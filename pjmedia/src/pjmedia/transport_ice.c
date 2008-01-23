@@ -51,27 +51,42 @@ struct transport_ice
 /*
  * These are media transport operations.
  */
-static pj_status_t tp_get_info(pjmedia_transport *tp,
-			       pjmedia_sock_info *info);
-static pj_status_t tp_attach( pjmedia_transport *tp,
-			      void *stream,
-			      const pj_sockaddr_t *rem_addr,
-			      const pj_sockaddr_t *rem_rtcp,
-			      unsigned addr_len,
-			      void (*rtp_cb)(void*,
-					     const void*,
-					     pj_ssize_t),
-			      void (*rtcp_cb)(void*,
-					      const void*,
-					      pj_ssize_t));
-static void	   tp_detach( pjmedia_transport *tp,
-			      void *strm);
-static pj_status_t tp_send_rtp( pjmedia_transport *tp,
-			        const void *pkt,
-			        pj_size_t size);
-static pj_status_t tp_send_rtcp( pjmedia_transport *tp,
-			         const void *pkt,
-			         pj_size_t size);
+static pj_status_t transport_get_info (pjmedia_transport *tp,
+				       pjmedia_sock_info *info);
+static pj_status_t transport_attach   (pjmedia_transport *tp,
+				       void *user_data,
+				       const pj_sockaddr_t *rem_addr,
+				       const pj_sockaddr_t *rem_rtcp,
+				       unsigned addr_len,
+				       void (*rtp_cb)(void*,
+						      const void*,
+						      pj_ssize_t),
+				       void (*rtcp_cb)(void*,
+						       const void*,
+						       pj_ssize_t));
+static void	   transport_detach   (pjmedia_transport *tp,
+				       void *strm);
+static pj_status_t transport_send_rtp( pjmedia_transport *tp,
+				       const void *pkt,
+				       pj_size_t size);
+static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
+				       const void *pkt,
+				       pj_size_t size);
+static pj_status_t transport_media_create(pjmedia_transport *tp,
+				       pj_pool_t *pool,
+				       pjmedia_sdp_session *sdp_local,
+				       const pjmedia_sdp_session *sdp_remote,
+				       unsigned media_index);
+static pj_status_t transport_media_start (pjmedia_transport *tp,
+				       pj_pool_t *pool,
+				       pjmedia_sdp_session *sdp_local,
+				       const pjmedia_sdp_session *sdp_remote,
+				       unsigned media_index);
+static pj_status_t transport_media_stop(pjmedia_transport *tp);
+static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
+				       pjmedia_dir dir,
+				       unsigned pct_lost);
+static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
 /*
  * And these are ICE callbacks.
@@ -84,14 +99,18 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 			        pj_status_t status);
 
 
-static pjmedia_transport_op tp_ice_op = 
+static pjmedia_transport_op transport_ice_op = 
 {
-    &tp_get_info,
-    &tp_attach,
-    &tp_detach,
-    &tp_send_rtp,
-    &tp_send_rtcp,
-    &pjmedia_ice_destroy
+    &transport_get_info,
+    &transport_attach,
+    &transport_detach,
+    &transport_send_rtp,
+    &transport_send_rtcp,
+    &transport_media_create,
+    &transport_media_start,
+    &transport_media_stop,
+    &transport_simulate_lost,
+    &transport_destroy
 };
 
 static const pj_str_t STR_CANDIDATE = {"candidate", 9};
@@ -132,7 +151,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     tp_ice = PJ_POOL_ZALLOC_T(ice_st->pool, struct transport_ice);
     tp_ice->ice_st = ice_st;
     pj_ansi_strcpy(tp_ice->base.name, ice_st->obj_name);
-    tp_ice->base.op = &tp_ice_op;
+    tp_ice->base.op = &transport_ice_op;
     tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
 
     if (cb)
@@ -143,25 +162,6 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     /* Done */
     if (p_tp)
 	*p_tp = &tp_ice->base;
-
-    return PJ_SUCCESS;
-}
-
-
-/*
- * Destroy ICE media transport.
- */
-PJ_DEF(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp)
-{
-    struct transport_ice *tp_ice = (struct transport_ice*)tp;
-
-    if (tp_ice->ice_st) {
-	pj_ice_strans_destroy(tp_ice->ice_st);
-	/*Must not touch tp_ice after ice_st is destroyed!
-	 (it has the pool)
-	 tp_ice->ice_st = NULL;
-	 */
-    }
 
     return PJ_SUCCESS;
 }
@@ -230,7 +230,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_get_comp( pjmedia_transport *tp,
     PJ_ASSERT_RETURN(tp && comp_id && comp_id <= tp_ice->ice_st->comp_cnt &&
 		     comp, PJ_EINVAL);
 
-    pj_memcpy(comp, tp_ice->ice_st->comp[comp_id-1], sizeof(pj_ice_strans_comp));
+    pj_memcpy(comp, tp_ice->ice_st->comp[comp_id-1], 
+	      sizeof(pj_ice_strans_comp));
     return PJ_SUCCESS;		    
 }
 
@@ -246,7 +247,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 					 const pj_str_t *local_passwd)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_strans_init_ice(tp_ice->ice_st, role, local_ufrag, local_passwd);
+    return pj_ice_strans_init_ice(tp_ice->ice_st, role, local_ufrag, 
+				  local_passwd);
 }
 
 
@@ -254,32 +256,46 @@ PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
  * For both UAC and UAS, pass in the SDP before sending it to remote.
  * This will add ICE attributes to the SDP.
  */
-PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
-					   pj_pool_t *pool,
-					   pjmedia_sdp_session *sdp)
+static pj_status_t transport_media_create(pjmedia_transport *tp,
+				       pj_pool_t *pool,
+				       pjmedia_sdp_session *sdp_local,
+				       const pjmedia_sdp_session *sdp_remote,
+				       unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_ice_sess_role ice_role;
     enum { MAXLEN = 256 };
     char *buffer;
     pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
+    pj_status_t status;
+
+    /* Init ICE */
+    ice_role = (sdp_remote==NULL ? PJ_ICE_SESS_ROLE_CONTROLLING : 
+				   PJ_ICE_SESS_ROLE_CONTROLLED);
+
+    status = pjmedia_ice_init_ice(tp, ice_role, NULL, NULL);
+    if (status != PJ_SUCCESS)
+	return status;
+
 
     buffer = (char*) pj_pool_alloc(pool, MAXLEN);
 
     /* Create ice-ufrag attribute */
     attr = pjmedia_sdp_attr_create(pool, "ice-ufrag", 
 				   &tp_ice->ice_st->ice->rx_ufrag);
-    sdp->attr[sdp->attr_count++] = attr;
+    sdp_local->attr[sdp_local->attr_count++] = attr;
 
     /* Create ice-pwd attribute */
     attr = pjmedia_sdp_attr_create(pool, "ice-pwd", 
 				   &tp_ice->ice_st->ice->rx_pass);
-    sdp->attr[sdp->attr_count++] = attr;
+    sdp_local->attr[sdp_local->attr_count++] = attr;
 
     /* Add all candidates (to media level) */
     cand_cnt = tp_ice->ice_st->ice->lcand_cnt;
     for (i=0; i<cand_cnt; ++i) {
 	pj_ice_sess_cand *cand;
+	pjmedia_sdp_media *m;
 	pj_str_t value;
 	int len;
 
@@ -329,7 +345,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
 
 	value = pj_str(buffer);
 	attr = pjmedia_sdp_attr_create(pool, "candidate", &value);
-	sdp->media[0]->attr[sdp->media[0]->attr_count++] = attr;
+	m = sdp_local->media[media_index];
+	m->attr[m->attr_count++] = attr;
     }
 
     /* Done */
@@ -456,17 +473,18 @@ static void set_no_ice(struct transport_ice *tp_ice, const char *reason)
 {
     PJ_LOG(4,(tp_ice->ice_st->obj_name, 
 	      "Disabling local ICE, reason=%s", reason));
-    pjmedia_ice_stop_ice(&tp_ice->base);
+    transport_media_stop(&tp_ice->base);
 }
 
 
 /*
  * Start ICE checks when both offer and answer are available.
  */
-PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
-					  pj_pool_t *pool,
-					  const pjmedia_sdp_session *rem_sdp,
-					  unsigned media_index)
+static pj_status_t transport_media_start(pjmedia_transport *tp,
+				         pj_pool_t *pool,
+				         pjmedia_sdp_session *sdp_local,
+				         const pjmedia_sdp_session *sdp_remote,
+				         unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     const pjmedia_sdp_attr *attr;
@@ -481,10 +499,12 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
     pj_str_t uname, pass;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(tp && pool && rem_sdp, PJ_EINVAL);
-    PJ_ASSERT_RETURN(media_index < rem_sdp->media_count, PJ_EINVAL);
+    PJ_UNUSED_ARG(sdp_local);
 
-    sdp_med = rem_sdp->media[media_index];
+    PJ_ASSERT_RETURN(tp && pool && sdp_remote, PJ_EINVAL);
+    PJ_ASSERT_RETURN(media_index < sdp_remote->media_count, PJ_EINVAL);
+
+    sdp_med = sdp_remote->media[media_index];
 
     /* Get the SDP connection for the media stream.
      * We'll verify later if the SDP connection address is specified 
@@ -492,7 +512,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
      */
     conn = sdp_med->conn;
     if (conn == NULL)
-	conn = rem_sdp->conn;
+	conn = sdp_remote->conn;
 
     if (conn == NULL) {
 	/* Unable to find SDP connection */
@@ -507,7 +527,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 				  "ice-ufrag", NULL);
     if (attr == NULL) {
 	/* Find ice-ufrag attribute in session descriptor */
-	attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
+	attr = pjmedia_sdp_attr_find2(sdp_remote->attr_count, sdp_remote->attr,
 				      "ice-ufrag", NULL);
 	if (attr == NULL) {
 	    set_no_ice(tp_ice, "ice-ufrag attribute not found");
@@ -521,7 +541,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 				  "ice-pwd", NULL);
     if (attr == NULL) {
 	/* Find ice-pwd attribute in session descriptor */
-	attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
+	attr = pjmedia_sdp_attr_find2(sdp_remote->attr_count, sdp_remote->attr,
 				      "ice-pwd", NULL);
 	if (attr == NULL) {
 	    set_no_ice(tp_ice, "ice-pwd attribute not found");
@@ -608,15 +628,15 @@ PJ_DEF(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_ice_stop_ice(pjmedia_transport *tp)
+static pj_status_t transport_media_stop(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     return pj_ice_strans_stop_ice(tp_ice->ice_st);
 }
 
 
-static pj_status_t tp_get_info(pjmedia_transport *tp,
-			       pjmedia_sock_info *info)
+static pj_status_t transport_get_info(pjmedia_transport *tp,
+				      pjmedia_sock_info *info)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_ice_strans *ice_st = tp_ice->ice_st;
@@ -648,17 +668,17 @@ static pj_status_t tp_get_info(pjmedia_transport *tp,
 }
 
 
-static pj_status_t tp_attach( pjmedia_transport *tp,
-			      void *stream,
-			      const pj_sockaddr_t *rem_addr,
-			      const pj_sockaddr_t *rem_rtcp,
-			      unsigned addr_len,
-			      void (*rtp_cb)(void*,
-					     const void*,
-					     pj_ssize_t),
-			      void (*rtcp_cb)(void*,
-					      const void*,
-					      pj_ssize_t))
+static pj_status_t transport_attach  (pjmedia_transport *tp,
+				      void *stream,
+				      const pj_sockaddr_t *rem_addr,
+				      const pj_sockaddr_t *rem_rtcp,
+				      unsigned addr_len,
+				      void (*rtp_cb)(void*,
+						     const void*,
+						     pj_ssize_t),
+				      void (*rtcp_cb)(void*,
+						      const void*,
+						      pj_ssize_t))
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
@@ -673,8 +693,8 @@ static pj_status_t tp_attach( pjmedia_transport *tp,
 }
 
 
-static void tp_detach(pjmedia_transport *tp,
-		      void *strm)
+static void transport_detach(pjmedia_transport *tp,
+			     void *strm)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
@@ -686,9 +706,9 @@ static void tp_detach(pjmedia_transport *tp,
 }
 
 
-static pj_status_t tp_send_rtp(pjmedia_transport *tp,
-			       const void *pkt,
-			       pj_size_t size)
+static pj_status_t transport_send_rtp(pjmedia_transport *tp,
+				      const void *pkt,
+				      pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
@@ -708,9 +728,9 @@ static pj_status_t tp_send_rtp(pjmedia_transport *tp,
 }
 
 
-static pj_status_t tp_send_rtcp(pjmedia_transport *tp,
-			        const void *pkt,
-			        pj_size_t size)
+static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
+				       const void *pkt,
+				       pj_size_t size)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     if (tp_ice->ice_st->comp_cnt > 1) {
@@ -798,9 +818,9 @@ static void ice_on_ice_complete(pj_ice_strans *ice_st,
 
 
 /* Simulate lost */
-PJ_DEF(pj_status_t) pjmedia_ice_simulate_lost( pjmedia_transport *tp,
-					       pjmedia_dir dir,
-					       unsigned pct_lost)
+static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
+					   pjmedia_dir dir,
+					   unsigned pct_lost)
 {
     struct transport_ice *ice = (struct transport_ice*) tp;
 
@@ -811,6 +831,25 @@ PJ_DEF(pj_status_t) pjmedia_ice_simulate_lost( pjmedia_transport *tp,
 
     if (dir & PJMEDIA_DIR_DECODING)
 	ice->rx_drop_pct = pct_lost;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Destroy ICE media transport.
+ */
+static pj_status_t transport_destroy(pjmedia_transport *tp)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+
+    if (tp_ice->ice_st) {
+	pj_ice_strans_destroy(tp_ice->ice_st);
+	/*Must not touch tp_ice after ice_st is destroyed!
+	 (it has the pool)
+	 tp_ice->ice_st = NULL;
+	 */
+    }
 
     return PJ_SUCCESS;
 }

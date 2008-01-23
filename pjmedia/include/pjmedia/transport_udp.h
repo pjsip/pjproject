@@ -56,19 +56,6 @@ enum pjmedia_transport_udp_options
 
 
 /**
- * UDP transport info.
- */
-typedef struct pjmedia_transport_udp_info
-{
-    /**
-     * Media socket info.
-     */
-    pjmedia_sock_info	skinfo;
-
-} pjmedia_transport_udp_info;
-
-
-/**
  * Create an RTP and RTCP sockets and bind the sockets to the specified
  * port to create media transport.
  *
@@ -137,18 +124,6 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
 						   unsigned options,
 						   pjmedia_transport **p_tp);
 
-/**
- * Get media socket info from the specified UDP transport.
- *
- * @param tp	    The UDP transport interface.
- * @param info	    Media socket info to be initialized.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) 
-pjmedia_transport_udp_get_info( pjmedia_transport *tp,
-				pjmedia_transport_udp_info *info);
-
 
 /**
  * Create UDP stream transport from existing sockets. Use this function when
@@ -167,36 +142,6 @@ PJ_DECL(pj_status_t) pjmedia_transport_udp_attach(pjmedia_endpt *endpt,
 						  const pjmedia_sock_info *si,
 						  unsigned options,
 						  pjmedia_transport **p_tp);
-
-
-/**
- * Simulate packet lost in the specified direction (for testing purposes).
- * When enabled, the transport will randomly drop packets to the specified
- * direction.
- *
- * @param tp	    The UDP media transport.
- * @param dir	    Media direction to which packets will be randomly dropped.
- * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
- *		    lost simulation.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_simulate_lost(pjmedia_transport *tp,
-							 pjmedia_dir dir,
-							 unsigned pct_lost);
-
-
-
-/**
- * Close UDP transport. Application can also use the "destroy" member of
- * media transport interface to close the UDP transport.
- *
- * @param tp	    The UDP media transport.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_transport_udp_close(pjmedia_transport *tp);
-
 
 
 PJ_END_DECL

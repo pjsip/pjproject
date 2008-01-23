@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "libgsmcodec"=.\THIRD_PARTY\BUILD\GSM\libgsmcodec.dsp - Package Owner=<4>
+Project: "libgsmcodec"=".\THIRD_PARTY\BUILD\GSM\libgsmcodec.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -15,7 +15,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libilbccodec"=.\THIRD_PARTY\BUILD\ILBC\libilbccodec.dsp - Package Owner=<4>
+Project: "libilbccodec"=".\THIRD_PARTY\BUILD\ILBC\libilbccodec.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -27,7 +27,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libmilenage"=.\third_party\build\milenage\libmilenage.dsp - Package Owner=<4>
+Project: "libmilenage"=".\third_party\build\milenage\libmilenage.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -39,7 +39,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libportaudio"=.\THIRD_PARTY\BUILD\PORTAUDIO\libportaudio.dsp - Package Owner=<4>
+Project: "libportaudio"=".\THIRD_PARTY\BUILD\PORTAUDIO\libportaudio.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -51,7 +51,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libresample"=.\THIRD_PARTY\BUILD\RESAMPLE\libresample.dsp - Package Owner=<4>
+Project: "libresample"=".\THIRD_PARTY\BUILD\RESAMPLE\libresample.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -63,7 +63,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libresample_dll"=.\THIRD_PARTY\BUILD\RESAMPLE\libresample_dll.dsp - Package Owner=<4>
+Project: "libresample_dll"=".\THIRD_PARTY\BUILD\RESAMPLE\libresample_dll.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -75,7 +75,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "libspeex"=.\third_party\build\speex\libspeex.dsp - Package Owner=<4>
+Project: "libspeex"=".\third_party\build\speex\libspeex.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -87,7 +87,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjlib"=.\pjlib\build\pjlib.dsp - Package Owner=<4>
+Project: "libsrtp"=".\third_party\build\srtp\libsrtp.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -99,7 +99,19 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjlib_test"=.\pjlib\build\pjlib_test.dsp - Package Owner=<4>
+Project: "pjlib"=".\pjlib\build\pjlib.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "pjlib_test"=".\pjlib\build\pjlib_test.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -144,7 +156,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjmedia"=.\pjmedia\build\pjmedia.dsp - Package Owner=<4>
+Project: "pjmedia"=".\pjmedia\build\pjmedia.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -156,7 +168,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjmedia_codec"=.\pjmedia\build\pjmedia_codec.dsp - Package Owner=<4>
+Project: "pjmedia_codec"=".\pjmedia\build\pjmedia_codec.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -168,7 +180,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjnath"=.\pjnath\build\pjnath.dsp - Package Owner=<4>
+Project: "pjnath"=".\pjnath\build\pjnath.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -180,7 +192,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_core"=.\pjsip\build\pjsip_core.dsp - Package Owner=<4>
+Project: "pjsip_core"=".\pjsip\build\pjsip_core.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -192,7 +204,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_simple"=.\pjsip\build\pjsip_simple.dsp - Package Owner=<4>
+Project: "pjsip_simple"=".\pjsip\build\pjsip_simple.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -204,7 +216,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjsip_ua"=.\pjsip\build\pjsip_ua.dsp - Package Owner=<4>
+Project: "pjsip_ua"=".\pjsip\build\pjsip_ua.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -269,11 +281,14 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libmilenage
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsrtp
+    End Project Dependency
 }}}
 
 ###############################################################################
 
-Project: "pjsua_lib"=.\pjsip\build\pjsua_lib.dsp - Package Owner=<4>
+Project: "pjsua_lib"=".\pjsip\build\pjsua_lib.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -393,7 +408,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "test_pjsip"=.\pjsip\build\test_pjsip.dsp - Package Owner=<4>
+Project: "test_pjsip"=".\pjsip\build\test_pjsip.dsp" - Package Owner=<4>
 
 Package=<5>
 {{{

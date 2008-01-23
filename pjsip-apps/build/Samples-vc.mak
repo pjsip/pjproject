@@ -23,9 +23,10 @@ ILBC_LIB = ..\..\third_party\lib\libilbccodec-$(TARGET)$(LIBEXT)
 PORTAUDIO_LIB = ..\..\third_party\lib\libportaudio-$(TARGET)$(LIBEXT)
 RESAMPLE_LIB = ..\..\third_party\lib\libresample-$(TARGET)$(LIBEXT)
 SPEEX_LIB = ..\..\third_party\lib\libspeex-$(TARGET)$(LIBEXT)
+SRTP_LIB = ..\..\third_party\lib\libsrtp-$(TARGET)$(LIBEXT)
 
 THIRD_PARTY_LIBS = $(GSM_LIB) $(ILBC_LIB) $(PORTAUDIO_LIB) $(RESAMPLE_LIB) \
-				   $(SPEEX_LIB)
+				   $(SPEEX_LIB) $(SRTP_LIB)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
 	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) $(PJNATH_LIB) \

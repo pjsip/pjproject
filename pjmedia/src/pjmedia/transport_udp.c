@@ -94,9 +94,12 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
                        pj_ioqueue_op_key_t *op_key, 
                        pj_ssize_t bytes_read);
 
-static pj_status_t transport_get_info(pjmedia_transport *tp,
-				      pjmedia_sock_info *info);
-static pj_status_t transport_attach(   pjmedia_transport *tp,
+/*
+ * These are media transport operations.
+ */
+static pj_status_t transport_get_info (pjmedia_transport *tp,
+				       pjmedia_sock_info *info);
+static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
 				       const pj_sockaddr_t *rem_rtcp,
@@ -107,7 +110,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 				       void (*rtcp_cb)(void*,
 						       const void*,
 						       pj_ssize_t));
-static void	   transport_detach(   pjmedia_transport *tp,
+static void	   transport_detach   (pjmedia_transport *tp,
 				       void *strm);
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 				       const void *pkt,
@@ -115,6 +118,21 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size);
+static pj_status_t transport_media_create(pjmedia_transport *tp,
+				       pj_pool_t *pool,
+				       pjmedia_sdp_session *sdp_local,
+				       const pjmedia_sdp_session *sdp_remote,
+				       unsigned media_index);
+static pj_status_t transport_media_start (pjmedia_transport *tp,
+				       pj_pool_t *pool,
+				       pjmedia_sdp_session *sdp_local,
+				       const pjmedia_sdp_session *sdp_remote,
+				       unsigned media_index);
+static pj_status_t transport_media_stop(pjmedia_transport *tp);
+static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
+				       pjmedia_dir dir,
+				       unsigned pct_lost);
+static pj_status_t transport_destroy  (pjmedia_transport *tp);
 
 
 static pjmedia_transport_op transport_udp_op = 
@@ -124,7 +142,11 @@ static pjmedia_transport_op transport_udp_op =
     &transport_detach,
     &transport_send_rtp,
     &transport_send_rtcp,
-    &pjmedia_transport_udp_close
+    &transport_media_create,
+    &transport_media_start,
+    &transport_media_stop,
+    &transport_simulate_lost,
+    &transport_destroy
 };
 
 
@@ -341,25 +363,15 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
 
 on_error:
-    pjmedia_transport_udp_close(&tp->base);
+    transport_destroy(&tp->base);
     return status;
-}
-
-
-/*
- * Get media socket info.
- */
-PJ_DEF(pj_status_t) pjmedia_transport_udp_get_info( pjmedia_transport *tp,
-				pjmedia_transport_udp_info *inf)
-{
-    return transport_get_info(tp, &inf->skinfo);
 }
 
 
 /**
  * Close UDP transport.
  */
-PJ_DEF(pj_status_t) pjmedia_transport_udp_close(pjmedia_transport *tp)
+static pj_status_t transport_destroy(pjmedia_transport *tp)
 {
     struct transport_udp *udp = (struct transport_udp*) tp;
 
@@ -726,9 +738,45 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_transport_udp_simulate_lost(pjmedia_transport *tp,
-							pjmedia_dir dir,
-							unsigned pct_lost)
+static pj_status_t transport_media_create(pjmedia_transport *tp,
+				  pj_pool_t *pool,
+				  pjmedia_sdp_session *sdp_local,
+				  const pjmedia_sdp_session *sdp_remote,
+				  unsigned media_index)
+{
+    PJ_UNUSED_ARG(tp);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(sdp_local);
+    PJ_UNUSED_ARG(sdp_remote);
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t transport_media_start(pjmedia_transport *tp,
+				  pj_pool_t *pool,
+				  pjmedia_sdp_session *sdp_local,
+				  const pjmedia_sdp_session *sdp_remote,
+				  unsigned media_index)
+{
+    PJ_UNUSED_ARG(tp);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(sdp_local);
+    PJ_UNUSED_ARG(sdp_remote);
+    PJ_UNUSED_ARG(media_index);
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t transport_media_stop(pjmedia_transport *tp)
+{
+    PJ_UNUSED_ARG(tp);
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
+					   pjmedia_dir dir,
+					   unsigned pct_lost)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
 

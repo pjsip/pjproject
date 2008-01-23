@@ -120,6 +120,9 @@ static void usage(void)
     puts  ("");
     puts  ("SIP Account options:");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    puts  ("  --use-srtp=N        Use SRTP N= 0: disabled, 1: optional, 2: mandatory");
+#endif
     puts  ("  --registrar=url     Set the URL of registrar server");
     puts  ("  --id=url            Set the URL of local ID (used in From header)");
     puts  ("  --contact=url       Optionally override the Contact information");
@@ -382,7 +385,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
-	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_USE_ICE,
+	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_USE_ICE, OPT_USE_SRTP,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -441,6 +444,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "rec-file",   1, 0, OPT_REC_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "use-ice",    0, 0, OPT_USE_ICE},
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+	{ "use-srtp",   1, 0, OPT_USE_SRTP},
+#endif
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
 	{ "dis-codec",  1, 0, OPT_DIS_CODEC},
 	{ "complexity",	1, 0, OPT_COMPLEXITY},
@@ -796,6 +802,16 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->media_cfg.enable_ice = PJ_TRUE;
 	    break;
 
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+	case OPT_USE_SRTP:
+	    app_config.cfg.use_srtp = my_atoi(pj_optarg);
+	    if (!pj_isdigit(*pj_optarg) || app_config.cfg.use_srtp > 2) {
+		PJ_LOG(1,(THIS_FILE, "Invalid value for --use-srtp option"));
+		return -1;
+	    }
+	    break;
+#endif
+
 	case OPT_RTP_PORT:
 	    cfg->rtp_cfg.port = my_atoi(pj_optarg);
 	    if (cfg->rtp_cfg.port == 0) {
@@ -1110,6 +1126,15 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 			(int)acc_cfg->auto_update_nat);
 	pj_strcat2(result, line);
     }
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* SRTP */
+    if (acc_cfg->use_srtp) {
+	pj_ansi_sprintf(line, "--use-srtp %i\n",
+			(int)acc_cfg->use_srtp);
+	pj_strcat2(result, line);
+    }
+#endif
 
     /* Proxy */
     for (i=0; i<acc_cfg->proxy_cnt; ++i) {

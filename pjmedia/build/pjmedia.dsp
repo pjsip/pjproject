@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
+# ADD CPP /nologo /MD /W4 /GX /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../../third_party/build/srtp" /I "../../third_party/srtp/crypto/include" /I "../../third_party/srtp/include" /I "../.." /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -67,7 +67,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /GX /ZI /Od /I "../include" /I "../../pjlib/include" /I "../../pjlib-util/include" /I "../../pjnath/include" /I "../../third_party/portaudio/include" /I "../../third_party/speex/include" /I "../../third_party/build/srtp" /I "../../third_party/srtp/crypto/include" /I "../../third_party/srtp/include" /I "../.." /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -249,6 +249,10 @@ SOURCE=..\src\pjmedia\transport_ice.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\transport_srtp.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\transport_udp.c
 # End Source File
 # Begin Source File
@@ -406,6 +410,10 @@ SOURCE=..\include\pjmedia\transport.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\transport_ice.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\transport_srtp.h
 # End Source File
 # Begin Source File
 

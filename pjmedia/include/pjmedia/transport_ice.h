@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __pjmedia_ice_H__
-#define __pjmedia_ice_H__
+#ifndef __PJMEDIA_TRANSPORT_ICE_H__
+#define __PJMEDIA_TRANSPORT_ICE_H__
 
 
 /**
@@ -74,15 +74,6 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 					pj_stun_config *stun_cfg,
 					const pjmedia_ice_cb *cb,
 					pjmedia_transport **p_tp);
-
-/**
- * Destroy the media transport.
- *
- * @param tp		The media transport.
- *
- * @return		PJ_SUCCESS.
- */
-PJ_DECL(pj_status_t) pjmedia_ice_destroy(pjmedia_transport *tp);
 
 
 /**
@@ -169,71 +160,6 @@ PJ_DECL(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
 					  const pj_str_t *local_ufrag,
 					  const pj_str_t *local_passwd);
 
-/**
- * Modify the SDP to add ICE specific SDP attributes before sending
- * the SDP to remote host.
- *
- * @param tp		The media transport.
- * @param pool		Pool to allocate memory for the SDP elements.
- * @param sdp		The SDP descriptor to be modified.
- *
- * @return		PJ_SUCCESS, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjmedia_ice_modify_sdp(pjmedia_transport *tp,
-					    pj_pool_t *pool,
-					    pjmedia_sdp_session *sdp);
-
-/**
- * Start ICE connectivity checks.
- *
- * This function will pair the local and remote candidates to create 
- * check list. Once the check list is created and sorted based on the
- * priority, ICE periodic checks will be started. This function will 
- * return immediately, and application will be notified about the 
- * connectivity check status in the callback.
- *
- * @param tp		The media transport.
- * @param pool		Memory pool to parse the SDP.
- * @param rem_sdp	The SDP received from remote agent.
- * @param media_index	The media index (in SDP) to process.
- *
- * @return		PJ_SUCCESS, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjmedia_ice_start_ice(pjmedia_transport *tp,
-					   pj_pool_t *pool,
-					   const pjmedia_sdp_session *rem_sdp,
-					   unsigned media_index);
-
-/**
- * Stop the ICE session (typically when the call is terminated). Application
- * may restart the ICE session again by calling #pjmedia_ice_init_ice(),
- * for example to use this media transport for the next call.
- *
- * @param tp		The media transport.
- *
- * @return		PJ_SUCCESS, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjmedia_ice_stop_ice(pjmedia_transport *tp);
-
-
-/**
- * Simulate packet lost in the specified direction (for testing purposes).
- * When enabled, the transport will randomly drop packets to the specified
- * direction.
- *
- * @param tp	    The ICE media transport.
- * @param dir	    Media direction to which packets will be randomly dropped.
- * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
- *		    lost simulation.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_ice_simulate_lost(pjmedia_transport *tp,
-					       pjmedia_dir dir,
-					       unsigned pct_lost);
-
-
-
 
 PJ_END_DECL
 
@@ -243,6 +169,6 @@ PJ_END_DECL
  */
 
 
-#endif	/* __pjmedia_ice_H__ */
+#endif	/* __PJMEDIA_TRANSPORT_ICE_H__ */
 
 

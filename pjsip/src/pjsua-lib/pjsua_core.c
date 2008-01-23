@@ -87,6 +87,10 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->max_calls = 4;
     cfg->thread_cnt = 1;
     cfg->nat_type_in_sdp = 1;
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    cfg->use_srtp = PJSUA_DEFAULT_USE_SRTP;
+    cfg->srtp_secure_signaling = PJSUA_DEFAULT_SRTP_SECURE_SIGNALING;
+#endif
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -142,6 +146,10 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
+    cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;
+#endif
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)

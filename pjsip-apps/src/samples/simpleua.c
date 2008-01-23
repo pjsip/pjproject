@@ -285,13 +285,7 @@ int main(int argc, char *argv[])
      * need this info to create SDP (i.e. the address and port info in
      * the SDP).
      */
-    {
-	pjmedia_transport_udp_info udp_info;
-
-	pjmedia_transport_udp_get_info(g_med_transport, &udp_info);
-	pj_memcpy(&g_med_skinfo, &udp_info.skinfo, 
-		  sizeof(pjmedia_sock_info));
-    }
+    pjmedia_transport_get_info(g_med_transport, &g_med_skinfo);
 
 
     /*

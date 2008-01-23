@@ -534,6 +534,7 @@ static pj_status_t create_udp_media_transports(pjsua_transport_config *cfg)
 		         status);
 	    goto on_error;
 	}
+
 	status = pjmedia_transport_udp_attach(pjsua_var.med_endpt, NULL,
 					      &skinfo, 0,
 					      &pjsua_var.calls[i].med_tp);
@@ -543,13 +544,13 @@ static pj_status_t create_udp_media_transports(pjsua_transport_config *cfg)
 	    goto on_error;
 	}
 
-	pjmedia_transport_udp_simulate_lost(pjsua_var.calls[i].med_tp,
-					    PJMEDIA_DIR_ENCODING,
-					    pjsua_var.media_cfg.tx_drop_pct);
+	pjmedia_transport_simulate_lost(pjsua_var.calls[i].med_tp,
+					PJMEDIA_DIR_ENCODING,
+					pjsua_var.media_cfg.tx_drop_pct);
 
-	pjmedia_transport_udp_simulate_lost(pjsua_var.calls[i].med_tp,
-					    PJMEDIA_DIR_DECODING,
-					    pjsua_var.media_cfg.rx_drop_pct);
+	pjmedia_transport_simulate_lost(pjsua_var.calls[i].med_tp,
+					PJMEDIA_DIR_DECODING,
+					pjsua_var.media_cfg.rx_drop_pct);
 
     }
 
@@ -645,13 +646,13 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	    goto on_error;
 	}
 
-	pjmedia_ice_simulate_lost(pjsua_var.calls[i].med_tp,
-				  PJMEDIA_DIR_ENCODING,
-				  pjsua_var.media_cfg.tx_drop_pct);
+	pjmedia_transport_simulate_lost(pjsua_var.calls[i].med_tp,
+				        PJMEDIA_DIR_ENCODING,
+				        pjsua_var.media_cfg.tx_drop_pct);
 
-	pjmedia_ice_simulate_lost(pjsua_var.calls[i].med_tp,
-				  PJMEDIA_DIR_DECODING,
-				  pjsua_var.media_cfg.rx_drop_pct);
+	pjmedia_transport_simulate_lost(pjsua_var.calls[i].med_tp,
+				        PJMEDIA_DIR_DECODING,
+				        pjsua_var.media_cfg.rx_drop_pct);
 
 	status = pjmedia_ice_start_init(pjsua_var.calls[i].med_tp, 0, &addr,
 				        &pjsua_var.stun_srv.ipv4, NULL);
@@ -744,32 +745,65 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
 
 
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
-				     pjsip_role_e role)
+				     pjsip_role_e role,
+				     int security_level)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
 
-    if (pjsua_var.media_cfg.enable_ice) {
-	pj_ice_sess_role ice_role;
-	pj_status_t status;
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+    pjmedia_srtp_setting srtp_opt;
+    pjmedia_transport *srtp;
+    pj_status_t status;
+#endif
 
-	ice_role = (role==PJSIP_ROLE_UAC ? PJ_ICE_SESS_ROLE_CONTROLLING : 
-				           PJ_ICE_SESS_ROLE_CONTROLLED);
+    PJ_UNUSED_ARG(role);
 
-	/* Restart ICE */
-	pjmedia_ice_stop_ice(call->med_tp);
-
-	status = pjmedia_ice_init_ice(call->med_tp, ice_role, NULL, NULL);
-	if (status != PJ_SUCCESS)
-	    return status;
+    /* Return error if media transport has not been created yet
+     * (e.g. application is starting)
+     */
+    if (call->med_tp == NULL) {
+	return PJ_EBUSY;
     }
+
+    /* Stop media transport (for good measure!) */
+    pjmedia_transport_media_stop(call->med_tp);
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* Check if SRTP requires secure signaling */
+    if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
+	if (security_level < acc->cfg.srtp_secure_signaling) {
+	    return PJSIP_ESESSIONINSECURE;
+	}
+    }
+
+    /* Always create SRTP adapter */
+    pjmedia_srtp_setting_default(&srtp_opt);
+    srtp_opt.close_member_tp = PJ_FALSE;
+    srtp_opt.use = acc->cfg.use_srtp;
+    status = pjmedia_transport_srtp_create(pjsua_var.med_endpt, 
+					   call->med_tp,
+					   &srtp_opt, &srtp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Set SRTP as current media transport */
+    call->med_orig = call->med_tp;
+    call->med_tp = srtp;
+#else
+    call->med_orig = call->med_tp;
+    PJ_UNUSED_ARG(security_level);
+#endif
 
     return PJ_SUCCESS;
 }
 
 pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
 					   pj_pool_t *pool,
+					   const pjmedia_sdp_session *rem_sdp,
 					   pjmedia_sdp_session **p_sdp)
 {
+    enum { MAX_MEDIA = 1, MEDIA_IDX = 0 };
     pjmedia_sdp_session *sdp;
     pjmedia_sock_info skinfo;
     pjsua_call *call = &pjsua_var.calls[call_id];
@@ -786,7 +820,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     pjmedia_transport_get_info(call->med_tp, &skinfo);
 
     /* Create SDP */
-    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, 1,
+    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, MAX_MEDIA,
 				      &skinfo, &sdp);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -815,11 +849,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
     }
 
-    if (pjsua_var.media_cfg.enable_ice) {
-	status = pjmedia_ice_modify_sdp(call->med_tp, pool, sdp);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
+    /* Give the SDP to media transport */
+    status = pjmedia_transport_media_create(call->med_tp, pool, 
+					    sdp, rem_sdp, MEDIA_IDX);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     *p_sdp = sdp;
     return PJ_SUCCESS;
@@ -858,10 +892,12 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 
     stop_media_session(call_id);
 
-    if (pjsua_var.media_cfg.enable_ice) {
-	pjmedia_ice_stop_ice(call->med_tp);
-    }
+    pjmedia_transport_media_stop(call->med_tp);
 
+    if (call->med_tp != call->med_orig) {
+	pjmedia_transport_close(call->med_tp);
+	call->med_tp = call->med_orig;
+    }
     return PJ_SUCCESS;
 }
 
@@ -877,14 +913,14 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
     if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
 	pjsua_call_id call_id;
 
-	call_id = (pjsua_call_id)user_data;
+	call_id = (pjsua_call_id)(long)user_data;
 	pjsua_var.ua_cfg.cb.on_dtmf_digit(call_id, digit);
     }
 }
 
 
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
-				       const pjmedia_sdp_session *local_sdp,
+				       pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp)
 {
     unsigned i;
@@ -911,7 +947,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Find which session is audio (we only support audio for now) */
     for (i=0; i < sess_info.stream_cnt; ++i) {
 	if (sess_info.stream_info[i].type == PJMEDIA_TYPE_AUDIO &&
-	    sess_info.stream_info[i].proto == PJMEDIA_TP_PROTO_RTP_AVP)
+	    (sess_info.stream_info[i].proto == PJMEDIA_TP_PROTO_RTP_AVP ||
+	     sess_info.stream_info[i].proto == PJMEDIA_TP_PROTO_RTP_SAVP))
 	{
 	    si = &sess_info.stream_info[i];
 	    break;
@@ -945,21 +982,18 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 	call->media_dir = PJMEDIA_DIR_NONE;
 
-	/* Shutdown ICE session */
-	if (pjsua_var.media_cfg.enable_ice) {
-	    pjmedia_ice_stop_ice(call->med_tp);
-	}
+	/* Shutdown transport's session */
+	pjmedia_transport_media_stop(call->med_tp);
 
 	/* No need because we need keepalive? */
 
     } else {
-	/* Start ICE */
-	if (pjsua_var.media_cfg.enable_ice) {
-	    status = pjmedia_ice_start_ice(call->med_tp, call->inv->pool, 
-					   remote_sdp, 0);
-	    if (status != PJ_SUCCESS)
-		return status;
-	}
+	/* Start media transport */
+	status = pjmedia_transport_media_start(call->med_tp, 
+					       call->inv->pool,
+					       local_sdp, remote_sdp, 0);
+	if (status != PJ_SUCCESS)
+	    return status;
 
 	/* Override ptime, if this option is specified. */
 	if (pjsua_var.media_cfg.ptime != 0) {
@@ -1000,7 +1034,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
 	    pjmedia_session_set_dtmf_callback(call->session, 0, 
 					      &dtmf_callback, 
-					      (void*)(call->index));
+					      (void*)(long)(call->index));
 	}
 
 	/* Get the port interface of the first stream in the session.

@@ -255,6 +255,44 @@ static pjsua_call_id alloc_call_id(void)
     return PJSUA_INVALID_ID;
 }
 
+static pj_bool_t pj_stristr(const pj_str_t *str, const pj_str_t *substr)
+{
+    int i;
+
+    for (i=0; i<(str->slen-substr->slen); ++i) {
+	pj_str_t s;
+	s.ptr = str->ptr+i;
+	s.slen = substr->slen;
+
+	if (pj_stricmp(&s, substr)==0)
+	    return PJ_TRUE;
+    }
+    return PJ_FALSE;
+}
+
+/* Get signaling secure level.
+ * Return:
+ *  0: if signaling is not secure
+ *  1: if TLS transport is used for immediate hop
+ *  2: if end-to-end signaling is secure.
+ *
+ * NOTE:
+ *  THIS IS WRONG. It should take into account the route-set.
+ */
+static int get_secure_level(const pj_str_t *dst_uri)
+{
+    const pj_str_t tls = pj_str(";transport=tls");
+    const pj_str_t sips = pj_str("sips:");
+
+    PJ_TODO(Fix_get_secure_level);
+
+    if (pj_stristr(dst_uri, &sips))
+	return 2;
+    if (pj_stristr(dst_uri, &tls))
+	return 1;
+    return 0;
+}
+
 /*
  * Make outgoing call to the specified URI using the specified account.
  */
@@ -362,7 +400,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
+				      get_secure_level(dest_uri));
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
@@ -372,7 +411,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 #if LATE_SDP
     offer = NULL;
 #else
-    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, &offer);
+    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL, &offer);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
 	goto on_error;
@@ -519,7 +558,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int acc_id;
     pjsua_call *call;
     int call_id = -1;
-    pjmedia_sdp_session *answer;
+    int secure_level;
+    pjmedia_sdp_session *offer, *answer;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -614,9 +654,44 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	}
     }
 
+    /* 
+     * Get which account is most likely to be associated with this incoming
+     * call. We need the account to find which contact URI to put for
+     * the call.
+     */
+    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* Get signaling security level, only when required by SRTP */
+    if (pjsua_var.acc[acc_id].cfg.srtp_secure_signaling < 2) {
+	secure_level = PJSIP_TRANSPORT_IS_SECURE(rdata->tp_info.transport)!=0;
+    } else 
+#endif
+
+    {
+	char *uri;
+	int uri_len;
+	pj_str_t dst;
+
+	uri = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
+	uri_len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+				  rdata->msg_info.msg->line.req.uri,
+				  uri, PJSIP_MAX_URL_SIZE);
+	if (uri_len < 1) {
+	    pjsua_perror(THIS_FILE, "Error analyzing dst URI", 
+			 PJSIP_EURITOOLONG);
+	    uri_len = 0;
+	}
+
+	dst.ptr = uri;
+	dst.slen = uri_len;
+
+	secure_level = get_secure_level(&dst);
+    }
 
     /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS);
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
+				      secure_level);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
@@ -624,9 +699,26 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    /* Parse SDP from incoming request */
+    if (rdata->msg_info.msg->body) {
+	status = pjmedia_sdp_parse(rdata->tp_info.pool, 
+				   rdata->msg_info.msg->body->data,
+				   rdata->msg_info.msg->body->len, &offer);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error parsing SDP in incoming INVITE", status);
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, NULL,
+					  NULL, NULL);
+	    pjsua_media_channel_deinit(call->index);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
+    } else {
+	offer = NULL;
+    }
 
     /* Get media capability from media endpoint: */
-    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, &answer);
+    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, 
+					    offer, &answer);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
@@ -635,20 +727,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
-    /* 
-     * Get which account is most likely to be associated with this incoming
-     * call. We need the account to find which contact URI to put for
-     * the call.
-     */
-    acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
-
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     if (pjsua_var.acc[acc_id].cfg.require_100rel)
 	options |= PJSIP_INV_REQUIRE_100REL;
 
-    status = pjsip_inv_verify_request(rdata, &options, answer, NULL,
-				      pjsua_var.endpt, &response);
+    status = pjsip_inv_verify_request2(rdata, &options, offer, answer, NULL,
+				       pjsua_var.endpt, &response);
     if (status != PJ_SUCCESS) {
 
 	/*
@@ -1338,7 +1423,8 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     }
 
     /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
+				      get_secure_level(&dlg->remote.info_str));
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_dec_lock(dlg);
@@ -1348,7 +1434,8 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     /* Create SDP */
     PJ_UNUSED_ARG(unhold);
     PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &sdp);
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					    NULL, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -1406,7 +1493,8 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 	return status;
 
     /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
+				      get_secure_level(&dlg->remote.info_str));
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_dec_lock(dlg);
@@ -1414,7 +1502,8 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     }
 
     /* Create SDP */
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &sdp);
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					    NULL, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -2355,7 +2444,8 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 				       pj_status_t status)
 {
     pjsua_call *call;
-    const pjmedia_sdp_session *local_sdp;
+    const pjmedia_sdp_session *c_local;
+    pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
 
     PJSUA_LOCK();
@@ -2384,7 +2474,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 
     /* Get local and remote SDP */
-    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &local_sdp);
+    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &c_local);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
 		     "Unable to retrieve currently active local SDP", 
@@ -2393,6 +2483,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	PJSUA_UNLOCK();
 	return;
     }
+    local_sdp = (pjmedia_sdp_session*) c_local;
 
     status = pjmedia_sdp_neg_get_active_remote(call->inv->neg, &remote_sdp);
     if (status != PJ_SUCCESS) {
@@ -2524,19 +2615,23 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 		  "(media in offer is %s)", call->index, remote_state));
 	status = create_inactive_sdp( call, &answer );
     } else {
+	int secure_level;
 
 	PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 		  call->index));
 
 	/* Init media channel */
-	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS);
+	secure_level = get_secure_level(&call->inv->dlg->remote.info_str);
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
+					  secure_level);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
 	    return;
 	}
 
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, &answer);
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					        offer, &answer);
     }
 
     if (status != PJ_SUCCESS) {
@@ -2576,19 +2671,23 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 		  call->index));
 	status = create_inactive_sdp( call, offer );
     } else {
+	int secure_level;
 
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));
 
 	/* Init media channel */
-	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC);
+	secure_level = get_secure_level(&call->inv->dlg->remote.info_str);
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
+					  secure_level);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
 	    return;
 	}
 
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, offer);
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					        NULL, offer);
     }
 
     if (status != PJ_SUCCESS) {

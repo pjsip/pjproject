@@ -166,6 +166,7 @@
 
 PJ_BEGIN_DECL
 
+#include <pjmedia/sdp.h>
 
 /*
  * Forward declaration for media transport.
@@ -242,6 +243,50 @@ struct pjmedia_transport_op
     pj_status_t (*send_rtcp)(pjmedia_transport *tp,
 			     const void *pkt,
 			     pj_size_t size);
+
+    /**
+     * This function is called by application to generate the SDP parts
+     * related to transport type, e.g: ICE, SRTP.
+     *
+     * Application should call #pjmedia_transport_media_create() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*media_create)(pjmedia_transport *tp,
+				pj_pool_t *pool,
+				pjmedia_sdp_session *sdp_local,
+				const pjmedia_sdp_session *sdp_remote,
+				unsigned media_index);
+
+    /**
+     * This function is called by application to start the transport
+     * based on SDP negotiation result.
+     *
+     * Application should call #pjmedia_transport_media_start() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*media_start) (pjmedia_transport *tp,
+			        pj_pool_t *pool,
+			        pjmedia_sdp_session *sdp_local,
+			        const pjmedia_sdp_session *sdp_remote,
+				unsigned media_index);
+
+    /**
+     * This function is called by application to stop the transport.
+     *
+     * Application should call #pjmedia_transport_media_stop() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*media_stop)  (pjmedia_transport *tp);
+
+    /**
+     * This function can be called to simulate packet lost.
+     *
+     * Application should call #pjmedia_transport_simulate_lost() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*simulate_lost)(pjmedia_transport *tp,
+				 pjmedia_dir dir,
+				 unsigned pct_lost);
 
     /**
      * This function can be called to destroy this transport.
@@ -410,6 +455,67 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
 
 
 /**
+ * Generate local SDP parts that are related to the specified media transport.
+ * Remote SDP might be needed as reference when application is in deciding
+ * side of negotiation (callee side), otherwise it should be NULL.
+ * This is just a simple wrapper which calls <tt>media_create()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ * @param pool		The memory pool.
+ * @param sdp_local	Local SDP.
+ * @param sdp_remote	Remote SDP.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
+				    pj_pool_t *pool,
+				    pjmedia_sdp_session *sdp_local,
+				    const pjmedia_sdp_session *sdp_remote,
+				    unsigned media_index)
+{
+    return (*tp->op->media_create)(tp, pool, sdp_local, sdp_remote, 
+				   media_index);
+}
+
+/**
+ * Start the transport with regards to SDP negotiation result. 
+ * This is just a simple wrapper which calls <tt>media_start()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ * @param pool		The memory pool.
+ * @param sdp_local	Local SDP.
+ * @param sdp_remote	Remote SDP.
+ * @param media_index	Media index to start.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
+				    pj_pool_t *pool,
+				    pjmedia_sdp_session *sdp_local,
+				    const pjmedia_sdp_session *sdp_remote,
+				    unsigned media_index)
+{
+    return (*tp->op->media_start)(tp, pool, sdp_local, sdp_remote, media_index);
+}
+
+
+/**
+ * Stop the transport. 
+ * This is just a simple wrapper which calls <tt>media_stop()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_media_stop(pjmedia_transport *tp)
+{
+    return (*tp->op->media_stop)(tp);
+}
+
+/**
  * Close media transport. This is just a simple wrapper which calls 
  * <tt>destroy()</tt> member of the transport. This function will free
  * all resources created by this transport (such as sockets, memory, etc.).
@@ -424,6 +530,25 @@ PJ_INLINE(pj_status_t) pjmedia_transport_close(pjmedia_transport *tp)
 	return (*tp->op->destroy)(tp);
     else
 	return PJ_SUCCESS;
+}
+
+/**
+ * Simulate packet lost in the specified direction (for testing purposes).
+ * When enabled, the transport will randomly drop packets to the specified
+ * direction.
+ *
+ * @param tp	    The media transport.
+ * @param dir	    Media direction to which packets will be randomly dropped.
+ * @param pct_lost  Percent lost (0-100). Set to zero to disable packet
+ *		    lost simulation.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_simulate_lost(pjmedia_transport *tp,
+						       pjmedia_dir dir,
+						       unsigned pct_lost)
+{
+    return (*tp->op->simulate_lost)(tp, dir, pct_lost);
 }
 
 

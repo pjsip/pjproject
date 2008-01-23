@@ -3,6 +3,10 @@ include ../../build.mak
 THIRD_PARTY:=$(PJDIR)/third_party
 PA_DIR := $(THIRD_PARTY)/build/portaudio/src
 
+SRTP_INC=$(CC_INC)$(THIRD_PARTY)/build/srtp \
+	 $(CC_INC)$(THIRD_PARTY)/srtp/crypto/include \
+	 $(CC_INC)$(THIRD_PARTY)/srtp/include
+
 include $(PJDIR)/build/common.mak
 
 RULES_MAK := $(PJDIR)/build/rules.mak
@@ -25,7 +29,8 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(CC_INC)../../pjlib/include \
 		   $(CC_INC)../../pjlib-util/include \
 		   $(CC_INC)../../pjnath/include \
-		   $(CC_INC)../..
+		   $(CC_INC)../.. \
+		   $(SRTP_INC) 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
@@ -48,7 +53,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			resample_resample.o resample_libsamplerate.o \
 			resample_port.o rtcp.o rtp.o sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stream.o \
-			tonegen.o transport_ice.o transport_udp.o \
+			tonegen.o transport_ice.o transport_srtp.o \
+			transport_udp.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			$(SOUND_OBJS) $(NULLSOUND_OBJS)
 
