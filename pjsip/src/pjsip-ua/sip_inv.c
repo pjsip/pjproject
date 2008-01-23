@@ -676,12 +676,13 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
 /*
  * Verify incoming INVITE request.
  */
-PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
-					     unsigned *options,
-					     const pjmedia_sdp_session *l_sdp,
-					     pjsip_dialog *dlg,
-					     pjsip_endpoint *endpt,
-					     pjsip_tx_data **p_tdata)
+PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
+					      unsigned *options,
+					      const pjmedia_sdp_session *r_sdp,
+					      const pjmedia_sdp_session *l_sdp,
+					      pjsip_dialog *dlg,
+					      pjsip_endpoint *endpt,
+					      pjsip_tx_data **p_tdata)
 {
     pjsip_msg *msg;
     pjsip_allow_hdr *allow;
@@ -722,10 +723,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
     /* Init response header list */
     pj_list_init(&res_hdr_list);
 
-    /* Check the request body, see if it'inv something that we support
-     * (i.e. SDP). 
+    /* Check the request body, see if it's something that we support,
+     * only when the body hasn't been parsed before.
      */
-    if (msg->body) {
+    if (r_sdp==NULL && msg->body) {
 	pjsip_msg_body *body = msg->body;
 	pj_str_t str_application = {"application", 11};
 	pj_str_t str_sdp = { "sdp", 3 };
@@ -777,6 +778,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
 	    goto on_return;
 	}
 
+	r_sdp = sdp;
+    }
+
+    if (r_sdp) {
 	/* Negotiate with local SDP */
 	if (l_sdp) {
 	    pjmedia_sdp_neg *neg;
@@ -787,7 +792,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request(pjsip_rx_data *rdata,
 
 	    /* Create SDP negotiator */
 	    status = pjmedia_sdp_neg_create_w_remote_offer(
-			    rdata->tp_info.pool, l_sdp, sdp, &neg);
+			    rdata->tp_info.pool, l_sdp, r_sdp, &neg);
 	    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
 	    /* Negotiate SDP */
@@ -1025,6 +1030,21 @@ on_return:
     }
 
     return status;
+}
+
+
+/*
+ * Verify incoming INVITE request.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_verify_request( pjsip_rx_data *rdata,
+					      unsigned *options,
+					      const pjmedia_sdp_session *l_sdp,
+					      pjsip_dialog *dlg,
+					      pjsip_endpoint *endpt,
+					      pjsip_tx_data **p_tdata)
+{
+    return pjsip_inv_verify_request2(rdata, options, NULL, l_sdp, dlg, 
+				     endpt, p_tdata);
 }
 
 /*

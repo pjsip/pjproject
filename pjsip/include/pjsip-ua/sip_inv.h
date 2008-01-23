@@ -394,6 +394,8 @@ PJ_DECL(pj_status_t) pjsip_inv_create_uac(pjsip_dialog *dlg,
  *			Otherwise application MUST specify the endpt argument
  *			(this is useful e.g. when application wants to send 
  *			the response statelessly).
+ *
+ * @see pjsip_inv_verify_request2()
  */
 PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
 						unsigned *options,
@@ -402,6 +404,20 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request(	pjsip_rx_data *rdata,
 						pjsip_endpoint *endpt,
 						pjsip_tx_data **tdata);
 
+/**
+ * Variant of #pjsip_inv_verify_request() which allows application to specify
+ * the parsed SDP in the \a offer argument. This is useful to avoid having to
+ * re-parse the SDP in the incoming request.
+ *
+ * @see pjsip_inv_verify_request()
+ */
+PJ_DECL(pj_status_t) pjsip_inv_verify_request2( pjsip_rx_data *rdata,
+						unsigned *options,
+						const pjmedia_sdp_session *offer,
+						const pjmedia_sdp_session *answer,
+						pjsip_dialog *dlg,
+						pjsip_endpoint *endpt,
+						pjsip_tx_data **tdata);
 
 /**
  * Create UAS invite session for the specified dialog in dlg. Application 
