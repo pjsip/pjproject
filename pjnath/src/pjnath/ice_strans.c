@@ -283,7 +283,7 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
     /* Create transaction ID for STUN keep alives */
     tsx_id.a1 = 0;
     tsx_id.a2 = comp_id;
-    tsx_id.a3 = (pj_uint32_t) ice_st;
+    tsx_id.a3 = (pj_uint32_t) (unsigned long) ice_st;
     pj_memcpy(comp->ka_tsx_id, &tsx_id, sizeof(comp->ka_tsx_id));
 
     /* Create socket */

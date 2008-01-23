@@ -742,7 +742,7 @@ static const char *dump_check(char *buffer, unsigned bufsize,
     if (lcand->addr.addr.sa_family == pj_AF_INET()) {
 	len = pj_ansi_snprintf(buffer, bufsize,
 			       "%d: [%d] %s:%d-->%s:%d",
-			       GET_CHECK_ID(clist, check),
+			       (int)GET_CHECK_ID(clist, check),
 			       check->lcand->comp_id,
 			       laddr, (int)pj_ntohs(lcand->addr.ipv4.sin_port),
 			       pj_inet_ntoa(rcand->addr.ipv4.sin_addr),
