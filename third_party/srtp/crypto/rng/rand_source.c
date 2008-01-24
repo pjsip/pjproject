@@ -132,11 +132,13 @@ rand_source_get_octet_string(void *dest, uint32_t len) {
 #else
   uint8_t *dst = (uint8_t *)dest;
 
+#ifdef PJ_DEV_URANDOM
   /* First try with /dev/urandom, if it's opened */
   if (dev_random_fdes >= 0) {
     if (read(dev_random_fdes, dest, len) == len)
 	return err_status_ok;	/* success */
   }
+#endif
 
   /* Generic C-library (rand()) version */
   /* This is a random source of last resort */
@@ -161,10 +163,12 @@ rand_source_deinit(void) {
 				      * but there is something wrong    */
 #endif
 
+#if defined(DEV_URANDOM) || defined(PJ_DEV_URANDOM)
   if (dev_random_fdes >= 0)
     close(dev_random_fdes);  
 
   dev_random_fdes = RAND_SOURCE_NOT_READY;
+#endif
   
   return err_status_ok;  
 }
