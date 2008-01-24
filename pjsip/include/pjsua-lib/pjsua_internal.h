@@ -315,11 +315,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
  */
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     pjsip_role_e role,
-				     int security_level);
+				     int security_level,
+				     int *sip_err_code);
 pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
 					   pj_pool_t *pool,
 					   const pjmedia_sdp_session *rem_sdp,
-					   pjmedia_sdp_session **p_sdp);
+					   pjmedia_sdp_session **p_sdp,
+					   int *sip_err_code);
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);

@@ -746,7 +746,8 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
 
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     pjsip_role_e role,
-				     int security_level)
+				     int security_level,
+				     int *sip_err_code)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
 
@@ -773,6 +774,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     /* Check if SRTP requires secure signaling */
     if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
 	if (security_level < acc->cfg.srtp_secure_signaling) {
+	    if (sip_err_code)
+		*sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
 	    return PJSIP_ESESSIONINSECURE;
 	}
     }
@@ -784,8 +787,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     status = pjmedia_transport_srtp_create(pjsua_var.med_endpt, 
 					   call->med_tp,
 					   &srtp_opt, &srtp);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	if (sip_err_code)
+	    *sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
 	return status;
+    }
 
     /* Set SRTP as current media transport */
     call->med_orig = call->med_tp;
@@ -801,7 +807,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
 					   pj_pool_t *pool,
 					   const pjmedia_sdp_session *rem_sdp,
-					   pjmedia_sdp_session **p_sdp)
+					   pjmedia_sdp_session **p_sdp,
+					   int *sip_status_code)
 {
     enum { MAX_MEDIA = 1, MEDIA_IDX = 0 };
     pjmedia_sdp_session *sdp;
@@ -822,8 +829,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     /* Create SDP */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, MAX_MEDIA,
 				      &skinfo, &sdp);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	if (sip_status_code) *sip_status_code = 500;
 	goto on_error;
+    }
 
     /* Add NAT info in the SDP */
     if (pjsua_var.ua_cfg.nat_type_in_sdp) {
@@ -852,8 +861,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     /* Give the SDP to media transport */
     status = pjmedia_transport_media_create(call->med_tp, pool, 
 					    sdp, rem_sdp, MEDIA_IDX);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	if (sip_status_code) *sip_status_code = PJSIP_SC_NOT_ACCEPTABLE;
 	goto on_error;
+    }
 
     *p_sdp = sdp;
     return PJ_SUCCESS;

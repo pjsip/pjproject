@@ -401,7 +401,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
-				      get_secure_level(dest_uri));
+				      get_secure_level(dest_uri), NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
@@ -411,7 +411,8 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 #if LATE_SDP
     offer = NULL;
 #else
-    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL, &offer);
+    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL, 
+					    &offer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "pjmedia unable to create SDP", status);
 	goto on_error;
@@ -558,7 +559,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int acc_id;
     pjsua_call *call;
     int call_id = -1;
-    int secure_level;
+    int secure_level, sip_err_code;
     pjmedia_sdp_session *offer, *answer;
     pj_status_t status;
 
@@ -691,9 +692,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
-				      secure_level);
+				      secure_level, &sip_err_code);
     if (status != PJ_SUCCESS) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+				      sip_err_code, NULL,
 				      NULL, NULL);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
@@ -718,9 +721,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Get media capability from media endpoint: */
     status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, 
-					    offer, &answer);
+					    offer, &answer, &sip_err_code);
     if (status != PJ_SUCCESS) {
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+				      sip_err_code, NULL,
 				      NULL, NULL);
 	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
@@ -1424,7 +1429,8 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-				      get_secure_level(&dlg->remote.info_str));
+				      get_secure_level(&dlg->remote.info_str),
+				      NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_dec_lock(dlg);
@@ -1435,7 +1441,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     PJ_UNUSED_ARG(unhold);
     PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
     status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
-					    NULL, &sdp);
+					    NULL, &sdp, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -1494,7 +1500,8 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-				      get_secure_level(&dlg->remote.info_str));
+				      get_secure_level(&dlg->remote.info_str),
+				      NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_dec_lock(dlg);
@@ -1503,7 +1510,7 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 
     /* Create SDP */
     status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
-					    NULL, &sdp);
+					    NULL, &sdp, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -2623,7 +2630,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	/* Init media channel */
 	secure_level = get_secure_level(&call->inv->dlg->remote.info_str);
 	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
-					  secure_level);
+					  secure_level, NULL);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
@@ -2631,7 +2638,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	}
 
 	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
-					        offer, &answer);
+					        offer, &answer, NULL);
     }
 
     if (status != PJ_SUCCESS) {
@@ -2679,7 +2686,7 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 	/* Init media channel */
 	secure_level = get_secure_level(&call->inv->dlg->remote.info_str);
 	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-					  secure_level);
+					  secure_level, NULL);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
@@ -2687,7 +2694,7 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 	}
 
 	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
-					        NULL, offer);
+					        NULL, offer, NULL);
     }
 
     if (status != PJ_SUCCESS) {
