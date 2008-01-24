@@ -220,7 +220,7 @@ static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
 	(*p_cnt)++;
     }
 
-    return PJ_SUCCESS;
+    return (*p_cnt) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
 
