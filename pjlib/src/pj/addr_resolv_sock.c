@@ -70,6 +70,22 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 ||
 		     af==PJ_AF_UNSPEC, PJ_EINVAL);
 
+    /* Check if nodename is IP address */
+    pj_bzero(&ai[0], sizeof(ai[0]));
+    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+    if (pj_inet_pton(af, nodename, pj_sockaddr_get_addr(&ai[0].ai_addr)) 
+	 == PJ_SUCCESS) 
+    {
+	pj_str_t tmp;
+
+	tmp.ptr = ai[0].ai_canonname;
+	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	*count = 1;
+
+	return PJ_SUCCESS;
+    }
+
     /* Copy node name to null terminated string. */
     if (nodename->slen >= PJ_MAX_HOSTNAME)
 	return PJ_ENAMETOOLONG;
@@ -118,7 +134,23 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
 #else	/* PJ_SOCK_HAS_GETADDRINFO */
 
-    PJ_ASSERT_RETURN(count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(count && *count, PJ_EINVAL);
+
+    /* Check if nodename is IP address */
+    pj_bzero(&ai[0], sizeof(ai[0]));
+    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+    if (pj_inet_pton(af, nodename, pj_sockaddr_get_addr(&ai[0].ai_addr)) 
+	 == PJ_SUCCESS) 
+    {
+	pj_str_t tmp;
+
+	tmp.ptr = ai[0].ai_canonname;
+	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	*count = 1;
+
+	return PJ_SUCCESS;
+    }
 
     if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
 	pj_hostent he;
