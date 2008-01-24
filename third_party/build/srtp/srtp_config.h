@@ -26,7 +26,7 @@
     (defined(PJ_M_X86_64) && PJ_M_X86_64!=0) || \
     (defined(PJ_M_IA64) && PJ_M_IA64!=0)
 #   define CPU_CISC	    1
-#   define HAVE_X86	    1   /* use X86 inlined assembly code */
+/* #   define HAVE_X86	    1   use X86 inlined assembly code */
 #else
 #   define CPU_RISC	    1
 #endif
@@ -113,7 +113,7 @@
     typedef pj_int64_t	    int64_t;
 #endif
 
-#define SIZEOF_UNSIGNED_LONG	    (sizeof(unsigned long))
+#define SIZEOF_UNSIGNED_LONG	    8
 #define SIZEOF_UNSIGNED_LONG_LONG   8
 
 
@@ -154,6 +154,13 @@
 
 /* Path to random device */
 /* #define DEV_URANDOM "/dev/urandom" */
+
+/* Only with PJSIP:
+ * Try to open PJ_DEV_URANDOM if present
+ */
+#if defined(PJ_HAS_FCNTL_H) && defined(PJ_HAS_UNISTD_H)
+#   define PJ_DEV_URANDOM	"/dev/urandom"
+#endif
 
 /* We have overridden libsrtp error mechanism, so these are not used. */
 /* #undef ERR_REPORTING_FILE */

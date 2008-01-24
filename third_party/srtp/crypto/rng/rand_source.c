@@ -44,7 +44,7 @@
 
 #include "srtp_config.h"
 
-#ifdef DEV_URANDOM
+#if defined(DEV_URANDOM) || defined(PJ_DEV_URANDOM)
 # include <fcntl.h>          /* for open()  */
 # include <unistd.h>         /* for close() */
 #elif (_MSC_VER >= 1400)
@@ -87,6 +87,13 @@ rand_source_init(void) {
   dev_random_fdes = open(DEV_URANDOM, O_RDONLY);
   if (dev_random_fdes < 0)
     return err_status_init_fail;
+#elif defined(PJ_DEV_URANDOM)
+  /* open random source for reading */
+  dev_random_fdes = open(PJ_DEV_URANDOM, O_RDONLY);
+  if (dev_random_fdes < 0) {
+    err_report(3,"Ugh: /dev/urandom not present, using rand() instead");
+    return err_status_ok;  /* it's ok, it'll fallback to using rand() */
+  }
 #elif (_MSC_VER >= 1400)
   dev_random_fdes = RAND_SOURCE_READY;
 #else
@@ -123,9 +130,16 @@ rand_source_get_octet_string(void *dest, uint32_t len) {
 	  len--;
   }
 #else
+  uint8_t *dst = (uint8_t *)dest;
+
+  /* First try with /dev/urandom, if it's opened */
+  if (dev_random_fdes >= 0) {
+    if (read(dev_random_fdes, dest, len) == len)
+	return err_status_ok;	/* success */
+  }
+
   /* Generic C-library (rand()) version */
   /* This is a random source of last resort */
-  uint8_t *dst = (uint8_t *)dest;
   while (len)
   {
 	  int val = rand();
@@ -141,13 +155,17 @@ rand_source_get_octet_string(void *dest, uint32_t len) {
  
 err_status_t
 rand_source_deinit(void) {
+#ifndef PJ_DEV_URANDOM
   if (dev_random_fdes < 0)
     return err_status_dealloc_fail;  /* well, we haven't really failed, *
 				      * but there is something wrong    */
-#ifdef DEV_URANDOM
-  close(dev_random_fdes);  
 #endif
+
+  if (dev_random_fdes >= 0)
+    close(dev_random_fdes);  
+
   dev_random_fdes = RAND_SOURCE_NOT_READY;
   
   return err_status_ok;  
 }
+
