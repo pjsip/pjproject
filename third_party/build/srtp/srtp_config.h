@@ -22,9 +22,13 @@
 #include <pj/types.h>
 
 /* We'll just define CISC if it's x86 family */
-#if (defined(PJ_M_I386) && PJ_M_I386!=0) || \
-    (defined(PJ_M_X86_64) && PJ_M_X86_64!=0) || \
-    (defined(PJ_M_IA64) && PJ_M_IA64!=0)
+#if defined (PJ_M_I386) || defined(_i386_) || defined(i_386_) || \
+    defined(_X86_) || defined(x86) || defined(__i386__) || \
+    defined(__i386) || defined(_M_IX86) || defined(__I86__) || \
+    defined (PJ_M_X86_64) || defined(__amd64__) || defined(__amd64) || \
+    defined(__x86_64__) || defined(__x86_64) || \
+    defined(PJ_M_IA64) || defined(__ia64__) || defined(_IA64) || \
+    defined(__IA64__) || defined(_M_IA64)
 #   define CPU_CISC	    1
 /* #   define HAVE_X86	    1   use X86 inlined assembly code */
 #else
@@ -113,7 +117,8 @@
     typedef pj_int64_t	    int64_t;
 #endif
 
-#define SIZEOF_UNSIGNED_LONG	    8
+/* These shouldn't really matter as long as HAVE_UINT64_T is set */
+#define SIZEOF_UNSIGNED_LONG	    (sizeof(unsigned long))
 #define SIZEOF_UNSIGNED_LONG_LONG   8
 
 
