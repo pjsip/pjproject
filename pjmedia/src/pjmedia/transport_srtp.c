@@ -214,9 +214,17 @@ const char* get_libsrtp_errstr(int err)
 	"error while using semaphores",	    /* err_status_semaphore_err = 23 */
 	"error while using pfkey"	    /* err_status_pfkey_err     = 24 */
     };
-    return liberr[err];
+    if (err >= 0 && err < PJ_ARRAY_SIZE(liberr)) {
+	return liberr[err];
+    } else {
+	static char msg[32];
+	pj_ansi_snprintf(msg, sizeof(msg), "Unknown libsrtp error %d", err);
+	return msg;
+    }
 #else
-    return NULL;
+    static char msg[32];
+    pj_ansi_snprintf(msg, sizeof(msg), "libsrtp error %d", err);
+    return msg;
 #endif
 }
 
@@ -228,7 +236,8 @@ static pj_status_t pjmedia_srtp_init_lib(void)
 	err_status_t err;
 	err = srtp_init();
 	if (err != err_status_ok) { 
-	    PJ_LOG(4, (THIS_FILE, "Failed to init libsrtp."));
+	    PJ_LOG(4, (THIS_FILE, "Failed to initialize libsrtp: %s", 
+		       get_libsrtp_errstr(err)));
 	    return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	}
 
@@ -380,7 +389,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     int		     crypto_suites_cnt;
 
     if (srtp->session_inited) {
-	PJ_LOG(4, (THIS_FILE, "SRTP could not be re-init'd before deinit'd"));
+	PJ_LOG(4, (srtp->pool->obj_name, 
+		   "Error: unable to start (not initialized)"));
 	return PJ_EINVALIDOP;
     }
 
@@ -483,18 +493,18 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     /* Declare SRTP session initialized */
     srtp->session_inited = PJ_TRUE;
 
-    PJ_LOG(5, (THIS_FILE, "TX: %s key=%s", srtp->tx_policy.name.ptr,
-	    octet_string_hex_string(tx->key.ptr, tx->key.slen)));
+    PJ_LOG(5, (srtp->pool->obj_name, "TX: %s key=%s", srtp->tx_policy.name.ptr,
+	       octet_string_hex_string(tx->key.ptr, tx->key.slen)));
     if (srtp->tx_policy.flags) {
-	PJ_LOG(5, (THIS_FILE, "TX: disable%s%s", (cr_tx_idx?"":" enc"),
-						 (au_tx_idx?"":" auth")));
+	PJ_LOG(5,(srtp->pool->obj_name,"TX: disable%s%s", (cr_tx_idx?"":" enc"),
+		  (au_tx_idx?"":" auth")));
     }
 
-    PJ_LOG(5, (THIS_FILE, "RX: %s key=%s", srtp->rx_policy.name.ptr,
-	    octet_string_hex_string(rx->key.ptr, rx->key.slen)));
+    PJ_LOG(5, (srtp->pool->obj_name, "RX: %s key=%s", srtp->rx_policy.name.ptr,
+	       octet_string_hex_string(rx->key.ptr, rx->key.slen)));
     if (srtp->rx_policy.flags) {
-	PJ_LOG(5, (THIS_FILE, "RX: disable%s%s", (cr_rx_idx?"":" enc"),
-						 (au_rx_idx?"":" auth")));
+	PJ_LOG(5,(srtp->pool->obj_name,"RX: disable%s%s", (cr_rx_idx?"":" enc"),
+		  (au_rx_idx?"":" auth")));
     }
 
     return PJ_SUCCESS;
@@ -513,11 +523,15 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
 
     err = srtp_dealloc(p_srtp->srtp_rx_ctx);
     if (err != err_status_ok) {
-	PJ_LOG(4, (THIS_FILE, "Failed to dealloc RX SRTP context"));
+	PJ_LOG(4, (p_srtp->pool->obj_name, 
+		   "Failed to dealloc RX SRTP context: %s",
+		   get_libsrtp_errstr(err)));
     }
     err = srtp_dealloc(p_srtp->srtp_tx_ctx);
     if (err != err_status_ok) {
-	PJ_LOG(4, (THIS_FILE, "Failed to dealloc TX SRTP context"));
+	PJ_LOG(4, (p_srtp->pool->obj_name, 
+		   "Failed to dealloc TX SRTP context: %s",
+		   get_libsrtp_errstr(err)));
     }
 
     p_srtp->session_inited = PJ_FALSE;
@@ -713,8 +727,9 @@ static void srtp_rtp_cb( void *user_data, const void *pkt, pj_ssize_t size)
     if (err == err_status_ok) {
 	srtp->rtp_cb(srtp->user_data, srtp->rx_buffer, len);
     } else {
-	PJ_LOG(5, (THIS_FILE, "Failed to unprotect SRTP size=%d, err=%d", 
-		   size, err));
+	PJ_LOG(5,(srtp->pool->obj_name, 
+		  "Failed to unprotect SRTP, pkt size=%d, err=%s", 
+		  size, get_libsrtp_errstr(err)));
     }
 
     pj_lock_release(srtp->mutex);
@@ -746,8 +761,9 @@ static void srtp_rtcp_cb( void *user_data, const void *pkt, pj_ssize_t size)
     if (err == err_status_ok) {
 	srtp->rtcp_cb(srtp->user_data, srtp->rx_buffer, len);
     } else {
-	PJ_LOG(5, (THIS_FILE, "Failed to unprotect SRTCP size=%d, err=%d",
-		   size, err));
+	PJ_LOG(5,(srtp->pool->obj_name, 
+		  "Failed to unprotect SRTCP, pkt size=%d, err=%s",
+		  size, get_libsrtp_errstr(err)));
     }
     
     pj_lock_release(srtp->mutex);
@@ -792,7 +808,8 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 	    err = crypto_get_random((unsigned char*)key, 
 				     crypto_suites[cs_idx].cipher_key_len);
 	    if (err != err_status_ok) {
-		PJ_LOG(5,(THIS_FILE, "Failed generating random key"));
+		PJ_LOG(5,(THIS_FILE, "Failed generating random key: %s",
+			  get_libsrtp_errstr(err)));
 		return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	    }
 	    for (i=0; i<crypto_suites[cs_idx].cipher_key_len && key_ok; ++i)
@@ -1243,7 +1260,8 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 
     status = pjmedia_transport_media_stop(srtp->real_tp);
     if (status != PJ_SUCCESS)
-	PJ_LOG(4, (THIS_FILE, "SRTP failed stop underlying media transport."));
+	PJ_LOG(4, (srtp->pool->obj_name, 
+		   "SRTP failed stop underlying media transport."));
 
     return pjmedia_transport_srtp_stop(tp);
 }
