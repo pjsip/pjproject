@@ -200,11 +200,12 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
     if (statcode >= PJMEDIA_LIBSRTP_ERRNO_START &&
 	statcode <  PJMEDIA_LIBSRTP_ERRNO_END)
     {
-	int err = statcode - PJMEDIA_PORTAUDIO_ERRNO_START;
+	int err = statcode - PJMEDIA_LIBSRTP_ERRNO_START;
 	pj_str_t msg;
 	
 	msg = pj_str((char*)get_libsrtp_errstr(err));
 
+	errstr.ptr = buf;
 	pj_strncpy_with_null(&errstr, &msg, bufsize);
 	return errstr;
     
