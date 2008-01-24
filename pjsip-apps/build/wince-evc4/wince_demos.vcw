@@ -75,6 +75,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "libsrtp"="..\..\..\third_party\build\srtp\libsrtp.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjlib_util_wince"="..\..\..\pjlib-util\build\wince-evc4\pjlib_util_wince.vcp" - Package Owner=<4>
 
 Package=<5>
@@ -256,6 +268,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libmilenage
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsrtp
     End Project Dependency
 }}}
 

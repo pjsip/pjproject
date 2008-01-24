@@ -137,6 +137,20 @@
 #   pragma warning(disable:4244) // conversion from int64 to int
 #endif
 
+/* clock()  */
+#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    /* clock() causes unresolved symbol on linking */
+#   define _CLOCK_T_DEFINED
+#   define CLOCKS_PER_SEC   1000
+#   define clock_t	    unsigned
+
+    #include <windows.h>
+    static clock_t clock(void)
+    {
+	return GetTickCount();
+    }
+#endif
+
 
 /* Path to random device */
 /* #define DEV_URANDOM "/dev/urandom" */

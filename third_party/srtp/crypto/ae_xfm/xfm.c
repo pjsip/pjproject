@@ -177,6 +177,9 @@ aes_128_cbc_hmac_sha1_96_inv(void *key,
 
 #define ENC 1
 
+// eVC4 declares DEBUG
+#undef DEBUG
+
 #define DEBUG 0
 
 err_status_t
