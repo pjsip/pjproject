@@ -32,7 +32,8 @@
 #   define CPU_CISC	    1
 /* #   define HAVE_X86	    1   use X86 inlined assembly code */
 #else
-#   define CPU_RISC	    1
+/*#   define CPU_RISC	    1*/
+#   define CPU_CISC	    1
 #endif
 
 /* Define to compile in dynamic debugging system. */
