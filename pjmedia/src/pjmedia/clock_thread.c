@@ -91,11 +91,13 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_thread_create(pool, "clock", &clock_thread, clock,
-			      0, 0, &clock->thread);
-    if (status != PJ_SUCCESS) {
-	pj_lock_destroy(clock->lock);
-	return status;
+    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0) {
+	status = pj_thread_create(pool, "clock", &clock_thread, clock,
+				  0, 0, &clock->thread);
+	if (status != PJ_SUCCESS) {
+	    pj_lock_destroy(clock->lock);
+	    return status;
+	}
     }
 
 
