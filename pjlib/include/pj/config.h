@@ -449,7 +449,6 @@
 
 
 /**
- * \def PJ_HAS_TCP
  * Support TCP in the library.
  * Disabling TCP will reduce the footprint slightly (about 6KB).
  *
@@ -460,7 +459,6 @@
 #endif
 
 /**
- * \def PJ_HAS_IPV6
  * Support IPv6 in the library. If this support is disabled, some IPv6 
  * related functions will return PJ_EIPV6NOTSUP.
  *
@@ -844,6 +842,11 @@
  * @def PJ_DECL_NO_RETURN(type)
  * @param type The return type of the function.
  * Declare a function that will not return.
+ */
+/**
+ * @def PJ_IDECL_NO_RETURN(type)
+ * @param type The return type of the function.
+ * Declare an inline function that will not return.
  */
 /**
  * @def PJ_BEGIN_DECL

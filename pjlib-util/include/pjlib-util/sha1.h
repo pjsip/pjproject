@@ -37,9 +37,9 @@ PJ_BEGIN_DECL
 /** SHA1 context */
 typedef struct pj_sha1_context
 {
-    pj_uint32_t state[5];
-    pj_uint32_t count[2];
-    pj_uint8_t	buffer[64];
+    pj_uint32_t state[5];	/**< State  */
+    pj_uint32_t count[2];	/**< Count  */
+    pj_uint8_t	buffer[64];	/**< Buffer */
 } pj_sha1_context;
 
 /** SHA1 digest size is 20 bytes */

@@ -32,7 +32,7 @@ PJ_BEGIN_DECL
  * @ingroup PJ_DNS
  * @{
  *
- * \subsection PJ_DNS_SRV_RESOLVER_INTRO DNS SRV Resolution Helper
+ * \section PJ_DNS_SRV_RESOLVER_INTRO DNS SRV Resolution Helper
  *
  * This module provides an even higher layer of abstraction for the DNS
  * resolution framework, to resolve DNS SRV names.

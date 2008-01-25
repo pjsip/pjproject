@@ -919,8 +919,27 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_unregister_tpfactory(pjsip_tpmgr *mgr,
  * TRANSPORT MANAGER
  *
  *****************************************************************************/
-typedef void (*pjsip_rx_callback)(pjsip_endpoint*, pj_status_t, pjsip_rx_data *);
-typedef pj_status_t (*pjsip_tx_callback)(pjsip_endpoint*, pjsip_tx_data*);
+
+/**
+ * Type of callback to be called when transport manager receives incoming
+ * SIP message.
+ *
+ * @param ep	    Endpoint.
+ * @param status    Receiption status.
+ * @param rd	    Received packet.
+ */
+typedef void (*pjsip_rx_callback)(pjsip_endpoint *ep, pj_status_t status, 
+				  pjsip_rx_data *rd);
+
+/**
+ * Type of callback to be called before transport manager is about
+ * to transmit SIP message.
+ *
+ * @param ep	    Endpoint.
+ * @param td	    Transmit data.
+ */
+typedef pj_status_t (*pjsip_tx_callback)(pjsip_endpoint *ep, pjsip_tx_data*td);
+
 /**
  * Create a transport manager. Normally application doesn't need to call
  * this function directly, since a transport manager will be created and

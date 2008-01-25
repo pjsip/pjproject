@@ -1032,7 +1032,7 @@ typedef struct pjsip_generic_array_hdr
     /** Number of tags/elements. */
     unsigned	count;
 
-    /**< Tags/elements. */
+    /** Tags/elements. */
     pj_str_t	values[PJSIP_GENERIC_ARRAY_MAX_COUNT];
 
 } pjsip_generic_array_hdr;

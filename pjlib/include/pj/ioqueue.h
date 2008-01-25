@@ -166,7 +166,7 @@ typedef struct pj_ioqueue_callback
                              pj_ssize_t bytes_read);
 
     /**
-     * This callback is called when #pj_ioqueue_write or #pj_ioqueue_sendto
+     * This callback is called when #pj_ioqueue_send or #pj_ioqueue_sendto
      * completes.
      *
      * @param key	    The key.

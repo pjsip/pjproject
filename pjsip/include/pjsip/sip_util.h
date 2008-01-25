@@ -259,7 +259,17 @@ typedef struct pjsip_send_state
 } pjsip_send_state;
 
 
-typedef void (*pjsip_send_callback)(pjsip_send_state*, pj_ssize_t sent,
+/**
+ * Declaration for callback function to be specified in 
+ * #pjsip_endpt_send_request_stateless(), #pjsip_endpt_send_response(), or
+ * #pjsip_endpt_send_response2().
+ *
+ * @param st	    Structure to keep transmission state.
+ * @param sent	    Number of bytes sent.
+ * @param cont	    When current transmission fails, specify whether
+ *		    the function should fallback to next destination.
+ */
+typedef void (*pjsip_send_callback)(pjsip_send_state *st, pj_ssize_t sent,
 				    pj_bool_t *cont);
 
 /**
@@ -517,7 +527,14 @@ PJ_DECL(pj_status_t) pjsip_endpt_respond( pjsip_endpoint *endpt,
 					  const pjsip_msg_body *body,
 					  pjsip_transaction **p_tsx );
 
-typedef void (*pjsip_endpt_send_callback)(void*, pjsip_event*);
+/**
+ * Type of callback to be specified in #pjsip_endpt_send_request().
+ *
+ * @param token	    The token that was given in #pjsip_endpt_send_request()
+ * @param e	    Completion event.
+ */
+typedef void (*pjsip_endpt_send_callback)(void *token, pjsip_event *e);
+
 /**
  * Send outgoing request and initiate UAC transaction for the request.
  * This is an auxiliary function to be used by application to send arbitrary

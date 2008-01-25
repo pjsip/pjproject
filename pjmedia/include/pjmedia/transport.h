@@ -56,6 +56,12 @@
  * so it should not need to call the function pointer inside 
  * #pjmedia_transport_op directly.
  *
+ * The connection between \ref PJMED_STRM and media transport is shown in
+ * the diagram below:
+
+   \image html media-transport.PNG
+
+
  * \section PJMEDIA_TRANSPORT_H_USING Using the Media Transport
  *
  * The media transport's life-cycle normally follows the following stages.
@@ -135,6 +141,39 @@
  *    all resources used by the transport, such as sockets and memory.
  *
  *
+ * \section PJMEDIA_TRANSPORT_H_EXT Media Transport Extended API
+ 
+   Apart from the basic interface above, the media transport provides some
+   more APIs:
+
+    - pjmedia_transport_media_create()
+   \n
+      This API is provided to allow the media transport to add more information
+      in the SDP offer, before the offer is sent to remote. Additionally, for 
+      answerer side, this callback allows the media transport to reject the 
+      offer before this offer is processed by the SDP negotiator. 
+
+    - pjmedia_transport_media_start()
+    \n
+      This API should be called after offer and answer are negotiated, and 
+      both SDPs are available, and before the media is started. For answerer
+      side, this callback will be called before the answer is sent to remote,
+      to allow media transport to put additional info in the SDP. For 
+      offerer side, this callback will be called after SDP answer is 
+      received. In this callback, the media transport has the final chance 
+      to negotiate/validate the offer and answer before media is really 
+      started (and answer is sent, for answerer side). 
+
+    - pjmedia_transport_media_stop()
+    \n
+      This API should be called when the media is stopped, to allow the media
+      transport to release its resources. 
+
+    - pjmedia_transport_simulate_lost()
+    \n
+      This API can be used to instruct media transport to simulate packet lost
+      on a particular direction.
+
  * \section PJMEDIA_TRANSPORT_H_IMPL Implementing Media Transport
  *
  * To implement a new type of media transport, one needs to "subclass" the
@@ -168,7 +207,7 @@ PJ_BEGIN_DECL
 
 #include <pjmedia/sdp.h>
 
-/*
+/**
  * Forward declaration for media transport.
  */
 typedef struct pjmedia_transport pjmedia_transport;
@@ -458,6 +497,12 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
  * Generate local SDP parts that are related to the specified media transport.
  * Remote SDP might be needed as reference when application is in deciding
  * side of negotiation (callee side), otherwise it should be NULL.
+ *
+ * This API is provided to allow the media transport to add more information
+ * in the SDP offer, before the offer is sent to remote. Additionally, for 
+ * answerer side, this callback allows the media transport to reject the 
+ * offer before this offer is processed by the SDP negotiator. 
+ *
  * This is just a simple wrapper which calls <tt>media_create()</tt> member 
  * of the transport.
  *
@@ -465,6 +510,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
  * @param pool		The memory pool.
  * @param sdp_local	Local SDP.
  * @param sdp_remote	Remote SDP.
+ * @param media_index	Media index in SDP.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -480,6 +526,15 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
 
 /**
  * Start the transport with regards to SDP negotiation result. 
+ * This API should be called after offer and answer are negotiated, and 
+ * both SDPs are available, and before the media is started. For answerer
+ * side, this callback will be called before the answer is sent to remote,
+ * to allow media transport to put additional info in the SDP. For 
+ * offerer side, this callback will be called after SDP answer is 
+ * received. In this callback, the media transport has the final chance 
+ * to negotiate/validate the offer and answer before media is really 
+ * started (and answer is sent, for answerer side). 
+ *
  * This is just a simple wrapper which calls <tt>media_start()</tt> member 
  * of the transport.
  *
@@ -503,6 +558,9 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
 
 /**
  * Stop the transport. 
+ * This API should be called when the media is stopped, to allow the media
+ * transport to release its resources. 
+ *
  * This is just a simple wrapper which calls <tt>media_stop()</tt> member 
  * of the transport.
  *

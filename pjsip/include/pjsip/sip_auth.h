@@ -30,7 +30,7 @@
 PJ_BEGIN_DECL
 
 /**
- * @addtogroup PJSIP_AUTH Authentication Framework
+ * @addtogroup PJSIP_AUTH
  * @ingroup PJSIP_CORE
  * @brief Client and server side authentication framework.
  */

@@ -45,7 +45,7 @@ typedef int pj_cis_buf_t;
  */
 typedef struct pj_cis_t
 {
-    PJ_CIS_ELEM_TYPE	cis_buf[256];
+    PJ_CIS_ELEM_TYPE	cis_buf[256];	/**< Internal buffer.	*/
 } pj_cis_t;
 
 

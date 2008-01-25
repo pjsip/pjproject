@@ -20,7 +20,7 @@
 #define __PJSIP_SIMPLE_EVENT_NOTIFY_MSG_H__
 
 /**
- * @file event_notify_msg.h
+ * @file evsub_msg.h
  * @brief SIP Event Notification Headers (RFC 3265)
  */
 #include <pjsip/sip_msg.h>

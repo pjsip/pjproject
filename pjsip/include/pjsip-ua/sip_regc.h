@@ -20,7 +20,7 @@
 #define __PJSIP_SIP_REG_H__
 
 /**
- * @file sip_reg.h
+ * @file sip_regc.h
  * @brief SIP Registration Client
  */
 

@@ -360,13 +360,15 @@ PJ_DECL(pjsip_transaction*) pjsip_rdata_get_tsx( pjsip_rx_data *rdata );
  */
 PJ_DECL(void) pjsip_tsx_layer_dump(pj_bool_t detail);
 
-/*
+/**
  * Get the string name for the state.
+ * @param state	State
  */
 PJ_DECL(const char *) pjsip_tsx_state_str(pjsip_tsx_state_e state);
 
-/*
+/**
  * Get the role name.
+ * @param role	Role.
  */
 PJ_DECL(const char *) pjsip_role_name(pjsip_role_e role);
 

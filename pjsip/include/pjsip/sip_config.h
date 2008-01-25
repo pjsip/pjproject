@@ -351,7 +351,7 @@
  *
  * Note that even when this setting is enabled, asynchronous DNS resolution
  * will only be done when application calls #pjsip_endpt_create_resolver(),
- * configure the nameservers with #pj_dns_resolver_set_ns(), and configure
+ * configure the nameservers with pj_dns_resolver_set_ns(), and configure
  * the SIP endpoint's DNS resolver with #pjsip_endpt_set_resolver(). If
  * these steps are not followed, the domain will be resolved with normal
  * pj_gethostbyname() function.

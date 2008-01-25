@@ -209,7 +209,7 @@ typedef void pjsip_resolver_callback(pj_status_t status,
  * Create SIP resolver engine. Note that this function is normally called
  * internally by pjsip_endpoint instance.
  *
- * @param pf	    The Pool Factory.
+ * @param pool	    Pool to allocate memory from.
  * @param p_res	    Pointer to receive SIP resolver instance.
  *
  * @return	    PJ_SUCCESS when resolver can be successfully created.

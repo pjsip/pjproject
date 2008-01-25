@@ -94,7 +94,7 @@ PJ_DECL(pj_xml_node*) pj_xml_parse( pj_pool_t *pool, char *msg, pj_size_t len);
  *		    sufficient space in the buffer to print the message.
  */
 PJ_DECL(int) pj_xml_print( const pj_xml_node *node, char *buf, pj_size_t len,
-			   pj_bool_t include_prolog);
+			   pj_bool_t prolog);
 
 /**
  * Clone XML node and all subnodes.
@@ -123,7 +123,7 @@ PJ_DECL(pj_xml_node*) pj_xml_node_new(pj_pool_t *pool, const pj_str_t *name);
  *
  * @param pool	    Pool.
  * @param name	    Attribute name.
- * @param attr	    Attribute value.
+ * @param value	    Attribute value.
  *
  * @return	    The new XML attribute.
  */
@@ -161,6 +161,7 @@ PJ_DECL(pj_xml_node*) pj_xml_find_node(pj_xml_node *parent, const pj_str_t *name
  * Find first node with the specified name.
  *
  * @param parent    Parent node.
+ * @param node	    node->next is the starting point.
  * @param name	    Node name to find.
  *
  * @return	    XML node found or NULL.
@@ -184,7 +185,7 @@ PJ_DECL(pj_xml_attr*) pj_xml_find_attr(pj_xml_node *node, const pj_str_t *name,
 /**
  * Find a direct child node with the specified name and match the function.
  *
- * @param node	    Parent node.
+ * @param parent    Parent node.
  * @param name	    Optional name.
  * @param data	    Data to be passed to matching function.
  * @param match	    Optional matching function.

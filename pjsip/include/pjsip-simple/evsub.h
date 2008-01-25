@@ -20,7 +20,7 @@
 #define __PJSIP_SIMPLE_EVSUB_H__
 
 /**
- * @file event_notify.h
+ * @file evsub.h
  * @brief SIP Specific Event Notification Extension (RFC 3265)
  */
 
@@ -132,7 +132,7 @@ struct pjsip_evsub_user
      *
      * However, implementation MUST send NOTIFY request upon receiving this
      * callback. The suggested behavior is to call 
-     * #pjsip_evsub_last_notify(), since this function takes care
+     * #pjsip_evsub_current_notify(), since this function takes care
      * about unsubscription request and calculates the appropriate expiration
      * interval.
      */

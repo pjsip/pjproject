@@ -20,7 +20,7 @@
 #define __PJSIP_AUTH_SIP_AUTH_PARSER_H__
 
 /**
- * @file pjsip_auth_parser.h
+ * @file sip_auth_parser.h
  * @brief SIP Authorization Parser Module.
  */
 

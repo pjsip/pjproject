@@ -1104,7 +1104,7 @@ typedef struct pjsua_config
 PJ_DECL(void) pjsua_config_default(pjsua_config *cfg);
 
 
-/* The implementation has been moved to sip_auth.h */
+/** The implementation has been moved to sip_auth.h */
 #define pjsip_cred_dup	pjsip_cred_info_dup
 
 
@@ -1197,7 +1197,7 @@ PJ_DECL(void) pjsua_msg_data_init(pjsua_msg_data *msg_data);
 PJ_DECL(pj_status_t) pjsua_create(void);
 
 
-/* Forward declaration */
+/** Forward declaration */
 typedef struct pjsua_media_config pjsua_media_config;
 
 
@@ -3393,7 +3393,7 @@ PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
  * for this buddy, this function will also start the presence subscription
  * session immediately.
  *
- * @param buddy)cfg	Buddy configuration.
+ * @param buddy_cfg	Buddy configuration.
  * @param p_buddy_id	Pointer to receive buddy ID.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -4449,7 +4449,7 @@ PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
  *
  * @param tail_ms	The tail length, in miliseconds. Set to zero to
  *			disable AEC.
- * @param options	Options to be passed to #pjmedia_echo_create().
+ * @param options	Options to be passed to pjmedia_echo_create().
  *			Normally the value should be zero.
  *
  * @return		PJ_SUCCESS on success.

@@ -748,6 +748,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     PJ_UNUSED_ARG(pool);
     PJ_UNUSED_ARG(sdp_local);
     PJ_UNUSED_ARG(sdp_remote);
+    PJ_UNUSED_ARG(media_index);
 
     return PJ_SUCCESS;
 }

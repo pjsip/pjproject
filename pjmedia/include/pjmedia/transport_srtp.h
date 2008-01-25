@@ -21,11 +21,51 @@
 
 /**
  * @file srtp.h
- * @brief transport SRTP encapsulates secure media transport.
+ * @brief Secure RTP (SRTP) transport.
  */
 
 #include <pjmedia/transport.h>
 
+
+/**
+ * @defgroup PJMEDIA_TRANSPORT_SRTP Secure RTP (SRTP) Transport Adapter
+ * @ingroup PJMEDIA_TRANSPORT
+ * @brief Media transport adapter to add SRTP feature to existing transports
+ * @{
+ *
+ * This module implements SRTP as described by RFC 3711, using RFC 4568 as
+ * key exchange method. It implements \ref PJMEDIA_TRANSPORT_H to integrate
+ * with the rest of PJMEDIA framework.
+ *
+ * As we know, media transport is separated from the stream object (which 
+ * does the encoding/decoding of PCM frames, (de)packetization of RTP/RTCP 
+ * packets, and de-jitter buffering). The connection between stream and media
+ * transport is established when the stream is created (we need to specify 
+ * media transport during stream creation), and the interconnection can be 
+ * depicted from the diagram below:
+ *
+   \image html media-transport.PNG
+
+ * I think the diagram above is self-explanatory.
+ *
+ * SRTP functionality is implemented as some kind of "adapter", which is 
+ * plugged between the stream and the actual media transport that does 
+ * sending/receiving RTP/RTCP packets. When SRTP is used, the interconnection
+ * between stream and transport is like the diagram below:
+ *
+    \image html media-srtp-transport.PNG
+
+ * So to stream, the SRTP transport behaves as if it is a media transport 
+ * (because it is a media transport), and to the media transport it behaves
+ * as if it is a stream. The SRTP object then forwards RTP packets back and
+ * forth between stream and the actual transport, encrypting/decrypting 
+ * the RTP/RTCP packets as necessary.
+ * 
+ * The neat thing about this design is the SRTP "adapter" then can be used 
+ * to encrypt any kind of media transports. We currently have UDP and ICE 
+ * media transports that can benefit SRTP, and we could add SRTP to any 
+ * media transports that will be added in the future. 
+ */
 
 PJ_BEGIN_DECL
 
@@ -55,7 +95,7 @@ typedef struct pjmedia_srtp_crypto
     /** Crypto name.   */
     pj_str_t	name;
 
-    /* Flags, bitmask from #pjmedia_srtp_crypto_option */
+    /** Flags, bitmask from #pjmedia_srtp_crypto_option */
     unsigned	flags;
 
 } pjmedia_srtp_crypto;
@@ -168,7 +208,7 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_create(
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_transport_srtp_start(
-					    pjmedia_transport *tp,
+					    pjmedia_transport *srtp,
 					    const pjmedia_srtp_crypto *tx,
 					    const pjmedia_srtp_crypto *rx);
 
@@ -181,7 +221,7 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_start(
  *
  * @see #pjmedia_transport_srtp_start() 
  */
-PJ_DECL(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *tp);
+PJ_DECL(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp);
 
 
 /**
@@ -192,9 +232,13 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *tp);
  * @return		    member media transport.
  */
 PJ_DECL(pjmedia_transport*) pjmedia_transport_srtp_get_member(
-						    pjmedia_transport *tp);
+						    pjmedia_transport *srtp);
 
 
 PJ_END_DECL
+
+/**
+ * @}
+ */
 
 #endif /* __PJMEDIA_TRANSPORT_SRTP_H__ */

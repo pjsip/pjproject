@@ -21,7 +21,7 @@
 
 
 /**
- * @file dialog.h
+ * @file sip_dialog.h
  * @brief SIP Dialog abstraction
  */
 
