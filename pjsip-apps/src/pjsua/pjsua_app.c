@@ -121,7 +121,8 @@ static void usage(void)
     puts  ("SIP Account options:");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-    puts  ("  --use-srtp=N        Use SRTP N= 0: disabled, 1: optional, 2: mandatory");
+    puts  ("  --use-srtp=N        Use SRTP?  0:disabled, 1:optional, 2:mandatory (def:0)");
+    puts  ("  --srtp-secure=N     SRTP require secure SIP? 0:no, 1:tls, 1:sips (def:1)");
 #endif
     puts  ("  --registrar=url     Set the URL of registrar server");
     puts  ("  --id=url            Set the URL of local ID (used in From header)");
@@ -385,7 +386,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
-	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_USE_ICE, OPT_USE_SRTP,
+	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_USE_ICE, OPT_USE_SRTP, 
+	   OPT_SRTP_SECURE,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -446,6 +448,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "use-ice",    0, 0, OPT_USE_ICE},
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	{ "use-srtp",   1, 0, OPT_USE_SRTP},
+	{ "srtp-secure",1, 0, OPT_SRTP_SECURE},
 #endif
 	{ "add-codec",  1, 0, OPT_ADD_CODEC},
 	{ "dis-codec",  1, 0, OPT_DIS_CODEC},
@@ -807,6 +810,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    app_config.cfg.use_srtp = my_atoi(pj_optarg);
 	    if (!pj_isdigit(*pj_optarg) || app_config.cfg.use_srtp > 2) {
 		PJ_LOG(1,(THIS_FILE, "Invalid value for --use-srtp option"));
+		return -1;
+	    }
+	    break;
+	case OPT_SRTP_SECURE:
+	    app_config.cfg.srtp_secure_signaling = my_atoi(pj_optarg);
+	    if (!pj_isdigit(*pj_optarg) || 
+		app_config.cfg.srtp_secure_signaling > 2) 
+	    {
+		PJ_LOG(1,(THIS_FILE, "Invalid value for --srtp-secure option"));
 		return -1;
 	    }
 	    break;
@@ -1266,7 +1278,6 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
-
     /* TLS */
     if (config->use_tls)
 	pj_strcat2(&cfg, "--use-tls\n");
@@ -1309,6 +1320,20 @@ static int write_settings(const struct app_config *config,
     }
 
     pj_strcat2(&cfg, "\n#\n# Media settings:\n#\n");
+
+    /* SRTP */
+    if (app_config.cfg.use_srtp != PJSUA_DEFAULT_USE_SRTP) {
+	pj_ansi_sprintf(line, "--use-srtp %d\n",
+			app_config.cfg.use_srtp);
+	pj_strcat2(&cfg, line);
+    }
+    if (app_config.cfg.srtp_secure_signaling != 
+	PJSUA_DEFAULT_SRTP_SECURE_SIGNALING) 
+    {
+	pj_ansi_sprintf(line, "--srtp-secure %d\n",
+			app_config.cfg.srtp_secure_signaling);
+	pj_strcat2(&cfg, line);
+    }
 
 
     /* Media */

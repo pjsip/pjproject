@@ -259,7 +259,7 @@ static pj_bool_t pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 {
     int i;
 
-    for (i=0; i<(str->slen-substr->slen); ++i) {
+    for (i=0; i<=(str->slen-substr->slen); ++i) {
 	pj_str_t s;
 	s.ptr = str->ptr+i;
 	s.slen = substr->slen;
