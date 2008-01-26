@@ -472,6 +472,31 @@ PJ_INLINE(char*) pj_strchr( const pj_str_t *str, int chr)
 }
 
 /**
+ * Find the occurence of a substring substr in string str.
+ *
+ * @param str	    The string to search.
+ * @param substr    The string to search fo.
+ *
+ * @return the pointer to the position of substr in str, or NULL. Note
+ *         that if str is not NULL terminated, the returned pointer
+ *         is pointing to non-NULL terminated string.
+ */
+PJ_DECL(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr);
+
+/**
+ * Performs substring lookup like pj_strstr() but ignores the case of
+ * both strings.
+ *
+ * @param str	    The string to search.
+ * @param substr    The string to search fo.
+ *
+ * @return the pointer to the position of substr in str, or NULL. Note
+ *         that if str is not NULL terminated, the returned pointer
+ *         is pointing to non-NULL terminated string.
+ */
+PJ_DECL(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr);
+
+/**
  * Remove (trim) leading whitespaces from the string.
  *
  * @param str	    The string.

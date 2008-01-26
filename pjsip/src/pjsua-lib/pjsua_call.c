@@ -255,21 +255,6 @@ static pjsua_call_id alloc_call_id(void)
     return PJSUA_INVALID_ID;
 }
 
-static pj_bool_t pj_stristr(const pj_str_t *str, const pj_str_t *substr)
-{
-    int i;
-
-    for (i=0; i<=(str->slen-substr->slen); ++i) {
-	pj_str_t s;
-	s.ptr = str->ptr+i;
-	s.slen = substr->slen;
-
-	if (pj_stricmp(&s, substr)==0)
-	    return PJ_TRUE;
-    }
-    return PJ_FALSE;
-}
-
 /* Get signaling secure level.
  * Return:
  *  0: if signaling is not secure

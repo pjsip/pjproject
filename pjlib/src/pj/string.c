@@ -28,6 +28,44 @@
 #endif
 
 
+PJ_DEF(char*) pj_strstr(const pj_str_t *str, const pj_str_t *substr)
+{
+    const char *s, *ends;
+
+    /* Special case when substr is zero */
+    if (substr->slen == 0) {
+	return (char*)str->ptr;
+    }
+
+    s = str->ptr;
+    ends = str->ptr + str->slen - substr->slen;
+    for (; s<=ends; ++s) {
+	if (pj_ansi_strncmp(s, substr->ptr, substr->slen)==0)
+	    return (char*)s;
+    }
+    return NULL;
+}
+
+
+PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
+{
+    const char *s, *ends;
+
+    /* Special case when substr is zero */
+    if (substr->slen == 0) {
+	return (char*)str->ptr;
+    }
+
+    s = str->ptr;
+    ends = str->ptr + str->slen - substr->slen;
+    for (; s<=ends; ++s) {
+	if (pj_ansi_strnicmp(s, substr->ptr, substr->slen)==0)
+	    return (char*)s;
+    }
+    return NULL;
+}
+
+
 PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
     register char *p = str->ptr;
