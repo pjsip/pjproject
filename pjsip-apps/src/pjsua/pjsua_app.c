@@ -812,6 +812,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 		PJ_LOG(1,(THIS_FILE, "Invalid value for --use-srtp option"));
 		return -1;
 	    }
+	    cur_acc->use_srtp = app_config.cfg.use_srtp;
 	    break;
 	case OPT_SRTP_SECURE:
 	    app_config.cfg.srtp_secure_signaling = my_atoi(pj_optarg);
@@ -821,6 +822,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 		PJ_LOG(1,(THIS_FILE, "Invalid value for --srtp-secure option"));
 		return -1;
 	    }
+	    cur_acc->srtp_secure_signaling = app_config.cfg.srtp_secure_signaling;
 	    break;
 #endif
 
