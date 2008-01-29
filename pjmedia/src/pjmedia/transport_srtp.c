@@ -1016,8 +1016,9 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 	    /* SRTP is disabled but there is crypto attr in remote media */
 	    /* Put the checking here to save a bit memory for parsing */
 	    if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
-		DEACTIVATE_MEDIA(pool, m_loc);
-		return PJMEDIA_SRTP_ESDPINTRANSPORT;
+		//DEACTIVATE_MEDIA(pool, m_loc);
+		//return PJMEDIA_SRTP_ESDPINTRANSPORT;
+		continue;
 	    }
 
 	    has_crypto_attr = PJ_TRUE;
