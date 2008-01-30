@@ -296,12 +296,12 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     PJ_ASSERT_RETURN(endpt && p_tp, PJ_EINVAL);
 
     /* Check crypto availability */
-    if (opt->crypto_count == 0 && 
+    if (opt && opt->crypto_count == 0 && 
 	opt->use == PJMEDIA_SRTP_MANDATORY)
 	return PJMEDIA_SRTP_ESDPREQCRYPTO;
 
     /* Check crypto */
-    if (opt->use != PJMEDIA_SRTP_DISABLED) {
+    if (opt && opt->use != PJMEDIA_SRTP_DISABLED) {
 	for (i=0; i < opt->crypto_count; ++i) {
 	    int cs_idx = get_crypto_idx(&opt->crypto[i].name);
 
@@ -969,6 +969,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 		DEACTIVATE_MEDIA(pool, m_loc);
 		return PJMEDIA_SRTP_ESDPINTRANSPORT;
 	    }
+	    goto BYPASS_SRTP;
 	} else if (srtp->setting.use == PJMEDIA_SRTP_OPTIONAL) {
 		m_loc->desc.transport = m_rem->desc.transport;
 	} else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
@@ -1013,14 +1014,6 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 	    if (pj_stricmp(&m_rem->attr[i]->name, &ID_CRYPTO) != 0)
 		continue;
 
-	    /* SRTP is disabled but there is crypto attr in remote media */
-	    /* Put the checking here to save a bit memory for parsing */
-	    if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
-		//DEACTIVATE_MEDIA(pool, m_loc);
-		//return PJMEDIA_SRTP_ESDPINTRANSPORT;
-		continue;
-	    }
-
 	    has_crypto_attr = PJ_TRUE;
 
 	    status = parse_attr_crypto(srtp->pool, m_rem->attr[i], 
@@ -1045,9 +1038,12 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 			int cs_idx = get_crypto_idx(&tmp_rx_crypto.name);
 
 			/* Force to use test key */
+			/* bad keys for snom: */
 			//char *hex_test_key = "58b29c5c8f42308120ce857e439f2d"
 			//		     "7810a8b10ad0b1446be5470faea496";
-			//pj_str_t* test_key = &srtp->setting.crypto[j].key;
+			//char *hex_test_key = "20a26aac7ba062d356ff52b61e3993"
+			//		     "ccb78078f12c64db94b9c294927fd0";
+			//pj_str_t *test_key = &srtp->setting.crypto[j].key;
 			//char  *raw_test_key = pj_pool_zalloc(srtp->pool, 64);
 			//hex_string_to_octet_string(
 			//		raw_test_key,
@@ -1055,6 +1051,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 			//		strlen(hex_test_key));
 			//pj_strset(test_key, raw_test_key, 
 			//	  crypto_suites[cs_idx].cipher_key_len);
+			/* EO Force to use test key */
 
 			if (tmp_rx_crypto.key.slen != 
 			    (int)crypto_suites[cs_idx].cipher_key_len)
@@ -1071,7 +1068,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 	}
 
 	if (srtp->setting.use == PJMEDIA_SRTP_DISABLED) {
-	    /* At this point, it is ensured remote has no crypto attr */
+	    /* bypass when remote uses RTP/AVP and we disable SRTP */
 	    goto BYPASS_SRTP;
 	} else if (srtp->setting.use == PJMEDIA_SRTP_OPTIONAL) {
 	    /* bypass SRTP when no crypto-attr but remote uses RTP/AVP */

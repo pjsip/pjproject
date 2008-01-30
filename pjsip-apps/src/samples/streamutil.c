@@ -29,6 +29,17 @@
  * \includelineno streamutil.c
  */
 
+#include <pjlib.h>
+#include <pjlib-util.h>
+#include <pjmedia.h>
+#include <pjmedia-codec.h>
+#include <pjmedia/transport_srtp.h>
+
+#include <stdlib.h>	/* atoi() */
+#include <stdio.h>
+
+#include "util.h"
+
 
 static const char *desc = 
  " streamutil								\n"
@@ -70,17 +81,6 @@ static const char *desc =
 ;
 
 
-
-#include <pjlib.h>
-#include <pjlib-util.h>
-#include <pjmedia.h>
-#include <pjmedia-codec.h>
-#include <pjmedia/transport_srtp.h>
-
-#include <stdlib.h>	/* atoi() */
-#include <stdio.h>
-
-#include "util.h"
 
 
 #define THIS_FILE	"stream.c"
