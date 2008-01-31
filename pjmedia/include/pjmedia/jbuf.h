@@ -235,6 +235,22 @@ PJ_DECL(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 				      void *frame, 
 				      char *p_frm_type);
 
+/**
+ * Get a frame from the jitter buffer. The jitter buffer will return the
+ * oldest frame from it's buffer, when it is available.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame		Buffer to receive the payload from the jitter buffer.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param size		Pointer to receive frame size.
+ * @param p_frm_type	Pointer to receive frame type.
+ *			@see pjmedia_jbuf_get_frame().    
+ */
+PJ_DECL(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb, 
+				      void *frame, 
+				      pj_size_t *size, 
+				      char *p_frm_type);
+
 
 /**
  * Get jitter buffer current state/settings.

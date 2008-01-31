@@ -192,9 +192,11 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	 samples_count += samples_per_frame) 
     {
 	char frame_type;
+	pj_size_t frame_size;
 
 	/* Get frame from jitter buffer. */
-	pjmedia_jbuf_get_frame(stream->jb, channel->out_pkt, &frame_type);
+	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
+			        &frame_type);
 	
 	if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
 	    
@@ -325,7 +327,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 	    /* Decode */
 	    frame_in.buf = channel->out_pkt;
-	    frame_in.size = stream->frame_size;
+	    frame_in.size = frame_size;
 	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
 
 	    frame_out.buf = p_out_samp + samples_count;
