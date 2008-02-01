@@ -30,6 +30,7 @@ static const char *USAGE =
 "INPUT is the PCAP file name/path\n"
 "\n"
 "Options to filter packets from PCAP file:\n"
+"(you can always select the relevant packets from Wireshark of course!)\n"
 "  --src-ip=IP            Only include packets from this source address\n"
 "  --dst-ip=IP            Only include packets destined to this address\n"
 "  --src-port=port        Only include packets from this source port number\n"
@@ -52,6 +53,8 @@ static const char *USAGE =
 "    pcaputil -c AES_CM_128_HMAC_SHA1_80 \\\n"
 "              -k VLDONbsbGl2Puqy+0PV7w/uGfpSPKFevDpxGsxN3 \\\n"
 "              file.pcap output.wav\n"
+"\n"
+"Remote streaming is not supported yet."
 ;
 
 static pj_caching_pool cp;

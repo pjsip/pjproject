@@ -98,6 +98,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\pcaputil.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\pjsip-perf.c"
 				>
 			</File>
