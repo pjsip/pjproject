@@ -241,10 +241,10 @@ struct pjmedia_transport_op
 			  const pj_sockaddr_t *rem_rtcp,
 			  unsigned addr_len,
 			  void (*rtp_cb)(void *user_data,
-					 const void *pkt,
+					 void *pkt,
 					 pj_ssize_t size),
 			  void (*rtcp_cb)(void *user_data,
-					  const void *pkt,
+					  void *pkt,
 					  pj_ssize_t size));
 
     /**
@@ -423,10 +423,10 @@ PJ_INLINE(pj_status_t) pjmedia_transport_attach(pjmedia_transport *tp,
 						const pj_sockaddr_t *rem_rtcp,
 					        unsigned addr_len,
 					        void (*rtp_cb)(void *user_data,
-							       const void *pkt,
+							       void *pkt,
 							       pj_ssize_t),
 					        void (*rtcp_cb)(void *usr_data,
-							        const void*pkt,
+							        void*pkt,
 							        pj_ssize_t))
 {
     return tp->op->attach(tp, user_data, rem_addr, rem_rtcp, addr_len, 

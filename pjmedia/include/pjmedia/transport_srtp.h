@@ -225,6 +225,30 @@ PJ_DECL(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp);
 
 
 /**
+ * This is a utility function to decrypt SRTP packet using SRTP transport.
+ * This function is not part of SRTP transport's API, but it can be used
+ * to decrypt SRTP packets from non-network (for example, from a saved file)
+ * without having to use the transport framework. See pcaputil.c in the
+ * samples collection on how to use this function.
+ *
+ * @param tp		The SRTP transport.
+ * @param is_rtp	Set to non-zero if the packet is SRTP, otherwise set
+ *			to zero if the packet is SRTCP.
+ * @param pkt		On input, it contains SRTP or SRTCP packet. On
+ *			output, it contains the decrypted RTP/RTCP packet.
+ * @param pkt_len	On input, specify the length of the buffer. On
+ *			output, it will be filled with the actual length
+ *			of decrypted packet.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
+							pj_bool_t is_rtp,
+							void *pkt,
+							int *pkt_len);
+
+
+/**
  * Query member transport of SRTP.
  *
  * @param srtp		    The SRTP media transport.

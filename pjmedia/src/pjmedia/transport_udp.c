@@ -55,10 +55,10 @@ struct transport_udp
     pj_sockaddr		rem_rtcp_addr;	/**< Remote RTCP address	    */
     int			addr_len;	/**< Length of addresses.	    */
     void  (*rtp_cb)(	void*,		/**< To report incoming RTP.	    */
-			const void*,
+			void*,
 			pj_ssize_t);
     void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
-			const void*,
+			void*,
 			pj_ssize_t);
 
     unsigned		tx_drop_pct;	/**< Percent of tx pkts to drop.    */
@@ -105,10 +105,10 @@ static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       const pj_sockaddr_t *rem_rtcp,
 				       unsigned addr_len,
 				       void (*rtp_cb)(void*,
-						      const void*,
+						      void*,
 						      pj_ssize_t),
 				       void (*rtcp_cb)(void*,
-						       const void*,
+						       void*,
 						       pj_ssize_t));
 static void	   transport_detach   (pjmedia_transport *tp,
 				       void *strm);
@@ -419,7 +419,7 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     do {
-	void (*cb)(void*,const void*,pj_ssize_t);
+	void (*cb)(void*,void*,pj_ssize_t);
 	void *user_data;
 
 	cb = udp->rtp_cb;
@@ -523,7 +523,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
     udp = (struct transport_udp*) pj_ioqueue_get_user_data(key);
 
     do {
-	void (*cb)(void*,const void*,pj_ssize_t);
+	void (*cb)(void*,void*,pj_ssize_t);
 	void *user_data;
 
 	cb = udp->rtcp_cb;
@@ -587,10 +587,10 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 				       const pj_sockaddr_t *rem_rtcp,
 				       unsigned addr_len,
 				       void (*rtp_cb)(void*,
-						      const void*,
+						      void*,
 						      pj_ssize_t),
 				       void (*rtcp_cb)(void*,
-						       const void*,
+						       void*,
 						       pj_ssize_t))
 {
     struct transport_udp *udp = (struct transport_udp*) tp;

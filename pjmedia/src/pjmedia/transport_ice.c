@@ -40,10 +40,10 @@ struct transport_ice
     unsigned		 rx_drop_pct;	/**< Percent of rx pkts to drop.    */
 
     void	       (*rtp_cb)(void*,
-			         const void*,
+			         void*,
 				 pj_ssize_t);
     void	       (*rtcp_cb)(void*,
-				  const void*,
+				  void*,
 				  pj_ssize_t);
 };
 
@@ -59,10 +59,10 @@ static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       const pj_sockaddr_t *rem_rtcp,
 				       unsigned addr_len,
 				       void (*rtp_cb)(void*,
-						      const void*,
+						      void*,
 						      pj_ssize_t),
 				       void (*rtcp_cb)(void*,
-						       const void*,
+						       void*,
 						       pj_ssize_t));
 static void	   transport_detach   (pjmedia_transport *tp,
 				       void *strm);
@@ -674,10 +674,10 @@ static pj_status_t transport_attach  (pjmedia_transport *tp,
 				      const pj_sockaddr_t *rem_rtcp,
 				      unsigned addr_len,
 				      void (*rtp_cb)(void*,
-						     const void*,
+						     void*,
 						     pj_ssize_t),
 				      void (*rtcp_cb)(void*,
-						      const void*,
+						      void*,
 						      pj_ssize_t))
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;

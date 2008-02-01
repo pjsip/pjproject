@@ -83,7 +83,6 @@ typedef struct transport_srtp
     pj_pool_t		*pool;
     pj_lock_t		*mutex;
     char		 tx_buffer[MAX_BUFFER_LEN];
-    char		 rx_buffer[MAX_BUFFER_LEN];
 
     pjmedia_srtp_setting setting;
     /* SRTP policy */
@@ -102,10 +101,10 @@ typedef struct transport_srtp
     /* Stream information */
     void		*user_data;
     void		(*rtp_cb)( void *user_data,
-				   const void *pkt,
+				   void *pkt,
 				   pj_ssize_t size);
     void		(*rtcp_cb)(void *user_data,
-				   const void *pkt,
+				   void *pkt,
 				   pj_ssize_t size);
         
     /* Transport information */
@@ -117,12 +116,12 @@ typedef struct transport_srtp
 /*
  * This callback is called by transport when incoming rtp is received
  */
-static void srtp_rtp_cb( void *user_data, const void *pkt, pj_ssize_t size);
+static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size);
 
 /*
  * This callback is called by transport when incoming rtcp is received
  */
-static void srtp_rtcp_cb( void *user_data, const void *pkt, pj_ssize_t size);
+static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size);
 
 
 /*
@@ -136,10 +135,10 @@ static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       const pj_sockaddr_t *rem_rtcp,
 				       unsigned addr_len,
 				       void (*rtp_cb)(void*,
-						      const void*,
+						      void*,
 						      pj_ssize_t),
 				       void (*rtcp_cb)(void*,
-						       const void*,
+						       void*,
 						       pj_ssize_t));
 static void	   transport_detach   (pjmedia_transport *tp,
 				       void *strm);
@@ -357,7 +356,10 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 
     /* Initialize base pjmedia_transport */
     pj_memcpy(srtp->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
-    srtp->base.type = tp->type;
+    if (tp)
+	srtp->base.type = tp->type;
+    else
+	srtp->base.type = PJMEDIA_TRANSPORT_TYPE_UDP;
     srtp->base.op = &transport_srtp_op;
 
     /* Set underlying transport */
@@ -564,9 +566,9 @@ static pj_status_t transport_attach(pjmedia_transport *tp,
 				    const pj_sockaddr_t *rem_addr,
 				    const pj_sockaddr_t *rem_rtcp,
 				    unsigned addr_len,
-				    void (*rtp_cb) (void*, const void*,
+				    void (*rtp_cb) (void*, void*,
 						    pj_ssize_t),
-				    void (*rtcp_cb)(void*, const void*,
+				    void (*rtcp_cb)(void*, void*,
 						    pj_ssize_t))
 {
     transport_srtp *srtp = (transport_srtp*) tp;
@@ -590,10 +592,12 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
 {
     transport_srtp *srtp = (transport_srtp*) tp;
 
-    PJ_ASSERT_ON_FAIL(tp && srtp->real_tp, return);
-
     PJ_UNUSED_ARG(strm);
-    pjmedia_transport_detach(srtp->real_tp, srtp);
+    PJ_ASSERT_ON_FAIL(tp, return);
+
+    if (srtp->real_tp) {
+	pjmedia_transport_detach(srtp->real_tp, srtp);
+    }
 
     /* Clear up application infos from transport */
     srtp->rtp_cb = NULL;
@@ -687,7 +691,7 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 
     pjmedia_transport_detach(tp, NULL);
     
-    if (srtp->setting.close_member_tp) {
+    if (srtp->setting.close_member_tp && srtp->real_tp) {
 	pjmedia_transport_close(srtp->real_tp);
     }
 
@@ -704,7 +708,7 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 /*
  * This callback is called by transport when incoming rtp is received
  */
-static void srtp_rtp_cb( void *user_data, const void *pkt, pj_ssize_t size)
+static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 {
     transport_srtp *srtp = (transport_srtp *) user_data;
     int len = size;
@@ -715,17 +719,19 @@ static void srtp_rtp_cb( void *user_data, const void *pkt, pj_ssize_t size)
 	return;
     }
 
-    if (size < 0 || size > sizeof(srtp->rx_buffer) || !srtp->session_inited) {
+    if (size < 0 || !srtp->session_inited) {
 	return;
     }
 
-    pj_lock_acquire(srtp->mutex);
-    pj_memcpy(srtp->rx_buffer, pkt, size);
+    /* Make sure buffer is 32bit aligned */
+    PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return );
 
-    err = srtp_unprotect(srtp->srtp_rx_ctx, srtp->rx_buffer, &len);
+    pj_lock_acquire(srtp->mutex);
+
+    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
     
     if (err == err_status_ok) {
-	srtp->rtp_cb(srtp->user_data, srtp->rx_buffer, len);
+	srtp->rtp_cb(srtp->user_data, pkt, len);
     } else {
 	PJ_LOG(5,(srtp->pool->obj_name, 
 		  "Failed to unprotect SRTP, pkt size=%d, err=%s", 
@@ -738,7 +744,7 @@ static void srtp_rtp_cb( void *user_data, const void *pkt, pj_ssize_t size)
 /*
  * This callback is called by transport when incoming rtcp is received
  */
-static void srtp_rtcp_cb( void *user_data, const void *pkt, pj_ssize_t size)
+static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
 {
     transport_srtp *srtp = (transport_srtp *) user_data;
     int len = size;
@@ -749,17 +755,19 @@ static void srtp_rtcp_cb( void *user_data, const void *pkt, pj_ssize_t size)
 	return;
     }
 
-    if (size < 0 || size > sizeof(srtp->rx_buffer) || !srtp->session_inited) {
+    if (size < 0 || !srtp->session_inited) {
 	return;
     }
 
-    pj_lock_acquire(srtp->mutex);
-    pj_memcpy(srtp->rx_buffer, pkt, size);
+    /* Make sure buffer is 32bit aligned */
+    PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return );
 
-    err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, srtp->rx_buffer, &len);
+    pj_lock_acquire(srtp->mutex);
+
+    err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 
     if (err == err_status_ok) {
-	srtp->rtcp_cb(srtp->user_data, srtp->rx_buffer, len);
+	srtp->rtcp_cb(srtp->user_data, pkt, len);
     } else {
 	PJ_LOG(5,(srtp->pool->obj_name, 
 		  "Failed to unprotect SRTCP, pkt size=%d, err=%s",
@@ -1262,6 +1270,42 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 		   "SRTP failed stop underlying media transport."));
 
     return pjmedia_transport_srtp_stop(tp);
+}
+
+/* Utility */
+PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
+						       pj_bool_t is_rtp,
+						       void *pkt,
+						       int *pkt_len)
+{
+    transport_srtp *srtp = (transport_srtp *)tp;
+    err_status_t err;
+
+    if (srtp->bypass_srtp)
+	return PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(*pkt_len>0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(srtp->session_inited, PJ_EINVALIDOP);
+
+    /* Make sure buffer is 32bit aligned */
+    PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return PJ_EINVAL);
+
+    pj_lock_acquire(srtp->mutex);
+
+    if (is_rtp)
+	err = srtp_unprotect(srtp->srtp_rx_ctx, pkt, pkt_len);
+    else
+	err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, pkt, pkt_len);
+    
+    if (err != err_status_ok) {
+	PJ_LOG(5,(srtp->pool->obj_name, 
+		  "Failed to unprotect SRTP, pkt size=%d, err=%s", 
+		  *pkt_len, get_libsrtp_errstr(err)));
+    }
+
+    pj_lock_release(srtp->mutex);
+
+    return (err==err_status_ok) ? PJ_SUCCESS : PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 }
 
 #endif
