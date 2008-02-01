@@ -50,7 +50,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\..\lib\libsrtp-i386-vc6-release.lib"
+# ADD LIB32 /nologo /out:"..\..\lib\libsrtp-i386-win32-vc6-release.lib"
 
 !ELSEIF  "$(CFG)" == "libsrtp - Win32 Debug"
 
@@ -74,7 +74,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\..\lib\libsrtp-i386-vc6-debug.lib"
+# ADD LIB32 /nologo /out:"..\..\lib\libsrtp-i386-win32-vc6-debug.lib"
 
 !ENDIF 
 
