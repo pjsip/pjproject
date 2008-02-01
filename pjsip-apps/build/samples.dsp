@@ -118,6 +118,10 @@ SOURCE=..\src\samples\mix.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\pcaputil.c
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\samples\pjsip-perf.c"
 # End Source File
 # Begin Source File
@@ -183,10 +187,6 @@ SOURCE=..\src\samples\strerror.c
 # Begin Source File
 
 SOURCE=..\src\samples\tonegen.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\samples\transportpausetest.c
 # End Source File
 # End Group
 # Begin Group "Header Files"

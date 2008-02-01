@@ -53,5 +53,7 @@
 /* Old STUN */
 #include <pjlib-util/stun_simple.h>
 
+/* PCAP */
+#include <pjlib-util/pcap.h>
 
 #endif	/* __PJLIB_UTIL_H__ */

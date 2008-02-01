@@ -18,6 +18,7 @@ SAMPLES := confsample \
 	   level \
 	   mix \
 	   pjsip-perf \
+	   pcaputil \
 	   playfile \
 	   playsine \
 	   recfile \

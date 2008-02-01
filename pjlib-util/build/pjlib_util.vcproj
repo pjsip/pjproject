@@ -356,6 +356,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\pcap.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\resolver.c"
 				>
 				<FileConfiguration
@@ -622,6 +626,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjlib-util\md5.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\pcap.h"
 				>
 			</File>
 			<File

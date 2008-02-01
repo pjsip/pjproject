@@ -37,6 +37,7 @@ SOURCE	getopt.c
 SOURCE	hmac_md5.c
 SOURCE	hmac_sha1.c
 SOURCE	md5.c
+SOURCE	pcap.c
 SOURCE	resolver.c
 SOURCE	scanner.c
 SOURCE	sha1.c

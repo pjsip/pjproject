@@ -125,6 +125,10 @@ SOURCE="..\src\pjlib-util\md5.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\pcap.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\resolver.c"
 # End Source File
 # Begin Source File
@@ -208,6 +212,10 @@ SOURCE="..\include\pjlib-util\hmac_sha1.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\md5.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\pcap.h"
 # End Source File
 # Begin Source File
 
