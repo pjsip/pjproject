@@ -260,23 +260,63 @@ static pjsua_call_id alloc_call_id(void)
  *  0: if signaling is not secure
  *  1: if TLS transport is used for immediate hop
  *  2: if end-to-end signaling is secure.
- *
- * NOTE:
- *  THIS IS WRONG. It should take into account the route-set.
  */
-static int get_secure_level(const pj_str_t *dst_uri)
+static int get_secure_level(pjsua_acc_id acc_id, const pj_str_t *dst_uri)
 {
     const pj_str_t tls = pj_str(";transport=tls");
     const pj_str_t sips = pj_str("sips:");
-
-    PJ_TODO(Fix_get_secure_level);
+    pjsua_acc *acc = &pjsua_var.acc[acc_id];
 
     if (pj_stristr(dst_uri, &sips))
 	return 2;
-    if (pj_stristr(dst_uri, &tls))
-	return 1;
+    
+    if (!pj_list_empty(&acc->route_set)) {
+	pjsip_route_hdr *r = acc->route_set.next;
+	pjsip_uri *uri = r->name_addr.uri;
+	pjsip_sip_uri *sip_uri;
+	
+	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
+	    return 1;
+
+    } else {
+	if (pj_stristr(dst_uri, &tls))
+	    return 1;
+    }
+
     return 0;
 }
+
+static int call_get_secure_level(pjsua_call *call)
+{
+    if (call->inv->dlg->secure)
+	return 2;
+
+    if (!pj_list_empty(&call->inv->dlg->route_set)) {
+	pjsip_route_hdr *r = call->inv->dlg->route_set.next;
+	pjsip_uri *uri = r->name_addr.uri;
+	pjsip_sip_uri *sip_uri;
+	
+	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
+	    return 1;
+
+    } else {
+	pjsip_sip_uri *sip_uri;
+
+	if (PJSIP_URI_SCHEME_IS_SIPS(call->inv->dlg->target))
+	    return 2;
+	if (!PJSIP_URI_SCHEME_IS_SIP(call->inv->dlg->target))
+	    return 0;
+
+	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(call->inv->dlg->target);
+	if (pj_stricmp2(&sip_uri->transport_param, "tls")==0)
+	    return 1;
+    }
+
+    return 0;
+}
+
 
 /*
  * Make outgoing call to the specified URI using the specified account.
@@ -384,9 +424,12 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 	return status;
     }
 
+    /* Calculate call's secure level */
+    call->secure_level = get_secure_level(acc_id, dest_uri);
+
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
-				      get_secure_level(dest_uri), NULL);
+				      call->secure_level, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
@@ -544,7 +587,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int acc_id;
     pjsua_call *call;
     int call_id = -1;
-    int secure_level, sip_err_code;
+    int sip_err_code;
     pjmedia_sdp_session *offer, *answer;
     pj_status_t status;
 
@@ -647,37 +690,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      */
     acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
 
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-    /* Get signaling security level, only when required by SRTP */
-    if (pjsua_var.acc[acc_id].cfg.srtp_secure_signaling < 2) {
-	secure_level = PJSIP_TRANSPORT_IS_SECURE(rdata->tp_info.transport)!=0;
-    } else 
-#endif
-
-    {
-	char *uri;
-	int uri_len;
-	pj_str_t dst;
-
-	uri = pj_pool_alloc(rdata->tp_info.pool, PJSIP_MAX_URL_SIZE);
-	uri_len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-				  rdata->msg_info.msg->line.req.uri,
-				  uri, PJSIP_MAX_URL_SIZE);
-	if (uri_len < 1) {
-	    pjsua_perror(THIS_FILE, "Error analyzing dst URI", 
-			 PJSIP_EURITOOLONG);
-	    uri_len = 0;
-	}
-
-	dst.ptr = uri;
-	dst.slen = uri_len;
-
-	secure_level = get_secure_level(&dst);
-    }
+    /* Get call's secure level */
+    if (PJSIP_URI_SCHEME_IS_SIPS(rdata->msg_info.msg->line.req.uri))
+	call->secure_level = 2;
+    else if (PJSIP_TRANSPORT_IS_SECURE(rdata->tp_info.transport))
+	call->secure_level = 1;
+    else
+	call->secure_level = 0;
 
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
-				      secure_level, &sip_err_code);
+				      call->secure_level, &sip_err_code);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
@@ -1412,10 +1435,12 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 	return PJSIP_ESESSIONSTATE;
     }
 
+    /* Update call secure level */
+    call->secure_level = call_get_secure_level(call);
+
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-				      get_secure_level(&dlg->remote.info_str),
-				      NULL);
+				      call->secure_level, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_dec_lock(dlg);
@@ -1483,10 +1508,12 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Update call's secure level */
+    call->secure_level = call_get_secure_level(call);
+
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-				      get_secure_level(&dlg->remote.info_str),
-				      NULL);
+				      call->secure_level, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_dec_lock(dlg);
@@ -2607,15 +2634,15 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 		  "(media in offer is %s)", call->index, remote_state));
 	status = create_inactive_sdp( call, &answer );
     } else {
-	int secure_level;
-
 	PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 		  call->index));
 
+	/* Update call's secure level */
+	call->secure_level = call_get_secure_level(call);
+
 	/* Init media channel */
-	secure_level = get_secure_level(&call->inv->dlg->remote.info_str);
 	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
-					  secure_level, NULL);
+					  call->secure_level, NULL);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
@@ -2663,15 +2690,15 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 		  call->index));
 	status = create_inactive_sdp( call, offer );
     } else {
-	int secure_level;
-
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));
 
+	/* Update call's secure level */
+	call->secure_level = call_get_secure_level(call);
+
 	/* Init media channel */
-	secure_level = get_secure_level(&call->inv->dlg->remote.info_str);
 	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
-					  secure_level, NULL);
+					  call->secure_level, NULL);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    PJSUA_UNLOCK();
