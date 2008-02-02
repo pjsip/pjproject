@@ -27,6 +27,7 @@ int session_test(void);
 int rtp_test(void);
 int sdp_test(void);
 int jbuf_main(void);
+int jbuf2_main(pj_pool_factory *pf);
 int sdp_neg_test(void);
 
 extern pj_pool_factory *mem;
