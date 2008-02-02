@@ -36,6 +36,7 @@
 #include <pjmedia/endpoint.h>
 #include <pjmedia/g711.h>
 #include <pjmedia/jbuf.h>
+#include <pjmedia/jbuf2.h>
 #include <pjmedia/master_port.h>
 #include <pjmedia/mem_port.h>
 #include <pjmedia/null_port.h>

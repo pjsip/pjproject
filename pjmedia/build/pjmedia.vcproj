@@ -510,6 +510,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\jbuf2.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\master_port.c"
 				>
 				<FileConfiguration
@@ -1138,6 +1142,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\jbuf.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\jbuf2.h"
 				>
 			</File>
 			<File
