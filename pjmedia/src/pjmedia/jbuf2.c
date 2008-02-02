@@ -451,6 +451,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_create( pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjmedia_jb2_destroy(pjmedia_jb2_t *jb)
 {
     PJ_UNUSED_ARG(jb);
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
 
     return PJ_SUCCESS;
 }
@@ -880,10 +881,10 @@ SHIFT_HISTORY:
 	jb->stat.max_level = jb->state.level;
 }
 
-
-/* Find matching samples pattern */
+/* Window len for matching samples */
 #define MATCH_WINDOW_LEN    8
 
+/* Find matching samples pattern, longest possible distance for !left_ref */
 static pj_status_t find_matched_window(jb_vbuf *buf, pj_bool_t left_ref, 
 				       int pref_dist,
 				       unsigned *ref_, unsigned *match_)
@@ -907,9 +908,9 @@ static pj_status_t find_matched_window(jb_vbuf *buf, pj_bool_t left_ref,
 	if (buf->size/2 > pref_dist + MATCH_WINDOW_LEN)
 	    ptr = pref_dist;
 	else
-	    ptr = buf->size/2 - MATCH_WINDOW_LEN - 1;
+	    ptr = buf->size/2 - MATCH_WINDOW_LEN;
     } else {
-	ref = buf->size/2 - MATCH_WINDOW_LEN - 1;
+	ref = buf->size/2 - MATCH_WINDOW_LEN;
 
 	/* do not +1, this is for insertion, inserting 0 sample is no use */
 	end = ref - MATCH_WINDOW_LEN;
@@ -936,6 +937,59 @@ static pj_status_t find_matched_window(jb_vbuf *buf, pj_bool_t left_ref,
 	    return PJ_SUCCESS;
 	}
 	ptr += left_ref ? -1 : 1;
+    }
+
+    return PJ_ENOTFOUND;
+}
+
+/* Find matching samples pattern, shortest possible distance for !left_ref */
+static pj_status_t find_matched_window2(jb_vbuf *buf, pj_bool_t left_ref, 
+				       int pref_dist,
+				       unsigned *ref_, unsigned *match_)
+{
+    const int MATCH_THRESHOLD = MATCH_WINDOW_LEN*1200;
+    unsigned ref, ptr, end;
+    int i, similarity, s1, s2;
+
+    if (buf->size/2 < MATCH_WINDOW_LEN * 2) {
+	TRACE__((THIS_FILE, "Buf size too small (%d) to perform matching",
+		 buf->size));
+	return PJ_ENOTFOUND;
+    }
+
+    /* Check minimum distance */
+    pj_assert(pref_dist >= MATCH_WINDOW_LEN);
+
+    if (left_ref) {
+	ref = 0;
+	end = MATCH_WINDOW_LEN - 1;
+	if (buf->size/2 > pref_dist + MATCH_WINDOW_LEN)
+	    ptr = pref_dist;
+	else
+	    ptr = buf->size/2 - MATCH_WINDOW_LEN - 1;
+    } else {
+	ref = buf->size/2 - MATCH_WINDOW_LEN;
+	end = -1;
+	ptr = ref - MATCH_WINDOW_LEN;
+    }
+
+    *ref_ = ref;
+
+    while (ptr != end) {
+	similarity = 0;
+	for (i = 0; i < MATCH_WINDOW_LEN; ++i) {
+	    s1 = jb_vbuf_get_sample(buf, ref+i);
+	    s2 = jb_vbuf_get_sample(buf, ptr+i);
+	    similarity += PJ_ABS(s1 - s2);
+	    if (similarity >= MATCH_THRESHOLD)
+		break;
+	}
+
+	if (similarity <= MATCH_THRESHOLD) {
+	    *match_ = ptr;
+	    return PJ_SUCCESS;
+	}
+	ptr += left_ref ? -1 : -1;
     }
 
     return PJ_ENOTFOUND;
