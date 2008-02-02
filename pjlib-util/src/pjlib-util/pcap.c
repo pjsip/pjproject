@@ -20,10 +20,19 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/file_io.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
 #include <pj/string.h>
 
+#if 0
+#   define TRACE_(x)	PJ_LOG(5,x)
+#else
+#   define TRACE_(x)
+#endif
+
+
+#pragma pack(1)
 
 typedef struct pj_pcap_hdr 
 {
@@ -44,12 +53,16 @@ typedef struct pj_pcap_rec_hdr
     pj_uint32_t orig_len;       /* actual length of packet */
 } pj_pcap_rec_hdr;
 
+#if 0
 typedef struct pj_pcap_eth_hdr 
 {
     pj_uint8_t  dest[6];
     pj_uint8_t  src[6];
-    pj_uint16_t len;
+    pj_uint8_t  len[2];	/* problem with struct size if pj_uint16_t */
 } pj_pcap_eth_hdr;
+#else
+typedef pj_uint8_t pj_pcap_eth_hdr[14];
+#endif
 
 typedef struct pj_pcap_ip_hdr 
 {
@@ -73,10 +86,12 @@ typedef struct pj_pcap_udp_hdr
     pj_uint16_t	csum;
 } pj_pcap_udp_hdr;
 
+#pragma pack()
 
 /* Implementation of pcap file */
 struct pj_pcap_file
 {
+    char	    obj_name[PJ_MAX_OBJ_NAME];
     pj_oshandle_t   fd;
     pj_bool_t	    swap;
     pj_pcap_hdr	    hdr;
@@ -100,7 +115,20 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && path && p_file, PJ_EINVAL);
 
+    /* More sanity checks */
+    TRACE_(("pcap", "sizeof(pj_pcap_eth_hdr)=%d",
+	    sizeof(pj_pcap_eth_hdr)));
+    PJ_ASSERT_RETURN(sizeof(pj_pcap_eth_hdr)==14, PJ_EBUG);
+    TRACE_(("pcap", "sizeof(pj_pcap_ip_hdr)=%d",
+	    sizeof(pj_pcap_ip_hdr)));
+    PJ_ASSERT_RETURN(sizeof(pj_pcap_ip_hdr)==20, PJ_EBUG);
+    TRACE_(("pcap", "sizeof(pj_pcap_udp_hdr)=%d",
+	    sizeof(pj_pcap_udp_hdr)));
+    PJ_ASSERT_RETURN(sizeof(pj_pcap_udp_hdr)==8, PJ_EBUG);
+    
     file = PJ_POOL_ZALLOC_T(pool, pj_pcap_file);
+
+    pj_ansi_strcpy(file->obj_name, "pcap");
 
     status = pj_file_open(pool, path, PJ_O_RDONLY, &file->fd);
     if (status != PJ_SUCCESS)
@@ -126,6 +154,8 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
 	return PJ_EINVALIDOP;
     }
 
+    TRACE_((file->obj_name, "PCAP file %s opened", path));
+    
     *p_file = file;
     return PJ_SUCCESS;
 }
@@ -134,6 +164,7 @@ PJ_DEF(pj_status_t) pj_pcap_open(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pj_pcap_close(pj_pcap_file *file)
 {
     PJ_ASSERT_RETURN(file, PJ_EINVAL);
+    TRACE_((file->obj_name, "PCAP file closed"));
     return pj_file_close(file->fd);
 }
 
@@ -207,11 +238,15 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	unsigned sz_read = 0;
 	pj_status_t status;
 
+	TRACE_((file->obj_name, "Reading packet.."));
+
 	/* Read PCAP packet header */
 	sz = sizeof(tmp.rec);
 	status = read_file(file, &tmp.rec, &sz);
-	if (status != PJ_SUCCESS) 
+	if (status != PJ_SUCCESS) {
+	    TRACE_((file->obj_name, "read_file() error: %d", status));
 	    return status;
+	}
 
 	rec_incl = tmp.rec.incl_len;
 
@@ -230,36 +265,47 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	    status = read_file(file, &tmp.eth, &sz);
 	    break;
 	default:
+	    TRACE_((file->obj_name, "Error: link layer not Ethernet"));
 	    return PJ_ENOTSUP;
 	}
 
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    TRACE_((file->obj_name, "Error reading Eth header: %d", status));
 	    return status;
+	}
 
 	sz_read += sz;
 	    
 	/* Read IP header */
 	sz = sizeof(tmp.ip);
 	status = read_file(file, &tmp.ip, &sz);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    TRACE_((file->obj_name, "Error reading IP header: %d", status));
 	    return status;
+	}
 
 	sz_read += sz;
 
 	/* Skip if IP source mismatch */
 	if (file->filter.ip_src && tmp.ip.ip_src != file->filter.ip_src) {
+	    TRACE_((file->obj_name, "IP source %s mismatch, skipping", 
+		    pj_inet_ntoa(*(pj_in_addr*)&tmp.ip.ip_src)));
 	    SKIP_PKT();
 	    continue;
 	}
 
 	/* Skip if IP destination mismatch */
 	if (file->filter.ip_dst && tmp.ip.ip_dst != file->filter.ip_dst) {
+	    TRACE_((file->obj_name, "IP detination %s mismatch, skipping", 
+		    pj_inet_ntoa(*(pj_in_addr*)&tmp.ip.ip_dst)));
 	    SKIP_PKT();
 	    continue;
 	}
 
 	/* Skip if proto mismatch */
 	if (file->filter.proto && tmp.ip.proto != file->filter.proto) {
+	    TRACE_((file->obj_name, "IP proto %d mismatch, skipping", 
+		    tmp.ip.proto));
 	    SKIP_PKT();
 	    continue;
 	}
@@ -269,8 +315,10 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	case PJ_PCAP_PROTO_TYPE_UDP:
 	    sz = sizeof(tmp.udp);
 	    status = read_file(file, &tmp.udp, &sz);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		TRACE_((file->obj_name, "Error reading UDP header: %d",status));
 		return status;
+	    }
 
 	    sz_read += sz;
 
@@ -278,6 +326,8 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	    if (file->filter.src_port && 
 	        tmp.udp.src_port != file->filter.src_port) 
 	    {
+		TRACE_((file->obj_name, "UDP src port %d mismatch, skipping", 
+			pj_ntohs(tmp.udp.src_port)));
 		SKIP_PKT();
 		continue;
 	    }
@@ -286,6 +336,8 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	    if (file->filter.dst_port && 
 		tmp.udp.dst_port != file->filter.dst_port) 
 	    {
+		TRACE_((file->obj_name, "UDP dst port %d mismatch, skipping", 
+			pj_ntohs(tmp.udp.dst_port)));
 		SKIP_PKT();
 		continue;
 	    }
@@ -294,20 +346,25 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 	    sz = pj_ntohs(tmp.udp.len) - sizeof(tmp.udp);
 	    break;
 	default:
+	    TRACE_((file->obj_name, "Not UDP, skipping"));
 	    SKIP_PKT();
 	    continue;
 	}
 
 	/* Check if payload fits the buffer */
 	if (sz > (pj_ssize_t)*udp_payload_size) {
+	    TRACE_((file->obj_name, 
+		    "Error: packet too large (%d bytes required)", sz));
 	    SKIP_PKT();
 	    return PJ_ETOOSMALL;
 	}
 
 	/* Read the payload */
 	status = read_file(file, udp_payload, &sz);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    TRACE_((file->obj_name, "Error reading payload: %d", status));
 	    return status;
+	}
 
 	sz_read += sz;
 
