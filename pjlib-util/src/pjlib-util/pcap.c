@@ -54,11 +54,12 @@ typedef struct pj_pcap_rec_hdr
 } pj_pcap_rec_hdr;
 
 #if 0
+/* gcc insisted on aligning this struct to 32bit on ARM */
 typedef struct pj_pcap_eth_hdr 
 {
     pj_uint8_t  dest[6];
     pj_uint8_t  src[6];
-    pj_uint8_t  len[2];	/* problem with struct size if pj_uint16_t */
+    pj_uint8_t  len[2];
 } pj_pcap_eth_hdr;
 #else
 typedef pj_uint8_t pj_pcap_eth_hdr[14];
@@ -77,16 +78,6 @@ typedef struct pj_pcap_ip_hdr
     pj_uint32_t	ip_src;
     pj_uint32_t	ip_dst;
 } pj_pcap_ip_hdr;
-
-typedef struct pj_pcap_udp_hdr
-{
-    pj_uint16_t	src_port;
-    pj_uint16_t	dst_port;
-    pj_uint16_t	len;
-    pj_uint16_t	csum;
-} pj_pcap_udp_hdr;
-
-#pragma pack()
 
 /* Implementation of pcap file */
 struct pj_pcap_file
@@ -210,6 +201,7 @@ static pj_status_t skip(pj_oshandle_t fd, pj_off_t bytes)
 
 /* Read UDP packet */
 PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
+				     pj_pcap_udp_hdr *udp_hdr,
 				     pj_uint8_t *udp_payload,
 				     pj_size_t *udp_payload_size)
 {
@@ -340,6 +332,11 @@ PJ_DEF(pj_status_t) pj_pcap_read_udp(pj_pcap_file *file,
 			pj_ntohs(tmp.udp.dst_port)));
 		SKIP_PKT();
 		continue;
+	    }
+
+	    /* Copy UDP header if caller wants it */
+	    if (udp_hdr) {
+		pj_memcpy(udp_hdr, &tmp.udp, sizeof(*udp_hdr));
 	    }
 
 	    /* Calculate payload size */

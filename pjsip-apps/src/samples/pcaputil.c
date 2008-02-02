@@ -57,12 +57,19 @@ static const char *USAGE =
 "Remote streaming is not supported yet."
 ;
 
-static pj_caching_pool cp;
-static pj_pool_t *pool;
-static pjmedia_endpt *mept;
-static pj_pcap_file *pcap;
-static pjmedia_port *wav;
-static pjmedia_transport *srtp;
+static struct app
+{
+    pj_caching_pool	 cp;
+    pj_pool_t		*pool;
+    pjmedia_endpt	*mept;
+    pj_pcap_file	*pcap;
+    pjmedia_port	*wav;
+    pjmedia_codec	*codec;
+    unsigned		 pt;
+    pjmedia_transport	*srtp;
+    pjmedia_rtp_session	 rtp_sess;
+    pj_bool_t		 rtp_sess_init;
+} app;
 
 static void err_exit(const char *title, pj_status_t status)
 {
@@ -74,12 +81,29 @@ static void err_exit(const char *title, pj_status_t status)
 	printf("Error: %s\n", title);
     }
 
-    if (srtp) pjmedia_transport_close(srtp);
-    if (wav) pjmedia_port_destroy(wav);
-    if (pcap) pj_pcap_close(pcap);
-    if (mept) pjmedia_endpt_destroy(mept);
-    if (pool) pj_pool_release(pool);
-    pj_caching_pool_destroy(&cp);
+    if (app.srtp) pjmedia_transport_close(app.srtp);
+    if (app.wav) {
+        pj_ssize_t pos = pjmedia_wav_writer_port_get_pos(app.wav);
+        if (pos >= 0) {
+            unsigned msec;
+            msec = pos / 2 * 1000 / app.wav->info.clock_rate;
+            printf("Written: %dm:%02ds.%03d\n",
+                    msec / 1000 / 60,
+                    (msec / 1000) % 60,
+                    msec % 1000);
+        }
+	pjmedia_port_destroy(app.wav);
+    }
+    if (app.pcap) pj_pcap_close(app.pcap);
+    if (app.codec) {
+	pjmedia_codec_mgr *cmgr;
+	app.codec->op->close(app.codec);
+	cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
+	pjmedia_codec_mgr_dealloc_codec(cmgr, app.codec);
+    }
+    if (app.mept) pjmedia_endpt_destroy(app.mept);
+    if (app.pool) pj_pool_release(app.pool);
+    pj_caching_pool_destroy(&app.cp);
     pj_shutdown();
 
     exit(1);
@@ -97,27 +121,91 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 		     pj_uint8_t **payload,
 		     unsigned *payload_size)
 {
-    pj_size_t sz = bufsize;
     pj_status_t status;
 
-    status = pj_pcap_read_udp(pcap, buf, &sz);
-    if (status != PJ_SUCCESS)
-	err_exit("Error reading PCAP file", status);
-
-    if (sz < sizeof(pjmedia_rtp_hdr) + 10) {
-	err_exit("Invalid RTP packet", PJ_SUCCESS);
+    /* Init RTP session */
+    if (!app.rtp_sess_init) {
+	T(pjmedia_rtp_session_init(&app.rtp_sess, 0, 0));
+	app.rtp_sess_init = PJ_TRUE;
     }
 
-    /* Decrypt SRTP */
-    if (srtp) {
-	int len = sz;
-	T(pjmedia_transport_srtp_decrypt_pkt(srtp, PJ_TRUE, buf, &len));
-	sz = len;
-    }
+    /* Loop reading until we have a good RTP packet */
+    for (;;) {
+	pj_size_t sz = bufsize;
+	const pjmedia_rtp_hdr *r;
+	const void *p;
+	pjmedia_rtp_status seq_st;
 
-    *rtp = (pjmedia_rtp_hdr*)buf;
-    *payload = (pj_uint8_t*) (buf + sizeof(pjmedia_rtp_hdr));
-    *payload_size = sz - sizeof(pjmedia_rtp_hdr);
+	status = pj_pcap_read_udp(app.pcap, NULL, buf, &sz);
+	if (status != PJ_SUCCESS)
+	    err_exit("Error reading PCAP file", status);
+
+	/* Decode RTP packet to make sure that this is an RTP packet.
+	 * We will decode it again to get the payload after we do
+	 * SRTP decoding
+	 */
+	status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, sz, &r, 
+					&p, payload_size);
+	if (status != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    printf("Not RTP packet, skipping packet: %s\n", errmsg);
+	    continue;
+	}
+
+	/* Decrypt SRTP */
+	if (app.srtp) {
+	    int len = sz;
+	    status = pjmedia_transport_srtp_decrypt_pkt(app.srtp, PJ_TRUE, 
+						        buf, &len);
+	    if (status != PJ_SUCCESS) {
+		char errmsg[PJ_ERR_MSG_SIZE];
+		pj_strerror(status, errmsg, sizeof(errmsg));
+		printf("SRTP packet decryption failed, skipping packet: %s\n", 
+			errmsg);
+		continue;
+	    }
+	    sz = len;
+
+	    /* Decode RTP packet again */
+	    status = pjmedia_rtp_decode_rtp(&app.rtp_sess, buf, sz, &r,
+					    &p, payload_size);
+	    if (status != PJ_SUCCESS) {
+		char errmsg[PJ_ERR_MSG_SIZE];
+		pj_strerror(status, errmsg, sizeof(errmsg));
+		printf("Not RTP packet, skipping packet: %s\n", errmsg);
+		continue;
+	    }
+	}
+
+	/* Update RTP session */
+	pjmedia_rtp_session_update(&app.rtp_sess, r, &seq_st);
+
+	/* Skip out-of-order packet */
+	if (seq_st.diff == 0) {
+	    printf("Skipping out of order packet\n");
+	    continue;
+	}
+
+	/* Skip if payload type is different */
+	if (r->pt != app.pt) {
+	    printf("Skipping RTP packet with bad payload type\n");
+	    continue;
+	}
+
+	/* Skip bad packet */
+	if (seq_st.status.flag.bad) {
+	    printf("Skipping bad RTP\n");
+	    continue;
+	}
+
+
+	*rtp = (pjmedia_rtp_hdr*)r;
+	*payload = (pj_uint8_t*)p;
+
+	/* We have good packet */
+	break;
+    }
 }
 
 static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
@@ -131,31 +219,30 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	unsigned	 payload_len;
     } pkt0;
     pjmedia_codec_mgr *cmgr;
-    pjmedia_codec_info *ci;
+    const pjmedia_codec_info *ci;
     pjmedia_codec_param param;
-    pjmedia_codec *codec;
     unsigned samples_per_frame;
     pj_status_t status;
 
     /* Initialize all codecs */
 #if PJMEDIA_HAS_SPEEX_CODEC
-    T( pjmedia_codec_speex_init(mept, 0, 10, 10) );
+    T( pjmedia_codec_speex_init(app.mept, 0, 10, 10) );
 #endif /* PJMEDIA_HAS_SPEEX_CODEC */
 
 #if PJMEDIA_HAS_ILBC_CODEC
-    T( pjmedia_codec_ilbc_init(mept, 30) );
+    T( pjmedia_codec_ilbc_init(app.mept, 30) );
 #endif /* PJMEDIA_HAS_ILBC_CODEC */
 
 #if PJMEDIA_HAS_GSM_CODEC
-    T( pjmedia_codec_gsm_init(mept) );
+    T( pjmedia_codec_gsm_init(app.mept) );
 #endif /* PJMEDIA_HAS_GSM_CODEC */
 
 #if PJMEDIA_HAS_G711_CODEC
-    T( pjmedia_codec_g711_init(mept) );
+    T( pjmedia_codec_g711_init(app.mept) );
 #endif	/* PJMEDIA_HAS_G711_CODEC */
 
 #if PJMEDIA_HAS_L16_CODEC
-    T( pjmedia_codec_l16_init(mept, 0) );
+    T( pjmedia_codec_l16_init(app.mept, 0) );
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
     /* Create SRTP transport is needed */
@@ -165,32 +252,33 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	pj_bzero(&crypto, sizeof(crypto));
 	crypto.key = *srtp_key;
 	crypto.name = *srtp_crypto;
-	T( pjmedia_transport_srtp_create(mept, NULL, NULL, &srtp) );
-	T( pjmedia_transport_srtp_start(srtp, &crypto, &crypto) );
+	T( pjmedia_transport_srtp_create(app.mept, NULL, NULL, &app.srtp) );
+	T( pjmedia_transport_srtp_start(app.srtp, &crypto, &crypto) );
     }
 
     /* Read first packet */
     read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp, 
 	     &pkt0.payload, &pkt0.payload_len);
 
-    cmgr = pjmedia_endpt_get_codec_mgr(mept);
+    cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 
     /* Get codec info and param for the specified payload type */
+    app.pt = pkt0.rtp->pt;
     T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt0.rtp->pt, &ci) );
     T( pjmedia_codec_mgr_get_default_param(cmgr, ci, &param) );
 
     /* Alloc and init codec */
-    T( pjmedia_codec_mgr_alloc_codec(cmgr, ci, &codec) );
-    T( codec->op->init(codec, pool) );
-    T( codec->op->open(codec, &param) );
+    T( pjmedia_codec_mgr_alloc_codec(cmgr, ci, &app.codec) );
+    T( app.codec->op->init(app.codec, app.pool) );
+    T( app.codec->op->open(app.codec, &param) );
 
     /* Open WAV file */
     samples_per_frame = ci->clock_rate * param.info.frm_ptime / 1000;
-    T( pjmedia_wav_writer_port_create(pool, wav_filename,
+    T( pjmedia_wav_writer_port_create(app.pool, wav_filename,
 				      ci->clock_rate, ci->channel_cnt,
 				      samples_per_frame,
 				      param.info.pcm_bits_per_sample, 0, 0,
-				      &wav) );
+				      &app.wav) );
 
     /* Loop reading PCAP and writing WAV file */
     for (;;) {
@@ -206,8 +294,8 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	/* Parse first packet */
 	ts.u64 = 0;
 	frame_cnt = PJ_ARRAY_SIZE(frames);
-	T( codec->op->parse(codec, pkt0.payload, pkt0.payload_len, &ts, 
-			    &frame_cnt, frames) );
+	T( app.codec->op->parse(app.codec, pkt0.payload, pkt0.payload_len, 
+				&ts, &frame_cnt, frames) );
 
 	/* Decode and write to WAV file */
 	samples_cnt = 0;
@@ -217,8 +305,9 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	    pcm_frame.buf = pcm;
 	    pcm_frame.size = samples_per_frame * 2;
 
-	    T( codec->op->decode(codec, &frames[i], pcm_frame.size, &pcm_frame) );
-	    T( pjmedia_port_put_frame(wav, &pcm_frame) );
+	    T( app.codec->op->decode(app.codec, &frames[i], pcm_frame.size, 
+				     &pcm_frame) );
+	    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
 	    samples_cnt += samples_per_frame;
 	}
 
@@ -234,13 +323,14 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	    pcm_frame.buf = pcm;
 	    pcm_frame.size = samples_per_frame * 2;
 
-	    if (codec->op->recover) {
-		T( codec->op->recover(codec, pcm_frame.size, &pcm_frame) );
+	    if (app.codec->op->recover) {
+		T( app.codec->op->recover(app.codec, pcm_frame.size, 
+					  &pcm_frame) );
 	    } else {
 		pj_bzero(pcm_frame.buf, pcm_frame.size);
 	    }
 
-	    T( pjmedia_port_put_frame(wav, &pcm_frame) );
+	    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
 	    ts_gap -= samples_per_frame;
 	}
 	
@@ -340,14 +430,14 @@ int main(int argc, char *argv[])
     
     T( pj_init() );
 
-    pj_caching_pool_init(&cp, NULL, 0);
-    pool = pj_pool_create(&cp.factory, "pcaputil", 1000, 1000, NULL);
+    pj_caching_pool_init(&app.cp, NULL, 0);
+    app.pool = pj_pool_create(&app.cp.factory, "pcaputil", 1000, 1000, NULL);
 
     T( pjlib_util_init() );
-    T( pjmedia_endpt_create(&cp.factory, NULL, 0, &mept) );
+    T( pjmedia_endpt_create(&app.cp.factory, NULL, 0, &app.mept) );
 
-    T( pj_pcap_open(pool, input.ptr, &pcap) );
-    T( pj_pcap_set_filter(pcap, &filter) );
+    T( pj_pcap_open(app.pool, input.ptr, &app.pcap) );
+    T( pj_pcap_set_filter(app.pcap, &filter) );
 
     if (pj_stristr(&output, &wav)) {
 	pcap2wav(output.ptr, &srtp_crypto, &srtp_key);
@@ -355,9 +445,9 @@ int main(int argc, char *argv[])
 	err_exit("invalid output file", PJ_EINVAL);
     }
 
-    pjmedia_endpt_destroy(mept);
-    pj_pool_release(pool);
-    pj_caching_pool_destroy(&cp);
+    pjmedia_endpt_destroy(app.mept);
+    pj_pool_release(app.pool);
+    pj_caching_pool_destroy(&app.cp);
     pj_shutdown();
     return 0;
 }
