@@ -50,6 +50,16 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_jb2_t pjmedia_jb2_t;
 
 /**
+ * Types of jitter buffer phase.
+ */
+typedef enum pjmedia_jb2_phase 
+{
+    PJMEDIA_JB_PH_IDLE	    = 0,	/**< No activity in PUT/GET or both */
+    PJMEDIA_JB_PH_LEARNING  = 1,	/**< Normal encoded frame */
+    PJMEDIA_JB_PH_RUNNING   = 2,	/**< Normal PCM frame */
+} pjmedia_jb2_phase;
+
+/**
  * Types of frame returned by the jitter buffer.
  */
 typedef enum pjmedia_jb2_frame_type 
@@ -78,11 +88,13 @@ typedef struct pjmedia_jb2_frame
  */
 typedef struct pjmedia_jb2_state
 {
-    /* frames */
+    pjmedia_jb2_phase phase;
+
+    /* in frames */
     pj_uint16_t	 level;
     pj_uint32_t	 frame_cnt;
     
-    /* samples */
+    /* in samples */
     pj_int32_t	 drift;
     pj_uint32_t	 drift_span;
     pj_uint32_t	 cur_size;
@@ -96,24 +108,24 @@ typedef struct pjmedia_jb2_state
  */
 typedef struct pjmedia_jb2_stat
 {
-    /* frames */
+    /* in frames */
     pj_uint32_t	 lost;
     pj_uint32_t	 late;
     pj_uint32_t	 ooo;
     pj_uint32_t	 out;
     pj_uint32_t	 in;
 
-    /* ticks */
+    /* in ticks */
     pj_uint32_t	 full;
     pj_uint32_t	 empty;
 
-    /* samples */
+    /* in samples */
     pj_uint32_t	 max_size;
     pj_int32_t	 max_drift;
     pj_int32_t	 max_drift_span;
     pj_int32_t	 max_comp;
 
-    /* ticks */
+    /* in frames */
     pj_uint16_t	 max_level;
 } pjmedia_jb2_stat;
 

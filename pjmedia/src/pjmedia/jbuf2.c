@@ -117,7 +117,7 @@ static const AGC_SET AGC_DRIFT_SET = {
  *   playing (frame to be played first is in the front).
  *
  * History structure:
- * - JB holds array of history, each element represent condition of JB at 
+ * - JB holds array of history, each element represents condition of JB at 
  *   specified time t (marked by tick), ordered as the newest is the first.
  * - History has age, when it is expired, history will be shifted/discarded.
  *
@@ -176,7 +176,6 @@ struct pjmedia_jb2_t
     /* internal state */
     pj_int16_t		     cur_level;
     pj_uint32_t		     tick;
-    pj_bool_t		     idle;
     jb_drift_state	     drift_state;
 
     /* callbacks */
@@ -201,7 +200,7 @@ static jb_frame_list* alloc_frame(pjmedia_jb2_t *jb)
 	f = jb->frames_pool.next;
 	pj_list_erase(f);
     } else if (jb->state.frame_cnt >= jb->setting.max_frames) {
-	TRACE__((THIS_FILE, "Frame numbers exceeds max(%d)!",
+	TRACE__((THIS_FILE, "Frame numbers(%d) exceeds max(%d)!",
 	    jb->state.frame_cnt, jb->setting.max_frames));
 	return NULL;
     } else {
@@ -232,10 +231,10 @@ typedef struct jb_vbuf
     /* private */
     pjmedia_jb2_t *jb;
     jb_frame_list *f[8];
-    int	cnt;
+    unsigned cnt;
 
     /* public */
-    int size;
+    unsigned size;
 } jb_vbuf;
 
 static void jb_vbuf_create(pjmedia_jb2_t *jb, jb_vbuf *buf)
@@ -269,7 +268,7 @@ static void jb_vbuf_create(pjmedia_jb2_t *jb, jb_vbuf *buf)
 
 static pj_int16_t jb_vbuf_get_sample(jb_vbuf *buf, unsigned idx)
 {
-    int i;
+    unsigned i;
     unsigned idx_ = idx;
     
     pj_assert(buf && idx < (unsigned)buf->size/2);
@@ -288,7 +287,7 @@ static pj_int16_t jb_vbuf_get_sample(jb_vbuf *buf, unsigned idx)
 static void jb_vbuf_set_sample(jb_vbuf *buf, unsigned idx, 
 				   pj_int16_t val)
 {
-    int i;
+    unsigned i;
     unsigned idx_ = idx;
     
     pj_assert(buf && idx < (unsigned)buf->size/2);
@@ -303,28 +302,55 @@ static void jb_vbuf_set_sample(jb_vbuf *buf, unsigned idx,
     }
 }
 
-/* Can only shrink */
-static void jb_vbuf_shrink_to(jb_vbuf *buf, int size)
+static void jb_vbuf_shrink(jb_vbuf *buf, unsigned size)
 {
     int i;
     
-    pj_assert(buf && size < buf->size);
+    pj_assert(buf && size <= buf->size);
 
-    for (i = buf->cnt-1; i>=0 && buf->size>size; --i) {
-	if ((buf->size - (int)buf->f[i]->frame.size) >= size) {
+    for (i = buf->cnt-1; i>=0 && size>0; --i) {
+	if (buf->f[i]->frame.size <= size) {
 	    buf->cnt--;
 	    buf->size -= buf->f[i]->frame.size;
+	    size -= buf->f[i]->frame.size;
 	    /* modify jb */
 	    buf->jb->state.cur_size -= buf->f[i]->frame.size/2;
 	    buf->f[i]->frame.size = 0;
-	    //release_frame(buf->jb, buf->f[i]);
 	} else {
-	    int diff = buf->size - size;
-	    buf->f[i]->frame.size -= diff;
-	    buf->size -= diff;
+	    buf->f[i]->frame.size -= size;
+	    buf->size -= size;
 	    /* modify jb */
-	    buf->jb->state.cur_size -= diff/2;
+	    buf->jb->state.cur_size -= size/2;
+	    size = 0;
 	}
+    }
+}
+
+static void jb_vbuf_expand(jb_vbuf *buf, unsigned size)
+{
+    jb_frame_list *f;
+    int step;
+
+    pj_assert(buf);
+
+    while (size > 0) {
+	step = PJ_MIN(buf->jb->setting.frame_size, size);
+
+	f = alloc_frame(buf->jb);
+	f->frame.pt = buf->f[buf->cnt-1]->frame.pt;
+	f->frame.seq = buf->f[buf->cnt-1]->frame.seq;
+	f->frame.size = step;
+	f->frame.ts = buf->f[buf->cnt-1]->frame.ts;
+	f->frame.type = buf->f[buf->cnt-1]->frame.type;
+
+	pj_list_insert_after(buf->f[buf->cnt - 1], f);
+	buf->jb->state.cur_size += step/2;
+
+	pj_assert(buf->cnt <= sizeof(buf->f)/sizeof(buf->f[0]));
+	buf->f[buf->cnt++] = f;
+	buf->size += step;
+
+	size -= step;
     }
 }
 
@@ -361,13 +387,13 @@ static void init_jb(pjmedia_jb2_t *jb)
     i = jb->state.frame_cnt;
     pj_bzero(&jb->state, sizeof(pjmedia_jb2_state));
     jb->state.frame_cnt = i;
-    jb->state.level = 1;
+    jb->state.level = 0;
 
     /* Reset drift state */
     pj_bzero(&jb->drift_state, sizeof(jb_drift_state));
 
-    /* Set not idle */
-    jb->idle = PJ_FALSE;
+    /* Set start learning */
+    jb->state.phase = PJMEDIA_JB_PH_LEARNING;
 
     /* Reset current level */
     jb->cur_level = 0;
@@ -510,7 +536,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_put_frame(pjmedia_jb2_t *jb,
 
     pos = jb->frames.prev;
 
-    if (jb->idle)
+    if (jb->state.phase == PJMEDIA_JB_PH_IDLE)
 	goto ON_RETURN;
 
     /* Late? */
@@ -556,7 +582,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_put_frame(pjmedia_jb2_t *jb,
 
     tmp->frame.pt = f->pt;
     tmp->frame.seq = f->seq;
-    tmp->frame.size = (f->seq == 1? 160: f->size);
+    tmp->frame.size = f->size;
     tmp->frame.ts = f->ts;
     tmp->frame.type = f->type;
     pj_memcpy(tmp->frame.buffer, f->buffer, f->size);
@@ -565,10 +591,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_put_frame(pjmedia_jb2_t *jb,
 
     /* Decode frame(s) if needed */
     if (tmp->frame.type == PJMEDIA_JB_FT_NORMAL_RAW_FRAME) {
-	if (f->seq == 1)
-	    jb->state.cur_size += 80;
-	else
-	    jb->state.cur_size += jb->setting.samples_per_frame;
+	jb->state.cur_size += jb->setting.samples_per_frame;
     }
     else if (tmp->prev != &jb->frames && 
 	     (tmp->frame.ts - tmp->prev->frame.ts == 
@@ -595,7 +618,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
     ++jb->stat.out;
     update_state(jb, PJ_TRUE);
 
-    if (jb->idle)
+    if (jb->state.phase == PJMEDIA_JB_PH_IDLE)
 	goto ON_RETURN;
 
     /* Check first frame */
@@ -697,6 +720,11 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
 
     /* Not enough samples in PCM buffer */
     if (jb->state.cur_size < jb->setting.samples_per_frame) {
+	if (jb->state.phase != PJMEDIA_JB_PH_LEARNING) {
+	    TRACE__((THIS_FILE,"Not enough PCM samples (%d)!", 
+		     jb->state.cur_size));
+	    ++jb->stat.empty;
+	}
 	goto RETURN_EMPTY_FRAME;
     }
 
@@ -726,7 +754,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
 	    pj_memcpy((pj_int8_t*)f->buffer + f->size, tmp->frame.buffer, i);
 	    tmp->frame.size -= i;
 
-	    /* Shift buffer, don't shift the pointer! */
+	    /* Shift the buffer, don't shift the pointer! */
 	    pj_memmove(tmp->frame.buffer, (pj_int8_t*)tmp->frame.buffer + i, 
 		       tmp->frame.size);
 	}
@@ -737,12 +765,13 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
 
     jb->state.cur_size -= jb->setting.samples_per_frame;
 
+    /* JB still learning the level */
+    if (jb->state.phase == PJMEDIA_JB_PH_LEARNING)
+	goto RETURN_EMPTY_FRAME;
+
     goto ON_RETURN;
 
 RETURN_EMPTY_FRAME:
-    TRACE__((THIS_FILE,"Return empty frame!"));
-
-    ++jb->stat.empty;
 
     f->type = PJMEDIA_JB_FT_NULL_FRAME;
     f->pt = jb->last_frame_out.pt;
@@ -751,7 +780,7 @@ RETURN_EMPTY_FRAME:
     f->ts = jb->last_frame_out.ts;
     pj_bzero(f->buffer, f->size);
 
-    /* Instead of return zero samples, it'd be better to return noise */
+    /* Instead of returning zero samples, it'd be better to return noise */
 
 ON_RETURN:
     return status;
@@ -766,9 +795,8 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
     if ((on_get && jb->cur_level > 0) || (!on_get && jb->cur_level < 0)) {
 
 	/* JB idle? */
-	if (jb->idle) {
+	if (jb->state.phase == PJMEDIA_JB_PH_IDLE) {
 	    TRACE__((THIS_FILE, "Idle ended, reinit jitter buffer."));
-	    jb->idle = PJ_FALSE;
 
 	    /* Reinit JB */
 	    init_jb(jb);
@@ -802,7 +830,8 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
 
 	    /* Calculate optimum size */
 	    jb->state.opt_size = jb->setting.samples_per_frame * level_sum /
-				 level_factor + jb->setting.samples_per_frame;
+				 level_factor
+				 + jb->setting.samples_per_frame / 2;
 	    if (jb->state.opt_size >
 		jb->setting.max_frames * jb->setting.samples_per_frame)
 	    {
@@ -811,6 +840,24 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
 		    jb->setting.max_frames * jb->setting.samples_per_frame;
 
 	    }
+
+	    /* Switching phase: learning -> running,
+	     * if history has shifted and current size reaches optimum size.
+	     */
+	    if (jb->state.phase == PJMEDIA_JB_PH_LEARNING) { 
+		if (jb->hist[1].level > 0 && 
+		    jb->state.cur_size >= jb->state.opt_size)
+		{
+		    jb->state.phase = PJMEDIA_JB_PH_RUNNING;
+		    TRACE__((THIS_FILE, "JB start running (%d>=%d)", 
+			     jb->state.cur_size, jb->state.opt_size));
+		} else {
+		    TRACE__((THIS_FILE, "Learning %d->%d", jb->state.cur_size,
+			     jb->state.opt_size));
+		}
+	    }
+
+
 #ifdef INC_OPT_SIZE_TO_DRIFT_CALC
 	    /* Include opt_size to drift calculation */
 	    jb->state.drift += ((int)jb->state.cur_size - 
@@ -835,10 +882,10 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
 
 	/* Check idle */
 	if (jb->hist[0].in == jb->stat.in || jb->hist[0].out == jb->stat.out) {
-	    if (!jb->idle)
+	    if (jb->state.phase != PJMEDIA_JB_PH_IDLE)
 		TRACE__((THIS_FILE, "Idle operation detected."));
 
-	    jb->idle = PJ_TRUE;
+	    jb->state.phase = PJMEDIA_JB_PH_IDLE;
 
 	    goto SHIFT_HISTORY;
 	}
@@ -886,7 +933,7 @@ SHIFT_HISTORY:
 
 /* Find matching samples pattern, longest possible distance for !left_ref */
 static pj_status_t find_matched_window(jb_vbuf *buf, pj_bool_t left_ref, 
-				       int pref_dist,
+				       unsigned pref_dist,
 				       unsigned *ref_, unsigned *match_)
 {
     const int MATCH_THRESHOLD = MATCH_WINDOW_LEN*1200;
@@ -944,11 +991,11 @@ static pj_status_t find_matched_window(jb_vbuf *buf, pj_bool_t left_ref,
 
 /* Find matching samples pattern, shortest possible distance for !left_ref */
 static pj_status_t find_matched_window2(jb_vbuf *buf, pj_bool_t left_ref, 
-				       int pref_dist,
+				       unsigned pref_dist,
 				       unsigned *ref_, unsigned *match_)
 {
     const int MATCH_THRESHOLD = MATCH_WINDOW_LEN*1200;
-    unsigned ref, ptr, end;
+    int ref, ptr, end;
     int i, similarity, s1, s2;
 
     if (buf->size/2 < MATCH_WINDOW_LEN * 2) {
@@ -970,7 +1017,10 @@ static pj_status_t find_matched_window2(jb_vbuf *buf, pj_bool_t left_ref,
     } else {
 	ref = buf->size/2 - MATCH_WINDOW_LEN;
 	end = -1;
-	ptr = ref - MATCH_WINDOW_LEN;
+	if (ref - MATCH_WINDOW_LEN >= (int)pref_dist)
+	    ptr = ref - MATCH_WINDOW_LEN - pref_dist;
+	else
+	    ptr = ref - MATCH_WINDOW_LEN;
     }
 
     *ref_ = ref;
@@ -989,20 +1039,19 @@ static pj_status_t find_matched_window2(jb_vbuf *buf, pj_bool_t left_ref,
 	    *match_ = ptr;
 	    return PJ_SUCCESS;
 	}
-	ptr += left_ref ? -1 : -1;
+	--ptr;
     }
 
     return PJ_ENOTFOUND;
 }
 
-/* Add n samples to buf, the additional samples will be put in dest,
+/* Add n samples for buf, the additional samples will be put in dest,
  * the buf may be modified but the buf size is not. Function will return
  * the number of inserted samples.
  */
-static int insert_samples(jb_vbuf *buf, int n, 
-			  void *dest, pj_size_t dest_size)
+static int insert_samples(jb_vbuf *buf, int n)
 {
-    unsigned ref, match;
+    unsigned ref, match, dest;
     pj_status_t status;
     int i, distance;
     pj_int16_t s1, s2;
@@ -1010,20 +1059,20 @@ static int insert_samples(jb_vbuf *buf, int n,
     if (n < MATCH_WINDOW_LEN)
 	n = MATCH_WINDOW_LEN;
 
-    if (n > (int)dest_size / 2)
-	n = dest_size / 2;
-
-    status = find_matched_window(buf, PJ_FALSE, n, &ref, &match);
+    status = find_matched_window2(buf, PJ_FALSE, n, &ref, &match);
     if (status != PJ_SUCCESS) 
 	return 0;
 
     distance = ref - match;
     pj_assert(distance > 0);
 
+    dest = buf->size/2;
+    jb_vbuf_expand(buf, distance*2);
+
     // memcpy
     for (i = 0; i < distance; ++i) {
 	s1 = jb_vbuf_get_sample(buf, match + MATCH_WINDOW_LEN + i);
-	*((pj_int16_t*)dest + i) = s1;
+	jb_vbuf_set_sample(buf, dest + i, s1);
     }
 
     /* Blend ref & match */
@@ -1067,12 +1116,12 @@ static int delete_samples(jb_vbuf *buf, int n)
     }
 
     // memmove
-    for (i = 0; i < buf->size/2 - distance - MATCH_WINDOW_LEN; ++i) {
+    for (i = 0; i < (int)buf->size/2 - distance - MATCH_WINDOW_LEN; ++i) {
 	s1 = jb_vbuf_get_sample(buf, match + MATCH_WINDOW_LEN + i);
 	jb_vbuf_set_sample(buf, ref + MATCH_WINDOW_LEN + i, s1);
     }
 
-    jb_vbuf_shrink_to(buf, buf->size - distance*2);
+    jb_vbuf_shrink(buf, distance*2);
 
     return distance;
 }
@@ -1174,17 +1223,14 @@ static void compensate_drift(pjmedia_jb2_t *jb)
     /* Apply pending compensation */
     culprit += jb->drift_state.pending;
 
-    /* Culprit may be negative when pending is negative.
-     * pending the compensation if this happens.
+    /* Culprit may be negative when pending is negative,
+     * which means last compensation was more than needed,
+     * nothing to compensate if this happens.
      */
-    if (culprit < 0) {
+    if (culprit <= 0) {
 	jb->drift_state.pending = culprit;
 	return;
     }
-
-    /* Nothing to compensate */
-    if (!culprit)
-	return;
 
     orig_cur_size = jb->state.cur_size;
     orig_culprit = culprit;
@@ -1204,8 +1250,9 @@ static void compensate_drift(pjmedia_jb2_t *jb)
 
 	int deleted = 0;
 
-	//if (jb->state.cur_size >
-	//    (jb->setting.samples_per_frame + culprit))
+	if (culprit > (int)jb->state.cur_size ||
+	    jb->state.cur_size >
+	    (jb->setting.samples_per_frame + culprit))
 	{
 	    deleted = delete_samples(&buf, culprit);
 	}
@@ -1220,27 +1267,9 @@ static void compensate_drift(pjmedia_jb2_t *jb)
     else {
 
 	int inserted = 0;
-	jb_frame_list *tmp_f;
 	
-	tmp_f = alloc_frame(jb);
-	if (tmp_f) {
-	    inserted = insert_samples(&buf,
-				      culprit, tmp_f->frame.buffer, 
-				      jb->setting.frame_size);
+	inserted = insert_samples(&buf, culprit);
 
-	    if (inserted > 0) {
-		tmp_f->frame.pt = buf.f[buf.cnt-1]->frame.pt;
-		tmp_f->frame.seq = buf.f[buf.cnt-1]->frame.seq;
-		tmp_f->frame.size = inserted * sample_size;
-		tmp_f->frame.ts = buf.f[buf.cnt-1]->frame.ts;
-		tmp_f->frame.type = buf.f[buf.cnt-1]->frame.type;
-    	    
-		jb->state.cur_size += inserted;
-		pj_list_insert_after(buf.f[buf.cnt-1], tmp_f);
-	    } else {
-		pj_list_push_back(&jb->frames_pool, tmp_f);
-	    }
-	}
 	jb->drift_state.pending = culprit - inserted;
 
 	culprit = inserted;
