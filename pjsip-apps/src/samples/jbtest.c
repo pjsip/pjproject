@@ -33,6 +33,7 @@ struct test_data {
     pjmedia_jb2_t *jb;
     pjmedia_port *read_port;
     pjmedia_port *write_port;
+    pjmedia_resample *resampler;
     pj_lock_t *mutex;
     pj_int16_t seq;
     unsigned ts;
@@ -44,16 +45,15 @@ static const char *desc =
  THIS_FILE "\n"
  "							\n"
  " PURPOSE:						\n"
- "  Test jbuf2 with real sound device.			\n"
+ "  Test drift compensation of jbuf2 with real sound device.\n"
  "							\n"
  " USAGE:						\n"
  "  sndtest --help					\n"
- "  sndtest [options]					\n"
+ "  sndtest [options] wavfile				\n"
  "							\n"
  " options:						\n"
  "  --id=ID          -i  Use device ID (default is -1)	\n"
  "  --rate=HZ        -r  Set test clock rate (default=8000)\n"
- "  --file=FILENAME  -l  Set input filename		\n"
  "  --drift=N	     -d  Set clock drift (-2000 < N < 2000)\n"
  "  --verbose        -v  Show verbose result		\n"
  "  --help           -h  Show this screen		\n"
@@ -99,14 +99,14 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
     pjmedia_jb2_frame f;
     pjmedia_frame f_;
     pj_status_t status;
-    char buf[1024];
+    char buf[5*1024];
 
     PJ_UNUSED_ARG(ts);
 
     PJ_ASSERT_ON_FAIL(test_data, return);
 
     f_.buf = buf;
-    f_.size = test_data->samples_per_frame*2;
+    f_.size = test_data->read_port->info.bytes_per_frame;
     status = pjmedia_port_get_frame(test_data->read_port, &f_);
     if (status != PJ_SUCCESS) {
 	app_perror("Failed to get frame from file", status);
@@ -114,7 +114,7 @@ static void clock_callback(const pj_timestamp *ts, void *user_data)
     }
 
     test_data->seq++;
-    test_data->ts += test_data->samples_per_frame;
+    test_data->ts += test_data->read_port->info.samples_per_frame;
 
     f.buffer = f_.buf;
     f.pt = 0;
@@ -136,18 +136,23 @@ static pj_status_t play_cb(void *user_data, pj_uint32_t timestamp,
     pjmedia_jb2_frame f;
     pjmedia_frame f_;
     pj_status_t status;
+    char buf[5*1024];
 
     PJ_UNUSED_ARG(timestamp);
     PJ_ASSERT_RETURN(test_data, PJ_EINVAL);
 
-    f.buffer = output;
-    f.size = size;
+    f.buffer = test_data->resampler? buf : output;
+    f.size = sizeof(buf);
+
     pj_lock_acquire(test_data->mutex);
     pjmedia_jb2_get_frame(test_data->jb, &f);
     pj_lock_release(test_data->mutex);
 
-    f_.buf = f.buffer;
-    f_.size = f.size;
+    if (test_data->resampler)
+	pjmedia_resample_run(test_data->resampler, f.buffer, output);
+
+    f_.buf = output;
+    f_.size = size;
     f_.type = PJMEDIA_FRAME_TYPE_AUDIO;
     f_.timestamp.u64 = f.ts;
     status = pjmedia_port_put_frame(test_data->write_port, &f_);
@@ -187,12 +192,6 @@ static int perform_test(pj_pool_t *pool, const char *inputfile, int dev_id,
     test_data.clock_rate = clock_rate;
     test_data.samples_per_frame = samples_per_frame;
 
-    jb_setting.max_frames = 0;
-    jb_setting.samples_per_frame = samples_per_frame;
-    jb_setting.frame_size = samples_per_frame * 2;
-
-    pj_bzero(&jb_cb, sizeof(jb_cb));
-
     pj_lock_create_recursive_mutex(pool, "sndtest", &test_data.mutex); 
 
     /* Create WAV player port */
@@ -209,8 +208,41 @@ static int perform_test(pj_pool_t *pool, const char *inputfile, int dev_id,
 	return 1;
     }
 
-    PJ_TODO(wav_nchannel_validation);
-    PJ_TODO(resample);
+    if (test_data.read_port->info.channel_count != 1) {
+	app_perror("WAV file not mono.", status);
+	return PJ_EINVAL;
+    }
+
+    /* Init JB setting */
+    pj_bzero(&jb_setting, sizeof(jb_setting));
+    jb_setting.max_frames = 0;
+    jb_setting.samples_per_frame = test_data.read_port->info.samples_per_frame;
+    jb_setting.frame_size = test_data.read_port->info.bytes_per_frame;
+
+    /* Init JB callback */
+    pj_bzero(&jb_cb, sizeof(jb_cb));
+
+    /* Create jitter buffer */
+    status = pjmedia_jb2_create(pool, NULL, &jb_setting, &jb_cb, &test_data.jb);
+    if (status != PJ_SUCCESS) {
+        app_perror("Unable to create jitter buffer", status);
+        return status;
+    }
+
+    /* Create the resample port when needed. */
+    if (test_data.read_port->info.clock_rate != clock_rate) {
+	status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1,
+					  test_data.read_port->info.clock_rate,
+					  clock_rate,
+					  jb_setting.samples_per_frame,
+					  &test_data.resampler);
+	if (status != PJ_SUCCESS) {
+	    app_perror("Unable to create resample port", status);
+	    return 1;
+	}
+    } else {
+	test_data.resampler = NULL;
+    }
 
     /* Create WAV writer port */
     status = pjmedia_wav_writer_port_create(  pool, "jbtestout.wav",
@@ -221,13 +253,6 @@ static int perform_test(pj_pool_t *pool, const char *inputfile, int dev_id,
     if (status != PJ_SUCCESS) {
 	app_perror("Unable to create WAV writer", status);
 	return 1;
-    }
-
-    /* Create jitter buffer */
-    status = pjmedia_jb2_create(pool, NULL, &jb_setting, &jb_cb, &test_data.jb);
-    if (status != PJ_SUCCESS) {
-        app_perror("Unable to create jitter buffer", status);
-        return status;
     }
 
     /* Create media clock */
@@ -253,8 +278,10 @@ static int perform_test(pj_pool_t *pool, const char *inputfile, int dev_id,
 
     pjmedia_snd_stream_get_info(strm, &si);
     if (si.play_id >= 0) {
-	PJ_LOG(3,(THIS_FILE, "Testing playback device %s", 
+	PJ_LOG(3,(THIS_FILE, "Testing playback device %s:", 
 		  pjmedia_snd_get_dev_info(si.play_id)->name));
+	PJ_LOG(4,(THIS_FILE, "Channel: %d clock: %dhz samples/frame: %d", 
+	    si.channel_count, si.clock_rate, si.samples_per_frame));
     }
 
     /*
@@ -311,6 +338,10 @@ static int perform_test(pj_pool_t *pool, const char *inputfile, int dev_id,
     /* Destroy clock */
     pjmedia_clock_destroy(clock);
 
+    /* Destroy resample */
+    if (test_data.resampler)
+	pjmedia_resample_destroy(test_data.resampler);
+
     /* Destroy file port */
     pjmedia_port_destroy(test_data.read_port);
     pjmedia_port_destroy(test_data.write_port);
@@ -334,7 +365,6 @@ int main(int argc, char *argv[])
     struct pj_getopt_option long_options[] = {
 	{ "id",	     1, 0, 'i' },
 	{ "rate",    1, 0, 'r' },
-	{ "file",    1, 0, 'l' },
 	{ "drift",   1, 0, 'd' },
 	{ "verbose", 0, 0, 'v' },
 	{ "help",    0, 0, 'h' },
@@ -380,9 +410,6 @@ int main(int argc, char *argv[])
 	case 'd':
 	    drift = atoi(pj_optarg);
 	    break;
-	case 'l':
-	    inputfile = pj_optarg;
-	    break;
 	case 'v':
 	    verbose = 1;
 	    break;
@@ -397,17 +424,18 @@ int main(int argc, char *argv[])
 	}
     }
 
-    if (pj_optind != argc) {
+    if ((argc - pj_optind) != 1) {
 	printf("Error: invalid options\n");
 	puts(desc);
 	return 1;
     }
 
+    inputfile = argv[argc - 1];
+
     if (!verbose)
 	pj_log_set_level(3);
     else
 	pj_log_set_level(4);
-
 
     status = perform_test(pool, inputfile, id, clock_rate, drift);
 
