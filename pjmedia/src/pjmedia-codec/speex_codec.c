@@ -768,17 +768,18 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 				     unsigned output_buf_len, 
 				     struct pjmedia_frame *output)
 {
-    struct spx_private *spx;
+    struct spx_private *spx = (struct spx_private*) codec->codec_data;
+    unsigned pcm_size;
 
-    spx = (struct spx_private*) codec->codec_data;
+    pcm_size = spx_factory.speex_param[spx->param_id].samples_per_frame << 1;
 
-    PJ_ASSERT_RETURN(output_buf_len >= 320, PJMEDIA_CODEC_EPCMTOOSHORT);
+    PJ_ASSERT_RETURN(output_buf_len >= pcm_size, PJMEDIA_CODEC_EPCMTOOSHORT);
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	pjmedia_zero_samples((pj_int16_t*)output->buf, 160);
-	output->size = 320;
+	output->size = pcm_size;
 	output->timestamp.u64 = input->timestamp.u64;
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+	pj_bzero(output->buf, output->size);
 	return PJ_SUCCESS;
     }
 
@@ -789,7 +790,7 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
     speex_decode_int(spx->dec, &spx->dec_bits, (spx_int16_t*)output->buf);
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = 320;
+    output->size = pcm_size;
     output->timestamp.u64 = input->timestamp.u64;
 
 
