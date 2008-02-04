@@ -20,7 +20,7 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
-#include <pjmedia/jbuf.h>
+#include <pjmedia/jbuf2.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ctype.h>
@@ -108,8 +108,7 @@ struct pjmedia_stream
     pj_uint32_t		     tx_duration;   /**< TX duration in timestamp.  */
 
     pj_mutex_t		    *jb_mutex;
-    pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
-    char		     jb_last_frm;   /**< Last frame type from jb    */
+    pjmedia_jb2_t	    *jb;	    /**< Jitter buffer.		    */
 
     pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -152,6 +151,89 @@ static void stream_perror(const char *sender, const char *title,
     PJ_LOG(4,(sender, "%s: %s [err:%d]", title, errmsg, status));
 }
 
+static pj_status_t jb_decode(pjmedia_jb2_frame *frame, void *userdata)
+{
+    pjmedia_stream *stream = (pjmedia_stream*) userdata;
+    pj_status_t status = PJ_SUCCESS;
+    pjmedia_frame frame_in, frame_out;
+
+    pj_assert(frame && userdata);
+
+    /* Decode */
+    frame_in.buf = stream->dec->out_pkt;
+    frame_in.size = frame->size;
+    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;
+    pj_memcpy(frame_in.buf, frame->buffer, frame->size);
+
+    frame_out.buf = frame->buffer;
+    frame_out.size = (stream->codec_param.info.clock_rate *
+		     stream->codec_param.info.frm_ptime / 1000)*
+		     (stream->codec_param.info.pcm_bits_per_sample/8);
+
+    status = stream->codec->op->decode( stream->codec, &frame_in,
+					frame_out.size, &frame_out);
+
+    /* NOTE: frame_out.size is not valid for speex/16000 */
+    frame->size = frame_out.size;
+    if (status != PJ_SUCCESS) {
+	LOGERR_((stream->port.info.name.ptr, "codec decode() error", 
+		 status));
+
+	pj_bzero(frame->buffer, frame->size);
+    }
+
+    return status;
+}
+
+static pj_status_t jb_plc(pjmedia_jb2_frame *frame, void *userdata)
+{
+    pjmedia_stream *stream = (pjmedia_stream*) userdata;
+    pj_status_t status = PJ_SUCCESS;
+
+    pj_assert(frame && stream);
+
+    /* Activate PLC */
+    if (stream->codec->op->recover && 
+	stream->codec_param.setting.plc) 
+    {
+	pjmedia_frame frame_out;
+
+	frame_out.buf = frame->buffer;
+	frame_out.size = frame->size;
+	status = (*stream->codec->op->recover)(stream->codec,
+					       frame_out.size,
+					       &frame_out);
+    } else {
+	status = PJ_EINVAL;
+    }
+
+    if (status != PJ_SUCCESS) {
+	/* Either PLC failed or PLC not supported/enabled */
+	pj_bzero(frame->buffer, frame->size);
+	PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
+
+    } else {
+	PJ_LOG(5,(stream->port.info.name.ptr, 
+		  "Lost frame recovered"));
+    }
+
+    return status;
+}
+
+static pj_status_t jb_cng(pjmedia_jb2_frame *frame, void *userdata)
+{
+    pjmedia_stream *stream = (pjmedia_stream*) userdata;
+
+    pj_assert(frame && stream);
+
+    frame->size = (stream->codec_param.info.clock_rate *
+		   stream->codec_param.info.frm_ptime / 1000)*
+		  (stream->codec_param.info.pcm_bits_per_sample/8);
+    pj_bzero(frame->buffer, frame->size);
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * play_callback()
@@ -159,6 +241,7 @@ static void stream_perror(const char *sender, const char *title,
  * This callback is called by sound device's player thread when it
  * needs to feed the player with some frames.
  */
+
 static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 {
     pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
@@ -166,7 +249,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     unsigned samples_count, samples_per_frame, samples_required;
     pj_int16_t *p_out_samp;
     pj_status_t status;
-
+    pjmedia_jb2_frame jb_frame;
 
     /* Return no frame is channel is paused */
     if (channel->paused) {
@@ -191,157 +274,10 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     for (samples_count=0; samples_count < samples_required; 
 	 samples_count += samples_per_frame) 
     {
-	char frame_type;
-
 	/* Get frame from jitter buffer. */
-	pjmedia_jbuf_get_frame(stream->jb, channel->out_pkt, &frame_type);
-	
-	if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
-	    
-	    /* Activate PLC */
-	    if (stream->codec->op->recover && 
-		stream->codec_param.setting.plc) 
-	    {
-		pjmedia_frame frame_out;
-
-		frame_out.buf = p_out_samp + samples_count;
-		frame_out.size = frame->size - samples_count*2;
-		status = (*stream->codec->op->recover)(stream->codec,
-						       frame_out.size,
-						       &frame_out);
-
-	    } else {
-		status = -1;
-	    }
-
-	    if (status != PJ_SUCCESS) {
-		/* Either PLC failed or PLC not supported/enabled */
-		pjmedia_zero_samples(p_out_samp + samples_count,
-				     samples_required - samples_count);
-		PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
-
-	    } else {
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Lost frame recovered"));
-	    }
-	    
-	} else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
-
-	    /* Jitter buffer is empty. If this is the first "empty" state,
-	     * activate PLC to smoothen the fade-out, otherwise zero
-	     * the frame. 
-	     */
-	    if (frame_type != stream->jb_last_frm) {
-		pjmedia_jb_state jb_state;
-
-		/* Activate PLC to smoothen the missing frame */
-		if (stream->codec->op->recover && 
-		    stream->codec_param.setting.plc) 
-		{
-		    pjmedia_frame frame_out;
-
-		    do {
-			frame_out.buf = p_out_samp + samples_count;
-			frame_out.size = frame->size - samples_count*2;
-			status = (*stream->codec->op->recover)(stream->codec,
-							       frame_out.size,
-							       &frame_out);
-			if (status != PJ_SUCCESS)
-			    break;
-			samples_count += samples_per_frame;
-
-		    } while (samples_count < samples_required);
-
-		} 
-
-		/* Report the state of jitter buffer */
-		pjmedia_jbuf_get_state(stream->jb, &jb_state);
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Jitter buffer empty (prefetch=%d)", 
-			  jb_state.prefetch));
-
-	    }
-
-	    if (samples_count < samples_required) {
-		pjmedia_zero_samples(p_out_samp + samples_count,
-				     samples_required - samples_count);
-		samples_count = samples_required;
-	    }
-
-	    stream->jb_last_frm = frame_type;
-	    break;
-
-	} else if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
-
-	    pjmedia_jb_state jb_state;
-
-	    /* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
-	    pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
-
-	    /* Get the state of jitter buffer */
-	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
-
-	    /* Always activate PLC when it's available.. */
-	    if (stream->codec->op->recover && 
-		stream->codec_param.setting.plc) 
-	    {
-		pjmedia_frame frame_out;
-
-		do {
-		    frame_out.buf = p_out_samp + samples_count;
-		    frame_out.size = frame->size - samples_count*2;
-		    status = (*stream->codec->op->recover)(stream->codec,
-							   frame_out.size,
-							   &frame_out);
-		    if (status != PJ_SUCCESS)
-			break;
-		    samples_count += samples_per_frame;
-
-		} while (samples_count < samples_required);
-
-		if (stream->jb_last_frm != frame_type) {
-		    PJ_LOG(5,(stream->port.info.name.ptr, 
-			      "Jitter buffer is bufferring with plc (prefetch=%d)",
-			      jb_state.prefetch));
-		}
-
-	    } 
-
-	    if (samples_count < samples_required) {
-		pjmedia_zero_samples(p_out_samp + samples_count,
-				     samples_required - samples_count);
-		samples_count = samples_required;
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Jitter buffer is bufferring (prefetch=%d)..", 
-			  jb_state.prefetch));
-	    }
-
-	    stream->jb_last_frm = frame_type;
-	    break;
-
-	} else {
-	    /* Got "NORMAL" frame from jitter buffer */
-	    pjmedia_frame frame_in, frame_out;
-
-	    /* Decode */
-	    frame_in.buf = channel->out_pkt;
-	    frame_in.size = stream->frame_size;
-	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
-
-	    frame_out.buf = p_out_samp + samples_count;
-	    frame_out.size = frame->size - samples_count*BYTES_PER_SAMPLE;
-	    status = stream->codec->op->decode( stream->codec, &frame_in,
-						frame_out.size, &frame_out);
-	    if (status != 0) {
-		LOGERR_((port->info.name.ptr, "codec decode() error", 
-			 status));
-
-		pjmedia_zero_samples(p_out_samp + samples_count, 
-				     samples_per_frame);
-	    }
-	}
-
-	stream->jb_last_frm = frame_type;
+	jb_frame.buffer = p_out_samp + samples_count;
+	jb_frame.size = frame->size - samples_count*2;
+	status = pjmedia_jb2_get_frame(stream->jb, &jb_frame);
     }
 
 
@@ -999,7 +935,7 @@ static void on_rx_rtp( void *data,
      */
     pj_mutex_lock( stream->jb_mutex );
     if (seq_st.status.flag.restart) {
-	status = pjmedia_jbuf_reset(stream->jb);
+	status = pjmedia_jb2_reset(stream->jb);
 	PJ_LOG(4,(stream->port.info.name.ptr, "Jitter buffer reset"));
 
     } else {
@@ -1013,6 +949,7 @@ static void on_rx_rtp( void *data,
 	unsigned i, count = MAX;
 	unsigned samples_per_frame;
 	pjmedia_frame frames[MAX];
+	pjmedia_jb2_frame jb_frame;
 
 	/* Get the timestamp of the first sample */
 	ts.u64 = pj_ntohl(hdr->ts);
@@ -1038,17 +975,22 @@ static void on_rx_rtp( void *data,
 			    1000;
 			    
 	for (i=0; i<count; ++i) {
-	    unsigned ext_seq;
-
-	    ext_seq = (unsigned)(frames[i].timestamp.u64 /
-				 samples_per_frame);
-	    pjmedia_jbuf_put_frame(stream->jb, frames[i].buf, 
-				   frames[i].size, ext_seq);
-
+	    jb_frame.buffer = frames[i].buf;
+	    jb_frame.pt = (pj_uint8_t)hdr->pt;
+	    jb_frame.seq = ntohs(hdr->seq);
+	    jb_frame.size = frames[i].size;
+	    jb_frame.ts = ntohl(hdr->ts) + samples_per_frame*i;
+	    jb_frame.type = PJMEDIA_JB_FT_NORMAL_FRAME;
+	    
+	    status = pjmedia_jb2_put_frame(stream->jb, &jb_frame);
+	    if (status != PJ_SUCCESS) {
+		LOGERR_((stream->port.info.name.ptr, "Jitter buffer put() error", 
+			status));
+	    }
 	}
     }
-    pj_mutex_unlock( stream->jb_mutex );
 
+    pj_mutex_unlock( stream->jb_mutex );
 
     /* Check if now is the time to transmit RTCP SR/RR report.
      * We only do this when stream direction is "decoding only", 
@@ -1056,12 +998,6 @@ static void on_rx_rtp( void *data,
      */
     if (stream->dir == PJMEDIA_DIR_DECODING) {
 	check_tx_rtcp(stream, pj_ntohl(hdr->ts));
-    }
-
-    if (status != 0) {
-	LOGERR_((stream->port.info.name.ptr, "Jitter buffer put() error", 
-		status));
-	return;
     }
 }
 
@@ -1160,8 +1096,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     enum { M = 32 };
     pjmedia_stream *stream;
     pj_str_t name;
-    unsigned jb_init, jb_max, jb_min_pre, jb_max_pre;
     pj_status_t status;
+    pjmedia_jb2_setting jb_setting;
+    pjmedia_jb2_cb jb_cb;
 
     PJ_ASSERT_RETURN(pool && info && p_stream, PJ_EINVAL);
 
@@ -1315,38 +1252,27 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 
     /* Init jitter buffer parameters: */
-    if (info->jb_max > 0)
-	jb_max = info->jb_max;
-    else
-	jb_max = 360 / stream->codec_param.info.frm_ptime;
+    pj_bzero(&jb_setting, sizeof(jb_setting));
+    jb_setting.samples_per_frame = info->fmt.clock_rate * 
+				   stream->codec_param.info.frm_ptime /
+				   1000;
+    jb_setting.frame_size = jb_setting.samples_per_frame * 
+			    stream->codec_param.info.pcm_bits_per_sample / 8;
+    jb_setting.max_frames = 0;
 
-    if (info->jb_min_pre >= 0)
-	jb_min_pre = info->jb_min_pre;
-    else
-	jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
-
-    if (info->jb_max_pre > 0)
-	jb_max_pre = info->jb_max_pre;
-    else
-	jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
-
-    if (info->jb_init >= 0)
-	jb_init = info->jb_init;
-    else
-	jb_init = (jb_min_pre + jb_max_pre) / 2;
-
+    pj_bzero(&jb_cb, sizeof(jb_cb));
+    jb_cb.decode = &jb_decode;
+    jb_cb.plc = &jb_plc;
+    jb_cb.cng = NULL; //&jb_cng;
+    jb_cb.user_data = stream;
 
     /* Create jitter buffer */
-    status = pjmedia_jbuf_create(pool, &stream->port.info.name,
-				 stream->frame_size, 
-				 stream->codec_param.info.frm_ptime,
-				 jb_max, &stream->jb);
+    status = pjmedia_jb2_create(pool, &stream->port.info.name, &jb_setting, 
+				&jb_cb, &stream->jb);
+
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
-
-    /* Set up jitter buffer */
-    pjmedia_jbuf_set_adaptive( stream->jb, jb_init, jb_min_pre, jb_max_pre);
 
     /* Create decoder channel: */
 
@@ -1414,6 +1340,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 	stream->codec->op->close(stream->codec);
 	pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
 	stream->codec = NULL;
+    }
+
+    /* Destroy JB */
+    if (stream->jb) {
+	pjmedia_jb2_destroy(stream->jb);
+	stream->jb = NULL;
     }
 
     /* Free mutex */
@@ -1507,7 +1439,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_pause( pjmedia_stream *stream,
 
 	/* Also reset jitter buffer */
 	pj_mutex_lock( stream->jb_mutex );
-	pjmedia_jbuf_reset(stream->jb);
+	pjmedia_jb2_reset(stream->jb);
 	pj_mutex_unlock( stream->jb_mutex );
 
 	PJ_LOG(4,(stream->port.info.name.ptr, "Decoder stream paused"));
