@@ -41,7 +41,7 @@
 
 /* Max frames specifies maximum frames allowed to be allocated.
  */
-#define MAX_FRAMES		100
+#define MAX_FRAMES		20
 
 /* History constants specify entries number of history,
  * and entry life time.
@@ -132,6 +132,7 @@ typedef struct jb_frame_list
 {
     PJ_DECL_LIST_MEMBER(struct jb_frame_list);
     pjmedia_jb2_frame	frame;
+    void		*orig_buffer;
 } jb_frame_list;
 
 typedef struct jb_history
@@ -167,8 +168,9 @@ struct pjmedia_jb2_t
     pjmedia_jb2_stat	     stat;
     pjmedia_jb2_state	     state;
 
-    /* last get frame */
+    /* frame history */
     pjmedia_jb2_frame	     last_frame_out;
+    pjmedia_jb2_frame	     last_frame_cn;
 
     /* state update */
     jb_history		     hist[HISTORY_COUNT];
@@ -182,7 +184,6 @@ struct pjmedia_jb2_t
     pjmedia_jb2_cb	     cb;
 };
 
-static void init_jb(pjmedia_jb2_t *jb);
 static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get);
 static void compensate_drift(pjmedia_jb2_t *jb);
 static pj_status_t decode_frames(pjmedia_jb2_t *jb, jb_frame_list* start, 
@@ -200,8 +201,9 @@ static jb_frame_list* alloc_frame(pjmedia_jb2_t *jb)
 	f = jb->frames_pool.next;
 	pj_list_erase(f);
     } else if (jb->state.frame_cnt >= jb->setting.max_frames) {
-	TRACE__((THIS_FILE, "Frame numbers(%d) exceeds max(%d)!",
-	    jb->state.frame_cnt, jb->setting.max_frames));
+	TRACE__((THIS_FILE, "Frame numbers %d(=%d?) exceeds max(%d)!",
+	    jb->state.frame_cnt, pj_list_size(&jb->frames), 
+	    jb->setting.max_frames));
 	return NULL;
     } else {
 	f = PJ_POOL_ZALLOC_T(jb->pool, jb_frame_list);
@@ -209,8 +211,12 @@ static jb_frame_list* alloc_frame(pjmedia_jb2_t *jb)
 	    TRACE__((THIS_FILE, "Failed to allocate frame!"));
 	    return NULL;
 	}
-	f->frame.buffer = pj_pool_alloc(jb->pool, jb->setting.frame_size);
-	if (NULL == f->frame.buffer) return NULL;
+	f->orig_buffer = pj_pool_alloc(jb->pool, jb->setting.frame_size);
+	f->frame.buffer = f->orig_buffer;
+	if (NULL == f->frame.buffer) {
+	    TRACE__((THIS_FILE, "Failed to allocate frame buffer!"));
+	    return NULL;
+	}
 	++jb->state.frame_cnt;
     }
 
@@ -222,6 +228,7 @@ PJ_INLINE(void) release_frame(pjmedia_jb2_t *jb, jb_frame_list* f)
 {
     pj_list_erase(f);
     pj_list_push_back(&jb->frames_pool, f);
+    f->frame.buffer = f->orig_buffer;
 }
 
 
@@ -326,10 +333,11 @@ static void jb_vbuf_shrink(jb_vbuf *buf, unsigned size)
     }
 }
 
-static void jb_vbuf_expand(jb_vbuf *buf, unsigned size)
+static pj_bool_t jb_vbuf_expand(jb_vbuf *buf, unsigned size)
 {
     jb_frame_list *f;
     int step;
+    int orig_buf_cnt = buf->cnt;
 
     pj_assert(buf);
 
@@ -337,6 +345,18 @@ static void jb_vbuf_expand(jb_vbuf *buf, unsigned size)
 	step = PJ_MIN(buf->jb->setting.frame_size, size);
 
 	f = alloc_frame(buf->jb);
+	if (!f) {
+	    unsigned i;
+	    /* Rollback */
+	    for (i=orig_buf_cnt; i<buf->cnt; ++i) {
+		buf->size -= buf->f[i]->frame.size;
+		buf->jb->state.cur_size -= buf->f[i]->frame.size/2;
+		release_frame(buf->jb, buf->f[i]);
+	    }
+	    buf->cnt = orig_buf_cnt;
+	    return PJ_FALSE;
+	}
+
 	f->frame.pt = buf->f[buf->cnt-1]->frame.pt;
 	f->frame.seq = buf->f[buf->cnt-1]->frame.seq;
 	f->frame.size = step;
@@ -352,12 +372,151 @@ static void jb_vbuf_expand(jb_vbuf *buf, unsigned size)
 
 	size -= step;
     }
+    return PJ_TRUE;
 }
 
-static void init_jb(pjmedia_jb2_t *jb)
+/* Decode consecutive undecoded frames. */
+static pj_status_t decode_frames(pjmedia_jb2_t *jb, jb_frame_list* start,
+				 int max)
+{
+    jb_frame_list* tmp = start;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(jb && start && jb->cb.decode, PJ_EINVAL);
+
+    /* Decoded already */
+    if (start->frame.type != PJMEDIA_JB_FT_NORMAL_FRAME)
+	return PJ_SUCCESS;
+
+    /* In the beginning, make sure it is sequenced from last_frame_out,
+     * otherwise we cannot detect packet loss.
+     */
+    if (start->prev == &jb->frames &&			        /* beginning */
+	jb->last_frame_out.seq &&			 /* last out defined */
+	start->frame.seq > jb->last_frame_out.seq &&	     /* bad sequence */
+	(start->frame.seq - jb->last_frame_out.seq > 1))
+    {
+	return PJ_SUCCESS;
+    }
+
+    /* Not in the beginning, make sure previous frame is sequenced & decoded */
+    if (start->prev != &jb->frames &&			    /* not beginning */
+	((start->frame.seq > start->prev->frame.seq &&	     /* bad sequence */
+	 (start->frame.seq - start->prev->frame.seq > 1)) ||
+	start->prev->frame.type == PJMEDIA_JB_FT_NORMAL_FRAME)) /* undecoded */
+    {
+	return PJ_SUCCESS;
+    }
+
+    do {
+	status = jb->cb.decode(&tmp->frame, jb->cb.user_data);
+        
+	if (status != PJ_SUCCESS) {
+	    TRACE__((THIS_FILE,"Failed to decode frame!"));
+	    release_frame(jb, tmp);
+	    return PJMEDIA_JB2_EFAILDECODE;
+	}
+	tmp->frame.type = PJMEDIA_JB_FT_NORMAL_RAW_FRAME;
+	tmp = tmp->next;
+        
+	jb->state.cur_size += jb->setting.samples_per_frame;
+
+    } while (tmp != &jb->frames && 
+	     tmp->frame.type == PJMEDIA_JB_FT_NORMAL_FRAME &&
+	     (tmp->frame.ts - tmp->prev->frame.ts <= 
+	     jb->setting.samples_per_frame) &&
+	     (!max || --max > 0));
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_jb2_create( pj_pool_t *pool,
+					  const pj_str_t *name,
+					  const pjmedia_jb2_setting *setting,
+					  const pjmedia_jb2_cb *cb,
+					  pjmedia_jb2_t **p_jb )
+{
+    pjmedia_jb2_t *jb;
+
+    PJ_ASSERT_RETURN(pool && setting && cb && p_jb, PJ_EINVAL);
+
+    if (setting->max_frames > MAX_FRAMES) {
+	PJ_LOG(4,(THIS_FILE, "Max frames requested is too big!"));
+	return PJ_EINVAL;
+    }
+
+    jb = PJ_POOL_ZALLOC_T(pool, pjmedia_jb2_t);
+    jb->pool = pool;
+
+    if (name)
+	pj_strdup_with_null(jb->pool, &jb->name, name);
+    else
+	pj_strdup2_with_null(pool, &jb->name, "jb2");
+
+    pj_list_init(&jb->frames_pool);
+    pj_list_init(&jb->frames);
+
+    jb->setting = *setting;
+    jb->cb = *cb;
+
+    /* Init CN frame */
+    pj_bzero(&jb->last_frame_cn, sizeof(jb->last_frame_cn));
+    jb->last_frame_cn.buffer = pj_pool_zalloc(pool, setting->frame_size);
+    jb->last_frame_cn.size = 0;
+
+    if (!jb->setting.max_frames)
+	jb->setting.max_frames = MAX_FRAMES;
+    
+    pjmedia_jb2_reset(jb);
+
+    *p_jb = jb;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_jb2_destroy(pjmedia_jb2_t *jb)
+{
+    pjmedia_jb2_stat jb_stat;
+    pjmedia_jb2_state jb_state;
+
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+
+    pjmedia_jb2_get_state(jb, &jb_state);
+    PJ_LOG(5, (jb->name.ptr, "JB state:"));
+    PJ_LOG(5, (jb->name.ptr, "Drift\t = %5d/%d", jb_state.drift, 
+						 jb_state.drift_span));
+    PJ_LOG(5, (jb->name.ptr, "Level\t = %5d ticks", jb_state.level));
+    PJ_LOG(5, (jb->name.ptr, "Size\t = %5d samples", jb_state.cur_size));
+    PJ_LOG(5, (jb->name.ptr, "Opt.Size\t = %5d samples", jb_state.opt_size));
+    PJ_LOG(5, (jb->name.ptr, "Pool\t = %5d frames", jb_state.frame_cnt));
+
+    pjmedia_jb2_get_stat(jb, &jb_stat);
+    PJ_LOG(5, (jb->name.ptr, "JB statistic:"));
+    PJ_LOG(5, (jb->name.ptr, "in \t = %5d frames", jb_stat.in));
+    PJ_LOG(5, (jb->name.ptr, "out\t = %5d frames", jb_stat.out));
+    PJ_LOG(5, (jb->name.ptr, "lost\t = %5d frames", jb_stat.lost));
+    PJ_LOG(5, (jb->name.ptr, "late\t = %5d frames", jb_stat.late));
+    PJ_LOG(5, (jb->name.ptr, "ooo\t = %5d frames", jb_stat.ooo));
+    PJ_LOG(5, (jb->name.ptr, "empty\t = %5d times", jb_stat.empty));
+    PJ_LOG(5, (jb->name.ptr, "full\t = %5d times", jb_stat.full));
+    PJ_LOG(5, (jb->name.ptr, "max_size\t = %5d samples", jb_stat.max_size));
+    PJ_LOG(5, (jb->name.ptr, "max_level\t = %5d", jb_stat.max_level));
+    PJ_LOG(5, (jb->name.ptr, "max_comp\t = %5d samples", jb_stat.max_comp));
+    PJ_LOG(5, (jb->name.ptr, "max_drift\t = %5d/%d", jb_stat.max_drift, 
+				    jb_stat.max_drift_span));
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_jb2_reset(pjmedia_jb2_t *jb)
 {
     jb_frame_list *f, *next_f;
     int i;
+
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+
+    /* Reset tick */
+    jb->tick = 0;
 
     /* Reset frames */
     f = jb->frames.next;
@@ -368,7 +527,7 @@ static void init_jb(pjmedia_jb2_t *jb)
     }
     pj_list_init(&jb->frames);
 
-    /* Init last frame out */
+    /* Init frame history */
     pj_bzero(&jb->last_frame_out, sizeof(jb->last_frame_out));
 
     /* Init history entries.
@@ -398,105 +557,6 @@ static void init_jb(pjmedia_jb2_t *jb)
     /* Reset current level */
     jb->cur_level = 0;
     jb->drift_state.acc_mod_span = 1;
-
-    /* Inform user about JB (re)init */
-}
-
-/* Decode all consecutive undecoded frames. */
-static pj_status_t decode_frames(pjmedia_jb2_t *jb, jb_frame_list* start,
-				 int max)
-{
-    jb_frame_list* tmp = start;
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(jb && start && jb->cb.decode, PJ_EINVAL);
-
-    /* Decoded already */
-    if (start->frame.type != PJMEDIA_JB_FT_NORMAL_FRAME)
-	return PJ_SUCCESS;
-
-    do {
-	status = jb->cb.decode(&tmp->frame);
-        
-	pj_assert(tmp->frame.size == jb->setting.frame_size);
-
-	if (status != PJ_SUCCESS) {
-	    TRACE__((THIS_FILE,"Failed to decode frame!"));
-	    return PJMEDIA_JB2_EFAILDECODE;
-	}
-	tmp->frame.type = PJMEDIA_JB_FT_NORMAL_RAW_FRAME;
-	tmp = tmp->next;
-        
-	jb->state.cur_size += jb->setting.samples_per_frame;
-
-    } while (tmp != &jb->frames && 
-	     tmp->frame.type == PJMEDIA_JB_FT_NORMAL_FRAME &&
-	     (tmp->frame.ts - tmp->prev->frame.ts == 
-	     jb->setting.samples_per_frame) &&
-	     (!max || --max > 0));
-
-    return PJ_SUCCESS;
-}
-
-PJ_DEF(pj_status_t) pjmedia_jb2_create( pj_pool_t *pool,
-					  const pj_str_t *name,
-					  const pjmedia_jb2_setting *setting,
-					  const pjmedia_jb2_cb *cb,
-					  pjmedia_jb2_t **p_jb )
-{
-    pjmedia_jb2_t *jb;
-
-    PJ_ASSERT_RETURN(pool && setting && cb && p_jb, PJ_EINVAL);
-
-    if (setting->max_frames > MAX_FRAMES) {
-	PJ_LOG(4,(THIS_FILE, "Max frames requested is too big!"));
-	return PJ_EINVAL;
-    }
-
-    jb = PJ_POOL_ZALLOC_T(pool, pjmedia_jb2_t);
-    jb->pool = pool;
-
-    if (name)
-	pj_strdup_with_null(jb->pool, &jb->name, name);
-    else
-	pj_strdup2(pool, &jb->name, "jb2");
-
-    pj_list_init(&jb->frames_pool);
-    pj_list_init(&jb->frames);
-
-    jb->setting = *setting;
-    jb->cb = *cb;
-
-    pjmedia_jb2_reset(jb);
-
-    *p_jb = jb;
-
-    return PJ_SUCCESS;
-}
-
-PJ_DEF(pj_status_t) pjmedia_jb2_destroy(pjmedia_jb2_t *jb)
-{
-    PJ_UNUSED_ARG(jb);
-    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
-
-    return PJ_SUCCESS;
-}
-
-PJ_DEF(pj_status_t) pjmedia_jb2_reset(pjmedia_jb2_t *jb)
-{
-    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
-
-    /* Reset tick */
-    jb->tick = 0;
-
-    /* Reset statistic */
-    pj_bzero(&jb->stat, sizeof(pjmedia_jb2_stat));
-
-    if (!jb->setting.max_frames)
-	jb->setting.max_frames = MAX_FRAMES;
-    
-    /* Init buffers */
-    init_jb(jb);
 
     return PJ_SUCCESS;
 }
@@ -592,12 +652,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_put_frame(pjmedia_jb2_t *jb,
     /* Decode frame(s) if needed */
     if (tmp->frame.type == PJMEDIA_JB_FT_NORMAL_RAW_FRAME) {
 	jb->state.cur_size += jb->setting.samples_per_frame;
-    }
-    else if (tmp->prev != &jb->frames && 
-	     (tmp->frame.ts - tmp->prev->frame.ts == 
-	     jb->setting.samples_per_frame) &&
-	     tmp->prev->frame.type != PJMEDIA_JB_FT_NORMAL_FRAME)
-    {
+    } else {
 	status = decode_frames(jb, tmp, 0);
     }
 
@@ -619,7 +674,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
     update_state(jb, PJ_TRUE);
 
     if (jb->state.phase == PJMEDIA_JB_PH_IDLE)
-	goto ON_RETURN;
+	goto RETURN_EMPTY_FRAME;
 
     /* Check first frame */
     if (!pj_list_empty(&jb->frames)) {
@@ -631,71 +686,72 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
 	{
 	    jb_frame_list *tmp_plc;
 
+	    ++jb->stat.in;
+	    ++jb->stat.lost;
+
 	    /* Generate PLC frame*/
 	    tmp_plc = alloc_frame(jb);
-	    if (!tmp_plc) return PJ_ENOMEM;
-
-	    /* Fill buffer with PLC */
-	    if (jb->cb.plc) {
-		status = jb->cb.plc(&tmp_plc->frame);
-		if (status != PJ_SUCCESS)
-		    return status;
+	    if (!tmp_plc) {
+		status = PJ_ENOMEM;
+		jb->last_frame_out = tmp->frame;
+		release_frame(jb, tmp);
+		goto RETURN_EMPTY_FRAME;
 	    }
-
-	    tmp_plc->frame.type = PJMEDIA_JB_FT_INTERP_RAW_FRAME;
 	    tmp_plc->frame.pt = jb->last_frame_out.pt;
 	    tmp_plc->frame.seq = jb->last_frame_out.seq + 1;
 	    tmp_plc->frame.size = jb->setting.frame_size;
 	    tmp_plc->frame.ts = jb->last_frame_out.ts + 
 				jb->setting.samples_per_frame;
-
 	    pj_list_push_front(&jb->frames, tmp_plc);
-	    ++jb->stat.in;
-	    ++jb->stat.lost;
-	    TRACE__((THIS_FILE,"Frame lost!"));
+
+	    /* Fill buffer with PLC */
+	    if (jb->cb.plc) {
+		status = jb->cb.plc(&tmp_plc->frame, jb->cb.user_data);
+		if (status != PJ_SUCCESS) {
+		    TRACE__((THIS_FILE,"PLC failed"));
+		    jb->last_frame_out = tmp->frame;
+		    release_frame(jb, tmp_plc);
+		    goto RETURN_EMPTY_FRAME;
+		}
+		tmp_plc->frame.type = PJMEDIA_JB_FT_INTERP_RAW_FRAME;
+
+		TRACE__((THIS_FILE,"Lost frame recovered!"));
+	    } else {
+		pj_bzero(tmp_plc->frame.buffer, jb->setting.frame_size);
+		tmp_plc->frame.type = PJMEDIA_JB_FT_NULL_FRAME;
+		TRACE__((THIS_FILE,"Lost frame!"));
+	    }
 
 	    jb->state.cur_size += jb->setting.samples_per_frame;
 	}
 
-	/* Or there is CN packet */
-	else if (tmp->frame.pt == PT_CN) {
-	    unsigned cn_samples;
-	    jb_frame_list *tmp_cn, *pos;
+	/* Or there is CN packet/jumping timestamp */
+	else if (tmp->frame.pt == PT_CN || (jb->last_frame_out.ts && 
+		(tmp->frame.ts - jb->last_frame_out.ts > 
+		jb->setting.samples_per_frame)))
+	{
+	    unsigned cn_frames;
 
-	    /* Generate CN frames */
-	    if (jb->last_frame_out.ts)
-		cn_samples = tmp->frame.ts - jb->last_frame_out.ts;
+	    /* Count CN frames */
+	    if (jb->last_frame_out.ts && tmp->frame.ts > jb->last_frame_out.ts)
+		cn_frames = (tmp->frame.ts - jb->last_frame_out.ts) / 
+			    jb->setting.samples_per_frame;
 	    else
-		cn_samples = jb->setting.samples_per_frame;
+		cn_frames = 1;
 
-	    pos = &jb->frames;
-	    for (i = 0; i<cn_samples; i += jb->setting.samples_per_frame)
-	    {
-		tmp_cn = alloc_frame(jb);
-		if (!tmp_cn) return PJ_ENOMEM;
+	    jb->last_frame_out = tmp->frame;
 
-		/* Fill buffer with CNG */
-		status = jb->cb.cng(&tmp_cn->frame);
-		if (status != PJ_SUCCESS)
-		    return status;
-
-		tmp_cn->frame.type = PJMEDIA_JB_FT_INTERP_RAW_FRAME;
-		tmp_cn->frame.pt = jb->last_frame_out.pt;
-		tmp_cn->frame.seq = tmp->frame.seq;
-		tmp_cn->frame.size = jb->setting.frame_size;
-		tmp_cn->frame.ts = jb->last_frame_out.seq + i +
-				   jb->setting.samples_per_frame;
-
-		pj_list_insert_after(pos, tmp_cn);
-		pos = tmp_cn;
-		jb->state.cur_size += jb->setting.samples_per_frame;
+	    if (tmp->frame.pt == PT_CN) {
+		/* Save CN info */
+		jb->last_frame_cn.size = tmp->frame.size;
+		pj_memcpy(jb->last_frame_cn.buffer, tmp->frame.buffer, 
+			  tmp->frame.size);
+		jb->stat.in += cn_frames;
+		release_frame(jb, tmp);
+	    } else {
+		jb->stat.in += cn_frames - 1;
+		status = decode_frames(jb, tmp, 2);
 	    }
-
-	    /* Discard this CN frame, replaced by real PCM frames */
-	    release_frame(jb, tmp);
-
-	    /* Update statistic */
-	    jb->stat.in += cn_samples - 1;
 	}
 
 	/* Or there is undecoded packet */
@@ -704,29 +760,27 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
 	     * One for being fetched, one for luring PUT op to decode the rest.
 	     */
 	    status = decode_frames(jb, tmp, 2);
-	    if (status != PJ_SUCCESS)
-		return status;
 	}
     }
-
-    /* Compensate drift right before any frame fetched */
-    compensate_drift(jb);
 
     /* Consistency checking, when cur_size!=0, there should be frame(s)
      * in the JB frames list.
      */
-    pj_assert((jb->state.cur_size==0) || 
+    pj_assert((jb->state.cur_size == 0) || 
 	      (!pj_list_empty(&jb->frames) && jb->state.cur_size));
 
     /* Not enough samples in PCM buffer */
-    if (jb->state.cur_size < jb->setting.samples_per_frame) {
+    if (jb->state.cur_size == 0) {
 	if (jb->state.phase != PJMEDIA_JB_PH_LEARNING) {
-	    TRACE__((THIS_FILE,"Not enough PCM samples (%d)!", 
-		     jb->state.cur_size));
+	    TRACE__((THIS_FILE,"JB empty!"));
 	    ++jb->stat.empty;
 	}
+
 	goto RETURN_EMPTY_FRAME;
     }
+
+    /* Compensate drift right before any frame fetched */
+    compensate_drift(jb);
 
     /* Prepare the requested frame */
     tmp = jb->frames.next;
@@ -738,7 +792,7 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
     f->ts = tmp->frame.ts;
     
     /* Fill frame buffer, make sure size == setting.frame_size */
-    while (f->size < jb->setting.frame_size) {
+    while (f->size < jb->setting.frame_size && jb->state.cur_size) {
 	next_frm = tmp->next;
 
 	if (tmp->frame.size <= jb->setting.frame_size - f->size) {
@@ -753,34 +807,60 @@ PJ_DEF(pj_status_t) pjmedia_jb2_get_frame(pjmedia_jb2_t *jb,
 	    i = jb->setting.frame_size - f->size;
 	    pj_memcpy((pj_int8_t*)f->buffer + f->size, tmp->frame.buffer, i);
 	    tmp->frame.size -= i;
-
-	    /* Shift the buffer, don't shift the pointer! */
-	    pj_memmove(tmp->frame.buffer, (pj_int8_t*)tmp->frame.buffer + i, 
-		       tmp->frame.size);
+	    tmp->frame.buffer = (pj_int8_t*)tmp->frame.buffer + i;
 	}
+
+	pj_assert(jb->state.cur_size >= (i/
+		    (jb->setting.frame_size/jb->setting.samples_per_frame)));
+	jb->state.cur_size -= i/
+		    (jb->setting.frame_size/jb->setting.samples_per_frame);
 
 	f->size += i;
 	tmp = next_frm;
     }
 
-    jb->state.cur_size -= jb->setting.samples_per_frame;
+    if (jb->tick % 100 == 0) {
+	pjmedia_jb2_state jb_state;
+
+	pjmedia_jb2_get_state(jb, &jb_state);
+	PJ_LOG(5, (jb->name.ptr, "JB state:"));
+	PJ_LOG(5, (jb->name.ptr, "Drift\t = %5d/%d", jb_state.drift, 
+						     jb_state.drift_span));
+	PJ_LOG(5, (jb->name.ptr, "Level\t = %5d ticks", jb_state.level));
+	PJ_LOG(5, (jb->name.ptr, "Size\t = %5d samples", jb_state.cur_size));
+	PJ_LOG(5, (jb->name.ptr, "Opt.Size\t = %5d samples", jb_state.opt_size));
+	PJ_LOG(5, (jb->name.ptr, "Pool\t = %5d frames", jb_state.frame_cnt));
+    }
 
     /* JB still learning the level */
-    if (jb->state.phase == PJMEDIA_JB_PH_LEARNING)
-	goto RETURN_EMPTY_FRAME;
+    //if (jb->state.phase == PJMEDIA_JB_PH_LEARNING)
+	//goto RETURN_EMPTY_FRAME;
 
     goto ON_RETURN;
 
 RETURN_EMPTY_FRAME:
 
-    f->type = PJMEDIA_JB_FT_NULL_FRAME;
     f->pt = jb->last_frame_out.pt;
     f->seq = jb->last_frame_out.seq;
-    f->size = jb->setting.frame_size;
     f->ts = jb->last_frame_out.ts;
-    pj_bzero(f->buffer, f->size);
 
     /* Instead of returning zero samples, it'd be better to return noise */
+    if (jb->cb.cng && jb->last_frame_cn.size) {
+	f->type = PJMEDIA_JB_FT_INTERP_RAW_FRAME;
+	f->size = jb->last_frame_cn.size;
+	pj_memcpy(f->buffer, jb->last_frame_cn.buffer, f->size);
+	status = jb->cb.cng(f, jb->cb.user_data);
+	if (status != PJ_SUCCESS) {
+	    f->type = PJMEDIA_JB_FT_NULL_FRAME;
+	    f->size = jb->setting.frame_size;
+	    pj_bzero(f->buffer, f->size);
+	    TRACE__((THIS_FILE,"CNG failed"));
+	}
+    } else {
+	f->type = PJMEDIA_JB_FT_NULL_FRAME;
+	f->size = jb->setting.frame_size;
+	pj_bzero(f->buffer, f->size);
+    }
 
 ON_RETURN:
     return status;
@@ -799,7 +879,7 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
 	    TRACE__((THIS_FILE, "Idle ended, reinit jitter buffer."));
 
 	    /* Reinit JB */
-	    init_jb(jb);
+	    pjmedia_jb2_reset(jb);
 	}
 
 	/* Update level? */
@@ -865,8 +945,9 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
 			       / 2;
 #endif
 
-	    TRACE__((THIS_FILE, "History=%s Level=%d Opt.size=%d", dbg_hist, 
-				jb->state.level, jb->state.opt_size));
+	    TRACE__((THIS_FILE, "History=%s level=%d opt.size=%d cur.size=%d", 
+				dbg_hist, jb->state.level, 
+				jb->state.opt_size, jb->state.cur_size));
 	}
 	/* Reset level counter */
 	jb->cur_level = 0;
@@ -902,6 +983,25 @@ static void update_state(pjmedia_jb2_t *jb, pj_bool_t on_get)
 	jb->state.drift = new_drift;
 	jb->state.drift_span = new_drift_span;
 
+	/* Validate drift by comparing current drift to drift margin constant.
+	 * Note that the drift value need to be rescaled to the same span before
+	 * comparing.
+	 */
+       // drift_span = PJ_MIN(jb->stat.in - jb->hist[HISTORY_COUNT-1].in,
+			    //jb->stat.out - jb->hist[HISTORY_COUNT-1].out)
+		     //* (int)jb->setting.samples_per_frame;
+       // drift = jb->state.drift * MAX_DRIFT_MARGIN_SPAN / drift_span;
+	new_drift = jb->state.drift * MAX_DRIFT_MARGIN_SPAN / 
+		(int)jb->state.drift_span;
+	if (PJ_ABS(new_drift) > MAX_DRIFT_MARGIN) {
+	    TRACE__((THIS_FILE, "Abnormal drift (%d/%d), reinit jitter buffer!",
+		     new_drift, MAX_DRIFT_MARGIN_SPAN));
+
+	    /* Reinit JB */
+	    pjmedia_jb2_reset(jb);
+	}
+
+
 	TRACE__((THIS_FILE, "Drift info update: %d/%d (in=%d out=%d)",
 	    jb->state.drift, jb->state.drift_span, 
 	    jb->stat.in - jb->hist[HISTORY_COUNT-1].in,
@@ -936,7 +1036,7 @@ static pj_status_t find_matched_window(jb_vbuf *buf, pj_bool_t left_ref,
 				       unsigned pref_dist,
 				       unsigned *ref_, unsigned *match_)
 {
-    const int MATCH_THRESHOLD = MATCH_WINDOW_LEN*1200;
+    const int MATCH_THRESHOLD = MATCH_WINDOW_LEN*1000;
     unsigned ref, ptr, end;
     int i, similarity, s1, s2;
 
@@ -1067,7 +1167,8 @@ static int insert_samples(jb_vbuf *buf, int n)
     pj_assert(distance > 0);
 
     dest = buf->size/2;
-    jb_vbuf_expand(buf, distance*2);
+    if (!jb_vbuf_expand(buf, distance*2))
+	return 0;
 
     // memcpy
     for (i = 0; i < distance; ++i) {
@@ -1131,31 +1232,11 @@ static void compensate_drift(pjmedia_jb2_t *jb)
     int culprit, orig_cur_size, orig_culprit;
     jb_vbuf buf;
     int sample_size, uncomp_cnt;
-    pj_int32_t drift, itmp;
+    pj_int32_t itmp;
 
     /* No drift, just leave */
     if (!jb->state.drift || !jb->state.drift_span) {
 	jb->drift_state.last_ts = 0;
-	return;
-    }
-
-    /* Validate drift by comparing current drift to drift margin constant.
-     * Note that the drift value need to be rescaled to the same span before
-     * comparing.
-     */
-   // drift_span = PJ_MIN(jb->stat.in - jb->hist[HISTORY_COUNT-1].in,
-			//jb->stat.out - jb->hist[HISTORY_COUNT-1].out)
-		 //* (int)jb->setting.samples_per_frame;
-   // drift = jb->state.drift * MAX_DRIFT_MARGIN_SPAN / drift_span;
-    drift = jb->state.drift * MAX_DRIFT_MARGIN_SPAN / 
-	    (int)jb->state.drift_span;
-    if (PJ_ABS(drift) > MAX_DRIFT_MARGIN) {
-	TRACE__((THIS_FILE, "Abnormal drift (%d/%d), reinit jitter buffer!",
-		 drift, MAX_DRIFT_MARGIN_SPAN));
-
-	/* Reinit JB */
-	init_jb(jb);
-
 	return;
     }
 
@@ -1194,8 +1275,8 @@ static void compensate_drift(pjmedia_jb2_t *jb)
     culprit *= uncomp_cnt;
     itmp *= uncomp_cnt;
 
-    TRACE__((THIS_FILE, "Introducing new culprit:%d/%d mod:%d cur_size:%d", 
-	     culprit, buf.cnt, itmp, jb->state.cur_size));
+    //TRACE__((THIS_FILE, "Introducing new culprit:%d/%d mod:%d cur_size:%d", 
+	     //culprit, buf.cnt, itmp, jb->state.cur_size));
     pj_assert(buf.size/2 <= (int)jb->state.cur_size);
 
     /* Check if modulo span changed */
@@ -1223,6 +1304,16 @@ static void compensate_drift(pjmedia_jb2_t *jb)
     /* Apply pending compensation */
     culprit += jb->drift_state.pending;
 
+    /* Normalization here, drift calculation is not always accurate,
+     * a bit hacky.
+     */
+    if (culprit > (int) jb->state.opt_size)
+	//&& 
+	//PJ_ABS(jb->state.cur_size-jb->state.opt_size) <= jb->setting.frame_size)
+    {
+	culprit = 0;
+    }
+
     /* Culprit may be negative when pending is negative,
      * which means last compensation was more than needed,
      * nothing to compensate if this happens.
@@ -1245,7 +1336,6 @@ static void compensate_drift(pjmedia_jb2_t *jb)
      */
     
     /* IN > OUT (need to shrink) */
-    /* Simple method: just drop samples */
     if (jb->state.drift > 0) {
 
 	int deleted = 0;
@@ -1263,7 +1353,6 @@ static void compensate_drift(pjmedia_jb2_t *jb)
     } 
 
     /* IN < OUT ==> (need to grow) */
-    /* Another simple method: insert null samples */
     else {
 
 	int inserted = 0;

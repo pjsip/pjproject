@@ -55,8 +55,8 @@ typedef struct pjmedia_jb2_t pjmedia_jb2_t;
 typedef enum pjmedia_jb2_phase 
 {
     PJMEDIA_JB_PH_IDLE	    = 0,	/**< No activity in PUT/GET or both */
-    PJMEDIA_JB_PH_LEARNING  = 1,	/**< Normal encoded frame */
-    PJMEDIA_JB_PH_RUNNING   = 2,	/**< Normal PCM frame */
+    PJMEDIA_JB_PH_LEARNING  = 1,	/**< Learning */
+    PJMEDIA_JB_PH_RUNNING   = 2,	/**< Running */
 } pjmedia_jb2_phase;
 
 /**
@@ -136,6 +136,18 @@ typedef enum pjmedia_jb2_frame_type pjmedia_jb2_frame_type;
 
 
 /**
+ * This structure describes jitter buffer callback
+ */
+typedef struct pjmedia_jb2_cb
+{
+    pj_status_t (*decode) (pjmedia_jb2_frame *frame, void *userdata);
+    pj_status_t (*plc)    (pjmedia_jb2_frame *frame, void *userdata);
+    pj_status_t (*cng)    (pjmedia_jb2_frame *frame, void *userdata);
+    void		  *user_data;
+} pjmedia_jb2_cb;
+
+
+/**
  * This structure describes jitter buffer current status.
  */
 typedef struct pjmedia_jb2_setting
@@ -161,13 +173,6 @@ typedef struct pjmedia_jb2_setting
     unsigned    max_frames;
 
 } pjmedia_jb2_setting;
-
-typedef struct pjmedia_jb2_cb
-{
-    pj_status_t (*decode) (pjmedia_jb2_frame *frame);
-    pj_status_t (*plc)    (pjmedia_jb2_frame *frame);
-    pj_status_t (*cng)    (pjmedia_jb2_frame *frame);
-} pjmedia_jb2_cb;
 
 
 /**
