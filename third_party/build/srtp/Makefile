@@ -10,10 +10,11 @@ export SRTP_LIB := ../../lib/libsrtp-$(TARGET_NAME)$(LIBEXT)
 ###############################################################################
 # Gather all flags.
 #
-export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
-		   $(CFLAGS) $(CC_INC). $(CC_INC)../../srtp/crypto/include \
+export _CFLAGS 	:= $(CC_INC). $(CC_INC)../../srtp/crypto/include \
 		   $(CC_INC)../../srtp/include \
-		   $(CC_INC)../../../pjlib/include
+		   $(CC_INC)../../../pjlib/include \
+		   $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
+		   $(CFLAGS) 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
