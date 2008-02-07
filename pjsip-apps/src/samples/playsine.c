@@ -48,7 +48,7 @@
 
 #include <stdlib.h>	/* atoi() */
 #include <stdio.h>
-
+#include <math.h>	/* sin()  */
 
 /* For logging purpose. */
 #define THIS_FILE   "playsine.c"
