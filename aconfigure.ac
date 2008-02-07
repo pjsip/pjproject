@@ -1,4 +1,4 @@
-AC_INIT(pjproject,0.7)
+AC_INIT(pjproject,0.8)
 
 host_orig="$host"
 
@@ -146,6 +146,7 @@ AC_CHECK_HEADER(netinet/in.h,[AC_DEFINE(PJ_HAS_NETINET_IN_H,1)])
 AC_CHECK_HEADER(netinet/ip.h,[AC_DEFINE(PJ_HAS_NETINET_IP_H,1)])
 AC_CHECK_HEADER(net/if.h,[AC_DEFINE(PJ_HAS_NET_IF_H,1)])
 AC_CHECK_HEADER(ifaddrs.h,[AC_DEFINE(PJ_HAS_IFADDRS_H,1)])
+AC_CHECK_HEADER(semaphore.h,[AC_DEFINE(PJ_HAS_SEMAPHORE_H,1)])
 AC_CHECK_HEADER(setjmp.h,[AC_DEFINE(PJ_HAS_SETJMP_H,1)])
 AC_CHECK_HEADER(stdarg.h,[AC_DEFINE(PJ_HAS_STDARG_H,1)])
 AC_CHECK_HEADER(stddef.h,[AC_DEFINE(PJ_HAS_STDDEF_H,1)])
@@ -268,9 +269,42 @@ AC_MSG_CHECKING([if pthread_rwlock_t is available])
 AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
 		    		   [pthread_rwlock_t *x;])],
 		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
+		   ac_rwmutex="yes"
   		   AC_MSG_RESULT(yes)],
 		  [AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
+		   ac_rwmutex="no"
 		   AC_MSG_RESULT(no)])
+
+dnl # If rwmutex is not detected, check again but this time
+dnl # with _POSIX_READER_WRITER_LOCKS defined (newlib needs this)
+if test "$ac_rwmutex" = "no"; then
+    AC_MSG_CHECKING([if pthread_rwlock_t is available with _POSIX_READER_WRITER_LOCKS])
+    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#define _POSIX_READER_WRITER_LOCKS
+					 #include <pthread.h>]],
+				       [pthread_rwlock_t *x;])],
+		      [AC_DEFINE(PJ_EMULATE_RWMUTEX,0)
+		       CFLAGS="$CFLAGS -D_POSIX_THREADS -D_POSIX_READER_WRITER_LOCKS"
+		       AC_MSG_RESULT(yes)],
+		      [AC_DEFINE(PJ_EMULATE_RWMUTEX,1)
+		       AC_MSG_RESULT(no)])
+fi
+
+dnl # Do we have pthread_mutexattr_settype()?
+AC_MSG_CHECKING([if pthread_mutexattr_settype() is available])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
+		    		   [pthread_mutexattr_settype(0,PTHREAD_MUTEX_FAST_NP);])],
+		  [AC_DEFINE(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE,1)
+  		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
+
+dnl # Does pthread_mutexattr_t has "recursive" member?
+AC_MSG_CHECKING([if pthread_mutexattr_t has recursive member])
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([#include <pthread.h>],
+		    		   [[pthread_mutexattr_t attr;
+				     attr.recursive=1;]])],
+		  [AC_DEFINE(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE,1)
+  		   AC_MSG_RESULT(yes)],
+		  [AC_MSG_RESULT(no)])
 
 AC_SUBST(ac_os_objs)
 case $target in

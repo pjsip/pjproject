@@ -54,6 +54,7 @@
 #undef PJ_HAS_NETINET_IP_H
 #undef PJ_HAS_NET_IF_H
 #undef PJ_HAS_IFADDRS_H
+#undef PJ_HAS_SEMAPHORE_H
 #undef PJ_HAS_SETJMP_H
 #undef PJ_HAS_STDARG_H
 #undef PJ_HAS_STDDEF_H
@@ -78,6 +79,19 @@
 #undef PJ_SOCK_HAS_INET_PTON
 #undef PJ_SOCK_HAS_INET_NTOP
 #undef PJ_SOCK_HAS_GETADDRINFO
+
+/* On these OSes, semaphore feature depends on semaphore.h */
+#if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H!=0
+#   define PJ_HAS_SEMAPHORE	1
+#else
+#   define PJ_HAS_SEMAPHORE	0
+#endif
+
+/* Do we have pthread_mutexattr_settype()? */
+#undef PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE
+
+/* Does pthread_mutexattr_t has "recursive" member?  */
+#undef PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE
 
 /* Set 1 if native sockaddr_in has sin_len member. 
  * Default: 0

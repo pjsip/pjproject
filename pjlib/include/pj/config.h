@@ -485,13 +485,6 @@
  * underlying I/O queue impelementation, but still, developers should be 
  * aware of this constant, to make sure that the program will not break when
  * the underlying implementation changes.
- *
- * For implementation based on select(), the value here will be used as the
- * maximum number of socket handles passed to select() (i.e. FD_SETSIZE will 
- * be set to this value).
- *
- * Default: if FD_SETSIZE is defined and the value is greather than 256,
- *          then it will be used.  Otherwise 256 (64 for WinCE).
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
 #   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
@@ -538,15 +531,40 @@
 
 
 /**
+ * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
+ * set it to PJ_IOQUEUE_MAX_HANDLES.
+ */
+/* This is awful, as we should actually check for __GLIBC__ rather than
+ * __GNUC__. But alas! Libc headers are not included yet at this stage.
+ */
+#ifdef __GNUC__
+#   define PJ_FD_SETSIZE_SETABLE	0
+#else
+#   define PJ_FD_SETSIZE_SETABLE	1
+#endif
+
+/**
  * Overrides FD_SETSIZE so it is consistent throughout the library.
- * OS specific configuration header (compat/os_*) might have declared
- * FD_SETSIZE, thus we only set if it hasn't been declared.
+ * We only do this if we detected that FD_SETSIZE is changeable.
  *
  * Default: #PJ_IOQUEUE_MAX_HANDLES
  */
-#ifndef FD_SETSIZE
-#  define FD_SETSIZE		    PJ_IOQUEUE_MAX_HANDLES
+#if PJ_FD_SETSIZE_SETABLE
+    /* Only override FD_SETSIZE if the value has not been set */
+#   ifndef FD_SETSIZE
+#	define FD_SETSIZE		PJ_IOQUEUE_MAX_HANDLES
+#   endif
+#else
+    /* When FD_SETSIZE is not changeable, check if PJ_IOQUEUE_MAX_HANDLES
+     * is lower than FD_SETSIZE value.
+     */
+#   ifdef FD_SETSIZE
+#	if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
+#	    error "PJ_IOQUEUE_MAX_HANDLES is greater than FD_SETSIZE"
+#	endif
+#   endif
 #endif
+
 
 /**
  * Has semaphore functionality?

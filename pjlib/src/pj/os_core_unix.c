@@ -34,7 +34,7 @@
 #include <pj/except.h>
 #include <pj/errno.h>
 
-#if defined(PJ_HAS_SEMAPHORE) && PJ_HAS_SEMAPHORE != 0
+#if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H != 0
 #  include <semaphore.h>
 #endif
 
@@ -948,21 +948,29 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 	return PJ_RETURN_OS_ERROR(rc);
 
     if (type == PJ_MUTEX_SIMPLE) {
-#if defined(PJ_LINUX) && PJ_LINUX!=0
+#if (defined(PJ_LINUX) && PJ_LINUX!=0) || \
+    defined(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE)
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_FAST_NP);
-#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+#elif (defined(PJ_RTEMS) && PJ_RTEMS!=0) || \
+       defined(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE)
 	/* Nothing to do, default is simple */
 #else
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_NORMAL);
 #endif
     } else {
-#if defined(PJ_LINUX) && PJ_LINUX!=0
+#if (defined(PJ_LINUX) && PJ_LINUX!=0) || \
+     defined(PJ_HAS_PTHREAD_MUTEXATTR_SETTYPE)
 	rc = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE_NP);
-#elif defined(PJ_RTEMS) && PJ_RTEMS!=0
+#elif (defined(PJ_RTEMS) && PJ_RTEMS!=0) || \
+       defined(PJ_PTHREAD_MUTEXATTR_T_HAS_RECURSIVE)
 	// Phil Torre <ptorre@zetron.com>:
 	// The RTEMS implementation of POSIX mutexes doesn't include 
 	// pthread_mutexattr_settype(), so what follows is a hack
 	// until I get RTEMS patched to support the set/get functions.
+	//
+	// More info:
+	//   newlib's pthread also lacks pthread_mutexattr_settype(),
+	//   but it seems to have mutexattr.recursive.
 	PJ_TODO(FIX_RTEMS_RECURSIVE_MUTEX_TYPE)
 	attr.recursive = 1;
 #else
@@ -1239,7 +1247,11 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
  * RTEMS). Otherwise use POSIX rwlock.
  */
 #if defined(PJ_EMULATE_RWMUTEX) && PJ_EMULATE_RWMUTEX!=0
-#  include "os_rwmutex.c"
+    /* We need semaphore functionality to emulate rwmutex */
+#   if !defined(PJ_HAS_SEMAPHORE) || PJ_HAS_SEMAPHORE==0
+#	error "Semaphore support needs to be enabled to emulate rwmutex"
+#   endif
+#   include "os_rwmutex.c"
 #else
 struct pj_rwmutex_t
 {

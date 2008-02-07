@@ -54,7 +54,7 @@ PJ_BEGIN_DECL
  */
 typedef struct pj_fd_set_t
 {
-    pj_sock_t	data[FD_SETSIZE + 4];   /**< Opaque buffer for fd_set */
+    pj_sock_t data[PJ_IOQUEUE_MAX_HANDLES+ 4]; /**< Opaque buffer for fd_set */
 } pj_fd_set_t;
 
 
