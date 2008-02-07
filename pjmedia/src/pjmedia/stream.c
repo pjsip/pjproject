@@ -919,7 +919,7 @@ static void handle_incoming_dtmf( pjmedia_stream *stream,
  * in the RTP socket. 
  */
 static void on_rx_rtp( void *data, 
-		       const void *pkt,
+		       void *pkt,
                        pj_ssize_t bytes_read)
 
 {
@@ -1073,7 +1073,7 @@ static void on_rx_rtp( void *data,
  * in the RTCP socket. 
  */
 static void on_rx_rtcp( void *data,
-                        const void *pkt, 
+                        void *pkt, 
                         pj_ssize_t bytes_read)
 {
     pjmedia_stream *stream = (pjmedia_stream*) data;

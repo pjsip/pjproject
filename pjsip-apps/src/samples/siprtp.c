@@ -231,10 +231,10 @@ static void destroy_call_media(unsigned call_index);
 static void destroy_media();
 
 /* This callback is called by media transport on receipt of RTP packet. */
-static void on_rx_rtp(void *user_data, const void *pkt, pj_ssize_t size);
+static void on_rx_rtp(void *user_data, void *pkt, pj_ssize_t size);
 
 /* This callback is called by media transport on receipt of RTCP packet. */
-static void on_rx_rtcp(void *user_data, const void *pkt, pj_ssize_t size);
+static void on_rx_rtcp(void *user_data, void *pkt, pj_ssize_t size);
 
 /* Display error */
 static void app_perror(const char *sender, const char *title, 
@@ -1178,7 +1178,7 @@ static void boost_priority(void)
 /*
  * This callback is called by media transport on receipt of RTP packet.
  */
-static void on_rx_rtp(void *user_data, const void *pkt, pj_ssize_t size)
+static void on_rx_rtp(void *user_data, void *pkt, pj_ssize_t size)
 {
     struct media_stream *strm;
     pj_status_t status;
@@ -1221,7 +1221,7 @@ static void on_rx_rtp(void *user_data, const void *pkt, pj_ssize_t size)
 /*
  * This callback is called by media transport on receipt of RTCP packet.
  */
-static void on_rx_rtcp(void *user_data, const void *pkt, pj_ssize_t size)
+static void on_rx_rtcp(void *user_data, void *pkt, pj_ssize_t size)
 {
     struct media_stream *strm;
 
