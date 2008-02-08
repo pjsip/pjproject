@@ -43,6 +43,9 @@
     /* Misc PJLIB setting */
 #   define PJ_MAXPATH			80
 
+	/* SRTP has not been ported to Symbian yet */
+#   define PJMEDIA_HAS_SRTP			0
+
     /* Disable these */
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
 #   define PJMEDIA_HAS_SPEEX_AEC	0
