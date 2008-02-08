@@ -384,10 +384,10 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     pj_memcpy(&skinfo->rtcp_addr_name, 
 	      &mapped_addr[1], sizeof(pj_sockaddr_in));
 
-    PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s:%d",
+    PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s",
 	      pj_sockaddr_print(&skinfo->rtp_addr_name, addr_buf,
 				sizeof(addr_buf), 3)));
-    PJ_LOG(4,(THIS_FILE, "RTCP socket reachable at %s:%d",
+    PJ_LOG(4,(THIS_FILE, "RTCP socket reachable at %s",
 	      pj_sockaddr_print(&skinfo->rtcp_addr_name, addr_buf,
 				sizeof(addr_buf), 3)));
 
