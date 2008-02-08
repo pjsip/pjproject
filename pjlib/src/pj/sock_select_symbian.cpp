@@ -26,7 +26,7 @@
 struct symbian_fd_set
 {
     unsigned	 count;
-    CPjSocket	*sock[FD_SETSIZE];
+    CPjSocket	*sock[PJ_IOQUEUE_MAX_HANDLES];
 };
 
 
@@ -41,7 +41,7 @@ PJ_DEF(void) PJ_FD_SET(pj_sock_t fd, pj_fd_set_t *fdsetp)
 {
     symbian_fd_set *fds = (symbian_fd_set *)fdsetp;
 
-    PJ_ASSERT_ON_FAIL(fds->count < FD_SETSIZE, return);
+    PJ_ASSERT_ON_FAIL(fds->count < PJ_IOQUEUE_MAX_HANDLES, return);
     fds->sock[fds->count++] = (CPjSocket*)fd;
 }
 

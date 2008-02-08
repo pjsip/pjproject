@@ -74,7 +74,7 @@ static int do_select( pj_sock_t sock1, pj_sock_t sock2,
     timeout.sec = 1;
     timeout.msec = 0;
 
-    n = pj_sock_select(FD_SETSIZE, &fds[0], &fds[1], &fds[2],
+    n = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &fds[0], &fds[1], &fds[2],
 		       &timeout);
     if (n < 0)
         return n;

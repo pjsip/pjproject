@@ -144,7 +144,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 		PJ_FD_SET(sock[i], &r);
 	    }
 
-	    select_rc = pj_sock_select(FD_SETSIZE, &r, NULL, NULL, &timeout);
+	    select_rc = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &r, NULL, NULL, &timeout);
 	    if (select_rc < 1)
 		continue;
 
