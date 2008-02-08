@@ -83,6 +83,8 @@
 /* On these OSes, semaphore feature depends on semaphore.h */
 #if defined(PJ_HAS_SEMAPHORE_H) && PJ_HAS_SEMAPHORE_H!=0
 #   define PJ_HAS_SEMAPHORE	1
+#elif defined(PJ_WIN32) && PJ_WIN32!=0
+#   define PJ_HAS_SEMAPHORE	1
 #else
 #   define PJ_HAS_SEMAPHORE	0
 #endif
