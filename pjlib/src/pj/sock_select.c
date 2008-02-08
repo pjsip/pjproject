@@ -35,13 +35,6 @@
 #   pragma warning(disable: 4389)    // Signed/unsigned mismatch in FD_*
 #endif
 
-/* Now that we have access to OS'es <sys/select>, lets check again that
- * PJ_IOQUEUE_MAX_HANDLES is not greater than FD_SETSIZE
- */
-#if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
-#   error "PJ_IOQUEUE_MAX_HANDLES cannot be greater than FD_SETSIZE"
-#endif
-
 #define PART_FDSET(ps)		((fd_set*)&ps->data[1])
 #define PART_FDSET_OR_NULL(ps)	(ps ? PART_FDSET(ps) : NULL)
 #define PART_COUNT(ps)		(ps->data[0])

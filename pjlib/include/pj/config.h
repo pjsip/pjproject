@@ -487,11 +487,7 @@
  * the underlying implementation changes.
  */
 #ifndef PJ_IOQUEUE_MAX_HANDLES
-#   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
-#	define PJ_IOQUEUE_MAX_HANDLES	(64)
-#   else
-#	define PJ_IOQUEUE_MAX_HANDLES	(256)
-#   endif
+#   define PJ_IOQUEUE_MAX_HANDLES	(64)
 #endif
 
 
@@ -532,22 +528,22 @@
 
 /**
  * Determine if FD_SETSIZE is changeable/set-able. If so, then we will
- * set it to PJ_IOQUEUE_MAX_HANDLES.
+ * set it to PJ_IOQUEUE_MAX_HANDLES. Currently we detect this by checking
+ * for Winsock.
  */
-/* This is awful, as we should actually check for __GLIBC__ rather than
- * __GNUC__. But alas! Libc headers are not included yet at this stage.
- */
-#ifdef __GNUC__
-#   define PJ_FD_SETSIZE_SETABLE	0
-#else
-#   define PJ_FD_SETSIZE_SETABLE	1
+#ifndef PJ_FD_SETSIZE_SETABLE
+#   if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H!=0
+#	define PJ_FD_SETSIZE_SETABLE	1
+#   else
+#	define PJ_FD_SETSIZE_SETABLE	0
+#   endif
 #endif
 
 /**
  * Overrides FD_SETSIZE so it is consistent throughout the library.
- * We only do this if we detected that FD_SETSIZE is changeable.
- *
- * Default: #PJ_IOQUEUE_MAX_HANDLES
+ * We only do this if we detected that FD_SETSIZE is changeable. If
+ * FD_SETSIZE is not set-able, then PJ_IOQUEUE_MAX_HANDLES must be
+ * set to value lower than FD_SETSIZE.
  */
 #if PJ_FD_SETSIZE_SETABLE
     /* Only override FD_SETSIZE if the value has not been set */

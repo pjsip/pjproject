@@ -38,6 +38,14 @@
 #include <pj/sock_select.h>
 #include <pj/errno.h>
 
+/* Now that we have access to OS'es <sys/select>, lets check again that
+ * PJ_IOQUEUE_MAX_HANDLES is not greater than FD_SETSIZE
+ */
+#if PJ_IOQUEUE_MAX_HANDLES > FD_SETSIZE
+#   error "PJ_IOQUEUE_MAX_HANDLES cannot be greater than FD_SETSIZE"
+#endif
+
+
 /*
  * Include declaration from common abstraction.
  */
