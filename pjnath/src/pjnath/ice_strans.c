@@ -331,6 +331,11 @@ static pj_status_t create_component(pj_ice_strans *ice_st,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Disable concurrency */
+    status = pj_ioqueue_set_concurrency(comp->key, PJ_FALSE);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     pj_ioqueue_op_key_init(&comp->read_op, sizeof(comp->read_op));
     pj_ioqueue_op_key_init(&comp->write_op, sizeof(comp->write_op));
 

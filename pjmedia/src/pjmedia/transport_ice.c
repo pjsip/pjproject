@@ -698,6 +698,8 @@ static void transport_detach(pjmedia_transport *tp,
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
 
+    /* TODO: need to solve ticket #460 here */
+
     tp_ice->rtp_cb = NULL;
     tp_ice->rtcp_cb = NULL;
     tp_ice->stream = NULL;

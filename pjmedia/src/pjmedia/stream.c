@@ -1399,16 +1399,19 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
 
+    /* Detach from transport 
+     * MUST NOT hold stream mutex while detaching from transport, as
+     * it may cause deadlock. See ticket #460 for the details.
+     */
+    if (stream->transport) {
+	pjmedia_transport_detach(stream->transport, stream);
+	stream->transport = NULL;
+    }
+
     /* This function may be called when stream is partly initialized. */
     if (stream->jb_mutex)
 	pj_mutex_lock(stream->jb_mutex);
 
-
-    /* Detach from transport */
-    if (stream->transport) {
-	(*stream->transport->op->detach)(stream->transport, stream);
-	stream->transport = NULL;
-    }
 
     /* Free codec. */
 

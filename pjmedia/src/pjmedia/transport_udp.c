@@ -319,6 +319,13 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
     
+    /* Disallow concurrency so that detach() and destroy() are
+     * synchronized with the callback.
+     */
+    status = pj_ioqueue_set_concurrency(tp->rtp_key, PJ_FALSE);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     pj_ioqueue_op_key_init(&tp->rtp_read_op, sizeof(tp->rtp_read_op));
     for (i=0; i<PJ_ARRAY_SIZE(tp->rtp_pending_write); ++i)
 	pj_ioqueue_op_key_init(&tp->rtp_pending_write[i].op_key, 
@@ -340,6 +347,10 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
 
     status = pj_ioqueue_register_sock(pool, ioqueue, tp->rtcp_sock, tp,
 				      &rtcp_cb, &tp->rtcp_key);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_ioqueue_set_concurrency(tp->rtcp_key, PJ_FALSE);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -383,6 +394,9 @@ static pj_status_t transport_destroy(pjmedia_transport *tp)
     
 
     if (udp->rtp_key) {
+	/* This will block the execution if callback is still
+	 * being called.
+	 */
 	pj_ioqueue_unregister(udp->rtp_key);
 	udp->rtp_key = NULL;
 	udp->rtp_sock = PJ_INVALID_SOCKET;
@@ -645,6 +659,12 @@ static void transport_detach( pjmedia_transport *tp,
     pj_assert(tp);
 
     if (udp->attached) {
+	/* Lock the ioqueue keys to make sure that callbacks are
+	 * not executed. See ticket #460 for details.
+	 */
+	pj_ioqueue_lock_key(udp->rtp_key);
+	pj_ioqueue_lock_key(udp->rtcp_key);
+
 	/* User data is unreferenced on Release build */
 	PJ_UNUSED_ARG(user_data);
 
@@ -658,6 +678,10 @@ static void transport_detach( pjmedia_transport *tp,
 	udp->rtp_cb = NULL;
 	udp->rtcp_cb = NULL;
 	udp->user_data = NULL;
+
+	/* Unlock keys */
+	pj_ioqueue_unlock_key(udp->rtcp_key);
+	pj_ioqueue_unlock_key(udp->rtp_key);
     }
 }
 
