@@ -286,14 +286,16 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     return 0;
 }
 
-int udp_ioqueue_unreg_test(void)
+static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
 {
     enum { LOOP = 10 };
     int i, rc;
     char title[30];
     pj_ioqueue_t *ioqueue;
     pj_pool_t *test_pool;
-			      
+	
+    PJ_LOG(3,(THIS_FILE, "..testing with concurency=%d", allow_concur));
+
     test_method = UNREGISTER_IN_APP;
 
     test_pool = pj_pool_create(mem, "unregtest", 4000, 4000, NULL);
@@ -304,6 +306,11 @@ int udp_ioqueue_unreg_test(void)
 	return -10;
     }
 
+    rc = pj_ioqueue_set_default_concurrency(ioqueue, allow_concur);
+    if (rc != PJ_SUCCESS) {
+	app_perror("Error in pj_ioqueue_set_default_concurrency()", rc);
+	return -12;
+    }
 
     PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 0/3 (%s)", 
 	       pj_ioqueue_name()));
@@ -351,7 +358,20 @@ int udp_ioqueue_unreg_test(void)
     return 0;
 }
 
+int udp_ioqueue_unreg_test(void)
+{
+    int rc;
 
+    rc = udp_ioqueue_unreg_test_imp(PJ_TRUE);
+    if (rc != 0)
+	return rc;
+
+    rc = udp_ioqueue_unreg_test_imp(PJ_FALSE);
+    if (rc != 0)
+	return rc;
+
+    return 0;
+}
 
 #else
 /* To prevent warning about "translation unit is empty"

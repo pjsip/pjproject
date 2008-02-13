@@ -232,7 +232,7 @@ static int send_recv_test(pj_ioqueue_t *ioque,
 /*
  * Compliance test for success scenario.
  */
-static int compliance_test_0(void)
+static int compliance_test_0(pj_bool_t allow_concur)
 {
     pj_sock_t ssock=-1, csock0=-1, csock1=-1;
     pj_sockaddr_in addr, client_addr, rmt_addr;
@@ -290,6 +290,13 @@ static int compliance_test_0(void)
     if (rc != PJ_SUCCESS) {
         app_perror("...ERROR in pj_ioqueue_create()", rc);
 	status=-20; goto on_error;
+    }
+
+    // Concurrency
+    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
+    if (rc != PJ_SUCCESS) {
+        app_perror("...ERROR in pj_ioqueue_set_default_concurrency()", rc);
+	status=-21; goto on_error;
     }
 
     // Register server socket and client socket.
@@ -458,7 +465,7 @@ on_error:
  * Compliance test for failed scenario.
  * In this case, the client connects to a non-existant service.
  */
-static int compliance_test_1(void)
+static int compliance_test_1(pj_bool_t allow_concur)
 {
     pj_sock_t csock1=PJ_INVALID_SOCKET;
     pj_sockaddr_in addr;
@@ -477,6 +484,12 @@ static int compliance_test_1(void)
     rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
     if (!ioque) {
 	status=-20; goto on_error;
+    }
+
+    // Concurrency
+    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
+    if (rc != PJ_SUCCESS) {
+	status=-21; goto on_error;
     }
 
     // Create client socket
@@ -581,7 +594,7 @@ on_error:
 /*
  * Repeated connect/accept on the same listener socket.
  */
-static int compliance_test_2(void)
+static int compliance_test_2(pj_bool_t allow_concur)
 {
 #if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
     enum { MAX_PAIR = 1, TEST_LOOP = 2 };
@@ -647,6 +660,13 @@ static int compliance_test_2(void)
 	return -10;
     }
 
+
+    // Concurrency
+    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
+    if (rc != PJ_SUCCESS) {
+        app_perror("...ERROR in pj_ioqueue_set_default_concurrency()", rc);
+	return -11;
+    }
 
     // Allocate buffers for send and receive.
     send_buf = (char*)pj_pool_alloc(pool, bufsize);
@@ -887,29 +907,46 @@ on_error:
 }
 
 
-int tcp_ioqueue_test()
+static int tcp_ioqueue_test_impl(pj_bool_t allow_concur)
 {
     int status;
 
+    PJ_LOG(3,(THIS_FILE, "..testing with concurency=%d", allow_concur));
+
     PJ_LOG(3, (THIS_FILE, "..%s compliance test 0 (success scenario)",
 	       pj_ioqueue_name()));
-    if ((status=compliance_test_0()) != 0) {
+    if ((status=compliance_test_0(allow_concur)) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
     PJ_LOG(3, (THIS_FILE, "..%s compliance test 1 (failed scenario)",
                pj_ioqueue_name()));
-    if ((status=compliance_test_1()) != 0) {
+    if ((status=compliance_test_1(allow_concur)) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
 
     PJ_LOG(3, (THIS_FILE, "..%s compliance test 2 (repeated accept)",
                pj_ioqueue_name()));
-    if ((status=compliance_test_2()) != 0) {
+    if ((status=compliance_test_2(allow_concur)) != 0) {
 	PJ_LOG(1, (THIS_FILE, "....FAILED (status=%d)\n", status));
 	return status;
     }
+
+    return 0;
+}
+
+int tcp_ioqueue_test()
+{
+    int rc;
+
+    rc = tcp_ioqueue_test_impl(PJ_TRUE);
+    if (rc != 0)
+	return rc;
+
+    rc = tcp_ioqueue_test_impl(PJ_FALSE);
+    if (rc != 0)
+	return rc;
 
     return 0;
 }

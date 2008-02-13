@@ -103,6 +103,7 @@ union operation_key
     pj_mutex_t             *mutex;                  \
     pj_bool_t		    inside_callback;	    \
     pj_bool_t		    destroy_requested;	    \
+    pj_bool_t		    allow_concurrent;	    \
     pj_sock_t		    fd;                     \
     int                     fd_type;                \
     void		   *user_data;              \
@@ -116,7 +117,8 @@ union operation_key
 
 #define DECLARE_COMMON_IOQUEUE                      \
     pj_lock_t          *lock;                       \
-    pj_bool_t           auto_delete_lock;
+    pj_bool_t           auto_delete_lock;	    \
+    pj_bool_t		default_concurrency;
 
 
 enum ioqueue_event_type

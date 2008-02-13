@@ -101,20 +101,87 @@ PJ_BEGIN_DECL
  *
  * \section pj_ioqueue_concurrency_sec Concurrency Rules
  *
- * The items below describe rules that must be obeyed when using the I/O 
- * queue, with regard to concurrency:
- *  - simultaneous operations (by different threads) to different key is safe.
- *  - simultaneous operations to the same key is also safe, except
- *    <b>unregistration</b>, which is described below.
- *  - <b>care must be taken when unregistering a key</b> from the
+ * The ioqueue has been fine tuned to allow multiple threads to poll the
+ * handles simultaneously, to maximize scalability when the application is
+ * running on multiprocessor systems. When more than one threads are polling
+ * the ioqueue and there are more than one handles are signaled, more than
+ * one threads will execute the callback simultaneously to serve the events.
+ * These parallel executions are completely safe when the events happen for
+ * two different handles.
+ *
+ * However, with multithreading, care must be taken when multiple events 
+ * happen on the same handle, or when event is happening on a handle (and 
+ * the callback is being executed) and application is performing 
+ * unregistration to the handle at the same time.
+ *
+ * The treatments of above scenario differ according to the concurrency
+ * setting that are applied to the handle.
+ *
+ * \subsection pj_ioq_concur_set Concurrency Settings for Handles
+ *
+ * Concurrency can be set on per handle (key) basis, by using
+ * #pj_ioqueue_set_concurrency() function. The default key concurrency value 
+ * for the handle is inherited from the key concurrency setting of the ioqueue, 
+ * and the key concurrency setting for the ioqueue can be changed by using
+ * #pj_ioqueue_set_default_concurrency(). The default key concurrency setting 
+ * for ioqueue itself is controlled by compile time setting
+ * PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY.
+ *
+ * Note that this key concurrency setting only controls whether multiple
+ * threads are allowed to operate <b>on the same key</b> at the same time. 
+ * The ioqueue itself always allows multiple threads to enter the ioqeuue at 
+ * the same time, and also simultaneous callback calls to <b>differrent 
+ * keys</b> is always allowed regardless to the key concurrency setting.
+ *
+ * \subsection pj_ioq_parallel Parallel Callback Executions for the Same Handle
+ *
+ * Note that when key concurrency is enabled (i.e. parallel callback calls on
+ * the same key is allowed; this is the default setting), the ioqueue will only
+ * perform simultaneous callback executions on the same key when the key has
+ * invoked multiple pending operations. This could be done for example by
+ * calling #pj_ioqueue_recvfrom() more than once on the same key, each with
+ * the same key but different operation key (pj_ioqueue_op_key_t). With this
+ * scenario, when multiple packets arrive on the key at the same time, more
+ * than one threads may execute the callback simultaneously, each with the
+ * same key but different operation key.
+ *
+ * When there is only one pending operation on the key (e.g. there is only one
+ * #pj_ioqueue_recvfrom() invoked on the key), then events occuring to the
+ * same key will be queued by the ioqueue, thus no simultaneous callback calls
+ * will be performed.
+ *
+ * \subsection pj_ioq_allow_concur Concurrency is Enabled (Default Value)
+ *
+ * The default setting for the ioqueue is to allow multiple threads to
+ * execute callbacks for the same handle/key. This setting is selected to
+ * promote good performance and scalability for application.
+ *
+ * However this setting has a major drawback with regard to synchronization,
+ * and application MUST carefully follow the following guidelines to ensure 
+ * that parallel access to the key does not cause problems:
+ *
+ *  - Always note that callback may be called simultaneously for the same
+ *    key.
+ *  - <b>Care must be taken when unregistering a key</b> from the
  *    ioqueue. Application must take care that when one thread is issuing
- *    an unregistration, other thread is not simultaneously invoking an
- *    operation <b>to the same key</b>.
+ *    an unregistration, other thread is not simultaneously invoking the
+ *    callback <b>to the same key</b>.
  *\n
  *    This happens because the ioqueue functions are working with a pointer
  *    to the key, and there is a possible race condition where the pointer
  *    has been rendered invalid by other threads before the ioqueue has a
  *    chance to acquire mutex on it.
+ *
+ * \subsection pj_ioq_disallow_concur Concurrency is Disabled
+ *
+ * Alternatively, application may disable key concurrency to make 
+ * synchronization easier. As noted above, there are three ways to control
+ * key concurrency setting:
+ *  - by controlling on per handle/key basis, with #pj_ioqueue_set_concurrency().
+ *  - by changing default key concurrency setting on the ioqueue, with
+ *    #pj_ioqueue_set_default_concurrency().
+ *  - by changing the default concurrency on compile time, by declaring
+ *    PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY macro to zero in your config_site.h
  *
  * \section pj_ioqeuue_examples_sec Examples
  *
@@ -291,6 +358,24 @@ PJ_DECL(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioque,
 					  pj_bool_t auto_delete );
 
 /**
+ * Set default concurrency policy for this ioqueue. If this function is not
+ * called, the default concurrency policy for the ioqueue is controlled by 
+ * compile time setting PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY.
+ *
+ * Note that changing the concurrency setting to the ioqueue will only affect
+ * subsequent key registrations. To modify the concurrency setting for
+ * individual key, use #pj_ioqueue_set_concurrency().
+ *
+ * @param ioqueue	The ioqueue instance.
+ * @param allow		Non-zero to allow concurrent callback calls, or
+ *			PJ_FALSE to disallow it.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_set_default_concurrency(pj_ioqueue_t *ioqueue,
+							pj_bool_t allow);
+
+/**
  * Register a socket to the I/O queue framework. 
  * When a socket is registered to the IOQueue, it may be modified to use
  * non-blocking IO. If it is modified, there is no guarantee that this 
@@ -366,6 +451,51 @@ PJ_DECL(pj_status_t) pj_ioqueue_set_user_data( pj_ioqueue_key_t *key,
                                                void *user_data,
                                                void **old_data);
 
+/**
+ * Configure whether the ioqueue is allowed to call the key's callback
+ * concurrently/in parallel. The default concurrency setting for the key
+ * is controlled by ioqueue's default concurrency value, which can be
+ * changed by calling #pj_ioqueue_set_default_concurrency().
+ *
+ * If concurrency is allowed for the key, it means that if there are more
+ * than one pending operations complete simultaneously, more than one
+ * threads may call the key's  callback at the same time. This generally
+ * would promote good scalability for application, at the expense of more
+ * complexity to manage the concurrent accesses in application's code.
+ *
+ * Alternatively application may disable the concurrent access by
+ * setting the \a allow flag to false. With concurrency disabled, only
+ * one thread can call the key's callback at one time.
+ *
+ * @param key	    The key that was previously obtained from registration.
+ * @param allow	    Set this to non-zero to allow concurrent callback calls
+ *		    and zero (PJ_FALSE) to disallow it.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
+						pj_bool_t allow);
+
+/**
+ * Acquire the key's mutex. When the key's concurrency is disabled, 
+ * application may call this function to synchronize its operation
+ * with the key's callback (i.e. this function will block until the
+ * key's callback returns).
+ *
+ * @param key	    The key that was previously obtained from registration.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_lock_key(pj_ioqueue_key_t *key);
+
+/**
+ * Release the lock previously acquired with pj_ioqueue_lock_key().
+ *
+ * @param key	    The key that was previously obtained from registration.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key);
 
 /**
  * Initialize operation key.

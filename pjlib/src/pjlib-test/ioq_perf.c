@@ -221,7 +221,8 @@ static int worker_thread(void *p)
  *  - measure the total bytes received by all consumers during a
  *    period of time.
  */
-static int perform_test(int sock_type, const char *type_name,
+static int perform_test(pj_bool_t allow_concur,
+			int sock_type, const char *type_name,
                         unsigned thread_cnt, unsigned sockpair_cnt,
                         pj_size_t buffer_size, 
                         pj_size_t *p_bandwidth)
@@ -258,6 +259,12 @@ static int perform_test(int sock_type, const char *type_name,
     if (rc != PJ_SUCCESS) {
         app_perror("...error: unable to create ioqueue", rc);
         return -15;
+    }
+
+    rc = pj_ioqueue_set_default_concurrency(ioqueue, allow_concur);
+    if (rc != PJ_SUCCESS) {
+	app_perror("...error: pj_ioqueue_set_default_concurrency()", rc);
+        return -16;
     }
 
     /* Initialize each producer-consumer pair. */
@@ -437,10 +444,7 @@ static int perform_test(int sock_type, const char *type_name,
     return 0;
 }
 
-/*
- * main test entry.
- */
-int ioqueue_perf_test(void)
+static int ioqueue_perf_test_imp(pj_bool_t allow_concur)
 {
     enum { BUF_SIZE = 512 };
     int i, rc;
@@ -500,6 +504,7 @@ int ioqueue_perf_test(void)
     int best_index = 0;
 
     PJ_LOG(3,(THIS_FILE, "   Benchmarking %s ioqueue:", pj_ioqueue_name()));
+    PJ_LOG(3,(THIS_FILE, "   Testing with concurency=%d", allow_concur));
     PJ_LOG(3,(THIS_FILE, "   ======================================="));
     PJ_LOG(3,(THIS_FILE, "   Type  Threads  Skt.Pairs      Bandwidth"));
     PJ_LOG(3,(THIS_FILE, "   ======================================="));
@@ -508,7 +513,8 @@ int ioqueue_perf_test(void)
     for (i=0; i<(int)(sizeof(test_param)/sizeof(test_param[0])); ++i) {
         pj_size_t bandwidth;
 
-        rc = perform_test(test_param[i].type, 
+        rc = perform_test(allow_concur,
+			  test_param[i].type, 
                           test_param[i].type_name,
                           test_param[i].thread_cnt, 
                           test_param[i].sockpair_cnt, 
@@ -534,6 +540,24 @@ int ioqueue_perf_test(void)
               best_bandwidth));
     PJ_LOG(3,(THIS_FILE, "   (Note: packet size=%d, total errors=%u)", 
 			 BUF_SIZE, last_error_counter));
+    return 0;
+}
+
+/*
+ * main test entry.
+ */
+int ioqueue_perf_test(void)
+{
+    int rc;
+
+    rc = ioqueue_perf_test_imp(PJ_TRUE);
+    if (rc != 0)
+	return rc;
+
+    rc = ioqueue_perf_test_imp(PJ_FALSE);
+    if (rc != 0)
+	return rc;
+
     return 0;
 }
 

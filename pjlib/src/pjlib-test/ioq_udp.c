@@ -125,7 +125,7 @@ static pj_ioqueue_callback test_cb =
  * To test that the basic IOQueue functionality works. It will just exchange
  * data between two sockets.
  */ 
-static int compliance_test(void)
+static int compliance_test(pj_bool_t allow_concur)
 {
     pj_sock_t ssock=-1, csock=-1;
     pj_sockaddr_in addr, dst_addr;
@@ -176,6 +176,13 @@ static int compliance_test(void)
     rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
     if (rc != PJ_SUCCESS) {
 	status=-20; goto on_error;
+    }
+
+    // Set concurrency
+    TRACE_("set concurrency...");
+    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
+    if (rc != PJ_SUCCESS) {
+	status=-21; goto on_error;
     }
 
     // Register server and client socket.
@@ -351,7 +358,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
  * Check if callback is still called after socket has been unregistered or 
  * closed.
  */ 
-static int unregister_test(void)
+static int unregister_test(pj_bool_t allow_concur)
 {
     enum { RPORT = 50000, SPORT = 50001 };
     pj_pool_t *pool;
@@ -379,6 +386,13 @@ static int unregister_test(void)
     if (status != PJ_SUCCESS) {
 	app_perror("Error creating ioqueue", status);
 	return -110;
+    }
+
+    // Set concurrency
+    TRACE_("set concurrency...");
+    status = pj_ioqueue_set_default_concurrency(ioqueue, allow_concur);
+    if (status != PJ_SUCCESS) {
+	return -112;
     }
 
     /* Create sender socket */
@@ -512,7 +526,7 @@ static int unregister_test(void)
  * This will just test registering PJ_IOQUEUE_MAX_HANDLES count
  * of sockets to the ioqueue.
  */
-static int many_handles_test(void)
+static int many_handles_test(pj_bool_t allow_concur)
 {
     enum { MAX = PJ_IOQUEUE_MAX_HANDLES };
     pj_pool_t *pool;
@@ -537,6 +551,12 @@ static int many_handles_test(void)
     if (rc != PJ_SUCCESS || ioqueue == NULL) {
 	app_perror("...error in pj_ioqueue_create", rc);
 	return -10;
+    }
+
+    // Set concurrency
+    rc = pj_ioqueue_set_default_concurrency(ioqueue, allow_concur);
+    if (rc != PJ_SUCCESS) {
+	return -11;
     }
 
     /* Register as many sockets. */
@@ -600,7 +620,8 @@ static int many_handles_test(void)
 /*
  * Benchmarking IOQueue
  */
-static int bench_test(int bufsize, int inactive_sock_count)
+static int bench_test(pj_bool_t allow_concur, int bufsize, 
+		      int inactive_sock_count)
 {
     pj_sock_t ssock=-1, csock=-1;
     pj_sockaddr_in addr;
@@ -648,6 +669,13 @@ static int bench_test(int bufsize, int inactive_sock_count)
     rc = pj_ioqueue_create(pool, PJ_IOQUEUE_MAX_HANDLES, &ioque);
     if (rc != PJ_SUCCESS) {
 	app_perror("...error: pj_ioqueue_create()", rc);
+	goto on_error;
+    }
+
+    // Set concurrency
+    rc = pj_ioqueue_set_default_concurrency(ioque, allow_concur);
+    if (rc != PJ_SUCCESS) {
+	app_perror("...error: pj_ioqueue_set_default_concurrency()", rc);
 	goto on_error;
     }
 
@@ -839,27 +867,29 @@ on_error:
     return -1;
 }
 
-int udp_ioqueue_test()
+static int udp_ioqueue_test_imp(pj_bool_t allow_concur)
 {
     int status;
     int bufsize, sock_count;
 
+    PJ_LOG(3,(THIS_FILE, "..testing with concurency=%d", allow_concur));
+
     //goto pass1;
 
     PJ_LOG(3, (THIS_FILE, "...compliance test (%s)", pj_ioqueue_name()));
-    if ((status=compliance_test()) != 0) {
+    if ((status=compliance_test(allow_concur)) != 0) {
 	return status;
     }
     PJ_LOG(3, (THIS_FILE, "....compliance test ok"));
 
 
     PJ_LOG(3, (THIS_FILE, "...unregister test (%s)", pj_ioqueue_name()));
-    if ((status=unregister_test()) != 0) {
+    if ((status=unregister_test(allow_concur)) != 0) {
 	return status;
     }
     PJ_LOG(3, (THIS_FILE, "....unregister test ok"));
 
-    if ((status=many_handles_test()) != 0) {
+    if ((status=many_handles_test(allow_concur)) != 0) {
 	return status;
     }
     
@@ -879,7 +909,7 @@ int udp_ioqueue_test()
     //goto pass2;
 
     for (bufsize=BUF_MIN_SIZE; bufsize <= BUF_MAX_SIZE; bufsize *= 2) {
-	if ((status=bench_test(bufsize, SOCK_INACTIVE_MIN)) != 0)
+	if ((status=bench_test(allow_concur, bufsize, SOCK_INACTIVE_MIN)) != 0)
 	    return status;
     }
 //pass2:
@@ -889,9 +919,24 @@ int udp_ioqueue_test()
 	 sock_count *= 2) 
     {
 	//PJ_LOG(3,(THIS_FILE, "...testing with %d fds", sock_count));
-	if ((status=bench_test(bufsize, sock_count-2)) != 0)
+	if ((status=bench_test(allow_concur, bufsize, sock_count-2)) != 0)
 	    return status;
     }
+    return 0;
+}
+
+int udp_ioqueue_test()
+{
+    int rc;
+
+    rc = udp_ioqueue_test_imp(PJ_TRUE);
+    if (rc != 0)
+	return rc;
+
+    rc = udp_ioqueue_test_imp(PJ_FALSE);
+    if (rc != 0)
+	return rc;
+
     return 0;
 }
 

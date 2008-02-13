@@ -285,6 +285,8 @@
 #   undef PJ_ENABLE_EXTRA_CHECK
 #   undef PJ_EXCEPTION_USE_WIN32_SEH
 #   undef PJ_HAS_ERROR_STRING
+
+#   define PJ_HAS_IPV6	1
 #endif
 
 /**
@@ -509,6 +511,32 @@
  */
 #ifndef PJ_IOQUEUE_HAS_SAFE_UNREG
 #   define PJ_IOQUEUE_HAS_SAFE_UNREG	1
+#endif
+
+
+/**
+ * Default concurrency setting for sockets/handles registered to ioqueue.
+ * This controls whether the ioqueue is allowed to call the key's callback
+ * concurrently/in parallel. The default is yes, which means that if there
+ * are more than one pending operations complete simultaneously, more
+ * than one threads may call the key's callback at the same time. This
+ * generally would promote good scalability for application, at the 
+ * expense of more complexity to manage the concurrent accesses.
+ *
+ * Please see the ioqueue documentation for more info.
+ */
+#ifndef PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY
+#   define PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY   1
+#endif
+
+
+/* Sanity check:
+ *  if ioqueue concurrency is disallowed, PJ_IOQUEUE_HAS_SAFE_UNREG
+ *  must be enabled.
+ */
+#if (PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY==0) && (PJ_IOQUEUE_HAS_SAFE_UNREG==0)
+#   error PJ_IOQUEUE_HAS_SAFE_UNREG must be enabled if ioqueue concurrency \
+	  is disabled
 #endif
 
 
