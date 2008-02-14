@@ -520,7 +520,7 @@ read_next_packet:
 	if (status != PJ_EPENDING && status != PJ_SUCCESS)
 	    bytes_read = -status;
 
-    } while (status != PJ_EPENDING);
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
 }
 
 
@@ -574,7 +574,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 	if (status != PJ_EPENDING && status != PJ_SUCCESS)
 	    bytes_read = -status;
 
-    } while (status != PJ_EPENDING);
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
 }
 
 
