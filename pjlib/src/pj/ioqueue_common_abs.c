@@ -641,12 +641,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     PJ_ASSERT_RETURN(key && op_key && buffer && length, PJ_EINVAL);
     PJ_CHECK_STACK();
 
-    read_op = (struct read_operation*)op_key;
-    read_op->op = PJ_IOQUEUE_OP_NONE;
-
-    /* Check if key is closing. */
+    /* Check if key is closing (need to do this first before accessing
+     * other variables, since they might have been destroyed. See ticket
+     * #469).
+     */
     if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
+
+    read_op = (struct read_operation*)op_key;
+    read_op->op = PJ_IOQUEUE_OP_NONE;
 
     /* Try to see if there's data immediately available. 
      */
