@@ -15,6 +15,7 @@ pjsip.mmp
 pjsip_simple.mmp
 pjsip_ua.mmp
 pjsua_lib.mmp
+libgsmcodec.mmp
 
 pjlib_test.mmp
 symbian_ua.mmp

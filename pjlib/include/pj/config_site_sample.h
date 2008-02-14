@@ -50,9 +50,9 @@
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
 #   define PJMEDIA_HAS_SPEEX_AEC	0
 
-    /* Disable all codecs but G.711, for now */
+    /* Disable all codecs but G.711 and GSM, for now */
+#   define PJMEDIA_HAS_GSM_CODEC	1
 #   define PJMEDIA_HAS_L16_CODEC	0
-#   define PJMEDIA_HAS_GSM_CODEC	0
 #   define PJMEDIA_HAS_ILBC_CODEC	0
 #   define PJMEDIA_HAS_SPEEX_CODEC	0
 

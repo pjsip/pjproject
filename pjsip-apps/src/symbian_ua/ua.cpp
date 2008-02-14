@@ -32,15 +32,15 @@
 //
 // Destination URI (to make call, or to subscribe presence)
 //
-#define SIP_DST_URI	"sip:user@192.168.0.11"
+#define SIP_DST_URI	"sip:100@pjsip.lab"
 
 //
 // Account
 //
-#define HAS_SIP_ACCOUNT	0	// 0 to disable registration
-#define SIP_DOMAIN	"domain"
-#define SIP_USER	"username"
-#define SIP_PASSWD	"password"
+#define HAS_SIP_ACCOUNT	1	// 0 to disable registration
+#define SIP_DOMAIN	"pjsip.lab"
+#define SIP_USER	"400"
+#define SIP_PASSWD	"400"
 
 //
 // Outbound proxy for all accounts
@@ -53,8 +53,8 @@
 // Configure nameserver if DNS SRV is to be used with both SIP
 // or STUN (for STUN see other settings below)
 //
-#define NAMESERVER	NULL
-//#define NAMESERVER	"192.168.0.1"
+//#define NAMESERVER	NULL
+#define NAMESERVER	"192.168.0.2"
 
 //
 // STUN server
@@ -368,7 +368,7 @@ static pj_status_t app_startup()
 	cfg.id = pj_str("sip:" SIP_USER "@" SIP_DOMAIN);
 	cfg.reg_uri = pj_str("sip:" SIP_DOMAIN);
 	cfg.cred_count = 1;
-	cfg.cred_info[0].realm = pj_str(SIP_DOMAIN);
+	cfg.cred_info[0].realm = pj_str("*");
 	cfg.cred_info[0].scheme = pj_str("digest");
 	cfg.cred_info[0].username = pj_str(SIP_USER);
 	cfg.cred_info[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
