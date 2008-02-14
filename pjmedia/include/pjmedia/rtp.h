@@ -301,6 +301,26 @@ PJ_DECL(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
 					  pjmedia_rtp_status *seq_st);
 
 
+/**
+ * Call this function everytime an RTP packet is received to check whether 
+ * the packet can be received and to let the RTP session performs its internal
+ * calculations.
+ *
+ * @param ses	    The session.
+ * @param hdr	    The RTP header of the incoming packet. The header must
+ *		    be given with fields in network byte order.
+ * @param seq_st    Optional structure to receive the status of the RTP packet
+ *		    processing.
+ * @param check_pt  Flag to indicate whether payload type needs to be validate.
+ *
+ * @see pjmedia_rtp_session_update()
+ */
+PJ_DECL(void) pjmedia_rtp_session_update2(pjmedia_rtp_session *ses, 
+					  const pjmedia_rtp_hdr *hdr,
+					  pjmedia_rtp_status *seq_st,
+					  pj_bool_t check_pt);
+
+
 /*
  * INTERNAL:
  */

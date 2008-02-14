@@ -161,7 +161,21 @@ PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
 					 const pjmedia_rtp_hdr *hdr,
 					 pjmedia_rtp_status *p_seq_st)
 {
+    pjmedia_rtp_session_update2(ses, hdr, p_seq_st, PJ_TRUE);
+}
+
+PJ_DEF(void) pjmedia_rtp_session_update2( pjmedia_rtp_session *ses, 
+					  const pjmedia_rtp_hdr *hdr,
+					  pjmedia_rtp_status *p_seq_st,
+					  pj_bool_t check_pt)
+{
     pjmedia_rtp_status seq_st;
+
+    /* for now check_pt MUST be either PJ_TRUE or PJ_FALSE.
+     * In the future we might change check_pt from boolean to 
+     * unsigned integer to accommodate more flags.
+     */
+    pj_assert(check_pt==PJ_TRUE || check_pt==PJ_FALSE);
 
     /* Init status */
     seq_st.status.value = 0;
@@ -176,7 +190,7 @@ PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
     }
 
     /* Check payload type. */
-    if (hdr->pt != ses->out_pt) {
+    if (check_pt && hdr->pt != ses->out_pt) {
 	if (p_seq_st) {
 	    p_seq_st->status.value = seq_st.status.value;
 	    p_seq_st->status.flag.bad = 1;
@@ -203,6 +217,7 @@ PJ_DEF(void) pjmedia_rtp_session_update( pjmedia_rtp_session *ses,
 	p_seq_st->diff = seq_st.diff;
     }
 }
+
 
 
 void pjmedia_rtp_seq_restart(pjmedia_rtp_seq_session *sess, pj_uint16_t seq)

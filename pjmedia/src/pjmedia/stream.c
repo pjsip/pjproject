@@ -960,16 +960,11 @@ static void on_rx_rtp( void *data,
     if (channel->paused)
 	return;
 
-    /* Handle incoming DTMF. */
-    if (hdr->pt == stream->rx_event_pt) {
-	handle_incoming_dtmf(stream, payload, payloadlen);
-	return;
-    }
-
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
      */
-    pjmedia_rtp_session_update(&channel->rtp, hdr, &seq_st);
+    pjmedia_rtp_session_update2(&channel->rtp, hdr, &seq_st,
+			        hdr->pt != stream->rx_event_pt);
     if (seq_st.status.value) {
 	TRC_  ((stream->port.info.name.ptr, 
 		"RTP status: badpt=%d, badssrc=%d, dup=%d, "
@@ -995,6 +990,19 @@ static void on_rx_rtp( void *data,
     /* Ignore if payloadlen is zero */
     if (payloadlen == 0)
         return;
+
+    /* Handle incoming DTMF. */
+    if (hdr->pt == stream->rx_event_pt) {
+	/* Ignore out-of-order packet as it will be detected as new
+	 * digit. Also ignore duplicate packet as it serves no use.
+	 */
+	if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
+	    return;
+	}
+
+	handle_incoming_dtmf(stream, payload, payloadlen);
+	return;
+    }
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
      * when RTP session is restarted.
