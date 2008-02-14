@@ -488,6 +488,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_set_lock( pj_ioqueue_t *ioq,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_ioqueue_set_default_concurrency(pj_ioqueue_t *ioqueue,
+													   pj_bool_t allow)
+{
+	/* Not supported, just return PJ_SUCCESS silently */
+	PJ_UNUSED_ARG(ioqueue);
+	PJ_UNUSED_ARG(allow);
+	return PJ_SUCCESS;
+}
 
 /*
  * Register a socket to the I/O queue framework. 
@@ -800,3 +808,25 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_ioqueue_set_concurrency(pj_ioqueue_key_t *key,
+											   pj_bool_t allow)
+{
+	/* Not supported, just return PJ_SUCCESS silently */
+	PJ_UNUSED_ARG(key);
+	PJ_UNUSED_ARG(allow);
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_ioqueue_lock_key(pj_ioqueue_key_t *key)
+{
+	/* Not supported, just return PJ_SUCCESS silently */
+	PJ_UNUSED_ARG(key);
+	return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_ioqueue_unlock_key(pj_ioqueue_key_t *key)
+{
+	/* Not supported, just return PJ_SUCCESS silently */
+	PJ_UNUSED_ARG(key);
+	return PJ_SUCCESS;
+}
