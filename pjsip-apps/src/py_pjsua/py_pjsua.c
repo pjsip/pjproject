@@ -152,7 +152,7 @@ static void cb_on_call_media_state(pjsua_call_id call_id)
  */
 static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
 {
-    if (PyCallable_Check(g_obj_callback->on_call_media_state))
+    if (PyCallable_Check(g_obj_callback->on_dtmf_digit))
     {
 	char digit_str[10];
 
@@ -161,7 +161,7 @@ static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
 	pj_ansi_snprintf(digit_str, sizeof(digit_str), "%c", digit);
 
         PyObject_CallFunctionObjArgs(
-	    g_obj_callback->on_call_media_state,
+	    g_obj_callback->on_dtmf_digit,
 	    Py_BuildValue("i",call_id),
 	    PyString_FromString(digit_str),
 	    NULL
