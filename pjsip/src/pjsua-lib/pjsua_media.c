@@ -921,6 +921,10 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 {
     PJ_UNUSED_ARG(strm);
 
+    /* For discussions about call mutex protection related to this 
+     * callback, please see ticket #460:
+     *	http://trac.pjsip.org/repos/ticket/460#comment:4
+     */
     if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
 	pjsua_call_id call_id;
 
