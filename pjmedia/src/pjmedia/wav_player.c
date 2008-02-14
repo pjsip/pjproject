@@ -328,7 +328,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVEUNSUPP;
     }
-    if (wave_hdr.data_hdr.len < 400) {
+    if (wave_hdr.data_hdr.len < 200) {
 	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVETOOSHORT;
     }
@@ -350,6 +350,13 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	fport->base.info.bits_per_sample / 8;
 
     pj_strdup2(pool, &fport->base.info.name, filename);
+
+    /* If file is shorter than buffer size, adjust buffer size to file
+     * size. Otherwise EOF callback will be called multiple times when
+     * fill_buffer() is called.
+     */
+    if (wave_hdr.data_hdr.len < (unsigned)buff_size)
+	buff_size = wave_hdr.data_hdr.len;
 
     /* Create file buffer.
      */
