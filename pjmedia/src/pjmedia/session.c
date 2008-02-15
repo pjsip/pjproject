@@ -176,14 +176,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
 	si->type = PJMEDIA_TYPE_VIDEO;
 
-    } else if (pj_stricmp(&local_m->desc.media, &ID_APPLICATION) == 0) {
-
-	si->type = PJMEDIA_TYPE_APPLICATION;
-
     } else {
 
 	si->type = PJMEDIA_TYPE_UNKNOWN;
-	return PJMEDIA_EINVALIMEDIATYPE;
+
+	/* Avoid rejecting call because of unrecognized media, 
+	 * just return PJ_SUCCESS, this media will be deactivated later.
+	 */
+	//return PJMEDIA_EINVALIMEDIATYPE;
+	return PJ_SUCCESS;
 
     }
 
