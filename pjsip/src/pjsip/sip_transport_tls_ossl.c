@@ -315,6 +315,7 @@ static void shutdown_openssl(void)
 static pj_status_t create_ctx( struct tls_listener *lis, SSL_CTX **p_ctx)
 {
     struct pjsip_tls_setting *opt = &lis->setting;
+    int method;
     char *lis_name = lis->factory.obj_name;
     SSL_METHOD *ssl_method;
     SSL_CTX *ctx;
@@ -326,8 +327,11 @@ static pj_status_t create_ctx( struct tls_listener *lis, SSL_CTX **p_ctx)
     init_openssl();
 
     /* Determine SSL method to use */
-    switch (opt->method) {
-    case PJSIP_SSL_DEFAULT_METHOD:
+    method = opt->method;
+    if (method == PJSIP_SSL_UNSPECIFIED_METHOD)
+	method = PJSIP_SSL_DEFAULT_METHOD;
+
+    switch (method) {
     case PJSIP_SSLV23_METHOD:
 	ssl_method = SSLv23_method();
 	break;
