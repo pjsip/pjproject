@@ -1270,7 +1270,7 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
     pj_assert(rdata->pkt_info.len > 0);
     if (rdata->pkt_info.len <= 0)
 	return -1;
-    
+
     current_pkt = rdata->pkt_info.packet;
     remaining_len = rdata->pkt_info.len;
     
@@ -1283,12 +1283,28 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
     while (remaining_len > 0) {
 
 	pjsip_msg *msg;
+	char *p, *end;
+	char saved;
 	pj_size_t msg_fragment_size;
+
+	/* Skip leading newlines as pjsip_find_msg() currently can't
+	 * handle leading newlines.
+	 */
+	for (p=current_pkt, end=p+remaining_len; p!=end; ++p) {
+	    if (*p != '\r' && *p != '\n')
+		break;
+	}
+	if (p!=current_pkt) {
+	    remaining_len -= (p - current_pkt);
+	    total_processed += (p - current_pkt);
+	    current_pkt = p;
+	    if (remaining_len == 0) {
+		return total_processed;
+	    }
+	}
 
 	/* Initialize default fragment size. */
 	msg_fragment_size = remaining_len;
-
-	/* Null terminate packet. */
 
 	/* Clear and init msg_info in rdata. 
 	 * Endpoint might inspect the values there when we call the callback
@@ -1319,9 +1335,16 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	/* Update msg_info. */
 	rdata->msg_info.len = msg_fragment_size;
 
+	/* Null terminate packet */
+	saved = current_pkt[msg_fragment_size];
+	current_pkt[msg_fragment_size] = '\0';
+
 	/* Parse the message. */
 	rdata->msg_info.msg = msg = 
 	    pjsip_parse_rdata( current_pkt, msg_fragment_size, rdata);
+
+	/* Restore null termination */
+	current_pkt[msg_fragment_size] = saved;
 
 	/* Check for parsing syntax error */
 	if (msg==NULL || !pj_list_empty(&rdata->msg_info.parse_err)) {
