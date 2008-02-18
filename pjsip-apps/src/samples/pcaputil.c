@@ -154,6 +154,7 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 	}
 
 	/* Decrypt SRTP */
+#if PJMEDIA_HAS_SRTP
 	if (app.srtp) {
 	    int len = sz;
 	    status = pjmedia_transport_srtp_decrypt_pkt(app.srtp, PJ_TRUE, 
@@ -177,6 +178,7 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
 		continue;
 	    }
 	}
+#endif
 
 	/* Update RTP session */
 	pjmedia_rtp_session_update(&app.rtp_sess, r, &seq_st);
@@ -246,6 +248,7 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
     /* Create SRTP transport is needed */
+#if PJMEDIA_HAS_SRTP
     if (srtp_crypto->slen) {
 	pjmedia_srtp_crypto crypto;
 
@@ -255,6 +258,10 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	T( pjmedia_transport_srtp_create(app.mept, NULL, NULL, &app.srtp) );
 	T( pjmedia_transport_srtp_start(app.srtp, &crypto, &crypto) );
     }
+#else
+    PJ_UNUSED_ARG(srtp_crypto);
+    PJ_UNUSED_ARG(srtp_key);
+#endif
 
     /* Read first packet */
     read_rtp(pkt0.buffer, sizeof(pkt0.buffer), &pkt0.rtp, 

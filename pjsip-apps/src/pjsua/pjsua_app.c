@@ -1324,6 +1324,7 @@ static int write_settings(const struct app_config *config,
     pj_strcat2(&cfg, "\n#\n# Media settings:\n#\n");
 
     /* SRTP */
+#if PJMEDIA_HAS_SRTP
     if (app_config.cfg.use_srtp != PJSUA_DEFAULT_USE_SRTP) {
 	pj_ansi_sprintf(line, "--use-srtp %d\n",
 			app_config.cfg.use_srtp);
@@ -1336,7 +1337,7 @@ static int write_settings(const struct app_config *config,
 			app_config.cfg.srtp_secure_signaling);
 	pj_strcat2(&cfg, line);
     }
-
+#endif
 
     /* Media */
     if (config->media_cfg.enable_ice)
