@@ -560,7 +560,8 @@
  * for Winsock.
  */
 #ifndef PJ_FD_SETSIZE_SETABLE
-#   if defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H!=0
+#   if (defined(PJ_HAS_WINSOCK_H) && PJ_HAS_WINSOCK_H!=0) || \
+       (defined(PJ_HAS_WINSOCK2_H) && PJ_HAS_WINSOCK2_H!=0)
 #	define PJ_FD_SETSIZE_SETABLE	1
 #   else
 #	define PJ_FD_SETSIZE_SETABLE	0
