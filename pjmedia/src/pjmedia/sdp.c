@@ -816,7 +816,7 @@ static void parse_origin(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_scan_get_char(scanner);
 
     /* address */
-    pj_scan_get_until_chr(scanner, " \t\r", &ses->origin.addr);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &ses->origin.addr);
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
@@ -846,7 +846,7 @@ static void parse_time(pj_scanner *scanner, pjmedia_sdp_session *ses,
     pj_scan_get_char(scanner);
 
     /* stop time */
-    pj_scan_get_until_chr(scanner, " \t\r", &str);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &str);
     ses->time.stop = pj_strtoul(&str);
 
     /* We've got what we're looking for, skip anything until newline */
@@ -868,7 +868,7 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
     pj_scan_advance_n(scanner, 2, SKIP_WS);
 
     /* get anything until newline (including whitespaces). */
-    pj_scan_get_until_ch(scanner, '\r', str);
+    pj_scan_get_until_chr(scanner, "\r\n", str);
 
     /* newline. */
     pj_scan_get_newline(scanner);
@@ -891,7 +891,7 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
     pj_scan_get_char(scanner);
 
     /* address. */
-    pj_scan_get_until_chr(scanner, " \t\r", &conn->addr);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &conn->addr);
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
@@ -987,8 +987,8 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
 	    pj_scan_get_char(scanner);
 
 	/* get value */
-	if (*scanner->curptr != '\r') {
-	    pj_scan_get_until_ch(scanner, '\r', &attr->value);
+	if (*scanner->curptr != '\r' && *scanner->curptr != '\n') {
+	    pj_scan_get_until_chr(scanner, "\r\n", &attr->value);
 	} else {
 	    attr->value.ptr = NULL;
 	    attr->value.slen = 0;
