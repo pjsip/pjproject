@@ -886,6 +886,10 @@ static void stop_media_session(pjsua_call_id call_id)
     }
 
     if (call->session) {
+	if (pjsua_var.ua_cfg.cb.on_stream_destroyed) {
+	    pjsua_var.ua_cfg.cb.on_stream_destroyed(call_id, call->session, 0);
+	}
+
 	pjmedia_session_destroy(call->session);
 	call->session = NULL;
 
@@ -1057,6 +1061,14 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	 */
 	pjmedia_session_get_port(call->session, 0, &media_port);
 
+	/* Notify application about stream creation.
+	 * Note: application may modify media_port to point to different
+	 * media port
+	 */
+	if (pjsua_var.ua_cfg.cb.on_stream_created) {
+	    pjsua_var.ua_cfg.cb.on_stream_created(call_id, call->session,
+						  0, &media_port);
+	}
 
 	/*
 	 * Add the call to conference bridge.

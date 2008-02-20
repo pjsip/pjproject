@@ -602,6 +602,44 @@ typedef struct pjsua_callback
      */
     void (*on_call_media_state)(pjsua_call_id call_id);
 
+ 
+    /** 
+     * Notify application when media session is created and before it is
+     * registered to the conference bridge. Application may return different
+     * media port if it has added media processing port to the stream. This
+     * media port then will be added to the conference bridge instead.
+     *
+     * @param call_id	    Call identification.
+     * @param sess	    Media session for the call.
+     * @param stream_idx    Stream index in the media session.
+     * @param p_port	    On input, it specifies the media port of the
+     *			    stream. Application may modify this pointer to
+     *			    point to different media port to be registered
+     *			    to the conference bridge.
+     *
+     * \par Python:
+     * Not applicable. 
+     */
+    void (*on_stream_created)(pjsua_call_id call_id, 
+			      pjmedia_session *sess,
+                              unsigned stream_idx, 
+			      pjmedia_port **p_port);
+
+    /** 
+     * Notify application when media session has been unregistered from the
+     * conference bridge and about to be destroyed.
+     *
+     * @param call_id	    Call identification.
+     * @param sess	    Media session for the call.
+     * @param stream_idx    Stream index in the media session.
+     *
+     * \par Python:
+     * Not applicable. 
+     */
+    void (*on_stream_destroyed)(pjsua_call_id call_id,
+                                pjmedia_session *sess, 
+				unsigned stream_idx);
+
     /**
      * Notify application upon incoming DTMF digits.
      *
