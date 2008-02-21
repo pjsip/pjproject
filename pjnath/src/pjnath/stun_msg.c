@@ -33,17 +33,13 @@
 
 static int padding_char;
 
-static const char *stun_method_names[] = 
+static const char *stun_method_names[PJ_STUN_METHOD_MAX] = 
 {
     "Unknown",			/* 0 */
     "Binding",			/* 1 */
     "Shared Secret",		/* 2 */
     "Allocate",			/* 3 */
-    "Send",			/* 4 */
-    "Data",			/* 5 */
-    "Set Active Destination",   /* 6 */
-    "Connect",			/* 7 */
-    "Connect Status"		/* 8 */
+    "Refresh",			/* 4 */
 };
 
 static struct
@@ -63,7 +59,7 @@ static struct
     //{ PJ_STUN_SC_MISSING_REALM,	    "Missing Realm"},
     //{ PJ_STUN_SC_MISSING_NONCE,	    "Missing Nonce"},
     //{ PJ_STUN_SC_UNKNOWN_USERNAME,	    "Unknown Username"},
-    { PJ_STUN_SC_NO_BINDING,		    "No Binding"},
+    { PJ_STUN_SC_ALLOCATION_MISMATCH,	    "Allocation Mismatch"},
     { PJ_STUN_SC_STALE_NONCE,		    "Stale Nonce"},
     { PJ_STUN_SC_TRANSITIONING,		    "Active Destination Already Set"},
     { PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,    "Unsupported Transport Protocol"},
@@ -216,10 +212,10 @@ static struct attr_desc mandatory_attr_desc[] =
 	&encode_sockaddr_attr
     },
     {
-	/* ID 0x000C is not assigned */
-	NULL,
-	NULL,
-	NULL
+	/* PJ_STUN_ATTR_CHANNEL_NUMBER (0x000C) */
+	"CHANNEL-NUMBER",
+	&decode_uint_attr,
+	&encode_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_LIFETIME, */
@@ -252,9 +248,9 @@ static struct attr_desc mandatory_attr_desc[] =
 	NULL
     },
     {
-	/* PJ_STUN_ATTR_REMOTE_ADDRESS, */
-	"REMOTE-ADDRESS",
-	&decode_sockaddr_attr,
+	/* PJ_STUN_ATTR_PEER_ADDRESS, */
+	"PEER-ADDRESS",
+	&decode_xored_sockaddr_attr,
 	&encode_sockaddr_attr
     },
     {
@@ -278,7 +274,7 @@ static struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_RELAY_ADDRESS, */
 	"RELAY-ADDRESS",
-	&decode_sockaddr_attr,
+	&decode_xored_sockaddr_attr,
 	&encode_sockaddr_attr
     },
     {
@@ -350,7 +346,7 @@ static struct attr_desc mandatory_attr_desc[] =
     {
 	/* PJ_STUN_ATTR_REQUESTED_IP, */
 	"REQUESTED-IP",
-	&decode_sockaddr_attr,
+	&decode_xored_sockaddr_attr,
 	&encode_sockaddr_attr
     },
     {
@@ -1731,7 +1727,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
     if (err_code)
 	msg_type |= PJ_STUN_ERROR_RESPONSE_BIT;
     else
-	msg_type |= PJ_STUN_RESPONSE_BIT;
+	msg_type |= PJ_STUN_SUCCESS_RESPONSE_BIT;
 
     status = pj_stun_msg_create(pool, msg_type, req_msg->hdr.magic, 
 				req_msg->hdr.tsx_id, &response);

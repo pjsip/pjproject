@@ -69,27 +69,12 @@ enum pj_stun_method_e
     /**
      * STUN/TURN Send Indication as defined by draft-ietf-behave-turn
      */
-    PJ_STUN_SEND_INDICATION_METHOD	    = 4,
+    PJ_STUN_REFRESH_METHOD		    = 4,
 
     /**
-     * STUN/TURN Data Indication as defined by draft-ietf-behave-turn
+     * All known methods.
      */
-    PJ_STUN_DATA_INDICATION_METHOD	    = 5,
-
-    /**
-     * STUN/TURN Set Active Destination as defined by draft-ietf-behave-turn
-     */
-    PJ_STUN_SET_ACTIVE_DESTINATION_METHOD   = 6,
-
-    /**
-     * STUN/TURN Connect method as defined by draft-ietf-behave-turn
-     */
-    PJ_STUN_CONNECT_METHOD		    = 7,
-
-    /**
-     * STUN/TURN Connect Status indication method.
-     */
-    PJ_STUN_CONNECT_STATUS_METHOD	    = 8
+    PJ_STUN_METHOD_MAX
 };
 
 
@@ -132,6 +117,7 @@ enum pj_stun_msg_class_e
  */
 #define PJ_STUN_IS_REQUEST(msg_type)	(((msg_type) & 0x0110) == 0x0000)
 
+
 /**
  * Determine if the message type is a successful response.
  */
@@ -140,7 +126,8 @@ enum pj_stun_msg_class_e
 /**
  * The response bit in the message type.
  */
-#define PJ_STUN_RESPONSE_BIT		(0x0100)
+#define PJ_STUN_SUCCESS_RESPONSE_BIT	(0x0100)
+
 
 /**
  * Determine if the message type is an error response.
@@ -157,11 +144,11 @@ enum pj_stun_msg_class_e
  */
 #define PJ_STUN_IS_RESPONSE(msg_type) (((msg_type) & 0x0100) == 0x0100)
 
+
 /**
  * Determine if the message type is an indication message.
  */
 #define PJ_STUN_IS_INDICATION(msg_type)	(((msg_type) & 0x0110) == 0x0010)
-
 
 /**
  * The error response bit in the message type.
@@ -220,50 +207,19 @@ typedef enum pj_stun_msg_type
     PJ_STUN_ALLOCATE_ERROR_RESPONSE	    = 0x0113,
 
     /**
-     * STUN/TURN Send Indication
+     * STUN/TURN REFRESH Request
      */
-    PJ_STUN_SEND_INDICATION		    = 0x0014,
+    PJ_STUN_REFRESH_REQUEST		    = 0x0004,
 
     /**
-     * STUN/TURN Data Indication
+     * Successful response to STUN REFRESH request
      */
-    PJ_STUN_DATA_INDICATION		    = 0x0015,
+    PJ_STUN_REFRESH_RESPONSE		    = 0x0104,
 
     /**
-     * STUN/TURN Set Active Destination Request
+     * Error response to STUN REFRESH request.
      */
-    PJ_STUN_SET_ACTIVE_DESTINATION_REQUEST  = 0x0006,
-
-    /** 
-     * STUN/TURN Set Active Destination Response
-     */
-    PJ_STUN_SET_ACTIVE_DESTINATION_RESPONSE = 0x0106,
-
-    /**
-     * STUN/TURN Set Active Destination Error Response
-     */
-    PJ_STUN_SET_ACTIVE_DESTINATION_ERROR_RESPONSE = 0x0116,
-
-    /**
-     * STUN/TURN Connect Request
-     */
-    PJ_STUN_CONNECT_REQUEST		    = 0x0007,
-
-    /**
-     * STUN/TURN Connect Response
-     */
-    PJ_STUN_CONNECT_RESPONSE		    = 0x0107,
-
-    /**
-     * STUN/TURN Connect Error Response
-     */
-    PJ_STUN_CONNECT_ERROR_RESPONSE	    = 0x0117,
-
-    /**
-     * STUN/TURN Connect Status Indication
-     */
-    PJ_STUN_CONNECT_STATUS_INDICATION	    = 0x0018
-
+    PJ_STUN_REFRESH_ERROR_RESPONSE	    = 0x0114
 
 } pj_stun_msg_type;
 
@@ -285,10 +241,11 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_ERROR_CODE	    = 0x0009,/**< ERROR-CODE.		    */
     PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES = 0x000A,/**< UNKNOWN-ATTRIBUTES.	    */
     PJ_STUN_ATTR_REFLECTED_FROM	    = 0x000B,/**< REFLECTED-FROM (deprecatd)*/
-    PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< LIFETIME attribute.	    */
+    PJ_STUN_ATTR_CHANNEL_NUMBER	    = 0x000C,/**< TURN CHANNEL-NUMBER	    */
+    PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< TURN LIFETIME attr.	    */
     PJ_STUN_ATTR_MAGIC_COOKIE	    = 0x000F,/**< MAGIC-COOKIE attr (deprec)*/
-    PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< BANDWIDTH attribute	    */
-    PJ_STUN_ATTR_REMOTE_ADDR	    = 0x0012,/**< REMOTE-ADDRESS attribute  */
+    PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< TURN BANDWIDTH attr.	    */
+    PJ_STUN_ATTR_PEER_ADDR	    = 0x0012,/**< TURN PEER-ADDRESS attr.   */
     PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */
     PJ_STUN_ATTR_REALM		    = 0x0014,/**< REALM attribute.	    */
     PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
@@ -339,13 +296,13 @@ typedef enum pj_stun_status
     //PJ_STUN_SC_MISSING_NONCE		= 435,  /**< Missing Nonce	    */
     //PJ_STUN_SC_UNKNOWN_USERNAME	= 436,  /**< Unknown Username	    */
 #endif
-    PJ_STUN_SC_NO_BINDING	        = 437,  /**< No Binding.	    */
+    PJ_STUN_SC_ALLOCATION_MISMATCH      = 437,  /**< TURN Alloc Mismatch    */
     PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
     PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
     PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
-						     Protocol */
-    PJ_STUN_SC_INVALID_IP_ADDR		= 443,  /**< Invalid IP Address	    */
-    PJ_STUN_SC_INVALID_PORT	        = 444,  /**< Invalid Port	    */
+						     Protocol (TURN) */
+    PJ_STUN_SC_INVALID_IP_ADDR		= 443,  /**< Invalid IP Address(TURN)*/
+    PJ_STUN_SC_INVALID_PORT	        = 444,  /**< Invalid Port (TURN)    */
     PJ_STUN_SC_OPER_TCP_ONLY		= 445,  /**< Operation for TCP Only */
     PJ_STUN_SC_CONNECTION_FAILURE       = 446,  /**< Connection Failure	    */
     PJ_STUN_SC_CONNECTION_TIMEOUT       = 447,  /**< Connection Timeout	    */
@@ -846,6 +803,37 @@ typedef struct pj_stun_string_attr pj_stun_password_attr;
 
 
 /**
+ * This describes TURN CHANNEL-NUMBER attribute. In this library,
+ * this attribute is represented with 32bit integer. Application may
+ * use #PJ_STUN_GET_CH_NB() and #PJ_STUN_SET_CH_NB() to extract/set
+ * channel number value from the 32bit integral value.
+ *
+ * The CHANNEL-NUMBER attribute contains the number of the channel.
+ * It is a 16-bit unsigned integer, followed by a two-octet RFFU field
+ * which MUST be set to 0 on transmission and ignored on reception.
+  
+ \verbatim
+    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |        Channel Number         |         RFFU                  |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ \endverbatim
+ */
+typedef struct pj_stun_uint_attr pj_stun_channel_number_attr;
+
+/**
+ * Get 16bit channel number from 32bit integral value.
+ */
+#define PJ_STUN_GET_CH_NB(u32)	    pj_ntohs((pj_uint16_t)(u32>>16))
+
+/**
+ * Convert 16bit channel number into 32bit integral value.
+ */
+#define PJ_STUN_SET_CH_NB(chnum)    (((pj_uint32_t)pj_htons(chnum)) << 16)
+
+
+/**
  * This describes STUN LIFETIME attribute.
  * The lifetime attribute represents the duration for which the server
  * will maintain an allocation in the absence of data traffic either
@@ -865,11 +853,12 @@ typedef struct pj_stun_uint_attr pj_stun_bandwidth_attr;
 
 
 /**
- * This describes the STUN REMOTE-ADDRESS attribute.
- * The REMOTE-ADDRESS specifies the address and port of the peer as seen
- * from the STUN relay server.
+ * This describes the STUN PEER-ADDRESS attribute.
+ * The PEER-ADDRESS specifies the address and port of the peer as seen
+ * from the TURN server.  It is encoded in the same way as XOR-MAPPED-
+ * ADDRESS. 
  */
-typedef struct pj_stun_sockaddr_attr pj_stun_remote_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_peer_addr_attr;
 
 
 /**
@@ -885,7 +874,8 @@ typedef struct pj_stun_binary_attr pj_stun_data_attr;
 /**
  * This describes the STUN RELAY-ADDRESS attribute.
  * The RELAY-ADDRESS is present in Allocate responses.  It specifies the
- * address and port that the server allocated to the client.
+ * address and port that the server allocated to the client.  It is
+ * encoded in the same way as XOR-MAPPED-ADDRESS.
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_relay_addr_attr;
 
@@ -909,7 +899,12 @@ typedef struct pj_stun_sockaddr_attr pj_stun_relay_addr_attr;
 typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
 
 /**
- * This describes the STUN REQUESTED-PORT-PROPS attribute.
+ * This describes the TURN REQUESTED-PORT-PROPS attribute, encoded as
+ * STUN 32bit integer attribute. Few macros are provided to manipulate
+ * the values in this attribute: #PJ_STUN_GET_RPP_BITS(), 
+ * #PJ_STUN_SET_RPP_BITS(), #PJ_STUN_GET_RPP_PORT(), and
+ * #PJ_STUN_SET_RPP_PORT().
+ *
  * This attribute allows the client to request certain properties for
  * the port that is allocated by the server.  The attribute can be used
  * with any transport protocol that has the notion of a 16 bit port
@@ -918,30 +913,108 @@ typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
 
  \verbatim
 
-    0                   1                   2                   3
-    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-   |                           Reserved = 0                  |B| A |
-   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |       Reserved = 0        | A |    Specific Port Number       |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
- \endverbatim  
+ \endverbatim
+
+ * The two bits labeled A in the diagram above are for requested port
+ * alignment and have the following meaning:
+ *
+ *  - 00  no specific port alignment
+ *  - 01  odd port number
+ *  - 10  even port number
+ *  - 11  even port number; reserve next higher port
  */
 typedef struct pj_stun_uint_attr pj_stun_req_port_props_attr;
 
+/**
+ * Get the 2 bits requested port alignment value from a 32bit integral
+ * value of TURN REQUESTED-PORT-PROPS attribute.
+ */
+#define PJ_STUN_GET_RPP_BITS(u32)   ((u32 >> 16) & 0x03)
 
 /**
- * This describes the STUN REQUESTED-TRANSPORT attribute.
+ * Convert 2 bits requested port alignment value to a 32bit integral
+ * value of TURN REQUESTED-PORT-PROPS attribute.
+ */
+#define PJ_STUN_SET_RPP_BITS(A)	    (A << 16)
+
+/**
+ * Get the port number in TURN REQUESTED-PORT-PROPS attribute. The port
+ * number is returned in host byte order.
+ */
+#define PJ_STUN_GET_RPP_PORT(u32)   pj_ntons((pj_uint16_t)(u32 & 0x0000FFFFL))
+
+/**
+ * Convert port number in host byte order to 32bit value to be encoded in 
+ * TURN REQUESTED-PORT-PROPS attribute.
+ */
+#define PJ_STUN_SET_RPP_PORT(port) ((pj_uint32_t)pj_htons((pj_uint16_t)(port)))
+
+
+/**
+ * This describes the TURN REQUESTED-TRANSPORT attribute, encoded in
+ * STUN generic integer attribute.
+ *
  * This attribute is used by the client to request a specific transport
- * protocol for the allocated transport address.  It is a 32 bit
- * unsigned integer.  Its values are: 0x0000 for UDP and 0x0000 for TCP.
+ * protocol for the allocated transport address.  It has the following
+ * format:
+
+ \verbatim
+
+      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |    Protocol   |                    RFFU                       |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+
+
+ \endverbatim
+
+ * The Protocol field specifies the desired protocol.  The codepoints
+ * used in this field are taken from those allowed in the Protocol field
+ * in the IPv4 header and the NextHeader field in the IPv6 header
+ * [Protocol-Numbers].  This specification only allows the use of
+ * codepoint 17 (User Datagram Protocol).
+ * 
+ * The RFFU field is set to zero on transmission and ignored on
+ * receiption.  It is reserved for future uses.
  */
 typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
 
+/**
+ * Get protocol value from 32bit TURN REQUESTED-TRANSPORT attribute.
+ */
+#define PJ_STUN_GET_RT_PROTO(u32)   (u32 >> 24)
 
 /**
- * This describes the STUN REQUESTED-IP attribute.
+ * Convert protocol value to be placed in 32bit TURN REQUESTED-TRANSPORT
+ * attribute.
+ */
+#define PJ_STUN_SET_RT_PROTO(proto)   (((pj_uint32_t)(proto)) << 24)
+
+
+
+/**
+ * This describes the TURN REQUESTED-IP attribute.
  * The REQUESTED-IP attribute is used by the client to request that a
- * specific IP address be allocated to it.
+ * specific IP address be allocated by the TURN server.  This attribute
+ * is needed since it is anticipated that TURN servers will be multi-
+ * homed so as to be able to allocate more than 64k transport addresses.
+ * As a consequence, a client needing a second transport address on the
+ * same interface as a previous one can use this attribute to request a
+ * remote address from the same TURN server interface as the TURN
+ * client's previous remote address.
+ * 
+ * The format of this attribute is identical to XOR-MAPPED-ADDRESS.
+ * However, the port component of the attribute MUST be ignored by the
+ * server.  If a client wishes to request a specific IP address and
+ * port, it uses both the REQUESTED-IP and REQUESTED-PORT-PROPS
+ * attributes. 
  */
 typedef struct pj_stun_sockaddr_attr pj_stun_req_ip_attr;
 

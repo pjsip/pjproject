@@ -71,7 +71,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_SOURCE_ADDR:
     case PJ_STUN_ATTR_CHANGED_ADDR:
     case PJ_STUN_ATTR_REFLECTED_FROM:
-    case PJ_STUN_ATTR_REMOTE_ADDR:
+    case PJ_STUN_ATTR_PEER_ADDR:
     case PJ_STUN_ATTR_RELAY_ADDR:
     case PJ_STUN_ATTR_XOR_MAPPED_ADDR:
     case PJ_STUN_ATTR_REQ_IP:
@@ -96,6 +96,19 @@ static int print_attr(char *buffer, unsigned length,
 		len = pj_ansi_snprintf(p, end-p,
 				       ", INVALID ADDRESS FAMILY!\n");
 	    }
+	    APPLY();
+	}
+	break;
+
+    case PJ_STUN_ATTR_CHANNEL_NUMBER:
+	{
+	    const pj_stun_uint_attr *attr;
+
+	    attr = (const pj_stun_uint_attr*)ahdr;
+	    len = pj_ansi_snprintf(p, end-p,
+				   ", chnum=%u (0x%x)\n",
+				   (int)PJ_STUN_GET_CH_NB(attr->value),
+				   (int)PJ_STUN_GET_CH_NB(attr->value));
 	    APPLY();
 	}
 	break;
