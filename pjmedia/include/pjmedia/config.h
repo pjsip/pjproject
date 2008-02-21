@@ -485,11 +485,31 @@
 
 
 /**
- * SRTP Transport
+ * Enable support for SRTP media transport. This will require linking
+ * with libsrtp from the third_party directory.
+ *
  * By default it is enabled.
  */
 #ifndef PJMEDIA_HAS_SRTP
 #   define PJMEDIA_HAS_SRTP			    1
+#endif
+
+
+/**
+ * Enable support to handle codecs with inconsistent clock rate
+ * between clock rate in SDP/RTP & the clock rate that is actually used.
+ * This happens for example with G.722 and MPEG audio codecs.
+ * See:
+ *  - G.722      : RFC 3551 4.5.2
+ *  - MPEG audio : RFC 3551 4.5.13 & RFC 3119
+ *
+ * Also when this feature is enabled, some handling will be performed
+ * to deal with clock rate incompatibilities of some phones.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_HANDLE_G722_MPEG_BUG
+#   define PJMEDIA_HANDLE_G722_MPEG_BUG		    1
 #endif
 
 

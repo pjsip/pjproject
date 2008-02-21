@@ -388,6 +388,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	    pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
 	    si->fmt.clock_rate = rtpmap->clock_rate;
 	    
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG != 0)
+	    /* The session info should have the actual clock rate, because 
+	     * this info is used for calculationg buffer size, etc in stream */
+	    if (si->fmt.pt == PJMEDIA_RTP_PT_G722)
+		si->fmt.clock_rate = 16000;
+#endif
+
 	    /* For audio codecs, rtpmap parameters denotes the number of
 	     * channels.
 	     */

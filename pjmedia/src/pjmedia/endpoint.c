@@ -412,9 +412,17 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	fmt->slen = pj_utoa(codec_info->pt, fmt->ptr);
 
 	rtpmap.pt = *fmt;
-	rtpmap.clock_rate = codec_info->clock_rate;
 	rtpmap.enc_name = codec_info->encoding_name;
-	
+
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG != 0)
+	if (codec_info->pt == PJMEDIA_RTP_PT_G722)
+	    rtpmap.clock_rate = 8000;
+	else
+	    rtpmap.clock_rate = codec_info->clock_rate;
+#else
+	rtpmap.clock_rate = codec_info->clock_rate;
+#endif
+
 	/* For audio codecs, rtpmap parameters denotes the number
 	 * of channels, which can be omited if the value is 1.
 	 */

@@ -92,7 +92,7 @@ struct pjmedia_stream
 						 ptime is different than dec.
 						 Otherwise it's NULL.	    */
 
-    unsigned		     enc_samples_per_frame;
+    unsigned		     enc_samples_per_pkt;
     unsigned		     enc_buf_size;  /**< Encoding buffer size, in
 						 samples.		    */
     unsigned		     enc_buf_pos;   /**< First position in buf.	    */
@@ -131,6 +131,32 @@ struct pjmedia_stream
     /* DTMF callback */
     void		    (*dtmf_cb)(pjmedia_stream*, void*, int);
     void		     *dtmf_cb_user_data;
+
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    /* Enable support to handle codecs with inconsistent clock rate
+     * between clock rate in SDP/RTP & the clock rate that is actually used.
+     * This happens for example with G.722 and MPEG audio codecs.
+     */
+    pj_bool_t		     has_g722_mpeg_bug;
+					    /**< Flag to specify whether 
+						 normalization process 
+						 is needed		    */
+    unsigned		     rtp_tx_samples_per_pkt;
+					    /**< Normalized samples per packet 
+						 transmitted according to 
+						 'erroneous' definition	    */
+    unsigned		     rtp_rx_samples_per_frame;
+					    /**< Normalized samples per frame 
+						 received according to 
+						 'erroneous' definition	    */
+    pj_uint32_t		     rtp_rx_last_ts;/**< Last received RTP timestamp
+						 for timestamp checking	    */
+    unsigned		     rtp_rx_last_cnt;/**< Nb of frames in last pkt  */
+    unsigned		     rtp_rx_check_cnt;
+					    /**< Counter of remote timestamp
+						 checking */
+#endif
+
 };
 
 
@@ -521,7 +547,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     pjmedia_channel *channel = stream->enc;
     pj_status_t status = 0;
     pjmedia_frame frame_out;
-    unsigned ts_len, samples_per_frame;
+    unsigned ts_len, rtp_ts_len, samples_per_frame;
     void *rtphdr;
     int rtphdrlen;
     int inc_timestamp = 0;
@@ -541,12 +567,24 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     /* Increment transmit duration */
     stream->tx_duration += ts_len;
 
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    /* Handle special case for audio codec with RTP timestamp inconsistence 
+     * e.g: G722, MPEG audio.
+     */
+    if (stream->has_g722_mpeg_bug)
+	rtp_ts_len = stream->rtp_tx_samples_per_pkt;
+    else
+	rtp_ts_len = ts_len;
+#else
+    rtp_ts_len = ts_len;
+#endif
+
     /* Init frame_out buffer. */
     frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
 
     /* Calculate number of samples per frame */
-    samples_per_frame = stream->enc_samples_per_frame;
+    samples_per_frame = stream->enc_samples_per_pkt;
 
 
     /* If we have DTMF digits in the queue, transmit the digits. 
@@ -563,7 +601,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
          */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 stream->tx_event_pt, first, 
-					 frame_out.size, (first?ts_len:0), 
+					 frame_out.size,
+					 (first ? rtp_ts_len : 0), 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
@@ -572,7 +611,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	     * Increment the RTP timestamp of the RTP session, for next
 	     * RTP packets.
 	     */
-	    inc_timestamp = PJMEDIA_DTMF_DURATION - ts_len;
+	    inc_timestamp = PJMEDIA_DTMF_DURATION - rtp_ts_len;
 	}
 
 	/* No need to encode if this is a zero frame.
@@ -640,7 +679,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	/* Encapsulate. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 channel->pt, 0, 
-					 frame_out.size, ts_len, 
+					 frame_out.size, rtp_ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
     } else {
@@ -648,7 +687,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	/* Just update RTP session's timestamp. */
 	status = pjmedia_rtp_encode_rtp( &channel->rtp, 
 					 0, 0, 
-					 0, ts_len, 
+					 0, rtp_ts_len, 
 					 (const void**)&rtphdr, 
 					 &rtphdrlen);
 
@@ -729,7 +768,7 @@ static pj_status_t put_frame( pjmedia_port *port,
     pjmedia_frame tmp_zero_frame;
     unsigned samples_per_frame;
 
-    samples_per_frame = stream->enc_samples_per_frame;
+    samples_per_frame = stream->enc_samples_per_pkt;
 
     /* http://www.pjsip.org/trac/ticket/56:
      *  when input is PJMEDIA_FRAME_TYPE_NONE, feed zero PCM frame
@@ -806,7 +845,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	    /* If we still have full frame in the buffer, re-run
 	     * rebuffer() with NULL frame.
 	     */
-	    if (stream->enc_buf_count >= stream->enc_samples_per_frame) {
+	    if (stream->enc_buf_count >= stream->enc_samples_per_pkt) {
 
 		tmp_rebuffer_frame.type = PJMEDIA_FRAME_TYPE_NONE;
 
@@ -1026,7 +1065,7 @@ static void on_rx_rtp( void *data,
 	enum { MAX = 16 };
 	pj_timestamp ts;
 	unsigned i, count = MAX;
-	unsigned samples_per_frame;
+	unsigned ts_span;
 	pjmedia_frame frames[MAX];
 
 	/* Get the timestamp of the first sample */
@@ -1046,17 +1085,74 @@ static void on_rx_rtp( void *data,
 	    count = 0;
 	}
 
-	/* Put each frame to jitter buffer. */
-	samples_per_frame = stream->codec_param.info.frm_ptime * 
-			    stream->codec_param.info.clock_rate *
-			    stream->codec_param.info.channel_cnt /
-			    1000;
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+	/* This code is used to learn the samples per frame value that is put
+	 * by remote endpoint, for codecs with inconsistent clock rate such
+	 * as G.722 or MPEG audio. We need to learn the samples per frame 
+	 * value as it is used as divider when inserting frames into the
+	 * jitter buffer.
+	 */
+	if (stream->has_g722_mpeg_bug) {
+	    if (stream->rtp_rx_check_cnt) {
+		/* Make sure the detection performed only on two consecutive 
+		 * packets with valid RTP sequence and no wrapped timestamp.
+		 */
+		if (seq_st.diff == 1 && stream->rtp_rx_last_ts && 
+		    ts.u64 > stream->rtp_rx_last_ts)
+		{
+		    unsigned peer_frm_ts_diff;
+
+		    peer_frm_ts_diff = 
+			((pj_uint32_t)ts.u64-stream->rtp_rx_last_ts) / 
+			stream->rtp_rx_last_cnt;
+
+		    /* Possibilities remote's samples per frame for G.722 
+		     * are only 160 and 320, this validation is needed
+		     * to avoid wrong decision because of silence frames.
+		     */
+		    if (stream->codec_param.info.pt == PJMEDIA_RTP_PT_G722 &&
+			(peer_frm_ts_diff==stream->port.info.samples_per_frame
+			 || peer_frm_ts_diff == 
+				    stream->port.info.samples_per_frame >> 1))
+		    {
+			if (peer_frm_ts_diff < stream->rtp_rx_samples_per_frame)
+			    stream->rtp_rx_samples_per_frame = peer_frm_ts_diff;
+
+			if (--stream->rtp_rx_check_cnt == 0) {
+    			    PJ_LOG(4, (THIS_FILE, "G722 codec used, remote"
+				       " samples per frame detected = %d", 
+				       stream->rtp_rx_samples_per_frame));
 			    
+			    /* Reset jitter buffer once detection done */
+			    pjmedia_jbuf_reset(stream->jb);
+			}
+		    }
+		}
+
+		stream->rtp_rx_last_ts = (pj_uint32_t)ts.u64;
+		stream->rtp_rx_last_cnt = count;
+	    }
+
+	    ts_span = stream->rtp_rx_samples_per_frame;
+
+	} else {
+	    ts_span = stream->codec_param.info.frm_ptime * 
+		      stream->codec_param.info.clock_rate *
+		      stream->codec_param.info.channel_cnt /
+		      1000;
+	}
+#else
+	ts_span = stream->codec_param.info.frm_ptime * 
+		  stream->codec_param.info.clock_rate *
+		  stream->codec_param.info.channel_cnt /
+		  1000;
+#endif
+
+	/* Put each frame to jitter buffer. */
 	for (i=0; i<count; ++i) {
 	    unsigned ext_seq;
 
-	    ext_seq = (unsigned)(frames[i].timestamp.u64 /
-				 samples_per_frame);
+	    ext_seq = (unsigned)(frames[i].timestamp.u64 / ts_span);
 	    pjmedia_jbuf_put_frame(stream->jb, frames[i].buf, 
 				   frames[i].size, ext_seq);
 
@@ -1190,7 +1286,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     name.ptr = (char*) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "strm%p", stream);
 
-
     /* Init some port-info. Some parts of the info will be set later
      * once we have more info about the codec.
      */
@@ -1263,7 +1358,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 					stream->codec_param.setting.frm_per_pkt /
 					1000;
 
-
     /* Open the codec: */
 
     status = stream->codec->op->open(stream->codec, &stream->codec_param);
@@ -1279,8 +1373,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     {
 	unsigned ptime;
 
-	stream->enc_samples_per_frame = stream->codec_param.info.enc_ptime *
-					stream->port.info.clock_rate / 1000;
+	stream->enc_samples_per_pkt = stream->codec_param.info.enc_ptime *
+				      stream->port.info.clock_rate / 1000;
 
 	/* Set buffer size as twice the largest ptime value between
 	 * stream's ptime, encoder ptime, or decoder ptime.
@@ -1303,8 +1397,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 			  pj_pool_alloc(pool, stream->enc_buf_size * 2);
 
     } else {
-	stream->enc_samples_per_frame = stream->port.info.samples_per_frame;
+	stream->enc_samples_per_pkt = stream->port.info.samples_per_frame;
     }
+
 
     /* Initially disable the VAD in the stream, to help traverse NAT better */
     stream->vad_enabled = stream->codec_param.setting.vad;
@@ -1321,13 +1416,37 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 			  stream->codec_param.info.frm_ptime / 1000;
 
 
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+    stream->rtp_rx_check_cnt = 5;
+    stream->has_g722_mpeg_bug = PJ_FALSE;
+    stream->rtp_rx_last_ts = 0;
+    stream->rtp_rx_last_cnt = 0;
+    stream->rtp_tx_samples_per_pkt = stream->enc_samples_per_pkt;
+    stream->rtp_rx_samples_per_frame = stream->port.info.samples_per_frame;
+
     /* Init RTCP session: */
 
+    /* Special case for G.722 */
+    if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
+	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
+			  8000, 
+			  160,
+			  info->ssrc);
+	stream->has_g722_mpeg_bug = PJ_TRUE;
+	/* RTP clock rate = 1/2 real clock rate */
+	stream->rtp_tx_samples_per_pkt >>= 1;
+    } else {
+	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
+			  info->fmt.clock_rate, 
+			  stream->port.info.samples_per_frame, 
+			  info->ssrc);
+    }
+#else
     pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
 		      info->fmt.clock_rate, 
 		      stream->port.info.samples_per_frame, 
 		      info->ssrc);
-
+#endif
 
     /* Init jitter buffer parameters: */
     if (info->jb_max > 0)
