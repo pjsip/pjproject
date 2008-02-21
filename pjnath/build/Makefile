@@ -71,7 +71,8 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjnath pjnath-test pjstun-client pjstun-srv-test
+TARGETS := pjnath pjnath-test 
+#pjstun-client pjstun-srv-test
 
 all: $(TARGETS)
 

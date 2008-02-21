@@ -511,6 +511,35 @@ static int worker_thread(void *arg)
 }
 
 
+/* Init random seed */
+static void init_random_seed(void)
+{
+    pj_sockaddr addr;
+    const pj_str_t *hostname;
+    pj_uint32_t pid;
+    pj_time_val t;
+    unsigned seed=0;
+
+    /* Add hostname */
+    hostname = pj_gethostname();
+    seed = pj_hash_calc(seed, hostname->ptr, (int)hostname->slen);
+
+    /* Add primary IP address */
+    if (pj_gethostip(pj_AF_INET(), &addr)==PJ_SUCCESS)
+	seed = pj_hash_calc(seed, &addr.ipv4.sin_addr, 4);
+
+    /* Get timeofday */
+    pj_gettimeofday(&t);
+    seed = pj_hash_calc(seed, &t, sizeof(t));
+
+    /* Add PID */
+    pid = pj_getpid();
+    seed = pj_hash_calc(seed, &pid, sizeof(pid));
+
+    /* Init random seed */
+    pj_srand(seed);
+}
+
 /*
  * Instantiate pjsua application.
  */
@@ -528,6 +557,8 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Init random seed */
+    init_random_seed();
 
     /* Init PJLIB-UTIL: */
     status = pjlib_util_init();

@@ -49,8 +49,7 @@ PJ_BEGIN_DECL
  * PJ_GUID_STRING_LENGTH specifies length of GUID string. The value is
  * dependent on the algorithm used internally to generate the GUID string.
  * If real GUID generator is used, then the length will be between 32 and
- * 36 bytes. If shadow GUID generator is used, then the length
- * will be 20 bytes. Application should not assume which algorithm will
+ * 36 bytes. Application should not assume which algorithm will
  * be used by GUID generator.
  *
  * Regardless of the actual length of the GUID, it will not exceed
