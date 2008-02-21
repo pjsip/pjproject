@@ -38,6 +38,21 @@ PJ_BEGIN_DECL
  * situation where filesystems are not available in the target system.
  */
 
+
+/**
+ * Memory player options.
+ */
+enum pjmedia_mem_player_option
+{
+    /**
+     * Tell the memory player to return NULL frame when the whole
+     * buffer has been played instead of rewinding the buffer back
+     * to start position.
+     */
+    PJMEDIA_MEM_NO_LOOP = 1
+};
+
+
 /**
  * Create the buffer based playback to play the media from the specified
  * buffer.
@@ -52,7 +67,7 @@ PJ_BEGIN_DECL
  * @param channel_count	    Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample.
- * @param options	    Option flags.
+ * @param options	    Option flags, see #pjmedia_mem_player_option
  * @param p_port	    Pointer to receive the port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate

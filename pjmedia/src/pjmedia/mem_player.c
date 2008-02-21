@@ -146,8 +146,22 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
     player = (struct mem_player*) this_port;
 
     if (player->eof) {
-	frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_EEOF;
+	pj_status_t status = PJ_SUCCESS;
+
+	/* Call callback, if any */
+	if (player->cb)
+	    status = (*player->cb)(this_port, player->user_data);
+
+	/* If callback returns non PJ_SUCCESS or 'no loop' is specified
+	 * return immediately (and don't try to access player port since
+	 * it might have been destroyed by the callback).
+	 */
+	if ((status != PJ_SUCCESS) || (player->options & PJMEDIA_MEM_NO_LOOP)) {
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    return PJ_EEOF;
+	}
+	
+	player->eof = PJ_FALSE;
     }
 
     size_needed = this_port->info.bytes_per_frame;
@@ -169,24 +183,18 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 	pj_assert(player->read_pos <= endpos);
 
 	if (player->read_pos == endpos) {
+	    /* Set EOF flag */
+	    player->eof = PJ_TRUE;
+	    /* Reset read pointer */
 	    player->read_pos = player->buffer;
 
-	    /* Call callback, if any */
-	    if (player->cb) {
-		pj_status_t status;
+	    /* Pad with zeroes then return for no looped play */
+	    if (player->options & PJMEDIA_MEM_NO_LOOP) {
+		pj_size_t null_len;
 
-		player->eof = PJ_TRUE;
-		status = (*player->cb)(this_port, player->user_data);
-		if (status != PJ_SUCCESS) {
-		    /* Must not access player from here on. It may be
-		     * destroyed by application.
-		     */
-		    frame->size = size_written;
-		    frame->timestamp.u64 = player->timestamp.u64;
-		    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-		    return status;
-		}
-		player->eof = PJ_FALSE;
+    		null_len = size_needed - size_written;
+		pj_bzero(dst + max, null_len);
+		break;
 	    }
 	}
     }
@@ -203,8 +211,12 @@ static pj_status_t mem_get_frame( pjmedia_port *this_port,
 
 static pj_status_t mem_on_destroy(pjmedia_port *this_port)
 {
-    /* Nothing to do */
-    PJ_UNUSED_ARG(this_port);
+    PJ_ASSERT_RETURN(this_port->info.signature == SIGNATURE,
+		     PJ_EINVALIDOP);
+
+    /* Destroy signature */
+    this_port->info.signature = 0;
+
     return PJ_SUCCESS;
 }
 
