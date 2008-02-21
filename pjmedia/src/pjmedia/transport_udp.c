@@ -35,6 +35,8 @@
 /* Maximum pending write operations */
 #define MAX_PENDING 4
 
+static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
+
 /* Pending write buffer */
 typedef struct pending_write
 {
@@ -49,6 +51,7 @@ struct transport_udp
 
     pj_pool_t	       *pool;		/**< Memory pool		    */
     unsigned		options;	/**< Transport options.		    */
+    unsigned		media_options;	/**< Transport media options.	    */
     void	       *user_data;	/**< Only valid when attached	    */
     pj_bool_t		attached;	/**< Has attachment?		    */
     pj_sockaddr		rem_rtp_addr;	/**< Remote RTP address		    */
@@ -120,6 +123,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
+				       unsigned options,
 				       pjmedia_sdp_session *sdp_local,
 				       const pjmedia_sdp_session *sdp_remote,
 				       unsigned media_index);
@@ -764,15 +768,31 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				  pj_pool_t *pool,
+				  unsigned options,
 				  pjmedia_sdp_session *sdp_local,
 				  const pjmedia_sdp_session *sdp_remote,
 				  unsigned media_index)
 {
-    PJ_UNUSED_ARG(tp);
-    PJ_UNUSED_ARG(pool);
-    PJ_UNUSED_ARG(sdp_local);
-    PJ_UNUSED_ARG(sdp_remote);
-    PJ_UNUSED_ARG(media_index);
+    struct transport_udp *udp = (struct transport_udp*)tp;
+
+    PJ_ASSERT_RETURN(tp && pool && sdp_local, PJ_EINVAL);
+    udp->media_options = options;
+
+    /* Validate media transport */
+    /* By now, this transport only support RTP/AVP transport */
+    if ((udp->media_options & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
+	pjmedia_sdp_media *m_rem, *m_loc;
+
+	m_rem = sdp_remote? sdp_remote->media[media_index] : NULL;
+	m_loc = sdp_local->media[media_index];
+
+	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
+	   (m_rem && pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)))
+	{
+	    pjmedia_sdp_media_deactivate(pool, m_loc);
+	    return PJMEDIA_SDP_EINPROTO;
+	}
+    }
 
     return PJ_SUCCESS;
 }
@@ -783,11 +803,25 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 				  const pjmedia_sdp_session *sdp_remote,
 				  unsigned media_index)
 {
-    PJ_UNUSED_ARG(tp);
-    PJ_UNUSED_ARG(pool);
-    PJ_UNUSED_ARG(sdp_local);
-    PJ_UNUSED_ARG(sdp_remote);
-    PJ_UNUSED_ARG(media_index);
+    struct transport_udp *udp = (struct transport_udp*)tp;
+
+    PJ_ASSERT_RETURN(tp && pool && sdp_local, PJ_EINVAL);
+
+    /* Validate media transport */
+    /* By now, this transport only support RTP/AVP transport */
+    if ((udp->media_options & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
+	pjmedia_sdp_media *m_rem, *m_loc;
+
+	m_rem = sdp_remote->media[media_index];
+	m_loc = sdp_local->media[media_index];
+
+	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
+	    pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP))
+	{
+	    pjmedia_sdp_media_deactivate(pool, m_loc);
+	    return PJMEDIA_SDP_EINPROTO;
+	}
+    }
 
     return PJ_SUCCESS;
 }

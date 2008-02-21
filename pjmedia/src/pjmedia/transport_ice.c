@@ -24,11 +24,14 @@
 
 #define THIS_FILE   "transport_ice.c"
 
+static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
+
 struct transport_ice
 {
     pjmedia_transport	 base;
     pj_ice_strans	*ice_st;
     pjmedia_ice_cb	 cb;
+    unsigned		 media_option;
 
     pj_time_val		 start_ice;
     
@@ -74,6 +77,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
+				       unsigned options,
 				       pjmedia_sdp_session *sdp_local,
 				       const pjmedia_sdp_session *sdp_remote,
 				       unsigned media_index);
@@ -258,6 +262,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_init_ice(pjmedia_transport *tp,
  */
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
+				       unsigned options,
 				       pjmedia_sdp_session *sdp_local,
 				       const pjmedia_sdp_session *sdp_remote,
 				       unsigned media_index)
@@ -269,6 +274,24 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     pjmedia_sdp_attr *attr;
     unsigned i, cand_cnt;
     pj_status_t status;
+
+    tp_ice->media_option = options;
+
+    /* Validate media transport */
+    /* By now, this transport only support RTP/AVP transport */
+    if ((tp_ice->media_option & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
+	pjmedia_sdp_media *m_rem, *m_loc;
+
+	m_rem = sdp_remote? sdp_remote->media[media_index] : NULL;
+	m_loc = sdp_local->media[media_index];
+
+	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
+	   (m_rem && pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)))
+	{
+	    pjmedia_sdp_media_deactivate(pool, m_loc);
+	    return PJMEDIA_SDP_EINPROTO;
+	}
+    }
 
     /* Init ICE */
     ice_role = (sdp_remote==NULL ? PJ_ICE_SESS_ROLE_CONTROLLING : 
@@ -499,12 +522,26 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     pj_str_t uname, pass;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(sdp_local);
-
     PJ_ASSERT_RETURN(tp && pool && sdp_remote, PJ_EINVAL);
     PJ_ASSERT_RETURN(media_index < sdp_remote->media_count, PJ_EINVAL);
 
     sdp_med = sdp_remote->media[media_index];
+
+    /* Validate media transport */
+    /* By now, this transport only support RTP/AVP transport */
+    if ((tp_ice->media_option & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
+	pjmedia_sdp_media *m_rem, *m_loc;
+
+	m_rem = sdp_remote->media[media_index];
+	m_loc = sdp_local->media[media_index];
+
+	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
+	   (pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)))
+	{
+	    pjmedia_sdp_media_deactivate(pool, m_loc);
+	    return PJMEDIA_SDP_EINPROTO;
+	}
+    }
 
     /* Get the SDP connection for the media stream.
      * We'll verify later if the SDP connection address is specified 

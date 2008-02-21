@@ -479,14 +479,18 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
     }
 
 
-    /* Chec that transport in the answer match our offer. */
+    /* Check that transport in the answer match our offer. */
 
-    if (pj_strcmp(&answer->desc.transport, 
-		  &offer->desc.transport)!=0) 
+    /* At this point, transport type must be compatible, 
+     * the transport instance will do more validation later.
+     */
+    if (pjmedia_sdp_transport_cmp(&answer->desc.transport, 
+				  &offer->desc.transport) 
+	!= PJ_SUCCESS)
     {
-	/* The transport in the answer is different than the offer! */
 	return PJMEDIA_SDPNEG_EINVANSTP;
     }
+
 
     /* Check if remote has rejected our offer */
     

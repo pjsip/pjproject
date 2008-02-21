@@ -212,6 +212,21 @@ PJ_BEGIN_DECL
  */
 typedef struct pjmedia_transport pjmedia_transport;
 
+/**
+ * This enumeration specifies the general behaviour of media processing
+ */
+typedef enum pjmedia_tranport_media_option
+{
+    /**
+     * When this flag is specified, the transport will not perform media
+     * transport validation, this is useful when transport is stacked with
+     * other transport, for example when transport UDP is stacked under
+     * transport SRTP, media transport validation only need to be done by 
+     * transport SRTP.
+     */
+    PJMEDIA_TPMED_NO_TRANSPORT_CHECKING = 1
+
+} pjmedia_tranport_media_option;
 
 /**
  * This structure describes the operations for the stream transport.
@@ -292,6 +307,7 @@ struct pjmedia_transport_op
      */
     pj_status_t (*media_create)(pjmedia_transport *tp,
 				pj_pool_t *pool,
+				unsigned options,
 				pjmedia_sdp_session *sdp_local,
 				const pjmedia_sdp_session *sdp_remote,
 				unsigned media_index);
@@ -508,6 +524,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
  *
  * @param tp		The media transport.
  * @param pool		The memory pool.
+ * @param option	Option flags, from #pjmedia_tranport_media_option
  * @param sdp_local	Local SDP.
  * @param sdp_remote	Remote SDP.
  * @param media_index	Media index in SDP.
@@ -516,11 +533,12 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
 				    pj_pool_t *pool,
+				    unsigned options,
 				    pjmedia_sdp_session *sdp_local,
 				    const pjmedia_sdp_session *sdp_remote,
 				    unsigned media_index)
 {
-    return (*tp->op->media_create)(tp, pool, sdp_local, sdp_remote, 
+    return (*tp->op->media_create)(tp, pool, options, sdp_local, sdp_remote, 
 				   media_index);
 }
 
@@ -540,6 +558,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
  *
  * @param tp		The media transport.
  * @param pool		The memory pool.
+ * @param option	The media transport option.
  * @param sdp_local	Local SDP.
  * @param sdp_remote	Remote SDP.
  * @param media_index	Media index to start.

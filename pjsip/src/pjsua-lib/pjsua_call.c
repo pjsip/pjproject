@@ -2484,7 +2484,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	if (inv->state != PJSIP_INV_STATE_NULL &&
 	    inv->state != PJSIP_INV_STATE_CONFIRMED) 
 	{
-	    //call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
+	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	}
 
 	PJSUA_UNLOCK();

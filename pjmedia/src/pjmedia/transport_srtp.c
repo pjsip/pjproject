@@ -35,11 +35,7 @@
 /* Maximum size of packet */
 #define MAX_BUFFER_LEN	1500
 #define MAX_KEY_LEN	32
-#define DEACTIVATE_MEDIA(pool, m) {\
-	    attr = pjmedia_sdp_attr_create(pool, ID_INACTIVE.ptr, NULL); \
-	    m->attr[m->attr_count++] = attr; \
-	    m->desc.port = 0; \
-	}
+#define DEACTIVATE_MEDIA(pool, m) pjmedia_sdp_media_deactivate(pool, m)
 
 static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
 static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
@@ -83,8 +79,9 @@ typedef struct transport_srtp
     pj_pool_t		*pool;
     pj_lock_t		*mutex;
     char		 tx_buffer[MAX_BUFFER_LEN];
-
     pjmedia_srtp_setting setting;
+    unsigned		 media_option;
+
     /* SRTP policy */
     pj_bool_t		 session_inited;
     pj_bool_t		 offerer_side;
@@ -150,6 +147,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
+				       unsigned options,
 				       pjmedia_sdp_session *sdp_local,
 				       const pjmedia_sdp_session *sdp_remote,
 				       unsigned media_index);
@@ -924,6 +922,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				          pj_pool_t *pool,
+					  unsigned options,
 				          pjmedia_sdp_session *sdp_local,
 				          const pjmedia_sdp_session *sdp_remote,
 					  unsigned media_index)
@@ -937,8 +936,12 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     pjmedia_sdp_attr *attr;
     pj_str_t attr_value;
     int i, j;
+    unsigned member_tp_option;
 
     PJ_ASSERT_RETURN(tp && pool && sdp_local, PJ_EINVAL);
+    
+    srtp->media_option = options;
+    member_tp_option = options | PJMEDIA_TPMED_NO_TRANSPORT_CHECKING;
 
     pj_bzero(&srtp->rx_policy, sizeof(srtp->tx_policy));
     pj_bzero(&srtp->tx_policy, sizeof(srtp->rx_policy));
@@ -1130,10 +1133,12 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 
 BYPASS_SRTP:
     srtp->bypass_srtp = PJ_TRUE;
+    member_tp_option &= ~PJMEDIA_TPMED_NO_TRANSPORT_CHECKING;
 
 PROPAGATE_MEDIA_CREATE:
-    return pjmedia_transport_media_create(srtp->real_tp, pool, sdp_local, 
-					   sdp_remote, media_index);
+    return pjmedia_transport_media_create(srtp->real_tp, pool, 
+			    member_tp_option,
+			    sdp_local, sdp_remote, media_index);
 }
 
 
@@ -1147,7 +1152,6 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     struct transport_srtp *srtp = (struct transport_srtp*) tp;
     pjmedia_sdp_media *m_rem, *m_loc;
     pj_status_t status;
-    pjmedia_sdp_attr *attr;
     int i;
 
     PJ_ASSERT_RETURN(tp && pool && sdp_local && sdp_remote, PJ_EINVAL);
@@ -1171,10 +1175,14 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	    }
 	    goto BYPASS_SRTP;
 	} else if (srtp->setting.use == PJMEDIA_SRTP_OPTIONAL) {
-	    if (pj_stricmp(&m_rem->desc.transport, &m_loc->desc.transport)) {
-		DEACTIVATE_MEDIA(pool, m_loc);
-		return PJMEDIA_SDP_EINPROTO;
-	    }
+	    // Regardless the answer's transport type (RTP/AVP or RTP/SAVP),
+	    // the answer must be processed through in optional mode.
+	    // Please note that at this point transport type is ensured to be 
+	    // RTP/AVP or RTP/SAVP, see transport_media_create()
+	    //if (pj_stricmp(&m_rem->desc.transport, &m_loc->desc.transport)) {
+		//DEACTIVATE_MEDIA(pool, m_loc);
+		//return PJMEDIA_SDP_EINPROTO;
+	    //}
 	} else if (srtp->setting.use == PJMEDIA_SRTP_MANDATORY) {
 	    if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP)) {
 		DEACTIVATE_MEDIA(pool, m_loc);

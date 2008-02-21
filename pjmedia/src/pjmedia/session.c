@@ -190,13 +190,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     /* Transport protocol */
 
-    /* Transport type must be equal */
-    if (pj_stricmp(&rem_m->desc.transport, 
-		   &local_m->desc.transport) != 0) 
-    {
-	si->type = PJMEDIA_TYPE_UNKNOWN;
+    /* At this point, transport type must be compatible, 
+     * the transport instance will do more validation later.
+     */
+    status = pjmedia_sdp_transport_cmp(&rem_m->desc.transport, 
+				       &local_m->desc.transport);
+    if (status != PJ_SUCCESS)
 	return PJMEDIA_SDPNEG_EINVANSTP;
-    }
 
     if (pj_stricmp(&local_m->desc.transport, &ID_RTP_AVP) == 0) {
 

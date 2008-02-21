@@ -1281,4 +1281,37 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjmedia_sdp_transport_cmp( const pj_str_t *t1,
+					       const pj_str_t *t2)
+{
+    static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
+    static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 
+    /* Exactly equal? */
+    if (pj_stricmp(t1, t2) == 0)
+	return PJ_SUCCESS;
+
+    /* Compatible? */
+    if ((!pj_stricmp(t1, &ID_RTP_AVP) || !pj_stricmp(t1, &ID_RTP_SAVP)) &&
+        (!pj_stricmp(t2, &ID_RTP_AVP) || !pj_stricmp(t2, &ID_RTP_SAVP)))
+	return PJ_SUCCESS;
+
+    return PJMEDIA_SDP_ETPORTNOTEQUAL;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
+						 pjmedia_sdp_media *m)
+{
+    pjmedia_sdp_attr *attr;
+    static const pj_str_t ID_INACTIVE = { "inactive", 8 };
+
+    attr = pjmedia_sdp_attr_create(pool, ID_INACTIVE.ptr, NULL);
+    if (NULL == attr)
+	return PJ_ENOMEM;
+
+    m->attr[m->attr_count++] = attr;
+    m->desc.port = 0;
+
+    return PJ_SUCCESS;
+}

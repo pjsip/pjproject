@@ -493,6 +493,30 @@ PJ_DECL(pj_status_t) pjmedia_sdp_media_cmp(const pjmedia_sdp_media *sd1,
 					   unsigned option);
 
 
+/**
+ * Compare two media transports for compatibility.
+ *
+ * @param t1	    The first media transport to compare.
+ * @param t2	    The second media transport to compare.
+ *
+ * @return	    PJ_SUCCESS when both media transports are compatible,
+ *		    otherwise returns PJMEDIA_SDP_ETPORTNOTEQUAL.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_transport_cmp(const pj_str_t *t1,
+					       const pj_str_t *t2);
+
+
+/**
+ * Deactivate SDP media.
+ *
+ * @param m	    The SDP media to deactivate.
+ *
+ * @return	    PJ_SUCCESS when SDP media successfully deactivated,
+ *		    otherwise appropriate status code returned.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
+						  pjmedia_sdp_media *m);
+
 
 /* **************************************************************************
  * SDP SESSION DESCRIPTION

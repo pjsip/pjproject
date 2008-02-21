@@ -859,7 +859,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     }
 
     /* Give the SDP to media transport */
-    status = pjmedia_transport_media_create(call->med_tp, pool, 
+    status = pjmedia_transport_media_create(call->med_tp, pool, 0,
 					    sdp, rem_sdp, MEDIA_IDX);
     if (status != PJ_SUCCESS) {
 	if (sip_status_code) *sip_status_code = PJSIP_SC_NOT_ACCEPTABLE;
