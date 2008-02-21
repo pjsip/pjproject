@@ -480,8 +480,13 @@ static void rebuffer(pjmedia_stream *stream,
 
     /* Append new frame to the buffer */
     if (frame->size) {
-	pj_memcpy(stream->enc_buf + stream->enc_buf_count,
-		  frame->buf, frame->size);
+	/* Handle case when there is no port transmitting to this port */
+	if (frame->buf) {
+	    pj_memcpy(stream->enc_buf + stream->enc_buf_count,
+		      frame->buf, frame->size);
+	} else {
+	    pj_bzero(stream->enc_buf + stream->enc_buf_count, frame->size);
+	}
 	stream->enc_buf_count += (frame->size >> 1);
     }
 
