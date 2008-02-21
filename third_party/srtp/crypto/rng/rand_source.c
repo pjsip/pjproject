@@ -98,10 +98,7 @@ rand_source_init(void) {
   dev_random_fdes = RAND_SOURCE_READY;
 #else
   /* no random source available; let the user know */
-  if (stderr)
-    fprintf(stderr, "WARNING: no real random source present!\n");
-  else
-    printf("WARNING: no real random source present!\n");
+  err_report(err_level_info, "WARNING: no real random source present!\n");
   dev_random_fdes = RAND_SOURCE_READY;
 #endif
   return err_status_ok;
