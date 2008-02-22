@@ -71,7 +71,7 @@
 #endif
 
 #define THIS_FILE	    "pjsip-perf.c"
-#define DEFAULT_COUNT	    (PJSIP_MAX_TSX_COUNT/2>10000?10000:PJSIP_MAX_TSX_COUNT/2)
+#define DEFAULT_COUNT	    (pjsip_cfg()->tsx.max_count/2>10000?10000:pjsip_cfg()->tsx.max_count/2)
 #define JOB_WINDOW	    1000
 #define TERMINATE_TSX(x,c)
 
@@ -1222,11 +1222,11 @@ static pj_status_t init_options(int argc, char *argv[])
 		PJ_LOG(3,(THIS_FILE, "Invalid --local-port %s", pj_optarg));
 		return -1;
 	    }
-	    if (app.client.job_count > PJSIP_MAX_TSX_COUNT)
+	    if (app.client.job_count > pjsip_cfg()->tsx.max_count)
 		PJ_LOG(3,(THIS_FILE, 
 			  "Warning: --count value (%d) exceeds maximum "
 			  "transaction count (%d)", app.client.job_count,
-			  PJSIP_MAX_TSX_COUNT));
+			  pjsip_cfg()->tsx.max_count));
 	    break;
 
 	case OPT_THREAD_COUNT:

@@ -614,11 +614,11 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	    msec_elapsed = now.sec*1000 + now.msec;
 
 	    ++recv_count;
-    	    msec_expected = (1<<(recv_count-2))*PJSIP_T1_TIMEOUT;
+    	    msec_expected = (1<<(recv_count-2))*pjsip_cfg()->tsx.t1;
 
 	    if (msg->line.req.method.id != PJSIP_INVITE_METHOD) {
-		if (msec_expected > PJSIP_T2_TIMEOUT)
-		    msec_expected = PJSIP_T2_TIMEOUT;
+		if (msec_expected > pjsip_cfg()->tsx.t2)
+		    msec_expected = pjsip_cfg()->tsx.t2;
 		max_received = 11;
 	    } else {
 		max_received = 7;

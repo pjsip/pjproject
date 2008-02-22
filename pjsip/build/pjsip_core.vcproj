@@ -296,6 +296,10 @@
 				Name="Core (.c)"
 				>
 				<File
+					RelativePath="..\src\pjsip\sip_config.c"
+					>
+				</File>
+				<File
 					RelativePath="..\src\pjsip\sip_endpoint.c"
 					>
 					<FileConfiguration

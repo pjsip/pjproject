@@ -92,6 +92,10 @@ LIB32=link.exe -lib
 # PROP Default_Filter ""
 # Begin Source File
 
+SOURCE=..\src\pjsip\sip_config.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsip\sip_errno.c
 # End Source File
 # End Group

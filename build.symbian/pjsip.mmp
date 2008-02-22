@@ -36,6 +36,7 @@ SOURCE	sip_auth_client.c
 SOURCE	sip_auth_msg.c
 SOURCE	sip_auth_parser.c
 SOURCE	sip_auth_server.c
+SOURCE	sip_config.c
 SOURCE	sip_dialog.c
 SOURCE	sip_endpoint.c
 SOURCE	sip_errno.c

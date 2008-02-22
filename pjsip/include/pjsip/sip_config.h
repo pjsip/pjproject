@@ -50,7 +50,7 @@
  */
 
 /**
- * @defgroup PJSIP_CONFIG Compile Time Configuration
+ * @defgroup PJSIP_CONFIG PJSIP Configurations/Settings
  * @ingroup PJSIP_BASE
  * @brief PJSIP compile time configurations.
  * @{
@@ -62,6 +62,75 @@
 #if defined(PJ_AUTOCONF)
 #   include <pjsip/sip_autoconf.h>
 #endif
+
+
+/**
+ * This structure describes PJSIP run-time configurations/settings.
+ * Application may use #pjsip_cfg() function to modify the settings
+ * before creating the stack.
+ */
+typedef struct pjsip_cfg_t
+{
+    /** Transaction layer settings. */
+    struct {
+
+	/** Maximum number of transactions. The value is initialized with
+	 *  PJSIP_MAX_TSX_COUNT
+	 */
+	unsigned max_count;
+
+	/* Timeout values: */
+
+	/** Transaction T1 timeout, in msec. Default value is PJSIP_T1_TIMEOUT
+	 */
+	unsigned t1;
+
+	/** Transaction T2 timeout, in msec. Default value is PJSIP_T2_TIMEOUT
+	 */
+	unsigned t2;
+
+	/** Transaction completed timer for non-INVITE, in msec. Default value
+	 *  is PJSIP_T4_TIMEOUT
+	 */
+	unsigned t4;
+
+	/** Transaction completed timer for INVITE, in msec. Default value is
+	 *  PJSIP_TD_TIMEOUT.
+	 */
+	unsigned td;
+
+    } tsx;
+
+    /* Dialog layer settings .. TODO */
+
+} pjsip_cfg_t;
+
+
+#ifdef PJ_DLL
+/**
+ * Get pjsip configuration instance. Application may modify the
+ * settings before creating the SIP endpoint and modules.
+ *
+ * @return  Configuration instance.
+ */
+PJ_DECL(pjsip_cfg_t*) pjsip_cfg(void);
+
+#else	/* PJ_DLL */
+
+PJ_DECL_DATA(pjsip_cfg_t) pjsip_sip_cfg_var;
+
+/**
+ * Get pjsip configuration instance. Application may modify the
+ * settings before creating the SIP endpoint and modules.
+ *
+ * @return  Configuration instance.
+ */
+PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
+{
+    return &pjsip_sip_cfg_var;
+}
+
+#endif	/* PJ_DLL */
 
 
 /**
@@ -407,7 +476,8 @@
 
 
 /* Endpoint. */
-#define PJSIP_MAX_TIMER_COUNT		(2*PJSIP_MAX_TSX_COUNT + 2*PJSIP_MAX_DIALOG_COUNT)
+#define PJSIP_MAX_TIMER_COUNT		(2*pjsip_cfg()->tsx.max_count + \
+					 2*PJSIP_MAX_DIALOG_COUNT)
 
 /**
  * Initial memory block for the endpoint.
@@ -631,6 +701,7 @@
 /**
  * @}
  */
+
 
 #include <pj/config.h>
 

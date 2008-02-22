@@ -23,6 +23,7 @@
 #include <pjsip/sip_transport.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
+#include <pjsip/sip_util.h>
 #include <pjlib-util/md5.h>
 #include <pj/log.h>
 #include <pj/string.h>
