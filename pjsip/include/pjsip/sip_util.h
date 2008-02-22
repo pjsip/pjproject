@@ -220,6 +220,21 @@ PJ_DECL(pj_status_t) pjsip_get_request_dest(const pjsip_tx_data *tdata,
 PJ_DECL(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 					     pjsip_host_info *dest_info );
 
+
+/**
+ * Swap the request URI and strict route back to the original position
+ * before #pjsip_process_route_set() function is called. If no strict
+ * route URI was found by #pjsip_process_route_set(), this function will
+ * do nothing.
+ *
+ * This function should only used internally by PJSIP client authentication
+ * module.
+ *
+ * @param tdata	    Transmit data containing request message.
+ */
+PJ_DECL(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata);
+
+
 /**
  * This structure holds the state of outgoing stateless request.
  */

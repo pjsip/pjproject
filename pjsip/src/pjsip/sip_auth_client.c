@@ -1098,6 +1098,11 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
     via = (pjsip_via_hdr*) pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
     via->branch_param.slen = 0;
 
+    /* Restore strict route set.
+     * See http://trac.pjsip.org/repos/ticket/492
+     */
+    pjsip_restore_strict_route_set(tdata);
+
     /* Must invalidate the message! */
     pjsip_tx_data_invalidate_msg(tdata);
 

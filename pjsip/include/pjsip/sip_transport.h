@@ -496,6 +496,11 @@ struct pjsip_tx_data
     /** The message in this buffer. */
     pjsip_msg 		*msg;
 
+    /** Strict route header saved by #pjsip_process_route_set(), to be
+     *  restored by #pjsip_restore_strict_route_set().
+     */
+    pjsip_route_hdr	*saved_strict_route;
+
     /** Buffer to the printed text representation of the message. When the
      *  content of this buffer is set, then the transport will send the content
      *  of this buffer instead of re-printing the message structure. If the

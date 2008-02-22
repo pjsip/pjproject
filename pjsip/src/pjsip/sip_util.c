@@ -720,6 +720,14 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 		     PJSIP_ENOTREQUESTMSG);
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
+    /* Assert if the request contains strict route and strict
+     * route processing has been applied before. We need to
+     * restore the strict route with pjsip_restore_strict_route_set()
+     * before we can call this function again, otherwise strict
+     * route will be swapped twice!
+     */
+    PJ_ASSERT_RETURN(tdata->saved_strict_route==NULL, PJ_EBUG);
+
     /* Find the first and last "Route" headers from the message. */
     last_route_hdr = first_route_hdr = (pjsip_route_hdr*)
 	pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
@@ -775,8 +783,9 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 	    new_request_uri = (const pjsip_uri*) 
 	    		      pjsip_uri_get_uri((pjsip_uri*)topmost_route_uri);
 	    pj_list_erase(first_route_hdr);
+	    tdata->saved_strict_route = first_route_hdr;
 	    if (first_route_hdr == last_route_hdr)
-		last_route_hdr = NULL;
+		first_route_hdr = last_route_hdr = NULL;
 	}
 
 	target_uri = (pjsip_uri*)topmost_route_uri;
@@ -806,6 +815,56 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 
     /* Success. */
     return PJ_SUCCESS;  
+}
+
+
+/*
+ * Swap the request URI and strict route back to the original position
+ * before #pjsip_process_route_set() function is called. This function
+ * should only used internally by PJSIP client authentication module.
+ */
+PJ_DEF(void) pjsip_restore_strict_route_set(pjsip_tx_data *tdata)
+{
+    pjsip_route_hdr *first_route_hdr, *last_route_hdr;
+
+    /* Check if we have found strict route before */
+    if (tdata->saved_strict_route == NULL) {
+	/* This request doesn't contain strict route */
+	return;
+    }
+
+    /* Find the first "Route" headers from the message. */
+    first_route_hdr = (pjsip_route_hdr*)
+		      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, NULL);
+
+    if (first_route_hdr == NULL) {
+	/* User has modified message route? We don't expect this! */
+	pj_assert(!"Message route was modified?");
+	tdata->saved_strict_route = NULL;
+	return;
+    }
+
+    /* Find last Route header */
+    last_route_hdr = first_route_hdr;
+    while (last_route_hdr->next != (void*)&tdata->msg->hdr) {
+	pjsip_route_hdr *hdr;
+	hdr = (pjsip_route_hdr*)
+	      pjsip_msg_find_hdr(tdata->msg, PJSIP_H_ROUTE, 
+                                 last_route_hdr->next);
+	if (!hdr)
+	    break;
+	last_route_hdr = hdr;
+    }
+
+    /* Put the last Route header as request URI, delete last Route
+     * header, and insert the saved strict route as the first Route.
+     */
+    tdata->msg->line.req.uri = last_route_hdr->name_addr.uri;
+    pj_list_insert_before(first_route_hdr, tdata->saved_strict_route);
+    pj_list_erase(last_route_hdr);
+
+    /* Reset */
+    tdata->saved_strict_route = NULL;
 }
 
 
