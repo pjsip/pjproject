@@ -155,7 +155,18 @@ struct tls_transport
 {
     pjsip_transport	     base;
     pj_bool_t		     is_server;
+
+    /* Do not save listener instance in the transport, because
+     * listener might be destroyed during transport's lifetime.
+     * See http://trac.pjsip.org/repos/ticket/491
     struct tls_listener	    *listener;
+     */
+
+    /* TLS settings, copied from listener */
+    struct {
+	pj_time_val	     timeout;
+    } setting;
+
     pj_bool_t		     is_registered;
     pj_bool_t		     is_closing;
     pj_status_t		     close_reason;
@@ -590,12 +601,12 @@ static pj_status_t ssl_connect(struct tls_transport *tls)
 	    /* This will block the whole stack!!! */
 	    PJ_TODO(SUPPORT_SSL_ASYNCHRONOUS_CONNECT);
 
-	    if (tls->listener->setting.timeout.sec == 0 &&
-		tls->listener->setting.timeout.msec == 0)
+	    if (tls->setting.timeout.sec == 0 &&
+		tls->setting.timeout.msec == 0)
 	    {
 		p_timeout = NULL;
 	    } else {
-		timeout = tls->listener->setting.timeout;
+		timeout = tls->setting.timeout;
 		p_timeout = &timeout;
 	    }
 
@@ -722,12 +733,12 @@ static pj_status_t ssl_accept(struct tls_transport *tls)
 	    /* Must have at least one handle to wait for at this point. */
 	    pj_assert(PJ_FD_COUNT(&rd_set) == 1 || PJ_FD_COUNT(&wr_set) == 1);
 
-	    if (tls->listener->setting.timeout.sec == 0 &&
-		tls->listener->setting.timeout.msec == 0)
+	    if (tls->setting.timeout.sec == 0 &&
+		tls->setting.timeout.msec == 0)
 	    {
 		p_timeout = NULL;
 	    } else {
-		timeout = tls->listener->setting.timeout;
+		timeout = tls->setting.timeout;
 		p_timeout = &timeout;
 	    }
 
@@ -1216,9 +1227,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
     tls = PJ_POOL_ZALLOC_T(pool, struct tls_transport);
     tls->sock = sock;
     tls->is_server = is_server;
-    tls->listener = listener;
+    /*tls->listener = listener;*/
     pj_list_init(&tls->delayed_list);
     tls->base.pool = pool;
+    tls->setting.timeout = listener->setting.timeout;
 
     pj_ansi_snprintf(tls->base.obj_name, PJ_MAX_OBJ_NAME, 
 		     (is_server ? "tlss%p" :"tlsc%p"), tls);
@@ -1403,7 +1415,7 @@ static pj_status_t tls_destroy(pjsip_transport *transport,
 
     /* Stop keep-alive timer. */
     if (tls->ka_timer.id) {
-	pjsip_endpt_cancel_timer(tls->listener->endpt, &tls->ka_timer);
+	pjsip_endpt_cancel_timer(tls->base.endpt, &tls->ka_timer);
 	tls->ka_timer.id = PJ_FALSE;
     }
 
@@ -1491,7 +1503,7 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
     pj_status_t status;
 
     /* Init rdata */
-    pool = pjsip_endpt_create_pool(tls->listener->endpt,
+    pool = pjsip_endpt_create_pool(tls->base.endpt,
 				   "rtd%p",
 				   PJSIP_POOL_RDATA_LEN,
 				   PJSIP_POOL_RDATA_INC);
@@ -1973,7 +1985,7 @@ static pj_status_t tls_shutdown(pjsip_transport *transport)
 
 	/* Stop keep-alive timer. */
 	if (tls->ka_timer.id) {
-	    pjsip_endpt_cancel_timer(tls->listener->endpt, &tls->ka_timer);
+	    pjsip_endpt_cancel_timer(tls->base.endpt, &tls->ka_timer);
 	    tls->ka_timer.id = PJ_FALSE;
 	}
 
@@ -2277,7 +2289,7 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     /* Start keep-alive timer */
     if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
 	pj_time_val delay = { PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0 };
-	pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;
 	pj_gettimeofday(&tls->last_activity);
@@ -2307,7 +2319,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 	delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL - now.sec;
 	delay.msec = 0;
 
-	pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;
 	return;
@@ -2333,7 +2345,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tls->listener->endpt, &tls->ka_timer, 
+    pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 			       &delay);
     tls->ka_timer.id = PJ_TRUE;
 }

@@ -103,7 +103,13 @@ struct tcp_transport
 {
     pjsip_transport	     base;
     pj_bool_t		     is_server;
+
+    /* Do not save listener instance in the transport, because
+     * listener might be destroyed during transport's lifetime.
+     * See http://trac.pjsip.org/repos/ticket/491
     struct tcp_listener	    *listener;
+     */
+
     pj_bool_t		     is_registered;
     pj_bool_t		     is_closing;
     pj_status_t		     close_reason;
@@ -524,7 +530,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp = PJ_POOL_ZALLOC_T(pool, struct tcp_transport);
     tcp->sock = sock;
     tcp->is_server = is_server;
-    tcp->listener = listener;
+    /*tcp->listener = listener;*/
     pj_list_init(&tcp->delayed_list);
     tcp->base.pool = pool;
 
@@ -673,7 +679,7 @@ static pj_status_t tcp_destroy(pjsip_transport *transport,
 
     /* Stop keep-alive timer. */
     if (tcp->ka_timer.id) {
-	pjsip_endpt_cancel_timer(tcp->listener->endpt, &tcp->ka_timer);
+	pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->ka_timer);
 	tcp->ka_timer.id = PJ_FALSE;
     }
 
@@ -756,7 +762,7 @@ static pj_status_t tcp_start_read(struct tcp_transport *tcp)
     pj_status_t status;
 
     /* Init rdata */
-    pool = pjsip_endpt_create_pool(tcp->listener->endpt,
+    pool = pjsip_endpt_create_pool(tcp->base.endpt,
 				   "rtd%p",
 				   PJSIP_POOL_RDATA_LEN,
 				   PJSIP_POOL_RDATA_INC);
@@ -1194,7 +1200,7 @@ static pj_status_t tcp_shutdown(pjsip_transport *transport)
     
     /* Stop keep-alive timer. */
     if (tcp->ka_timer.id) {
-	pjsip_endpt_cancel_timer(tcp->listener->endpt, &tcp->ka_timer);
+	pjsip_endpt_cancel_timer(tcp->base.endpt, &tcp->ka_timer);
 	tcp->ka_timer.id = PJ_FALSE;
     }
 
@@ -1434,7 +1440,7 @@ static void on_connect_complete(pj_ioqueue_key_t *key,
     /* Start keep-alive timer */
     if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
 	pj_time_val delay = { PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0 };
-	pjsip_endpt_schedule_timer(tcp->listener->endpt, &tcp->ka_timer, 
+	pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
 				   &delay);
 	tcp->ka_timer.id = PJ_TRUE;
 	pj_gettimeofday(&tcp->last_activity);
@@ -1462,7 +1468,7 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
 	delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL - now.sec;
 	delay.msec = 0;
 
-	pjsip_endpt_schedule_timer(tcp->listener->endpt, &tcp->ka_timer, 
+	pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
 				   &delay);
 	tcp->ka_timer.id = PJ_TRUE;
 	return;
@@ -1489,7 +1495,7 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL;
     delay.msec = 0;
 
-    pjsip_endpt_schedule_timer(tcp->listener->endpt, &tcp->ka_timer, 
+    pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->ka_timer, 
 			       &delay);
     tcp->ka_timer.id = PJ_TRUE;
 }
