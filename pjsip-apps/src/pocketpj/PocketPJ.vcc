@@ -12,12 +12,12 @@ Class1=CPocketPJApp
 Class2=CPocketPJDlg
 
 ResourceCount=5
-Resource2=IDR_ACC_MENU
-Resource3=IDR_URI_MENU
-Resource4=IDD_SETTING
+Resource2=IDD_POCKETPJ_DIALOG
+Resource3=IDD_SETTING
+Resource4=IDR_ACC_MENU
 Resource1=IDR_MAINFRAME
 Class3=CSettingsDlg
-Resource5=IDD_POCKETPJ_DIALOG
+Resource5=IDR_URI_MENU
 
 [CLS:CPocketPJApp]
 Type=0

@@ -409,13 +409,12 @@ void CPocketPJDlg::OnRegState()
 	HBITMAP old = m_BtnAcc.SetBitmap(::LoadBitmap(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDB_ONLINE)) );
 	acc_text += " (OK)";
 	m_AccId.SetWindowText(acc_text);
-	PopUp_Hide(POPUP_REGISTRATION);
     } else if (ai.status/100 != 2) {
 	acc_text += " (err)";
 	Error(_T("SIP registration error"), PJSIP_ERRNO_FROM_SIP_STATUS(ai.status));
 	m_AccId.SetWindowText(acc_text);
-	PopUp_Hide(POPUP_REGISTRATION);
     }
+    PopUp_Hide(POPUP_REGISTRATION);
 }
 
 void CPocketPJDlg::on_reg_state(pjsua_acc_id acc_id)
