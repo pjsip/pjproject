@@ -269,7 +269,7 @@ static pj_bool_t proxy_on_rx_request( pjsip_rx_data *rdata )
 	 * we receive final response from the UAC INVITE transaction.
 	 */
 	uas_data = (struct uas_data*) invite_uas->mod_data[mod_tu.id];
-	if (uas_data->uac_tsx) {
+	if (uas_data->uac_tsx && uas_data->uac_tsx->status_code < 200) {
 	    pjsip_tx_data *cancel;
 
 	    pj_mutex_lock(uas_data->uac_tsx->mutex);
