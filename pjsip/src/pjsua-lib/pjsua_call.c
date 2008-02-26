@@ -224,7 +224,7 @@ static pjsua_call_id alloc_call_id(void)
     if (pjsua_var.next_call_id >= (int)pjsua_var.ua_cfg.max_calls || 
 	pjsua_var.next_call_id < 0)
     {
-	cid = 0;
+	pjsua_var.next_call_id = 0;
     }
 
     for (cid=pjsua_var.next_call_id; 
