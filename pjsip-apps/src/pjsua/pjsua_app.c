@@ -171,7 +171,8 @@ static void usage(void)
     puts  ("  --use-ice           Enable ICE (default:no)");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --dis-codec=name    Disable codec (can be specified multiple times)");
-    puts  ("  --clock-rate=N      Override sound device clock rate");
+    puts  ("  --clock-rate=N      Override conference bridge clock rate");
+    puts  ("  --snd-clock-rate=N  Override sound device clock rate");
     puts  ("  --null-audio        Use NULL audio device");
     puts  ("  --play-file=file    Register WAV file in conference bridge.");
     puts  ("                      This can be specified multiple times.");
@@ -386,8 +387,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
-	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_USE_ICE, OPT_USE_SRTP, 
-	   OPT_SRTP_SECURE,
+	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_USE_ICE,
+	   OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -409,6 +410,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "help",	0, 0, OPT_HELP},
 	{ "version",	0, 0, OPT_VERSION},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
+	{ "snd-clock-rate",	1, 0, OPT_SND_CLOCK_RATE},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
 	{ "ip-addr",	1, 0, OPT_IP_ADDR},
@@ -562,10 +564,20 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    if (lval < 8000 || lval > 48000) {
 		PJ_LOG(1,(THIS_FILE, "Error: expecting value between "
-				     "8000-48000 for clock rate"));
+				     "8000-48000 for conference clock rate"));
 		return PJ_EINVAL;
 	    }
 	    cfg->media_cfg.clock_rate = lval; 
+	    break;
+
+	case OPT_SND_CLOCK_RATE:
+	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (lval < 8000 || lval > 48000) {
+		PJ_LOG(1,(THIS_FILE, "Error: expecting value between "
+				     "8000-48000 for sound device clock rate"));
+		return PJ_EINVAL;
+	    }
+	    cfg->media_cfg.snd_clock_rate = lval; 
 	    break;
 
 	case OPT_LOCAL_PORT:   /* local-port */
@@ -1385,6 +1397,16 @@ static int write_settings(const struct app_config *config,
     } else {
 	pj_ansi_sprintf(line, "#using default --clock-rate %d\n",
 			config->media_cfg.clock_rate);
+	pj_strcat2(&cfg, line);
+    }
+
+    if (config->media_cfg.snd_clock_rate != config->media_cfg.clock_rate) {
+	pj_ansi_sprintf(line, "--snd-clock-rate %d\n",
+			config->media_cfg.snd_clock_rate);
+	pj_strcat2(&cfg, line);
+    } else {
+	pj_ansi_sprintf(line, "#using default --snd-clock-rate %d\n",
+			config->media_cfg.snd_clock_rate);
 	pj_strcat2(&cfg, line);
     }
 

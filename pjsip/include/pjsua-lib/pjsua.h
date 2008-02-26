@@ -3742,6 +3742,12 @@ struct pjsua_media_config
     unsigned		clock_rate;
 
     /**
+     * Clock rate to be applied when opening the sound device.
+     * If value is zero, conference bridge clock rate will be used.
+     */
+    unsigned		snd_clock_rate;
+
+    /**
      * Specify audio frame ptime. The value here will affect the 
      * samples per frame of both the sound device and the conference
      * bridge. Specifying lower ptime will normally reduce the

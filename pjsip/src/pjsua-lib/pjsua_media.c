@@ -1771,7 +1771,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 {
     pjmedia_port *conf_port;
     const pjmedia_snd_dev_info *play_info;
-    unsigned clock_rates[] = { 0, 22050, 44100, 48000, 11025, 32000, 8000};
+    unsigned clock_rates[] = {0, 22050, 44100, 48000, 32000, 16000, 
+			      8000};
     unsigned selected_clock_rate = 0;
     unsigned i;
     pjmedia_snd_stream *strm;
@@ -1784,7 +1785,9 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
 
     /* Set default clock rate */
-    clock_rates[0] = pjsua_var.media_cfg.clock_rate;
+    clock_rates[0] = pjsua_var.media_cfg.snd_clock_rate;
+    if (clock_rates[0] == 0)
+	clock_rates[0] = pjsua_var.media_cfg.clock_rate;
 
     /* Attempts to open the sound device with different clock rates */
     for (i=0; i<PJ_ARRAY_SIZE(clock_rates); ++i) {
@@ -1831,10 +1834,20 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
      */
     if (selected_clock_rate != pjsua_var.media_cfg.clock_rate) {
 	pjmedia_port *resample_port;
+	unsigned resample_opt = 0;
 
+	if (pjsua_var.media_cfg.quality >= 3 &&
+	    pjsua_var.media_cfg.quality <= 4)
+	{
+	    resample_opt |= PJMEDIA_CONF_SMALL_FILTER;
+	}
+	else if (pjsua_var.media_cfg.quality < 3) {
+	    resample_opt |= PJMEDIA_CONF_USE_LINEAR;
+	}
+	
 	status = pjmedia_resample_port_create(pjsua_var.pool, conf_port, 
-					      selected_clock_rate, 0, 
-					      &resample_port);
+					      selected_clock_rate, 
+					      resample_opt, &resample_port);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror("Error creating resample port", THIS_FILE, status);
 	    return status;
@@ -1863,8 +1876,18 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pjmedia_snd_stream_get_info(strm, &si);
     play_info = pjmedia_snd_get_dev_info(si.rec_id);
 
-    pjmedia_conf_set_port0_name(pjsua_var.mconf, 
-				pj_cstr(&tmp, play_info->name));
+    if (si.clock_rate != pjsua_var.media_cfg.clock_rate) {
+	char tmp_buf[128];
+	int tmp_buf_len = sizeof(tmp_buf);
+
+	tmp_buf_len = pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf)-1, "%s (%dKHz)",
+				       play_info->name, si.clock_rate/1000);
+	pj_strset(&tmp, tmp_buf, tmp_buf_len);
+        pjmedia_conf_set_port0_name(pjsua_var.mconf, &tmp); 
+    } else {
+        pjmedia_conf_set_port0_name(pjsua_var.mconf, 
+				    pj_cstr(&tmp, play_info->name));
+    }
 
     return PJ_SUCCESS;
 }
