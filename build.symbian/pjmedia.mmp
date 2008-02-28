@@ -66,6 +66,7 @@ SOURCE		wav_player.c
 SOURCE		wav_playlist.c
 SOURCE		wav_writer.c
 SOURCE		wave.c
+SOURCE		wsola.c
 
 //
 // Symbian specific

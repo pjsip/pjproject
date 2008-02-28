@@ -56,7 +56,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			tonegen.o transport_ice.o transport_srtp.o \
 			transport_udp.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
-			$(SOUND_OBJS) $(NULLSOUND_OBJS)
+			wsola.o $(SOUND_OBJS) $(NULLSOUND_OBJS)
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
 

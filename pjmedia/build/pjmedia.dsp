@@ -271,6 +271,10 @@ SOURCE=..\src\pjmedia\wav_writer.c
 
 SOURCE=..\src\pjmedia\wave.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pjmedia\wsola.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -434,6 +438,10 @@ SOURCE=..\include\pjmedia\wav_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\wave.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\wsola.h
 # End Source File
 # End Group
 # End Target
