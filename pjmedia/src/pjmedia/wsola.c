@@ -24,6 +24,7 @@
 
 #define THIS_FILE   "wsola.c"
 
+//#undef PJ_HAS_FLOATING_POINT
 
 /* History size, in percentage of samples_per_frame */
 #define HISTSZ		(1.5)
@@ -91,7 +92,17 @@ static short *find_pitch(short *frm, short *beg, short *end,
 	double corr = 0;
 	unsigned i;
 
-	for (i=0; i<template_cnt; ++i) {
+	for (i=0; i<template_cnt; i += 8) {
+	    corr += ((float)frm[i+0]) * ((float)sr[i+0]) + 
+		    ((float)frm[i+1]) * ((float)sr[i+1]) + 
+		    ((float)frm[i+2]) * ((float)sr[i+2]) + 
+		    ((float)frm[i+3]) * ((float)sr[i+3]) + 
+		    ((float)frm[i+4]) * ((float)sr[i+4]) + 
+		    ((float)frm[i+5]) * ((float)sr[i+5]) + 
+		    ((float)frm[i+6]) * ((float)sr[i+6]) + 
+		    ((float)frm[i+7]) * ((float)sr[i+7]);
+	}
+	for (; i<template_cnt; ++i) {
 	    corr += ((float)frm[i]) * ((float)sr[i]);
 	}
 
@@ -160,11 +171,22 @@ static short *find_pitch(short *frm, short *beg, short *end,
     short *sr, *best=beg;
     pj_int64_t best_corr = 0;
 
+    
     for (sr=beg; sr!=end; ++sr) {
 	pj_int64_t corr = 0;
 	unsigned i;
 
-	for (i=0; i<template_cnt; ++i) {
+	for (i=0; i<template_cnt; i+=8) {
+	    corr += ((int)frm[i+0]) * ((int)sr[i+0]) + 
+		    ((int)frm[i+1]) * ((int)sr[i+1]) + 
+		    ((int)frm[i+2]) * ((int)sr[i+2]) +
+		    ((int)frm[i+3]) * ((int)sr[i+3]) +
+		    ((int)frm[i+4]) * ((int)sr[i+4]) +
+		    ((int)frm[i+5]) * ((int)sr[i+5]) +
+		    ((int)frm[i+6]) * ((int)sr[i+6]) +
+		    ((int)frm[i+7]) * ((int)sr[i+7]);
+	}
+	for (; i<template_cnt; ++i) {
 	    corr += ((int)frm[i]) * ((int)sr[i]);
 	}
 
@@ -192,13 +214,8 @@ static void overlapp_add(short dst[], unsigned count,
     unsigned i;
 
     for (i=0; i<count; ++i) {
-	int val;
-	val = ((int)(l[i]) * (int)(w[count-1-i]) + 
-	       (int)(r[i]) * (int)(w[i]));
-	dst[i] = (short)(val >> WINDOW_BITS);
-
-	assert((val>=0 && dst[i]>=0) ||
-	       (val<0 && dst[i]<0));
+	dst[i] = (short)(((int)(l[i]) * (int)(w[count-1-i]) + 
+	                  (int)(r[i]) * (int)(w[i])) >> WINDOW_BITS);
     }
 }
 
@@ -210,16 +227,8 @@ static void overlapp_add_simple(short dst[], unsigned count,
     unsigned i;
 
     for (i=0; i<count; ++i) {
-	int val;
-
-	assert(stepdown >= 0);
-
-	val = (l[i] * stepdown + r[i] * (1-stepdown));
-	dst[i] = (short)(val >> WINDOW_BITS);
+	dst[i]=(short)((l[i] * stepdown + r[i] * (1-stepdown)) >> WINDOW_BITS);
 	stepdown -= step;
-
-	assert((val>=0 && dst[i]>=0) ||
-	       (val<0 && dst[i]<0));
     }
 }
 
