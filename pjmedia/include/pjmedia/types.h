@@ -190,7 +190,7 @@ typedef struct pjmedia_sock_info
 PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
 {
 #if 1
-    pj_bzero(samples, count*sizeof(pj_int16_t));
+    pj_bzero(samples, (count<<1));
 #elif 0
     unsigned i;
     for (i=0; i<count; ++i) samples[i] = 0;
@@ -212,7 +212,7 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
 				     unsigned count)
 {
 #if 1
-    pj_memcpy(dst, src, count*sizeof(pj_int16_t));
+    pj_memcpy(dst, src, (count<<1));
 #elif 0
     unsigned i;
     for (i=0; i<count; ++i) dst[i] = src[i];
@@ -224,6 +224,28 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
 #endif
 }
 
+
+/**
+ * This is a general purpose function to copy samples from/to buffers with
+ * equal size. Since this function is needed by many parts of the library, 
+ * by putting this functionality in one place, it enables some.
+ * clever people to optimize this function.
+ */
+PJ_INLINE(void) pjmedia_move_samples(pj_int16_t *dst, const pj_int16_t *src,
+				     unsigned count)
+{
+#if 1
+    pj_memmove(dst, src, (count<<1));
+#elif 0
+    unsigned i;
+    for (i=0; i<count; ++i) dst[i] = src[i];
+#else
+    unsigned i;
+    count >>= 1;
+    for (i=0; i<count; ++i) 
+	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
+#endif
+}
 
 /**
  * @}

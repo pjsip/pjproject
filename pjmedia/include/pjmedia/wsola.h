@@ -58,7 +58,13 @@ enum pjmedia_wsola_option
     /**
      * Specify that the WSOLA will not be used for PLC.
      */
-    PJMEDIA_WSOLA_NO_PLC = 2
+    PJMEDIA_WSOLA_NO_PLC = 2,
+
+    /**
+     * Specify that the WSOLA will not be used to discard frames in
+     * non-contiguous buffer.
+     */
+    PJMEDIA_WSOLA_NO_DISCARD = 4
 };
 
 
@@ -129,13 +135,17 @@ PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola,
 
 /**
  * Compress or compact the specified buffer by removing some audio samples
- * from the buffer, without altering the pitch.
+ * from the buffer, without altering the pitch. For this function to work, 
+ * total length of the buffer must be more than twice \a erase_cnt.
  * 
  * @param wsola	    WSOLA session.
- * @param buf	    Pointer to buffer. For this function to work, the buffer
- *		    must contain more than twice \a erase_cnt number of 
- *		    samples.
- * @param buf_cnt   Number of samples in the buffer.
+ * @param buf1	    Pointer to buffer. 
+ * @param buf1_cnt  Number of samples in the buffer.
+ * @param buf2	    Pointer to second buffer, if the buffer is not
+ *		    contiguous. Otherwise this parameter must be NULL.
+ * @param buf2_cnt  Number of samples in the second buffer, if the buffer
+ *		    is not contiguous. Otherwise this parameter should be
+ *		    zero.
  * @param erase_cnt On input, specify the number of samples to be erased.
  *		    This function may erase more or less than the requested 
  *		    number, and the actual number of samples erased will be 
@@ -146,8 +156,10 @@ PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola,
  *		    of the parameters are not valid.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_discard(pjmedia_wsola *wsola, 
-					   short buf[],
-					   unsigned buf_cnt, 
+					   short buf1[],
+					   unsigned buf1_cnt, 
+					   short buf2[],
+					   unsigned buf2_cnt,
 					   unsigned *erase_cnt);
 
 

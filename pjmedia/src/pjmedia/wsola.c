@@ -38,6 +38,9 @@
 /* Generate extra samples, in msec */
 #define GEN_EXTRA_PTIME	(0.0)
 
+/* Number of frames in erase buffer */
+#define ERASE_CNT	((unsigned)3)
+
 
 #ifndef M_PI
 #   define  M_PI	3.14159265358979323846
@@ -66,6 +69,7 @@ struct pjmedia_wsola
     short    *buf;		/* The buffer.				*/
     short    *frm;	        /* Pointer to next frame to play in buf */
     short    *mergebuf;	        /* Temporary merge buffer.		*/
+    short    *erasebuf;		/* Temporary erase buffer.		*/
 #if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
     float    *hanning;		/* Hanning window.			*/
 #else
@@ -329,6 +333,12 @@ PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool,
 	create_win(pool, &wsola->hanning, wsola->samples_per_frame);
     }
 
+    if ((options & PJMEDIA_WSOLA_NO_DISCARD) == 0) {
+	wsola->erasebuf = (short*)pj_pool_calloc(pool, samples_per_frame *
+						       ERASE_CNT,
+						 sizeof(short));
+    }
+
     *p_wsola = wsola;
     return PJ_SUCCESS;
 
@@ -365,10 +375,10 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
 	}
 
 	dist = wsola->frm - start;
-	memmove(wsola->frm + frmsz, start + frmsz, 
-		(wsola->buf+wsola->cur_cnt - (start+frmsz)) << 1);
+	pjmedia_move_samples(wsola->frm + frmsz, start + frmsz, 
+			     wsola->buf+wsola->cur_cnt - (start+frmsz));
 
-	memcpy(wsola->frm, wsola->mergebuf, frmsz << 1);
+	pjmedia_copy_samples(wsola->frm, wsola->mergebuf, frmsz);
 
 	wsola->cur_cnt = (pj_uint16_t)(wsola->cur_cnt + dist);
 	generated += dist;
@@ -384,7 +394,7 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
 
 
 static unsigned compress(pjmedia_wsola *wsola, short *buf, unsigned count,
-			 unsigned erase_cnt)
+			 unsigned del_cnt)
 {
     unsigned samples_del = 0, rep;
 
@@ -393,7 +403,7 @@ static unsigned compress(pjmedia_wsola *wsola, short *buf, unsigned count,
 	unsigned frmsz = wsola->samples_per_frame;
 	unsigned dist;
 
-	if (count <= (erase_cnt << 1)) {
+	if (count <= (del_cnt << 1)) {
 	    TRACE_((THIS_FILE, "Not enough samples to compress!"));
 	    return samples_del;
 	}
@@ -414,16 +424,16 @@ static unsigned compress(pjmedia_wsola *wsola, short *buf, unsigned count,
 			 wsola->hanning);
 	}
 
-	memmove(buf + frmsz, buf + frmsz + dist,
-		(count - frmsz - dist) * 2);
+	pjmedia_move_samples(buf + frmsz, buf + frmsz + dist,
+			     count - frmsz - dist);
 
 	count -= dist;
 	samples_del += dist;
 
-	if (samples_del >= erase_cnt) {
+	if (samples_del >= del_cnt) {
 	    TRACE_((THIS_FILE, 
 		    "Erased %d of %d requested after %d iteration(s)",
-		    samples_del, erase_cnt, rep));
+		    samples_del, del_cnt, rep));
 	    break;
 	}
     }
@@ -452,11 +462,11 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 	    dst[i] = frm[i];
 
 	
-	memcpy(frm, wsola->frm, wsola->samples_per_frame << 1);
+	pjmedia_copy_samples(frm, wsola->frm, wsola->samples_per_frame);
 	wsola->cur_cnt = (pj_uint16_t)(wsola->hist_cnt + 
 				       wsola->samples_per_frame);
-	memmove(wsola->buf, wsola->buf+wsola->samples_per_frame, 
-		wsola->cur_cnt << 1);
+	pjmedia_move_samples(wsola->buf, wsola->buf+wsola->samples_per_frame,
+			      wsola->cur_cnt);
 
     } else {
 	/* Just append to end of buffer */
@@ -465,12 +475,12 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 		    "Appending new frame without interpolation"));
 	}
 
-	memcpy(wsola->buf + wsola->cur_cnt, frm, 
-	       wsola->samples_per_frame << 1);
-	memcpy(frm, wsola->frm, 
-	       wsola->samples_per_frame << 1);
-	memmove(wsola->buf, wsola->buf+wsola->samples_per_frame, 
-		wsola->cur_cnt << 1);
+	pjmedia_copy_samples(wsola->buf + wsola->cur_cnt, frm, 
+			     wsola->samples_per_frame);
+	pjmedia_copy_samples(frm, wsola->frm, 
+			     wsola->samples_per_frame);
+	pjmedia_move_samples(wsola->buf, wsola->buf+wsola->samples_per_frame,
+			     wsola->cur_cnt);
     }
     
     wsola->expand_cnt = 0;
@@ -492,9 +502,9 @@ PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola,
 	/* We have one extra frame in the buffer, just return this frame
 	 * rather than generating a new one.
 	 */
-	memcpy(frm, wsola->frm, wsola->samples_per_frame << 1);
-	memmove(wsola->buf, wsola->buf+wsola->samples_per_frame, 
-	        (wsola->cur_cnt - wsola->samples_per_frame) << 1);
+	pjmedia_copy_samples(frm, wsola->frm, wsola->samples_per_frame);
+	pjmedia_move_samples(wsola->buf, wsola->buf+wsola->samples_per_frame,
+			     wsola->cur_cnt - wsola->samples_per_frame);
 
 	pj_assert(wsola->cur_cnt >= 
 		    wsola->hist_cnt + (wsola->samples_per_frame << 1));
@@ -511,9 +521,9 @@ PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola,
 	/* Expand buffer */
 	expand(wsola, new_samples);
 
-	memcpy(frm, wsola->frm, wsola->samples_per_frame << 1);
-	memmove(wsola->buf, wsola->buf+wsola->samples_per_frame, 
-		(wsola->cur_cnt - wsola->samples_per_frame) << 1);
+	pjmedia_copy_samples(frm, wsola->frm, wsola->samples_per_frame);
+	pjmedia_move_samples(wsola->buf, wsola->buf+wsola->samples_per_frame,
+			     wsola->cur_cnt - wsola->samples_per_frame);
 
 	pj_assert(wsola->cur_cnt >= 
 		   wsola->hist_cnt + (wsola->samples_per_frame << 1));
@@ -530,15 +540,80 @@ PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola,
 
 
 PJ_DEF(pj_status_t) pjmedia_wsola_discard( pjmedia_wsola *wsola, 
-					   short buf[],
-					   unsigned buf_cnt, 
-					   unsigned *erase_cnt)
+					   short buf1[],
+					   unsigned buf1_cnt, 
+					   short buf2[],
+					   unsigned buf2_cnt,
+					   unsigned *del_cnt)
 {
-    PJ_ASSERT_RETURN(wsola && buf && buf_cnt && erase_cnt, PJ_EINVAL);
-    PJ_ASSERT_RETURN(*erase_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(wsola && buf1 && buf1_cnt && del_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(*del_cnt, PJ_EINVAL);
 
-    *erase_cnt = compress(wsola, buf, buf_cnt, *erase_cnt);
-    return (*erase_cnt) > 0 ? PJ_SUCCESS : PJ_ETOOSMALL;
+    if (buf2_cnt == 0) {
+	/* Buffer is contiguous space, no need to use temporary
+	 * buffer.
+	 */
+	*del_cnt = compress(wsola, buf1, buf1_cnt, *del_cnt);
+
+    } else {
+	PJ_ASSERT_RETURN(buf2, PJ_EINVAL);
+
+	if (buf1_cnt < ERASE_CNT * wsola->samples_per_frame &&
+	    buf2_cnt < ERASE_CNT * wsola->samples_per_frame &&
+	    wsola->erasebuf == NULL)
+	{
+	    /* We need erasebuf but WSOLA was created with 
+	     * PJMEDIA_WSOLA_NO_DISCARD flag.
+	     */
+	    pj_assert(!"WSOLA need erase buffer!");
+	    return PJ_EINVALIDOP;
+	}
+
+	if (buf2_cnt >= ERASE_CNT * wsola->samples_per_frame) {
+	    *del_cnt = compress(wsola, buf2, buf2_cnt, *del_cnt);
+	} else if (buf1_cnt >= ERASE_CNT * wsola->samples_per_frame) {
+	    unsigned max;
+
+	    *del_cnt = compress(wsola, buf1, buf1_cnt, *del_cnt);
+
+	    max = *del_cnt;
+	    if (max > buf2_cnt)
+		max = buf2_cnt;
+
+	    pjmedia_move_samples(buf1+buf1_cnt-(*del_cnt), buf2, 
+				 max);
+	    if (max < buf2_cnt) {
+		pjmedia_move_samples(buf2, buf2+(*del_cnt), 
+				     buf2_cnt-max);
+	    }
+
+	} else {
+	    unsigned buf_cnt = buf1_cnt + buf2_cnt;
+	    unsigned max;
+
+	    if (buf_cnt > ERASE_CNT * wsola->samples_per_frame)
+		buf_cnt = ERASE_CNT * wsola->samples_per_frame;
+
+	    pjmedia_copy_samples(wsola->erasebuf, buf1, buf1_cnt);
+	    pjmedia_copy_samples(wsola->erasebuf+buf1_cnt, buf2, 
+				 buf_cnt-buf1_cnt);
+
+	    *del_cnt = compress(wsola, wsola->erasebuf, buf_cnt, *del_cnt);
+
+	    buf_cnt -= (*del_cnt);
+
+	    max = buf_cnt;
+	    if (max > buf1_cnt)
+		max = buf1_cnt;
+	    pjmedia_copy_samples(buf1, wsola->erasebuf, max);
+
+	    if (max < buf_cnt) {
+		pjmedia_copy_samples(buf2, wsola->erasebuf+max, buf_cnt-max);
+	    }
+	}
+    }
+
+    return (*del_cnt) > 0 ? PJ_SUCCESS : PJ_ETOOSMALL;
 }
 
 
