@@ -589,10 +589,19 @@ PJ_DEF(pj_status_t) pjmedia_wsola_discard( pjmedia_wsola *wsola,
 
 	} else {
 	    unsigned buf_cnt = buf1_cnt + buf2_cnt;
-	    unsigned max;
+	    short *rem;	/* remainder */
+	    unsigned rem_cnt;
 
-	    if (buf_cnt > ERASE_CNT * wsola->samples_per_frame)
+	    if (buf_cnt > ERASE_CNT * wsola->samples_per_frame) {
 		buf_cnt = ERASE_CNT * wsola->samples_per_frame;
+		
+		rem_cnt = buf1_cnt + buf2_cnt - buf_cnt;
+		rem = buf2 + buf2_cnt - rem_cnt;
+		
+	    } else {
+		rem = NULL;
+		rem_cnt = 0;
+	    }
 
 	    pjmedia_copy_samples(wsola->erasebuf, buf1, buf1_cnt);
 	    pjmedia_copy_samples(wsola->erasebuf+buf1_cnt, buf2, 
@@ -602,14 +611,35 @@ PJ_DEF(pj_status_t) pjmedia_wsola_discard( pjmedia_wsola *wsola,
 
 	    buf_cnt -= (*del_cnt);
 
-	    max = buf_cnt;
-	    if (max > buf1_cnt)
-		max = buf1_cnt;
-	    pjmedia_copy_samples(buf1, wsola->erasebuf, max);
-
-	    if (max < buf_cnt) {
-		pjmedia_copy_samples(buf2, wsola->erasebuf+max, buf_cnt-max);
+	    /* Copy back to buffers */
+	    if (buf_cnt == buf1_cnt) {
+		pjmedia_copy_samples(buf1, wsola->erasebuf, buf_cnt);
+		if (rem_cnt) {
+		    pjmedia_move_samples(buf2, rem, rem_cnt);
+		}
+	    } else if (buf_cnt < buf1_cnt) {
+		pjmedia_copy_samples(buf1, wsola->erasebuf, buf_cnt);
+		if (rem_cnt) {
+		    unsigned c = rem_cnt;
+		    if (c > buf1_cnt-buf_cnt) {
+			c = buf1_cnt-buf_cnt;
+		    }
+		    pjmedia_copy_samples(buf1+buf_cnt, rem, c);
+		    rem += c;
+		    rem_cnt -= c;
+		    if (rem_cnt)
+			pjmedia_move_samples(buf2, rem, rem_cnt);
+		}
+	    } else {
+		pjmedia_copy_samples(buf1, wsola->erasebuf, buf1_cnt);
+		pjmedia_copy_samples(buf2, wsola->erasebuf+buf1_cnt, 
+				     buf_cnt-buf1_cnt);
+		if (rem_cnt) {
+		    pjmedia_move_samples(buf2+buf_cnt-buf1_cnt, rem,
+				         rem_cnt);
+		}
 	    }
+
 	}
     }
 
