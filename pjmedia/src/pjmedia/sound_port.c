@@ -99,12 +99,15 @@ static pj_status_t play_cb(/* in */   void *user_data,
     frame.timestamp.u32.lo = timestamp;
 
 #if PJMEDIA_SOUND_USE_DELAYBUF
-    status = pjmedia_delay_buf_get(snd_port->delay_buf, (pj_int16_t*)output);
-    if (status != PJ_SUCCESS) {
-	pj_bzero(output, size);
-    }
+    if (snd_port->delay_buf) {
+	status = pjmedia_delay_buf_get(snd_port->delay_buf, (pj_int16_t*)output);
+	if (status != PJ_SUCCESS) {
+	    pj_bzero(output, size);
+	}
 
-    pjmedia_port_put_frame(port, &frame);
+	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	pjmedia_port_put_frame(port, &frame);
+    }
 #endif
 
     status = pjmedia_port_get_frame(port, &frame);
@@ -200,10 +203,16 @@ static pj_status_t rec_cb(/* in */   void *user_data,
     }
 
 #if PJMEDIA_SOUND_USE_DELAYBUF
-    PJ_UNUSED_ARG(size);
-    PJ_UNUSED_ARG(timestamp);
-    PJ_UNUSED_ARG(frame);
-    pjmedia_delay_buf_put(snd_port->delay_buf, (pj_int16_t*)input);
+    if (snd_port->delay_buf) {
+	pjmedia_delay_buf_put(snd_port->delay_buf, (pj_int16_t*)input);
+    } else {
+	frame.buf = (void*)input;
+	frame.size = size;
+	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frame.timestamp.u32.lo = timestamp;
+
+	pjmedia_port_put_frame(port, &frame);
+    }
 #else
     frame.buf = (void*)input;
     frame.size = size;
