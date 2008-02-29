@@ -99,6 +99,18 @@ PJ_DECL(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola);
 
 
 /**
+ * Reset the buffer contents of WSOLA.
+ *
+ * @param wsola	    WSOLA session.
+ * @param options   Reset options, must be zero for now.
+ *
+ * @return	    PJ_SUCCESS normally.
+ */
+PJ_DECL(pj_status_t) pjmedia_wsola_reset(pjmedia_wsola *wsola,
+					 unsigned options);
+
+
+/**
  * Give one good frame to WSOLA to be kept as reference. Application
  * must continuously give WSOLA good frames to keep its session up to
  * date with current playback. Depending on the WSOLA implementation,

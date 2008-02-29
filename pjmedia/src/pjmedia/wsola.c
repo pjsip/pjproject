@@ -352,6 +352,20 @@ PJ_DEF(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola)
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_wsola_reset( pjmedia_wsola *wsola,
+					 unsigned options)
+{
+    PJ_ASSERT_RETURN(wsola && options==0, PJ_EINVAL);
+    PJ_UNUSED_ARG(options);
+
+    pjmedia_zero_samples(wsola->buf, wsola->cur_cnt);
+    wsola->cur_cnt = (pj_uint16_t)(wsola->hist_cnt + 
+				   wsola->samples_per_frame);
+    return PJ_SUCCESS;
+}
+
+
 static void expand(pjmedia_wsola *wsola, unsigned needed)
 {
     unsigned generated = 0;
