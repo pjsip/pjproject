@@ -18,6 +18,7 @@
  */
 #include <pjmedia/conference.h>
 #include <pjmedia/alaw_ulaw.h>
+#include <pjmedia/delaybuf.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
 #include <pjmedia/resample.h>
@@ -56,12 +57,7 @@ static FILE *fhnd_rec;
 
 #define THIS_FILE	"conference.c"
 
-/* When delay buffer is used, we only need 1 frame buffering */
-#if defined(PJMEDIA_SOUND_USE_DELAYBUF) && PJMEDIA_SOUND_USE_DELAYBUF!=0
-#   define RX_BUF_COUNT	    1
-#else
-#   define RX_BUF_COUNT	    PJMEDIA_SOUND_BUFFER_COUNT
-#endif
+#define RX_BUF_COUNT	    PJMEDIA_SOUND_BUFFER_COUNT
 
 #define BYTES_PER_SAMPLE    2
 
@@ -183,17 +179,22 @@ struct conf_port
     unsigned		 tx_buf_cap;	/**< Max size, in samples.	    */
     unsigned		 tx_buf_count;	/**< # of samples in the buffer.    */
 
-    /* Snd buffers is a special buffer for sound device port (port 0, master
-     * port). It's not used by other ports.
+    /* Delay buffer is a special buffer for sound device port (port 0, master
+     * port) and other passive ports (sound device port is also passive port).
      *
-     * There are multiple numbers of this buffer, because we can not expect
-     * the mic and speaker thread to run equally after one another. In most
-     * systems, each thread will run multiple times before the other thread
-     * gains execution time. For example, in my system, mic thread is called
-     * three times, then speaker thread is called three times, and so on.
+     * We need the delay buffer because we can not expect the mic and speaker 
+     * thread to run equally after one another. In most systems, each thread 
+     * will run multiple times before the other thread gains execution time. 
+     * For example, in my system, mic thread is called three times, then 
+     * speaker thread is called three times, and so on. This we call burst.
+     *
+     * There is also possibility of drift, unbalanced rate between put_frame
+     * and get_frame operation, in passive ports. If drift happens, snd_buf
+     * needs to be expanded or shrinked. 
+     *
+     * Burst and drift are handled by delay buffer.
      */
-    int			 snd_write_pos, snd_read_pos;
-    pj_int16_t		*snd_buf[RX_BUF_COUNT];	/**< Buffer 		    */
+    pjmedia_delay_buf	*delay_buf;
 };
 
 
@@ -226,6 +227,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
 static pj_status_t destroy_port(pjmedia_port *this_port);
+static pj_status_t destroy_port_pasv(pjmedia_port *this_port);
 
 
 /*
@@ -377,7 +379,6 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
 				     struct conf_port **p_conf_port)
 {
     struct conf_port *conf_port;
-    unsigned i;
     pj_status_t status;
 
     /* Create port */
@@ -385,17 +386,16 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Passive port has rx buffers. */
-    for (i=0; i<RX_BUF_COUNT; ++i) {
-	conf_port->snd_buf[i] = (pj_int16_t*)
-				pj_pool_zalloc(pool, conf->samples_per_frame *
-					      sizeof(conf_port->snd_buf[0][0]));
-	if (conf_port->snd_buf[i] == NULL) {
-	    return PJ_ENOMEM;
-	}
-    }
-    conf_port->snd_write_pos = 0;
-    conf_port->snd_read_pos = 0;
+    /* Passive port has delay buf. */
+    status = pjmedia_delay_buf_create(pool, name->ptr, 
+				      conf->clock_rate,
+				      conf->samples_per_frame,
+				      RX_BUF_COUNT, /* max */
+				      -1, /* delay */
+				      0, /* options */
+				      &conf_port->delay_buf);
+    if (status != PJ_SUCCESS)
+	return status;
 
     *p_conf_port = conf_port;
 
@@ -444,6 +444,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 					      conf->bits_per_sample,
 					      0,    /* Options */
 					      &conf->snd_dev_port);
+
 	}
 
 	if (status != PJ_SUCCESS)
@@ -606,6 +607,17 @@ static pj_status_t destroy_port(pjmedia_port *this_port)
     return pjmedia_conf_destroy(conf);
 }
 
+static pj_status_t destroy_port_pasv(pjmedia_port *this_port) {
+    pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
+    struct conf_port *port = conf->ports[this_port->port_data.ldata];
+    pj_status_t status;
+
+    status = pjmedia_delay_buf_destroy(port->delay_buf);
+    if (status == PJ_SUCCESS)
+	port->delay_buf = NULL;
+
+    return status;
+}
 
 /*
  * Get port zero interface.
@@ -785,7 +797,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
 
     port->get_frame = &get_frame_pasv;
     port->put_frame = &put_frame;
-    port->on_destroy = NULL;
+    port->on_destroy = &destroy_port_pasv;
 
     
     /* Create conf port structure. */
@@ -954,7 +966,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 		  (int)dst_port->name.slen,
 		  dst_port->name.ptr));
 
-	
+	/* if source port is passive port and has no listener, reset delaybuf */
+	if (src_port->delay_buf && src_port->listener_cnt == 0)
+	    pjmedia_delay_buf_reset(src_port->delay_buf);
     }
 
     pj_mutex_unlock(conf->mutex);
@@ -1616,29 +1630,17 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    continue;
 	}
 
-	/* Get frame from this port. 
-	 * For port zero (sound port) and passive ports, get the frame  from 
-	 * the rx_buffer instead.
+	/* Get frame from this port.
+	 * For passive ports, get the frame from the delay_buf.
+	 * For other ports, get the frame from the port. 
 	 */
-	if (conf_port->port == NULL) {
-	    pj_int16_t *snd_buf;
-
-	    if (conf_port->snd_read_pos == conf_port->snd_write_pos) {
-		conf_port->snd_read_pos = 
-		    (conf_port->snd_write_pos+RX_BUF_COUNT-RX_BUF_COUNT/2) % 
-			RX_BUF_COUNT;
-	    }
-
-	    /* Skip if this port is muted/disabled. */
-	    if (conf_port->rx_setting != PJMEDIA_PORT_ENABLE) {
-		conf_port->rx_level = 0;
+	if (conf_port->delay_buf != NULL) {
+	    pj_status_t status;
+	
+	    status = pjmedia_delay_buf_get(conf_port->delay_buf,
+				  (pj_int16_t*)frame->buf);
+	    if (status != PJ_SUCCESS)
 		continue;
-	    }
-
-	    snd_buf = conf_port->snd_buf[conf_port->snd_read_pos];
-	    pjmedia_copy_samples((pj_int16_t*)frame->buf, snd_buf, 
-				 conf->samples_per_frame);
-	    conf_port->snd_read_pos = (conf_port->snd_read_pos+1) % RX_BUF_COUNT;
 
 	} else {
 
@@ -1830,20 +1832,22 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
 
 
 /*
- * Recorder callback.
+ * Recorder (or passive port) callback.
  */
 static pj_status_t put_frame(pjmedia_port *this_port, 
 			     const pjmedia_frame *frame)
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *port = conf->ports[this_port->port_data.ldata];
-    const pj_int16_t *input = (const pj_int16_t*) frame->buf;
-    pj_int16_t *target_snd_buf;
+    pj_status_t status;
 
     /* Check for correct size. */
     PJ_ASSERT_RETURN( frame->size == conf->samples_per_frame *
 				     conf->bits_per_sample / 8,
 		      PJMEDIA_ENCSAMPLESPFRAME);
+
+    /* Check existance of delay_buf instance */
+    PJ_ASSERT_RETURN( port->delay_buf, PJ_EBUG );
 
     /* Skip if this port is muted/disabled. */
     if (port->rx_setting != PJMEDIA_PORT_ENABLE) {
@@ -1855,17 +1859,8 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	return PJ_SUCCESS;
     }
 
+    status = pjmedia_delay_buf_put(port->delay_buf, (pj_int16_t*)frame->buf);
 
-    /* Determine which rx_buffer to fill in */
-    target_snd_buf = port->snd_buf[port->snd_write_pos];
-    
-    /* Copy samples from audio device to target rx_buffer */
-    pjmedia_copy_samples(target_snd_buf, input, conf->samples_per_frame);
-
-    /* Switch buffer */
-    port->snd_write_pos = (port->snd_write_pos+1)%RX_BUF_COUNT;
-
-
-    return PJ_SUCCESS;
+    return status;
 }
 

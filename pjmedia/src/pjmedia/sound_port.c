@@ -32,6 +32,8 @@
 
 #define THIS_FILE	    "sound_port.c"
 
+#define TEST_OVERFLOW_UNDERFLOW
+
 enum
 {
     PJMEDIA_PLC_ENABLED	    = 1,
@@ -101,12 +103,27 @@ static pj_status_t play_cb(/* in */   void *user_data,
 #if PJMEDIA_SOUND_USE_DELAYBUF
     if (snd_port->delay_buf) {
 	status = pjmedia_delay_buf_get(snd_port->delay_buf, (pj_int16_t*)output);
-	if (status != PJ_SUCCESS) {
+	if (status != PJ_SUCCESS)
 	    pj_bzero(output, size);
-	}
 
 	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	pjmedia_port_put_frame(port, &frame);
+
+#ifdef TEST_OVERFLOW_UNDERFLOW
+	{
+	    static int count = 1;
+	    if (++count % 10 == 0) {
+		status = pjmedia_delay_buf_get(snd_port->delay_buf, 
+					       (pj_int16_t*)output);
+		if (status != PJ_SUCCESS)
+		    pj_bzero(output, size);
+
+		frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+		pjmedia_port_put_frame(port, &frame);
+	    }
+	}
+#endif
+
     }
 #endif
 
@@ -371,7 +388,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     snd_port->bits_per_sample = bits_per_sample;
     
 #if PJMEDIA_SOUND_USE_DELAYBUF
-    status = pjmedia_delay_buf_create(pool, "snd_buff", samples_per_frame, 
+    status = pjmedia_delay_buf_create(pool, "snd_buff", 
+				      clock_rate, samples_per_frame, 
 				      PJMEDIA_SOUND_BUFFER_COUNT, -1, 
 				      &snd_port->delay_buf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);

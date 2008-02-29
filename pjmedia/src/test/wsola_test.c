@@ -327,12 +327,9 @@ int main()
     pj_caching_pool_init(&cp, NULL, 0);
     pool = pj_pool_create(&cp.factory, "", 1000, 1000, NULL);
 
-    mem_test(pool);
-    return 0;
-
     srand(2);
 
-    rc = expand(pool, "beet44.pcm", "output.pcm", 1, 0, 0);
+    rc = expand(pool, "beet44.pcm", "output.pcm", 0, 0, 0);
     //rc = compress(pool, "beet44.pcm", "output.pcm", 2);
 
     if (rc != 0) {
