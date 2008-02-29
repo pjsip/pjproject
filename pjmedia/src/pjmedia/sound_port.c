@@ -391,7 +391,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     status = pjmedia_delay_buf_create(pool, "snd_buff", 
 				      clock_rate, samples_per_frame, 
 				      PJMEDIA_SOUND_BUFFER_COUNT, -1, 
-				      &snd_port->delay_buf);
+				      0, &snd_port->delay_buf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 #else
     PJ_UNUSED_ARG(status);
