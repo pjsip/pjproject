@@ -197,7 +197,7 @@ static void shrink_buffer(pjmedia_delay_buf *b, unsigned erase_cnt)
     unsigned buf2len;
     pj_status_t status;
 
-    pj_assert(b && erase_cnt);
+    pj_assert(b && erase_cnt && b->buf_cnt);
 
     if (b->get_pos < b->put_pos) {
 	/* sssss .. sssss
@@ -272,6 +272,13 @@ static void set_max_cnt(pjmedia_delay_buf *b, unsigned new_max_cnt)
 
     /* For now, only support shrinking */
     pj_assert(old_max_cnt > new_max_cnt);
+
+    /* Buffer empty, only need to reset pointers then set new max directly */
+    if (b->buf_cnt == 0) {
+	b->put_pos = b->get_pos = 0;
+	b->max_cnt = new_max_cnt;
+	return;
+    }
 
     shrink_buffer(b, old_max_cnt - new_max_cnt);
 
