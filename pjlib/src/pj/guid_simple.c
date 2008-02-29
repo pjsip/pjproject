@@ -59,7 +59,7 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
 	if (guid_chars[0] == '\0') {
 	    init_guid_chars();
 	}
-	pj_enter_critical_section();
+	pj_leave_critical_section();
     }
 
     /* This would only work if PJ_GUID_STRING_LENGTH is multiple of 2 bytes */
