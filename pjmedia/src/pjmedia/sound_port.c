@@ -32,7 +32,7 @@
 
 #define THIS_FILE	    "sound_port.c"
 
-#define TEST_OVERFLOW_UNDERFLOW
+//#define TEST_OVERFLOW_UNDERFLOW
 
 enum
 {
