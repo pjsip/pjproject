@@ -23,7 +23,7 @@
  * @file sip_config.h
  * @brief Compile time configuration.
  */
-#include <pj/config.h>
+#include <pj/types.h>
 
 /**
  * @defgroup PJSIP PJSIP Library Collection
@@ -102,6 +102,21 @@ typedef struct pjsip_cfg_t
     } tsx;
 
     /* Dialog layer settings .. TODO */
+
+    /** Client registration settings. */
+    struct {
+	/**
+	 * Specify whether client registration should check for its 
+	 * registered contact in Contact header of successful REGISTE 
+	 * response to determine whether registration has been successful. 
+	 * This setting may be disabled if non-compliant registrar is unable
+	 * to return correct Contact header.
+	 *
+	 * Default is PJSIP_REGISTER_CLIENT_CHECK_CONTACT
+	 */
+	pj_bool_t   check_contact;
+
+    } regc;
 
 } pjsip_cfg_t;
 
@@ -695,6 +710,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_HAS_DIGEST_AKA_AUTH
 #   define PJSIP_HAS_DIGEST_AKA_AUTH	    0
+#endif
+
+
+/**
+ * Specify whether client registration should check for its registered
+ * contact in Contact header of successful REGISTE response to determine
+ * whether registration has been successful. This setting may be disabled
+ * if non-compliant registrar is unable to return correct Contact header.
+ *
+ * This setting can be changed in run-time with using pjsip_cfg().
+ *
+ * Default is 1
+ */
+#ifndef PJSIP_REGISTER_CLIENT_CHECK_CONTACT
+#   define PJSIP_REGISTER_CLIENT_CHECK_CONTACT	1
 #endif
 
 

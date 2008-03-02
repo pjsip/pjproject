@@ -29,6 +29,11 @@ PJ_DEF_DATA(pjsip_cfg_t) pjsip_sip_cfg_var =
        PJSIP_T2_TIMEOUT,
        PJSIP_T4_TIMEOUT,
        PJSIP_TD_TIMEOUT
+    },
+
+    /* Client registration client */
+    {
+	PJSIP_REGISTER_CLIENT_CHECK_CONTACT
     }
 };
 

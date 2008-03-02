@@ -723,8 +723,20 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    
 	    /* Enumerate all Contact headers found in the response and
 	     * find the Contact(s) that we register.
+	     *
+	     * Note: 
+	     *	by default we require that the exact same URI that we
+	     *  register is returned in the 200/OK response (by exact,
+	     *  meaning all URI components including transport param),
+	     *  otherwise if we don't detect that our URI is there, we
+	     *  treat registration as failed.
+	     *
+	     *  If your registrar server couldn't do this, you can
+	     *  disable this exact URI checking. See the compile time
+	     *  setting PJSIP_REGISTER_CLIENT_CHECK_CONTACT or the
+	     *  corresponding run-time setting in pjsip_cfg().
 	     */
-	    for (i=0; i<contact_cnt; ++i) {
+	    for (i=0; i<contact_cnt && pjsip_cfg()->regc.check_contact; ++i) {
 		pjsip_contact_hdr *our_contact;
 
 		our_contact = (pjsip_contact_hdr*)
@@ -760,7 +772,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    /* When the response doesn't contain our Contact header, that
 	     * means we have been unregistered.
 	     */
-	    if (!has_our_contact)
+	    if (pjsip_cfg()->regc.check_contact && !has_our_contact)
 		expiration = 0;
 
 	    /* Schedule next registration */
