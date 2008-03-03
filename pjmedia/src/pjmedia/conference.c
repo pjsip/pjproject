@@ -179,6 +179,23 @@ struct conf_port
     unsigned		 tx_buf_cap;	/**< Max size, in samples.	    */
     unsigned		 tx_buf_count;	/**< # of samples in the buffer.    */
 
+    /* When the port is not receiving signal from any other ports (e.g. when
+     * no other ports is transmitting to this port), the bridge periodically
+     * transmit NULL frame to the port to keep the port "alive" (for example,
+     * a stream port needs this heart-beat to periodically transmit silence
+     * frame to keep NAT binding alive).
+     *
+     * This NULL frame should be sent to the port at the port's ptime rate.
+     * So if the port's ptime is greater than the bridge's ptime, the bridge
+     * needs to delay the NULL frame until it's the right time to do so.
+     *
+     * This variable keeps track of how many pending NULL samples are being
+     * "held" for this port. Once this value reaches samples_per_frame
+     * value of the port, a NULL frame is sent. The samples value on this
+     * variable is clocked at the port's clock rate.
+     */
+    unsigned		 tx_heart_beat;
+
     /* Delay buffer is a special buffer for sound device port (port 0, master
      * port) and other passive ports (sound device port is also passive port).
      *
@@ -1388,15 +1405,33 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 
 	pjmedia_frame frame;
 
-	/* Adjust the timestamp */
+	/* Clear left-over samples in tx_buffer, if any, so that it won't
+	 * be transmitted next time we have audio signal.
+	 */
+	cport->tx_buf_count = 0;
+
+	/* Add sample counts to heart-beat samples */
+	cport->tx_heart_beat += conf->samples_per_frame * cport->clock_rate /
+				conf->clock_rate;
+
+	/* Set frame timestamp */
 	frame.timestamp.u64 = timestamp->u64 * cport->clock_rate /
 				conf->clock_rate;
 	frame.type = PJMEDIA_FRAME_TYPE_NONE;
 	frame.buf = NULL;
 	frame.size = 0;
 
+	/* Transmit heart-beat frames (may transmit more than one NULL frame
+	 * if port's ptime is less than bridge's ptime.
+	 */
 	if (cport->port && cport->port->put_frame) {
-	    pjmedia_port_put_frame(cport->port, &frame);
+	    while (cport->tx_heart_beat >= cport->samples_per_frame) {
+
+		pjmedia_port_put_frame(cport->port, &frame);
+
+		cport->tx_heart_beat -= cport->samples_per_frame;
+		frame.timestamp.u64 += cport->samples_per_frame;
+	    }
 	}
 
 	cport->tx_level = 0;
@@ -1408,6 +1443,9 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	*frm_type = PJMEDIA_FRAME_TYPE_NONE;
 	return PJ_SUCCESS;
     }
+
+    /* Reset heart-beat sample count */
+    cport->tx_heart_beat = 0;
 
     buf = (pj_int16_t*) cport->mix_buf;
 
