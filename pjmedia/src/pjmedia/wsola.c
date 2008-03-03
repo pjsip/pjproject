@@ -55,7 +55,7 @@
 
 struct pjmedia_wsola
 {
-    pj_uint16_t clock_rate;	/* Sampling rate.			*/
+    unsigned    clock_rate;	/* Sampling rate.			*/
     pj_uint16_t samples_per_frame;/* Samples per frame.			*/
     pj_uint16_t options;	/* Options.				*/
     pj_uint16_t hist_cnt;       /* # of history samples.		*/
