@@ -241,7 +241,7 @@ static void shrink_buffer(pjmedia_delay_buf *b, unsigned erase_cnt)
 
 	b->buf_cnt -= erase_cnt;
 
-	PJ_LOG(5,(b->obj_name,"Successfully shrinking %d samples, "
+	PJ_LOG(5,(b->obj_name,"Overflow, %d samples reduced, "
 		  "buf_cnt=%d", erase_cnt, b->buf_cnt));
     }
 
@@ -532,7 +532,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b)
 
     pj_lock_release(b->lock);
 
-    PJ_LOG(5,(b->obj_name,"Delay buffer resetted"));
+    PJ_LOG(5,(b->obj_name,"Delay buffer is reset"));
 
     return PJ_SUCCESS;
 }
