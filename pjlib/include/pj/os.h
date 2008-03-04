@@ -138,6 +138,46 @@ PJ_DECL(pj_bool_t) pj_thread_is_registered(void);
 
 
 /**
+ * Get thread priority value for the thread.
+ *
+ * @param thread	Thread handle.
+ *
+ * @return		Thread priority value, or -1 on error.
+ */
+PJ_DECL(int) pj_thread_get_prio(pj_thread_t *thread);
+
+
+/**
+ * Set the thread priority. The priority value must be in the priority
+ * value range, which can be retrieved with #pj_thread_get_prio_min() and
+ * #pj_thread_get_prio_max() functions.
+ *
+ * @param thread	Thread handle.
+ * @param prio		New priority to be set to the thread.
+ *
+ * @return		PJ_SUCCESS on success or the error code.
+ */
+PJ_DECL(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio);
+
+/**
+ * Get the lowest priority value available for this thread.
+ *
+ * @param thread	Thread handle.
+ * @return		Minimum thread priority value, or -1 on error.
+ */
+PJ_DECL(int) pj_thread_get_prio_min(pj_thread_t *thread);
+
+
+/**
+ * Get the highest priority value available for this thread.
+ *
+ * @param thread	Thread handle.
+ * @return		Minimum thread priority value, or -1 on error.
+ */
+PJ_DECL(int) pj_thread_get_prio_max(pj_thread_t *thread);
+
+
+/**
  * Return native handle from pj_thread_t for manipulation using native
  * OS APIs.
  *

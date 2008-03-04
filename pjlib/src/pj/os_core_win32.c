@@ -253,6 +253,61 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
     return pj_thread_local_get(thread_tls_id) != 0;
 }
 
+
+/*
+ * Get thread priority value for the thread.
+ */
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+{
+    return GetThreadPriority(thread->hthread);
+}
+
+
+/*
+ * Set the thread priority.
+ */
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+{
+#if PJ_HAS_THREADS
+    PJ_ASSERT_RETURN(thread, PJ_EINVAL);
+    PJ_ASSERT_RETURN(prio>=THREAD_PRIORITY_IDLE && 
+			prio<=THREAD_PRIORITY_TIME_CRITICAL,
+		     PJ_EINVAL);
+
+    if (SetThreadPriority(thread->hthread, prio) == FALSE)
+	return PJ_RETURN_OS_ERROR(GetLastError());
+
+    return PJ_SUCCESS;
+
+#else
+    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(prio);
+    pj_assert("pj_thread_set_prio() called in non-threading mode!");
+    return PJ_EINVALIDOP;
+#endif
+}
+
+
+/*
+ * Get the lowest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return THREAD_PRIORITY_IDLE;
+}
+
+
+/*
+ * Get the highest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return THREAD_PRIORITY_TIME_CRITICAL;
+}
+
+
 /*
  * Get native thread handle
  */

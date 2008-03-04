@@ -238,6 +238,93 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 #endif
 }
 
+
+/*
+ * Get thread priority value for the thread.
+ */
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+{
+#if PJ_HAS_THREADS
+    sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam (thread->thread, &policy, &param);
+    if (rc != 0)
+	return -1;
+
+    return param.sched_priority;
+#else
+    PJ_UNUSED_ARG(thread);
+    return 1;
+#endif
+}
+
+
+/*
+ * Set the thread priority.
+ */
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+{
+#if PJ_HAS_THREADS
+    sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam (thread->thread, &policy, &param);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
+
+    param.sched_priority = prio;
+
+    rc = pthread_setschedparam(tid, policy, &param);
+    if (rc != 0)
+	return PJ_RETURN_OS_ERROR(rc);
+
+    return PJ_SUCCESS;
+#else
+    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(prio);
+    pj_assert("pj_thread_set_prio() called in non-threading mode!");
+    return 1;
+#endif
+}
+
+
+/*
+ * Get the lowest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+{
+    sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam(thread->thread, &policy, &param);
+    if (rc != 0)
+	return -1;
+
+    return sched_get_priority_min(policy);
+}
+
+
+/*
+ * Get the highest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+{
+    sched_param param;
+    int policy;
+    int rc;
+
+    rc = pthread_getschedparam(thread->thread, &policy, &param);
+    if (rc != 0)
+	return -1;
+
+    return sched_get_priority_max(policy);
+}
+
+
 /*
  * Get native thread handle
  */

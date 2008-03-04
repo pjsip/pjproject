@@ -484,6 +484,48 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
     return PJ_FALSE;
 }
 
+
+/*
+ * Get thread priority value for the thread.
+ */
+PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return 1;
+}
+
+
+/*
+ * Set the thread priority.
+ */
+PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
+{
+    PJ_UNUSED_ARG(thread);
+    PJ_UNUSED_ARG(prio);
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get the lowest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return 1;
+}
+
+
+/*
+ * Get the highest priority value available on this system.
+ */
+PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
+{
+    PJ_UNUSED_ARG(thread);
+    return 1;
+}
+
+
 /*
  * pj_thread_get_os_handle()
  */
