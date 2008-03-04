@@ -245,7 +245,7 @@ PJ_DEF(pj_bool_t) pj_thread_is_registered(void)
 PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 {
 #if PJ_HAS_THREADS
-    sched_param param;
+    struct sched_param param;
     int policy;
     int rc;
 
@@ -267,7 +267,7 @@ PJ_DEF(int) pj_thread_get_prio(pj_thread_t *thread)
 PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 {
 #if PJ_HAS_THREADS
-    sched_param param;
+    struct sched_param param;
     int policy;
     int rc;
 
@@ -277,7 +277,7 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
 
     param.sched_priority = prio;
 
-    rc = pthread_setschedparam(tid, policy, &param);
+    rc = pthread_setschedparam(thread->thread, policy, &param);
     if (rc != 0)
 	return PJ_RETURN_OS_ERROR(rc);
 
@@ -296,7 +296,7 @@ PJ_DEF(pj_status_t) pj_thread_set_prio(pj_thread_t *thread,  int prio)
  */
 PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
 {
-    sched_param param;
+    struct sched_param param;
     int policy;
     int rc;
 
@@ -313,7 +313,7 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
  */
 PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
 {
-    sched_param param;
+    struct sched_param param;
     int policy;
     int rc;
 
