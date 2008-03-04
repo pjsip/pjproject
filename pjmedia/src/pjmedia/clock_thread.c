@@ -215,6 +215,13 @@ static int clock_thread(void *arg)
     pj_timestamp now;
     pjmedia_clock *clock = (pjmedia_clock*) arg;
 
+    /* Set thread priority to maximum unless not wanted. */
+    if ((clock->options & PJMEDIA_CLOCK_NO_HIGHEST_PRIO) == 0) {
+	int max = pj_thread_get_prio_max(pj_thread_this());
+	if (max > 0)
+	    pj_thread_set_prio(pj_thread_this(), max);
+    }
+
     /* Get the first tick */
     pj_get_timestamp(&clock->next_tick);
     clock->next_tick.u64 += clock->interval.u64;

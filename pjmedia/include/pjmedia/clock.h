@@ -62,7 +62,12 @@ enum pjmedia_clock_options
      * application must poll the clock continuously by calling
      * #pjmedia_clock_wait() in order to synchronize timing.
      */
-    PJMEDIA_CLOCK_NO_ASYNC  = 1
+    PJMEDIA_CLOCK_NO_ASYNC  = 1,
+
+    /**
+     * Prevent the clock from setting it's thread to highest priority.
+     */
+    PJMEDIA_CLOCK_NO_HIGHEST_PRIO = 2
 };
 
 
@@ -86,12 +91,7 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  * @param samples_per_frame Number of samples per frame. This argument
  *			    along with clock_rate, specifies the interval
  *			    of each clock run (or clock ticks).
- * @param options	    By default, the callback will be called 
- *			    asynchronously (depending on the clock 
- *			    implementation backend, a thread may be 
- *			    created). If PJMEDIA_CLOCK_NO_ASYNC is set,
- *			    application must poll the clock with 
- *			    #pjmedia_clock_wait() to let the clock runs.
+ * @param options	    Bitmask of pjmedia_clock_options.
  * @param cb		    Callback to be called for each clock tick.
  * @param user_data	    User data, which will be passed to the callback.
  * @param p_clock	    Pointer to receive the clock instance.

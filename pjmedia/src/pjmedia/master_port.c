@@ -102,8 +102,8 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 	return status;
 
     /* Create media clock */
-    status = pjmedia_clock_create(pool, clock_rate, samples_per_frame, 0,
-				  &clock_callback, m, &m->clock);
+    status = pjmedia_clock_create(pool, clock_rate, samples_per_frame, 
+				  options, &clock_callback, m, &m->clock);
     if (status != PJ_SUCCESS) {
 	pj_lock_destroy(m->lock);
 	return status;
