@@ -34,8 +34,8 @@
  */
 #if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
 
-/* We removed PLC in 0.6 */
-#define PLC_DISABLED	1
+/* We removed PLC in 0.6 (and re-enabled it again in 0.9!) */
+#define PLC_DISABLED	0
 
 
 /* Prototypes for GSM factory */

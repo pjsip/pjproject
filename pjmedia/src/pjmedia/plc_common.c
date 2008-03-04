@@ -18,19 +18,15 @@
  */
 #include <pjmedia/plc.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/wsola.h>
 #include <pj/assert.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 
 
-static void* plc_replay_create(pj_pool_t*, unsigned c, unsigned f);
-static void  plc_replay_save(void*, pj_int16_t*);
-static void  plc_replay_generate(void*, pj_int16_t*);
-
-extern void* pjmedia_plc_steveu_create(pj_pool_t*, unsigned c, unsigned f);
-extern void  pjmedia_plc_steveu_save(void*, pj_int16_t*);
-extern void  pjmedia_plc_steveu_generate(void*, pj_int16_t*);
-
+static void* plc_wsola_create(pj_pool_t*, unsigned c, unsigned f);
+static void  plc_wsola_save(void*, pj_int16_t*);
+static void  plc_wsola_generate(void*, pj_int16_t*);
 
 /**
  * This struct is used internally to represent a PLC backend.
@@ -43,21 +39,11 @@ struct plc_alg
 };
 
 
-#if defined(PJMEDIA_HAS_STEVEU_PLC) && PJMEDIA_HAS_STEVEU_PLC!=0
-static struct plc_alg plc_steveu =
+static struct plc_alg plc_wsola =
 {
-    &pjmedia_plc_steveu_create,
-    &pjmedia_plc_steveu_save,
-    &pjmedia_plc_steveu_generate
-};
-#endif
-
-
-static struct plc_alg plc_replay =
-{
-    &plc_replay_create,
-    &plc_replay_save,
-    &plc_replay_generate
+    &plc_wsola_create,
+    &plc_wsola_save,
+    &plc_wsola_generate
 };
 
 
@@ -88,15 +74,7 @@ PJ_DEF(pj_status_t) pjmedia_plc_create( pj_pool_t *pool,
 
     plc = PJ_POOL_ZALLOC_T(pool, pjmedia_plc);
 
-    if (0)
-	;
-#if defined(PJMEDIA_HAS_STEVEU_PLC) && PJMEDIA_HAS_STEVEU_PLC!=0
-    else if (clock_rate == 8000)
-	plc->op = &plc_steveu;
-#endif
-    else
-	plc->op = &plc_replay;
-
+    plc->op = &plc_wsola;
     plc->obj = plc->op->plc_create(pool, clock_rate, samples_per_frame);
 
     *p_plc = plc;
@@ -133,59 +111,47 @@ PJ_DEF(pj_status_t) pjmedia_plc_generate( pjmedia_plc *plc,
 
 //////////////////////////////////////////////////////////////////////////////
 /*
- * Simple replay based plc
+ * Packet loss concealment based on WSOLA
  */
-struct replay_plc
+struct wsola_plc
 {
-    unsigned	size;
-    unsigned	replay_cnt;
-    pj_int16_t *frame;
+    pjmedia_wsola   *wsola;
+    pj_bool_t	     prev_lost;
 };
 
 
-static void* plc_replay_create(pj_pool_t *pool, unsigned clock_rate, 
-			       unsigned samples_per_frame)
+static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate, 
+			      unsigned samples_per_frame)
 {
-    struct replay_plc *o;
+    struct wsola_plc *o;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(clock_rate);
 
-    o = PJ_POOL_ALLOC_T(pool, struct replay_plc);
-    o->size = samples_per_frame * 2;
-    o->replay_cnt = 0;
-    o->frame = (pj_int16_t*) pj_pool_zalloc(pool, o->size);
+    o = PJ_POOL_ALLOC_T(pool, struct wsola_plc);
+
+    status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
+				  PJMEDIA_WSOLA_NO_DISCARD, &o->wsola);
+    if (status != PJ_SUCCESS)
+	return NULL;
 
     return o;
 }
 
-static void plc_replay_save(void *plc, pj_int16_t *frame)
+static void plc_wsola_save(void *plc, pj_int16_t *frame)
 {
-    struct replay_plc *o = (struct replay_plc*) plc;
+    struct wsola_plc *o = (struct wsola_plc*) plc;
 
-    pj_memcpy(o->frame, frame, o->size);
-    o->replay_cnt = 0;
+    pjmedia_wsola_save(o->wsola, frame, o->prev_lost);
+    o->prev_lost = PJ_FALSE;
 }
 
-static void plc_replay_generate(void *plc, pj_int16_t *frame)
+static void plc_wsola_generate(void *plc, pj_int16_t *frame)
 {
-    struct replay_plc *o = (struct replay_plc*) plc;
-    unsigned i, count;
-    pj_int16_t *samp;
-
-    ++o->replay_cnt;
-
-    if (o->replay_cnt < 16) {
-	pj_memcpy(frame, o->frame, o->size);
+    struct wsola_plc *o = (struct wsola_plc*) plc;
     
-
-	count = o->size / 2;
-	samp = o->frame;
-	for (i=0; i<count; ++i)
-	    samp[i] = (pj_int16_t)(samp[i] >> 1);
-    } else {
-	pj_bzero(frame, o->size);
-    }
+    pjmedia_wsola_generate(o->wsola, frame);
+    o->prev_lost = PJ_TRUE;
 }
-
 
 
