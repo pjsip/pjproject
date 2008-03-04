@@ -75,6 +75,7 @@ enum pjmedia_wsola_option
  * @param pool		    Pool to allocate memory for WSOLA.
  * @param clock_rate	    Sampling rate of audio playback.
  * @param samples_per_frame Number of samples per frame.
+ * @param channel_count	    Number of channels.
  * @param options	    Option flags, bitmask combination of
  *			    #pjmedia_wsola_option.
  * @param p_wsola	    Pointer to receive WSOLA structure.
@@ -84,6 +85,7 @@ enum pjmedia_wsola_option
 PJ_DECL(pj_status_t) pjmedia_wsola_create(pj_pool_t *pool, 
 					  unsigned clock_rate,
 					  unsigned samples_per_frame,
+					  unsigned channel_count,
 					  unsigned options,
 					  pjmedia_wsola **p_wsola);
 

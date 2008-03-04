@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#define CLOCK_RATE	    44100
+#define CLOCK_RATE	    16000
 #define SAMPLES_PER_FRAME   (10 * CLOCK_RATE / 1000)
 
 #define RESET()	    memset(buf1, 0, sizeof(buf1)), \
@@ -85,7 +85,7 @@ int expand(pj_pool_t *pool, const char *filein, const char *fileout,
     out = fopen(fileout, "wb");
     if (!out) return 1;
 
-    pjmedia_wsola_create(pool, CLOCK_RATE, SAMPLES_PER_FRAME, 0, &wsola);
+    pjmedia_wsola_create(pool, CLOCK_RATE, SAMPLES_PER_FRAME, 1, 0, &wsola);
 
     samples = 0;
     elapsed.u64 = 0;
@@ -200,7 +200,7 @@ int compress(pj_pool_t *pool,
     out = fopen(fileout, "wb");
     if (!out) return 1;
 
-    pjmedia_wsola_create(pool, CLOCK_RATE, SAMPLES_PER_FRAME, 0, &wsola);
+    pjmedia_wsola_create(pool, CLOCK_RATE, SAMPLES_PER_FRAME, 1, 0, &wsola);
 
     elapsed.u64 = 0;
 
@@ -319,7 +319,7 @@ int main()
 {
     pj_caching_pool cp;
     pj_pool_t *pool;
-    int rc;
+    int i, rc;
 
     //test_find_pitch();
 
@@ -329,8 +329,13 @@ int main()
 
     srand(2);
 
-    rc = expand(pool, "beet44.pcm", "output.pcm", 0, 0, 0);
-    //rc = compress(pool, "beet44.pcm", "output.pcm", 2);
+    rc = expand(pool, "galileo16.pcm", "temp1.pcm", 20, 0, 0);
+    rc = compress(pool, "temp1.pcm", "output.pcm", 1);
+
+    for (i=0; i<2; ++i) {
+	rc = expand(pool, "output.pcm", "temp1.pcm", 20, 0, 0);
+	rc = compress(pool, "temp1.pcm", "output.pcm", 1);
+    }
 
     if (rc != 0) {
 	puts("Error");

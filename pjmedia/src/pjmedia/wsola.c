@@ -36,7 +36,7 @@
 #define TEMPLATE_PTIME	(5)
 
 /* Generate extra samples, in msec */
-#define GEN_EXTRA_PTIME	(0.0)
+#define GEN_EXTRA_PTIME	(5)
 
 /* Number of frames in erase buffer */
 #define ERASE_CNT	((unsigned)3)
@@ -53,17 +53,43 @@
 #endif
 
 
+/* Buffer content:
+ *
+ *   t0   time    tn
+ *   ---------------->
+ *
+ * +---------+-------+-------+---          --+
+ * | history | frame | extra | ...empty...   |
+ * +---------+-------+-------+----        ---+
+ * ^         ^               ^               ^
+ * buf    hist_cnt        cur_cnt          buf_cnt
+ *           or
+ *       frm pointer
+ *
+ * History count (hist_cnt) is a constant value, initialized upon 
+ * creation.
+ *
+ * At any particular time, the buffer will contain at least 
+ * (hist_cnt+samples_per_frame) samples.
+ *
+ * A "save" operation will append the frame to the end of the 
+ * buffer, return the samples right after history (the frm pointer),
+ * and shift the buffer by one frame.
+ */
+
+/* WSOLA structure */
 struct pjmedia_wsola
 {
     unsigned    clock_rate;	/* Sampling rate.			*/
-    pj_uint16_t samples_per_frame;/* Samples per frame.			*/
+    pj_uint16_t samples_per_frame;/* Samples per frame (const)		*/
+    pj_uint16_t channel_count;	/* Samples per frame (const)		*/
     pj_uint16_t options;	/* Options.				*/
-    pj_uint16_t hist_cnt;       /* # of history samples.		*/
-    pj_uint16_t buf_cnt;        /* Total buffer capacity		*/
+    pj_uint16_t hist_cnt;       /* # of history samples (const)		*/
+    pj_uint16_t buf_cnt;        /* Total buffer capacity (const)	*/
     pj_uint16_t cur_cnt;        /* Cur # of samples, inc. history	*/
-    pj_uint16_t template_size;	/* Template size.			*/
-    pj_uint16_t min_extra;	/* Min extra samples for merging.	*/
-    pj_uint16_t gen_extra;	/* Generate extra samples.		*/
+    pj_uint16_t template_size;	/* Template size (const)		*/
+    pj_uint16_t min_extra;	/* Min extra samples for merging (const)*/
+    pj_uint16_t gen_extra;	/* Generate extra samples (const)	*/
     pj_uint16_t expand_cnt;     /* Number of expansion currently done   */
 
     short    *buf;		/* The buffer.				*/
@@ -123,7 +149,7 @@ static short *find_pitch(short *frm, short *beg, short *end,
 	}
     }
 
-    TRACE_((THIS_FILE, "found pitch at %u", best-beg));
+    /*TRACE_((THIS_FILE, "found pitch at %u", best-beg));*/
     return best;
 }
 
@@ -207,7 +233,7 @@ static short *find_pitch(short *frm, short *beg, short *end,
 	}
     }
 
-    TRACE_((THIS_FILE, "found pitch at %u", best-beg));
+    /*TRACE_((THIS_FILE, "found pitch at %u", best-beg));*/
     return best;
 }
 
@@ -292,6 +318,7 @@ static void create_win(pj_pool_t *pool, pj_uint16_t **pw, unsigned count)
 PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool, 
 					  unsigned clock_rate,
 					  unsigned samples_per_frame,
+					  unsigned channel_count,
 					  unsigned options,
 					  pjmedia_wsola **p_wsola)
 {
@@ -301,11 +328,13 @@ PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(clock_rate <= 65535, PJ_EINVAL);
     PJ_ASSERT_RETURN(samples_per_frame < clock_rate, PJ_EINVAL);
+    PJ_ASSERT_RETURN(channel_count > 0, PJ_EINVAL);
 
     wsola = PJ_POOL_ZALLOC_T(pool, pjmedia_wsola);
     
     wsola->clock_rate= (pj_uint16_t) clock_rate;
     wsola->samples_per_frame = (pj_uint16_t) samples_per_frame;
+    wsola->channel_count = (pj_uint16_t) channel_count;
     wsola->options   = (pj_uint16_t) options;
     wsola->hist_cnt  = (pj_uint16_t)(samples_per_frame * HISTSZ);
     wsola->buf_cnt   = (pj_uint16_t)(wsola->hist_cnt + 
@@ -359,9 +388,9 @@ PJ_DEF(pj_status_t) pjmedia_wsola_reset( pjmedia_wsola *wsola,
     PJ_ASSERT_RETURN(wsola && options==0, PJ_EINVAL);
     PJ_UNUSED_ARG(options);
 
-    pjmedia_zero_samples(wsola->buf, wsola->cur_cnt);
     wsola->cur_cnt = (pj_uint16_t)(wsola->hist_cnt + 
 				   wsola->samples_per_frame);
+    pjmedia_zero_samples(wsola->buf, wsola->cur_cnt);
     return PJ_SUCCESS;
 }
 
@@ -373,32 +402,47 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
     unsigned rep;
 
     for (rep=1;; ++rep) {
-	short *start;
-	unsigned dist;
+	short *start, *frm;
+	unsigned min_dist, max_dist, dist;
 
-	start = find_pitch(wsola->frm, wsola->buf, 
-			   wsola->frm - (wsola->samples_per_frame >> 1),
+	frm = wsola->buf + wsola->cur_cnt - frmsz;
+	pj_assert(frm - wsola->buf >= wsola->hist_cnt);
+
+	max_dist = wsola->hist_cnt;
+	min_dist = frmsz >> 1;
+
+	start = find_pitch(frm, frm - max_dist, frm - min_dist,
 			   wsola->template_size, 1);
 
+	/* Should we make sure that "start" is really aligned to
+	 * channel #0, in case of stereo? Probably not necessary, as
+	 * find_pitch() should have found the best match anyway.
+	 */
+
 	if (wsola->options & PJMEDIA_WSOLA_NO_HANNING) {
-	    overlapp_add_simple(wsola->mergebuf, wsola->samples_per_frame,
-				wsola->frm, start);
+	    overlapp_add_simple(wsola->mergebuf, frmsz,frm, start);
 	} else {
-	    overlapp_add(wsola->mergebuf, wsola->samples_per_frame,
-			 wsola->frm, start, wsola->hanning);
+	    overlapp_add(wsola->mergebuf, frmsz, frm, start, wsola->hanning);
 	}
 
-	dist = wsola->frm - start;
-	pjmedia_move_samples(wsola->frm + frmsz, start + frmsz, 
+	/* How many new samples do we have */
+	dist = frm - start;
+
+	/* Copy the "tail" (excess frame) to the end */
+	pjmedia_move_samples(frm + frmsz, start + frmsz, 
 			     wsola->buf+wsola->cur_cnt - (start+frmsz));
 
-	pjmedia_copy_samples(wsola->frm, wsola->mergebuf, frmsz);
+	/* Copy the merged frame */
+	pjmedia_copy_samples(frm, wsola->mergebuf, frmsz);
 
+	/* We have new samples */
 	wsola->cur_cnt = (pj_uint16_t)(wsola->cur_cnt + dist);
+
+	pj_assert(wsola->cur_cnt <= wsola->buf_cnt);
+
 	generated += dist;
 
 	if (generated >= needed) {
-	    assert(wsola->cur_cnt <= wsola->buf_cnt);
 	    TRACE_((THIS_FILE, "WSOLA frame expanded after %d iterations", 
 		    rep));
 	    break;
@@ -468,17 +512,24 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 
     if (prev_lost && extra >= wsola->min_extra) {
 	short *dst = wsola->buf + wsola->hist_cnt + wsola->samples_per_frame;
-	unsigned i;
 
+	/* Smoothen the transition. This will also erase the excess
+	 * samples
+	 */
 	overlapp_add_simple(dst, extra, dst, frm);
 
-	for (i=extra; i<wsola->samples_per_frame; ++i)
-	    dst[i] = frm[i];
+	/* Copy remaining samples from the frame */
+	pjmedia_copy_samples(dst+extra, frm+extra, 
+			     wsola->samples_per_frame-extra);
 
-	
+	/* Retrieve frame */
 	pjmedia_copy_samples(frm, wsola->frm, wsola->samples_per_frame);
+
+	/* Remove excess samples */
 	wsola->cur_cnt = (pj_uint16_t)(wsola->hist_cnt + 
 				       wsola->samples_per_frame);
+
+	/* Shift buffer */
 	pjmedia_move_samples(wsola->buf, wsola->buf+wsola->samples_per_frame,
 			      wsola->cur_cnt);
 
@@ -489,10 +540,15 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 		    "Appending new frame without interpolation"));
 	}
 
+	/* Append frame */
 	pjmedia_copy_samples(wsola->buf + wsola->cur_cnt, frm, 
 			     wsola->samples_per_frame);
+
+	/* Retrieve frame */
 	pjmedia_copy_samples(frm, wsola->frm, 
 			     wsola->samples_per_frame);
+
+	/* Shift buffer */
 	pjmedia_move_samples(wsola->buf, wsola->buf+wsola->samples_per_frame,
 			     wsola->cur_cnt);
     }

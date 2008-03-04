@@ -157,7 +157,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 	b->state = STATE_WAITING;
     }
 
-    status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 
+    status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
 				  PJMEDIA_WSOLA_NO_PLC, &b->wsola);
     if (status != PJ_SUCCESS)
 	return status;
