@@ -36,7 +36,7 @@
 #define TEMPLATE_PTIME	(5)
 
 /* Generate extra samples, in msec */
-#define GEN_EXTRA_PTIME	(5)
+#define GEN_EXTRA_PTIME	(1)
 
 /* Number of frames in erase buffer */
 #define ERASE_CNT	((unsigned)3)
@@ -512,6 +512,9 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 
     if (prev_lost && extra >= wsola->min_extra) {
 	short *dst = wsola->buf + wsola->hist_cnt + wsola->samples_per_frame;
+
+	if (extra > wsola->samples_per_frame)
+	    extra = wsola->samples_per_frame;
 
 	/* Smoothen the transition. This will also erase the excess
 	 * samples
