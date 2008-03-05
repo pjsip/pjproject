@@ -280,7 +280,9 @@ static void set_max_cnt(pjmedia_delay_buf *b, unsigned new_max_cnt)
 	return;
     }
 
-    shrink_buffer(b, old_max_cnt - new_max_cnt);
+    /* If samples number in the buffer > new_max_cnt, reduce samples first */
+    if (b->buf_cnt > new_max_cnt)
+	shrink_buffer(b, b->buf_cnt - new_max_cnt);
 
     /* Adjust buffer to accomodate the new max_cnt so the samples is secured.
      * This is done by make get_pos = 0 
