@@ -2438,7 +2438,9 @@ static void call_disconnect( pjsip_inv_session *inv,
 	return;
 
     /* Add SDP in 488 status */
-    if (call && call->med_tp && code==PJSIP_SC_NOT_ACCEPTABLE_HERE) {
+    if (call && call->med_tp && tdata->msg->type==PJSIP_RESPONSE_MSG && 
+	code==PJSIP_SC_NOT_ACCEPTABLE_HERE) 
+    {
 	pjmedia_sdp_session *local_sdp;
 	pjmedia_sock_info si;
 
