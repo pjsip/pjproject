@@ -90,7 +90,7 @@ static int PaRecorderCallback(const void *input,
     pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
     pj_status_t status;
 
-    pj_assert(frameCount == stream->samples_per_frame * stream->channel_count);
+    pj_assert(frameCount * stream->channel_count == stream->samples_per_frame);
 
     PJ_UNUSED_ARG(output);
     PJ_UNUSED_ARG(timeInfo);
@@ -140,7 +140,7 @@ static int PaPlayerCallback( const void *input,
     unsigned size = frameCount * stream->bytes_per_sample *
 		    stream->channel_count;
 
-    pj_assert(frameCount == stream->samples_per_frame * stream->channel_count);
+    pj_assert(frameCount * stream->channel_count == stream->samples_per_frame);
 
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(timeInfo);

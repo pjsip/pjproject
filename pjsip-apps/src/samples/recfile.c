@@ -41,8 +41,8 @@
 
 /* Configs */
 #define CLOCK_RATE	    44100
-#define SAMPLES_PER_FRAME   (CLOCK_RATE * 20 / 1000)
 #define NCHANNELS	    2
+#define SAMPLES_PER_FRAME   (NCHANNELS * (CLOCK_RATE * 10 / 1000))
 #define BITS_PER_SAMPLE	    16
 
 
