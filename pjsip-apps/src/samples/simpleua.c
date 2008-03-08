@@ -29,6 +29,7 @@
  *
  * Capabilities to be demonstrated here:
  *  - Basic call
+ *  - Should support IPv6 (not tested)
  *  - UDP transport at port 5060 (hard coded)
  *  - RTP socket at port 4000 (hard coded)
  *  - proper SDP negotiation
@@ -62,6 +63,14 @@
 #define THIS_FILE   "simpleua.c"
 
 #include "util.h"
+
+
+/* Settings */
+#define AF	    pj_AF_INET()     /* Change to pj_AF_INET6() for IPv6.
+				      * PJ_HAS_IPV6 must be enabled and
+				      * your system must support IPv6.  */
+#define SIP_PORT    5060	     /* Listening SIP port		*/
+#define RTP_PORT    4000	     /* RTP port			*/
 
 /*
  * Static variables.
@@ -179,13 +188,20 @@ int main(int argc, char *argv[])
      * resolves the address with STUN).
      */
     {
-	pj_sockaddr_in addr;
+	pj_sockaddr addr;
 
-	addr.sin_family = pj_AF_INET();
-	addr.sin_addr.s_addr = 0;
-	addr.sin_port = pj_htons(5060);
+	pj_sockaddr_init(AF, &addr, NULL, (pj_uint16_t)SIP_PORT);
+	
+	if (AF == pj_AF_INET()) {
+	    status = pjsip_udp_transport_start( g_endpt, &addr.ipv4, NULL, 
+						1, NULL);
+	} else if (AF == pj_AF_INET6()) {
+	    status = pjsip_udp_transport_start6(g_endpt, &addr.ipv6, NULL,
+						1, NULL);
+	} else {
+	    status = PJ_EAFNOTSUP;
+	}
 
-	status = pjsip_udp_transport_start( g_endpt, &addr, NULL, 1, NULL);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to start UDP transport", status);
 	    return 1;
@@ -273,8 +289,8 @@ int main(int argc, char *argv[])
      * One media transport is needed for each call. Application may
      * opt to re-use the same media transport for subsequent calls.
      */
-    status = pjmedia_transport_udp_create(g_med_endpt, NULL, 4000, 0, 
-					  &g_med_transport);
+    status = pjmedia_transport_udp_create3(g_med_endpt, AF, NULL, NULL, 
+				           RTP_PORT, 0, &g_med_transport);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to create media transport", status);
 	return 1;
@@ -292,6 +308,8 @@ int main(int argc, char *argv[])
      * If URL is specified, then make call immediately.
      */
     if (argc > 1) {
+	pj_sockaddr hostaddr;
+	char hostip[PJ_INET6_ADDRSTRLEN+2];
 	char temp[80];
 	pj_str_t dst_uri = pj_str(argv[1]);
 	pj_str_t local_uri;
@@ -299,13 +317,20 @@ int main(int argc, char *argv[])
 	pjmedia_sdp_session *local_sdp;
 	pjsip_tx_data *tdata;
 
-	pj_ansi_sprintf(temp, "sip:simpleuac@%s", pjsip_endpt_name(g_endpt)->ptr);
+	if (pj_gethostip(AF, &hostaddr) != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Unable to retrieve local host IP", status);
+	    return 1;
+	}
+	pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
+
+	pj_ansi_sprintf(temp, "<sip:simpleuac@%s:%d>", 
+			hostip, SIP_PORT);
 	local_uri = pj_str(temp);
 
 	/* Create UAC dialog */
 	status = pjsip_dlg_create_uac( pjsip_ua_instance(), 
 				       &local_uri,  /* local URI */
-				       NULL,	    /* local Contact */
+				       &local_uri,  /* local Contact */
 				       &dst_uri,    /* remote URI */
 				       &dst_uri,    /* remote target */
 				       &dlg);	    /* dialog */
@@ -461,6 +486,9 @@ static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e)
  */
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 {
+    pj_sockaddr hostaddr;
+    char temp[80], hostip[PJ_INET6_ADDRSTRLEN];
+    pj_str_t local_uri;
     pjsip_dialog *dlg;
     pjmedia_sdp_session *local_sdp;
     pjsip_tx_data *tdata;
@@ -513,11 +541,24 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     } 
 
     /*
+     * Generate Contact URI
+     */
+    if (pj_gethostip(AF, &hostaddr) != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Unable to retrieve local host IP", status);
+	return PJ_TRUE;
+    }
+    pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
+
+    pj_ansi_sprintf(temp, "<sip:simpleuas@%s:%d>", 
+		    hostip, SIP_PORT);
+    local_uri = pj_str(temp);
+
+    /*
      * Create UAS dialog.
      */
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), 
 				   rdata,
-				   NULL, /* contact */
+				   &local_uri, /* contact */
 				   &dlg);
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(g_endpt, rdata, 500, NULL,
