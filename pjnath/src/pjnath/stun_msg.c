@@ -37,9 +37,14 @@ static const char *stun_method_names[PJ_STUN_METHOD_MAX] =
 {
     "Unknown",			/* 0 */
     "Binding",			/* 1 */
-    "Shared Secret",		/* 2 */
+    "SharedSecret",		/* 2 */
     "Allocate",			/* 3 */
     "Refresh",			/* 4 */
+    "???",			/* 5 */
+    "Send",			/* 6 */
+    "Data",			/* 7 */
+    "???",			/* 8 */
+    "ChannelBind",		/* 9 */
 };
 
 static struct

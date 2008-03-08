@@ -67,9 +67,24 @@ enum pj_stun_method_e
     PJ_STUN_ALLOCATE_METHOD		    = 3,
 
     /**
-     * STUN/TURN Send Indication as defined by draft-ietf-behave-turn
+     * STUN/TURN Refresh method as defined by draft-ietf-behave-turn
      */
     PJ_STUN_REFRESH_METHOD		    = 4,
+
+    /**
+     * STUN/TURN Send indication as defined by draft-ietf-behave-turn
+     */
+    PJ_STUN_SEND_METHOD			    = 6,
+
+    /**
+     * STUN/TURN Data indication as defined by draft-ietf-behave-turn
+     */
+    PJ_STUN_DATA_METHOD			    = 7,
+
+    /**
+     * STUN/TURN ChannelBind as defined by draft-ietf-behave-turn
+     */
+    PJ_STUN_CHANNEL_BIND_METHOD		    = 9,
 
     /**
      * All known methods.
@@ -176,6 +191,7 @@ typedef enum pj_stun_msg_type
      */
     PJ_STUN_BINDING_ERROR_RESPONSE	    = 0x0111,
 
+
     /**
      * STUN SHARED-SECRET reqeust.
      */
@@ -190,6 +206,7 @@ typedef enum pj_stun_msg_type
      * Error response to STUN SHARED-SECRET reqeust.
      */
     PJ_STUN_SHARED_SECRET_ERROR_RESPONSE    = 0x0112,
+
 
     /**
      * STUN/TURN Allocate Request
@@ -206,6 +223,7 @@ typedef enum pj_stun_msg_type
      */
     PJ_STUN_ALLOCATE_ERROR_RESPONSE	    = 0x0113,
 
+
     /**
      * STUN/TURN REFRESH Request
      */
@@ -219,7 +237,35 @@ typedef enum pj_stun_msg_type
     /**
      * Error response to STUN REFRESH request.
      */
-    PJ_STUN_REFRESH_ERROR_RESPONSE	    = 0x0114
+    PJ_STUN_REFRESH_ERROR_RESPONSE	    = 0x0114,
+
+
+    /**
+     * TURN Send indication
+     */
+    PJ_STUN_SEND_INDICATION		    = 0x0016,
+
+
+    /**
+     * TURN Data indication
+     */
+    PJ_STUN_DATA_INDICATION		    = 0x0017,
+
+
+    /**
+     * STUN/TURN ChannelBind Request
+     */
+    PJ_STUN_CHANNEL_BIND_REQUEST	    = 0x0009,
+
+    /**
+     * Successful response to STUN ChannelBind request
+     */
+    PJ_STUN_CHANNEL_BIND_RESPONSE	    = 0x0109,
+
+    /**
+     * Error response to STUN ChannelBind request.
+     */
+    PJ_STUN_CHANNEL_BIND_ERROR_RESPONSE	    = 0x0119
 
 } pj_stun_msg_type;
 
@@ -947,7 +993,7 @@ typedef struct pj_stun_uint_attr pj_stun_req_port_props_attr;
  * Get the port number in TURN REQUESTED-PORT-PROPS attribute. The port
  * number is returned in host byte order.
  */
-#define PJ_STUN_GET_RPP_PORT(u32)   pj_ntons((pj_uint16_t)(u32 & 0x0000FFFFL))
+#define PJ_STUN_GET_RPP_PORT(u32)   pj_ntohs((pj_uint16_t)(u32 & 0x0000FFFFL))
 
 /**
  * Convert port number in host byte order to 32bit value to be encoded in 

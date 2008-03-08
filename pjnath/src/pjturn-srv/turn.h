@@ -33,6 +33,8 @@ typedef struct pjturn_pkt	    pjturn_pkt;
 #define PJTURN_INVALID_CHANNEL	    0xFFFF
 #define PJTURN_NO_TIMEOUT	    ((long)0x7FFFFFFF)
 #define PJTURN_MAX_PKT_LEN	    3000
+#define PJTURN_PERM_TIMEOUT	    300
+#define PJTURN_CHANNEL_TIMEOUT	    600
 
 /** Transport types */
 enum {
@@ -40,6 +42,10 @@ enum {
     PJTURN_TP_TCP = 6	    /**< TCP.	*/
 };
 
+/** 
+ * Get transport type name string.
+ */
+PJ_DECL(const char*) pjturn_tp_type_name(int tp_type);
 
 /**
  * This structure describes TURN relay resource. An allocation allocates
@@ -54,19 +60,10 @@ struct pjturn_relay_res
 
 	/** Transport/relay address */
 	pj_sockaddr	    addr;
-    } key;
-
-    /** Pool for this resource. */
-    pj_pool_t       *pool;
-
-    /** Mutex */
-    pj_lock_t	    *lock;
+    } hkey;
 
     /** Allocation who requested or reserved this resource. */
     pjturn_allocation *allocation;
-
-    /** Time when this resource times out */
-    pj_time_val	    timeout;
 
     /** Username used in credential */
     pj_str_t	    user;
@@ -74,8 +71,38 @@ struct pjturn_relay_res
     /** Realm used in credential. */
     pj_str_t	    realm;
 
-    /** Transport/relay socket */
-    pj_sock_t	    sock;
+    /** Lifetime, in seconds. */
+    unsigned	    lifetime;
+
+    /** Relay/allocation expiration time */
+    pj_time_val	    expiry;
+
+    /** Timeout timer entry */
+    pj_timer_entry  timer;
+
+    /** Transport. */
+    struct {
+	/** Transport/relay socket */
+	pj_sock_t	    sock;
+
+	/** Transport/relay ioqueue */
+	pj_ioqueue_key_t    *key;
+
+	/** Read operation key. */
+	pj_ioqueue_op_key_t read_key;
+
+	/** The incoming packet buffer */
+	char		    rx_pkt[PJTURN_MAX_PKT_LEN];
+
+	/** Source address of the packet. */
+	pj_sockaddr	    src_addr;
+
+	/** Source address length */
+	int		    src_addr_len;
+
+	/** The outgoing packet buffer. This must be 3wbit aligned. */
+	char		    tx_pkt[PJTURN_MAX_PKT_LEN+4];
+    } tp;
 };
 
 
@@ -104,7 +131,7 @@ typedef struct pjturn_allocation_req
     unsigned		tp_type;
 
     /** Requested IP */
-    pj_sockaddr		addr;
+    char		addr[PJ_INET6_ADDRSTRLEN];
 
     /** Requested bandwidth */
     unsigned		bandwidth;
@@ -127,10 +154,16 @@ typedef struct pjturn_allocation_req
 struct pjturn_allocation
 {
     /** Hash table key to identify client. */
-    pjturn_allocation_key key;
+    pjturn_allocation_key hkey;
 
     /** Pool for this allocation. */
     pj_pool_t		*pool;
+
+    /** Object name for logging identification */
+    char		*obj_name;
+
+    /** Client info (IP address and port) */
+    char		info[80];
 
     /** Mutex */
     pj_lock_t		*lock;
@@ -147,7 +180,30 @@ struct pjturn_allocation
     /** Relay resource reserved by this allocation, if any */
     pjturn_relay_res	*resv;
 
+    /** Requested bandwidth */
+    unsigned		bandwidth;
+
+    /** STUN session for this client */
+    pj_stun_session	*sess;
+
+    /** Peer hash table (keyed by peer address) */
+    pj_hash_table_t	*peer_table;
+
+    /** Channel hash table (keyed by channel number) */
+    pj_hash_table_t	*ch_table;
 };
+
+
+/**
+ * This structure describes the hash table key to lookup TURN
+ * permission.
+ */
+typedef struct pjturn_permission_key
+{
+    /** Peer address. */
+    pj_sockaddr		peer_addr;
+
+} pjturn_permission_key;
 
 
 /**
@@ -156,24 +212,12 @@ struct pjturn_allocation
 struct pjturn_permission
 {
     /** Hash table key */
-    struct {
-	/** Transport type. */
-	pj_uint16_t		tp_type;
+    pjturn_permission_key hkey;
 
-	/** Transport socket. If TCP is used, the value will be the actual
-	 *  TCP socket. If UDP is used, the value will be the relay address
-	 */
-	pj_sock_t		sock;
-
-	/** Peer address. */
-	pj_sockaddr		peer_addr;
-    } key;
-
-    /** Pool for this permission. */
-    pj_pool_t	        *pool;
-
-    /** Mutex */
-    pj_lock_t		*lock;
+    /** Transport socket. If TCP is used, the value will be the actual
+     *  TCP socket. If UDP is used, the value will be the relay address
+     */
+    pj_sock_t		sock;
 
     /** TURN allocation that owns this permission/channel */
     pjturn_allocation	*allocation;
@@ -183,16 +227,38 @@ struct pjturn_permission
      */
     pj_uint16_t		channel;
 
-    /** Permission timeout. */
-    pj_time_val		timeout;
+    /** Permission expiration time. */
+    pj_time_val		expiry;
 };
 
 /**
- * Handle incoming packet.
+ * Create new allocation.
  */
-PJ_DECL(void) pjturn_allocation_on_rx_pkt(pjturn_allocation *alloc,
-					  pjturn_pkt *pkt);
+PJ_DECL(pj_status_t) pjturn_allocation_create(pjturn_listener *listener,
+					      const pj_sockaddr_t *src_addr,
+					      unsigned src_addr_len,
+					      const pj_stun_msg *msg,
+					      const pjturn_allocation_req *req,
+					      pjturn_allocation **p_alloc);
+/**
+ * Destroy allocation.
+ */
+PJ_DECL(void) pjturn_allocation_destroy(pjturn_allocation *alloc);
 
+/**
+ * Create relay.
+ */
+PJ_DECL(pj_status_t) pjturn_allocation_create_relay(pjturn_srv *srv,
+					            pjturn_allocation *alloc,
+						    const pj_stun_msg *msg,
+						    const pjturn_allocation_req *req,
+						    pjturn_relay_res *relay);
+
+/**
+ * Handle incoming packet from client.
+ */
+PJ_DECL(void) pjturn_allocation_on_rx_client_pkt(pjturn_allocation *alloc,
+						 pjturn_pkt *pkt);
 
 /****************************************************************************/
 /*
@@ -250,7 +316,7 @@ struct pjturn_pkt
     /** Listener that owns this. */
     pjturn_listener	    *listener;
 
-    /** Packet buffer. */
+    /** Packet buffer (must be 32bit aligned). */
     pj_uint8_t		    pkt[PJTURN_MAX_PKT_LEN];
 
     /** Size of the packet */
@@ -357,11 +423,6 @@ struct pjturn_srv
 	 */
 	pj_hash_table_t *res;
 
-	/** Permission hash table, indexed by transport type, socket handle,
-	 *  and peer address.
-	 */
-	pj_hash_table_t *peer;
-
     } tables;
 
     /** Ports settings */
@@ -405,6 +466,18 @@ PJ_DECL(pj_status_t) pjturn_srv_destroy(pjturn_srv *srv);
  */
 PJ_DECL(pj_status_t) pjturn_srv_add_listener(pjturn_srv *srv,
 					     pjturn_listener *lis);
+
+/**
+ * Register an allocation.
+ */
+PJ_DECL(pj_status_t) pjturn_srv_register_allocation(pjturn_srv *srv,
+						    pjturn_allocation *alloc);
+
+/**
+ * Unregister an allocation.
+ */
+PJ_DECL(pj_status_t) pjturn_srv_unregister_allocation(pjturn_srv *srv,
+						      pjturn_allocation *alloc);
 
 /**
  * This callback is called by UDP listener on incoming packet.
