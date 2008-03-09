@@ -40,15 +40,6 @@ enum {
 #define DEF_LIFETIME		300
 
 
-
-/* ChannelData header */
-typedef struct channel_data_hdr
-{
-    pj_uint16_t ch_number;
-    pj_uint16_t length;
-} channel_data_hdr;
-
-
 /* Parsed Allocation request. */
 typedef struct alloc_request
 {
@@ -912,9 +903,11 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 	/*
 	 * This is not a STUN packet, must be ChannelData packet.
 	 */
-	channel_data_hdr *cd = (channel_data_hdr*)pkt->pkt;
+	pj_turn_channel_data *cd = (pj_turn_channel_data*)pkt->pkt;
 	pj_turn_permission *perm;
 	pj_ssize_t len;
+
+	pj_assert(sizeof(*cd)==4);
 
 	/* For UDP check the packet length */
 	if (alloc->listener->tp_type == PJ_TURN_TP_UDP) {
@@ -978,7 +971,7 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
      */
     if (perm->channel != PJ_TURN_INVALID_CHANNEL) {
 	/* Send ChannelData */
-	channel_data_hdr *cd = (channel_data_hdr*)rel->tp.tx_pkt;
+	pj_turn_channel_data *cd = (pj_turn_channel_data*)rel->tp.tx_pkt;
 
 	if (len > PJ_TURN_MAX_PKT_LEN) {
 	    char peer_addr[80];
@@ -994,11 +987,11 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
 	cd->length = pj_htons((pj_uint16_t)len);
 
 	/* Copy data */
-	pj_memcpy(rel->tp.rx_pkt+sizeof(channel_data_hdr), pkt, len);
+	pj_memcpy(rel->tp.rx_pkt+sizeof(pj_turn_channel_data), pkt, len);
 
 	/* Send to client */
 	pj_turn_listener_sendto(alloc->listener, rel->tp.tx_pkt,
-			       len+sizeof(channel_data_hdr), 0,
+			       len+sizeof(pj_turn_channel_data), 0,
 			       &alloc->hkey.clt_addr,
 			       pj_sockaddr_get_len(&alloc->hkey.clt_addr));
     } else {

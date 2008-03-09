@@ -30,18 +30,7 @@ typedef struct pj_turn_srv	    pj_turn_srv;
 typedef struct pj_turn_pkt	    pj_turn_pkt;
 
 
-#define PJ_TURN_INVALID_CHANNEL	    0xFFFF
 #define PJ_TURN_INVALID_LIS_ID	    ((unsigned)-1)
-#define PJ_TURN_NO_TIMEOUT	    ((long)0x7FFFFFFF)
-#define PJ_TURN_MAX_PKT_LEN	    3000
-#define PJ_TURN_PERM_TIMEOUT	    300
-#define PJ_TURN_CHANNEL_TIMEOUT	    600
-
-/** Transport types */
-enum {
-    PJ_TURN_TP_UDP = 16,	    /**< UDP.	*/
-    PJ_TURN_TP_TCP = 6	    /**< TCP.	*/
-};
 
 /** 
  * Get transport type name string.

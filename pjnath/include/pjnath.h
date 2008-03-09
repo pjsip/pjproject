@@ -27,5 +27,6 @@
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_session.h>
 #include <pjnath/stun_transaction.h>
+#include <pjnath/turn_session.h>
 #include <pjnath/types.h>
 
