@@ -77,6 +77,7 @@ static struct
     { PJ_STUN_SC_ROLE_CONFLICT,		    "Role Conflict"},
     { PJ_STUN_SC_SERVER_ERROR,		    "Server Error"},
     { PJ_STUN_SC_INSUFFICIENT_CAPACITY,	    "Insufficient Capacity"},
+    { PJ_STUN_SC_INSUFFICIENT_PORT_CAPACITY,"Insufficient Port Capacity"},
     { PJ_STUN_SC_GLOBAL_FAILURE,	    "Global Failure"}
 };
 
@@ -289,8 +290,8 @@ static struct attr_desc mandatory_attr_desc[] =
 	&encode_uint_attr
     },
     {
-	/* PJ_STUN_ATTR_REQUESTED_PORT_PROPS, */
-	"REQUESTED-PORT-PROPS",
+	/* PJ_STUN_ATTR_REQUESTED_PROPS, */
+	"REQUESTED-PROPS",
 	&decode_uint_attr,
 	&encode_uint_attr
     },
@@ -349,10 +350,10 @@ static struct attr_desc mandatory_attr_desc[] =
 	&encode_uint_attr
     },
     {
-	/* PJ_STUN_ATTR_REQUESTED_IP, */
-	"REQUESTED-IP",
-	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr
+	/* PJ_STUN_ATTR_RESERVATION_TOKEN, */
+	"RESERVATION-TOKEN",
+	&decode_uint64_attr,
+	&encode_uint64_attr
     },
     {
 	/* PJ_STUN_ATTR_XOR_REFLECTED_FROM, */

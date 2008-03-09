@@ -74,7 +74,6 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_PEER_ADDR:
     case PJ_STUN_ATTR_RELAY_ADDR:
     case PJ_STUN_ATTR_XOR_MAPPED_ADDR:
-    case PJ_STUN_ATTR_REQ_IP:
     case PJ_STUN_ATTR_XOR_REFLECTED_FROM:
     case PJ_STUN_ATTR_XOR_INTERNAL_ADDR:
     case PJ_STUN_ATTR_ALTERNATE_SERVER:
@@ -117,7 +116,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_LIFETIME:
     case PJ_STUN_ATTR_BANDWIDTH:
     case PJ_STUN_ATTR_REQ_ADDR_TYPE:
-    case PJ_STUN_ATTR_REQ_PORT_PROPS:
+    case PJ_STUN_ATTR_REQ_PROPS:
     case PJ_STUN_ATTR_REQ_TRANSPORT:
     case PJ_STUN_ATTR_TIMER_VAL:
     case PJ_STUN_ATTR_PRIORITY:
@@ -207,6 +206,7 @@ static int print_attr(char *buffer, unsigned length,
 	break;
     case PJ_STUN_ATTR_ICE_CONTROLLED:
     case PJ_STUN_ATTR_ICE_CONTROLLING:
+    case PJ_STUN_ATTR_RESERVATION_TOKEN:
 	{
 	    const pj_stun_uint64_attr *attr;
 	    pj_uint8_t data[8];

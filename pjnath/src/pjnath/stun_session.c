@@ -711,6 +711,32 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     return status;
 }
 
+
+/*
+ * Create and send STUN response message.
+ */
+PJ_DEF(pj_status_t) pj_stun_session_respond( pj_stun_session *sess, 
+					     const pj_stun_msg *req,
+					     unsigned code, 
+					     const char *errmsg,
+					     pj_bool_t cache, 
+					     const pj_sockaddr_t *dst_addr, 
+					     unsigned addr_len)
+{
+    pj_status_t status;
+    pj_str_t reason;
+    pj_stun_tx_data *tdata;
+
+    status = pj_stun_session_create_res(sess, req, code, 
+					(errmsg?pj_cstr(&reason,errmsg):NULL), 
+					&tdata);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    return pj_stun_session_send_msg(sess, cache, dst_addr,  addr_len, tdata);
+}
+
+
 /*
  * Cancel outgoing STUN transaction. 
  */

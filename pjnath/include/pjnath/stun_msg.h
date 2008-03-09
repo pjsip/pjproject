@@ -297,11 +297,11 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
     PJ_STUN_ATTR_RELAY_ADDR	    = 0x0016,/**< RELAY-ADDRESS attribute.  */
     PJ_STUN_ATTR_REQ_ADDR_TYPE	    = 0x0017,/**< REQUESTED-ADDRESS-TYPE    */
-    PJ_STUN_ATTR_REQ_PORT_PROPS	    = 0x0018,/**< REQUESTED-PORT-PROPS	    */
+    PJ_STUN_ATTR_REQ_PROPS	    = 0x0018,/**< REQUESTED-PROPS	    */
     PJ_STUN_ATTR_REQ_TRANSPORT	    = 0x0019,/**< REQUESTED-TRANSPORT	    */
     PJ_STUN_ATTR_XOR_MAPPED_ADDR    = 0x0020,/**< XOR-MAPPED-ADDRESS	    */
     PJ_STUN_ATTR_TIMER_VAL	    = 0x0021,/**< TIMER-VAL attribute.	    */
-    PJ_STUN_ATTR_REQ_IP		    = 0x0022,/**< REQUESTED-IP attribute    */
+    PJ_STUN_ATTR_RESERVATION_TOKEN  = 0x0022,/**< TURN RESERVATION-TOKEN    */
     PJ_STUN_ATTR_XOR_REFLECTED_FROM = 0x0023,/**< XOR-REFLECTED-FROM	    */
     PJ_STUN_ATTR_PRIORITY	    = 0x0024,/**< PRIORITY		    */
     PJ_STUN_ATTR_USE_CANDIDATE	    = 0x0025,/**< USE-CANDIDATE		    */
@@ -357,6 +357,8 @@ typedef enum pj_stun_status
     PJ_STUN_SC_ROLE_CONFLICT		= 487,  /**< Role Conflict	    */
     PJ_STUN_SC_SERVER_ERROR	        = 500,  /**< Server Error	    */
     PJ_STUN_SC_INSUFFICIENT_CAPACITY    = 507,  /**< Insufficient Capacity 
+						     (TURN) */
+    PJ_STUN_SC_INSUFFICIENT_PORT_CAPACITY=508,  /**< Insufficient Port Capacity 
 						     (TURN) */
     PJ_STUN_SC_GLOBAL_FAILURE	        = 600   /**< Global Failure	    */
 } pj_stun_status;
@@ -945,61 +947,48 @@ typedef struct pj_stun_sockaddr_attr pj_stun_relay_addr_attr;
 typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
 
 /**
- * This describes the TURN REQUESTED-PORT-PROPS attribute, encoded as
+ * This describes the TURN REQUESTED-PROPS attribute, encoded as
  * STUN 32bit integer attribute. Few macros are provided to manipulate
  * the values in this attribute: #PJ_STUN_GET_RPP_BITS(), 
  * #PJ_STUN_SET_RPP_BITS(), #PJ_STUN_GET_RPP_PORT(), and
  * #PJ_STUN_SET_RPP_PORT().
- *
+ * 
  * This attribute allows the client to request certain properties for
- * the port that is allocated by the server.  The attribute can be used
- * with any transport protocol that has the notion of a 16 bit port
- * space (including TCP and UDP).  The attribute is 32 bits long.  Its
- * format is:
+ * the relayed transport address that is allocated by the server.  The
+ * attribute is 32 bits long.  Its format is:
 
  \verbatim
 
       0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |       Reserved = 0        | A |    Specific Port Number       |
+     |   Prop-type   |                  Reserved = 0                 |
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
  \endverbatim
 
- * The two bits labeled A in the diagram above are for requested port
- * alignment and have the following meaning:
- *
- *  - 00  no specific port alignment
- *  - 01  odd port number
- *  - 10  even port number
- *  - 11  even port number; reserve next higher port
+ * The field labeled "Prop-type" is an 8-bit field specifying the
+ * desired property.  The rest of the attribute is RFFU (Reserved For
+ * Future Use) and MUST be set to 0 on transmission and ignored on
+ * reception.  The values of the "Prop-type" field are:
+ * 
+ *    0x00  (Reserved)
+ *    0x01  Even port number
+ *    0x02  Pair of ports 
  */
-typedef struct pj_stun_uint_attr pj_stun_req_port_props_attr;
+typedef struct pj_stun_uint_attr pj_stun_req_props_attr;
 
 /**
- * Get the 2 bits requested port alignment value from a 32bit integral
- * value of TURN REQUESTED-PORT-PROPS attribute.
+ * Get the 8bit Prop-type value from a 32bit integral value of TURN 
+ * TURN REQUESTED-PROPS attribute.
  */
-#define PJ_STUN_GET_RPP_BITS(u32)   ((u32 >> 16) & 0x03)
+#define PJ_STUN_GET_PROP_TYPE(u32)	(u32 >> 24)
 
 /**
- * Convert 2 bits requested port alignment value to a 32bit integral
- * value of TURN REQUESTED-PORT-PROPS attribute.
+ * Convert 8bit Prop-type value to a 32bit integral value of TURN 
+ * REQUESTED-PROPS attribute.
  */
-#define PJ_STUN_SET_RPP_BITS(A)	    (A << 16)
-
-/**
- * Get the port number in TURN REQUESTED-PORT-PROPS attribute. The port
- * number is returned in host byte order.
- */
-#define PJ_STUN_GET_RPP_PORT(u32)   pj_ntohs((pj_uint16_t)(u32 & 0x0000FFFFL))
-
-/**
- * Convert port number in host byte order to 32bit value to be encoded in 
- * TURN REQUESTED-PORT-PROPS attribute.
- */
-#define PJ_STUN_SET_RPP_PORT(port) ((pj_uint32_t)pj_htons((pj_uint16_t)(port)))
+#define PJ_STUN_SET_PROP_TYPE(PropType)	(PropType << 24)
 
 
 /**
@@ -1046,23 +1035,18 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
 
 
 /**
- * This describes the TURN REQUESTED-IP attribute.
- * The REQUESTED-IP attribute is used by the client to request that a
- * specific IP address be allocated by the TURN server.  This attribute
- * is needed since it is anticipated that TURN servers will be multi-
- * homed so as to be able to allocate more than 64k transport addresses.
- * As a consequence, a client needing a second transport address on the
- * same interface as a previous one can use this attribute to request a
- * remote address from the same TURN server interface as the TURN
- * client's previous remote address.
+ * This describes the TURN RESERVATION-TOKEN attribute.
+ * The RESERVATION-TOKEN attribute contains a token that uniquely
+ * identifies a relayed transport address being held in reserve by the
+ * server.  The server includes this attribute in a success response to
+ * tell the client about the token, and the client includes this
+ * attribute in a subsequent Allocate request to request the server use
+ * that relayed transport address for the allocation.
  * 
- * The format of this attribute is identical to XOR-MAPPED-ADDRESS.
- * However, the port component of the attribute MUST be ignored by the
- * server.  If a client wishes to request a specific IP address and
- * port, it uses both the REQUESTED-IP and REQUESTED-PORT-PROPS
- * attributes. 
+ * The attribute value is a 64-bit-long field containing the token
+ * value. 
  */
-typedef struct pj_stun_sockaddr_attr pj_stun_req_ip_attr;
+typedef struct pj_stun_uint64_attr pj_stun_res_token_attr;
 
 /**
  * This describes the XOR-REFLECTED-FROM attribute, as described by

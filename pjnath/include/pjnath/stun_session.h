@@ -293,7 +293,9 @@ PJ_DECL(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
 /**
  * Create a STUN response message. After the message has been 
  * successfully created, application can send the message by calling 
- * pj_stun_session_send_msg().
+ * pj_stun_session_send_msg(). Alternatively application may use
+ * pj_stun_session_respond() to create and send response in one function
+ * call.
  *
  * @param sess	    The STUN session instance.
  * @param req	    The STUN request where the response is to be created.
@@ -314,7 +316,6 @@ PJ_DECL(pj_status_t) pj_stun_session_create_res(pj_stun_session *sess,
 						unsigned err_code,
 						const pj_str_t *err_msg,
 						pj_stun_tx_data **p_tdata);
-
 
 /**
  * Send STUN message to the specified destination. This function will encode
@@ -340,6 +341,37 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
 					      const pj_sockaddr_t *dst_addr,
 					      unsigned addr_len,
 					      pj_stun_tx_data *tdata);
+
+/**
+ * Create and send STUN response message.
+ *
+ * @param sess	    The STUN session instance.
+ * @param req	    The STUN request message to be responded.
+ * @param err_code  Error code to be set in the response, if error response
+ *		    is to be created, according to pj_stun_status enumeration.
+ *		    This argument MUST be zero if successful response is
+ *		    to be created.
+ * @param err_msg   Optional pointer for the error message string, when
+ *		    creating error response. If the value is NULL and the
+ *		    \a err_code is non-zero, then default error message will
+ *		    be used.
+ * @param cache	    Specify whether session should cache this response for
+ *		    future request retransmission. If TRUE, subsequent request
+ *		    retransmission will be handled by the session and it 
+ *		    will not call request callback.
+ * @param dst_addr  Destination address of the response (or equal to the
+ *		    source address of the original request).
+ * @param addr_len  Address length.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_session_respond(pj_stun_session *sess, 
+					     const pj_stun_msg *req,
+					     unsigned code, 
+					     const char *err_msg,
+					     pj_bool_t cache, 
+					     const pj_sockaddr_t *dst_addr, 
+					     unsigned addr_len);
 
 /**
  * Cancel outgoing STUN transaction. This operation is only valid for outgoing

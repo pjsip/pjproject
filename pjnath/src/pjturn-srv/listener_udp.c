@@ -21,25 +21,25 @@
 struct read_op
 {
     pj_ioqueue_op_key_t	op_key;
-    pjturn_pkt		pkt;
+    pj_turn_pkt		pkt;
 };
 
 struct udp_listener
 {
-    pjturn_listener	     base;
+    pj_turn_listener	     base;
     pj_ioqueue_key_t	    *key;
     unsigned		     read_cnt;
     struct read_op	    **read_op;	/* Array of read_op's	*/
 };
 
 
-static pj_status_t udp_sendto(pjturn_listener *listener,
+static pj_status_t udp_sendto(pj_turn_listener *listener,
 			      const void *packet,
 			      pj_size_t size,
 			      unsigned flag,
 			      const pj_sockaddr_t *addr,
 			      int addr_len);
-static pj_status_t udp_destroy(pjturn_listener *udp);
+static pj_status_t udp_destroy(pj_turn_listener *udp);
 static void on_read_complete(pj_ioqueue_key_t *key, 
 			     pj_ioqueue_op_key_t *op_key, 
 			     pj_ssize_t bytes_read);
@@ -48,13 +48,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 /*
  * Create a new listener on the specified port.
  */
-PJ_DEF(pj_status_t) pjturn_listener_create_udp( pjturn_srv *srv,
+PJ_DEF(pj_status_t) pj_turn_listener_create_udp( pj_turn_srv *srv,
 					        int af,
 					        const pj_str_t *bound_addr,
 					        unsigned port,
 						unsigned concurrency_cnt,
 						unsigned flags,
-						pjturn_listener **p_listener)
+						pj_turn_listener **p_listener)
 {
     pj_pool_t *pool;
     struct udp_listener *udp;
@@ -63,11 +63,12 @@ PJ_DEF(pj_status_t) pjturn_listener_create_udp( pjturn_srv *srv,
     pj_status_t status;
 
     /* Create structure */
-    pool = pj_pool_create(srv->core.pf, "udplis%p", 1000, 1000, NULL);
+    pool = pj_pool_create(srv->core.pf, "udp%p", 1000, 1000, NULL);
     udp = PJ_POOL_ZALLOC_T(pool, struct udp_listener);
     udp->base.pool = pool;
+    udp->base.obj_name = pool->obj_name;
     udp->base.server = srv;
-    udp->base.tp_type = PJTURN_TP_UDP;
+    udp->base.tp_type = PJ_TURN_TP_UDP;
     udp->base.sock = PJ_INVALID_SOCKET;
     udp->base.sendto = &udp_sendto;
     udp->base.destroy = &udp_destroy;
@@ -85,6 +86,11 @@ PJ_DEF(pj_status_t) pjturn_listener_create_udp( pjturn_srv *srv,
     if (status != PJ_SUCCESS) 
 	goto on_error;
     
+    /* Create info */
+    pj_ansi_strcpy(udp->base.info, "UDP:");
+    pj_sockaddr_print(&udp->base.addr, udp->base.info+4, 
+		      sizeof(udp->base.info)-4, 3);
+
     /* Bind socket */
     status = pj_sock_bind(udp->base.sock, &udp->base.addr, 
 			  pj_sockaddr_get_len(&udp->base.addr));
@@ -104,7 +110,8 @@ PJ_DEF(pj_status_t) pjturn_listener_create_udp( pjturn_srv *srv,
     /* Create each read_op and kick off read operation */
     for (i=0; i<concurrency_cnt; ++i) {
 	pj_pool_t *rpool = pj_pool_create(srv->core.pf, "rop%p", 
-					  1000, 1000, NULL);
+					  sizeof(struct read_op)+1000, 
+					  1000, NULL);
 
 	udp->read_op[i] = PJ_POOL_ZALLOC_T(rpool, struct read_op);
 	udp->read_op[i]->pkt.pool = rpool;
@@ -113,6 +120,8 @@ PJ_DEF(pj_status_t) pjturn_listener_create_udp( pjturn_srv *srv,
     }
 
     /* Done */
+    PJ_LOG(4,(udp->base.obj_name, "Listener %s created", udp->base.info));
+
     *p_listener = &udp->base;
     return PJ_SUCCESS;
 
@@ -126,7 +135,7 @@ on_error:
 /*
  * Destroy listener.
  */
-static pj_status_t udp_destroy(pjturn_listener *listener)
+static pj_status_t udp_destroy(pj_turn_listener *listener)
 {
     struct udp_listener *udp = (struct udp_listener *)listener;
     unsigned i;
@@ -149,8 +158,13 @@ static pj_status_t udp_destroy(pjturn_listener *listener)
     }
 
     if (udp->base.pool) {
-	pj_pool_release(udp->base.pool);
+	pj_pool_t *pool = udp->base.pool;
+
+	PJ_LOG(4,(udp->base.obj_name, "Listener %s destroyed", 
+		  udp->base.info));
+
 	udp->base.pool = NULL;
+	pj_pool_release(pool);
     }
     return PJ_SUCCESS;
 }
@@ -158,7 +172,7 @@ static pj_status_t udp_destroy(pjturn_listener *listener)
 /*
  * Callback to send packet.
  */
-static pj_status_t udp_sendto(pjturn_listener *listener,
+static pj_status_t udp_sendto(pj_turn_listener *listener,
 			      const void *packet,
 			      pj_size_t size,
 			      unsigned flag,
@@ -166,8 +180,7 @@ static pj_status_t udp_sendto(pjturn_listener *listener,
 			      int addr_len)
 {
     pj_ssize_t len = size;
-    return pj_sock_sendto(listener->sock, packet, &len, flag, addr,
-			  pj_sockaddr_get_len(addr));
+    return pj_sock_sendto(listener->sock, packet, &len, flag, addr, addr_len);
 }
 
 /*
@@ -191,7 +204,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    read_op->pkt.len = bytes_read;
 	    pj_gettimeofday(&read_op->pkt.rx_time);
 
-	    pjturn_srv_on_rx_pkt(udp->base.server, &read_op->pkt);
+	    pj_turn_srv_on_rx_pkt(udp->base.server, &read_op->pkt);
 	}
 
 	/* Reset pool */
