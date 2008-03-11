@@ -52,6 +52,9 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     pj_memcpy(&pjsua_var.media_cfg, cfg, sizeof(*cfg));
 
     /* Normalize configuration */
+    if (pjsua_var.media_cfg.snd_clock_rate == 0) {
+	pjsua_var.media_cfg.snd_clock_rate = pjsua_var.media_cfg.clock_rate;
+    }
 
     if (pjsua_var.media_cfg.has_ioqueue &&
 	pjsua_var.media_cfg.thread_cnt == 0)
@@ -184,8 +187,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 				 pjsua_var.mconf_cfg.bits_per_sample, 
 				 opt, &pjsua_var.mconf);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, 
-		     "Media stack initialization has returned error", 
+	pjsua_perror(THIS_FILE, "Error creating conference bridge", 
 		     status);
 	return status;
     }
@@ -1789,6 +1791,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     if (clock_rates[0] == 0)
 	clock_rates[0] = pjsua_var.media_cfg.clock_rate;
 
+    /* Get the port0 of the conference bridge. */
+    conf_port = pjmedia_conf_get_master_port(pjsua_var.mconf);
+    pj_assert(conf_port != NULL);
+
     /* Attempts to open the sound device with different clock rates */
     for (i=0; i<PJ_ARRAY_SIZE(clock_rates); ++i) {
 	char errmsg[PJ_ERR_MSG_SIZE];
@@ -1808,7 +1814,45 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
 	if (status == PJ_SUCCESS) {
 	    selected_clock_rate = clock_rates[i];
-	    break;
+
+	    /* If there's mismatch between sound port and conference's port,
+	     * create a resample port to bridge them.
+	     */
+	    if (selected_clock_rate != pjsua_var.media_cfg.clock_rate) {
+		pjmedia_port *resample_port;
+		unsigned resample_opt = 0;
+
+		if (pjsua_var.media_cfg.quality >= 3 &&
+		    pjsua_var.media_cfg.quality <= 4)
+		{
+		    resample_opt |= PJMEDIA_CONF_SMALL_FILTER;
+		}
+		else if (pjsua_var.media_cfg.quality < 3) {
+		    resample_opt |= PJMEDIA_CONF_USE_LINEAR;
+		}
+		
+		status = pjmedia_resample_port_create(pjsua_var.pool, 
+						      conf_port,
+						      selected_clock_rate,
+						      resample_opt, 
+						      &resample_port);
+		if (status != PJ_SUCCESS) {
+		    pj_strerror(status, errmsg, sizeof(errmsg));
+		    PJ_LOG(4, (THIS_FILE, 
+			       "Error creating resample port, trying next "
+			       "clock rate", 
+			       errmsg));
+		    pjmedia_snd_port_destroy(pjsua_var.snd_port);
+		    pjsua_var.snd_port = NULL;
+		    continue;
+		} else {
+		    conf_port = resample_port;
+		    break;
+		}
+
+	    } else {
+		break;
+	    }
 	}
 
 	pj_strerror(status, errmsg, sizeof(errmsg));
@@ -1820,41 +1864,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	return status;
     }
 
-    /* Get the port0 of the conference bridge. */
-    conf_port = pjmedia_conf_get_master_port(pjsua_var.mconf);
-    pj_assert(conf_port != NULL);
-
     /* Set AEC */
     pjmedia_snd_port_set_ec( pjsua_var.snd_port, pjsua_var.pool, 
 			     pjsua_var.media_cfg.ec_tail_len, 
 			     pjsua_var.media_cfg.ec_options);
-
-    /* If there's mismatch between sound port and conference's port,
-     * create a resample port to bridge them.
-     */
-    if (selected_clock_rate != pjsua_var.media_cfg.clock_rate) {
-	pjmedia_port *resample_port;
-	unsigned resample_opt = 0;
-
-	if (pjsua_var.media_cfg.quality >= 3 &&
-	    pjsua_var.media_cfg.quality <= 4)
-	{
-	    resample_opt |= PJMEDIA_CONF_SMALL_FILTER;
-	}
-	else if (pjsua_var.media_cfg.quality < 3) {
-	    resample_opt |= PJMEDIA_CONF_USE_LINEAR;
-	}
-	
-	status = pjmedia_resample_port_create(pjsua_var.pool, conf_port, 
-					      selected_clock_rate, 
-					      resample_opt, &resample_port);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror("Error creating resample port", THIS_FILE, status);
-	    return status;
-	}
-
-	conf_port = resample_port;
-    }
 
     /* Connect sound port to the bridge */ 	 
     status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 
