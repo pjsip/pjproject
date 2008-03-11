@@ -1350,6 +1350,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Set additional info. */
     stream->port.info.bits_per_sample = 16;
     stream->port.info.samples_per_frame = info->fmt.clock_rate * 
+					  stream->codec_param.info.channel_cnt *
 					  stream->codec_param.info.frm_ptime *
 					  stream->codec_param.setting.frm_per_pkt /
 					  1000;
