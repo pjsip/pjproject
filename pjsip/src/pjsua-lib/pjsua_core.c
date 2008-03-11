@@ -260,7 +260,7 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_tx_data *tdata;
     pjsip_response_addr res_addr;
-    pjmedia_sock_info skinfo;
+    pjmedia_transport_info tpinfo;
     pjmedia_sdp_session *sdp;
     const pjsip_hdr *cap_hdr;
     pj_status_t status;
@@ -320,11 +320,11 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Get media socket info */
-    pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &skinfo);
+    pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &tpinfo);
 
     /* Add SDP body, using call0's RTP address */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 1,
-				      &skinfo, &sdp);
+				      &tpinfo.sock_info, &sdp);
     if (status == PJ_SUCCESS) {
 	pjsip_create_sdp_body(tdata->pool, sdp, &tdata->msg->body);
     }
@@ -2060,17 +2060,17 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     PJ_LOG(3,(THIS_FILE, "Dumping media transports:"));
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];
-	pjmedia_sock_info skinfo;
+	pjmedia_transport_info tpinfo;
 	char addr_buf[80];
 
-	/* MSVC complains about skinfo not being initialized */
-	pj_bzero(&skinfo, sizeof(skinfo));
+	/* MSVC complains about tpinfo not being initialized */
+	pj_bzero(&tpinfo, sizeof(tpinfo));
 
-	pjmedia_transport_get_info(call->med_tp, &skinfo);
+	pjmedia_transport_get_info(call->med_tp, &tpinfo);
 
 	PJ_LOG(3,(THIS_FILE, " %s: %s",
 		  (pjsua_var.media_cfg.enable_ice ? "ICE" : "UDP"),
-		  pj_sockaddr_print(&skinfo.rtp_addr_name, addr_buf,
+		  pj_sockaddr_print(&tpinfo.sock_info.rtp_addr_name, addr_buf,
 				    sizeof(addr_buf), 3)));
     }
 

@@ -207,10 +207,16 @@ PJ_BEGIN_DECL
 
 #include <pjmedia/sdp.h>
 
+
 /**
  * Forward declaration for media transport.
  */
 typedef struct pjmedia_transport pjmedia_transport;
+
+/**
+ * Forward declaration for media transport info.
+ */
+typedef struct pjmedia_transport_info pjmedia_transport_info;
 
 /**
  * This enumeration specifies the general behaviour of media processing
@@ -228,6 +234,7 @@ typedef enum pjmedia_tranport_media_option
 
 } pjmedia_tranport_media_option;
 
+
 /**
  * This structure describes the operations for the stream transport.
  */
@@ -239,7 +246,7 @@ struct pjmedia_transport_op
      * Application should call #pjmedia_transport_get_info() instead
      */
     pj_status_t (*get_info)(pjmedia_transport *tp,
-			    pjmedia_sock_info *info);
+			    pjmedia_transport_info *info);
 
     /**
      * This function is called by the stream when the transport is about
@@ -368,7 +375,14 @@ typedef enum pjmedia_transport_type
     PJMEDIA_TRANSPORT_TYPE_UDP,
 
     /** Media transport using ICE */
-    PJMEDIA_TRANSPORT_TYPE_ICE
+    PJMEDIA_TRANSPORT_TYPE_ICE,
+
+    /** 
+     * Media transport SRTP, this transport is actually security adapter to be
+     * stacked with other transport to enable encryption on the underlying
+     * transport.
+     */
+    PJMEDIA_TRANSPORT_TYPE_SRTP
 
 } pjmedia_transport_type;
 
@@ -390,6 +404,56 @@ struct pjmedia_transport
     pjmedia_transport_op    *op;
 };
 
+/**
+ * This structure describes buffer storage of transport specific info.
+ * The actual transport specific info contents will be defined by transport
+ * implementation. Note that some transport implementations do not need to
+ * provide specific info, since the general socket info is enough.
+ */
+typedef struct pjmedia_transport_specific_info
+{
+    /**
+     * Specify media transport type.
+     */
+    pjmedia_transport_type   type;
+
+    /**
+     * Specify storage buffer size of transport specific info.
+     */
+    int			     cbsize;
+
+    /**
+     * Storage buffer of transport specific info.
+     */
+    char		     buffer[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE];
+
+} pjmedia_transport_specific_info;
+
+
+/**
+ * This structure describes transport informations, including general 
+ * socket information and specific information of single transport or 
+ * stacked transports (e.g: SRTP stacked on top of UDP)
+ */
+struct pjmedia_transport_info
+{
+    /**
+     * General socket info.
+     */
+    pjmedia_sock_info sock_info;
+
+    /**
+     * Specifies number of transport specific info included.
+     */
+    int specific_info_cnt;
+
+    /**
+     * Buffer storage of transport specific info.
+     */
+    pjmedia_transport_specific_info spc_info[PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT];
+
+};
+
 
 /**
  * Get media socket info from the specified transport. The socket info
@@ -403,7 +467,7 @@ struct pjmedia_transport
  * @return	    PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
-						  pjmedia_sock_info *info)
+						  pjmedia_transport_info *info)
 {
     if (tp->op->get_info)
 	return (*tp->op->get_info)(tp, info);

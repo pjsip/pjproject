@@ -55,7 +55,7 @@ struct transport_ice
  * These are media transport operations.
  */
 static pj_status_t transport_get_info (pjmedia_transport *tp,
-				       pjmedia_sock_info *info);
+				       pjmedia_transport_info *info);
 static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
@@ -673,20 +673,20 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
 
 
 static pj_status_t transport_get_info(pjmedia_transport *tp,
-				      pjmedia_sock_info *info)
+				      pjmedia_transport_info *info)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_ice_strans *ice_st = tp_ice->ice_st;
     pj_ice_strans_comp *comp;
 
-    pj_bzero(info, sizeof(*info));
-    info->rtp_sock = info->rtcp_sock = PJ_INVALID_SOCKET;
+    pj_bzero(&info->sock_info, sizeof(info->sock_info));
+    info->sock_info.rtp_sock = info->sock_info.rtcp_sock = PJ_INVALID_SOCKET;
 
     /* Retrieve address of default candidate for component 1 (RTP) */
     comp = ice_st->comp[0];
     pj_assert(comp->default_cand >= 0);
-    info->rtp_sock = comp->sock;
-    pj_memcpy(&info->rtp_addr_name, 
+    info->sock_info.rtp_sock = comp->sock;
+    pj_memcpy(&info->sock_info.rtp_addr_name, 
 	      &comp->cand_list[comp->default_cand].addr,
 	      sizeof(pj_sockaddr_in));
 
@@ -694,12 +694,13 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     if (ice_st->comp_cnt > 1) {
 	comp = ice_st->comp[1];
 	pj_assert(comp->default_cand >= 0);
-	info->rtp_sock = comp->sock;
-	pj_memcpy(&info->rtcp_addr_name, 
+	info->sock_info.rtp_sock = comp->sock;
+	pj_memcpy(&info->sock_info.rtcp_addr_name, 
 		  &comp->cand_list[comp->default_cand].addr,
 		  sizeof(pj_sockaddr_in));
     }
 
+    info->specific_info_cnt = 0;
 
     return PJ_SUCCESS;
 }

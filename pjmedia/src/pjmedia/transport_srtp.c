@@ -125,7 +125,7 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size);
  * These are media transport operations.
  */
 static pj_status_t transport_get_info (pjmedia_transport *tp,
-				       pjmedia_sock_info *info);
+				       pjmedia_transport_info *info);
 static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
@@ -551,12 +551,34 @@ PJ_DEF(pjmedia_transport *) pjmedia_transport_srtp_get_member(
 
 
 static pj_status_t transport_get_info(pjmedia_transport *tp,
-				      pjmedia_sock_info *info)
+				      pjmedia_transport_info *info)
 {
     transport_srtp *srtp = (transport_srtp*) tp;
+    pjmedia_srtp_info srtp_info;
+    int spc_info_idx;
+    pj_status_t status;
 
-    /* put SRTP info as well? */
-    return pjmedia_transport_get_info(srtp->real_tp, info);
+    PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
+    PJ_ASSERT_RETURN(info->specific_info_cnt <
+		     PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT, PJ_ETOOMANY);
+    PJ_ASSERT_RETURN(sizeof(pjmedia_srtp_info) <=
+		     PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE, PJ_ENOMEM);
+
+    status = pjmedia_transport_get_info(srtp->real_tp, info);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    srtp_info.active = srtp->session_inited;
+    srtp_info.rx_policy = srtp->rx_policy;
+    srtp_info.tx_policy = srtp->tx_policy;
+
+    spc_info_idx = info->specific_info_cnt++;
+    info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_SRTP;
+    info->spc_info[spc_info_idx].cbsize = sizeof(srtp_info);
+    pj_memcpy(&info->spc_info[spc_info_idx].buffer, &srtp_info, 
+	      sizeof(srtp_info));
+
+    return PJ_SUCCESS;
 }
 
 static pj_status_t transport_attach(pjmedia_transport *tp,

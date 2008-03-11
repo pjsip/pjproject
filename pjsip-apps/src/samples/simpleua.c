@@ -81,7 +81,7 @@ static pjsip_endpoint	    *g_endpt;	    /* SIP endpoint.		*/
 static pj_caching_pool	     cp;	    /* Global pool factory.	*/
 
 static pjmedia_endpt	    *g_med_endpt;   /* Media endpoint.		*/
-static pjmedia_sock_info     g_med_skinfo;  /* Socket info for media	*/
+static pjmedia_transport_info g_med_tpinfo; /* Socket info for media	*/
 static pjmedia_transport    *g_med_transport;/* Media stream transport	*/
 
 /* Call variables: */
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
      * need this info to create SDP (i.e. the address and port info in
      * the SDP).
      */
-    pjmedia_transport_get_info(g_med_transport, &g_med_skinfo);
+    pjmedia_transport_get_info(g_med_transport, &g_med_tpinfo);
 
 
     /*
@@ -364,7 +364,8 @@ int main(int argc, char *argv[])
 	status = pjmedia_endpt_create_sdp( g_med_endpt,	    /* the media endpt	*/
 					   dlg->pool,	    /* pool.		*/
 					   1,		    /* # of streams	*/
-					   &g_med_skinfo,   /* RTP sock info	*/
+					   &g_med_tpinfo.sock_info,   
+							    /* RTP sock info	*/
 					   &local_sdp);	    /* the SDP result	*/
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
@@ -571,7 +572,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      */
 
     status = pjmedia_endpt_create_sdp( g_med_endpt, rdata->tp_info.pool, 1,
-				       &g_med_skinfo, 
+				       &g_med_tpinfo.sock_info, 
 				       &local_sdp);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, PJ_TRUE);
 

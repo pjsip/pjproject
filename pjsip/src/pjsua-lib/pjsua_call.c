@@ -2200,6 +2200,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     char *p, *end;
     pj_status_t status;
     int len;
+    pjmedia_transport_info tp_info;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
@@ -2256,6 +2257,31 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 	p += len;
 	*p++ = '\n';
 	*p = '\0';
+    }
+
+    /* Get SRTP status */
+    pjmedia_transport_get_info(call->med_tp, &tp_info);
+    if (tp_info.specific_info_cnt > 0) {
+	int i;
+	for (i = 0; i < tp_info.specific_info_cnt; ++i) {
+	    if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
+	    {
+		pjmedia_srtp_info *srtp_info = 
+			    (pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
+
+		len = pj_ansi_snprintf(p, end-p, 
+				       "%s  SRTP status: %s Crypto-suite: %s",
+				       indent,
+				       (srtp_info->active?"Active":"Not active"),
+				       srtp_info->tx_policy.name.ptr);
+		if (len > 0 && len < end-p) {
+		    p += len;
+		    *p++ = '\n';
+		    *p = '\0';
+		}
+		break;
+	    }
+	}
     }
 
     /* Dump session statistics */
@@ -2442,11 +2468,11 @@ static void call_disconnect( pjsip_inv_session *inv,
 	code==PJSIP_SC_NOT_ACCEPTABLE_HERE) 
     {
 	pjmedia_sdp_session *local_sdp;
-	pjmedia_sock_info si;
+	pjmedia_transport_info ti;
 
-	call->med_tp->op->get_info(call->med_tp, &si);
+	pjmedia_transport_get_info(call->med_tp, &ti);
 	status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 
-					  1, &si, &local_sdp);
+					  1, &ti.sock_info, &local_sdp);
 	if (status == PJ_SUCCESS) {
 	    pjsip_create_sdp_body(tdata->pool, local_sdp,
 				  &tdata->msg->body);
@@ -2551,15 +2577,15 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
     pj_status_t status;
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_attr *attr;
-    pjmedia_sock_info skinfo;
+    pjmedia_transport_info tp_info;
     pjmedia_sdp_session *sdp;
 
     /* Get media socket info */
-    pjmedia_transport_get_info(call->med_tp, &skinfo);
+    pjmedia_transport_get_info(call->med_tp, &tp_info);
 
     /* Create new offer */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pjsua_var.pool, 1,
-				      &skinfo, &sdp);
+				      &tp_info.sock_info, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
 	return status;

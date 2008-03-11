@@ -101,7 +101,7 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
  * These are media transport operations.
  */
 static pj_status_t transport_get_info (pjmedia_transport *tp,
-				       pjmedia_sock_info *info);
+				       pjmedia_transport_info *info);
 static pj_status_t transport_attach   (pjmedia_transport *tp,
 				       void *user_data,
 				       const pj_sockaddr_t *rem_addr,
@@ -584,15 +584,16 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 
 /* Called to get the transport info */
 static pj_status_t transport_get_info(pjmedia_transport *tp,
-				      pjmedia_sock_info *info)
+				      pjmedia_transport_info *info)
 {
     struct transport_udp *udp = (struct transport_udp*)tp;
     PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
 
-    info->rtp_sock = udp->rtp_sock;
-    info->rtp_addr_name = udp->rtp_addr_name;
-    info->rtcp_sock = udp->rtcp_sock;
-    info->rtcp_addr_name = udp->rtcp_addr_name;
+    info->sock_info.rtp_sock = udp->rtp_sock;
+    info->sock_info.rtp_addr_name = udp->rtp_addr_name;
+    info->sock_info.rtcp_sock = udp->rtcp_sock;
+    info->sock_info.rtcp_addr_name = udp->rtcp_addr_name;
+    info->specific_info_cnt = 0;
 
     return PJ_SUCCESS;
 }

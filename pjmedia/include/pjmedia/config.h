@@ -525,6 +525,27 @@
 
 
 /**
+ * Transport info (pjmedia_transport_info) contains a socket info and list
+ * of transport specific info, since transports can be chained together 
+ * (for example, SRTP transport uses UDP transport as the underlying 
+ * transport). This constant specifies maximum number of transport specific
+ * infos that can be held in a transport info.
+ */
+#ifndef PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT
+#   define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXCNT   4
+#endif
+
+
+/**
+ * Maximum size in bytes of storage buffer of a transport specific info.
+ */
+#ifndef PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE
+#   define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE  (12*sizeof(long))
+#endif
+
+
+
+/**
  * @}
  */
 

@@ -1005,7 +1005,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *m;
     pjmedia_sdp_attr *attr;
-    pjmedia_sock_info tpinfo;
+    pjmedia_transport_info tpinfo;
     struct media_stream *audio = &call->media[0];
 
     PJ_ASSERT_RETURN(pool && p_sdp, PJ_EINVAL);
@@ -1047,7 +1047,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 
     /* Standard media info: */
     m->desc.media = pj_str("audio");
-    m->desc.port = pj_ntohs(tpinfo.rtp_addr_name.ipv4.sin_port);
+    m->desc.port = pj_ntohs(tpinfo.sock_info.rtp_addr_name.ipv4.sin_port);
     m->desc.port_count = 1;
     m->desc.transport = pj_str("RTP/AVP");
 

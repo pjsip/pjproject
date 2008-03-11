@@ -160,6 +160,30 @@ typedef struct pjmedia_srtp_setting
 
 
 /**
+ * This structure specifies SRTP transport specific info. This will fit
+ * into \a buffer field of pjmedia_transport_specific_info.
+ */
+typedef struct pjmedia_srtp_info
+{
+    /**
+     * Specify whether the SRTP transport is active for SRTP session.
+     */
+    pj_bool_t			active;
+
+    /**
+     * Specify the policy used by the SRTP session for receive direction.
+     */
+    pjmedia_srtp_crypto		rx_policy;
+
+    /**
+     * Specify the policy used by the SRTP session for transmit direction.
+     */
+    pjmedia_srtp_crypto		tx_policy;
+
+} pjmedia_srtp_info;
+
+
+/**
  * Initialize SRTP setting with its default values.
  *
  * @param opt	SRTP setting to be initialized.

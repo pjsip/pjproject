@@ -814,7 +814,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 {
     enum { MAX_MEDIA = 1, MEDIA_IDX = 0 };
     pjmedia_sdp_session *sdp;
-    pjmedia_sock_info skinfo;
+    pjmedia_transport_info tpinfo;
     pjsua_call *call = &pjsua_var.calls[call_id];
     pj_status_t status;
 
@@ -826,11 +826,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     }
 
     /* Get media socket info */
-    pjmedia_transport_get_info(call->med_tp, &skinfo);
+    pjmedia_transport_get_info(call->med_tp, &tpinfo);
 
     /* Create SDP */
     status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, MAX_MEDIA,
-				      &skinfo, &sdp);
+				      &tpinfo.sock_info, &sdp);
     if (status != PJ_SUCCESS) {
 	if (sip_status_code) *sip_status_code = 500;
 	goto on_error;
