@@ -20,7 +20,7 @@
 #include <pjsip/sip_config.h>
 
 /* pjsip configuration instance, initialized with default values */
-PJ_DEF_DATA(pjsip_cfg_t) pjsip_sip_cfg_var =
+pjsip_cfg_t pjsip_sip_cfg_var =
 {
     /* Transaction settings */
     {

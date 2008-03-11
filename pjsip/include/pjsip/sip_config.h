@@ -63,6 +63,7 @@
 #   include <pjsip/sip_autoconf.h>
 #endif
 
+PJ_BEGIN_DECL
 
 /**
  * This structure describes PJSIP run-time configurations/settings.
@@ -132,7 +133,7 @@ PJ_DECL(pjsip_cfg_t*) pjsip_cfg(void);
 
 #else	/* PJ_DLL */
 
-PJ_DECL_DATA(pjsip_cfg_t) pjsip_sip_cfg_var;
+extern pjsip_cfg_t pjsip_sip_cfg_var;
 
 /**
  * Get pjsip configuration instance. Application may modify the
@@ -712,6 +713,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_HAS_DIGEST_AKA_AUTH	    0
 #endif
 
+PJ_END_DECL
 
 /**
  * Specify whether client registration should check for its registered
