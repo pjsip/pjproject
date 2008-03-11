@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJ_COMPAT_CC_GCC_H__
-#define __PJ_COMPAT_CC_GCC_H__
+#ifndef __PJ_COMPAT_CC_CODEW_H__
+#define __PJ_COMPAT_CC_CODEW_H__
 
 /**
  * @file cc_codew.h
@@ -44,8 +44,10 @@
 typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
+#define PJ_INT64(val)		val##LL
+#define PJ_UINT64(val)		val##LLU
 #define PJ_INT64_FMT		"L"
 
 
-#endif	/* __PJ_COMPAT_CC_GCC_H__ */
+#endif	/* __PJ_COMPAT_CC_CODEW_H__ */
 

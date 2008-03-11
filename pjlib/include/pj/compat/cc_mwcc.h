@@ -44,6 +44,8 @@
 typedef long long pj_int64_t;
 typedef unsigned long long pj_uint64_t;
 
+#define PJ_INT64(val)		val##LL
+#define PJ_UINT64(val)		val##LLU
 #define PJ_INT64_FMT		"L"
 
 
