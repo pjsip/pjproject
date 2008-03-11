@@ -178,7 +178,12 @@ BOOL CPocketPJDlg::Restart()
     media_cfg.quality = 1;
     media_cfg.thread_cnt = 1;
     media_cfg.enable_ice = m_Cfg.m_UseIce;
-    
+
+    if (m_Cfg.m_EchoSuppress) {
+	media_cfg.ec_options = PJMEDIA_ECHO_SIMPLE;
+	media_cfg.ec_tail_len = m_Cfg.m_EcTail;
+    }
+
     // Init
     PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Initializing..");
     status = pjsua_init(&cfg, &log_cfg, &media_cfg);

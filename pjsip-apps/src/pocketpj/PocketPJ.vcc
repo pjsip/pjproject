@@ -12,8 +12,8 @@ Class1=CPocketPJApp
 Class2=CPocketPJDlg
 
 ResourceCount=5
-Resource2=IDD_POCKETPJ_DIALOG
-Resource3=IDD_SETTING
+Resource2=IDD_SETTING
+Resource3=IDD_POCKETPJ_DIALOG
 Resource4=IDR_ACC_MENU
 Resource1=IDR_MAINFRAME
 Class3=CSettingsDlg
@@ -66,7 +66,7 @@ CommandCount=3
 [DLG:IDD_SETTING]
 Type=1
 Class=CSettingsDlg
-ControlCount=15
+ControlCount=17
 Control1=IDC_STATIC,static,1342308352
 Control2=IDC_DOMAIN,edit,1350631552
 Control3=IDC_USER,edit,1350631552
@@ -82,6 +82,8 @@ Control12=IDC_DNS,edit,1350631552
 Control13=IDC_STATIC,static,1342308352
 Control14=IDOK,button,1342242816
 Control15=IDCANCEL,button,1342242816
+Control16=IDC_ECHO_SUPPRESS,button,1342242819
+Control17=IDC_EC_TAIL,edit,1350631552
 
 [CLS:CSettingsDlg]
 Type=0
@@ -90,5 +92,5 @@ ImplementationFile=SettingsDlg.cpp
 BaseClass=CDialog
 Filter=D
 VirtualFilter=dWC
-LastObject=CSettingsDlg
+LastObject=IDC_ECHO_SUPPRESS
 

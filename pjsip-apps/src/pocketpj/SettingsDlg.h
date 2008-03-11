@@ -21,6 +21,8 @@ struct CPocketPJSettings
     bool	m_UseSrtp;
     bool	m_UsePublish;
     CString	m_DNS;
+    bool	m_EchoSuppress;
+    DWORD	m_EcTail;
 
     CArray<CString,CString> m_BuddyList;
     
@@ -53,6 +55,8 @@ public:
 	CString	m_StunSrv;
 	CString	m_User;
 	CString	m_Dns;
+	BOOL	m_EchoSuppress;
+	CString	m_EcTail;
 	//}}AFX_DATA
 
 
@@ -71,7 +75,8 @@ protected:
 
 	// Generated message map functions
 	//{{AFX_MSG(CSettingsDlg)
-		// NOTE: the ClassWizard will add member functions here
+	afx_msg void OnStun();
+	afx_msg void OnEchoSuppress();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

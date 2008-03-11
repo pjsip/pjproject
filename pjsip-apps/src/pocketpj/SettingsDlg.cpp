@@ -24,6 +24,8 @@ static char THIS_FILE[] = __FILE__;
 #define REG_USE_PUBLISH	_T("UsePUBLISH")
 #define REG_BUDDY_CNT	_T("BuddyCnt")
 #define REG_BUDDY_X	_T("Buddy%u")
+#define REG_ENABLE_EC	_T("EnableEC")
+#define REG_EC_TAIL	_T("ECTail")
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -69,21 +71,41 @@ void CPocketPJSettings::LoadRegistry()
     dwordVal = 0;
     if (key.QueryValue(dwordVal, REG_USE_STUN) == ERROR_SUCCESS) {
 	m_UseStun = dwordVal != 0;
+    } else {
+	m_UseStun = 0;
     }
 
     if (key.QueryValue(dwordVal, REG_USE_ICE) == ERROR_SUCCESS) {
 	m_UseIce = dwordVal != 0;
+    } else {
+	m_UseIce = 0;
     }
 
 
     if (key.QueryValue(dwordVal, REG_USE_SRTP) == ERROR_SUCCESS) {
 	m_UseSrtp = dwordVal != 0;
+    } else {
+	m_UseSrtp = 0;
     }
 
 
     cbData = sizeof(dwordVal);
     if (key.QueryValue(dwordVal, REG_USE_PUBLISH) == ERROR_SUCCESS) {
 	m_UsePublish = dwordVal != 0;
+    }
+
+    cbData = sizeof(dwordVal);
+    if (key.QueryValue(dwordVal, REG_ENABLE_EC) == ERROR_SUCCESS) {
+	m_EchoSuppress = dwordVal != 0;
+    } else {
+	m_EchoSuppress = 0;
+    }
+
+    cbData = sizeof(dwordVal);
+    if (key.QueryValue(dwordVal, REG_EC_TAIL) == ERROR_SUCCESS) {
+	m_EcTail = dwordVal;
+    } else {
+	m_EcTail = 2;
     }
 
     m_BuddyList.RemoveAll();
@@ -127,9 +149,12 @@ void CPocketPJSettings::SaveRegistry()
     key.SetValue(m_UseSrtp, REG_USE_SRTP);
     key.SetValue(m_UsePublish, REG_USE_PUBLISH);
 
+    key.SetValue(m_EchoSuppress, REG_ENABLE_EC);
+    key.SetValue(m_EcTail, REG_EC_TAIL);
+
     key.SetValue(m_BuddyList.GetSize(), REG_BUDDY_CNT);
 
-    unsigned i;
+    int i;
     for (i=0; i<m_BuddyList.GetSize(); ++i) {
 	CString entry;
 	entry.Format(REG_BUDDY_X, i);
@@ -157,6 +182,8 @@ CSettingsDlg::CSettingsDlg(CPocketPJSettings &cfg, CWnd* pParent)
 	m_StunSrv = _T("");
 	m_User = _T("");
 	m_Dns = _T("");
+	m_EchoSuppress = FALSE;
+	m_EcTail = _T("");
 	//}}AFX_DATA_INIT
 
 	m_Domain    = m_Cfg.m_Domain;
@@ -168,6 +195,11 @@ CSettingsDlg::CSettingsDlg(CPocketPJSettings &cfg, CWnd* pParent)
 	m_StunSrv   = m_Cfg.m_StunSrv;
 	m_User	    = m_Cfg.m_User;
 	m_Dns	    = m_Cfg.m_DNS;
+	m_EchoSuppress = m_Cfg.m_EchoSuppress;
+
+	CString s;
+	s.Format(_T("%d"), m_Cfg.m_EcTail);
+	m_EcTail    = s;
 }
 
 
@@ -184,13 +216,16 @@ void CSettingsDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Text(pDX, IDC_STUN_SRV, m_StunSrv);
 	DDX_Text(pDX, IDC_USER, m_User);
 	DDX_Text(pDX, IDC_DNS, m_Dns);
+	DDX_Check(pDX, IDC_ECHO_SUPPRESS, m_EchoSuppress);
+	DDX_Text(pDX, IDC_EC_TAIL, m_EcTail);
 	//}}AFX_DATA_MAP
 }
 
 
 BEGIN_MESSAGE_MAP(CSettingsDlg, CDialog)
 	//{{AFX_MSG_MAP(CSettingsDlg)
-		// NOTE: the ClassWizard will add message map macros here
+	ON_BN_CLICKED(IDC_STUN, OnStun)
+	ON_BN_CLICKED(IDC_ECHO_SUPPRESS, OnEchoSuppress)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -203,15 +238,25 @@ int CSettingsDlg::DoModal()
 
     if (rc == IDOK) {
 	m_Cfg.m_Domain	    = m_Domain;
-	m_Cfg.m_UseIce	    = m_ICE;
+	m_Cfg.m_UseIce	    = m_ICE != 0;
 	m_Cfg.m_Password    = m_Passwd;
-	m_Cfg.m_UsePublish  = m_PUBLISH;
-	m_Cfg.m_UseSrtp	    = m_SRTP;
-	m_Cfg.m_UseStun	    = m_STUN;
+	m_Cfg.m_UsePublish  = m_PUBLISH != 0;
+	m_Cfg.m_UseSrtp	    = m_SRTP != 0;
+	m_Cfg.m_UseStun	    = m_STUN != 0;
 	m_Cfg.m_StunSrv	    = m_StunSrv;
 	m_Cfg.m_User	    = m_User;
 	m_Cfg.m_DNS	    = m_Dns;
+	m_Cfg.m_EchoSuppress= m_EchoSuppress != 0;
+	m_Cfg.m_EcTail	    = _ttoi(m_EcTail);
     }
 
     return rc;
+}
+
+void CSettingsDlg::OnStun() 
+{
+}
+
+void CSettingsDlg::OnEchoSuppress() 
+{
 }

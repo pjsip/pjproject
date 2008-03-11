@@ -33,7 +33,9 @@
 #define IDC_TITLE2                      1018
 #define IDC_DNS                         1019
 #define IDC_TITLE3                      1020
+#define IDC_ECHO_SUPPRESS               1020
 #define IDC_BUTTON1                     1021
+#define IDC_EC_TAIL                     1021
 #define IDC_BUTTON2                     1022
 #define IDS_CAP_ONLINE                  32772
 #define IDS_CAP_OFFLINE                 32774
