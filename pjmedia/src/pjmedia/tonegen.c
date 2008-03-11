@@ -39,29 +39,52 @@
 
 
 #if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
-    /*
-     * Default floating-point based tone generation using sine wave 
-     * generation from:
-     *   http://www.musicdsp.org/showone.php?id=10.
-     * This produces good quality tone in relatively faster time than
-     * the normal sin() generator.
-     * Speed = 40.6 cycles per sample.
-     */
 #   include <math.h>
-    struct gen
-    {
-	DATA a, s0, s1;
-    };
 
-#   define GEN_INIT(var,R,F,A)	 var.a = (DATA) (2.0 * sin(M_PI * F / R)); \
-				 var.s0 = A; \
-				 var.s1 = 0
-#   define GEN_SAMP(val,var)	 var.s0 = var.s0 - var.a * var.s1; \
-				 var.s1 = var.s1 + var.a * var.s0; \
-				 val = (short) var.s0
+#   if defined(PJMEDIA_USE_HIGH_QUALITY_TONEGEN) && \
+       PJMEDIA_USE_HIGH_QUALITY_TONEGEN!=0
 
+	/*
+	 * This is the good old tone generator using sin().
+	 * Speed = 222.5 cycles per sample.
+	 */
+	struct gen
+	{
+	    DATA add;
+	    DATA c;
+	    DATA vol;
+	};
 
-#elif !defined(PJ_HAS_FLOATING_POINT) || PJ_HAS_FLOATING_POINT==0
+#	define GEN_INIT(var,R,F,A) var.add = ((DATA)F)/R, var.c=0, var.vol=A
+#	define GEN_SAMP(val,var)   val = (short)(sin(var.c * 2 * M_PI) * \
+						 var.vol); \
+				   var.c += var.add
+
+#   else
+
+	/*
+	 * Default floating-point based tone generation using sine wave 
+	 * generation from:
+	 *   http://www.musicdsp.org/showone.php?id=10.
+	 * This produces good quality tone in relatively faster time than
+	 * the normal sin() generator.
+	 * Speed = 40.6 cycles per sample.
+	 */
+	struct gen
+	{
+	    DATA a, s0, s1;
+	};
+
+#	define GEN_INIT(var,R,F,A) var.a = (DATA) (2.0 * sin(M_PI * F / R)); \
+				   var.s0 = A; \
+				   var.s1 = 0
+#	define GEN_SAMP(val,var)   var.s0 = var.s0 - var.a * var.s1; \
+				   var.s1 = var.s1 + var.a * var.s0; \
+				   val = (short) var.s0
+#   endif
+
+#else
+
     /* 
      * Fallback algorithm when floating point is disabled.
      * This is a very fast fixed point tone generation using sine wave
@@ -98,26 +121,6 @@
 #   define GEN_INIT(var,R,F,A)	var.add = MAXI/R * F, var.c=0, var.vol=A
 #   define GEN_SAMP(val,var)	val = (short) VOL(var,SIN(var.c)>>16);\
 				var.c += var.add
-
-
-#else
-#   error "Should never get to this part"
-#   include <math.h>
-    /*
-     * Should never really reach here, but anyway it's provided for reference.
-     * This is the good old tone generator using sin().
-     * Speed = 222.5 cycles per sample.
-     */
-    struct gen
-    {
-	DATA add;
-	DATA c;
-	DATA vol;
-    };
-
-#   define GEN_INIT(var,R,F,A) var.add = ((DATA)F)/R, var.c=0, var.vol=A
-#   define GEN_SAMP(val,var)   val = (short)(sin(var.c * 2 * M_PI) * var.vol);\
-			       var.c += var.add
 
 #endif
 

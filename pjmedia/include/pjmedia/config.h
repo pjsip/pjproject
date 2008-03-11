@@ -485,6 +485,17 @@
 
 
 /**
+ * Enable high quality of tone generation, the better quality will cost
+ * more CPU load. This is only applied to floating point enabled machines.
+ *
+ * By default it is enabled.
+ */
+#ifndef PJMEDIA_USE_HIGH_QUALITY_TONEGEN
+#   define PJMEDIA_USE_HIGH_QUALITY_TONEGEN	    1
+#endif
+
+
+/**
  * Enable support for SRTP media transport. This will require linking
  * with libsrtp from the third_party directory.
  *
