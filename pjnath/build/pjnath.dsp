@@ -123,6 +123,14 @@ SOURCE=..\src\pjnath\stun_session.c
 
 SOURCE=..\src\pjnath\stun_transaction.c
 # End Source File
+# Begin Source File
+
+SOURCE=..\src\pjnath\turn_session.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pjnath\turn_udp.c
+# End Source File
 # End Group
 # Begin Group "Header Files"
 
@@ -170,6 +178,14 @@ SOURCE=..\include\pjnath\stun_session.h
 # Begin Source File
 
 SOURCE=..\include\pjnath\stun_transaction.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjnath\turn_session.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjnath\turn_udp.h
 # End Source File
 # Begin Source File
 
