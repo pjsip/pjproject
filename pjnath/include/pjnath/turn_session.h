@@ -48,15 +48,73 @@ typedef struct pj_turn_session pj_turn_session;
 #define PJ_TURN_CHANNEL_MAX	    0xFFFE  /* inclusive */
 #define PJ_TURN_NO_TIMEOUT	    ((long)0x7FFFFFFF)
 #define PJ_TURN_MAX_PKT_LEN	    3000
-#define PJ_TURN_PERM_TIMEOUT	    300
-#define PJ_TURN_CHANNEL_TIMEOUT	    600
+#define PJ_TURN_PERM_TIMEOUT	    300	/* Must be greater than REFRESH_SEC_BEFORE */
+#define PJ_TURN_CHANNEL_TIMEOUT	    600	/* Must be greater than REFRESH_SEC_BEFORE */
+#define PJ_TURN_REFRESH_SEC_BEFORE  60
+#define PJ_TURN_KEEP_ALIVE_SEC	    15
+#define PJ_TURN_PEER_HTABLE_SIZE    8
 
 
-/** Transport types */
-enum {
+/** TURN transport types */
+typedef enum pj_turn_tp_type
+{
     PJ_TURN_TP_UDP = 16,    /**< UDP.	*/
-    PJ_TURN_TP_TCP = 6	    /**< TCP.	*/
-};
+    PJ_TURN_TP_TCP = 6,	    /**< TCP.	*/
+    PJ_TURN_TP_TLS = 256    /**< TLS.	*/
+} pj_turn_tp_type;
+
+
+/** TURN session state */
+typedef enum pj_turn_state_t
+{
+    /**
+     * TURN session has just been created.
+     */
+    PJ_TURN_STATE_NULL,
+
+    /**
+     * TURN server has been configured and now is being resolved via
+     * DNS SRV resolution.
+     */
+    PJ_TURN_STATE_RESOLVING,
+
+    /**
+     * TURN server has been resolved. If there is pending allocation to
+     * be done, it will be invoked immediately.
+     */
+    PJ_TURN_STATE_RESOLVED,
+
+    /**
+     * TURN session has issued ALLOCATE request and is waiting for response
+     * from the TURN server.
+     */
+    PJ_TURN_STATE_ALLOCATING,
+
+    /**
+     * TURN session has successfully allocated relay resoruce and now is
+     * ready to be used.
+     */
+    PJ_TURN_STATE_READY,
+
+    /**
+     * TURN session has issued deallocate request and is waiting for a
+     * response from the TURN server.
+     */
+    PJ_TURN_STATE_DEALLOCATING,
+
+    /**
+     * Deallocate response has been received. Normally the session will
+     * proceed to DESTROYING state immediately.
+     */
+    PJ_TURN_STATE_DEALLOCATED,
+
+    /**
+     * TURN session is being destroyed.
+     */
+    PJ_TURN_STATE_DESTROYING
+
+} pj_turn_state_t;
+
 
 /* ChannelData header */
 typedef struct pj_turn_channel_data
@@ -73,7 +131,9 @@ typedef struct pj_turn_channel_data
 typedef struct pj_turn_session_cb
 {
     /**
-     * Callback to send outgoing packet. This callback is mandatory.
+     * This callback will be called by the TURN session whenever it
+     * needs to send outgoing message. Since the TURN session doesn't
+     * have a socket on its own, this callback must be implemented.
      */
     pj_status_t (*on_send_pkt)(pj_turn_session *sess,
 			       const pj_uint8_t *pkt,
@@ -82,14 +142,21 @@ typedef struct pj_turn_session_cb
 			       unsigned dst_addr_len);
 
     /**
-     * Notification when allocation completes, either successfully or
-     * with failure.
+     * Notification when peer address has been bound successfully to 
+     * a channel number.
+     *
+     * This callback is optional.
      */
-    void (*on_allocate_complete)(pj_turn_session *sess,
-				 pj_status_t status);
+    void (*on_channel_bound)(pj_turn_session *sess,
+			     const pj_sockaddr_t *peer_addr,
+			     unsigned addr_len,
+			     unsigned ch_num);
 
     /**
-     * Notification when data is received.
+     * Notification when incoming data has been received, either through
+     * Data indication or ChannelData message from the TURN server.
+     *
+     * This callback is optional.
      */
     void (*on_rx_data)(pj_turn_session *sess,
 		       const pj_uint8_t *pkt,
@@ -98,9 +165,12 @@ typedef struct pj_turn_session_cb
 		       unsigned addr_len);
 
     /**
-     * Notification when session has been destroyed.
+     * Notification when TURN session state has changed. Application should
+     * implement this callback at least to know that the TURN session is
+     * going to be destroyed.
      */
-    void (*on_destroyed)(pj_turn_session *sess);
+    void (*on_state)(pj_turn_session *sess, pj_turn_state_t old_state,
+		     pj_turn_state_t new_state);
 
 } pj_turn_session_cb;
 
@@ -112,6 +182,7 @@ typedef struct pj_turn_alloc_param
 {
     int	    bandwidth;
     int	    lifetime;
+    int	    ka_interval;
 } pj_turn_alloc_param;
 
 
@@ -120,15 +191,35 @@ typedef struct pj_turn_alloc_param
  */
 typedef struct pj_turn_session_info
 {
+    /**
+     * The relay address
+     */
+    pj_sockaddr	    relay_addr;
+
+    /**
+     * The TURN server address for informational purpose.
+     */
     pj_sockaddr	    server;
+
 } pj_turn_session_info;
+
+
+/**
+ * Get TURN state name.
+ */
+PJ_DECL(const char*) pj_turn_state_name(pj_turn_state_t state);
 
 
 /**
  * Create TURN client session.
  */
 PJ_DECL(pj_status_t) pj_turn_session_create(pj_stun_config *cfg,
+					    const char *name,
+					    int af,
+					    pj_turn_tp_type conn_type,
 					    const pj_turn_session_cb *cb,
+					    void *user_data,
+					    unsigned options,
 					    pj_turn_session **p_sess);
 
 
@@ -139,11 +230,21 @@ PJ_DECL(pj_status_t) pj_turn_session_destroy(pj_turn_session *sess);
 
 
 /**
+ * Re-assign user data.
+ */
+PJ_DECL(pj_status_t) pj_turn_session_set_user_data(pj_turn_session *sess,
+						   void *user_data);
+
+/**
+ * Retrieve user data.
+ */
+PJ_DECL(void*) pj_turn_session_get_user_data(pj_turn_session *sess);
+
+/**
  * Set the server or domain name of the server.
  */
 PJ_DECL(pj_status_t) pj_turn_session_set_server(pj_turn_session *sess,
 					        const pj_str_t *domain,
-					        const pj_str_t *res_name,
 						int default_port,
 						pj_dns_resolver *resolver);
 

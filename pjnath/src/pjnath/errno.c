@@ -35,6 +35,7 @@ static const struct
 } err_str[] = 
 {
     /* STUN related error codes */
+    PJ_BUILD_ERR( PJNATH_EINSTUNMSG,	    "Invalid STUN message"),
     PJ_BUILD_ERR( PJNATH_EINSTUNMSGLEN,	    "Invalid STUN message length"),
     PJ_BUILD_ERR( PJNATH_EINSTUNMSGTYPE,    "Invalid or unexpected STUN message type"),
     PJ_BUILD_ERR( PJNATH_ESTUNTIMEDOUT,	    "STUN transaction has timed out"),
@@ -61,6 +62,9 @@ static const struct
     PJ_BUILD_ERR( PJNATH_EICEMISSINGSDP,    "Missing ICE SDP attribute"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDSDP,	    "Invalid SDP \"candidate\" attribute"),
     PJ_BUILD_ERR( PJNATH_EICENOHOSTCAND,    "No host candidate associated with srflx"),
+
+    /* TURN related errors */
+    PJ_BUILD_ERR( PJNATH_ETURNINTP,	    "Invalid/unsupported transport"),
 
 };
 #endif	/* PJ_HAS_ERROR_STRING */

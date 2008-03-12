@@ -50,20 +50,24 @@
 
 /**
  * @hideinitializer
+ * Invalid STUN message
+ */
+#define PJNATH_EINSTUNMSG	    (PJNATH_ERRNO_START+1)  /* 370001 */
+/**
+ * @hideinitializer
  * Invalid STUN message length.
  */
-#define PJNATH_EINSTUNMSGLEN	    (PJNATH_ERRNO_START+1)  /* 370001 */
+#define PJNATH_EINSTUNMSGLEN	    (PJNATH_ERRNO_START+2)  /* 370002 */
 /**
  * @hideinitializer
  * Invalid or unexpected STUN message type
  */
-#define	PJNATH_EINSTUNMSGTYPE	    (PJNATH_ERRNO_START+2)  /* 370002 */
+#define	PJNATH_EINSTUNMSGTYPE	    (PJNATH_ERRNO_START+3)  /* 370003 */
 /**
  * @hideinitializer
  * STUN transaction has timed out
  */
-#define PJNATH_ESTUNTIMEDOUT	    (PJNATH_ERRNO_START+3)  /* 370003 */
-
+#define PJNATH_ESTUNTIMEDOUT	    (PJNATH_ERRNO_START+4)  /* 370004 */
 
 
 /**
@@ -171,6 +175,17 @@
  * host candidate.
  */
 #define PJNATH_EICENOHOSTCAND	    (PJNATH_ERRNO_START+92) /* 370092 */
+
+
+/************************************************************
+ * TURN ERROR CODES
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Invalid or unsupported TURN transport.
+ */
+#define PJNATH_ETURNINTP	    (PJNATH_ERRNO_START+120) /* 370120 */
+
 
 
 /**

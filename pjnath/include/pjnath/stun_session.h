@@ -112,7 +112,7 @@ typedef struct pj_stun_session_cb
      *			    Note that when the status is not success, the
      *			    response may contain non-NULL value if the 
      *			    response contains STUN ERROR-CODE attribute.
-     * @param request	    The original STUN request.
+     * @param tdata	    The original STUN request.
      * @param response	    The response message, on successful transaction,
      *			    or otherwise MAY BE NULL if status is not success.
      *			    Note that when the status is not success, this
@@ -222,6 +222,22 @@ PJ_DECL(pj_status_t) pj_stun_session_set_user_data(pj_stun_session *sess,
  * @return	    The user data associated with this STUN session.
  */
 PJ_DECL(void*) pj_stun_session_get_user_data(pj_stun_session *sess);
+
+/**
+ * Change the lock object used by the STUN session. By default, the STUN
+ * session uses a mutex to protect its internal data. If application already
+ * protects access to STUN session with higher layer lock, it may disable
+ * the mutex protection in the STUN session by changing the STUN session
+ * lock to a NULL mutex.
+ *
+ * @param sess	    The STUN session instance.
+ * @param lock	    New lock instance to be used by the STUN session.
+ * @param auto_del  Specify whether STUN session should destroy this
+ *		    lock instance when it's destroyed.
+ */
+PJ_DECL(pj_status_t) pj_stun_session_set_lock(pj_stun_session *sess,
+					      pj_lock_t *lock,
+					      pj_bool_t auto_del);
 
 /**
  * Set server name to be included in all response.

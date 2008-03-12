@@ -23,7 +23,8 @@ struct pj_stun_session
 {
     pj_stun_config	*cfg;
     pj_pool_t		*pool;
-    pj_mutex_t		*mutex;
+    pj_lock_t		*lock;
+    pj_bool_t		 delete_lock;
     pj_stun_session_cb	 cb;
     void		*user_data;
 
@@ -402,11 +403,12 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     pj_list_init(&sess->pending_request_list);
     pj_list_init(&sess->cached_response_list);
 
-    status = pj_mutex_create_recursive(pool, name, &sess->mutex);
+    status = pj_lock_create_recursive_mutex(pool, name, &sess->lock);
     if (status != PJ_SUCCESS) {
 	pj_pool_release(pool);
 	return status;
     }
+    sess->delete_lock = PJ_TRUE;
 
     *p_sess = sess;
 
@@ -417,7 +419,7 @@ PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
-    pj_mutex_lock(sess->mutex);
+    pj_lock_acquire(sess->lock);
     while (!pj_list_empty(&sess->pending_request_list)) {
 	pj_stun_tx_data *tdata = sess->pending_request_list.next;
 	destroy_tdata(tdata);
@@ -426,9 +428,12 @@ PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
 	pj_stun_tx_data *tdata = sess->cached_response_list.next;
 	destroy_tdata(tdata);
     }
-    pj_mutex_unlock(sess->mutex);
+    pj_lock_release(sess->lock);
 
-    pj_mutex_destroy(sess->mutex);
+    if (sess->delete_lock) {
+	pj_lock_destroy(sess->lock);
+    }
+
     pj_pool_release(sess->pool);
 
     return PJ_SUCCESS;
@@ -439,9 +444,9 @@ PJ_DEF(pj_status_t) pj_stun_session_set_user_data( pj_stun_session *sess,
 						   void *user_data)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
-    pj_mutex_lock(sess->mutex);
+    pj_lock_acquire(sess->lock);
     sess->user_data = user_data;
-    pj_mutex_unlock(sess->mutex);
+    pj_lock_release(sess->lock);
     return PJ_SUCCESS;
 }
 
@@ -449,6 +454,27 @@ PJ_DEF(void*) pj_stun_session_get_user_data(pj_stun_session *sess)
 {
     PJ_ASSERT_RETURN(sess, NULL);
     return sess->user_data;
+}
+
+PJ_DEF(pj_status_t) pj_stun_session_set_lock( pj_stun_session *sess,
+					      pj_lock_t *lock,
+					      pj_bool_t auto_del)
+{
+    pj_lock_t *old_lock = sess->lock;
+    pj_bool_t old_del;
+
+    PJ_ASSERT_RETURN(sess && lock, PJ_EINVAL);
+
+    pj_lock_acquire(old_lock);
+    sess->lock = lock;
+    old_del = sess->delete_lock;
+    sess->delete_lock = auto_del;
+    pj_lock_release(old_lock);
+
+    if (old_lock)
+	pj_lock_destroy(old_lock);
+
+    return PJ_SUCCESS;
 }
 
 PJ_DEF(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
@@ -602,13 +628,13 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     tdata->pkt = pj_pool_alloc(tdata->pool, tdata->max_len);
 
     /* Start locking the session now */
-    pj_mutex_lock(sess->mutex);
+    pj_lock_acquire(sess->lock);
 
     /* Apply options */
     status = apply_msg_options(sess, tdata->pool, tdata->msg);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
-	pj_mutex_unlock(sess->mutex);
+	pj_lock_release(sess->lock);
 	LOG_ERR_(sess, "Error applying options", status);
 	return status;
     }
@@ -616,7 +642,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     status = get_key(sess, tdata->pool, tdata->msg, &tdata->auth_key);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
-	pj_mutex_unlock(sess->mutex);
+	pj_lock_release(sess->lock);
 	LOG_ERR_(sess, "Error getting creadential's key", status);
 	return status;
     }
@@ -628,7 +654,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 				&tdata->pkt_size);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
-	pj_mutex_unlock(sess->mutex);
+	pj_lock_release(sess->lock);
 	LOG_ERR_(sess, "STUN encode() error", status);
 	return status;
     }
@@ -656,7 +682,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 					     tdata->pkt, tdata->pkt_size);
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	    pj_stun_msg_destroy_tdata(sess, tdata);
-	    pj_mutex_unlock(sess->mutex);
+	    pj_lock_release(sess->lock);
 	    LOG_ERR_(sess, "Error sending STUN request", status);
 	    return status;
 	}
@@ -684,7 +710,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 					    &timeout);
 	    if (status != PJ_SUCCESS) {
 		pj_stun_msg_destroy_tdata(sess, tdata);
-		pj_mutex_unlock(sess->mutex);
+		pj_lock_release(sess->lock);
 		LOG_ERR_(sess, "Error scheduling response timer", status);
 		return status;
 	    }
@@ -707,7 +733,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     }
 
 
-    pj_mutex_unlock(sess->mutex);
+    pj_lock_release(sess->lock);
     return status;
 }
 
@@ -749,7 +775,7 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
     PJ_ASSERT_RETURN(!notify || notify_status!=PJ_SUCCESS, PJ_EINVAL);
     PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(tdata->msg->hdr.type), PJ_EINVAL);
 
-    pj_mutex_lock(sess->mutex);
+    pj_lock_acquire(sess->lock);
 
     if (notify) {
 	(sess->cb.on_request_complete)(sess, notify_status, tdata, NULL,
@@ -759,7 +785,7 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
     /* Just destroy tdata. This will destroy the transaction as well */
     pj_stun_msg_destroy_tdata(sess, tdata);
 
-    pj_mutex_unlock(sess->mutex);
+    pj_lock_release(sess->lock);
     return PJ_SUCCESS;
 }
 
@@ -774,11 +800,11 @@ PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
     PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(tdata->msg->hdr.type), PJ_EINVAL);
 
-    pj_mutex_lock(sess->mutex);
+    pj_lock_acquire(sess->lock);
 
     status = pj_stun_client_tsx_retransmit(tdata->client_tsx);
 
-    pj_mutex_unlock(sess->mutex);
+    pj_lock_release(sess->lock);
 
     return status;
 }
@@ -1053,7 +1079,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 	      pj_ntohs(((pj_sockaddr_in*)src_addr)->sin_port),
 	      pj_stun_msg_dump(msg, dump, PJ_STUN_MAX_PKT_LEN, NULL)));
 
-    pj_mutex_lock(sess->mutex);
+    pj_lock_acquire(sess->lock);
 
     /* For requests, check if we have cached response */
     status = check_cached_response(sess, tmp_pool, msg, 
@@ -1088,7 +1114,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     }
 
 on_return:
-    pj_mutex_unlock(sess->mutex);
+    pj_lock_release(sess->lock);
 
     pj_pool_release(tmp_pool);
     return status;
