@@ -15,6 +15,9 @@ AC_PJMEDIA_SND=@ac_pjmedia_snd@
 # For Unix, specify if ALSA should be supported
 AC_PA_USE_ALSA=@ac_pa_use_alsa@
 
+# For Unix, specify if OSS should be supported
+AC_PA_USE_OSS=@ac_pa_use_oss@
+
 # Additional PortAudio CFLAGS are in @ac_pa_cflags@
 
 
@@ -31,11 +34,14 @@ export CFLAGS += -DPA_USE_ALSA=1
 export PORTAUDIO_OBJS += pa_linux_alsa.o
 endif
 
-export CFLAGS += -DPA_USE_OSS=1
 export CFLAGS += @ac_pa_cflags@
-export PORTAUDIO_OBJS += pa_unix_oss.o
 endif
 
+# Include OSS?
+ifeq ($(AC_PA_USE_OSS),1)
+export CFLAGS += -DPA_USE_OSS=1
+export PORTAUDIO_OBJS += pa_unix_oss.o
+endif
 
 #
 # PortAudio on MacOS X (using current PortAudio)
