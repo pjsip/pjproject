@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\portaudio\src\common,..\..\portaudio\include"
+				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\portaudio\src\common,..\..\portaudio\include"
+				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -504,6 +504,10 @@
 								PreprocessorDefinitions=""
 							/>
 						</FileConfiguration>
+					</File>
+					<File
+						RelativePath="..\..\portaudio\src\os\win\pa_win_waveformat.c"
+						>
 					</File>
 					<File
 						RelativePath="..\..\portaudio\src\os\win\pa_x86_plain_converters.c"

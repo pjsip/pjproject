@@ -881,11 +881,9 @@ NODEP_CPP_PA_AL=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_AL=\
+	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_allocation.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
-	
-NODEP_CPP_PA_AL=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -1154,13 +1152,11 @@ NODEP_CPP_PA_CO=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_CO=\
+	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_converters.h"\
 	"..\..\portaudio\src\common\pa_dither.h"\
 	"..\..\portaudio\src\common\pa_endianness.h"\
 	"..\..\portaudio\src\common\pa_types.h"\
-	
-NODEP_CPP_PA_CO=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -1411,11 +1407,9 @@ NODEP_CPP_PA_CP=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_CP=\
+	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_cpuload.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
-	
-NODEP_CPP_PA_CP=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -2042,15 +2036,14 @@ NODEP_CPP_PA_FR=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_FR=\
+	"..\..\portaudio\include\portaudio.h"\
+	"..\..\portaudio\src\common\pa_debugprint.h"\
 	"..\..\portaudio\src\common\pa_endianness.h"\
 	"..\..\portaudio\src\common\pa_hostapi.h"\
 	"..\..\portaudio\src\common\pa_stream.h"\
 	"..\..\portaudio\src\common\pa_trace.h"\
 	"..\..\portaudio\src\common\pa_types.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
-	
-NODEP_CPP_PA_FR=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -2347,13 +2340,11 @@ NODEP_CPP_PA_PR=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_PR=\
+	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_converters.h"\
 	"..\..\portaudio\src\common\pa_dither.h"\
 	"..\..\portaudio\src\common\pa_process.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
-	
-NODEP_CPP_PA_PR=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -2700,6 +2691,7 @@ NODEP_CPP_PA_SK=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_SK=\
+	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_allocation.h"\
 	"..\..\portaudio\src\common\pa_converters.h"\
 	"..\..\portaudio\src\common\pa_cpuload.h"\
@@ -2708,9 +2700,6 @@ DEP_CPP_PA_SK=\
 	"..\..\portaudio\src\common\pa_process.h"\
 	"..\..\portaudio\src\common\pa_stream.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
-	
-NODEP_CPP_PA_SK=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -2973,10 +2962,8 @@ NODEP_CPP_PA_ST=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_ST=\
+	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_stream.h"\
-	
-NODEP_CPP_PA_ST=\
-	"..\..\portaudio\src\common\portaudio.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -3313,17 +3300,22 @@ DEP_CPP_PA_WI=\
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_PA_WI=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
 	"..\..\portaudio\include\pa_win_wmme.h"\
 	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_allocation.h"\
 	"..\..\portaudio\src\common\pa_converters.h"\
 	"..\..\portaudio\src\common\pa_cpuload.h"\
+	"..\..\portaudio\src\common\pa_debugprint.h"\
 	"..\..\portaudio\src\common\pa_dither.h"\
 	"..\..\portaudio\src\common\pa_hostapi.h"\
 	"..\..\portaudio\src\common\pa_process.h"\
 	"..\..\portaudio\src\common\pa_stream.h"\
 	"..\..\portaudio\src\common\pa_trace.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
+	
+NODEP_CPP_PA_WI=\
+	"..\..\portaudio\src\hostapi\wmme\pa_win_wdmks_utils.h"\
 	
 
 !ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
@@ -3794,6 +3786,181 @@ DEP_CPP_PA_WIN_=\
 DEP_CPP_PA_WIN_=\
 	"..\..\portaudio\include\portaudio.h"\
 	"..\..\portaudio\src\common\pa_util.h"\
+	
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\portaudio\src\os\win\pa_win_waveformat.c
+
+!IF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSII_FP) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSII_FP) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSII) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSII) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE SH4) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE SH4) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE SH3) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE SH3) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSIV) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSIV) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE emulator) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE emulator) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSIV_FP) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPSIV_FP) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPS16) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE MIPS16) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE x86) Release"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
+	
+
+!ELSEIF  "$(CFG)" == "libportaudio - Win32 (WCE x86) Debug"
+
+DEP_CPP_PA_WIN_W=\
+	"..\..\portaudio\include\pa_win_waveformat.h"\
+	"..\..\portaudio\include\portaudio.h"\
 	
 
 !ENDIF 

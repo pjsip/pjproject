@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\..\portaudio\src\common" /I "..\..\portaudio\include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "PA_ENABLE_DEBUG_OUTPUT" /D "_CRT_SECURE_NO_DEPRECATE" /D "PA_NO_ASIO" /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /I "..\..\portaudio\src\common" /I "..\..\portaudio\include" /I "..\..\portaudio\src\os\win" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "PA_ENABLE_DEBUG_OUTPUT" /D "_CRT_SECURE_NO_DEPRECATE" /D "PA_NO_ASIO" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -66,7 +66,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\portaudio\src\common" /I "..\..\portaudio\include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "PA_ENABLE_DEBUG_OUTPUT" /D "_CRT_SECURE_NO_DEPRECATE" /D "PA_NO_ASIO" /YX /FD /GZ /c
+# ADD CPP /nologo /MTd /W3 /Gm /GX /ZI /Od /I "..\..\portaudio\src\common" /I "..\..\portaudio\include" /I "..\..\portaudio\src\os\win" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D "PA_ENABLE_DEBUG_OUTPUT" /D "_CRT_SECURE_NO_DEPRECATE" /D "PA_NO_ASIO" /YX /FD /GZ /c
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
 BSC32=bscmake.exe
@@ -166,6 +166,10 @@ SOURCE=..\..\portaudio\src\os\win\pa_win_hostapis.c
 # Begin Source File
 
 SOURCE=..\..\portaudio\src\os\win\pa_win_util.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\portaudio\src\os\win\pa_win_waveformat.c
 # End Source File
 # Begin Source File
 

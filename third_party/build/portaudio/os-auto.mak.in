@@ -47,7 +47,8 @@ endif
 # PortAudio on MacOS X (using current PortAudio)
 #
 ifeq ($(AC_PJMEDIA_SND),pa_darwinos)
-export PORTAUDIO_OBJS +=pa_mac_hostapis.o \
+#export PORTAUDIO_OBJS +=pa_mac_hostapis.o 
+export PORTAUDIO_OBJS += \
 			pa_unix_util.o \
 			pa_mac_core.o \
 			pa_mac_core_blocking.o \
