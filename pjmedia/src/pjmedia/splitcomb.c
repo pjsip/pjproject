@@ -655,7 +655,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	store_mono_frame(sc->get_buf, 
 			 (pj_int16_t*)frame->buf, ch,
 			 this_port->info.channel_count,
-			 this_port->info.samples_per_frame);
+			 this_port->info.samples_per_frame /
+			 this_port->info.channel_count);
 
 	has_frame = PJ_TRUE;
     }

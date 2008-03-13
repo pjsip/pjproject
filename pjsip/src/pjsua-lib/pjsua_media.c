@@ -160,11 +160,12 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     /* Save additional conference bridge parameters for future
      * reference.
      */
-    pjsua_var.mconf_cfg.samples_per_frame = pjsua_var.media_cfg.clock_rate * 
-					    pjsua_var.media_cfg.audio_frame_ptime / 
-					    1000;
     pjsua_var.mconf_cfg.channel_count = 1;
     pjsua_var.mconf_cfg.bits_per_sample = 16;
+    pjsua_var.mconf_cfg.samples_per_frame = pjsua_var.media_cfg.clock_rate * 
+					    pjsua_var.mconf_cfg.channel_count *
+					    pjsua_var.media_cfg.audio_frame_ptime / 
+					    1000;
 
     /* Init options for conference bridge. */
     opt = PJMEDIA_CONF_NO_DEVICE;
