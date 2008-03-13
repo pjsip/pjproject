@@ -689,7 +689,9 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     count = pj_sock_select(ioqueue->nfds+1, &rfdset, &wfdset, &xfdset, 
 			   timeout);
     
-    if (count <= 0)
+    if (count == 0)
+	return 0;
+    else if (count < 0)
 	return -pj_get_netos_error();
     else if (count > PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL)
         count = PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL;
