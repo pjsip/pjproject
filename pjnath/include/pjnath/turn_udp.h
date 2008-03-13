@@ -95,6 +95,13 @@ PJ_DECL(pj_status_t) pj_turn_udp_set_user_data(pj_turn_udp *udp_rel,
  */
 PJ_DECL(void*) pj_turn_udp_get_user_data(pj_turn_udp *udp_rel);
 
+
+/**
+ * Get info.
+ */
+PJ_DECL(pj_status_t) pj_turn_udp_get_info(pj_turn_udp *udp_rel,
+					  pj_turn_session_info *info);
+
 /**
  * Initialize.
  */

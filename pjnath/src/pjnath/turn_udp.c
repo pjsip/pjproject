@@ -166,6 +166,23 @@ PJ_DEF(void*) pj_turn_udp_get_user_data(pj_turn_udp *udp_rel)
     return udp_rel->user_data;
 }
 
+/**
+ * Get info.
+ */
+PJ_DEF(pj_status_t) pj_turn_udp_get_info(pj_turn_udp *udp_rel,
+					 pj_turn_session_info *info)
+{
+    PJ_ASSERT_RETURN(udp_rel && info, PJ_EINVAL);
+
+    if (udp_rel->sess) {
+	return pj_turn_session_get_info(udp_rel->sess, info);
+    } else {
+	pj_bzero(info, sizeof(*info));
+	info->state = PJ_TURN_STATE_NULL;
+	return PJ_SUCCESS;
+    }
+}
+
 /*
  * Initialize.
  */
@@ -178,14 +195,19 @@ PJ_DEF(pj_status_t) pj_turn_udp_init( pj_turn_udp *udp_rel,
 {
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(udp_rel && domain, PJ_EINVAL);
+    PJ_ASSERT_RETURN(udp_rel->sess, PJ_EINVALIDOP);
+
     status = pj_turn_session_set_server(udp_rel->sess, domain, default_port,
 					resolver);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pj_turn_session_set_cred(udp_rel->sess, cred);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (cred) {
+	status = pj_turn_session_set_cred(udp_rel->sess, cred);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     status = pj_turn_session_alloc(udp_rel->sess, param);
     if (status != PJ_SUCCESS)
@@ -203,6 +225,11 @@ PJ_DEF(pj_status_t) pj_turn_udp_sendto( pj_turn_udp *udp_rel,
 					const pj_sockaddr_t *addr,
 					unsigned addr_len)
 {
+    PJ_ASSERT_RETURN(udp_rel && addr && addr_len, PJ_EINVAL);
+
+    if (udp_rel->sess == NULL)
+	return PJ_EINVALIDOP;
+
     return pj_turn_session_sendto(udp_rel->sess, pkt, pkt_len, 
 				  addr, addr_len);
 }
@@ -214,6 +241,9 @@ PJ_DEF(pj_status_t) pj_turn_udp_bind_channel( pj_turn_udp *udp_rel,
 					      const pj_sockaddr_t *peer,
 					      unsigned addr_len)
 {
+    PJ_ASSERT_RETURN(udp_rel && peer && addr_len, PJ_EINVAL);
+    PJ_ASSERT_RETURN(udp_rel->sess != NULL, PJ_EINVALIDOP);
+
     return pj_turn_session_bind_channel(udp_rel->sess, peer, addr_len);
 }
 
@@ -232,7 +262,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 
     do {
 	/* Report incoming packet to TURN session */
-	if (bytes_read > 0) {
+	if (bytes_read > 0 && udp_rel->sess) {
 	    pj_turn_session_on_rx_pkt(udp_rel->sess, udp_rel->pkt, 
 				      bytes_read, PJ_TRUE);
 	}
@@ -316,6 +346,10 @@ static void turn_on_state(pj_turn_session *sess,
 			   pj_turn_session_get_user_data(sess);
     if (udp_rel->cb.on_state) {
 	(*udp_rel->cb.on_state)(udp_rel, old_state, new_state);
+    }
+
+    if (new_state > PJ_TURN_STATE_READY) {
+	udp_rel->sess = NULL;
     }
 }
 

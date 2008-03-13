@@ -2,9 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="pjstun_client"
+	Name="pjturn_client"
 	ProjectGUID="{D13A6424-23A4-4990-998D-F80C63704580}"
-	RootNamespace="pjstun_client"
+	RootNamespace="pjturn_client"
 	>
 	<Platforms>
 		<Platform
@@ -16,8 +16,8 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="./output/pjstun-client-i386-win32-vc8-release"
-			IntermediateDirectory="./output/pjstun-client-i386-win32-vc8-release"
+			OutputDirectory="./output/pjturn-client-i386-win32-vc8-release"
+			IntermediateDirectory="./output/pjturn-client-i386-win32-vc8-release"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -38,7 +38,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjstun-client-i386-win32-vc8-release/pjstun_client.tlb"
+				TypeLibraryName="./output/pjturn-client-i386-win32-vc8-release/pjturn_client.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -50,10 +50,10 @@
 				StringPooling="true"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/pjstun-client-i386-win32-vc8-release/pjstun_client.pch"
-				AssemblerListingLocation="./output/pjstun-client-i386-win32-vc8-release/"
-				ObjectFile="./output/pjstun-client-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/pjstun-client-i386-win32-vc8-release/"
+				PrecompiledHeaderFile="./output/pjturn-client-i386-win32-vc8-release/pjturn_client.pch"
+				AssemblerListingLocation="./output/pjturn-client-i386-win32-vc8-release/"
+				ObjectFile="./output/pjturn-client-i386-win32-vc8-release/"
+				ProgramDataBaseFileName="./output/pjturn-client-i386-win32-vc8-release/"
 				BrowseInformation="1"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
@@ -72,10 +72,10 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjstun-client-i386-win32-vc8-release.exe"
+				OutputFile="../bin/pjturn-client-i386-win32-vc8-release.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
-				ProgramDatabaseFile="./output/pjstun-client-i386-win32-vc8-release/pjstun-client-i386-win32-vc8-release.pdb"
+				ProgramDatabaseFile="./output/pjturn-client-i386-win32-vc8-release/pjturn-client-i386-win32-vc8-release.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -91,7 +91,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/pjstun-client-i386-win32-vc8-release/pjstun_client.bsc"
+				OutputFile="./output/pjturn-client-i386-win32-vc8-release/pjturn_client.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -108,8 +108,8 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="./output/pjstun-client-i386-win32-vc8-debug"
-			IntermediateDirectory="./output/pjstun-client-i386-win32-vc8-debug"
+			OutputDirectory="./output/pjturn-client-i386-win32-vc8-debug"
+			IntermediateDirectory="./output/pjturn-client-i386-win32-vc8-debug"
 			ConfigurationType="1"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -130,7 +130,7 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjstun-client-i386-win32-vc8-debug/pjstun_client.tlb"
+				TypeLibraryName="./output/pjturn-client-i386-win32-vc8-debug/pjturn_client.tlb"
 				HeaderFileName=""
 			/>
 			<Tool
@@ -141,10 +141,10 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/pjstun-client-i386-win32-vc8-debug/pjstun_client.pch"
-				AssemblerListingLocation="./output/pjstun-client-i386-win32-vc8-debug/"
-				ObjectFile="./output/pjstun-client-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/pjstun-client-i386-win32-vc8-debug/"
+				PrecompiledHeaderFile="./output/pjturn-client-i386-win32-vc8-debug/pjturn_client.pch"
+				AssemblerListingLocation="./output/pjturn-client-i386-win32-vc8-debug/"
+				ObjectFile="./output/pjturn-client-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName="./output/pjturn-client-i386-win32-vc8-debug/"
 				BrowseInformation="1"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
@@ -164,11 +164,11 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjstun-client-i386-win32-vc8-debug.exe"
+				OutputFile="../bin/pjturn-client-i386-win32-vc8-debug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/pjstun-client-i386-win32-vc8-debug/pjstun-client-i386-win32-vc8-debug.pdb"
+				ProgramDatabaseFile="./output/pjturn-client-i386-win32-vc8-debug/pjturn-client-i386-win32-vc8-debug.pdb"
 				SubSystem="1"
 				TargetMachine="1"
 			/>
@@ -184,7 +184,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile="./output/pjstun-client-i386-win32-vc8-debug/pjstun_client.bsc"
+				OutputFile="./output/pjturn-client-i386-win32-vc8-debug/pjturn_client.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -208,7 +208,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\src\pjstun-client\client_main.c"
+				RelativePath="..\src\pjturn-client\client_main.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"

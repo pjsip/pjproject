@@ -192,14 +192,29 @@ typedef struct pj_turn_alloc_param
 typedef struct pj_turn_session_info
 {
     /**
+     * Session state.
+     */
+    pj_turn_state_t state;
+
+    /**
+     * Type of connection to the TURN server.
+     */
+    pj_turn_tp_type tp_type;
+
+    /**
      * The relay address
      */
     pj_sockaddr	    relay_addr;
 
     /**
-     * The TURN server address for informational purpose.
+     * The selected TURN server address.
      */
     pj_sockaddr	    server;
+
+    /**
+     * Current seconds before allocation expires.
+     */
+    int		    lifetime;
 
 } pj_turn_session_info;
 
@@ -228,6 +243,12 @@ PJ_DECL(pj_status_t) pj_turn_session_create(pj_stun_config *cfg,
  */
 PJ_DECL(pj_status_t) pj_turn_session_destroy(pj_turn_session *sess);
 
+
+/**
+ * Get TURN session info.
+ */
+PJ_DECL(pj_status_t) pj_turn_session_get_info(pj_turn_session *sess,
+					      pj_turn_session_info *info);
 
 /**
  * Re-assign user data.

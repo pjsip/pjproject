@@ -60,7 +60,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjstun_client"=.\pjstun_client.dsp - Package Owner=<4>
+Project: "pjstun_srv_test"=.\pjstun_srv_test.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -81,7 +81,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "pjstun_srv_test"=.\pjstun_srv_test.dsp - Package Owner=<4>
+Project: "pjturn_client"=.\pjturn_client.dsp - Package Owner=<4>
 
 Package=<5>
 {{{

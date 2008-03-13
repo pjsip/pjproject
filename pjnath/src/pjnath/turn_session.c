@@ -95,6 +95,8 @@ struct pj_turn_session
     pj_bool_t		 pending_alloc;
     pj_turn_alloc_param	 alloc_param;
 
+    pj_sockaddr		 relay_addr;
+
     pj_hash_table_t	*peer_table;
 
     /* tx_pkt must be 16bit aligned */
@@ -362,6 +364,33 @@ PJ_DEF(pj_status_t) pj_turn_session_destroy(pj_turn_session *sess)
     sess_shutdown(sess, PJ_FALSE, PJ_SUCCESS);
 
     pj_lock_release(sess->lock);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get TURN session info.
+ */
+PJ_DEF(pj_status_t) pj_turn_session_get_info( pj_turn_session *sess,
+					      pj_turn_session_info *info)
+{
+    pj_time_val now;
+
+    PJ_ASSERT_RETURN(sess && info, PJ_EINVAL);
+
+    pj_gettimeofday(&now);
+
+    info->state = sess->state;
+    info->tp_type = sess->tp_type;
+    info->lifetime = sess->expiry.sec - now.sec;
+
+    if (sess->srv_addr)
+	pj_memcpy(&info->server, sess->srv_addr, sizeof(info->server));
+    else
+	pj_bzero(&info->server, sizeof(info->server));
+
+    pj_memcpy(&info->relay_addr, &sess->relay_addr, sizeof(sess->relay_addr));
 
     return PJ_SUCCESS;
 }
@@ -990,6 +1019,8 @@ static void on_allocate_success(pj_turn_session *sess,
 	return;
     }
     
+    /* Save relayed address */
+    pj_memcpy(&sess->relay_addr, &raddr_attr->sockaddr, sizeof(pj_sockaddr));
 
     /* Success */
 

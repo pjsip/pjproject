@@ -319,6 +319,14 @@
 					/>
 				</FileConfiguration>
 			</File>
+			<File
+				RelativePath="..\src\pjnath\turn_session.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjnath\turn_udp.c"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -373,7 +381,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjnath\turn_client.h"
+				RelativePath="..\include\pjnath\turn_session.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjnath\turn_udp.h"
 				>
 			</File>
 			<File
