@@ -655,7 +655,7 @@ static int fingerprint_test_vector()
 		cred.data.static_cred.data = pj_str(v->password);
 
 		status = pj_stun_authenticate_request(buf, len, msg, 
-						      &cred, pool, NULL);
+						      &cred, pool, NULL, NULL);
 		if (status != PJ_SUCCESS) {
 		    char errmsg[PJ_ERR_MSG_SIZE];
 		    pj_strerror(status, errmsg, sizeof(errmsg));

@@ -19,6 +19,7 @@
 #include <pjnath/turn_udp.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/ioqueue.h>
 
@@ -107,6 +108,15 @@ PJ_DEF(pj_status_t) pj_turn_udp_create( pj_stun_config *cfg,
 
     /* Init socket */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &udp_rel->sock);
+    if (status != PJ_SUCCESS) {
+	pj_turn_udp_destroy(udp_rel);
+	return status;
+    }
+
+    /* Bind to any */
+    pj_sockaddr_init(af, &udp_rel->src_addr, NULL, 0);
+    status = pj_sock_bind(udp_rel->sock, &udp_rel->src_addr, 
+			  pj_sockaddr_get_len(&udp_rel->src_addr));
     if (status != PJ_SUCCESS) {
 	pj_turn_udp_destroy(udp_rel);
 	return status;
@@ -255,7 +265,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ioqueue_op_key_t *op_key, 
                              pj_ssize_t bytes_read)
 {
+    enum { MAX_RETRY = 10 };
     pj_turn_udp *udp_rel;
+    int retry = 0;
     pj_status_t status;
 
     udp_rel = (pj_turn_udp*) pj_ioqueue_get_user_data(key);
@@ -270,16 +282,23 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	/* Read next packet */
 	bytes_read = sizeof(udp_rel->pkt);
 	udp_rel->src_addr_len = sizeof(udp_rel->src_addr);
-
 	status = pj_ioqueue_recvfrom(udp_rel->key, op_key,
 				     udp_rel->pkt, &bytes_read, 0,
 				     &udp_rel->src_addr, 
 				     &udp_rel->src_addr_len);
 
-	if (status != PJ_EPENDING && status != PJ_SUCCESS)
-	    bytes_read = -status;
+	if (status != PJ_EPENDING && status != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
 
-    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    PJ_LOG(4,(udp_rel->pool->obj_name,
+		      "ioqueue recvfrom error: %s", errmsg));
+
+	    bytes_read = -status;
+	}
+
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
+	     ++retry < MAX_RETRY);
 
 }
 

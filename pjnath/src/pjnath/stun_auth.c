@@ -121,6 +121,7 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
 					         const pj_stun_msg *msg,
 					         pj_stun_auth_cred *cred,
 					         pj_pool_t *pool,
+						 pj_str_t *auth_key,
 					         pj_stun_msg **p_response)
 {
     pj_str_t realm, nonce, password;
@@ -331,6 +332,10 @@ PJ_DEF(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
 	    if (p_response) {
 		create_challenge(pool, msg, PJ_STUN_SC_STALE_NONCE, 
 				 NULL, &realm, &nonce, p_response);
+	    }
+	    if (auth_key) {
+		pj_stun_create_key(pool, auth_key, &realm, 
+				   &auser->value, &password);
 	    }
 	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_STALE_NONCE);
 	}

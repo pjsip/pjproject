@@ -859,16 +859,17 @@ static pj_status_t authenticate_req(pj_stun_session *sess,
 				    unsigned src_addr_len)
 {
     pj_stun_msg *response;
+    pj_str_t auth_key;
     pj_status_t status;
 
     if (PJ_STUN_IS_ERROR_RESPONSE(msg->hdr.type) || sess->cred == NULL)
 	return PJ_SUCCESS;
 
     status = pj_stun_authenticate_request(pkt, pkt_len, msg, sess->cred,
-				          tmp_pool, &response);
+				          tmp_pool, &auth_key, &response);
     if (status != PJ_SUCCESS && response != NULL) {
 	PJ_LOG(5,(SNAME(sess), "Message authentication failed"));
-	send_response(sess, tmp_pool, response, NULL, PJ_FALSE, 
+	send_response(sess, tmp_pool, response, &auth_key, PJ_FALSE, 
 		      src_addr, src_addr_len);
     }
 

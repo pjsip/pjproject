@@ -58,6 +58,29 @@ PJ_DEF(void) pj_turn_auth_dinit(void)
 }
 
 
+PJ_DEF(pj_status_t) pj_turn_get_cred( const pj_stun_msg *msg,
+				      void *user_data,
+				      pj_pool_t *pool,
+				      pj_str_t *realm,
+				      pj_str_t *username,
+				      pj_str_t *nonce,
+				      int *data_type,
+				      pj_str_t *data)
+{
+    PJ_UNUSED_ARG(msg);
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(user_data);
+
+    *realm = pj_str(g_realm);
+    *username = pj_str(g_cred[0].username);
+    *nonce = pj_str(THE_NONCE);
+    *data_type = 0;
+    *data = pj_str(g_cred[0].passwd);
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * This function is called by pj_stun_verify_credential() when
  * server needs to challenge the request with 401 response.

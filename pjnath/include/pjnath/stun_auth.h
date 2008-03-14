@@ -277,6 +277,9 @@ PJ_DECL(void) pj_stun_auth_cred_dup(pj_pool_t *pool,
  *			the message.
  * @param pool		If response is to be created, then memory will
  *			be allocated from this pool.
+ * @param auth_key	Optional pointer to receive authentication key to
+ *			calculate MESSAGE-INTEGRITY of the response, if
+ *			the response needs to be authenticated.
  * @param p_response	Optional pointer to receive the response message
  *			then the credential in the request fails to
  *			authenticate.
@@ -291,6 +294,7 @@ PJ_DECL(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
 					          const pj_stun_msg *msg,
 					          pj_stun_auth_cred *cred,
 					          pj_pool_t *pool,
+						  pj_str_t *auth_key,
 					          pj_stun_msg **p_response);
 
 

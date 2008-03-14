@@ -132,7 +132,7 @@ static int init()
 
 	len = sizeof(addr);
 	CHECK( pj_sock_getsockname(g.peer[i].sock, &addr, &len) );
-	port = pj_sockaddr_get_port(&g.peer[i].addr);
+	port = pj_sockaddr_get_port(&addr);
 
 	CHECK( pj_gethostip(pj_AF_INET(), &g.peer[i].addr) );
 	pj_sockaddr_set_port(&g.peer[0].addr, port);
@@ -357,7 +357,10 @@ static void menu(void)
     if (g.udp_rel) {
 	pj_turn_udp_get_info(g.udp_rel, &info);
 	strcpy(client_state, pj_turn_state_name(info.state));
-	pj_sockaddr_print(&info.relay_addr, relay_addr, sizeof(relay_addr), 3);
+	if (info.state >= PJ_TURN_STATE_READY)
+	    pj_sockaddr_print(&info.relay_addr, relay_addr, sizeof(relay_addr), 3);
+	else
+	    strcpy(relay_addr, "0.0.0.0:0");
     } else {
 	strcpy(client_state, "NULL");
 	strcpy(relay_addr, "0.0.0.0:0");
@@ -371,15 +374,15 @@ static void menu(void)
     puts("+====================================================================+");
     puts("|             CLIENT                |             PEER-0             |");
     puts("|                                   |                                |");
-    printf("| State     : %12s          | Address: %21s |\n",
+    printf("| State     : %-12s          | Address: %-21s |\n",
 	   client_state, peer0_addr);
-    printf("| Relay addr: %21s |                                |\n",
+    printf("| Relay addr: %-21s |                                |\n",
 	   relay_addr);
     puts("|                                   | 0  Send data to relay address  |");
     puts("| A      Allocate relay             +--------------------------------+	");
     puts("| S[01]  Send data to peer 0/1      |             PEER-1             |");
     puts("| B[01]  BindChannel to peer 0/1    |                                |");
-    printf("| X      Delete allocation          | Address: %21s |\n",
+    printf("| X      Delete allocation          | Address: %-21s |\n",
 	  peer1_addr);
     puts("+-----------------------------------+                                |");
     puts("| q  Quit                           | 1  Send data to relay adderss  |");

@@ -17,6 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "turn.h"
+#include "auth.h"
+
+#define REALM	"pjsip.org"
 
 int err(const char *title, pj_status_t status)
 {
@@ -38,13 +41,19 @@ int main()
     if (status != PJ_SUCCESS)
 	return err("pj_init() error", status);
 
+    pjlib_util_init();
+    pjnath_init();
+
     pj_caching_pool_init(&cp, NULL, 0);
+
+    pj_turn_auth_init(REALM);
 
     status = pj_turn_srv_create(&cp.factory, &srv);
     if (status != PJ_SUCCESS)
 	return err("Error creating server", status);
 
-    status = pj_turn_listener_create_udp(srv, pj_AF_INET(), NULL, 3478, 1, 0, &listener);
+    status = pj_turn_listener_create_udp(srv, pj_AF_INET(), NULL, 
+					 PJ_STUN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
 	return err("Error creating listener", status);
 

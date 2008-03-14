@@ -61,6 +61,18 @@ PJ_DECL(pj_status_t) pj_turn_get_auth(void *user_data,
 				      pj_str_t *nonce);
 
 /**
+ * Get credential.
+ */
+PJ_DECL(pj_status_t) pj_turn_get_cred(const pj_stun_msg *msg,
+				      void *user_data,
+				      pj_pool_t *pool,
+				      pj_str_t *realm,
+				      pj_str_t *username,
+				      pj_str_t *nonce,
+				      int *data_type,
+				      pj_str_t *data);
+
+/**
  * This function is called to get the password for the specified username.
  * This function is also used to check whether the username is valid.
  *

@@ -218,6 +218,9 @@ PJ_DEF(pj_status_t) pj_turn_session_create( pj_stun_config *cfg,
 	return status;
     }
 
+    /* Attach ourself to STUN session */
+    pj_stun_session_set_user_data(sess->stun, sess);
+
     /* Replace mutex in STUN session with a NULL mutex, since access to
      * STUN session is serialized.
      */

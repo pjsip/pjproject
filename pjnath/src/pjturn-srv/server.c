@@ -147,7 +147,7 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
     srv->core.cred.type = PJ_STUN_AUTH_CRED_DYNAMIC;
     srv->core.cred.data.dyn_cred.user_data = srv;
     srv->core.cred.data.dyn_cred.get_auth = &pj_turn_get_auth;
-    srv->core.cred.data.dyn_cred.get_cred = &pj_turn_srv_get_cred;
+    srv->core.cred.data.dyn_cred.get_cred = &pj_turn_get_cred;
     srv->core.cred.data.dyn_cred.get_password = &pj_turn_get_password;
     srv->core.cred.data.dyn_cred.verify_nonce = &pj_turn_verify_nonce;
 
