@@ -55,6 +55,7 @@
 #   define PJMEDIA_HAS_L16_CODEC	0
 #   define PJMEDIA_HAS_ILBC_CODEC	0
 #   define PJMEDIA_HAS_SPEEX_CODEC	0
+#   define PJMEDIA_HAS_G722_CODEC	0
 
     /* Need larger sound buffers */
 #   define PJMEDIA_SOUND_BUFFER_COUNT	16

@@ -266,6 +266,9 @@ int main(int argc, char *argv[])
 #if HAS_G729_CODEC
     CHECK( keystream_g729ab_init(mept) );
 #endif
+#if PJMEDIA_HAS_G722_CODEC
+    CHECK( pjmedia_codec_g722_init(mept) );
+#endif
 
     pj_gettimeofday(&t0);
     status = enc_dec_test(argv[1], argv[2], argv[3]);

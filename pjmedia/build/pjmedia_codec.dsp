@@ -87,6 +87,30 @@ LIB32=link.exe -lib
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Group "g722 Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_dec.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_dec.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_enc.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722\g722_enc.h"
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g722.c"
+# End Source File
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\gsm.c"
@@ -137,6 +161,10 @@ SOURCE="..\src\pjmedia-codec\speex_codec.c"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec\config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\g722.h"
 # End Source File
 # Begin Source File
 

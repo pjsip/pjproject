@@ -28,6 +28,7 @@
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/ilbc.h>
+#include <pjmedia-codec/g722.h>
 
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */

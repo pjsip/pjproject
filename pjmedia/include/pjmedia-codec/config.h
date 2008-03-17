@@ -60,6 +60,13 @@
 #endif
 
 
+/**
+ * Unless specified otherwise, G.722 codec is included by default.
+ */
+#ifndef PJMEDIA_HAS_G722_CODEC
+#   define PJMEDIA_HAS_G722_CODEC    1
+#endif
+
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
 

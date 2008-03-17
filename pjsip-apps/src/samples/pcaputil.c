@@ -243,6 +243,10 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
     T( pjmedia_codec_g711_init(app.mept) );
 #endif	/* PJMEDIA_HAS_G711_CODEC */
 
+#if PJMEDIA_HAS_G722_CODEC
+    T( pjmedia_codec_g722_init(app.mept) );
+#endif	/* PJMEDIA_HAS_G722_CODEC */
+
 #if PJMEDIA_HAS_L16_CODEC
     T( pjmedia_codec_l16_init(app.mept, 0) );
 #endif	/* PJMEDIA_HAS_L16_CODEC */

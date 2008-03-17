@@ -139,6 +139,15 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     }
 #endif	/* PJMEDIA_HAS_G711_CODEC */
 
+#if PJMEDIA_HAS_G722_CODEC
+    status = pjmedia_codec_g722_init( pjsua_var.med_endpt );
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing G722 codec",
+		     status);
+	return status;
+    }
+#endif  /* PJMEDIA_HAS_G722_CODEC */
+
 #if PJMEDIA_HAS_L16_CODEC
     /* Register L16 family codecs, but disable all */
     status = pjmedia_codec_l16_init(pjsua_var.med_endpt, 0);
@@ -500,10 +509,13 @@ pj_status_t pjsua_media_subsys_destroy(void)
 	    pjmedia_codec_g711_deinit();
 #	endif	/* PJMEDIA_HAS_G711_CODEC */
 
+#	if PJMEDIA_HAS_G722_CODEC
+	    pjmedia_codec_g722_deinit();
+#	endif	/* PJMEDIA_HAS_G722_CODEC */
+
 #	if PJMEDIA_HAS_L16_CODEC
 	    pjmedia_codec_l16_deinit();
 #	endif	/* PJMEDIA_HAS_L16_CODEC */
-
 
 	pjmedia_endpt_destroy(pjsua_var.med_endpt);
 	pjsua_var.med_endpt = NULL;

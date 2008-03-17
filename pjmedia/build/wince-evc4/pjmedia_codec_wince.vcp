@@ -316,6 +316,2319 @@ BSC32=bscmake.exe
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Group "g722 Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE="..\..\src\pjmedia-codec\g722\g722_dec.c"
+
+!IF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_G722_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\src\pjmedia-codec\g722\g722_dec.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\src\pjmedia-codec\g722\g722_enc.c"
+
+!IF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_G722_E=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\src\pjmedia-codec\g722\g722_enc.h"
+# End Source File
+# End Group
+# Begin Source File
+
+SOURCE="..\..\src\pjmedia-codec\g722.c"
+
+!IF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_G722_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
+	"..\..\include\pjmedia-codec\g722.h"\
+	"..\..\include\pjmedia-codec\types.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\types.h"\
+	"..\..\src\pjmedia-codec\g722\g722_dec.h"\
+	"..\..\src\pjmedia-codec\g722\g722_enc.h"\
+	
+
+!ENDIF 
+
+# End Source File
 # Begin Source File
 
 SOURCE="..\..\src\pjmedia-codec\gsm.c"
@@ -421,7 +2734,7 @@ DEP_CPP_GSM_C=\
 	"..\..\..\pjlib\include\pj\types.h"\
 	"..\..\..\pjlib\include\pj\unicode.h"\
 	"..\..\..\pjlib\include\pjlib.h"\
-	"..\..\..\THIRD_PARTY\gsm\inc\gsm.h"\
+	"..\..\..\third_party\gsm\inc\gsm.h"\
 	"..\..\include\pjmedia-codec\config.h"\
 	"..\..\include\pjmedia-codec\gsm.h"\
 	"..\..\include\pjmedia-codec\types.h"\
@@ -534,48 +2847,82 @@ NODEP_CPP_GSM_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_GSM_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\gsm\inc\gsm.h"\
+	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
 	"..\..\include\pjmedia-codec\gsm.h"\
 	"..\..\include\pjmedia-codec\types.h"\
 	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
 	"..\..\include\pjmedia\endpoint.h"\
 	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\plc.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\silencedet.h"\
 	"..\..\include\pjmedia\sound.h"\
 	"..\..\include\pjmedia\types.h"\
-	
-NODEP_CPP_GSM_C=\
-	"..\..\..\pjlib\include\pj\compat\sprintf.h"\
-	"..\..\..\pjlib\include\pj\compat\vsprintf.h"\
-	"..\..\src\pjmedia-codec\gsm\gsm.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Debug"
@@ -942,9 +3289,9 @@ DEP_CPP_ILBC_=\
 	"..\..\..\pjlib\include\pj\types.h"\
 	"..\..\..\pjlib\include\pj\unicode.h"\
 	"..\..\..\pjlib\include\pjlib.h"\
-	"..\..\..\THIRD_PARTY\ilbc\iLBC_decode.h"\
-	"..\..\..\THIRD_PARTY\ilbc\iLBC_define.h"\
-	"..\..\..\THIRD_PARTY\ilbc\iLBC_encode.h"\
+	"..\..\..\third_party\ilbc\iLBC_decode.h"\
+	"..\..\..\third_party\ilbc\iLBC_define.h"\
+	"..\..\..\third_party\ilbc\iLBC_encode.h"\
 	"..\..\include\pjmedia-codec\config.h"\
 	"..\..\include\pjmedia-codec\ilbc.h"\
 	"..\..\include\pjmedia-codec\types.h"\
@@ -1081,47 +3428,76 @@ NODEP_CPP_ILBC_=\
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_ILBC_=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\ilbc\iLBC_decode.h"\
+	"..\..\..\third_party\ilbc\iLBC_define.h"\
+	"..\..\..\third_party\ilbc\iLBC_encode.h"\
 	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
 	"..\..\include\pjmedia-codec\ilbc.h"\
 	"..\..\include\pjmedia-codec\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
 	"..\..\include\pjmedia\endpoint.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\plc.h"\
@@ -1130,11 +3506,6 @@ DEP_CPP_ILBC_=\
 	"..\..\include\pjmedia\silencedet.h"\
 	"..\..\include\pjmedia\sound.h"\
 	"..\..\include\pjmedia\types.h"\
-	
-NODEP_CPP_ILBC_=\
-	"..\..\src\pjmedia-codec\ilbc\iLBC_decode.h"\
-	"..\..\src\pjmedia-codec\ilbc\iLBC_define.h"\
-	"..\..\src\pjmedia-codec\ilbc\iLBC_encode.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Debug"
@@ -1662,46 +4033,73 @@ DEP_CPP_L16_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_L16_C=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
 	"..\..\include\pjmedia-codec\l16.h"\
 	"..\..\include\pjmedia-codec\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
 	"..\..\include\pjmedia\endpoint.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
@@ -2084,9 +4482,9 @@ DEP_CPP_SPEEX=\
 	"..\..\..\pjlib\include\pj\types.h"\
 	"..\..\..\pjlib\include\pj\unicode.h"\
 	"..\..\..\pjlib\include\pjlib.h"\
-	"..\..\..\THIRD_PARTY\speex\include\speex\speex.h"\
-	"..\..\..\THIRD_PARTY\speex\include\speex\speex_bits.h"\
-	"..\..\..\THIRD_PARTY\speex\include\speex\speex_types.h"\
+	"..\..\..\third_party\speex\include\speex\speex.h"\
+	"..\..\..\third_party\speex\include\speex\speex_bits.h"\
+	"..\..\..\third_party\speex\include\speex\speex_types.h"\
 	"..\..\include\pjmedia-codec\config.h"\
 	"..\..\include\pjmedia-codec\speex.h"\
 	"..\..\include\pjmedia-codec\types.h"\
@@ -2219,59 +4617,82 @@ NODEP_CPP_SPEEX=\
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_SPEEX=\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
-	"..\..\..\pjlib\include\pj\compat\m_alpha.h"\
-	"..\..\..\pjlib\include\pj\compat\m_armv4.h"\
-	"..\..\..\pjlib\include\pj\compat\m_i386.h"\
-	"..\..\..\pjlib\include\pj\compat\m_m68k.h"\
-	"..\..\..\pjlib\include\pj\compat\m_powerpc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_sparc.h"\
-	"..\..\..\pjlib\include\pj\compat\m_x86_64.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
 	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
 	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
 	"..\..\..\pjlib\include\pj\list.h"\
 	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
 	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
 	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
 	"..\..\..\pjlib\include\pj\string.h"\
 	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
 	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\..\third_party\speex\include\speex\speex.h"\
+	"..\..\..\third_party\speex\include\speex\speex_bits.h"\
+	"..\..\..\third_party\speex\include\speex\speex_types.h"\
 	"..\..\include\pjmedia-codec\config.h"\
+	"..\..\include\pjmedia-codec\config_auto.h"\
 	"..\..\include\pjmedia-codec\speex.h"\
 	"..\..\include\pjmedia-codec\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
 	"..\..\include\pjmedia\endpoint.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
 	"..\..\include\pjmedia\types.h"\
-	
-NODEP_CPP_SPEEX=\
-	"..\..\src\pjmedia-codec\speex\speex.h"\
-	"..\..\src\pjmedia-codec\speex\speex_bits.h"\
-	"..\..\src\pjmedia-codec\speex\speex_config_types.h"\
-	"..\..\src\pjmedia-codec\speex\speex_types.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjmedia_codec_wince - Win32 (WCE ARMV4) Debug"
@@ -2568,6 +4989,10 @@ DEP_CPP_SPEEX=\
 # Begin Source File
 
 SOURCE="..\..\include\pjmedia-codec\config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\..\include\pjmedia-codec\g722.h"
 # End Source File
 # Begin Source File
 

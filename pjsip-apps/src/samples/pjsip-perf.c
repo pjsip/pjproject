@@ -936,6 +936,9 @@ static pj_status_t init_media()
 #if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
     pjmedia_codec_speex_init(app.med_endpt, PJMEDIA_SPEEX_NO_UWB, 3, 3);
 #endif
+#if defined(PJMEDIA_HAS_G722_CODEC) && PJMEDIA_HAS_G722_CODEC!=0
+    pjmedia_codec_g722_init(app.med_endpt);
+#endif
 
     /* Init dummy socket addresses */
     app.skinfo_cnt = 0;
