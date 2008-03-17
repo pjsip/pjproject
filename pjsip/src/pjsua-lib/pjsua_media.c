@@ -839,6 +839,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     }
 
     /* Get media socket info */
+    pjmedia_transport_info_init(&tpinfo);
     pjmedia_transport_get_info(call->med_tp, &tpinfo);
 
     /* Create SDP */

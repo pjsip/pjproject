@@ -564,10 +564,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     PJ_ASSERT_RETURN(sizeof(pjmedia_srtp_info) <=
 		     PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE, PJ_ENOMEM);
 
-    status = pjmedia_transport_get_info(srtp->real_tp, info);
-    if (status != PJ_SUCCESS)
-	return status;
-
     srtp_info.active = srtp->session_inited;
     srtp_info.rx_policy = srtp->rx_policy;
     srtp_info.tx_policy = srtp->tx_policy;
@@ -578,7 +574,7 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     pj_memcpy(&info->spc_info[spc_info_idx].buffer, &srtp_info, 
 	      sizeof(srtp_info));
 
-    return PJ_SUCCESS;
+    return pjmedia_transport_get_info(srtp->real_tp, info);
 }
 
 static pj_status_t transport_attach(pjmedia_transport *tp,

@@ -700,8 +700,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 		  sizeof(pj_sockaddr_in));
     }
 
-    info->specific_info_cnt = 0;
-
     return PJ_SUCCESS;
 }
 

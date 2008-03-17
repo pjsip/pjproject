@@ -1012,7 +1012,7 @@ static pj_status_t create_sdp( pj_pool_t *pool,
 
 
     /* Get transport info */
-    pj_bzero(&tpinfo, sizeof(tpinfo));
+    pjmedia_transport_info_init(&tpinfo);
     pjmedia_transport_get_info(audio->transport, &tpinfo);
 
     /* Create and initialize basic SDP session */

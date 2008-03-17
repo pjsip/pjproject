@@ -2260,6 +2260,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     }
 
     /* Get SRTP status */
+    pjmedia_transport_info_init(&tp_info);
     pjmedia_transport_get_info(call->med_tp, &tp_info);
     if (tp_info.specific_info_cnt > 0) {
 	int i;
@@ -2470,6 +2471,7 @@ static void call_disconnect( pjsip_inv_session *inv,
 	pjmedia_sdp_session *local_sdp;
 	pjmedia_transport_info ti;
 
+	pjmedia_transport_info_init(&ti);
 	pjmedia_transport_get_info(call->med_tp, &ti);
 	status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 
 					  1, &ti.sock_info, &local_sdp);
@@ -2581,6 +2583,7 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
     pjmedia_sdp_session *sdp;
 
     /* Get media socket info */
+    pjmedia_transport_info_init(&tp_info);
     pjmedia_transport_get_info(call->med_tp, &tp_info);
 
     /* Create new offer */

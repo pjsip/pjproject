@@ -405,7 +405,7 @@ struct pjmedia_transport
 };
 
 /**
- * This structure describes buffer storage of transport specific info.
+ * This structure describes storage buffer of transport specific info.
  * The actual transport specific info contents will be defined by transport
  * implementation. Note that some transport implementations do not need to
  * provide specific info, since the general socket info is enough.
@@ -456,10 +456,23 @@ struct pjmedia_transport_info
 
 
 /**
- * Get media socket info from the specified transport. The socket info
- * contains information about the local address of this transport, and
- * would be needed for example to fill in the "c=" and "m=" line of local 
- * SDP.
+ * Initialize transport info.
+ *
+ * @param info	    Transport info to be initialized.
+ */
+PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
+{
+    pj_bzero(&info->sock_info, sizeof(pjmedia_sock_info));
+    info->sock_info.rtp_sock = info->sock_info.rtcp_sock = PJ_INVALID_SOCKET;
+    info->specific_info_cnt = 0;
+}
+
+
+/**
+ * Get media transport info from the specified transport and all underlying 
+ * transports if any. The transport also contains information about socket info
+ * which describes the local address of the transport, and would be needed
+ * for example to fill in the "c=" and "m=" line of local SDP.
  *
  * @param tp	    The transport.
  * @param info	    Media socket info to be initialized.

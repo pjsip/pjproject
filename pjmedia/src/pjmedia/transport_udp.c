@@ -593,7 +593,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     info->sock_info.rtp_addr_name = udp->rtp_addr_name;
     info->sock_info.rtcp_sock = udp->rtcp_sock;
     info->sock_info.rtcp_addr_name = udp->rtcp_addr_name;
-    info->specific_info_cnt = 0;
 
     return PJ_SUCCESS;
 }

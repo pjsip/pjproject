@@ -320,6 +320,7 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Get media socket info */
+    pjmedia_transport_info_init(&tpinfo);
     pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &tpinfo);
 
     /* Add SDP body, using call0's RTP address */
@@ -2064,8 +2065,9 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 	char addr_buf[80];
 
 	/* MSVC complains about tpinfo not being initialized */
-	pj_bzero(&tpinfo, sizeof(tpinfo));
+	//pj_bzero(&tpinfo, sizeof(tpinfo));
 
+	pjmedia_transport_info_init(&tpinfo);
 	pjmedia_transport_get_info(call->med_tp, &tpinfo);
 
 	PJ_LOG(3,(THIS_FILE, " %s: %s",
