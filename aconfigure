@@ -308,7 +308,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX ac_pjdir CPP EGREP ac_os_objs ac_pjmedia_snd ac_pa_cflags ac_pa_use_alsa ac_pa_use_oss ac_no_small_filter ac_no_large_filter ac_no_speex_aec ac_no_g711_codec ac_no_l16_codec ac_no_gsm_codec ac_no_speex_codec ac_no_ilbc_codec ac_no_ssl openssl_h_present libssl_present libcrypto_present ac_cross_compile ac_linux_poll ac_host ac_main_obj LIBOBJS LTLIBOBJS'
+ac_subst_vars='SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS build build_cpu build_vendor build_os host host_cpu host_vendor host_os target target_cpu target_vendor target_os CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT CXX CXXFLAGS ac_ct_CXX ac_pjdir CPP EGREP ac_os_objs ac_pjmedia_snd ac_pa_cflags ac_pa_use_alsa ac_pa_use_oss ac_no_small_filter ac_no_large_filter ac_no_speex_aec ac_no_g711_codec ac_no_l16_codec ac_no_gsm_codec ac_no_g722_codec ac_no_speex_codec ac_no_ilbc_codec ac_no_ssl openssl_h_present libssl_present libcrypto_present ac_cross_compile ac_linux_poll ac_host ac_main_obj LIBOBJS LTLIBOBJS'
 ac_subst_files=''
 
 # Initialize some variables set by options.
@@ -865,6 +865,7 @@ Optional Features:
   --disable-g711-codec    Exclude G.711 codecs from the build
   --disable-l16-codec     Exclude Linear/L16 codec family from the build
   --disable-gsm-codec     Exclude GSM codec in the build
+  --disable-g722-codec    Exclude G.722 codec in the build
   --disable-speex-codec   Exclude Speex codecs in the build
   --disable-ilbc-codec    Exclude iLBC codec in the build
   --enable-libsamplerate  Link with libsamplerate when available. Note that
@@ -10474,6 +10475,24 @@ echo "${ECHO_T}Checking if GSM codec is disabled...no" >&6
 fi;
 
 
+# Check whether --enable-g722-codec or --disable-g722-codec was given.
+if test "${enable_g722_codec+set}" = set; then
+  enableval="$enable_g722_codec"
+  if test "$enable_g722_codec" = "no"; then
+		ac_no_g722_codec=1
+		cat >>confdefs.h <<\_ACEOF
+#define PJMEDIA_HAS_G722_CODEC 0
+_ACEOF
+
+		echo "$as_me:$LINENO: result: Checking if G.722 codec is disabled...yes" >&5
+echo "${ECHO_T}Checking if G.722 codec is disabled...yes" >&6
+	       fi
+else
+  echo "$as_me:$LINENO: result: Checking if G.722 codec is disabled...no" >&5
+echo "${ECHO_T}Checking if G.722 codec is disabled...no" >&6
+fi;
+
+
 # Check whether --enable-speex-codec or --disable-speex-codec was given.
 if test "${enable_speex_codec+set}" = set; then
   enableval="$enable_speex_codec"
@@ -11677,6 +11696,7 @@ s,@ac_no_speex_aec@,$ac_no_speex_aec,;t t
 s,@ac_no_g711_codec@,$ac_no_g711_codec,;t t
 s,@ac_no_l16_codec@,$ac_no_l16_codec,;t t
 s,@ac_no_gsm_codec@,$ac_no_gsm_codec,;t t
+s,@ac_no_g722_codec@,$ac_no_g722_codec,;t t
 s,@ac_no_speex_codec@,$ac_no_speex_codec,;t t
 s,@ac_no_ilbc_codec@,$ac_no_ilbc_codec,;t t
 s,@ac_no_ssl@,$ac_no_ssl,;t t

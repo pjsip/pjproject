@@ -76,7 +76,7 @@ static int block1l (int xl, int sl, int detl)
 
     sil = el >> 15 ;
     if (sil == 0 )  wd = el ;
-    else wd = 32767 - el & 32767 ;
+    else wd = 32767 - (el & 32767) ;
 
     mil = 1 ;
 
@@ -304,7 +304,7 @@ static int block1h (int xh, int sh, int deth)
 
     sih = eh >> 15 ;
     if (sih == 0 )  wd = eh ;
-    else wd = 32767 - eh & 32767 ;
+    else wd = 32767 - (eh & 32767) ;
 
     hdu = (564 << 3) * deth;
     wd1 = (hdu >> 15) ;

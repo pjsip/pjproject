@@ -26,6 +26,7 @@ AC_NO_L16_CODEC=@ac_no_l16_codec@
 AC_NO_GSM_CODEC=@ac_no_gsm_codec@
 AC_NO_SPEEX_CODEC=@ac_no_speex_codec@
 AC_NO_ILBC_CODEC=@ac_no_ilbc_codec@
+AC_NO_G722_CODEC=@ac_no_g722_codec@
 
 export CODEC_OBJS=
 
@@ -63,6 +64,12 @@ ifeq ($(AC_NO_ILBC_CODEC),1)
 export CFLAGS += -DPJMEDIA_HAS_ILBC_CODEC=0
 else
 export CODEC_OBJS += ilbc.o
+endif
+
+ifeq ($(AC_NO_G722_CODEC),1)
+export CFLAGS += -DPJMEDIA_HAS_G722_CODEC=0
+else
+export CODEC_OBJS += g722.o g722/g722_enc.o g722/g722_dec.o
 endif
 
 
