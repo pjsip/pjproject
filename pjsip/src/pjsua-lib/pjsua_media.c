@@ -1376,7 +1376,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 	return status;
     }
 
-    status = pjmedia_conf_add_port(pjsua_var.mconf, pjsua_var.pool, 
+    status = pjmedia_conf_add_port(pjsua_var.mconf, pool, 
 				   port, filename, &slot);
     if (status != PJ_SUCCESS) {
 	pjmedia_port_destroy(port);
