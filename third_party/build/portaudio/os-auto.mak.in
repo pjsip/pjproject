@@ -75,6 +75,6 @@ endif
 #
 ifeq ($(AC_PJMEDIA_SND),pa_win32)
 export PORTAUDIO_OBJS += pa_win_hostapis.o pa_win_util.o \
-		       pa_win_wmme.o
+		       pa_win_wmme.o pa_win_waveformat.o
 export CFLAGS += -DPA_NO_ASIO -DPA_NO_DS
 endif
