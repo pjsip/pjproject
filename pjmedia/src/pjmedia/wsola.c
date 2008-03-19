@@ -510,7 +510,7 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
     extra = wsola->cur_cnt - wsola->hist_cnt - wsola->samples_per_frame;
     pj_assert(extra >= 0);
 
-    if (prev_lost && extra >= wsola->min_extra) {
+    if (prev_lost && extra != 0 && extra >= wsola->min_extra) {
 	short *dst = wsola->buf + wsola->hist_cnt + wsola->samples_per_frame;
 
 	if (extra > wsola->samples_per_frame)
