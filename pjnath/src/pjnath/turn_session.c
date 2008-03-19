@@ -521,7 +521,7 @@ PJ_DEF(pj_status_t) pj_turn_session_set_cred(pj_turn_session *sess,
 
     pj_lock_acquire(sess->lock);
 
-    pj_stun_session_set_credential(sess->stun, cred);
+    pj_stun_session_set_credential(sess->stun, PJ_STUN_AUTH_LONG_TERM, cred);
 
     pj_lock_release(sess->lock);
 

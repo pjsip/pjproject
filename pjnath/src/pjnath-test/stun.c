@@ -269,7 +269,7 @@ static int decode_test(void)
 	    continue;
 
 	/* Try to encode message */
-	pj_stun_create_key(pool, &key, NULL, &USERNAME, &PASSWORD);
+	pj_stun_create_key(pool, &key, NULL, &USERNAME, PJ_STUN_PASSWD_PLAIN, &PASSWORD);
 	status = pj_stun_msg_encode(msg, buf, sizeof(buf), 0, &key, &len);
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(1,(THIS_FILE, "    encode error: %s", err(status)));
@@ -405,55 +405,6 @@ static int verify5(pj_stun_msg *msg)
 static int decode_verify(void)
 {
     /* Decode all attribute types */
-    return 0;
-}
-
-static int auth_test(void)
-{
-    /* REALM and USERNAME is present, but MESSAGE-INTEGRITY is not present.
-     * For short term, must with reply 401 without REALM.
-     * For long term, must reply with 401 with REALM.
-     */
-
-    /* USERNAME is not present, server must respond with 432 (Missing
-     * Username).
-     */
-
-    /* If long term credential is wanted and REALM is not present, server 
-     * must respond with 434 (Missing Realm) 
-     */
-
-    /* If REALM doesn't match, server must respond with 434 (Missing Realm)
-     * too, containing REALM and NONCE attribute.
-     */
-
-    /* When long term authentication is wanted and NONCE is NOT present,
-     * server must respond with 435 (Missing Nonce), containing REALM and
-     * NONCE attribute.
-     */
-
-    /* Simulate 438 (Stale Nonce) */
-    
-    /* Simulate 436 (Unknown Username) */
-
-    /* When server wants to use short term credential, but request has
-     * REALM, reject with .... ???
-     */
-
-    /* Invalid HMAC */
-
-    /* Valid static short term, without NONCE */
-
-    /* Valid static short term, WITH NONCE */
-
-    /* Valid static long term (with NONCE */
-
-    /* Valid dynamic short term (without NONCE) */
-
-    /* Valid dynamic short term (with NONCE) */
-
-    /* Valid dynamic long term (with NONCE) */
-
     return 0;
 }
 
@@ -614,7 +565,7 @@ static int fingerprint_test_vector()
 	    pj_str_t s1, s2;
 
 	    pj_stun_create_key(pool, &key, NULL, pj_cstr(&s1, v->username), 
-			       pj_cstr(&s2, v->password));
+			       PJ_STUN_PASSWD_PLAIN, pj_cstr(&s2, v->password));
 	    pj_stun_msg_encode(msg, buf, sizeof(buf), 0, &key, &len);
 
 	} else {
@@ -748,10 +699,6 @@ int stun_test(void)
 	goto on_return;
 
     rc = decode_verify();
-    if (rc != 0)
-	goto on_return;
-
-    rc = auth_test();
     if (rc != 0)
 	goto on_return;
 

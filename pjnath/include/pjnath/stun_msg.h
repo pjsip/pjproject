@@ -1225,6 +1225,17 @@ PJ_DECL(pj_status_t) pj_stun_msg_create(pj_pool_t *pool,
 					pj_stun_msg **p_msg);
 
 /**
+ * Clone a STUN message with all of its attributes.
+ *
+ * @param pool		Pool to allocate memory for the new message.
+ * @param msg		The message to be cloned.
+ *
+ * @return		The duplicate message.
+ */
+PJ_DECL(pj_stun_msg*) pj_stun_msg_clone(pj_pool_t *pool,
+					const pj_stun_msg *msg);
+
+/**
  * Create STUN response message. 
  *
  * @param pool		Pool to create the mesage.
@@ -1299,30 +1310,6 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				        unsigned options,
 					const pj_str_t *key,
 				        unsigned *p_msg_len);
-
-
-/**
- * Create authentication key to be used for encoding the message with
- * MESSAGE-INTEGRITY. If short term credential is used (i.e. the realm
- * argument is NULL or empty), the key will be copied from the password.
- * If long term credential is used, the key will be calculated from the
- * MD5 hash of the realm, username, and password.
- *
- * @param pool		Pool to allocate memory for the key.
- * @param key		String to receive the key.
- * @param realm		The realm of the credential, if long term credential
- *			is to be used. If short term credential is wanted,
- *			application can put NULL or empty string here.
- * @param username	The username.
- * @param passwd	The clear text password.
- */
-PJ_DECL(void) pj_stun_create_key(pj_pool_t *pool,
-				 pj_str_t *key,
-				 const pj_str_t *realm,
-				 const pj_str_t *username,
-				 const pj_str_t *passwd);
-
-
 
 /**
  * Check that the PDU is potentially a valid STUN message. This function
@@ -1414,6 +1401,18 @@ PJ_DECL(char*) pj_stun_msg_dump(const pj_stun_msg *msg,
 PJ_DECL(pj_stun_attr_hdr*) pj_stun_msg_find_attr(const pj_stun_msg *msg,
 						 int attr_type,
 						 unsigned start_index);
+
+
+/**
+ * Clone a STUN attribute.
+ *
+ * @param pool		Pool to allocate memory.
+ * @param attr		Attribute to clone.
+ *
+ * @return		Duplicate attribute.
+ */
+PJ_DECL(pj_stun_attr_hdr*) pj_stun_attr_clone(pj_pool_t *pool,
+					      const pj_stun_attr_hdr *attr);
 
 
 /**

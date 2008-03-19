@@ -95,6 +95,10 @@ SOURCE="..\src\pjnath-test\main.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjnath-test\sess_auth.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjnath-test\stun.c"
 # End Source File
 # Begin Source File

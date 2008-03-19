@@ -20,7 +20,6 @@
 #include <pjnath/errno.h>
 #include <pjlib-util/crc32.h>
 #include <pjlib-util/hmac_sha1.h>
-#include <pjlib-util/md5.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -90,6 +89,7 @@ struct attr_desc
 			       void **p_attr);
     pj_status_t (*encode_attr)(const void *a, pj_uint8_t *buf, 
 			       unsigned len, unsigned *printed);
+    void*       (*clone_attr)(pj_pool_t *pool, const void *src);
 };
 
 static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
@@ -101,52 +101,61 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
 static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
 				       unsigned len, 
 				       unsigned *printed);
+static void*       clone_sockaddr_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_string_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf, 
 				      void **p_attr);
 static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
 				      unsigned len, unsigned *printed);
+static void*       clone_string_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
 				      void **p_attr);
 static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
 				      unsigned len, unsigned *printed);
+static void*       clone_msgint_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf,
 				       void **p_attr);
 static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
 				       unsigned len, unsigned *printed);
+static void*       clone_errcode_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf, 
 				       void **p_attr);
 static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf, 
 				       unsigned len, unsigned *printed);
+static void*       clone_unknown_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_uint_attr(pj_pool_t *pool, 
 				    const pj_uint8_t *buf, 
 				    void **p_attr);
 static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
 				    unsigned len, unsigned *printed);
+static void*       clone_uint_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_uint64_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf, 
 				      void **p_attr);
 static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf, 
 				      unsigned len, unsigned *printed);
+static void*       clone_uint64_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_binary_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
 				      void **p_attr);
 static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf, 
 				      unsigned len, unsigned *printed);
+static void*       clone_binary_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_empty_attr(pj_pool_t *pool, 
 				     const pj_uint8_t *buf, 
 				     void **p_attr);
 static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf, 
 				     unsigned len, unsigned *printed);
-
+static void*       clone_empty_attr(pj_pool_t *pool, const void *src);
 
 static struct attr_desc mandatory_attr_desc[] = 
 {
     {
 	/* type zero */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -155,82 +164,96 @@ static struct attr_desc mandatory_attr_desc[] =
 	/* PJ_STUN_ATTR_MAPPED_ADDR, */
 	"MAPPED-ADDRESS",
 	&decode_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_RESPONSE_ADDR, */
 	"RESPONSE-ADDRESS",
 	&decode_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANGE_REQUEST, */
 	"CHANGE-REQUEST",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_SOURCE_ADDR, */
 	"SOURCE-ADDRESS",
 	&decode_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANGED_ADDR, */
 	"CHANGED-ADDRESS",
 	&decode_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_USERNAME, */
 	"USERNAME",
 	&decode_string_attr,
-	&encode_string_attr
+	&encode_string_attr,
+	&clone_string_attr
     },
     {
 	/* PJ_STUN_ATTR_PASSWORD, */
 	"PASSWORD",
 	&decode_string_attr,
-	&encode_string_attr
+	&encode_string_attr,
+	&clone_string_attr
     },
     {
 	/* PJ_STUN_ATTR_MESSAGE_INTEGRITY, */
 	"MESSAGE-INTEGRITY",
 	&decode_msgint_attr,
-	&encode_msgint_attr
+	&encode_msgint_attr,
+	&clone_msgint_attr
     },
     {
 	/* PJ_STUN_ATTR_ERROR_CODE, */
 	"ERROR-CODE",
 	&decode_errcode_attr,
-	&encode_errcode_attr
+	&encode_errcode_attr,
+	&clone_errcode_attr
     },
     {
 	/* PJ_STUN_ATTR_UNKNOWN_ATTRIBUTES, */
 	"UNKNOWN-ATTRIBUTES",
 	&decode_unknown_attr,
-	&encode_unknown_attr
+	&encode_unknown_attr,
+	&clone_unknown_attr
     },
     {
 	/* PJ_STUN_ATTR_REFLECTED_FROM, */
 	"REFLECTED-FROM",
 	&decode_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_CHANNEL_NUMBER (0x000C) */
 	"CHANNEL-NUMBER",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_LIFETIME, */
 	"LIFETIME",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* ID 0x000E is not assigned */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -239,16 +262,19 @@ static struct attr_desc mandatory_attr_desc[] =
 	/* PJ_STUN_ATTR_MAGIC_COOKIE */
 	"MAGIC-COOKIE",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_BANDWIDTH, */
 	"BANDWIDTH",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* ID 0x0011 is not assigned */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -257,52 +283,61 @@ static struct attr_desc mandatory_attr_desc[] =
 	/* PJ_STUN_ATTR_PEER_ADDRESS, */
 	"PEER-ADDRESS",
 	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_DATA, */
 	"DATA",
 	&decode_binary_attr,
-	&encode_binary_attr
+	&encode_binary_attr,
+	&clone_binary_attr
     },
     {
 	/* PJ_STUN_ATTR_REALM, */
 	"REALM",
 	&decode_string_attr,
-	&encode_string_attr
+	&encode_string_attr,
+	&clone_string_attr
     },
     {
 	/* PJ_STUN_ATTR_NONCE, */
 	"NONCE",
 	&decode_string_attr,
-	&encode_string_attr
+	&encode_string_attr,
+	&clone_string_attr
     },
     {
 	/* PJ_STUN_ATTR_RELAY_ADDRESS, */
 	"RELAY-ADDRESS",
 	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_ADDR_TYPE, */
 	"REQUESTED-ADDRESS-TYPE",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_PROPS, */
 	"REQUESTED-PROPS",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_REQUESTED_TRANSPORT, */
 	"REQUESTED-TRANSPORT",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* ID 0x001A is not assigned */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -311,10 +346,12 @@ static struct attr_desc mandatory_attr_desc[] =
 	/* ID 0x001B is not assigned */
 	NULL,
 	NULL,
+	NULL,
 	NULL
     },
     {
 	/* ID 0x001C is not assigned */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -323,10 +360,12 @@ static struct attr_desc mandatory_attr_desc[] =
 	/* ID 0x001D is not assigned */
 	NULL,
 	NULL,
+	NULL,
 	NULL
     },
     {
 	/* ID 0x001E is not assigned */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -335,54 +374,63 @@ static struct attr_desc mandatory_attr_desc[] =
 	/* ID 0x001F is not assigned */
 	NULL,
 	NULL,
+	NULL,
 	NULL
     },
     {
 	/* PJ_STUN_ATTR_XOR_MAPPED_ADDRESS, */
 	"XOR-MAPPED-ADDRESS",
 	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_TIMER_VAL, */
 	"TIMER-VAL",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_RESERVATION_TOKEN, */
 	"RESERVATION-TOKEN",
 	&decode_uint64_attr,
-	&encode_uint64_attr
+	&encode_uint64_attr,
+	&clone_uint64_attr
     },
     {
 	/* PJ_STUN_ATTR_XOR_REFLECTED_FROM, */
 	"XOR-REFLECTED-FROM",
 	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_PRIORITY, */
 	"PRIORITY",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_USE_CANDIDATE, */
 	"USE-CANDIDATE",
 	&decode_empty_attr,
-	&encode_empty_attr
+	&encode_empty_attr,
+	&clone_empty_attr
     },
     {
 	/* PJ_STUN_ATTR_XOR_INTERNAL_ADDR, */
 	"XOR-INTERNAL-ADDRESS",
 	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
 
     /* Sentinel */
     {
 	/* PJ_STUN_ATTR_END_MANDATORY_ATTR */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -395,28 +443,33 @@ static struct attr_desc extended_attr_desc[] =
 	/* ID 0x8021 is not assigned */
 	NULL,
 	NULL,
+	NULL,
 	NULL
     },
     {
 	/* PJ_STUN_ATTR_SERVER, */
 	"SERVER",
 	&decode_string_attr,
-	&encode_string_attr
+	&encode_string_attr,
+	&clone_string_attr
     },
     {
 	/* PJ_STUN_ATTR_ALTERNATE_SERVER, */
 	"ALTERNATE-SERVER",
 	&decode_sockaddr_attr,
-	&encode_sockaddr_attr
+	&encode_sockaddr_attr,
+	&clone_sockaddr_attr
     },
     {
 	/* PJ_STUN_ATTR_REFRESH_INTERVAL, */
 	"REFRESH-INTERVAL",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* ID 0x8025 is not assigned*/
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -425,10 +478,12 @@ static struct attr_desc extended_attr_desc[] =
 	/* PADDING, 0x8026 */
 	NULL,
 	NULL,
+	NULL,
 	NULL
     },
     {
 	/* CACHE-TIMEOUT, 0x8027 */
+	NULL,
 	NULL,
 	NULL,
 	NULL
@@ -437,19 +492,22 @@ static struct attr_desc extended_attr_desc[] =
 	/* PJ_STUN_ATTR_FINGERPRINT, */
 	"FINGERPRINT",
 	&decode_uint_attr,
-	&encode_uint_attr
+	&encode_uint_attr,
+	&clone_uint_attr
     },
     {
 	/* PJ_STUN_ATTR_ICE_CONTROLLED, */
 	"ICE-CONTROLLED",
 	&decode_uint64_attr,
-	&encode_uint64_attr
+	&encode_uint64_attr,
+	&clone_uint64_attr
     },
     {
 	/* PJ_STUN_ATTR_ICE_CONTROLLING, */
 	"ICE-CONTROLLING",
 	&decode_uint64_attr,
-	&encode_uint64_attr
+	&encode_uint64_attr,
+	&clone_uint64_attr
     }
 };
 
@@ -826,6 +884,13 @@ static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf,
 }
 
 
+static void* clone_sockaddr_attr(pj_pool_t *pool, const void *src)
+{
+    pj_stun_sockaddr_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_sockaddr_attr);
+    pj_memcpy(dst, src, sizeof(pj_stun_sockaddr_attr));
+    return (void*)dst;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*
  * STUN generic string attribute
@@ -934,6 +999,17 @@ static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
 }
 
 
+static void* clone_string_attr(pj_pool_t *pool, const void *src)
+{
+    const pj_stun_string_attr *asrc = (const pj_stun_string_attr*)src;
+    pj_stun_string_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_string_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_attr_hdr));
+    pj_strdup(pool, &dst->value, &asrc->value);
+
+    return (void*)dst;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*
  * STUN empty attribute (used by USE-CANDIDATE).
@@ -1018,6 +1094,15 @@ static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf,
 }
 
 
+static void* clone_empty_attr(pj_pool_t *pool, const void *src)
+{
+    pj_stun_empty_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_empty_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_empty_attr));
+
+    return (void*) dst;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*
  * STUN generic 32bit integer attribute.
@@ -1101,6 +1186,16 @@ static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf,
     *printed = 8;
 
     return PJ_SUCCESS;
+}
+
+
+static void* clone_uint_attr(pj_pool_t *pool, const void *src)
+{
+    pj_stun_uint_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_uint_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_uint_attr));
+
+    return (void*)dst;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1189,6 +1284,16 @@ static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf,
 }
 
 
+static void* clone_uint64_attr(pj_pool_t *pool, const void *src)
+{
+    pj_stun_uint64_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_uint64_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_uint64_attr));
+
+    return (void*)dst;
+}
+
+
 //////////////////////////////////////////////////////////////////////////////
 /*
  * STUN MESSAGE-INTEGRITY attribute.
@@ -1269,6 +1374,16 @@ static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf,
     *printed = 24;
 
     return PJ_SUCCESS;
+}
+
+
+static void* clone_msgint_attr(pj_pool_t *pool, const void *src)
+{
+    pj_stun_msgint_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_msgint_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_msgint_attr));
+
+    return (void*) dst;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1379,6 +1494,18 @@ static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf,
     *printed = (ATTR_HDR_LEN + 4 + ca->reason.slen + 3) & (~3);
 
     return PJ_SUCCESS;
+}
+
+
+static void* clone_errcode_attr(pj_pool_t *pool, const void *src)
+{
+    const pj_stun_errcode_attr *asrc = (const pj_stun_errcode_attr*)src;
+    pj_stun_errcode_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_errcode_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_errcode_attr));
+    pj_strdup(pool, &dst->reason, &asrc->reason);
+
+    return (void*)dst;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1499,6 +1626,15 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
 }
 
 
+static void* clone_unknown_attr(pj_pool_t *pool, const void *src)
+{
+    pj_stun_unknown_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_unknown_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_unknown_attr));
+    
+    return (void*)dst;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*
  * STUN generic binary attribute
@@ -1597,6 +1733,21 @@ static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf,
 }
 
 
+static void* clone_binary_attr(pj_pool_t *pool, const void *src)
+{
+    const pj_stun_binary_attr *asrc = (const pj_stun_binary_attr*)src;
+    pj_stun_binary_attr *dst = PJ_POOL_ALLOC_T(pool, pj_stun_binary_attr);
+
+    pj_memcpy(dst, src, sizeof(pj_stun_binary_attr));
+
+    if (asrc->length) {
+	dst->data = (pj_uint8_t*) pj_pool_alloc(pool, asrc->length);
+	pj_memcpy(dst->data, asrc->data, asrc->length);
+    }
+
+    return (void*)dst;
+}
+
 //////////////////////////////////////////////////////////////////////////////
 
 /*
@@ -1637,6 +1788,31 @@ PJ_DEF(pj_status_t) pj_stun_msg_create( pj_pool_t *pool,
     *p_msg = msg;
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Clone a STUN message with all of its attributes.
+ */
+PJ_DEF(pj_stun_msg*) pj_stun_msg_clone( pj_pool_t *pool,
+					const pj_stun_msg *src)
+{
+    pj_stun_msg *dst;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(pool && src, NULL);
+
+    dst = PJ_POOL_ZALLOC_T(pool, pj_stun_msg);
+    pj_memcpy(dst, src, sizeof(pj_stun_msg));
+
+    /* Duplicate the attributes */
+    for (i=0, dst->attr_count=0; i<src->attr_count; ++i) {
+	dst->attr[dst->attr_count] = pj_stun_attr_clone(pool, src->attr[i]);
+	if (dst->attr[dst->attr_count])
+	    ++dst->attr_count;
+    }
+
+    return dst;
 }
 
 
@@ -1981,79 +2157,6 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-/* Calculate HMAC-SHA1 key for long term credential, by getting
- * MD5 digest of username, realm, and password. 
- */
-static void calc_md5_key(pj_uint8_t digest[16],
-			 const pj_str_t *realm,
-			 const pj_str_t *username,
-			 const pj_str_t *passwd)
-{
-    /* The 16-byte key for MESSAGE-INTEGRITY HMAC is formed by taking
-     * the MD5 hash of the result of concatenating the following five
-     * fields: (1) The username, with any quotes and trailing nulls
-     * removed, (2) A single colon, (3) The realm, with any quotes and
-     * trailing nulls removed, (4) A single colon, and (5) The 
-     * password, with any trailing nulls removed.
-     */
-    pj_md5_context ctx;
-    pj_str_t s;
-
-    pj_md5_init(&ctx);
-
-#define REMOVE_QUOTE(s)	if (s.slen && *s.ptr=='"') \
-			    s.ptr++, s.slen--; \
-			if (s.slen && s.ptr[s.slen-1]=='"') \
-			    s.slen--;
-
-    /* Add username */
-    s = *username;
-    REMOVE_QUOTE(s);
-    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
-
-    /* Add single colon */
-    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
-
-    /* Add realm */
-    s = *realm;
-    REMOVE_QUOTE(s);
-    pj_md5_update(&ctx, (pj_uint8_t*)s.ptr, s.slen);
-
-#undef REMOVE_QUOTE
-
-    /* Another colon */
-    pj_md5_update(&ctx, (pj_uint8_t*)":", 1);
-
-    /* Add password */
-    pj_md5_update(&ctx, (pj_uint8_t*)passwd->ptr, passwd->slen);
-
-    /* Done */
-    pj_md5_final(&ctx, digest);
-}
-
-
-/*
- * Create authentication key to be used for encoding the message with
- * MESSAGE-INTEGRITY. 
- */
-PJ_DEF(void) pj_stun_create_key(pj_pool_t *pool,
-				pj_str_t *key,
-				const pj_str_t *realm,
-				const pj_str_t *username,
-				const pj_str_t *passwd)
-{
-    PJ_ASSERT_ON_FAIL(pool && key && username && passwd, return);
-
-    if (realm && realm->slen) {
-	key->ptr = (char*) pj_pool_alloc(pool, 16);
-	calc_md5_key((pj_uint8_t*)key->ptr, realm, username, passwd);
-	key->slen = 16;
-    } else {
-	pj_strdup(pool, key, passwd);
-    }
-}
-
-
 /*
 static char *print_binary(const pj_uint8_t *data, unsigned data_len)
 {
@@ -2207,7 +2310,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	/* MESSAGE-INTEGRITY must be the last attribute in the message, or
 	 * the last attribute before FINGERPRINT.
 	 */
-	if (i < msg->attr_count-2) {
+	if (msg->attr_count>1 && i < msg->attr_count-2) {
 	    /* Should not happen for message generated by us */
 	    pj_assert(PJ_FALSE);
 	    return PJNATH_ESTUNMSGINTPOS;
@@ -2297,4 +2400,21 @@ PJ_DEF(pj_stun_attr_hdr*) pj_stun_msg_find_attr( const pj_stun_msg *msg,
 
     return NULL;
 }
+
+
+/*
+ * Clone a STUN attribute.
+ */
+PJ_DEF(pj_stun_attr_hdr*) pj_stun_attr_clone( pj_pool_t *pool,
+					      const pj_stun_attr_hdr *attr)
+{
+    const struct attr_desc *adesc;
+
+    /* Get the attribute descriptor */
+    adesc = find_attr_desc(attr->type);
+    PJ_ASSERT_RETURN(adesc != NULL, NULL);
+
+    return (pj_stun_attr_hdr*) (*adesc->clone_attr)(pool, attr);
+}
+
 

@@ -23,9 +23,10 @@
 #define INCLUDE_STUN_TEST	    1
 #define INCLUDE_ICE_TEST	    1
 
-extern int stun_test(void);
-extern int ice_test(void);
-extern int test_main(void);
+int stun_test(void);
+int sess_auth_test(void);
+int ice_test(void);
+int test_main(void);
 
 extern void app_perror(const char *title, pj_status_t rc);
 extern pj_pool_factory *mem;

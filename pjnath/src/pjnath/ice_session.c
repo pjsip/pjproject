@@ -120,7 +120,7 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
-				      const pj_stun_msg *msg,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len);
 static void on_stun_request_complete(pj_stun_session *stun_sess,
@@ -147,14 +147,14 @@ static pj_status_t stun_auth_get_cred(const pj_stun_msg *msg,
 				      pj_str_t *realm,
 				      pj_str_t *username,
 				      pj_str_t *nonce,
-				      int *data_type,
+				      pj_stun_passwd_type *data_type,
 				      pj_str_t *data);
 static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 					  void *user_data, 
 					  const pj_str_t *realm,
 					  const pj_str_t *username,
 					  pj_pool_t *pool,
-					  int *data_type,
+					  pj_stun_passwd_type *data_type,
 					  pj_str_t *data);
 
 
@@ -232,7 +232,8 @@ static pj_status_t init_comp(pj_ice_sess *ice,
     auth_cred.data.dyn_cred.get_cred = &stun_auth_get_cred;
     auth_cred.data.dyn_cred.get_password = &stun_auth_get_password;
     auth_cred.data.dyn_cred.user_data = comp->stun_sess;
-    pj_stun_session_set_credential(comp->stun_sess, &auth_cred);
+    pj_stun_session_set_credential(comp->stun_sess, PJ_STUN_AUTH_SHORT_TERM,
+				   &auth_cred);
 
     return PJ_SUCCESS;
 }
@@ -446,7 +447,7 @@ static pj_status_t stun_auth_get_cred(const pj_stun_msg *msg,
 				      pj_str_t *realm,
 				      pj_str_t *username,
 				      pj_str_t *nonce,
-				      int *data_type,
+				      pj_stun_passwd_type *data_type,
 				      pj_str_t *data)
 {
     pj_stun_session *sess = (pj_stun_session *)user_data;
@@ -461,12 +462,12 @@ static pj_status_t stun_auth_get_cred(const pj_stun_msg *msg,
 	 * incoming requests.
 	 */
 	*username = ice->rx_uname;
-	*data_type = 0;
+	*data_type = PJ_STUN_PASSWD_PLAIN;
 	*data = ice->rx_pass;
     }
     else {
 	*username = ice->tx_uname;
-	*data_type = 0;
+	*data_type = PJ_STUN_PASSWD_PLAIN;
 	*data = ice->tx_pass;
     }
 
@@ -479,7 +480,7 @@ static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 					  const pj_str_t *realm,
 					  const pj_str_t *username,
 					  pj_pool_t *pool,
-					  int *data_type,
+					  pj_stun_passwd_type *data_type,
 					  pj_str_t *data)
 {
     pj_stun_session *sess = (pj_stun_session *)user_data;
@@ -496,7 +497,7 @@ static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 	/* Verify username */
 	if (pj_strcmp(username, &ice->tx_uname) != 0)
 	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
-	*data_type = 0;
+	*data_type = PJ_STUN_PASSWD_PLAIN;
 	*data = ice->tx_pass;
 
     } else {
@@ -521,7 +522,7 @@ static pj_status_t stun_auth_get_password(const pj_stun_msg *msg,
 	if (pj_strcmp(&ufrag, &ice->rx_ufrag) != 0)
 	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNAUTHORIZED);
 
-	*data_type = 0;
+	*data_type = PJ_STUN_PASSWD_PLAIN;
 	*data = ice->rx_pass;
 
     }
@@ -1903,11 +1904,12 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
-				      const pj_stun_msg *msg,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len)
 {
     stun_data *sd;
+    const pj_stun_msg *msg = rdata->msg;
     pj_ice_sess *ice;
     pj_stun_priority_attr *prio_attr;
     pj_stun_use_candidate_attr *uc_attr;
@@ -1921,7 +1923,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 
     /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
-	status = pj_stun_session_create_res(sess, msg, 
+	status = pj_stun_session_create_res(sess, rdata, 
 					    PJ_STUN_SC_BAD_REQUEST,
 					    NULL, &tdata);
 	if (status != PJ_SUCCESS)
@@ -1992,7 +1994,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	    pj_ice_sess_change_role(ice, PJ_ICE_SESS_ROLE_CONTROLLED);
 	} else {
 	    /* Generate 487 response */
-	    status = pj_stun_session_create_res(sess, msg, 
+	    status = pj_stun_session_create_res(sess, rdata, 
 					        PJ_STUN_SC_ROLE_CONFLICT,
 						NULL, &tdata);
 	    if (status == PJ_SUCCESS) {
@@ -2008,7 +2010,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     {
 	if (pj_cmp_timestamp(&ice->tie_breaker, &role_attr->value) < 0) {
 	    /* Generate 487 response */
-	    status = pj_stun_session_create_res(sess, msg, 
+	    status = pj_stun_session_create_res(sess, rdata, 
 					        PJ_STUN_SC_ROLE_CONFLICT,
 						NULL, &tdata);
 	    if (status == PJ_SUCCESS) {
@@ -2028,7 +2030,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     /* 
      * First send response to this request 
      */
-    status = pj_stun_session_create_res(sess, msg, 0, NULL, &tdata);
+    status = pj_stun_session_create_res(sess, rdata, 0, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pj_mutex_unlock(ice->mutex);
 	return status;

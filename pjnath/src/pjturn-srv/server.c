@@ -40,7 +40,7 @@ static pj_status_t on_tx_stun_msg( pj_stun_session *sess,
 static pj_status_t on_rx_stun_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
-				      const pj_stun_msg *msg,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len);
 
@@ -147,7 +147,6 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
     srv->core.cred.type = PJ_STUN_AUTH_CRED_DYNAMIC;
     srv->core.cred.data.dyn_cred.user_data = srv;
     srv->core.cred.data.dyn_cred.get_auth = &pj_turn_get_auth;
-    srv->core.cred.data.dyn_cred.get_cred = &pj_turn_get_cred;
     srv->core.cred.data.dyn_cred.get_password = &pj_turn_get_password;
     srv->core.cred.data.dyn_cred.verify_nonce = &pj_turn_verify_nonce;
 
@@ -368,7 +367,8 @@ PJ_DEF(pj_status_t) pj_turn_srv_add_listener(pj_turn_srv *srv,
     }
 
     pj_stun_session_set_user_data(sess, lis);
-    pj_stun_session_set_credential(sess, &srv->core.cred);
+    pj_stun_session_set_credential(sess, PJ_STUN_AUTH_LONG_TERM, 
+				   &srv->core.cred);
 
     srv->core.stun_sess[index] = sess;
     lis->id = index;
@@ -483,9 +483,8 @@ static pj_status_t on_tx_stun_msg( pj_stun_session *sess,
 
 
 /* Respond to STUN request */
-static pj_status_t stun_respond(pj_turn_srv *srv,
-				pj_stun_session *sess, 
-				const pj_stun_msg *req,
+static pj_status_t stun_respond(pj_stun_session *sess, 
+				const pj_stun_rx_data *rdata,
 				unsigned code, 
 				const char *errmsg,
 				pj_bool_t cache, 
@@ -497,111 +496,14 @@ static pj_status_t stun_respond(pj_turn_srv *srv,
     pj_stun_tx_data *tdata;
 
     /* Create response */
-    status = pj_stun_session_create_res(sess, req, code, 
+    status = pj_stun_session_create_res(sess, rdata, code, 
 					(errmsg?pj_cstr(&reason,errmsg):NULL),
 					&tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Store the credential for future lookup. */
-    if (pj_stun_auth_valid_for_msg(tdata->msg)) {
-	pj_turn_srv_put_cred(srv, req, tdata);
-    }
-
     /* Send the response */
     return pj_stun_session_send_msg(sess, cache, dst_addr,  addr_len, tdata);
-}
-
-
-/*
- * Store the credential to put placed for the specified message for
- * future retrieval.
- */
-PJ_DEF(pj_status_t) pj_turn_srv_put_cred(pj_turn_srv *srv,
-				         const pj_stun_msg *req,
-					 pj_stun_tx_data *response)
-{
-    pj_stun_username_attr *user;
-    pj_stun_realm_attr *realm;
-    pj_stun_nonce_attr *nonce;
-    struct saved_cred *saved_cred;
-    pj_status_t status;
-
-    realm = (pj_stun_realm_attr*)
-	    pj_stun_msg_find_attr(req, PJ_STUN_ATTR_REALM, 0);
-    PJ_ASSERT_RETURN(realm != NULL, PJ_EBUG);
-
-    user = (pj_stun_username_attr*)
-	   pj_stun_msg_find_attr(req, PJ_STUN_ATTR_USERNAME, 0);
-    PJ_ASSERT_RETURN(user != NULL, PJ_EBUG);
-
-    nonce = (pj_stun_nonce_attr*)
-	    pj_stun_msg_find_attr(req, PJ_STUN_ATTR_NONCE, 0);
-    PJ_ASSERT_RETURN(nonce != NULL, PJ_EBUG);
-
-    saved_cred = PJ_POOL_ALLOC_T(response->pool, struct saved_cred);
-
-    /* Lookup the password */
-    status = pj_turn_get_password(response->msg, NULL, &realm->value, 
-				  &user->value, response->pool, 
-				  &saved_cred->data_type, 
-				  &saved_cred->data);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Store credential */
-    pj_strdup(response->pool, &saved_cred->username, &user->value);
-    pj_strdup(response->pool, &saved_cred->realm, &realm->value);
-    pj_strdup(response->pool, &saved_cred->nonce, &nonce->value);
-
-    pj_thread_local_set(srv->core.tls_key, response->msg);
-    pj_thread_local_set(srv->core.tls_data, saved_cred);
-
-    return PJ_SUCCESS;
-}
-
-
-/**
- * Retrieve previously stored credential for the specified message.
- */
-PJ_DEF(pj_status_t) pj_turn_srv_get_cred(const pj_stun_msg *msg,
-					 void *user_data,
-					 pj_pool_t *pool,
-					 pj_str_t *realm,
-					 pj_str_t *username,
-					 pj_str_t *nonce,
-					 int *data_type,
-					 pj_str_t *data)
-{
-    pj_turn_srv *srv;
-    const pj_stun_msg *saved_msg;
-    struct saved_cred *saved_cred;
-
-    PJ_UNUSED_ARG(pool);
-
-    srv = (pj_turn_srv*)user_data;
-
-    /* Lookup stored message and make sure it's for the same message */
-    saved_msg = (const pj_stun_msg*)
-	        pj_thread_local_get(srv->core.tls_key);
-    PJ_ASSERT_RETURN(saved_msg==msg, PJ_ENOTFOUND);
-
-    /* Lookup saved credential */
-    saved_cred = (struct saved_cred*) 
-		 pj_thread_local_get(srv->core.tls_data);
-    PJ_ASSERT_RETURN(saved_cred != NULL, PJ_ENOTFOUND);
-
-
-    *realm = saved_cred->realm;
-    *username = saved_cred->username;
-    *nonce = saved_cred->nonce;
-    *data_type = saved_cred->data_type;
-    *data = saved_cred->data;
-
-
-    /* Don't clear saved_cred as this may be called more than once */
-
-    return PJ_SUCCESS;
 }
 
 
@@ -612,11 +514,12 @@ PJ_DEF(pj_status_t) pj_turn_srv_get_cred(const pj_stun_msg *msg,
 static pj_status_t on_rx_stun_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
-				      const pj_stun_msg *msg,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len)
 {
     pj_turn_listener *listener;
+    const pj_stun_msg *msg = rdata->msg;
     pj_turn_srv *srv;
     pj_turn_allocation *alloc;
     pj_status_t status;
@@ -629,7 +532,7 @@ static pj_status_t on_rx_stun_request(pj_stun_session *sess,
 
     /* Respond any requests other than ALLOCATE with 437 response */
     if (msg->hdr.type != PJ_STUN_ALLOCATE_REQUEST) {
-	stun_respond(srv, sess, msg, PJ_STUN_SC_ALLOCATION_MISMATCH,
+	stun_respond(sess, rdata, PJ_STUN_SC_ALLOCATION_MISMATCH,
 		     NULL, PJ_FALSE, src_addr, src_addr_len);
 	return PJ_SUCCESS;
     }
@@ -638,7 +541,7 @@ static pj_status_t on_rx_stun_request(pj_stun_session *sess,
      * in this function.
      */
     status = pj_turn_allocation_create(listener, src_addr, src_addr_len,
-				       msg, sess, &alloc);
+				       rdata, sess, &alloc);
     if (status != PJ_SUCCESS) {
 	/* STUN response has been sent, no need to reply here */
 	return PJ_SUCCESS;

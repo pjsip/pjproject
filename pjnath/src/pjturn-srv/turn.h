@@ -204,7 +204,7 @@ struct pj_turn_permission
 PJ_DECL(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
 					      const pj_sockaddr_t *src_addr,
 					      unsigned src_addr_len,
-					      const pj_stun_msg *msg,
+					      const pj_stun_rx_data *rdata,
 					      pj_stun_session *srv_sess,
 					      pj_turn_allocation **p_alloc);
 /**
@@ -457,27 +457,6 @@ PJ_DECL(pj_status_t) pj_turn_srv_unregister_allocation(pj_turn_srv *srv,
  */
 PJ_DECL(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv, 
 				   pj_turn_pkt *pkt);
-
-
-/**
- * Store the credential to put placed for the specified message for
- * future retrieval.
- */
-PJ_DECL(pj_status_t) pj_turn_srv_put_cred(pj_turn_srv *srv,
-					  const pj_stun_msg *request,
-					  pj_stun_tx_data *response);
-
-/**
- * Retrieve previously stored credential for the specified message.
- */
-PJ_DECL(pj_status_t) pj_turn_srv_get_cred(const pj_stun_msg *msg,
-					  void *user_data,
-					  pj_pool_t *pool,
-					  pj_str_t *realm,
-					  pj_str_t *username,
-					  pj_str_t *nonce,
-					  int *data_type,
-					  pj_str_t *data);
 
 
 #endif	/* __PJ_TURN_SRV_TURN_H__ */

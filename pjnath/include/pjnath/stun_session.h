@@ -46,6 +46,9 @@ PJ_BEGIN_DECL
 /** Forward declaration for pj_stun_tx_data */
 typedef struct pj_stun_tx_data pj_stun_tx_data;
 
+/** Forward declaration for pj_stun_rx_data */
+typedef struct pj_stun_rx_data pj_stun_rx_data;
+
 /** Forward declaration for pj_stun_session */
 typedef struct pj_stun_session pj_stun_session;
 
@@ -85,7 +88,7 @@ typedef struct pj_stun_session_cb
      * @param sess	    The STUN session.
      * @param pkt	    Pointer to the original STUN packet.
      * @param pkt_len	    Length of the STUN packet.
-     * @param msg	    The parsed STUN request.
+     * @param rdata	    Data containing incoming request message.
      * @param src_addr	    Source address of the packet.
      * @param src_addr_len  Length of the source address.
      *
@@ -96,7 +99,7 @@ typedef struct pj_stun_session_cb
     pj_status_t (*on_rx_request)(pj_stun_session *sess,
 				 const pj_uint8_t *pkt,
 				 unsigned pkt_len,
-				 const pj_stun_msg *msg,
+				 const pj_stun_rx_data *rdata,
 				 const pj_sockaddr_t *src_addr,
 				 unsigned src_addr_len);
 
@@ -144,6 +147,25 @@ typedef struct pj_stun_session_cb
 
 
 /**
+ * This structure describes incoming request message.
+ */
+struct pj_stun_rx_data
+{
+    /**
+     * The parsed request message.
+     */
+    pj_stun_msg		    *msg;
+
+    /**
+     * Credential information that is found and used to authenticate 
+     * incoming request. Application may use this information when 
+     * generating  authentication for the outgoing response.
+     */
+    pj_stun_req_cred_info   info;
+};
+
+
+/**
  * This structure describe the outgoing STUN transmit data to carry the
  * message to be sent.
  */
@@ -161,7 +183,7 @@ struct pj_stun_tx_data
     pj_uint32_t		 msg_magic;	/**< Message magic.		    */
     pj_uint8_t		 msg_key[12];	/**< Message/transaction key.	    */
 
-    pj_str_t		 auth_key;	/**< Auth key.			    */
+    pj_stun_req_cred_info auth_info;	/**< Credential info		    */
 
     void		*pkt;		/**< The STUN packet.		    */
     unsigned		 max_len;	/**< Length of packet buffer.	    */
@@ -259,13 +281,15 @@ PJ_DECL(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
  * again with NULL as the argument.
  *
  * @param sess	    The STUN session instance.
+ * @param auth_type Type of authentication.
  * @param cred	    The credential to be used by this session. If NULL
  *		    is specified, authentication will be disabled.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(void) pj_stun_session_set_credential(pj_stun_session *sess,
-					     const pj_stun_auth_cred *cred);
+PJ_DECL(pj_status_t) pj_stun_session_set_credential(pj_stun_session *sess,
+						pj_stun_auth_type auth_type,
+						const pj_stun_auth_cred *cred);
 
 /**
  * Create a STUN request message. After the message has been successfully
@@ -328,7 +352,7 @@ PJ_DECL(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_session_create_res(pj_stun_session *sess,
-						const pj_stun_msg *req,
+						const pj_stun_rx_data *rdata,
 						unsigned err_code,
 						const pj_str_t *err_msg,
 						pj_stun_tx_data **p_tdata);
@@ -362,7 +386,7 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
  * Create and send STUN response message.
  *
  * @param sess	    The STUN session instance.
- * @param req	    The STUN request message to be responded.
+ * @param rdata	    The STUN request message to be responded.
  * @param err_code  Error code to be set in the response, if error response
  *		    is to be created, according to pj_stun_status enumeration.
  *		    This argument MUST be zero if successful response is
@@ -382,7 +406,7 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_stun_session_respond(pj_stun_session *sess, 
-					     const pj_stun_msg *req,
+					     const pj_stun_rx_data *rdata,
 					     unsigned code, 
 					     const char *err_msg,
 					     pj_bool_t cache, 

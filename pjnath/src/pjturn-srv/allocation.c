@@ -72,7 +72,7 @@ static pj_status_t stun_on_send_msg(pj_stun_session *sess,
 static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
-				      const pj_stun_msg *msg,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len);
 static pj_status_t stun_on_rx_indication(pj_stun_session *sess,
@@ -97,10 +97,11 @@ static void alloc_err(pj_turn_allocation *alloc, const char *title,
 /* Parse ALLOCATE request */
 static pj_status_t parse_allocate_req(alloc_request *cfg,
 				      pj_stun_session *sess,
-				      const pj_stun_msg *req,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len)
 {
+    const pj_stun_msg *req = rdata->msg;
     pj_stun_bandwidth_attr *attr_bw;
     pj_stun_req_transport_attr *attr_req_tp;
     pj_stun_res_token_attr *attr_res_token;
@@ -120,7 +121,8 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
 
     /* Check if we can satisfy the bandwidth */
     if (cfg->bandwidth > MAX_CLIENT_BANDWIDTH) {
-	pj_stun_session_respond(sess, req, PJ_STUN_SC_ALLOCATION_QUOTA_REACHED,
+	pj_stun_session_respond(sess, rdata, 
+				PJ_STUN_SC_ALLOCATION_QUOTA_REACHED,
 			        "Invalid bandwidth", PJ_TRUE,
 				src_addr, src_addr_len);
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_ALLOCATION_QUOTA_REACHED);
@@ -130,7 +132,7 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
     attr_req_tp = (pj_stun_uint_attr*)
 	          pj_stun_msg_find_attr(req, PJ_STUN_ATTR_REQ_TRANSPORT, 0);
     if (attr_req_tp == NULL) {
-	pj_stun_session_respond(sess, req, PJ_STUN_SC_BAD_REQUEST,
+	pj_stun_session_respond(sess, rdata, PJ_STUN_SC_BAD_REQUEST,
 			        "Missing REQUESTED-TRANSPORT attribute", 
 				PJ_TRUE, src_addr, src_addr_len);
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_BAD_REQUEST);
@@ -140,7 +142,7 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
 
     /* Can only support UDP for now */
     if (cfg->tp_type != PJ_TURN_TP_UDP) {
-	pj_stun_session_respond(sess, req, PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,
+	pj_stun_session_respond(sess, rdata, PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,
 				NULL, PJ_TRUE, src_addr, src_addr_len);
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO);
     }
@@ -151,7 +153,7 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
 					   0);
     if (attr_res_token) {
 	/* We don't support RESERVATION-TOKEN for now */
-	pj_stun_session_respond(sess, req, 
+	pj_stun_session_respond(sess, rdata, 
 				PJ_STUN_SC_BAD_REQUEST,
 				"RESERVATION-TOKEN is not supported", PJ_TRUE, 
 				src_addr, src_addr_len);
@@ -163,7 +165,7 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
 	       pj_stun_msg_find_attr(req, PJ_STUN_ATTR_REQ_PROPS, 0);
     if (attr_rpp) {
 	/* We don't support REQUESTED-PROPS for now */
-	pj_stun_session_respond(sess, req, 
+	pj_stun_session_respond(sess, rdata, 
 				PJ_STUN_SC_BAD_REQUEST,
 				"REQUESTED-PROPS is not supported", PJ_TRUE, 
 				src_addr, src_addr_len);
@@ -176,7 +178,7 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
     if (attr_lifetime) {
 	cfg->lifetime = attr_lifetime->value;
 	if (cfg->lifetime < MIN_LIFETIME) {
-	    pj_stun_session_respond(sess, req, PJ_STUN_SC_BAD_REQUEST,
+	    pj_stun_session_respond(sess, rdata, PJ_STUN_SC_BAD_REQUEST,
 				    "LIFETIME too short", PJ_TRUE, 
 				    src_addr, src_addr_len);
 	    return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_BAD_REQUEST);
@@ -194,13 +196,13 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
 /* Respond to ALLOCATE request */
 static pj_status_t send_allocate_response(pj_turn_allocation *alloc,
 					  pj_stun_session *srv_sess,
-					  const pj_stun_msg *msg)
+					  const pj_stun_rx_data *rdata)
 {
     pj_stun_tx_data *tdata;
     pj_status_t status;
 
     /* Respond the original ALLOCATE request */
-    status = pj_stun_session_create_res(srv_sess, msg, 0, NULL, &tdata);
+    status = pj_stun_session_create_res(srv_sess, rdata, 0, NULL, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -284,11 +286,12 @@ static pj_status_t init_cred(pj_turn_allocation *alloc, const pj_stun_msg *req)
 PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
 					      const pj_sockaddr_t *src_addr,
 					      unsigned src_addr_len,
-					      const pj_stun_msg *msg,
+					      const pj_stun_rx_data *rdata,
 					      pj_stun_session *srv_sess,
 					      pj_turn_allocation **p_alloc)
 {
     pj_turn_srv *srv = listener->server;
+    const pj_stun_msg *msg = rdata->msg;
     pj_pool_t *pool;
     alloc_request req;
     pj_turn_allocation *alloc;
@@ -297,7 +300,7 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
     pj_status_t status;
 
     /* Parse ALLOCATE request */
-    status = parse_allocate_req(&req, srv_sess, msg, src_addr, src_addr_len);
+    status = parse_allocate_req(&req, srv_sess, rdata, src_addr, src_addr_len);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -354,7 +357,8 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
     }
 
     /* Attach authentication credential to STUN session */
-    pj_stun_session_set_credential(alloc->sess, &alloc->cred);
+    pj_stun_session_set_credential(alloc->sess, PJ_STUN_AUTH_LONG_TERM,
+				   &alloc->cred);
 
     /* Create the relay resource */
     status = create_relay(srv, alloc, msg, &req, &alloc->relay);
@@ -366,7 +370,7 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
     pj_turn_srv_register_allocation(srv, alloc);
 
     /* Respond to ALLOCATE request */
-    status = send_allocate_response(alloc, srv_sess, msg);
+    status = send_allocate_response(alloc, srv_sess, rdata);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -383,7 +387,7 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
 on_error:
     /* Send reply to the ALLOCATE request */
     pj_strerror(status, str_tmp, sizeof(str_tmp));
-    pj_stun_session_respond(srv_sess, msg, PJ_STUN_SC_BAD_REQUEST, str_tmp, 
+    pj_stun_session_respond(srv_sess, rdata, PJ_STUN_SC_BAD_REQUEST, str_tmp, 
 			    PJ_TRUE, src_addr, src_addr_len);
 
     /* Cleanup */
@@ -709,13 +713,13 @@ static pj_status_t create_relay(pj_turn_srv *srv,
 
 /* Create and send error response */
 static void send_reply_err(pj_turn_allocation *alloc,
-			   const pj_stun_msg *req,
+			   const pj_stun_rx_data *rdata,
 			   pj_bool_t cache, 
 			   int code, const char *errmsg)
 {
     pj_status_t status;
 
-    status = pj_stun_session_respond(alloc->sess, req, code, errmsg, cache,
+    status = pj_stun_session_respond(alloc->sess, rdata, code, errmsg, cache,
 				     &alloc->hkey.clt_addr,
 				     pj_sockaddr_get_len(&alloc->hkey.clt_addr.addr));
     if (status != PJ_SUCCESS) {
@@ -726,13 +730,13 @@ static void send_reply_err(pj_turn_allocation *alloc,
 
 /* Create and send successful response */
 static void send_reply_ok(pj_turn_allocation *alloc,
-		          const pj_stun_msg *req)
+		          const pj_stun_rx_data *rdata)
 {
     pj_status_t status;
     unsigned interval;
     pj_stun_tx_data *tdata;
 
-    status = pj_stun_session_create_res(alloc->sess, req, 0, NULL, &tdata);
+    status = pj_stun_session_create_res(alloc->sess, rdata, 0, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	alloc_err(alloc, "Error creating STUN success response", status);
 	return;
@@ -1072,10 +1076,11 @@ static pj_status_t stun_on_send_msg(pj_stun_session *sess,
 static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
-				      const pj_stun_msg *msg,
+				      const pj_stun_rx_data *rdata,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len)
 {
+    const pj_stun_msg *msg = rdata->msg;
     pj_turn_allocation *alloc;
 
     PJ_UNUSED_ARG(pkt);
@@ -1088,7 +1093,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
     /* Refuse to serve any request if we've been shutdown */
     if (alloc->relay.lifetime == 0) {
 	/* Reject with 437 if we're shutting down */
-	send_reply_err(alloc, msg, PJ_TRUE, 
+	send_reply_err(alloc, rdata, PJ_TRUE, 
 		       PJ_STUN_SC_ALLOCATION_MISMATCH, NULL);
 	return PJ_SUCCESS;
     }
@@ -1115,7 +1120,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	    alloc->relay.lifetime = 0;
 
 	    /* Respond first */
-	    send_reply_ok(alloc, msg);
+	    send_reply_ok(alloc, rdata);
 
 	    /* Shutdown allocation */
 	    PJ_LOG(4,(alloc->obj_name, 
@@ -1141,7 +1146,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	    resched_timeout(alloc);
 
 	    /* Send reply */
-	    send_reply_ok(alloc, msg);
+	    send_reply_ok(alloc, rdata);
 	}
 
     } else if (msg->hdr.type == PJ_STUN_CHANNEL_BIND_REQUEST) {
@@ -1158,7 +1163,8 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 		    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PEER_ADDR, 0);
 
 	if (!ch_attr || !peer_attr) {
-	    send_reply_err(alloc, msg, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, NULL);
+	    send_reply_err(alloc, rdata, PJ_TRUE, 
+			   PJ_STUN_SC_BAD_REQUEST, NULL);
 	    return PJ_SUCCESS;
 	}
 
@@ -1171,7 +1177,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	if (p1) {
 	    if (pj_sockaddr_cmp(&p1->hkey.peer_addr, &peer_attr->sockaddr)) {
 		/* Address mismatch. Send 400 */
-		send_reply_err(alloc, msg, PJ_TRUE, 
+		send_reply_err(alloc, rdata, PJ_TRUE, 
 			       PJ_STUN_SC_BAD_REQUEST, 
 			       "Peer address mismatch");
 		return PJ_SUCCESS;
@@ -1190,7 +1196,7 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	p2 = lookup_permission_by_addr(alloc, &peer_attr->sockaddr,
 				       pj_sockaddr_get_len(&peer_attr->sockaddr));
 	if (p2 && p2->channel != PJ_TURN_INVALID_CHANNEL) {
-	    send_reply_err(alloc, msg, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, 
+	    send_reply_err(alloc, rdata, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, 
 			   "Peer address already assigned a channel number");
 	    return PJ_SUCCESS;
 	}
@@ -1210,19 +1216,20 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	refresh_permission(p2);
 
 	/* Reply */
-	send_reply_ok(alloc, msg);
+	send_reply_ok(alloc, rdata);
 
 	return PJ_SUCCESS;
 
     } else if (msg->hdr.type == PJ_STUN_ALLOCATE_REQUEST) {
 
 	/* Respond with 437 (section 6.3 turn-07) */
-	send_reply_err(alloc, msg, PJ_TRUE, PJ_STUN_SC_ALLOCATION_MISMATCH, NULL);
+	send_reply_err(alloc, rdata, PJ_TRUE, PJ_STUN_SC_ALLOCATION_MISMATCH,
+		       NULL);
 
     } else {
 
 	/* Respond with Bad Request? */
-	send_reply_err(alloc, msg, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, NULL);
+	send_reply_err(alloc, rdata, PJ_TRUE, PJ_STUN_SC_BAD_REQUEST, NULL);
 
     }
 

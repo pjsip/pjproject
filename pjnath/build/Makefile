@@ -38,7 +38,7 @@ export PJNATH_CFLAGS += $(_CFLAGS)
 # Defines for building test application
 #
 export PJNATH_TEST_SRCDIR = ../src/pjnath-test
-export PJNATH_TEST_OBJS += ice_test.o stun.o test.o
+export PJNATH_TEST_OBJS += ice_test.o stun.o sess_auth.o test.o
 export PJNATH_TEST_CFLAGS += $(_CFLAGS)
 export PJNATH_TEST_LDFLAGS += $(_LDFLAGS)
 export PJNATH_TEST_EXE:=../bin/pjnath-test-$(TARGET_NAME)$(HOST_EXE)

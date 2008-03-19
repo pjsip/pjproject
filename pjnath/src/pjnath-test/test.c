@@ -68,6 +68,7 @@ static int test_inner(void)
 
 #if INCLUDE_STUN_TEST
     DO_TEST(stun_test());
+    DO_TEST(sess_auth_test());
 #endif
 
 #if INCLUDE_ICE_TEST

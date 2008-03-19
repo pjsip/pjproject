@@ -39,6 +39,29 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Type of authentication.
+ */
+typedef enum pj_stun_auth_type
+{ 
+    /**
+     * No authentication.
+     */
+    PJ_STUN_AUTH_NONE = 0,
+
+    /**
+     * Authentication using short term credential.
+     */
+    PJ_STUN_AUTH_SHORT_TERM = 1,
+
+    /**
+     * Authentication using long term credential.
+     */
+    PJ_STUN_AUTH_LONG_TERM = 2
+
+} pj_stun_auth_type;
+
+
+/**
  * Type of authentication data in the credential.
  */
 typedef enum pj_stun_auth_cred_type
@@ -59,6 +82,26 @@ typedef enum pj_stun_auth_cred_type
     PJ_STUN_AUTH_CRED_DYNAMIC
 
 } pj_stun_auth_cred_type;
+
+
+/**
+ * Type of encoding applied to the password stored in the credential.
+ */
+typedef enum pj_stun_passwd_type
+{
+    /**
+     * Plain text password.
+     */
+    PJ_STUN_PASSWD_PLAIN    = 0,
+
+    /**
+     * Hashed password, valid for long term credential only. The hash value
+     * of the password is calculated as MD5(USERNAME ":" REALM ":" PASSWD)
+     * with all quotes removed from the username and realm values.
+     */
+    PJ_STUN_PASSWD_HASHED = 1
+
+} pj_stun_passwd_type;
 
 
 /**
@@ -89,31 +132,29 @@ typedef struct pj_stun_auth_cred
 	    /** 
 	     * If not-empty, it indicates that this is a long term credential.
 	     */
-	    pj_str_t	  realm;
+	    pj_str_t		realm;
 
 	    /** 
 	     * The username of the credential.
 	     */
-	    pj_str_t	  username;
+	    pj_str_t		username;
 
 	    /**
 	     * Data type to indicate the type of password in the \a data field.
-	     * Value zero indicates that the data contains a plaintext
-	     * password.
 	     */
-	    int		  data_type;
+	    pj_stun_passwd_type	data_type;
 
 	    /** 
 	     * The data, which depends depends on the value of \a data_type
 	     * field. When \a data_type is zero, this field will contain the
 	     * plaintext password.
 	     */
-	    pj_str_t	  data;
+	    pj_str_t		data;
 
 	    /** 
 	     * Optional NONCE.
 	     */
-	    pj_str_t	  nonce;
+	    pj_str_t		nonce;
 
 	} static_cred;
 
@@ -156,7 +197,7 @@ typedef struct pj_stun_auth_cred
 				    pj_str_t *nonce);
 
 	    /**
-	     * Get the credential to be put in outgoing message.
+	     * Get the credential to be put in outgoing request.
 	     *
 	     * @param msg	The outgoing message where the credential is
 	     *			to be applied.
@@ -186,7 +227,7 @@ typedef struct pj_stun_auth_cred
 				    pj_str_t *realm,
 				    pj_str_t *username,
 				    pj_str_t *nonce,
-				    int *data_type,
+				    pj_stun_passwd_type *data_type,
 				    pj_str_t *data);
 
 	    /**
@@ -217,7 +258,7 @@ typedef struct pj_stun_auth_cred
 				        const pj_str_t *realm,
 				        const pj_str_t *username,
 					pj_pool_t *pool,
-					int *data_type,
+					pj_stun_passwd_type *data_type,
 					pj_str_t *data);
 
 	    /**
@@ -250,6 +291,40 @@ typedef struct pj_stun_auth_cred
 
 
 /**
+ * This structure contains the credential information that is found and
+ * used to authenticate incoming requests. Application may use this
+ * information when generating authentication for the outgoing response.
+ */
+typedef struct pj_stun_req_cred_info
+{
+    /**
+     * The REALM value found in the incoming request. If short term 
+     * credential is used, the value will be empty.
+     */
+    pj_str_t	realm;
+
+    /**
+     * The USERNAME value found in the incoming request.
+     */
+    pj_str_t	username;
+
+    /**
+     * Optional NONCE.
+     */
+    pj_str_t	nonce;
+
+    /**
+     * Authentication key that was used to authenticate the incoming 
+     * request. This key is created with #pj_stun_create_key(), and
+     * it can be used to encode the credential of the outgoing
+     * response.
+     */
+    pj_str_t	auth_key;
+
+} pj_stun_req_cred_info;
+
+
+/**
  * Duplicate authentication credential.
  *
  * @param pool		Pool to be used to allocate memory.
@@ -260,6 +335,40 @@ PJ_DECL(void) pj_stun_auth_cred_dup(pj_pool_t *pool,
 				      pj_stun_auth_cred *dst,
 				      const pj_stun_auth_cred *src);
 
+/**
+ * Duplicate request credential.
+ *
+ * @param pool		Pool to be used to allocate memory.
+ * @param dst		Destination credential.
+ * @param src		Source credential.
+ */
+PJ_DECL(void) pj_stun_req_cred_info_dup(pj_pool_t *pool,
+					pj_stun_req_cred_info *dst,
+					const pj_stun_req_cred_info *src);
+
+
+/**
+ * Create authentication key to be used for encoding the message with
+ * MESSAGE-INTEGRITY. If short term credential is used (i.e. the realm
+ * argument is NULL or empty), the key will be copied from the password.
+ * If long term credential is used, the key will be calculated from the
+ * MD5 hash of the realm, username, and password.
+ *
+ * @param pool		Pool to allocate memory for the key.
+ * @param key		String to receive the key.
+ * @param realm		The realm of the credential, if long term credential
+ *			is to be used. If short term credential is wanted,
+ *			application can put NULL or empty string here.
+ * @param username	The username.
+ * @param data_type	Password encoding.
+ * @param data		The password.
+ */
+PJ_DECL(void) pj_stun_create_key(pj_pool_t *pool,
+				 pj_str_t *key,
+				 const pj_str_t *realm,
+				 const pj_str_t *username,
+				 pj_stun_passwd_type data_type,
+				 const pj_str_t *data);
 
 /**
  * Verify credential in the STUN request. Note that before calling this
@@ -277,9 +386,9 @@ PJ_DECL(void) pj_stun_auth_cred_dup(pj_pool_t *pool,
  *			the message.
  * @param pool		If response is to be created, then memory will
  *			be allocated from this pool.
- * @param auth_key	Optional pointer to receive authentication key to
- *			calculate MESSAGE-INTEGRITY of the response, if
- *			the response needs to be authenticated.
+ * @param info		Optional pointer to receive authentication information
+ *			found in the request and the credential that is used
+ *			to authenticate the request.
  * @param p_response	Optional pointer to receive the response message
  *			then the credential in the request fails to
  *			authenticate.
@@ -294,7 +403,7 @@ PJ_DECL(pj_status_t) pj_stun_authenticate_request(const pj_uint8_t *pkt,
 					          const pj_stun_msg *msg,
 					          pj_stun_auth_cred *cred,
 					          pj_pool_t *pool,
-						  pj_str_t *auth_key,
+						  pj_stun_req_cred_info *info,
 					          pj_stun_msg **p_response);
 
 
