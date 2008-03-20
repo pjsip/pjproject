@@ -105,11 +105,11 @@ PJ_DECL(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
  * @return		The callback MUST return non-zero if the 
  *			NONCE can be accepted.
  */
-PJ_DECL(pj_status_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
-					  void *user_data,
-					  const pj_str_t *realm,
-					  const pj_str_t *username,
-					  const pj_str_t *nonce);
+PJ_DECL(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
+					void *user_data,
+					const pj_str_t *realm,
+					const pj_str_t *username,
+					const pj_str_t *nonce);
 
 #endif	/* __PJ_TURN_SRV_AUTH_H__ */
 

@@ -188,6 +188,7 @@ PJ_DEF(pj_status_t) pj_turn_session_create( pj_stun_config *cfg,
     sess->tp_type = tp_type;
     sess->ka_interval = PJ_TURN_KEEP_ALIVE_SEC;
     sess->user_data = user_data;
+    sess->next_ch = PJ_TURN_CHANNEL_MIN;
 
     /* Copy callback */
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
@@ -325,7 +326,7 @@ static void sess_shutdown(pj_turn_session *sess,
     case PJ_TURN_STATE_READY:
 	/* Send REFRESH with LIFETIME=0 */
 	can_destroy = PJ_FALSE;
-	sess->pending_destroy = PJ_TRUE;
+	send_refresh(sess, 0);
 	break;
     case PJ_TURN_STATE_DEALLOCATING:
 	can_destroy = PJ_FALSE;
@@ -778,7 +779,7 @@ PJ_DEF(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
     /* Add CHANNEL-NUMBER attribute */
     pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
 			      PJ_STUN_ATTR_CHANNEL_NUMBER,
-			      PJ_STUN_SET_CH_NB(sess->next_ch));
+			      PJ_STUN_SET_CH_NB(ch_num));
 
     /* Add PEER-ADDRESS attribute */
     pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
@@ -1023,7 +1024,23 @@ static void on_allocate_success(pj_turn_session *sess,
     }
     
     /* Save relayed address */
-    pj_memcpy(&sess->relay_addr, &raddr_attr->sockaddr, sizeof(pj_sockaddr));
+    if (raddr_attr) {
+	/* If we already have relay address, check if the relay address 
+	 * in the response matches our relay address.
+	 */
+	if (pj_sockaddr_has_addr(&sess->relay_addr)) {
+	    if (pj_sockaddr_cmp(&sess->relay_addr, &raddr_attr->sockaddr)) {
+		on_session_fail(sess, method, PJNATH_EINSTUNMSG,
+				pj_cstr(&s, "Error: different RELAY-ADDRESS is"
+					    "returned by server"));
+		return;
+	    }
+	} else {
+	    /* Otherwise save the relayed address */
+	    pj_memcpy(&sess->relay_addr, &raddr_attr->sockaddr, 
+		      sizeof(pj_sockaddr));
+	}
+    }
 
     /* Success */
 
@@ -1180,6 +1197,8 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
     pj_stun_peer_addr_attr *peer_attr;
     pj_stun_data_attr *data_attr;
 
+    PJ_UNUSED_ARG(pkt);
+    PJ_UNUSED_ARG(pkt_len);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -1209,7 +1228,7 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
 
     /* Notify application */
     if (sess->cb.on_rx_data) {
-	(*sess->cb.on_rx_data)(sess, pkt, pkt_len, 
+	(*sess->cb.on_rx_data)(sess, data_attr->data, data_attr->length, 
 			       &peer_attr->sockaddr,
 			       pj_sockaddr_get_len(&peer_attr->sockaddr));
     }
@@ -1298,13 +1317,15 @@ static struct peer *lookup_peer_by_addr(pj_turn_session *sess,
 	}
 
 	if (bind_channel) {
+	    pj_uint32_t hval = 0;
 	    /* Register by channel number */
 	    pj_assert(peer->ch_id != PJ_TURN_INVALID_CHANNEL && peer->bound);
-	    pj_assert(pj_hash_get(sess->peer_table, &peer->ch_id, 
-				  sizeof(peer->ch_id), NULL)==0);
 
-	    pj_hash_set(sess->pool, sess->peer_table, &peer->ch_id,
-			sizeof(peer->ch_id), 0, peer);
+	    if (pj_hash_get(sess->peer_table, &peer->ch_id, 
+			    sizeof(peer->ch_id), &hval)==0) {
+		pj_hash_set(sess->pool, sess->peer_table, &peer->ch_id,
+			    sizeof(peer->ch_id), hval, peer);
+	    }
 	}
     }
 
@@ -1405,6 +1426,7 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 	    delay.sec = sess->ka_interval;
 	    delay.msec = 0;
 
+	    sess->timer.id = TIMER_KEEP_ALIVE;
 	    pj_timer_heap_schedule(sess->timer_heap, &sess->timer, &delay);
 	}
 
@@ -1414,6 +1436,9 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 	/* Time to destroy */
 	pj_lock_release(sess->lock);
 	do_destroy(sess);
-    }    
+    } else {
+	pj_assert(!"Unknown timer event");
+	pj_lock_release(sess->lock);
+    }
 }
 

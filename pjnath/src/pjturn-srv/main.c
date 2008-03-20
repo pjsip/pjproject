@@ -21,6 +21,8 @@
 
 #define REALM	"pjsip.org"
 
+static pj_caching_pool g_cp;
+
 int err(const char *title, pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
@@ -30,9 +32,91 @@ int err(const char *title, pj_status_t status)
     return 1;
 }
 
+static void dump_status(pj_turn_srv *srv)
+{
+    char addr[80];
+    pj_hash_iterator_t itbuf, *it;
+    pj_time_val now;
+    unsigned i;
+
+    for (i=0; i<srv->core.lis_cnt; ++i) {
+	pj_turn_listener *lis = srv->core.listener[i];
+	printf("Server address : %s\n", lis->info);
+    }
+
+    printf("Worker threads : %d\n", srv->core.thread_cnt);
+    printf("Total mem usage: %d.%03dMB\n", g_cp.used_size / 1000000, 
+	   (g_cp.used_size % 1000000)/1000);
+    printf("UDP port range : %u %u %u (next/min/max)\n", srv->ports.next_udp,
+	   srv->ports.min_udp, srv->ports.max_udp);
+    printf("TCP port range : %u %u %u (next/min/max)\n", srv->ports.next_tcp,
+	   srv->ports.min_tcp, srv->ports.max_tcp);
+    printf("Clients #      : %u\n", pj_hash_count(srv->tables.alloc));
+
+    puts("");
+
+    if (pj_hash_count(srv->tables.alloc)==0) {
+	return;
+    }
+
+    puts("#    Client addr.          Alloc addr.            Username Lftm Expy #prm #chl");
+    puts("------------------------------------------------------------------------------");
+
+    pj_gettimeofday(&now);
+
+    it = pj_hash_first(srv->tables.alloc, &itbuf);
+    i=1;
+    while (it) {
+	pj_turn_allocation *alloc = (pj_turn_allocation*) 
+				    pj_hash_this(srv->tables.alloc, it);
+	printf("%-3d %-22s %-22s %-8.*s %-4d %-4d %-4d %-4d\n",
+	       i,
+	       alloc->info,
+	       pj_sockaddr_print(&alloc->relay.hkey.addr, addr, sizeof(addr), 3),
+	       (int)alloc->cred.data.static_cred.username.slen,
+	       (int)alloc->cred.data.static_cred.username.ptr,
+	       alloc->relay.lifetime,
+	       alloc->relay.expiry.sec - now.sec,
+	       pj_hash_count(alloc->peer_table), 
+	       pj_hash_count(alloc->ch_table));
+	it = pj_hash_next(srv->tables.alloc, it);
+	++i;
+    }
+}
+
+static void menu(void)
+{
+    puts("");
+    puts("Menu:");
+    puts(" d   Dump status");
+    puts(" q   Quit");
+    printf(">> ");
+}
+
+static void console_main(pj_turn_srv *srv)
+{
+    pj_bool_t quit = PJ_FALSE;
+
+    while (!quit) {
+	char line[10];
+	
+	menu();
+	    
+	fgets(line, sizeof(line), stdin);
+
+	switch (line[0]) {
+	case 'd':
+	    dump_status(srv);
+	    break;
+	case 'q':
+	    quit = PJ_TRUE;
+	    break;
+	}
+    }
+}
+
 int main()
 {
-    pj_caching_pool cp;
     pj_turn_srv *srv;
     pj_turn_listener *listener;
     pj_status_t status;
@@ -44,11 +128,11 @@ int main()
     pjlib_util_init();
     pjnath_init();
 
-    pj_caching_pool_init(&cp, NULL, 0);
+    pj_caching_pool_init(&g_cp, NULL, 0);
 
     pj_turn_auth_init(REALM);
 
-    status = pj_turn_srv_create(&cp.factory, &srv);
+    status = pj_turn_srv_create(&g_cp.factory, &srv);
     if (status != PJ_SUCCESS)
 	return err("Error creating server", status);
 
@@ -62,15 +146,11 @@ int main()
 	return err("Error adding listener", status);
 
     puts("Server is running");
-    puts("Press <ENTER> to quit");
 
-    {
-	char line[10];
-	fgets(line, sizeof(line), stdin);
-    }
+    console_main(srv);
 
     pj_turn_srv_destroy(srv);
-    pj_caching_pool_destroy(&cp);
+    pj_caching_pool_destroy(&g_cp);
     pj_shutdown();
 
     return 0;

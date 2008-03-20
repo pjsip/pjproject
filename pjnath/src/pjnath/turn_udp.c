@@ -19,9 +19,16 @@
 #include <pjnath/turn_udp.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/ioqueue.h>
+
+enum
+{
+    TIMER_NONE,
+    TIMER_DESTROY
+};
 
 struct pj_turn_udp
 {
@@ -29,6 +36,12 @@ struct pj_turn_udp
     pj_turn_session	*sess;
     pj_turn_udp_cb	 cb;
     void		*user_data;
+
+    pj_lock_t		*lock;
+
+    pj_bool_t		 destroy_request;
+    pj_timer_heap_t	*timer_heap;
+    pj_timer_entry	 timer;
 
     pj_sock_t		 sock;
     pj_ioqueue_key_t	*key;
@@ -64,6 +77,10 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ssize_t bytes_read);
 
 
+static void destroy(pj_turn_udp *udp_rel);
+static void timer_cb(pj_timer_heap_t *th, pj_timer_entry *e);
+
+
 /*
  * Create.
  */
@@ -93,23 +110,22 @@ PJ_DEF(pj_status_t) pj_turn_udp_create( pj_stun_config *cfg,
 	pj_memcpy(&udp_rel->cb, cb, sizeof(*cb));
     }
 
-    /* Init TURN session */
-    pj_bzero(&sess_cb, sizeof(sess_cb));
-    sess_cb.on_send_pkt = &turn_on_send_pkt;
-    sess_cb.on_channel_bound = &turn_on_channel_bound;
-    sess_cb.on_rx_data = &turn_on_rx_data;
-    sess_cb.on_state = &turn_on_state;
-    status = pj_turn_session_create(cfg, pool->obj_name, af, PJ_TURN_TP_UDP,
-				    &sess_cb, udp_rel, 0, &udp_rel->sess);
+    /* Create lock */
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name, 
+					    &udp_rel->lock);
     if (status != PJ_SUCCESS) {
-	pj_turn_udp_destroy(udp_rel);
+	destroy(udp_rel);
 	return status;
     }
+
+    /* Init timer */
+    udp_rel->timer_heap = cfg->timer_heap;
+    pj_timer_entry_init(&udp_rel->timer, TIMER_NONE, udp_rel, &timer_cb);
 
     /* Init socket */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &udp_rel->sock);
     if (status != PJ_SUCCESS) {
-	pj_turn_udp_destroy(udp_rel);
+	destroy(udp_rel);
 	return status;
     }
 
@@ -118,7 +134,7 @@ PJ_DEF(pj_status_t) pj_turn_udp_create( pj_stun_config *cfg,
     status = pj_sock_bind(udp_rel->sock, &udp_rel->src_addr, 
 			  pj_sockaddr_get_len(&udp_rel->src_addr));
     if (status != PJ_SUCCESS) {
-	pj_turn_udp_destroy(udp_rel);
+	destroy(udp_rel);
 	return status;
     }
 
@@ -129,7 +145,20 @@ PJ_DEF(pj_status_t) pj_turn_udp_create( pj_stun_config *cfg,
 				      udp_rel->sock, udp_rel, 
 				      &ioq_cb, &udp_rel->key);
     if (status != PJ_SUCCESS) {
-	pj_turn_udp_destroy(udp_rel);
+	destroy(udp_rel);
+	return status;
+    }
+
+    /* Init TURN session */
+    pj_bzero(&sess_cb, sizeof(sess_cb));
+    sess_cb.on_send_pkt = &turn_on_send_pkt;
+    sess_cb.on_channel_bound = &turn_on_channel_bound;
+    sess_cb.on_rx_data = &turn_on_rx_data;
+    sess_cb.on_state = &turn_on_state;
+    status = pj_turn_session_create(cfg, pool->obj_name, af, PJ_TURN_TP_UDP,
+				    &sess_cb, udp_rel, 0, &udp_rel->sess);
+    if (status != PJ_SUCCESS) {
+	destroy(udp_rel);
 	return status;
     }
 
@@ -144,11 +173,31 @@ PJ_DEF(pj_status_t) pj_turn_udp_create( pj_stun_config *cfg,
 /*
  * Destroy.
  */
-PJ_DEF(void) pj_turn_udp_destroy(pj_turn_udp *udp_rel)
+static void destroy(pj_turn_udp *udp_rel)
 {
+    if (udp_rel->lock) {
+	pj_lock_acquire(udp_rel->lock);
+    }
+
     if (udp_rel->sess) {
+	pj_turn_session_set_user_data(udp_rel->sess, NULL);
 	pj_turn_session_destroy(udp_rel->sess);
 	udp_rel->sess = NULL;
+    }
+
+    if (udp_rel->key) {
+	pj_ioqueue_unregister(udp_rel->key);
+	udp_rel->key = NULL;
+	udp_rel->sock = 0;
+    } else if (udp_rel->sock) {
+	pj_sock_close(udp_rel->sock);
+	udp_rel->sock = 0;
+    }
+
+    if (udp_rel->lock) {
+	pj_lock_release(udp_rel->lock);
+	pj_lock_destroy(udp_rel->lock);
+	udp_rel->lock = NULL;
     }
 
     if (udp_rel->pool) {
@@ -157,6 +206,46 @@ PJ_DEF(void) pj_turn_udp_destroy(pj_turn_udp *udp_rel)
 	pj_pool_release(pool);
     }
 }
+
+PJ_DEF(void) pj_turn_udp_destroy(pj_turn_udp *udp_rel)
+{
+    pj_lock_acquire(udp_rel->lock);
+    udp_rel->destroy_request = PJ_TRUE;
+
+    if (udp_rel->sess) {
+	pj_turn_session_destroy(udp_rel->sess);
+	/* This will ultimately call our state callback, and when
+	 * session state is DESTROYING we will schedule a timer to
+	 * destroy ourselves.
+	 */
+	pj_lock_release(udp_rel->lock);
+    } else {
+	pj_lock_release(udp_rel->lock);
+	destroy(udp_rel);
+    }
+
+}
+
+/* Timer callback */
+static void timer_cb(pj_timer_heap_t *th, pj_timer_entry *e)
+{
+    pj_turn_udp *udp_rel = (pj_turn_udp*)e->user_data;
+    int eid = e->id;
+
+    PJ_UNUSED_ARG(th);
+
+    e->id = TIMER_NONE;
+
+    switch (eid) {
+    case TIMER_DESTROY:
+	destroy(udp_rel);
+	break;
+    default:
+	pj_assert(!"Invalid timer id");
+	break;
+    }
+}
+
 
 /*
  * Set user data.
@@ -271,6 +360,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_status_t status;
 
     udp_rel = (pj_turn_udp*) pj_ioqueue_get_user_data(key);
+    pj_lock_acquire(udp_rel->lock);
 
     do {
 	/* Report incoming packet to TURN session */
@@ -300,6 +390,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
 	     ++retry < MAX_RETRY);
 
+    pj_lock_release(udp_rel->lock);
 }
 
 
@@ -315,6 +406,12 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
     pj_turn_udp *udp_rel = (pj_turn_udp*) 
 			   pj_turn_session_get_user_data(sess);
     pj_ssize_t len = pkt_len;
+
+    if (udp_rel == NULL) {
+	/* We've been destroyed */
+	pj_assert(!"We should shutdown gracefully");
+	return PJ_EINVALIDOP;
+    }
 
     return pj_sock_sendto(udp_rel->sock, pkt, &len, 0,
 			  dst_addr, dst_addr_len);
@@ -347,6 +444,11 @@ static void turn_on_rx_data(pj_turn_session *sess,
 {
     pj_turn_udp *udp_rel = (pj_turn_udp*) 
 			   pj_turn_session_get_user_data(sess);
+    if (udp_rel == NULL) {
+	/* We've been destroyed */
+	return;
+    }
+
     if (udp_rel->cb.on_rx_data) {
 	(*udp_rel->cb.on_rx_data)(udp_rel, pkt, pkt_len, 
 				  peer_addr, addr_len);
@@ -363,12 +465,27 @@ static void turn_on_state(pj_turn_session *sess,
 {
     pj_turn_udp *udp_rel = (pj_turn_udp*) 
 			   pj_turn_session_get_user_data(sess);
+    if (udp_rel == NULL) {
+	/* We've been destroyed */
+	return;
+    }
+
     if (udp_rel->cb.on_state) {
 	(*udp_rel->cb.on_state)(udp_rel, old_state, new_state);
     }
 
-    if (new_state > PJ_TURN_STATE_READY) {
-	udp_rel->sess = NULL;
+    if (new_state >= PJ_TURN_STATE_DESTROYING && udp_rel->sess) {
+	if (udp_rel->destroy_request) {
+	    pj_time_val delay = {0, 0};
+
+	    pj_turn_session_set_user_data(udp_rel->sess, NULL);
+
+	    udp_rel->timer.id = TIMER_DESTROY;
+	    pj_timer_heap_schedule(udp_rel->timer_heap, &udp_rel->timer, 
+				   &delay);
+	} else {
+	    udp_rel->sess = NULL;
+	}
     }
 }
 

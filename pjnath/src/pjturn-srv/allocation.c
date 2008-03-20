@@ -668,7 +668,7 @@ static pj_status_t create_relay(pj_turn_srv *srv,
 
     if (status != PJ_SUCCESS) {
 	/* Unable to allocate port */
-	PJ_LOG(4,(THIS_FILE, "bind() failed: err %d", 
+	PJ_LOG(4,(THIS_FILE, "Unable to allocate relay, giving up: err %d", 
 		  status));
 	pj_sock_close(relay->tp.sock);
 	relay->tp.sock = PJ_INVALID_SOCKET;
@@ -687,6 +687,11 @@ static pj_status_t create_relay(pj_turn_srv *srv,
     }
     if (!pj_sockaddr_has_addr(&relay->hkey.addr)) {
 	pj_sockaddr_copy_addr(&relay->hkey.addr, &alloc->listener->addr);
+    }
+    if (!pj_sockaddr_has_addr(&relay->hkey.addr)) {
+	pj_sockaddr tmp_addr;
+	pj_gethostip(af, &tmp_addr);
+	pj_sockaddr_copy_addr(&relay->hkey.addr, &tmp_addr);
     }
 
     /* Init ioqueue */
@@ -751,14 +756,18 @@ static void send_reply_ok(pj_turn_allocation *alloc,
 	interval = 0;
     }
 
-    /* Add LIFETIME. */
-    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-			      PJ_STUN_ATTR_LIFETIME, interval);
+    /* Add LIFETIME if this is not ChannelBind. */
+    if (PJ_STUN_GET_METHOD(tdata->msg->hdr.type)!=PJ_STUN_CHANNEL_BIND_METHOD){
+	pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				  PJ_STUN_ATTR_LIFETIME, interval);
 
-    /* Add BANDWIDTH */
-    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
-			      PJ_STUN_ATTR_BANDWIDTH,
-			      alloc->bandwidth);
+	/* Add BANDWIDTH if lifetime is not zero */
+	if (interval != 0) {
+	    pj_stun_msg_add_uint_attr(tdata->pool, tdata->msg,
+				      PJ_STUN_ATTR_BANDWIDTH,
+				      alloc->bandwidth);
+	}
+    }
 
     status = pj_stun_session_send_msg(alloc->sess, PJ_TRUE, 
 				      &alloc->hkey.clt_addr,  
@@ -773,8 +782,8 @@ static void send_reply_ok(pj_turn_allocation *alloc,
 
 /* Create new permission */
 static pj_turn_permission *create_permission(pj_turn_allocation *alloc,
-					    const pj_sockaddr_t *peer_addr,
-					    unsigned addr_len)
+					     const pj_sockaddr_t *peer_addr,
+					     unsigned addr_len)
 {
     pj_turn_permission *perm;
 
@@ -794,6 +803,10 @@ static pj_turn_permission *create_permission(pj_turn_allocation *alloc,
     pj_gettimeofday(&perm->expiry);
     perm->expiry.sec += PJ_TURN_PERM_TIMEOUT;
 
+    /* Register to hash table */
+    pj_hash_set(alloc->pool, alloc->peer_table, &perm->hkey.peer_addr, 
+	        pj_sockaddr_get_len(&perm->hkey.peer_addr), 0, perm);
+
     return perm;
 }
 
@@ -804,14 +817,14 @@ static pj_turn_permission *check_permission_expiry(pj_turn_permission *perm)
     pj_time_val now;
 
     pj_gettimeofday(&now);
-    if (PJ_TIME_VAL_LT(perm->expiry, now)) {
+    if (PJ_TIME_VAL_GT(perm->expiry, now)) {
 	/* Permission has not expired */
 	return perm;
     }
 
     /* Remove from permission hash table */
-    pj_hash_set(NULL, alloc->peer_table, &perm->hkey, sizeof(perm->hkey),
-		0, NULL);
+    pj_hash_set(NULL, alloc->peer_table, &perm->hkey.peer_addr, 
+	        pj_sockaddr_get_len(&perm->hkey.peer_addr), 0, NULL);
 
     /* Remove from channel hash table, if assigned a channel number */
     if (perm->channel != PJ_TURN_INVALID_CHANNEL) {
@@ -828,16 +841,12 @@ lookup_permission_by_addr(pj_turn_allocation *alloc,
 			  const pj_sockaddr_t *peer_addr,
 			  unsigned addr_len)
 {
-    pj_turn_permission_key key;
     pj_turn_permission *perm;
 
-    pj_bzero(&key, sizeof(key));
-    pj_memcpy(&key, peer_addr, addr_len);
-
     /* Lookup in peer hash table */
-    perm = (pj_turn_permission*) pj_hash_get(alloc->peer_table, &key,
-					    sizeof(key), NULL);
-    return check_permission_expiry(perm);
+    perm = (pj_turn_permission*) pj_hash_get(alloc->peer_table, peer_addr,
+					     addr_len, NULL);
+    return perm ? check_permission_expiry(perm) : NULL;
 }
 
 /* Lookup permission in hash table by the channel number */
@@ -849,9 +858,9 @@ lookup_permission_by_chnum(pj_turn_allocation *alloc,
     pj_turn_permission *perm;
 
     /* Lookup in peer hash table */
-    perm = (pj_turn_permission*) pj_hash_get(alloc->peer_table, &chnum16,
+    perm = (pj_turn_permission*) pj_hash_get(alloc->ch_table, &chnum16,
 					    sizeof(chnum16), NULL);
-    return check_permission_expiry(perm);
+    return perm ? check_permission_expiry(perm) : NULL;
 }
 
 /* Update permission because of data from client to peer. 
@@ -930,8 +939,8 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 	if (!perm) {
 	    /* Discard */
 	    PJ_LOG(4,(alloc->obj_name, 
-		      "ChannelData from %s discarded: not found",
-		      alloc->info));
+		      "ChannelData from %s discarded: ch#0x%x not found",
+		      alloc->info, pj_ntohs(cd->ch_number)));
 	    goto on_return;
 	}
 
@@ -991,7 +1000,7 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
 	cd->length = pj_htons((pj_uint16_t)len);
 
 	/* Copy data */
-	pj_memcpy(rel->tp.rx_pkt+sizeof(pj_turn_channel_data), pkt, len);
+	pj_memcpy(rel->tp.tx_pkt+sizeof(pj_turn_channel_data), pkt, len);
 
 	/* Send to client */
 	pj_turn_listener_sendto(alloc->listener, rel->tp.tx_pkt,
@@ -1009,6 +1018,18 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
 	    alloc_err(alloc, "Error creating Data indication", status);
 	    return;
 	}
+
+	pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg, 
+				      PJ_STUN_ATTR_PEER_ADDR, PJ_TRUE,
+				      src_addr, pj_sockaddr_get_len(src_addr));
+	pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
+				    PJ_STUN_ATTR_DATA, 
+				    (const pj_uint8_t*)pkt, len);
+
+	pj_stun_session_send_msg(alloc->sess, PJ_FALSE, 
+				 &alloc->hkey.clt_addr, 
+				 pj_sockaddr_get_len(&alloc->hkey.clt_addr), 
+				 tdata);
     }
 }
 
@@ -1186,6 +1207,9 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	    /* Refresh permission */
 	    refresh_permission(p1);
 
+	    /* Send response */
+	    send_reply_ok(alloc, rdata);
+
 	    /* Done */
 	    return PJ_SUCCESS;
 	}
@@ -1211,6 +1235,11 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 
 	/* Assign channel number to permission */
 	p2->channel = PJ_STUN_GET_CH_NB(ch_attr->value);
+
+	/* Register to hash table */
+	pj_assert(sizeof(p2->channel==2));
+	pj_hash_set(alloc->pool, alloc->ch_table, &p2->channel, 
+		    sizeof(p2->channel), 0, p2);
 
 	/* Update */
 	refresh_permission(p2);

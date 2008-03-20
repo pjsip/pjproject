@@ -61,7 +61,6 @@ static struct options
     char    *realm;
     char    *user_name;
     char    *password;
-    char    *nonce;
     pj_bool_t use_fingerprint;
 } o;
 
@@ -135,7 +134,7 @@ static int init()
 	port = pj_sockaddr_get_port(&addr);
 
 	CHECK( pj_gethostip(pj_AF_INET(), &g.peer[i].addr) );
-	pj_sockaddr_set_port(&g.peer[0].addr, port);
+	pj_sockaddr_set_port(&g.peer[i].addr, port);
 
     }
 
@@ -265,7 +264,7 @@ static pj_status_t create_relay(void)
 	cred.data.static_cred.username = pj_str(o.user_name);
 	cred.data.static_cred.data_type = 0;
 	cred.data.static_cred.data = pj_str(o.password);
-	cred.data.static_cred.nonce = pj_str(o.nonce);
+	//cred.data.static_cred.nonce = pj_str(o.nonce);
     } else {
 	PJ_LOG(2,(THIS_FILE, "Warning: no credential is set"));
     }
@@ -286,7 +285,6 @@ static void destroy_relay(void)
 {
     if (g.udp_rel) {
 	pj_turn_udp_destroy(g.udp_rel);
-	g.udp_rel = NULL;
     }
 }
 
@@ -309,10 +307,16 @@ static void turn_on_rx_data(pj_turn_udp *udp_rel,
 static void turn_on_state(pj_turn_udp *udp_rel, pj_turn_state_t old_state,
 			  pj_turn_state_t new_state)
 {
+    PJ_LOG(3,(THIS_FILE, "State %s --> %s", pj_turn_state_name(old_state), 
+	      pj_turn_state_name(new_state)));
+
     if (new_state == PJ_TURN_STATE_READY) {
 	pj_turn_session_info info;
 	pj_turn_udp_get_info(udp_rel, &info);
 	pj_memcpy(&g.relay_addr, &info.relay_addr, sizeof(pj_sockaddr));
+    } else if (new_state > PJ_TURN_STATE_READY && g.udp_rel) {
+	PJ_LOG(3,(THIS_FILE, "Relay shutting down.."));
+	g.udp_rel = NULL;
     }
 }
 
@@ -379,10 +383,10 @@ static void menu(void)
     printf("| Relay addr: %-21s |                                |\n",
 	   relay_addr);
     puts("|                                   | 0  Send data to relay address  |");
-    puts("| A      Allocate relay             +--------------------------------+	");
-    puts("| S[01]  Send data to peer 0/1      |             PEER-1             |");
-    puts("| B[01]  BindChannel to peer 0/1    |                                |");
-    printf("| X      Delete allocation          | Address: %-21s |\n",
+    puts("| a      Allocate relay             +--------------------------------+	");
+    puts("| s,ss   Send data to peer 0/1      |             PEER-1             |");
+    puts("| b,bb   BindChannel to peer 0/1    |                                |");
+    printf("| x      Delete allocation          | Address: %-21s |\n",
 	  peer1_addr);
     puts("+-----------------------------------+                                |");
     puts("| q  Quit                           | 1  Send data to relay adderss  |");
@@ -405,19 +409,19 @@ static void console_main(void)
 	fgets(input, sizeof(input), stdin);
 	
 	switch (input[0]) {
-	case 'A':
+	case 'a':
 	    create_relay();
 	    break;
-	case 'S':
+	case 's':
 	    if (g.udp_rel == NULL) {
 		puts("Error: no relay");
 		continue;
 	    }
-	    if (input[1] != '0' && input[1] != '1') {
-		puts("Usage: S0 or S1");
-		continue;
-	    }
-	    peer = &g.peer[input[1]-'0'];
+	    if (input[1]!='s')
+		peer = &g.peer[0];
+	    else
+		peer = &g.peer[1];
+
 	    strcpy(input, "Hello from client");
 	    status = pj_turn_udp_sendto(g.udp_rel, input, strlen(input)+1, 
 					&peer->addr, 
@@ -425,22 +429,22 @@ static void console_main(void)
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_sendto() failed", status);
 	    break;
-	case 'B':
+	case 'b':
 	    if (g.udp_rel == NULL) {
 		puts("Error: no relay");
 		continue;
 	    }
-	    if (input[1] != '0' && input[1] != '1') {
-		puts("Usage: B0 or B1");
-		continue;
-	    }
-	    peer = &g.peer[input[1]-'0'];
+	    if (input[1]!='b')
+		peer = &g.peer[0];
+	    else
+		peer = &g.peer[1];
+
 	    status = pj_turn_udp_bind_channel(g.udp_rel, &peer->addr,
 					      pj_sockaddr_get_len(&peer->addr));
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_bind_channel() failed", status);
 	    break;
-	case 'X':
+	case 'x':
 	    if (g.udp_rel == NULL) {
 		puts("Error: no relay");
 		continue;
@@ -449,7 +453,7 @@ static void console_main(void)
 	    break;
 	case '0':
 	case '1':
-	    peer = &g.peer[input[1]-'0'];
+	    peer = &g.peer[input[0]-'0'];
 	    sprintf(input, "Hello from peer%d", input[0]-'0');
 	    len = strlen(input)+1;
 	    pj_sock_sendto(peer->sock, input, &len, 0, &g.relay_addr, 
@@ -473,7 +477,6 @@ static void usage(void)
     puts(" --realm, -r       Set realm of the credential");
     puts(" --username, -u    Set username of the credential");
     puts(" --password, -p    Set password of the credential");
-    puts(" --nonce, -N       Set NONCE");   
     puts(" --fingerprint, -F Use fingerprint for outgoing requests");
     puts(" --help, -h");
 }
@@ -484,7 +487,6 @@ int main(int argc, char *argv[])
 	{ "realm",	1, 0, 'r'},
 	{ "username",	1, 0, 'u'},
 	{ "password",	1, 0, 'p'},
-	{ "nonce",	1, 0, 'N'},
 	{ "fingerprint",0, 0, 'F'},
 	{ "data",	1, 0, 'D'},
 	{ "help",	0, 0, 'h'}
@@ -503,9 +505,6 @@ int main(int argc, char *argv[])
 	    break;
 	case 'p':
 	    o.password = pj_optarg;
-	    break;
-	case 'N':
-	    o.nonce = pj_optarg;
 	    break;
 	case 'h':
 	    usage();
@@ -537,8 +536,8 @@ int main(int argc, char *argv[])
     if ((status=init()) != 0)
 	goto on_return;
     
-    if ((status=create_relay()) != 0)
-	goto on_return;
+    //if ((status=create_relay()) != 0)
+    //	goto on_return;
     
     console_main();
 

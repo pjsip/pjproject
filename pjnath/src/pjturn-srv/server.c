@@ -135,7 +135,7 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
 
     /* Init ports settings */
     srv->ports.min_udp = srv->ports.next_udp = MIN_PORT;
-    srv->ports.max_tcp = MAX_PORT;
+    srv->ports.max_udp = MAX_PORT;
     srv->ports.min_tcp = srv->ports.next_tcp = MIN_PORT;
     srv->ports.max_tcp = MAX_PORT;
 
@@ -265,6 +265,18 @@ PJ_DEF(pj_status_t) pj_turn_srv_destroy(pj_turn_srv *srv)
 	}
     }
 
+    /* Destroy all allocations FIRST */
+    if (srv->tables.alloc) {
+	it = pj_hash_first(srv->tables.alloc, &itbuf);
+	while (it != NULL) {
+	    pj_turn_allocation *alloc = (pj_turn_allocation*)
+					pj_hash_this(srv->tables.alloc, it);
+	    pj_hash_iterator_t *next = pj_hash_next(srv->tables.alloc, it);
+	    pj_turn_allocation_destroy(alloc);
+	    it = next;
+	}
+    }
+    
     /* Destroy all listeners and STUN sessions associated with them. */
     for (i=0; i<srv->core.lis_cnt; ++i) {
 	if (srv->core.listener[i]) {
@@ -276,18 +288,6 @@ PJ_DEF(pj_status_t) pj_turn_srv_destroy(pj_turn_srv *srv)
 	    srv->core.stun_sess[i] = NULL;
 	}
     }
-
-    /* Destroy all allocations */
-    if (srv->tables.alloc) {
-	it = pj_hash_first(srv->tables.alloc, &itbuf);
-	while (it != NULL) {
-	    pj_turn_allocation *alloc = (pj_turn_allocation*)
-					pj_hash_this(srv->tables.alloc, it);
-	    pj_turn_allocation_destroy(alloc);
-	    it = pj_hash_next(srv->tables.alloc, it);
-	}
-    }
-    
 
     /* Destroy hash tables (well, sort of) */
     if (srv->tables.alloc) {

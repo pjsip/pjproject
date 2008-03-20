@@ -113,11 +113,11 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
  * in the message can be accepted. If this callback returns
  * PJ_FALSE, 438 (Stale Nonce) response will be created.
  */
-PJ_DEF(pj_status_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
-					 void *user_data,
-					 const pj_str_t *realm,
-					 const pj_str_t *username,
-					 const pj_str_t *nonce)
+PJ_DEF(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
+				       void *user_data,
+				       const pj_str_t *realm,
+				       const pj_str_t *username,
+				       const pj_str_t *nonce)
 {
     PJ_UNUSED_ARG(msg);
     PJ_UNUSED_ARG(user_data);
@@ -127,6 +127,6 @@ PJ_DEF(pj_status_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
     if (pj_stricmp2(nonce, THE_NONCE))
 	return PJ_FALSE;
 
-    return PJ_SUCCESS;
+    return PJ_TRUE;
 }
 

@@ -190,7 +190,7 @@ struct pj_turn_permission
     pj_turn_allocation	*allocation;
 
     /** Optional channel number, or PJ_TURN_INVALID_CHANNEL if channel number
-     *  is not requested for this permission.
+     *  is not requested for this permission. 
      */
     pj_uint16_t		channel;
 

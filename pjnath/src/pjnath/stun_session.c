@@ -267,6 +267,9 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 
     *notify_user = PJ_TRUE;
 
+    if (response==NULL)
+	return PJ_SUCCESS;
+
     if (sess->auth_type != PJ_STUN_AUTH_LONG_TERM)
 	return PJ_SUCCESS;
     
