@@ -2070,6 +2070,14 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 
 	pjsip_dlg_inc_lock(inv->dlg);
 
+	/* Check again that we didn't receive incoming re-INVITE */
+	if (inv->invite_tsx) {
+	    pjsip_tx_data_dec_ref(tdata);
+	    pjsip_dlg_dec_lock(inv->dlg);
+	    return PJ_EINVALIDOP;
+	}
+
+	/* Associate our data in outgoing invite transaction */
 	tsx_inv_data = PJ_POOL_ZALLOC_T(inv->pool, struct tsx_inv_data);
 	tsx_inv_data->inv = inv;
 
@@ -3274,11 +3282,19 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
     else if (tsx->method.id == PJSIP_INVITE_METHOD &&
 	     tsx->role == PJSIP_ROLE_UAC)
     {
+	/* Must not have other pending INVITE transaction */
+	pj_assert(inv->invite_tsx==NULL || tsx==inv->invite_tsx);
+
 	/*
 	 * Handle outgoing re-INVITE
 	 */
-	if (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
-	    tsx->status_code/100 == 2) 
+	if (tsx->state == PJSIP_TSX_STATE_CALLING) {
+
+	    /* Save pending invite transaction */
+	    inv->invite_tsx = tsx;
+
+	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+		   tsx->status_code/100 == 2) 
 	{
 
 	    /* Re-INVITE was accepted. */
