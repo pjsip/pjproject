@@ -58,7 +58,7 @@ typedef struct pj_turn_session pj_turn_session;
 /** TURN transport types */
 typedef enum pj_turn_tp_type
 {
-    PJ_TURN_TP_UDP = 16,    /**< UDP.	*/
+    PJ_TURN_TP_UDP = 17,    /**< UDP.	*/
     PJ_TURN_TP_TCP = 6,	    /**< TCP.	*/
     PJ_TURN_TP_TLS = 256    /**< TLS.	*/
 } pj_turn_tp_type;
