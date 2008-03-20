@@ -66,7 +66,6 @@ static struct options
 
 
 static int worker_thread(void *unused);
-static pj_status_t parse_addr(const char *input, pj_sockaddr_in *addr);
 static void turn_on_rx_data(pj_turn_udp *udp_rel,
 			    const pj_uint8_t *pkt,
 			    unsigned pkt_len,
@@ -320,39 +319,6 @@ static void turn_on_state(pj_turn_udp *udp_rel, pj_turn_state_t old_state,
     }
 }
 
-static pj_status_t parse_addr(const char *input,
-			      pj_sockaddr_in *addr)
-{
-    const char *pos;
-    pj_str_t ip;
-    pj_uint16_t port;
-    pj_sockaddr tmp_addr;
-
-    pos = pj_ansi_strchr(input, ':');
-    if (pos==NULL) {
-	puts("Invalid format");
-	return -1;
-    }
-
-    ip.ptr = (char*)input;
-    ip.slen = pos - input;
-    port = (pj_uint16_t)atoi(pos+1);
-
-    if (port==0) {
-	puts("Invalid port");
-	return -1;
-    }
-
-    if (pj_sockaddr_in_init(&tmp_addr.ipv4, &ip, port)!=PJ_SUCCESS) {
-	puts("Invalid address");
-	return -1;
-    }
-
-    pj_memcpy(addr, &tmp_addr, sizeof(pj_sockaddr_in));
-
-    return PJ_SUCCESS;
-}
-
 static void menu(void)
 {
     pj_turn_session_info info;
@@ -423,7 +389,8 @@ static void console_main(void)
 		peer = &g.peer[1];
 
 	    strcpy(input, "Hello from client");
-	    status = pj_turn_udp_sendto(g.udp_rel, input, strlen(input)+1, 
+	    status = pj_turn_udp_sendto(g.udp_rel, (const pj_uint8_t*)input, 
+					strlen(input)+1, 
 					&peer->addr, 
 					pj_sockaddr_get_len(&peer->addr));
 	    if (status != PJ_SUCCESS)
@@ -453,6 +420,10 @@ static void console_main(void)
 	    break;
 	case '0':
 	case '1':
+	    if (g.udp_rel == NULL) {
+		puts("No relay");
+		break;
+	    }
 	    peer = &g.peer[input[0]-'0'];
 	    sprintf(input, "Hello from peer%d", input[0]-'0');
 	    len = strlen(input)+1;
@@ -522,6 +493,7 @@ int main(int argc, char *argv[])
 
     if (pj_optind == argc) {
 	puts("Error: TARGET is needed");
+	usage();
 	return 1;
     }
 

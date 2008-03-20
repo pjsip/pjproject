@@ -336,6 +336,7 @@ static void sess_shutdown(pj_turn_session *sess,
 	send_refresh(sess, 0);
 	break;
     case PJ_TURN_STATE_DEALLOCATED:
+    case PJ_TURN_STATE_DESTROYING:
 	break;
     }
 

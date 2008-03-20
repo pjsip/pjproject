@@ -69,16 +69,17 @@ static void dump_status(pj_turn_srv *srv)
     while (it) {
 	pj_turn_allocation *alloc = (pj_turn_allocation*) 
 				    pj_hash_this(srv->tables.alloc, it);
-	printf("%-3d %-22s %-22s %-8.*s %-4d %-4d %-4d %-4d\n",
+	printf("%-3d %-22s %-22s %-8.*s %-4d %-4ld %-4d %-4d\n",
 	       i,
 	       alloc->info,
 	       pj_sockaddr_print(&alloc->relay.hkey.addr, addr, sizeof(addr), 3),
 	       (int)alloc->cred.data.static_cred.username.slen,
-	       (int)alloc->cred.data.static_cred.username.ptr,
+	       alloc->cred.data.static_cred.username.ptr,
 	       alloc->relay.lifetime,
 	       alloc->relay.expiry.sec - now.sec,
 	       pj_hash_count(alloc->peer_table), 
 	       pj_hash_count(alloc->ch_table));
+
 	it = pj_hash_next(srv->tables.alloc, it);
 	++i;
     }

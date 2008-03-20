@@ -88,7 +88,7 @@ PJ_DECL(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
 					  const pj_str_t *realm,
 					  const pj_str_t *username,
 					  pj_pool_t *pool,
-					  int *data_type,
+					  pj_stun_passwd_type *data_type,
 					  pj_str_t *data);
 
 /**

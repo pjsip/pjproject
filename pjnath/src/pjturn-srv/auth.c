@@ -85,7 +85,7 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
 					 const pj_str_t *realm,
 					 const pj_str_t *username,
 					 pj_pool_t *pool,
-					 int *data_type,
+					 pj_stun_passwd_type *data_type,
 					 pj_str_t *data)
 {
     unsigned i;
@@ -95,7 +95,7 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(pool);
 
     if (pj_stricmp2(realm, g_realm))
-	PJ_EINVAL;
+	return PJ_EINVAL;
 
     for (i=0; i<PJ_ARRAY_SIZE(g_cred); ++i) {
 	if (pj_stricmp2(username, g_cred[i].username) == 0) {
