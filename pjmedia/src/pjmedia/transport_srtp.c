@@ -556,7 +556,6 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     transport_srtp *srtp = (transport_srtp*) tp;
     pjmedia_srtp_info srtp_info;
     int spc_info_idx;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(tp && info, PJ_EINVAL);
     PJ_ASSERT_RETURN(info->specific_info_cnt <
