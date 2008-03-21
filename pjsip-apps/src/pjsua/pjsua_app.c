@@ -93,6 +93,8 @@ static struct app_config
 static pjsua_call_id	current_call = PJSUA_INVALID_ID;
 static pj_str_t		uri_arg;
 
+static char some_buf[2048];
+
 #ifdef STEREO_DEMO
 static void stereo_demo();
 #endif
@@ -1671,12 +1673,11 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
 	/* Dump media state upon disconnected */
 	if (1) {
-	    char buf[1024];
-	    pjsua_call_dump(call_id, PJ_TRUE, buf, 
-			    sizeof(buf), "  ");
+	    pjsua_call_dump(call_id, PJ_TRUE, some_buf, 
+			    sizeof(some_buf), "  ");
 	    PJ_LOG(5,(THIS_FILE, 
 		      "Call %d disconnected, dumping media stats\n%s", 
-		      call_id, buf));
+		      call_id, some_buf));
 	}
 
     } else {
@@ -3353,10 +3354,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    } else if (menuin[1] == 'q') {
 
 		if (current_call != PJSUA_INVALID_ID) {
-		    char buf[1024];
-		    pjsua_call_dump(current_call, PJ_TRUE, buf, 
-				    sizeof(buf), "  ");
-		    PJ_LOG(3,(THIS_FILE, "\n%s", buf));
+		    pjsua_call_dump(current_call, PJ_TRUE, some_buf, 
+				    sizeof(some_buf), "  ");
+		    PJ_LOG(3,(THIS_FILE, "\n%s", some_buf));
 		} else {
 		    PJ_LOG(3,(THIS_FILE, "No current call"));
 		}
