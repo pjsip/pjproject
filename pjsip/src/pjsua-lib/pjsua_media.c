@@ -169,7 +169,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     /* Save additional conference bridge parameters for future
      * reference.
      */
-    pjsua_var.mconf_cfg.channel_count = pjsua_var.media_cfg.channel_count;
+    pjsua_var.mconf_cfg.channel_count = 1;
     pjsua_var.mconf_cfg.bits_per_sample = 16;
     pjsua_var.mconf_cfg.samples_per_frame = pjsua_var.media_cfg.clock_rate * 
 					    pjsua_var.mconf_cfg.channel_count *
@@ -1834,10 +1834,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	fps = 1000 / pjsua_var.media_cfg.audio_frame_ptime;
 	status = pjmedia_snd_port_create(pjsua_var.pool, capture_dev,
 					 playback_dev, 
-					 clock_rates[i], 
-					 pjsua_var.media_cfg.channel_count,
-					 clock_rates[i]/fps * 
-					 pjsua_var.media_cfg.channel_count,
+					 clock_rates[i], 1,
+					 clock_rates[i]/fps,
 					 16, 0, &pjsua_var.snd_port);
 
 	if (status == PJ_SUCCESS) {
