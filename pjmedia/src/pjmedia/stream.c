@@ -1458,17 +1458,20 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (info->jb_min_pre >= 0)
 	jb_min_pre = info->jb_min_pre;
     else
-	jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
+	//jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
+	jb_min_pre = 1;
 
     if (info->jb_max_pre > 0)
 	jb_max_pre = info->jb_max_pre;
     else
-	jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
+	//jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
+	jb_max_pre = jb_max * 4 / 5;
 
     if (info->jb_init >= 0)
 	jb_init = info->jb_init;
     else
-	jb_init = (jb_min_pre + jb_max_pre) / 2;
+	//jb_init = (jb_min_pre + jb_max_pre) / 2;
+	jb_init = jb_min_pre;
 
 
     /* Create jitter buffer */
