@@ -2026,17 +2026,18 @@ typedef struct pjsua_acc_config
     pjsua_transport_id  transport_id;
 
     /**
-     * This option is useful for keeping the UDP transport address up to
-     * date with the NAT public mapped address. When this option is 
-     * enabled and STUN is configured, the library will keep track of
-     * the public IP address from the response of REGISTER request. Once
-     * it detects that the address has changed, it will unregister current
-     * Contact, update the UDP transport address, and register a new
-     * Contact to the registrar.
+     * This option is used to update the UDP transport address and the Contact
+     * header of REGISTER request. When this option is  enabled, the library 
+     * will keep track of the public IP address from the response of REGISTER
+     * request. Once it detects that the address has changed, it will 
+     * unregister current Contact, update the Contact with transport address
+     * learned from Via header, and register a new Contact to the registrar.
+     * This will also update the public name of UDP transport if STUN is
+     * configured.
      *
      * Default: 1 (yes)
      */
-    pj_bool_t auto_update_nat;
+    pj_bool_t allow_contact_rewrite;
 
     /**
      * Set the interval for periodic keep-alive transmission for this account.

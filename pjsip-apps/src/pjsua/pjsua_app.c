@@ -694,7 +694,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_AUTO_UPDATE_NAT:   /* OPT_AUTO_UPDATE_NAT */
-            cur_acc->auto_update_nat  = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+            cur_acc->allow_contact_rewrite  = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    break;
 
 	case OPT_USE_COMPACT_FORM:
@@ -1148,10 +1148,10 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     }
 
     /*  */
-    //if (acc_cfg->auto_update_nat)
+    if (acc_cfg->allow_contact_rewrite==0)
     {
-	pj_ansi_sprintf(line, "--auto-update-nat %i\n",
-			(int)acc_cfg->auto_update_nat);
+	pj_ansi_sprintf(line, "--contact-rewrite %i\n",
+			(int)acc_cfg->allow_contact_rewrite);
 	pj_strcat2(result, line);
     }
 
