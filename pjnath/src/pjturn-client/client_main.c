@@ -190,7 +190,7 @@ static int worker_thread(void *unused)
 
     while (!g.quit) {
 	const pj_time_val delay = {0, 10};
-	int i;
+	int i, n=0;
 	pj_fd_set_t readset;
 
 	/* Poll ioqueue for the TURN client */
@@ -203,9 +203,11 @@ static int worker_thread(void *unused)
 	PJ_FD_ZERO(&readset);
 	for (i=0; i<PJ_ARRAY_SIZE(g.peer); ++i) {
 	    PJ_FD_SET(g.peer[i].sock, &readset);
+	    if (g.peer[i].sock > n)
+		n = g.peer[i].sock;
 	}
 
-	if (pj_sock_select(64, &readset, NULL, NULL, &delay) <= 0)
+	if (pj_sock_select(n+1, &readset, NULL, NULL, &delay) <= 0)
 	    continue;
 
 	/* Handle incoming data on peer socket */

@@ -872,11 +872,17 @@ typedef struct pj_stun_uint_attr pj_stun_channel_number_attr;
 
 /**
  * Get 16bit channel number from 32bit integral value.
+ * Note that uint32 attributes are always stored in host byte order
+ * after they have been parsed from the PDU, so no need to do ntohs()
+ * here.
  */
 #define PJ_STUN_GET_CH_NB(u32)	    ((pj_uint16_t)(u32>>16))
 
 /**
  * Convert 16bit channel number into 32bit integral value.
+ * Note that uint32 attributes will be converted to network byte order
+ * when the attribute is written to packet, so no need to do htons()
+ * here.
  */
 #define PJ_STUN_SET_CH_NB(chnum)    (((pj_uint32_t)chnum) << 16)
 
