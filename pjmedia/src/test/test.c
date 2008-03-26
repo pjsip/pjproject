@@ -35,7 +35,7 @@ pj_pool_factory *mem;
 
 void app_perror(pj_status_t status, const char *msg)
 {
-    char errbuf[PJMEDIA_ERR_MSG_SIZE];
+    char errbuf[PJ_ERR_MSG_SIZE];
     
     pjmedia_strerror(status, errbuf, sizeof(errbuf));
 
@@ -44,7 +44,7 @@ void app_perror(pj_status_t status, const char *msg)
 
 int test_main(void)
 {
-    int rc;
+    int rc = 0;
     pj_caching_pool caching_pool;
 
     pj_init();
@@ -54,15 +54,13 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
-    DO_TEST(sdp_neg_test());
+    //DO_TEST(sdp_neg_test());
     //sdp_test (&caching_pool.factory);
     //rtp_test(&caching_pool.factory);
     //session_test (&caching_pool.factory);
-    //jbuf_main(&caching_pool.factory);
+    jbuf_main();
 
     PJ_LOG(3,(THIS_FILE," "));
-
-on_return:
 
     if (rc != 0) {
 	PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));

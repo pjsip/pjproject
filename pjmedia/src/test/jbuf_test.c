@@ -18,32 +18,34 @@
  */
 #include <stdio.h>
 #include <ctype.h>
-#include <pjmedia/jbuf.h>
 #include <pj/pool.h>
+#include "test.h"
 
-#define JB_MIN	    1
-#define JB_MAX	    8
-#define JB_BUF_SIZE 10
+#define JB_INIT_PREFETCH    0
+#define JB_MIN_PREFETCH	    0
+#define JB_MAX_PREFETCH	    10
+#define JB_PTIME	    20
+#define JB_BUF_SIZE	    20
 
 #define REPORT
 //#define PRINT_COMMENT
 
-int jbuf_main(pj_pool_factory *pf)
+int jbuf_main(void)
 {
-    pj_jitter_buffer jb;
+    pjmedia_jbuf *jb;
     FILE *input = fopen("JBTEST.DAT", "rt");
-    unsigned lastseq;
-    void *data = "Hello world";
-    char line[1024], *p;
-    int lastget = 0, lastput = 0;
+    unsigned seq;
+    char line[1024 * 10], *p;
     pj_pool_t *pool;
+    pjmedia_jb_state state;
+    pj_str_t jb_name = {"JBTEST", 6};
 
     pj_init();
-    pool = pj_pool_create(pf, "JBPOOL", 256*16, 256*16, NULL);
+    pool = pj_pool_create(mem, "JBPOOL", 256*16, 256*16, NULL);
 
-    pj_jb_init(&jb, pool, JB_MIN, JB_MAX, JB_BUF_SIZE);
-
-    lastseq = 1;
+    pjmedia_jbuf_create(pool, &jb_name, 1, JB_PTIME, JB_BUF_SIZE, &jb);
+    pjmedia_jbuf_set_adaptive(jb, JB_INIT_PREFETCH, JB_MIN_PREFETCH, 
+			      JB_MAX_PREFETCH);
 
     while ((p=fgets(line, sizeof(line), input)) != NULL) {
 
@@ -55,78 +57,54 @@ int jbuf_main(pj_pool_factory *pf)
 
 	if (*p == '#') {
 #ifdef PRINT_COMMENT
-	    printf("\n%s", p);
+	    printf("%s", p);
 #endif
 	    continue;
 	}
 
-	pj_jb_reset(&jb);
+	pjmedia_jbuf_reset(jb);
+	seq = 1;
+
 #ifdef REPORT
-	printf( "Initial\t%c   size=%d  prefetch=%d level=%d\n", 
-	        ' ', jb.lst.count, jb.prefetch, jb.level);
+	pjmedia_jbuf_get_state(jb, &state);
+	printf("Initial\tsize=%d\tprefetch=%d\tmin.pftch=%d\tmax.pftch=%d\n", 
+	    state.size, state.prefetch, state.min_prefetch, state.max_prefetch);
 #endif
 
 	while (*p) {
 	    int c;
-	    unsigned seq = 0;
-	    void *thedata;
-	    int status = 1234;
+	    char frame[1];
+	    char f_type;
 	    
 	    c = *p++;
 	    if (isspace(c))
 		continue;
 	    
 	    if (c == '/') {
-		char *end;
+		putchar('\n');
 
-		printf("/*");
-
-		do {
-		    putchar(*++p);
-		} while (*p != '/');
+		while (*++p && *p != '/')
+		    putchar(*p);
 
 		putchar('\n');
 
-		c = *++p;
-		end = p;
+		if (*++p == 0)
+		    break;
 
-	    }
-
-	    if (isspace(c))
 		continue;
-
-	    if (isdigit(c)) {
-		seq = c - '0';
-		while (*p) {
-		    c = *p++;
-		    
-		    if (isspace(c))
-			continue;
-		    
-		    if (!isdigit(c))
-			break;
-		    
-		    seq = seq * 10 + c - '0';
-		}
 	    }
-
-	    if (!*p)
-		break;
 
 	    switch (toupper(c)) {
 	    case 'G':
-		seq = -1;
-		status = pj_jb_get(&jb, &seq, &thedata);
-		lastget = seq;
+		pjmedia_jbuf_get_frame(jb, frame, &f_type);
 		break;
 	    case 'P':
-		if (seq == 0) 
-		    seq = lastseq++;
-		else
-		    lastseq = seq;
-		status = pj_jb_put(&jb, seq, data);
-		if (status == 0)
-		    lastput = seq;
+		pjmedia_jbuf_put_frame(jb, (void*)frame, 1, seq);
+		seq++;
+		break;
+	    case 'L':
+		seq++;
+		printf("Lost\n");
 		break;
 	    default:
 		printf("Unknown character '%c'\n", c);
@@ -134,17 +112,16 @@ int jbuf_main(pj_pool_factory *pf)
 	    }
 
 #ifdef REPORT
-	    printf("seq=%d\t%c rc=%d\tsize=%d\tpfch=%d\tlvl=%d\tmxl=%d\tdelay=%d\n", 
-		    seq, toupper(c), status, jb.lst.count, jb.prefetch, jb.level, jb.max_level,
-		    (lastget>0 && lastput>0) ? lastput-lastget : -1);
+	    if (toupper(c) != 'L') {
+		pjmedia_jbuf_get_state(jb, &state);
+		printf("seq=%d\t%c\tsize=%d\tprefetch=%d\n", 
+		       seq, toupper(c), state.size, state.prefetch);
+	    }
 #endif
 	}
     }
 
-#ifdef REPORT
-    printf("0\t%c   size=%d  prefetch=%d level=%d\n", 
-	    ' ', jb.lst.count, jb.prefetch, jb.level);
-#endif
+    pjmedia_jbuf_destroy(jb);
 
     if (input != stdin)
 	fclose(input);
