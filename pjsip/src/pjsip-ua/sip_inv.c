@@ -2071,7 +2071,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	pjsip_dlg_inc_lock(inv->dlg);
 
 	/* Check again that we didn't receive incoming re-INVITE */
-	if (inv->invite_tsx) {
+	if (tdata->msg->line.req.method.id==PJSIP_INVITE_METHOD && 
+	    inv->invite_tsx) 
+	{
 	    pjsip_tx_data_dec_ref(tdata);
 	    pjsip_dlg_dec_lock(inv->dlg);
 	    return PJ_EINVALIDOP;
