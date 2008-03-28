@@ -316,7 +316,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	}
     }
     
-    if (!pj_sockaddr_has_addr(&si->rem_rtcp) == 0) {
+    if (!pj_sockaddr_has_addr(&si->rem_rtcp)) {
 	int rtcp_port;
 
 	pj_memcpy(&si->rem_rtcp, &si->rem_addr, sizeof(pj_sockaddr));
