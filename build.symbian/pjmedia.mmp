@@ -58,6 +58,7 @@ SOURCE		session.c
 SOURCE		silencedet.c
 SOURCE		sound_port.c
 SOURCE		splitcomb.c
+SOURCE		stereo_port.c
 SOURCE		stream.c
 SOURCE		tonegen.c
 SOURCE		transport_ice.c

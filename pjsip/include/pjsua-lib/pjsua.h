@@ -3749,6 +3749,12 @@ struct pjsua_media_config
     unsigned		snd_clock_rate;
 
     /**
+     * Channel count be applied when opening the sound device and
+     * conference bridge.
+     */
+    unsigned		channel_count;
+
+    /**
      * Specify audio frame ptime. The value here will affect the 
      * samples per frame of both the sound device and the conference
      * bridge. Specifying lower ptime will normally reduce the

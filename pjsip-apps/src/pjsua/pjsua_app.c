@@ -175,6 +175,7 @@ static void usage(void)
     puts  ("  --dis-codec=name    Disable codec (can be specified multiple times)");
     puts  ("  --clock-rate=N      Override conference bridge clock rate");
     puts  ("  --snd-clock-rate=N  Override sound device clock rate");
+    puts  ("  --stereo            Audio device and conference bridge opened in stereo mode");
     puts  ("  --null-audio        Use NULL audio device");
     puts  ("  --play-file=file    Register WAV file in conference bridge.");
     puts  ("                      This can be specified multiple times.");
@@ -389,8 +390,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
-	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_USE_ICE,
-	   OPT_USE_SRTP, OPT_SRTP_SECURE,
+	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
+	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -413,6 +414,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "version",	0, 0, OPT_VERSION},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
 	{ "snd-clock-rate",	1, 0, OPT_SND_CLOCK_RATE},
+	{ "stereo",	0, 0, OPT_STEREO},
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
 	{ "ip-addr",	1, 0, OPT_IP_ADDR},
@@ -580,6 +582,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return PJ_EINVAL;
 	    }
 	    cfg->media_cfg.snd_clock_rate = lval; 
+	    break;
+
+	case OPT_STEREO:
+	    cfg->media_cfg.channel_count = 2;
 	    break;
 
 	case OPT_LOCAL_PORT:   /* local-port */
@@ -1409,6 +1415,12 @@ static int write_settings(const struct app_config *config,
     } else {
 	pj_ansi_sprintf(line, "#using default --snd-clock-rate %d\n",
 			config->media_cfg.snd_clock_rate);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* Stereo mode. */
+    if (config->media_cfg.channel_count == 2) {
+	pj_ansi_sprintf(line, "--stereo\n");
 	pj_strcat2(&cfg, line);
     }
 
@@ -2314,10 +2326,11 @@ static void conf_list(void)
 	    pj_ansi_sprintf(s, "#%d ", info.listeners[j]);
 	    pj_ansi_strcat(txlist, s);
 	}
-	printf("Port #%02d[%2dKHz/%dms] %20.*s  transmitting to: %s\n", 
+	printf("Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n", 
 	       info.slot_id, 
 	       info.clock_rate/1000,
 	       info.samples_per_frame * 1000 / info.clock_rate,
+	       info.channel_count,
 	       (int)info.name.slen, 
 	       info.name.ptr,
 	       txlist);

@@ -178,6 +178,10 @@ SOURCE=..\src\samples\stateless_proxy.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\stereotest.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\streamutil.c
 # End Source File
 # Begin Source File

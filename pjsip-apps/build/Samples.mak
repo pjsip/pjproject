@@ -31,6 +31,7 @@ SAMPLES := confsample \
 	   sndtest \
 	   stateful_proxy \
 	   stateless_proxy \
+	   stereotest \
 	   streamutil \
 	   strerror \
 	   tonegen

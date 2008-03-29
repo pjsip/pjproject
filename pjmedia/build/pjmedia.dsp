@@ -237,6 +237,10 @@ SOURCE=..\src\pjmedia\splitcomb.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\stereo_port.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # Begin Source File
@@ -398,6 +402,10 @@ SOURCE=..\include\pjmedia\sound_port.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\splitcomb.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\stereo.h
 # End Source File
 # Begin Source File
 

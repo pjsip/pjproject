@@ -918,6 +918,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\stereo_port.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\stream.c"
 				>
 				<FileConfiguration
@@ -1206,6 +1210,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\splitcomb.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\stereo.h"
 				>
 			</File>
 			<File

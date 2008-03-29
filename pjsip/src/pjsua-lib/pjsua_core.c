@@ -163,6 +163,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
 
     cfg->clock_rate = PJSUA_DEFAULT_CLOCK_RATE;
     cfg->snd_clock_rate = 0;
+    cfg->channel_count = 1;
     cfg->audio_frame_ptime = PJSUA_DEFAULT_AUDIO_FRAME_PTIME;
     cfg->max_media_ports = PJSUA_MAX_CONF_PORTS;
     cfg->has_ioqueue = PJ_TRUE;
