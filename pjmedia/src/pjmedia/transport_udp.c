@@ -214,7 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
 	goto on_error;
 
     status = pj_sock_bind(si.rtp_sock, &si.rtp_addr_name, 
-			  sizeof(si.rtp_addr_name));
+			  pj_sockaddr_get_len(&si.rtp_addr_name));
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -231,7 +231,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_create3(pjmedia_endpt *endpt,
 	goto on_error;
 
     status = pj_sock_bind(si.rtcp_sock, &si.rtcp_addr_name,
-			  sizeof(si.rtcp_addr_name));
+			  pj_sockaddr_get_len(&si.rtcp_addr_name));
     if (status != PJ_SUCCESS)
 	goto on_error;
 
