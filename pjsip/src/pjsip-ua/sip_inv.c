@@ -3327,6 +3327,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    if (status != PJ_SUCCESS)
 		return;
 
+	    /* Retry INVITE request */
+	    inv->invite_tsx = NULL;
+
 	    /* Send re-INVITE */
 	    status = pjsip_inv_send_msg( inv, tdata);
 
