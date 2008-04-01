@@ -381,6 +381,12 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
 					response, 
 					src_addr, src_addr_len);
     }
+
+    /* Destroy the transmit data. This will remove the transaction
+     * from the pending list too. 
+     */
+    pj_stun_msg_destroy_tdata(sess, tdata);
+    tdata = NULL;
 }
 
 static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
@@ -1030,14 +1036,6 @@ static pj_status_t on_incoming_response(pj_stun_session *sess,
 					  src_addr, src_addr_len);
     if (status != PJ_SUCCESS) {
 	return status;
-    }
-
-    /* If transaction has completed, destroy the transmit data.
-     * This will remove the transaction from the pending list too.
-     */
-    if (pj_stun_client_tsx_is_complete(tdata->client_tsx)) {
-	pj_stun_msg_destroy_tdata(sess, tdata);
-	tdata = NULL;
     }
 
     return PJ_SUCCESS;
