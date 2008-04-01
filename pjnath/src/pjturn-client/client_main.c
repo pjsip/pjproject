@@ -357,7 +357,7 @@ static void menu(void)
     printf("| x      Delete allocation          | Address: %-21s |\n",
 	  peer1_addr);
     puts("+-----------------------------------+                                |");
-    puts("| q  Quit                           | 1  Send data to relay adderss  |");
+    puts("| q  Quit        d  Dump            | 1  Send data to relay adderss  |");
     puts("+-----------------------------------+--------------------------------+");
     printf(">>> ");
     fflush(stdout);
@@ -379,6 +379,9 @@ static void console_main(void)
 	switch (input[0]) {
 	case 'a':
 	    create_relay();
+	    break;
+	case 'd':
+	    pj_pool_factory_dump(&g.cp.factory, PJ_TRUE);
 	    break;
 	case 's':
 	    if (g.udp_rel == NULL) {

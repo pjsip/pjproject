@@ -155,7 +155,7 @@ PJ_DEF(pj_status_t) pj_turn_udp_create( pj_stun_config *cfg,
     sess_cb.on_channel_bound = &turn_on_channel_bound;
     sess_cb.on_rx_data = &turn_on_rx_data;
     sess_cb.on_state = &turn_on_state;
-    status = pj_turn_session_create(cfg, pool->obj_name, af, PJ_TURN_TP_UDP,
+    status = pj_turn_session_create(cfg, "turn%p", af, PJ_TURN_TP_UDP,
 				    &sess_cb, udp_rel, 0, &udp_rel->sess);
     if (status != PJ_SUCCESS) {
 	destroy(udp_rel);
@@ -475,16 +475,24 @@ static void turn_on_state(pj_turn_session *sess,
     }
 
     if (new_state >= PJ_TURN_STATE_DESTROYING && udp_rel->sess) {
-	if (udp_rel->destroy_request) {
+
+	udp_rel->sess = NULL;
+	// Always destroy the session regardless whether application
+	// has called pj_turn_udp_destroy() or not. This is to handle
+	// the case when Allocate request fails.
+	//if (udp_rel->destroy_request) {
+	if (1) {
 	    pj_time_val delay = {0, 0};
 
-	    pj_turn_session_set_user_data(udp_rel->sess, NULL);
+	    pj_turn_session_set_user_data(sess, NULL);
+
+	    if (udp_rel->timer.id != TIMER_NONE) {
+		pj_timer_heap_cancel(udp_rel->timer_heap, &udp_rel->timer);
+	    }
 
 	    udp_rel->timer.id = TIMER_DESTROY;
 	    pj_timer_heap_schedule(udp_rel->timer_heap, &udp_rel->timer, 
 				   &delay);
-	} else {
-	    udp_rel->sess = NULL;
 	}
     }
 }
