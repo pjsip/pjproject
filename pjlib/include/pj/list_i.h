@@ -75,6 +75,12 @@ PJ_IDEF(void) pj_list_merge_first(pj_list_type *lst1, pj_list_type *lst2)
 PJ_IDEF(void) pj_list_erase(pj_list_type *node)
 {
     pj_link_node( ((pj_list*)node)->prev, ((pj_list*)node)->next);
+
+    /* It'll be safer to init the next/prev fields to itself, to
+     * prevent multiple erase() from corrupting the list. See
+     * ticket #520 for one sample bug.
+     */
+    pj_list_init(node);
 }
 
 

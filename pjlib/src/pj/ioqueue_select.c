@@ -445,7 +445,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
 
     pj_assert(ioqueue->count > 0);
     --ioqueue->count;
+#if !PJ_IOQUEUE_HAS_SAFE_UNREG
+    /* Ticket #520, key will be erased more than once */
     pj_list_erase(key);
+#endif
     PJ_FD_CLR(key->fd, &ioqueue->rfdset);
     PJ_FD_CLR(key->fd, &ioqueue->wfdset);
 #if PJ_HAS_TCP
