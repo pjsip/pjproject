@@ -872,31 +872,19 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 		pj_list_erase(h);
 		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)h);
 	    } else {
-		enum { HDRLEN = 256 };
-		const pj_str_t hname = pj_str("Authorization");
-		pj_str_t hval;
-		pjsip_generic_string_hdr *hs;
-		char *hdr;
+		pjsip_authorization_hdr *hs;
 
-		hdr = (char*)pj_pool_alloc(tdata->pool, HDRLEN);
-		len = pj_ansi_snprintf(
-		    hdr, HDRLEN,
-		    "%.*s username=\"%.*s\", realm=\"%.*s\","
-		    " nonce=\"\", uri=\"%s\",%s%.*s%s response=\"\"",
-		    (int)c->scheme.slen, c->scheme.ptr,
-		    (int)c->username.slen, c->username.ptr,
-		    (int)c->realm.slen, c->realm.ptr,
-		    uri_str,
-		    (sess->pref.algorithm.slen ? " algorithm=" : ""),
-		    (int)sess->pref.algorithm.slen, sess->pref.algorithm.ptr,
-		    (sess->pref.algorithm.slen ? "," : ""));
+		hs = pjsip_authorization_hdr_create(tdata->pool);
+		pj_strdup(tdata->pool, &hs->scheme, &c->scheme);
+		pj_strdup(tdata->pool, &hs->credential.digest.username,
+			  &c->username);
+		pj_strdup(tdata->pool, &hs->credential.digest.realm,
+			  &c->realm);
+		pj_strdup2(tdata->pool, &hs->credential.digest.uri,
+			   uri_str);
+		pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
+			  &sess->pref.algorithm);
 
-		PJ_ASSERT_RETURN(len>0 && len<HDRLEN, PJ_ETOOBIG);
-
-		hval.ptr = hdr;
-		hval.slen = len;
-		hs = pjsip_generic_string_hdr_create(tdata->pool, &hname, 
-						     &hval);
 		pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)hs);
 	    }
 	}
