@@ -32,12 +32,14 @@ void
 err_report(int priority, char *format, ...) {
   va_list args;
 
+#if PJ_LOG_MAX_LEVEL >= 1
   if (priority <= err_level) {
 
     va_start(args, format);
     pj_log("libsrtp", priority, format, args);
     va_end(args);
   }
+#endif
 }
 
 void
