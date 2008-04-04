@@ -2045,11 +2045,6 @@ typedef struct pjsua_acc_config
      * The keep-alive transmission will be sent to the registrar's address,
      * after successful registration.
      *
-     * Even if this setting is enabled, keep-alive transmission is only done
-     * when STUN is enabled in the global #pjsua_config, and the transport
-     * used for registration is UDP. For TCP and TLS transports, keep-alive
-     * is done by the transport themselves.
-     *
      * Default: 15 (seconds)
      */
     unsigned	     ka_interval;

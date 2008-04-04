@@ -777,11 +777,20 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	pj_status_t status;
 
 	/* Only do keep-alive if:
-	 *  - STUN is enabled in global config, and
 	 *  - ka_interval is not zero in the account, and
 	 *  - transport is UDP.
+	 *
+	 * Previously we only enabled keep-alive when STUN is enabled, since
+	 * we thought that keep-alive is only needed in Internet situation.
+	 * But it has been discovered that Windows Firewall on WinXP also
+	 * needs to be kept-alive, otherwise incoming packets will be dropped.
+	 * So because of this, now keep-alive is always enabled for UDP,
+	 * regardless of whether STUN is enabled or not.
+	 *
+	 * Note that this applies only for UDP. For TCP/TLS, the keep-alive
+	 * is done by the transport layer.
 	 */
-	if (pjsua_var.stun_srv.ipv4.sin_family == 0 ||
+	if (/*pjsua_var.stun_srv.ipv4.sin_family == 0 ||*/
 	    acc->cfg.ka_interval == 0 ||
 	    param->rdata->tp_info.transport->key.type != PJSIP_TRANSPORT_UDP)
 	{
