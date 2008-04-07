@@ -112,7 +112,10 @@
 #   define PJ_ENABLE_EXTRA_CHECK	0
 #   define PJ_HAS_ERROR_STRING		0
 #   undef PJ_IOQUEUE_MAX_HANDLES
-#   define PJ_IOQUEUE_MAX_HANDLES	16
+/* Putting max handles to lower than 32 will make pj_fd_set_t size smaller
+ * than native fdset_t and will trigger assertion on sock_select.c.
+ */
+#   define PJ_IOQUEUE_MAX_HANDLES	32
 #   define PJ_IOQUEUE_HAS_SAFE_UNREG	0
 #   define PJSIP_MAX_TSX_COUNT		15
 #   define PJSIP_MAX_DIALOG_COUNT	15
