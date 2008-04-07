@@ -116,7 +116,6 @@
  * than native fdset_t and will trigger assertion on sock_select.c.
  */
 #   define PJ_IOQUEUE_MAX_HANDLES	32
-#   define PJ_IOQUEUE_HAS_SAFE_UNREG	0
 #   define PJSIP_MAX_TSX_COUNT		15
 #   define PJSIP_MAX_DIALOG_COUNT	15
 #   define PJSIP_UDP_SO_SNDBUF_SIZE	4000
