@@ -716,13 +716,27 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				   rdata->msg_info.msg->body->data,
 				   rdata->msg_info.msg->body->len, &offer);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error parsing SDP in incoming INVITE", status);
-	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, NULL,
+	    const pj_str_t reason = pj_str("Bad SDP");
+	    pjsua_perror(THIS_FILE, "Error parsing SDP in incoming INVITE", 
+			 status);
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, &reason,
 					  NULL, NULL);
 	    pjsua_media_channel_deinit(call->index);
 	    PJSUA_UNLOCK();
 	    return PJ_TRUE;
 	}
+
+	/* Do quick checks on SDP before passing it to transports. More elabore 
+	 * checks will be done in pjsip_inv_verify_request2() below.
+	 */
+	if (offer->media_count==0) {
+	    const pj_str_t reason = pj_str("Missing media in SDP");
+	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400, &reason, 
+				NULL, NULL, NULL);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
+
     } else {
 	offer = NULL;
     }
