@@ -660,7 +660,7 @@ typedef struct pjsua_callback
     /**
      * Notify application on call being transfered (i.e. REFER is received).
      * Application can decide to accept/reject transfer request
-     * by setting the code (default is 200). When this callback
+     * by setting the code (default is 202). When this callback
      * is not defined, the default behavior is to accept the
      * transfer.
      *

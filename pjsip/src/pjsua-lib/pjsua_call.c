@@ -3005,14 +3005,14 @@ static void on_call_transfered( pjsip_inv_session *inv,
 					    NULL);
 
     /* Notify callback */
-    code = PJSIP_SC_OK;
+    code = PJSIP_SC_ACCEPTED;
     if (pjsua_var.ua_cfg.cb.on_call_transfer_request)
 	(*pjsua_var.ua_cfg.cb.on_call_transfer_request)(existing_call->index,
 							&refer_to->hvalue, 
 							&code);
 
     if (code < 200)
-	code = PJSIP_SC_OK;
+	code = PJSIP_SC_ACCEPTED;
     if (code >= 300) {
 	/* Application rejects call transfer request */
 	pjsip_dlg_respond( inv->dlg, rdata, code, NULL, NULL, NULL);
@@ -3027,15 +3027,16 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
     if (no_refer_sub) {
 	/*
-	 * Always answer with 200.
+	 * Always answer with 2xx.
 	 */
 	pjsip_tx_data *tdata;
 	const pj_str_t str_false = { "false", 5};
 	pjsip_hdr *hdr;
 
-	status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
+	status = pjsip_dlg_create_response(inv->dlg, rdata, code, NULL, 
+					   &tdata);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create 200 response to REFER",
+	    pjsua_perror(THIS_FILE, "Unable to create 2xx response to REFER",
 			 status);
 	    return;
 	}
@@ -3051,7 +3052,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 	status = pjsip_dlg_send_response(inv->dlg, pjsip_rdata_get_tsx(rdata),
 					 tdata);
 	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to create 200 response to REFER",
+	    pjsua_perror(THIS_FILE, "Unable to create 2xx response to REFER",
 			 status);
 	    return;
 	}
@@ -3093,7 +3094,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
 	}
 
-	/* Accept the REFER request, send 200 (OK). */
+	/* Accept the REFER request, send 2xx. */
 	pjsip_xfer_accept(sub, rdata, code, &hdr_list);
 
 	/* Create initial NOTIFY request */
