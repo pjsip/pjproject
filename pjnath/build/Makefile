@@ -58,8 +58,8 @@ export PJTURN_CLIENT_EXE:=../bin/pjturn-client-$(TARGET_NAME)$(HOST_EXE)
 # Defines for building TURN server application
 #
 export PJTURN_SRV_SRCDIR = ../src/pjturn-srv
-export PJTURN_SRV_OBJS += 	allocation.o auth.o listener_udp.o server.o \
-				main.o
+export PJTURN_SRV_OBJS += allocation.o auth.o listener_udp.o \
+			  listener_tcp.o server.o main.o
 export PJTURN_SRV_CFLAGS += $(_CFLAGS)
 export PJTURN_SRV_LDFLAGS += $(_LDFLAGS)
 export PJTURN_SRV_EXE:=../bin/pjturn-srv-$(TARGET_NAME)$(HOST_EXE)

@@ -55,6 +55,7 @@ static struct server
 
 
 static pj_status_t server_send_msg(pj_stun_session *sess,
+				   void *token,
 				   const void *pkt,
 				   pj_size_t pkt_size,
 				   const pj_sockaddr_t *dst_addr,
@@ -63,6 +64,7 @@ static pj_status_t server_send_msg(pj_stun_session *sess,
     pj_ssize_t len = pkt_size;
 
     PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(token);
 
     return pj_sock_sendto(server->sock, pkt, &len, 0, dst_addr, addr_len);
 }
@@ -71,13 +73,15 @@ static pj_status_t server_on_rx_request(pj_stun_session *sess,
 					const pj_uint8_t *pkt,
 					unsigned pkt_len,
 					const pj_stun_rx_data *rdata,
+					void *token,
 					const pj_sockaddr_t *src_addr,
 					unsigned src_addr_len)
 {
     PJ_UNUSED_ARG(pkt);
     PJ_UNUSED_ARG(pkt_len);
+    PJ_UNUSED_ARG(token);
 
-    return pj_stun_session_respond(sess, rdata, 0, NULL, PJ_TRUE, 
+    return pj_stun_session_respond(sess, rdata, 0, NULL, NULL, PJ_TRUE, 
 				   src_addr, src_addr_len);
 }
 
@@ -191,7 +195,7 @@ static int server_thread(void *unused)
 
 	    pj_stun_session_on_rx_pkt(server->sess, pkt, len, 
 				      PJ_STUN_CHECK_PACKET | PJ_STUN_IS_DATAGRAM,
-				      NULL, &src_addr, src_addr_len);
+				      NULL, NULL, &src_addr, src_addr_len);
 	}
     }
 
@@ -327,6 +331,7 @@ static struct client
 
 
 static pj_status_t client_send_msg(pj_stun_session *sess,
+				   void *token,
 				   const void *pkt,
 				   pj_size_t pkt_size,
 				   const pj_sockaddr_t *dst_addr,
@@ -335,6 +340,7 @@ static pj_status_t client_send_msg(pj_stun_session *sess,
     pj_ssize_t len = pkt_size;
 
     PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(token);
 
     return pj_sock_sendto(client->sock, pkt, &len, 0, dst_addr, addr_len);
 }
@@ -342,12 +348,14 @@ static pj_status_t client_send_msg(pj_stun_session *sess,
 
 static void client_on_request_complete( pj_stun_session *sess,
 					pj_status_t status,
+					void *token,
 					pj_stun_tx_data *tdata,
 					const pj_stun_msg *response,
 					const pj_sockaddr_t *src_addr,
 					unsigned src_addr_len)
 {
     PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(token);
     PJ_UNUSED_ARG(tdata);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -400,7 +408,7 @@ static int client_thread(void *unused)
 
 	    pj_stun_session_on_rx_pkt(client->sess, pkt, len, 
 				      PJ_STUN_CHECK_PACKET | PJ_STUN_IS_DATAGRAM,
-				      NULL, &src_addr, src_addr_len);
+				      NULL, NULL, &src_addr, src_addr_len);
 	}
  
     }
@@ -553,7 +561,7 @@ static int run_client_test(const char *title,
     }
 
     /* Send the request */
-    status = pj_stun_session_send_msg(client->sess, PJ_FALSE, &server->addr,
+    status = pj_stun_session_send_msg(client->sess, NULL, PJ_FALSE, PJ_TRUE, &server->addr,
 				      pj_sockaddr_get_len(&server->addr), tdata);
     if (status != PJ_SUCCESS) {
 	destroy_client_server();
