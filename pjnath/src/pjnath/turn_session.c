@@ -555,10 +555,11 @@ on_return:
 /**
  * Set credential to be used by the session.
  */
-PJ_DEF(pj_status_t) pj_turn_session_set_cred(pj_turn_session *sess,
+PJ_DEF(pj_status_t) pj_turn_session_set_credential(pj_turn_session *sess,
 					     const pj_stun_auth_cred *cred)
 {
     PJ_ASSERT_RETURN(sess && cred, PJ_EINVAL);
+    PJ_ASSERT_RETURN(sess->stun, PJ_EINVALIDOP);
 
     pj_lock_acquire(sess->lock);
 

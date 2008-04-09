@@ -419,9 +419,6 @@ static void console_main(void)
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_bind_channel() failed", status);
 	    break;
-	case 'd':
-	    pj_pool_factory_dump(&g.cp.factory, PJ_TRUE);
-	    break;
 	case 'x':
 	    if (g.relay == NULL) {
 		puts("Error: no relay");

@@ -140,6 +140,15 @@ PJ_END_DECL
  * messages.
  * 
  *
+ * \n
+ *
+ * \subsection PJNATH_STUN_CLASSES PJNATH Class Diagram
+ *
+ * 
+ * \image html UML-class-diagram.png "Class Diagram"
+ *
+ * TBD: write descriptions.
+ *
  * \subsection PJNATH_STUN_USING Using STUN Library
  *
  * [The developers guide documentation can certainly be improved here]
@@ -155,11 +164,11 @@ PJ_END_DECL
  *
  * References for STUN:
  *
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-11.txt">
- *    <B>draft-ietf-behave-rfc3489bis-11</b></A>: Session Traversal 
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-15.txt">
+ *    <B>draft-ietf-behave-rfc3489bis-15</b></A>: Session Traversal 
  *     Utilities for (NAT) (STUN),
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-03.txt">
- *    <B>draft-ietf-behave-turn-03</B></A>: Obtaining Relay Addresses 
+ *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-07.txt">
+ *    <B>draft-ietf-behave-turn-07</B></A>: Obtaining Relay Addresses 
  *    from Simple Traversal Underneath NAT (STUN)
  *  - Obsoleted: <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>.
  *

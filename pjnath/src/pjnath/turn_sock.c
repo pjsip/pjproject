@@ -335,7 +335,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_init(pj_turn_sock *turn_sock,
 
     /* Set credental */
     if (cred) {
-	status = pj_turn_session_set_cred(turn_sock->sess, cred);
+	status = pj_turn_session_set_credential(turn_sock->sess, cred);
 	if (status != PJ_SUCCESS) {
 	    sess_fail(turn_sock, "Error setting credential", status);
 	    return status;
