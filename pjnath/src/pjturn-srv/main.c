@@ -140,6 +140,11 @@ int main()
     status = pj_turn_listener_create_udp(srv, pj_AF_INET(), NULL, 
 					 PJ_STUN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
+	return err("Error creating UDP listener", status);
+
+    status = pj_turn_listener_create_tcp(srv, pj_AF_INET(), NULL, 
+					 PJ_STUN_PORT, 1, 0, &listener);
+    if (status != PJ_SUCCESS)
 	return err("Error creating listener", status);
 
     status = pj_turn_srv_add_listener(srv, listener);

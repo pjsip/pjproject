@@ -22,10 +22,11 @@
 #include <pjlib.h>
 #include <pjnath.h>
 
-typedef struct pj_turn_relay_res	    pj_turn_relay_res;
+typedef struct pj_turn_relay_res    pj_turn_relay_res;
 typedef struct pj_turn_listener	    pj_turn_listener;
-typedef struct pj_turn_permission    pj_turn_permission;
-typedef struct pj_turn_allocation    pj_turn_allocation;
+typedef struct pj_turn_transport    pj_turn_transport;
+typedef struct pj_turn_permission   pj_turn_permission;
+typedef struct pj_turn_allocation   pj_turn_allocation;
 typedef struct pj_turn_srv	    pj_turn_srv;
 typedef struct pj_turn_pkt	    pj_turn_pkt;
 
@@ -132,11 +133,11 @@ struct pj_turn_allocation
     /** Mutex */
     pj_lock_t		*lock;
 
-    /** TURN listener. */
-    pj_turn_listener	*listener;
+    /** Server instance. */
+    pj_turn_srv		*server;
 
-    /** Client socket, if connection to client is using TCP. */
-    pj_sock_t		clt_sock;
+    /** Transport to send/receive packets to/from client. */
+    pj_turn_transport	*transport;
 
     /** The relay resource for this allocation. */
     pj_turn_relay_res	relay;
@@ -181,11 +182,6 @@ struct pj_turn_permission
     /** Hash table key */
     pj_turn_permission_key hkey;
 
-    /** Transport socket. If TCP is used, the value will be the actual
-     *  TCP socket. If UDP is used, the value will be the relay address
-     */
-    pj_sock_t		sock;
-
     /** TURN allocation that owns this permission/channel */
     pj_turn_allocation	*allocation;
 
@@ -201,12 +197,12 @@ struct pj_turn_permission
 /**
  * Create new allocation.
  */
-PJ_DECL(pj_status_t) pj_turn_allocation_create(pj_turn_listener *listener,
-					      const pj_sockaddr_t *src_addr,
-					      unsigned src_addr_len,
-					      const pj_stun_rx_data *rdata,
-					      pj_stun_session *srv_sess,
-					      pj_turn_allocation **p_alloc);
+PJ_DECL(pj_status_t) pj_turn_allocation_create(pj_turn_transport *transport,
+					       const pj_sockaddr_t *src_addr,
+					       unsigned src_addr_len,
+					       const pj_stun_rx_data *rdata,
+					       pj_stun_session *srv_sess,
+					       pj_turn_allocation **p_alloc);
 /**
  * Destroy allocation.
  */
@@ -217,7 +213,13 @@ PJ_DECL(void) pj_turn_allocation_destroy(pj_turn_allocation *alloc);
  * Handle incoming packet from client.
  */
 PJ_DECL(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
-						 pj_turn_pkt *pkt);
+						  pj_turn_pkt *pkt);
+
+/**
+ * Handle transport closure.
+ */
+PJ_DECL(void) pj_turn_allocation_on_transport_closed(pj_turn_allocation *alloc,
+						     pj_turn_transport *tp);
 
 /****************************************************************************/
 /*
@@ -257,16 +259,42 @@ struct pj_turn_listener
     /** Flags. */
     unsigned		flags;
 
+    /** Destroy handler */
+    pj_status_t		(*destroy)(pj_turn_listener*);
+};
+
+
+/**
+ * This structure describes TURN transport socket which is used to send and
+ * receive packets towards client.
+ */
+struct pj_turn_transport
+{
+    /** Object name/identification */
+    char		*obj_name;
+
+    /** Slightly longer info about this listener */
+    char		*info;
+
+    /** Listener instance */
+    pj_turn_listener	*listener;
+
     /** Sendto handler */
-    pj_status_t		(*sendto)(pj_turn_listener *listener,
+    pj_status_t		(*sendto)(pj_turn_transport *tp,
 				  const void *packet,
 				  pj_size_t size,
 				  unsigned flag,
 				  const pj_sockaddr_t *addr,
 				  int addr_len);
 
-    /** Destroy handler */
-    pj_status_t		(*destroy)(pj_turn_listener*);
+    /** Addref handler */
+    void		(*add_ref)(pj_turn_transport *tp,
+				   pj_turn_allocation *alloc);
+
+    /** Decref handler */
+    void		(*dec_ref)(pj_turn_transport *tp,
+				   pj_turn_allocation *alloc);
+
 };
 
 
@@ -278,8 +306,8 @@ struct pj_turn_pkt
     /** Pool for this packet */
     pj_pool_t		    *pool;
 
-    /** Listener that owns this. */
-    pj_turn_listener	    *listener;
+    /** Transport where the packet was received. */
+    pj_turn_transport	    *transport;
 
     /** Packet buffer (must be 32bit aligned). */
     pj_uint8_t		    pkt[PJ_TURN_MAX_PKT_LEN];
@@ -299,30 +327,46 @@ struct pj_turn_pkt
 
 
 /**
- * Create a new listener on the specified port.
+ * Create a UDP listener on the specified port.
  */
 PJ_DECL(pj_status_t) pj_turn_listener_create_udp(pj_turn_srv *srv,
-						int af,
-					        const pj_str_t *bound_addr,
-					        unsigned port,
-						unsigned concurrency_cnt,
-						unsigned flags,
-						pj_turn_listener **p_listener);
+						 int af,
+					         const pj_str_t *bound_addr,
+					         unsigned port,
+						 unsigned concurrency_cnt,
+						 unsigned flags,
+						 pj_turn_listener **p_lis);
 
 /**
- * Send packet with this listener.
+ * Create a TCP listener on the specified port.
  */
-PJ_DECL(pj_status_t) pj_turn_listener_sendto(pj_turn_listener *listener,
-					    const void *packet,
-					    pj_size_t size,
-					    unsigned flag,
-					    const pj_sockaddr_t *addr,
-					    int addr_len);
+PJ_DECL(pj_status_t) pj_turn_listener_create_tcp(pj_turn_srv *srv,
+						 int af,
+					         const pj_str_t *bound_addr,
+					         unsigned port,
+						 unsigned concurrency_cnt,
+						 unsigned flags,
+						 pj_turn_listener **p_lis);
 
 /**
  * Destroy listener.
  */
 PJ_DECL(pj_status_t) pj_turn_listener_destroy(pj_turn_listener *listener);
+
+
+/**
+ * Add a reference to a transport.
+ */
+PJ_DECL(void) pj_turn_transport_add_ref(pj_turn_transport *transport,
+					pj_turn_allocation *alloc);
+
+
+/**
+ * Decrement transport reference counter.
+ */
+PJ_DECL(void) pj_turn_transport_dec_ref(pj_turn_transport *transport,
+					pj_turn_allocation *alloc);
+
 
 
 /****************************************************************************/
@@ -360,8 +404,8 @@ struct pj_turn_srv
 	/** Array of listeners. */
 	pj_turn_listener **listener;
 
-	/** Array of STUN sessions, one for each listeners. */
-	pj_stun_session	**stun_sess;
+	/** STUN session to handle initial Allocate request. */
+	pj_stun_session	*stun_sess;
 
 	/** Number of worker threads. */
 	unsigned        thread_cnt;
@@ -456,7 +500,7 @@ PJ_DECL(pj_status_t) pj_turn_srv_unregister_allocation(pj_turn_srv *srv,
  * This callback is called by UDP listener on incoming packet.
  */
 PJ_DECL(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv, 
-				   pj_turn_pkt *pkt);
+				    pj_turn_pkt *pkt);
 
 
 #endif	/* __PJ_TURN_SRV_TURN_H__ */

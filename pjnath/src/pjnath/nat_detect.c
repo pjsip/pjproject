@@ -113,11 +113,13 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ssize_t bytes_read);
 static void on_request_complete(pj_stun_session *sess,
 			        pj_status_t status,
+				void *token,
 			        pj_stun_tx_data *tdata,
 			        const pj_stun_msg *response,
 				const pj_sockaddr_t *src_addr,
 				unsigned src_addr_len);
 static pj_status_t on_send_msg(pj_stun_session *sess,
+			       void *token,
 			       const void *pkt,
 			       pj_size_t pkt_size,
 			       const pj_sockaddr_t *dst_addr,
@@ -414,7 +416,8 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     } else if (bytes_read > 0) {
 	pj_stun_session_on_rx_pkt(sess->stun_sess, sess->rx_pkt, bytes_read,
 				  PJ_STUN_IS_DATAGRAM|PJ_STUN_CHECK_PACKET, 
-				  NULL, &sess->src_addr, sess->src_addr_len);
+				  NULL, NULL, 
+				  &sess->src_addr, sess->src_addr_len);
     }
 
 
@@ -438,6 +441,7 @@ on_return:
  * Callback to send outgoing packet from STUN session.
  */
 static pj_status_t on_send_msg(pj_stun_session *stun_sess,
+			       void *token,
 			       const void *pkt,
 			       pj_size_t pkt_size,
 			       const pj_sockaddr_t *dst_addr,
@@ -446,6 +450,8 @@ static pj_status_t on_send_msg(pj_stun_session *stun_sess,
     nat_detect_session *sess;
     pj_ssize_t pkt_len;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(token);
 
     sess = (nat_detect_session*) pj_stun_session_get_user_data(stun_sess);
 
@@ -462,6 +468,7 @@ static pj_status_t on_send_msg(pj_stun_session *stun_sess,
  */
 static void on_request_complete(pj_stun_session *stun_sess,
 			        pj_status_t status,
+				void *token,
 			        pj_stun_tx_data *tdata,
 			        const pj_stun_msg *response,
 				const pj_sockaddr_t *src_addr,
@@ -474,6 +481,7 @@ static void on_request_complete(pj_stun_session *stun_sess,
     int cmp;
     unsigned test_id;
 
+    PJ_UNUSED_ARG(token);
     PJ_UNUSED_ARG(tdata);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -812,8 +820,8 @@ static pj_status_t send_test(nat_detect_session *sess,
 	      pj_ntohs(sess->cur_server->sin_port)));
 
     /* Send the request */
-    status = pj_stun_session_send_msg(sess->stun_sess, PJ_TRUE, 
-				      sess->cur_server, 
+    status = pj_stun_session_send_msg(sess->stun_sess, NULL, PJ_TRUE,
+				      PJ_TRUE, sess->cur_server, 
 				      sizeof(pj_sockaddr_in),
 				      sess->result[test_id].tdata);
     if (status != PJ_SUCCESS)

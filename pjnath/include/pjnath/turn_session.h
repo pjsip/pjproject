@@ -55,12 +55,29 @@ typedef struct pj_turn_session pj_turn_session;
 #define PJ_TURN_PEER_HTABLE_SIZE    8
 
 
-/** TURN transport types */
+/** 
+ * TURN transport types, which will be used both to specify the connection 
+ * type for reaching TURN server and the type of allocation transport to be 
+ * requested to server (the REQUESTED-TRANSPORT attribute).
+ */
 typedef enum pj_turn_tp_type
 {
-    PJ_TURN_TP_UDP = 17,    /**< UDP.	*/
-    PJ_TURN_TP_TCP = 6,	    /**< TCP.	*/
-    PJ_TURN_TP_TLS = 256    /**< TLS.	*/
+    /**
+     * UDP transport, which value corresponds to IANA protocol number.
+     */
+    PJ_TURN_TP_UDP = 17,
+
+    /**
+     * TCP transport, which value corresponds to IANA protocol number.
+     */
+    PJ_TURN_TP_TCP = 6,
+
+    /**
+     * TLS transport. The TLS transport will only be used as the connection
+     * type to reach the server and never as the allocation transport type.
+     */
+    PJ_TURN_TP_TLS = 255
+
 } pj_turn_tp_type;
 
 
@@ -220,6 +237,18 @@ typedef struct pj_turn_session_info
 
 
 /**
+ * Create default pj_turn_alloc_param.
+ */
+PJ_DECL(void) pj_turn_alloc_param_default(pj_turn_alloc_param *prm);
+
+/**
+ * Duplicate pj_turn_alloc_param.
+ */
+PJ_DECL(void) pj_turn_alloc_param_copy(pj_pool_t *pool, 
+				       pj_turn_alloc_param *dst,
+				       const pj_turn_alloc_param *src);
+
+/**
  * Get TURN state name.
  */
 PJ_DECL(const char*) pj_turn_state_name(pj_turn_state_t state);
@@ -239,7 +268,13 @@ PJ_DECL(pj_status_t) pj_turn_session_create(pj_stun_config *cfg,
 
 
 /**
- * Destroy TURN client session.
+ * Shutdown TURN client session.
+ */
+PJ_DECL(pj_status_t) pj_turn_session_shutdown(pj_turn_session *sess);
+
+
+/**
+ * Forcefully destroy the TURN session.
  */
 PJ_DECL(pj_status_t) pj_turn_session_destroy(pj_turn_session *sess);
 

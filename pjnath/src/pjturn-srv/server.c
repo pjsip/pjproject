@@ -28,11 +28,12 @@
 #define MAX_PORT		65535
 #define MAX_LISTENERS		16
 #define MAX_THREADS		2
-#define MAX_NET_EVENTS		10
+#define MAX_NET_EVENTS		1000
 
 /* Prototypes */
 static int server_thread_proc(void *arg);
 static pj_status_t on_tx_stun_msg( pj_stun_session *sess,
+				   void *token,
 				   const void *pkt,
 				   pj_size_t pkt_size,
 				   const pj_sockaddr_t *dst_addr,
@@ -41,6 +42,7 @@ static pj_status_t on_rx_stun_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
 				      const pj_stun_rx_data *rdata,
+				      void *user_data,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len);
 
@@ -77,6 +79,7 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
 				       pj_turn_srv **p_srv)
 {
     pj_pool_t *pool;
+    pj_stun_session_cb sess_cb;
     pj_turn_srv *srv;
     unsigned i;
     pj_status_t status;
@@ -124,11 +127,6 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
 			 pj_pool_calloc(pool, MAX_LISTENERS, 
 					sizeof(srv->core.listener[0]));
 
-    /* Array of STUN sessions, one for each listener */
-    srv->core.stun_sess = (pj_stun_session**)
-			  pj_pool_calloc(pool, MAX_LISTENERS,
-					 (sizeof(srv->core.stun_sess[0])));
-
     /* Create hash tables */
     srv->tables.alloc = pj_hash_create(pool, MAX_CLIENTS);
     srv->tables.res = pj_hash_create(pool, MAX_CLIENTS);
@@ -149,6 +147,22 @@ PJ_DEF(pj_status_t) pj_turn_srv_create(pj_pool_factory *pf,
     srv->core.cred.data.dyn_cred.get_auth = &pj_turn_get_auth;
     srv->core.cred.data.dyn_cred.get_password = &pj_turn_get_password;
     srv->core.cred.data.dyn_cred.verify_nonce = &pj_turn_verify_nonce;
+
+    /* Create STUN session to handle new allocation */
+    pj_bzero(&sess_cb, sizeof(sess_cb));
+    sess_cb.on_rx_request = &on_rx_stun_request;
+    sess_cb.on_send_msg = &on_tx_stun_msg;
+
+    status = pj_stun_session_create(&srv->core.stun_cfg, srv->obj_name,
+				    &sess_cb, PJ_FALSE, &srv->core.stun_sess);
+    if (status != PJ_SUCCESS) {
+	goto on_error;
+    }
+
+    pj_stun_session_set_user_data(srv->core.stun_sess, srv);
+    pj_stun_session_set_credential(srv->core.stun_sess, PJ_STUN_AUTH_LONG_TERM,
+				   &srv->core.cred);
+
 
     /* Array of worker threads */
     srv->core.thread_cnt = MAX_THREADS;
@@ -240,7 +254,7 @@ static int server_thread_proc(void *arg)
     pj_turn_srv *srv = (pj_turn_srv*)arg;
 
     while (!srv->core.quit) {
-	pj_time_val timeout_max = {0, 500};
+	pj_time_val timeout_max = {0, 100};
 	srv_handle_events(srv, &timeout_max);
     }
 
@@ -277,16 +291,18 @@ PJ_DEF(pj_status_t) pj_turn_srv_destroy(pj_turn_srv *srv)
 	}
     }
     
-    /* Destroy all listeners and STUN sessions associated with them. */
+    /* Destroy all listeners. */
     for (i=0; i<srv->core.lis_cnt; ++i) {
 	if (srv->core.listener[i]) {
 	    pj_turn_listener_destroy(srv->core.listener[i]);
 	    srv->core.listener[i] = NULL;
 	}
-	if (srv->core.stun_sess[i]) {
-	    pj_stun_session_destroy(srv->core.stun_sess[i]);
-	    srv->core.stun_sess[i] = NULL;
-	}
+    }
+
+    /* Destroy STUN session */
+    if (srv->core.stun_sess) {
+	pj_stun_session_destroy(srv->core.stun_sess);
+	srv->core.stun_sess = NULL;
     }
 
     /* Destroy hash tables (well, sort of) */
@@ -341,10 +357,7 @@ PJ_DEF(pj_status_t) pj_turn_srv_destroy(pj_turn_srv *srv)
 PJ_DEF(pj_status_t) pj_turn_srv_add_listener(pj_turn_srv *srv,
 					     pj_turn_listener *lis)
 {
-    pj_stun_session_cb sess_cb;
     unsigned index;
-    pj_stun_session *sess;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(srv && lis, PJ_EINVAL);
     PJ_ASSERT_RETURN(srv->core.lis_cnt < MAX_LISTENERS, PJ_ETOOMANY);
@@ -353,24 +366,6 @@ PJ_DEF(pj_status_t) pj_turn_srv_add_listener(pj_turn_srv *srv,
     index = srv->core.lis_cnt;
     srv->core.listener[index] = lis;
     lis->server = srv;
-
-    /* Create STUN session to handle new allocation */
-    pj_bzero(&sess_cb, sizeof(sess_cb));
-    sess_cb.on_rx_request = &on_rx_stun_request;
-    sess_cb.on_send_msg = &on_tx_stun_msg;
-
-    status = pj_stun_session_create(&srv->core.stun_cfg, lis->obj_name, 
-				    &sess_cb, PJ_FALSE, &sess);
-    if (status != PJ_SUCCESS) {
-	srv->core.listener[index] = NULL;
-	return status;
-    }
-
-    pj_stun_session_set_user_data(sess, lis);
-    pj_stun_session_set_credential(sess, PJ_STUN_AUTH_LONG_TERM, 
-				   &srv->core.cred);
-
-    srv->core.stun_sess[index] = sess;
     lis->id = index;
     srv->core.lis_cnt++;
 
@@ -378,21 +373,6 @@ PJ_DEF(pj_status_t) pj_turn_srv_add_listener(pj_turn_srv *srv,
 	      lis->obj_name, lis->info, lis->id));
 
     return PJ_SUCCESS;
-}
-
-
-/*
- * Send packet with this listener.
- */
-PJ_DEF(pj_status_t) pj_turn_listener_sendto(pj_turn_listener *listener,
-					    const void *packet,
-					    pj_size_t size,
-					    unsigned flag,
-					    const pj_sockaddr_t *addr,
-					    int addr_len)
-{
-    pj_assert(listener->id != PJ_TURN_INVALID_LIS_ID);
-    return listener->sendto(listener, packet, size, flag, addr, addr_len);
 }
 
 
@@ -411,10 +391,6 @@ PJ_DEF(pj_status_t) pj_turn_listener_destroy(pj_turn_listener *listener)
 	    srv->core.listener[i] = NULL;
 	    srv->core.lis_cnt--;
 	    listener->id = PJ_TURN_INVALID_LIS_ID;
-	    if (srv->core.stun_sess[i]) {
-		pj_stun_session_destroy(srv->core.stun_sess[i]);
-		srv->core.stun_sess[i] = NULL;
-	    }
 	    break;
 	}
     }
@@ -422,6 +398,26 @@ PJ_DEF(pj_status_t) pj_turn_listener_destroy(pj_turn_listener *listener)
 
     /* Destroy */
     return listener->destroy(listener);
+}
+
+
+/**
+ * Add a reference to a transport.
+ */
+PJ_DEF(void) pj_turn_transport_add_ref( pj_turn_transport *transport,
+					pj_turn_allocation *alloc)
+{
+    transport->add_ref(transport, alloc);
+}
+
+
+/**
+ * Decrement transport reference counter.
+ */
+PJ_DEF(void) pj_turn_transport_dec_ref( pj_turn_transport *transport,
+					pj_turn_allocation *alloc)
+{
+    transport->dec_ref(transport, alloc);
 }
 
 
@@ -466,24 +462,26 @@ PJ_DEF(pj_status_t) pj_turn_srv_unregister_allocation(pj_turn_srv *srv,
  * outgoing STUN packet.
  */
 static pj_status_t on_tx_stun_msg( pj_stun_session *sess,
-				   const void *pkt,
-				   pj_size_t pkt_size,
+				   void *token,
+				   const void *pdu,
+				   pj_size_t pdu_size,
 				   const pj_sockaddr_t *dst_addr,
 				   unsigned addr_len)
 {
-    pj_turn_listener *listener;
+    pj_turn_transport *transport = (pj_turn_transport*) token;
     
-    listener = (pj_turn_listener*) pj_stun_session_get_user_data(sess);
+    PJ_ASSERT_RETURN(transport!=NULL, PJ_EINVALIDOP);
 
-    PJ_ASSERT_RETURN(listener!=NULL, PJ_EINVALIDOP);
+    PJ_UNUSED_ARG(sess);
 
-    return pj_turn_listener_sendto(listener, pkt, pkt_size, 0, 
-				   dst_addr, addr_len);
+    return transport->sendto(transport, pdu, pdu_size, 0, 
+			     dst_addr, addr_len);
 }
 
 
 /* Respond to STUN request */
 static pj_status_t stun_respond(pj_stun_session *sess, 
+				pj_turn_transport *transport,
 				const pj_stun_rx_data *rdata,
 				unsigned code, 
 				const char *errmsg,
@@ -503,36 +501,38 @@ static pj_status_t stun_respond(pj_stun_session *sess,
 	return status;
 
     /* Send the response */
-    return pj_stun_session_send_msg(sess, cache, dst_addr,  addr_len, tdata);
+    return pj_stun_session_send_msg(sess, transport, cache, PJ_FALSE, 
+				    dst_addr,  addr_len, tdata);
 }
 
 
 /* Callback from our own STUN session when incoming request arrives.
  * This function is triggered by pj_stun_session_on_rx_pkt() call in
-  * pj_turn_srv_on_rx_pkt() function below.
+ * pj_turn_srv_on_rx_pkt() function below.
  */
 static pj_status_t on_rx_stun_request(pj_stun_session *sess,
-				      const pj_uint8_t *pkt,
-				      unsigned pkt_len,
+				      const pj_uint8_t *pdu,
+				      unsigned pdu_len,
 				      const pj_stun_rx_data *rdata,
+				      void *token,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len)
 {
-    pj_turn_listener *listener;
+    pj_turn_transport *transport;
     const pj_stun_msg *msg = rdata->msg;
     pj_turn_srv *srv;
     pj_turn_allocation *alloc;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(pkt);
-    PJ_UNUSED_ARG(pkt_len);
+    PJ_UNUSED_ARG(pdu);
+    PJ_UNUSED_ARG(pdu_len);
 
-    listener = (pj_turn_listener*) pj_stun_session_get_user_data(sess);
-    srv = listener->server;
+    transport = (pj_turn_transport*) token;
+    srv = transport->listener->server;
 
     /* Respond any requests other than ALLOCATE with 437 response */
     if (msg->hdr.type != PJ_STUN_ALLOCATE_REQUEST) {
-	stun_respond(sess, rdata, PJ_STUN_SC_ALLOCATION_MISMATCH,
+	stun_respond(sess, transport, rdata, PJ_STUN_SC_ALLOCATION_MISMATCH,
 		     NULL, PJ_FALSE, src_addr, src_addr_len);
 	return PJ_SUCCESS;
     }
@@ -540,7 +540,7 @@ static pj_status_t on_rx_stun_request(pj_stun_session *sess,
     /* Create new allocation. The relay resource will be allocated
      * in this function.
      */
-    status = pj_turn_allocation_create(listener, src_addr, src_addr_len,
+    status = pj_turn_allocation_create(transport, src_addr, src_addr_len,
 				       rdata, sess, &alloc);
     if (status != PJ_SUCCESS) {
 	/* STUN response has been sent, no need to reply here */
@@ -576,37 +576,53 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 	pj_turn_allocation_on_rx_client_pkt(alloc, pkt);
     } else {
 	/* Otherwise this is a new client */
-	unsigned options, lis_id;
+	unsigned options;
+	unsigned parsed_len;
 	pj_status_t status;
 
 	/* Check that this is a STUN message */
 	options = PJ_STUN_CHECK_PACKET;
-	if (pkt->listener->tp_type == PJ_TURN_TP_UDP)
+	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP)
 	    options |= PJ_STUN_IS_DATAGRAM;
 
 	status = pj_stun_msg_check(pkt->pkt, pkt->len, options);
 	if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    char ip[PJ_INET6_ADDRSTRLEN+10];
+	    /* If the first byte are not STUN, drop the packet. First byte
+	     * of STUN message is always 0x00 or 0x01. Otherwise wait for
+	     * more data as the data might have come from TCP.
+	     *
+	     * Also drop packet if it's unreasonably too big, as this might
+	     * indicate invalid data that's building up in the buffer.
+	     *
+	     * Or if packet is a datagram.
+	     */
+	    if ((*pkt->pkt != 0x00 && *pkt->pkt != 0x01) ||
+		pkt->len > 1600 ||
+		(options & PJ_STUN_IS_DATAGRAM)) 
+	    {
+		char errmsg[PJ_ERR_MSG_SIZE];
+		char ip[PJ_INET6_ADDRSTRLEN+10];
 
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(5,(srv->obj_name, 
-		      "Non STUN packet from %s is dropped: %s",
-		      pj_sockaddr_print(&pkt->src.clt_addr, ip, sizeof(ip), 3),
-		      errmsg));
+		pkt->len = 0;
+
+		pj_strerror(status, errmsg, sizeof(errmsg));
+		PJ_LOG(5,(srv->obj_name, 
+			  "Non-STUN packet from %s is dropped: %s",
+			  pj_sockaddr_print(&pkt->src.clt_addr, ip, sizeof(ip), 3),
+			  errmsg));
+	    }
 	    return;
 	}
-
-	lis_id = pkt->listener->id;
 
 	/* Hand over processing to STUN session. This will trigger
 	 * on_rx_stun_request() callback to be called if the STUN
 	 * message is a request.
 	 */
 	options &= ~PJ_STUN_CHECK_PACKET;
-	status = pj_stun_session_on_rx_pkt(srv->core.stun_sess[lis_id], 
-					   pkt->pkt, pkt->len, options, NULL,
-					   &pkt->src.clt_addr, 
+	parsed_len = 0;
+	status = pj_stun_session_on_rx_pkt(srv->core.stun_sess, pkt->pkt, 
+					   pkt->len, options, pkt->transport,
+					   &parsed_len, &pkt->src.clt_addr, 
 					   pkt->src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
@@ -617,7 +633,18 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 		      "Error processing STUN packet from %s: %s",
 		      pj_sockaddr_print(&pkt->src.clt_addr, ip, sizeof(ip), 3),
 		      errmsg));
-	    return;
+	}
+
+	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP) {
+	    pkt->len = 0;
+	} else if (parsed_len > 0) {
+	    if (parsed_len == pkt->len) {
+		pkt->len = 0;
+	    } else {
+		pj_memmove(pkt->pkt, pkt->pkt+parsed_len,
+			   pkt->len - parsed_len);
+		pkt->len -= parsed_len;
+	    }
 	}
     }
 }

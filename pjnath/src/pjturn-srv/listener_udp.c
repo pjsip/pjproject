@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "turn.h"
+#include <pj/compat/socket.h>
 
 struct read_op
 {
@@ -27,22 +28,30 @@ struct read_op
 struct udp_listener
 {
     pj_turn_listener	     base;
+
     pj_ioqueue_key_t	    *key;
     unsigned		     read_cnt;
     struct read_op	    **read_op;	/* Array of read_op's	*/
+
+    pj_turn_transport	     tp;	/* Transport instance */
 };
 
 
-static pj_status_t udp_sendto(pj_turn_listener *listener,
+static pj_status_t udp_destroy(pj_turn_listener *udp);
+static void on_read_complete(pj_ioqueue_key_t *key, 
+			     pj_ioqueue_op_key_t *op_key, 
+			     pj_ssize_t bytes_read);
+
+static pj_status_t udp_sendto(pj_turn_transport *tp,
 			      const void *packet,
 			      pj_size_t size,
 			      unsigned flag,
 			      const pj_sockaddr_t *addr,
 			      int addr_len);
-static pj_status_t udp_destroy(pj_turn_listener *udp);
-static void on_read_complete(pj_ioqueue_key_t *key, 
-			     pj_ioqueue_op_key_t *op_key, 
-			     pj_ssize_t bytes_read);
+static void udp_add_ref(pj_turn_transport *tp,
+			pj_turn_allocation *alloc);
+static void udp_dec_ref(pj_turn_transport *tp,
+			pj_turn_allocation *alloc);
 
 
 /*
@@ -70,10 +79,16 @@ PJ_DEF(pj_status_t) pj_turn_listener_create_udp( pj_turn_srv *srv,
     udp->base.server = srv;
     udp->base.tp_type = PJ_TURN_TP_UDP;
     udp->base.sock = PJ_INVALID_SOCKET;
-    udp->base.sendto = &udp_sendto;
     udp->base.destroy = &udp_destroy;
     udp->read_cnt = concurrency_cnt;
     udp->base.flags = flags;
+
+    udp->tp.obj_name = udp->base.obj_name;
+    udp->tp.info = udp->base.info;
+    udp->tp.listener = &udp->base;
+    udp->tp.sendto = &udp_sendto;
+    udp->tp.add_ref = &udp_add_ref;
+    udp->tp.dec_ref = &udp_dec_ref;
 
     /* Create socket */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &udp->base.sock);
@@ -172,7 +187,7 @@ static pj_status_t udp_destroy(pj_turn_listener *listener)
 /*
  * Callback to send packet.
  */
-static pj_status_t udp_sendto(pj_turn_listener *listener,
+static pj_status_t udp_sendto(pj_turn_transport *tp,
 			      const void *packet,
 			      pj_size_t size,
 			      unsigned flag,
@@ -180,8 +195,26 @@ static pj_status_t udp_sendto(pj_turn_listener *listener,
 			      int addr_len)
 {
     pj_ssize_t len = size;
-    return pj_sock_sendto(listener->sock, packet, &len, flag, addr, addr_len);
+    return pj_sock_sendto(tp->listener->sock, packet, &len, flag, addr, addr_len);
 }
+
+
+static void udp_add_ref(pj_turn_transport *tp,
+			pj_turn_allocation *alloc)
+{
+    /* Do nothing */
+    PJ_UNUSED_ARG(tp);
+    PJ_UNUSED_ARG(alloc);
+}
+
+static void udp_dec_ref(pj_turn_transport *tp,
+			pj_turn_allocation *alloc)
+{
+    /* Do nothing */
+    PJ_UNUSED_ARG(tp);
+    PJ_UNUSED_ARG(alloc);
+}
+
 
 /*
  * Callback on received packet.
@@ -211,7 +244,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	rpool = read_op->pkt.pool;
 	pj_pool_reset(rpool);
 	read_op->pkt.pool = rpool;
-	read_op->pkt.listener = &udp->base;
+	read_op->pkt.transport = &udp->tp;
 	read_op->pkt.src.tp_type = udp->base.tp_type;
 
 	/* Read next packet */
@@ -227,6 +260,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	if (status != PJ_EPENDING && status != PJ_SUCCESS)
 	    bytes_read = -status;
 
-    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
+    } while (status != PJ_EPENDING && status != PJ_ECANCELLED &&
+	     status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL));
 }
 

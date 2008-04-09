@@ -129,7 +129,7 @@ SOURCE=..\src\pjnath\turn_session.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjnath\turn_udp.c
+SOURCE=..\src\pjnath\turn_sock.c
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -185,7 +185,7 @@ SOURCE=..\include\pjnath\turn_session.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\include\pjnath\turn_udp.h
+SOURCE=..\include\pjnath\turn_sock.h
 # End Source File
 # Begin Source File
 

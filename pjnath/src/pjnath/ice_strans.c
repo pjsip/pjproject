@@ -60,12 +60,14 @@ static void destroy_ice_st(pj_ice_strans *ice_st, pj_status_t reason);
 
 /* STUN session callback */
 static pj_status_t stun_on_send_msg(pj_stun_session *sess,
+				    void *token,
 				    const void *pkt,
 				    pj_size_t pkt_size,
 				    const pj_sockaddr_t *dst_addr,
 				    unsigned addr_len);
 static void stun_on_request_complete(pj_stun_session *sess,
 				     pj_status_t status,
+				     void *token,
 				     pj_stun_tx_data *tdata,
 				     const pj_stun_msg *response,
 				     const pj_sockaddr_t *src_addr,
@@ -490,7 +492,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 		status = pj_stun_session_on_rx_pkt(comp->stun_sess, comp->pkt,
 						   bytes_read, 
 						   PJ_STUN_IS_DATAGRAM, NULL,
-						   &comp->src_addr, 
+						   NULL, &comp->src_addr, 
 						   comp->src_addr_len);
 	    } else if (ice_st->ice) {
 		PJ_TODO(DISTINGUISH_BETWEEN_LOCAL_AND_RELAY);
@@ -600,8 +602,6 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	/* tdata->user_data is NULL for keep-alive */
 	//tdata->user_data = NULL;
 
-	// We need this to support mapped address change
-	tdata->user_data = &comp->cand_list[j];
 	++comp->pending_cnt;
 
 
@@ -609,8 +609,8 @@ static void ka_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	PJ_LOG(5,(ice_st->obj_name, "Sending STUN keep-alive from %s;%d",
 		  pj_inet_ntoa(comp->local_addr.ipv4.sin_addr),
 		  pj_ntohs(comp->local_addr.ipv4.sin_port)));
-	status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
-					  &ice_st->stun_srv, 
+	status = pj_stun_session_send_msg(comp->stun_sess, &comp->cand_list[j],
+					  PJ_FALSE, PJ_TRUE, &ice_st->stun_srv,
 					  sizeof(pj_sockaddr_in), tdata);
 	if (status != PJ_SUCCESS) {
 	    --comp->pending_cnt;
@@ -700,9 +700,8 @@ static pj_status_t get_stun_mapped_addr(pj_ice_strans *ice_st,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Attach alias instance to tdata */
+    /* Will be attached to tdata in send_msg() */
     cand = &comp->cand_list[comp->cand_cnt];
-    tdata->user_data = (void*)cand;
 
     /* Add pending count first, since stun_on_request_complete()
      * may be called before this function completes
@@ -720,8 +719,8 @@ static pj_status_t get_stun_mapped_addr(pj_ice_strans *ice_st,
     ++comp->cand_cnt;
 
     /* Send STUN binding request */
-    status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
-				      &ice_st->stun_srv, 
+    status = pj_stun_session_send_msg(comp->stun_sess, (void*)cand, PJ_FALSE, 
+				      PJ_TRUE, &ice_st->stun_srv, 
 				      sizeof(pj_sockaddr_in), tdata);
     if (status != PJ_SUCCESS) {
 	--comp->pending_cnt;
@@ -1078,6 +1077,7 @@ static void ice_rx_data(pj_ice_sess *ice,
  * Callback called by STUN session to send outgoing packet.
  */
 static pj_status_t stun_on_send_msg(pj_stun_session *sess,
+				    void *token,
 				    const void *pkt,
 				    pj_size_t size,
 				    const pj_sockaddr_t *dst_addr,
@@ -1086,6 +1086,8 @@ static pj_status_t stun_on_send_msg(pj_stun_session *sess,
     pj_ice_strans_comp *comp;
     pj_ssize_t pkt_size;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(token);
 
     comp = (pj_ice_strans_comp*) pj_stun_session_get_user_data(sess);
     pkt_size = size;
@@ -1102,6 +1104,7 @@ static pj_status_t stun_on_send_msg(pj_stun_session *sess,
  */
 static void stun_on_request_complete(pj_stun_session *sess,
 				     pj_status_t status,
+				     void *token,
 				     pj_stun_tx_data *tdata,
 				     const pj_stun_msg *response,
 				     const pj_sockaddr_t *src_addr,
@@ -1115,8 +1118,10 @@ static void stun_on_request_complete(pj_stun_session *sess,
     char ip[20];
 
     comp = (pj_ice_strans_comp*) pj_stun_session_get_user_data(sess);
-    cand = (pj_ice_strans_cand*) tdata->user_data;
+    cand = (pj_ice_strans_cand*) token;
 
+    PJ_UNUSED_ARG(token);
+    PJ_UNUSED_ARG(tdata);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
 

@@ -48,7 +48,7 @@ static struct global
     pj_thread_t		*thread;
     pj_bool_t		 quit;
 
-    pj_turn_udp		*udp_rel;
+    pj_turn_sock	*relay;
     pj_sockaddr		 relay_addr;
 
     struct peer		 peer[2];
@@ -56,22 +56,23 @@ static struct global
 
 static struct options
 {
-    char    *srv_addr;
-    char    *srv_port;
-    char    *realm;
-    char    *user_name;
-    char    *password;
-    pj_bool_t use_fingerprint;
+    pj_bool_t	 use_tcp;
+    char	*srv_addr;
+    char	*srv_port;
+    char	*realm;
+    char	*user_name;
+    char	*password;
+    pj_bool_t	 use_fingerprint;
 } o;
 
 
 static int worker_thread(void *unused);
-static void turn_on_rx_data(pj_turn_udp *udp_rel,
+static void turn_on_rx_data(pj_turn_sock *relay,
 			    const pj_uint8_t *pkt,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
 			    unsigned addr_len);
-static void turn_on_state(pj_turn_udp *udp_rel, pj_turn_state_t old_state,
+static void turn_on_state(pj_turn_sock *relay, pj_turn_state_t old_state,
 			  pj_turn_state_t new_state);
 
 
@@ -155,9 +156,9 @@ static int shutdown()
 	pj_thread_destroy(g.thread);
 	g.thread = NULL;
     }
-    if (g.udp_rel) {
-	pj_turn_udp_destroy(g.udp_rel);
-	g.udp_rel = NULL;
+    if (g.relay) {
+	pj_turn_sock_destroy(g.relay);
+	g.relay = NULL;
     }
     for (i=0; i<PJ_ARRAY_SIZE(g.peer); ++i) {
 	if (g.peer[i].sock) {
@@ -242,12 +243,12 @@ static int worker_thread(void *unused)
 
 static pj_status_t create_relay(void)
 {
-    pj_turn_udp_cb rel_cb;
+    pj_turn_sock_cb rel_cb;
     pj_stun_auth_cred cred;
     pj_str_t srv;
     pj_status_t status;
 
-    if (g.udp_rel) {
+    if (g.relay) {
 	PJ_LOG(1,(THIS_FILE, "Relay already created"));
 	return -1;
     }
@@ -255,8 +256,10 @@ static pj_status_t create_relay(void)
     pj_bzero(&rel_cb, sizeof(rel_cb));
     rel_cb.on_rx_data = &turn_on_rx_data;
     rel_cb.on_state = &turn_on_state;
-    CHECK( pj_turn_udp_create(&g.stun_config, pj_AF_INET(), &rel_cb, 0,
-			      NULL, &g.udp_rel) );
+    CHECK( pj_turn_sock_create(&g.stun_config, pj_AF_INET(), 
+			       (o.use_tcp? PJ_TURN_TP_TCP : PJ_TURN_TP_UDP),
+			       &rel_cb, 0,
+			       NULL, &g.relay) );
 
     if (o.user_name) {
 	pj_bzero(&cred, sizeof(cred));
@@ -271,7 +274,7 @@ static pj_status_t create_relay(void)
     }
 
     srv = pj_str(o.srv_addr);
-    CHECK( pj_turn_udp_init(g.udp_rel,				 /* the relay */
+    CHECK( pj_turn_sock_init(g.relay,				 /* the relay */
 			    &srv,				 /* srv addr */
 			    (o.srv_port?atoi(o.srv_port):PJ_STUN_PORT),/* def port */
 			    NULL,				 /* resolver */
@@ -284,13 +287,13 @@ static pj_status_t create_relay(void)
 
 static void destroy_relay(void)
 {
-    if (g.udp_rel) {
-	pj_turn_udp_destroy(g.udp_rel);
+    if (g.relay) {
+	pj_turn_sock_destroy(g.relay);
     }
 }
 
 
-static void turn_on_rx_data(pj_turn_udp *udp_rel,
+static void turn_on_rx_data(pj_turn_sock *relay,
 			    const pj_uint8_t *pkt,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
@@ -305,7 +308,7 @@ static void turn_on_rx_data(pj_turn_udp *udp_rel,
 }
 
 
-static void turn_on_state(pj_turn_udp *udp_rel, pj_turn_state_t old_state,
+static void turn_on_state(pj_turn_sock *relay, pj_turn_state_t old_state,
 			  pj_turn_state_t new_state)
 {
     PJ_LOG(3,(THIS_FILE, "State %s --> %s", pj_turn_state_name(old_state), 
@@ -313,11 +316,11 @@ static void turn_on_state(pj_turn_udp *udp_rel, pj_turn_state_t old_state,
 
     if (new_state == PJ_TURN_STATE_READY) {
 	pj_turn_session_info info;
-	pj_turn_udp_get_info(udp_rel, &info);
+	pj_turn_sock_get_info(relay, &info);
 	pj_memcpy(&g.relay_addr, &info.relay_addr, sizeof(pj_sockaddr));
-    } else if (new_state > PJ_TURN_STATE_READY && g.udp_rel) {
+    } else if (new_state > PJ_TURN_STATE_READY && g.relay) {
 	PJ_LOG(3,(THIS_FILE, "Relay shutting down.."));
-	g.udp_rel = NULL;
+	g.relay = NULL;
     }
 }
 
@@ -326,8 +329,8 @@ static void menu(void)
     pj_turn_session_info info;
     char client_state[20], relay_addr[80], peer0_addr[80], peer1_addr[80];
 
-    if (g.udp_rel) {
-	pj_turn_udp_get_info(g.udp_rel, &info);
+    if (g.relay) {
+	pj_turn_sock_get_info(g.relay, &info);
 	strcpy(client_state, pj_turn_state_name(info.state));
 	if (info.state >= PJ_TURN_STATE_READY)
 	    pj_sockaddr_print(&info.relay_addr, relay_addr, sizeof(relay_addr), 3);
@@ -357,7 +360,7 @@ static void menu(void)
     printf("| x      Delete allocation          | Address: %-21s |\n",
 	  peer1_addr);
     puts("+-----------------------------------+                                |");
-    puts("| q  Quit        d  Dump            | 1  Send data to relay adderss  |");
+    puts("| q  Quit                  d  Dump  | 1  Send data to relay adderss  |");
     puts("+-----------------------------------+--------------------------------+");
     printf(">>> ");
     fflush(stdout);
@@ -384,7 +387,7 @@ static void console_main(void)
 	    pj_pool_factory_dump(&g.cp.factory, PJ_TRUE);
 	    break;
 	case 's':
-	    if (g.udp_rel == NULL) {
+	    if (g.relay == NULL) {
 		puts("Error: no relay");
 		continue;
 	    }
@@ -394,7 +397,7 @@ static void console_main(void)
 		peer = &g.peer[1];
 
 	    strcpy(input, "Hello from client");
-	    status = pj_turn_udp_sendto(g.udp_rel, (const pj_uint8_t*)input, 
+	    status = pj_turn_sock_sendto(g.relay, (const pj_uint8_t*)input, 
 					strlen(input)+1, 
 					&peer->addr, 
 					pj_sockaddr_get_len(&peer->addr));
@@ -402,7 +405,7 @@ static void console_main(void)
 		my_perror("turn_udp_sendto() failed", status);
 	    break;
 	case 'b':
-	    if (g.udp_rel == NULL) {
+	    if (g.relay == NULL) {
 		puts("Error: no relay");
 		continue;
 	    }
@@ -411,13 +414,16 @@ static void console_main(void)
 	    else
 		peer = &g.peer[1];
 
-	    status = pj_turn_udp_bind_channel(g.udp_rel, &peer->addr,
+	    status = pj_turn_sock_bind_channel(g.relay, &peer->addr,
 					      pj_sockaddr_get_len(&peer->addr));
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_bind_channel() failed", status);
 	    break;
+	case 'd':
+	    pj_pool_factory_dump(&g.cp.factory, PJ_TRUE);
+	    break;
 	case 'x':
-	    if (g.udp_rel == NULL) {
+	    if (g.relay == NULL) {
 		puts("Error: no relay");
 		continue;
 	    }
@@ -425,7 +431,7 @@ static void console_main(void)
 	    break;
 	case '0':
 	case '1':
-	    if (g.udp_rel == NULL) {
+	    if (g.relay == NULL) {
 		puts("No relay");
 		break;
 	    }
@@ -450,10 +456,11 @@ static void usage(void)
     puts("where TARGET is \"host[:port]\"");
     puts("");
     puts("and OPTIONS:");
-    puts(" --realm, -r       Set realm of the credential");
-    puts(" --username, -u    Set username of the credential");
-    puts(" --password, -p    Set password of the credential");
-    puts(" --fingerprint, -F Use fingerprint for outgoing requests");
+    puts(" --tcp, -T             Use TCP to connect to TURN server");
+    puts(" --realm, -r REALM     Set realm of the credential to REALM");
+    puts(" --username, -u UID    Set username of the credential to UID");
+    puts(" --password, -p PASSWD Set password of the credential to PASSWD");
+    puts(" --fingerprint, -F     Use fingerprint for outgoing requests");
     puts(" --help, -h");
 }
 
@@ -464,14 +471,14 @@ int main(int argc, char *argv[])
 	{ "username",	1, 0, 'u'},
 	{ "password",	1, 0, 'p'},
 	{ "fingerprint",0, 0, 'F'},
-	{ "data",	1, 0, 'D'},
+	{ "tcp",        0, 0, 'T'},
 	{ "help",	0, 0, 'h'}
     };
     int c, opt_id;
     char *pos;
     pj_status_t status;
 
-    while((c=pj_getopt_long(argc,argv, "r:u:p:N:hF", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "r:u:p:N:hFT", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'r':
 	    o.realm = pj_optarg;
@@ -487,6 +494,9 @@ int main(int argc, char *argv[])
 	    return 0;
 	case 'F':
 	    o.use_fingerprint = PJ_TRUE;
+	    break;
+	case 'T':
+	    o.use_tcp = PJ_TRUE;
 	    break;
 
 	default:

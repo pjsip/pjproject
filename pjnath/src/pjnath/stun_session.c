@@ -349,7 +349,8 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 	PJ_LOG(4,(SNAME(sess), "Retrying request with new authentication"));
 
 	/* Retry the request */
-	status = pj_stun_session_send_msg(sess, PJ_TRUE, src_addr, 
+	status = pj_stun_session_send_msg(sess, request->token, PJ_TRUE, 
+					  request->retransmit, src_addr, 
 					  src_addr_len, tdata);
 
     } else {
@@ -377,9 +378,8 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
 		          src_addr_len, &notify_user);
 
     if (notify_user && sess->cb.on_request_complete) {
-	(*sess->cb.on_request_complete)(sess, status, tdata, 
-					response, 
-					src_addr, src_addr_len);
+	(*sess->cb.on_request_complete)(sess, status, tdata->token, tdata, 
+					response, src_addr, src_addr_len);
     }
 
     /* Destroy the transmit data. This will remove the transaction
@@ -397,8 +397,9 @@ static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
 
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
 
-    return tdata->sess->cb.on_send_msg(tdata->sess, stun_pkt, pkt_size,
-				       tdata->dst_addr, tdata->addr_len);
+    return tdata->sess->cb.on_send_msg(tdata->sess, tdata->token, stun_pkt, 
+				       pkt_size, tdata->dst_addr, 
+				       tdata->addr_len);
 }
 
 /* **************************************************************************/
@@ -730,7 +731,9 @@ static void dump_tx_msg(pj_stun_session *sess, const pj_stun_msg *msg,
 
 
 PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
+					      void *token,
 					      pj_bool_t cache_res,
+					      pj_bool_t retransmit,
 					      const pj_sockaddr_t *server,
 					      unsigned addr_len,
 					      pj_stun_tx_data *tdata)
@@ -742,6 +745,9 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     /* Allocate packet */
     tdata->max_len = PJ_STUN_MAX_PKT_LEN;
     tdata->pkt = pj_pool_alloc(tdata->pool, tdata->max_len);
+
+    tdata->token = token;
+    tdata->retransmit = retransmit;
 
     /* Start locking the session now */
     pj_lock_acquire(sess->lock);
@@ -787,7 +793,7 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	tdata->dst_addr = server;
 
 	/* Send the request! */
-	status = pj_stun_client_tsx_send_msg(tdata->client_tsx, PJ_TRUE,
+	status = pj_stun_client_tsx_send_msg(tdata->client_tsx, retransmit,
 					     tdata->pkt, tdata->pkt_size);
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	    pj_stun_msg_destroy_tdata(sess, tdata);
@@ -828,8 +834,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	}
     
 	/* Otherwise for non-request message, send directly to transport. */
-	status = sess->cb.on_send_msg(sess, tdata->pkt, tdata->pkt_size,
-				      server, addr_len);
+	status = sess->cb.on_send_msg(sess, token, tdata->pkt, 
+				      tdata->pkt_size, server, addr_len);
 
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	    LOG_ERR_(sess, "Error sending STUN request", status);
@@ -854,6 +860,7 @@ PJ_DEF(pj_status_t) pj_stun_session_respond( pj_stun_session *sess,
 					     const pj_stun_rx_data *rdata,
 					     unsigned code, 
 					     const char *errmsg,
+					     void *token,
 					     pj_bool_t cache, 
 					     const pj_sockaddr_t *dst_addr, 
 					     unsigned addr_len)
@@ -868,7 +875,8 @@ PJ_DEF(pj_status_t) pj_stun_session_respond( pj_stun_session *sess,
     if (status != PJ_SUCCESS)
 	return status;
 
-    return pj_stun_session_send_msg(sess, cache, dst_addr,  addr_len, tdata);
+    return pj_stun_session_send_msg(sess, token, cache, PJ_FALSE,
+				    dst_addr,  addr_len, tdata);
 }
 
 
@@ -887,8 +895,8 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
     pj_lock_acquire(sess->lock);
 
     if (notify) {
-	(sess->cb.on_request_complete)(sess, notify_status, tdata, NULL,
-				       NULL, 0);
+	(sess->cb.on_request_complete)(sess, notify_status, tdata->token, 
+				       tdata, NULL, NULL, 0);
     }
 
     /* Just destroy tdata. This will destroy the transaction as well */
@@ -920,7 +928,7 @@ PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
 
 
 /* Send response */
-static pj_status_t send_response(pj_stun_session *sess, 
+static pj_status_t send_response(pj_stun_session *sess, void *token,
 				 pj_pool_t *pool, pj_stun_msg *response,
 				 const pj_stun_req_cred_info *auth_info,
 				 pj_bool_t retransmission,
@@ -953,13 +961,15 @@ static pj_status_t send_response(pj_stun_session *sess,
     dump_tx_msg(sess, response, out_len, addr);
 
     /* Send packet */
-    status = sess->cb.on_send_msg(sess, out_pkt, out_len, addr, addr_len);
+    status = sess->cb.on_send_msg(sess, token, out_pkt, out_len, 
+				  addr, addr_len);
 
     return status;
 }
 
 /* Authenticate incoming message */
 static pj_status_t authenticate_req(pj_stun_session *sess,
+				    void *token,
 				    const pj_uint8_t *pkt,
 				    unsigned pkt_len,
 				    pj_stun_rx_data *rdata,
@@ -981,8 +991,8 @@ static pj_status_t authenticate_req(pj_stun_session *sess,
 					  &response);
     if (status != PJ_SUCCESS && response != NULL) {
 	PJ_LOG(5,(SNAME(sess), "Message authentication failed"));
-	send_response(sess, tmp_pool, response, &rdata->info, PJ_FALSE, 
-		      src_addr, src_addr_len);
+	send_response(sess, token, tmp_pool, response, &rdata->info, 
+		      PJ_FALSE, src_addr, src_addr_len);
     }
 
     return status;
@@ -1070,8 +1080,8 @@ static pj_status_t check_cached_response(pj_stun_session *sess,
 	PJ_LOG(5,(SNAME(sess), 
 		 "Request retransmission, sending cached response"));
 
-	send_response(sess, tmp_pool, t->msg, &t->auth_info, PJ_TRUE, 
-		      src_addr, src_addr_len);
+	send_response(sess, t->token, tmp_pool, t->msg, &t->auth_info, 
+		      PJ_TRUE, src_addr, src_addr_len);
 	return PJ_SUCCESS;
     }
 
@@ -1081,6 +1091,7 @@ static pj_status_t check_cached_response(pj_stun_session *sess,
 /* Handle incoming request */
 static pj_status_t on_incoming_request(pj_stun_session *sess,
 				       unsigned options,
+				       void *token,
 				       pj_pool_t *tmp_pool,
 				       const pj_uint8_t *in_pkt,
 				       unsigned in_pkt_len,
@@ -1102,8 +1113,9 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
      * is specified in the option.
      */
     if ((options & PJ_STUN_NO_AUTHENTICATE) == 0) {
-	status = authenticate_req(sess, (const pj_uint8_t*) in_pkt, in_pkt_len,
-				  &rdata, tmp_pool, src_addr, src_addr_len);
+	status = authenticate_req(sess, token, (const pj_uint8_t*) in_pkt, 
+				  in_pkt_len,&rdata, tmp_pool, src_addr, 
+				  src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    return status;
 	}
@@ -1112,7 +1124,7 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
     /* Distribute to handler, or respond with Bad Request */
     if (sess->cb.on_rx_request) {
 	status = (*sess->cb.on_rx_request)(sess, in_pkt, in_pkt_len, &rdata,
-					   src_addr, src_addr_len);
+					   token, src_addr, src_addr_len);
     } else {
 	pj_str_t err_text;
 	pj_stun_msg *response;
@@ -1122,7 +1134,7 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 					     PJ_STUN_SC_BAD_REQUEST, 
 					     &err_text, &response);
 	if (status == PJ_SUCCESS && response) {
-	    status = send_response(sess, tmp_pool, response, 
+	    status = send_response(sess, token, tmp_pool, response, 
 				   NULL, PJ_FALSE, src_addr, src_addr_len);
 	}
     }
@@ -1133,6 +1145,7 @@ static pj_status_t on_incoming_request(pj_stun_session *sess,
 
 /* Handle incoming indication */
 static pj_status_t on_incoming_indication(pj_stun_session *sess,
+					  void *token,
 					  pj_pool_t *tmp_pool,
 					  const pj_uint8_t *in_pkt,
 					  unsigned in_pkt_len,
@@ -1145,7 +1158,7 @@ static pj_status_t on_incoming_indication(pj_stun_session *sess,
     /* Distribute to handler */
     if (sess->cb.on_rx_indication) {
 	return (*sess->cb.on_rx_indication)(sess, in_pkt, in_pkt_len, msg,
-					    src_addr, src_addr_len);
+					    token, src_addr, src_addr_len);
     } else {
 	return PJ_SUCCESS;
     }
@@ -1156,6 +1169,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					      const void *packet,
 					      pj_size_t pkt_size,
 					      unsigned options,
+					      void *token,
 					      unsigned *parsed_len,
 					      const pj_sockaddr_t *src_addr,
 					      unsigned src_addr_len)
@@ -1180,7 +1194,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
     if (status != PJ_SUCCESS) {
 	LOG_ERR_(sess, "STUN msg_decode() error", status);
 	if (response) {
-	    send_response(sess, tmp_pool, response, NULL,
+	    send_response(sess, token, tmp_pool, response, NULL,
 			  PJ_FALSE, src_addr, src_addr_len);
 	}
 	pj_pool_release(tmp_pool);
@@ -1217,13 +1231,13 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     } else if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 
-	status = on_incoming_request(sess, options, tmp_pool, 
+	status = on_incoming_request(sess, options, token, tmp_pool, 
 				     (const pj_uint8_t*) packet, pkt_size, 
 				     msg, src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_INDICATION(msg->hdr.type)) {
 
-	status = on_incoming_indication(sess, tmp_pool, 
+	status = on_incoming_indication(sess, token, tmp_pool, 
 					(const pj_uint8_t*) packet, pkt_size,
 					msg, src_addr, src_addr_len);
 

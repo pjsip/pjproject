@@ -38,6 +38,8 @@ SOURCE	stun_msg.c
 SOURCE	stun_msg_dump.c
 SOURCE	stun_session.c
 SOURCE	stun_transaction.c
+SOURCE	turn_session.c
+SOURCE	turn_sock.c
 
 //
 // Include files

@@ -113,6 +113,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
 
 /* These are the callbacks registered to the STUN sessions */
 static pj_status_t on_stun_send_msg(pj_stun_session *sess,
+				    void *token,
 				    const void *pkt,
 				    pj_size_t pkt_size,
 				    const pj_sockaddr_t *dst_addr,
@@ -121,10 +122,12 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
 				      const pj_stun_rx_data *rdata,
+				      void *token,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len);
 static void on_stun_request_complete(pj_stun_session *stun_sess,
 				     pj_status_t status,
+				     void *token,
 				     pj_stun_tx_data *tdata,
 				     const pj_stun_msg *response,
 				     const pj_sockaddr_t *src_addr,
@@ -133,6 +136,7 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 					 const pj_uint8_t *pkt,
 					 unsigned pkt_len,
 					 const pj_stun_msg *msg,
+					 void *token,
 					 const pj_sockaddr_t *src_addr,
 					 unsigned src_addr_len);
 
@@ -1392,7 +1396,6 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     rd->ice = ice;
     rd->clist = clist;
     rd->ckid = check_id;
-    check->tdata->user_data = (void*) rd;
 
     /* Add PRIORITY */
     prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 65535, 
@@ -1424,8 +1427,8 @@ static pj_status_t perform_check(pj_ice_sess *ice,
      */
 
     /* Initiate STUN transaction to send the request */
-    status = pj_stun_session_send_msg(comp->stun_sess, PJ_FALSE, 
-				      &rcand->addr, 
+    status = pj_stun_session_send_msg(comp->stun_sess, (void*)rd, PJ_FALSE, 
+				      PJ_TRUE, &rcand->addr, 
 				      sizeof(pj_sockaddr_in), check->tdata);
     if (status != PJ_SUCCESS) {
 	check->tdata = NULL;
@@ -1644,6 +1647,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
  * STUN session also doesn't have a transport, remember?!
  */
 static pj_status_t on_stun_send_msg(pj_stun_session *sess,
+				    void *token,
 				    const void *pkt,
 				    pj_size_t pkt_size,
 				    const pj_sockaddr_t *dst_addr,
@@ -1651,6 +1655,9 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 {
     stun_data *sd = (stun_data*) pj_stun_session_get_user_data(sess);
     pj_ice_sess *ice = sd->ice;
+
+    PJ_UNUSED_ARG(token);
+
     return (*ice->cb.on_tx_pkt)(ice, sd->comp_id, 
 				pkt, pkt_size, 
 				dst_addr, addr_len);
@@ -1660,12 +1667,13 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 /* This callback is called when outgoing STUN request completed */
 static void on_stun_request_complete(pj_stun_session *stun_sess,
 				     pj_status_t status,
+				     void *token,
 				     pj_stun_tx_data *tdata,
 				     const pj_stun_msg *response,
 				     const pj_sockaddr_t *src_addr,
 				     unsigned src_addr_len)
 {
-    struct req_data *rd = (struct req_data*) tdata->user_data;
+    struct req_data *rd = (struct req_data*) token;
     pj_ice_sess *ice;
     pj_ice_sess_check *check, *new_check;
     pj_ice_sess_cand *lcand;
@@ -1905,6 +1913,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      const pj_uint8_t *pkt,
 				      unsigned pkt_len,
 				      const pj_stun_rx_data *rdata,
+				      void *token,
 				      const pj_sockaddr_t *src_addr,
 				      unsigned src_addr_len)
 {
@@ -1920,17 +1929,14 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 
     PJ_UNUSED_ARG(pkt);
     PJ_UNUSED_ARG(pkt_len);
+    PJ_UNUSED_ARG(token);
 
     /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
-	status = pj_stun_session_create_res(sess, rdata, 
-					    PJ_STUN_SC_BAD_REQUEST,
-					    NULL, &tdata);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	return pj_stun_session_send_msg(sess, PJ_TRUE, 
-					src_addr, src_addr_len, tdata);
+	pj_stun_session_respond(sess, rdata, PJ_STUN_SC_BAD_REQUEST, 
+				NULL, NULL, PJ_TRUE, 
+				src_addr, src_addr_len);
+	return PJ_SUCCESS;
     }
 
 
@@ -1994,13 +2000,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	    pj_ice_sess_change_role(ice, PJ_ICE_SESS_ROLE_CONTROLLED);
 	} else {
 	    /* Generate 487 response */
-	    status = pj_stun_session_create_res(sess, rdata, 
-					        PJ_STUN_SC_ROLE_CONFLICT,
-						NULL, &tdata);
-	    if (status == PJ_SUCCESS) {
-		pj_stun_session_send_msg(sess, PJ_TRUE, 
-				         src_addr, src_addr_len, tdata);
-	    }
+	    pj_stun_session_respond(sess, rdata, PJ_STUN_SC_ROLE_CONFLICT, 
+				    NULL, NULL, PJ_TRUE, 
+				    src_addr, src_addr_len);
 	    pj_mutex_unlock(ice->mutex);
 	    return PJ_SUCCESS;
 	}
@@ -2010,13 +2012,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     {
 	if (pj_cmp_timestamp(&ice->tie_breaker, &role_attr->value) < 0) {
 	    /* Generate 487 response */
-	    status = pj_stun_session_create_res(sess, rdata, 
-					        PJ_STUN_SC_ROLE_CONFLICT,
-						NULL, &tdata);
-	    if (status == PJ_SUCCESS) {
-		pj_stun_session_send_msg(sess, PJ_TRUE, 
-				         src_addr, src_addr_len, tdata);
-	    }
+	    pj_stun_session_respond(sess, rdata, PJ_STUN_SC_ROLE_CONFLICT, 
+				    NULL, NULL, PJ_TRUE, 
+				    src_addr, src_addr_len);
 	    pj_mutex_unlock(ice->mutex);
 	    return PJ_SUCCESS;
 	} else {
@@ -2040,7 +2038,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
 					   PJ_TRUE, src_addr, src_addr_len);
 
-    status = pj_stun_session_send_msg(sess, PJ_TRUE, 
+    status = pj_stun_session_send_msg(sess, NULL, PJ_TRUE, PJ_TRUE,
 				      src_addr, src_addr_len, tdata);
 
 
@@ -2286,6 +2284,7 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 					 const pj_uint8_t *pkt,
 					 unsigned pkt_len,
 					 const pj_stun_msg *msg,
+					 void *token,
 					 const pj_sockaddr_t *src_addr,
 					 unsigned src_addr_len)
 {
@@ -2293,6 +2292,7 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
     PJ_UNUSED_ARG(pkt);
     PJ_UNUSED_ARG(pkt_len);
     PJ_UNUSED_ARG(msg);
+    PJ_UNUSED_ARG(token);
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -2367,7 +2367,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     				    PJ_STUN_IS_DATAGRAM);
     if (stun_status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
-					   PJ_STUN_IS_DATAGRAM,
+					   PJ_STUN_IS_DATAGRAM, NULL,
 					   NULL, src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    pj_strerror(status, ice->tmp.errmsg, sizeof(ice->tmp.errmsg));

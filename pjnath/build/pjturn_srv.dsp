@@ -95,6 +95,10 @@ SOURCE="..\src\pjturn-srv\auth.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjturn-srv\listener_tcp.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjturn-srv\listener_udp.c"
 # End Source File
 # Begin Source File

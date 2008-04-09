@@ -324,7 +324,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\pjnath\turn_udp.c"
+				RelativePath="..\src\pjnath\turn_sock.c"
 				>
 			</File>
 		</Filter>
@@ -385,7 +385,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjnath\turn_udp.h"
+				RelativePath="..\include\pjnath\turn_sock.h"
 				>
 			</File>
 			<File
