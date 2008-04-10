@@ -77,6 +77,21 @@ struct pjmedia_snd_stream
     //pj_bool_t		 play_thread_initialized;
     pj_thread_desc	 play_thread_desc;
     pj_thread_t		*play_thread;
+
+    /* Sometime the record callback does not return framesize as configured
+     * (e.g: in OSS), while this module must guarantee returning framesize
+     * as configured in the creation settings. In this case, we need a buffer 
+     * for the recorded samples.
+     */
+    pj_int16_t		*rec_buf;
+    unsigned		 rec_buf_size;
+
+    /* Sometime the player callback does not request framesize as configured
+     * (e.g: in Linux OSS) while sound device will always get samples from 
+     * the other component as many as configured samples_per_frame. 
+     */
+    pj_int16_t		*play_buf;
+    unsigned		 play_buf_size;
 };
 
 
@@ -88,9 +103,8 @@ static int PaRecorderCallback(const void *input,
 			      void *userData )
 {
     pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
-    pj_status_t status;
-
-    pj_assert(frameCount * stream->channel_count == stream->samples_per_frame);
+    pj_status_t status = 0;
+    unsigned nsamples;
 
     PJ_UNUSED_ARG(output);
     PJ_UNUSED_ARG(timeInfo);
@@ -118,11 +132,56 @@ static int PaRecorderCallback(const void *input,
 
     stream->rec_timestamp += frameCount;
 
-    status = (*stream->rec_cb)(stream->user_data, stream->rec_timestamp, 
-			       (void*)input, 
-			       frameCount * stream->bytes_per_sample *
-				 stream->channel_count);
-    
+    /* Calculate number of samples we've got */
+    nsamples = frameCount * stream->channel_count + stream->rec_buf_size;
+
+    if (nsamples >= stream->samples_per_frame) 
+    {
+	/* If buffer is not empty, combine the buffer with the just incoming
+	 * samples, then call put_frame.
+	 */
+	if (stream->rec_buf_size) {
+	    unsigned chunk_size = 0;
+	
+	    chunk_size = stream->samples_per_frame - stream->rec_buf_size;
+	    pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_size,
+				 (pj_int16_t*)input, chunk_size);
+	    status = (*stream->rec_cb)(stream->user_data, stream->rec_timestamp,
+				       (void*) stream->rec_buf, 
+				       stream->samples_per_frame * 
+				       stream->bytes_per_sample);
+
+	    input = (pj_int16_t*) input + chunk_size;
+	    nsamples -= stream->samples_per_frame;
+	    stream->rec_buf_size = 0;
+	}
+
+	/* Give all frames we have */
+	while (nsamples >= stream->samples_per_frame && status == 0) {
+	    status = (*stream->rec_cb)(stream->user_data, stream->rec_timestamp,
+				       (void*) input, 
+				       stream->samples_per_frame * 
+				       stream->bytes_per_sample);
+	    input = (pj_int16_t*) input + stream->samples_per_frame;
+	    nsamples -= stream->samples_per_frame;
+	}
+
+	/* Store the remaining samples into the buffer */
+	if (nsamples && status == 0) {
+	    stream->rec_buf_size = nsamples;
+	    pjmedia_copy_samples((pj_int16_t*)stream->rec_buf, 
+				 (pj_int16_t*)input, nsamples);
+	}
+
+    } else {
+	/* Not enough samples, let's just store them in the buffer */
+	pjmedia_copy_samples((pj_int16_t*)(stream->rec_buf + 
+					   stream->rec_buf_size),
+					   (pj_int16_t*)input, 
+					   frameCount * stream->channel_count);
+	stream->rec_buf_size += frameCount * stream->channel_count;
+    }
+
     if (status==0) 
 	return paContinue;
 
@@ -139,11 +198,8 @@ static int PaPlayerCallback( const void *input,
 			     void *userData )
 {
     pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
-    pj_status_t status;
-    unsigned size = frameCount * stream->bytes_per_sample *
-		    stream->channel_count;
-
-    pj_assert(frameCount * stream->channel_count == stream->samples_per_frame);
+    pj_status_t status = 0;
+    unsigned nsamples_req = frameCount * stream->channel_count;
 
     PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(timeInfo);
@@ -171,8 +227,53 @@ static int PaPlayerCallback( const void *input,
 
     stream->play_timestamp += frameCount;
 
-    status = (*stream->play_cb)(stream->user_data, stream->play_timestamp, 
-			        output, size);
+    /* Check if any buffered samples */
+    if (stream->play_buf_size) {
+	/* samples buffered >= requested by sound device */
+	if (stream->play_buf_size >= nsamples_req) {
+	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
+				 nsamples_req);
+	    stream->play_buf_size -= nsamples_req;
+	    pjmedia_move_samples(stream->play_buf, 
+				 stream->play_buf + nsamples_req,
+				 stream->play_buf_size);
+	    nsamples_req = 0;
+	    
+	    return paContinue;
+	}
+
+	/* samples buffered < requested by sound device */
+	pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
+			     stream->play_buf_size);
+	nsamples_req -= stream->play_buf_size;
+	output = (pj_int16_t*)output + stream->play_buf_size;
+	stream->play_buf_size = 0;
+    }
+
+    /* Fill output buffer as requested */
+    while (nsamples_req && status == 0) {
+	if (nsamples_req >= stream->samples_per_frame) {
+	    status = (*stream->play_cb)(stream->user_data, 
+					stream->play_timestamp, 
+					output, 
+					stream->samples_per_frame * 
+					stream->bytes_per_sample);
+	    nsamples_req -= stream->samples_per_frame;
+	    output = (pj_int16_t*)output + stream->samples_per_frame;
+	} else {
+	    status = (*stream->play_cb)(stream->user_data, 
+					stream->play_timestamp, 
+					stream->play_buf,
+					stream->samples_per_frame * 
+					stream->bytes_per_sample);
+	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
+				 nsamples_req);
+	    stream->play_buf_size = stream->samples_per_frame - nsamples_req;
+	    pjmedia_move_samples(stream->play_buf, stream->play_buf+nsamples_req,
+				 stream->play_buf_size);
+	    nsamples_req = 0;
+	}
+    }
     
     if (status==0) 
 	return paContinue;
@@ -449,6 +550,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     stream->channel_count = channel_count;
     stream->rec_cb = rec_cb;
 
+    stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+		      stream->samples_per_frame * stream->bytes_per_sample);
+    stream->rec_buf_size = 0;
+
     pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = index;
     inputParam.channelCount = channel_count;
@@ -546,6 +651,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     stream->bytes_per_sample = bits_per_sample / 8;
     stream->channel_count = channel_count;
     stream->play_cb = play_cb;
+
+    stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+		       stream->samples_per_frame * stream->bytes_per_sample);
+    stream->play_buf_size = 0;
 
     pj_bzero(&outputParam, sizeof(outputParam));
     outputParam.device = index;
@@ -669,6 +778,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     stream->channel_count = channel_count;
     stream->rec_cb = rec_cb;
     stream->play_cb = play_cb;
+
+    stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+		      stream->samples_per_frame * stream->bytes_per_sample);
+    stream->rec_buf_size = 0;
+
+    stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
+		       stream->samples_per_frame * stream->bytes_per_sample);
+    stream->play_buf_size = 0;
 
     pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = rec_id;
