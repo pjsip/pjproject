@@ -1408,12 +1408,10 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
-    if (config->media_cfg.snd_clock_rate != config->media_cfg.clock_rate) {
+    if (config->media_cfg.snd_clock_rate && 
+	config->media_cfg.snd_clock_rate != config->media_cfg.clock_rate) 
+    {
 	pj_ansi_sprintf(line, "--snd-clock-rate %d\n",
-			config->media_cfg.snd_clock_rate);
-	pj_strcat2(&cfg, line);
-    } else {
-	pj_ansi_sprintf(line, "#using default --snd-clock-rate %d\n",
 			config->media_cfg.snd_clock_rate);
 	pj_strcat2(&cfg, line);
     }
