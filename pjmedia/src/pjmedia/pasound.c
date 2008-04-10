@@ -84,14 +84,14 @@ struct pjmedia_snd_stream
      * for the recorded samples.
      */
     pj_int16_t		*rec_buf;
-    unsigned		 rec_buf_size;
+    unsigned		 rec_buf_count;
 
     /* Sometime the player callback does not request framesize as configured
      * (e.g: in Linux OSS) while sound device will always get samples from 
      * the other component as many as configured samples_per_frame. 
      */
     pj_int16_t		*play_buf;
-    unsigned		 play_buf_size;
+    unsigned		 play_buf_count;
 };
 
 
@@ -133,32 +133,34 @@ static int PaRecorderCallback(const void *input,
     stream->rec_timestamp += frameCount;
 
     /* Calculate number of samples we've got */
-    nsamples = frameCount * stream->channel_count + stream->rec_buf_size;
+    nsamples = frameCount * stream->channel_count + stream->rec_buf_count;
 
     if (nsamples >= stream->samples_per_frame) 
     {
 	/* If buffer is not empty, combine the buffer with the just incoming
 	 * samples, then call put_frame.
 	 */
-	if (stream->rec_buf_size) {
-	    unsigned chunk_size = 0;
+	if (stream->rec_buf_count) {
+	    unsigned chunk_count = 0;
 	
-	    chunk_size = stream->samples_per_frame - stream->rec_buf_size;
-	    pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_size,
-				 (pj_int16_t*)input, chunk_size);
-	    status = (*stream->rec_cb)(stream->user_data, stream->rec_timestamp,
+	    chunk_count = stream->samples_per_frame - stream->rec_buf_count;
+	    pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_count,
+				 (pj_int16_t*)input, chunk_count);
+	    status = (*stream->rec_cb)(stream->user_data, 
+				       stream->rec_timestamp,
 				       (void*) stream->rec_buf, 
 				       stream->samples_per_frame * 
 				       stream->bytes_per_sample);
 
-	    input = (pj_int16_t*) input + chunk_size;
+	    input = (pj_int16_t*) input + chunk_count;
 	    nsamples -= stream->samples_per_frame;
-	    stream->rec_buf_size = 0;
+	    stream->rec_buf_count = 0;
 	}
 
 	/* Give all frames we have */
 	while (nsamples >= stream->samples_per_frame && status == 0) {
-	    status = (*stream->rec_cb)(stream->user_data, stream->rec_timestamp,
+	    status = (*stream->rec_cb)(stream->user_data, 
+				       stream->rec_timestamp,
 				       (void*) input, 
 				       stream->samples_per_frame * 
 				       stream->bytes_per_sample);
@@ -168,18 +170,17 @@ static int PaRecorderCallback(const void *input,
 
 	/* Store the remaining samples into the buffer */
 	if (nsamples && status == 0) {
-	    stream->rec_buf_size = nsamples;
-	    pjmedia_copy_samples((pj_int16_t*)stream->rec_buf, 
-				 (pj_int16_t*)input, nsamples);
+	    stream->rec_buf_count = nsamples;
+	    pjmedia_copy_samples(stream->rec_buf, (pj_int16_t*)input, 
+			         nsamples);
 	}
 
     } else {
 	/* Not enough samples, let's just store them in the buffer */
-	pjmedia_copy_samples((pj_int16_t*)(stream->rec_buf + 
-					   stream->rec_buf_size),
-					   (pj_int16_t*)input, 
-					   frameCount * stream->channel_count);
-	stream->rec_buf_size += frameCount * stream->channel_count;
+	pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_count,
+			     (pj_int16_t*)input, 
+			     frameCount * stream->channel_count);
+	stream->rec_buf_count += frameCount * stream->channel_count;
     }
 
     if (status==0) 
@@ -228,15 +229,15 @@ static int PaPlayerCallback( const void *input,
     stream->play_timestamp += frameCount;
 
     /* Check if any buffered samples */
-    if (stream->play_buf_size) {
+    if (stream->play_buf_count) {
 	/* samples buffered >= requested by sound device */
-	if (stream->play_buf_size >= nsamples_req) {
+	if (stream->play_buf_count >= nsamples_req) {
 	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
 				 nsamples_req);
-	    stream->play_buf_size -= nsamples_req;
+	    stream->play_buf_count -= nsamples_req;
 	    pjmedia_move_samples(stream->play_buf, 
 				 stream->play_buf + nsamples_req,
-				 stream->play_buf_size);
+				 stream->play_buf_count);
 	    nsamples_req = 0;
 	    
 	    return paContinue;
@@ -244,10 +245,10 @@ static int PaPlayerCallback( const void *input,
 
 	/* samples buffered < requested by sound device */
 	pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
-			     stream->play_buf_size);
-	nsamples_req -= stream->play_buf_size;
-	output = (pj_int16_t*)output + stream->play_buf_size;
-	stream->play_buf_size = 0;
+			     stream->play_buf_count);
+	nsamples_req -= stream->play_buf_count;
+	output = (pj_int16_t*)output + stream->play_buf_count;
+	stream->play_buf_count = 0;
     }
 
     /* Fill output buffer as requested */
@@ -268,9 +269,10 @@ static int PaPlayerCallback( const void *input,
 					stream->bytes_per_sample);
 	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
 				 nsamples_req);
-	    stream->play_buf_size = stream->samples_per_frame - nsamples_req;
-	    pjmedia_move_samples(stream->play_buf, stream->play_buf+nsamples_req,
-				 stream->play_buf_size);
+	    stream->play_buf_count = stream->samples_per_frame - nsamples_req;
+	    pjmedia_move_samples(stream->play_buf, 
+				 stream->play_buf+nsamples_req,
+				 stream->play_buf_count);
 	    nsamples_req = 0;
 	}
     }
@@ -552,7 +554,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 
     stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
 		      stream->samples_per_frame * stream->bytes_per_sample);
-    stream->rec_buf_size = 0;
+    stream->rec_buf_count = 0;
 
     pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = index;
@@ -654,7 +656,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 
     stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
 		       stream->samples_per_frame * stream->bytes_per_sample);
-    stream->play_buf_size = 0;
+    stream->play_buf_count = 0;
 
     pj_bzero(&outputParam, sizeof(outputParam));
     outputParam.device = index;
@@ -781,11 +783,11 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
 		      stream->samples_per_frame * stream->bytes_per_sample);
-    stream->rec_buf_size = 0;
+    stream->rec_buf_count = 0;
 
     stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
 		       stream->samples_per_frame * stream->bytes_per_sample);
-    stream->play_buf_size = 0;
+    stream->play_buf_count = 0;
 
     pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = rec_id;
