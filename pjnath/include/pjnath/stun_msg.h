@@ -1030,13 +1030,13 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
 /**
  * Get protocol value from 32bit TURN REQUESTED-TRANSPORT attribute.
  */
-#define PJ_STUN_GET_RT_PROTO(u32)   (pj_ntohl(u32) >> 24)
+#define PJ_STUN_GET_RT_PROTO(u32)   (u32 >> 24)
 
 /**
  * Convert protocol value to be placed in 32bit TURN REQUESTED-TRANSPORT
  * attribute.
  */
-#define PJ_STUN_SET_RT_PROTO(proto)   pj_htonl(((pj_uint32_t)(proto)) << 24)
+#define PJ_STUN_SET_RT_PROTO(proto)   (((pj_uint32_t)(proto)) << 24)
 
 
 
