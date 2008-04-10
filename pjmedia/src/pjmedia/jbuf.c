@@ -83,7 +83,7 @@ struct pjmedia_jbuf
  * second.
  */
 #if 1
-#  define TRACE__(args)	    PJ_LOG(4,args)
+#  define TRACE__(args)	    PJ_LOG(5,args)
 #else
 #  define TRACE__(args)
 #endif
@@ -395,14 +395,14 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	/* Level is decreasing */
 	if (jb->jb_level < jb->jb_prefetch) {
 
-	    static const int stable_history_limit = 100;
+	    enum { STABLE_HISTORY_LIMIT = 100 };
 	    
 	    jb->jb_stable_hist++;
 	    
 	    /* Only update the prefetch if 'stable' condition is reached 
 	     * (not just short time impulse)
 	     */
-	    if (jb->jb_stable_hist > (int)stable_history_limit) {
+	    if (jb->jb_stable_hist > STABLE_HISTORY_LIMIT) {
 		diff = (jb->jb_prefetch - jb->jb_max_hist_level) / 3;
 
 		if (diff < 1)
@@ -444,12 +444,14 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
     /* These code is used for shortening the delay in the jitter buffer. */
     diff = jb_framelist_size(&jb->jb_framelist) - jb->jb_prefetch;
     if (diff > SAFE_SHRINKING_DIFF) {
-	
-	/* Drop some frames so jitter buffer size should be == jb_prefetch */
+	/* Shrink slowly */
+	diff = 1;
+
+	/* Drop frame(s)! */
 	jb_framelist_remove_head(&jb->jb_framelist, diff);
 
 	TRACE__((jb->name.ptr, 
-		 "JB shrinking %d frames, size=%d", diff,
+		 "JB shrinking %d frame(s), size=%d", diff,
 		 jb_framelist_size(&jb->jb_framelist)));
     }
 
