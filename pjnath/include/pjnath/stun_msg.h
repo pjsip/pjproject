@@ -1158,7 +1158,15 @@ enum pj_stun_decode_options
      * When specified, it tells the session NOT to authenticate the
      * message.
      */
-    PJ_STUN_NO_AUTHENTICATE = 4
+    PJ_STUN_NO_AUTHENTICATE = 4,
+
+    /**
+     * Disable FINGERPRINT verification. This option can be used when calling
+     * #pj_stun_msg_check() and #pj_stun_msg_decode() to disable the 
+     * verification of FINGERPRINT, for example when the STUN usage says when
+     * FINGERPRINT mechanism shall not * be used.
+     */
+    PJ_STUN_NO_FINGERPRINT_CHECK = 8
 };
 
 

@@ -581,7 +581,7 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 	pj_status_t status;
 
 	/* Check that this is a STUN message */
-	options = PJ_STUN_CHECK_PACKET;
+	options = PJ_STUN_CHECK_PACKET | PJ_STUN_NO_FINGERPRINT_CHECK;
 	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP)
 	    options |= PJ_STUN_IS_DATAGRAM;
 

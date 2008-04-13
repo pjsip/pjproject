@@ -825,9 +825,10 @@ static pj_turn_permission *create_permission(pj_turn_allocation *alloc,
     pj_gettimeofday(&perm->expiry);
     perm->expiry.sec += PJ_TURN_PERM_TIMEOUT;
 
-    /* Register to hash table */
-    pj_hash_set(alloc->pool, alloc->peer_table, &perm->hkey.peer_addr, 
-	        pj_sockaddr_get_len(&perm->hkey.peer_addr), 0, perm);
+    /* Register to hash table (only the address part!) */
+    pj_hash_set(alloc->pool, alloc->peer_table, 
+		pj_sockaddr_get_addr(&perm->hkey.peer_addr), 
+	        pj_sockaddr_get_addr_len(&perm->hkey.peer_addr), 0, perm);
 
     return perm;
 }
@@ -845,8 +846,9 @@ static pj_turn_permission *check_permission_expiry(pj_turn_permission *perm)
     }
 
     /* Remove from permission hash table */
-    pj_hash_set(NULL, alloc->peer_table, &perm->hkey.peer_addr, 
-	        pj_sockaddr_get_len(&perm->hkey.peer_addr), 0, NULL);
+    pj_hash_set(NULL, alloc->peer_table, 
+		pj_sockaddr_get_addr(&perm->hkey.peer_addr), 
+	        pj_sockaddr_get_addr_len(&perm->hkey.peer_addr), 0, NULL);
 
     /* Remove from channel hash table, if assigned a channel number */
     if (perm->channel != PJ_TURN_INVALID_CHANNEL) {
@@ -865,9 +867,14 @@ lookup_permission_by_addr(pj_turn_allocation *alloc,
 {
     pj_turn_permission *perm;
 
+    PJ_UNUSED_ARG(addr_len);
+
     /* Lookup in peer hash table */
-    perm = (pj_turn_permission*) pj_hash_get(alloc->peer_table, peer_addr,
-					     addr_len, NULL);
+    perm = (pj_turn_permission*) 
+	   pj_hash_get(alloc->peer_table, 
+		       pj_sockaddr_get_addr(peer_addr),
+		       pj_sockaddr_get_addr_len(peer_addr), 
+		       NULL);
     return perm ? check_permission_expiry(perm) : NULL;
 }
 
@@ -920,8 +927,13 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 	 * Pass this through to the STUN session, which will call
 	 * our stun_on_rx_request() or stun_on_rx_indication()
 	 * callbacks.
+	 *
+	 * Note: currently it is necessary to specify the 
+	 * PJ_STUN_NO_FINGERPRINT_CHECK otherwise the FINGERPRINT
+	 * attribute inside STUN Send Indication message will mess up
+	 * with fingerprint checking.
 	 */
-	unsigned options = PJ_STUN_CHECK_PACKET;
+	unsigned options = PJ_STUN_CHECK_PACKET | PJ_STUN_NO_FINGERPRINT_CHECK;
 	unsigned parsed_len = 0;
 
 	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP)

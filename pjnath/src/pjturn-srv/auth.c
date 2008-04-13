@@ -33,7 +33,10 @@ static struct cred_t
     char    passwd[MAX_PASSWORD];
 } g_cred[] = 
 {
-    { "user", "passwd" },
+    { "100", "100" },
+    { "700", "700" },
+    { "701", "701" },
+    { "702", "702" }
 };
 
 #define THE_NONCE	"pjnath"

@@ -19,7 +19,10 @@
 #include "turn.h"
 #include "auth.h"
 
-#define REALM	"pjsip.org"
+#define REALM		"pjsip.org"
+#define TURN_PORT	PJ_STUN_TURN_PORT
+//#define TURN_PORT	34780
+
 
 static pj_caching_pool g_cp;
 
@@ -138,12 +141,12 @@ int main()
 	return err("Error creating server", status);
 
     status = pj_turn_listener_create_udp(srv, pj_AF_INET(), NULL, 
-					 PJ_STUN_PORT, 1, 0, &listener);
+					 TURN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
 	return err("Error creating UDP listener", status);
 
     status = pj_turn_listener_create_tcp(srv, pj_AF_INET(), NULL, 
-					 PJ_STUN_PORT, 1, 0, &listener);
+					 TURN_PORT, 1, 0, &listener);
     if (status != PJ_SUCCESS)
 	return err("Error creating listener", status);
 
