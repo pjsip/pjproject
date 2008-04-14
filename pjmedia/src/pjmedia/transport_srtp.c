@@ -211,7 +211,7 @@ const char* get_libsrtp_errstr(int err)
 	"error while using semaphores",	    /* err_status_semaphore_err = 23 */
 	"error while using pfkey"	    /* err_status_pfkey_err     = 24 */
     };
-    if (err >= 0 && err < PJ_ARRAY_SIZE(liberr)) {
+    if (err >= 0 && err < (int)PJ_ARRAY_SIZE(liberr)) {
 	return liberr[err];
     } else {
 	static char msg[32];
@@ -263,7 +263,7 @@ static int get_crypto_idx(const pj_str_t* crypto_name)
 
 PJ_DEF(void) pjmedia_srtp_setting_default(pjmedia_srtp_setting *opt)
 {
-    int i;
+    unsigned i;
 
     pj_bzero(opt, sizeof(pjmedia_srtp_setting));
     opt->close_member_tp = PJ_TRUE;
@@ -288,7 +288,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     pj_pool_t *pool;
     transport_srtp *srtp;
     pj_status_t status;
-    int i;
+    unsigned i;
 
     PJ_ASSERT_RETURN(endpt && p_tp, PJ_EINVAL);
 
@@ -820,7 +820,7 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 	pj_bool_t key_ok;
 	char key[MAX_KEY_LEN];
 	err_status_t err;
-	int i;
+	unsigned i;
 
 	PJ_ASSERT_RETURN(MAX_KEY_LEN >= crypto_suites[cs_idx].cipher_key_len,
 			 PJ_ETOOSMALL);
@@ -839,7 +839,8 @@ static pj_status_t generate_crypto_attr_value(pj_pool_t *pool,
 		if (key[i] == 0) key_ok = PJ_FALSE;
 
 	} while (!key_ok);
-	crypto->key.ptr = pj_pool_zalloc(pool, 
+	crypto->key.ptr = (char*)
+			  pj_pool_zalloc(pool, 
 					 crypto_suites[cs_idx].cipher_key_len);
 	pj_memcpy(crypto->key.ptr, key, crypto_suites[cs_idx].cipher_key_len);
 	crypto->key.slen = crypto_suites[cs_idx].cipher_key_len;
@@ -922,7 +923,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 	return PJMEDIA_SDP_EINATTR;
     }
     tmp = pj_str(token);
-    crypto->key.ptr = pj_pool_zalloc(pool, MAX_KEY_LEN);
+    crypto->key.ptr = (char*) pj_pool_zalloc(pool, MAX_KEY_LEN);
 
     /* Decode key */
     itmp = MAX_KEY_LEN;
@@ -952,7 +953,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     pj_status_t status;
     pjmedia_sdp_attr *attr;
     pj_str_t attr_value;
-    int i, j;
+    unsigned i, j;
     unsigned member_tp_option;
 
     PJ_ASSERT_RETURN(tp && pool && sdp_local, PJ_EINVAL);
@@ -1233,7 +1234,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
 
 	    /* our offer tag is always ordered by setting */
-	    if (rem_tag < 1 || rem_tag > srtp->setting.crypto_count) {
+	    if (rem_tag < 1 || rem_tag > (int)srtp->setting.crypto_count) {
 		DEACTIVATE_MEDIA(pool, m_loc);
 		return PJMEDIA_SRTP_ESDPINCRYPTOTAG;
 	    }

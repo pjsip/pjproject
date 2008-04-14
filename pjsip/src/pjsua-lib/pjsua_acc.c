@@ -519,8 +519,11 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (via->rport_param < 1) {
 	/* Remote doesn't support rport */
 	rport = via->sent_by.port;
-	if (rport==0)
-	    rport = pjsip_transport_get_default_port_for_type(tp->key.type);
+	if (rport==0) {
+	    pjsip_transport_type_e tp_type;
+	    tp_type = (pjsip_transport_type_e) tp->key.type;
+	    rport = pjsip_transport_get_default_port_for_type(tp_type);
+	}
     } else
 	rport = via->rport_param;
 
@@ -534,10 +537,13 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     uri = (pjsip_sip_uri*)
 	  pjsip_parse_uri(pool, acc->contact.ptr, acc->contact.slen, 0);
     pj_assert(uri != NULL);
-    uri = pjsip_uri_get_uri(uri);
+    uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
 
-    if (uri->port == 0)
-	uri->port = pjsip_transport_get_default_port_for_type(tp->key.type);
+    if (uri->port == 0) {
+	pjsip_transport_type_e tp_type;
+	tp_type = (pjsip_transport_type_e) tp->key.type;
+	uri->port = pjsip_transport_get_default_port_for_type(tp_type);
+    }
 
     if (uri->port == rport &&
 	pj_stricmp(&uri->host, via_addr)==0)
@@ -572,7 +578,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	char *tmp;
 	int len;
 
-	tmp = pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
+	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
 			       "<sip:%.*s@%.*s:%d;transport=%s>",
 			       (int)acc->user_part.slen,

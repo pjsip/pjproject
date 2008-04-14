@@ -121,7 +121,7 @@ static int init()
     /* 
      * Create peers
      */
-    for (i=0; i<PJ_ARRAY_SIZE(g.peer); ++i) {
+    for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
 	int len;
 	pj_sockaddr addr;
 	pj_uint16_t port;
@@ -202,7 +202,7 @@ static int worker_thread(void *unused)
 
 	/* Poll peer sockets */
 	PJ_FD_ZERO(&readset);
-	for (i=0; i<PJ_ARRAY_SIZE(g.peer); ++i) {
+	for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
 	    PJ_FD_SET(g.peer[i].sock, &readset);
 	    if (g.peer[i].sock > n)
 		n = g.peer[i].sock;
@@ -212,7 +212,7 @@ static int worker_thread(void *unused)
 	    continue;
 
 	/* Handle incoming data on peer socket */
-	for (i=0; i<PJ_ARRAY_SIZE(g.peer); ++i) {
+	for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
 	    char buf[128];
 	    pj_ssize_t len;
 	    pj_sockaddr src_addr;
@@ -266,7 +266,7 @@ static pj_status_t create_relay(void)
 	cred.type = PJ_STUN_AUTH_CRED_STATIC;
 	cred.data.static_cred.realm = pj_str(o.realm);
 	cred.data.static_cred.username = pj_str(o.user_name);
-	cred.data.static_cred.data_type = 0;
+	cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
 	cred.data.static_cred.data = pj_str(o.password);
 	//cred.data.static_cred.nonce = pj_str(o.nonce);
     } else {

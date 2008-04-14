@@ -713,7 +713,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
 	status = pjmedia_sdp_parse(rdata->tp_info.pool, 
-				   rdata->msg_info.msg->body->data,
+				   (char*)rdata->msg_info.msg->body->data,
 				   rdata->msg_info.msg->body->len, &offer);
 	if (status != PJ_SUCCESS) {
 	    const pj_str_t reason = pj_str("Bad SDP");

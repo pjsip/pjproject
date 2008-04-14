@@ -566,7 +566,8 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 
     /* Get TURN allocation from the source address */
     pj_lock_acquire(srv->core.lock);
-    alloc = pj_hash_get(srv->tables.alloc, &pkt->src, sizeof(pkt->src), NULL);
+    alloc = (pj_turn_allocation*)
+	    pj_hash_get(srv->tables.alloc, &pkt->src, sizeof(pkt->src), NULL);
     pj_lock_release(srv->core.lock);
 
     /* If allocation is found, just hand over the packet to the

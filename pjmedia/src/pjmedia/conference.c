@@ -1373,14 +1373,16 @@ static pj_status_t read_port( pjmedia_conf *conf,
 	    /* Adjust channels */
 	    if (cport->channel_count != conf->channel_count) {
 		if (cport->channel_count == 1) {
-		    pjmedia_convert_channel_1ton(f.buf, f.buf,
+		    pjmedia_convert_channel_1ton((pj_int16_t*)f.buf, 
+						 (const pj_int16_t*)f.buf,
 						 conf->channel_count, 
 						 cport->samples_per_frame,
 						 0);
 		    cport->rx_buf_count += (cport->samples_per_frame * 
 					    conf->channel_count);
 		} else { /* conf->channel_count == 1 */
-		    pjmedia_convert_channel_nto1(f.buf, f.buf,
+		    pjmedia_convert_channel_nto1((pj_int16_t*)f.buf, 
+						 (const pj_int16_t*)f.buf,
 						 cport->channel_count, 
 						 cport->samples_per_frame, 
 						 PJMEDIA_STEREO_MIX, 0);

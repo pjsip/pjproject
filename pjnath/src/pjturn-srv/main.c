@@ -20,8 +20,9 @@
 #include "auth.h"
 
 #define REALM		"pjsip.org"
-#define TURN_PORT	PJ_STUN_TURN_PORT
-//#define TURN_PORT	34780
+//#define TURN_PORT	PJ_STUN_TURN_PORT
+#define TURN_PORT	34780
+#define LOG_LEVEL	4
 
 
 static pj_caching_pool g_cp;
@@ -155,6 +156,8 @@ int main()
 	return err("Error adding listener", status);
 
     puts("Server is running");
+
+    pj_log_set_level(LOG_LEVEL);
 
     console_main(srv);
 

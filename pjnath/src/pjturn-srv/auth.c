@@ -102,7 +102,7 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
 
     for (i=0; i<PJ_ARRAY_SIZE(g_cred); ++i) {
 	if (pj_stricmp2(username, g_cred[i].username) == 0) {
-	    *data_type = 0;
+	    *data_type = PJ_STUN_PASSWD_PLAIN;
 	    *data = pj_str(g_cred[i].passwd);
 	    return PJ_SUCCESS;
 	}

@@ -583,7 +583,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
 
 #if !PLC_DISABLED
     if (priv->plc_enabled)
-	pjmedia_plc_save( priv->plc, output->buf);
+	pjmedia_plc_save( priv->plc, (pj_int16_t*)output->buf);
 #endif
 
     return PJ_SUCCESS;
@@ -594,7 +594,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
 				  unsigned output_buf_len,
 				  struct pjmedia_frame *output)
 {
-    struct g711_private *priv = codec->codec_data;
+    struct g711_private *priv = (struct g711_private*) codec->codec_data;
 
     if (!priv->plc_enabled)
 	return PJ_EINVALIDOP;
@@ -602,7 +602,7 @@ static pj_status_t  g711_recover( pjmedia_codec *codec,
     PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2, 
 		     PJMEDIA_CODEC_EPCMTOOSHORT);
 
-    pjmedia_plc_generate(priv->plc, output->buf);
+    pjmedia_plc_generate(priv->plc, (pj_int16_t*)output->buf);
     output->size = SAMPLES_PER_FRAME * 2;
 
     return PJ_SUCCESS;

@@ -118,13 +118,15 @@ static pj_status_t stereo_put_frame(pjmedia_port *this_port,
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
 	tmp_frame.buf = sport->put_buf;
 	if (sport->dn_port->info.channel_count == 1) {
-	    pjmedia_convert_channel_nto1(tmp_frame.buf, frame->buf,
+	    pjmedia_convert_channel_nto1((pj_int16_t*)tmp_frame.buf, 
+					 (const pj_int16_t*)frame->buf,
 					 sport->base.info.channel_count, 
 					 sport->base.info.samples_per_frame, 
 					 (sport->options & PJMEDIA_STEREO_MIX),
 					 0);
 	} else {
-	    pjmedia_convert_channel_1ton(tmp_frame.buf, frame->buf,
+	    pjmedia_convert_channel_1ton((pj_int16_t*)tmp_frame.buf, 
+					 (const pj_int16_t*)frame->buf,
 					 sport->dn_port->info.channel_count, 
 					 sport->base.info.samples_per_frame,
 					 sport->options);
@@ -175,12 +177,14 @@ static pj_status_t stereo_get_frame(pjmedia_port *this_port,
     }
 
     if (sport->base.info.channel_count == 1) {
-	pjmedia_convert_channel_nto1(frame->buf, tmp_frame.buf,
+	pjmedia_convert_channel_nto1((pj_int16_t*)frame->buf, 
+				     (const pj_int16_t*)tmp_frame.buf,
 				     sport->dn_port->info.channel_count, 
 				     sport->dn_port->info.samples_per_frame, 
 				     (sport->options & PJMEDIA_STEREO_MIX), 0);
     } else {
-	pjmedia_convert_channel_1ton(frame->buf, tmp_frame.buf,
+	pjmedia_convert_channel_1ton((pj_int16_t*)frame->buf, 
+				     (const pj_int16_t*)tmp_frame.buf,
 				     sport->base.info.channel_count, 
 				     sport->dn_port->info.samples_per_frame,
 				     sport->options);

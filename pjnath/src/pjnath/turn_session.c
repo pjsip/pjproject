@@ -939,7 +939,7 @@ static pj_status_t stun_on_send_msg(pj_stun_session *stun,
     PJ_UNUSED_ARG(token);
 
     sess = (pj_turn_session*) pj_stun_session_get_user_data(stun);
-    return (*sess->cb.on_send_pkt)(sess, pkt, pkt_size, 
+    return (*sess->cb.on_send_pkt)(sess, (const pj_uint8_t*)pkt, pkt_size, 
 				   dst_addr, addr_len);
 }
 
@@ -1123,7 +1123,8 @@ static void stun_on_request_complete(pj_stun_session *stun,
 				     unsigned src_addr_len)
 {
     pj_turn_session *sess;
-    int method = PJ_STUN_GET_METHOD(tdata->msg->hdr.type);
+    enum pj_stun_method_e method = (enum pj_stun_method_e) 
+			      	   PJ_STUN_GET_METHOD(tdata->msg->hdr.type);
 
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
@@ -1408,7 +1409,7 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 
     pj_lock_acquire(sess->lock);
 
-    eid = e->id;
+    eid = (enum timer_id_t) e->id;
     e->id = TIMER_NONE;
     
     if (eid == TIMER_KEEP_ALIVE) {

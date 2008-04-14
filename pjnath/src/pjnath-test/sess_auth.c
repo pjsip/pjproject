@@ -163,6 +163,8 @@ static int server_thread(void *unused)
 {
     PJ_UNUSED_ARG(unused);
 
+    PJ_LOG(5,("", "    server thread started"));
+
     while (!server->quit) {
 	pj_fd_set_t readset;
 	pj_time_val delay = {0, 10};
@@ -170,7 +172,7 @@ static int server_thread(void *unused)
 	PJ_FD_ZERO(&readset);
 	PJ_FD_SET(server->sock, &readset);
 
-	if (pj_sock_select(server->sock, &readset, NULL, NULL, &delay)==1 &&
+	if (pj_sock_select(server->sock+1, &readset, NULL, NULL, &delay)==1 &&
 	    PJ_FD_ISSET(server->sock, &readset)) 
 	{
 	    char pkt[1000];
@@ -383,7 +385,7 @@ static int client_thread(void *unused)
 	PJ_FD_ZERO(&readset);
 	PJ_FD_SET(client->sock, &readset);
 
-	if (pj_sock_select(client->sock, &readset, NULL, NULL, &delay)==1 &&
+	if (pj_sock_select(client->sock+1, &readset, NULL, NULL, &delay)==1 &&
 	    PJ_FD_ISSET(client->sock, &readset)) 
 	{
 	    char pkt[1000];
@@ -450,8 +452,8 @@ static int run_client_test(const char *title,
 			   const char *password,
 			   pj_bool_t dummy_mi,
 
-			   pj_stun_status expected_error,
-			   pj_stun_status expected_code,
+			   pj_bool_t expected_error,
+			   pj_status_t expected_code,
 			   const char *expected_realm,
 			   const char *expected_nonce,
 			   
@@ -689,8 +691,12 @@ done:
 /* Retransmission test */
 static int retransmit_check(void)
 {
-    if (server->recv_count != PJ_STUN_MAX_TRANSMIT_COUNT)
+
+    if (server->recv_count != PJ_STUN_MAX_TRANSMIT_COUNT) {
+	PJ_LOG(3,("", "    expecting %d retransmissions, got %d",
+		  PJ_STUN_MAX_TRANSMIT_COUNT, server->recv_count));
 	return -700;
+    }
     if (client->recv_count != 0)
 	return -710;
 
