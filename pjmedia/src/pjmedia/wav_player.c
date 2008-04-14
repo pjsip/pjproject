@@ -60,6 +60,7 @@ struct file_reader_port
     pj_size_t	     bufsize;
     char	    *buf;
     char	    *readpos;
+    char	    *eofpos;
 
     pj_off_t	     fsize;
     unsigned	     start_data;
@@ -106,10 +107,8 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
     pj_ssize_t size;
     pj_status_t status;
 
-    /* Can't read file if EOF and loop flag is disabled */
-    if (fport->eof)
-	return PJ_EEOF;
-
+    fport->eofpos = NULL;
+    
     while (size_left > 0) {
 
 	/* Calculate how many bytes to read in this run. */
@@ -131,45 +130,17 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
 	 * encountered EOF. Rewind the file.
 	 */
 	if (size < (pj_ssize_t)size_to_read) {
-	    /* Call callback, if any. */
-	    if (fport->cb) {
-		PJ_LOG(5,(THIS_FILE, 
-			  "File port %.*s EOF, calling callback",
-			  (int)fport->base.info.name.slen,
-			  fport->base.info.name.ptr));
-
-		fport->eof = PJ_TRUE;
-		status=(*fport->cb)(&fport->base,fport->base.port_data.pdata);
-		if (status != PJ_SUCCESS) {
-		    /* This will crash if file port is destroyed in the 
-		     * callback, that's why we set the eof flag before
-		     * calling the callback:
-		     fport->eof = PJ_TRUE;
-		    */
-		    return status;
-		}
-		
-		fport->eof = PJ_FALSE;
-	    }
-
+	    fport->eof = PJ_TRUE;
+	    fport->eofpos = fport->buf + fport->bufsize - size_left;
+	    
 	    if (fport->options & PJMEDIA_FILE_NO_LOOP) {
-		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, stopping..",
-			  (int)fport->base.info.name.slen,
-			  fport->base.info.name.ptr));
 		/* Zero remaining buffer */
-		pj_bzero(fport->buf+size, size_left);
-		/* Mark port as EOF */
-		fport->eof = PJ_TRUE;
-		/* Must return PJ_SUCCESS, otherwise this buffer 
-		 * is not read */
-		return PJ_SUCCESS;
-	    } else {
-		PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
-			  (int)fport->base.info.name.slen,
-			  fport->base.info.name.ptr));
-		fport->fpos = fport->start_data;
-		pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
+		pj_bzero(fport->eofpos, size_left);
 	    }
+
+	    /* Rewind file */
+	    fport->fpos = fport->start_data;
+	    pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
 	}
     }
 
@@ -521,6 +492,36 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
     pj_status_t status;
 
     pj_assert(fport->base.info.signature == SIGNATURE);
+    pj_assert(frame->size <= fport->bufsize);
+
+    /* EOF is set and readpos already passed the eofpos */
+    if (fport->eof && fport->readpos >= fport->eofpos) {
+	pj_status_t status = PJ_SUCCESS;
+
+	/* Call callback, if any */
+	if (fport->cb)
+	    status = (*fport->cb)(this_port, fport->base.port_data.pdata);
+
+	/* If callback returns non PJ_SUCCESS or 'no loop' is specified,
+	 * return immediately (and don't try to access player port since
+	 * it might have been destroyed by the callback).
+	 */
+	if ((status != PJ_SUCCESS) || (fport->options & PJMEDIA_FILE_NO_LOOP)) {
+	    PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, stopping..",
+		      (int)fport->base.info.name.slen,
+		      fport->base.info.name.ptr));
+
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
+	    return PJ_EEOF;
+	}
+    	
+	PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
+		  (int)fport->base.info.name.slen,
+		  fport->base.info.name.ptr));
+	
+	fport->eof = PJ_FALSE;
+    }
 
     //frame_size = fport->base.info.bytes_per_frame;
     //pj_assert(frame->size == frame_size);
@@ -531,8 +532,8 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
     frame->size = frame_size;
     frame->timestamp.u64 = 0;
 
-    if (fport->readpos + frame_size <= fport->buf + fport->bufsize) {
-
+    if ((fport->readpos + frame_size) <= (fport->buf + fport->bufsize))
+    {
 	/* Read contiguous buffer. */
 	pj_memcpy(frame->buf, fport->readpos, frame_size);
 
@@ -558,19 +559,20 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	endread = (fport->buf+fport->bufsize) - fport->readpos;
 	pj_memcpy(frame->buf, fport->readpos, endread);
 
+	/* End Of Buffer and EOF and NO LOOP */
+	if (fport->eof && (fport->options & PJMEDIA_FILE_NO_LOOP)) {
+	    fport->readpos += endread;
+	    pj_bzero((char*)frame->buf + endread, frame_size - endread);
+	    return PJ_SUCCESS;
+	}
+
 	/* Second stage: fill up buffer, and read from the start of buffer. */
 	status = fill_buffer(fport);
 	if (status != PJ_SUCCESS) {
-	    /* If we don't get anything, return NONE frame. Otherwise
-	     * return AUDIO frame since we have partial audio.
-	     */
-	    if (endread == 0) {
-		frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	    } else {
-		pj_bzero(((char*)frame->buf)+endread, frame_size-endread);
-	    }
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
 	    fport->readpos = fport->buf + fport->bufsize;
-	    return (endread? PJ_SUCCESS : status);
+	    return status;
 	}
 
 	pj_memcpy(((char*)frame->buf)+endread, fport->buf, frame_size-endread);
