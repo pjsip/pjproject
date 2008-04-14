@@ -782,41 +782,38 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	return PJ_EBUSY;
     }
 
-    /* Stop media transport (for good measure!) */
-    pjmedia_transport_media_stop(call->med_tp);
-
-    /* Close upper entry of transport stack */
-    if (call->med_orig && (call->med_tp != call->med_orig)) {
-	pjmedia_transport_close(call->med_tp);
-	call->med_tp = call->med_orig;
-    }
-
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-    /* Check if SRTP requires secure signaling */
-    if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
-	if (security_level < acc->cfg.srtp_secure_signaling) {
-	    if (sip_err_code)
-		*sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
-	    return PJSIP_ESESSIONINSECURE;
+    /* This function may be called when SRTP transport already exists 
+     * (e.g: in re-invite, update), don't need to destroy/re-create.
+     */
+    if (!call->med_orig || call->med_tp == call->med_orig) {
+
+	/* Check if SRTP requires secure signaling */
+	if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
+	    if (security_level < acc->cfg.srtp_secure_signaling) {
+		if (sip_err_code)
+		    *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+		return PJSIP_ESESSIONINSECURE;
+	    }
 	}
-    }
 
-    /* Always create SRTP adapter */
-    pjmedia_srtp_setting_default(&srtp_opt);
-    srtp_opt.close_member_tp = PJ_FALSE;
-    srtp_opt.use = acc->cfg.use_srtp;
-    status = pjmedia_transport_srtp_create(pjsua_var.med_endpt, 
-					   call->med_tp,
-					   &srtp_opt, &srtp);
-    if (status != PJ_SUCCESS) {
-	if (sip_err_code)
-	    *sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
-	return status;
-    }
+	/* Always create SRTP adapter */
+	pjmedia_srtp_setting_default(&srtp_opt);
+	srtp_opt.close_member_tp = PJ_FALSE;
+	srtp_opt.use = acc->cfg.use_srtp;
+	status = pjmedia_transport_srtp_create(pjsua_var.med_endpt, 
+					       call->med_tp,
+					       &srtp_opt, &srtp);
+	if (status != PJ_SUCCESS) {
+	    if (sip_err_code)
+		*sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+	    return status;
+	}
 
-    /* Set SRTP as current media transport */
-    call->med_orig = call->med_tp;
-    call->med_tp = srtp;
+	/* Set SRTP as current media transport */
+	call->med_orig = call->med_tp;
+	call->med_tp = srtp;
+    }
 #else
     call->med_orig = call->med_tp;
     PJ_UNUSED_ARG(security_level);
@@ -901,6 +898,8 @@ on_error:
 static void stop_media_session(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
+
+    pjmedia_transport_media_stop(call->med_tp);
 
     if (call->conf_slot != PJSUA_INVALID_ID) {
 	pjmedia_conf_remove_port(pjsua_var.mconf, call->conf_slot);
