@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJNATH_turn_sock_H__
-#define __PJNATH_turn_sock_H__
+#ifndef __PJNATH_TURN_SOCK_H__
+#define __PJNATH_TURN_SOCK_H__
 
 /**
  * @file turn_sock.h
@@ -53,7 +53,7 @@ typedef struct pj_turn_sock_cb
      * This callback is mandatory.
      */
     void (*on_rx_data)(pj_turn_sock *turn_sock,
-		       const pj_uint8_t *pkt,
+		       void *pkt,
 		       unsigned pkt_len,
 		       const pj_sockaddr_t *peer_addr,
 		       unsigned addr_len);
@@ -104,6 +104,19 @@ PJ_DECL(pj_status_t) pj_turn_sock_get_info(pj_turn_sock *turn_sock,
 					  pj_turn_session_info *info);
 
 /**
+ * Lock the TURN socket. Application may need to call this function to
+ * synchronize access to other objects to avoid deadlock.
+ */
+PJ_DECL(pj_status_t) pj_turn_sock_lock(pj_turn_sock *turn_sock);
+
+
+/**
+ * Unlock the TURN socket.
+ */
+PJ_DECL(pj_status_t) pj_turn_sock_unlock(pj_turn_sock *turn_sock);
+
+
+/**
  * Initialize.
  */
 PJ_DECL(pj_status_t) pj_turn_sock_init(pj_turn_sock *turn_sock,
@@ -138,5 +151,5 @@ PJ_DECL(pj_status_t) pj_turn_sock_bind_channel(pj_turn_sock *turn_sock,
 PJ_END_DECL
 
 
-#endif	/* __PJNATH_turn_sock_H__ */
+#endif	/* __PJNATH_TURN_SOCK_H__ */
 

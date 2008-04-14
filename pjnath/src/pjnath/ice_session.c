@@ -101,6 +101,27 @@ typedef struct timer_data
 } timer_data;
 
 
+/* This is the data that will be attached as token to outgoing
+ * STUN messages.
+ */
+struct msg_data
+{
+    pj_bool_t			     is_request;
+
+    union data {
+	struct request_data {
+	    pj_ice_sess		    *ice;
+	    pj_ice_sess_checklist   *clist;
+	    unsigned		     ckid;
+	} req;
+
+	struct response_data {
+	    unsigned		     cand_id;
+	} res;
+    } data;
+};
+
+
 /* Forward declarations */
 static void destroy_ice(pj_ice_sess *ice,
 			pj_status_t reason);
@@ -1345,26 +1366,13 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     return PJ_SUCCESS;
 }
 
-
-/* This is the data that will be attached as user data to outgoing
- * STUN requests, and it will be given back when we receive completion
- * status of the request.
- */
-struct req_data
-{
-    pj_ice_sess		    *ice;
-    pj_ice_sess_checklist   *clist;
-    unsigned		     ckid;
-};
-
-
 /* Perform check on the specified candidate pair */
 static pj_status_t perform_check(pj_ice_sess *ice, 
 				 pj_ice_sess_checklist *clist,
 				 unsigned check_id)
 {
     pj_ice_sess_comp *comp;
-    struct req_data *rd;
+    struct msg_data *msg_data;
     pj_ice_sess_check *check;
     const pj_ice_sess_cand *lcand;
     const pj_ice_sess_cand *rcand;
@@ -1392,10 +1400,11 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     /* Attach data to be retrieved later when STUN request transaction
      * completes and on_stun_request_complete() callback is called.
      */
-    rd = PJ_POOL_ZALLOC_T(check->tdata->pool, struct req_data);
-    rd->ice = ice;
-    rd->clist = clist;
-    rd->ckid = check_id;
+    msg_data = PJ_POOL_ZALLOC_T(check->tdata->pool, struct msg_data);
+    msg_data->is_request = PJ_TRUE;
+    msg_data->data.req.ice = ice;
+    msg_data->data.req.clist = clist;
+    msg_data->data.req.ckid = check_id;
 
     /* Add PRIORITY */
     prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 65535, 
@@ -1427,7 +1436,7 @@ static pj_status_t perform_check(pj_ice_sess *ice,
      */
 
     /* Initiate STUN transaction to send the request */
-    status = pj_stun_session_send_msg(comp->stun_sess, (void*)rd, PJ_FALSE, 
+    status = pj_stun_session_send_msg(comp->stun_sess, msg_data, PJ_FALSE, 
 				      PJ_TRUE, &rcand->addr, 
 				      sizeof(pj_sockaddr_in), check->tdata);
     if (status != PJ_SUCCESS) {
@@ -1655,12 +1664,21 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
 {
     stun_data *sd = (stun_data*) pj_stun_session_get_user_data(sess);
     pj_ice_sess *ice = sd->ice;
+    struct msg_data *msg_data = (struct msg_data*) token;
+    unsigned cand_id;
+    
+    if (msg_data->is_request) {
+	pj_ice_sess_checklist *clist = msg_data->data.req.clist;
+	pj_ice_sess_cand *lcand = clist->checks[msg_data->data.req.ckid].lcand;
 
-    PJ_UNUSED_ARG(token);
+	cand_id = lcand - ice->lcand;
+	
+    } else {
+	cand_id = msg_data->data.res.cand_id;
+    }
 
-    return (*ice->cb.on_tx_pkt)(ice, sd->comp_id, 
-				pkt, pkt_size, 
-				dst_addr, addr_len);
+    return (*ice->cb.on_tx_pkt)(ice, sd->comp_id, cand_id,
+				pkt, pkt_size, dst_addr, addr_len);
 }
 
 
@@ -1673,7 +1691,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 				     const pj_sockaddr_t *src_addr,
 				     unsigned src_addr_len)
 {
-    struct req_data *rd = (struct req_data*) token;
+    struct msg_data *msg_data = (struct msg_data*) token;
     pj_ice_sess *ice;
     pj_ice_sess_check *check, *new_check;
     pj_ice_sess_cand *lcand;
@@ -1684,9 +1702,12 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     PJ_UNUSED_ARG(stun_sess);
     PJ_UNUSED_ARG(src_addr_len);
 
-    ice = rd->ice;
-    check = &rd->clist->checks[rd->ckid];
-    clist = rd->clist;
+    pj_assert(msg_data->is_request);
+
+    ice = msg_data->data.req.ice;
+    clist = msg_data->data.req.clist;
+    check = &clist->checks[msg_data->data.req.ckid];
+    
 
     /* Mark STUN transaction as complete */
     pj_assert(tdata == check->tdata);
@@ -1739,7 +1760,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    /* Resend request */
 	    LOG4((ice->obj_name, "Resending check because of role conflict"));
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
-	    perform_check(ice, clist, rd->ckid);
+	    perform_check(ice, clist, msg_data->data.req.ckid);
 	    pj_mutex_unlock(ice->mutex);
 	    return;
 	}
@@ -1918,7 +1939,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      unsigned src_addr_len)
 {
     stun_data *sd;
+    unsigned *param_cand_id;
     const pj_stun_msg *msg = rdata->msg;
+    struct msg_data *msg_data;
     pj_ice_sess *ice;
     pj_stun_priority_attr *prio_attr;
     pj_stun_use_candidate_attr *uc_attr;
@@ -1929,7 +1952,16 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 
     PJ_UNUSED_ARG(pkt);
     PJ_UNUSED_ARG(pkt_len);
-    PJ_UNUSED_ARG(token);
+    
+    /*
+     * Note about candidate ID parameter:
+     *  This parameter is given by us by user, and it cannot be used to
+     *  distinguish local and server reflexive candidate. Just about the
+     *  only thing that we can do with it is to return it back to user
+     *  in the on_tx_pkt(). The user needs this information to determine
+     *  whether to send packet using local socket or the relay.
+     */
+    param_cand_id = (unsigned*)token;
 
     /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
@@ -2034,11 +2066,18 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 	return status;
     }
 
+    /* Add XOR-MAPPED-ADDRESS attribute */
     status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg, 
 					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
 					   PJ_TRUE, src_addr, src_addr_len);
 
-    status = pj_stun_session_send_msg(sess, NULL, PJ_TRUE, PJ_TRUE,
+    /* Create a msg_data to be associated with this response */
+    msg_data = PJ_POOL_ZALLOC_T(tdata->pool, struct msg_data);
+    msg_data->is_request = PJ_FALSE;
+    msg_data->data.res.cand_id = *param_cand_id;
+
+    /* Send the response */
+    status = pj_stun_session_send_msg(sess, msg_data, PJ_TRUE, PJ_TRUE,
 				      src_addr, src_addr_len, tdata);
 
 
@@ -2090,7 +2129,6 @@ static void handle_incoming_check(pj_ice_sess *ice,
     pj_ice_sess_cand *lcand = NULL;
     pj_ice_sess_cand *rcand;
     unsigned i;
-    pj_bool_t is_relayed;
 
     comp = find_comp(ice, rcheck->comp_id);
 
@@ -2170,11 +2208,6 @@ static void handle_incoming_check(pj_ice_sess *ice,
     /* 
      * Create candidate pair for this request. 
      */
-    /* First check if the source address is the source address of the 
-     * STUN relay, to determine if local candidate is relayed candidate.
-     */
-    PJ_TODO(DETERMINE_IF_REQUEST_COMES_FROM_RELAYED_CANDIDATE);
-    is_relayed = PJ_FALSE;
 
     /* 
      * 7.2.1.4.  Triggered Checks
@@ -2309,6 +2342,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
 {
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
+    unsigned cand_id;
 
     PJ_ASSERT_RETURN(ice && comp_id, PJ_EINVAL);
     
@@ -2332,7 +2366,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
 	goto on_return;
     }
 
-    status = (*ice->cb.on_tx_pkt)(ice, comp_id, data, data_len, 
+    cand_id = comp->valid_check->lcand - ice->lcand;
+
+    status = (*ice->cb.on_tx_pkt)(ice, comp_id, cand_id, data, data_len, 
 				  &comp->valid_check->rcand->addr, 
 				  sizeof(pj_sockaddr_in));
 
@@ -2344,6 +2380,7 @@ on_return:
 
 PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 					  unsigned comp_id,
+					  unsigned cand_id,
 					  void *pkt,
 					  pj_size_t pkt_size,
 					  const pj_sockaddr_t *src_addr,
@@ -2367,7 +2404,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     				    PJ_STUN_IS_DATAGRAM);
     if (stun_status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
-					   PJ_STUN_IS_DATAGRAM, NULL,
+					   PJ_STUN_IS_DATAGRAM, &cand_id,
 					   NULL, src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    pj_strerror(status, ice->tmp.errmsg, sizeof(ice->tmp.errmsg));

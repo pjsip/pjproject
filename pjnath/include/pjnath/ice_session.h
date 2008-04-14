@@ -430,12 +430,14 @@ typedef struct pj_ice_sess_cb
      *
      * @param ice	    The ICE session.
      * @param comp_id	    ICE component ID.
+     * @param cand_id	    ICE candidate ID.
      * @param pkt	    The STUN packet.
      * @param size	    The size of the packet.
      * @param dst_addr	    Packet destination address.
      * @param dst_addr_len  Length of destination address.
      */
     pj_status_t (*on_tx_pkt)(pj_ice_sess *ice, unsigned comp_id, 
+			     unsigned cand_id,
 			     const void *pkt, pj_size_t size,
 			     const pj_sockaddr_t *dst_addr,
 			     unsigned dst_addr_len);
@@ -797,6 +799,14 @@ PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
  *
  * @param ice		The ICE session.
  * @param comp_id	Component ID.
+ * @param cand_id	The candidate ID where this packet was received
+ *			from. This parameter will be returned back to
+ *			application in \a on_tx_pkt() callback, and
+ *			application may use it to determine whether to
+ *			send outgoing packet using local socket or with
+ *			the TURN relay. The ICE session will not use
+ *			this information to determine the local candidate
+ *			for this packet.
  * @param pkt		Incoming packet.
  * @param pkt_size	Size of incoming packet.
  * @param src_addr	Source address of the packet.
@@ -806,6 +816,7 @@ PJ_DECL(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
  */
 PJ_DECL(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 					   unsigned comp_id,
+					   unsigned cand_id,
 					   void *pkt,
 					   pj_size_t pkt_size,
 					   const pj_sockaddr_t *src_addr,

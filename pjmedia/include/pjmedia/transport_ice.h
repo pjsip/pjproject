@@ -62,7 +62,7 @@ typedef struct pjmedia_ice_cb
  * @param name		Optional name to identify this ICE media transport
  *			for logging purposes.
  * @param comp_cnt	Number of components to be created.
- * @param stun_cfg	Pointer to STUN configuration settings.
+ * @param cfg		Pointer to configuration settings.
  * @param cb		Optional callbacks.
  * @param p_tp		Pointer to receive the media transport instance.
  *
@@ -71,7 +71,7 @@ typedef struct pjmedia_ice_cb
 PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 					const char *name,
 					unsigned comp_cnt,
-					pj_stun_config *stun_cfg,
+					const pj_ice_strans_cfg *cfg,
 					const pjmedia_ice_cb *cb,
 					pjmedia_transport **p_tp);
 
@@ -104,19 +104,13 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
  *			  socket to this particular interface only, and
  *			  no other host candidates will be added for this
  *			  socket.
- * @param stun_srv	Address of the STUN server, or NULL if STUN server
- *			reflexive mapping is not to be used.
- * @param turn_srv	Address of the TURN server, or NULL if TURN relay
- *			is not to be used.
  *
  * @return		PJ_SUCCESS when the initialization process has started
  *			successfully, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_ice_start_init(pjmedia_transport *tp,
 					    unsigned options,
-					    const pj_sockaddr_in *start_addr,
-					    const pj_sockaddr_in *stun_srv,
-					    const pj_sockaddr_in *turn_srv);
+					    const pj_sockaddr_in *start_addr);
 
 /**
  * Poll the initialization status of this media transport.

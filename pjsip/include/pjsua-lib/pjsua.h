@@ -1043,9 +1043,24 @@ typedef struct pjsua_config
     pj_str_t	    stun_host;
 
     /**
-     * Specify STUN relay server to be used.
+     * Specify TURN server to be used.
      */
-    pj_str_t	    stun_relay_host;
+    pj_str_t	    turn_host;
+
+    /**
+     * Specify TURN server port number.
+     */
+    pj_uint16_t	    turn_port;
+
+    /**
+     * Specify if TCP connection to TURN server should be used.
+     */
+    pj_bool_t	    turn_tcp;
+
+    /**
+     * Specify STUN credential for the TURN connection.
+     */
+    pj_stun_auth_cred turn_cred;
 
     /**
      * Support for adding and parsing NAT type in the SDP to assist 
@@ -3886,9 +3901,14 @@ struct pjsua_media_config
     pj_bool_t		enable_ice;
 
     /**
-     * Enable ICE media relay.
+     * ICE options.
      */
-    pj_bool_t		enable_relay;
+    unsigned		ice_options;
+
+    /**
+     * Disable RTCP in ICE.
+     */
+    pj_bool_t		ice_no_rtcp;
 };
 
 

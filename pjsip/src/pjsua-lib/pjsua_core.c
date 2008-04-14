@@ -113,7 +113,8 @@ PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
     pj_strdup_with_null(pool, &dst->stun_domain, &src->stun_domain);
     pj_strdup_with_null(pool, &dst->stun_host, &src->stun_host);
-    pj_strdup_with_null(pool, &dst->stun_relay_host, &src->stun_relay_host);
+    pj_strdup_with_null(pool, &dst->turn_host, &src->turn_host);
+    pj_stun_auth_cred_dup(pool, &dst->turn_cred, &src->turn_cred);
 }
 
 PJ_DEF(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)

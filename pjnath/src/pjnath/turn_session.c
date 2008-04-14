@@ -66,6 +66,7 @@ struct pj_turn_session
     const char		*obj_name;
     pj_turn_session_cb	 cb;
     void		*user_data;
+    pj_stun_config	 stun_cfg;
 
     pj_lock_t		*lock;
     int			 busy;
@@ -176,7 +177,7 @@ PJ_DEF(const char*) pj_turn_state_name(pj_turn_state_t state)
 /*
  * Create TURN client session.
  */
-PJ_DEF(pj_status_t) pj_turn_session_create( pj_stun_config *cfg,
+PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
 					    const char *name,
 					    int af,
 					    pj_turn_tp_type tp_type,
@@ -211,6 +212,9 @@ PJ_DEF(pj_status_t) pj_turn_session_create( pj_stun_config *cfg,
     sess->user_data = user_data;
     sess->next_ch = PJ_TURN_CHANNEL_MIN;
 
+    /* Copy STUN session */
+    pj_memcpy(&sess->stun_cfg, cfg, sizeof(pj_stun_config));
+
     /* Copy callback */
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
 
@@ -233,8 +237,8 @@ PJ_DEF(pj_status_t) pj_turn_session_create( pj_stun_config *cfg,
     stun_cb.on_send_msg = &stun_on_send_msg;
     stun_cb.on_request_complete = &stun_on_request_complete;
     stun_cb.on_rx_indication = &stun_on_rx_indication;
-    status = pj_stun_session_create(cfg, sess->obj_name, &stun_cb, PJ_FALSE,
-				    &sess->stun);
+    status = pj_stun_session_create(&sess->stun_cfg, sess->obj_name, &stun_cb,
+				    PJ_FALSE, &sess->stun);
     if (status != PJ_SUCCESS) {
 	do_destroy(sess);
 	return status;
@@ -849,7 +853,7 @@ on_return:
  * The packet maybe a STUN packet or ChannelData packet.
  */
 PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
-					      const pj_uint8_t *pkt,
+					      void *pkt,
 					      unsigned pkt_len,
 					      pj_bool_t is_datagram)
 {
@@ -864,13 +868,13 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
     pj_lock_acquire(sess->lock);
 
     /* Quickly check if this is STUN message */
-    is_stun = ((pkt[0] & 0xC0) == 0);
+    is_stun = ((((pj_uint8_t*)pkt)[0] & 0xC0) == 0);
 
     if (is_stun) {
 	/* This looks like STUN, give it to the STUN session */
 	unsigned options;
 
-	options = PJ_STUN_CHECK_PACKET;
+	options = PJ_STUN_CHECK_PACKET | PJ_STUN_NO_FINGERPRINT_CHECK;
 	if (is_datagram)
 	    options |= PJ_STUN_IS_DATAGRAM;
 	status=pj_stun_session_on_rx_pkt(sess->stun, pkt, pkt_len,
@@ -905,8 +909,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 	}
 
 	/* Notify application */
-	(*sess->cb.on_rx_data)(sess, pkt+sizeof(cd), cd.length,
-			       &peer->addr,
+	(*sess->cb.on_rx_data)(sess, ((pj_uint8_t*)pkt)+sizeof(cd), 
+			       cd.length, &peer->addr,
 			       pj_sockaddr_get_len(&peer->addr));
 
 	status = PJ_SUCCESS;

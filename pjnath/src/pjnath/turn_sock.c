@@ -71,7 +71,7 @@ static void turn_on_channel_bound(pj_turn_session *sess,
 				  unsigned addr_len,
 				  unsigned ch_num);
 static void turn_on_rx_data(pj_turn_session *sess,
-			    const pj_uint8_t *pkt,
+			    void *pkt,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
 			    unsigned addr_len);
@@ -309,6 +309,24 @@ PJ_DEF(pj_status_t) pj_turn_sock_get_info(pj_turn_sock *turn_sock,
     }
 }
 
+/**
+ * Lock the TURN socket. Application may need to call this function to
+ * synchronize access to other objects to avoid deadlock.
+ */
+PJ_DEF(pj_status_t) pj_turn_sock_lock(pj_turn_sock *turn_sock)
+{
+    return pj_lock_acquire(turn_sock->lock);
+}
+
+/**
+ * Unlock the TURN socket.
+ */
+PJ_DEF(pj_status_t) pj_turn_sock_unlock(pj_turn_sock *turn_sock)
+{
+    return pj_lock_release(turn_sock->lock);
+}
+
+
 /*
  * Initialize.
  */
@@ -524,7 +542,7 @@ static void turn_on_channel_bound(pj_turn_session *sess,
  * Callback from TURN session upon incoming data.
  */
 static void turn_on_rx_data(pj_turn_session *sess,
-			    const pj_uint8_t *pkt,
+			    void *pkt,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
 			    unsigned addr_len)

@@ -176,7 +176,7 @@ typedef struct pj_turn_session_cb
      * This callback is optional.
      */
     void (*on_rx_data)(pj_turn_session *sess,
-		       const pj_uint8_t *pkt,
+		       void *pkt,
 		       unsigned pkt_len,
 		       const pj_sockaddr_t *peer_addr,
 		       unsigned addr_len);
@@ -257,7 +257,7 @@ PJ_DECL(const char*) pj_turn_state_name(pj_turn_state_t state);
 /**
  * Create TURN client session.
  */
-PJ_DECL(pj_status_t) pj_turn_session_create(pj_stun_config *cfg,
+PJ_DECL(pj_status_t) pj_turn_session_create(const pj_stun_config *cfg,
 					    const char *name,
 					    int af,
 					    pj_turn_tp_type conn_type,
@@ -340,7 +340,7 @@ PJ_DECL(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
  * The packet maybe a STUN packet or ChannelData packet.
  */
 PJ_DECL(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
-					       const pj_uint8_t *pkt,
+					       void *pkt,
 					       unsigned pkt_len,
 					       pj_bool_t is_datagram);
 

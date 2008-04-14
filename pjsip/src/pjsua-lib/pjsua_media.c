@@ -624,6 +624,7 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 {
     unsigned i;
     pj_sockaddr_in addr;
+    pj_ice_strans_cfg ice_cfg;
     pj_status_t status;
 
     /* Make sure STUN server resolution has completed */
@@ -635,25 +636,65 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 
     pj_sockaddr_in_init(&addr, 0, (pj_uint16_t)cfg->port);
 
+    /* Init ICE config */
+    pj_bzero(&ice_cfg, sizeof(ice_cfg));
+
+    /* Duplicate STUN config */
+    pj_memcpy(&ice_cfg.stun_cfg, &pjsua_var.stun_cfg, sizeof(pj_stun_config));
+
+    /* Set STUN server, if any */
+    if (pj_sockaddr_has_addr(&pjsua_var.stun_srv))
+	pj_sockaddr_cp(&ice_cfg.stun_srv, &pjsua_var.stun_srv);
+
+    if (pjsua_var.ua_cfg.turn_host.slen) {
+	/* Set TURN server.
+	 * TODO: DNS SRV
+	 */
+	status = pj_sockaddr_in_init(&ice_cfg.turn_srv.ipv4, 
+				     &pjsua_var.ua_cfg.turn_host,
+				     pjsua_var.ua_cfg.turn_port);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error resolving TURN server", status);
+	    return status;
+	}
+
+	/* Copy TURN credential */
+	pj_memcpy(&ice_cfg.turn_cred, &pjsua_var.ua_cfg.turn_cred,
+		  sizeof(pjsua_var.ua_cfg.turn_cred));
+
+	/* TURN connection type. */
+	if (pjsua_var.ua_cfg.turn_tcp)
+	    ice_cfg.turn_conn_type = PJ_TURN_TP_TCP;
+	else
+	    ice_cfg.turn_conn_type = PJ_TURN_TP_UDP;
+    }
+
     /* Create each media transport */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pj_ice_strans_comp comp;
 	pjmedia_ice_cb ice_cb;
 	int next_port;
 	char name[32];
-#if PJMEDIA_ADVERTISE_RTCP
-	enum { COMP_CNT=2 };
+	unsigned options, comp_cnt;
+
+#if PJMEDIA_ADVERTISE_RTCP==0
+	comp_cnt = 1;
 #else
-	enum { COMP_CNT=1 };
+	if (pjsua_var.media_cfg.ice_no_rtcp)
+	    comp_cnt = 1;
+	else
+	    comp_cnt = 2;
 #endif
+
+	options = pjsua_var.media_cfg.ice_options;
 
 	pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
 	ice_cb.on_ice_complete = &on_ice_complete;
 
 	pj_ansi_snprintf(name, sizeof(name), "icetp%02d", i);
 			 
-	status = pjmedia_ice_create(pjsua_var.med_endpt, name, COMP_CNT,
-				    &pjsua_var.stun_cfg, &ice_cb,
+	status = pjmedia_ice_create(pjsua_var.med_endpt, name, comp_cnt,
+				    &ice_cfg, &ice_cb,
 				    &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create ICE media transport",
@@ -669,8 +710,8 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 				        PJMEDIA_DIR_DECODING,
 				        pjsua_var.media_cfg.rx_drop_pct);
 
-	status = pjmedia_ice_start_init(pjsua_var.calls[i].med_tp, 0, &addr,
-				        &pjsua_var.stun_srv.ipv4, NULL);
+	status = pjmedia_ice_start_init(pjsua_var.calls[i].med_tp, options, 
+					&addr);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error starting ICE transport",
 		         status);

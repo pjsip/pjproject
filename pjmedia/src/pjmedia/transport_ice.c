@@ -128,7 +128,7 @@ static const pj_str_t STR_ICE_MISMATCH = {"ice-mismatch", 12};
 PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 				       const char *name,
 				       unsigned comp_cnt,
-				       pj_stun_config *stun_cfg,
+				       const pj_ice_strans_cfg *cfg,
 				       const pjmedia_ice_cb *cb,
 	    			       pjmedia_transport **p_tp)
 {
@@ -145,8 +145,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     ice_st_cb.on_rx_data = &ice_on_rx_data;
 
     /* Create ICE */
-    status = pj_ice_strans_create(stun_cfg, name, comp_cnt, NULL, 
-			      &ice_st_cb, &ice_st);
+    status = pj_ice_strans_create(cfg, name, comp_cnt, NULL, 
+				  &ice_st_cb, &ice_st);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -176,16 +176,10 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
  */
 PJ_DEF(pj_status_t) pjmedia_ice_start_init( pjmedia_transport *tp,
 					    unsigned options,
-					    const pj_sockaddr_in *start_addr,
-					    const pj_sockaddr_in *stun_srv,
-					    const pj_sockaddr_in *turn_srv)
+					    const pj_sockaddr_in *start_addr)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     pj_status_t status;
-
-    status = pj_ice_strans_set_stun_srv(tp_ice->ice_st, stun_srv, turn_srv);
-    if (status != PJ_SUCCESS)
-	return status;
 
     status = pj_ice_strans_create_comp(tp_ice->ice_st, 1, options, start_addr);
     if (status != PJ_SUCCESS)
@@ -349,7 +343,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 	case PJ_ICE_CAND_TYPE_RELAYED:
 	    PJ_TODO(RELATED_ADDR_FOR_RELAYED_ADDR);
 	    len = pj_ansi_snprintf(buffer+len, MAXLEN-len,
-			     "srflx raddr %s rport %d",
+			     "relay raddr %s rport %d",
 			     pj_inet_ntoa(cand->base_addr.ipv4.sin_addr),
 			     (int)pj_ntohs(cand->base_addr.ipv4.sin_port));
 	    break;

@@ -22,6 +22,16 @@
 #define THIS_FILE	"pjsua_app.c"
 #define NO_LIMIT	(int)0x7FFFFFFF
 
+#if 1
+#define TURN_SERVER	"turn.pjsip.org"
+#define TURN_PORT	34780
+#define TURN_TCP	0
+#define TURN_REALM	"pjsip.org"
+#define TURN_USER	"700"
+#define TURN_PASSWD	"700"
+#endif
+
+
 //#define STEREO_DEMO
 
 /* Call specific data */
@@ -54,6 +64,8 @@ static struct app_config
 
     pj_pool_t		   *pool;
     /* Compatibility with older pjsua */
+
+    pj_bool_t		    use_turn;
 
     unsigned		    codec_cnt;
     pj_str_t		    codec_arg[32];
@@ -171,6 +183,10 @@ static void usage(void)
     puts  ("");
     puts  ("Media Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
+    puts  ("  --use-turn          Enable experimantal TURN (default:no)");
+    puts  ("  --ice-no-host       Disable ICE host candidates");
+    puts  ("  --ice-no-srflx      Disable ICE srflx candidates");
+    puts  ("  --ice-no-rtcp       Disable RTCP in ICE");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --dis-codec=name    Disable codec (can be specified multiple times)");
     puts  ("  --clock-rate=N      Override conference bridge clock rate");
@@ -391,7 +407,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
-	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
+	   OPT_USE_ICE, OPT_USE_TURN, OPT_ICE_NO_HOST, OPT_ICE_NO_SRFLX, 
+	   OPT_ICE_NO_RTCP, OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -452,6 +469,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "rec-file",   1, 0, OPT_REC_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 	{ "use-ice",    0, 0, OPT_USE_ICE},
+	{ "use-turn",   0, 0, OPT_USE_TURN},
+	{ "ice-no-host",0, 0, OPT_ICE_NO_HOST},
+	{ "ice-no-srflx",0,0, OPT_ICE_NO_SRFLX},
+	{ "ice-no-rtcp",0, 0, OPT_ICE_NO_RTCP},
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	{ "use-srtp",   1, 0, OPT_USE_SRTP},
 	{ "srtp-secure",1, 0, OPT_SRTP_SECURE},
@@ -823,6 +844,22 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_USE_ICE:
 	    cfg->media_cfg.enable_ice = PJ_TRUE;
+	    break;
+
+	case OPT_USE_TURN:
+	    cfg->use_turn = PJ_TRUE;
+	    break;
+
+	case OPT_ICE_NO_HOST:
+	    cfg->media_cfg.ice_options |= PJ_ICE_ST_OPT_DONT_ADD_CAND;
+	    break;
+
+	case OPT_ICE_NO_SRFLX:
+	    cfg->media_cfg.ice_options |= PJ_ICE_ST_OPT_DISABLE_STUN;
+	    break;
+
+	case OPT_ICE_NO_RTCP:
+	    cfg->media_cfg.ice_no_rtcp = PJ_TRUE;
 	    break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -3465,6 +3502,20 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     app_config.cfg.cb.on_call_replaced = &on_call_replaced;
     app_config.cfg.cb.on_nat_detect = &on_nat_detect;
+
+    /* Init TURN settings */
+#ifdef TURN_SERVER
+    if (app_config.use_turn) {
+	app_config.cfg.turn_host = pj_str(TURN_SERVER);
+	app_config.cfg.turn_port = TURN_PORT;
+	app_config.cfg.turn_tcp = 0;
+	app_config.cfg.turn_cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	app_config.cfg.turn_cred.data.static_cred.realm = pj_str(TURN_REALM);
+	app_config.cfg.turn_cred.data.static_cred.username = pj_str(TURN_USER);
+	app_config.cfg.turn_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+	app_config.cfg.turn_cred.data.static_cred.data = pj_str(TURN_PASSWD);
+    }
+#endif
 
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,

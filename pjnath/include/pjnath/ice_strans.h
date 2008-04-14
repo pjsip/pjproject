@@ -25,6 +25,7 @@
  * @brief ICE Stream Transport
  */
 #include <pjnath/ice_session.h>
+#include <pjnath/turn_sock.h>
 #include <pjlib-util/resolver.h>
 #include <pj/ioqueue.h>
 #include <pj/timer.h>
@@ -90,11 +91,6 @@ PJ_BEGIN_DECL
  *	  about incoming data (perhaps RTP or RTCP packet), and
  *	  \a on_ice_complete() to notify application that ICE negotiation
  *	  has completed, either successfully or with failure.
- *
- * After the ICE stream transport is created, application may set up the
- * STUN servers to be used to obtain STUN server reflexive and relayed
- * candidate, by calling #pj_ice_strans_set_stun_domain() or 
- * #pj_ice_strans_set_stun_srv().
  *
  * Application then creates each component by calling 
  * #pj_ice_strans_create_comp(); this would create an actual socket
@@ -335,6 +331,8 @@ typedef struct pj_ice_strans_comp
     pj_stun_session	*stun_sess;	/**< STUN session.		*/
     pj_uint8_t		 ka_tsx_id[12];	/**< ID for keep STUN alives	*/
 
+    pj_turn_sock	*turn_relay;	/**< TURN relay object.		*/
+
     pj_sockaddr		 local_addr;	/**< Local/base address.	*/
 
     unsigned		 pending_cnt;	/**< Pending resolution cnt.	*/
@@ -355,6 +353,54 @@ typedef struct pj_ice_strans_comp
 
 
 /**
+ * This structure describes ICE stream transport configuration.
+ */
+typedef struct pj_ice_strans_cfg
+{
+    /**
+     * STUN config. This setting is mandatory.
+     */
+    pj_stun_config	stun_cfg;
+
+    /**
+     * STUN server address, if STUN is enabled.
+     *
+     * Default is to have no TURN server.
+     */
+    pj_sockaddr		stun_srv;
+
+    /**
+     * TURN server address, if TURN is enabled.
+     *
+     * Default is to have no TURN server.
+     */
+    pj_sockaddr		turn_srv;
+
+    /**
+     * Type of connection to the TURN server.
+     *
+     * Default is PJ_TURN_TP_UDP.
+     */
+    pj_turn_tp_type	turn_conn_type;
+
+    /**
+     * Credential to be used for the TURN session.
+     *
+     * Default is to have no credential.
+     */
+    pj_stun_auth_cred	turn_cred;
+
+    /**
+     * Optional TURN Allocate parameter.
+     *
+     * Default is all empty.
+     */
+    pj_turn_alloc_param	turn_alloc_param;
+
+} pj_ice_strans_cfg;
+
+
+/**
  * This structure represents the ICE stream transport.
  */
 struct pj_ice_strans
@@ -363,18 +409,13 @@ struct pj_ice_strans
 
     pj_pool_t		    *pool;	/**< Pool used by this object.	*/
     void		    *user_data;	/**< Application data.		*/
-    pj_stun_config	     stun_cfg;	/**< STUN settings.		*/
+    pj_ice_strans_cfg	     cfg;	/**< Configuration.		*/
     pj_ice_strans_cb	     cb;	/**< Application callback.	*/
 
     pj_ice_sess		    *ice;	/**< ICE session.		*/
 
     unsigned		     comp_cnt;	/**< Number of components.	*/
     pj_ice_strans_comp	   **comp;	/**< Components array.		*/
-
-    pj_dns_resolver	    *resolver;	/**< The resolver instance.	*/
-    pj_bool_t		     has_rjob;	/**< Has pending resolve?	*/
-    pj_sockaddr_in	     stun_srv;	/**< STUN server address.	*/
-    pj_sockaddr_in	     turn_srv;	/**< TURN server address.	*/
 
     pj_timer_entry	     ka_timer;	/**< STUN keep-alive timer.	*/
 };
@@ -387,7 +428,7 @@ struct pj_ice_strans
  * initialize each components by calling #pj_ice_strans_create_comp()
  * function.
  *
- * @param stun_cfg	The STUN settings.
+ * @param cfg		Configuration.
  * @param name		Optional name for logging identification.
  * @param comp_cnt	Number of components.
  * @param user_data	Arbitrary user data to be associated with this
@@ -399,7 +440,7 @@ struct pj_ice_strans
  * @return		PJ_SUCCESS if ICE stream transport is created
  *			successfully.
  */
-PJ_DECL(pj_status_t) pj_ice_strans_create(pj_stun_config *stun_cfg,
+PJ_DECL(pj_status_t) pj_ice_strans_create(const pj_ice_strans_cfg *cfg,
 					  const char *name,
 					  unsigned comp_cnt,
 					  void *user_data,
@@ -416,50 +457,6 @@ PJ_DECL(pj_status_t) pj_ice_strans_create(pj_stun_config *stun_cfg,
  * @return		PJ_SUCCESS, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pj_ice_strans_destroy(pj_ice_strans *ice_st);
-
-
-/**
- * Set the domain to be used when resolving the STUN servers. If application
- * wants to utillize STUN, then STUN server must be specified, either by
- * calling this function or by calling #pj_ice_strans_set_stun_srv().
- *
- * If application calls this function, then the STUN/TURN servers will
- * be resolved by querying DNS SRV records for the specified domain.
- *
- * @param ice_st	The ICE stream transport.
- * @param resolver	The resolver instance that will be used to
- *			resolve the STUN/TURN servers.
- * @param domain	The target domain.
- *
- * @return		PJ_SUCCESS if DNS SRV resolution job can be
- *			started. The resolution process itself will
- *			complete asynchronously.
- */
-PJ_DECL(pj_status_t) pj_ice_strans_set_stun_domain(pj_ice_strans *ice_st,
-						   pj_dns_resolver *resolver,
-						   const pj_str_t *domain);
-
-/**
- * Set the STUN and TURN server addresses. If application
- * wants to utillize STUN, then STUN server must be specified, either by
- * calling this function or by calling #pj_ice_strans_set_stun_domain().
- *
- * With this function, the STUN and TURN server addresses will be 
- * assigned immediately, that is no DNS resolution will need to be 
- * performed.
- *
- * @param ice_st	The ICE stream transport.
- * @param stun_srv	The STUN server address, or NULL if STUN
- *			reflexive candidate is not to be used.
- * @param turn_srv	The TURN server address, or NULL if STUN
- *			relay candidate is not to be used.
- *
- * @return		PJ_SUCCESS, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) 
-pj_ice_strans_set_stun_srv( pj_ice_strans *ice_st,
-			    const pj_sockaddr_in *stun_srv,
-			    const pj_sockaddr_in *turn_srv);
 
 /**
  * Create and initialize the specified component. This function will
