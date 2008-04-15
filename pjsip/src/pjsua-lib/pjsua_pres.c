@@ -552,12 +552,17 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	      acc_id));
     
     /* Create suitable Contact header */
-    status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
-					  acc_id, rdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	PJSUA_UNLOCK();
-	return PJ_TRUE;
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
+					      acc_id, rdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+			 status);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
     }
 
     /* Create UAS dialog: */
@@ -1123,12 +1128,19 @@ static void subscribe_buddy_presence(unsigned index)
     PJ_LOG(4,(THIS_FILE, "Using account %d for buddy %d subscription",
 			 acc_id, index));
 
-    /* Generate suitable Contact header */
-    status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
-					  acc_id, &buddy->uri);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	return;
+    /* Generate suitable Contact header unless one is already set in
+     * the account
+     */
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
+					      acc_id, &buddy->uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+		         status);
+	    return;
+	}
     }
 
     /* Create UAC dialog */
