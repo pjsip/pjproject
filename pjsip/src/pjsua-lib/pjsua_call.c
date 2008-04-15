@@ -405,13 +405,20 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Reset first response time */
     call->res_time.sec = 0;
 
-    /* Create suitable Contact header */
-    status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
-					  acc_id, dest_uri);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	PJSUA_UNLOCK();
-	return status;
+    /* Create suitable Contact header unless a Contact header has been
+     * set in the account.
+     */
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
+					      acc_id, dest_uri);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+			 status);
+	    PJSUA_UNLOCK();
+	    return status;
+	}
     }
 
     /* Create outgoing dialog: */
@@ -787,15 +794,20 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 
     /* Get suitable Contact header */
-    status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
-					  acc_id, rdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
-				      NULL, NULL);
-	pjsua_media_channel_deinit(call->index);
-	PJSUA_UNLOCK();
-	return PJ_TRUE;
+    if (pjsua_var.acc[acc_id].contact.slen) {
+	contact = pjsua_var.acc[acc_id].contact;
+    } else {
+	status = pjsua_acc_create_uas_contact(rdata->tp_info.pool, &contact,
+					      acc_id, rdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+			 status);
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
+					  NULL, NULL);
+	    pjsua_media_channel_deinit(call->index);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
     }
 
     /* Create dialog: */

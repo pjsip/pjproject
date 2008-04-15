@@ -565,6 +565,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     if (acc->regc != NULL) {
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
     }
 
     /* Update account's Contact header */
@@ -853,6 +854,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		     param->status);
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
 	
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -863,6 +865,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 		   (int)param->reason.slen, param->reason.ptr));
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
 
 	/* Stop keep-alive timer if any. */
 	update_keep_alive(acc, PJ_FALSE, NULL);
@@ -872,6 +875,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	if (param->expiration < 1) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
+	    acc->contact.slen = 0;
 
 	    /* Stop keep-alive timer if any. */
 	    update_keep_alive(acc, PJ_FALSE, NULL);
@@ -940,6 +944,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
     if (acc->regc) {
 	pjsip_regc_destroy(acc->regc);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
     }
 
     /* initialize SIP registration if registrar is configured */
@@ -986,6 +991,7 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	pjsip_regc_destroy(acc->regc);
 	pj_pool_release(pool);
 	acc->regc = NULL;
+	acc->contact.slen = 0;
 	return status;
     }
 
