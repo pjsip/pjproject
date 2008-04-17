@@ -953,6 +953,14 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 		continue;
 	    }
 
+	    /* Skip if candidate has no address */
+	    if (!pj_sockaddr_has_addr(&cand->addr)) {
+		PJ_LOG(5,(ice_st->obj_name, 
+			  "Candidate %d in component %d is not added",
+			  j, i));
+		continue;
+	    }
+
 	    if (cand->type == PJ_ICE_CAND_TYPE_RELAYED) {
 		local_addr = &cand->addr;
 		relay_addr = &cand->addr;
@@ -963,7 +971,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 	    status = pj_ice_sess_add_cand(ice_st->ice, comp->comp_id, 
 					  cand->type, cand->local_pref, 
 					  &cand->foundation, &cand->addr, 
-					  &comp->local_addr, NULL, 
+					  local_addr, relay_addr, 
 					  sizeof(pj_sockaddr_in), 
 					  (unsigned*)&cand->ice_cand_id);
 	    if (status != PJ_SUCCESS)
@@ -1312,6 +1320,11 @@ static void turn_on_rx_data(pj_turn_sock *turn_sock,
 
     comp = (pj_ice_strans_comp*) pj_turn_sock_get_user_data(turn_sock);
     if (comp == NULL) {
+	return;
+    }
+
+    if (comp->ice_st->ice == NULL) {
+	/* The session is gone */
 	return;
     }
 

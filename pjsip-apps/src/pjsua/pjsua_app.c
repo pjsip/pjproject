@@ -22,14 +22,23 @@
 #define THIS_FILE	"pjsua_app.c"
 #define NO_LIMIT	(int)0x7FFFFFFF
 
-#if 1
+#if 0
 #define TURN_SERVER	"turn.pjsip.org"
 #define TURN_PORT	34780
-#define TURN_TCP	0
 #define TURN_REALM	"pjsip.org"
 #define TURN_USER	"700"
 #define TURN_PASSWD	"700"
 #endif
+
+#if 1
+/* Eyeball test */
+#define TURN_SERVER	"216.187.87.78"
+#define TURN_PORT	3478
+#define TURN_REALM	"test.eyeball.com"
+#define TURN_USER	"sipit6"
+#define TURN_PASSWD	"password"
+#endif
+
 
 
 //#define STEREO_DEMO
@@ -239,11 +248,11 @@ static void usage(void)
 /* Set default config. */
 static void default_config(struct app_config *cfg)
 {
-    char tmp[80];
+    char tmp[120];
     unsigned i;
 
     pjsua_config_default(&cfg->cfg);
-    pj_ansi_sprintf(tmp, "PJSUA v%s/%s", pj_get_version(), PJ_OS_NAME);
+    pj_ansi_sprintf(tmp, "PJSUA v%s/%s (http://pjsip.org)", pj_get_version(), PJ_OS_NAME);
     pj_strdup2_with_null(app_config.pool, &cfg->cfg.user_agent, tmp);
 
     pjsua_logging_config_default(&cfg->log_cfg);

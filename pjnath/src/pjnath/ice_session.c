@@ -106,7 +106,8 @@ typedef struct timer_data
  */
 struct msg_data
 {
-    pj_bool_t			     is_request;
+    pj_bool_t	is_request;
+    unsigned	cand_id;
 
     union data {
 	struct request_data {
@@ -114,10 +115,6 @@ struct msg_data
 	    pj_ice_sess_checklist   *clist;
 	    unsigned		     ckid;
 	} req;
-
-	struct response_data {
-	    unsigned		     cand_id;
-	} res;
     } data;
 };
 
@@ -1400,8 +1397,9 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     /* Attach data to be retrieved later when STUN request transaction
      * completes and on_stun_request_complete() callback is called.
      */
-    msg_data = PJ_POOL_ZALLOC_T(check->tdata->pool, struct msg_data);
+    msg_data = PJ_POOL_ZALLOC_T(ice->pool, struct msg_data);
     msg_data->is_request = PJ_TRUE;
+    msg_data->cand_id = lcand - ice->lcand;
     msg_data->data.req.ice = ice;
     msg_data->data.req.clist = clist;
     msg_data->data.req.ckid = check_id;
@@ -1667,15 +1665,7 @@ static pj_status_t on_stun_send_msg(pj_stun_session *sess,
     struct msg_data *msg_data = (struct msg_data*) token;
     unsigned cand_id;
     
-    if (msg_data->is_request) {
-	pj_ice_sess_checklist *clist = msg_data->data.req.clist;
-	pj_ice_sess_cand *lcand = clist->checks[msg_data->data.req.ckid].lcand;
-
-	cand_id = lcand - ice->lcand;
-	
-    } else {
-	cand_id = msg_data->data.res.cand_id;
-    }
+    cand_id = msg_data->cand_id;
 
     return (*ice->cb.on_tx_pkt)(ice, sd->comp_id, cand_id,
 				pkt, pkt_size, dst_addr, addr_len);
@@ -1939,7 +1929,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 				      unsigned src_addr_len)
 {
     stun_data *sd;
-    unsigned *param_cand_id;
+    //unsigned *param_cand_id;
     const pj_stun_msg *msg = rdata->msg;
     struct msg_data *msg_data;
     pj_ice_sess *ice;
@@ -1961,7 +1951,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
      *  in the on_tx_pkt(). The user needs this information to determine
      *  whether to send packet using local socket or the relay.
      */
-    param_cand_id = (unsigned*)token;
+    //param_cand_id = (unsigned*)token;
 
     /* Reject any requests except Binding request */
     if (msg->hdr.type != PJ_STUN_BINDING_REQUEST) {
@@ -2072,9 +2062,9 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
 					   PJ_TRUE, src_addr, src_addr_len);
 
     /* Create a msg_data to be associated with this response */
-    msg_data = PJ_POOL_ZALLOC_T(tdata->pool, struct msg_data);
+    msg_data = PJ_POOL_ZALLOC_T(ice->pool, struct msg_data);
     msg_data->is_request = PJ_FALSE;
-    msg_data->data.res.cand_id = *param_cand_id;
+    msg_data->cand_id = ((struct msg_data*)token)->cand_id;
 
     /* Send the response */
     status = pj_stun_session_send_msg(sess, msg_data, PJ_TRUE, PJ_TRUE,
@@ -2388,6 +2378,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 {
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
+    struct msg_data *msg_data;
     pj_status_t stun_status;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
@@ -2400,11 +2391,15 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 	goto on_return;
     }
 
+    msg_data = PJ_POOL_ZALLOC_T(ice->pool, struct msg_data);
+    msg_data->is_request = PJ_FALSE;
+    msg_data->cand_id = cand_id;
+
     stun_status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
     				    PJ_STUN_IS_DATAGRAM);
     if (stun_status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
-					   PJ_STUN_IS_DATAGRAM, &cand_id,
+					   PJ_STUN_IS_DATAGRAM, msg_data,
 					   NULL, src_addr, src_addr_len);
 	if (status != PJ_SUCCESS) {
 	    pj_strerror(status, ice->tmp.errmsg, sizeof(ice->tmp.errmsg));
