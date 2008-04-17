@@ -404,7 +404,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
 
     /* Create sipfrag content. */
     body = (char*) pj_pool_alloc(tdata->pool, 128);
-    bodylen = pj_ansi_snprintf(body, 128, "SIP/2.0 %u %.*s",
+    bodylen = pj_ansi_snprintf(body, 128, "SIP/2.0 %u %.*s\r\n",
 			       xfer_st_code,
 			       (int)xfer_st_text->slen,
 			       xfer_st_text->ptr);
