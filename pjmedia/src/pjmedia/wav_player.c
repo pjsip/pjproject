@@ -498,6 +498,10 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
     if (fport->eof && fport->readpos >= fport->eofpos) {
 	pj_status_t status = PJ_SUCCESS;
 
+	PJ_LOG(5,(THIS_FILE, "File port %.*s EOF",
+		  (int)fport->base.info.name.slen,
+		  fport->base.info.name.ptr));
+
 	/* Call callback, if any */
 	if (fport->cb)
 	    status = (*fport->cb)(this_port, fport->base.port_data.pdata);
@@ -507,16 +511,12 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	 * it might have been destroyed by the callback).
 	 */
 	if ((status != PJ_SUCCESS) || (fport->options & PJMEDIA_FILE_NO_LOOP)) {
-	    PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, stopping..",
-		      (int)fport->base.info.name.slen,
-		      fport->base.info.name.ptr));
-
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	    frame->size = 0;
 	    return PJ_EEOF;
 	}
     	
-	PJ_LOG(5,(THIS_FILE, "File port %.*s EOF, rewinding..",
+	PJ_LOG(5,(THIS_FILE, "File port %.*s rewinding..",
 		  (int)fport->base.info.name.slen,
 		  fport->base.info.name.ptr));
 	
