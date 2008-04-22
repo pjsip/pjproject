@@ -581,9 +581,10 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
-			       "<sip:%.*s@%.*s:%d;transport=%s>",
+			       "<sip:%.*s%s%.*s:%d;transport=%s>",
 			       (int)acc->user_part.slen,
 			       acc->user_part.ptr,
+			       (acc->user_part.slen? "@" : ""),
 			       (int)via_addr->slen,
 			       via_addr->ptr,
 			       rport,
