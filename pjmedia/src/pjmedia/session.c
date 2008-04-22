@@ -219,7 +219,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	if (pj_stricmp(&rem_conn->addr_type, &ID_IP4)==0) {
 	    rem_af = pj_AF_INET();
 	} else if (pj_stricmp(&rem_conn->addr_type, &ID_IP6)==0) {
-	    rem_af = pj_AF_UNSPEC();
+	    rem_af = pj_AF_INET6();
 	}
     }
 
@@ -242,7 +242,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	if (pj_stricmp(&local_conn->addr_type, &ID_IP4)==0) {
 	    local_af = pj_AF_INET();
 	} else if (pj_stricmp(&local_conn->addr_type, &ID_IP6)==0) {
-	    local_af = pj_AF_UNSPEC();
+	    local_af = pj_AF_INET6();
 	}
     }
 
