@@ -705,8 +705,21 @@ PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 
     usleep(msec * 1000);
 
+    /* MacOS X (reported on 10.5) seems to always set errno to ETIMEDOUT.
+     * It does so because usleep() is declared to return int, and we're
+     * supposed to check for errno only when usleep() returns non-zero. 
+     * Unfortunately, usleep() is declared to return void in other platforms
+     * so it's not possible to always check for the return value (unless 
+     * we add a detection routine in autoconf).
+     *
+     * As a workaround, here we check if ETIMEDOUT is returned and
+     * return successfully if it is.
+     */
+    if (pj_get_native_os_error() == ETIMEDOUT)
+	return PJ_SUCCESS;
+
     return pj_get_os_error();
-;
+
 #endif	/* PJ_RTEMS */
 }
 
