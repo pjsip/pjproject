@@ -734,9 +734,26 @@ static void on_request_complete(pj_stun_session *stun_sess,
 		case PJNATH_ESTUNTIMEDOUT:
 		    /*
 		     * Strangely test 1B has failed. Maybe connectivity was
-		     * lost?
+		     * lost? Or perhaps port 3489 (the usual port number in
+		     * CHANGED-ADDRESS) is blocked?
 		     */
-		    end_session(sess, PJ_SUCCESS, PJ_STUN_NAT_TYPE_BLOCKED);
+		    switch (sess->result[ST_TEST_3].status) {
+		    case PJ_SUCCESS:
+			/* Although test 1B failed, test 3 was successful.
+			 * It could be that port 3489 is blocked, while the
+			 * NAT itself looks to be a Restricted one.
+			 */
+			end_session(sess, PJ_SUCCESS, 
+				    PJ_STUN_NAT_TYPE_RESTRICTED);
+			break;
+		    default:
+			/* Can't distinguish between Symmetric and Port
+			 * Restricted, so set the type to Unknown
+			 */
+			end_session(sess, PJ_SUCCESS, 
+				    PJ_STUN_NAT_TYPE_ERR_UNKNOWN);
+			break;
+		    }
 		    break;
 		default:
 		    /*
