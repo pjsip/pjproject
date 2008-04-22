@@ -48,6 +48,23 @@ static pjsip_endpoint *sip_endpt;
 /* What response code to be sent (default is 501/Not Implemented) */
 static int code = PJSIP_SC_NOT_IMPLEMENTED;
 
+/* Additional header list */
+struct pjsip_hdr hdr_list;
+
+/* usage() */
+static void usage(void)
+{
+    puts("Usage:");
+    puts("  sipstateless [code] [-H HDR] ..");
+    puts("");
+    puts("Options:");
+    puts("  code     SIP status code to send (default: 501/Not Implemented");
+    puts("  -H HDR   Specify additional headers to send with response");
+    puts("           This option may be specified more than once.");
+    puts("           Example:");
+    puts("              -H 'Expires: 300' -H 'Contact: <sip:localhost>'"); 
+}
+
 
 /* Callback to handle incoming requests. */
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
@@ -58,7 +75,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     if (rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) {
 	pjsip_endpt_respond_stateless( sip_endpt, rdata, 
 				       code, NULL,
-				       NULL, NULL);
+				       &hdr_list, NULL);
     }
     return PJ_TRUE;
 }
@@ -72,6 +89,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 int main(int argc, char *argv[])
 {
     pj_caching_pool cp;
+    pj_pool_t *pool = NULL;
     pjsip_module mod_app =
     {
 	NULL, NULL,		    /* prev, next.		*/
@@ -88,13 +106,9 @@ int main(int argc, char *argv[])
 	NULL,			    /* on_tx_response()		*/
 	NULL,			    /* on_tsx_state()		*/
     };
-
-
+    int c;
     pj_status_t status;
     
-    if (argc == 2)
-	code = atoi(argv[1]);
-
     /* Must init PJLIB first: */
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -106,7 +120,6 @@ int main(int argc, char *argv[])
 
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
-
 
     /* Create global endpoint: */
     {
@@ -120,6 +133,58 @@ int main(int argc, char *argv[])
 				    &sip_endpt);
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     }
+
+    /* Parse arguments */
+    pj_optind = 0;
+    pj_list_init(&hdr_list);
+    while ((c=pj_getopt(argc, argv , "H:")) != -1) {
+	switch (c) {
+	case 'H':
+	    if (pool == NULL) {
+		pool = pj_pool_create(&cp.factory, "sipstateless", 1000, 
+				      1000, NULL);
+	    } 
+	    
+	    if (pool) {
+		char *name;
+		name = strtok(pj_optarg, ":");
+		if (name == NULL) {
+		    puts("Error: invalid header format");
+		    return 1;
+		} else {
+		    char *val = strtok(NULL, "\r\n");
+		    pjsip_generic_string_hdr *h;
+		    pj_str_t hname, hvalue;
+
+		    hname = pj_str(name);
+		    hvalue = pj_str(val);
+
+		    h = pjsip_generic_string_hdr_create(pool, &hname, &hvalue);
+
+		    pj_list_push_back(&hdr_list, h);
+
+		    PJ_LOG(4,(THIS_FILE, "Header %s: %s added", name, val));
+		}
+	    }
+	    break;
+	default:
+	    puts("Error: invalid argument");
+	    usage();
+	    return 1;
+	}
+    }
+
+    if (pj_optind != argc) {
+	code = atoi(argv[pj_optind]);
+	if (code < 200 || code > 699) {
+	    puts("Error: invalid status code");
+	    usage();
+	    return 1;
+	}
+    }
+
+    PJ_LOG(4,(THIS_FILE, "Returning %d to incoming requests", code));
+
 
     /* 
      * Add UDP transport, with hard-coded port 
