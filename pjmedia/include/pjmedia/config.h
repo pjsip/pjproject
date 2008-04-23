@@ -106,6 +106,42 @@
 #endif
 
 
+/*
+ * Types of WSOLA backend algorithm.
+ */
+
+/**
+ * This denotes implementation of WSOLA using null algorithm. Expansion
+ * will generate zero frames, and compression will just discard some
+ * samples from the input.
+ *
+ * This type of implementation may be used as it requires the least
+ * processing power.
+ */
+#define PJMEDIA_WSOLA_IMP_NULL		    0
+
+/**
+ * This denotes implementation of WSOLA using fixed or floating point WSOLA
+ * algorithm. This implementation provides the best quality of the result,
+ * at the expense of one frame delay and intensive processing power 
+ * requirement.
+ */
+#define PJMEDIA_WSOLA_IMP_WSOLA		    1
+
+
+/**
+ * Specify type of Waveform based Similarity Overlap and Add (WSOLA) backend
+ * implementation to be used. WSOLA is an algorithm to expand and/or compress 
+ * audio frames without changing the pitch, and used by the delaybuf and as PLC
+ * backend algorithm.
+ *
+ * Default is PJMEDIA_WSOLA_IMP_WSOLA
+ */
+#ifndef PJMEDIA_WSOLA_IMP
+#   define PJMEDIA_WSOLA_IMP		    PJMEDIA_WSOLA_IMP_WSOLA
+#endif
+
+
 /**
  * Specify number of sound buffers. Larger number is better for sound
  * stability and to accommodate sound devices that are unable to send frames

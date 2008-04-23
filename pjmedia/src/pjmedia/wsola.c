@@ -22,9 +22,17 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
+/*
+ * This file contains implementation of WSOLA using PJMEDIA_WSOLA_IMP_WSOLA
+ * or PJMEDIA_WSOLA_IMP_NULL
+ */
 #define THIS_FILE   "wsola.c"
 
-//#undef PJ_HAS_FLOATING_POINT
+
+#if PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA
+/*
+ * WSOLA implementation using WSOLA
+ */
 
 /* History size, in percentage of samples_per_frame */
 #define HISTSZ		(1.5)
@@ -718,5 +726,98 @@ PJ_DEF(pj_status_t) pjmedia_wsola_discard( pjmedia_wsola *wsola,
 
     return (*del_cnt) > 0 ? PJ_SUCCESS : PJ_ETOOSMALL;
 }
+
+
+#elif PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_NULL
+/*
+ * WSOLA implementation using NULL
+ */
+
+struct pjmedia_wsola
+{
+    unsigned samples_per_frame;
+};
+
+
+PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool, 
+					  unsigned clock_rate,
+					  unsigned samples_per_frame,
+					  unsigned channel_count,
+					  unsigned options,
+					  pjmedia_wsola **p_wsola)
+{
+    pjmedia_wsola *wsola;
+
+    wsola = PJ_POOL_ZALLOC_T(pool, struct pjmedia_wsola);
+    wsola->samples_per_frame = samples_per_frame;
+
+    PJ_UNUSED_ARG(clock_rate);
+    PJ_UNUSED_ARG(channel_count);
+    PJ_UNUSED_ARG(options);
+
+    *p_wsola = wsola;
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola)
+{
+    PJ_UNUSED_ARG(wsola);
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_wsola_reset( pjmedia_wsola *wsola,
+					 unsigned options)
+{
+    PJ_UNUSED_ARG(wsola);
+    PJ_UNUSED_ARG(options);
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola, 
+					short frm[], 
+					pj_bool_t prev_lost)
+{
+    PJ_UNUSED_ARG(wsola);
+    PJ_UNUSED_ARG(frm);
+    PJ_UNUSED_ARG(prev_lost);
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola, 
+					    short frm[])
+{
+    pjmedia_zero_samples(frm, wsola->samples_per_frame);
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_wsola_discard( pjmedia_wsola *wsola, 
+					   short buf1[],
+					   unsigned buf1_cnt, 
+					   short buf2[],
+					   unsigned buf2_cnt,
+					   unsigned *del_cnt)
+{
+    pj_assert(buf1_cnt + buf2_cnt >= wsola->samples_per_frame);
+
+    PJ_UNUSED_ARG(buf1);
+    PJ_UNUSED_ARG(buf1_cnt);
+    PJ_UNUSED_ARG(buf2);
+    PJ_UNUSED_ARG(buf2_cnt);
+
+    *del_cnt = wsola->samples_per_frame;
+
+    return PJ_SUCCESS;
+}
+
+
+#endif	/* #if PJMEDIA_WSOLA_IMP.. */
 
 

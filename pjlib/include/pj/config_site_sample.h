@@ -26,6 +26,7 @@
 #   define PJMEDIA_HAS_SPEEX_AEC	0
 #   undef PJMEDIA_RESAMPLE_IMP
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_LIBRESAMPLE
+#   define PJMEDIA_WSOLA_IMP		PJMEDIA_WSOLA_IMP_NULL
 #endif
 
 
@@ -49,6 +50,7 @@
     /* Disable these */
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
 #   define PJMEDIA_HAS_SPEEX_AEC	0
+#   define PJMEDIA_WSOLA_IMP		PJMEDIA_WSOLA_IMP_NULL
 
     /* Disable all codecs but G.711 and GSM, for now */
 #   define PJMEDIA_HAS_GSM_CODEC	1
