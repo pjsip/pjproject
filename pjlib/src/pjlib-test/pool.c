@@ -105,7 +105,8 @@ static int drain_test(pj_size_t size, pj_size_t increment)
 	int size;
 
 	if (freesize > 255)
-	    size = ((pj_rand() & 0x000000FF) + 4) & ~0x03L;
+	    size = ((pj_rand() & 0x000000FF) + PJ_POOL_ALIGNMENT) & 
+		   ~(PJ_POOL_ALIGNMENT - 1);
 	else
 	    size = freesize;
 
