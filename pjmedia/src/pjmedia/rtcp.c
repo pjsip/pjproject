@@ -28,7 +28,7 @@
 
 #define RTCP_SR   200
 #define RTCP_RR   201
-
+#define RTCP_XR   207
 
 #if PJ_HAS_HIGH_RES_TIMER==0
 #   error "High resolution timer needs to be enabled"
@@ -172,8 +172,12 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
 
 PJ_DEF(void) pjmedia_rtcp_fini(pjmedia_rtcp_session *sess)
 {
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    pjmedia_rtcp_xr_fini(&sess->xr_session);
+#else
     /* Nothing to do. */
     PJ_UNUSED_ARG(sess);
+#endif
 }
 
 static void rtcp_init_seq(pjmedia_rtcp_session *sess)
@@ -185,16 +189,29 @@ static void rtcp_init_seq(pjmedia_rtcp_session *sess)
     sess->jitter = 0;
 }
 
-PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess, 
-				 unsigned seq, 
-				 unsigned rtp_ts,
-				 unsigned payload)
+PJ_DEF(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *sess, 
+				  unsigned seq, 
+				  unsigned rtp_ts,
+				  unsigned payload)
+{
+    pjmedia_rtcp_rx_rtp2(sess, seq, rtp_ts, payload, PJ_FALSE);
+}
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess, 
+				  unsigned seq, 
+				  unsigned rtp_ts,
+				  unsigned payload,
+				  pj_bool_t discarded)
 {   
     pj_timestamp ts;
     pj_uint32_t arrival;
     pj_int32_t transit;
     pjmedia_rtp_status seq_st;
     unsigned last_seq;
+
+#if !defined(PJMEDIA_HAS_RTCP_XR) || (PJMEDIA_HAS_RTCP_XR == 0)
+    PJ_UNUSED_ARG(discarded);
+#endif
 
     if (sess->stat.rx.pkt == 0) {
 	/* Init sequence for the first time. */
@@ -224,6 +241,16 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 
     if (seq_st.status.flag.bad) {
 	sess->stat.rx.discard++;
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
+			       -1,				 /* lost    */
+			       (seq_st.status.flag.dup? 1:0),	 /* dup     */
+			       (!seq_st.status.flag.dup? 1:-1),  /* discard */
+			       -1,				 /* jitter  */
+			       -1, 0);				 /* toh	    */
+#endif
+
 	TRACE_((sess->name, "Bad packet discarded"));
 	return;
     }
@@ -316,7 +343,38 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp(pjmedia_rtcp_session *sess,
 		sess->stat.rx.jitter.max = jitter;
 
 	    sess->stat.rx.jitter.last = jitter;
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	    pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
+				   0,			    /* lost    */
+				   0,			    /* dup     */
+				   discarded,		    /* discard */
+				   (sess->jitter >> 4),	    /* jitter  */
+				   -1, 0);		    /* toh     */
+#endif
 	}
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    } else if (seq_st.diff > 1) {
+	int i;
+
+	/* Report RTCP XR about packet losses */
+	for (i=seq_st.diff-1; i>0; --i) {
+	    pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq - i, 
+				   1,			    /* lost    */
+				   0,			    /* dup     */
+				   0,			    /* discard */
+				   -1,			    /* jitter  */
+				   -1, 0);		    /* toh     */
+	}
+
+	/* Report RTCP XR this packet */
+	pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
+			       0,			    /* lost    */
+			       0,			    /* dup     */
+			       discarded,		    /* discard */
+			       -1,			    /* jitter  */
+			       -1, 0);			    /* toh     */
+#endif
     }
 
     /* Update timestamp of last RX RTP packet */
@@ -348,8 +406,16 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	    rr = (pjmedia_rtcp_rr*)(((char*)pkt) + (sizeof(pjmedia_rtcp_common)
 				    + sizeof(pjmedia_rtcp_sr)));
 	}
-    } else if (common->pt == RTCP_RR && common->count > 0)
+    } else if (common->pt == RTCP_RR && common->count > 0) {
 	rr = (pjmedia_rtcp_rr*)(((char*)pkt) + sizeof(pjmedia_rtcp_common));
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    } else if (common->pt == RTCP_XR) {
+	if (sess->xr_enabled)
+	    pjmedia_rtcp_xr_rx_rtcp_xr(&sess->xr_session, pkt, size);
+
+	return;
+#endif
+    }
 
 
     if (sr) {
@@ -674,4 +740,30 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     sess->stat.rx.update_cnt++;
 }
 
- 
+PJ_DEF(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *sess, 
+					    pj_bool_t enable)
+{
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+
+    /* Check if request won't change anything */
+    if (!(enable ^ sess->xr_enabled))
+	return PJ_SUCCESS;
+
+    if (!enable) {
+	sess->xr_enabled = PJ_FALSE;
+	return PJ_SUCCESS;
+    }
+
+    pjmedia_rtcp_xr_init(&sess->xr_session, sess, 0, 1);
+    sess->xr_enabled = PJ_TRUE;
+
+    return PJ_SUCCESS;
+
+#else
+
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(enable);
+    return PJ_ENOTSUP;
+
+#endif
+}

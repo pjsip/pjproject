@@ -67,7 +67,7 @@ struct pjmedia_jbuf
     int		    jb_max_prefetch;	  // Maximum allowable prefetch
     int		    jb_status;		  // status is 'init' until the	first 'put' operation
 
-
+    int		    jb_max_size;	  // Maximum frames buffered ever
 };
 
 
@@ -368,6 +368,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
     jb->jb_stable_hist	 = 0;
     jb->jb_status	 = JB_STATUS_INITIALIZING;
     jb->jb_max_hist_level = 0;
+    jb->jb_max_size	 = 0;
 
     jb_framelist_remove_head(&jb->jb_framelist, 
 			     jb_framelist_size(&jb->jb_framelist));
@@ -383,7 +384,12 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
 
 static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 {
-    int diff;
+    int diff, cur_size;
+
+    /* Update jb_max_size */
+    cur_size = jb_framelist_size(&jb->jb_framelist);
+    if (cur_size > jb->jb_max_size)
+	jb->jb_max_size = cur_size;
 
     /* Only apply burst-level calculation on PUT operation since if VAD is 
      * active the burst-level may not be accurate.
@@ -413,7 +419,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 		    jb->jb_prefetch = jb->jb_min_prefetch;
 
 		TRACE__((jb->name.ptr,"jb updated(1), prefetch=%d, size=%d", 
-			 jb->jb_prefetch, jb_framelist_size(&jb->jb_framelist)));
+			 jb->jb_prefetch, cur_size));
 
 		jb->jb_stable_hist = 0;
 		jb->jb_max_hist_level = 0;
@@ -432,7 +438,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	    jb->jb_max_hist_level = 0;
 
 	    TRACE__((jb->name.ptr,"jb updated(2), prefetch=%d, size=%d", 
-		     jb->jb_prefetch, jb_framelist_size(&jb->jb_framelist)));
+		     jb->jb_prefetch, cur_size));
 	}
 
 	/* Level is unchanged */
@@ -442,7 +448,7 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
     }
 
     /* These code is used for shortening the delay in the jitter buffer. */
-    diff = jb_framelist_size(&jb->jb_framelist) - jb->jb_prefetch;
+    diff = cur_size - jb->jb_prefetch;
     if (diff > SAFE_SHRINKING_DIFF) {
 	/* Shrink slowly */
 	diff = 1;
@@ -471,6 +477,15 @@ PJ_DEF(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
 				     pj_size_t frame_size, 
 				     int frame_seq)
 {
+    pjmedia_jbuf_put_frame2(jb, frame, frame_size, frame_seq, NULL);
+}
+
+PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb, 
+				     const void *frame, 
+				     pj_size_t frame_size, 
+				     int frame_seq,
+				     pj_bool_t *discarded)
+{
     pj_size_t min_frame_size;
     int seq_diff;
 
@@ -493,7 +508,7 @@ PJ_DEF(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
     if (seq_diff > 0) {
 
 	while (jb_framelist_put_at(&jb->jb_framelist,
-				   frame_seq,frame,min_frame_size) ==PJ_FALSE)
+				   frame_seq,frame,min_frame_size) == PJ_FALSE)
 	{
 	    jb_framelist_remove_head(&jb->jb_framelist,
 				     PJ_MAX(jb->jb_max_count/4,1) );
@@ -502,10 +517,16 @@ PJ_DEF(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
 	if (jb->jb_prefetch_cnt < jb->jb_prefetch)	
 	    jb->jb_prefetch_cnt += seq_diff;
 
+	if (discarded)
+	    *discarded = PJ_FALSE;
     }
     else
     {
-	jb_framelist_put_at(&jb->jb_framelist,frame_seq,frame,min_frame_size);
+	pj_bool_t res;
+	res = jb_framelist_put_at(&jb->jb_framelist,frame_seq,frame,
+				  min_frame_size);
+	if (discarded)
+	    *discarded = !res;
     }
 }
 
@@ -590,6 +611,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( pjmedia_jbuf *jb,
     state->min_prefetch = jb->jb_min_prefetch;
     state->max_prefetch = jb->jb_max_prefetch;
     state->size = jb_framelist_size(&jb->jb_framelist);
+    state->max_size = jb->jb_max_size;
 
     return PJ_SUCCESS;
 }

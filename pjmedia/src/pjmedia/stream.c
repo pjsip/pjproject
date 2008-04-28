@@ -470,9 +470,35 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 	(*stream->transport->op->send_rtcp)(stream->transport, 
 					    rtcp_pkt, len);
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	/* Temporarily always send RTCP XR after RTCP */
+	if (stream->rtcp.xr_enabled)
+	{
+	    int i;
+	    pjmedia_jb_state jb_state;
+
+	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
+	    
+	    i = jb_state.size * stream->codec_param.info.frm_ptime;
+	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+					PJMEDIA_RTCP_XR_INFO_JB_NOM,
+					i);
+
+	    i = jb_state.max_size* stream->codec_param.info.frm_ptime;
+	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+					PJMEDIA_RTCP_XR_INFO_JB_MAX,
+					i);
+
+	    pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
+				       &rtcp_pkt, &len);
+
+	    (*stream->transport->op->send_rtcp)(stream->transport, 
+						rtcp_pkt, len);
+	}
+#endif
+
 	stream->rtcp_last_tx = timestamp;
     }
-
 }
 
 
@@ -974,7 +1000,7 @@ static void on_rx_rtp( void *data,
     unsigned payloadlen;
     pjmedia_rtp_status seq_st;
     pj_status_t status;
-
+    pj_bool_t pkt_discarded = PJ_FALSE;
 
     /* Check for errors */
     if (bytes_read < 0) {
@@ -995,14 +1021,9 @@ static void on_rx_rtp( void *data,
 	return;
     }
 
-
-    /* Inform RTCP session */
-    pjmedia_rtcp_rx_rtp(&stream->rtcp, pj_ntohs(hdr->seq),
-			pj_ntohl(hdr->ts), payloadlen);
-
     /* Ignore the packet if decoder is paused */
     if (channel->paused)
-	return;
+	goto on_return;
 
     /* Update RTP session (also checks if RTP session can accept
      * the incoming packet.
@@ -1025,15 +1046,28 @@ static void on_rx_rtp( void *data,
 		      "Bad RTP pt %d (expecting %d)",
 		      hdr->pt, channel->rtp.out_pt));
 	}
+
+	if (seq_st.status.flag.badssrc) {
+	    PJ_LOG(4,(stream->port.info.name.ptr,
+		      "Changed RTP peer SSRC %d (previously %d)",
+		      channel->rtp.peer_ssrc, stream->rtcp.peer_ssrc));
+	    stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
+	}
+
+
     }
 
     /* Skip bad RTP packet */
-    if (seq_st.status.flag.bad)
-	return;
+    if (seq_st.status.flag.bad) {
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
+    }
 
     /* Ignore if payloadlen is zero */
-    if (payloadlen == 0)
-        return;
+    if (payloadlen == 0) {
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
+    }
 
     /* Handle incoming DTMF. */
     if (hdr->pt == stream->rx_event_pt) {
@@ -1041,11 +1075,11 @@ static void on_rx_rtp( void *data,
 	 * digit. Also ignore duplicate packet as it serves no use.
 	 */
 	if (seq_st.status.flag.outorder || seq_st.status.flag.dup) {
-	    return;
+	    goto on_return;
 	}
 
 	handle_incoming_dtmf(stream, payload, payloadlen);
-	return;
+	goto on_return;
     }
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
@@ -1151,11 +1185,13 @@ static void on_rx_rtp( void *data,
 	/* Put each frame to jitter buffer. */
 	for (i=0; i<count; ++i) {
 	    unsigned ext_seq;
+	    pj_bool_t discarded;
 
 	    ext_seq = (unsigned)(frames[i].timestamp.u64 / ts_span);
-	    pjmedia_jbuf_put_frame(stream->jb, frames[i].buf, 
-				   frames[i].size, ext_seq);
-
+	    pjmedia_jbuf_put_frame2(stream->jb, frames[i].buf, frames[i].size,
+				    ext_seq, &discarded);
+	    if (discarded)
+		pkt_discarded = PJ_TRUE;
 	}
     }
     pj_mutex_unlock( stream->jb_mutex );
@@ -1172,8 +1208,17 @@ static void on_rx_rtp( void *data,
     if (status != 0) {
 	LOGERR_((stream->port.info.name.ptr, "Jitter buffer put() error", 
 		status));
-	return;
+	pkt_discarded = PJ_TRUE;
+	goto on_return;
     }
+
+on_return:
+    /* Update RTCP session */
+    if (stream->rtcp.peer_ssrc == 0)
+	stream->rtcp.peer_ssrc = channel->rtp.peer_ssrc;
+
+    pjmedia_rtcp_rx_rtp2(&stream->rtcp, pj_ntohs(hdr->seq),
+			 pj_ntohl(hdr->ts), payloadlen, pkt_discarded);
 }
 
 
@@ -1512,11 +1557,50 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     stream->transport = tp;
 
+#if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
+    /* Enable RTCP XR and update some settings */
+    {
+	int i;
+	pjmedia_rtcp_enable_xr(&stream->rtcp, PJ_TRUE);
+
+	/* jitter buffer adaptive info */
+	i = PJMEDIA_RTCP_XR_JB_ADAPTIVE;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_CONF_JBA,
+				    i);
+
+	/* Jitter buffer aggressiveness info (estimated) */
+	i = 7;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_CONF_JBR,
+				    i);
+
+	/* Jitter buffer absolute maximum delay */
+	i = jb_max * stream->codec_param.info.frm_ptime;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_JB_ABS_MAX,
+				    i);
+
+	/* PLC info */
+	if (stream->codec_param.setting.plc == 0)
+	    i = PJMEDIA_RTCP_XR_PLC_DIS;
+	else
+#if PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA
+	    i = PJMEDIA_RTCP_XR_PLC_ENH;
+#else
+	    i = PJMEDIA_RTCP_XR_PLC_DIS;
+#endif
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_CONF_PLC,
+				    i);
+    }
+#endif
 
     /* Success! */
     *p_stream = stream;
 
     PJ_LOG(5,(THIS_FILE, "Stream %s created", stream->port.info.name.ptr));
+
     return PJ_SUCCESS;
 
 

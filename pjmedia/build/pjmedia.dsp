@@ -205,6 +205,10 @@ SOURCE=..\src\pjmedia\rtcp.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\rtcp_xr.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\rtp.c
 # End Source File
 # Begin Source File
@@ -370,6 +374,10 @@ SOURCE=..\include\pjmedia\resample.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\rtcp.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\rtcp_xr.h
 # End Source File
 # Begin Source File
 

@@ -25,6 +25,7 @@
  */
 
 #include <pjmedia/types.h>
+#include <pjmedia/rtcp_xr.h>
 #include <pjmedia/rtp.h>
 
 
@@ -246,7 +247,6 @@ typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
   typedef pj_uint32_t PJMEDIA_AVG_JITTER_TYPE;
 #endif
 
-
 /**
  * RTCP session is used to monitor the RTP session of one endpoint. There
  * should only be one RTCP session for a bidirectional RTP streams.
@@ -254,7 +254,7 @@ typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
 struct pjmedia_rtcp_session
 {
     char		   *name;	/**< Name identification.	    */
-    pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP packet.	    */
+    pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP SR packet.	    */
     pjmedia_rtcp_rr_pkt	    rtcp_rr_pkt;/**< Cached RTCP RR packet.	    */
     
     pjmedia_rtp_seq_session seq_ctrl;	/**< RTCP sequence number control.  */
@@ -281,6 +281,19 @@ struct pjmedia_rtcp_session
      * from being rounded-down to nearest integer.
      */
     PJMEDIA_AVG_JITTER_TYPE avg_jitter;	/**< Average RX jitter.		    */
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /**
+     * Specify whether RTCP XR processing is enabled on this session.
+     */
+    pj_bool_t		    xr_enabled;
+
+    /**
+     * RTCP XR session, only valid if RTCP XR processing is enabled
+     * on this session.
+     */
+    pjmedia_rtcp_xr_session xr_session;
+#endif
 };
 
 /**
@@ -342,6 +355,23 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtp( pjmedia_rtcp_session *session,
 
 
 /**
+ * Call this function everytime an RTP packet is received to let the RTCP
+ * session do its internal calculations.
+ *
+ * @param session   The session.
+ * @param seq	    The RTP packet sequence number, in host byte order.
+ * @param ts	    The RTP packet timestamp, in host byte order.
+ * @param payload   Size of the payload.
+ * @param discarded Flag to specify whether the packet is discarded.
+ */
+PJ_DECL(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *session, 
+				   unsigned seq, 
+				   unsigned ts,
+				   unsigned payload,
+				   pj_bool_t discarded);
+
+
+/**
  * Call this function everytime an RTP packet is sent to let the RTCP session
  * do its internal calculations.
  *
@@ -382,6 +412,19 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
  */
 PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
 				       void **rtcp_pkt, int *len);
+
+
+/**
+ * Call this function if RTCP XR needs to be enabled/disabled in the 
+ * RTCP session.
+ *
+ * @param session   The RTCP session.
+ * @param enable    Enable/disable RTCP XR.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *session, 
+					     pj_bool_t enable);
 
 
 /**

@@ -52,6 +52,7 @@ SOURCE		port.c
 SOURCE		resample_port.c
 SOURCE		resample_resample.c
 SOURCE		rtcp.c
+SOURCE		rtcp_xr.c
 SOURCE		rtp.c
 //SDP files are in pjsdp.mmp: sdp.c, sdp_cmp.c, sdp_neg.c
 SOURCE		session.c

@@ -76,6 +76,7 @@ struct pjmedia_jb_state
     unsigned	min_prefetch;	    /**< Minimum allowed prefetch, in frms. */
     unsigned	max_prefetch;	    /**< Maximum allowed prefetch, in frms. */
     unsigned	size;		    /**< Current buffer size, in frames.    */
+    unsigned	max_size;	    /**< Maximum size ever.		    */
 };
 
 
@@ -184,6 +185,24 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb);
  */
 PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
 
+/**
+ * Put a frame to the jitter buffer. If the frame can be accepted (based
+ * on the sequence number), the jitter buffer will copy the frame and put
+ * it in the appropriate position in the buffer.
+ *
+ * Application MUST manage it's own synchronization when multiple threads
+ * are accessing the jitter buffer at the same time.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame		Pointer to frame buffer to be stored in the jitter
+ *			buffer.
+ * @param size		The frame size.
+ * @param frame_seq	The frame sequence number.
+ */
+PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
+				      const void *frame, 
+				      pj_size_t size, 
+				      int frame_seq);
 
 /**
  * Put a frame to the jitter buffer. If the frame can be accepted (based
@@ -198,13 +217,13 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb);
  *			buffer.
  * @param size		The frame size.
  * @param frame_seq	The frame sequence number.
- *
- * @return		PJ_SUCCESS on success.
+ * @param discarded	Flag whether the frame is discarded by jitter buffer.
  */
-PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
-				      const void *frame, 
-				      pj_size_t size, 
-				      int frame_seq);
+PJ_DECL(void) pjmedia_jbuf_put_frame2( pjmedia_jbuf *jb, 
+				       const void *frame, 
+				       pj_size_t size, 
+				       int frame_seq,
+				       pj_bool_t *discarded);
 
 /**
  * Get a frame from the jitter buffer. The jitter buffer will return the

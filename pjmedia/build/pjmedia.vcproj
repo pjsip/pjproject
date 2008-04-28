@@ -742,6 +742,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\rtcp_xr.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\rtp.c"
 				>
 				<FileConfiguration
@@ -1178,6 +1182,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\rtcp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\rtcp_xr.h"
 				>
 			</File>
 			<File

@@ -339,6 +339,30 @@
 #   define  PJMEDIA_RTCP_IGNORE_FIRST_PACKETS	25
 #endif
 
+/**
+ * Specify whether RTCP XR support should be built into PJMEDIA. Disabling
+ * this feature will reduce footprint slightly. Note that even when this 
+ * setting is enabled, RTCP XR processing will only be performed in stream 
+ * if it is enabled on run-time on per stream basis. See  
+ * PJMEDIA_STREAM_ENABLE_XR setting for more info.
+ *
+ * Default: 1 (yes).
+ */
+#ifndef PJMEDIA_HAS_RTCP_XR
+#   define PJMEDIA_HAS_RTCP_XR			0
+#endif
+
+
+/**
+ * The RTCP XR feature is activated and used by stream if \a enable_rtcp_xr
+ * field of \a pjmedia_stream_info structure is non-zero. This setting 
+ * controls the default value of this field.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_STREAM_ENABLE_XR
+#   define PJMEDIA_STREAM_ENABLE_XR		0
+#endif
 
 /**
  * Specify how long (in miliseconds) the stream should suspend the
