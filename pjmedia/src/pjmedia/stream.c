@@ -1557,10 +1557,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     stream->transport = tp;
 
-#if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
-    /* Enable RTCP XR and update some settings */
-    {
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /* Enable RTCP XR and update stream info/config to RTCP XR */
+    if (info->rtcp_xr_enabled) {
 	int i;
+
 	pjmedia_rtcp_enable_xr(&stream->rtcp, PJ_TRUE);
 
 	/* jitter buffer adaptive info */
@@ -1713,6 +1714,22 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
     return PJ_SUCCESS;
 }
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+/*
+ * Get stream extended statistics.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
+					        pjmedia_rtcp_xr_stat *stat)
+{
+    PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
+
+    if (stream->rtcp.xr_enabled) {
+	pj_memcpy(stat, &stream->rtcp.xr_session.stat, sizeof(pjmedia_rtcp_xr_stat));
+	return PJ_SUCCESS;
+    }
+    return PJ_ENOTFOUND;
+}
+#endif
 
 /*
  * Pause stream.

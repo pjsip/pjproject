@@ -86,22 +86,31 @@ void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session,
 {
     pj_bzero(session, sizeof(pjmedia_rtcp_xr_session));
 
+    session->name = parent_session->name;
     session->rtcp_session = parent_session;
     pj_memcpy(&session->pkt.common, &session->rtcp_session->rtcp_sr_pkt.common,
 	      sizeof(pjmedia_rtcp_common));
     session->pkt.common.pt = RTCP_XR;
 
     /* Init config */
-    session->stat.tx.voip_mtc.gmin = (pj_uint8_t)(gmin? gmin : DEFAULT_GMIN);
+    session->stat.rx.voip_mtc.gmin = (pj_uint8_t)(gmin? gmin : DEFAULT_GMIN);
     session->ptime = session->rtcp_session->pkt_size * 1000 / 
 		     session->rtcp_session->clock_rate;
     session->frames_per_packet = frames_per_packet;
 
     /* Init Statistics Summary fields which have non-zero default */
-    session->stat.tx.stat_sum.jitter.min = (unsigned) -1;
-    session->stat.tx.stat_sum.toh.min = (unsigned) -1;
+    session->stat.rx.stat_sum.jitter.min = (unsigned) -1;
+    session->stat.rx.stat_sum.toh.min = (unsigned) -1;
 
     /* Init VoIP Metrics fields which have non-zero default */
+    session->stat.rx.voip_mtc.signal_lvl = 127;
+    session->stat.rx.voip_mtc.noise_lvl = 127;
+    session->stat.rx.voip_mtc.rerl = 127;
+    session->stat.rx.voip_mtc.r_factor = 127;
+    session->stat.rx.voip_mtc.ext_r_factor = 127;
+    session->stat.rx.voip_mtc.mos_lq = 127;
+    session->stat.rx.voip_mtc.mos_cq = 127;
+
     session->stat.tx.voip_mtc.signal_lvl = 127;
     session->stat.tx.voip_mtc.noise_lvl = 127;
     session->stat.tx.voip_mtc.rerl = 127;
@@ -189,7 +198,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
     /* Statistics Summary Block */
     /* Build this block if we have received packets since last build */
     if ((rpt_types == 0 || (rpt_types & PJMEDIA_RTCP_XR_STATS)) &&
-	sess->stat.tx.stat_sum.count > 0)
+	sess->stat.rx.stat_sum.count > 0)
     {
 	pjmedia_rtcp_xr_rb_stats *r;
 	pj_uint8_t specific = 0;
@@ -198,10 +207,10 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	pj_bzero(r, sizeof(pjmedia_rtcp_xr_rb_stats));
 
 	/* Init block header */
-	specific |= sess->stat.tx.stat_sum.l ? (1 << 7) : 0;
-	specific |= sess->stat.tx.stat_sum.d ? (1 << 6) : 0;
-	specific |= sess->stat.tx.stat_sum.j ? (1 << 5) : 0;
-	specific |= (sess->stat.tx.stat_sum.t & 3) << 3;
+	specific |= sess->stat.rx.stat_sum.l ? (1 << 7) : 0;
+	specific |= sess->stat.rx.stat_sum.d ? (1 << 6) : 0;
+	specific |= sess->stat.rx.stat_sum.j ? (1 << 5) : 0;
+	specific |= (sess->stat.rx.stat_sum.t & 3) << 3;
 	r->header.bt = BT_STATS;
 	r->header.specific = specific;
 	r->header.length = pj_htons(9);
@@ -209,39 +218,40 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	/* Generate block contents */
 	r->ssrc = pj_htonl(sess->rtcp_session->peer_ssrc);
 	r->begin_seq = pj_htons((pj_uint16_t)
-				(sess->stat.tx.stat_sum.begin_seq & 0xFFFF));
+				(sess->stat.rx.stat_sum.begin_seq & 0xFFFF));
 	r->end_seq = pj_htons((pj_uint16_t)
-			      (sess->stat.tx.stat_sum.end_seq & 0xFFFF));
-	if (sess->stat.tx.stat_sum.l) {
-	    r->lost = pj_htonl(sess->stat.tx.stat_sum.lost);
+			      (sess->stat.rx.stat_sum.end_seq & 0xFFFF));
+	if (sess->stat.rx.stat_sum.l) {
+	    r->lost = pj_htonl(sess->stat.rx.stat_sum.lost);
 	}
-	if (sess->stat.tx.stat_sum.d) {
-	    r->dup = pj_htonl(sess->stat.tx.stat_sum.dup);
+	if (sess->stat.rx.stat_sum.d) {
+	    r->dup = pj_htonl(sess->stat.rx.stat_sum.dup);
 	}
-	if (sess->stat.tx.stat_sum.j) {
-	    r->jitter_min = pj_htonl(sess->stat.tx.stat_sum.jitter.min);
-	    r->jitter_max = pj_htonl(sess->stat.tx.stat_sum.jitter.max);
-	    r->jitter_mean = pj_htonl(sess->stat.tx.stat_sum.jitter.mean);
-	    sess->stat.tx.stat_sum.jitter.dev = 
-				my_isqrt(sess->stat.tx.stat_sum.jitter.dev);
-	    r->jitter_dev = pj_htonl(sess->stat.tx.stat_sum.jitter.dev);
+	if (sess->stat.rx.stat_sum.j) {
+	    r->jitter_min = pj_htonl(sess->stat.rx.stat_sum.jitter.min);
+	    r->jitter_max = pj_htonl(sess->stat.rx.stat_sum.jitter.max);
+	    r->jitter_mean = pj_htonl(sess->stat.rx.stat_sum.jitter.mean);
+	    sess->stat.rx.stat_sum.jitter.dev = 
+				my_isqrt(sess->stat.rx.stat_sum.jitter.dev);
+	    r->jitter_dev = pj_htonl(sess->stat.rx.stat_sum.jitter.dev);
 	}
-	if (sess->stat.tx.stat_sum.t) {
-	    r->toh_min = sess->stat.tx.stat_sum.toh.min;
-	    r->toh_max = sess->stat.tx.stat_sum.toh.max;
-	    r->toh_mean = sess->stat.tx.stat_sum.toh.mean;
-	    sess->stat.tx.stat_sum.toh.dev = 
-				my_isqrt(sess->stat.tx.stat_sum.toh.dev);
-	    r->toh_dev = sess->stat.tx.stat_sum.toh.dev;
+	if (sess->stat.rx.stat_sum.t) {
+	    r->toh_min = sess->stat.rx.stat_sum.toh.min;
+	    r->toh_max = sess->stat.rx.stat_sum.toh.max;
+	    r->toh_mean = sess->stat.rx.stat_sum.toh.mean;
+	    sess->stat.rx.stat_sum.toh.dev = 
+				my_isqrt(sess->stat.rx.stat_sum.toh.dev);
+	    r->toh_dev = sess->stat.rx.stat_sum.toh.dev;
 	}
 
 	/* Reset TX statistics summary each time built */
-	pj_bzero(&sess->stat.tx.stat_sum, sizeof(sess->stat.tx.stat_sum));
-	sess->stat.tx.stat_sum.jitter.min = (unsigned) -1;
-	sess->stat.tx.stat_sum.toh.min = (unsigned) -1;
+	pj_bzero(&sess->stat.rx.stat_sum, sizeof(sess->stat.rx.stat_sum));
+	sess->stat.rx.stat_sum.jitter.min = (unsigned) -1;
+	sess->stat.rx.stat_sum.toh.min = (unsigned) -1;
 
 	/* Finally */
 	size += sizeof(pjmedia_rtcp_xr_rb_stats);
+	pj_gettimeofday(&sess->stat.rx.stat_sum.update);
     }
 
     /* Voip Metrics Block */
@@ -288,45 +298,47 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	    } else {
 		p23 = 1 - c22/(c22 + c23);
 	    }
-	    sess->stat.tx.voip_mtc.burst_den = (pj_uint8_t)(256*p23/(p23 + p32));
-	    sess->stat.tx.voip_mtc.gap_den = (pj_uint8_t)(256*c14/(c11 + c14));
+	    sess->stat.rx.voip_mtc.burst_den = (pj_uint8_t)(256*p23/(p23 + p32));
+	    sess->stat.rx.voip_mtc.gap_den = (pj_uint8_t)(256*c14/(c11 + c14));
 
 	    /* Calculate burst and gap durations in ms */
-	    sess->stat.tx.voip_mtc.gap_dur = (pj_uint16_t)((c11+c14+c13)*m/c13);
-	    sess->stat.tx.voip_mtc.burst_dur = (pj_uint16_t)(ctotal*m/c13 - 
-					       sess->stat.tx.voip_mtc.gap_dur);
+	    sess->stat.rx.voip_mtc.gap_dur = (pj_uint16_t)((c11+c14+c13)*m/c13);
+	    sess->stat.rx.voip_mtc.burst_dur = (pj_uint16_t)(ctotal*m/c13 - 
+					       sess->stat.rx.voip_mtc.gap_dur);
 	} else {
 	    /* No burst occurred yet until this time?
 	     * Just report full gap.
 	     */
-	    ctotal = sess->rtcp_session->stat.rx.pkt;
+	    ctotal = sess->rtcp_session->stat.rx.pkt + 
+		     sess->voip_mtc_stat.loss_count +
+		     sess->voip_mtc_stat.discard_count;
 
-	    sess->stat.tx.voip_mtc.burst_den = 0;
-	    sess->stat.tx.voip_mtc.gap_den = (pj_uint8_t)(256 * 
+	    sess->stat.rx.voip_mtc.burst_den = 0;
+	    sess->stat.rx.voip_mtc.gap_den = (pj_uint8_t)(256 * 
 					(sess->voip_mtc_stat.loss_count + 
 					sess->voip_mtc_stat.discard_count) / 
 					ctotal);
 
 	    /* Calculate burst and gap durations in ms */
-	    sess->stat.tx.voip_mtc.gap_dur = (pj_uint16_t)((m*ctotal) < 0xFFFF?
+	    sess->stat.rx.voip_mtc.gap_dur = (pj_uint16_t)((m*ctotal) < 0xFFFF?
 					     (m*ctotal) : 0xFFFF);
-	    sess->stat.tx.voip_mtc.burst_dur = 0;
+	    sess->stat.rx.voip_mtc.burst_dur = 0;
 	}
 
 	/* Calculate loss and discard rates */
-	sess->stat.tx.voip_mtc.loss_rate = (pj_uint8_t)
+	sess->stat.rx.voip_mtc.loss_rate = (pj_uint8_t)
 			     (256 * sess->voip_mtc_stat.loss_count / ctotal);
-	sess->stat.tx.voip_mtc.discard_rate = (pj_uint8_t)
+	sess->stat.rx.voip_mtc.discard_rate = (pj_uint8_t)
 			     (256 * sess->voip_mtc_stat.discard_count / ctotal);
 
 	/* Set round trip delay (in ms) to RTT calculated after receiving
 	 * DLRR or DLSR.
 	 */
 	if (sess->stat.rtt.last)
-	    sess->stat.tx.voip_mtc.rnd_trip_delay = (pj_uint16_t)
+	    sess->stat.rx.voip_mtc.rnd_trip_delay = (pj_uint16_t)
 				    (sess->stat.rtt.last / 1000);
 	else if (sess->rtcp_session->stat.rtt.last)
-	    sess->stat.tx.voip_mtc.rnd_trip_delay = (pj_uint16_t)
+	    sess->stat.rx.voip_mtc.rnd_trip_delay = (pj_uint16_t)
 				    (sess->rtcp_session->stat.rtt.last / 1000);
 	
 	/* End system delay estimation = RTT/2 + current jitter buffer size +
@@ -336,35 +348,41 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	 * Since it is difficult to get the exact value of EXTRA, estimation
 	 * is taken to be totally around 50 ms.
 	 */
-	sess->stat.tx.voip_mtc.end_sys_delay = (pj_uint16_t)
-				(sess->stat.tx.voip_mtc.rnd_trip_delay / 2 +
-				 sess->stat.tx.voip_mtc.jb_nom + 50);
+	sess->stat.rx.voip_mtc.end_sys_delay = (pj_uint16_t)
+				(sess->stat.rx.voip_mtc.rnd_trip_delay / 2 +
+				 sess->stat.rx.voip_mtc.jb_nom + 50);
 
 	/* Generate block contents */
 	r->ssrc		    = pj_htonl(sess->rtcp_session->peer_ssrc);
-	r->loss_rate	    = sess->stat.tx.voip_mtc.loss_rate;
-	r->discard_rate	    = sess->stat.tx.voip_mtc.discard_rate;
-	r->burst_den	    = sess->stat.tx.voip_mtc.burst_den;
-	r->gap_den	    = sess->stat.tx.voip_mtc.gap_den;
-	r->burst_dur	    = pj_htons(sess->stat.tx.voip_mtc.burst_dur);
-	r->gap_dur	    = pj_htons(sess->stat.tx.voip_mtc.gap_dur);
-	r->rnd_trip_delay   = pj_htons(sess->stat.tx.voip_mtc.rnd_trip_delay);
-	r->end_sys_delay    = pj_htons(sess->stat.tx.voip_mtc.end_sys_delay);
-	r->signal_lvl	    = sess->stat.tx.voip_mtc.signal_lvl;
-	r->noise_lvl	    = sess->stat.tx.voip_mtc.noise_lvl;
-	r->rerl		    = sess->stat.tx.voip_mtc.rerl;
-	r->gmin		    = sess->stat.tx.voip_mtc.gmin;
-	r->r_factor	    = sess->stat.tx.voip_mtc.r_factor;
-	r->ext_r_factor	    = sess->stat.tx.voip_mtc.ext_r_factor;
-	r->mos_lq	    = sess->stat.tx.voip_mtc.mos_lq;
-	r->mos_cq	    = sess->stat.tx.voip_mtc.mos_cq;
-	r->rx_config	    = sess->stat.tx.voip_mtc.rx_config;
-	r->jb_nom	    = pj_htons(sess->stat.tx.voip_mtc.jb_nom);
-	r->jb_max	    = pj_htons(sess->stat.tx.voip_mtc.jb_max);
-	r->jb_abs_max	    = pj_htons(sess->stat.tx.voip_mtc.jb_abs_max);
+	r->loss_rate	    = sess->stat.rx.voip_mtc.loss_rate;
+	r->discard_rate	    = sess->stat.rx.voip_mtc.discard_rate;
+	r->burst_den	    = sess->stat.rx.voip_mtc.burst_den;
+	r->gap_den	    = sess->stat.rx.voip_mtc.gap_den;
+	r->burst_dur	    = pj_htons(sess->stat.rx.voip_mtc.burst_dur);
+	r->gap_dur	    = pj_htons(sess->stat.rx.voip_mtc.gap_dur);
+	r->rnd_trip_delay   = pj_htons(sess->stat.rx.voip_mtc.rnd_trip_delay);
+	r->end_sys_delay    = pj_htons(sess->stat.rx.voip_mtc.end_sys_delay);
+	/* signal & noise level encoded in two's complement form */
+	r->signal_lvl	    = (sess->stat.rx.voip_mtc.signal_lvl >= 0)?
+			      sess->stat.rx.voip_mtc.signal_lvl :
+			      (sess->stat.rx.voip_mtc.signal_lvl + 256);
+	r->noise_lvl	    = (sess->stat.rx.voip_mtc.noise_lvl >= 0)?
+			      sess->stat.rx.voip_mtc.noise_lvl :
+			      (sess->stat.rx.voip_mtc.noise_lvl + 256);
+	r->rerl		    = sess->stat.rx.voip_mtc.rerl;
+	r->gmin		    = sess->stat.rx.voip_mtc.gmin;
+	r->r_factor	    = sess->stat.rx.voip_mtc.r_factor;
+	r->ext_r_factor	    = sess->stat.rx.voip_mtc.ext_r_factor;
+	r->mos_lq	    = sess->stat.rx.voip_mtc.mos_lq;
+	r->mos_cq	    = sess->stat.rx.voip_mtc.mos_cq;
+	r->rx_config	    = sess->stat.rx.voip_mtc.rx_config;
+	r->jb_nom	    = pj_htons(sess->stat.rx.voip_mtc.jb_nom);
+	r->jb_max	    = pj_htons(sess->stat.rx.voip_mtc.jb_max);
+	r->jb_abs_max	    = pj_htons(sess->stat.rx.voip_mtc.jb_abs_max);
 
 	/* Finally */
 	size += sizeof(pjmedia_rtcp_xr_rb_voip_mtc);
+	pj_gettimeofday(&sess->stat.rx.voip_mtc.update);
     }
 
     /* Add RTCP XR header size */
@@ -532,66 +550,73 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
     if (rb_stats) {
 	pj_uint8_t flags = rb_stats->header.specific;
 
-	pj_bzero(&sess->stat.rx.stat_sum, sizeof(sess->stat.rx.stat_sum));
+	pj_bzero(&sess->stat.tx.stat_sum, sizeof(sess->stat.tx.stat_sum));
 
 	/* Range of packets sequence reported in this blocks */
-	sess->stat.rx.stat_sum.begin_seq = pj_ntohs(rb_stats->begin_seq);
-	sess->stat.rx.stat_sum.end_seq   = pj_ntohs(rb_stats->end_seq);
+	sess->stat.tx.stat_sum.begin_seq = pj_ntohs(rb_stats->begin_seq);
+	sess->stat.tx.stat_sum.end_seq   = pj_ntohs(rb_stats->end_seq);
 
 	/* Get flags of valid fields */
-	sess->stat.rx.stat_sum.l = (flags & (1 << 7)) != 0;
-	sess->stat.rx.stat_sum.d = (flags & (1 << 6)) != 0;
-	sess->stat.rx.stat_sum.j = (flags & (1 << 5)) != 0;
-	sess->stat.rx.stat_sum.t = (flags & (3 << 3)) != 0;
+	sess->stat.tx.stat_sum.l = (flags & (1 << 7)) != 0;
+	sess->stat.tx.stat_sum.d = (flags & (1 << 6)) != 0;
+	sess->stat.tx.stat_sum.j = (flags & (1 << 5)) != 0;
+	sess->stat.tx.stat_sum.t = (flags & (3 << 3)) != 0;
 
 	/* Fetch the reports info */
-	if (sess->stat.rx.stat_sum.l) {
-	    sess->stat.rx.stat_sum.lost = pj_ntohl(rb_stats->lost);
+	if (sess->stat.tx.stat_sum.l) {
+	    sess->stat.tx.stat_sum.lost = pj_ntohl(rb_stats->lost);
 	}
 
-	if (sess->stat.rx.stat_sum.d) {
-	    sess->stat.rx.stat_sum.dup = pj_ntohl(rb_stats->dup);
+	if (sess->stat.tx.stat_sum.d) {
+	    sess->stat.tx.stat_sum.dup = pj_ntohl(rb_stats->dup);
 	}
 
-	if (sess->stat.rx.stat_sum.j) {
-	    sess->stat.rx.stat_sum.jitter.min = pj_ntohl(rb_stats->jitter_min);
-	    sess->stat.rx.stat_sum.jitter.max = pj_ntohl(rb_stats->jitter_max);
-	    sess->stat.rx.stat_sum.jitter.mean = pj_ntohl(rb_stats->jitter_mean);
-	    sess->stat.rx.stat_sum.jitter.dev = pj_ntohl(rb_stats->jitter_dev);
+	if (sess->stat.tx.stat_sum.j) {
+	    sess->stat.tx.stat_sum.jitter.min = pj_ntohl(rb_stats->jitter_min);
+	    sess->stat.tx.stat_sum.jitter.max = pj_ntohl(rb_stats->jitter_max);
+	    sess->stat.tx.stat_sum.jitter.mean = pj_ntohl(rb_stats->jitter_mean);
+	    sess->stat.tx.stat_sum.jitter.dev = pj_ntohl(rb_stats->jitter_dev);
 	}
 
-	if (sess->stat.rx.stat_sum.t) {
-	    sess->stat.rx.stat_sum.toh.min = rb_stats->toh_min;
-	    sess->stat.rx.stat_sum.toh.max = rb_stats->toh_max;
-	    sess->stat.rx.stat_sum.toh.mean = rb_stats->toh_mean;
-	    sess->stat.rx.stat_sum.toh.dev = rb_stats->toh_dev;
+	if (sess->stat.tx.stat_sum.t) {
+	    sess->stat.tx.stat_sum.toh.min = rb_stats->toh_min;
+	    sess->stat.tx.stat_sum.toh.max = rb_stats->toh_max;
+	    sess->stat.tx.stat_sum.toh.mean = rb_stats->toh_mean;
+	    sess->stat.tx.stat_sum.toh.dev = rb_stats->toh_dev;
 	}
+
+	pj_gettimeofday(&sess->stat.tx.stat_sum.update);
     }
 
     /* Receiving VoIP Metrics */
     if (rb_voip_mtc) {
-	sess->stat.rx.voip_mtc.loss_rate = rb_voip_mtc->loss_rate;
-	sess->stat.rx.voip_mtc.discard_rate = rb_voip_mtc->discard_rate;
-	sess->stat.rx.voip_mtc.burst_den = rb_voip_mtc->burst_den;
-	sess->stat.rx.voip_mtc.gap_den = rb_voip_mtc->gap_den;
-	sess->stat.rx.voip_mtc.burst_dur = pj_ntohs(rb_voip_mtc->burst_dur);
-	sess->stat.rx.voip_mtc.gap_dur = pj_ntohs(rb_voip_mtc->gap_dur);
-	sess->stat.rx.voip_mtc.rnd_trip_delay = 
+	sess->stat.tx.voip_mtc.loss_rate = rb_voip_mtc->loss_rate;
+	sess->stat.tx.voip_mtc.discard_rate = rb_voip_mtc->discard_rate;
+	sess->stat.tx.voip_mtc.burst_den = rb_voip_mtc->burst_den;
+	sess->stat.tx.voip_mtc.gap_den = rb_voip_mtc->gap_den;
+	sess->stat.tx.voip_mtc.burst_dur = pj_ntohs(rb_voip_mtc->burst_dur);
+	sess->stat.tx.voip_mtc.gap_dur = pj_ntohs(rb_voip_mtc->gap_dur);
+	sess->stat.tx.voip_mtc.rnd_trip_delay = 
 					pj_ntohs(rb_voip_mtc->rnd_trip_delay);
-	sess->stat.rx.voip_mtc.end_sys_delay = 
+	sess->stat.tx.voip_mtc.end_sys_delay = 
 					pj_ntohs(rb_voip_mtc->end_sys_delay);
-	sess->stat.rx.voip_mtc.signal_lvl = rb_voip_mtc->signal_lvl;
-	sess->stat.rx.voip_mtc.noise_lvl = rb_voip_mtc->noise_lvl;
-	sess->stat.rx.voip_mtc.rerl = rb_voip_mtc->rerl;
-	sess->stat.rx.voip_mtc.gmin = rb_voip_mtc->gmin;
-	sess->stat.rx.voip_mtc.r_factor = rb_voip_mtc->r_factor;
-	sess->stat.rx.voip_mtc.ext_r_factor = rb_voip_mtc->ext_r_factor;
-	sess->stat.rx.voip_mtc.mos_lq = rb_voip_mtc->mos_lq;
-	sess->stat.rx.voip_mtc.mos_cq = rb_voip_mtc->mos_cq;
-	sess->stat.rx.voip_mtc.rx_config = rb_voip_mtc->rx_config;
-	sess->stat.rx.voip_mtc.jb_nom = pj_ntohs(rb_voip_mtc->jb_nom);
-	sess->stat.rx.voip_mtc.jb_max = pj_ntohs(rb_voip_mtc->jb_max);
-	sess->stat.rx.voip_mtc.jb_abs_max = pj_ntohs(rb_voip_mtc->jb_abs_max);
+	/* signal & noise level encoded in two's complement form */
+	sess->stat.tx.voip_mtc.signal_lvl = (rb_voip_mtc->signal_lvl > 127)?
+		    (rb_voip_mtc->signal_lvl - 256) : rb_voip_mtc->signal_lvl;
+	sess->stat.tx.voip_mtc.noise_lvl = (rb_voip_mtc->noise_lvl > 127)?
+		    (rb_voip_mtc->noise_lvl - 256) : rb_voip_mtc->noise_lvl;
+	sess->stat.tx.voip_mtc.rerl = rb_voip_mtc->rerl;
+	sess->stat.tx.voip_mtc.gmin = rb_voip_mtc->gmin;
+	sess->stat.tx.voip_mtc.r_factor = rb_voip_mtc->r_factor;
+	sess->stat.tx.voip_mtc.ext_r_factor = rb_voip_mtc->ext_r_factor;
+	sess->stat.tx.voip_mtc.mos_lq = rb_voip_mtc->mos_lq;
+	sess->stat.tx.voip_mtc.mos_cq = rb_voip_mtc->mos_cq;
+	sess->stat.tx.voip_mtc.rx_config = rb_voip_mtc->rx_config;
+	sess->stat.tx.voip_mtc.jb_nom = pj_ntohs(rb_voip_mtc->jb_nom);
+	sess->stat.tx.voip_mtc.jb_max = pj_ntohs(rb_voip_mtc->jb_max);
+	sess->stat.tx.voip_mtc.jb_abs_max = pj_ntohs(rb_voip_mtc->jb_abs_max);
+
+	pj_gettimeofday(&sess->stat.tx.voip_mtc.update);
     }
 }
 
@@ -664,75 +689,75 @@ void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *sess,
     ext_seq = extend_seq(sess, (pj_uint16_t)seq);
 
     /* Update statistics summary */
-    sess->stat.tx.stat_sum.count++;
+    sess->stat.rx.stat_sum.count++;
 
-    if (sess->stat.tx.stat_sum.begin_seq == 0 || 
-	sess->stat.tx.stat_sum.begin_seq > ext_seq)
+    if (sess->stat.rx.stat_sum.begin_seq == 0 || 
+	sess->stat.rx.stat_sum.begin_seq > ext_seq)
     {
-	sess->stat.tx.stat_sum.begin_seq = ext_seq;
+	sess->stat.rx.stat_sum.begin_seq = ext_seq;
     }
 
-    if (sess->stat.tx.stat_sum.end_seq == 0 || 
-	sess->stat.tx.stat_sum.end_seq < ext_seq)
+    if (sess->stat.rx.stat_sum.end_seq == 0 || 
+	sess->stat.rx.stat_sum.end_seq < ext_seq)
     {
-	sess->stat.tx.stat_sum.end_seq = ext_seq;
+	sess->stat.rx.stat_sum.end_seq = ext_seq;
     }
 
     if (lost >= 0) {
-	sess->stat.tx.stat_sum.l = PJ_TRUE;
+	sess->stat.rx.stat_sum.l = PJ_TRUE;
 	if (lost > 0)
-	    sess->stat.tx.stat_sum.lost++;
+	    sess->stat.rx.stat_sum.lost++;
     }
 
     if (dup >= 0) {
-	sess->stat.tx.stat_sum.d = PJ_TRUE;
+	sess->stat.rx.stat_sum.d = PJ_TRUE;
 	if (dup > 0)
-	    sess->stat.tx.stat_sum.dup++;
+	    sess->stat.rx.stat_sum.dup++;
     }
 
     if (jitter >= 0) {
 	pj_int32_t diff;
 
-	sess->stat.tx.stat_sum.j = PJ_TRUE;
-	if (sess->stat.tx.stat_sum.jitter.min > (pj_uint32_t)jitter)
-	    sess->stat.tx.stat_sum.jitter.min = jitter;
-	if (sess->stat.tx.stat_sum.jitter.max < (pj_uint32_t)jitter)
-	    sess->stat.tx.stat_sum.jitter.max = jitter;
-	sess->stat.tx.stat_sum.jitter.mean = 
-	    (jitter + sess->stat.tx.stat_sum.jitter.mean * 
-	     sess->stat.tx.stat_sum.jitter.count) /
-	    (sess->stat.tx.stat_sum.jitter.count + 1);
+	sess->stat.rx.stat_sum.j = PJ_TRUE;
+	if (sess->stat.rx.stat_sum.jitter.min > (pj_uint32_t)jitter)
+	    sess->stat.rx.stat_sum.jitter.min = jitter;
+	if (sess->stat.rx.stat_sum.jitter.max < (pj_uint32_t)jitter)
+	    sess->stat.rx.stat_sum.jitter.max = jitter;
+	sess->stat.rx.stat_sum.jitter.mean = 
+	    (jitter + sess->stat.rx.stat_sum.jitter.mean * 
+	     sess->stat.rx.stat_sum.jitter.count) /
+	    (sess->stat.rx.stat_sum.jitter.count + 1);
 
-	diff = sess->stat.tx.stat_sum.jitter.mean - jitter;
-	sess->stat.tx.stat_sum.jitter.dev =
-	    (diff * diff + sess->stat.tx.stat_sum.jitter.dev * 
-	     sess->stat.tx.stat_sum.jitter.count) /
-	    (sess->stat.tx.stat_sum.jitter.count + 1);
+	diff = sess->stat.rx.stat_sum.jitter.mean - jitter;
+	sess->stat.rx.stat_sum.jitter.dev =
+	    (diff * diff + sess->stat.rx.stat_sum.jitter.dev * 
+	     sess->stat.rx.stat_sum.jitter.count) /
+	    (sess->stat.rx.stat_sum.jitter.count + 1);
 
-	++sess->stat.tx.stat_sum.jitter.count;
+	++sess->stat.rx.stat_sum.jitter.count;
     }
 
     if (toh >= 0) {
 	pj_int32_t diff;
 
-	sess->stat.tx.stat_sum.t = toh_ipv4? 1 : 2;
+	sess->stat.rx.stat_sum.t = toh_ipv4? 1 : 2;
 
-	if (sess->stat.tx.stat_sum.toh.min > (pj_uint32_t)toh)
-	    sess->stat.tx.stat_sum.toh.min = toh;
-	if (sess->stat.tx.stat_sum.toh.max < (pj_uint32_t)toh)
-	    sess->stat.tx.stat_sum.toh.max = toh;
-	sess->stat.tx.stat_sum.toh.mean = 
-	    (toh + sess->stat.tx.stat_sum.toh.mean * 
-	     sess->stat.tx.stat_sum.toh.count) /
-	    (sess->stat.tx.stat_sum.toh.count + 1);
+	if (sess->stat.rx.stat_sum.toh.min > (pj_uint32_t)toh)
+	    sess->stat.rx.stat_sum.toh.min = toh;
+	if (sess->stat.rx.stat_sum.toh.max < (pj_uint32_t)toh)
+	    sess->stat.rx.stat_sum.toh.max = toh;
+	sess->stat.rx.stat_sum.toh.mean = 
+	    (toh + sess->stat.rx.stat_sum.toh.mean * 
+	     sess->stat.rx.stat_sum.toh.count) /
+	    (sess->stat.rx.stat_sum.toh.count + 1);
 
-	diff = sess->stat.tx.stat_sum.toh.mean - toh;
-	sess->stat.tx.stat_sum.toh.dev =
-	    (diff * diff + sess->stat.tx.stat_sum.toh.dev * 
-	     sess->stat.tx.stat_sum.toh.count) /
-	    (sess->stat.tx.stat_sum.toh.count + 1);
+	diff = sess->stat.rx.stat_sum.toh.mean - toh;
+	sess->stat.rx.stat_sum.toh.dev =
+	    (diff * diff + sess->stat.rx.stat_sum.toh.dev * 
+	     sess->stat.rx.stat_sum.toh.count) /
+	    (sess->stat.rx.stat_sum.toh.count + 1);
 
-	++sess->stat.tx.stat_sum.toh.count;
+	++sess->stat.rx.stat_sum.toh.count;
     }
 
     /* Update burst metrics.
@@ -752,7 +777,7 @@ void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *sess,
 	    sess->voip_mtc_stat.pkt++;
 	}
 	else {
-	    if(sess->voip_mtc_stat.pkt >= sess->stat.tx.voip_mtc.gmin) {
+	    if(sess->voip_mtc_stat.pkt >= sess->stat.rx.voip_mtc.gmin) {
 		/* Gap condition */
 		if(sess->voip_mtc_stat.lost == 1) {
 		    /* Gap -> Gap */
@@ -800,60 +825,60 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_xr_update_info(
 
     switch(info) {
 	case PJMEDIA_RTCP_XR_INFO_SIGNAL_LVL:
-	    sess->stat.tx.voip_mtc.signal_lvl = (pj_uint8_t) v;
+	    sess->stat.rx.voip_mtc.signal_lvl = (pj_int8_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_NOISE_LVL:
-	    sess->stat.tx.voip_mtc.noise_lvl = (pj_uint8_t) v;
+	    sess->stat.rx.voip_mtc.noise_lvl = (pj_int8_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_RERL:
-	    sess->stat.tx.voip_mtc.rerl = (pj_uint8_t) v;
+	    sess->stat.rx.voip_mtc.rerl = (pj_uint8_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_R_FACTOR:
-	    sess->stat.tx.voip_mtc.ext_r_factor = (pj_uint8_t) v;
+	    sess->stat.rx.voip_mtc.ext_r_factor = (pj_uint8_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_MOS_LQ:
-	    sess->stat.tx.voip_mtc.mos_lq = (pj_uint8_t) v;
+	    sess->stat.rx.voip_mtc.mos_lq = (pj_uint8_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_MOS_CQ:
-	    sess->stat.tx.voip_mtc.mos_cq = (pj_uint8_t) v;
+	    sess->stat.rx.voip_mtc.mos_cq = (pj_uint8_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_CONF_PLC:
 	    if (v >= 0 && v <= 3) {
-		sess->stat.tx.voip_mtc.rx_config &= 0x3F;
-		sess->stat.tx.voip_mtc.rx_config |= (pj_uint8_t) (v << 6);
+		sess->stat.rx.voip_mtc.rx_config &= 0x3F;
+		sess->stat.rx.voip_mtc.rx_config |= (pj_uint8_t) (v << 6);
 	    }
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_CONF_JBA:
 	    if (v >= 0 && v <= 3) {
-		sess->stat.tx.voip_mtc.rx_config &= 0xCF;
-		sess->stat.tx.voip_mtc.rx_config |= (pj_uint8_t) (v << 4);
+		sess->stat.rx.voip_mtc.rx_config &= 0xCF;
+		sess->stat.rx.voip_mtc.rx_config |= (pj_uint8_t) (v << 4);
 	    }
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_CONF_JBR:
 	    if (v >= 0 && v <= 15) {
-		sess->stat.tx.voip_mtc.rx_config &= 0xF0;
-		sess->stat.tx.voip_mtc.rx_config |= (pj_uint8_t) v;
+		sess->stat.rx.voip_mtc.rx_config &= 0xF0;
+		sess->stat.rx.voip_mtc.rx_config |= (pj_uint8_t) v;
 	    }
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_JB_NOM:
-	    sess->stat.tx.voip_mtc.jb_nom = (pj_uint16_t) v;
+	    sess->stat.rx.voip_mtc.jb_nom = (pj_uint16_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_JB_MAX:
-	    sess->stat.tx.voip_mtc.jb_max = (pj_uint16_t) v;
+	    sess->stat.rx.voip_mtc.jb_max = (pj_uint16_t) v;
 	    break;
 
 	case PJMEDIA_RTCP_XR_INFO_JB_ABS_MAX:
-	    sess->stat.tx.voip_mtc.jb_abs_max = (pj_uint16_t) v;
+	    sess->stat.rx.voip_mtc.jb_abs_max = (pj_uint16_t) v;
 	    break;
 
 	default:

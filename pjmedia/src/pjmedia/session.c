@@ -166,6 +166,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     pj_bzero(si, sizeof(*si));
 
+#if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
+    /* Set default RTCP XR enabled/disabled */
+    si->rtcp_xr_enabled = PJ_TRUE;
+#endif
+
     /* Media type: */
 
     if (pj_stricmp(&local_m->desc.media, &ID_AUDIO) == 0) {

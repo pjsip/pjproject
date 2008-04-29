@@ -229,8 +229,10 @@ typedef struct pjmedia_rtcp_xr_pkt
 typedef struct pjmedia_rtcp_xr_stream_stat
 {
     struct {
-	pj_uint32_t	    begin_seq;
-	pj_uint32_t	    end_seq;
+	pj_time_val	    update;	/**< Time of last update.	    */
+
+	pj_uint32_t	    begin_seq;	/**< Begin # seq of this interval.  */
+	pj_uint32_t	    end_seq;	/**< End # seq of this interval.    */
 	unsigned	    count;	/**< Number of packets.		    */
 
 	/**
@@ -263,6 +265,8 @@ typedef struct pjmedia_rtcp_xr_stream_stat
     } stat_sum;
 
     struct {
+	pj_time_val	    update;	    /**< Time of last update.	    */
+
 	pj_uint8_t	    loss_rate;	    /**< Packet loss rate	    */
 	pj_uint8_t	    discard_rate;   /**< Packet discarded rate	    */
 	pj_uint8_t	    burst_den;	    /**< Burst density		    */
@@ -271,8 +275,8 @@ typedef struct pjmedia_rtcp_xr_stream_stat
 	pj_uint16_t	    gap_dur;	    /**< Gap duration		    */
 	pj_uint16_t	    rnd_trip_delay; /**< Round trip delay	    */
 	pj_uint16_t	    end_sys_delay;  /**< End system delay	    */
-	pj_uint8_t	    signal_lvl;	    /**< Signal level		    */
-	pj_uint8_t	    noise_lvl;	    /**< Noise level		    */
+	pj_int8_t	    signal_lvl;	    /**< Signal level		    */
+	pj_int8_t	    noise_lvl;	    /**< Noise level		    */
 	pj_uint8_t	    rerl;	    /**< Residual Echo Return Loss  */
 	pj_uint8_t	    gmin;	    /**< The gap threshold	    */
 	pj_uint8_t	    r_factor;	    /**< Voice quality metric carried

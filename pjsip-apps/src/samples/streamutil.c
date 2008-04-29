@@ -168,6 +168,10 @@ static pj_status_t create_stream( pj_pool_t *pool,
     info.tx_pt = codec_info->pt;
     info.ssrc = pj_rand();
     
+#if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
+    /* Set default RTCP XR enabled/disabled */
+    info.rtcp_xr_enabled = PJ_TRUE;
+#endif
 
     /* Copy remote address */
     pj_memcpy(&info.rem_addr, rem_addr, sizeof(pj_sockaddr_in));
@@ -695,6 +699,22 @@ static const char *good_number(char *buf, pj_int32_t val)
 }
 
 
+#define SAMPLES_TO_USEC(usec, samples, clock_rate) \
+    do { \
+	if (samples <= 4294) \
+	    usec = samples * 1000000 / clock_rate; \
+	else { \
+	    usec = samples * 1000 / clock_rate; \
+	    usec *= 1000; \
+	} \
+    } while(0)
+
+#define PRINT_VOIP_MTC_VAL(s, v) \
+    if (v == 127) \
+	sprintf(s, "(na)"); \
+    else \
+	sprintf(s, "%d", v)
+
 
 /*
  * Print stream statistics
@@ -826,6 +846,339 @@ static void print_stream_stat(pjmedia_stream *stream)
 	   stat.rtt.last / 1000.0,
 	   ""
 	   );
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /* RTCP XR Reports */
+    do {
+	char loss[16], dup[16];
+	char jitter[80];
+	char toh[80];
+	char plc[16], jba[16], jbr[16];
+	char signal_lvl[16], noise_lvl[16], rerl[16];
+	char r_factor[16], ext_r_factor[16], mos_lq[16], mos_cq[16];
+	pjmedia_rtcp_xr_stat xr_stat;
+
+	if (pjmedia_stream_get_stat_xr(stream, &xr_stat) != PJ_SUCCESS)
+	    break;
+
+	puts("\nExtended reports:");
+
+	/* Statistics Summary */
+	puts(" Statistics Summary");
+
+	if (xr_stat.rx.stat_sum.l)
+	    sprintf(loss, "%d", xr_stat.rx.stat_sum.lost);
+	else
+	    sprintf(loss, "(na)");
+
+	if (xr_stat.rx.stat_sum.d)
+	    sprintf(dup, "%d", xr_stat.rx.stat_sum.dup);
+	else
+	    sprintf(dup, "(na)");
+
+	if (xr_stat.rx.stat_sum.j) {
+	    unsigned jmin, jmax, jmean, jdev;
+
+	    SAMPLES_TO_USEC(jmin, xr_stat.rx.stat_sum.jitter.min, 
+			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jmax, xr_stat.rx.stat_sum.jitter.max, 
+			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean, 
+			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jdev, xr_stat.rx.stat_sum.jitter.dev, 
+			    port->info.clock_rate);
+	    sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+		    jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
+	} else
+	    sprintf(jitter, "(report not available)");
+
+	if (xr_stat.rx.stat_sum.t) {
+	    sprintf(toh, "%11d %11d %11d %11d", 
+		    xr_stat.rx.stat_sum.toh.min,
+		    xr_stat.rx.stat_sum.toh.mean,
+		    xr_stat.rx.stat_sum.toh.max,
+		    xr_stat.rx.stat_sum.toh.dev);
+	} else
+	    sprintf(toh, "(report not available)");
+
+	if (xr_stat.rx.stat_sum.update.sec == 0)
+	    strcpy(last_update, "never");
+	else {
+	    pj_gettimeofday(&now);
+	    PJ_TIME_VAL_SUB(now, xr_stat.rx.stat_sum.update);
+	    sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+		    now.sec / 3600,
+		    (now.sec % 3600) / 60,
+		    now.sec % 60,
+		    now.msec);
+	}
+
+	printf(" RX last update: %s\n"
+	       "    begin seq=%d, end seq=%d%s\n"
+	       "    pkt loss=%s, dup=%s%s\n"
+	       "          (msec)    min     avg     max     dev\n"
+	       "    jitter     : %s\n"
+	       "    toh        : %s\n",
+	       last_update,
+	       xr_stat.rx.stat_sum.begin_seq, xr_stat.rx.stat_sum.end_seq,
+	       "",
+	       loss, dup,
+	       "",
+	       jitter,
+	       toh
+	       );
+
+	if (xr_stat.tx.stat_sum.l)
+	    sprintf(loss, "%d", xr_stat.tx.stat_sum.lost);
+	else
+	    sprintf(loss, "(na)");
+
+	if (xr_stat.tx.stat_sum.d)
+	    sprintf(dup, "%d", xr_stat.tx.stat_sum.dup);
+	else
+	    sprintf(dup, "(na)");
+
+	if (xr_stat.tx.stat_sum.j) {
+	    unsigned jmin, jmax, jmean, jdev;
+
+	    SAMPLES_TO_USEC(jmin, xr_stat.tx.stat_sum.jitter.min, 
+			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jmax, xr_stat.tx.stat_sum.jitter.max, 
+			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean, 
+			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jdev, xr_stat.tx.stat_sum.jitter.dev, 
+			    port->info.clock_rate);
+	    sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+		    jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
+	} else
+	    sprintf(jitter, "(report not available)");
+
+	if (xr_stat.tx.stat_sum.t) {
+	    sprintf(toh, "%11d %11d %11d %11d", 
+		    xr_stat.tx.stat_sum.toh.min,
+		    xr_stat.tx.stat_sum.toh.mean,
+		    xr_stat.tx.stat_sum.toh.max,
+		    xr_stat.tx.stat_sum.toh.dev);
+	} else
+	    sprintf(toh,    "(report not available)");
+
+	if (xr_stat.tx.stat_sum.update.sec == 0)
+	    strcpy(last_update, "never");
+	else {
+	    pj_gettimeofday(&now);
+	    PJ_TIME_VAL_SUB(now, xr_stat.tx.stat_sum.update);
+	    sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+		    now.sec / 3600,
+		    (now.sec % 3600) / 60,
+		    now.sec % 60,
+		    now.msec);
+	}
+
+	printf(" TX last update: %s\n"
+	       "    begin seq=%d, end seq=%d%s\n"
+	       "    pkt loss=%s, dup=%s%s\n"
+	       "          (msec)    min     avg     max     dev\n"
+	       "    jitter     : %s\n"
+	       "    toh        : %s\n",
+	       last_update,
+	       xr_stat.tx.stat_sum.begin_seq, xr_stat.tx.stat_sum.end_seq,
+	       "",
+	       loss, dup,
+	       "",
+	       jitter,
+	       toh
+	       );
+
+	/* VoIP Metrics */
+	puts(" VoIP Metrics");
+
+	PRINT_VOIP_MTC_VAL(signal_lvl, xr_stat.rx.voip_mtc.signal_lvl);
+	PRINT_VOIP_MTC_VAL(noise_lvl, xr_stat.rx.voip_mtc.noise_lvl);
+	PRINT_VOIP_MTC_VAL(rerl, xr_stat.rx.voip_mtc.rerl);
+	PRINT_VOIP_MTC_VAL(r_factor, xr_stat.rx.voip_mtc.r_factor);
+	PRINT_VOIP_MTC_VAL(ext_r_factor, xr_stat.rx.voip_mtc.ext_r_factor);
+	PRINT_VOIP_MTC_VAL(mos_lq, xr_stat.rx.voip_mtc.mos_lq);
+	PRINT_VOIP_MTC_VAL(mos_cq, xr_stat.rx.voip_mtc.mos_cq);
+
+	switch ((xr_stat.rx.voip_mtc.rx_config>>6) & 3) {
+	    case PJMEDIA_RTCP_XR_PLC_DIS:
+		sprintf(plc, "DISABLED");
+		break;
+	    case PJMEDIA_RTCP_XR_PLC_ENH:
+		sprintf(plc, "ENHANCED");
+		break;
+	    case PJMEDIA_RTCP_XR_PLC_STD:
+		sprintf(plc, "STANDARD");
+		break;
+	    case PJMEDIA_RTCP_XR_PLC_UNK:
+	    default:
+		sprintf(plc, "UNKNOWN");
+		break;
+	}
+
+	switch ((xr_stat.rx.voip_mtc.rx_config>>4) & 3) {
+	    case PJMEDIA_RTCP_XR_JB_FIXED:
+		sprintf(jba, "FIXED");
+		break;
+	    case PJMEDIA_RTCP_XR_JB_ADAPTIVE:
+		sprintf(jba, "ADAPTIVE");
+		break;
+	    default:
+		sprintf(jba, "UNKNOWN");
+		break;
+	}
+
+	sprintf(jbr, "%d", xr_stat.rx.voip_mtc.rx_config & 0x0F);
+
+	if (xr_stat.rx.voip_mtc.update.sec == 0)
+	    strcpy(last_update, "never");
+	else {
+	    pj_gettimeofday(&now);
+	    PJ_TIME_VAL_SUB(now, xr_stat.rx.voip_mtc.update);
+	    sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+		    now.sec / 3600,
+		    (now.sec % 3600) / 60,
+		    now.sec % 60,
+		    now.msec);
+	}
+
+	printf(" RX last update: %s\n"
+	       "    packets    : loss rate=%d (%.2f%%), discard rate=%d (%.2f%%)\n"
+	       "    burst      : density=%d (%.2f%%), duration=%d%s\n"
+	       "    gap        : density=%d (%.2f%%), duration=%d%s\n"
+	       "    delay      : round trip=%d%s, end system=%d%s\n"
+	       "    level      : signal=%s%s, noise=%s%s, RERL=%s%s\n"
+	       "    quality    : R factor=%s, ext R factor=%s\n"
+	       "                 MOS LQ=%s, MOS CQ=%s\n"
+	       "    config     : PLC=%s, JB=%s, JB rate=%s, Gmin=%d\n"
+	       "    JB delay   : cur=%d%s, max=%d%s, abs max=%d%s\n",
+	       last_update,
+	       /* pakcets */
+	       xr_stat.rx.voip_mtc.loss_rate, xr_stat.rx.voip_mtc.loss_rate*100.0/256,
+	       xr_stat.rx.voip_mtc.discard_rate, xr_stat.rx.voip_mtc.discard_rate*100.0/256,
+	       /* burst */
+	       xr_stat.rx.voip_mtc.burst_den, xr_stat.rx.voip_mtc.burst_den*100.0/256,
+	       xr_stat.rx.voip_mtc.burst_dur, "ms",
+	       /* gap */
+	       xr_stat.rx.voip_mtc.gap_den, xr_stat.rx.voip_mtc.gap_den*100.0/256,
+	       xr_stat.rx.voip_mtc.gap_dur, "ms",
+	       /* delay */
+	       xr_stat.rx.voip_mtc.rnd_trip_delay, "ms",
+	       xr_stat.rx.voip_mtc.end_sys_delay, "ms",
+	       /* level */
+	       signal_lvl, "dB",
+	       noise_lvl, "dB",
+	       rerl, "",
+	       /* quality */
+	       r_factor, ext_r_factor, mos_lq, mos_cq,
+	       /* config */
+	       plc, jba, jbr, xr_stat.rx.voip_mtc.gmin,
+	       /* JB delay */
+	       xr_stat.rx.voip_mtc.jb_nom, "ms",
+	       xr_stat.rx.voip_mtc.jb_max, "ms",
+	       xr_stat.rx.voip_mtc.jb_abs_max, "ms"
+	       );
+
+	PRINT_VOIP_MTC_VAL(signal_lvl, xr_stat.tx.voip_mtc.signal_lvl);
+	PRINT_VOIP_MTC_VAL(noise_lvl, xr_stat.tx.voip_mtc.noise_lvl);
+	PRINT_VOIP_MTC_VAL(rerl, xr_stat.tx.voip_mtc.rerl);
+	PRINT_VOIP_MTC_VAL(r_factor, xr_stat.tx.voip_mtc.r_factor);
+	PRINT_VOIP_MTC_VAL(ext_r_factor, xr_stat.tx.voip_mtc.ext_r_factor);
+	PRINT_VOIP_MTC_VAL(mos_lq, xr_stat.tx.voip_mtc.mos_lq);
+	PRINT_VOIP_MTC_VAL(mos_cq, xr_stat.tx.voip_mtc.mos_cq);
+
+	switch ((xr_stat.tx.voip_mtc.rx_config>>6) & 3) {
+	    case PJMEDIA_RTCP_XR_PLC_DIS:
+		sprintf(plc, "DISABLED");
+		break;
+	    case PJMEDIA_RTCP_XR_PLC_ENH:
+		sprintf(plc, "ENHANCED");
+		break;
+	    case PJMEDIA_RTCP_XR_PLC_STD:
+		sprintf(plc, "STANDARD");
+		break;
+	    case PJMEDIA_RTCP_XR_PLC_UNK:
+	    default:
+		sprintf(plc, "unknown");
+		break;
+	}
+
+	switch ((xr_stat.tx.voip_mtc.rx_config>>4) & 3) {
+	    case PJMEDIA_RTCP_XR_JB_FIXED:
+		sprintf(jba, "FIXED");
+		break;
+	    case PJMEDIA_RTCP_XR_JB_ADAPTIVE:
+		sprintf(jba, "ADAPTIVE");
+		break;
+	    default:
+		sprintf(jba, "unknown");
+		break;
+	}
+
+	sprintf(jbr, "%d", xr_stat.tx.voip_mtc.rx_config & 0x0F);
+
+	if (xr_stat.tx.voip_mtc.update.sec == 0)
+	    strcpy(last_update, "never");
+	else {
+	    pj_gettimeofday(&now);
+	    PJ_TIME_VAL_SUB(now, xr_stat.tx.voip_mtc.update);
+	    sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+		    now.sec / 3600,
+		    (now.sec % 3600) / 60,
+		    now.sec % 60,
+		    now.msec);
+	}
+
+	printf(" TX last update: %s\n"
+	       "    packets    : loss rate=%d (%.2f%%), discard rate=%d (%.2f%%)\n"
+	       "    burst      : density=%d (%.2f%%), duration=%d%s\n"
+	       "    gap        : density=%d (%.2f%%), duration=%d%s\n"
+	       "    delay      : round trip=%d%s, end system=%d%s\n"
+	       "    level      : signal=%s%s, noise=%s%s, RERL=%s%s\n"
+	       "    quality    : R factor=%s, ext R factor=%s\n"
+	       "                 MOS LQ=%s, MOS CQ=%s\n"
+	       "    config     : PLC=%s, JB=%s, JB rate=%s, Gmin=%d\n"
+	       "    JB delay   : cur=%d%s, max=%d%s, abs max=%d%s\n",
+	       last_update,
+	       /* pakcets */
+	       xr_stat.tx.voip_mtc.loss_rate, xr_stat.tx.voip_mtc.loss_rate*100.0/256,
+	       xr_stat.tx.voip_mtc.discard_rate, xr_stat.tx.voip_mtc.discard_rate*100.0/256,
+	       /* burst */
+	       xr_stat.tx.voip_mtc.burst_den, xr_stat.tx.voip_mtc.burst_den*100.0/256,
+	       xr_stat.tx.voip_mtc.burst_dur, "ms",
+	       /* gap */
+	       xr_stat.tx.voip_mtc.gap_den, xr_stat.tx.voip_mtc.gap_den*100.0/256,
+	       xr_stat.tx.voip_mtc.gap_dur, "ms",
+	       /* delay */
+	       xr_stat.tx.voip_mtc.rnd_trip_delay, "ms",
+	       xr_stat.tx.voip_mtc.end_sys_delay, "ms",
+	       /* level */
+	       signal_lvl, "dB",
+	       noise_lvl, "dB",
+	       rerl, "",
+	       /* quality */
+	       r_factor, ext_r_factor, mos_lq, mos_cq,
+	       /* config */
+	       plc, jba, jbr, xr_stat.tx.voip_mtc.gmin,
+	       /* JB delay */
+	       xr_stat.tx.voip_mtc.jb_nom, "ms",
+	       xr_stat.tx.voip_mtc.jb_max, "ms",
+	       xr_stat.tx.voip_mtc.jb_abs_max, "ms"
+	       );
+
+
+	/* RTT delay, need this? */
+	printf("          (msec)    min     avg     max     last\n");
+	printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f%s\n", 
+	       xr_stat.rtt.min / 1000.0,
+	       xr_stat.rtt.avg / 1000.0,
+	       xr_stat.rtt.max / 1000.0,
+	       xr_stat.rtt.last / 1000.0,
+	       ""
+	       );
+    } while (0);
+#endif /* PJMEDIA_HAS_RTCP_XR */
 
 }
 

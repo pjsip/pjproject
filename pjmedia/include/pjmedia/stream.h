@@ -95,6 +95,10 @@ struct pjmedia_stream_info
     pj_sockaddr		rem_rtcp;   /**< Optional remote RTCP address. If
 					 sin_family is zero, the RTP address
 					 will be calculated from RTP.	    */
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    pj_bool_t		rtcp_xr_enabled;
+				    /**< Specify whether RTCP XR is enabled.*/
+#endif
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
     pjmedia_codec_param *param;	    /**< Optional codec param.		    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
@@ -205,6 +209,19 @@ PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
  */
 PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
 					      pjmedia_rtcp_stat *stat);
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+/**
+ * Get the stream extended report statistics (RTCP XR).
+ *
+ * @param stream	The media stream.
+ * @param stat		Media stream extended report statistics.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
+					         pjmedia_rtcp_xr_stat *stat);
+#endif
 
 /**
  * Pause the individual channel in the stream.
