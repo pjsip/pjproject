@@ -145,6 +145,11 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size);
+static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
+				       const pj_sockaddr_t *addr,
+				       unsigned addr_len,
+				       const void *pkt,
+				       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
 				       unsigned options,
@@ -171,6 +176,7 @@ static pjmedia_transport_op transport_srtp_op =
     &transport_detach,
     &transport_send_rtp,
     &transport_send_rtcp,
+    &transport_send_rtcp2,
     &transport_media_create,
     &transport_media_start,
     &transport_media_stop,
@@ -657,13 +663,24 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size)
 {
+    return transport_send_rtcp2(tp, NULL, 0, pkt, size);
+}
+
+static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
+				        const pj_sockaddr_t *addr,
+				        unsigned addr_len,
+				        const void *pkt,
+				        pj_size_t size)
+{
     pj_status_t status;
     transport_srtp *srtp = (transport_srtp*) tp;
     int len = size;
     err_status_t err;
 
-    if (srtp->bypass_srtp)
-	return pjmedia_transport_send_rtcp(srtp->real_tp, pkt, size);
+    if (srtp->bypass_srtp) {
+	return pjmedia_transport_send_rtcp2(srtp->real_tp, addr, addr_len, 
+	                                    pkt, size);
+    }
 
     if (!srtp->session_inited)
 	return PJ_SUCCESS;
@@ -677,8 +694,8 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
     err = srtp_protect_rtcp(srtp->srtp_tx_ctx, srtp->tx_buffer, &len);
     
     if (err == err_status_ok) {
-	status = pjmedia_transport_send_rtcp(srtp->real_tp, srtp->tx_buffer, 
-					     len);
+	status = pjmedia_transport_send_rtcp2(srtp->real_tp, addr, addr_len,
+					      srtp->tx_buffer, len);
     } else {
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
     }
@@ -687,6 +704,7 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 
     return status;
 }
+
 
 static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 					   pjmedia_dir dir,

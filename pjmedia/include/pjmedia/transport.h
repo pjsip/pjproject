@@ -306,6 +306,20 @@ struct pjmedia_transport_op
 			     pj_size_t size);
 
     /**
+     * This function is called by the stream to send RTCP packet using the
+     * transport with destination address other than default specified in
+     * #pjmedia_transport_attach().
+     *
+     * Application should call #pjmedia_transport_send_rtcp2() instead of 
+     * calling this function directly.
+     */
+    pj_status_t (*send_rtcp2)(pjmedia_transport *tp,
+			      const pj_sockaddr_t *addr,
+			      unsigned addr_len,
+			      const void *pkt,
+			      pj_size_t size);
+
+    /**
      * This function is called by application to generate the SDP parts
      * related to transport type, e.g: ICE, SRTP.
      *
@@ -583,6 +597,31 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp(pjmedia_transport *tp,
 						  pj_size_t size)
 {
     return (*tp->op->send_rtcp)(tp, pkt, size);
+}
+
+
+/**
+ * Send RTCP packet with the specified media transport. This is just a simple
+ * wrapper which calls <tt>send_rtcp2()</tt> member of the transport. The 
+ * RTCP packet will be delivered to the destination address specified in
+ * param addr, if addr is NULL, RTCP packet will be delivered to destination 
+ * address specified in #pjmedia_transport_attach() function.
+ *
+ * @param tp	    The media transport.
+ * @param addr	    The destination address.
+ * @param addr_len  Length of destination address.
+ * @param pkt	    The packet to send.
+ * @param size	    Size of the packet.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
+						    const pj_sockaddr_t *addr,
+						    unsigned addr_len,
+						    const void *pkt,
+						    pj_size_t size)
+{
+    return (*tp->op->send_rtcp2)(tp, addr, addr_len, pkt, size);
 }
 
 

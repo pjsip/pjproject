@@ -121,6 +121,11 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size);
+static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
+				       const pj_sockaddr_t *addr,
+				       unsigned addr_len,
+				       const void *pkt,
+				       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
 				       unsigned options,
@@ -146,6 +151,7 @@ static pjmedia_transport_op transport_udp_op =
     &transport_detach,
     &transport_send_rtp,
     &transport_send_rtcp,
+    &transport_send_rtcp2,
     &transport_media_create,
     &transport_media_start,
     &transport_media_stop,
@@ -748,16 +754,31 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size)
 {
+    return transport_send_rtcp2(tp, NULL, 0, pkt, size);
+}
+
+
+/* Called by application to send RTCP packet */
+static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
+					const pj_sockaddr_t *addr,
+					unsigned addr_len,
+				        const void *pkt,
+				        pj_size_t size)
+{
     struct transport_udp *udp = (struct transport_udp*)tp;
     pj_ssize_t sent;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(udp->attached, PJ_EINVALIDOP);
 
+    if (addr == NULL) {
+	addr = &udp->rem_rtcp_addr;
+	addr_len = udp->addr_len;
+    }
+
     sent = size;
     status = pj_ioqueue_sendto( udp->rtcp_key, &udp->rtcp_write_op,
-				pkt, &sent, 0,
-				&udp->rem_rtcp_addr, udp->addr_len);
+				pkt, &sent, 0, addr, addr_len);
 
     if (status==PJ_SUCCESS || status==PJ_EPENDING)
 	return PJ_SUCCESS;

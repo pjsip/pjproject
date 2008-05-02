@@ -75,6 +75,11 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size);
+static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
+				       const pj_sockaddr_t *addr,
+				       unsigned addr_len,
+				       const void *pkt,
+				       pj_size_t size);
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
 				       unsigned options,
@@ -110,6 +115,7 @@ static pjmedia_transport_op transport_ice_op =
     &transport_detach,
     &transport_send_rtp,
     &transport_send_rtcp,
+    &transport_send_rtcp2,
     &transport_media_create,
     &transport_media_start,
     &transport_media_stop,
@@ -770,11 +776,23 @@ static pj_status_t transport_send_rtcp(pjmedia_transport *tp,
 				       const void *pkt,
 				       pj_size_t size)
 {
+    return transport_send_rtcp2(tp, NULL, 0, pkt, size);
+}
+
+static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
+				        const pj_sockaddr_t *addr,
+				        unsigned addr_len,
+				        const void *pkt,
+				        pj_size_t size)
+{
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
     if (tp_ice->ice_st->comp_cnt > 1) {
-	return pj_ice_strans_sendto(tp_ice->ice_st, 2, 
-				    pkt, size, &tp_ice->remote_rtcp,
-				    sizeof(pj_sockaddr_in));
+	if (addr == NULL) {
+	    addr = &tp_ice->remote_rtcp;
+	    addr_len = pj_sockaddr_get_len(addr);
+	}
+	return pj_ice_strans_sendto(tp_ice->ice_st, 2, pkt, size, 
+				    addr, addr_len);
     } else {
 	return PJ_SUCCESS;
     }
