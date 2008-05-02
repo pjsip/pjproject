@@ -157,6 +157,16 @@ struct pjmedia_stream
 						 checking */
 #endif
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    pj_uint32_t		     rtcp_xr_last_tx;  /**< RTCP XR tx time 
+					            in timestamp.           */
+    pj_uint32_t		     rtcp_xr_interval; /**< Interval, in timestamp. */
+    pj_sockaddr		     rtcp_xr_dest;     /**< Additional remote RTCP XR 
+						    dest. If sin_family is 
+						    zero, it will be ignored*/
+    unsigned		     rtcp_xr_dest_len; /**< Length of RTCP XR dest
+					            address		    */
+#endif
 };
 
 
@@ -467,18 +477,29 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);
 
-	(*stream->transport->op->send_rtcp)(stream->transport, 
-					    rtcp_pkt, len);
+	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+
+	stream->rtcp_last_tx = timestamp;
+    }
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-	/* Temporarily always send RTCP XR after RTCP */
-	if (stream->rtcp.xr_enabled)
+    if (stream->rtcp.xr_enabled) {
+
+	if (stream->rtcp_xr_last_tx == 0) {
+    	
+	    stream->rtcp_xr_last_tx = timestamp;
+
+	} else if (timestamp - stream->rtcp_xr_last_tx >= 
+		   stream->rtcp_xr_interval)
 	{
 	    int i;
 	    pjmedia_jb_state jb_state;
+	    void *rtcp_pkt;
+	    int len;
 
+	    /* Update RTCP XR with current JB states */
 	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
-	    
+    	    
 	    i = jb_state.size * stream->codec_param.info.frm_ptime;
 	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
 					PJMEDIA_RTCP_XR_INFO_JB_NOM,
@@ -489,16 +510,26 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 					PJMEDIA_RTCP_XR_INFO_JB_MAX,
 					i);
 
+	    /* Build RTCP XR packet */
 	    pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
 				       &rtcp_pkt, &len);
 
-	    (*stream->transport->op->send_rtcp)(stream->transport, 
-						rtcp_pkt, len);
-	}
-#endif
+	    /* Send the RTCP XR to remote address */
+	    pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
 
-	stream->rtcp_last_tx = timestamp;
+	    /* Send the RTCP XR to third-party destination if specified */
+	    if (stream->rtcp_xr_dest_len) {
+		pjmedia_transport_send_rtcp2(stream->transport, 
+					     &stream->rtcp_xr_dest,
+					     stream->rtcp_xr_dest_len, 
+					     rtcp_pkt, len);
+	    }
+
+	    /* Update last tx RTCP XR */
+	    stream->rtcp_xr_last_tx = timestamp;
+	}
     }
+#endif
 }
 
 
@@ -767,11 +798,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     stream->is_streaming = PJ_TRUE;
 
     /* Send the RTP packet to the transport. */
-    (*stream->transport->op->send_rtp)(stream->transport,
-				       channel->out_pkt, 
-				       frame_out.size + 
-					    sizeof(pjmedia_rtp_hdr));
-
+    pjmedia_transport_send_rtp(stream->transport, channel->out_pkt, 
+			       frame_out.size + sizeof(pjmedia_rtp_hdr));
 
     /* Update stat */
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
@@ -1564,6 +1592,21 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 	pjmedia_rtcp_enable_xr(&stream->rtcp, PJ_TRUE);
 
+	/* Set RTCP XR TX interval */
+	if (info->rtcp_xr_interval != 0)
+	    stream->rtcp_xr_interval = info->rtcp_xr_interval;
+	else
+	    stream->rtcp_xr_interval = (PJMEDIA_RTCP_INTERVAL + 
+				       (pj_rand() % 8000)) * 
+				       info->fmt.clock_rate / 1000;
+
+	/* Additional third-party RTCP XR destination */
+	if (info->rtcp_xr_dest.addr.sa_family != 0) {
+	    stream->rtcp_xr_dest_len = pj_sockaddr_get_len(&info->rtcp_xr_dest);
+	    pj_memcpy(&stream->rtcp_xr_dest, &info->rtcp_xr_dest,
+		      stream->rtcp_xr_dest_len);
+	}
+
 	/* jitter buffer adaptive info */
 	i = PJMEDIA_RTCP_XR_JB_ADAPTIVE;
 	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
@@ -1619,6 +1662,43 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    /* Send RTCP XR on stream destroy */
+    if (stream->rtcp.xr_enabled) {
+	int i;
+	pjmedia_jb_state jb_state;
+	void *rtcp_pkt;
+	int len;
+
+	/* Update RTCP XR with current JB states */
+	pjmedia_jbuf_get_state(stream->jb, &jb_state);
+    	    
+	i = jb_state.size * stream->codec_param.info.frm_ptime;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_JB_NOM,
+				    i);
+
+	i = jb_state.max_size* stream->codec_param.info.frm_ptime;
+	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+				    PJMEDIA_RTCP_XR_INFO_JB_MAX,
+				    i);
+
+	/* Build RTCP XR packet */
+	pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
+				   &rtcp_pkt, &len);
+
+	/* Send the RTCP XR to remote address */
+	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+	
+	/* Send the RTCP XR to third-party destination if specified */
+	if (stream->rtcp_xr_dest_len) {
+	    pjmedia_transport_send_rtcp2(stream->transport, 
+					 &stream->rtcp_xr_dest,
+					 stream->rtcp_xr_dest_len, 
+					 rtcp_pkt, len);
+	}
+    }
+#endif
 
     /* Detach from transport 
      * MUST NOT hold stream mutex while detaching from transport, as

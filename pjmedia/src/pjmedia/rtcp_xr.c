@@ -269,6 +269,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	pj_uint32_t c32;
 	pj_uint32_t c33;
 	pj_uint32_t ctotal, p32, p23, m;
+	unsigned est_extra_delay;
 
 	r = (pjmedia_rtcp_xr_rb_voip_mtc*) &sess->pkt.buf[size];
 	pj_bzero(r, sizeof(pjmedia_rtcp_xr_rb_voip_mtc));
@@ -341,16 +342,26 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	    sess->stat.rx.voip_mtc.rnd_trip_delay = (pj_uint16_t)
 				    (sess->rtcp_session->stat.rtt.last / 1000);
 	
-	/* End system delay estimation = RTT/2 + current jitter buffer size +
-	 *				 EXTRA
+	/* End system delay = RTT/2 + current jitter buffer size + 
+	 *                    EXTRA (estimated extra delay)
 	 * EXTRA will cover additional delay introduced by other components of
 	 * audio engine, e.g: sound device, codec, AEC, PLC, WSOLA.
 	 * Since it is difficult to get the exact value of EXTRA, estimation
-	 * is taken to be totally around 50 ms.
+	 * is taken to be totally around 30ms + sound device latency.
 	 */
+	est_extra_delay = 30 + 
+#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
+			  PJMEDIA_PASOUND_MAX_LATENCY
+#elif PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_NULL_SOUND
+			  0
+#else
+			  (PJMEDIA_SOUND_BUFFER_COUNT * 15)
+#endif
+			  ;
 	sess->stat.rx.voip_mtc.end_sys_delay = (pj_uint16_t)
-				(sess->stat.rx.voip_mtc.rnd_trip_delay / 2 +
-				 sess->stat.rx.voip_mtc.jb_nom + 50);
+				 (sess->stat.rx.voip_mtc.rnd_trip_delay / 2 +
+				 sess->stat.rx.voip_mtc.jb_nom + 
+				 est_extra_delay);
 
 	/* Generate block contents */
 	r->ssrc		    = pj_htonl(sess->rtcp_session->peer_ssrc);

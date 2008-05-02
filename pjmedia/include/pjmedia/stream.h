@@ -98,6 +98,12 @@ struct pjmedia_stream_info
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
     pj_bool_t		rtcp_xr_enabled;
 				    /**< Specify whether RTCP XR is enabled.*/
+    pj_uint32_t		rtcp_xr_interval; /**< RTCP XR interval.            */
+    pj_sockaddr		rtcp_xr_dest;/**<Additional remote RTCP XR address.
+				         This is useful for third-party (e.g:
+					 network monitor) to monitor the 
+					 stream. If sin_family is zero, 
+					 this will be ignored.		    */
 #endif
     pjmedia_codec_info	fmt;	    /**< Incoming codec format info.	    */
     pjmedia_codec_param *param;	    /**< Optional codec param.		    */
