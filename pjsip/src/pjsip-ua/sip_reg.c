@@ -769,6 +769,19 @@ static void tsx_callback(void *token, pjsip_event *event)
 		}
 	    }
 
+	    /* If regc.check_contact is disabled, and no Expires header 
+	     * has been found, but the server does return one single
+	     * Contact header, assumes that the server is broken/unable to
+	     * return the correct Contact. In this case, get the expiration
+	     * from the single Contact header in the response.
+	     */
+	    if (expiration==NOEXP && !pjsip_cfg()->regc.check_contact && 
+		contact_cnt==1) 
+	    {
+		if (contact[0]->expires >= 0)
+		    expiration = contact[0]->expires;
+	    }
+
 	    /* When the response doesn't contain our Contact header, that
 	     * means we have been unregistered.
 	     */
