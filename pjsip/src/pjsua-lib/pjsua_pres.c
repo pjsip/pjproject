@@ -885,7 +885,10 @@ void pjsua_pres_delete_acc(int acc_id)
 	
 	pjsip_pres_status pres_status;
 	pj_str_t reason = { "noresource", 10 };
+	pjsua_srv_pres *next;
 	pjsip_tx_data *tdata;
+
+	next = uapres->next;
 
 	pjsip_pres_get_status(uapres->sub, &pres_status);
 	
@@ -899,7 +902,7 @@ void pjsua_pres_delete_acc(int acc_id)
 	    pjsip_pres_send_request(uapres->sub, tdata);
 	}
 
-	uapres = uapres->next;
+	uapres = next;
     }
 
     /* Clear server presence subscription list because account might be reused
