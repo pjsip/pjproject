@@ -1113,6 +1113,9 @@ case $basic_machine in
 	pmac | pmac-mpw)
 		basic_machine=powerpc-apple
 		;;
+	nios2*)
+		basic_machine=nios2-altera
+		;;
 	*-unknown)
 		# Make sure to match an already-canonicalized machine name.
 		;;
