@@ -224,6 +224,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 				    pjmedia_sdp_neg *neg,
 				    const pjmedia_sdp_session *local)
 {
+    pjmedia_sdp_session *new_offer;
+    pjmedia_sdp_session *old_offer;
+    char media_used[PJMEDIA_MAX_SDP_MEDIA];
+    unsigned oi; /* old offer media index */
+    pj_status_t status;
+
     /* Check arguments are valid. */
     PJ_ASSERT_RETURN(pool && neg && local, PJ_EINVAL);
 
@@ -231,10 +237,76 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
     PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_DONE, 
 		     PJMEDIA_SDPNEG_EINSTATE);
 
+    /* Validate the new offer */
+    status = pjmedia_sdp_validate(local);
+    if (status != PJ_SUCCESS)
+	return status;
+
     /* Change state to STATE_LOCAL_OFFER */
     neg->state = PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER;
-    neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
-    neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+
+    /* Init vars */
+    pj_bzero(media_used, sizeof(media_used));
+    old_offer = neg->active_local_sdp;
+    new_offer = pjmedia_sdp_session_clone(pool, local);
+
+    /* RFC 3264 Section 8: When issuing an offer that modifies the session,
+     * the "o=" line of the new SDP MUST be identical to that in the
+     * previous SDP, except that the version in the origin field MUST
+     * increment by one from the previous SDP.
+     */
+    pj_strdup(pool, &new_offer->origin.user, &old_offer->origin.user);
+    new_offer->origin.id = old_offer->origin.id;
+    new_offer->origin.version = old_offer->origin.version + 1;
+    pj_strdup(pool, &new_offer->origin.net_type, &old_offer->origin.net_type);
+    pj_strdup(pool, &new_offer->origin.addr_type,&old_offer->origin.addr_type);
+    pj_strdup(pool, &new_offer->origin.addr, &old_offer->origin.addr);
+
+    /* Generating the new offer, in the case media lines doesn't match the
+     * active SDP (e.g. current/active SDP's have m=audio and m=video lines, 
+     * and the new offer only has m=audio line), the negotiator will fix 
+     * the new offer by reordering and adding the missing media line with 
+     * port number set to zero.
+     */
+    for (oi = 0; oi < old_offer->media_count; ++oi) {
+	pjmedia_sdp_media *om;
+	pjmedia_sdp_media *nm;
+	unsigned ni; /* new offer media index */
+	pj_bool_t found = PJ_FALSE;
+
+	om = old_offer->media[oi];
+	for (ni = oi; ni < new_offer->media_count; ++ni) {
+	    nm = new_offer->media[ni];
+	    if (pj_strcmp(&nm->desc.media, &om->desc.media) == 0) {
+		if (ni != oi) {
+		    /* The same media found but the position unmatched to the 
+		     * old offer, so let's put this media in the right place, 
+		     * and keep the order of the rest.
+		     */
+		    pj_array_insert(new_offer->media,		 /* array    */
+				    sizeof(new_offer->media[0]), /* elmt size*/
+				    ni,				 /* count    */
+				    oi,				 /* pos      */
+				    &nm);			 /* new elmt */
+		}
+		found = PJ_TRUE;
+		break;
+	    }
+	}
+	if (!found) {
+	    pjmedia_sdp_media *m;
+
+	    m = pjmedia_sdp_media_clone(pool, om);
+	    m->desc.port = 0;
+
+	    pj_array_insert(new_offer->media, sizeof(new_offer->media[0]),
+			    new_offer->media_count++, oi, &m);
+	}
+    }
+
+    /* New_offer fixed */
+    neg->initial_sdp = new_offer;
+    neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, new_offer);
 
     return PJ_SUCCESS;
 }
@@ -648,7 +720,8 @@ static pj_status_t process_answer(pj_pool_t *pool,
 				  pj_bool_t allow_asym,
 				  pjmedia_sdp_session **p_active)
 {
-    unsigned mi;
+    unsigned omi = 0; /* Offer media index */
+    unsigned ami = 0; /* Answer media index */
     pj_bool_t has_active = PJ_FALSE;
     pj_status_t status;
 
@@ -656,18 +729,35 @@ static pj_status_t process_answer(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && offer && answer && p_active, PJ_EINVAL);
 
     /* Check that media count match between offer and answer */
-    if (offer->media_count != answer->media_count)
-	return PJMEDIA_SDPNEG_EMISMEDIA;
+    // Ticket #527, different media count is allowed for more interoperability,
+    // however, the media order must be same between offer and answer.
+    // if (offer->media_count != answer->media_count)
+    //	   return PJMEDIA_SDPNEG_EMISMEDIA;
 
     /* Now update each media line in the offer with the answer. */
-    for (mi=0; mi<offer->media_count; ++mi) {
-	status = process_m_answer(pool, offer->media[mi], answer->media[mi],
+    for (; omi<offer->media_count; ++omi) {
+	if (ami == answer->media_count) {
+	    /* No answer media to be negotiated */
+	    offer->media[omi]->desc.port = 0;
+	    continue;
+	}
+
+	status = process_m_answer(pool, offer->media[omi], answer->media[ami],
 				  allow_asym);
+
+	/* If media type is mismatched, just disable the media. */
+	if (status == PJMEDIA_SDPNEG_EINVANSMEDIA) {
+	    offer->media[omi]->desc.port = 0;
+	    continue;
+	}
+
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	if (offer->media[mi]->desc.port != 0)
+	if (offer->media[omi]->desc.port != 0)
 	    has_active = PJ_TRUE;
+
+	++ami;
     }
 
     *p_active = offer;
@@ -945,7 +1035,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 	    /* No matching media.
 	     * Reject the offer by setting the port to zero in the answer.
 	     */
-	    pjmedia_sdp_attr *a;
+	    //pjmedia_sdp_attr *a;
 
 	    /* For simplicity in the construction of the answer, we'll
 	     * just clone the media from the offer. Anyway receiver will
@@ -955,11 +1045,14 @@ static pj_status_t create_answer( pj_pool_t *pool,
 	    am = pjmedia_sdp_media_clone(pool, om);
 	    am->desc.port = 0;
 
+	    // Just set port zero to disable stream without set it to inactive.
 	    /* Remove direction attribute, and replace with inactive */
 	    remove_all_media_directions(am);
+	    //a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+	    //pjmedia_sdp_media_add_attr(am, a);
 
-	    a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
-	    pjmedia_sdp_media_add_attr(am, a);
+	    /* Then update direction */
+	    update_media_direction(pool, om, am);
 
 	} else {
 	    /* The answer is in am */

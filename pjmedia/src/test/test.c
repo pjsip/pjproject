@@ -54,11 +54,11 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
-    //DO_TEST(sdp_neg_test());
+    sdp_neg_test();
     //sdp_test (&caching_pool.factory);
     //rtp_test(&caching_pool.factory);
     //session_test (&caching_pool.factory);
-    jbuf_main();
+    //jbuf_main();
 
     PJ_LOG(3,(THIS_FILE," "));
 
