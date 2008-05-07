@@ -251,6 +251,18 @@
 #   define PJ_IS_LITTLE_ENDIAN	0
 #   define PJ_IS_BIG_ENDIAN	1
 
+#elif defined (PJ_M_NIOS2) || defined(__nios2) || defined(__nios2__) || \
+      defined(__NIOS2__) || defined(__M_NIOS2) || defined(_ARCH_NIOS2)
+    /*
+     * Nios2, little endian
+     */
+#   undef PJ_M_NIOS2
+#   define PJ_M_NIOS2		1
+#   define PJ_M_NAME		"nios2"
+#   define PJ_HAS_PENTIUM	0
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+		
 #else
 #   error "Please specify target machine."
 #endif
