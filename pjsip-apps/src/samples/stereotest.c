@@ -38,7 +38,7 @@
 #include "util.h"
 
 #define REC_CLOCK_RATE	    16000
-#define PTIME		    10
+#define PTIME		    20
 
 #define MODE_PLAY	    1
 #define MODE_RECORD	    2
