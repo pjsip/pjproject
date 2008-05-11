@@ -776,9 +776,22 @@ PJ_DECL(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr);
  *
  * @param dst	    Destination socket address.
  * @param src	    Source socket address.
+ *
+ * @see @pj_sockaddr_cp()
  */
 PJ_DECL(void) pj_sockaddr_copy_addr(pj_sockaddr *dst,
 				    const pj_sockaddr *src);
+/**
+ * Copy socket address. This will copy the whole structure depending
+ * on the address family of the source socket address.
+ *
+ * @param dst	    Destination socket address.
+ * @param src	    Source socket address.
+ *
+ * @see @pj_sockaddr_copy_addr()
+ */
+PJ_DECL(void) pj_sockaddr_cp(pj_sockaddr_t *dst, const pj_sockaddr_t *src);
+
 /**
  * Get the IP address of an IPv4 socket address.
  * The address is returned as 32bit value in host byte order.

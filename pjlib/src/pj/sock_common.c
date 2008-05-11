@@ -390,6 +390,14 @@ PJ_DEF(void) pj_sockaddr_copy_addr( pj_sockaddr *dst,
 }
 
 /*
+ * Copy socket address.
+ */
+PJ_DEF(void) pj_sockaddr_cp(pj_sockaddr_t *dst, const pj_sockaddr_t *src)
+{
+    pj_memcpy(dst, src, pj_sockaddr_get_len(src));
+}
+
+/*
  * Set port number of pj_sockaddr_in
  */
 PJ_DEF(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
