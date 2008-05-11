@@ -328,6 +328,673 @@ BSC32=bscmake.exe
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
+SOURCE=..\..\src\pj\activesock.c
+
+!IF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_ACTIV=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
+	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
+	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
+	"..\..\include\pj\compat\os_linux.h"\
+	"..\..\include\pj\compat\os_linux_kernel.h"\
+	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
+	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
+	"..\..\include\pj\compat\os_win32.h"\
+	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
+	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
+	"..\..\include\pj\config.h"\
+	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
+	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\src\pj\addr_resolv_sock.c
 
 !IF  "$(CFG)" == "pjlib_wince - Win32 (WCE emulator) Release"
@@ -513,40 +1180,68 @@ NODEP_CPP_ADDR_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_ADDR_=\
+	"..\..\include\pj\activesock.h"\
 	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\socket.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_ADDR_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -945,39 +1640,67 @@ NODEP_CPP_ARRAY=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_ARRAY=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
 	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_ARRAY=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -1293,22 +2016,27 @@ DEP_CPP_CONFI=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_CONFI=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\ioqueue.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\types.h"\
@@ -1538,23 +2266,28 @@ DEP_CPP_CTYPE=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_CTYPE=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\ctype.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\types.h"\
 	
@@ -1852,38 +2585,67 @@ NODEP_CPP_ERRNO=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_ERRNO=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_ERRNO=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -2241,31 +3003,67 @@ DEP_CPP_EXCEP=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_EXCEP=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -2565,22 +3363,27 @@ DEP_CPP_FIFOB=\
 DEP_CPP_FIFOB=\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\fifobuf.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
@@ -2871,41 +3674,67 @@ DEP_CPP_FILE_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_FILE_=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
 	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
 	"..\..\include\pj\unicode.h"\
-	
-NODEP_CPP_FILE_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -3205,23 +4034,28 @@ DEP_CPP_FILE_I=\
 DEP_CPP_FILE_I=\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\types.h"\
@@ -3535,35 +4369,67 @@ NODEP_CPP_GUID_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_GUID_=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_GUID_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -3935,37 +4801,67 @@ NODEP_CPP_GUID_S=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_GUID_S=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
 	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_GUID_S=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -4351,41 +5247,67 @@ NODEP_CPP_HASH_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_HASH_=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\ctype.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
 	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_HASH_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -4815,47 +5737,70 @@ NODEP_CPP_IOQUE=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_IOQUE=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\socket.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
 	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
 	"..\..\include\pj\sock.h"\
 	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	"..\..\src\pj\ioqueue_common_abs.c"\
 	"..\..\src\pj\ioqueue_common_abs.h"\
-	
-NODEP_CPP_IOQUE=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -5232,9 +6177,11 @@ DEP_CPP_IP_HE=\
 	"..\..\include\pj\types.h"\
 	"..\..\include\pj\unicode.h"\
 	"..\..\include\pjlib.h"\
-	{$(INCLUDE)}"ipexport.h"\
-	{$(INCLUDE)}"Iphlpapi.h"\
-	{$(INCLUDE)}"iptypes.h"\
+	
+NODEP_CPP_IP_HE=\
+	".\pexport.h"\
+	".\phlpapi.h"\
+	".\ptypes.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4I) Release"
@@ -5368,25 +6315,34 @@ NODEP_CPP_IP_HE=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_IP_HE=\
+	"..\..\include\pj\activesock.h"\
 	"..\..\include\pj\addr_resolv.h"\
 	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
 	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
@@ -5420,13 +6376,9 @@ DEP_CPP_IP_HE=\
 	"..\..\include\pj\types.h"\
 	"..\..\include\pj\unicode.h"\
 	"..\..\include\pjlib.h"\
-	
-NODEP_CPP_IP_HE=\
-	"..\..\include\pj\compat\m_auto.h"\
-	"..\..\include\pj\compat\os_auto.h"\
-	".\pexport.h"\
-	".\phlpapi.h"\
-	".\ptypes.h"\
+	{$(INCLUDE)}"ipexport.h"\
+	{$(INCLUDE)}"Iphlpapi.h"\
+	{$(INCLUDE)}"iptypes.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -5854,22 +6806,27 @@ DEP_CPP_LIST_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_LIST_=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\types.h"\
@@ -6180,40 +7137,67 @@ NODEP_CPP_LOCK_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_LOCK_=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_LOCK_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -6605,37 +7589,67 @@ NODEP_CPP_LOG_C=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_LOG_C=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_LOG_C=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -6948,23 +7962,28 @@ DEP_CPP_LOG_W=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_LOG_W=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\stdfileio.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\types.h"\
@@ -7293,44 +8312,68 @@ NODEP_CPP_OS_CO=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_OS_CO=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
 	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
 	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_OS_CO=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	"..\..\src\pj\os_rwmutex.c"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -7745,40 +8788,67 @@ NODEP_CPP_OS_ER=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_OS_ER=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
 	"..\..\include\pj\unicode.h"\
-	
-NODEP_CPP_OS_ER=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -8128,35 +9198,67 @@ DEP_CPP_OS_TI=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_OS_TI=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_OS_TI=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -8423,23 +9525,28 @@ DEP_CPP_OS_TIM=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_OS_TIM=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\high_precision.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\types.h"\
 	
@@ -8675,24 +9782,32 @@ DEP_CPP_OS_TIME=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_OS_TIME=\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\types.h"\
 	
@@ -9010,40 +10125,67 @@ NODEP_CPP_POOL_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_POOL_=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_POOL_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -9498,25 +10640,34 @@ DEP_CPP_POOL_B=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_POOL_B=\
+	"..\..\include\pj\activesock.h"\
 	"..\..\include\pj\addr_resolv.h"\
 	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
 	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
 	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
@@ -9530,6 +10681,7 @@ DEP_CPP_POOL_B=\
 	"..\..\include\pj\guid.h"\
 	"..\..\include\pj\hash.h"\
 	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
@@ -10014,38 +11166,67 @@ NODEP_CPP_POOL_C=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_POOL_C=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_POOL_C=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -10434,38 +11615,69 @@ NODEP_CPP_POOL_P=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_POOL_P=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
 	"..\..\include\pj\compat\malloc.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_POOL_P=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
+	"..\..\src\pj\pool_signature.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -10782,23 +11994,28 @@ DEP_CPP_RAND_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_RAND_=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\rand.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\rand.h"\
 	"..\..\include\pj\types.h"\
@@ -11033,22 +12250,27 @@ DEP_CPP_RBTRE=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_RBTRE=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\rbtree.h"\
 	"..\..\include\pj\types.h"\
@@ -11366,42 +12588,68 @@ NODEP_CPP_SOCK_=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_SOCK_=\
+	"..\..\include\pj\activesock.h"\
 	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\socket.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
 	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_SOCK_=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -11744,12 +12992,20 @@ DEP_CPP_SOCK_C=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_SOCK_C=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
 	"..\..\include\pj\compat\cc_armcc.h"\
 	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
 	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
 	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
 	"..\..\include\pj\compat\m_auto.h"\
 	"..\..\include\pj\compat\os_auto.h"\
 	"..\..\include\pj\compat\os_darwinos.h"\
@@ -11761,12 +13017,43 @@ DEP_CPP_SOCK_C=\
 	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\socket.h"\
+	"..\..\include\pj\compat\stdarg.h"\
+	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
 	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
+	"..\..\include\pj\list.h"\
+	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
+	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
+	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
 	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
+	"..\..\include\pj\string.h"\
+	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -12039,24 +13326,29 @@ DEP_CPP_SOCK_S=\
 DEP_CPP_SOCK_S=\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\compat\socket.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\errno.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\sock_select.h"\
@@ -12387,38 +13679,67 @@ NODEP_CPP_STRIN=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_STRIN=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
+	"..\..\include\pj\assert.h"\
+	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
 	"..\..\include\pj\compat\ctype.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
 	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_STRIN=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -12814,41 +14135,67 @@ NODEP_CPP_TIMER=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_TIMER=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
 	"..\..\include\pj\compat\errno.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
 	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
 	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
-	
-NODEP_CPP_TIMER=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pj\unicode.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -13168,22 +14515,27 @@ DEP_CPP_TYPES=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_TYPES=\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
 	"..\..\include\pj\compat\size_t.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\types.h"\
 	
@@ -13479,37 +14831,67 @@ NODEP_CPP_UNICO=\
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Release"
 
 DEP_CPP_UNICO=\
+	"..\..\include\pj\activesock.h"\
+	"..\..\include\pj\addr_resolv.h"\
+	"..\..\include\pj\array.h"\
 	"..\..\include\pj\assert.h"\
 	"..\..\include\pj\compat\assert.h"\
+	"..\..\include\pj\compat\cc_armcc.h"\
+	"..\..\include\pj\compat\cc_codew.h"\
 	"..\..\include\pj\compat\cc_gcc.h"\
+	"..\..\include\pj\compat\cc_gcce.h"\
 	"..\..\include\pj\compat\cc_msvc.h"\
-	"..\..\include\pj\compat\m_alpha.h"\
-	"..\..\include\pj\compat\m_armv4.h"\
-	"..\..\include\pj\compat\m_i386.h"\
-	"..\..\include\pj\compat\m_m68k.h"\
-	"..\..\include\pj\compat\m_sparc.h"\
+	"..\..\include\pj\compat\cc_mwcc.h"\
+	"..\..\include\pj\compat\ctype.h"\
+	"..\..\include\pj\compat\errno.h"\
+	"..\..\include\pj\compat\high_precision.h"\
+	"..\..\include\pj\compat\m_auto.h"\
+	"..\..\include\pj\compat\os_auto.h"\
+	"..\..\include\pj\compat\os_darwinos.h"\
 	"..\..\include\pj\compat\os_linux.h"\
 	"..\..\include\pj\compat\os_linux_kernel.h"\
 	"..\..\include\pj\compat\os_palmos.h"\
+	"..\..\include\pj\compat\os_rtems.h"\
 	"..\..\include\pj\compat\os_sunos.h"\
+	"..\..\include\pj\compat\os_symbian.h"\
 	"..\..\include\pj\compat\os_win32.h"\
 	"..\..\include\pj\compat\os_win32_wince.h"\
+	"..\..\include\pj\compat\setjmp.h"\
 	"..\..\include\pj\compat\size_t.h"\
+	"..\..\include\pj\compat\stdarg.h"\
 	"..\..\include\pj\compat\string.h"\
 	"..\..\include\pj\config.h"\
 	"..\..\include\pj\config_site.h"\
+	"..\..\include\pj\config_site_sample.h"\
+	"..\..\include\pj\ctype.h"\
+	"..\..\include\pj\errno.h"\
+	"..\..\include\pj\except.h"\
+	"..\..\include\pj\fifobuf.h"\
+	"..\..\include\pj\file_access.h"\
+	"..\..\include\pj\file_io.h"\
+	"..\..\include\pj\guid.h"\
+	"..\..\include\pj\hash.h"\
+	"..\..\include\pj\ioqueue.h"\
+	"..\..\include\pj\ip_helper.h"\
 	"..\..\include\pj\list.h"\
 	"..\..\include\pj\list_i.h"\
+	"..\..\include\pj\lock.h"\
+	"..\..\include\pj\log.h"\
+	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
+	"..\..\include\pj\pool_alt.h"\
+	"..\..\include\pj\pool_buf.h"\
 	"..\..\include\pj\pool_i.h"\
+	"..\..\include\pj\rand.h"\
+	"..\..\include\pj\rbtree.h"\
+	"..\..\include\pj\sock.h"\
+	"..\..\include\pj\sock_select.h"\
 	"..\..\include\pj\string.h"\
 	"..\..\include\pj\string_i.h"\
+	"..\..\include\pj\timer.h"\
 	"..\..\include\pj\types.h"\
 	"..\..\include\pj\unicode.h"\
-	
-NODEP_CPP_UNICO=\
-	"..\..\include\pj\compat\sprintf.h"\
-	"..\..\include\pj\compat\vsprintf.h"\
+	"..\..\include\pjlib.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjlib_wince - Win32 (WCE ARMV4) Debug"
@@ -13799,6 +15181,10 @@ SOURCE=..\..\include\pj\compat\time.h
 SOURCE=..\..\include\pj\compat\vsprintf.h
 # End Source File
 # End Group
+# Begin Source File
+
+SOURCE=..\..\include\pj\activesock.h
+# End Source File
 # Begin Source File
 
 SOURCE=..\..\include\pj\addr_resolv.h

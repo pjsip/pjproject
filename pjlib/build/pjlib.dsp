@@ -173,6 +173,10 @@ SOURCE=..\src\pj\symbols.c
 # End Group
 # Begin Source File
 
+SOURCE=..\src\pj\activesock.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\addr_resolv_sock.c
 # End Source File
 # Begin Source File
@@ -465,6 +469,10 @@ SOURCE=..\include\pj\compat\vsprintf.h
 # End Group
 # Begin Source File
 
+SOURCE=..\include\pj\activesock.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pj\addr_resolv.h
 # End Source File
 # Begin Source File
@@ -494,10 +502,6 @@ SOURCE=..\include\pj\ctype.h
 # Begin Source File
 
 SOURCE=..\include\pj\doxygen.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pj\equeue.h
 # End Source File
 # Begin Source File
 

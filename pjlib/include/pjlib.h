@@ -25,6 +25,7 @@
  * @brief Include all PJLIB header files.
  */
 
+#include <pj/activesock.h>
 #include <pj/addr_resolv.h>
 #include <pj/array.h>
 #include <pj/assert.h>

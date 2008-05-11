@@ -51,6 +51,7 @@
 #define INCLUDE_SELECT_TEST	    GROUP_NETWORK
 #define INCLUDE_UDP_IOQUEUE_TEST    GROUP_NETWORK
 #define INCLUDE_TCP_IOQUEUE_TEST    GROUP_NETWORK
+#define INCLUDE_ACTIVESOCK_TEST	    GROUP_NETWORK
 #define INCLUDE_IOQUEUE_PERF_TEST   (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_IOQUEUE_UNREG_TEST  (PJ_HAS_THREADS && GROUP_NETWORK)
 #define INCLUDE_FILE_TEST           GROUP_FILE
@@ -90,6 +91,7 @@ extern int udp_ioqueue_test(void);
 extern int udp_ioqueue_unreg_test(void);
 extern int tcp_ioqueue_test(void);
 extern int ioqueue_perf_test(void);
+extern int activesock_test(void);
 extern int file_test(void);
 
 extern int echo_server(void);

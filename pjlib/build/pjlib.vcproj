@@ -176,6 +176,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pj\activesock.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pj\addr_resolv_sock.c"
 				>
 				<FileConfiguration
@@ -1418,6 +1422,10 @@
 			Name="Header Files"
 			Filter="h;hpp;hxx;hm;inl"
 			>
+			<File
+				RelativePath="..\include\pj\activesock.h"
+				>
+			</File>
 			<File
 				RelativePath="..\include\pj\addr_resolv.h"
 				>
