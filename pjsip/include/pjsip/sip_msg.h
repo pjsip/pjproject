@@ -1649,7 +1649,15 @@ PJ_DECL(pjsip_require_hdr*) pjsip_require_hdr_init( pj_pool_t *pool,
 /**
  * Retry-After header.
  */
-typedef pjsip_generic_int_hdr pjsip_retry_after_hdr;
+typedef struct pjsip_retry_after_hdr
+{
+    /** Standard header field. */
+    PJSIP_DECL_HDR_MEMBER(struct pjsip_retry_after_hdr); 
+    pj_int32_t	ivalue;		/**< Retry-After value	    */
+    pjsip_param	param;		/**< Optional parameters    */
+    pj_str_t	comment;	/**< Optional comments.	    */
+} pjsip_retry_after_hdr;
+
 
 /**
  * Create new Retry-After header instance.

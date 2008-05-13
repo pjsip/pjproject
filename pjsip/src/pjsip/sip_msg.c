@@ -1644,6 +1644,22 @@ PJ_DEF(pjsip_require_hdr*) pjsip_require_hdr_create(pj_pool_t *pool)
 /*
  * Retry-After header.
  */
+static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *r, 
+				       char *buf, pj_size_t size );
+static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool, 
+							  const pjsip_retry_after_hdr *r);
+static pjsip_retry_after_hdr* 
+pjsip_retry_after_hdr_shallow_clone(pj_pool_t *pool, 
+				    const pjsip_retry_after_hdr *r );
+
+static pjsip_hdr_vptr retry_after_hdr_vptr = 
+{
+    (pjsip_hdr_clone_fptr) &pjsip_retry_after_hdr_clone,
+    (pjsip_hdr_clone_fptr) &pjsip_retry_after_hdr_shallow_clone,
+    (pjsip_hdr_print_fptr) &pjsip_retry_after_hdr_print,
+};
+
+
 PJ_DEF(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_init( pj_pool_t *pool,
 							   void *mem,
 							   int value )
@@ -1652,8 +1668,9 @@ PJ_DEF(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_init( pj_pool_t *pool,
 
     PJ_UNUSED_ARG(pool);
 
-    init_hdr(hdr, PJSIP_H_RETRY_AFTER, &generic_int_hdr_vptr);
+    init_hdr(hdr, PJSIP_H_RETRY_AFTER, &retry_after_hdr_vptr);
     hdr->ivalue = value;
+    pj_list_init(&hdr->param);
     return hdr;
 }
 
@@ -1664,6 +1681,74 @@ PJ_DEF(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_create(pj_pool_t *pool,
     return pjsip_retry_after_hdr_init(pool, mem, value );
 }
 
+
+static int pjsip_retry_after_hdr_print(pjsip_retry_after_hdr *hdr, 
+			    	       char *buf, pj_size_t size)
+{
+    char *p = buf;
+    char *endbuf = buf + size;
+    const pj_str_t *hname = &hdr->name;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
+    int printed;
+    
+    if ((pj_ssize_t)size < hdr->name.slen + 2+11)
+	return -1;
+
+    pj_memcpy(p, hdr->name.ptr, hdr->name.slen);
+    p += hname->slen;
+    *p++ = ':';
+    *p++ = ' ';
+
+    p += pj_utoa(hdr->ivalue, p);
+
+    if (hdr->comment.slen) {
+	pj_bool_t enclosed;
+
+	if (endbuf-p < hdr->comment.slen + 3)
+	    return -1;
+
+	enclosed = (*hdr->comment.ptr == '(');
+	if (!enclosed)
+	    *p++ = '(';
+	pj_memcpy(p, hdr->comment.ptr, hdr->comment.slen);
+	p += hdr->comment.slen;
+	if (!enclosed)
+	    *p++ = ')';
+
+	if (!pj_list_empty(&hdr->param))
+	    *p++ = ' ';
+    }
+
+    printed = pjsip_param_print_on(&hdr->param, p, endbuf-p,
+				   &pc->pjsip_TOKEN_SPEC,
+				   &pc->pjsip_TOKEN_SPEC, 
+				   ';');
+    if (printed < 0)
+	return printed;
+
+    p += printed;
+
+    return p - buf;
+}
+
+static pjsip_retry_after_hdr* pjsip_retry_after_hdr_clone(pj_pool_t *pool, 
+							  const pjsip_retry_after_hdr *rhs)
+{
+    pjsip_retry_after_hdr *hdr = pjsip_retry_after_hdr_create(pool, rhs->ivalue);
+    pj_strdup(pool, &hdr->comment, &rhs->comment);
+    pjsip_param_clone(pool, &hdr->param, &rhs->param);
+    return hdr;
+}
+
+static pjsip_retry_after_hdr* 
+pjsip_retry_after_hdr_shallow_clone(pj_pool_t *pool, 
+				    const pjsip_retry_after_hdr *rhs)
+{
+    pjsip_retry_after_hdr *hdr = PJ_POOL_ALLOC_T(pool, pjsip_retry_after_hdr);
+    pj_memcpy(hdr, rhs, sizeof(*hdr));
+    pjsip_param_shallow_clone(pool, &hdr->param, &rhs->param);
+    return hdr;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /*

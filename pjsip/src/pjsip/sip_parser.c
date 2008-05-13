@@ -1825,8 +1825,27 @@ static pjsip_hdr* parse_hdr_require( pjsip_parse_ctx *ctx )
 static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
 {
     pjsip_retry_after_hdr *hdr;
+    pj_scanner *scanner = ctx->scanner;
+    pj_str_t tmp;
+
     hdr = pjsip_retry_after_hdr_create(ctx->pool, 0);
-    parse_generic_int_hdr(hdr, ctx->scanner);
+    
+    pj_scan_get(scanner, &pconst.pjsip_DIGIT_SPEC, &tmp);
+    hdr->ivalue = pj_strtoul(&tmp);
+
+    while (!pj_scan_is_eof(scanner) && *scanner->curptr!='\r' &&
+	   *scanner->curptr=='\n')
+    {
+	if (*scanner->curptr=='(') {
+	    pj_scan_get_quote(scanner, '(', ')', &hdr->comment);
+	} else if (*scanner->curptr==';') {
+	    pjsip_param *prm = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
+	    int_parse_param(scanner, ctx->pool, &prm->name, &prm->value, 0);
+	    pj_list_push_back(&hdr->param, prm);
+	}
+    }
+
+    parse_hdr_end(scanner);
     return (pjsip_hdr*)hdr;
 }
 
