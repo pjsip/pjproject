@@ -185,9 +185,11 @@ static pj_status_t resample_get_frame(pjmedia_port *this_port,
     if (tmp_frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
 	frame->type = tmp_frame.type;
 	frame->timestamp = tmp_frame.timestamp;
-	frame->size = tmp_frame.size;
+	/* Copy whatever returned as long as the buffer size is enough */
+	frame->size = tmp_frame.size < rport->base.info.bytes_per_frame ?
+		      tmp_frame.size : rport->base.info.bytes_per_frame;
 	if (tmp_frame.size)
-	    pj_memcpy(frame->buf, tmp_frame.buf, tmp_frame.size);
+	    pjmedia_copy_samples(frame->buf, tmp_frame.buf, frame->size >> 1);
 	return PJ_SUCCESS;
     }
 
