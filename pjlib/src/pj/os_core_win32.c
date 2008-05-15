@@ -144,13 +144,13 @@ PJ_DEF(pj_status_t) pj_init(void)
     /* Or probably not. Let application in charge of this */
     /* pj_srand( GetCurrentProcessId() ); */
 
-    /* Startup GUID. */
-    guid.ptr = dummy_guid;
-    pj_generate_unique_string( &guid );
-
     /* Initialize critical section. */
     if ((rc=init_mutex(&critical_section_mutex, "pj%p")) != PJ_SUCCESS)
 	return rc;
+
+    /* Startup GUID. */
+    guid.ptr = dummy_guid;
+    pj_generate_unique_string( &guid );
 
     /* Initialize exception ID for the pool. 
      * Must do so after critical section is configured.
