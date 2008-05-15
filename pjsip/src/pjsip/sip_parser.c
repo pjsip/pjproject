@@ -1834,10 +1834,13 @@ static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
     hdr->ivalue = pj_strtoul(&tmp);
 
     while (!pj_scan_is_eof(scanner) && *scanner->curptr!='\r' &&
-	   *scanner->curptr=='\n')
+	   *scanner->curptr!='\n')
     {
 	if (*scanner->curptr=='(') {
 	    pj_scan_get_quote(scanner, '(', ')', &hdr->comment);
+	    /* Trim the leading and ending parens */
+	    hdr->comment.ptr++;
+	    hdr->comment.slen -= 2;
 	} else if (*scanner->curptr==';') {
 	    pjsip_param *prm = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
 	    int_parse_param(scanner, ctx->pool, &prm->name, &prm->value, 0);

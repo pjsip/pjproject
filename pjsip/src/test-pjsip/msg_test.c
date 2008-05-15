@@ -800,6 +800,7 @@ static int hdr_test_via(pjsip_hdr *h);
 static int hdr_test_via_ipv6_1(pjsip_hdr *h);
 static int hdr_test_via_ipv6_2(pjsip_hdr *h);
 static int hdr_test_via_ipv6_3(pjsip_hdr *h);
+static int hdr_test_retry_after1(pjsip_hdr *h);
 
 
 #define GENERIC_PARAM	     "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
@@ -972,6 +973,13 @@ struct hdr_test_t
 	"Via", "v",
 	"SIP/2.0/UDP [::1];rport=5061;received=::2",
 	&hdr_test_via_ipv6_3
+    },
+
+    {
+	/* Retry-After header with comment */
+	"Retry-After", NULL,
+	"10(Already Pending Register)",
+	&hdr_test_retry_after1
     }
 };
 
@@ -1522,6 +1530,23 @@ static int hdr_test_via_ipv6_3(pjsip_hdr *h)
 
     if (hdr->rport_param != 5061)
 	return -2850;
+
+    return 0;
+}
+
+/* "10(Already Pending Register)" */
+static int hdr_test_retry_after1(pjsip_hdr *h)
+{
+    pjsip_retry_after_hdr *hdr = (pjsip_retry_after_hdr*)h;
+
+    if (h->type != PJSIP_H_RETRY_AFTER)
+	return -2910;
+
+    if (hdr->ivalue != 10)
+	return -2920;
+    
+    if (pj_strcmp2(&hdr->comment, "Already Pending Register"))
+	return -2930;
 
     return 0;
 }
