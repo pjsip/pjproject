@@ -256,7 +256,7 @@ PJ_IDECL(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
  *
  * @return	    Number of elements.
  */
-PJ_IDECL(pj_size_t) pj_list_size(pj_list_type *list);
+PJ_IDECL(pj_size_t) pj_list_size(const pj_list_type *list);
 
 
 /**

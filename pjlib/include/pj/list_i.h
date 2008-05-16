@@ -105,9 +105,9 @@ PJ_IDEF(pj_list_type*) pj_list_search(pj_list_type *list, void *value,
 }
 
 
-PJ_IDEF(pj_size_t) pj_list_size(pj_list_type *list)
+PJ_IDEF(pj_size_t) pj_list_size(const pj_list_type *list)
 {
-    pj_list *node = (pj_list*) ((pj_list*)list)->next;
+    const pj_list *node = (const pj_list*) ((const pj_list*)list)->next;
     pj_size_t count = 0;
 
     while (node != list) {
