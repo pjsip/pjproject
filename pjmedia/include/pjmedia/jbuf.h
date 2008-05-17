@@ -76,7 +76,10 @@ struct pjmedia_jb_state
     unsigned	min_prefetch;	    /**< Minimum allowed prefetch, in frms. */
     unsigned	max_prefetch;	    /**< Maximum allowed prefetch, in frms. */
     unsigned	size;		    /**< Current buffer size, in frames.    */
-    unsigned	max_size;	    /**< Maximum size ever.		    */
+    unsigned	avg_delay;	    /**< Average delay, in ms.		    */
+    unsigned	min_delay;	    /**< Minimum delay, in ms.		    */
+    unsigned	max_delay;	    /**< Maximum delay, in ms.		    */
+    unsigned	dev_delay;	    /**< Standard deviation of delay, in ms. */
 };
 
 

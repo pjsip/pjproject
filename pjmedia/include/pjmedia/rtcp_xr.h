@@ -25,6 +25,7 @@
  */
 
 #include <pjmedia/types.h>
+#include <pj/math.h>
 
 
 PJ_BEGIN_DECL
@@ -246,22 +247,8 @@ typedef struct pjmedia_rtcp_xr_stream_stat
 
 	unsigned	    lost;	/**< Number of packets lost	    */
 	unsigned	    dup;	/**< Number of duplicated packets   */
-	
-	struct {
-	    unsigned	    min;	/**< Minimum jitter (in usec)	    */
-	    unsigned	    max;	/**< Maximum jitter (in usec)	    */
-	    unsigned	    dev;	/**< Jitter deviation (in usec)	    */
-	    unsigned	    mean;	/**< Average jitter (in usec)	    */
-	    unsigned	    count;	/**< Update count		    */
-	} jitter;			/**< Jitter history.		    */
-
-	struct {
-	    unsigned	    min;	/**< Minimum ToH		    */
-	    unsigned	    max;	/**< Maximum ToH		    */
-	    unsigned	    dev;	/**< ToH deviation		    */
-	    unsigned	    mean;	/**< Average ToH		    */
-	    unsigned	    count;	/**< Update count		    */
-	} toh;				/**< TTL of hop limit history.	    */
+	pj_math_stat	    jitter;	/**< Jitter statistics (in usec)    */
+	pj_math_stat	    toh;	/**< TTL of hop limit statistics.   */
     } stat_sum;
 
     struct {
@@ -300,18 +287,11 @@ typedef struct pjmedia_rtcp_xr_stream_stat
 
 typedef struct pjmedia_rtcp_xr_stat
 {
-    pjmedia_rtcp_xr_stream_stat	 rx;
-    pjmedia_rtcp_xr_stream_stat	 tx;
-
-    /* RTT calculated from receiver side */
-    struct {
-	unsigned    min;	    /**< Minimum round-trip delay (in usec) */
-	unsigned    avg;	    /**< Average round-trip delay (in usec) */
-	unsigned    max;	    /**< Maximum round-trip delay (in usec) */
-	unsigned    last;	    /**< Last round-trip delay (in usec)    */
-	unsigned    update_cnt;	    /**< Nb of times rtt is updated.	    */
-    } rtt;			    /**< Round trip delay history.	    */
-
+    pjmedia_rtcp_xr_stream_stat	 rx;  /**< Decoding direction statistics.   */
+    pjmedia_rtcp_xr_stream_stat	 tx;  /**< Encoding direction statistics.   */
+    pj_math_stat		 rtt; /**< Round-trip delay stat (in usec) 
+					   the value is calculated from 
+					   receiver side.		    */
 } pjmedia_rtcp_xr_stat;
 
 /**

@@ -768,9 +768,9 @@ static void print_stream_stat(pjmedia_stream *stream)
     printf(" RX stat last update: %s\n"
 	   "    total %s packets %sB received (%sB +IP hdr)%s\n"
 	   "    pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "          (msec)    min     avg     max     last\n"
-	   "    loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
-	   "    jitter     : %7.3f %7.3f %7.3f %7.3f%s\n",
+	   "          (msec)    min     avg     max     last    dev\n"
+	   "    loss period: %7.3f %7.3f %7.3f %7.3f %7.3f%s\n"
+	   "    jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n",
 	   last_update,
 	   good_number(packets, stat.rx.pkt),
 	   good_number(bytes, stat.rx.bytes),
@@ -784,14 +784,16 @@ static void print_stream_stat(pjmedia_stream *stream)
 	   stat.rx.reorder * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	   "",
 	   stat.rx.loss_period.min / 1000.0, 
-	   stat.rx.loss_period.avg / 1000.0, 
+	   stat.rx.loss_period.mean / 1000.0, 
 	   stat.rx.loss_period.max / 1000.0,
 	   stat.rx.loss_period.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat.rx.loss_period) / 1000.0,
 	   "",
 	   stat.rx.jitter.min / 1000.0,
-	   stat.rx.jitter.avg / 1000.0,
+	   stat.rx.jitter.mean / 1000.0,
 	   stat.rx.jitter.max / 1000.0,
 	   stat.rx.jitter.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat.rx.jitter) / 1000.0,
 	   ""
 	   );
 
@@ -811,9 +813,9 @@ static void print_stream_stat(pjmedia_stream *stream)
     printf(" TX stat last update: %s\n"
 	   "    total %s packets %sB sent (%sB +IP hdr)%s\n"
 	   "    pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)%s\n"
-	   "          (msec)    min     avg     max     last\n"
-	   "    loss period: %7.3f %7.3f %7.3f %7.3f%s\n"
-	   "    jitter     : %7.3f %7.3f %7.3f %7.3f%s\n",
+	   "          (msec)    min     avg     max     last    dev\n"
+	   "    loss period: %7.3f %7.3f %7.3f %7.3f %7.3f%s\n"
+	   "    jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n",
 	   last_update,
 	   good_number(packets, stat.tx.pkt),
 	   good_number(bytes, stat.tx.bytes),
@@ -827,23 +829,26 @@ static void print_stream_stat(pjmedia_stream *stream)
 	   stat.tx.reorder * 100.0 / (stat.tx.pkt + stat.tx.loss),
 	   "",
 	   stat.tx.loss_period.min / 1000.0, 
-	   stat.tx.loss_period.avg / 1000.0, 
+	   stat.tx.loss_period.mean / 1000.0, 
 	   stat.tx.loss_period.max / 1000.0,
 	   stat.tx.loss_period.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat.tx.loss_period) / 1000.0,
 	   "",
 	   stat.tx.jitter.min / 1000.0,
-	   stat.tx.jitter.avg / 1000.0,
+	   stat.tx.jitter.mean / 1000.0,
 	   stat.tx.jitter.max / 1000.0,
 	   stat.tx.jitter.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat.tx.jitter) / 1000.0,
 	   ""
 	   );
 
 
-    printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f%s\n", 
+    printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n", 
 	   stat.rtt.min / 1000.0,
-	   stat.rtt.avg / 1000.0,
+	   stat.rtt.mean / 1000.0,
 	   stat.rtt.max / 1000.0,
 	   stat.rtt.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat.rtt) / 1000.0,
 	   ""
 	   );
 
@@ -885,8 +890,9 @@ static void print_stream_stat(pjmedia_stream *stream)
 			    port->info.clock_rate);
 	    SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean, 
 			    port->info.clock_rate);
-	    SAMPLES_TO_USEC(jdev, xr_stat.rx.stat_sum.jitter.dev, 
-			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jdev, 
+			   pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.jitter),
+			   port->info.clock_rate);
 	    sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
 		    jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
 	} else
@@ -897,7 +903,7 @@ static void print_stream_stat(pjmedia_stream *stream)
 		    xr_stat.rx.stat_sum.toh.min,
 		    xr_stat.rx.stat_sum.toh.mean,
 		    xr_stat.rx.stat_sum.toh.max,
-		    xr_stat.rx.stat_sum.toh.dev);
+		    pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.toh));
 	} else
 	    sprintf(toh, "(report not available)");
 
@@ -947,8 +953,9 @@ static void print_stream_stat(pjmedia_stream *stream)
 			    port->info.clock_rate);
 	    SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean, 
 			    port->info.clock_rate);
-	    SAMPLES_TO_USEC(jdev, xr_stat.tx.stat_sum.jitter.dev, 
-			    port->info.clock_rate);
+	    SAMPLES_TO_USEC(jdev, 
+			   pj_math_stat_get_stddev(&xr_stat.tx.stat_sum.jitter),
+			   port->info.clock_rate);
 	    sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
 		    jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
 	} else
@@ -959,7 +966,7 @@ static void print_stream_stat(pjmedia_stream *stream)
 		    xr_stat.tx.stat_sum.toh.min,
 		    xr_stat.tx.stat_sum.toh.mean,
 		    xr_stat.tx.stat_sum.toh.max,
-		    xr_stat.tx.stat_sum.toh.dev);
+		    pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.toh));
 	} else
 	    sprintf(toh,    "(report not available)");
 
@@ -1168,13 +1175,14 @@ static void print_stream_stat(pjmedia_stream *stream)
 	       );
 
 
-	/* RTT delay, need this? */
-	printf("          (msec)    min     avg     max     last\n");
-	printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f%s\n", 
+	/* RTT delay (by receiver side) */
+	printf("          (msec)    min     avg     max     last    dev\n");
+	printf(" RTT delay     : %7.3f %7.3f %7.3f %7.3f %7.3f%s\n", 
 	       xr_stat.rtt.min / 1000.0,
-	       xr_stat.rtt.avg / 1000.0,
+	       xr_stat.rtt.mean / 1000.0,
 	       xr_stat.rtt.max / 1000.0,
 	       xr_stat.rtt.last / 1000.0,
+	       pj_math_stat_get_stddev(&xr_stat.rtt) / 1000.0,
 	       ""
 	       );
     } while (0);

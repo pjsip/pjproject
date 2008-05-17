@@ -2058,9 +2058,9 @@ static void dump_media_session(const char *indent,
 	       "%s     RX pt=%d, stat last update: %s\n"
 	       "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
 	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
-	       "%s              (msec)    min     avg     max     last\n"
-	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       "%s              (msec)    min     avg     max     last    dev\n"
+	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
 	       indent, info.stream_info[i].fmt.pt,
 	       last_update,
 	       indent,
@@ -2078,14 +2078,16 @@ static void dump_media_session(const char *indent,
 	       stat.rx.reorder * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	       indent, indent,
 	       stat.rx.loss_period.min / 1000.0, 
-	       stat.rx.loss_period.avg / 1000.0, 
+	       stat.rx.loss_period.mean / 1000.0, 
 	       stat.rx.loss_period.max / 1000.0,
 	       stat.rx.loss_period.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rx.loss_period) / 1000.0,
 	       indent,
 	       stat.rx.jitter.min / 1000.0,
-	       stat.rx.jitter.avg / 1000.0,
+	       stat.rx.jitter.mean / 1000.0,
 	       stat.rx.jitter.max / 1000.0,
 	       stat.rx.jitter.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rx.jitter) / 1000.0,
 	       ""
 	       );
 
@@ -2114,9 +2116,9 @@ static void dump_media_session(const char *indent,
 	       "%s     TX pt=%d, ptime=%dms, stat last update: %s\n"
 	       "%s        total %spkt %sB (%sB +IP hdr) @avg %sbps/%sbps\n"
 	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
-	       "%s              (msec)    min     avg     max     last\n"
-	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f%s",
+	       "%s              (msec)    min     avg     max     last    dev \n"
+	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
 	       indent,
 	       info.stream_info[i].tx_pt,
 	       info.stream_info[i].param->info.frm_ptime *
@@ -2140,14 +2142,16 @@ static void dump_media_session(const char *indent,
 
 	       indent, indent,
 	       stat.tx.loss_period.min / 1000.0, 
-	       stat.tx.loss_period.avg / 1000.0, 
+	       stat.tx.loss_period.mean / 1000.0, 
 	       stat.tx.loss_period.max / 1000.0,
 	       stat.tx.loss_period.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.tx.loss_period) / 1000.0,
 	       indent,
 	       stat.tx.jitter.min / 1000.0,
-	       stat.tx.jitter.avg / 1000.0,
+	       stat.tx.jitter.mean / 1000.0,
 	       stat.tx.jitter.max / 1000.0,
 	       stat.tx.jitter.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.tx.jitter) / 1000.0,
 	       ""
 	       );
 
@@ -2161,12 +2165,13 @@ static void dump_media_session(const char *indent,
 	*p = '\0';
 
 	len = pj_ansi_snprintf(p, end-p,
-	       "%s    RTT msec       : %7.3f %7.3f %7.3f %7.3f", 
+	       "%s    RTT msec       : %7.3f %7.3f %7.3f %7.3f %7.3f", 
 	       indent,
 	       stat.rtt.min / 1000.0,
-	       stat.rtt.avg / 1000.0,
+	       stat.rtt.mean / 1000.0,
 	       stat.rtt.max / 1000.0,
-	       stat.rtt.last / 1000.0
+	       stat.rtt.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rtt) / 1000.0
 	       );
 	if (len < 1 || len > end-p) {
 	    *p = '\0';

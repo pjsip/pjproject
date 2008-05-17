@@ -500,12 +500,12 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 	    /* Update RTCP XR with current JB states */
 	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
     	    
-	    i = jb_state.size * stream->codec_param.info.frm_ptime;
+	    i = jb_state.avg_delay;
 	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
 					PJMEDIA_RTCP_XR_INFO_JB_NOM,
 					i);
 
-	    i = jb_state.max_size* stream->codec_param.info.frm_ptime;
+	    i = jb_state.max_delay;
 	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
 					PJMEDIA_RTCP_XR_INFO_JB_MAX,
 					i);
@@ -1673,12 +1673,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 	/* Update RTCP XR with current JB states */
 	pjmedia_jbuf_get_state(stream->jb, &jb_state);
     	    
-	i = jb_state.size * stream->codec_param.info.frm_ptime;
+	i = jb_state.avg_delay;
 	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
 				    PJMEDIA_RTCP_XR_INFO_JB_NOM,
 				    i);
 
-	i = jb_state.max_size* stream->codec_param.info.frm_ptime;
+	i = jb_state.max_delay;
 	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
 				    PJMEDIA_RTCP_XR_INFO_JB_MAX,
 				    i);

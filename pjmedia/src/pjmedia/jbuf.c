@@ -24,6 +24,7 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/string.h>
 
 
@@ -66,18 +67,12 @@ struct pjmedia_jbuf
     int		    jb_min_prefetch;	  // Minimum allowable prefetch
     int		    jb_max_prefetch;	  // Maximum allowable prefetch
     int		    jb_status;		  // status is 'init' until the	first 'put' operation
-
-    int		    jb_max_size;	  // Maximum frames buffered ever
+    pj_math_stat    jb_delay;		  // Delay statistics of jitter buffer (in frame unit)
 };
 
 
 #define JB_STATUS_INITIALIZING	0
 #define JB_STATUS_PROCESSING	1
-
-#define	PJ_ABS(x)	((x > 0) ? (x) : -(x))
-#define	PJ_MAX(x, y)	((x > y) ? (x) : (y))
-#define	PJ_MIN(x, y)	((x < y) ? (x) : (y))
-
 
 /* Enabling this would log the jitter buffer state about once per 
  * second.
@@ -313,6 +308,8 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     jb->jb_max_hist_level = 0;
     jb->jb_max_count	 = max_count;
 
+    pj_math_stat_init(&jb->jb_delay);
+
     *p_jb = jb;
     return PJ_SUCCESS;
 }
@@ -368,10 +365,12 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
     jb->jb_stable_hist	 = 0;
     jb->jb_status	 = JB_STATUS_INITIALIZING;
     jb->jb_max_hist_level = 0;
-    jb->jb_max_size	 = 0;
 
     jb_framelist_remove_head(&jb->jb_framelist, 
 			     jb_framelist_size(&jb->jb_framelist));
+
+    pj_math_stat_init(&jb->jb_delay);
+    
     return PJ_SUCCESS;
 }
 
@@ -388,8 +387,6 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 
     /* Update jb_max_size */
     cur_size = jb_framelist_size(&jb->jb_framelist);
-    if (cur_size > jb->jb_max_size)
-	jb->jb_max_size = cur_size;
 
     /* Only apply burst-level calculation on PUT operation since if VAD is 
      * active the burst-level may not be accurate.
@@ -456,9 +453,13 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	/* Drop frame(s)! */
 	jb_framelist_remove_head(&jb->jb_framelist, diff);
 
+	pj_math_stat_update(&jb->jb_delay, cur_size - diff);
+
 	TRACE__((jb->name.ptr, 
 		 "JB shrinking %d frame(s), size=%d", diff,
 		 jb_framelist_size(&jb->jb_framelist)));
+    } else {
+	pj_math_stat_update(&jb->jb_delay, cur_size);
     }
 
     jb->jb_level = 0;
@@ -611,8 +612,11 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( pjmedia_jbuf *jb,
     state->min_prefetch = jb->jb_min_prefetch;
     state->max_prefetch = jb->jb_max_prefetch;
     state->size = jb_framelist_size(&jb->jb_framelist);
-    state->max_size = jb->jb_max_size;
+    state->avg_delay = jb->jb_delay.mean * jb->jb_frame_ptime;
+    state->min_delay = jb->jb_delay.min * jb->jb_frame_ptime;
+    state->max_delay = jb->jb_delay.max * jb->jb_frame_ptime;
+    state->dev_delay = pj_math_stat_get_stddev(&jb->jb_delay) * 
+		       jb->jb_frame_ptime;
 
     return PJ_SUCCESS;
 }
-

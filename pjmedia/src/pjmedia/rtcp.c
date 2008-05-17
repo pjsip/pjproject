@@ -166,6 +166,13 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     pj_get_timestamp(&sess->ts_base);
     pj_get_timestamp_freq(&sess->ts_freq);
 
+    /* Initialize statistics states */
+    pj_math_stat_init(&sess->stat.rtt);
+    pj_math_stat_init(&sess->stat.rx.loss_period);
+    pj_math_stat_init(&sess->stat.rx.jitter);
+    pj_math_stat_init(&sess->stat.tx.loss_period);
+    pj_math_stat_init(&sess->stat.tx.jitter);
+
     /* RR will be initialized on receipt of the first RTP packet. */
 }
 
@@ -274,18 +281,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 	TRACE_((sess->name, "%d packet(s) lost", seq_st.diff - 1));
 
 	/* Update loss period stat */
-	if (sess->stat.rx.loss_period.count == 0 ||
-	    period < sess->stat.rx.loss_period.min)
-	{
-	    sess->stat.rx.loss_period.min = period;
-	}
-	if (period > sess->stat.rx.loss_period.max)
-	    sess->stat.rx.loss_period.max = period;
-	sess->stat.rx.loss_period.avg = 
-	    (sess->stat.rx.loss_period.avg * sess->stat.rx.loss_period.count +
-	     period) / (sess->stat.rx.loss_period.count + 1);
-	sess->stat.rx.loss_period.last = period;
-	++sess->stat.rx.loss_period.count;
+	pj_math_stat_update(&sess->stat.rx.loss_period, period);
     }
 
 
@@ -329,20 +325,8 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 		jitter *= 1000;
 	    }
 
-	    /* Add to average */
-	    sess->avg_jitter = 
-		(jitter + sess->avg_jitter * sess->stat.rx.jitter.count) /
-		(sess->stat.rx.jitter.count + 1);
-	    sess->stat.rx.jitter.avg = (unsigned)sess->avg_jitter;
-	    ++sess->stat.rx.jitter.count;
-
 	    /* Update jitter stat */
-	    if (jitter < sess->stat.rx.jitter.min)
-		sess->stat.rx.jitter.min = jitter;
-	    if (jitter > sess->stat.rx.jitter.max)
-		sess->stat.rx.jitter.max = jitter;
-
-	    sess->stat.rx.jitter.last = jitter;
+	    pj_math_stat_update(&sess->stat.rx.jitter, jitter);
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 	    pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 
@@ -463,17 +447,8 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	/* Loss period in usec */
 	period *= 1000;
 
-	if (sess->stat.tx.update_cnt==0||sess->stat.tx.loss_period.min==0)
-	    sess->stat.tx.loss_period.min = period;
-	if (period < sess->stat.tx.loss_period.min)
-	    sess->stat.tx.loss_period.min = period;
-	if (period > sess->stat.tx.loss_period.max)
-	    sess->stat.tx.loss_period.max = period;
-
-	sess->stat.tx.loss_period.avg = 
-	    (sess->stat.tx.loss_period.avg*sess->stat.tx.update_cnt+period)
-	    / (sess->stat.tx.update_cnt + 1);
-	sess->stat.tx.loss_period.last = period;
+	/* Update loss period stat */
+	pj_math_stat_update(&sess->stat.tx.loss_period, period);
     }
 
     /* Get jitter value in usec */
@@ -487,18 +462,7 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
     }
 
     /* Update jitter statistics */
-    if (sess->stat.tx.jitter.count == 0)
-	sess->stat.tx.jitter.min = jitter;
-    if (jitter < sess->stat.tx.jitter.min && jitter)
-	sess->stat.tx.jitter.min = jitter;
-    if (jitter > sess->stat.tx.jitter.max)
-	sess->stat.tx.jitter.max = jitter;
-    sess->stat.tx.jitter.avg = 
-	(sess->stat.tx.jitter.avg * sess->stat.tx.jitter.count + jitter) /
-	(sess->stat.tx.jitter.count + 1);
-    ++sess->stat.tx.jitter.count;
-    sess->stat.tx.jitter.last = jitter;
-
+    pj_math_stat_update(&sess->stat.tx.jitter, jitter);
 
     /* Can only calculate if LSR and DLSR is present in RR */
     if (rr->lsr && rr->dlsr) {
@@ -552,16 +516,14 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 		goto end_rtt_calc;
 	    }
 
-	    if (sess->stat.rtt_update_cnt == 0)
-		sess->stat.rtt.min = rtt;
-
 	    /* "Normalize" rtt value that is exceptionally high.
 	     * For such values, "normalize" the rtt to be three times
 	     * the average value.
 	     */
-	    if (rtt > (sess->stat.rtt.avg*3) && sess->stat.rtt_update_cnt!=0) {
+	    if (rtt > ((unsigned)sess->stat.rtt.mean*3) && sess->stat.rtt.n!=0)
+	    {
 		unsigned orig_rtt = rtt;
-		rtt = sess->stat.rtt.avg*3;
+		rtt = sess->stat.rtt.mean*3;
 		PJ_LOG(5,(sess->name, 
 			  "RTT value %d usec is normalized to %d usec",
 			  orig_rtt, rtt));
@@ -569,17 +531,8 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 	
 	    TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
 
-	    if (rtt < sess->stat.rtt.min && rtt)
-		sess->stat.rtt.min = rtt;
-	    if (rtt > sess->stat.rtt.max)
-		sess->stat.rtt.max = rtt;
-
-	    sess->stat.rtt.avg = 
-		(sess->stat.rtt.avg * sess->stat.rtt_update_cnt + rtt) / 
-		(sess->stat.rtt_update_cnt + 1);
-
-	    sess->stat.rtt.last = rtt;
-	    sess->stat.rtt_update_cnt++;
+	    /* Update RTT stat */
+	    pj_math_stat_update(&sess->stat.rtt, rtt);
 
 	} else {
 	    PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "

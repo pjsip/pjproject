@@ -28,7 +28,6 @@
 #include <pjmedia/rtcp_xr.h>
 #include <pjmedia/rtp.h>
 
-
 PJ_BEGIN_DECL
 
 
@@ -180,26 +179,14 @@ struct pjmedia_rtcp_stream_stat
     unsigned	    reorder;	/**< Total number of out of order packets   */
     unsigned	    dup;	/**< Total number of duplicates packets	    */
 
-    struct {
-	unsigned    count;	/**< Number of period samples(to calc avg)  */
-	unsigned    min;	/**< Minimum loss period (in usec)	    */
-	unsigned    avg;	/**< Average loss period (in usec)	    */
-	unsigned    max;	/**< Maximum loss period (in usec)	    */
-	unsigned    last;	/**< Last loss period (in usec)		    */
-    } loss_period;		/**< Lost period history.		    */
+    pj_math_stat    loss_period;/**< Loss period statistics (in usec)	    */
 
     struct {
 	unsigned    burst:1;	/**< Burst/sequential packet lost detected  */
     	unsigned    random:1;	/**< Random packet lost detected.	    */
     } loss_type;		/**< Types of loss detected.		    */
 
-    struct {
-	unsigned    count;	/**< Number of updates.			    */
-	unsigned    min;	/**< Minimum jitter (in usec)		    */
-	unsigned    avg;	/**< Average jitter (in usec)		    */
-	unsigned    max;	/**< Maximum jitter (in usec)		    */
-	unsigned    last;	/**< Last jitter (in usec)		    */
-    } jitter;			/**< Jitter history.			    */
+    pj_math_stat    jitter;	/**< Jitter statistics (in usec)	    */
 };
 
 
@@ -220,14 +207,7 @@ struct pjmedia_rtcp_stat
     pjmedia_rtcp_stream_stat tx;    /**< Encoder stream statistics.	    */
     pjmedia_rtcp_stream_stat rx;    /**< Decoder stream statistics.	    */
     
-    struct {
-	unsigned    min;	    /**< Minimum round-trip delay (in usec) */
-	unsigned    avg;	    /**< Average round-trip delay (in usec) */
-	unsigned    max;	    /**< Maximum round-trip delay (in usec) */
-	unsigned    last;	    /**< Last round-trip delay (in usec)    */
-    } rtt;			    /**< Round trip delay history.	    */
-
-    unsigned	    rtt_update_cnt; /**< Nb of times rtt is updated.	    */
+    pj_math_stat	     rtt;   /**< Round trip delay statistic(in usec)*/
 };
 
 

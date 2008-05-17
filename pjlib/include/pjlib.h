@@ -42,6 +42,7 @@
 #include <pj/list.h>
 #include <pj/lock.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/pool_buf.h>

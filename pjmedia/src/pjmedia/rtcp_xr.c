@@ -26,7 +26,7 @@
 #include <pj/sock.h>
 #include <pj/string.h>
 
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+#if 1 //defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 
 #define THIS_FILE "rtcp_xr.c"
 
@@ -57,27 +57,6 @@
 #else
 #   define TRACE_(x)	;
 #endif
-
-/* Integer square root for calculating standard deviation */
-static pj_uint32_t my_isqrt(pj_uint32_t i)
-{
-    pj_uint32_t res = 1, prev;
-    
-    /* Rough guess */
-    prev = i >> 2;
-    while (prev) {
-	prev >>= 2;
-	res <<= 1;
-    }
-
-    /* Babilonian method */
-    do {
-	prev = res;
-	res = (prev + i/prev) >> 1;
-    } while ((prev+res)>>1 != res);
-
-    return res;
-}
 
 void pjmedia_rtcp_xr_init( pjmedia_rtcp_xr_session *session, 
 			   struct pjmedia_rtcp_session *parent_session,
@@ -230,18 +209,16 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	if (sess->stat.rx.stat_sum.j) {
 	    r->jitter_min = pj_htonl(sess->stat.rx.stat_sum.jitter.min);
 	    r->jitter_max = pj_htonl(sess->stat.rx.stat_sum.jitter.max);
-	    r->jitter_mean = pj_htonl(sess->stat.rx.stat_sum.jitter.mean);
-	    sess->stat.rx.stat_sum.jitter.dev = 
-				my_isqrt(sess->stat.rx.stat_sum.jitter.dev);
-	    r->jitter_dev = pj_htonl(sess->stat.rx.stat_sum.jitter.dev);
+	    r->jitter_mean = 
+		pj_htonl((unsigned)sess->stat.rx.stat_sum.jitter.mean);
+	    r->jitter_dev = 
+		pj_htonl(pj_math_stat_get_stddev(&sess->stat.rx.stat_sum.jitter));
 	}
 	if (sess->stat.rx.stat_sum.t) {
 	    r->toh_min = sess->stat.rx.stat_sum.toh.min;
 	    r->toh_max = sess->stat.rx.stat_sum.toh.max;
-	    r->toh_mean = sess->stat.rx.stat_sum.toh.mean;
-	    sess->stat.rx.stat_sum.toh.dev = 
-				my_isqrt(sess->stat.rx.stat_sum.toh.dev);
-	    r->toh_dev = sess->stat.rx.stat_sum.toh.dev;
+	    r->toh_mean = (unsigned) sess->stat.rx.stat_sum.toh.mean;
+	    r->toh_dev = pj_math_stat_get_stddev(&sess->stat.rx.stat_sum.toh);
 	}
 
 	/* Reset TX statistics summary each time built */
@@ -292,7 +269,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	m = sess->ptime * sess->frames_per_packet;
 
 	/* Calculate burst and densities. */
-	if (ctotal) {
+	if (c11 && (c23 || c33)) {
 	    p32 = c32 / (c31 + c32 + c33);
 	    if((c22 + c23) < 1) {
 		p23 = 1;
@@ -517,35 +494,21 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	     * We allow up to 30 seconds RTT!
 	     */
 	    if (eedelay <= 30 * 1000 * 1000UL) {
-		if (sess->stat.rtt.update_cnt == 0)
-		    sess->stat.rtt.min = rtt;
-
 		/* "Normalize" rtt value that is exceptionally high.
 		 * For such values, "normalize" the rtt to be three times
 		 * the average value.
 		 */
-		if (rtt>(sess->stat.rtt.avg*3) && sess->stat.rtt.update_cnt!=0)
+		if (rtt>((unsigned)sess->stat.rtt.mean*3) && sess->stat.rtt.n!=0)
 		{
 		    unsigned orig_rtt = rtt;
-		    rtt = sess->stat.rtt.avg*3;
+		    rtt = (unsigned)sess->stat.rtt.mean*3;
 		    PJ_LOG(5,(sess->name, 
 			      "RTT value %d usec is normalized to %d usec",
 			      orig_rtt, rtt));
 		}
     	
 		TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
-
-		if (rtt < sess->stat.rtt.min && rtt)
-		    sess->stat.rtt.min = rtt;
-		if (rtt > sess->stat.rtt.max)
-		    sess->stat.rtt.max = rtt;
-
-		sess->stat.rtt.avg = 
-		    (sess->stat.rtt.avg * sess->stat.rtt.update_cnt + rtt) / 
-		    (sess->stat.rtt.update_cnt + 1);
-
-		sess->stat.rtt.last = rtt;
-		sess->stat.rtt.update_cnt++;
+		pj_math_stat_update(&sess->stat.rtt, rtt);
 	    }
 	} else {
 	    PJ_LOG(5, (sess->name, "Internal RTCP NTP clock skew detected: "
@@ -585,15 +548,17 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	if (sess->stat.tx.stat_sum.j) {
 	    sess->stat.tx.stat_sum.jitter.min = pj_ntohl(rb_stats->jitter_min);
 	    sess->stat.tx.stat_sum.jitter.max = pj_ntohl(rb_stats->jitter_max);
-	    sess->stat.tx.stat_sum.jitter.mean = pj_ntohl(rb_stats->jitter_mean);
-	    sess->stat.tx.stat_sum.jitter.dev = pj_ntohl(rb_stats->jitter_dev);
+	    sess->stat.tx.stat_sum.jitter.mean= pj_ntohl(rb_stats->jitter_mean);
+	    pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.jitter, 
+				    pj_ntohl(rb_stats->jitter_dev));
 	}
 
 	if (sess->stat.tx.stat_sum.t) {
 	    sess->stat.tx.stat_sum.toh.min = rb_stats->toh_min;
 	    sess->stat.tx.stat_sum.toh.max = rb_stats->toh_max;
-	    sess->stat.tx.stat_sum.toh.mean = rb_stats->toh_mean;
-	    sess->stat.tx.stat_sum.toh.dev = rb_stats->toh_dev;
+	    sess->stat.tx.stat_sum.toh.mean= rb_stats->toh_mean;
+	    pj_math_stat_set_stddev(&sess->stat.tx.stat_sum.toh, 
+				    pj_ntohl(rb_stats->toh_dev));
 	}
 
 	pj_gettimeofday(&sess->stat.tx.stat_sum.update);
@@ -727,48 +692,13 @@ void pjmedia_rtcp_xr_rx_rtp( pjmedia_rtcp_xr_session *sess,
     }
 
     if (jitter >= 0) {
-	pj_int32_t diff;
-
 	sess->stat.rx.stat_sum.j = PJ_TRUE;
-	if (sess->stat.rx.stat_sum.jitter.min > (pj_uint32_t)jitter)
-	    sess->stat.rx.stat_sum.jitter.min = jitter;
-	if (sess->stat.rx.stat_sum.jitter.max < (pj_uint32_t)jitter)
-	    sess->stat.rx.stat_sum.jitter.max = jitter;
-	sess->stat.rx.stat_sum.jitter.mean = 
-	    (jitter + sess->stat.rx.stat_sum.jitter.mean * 
-	     sess->stat.rx.stat_sum.jitter.count) /
-	    (sess->stat.rx.stat_sum.jitter.count + 1);
-
-	diff = sess->stat.rx.stat_sum.jitter.mean - jitter;
-	sess->stat.rx.stat_sum.jitter.dev =
-	    (diff * diff + sess->stat.rx.stat_sum.jitter.dev * 
-	     sess->stat.rx.stat_sum.jitter.count) /
-	    (sess->stat.rx.stat_sum.jitter.count + 1);
-
-	++sess->stat.rx.stat_sum.jitter.count;
+	pj_math_stat_update(&sess->stat.rx.stat_sum.jitter, jitter);
     }
 
     if (toh >= 0) {
-	pj_int32_t diff;
-
 	sess->stat.rx.stat_sum.t = toh_ipv4? 1 : 2;
-
-	if (sess->stat.rx.stat_sum.toh.min > (pj_uint32_t)toh)
-	    sess->stat.rx.stat_sum.toh.min = toh;
-	if (sess->stat.rx.stat_sum.toh.max < (pj_uint32_t)toh)
-	    sess->stat.rx.stat_sum.toh.max = toh;
-	sess->stat.rx.stat_sum.toh.mean = 
-	    (toh + sess->stat.rx.stat_sum.toh.mean * 
-	     sess->stat.rx.stat_sum.toh.count) /
-	    (sess->stat.rx.stat_sum.toh.count + 1);
-
-	diff = sess->stat.rx.stat_sum.toh.mean - toh;
-	sess->stat.rx.stat_sum.toh.dev =
-	    (diff * diff + sess->stat.rx.stat_sum.toh.dev * 
-	     sess->stat.rx.stat_sum.toh.count) /
-	    (sess->stat.rx.stat_sum.toh.count + 1);
-
-	++sess->stat.rx.stat_sum.toh.count;
+	pj_math_stat_update(&sess->stat.rx.stat_sum.toh, toh);
     }
 
     /* Update burst metrics.

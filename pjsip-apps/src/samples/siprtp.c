@@ -1659,7 +1659,7 @@ static void print_avg_stat(void)
 	/* Jitter  */
 	MIN_(min_stat.rx.jitter.min, audio->rtcp.stat.rx.jitter.min);
 	MAX_(max_stat.rx.jitter.max, audio->rtcp.stat.rx.jitter.max);
-	AVG_(avg_stat.rx.jitter.avg, audio->rtcp.stat.rx.jitter.avg);
+	AVG_(avg_stat.rx.jitter.mean, audio->rtcp.stat.rx.jitter.mean);
 
 
 	/* TX Statistisc: */
@@ -1692,13 +1692,13 @@ static void print_avg_stat(void)
 	/* Jitter  */
 	MIN_(min_stat.tx.jitter.min, audio->rtcp.stat.tx.jitter.min);
 	MAX_(max_stat.tx.jitter.max, audio->rtcp.stat.tx.jitter.max);
-	AVG_(avg_stat.tx.jitter.avg, audio->rtcp.stat.tx.jitter.avg);
+	AVG_(avg_stat.tx.jitter.mean, audio->rtcp.stat.tx.jitter.mean);
 
 
 	/* RTT */
 	MIN_(min_stat.rtt.min, audio->rtcp.stat.rtt.min);
 	MAX_(max_stat.rtt.max, audio->rtcp.stat.rtt.max);
-	AVG_(avg_stat.rtt.avg, audio->rtcp.stat.rtt.avg);
+	AVG_(avg_stat.rtt.mean, audio->rtcp.stat.rtt.mean);
 
 	++count;
     }
@@ -1767,7 +1767,7 @@ static void print_avg_stat(void)
 	   "packets",
 
 	   min_stat.rx.jitter.min/1000.0, 
-	   avg_stat.rx.jitter.avg/1000.0, 
+	   avg_stat.rx.jitter.mean/1000.0, 
 	   max_stat.rx.jitter.max/1000.0,
 	   "ms",
 	
@@ -1798,13 +1798,13 @@ static void print_avg_stat(void)
 	   "packets",
 
 	   min_stat.tx.jitter.min/1000.0, 
-	   avg_stat.tx.jitter.avg/1000.0, 
+	   avg_stat.tx.jitter.mean/1000.0, 
 	   max_stat.tx.jitter.max/1000.0,
 	   "ms",
 
 	   /* rtt */
 	   min_stat.rtt.min/1000.0, 
-	   avg_stat.rtt.avg/1000.0, 
+	   avg_stat.rtt.mean/1000.0, 
 	   max_stat.rtt.max/1000.0,
 	   "ms"
 	   );
