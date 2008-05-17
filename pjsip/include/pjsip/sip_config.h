@@ -108,7 +108,7 @@ typedef struct pjsip_cfg_t
     struct {
 	/**
 	 * Specify whether client registration should check for its 
-	 * registered contact in Contact header of successful REGISTE 
+	 * registered contact in Contact header of successful REGISTER 
 	 * response to determine whether registration has been successful. 
 	 * This setting may be disabled if non-compliant registrar is unable
 	 * to return correct Contact header.
@@ -116,6 +116,17 @@ typedef struct pjsip_cfg_t
 	 * Default is PJSIP_REGISTER_CLIENT_CHECK_CONTACT
 	 */
 	pj_bool_t   check_contact;
+
+	/**
+	 * Specify whether client registration should add "x-uid" extension
+	 * parameter in all Contact URIs that it registers to assist the
+	 * matching of Contact URIs in the 200/OK REGISTER response, in 
+	 * case the registrar is unable to return exact Contact URI in the
+	 * 200/OK response.
+	 *
+	 * Default is PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM.
+	 */
+	pj_bool_t   add_xuid_param;
 
     } regc;
 
@@ -713,7 +724,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_HAS_DIGEST_AKA_AUTH	    0
 #endif
 
-PJ_END_DECL
+
+/**
+ * Specify the number of seconds to refresh the client registration
+ * before the registration expires.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
+#   define PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH  5
+#endif
+
 
 /**
  * Specify whether client registration should check for its registered
@@ -721,7 +742,8 @@ PJ_END_DECL
  * whether registration has been successful. This setting may be disabled
  * if non-compliant registrar is unable to return correct Contact header.
  *
- * This setting can be changed in run-time with using pjsip_cfg().
+ * This setting can be changed in run-time by settting \a regc.check_contact
+ * field of pjsip_cfg().
  *
  * Default is 1
  */
@@ -729,6 +751,25 @@ PJ_END_DECL
 #   define PJSIP_REGISTER_CLIENT_CHECK_CONTACT	1
 #endif
 
+
+/**
+ * Specify whether client registration should add "x-uid" extension
+ * parameter in all Contact URIs that it registers to assist the
+ * matching of Contact URIs in the 200/OK REGISTER response, in 
+ * case the registrar is unable to return exact Contact URI in the
+ * 200/OK response.
+ *
+ * This setting can be changed in run-time by setting 
+ * \a regc.add_xuid_param field of pjsip_cfg().
+ *
+ * Default is 0.
+ */
+#ifndef PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM
+#   define PJSIP_REGISTER_CLIENT_ADD_XUID_PARAM	0
+#endif
+
+
+PJ_END_DECL
 
 /**
  * @}

@@ -117,6 +117,10 @@ SOURCE="..\src\test-pjsip\msg_test.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\test-pjsip\regc_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test-pjsip\test.c"
 # End Source File
 # Begin Source File

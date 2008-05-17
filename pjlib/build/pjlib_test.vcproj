@@ -208,6 +208,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pjlib-test\activesock.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-test\atomic.c"
 				>
 				<FileConfiguration

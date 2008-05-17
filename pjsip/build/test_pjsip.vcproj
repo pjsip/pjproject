@@ -347,6 +347,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\test-pjsip\regc_test.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\test-pjsip\test.c"
 				>
 				<FileConfiguration

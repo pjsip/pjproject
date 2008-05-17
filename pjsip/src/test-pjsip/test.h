@@ -40,6 +40,7 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_TRANSPORT_GROUP	    1
 #define INCLUDE_TSX_GROUP	    1
 #define INCLUDE_INV_GROUP	    1
+#define INCLUDE_REGC_GROUP	    1
 
 #define INCLUDE_BENCHMARKS	    1
 
@@ -62,6 +63,7 @@ extern pjsip_endpoint *endpt;
 #define INCLUDE_RESOLVE_TEST	INCLUDE_TRANSPORT_GROUP
 #define INCLUDE_TSX_TEST	INCLUDE_TSX_GROUP
 #define INCLUDE_INV_OA_TEST	INCLUDE_INV_GROUP
+#define INCLUDE_REGC_TEST	INCLUDE_REGC_GROUP
 
 
 /* The tests */
@@ -74,6 +76,7 @@ int transport_udp_test(void);
 int transport_loop_test(void);
 int transport_tcp_test(void);
 int resolve_test(void);
+int regc_test(void);
 
 struct tsx_test_param
 {

@@ -62,8 +62,14 @@ typedef struct pjsip_regc pjsip_regc;
 struct pjsip_regc_cbparam
 {
     pjsip_regc		*regc;	    /**< Client registration structure.	    */
-    void		*token;	    /**< Arbitrary token.		    */
-    pj_status_t		 status;    /**< Error status.			    */
+    void		*token;	    /**< Arbitrary token set by application */
+
+    /** Error status. If this value is non-PJ_SUCCESS, some error has occured.
+     *  Note that even when this contains PJ_SUCCESS the registration might
+     *  have failed; in this case the \a code field will contain non
+     *  successful (non-2xx status class) code
+     */
+    pj_status_t		 status;
     int			 code;	    /**< SIP status code received.	    */
     pj_str_t		 reason;    /**< SIP reason phrase received.	    */
     pjsip_rx_data	*rdata;	    /**< The complete received response.    */
@@ -295,19 +301,31 @@ PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
 					       pjsip_tx_data **p_tdata);
 
 /**
- * Update Contact details in the client registration structure.
+ * Update Contact details in the client registration structure. For each
+ * contact URI, if the uri is not found in existing contact, it will be
+ * added to the Contact list. If the URI matches existing contact, nothing
+ * will be added. This function will also mark existing contacts which
+ * are not specified in the new contact list as to be removed, by adding
+ * "expires=0" parameter to these contacts.
+ *
+ * Once the contact list has been updated, application must update the
+ * registration by creating a new REGISTER request and send it to the
+ * registrar. This request will contain both old and new contacts; the
+ * old contacts will have it's expires parameter set to zero to instruct
+ * the registrar to remove the bindings.
  *
  * @param regc	    The client registration structure.
  * @param ccnt	    Number of contacts.
- * @param contact   Array of contacts.
- * @return	    zero if sucessfull.
+ * @param contact   Array of contact URIs.
+ * @return	    PJ_SUCCESS if sucessfull.
  */
 PJ_DECL(pj_status_t) pjsip_regc_update_contact( pjsip_regc *regc,
 					        int ccnt,
 						const pj_str_t contact[] );
 
 /**
- * Update the expires value.
+ * Update the expires value. The next REGISTER request will contain
+ * new expires value for the registration.
  *
  * @param regc	    The client registration structure.
  * @param expires   The new expires value.

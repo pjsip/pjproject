@@ -359,6 +359,10 @@ int test_main(void)
     DO_TEST(inv_offer_answer_test());
 #endif
 
+#if INCLUDE_REGC_TEST
+    DO_TEST(regc_test());
+#endif
+
 
 on_return:
     flush_events(500);
