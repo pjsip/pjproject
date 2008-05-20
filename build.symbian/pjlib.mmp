@@ -29,6 +29,7 @@ MACRO		PJ_SYMBIAN=1
 //
 // Platform independent source
 //
+SOURCE		activesock.c
 SOURCE		array.c
 SOURCE		config.c
 SOURCE		ctype.c

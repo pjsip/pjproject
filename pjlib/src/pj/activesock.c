@@ -236,7 +236,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
 	struct read_op *r = &asock->read_op[i];
 	pj_ssize_t size_to_read;
 
-	r->pkt = pj_pool_alloc(pool, buff_size);
+	r->pkt = (pj_uint8_t*)pj_pool_alloc(pool, buff_size);
 	r->max_size = size_to_read = buff_size;
 
 	status = pj_ioqueue_recv(asock->key, &r->op_key, r->pkt, &size_to_read,
@@ -272,7 +272,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
 	struct read_op *r = &asock->read_op[i];
 	pj_ssize_t size_to_read;
 
-	r->pkt = pj_pool_alloc(pool, buff_size);
+	r->pkt = (pj_uint8_t*) pj_pool_alloc(pool, buff_size);
 	r->max_size = size_to_read = buff_size;
 	r->src_addr_len = sizeof(r->src_addr);
 

@@ -21,6 +21,7 @@ OPTION		GCC	-x c++
 
 // Test files
 
+SOURCE	activesock.c
 SOURCE	atomic.c
 SOURCE	echo_clt.c
 SOURCE	errno.c
