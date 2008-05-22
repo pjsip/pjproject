@@ -256,7 +256,7 @@ BOOL CPocketPJDlg::Restart()
     acc_cfg.cred_info[0].data_type = 0;
     acc_cfg.cred_info[0].data = pj_str(passwd);
 
-    acc_cfg.use_srtp = (m_Cfg.m_UseStun ? PJMEDIA_SRTP_OPTIONAL : PJMEDIA_SRTP_DISABLED);
+    acc_cfg.use_srtp = (m_Cfg.m_UseSrtp ? PJMEDIA_SRTP_OPTIONAL : PJMEDIA_SRTP_DISABLED);
     acc_cfg.srtp_secure_signaling = 0;
     acc_cfg.publish_enabled = m_Cfg.m_UsePublish;
     
