@@ -175,7 +175,7 @@ BOOL CPocketPJDlg::Restart()
     media_cfg.ec_tail_len = 0;
     media_cfg.ilbc_mode = 30;
     media_cfg.max_media_ports = 8;
-    media_cfg.quality = 1;
+    media_cfg.quality = 5;
     media_cfg.thread_cnt = 1;
     media_cfg.enable_ice = m_Cfg.m_UseIce;
 
@@ -212,11 +212,12 @@ BOOL CPocketPJDlg::Restart()
 
     // Adjust codecs priority
     pj_str_t tmp;
-    pjsua_codec_set_priority(pj_cstr(&tmp, "GSM"),  200);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "PCMU"), 190);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "PCMA"), 185);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "iLBC"), 0);
     pjsua_codec_set_priority(pj_cstr(&tmp, "speex"), 0);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/8000"), 200);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "GSM"),  180);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "PCMU"), 160);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "PCMA"), 150);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "iLBC"), 0);
     pjsua_codec_set_priority(pj_cstr(&tmp, "L16"), 0);
 
 

@@ -165,7 +165,7 @@ BSC32=bscmake.exe
 # PROP Target_Dir ""
 CPP=clarm.exe
 # ADD BASE CPP /nologo /W3 /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D "NDEBUG" /D "ARM" /D "_ARM_" /D "ARMV4" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
-# ADD CPP /nologo /W3 /I "../../include" /D "NDEBUG" /D "ARMV4" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX /O2 /M$(CECrtMT) /c
+# ADD CPP /nologo /W3 /Oxt /I "../../include" /D "NDEBUG" /D "ARMV4" /D "ARM" /D "_ARM_" /D _WIN32_WCE=$(CEVersion) /D "$(CePlatform)" /D UNDER_CE=$(CEVersion) /D "UNICODE" /D "_UNICODE" /D "_LIB" /YX  /M$(CECrtMT) /c
 # SUBTRACT CPP /Fr
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
@@ -643,6 +643,7 @@ DEP_CPP_ACTIV=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -1227,6 +1228,7 @@ DEP_CPP_ADDR_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -1686,6 +1688,7 @@ DEP_CPP_ARRAY=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -2631,6 +2634,7 @@ DEP_CPP_ERRNO=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -3049,6 +3053,7 @@ DEP_CPP_EXCEP=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -3720,6 +3725,7 @@ DEP_CPP_FILE_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -4415,6 +4421,7 @@ DEP_CPP_GUID_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -4847,6 +4854,7 @@ DEP_CPP_GUID_S=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -5293,6 +5301,7 @@ DEP_CPP_HASH_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -5784,6 +5793,7 @@ DEP_CPP_IOQUE=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -6361,6 +6371,7 @@ DEP_CPP_IP_HE=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -7183,6 +7194,7 @@ DEP_CPP_LOCK_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -7635,6 +7647,7 @@ DEP_CPP_LOG_C=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -8358,6 +8371,7 @@ DEP_CPP_OS_CO=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -8834,6 +8848,7 @@ DEP_CPP_OS_ER=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -9244,6 +9259,7 @@ DEP_CPP_OS_TI=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -10171,6 +10187,7 @@ DEP_CPP_POOL_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -10686,6 +10703,7 @@ DEP_CPP_POOL_B=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -11212,6 +11230,7 @@ DEP_CPP_POOL_C=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -11662,6 +11681,7 @@ DEP_CPP_POOL_P=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -12635,6 +12655,7 @@ DEP_CPP_SOCK_=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -13039,6 +13060,7 @@ DEP_CPP_SOCK_C=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -13725,6 +13747,7 @@ DEP_CPP_STRIN=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -14181,6 +14204,7 @@ DEP_CPP_TIMER=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
@@ -14877,6 +14901,7 @@ DEP_CPP_UNICO=\
 	"..\..\include\pj\list_i.h"\
 	"..\..\include\pj\lock.h"\
 	"..\..\include\pj\log.h"\
+	"..\..\include\pj\math.h"\
 	"..\..\include\pj\os.h"\
 	"..\..\include\pj\pool.h"\
 	"..\..\include\pj\pool_alt.h"\
