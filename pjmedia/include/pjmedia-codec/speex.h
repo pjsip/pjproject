@@ -61,9 +61,9 @@ enum pjmedia_speex_options
  * @param endpt		The pjmedia endpoint.
  * @param options	Bitmask of pjmedia_speex_options (default=0).
  * @param quality	Specify encoding quality, or use -1 for default 
- *			(default=8).
+ *			(@see PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY).
  * @param complexity	Specify encoding complexity , or use -1 for default 
- *			(default=8).
+ *			(@see PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY).
  *
  * @return		PJ_SUCCESS on success.
  */
@@ -83,6 +83,21 @@ PJ_DECL(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
  */
 PJ_DECL(pj_status_t) pjmedia_codec_speex_init_default(pjmedia_endpt *endpt);
 
+
+/**
+ * Change the settings of Speex codec.
+ *
+ * @param clock_rate	Clock rate of Speex mode to be set.
+ * @param quality	Specify encoding quality, or use -1 for default 
+ *			(@see PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY).
+ * @param complexity	Specify encoding complexity , or use -1 for default 
+ *			(@see PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY).
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_speex_set_param(unsigned clock_rate,
+						   int quality,
+						   int complexity);
 
 
 /**

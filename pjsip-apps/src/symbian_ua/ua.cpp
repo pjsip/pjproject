@@ -334,7 +334,25 @@ static pj_status_t app_startup()
 	    pjsua_destroy();
 	    return status;
     }
+    
+    /* Adjust Speex priority and enable only the narrowband */
+    {
+        pj_str_t codec_id = pj_str("speex/8000");
+        pjmedia_codec_mgr_set_codec_priority( 
+        	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+        	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+1);
 
+        codec_id = pj_str("speex/16000");
+        pjmedia_codec_mgr_set_codec_priority( 
+        	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+        	&codec_id, PJMEDIA_CODEC_PRIO_DISABLED);
+
+        codec_id = pj_str("speex/32000");
+        pjmedia_codec_mgr_set_codec_priority( 
+        	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+        	&codec_id, PJMEDIA_CODEC_PRIO_DISABLED);
+    }
+    
     /* Add UDP transport. */
     pjsua_transport_config tcfg;
     pjsua_transport_id tid;

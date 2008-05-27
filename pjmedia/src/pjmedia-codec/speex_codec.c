@@ -37,9 +37,6 @@
 
 #define THIS_FILE   "speex_codec.c"
 
-#define DEFAULT_QUALITY	    10
-#define DEFAULT_COMPLEXITY  10
-
 /* Prototypes for Speex factory */
 static pj_status_t spx_test_alloc( pjmedia_codec_factory *factory, 
 				   const pjmedia_codec_info *id );
@@ -211,8 +208,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     }
 
     /* Get defaults */
-    if (quality <= 0) quality = DEFAULT_QUALITY;
-    if (complexity <= 0) complexity = DEFAULT_COMPLEXITY;
+    if (quality < 0) quality = PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY;
+    if (complexity < 0) complexity = PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY;
+
+    /* Validate quality & complexity */
+    PJ_ASSERT_RETURN(quality >= 0 && quality <= 10, PJ_EINVAL);
+    PJ_ASSERT_RETURN(complexity >= 1 && complexity <= 10, PJ_EINVAL);
 
     /* Create Speex codec factory. */
     spx_factory.base.op = &spx_factory_op;
@@ -297,6 +298,46 @@ on_error:
 PJ_DEF(pj_status_t) pjmedia_codec_speex_init_default(pjmedia_endpt *endpt)
 {
     return pjmedia_codec_speex_init(endpt, 0, -1, -1);
+}
+
+/*
+ * Change the settings of Speex codec.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_speex_set_param(unsigned clock_rate,
+						  int quality,
+						  int complexity)
+{
+    unsigned i;
+
+    /* Get defaults */
+    if (quality < 0) quality = PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY;
+    if (complexity < 0) complexity = PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY;
+
+    /* Validate quality & complexity */
+    PJ_ASSERT_RETURN(quality >= 0 && quality <= 10, PJ_EINVAL);
+    PJ_ASSERT_RETURN(complexity >= 1 && complexity <= 10, PJ_EINVAL);
+
+    /* Apply the settings */
+    for (i=0; i<PJ_ARRAY_SIZE(spx_factory.speex_param); ++i) {
+	if (spx_factory.speex_param[i].clock_rate == clock_rate) {
+	    pj_status_t status;
+
+	    spx_factory.speex_param[i].quality = quality;
+	    spx_factory.speex_param[i].complexity = complexity;
+
+	    /* Somehow quality<=4 is broken in linux. */
+	    if (i == PARAM_UWB && quality <= 4 && quality >= 0) {
+		PJ_LOG(5,(THIS_FILE, "Adjusting quality to 5 for uwb"));
+		spx_factory.speex_param[PARAM_UWB].quality = 5;
+	    }
+
+	    status = get_speex_info(&spx_factory.speex_param[i]);
+
+	    return status;
+	}
+    }
+
+    return PJ_EINVAL;
 }
 
 /*

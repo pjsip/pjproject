@@ -4,6 +4,8 @@ winscw
 gcce
 
 prj_mmpfiles
+
+// libraries
 pjlib.mmp
 pjlib_util.mmp
 pjnath.mmp
@@ -15,8 +17,12 @@ pjsip.mmp
 pjsip_simple.mmp
 pjsip_ua.mmp
 pjsua_lib.mmp
-libgsmcodec.mmp
 
+// codecs
+libgsmcodec.mmp
+libspeexcodec.mmp
+
+// applications
 pjlib_test.mmp
 symbian_ua.mmp
 symsndtest.mmp

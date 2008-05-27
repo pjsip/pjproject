@@ -51,6 +51,20 @@
 #   define PJMEDIA_HAS_SPEEX_CODEC    1
 #endif
 
+/**
+ * Speex codec default complexity setting.
+ */
+#ifndef PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY
+#   define PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY   2
+#endif
+
+/**
+ * Speex codec default quality setting.
+ */
+#ifndef PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY
+#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	    5
+#endif
+
 
 /**
  * Unless specified otherwise, iLBC codec is included by default.

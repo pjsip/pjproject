@@ -82,10 +82,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     /* Register all codecs */
 #if PJMEDIA_HAS_SPEEX_CODEC
     /* Register speex. */
-    status = pjmedia_codec_speex_init(pjsua_var.med_endpt, 
-				      0,
-				      pjsua_var.media_cfg.quality, 
-				      pjsua_var.media_cfg.quality);
+    status = pjmedia_codec_speex_init_default(pjsua_var.med_endpt);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing Speex codec",
 		     status);

@@ -38,7 +38,7 @@ SYSTEMINCLUDE	\epoc32\include\libc
 	STATICLIBRARY	pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
 	STATICLIBRARY	pjnath.lib pjlib_util.lib pjlib.lib
 	STATICLIBRARY	symbian_audio.lib
-	STATICLIBRARY	libgsmcodec.lib
+	STATICLIBRARY	libgsmcodec.lib libspeexcodec.lib
 #endif
 
 #ifdef WINSCW
