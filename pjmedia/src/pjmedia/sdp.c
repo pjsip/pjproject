@@ -466,7 +466,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_rtpmap_to_attr(pj_pool_t *pool,
 	return PJMEDIA_SDP_ERTPMAPTOOLONG;
 
     attr->value.slen = len;
-    attr->value.ptr = (char*) pj_pool_alloc(pool, attr->value.slen);
+    attr->value.ptr = (char*) pj_pool_alloc(pool, attr->value.slen+1);
     pj_memcpy(attr->value.ptr, tempbuf, attr->value.slen+1);
 
     *p_attr = attr;
