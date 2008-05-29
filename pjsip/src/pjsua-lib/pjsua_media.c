@@ -1849,10 +1849,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 		if (pjsua_var.media_cfg.quality >= 3 &&
 		    pjsua_var.media_cfg.quality <= 4)
 		{
-		    resample_opt |= PJMEDIA_CONF_SMALL_FILTER;
+		    resample_opt |= PJMEDIA_RESAMPLE_USE_SMALL_FILTER;
 		}
 		else if (pjsua_var.media_cfg.quality < 3) {
-		    resample_opt |= PJMEDIA_CONF_USE_LINEAR;
+		    resample_opt |= PJMEDIA_RESAMPLE_USE_LINEAR;
 		}
 		
 		status = pjmedia_resample_port_create(pjsua_var.pool, 
