@@ -68,14 +68,11 @@ typedef struct pjmedia_delay_buf pjmedia_delay_buf;
  *			    identification.
  * @param clock_rate	    Number of samples processed per second.
  * @param samples_per_frame Number of samples per frame.
- * @param max_frames	    Maximum number of delay to be accommodated,
- *			    in number of frames.
- * @param delay		    The delay to be applied, in number of frames.
- *			    If the value is -1 or 0, the delay buffer will
- *			    learn about the delay automatically. If
- *			    the value is greater than zero, then this
- *			    value will be used and no learning will be
- *			    performed.
+ * @param channel_count	    Number of channel per frame.
+ * @param max_delay	    Maximum number of delay to be accommodated,
+ *			    in ms, if this value is negative or less than 
+ *			    one frame time, default maximum delay used is
+ *			    400 ms.
  * @param option	    Option flags, must be zero for now.
  * @param p_b		    Pointer to receive the delay buffer instance.
  *
@@ -87,8 +84,8 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_create(pj_pool_t *pool,
 					      const char *name,
 					      unsigned clock_rate,
 					      unsigned samples_per_frame,
-					      unsigned max_frames,
-					      int delay,
+					      unsigned channel_count,
+					      unsigned max_delay,
 					      unsigned options,
 					      pjmedia_delay_buf **p_b);
 
@@ -125,15 +122,6 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
  */
 PJ_DECL(pj_status_t) pjmedia_delay_buf_get(pjmedia_delay_buf *b,
 					   pj_int16_t frame[]);
-
-/**
- * Reinitiate learning state. This will clear the buffer's content.
- *
- * @param b		    The delay buffer.
- *
- * @return		    PJ_SUCCESS on success or the appropriate error.
- */
-PJ_DECL(pj_status_t) pjmedia_delay_buf_learn(pjmedia_delay_buf *b);
 
 /**
  * Reset delay buffer. This will clear the buffer's content. But keep

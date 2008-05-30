@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     const pj_str_t name = pj_str("scomb-rev");
     struct splitcomb *sc = (struct splitcomb*) splitcomb;
     struct reverse_port *rport;
-    unsigned buf_cnt;
+    unsigned buf_cnt, ptime;
     pjmedia_port *port;
     pj_status_t status;
 
@@ -346,6 +346,9 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     if (buf_cnt == 0)
 	buf_cnt = MAX_BUF_CNT;
 
+    ptime = port->info.samples_per_frame * 1000 / port->info.clock_rate /
+	    port->info.channel_count;
+
     rport->max_burst = MAX_BURST;
     rport->max_null_frames = MAX_NULL_FRAMES;
 
@@ -353,7 +356,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     status = pjmedia_delay_buf_create(pool, "scombdb-dn",
 				      port->info.clock_rate,
 				      port->info.samples_per_frame,
-				      buf_cnt, -1, 0,
+				      port->info.channel_count,
+				      buf_cnt * ptime, 0,
 				      &rport->buf[DIR_DOWNSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
 	return status;
@@ -363,7 +367,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     status = pjmedia_delay_buf_create(pool, "scombdb-up",
 				      port->info.clock_rate,
 				      port->info.samples_per_frame,
-				      buf_cnt, -1, 0,
+				      port->info.channel_count,
+				      buf_cnt * ptime, 0,
 				      &rport->buf[DIR_UPSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
 	pjmedia_delay_buf_destroy(rport->buf[DIR_DOWNSTREAM].dbuf);

@@ -372,6 +372,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
 {
     pjmedia_snd_port *snd_port;
     pj_status_t status;
+    unsigned ptime;
 
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
@@ -388,13 +389,17 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     snd_port->bits_per_sample = bits_per_sample;
     
 #if PJMEDIA_SOUND_USE_DELAYBUF
+    ptime = samples_per_frame * 1000 / (clock_rate * channel_count);
+
     status = pjmedia_delay_buf_create(pool, "snd_buff", 
-				      clock_rate, samples_per_frame, 
-				      PJMEDIA_SOUND_BUFFER_COUNT, -1, 
+				      clock_rate, samples_per_frame,
+				      channel_count,
+				      PJMEDIA_SOUND_BUFFER_COUNT * ptime,
 				      0, &snd_port->delay_buf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 #else
     PJ_UNUSED_ARG(status);
+    PJ_UNUSED_ARG(ptime);
 #endif
 
     *p_port = snd_port;

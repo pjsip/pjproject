@@ -23,6 +23,7 @@
 #include <pj/assert.h>
 #include <pj/lock.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/pool.h>
 
 
@@ -32,96 +33,74 @@
 #   define TRACE__(x)
 #endif
 
-
-/* Type of states of delay buffer */
-enum state
-{
-    STATE_WAITING,
-    STATE_LEARNING,
-    STATE_RUNNING
-};
-
-/* Type of operation of delay buffer */
+/* Operation types of delay buffer */
 enum OP
 {
     OP_PUT,
-    OP_GET,
-    OP_UNDEFINED
+    OP_GET
 };
 
-/* The following macros represent cycles of test. Since there are two
- * operations performed (get & put), these macros minimum value must be 2 
- * and should be even number.
+/* Specify time for delaybuf to recalculate effective delay, in ms.
  */
-#define WAITING_COUNT	4
-#define LEARN_COUNT	16
+#define RECALC_TIME	    2000
 
-/* Number of buffers to add to learnt level for additional stability
- * Please note that wsola_discard() needs minimum 3 frames, so max buffer 
- * count should be minimally 3, setting SAFE_MARGIN to 2 will guarantees 
- * this.
+/* Default value of maximum delay, in ms, this value is used when 
+ * maximum delay requested is less than ptime (one frame length).
  */
-#define SAFE_MARGIN	2
+#define DEFAULT_MAX_DELAY   400
 
-/*
- * Some experimental data (with SAFE_MARGIN=1):
- *
- * System 1:
- *  - XP, WMME, 10ms ptime, 
- *  - Sennheiser Headset+USB sound card
- *  - Stable delaybuf level: 6, on WAITING_COUNT=4 and LEARNING_COUNT=48
- *
- * System 2:
- *  - XP, WMME, 10ms ptime
- *  - Onboard SoundMAX Digital Audio
- *  - Stable delaybuf level: 6, on WAITING_COUNT=4 and LEARNING_COUNT=48
- *
- * System 3:
- *  - MacBook Core 2 Duo, OSX 10.5, 10ms ptime
- *  - Stable delaybuf level: 2, on WAITING_COUNT=4 and LEARNING_COUNT=8
+/* Number of frames to add to learnt level for additional stability.
  */
+#define SAFE_MARGIN	    0
 
+/* This structure describes internal delaybuf settings and states.
+ */
 struct pjmedia_delay_buf
 {
+    /* Properties and configuration */
     char	     obj_name[PJ_MAX_OBJ_NAME];
-
     pj_lock_t	    *lock;		/**< Lock object.		     */
-
     pj_int16_t	    *frame_buf;
-    enum state	     state;		/**< State of delay buffer	     */
     unsigned	     samples_per_frame; /**< Number of samples in one frame  */
-    unsigned	     max_frames;	/**< Buffer allocated, in frames     */
+    unsigned	     ptime;		/**< Frame time, in ms		     */
+    unsigned	     channel_count;	/**< Channel count, in ms	     */
+    unsigned	     max_cnt;		/**< Max buffered samples, in samples*/
 
+    /* Buffer pointer and counter */
     unsigned	     put_pos;		/**< Position for put op, in samples */
     unsigned	     get_pos;		/**< Position for get op, in samples */
     unsigned	     buf_cnt;		/**< Number of buffered samples	     */
-    unsigned	     max_cnt;		/**< Max number of buffered samples  */
+    unsigned	     eff_cnt;		/**< Effective count of buffered 
+					     samples to keep the optimum
+					     balance between delay and 
+					     stability. This is calculated 
+					     based on burst level.	     */
 
-    struct {
-	unsigned     level;		/**< Burst level storage on learning */
-    } op[2];
+    /* Learning vars */
+    unsigned	     level;		/**< Burst level counter	     */
     enum OP	     last_op;		/**< Last op (GET or PUT) of learning*/
-    unsigned	     state_count;	/**< Counter of op cycles of learning*/
+    int		     recalc_timer;	/**< Timer for recalculating max_level*/
+    unsigned	     max_level;		/**< Current max burst level	     */
 
-    unsigned	     max_level;		/**< Learning result: burst level    */
-
+    /* Drift handler */
     pjmedia_wsola   *wsola;		/**< Drift handler		     */
 };
+
 
 PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 					      const char *name,
 					      unsigned clock_rate,
 					      unsigned samples_per_frame,
-					      unsigned max_frames,
-					      int delay,
+					      unsigned channel_count,
+					      unsigned max_delay,
 					      unsigned options,
 					      pjmedia_delay_buf **p_b)
 {
     pjmedia_delay_buf *b;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pool && samples_per_frame && max_frames && p_b, PJ_EINVAL);
-    PJ_ASSERT_RETURN((int)max_frames >= delay, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pool && samples_per_frame && clock_rate && channel_count &&
+		     p_b, PJ_EINVAL);
     PJ_ASSERT_RETURN(options==0, PJ_EINVAL);
 
     PJ_UNUSED_ARG(options);
@@ -133,8 +112,16 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
     b = PJ_POOL_ZALLOC_T(pool, pjmedia_delay_buf);
 
     pj_ansi_strncpy(b->obj_name, name, PJ_MAX_OBJ_NAME-1);
+
     b->samples_per_frame = samples_per_frame;
-    b->max_frames = max_frames;
+    b->channel_count = channel_count;
+    b->ptime = samples_per_frame * 1000 / clock_rate / channel_count;
+    if (max_delay < b->ptime)
+	max_delay = PJ_MAX(DEFAULT_MAX_DELAY, b->ptime);
+
+    b->max_cnt = samples_per_frame * max_delay / b->ptime;
+    b->eff_cnt = b->max_cnt >> 1;
+    b->recalc_timer = RECALC_TIME;
 
     status = pj_lock_create_recursive_mutex(pool, b->obj_name, 
 					    &b->lock);
@@ -142,20 +129,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 	return status;
 
     b->frame_buf = (pj_int16_t*)
-		   pj_pool_zalloc(pool, samples_per_frame * max_frames * 
-				  sizeof(pj_int16_t));
-
-    if (delay >= 0) {
-	if (delay == 0)
-	    delay = 1;
-	b->max_level = delay;
-	b->max_cnt = delay * samples_per_frame;
-	b->state = STATE_RUNNING;
-    } else {
-	b->max_cnt = max_frames * samples_per_frame;
-	b->last_op = OP_UNDEFINED;
-	b->state = STATE_WAITING;
-    }
+		    pj_pool_zalloc(pool, b->max_cnt * sizeof(pj_int16_t));
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
 				  PJMEDIA_WSOLA_NO_PLC, &b->wsola);
@@ -182,6 +156,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf *b)
 	b->wsola = NULL;
 
     pj_lock_release(b->lock);
+
     pj_lock_destroy(b->lock);
     b->lock = NULL;
 
@@ -262,118 +237,58 @@ static void shrink_buffer(pjmedia_delay_buf *b, unsigned erase_cnt)
     }
 }
 
-static void set_max_cnt(pjmedia_delay_buf *b, unsigned new_max_cnt)
-{
-    unsigned old_max_cnt = b->max_cnt;
-
-    /* nothing to adjust */
-    if (old_max_cnt == new_max_cnt)
-	return;
-
-    /* For now, only support shrinking */
-    pj_assert(old_max_cnt > new_max_cnt);
-
-    /* Buffer empty, only need to reset pointers then set new max directly */
-    if (b->buf_cnt == 0) {
-	b->put_pos = b->get_pos = 0;
-	b->max_cnt = new_max_cnt;
-	return;
-    }
-
-    /* If samples number in the buffer > new_max_cnt, reduce samples first */
-    if (b->buf_cnt > new_max_cnt)
-	shrink_buffer(b, b->buf_cnt - new_max_cnt);
-
-    /* Adjust buffer to accomodate the new max_cnt so the samples is secured.
-     * This is done by make get_pos = 0 
-     */
-    if (b->get_pos <= b->put_pos) {
-	/* sssss .. sssss
-	 *   ^         ^
-	 *   G         P
-	 */
-	/* Consistency checking */
-	pj_assert((b->put_pos - b->get_pos) <= new_max_cnt);
-	pj_assert((b->put_pos - b->get_pos) == b->buf_cnt);
-
-	pjmedia_move_samples(b->frame_buf, &b->frame_buf[b->get_pos], 
-			     b->get_pos);
-	b->put_pos -= b->get_pos;
-	b->get_pos = 0;
-    } else {
-	/* sssss .. sssss
-	 *          ^  ^
-	 *          P  G
-	 */
-	unsigned d = old_max_cnt - b->get_pos;
-
-	/* Consistency checking */
-	pj_assert((b->get_pos - b->put_pos) >= (old_max_cnt - new_max_cnt));
-
-	/* Make get_pos = 0, shift right the leftmost block first */
-	pjmedia_move_samples(&b->frame_buf[d], b->frame_buf, d);
-	pjmedia_copy_samples(b->frame_buf, &b->frame_buf[b->get_pos], d);
-	b->put_pos += d;
-	b->get_pos = 0;
-    }
-
-    b->max_cnt = new_max_cnt;
-}
+/* Fast increase, slow decrease */
+#define AGC_UP(cur, target) cur = (cur + target*3) >> 2
+#define AGC_DOWN(cur, target) cur = (cur*3 + target) >> 2
+#define AGC(cur, target) \
+    if (cur < target) AGC_UP(cur, target); \
+    else AGC_DOWN(cur, target)
 
 static void update(pjmedia_delay_buf *b, enum OP op)
 {
-    enum OP other = (enum OP) !op;
+    /* Sequential operation */
+    if (op == b->last_op) {
+	++b->level;
+	return;
+    } 
 
-    switch (b->state) {
-    case STATE_RUNNING:
-	break;
-    case STATE_WAITING:
-	++b->op[op].level;
-	if (b->op[other].level != 0) {
-	    ++b->state_count;
-	    if (b->state_count == WAITING_COUNT) {
-		/* Start learning */
-		pjmedia_delay_buf_learn(b);
-	    }
-	}
-	b->last_op = op;
-	break;
-    case STATE_LEARNING:
-	++b->op[op].level;
-	if (b->last_op == other) {
-	    unsigned last_level = b->op[other].level;
-	    if (last_level > b->max_level)
-		b->max_level = last_level;
-	    b->op[other].level = 0;
-	    b->state_count++;
-	    if (b->state_count == LEARN_COUNT) {
-		/* give SAFE_MARGIN compensation for added stability */
-		b->max_level += SAFE_MARGIN;
-		
-		/* buffer not enough! */
-		if (b->max_level > b->max_frames) {
-		    PJ_LOG(4,(b->obj_name,"Delay buffer learning result (%d)"
-			      " exceeds the maximum delay allowed (%d)",
-			      b->max_level,
-			      b->max_frames));
+    /* Switching operation */
+    if (b->level > b->max_level)
+	b->max_level = b->level;
 
-		    b->max_level = b->max_frames;
-		}
+    b->recalc_timer -= (b->level * b->ptime) >> 1;
 
-		/* we need to set new max_cnt & adjust buffer */
-		set_max_cnt(b, b->max_level * b->samples_per_frame);
+    b->last_op = op;
+    b->level = 1;
 
-		b->state = STATE_RUNNING;
+    /* Recalculate effective count based on max_level */
+    if (b->recalc_timer <= 0) {
+	unsigned new_eff_cnt = (b->max_level+SAFE_MARGIN)*b->samples_per_frame;
 
-		PJ_LOG(4,(b->obj_name,"Delay buffer start running, level=%u",
-			  b->max_level));
-	    }
-	}
-	b->last_op = op;
-	break;
+	/* Smoothening effective count transition */
+	AGC(b->eff_cnt, new_eff_cnt);
+	
+	/* Make sure the new effective count is multiplication of 
+	 * channel_count, so let's round it up.
+	 */
+	if (b->eff_cnt % b->channel_count)
+	    b->eff_cnt += b->channel_count - (b->eff_cnt % b->channel_count);
+
+	TRACE__((b->obj_name,"Cur eff_cnt=%d", b->eff_cnt));
+	
+	b->max_level = 0;
+	b->recalc_timer = RECALC_TIME;
     }
 
-    
+    /* See if we need to shrink the buffer to reduce delay */
+    if (b->buf_cnt > b->samples_per_frame + b->eff_cnt) {
+	unsigned erase_cnt = b->samples_per_frame >> 1;
+	unsigned old_buf_cnt = b->buf_cnt;
+
+	shrink_buffer(b, erase_cnt);
+	PJ_LOG(5,(b->obj_name,"Buffer size adjusted from %d to %d",
+		  old_buf_cnt, b->buf_cnt));
+    }
 }
 
 PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
@@ -499,33 +414,14 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_delay_buf_learn(pjmedia_delay_buf *b)
-{
-    PJ_ASSERT_RETURN(b, PJ_EINVAL);
-
-    pj_lock_acquire(b->lock);
-
-    b->last_op = OP_UNDEFINED;
-    b->op[OP_GET].level = b->op[OP_PUT].level = 0;
-    b->state = STATE_LEARNING;
-    b->state_count = 0;
-    b->max_level = 0;
-    b->max_cnt = b->max_frames * b->samples_per_frame;
-
-    pjmedia_delay_buf_reset(b);
-
-    pj_lock_release(b->lock);
-
-    PJ_LOG(5,(b->obj_name,"Delay buffer start learning"));
-
-    return PJ_SUCCESS;
-}
 
 PJ_DEF(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b)
 {
     PJ_ASSERT_RETURN(b, PJ_EINVAL);
 
     pj_lock_acquire(b->lock);
+
+    b->recalc_timer = RECALC_TIME;
 
     /* clean up buffer */
     b->buf_cnt = 0;

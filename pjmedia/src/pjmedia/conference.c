@@ -418,6 +418,7 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
 {
     struct conf_port *conf_port;
     pj_status_t status;
+    unsigned ptime;
 
     /* Create port */
     status = create_conf_port(pool, conf, port, name, &conf_port);
@@ -425,11 +426,13 @@ static pj_status_t create_pasv_port( pjmedia_conf *conf,
 	return status;
 
     /* Passive port has delay buf. */
+    ptime = conf->samples_per_frame * 1000 / conf->clock_rate / 
+	    conf->channel_count;
     status = pjmedia_delay_buf_create(pool, name->ptr, 
 				      conf->clock_rate,
 				      conf->samples_per_frame,
-				      RX_BUF_COUNT, /* max */
-				      -1, /* delay */
+				      conf->channel_count,
+				      RX_BUF_COUNT * ptime, /* max delay */
 				      0, /* options */
 				      &conf_port->delay_buf);
     if (status != PJ_SUCCESS)
