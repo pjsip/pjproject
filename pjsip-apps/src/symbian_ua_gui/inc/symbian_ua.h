@@ -20,7 +20,7 @@
 #ifndef __SYMBIAN_UA_H__
 #define __SYMBIAN_UA_H__
 
-typedef unsigned short int wchar_t;
+#include <stddef.h>
 
 typedef struct 
 {
