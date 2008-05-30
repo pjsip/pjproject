@@ -1,0 +1,60 @@
+TARGET			symbian_ua_gui.exe
+UID			   0x100039CE 0xEBD12EE4
+VENDORID	  	  0
+TARGETTYPE		exe
+EPOCSTACKSIZE	0x8000
+
+MACRO		PJ_M_I386=1
+MACRO		PJ_SYMBIAN=1
+
+SYSTEMINCLUDE	\epoc32\include \epoc32\include\variant \epoc32\include\ecom
+SYSTEMINCLUDE	\epoc32\include\libc
+SYSTEMINCLUDE	..\..\..\..\pjlib\include
+SYSTEMINCLUDE	..\..\..\..\pjlib-util\include
+SYSTEMINCLUDE	..\..\..\..\pjnath\include
+SYSTEMINCLUDE	..\..\..\..\pjmedia\include
+SYSTEMINCLUDE	..\..\..\..\pjsip\include
+
+USERINCLUDE	..\inc ..\data
+
+SOURCEPATH		..\data
+START RESOURCE	symbian_ua_gui.rss
+HEADER
+TARGETPATH resource\apps
+END //RESOURCE
+
+START RESOURCE	symbian_ua_gui_reg.rss
+TARGETPATH 	  \private\10003a3f\apps
+END //RESOURCE
+
+LIBRARY			euser.lib apparc.lib cone.lib eikcore.lib avkon.lib
+LIBRARY			commonengine.lib efsrv.lib estor.lib eikcoctl.lib eikdlg.lib 
+LIBRARY			eikctl.lib bafl.lib fbscli.lib aknnotify.lib aknicon.lib
+LIBRARY			etext.lib gdi.lib egul.lib insock.lib
+LIBRARY			ecom.lib InetProtUtil.lib http.lib esock.lib
+
+STATICLIBRARY	pjsua_lib.lib pjsip_ua.lib
+STATICLIBRARY	pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
+STATICLIBRARY	pjnath.lib pjlib_util.lib pjlib.lib
+STATICLIBRARY	symbian_audio.lib
+STATICLIBRARY	libgsmcodec.lib
+STATICLIBRARY	libspeexcodec.lib
+
+LIBRARY		charconv.lib estlib.lib 
+LIBRARY 	mediaclientaudiostream.lib
+LIBRARY 	mediaclientaudioinputstream.lib
+
+LANG 				01
+
+START BITMAP	symbian_ua_gui.mbm
+HEADER
+TARGETPATH		\resource\apps
+SOURCEPATH		..\gfx
+SOURCE	c12,1	list_icon.bmp list_icon_mask.bmp
+END
+
+SOURCEPATH		..\src
+SOURCE symbian_ua_guiContainerView.cpp symbian_ua_guiContainer.cpp symbian_ua_guiAppUi.cpp symbian_ua_guiDocument.cpp symbian_ua_guiApplication.cpp symbian_ua_guiSettingItemList.cpp Symbian_ua_guiSettingItemListSets.cpp symbian_ua_guiSettingItemListView.cpp
+SOURCE symbian_ua.cpp
+
+CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
