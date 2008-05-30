@@ -20,6 +20,8 @@
 #ifndef __SYMBIAN_UA_H__
 #define __SYMBIAN_UA_H__
 
+typedef unsigned short int wchar_t;
+
 typedef struct 
 {
     void (*on_info)(const wchar_t* buf);

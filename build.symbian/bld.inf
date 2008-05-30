@@ -5,12 +5,12 @@ gcce
 
 prj_mmpfiles
 
-// libraries
+/* Libraries */
 pjlib.mmp
 pjlib_util.mmp
 pjnath.mmp
 pjsdp.mmp
-null_audio.mmp
+//null_audio.mmp
 symbian_audio.mmp
 pjmedia.mmp
 pjsip.mmp
@@ -18,11 +18,13 @@ pjsip_simple.mmp
 pjsip_ua.mmp
 pjsua_lib.mmp
 
-// codecs
+/* Codecs */
 libgsmcodec.mmp
 libspeexcodec.mmp
 
-// applications
-pjlib_test.mmp
+/* Applications */
+//pjlib_test.mmp
+//symsndtest.mmp
 symbian_ua.mmp
-symsndtest.mmp
+..\pjsip-apps\src\symbian_ua_gui\group\symbian_ua_gui.mmp
+gnumakefile ..\pjsip-apps\src\symbian_ua_gui\group\icons_aif_scalable_dc.mk
