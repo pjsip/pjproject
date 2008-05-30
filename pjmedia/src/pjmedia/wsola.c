@@ -28,8 +28,9 @@
  */
 #define THIS_FILE   "wsola.c"
 
+#if (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA) || \
+    (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA_LITE)
 
-#if PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA
 /*
  * WSOLA implementation using WSOLA
  */
@@ -113,12 +114,80 @@ struct pjmedia_wsola
     pj_timestamp ts;	        /* Running timestamp.			*/
 };
 
+#if (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA_LITE)
+
+/* In this implementation, waveform similarity comparison is done by calculating
+ * the difference of total level between template frame and the target buffer 
+ * for each template_cnt samples. The smallest difference value assumed to be 
+ * the most similar block. This seems to be naive, however some tests show
+ * acceptable results and the processing speed is amazing.
+ *
+ * diff level = (template[1]+..+template[n]) - (target[1]+..+target[n])
+ */
+static short *find_pitch(short *frm, short *beg, short *end, 
+			 unsigned template_cnt, int first)
+{
+    short *sr, *best=beg;
+    int best_corr = 0x7FFFFFFF;
+    int frm_sum = 0;
+    unsigned i;
+
+    for (i = 0; i<template_cnt; ++i)
+	frm_sum += frm[i];
+
+    for (sr=beg; sr!=end; ++sr) {
+	int corr = frm_sum;
+	int abs_corr = 0;
+
+	/* Do calculation on 8 samples at once */
+	for (i = 0; i<template_cnt; i+=8) {
+	    corr -= (int)sr[i+0] +
+		    (int)sr[i+1] +
+		    (int)sr[i+2] +
+		    (int)sr[i+3] +
+		    (int)sr[i+4] +
+		    (int)sr[i+5] +
+		    (int)sr[i+6] +
+		    (int)sr[i+7];
+	}
+
+	/* Reverse back i if template_cnt is not multiplication of 8,
+	 * the remaining samples will be processed below.
+	 */
+	if (i != template_cnt)
+	    i -= 8;
+
+	for (; i<template_cnt; ++i)
+	    corr -= (int)sr[i];
+
+	abs_corr = corr > 0? corr : -corr;
+
+	if (first) {
+	    if (abs_corr < best_corr) {
+		best_corr = abs_corr;
+		best = sr;
+	    }
+	} else {
+	    if (abs_corr <= best_corr) {
+		best_corr = abs_corr;
+		best = sr;
+	    }
+	}
+    }
+
+    /*TRACE_((THIS_FILE, "found pitch at %u", best-beg));*/
+    return best;
+}
+
+#endif
 
 #if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
 /*
  * Floating point version.
  */
 #include <math.h>
+
+#if (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA)
 
 static short *find_pitch(short *frm, short *beg, short *end, 
 			 unsigned template_cnt, int first)
@@ -130,6 +199,7 @@ static short *find_pitch(short *frm, short *beg, short *end,
 	double corr = 0;
 	unsigned i;
 
+	/* Do calculation on 8 samples at once */
 	for (i=0; i<template_cnt; i += 8) {
 	    corr += ((float)frm[i+0]) * ((float)sr[i+0]) + 
 		    ((float)frm[i+1]) * ((float)sr[i+1]) + 
@@ -140,6 +210,13 @@ static short *find_pitch(short *frm, short *beg, short *end,
 		    ((float)frm[i+6]) * ((float)sr[i+6]) + 
 		    ((float)frm[i+7]) * ((float)sr[i+7]);
 	}
+
+	/* Reverse back i if template_cnt is not multiplication of 8,
+	 * the remaining samples will be processed below.
+	 */
+	if (i != template_cnt)
+	    i -= 8;
+
 	for (; i<template_cnt; ++i) {
 	    corr += ((float)frm[i]) * ((float)sr[i]);
 	}
@@ -160,6 +237,8 @@ static short *find_pitch(short *frm, short *beg, short *end,
     /*TRACE_((THIS_FILE, "found pitch at %u", best-beg));*/
     return best;
 }
+
+#endif
 
 static void overlapp_add(short dst[], unsigned count,
 			 short l[], short r[],
@@ -203,6 +282,8 @@ static void create_win(pj_pool_t *pool, float **pw, unsigned count)
 #define WINDOW_BITS	15
 enum { WINDOW_MAX_VAL = (1 << WINDOW_BITS)-1 };
 
+#if (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA)
+
 static short *find_pitch(short *frm, short *beg, short *end, 
 			 unsigned template_cnt, int first)
 {
@@ -214,6 +295,7 @@ static short *find_pitch(short *frm, short *beg, short *end,
 	pj_int64_t corr = 0;
 	unsigned i;
 
+	/* Do calculation on 8 samples at once */
 	for (i=0; i<template_cnt; i+=8) {
 	    corr += ((int)frm[i+0]) * ((int)sr[i+0]) + 
 		    ((int)frm[i+1]) * ((int)sr[i+1]) + 
@@ -224,6 +306,13 @@ static short *find_pitch(short *frm, short *beg, short *end,
 		    ((int)frm[i+6]) * ((int)sr[i+6]) +
 		    ((int)frm[i+7]) * ((int)sr[i+7]);
 	}
+
+	/* Reverse back i if template_cnt is not multiplication of 8,
+	 * the remaining samples will be processed below.
+	 */
+	if (i != template_cnt)
+	    i -= 8;
+
 	for (; i<template_cnt; ++i) {
 	    corr += ((int)frm[i]) * ((int)sr[i]);
 	}
@@ -244,6 +333,9 @@ static short *find_pitch(short *frm, short *beg, short *end,
     /*TRACE_((THIS_FILE, "found pitch at %u", best-beg));*/
     return best;
 }
+
+#endif
+
 
 static void overlapp_add(short dst[], unsigned count,
 			 short l[], short r[],
@@ -359,6 +451,13 @@ PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool,
     if (wsola->template_size > samples_per_frame)
 	wsola->template_size = wsola->samples_per_frame;
 
+    /* Make sure minimal template size is 8, this is required by waveform 
+     * similarity calculation (find_pitch()). Moreover, smaller template size
+     * will reduce accuracy.
+     */
+    if (wsola->template_size < 8)
+	wsola->template_size = 8;
+
     wsola->buf = (short*)pj_pool_calloc(pool, wsola->buf_cnt, 
 					sizeof(short));
     wsola->frm = wsola->buf + wsola->hist_cnt;
@@ -469,16 +568,20 @@ static unsigned compress(pjmedia_wsola *wsola, short *buf, unsigned count,
 	unsigned frmsz = wsola->samples_per_frame;
 	unsigned dist;
 
-	if (count <= (del_cnt << 1)) {
+	if ((count - del_cnt) <= frmsz) {
+	//if (count <= (del_cnt << 1)) {
 	    TRACE_((THIS_FILE, "Not enough samples to compress!"));
 	    return samples_del;
 	}
 
-	start = buf + (frmsz >> 1);
+	//start = buf + (frmsz >> 1);
+	start = buf + del_cnt - samples_del;
 	end = start + frmsz;
 
 	if (end + frmsz > buf + count)
 	    end = buf+count-frmsz;
+
+	pj_assert(start < end);
 
 	start = find_pitch(buf, start, end, wsola->template_size, 0);
 	dist = start - buf;
@@ -816,7 +919,6 @@ PJ_DEF(pj_status_t) pjmedia_wsola_discard( pjmedia_wsola *wsola,
 
     return PJ_SUCCESS;
 }
-
 
 #endif	/* #if PJMEDIA_WSOLA_IMP.. */
 

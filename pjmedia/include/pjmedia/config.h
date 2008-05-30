@@ -128,6 +128,12 @@
  */
 #define PJMEDIA_WSOLA_IMP_WSOLA		    1
 
+/**
+ * This denotes implementation of WSOLA algorithm with faster waveform 
+ * similarity calculation. This implementation provides fair quality of 
+ * the result with the main advantage of low processing power requirement.
+ */
+#define PJMEDIA_WSOLA_IMP_WSOLA_LITE	    2
 
 /**
  * Specify type of Waveform based Similarity Overlap and Add (WSOLA) backend
