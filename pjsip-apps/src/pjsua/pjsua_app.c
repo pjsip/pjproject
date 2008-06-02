@@ -566,9 +566,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_CLOCK_RATE:
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (lval < 8000 || lval > 48000) {
+	    if (lval < 8000 || lval > 192000) {
 		PJ_LOG(1,(THIS_FILE, "Error: expecting value between "
-				     "8000-48000 for conference clock rate"));
+				     "8000-192000 for conference clock rate"));
 		return PJ_EINVAL;
 	    }
 	    cfg->media_cfg.clock_rate = lval; 
@@ -576,9 +576,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_SND_CLOCK_RATE:
 	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (lval < 8000 || lval > 48000) {
+	    if (lval < 8000 || lval > 192000) {
 		PJ_LOG(1,(THIS_FILE, "Error: expecting value between "
-				     "8000-48000 for sound device clock rate"));
+				     "8000-192000 for sound device clock rate"));
 		return PJ_EINVAL;
 	    }
 	    cfg->media_cfg.snd_clock_rate = lval; 
