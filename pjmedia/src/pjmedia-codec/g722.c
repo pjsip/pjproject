@@ -568,6 +568,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
     }
 
     /* Encode to temporary buffer */
+    output->size = output_buf_len;
     status = g722_enc_encode(&g722_data->encoder, (pj_int16_t*)input->buf, 
 			     SAMPLES_PER_FRAME, output->buf, &output->size);
     if (status != PJ_SUCCESS) {
