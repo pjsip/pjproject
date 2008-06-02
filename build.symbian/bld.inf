@@ -17,6 +17,7 @@ pjsip.mmp
 pjsip_simple.mmp
 pjsip_ua.mmp
 pjsua_lib.mmp
+libsrtp.mmp
 
 /* Codecs */
 libgsmcodec.mmp

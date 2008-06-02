@@ -69,6 +69,7 @@ SOURCE		stream.c
 SOURCE		tonegen.c
 SOURCE		transport_ice.c
 SOURCE		transport_udp.c
+SOURCE		transport_srtp.c
 SOURCE		wav_player.c
 SOURCE		wav_playlist.c
 SOURCE		wav_writer.c
@@ -92,6 +93,9 @@ SYSTEMINCLUDE	..\pjmedia\include
 SYSTEMINCLUDE	..\pjlib\include 
 SYSTEMINCLUDE	..\pjlib-util\include 
 SYSTEMINCLUDE	..\pjnath\include 
+SYSTEMINCLUDE	..\third_party\srtp\include
+SYSTEMINCLUDE	..\third_party\srtp\crypto\include
+SYSTEMINCLUDE	..\third_party\build\srtp
 
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc

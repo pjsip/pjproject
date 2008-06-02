@@ -26,6 +26,7 @@
 
 #define SIP_PORT	5060
 #define USE_ICE		0
+#define USE_SRTP	PJSUA_DEFAULT_USE_SRTP
 
 static RSocketServ aSocketServer;
 static RConnection aConn;
@@ -302,8 +303,8 @@ int symbian_ua_init()
     pjsua_config_default(&cfg);
     cfg.max_calls = 2;
     cfg.thread_cnt = 0; // Disable threading on Symbian
-    //cfg.use_srtp = 0;
-    //cfg.srtp_secure_signaling = 0;
+    cfg.use_srtp = USE_SRTP;
+    cfg.srtp_secure_signaling = 0;
 
     cfg.cb.on_incoming_call = &on_incoming_call;
     cfg.cb.on_call_media_state = &on_call_media_state;

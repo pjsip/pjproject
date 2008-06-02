@@ -77,6 +77,10 @@
 //
 #define USE_ICE		1
 
+//
+// Use SRTP?
+//
+#define USE_SRTP 	PJSUA_DEFAULT_USE_SRTP
 
 //
 // Globals
@@ -289,6 +293,9 @@ static pj_status_t app_startup()
     pjsua_config_default(&cfg);
     cfg.max_calls = 2;
     cfg.thread_cnt = 0; // Disable threading on Symbian
+    cfg.use_srtp = USE_SRTP;
+    cfg.srtp_secure_signaling = 0;
+    
     cfg.cb.on_incoming_call = &on_incoming_call;
     cfg.cb.on_call_media_state = &on_call_media_state;
     cfg.cb.on_call_state = &on_call_state;

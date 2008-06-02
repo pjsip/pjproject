@@ -45,7 +45,7 @@
 #   define PJ_MAXPATH			80
 
 	/* SRTP has not been ported to Symbian yet */
-#   define PJMEDIA_HAS_SRTP			0
+#   define PJMEDIA_HAS_SRTP			1
 
     /* Disable these */
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE

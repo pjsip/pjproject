@@ -29,6 +29,7 @@ OPTION		GCC	-x c++
 //
 // PJLIB-UTIL files
 //
+SOURCE	base64.c
 SOURCE	crc32.c
 SOURCE	dns.c
 SOURCE	dns_dump.c
