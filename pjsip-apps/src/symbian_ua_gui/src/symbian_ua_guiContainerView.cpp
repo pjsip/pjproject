@@ -32,7 +32,7 @@
 #include "symbian_ua_guiContainer.h"
 // ]]] end generated region [Generated User Includes]
 
-#include <UTF.H>
+#include <utf.h>
 #include "symbian_ua.h"
 
 // [[[ begin generated region: do not modify [Generated Constants]

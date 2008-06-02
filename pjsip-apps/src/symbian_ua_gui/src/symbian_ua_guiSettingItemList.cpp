@@ -35,8 +35,8 @@
 // ]]] end generated region [Generated User Includes]
 
 
-#include <S32STOR.H>
-#include <S32FILE.H>
+#include <s32stor.h>
+#include <s32file.h>
 
 
 // [[[ begin generated region: do not modify [Generated Constants]
