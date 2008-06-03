@@ -24,7 +24,9 @@
 #endif
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+PJ_BEGIN_DECL
     const char* get_libsrtp_errstr(int err);
+PJ_END_DECL
 #endif
 
 
