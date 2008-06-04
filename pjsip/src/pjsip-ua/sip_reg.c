@@ -568,7 +568,7 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 
     /* Add Contact headers. */
     hdr = (pjsip_hdr*)regc->contact_hdr_list.next;
-    while (hdr != (pjsip_hdr*)&regc->contact_hdr_list) {
+    while ((void*)hdr != (void*)&regc->contact_hdr_list) {
 	pjsip_msg_add_hdr(msg, (pjsip_hdr*)
 			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
 	hdr = hdr->next;

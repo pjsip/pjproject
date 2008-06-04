@@ -580,7 +580,7 @@ static int update_test(const pj_str_t *registrar_uri)
 	ret = -630;
 	goto on_return;
     }
-    if (h1->next == (pjsip_contact_hdr*)&tdata->msg->hdr)
+    if ((void*)h1->next == (void*)&tdata->msg->hdr)
 	h2 = NULL;
     else
 	h2 = (pjsip_contact_hdr*) 
@@ -590,7 +590,7 @@ static int update_test(const pj_str_t *registrar_uri)
 	goto on_return;
     }
     /* must not have other Contact header */
-    if (h2->next != (pjsip_contact_hdr*)&tdata->msg->hdr &&
+    if ((void*)h2->next != (void*)&tdata->msg->hdr &&
 	pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, h2->next) != NULL)
     {
 	ret = -645;
@@ -660,7 +660,7 @@ static int update_test(const pj_str_t *registrar_uri)
 	    ret = -730;
 	    goto on_return;
 	}
-	if (h1->next == (pjsip_contact_hdr*)&tdata->msg->hdr)
+	if ((void*)h1->next == (void*)&tdata->msg->hdr)
 	    h2 = NULL;
 	else
 	    h2 = (pjsip_contact_hdr*) 
@@ -670,7 +670,7 @@ static int update_test(const pj_str_t *registrar_uri)
 	    goto on_return;
 	}
 	/* must not have other Contact header */
-	if (h2->next != (pjsip_contact_hdr*)&tdata->msg->hdr &&
+	if ((void*)h2->next != (void*)&tdata->msg->hdr &&
 	    pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, h2->next) != NULL)
 	{
 	    ret = -745;
