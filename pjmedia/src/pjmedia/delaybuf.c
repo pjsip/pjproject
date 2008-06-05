@@ -216,24 +216,8 @@ static void shrink_buffer(pjmedia_delay_buf *b, unsigned erase_cnt)
 
 	b->buf_cnt -= erase_cnt;
 
-	PJ_LOG(5,(b->obj_name,"Overflow, %d samples reduced, "
-		  "buf_cnt=%d", erase_cnt, b->buf_cnt));
-    }
-
-    /* Shrinking failed or erased count is less than requested,
-     * delaybuf needs to drop eldest samples, this is bad since the voice
-     * samples may not have smooth transition.
-     */
-    if (b->buf_cnt + b->samples_per_frame > b->max_cnt) {
-	erase_cnt = b->buf_cnt + b->samples_per_frame - b->max_cnt;
-
-	b->buf_cnt -= erase_cnt;
-
-	/* Shift get_pos forward */
-	b->get_pos = (b->get_pos + erase_cnt) % b->max_cnt;
-
-	PJ_LOG(4,(b->obj_name,"Shrinking failed or insufficient, dropping"
-		  " %d eldest samples, buf_cnt=%d", erase_cnt, b->buf_cnt));
+	PJ_LOG(5,(b->obj_name,"%d samples reduced, buf_cnt=%d", 
+	       erase_cnt, b->buf_cnt));
     }
 }
 
@@ -286,8 +270,8 @@ static void update(pjmedia_delay_buf *b, enum OP op)
 	unsigned old_buf_cnt = b->buf_cnt;
 
 	shrink_buffer(b, erase_cnt);
-	PJ_LOG(5,(b->obj_name,"Buffer size adjusted from %d to %d",
-		  old_buf_cnt, b->buf_cnt));
+	PJ_LOG(4,(b->obj_name,"Buffer size adjusted from %d to %d (eff_cnt=%d)",
+	          old_buf_cnt, b->buf_cnt, b->eff_cnt));
     }
 }
 
@@ -311,11 +295,29 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
     /* Overflow checking */
     if (b->buf_cnt + b->samples_per_frame > b->max_cnt)
     {
+	unsigned erase_cnt;
+	
 	/* shrink one frame or just the diff? */
-	//unsigned erase_cnt = b->samples_per_frame;
-	unsigned erase_cnt = b->buf_cnt + b->samples_per_frame - b->max_cnt;
+	//erase_cnt = b->samples_per_frame;
+	erase_cnt = b->buf_cnt + b->samples_per_frame - b->max_cnt;
 
 	shrink_buffer(b, erase_cnt);
+
+	/* Check if shrinking failed or erased count is less than requested,
+	 * delaybuf needs to drop eldest samples, this is bad since the voice
+	 * samples get rough transition which may produce tick noise.
+	 */
+	if (b->buf_cnt + b->samples_per_frame > b->max_cnt) {
+	    erase_cnt = b->buf_cnt + b->samples_per_frame - b->max_cnt;
+
+	    b->buf_cnt -= erase_cnt;
+
+	    /* Shift get_pos forward */
+	    b->get_pos = (b->get_pos + erase_cnt) % b->max_cnt;
+
+	    PJ_LOG(4,(b->obj_name,"Shrinking failed or insufficient, dropping"
+		      " %d eldest samples, buf_cnt=%d", erase_cnt, b->buf_cnt));
+	}
     }
 
     /* put the frame on put_pos */
@@ -354,7 +356,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
     /* Starvation checking */
     if (b->buf_cnt < b->samples_per_frame) {
 
-	PJ_LOG(5,(b->obj_name,"Underflow, buf_cnt=%d, will generate 1 frame",
+	PJ_LOG(4,(b->obj_name,"Underflow, buf_cnt=%d, will generate 1 frame",
 		  b->buf_cnt));
 
 	status = pjmedia_wsola_generate(b->wsola, frame);
@@ -384,18 +386,27 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
 	    b->buf_cnt += b->samples_per_frame;
 
 	} else {
-	    /* Give all what delay buffer has, then pad zeroes */
+	    /* Give all what delay buffer has, then pad with zeroes */
 	    PJ_LOG(4,(b->obj_name,"Error generating frame, status=%d", 
 		      status));
 
-	    pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos], b->buf_cnt);
+	    if (b->get_pos + b->buf_cnt <= b->max_cnt) {
+		pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos], b->buf_cnt);
+	    } else {
+		int remainder = b->get_pos + b->buf_cnt - b->max_cnt;
+
+		pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos],
+				     b->buf_cnt - remainder);
+		pjmedia_copy_samples(&frame[b->buf_cnt - remainder],
+				     &b->frame_buf[0], remainder);
+	    }
+
 	    pjmedia_zero_samples(&frame[b->buf_cnt], 
 				 b->samples_per_frame - b->buf_cnt);
-	    b->get_pos += b->buf_cnt;
-	    b->buf_cnt = 0;
 
-	    /* Consistency checking */
-	    pj_assert(b->get_pos == b->put_pos);
+	    /* Delay buf is empty */
+	    b->get_pos = b->put_pos = 0;
+	    b->buf_cnt = 0;
 
 	    pj_lock_release(b->lock);
 
@@ -403,8 +414,18 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
 	}
     }
 
-    pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos],
-			 b->samples_per_frame);
+    if (b->get_pos + b->samples_per_frame <= b->max_cnt) {
+	pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos], 
+			     b->samples_per_frame);
+    } else {
+	int remainder = b->get_pos + b->samples_per_frame - b->max_cnt;
+
+	pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos],
+			     b->samples_per_frame - remainder);
+	pjmedia_copy_samples(&frame[b->samples_per_frame - remainder],
+			     &b->frame_buf[0], 
+			     remainder);
+    }
 
     b->get_pos = (b->get_pos + b->samples_per_frame) % b->max_cnt;
     b->buf_cnt -= b->samples_per_frame;
