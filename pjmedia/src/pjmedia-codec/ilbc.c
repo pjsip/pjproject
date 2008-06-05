@@ -510,16 +510,19 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
-    unsigned i;
+    pj_int16_t *pcm_in;
+    unsigned nsamples;
 
-    pj_assert(ilbc_codec != NULL);
-    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
+    pj_assert(ilbc_codec && input && output);
 
-    if (output_buf_len < ilbc_codec->enc_frame_size)
-	return PJMEDIA_CODEC_EFRMTOOSHORT;
+    pcm_in = (pj_int16_t*)input->buf;
+    nsamples = input->size >> 1;
 
-    if (input->size != (ilbc_codec->enc_samples_per_frame << 1))
-	return PJMEDIA_CODEC_EPCMFRMINLEN;
+    PJ_ASSERT_RETURN(nsamples % ilbc_codec->enc_samples_per_frame == 0, 
+		     PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(output_buf_len >= ilbc_codec->enc_frame_size * nsamples /
+		     ilbc_codec->enc_samples_per_frame,
+		     PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
     if (ilbc_codec->vad_enabled) {
@@ -547,18 +550,25 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 	}
     }
 
-    /* Convert to float */
-    for (i=0; i<ilbc_codec->enc_samples_per_frame; ++i) {
-	ilbc_codec->enc_block[i] = (float) (((pj_int16_t*)input->buf)[i]);
+    /* Encode */
+    output->size = 0;
+    while (nsamples >= ilbc_codec->enc_samples_per_frame) {
+	unsigned i;
+	
+	/* Convert to float */
+	for (i=0; i<ilbc_codec->enc_samples_per_frame; ++i) {
+	    ilbc_codec->enc_block[i] = (float) (*pcm_in++);
+	}
+
+	iLBC_encode((unsigned char *)output->buf + output->size, 
+		    ilbc_codec->enc_block, 
+		    &ilbc_codec->enc);
+
+	output->size += ilbc_codec->enc.no_of_bytes;
+	nsamples -= ilbc_codec->enc_samples_per_frame;
     }
 
-    /* Encode */
-    iLBC_encode((unsigned char *)output->buf, 
-		ilbc_codec->enc_block, 
-		&ilbc_codec->enc);
-
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = ilbc_codec->enc.no_of_bytes;
     output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;

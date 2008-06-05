@@ -229,10 +229,11 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
     {
 	char frame_type;
 	pj_size_t frame_size;
+	pj_uint32_t bit_info;
 
 	/* Get frame from jitter buffer. */
 	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
-			        &frame_type);
+			        &frame_type, &bit_info);
 	
 	if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
 	    
@@ -364,6 +365,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    /* Decode */
 	    frame_in.buf = channel->out_pkt;
 	    frame_in.size = frame_size;
+	    frame_in.bit_info = bit_info;
 	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;  /* ignored */
 
 	    frame_out.buf = p_out_samp + samples_count;
@@ -677,60 +679,15 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE &&
 	       frame->buf != NULL) 
     {
-	unsigned ts, codec_samples_per_frame;
-
-	/* Repeatedly call encode if there are multiple frames to be
-	 * sent.
-	 */
-	codec_samples_per_frame = stream->codec_param.info.enc_ptime *
-				  stream->codec_param.info.clock_rate /
-				  1000;
-	if (codec_samples_per_frame == 0) {
-	    codec_samples_per_frame = stream->codec_param.info.frm_ptime *
-				      stream->codec_param.info.clock_rate /
-				      1000;
-	}
-
-	for (ts=0; ts<ts_len; ts += codec_samples_per_frame) {
-	    pjmedia_frame tmp_out_frame, tmp_in_frame;
-	    unsigned bytes_per_sample, max_size;
-
-	    /* Nb of bytes in PCM sample */
-	    bytes_per_sample = stream->codec_param.info.pcm_bits_per_sample/8;
-
-	    /* Split original PCM input frame into base frame size */
-	    tmp_in_frame.timestamp.u64 = frame->timestamp.u64 + ts;
-	    tmp_in_frame.buf = ((char*)frame->buf) + ts * bytes_per_sample;
-	    tmp_in_frame.size = codec_samples_per_frame * bytes_per_sample;
-	    tmp_in_frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-
-	    /* Set output frame position */
-	    tmp_out_frame.buf = ((char*)frame_out.buf) + frame_out.size;
-
-	    max_size = channel->out_pkt_size - sizeof(pjmedia_rtp_hdr) -
-		       frame_out.size;
-
-	    /* Encode! */
-	    status = stream->codec->op->encode( stream->codec, &tmp_in_frame, 
-						max_size, &tmp_out_frame);
-	    if (status != PJ_SUCCESS) {
-		LOGERR_((stream->port.info.name.ptr, 
-			"Codec encode() error", status));
-		return status;
-	    }
-
-	    /* tmp_out_frame.size may be zero for silence frame. */
-	    frame_out.size += tmp_out_frame.size;
-
-	    /* Stop processing next PCM frame when encode() returns either 
-	     * CNG frame or NULL frame.
-	     */
-	    if (tmp_out_frame.type!=PJMEDIA_FRAME_TYPE_AUDIO || 
-		tmp_out_frame.size==0) 
-	    {
-		break;
-	    }
-
+	/* Encode! */
+	status = stream->codec->op->encode( stream->codec, frame, 
+					    channel->out_pkt_size - 
+					    sizeof(pjmedia_rtp_hdr),
+					    &frame_out);
+	if (status != PJ_SUCCESS) {
+	    LOGERR_((stream->port.info.name.ptr, 
+		    "Codec encode() error", status));
+	    return status;
 	}
 
 	/* Encapsulate. */
@@ -1217,7 +1174,7 @@ static void on_rx_rtp( void *data,
 
 	    ext_seq = (unsigned)(frames[i].timestamp.u64 / ts_span);
 	    pjmedia_jbuf_put_frame2(stream->jb, frames[i].buf, frames[i].size,
-				    ext_seq, &discarded);
+				    frames[i].bit_info, ext_seq, &discarded);
 	    if (discarded)
 		pkt_discarded = PJ_TRUE;
 	}

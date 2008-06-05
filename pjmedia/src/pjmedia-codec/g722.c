@@ -532,14 +532,10 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
     struct g722_data *g722_data = (struct g722_data*) codec->codec_data;
     pj_status_t status;
 
-    pj_assert(g722_data != NULL);
-    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
+    pj_assert(g722_data && input && output);
 
-    if (output_buf_len < FRAME_LEN)
-	return PJMEDIA_CODEC_EFRMTOOSHORT;
-
-    PJ_ASSERT_RETURN(input->size/2 == SAMPLES_PER_FRAME, 
-                     PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN((input->size >> 2) <= output_buf_len, 
+                     PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
     if (g722_data->vad_enabled) {
@@ -570,7 +566,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
     /* Encode to temporary buffer */
     output->size = output_buf_len;
     status = g722_enc_encode(&g722_data->encoder, (pj_int16_t*)input->buf, 
-			     SAMPLES_PER_FRAME, output->buf, &output->size);
+			     (input->size >> 1), output->buf, &output->size);
     if (status != PJ_SUCCESS) {
 	output->size = 0;
 	output->buf = NULL;

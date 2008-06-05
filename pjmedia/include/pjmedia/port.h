@@ -298,10 +298,15 @@ typedef enum pjmedia_frame_type
  */
 struct pjmedia_frame
 {
-    pjmedia_frame_type	 type;	    /**< Frame type.		    */
-    void		*buf;	    /**< Pointer to buffer.	    */
-    pj_size_t		 size;	    /**< Frame size in bytes.	    */
-    pj_timestamp	 timestamp; /**< Frame timestamp.	    */
+    pjmedia_frame_type	 type;	    /**< Frame type.			    */
+    void		*buf;	    /**< Pointer to buffer.		    */
+    pj_size_t		 size;	    /**< Frame size in bytes.		    */
+    pj_timestamp	 timestamp; /**< Frame timestamp.		    */
+    pj_uint32_t		 bit_info;  /**< Bit info of the frame, sample case:
+					 a frame may not exactly start and end
+					 at the octet boundary, so this field 
+					 may be used for specifying start & 
+					 end bit offset.		    */
 };
 
 

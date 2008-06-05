@@ -38,6 +38,7 @@ typedef struct jb_framelist_t
     char	*flist_buffer;
     int		*flist_frame_type;
     pj_size_t	*flist_content_len;
+    pj_uint32_t	*flist_bit_info;
     unsigned	 flist_frame_size;
     unsigned	 flist_max_count;
     unsigned	 flist_empty;
@@ -108,6 +109,10 @@ static pj_status_t jb_framelist_init( pj_pool_t *pool,
 	pj_pool_zalloc(pool, sizeof(framelist->flist_content_len[0]) * 
 				framelist->flist_max_count);
 
+    framelist->flist_bit_info = (pj_uint32_t*)
+	pj_pool_zalloc(pool, sizeof(framelist->flist_bit_info[0]) * 
+				framelist->flist_max_count);
+
     framelist->flist_empty = 1;
 
     return PJ_SUCCESS;
@@ -134,7 +139,8 @@ static unsigned jb_framelist_size(jb_framelist_t *framelist)
 
 static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 				  void *frame, pj_size_t *size,
-				  pjmedia_jb_frame_type *p_type) 
+				  pjmedia_jb_frame_type *p_type,
+				  pj_uint32_t *bit_info) 
 {
     if (!framelist->flist_empty) {
 	pj_memcpy(frame, 
@@ -143,7 +149,10 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 		  framelist->flist_frame_size);
 	*p_type = (pjmedia_jb_frame_type) 
 		  framelist->flist_frame_type[framelist->flist_head];
-	*size   = framelist->flist_content_len[framelist->flist_head];
+	if (size)
+	    *size   = framelist->flist_content_len[framelist->flist_head];
+	if (bit_info)
+	    *bit_info = framelist->flist_bit_info[framelist->flist_head];
 
 	pj_bzero(framelist->flist_buffer + 
 		    framelist->flist_head * framelist->flist_frame_size,
@@ -221,7 +230,8 @@ static void jb_framelist_remove_head( jb_framelist_t *framelist,
 static pj_bool_t jb_framelist_put_at(jb_framelist_t *framelist,
 				     unsigned index,
 				     const void *frame,
-				     unsigned frame_size) 
+				     unsigned frame_size,
+				     pj_uint32_t bit_info)
 {
     unsigned where;
 
@@ -263,6 +273,7 @@ static pj_bool_t jb_framelist_put_at(jb_framelist_t *framelist,
 
     framelist->flist_frame_type[where] = PJMEDIA_JB_NORMAL_FRAME;
     framelist->flist_content_len[where] = frame_size;
+    framelist->flist_bit_info[where] = bit_info;
 
     return PJ_TRUE;
 }
@@ -478,12 +489,13 @@ PJ_DEF(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
 				     pj_size_t frame_size, 
 				     int frame_seq)
 {
-    pjmedia_jbuf_put_frame2(jb, frame, frame_size, frame_seq, NULL);
+    pjmedia_jbuf_put_frame2(jb, frame, frame_size, 0, frame_seq, NULL);
 }
 
 PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb, 
 				     const void *frame, 
 				     pj_size_t frame_size, 
+				     pj_uint32_t bit_info,
 				     int frame_seq,
 				     pj_bool_t *discarded)
 {
@@ -508,8 +520,8 @@ PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb,
     min_frame_size = PJ_MIN(frame_size, jb->jb_frame_size);
     if (seq_diff > 0) {
 
-	while (jb_framelist_put_at(&jb->jb_framelist,
-				   frame_seq,frame,min_frame_size) == PJ_FALSE)
+	while (jb_framelist_put_at(&jb->jb_framelist, frame_seq, frame,
+				   min_frame_size, bit_info) == PJ_FALSE)
 	{
 	    jb_framelist_remove_head(&jb->jb_framelist,
 				     PJ_MAX(jb->jb_max_count/4,1) );
@@ -525,7 +537,7 @@ PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb,
     {
 	pj_bool_t res;
 	res = jb_framelist_put_at(&jb->jb_framelist,frame_seq,frame,
-				  min_frame_size);
+				  min_frame_size, bit_info);
 	if (discarded)
 	    *discarded = !res;
     }
@@ -538,9 +550,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 				     void *frame, 
 				     char *p_frame_type)
 {
-    pj_size_t size;
-
-    pjmedia_jbuf_get_frame2(jb, frame, &size, p_frame_type);
+    pjmedia_jbuf_get_frame2(jb, frame, NULL, p_frame_type, NULL);
 }
 
 /*
@@ -549,7 +559,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb, 
 				     void *frame, 
 				     pj_size_t *size,
-				     char *p_frame_type)
+				     char *p_frame_type,
+				     pj_uint32_t *bit_info)
 {
     pjmedia_jb_frame_type ftype;
 
@@ -581,7 +592,9 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 #endif
 
     /* Retrieve a frame from frame list */
-    if (jb_framelist_get(&jb->jb_framelist,frame,size,&ftype) == PJ_FALSE) {
+    if (jb_framelist_get(&jb->jb_framelist,frame,size,&ftype,bit_info) ==
+	PJ_FALSE) 
+    {
 	/* Can't return frame because jitter buffer is empty! */
 	pj_bzero(frame, jb->jb_frame_size);
 	*p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;

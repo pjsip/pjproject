@@ -564,6 +564,8 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
     while (samp!=samp_end)
 	*samp_out++ = pj_htons(*samp++);
+#else
+    pjmedia_copy_samples(samp_out, samp, input->size >> 1);
 #endif
 
 
@@ -596,6 +598,8 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
 #if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
     while (samp!=samp_end)
 	*samp_out++ = pj_htons(*samp++);
+#else
+    pjmedia_copy_samples(samp_out, samp, input->size >> 1);
 #endif
 
 

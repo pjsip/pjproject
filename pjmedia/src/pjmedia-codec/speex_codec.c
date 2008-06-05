@@ -160,9 +160,9 @@ static pj_status_t get_speex_info( struct speex_param *p )
     if (!state)
 	return PJMEDIA_CODEC_EFAILED;
 
-    /* Set the quality */
-    if (p->quality != -1)
-	speex_encoder_ctl(state, SPEEX_SET_QUALITY, &p->quality);
+    /* We have to get maximum bitrate, so let's set maximum quality */
+    tmp = 10;
+    speex_encoder_ctl(state, SPEEX_SET_QUALITY, &tmp);
 
     /* Sampling rate. */
     speex_encoder_ctl(state, SPEEX_SET_SAMPLING_RATE, &p->clock_rate);
@@ -595,9 +595,6 @@ static pj_status_t spx_codec_open( pjmedia_codec *codec,
     spx = (struct spx_private*) codec->codec_data;
     id = spx->param_id;
 
-    /* Only supports one frame per packet */
-    PJ_ASSERT_RETURN(attr->setting.frm_per_pkt==1, PJ_EINVAL);
-
     /* 
      * Create and initialize encoder. 
      */
@@ -687,9 +684,6 @@ static pj_status_t  spx_codec_modify(pjmedia_codec *codec,
 
     spx = (struct spx_private*) codec->codec_data;
 
-    /* Only supports one frame per packet */
-    PJ_ASSERT_RETURN(attr->setting.frm_per_pkt==1, PJ_EINVAL);
-
     /* VAD */
     tmp = (attr->setting.vad != 0);
     speex_encoder_ctl(spx->enc, SPEEX_SET_VAD, &tmp);
@@ -700,6 +694,119 @@ static pj_status_t  spx_codec_modify(pjmedia_codec *codec,
     speex_decoder_ctl(spx->dec, SPEEX_SET_ENH, &tmp);
 
     return PJ_SUCCESS;
+}
+
+#if 0
+#  define TRACE__(args)	    PJ_LOG(5,args)
+#else
+#  define TRACE__(args)
+#endif
+
+#undef THIS_FUNC
+#define THIS_FUNC "speex_get_next_frame"
+
+#define NB_SUBMODES 16
+#define NB_SUBMODE_BITS 4
+
+#define SB_SUBMODES 8
+#define SB_SUBMODE_BITS 3
+
+/* This function will iterate frames & submodes in the Speex bits.
+ * Returns 0 if a frame found, otherwise returns -1.
+ */
+int speex_get_next_frame(SpeexBits *bits)
+{
+    static const int inband_skip_table[NB_SUBMODES] =
+       {1, 1, 4, 4, 4, 4, 4, 4, 8, 8, 16, 16, 32, 32, 64, 64 };
+    static const int wb_skip_table[SB_SUBMODES] =
+       {SB_SUBMODE_BITS+1, 36, 112, 192, 352, -1, -1, -1};
+
+    unsigned submode;
+    unsigned nb_count = 0;
+
+    while (speex_bits_remaining(bits) >= 5) {
+	unsigned wb_count = 0;
+	unsigned bit_ptr = bits->bitPtr;
+	unsigned char_ptr = bits->charPtr;
+
+	/* WB frame */
+	while ((speex_bits_remaining(bits) >= 4)
+	    && speex_bits_unpack_unsigned(bits, 1))
+	{
+	    int advance;
+
+	    submode = speex_bits_unpack_unsigned(bits, 3);
+	    advance = wb_skip_table[submode];
+	    if (advance < 0) {
+		TRACE__((THIS_FUNC, "Invalid mode encountered. "
+			 "The stream is corrupted."));
+		return -1;
+	    } 
+	    TRACE__((THIS_FUNC, "WB layer skipped: %d bits", advance));
+	    advance -= (SB_SUBMODE_BITS+1);
+	    speex_bits_advance(bits, advance);
+
+	    bit_ptr = bits->bitPtr;
+	    char_ptr = bits->charPtr;
+
+	    /* Consecutive subband frames may not exceed 2 frames */
+	    if (++wb_count > 2)
+		return -1;
+	}
+
+	/* End of bits, return the frame */
+	if (speex_bits_remaining(bits) < 4) {
+	    TRACE__((THIS_FUNC, "End of stream"));
+	    return 0;
+	}
+
+	/* Stop iteration, return the frame */
+	if (nb_count > 0) {
+	    bits->bitPtr = bit_ptr;
+	    bits->charPtr = char_ptr;
+	    return 0;
+	}
+
+	/* Get control bits */
+	submode = speex_bits_unpack_unsigned(bits, 4);
+	TRACE__((THIS_FUNC, "Control bits: %d at %d", 
+		 submode, bits->charPtr*8+bits->bitPtr));
+
+	if (submode == 15) {
+	    TRACE__((THIS_FUNC, "Found submode: terminator"));
+	    return 0;
+	} else if (submode == 14) {
+	    /* in-band signal; next 4 bits contain signal id */
+	    submode = speex_bits_unpack_unsigned(bits, 4);
+	    TRACE__((THIS_FUNC, "Found submode: in-band %d bits", 
+		     inband_skip_table[submode]));
+	    speex_bits_advance(bits, inband_skip_table[submode]);
+	} else if (submode == 13) {
+	    /* user in-band; next 5 bits contain msg len */
+	    submode = speex_bits_unpack_unsigned(bits, 5);
+	    TRACE__((THIS_FUNC, "Found submode: user-band %d bytes", submode));
+	    speex_bits_advance(bits, submode * 8);
+	} else if (submode > 8) {
+	    TRACE__((THIS_FUNC, "Unknown sub-mode %d", submode));
+	    return 0;
+	} else {
+	    /* NB frame */
+	    unsigned int advance = submode;
+	    speex_mode_query(&speex_nb_mode, SPEEX_SUBMODE_BITS_PER_FRAME, &advance);
+	    if (advance < 0) {
+		TRACE__((THIS_FUNC, "Invalid mode encountered. "
+			 "The stream is corrupted."));
+		return -1;
+	    }
+	    TRACE__((THIS_FUNC, "Submode %d: %d bits", submode, advance));
+	    advance -= (NB_SUBMODE_BITS+1);
+	    speex_bits_advance(bits, advance);
+
+	    ++nb_count;
+	}
+    }
+
+    return 0;
 }
 
 
@@ -713,45 +820,42 @@ static pj_status_t  spx_codec_parse( pjmedia_codec *codec,
 				     unsigned *frame_cnt,
 				     pjmedia_frame frames[])
 {
-    struct spx_private *spx;
-    unsigned frame_size, samples_per_frame;
-    unsigned count;
+    struct spx_private *spx = (struct spx_private*) codec->codec_data;
+    unsigned samples_per_frame;
+    unsigned count = 0;
+    int char_ptr = 0;
+    int bit_ptr = 0;
 
-    spx = (struct spx_private*) codec->codec_data;
+    samples_per_frame=spx_factory.speex_param[spx->param_id].samples_per_frame;
 
-    frame_size = spx_factory.speex_param[spx->param_id].framesize;
-    samples_per_frame = spx_factory.speex_param[spx->param_id].samples_per_frame;
+    /* Copy the data into the speex bit-stream */
+    speex_bits_read_from(&spx->dec_bits, (char*)pkt, pkt_size);
 
-    /* Don't really know how to do this... */
-    count = 0;
-    while (pkt_size >= frame_size && count < *frame_cnt) {
-	frames[count].buf = pkt;
-	frames[count].size = frame_size;
+    while (speex_get_next_frame(&spx->dec_bits) == 0 && 
+	   spx->dec_bits.charPtr != char_ptr)
+    {
+	frames[count].buf = (char*)pkt + char_ptr;
+	/* Bit info contains start bit offset of the frame */
+	frames[count].bit_info = bit_ptr;
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].timestamp.u64 = ts->u64 + count * samples_per_frame;
+	frames[count].size = spx->dec_bits.charPtr - char_ptr;
+	if (spx->dec_bits.bitPtr)
+	    ++frames[count].size;
 
-	pkt_size -= frame_size;
-	++count;
-	pkt = ((char*)pkt) + frame_size;
-    }
+	bit_ptr = spx->dec_bits.bitPtr;
+	char_ptr = spx->dec_bits.charPtr;
 
-    /* Just in case speex has silence frame which size is less than normal
-     * frame size...
-     */
-    if (pkt_size && count < *frame_cnt) {
-	frames[count].buf = pkt;
-	frames[count].size = pkt_size;
-	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frames[count].timestamp.u64 = ts->u64 + count * samples_per_frame;
 	++count;
     }
 
     *frame_cnt = count;
+
     return PJ_SUCCESS;
 }
 
 /*
- * Encode frame.
+ * Encode frames.
  */
 static pj_status_t spx_codec_encode( pjmedia_codec *codec, 
 				     const struct pjmedia_frame *input,
@@ -759,8 +863,10 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct spx_private *spx;
-    unsigned sz;
-    int tx;
+    unsigned samples_per_frame;
+    int tx = 0;
+    spx_int16_t *pcm_in = (spx_int16_t*)input->buf;
+    unsigned nsamples;
 
     spx = (struct spx_private*) codec->codec_data;
 
@@ -772,12 +878,21 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
 	return PJ_SUCCESS;
     }
 
+    nsamples = input->size >> 1;
+    samples_per_frame=spx_factory.speex_param[spx->param_id].samples_per_frame;
+
+    PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
+		     PJMEDIA_CODEC_EPCMFRMINLEN);
+
     /* Flush all the bits in the struct so we can encode a new frame */
     speex_bits_reset(&spx->enc_bits);
 
-    /* Encode the frame */
-    tx = speex_encode_int(spx->enc, (spx_int16_t*)input->buf, 
-			  &spx->enc_bits);
+    /* Encode the frames */
+    while (nsamples >= samples_per_frame) {
+	tx += speex_encode_int(spx->enc, pcm_in, &spx->enc_bits);
+	pcm_in += samples_per_frame;
+	nsamples -= samples_per_frame;
+    }
 
     /* Check if we need not to transmit the frame (DTX) */
     if (tx == 0) {
@@ -789,8 +904,7 @@ static pj_status_t spx_codec_encode( pjmedia_codec *codec,
     }
 
     /* Check size. */
-    sz = speex_bits_nbytes(&spx->enc_bits);
-    pj_assert(sz <= output_buf_len);
+    pj_assert(speex_bits_nbytes(&spx->enc_bits) <= (int)output_buf_len);
 
     /* Copy the bits to an array of char that can be written */
     output->size = speex_bits_write(&spx->enc_bits, 
@@ -810,14 +924,17 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct spx_private *spx;
+    unsigned samples_per_frame;
 
     spx = (struct spx_private*) codec->codec_data;
+    samples_per_frame=spx_factory.speex_param[spx->param_id].samples_per_frame;
 
-    PJ_ASSERT_RETURN(output_buf_len >= 320, PJMEDIA_CODEC_EPCMTOOSHORT);
+    PJ_ASSERT_RETURN(output_buf_len >= samples_per_frame << 1,
+		     PJMEDIA_CODEC_EPCMTOOSHORT);
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO) {
-	pjmedia_zero_samples((pj_int16_t*)output->buf, 160);
-	output->size = 320;
+	pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
+	output->size = samples_per_frame << 1;
 	output->timestamp.u64 = input->timestamp.u64;
 	output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 	return PJ_SUCCESS;
@@ -825,14 +942,16 @@ static pj_status_t spx_codec_decode( pjmedia_codec *codec,
 
     /* Copy the data into the bit-stream struct */
     speex_bits_read_from(&spx->dec_bits, (char*)input->buf, input->size);
+    
+    /* Set Speex dec_bits pointer to the start bit of the frame */
+    speex_bits_advance(&spx->dec_bits, input->bit_info);
 
     /* Decode the data */
     speex_decode_int(spx->dec, &spx->dec_bits, (spx_int16_t*)output->buf);
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = 320;
+    output->size = samples_per_frame << 1;
     output->timestamp.u64 = input->timestamp.u64;
-
 
     return PJ_SUCCESS;
 }

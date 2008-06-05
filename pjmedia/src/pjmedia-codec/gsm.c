@@ -515,14 +515,17 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
+    pj_int16_t *pcm_in;
+    unsigned in_size;
 
-    pj_assert(gsm_data != NULL);
-    PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
+    pj_assert(gsm_data && input && output);
+    
+    pcm_in = (pj_int16_t*)input->buf;
+    in_size = input->size;
 
-    if (output_buf_len < 33)
-	return PJMEDIA_CODEC_EFRMTOOSHORT;
-
-    PJ_ASSERT_RETURN(input->size==320, PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(in_size % 320 == 0, PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(output_buf_len >= 33 * in_size/320, 
+		     PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Detect silence */
     if (gsm_data->vad_enabled) {
@@ -551,10 +554,15 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     }
 
     /* Encode */
-    gsm_encode(gsm_data->encoder, (short*)input->buf, 
-	       (unsigned char*)output->buf);
+    output->size = 0;
+    while (in_size >= 320) {
+	gsm_encode(gsm_data->encoder, pcm_in, 
+		   (unsigned char*)output->buf + output->size);
+	pcm_in += 160;
+	output->size += 33;
+	in_size -= 320;
+    }
 
-    output->size = 33;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     return PJ_SUCCESS;

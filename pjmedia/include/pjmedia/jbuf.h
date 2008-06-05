@@ -219,12 +219,16 @@ PJ_DECL(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb,
  * @param frame		Pointer to frame buffer to be stored in the jitter
  *			buffer.
  * @param size		The frame size.
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
  * @param frame_seq	The frame sequence number.
  * @param discarded	Flag whether the frame is discarded by jitter buffer.
  */
 PJ_DECL(void) pjmedia_jbuf_put_frame2( pjmedia_jbuf *jb, 
 				       const void *frame, 
 				       pj_size_t size, 
+				       pj_uint32_t bit_info,
 				       int frame_seq,
 				       pj_bool_t *discarded);
 
@@ -267,11 +271,15 @@ PJ_DECL(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
  * @param size		Pointer to receive frame size.
  * @param p_frm_type	Pointer to receive frame type.
  *			@see pjmedia_jbuf_get_frame().    
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
  */
 PJ_DECL(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb, 
 				      void *frame, 
 				      pj_size_t *size, 
-				      char *p_frm_type);
+				      char *p_frm_type,
+				      pj_uint32_t *bit_info);
 
 
 /**

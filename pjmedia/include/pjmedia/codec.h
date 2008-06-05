@@ -375,7 +375,7 @@ typedef struct pjmedia_codec_op
 
     /** 
      * Instruct the codec to encode the specified input frame. The input
-     * PCM samples MUST have ptime that is exactly equal to base frame
+     * PCM samples MUST have ptime that is multiplication of base frame
      * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
      *
      * @param codec	The codec instance.
