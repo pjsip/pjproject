@@ -227,6 +227,8 @@ PJ_DECL(void) pj_activesock_cfg_default(pj_activesock_cfg *cfg);
  *			the default values will be used.
  * @param cb		Pointer to structure containing application
  *			callbacks.
+ * @param user_data	Arbitrary user data to be associated with this
+ *			active socket.
  * @param p_asock	Pointer to receive the active socket instance.
  *
  * @return		PJ_SUCCESS if the operation has been successful,
@@ -238,6 +240,7 @@ PJ_DECL(pj_status_t) pj_activesock_create(pj_pool_t *pool,
 					  const pj_activesock_cfg *opt,
 					  pj_ioqueue_t *ioqueue,
 					  const pj_activesock_cb *cb,
+					  void *user_data,
 					  pj_activesock_t **p_asock);
 
 /**
@@ -253,6 +256,8 @@ PJ_DECL(pj_status_t) pj_activesock_create(pj_pool_t *pool,
  *			the default values will be used.
  * @param cb		Pointer to structure containing application
  *			callbacks.
+ * @param user_data	Arbitrary user data to be associated with this
+ *			active socket.
  * @param p_asock	Pointer to receive the active socket instance.
  * @param bound_addr	If this argument is specified, it will be filled with
  *			the bound address on return.
@@ -265,6 +270,7 @@ PJ_DECL(pj_status_t) pj_activesock_create_udp(pj_pool_t *pool,
 					      const pj_activesock_cfg *opt,
 					      pj_ioqueue_t *ioqueue,
 					      const pj_activesock_cb *cb,
+					      void *user_data,
 					      pj_activesock_t **p_asock,
 					      pj_sockaddr *bound_addr);
 

@@ -97,6 +97,7 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
 					  const pj_activesock_cfg *opt,
 					  pj_ioqueue_t *ioqueue,
 					  const pj_activesock_cb *cb,
+					  void *user_data,
 					  pj_activesock_t **p_asock)
 {
     pj_activesock_t *asock;
@@ -114,6 +115,7 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
     asock->stream_oriented = (sock_type == pj_SOCK_STREAM());
     asock->async_count = (opt? opt->async_cnt : 1);
     asock->max_loop = PJ_ACTIVESOCK_MAX_LOOP;
+    asock->user_data = user_data;
     pj_memcpy(&asock->cb, cb, sizeof(*cb));
 
     pj_bzero(&ioq_cb, sizeof(ioq_cb));
@@ -143,6 +145,7 @@ PJ_DEF(pj_status_t) pj_activesock_create_udp( pj_pool_t *pool,
 					      const pj_activesock_cfg *opt,
 					      pj_ioqueue_t *ioqueue,
 					      const pj_activesock_cb *cb,
+					      void *user_data,
 					      pj_activesock_t **p_asock,
 					      pj_sockaddr *bound_addr)
 {
@@ -168,7 +171,7 @@ PJ_DEF(pj_status_t) pj_activesock_create_udp( pj_pool_t *pool,
     }
 
     status = pj_activesock_create(pool, sock_fd, pj_SOCK_DGRAM(), opt,
-				  ioqueue, cb, p_asock);
+				  ioqueue, cb, user_data, p_asock);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock_fd);
 	return status;

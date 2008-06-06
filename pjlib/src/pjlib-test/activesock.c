@@ -114,7 +114,7 @@ static pj_status_t udp_echo_srv_create(pj_pool_t *pool,
     activesock_cb.on_data_recvfrom = &udp_echo_srv_on_data_recvfrom;
 
     status = pj_activesock_create_udp(pool, &addr, NULL, ioqueue, &activesock_cb, 
-				      &srv->asock, &addr);
+				      srv, &srv->asock, &addr);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock_fd);
 	udp_echo_err("pj_activesock_create()", status);
@@ -123,7 +123,6 @@ static pj_status_t udp_echo_srv_create(pj_pool_t *pool,
 
     srv->port = pj_ntohs(addr.ipv4.sin_port);
 
-    pj_activesock_set_user_data(srv->asock, srv);
     pj_ioqueue_op_key_init(&srv->send_key, sizeof(srv->send_key));
 
     status = pj_activesock_start_recvfrom(srv->asock, pool, 32, 0);
