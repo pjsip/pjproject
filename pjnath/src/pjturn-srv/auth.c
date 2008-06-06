@@ -38,7 +38,9 @@ static struct cred_t
     { "701", "701" }
 };
 
+#define THIS_FILE	"auth.c"
 #define THE_NONCE	"pjnath"
+#define LOG(expr)	PJ_LOG(3,expr)
 
 
 /*
@@ -96,8 +98,11 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(pool);
 
-    if (pj_stricmp2(realm, g_realm))
+    if (pj_stricmp2(realm, g_realm)) {
+	LOG((THIS_FILE, "auth error: invalid realm '%.*s'", 
+			(int)realm->slen, realm->ptr));
 	return PJ_EINVAL;
+    }
 
     for (i=0; i<PJ_ARRAY_SIZE(g_cred); ++i) {
 	if (pj_stricmp2(username, g_cred[i].username) == 0) {
@@ -107,6 +112,8 @@ PJ_DEF(pj_status_t) pj_turn_get_password(const pj_stun_msg *msg,
 	}
     }
 
+    LOG((THIS_FILE, "auth error: user '%.*s' not found", 
+		    (int)username->slen, username->ptr));
     return PJ_ENOTFOUND;
 }
 
@@ -126,8 +133,11 @@ PJ_DEF(pj_bool_t) pj_turn_verify_nonce(const pj_stun_msg *msg,
     PJ_UNUSED_ARG(realm);
     PJ_UNUSED_ARG(username);
 
-    if (pj_stricmp2(nonce, THE_NONCE))
+    if (pj_stricmp2(nonce, THE_NONCE)) {
+	LOG((THIS_FILE, "auth error: invalid nonce '%.*s'", 
+			(int)nonce->slen, nonce->ptr));
 	return PJ_FALSE;
+    }
 
     return PJ_TRUE;
 }
