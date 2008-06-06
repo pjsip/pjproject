@@ -246,6 +246,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\dns_server.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\errno.c"
 				>
 				<FileConfiguration
@@ -606,6 +610,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjlib-util\dns.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\dns_server.h"
 				>
 			</File>
 			<File

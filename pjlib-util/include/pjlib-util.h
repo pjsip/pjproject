@@ -44,6 +44,9 @@
 #include <pjlib-util/resolver.h>
 #include <pjlib-util/srv_resolver.h>
 
+/* Simple DNS server */
+#include <pjlib-util/dns_server.h>
+
 /* Text scanner */
 #include <pjlib-util/scanner.h>
 

@@ -372,6 +372,60 @@ PJ_DECL(const char *) pj_dns_get_type_name(int type);
 
 
 /**
+ * Initialize DNS record as DNS SRV record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			SRV record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param prio		DNS SRV priority.
+ * @param weight	DNS SRV weight.
+ * @param port		Target port.
+ * @param target	Target name.
+ */
+PJ_DECL(void) pj_dns_init_srv_rr(pj_dns_parsed_rr *rec,
+				 const pj_str_t *res_name,
+				 unsigned dnsclass,
+				 unsigned ttl,
+				 unsigned prio,
+				 unsigned weight,
+				 unsigned port,
+				 const pj_str_t *target);
+
+/**
+ * Initialize DNS record as DNS CNAME record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			CNAME record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param name		Host name.
+ */
+PJ_DECL(void) pj_dns_init_cname_rr(pj_dns_parsed_rr *rec,
+				   const pj_str_t *res_name,
+				   unsigned dnsclass,
+				   unsigned ttl,
+				   const pj_str_t *name);
+
+/**
+ * Initialize DNS record as DNS A record.
+ *
+ * @param rec		The DNS resource record to be initialized as DNS
+ *			A record.
+ * @param res_name	Resource name.
+ * @param dnsclass	DNS class.
+ * @param ttl		Resource TTL value.
+ * @param ip_addr	Host address.
+ */
+PJ_DECL(void) pj_dns_init_a_rr(pj_dns_parsed_rr *rec,
+			       const pj_str_t *res_name,
+			       unsigned dnsclass,
+			       unsigned ttl,
+			       const pj_in_addr *ip_addr);
+
+/**
  * Dump DNS packet to standard log.
  *
  * @param res		The DNS packet.
