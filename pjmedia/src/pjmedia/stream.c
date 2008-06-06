@@ -1263,9 +1263,9 @@ static pj_status_t create_channel( pj_pool_t *pool,
     /* Allocate buffer for outgoing packet. */
 
     channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) + 
-			    stream->codec_param.info.avg_bps/8 * 
+			    stream->codec_param.info.max_bps * 
 			    PJMEDIA_MAX_FRAME_DURATION_MS / 
-			    1000;
+			    8 / 1000;
 
     if (channel->out_pkt_size > PJMEDIA_MAX_MTU)
 	channel->out_pkt_size = PJMEDIA_MAX_MTU;
@@ -1373,6 +1373,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	    goto err_cleanup;
     }
 
+    /* Check for invalid max_bps. */
+    if (stream->codec_param.info.max_bps < stream->codec_param.info.avg_bps)
+	stream->codec_param.info.max_bps = stream->codec_param.info.avg_bps;
+
     /* Check for invalid frame per packet. */
     if (stream->codec_param.setting.frm_per_pkt < 1)
 	stream->codec_param.setting.frm_per_pkt = 1;
@@ -1384,10 +1388,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 					  stream->codec_param.info.frm_ptime *
 					  stream->codec_param.setting.frm_per_pkt /
 					  1000;
-    stream->port.info.bytes_per_frame = stream->codec_param.info.avg_bps/8 * 
+    stream->port.info.bytes_per_frame = stream->codec_param.info.max_bps * 
 					stream->codec_param.info.frm_ptime *
 					stream->codec_param.setting.frm_per_pkt /
-					1000;
+					8 / 1000;
+    if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime *
+	stream->codec_param.setting.frm_per_pkt) % 8000 != 0)
+    {
+	++stream->port.info.bytes_per_frame;
+    }
 
     /* Open the codec: */
 
@@ -1441,11 +1450,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	PJ_LOG(4,(stream->port.info.name.ptr,"VAD temporarily disabled"));
     }
 
-    /* Get the frame size: */
-
-    stream->frame_size = ((stream->codec_param.info.avg_bps + 7) / 8) * 
-			  stream->codec_param.info.frm_ptime / 1000;
-
+    /* Get the frame size */
+    stream->frame_size = stream->codec_param.info.max_bps * 
+			 stream->codec_param.info.frm_ptime / 8 / 1000;
+    if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime) 
+	% 8000 != 0)
+    {
+	++stream->frame_size;
+    }
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
     stream->rtp_rx_check_cnt = 5;

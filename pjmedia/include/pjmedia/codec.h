@@ -253,6 +253,7 @@ typedef struct pjmedia_codec_param
        unsigned	   clock_rate;		/**< Sampling rate in Hz	    */
        unsigned	   channel_cnt;		/**< Channel count.		    */
        pj_uint32_t avg_bps;		/**< Average bandwidth in bits/sec  */
+       pj_uint32_t max_bps;		/**< Maximum bandwidth in bits/sec  */
        pj_uint16_t frm_ptime;		/**< Decoder frame ptime in msec.   */
        pj_uint16_t enc_ptime;		/**< Encoder ptime, or zero if it's
 					     equal to decoder ptime.	    */

@@ -121,6 +121,7 @@ struct speex_param
     int		     samples_per_frame;	/* Samples per frame.		    */
     int		     framesize;		/* Frame size for current mode.	    */
     int		     bitrate;		/* Bit rate for current mode.	    */
+    int		     max_bitrate;	/* Max bit rate for current mode.   */
 };
 
 /* Speex factory */
@@ -160,9 +161,9 @@ static pj_status_t get_speex_info( struct speex_param *p )
     if (!state)
 	return PJMEDIA_CODEC_EFAILED;
 
-    /* We have to get maximum bitrate, so let's set maximum quality */
-    tmp = 10;
-    speex_encoder_ctl(state, SPEEX_SET_QUALITY, &tmp);
+    /* Set the quality */
+    if (p->quality != -1)
+	speex_encoder_ctl(state, SPEEX_SET_QUALITY, &p->quality);
 
     /* Sampling rate. */
     speex_encoder_ctl(state, SPEEX_SET_SAMPLING_RATE, &p->clock_rate);
@@ -178,11 +179,16 @@ static pj_status_t get_speex_info( struct speex_param *p )
     /* Now get the frame size */
     speex_encoder_ctl(state, SPEEX_GET_FRAME_SIZE, &p->samples_per_frame);
 
-    /* Now get the the averate bitrate */
+    /* Now get the average bitrate */
     speex_encoder_ctl(state, SPEEX_GET_BITRATE, &p->bitrate);
 
     /* Calculate framesize. */
     p->framesize = p->bitrate * 20 / 1000;
+
+    /* Now get the maximum bitrate by using maximum quality (=10) */
+    tmp = 10;
+    speex_encoder_ctl(state, SPEEX_SET_QUALITY, &tmp);
+    speex_encoder_ctl(state, SPEEX_GET_BITRATE, &p->max_bitrate);
 
     /* Destroy encoder. */
     speex_encoder_destroy(state);
@@ -237,7 +243,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_NB].enabled = 
 	((options & PJMEDIA_SPEEX_NO_NB) == 0);
     spx_factory.speex_param[PARAM_NB].pt = PJMEDIA_RTP_PT_SPEEX_NB;
-    spx_factory.speex_param[PARAM_NB].mode = &speex_nb_mode;
+    spx_factory.speex_param[PARAM_NB].mode = speex_lib_get_mode(SPEEX_MODEID_NB);
     spx_factory.speex_param[PARAM_NB].clock_rate = 8000;
     spx_factory.speex_param[PARAM_NB].quality = quality;
     spx_factory.speex_param[PARAM_NB].complexity = complexity;
@@ -245,7 +251,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_WB].enabled = 
 	((options & PJMEDIA_SPEEX_NO_WB) == 0);
     spx_factory.speex_param[PARAM_WB].pt = PJMEDIA_RTP_PT_SPEEX_WB;
-    spx_factory.speex_param[PARAM_WB].mode = &speex_wb_mode;
+    spx_factory.speex_param[PARAM_WB].mode = speex_lib_get_mode(SPEEX_MODEID_WB);
     spx_factory.speex_param[PARAM_WB].clock_rate = 16000;
     spx_factory.speex_param[PARAM_WB].quality = quality;
     spx_factory.speex_param[PARAM_WB].complexity = complexity;
@@ -253,7 +259,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_speex_init( pjmedia_endpt *endpt,
     spx_factory.speex_param[PARAM_UWB].enabled = 
 	((options & PJMEDIA_SPEEX_NO_UWB) == 0);
     spx_factory.speex_param[PARAM_UWB].pt = PJMEDIA_RTP_PT_SPEEX_UWB;
-    spx_factory.speex_param[PARAM_UWB].mode = &speex_uwb_mode;
+    spx_factory.speex_param[PARAM_UWB].mode = speex_lib_get_mode(SPEEX_MODEID_UWB);
     spx_factory.speex_param[PARAM_UWB].clock_rate = 32000;
     spx_factory.speex_param[PARAM_UWB].quality = quality;
     spx_factory.speex_param[PARAM_UWB].complexity = complexity;
@@ -437,15 +443,18 @@ static pj_status_t spx_default_attr (pjmedia_codec_factory *factory,
     if (id->clock_rate <= 8000) {
 	attr->info.clock_rate = spx_factory.speex_param[PARAM_NB].clock_rate;
 	attr->info.avg_bps = spx_factory.speex_param[PARAM_NB].bitrate;
+	attr->info.max_bps = spx_factory.speex_param[PARAM_NB].max_bitrate;
 
     } else if (id->clock_rate <= 16000) {
 	attr->info.clock_rate = spx_factory.speex_param[PARAM_WB].clock_rate;
 	attr->info.avg_bps = spx_factory.speex_param[PARAM_WB].bitrate;
+	attr->info.max_bps = spx_factory.speex_param[PARAM_WB].max_bitrate;
 
     } else {
 	/* Wow.. somebody is doing ultra-wideband. Cool...! */
 	attr->info.clock_rate = spx_factory.speex_param[PARAM_UWB].clock_rate;
 	attr->info.avg_bps = spx_factory.speex_param[PARAM_UWB].bitrate;
+	attr->info.max_bps = spx_factory.speex_param[PARAM_UWB].max_bitrate;
     }
 
     attr->info.pcm_bits_per_sample = 16;

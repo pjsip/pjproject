@@ -264,6 +264,7 @@ static pj_status_t ilbc_default_attr (pjmedia_codec_factory *factory,
     attr->info.clock_rate = CLOCK_RATE;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = ilbc_factory.bps;
+    attr->info.max_bps = 15200;
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = (short)ilbc_factory.mode;
     attr->info.pt = PJMEDIA_RTP_PT_ILBC;

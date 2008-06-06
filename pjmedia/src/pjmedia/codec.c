@@ -385,8 +385,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
 	if ( (*factory->op->test_alloc)(factory, info) == PJ_SUCCESS ) {
 
 	    status = (*factory->op->default_attr)(factory, info, param);
-	    if (status == PJ_SUCCESS)
+	    if (status == PJ_SUCCESS) {
+		/* Check for invalid max_bps. */
+		if (param->info.max_bps < param->info.avg_bps)
+		    param->info.max_bps = param->info.avg_bps;
+
 		return PJ_SUCCESS;
+	    }
 
 	}
 

@@ -270,6 +270,7 @@ static pj_status_t g722_default_attr( pjmedia_codec_factory *factory,
     attr->info.clock_rate = 16000;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = 64000;
+    attr->info.max_bps = 64000;
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = PTIME;
     attr->info.pt = PJMEDIA_RTP_PT_G722;

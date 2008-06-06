@@ -249,6 +249,7 @@ static pj_status_t g711_default_attr (pjmedia_codec_factory *factory,
     attr->info.clock_rate = 8000;
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = G711_BPS;
+    attr->info.max_bps = G711_BPS;
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = PTIME;
     attr->info.pt = (pj_uint8_t)id->pt;

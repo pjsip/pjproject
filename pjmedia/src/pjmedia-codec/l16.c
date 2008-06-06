@@ -242,6 +242,7 @@ static pj_status_t l16_default_attr( pjmedia_codec_factory *factory,
     attr->info.clock_rate = id->clock_rate;
     attr->info.channel_cnt = id->channel_cnt;
     attr->info.avg_bps = id->clock_rate * id->channel_cnt * 16;
+    attr->info.max_bps = attr->info.avg_bps;
     attr->info.pcm_bits_per_sample = 16;
 
     /* To keep frame size below 1400 MTU, set ptime to 10ms for
