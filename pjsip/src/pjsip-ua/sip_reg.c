@@ -27,6 +27,7 @@
 #include <pjsip/sip_errno.h>
 #include <pj/assert.h>
 #include <pj/guid.h>
+#include <pj/lock.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/log.h>
@@ -63,9 +64,10 @@ struct pjsip_regc
 {
     pj_pool_t			*pool;
     pjsip_endpoint		*endpt;
+    pj_lock_t			*lock;
     pj_bool_t			 _delete_flag;
     pj_bool_t			 has_tsx;
-    pj_int32_t			 busy;
+    pj_atomic_t			*busy_ctr;
     enum regc_op		 current_op;
 
     pj_bool_t			 add_xuid_param;
@@ -129,6 +131,20 @@ PJ_DEF(pj_status_t) pjsip_regc_create( pjsip_endpoint *endpt, void *token,
     regc->expires = PJSIP_REGC_EXPIRATION_NOT_SPECIFIED;
     regc->add_xuid_param = pjsip_cfg()->regc.add_xuid_param;
 
+    status = pj_lock_create_recursive_mutex(pool, pool->obj_name, 
+					    &regc->lock);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(pool);
+	return status;
+    }
+
+    status = pj_atomic_create(pool, 0, &regc->busy_ctr);
+    if (status != PJ_SUCCESS) {
+	pj_lock_destroy(regc->lock);
+	pj_pool_release(pool);
+	return status;
+    }
+
     status = pjsip_auth_clt_init(&regc->auth_sess, endpt, regc->pool, 0);
     if (status != PJ_SUCCESS)
 	return status;
@@ -148,9 +164,11 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
 
-    if (regc->has_tsx || regc->busy) {
+    pj_lock_acquire(regc->lock);
+    if (regc->has_tsx || pj_atomic_get(regc->busy_ctr) != 0) {
 	regc->_delete_flag = 1;
 	regc->cb = NULL;
+	pj_lock_release(regc->lock);
     } else {
 	pjsip_tpselector_dec_ref(&regc->tp_sel);
 	if (regc->last_transport) {
@@ -161,6 +179,10 @@ PJ_DEF(pj_status_t) pjsip_regc_destroy(pjsip_regc *regc)
 	    pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
 	    regc->timer.id = 0;
 	}
+	pj_atomic_destroy(regc->busy_ctr);
+	pj_lock_release(regc->lock);
+	pj_lock_destroy(regc->lock);
+	regc->lock = NULL;
 	pjsip_endpt_release_pool(regc->endpt, regc->pool);
     }
 
@@ -173,9 +195,11 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 {
     PJ_ASSERT_RETURN(regc && info, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     info->server_uri = regc->str_srv_url;
     info->client_uri = regc->from_uri;
-    info->is_busy = (regc->busy || regc->has_tsx);
+    info->is_busy = (pj_atomic_get(regc->busy_ctr) || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
     
@@ -193,6 +217,8 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
 	PJ_TIME_VAL_SUB(next_reg, now);
 	info->next_reg = next_reg.sec;
     }
+
+    pj_lock_release(regc->lock);
 
     return PJ_SUCCESS;
 }
@@ -504,9 +530,13 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     status = create_request(regc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(regc->lock);
 	return status;
+    }
 
     msg = tdata->msg;
 
@@ -539,6 +569,8 @@ PJ_DEF(pj_status_t) pjsip_regc_register(pjsip_regc *regc, pj_bool_t autoreg,
 
     regc->auto_reg = autoreg;
 
+    pj_lock_release(regc->lock);
+
     /* Done */
     *p_tdata = tdata;
     return PJ_SUCCESS;
@@ -555,14 +587,18 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
 	regc->timer.id = 0;
     }
 
     status = create_request(regc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(regc->lock);
 	return status;
+    }
 
     msg = tdata->msg;
 
@@ -586,6 +622,8 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister(pjsip_regc *regc,
     hdr = (pjsip_hdr*) pjsip_expires_hdr_create(tdata->pool, 0);
     pjsip_msg_add_hdr(msg, hdr);
 
+    pj_lock_release(regc->lock);
+
     *p_tdata = tdata;
     return PJ_SUCCESS;
 }
@@ -601,14 +639,18 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
 
     PJ_ASSERT_RETURN(regc && p_tdata, PJ_EINVAL);
 
+    pj_lock_acquire(regc->lock);
+
     if (regc->timer.id != 0) {
 	pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
 	regc->timer.id = 0;
     }
 
     status = create_request(regc, &tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(regc->lock);
 	return status;
+    }
 
     msg = tdata->msg;
 
@@ -624,6 +666,8 @@ PJ_DEF(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
     hdr = (pjsip_hdr*) pjsip_expires_hdr_create(tdata->pool, 0);
     pjsip_msg_add_hdr(msg, hdr);
 
+    pj_lock_release(regc->lock);
+
     *p_tdata = tdata;
     return PJ_SUCCESS;
 }
@@ -633,8 +677,15 @@ PJ_DEF(pj_status_t) pjsip_regc_update_contact(  pjsip_regc *regc,
 					        int contact_cnt,
 						const pj_str_t contact[] )
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
-    return set_contact( regc, contact_cnt, contact );
+
+    pj_lock_acquire(regc->lock);
+    status = set_contact( regc, contact_cnt, contact );
+    pj_lock_release(regc->lock);
+
+    return status;
 }
 
 
@@ -642,7 +693,11 @@ PJ_DEF(pj_status_t) pjsip_regc_update_expires(  pjsip_regc *regc,
 					        pj_uint32_t expires )
 {
     PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
+    pj_lock_acquire(regc->lock);
     set_expires( regc, expires );
+    pj_lock_release(regc->lock);
+
     return PJ_SUCCESS;
 }
 
@@ -684,9 +739,9 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     PJ_UNUSED_ARG(timer_heap);
 
     /* Temporarily increase busy flag to prevent regc from being deleted
-     * in pjsip_regc_send()
+     * in pjsip_regc_send() or in the callback
      */
-    regc->busy++;
+    pj_atomic_inc(regc->busy_ctr);
 
     entry->id = 0;
     status = pjsip_regc_register(regc, 1, &tdata);
@@ -700,10 +755,8 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 	call_callback(regc, status, 400, &reason, NULL, -1, 0, NULL);
     }
 
-    regc->busy--;
-
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->busy==0) {
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
 	pjsip_regc_destroy(regc);
     }
 }
@@ -880,7 +933,10 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_status_t status;
     pjsip_regc *regc = (pjsip_regc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
-    
+
+    pj_atomic_inc(regc->busy_ctr);
+    pj_lock_acquire(regc->lock);
+
     /* Decrement pending transaction counter. */
     pj_assert(regc->has_tsx);
     regc->has_tsx = PJ_FALSE;
@@ -914,9 +970,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 					    &tdata);
 
 	if (status == PJ_SUCCESS) {
-	    ++regc->busy;
 	    status = pjsip_regc_send(regc, tdata);
-	    --regc->busy;
 	}
 	
 	if (status != PJ_SUCCESS) {
@@ -925,17 +979,14 @@ static void tsx_callback(void *token, pjsip_event *event)
 	     * in it.
 	     */
 	    if (regc->_delete_flag == 0) {
-		/* Increment busy flag temporarily to prevent regc from
-		 * being destroyed.
+		/* Should be safe to release the lock temporarily.
+		 * We do this to avoid deadlock. 
 		 */
-		++regc->busy;
-
+		pj_lock_release(regc->lock);
 		call_callback(regc, status, tsx->status_code, 
 			      &rdata->msg_info.msg->line.status.reason,
 			      rdata, -1, 0, NULL);
-
-		/* Decrement busy flag */
-		--regc->busy;
+		pj_lock_acquire(regc->lock);
 	    }
 	}
 
@@ -993,28 +1044,27 @@ static void tsx_callback(void *token, pjsip_event *event)
 			event->body.tsx_state.src.rdata : NULL;
 	}
 
-	/* Increment busy flag temporarily to prevent regc from
-	 * being destroyed.
-	 */
-	++regc->busy;
-
 	/* Update registration */
 	if (expiration==NOEXP) expiration=-1;
 	regc->expires = expiration;
 
 	/* Call callback. */
+	/* Should be safe to release the lock temporarily.
+	 * We do this to avoid deadlock. 
+	 */
+	pj_lock_release(regc->lock);
 	call_callback(regc, PJ_SUCCESS, tsx->status_code, 
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
 			: pjsip_get_status_text(tsx->status_code)),
 		      rdata, expiration, 
 		      contact_cnt, contact);
-
-	/* Decrement busy flag */
-	--regc->busy;
+	pj_lock_acquire(regc->lock);
     }
 
+    pj_lock_release(regc->lock);
+
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->busy==0) {
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
 	pjsip_regc_destroy(regc);
     }
 }
@@ -1026,11 +1076,16 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pjsip_expires_hdr *expires_hdr;
     pj_uint32_t cseq;
 
+    pj_atomic_inc(regc->busy_ctr);
+    pj_lock_acquire(regc->lock);
+
     /* Make sure we don't have pending transaction. */
     if (regc->has_tsx) {
 	PJ_LOG(4,(THIS_FILE, "Unable to send request, regc has another "
 			     "transaction pending"));
 	pjsip_tx_data_dec_ref( tdata );
+	pj_lock_release(regc->lock);
+	pj_atomic_dec(regc->busy_ctr);
 	return PJSIP_EBUSY;
     }
 
@@ -1052,11 +1107,7 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     /* Bind to transport selector */
     pjsip_tx_data_set_transport(tdata, &regc->tp_sel);
 
-    /* Increment pending transaction first, since transaction callback
-     * may be called even before send_request() returns!
-     */
     regc->has_tsx = PJ_TRUE;
-    ++regc->busy;
 
     /* Set current operation based on the value of Expires header */
     if (expires_hdr && expires_hdr->ivalue==0)
@@ -1069,10 +1120,11 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     if (status!=PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
-    --regc->busy;
+
+    pj_lock_release(regc->lock);
 
     /* Delete the record if user destroy regc during the callback. */
-    if (regc->_delete_flag && regc->busy==0) {
+    if (pj_atomic_dec_and_get(regc->busy_ctr)==0 && regc->_delete_flag) {
 	pjsip_regc_destroy(regc);
     }
 
