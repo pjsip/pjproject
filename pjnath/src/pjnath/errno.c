@@ -52,6 +52,8 @@ static const struct
     PJ_BUILD_ERR( PJNATH_ESTUNIPV6NOTSUPP,  "STUN IPv6 attribute not supported"),
     PJ_BUILD_ERR( PJNATH_ESTUNINSERVER,	    "Invalid STUN server or server not configured"),
 
+    PJ_BUILD_ERR( PJNATH_ESTUNDESTROYED,    "STUN object has been destoyed"),
+
     /* ICE related errors */
     PJ_BUILD_ERR( PJNATH_ENOICE,	    "ICE session not available"),
     PJ_BUILD_ERR( PJNATH_EICEINPROGRESS,    "ICE check is in progress"),

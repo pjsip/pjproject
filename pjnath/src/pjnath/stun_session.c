@@ -29,14 +29,23 @@ struct pj_stun_session
     pj_stun_session_cb	 cb;
     void		*user_data;
 
+    pj_atomic_t		*busy;
+    pj_bool_t		 destroy_request;
+
     pj_bool_t		 use_fingerprint;
 
+    pj_pool_t		*rx_pool;
+
+#if PJ_LOG_MAX_LEVEL >= 5
     char		 dump_buf[1000];
+#endif
+    unsigned		 log_flag;
 
     pj_stun_auth_type	 auth_type;
     pj_stun_auth_cred	 cred;
     int			 auth_retry;
     pj_str_t		 next_nonce;
+    pj_str_t		 server_realm;
 
     pj_str_t		 srv_name;
 
@@ -79,7 +88,7 @@ static pj_stun_tsx_cb tsx_cb =
 static pj_status_t tsx_add(pj_stun_session *sess,
 			   pj_stun_tx_data *tdata)
 {
-    pj_list_push_back(&sess->pending_request_list, tdata);
+    pj_list_push_front(&sess->pending_request_list, tdata);
     return PJ_SUCCESS;
 }
 
@@ -138,11 +147,13 @@ static void stun_tsx_on_destroy(pj_stun_client_tsx *tsx)
     pj_stun_tx_data *tdata;
 
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
+    tsx_erase(tdata->sess, tdata);
+
     pj_stun_client_tsx_destroy(tsx);
     pj_pool_release(tdata->pool);
 }
 
-static void destroy_tdata(pj_stun_tx_data *tdata)
+static void destroy_tdata(pj_stun_tx_data *tdata, pj_bool_t force)
 {
     if (tdata->res_timer.id != PJ_FALSE) {
 	pj_timer_heap_cancel(tdata->sess->cfg->timer_heap, 
@@ -151,14 +162,21 @@ static void destroy_tdata(pj_stun_tx_data *tdata)
 	pj_list_erase(tdata);
     }
 
-    if (tdata->client_tsx) {
-	pj_time_val delay = {2, 0};
-	tsx_erase(tdata->sess, tdata);
-	pj_stun_client_tsx_schedule_destroy(tdata->client_tsx, &delay);
-	tdata->client_tsx = NULL;
+    if (force) {
+	if (tdata->client_tsx) {
+	    tsx_erase(tdata->sess, tdata);
+	    pj_stun_client_tsx_destroy(tdata->client_tsx);
+	}
+	pj_pool_release(tdata->pool);
 
     } else {
-	pj_pool_release(tdata->pool);
+	if (tdata->client_tsx) {
+	    pj_time_val delay = {2, 0};
+	    pj_stun_client_tsx_schedule_destroy(tdata->client_tsx, &delay);
+
+	} else {
+	    pj_pool_release(tdata->pool);
+	}
     }
 }
 
@@ -169,7 +187,7 @@ PJ_DEF(void) pj_stun_msg_destroy_tdata( pj_stun_session *sess,
 					pj_stun_tx_data *tdata)
 {
     PJ_UNUSED_ARG(sess);
-    destroy_tdata(tdata);
+    destroy_tdata(tdata, PJ_FALSE);
 }
 
 
@@ -289,6 +307,7 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 	ea->err_code == PJ_STUN_SC_STALE_NONCE)
     {
 	const pj_stun_nonce_attr *anonce;
+	const pj_stun_realm_attr *arealm;
 	pj_stun_tx_data *tdata;
 	unsigned i;
 	pj_status_t status;
@@ -316,6 +335,13 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 	/* Save next_nonce */
 	pj_strdup(sess->pool, &sess->next_nonce, &anonce->value);
 
+	/* Copy the realm from the response */
+	arealm = (pj_stun_realm_attr*)
+		 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_REALM, 0);
+	if (arealm) {
+	    pj_strdup(sess->pool, &sess->server_realm, &arealm->value);
+	}
+
 	/* Create new request */
 	status = pj_stun_session_create_req(sess, request->msg->hdr.type,
 					    request->msg->hdr.magic,
@@ -324,7 +350,8 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 	    return status;
 
 	/* Duplicate all the attributes in the old request, except
-	 * USERNAME, REALM, M-I, and NONCE 
+	 * USERNAME, REALM, M-I, and NONCE, which will be filled in
+	 * later.
 	 */
 	for (i=0; i<request->msg->attr_count; ++i) {
 	    const pj_stun_attr_hdr *asrc = request->msg->attr[i];
@@ -373,6 +400,10 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
     sess = tdata->sess;
 
+    /* Lock the session and prevent user from destroying us in the callback */
+    pj_atomic_inc(sess->busy);
+    pj_lock_acquire(sess->lock);
+
     /* Handle authentication challenge */
     handle_auth_challenge(sess, tdata, response, src_addr,
 		          src_addr_len, &notify_user);
@@ -387,6 +418,13 @@ static void stun_tsx_on_complete(pj_stun_client_tsx *tsx,
      */
     pj_stun_msg_destroy_tdata(sess, tdata);
     tdata = NULL;
+
+    pj_lock_release(sess->lock);
+
+    if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
+	pj_stun_session_destroy(sess);
+	return;
+    }
 }
 
 static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
@@ -394,12 +432,27 @@ static pj_status_t stun_tsx_on_send_msg(pj_stun_client_tsx *tsx,
 					pj_size_t pkt_size)
 {
     pj_stun_tx_data *tdata;
+    pj_stun_session *sess;
+    pj_status_t status;
 
     tdata = (pj_stun_tx_data*) pj_stun_client_tsx_get_data(tsx);
+    sess = tdata->sess;
 
-    return tdata->sess->cb.on_send_msg(tdata->sess, tdata->token, stun_pkt, 
-				       pkt_size, tdata->dst_addr, 
-				       tdata->addr_len);
+    /* Lock the session and prevent user from destroying us in the callback */
+    pj_atomic_inc(sess->busy);
+    pj_lock_acquire(sess->lock);
+    
+    status = sess->cb.on_send_msg(tdata->sess, tdata->token, stun_pkt, 
+				  pkt_size, tdata->dst_addr, 
+				  tdata->addr_len);
+    pj_lock_release(sess->lock);
+
+    if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
+	pj_stun_session_destroy(sess);
+	return PJNATH_ESTUNDESTROYED;
+    } else {
+	return status;
+    }
 }
 
 /* **************************************************************************/
@@ -428,10 +481,15 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     sess->pool = pool;
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
     sess->use_fingerprint = fingerprint;
+    sess->log_flag = 0xFFFF;
     
     sess->srv_name.ptr = (char*) pj_pool_alloc(pool, 32);
     sess->srv_name.slen = pj_ansi_snprintf(sess->srv_name.ptr, 32,
 					   "pj_stun-%s", pj_get_version());
+
+    sess->rx_pool = pj_pool_create(sess->cfg->pf, "name", 
+				   PJNATH_POOL_LEN_STUN_TDATA, 
+				   PJNATH_POOL_INC_STUN_TDATA, NULL);
 
     pj_list_init(&sess->pending_request_list);
     pj_list_init(&sess->cached_response_list);
@@ -443,6 +501,13 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     }
     sess->delete_lock = PJ_TRUE;
 
+    status = pj_atomic_create(pool, 0, &sess->busy);
+    if (status != PJ_SUCCESS) {
+	pj_lock_destroy(sess->lock);
+	pj_pool_release(pool);
+	return status;
+    }
+
     *p_sess = sess;
 
     return PJ_SUCCESS;
@@ -453,18 +518,32 @@ PJ_DEF(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess)
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
     pj_lock_acquire(sess->lock);
+
+    /* Can't destroy if we're in a callback */
+    sess->destroy_request = PJ_TRUE;
+    if (pj_atomic_get(sess->busy)) {
+	pj_lock_release(sess->lock);
+	return PJ_EPENDING;
+    }
+
     while (!pj_list_empty(&sess->pending_request_list)) {
 	pj_stun_tx_data *tdata = sess->pending_request_list.next;
-	destroy_tdata(tdata);
+	destroy_tdata(tdata, PJ_TRUE);
     }
+
     while (!pj_list_empty(&sess->cached_response_list)) {
 	pj_stun_tx_data *tdata = sess->cached_response_list.next;
-	destroy_tdata(tdata);
+	destroy_tdata(tdata, PJ_TRUE);
     }
     pj_lock_release(sess->lock);
 
     if (sess->delete_lock) {
 	pj_lock_destroy(sess->lock);
+    }
+
+    if (sess->rx_pool) {
+	pj_pool_release(sess->rx_pool);
+	sess->rx_pool = NULL;
     }
 
     pj_pool_release(sess->pool);
@@ -538,12 +617,19 @@ PJ_DEF(pj_status_t) pj_stun_session_set_credential(pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(void) pj_stun_session_set_log( pj_stun_session *sess,
+				      unsigned flags)
+{
+    PJ_ASSERT_ON_FAIL(sess, return);
+    sess->log_flag = flags;
+}
 
 static pj_status_t get_auth(pj_stun_session *sess,
 			    pj_stun_tx_data *tdata)
 {
     if (sess->cred.type == PJ_STUN_AUTH_CRED_STATIC) {
-	tdata->auth_info.realm = sess->cred.data.static_cred.realm;
+	//tdata->auth_info.realm = sess->cred.data.static_cred.realm;
+	tdata->auth_info.realm = sess->server_realm;
 	tdata->auth_info.username = sess->cred.data.static_cred.username;
 	tdata->auth_info.nonce = sess->cred.data.static_cred.nonce;
 
@@ -633,6 +719,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create_req(pj_stun_session *sess,
 		return status;
 	    }
 	    tdata->auth_info.nonce = sess->next_nonce;
+	    tdata->auth_info.realm = sess->server_realm;
 	}
 
     } else {
@@ -714,8 +801,18 @@ PJ_DEF(pj_status_t) pj_stun_session_create_res( pj_stun_session *sess,
 static void dump_tx_msg(pj_stun_session *sess, const pj_stun_msg *msg,
 			unsigned pkt_size, const pj_sockaddr_t *addr)
 {
-    char dst_name[80];
+    char dst_name[PJ_INET6_ADDRSTRLEN+10];
     
+    if ((PJ_STUN_IS_REQUEST(msg->hdr.type) && 
+	 (sess->log_flag & PJ_STUN_SESS_LOG_TX_REQ)==0) ||
+	(PJ_STUN_IS_RESPONSE(msg->hdr.type) &&
+	 (sess->log_flag & PJ_STUN_SESS_LOG_TX_RES)==0) ||
+	(PJ_STUN_IS_INDICATION(msg->hdr.type) &&
+	 (sess->log_flag & PJ_STUN_SESS_LOG_TX_IND)==0))
+    {
+	return;
+    }
+
     pj_sockaddr_print(addr, dst_name, sizeof(dst_name), 3);
 
     PJ_LOG(5,(SNAME(sess), 
@@ -749,7 +846,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
     tdata->token = token;
     tdata->retransmit = retransmit;
 
-    /* Start locking the session now */
+    /* Lock the session and prevent user from destroying us in the callback */
+    pj_atomic_inc(sess->busy);
     pj_lock_acquire(sess->lock);
 
     /* Apply options */
@@ -757,9 +855,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 			       tdata->msg);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
-	pj_lock_release(sess->lock);
 	LOG_ERR_(sess, "Error applying options", status);
-	return status;
+	goto on_return;
     }
 
     /* Encode message */
@@ -769,9 +866,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 				&tdata->pkt_size);
     if (status != PJ_SUCCESS) {
 	pj_stun_msg_destroy_tdata(sess, tdata);
-	pj_lock_release(sess->lock);
 	LOG_ERR_(sess, "STUN encode() error", status);
-	return status;
+	goto on_return;
     }
 
     /* Dump packet */
@@ -797,9 +893,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 					     tdata->pkt, tdata->pkt_size);
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	    pj_stun_msg_destroy_tdata(sess, tdata);
-	    pj_lock_release(sess->lock);
 	    LOG_ERR_(sess, "Error sending STUN request", status);
-	    return status;
+	    goto on_return;
 	}
 
 	/* Add to pending request list */
@@ -824,10 +919,10 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 					    &tdata->res_timer,
 					    &timeout);
 	    if (status != PJ_SUCCESS) {
+		tdata->res_timer.id = PJ_FALSE;
 		pj_stun_msg_destroy_tdata(sess, tdata);
-		pj_lock_release(sess->lock);
 		LOG_ERR_(sess, "Error scheduling response timer", status);
-		return status;
+		goto on_return;
 	    }
 
 	    pj_list_push_back(&sess->cached_response_list, tdata);
@@ -838,7 +933,9 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 				      tdata->pkt_size, server, addr_len);
 
 	if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	    pj_stun_msg_destroy_tdata(sess, tdata);
 	    LOG_ERR_(sess, "Error sending STUN request", status);
+	    goto on_return;
 	}
 
 	/* Destroy only when response is not cached*/
@@ -847,8 +944,15 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 	}
     }
 
-
+on_return:
     pj_lock_release(sess->lock);
+
+    /* Check if application has called destroy() in the callback */
+    if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
+	pj_stun_session_destroy(sess);
+	return PJNATH_ESTUNDESTROYED;
+    }
+
     return status;
 }
 
@@ -892,6 +996,8 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
     PJ_ASSERT_RETURN(!notify || notify_status!=PJ_SUCCESS, PJ_EINVAL);
     PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(tdata->msg->hdr.type), PJ_EINVAL);
 
+    /* Lock the session and prevent user from destroying us in the callback */
+    pj_atomic_inc(sess->busy);
     pj_lock_acquire(sess->lock);
 
     if (notify) {
@@ -903,6 +1009,12 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
     pj_stun_msg_destroy_tdata(sess, tdata);
 
     pj_lock_release(sess->lock);
+
+    if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
+	pj_stun_session_destroy(sess);
+	return PJNATH_ESTUNDESTROYED;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -917,11 +1029,18 @@ PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
     PJ_ASSERT_RETURN(sess && tdata, PJ_EINVAL);
     PJ_ASSERT_RETURN(PJ_STUN_IS_REQUEST(tdata->msg->hdr.type), PJ_EINVAL);
 
+    /* Lock the session and prevent user from destroying us in the callback */
+    pj_atomic_inc(sess->busy);
     pj_lock_acquire(sess->lock);
 
     status = pj_stun_client_tsx_retransmit(tdata->client_tsx);
 
     pj_lock_release(sess->lock);
+
+    if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
+	pj_stun_session_destroy(sess);
+	return PJNATH_ESTUNDESTROYED;
+    }
 
     return status;
 }
@@ -1165,6 +1284,36 @@ static pj_status_t on_incoming_indication(pj_stun_session *sess,
 }
 
 
+/* Print outgoing message to log */
+static void dump_rx_msg(pj_stun_session *sess, const pj_stun_msg *msg,
+			unsigned pkt_size, const pj_sockaddr_t *addr)
+{
+    char src_info[PJ_INET6_ADDRSTRLEN+10];
+    
+    if ((PJ_STUN_IS_REQUEST(msg->hdr.type) && 
+	 (sess->log_flag & PJ_STUN_SESS_LOG_RX_REQ)==0) ||
+	(PJ_STUN_IS_RESPONSE(msg->hdr.type) &&
+	 (sess->log_flag & PJ_STUN_SESS_LOG_RX_RES)==0) ||
+	(PJ_STUN_IS_INDICATION(msg->hdr.type) &&
+	 (sess->log_flag & PJ_STUN_SESS_LOG_RX_IND)==0))
+    {
+	return;
+    }
+
+    pj_sockaddr_print(addr, src_info, sizeof(src_info), 3);
+
+    PJ_LOG(5,(SNAME(sess),
+	      "RX %d bytes STUN message from %s:\n"
+	      "--- begin STUN message ---\n"
+	      "%s"
+	      "--- end of STUN message ---\n",
+	      pkt_size, src_info,
+	      pj_stun_msg_dump(msg, sess->dump_buf, sizeof(sess->dump_buf), 
+			       NULL)));
+
+}
+
+/* Incoming packet */
 PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					      const void *packet,
 					      pj_size_t pkt_size,
@@ -1175,47 +1324,34 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					      unsigned src_addr_len)
 {
     pj_stun_msg *msg, *response;
-    pj_pool_t *tmp_pool;
-    char *dump;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && packet && pkt_size, PJ_EINVAL);
 
-    tmp_pool = pj_pool_create(sess->cfg->pf, "tmpstun", 
-			      PJNATH_POOL_LEN_STUN_TDATA, 
-			      PJNATH_POOL_INC_STUN_TDATA, NULL);
-    if (!tmp_pool)
-	return PJ_ENOMEM;
+    /* Lock the session and prevent user from destroying us in the callback */
+    pj_atomic_inc(sess->busy);
+    pj_lock_acquire(sess->lock);
+
+    /* Reset pool */
+    pj_pool_reset(sess->rx_pool);
 
     /* Try to parse the message */
-    status = pj_stun_msg_decode(tmp_pool, (const pj_uint8_t*)packet,
+    status = pj_stun_msg_decode(sess->rx_pool, (const pj_uint8_t*)packet,
 			        pkt_size, options, 
 				&msg, parsed_len, &response);
     if (status != PJ_SUCCESS) {
 	LOG_ERR_(sess, "STUN msg_decode() error", status);
 	if (response) {
-	    send_response(sess, token, tmp_pool, response, NULL,
+	    send_response(sess, token, sess->rx_pool, response, NULL,
 			  PJ_FALSE, src_addr, src_addr_len);
 	}
-	pj_pool_release(tmp_pool);
-	return status;
+	goto on_return;
     }
 
-    dump = (char*) pj_pool_alloc(tmp_pool, PJ_STUN_MAX_PKT_LEN);
-
-    PJ_LOG(5,(SNAME(sess),
-	      "RX STUN message from %s:%d:\n"
-	      "--- begin STUN message ---\n"
-	      "%s"
-	      "--- end of STUN message ---\n",
-	      pj_inet_ntoa(((pj_sockaddr_in*)src_addr)->sin_addr),
-	      pj_ntohs(((pj_sockaddr_in*)src_addr)->sin_port),
-	      pj_stun_msg_dump(msg, dump, PJ_STUN_MAX_PKT_LEN, NULL)));
-
-    pj_lock_acquire(sess->lock);
+    dump_rx_msg(sess, msg, pkt_size, src_addr);
 
     /* For requests, check if we have cached response */
-    status = check_cached_response(sess, tmp_pool, msg, 
+    status = check_cached_response(sess, sess->rx_pool, msg, 
 				   src_addr, src_addr_len);
     if (status == PJ_SUCCESS) {
 	goto on_return;
@@ -1231,13 +1367,13 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     } else if (PJ_STUN_IS_REQUEST(msg->hdr.type)) {
 
-	status = on_incoming_request(sess, options, token, tmp_pool, 
+	status = on_incoming_request(sess, options, token, sess->rx_pool, 
 				     (const pj_uint8_t*) packet, pkt_size, 
 				     msg, src_addr, src_addr_len);
 
     } else if (PJ_STUN_IS_INDICATION(msg->hdr.type)) {
 
-	status = on_incoming_indication(sess, token, tmp_pool, 
+	status = on_incoming_indication(sess, token, sess->rx_pool, 
 					(const pj_uint8_t*) packet, pkt_size,
 					msg, src_addr, src_addr_len);
 
@@ -1249,9 +1385,14 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 on_return:
     pj_lock_release(sess->lock);
 
-    pj_pool_release(tmp_pool);
+    /* If we've received destroy request while we're on the callback,
+     * destroy the session now.
+     */
+    if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
+	pj_stun_session_destroy(sess);
+	return PJNATH_ESTUNDESTROYED;
+    }
+
     return status;
 }
-
-
 

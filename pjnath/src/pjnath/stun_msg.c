@@ -1557,7 +1557,7 @@ PJ_DEF(pj_status_t) pj_stun_unknown_attr_create(pj_pool_t *pool,
 /* Create and add STUN UNKNOWN-ATTRIBUTES attribute to the message. */
 PJ_DEF(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
 						 pj_stun_msg *msg,
-						 unsigned attr_cnt,
+						 pj_size_t attr_cnt,
 						 const pj_uint16_t attr_types[])
 {
     pj_stun_unknown_attr *attr = NULL;
@@ -1646,7 +1646,7 @@ static void* clone_unknown_attr(pj_pool_t *pool, const void *src)
 PJ_DEF(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
 					       int attr_type,
 					       const pj_uint8_t *data,
-					       unsigned length,
+					       pj_size_t length,
 					       pj_stun_binary_attr **p_attr)
 {
     pj_stun_binary_attr *attr;
@@ -1673,7 +1673,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 						pj_stun_msg *msg,
 						int attr_type,
 						const pj_uint8_t *data,
-						unsigned length)
+						pj_size_t length)
 {
     pj_stun_binary_attr *attr = NULL;
     pj_status_t status;
@@ -1833,10 +1833,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
 /*
  * Check that the PDU is potentially a valid STUN message.
  */
-PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, unsigned pdu_len,
+PJ_DEF(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, pj_size_t pdu_len,
 				      unsigned options)
 {
-    unsigned msg_len;
+    pj_size_t msg_len;
 
     PJ_ASSERT_RETURN(pdu, PJ_EINVAL);
 
@@ -1938,10 +1938,10 @@ PJ_DEF(pj_status_t) pj_stun_msg_create_response(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 				       const pj_uint8_t *pdu,
-				       unsigned pdu_len,
+				       pj_size_t pdu_len,
 				       unsigned options,
 				       pj_stun_msg **p_msg,
-				       unsigned *p_parsed_len,
+				       pj_size_t *p_parsed_len,
 				       pj_stun_msg **p_response)
 {
     
@@ -2190,9 +2190,9 @@ static char *print_binary(const pj_uint8_t *data, unsigned data_len)
  */
 PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				       pj_uint8_t *buf, unsigned buf_size,
-				       unsigned options,
+				       pj_size_t options,
 				       const pj_str_t *key,
-				       unsigned *p_msg_len)
+				       pj_size_t *p_msg_len)
 {
     pj_uint8_t *start = buf;
     pj_stun_msgint_attr *amsgint = NULL;

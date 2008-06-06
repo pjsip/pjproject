@@ -88,10 +88,21 @@ LINK32=link.exe
 # Begin Source File
 
 SOURCE="..\src\pjnath-test\ice_test.c"
+
+!IF  "$(CFG)" == "pjnath_test - Win32 Release"
+
+!ELSEIF  "$(CFG)" == "pjnath_test - Win32 Debug"
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
 SOURCE="..\src\pjnath-test\main.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjnath-test\server.c"
 # End Source File
 # Begin Source File
 
@@ -103,12 +114,24 @@ SOURCE="..\src\pjnath-test\stun.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjnath-test\stun_sock_test.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjnath-test\test.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjnath-test\turn_sock_test.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
+# Begin Source File
+
+SOURCE="..\src\pjnath-test\server.h"
+# End Source File
 # Begin Source File
 
 SOURCE="..\src\pjnath-test\test.h"

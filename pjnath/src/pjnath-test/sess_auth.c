@@ -1098,6 +1098,11 @@ int sess_auth_test(void)
 
     /* If REALM doesn't match, server must respond with 401
      */
+#if 0
+    // STUN session now will just use the realm sent in the
+    // response, so this test will fail because it will
+    // authenticate successfully.
+
     rc = run_client_test("Invalid REALM (long term)",  // title
 			 PJ_TRUE,	    // server responding
 			 PJ_STUN_AUTH_LONG_TERM, // server auth
@@ -1116,6 +1121,7 @@ int sess_auth_test(void)
     if (rc != 0) {
 	goto done;
     }
+#endif
 
     /* Invalid HMAC */
 

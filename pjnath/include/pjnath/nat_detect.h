@@ -32,7 +32,6 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJNATH_NAT_DETECT NAT Classification/Detection Tool
  * @brief NAT Classification/Detection Tool
- * @ingroup PJNATH_ICE
  * @{
  *
  * This module provides one function to perform NAT classification and

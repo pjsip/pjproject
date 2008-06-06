@@ -31,15 +31,16 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 export PJNATH_SRCDIR = ../src/pjnath
 export PJNATH_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 		errno.o ice_session.o ice_strans.o nat_detect.o stun_auth.o \
-		stun_msg.o stun_msg_dump.o stun_session.o stun_transaction.o \
-		turn_session.o turn_sock.o
+		stun_msg.o stun_msg_dump.o stun_session.o stun_sock.o \
+		stun_transaction.o turn_session.o turn_sock.o
 export PJNATH_CFLAGS += $(_CFLAGS)
 
 ###############################################################################
 # Defines for building test application
 #
 export PJNATH_TEST_SRCDIR = ../src/pjnath-test
-export PJNATH_TEST_OBJS += ice_test.o stun.o sess_auth.o test.o
+export PJNATH_TEST_OBJS += ice_test.o stun.o sess_auth.o server.o \
+			    stun_sock_test.o turn_sock_test.o test.o
 export PJNATH_TEST_CFLAGS += $(_CFLAGS)
 export PJNATH_TEST_LDFLAGS += $(_LDFLAGS)
 export PJNATH_TEST_EXE:=../bin/pjnath-test-$(TARGET_NAME)$(HOST_EXE)

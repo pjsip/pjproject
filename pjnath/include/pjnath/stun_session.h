@@ -213,6 +213,7 @@ struct pj_stun_rx_data
  */
 struct pj_stun_tx_data
 {
+    /** PJLIB list interface */
     PJ_DECL_LIST_MEMBER(struct pj_stun_tx_data);
 
     pj_pool_t		*pool;		/**< Pool.			    */
@@ -240,6 +241,21 @@ struct pj_stun_tx_data
 
 
 /**
+ * These are the flags to control the message logging in the STUN session.
+ */
+typedef enum pj_stun_sess_msg_log_flag
+{
+    PJ_STUN_SESS_LOG_TX_REQ=1,	/**< Log outgoing STUN requests.    */
+    PJ_STUN_SESS_LOG_TX_RES=2,	/**< Log outgoing STUN responses.   */
+    PJ_STUN_SESS_LOG_TX_IND=4,	/**< Log outgoing STUN indications. */
+
+    PJ_STUN_SESS_LOG_RX_REQ=8,	/**< Log incoming STUN requests.    */
+    PJ_STUN_SESS_LOG_RX_RES=16,	/**< Log incoming STUN responses    */
+    PJ_STUN_SESS_LOG_RX_IND=32	/**< Log incoming STUN indications  */
+} pj_stun_sess_msg_log_flag;
+
+
+/**
  * Create a STUN session.
  *
  * @param cfg		The STUN endpoint, to be used to register timers etc.
@@ -258,11 +274,16 @@ PJ_DECL(pj_status_t) pj_stun_session_create(pj_stun_config *cfg,
 					    pj_stun_session **p_sess);
 
 /**
- * Destroy the STUN session.
+ * Destroy the STUN session and all objects created in the context of
+ * this session.
  *
  * @param sess	    The STUN session instance.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ *		    This function will return PJ_EPENDING if the operation
+ *		    cannot be performed immediately because callbacks are
+ *		    being called; in this case the session will be destroyed
+ *		    as soon as the last callback returns.
  */
 PJ_DECL(pj_status_t) pj_stun_session_destroy(pj_stun_session *sess);
 
@@ -333,6 +354,14 @@ PJ_DECL(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
 PJ_DECL(pj_status_t) pj_stun_session_set_credential(pj_stun_session *sess,
 						pj_stun_auth_type auth_type,
 						const pj_stun_auth_cred *cred);
+/**
+ * Configure message logging. By default all flags are enabled.
+ *
+ * @param sess	    The STUN session instance.
+ * @param flags	    Bitmask combination of #pj_stun_sess_msg_log_flag
+ */
+PJ_DECL(void) pj_stun_session_set_log(pj_stun_session *sess,
+				      unsigned flags);
 
 /**
  * Create a STUN request message. After the message has been successfully
@@ -381,7 +410,7 @@ PJ_DECL(pj_status_t) pj_stun_session_create_ind(pj_stun_session *sess,
  * call.
  *
  * @param sess	    The STUN session instance.
- * @param req	    The STUN request where the response is to be created.
+ * @param rdata	    The STUN request where the response is to be created.
  * @param err_code  Error code to be set in the response, if error response
  *		    is to be created, according to pj_stun_status enumeration.
  *		    This argument MUST be zero if successful response is
@@ -432,6 +461,9 @@ PJ_DECL(pj_status_t) pj_stun_session_create_res(pj_stun_session *sess,
  *		    be sent.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ *		    This function will return PJNATH_ESTUNDESTROYED if 
+ *		    application has destroyed the session in 
+ *		    \a on_send_msg() callback.
  */
 PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
 					      void *token,
@@ -449,7 +481,7 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
  *
  * @param sess	    The STUN session instance.
  * @param rdata	    The STUN request message to be responded.
- * @param err_code  Error code to be set in the response, if error response
+ * @param code	    Error code to be set in the response, if error response
  *		    is to be created, according to pj_stun_status enumeration.
  *		    This argument MUST be zero if successful response is
  *		    to be created.
@@ -472,6 +504,9 @@ PJ_DECL(pj_status_t) pj_stun_session_send_msg(pj_stun_session *sess,
  * @param addr_len  Address length.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ *		    This function will return PJNATH_ESTUNDESTROYED if 
+ *		    application has destroyed the session in 
+ *		    \a on_send_msg() callback.
  */
 PJ_DECL(pj_status_t) pj_stun_session_respond(pj_stun_session *sess, 
 					     const pj_stun_rx_data *rdata,
@@ -496,6 +531,9 @@ PJ_DECL(pj_status_t) pj_stun_session_respond(pj_stun_session *sess,
  *		    callback. This error status MUST NOT be PJ_SUCCESS.
  *
  * @return	    PJ_SUCCESS if transaction is successfully cancelled.
+ *		    This function will return PJNATH_ESTUNDESTROYED if 
+ *		    application has destroyed the session in 
+ *		    \a on_request_complete() callback.
  */
 PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
 						pj_stun_tx_data *tdata,
@@ -511,6 +549,9 @@ PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
  * @param tdata	    The request message previously sent.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error.
+ *		    This function will return PJNATH_ESTUNDESTROYED if 
+ *		    application has destroyed the session in \a on_send_msg()
+ *		    callback.
  */
 PJ_DECL(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
 						    pj_stun_tx_data *tdata);
@@ -548,6 +589,9 @@ PJ_DECL(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
  * @param src_addr_len	Length of the source address.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
+ *			This function will return PJNATH_ESTUNDESTROYED if 
+ *			application has destroyed the session in one of the
+ *			callback.
  */
 PJ_DECL(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					       const void *packet,

@@ -68,7 +68,7 @@ static struct options
 
 static int worker_thread(void *unused);
 static void turn_on_rx_data(pj_turn_sock *relay,
-			    const pj_uint8_t *pkt,
+			    void *pkt,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
 			    unsigned addr_len);
@@ -274,7 +274,7 @@ static pj_status_t create_relay(void)
     }
 
     srv = pj_str(o.srv_addr);
-    CHECK( pj_turn_sock_init(g.relay,				 /* the relay */
+    CHECK(pj_turn_sock_alloc(g.relay,				 /* the relay */
 			    &srv,				 /* srv addr */
 			    (o.srv_port?atoi(o.srv_port):PJ_STUN_PORT),/* def port */
 			    NULL,				 /* resolver */
@@ -294,7 +294,7 @@ static void destroy_relay(void)
 
 
 static void turn_on_rx_data(pj_turn_sock *relay,
-			    const pj_uint8_t *pkt,
+			    void *pkt,
 			    unsigned pkt_len,
 			    const pj_sockaddr_t *peer_addr,
 			    unsigned addr_len)

@@ -25,6 +25,8 @@
  */
 
 #include <pjnath/stun_msg.h>
+#include <pj/assert.h>
+#include <pj/errno.h>
 #include <pj/string.h>
 
 
@@ -99,6 +101,17 @@ PJ_INLINE(void) pj_stun_config_init(pj_stun_config *cfg,
     cfg->timer_heap = timer_heap;
     cfg->rto_msec = PJ_STUN_RTO_VALUE;
     cfg->res_cache_msec = PJ_STUN_RES_CACHE_DURATION;
+}
+
+
+/**
+ * Check that STUN config is valid.
+ */
+PJ_INLINE(pj_status_t) pj_stun_config_check_valid(const pj_stun_config *cfg)
+{
+    PJ_ASSERT_RETURN(cfg->ioqueue && cfg->pf && cfg->timer_heap &&
+		     cfg->rto_msec && cfg->res_cache_msec, PJ_EINVAL);
+    return PJ_SUCCESS;
 }
 
 

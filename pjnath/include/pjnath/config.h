@@ -142,6 +142,84 @@
 
 
 /* **************************************************************************
+ * STUN TRANSPORT CONFIGURATION
+ */
+
+/**
+ * The packet buffer size for the STUN transport.
+ */
+#ifndef PJ_STUN_SOCK_PKT_LEN
+#   define PJ_STUN_SOCK_PKT_LEN			    2000
+#endif
+
+
+/**
+ * The duration of the STUN keep-alive period, in seconds.
+ */
+#ifndef PJ_STUN_KEEP_ALIVE_SEC
+#   define PJ_STUN_KEEP_ALIVE_SEC		    15
+#endif
+
+
+/* **************************************************************************
+ * TURN CONFIGURATION
+ */
+
+/**
+ * Maximum DNS SRV entries to be processed in the DNS SRV response
+ */
+#ifndef PJ_TURN_MAX_DNS_SRV_CNT
+#   define PJ_TURN_MAX_DNS_SRV_CNT		    4
+#endif
+
+
+/**
+ * Maximum TURN packet size to be supported.
+ */
+#ifndef PJ_TURN_MAX_PKT_LEN
+#   define PJ_TURN_MAX_PKT_LEN			    3000
+#endif
+
+
+/**
+ * The TURN permission lifetime setting. This value should be taken from the
+ * TURN protocol specification.
+ */
+#ifndef PJ_TURN_PERM_TIMEOUT
+#   define PJ_TURN_PERM_TIMEOUT			    300
+#endif
+
+
+/**
+ * The TURN channel binding lifetime. This value should be taken from the
+ * TURN protocol specification.
+ */
+#ifndef PJ_TURN_CHANNEL_TIMEOUT
+#   define PJ_TURN_CHANNEL_TIMEOUT		    600
+#endif
+
+
+/**
+ * Number of seconds to refresh the permission/channel binding before the 
+ * permission/channel binding expires. This value should be greater than 
+ * PJ_TURN_PERM_TIMEOUT setting.
+ */
+#ifndef PJ_TURN_REFRESH_SEC_BEFORE
+#   define PJ_TURN_REFRESH_SEC_BEFORE		    60
+#endif
+
+
+/**
+ * The TURN session timer heart beat interval. When this timer occurs, the 
+ * TURN session will scan all the permissions/channel bindings to see which
+ * need to be refreshed.
+ */
+#ifndef PJ_TURN_KEEP_ALIVE_SEC
+#   define PJ_TURN_KEEP_ALIVE_SEC		    15
+#endif
+
+
+/* **************************************************************************
  * ICE CONFIGURATION
  */
 

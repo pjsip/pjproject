@@ -298,6 +298,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjnath\stun_sock.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjnath\stun_transaction.c"
 				>
 				<FileConfiguration

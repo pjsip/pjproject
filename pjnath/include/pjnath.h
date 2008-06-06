@@ -26,6 +26,7 @@
 #include <pjnath/stun_config.h>
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_session.h>
+#include <pjnath/stun_sock.h>
 #include <pjnath/stun_transaction.h>
 #include <pjnath/turn_session.h>
 #include <pjnath/turn_sock.h>

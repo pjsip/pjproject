@@ -34,8 +34,8 @@ PJ_BEGIN_DECL
 /* **************************************************************************/
 /**
  * @defgroup PJNATH_STUN_MSG STUN Message Representation and Parsing
- * @brief Low-level representation and parsing of STUN messages.
  * @ingroup PJNATH_STUN
+ * @brief Low-level representation and parsing of STUN messages.
  * @{
  */
 
@@ -955,9 +955,8 @@ typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
 /**
  * This describes the TURN REQUESTED-PROPS attribute, encoded as
  * STUN 32bit integer attribute. Few macros are provided to manipulate
- * the values in this attribute: #PJ_STUN_GET_RPP_BITS(), 
- * #PJ_STUN_SET_RPP_BITS(), #PJ_STUN_GET_RPP_PORT(), and
- * #PJ_STUN_SET_RPP_PORT().
+ * the values in this attribute: #PJ_STUN_GET_PROP_TYPE(), and
+ * #PJ_STUN_SET_PROP_TYPE().
  * 
  * This attribute allows the client to request certain properties for
  * the relayed transport address that is allocated by the server.  The
@@ -1164,7 +1163,7 @@ enum pj_stun_decode_options
      * Disable FINGERPRINT verification. This option can be used when calling
      * #pj_stun_msg_check() and #pj_stun_msg_decode() to disable the 
      * verification of FINGERPRINT, for example when the STUN usage says when
-     * FINGERPRINT mechanism shall not * be used.
+     * FINGERPRINT mechanism shall not be used.
      */
     PJ_STUN_NO_FINGERPRINT_CHECK = 8
 };
@@ -1292,7 +1291,7 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  * value, if these attributes are present in the message.
  *
  * If application wants to apply credential to the message, it MUST
- * include a blank MESSAGE-INTEGRITY attribute in the message, as the
+ * include a blank MESSAGE-INTEGRITY attribute in the message as the
  * last attribute or the attribute before FINGERPRINT. This function will
  * calculate the HMAC digest from the message using  the supplied key in
  * the parameter. The key should be set to the password if short term 
@@ -1320,10 +1319,10 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_attr(pj_stun_msg *msg,
  */
 PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 				        pj_uint8_t *pkt_buf,
-				        unsigned buf_size,
+				        pj_size_t buf_size,
 				        unsigned options,
 					const pj_str_t *key,
-				        unsigned *p_msg_len);
+				        pj_size_t *p_msg_len);
 
 /**
  * Check that the PDU is potentially a valid STUN message. This function
@@ -1345,7 +1344,7 @@ PJ_DECL(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
  *			message.
  */
 PJ_DECL(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu, 
-				       unsigned pdu_len, unsigned options);
+				       pj_size_t pdu_len, unsigned options);
 
 
 /**
@@ -1371,10 +1370,10 @@ PJ_DECL(pj_status_t) pj_stun_msg_check(const pj_uint8_t *pdu,
  */
 PJ_DECL(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 				        const pj_uint8_t *pdu,
-				        unsigned pdu_len,
+				        pj_size_t pdu_len,
 				        unsigned options,
 				        pj_stun_msg **p_msg,
-					unsigned *p_parsed_len,
+					pj_size_t *p_parsed_len,
 				        pj_stun_msg **p_response);
 
 /**

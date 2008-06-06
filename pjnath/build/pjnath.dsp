@@ -121,6 +121,10 @@ SOURCE=..\src\pjnath\stun_session.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjnath\stun_sock.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjnath\stun_transaction.c
 # End Source File
 # Begin Source File
@@ -174,6 +178,10 @@ SOURCE=..\include\pjnath\stun_msg.h
 # Begin Source File
 
 SOURCE=..\include\pjnath\stun_session.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjnath\stun_sock.h
 # End Source File
 # Begin Source File
 

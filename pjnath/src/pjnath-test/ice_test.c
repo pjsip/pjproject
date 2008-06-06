@@ -17,506 +17,858 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
+#include "server.h"
 
-#define THIS_FILE   "ice_test.c"
-
-
-struct ice_data
+enum
 {
-    const char	   *obj_name;
-    pj_bool_t	    complete;
-    pj_status_t	    err_code;
-    unsigned	    rx_rtp_cnt;
-    unsigned	    rx_rtcp_cnt;
-
-    unsigned	    rx_rtp_count;
-    char	    last_rx_rtp_data[32];
-    unsigned	    rx_rtcp_count;
-    char	    last_rx_rtcp_data[32];
+    NO	= 0,
+    YES	= 1,
+    SRV	= 3,
 };
 
-static pj_stun_config stun_cfg;
+#define NODELAY		0xFFFFFFFF
+#define SRV_DOMAIN	"pjsip.lab.domain"
 
-static void on_ice_complete(pj_ice_strans *icest, 
-			    pj_status_t status)
+#define INDENT		"    "
+
+/* Client flags */
+enum
 {
-    struct ice_data *id = (struct ice_data*) icest->user_data;
-    id->complete = PJ_TRUE;
-    id->err_code = status;
-    PJ_LOG(3,(THIS_FILE, "     ICE %s complete %s", id->obj_name,
-	      (status==PJ_SUCCESS ? "successfully" : "with failure")));
-}
-
-
-static void on_rx_data(pj_ice_strans *icest, unsigned comp_id, 
-		       void *pkt, pj_size_t size,
-		       const pj_sockaddr_t *src_addr,
-		       unsigned src_addr_len)
-{
-    struct ice_data *id = (struct ice_data*) icest->user_data;
-
-    if (comp_id == 1) {
-	id->rx_rtp_cnt++;
-	pj_memcpy(id->last_rx_rtp_data, pkt, size);
-	id->last_rx_rtp_data[size] = '\0';
-    } else if (comp_id == 2) {
-	id->rx_rtcp_cnt++;
-	pj_memcpy(id->last_rx_rtcp_data, pkt, size);
-	id->last_rx_rtcp_data[size] = '\0';
-    } else {
-	pj_assert(!"Invalid component ID");
-    }
-
-    PJ_UNUSED_ARG(src_addr);
-    PJ_UNUSED_ARG(src_addr_len);
-}
-
-
-static void handle_events(unsigned msec_timeout)
-{
-    pj_time_val delay;
-
-    pj_timer_heap_poll(stun_cfg.timer_heap, NULL);
-
-    delay.sec = 0;
-    delay.msec = msec_timeout;
-    pj_time_val_normalize(&delay);
-
-    pj_ioqueue_poll(stun_cfg.ioqueue, &delay);
-}
-
-
-/* Basic create and destroy test */
-static int ice_basic_create_destroy_test()
-{
-    pj_ice_strans *im;
-    pj_ice_strans_cb icest_cb;
-    pj_status_t status;
-
-    PJ_LOG(3,(THIS_FILE, "...basic create/destroy"));
-
-    pj_bzero(&icest_cb, sizeof(icest_cb));
-    icest_cb.on_ice_complete = &on_ice_complete;
-    icest_cb.on_rx_data = &on_rx_data;
-
-    status = pj_ice_strans_create(&stun_cfg, "icetest", 2, NULL, &icest_cb, &im);
-    if (status != PJ_SUCCESS)
-	return -10;
-
-    pj_ice_strans_destroy(im);
-
-    return 0;
-}
-
-
-static pj_status_t start_ice(pj_ice_strans *ist, pj_ice_strans *remote)
-{
-    unsigned count;
-    pj_ice_sess_cand cand[PJ_ICE_MAX_CAND];
-    pj_status_t status;
-
-    count = PJ_ARRAY_SIZE(cand);
-    status = pj_ice_strans_enum_cands(remote, &count, cand);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    return pj_ice_strans_start_ice(ist, &remote->ice->rx_ufrag, &remote->ice->rx_pass,
-			       count, cand);
-}
-
-
-struct dummy_cand
-{
-    unsigned		 comp_id;
-    pj_ice_cand_type	 type;
-    const char		*addr;
-    unsigned		 port;
+    WRONG_TURN	= 1,
+    DEL_ON_ERR	= 2,
 };
 
-static int init_ice_st(pj_ice_strans *ice_st,
-		       pj_bool_t add_valid_comp,
-		       unsigned dummy_cnt,
-		       struct dummy_cand cand[])
+
+/* Test results */
+struct test_result
 {
-    pj_str_t a;
+    pj_status_t	init_status;	/* init successful?		*/
+    pj_status_t	nego_status;	/* negotiation successful?	*/
+    unsigned	rx_cnt[4];	/* Number of data received	*/
+};
+
+
+/* Test session configuration */
+struct test_cfg
+{
+    pj_ice_sess_role role;	/* Role.			*/
+    unsigned	comp_cnt;	/* Component count		*/
+    unsigned    enable_host;	/* Enable host candidates	*/
+    unsigned    enable_stun;	/* Enable srflx candidates	*/
+    unsigned    enable_turn;	/* Enable turn candidates	*/
+    unsigned	client_flag;	/* Client flags			*/
+
+    unsigned    answer_delay;	/* Delay before sending SDP	*/
+    unsigned    send_delay;	/* Delay before sending data	*/
+    unsigned    destroy_delay;	/* Delay before destroy()	*/
+
+    struct test_result expected;/* Expected result		*/
+};
+
+/* ICE endpoint state */
+struct ice_ept
+{
+    struct test_cfg	 cfg;	/* Configuratino.		*/
+    pj_ice_strans	*ice;	/* ICE stream transport		*/
+    struct test_result	 result;/* Test result.			*/
+
+    pj_str_t		 ufrag;	/* username fragment.		*/
+    pj_str_t		 pass;	/* password			*/
+};
+
+/* The test session */
+struct test_sess
+{
+    pj_pool_t		*pool;
+    pj_stun_config	*stun_cfg;
+    pj_dns_resolver	*resolver;
+
+    test_server		*server;
+
+    unsigned		 server_flag;
+    struct ice_ept	 caller;
+    struct ice_ept	 callee;
+};
+
+
+static void ice_on_rx_data(pj_ice_strans *ice_st,
+			   unsigned comp_id, 
+			   void *pkt, pj_size_t size,
+			   const pj_sockaddr_t *src_addr,
+			   unsigned src_addr_len);
+static void ice_on_ice_complete(pj_ice_strans *ice_st, 
+			        pj_ice_strans_op op,
+			        pj_status_t status);
+static void destroy_sess(struct test_sess *sess, unsigned wait_msec);
+
+/* Create ICE stream transport */
+static int create_ice_strans(struct test_sess *test_sess,
+			     struct ice_ept *ept,
+			     pj_ice_strans **p_ice)
+{
+    pj_ice_strans *ice;
+    pj_ice_strans_cb ice_cb;
+    pj_ice_strans_cfg ice_cfg;
+    pj_sockaddr hostip;
+    char serverip[PJ_INET6_ADDRSTRLEN];
     pj_status_t status;
-    unsigned i;
 
-    /* Create components */
-    for (i=0; i<ice_st->comp_cnt; ++i) {
-	status = pj_ice_strans_create_comp(ice_st, i+1, PJ_ICE_ST_OPT_DONT_ADD_CAND, NULL);
-	if (status != PJ_SUCCESS)
-	    return -21;
-    }
+    status = pj_gethostip(pj_AF_INET(), &hostip);
+    if (status != PJ_SUCCESS)
+	return -1030;
 
-    /* Add dummy candidates */
-    for (i=0; i<dummy_cnt; ++i) {
-	pj_sockaddr_in addr;
+    pj_sockaddr_print(&hostip, serverip, sizeof(serverip), 0);
 
-	pj_sockaddr_in_init(&addr, pj_cstr(&a, cand[i].addr), (pj_uint16_t)cand[i].port);
-	status = pj_ice_strans_add_cand(ice_st, cand[i].comp_id, cand[i].type,
-				    65535, &addr, PJ_FALSE);
-	if (status != PJ_SUCCESS)
-	    return -22;
-    }
+    /* Init callback structure */
+    pj_bzero(&ice_cb, sizeof(ice_cb));
+    ice_cb.on_rx_data = &ice_on_rx_data;
+    ice_cb.on_ice_complete = &ice_on_ice_complete;
 
-    /* Add the real candidate */
-    if (add_valid_comp) {
-	for (i=0; i<ice_st->comp_cnt; ++i) {
-	    status = pj_ice_strans_add_cand(ice_st, i+1, PJ_ICE_CAND_TYPE_HOST, 65535,
-					&ice_st->comp[i]->local_addr.ipv4, PJ_TRUE);
-	    if (status != PJ_SUCCESS)
-		return -23;
+    /* Init ICE stream transport configuration structure */
+    pj_ice_strans_cfg_default(&ice_cfg);
+    pj_memcpy(&ice_cfg.stun_cfg, test_sess->stun_cfg, sizeof(pj_stun_config));
+    if ((ept->cfg.enable_stun & SRV)==SRV || (ept->cfg.enable_turn & SRV)==SRV)
+	ice_cfg.resolver = test_sess->resolver;
+
+    if (ept->cfg.enable_stun & YES) {
+	if ((ept->cfg.enable_stun & SRV) == SRV) {
+	    ice_cfg.stun.server = pj_str(SRV_DOMAIN);
+	} else {
+	    ice_cfg.stun.server = pj_str(serverip);
 	}
+	ice_cfg.stun.port = STUN_SERVER_PORT;
     }
 
-    return 0;
+    if (ept->cfg.enable_host == 0) {
+	ice_cfg.stun.no_host_cands = PJ_TRUE;
+    } else {
+	ice_cfg.stun.no_host_cands = PJ_FALSE;
+	ice_cfg.stun.loop_addr = PJ_TRUE;
+    }
+
+
+    if (ept->cfg.enable_turn & YES) {
+	if ((ept->cfg.enable_turn & SRV) == SRV) {
+	    ice_cfg.turn.server = pj_str(SRV_DOMAIN);
+	} else {
+	    ice_cfg.turn.server = pj_str(serverip);
+	}
+	ice_cfg.turn.port = TURN_SERVER_PORT;
+	ice_cfg.turn.conn_type = PJ_TURN_TP_UDP;
+	ice_cfg.turn.auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	ice_cfg.turn.auth_cred.data.static_cred.realm = pj_str(SRV_DOMAIN);
+	if (ept->cfg.client_flag & WRONG_TURN)
+	    ice_cfg.turn.auth_cred.data.static_cred.username = pj_str("xxx");
+	else
+	    ice_cfg.turn.auth_cred.data.static_cred.username = pj_str(TURN_USERNAME);
+	ice_cfg.turn.auth_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+	ice_cfg.turn.auth_cred.data.static_cred.data = pj_str(TURN_PASSWD);
+    }
+
+    /* Create ICE stream transport */
+    status = pj_ice_strans_create(NULL, &ice_cfg, ept->cfg.comp_cnt,
+				  (void*)ept, &ice_cb,
+				  &ice);
+    if (status != PJ_SUCCESS) {
+	app_perror(INDENT "err: pj_ice_strans_create()", status);
+	return status;
+    }
+
+    pj_create_unique_string(test_sess->pool, &ept->ufrag);
+    pj_create_unique_string(test_sess->pool, &ept->pass);
+
+    /* Looks alright */
+    *p_ice = ice;
+    return PJ_SUCCESS;
 }
-
-
-/* When ICE completes, both agents should agree on the same candidate pair.
- * Check that the remote address selected by agent1 is equal to the
- * local address of selected by agent 2.
- */
-static int verify_address(pj_ice_strans *agent1, pj_ice_strans *agent2,
-			  unsigned comp_id)
+			     
+/* Create test session */
+static int create_sess(pj_stun_config *stun_cfg,
+		       unsigned server_flag,
+		       struct test_cfg *caller_cfg,
+		       struct test_cfg *callee_cfg,
+		       struct test_sess **p_sess)
 {
-    pj_ice_sess_cand *rcand, *lcand;
-    int lcand_id;
-
-    if (agent1->ice->comp[comp_id-1].valid_check == NULL) {
-	PJ_LOG(3,(THIS_FILE, "....error: valid_check not set for comp_id %d", comp_id));
-	return -60;
-    }
-
-    /* Get default remote candidate of agent 1 */
-    rcand = agent1->ice->comp[comp_id-1].valid_check->rcand;
-
-    /* Get default local candidate of agent 2 */
-    pj_ice_sess_find_default_cand(agent2->ice, comp_id, &lcand_id);
-    if (lcand_id < 0)
-	return -62;
-
-    lcand = &agent2->ice->lcand[lcand_id];
-
-    if (pj_memcmp(&rcand->addr, &lcand->addr, sizeof(pj_sockaddr_in))!=0) {
-	PJ_LOG(3,(THIS_FILE, "....error: the selected addresses are incorrect for comp_id %d", comp_id));
-	return -64;
-    }
-
-    return 0;
-}
-
-
-/* Perform ICE test with the following parameters:
- *
- * - title:	The title of the test
- * - ocand_cnt,
- *   ocand	Additional candidates to be added to offerer
- * - acand_cnt,
- *   acand	Additional candidates to be added to answerer
- *
- * The additional candidates are normally invalid candidates, meaning 
- * they won't be reachable by the agents. They are used to "confuse"
- * ICE processing.
- */
-static int perform_ice_test(const char *title,
-			    pj_bool_t expected_success,
-			    unsigned comp_cnt,
-			    pj_bool_t add_valid_comp,
-			    unsigned wait_before_send,
-			    unsigned max_total_time,
-			    unsigned ocand_cnt,
-			    struct dummy_cand ocand[],
-			    unsigned acand_cnt,
-			    struct dummy_cand acand[])
-{
-    pj_ice_strans *im1, *im2;
-    pj_ice_strans_cb icest_cb;
-    struct ice_data *id1, *id2;
-    pj_timestamp t_start, t_end;
-    unsigned i;
-    pj_str_t data_from_offerer, data_from_answerer;
+    pj_pool_t *pool;
+    struct test_sess *sess;
+    pj_str_t ns_ip;
+    pj_uint16_t ns_port;
+    unsigned flags;
     pj_status_t status;
 
-#define CHECK_COMPLETE()    if (id1->complete && id2->complete) { \
-				if (t_end.u32.lo==0) pj_get_timestamp(&t_end); \
-			    } else {}
+    /* Create session structure */
+    pool = pj_pool_create(mem, "testsess", 512, 512, NULL);
+    sess = PJ_POOL_ZALLOC_T(pool, struct test_sess);
+    sess->pool = pool;
+    sess->stun_cfg = stun_cfg;
 
-    PJ_LOG(3,(THIS_FILE, "...%s", title));
+    pj_memcpy(&sess->caller.cfg, caller_cfg, sizeof(*caller_cfg));
+    sess->caller.result.init_status = sess->caller.result.nego_status = PJ_EPENDING;
 
-    pj_bzero(&t_end, sizeof(t_end));
+    pj_memcpy(&sess->callee.cfg, callee_cfg, sizeof(*callee_cfg));
+    sess->callee.result.init_status = sess->callee.result.nego_status = PJ_EPENDING;
 
-    pj_bzero(&icest_cb, sizeof(icest_cb));
-    icest_cb.on_ice_complete = &on_ice_complete;
-    icest_cb.on_rx_data = &on_rx_data;
-
-    /* Create first ICE */
-    status = pj_ice_strans_create(&stun_cfg, "offerer", comp_cnt, NULL, &icest_cb, &im1);
-    if (status != PJ_SUCCESS)
-	return -20;
-
-    id1 = PJ_POOL_ZALLOC_T(im1->pool, struct ice_data);
-    id1->obj_name = "offerer";
-    im1->user_data = id1;
-
-    /* Init components */
-    status = init_ice_st(im1, add_valid_comp, ocand_cnt, ocand);
-    if (status != 0)
-	return status;
-
-    /* Create second ICE */
-    status = pj_ice_strans_create(&stun_cfg, "answerer", comp_cnt, NULL, &icest_cb, &im2);
-    if (status != PJ_SUCCESS)
-	return -25;
-
-    id2 = PJ_POOL_ZALLOC_T(im2->pool, struct ice_data);
-    id2->obj_name = "answerer";
-    im2->user_data = id2;
-
-    /* Init components */
-    status = init_ice_st(im2, add_valid_comp, acand_cnt, acand);
-    if (status != 0)
-	return status;
-
-
-    /* Init ICE on im1 */
-    status = pj_ice_strans_init_ice(im1, PJ_ICE_SESS_ROLE_CONTROLLING, NULL, NULL);
-    if (status != PJ_SUCCESS)
-	return -29;
-
-    /* Init ICE on im2 */
-    status = pj_ice_strans_init_ice(im2, PJ_ICE_SESS_ROLE_CONTROLLED, NULL, NULL);
-    if (status != PJ_SUCCESS)
-	return -29;
-
-    /* Start ICE on im2 */
-    status = start_ice(im2, im1);
+    /* Create server */
+    flags = server_flag;
+    status = create_test_server(stun_cfg, flags, SRV_DOMAIN, &sess->server);
     if (status != PJ_SUCCESS) {
-	app_perror("   error starting ICE", status);
+	app_perror(INDENT "error: create_test_server()", status);
+	destroy_sess(sess, 500);
+	return -10;
+    }
+    sess->server->turn_respond_allocate = 
+	sess->server->turn_respond_refresh = PJ_TRUE;
+
+    /* Create resolver */
+    status = pj_dns_resolver_create(mem, NULL, 0, stun_cfg->timer_heap,
+				    stun_cfg->ioqueue, &sess->resolver);
+    if (status != PJ_SUCCESS) {
+	app_perror(INDENT "error: pj_dns_resolver_create()", status);
+	destroy_sess(sess, 500);
+	return -20;
+    }
+
+    ns_ip = pj_str("127.0.0.1");
+    ns_port = (pj_uint16_t)DNS_SERVER_PORT;
+    status = pj_dns_resolver_set_ns(sess->resolver, 1, &ns_ip, &ns_port);
+    if (status != PJ_SUCCESS) {
+	app_perror( INDENT "error: pj_dns_resolver_set_ns()", status);
+	destroy_sess(sess, 500);
+	return -21;
+    }
+
+    /* Create caller ICE stream transport */
+    status = create_ice_strans(sess, &sess->caller, &sess->caller.ice);
+    if (status != PJ_SUCCESS) {
+	destroy_sess(sess, 500);
 	return -30;
     }
 
-    /* Start ICE on im1 */
-    status = start_ice(im1, im2);
-    if (status != PJ_SUCCESS)
-	return -35;
+    /* Create callee ICE stream transport */
+    status = create_ice_strans(sess, &sess->callee, &sess->callee.ice);
+    if (status != PJ_SUCCESS) {
+	destroy_sess(sess, 500);
+	return -40;
+    }
 
-    /* Apply delay to let other checks commence */
-    pj_thread_sleep(40);
+    *p_sess = sess;
+    return 0;
+}
 
-    /* Mark start time */
-    pj_get_timestamp(&t_start);
+/* Destroy test session */
+static void destroy_sess(struct test_sess *sess, unsigned wait_msec)
+{
+    if (sess->caller.ice) {
+	pj_ice_strans_destroy(sess->caller.ice);
+	sess->caller.ice = NULL;
+    }
 
-    /* Poll for wait_before_send msecs before we send the first data */
-    if (expected_success) {
-	for (;;) {
-	    pj_timestamp t_now;
+    if (sess->callee.ice) {
+	pj_ice_strans_destroy(sess->callee.ice);
+	sess->callee.ice = NULL;
+    }
 
-	    handle_events(1);
+    poll_events(sess->stun_cfg, wait_msec, PJ_FALSE);
 
-	    CHECK_COMPLETE();
+    if (sess->resolver) {
+	pj_dns_resolver_destroy(sess->resolver, PJ_FALSE);
+	sess->resolver = NULL;
+    }
 
-	    pj_get_timestamp(&t_now);
-	    if (pj_elapsed_msec(&t_start, &t_now) >= wait_before_send)
-		break;
+    if (sess->server) {
+	destroy_test_server(sess->server);
+	sess->server = NULL;
+    }
+
+    if (sess->pool) {
+	pj_pool_t *pool = sess->pool;
+	sess->pool = NULL;
+	pj_pool_release(pool);
+    }
+}
+
+static void ice_on_rx_data(pj_ice_strans *ice_st,
+			   unsigned comp_id, 
+			   void *pkt, pj_size_t size,
+			   const pj_sockaddr_t *src_addr,
+			   unsigned src_addr_len)
+{
+    struct ice_ept *ept;
+
+    PJ_UNUSED_ARG(pkt);
+    PJ_UNUSED_ARG(size);
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
+    ept = (struct ice_ept*) pj_ice_strans_get_user_data(ice_st);
+    ept->result.rx_cnt[comp_id]++;
+}
+
+
+static void ice_on_ice_complete(pj_ice_strans *ice_st, 
+			        pj_ice_strans_op op,
+			        pj_status_t status)
+{
+    struct ice_ept *ept;
+
+    ept = (struct ice_ept*) pj_ice_strans_get_user_data(ice_st);
+    switch (op) {
+    case PJ_ICE_STRANS_OP_INIT:
+	ept->result.init_status = status;
+	if (status != PJ_SUCCESS && (ept->cfg.client_flag & DEL_ON_ERR)) {
+	    pj_ice_strans_destroy(ice_st);
+	    ept->ice = NULL;
 	}
+	break;
+    case PJ_ICE_STRANS_OP_NEGOTIATION:
+	ept->result.nego_status = status;
+	break;
+    default:
+	pj_assert(!"Unknown op");
+    }
+}
 
-	/* Send data. It must be successful! */
-	data_from_offerer = pj_str("from offerer");
-	status = pj_ice_sess_send_data(im1->ice, 1, data_from_offerer.ptr, data_from_offerer.slen);
-	if (status != PJ_SUCCESS)
-	    return -47;
 
-	data_from_answerer = pj_str("from answerer");
-	status = pj_ice_sess_send_data(im2->ice, 1, data_from_answerer.ptr, data_from_answerer.slen);
+/* Start ICE negotiation on the endpoint, based on parameter from
+ * the other endpoint.
+ */
+static pj_status_t start_ice(struct ice_ept *ept, const struct ice_ept *remote)
+{
+    pj_ice_sess_cand rcand[32];
+    unsigned i, rcand_cnt = 0;
+    pj_status_t status;
+
+    /* Enum remote candidates */
+    for (i=0; i<remote->cfg.comp_cnt; ++i) {
+	unsigned cnt = PJ_ARRAY_SIZE(rcand) - rcand_cnt;
+	status = pj_ice_strans_enum_cands(remote->ice, i+1, &cnt, rcand+rcand_cnt);
 	if (status != PJ_SUCCESS) {
-	    app_perror("   error sending packet", status);
-	    return -48;
-	}
-
-	/* Poll to allow data to be received */
-	for (;;) {
-	    pj_timestamp t_now;
-	    handle_events(1);
-	    CHECK_COMPLETE();
-	    pj_get_timestamp(&t_now);
-	    if (pj_elapsed_msec(&t_start, &t_now) >= (wait_before_send + 200))
-		break;
-	}
-    }
-
-    /* Just wait until both completes, or timed out */
-    while (!id1->complete || !id2->complete) {
-	pj_timestamp t_now;
-
-	handle_events(1);
-
-	CHECK_COMPLETE();
-	pj_get_timestamp(&t_now);
-	if (pj_elapsed_msec(&t_start, &t_now) >= max_total_time) {
-	    PJ_LOG(3,(THIS_FILE, "....error: timed-out"));
-	    return -50;
-	}
-    }
-
-    /* Mark end-time */
-    CHECK_COMPLETE();
-
-    /* If expected to fail, then just check that both fail */
-    if (!expected_success) {
-	/* Check status */
-	if (id1->err_code == PJ_SUCCESS)
-	    return -51;
-	if (id2->err_code == PJ_SUCCESS)
-	    return -52;
-	goto on_return;
-    }
-
-    /* Check status */
-    if (id1->err_code != PJ_SUCCESS)
-	return -53;
-    if (id2->err_code != PJ_SUCCESS)
-	return -56;
-
-    /* Verify that offerer gets answerer's transport address */
-    for (i=0; i<comp_cnt; ++i) {
-	status = verify_address(im1, im2, i+1);
-	if (status != 0)
+	    app_perror(INDENT "err: pj_ice_strans_enum_cands()", status);
 	    return status;
+	}
+	rcand_cnt += cnt;
     }
 
-    /* And the other way around */
-    for (i=0; i<comp_cnt; ++i) {
-	status = verify_address(im2, im1, i+1);
-	if (status != 0)
-	    return status;
+    status = pj_ice_strans_start_ice(ept->ice, &remote->ufrag, &remote->pass,
+				     rcand_cnt, rcand);
+    if (status != PJ_SUCCESS) {
+	app_perror(INDENT "err: pj_ice_strans_start_ice()", status);
+	return status;
     }
 
-    /* Check that data is received in offerer */
-    if (id1->rx_rtp_cnt != 1) {
-	PJ_LOG(3,(THIS_FILE, "....error: data not received in offerer"));
-	return -80;
-    }
-    if (pj_strcmp2(&data_from_answerer, id1->last_rx_rtp_data) != 0) {
-	PJ_LOG(3,(THIS_FILE, "....error: data mismatch in offerer"));
-	return -82;
-    }
+    return PJ_SUCCESS;
+}
 
-    /* And the same in answerer */
-    if (id2->rx_rtp_cnt != 1) {
-	PJ_LOG(3,(THIS_FILE, "....error: data not received in answerer"));
-	return -84;
-    }
-    if (pj_strcmp2(&data_from_offerer, id2->last_rx_rtp_data) != 0) {
-	PJ_LOG(3,(THIS_FILE, "....error: data mismatch in answerer"));
-	return -82;
+
+/* Check that the pair in both agents are matched */
+static int check_pair(const struct ice_ept *ept1, const struct ice_ept *ept2,
+		      int start_err)
+{
+    unsigned i, min_cnt, max_cnt;
+
+    if (ept1->cfg.comp_cnt < ept2->cfg.comp_cnt) {
+	min_cnt = ept1->cfg.comp_cnt;
+	max_cnt = ept2->cfg.comp_cnt;
+    } else {
+	min_cnt = ept2->cfg.comp_cnt;
+	max_cnt = ept1->cfg.comp_cnt;
     }
 
+    /* Must have valid pair for common components */
+    for (i=0; i<min_cnt; ++i) {
+	const pj_ice_sess_check *c1;
+	const pj_ice_sess_check *c2;
 
-on_return:
+	c1 = pj_ice_strans_get_valid_pair(ept1->ice, i+1);
+	if (c1 == NULL) {
+	    PJ_LOG(3,("", INDENT "err: unable to get valid pair for ice1 "
+			  "component %d", i+1));
+	    return start_err - 2;
+	}
 
-    /* Done */
-    PJ_LOG(3,(THIS_FILE, "....success: ICE completed in %d msec, waiting..", 
-	      pj_elapsed_msec(&t_start, &t_end)));
+	c2 = pj_ice_strans_get_valid_pair(ept2->ice, i+1);
+	if (c2 == NULL) {
+	    PJ_LOG(3,("", INDENT "err: unable to get valid pair for ice2 "
+			  "component %d", i+1));
+	    return start_err - 4;
+	}
 
-    /* Wait for some more time */
-    for (;;) {
-	pj_timestamp t_now;
-
-	pj_get_timestamp(&t_now);
-	if (pj_elapsed_msec(&t_start, &t_now) > max_total_time)
-	    break;
-
-	handle_events(1);
+	if (pj_sockaddr_cmp(&c1->rcand->addr, &c2->lcand->addr) != 0) {
+	    PJ_LOG(3,("", INDENT "err: candidate pair does not match "
+			  "for component %d", i+1));
+	    return start_err - 6;
+	}
     }
 
+    /* Extra components must not have valid pair */
+    for (; i<max_cnt; ++i) {
+	if (ept1->cfg.comp_cnt>i &&
+	    pj_ice_strans_get_valid_pair(ept1->ice, i+1) != NULL) 
+	{
+	    PJ_LOG(3,("", INDENT "err: ice1 shouldn't have valid pair "
+		          "for component %d", i+1));
+	    return start_err - 8;
+	}
+	if (ept2->cfg.comp_cnt>i &&
+	    pj_ice_strans_get_valid_pair(ept2->ice, i+1) != NULL) 
+	{
+	    PJ_LOG(3,("", INDENT "err: ice2 shouldn't have valid pair "
+		          "for component %d", i+1));
+	    return start_err - 9;
+	}
+    }
 
-    pj_ice_strans_destroy(im1);
-    pj_ice_strans_destroy(im2);
-    handle_events(100);
     return 0;
 }
 
 
-int ice_test(void)
+#define WAIT_UNTIL(timeout,expr, RC)  { \
+				pj_time_val t0, t; \
+				pj_gettimeofday(&t0); \
+				RC = -1; \
+				for (;;) { \
+				    poll_events(stun_cfg, 10, PJ_FALSE); \
+				    pj_gettimeofday(&t); \
+				    if (expr) { \
+					rc = PJ_SUCCESS; \
+					break; \
+				    } \
+				    if (t.sec - t0.sec > (timeout)) break; \
+				} \
+			    }
+
+
+static int perform_test(const char *title,
+			pj_stun_config *stun_cfg,
+			unsigned server_flag,
+		        struct test_cfg *caller_cfg,
+		        struct test_cfg *callee_cfg)
 {
-    int rc = 0;
-    pj_pool_t *pool;
-    pj_ioqueue_t *ioqueue;
-    pj_timer_heap_t *timer_heap;
-    enum { D1=500, D2=5000, D3=15000 };
-    struct dummy_cand ocand[] = 
+    pjlib_state pjlib_state;
+    struct test_sess *sess;
+    int rc;
+
+    PJ_LOG(3,("", INDENT "%s", title));
+
+    capture_pjlib_state(stun_cfg, &pjlib_state);
+
+    rc = create_sess(stun_cfg, server_flag, caller_cfg, callee_cfg, &sess);
+    if (rc != 0)
+	return rc;
+
+#define ALL_READY   (sess->caller.result.init_status!=PJ_EPENDING && \
+		     sess->callee.result.init_status!=PJ_EPENDING)
+
+    /* Wait until both ICE transports are initialized */
+    WAIT_UNTIL(30, ALL_READY, rc);
+
+    if (!ALL_READY) {
+	PJ_LOG(3,("", INDENT "err: init timed-out"));
+	destroy_sess(sess, 500);
+	return -100;
+    }
+
+    if (sess->caller.result.init_status != sess->caller.cfg.expected.init_status) {
+	app_perror(INDENT "err: caller init", sess->caller.result.init_status);
+	destroy_sess(sess, 500);
+	return -102;
+    }
+    if (sess->callee.result.init_status != sess->callee.cfg.expected.init_status) {
+	app_perror(INDENT "err: callee init", sess->callee.result.init_status);
+	destroy_sess(sess, 500);
+	return -104;
+    }
+
+    /* Failure condition */
+    if (sess->caller.result.init_status != PJ_SUCCESS ||
+	sess->callee.result.init_status != PJ_SUCCESS)
     {
-	{1, PJ_ICE_CAND_TYPE_SRFLX, "127.1.1.1", 65534 },
-	{2, PJ_ICE_CAND_TYPE_SRFLX, "127.1.1.1", 65535 },
-    };
-    struct dummy_cand acand[] =
-    {
-	{1, PJ_ICE_CAND_TYPE_SRFLX, "127.2.2.2", 65534 },
-	{2, PJ_ICE_CAND_TYPE_SRFLX, "127.2.2.2", 65535 },
-    };
-
-    pool = pj_pool_create(mem, NULL, 4000, 4000, NULL);
-    pj_ioqueue_create(pool, 12, &ioqueue);
-    pj_timer_heap_create(pool, 100, &timer_heap);
-    
-    pj_stun_config_init(&stun_cfg, mem, 0, ioqueue, timer_heap);
-
-#if 0
-    pj_log_set_level(5);
-#endif
-
-    //goto test;
-
-    /* Basic create/destroy */
-    rc = ice_basic_create_destroy_test();
-    if (rc != 0)
+	rc = 0;
 	goto on_return;
+    }
 
-    /* Direct communication */
-    rc = perform_ice_test("Simple test (1 component)", PJ_TRUE, 1, PJ_TRUE, D1, D2, 0, NULL, 0, NULL);
-    if (rc != 0)
-	goto on_return;
+    /* Init ICE on caller */
+    rc = pj_ice_strans_init_ice(sess->caller.ice, sess->caller.cfg.role, 
+				&sess->caller.ufrag, &sess->caller.pass);
+    if (rc != PJ_SUCCESS) {
+	app_perror(INDENT "err: caller pj_ice_strans_init_ice()", rc);
+	destroy_sess(sess, 500);
+	return -100;
+    }
 
-    /* Failure case (all checks fail) */
-#if 0
-    /* Cannot just add an SRFLX candidate; it needs a base */
-    rc = perform_ice_test("Failure case (all checks fail)", PJ_FALSE, 1, PJ_FALSE, D3, D3, 1, ocand, 1, acand);
-    if (rc != 0)
-	goto on_return;
-#endif
+    /* Init ICE on callee */
+    rc = pj_ice_strans_init_ice(sess->callee.ice, sess->callee.cfg.role, 
+				&sess->callee.ufrag, &sess->callee.pass);
+    if (rc != PJ_SUCCESS) {
+	app_perror(INDENT "err: callee pj_ice_strans_init_ice()", rc);
+	destroy_sess(sess, 500);
+	return -110;
+    }
 
-    /* Direct communication with invalid address */
-    rc = perform_ice_test("With 1 unreachable address", PJ_TRUE, 1, PJ_TRUE, D1, D2, 1, ocand, 0, NULL);
-    if (rc != 0)
-	goto on_return;
+    /* Start ICE on callee */
+    rc = start_ice(&sess->callee, &sess->caller);
+    if (rc != PJ_SUCCESS) {
+	destroy_sess(sess, 500);
+	return -120;
+    }
 
-    /* Direct communication with invalid address */
-    rc = perform_ice_test("With 2 unreachable addresses (one each)", PJ_TRUE, 1, PJ_TRUE, D1, D2, 1, ocand, 1, acand);
-    if (rc != 0)
-	goto on_return;
+    /* Wait for callee's answer_delay */
+    poll_events(stun_cfg, sess->callee.cfg.answer_delay, PJ_FALSE);
 
-    /* Direct communication with two components */
-//test:
-    rc = perform_ice_test("With two components (RTP and RTCP)", PJ_TRUE, 2, PJ_TRUE, D1, D2, 0, NULL, 0, NULL);
-    if (rc != 0)
-	goto on_return;
+    /* Start ICE on caller */
+    rc = start_ice(&sess->caller, &sess->callee);
+    if (rc != PJ_SUCCESS) {
+	destroy_sess(sess, 500);
+	return -130;
+    }
 
-    goto on_return;
+    /* Wait until negotiation is complete on both endpoints */
+#define ALL_DONE    (sess->caller.result.nego_status!=PJ_EPENDING && \
+		     sess->callee.result.nego_status!=PJ_EPENDING)
+    WAIT_UNTIL(30, ALL_DONE, rc);
 
-    /* Direct communication with mismatch number of components */
+    if (!ALL_DONE) {
+	PJ_LOG(3,("", INDENT "err: negotiation timed-out"));
+	destroy_sess(sess, 500);
+	return -140;
+    }
 
-    /* Direct communication with 2 components and 2 invalid address */
-    rc = perform_ice_test("With 2 two components and 2 unreachable address", PJ_TRUE, 2, PJ_TRUE, D1, D2, 1, ocand, 1, acand);
-    if (rc != 0)
-	goto on_return;
+    if (sess->caller.result.nego_status != sess->caller.cfg.expected.nego_status) {
+	app_perror(INDENT "err: caller negotiation failed", sess->caller.result.nego_status);
+	destroy_sess(sess, 500);
+	return -150;
+    }
 
+    if (sess->callee.result.nego_status != sess->callee.cfg.expected.nego_status) {
+	app_perror(INDENT "err: callee negotiation failed", sess->callee.result.nego_status);
+	destroy_sess(sess, 500);
+	return -160;
+    }
 
+    /* Verify that both agents have agreed on the same pair */
+    rc = check_pair(&sess->caller, &sess->callee, -170);
+    if (rc != 0) {
+	destroy_sess(sess, 500);
+	return rc;
+    }
+    rc = check_pair(&sess->callee, &sess->caller, -180);
+    if (rc != 0) {
+	destroy_sess(sess, 500);
+	return rc;
+    }
+
+    /* Looks like everything is okay */
+
+    /* Destroy ICE stream transports first to let it de-allocate
+     * TURN relay (otherwise there'll be timer/memory leak, unless
+     * we wait for long time in the last poll_events() below).
+     */
+    if (sess->caller.ice) {
+	pj_ice_strans_destroy(sess->caller.ice);
+	sess->caller.ice = NULL;
+    }
+
+    if (sess->callee.ice) {
+	pj_ice_strans_destroy(sess->callee.ice);
+	sess->callee.ice = NULL;
+    }
 
 on_return:
-    pj_log_set_level(3);
-    pj_ioqueue_destroy(stun_cfg.ioqueue);
+    /* Wait.. */
+    poll_events(stun_cfg, 500, PJ_FALSE);
+
+    /* Now destroy everything */
+    destroy_sess(sess, 500);
+
+    /* Flush events */
+    poll_events(stun_cfg, 100, PJ_FALSE);
+
+    rc = check_pjlib_state(stun_cfg, &pjlib_state);
+    if (rc != 0) {
+	return rc;
+    }
+
+    return 0;
+}
+
+#define ROLE1	PJ_ICE_SESS_ROLE_CONTROLLED
+#define ROLE2	PJ_ICE_SESS_ROLE_CONTROLLING
+
+int ice_test(void)
+{
+    pj_pool_t *pool;
+    pj_stun_config stun_cfg;
+    unsigned i;
+    int rc;
+    struct sess_cfg_t {
+	const char	*title;
+	unsigned	 server_flag;
+	struct test_cfg	 ua1;
+	struct test_cfg	 ua2;
+    } sess_cfg[] = 
+    {
+	/*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	{
+	    "hosts candidates only",
+	    0xFFFF,
+	    {ROLE1, 1,	    YES,    NO,	    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    YES,    NO,	    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	},
+	{
+	    "host and srflxes",
+	    0xFFFF,
+	    {ROLE1, 1,	    YES,    YES,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    YES,    YES,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	},
+	{
+	    "host vs relay",
+	    0xFFFF,
+	    {ROLE1, 1,	    YES,    NO,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    NO,     NO,    YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	},
+	{
+	    "relay vs host",
+	    0xFFFF,
+	    {ROLE1, 1,	    NO,	    NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	   YES,     NO,    NO,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	},
+	{
+	    "relay vs relay",
+	    0xFFFF,
+	    {ROLE1, 1,	    NO,	    NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	    NO,     NO,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	},
+	{
+	    "all candidates",
+	    0xFFFF,
+	    {ROLE1, 1,	   YES,	   YES,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2, 1,	   YES,    YES,   YES,	    NO,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	},
+    };
+
+    pool = pj_pool_create(mem, NULL, 512, 512, NULL);
+    rc = create_stun_config(pool, &stun_cfg);
+    if (rc != PJ_SUCCESS) {
+	pj_pool_release(pool);
+	return -7;
+    }
+
+    /* Simple test first with host candidate */
+    if (1) {
+	struct sess_cfg_t cfg = 
+	{
+	    "Basic with host candidates",
+	    0x0,
+	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	    {ROLE1,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2,	1,	YES,     NO,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	};
+
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+
+	cfg.ua1.comp_cnt = 4;
+	cfg.ua2.comp_cnt = 4;
+	rc = perform_test("Basic with host candidates, 4 components", 
+			  &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+    }
+
+    /* Simple test first with srflx candidate */
+    if (1) {
+	struct sess_cfg_t cfg = 
+	{
+	    "Basic with srflx candidates",
+	    0xFFFF,
+	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	    {ROLE1,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2,	1,	YES,    YES,	    NO,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	};
+
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+
+	cfg.ua1.comp_cnt = 4;
+	cfg.ua2.comp_cnt = 4;
+
+	rc = perform_test("Basic with srflx candidates, 4 components", 
+			  &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+    }
+
+    /* Simple test with relay candidate */
+    if (1) {
+	struct sess_cfg_t cfg = 
+	{
+	    "Basic with relay candidates",
+	    0xFFFF,
+	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	    {ROLE1,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}},
+	    {ROLE2,	1,	 NO,     NO,	  YES,	    0,	    0,	    0,	    0, {PJ_SUCCESS, PJ_SUCCESS}}
+	};
+
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+
+	cfg.ua1.comp_cnt = 4;
+	cfg.ua2.comp_cnt = 4;
+
+	rc = perform_test("Basic with relay candidates, 4 components", 
+			  &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+    }
+
+    /* Failure test with STUN resolution */
+    if (1) {
+	struct sess_cfg_t cfg = 
+	{
+	    "STUN resolution failure",
+	    0x0,
+	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	    {ROLE1,	2,	 NO,    YES,	    NO,	    0,	    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}},
+	    {ROLE2,	2,	 NO,    YES,	    NO,	    0,	    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}}
+	};
+
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+
+	cfg.ua1.client_flag |= DEL_ON_ERR;
+	cfg.ua2.client_flag |= DEL_ON_ERR;
+
+	rc = perform_test("STUN resolution failure with destroy on callback", 
+			  &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+    }
+
+    /* Failure test with TURN resolution */
+    if (1) {
+	struct sess_cfg_t cfg = 
+	{
+	    "TURN allocation failure",
+	    0xFFFF,
+	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	    {ROLE1,	4,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}},
+	    {ROLE2,	4,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}}
+	};
+
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+
+	cfg.ua1.client_flag |= DEL_ON_ERR;
+	cfg.ua2.client_flag |= DEL_ON_ERR;
+
+	rc = perform_test("TURN allocation failure with destroy on callback", 
+			  &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+    }
+
+    /* STUN failure, testing TURN deallocation */
+    if (1) {
+	struct sess_cfg_t cfg = 
+	{
+	    "STUN failure, testing TURN deallocation",
+	    0xFFFF & (~(CREATE_STUN_SERVER)),
+	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
+	    {ROLE1,	2,	 YES,    YES,	YES,	0,    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}},
+	    {ROLE2,	2,	 YES,    YES,	YES,	0,    0,	    0,	    0, {PJNATH_ESTUNTIMEDOUT, -1}}
+	};
+
+	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+
+	cfg.ua1.client_flag |= DEL_ON_ERR;
+	cfg.ua2.client_flag |= DEL_ON_ERR;
+
+	rc = perform_test("STUN failure, testing TURN deallocation (cb)", 
+			  &stun_cfg, cfg.server_flag, 
+			  &cfg.ua1, &cfg.ua2);
+	if (rc != 0)
+	    goto on_return;
+    }
+
+    rc = 0;
+    /* Iterate each test item */
+    for (i=0; i<PJ_ARRAY_SIZE(sess_cfg); ++i) {
+	struct sess_cfg_t *cfg = &sess_cfg[i];
+	unsigned delay[] = { 50, 2000 };
+	unsigned d;
+
+	PJ_LOG(3,("", "  %s", cfg->title));
+
+	/* For each test item, test with various answer delay */
+	for (d=0; d<PJ_ARRAY_SIZE(delay); ++d) {
+	    struct role_t {
+		pj_ice_sess_role	ua1;
+		pj_ice_sess_role	ua2;
+	    } role[] = 
+	    {
+		{ ROLE1, ROLE2},
+		{ ROLE2, ROLE1},
+		{ ROLE1, ROLE1},
+		{ ROLE2, ROLE2}
+	    };
+	    unsigned j;
+
+	    cfg->ua1.answer_delay = delay[d];
+	    cfg->ua2.answer_delay = delay[d];
+
+	    /* For each test item, test with role conflict scenarios */
+	    for (j=0; j<PJ_ARRAY_SIZE(role); ++j) {
+		unsigned k1;
+
+		cfg->ua1.role = role[j].ua1;
+		cfg->ua2.role = role[j].ua2;
+
+		/* For each test item, test with different number of components */
+		for (k1=1; k1<=2; ++k1) {
+		    unsigned k2;
+
+		    cfg->ua1.comp_cnt = k1;
+
+		    for (k2=1; k2<=2; ++k2) {
+			char title[120];
+
+			sprintf(title, 
+				"%s/%s, %dms answer delay, %d vs %d components", 
+				pj_ice_sess_role_name(role[j].ua1),
+				pj_ice_sess_role_name(role[j].ua2),
+				delay[d], k1, k2);
+
+			cfg->ua2.comp_cnt = k2;
+			rc = perform_test(title, &stun_cfg, cfg->server_flag, 
+					  &cfg->ua1, &cfg->ua2);
+			if (rc != 0)
+			    goto on_return;
+		    }
+		}
+	    }
+	}
+    }
+
+on_return:
+    destroy_stun_config(&stun_cfg);
     pj_pool_release(pool);
     return rc;
 }

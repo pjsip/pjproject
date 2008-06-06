@@ -121,6 +121,15 @@
 #define PJNATH_ESTUNINSERVER	    (PJNATH_ERRNO_START+42) /* 370042 */
 
 
+/************************************************************
+ * STUN SESSION/TRANSPORT ERROR CODES
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * STUN object has been destoyed.
+ */
+#define PJNATH_ESTUNDESTROYED	    (PJNATH_ERRNO_START+60) /* 370060 */
+
 
 /************************************************************
  * ICE ERROR CODES

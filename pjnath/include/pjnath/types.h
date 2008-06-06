@@ -35,6 +35,13 @@
 PJ_BEGIN_DECL
 
 /**
+ * This constant describes a number to be used to identify an invalid TURN
+ * channel number.
+ */
+#define PJ_TURN_INVALID_CHANNEL	    0xFFFF
+
+
+/**
  * Initialize pjnath library.
  *
  * @return	    Initialization status.
@@ -43,7 +50,7 @@ PJ_DECL(pj_status_t) pjnath_init(void);
 
 
 /**
- * Display error to the log.
+ * Display error to the log. 
  *
  * @param sender    The sender name.
  * @param title	    Title message.
@@ -67,167 +74,216 @@ PJ_END_DECL
 /* Doxygen documentation below: */
 
 /**
- * @mainpage PJNATH - Open Source ICE, STUN, and TURN Library
- *
- * \n
- * This is the documentation of PJNATH, an Open Source library providing
- * NAT traversal helper functionalities by using standard based protocols.
- *
- * \n
 
- * \section PJNATH_STUN STUN Protocol Library
- *
- * Session Traversal Utilities (STUN, or previously known as Simple 
- * Traversal of User Datagram Protocol (UDP) Through Network Address 
- * Translators (NAT)s), is a lightweight protocol that serves as a tool for
- * application protocols in dealing with NAT traversal. It allows a client
- * to determine the IP address and port allocated to them by a NAT and to 
- * keep NAT bindings open.
- * 
- * The PJNATH library provides facilities to support both the core 
- * <B>STUN-bis</B> specification and the <B>TURN</B> usage of STUN, 
- * as well as other STUN usages. Please see #pj_stun_attr_type for 
- * list of STUN attributes supported by this library.
- *
- * 
- * The following are some design principles that have been utilized
- * when implementing the STUN library in PJNATH:
- *
- *  - layered architecture, with \ref PJNATH_STUN_MSG as the lowest
- *    layer and \ref PJNATH_STUN_SESSION as the highest abstraction
- *    layer, to accommodate various usage scenario of the library.
- *
- *  - no transport -- the STUN library is pretty much transport
- *    independent and all sending and receiving functionalities will
- *    have to be implemented by application or higher level
- *    abstraction (such as ICE). This helps facilitating an even
- *    more usage scenarios of the library.
- *
- *  - common functionalities for both STUN client and server
- *    development. All STUN components can be used to develop both
- *    STUN client and STUN server application, and in fact, in ICE,
- *    both STUN client and server functionality exist in a single
- *    ICE session.
- *
- * \n
- *
- * \subsection PJNATH_STUN_ARCH STUN Library Organization
- *
- * \image html stun-arch.jpg "STUN Library Architecture"
- *
- * The STUN library is organized as follows:
- *
- *  - for both client and server, the highest abstraction is
- *    \ref PJNATH_STUN_SESSION, which provides management of incoming
- *    and outgoing messages and association of STUN credential to
- *    a STUN session. 
- *
- *  - for client, the next layer below is \ref PJNATH_STUN_TRANSACTION,
- *    which manages retransmissions of STUN request. Server side STUN
- *    transaction is handled in \ref PJNATH_STUN_SESSION layer above.
- *
- *  - \ref PJNATH_STUN_AUTH provides mechanism to verify STUN
- *    credential in incoming STUN messages.
- *
- *  - the lowest layer of the library is \ref PJNATH_STUN_MSG. This layer
- *    provides STUN message representation, validation, parsing, 
- *    encoding MESSAGE-INTEGRITY for outgoing messages, and
- *    debugging (dump to log) of STUN messages.
- *
- * All STUN library components are independent of any transports. 
- * Application gives incoming packet to the STUN components for processing,
- * and it must supply the STUN components with callback to send outgoing 
- * messages.
- * 
- *
- * \n
- *
- * \subsection PJNATH_STUN_CLASSES PJNATH Class Diagram
- *
- * 
- * \image html UML-class-diagram.png "Class Diagram"
- *
- * TBD: write descriptions.
- *
- * \subsection PJNATH_STUN_USING Using STUN Library
- *
- * [The developers guide documentation can certainly be improved here]
- *
- * For a sample STUN and TURN client, please see <tt>pjstun-client</tt>
- * project under <tt>pjnath/src</tt> directory.
- *
- * For a sample STUN and TURN server, please see <tt>pjstun-srv-test</tt>
- * project under <tt>pjnath/src</tt> directory.
- *
- *
- * \subsection PJNATH_STUN_REF STUN Reference
- *
- * References for STUN:
- *
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-15.txt">
- *    <B>draft-ietf-behave-rfc3489bis-15</b></A>: Session Traversal 
- *     Utilities for (NAT) (STUN),
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-07.txt">
- *    <B>draft-ietf-behave-turn-07</B></A>: Obtaining Relay Addresses 
- *    from Simple Traversal Underneath NAT (STUN)
- *  - Obsoleted: <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>.
- *
- * \n
- *
- * \section PJNATH_ICE ICE Implementation
- *
- * Interactive Connectivity Establishment (ICE) is a standard based 
- * methodology for traversing Network Address Translator (NAT), and
- * is described in 
- * <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
- * <B>draft-ietf-mmusic-ice-19.txt</B></A> draft. The PJNATH ICE
- * implementation is aimed to provide a usable and generic ICE transports
- * for different types of application, including but not limited to
- * the usage of ICE in SIP/SDP offer/answer.
- * 
- *
- * \subsection PJNATH_ICE_ARCH ICE Library Organization
- * 
- * \image html ice-arch.jpg "ICE Architecture"
- *
- * The ICE library is organized as follows:
- *
- *  - the highest abstraction is ICE media transport, which maintains
- *    ICE stream transport and provides SDP translations to be used
- *    for SIP offer/answer exchanges. ICE media transport is part
- *    of PJMEDIA library.
- *
- *  - higher in the hierarchy is \ref PJNATH_ICE_STREAM_TRANSPORT,
- *    which binds ICE with UDP sockets, and provides STUN binding
- *    and relay/TURN allocation for the sockets. This component can
- *    be directly used by application, although normally application
- *    should use the next higher abstraction since it provides
- *    SDP translations and better integration with other PJ libraries
- *    such as PJSIP and PJMEDIA.
- *
- *  - the lowest layer is \ref PJNATH_ICE_SESSION, which provides 
- *    ICE management and negotiation in a transport-independent way.
- *    This layer contains the state machines to perform ICE
- *    negotiation, and provides the most flexibility to control all
- *    aspects of ICE session. This layer normally is only usable for
- *    ICE implementors.
- *
- * \subsection PJNATH_ICE_USING Using the ICE Library
- *
- * For ICE implementation that has been integrated with socket transport,
- * please see \ref PJNATH_ICE_STREAM_TRANSPORT_USING.
- *
- * For ICE implementation that has not been integrated with socket
- * transport, please see \ref pj_ice_sess_using_sec.
- *
- * \subsection PJNATH_ICE_REF Reference
- *
- * References for ICE:
- *  - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
- *    <B>draft-ietf-mmusic-ice-19.txt</B></A>: Interactive Connectivity 
- *    Establishment (ICE): A Methodology for Network Address Translator 
- *    (NAT) Traversal for Offer/Answer Protocols
- */
+@mainpage PJNATH - Open Source ICE, STUN, and TURN Library
+
+\n
+This is the documentation of PJNATH, an Open Source library providing
+NAT traversal helper functionalities by using standard based protocols
+such as STUN, TURN, and ICE.
+
+\n
+\n
+
+\section lib_comps Library Components
+
+\subsection comp_stun STUN
+
+Session Traversal Utilities (STUN, or previously known as Simple 
+Traversal of User Datagram Protocol (UDP) Through Network Address 
+Translators (NAT)s), is a lightweight protocol that serves as a tool for
+application protocols in dealing with NAT traversal. It allows a client
+to determine the IP address and port allocated to them by a NAT and to 
+keep NAT bindings open.
+
+This version of PJNATH implements the following STUN-bis draft:
+- <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-15.txt">
+  <B>draft-ietf-behave-rfc3489bis-15</b></A>: Session Traversal 
+    Utilities for (NAT) (STUN),
+
+
+\subsection comp_turn TURN
+
+Traversal Using Relays around NAT (TURN) allows the host to control the
+operation of the relay and to exchange packets with its peers using the relay.
+
+This version of PJNATH implements both TCP and UDP client transport and it
+complies with the following TURN draft:
+ - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-07.txt">
+   <B>draft-ietf-behave-turn-07</B></A>: Obtaining Relay Addresses 
+   from Simple Traversal Underneath NAT (STUN)
+
+
+\subsection comp_ice ICE
+
+Interactive Connectivity Establishment (ICE) is a standard based 
+methodology for traversing Network Address Translator (NAT). This
+implementation is aimed to provide a usable and generic ICE transports
+for different types of application, including but not limited to
+the usage of ICE in SIP/SDP offer/answer.
+
+
+This version of PJNATH implements the following ICE draft:
+ - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-mmusic-ice-19.txt">
+   <B>draft-ietf-mmusic-ice-19.txt</B></A> draft. The PJNATH ICE
+
+
+\subsection comp_natck NAT Classification Utility
+
+The PJNATH library also provides NAT classification utility as 
+described in <A HREF="http://www.ietf.org/rfc/rfc3489.txt">RFC 3489</A>.
+While the practice to detect the NAT type to assist NAT traversal
+has been deprecated in favor of ICE, the information may still be
+useful for troubleshooting purposes, hence the utility is provided.
+
+
+\n
+\n
+
+\section lib_org Library Organization
+
+The PJNATH library consists of many components with each providing
+specific functionality that may or may not be of the interests of 
+applications (or application developers). This section attempts to 
+give brief overview on the components provided by PJNATH.
+
+The PJNATH components from the highest layer to the lower layer are
+as follows.
+
+
+\n
+
+\subsection user_comp High-level Transport Objects
+
+PJNATH library provides some high-level objects that may be used
+by applications:
+
+
+\subsubsection stun_sock STUN Transport
+
+The \ref PJNATH_STUN_SOCK provides asynchronous UDP like socket transport
+with the additional capability to query the publicly mapped transport
+address (using STUN resolution), to refresh the NAT binding, and to
+demultiplex internal STUN messages from application data (the 
+application data may be a STUN message as well).
+
+
+\subsubsection turn_sock TURN Client Transport
+
+The \ref PJNATH_TURN_SOCK may be used by the application to send and
+receive data via TURN server. For more information please see the
+documentation of \ref PJNATH_TURN_SOCK.
+
+
+\subsubsection ice_strans ICE Stream Transport
+
+The \ref PJNATH_ICE_STREAM_TRANSPORT provides transport interface to
+send and receive data through connection that is negotiated
+with ICE protocol. The \ref PJNATH_ICE_STREAM_TRANSPORT naturally 
+contains both STUN Transport and \ref PJNATH_TURN_SOCK.
+
+The \ref PJNATH_ICE_STREAM_TRANSPORT interface is suitable for both
+SIP or non-SIP use. For SIP use, application may prefer to use the
+ICE media transport in PJMEDIA instead where it has been integrated
+with the SDP offer and answer mechanism.
+
+
+\subsubsection natck NAT Classification Utility
+
+PJNATH also provides \a PJNATH_NAT_DETECT to assist troubleshooting
+of problems related to NAT traversal.
+
+
+
+\n
+
+
+\subsection sessions Transport Independent Sessions Layer
+
+Right below the high level transports objects are the transport
+independent sessions. These sessions don't have access to sockets,
+so higher level objects (such as transports) must give incoming
+packets to the sessions and provide callback to be called by
+sessions to send outgoing packets.
+
+
+\subsubsection ice_sess ICE Session
+
+The \ref PJNATH_ICE_SESSION is used by the \ref PJNATH_ICE_STREAM_TRANSPORT
+and contains the actual logic of the ICE negotiation.
+
+
+\subsubsection turn_sess TURN Session
+
+The \ref PJNATH_TURN_SESSION is used by the \ref PJNATH_TURN_SOCK
+and it contains TURN protocol logic. Implementors may implement
+other types of TURN client connection (such as TURN TLS client)
+by utilizing this session.
+
+
+\subsubsection stun_sess STUN Session
+
+The \ref PJNATH_STUN_SESSION manages STUN message exchange between
+a client and server (or vice versa). It manages \ref PJNATH_STUN_TRANSACTION
+for sending or receiving requests and \ref PJNATH_STUN_AUTH for both
+both incoming and outgoing STUN messages. 
+
+The \ref PJNATH_STUN_SESSION is naturally used by the \ref PJNATH_TURN_SESSION
+and \ref PJNATH_ICE_SESSION
+
+
+\n
+
+\subsection stun_tsx STUN Transaction Layer
+
+The \ref PJNATH_STUN_TRANSACTION is a thin layer to manage retransmission
+of STUN requests.
+
+
+\n
+
+
+\subsection stun_msg STUN Messaging Layer
+
+At the very bottom of the PJNATH components is the \ref PJNATH_STUN_MSG
+layer. The API contains various representation of STUN messaging components
+and it provides API to encode and decode STUN messages.
+
+
+
+\n
+\n
+
+\section class_dia Class Diagram
+
+
+The following class diagram shows the interactions between objects in
+PJNATH:
+
+\image html UML-class-diagram.png "Class Diagram"
+\image latex UML-class-diagram.png "Class Diagram"
+
+
+
+\n
+\n
+
+\section samples Sample Applications
+
+
+Some sample applications have been provided with PJNATH, and it's available
+under <tt>pjnath/src</tt> directory:
+
+   - <b>pjturn-client</b>: this is a stand-alone, console based TURN client
+     application to be used as a demonstration for PJNATH TURN client 
+     transport API and for simple testing against TURN server implementations.
+     The client supports both UDP and TCP connection to the TURN server.
+
+   - <b>pjturn-srv</b>: this is a simple TURN server to be used for testing
+     purposes. It supports both UDP and TCP connections to the clients.
+
+
+*/
 
 /**
  * @defgroup PJNATH_STUN STUN Library
