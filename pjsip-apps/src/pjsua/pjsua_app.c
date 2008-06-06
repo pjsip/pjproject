@@ -170,7 +170,6 @@ static void usage(void)
 
     puts  ("");
     puts  ("Media Options:");
-    puts  ("  --use-ice           Enable ICE (default:no)");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --dis-codec=name    Disable codec (can be specified multiple times)");
     puts  ("  --clock-rate=N      Override conference bridge clock rate");
@@ -188,17 +187,26 @@ static void usage(void)
     puts  ("  --auto-conf         Automatically put calls in conference with others");
     puts  ("  --rec-file=file     Open file recorder (extension can be .wav or .mp3");
     puts  ("  --auto-rec          Automatically record conversation");
-    puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --quality=N         Specify media quality (0-10, default=6)");
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     puts  ("  --no-vad            Disable VAD/silence detector (default=vad enabled)");
     puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default=256)");
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
-    puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
-    puts  ("  --tx-drop-pct=PCT   Drop PCT percent of TX RTP (for pkt lost sim, default: 0)");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
 
+    puts  ("");
+    puts  ("Media Transport Options:");
+    puts  ("  --use-ice           Enable ICE (default:no)");
+    puts  ("  --ice-no-host       Disable ICE host candidates");
+    puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
+    puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
+    puts  ("  --tx-drop-pct=PCT   Drop PCT percent of TX RTP (for pkt lost sim, default: 0)");
+    puts  ("  --use-turn          Enable TURN relay with ICE (default:no)");
+    puts  ("  --turn-srv          Domain or host name of TURN server (\"NAME:PORT\" format)");
+    puts  ("  --turn-tcp          Use TCP connection to TURN server (default no)");
+    puts  ("  --turn-user         TURN username");
+    puts  ("  --turn-passwd       TURN password");
 
     puts  ("");
     puts  ("Buddy List (can be more than one):");
@@ -392,6 +400,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
+	   OPT_USE_TURN,OPT_ICE_NO_HOST, OPT_TURN_SRV, OPT_TURN_TCP,
+	   OPT_TURN_USER, OPT_TURN_PASSWD,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -451,7 +461,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "play-tone",  1, 0, OPT_PLAY_TONE},
 	{ "rec-file",   1, 0, OPT_REC_FILE},
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
+
 	{ "use-ice",    0, 0, OPT_USE_ICE},
+	{ "use-turn",	0, 0, OPT_USE_TURN},
+	{ "ice-no-host",0, 0, OPT_ICE_NO_HOST},
+	{ "turn-srv",	1, 0, OPT_TURN_SRV},
+	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
+	{ "turn-user",	1, 0, OPT_TURN_USER},
+	{ "turn-passwd",1, 0, OPT_TURN_PASSWD},
+
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	{ "use-srtp",   1, 0, OPT_USE_SRTP},
 	{ "srtp-secure",1, 0, OPT_SRTP_SECURE},
@@ -823,6 +841,33 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_USE_ICE:
 	    cfg->media_cfg.enable_ice = PJ_TRUE;
+	    break;
+
+	case OPT_USE_TURN:
+	    cfg->media_cfg.enable_turn = PJ_TRUE;
+	    break;
+
+	case OPT_ICE_NO_HOST:
+	    cfg->media_cfg.ice_no_host_cands = PJ_TRUE;
+	    break;
+
+	case OPT_TURN_SRV:
+	    cfg->media_cfg.turn_server = pj_str(pj_optarg);
+	    break;
+
+	case OPT_TURN_TCP:
+	    cfg->media_cfg.turn_conn_type = PJ_TURN_TP_TCP;
+	    break;
+
+	case OPT_TURN_USER:
+	    cfg->media_cfg.turn_auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.realm = pj_str("*");
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.username = pj_str(pj_optarg);
+	    break;
+
+	case OPT_TURN_PASSWD:
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.data = pj_str(pj_optarg);
 	    break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1359,9 +1404,41 @@ static int write_settings(const struct app_config *config,
     }
 #endif
 
-    /* Media */
+    /* Media Transport*/
     if (config->media_cfg.enable_ice)
 	pj_strcat2(&cfg, "--use-ice\n");
+
+    if (config->media_cfg.enable_turn)
+	pj_strcat2(&cfg, "--use-turn\n");
+
+    if (config->media_cfg.ice_no_host_cands)
+	pj_strcat2(&cfg, "--ice-no-host\n");
+
+    if (config->media_cfg.turn_server.slen) {
+	pj_ansi_sprintf(line, "--turn-srv %.*s\n",
+			(int)config->media_cfg.turn_server.slen,
+			config->media_cfg.turn_server.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    if (config->media_cfg.turn_conn_type == PJ_TURN_TP_TCP)
+	pj_strcat2(&cfg, "--turn-tcp\n");
+
+    if (config->media_cfg.turn_auth_cred.data.static_cred.username.slen) {
+	pj_ansi_sprintf(line, "--turn-user %.*s\n",
+			(int)config->media_cfg.turn_auth_cred.data.static_cred.username.slen,
+			config->media_cfg.turn_auth_cred.data.static_cred.username.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    if (config->media_cfg.turn_auth_cred.data.static_cred.data.slen) {
+	pj_ansi_sprintf(line, "--turn-passwd %.*s\n",
+			(int)config->media_cfg.turn_auth_cred.data.static_cred.data.slen,
+			config->media_cfg.turn_auth_cred.data.static_cred.data.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* Media */
     if (config->null_audio)
 	pj_strcat2(&cfg, "--null-audio\n");
     if (config->auto_play)

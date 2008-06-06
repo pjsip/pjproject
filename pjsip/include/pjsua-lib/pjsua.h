@@ -1028,8 +1028,8 @@ typedef struct pjsua_config
 
     /**
      * Specify domain name to be resolved with DNS SRV resolution to get the
-     * address of the STUN servers. Alternatively application may specify
-     * \a stun_host and \a stun_relay_host instead.
+     * address of the STUN server. Alternatively application may specify
+     * \a stun_host instead.
      *
      * If DNS SRV resolution failed for this domain, then DNS A resolution
      * will be performed only if \a stun_host is specified.
@@ -1041,11 +1041,6 @@ typedef struct pjsua_config
      * not specified, default port 3478 will be used.
      */
     pj_str_t	    stun_host;
-
-    /**
-     * Specify STUN relay server to be used.
-     */
-    pj_str_t	    stun_relay_host;
 
     /**
      * Support for adding and parsing NAT type in the SDP to assist 
@@ -3886,9 +3881,33 @@ struct pjsua_media_config
     pj_bool_t		enable_ice;
 
     /**
-     * Enable ICE media relay.
+     * Disable ICE host candidates.
      */
-    pj_bool_t		enable_relay;
+    pj_bool_t		ice_no_host_cands;
+
+    /**
+     * Enable TURN relay candidate in ICE.
+     */
+    pj_bool_t		enable_turn;
+
+    /**
+     * Specify TURN domain name or host name, in in "DOMAIN:PORT" or 
+     * "HOST:PORT" format.
+     */
+    pj_str_t		turn_server;
+
+    /**
+     * Specify the connection type to be used to the TURN server. Valid
+     * values are PJ_TURN_TP_UDP or PJ_TURN_TP_TCP.
+     *
+     * Default: PJ_TURN_TP_UDP
+     */
+    pj_turn_tp_type	turn_conn_type;
+
+    /**
+     * Specify the credential to authenticate with the TURN server.
+     */
+    pj_stun_auth_cred	turn_auth_cred;
 };
 
 

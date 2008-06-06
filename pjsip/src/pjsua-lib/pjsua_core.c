@@ -113,7 +113,6 @@ PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->user_agent, &src->user_agent);
     pj_strdup_with_null(pool, &dst->stun_domain, &src->stun_domain);
     pj_strdup_with_null(pool, &dst->stun_host, &src->stun_host);
-    pj_strdup_with_null(pool, &dst->stun_relay_host, &src->stun_relay_host);
 }
 
 PJ_DEF(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
@@ -172,6 +171,8 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
     cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
     cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
+
+    cfg->turn_conn_type = PJ_TURN_TP_UDP;
 }
 
 

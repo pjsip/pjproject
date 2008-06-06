@@ -52,6 +52,7 @@ typedef struct pjsua_call
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
     pjmedia_transport	*med_tp;    /**< Current media transport.	    */
+    pj_status_t		 med_tp_st; /**< Media transport status.	    */
     pjmedia_transport	*med_orig;  /**< Original media transport	    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */

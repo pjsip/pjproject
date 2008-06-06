@@ -36,6 +36,15 @@ static pj_uint16_t next_rtp_port;
 static void close_snd_dev(void);
 
 
+static void pjsua_media_config_dup(pj_pool_t *pool,
+				   pjsua_media_config *dst,
+				   const pjsua_media_config *src)
+{
+    pj_memcpy(dst, src, sizeof(*src));
+    pj_strdup(pool, &dst->turn_server, &src->turn_server);
+    pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred, &src->turn_auth_cred);
+}
+
 /**
  * Init media subsystems.
  */
@@ -49,7 +58,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     PJ_UNUSED_ARG(codec_id);
 
     /* Copy configuration */
-    pj_memcpy(&pjsua_var.media_cfg, cfg, sizeof(*cfg));
+    pjsua_media_config_dup(pjsua_var.pool, &pjsua_var.media_cfg, cfg);
 
     /* Normalize configuration */
     if (pjsua_var.media_cfg.snd_clock_rate == 0) {
@@ -581,46 +590,81 @@ on_error:
 
 
 /* This callback is called when ICE negotiation completes */
-static void on_ice_complete(pjmedia_transport *tp, pj_status_t result)
+static void on_ice_complete(pjmedia_transport *tp, 
+			    pj_ice_strans_op op,
+			    pj_status_t result)
 {
-    unsigned id, c;
+    unsigned id;
     pj_bool_t found = PJ_FALSE;
-
-    /* We're only interested with failure case */
-    if (result == PJ_SUCCESS)
-	return;
 
     /* Find call which has this media transport */
 
     PJSUA_LOCK();
 
-    for (id=0, c=0; id<PJSUA_MAX_CALLS && c<pjsua_var.call_cnt; ++id) {
-	pjsua_call *call = &pjsua_var.calls[id];
-	if (call->inv) {
-	    ++c;
-
-	    if (call->med_tp == tp) {
-		call->media_st = PJSUA_CALL_MEDIA_ERROR;
-		call->media_dir = PJMEDIA_DIR_NONE;
-		found = PJ_TRUE;
-		break;
-	    }
+    for (id=0; id<pjsua_var.ua_cfg.max_calls; ++id) {
+	if (pjsua_var.calls[id].med_tp == tp ||
+	    pjsua_var.calls[id].med_orig == tp) 
+	{
+	    found = PJ_TRUE;
+	    break;
 	}
     }
 
     PJSUA_UNLOCK();
 
-    if (found && pjsua_var.ua_cfg.cb.on_call_media_state) {
-	pjsua_var.ua_cfg.cb.on_call_media_state(id);
+    if (!found)
+	return;
+
+    switch (op) {
+    case PJ_ICE_STRANS_OP_INIT:
+	pjsua_var.calls[id].med_tp_st = result;
+	break;
+    case PJ_ICE_STRANS_OP_NEGOTIATION:
+	if (result != PJ_SUCCESS) {
+	    pjsua_var.calls[id].media_st = PJSUA_CALL_MEDIA_ERROR;
+	    pjsua_var.calls[id].media_dir = PJMEDIA_DIR_NONE;
+
+	    if (pjsua_var.ua_cfg.cb.on_call_media_state) {
+		pjsua_var.ua_cfg.cb.on_call_media_state(id);
+	    }
+	}
+	break;
     }
 }
 
 
-/* Create ICE media transports (when ice is enabled) */
-static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
+/* Parse "HOST:PORT" format */
+static pj_status_t parse_host_port(const pj_str_t *host_port,
+				   pj_str_t *host, pj_uint16_t *port)
 {
+    pj_str_t str_port;
+
+    str_port.ptr = pj_strchr(host_port, ':');
+    if (str_port.ptr != NULL) {
+	int iport;
+
+	host->ptr = host_port->ptr;
+	host->slen = (str_port.ptr - host->ptr);
+	str_port.ptr++;
+	str_port.slen = host_port->slen - host->slen - 1;
+	iport = (int)pj_strtoul(&str_port);
+	if (iport < 1 || iport > 65535)
+	    return PJ_EINVAL;
+	*port = (pj_uint16_t)iport;
+    } else {
+	*host = *host_port;
+	*port = 0;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* Create ICE media transports (when ice is enabled) */
+static pj_status_t create_ice_media_transports(void)
+{
+    char stunip[PJ_INET6_ADDRSTRLEN];
+    pj_ice_strans_cfg ice_cfg;
     unsigned i;
-    pj_sockaddr_in addr;
     pj_status_t status;
 
     /* Make sure STUN server resolution has completed */
@@ -630,31 +674,74 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	return status;
     }
 
-    pj_sockaddr_in_init(&addr, 0, (pj_uint16_t)cfg->port);
+    /* Create ICE stream transport configuration */
+    pj_ice_strans_cfg_default(&ice_cfg);
+    pj_stun_config_init(&ice_cfg.stun_cfg, &pjsua_var.cp.factory, 0,
+		        pjsip_endpt_get_ioqueue(pjsua_var.endpt),
+			pjsip_endpt_get_timer_heap(pjsua_var.endpt));
+    
+    ice_cfg.af = pj_AF_INET();
+    ice_cfg.resolver = pjsua_var.resolver;
+    
+    /* Configure STUN settings */
+    if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
+	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
+	ice_cfg.stun.server = pj_str(stunip);
+	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
+    }
+    ice_cfg.stun.no_host_cands = pjsua_var.media_cfg.ice_no_host_cands;
+
+    /* Configure TURN settings */
+    if (pjsua_var.media_cfg.enable_turn) {
+	status = parse_host_port(&pjsua_var.media_cfg.turn_server,
+				 &ice_cfg.turn.server,
+				 &ice_cfg.turn.port);
+	if (status != PJ_SUCCESS || ice_cfg.turn.server.slen == 0) {
+	    PJ_LOG(1,(THIS_FILE, "Invalid TURN server setting"));
+	    return PJ_EINVAL;
+	}
+	if (ice_cfg.turn.port == 0)
+	    ice_cfg.turn.port = 3479;
+	ice_cfg.turn.conn_type = pjsua_var.media_cfg.turn_conn_type;
+	pj_memcpy(&ice_cfg.turn.auth_cred, 
+		  &pjsua_var.media_cfg.turn_auth_cred,
+		  sizeof(ice_cfg.turn.auth_cred));
+    }
 
     /* Create each media transport */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-	pj_ice_strans_comp comp;
 	pjmedia_ice_cb ice_cb;
-	int next_port;
 	char name[32];
-#if PJMEDIA_ADVERTISE_RTCP
-	enum { COMP_CNT=2 };
-#else
-	enum { COMP_CNT=1 };
-#endif
+	unsigned comp_cnt;
 
 	pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
 	ice_cb.on_ice_complete = &on_ice_complete;
-
 	pj_ansi_snprintf(name, sizeof(name), "icetp%02d", i);
-			 
-	status = pjmedia_ice_create(pjsua_var.med_endpt, name, COMP_CNT,
-				    &pjsua_var.stun_cfg, &ice_cb,
+	pjsua_var.calls[i].med_tp_st = PJ_EPENDING;
+
+	comp_cnt = 1;
+	if (PJMEDIA_ADVERTISE_RTCP)
+	    ++comp_cnt;
+
+	status = pjmedia_ice_create(pjsua_var.med_endpt, name, comp_cnt,
+				    &ice_cfg, &ice_cb,
 				    &pjsua_var.calls[i].med_tp);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to create ICE media transport",
 		         status);
+	    goto on_error;
+	}
+
+	/* Wait until transport is initialized, or time out */
+	PJSUA_UNLOCK();
+	while (pjsua_var.calls[i].med_tp_st == PJ_EPENDING) {
+	    pjsua_handle_events(100);
+	}
+	PJSUA_LOCK();
+	if (pjsua_var.calls[i].med_tp_st != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing ICE media transport",
+		         pjsua_var.calls[i].med_tp_st);
+	    status = pjsua_var.calls[i].med_tp_st;
 	    goto on_error;
 	}
 
@@ -665,40 +752,6 @@ static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 	pjmedia_transport_simulate_lost(pjsua_var.calls[i].med_tp,
 				        PJMEDIA_DIR_DECODING,
 				        pjsua_var.media_cfg.rx_drop_pct);
-
-	status = pjmedia_ice_start_init(pjsua_var.calls[i].med_tp, 0, &addr,
-				        &pjsua_var.stun_srv.ipv4, NULL);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error starting ICE transport",
-		         status);
-	    goto on_error;
-	}
-
-	pjmedia_ice_get_comp(pjsua_var.calls[i].med_tp, 1, &comp);
-	next_port = pj_ntohs(comp.local_addr.ipv4.sin_port);
-	next_port += 2;
-	addr.sin_port = pj_htons((pj_uint16_t)next_port);
-    }
-
-    /* Wait until all ICE transports are ready */
-    for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-
-	/* Wait until interface status is PJ_SUCCESS */
-	for (;;) {
-	    status = pjmedia_ice_get_init_status(pjsua_var.calls[i].med_tp);
-	    if (status == PJ_EPENDING)
-		pjsua_handle_events(100);
-	    else
-		break;
-	}
-
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, 
-			 "Error adding STUN address to ICE media transport",
-		         status);
-	    goto on_error;
-	}
-
     }
 
     return PJ_SUCCESS;
@@ -744,7 +797,7 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
     pjsua_transport_config_dup(pjsua_var.pool, &cfg, app_cfg);
 
     if (pjsua_var.media_cfg.enable_ice) {
-	status = create_ice_media_transports(&cfg);
+	status = create_ice_media_transports();
     } else {
 	status = create_udp_media_transports(&cfg);
     }
@@ -896,7 +949,8 @@ static void stop_media_session(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
 
-    pjmedia_transport_media_stop(call->med_tp);
+    //see ticket #525
+    //pjmedia_transport_media_stop(call->med_tp);
 
     if (call->conf_slot != PJSUA_INVALID_ID) {
 	pjmedia_conf_remove_port(pjsua_var.mconf, call->conf_slot);
