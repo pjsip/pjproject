@@ -134,8 +134,8 @@ PJ_DEF(pj_status_t) pj_dns_server_destroy(pj_dns_server *srv)
 
 
 static struct rr* find_rr( pj_dns_server *srv,
-			   pj_uint16_t dns_class,
-			   pj_uint16_t type	/* pj_dns_type */,
+			   unsigned dns_class,
+			   unsigned type	/* pj_dns_type */,
 			   const pj_str_t *name)
 {
     struct rr *r;
