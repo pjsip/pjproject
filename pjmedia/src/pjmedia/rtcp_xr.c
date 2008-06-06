@@ -351,12 +351,14 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	r->rnd_trip_delay   = pj_htons(sess->stat.rx.voip_mtc.rnd_trip_delay);
 	r->end_sys_delay    = pj_htons(sess->stat.rx.voip_mtc.end_sys_delay);
 	/* signal & noise level encoded in two's complement form */
-	r->signal_lvl	    = (sess->stat.rx.voip_mtc.signal_lvl >= 0)?
-			      sess->stat.rx.voip_mtc.signal_lvl :
-			      (sess->stat.rx.voip_mtc.signal_lvl + 256);
-	r->noise_lvl	    = (sess->stat.rx.voip_mtc.noise_lvl >= 0)?
-			      sess->stat.rx.voip_mtc.noise_lvl :
-			      (sess->stat.rx.voip_mtc.noise_lvl + 256);
+	r->signal_lvl	    = (pj_uint8_t) 
+			      ((sess->stat.rx.voip_mtc.signal_lvl >= 0)?
+			       sess->stat.rx.voip_mtc.signal_lvl :
+			       (sess->stat.rx.voip_mtc.signal_lvl + 256));
+	r->noise_lvl	    = (pj_uint8_t)
+			      ((sess->stat.rx.voip_mtc.noise_lvl >= 0)?
+			       sess->stat.rx.voip_mtc.noise_lvl :
+			       (sess->stat.rx.voip_mtc.noise_lvl + 256));
 	r->rerl		    = sess->stat.rx.voip_mtc.rerl;
 	r->gmin		    = sess->stat.rx.voip_mtc.gmin;
 	r->r_factor	    = sess->stat.rx.voip_mtc.r_factor;
@@ -577,10 +579,14 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	sess->stat.tx.voip_mtc.end_sys_delay = 
 					pj_ntohs(rb_voip_mtc->end_sys_delay);
 	/* signal & noise level encoded in two's complement form */
-	sess->stat.tx.voip_mtc.signal_lvl = (rb_voip_mtc->signal_lvl > 127)?
-		    (rb_voip_mtc->signal_lvl - 256) : rb_voip_mtc->signal_lvl;
-	sess->stat.tx.voip_mtc.noise_lvl = (rb_voip_mtc->noise_lvl > 127)?
-		    (rb_voip_mtc->noise_lvl - 256) : rb_voip_mtc->noise_lvl;
+	sess->stat.tx.voip_mtc.signal_lvl = (pj_int8_t)
+				    ((rb_voip_mtc->signal_lvl > 127)?
+				     ((int)rb_voip_mtc->signal_lvl - 256) : 
+				     rb_voip_mtc->signal_lvl);
+	sess->stat.tx.voip_mtc.noise_lvl  = (pj_int8_t)
+				    ((rb_voip_mtc->noise_lvl > 127)?
+				     ((int)rb_voip_mtc->noise_lvl - 256) : 
+				     rb_voip_mtc->noise_lvl);
 	sess->stat.tx.voip_mtc.rerl = rb_voip_mtc->rerl;
 	sess->stat.tx.voip_mtc.gmin = rb_voip_mtc->gmin;
 	sess->stat.tx.voip_mtc.r_factor = rb_voip_mtc->r_factor;
