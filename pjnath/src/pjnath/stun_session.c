@@ -487,7 +487,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     sess->srv_name.slen = pj_ansi_snprintf(sess->srv_name.ptr, 32,
 					   "pj_stun-%s", pj_get_version());
 
-    sess->rx_pool = pj_pool_create(sess->cfg->pf, "name", 
+    sess->rx_pool = pj_pool_create(sess->cfg->pf, name, 
 				   PJNATH_POOL_LEN_STUN_TDATA, 
 				   PJNATH_POOL_INC_STUN_TDATA, NULL);
 
