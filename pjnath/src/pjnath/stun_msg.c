@@ -1557,13 +1557,13 @@ PJ_DEF(pj_status_t) pj_stun_unknown_attr_create(pj_pool_t *pool,
 /* Create and add STUN UNKNOWN-ATTRIBUTES attribute to the message. */
 PJ_DEF(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
 						 pj_stun_msg *msg,
-						 pj_size_t attr_cnt,
-						 const pj_uint16_t attr_types[])
+						 unsigned attr_cnt,
+						 const pj_uint16_t attr_type[])
 {
     pj_stun_unknown_attr *attr = NULL;
     pj_status_t status;
 
-    status = pj_stun_unknown_attr_create(pool, attr_cnt, attr_types, &attr);
+    status = pj_stun_unknown_attr_create(pool, attr_cnt, attr_type, &attr);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1646,7 +1646,7 @@ static void* clone_unknown_attr(pj_pool_t *pool, const void *src)
 PJ_DEF(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
 					       int attr_type,
 					       const pj_uint8_t *data,
-					       pj_size_t length,
+					       unsigned length,
 					       pj_stun_binary_attr **p_attr)
 {
     pj_stun_binary_attr *attr;
@@ -1673,7 +1673,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 						pj_stun_msg *msg,
 						int attr_type,
 						const pj_uint8_t *data,
-						pj_size_t length)
+						unsigned length)
 {
     pj_stun_binary_attr *attr = NULL;
     pj_status_t status;

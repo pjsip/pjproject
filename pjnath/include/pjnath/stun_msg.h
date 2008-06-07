@@ -1642,7 +1642,7 @@ PJ_DECL(pj_status_t) pj_stun_unknown_attr_create(pj_pool_t *pool,
  * @param pool		The pool to allocate memory from.
  * @param msg		The STUN message.
  * @param attr_cnt	Number of attributes in the array (can be zero).
- * @param attr		Optional array of attributes.
+ * @param attr		Optional array of attribute types.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
