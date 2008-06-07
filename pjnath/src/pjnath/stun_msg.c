@@ -2189,8 +2189,8 @@ static char *print_binary(const pj_uint8_t *data, unsigned data_len)
  * Print the message structure to a buffer.
  */
 PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
-				       pj_uint8_t *buf, unsigned buf_size,
-				       pj_size_t options,
+				       pj_uint8_t *buf, pj_size_t buf_size,
+				       unsigned options,
 				       const pj_str_t *key,
 				       pj_size_t *p_msg_len)
 {
