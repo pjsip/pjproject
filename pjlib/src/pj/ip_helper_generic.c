@@ -96,6 +96,17 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip when interface is down */
 	}
 
+	/* Ignore 0.0.0.0/8 address. This is a special address
+	 * which doesn't seem to have practical use.
+	 */
+	if (af==pj_AF_INET() &&
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
+	{
+	    TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
+		    get_addr(ad), ad->sa_family));
+	    continue;
+	}
+
 	TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
 		get_addr(ad), ad->sa_family, *p_cnt));
 
@@ -177,6 +188,17 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip loopback interface */
 	}
 
+	/* Ignore 0.0.0.0/8 address. This is a special address
+	 * which doesn't seem to have practical use.
+	 */
+	if (af==pj_AF_INET() &&
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
+	{
+	    TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
+		    get_addr(ad), ad->sa_family));
+	    continue;
+	}
+
 	TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
 		get_addr(ad), ad->sa_family, *p_cnt));
 
@@ -214,6 +236,7 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
     max_count = *p_cnt;
     *p_cnt = 0;
     for (i=0; if_list[i].if_index && *p_cnt<max_count; ++i) {
+	struct sockaddr *ad;
 	int rc;
 
 	strncpy(ifreq.ifr_name, if_list[i].if_name, IFNAMSIZ);
@@ -243,20 +266,32 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 	    continue;	/* Failed to get address, continue */
 	}
 
-	if (ifreq.ifr_addr.sa_family != af) {
+	ad = (struct sockaddr*) &ifreq.ifr_addr;
+
+	if (ad->sa_family != af) {
 	    TRACE_((THIS_FILE, "  address %s family %d ignored", 
 			       get_addr(&ifreq.ifr_addr),
 			       ifreq.ifr_addr.sa_family));
 	    continue;	/* Not address family that we want, continue */
 	}
 
+	/* Ignore 0.0.0.0/8 address. This is a special address
+	 * which doesn't seem to have practical use.
+	 */
+	if (af==pj_AF_INET() &&
+	    (pj_ntohl(((pj_sockaddr_in*)ad)->sin_addr.s_addr) >> 24) == 0)
+	{
+	    TRACE_((THIS_FILE, "  address %s ignored (0.0.0.0/8 class)", 
+		    get_addr(ad), ad->sa_family));
+	    continue;
+	}
+
 	/* Got an address ! */
 	TRACE_((THIS_FILE, "  address %s (af=%d) added at index %d", 
-		get_addr(&ifreq.ifr_addr), ifreq.ifr_addr.sa_family, *p_cnt));
+		get_addr(ad), ad->sa_family, *p_cnt));
 
 	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
-	pj_memcpy(&ifs[*p_cnt], &ifreq.ifr_addr, 
-		  pj_sockaddr_get_len(&ifreq.ifr_addr));
+	pj_memcpy(&ifs[*p_cnt], ad, pj_sockaddr_get_len(ad));
 	(*p_cnt)++;
     }
 

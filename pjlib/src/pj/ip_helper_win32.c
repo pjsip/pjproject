@@ -204,6 +204,12 @@ static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
 	if (pTab->table[i].dwAddr == 0)
 	    continue;
 
+	/* Ignore 0.0.0.0/8 address. This is a special address
+	 * which doesn't seem to have practical use.
+	 */
+	if ((pj_ntohl(pTab->table[i].dwAddr) >> 24) == 0)
+	    continue;
+
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 	/* Investigate the type of this interface */
 	pj_bzero(&ifRow, sizeof(ifRow));
