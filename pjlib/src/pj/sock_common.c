@@ -468,11 +468,14 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     }
 
 
-    /* If we end up with 127.x.x.x, resolve the IP by getting the default
-     * interface to connect to some public host.
+    /* If we end up with 127.0.0.0/8 or 0.0.0.0/8, resolve the IP
+     * by getting the default interface to connect to some public host.
+     * The 0.0.0.0/8 is a special IP class that doesn't seem to be
+     * practically useful for our purpose.
      */
     if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(addr) ||
-		(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr) >> 24)==127))
+	(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127) ||
+	(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==0))
     {
 		status = pj_getdefaultipinterface(af, addr);
     }
