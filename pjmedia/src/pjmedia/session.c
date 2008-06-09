@@ -685,6 +685,13 @@ PJ_DEF(pj_status_t) pjmedia_session_get_info( pjmedia_session *session,
     return PJ_SUCCESS;
 }
 
+/*
+ * Get user data.
+ */
+PJ_DEF(void*) pjmedia_session_get_user_data( pjmedia_session *session)
+{
+    return (session? session->user_data : NULL);
+}
 
 /**
  * Destroy media session.

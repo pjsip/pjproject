@@ -172,6 +172,15 @@ pjmedia_session_create( pjmedia_endpt *endpt,
 PJ_DECL(pj_status_t) pjmedia_session_get_info( pjmedia_session *session,
 					       pjmedia_session_info *info );
 
+/**
+ * Get user data of the session.
+ *
+ * @param session	The session being queried.
+ *
+ * @return		User data of the session.
+ */
+PJ_DECL(void*) pjmedia_session_get_user_data( pjmedia_session *session);
+
 
 /**
  * Activate all streams in media session for the specified direction.

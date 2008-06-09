@@ -496,7 +496,7 @@ PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
 PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
 						  pjmedia_transport_info *info)
 {
-    if (tp->op->get_info)
+    if (tp && tp->op && tp->op->get_info)
 	return (*tp->op->get_info)(tp, info);
     else
 	return PJ_ENOTSUP;

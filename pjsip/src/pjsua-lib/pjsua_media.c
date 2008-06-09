@@ -953,7 +953,9 @@ static void stop_media_session(pjsua_call_id call_id)
     //pjmedia_transport_media_stop(call->med_tp);
 
     if (call->conf_slot != PJSUA_INVALID_ID) {
-	pjmedia_conf_remove_port(pjsua_var.mconf, call->conf_slot);
+	if (pjsua_var.mconf) {
+	    pjmedia_conf_remove_port(pjsua_var.mconf, call->conf_slot);
+	}
 	call->conf_slot = PJSUA_INVALID_ID;
     }
 
