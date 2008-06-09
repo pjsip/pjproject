@@ -52,14 +52,6 @@ static const char *desc =
  "\n"
 ;
 
-#ifndef HAS_G729_CODEC
-# define HAS_G729_CODEC	0
-#endif
-
-#if HAS_G729_CODEC
-#include <keystream_g729ab.h>
-#endif
-
 //#undef PJ_TRACE
 //#define PJ_TRACE 1
 
@@ -181,12 +173,6 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	    continue;
 	}
 	
-	/* Simulate jitter buffer bug */
-	if (pci->pt==PJMEDIA_RTP_PT_G729 && frm_bit.size == 2) {
-	    TRACE_((THIS_FILE, "%d.%03d G729 SID frame masqueraded", T));
-	    frm_bit.size = 10;
-	}
-	
 	/* Parse the bitstream (not really necessary for this case
 	 * since we always decode 1 frame, but it's still good
 	 * for testing)
@@ -262,9 +248,6 @@ int main(int argc, char *argv[])
 #endif
 #if PJMEDIA_HAS_SPEEX_CODEC
     CHECK( pjmedia_codec_speex_init(mept, 0, 5, 5) );
-#endif
-#if HAS_G729_CODEC
-    CHECK( keystream_g729ab_init(mept) );
 #endif
 #if PJMEDIA_HAS_G722_CODEC
     CHECK( pjmedia_codec_g722_init(mept) );
