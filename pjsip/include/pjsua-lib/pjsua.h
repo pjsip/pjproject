@@ -3674,7 +3674,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  * for pjsua_media_config.quality.
  */
 #ifndef PJSUA_DEFAULT_CODEC_QUALITY
-#   define PJSUA_DEFAULT_CODEC_QUALITY	5
+#   define PJSUA_DEFAULT_CODEC_QUALITY	8
 #endif
 
 /**

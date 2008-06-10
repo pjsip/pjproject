@@ -59,10 +59,11 @@
 #endif
 
 /**
- * Speex codec default quality setting.
+ * Speex codec default quality setting. Please note that pjsua-lib may override
+ * this setting via its codec quality setting (i.e PJSUA_DEFAULT_CODEC_QUALITY).
  */
 #ifndef PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY
-#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	    5
+#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	    8
 #endif
 
 

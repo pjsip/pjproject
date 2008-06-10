@@ -27,6 +27,10 @@
 #   undef PJMEDIA_RESAMPLE_IMP
 #   define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_LIBRESAMPLE
 #   define PJMEDIA_WSOLA_IMP		PJMEDIA_WSOLA_IMP_WSOLA_LITE
+
+    /* Speex default quality settings */
+#   define PJSUA_DEFAULT_CODEC_QUALITY	5
+#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	5
 #endif
 
 
@@ -100,6 +104,9 @@
 #   define PJSUA_MAX_CONF_PORTS		(PJSUA_MAX_CALLS+2*PJSUA_MAX_PLAYERS)
 #   define PJSUA_MAX_BUDDIES		32
 
+    /* Speex default quality settings */
+#   define PJSUA_DEFAULT_CODEC_QUALITY	5
+#   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	5
 #endif
 
 
