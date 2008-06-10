@@ -151,10 +151,6 @@ SOURCE=..\..\speex\libspeex\high_lsp_tables.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\speex\libspeex\jitter.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\speex\libspeex\kiss_fft.c
 # End Source File
 # Begin Source File
@@ -179,23 +175,15 @@ SOURCE=..\..\speex\libspeex\ltp.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\speex\libspeex\math_approx.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\speex\libspeex\mdf.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\speex\libspeex\medfilter.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\speex\libspeex\misc.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\speex\libspeex\modes.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\modes_wb.c
 # End Source File
 # Begin Source File
 
@@ -255,7 +243,19 @@ SOURCE=..\..\speex\libspeex\window.c
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE=..\..\speex\libspeex\_kiss_fft_guts.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\arch.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\speex\libspeex\cb_search.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\cb_search_sse.h
 # End Source File
 # Begin Source File
 
@@ -272,6 +272,18 @@ SOURCE=..\..\speex\libspeex\filterbank.h
 # Begin Source File
 
 SOURCE=..\..\speex\libspeex\filters.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\filters_sse.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\fixed_debug.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\fixed_generic.h
 # End Source File
 # Begin Source File
 
@@ -295,11 +307,11 @@ SOURCE=..\..\speex\libspeex\ltp.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\speex\libspeex\medfilter.h
+SOURCE=..\..\speex\libspeex\ltp_sse.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\speex\libspeex\misc.h
+SOURCE=..\..\speex\libspeex\math_approx.h
 # End Source File
 # Begin Source File
 
@@ -308,6 +320,14 @@ SOURCE=..\..\speex\libspeex\modes.h
 # Begin Source File
 
 SOURCE=..\..\speex\libspeex\nb_celp.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\os_support.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\speex\libspeex\pseudofloat.h
 # End Source File
 # Begin Source File
 

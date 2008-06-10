@@ -26,10 +26,10 @@ export SPEEX_OBJS = 	bits.o cb_search.o exc_10_16_table.o  \
 			exc_8_128_table.o fftwrap.o filterbank.o \
 			filters.o gain_table.o gain_table_lbr.o \
 			hexc_10_32_table.o hexc_table.o \
-			high_lsp_tables.o jitter.o \
+			high_lsp_tables.o \
 			kiss_fft.o kiss_fftr.o lpc.o \
 			lsp.o lsp_tables_nb.o ltp.o \
-			math_approx.o mdf.o medfilter.o misc.o modes.o \
+			mdf.o modes.o modes_wb.o \
 			nb_celp.o preprocess.o \
 			quant_lsp.o resample.o sb_celp.o smallft.o \
 			speex.o speex_callbacks.o speex_header.o \

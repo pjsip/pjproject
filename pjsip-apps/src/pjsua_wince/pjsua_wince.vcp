@@ -411,14 +411,17 @@ DEP_CPP_PJSUA=\
 
 DEP_CPP_PJSUA=\
 	"..\..\..\pjlib-util\include\pjlib-util.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\crc32.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\dns_server.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\errno.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\getopt.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\hmac_md5.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\hmac_sha1.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\md5.h"\
+	"..\..\..\pjlib-util\include\pjlib-util\pcap.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
@@ -428,12 +431,17 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib-util\include\pjlib-util\stun_simple.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\xml.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
 	"..\..\..\pjlib\include\pj\compat\ctype.h"\
 	"..\..\..\pjlib\include\pj\compat\errno.h"\
 	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
@@ -443,13 +451,16 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
 	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
 	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
 	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
 	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
 	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -464,6 +475,7 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -481,6 +493,7 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\config.h"\
+	"..\..\..\pjmedia\include\pjmedia-codec\g722.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\gsm.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\ilbc.h"\
 	"..\..\..\pjmedia\include\pjmedia-codec\l16.h"\
@@ -506,6 +519,7 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjmedia\include\pjmedia\port.h"\
 	"..\..\..\pjmedia\include\pjmedia\resample.h"\
 	"..\..\..\pjmedia\include\pjmedia\rtcp.h"\
+	"..\..\..\pjmedia\include\pjmedia\rtcp_xr.h"\
 	"..\..\..\pjmedia\include\pjmedia\rtp.h"\
 	"..\..\..\pjmedia\include\pjmedia\sdp.h"\
 	"..\..\..\pjmedia\include\pjmedia\sdp_neg.h"\
@@ -514,37 +528,48 @@ DEP_CPP_PJSUA=\
 	"..\..\..\pjmedia\include\pjmedia\sound.h"\
 	"..\..\..\pjmedia\include\pjmedia\sound_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\splitcomb.h"\
+	"..\..\..\pjmedia\include\pjmedia\stereo.h"\
 	"..\..\..\pjmedia\include\pjmedia\stream.h"\
 	"..\..\..\pjmedia\include\pjmedia\tonegen.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_ice.h"\
+	"..\..\..\pjmedia\include\pjmedia\transport_srtp.h"\
 	"..\..\..\pjmedia\include\pjmedia\transport_udp.h"\
 	"..\..\..\pjmedia\include\pjmedia\types.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_playlist.h"\
 	"..\..\..\pjmedia\include\pjmedia\wav_port.h"\
 	"..\..\..\pjmedia\include\pjmedia\wave.h"\
+	"..\..\..\pjnath\include\pjnath.h"\
 	"..\..\..\pjnath\include\pjnath\config.h"\
+	"..\..\..\pjnath\include\pjnath\errno.h"\
 	"..\..\..\pjnath\include\pjnath\ice_session.h"\
 	"..\..\..\pjnath\include\pjnath\ice_strans.h"\
+	"..\..\..\pjnath\include\pjnath\nat_detect.h"\
 	"..\..\..\pjnath\include\pjnath\stun_auth.h"\
 	"..\..\..\pjnath\include\pjnath\stun_config.h"\
 	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
 	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_sock.h"\
 	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\turn_session.h"\
+	"..\..\..\pjnath\include\pjnath\turn_sock.h"\
 	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\..\pjsip\include\pjsip-simple\evsub.h"\
 	"..\..\..\pjsip\include\pjsip-simple\iscomposing.h"\
 	"..\..\..\pjsip\include\pjsip-simple\pidf.h"\
 	"..\..\..\pjsip\include\pjsip-simple\presence.h"\
 	"..\..\..\pjsip\include\pjsip-simple\publish.h"\
+	"..\..\..\pjsip\include\pjsip-simple\rpid.h"\
 	"..\..\..\pjsip\include\pjsip-simple\types.h"\
 	"..\..\..\pjsip\include\pjsip-simple\xpidf.h"\
+	"..\..\..\pjsip\include\pjsip-ua\sip_100rel.h"\
 	"..\..\..\pjsip\include\pjsip-ua\sip_inv.h"\
 	"..\..\..\pjsip\include\pjsip-ua\sip_regc.h"\
 	"..\..\..\pjsip\include\pjsip-ua\sip_replaces.h"\
 	"..\..\..\pjsip\include\pjsip-ua\sip_xfer.h"\
 	"..\..\..\pjsip\include\pjsip.h"\
 	"..\..\..\pjsip\include\pjsip\sip_auth.h"\
+	"..\..\..\pjsip\include\pjsip\sip_auth_aka.h"\
 	"..\..\..\pjsip\include\pjsip\sip_auth_msg.h"\
 	"..\..\..\pjsip\include\pjsip\sip_config.h"\
 	"..\..\..\pjsip\include\pjsip\sip_dialog.h"\

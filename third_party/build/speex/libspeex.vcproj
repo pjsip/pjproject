@@ -535,29 +535,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\speex\libspeex\jitter.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\speex\libspeex\kiss_fft.c"
 				>
 				<FileConfiguration
@@ -696,76 +673,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\..\speex\libspeex\math_approx.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\..\speex\libspeex\mdf.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\speex\libspeex\medfilter.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						Optimization="2"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\..\speex\libspeex\misc.c"
 				>
 				<FileConfiguration
 					Name="Debug|Win32"
@@ -809,6 +717,10 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\modes_wb.c"
+				>
 			</File>
 			<File
 				RelativePath="..\..\speex\libspeex\nb_celp.c"
@@ -1115,7 +1027,19 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
+				RelativePath="..\..\speex\libspeex\_kiss_fft_guts.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\arch.h"
+				>
+			</File>
+			<File
 				RelativePath="..\..\speex\libspeex\cb_search.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\cb_search_sse.h"
 				>
 			</File>
 			<File
@@ -1132,6 +1056,18 @@
 			</File>
 			<File
 				RelativePath="..\..\speex\libspeex\filters.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\filters_sse.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\fixed_debug.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\fixed_generic.h"
 				>
 			</File>
 			<File
@@ -1155,11 +1091,11 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\speex\libspeex\medfilter.h"
+				RelativePath="..\..\speex\libspeex\ltp_sse.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\speex\libspeex\misc.h"
+				RelativePath="..\..\speex\libspeex\math_approx.h"
 				>
 			</File>
 			<File
@@ -1168,6 +1104,14 @@
 			</File>
 			<File
 				RelativePath="..\..\speex\libspeex\nb_celp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\os_support.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\speex\libspeex\pseudofloat.h"
 				>
 			</File>
 			<File
