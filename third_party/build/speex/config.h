@@ -3,11 +3,13 @@
 /* Check if we need to use the fixed point version */
 #if !defined(PJ_HAS_FLOATING_POINT) || PJ_HAS_FLOATING_POINT==0
 #   define FIXED_POINT
+#   define USE_KISS_FFT
 #else 
 #   define FLOATING_POINT
+#   define USE_SMALLFT
 #endif
 
-#define MACRO
+#define EXPORT
 
 #if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
     (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0) 
