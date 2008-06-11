@@ -789,6 +789,11 @@ static int hdr_test_authorization(pjsip_hdr *h);
 static int hdr_test_cid(pjsip_hdr *h);
 static int hdr_test_contact0(pjsip_hdr *h);
 static int hdr_test_contact1(pjsip_hdr *h);
+static int hdr_test_contact_q0(pjsip_hdr *h);
+static int hdr_test_contact_q1(pjsip_hdr *h);
+static int hdr_test_contact_q2(pjsip_hdr *h);
+static int hdr_test_contact_q3(pjsip_hdr *h);
+static int hdr_test_contact_q4(pjsip_hdr *h);
 static int hdr_test_content_length(pjsip_hdr *h);
 static int hdr_test_content_type(pjsip_hdr *h);
 static int hdr_test_from(pjsip_hdr *h);
@@ -894,6 +899,43 @@ struct hdr_test_t
 	"Contact", "m",
 	NAME_ADDR ";" GENERIC_PARAM,
 	&hdr_test_contact1
+    },
+
+    {
+	/* q=0 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=0",
+	&hdr_test_contact_q0,
+	HDR_FLAG_DONT_PRINT
+    },
+
+    {
+	/* q=0.5 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=0.5",
+	&hdr_test_contact_q1
+    },
+
+    {
+	/* q=1 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=1",
+	&hdr_test_contact_q2
+    },
+
+    {
+	/* q=1.0 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=1.0",
+	&hdr_test_contact_q3,
+	HDR_FLAG_DONT_PRINT
+    },
+
+    {
+	/* q=1.1 parameter in Contact header */
+	"Contact", "m",
+	NAME_ADDR ";q=1.15",
+	&hdr_test_contact_q4
     },
 
     {
@@ -1270,6 +1312,111 @@ static int hdr_test_contact1(pjsip_hdr *h)
     rc = generic_param_test(&hdr->other_param);
     if (rc != 0)
 	return rc;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=0"
+ */
+static int hdr_test_contact_q0(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 0)
+	return -1711;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=0.5"
+ */
+static int hdr_test_contact_q1(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 500)
+	return -1712;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=1"
+ */
+static int hdr_test_contact_q2(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 1000)
+	return -1713;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=1.0"
+ */
+static int hdr_test_contact_q3(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 1000)
+	return -1714;
+
+    return 0;
+}
+
+/*
+    NAME_ADDR ";q=1.15"
+ */
+static int hdr_test_contact_q4(pjsip_hdr *h)
+{
+    pjsip_contact_hdr *hdr = (pjsip_contact_hdr*)h;
+    int rc;
+
+    if (h->type != PJSIP_H_CONTACT)
+	return -1710;
+
+    rc = nameaddr_test(hdr->uri);
+    if (rc != 0)
+	return rc;
+
+    if (hdr->q1000 != 1150)
+	return -1715;
 
     return 0;
 }

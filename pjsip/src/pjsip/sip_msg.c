@@ -1131,6 +1131,8 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	buf += printed;
 
 	if (hdr->q1000) {
+	    unsigned frac;
+
 	    if (buf+19 >= endbuf)
 		return -1;
 
@@ -1141,9 +1143,14 @@ static int pjsip_contact_hdr_print( pjsip_contact_hdr *hdr, char *buf,
 	    pj_memcpy(buf, ";q=", 3);
 	    printed = pj_utoa(hdr->q1000/1000, buf+3);
 	    buf += printed + 3;
-	    *buf++ = '.';
-	    printed = pj_utoa(hdr->q1000 % 1000, buf);
-	    buf += printed;
+	    frac = hdr->q1000 % 1000;
+	    if (frac != 0) {
+		*buf++ = '.';
+		if ((frac % 100)==0) frac /= 100;
+		if ((frac % 10)==0) frac /= 10;
+		printed = pj_utoa(frac, buf);
+		buf += printed;
+	    }
 	}
 
 	if (hdr->expires >= 0) {

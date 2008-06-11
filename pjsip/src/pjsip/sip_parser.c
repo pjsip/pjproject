@@ -1640,11 +1640,16 @@ static void int_parse_contact_param( pjsip_contact_hdr *hdr,
 	if (!parser_stricmp(pname, pconst.pjsip_Q_STR) && pvalue.slen) {
 	    char *dot_pos = (char*) pj_memchr(pvalue.ptr, '.', pvalue.slen);
 	    if (!dot_pos) {
-		hdr->q1000 = pj_strtoul(&pvalue);
+		hdr->q1000 = pj_strtoul(&pvalue) * 1000;
 	    } else {
+		pj_str_t tmp = pvalue;
+
+		tmp.slen = dot_pos - pvalue.ptr;
+		hdr->q1000 = pj_strtoul(&tmp) * 1000;
+
 		pvalue.slen = (pvalue.ptr+pvalue.slen) - (dot_pos+1);
 		pvalue.ptr = dot_pos + 1;
-		hdr->q1000 = pj_strtoul_mindigit(&pvalue, 3);
+		hdr->q1000 += pj_strtoul_mindigit(&pvalue, 3);
 	    }    
 	} else if (!parser_stricmp(pname, pconst.pjsip_EXPIRES_STR) && pvalue.slen) {
 	    hdr->expires = pj_strtoul(&pvalue);
