@@ -50,8 +50,22 @@ def test_func(t):
 		raise TestError("Call failed")
 	caller.expect(const.STATE_CONFIRMED)
 
-	# Hold call
+	# Synchronize stdout
+	caller.send("echo 1")
+	caller.expect("echo 1")
+	callee.send("echo 1")
+	callee.expect("echo 1")
+
+	# Test that media is okay (with RFC 2833 DTMF)
 	time.sleep(2)
+	caller.send("#")
+	caller.send("1122")
+	callee.expect(const.RX_DTMF + "1")
+	callee.expect(const.RX_DTMF + "1")
+	callee.expect(const.RX_DTMF + "2")
+	callee.expect(const.RX_DTMF + "2")
+
+	# Hold call
 	caller.send("H")
 	caller.expect(const.MEDIA_HOLD)
 	callee.expect(const.MEDIA_HOLD)
@@ -62,13 +76,58 @@ def test_func(t):
 	caller.expect(const.MEDIA_ACTIVE)
 	callee.expect(const.MEDIA_ACTIVE)
 
-	# UPDATE
+	# Synchronize stdout
+	caller.send("echo 1")
+	caller.expect("echo 1")
+	callee.send("echo 1")
+	callee.expect("echo 1")
+
+	# Test that media is okay (with RFC 2833 DTMF)
+	caller.send("#")
+	caller.send("1122")
+	callee.expect(const.RX_DTMF + "1")
+	callee.expect(const.RX_DTMF + "1")
+	callee.expect(const.RX_DTMF + "2")
+	callee.expect(const.RX_DTMF + "2")
+
+	# Synchronize stdout
+	caller.send("echo 1")
+	caller.expect("echo 1")
+	callee.send("echo 1")
+	callee.expect("echo 1")
+
+	# UPDATE (by caller)
+	caller.send("U")
+	caller.expect(const.MEDIA_ACTIVE)
+	callee.expect(const.MEDIA_ACTIVE)
+	
+	# Synchronize stdout
+	caller.send("echo 1")
+	caller.expect("echo 1")
+	callee.send("echo 1")
+	callee.expect("echo 1")
+
+	# Test that media is okay (with RFC 2833 DTMF)
 	time.sleep(2)
+	caller.send("#")
+	caller.send("1122")
+	callee.expect(const.RX_DTMF + "1")
+	callee.expect(const.RX_DTMF + "1")
+	callee.expect(const.RX_DTMF + "2")
+	callee.expect(const.RX_DTMF + "2")
+
+	# UPDATE (by callee)
 	callee.send("U")
 	callee.expect(const.MEDIA_ACTIVE)
 	caller.expect(const.MEDIA_ACTIVE)
 	
-	# Send DTMF
+	# Synchronize stdout
+	caller.send("echo 1")
+	caller.expect("echo 1")
+	callee.send("echo 1")
+	callee.expect("echo 1")
+
+	# Test that media is okay (with RFC 2833 DTMF)
 	time.sleep(2)
 	caller.send("#")
 	caller.send("1122")
