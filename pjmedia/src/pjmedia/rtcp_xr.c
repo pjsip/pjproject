@@ -326,15 +326,13 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	 * Since it is difficult to get the exact value of EXTRA, estimation
 	 * is taken to be totally around 30ms + sound device latency.
 	 */
-	est_extra_delay = 30 + 
-#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
-			  PJMEDIA_PASOUND_MAX_LATENCY
-#elif PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_NULL_SOUND
-			  0
-#else
-			  (PJMEDIA_SOUND_BUFFER_COUNT * 15)
+	est_extra_delay = 30;
+
+#if PJMEDIA_SOUND_IMPLEMENTATION!=PJMEDIA_SOUND_NULL_SOUND
+	est_extra_delay += PJMEDIA_SND_DEFAULT_REC_LATENCY + 
+			   PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 #endif
-			  ;
+
 	sess->stat.rx.voip_mtc.end_sys_delay = (pj_uint16_t)
 				 (sess->stat.rx.voip_mtc.rnd_trip_delay / 2 +
 				 sess->stat.rx.voip_mtc.jb_nom + 

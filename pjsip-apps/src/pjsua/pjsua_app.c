@@ -85,6 +85,7 @@ static struct app_config
 			    speaker_level;
 
     int			    capture_dev, playback_dev;
+    unsigned		    capture_lat, playback_lat;
 } app_config;
 
 
@@ -194,6 +195,8 @@ static void usage(void)
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
+    puts  ("  --capture-lat=N     Audio capture latency, in ms (default=10)");
+    puts  ("  --playback-lat=N    Audio playback latency, in ms (default=100)");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -252,6 +255,8 @@ static void default_config(struct app_config *cfg)
     cfg->mic_level = cfg->speaker_level = 1.0;
     cfg->capture_dev = PJSUA_INVALID_ID;
     cfg->playback_dev = PJSUA_INVALID_ID;
+    cfg->capture_lat = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+    cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
 	pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -413,6 +418,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
 	   OPT_TLS_NEG_TIMEOUT,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
+	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT,
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC
     };
     struct pj_getopt_option long_options[] = {
@@ -499,6 +505,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "tls-neg-timeout", 1, 0, OPT_TLS_NEG_TIMEOUT},
 	{ "capture-dev",    1, 0, OPT_CAPTURE_DEV},
 	{ "playback-dev",   1, 0, OPT_PLAYBACK_DEV},
+	{ "capture-lat",    1, 0, OPT_CAPTURE_LAT},
+	{ "playback-lat",   1, 0, OPT_PLAYBACK_LAT},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1077,6 +1085,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->playback_dev = atoi(pj_optarg);
 	    break;
 
+	case OPT_CAPTURE_LAT:
+	    cfg->capture_lat = atoi(pj_optarg);
+	    break;
+
+	case OPT_PLAYBACK_LAT:
+	    cfg->playback_lat = atoi(pj_optarg);
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1471,6 +1487,16 @@ static int write_settings(const struct app_config *config,
     }
     if (config->playback_dev != PJSUA_INVALID_ID) {
 	pj_ansi_sprintf(line, "--playback-dev %d\n", config->playback_dev);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* Sound device latency */
+    if (config->capture_lat != PJMEDIA_SND_DEFAULT_REC_LATENCY) {
+	pj_ansi_sprintf(line, "--capture-lat %d\n", config->capture_lat);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->playback_dev != PJMEDIA_SND_DEFAULT_PLAY_LATENCY) {
+	pj_ansi_sprintf(line, "--playback-lat %d\n", config->playback_lat);
 	pj_strcat2(&cfg, line);
     }
 
@@ -3712,6 +3738,9 @@ pj_status_t app_init(int argc, char *argv[])
     status = pjsua_media_transports_create(&app_config.rtp_cfg);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Set sound device latency */
+    pjmedia_snd_set_latency(app_config.capture_lat, app_config.playback_lat);
 
     /* Use null sound device? */
 #ifndef STEREO_DEMO

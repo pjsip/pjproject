@@ -181,4 +181,16 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
     return PJ_SUCCESS;
 }
 
+/*
+ * Set sound latency.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
+					    unsigned output_latency)
+{
+    /* Nothing to do */
+    PJ_UNUSED_ARG(input_latency);
+    PJ_UNUSED_ARG(output_latency);
+    return PJ_SUCCESS;
+}
+
 #endif	/* PJMEDIA_SOUND_IMPLEMENTATION */

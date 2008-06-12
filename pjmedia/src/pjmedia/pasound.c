@@ -28,9 +28,11 @@
 
 #define THIS_FILE	"pasound.c"
 
-#define MAX_LATENCY	(PJMEDIA_PASOUND_MAX_LATENCY / 1000.0)
-
 static int snd_init_count;
+
+/* Latency settings */
+static unsigned snd_input_latency  = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+static unsigned snd_output_latency = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 
 static struct snd_mgr
 {
@@ -561,9 +563,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     inputParam.channelCount = channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
-    inputParam.suggestedLatency = paDevInfo->defaultLowInputLatency;
-    if (inputParam.suggestedLatency > MAX_LATENCY)
-	inputParam.suggestedLatency = MAX_LATENCY;
+    inputParam.suggestedLatency = snd_input_latency / 1000.0;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
@@ -663,9 +663,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = paDevInfo->defaultLowOutputLatency;
-    if (outputParam.suggestedLatency > MAX_LATENCY)
-	outputParam.suggestedLatency = MAX_LATENCY;
+    outputParam.suggestedLatency = snd_output_latency / 1000.0;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
@@ -794,9 +792,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     inputParam.channelCount = channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
-    inputParam.suggestedLatency = paRecDevInfo->defaultLowInputLatency;
-    if (inputParam.suggestedLatency > MAX_LATENCY)
-	inputParam.suggestedLatency = MAX_LATENCY;
+    inputParam.suggestedLatency = snd_input_latency / 1000.0;
 
     paRecHostApiInfo = Pa_GetHostApiInfo(paRecDevInfo->hostApi);
 
@@ -805,9 +801,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     outputParam.channelCount = channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = paPlayDevInfo->defaultLowOutputLatency;
-    if (outputParam.suggestedLatency > MAX_LATENCY)
-	outputParam.suggestedLatency = MAX_LATENCY;
+    outputParam.suggestedLatency = snd_output_latency / 1000.0;
 
     paPlayHostApiInfo = Pa_GetHostApiInfo(paPlayDevInfo->hostApi);
 
@@ -1012,5 +1006,18 @@ PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
     }
 }
 
+/*
+ * Set sound latency.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
+					    unsigned output_latency)
+{
+    snd_input_latency  = (input_latency == 0)? 
+			 PJMEDIA_SND_DEFAULT_REC_LATENCY : input_latency;
+    snd_output_latency = (output_latency == 0)? 
+			 PJMEDIA_SND_DEFAULT_PLAY_LATENCY : output_latency;
+
+    return PJ_SUCCESS;
+}
 
 #endif	/* PJMEDIA_SOUND_IMPLEMENTATION */

@@ -83,10 +83,14 @@
 
 
 /**
- * Specify PortAudio maximum buffering latency, in milliseconds.
+ * Specify sound device latency default, in milisecond.
  */
-#ifndef PJMEDIA_PASOUND_MAX_LATENCY
-#   define PJMEDIA_PASOUND_MAX_LATENCY	    100
+#ifndef PJMEDIA_SND_DEFAULT_REC_LATENCY
+#   define PJMEDIA_SND_DEFAULT_REC_LATENCY  10
+#endif
+
+#ifndef PJMEDIA_SND_DEFAULT_PLAY_LATENCY
+#   define PJMEDIA_SND_DEFAULT_PLAY_LATENCY 100
 #endif
 
 

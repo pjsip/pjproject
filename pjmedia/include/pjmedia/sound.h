@@ -154,6 +154,28 @@ PJ_DECL(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index);
 
 
 /**
+ * Set sound device latency, this function must be called before sound device
+ * opened, or otherwise default latency setting will be used, @see
+ * PJMEDIA_SND_DEFAULT_REC_LATENCY & PJMEDIA_SND_DEFAULT_PLAY_LATENCY.
+ *
+ * Choosing latency value is not straightforward, it should accomodate both 
+ * minimum latency and stability. Lower latency tends to cause sound device 
+ * less reliable (producing audio dropouts) on CPU load disturbance. Moreover,
+ * the best latency setting may vary based on many aspects, e.g: sound card, 
+ * CPU, OS, kernel, etc.
+ *
+ * @param input_latency	    The latency of input device, in ms, set to 0
+ *			    for default PJMEDIA_SND_DEFAULT_REC_LATENCY.
+ * @param output_latency    The latency of output device, in ms, set to 0
+ *			    for default PJMEDIA_SND_DEFAULT_PLAY_LATENCY.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
+					     unsigned output_latency);
+
+
+/**
  * Create sound stream for both capturing audio and audio playback,  from the 
  * same device. This is the recommended way to create simultaneous recorder 
  * and player streams (instead of creating separate capture and playback

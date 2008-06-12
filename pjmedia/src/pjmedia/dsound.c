@@ -59,6 +59,10 @@ static unsigned dev_count;
 static struct dsound_dev_info dev_info[MAX_HARDWARE];
 static int snd_init_count;
 
+/* Latency settings */
+static unsigned snd_input_latency  = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+static unsigned snd_output_latency = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+
 
 /* Individual DirectSound capture/playback stream descriptor */
 struct dsound_stream
@@ -985,6 +989,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Set sound latency.
+ */
+PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
+					    unsigned output_latency)
+{
+    PJ_TODO(APPLY_LATENCY_SETTINGS_ON_DSOUND);
+
+    snd_input_latency  = (input_latency == 0)? 
+			 PJMEDIA_SND_DEFAULT_REC_LATENCY : input_latency;
+    snd_output_latency = (output_latency == 0)? 
+			 PJMEDIA_SND_DEFAULT_PLAY_LATENCY : output_latency;
+
+    return PJ_SUCCESS;
+}
 
 #endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
 
