@@ -395,9 +395,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     int		     crypto_suites_cnt;
 
     if (srtp->session_inited) {
-	PJ_LOG(4, (srtp->pool->obj_name, 
-		   "Error: unable to start (not initialized)"));
-	return PJ_EINVALIDOP;
+	pjmedia_transport_srtp_stop(tp);
     }
 
     crypto_suites_cnt = sizeof(crypto_suites)/sizeof(crypto_suites[0]);
