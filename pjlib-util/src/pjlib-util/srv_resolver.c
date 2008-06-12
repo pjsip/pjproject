@@ -285,8 +285,10 @@ static void build_server_entries(pj_dns_srv_resolver_job *query_job,
 	    if (pj_stricmp(&rr->name, &query_job->srv[j].target_name)==0) {
 		unsigned cnt = query_job->srv[j].addr_cnt;
 		query_job->srv[j].addr[cnt].s_addr = rr->rdata.a.ip_addr.s_addr;
+		/* Only increment host_resolved once per SRV record */
+		if (query_job->srv[j].addr_cnt == 0)
+		    ++query_job->host_resolved;
 		++query_job->srv[j].addr_cnt;
-		++query_job->host_resolved;
 		break;
 	    }
 	}
