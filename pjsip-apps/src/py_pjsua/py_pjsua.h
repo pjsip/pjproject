@@ -1023,8 +1023,8 @@ static void PyObj_pjsua_config_import(PyObj_pjsua_config *obj,
     obj->stun_host	= PyString_FromStringAndSize(cfg->stun_host.ptr,
 						     cfg->stun_host.slen);
     Py_XDECREF(obj->stun_relay_host);
-    obj->stun_relay_host= PyString_FromStringAndSize(cfg->stun_relay_host.ptr,
-						     cfg->stun_relay_host.slen);
+    obj->stun_relay_host= PyString_FromStringAndSize(cfg->stun_host.ptr,
+						     cfg->stun_host.slen);
     Py_XDECREF(obj->user_agent);
     obj->user_agent	= PyString_FromStringAndSize(cfg->user_agent.ptr,
 						     cfg->user_agent.slen);
@@ -1044,7 +1044,7 @@ static void PyObj_pjsua_config_export(pjsua_config *cfg,
     }
     cfg->stun_domain	= PyString_to_pj_str(obj->stun_domain);
     cfg->stun_host	= PyString_to_pj_str(obj->stun_host);
-    cfg->stun_relay_host= PyString_to_pj_str(obj->stun_host);
+    //cfg->stun_relay_host= PyString_to_pj_str(obj->stun_host);
     cfg->user_agent	= PyString_to_pj_str(obj->user_agent);
 
 }
