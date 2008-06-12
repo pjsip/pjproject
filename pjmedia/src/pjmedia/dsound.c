@@ -43,8 +43,8 @@
 #define BITS_PER_SAMPLE	    16
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE/8)
 
-#define MAX_PACKET_BUFFER_COUNT	    PJMEDIA_SOUND_BUFFER_COUNT
-#define DEFAULT_BUFFER_COUNT	    PJMEDIA_SOUND_BUFFER_COUNT
+#define MAX_PACKET_BUFFER_COUNT	    50
+#define MIN_PACKET_BUFFER_COUNT	    2
 
 #define MAX_HARDWARE		    16
 
@@ -87,6 +87,7 @@ struct dsound_stream
     DWORD		    dwBytePos;
     DWORD		    dwDsBufferSize;
     pj_timestamp	    timestamp;
+    unsigned		    latency;
 };
 
 
@@ -238,7 +239,8 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
     ds_strm->dwBytePos = 0;
     ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
     ds_strm->timestamp.u64 = 0;
-
+    ds_strm->latency = buffer_count * samples_per_frame * 1000 / clock_rate / 
+		       channel_count;
 
     /* Done setting up play device. */
     PJ_LOG(5,(THIS_FILE, 
@@ -344,6 +346,8 @@ static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
 
     ds_strm->timestamp.u64 = 0;
     ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
+    ds_strm->latency = buffer_count * samples_per_frame * 1000 / clock_rate / 
+		       channel_count;
 
     /* Done setting up recorder device. */
     PJ_LOG(5,(THIS_FILE, 
@@ -727,7 +731,6 @@ static pj_status_t open_stream( pjmedia_dir dir,
     pjmedia_snd_stream *strm;
     pj_status_t status;
 
-
     /* Make sure sound subsystem has been initialized with
      * pjmedia_snd_init()
      */
@@ -761,9 +764,19 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Create player stream */
     if (dir & PJMEDIA_DIR_PLAYBACK) {
+	unsigned buffer_count;
+	
+	/* Calculate buffer count, in frame unit */
+	buffer_count = clock_rate * snd_output_latency / samples_per_frame /
+		       1000;
+	if (buffer_count < MIN_PACKET_BUFFER_COUNT)
+	    buffer_count = MIN_PACKET_BUFFER_COUNT;
+	if (buffer_count > MAX_PACKET_BUFFER_COUNT)
+	    buffer_count = MAX_PACKET_BUFFER_COUNT;
+
 	status = init_player_stream( &strm->play_strm, play_id, clock_rate,
 				     channel_count, samples_per_frame,
-				     DEFAULT_BUFFER_COUNT );
+				     buffer_count );
 	if (status != PJ_SUCCESS) {
 	    pjmedia_snd_stream_close(strm);
 	    return status;
@@ -772,9 +785,19 @@ static pj_status_t open_stream( pjmedia_dir dir,
 
     /* Create capture stream */
     if (dir & PJMEDIA_DIR_CAPTURE) {
+	unsigned buffer_count;
+	
+	/* Calculate buffer count, in frame unit */
+	buffer_count = clock_rate * snd_input_latency / samples_per_frame /
+		       1000;
+	if (buffer_count < MIN_PACKET_BUFFER_COUNT)
+	    buffer_count = MIN_PACKET_BUFFER_COUNT;
+	if (buffer_count > MAX_PACKET_BUFFER_COUNT)
+	    buffer_count = MAX_PACKET_BUFFER_COUNT;
+
 	status = init_capture_stream( &strm->rec_strm, rec_id, clock_rate,
 				      channel_count, samples_per_frame,
-				      DEFAULT_BUFFER_COUNT);
+				      buffer_count);
 	if (status != PJ_SUCCESS) {
 	    pjmedia_snd_stream_close(strm);
 	    return status;
@@ -871,8 +894,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
     pi->channel_count = strm->channel_count;
     pi->samples_per_frame = strm->samples_per_frame;
     pi->bits_per_sample = strm->bits_per_sample;
-    pi->rec_latency = 0;
-    pi->play_latency = 0;
+    pi->rec_latency = strm->rec_strm.latency;
+    pi->play_latency = strm->play_strm.latency;
 
     return PJ_SUCCESS;
 }
@@ -996,8 +1019,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
 					    unsigned output_latency)
 {
-    PJ_TODO(APPLY_LATENCY_SETTINGS_ON_DSOUND);
-
     snd_input_latency  = (input_latency == 0)? 
 			 PJMEDIA_SND_DEFAULT_REC_LATENCY : input_latency;
     snd_output_latency = (output_latency == 0)? 
