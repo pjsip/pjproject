@@ -92,6 +92,10 @@ static struct app_config
 //static pjsua_acc_id	current_acc;
 #define current_acc	pjsua_acc_get_default()
 static pjsua_call_id	current_call = PJSUA_INVALID_ID;
+static pj_bool_t	cmd_echo;
+static int		stdout_refresh = -1;
+static const char      *stdout_refresh_text = "STDOUT_REFRESH";
+static pj_bool_t	stdout_refresh_quit = PJ_FALSE;
 static pj_str_t		uri_arg;
 
 static char some_buf[2048];
@@ -419,6 +423,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_NEG_TIMEOUT,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT,
+	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT,
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC
     };
     struct pj_getopt_option long_options[] = {
@@ -507,6 +512,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "playback-dev",   1, 0, OPT_PLAYBACK_DEV},
 	{ "capture-lat",    1, 0, OPT_CAPTURE_LAT},
 	{ "playback-lat",   1, 0, OPT_PLAYBACK_LAT},
+	{ "stdout-refresh", 1, 0, OPT_STDOUT_REFRESH},
+	{ "stdout-refresh-text", 1, 0, OPT_STDOUT_REFRESH_TEXT},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1083,6 +1090,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_PLAYBACK_DEV:
 	    cfg->playback_dev = atoi(pj_optarg);
+	    break;
+
+	case OPT_STDOUT_REFRESH:
+	    stdout_refresh = atoi(pj_optarg);
+	    break;
+
+	case OPT_STDOUT_REFRESH_TEXT:
+	    stdout_refresh_text = pj_optarg;
 	    break;
 
 	case OPT_CAPTURE_LAT:
@@ -2275,7 +2290,7 @@ static void keystroke_help(void)
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
-    puts("|  q  QUIT       sleep N: console sleep for N ms    n: detect NAT type        |");
+    puts("|  q  QUIT       sleep MS     echo [0|1]            n: detect NAT type        |");
     puts("+=============================================================================+");
 
     i = pjsua_call_get_count();
@@ -2645,6 +2660,10 @@ void console_app_main(const pj_str_t *uri_to_call)
 		puts("Switched back to console from file redirection");
 		continue;
 	    }
+	}
+
+	if (cmd_echo) {
+	    printf("%s", menuin);
 	}
 
 	switch (menuin[0]) {
@@ -3310,6 +3329,22 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    send_request(text, &tmp);
 	    break;
 
+	case 'e':
+	    if (pj_ansi_strnicmp(menuin, "echo", 4)==0) {
+		pj_str_t tmp;
+
+		tmp.ptr = menuin+5;
+		tmp.slen = pj_ansi_strlen(menuin)-6;
+
+		if (tmp.slen < 1) {
+		    puts("Usage: echo [0|1]");
+		    break;
+		}
+
+		cmd_echo = pj_strtoul(&tmp);
+	    }
+	    break;
+
 	case 's':
 	    if (pj_ansi_strnicmp(menuin, "sleep", 5)==0) {
 		pj_str_t tmp;
@@ -3767,8 +3802,28 @@ on_error:
 }
 
 
+static int stdout_refresh_proc(void *arg)
+{
+    PJ_UNUSED_ARG(arg);
+
+    /* Set thread to lowest priority so that it doesn't clobber
+     * stdout output
+     */
+    pj_thread_set_prio(pj_thread_this(), 
+		       pj_thread_get_prio_min(pj_thread_this()));
+
+    while (!stdout_refresh_quit) {
+	pj_thread_sleep(stdout_refresh * 1000);
+	puts(stdout_refresh_text);
+	fflush(stdout);
+    }
+
+    return 0;
+}
+
 pj_status_t app_main(void)
 {
+    pj_thread_t *stdout_refresh_thread = NULL;
     pj_status_t status;
 
     /* Start pjsua */
@@ -3778,7 +3833,19 @@ pj_status_t app_main(void)
 	return status;
     }
 
+    /* Start console refresh thread */
+    if (stdout_refresh > 0) {
+	pj_thread_create(app_config.pool, "stdout", &stdout_refresh_proc,
+			 NULL, 0, 0, &stdout_refresh_thread);
+    }
+
     console_app_main(&uri_arg);
+
+    if (stdout_refresh_thread) {
+	stdout_refresh_quit = PJ_TRUE;
+	pj_thread_join(stdout_refresh_thread);
+	pj_thread_destroy(stdout_refresh_thread);
+    }
 
     return PJ_SUCCESS;
 }
