@@ -35,7 +35,7 @@ def test_func(t):
 
 	# Caller making call
 	caller.send("m")
-	caller.send("sip:localhost:" + port1)
+	caller.send("sip:localhost:" + port1 + cfg_file.config.uri_param)
 	caller.expect(const.STATE_CALLING)
 	
 	# Callee answers with 200/OK

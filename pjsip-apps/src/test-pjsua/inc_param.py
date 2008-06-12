@@ -31,7 +31,7 @@ class Pjsua:
 # Test parameter class
 class Test:
 	title = ""
-	# params is list containing PjsuaParam objects
+	# params is list containing Pjsua objects
 	run = []
 	# list of Expect instances, to be filled at run-time by
         # the test program	

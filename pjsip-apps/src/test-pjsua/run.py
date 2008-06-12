@@ -47,20 +47,23 @@ class Expect:
 		while True:
 			line = self.proc.stdout.readline()
 		  	if line == "":
-				raise TestError("Premature EOF")
+				raise TestError(self.name + ": Premature EOF")
 			# Print the line if echo is ON
 			if self.echo:
 				print self.name + ": " + line,
 			# Trap assertion error
 			if self.ra.search(line) != None:
-				raise TestError(line)
+				if raise_on_error:
+					raise TestError(self.name + ": " + line)
+				else:
+					return None
 			# Count stdout refresh text. 
 			if self.rr.search(line) != None:
 				refresh_cnt = refresh_cnt+1
 				if refresh_cnt >= 6:
 					self.trace("Timed-out!")
 					if raise_on_error:
-						raise TestError("Timeout expecting pattern: " + pattern)
+						raise TestError(self.name + ": Timeout expecting pattern: " + pattern)
 					else:
 						return None		# timeout
 			# Search for expected text
@@ -80,7 +83,7 @@ def handle_error(errmsg, t):
 	time.sleep(1)
 	for p in t.process:
 		p.send("q")
-		p.expect(const.DESTROYED)
+		p.expect(const.DESTROYED, False)
 		p.wait()
 	print "Test completed with error: " + errmsg
 	sys.exit(1)
@@ -117,6 +120,7 @@ for run in script.test.run:
 		p.expect(const.PROMPT)
 		p.send("echo 1")
 		p.send("echo 1")
+		p.expect("echo 1")
 		# add running instance
 		script.test.process.append(p)
 		# run initial script
@@ -143,7 +147,7 @@ time.sleep(2)
 for p in script.test.process:
 	p.send("q")
 	time.sleep(0.5)
-	p.expect(const.DESTROYED)
+	p.expect(const.DESTROYED, False)
 	p.wait()
 
 # Done

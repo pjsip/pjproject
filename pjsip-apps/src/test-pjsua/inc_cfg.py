@@ -18,6 +18,8 @@ class Config:
 
 # Call config class
 class CallConfig:
+	# additional parameter to be added to target URI
+	uri_param = ""
 	def __init__(self, title, callee_cfg, caller_cfg):
 		self.title = title
 		self.callee_cfg = callee_cfg
