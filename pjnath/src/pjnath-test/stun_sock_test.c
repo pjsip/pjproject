@@ -52,7 +52,7 @@ static pj_bool_t srv_on_data_recvfrom(pj_activesock_t *asock,
     struct stun_srv *srv;
     pj_ssize_t sent;
 
-    srv = pj_activesock_get_user_data(asock);
+    srv = (struct stun_srv*) pj_activesock_get_user_data(asock);
 
     /* Ignore error */
     if (status != PJ_SUCCESS)
@@ -194,7 +194,7 @@ static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
 {
     struct stun_client *client;
 
-    client = pj_stun_sock_get_user_data(stun_sock);
+    client = (struct stun_client*) pj_stun_sock_get_user_data(stun_sock);
     client->on_status_cnt++;
     client->last_op = op;
     client->last_status = status;
@@ -221,7 +221,7 @@ static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(addr_len);
 
-    client = pj_stun_sock_get_user_data(stun_sock);
+    client = (struct stun_client*) pj_stun_sock_get_user_data(stun_sock);
     client->on_rx_data_cnt++;
 
     return PJ_TRUE;

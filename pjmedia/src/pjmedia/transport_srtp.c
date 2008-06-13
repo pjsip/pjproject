@@ -1186,7 +1186,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     struct transport_srtp *srtp = (struct transport_srtp*) tp;
     pjmedia_sdp_media *m_rem, *m_loc;
     pj_status_t status;
-    int i;
+    unsigned i;
 
     PJ_ASSERT_RETURN(tp && pool && sdp_local && sdp_remote, PJ_EINVAL);
 

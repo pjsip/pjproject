@@ -597,7 +597,7 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 
 #if !PLC_DISABLED
     if (gsm_data->plc_enabled)
-	pjmedia_plc_save( gsm_data->plc, output->buf);
+	pjmedia_plc_save( gsm_data->plc, (pj_int16_t*)output->buf);
 #endif
 
     return PJ_SUCCESS;
@@ -612,13 +612,13 @@ static pj_status_t  gsm_codec_recover(pjmedia_codec *codec,
 				      unsigned output_buf_len,
 				      struct pjmedia_frame *output)
 {
-    struct gsm_data *gsm_data = codec->codec_data;
+    struct gsm_data *gsm_data = (struct gsm_data*) codec->codec_data;
 
     PJ_ASSERT_RETURN(gsm_data->plc_enabled, PJ_EINVALIDOP);
 
     PJ_ASSERT_RETURN(output_buf_len >= 320, PJMEDIA_CODEC_EPCMTOOSHORT);
 
-    pjmedia_plc_generate(gsm_data->plc, output->buf);
+    pjmedia_plc_generate(gsm_data->plc, (pj_int16_t*)output->buf);
     output->size = 320;
 
     return PJ_SUCCESS;

@@ -308,7 +308,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
 	    xuid_param->name = XUID_PARAM_NAME;
 	    pj_create_unique_string(regc->pool, &xuid_param->value);
 
-	    sip_uri = pjsip_uri_get_uri(hdr->uri);
+	    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->uri);
 	    pj_list_push_back(&sip_uri->other_param, xuid_param);
 	}
 
