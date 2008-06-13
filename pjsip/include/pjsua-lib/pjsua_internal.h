@@ -236,7 +236,9 @@ struct pjsua_data
     int			 cap_dev;   /**< Capture device ID.		*/
     int			 play_dev;  /**< Playback device ID.		*/
     pj_bool_t		 no_snd;    /**< No sound (app will manage it)	*/
+    pj_pool_t		*snd_pool;  /**< Sound's private pool.		*/
     pjmedia_snd_port	*snd_port;  /**< Sound port.			*/
+    pj_timer_entry	 snd_idle_timer;/**< Sound device idle timer.	*/
     pjmedia_master_port	*null_snd;  /**< Master port for null sound.	*/
     pjmedia_port	*null_port; /**< Null port.			*/
 

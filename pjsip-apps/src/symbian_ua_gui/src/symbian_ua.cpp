@@ -326,6 +326,7 @@ int symbian_ua_init()
     med_cfg.audio_frame_ptime = 40;
     med_cfg.ec_tail_len = 0;
     med_cfg.enable_ice = USE_ICE;
+    med_cfg.snd_auto_close_time = 5; // wait for 5 seconds idle before sound dev get auto-closed
 
     pjsua_logging_config log_cfg;
 

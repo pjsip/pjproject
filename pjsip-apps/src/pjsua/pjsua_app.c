@@ -201,6 +201,9 @@ static void usage(void)
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
     puts  ("  --capture-lat=N     Audio capture latency, in ms (default=10)");
     puts  ("  --playback-lat=N    Audio playback latency, in ms (default=100)");
+    puts  ("  --snd-auto-close=N  Auto close audio device when it is idle for N seconds.");
+    puts  ("                      Specify N=-1 (default) to disable this feature.");
+    puts  ("                      Specify N=0 for instant close when unused.");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -400,7 +403,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     int c;
     int option_index;
     enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
-	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, 
+	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
@@ -514,6 +517,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "playback-lat",   1, 0, OPT_PLAYBACK_LAT},
 	{ "stdout-refresh", 1, 0, OPT_STDOUT_REFRESH},
 	{ "stdout-refresh-text", 1, 0, OPT_STDOUT_REFRESH_TEXT},
+	{ "snd-auto-close", 1, 0, OPT_SND_AUTO_CLOSE},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1108,6 +1112,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->playback_lat = atoi(pj_optarg);
 	    break;
 
+	case OPT_SND_AUTO_CLOSE:
+	    cfg->media_cfg.snd_auto_close_time = atoi(pj_optarg);
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1502,6 +1510,11 @@ static int write_settings(const struct app_config *config,
     }
     if (config->playback_dev != PJSUA_INVALID_ID) {
 	pj_ansi_sprintf(line, "--playback-dev %d\n", config->playback_dev);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->media_cfg.snd_auto_close_time != -1) {
+	pj_ansi_sprintf(line, "--snd-auto-close %d\n", 
+			config->media_cfg.snd_auto_close_time);
 	pj_strcat2(&cfg, line);
     }
 
@@ -3786,10 +3799,11 @@ pj_status_t app_init(int argc, char *argv[])
     }
 #endif
 
-    if (app_config.capture_dev != PJSUA_INVALID_ID
-        || app_config.playback_dev != PJSUA_INVALID_ID) {
-	status
-	  = pjsua_set_snd_dev(app_config.capture_dev, app_config.playback_dev);
+    if (app_config.capture_dev  != PJSUA_INVALID_ID ||
+        app_config.playback_dev != PJSUA_INVALID_ID) 
+    {
+	status = pjsua_set_snd_dev(app_config.capture_dev, 
+				   app_config.playback_dev);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }

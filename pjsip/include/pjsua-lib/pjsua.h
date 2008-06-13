@@ -3908,6 +3908,14 @@ struct pjsua_media_config
      * Specify the credential to authenticate with the TURN server.
      */
     pj_stun_auth_cred	turn_auth_cred;
+
+    /**
+     * Specify idle time of sound device before it is automatically closed,
+     * in seconds.
+     *
+     * Default : -1 (Disable the auto-close feature of sound device)
+     */
+    int			snd_auto_close_time;
 };
 
 

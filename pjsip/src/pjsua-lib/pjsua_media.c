@@ -22,7 +22,9 @@
 
 #define THIS_FILE		"pjsua_media.c"
 
-#define DEFAULT_RTP_PORT			4000
+#define DEFAULT_RTP_PORT	4000
+
+#define NULL_SND_DEV_ID		-99
 
 #ifndef PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT
 #   define PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT	0
@@ -423,6 +425,20 @@ on_error:
     return status;
 }
 
+/* Timer callback to close sound device */
+static void close_snd_timer_cb( pj_timer_heap_t *th,
+				pj_timer_entry *entry)
+{
+    PJ_UNUSED_ARG(th);
+
+    PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d seconds", 
+	      pjsua_var.media_cfg.snd_auto_close_time));
+
+    entry->id = PJ_FALSE;
+
+    close_snd_dev();
+}
+
 
 /*
  * Start pjsua media subsystem.
@@ -444,16 +460,8 @@ pj_status_t pjsua_media_subsys_start(void)
 	    return status;
     }
 
-    /* Create sound port if none is created yet */
-    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
-	!pjsua_var.no_snd) 
-    {
-	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error opening sound device", status);
-	    return status;
-	}
-    }
+    pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL, 
+			&close_snd_timer_cb);
 
     return PJ_SUCCESS;
 }
@@ -1327,6 +1335,25 @@ PJ_DEF(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id)
 PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 					pjsua_conf_port_id sink)
 {
+    /* If sound device idle timer is active, cancel it first. */
+    if (pjsua_var.snd_idle_timer.id) {
+	pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
+	pjsua_var.snd_idle_timer.id = PJ_FALSE;
+    }
+
+    /* Create sound port if none is instantiated */
+    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
+	!pjsua_var.no_snd) 
+    {
+	pj_status_t status;
+
+	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+	    return status;
+	}
+    }
+
     return pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 0);
 }
 
@@ -1337,7 +1364,31 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
 					   pjsua_conf_port_id sink)
 {
-    return pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);
+    pj_status_t status;
+
+    status = pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* If no port is connected, sound device must be idle. Activate sound 
+     * device auto-close timer.
+     */
+    if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL) && 
+	pjsua_var.snd_idle_timer.id==PJ_FALSE &&
+	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0 &&
+	pjsua_var.media_cfg.snd_auto_close_time >= 0)
+    {
+	pj_time_val delay;
+
+	delay.msec = 0;
+	delay.sec = pjsua_var.media_cfg.snd_auto_close_time;
+
+	pjsua_var.snd_idle_timer.id = PJ_TRUE;
+	pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer, 
+				   &delay);
+    }
+
+    return status;
 }
 
 
@@ -1843,6 +1894,10 @@ static void close_snd_dev(void)
 	pjmedia_master_port_destroy(pjsua_var.null_snd, PJ_FALSE);
 	pjsua_var.null_snd = NULL;
     }
+
+    if (pjsua_var.snd_pool) 
+	pj_pool_release(pjsua_var.snd_pool);
+    pjsua_var.snd_pool = NULL;
 }
 
 /*
@@ -1863,9 +1918,17 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pj_str_t tmp;
     pj_status_t status = -1;
 
+    /* Check if NULL sound device is used */
+    if (NULL_SND_DEV_ID == capture_dev || NULL_SND_DEV_ID == playback_dev) {
+	return pjsua_set_null_snd_dev();
+    }
+
     /* Close existing sound port */
     close_snd_dev();
 
+    /* Create memory pool for sound device. */
+    pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
+    PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
 
     /* Set default clock rate */
     clock_rates[0] = pjsua_var.media_cfg.snd_clock_rate;
@@ -1887,7 +1950,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
 	/* Create the sound device. Sound port will start immediately. */
 	fps = 1000 / pjsua_var.media_cfg.audio_frame_ptime;
-	status = pjmedia_snd_port_create(pjsua_var.pool, capture_dev,
+	status = pjmedia_snd_port_create(pjsua_var.snd_pool, capture_dev,
 					 playback_dev, 
 					 clock_rates[i], 
 					 pjsua_var.media_cfg.channel_count,
@@ -1914,7 +1977,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 		    resample_opt |= PJMEDIA_RESAMPLE_USE_LINEAR;
 		}
 		
-		status = pjmedia_resample_port_create(pjsua_var.pool, 
+		status = pjmedia_resample_port_create(pjsua_var.snd_pool, 
 						      conf_port,
 						      selected_clock_rate,
 						      resample_opt, 
@@ -1948,7 +2011,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     }
 
     /* Set AEC */
-    pjmedia_snd_port_set_ec( pjsua_var.snd_port, pjsua_var.pool, 
+    pjmedia_snd_port_set_ec( pjsua_var.snd_port, pjsua_var.snd_pool, 
 			     pjsua_var.media_cfg.ec_tail_len, 
 			     pjsua_var.media_cfg.ec_options);
 
@@ -2019,6 +2082,10 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     /* Close existing sound device */
     close_snd_dev();
 
+    /* Create memory pool for sound device. */
+    pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
+    PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
+
     PJ_LOG(4,(THIS_FILE, "Opening null sound device.."));
 
     /* Get the port0 of the conference bridge. */
@@ -2028,7 +2095,7 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     /* Create master port, connecting port0 of the conference bridge to
      * a null port.
      */
-    status = pjmedia_master_port_create(pjsua_var.pool, pjsua_var.null_port,
+    status = pjmedia_master_port_create(pjsua_var.snd_pool, pjsua_var.null_port,
 					conf_port, 0, &pjsua_var.null_snd);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create null sound device",
@@ -2039,6 +2106,9 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     /* Start the master port */
     status = pjmedia_master_port_start(pjsua_var.null_snd);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    pjsua_var.cap_dev = NULL_SND_DEV_ID;
+    pjsua_var.play_dev = NULL_SND_DEV_ID;
 
     return PJ_SUCCESS;
 }

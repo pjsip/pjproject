@@ -171,6 +171,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
     cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
     cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
+    cfg->snd_auto_close_time = -1;
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
 }
