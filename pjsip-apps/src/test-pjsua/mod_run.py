@@ -1,4 +1,4 @@
-# $Id$
+# $Id:$
 import imp
 import sys
 import inc_param as param

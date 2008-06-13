@@ -1,4 +1,4 @@
-# $Id$
+# $Id:$
 
 DEFAULT_ECHO = True
 DEFAULT_TRACE = True

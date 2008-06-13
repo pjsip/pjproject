@@ -1,4 +1,4 @@
-# $Id$
+# $Id:$
 ###########################################
 # pjsua instantiation parameter
 class Pjsua:

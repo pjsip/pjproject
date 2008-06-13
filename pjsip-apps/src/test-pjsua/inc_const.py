@@ -1,4 +1,4 @@
-# $Id$
+# $Id:$
 # Useful constants
 
 
