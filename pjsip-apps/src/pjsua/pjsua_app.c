@@ -24,17 +24,20 @@
 
 //#define STEREO_DEMO
 
-/* Ringtones */
-#define RINGBACK_FREQ1	440
-#define RINGBACK_FREQ2	480
-#define RINGBACK_ON	2000
-#define RINGBACK_OFF	4000
+/* Ringtones		    US	       UK  */
+#define RINGBACK_FREQ1	    440	    /* 400 */
+#define RINGBACK_FREQ2	    480	    /* 450 */
+#define RINGBACK_ON	    2000    /* 400 */
+#define RINGBACK_OFF	    4000    /* 200 */
+#define RINGBACK_CNT	    1	    /* 2   */
+#define RINGBACK_INTERVAL   4000    /* 2000 */
 
-#define RING_FREQ1	500
-#define RING_FREQ2	660
-#define RING_ON		100
-#define RING_OFF	100
-#define RING_INTERVAL	4000
+#define RING_FREQ1	    800
+#define RING_FREQ2	    640
+#define RING_ON		    200
+#define RING_OFF	    100
+#define RING_CNT	    3
+#define RING_INTERVAL	    3000
 
 
 /* Call specific data */
@@ -3810,25 +3813,35 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Create ringback tones */
     if (app_config.no_tones == PJ_FALSE) {
-	unsigned i;
-	pjmedia_tone_desc tone[3];
+	unsigned i, samples_per_frame;
+	pjmedia_tone_desc tone[RING_CNT+RINGBACK_CNT];
 	pj_str_t name;
+
+	samples_per_frame = app_config.media_cfg.audio_frame_ptime * 
+			    app_config.media_cfg.clock_rate *
+			    app_config.media_cfg.channel_count / 1000;
 
 	/* Ringback tone (call is ringing) */
 	name = pj_str("ringback");
-	status = pjmedia_tonegen_create2(app_config.pool, &name, 8000, 1, 160,
+	status = pjmedia_tonegen_create2(app_config.pool, &name, 
+					 app_config.media_cfg.clock_rate,
+					 app_config.media_cfg.channel_count, 
+					 samples_per_frame,
 					 16, PJMEDIA_TONEGEN_LOOP, 
 					 &app_config.ringback_port);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
 	pj_bzero(&tone, sizeof(tone));
-	tone[0].freq1 = RINGBACK_FREQ1;
-	tone[0].freq2 = RINGBACK_FREQ2;
-	tone[0].on_msec = RINGBACK_ON;
-	tone[0].off_msec = RINGBACK_OFF;
+	for (i=0; i<RINGBACK_CNT; ++i) {
+	    tone[i].freq1 = RINGBACK_FREQ1;
+	    tone[i].freq2 = RINGBACK_FREQ2;
+	    tone[i].on_msec = RINGBACK_ON;
+	    tone[i].off_msec = RINGBACK_OFF;
+	}
+	tone[RINGBACK_CNT-1].off_msec = RINGBACK_INTERVAL;
 
-	pjmedia_tonegen_play(app_config.ringback_port, 1, &tone[0], 
+	pjmedia_tonegen_play(app_config.ringback_port, RINGBACK_CNT, tone,
 			     PJMEDIA_TONEGEN_LOOP);
 
 
@@ -3839,21 +3852,24 @@ pj_status_t app_init(int argc, char *argv[])
 
 	/* Ring (to alert incoming call) */
 	name = pj_str("ring");
-	status = pjmedia_tonegen_create2(app_config.pool, &name, 8000, 1, 160,
+	status = pjmedia_tonegen_create2(app_config.pool, &name, 
+					 app_config.media_cfg.clock_rate,
+					 app_config.media_cfg.channel_count, 
+					 samples_per_frame,
 					 16, PJMEDIA_TONEGEN_LOOP, 
 					 &app_config.ring_port);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	for (i=0; i<PJ_ARRAY_SIZE(tone); ++i) {
+	for (i=0; i<RING_CNT; ++i) {
 	    tone[i].freq1 = RING_FREQ1;
 	    tone[i].freq2 = RING_FREQ2;
 	    tone[i].on_msec = RING_ON;
 	    tone[i].off_msec = RING_OFF;
 	}
-	tone[PJ_ARRAY_SIZE(tone)-1].off_msec = RING_INTERVAL;
+	tone[RING_CNT-1].off_msec = RING_INTERVAL;
 
-	pjmedia_tonegen_play(app_config.ring_port, PJ_ARRAY_SIZE(tone), 
+	pjmedia_tonegen_play(app_config.ring_port, RING_CNT, 
 			     tone, PJMEDIA_TONEGEN_LOOP);
 
 	status = pjsua_conf_add_port(app_config.pool, app_config.ring_port,
