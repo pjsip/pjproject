@@ -24,10 +24,25 @@
 
 //#define STEREO_DEMO
 
+/* Ringtones */
+#define RINGBACK_FREQ1	440
+#define RINGBACK_FREQ2	480
+#define RINGBACK_ON	2000
+#define RINGBACK_OFF	4000
+
+#define RING_FREQ1	500
+#define RING_FREQ2	660
+#define RING_ON		100
+#define RING_OFF	100
+#define RING_INTERVAL	4000
+
+
 /* Call specific data */
 struct call_data
 {
     pj_timer_entry	    timer;
+    pj_bool_t		    ringback_on;
+    pj_bool_t		    ring_on;
 };
 
 
@@ -86,6 +101,15 @@ static struct app_config
 
     int			    capture_dev, playback_dev;
     unsigned		    capture_lat, playback_lat;
+
+    pj_bool_t		    no_tones;
+    int			    ringback_slot;
+    int			    ringback_cnt;
+    pjmedia_port	   *ringback_port;
+    int			    ring_slot;
+    int			    ring_cnt;
+    pjmedia_port	   *ring_port;
+
 } app_config;
 
 
@@ -104,6 +128,11 @@ static char some_buf[2048];
 static void stereo_demo();
 #endif
 pj_status_t app_destroy(void);
+
+static void ringback_start(pjsua_call_id call_id);
+static void ring_start(pjsua_call_id call_id);
+static void ring_stop(pjsua_call_id call_id);
+
 
 /*****************************************************************************
  * Configuration manipulation
@@ -204,6 +233,7 @@ static void usage(void)
     puts  ("  --snd-auto-close=N  Auto close audio device when it is idle for N seconds.");
     puts  ("                      Specify N=-1 (default) to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");
+    puts  ("  --no-tones          Disable audible tones");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -264,6 +294,8 @@ static void default_config(struct app_config *cfg)
     cfg->playback_dev = PJSUA_INVALID_ID;
     cfg->capture_lat = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+    cfg->ringback_slot = PJSUA_INVALID_ID;
+    cfg->ring_slot = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
 	pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -425,7 +457,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
 	   OPT_TLS_NEG_TIMEOUT,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
-	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT,
+	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES,
 	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT,
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC
     };
@@ -518,6 +550,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "stdout-refresh", 1, 0, OPT_STDOUT_REFRESH},
 	{ "stdout-refresh-text", 1, 0, OPT_STDOUT_REFRESH_TEXT},
 	{ "snd-auto-close", 1, 0, OPT_SND_AUTO_CLOSE},
+	{ "no-tones",    0, 0, OPT_NO_TONES},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1116,6 +1149,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->media_cfg.snd_auto_close_time = atoi(pj_optarg);
 	    break;
 
+	case OPT_NO_TONES:
+	    cfg->no_tones = PJ_TRUE;
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1517,6 +1554,9 @@ static int write_settings(const struct app_config *config,
 			config->media_cfg.snd_auto_close_time);
 	pj_strcat2(&cfg, line);
     }
+    if (config->no_tones) {
+	pj_strcat2(&cfg, "--no-tones\n");
+    }
 
     /* Sound device latency */
     if (config->capture_lat != PJMEDIA_SND_DEFAULT_REC_LATENCY) {
@@ -1693,6 +1733,95 @@ static void app_dump(pj_bool_t detail)
  * Console application
  */
 
+static void ringback_start(pjsua_call_id call_id)
+{
+    if (app_config.no_tones)
+	return;
+
+    if (app_config.call_data[call_id].ringback_on)
+	return;
+
+    app_config.call_data[call_id].ringback_on = PJ_TRUE;
+
+    if (++app_config.ringback_cnt==1 && 
+	app_config.ringback_slot!=PJSUA_INVALID_ID) 
+    {
+	pjmedia_tone_desc tone;
+
+	pj_bzero(&tone, sizeof(tone));
+	tone.freq1 = RINGBACK_FREQ1;
+	tone.freq2 = RINGBACK_FREQ2;
+	tone.on_msec = RINGBACK_ON;
+	tone.off_msec = RINGBACK_OFF;
+	pjmedia_tonegen_play(app_config.ringback_port, 1, &tone, 
+			     PJMEDIA_TONEGEN_LOOP);
+
+	pjsua_conf_connect(app_config.ringback_slot, 0);
+    }
+}
+
+static void ring_stop(pjsua_call_id call_id)
+{
+    if (app_config.no_tones)
+	return;
+
+    if (app_config.call_data[call_id].ringback_on) {
+	app_config.call_data[call_id].ringback_on = PJ_FALSE;
+
+	pj_assert(app_config.ringback_cnt>0);
+	if (--app_config.ringback_cnt == 0 && 
+	    app_config.ringback_slot!=PJSUA_INVALID_ID) 
+	{
+	    pjsua_conf_disconnect(app_config.ringback_slot, 0);
+	    pjmedia_tonegen_stop(app_config.ringback_port);
+	}
+    }
+
+    if (app_config.call_data[call_id].ring_on) {
+	app_config.call_data[call_id].ring_on = PJ_FALSE;
+
+	pj_assert(app_config.ring_cnt>0);
+	if (--app_config.ring_cnt == 0 && 
+	    app_config.ring_slot!=PJSUA_INVALID_ID) 
+	{
+	    pjsua_conf_disconnect(app_config.ring_slot, 0);
+	    pjmedia_tonegen_stop(app_config.ring_port);
+	}
+    }
+}
+
+static void ring_start(pjsua_call_id call_id)
+{
+    if (app_config.no_tones)
+	return;
+
+    if (app_config.call_data[call_id].ring_on)
+	return;
+
+    app_config.call_data[call_id].ring_on = PJ_TRUE;
+
+    if (++app_config.ring_cnt==1 && 
+	app_config.ring_slot!=PJSUA_INVALID_ID) 
+    {
+	unsigned i;
+	pjmedia_tone_desc tone[3];
+
+	pj_bzero(&tone, sizeof(tone));
+	for (i=0; i<PJ_ARRAY_SIZE(tone); ++i) {
+	    tone[i].freq1 = RING_FREQ1;
+	    tone[i].freq2 = RING_FREQ2;
+	    tone[i].on_msec = RING_ON;
+	    tone[i].off_msec = RING_OFF;
+	}
+	tone[PJ_ARRAY_SIZE(tone)-1].off_msec = RING_INTERVAL;
+
+	pjmedia_tonegen_play(app_config.ring_port, PJ_ARRAY_SIZE(tone), 
+			     tone, PJMEDIA_TONEGEN_LOOP);
+
+	pjsua_conf_connect(app_config.ring_slot, 0);
+    }
+}
+
 /*
  * Find next call when current call is disconnected or when user
  * press ']'
@@ -1794,6 +1923,9 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
     if (call_info.state == PJSIP_INV_STATE_DISCONNECTED) {
 
+	/* Stop all ringback for this call */
+	ring_stop(call_id);
+
 	/* Cancel duration timer, if any */
 	if (app_config.call_data[call_id].timer.id != PJSUA_INVALID_ID) {
 	    struct call_data *cd = &app_config.call_data[call_id];
@@ -1854,6 +1986,14 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    code = msg->line.status.code;
 	    reason = msg->line.status.reason;
 
+	    /* Start ringback for 180 for UAC unless there's SDP in 180 */
+	    if (call_info.role==PJSIP_ROLE_UAC && code==180 && 
+		msg->body == NULL && 
+		call_info.media_status==PJSUA_CALL_MEDIA_NONE) 
+	    {
+		ringback_start(call_id);
+	    }
+
 	    PJ_LOG(3,(THIS_FILE, "Call %d state changed to %s (%d %.*s)", 
 		      call_id, call_info.state_text.ptr,
 		      code, (int)reason.slen, reason.ptr));
@@ -1882,6 +2022,9 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     PJ_UNUSED_ARG(rdata);
 
     pjsua_call_get_info(call_id, &call_info);
+
+    /* Start ringback */
+    ring_start(call_id);
 
     if (app_config.auto_answer > 0) {
 	pjsua_call_answer(call_id, app_config.auto_answer, NULL, NULL);
@@ -1976,6 +2119,9 @@ static void on_call_media_state(pjsua_call_id call_id)
     pjsua_call_info call_info;
 
     pjsua_call_get_info(call_id, &call_info);
+
+    /* Stop ringback */
+    ring_stop(call_id);
 
     if (call_info.media_status == PJSUA_CALL_MEDIA_ACTIVE) {
 	pj_bool_t connect_sound = PJ_TRUE;
@@ -3687,6 +3833,38 @@ pj_status_t app_init(int argc, char *argv[])
 
     pj_memcpy(&tcp_cfg, &app_config.udp_cfg, sizeof(tcp_cfg));
 
+    /* Create ringback tones */
+    if (app_config.no_tones == PJ_FALSE) {
+	pj_str_t name;
+
+	/* Ringback tone (call is ringing) */
+	name = pj_str("ringback");
+	status = pjmedia_tonegen_create2(app_config.pool, &name, 8000, 1, 160,
+					 16, PJMEDIA_TONEGEN_LOOP, 
+					 &app_config.ringback_port);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	status = pjsua_conf_add_port(app_config.pool, app_config.ringback_port,
+				     &app_config.ringback_slot);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Ring (to alert incoming call) */
+	name = pj_str("ring");
+	status = pjmedia_tonegen_create2(app_config.pool, &name, 8000, 1, 160,
+					 16, PJMEDIA_TONEGEN_LOOP, 
+					 &app_config.ring_port);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	status = pjsua_conf_add_port(app_config.pool, app_config.ring_port,
+				     &app_config.ring_slot);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+    }
+
     /* Add UDP transport unless it's disabled. */
     if (!app_config.no_udp) {
 	pjsua_acc_id aid;
@@ -3875,6 +4053,24 @@ pj_status_t app_destroy(void)
 	app_config.snd = NULL;
     }
 #endif
+
+    /* Close ringback port */
+    if (app_config.ringback_port && 
+	app_config.ringback_slot != PJSUA_INVALID_ID) 
+    {
+	pjsua_conf_remove_port(app_config.ringback_slot);
+	app_config.ringback_slot = PJSUA_INVALID_ID;
+	pjmedia_port_destroy(app_config.ringback_port);
+	app_config.ringback_port = NULL;
+    }
+
+    /* Close ring port */
+    if (app_config.ring_port && app_config.ring_slot != PJSUA_INVALID_ID) {
+	pjsua_conf_remove_port(app_config.ring_slot);
+	app_config.ring_slot = PJSUA_INVALID_ID;
+	pjmedia_port_destroy(app_config.ring_port);
+	app_config.ring_port = NULL;
+    }
 
     /* Close tone generators */
     for (i=0; i<app_config.tone_count; ++i) {
