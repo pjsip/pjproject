@@ -502,7 +502,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 						(input->size >> 1), NULL);
 	if (is_silence && 
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD) 
+	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000) 
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;

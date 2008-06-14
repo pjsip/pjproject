@@ -552,7 +552,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 						NULL);
 	if (is_silence &&
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD) 
+	    silence_duration < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*16000/1000) 
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;

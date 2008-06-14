@@ -394,7 +394,7 @@
 
 
 /**
- * Specify the maximum duration of silence period in the codec. 
+ * Specify the maximum duration of silence period in the codec, in msec. 
  * This is useful for example to keep NAT binding open in the firewall
  * and to prevent server from disconnecting the call because no 
  * RTP packet is received.
@@ -405,11 +405,11 @@
  *
  * Use (-1) to disable this feature.
  *
- * Default: 8000 (one second on 8KHz).
+ * Default: 500 ms
  *
  */
 #ifndef PJMEDIA_CODEC_MAX_SILENCE_PERIOD
-#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	8000
+#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	500
 #endif
 
 
