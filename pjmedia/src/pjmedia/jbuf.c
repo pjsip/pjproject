@@ -30,7 +30,8 @@
 
 #define THIS_FILE   "jbuf.c"
 
-#define SAFE_SHRINKING_DIFF	2
+#define SAFE_SHRINKING_DIFF	1
+#define MIN_SHRINK_GAP_MSEC	200
 #define USE_PREFETCH_BUFFERING	0
 
 typedef struct jb_framelist_t
@@ -69,6 +70,9 @@ struct pjmedia_jbuf
     int		    jb_max_prefetch;	  // Maximum allowable prefetch
     int		    jb_status;		  // status is 'init' until the	first 'put' operation
     pj_math_stat    jb_delay;		  // Delay statistics of jitter buffer (in frame unit)
+
+    unsigned	    jb_last_del_seq;	  // Seq # of last frame deleted
+    unsigned	    jb_min_shrink_gap;	  // How often can we shrink
 };
 
 
@@ -318,6 +322,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     jb->jb_status	 = JB_STATUS_INITIALIZING;
     jb->jb_max_hist_level = 0;
     jb->jb_max_count	 = max_count;
+    jb->jb_min_shrink_gap= MIN_SHRINK_GAP_MSEC / ptime;
 
     pj_math_stat_init(&jb->jb_delay);
 
@@ -457,12 +462,15 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 
     /* These code is used for shortening the delay in the jitter buffer. */
     diff = cur_size - jb->jb_prefetch;
-    if (diff > SAFE_SHRINKING_DIFF) {
+    if (diff > SAFE_SHRINKING_DIFF && 
+	jb->jb_framelist.flist_origin-jb->jb_last_del_seq > jb->jb_min_shrink_gap)
+    {
 	/* Shrink slowly */
 	diff = 1;
 
 	/* Drop frame(s)! */
 	jb_framelist_remove_head(&jb->jb_framelist, diff);
+	jb->jb_last_del_seq = jb->jb_framelist.flist_origin;
 
 	pj_math_stat_update(&jb->jb_delay, cur_size - diff);
 
