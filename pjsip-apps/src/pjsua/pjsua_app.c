@@ -1746,16 +1746,6 @@ static void ringback_start(pjsua_call_id call_id)
     if (++app_config.ringback_cnt==1 && 
 	app_config.ringback_slot!=PJSUA_INVALID_ID) 
     {
-	pjmedia_tone_desc tone;
-
-	pj_bzero(&tone, sizeof(tone));
-	tone.freq1 = RINGBACK_FREQ1;
-	tone.freq2 = RINGBACK_FREQ2;
-	tone.on_msec = RINGBACK_ON;
-	tone.off_msec = RINGBACK_OFF;
-	pjmedia_tonegen_play(app_config.ringback_port, 1, &tone, 
-			     PJMEDIA_TONEGEN_LOOP);
-
 	pjsua_conf_connect(app_config.ringback_slot, 0);
     }
 }
@@ -1773,7 +1763,7 @@ static void ring_stop(pjsua_call_id call_id)
 	    app_config.ringback_slot!=PJSUA_INVALID_ID) 
 	{
 	    pjsua_conf_disconnect(app_config.ringback_slot, 0);
-	    pjmedia_tonegen_stop(app_config.ringback_port);
+	    pjmedia_tonegen_rewind(app_config.ringback_port);
 	}
     }
 
@@ -1785,7 +1775,7 @@ static void ring_stop(pjsua_call_id call_id)
 	    app_config.ring_slot!=PJSUA_INVALID_ID) 
 	{
 	    pjsua_conf_disconnect(app_config.ring_slot, 0);
-	    pjmedia_tonegen_stop(app_config.ring_port);
+	    pjmedia_tonegen_rewind(app_config.ring_port);
 	}
     }
 }
@@ -1803,21 +1793,6 @@ static void ring_start(pjsua_call_id call_id)
     if (++app_config.ring_cnt==1 && 
 	app_config.ring_slot!=PJSUA_INVALID_ID) 
     {
-	unsigned i;
-	pjmedia_tone_desc tone[3];
-
-	pj_bzero(&tone, sizeof(tone));
-	for (i=0; i<PJ_ARRAY_SIZE(tone); ++i) {
-	    tone[i].freq1 = RING_FREQ1;
-	    tone[i].freq2 = RING_FREQ2;
-	    tone[i].on_msec = RING_ON;
-	    tone[i].off_msec = RING_OFF;
-	}
-	tone[PJ_ARRAY_SIZE(tone)-1].off_msec = RING_INTERVAL;
-
-	pjmedia_tonegen_play(app_config.ring_port, PJ_ARRAY_SIZE(tone), 
-			     tone, PJMEDIA_TONEGEN_LOOP);
-
 	pjsua_conf_connect(app_config.ring_slot, 0);
     }
 }
@@ -3835,6 +3810,8 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Create ringback tones */
     if (app_config.no_tones == PJ_FALSE) {
+	unsigned i;
+	pjmedia_tone_desc tone[3];
 	pj_str_t name;
 
 	/* Ringback tone (call is ringing) */
@@ -3844,6 +3821,16 @@ pj_status_t app_init(int argc, char *argv[])
 					 &app_config.ringback_port);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+
+	pj_bzero(&tone, sizeof(tone));
+	tone[0].freq1 = RINGBACK_FREQ1;
+	tone[0].freq2 = RINGBACK_FREQ2;
+	tone[0].on_msec = RINGBACK_ON;
+	tone[0].off_msec = RINGBACK_OFF;
+
+	pjmedia_tonegen_play(app_config.ringback_port, 1, &tone[0], 
+			     PJMEDIA_TONEGEN_LOOP);
+
 
 	status = pjsua_conf_add_port(app_config.pool, app_config.ringback_port,
 				     &app_config.ringback_slot);
@@ -3857,6 +3844,17 @@ pj_status_t app_init(int argc, char *argv[])
 					 &app_config.ring_port);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+
+	for (i=0; i<PJ_ARRAY_SIZE(tone); ++i) {
+	    tone[i].freq1 = RING_FREQ1;
+	    tone[i].freq2 = RING_FREQ2;
+	    tone[i].on_msec = RING_ON;
+	    tone[i].off_msec = RING_OFF;
+	}
+	tone[PJ_ARRAY_SIZE(tone)-1].off_msec = RING_INTERVAL;
+
+	pjmedia_tonegen_play(app_config.ring_port, PJ_ARRAY_SIZE(tone), 
+			     tone, PJMEDIA_TONEGEN_LOOP);
 
 	status = pjsua_conf_add_port(app_config.pool, app_config.ring_port,
 				     &app_config.ring_slot);
