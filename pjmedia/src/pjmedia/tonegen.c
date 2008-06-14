@@ -401,6 +401,26 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *port)
 
 
 /*
+ * Instruct the tone generator to stop current processing.
+ */
+PJ_DEF(pj_status_t) pjmedia_tonegen_rewind(pjmedia_port *port)
+{
+    struct tonegen *tonegen = (struct tonegen*) port;
+    PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
+
+    TRACE_((THIS_FILE, "tonegen_rewind()"));
+
+    /* Reset back to the first tone */
+    pj_lock_acquire(tonegen->lock);
+    tonegen->cur_digit = 0;
+    tonegen->dig_samples = 0;
+    pj_lock_release(tonegen->lock);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Callback to destroy tonegen
  */
 static pj_status_t tonegen_destroy(pjmedia_port *port)

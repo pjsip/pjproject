@@ -195,6 +195,17 @@ PJ_DECL(pj_status_t) pjmedia_tonegen_stop(pjmedia_port *tonegen);
 
 
 /**
+ * Rewind the playback. This will start the playback to the first
+ * tone in the playback list.
+ *
+ * @param tonegen	    The tone generator instance.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_tonegen_rewind(pjmedia_port *tonegen);
+
+
+/**
  * Instruct the tone generator to play single or dual frequency tones 
  * with the specified duration. The new tones will be appended to currently
  * playing tones, unless #pjmedia_tonegen_stop() is called before calling
