@@ -2,31 +2,11 @@
 import time
 import imp
 import sys
-import inc_param as param
 import inc_const as const
 
 # Load configuration
 cfg_file = imp.load_source("cfg_file", sys.argv[2])
 
-# Test title
-title = cfg_file.config.title
-port1 = "9060"
-
-# First pjsua
-p1 = param.Pjsua(
-		"callee",
-		args = cfg_file.config.callee_cfg.arg + " --local-port="+port1,
-		echo = cfg_file.config.callee_cfg.echo_enabled,
-		trace = cfg_file.config.callee_cfg.trace_enabled
-		)
-
-# Second pjsua, make call to the first one
-p2 = param.Pjsua(
-		"caller",
-		args = cfg_file.config.caller_cfg.arg + " --local-port=0",
-		echo = cfg_file.config.caller_cfg.echo_enabled,
-		trace = cfg_file.config.caller_cfg.trace_enabled
-		)
 
 # Test body function
 def test_func(t):
@@ -35,7 +15,7 @@ def test_func(t):
 
 	# Caller making call
 	caller.send("m")
-	caller.send("sip:localhost:" + port1 + cfg_file.config.uri_param)
+	caller.send(t.inst_params[0].uri)
 	caller.expect(const.STATE_CALLING)
 	
 	# Callee answers with 200/OK
@@ -146,6 +126,6 @@ def test_func(t):
 	
 
 # Here where it all comes together
-test = param.Test(title, run=[p1, p2], func=test_func)
-
+test = cfg_file.test_param
+test.test_func = test_func
 

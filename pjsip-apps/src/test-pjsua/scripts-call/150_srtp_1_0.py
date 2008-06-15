@@ -1,10 +1,11 @@
 # $Id:$
 #
-import inc_cfg
+from inc_cfg import *
 
-# Simple call
-config = inc_cfg.CallConfig(
-		title = "Callee=optional SRTP, caller=no SRTP",
-		callee_cfg = inc_cfg.Config(arg="--null-audio --use-srtp=1 --srtp-secure=0"),
-		caller_cfg = inc_cfg.Config(arg="--null-audio")
+test_param = TestParam(
+		"Callee=optional SRTP, caller=no SRTP",
+		[
+			InstanceParam("callee", "--null-audio --use-srtp=1 --srtp-secure=0 --max-calls=1"),
+			InstanceParam("caller", "--null-audio --max-calls=1")
+		]
 		)

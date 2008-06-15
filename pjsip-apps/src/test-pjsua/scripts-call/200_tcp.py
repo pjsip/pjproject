@@ -1,11 +1,12 @@
 # $Id$
 #
-import inc_cfg
+from inc_cfg import *
 
 # TCP call
-config = inc_cfg.CallConfig(
-		title = "TCP transport",
-		callee_cfg = inc_cfg.Config(arg="--null-audio --no-udp"),
-		caller_cfg = inc_cfg.Config(arg="--null-audio --no-udp")
+test_param = TestParam(
+		"TCP transport",
+		[
+			InstanceParam("callee", "--null-audio --no-udp", uri_param=";transport=tcp --max-calls=1"),
+			InstanceParam("caller", "--null-audio --no-udp --max-calls=1")
+		]
 		)
-config.uri_param = ";transport=tcp"

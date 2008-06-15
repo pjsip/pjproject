@@ -1,10 +1,12 @@
-# $Id:$
+# $Id$
 #
-import inc_cfg
-
+from inc_cfg import *
+ 
 # ICE mismatch
-config = inc_cfg.CallConfig(
-		title = "Callee=use ICE, caller=no ICE",
-		callee_cfg = inc_cfg.Config(arg="--null-audio --use-ice"),
-		caller_cfg = inc_cfg.Config(arg="--null-audio")
+test_param = TestParam(
+		"Callee=use ICE, caller=no ICE",
+		[
+			InstanceParam("callee", "--null-audio --use-ice --max-calls=1"),
+			InstanceParam("caller", "--null-audio --max-calls=1")
+		]
 		)

@@ -5,12 +5,9 @@ import re
 import subprocess
 import time
 
-import inc_param as param
 import inc_const as const
 
 # Defaults
-G_ECHO=True
-G_TRACE=False
 G_EXE="..\\..\\bin\\pjsua_vc6d.exe"
 
 ###################################
@@ -27,14 +24,16 @@ class Expect:
 	echo = False
 	trace_enabled = False
 	name = ""
+	inst_param = None
 	rh = re.compile(const.DESTROYED)
 	ra = re.compile(const.ASSERT, re.I)
 	rr = re.compile(const.STDOUT_REFRESH)
-	def __init__(self, name, exe, args="", echo=G_ECHO, trace_enabled=G_TRACE):
-		self.name = name
-		self.echo = echo
-		self.trace_enabled = trace_enabled
-		fullcmd = exe + " " + args + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
+	def __init__(self, inst_param):
+		self.inst_param = inst_param
+		self.name = inst_param.name
+		self.echo = inst_param.echo_enabled
+		self.trace_enabled = inst_param.trace_enabled
+		fullcmd = G_EXE + " " + inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
 		self.trace("Popen " + fullcmd)
 		self.proc = subprocess.Popen(fullcmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
 	def send(self, cmd):
@@ -69,6 +68,12 @@ class Expect:
 			# Search for expected text
 			if r.search(line) != None:
 				return line
+
+	def sync_stdout(self):
+		self.trace("sync_stdout")
+		self.send("echo 1")
+		self.expect("echo 1")
+
 	def wait(self):
 		self.trace("wait")
 		self.proc.wait()
@@ -82,6 +87,7 @@ def handle_error(errmsg, t):
 	print "====== Caught error: " + errmsg + " ======"
 	time.sleep(1)
 	for p in t.process:
+		p.send("q")
 		p.send("q")
 		p.expect(const.DESTROYED, False)
 		p.wait()
@@ -107,30 +113,27 @@ if script.test == None:
 	print "Error: no test defined"
 	sys.exit(1)
 
-if len(script.test.run) == 0:
+if len(script.test.inst_params) == 0:
 	print "Error: test doesn't contain pjsua run descriptions"
 	sys.exit(1)
 
 # Instantiate pjsuas
 print "====== Running " + script.test.title + " ======"
-for run in script.test.run:
+for inst_param in script.test.inst_params:
 	try:
-		p = Expect(run.name, G_EXE, args=run.args, echo=run.echo, trace_enabled=run.trace)
-	 	# Wait until initialized
+		# Create pjsua's Expect instance from the param
+		p = Expect(inst_param)
+		# Wait until registration completes
+		if inst_param.have_reg:
+			p.expect(inst_param.uri+".*registration success")
+	 	# Synchronize stdout
+		p.send("")
 		p.expect(const.PROMPT)
 		p.send("echo 1")
 		p.send("echo 1")
 		p.expect("echo 1")
 		# add running instance
 		script.test.process.append(p)
-		# run initial script
-		for cmd in run.cmds:
-			if len(cmd) >= 3 and cmd[2]!="":
-				print "====== " + cmd[2] + " ======"
-			if len(cmd) >= 1 and cmd[0]!="":
-				p.send(cmd[0])
-			if len(cmd) >= 2 and cmd[1]!="":
-				p.expect(cmd[1])
 
 	except TestError, e:
 		handle_error(e.desc, script.test)
@@ -145,6 +148,12 @@ if script.test.test_func != None:
 # Shutdown all instances
 time.sleep(2)
 for p in script.test.process:
+	# Unregister if we have_reg to make sure that next tests
+	# won't wail
+	if p.inst_param.have_reg:
+		p.send("ru")
+		p.expect(p.inst_param.uri+".*unregistration success")
+	p.send("q")
 	p.send("q")
 	time.sleep(0.5)
 	p.expect(const.DESTROYED, False)

@@ -1,10 +1,12 @@
 # $Id:$
 #
-import inc_cfg
+from inc_cfg import *
 
 # Simple call
-config = inc_cfg.CallConfig(
-		title = "Basic call",
-		callee_cfg = inc_cfg.Config(arg="--null-audio"),
-		caller_cfg = inc_cfg.Config(arg="--null-audio")
+test_param = TestParam(
+		"Basic call",
+		[
+			InstanceParam("callee", "--null-audio --max-calls=1"),
+			InstanceParam("caller", "--null-audio --max-calls=1")
+		]
 		)
