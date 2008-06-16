@@ -425,6 +425,30 @@ on_error:
     return status;
 }
 
+/* Check if sound device is idle. */
+static void check_snd_dev_idle()
+{
+
+    /* Activate sound device auto-close timer if sound device is idle.
+     * It is idle when there is no port connection in the bridge.
+     */
+    if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL) && 
+	pjsua_var.snd_idle_timer.id == PJ_FALSE &&
+	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0 &&
+	pjsua_var.media_cfg.snd_auto_close_time >= 0)
+    {
+	pj_time_val delay;
+
+	delay.msec = 0;
+	delay.sec = pjsua_var.media_cfg.snd_auto_close_time;
+
+	pjsua_var.snd_idle_timer.id = PJ_TRUE;
+	pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer, 
+				   &delay);
+    }
+}
+
+
 /* Timer callback to close sound device */
 static void close_snd_timer_cb( pj_timer_heap_t *th,
 				pj_timer_entry *entry)
@@ -965,7 +989,7 @@ static void stop_media_session(pjsua_call_id call_id)
 
     if (call->conf_slot != PJSUA_INVALID_ID) {
 	if (pjsua_var.mconf) {
-	    pjmedia_conf_remove_port(pjsua_var.mconf, call->conf_slot);
+	    pjsua_conf_remove_port(call->conf_slot);
 	}
 	call->conf_slot = PJSUA_INVALID_ID;
     }
@@ -1325,7 +1349,12 @@ PJ_DEF(pj_status_t) pjsua_conf_add_port( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id)
 {
-    return pjmedia_conf_remove_port(pjsua_var.mconf, (unsigned)id);
+    pj_status_t status;
+
+    status = pjmedia_conf_remove_port(pjsua_var.mconf, (unsigned)id);
+    check_snd_dev_idle();
+
+    return status;
 }
 
 
@@ -1367,26 +1396,7 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
     pj_status_t status;
 
     status = pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* If no port is connected, sound device must be idle. Activate sound 
-     * device auto-close timer.
-     */
-    if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL) && 
-	pjsua_var.snd_idle_timer.id==PJ_FALSE &&
-	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0 &&
-	pjsua_var.media_cfg.snd_auto_close_time >= 0)
-    {
-	pj_time_val delay;
-
-	delay.msec = 0;
-	delay.sec = pjsua_var.media_cfg.snd_auto_close_time;
-
-	pjsua_var.snd_idle_timer.id = PJ_TRUE;
-	pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer, 
-				   &delay);
-    }
+    check_snd_dev_idle();
 
     return status;
 }
@@ -1648,8 +1658,7 @@ PJ_DEF(pj_status_t) pjsua_player_destroy(pjsua_player_id id)
     PJSUA_LOCK();
 
     if (pjsua_var.player[id].port) {
-	pjmedia_conf_remove_port(pjsua_var.mconf, 
-				 pjsua_var.player[id].slot);
+	pjsua_conf_remove_port(pjsua_var.player[id].slot);
 	pjmedia_port_destroy(pjsua_var.player[id].port);
 	pjsua_var.player[id].port = NULL;
 	pjsua_var.player[id].slot = 0xFFFF;
@@ -1824,8 +1833,7 @@ PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
     PJSUA_LOCK();
 
     if (pjsua_var.recorder[id].port) {
-	pjmedia_conf_remove_port(pjsua_var.mconf, 
-				 pjsua_var.recorder[id].slot);
+	pjsua_conf_remove_port(pjsua_var.recorder[id].slot);
 	pjmedia_port_destroy(pjsua_var.recorder[id].port);
 	pjsua_var.recorder[id].port = NULL;
 	pjsua_var.recorder[id].slot = 0xFFFF;

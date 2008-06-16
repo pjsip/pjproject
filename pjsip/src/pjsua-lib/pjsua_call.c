@@ -348,6 +348,19 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     PJSUA_LOCK();
 
+    /* Create sound port if none is instantiated */
+    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
+	!pjsua_var.no_snd) 
+    {
+	pj_status_t status;
+
+	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+	if (status != PJ_SUCCESS) {
+	    PJSUA_UNLOCK();
+	    return status;
+	}
+    }
+
     acc = &pjsua_var.acc[acc_id];
     if (!acc->valid) {
 	pjsua_perror(THIS_FILE, "Unable to make call because account "
