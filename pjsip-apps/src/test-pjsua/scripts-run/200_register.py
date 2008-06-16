@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 from inc_cfg import *
 
@@ -8,7 +8,7 @@ test_param = TestParam(
 		[
 			InstanceParam(	"client", 
 					"--null-audio"+
-						" --id=<sip:test1@pjsip.org>"+
+						" --id=\"<sip:test1@pjsip.org>\""+
 						" --registrar=sip:sip.pjsip.org" +
 						" --username=test1" +
 						" --password=test1" +

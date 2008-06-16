@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 from inc_cfg import *
 
@@ -8,24 +8,24 @@ test_param = TestParam(
 		[
 			InstanceParam(	"ua1", 
 					"--null-audio"+
-						" --id=<sip:test1@pjsip.org>"+
+						" --id=\"<sip:test1@pjsip.org>\""+
 						" --registrar=sip:sip.pjsip.org" +
 						" --username=test1" +
 						" --password=test1" +
 						" --realm=*" +
-						" --proxy=sip:sip.pjsip.org;lr" +
+						" --proxy=\"sip:sip.pjsip.org;lr\"" +
 						" --publish",
 					uri="<sip:test1@pjsip.org>",
 					have_reg=True,
 					have_publish=True),
 			InstanceParam(	"ua2", 
 					"--null-audio"+
-						" --id=<sip:test2@pjsip.org>"+
+						" --id=\"<sip:test2@pjsip.org>\""+
 						" --registrar=sip:sip.pjsip.org" +
 						" --username=test2" +
 						" --password=test2" +
 						" --realm=*" +
-						" --proxy=sip:sip.pjsip.org;lr" +
+						" --proxy=\"sip:sip.pjsip.org;lr\"" +
 						" --publish",
 					uri="<sip:test2@pjsip.org>",
 					have_reg=True,

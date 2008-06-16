@@ -1,14 +1,46 @@
-# $Id:$
+# $Id$
 import sys
 import imp
 import re
+import os
 import subprocess
+import random
 import time
 
 import inc_const as const
 
-# Defaults
-G_EXE="..\\..\\bin\\pjsua_vc6d.exe"
+# Get the pjsua executable name
+if sys.platform.find("win32")!=-1:
+    e = "../../bin/pjsua_vc6d.exe"
+    st1 = os.stat(e)
+    if st1 != None:
+	G_EXE = e
+    e = "../../bin/pjsua_vc6d.exe"
+    st2 = os.stat(e)
+    if st2 != None and st2.st_mtime > st1.st_mtime:
+	G_EXE = e
+	st1 = st2
+    if G_EXE=="":
+	print "Unable to find valid pjsua. Please build pjsip first"
+	sys.exit(1)
+    G_INUNIX = False
+else:
+    f = open("../../../build.mak", "r")
+    while True:
+	line = f.readline()
+	if not line:
+	    break
+	if line.find("TARGET_NAME")!=-1:
+	    print line
+	    G_EXE="../../bin/pjsua-" + line.split(":= ")[1]
+	    break
+    if G_EXE=="":
+	print "Unable to find ../../../build.mak. Please build pjsip first"
+	sys.exit(1)
+    G_INUNIX = True
+
+
+G_EXE = G_EXE.rstrip("\n\r \t")
 
 ###################################
 # TestError exception
@@ -35,7 +67,7 @@ class Expect:
 		self.trace_enabled = inst_param.trace_enabled
 		fullcmd = G_EXE + " " + inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
 		self.trace("Popen " + fullcmd)
-		self.proc = subprocess.Popen(fullcmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+		self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
 	def send(self, cmd):
 		self.trace("send " + cmd)
 		self.proc.stdin.writelines(cmd + "\n")
@@ -108,6 +140,9 @@ if len(sys.argv)!=3:
 # Import the test script
 script = imp.load_source("script", sys.argv[1])  
 
+# Init random seed
+random.seed()
+
 # Validate
 if script.test == None:
 	print "Error: no test defined"
@@ -119,6 +154,8 @@ if len(script.test.inst_params) == 0:
 
 # Instantiate pjsuas
 print "====== Running " + script.test.title + " ======"
+print "Using " + G_EXE + " as pjsua executable"
+
 for inst_param in script.test.inst_params:
 	try:
 		# Create pjsua's Expect instance from the param
