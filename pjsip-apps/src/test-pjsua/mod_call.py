@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 import time
 import imp
 import sys
@@ -9,7 +9,7 @@ cfg_file = imp.load_source("cfg_file", sys.argv[2])
 
 
 # Test body function
-def test_func(t):
+def test_func(t, user_data):
 	callee = t.process[0]
 	caller = t.process[1]
 

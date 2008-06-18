@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 # Useful constants
 
 
@@ -32,6 +32,18 @@ MEDIA_HOLD = "Media for call [0-9]+ is suspended.*hold"
 MEDIA_ACTIVE = "Media for call [0-9]+ is active"
 # RX_DTMF
 RX_DTMF = "Incoming DTMF on call [0-9]+: "
+
+##########################
+# MEDIA
+#
+
+# Connecting/disconnecting ports
+MEDIA_CONN_PORT_SUCCESS = "Port \d+ \(.+\) transmitting to port"
+MEDIA_DISCONN_PORT_SUCCESS = "Port \d+ \(.+\) stop transmitting to port"
+
+# Filename to play / record
+MEDIA_PLAY_FILE = "--play-file (\S+)"
+MEDIA_REC_FILE = "--rec-file (\S+)"
 
 ##########################
 # MISC

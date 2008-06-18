@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 import time
 import imp
 import sys
@@ -9,7 +9,7 @@ cfg_file = imp.load_source("cfg_file", sys.argv[2])
 
 
 # Test body function
-def test_func(t):
+def test_func(t, user_data):
 	u1 = t.process[0]
 	uri1 = cfg_file.test_param.inst_params[0].uri
 	acc1 = "-1"

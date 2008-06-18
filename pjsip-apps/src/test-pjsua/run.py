@@ -178,7 +178,7 @@ for inst_param in script.test.inst_params:
 # Run the test function
 if script.test.test_func != None:
 	try:
-		script.test.test_func(script.test)
+		script.test.test_func(script.test, script.test.user_data)
 	except TestError, e:
 		handle_error(e.desc, script.test)
 
@@ -195,6 +195,13 @@ for p in script.test.process:
 	time.sleep(0.5)
 	p.expect(const.DESTROYED, False)
 	p.wait()
+
+# Run the post test function
+if script.test.post_func != None:
+	try:
+		script.test.post_func(script.test, script.test.user_data)
+	except TestError, e:
+		handle_error(e.desc, script.test)
 
 # Done
 print "Test " + script.test.title + " completed successfully"

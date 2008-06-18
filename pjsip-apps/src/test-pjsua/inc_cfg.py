@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 import random
 
 DEFAULT_ECHO = True
@@ -71,13 +71,19 @@ class TestParam:
 	process = []
 	# the function for test body
 	test_func = None
+	post_func = None
+	user_data = None
 	def __init__(	self, 
 			title, 		# Test title
 			inst_params, 	# InstanceParam's as list
-			func=None):
+			func=None,
+			post_func=None,
+			user_data=None):
 		self.title = title
 		self.inst_params = inst_params
 		self.test_func = func
+		self.post_func = post_func
+		self.user_data = user_data
 
 
 
