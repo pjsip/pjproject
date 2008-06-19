@@ -58,6 +58,7 @@ static const struct
     PJ_BUILD_ERR( PJNATH_ENOICE,	    "ICE session not available"),
     PJ_BUILD_ERR( PJNATH_EICEINPROGRESS,    "ICE check is in progress"),
     PJ_BUILD_ERR( PJNATH_EICEFAILED,	    "All ICE checklists failed"),
+    PJ_BUILD_ERR( PJNATH_EICEMISMATCH,	    "Default target doesn't match any ICE candidates"),
     PJ_BUILD_ERR( PJNATH_EICEINCOMPID,	    "Invalid ICE component ID"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDID,	    "Invalid ICE candidate ID"),
     PJ_BUILD_ERR( PJNATH_EICEINSRCADDR,	    "Source address mismatch"),

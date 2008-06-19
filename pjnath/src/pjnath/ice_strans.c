@@ -700,6 +700,73 @@ on_error:
 }
 
 /*
+ * Check if the ICE stream transport has the ICE session created. 
+ */
+PJ_DEF(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st)
+{
+    PJ_ASSERT_RETURN(ice_st, PJ_FALSE);
+    return ice_st->ice != NULL;
+}
+
+/*
+ * Check if ICE negotiation is still running.
+ */
+PJ_DEF(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st)
+{
+    return ice_st && ice_st->ice && ice_st->ice->rcand_cnt &&
+	   !pj_ice_strans_sess_is_complete(ice_st);
+}
+
+
+/*
+ * Check if ICE negotiation has completed.
+ */
+PJ_DEF(pj_bool_t) pj_ice_strans_sess_is_complete(pj_ice_strans *ice_st)
+{
+    return ice_st && ice_st->ice && ice_st->ice->is_complete;
+}
+
+
+/*
+ * Get the current/running component count.
+ */
+PJ_DEF(unsigned) pj_ice_strans_get_running_comp_cnt(pj_ice_strans *ice_st)
+{
+    PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
+
+    if (ice_st->ice && ice_st->ice->rcand_cnt) {
+	return (ice_st->comp_cnt < ice_st->ice->rcand_cnt) ?
+		    ice_st->comp_cnt : ice_st->ice->rcand_cnt;
+    } else {
+	return ice_st->comp_cnt;
+    }
+}
+
+
+/*
+ * Get the ICE username fragment and password of the ICE session.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_get_ufrag_pwd( pj_ice_strans *ice_st,
+						 pj_str_t *loc_ufrag,
+						 pj_str_t *loc_pwd,
+						 pj_str_t *rem_ufrag,
+						 pj_str_t *rem_pwd)
+{
+    PJ_ASSERT_RETURN(ice_st && ice_st->ice, PJ_EINVALIDOP);
+
+    if (loc_ufrag) *loc_ufrag = ice_st->ice->rx_ufrag;
+    if (loc_pwd) *loc_pwd = ice_st->ice->rx_pass;
+
+    if (rem_ufrag || rem_pwd) {
+	PJ_ASSERT_RETURN(ice_st->ice->rcand_cnt != 0, PJ_EINVALIDOP);
+	if (rem_ufrag) *rem_ufrag = ice_st->ice->tx_ufrag;
+	if (rem_pwd) *rem_pwd = ice_st->ice->tx_pass;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
  * Enum candidates
  */
 PJ_DEF(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
@@ -708,17 +775,17 @@ PJ_DEF(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,
 					     pj_ice_sess_cand cand[])
 {
     unsigned i, cnt;
-    pj_ice_strans_comp *comp;
 
-    PJ_ASSERT_RETURN(ice_st && comp_id && comp_id <= ice_st->comp_cnt &&
-		     count && cand, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id && 
+		     comp_id <= ice_st->comp_cnt && count && cand, PJ_EINVAL);
 
-    comp = ice_st->comp[comp_id - 1];
-    cnt = comp->cand_cnt;
-    cnt = (cnt > *count) ? *count : cnt;
-
-    for (i=0; i<cnt; ++i) {
-	pj_memcpy(&cand[i], &comp->cand_list[i], sizeof(pj_ice_sess_cand));
+    cnt = 0;
+    for (i=0; i<ice_st->ice->lcand_cnt && cnt<*count; ++i) {
+	if (ice_st->ice->lcand[i].comp_id != comp_id)
+	    continue;
+	pj_memcpy(&cand[cnt], &ice_st->ice->lcand[i],
+		  sizeof(pj_ice_sess_cand));
+	++cnt;
     }
 
     *count = cnt;

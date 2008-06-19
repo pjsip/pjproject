@@ -152,6 +152,11 @@
 #define PJNATH_EICEFAILED	    (PJNATH_ERRNO_START+82) /* 370082 */
 /**
  * @hideinitializer
+ * Default destination does not match any ICE candidates
+ */
+#define PJNATH_EICEMISMATCH	    (PJNATH_ERRNO_START+83) /* 370083 */
+/**
+ * @hideinitializer
  * Invalid ICE component ID
  */
 #define PJNATH_EICEINCOMPID	    (PJNATH_ERRNO_START+86) /* 370086 */

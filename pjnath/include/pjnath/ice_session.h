@@ -510,7 +510,7 @@ typedef struct pj_ice_sess_cb
 typedef enum pj_ice_sess_role
 {
     /**
-     * The ICE agent is in controlled role.
+     * The role is unknown.
      */
     PJ_ICE_SESS_ROLE_UNKNOWN,
 

@@ -349,6 +349,87 @@ PJ_DECL(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 					    const pj_str_t *local_passwd);
 
 /**
+ * Check if the ICE stream transport has the ICE session created. The
+ * ICE session is created with #pj_ice_strans_init_ice().
+ *
+ * @param ice_st	The ICE stream transport.
+ *
+ * @return		PJ_TRUE if #pj_ice_strans_init_ice() has been
+ *			called.
+ */
+PJ_DECL(pj_bool_t) pj_ice_strans_has_sess(pj_ice_strans *ice_st);
+
+
+/**
+ * Check if ICE negotiation is still running.
+ *
+ * @param ice_st	The ICE stream transport.
+ *
+ * @return		PJ_TRUE if ICE session has been created and ICE 
+ *			negotiation negotiation is in progress.
+ */
+PJ_DECL(pj_bool_t) pj_ice_strans_sess_is_running(pj_ice_strans *ice_st);
+
+
+/**
+ * Check if ICE negotiation has completed.
+ *
+ * @param ice_st	The ICE stream transport.
+ *
+ * @return		PJ_TRUE if ICE session has been created and the
+ *			negotiation is complete.
+ */
+PJ_DECL(pj_bool_t) pj_ice_strans_sess_is_complete(pj_ice_strans *ice_st);
+
+
+/**
+ * Get the current/running component count. If ICE negotiation has not
+ * been started, the number of components will be equal to the number
+ * when the ICE stream transport was created. Once negotiation been
+ * started, the number of components will be the lowest number of 
+ * component between local and remote agents.
+ *
+ * @param ice_st	The ICE stream transport.
+ *
+ * @return		The running number of components.
+ */
+PJ_DECL(unsigned) pj_ice_strans_get_running_comp_cnt(pj_ice_strans *ice_st);
+
+
+/**
+ * Get the ICE username fragment and password of the ICE session. The
+ * local username fragment and password can only be retrieved once ICE
+ * session has been created with #pj_ice_strans_init_ice(). The remote
+ * username fragment and password can only be retrieved once ICE session
+ * has been started with #pj_ice_strans_start_ice().
+ *
+ * Note that the string returned by this function is only valid throughout
+ * the duration of the ICE session, and the application must not modify
+ * these strings. Once the ICE session has been stopped with
+ * #pj_ice_strans_stop_ice(), the pointer in the string will no longer be
+ * valid.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param loc_ufrag	Optional pointer to receive ICE username fragment
+ *			of local endpoint from the ICE session.
+ * @param loc_pwd	Optional pointer to receive ICE password of local
+ *			endpoint from the ICE session.
+ * @param rem_ufrag	Optional pointer to receive ICE username fragment
+ *			of remote endpoint from the ICE session.
+ * @param rem_pwd	Optional pointer to receive ICE password of remote
+ *			endpoint from the ICE session.
+ *
+ * @return		PJ_SUCCESS if the strings have been retrieved
+ *			successfully.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_get_ufrag_pwd(pj_ice_strans *ice_st,
+						 pj_str_t *loc_ufrag,
+						 pj_str_t *loc_pwd,
+						 pj_str_t *rem_ufrag,
+						 pj_str_t *rem_pwd);
+
+
+/**
  * Enumerate the local candidates for the specified component.
  *
  * @param ice_st	The ICE stream transport.
