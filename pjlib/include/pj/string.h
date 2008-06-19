@@ -524,7 +524,8 @@ PJ_DECL(pj_str_t*) pj_strrtrim( pj_str_t *str );
 PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
 
 /**
- * Initialize the buffer with some random string.
+ * Initialize the buffer with some random string. Note that the 
+ * generated string is not NULL terminated.
  *
  * @param str	    the string to store the result.
  * @param length    the length of the random string to generate.
