@@ -27,6 +27,22 @@
 PJ_BEGIN_DECL
 
 /** 
+ * Media transport state.
+ */
+typedef enum pjsua_med_tp_st
+{
+    /** Not initialized */
+    PJSUA_MED_TP_IDLE,
+
+    /** Initialized (media_create() has been called) */
+    PJSUA_MED_TP_INIT,
+
+    /** Running (media_start() has been called) */
+    PJSUA_MED_TP_RUNNING
+
+} pjsua_med_tp_st;
+
+/** 
  * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
  * by accessing dlg->mod_data[pjsua.mod.id].
@@ -52,8 +68,9 @@ typedef struct pjsua_call
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
     pjmedia_transport	*med_tp;    /**< Current media transport.	    */
-    pj_status_t		 med_tp_st; /**< Media transport status.	    */
+    pj_status_t		 med_tp_ready;/**< Media transport status.	    */
     pjmedia_transport	*med_orig;  /**< Original media transport	    */
+    pjsua_med_tp_st	 med_tp_st; /**< Media transport state		    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */
     pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
@@ -321,6 +338,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata);
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     pjsip_role_e role,
 				     int security_level,
+				     pj_pool_t *tmp_pool,
+				     const pjmedia_sdp_session *rem_sdp,
 				     int *sip_err_code);
 pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
 					   pj_pool_t *pool,
@@ -328,7 +347,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 					   pjmedia_sdp_session **p_sdp,
 					   int *sip_err_code);
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
-				       pjmedia_sdp_session *local_sdp,
+				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
 

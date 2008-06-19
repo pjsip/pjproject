@@ -362,31 +362,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     /* Add "rtcp" attribute */
 #if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
     if (sock_info->rtcp_addr_name.addr.sa_family != 0) {
-	const pj_sockaddr *rtcp_addr = &sock_info->rtcp_addr_name;
-
-	attr = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_attr);
-	attr->name = pj_str("rtcp");
-	attr->value.ptr = (char*) pj_pool_alloc(pool, 80);
-	if (rtcp_addr->addr.sa_family == pj_AF_INET()) {
-	    attr->value.slen = 
-		pj_ansi_snprintf(attr->value.ptr, 80,
-				"%u IN IP4 %s",
-				pj_ntohs(rtcp_addr->ipv4.sin_port),
-				pj_inet_ntoa(rtcp_addr->ipv4.sin_addr));
-	} else if (rtcp_addr->addr.sa_family == pj_AF_INET6()) {
-	    char tmp_addr[PJ_INET6_ADDRSTRLEN];
-	    attr->value.slen = 
-		pj_ansi_snprintf(attr->value.ptr, 80,
-				"%u IN IP6 %s",
-				pj_sockaddr_get_port(rtcp_addr),
-				pj_sockaddr_print(rtcp_addr, tmp_addr, 
-						  sizeof(tmp_addr), 0));
-
-	} else {
-	    pj_assert(!"Unsupported address family");
-	    return PJ_EAFNOTSUP;
-	}
-	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	attr = pjmedia_sdp_attr_create_rtcp(pool, &sock_info->rtcp_addr_name);
+	if (attr)
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
     }
 #endif
 

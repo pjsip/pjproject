@@ -23,18 +23,42 @@
 #include <pj/rand.h>
 
 #define THIS_FILE   "transport_ice.c"
+#if 0
+#   define TRACE__(expr)    PJ_LOG(5,expr)
+#else
+#   define TRACE__(expr)
+#endif
 
-static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
+enum oa_role
+{
+    ROLE_NONE,
+    ROLE_OFFERER,
+    ROLE_ANSWERER
+};
+
+struct sdp_state
+{
+    unsigned		match_comp_cnt;	/* Matching number of components    */
+    pj_bool_t		ice_mismatch;	/* Address doesn't match candidates */
+    pj_bool_t		ice_restart;	/* Offer to restart ICE		    */
+    pj_ice_sess_role	local_role;	/* Our role			    */
+};
 
 struct transport_ice
 {
     pjmedia_transport	 base;
     pj_pool_t		*pool;
     int			 af;
+
     unsigned		 comp_cnt;
     pj_ice_strans	*ice_st;
+
     pjmedia_ice_cb	 cb;
     unsigned		 media_option;
+
+    pj_bool_t		 initial_sdp;
+    enum oa_role	 oa_role;	/**< Last role in SDP offer/answer  */
+    struct sdp_state	 rem_offer_state;/**< Describes the remote offer	    */
 
     void		*stream;
     pj_sockaddr_in	 remote_rtp;
@@ -84,12 +108,16 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 static pj_status_t transport_media_create(pjmedia_transport *tp,
 				       pj_pool_t *pool,
 				       unsigned options,
-				       pjmedia_sdp_session *sdp_local,
 				       const pjmedia_sdp_session *rem_sdp,
 				       unsigned media_index);
-static pj_status_t transport_media_start (pjmedia_transport *tp,
+static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
+				        pj_pool_t *tmp_pool,
+				        pjmedia_sdp_session *sdp_local,
+				        const pjmedia_sdp_session *rem_sdp,
+				        unsigned media_index);
+static pj_status_t transport_media_start(pjmedia_transport *tp,
 				       pj_pool_t *pool,
-				       pjmedia_sdp_session *sdp_local,
+				       const pjmedia_sdp_session *sdp_local,
 				       const pjmedia_sdp_session *rem_sdp,
 				       unsigned media_index);
 static pj_status_t transport_media_stop(pjmedia_transport *tp);
@@ -120,16 +148,28 @@ static pjmedia_transport_op transport_ice_op =
     &transport_send_rtcp,
     &transport_send_rtcp2,
     &transport_media_create,
+    &transport_encode_sdp,
     &transport_media_start,
     &transport_media_stop,
     &transport_simulate_lost,
     &transport_destroy
 };
 
-static const pj_str_t STR_CANDIDATE = {"candidate", 9};
-static const pj_str_t STR_ICE_LITE = {"ice-lite", 8};
-static const pj_str_t STR_ICE_MISMATCH = {"ice-mismatch", 12};
+static const pj_str_t STR_RTP_AVP	= { "RTP/AVP", 7 };
+static const pj_str_t STR_CANDIDATE	= { "candidate", 9};
+static const pj_str_t STR_REM_CAND	= { "remote-candidates", 17 };
+static const pj_str_t STR_ICE_LITE	= { "ice-lite", 8};
+static const pj_str_t STR_ICE_MISMATCH	= { "ice-mismatch", 12};
+static const pj_str_t STR_ICE_UFRAG	= { "ice-ufrag", 9 };
+static const pj_str_t STR_ICE_PWD	= { "ice-pwd", 7 };
+static const pj_str_t STR_IP4		= { "IP4", 3 };
+static const pj_str_t STR_IP6		= { "IP6", 3 };
+static const pj_str_t STR_RTCP		= { "rtcp", 4 };
 
+enum {
+    COMP_RTP = 1,
+    COMP_RTCP = 2
+};
 
 /*
  * Create ICE media transport.
@@ -157,6 +197,8 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     pj_ansi_strcpy(tp_ice->base.name, pool->obj_name);
     tp_ice->base.op = &transport_ice_op;
     tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
+    tp_ice->initial_sdp = PJ_TRUE;
+    tp_ice->oa_role = ROLE_NONE;
 
     if (cb)
 	pj_memcpy(&tp_ice->cb, cb, sizeof(pjmedia_ice_cb));
@@ -183,6 +225,24 @@ PJ_DEF(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
     /* Done */
     return PJ_SUCCESS;
 }
+
+/* Disable ICE when SDP from remote doesn't contain a=candidate line */
+static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
+		       pj_status_t err)
+{
+    if (err != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(err, errmsg, sizeof(errmsg));
+	PJ_LOG(4,(tp_ice->base.name, 
+		  "Stopping ICE, reason=%s:%s", reason, errmsg));
+    } else {
+	PJ_LOG(4,(tp_ice->base.name, 
+		  "Stopping ICE, reason=%s", reason));
+    }
+
+    pj_ice_strans_stop_ice(tp_ice->ice_st);
+}
+
 
 /* Create SDP candidate attribute */
 static int print_sdp_cand_attr(char *buffer, int max_len,
@@ -227,102 +287,259 @@ static int print_sdp_cand_attr(char *buffer, int max_len,
     return len+len2;
 }
 
-/*
- * For both UAC and UAS, pass in the SDP before sending it to remote.
- * This will add ICE attributes to the SDP.
- */
-static pj_status_t transport_media_create(pjmedia_transport *tp,
-				          pj_pool_t *pool,
-					  unsigned options,
-					  pjmedia_sdp_session *sdp_local,
-					  const pjmedia_sdp_session *rem_sdp,
-					  unsigned media_index)
+
+/* Get ice-ufrag and ice-pwd attribute */
+static void get_ice_attr(const pjmedia_sdp_session *rem_sdp,
+			 const pjmedia_sdp_media *rem_m,
+			 const pjmedia_sdp_attr **p_ice_ufrag,
+			 const pjmedia_sdp_attr **p_ice_pwd)
 {
-    struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    pj_bool_t init_ice;
-    unsigned i;
+    pjmedia_sdp_attr *attr;
+
+    /* Find ice-ufrag attribute in media descriptor */
+    attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr,
+				 &STR_ICE_UFRAG, NULL);
+    if (attr == NULL) {
+	/* Find ice-ufrag attribute in session descriptor */
+	attr = pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
+				     &STR_ICE_UFRAG, NULL);
+    }
+    *p_ice_ufrag = attr;
+
+    /* Find ice-pwd attribute in media descriptor */
+    attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr,
+				 &STR_ICE_PWD, NULL);
+    if (attr == NULL) {
+	/* Find ice-pwd attribute in session descriptor */
+	attr = pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
+				     &STR_ICE_PWD, NULL);
+    }
+    *p_ice_pwd = attr;
+}
+
+
+/* Encode and add "a=ice-mismatch" attribute in the SDP */
+static void encode_ice_mismatch(pj_pool_t *sdp_pool,
+				pjmedia_sdp_session *sdp_local,
+				unsigned media_index)
+{
+    pjmedia_sdp_attr *attr;
+    pjmedia_sdp_media *m = sdp_local->media[media_index];
+
+    attr = PJ_POOL_ALLOC_T(sdp_pool, pjmedia_sdp_attr);
+    attr->name = STR_ICE_MISMATCH;
+    attr->value.slen = 0;
+    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+}
+
+
+/* Encode ICE information in SDP */
+static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
+					 pj_pool_t *sdp_pool,
+					 pjmedia_sdp_session *sdp_local,
+					 unsigned media_index,
+					 unsigned comp_cnt,
+					 pj_bool_t restart_session)
+{
+    enum { 
+	ATTR_BUF_LEN = 160,	/* Max len of a=candidate attr */
+	RATTR_BUF_LEN= 160	/* Max len of a=remote-candidates attr */
+    };
+    pjmedia_sdp_media *m = sdp_local->media[media_index];
+    pj_str_t local_ufrag, local_pwd;
+    pjmedia_sdp_attr *attr;
     pj_status_t status;
 
-    tp_ice->media_option = options;
+    /* Must have a session */
+    PJ_ASSERT_RETURN(pj_ice_strans_has_sess(tp_ice->ice_st), PJ_EBUG);
 
-    /* Validate media transport */
-    /* For now, this transport only support RTP/AVP transport */
-    if ((tp_ice->media_option & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
-	pjmedia_sdp_media *m_rem, *m_loc;
+    /* Get ufrag and pwd from current session */
+    pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, &local_ufrag, &local_pwd,
+				NULL, NULL);
 
-	m_rem = rem_sdp? rem_sdp->media[media_index] : NULL;
-	m_loc = sdp_local->media[media_index];
-
-	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
-	   (m_rem && pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)))
-	{
-	    pjmedia_sdp_media_deactivate(pool, m_loc);
-	    return PJMEDIA_SDP_EINPROTO;
-	}
-    }
-
-    /* If we are UAS, check that the incoming SDP contains support for ICE. */
-    if (rem_sdp) {
-	const pjmedia_sdp_media *rem_m;
-
-	rem_m = rem_sdp->media[media_index];
-
-	init_ice = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
-					  "ice-ufrag", NULL) != NULL;
-	if (init_ice == PJ_FALSE) {
-	    init_ice = pjmedia_sdp_attr_find2(rem_sdp->attr_count, 
-					      rem_sdp->attr,
-					      "ice-ufrag", NULL) != NULL;
-	}
-
-	if (init_ice) {
-	    init_ice = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
-					      "candidate", NULL) != NULL;
-	}
-    } else {
-	init_ice = PJ_TRUE;
-    }
-
-    /* Init ICE */
-    if (init_ice) {
-	pj_ice_sess_role ice_role;
-	enum { MAXLEN = 256 };
-	pj_str_t ufrag, pass;
-	char *buffer;
-	pjmedia_sdp_attr *attr;
+    /* The listing of candidates depends on whether ICE has completed
+     * or not. When ICE has completed:
+     *
+     * 9.1.2.2: Existing Media Streams with ICE Completed
+     *   The agent MUST include a candidate attributes for candidates
+     *   matching the default destination for each component of the 
+     *   media stream, and MUST NOT include any other candidates.
+     *
+     * When ICE has not completed, we shall include all candidates.
+     *
+     * Except when we have detected that remote is offering to restart
+     * the session, in this case we will answer with full ICE SDP and
+     * new ufrag/pwd pair.
+     */
+    if (!restart_session && pj_ice_strans_sess_is_complete(tp_ice->ice_st)) {
+	const pj_ice_sess_check *check;
+	char *attr_buf;
+	pjmedia_sdp_conn *conn;
+	pjmedia_sdp_attr *a_rtcp;
+	pj_str_t rem_cand;
 	unsigned comp;
 
-	ice_role = (rem_sdp==NULL ? PJ_ICE_SESS_ROLE_CONTROLLING : 
-				    PJ_ICE_SESS_ROLE_CONTROLLED);
+	/* Encode ice-ufrag attribute */
+	attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_UFRAG.ptr,
+				       &local_ufrag);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
-	ufrag.ptr = (char*) pj_pool_alloc(pool, PJ_ICE_UFRAG_LEN);
-	pj_create_random_string(ufrag.ptr, PJ_ICE_UFRAG_LEN);
-	ufrag.slen = PJ_ICE_UFRAG_LEN;
+	/* Encode ice-pwd attribute */
+	attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, 
+				       &local_pwd);
+	pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
-	pass.ptr = (char*) pj_pool_alloc(pool, PJ_ICE_UFRAG_LEN);
-	pj_create_random_string(pass.ptr, PJ_ICE_UFRAG_LEN);
-	pass.slen = PJ_ICE_UFRAG_LEN;
+	/* Prepare buffer */
+	attr_buf = (char*) pj_pool_alloc(sdp_pool, ATTR_BUF_LEN);
+	rem_cand.ptr = (char*) pj_pool_alloc(sdp_pool, RATTR_BUF_LEN);
+	rem_cand.slen = 0;
 
-	status = pj_ice_strans_init_ice(tp_ice->ice_st, ice_role, 
-					&ufrag, &pass);
-	if (status != PJ_SUCCESS)
-	    return status;
+	/* 9.1.2.2: Existing Media Streams with ICE Completed
+	 *   The default destination for media (i.e., the values of 
+	 *   the IP addresses and ports in the m and c line used for
+	 *   that media stream) MUST be the local candidate from the
+	 *   highest priority nominated pair in the valid list for each
+	 *   component.
+	 */
+	check = pj_ice_strans_get_valid_pair(tp_ice->ice_st, 1);
+	if (check == NULL) {
+	    pj_assert(!"Shouldn't happen");
+	    return PJ_EBUG;
+	}
 
-	/* Create ice-ufrag attribute */
-	attr = pjmedia_sdp_attr_create(pool, "ice-ufrag", &ufrag);
-	sdp_local->attr[sdp_local->attr_count++] = attr;
+	/* Override connection line address and media port number */
+	conn = m->conn;
+	if (conn == NULL)
+	    conn = sdp_local->conn;
 
-	/* Create ice-pwd attribute */
-	attr = pjmedia_sdp_attr_create(pool, "ice-pwd", &pass);
-	sdp_local->attr[sdp_local->attr_count++] = attr;
+	conn->addr.ptr = (char*) pj_pool_alloc(sdp_pool, 
+					       PJ_INET6_ADDRSTRLEN);
+	pj_sockaddr_print(&check->lcand->addr, conn->addr.ptr, 
+			  PJ_INET6_ADDRSTRLEN, 0);
+	conn->addr.slen = pj_ansi_strlen(conn->addr.ptr);
+	m->desc.port = pj_sockaddr_get_port(&check->lcand->addr);
 
+	/* Override address RTCP attribute if it's present */
+	if (comp_cnt == 2 &&
+	    (check = pj_ice_strans_get_valid_pair(tp_ice->ice_st, 
+						  COMP_RTCP)) != NULL &&
+	    (a_rtcp = pjmedia_sdp_attr_find(m->attr_count, m->attr, 
+					    &STR_RTCP, 0)) != NULL) 
+	{
+	    pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a_rtcp);
+
+	    a_rtcp = pjmedia_sdp_attr_create_rtcp(sdp_pool, 
+						  &check->lcand->addr);
+	    if (a_rtcp)
+		pjmedia_sdp_attr_add(&m->attr_count, m->attr, a_rtcp);
+	}
+
+	/* Encode only candidates matching the default destination 
+	 * for each component 
+	 */
+	for (comp=0; comp < comp_cnt; ++comp) {
+	    int len;
+	    pj_str_t value;
+
+	    /* Get valid pair for this component */
+	    check = pj_ice_strans_get_valid_pair(tp_ice->ice_st, comp+1);
+	    if (check == NULL)
+		continue;
+
+	    /* Print and add local candidate in the pair */
+	    value.ptr = attr_buf;
+	    value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN, 
+					     check->lcand);
+	    if (value.slen < 0) {
+		pj_assert(!"Not enough attr_buf to print candidate");
+		return PJ_EBUG;
+	    }
+
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_CANDIDATE.ptr,
+					   &value);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+
+	    /* Append to a=remote-candidates attribute */
+	    if (pj_ice_strans_get_role(tp_ice->ice_st) == 
+				    PJ_ICE_SESS_ROLE_CONTROLLING) 
+	    {
+		char rem_addr[PJ_INET6_ADDRSTRLEN];
+
+		pj_sockaddr_print(&check->rcand->addr, rem_addr, 
+				  sizeof(rem_addr), 0);
+		len = pj_ansi_snprintf(
+			   rem_cand.ptr + rem_cand.slen,
+			   RATTR_BUF_LEN - rem_cand.slen,
+			   "%s%u %s %u", 
+			   (rem_cand.slen==0? "" : " "),
+			   comp+1, rem_addr,
+			   pj_sockaddr_get_port(&check->rcand->addr)
+			   );
+		if (len < 1 || len >= RATTR_BUF_LEN) {
+		    pj_assert(!"Not enough buffer to print "
+			       "remote-candidates");
+		    return PJ_EBUG;
+		}
+
+		rem_cand.slen += len;
+	    }
+	}
+
+	/* 9.1.2.2: Existing Media Streams with ICE Completed
+	 *   In addition, if the agent is controlling, it MUST include
+	 *   the a=remote-candidates attribute for each media stream 
+	 *   whose check list is in the Completed state.  The attribute
+	 *   contains the remote candidates from the highest priority 
+	 *   nominated pair in the valid list for each component of that
+	 *   media stream.
+	 */
+	if (pj_ice_strans_get_role(tp_ice->ice_st) == 
+				    PJ_ICE_SESS_ROLE_CONTROLLING) 
+	{
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_REM_CAND.ptr, 
+					   &rem_cand);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	}
+
+    } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
 	/* Encode all candidates to SDP media */
+	char *attr_buf;
+	unsigned comp;
 
-	buffer = (char*) pj_pool_alloc(pool, MAXLEN);
+	/* If ICE is not restarted, encode current ICE ufrag/pwd.
+	 * Otherwise generate new one.
+	 */
+	if (!restart_session) {
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_UFRAG.ptr,
+					   &local_ufrag);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 
-	for (comp=0; comp < tp_ice->comp_cnt; ++comp) {
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, 
+					   &local_pwd);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+
+	} else {
+	    pj_str_t str;
+
+	    str.slen = PJ_ICE_UFRAG_LEN;
+	    str.ptr = (char*) pj_pool_alloc(sdp_pool, str.slen);
+	    pj_create_random_string(str.ptr, str.slen);
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_UFRAG.ptr, &str);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+
+	    str.ptr = (char*) pj_pool_alloc(sdp_pool, str.slen);
+	    pj_create_random_string(str.ptr, str.slen);
+	    attr = pjmedia_sdp_attr_create(sdp_pool, STR_ICE_PWD.ptr, &str);
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+	}
+
+	/* Create buffer to encode candidates as SDP attribute */
+	attr_buf = (char*) pj_pool_alloc(sdp_pool, ATTR_BUF_LEN);
+
+	for (comp=0; comp < comp_cnt; ++comp) {
 	    unsigned cand_cnt;
 	    pj_ice_sess_cand cand[PJ_ICE_ST_MAX_CAND];
+	    unsigned i;
 
 	    cand_cnt = PJ_ARRAY_SIZE(cand);
 	    status = pj_ice_strans_enum_cands(tp_ice->ice_st, comp+1,
@@ -331,45 +548,51 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
 		return status;
 
 	    for (i=0; i<cand_cnt; ++i) {
-		pjmedia_sdp_media *m;
 		pj_str_t value;
 
-		value.slen = print_sdp_cand_attr(buffer, MAXLEN, &cand[i]);
+		value.slen = print_sdp_cand_attr(attr_buf, ATTR_BUF_LEN, 
+						 &cand[i]);
 		if (value.slen < 0) {
-		    pj_assert(!"Not enough buffer to print candidate");
+		    pj_assert(!"Not enough attr_buf to print candidate");
 		    return PJ_EBUG;
 		}
 
-		value.ptr = buffer;
-		attr = pjmedia_sdp_attr_create(pool, "candidate", &value);
-		m = sdp_local->media[media_index];
-		m->attr[m->attr_count++] = attr;
+		value.ptr = attr_buf;
+		attr = pjmedia_sdp_attr_create(sdp_pool, 
+					       STR_CANDIDATE.ptr,
+					       &value);
+		pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 	    }
 	}
+    } else {
+	/* ICE has failed, application should have terminated this call */
     }
 
-    /* Done */
     return PJ_SUCCESS;
 }
 
 
 /* Parse a=candidate line */
-static pj_status_t parse_cand(pj_pool_t *pool,
+static pj_status_t parse_cand(const char *obj_name,
+			      pj_pool_t *pool,
 			      const pj_str_t *orig_input,
 			      pj_ice_sess_cand *cand)
 {
     pj_str_t input;
     char *token, *host;
+    int af;
     pj_str_t s;
     pj_status_t status = PJNATH_EICEINCANDSDP;
 
     pj_bzero(cand, sizeof(*cand));
     pj_strdup_with_null(pool, &input, orig_input);
 
+    PJ_UNUSED_ARG(obj_name);
+
     /* Foundation */
     token = strtok(input.ptr, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE foundation in candidate"));
+	TRACE__((obj_name, "Expecting ICE foundation in candidate"));
 	goto on_return;
     }
     pj_strdup2(pool, &cand->foundation, token);
@@ -377,7 +600,7 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     /* Component ID */
     token = strtok(NULL, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE component ID in candidate"));
+	TRACE__((obj_name, "Expecting ICE component ID in candidate"));
 	goto on_return;
     }
     cand->comp_id = (pj_uint8_t) atoi(token);
@@ -385,19 +608,19 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     /* Transport */
     token = strtok(NULL, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE transport in candidate"));
+	TRACE__((obj_name, "Expecting ICE transport in candidate"));
 	goto on_return;
     }
     if (pj_ansi_stricmp(token, "UDP") != 0) {
-	PJ_LOG(5,(THIS_FILE, 
-		  "Expecting ICE UDP transport only in candidate"));
+	TRACE__((obj_name, 
+		 "Expecting ICE UDP transport only in candidate"));
 	goto on_return;
     }
 
     /* Priority */
     token = strtok(NULL, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE priority in candidate"));
+	TRACE__((obj_name, "Expecting ICE priority in candidate"));
 	goto on_return;
     }
     cand->prio = atoi(token);
@@ -405,38 +628,43 @@ static pj_status_t parse_cand(pj_pool_t *pool,
     /* Host */
     host = strtok(NULL, " ");
     if (!host) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE host in candidate"));
+	TRACE__((obj_name, "Expecting ICE host in candidate"));
 	goto on_return;
     }
-    if (pj_sockaddr_in_init(&cand->addr.ipv4, pj_cstr(&s, host), 0)) {
-	PJ_LOG(5,(THIS_FILE, 
-		  "Expecting ICE IPv4 transport address in candidate"));
+    /* Detect address family */
+    if (pj_ansi_strchr(host, ':'))
+	af = pj_AF_INET6();
+    else
+	af = pj_AF_INET();
+    /* Assign address */
+    if (pj_sockaddr_init(af, &cand->addr, pj_cstr(&s, host), 0)) {
+	TRACE__((obj_name, "Invalid ICE candidate address"));
 	goto on_return;
     }
 
     /* Port */
     token = strtok(NULL, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE port number in candidate"));
+	TRACE__((obj_name, "Expecting ICE port number in candidate"));
 	goto on_return;
     }
-    cand->addr.ipv4.sin_port = pj_htons((pj_uint16_t)atoi(token));
+    pj_sockaddr_set_port(&cand->addr, (pj_uint16_t)atoi(token));
 
     /* typ */
     token = strtok(NULL, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE \"typ\" in candidate"));
+	TRACE__((obj_name, "Expecting ICE \"typ\" in candidate"));
 	goto on_return;
     }
     if (pj_ansi_stricmp(token, "typ") != 0) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE \"typ\" in candidate"));
+	TRACE__((obj_name, "Expecting ICE \"typ\" in candidate"));
 	goto on_return;
     }
 
     /* candidate type */
     token = strtok(NULL, " ");
     if (!token) {
-	PJ_LOG(5,(THIS_FILE, "Expecting ICE candidate type in candidate"));
+	TRACE__((obj_name, "Expecting ICE candidate type in candidate"));
 	goto on_return;
     }
 
@@ -453,11 +681,10 @@ static pj_status_t parse_cand(pj_pool_t *pool,
 	cand->type = PJ_ICE_CAND_TYPE_PRFLX;
 
     } else {
-	PJ_LOG(5,(THIS_FILE, "Invalid ICE candidate type %s in candidate", 
+	PJ_LOG(5,(obj_name, "Invalid ICE candidate type %s in candidate", 
 		  token));
 	goto on_return;
     }
-
 
     status = PJ_SUCCESS;
 
@@ -466,182 +693,681 @@ on_return:
 }
 
 
-/* Disable ICE when SDP from remote doesn't contain a=candidate line */
-static void set_no_ice(struct transport_ice *tp_ice, const char *reason)
+/* Create initial SDP offer */
+static pj_status_t create_initial_offer(struct transport_ice *tp_ice,
+					pj_pool_t *sdp_pool,
+					pjmedia_sdp_session *loc_sdp,
+					unsigned media_index)
 {
+    pj_status_t status;
+
+    /* Encode ICE in SDP */
+    status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
+				   tp_ice->comp_cnt, PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+	set_no_ice(tp_ice, "Error encoding SDP answer", status);
+	return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* Verify incoming offer */
+static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
+				  pj_pool_t *tmp_pool,
+				  const pjmedia_sdp_session *rem_sdp,
+				  unsigned media_index,
+				  pj_ice_sess_role current_ice_role,
+				  struct sdp_state *sdp_state)
+{
+    const pjmedia_sdp_media *rem_m;
+    const pjmedia_sdp_attr *attr, *ufrag_attr, *pwd_attr;
+    const pjmedia_sdp_conn *rem_conn;
+    pj_bool_t comp1_found=PJ_FALSE, comp2_found=PJ_FALSE;
+    pj_sockaddr rem_conn_addr, rtcp_addr;
+    unsigned i;
+    pj_status_t status;
+
+    rem_m = rem_sdp->media[media_index];
+
+    /* Get the "ice-ufrag" and "ice-pwd" attributes */
+    get_ice_attr(rem_sdp, rem_m, &ufrag_attr, &pwd_attr);
+
+    /* If "ice-ufrag" or "ice-pwd" are not found, disable ICE */
+    if (ufrag_attr==NULL || pwd_attr==NULL) {
+	sdp_state->match_comp_cnt = 0;
+	return PJ_SUCCESS;
+    }
+
+    /* Verify that default target for each component matches one of the 
+     * candidatefor the component. Otherwise stop ICE with ICE ice_mismatch 
+     * error.
+     */
+
+    /* Component 1 is the c= line */
+    rem_conn = rem_m->conn;
+    if (rem_conn == NULL)
+	rem_conn = rem_sdp->conn;
+    if (!rem_conn)
+	return PJMEDIA_SDP_EMISSINGCONN;
+
+    /* Verify address family matches */
+    if ((tp_ice->af==pj_AF_INET() && 
+	 pj_strcmp(&rem_conn->addr_type, &STR_IP4)!=0) ||
+	(tp_ice->af==pj_AF_INET6() && 
+	 pj_strcmp(&rem_conn->addr_type, &STR_IP6)!=0))
+    {
+	return PJMEDIA_SDP_ETPORTNOTEQUAL;
+    }
+
+    /* Assign remote connection address */
+    status = pj_sockaddr_init(tp_ice->af, &rem_conn_addr, &rem_conn->addr,
+			      (pj_uint16_t)rem_m->desc.port);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Component 2 is a=rtcp line, if present. */
+    attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+				 &STR_RTCP, NULL);
+    if (attr && tp_ice->comp_cnt > 1) {
+	pjmedia_sdp_rtcp_attr rtcp_attr;
+
+	status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp_attr);
+	if (status != PJ_SUCCESS) {
+	    /* Error parsing a=rtcp attribute */
+	    return status;
+	}
+	
+	/* Verify address family matches */
+	if ((tp_ice->af==pj_AF_INET() && 
+	     pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
+	    (tp_ice->af==pj_AF_INET6() && 
+	     pj_strcmp(&rtcp_attr.addr_type, &STR_IP6)!=0))
+	{
+	    return PJMEDIA_SDP_ETPORTNOTEQUAL;
+	}
+
+	/* Assign RTCP address */
+	status = pj_sockaddr_init(tp_ice->af, &rtcp_addr,
+				  &rtcp_attr.addr,
+				  (pj_uint16_t)rtcp_attr.port);
+	if (status != PJ_SUCCESS) {
+	    return PJMEDIA_SDP_EINRTCP;
+	}
+
+	sdp_state->match_comp_cnt = 2;
+
+    } else {
+	/* Don't have RTCP component */
+	comp2_found = PJ_TRUE;
+	sdp_state->match_comp_cnt = 1;
+    }
+
+    /* Find the default address in a=candidate attributes. 
+     */
+    for (i=0; i<rem_m->attr_count; ++i) {
+	pj_ice_sess_cand cand;
+
+	if (pj_strcmp(&rem_m->attr[i]->name, &STR_CANDIDATE)!=0)
+	    continue;
+
+	status = parse_cand(tp_ice->base.name, tmp_pool, 
+			    &rem_m->attr[i]->value, &cand);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(4,(tp_ice->base.name, 
+		      "Error in parsing SDP candidate attribute '%.*s', "
+		      "candidate is ignored",
+		      (int)rem_m->attr[i]->value.slen, 
+		      rem_m->attr[i]->value.ptr));
+	    continue;
+	}
+
+	if (!comp1_found && cand.comp_id==COMP_RTP &&
+	    pj_sockaddr_cmp(&rem_conn_addr, &cand.addr)==0) 
+	{
+	    /* Found */
+	    comp1_found = PJ_TRUE;
+	    if (comp1_found && comp2_found)
+		break;
+	} else if (!comp2_found && cand.comp_id==COMP_RTCP &&
+		    pj_sockaddr_cmp(&rtcp_addr, &cand.addr)==0) 
+	{
+	    /* Found */
+	    comp2_found = PJ_TRUE;
+	    if (comp1_found && comp2_found)
+		break;
+	}
+
+    }
+
+    if (!comp1_found || !comp2_found) {
+	/* ICE ice_mismatch */
+	sdp_state->ice_mismatch = PJ_TRUE;
+    } else {
+	sdp_state->ice_mismatch = PJ_FALSE;
+    }
+
+    /* Detect remote restarting session */
+    if (pj_ice_strans_has_sess(tp_ice->ice_st) &&
+	(pj_ice_strans_sess_is_running(tp_ice->ice_st) ||
+	 pj_ice_strans_sess_is_complete(tp_ice->ice_st))) 
+    {
+	pj_str_t rem_run_ufrag, rem_run_pwd;
+	pj_ice_strans_get_ufrag_pwd(tp_ice->ice_st, NULL, NULL,
+				    &rem_run_ufrag, &rem_run_pwd);
+	if (pj_strcmp(&ufrag_attr->value, &rem_run_ufrag) ||
+	    pj_strcmp(&pwd_attr->value, &rem_run_pwd))
+	{
+	    /* Remote offers to restart ICE */
+	    sdp_state->ice_restart = PJ_TRUE;
+	} else {
+	    sdp_state->ice_restart = PJ_FALSE;
+	}
+    } else {
+	sdp_state->ice_restart = PJ_FALSE;
+    }
+
+    /* Detect our role */
+    if (current_ice_role==PJ_ICE_SESS_ROLE_CONTROLLING) {
+	sdp_state->local_role = PJ_ICE_SESS_ROLE_CONTROLLING;
+    } else {
+	if (pjmedia_sdp_attr_find(rem_sdp->attr_count, rem_sdp->attr,
+				  &STR_ICE_LITE, NULL) != NULL)
+	{
+	    /* Remote is ICE Lite */
+	    sdp_state->local_role = PJ_ICE_SESS_ROLE_CONTROLLING;
+	} else {
+	    sdp_state->local_role = PJ_ICE_SESS_ROLE_CONTROLLED;
+	}
+    }
+
     PJ_LOG(4,(tp_ice->base.name, 
-	      "Disabling local ICE, reason=%s", reason));
-    transport_media_stop(&tp_ice->base);
+	      "Processing SDP: support ICE=%u, common comp_cnt=%u, "
+	      "ice_mismatch=%u, ice_restart=%u, local_role=%s",
+	      (sdp_state->match_comp_cnt != 0), 
+	      sdp_state->match_comp_cnt, 
+	      sdp_state->ice_mismatch, 
+	      sdp_state->ice_restart,
+	      pj_ice_sess_role_name(sdp_state->local_role)));
+
+    return PJ_SUCCESS;
+
+}
+
+
+/* Verify incoming offer and create initial answer */
+static pj_status_t create_initial_answer(struct transport_ice *tp_ice,
+					 pj_pool_t *sdp_pool,
+					 pjmedia_sdp_session *loc_sdp,
+					 const pjmedia_sdp_session *rem_sdp,
+					 unsigned media_index)
+{
+    const pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
+    pj_status_t status;
+
+    /* Check if media is removed (just in case) */
+    if (rem_m->desc.port == 0) {
+	return PJ_SUCCESS;
+    }
+
+    /* Verify the offer */
+    status = verify_ice_sdp(tp_ice, sdp_pool, rem_sdp, media_index, 
+			    PJ_ICE_SESS_ROLE_CONTROLLED, 
+			    &tp_ice->rem_offer_state);
+    if (status != PJ_SUCCESS) {
+	set_no_ice(tp_ice, "Invalid SDP offer", status);
+	return status;
+    }
+
+    /* Does remote support ICE? */
+    if (tp_ice->rem_offer_state.match_comp_cnt==0) {
+	set_no_ice(tp_ice, "No ICE found in SDP offer", PJ_SUCCESS);
+	return PJ_SUCCESS;
+    }
+
+    /* ICE ice_mismatch? */
+    if (tp_ice->rem_offer_state.ice_mismatch) {
+	set_no_ice(tp_ice, "ICE ice_mismatch in remote offer", PJ_SUCCESS);
+	encode_ice_mismatch(sdp_pool, loc_sdp, media_index);
+	return PJ_SUCCESS;
+    }
+
+    /* Encode ICE in SDP */
+    status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index, 
+				   tp_ice->rem_offer_state.match_comp_cnt,
+				   PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+	set_no_ice(tp_ice, "Error encoding SDP answer", status);
+	return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* Create subsequent SDP offer */
+static pj_status_t create_subsequent_offer(struct transport_ice *tp_ice,
+					   pj_pool_t *sdp_pool,
+					   pjmedia_sdp_session *loc_sdp,
+					   unsigned media_index)
+{
+    unsigned comp_cnt;
+
+    if (pj_ice_strans_has_sess(tp_ice->ice_st) == PJ_FALSE) {
+	/* We don't have ICE */
+	return PJ_SUCCESS;
+    }
+
+    comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
+    return encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
+				 comp_cnt, PJ_FALSE);
+}
+
+
+/* Create subsequent SDP answer */
+static pj_status_t create_subsequent_answer(struct transport_ice *tp_ice,
+					    pj_pool_t *sdp_pool,
+					    pjmedia_sdp_session *loc_sdp,
+					    const pjmedia_sdp_session *rem_sdp,
+					    unsigned media_index)
+{
+    pj_status_t status;
+
+    /* We have a session */
+    status = verify_ice_sdp(tp_ice, sdp_pool, rem_sdp, media_index, 
+			    PJ_ICE_SESS_ROLE_CONTROLLED, 
+			    &tp_ice->rem_offer_state);
+    if (status != PJ_SUCCESS) {
+	/* Something wrong with the offer */
+	return status;
+    }
+
+    if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
+	/*
+	 * Received subsequent offer while we have ICE active.
+	 */
+
+	if (tp_ice->rem_offer_state.match_comp_cnt == 0) {
+	    /* Remote no longer offers ICE */
+	    return PJ_SUCCESS;
+	}
+
+	if (tp_ice->rem_offer_state.ice_mismatch) {
+	    encode_ice_mismatch(sdp_pool, loc_sdp, media_index);
+	    return PJ_SUCCESS;
+	}
+
+	status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
+				       tp_ice->rem_offer_state.match_comp_cnt,
+				       tp_ice->rem_offer_state.ice_restart);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Done */
+
+    } else {
+	/*
+	 * Received subsequent offer while we DON'T have ICE active.
+	 */
+
+	if (tp_ice->rem_offer_state.match_comp_cnt == 0) {
+	    /* Remote does not support ICE */
+	    return PJ_SUCCESS;
+	}
+
+	if (tp_ice->rem_offer_state.ice_mismatch) {
+	    encode_ice_mismatch(sdp_pool, loc_sdp, media_index);
+	    return PJ_SUCCESS;
+	}
+
+	/* Looks like now remote is offering ICE, so we need to create
+	 * ICE session now.
+	 */
+	status = pj_ice_strans_init_ice(tp_ice->ice_st, 
+					PJ_ICE_SESS_ROLE_CONTROLLED,
+					NULL, NULL);
+	if (status != PJ_SUCCESS) {
+	    /* Fail to create new ICE session */
+	    return status;
+	}
+
+	status = encode_session_in_sdp(tp_ice, sdp_pool, loc_sdp, media_index,
+				       tp_ice->rem_offer_state.match_comp_cnt,
+				       tp_ice->rem_offer_state.ice_restart);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Done */
+    }
+
+    return PJ_SUCCESS;
 }
 
 
 /*
- * Start ICE checks when both offer and answer are available.
+ * For both UAC and UAS, pass in the SDP before sending it to remote.
+ * This will add ICE attributes to the SDP.
  */
-static pj_status_t transport_media_start(pjmedia_transport *tp,
-				         pj_pool_t *pool,
-				         pjmedia_sdp_session *sdp_local,
-				         const pjmedia_sdp_session *rem_sdp,
-				         unsigned media_index)
+static pj_status_t transport_media_create(pjmedia_transport *tp,
+				          pj_pool_t *sdp_pool,
+					  unsigned options,
+					  const pjmedia_sdp_session *rem_sdp,
+					  unsigned media_index)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    const pjmedia_sdp_attr *attr;
-    unsigned i, cand_cnt;
-    pj_ice_sess_cand *cand;
-    const pjmedia_sdp_media *sdp_med;
-    pj_bool_t remote_is_lite = PJ_FALSE;
-    pj_bool_t ice_mismatch = PJ_FALSE;
-    pjmedia_sdp_conn *conn = NULL;
-    pj_sockaddr conn_addr;
-    pj_bool_t conn_found_in_candidate = PJ_FALSE;
-    pj_str_t uname, pass;
+    pj_ice_sess_role ice_role;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(tp && pool && rem_sdp, PJ_EINVAL);
-    PJ_ASSERT_RETURN(media_index < rem_sdp->media_count, PJ_EINVAL);
+    PJ_UNUSED_ARG(media_index);
+    PJ_UNUSED_ARG(sdp_pool);
 
-    sdp_med = rem_sdp->media[media_index];
+    tp_ice->media_option = options;
+    tp_ice->oa_role = ROLE_NONE;
+    tp_ice->initial_sdp = PJ_TRUE;
+
+    /* Init ICE, the initial role is set now based on availability of
+     * rem_sdp, but it will be checked again later.
+     */
+    ice_role = (rem_sdp==NULL ? PJ_ICE_SESS_ROLE_CONTROLLING : 
+				PJ_ICE_SESS_ROLE_CONTROLLED);
+    status = pj_ice_strans_init_ice(tp_ice->ice_st, ice_role, NULL, NULL);
+
+    /* Done */
+    return status;
+}
+
+
+static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
+				        pj_pool_t *sdp_pool,
+				        pjmedia_sdp_session *sdp_local,
+				        const pjmedia_sdp_session *rem_sdp,
+				        unsigned media_index)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pj_status_t status;
 
     /* Validate media transport */
-    /* By now, this transport only support RTP/AVP transport */
+    /* For now, this transport only support RTP/AVP transport */
     if ((tp_ice->media_option & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
-	pjmedia_sdp_media *m_rem, *m_loc;
+	pjmedia_sdp_media *loc_m, *rem_m;
 
-	m_rem = rem_sdp->media[media_index];
-	m_loc = sdp_local->media[media_index];
+	rem_m = rem_sdp? rem_sdp->media[media_index] : NULL;
+	loc_m = sdp_local->media[media_index];
 
-	if (pj_stricmp(&m_loc->desc.transport, &ID_RTP_AVP) ||
-	   (pj_stricmp(&m_rem->desc.transport, &ID_RTP_AVP)))
+	if (pj_stricmp(&loc_m->desc.transport, &STR_RTP_AVP) ||
+	   (rem_m && pj_stricmp(&rem_m->desc.transport, &STR_RTP_AVP)))
 	{
-	    pjmedia_sdp_media_deactivate(pool, m_loc);
+	    pjmedia_sdp_media_deactivate(sdp_pool, loc_m);
 	    return PJMEDIA_SDP_EINPROTO;
 	}
     }
 
-    /* Get the SDP connection for the media stream.
-     * We'll verify later if the SDP connection address is specified 
-     * as one of the candidate.
-     */
-    conn = sdp_med->conn;
-    if (conn == NULL)
-	conn = rem_sdp->conn;
-
-    if (conn == NULL) {
-	/* Unable to find SDP connection */
-	return PJMEDIA_SDP_EMISSINGCONN;
-    }
-
-    pj_sockaddr_in_init(&conn_addr.ipv4, &conn->addr, 
-			(pj_uint16_t)sdp_med->desc.port);
-
-    /* Find ice-ufrag attribute in media descriptor */
-    attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
-				  "ice-ufrag", NULL);
-    if (attr == NULL) {
-	/* Find ice-ufrag attribute in session descriptor */
-	attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
-				      "ice-ufrag", NULL);
-	if (attr == NULL) {
-	    set_no_ice(tp_ice, "ice-ufrag attribute not found");
-	    return PJ_SUCCESS;
+    if (tp_ice->initial_sdp) {
+	if (rem_sdp) {
+	    status = create_initial_answer(tp_ice, sdp_pool, sdp_local, 
+					   rem_sdp, media_index);
+	} else {
+	    status = create_initial_offer(tp_ice, sdp_pool, sdp_local,
+					  media_index);
+	}
+    } else {
+	if (rem_sdp) {
+	    status = create_subsequent_answer(tp_ice, sdp_pool, sdp_local,
+					      rem_sdp, media_index);
+	} else {
+	    status = create_subsequent_offer(tp_ice, sdp_pool, sdp_local,
+					     media_index);
 	}
     }
-    uname = attr->value;
 
-    /* Find ice-pwd attribute in media descriptor */
-    attr = pjmedia_sdp_attr_find2(sdp_med->attr_count, sdp_med->attr,
-				  "ice-pwd", NULL);
-    if (attr == NULL) {
-	/* Find ice-pwd attribute in session descriptor */
-	attr = pjmedia_sdp_attr_find2(rem_sdp->attr_count, rem_sdp->attr,
-				      "ice-pwd", NULL);
-	if (attr == NULL) {
-	    set_no_ice(tp_ice, "ice-pwd attribute not found");
-	    return PJ_SUCCESS;
-	}
+    if (status==PJ_SUCCESS) {
+	if (rem_sdp)
+	    tp_ice->oa_role = ROLE_ANSWERER;
+	else
+	    tp_ice->oa_role = ROLE_OFFERER;
     }
-    pass = attr->value;
+
+    return status;
+}
+
+
+/* Start ICE session with the specified remote SDP */
+static pj_status_t start_ice(struct transport_ice *tp_ice,
+			     pj_pool_t *tmp_pool,
+			     const pjmedia_sdp_session *rem_sdp,
+			     unsigned media_index)
+{
+    pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
+    pjmedia_sdp_attr *ufrag_attr, *pwd_attr;
+    pj_ice_sess_cand *cand;
+    unsigned i, cand_cnt;
+    pj_status_t status;
+
+    get_ice_attr(rem_sdp, rem_m, &ufrag_attr, &pwd_attr);
 
     /* Allocate candidate array */
     cand = (pj_ice_sess_cand*)
-	   pj_pool_calloc(pool, PJ_ICE_MAX_CAND, sizeof(pj_ice_sess_cand));
+	   pj_pool_calloc(tmp_pool, PJ_ICE_MAX_CAND, 
+			  sizeof(pj_ice_sess_cand));
 
     /* Get all candidates in the media */
     cand_cnt = 0;
-    for (i=0; i<sdp_med->attr_count && cand_cnt < PJ_ICE_MAX_CAND; ++i) {
+    for (i=0; i<rem_m->attr_count && cand_cnt < PJ_ICE_MAX_CAND; ++i) {
 	pjmedia_sdp_attr *attr;
 
-	attr = sdp_med->attr[i];
+	attr = rem_m->attr[i];
 
-	/* Detect if remote is ICE lite */
-	if (pj_stricmp(&attr->name, &STR_ICE_LITE)==0) {
-	    remote_is_lite = PJ_TRUE;
-	    continue;
-	}
-
-	/* Detect if remote has reported ICE mismatch */
-	if (pj_stricmp(&attr->name, &STR_ICE_MISMATCH)==0) {
-	    ice_mismatch = PJ_TRUE;
-	    continue;
-	}
-
-	if (pj_stricmp(&attr->name, &STR_CANDIDATE)!=0)
+	if (pj_strcmp(&attr->name, &STR_CANDIDATE)!=0)
 	    continue;
 
 	/* Parse candidate */
-	status = parse_cand(pool, &attr->value, &cand[cand_cnt]);
+	status = parse_cand(tp_ice->base.name, tmp_pool, &attr->value, 
+			    &cand[cand_cnt]);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(4,(THIS_FILE, 
-		      "Error in parsing SDP candidate attribute, "
-		      "candidate is ignored"));
+	    PJ_LOG(4,(tp_ice->base.name, 
+		      "Error in parsing SDP candidate attribute '%.*s', "
+		      "candidate is ignored",
+		      (int)attr->value.slen, attr->value.ptr));
 	    continue;
-	}
-
-	/* Check if this candidate is equal to the connection line */
-	if (!conn_found_in_candidate &&
-	    pj_memcmp(&conn_addr.ipv4, &cand[cand_cnt].addr.ipv4,
-		      sizeof(pj_sockaddr_in))==0)
-	{
-	    conn_found_in_candidate = PJ_TRUE;
 	}
 
 	cand_cnt++;
     }
 
-    /* Handle ice-mismatch case */
-    if (ice_mismatch) {
-	set_no_ice(tp_ice, "remote reported ice-mismatch");
-	return PJ_SUCCESS;
-    }
-
-    /* Handle case where SDP connection address is not specified as
-     * one of the candidate.
-     */
-    if (!conn_found_in_candidate) {
-	set_no_ice(tp_ice, "local reported ice-mismatch");
-	return PJ_SUCCESS;
-    }
-
-    /* If our role was controlled but it turns out that remote is 
-     * a lite implementation, change our role to controlling.
-     */
-    if (remote_is_lite && 
-	pj_ice_strans_get_role(tp_ice->ice_st) == PJ_ICE_SESS_ROLE_CONTROLLED)
-    {
-	pj_ice_strans_change_role(tp_ice->ice_st, 
-				  PJ_ICE_SESS_ROLE_CONTROLLING);
-    }
-
     /* Start ICE */
-    return pj_ice_strans_start_ice(tp_ice->ice_st, &uname, &pass, 
-				   cand_cnt, cand);
+    return pj_ice_strans_start_ice(tp_ice->ice_st, &ufrag_attr->value, 
+				   &pwd_attr->value, cand_cnt, cand);
+}
+
+
+/*
+ * Start ICE checks when both offer and answer have been negotiated
+ * by SDP negotiator.
+ */
+static pj_status_t transport_media_start(pjmedia_transport *tp,
+				         pj_pool_t *tmp_pool,
+				         const pjmedia_sdp_session *sdp_local,
+				         const pjmedia_sdp_session *rem_sdp,
+				         unsigned media_index)
+{
+    struct transport_ice *tp_ice = (struct transport_ice*)tp;
+    pjmedia_sdp_media *rem_m;
+    enum oa_role current_oa_role;
+    pj_bool_t initial_oa;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(tp && tmp_pool && rem_sdp, PJ_EINVAL);
+    PJ_ASSERT_RETURN(media_index < rem_sdp->media_count, PJ_EINVAL);
+
+    rem_m = rem_sdp->media[media_index];
+
+    initial_oa = tp_ice->initial_sdp;
+    current_oa_role = tp_ice->oa_role;
+
+    /* SDP has been negotiated */
+    tp_ice->initial_sdp = PJ_FALSE;
+    tp_ice->oa_role = ROLE_NONE;
+
+    /* Nothing to do if we don't have ICE session */
+    if (pj_ice_strans_has_sess(tp_ice->ice_st) == PJ_FALSE) {
+	return PJ_SUCCESS;
+    }
+
+    /* Processing depends on the offer/answer role */
+    if (current_oa_role == ROLE_OFFERER) {
+	/*
+	 * We are offerer. So this will be the first time we see the
+	 * remote's SDP.
+	 */
+	struct sdp_state answer_state;
+
+	/* Verify the answer */
+	status = verify_ice_sdp(tp_ice, tmp_pool, rem_sdp, media_index, 
+				PJ_ICE_SESS_ROLE_CONTROLLING, &answer_state);
+	if (status != PJ_SUCCESS) {
+	    /* Something wrong in the SDP answer */
+	    set_no_ice(tp_ice, "Invalid remote SDP answer", status);
+	    return status;
+	}
+
+	/* Does it have ICE? */
+	if (answer_state.match_comp_cnt == 0) {
+	    /* Remote doesn't support ICE */
+	    set_no_ice(tp_ice, "Remote answer doesn't support ICE", 
+		       PJ_SUCCESS);
+	    return PJ_SUCCESS;
+	}
+
+	/* Check if remote has reported ice-mismatch */
+	if (pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+				  &STR_ICE_MISMATCH, NULL) != NULL)
+	{
+	    /* Remote has reported ice-mismatch */
+	    set_no_ice(tp_ice, 
+		       "Remote answer contains 'ice-mismatch' attribute", 
+		       PJ_SUCCESS);
+	    return PJ_SUCCESS;
+	}
+
+	/* Check if remote has indicated a restart */
+	if (answer_state.ice_restart) {
+	    PJ_LOG(2,(tp_ice->base.name, 
+		      "Warning: remote has signalled ICE restart in SDP "
+		      "answer which is disallowed. Remote ICE negotiation"
+		      " may fail."));
+	}
+
+	/* Check if the answer itself is mismatched */
+	if (answer_state.ice_mismatch) {
+	    /* This happens either when a B2BUA modified remote answer but
+	     * strangely didn't modify our offer, or remote is not capable
+	     * of detecting mismatch in our offer (it didn't put 
+	     * 'ice-mismatch' attribute in the answer).
+	     */
+	    PJ_LOG(2,(tp_ice->base.name, 
+		      "Warning: remote answer mismatch, but it does not "
+		      "reject our offer with 'ice-mismatch'. ICE negotiation "
+		      "may fail"));
+	}
+
+	/* Do nothing if ICE is complete or running */
+	if (pj_ice_strans_sess_is_running(tp_ice->ice_st)) {
+	    PJ_LOG(4,(tp_ice->base.name,
+		      "Ignored offer/answer because ICE is running"));
+	    return PJ_SUCCESS;
+	}
+
+	if (pj_ice_strans_sess_is_complete(tp_ice->ice_st)) {
+	    PJ_LOG(4,(tp_ice->base.name, "ICE session unchanged"));
+	    return PJ_SUCCESS;
+	}
+
+	/* Start ICE */
+
+    } else {
+	/*
+	 * We are answerer. We've seen and negotiated remote's SDP
+	 * before, and the result is in "rem_offer_state".
+	 */
+	const pjmedia_sdp_attr *ufrag_attr, *pwd_attr;
+
+	/* Check for ICE in remote offer */
+	if (tp_ice->rem_offer_state.match_comp_cnt == 0) {
+	    /* No ICE attribute present */
+	    set_no_ice(tp_ice, "Remote no longer offers ICE",
+		       PJ_SUCCESS);
+	    return PJ_SUCCESS;
+	}
+
+	/* Check for ICE ice_mismatch condition in the offer */
+	if (tp_ice->rem_offer_state.ice_mismatch) {
+	    set_no_ice(tp_ice, "Remote offer mismatch: ", 
+		       PJNATH_EICEMISMATCH);
+	    return PJ_SUCCESS;
+	}
+
+	/* If ICE is complete and remote doesn't request restart,
+	 * then leave the session as is.
+	 */
+	if (!initial_oa && tp_ice->rem_offer_state.ice_restart == PJ_FALSE) {
+	    /* Remote has not requested ICE restart, so session is
+	     * unchanged.
+	     */
+	    PJ_LOG(4,(tp_ice->base.name, "ICE session unchanged"));
+	    return PJ_SUCCESS;
+	}
+
+	/* Either remote has requested ICE restart or this is our
+	 * first answer. 
+	 */
+
+	/* Stop ICE */
+	if (!initial_oa) {
+	    set_no_ice(tp_ice, "restarting by remote request..", PJ_SUCCESS);
+
+	    /* We have put new ICE ufrag and pwd in the answer. Now
+	     * create a new ICE session with that ufrag/pwd pair.
+	     */
+	    get_ice_attr(sdp_local, sdp_local->media[media_index], 
+			 &ufrag_attr, &pwd_attr);
+	    status = pj_ice_strans_init_ice(tp_ice->ice_st, 
+					    tp_ice->rem_offer_state.local_role,
+					    &ufrag_attr->value, 
+					    &pwd_attr->value);
+	    if (status != PJ_SUCCESS) {
+		PJ_LOG(1,(tp_ice->base.name, 
+			  "ICE re-initialization failed (status=%d)!",
+			  status));
+		return status;
+	    }
+	}
+
+	/* start ICE */
+    }
+
+    /* Now start ICE */
+    status = start_ice(tp_ice, tmp_pool, rem_sdp, media_index);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(1,(tp_ice->base.name, 
+		  "ICE restart failed (status=%d)!",
+		  status));
+	return status;
+    }
+
+    /* Done */
+
+    return PJ_SUCCESS;
 }
 
 
 static pj_status_t transport_media_stop(pjmedia_transport *tp)
 {
     struct transport_ice *tp_ice = (struct transport_ice*)tp;
-    return pj_ice_strans_stop_ice(tp_ice->ice_st);
+    
+    set_no_ice(tp_ice, "media stop requested", PJ_SUCCESS);
+
+    return PJ_SUCCESS;
 }
 
 

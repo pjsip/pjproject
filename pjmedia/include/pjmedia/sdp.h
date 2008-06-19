@@ -318,6 +318,17 @@ PJ_DECL(pj_status_t) pjmedia_sdp_attr_get_rtcp(const pjmedia_sdp_attr *attr,
 					       pjmedia_sdp_rtcp_attr *rtcp);
 
 
+/**
+ * Create a=rtcp attribute.
+ *
+ * @param pool		Pool to create the attribute.
+ * @param a		Socket address.
+ *
+ * @return		SDP RTCP attribute.
+ */
+PJ_DECL(pjmedia_sdp_attr*) pjmedia_sdp_attr_create_rtcp(pj_pool_t *pool,
+							const pj_sockaddr *a);
+
 
 /* **************************************************************************
  * SDP CONNECTION INFO

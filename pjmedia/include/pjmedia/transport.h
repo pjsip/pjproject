@@ -320,18 +320,29 @@ struct pjmedia_transport_op
 			      pj_size_t size);
 
     /**
-     * This function is called by application to generate the SDP parts
-     * related to transport type, e.g: ICE, SRTP.
+     * Prepare the transport for a new media session.
      *
      * Application should call #pjmedia_transport_media_create() instead of 
      * calling this function directly.
      */
     pj_status_t (*media_create)(pjmedia_transport *tp,
-				pj_pool_t *pool,
+				pj_pool_t *sdp_pool,
 				unsigned options,
-				pjmedia_sdp_session *sdp_local,
-				const pjmedia_sdp_session *sdp_remote,
+				const pjmedia_sdp_session *remote_sdp,
 				unsigned media_index);
+
+    /**
+     * This function is called by application to generate the SDP parts
+     * related to transport type, e.g: ICE, SRTP.
+     *
+     * Application should call #pjmedia_transport_encode_sdp() instead of
+     * calling this function directly.
+     */
+    pj_status_t (*encode_sdp)(pjmedia_transport *tp,
+			      pj_pool_t *sdp_pool,
+			      pjmedia_sdp_session *sdp_local,
+			      const pjmedia_sdp_session *rem_sdp,
+			      unsigned media_index);
 
     /**
      * This function is called by application to start the transport
@@ -341,8 +352,8 @@ struct pjmedia_transport_op
      * calling this function directly.
      */
     pj_status_t (*media_start) (pjmedia_transport *tp,
-			        pj_pool_t *pool,
-			        pjmedia_sdp_session *sdp_local,
+			        pj_pool_t *tmp_pool,
+			        const pjmedia_sdp_session *sdp_local,
 			        const pjmedia_sdp_session *sdp_remote,
 				unsigned media_index);
 
@@ -626,37 +637,61 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
 
 
 /**
- * Generate local SDP parts that are related to the specified media transport.
- * Remote SDP might be needed as reference when application is in deciding
- * side of negotiation (callee side), otherwise it should be NULL.
- *
- * This API is provided to allow the media transport to add more information
- * in the SDP offer, before the offer is sent to remote. Additionally, for 
- * answerer side, this callback allows the media transport to reject the 
- * offer before this offer is processed by the SDP negotiator. 
+ * Prepare the media transport for a new media session, and optionally
+ * encode the relevant information in the \a sdp_local. Application must
+ * call this function before starting a new media session using this
+ * transport.
  *
  * This is just a simple wrapper which calls <tt>media_create()</tt> member 
  * of the transport.
  *
  * @param tp		The media transport.
- * @param pool		The memory pool.
+ * @param sdp_pool	Pool object to allocate memory related to SDP
+ *			messaging components.
  * @param option	Option flags, from #pjmedia_tranport_media_option
- * @param sdp_local	Local SDP.
- * @param sdp_remote	Remote SDP.
+ * @param rem_sdp	Remote SDP if it's available.
  * @param media_index	Media index in SDP.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
-				    pj_pool_t *pool,
+				    pj_pool_t *sdp_pool,
 				    unsigned options,
-				    pjmedia_sdp_session *sdp_local,
-				    const pjmedia_sdp_session *sdp_remote,
+				    const pjmedia_sdp_session *rem_sdp,
 				    unsigned media_index)
 {
-    return (*tp->op->media_create)(tp, pool, options, sdp_local, sdp_remote, 
+    return (*tp->op->media_create)(tp, sdp_pool, options, rem_sdp, 
 				   media_index);
 }
+
+
+/**
+ * Put transport specific information into the SDP. This function can be
+ * called to create SDP offer or answer, depending whether \a rem_sdp
+ * parameter is present.
+ *
+ * This is just a simple wrapper which calls <tt>encode_sdp()</tt> member 
+ * of the transport.
+ *
+ * @param tp		The media transport.
+ * @param sdp_pool	Pool object to allocate memory related to SDP
+ *			messaging components.
+ * @param sdp		The local SDP to be filled in information from the
+ *			media transport.
+ * @param rem_sdp	Remote SDP if it's available.
+ * @param media_index	Media index in SDP.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_INLINE(pj_status_t) pjmedia_transport_encode_sdp(pjmedia_transport *tp,
+					    pj_pool_t *sdp_pool,
+					    pjmedia_sdp_session *sdp,
+					    const pjmedia_sdp_session *rem_sdp,
+					    unsigned media_index)
+{
+    return (*tp->op->encode_sdp)(tp, sdp_pool, sdp, rem_sdp, media_index);
+}
+
 
 /**
  * Start the transport with regards to SDP negotiation result. 
@@ -673,7 +708,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
  * of the transport.
  *
  * @param tp		The media transport.
- * @param pool		The memory pool.
+ * @param tmp_pool	The memory pool for allocating temporary objects.
  * @param option	The media transport option.
  * @param sdp_local	Local SDP.
  * @param sdp_remote	Remote SDP.
@@ -682,12 +717,13 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
-				    pj_pool_t *pool,
-				    pjmedia_sdp_session *sdp_local,
+				    pj_pool_t *tmp_pool,
+				    const pjmedia_sdp_session *sdp_local,
 				    const pjmedia_sdp_session *sdp_remote,
 				    unsigned media_index)
 {
-    return (*tp->op->media_start)(tp, pool, sdp_local, sdp_remote, media_index);
+    return (*tp->op->media_start)(tp, tmp_pool, sdp_local, sdp_remote, 
+				  media_index);
 }
 
 
