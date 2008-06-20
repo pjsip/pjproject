@@ -86,6 +86,8 @@ static struct app_config
     pjsua_player_id	    wav_id;
     pjsua_conf_port_id	    wav_port;
     pj_bool_t		    auto_play;
+    pj_bool_t		    auto_play_hangup;
+    pj_timer_entry	    auto_hangup_timer;
     pj_bool_t		    auto_loop;
     pj_bool_t		    auto_conf;
     pj_str_t		    rec_file;
@@ -444,7 +446,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
-	   OPT_AUTO_ANSWER, OPT_AUTO_HANGUP, OPT_AUTO_PLAY, OPT_AUTO_LOOP,
+	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
 	   OPT_USE_TURN,OPT_ICE_NO_HOST, OPT_TURN_SRV, OPT_TURN_TCP,
@@ -501,8 +503,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "offer-x-ms-msg",0,0,OPT_OFFER_X_MS_MSG},
 	{ "no-presence", 0, 0, OPT_NO_PRESENCE},
 	{ "auto-answer",1, 0, OPT_AUTO_ANSWER},
-	{ "auto-hangup",1, 0, OPT_AUTO_HANGUP},
 	{ "auto-play",  0, 0, OPT_AUTO_PLAY},
+	{ "auto-play-hangup",0, 0, OPT_AUTO_PLAY_HANGUP},
 	{ "auto-rec",   0, 0, OPT_AUTO_REC},
 	{ "auto-loop",  0, 0, OPT_AUTO_LOOP},
 	{ "auto-conf",  0, 0, OPT_AUTO_CONF},
@@ -853,6 +855,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_AUTO_PLAY:
 	    cfg->auto_play = 1;
+	    break;
+
+	case OPT_AUTO_PLAY_HANGUP:
+	    cfg->auto_play_hangup = 1;
 	    break;
 
 	case OPT_AUTO_REC:
@@ -1913,6 +1919,13 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	    pjsip_endpt_cancel_timer(endpt, &cd->timer);
 	}
 
+	/* Rewind play file when hangup automatically, 
+	 * since file is not looped
+	 */
+	if (app_config.auto_play_hangup)
+	    pjsua_player_set_pos(app_config.wav_id, 0);
+
+
 	PJ_LOG(3,(THIS_FILE, "Call %d is DISCONNECTED [reason=%d (%s)]", 
 		  call_id,
 		  call_info.last_status,
@@ -2116,7 +2129,9 @@ static void on_call_media_state(pjsua_call_id call_id)
 	}
 
 	/* Stream a file, if desired */
-	if (app_config.auto_play && app_config.wav_port != PJSUA_INVALID_ID) {
+	if ((app_config.auto_play || app_config.auto_play_hangup) && 
+	    app_config.wav_port != PJSUA_INVALID_ID)
+	{
 	    pjsua_conf_connect(app_config.wav_port, call_info.conf_slot);
 	    connect_sound = PJ_FALSE;
 	}
@@ -2387,6 +2402,44 @@ static void print_acc_status(int acc_id)
 	info.online_status_text.ptr);
 }
 
+/* Playfile done notification, set timer to hangup calls */
+pj_status_t on_playfile_done(pjmedia_port *port, void *usr_data)
+{
+    pj_time_val delay;
+
+    PJ_UNUSED_ARG(port);
+    PJ_UNUSED_ARG(usr_data);
+
+    /* Just rewind WAV when it is played outside of call */
+    if (pjsua_call_get_count() == 0) {
+	pjsua_player_set_pos(app_config.wav_id, 0);
+	return PJ_SUCCESS;
+    }
+
+    /* Timer is already active */
+    if (app_config.auto_hangup_timer.id == 1)
+	return PJ_SUCCESS;
+
+    app_config.auto_hangup_timer.id = 1;
+    delay.sec = 0;
+    delay.msec = 200; /* Give 200 ms before hangup */
+    pjsip_endpt_schedule_timer(pjsua_get_pjsip_endpt(), 
+			       &app_config.auto_hangup_timer, 
+			       &delay);
+
+    return PJ_SUCCESS;
+}
+
+/* Auto hangup timer callback */
+static void hangup_timeout_callback(pj_timer_heap_t *timer_heap,
+				    struct pj_timer_entry *entry)
+{
+    PJ_UNUSED_ARG(timer_heap);
+    PJ_UNUSED_ARG(entry);
+
+    app_config.auto_hangup_timer.id = 0;
+    pjsua_call_hangup_all();
+}
 
 /*
  * Show a bit of help.
@@ -3760,8 +3813,12 @@ pj_status_t app_init(int argc, char *argv[])
     /* Optionally registers WAV file */
     for (i=0; i<app_config.wav_count; ++i) {
 	pjsua_player_id wav_id;
+	unsigned play_options = 0;
 
-	status = pjsua_player_create(&app_config.wav_files[i], 0, 
+	if (app_config.auto_play_hangup)
+	    play_options |= PJMEDIA_FILE_NO_LOOP;
+
+	status = pjsua_player_create(&app_config.wav_files[i], play_options, 
 				     &wav_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -3769,6 +3826,18 @@ pj_status_t app_init(int argc, char *argv[])
 	if (app_config.wav_id == PJSUA_INVALID_ID) {
 	    app_config.wav_id = wav_id;
 	    app_config.wav_port = pjsua_player_get_conf_port(app_config.wav_id);
+	    if (app_config.auto_play_hangup) {
+		pjmedia_port *port;
+
+		pjsua_player_get_port(app_config.wav_id, &port);
+		status = pjmedia_wav_player_set_eof_cb(port, NULL, 
+						       &on_playfile_done);
+		if (status != PJ_SUCCESS)
+		    goto on_error;
+
+		pj_timer_entry_init(&app_config.auto_hangup_timer, 0, NULL, 
+				    &hangup_timeout_callback);
+	    }
 	}
     }
 
