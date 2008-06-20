@@ -1064,6 +1064,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     session = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
     PJ_ASSERT_RETURN(session != NULL, PJ_ENOMEM);
 
+    /* Ignore leading newlines */
+    while (*scanner.curptr=='\r' || *scanner.curptr=='\n')
+	pj_scan_get_char(&scanner);
+
     PJ_TRY {
 	while (!pj_scan_is_eof(&scanner)) {
 		cur_name = *scanner.curptr;
@@ -1111,6 +1115,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		case 10:
 		    pj_scan_get_char(&scanner);
 		    if (!pj_scan_is_eof(&scanner)) {
+			ctx.last_error = PJMEDIA_SDP_EINSDP;
 			on_scanner_error(&scanner);
 		    }
 		    break;
