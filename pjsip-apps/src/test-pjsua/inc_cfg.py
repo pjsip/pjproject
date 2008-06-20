@@ -86,4 +86,11 @@ class TestParam:
 		self.user_data = user_data
 
 
+###################################
+# TestError exception
+class TestError:
+	desc = ""
+	def __init__(self, desc):
+		self.desc = desc
+
 

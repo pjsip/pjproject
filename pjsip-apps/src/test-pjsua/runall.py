@@ -12,9 +12,9 @@ tests = []
 # Excluded tests (because they fail?)
 excluded_tests = [ "svn",
 		   "pyc",
-		   "scripts-call/150_srtp_1_2",
-		   "scripts-call/150_srtp_2_1",
-                   "scripts-call/300_ice_1_1"]
+		   #"scripts-call/150_srtp_1_2",
+		   "scripts-call/150_srtp_2_1"
+                   ]
 
 # Add basic tests
 for f in os.listdir("scripts-run"):
@@ -27,6 +27,10 @@ for f in os.listdir("scripts-call"):
 # Add presence tests
 for f in os.listdir("scripts-pres"):
     tests.append("mod_pres.py scripts-pres/" + f)
+
+# Add mod_sendto tests
+for f in os.listdir("scripts-sendto"):
+    tests.append("mod_sendto.py scripts-sendto/" + f)
 
 # Filter-out excluded tests
 for pat in excluded_tests:

@@ -8,6 +8,7 @@ import random
 import time
 
 import inc_const as const
+from inc_cfg import *
 
 # Get the pjsua executable name
 if sys.platform.find("win32")!=-1:
@@ -41,13 +42,6 @@ else:
 
 
 G_EXE = G_EXE.rstrip("\n\r \t")
-
-###################################
-# TestError exception
-class TestError:
-	desc = ""
-	def __init__(self, desc):
-		self.desc = desc
 
 ###################################
 # Poor man's 'expect'-like class
