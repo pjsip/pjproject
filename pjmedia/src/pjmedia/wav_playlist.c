@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * Original author:
  *  David Clark <vdc1048 @ tx.rr.com>

@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1134,7 +1134,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	    int matched_idx = -1;
 	    int chosen_tag = 0;
 	    int tags[64]; /* assume no more than 64 crypto attrs in a media */
-	    int cr_attr_count = 0;
+	    unsigned cr_attr_count = 0;
 
 	    /* Find supported crypto-suite, get the tag, and assign policy_local */
 	    for (i=0; i<m_rem->attr_count; ++i) {

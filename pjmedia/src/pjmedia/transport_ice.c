@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1139,7 +1139,7 @@ static pj_status_t start_ice(struct transport_ice *tp_ice,
 			     unsigned media_index)
 {
     pjmedia_sdp_media *rem_m = rem_sdp->media[media_index];
-    pjmedia_sdp_attr *ufrag_attr, *pwd_attr;
+    const pjmedia_sdp_attr *ufrag_attr, *pwd_attr;
     pj_ice_sess_cand *cand;
     unsigned i, cand_cnt;
     pj_status_t status;

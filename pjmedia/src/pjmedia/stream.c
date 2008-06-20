@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1758,7 +1758,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 #endif
 
     /* Send RTCP SDES */
-    len = create_rtcp_sdes(stream, stream->enc->out_pkt, 
+    len = create_rtcp_sdes(stream, (pj_uint8_t*)stream->enc->out_pkt, 
 			   stream->enc->out_pkt_size);
     if (len != 0) {
 	pjmedia_transport_send_rtcp(stream->transport, 
@@ -1826,7 +1826,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 #endif
 
     /* Send RTCP BYE */
-    len = create_rtcp_bye(stream, stream->enc->out_pkt, 
+    len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt, 
 			  stream->enc->out_pkt_size);
     if (len != 0) {
 	pjmedia_transport_send_rtcp(stream->transport, 
