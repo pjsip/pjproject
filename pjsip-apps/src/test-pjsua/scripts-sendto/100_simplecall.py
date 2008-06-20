@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 import inc_sip as sip
 import inc_sdp as sdp
 
@@ -16,5 +16,5 @@ a=rtpmap:101 telephone-event/8000
 a=fmtp:101 0-15
 """
 
-sendto_cfg = sip.SendtoCfg( "simple call", "--null-audio", sdp, 200)
+sendto_cfg = sip.SendtoCfg( "simple call", "--null-audio --auto-answer 200", sdp, 200)
 

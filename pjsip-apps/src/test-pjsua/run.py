@@ -109,14 +109,15 @@ class Expect:
 
 #########################
 # Error handling
-def handle_error(errmsg, t):
+def handle_error(errmsg, t, close_processes = True):
 	print "====== Caught error: " + errmsg + " ======"
-	time.sleep(1)
-	for p in t.process:
-		p.send("q")
-		p.send("q")
-		p.expect(const.DESTROYED, False)
-		p.wait()
+	if (close_processes):
+		time.sleep(1)
+		for p in t.process:
+			p.send("q")
+			p.send("q")
+			p.expect(const.DESTROYED, False)
+			p.wait()
 	print "Test completed with error: " + errmsg
 	sys.exit(1)
 
@@ -195,7 +196,7 @@ if script.test.post_func != None:
 	try:
 		script.test.post_func(script.test, script.test.user_data)
 	except TestError, e:
-		handle_error(e.desc, script.test)
+		handle_error(e.desc, script.test, False)
 
 # Done
 print "Test " + script.test.title + " completed successfully"

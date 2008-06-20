@@ -1,11 +1,12 @@
 # $Id$
 
 # PLAYFILE -> RECFILE:
-# input file is played and is recorded to output, then compare them.
+# Input file is played and is recorded to output, then compare them.
+# Useful to tes clock rates compatibility and resample quality
 #	null-audio
 #	port 1: wav file input xxxxxx.clock_rate.wav, e.g: test1.8.wav
 #	port 2: wav file ouput xxxxxx.clock_rate.wav, e.g: res1.8.wav
-#	wav input more than 3 seconds
+#	wav input must be more than 3 seconds long
 
 import time
 import imp
@@ -75,8 +76,20 @@ def post_func(t, ud):
 	fullcmd = COMPARE_WAV_EXE + " " + ud.input_filename + " " + ud.output_filename + " " + "3000"
 	endpt.trace("Popen " + fullcmd)
 	cmp_proc = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, universal_newlines=True)
+
+	# Parse similarity ouput
 	line = cmp_proc.stdout.readline()
-	endpt.trace("WAV similarity = " + line)
+	mo_sim_val = re.match(".+=\s+(\d+)", line)
+	if (mo_sim_val == None):
+		raise TestError("Error comparing WAV files")
+		return
+
+	# Evaluate the similarity value
+	sim_val = mo_sim_val.group(1)
+	if (sim_val > 0):
+		endpt.trace("WAV similarity = " + sim_val)
+	else:
+		raise TestError("Degraded WAV heavily distorted")
 
 
 # Here where it all comes together
