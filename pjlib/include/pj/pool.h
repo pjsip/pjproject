@@ -39,7 +39,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_POOL_GROUP Fast Memory Pool
- * @ingroup PJ
  * @brief
  * Memory pools allow dynamic memory allocation comparable to malloc or the 
  * new in operator C++. Those implementations are not desirable for very

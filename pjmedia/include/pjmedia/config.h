@@ -27,7 +27,6 @@
 
 /**
  * @defgroup PJMEDIA_BASE Base Types and Configurations
- * @ingroup PJMEDIA
  */
 
 /**

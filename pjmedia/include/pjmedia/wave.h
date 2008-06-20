@@ -26,13 +26,21 @@
  */
 #include <pjmedia/types.h>
 
+/**
+ * @defgroup PJMEDIA_FILE_FORMAT File Formats
+ * @brief Supported file formats
+ */
+
 
 /**
  * @defgroup PJMEDIA_WAVE WAVE Header
- * @ingroup PJMEDIA_MISC
+ * @ingroup PJMEDIA_FILE_FORMAT
+ * @brief Representation of RIFF/WAVE file format
  * @{
  *
- * Supports for simple/canonical Microsoft RIFF WAVE format.
+ * This the the low level representation of RIFF/WAVE file format. For
+ * higher abstraction, please see \ref PJMEDIA_FILE_PLAY and 
+ * \ref PJMEDIA_FILE_REC.
  */
 
 

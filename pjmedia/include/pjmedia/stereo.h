@@ -32,9 +32,8 @@
 
 /**
  * @defgroup PJMEDIA_STEREO Monochannel and multichannel audio frame converter
- * @ingroup PJMEDIA_MISC
- * @brief Interface for converting monochannel audio frame to multichannel
- * audio frame and vice versa.
+ * @ingroup PJMEDIA_FRAME_OP
+ * @brief Mono - multi-channels audio conversion
  * @{
  *
  */

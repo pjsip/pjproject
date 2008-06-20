@@ -55,7 +55,11 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjlib/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjlib/docs/html/ ; \
+	fi
 
 print:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib print_lib

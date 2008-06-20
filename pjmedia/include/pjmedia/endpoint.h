@@ -26,7 +26,6 @@
  */
 /**
  * @defgroup PJMED_ENDPT The Endpoint
- * @ingroup PJMEDIA
  * @{
  *
  * The media endpoint acts as placeholder for endpoint capabilities. Each 

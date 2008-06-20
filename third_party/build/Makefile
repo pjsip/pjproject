@@ -12,3 +12,5 @@ all clean dep depend distclean realclean:
 		fi; \
 	done
 
+doc:
+	

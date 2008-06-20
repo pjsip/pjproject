@@ -31,7 +31,6 @@
 
 /**
  * @defgroup PJSIP_HIGH_UA User Agent Library
- * @ingroup PJSIP
  * @brief Mid-level User Agent Library.
  *
  * This is the high level user agent library, which consists of:

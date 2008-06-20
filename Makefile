@@ -7,7 +7,7 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
-all clean dep depend distclean doc print realclean:
+all clean dep depend distclean print realclean:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
 		    true; \
@@ -16,6 +16,19 @@ all clean dep depend distclean doc print realclean:
 		fi; \
 	done
 
+doc:
+	@if test \( ! "$(WWWDIR)" == "" \) -a \( ! -d $(WWWDIR)/pjlib/docs/html \) ; then \
+		echo 'Directory "$(WWWDIR)" does not look like a valid pjsip web directory'; \
+		exit 1; \
+	fi
+	for dir in $(DIRS); do \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
+		    true; \
+		else \
+		    exit 1; \
+		fi; \
+	done
+	
 LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
 	pjlib-util/lib/libpjlib-util-$(TARGET_NAME).a \
 	pjnath/lib/libpjnath-$(TARGET_NAME).a \

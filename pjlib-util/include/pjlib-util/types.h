@@ -28,7 +28,7 @@
 #include <pjlib-util/config.h>
 
 /**
- * @defgroup PJLIB_UTIL PJLIB-UTIL Library
+ * @defgroup PJLIB_UTIL_BASE Base
  * @{
  */
 
@@ -50,6 +50,17 @@ PJ_END_DECL
  * @}
  */
 
+/**
+ * @defgroup PJLIB_TEXT Text and String Manipulation
+ */
+
+/**
+ * @defgroup PJ_PROTOCOLS Protocols
+ */
+
+/**
+ * @defgroup PJ_FILE_FMT File Formats
+ */
 
 /**
  * @mainpage PJLIB-UTIL
@@ -60,8 +71,8 @@ PJ_END_DECL
  * This is the documentation of PJLIB-UTIL, an auxiliary library providing
  * adjunct functions to PJLIB.
  * 
- * Please go to the <A HREF="modules.htm"><B>Modules</B></A> page for list
- * of modules.
+ * Please go to the <A HREF="modules.htm"><B>Table of Contents</B></A> page
+ * for list of modules.
  *
  *
  * \n

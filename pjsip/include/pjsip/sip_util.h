@@ -582,7 +582,6 @@ PJ_DECL(pj_status_t) pjsip_endpt_send_request( pjsip_endpoint *endpt,
 
 /**
  * @defgroup PJSIP_PROXY_CORE Core Proxy Layer
- * @ingroup PJSIP
  * @brief Core proxy operations
  * @{
  */

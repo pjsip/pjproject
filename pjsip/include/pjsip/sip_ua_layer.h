@@ -30,7 +30,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJSIP_UA Base User Agent Layer/Common Dialog Layer
- * @ingroup PJSIP
  * @brief Dialog management.
  *
  * This module provides basic dialog management, which is used by higher

@@ -30,7 +30,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup pj_errno Error Codes
- * @ingroup PJ
  * @{
  *
  * In PJLIB, error/status codes from operating system are translated

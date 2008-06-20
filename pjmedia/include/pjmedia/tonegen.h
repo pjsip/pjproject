@@ -27,10 +27,11 @@
 
 
 /**
- * @defgroup PJMEDIA_MF_DTMF_TONE_GENERATOR Tone (sine, MF, DTMF) Generator
+ * @defgroup PJMEDIA_MF_DTMF_TONE_GENERATOR Multi-frequency tone generator
  * @ingroup PJMEDIA_PORT
- * @brief Tone (sine, MF, DTMF) Generator
+ * @brief Multi-frequency tone generator
  * @{
+ *
  * This page describes tone generator media port. A tone generator can be
  * used to generate a single frequency sine wave or dual frequency tones
  * such as DTMF.

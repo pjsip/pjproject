@@ -33,7 +33,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMEDIA_FILE_PLAY WAV File Player
  * @ingroup PJMEDIA_PORT
- * @brief WAV File Player
+ * @brief Audio playback from WAV file
  * @{
  */
 
@@ -137,7 +137,7 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
 /**
  * @defgroup PJMEDIA_FILE_REC File Writer (Recorder)
  * @ingroup PJMEDIA_PORT
- * @brief WAV File Writer (Recorder)
+ * @brief Audio capture/recording to WAV file
  * @{
  */
 

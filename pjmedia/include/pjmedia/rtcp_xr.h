@@ -33,8 +33,10 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMED_RTCP_XR RTCP Extended Report (XR) - RFC 3611
- * @ingroup PJMEDIA_TRANSPORT
+ * @ingroup PJMEDIA_SESSION
+ * @brief RTCP XR extension to RTCP session
  * @{
+ *
  * PJMEDIA implements subsets of RTCP XR specification (RFC 3611) to monitor
  * the quality of the real-time media (audio/video) transmission.
  */

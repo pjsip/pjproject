@@ -55,7 +55,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJSUA_LIB PJSUA API - High Level Softphone API for C/C++ and Python
- * @ingroup PJSIP
  * @brief Very high level API for constructing SIP UA applications.
  * @{
  *

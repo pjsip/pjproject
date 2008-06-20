@@ -32,14 +32,12 @@
 /**
  * @defgroup PJMED_JBUF Adaptive jitter buffer
  * @ingroup PJMEDIA_FRAME_OP
+ * @brief Adaptive de-jitter buffering implementation
  * @{
+ *
  * This section describes PJMEDIA's implementation of de-jitter buffer.
  * The de-jitter buffer may be set to operate in adaptive mode or fixed
  * delay mode.
- *
- * The jitter buffer is also able to report the status of the current
- * frame (#pjmedia_jb_frame_type). This status is used for examply by
- * @ref PJMED_STRM to invoke the codec's @ref PJMED_PLC algorithm.
  */
 
 

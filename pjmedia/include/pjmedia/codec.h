@@ -33,7 +33,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMEDIA_CODEC Codec Framework
- * @ingroup PJMEDIA
  * @brief Media codec framework and management
  * @{
  *

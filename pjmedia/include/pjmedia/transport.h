@@ -29,24 +29,13 @@
 #include <pjmedia/errno.h>
 
 /**
- * @defgroup PJMEDIA_TRANSPORT Media Transports
- * @ingroup PJMEDIA
+ * @defgroup PJMEDIA_TRANSPORT Media Transport
  * @brief Transports.
- * Transport related components.
- */
-
-/**
- * @defgroup PJMEDIA_TRANSPORT_H Media Network Transport Interface
- * @ingroup PJMEDIA_TRANSPORT
- * @brief PJMEDIA object for sending/receiving media packets over the network
  * @{
  * The media transport (#pjmedia_transport) is the object to send and
  * receive media packets over the network. The media transport interface
  * allows the library to be extended to support different types of 
- * transports to send and receive packets. Currently only the standard
- * UDP transport implementation is provided (see \ref PJMEDIA_TRANSPORT_UDP),
- * but application designer may extend the library to support other types
- * of custom transports such as RTP/RTCP over TCP, RTP/RTCP over HTTP, etc.
+ * transports to send and receive packets.
  *
  * The media transport is declared as #pjmedia_transport "class", which
  * declares "interfaces" to use the class in #pjmedia_transport_op
@@ -62,7 +51,7 @@
    \image html media-transport.PNG
 
 
- * \section PJMEDIA_TRANSPORT_H_USING Using the Media Transport
+ * \section PJMEDIA_TRANSPORT_H_USING Basic Media Transport Usage
  *
  * The media transport's life-cycle normally follows the following stages.
  *
@@ -141,38 +130,71 @@
  *    all resources used by the transport, such as sockets and memory.
  *
  *
- * \section PJMEDIA_TRANSPORT_H_EXT Media Transport Extended API
+ * \section offer_answer Interaction with SDP Offer/Answer
  
-   Apart from the basic interface above, the media transport provides some
-   more APIs:
+   For basic UDP transport, the \ref PJMEDIA_TRANSPORT_H_USING above is
+   sufficient to use the media transport. However, more complex media
+   transports such as \ref PJMEDIA_TRANSPORT_SRTP and \ref
+   PJMEDIA_TRANSPORT_ICE requires closer interactions with SDP offer and
+   answer negotiation.
 
-    - pjmedia_transport_media_create()
-   \n
-      This API is provided to allow the media transport to add more information
-      in the SDP offer, before the offer is sent to remote. Additionally, for 
-      answerer side, this callback allows the media transport to reject the 
-      offer before this offer is processed by the SDP negotiator. 
+   The media transports can interact with the SDP offer/answer via
+   these APIs:
+     - #pjmedia_transport_media_create(), to initialize the media transport
+       for new media session,
+     - #pjmedia_transport_encode_sdp(), to encode SDP offer or answer,
+     - #pjmedia_transport_media_start(), to activate the settings that
+       have been negotiated by SDP offer answer, and
+     - #pjmedia_transport_media_stop(), to deinitialize the media transport
+       and reset the transport to its idle state.
+   
+   The usage of these API in the context of SDP offer answer will be 
+   described below.
 
-    - pjmedia_transport_media_start()
-    \n
-      This API should be called after offer and answer are negotiated, and 
-      both SDPs are available, and before the media is started. For answerer
-      side, this callback will be called before the answer is sent to remote,
-      to allow media transport to put additional info in the SDP. For 
-      offerer side, this callback will be called after SDP answer is 
-      received. In this callback, the media transport has the final chance 
-      to negotiate/validate the offer and answer before media is really 
-      started (and answer is sent, for answerer side). 
+   \subsection media_create Initializing Transport for New Session
 
-    - pjmedia_transport_media_stop()
-    \n
-      This API should be called when the media is stopped, to allow the media
-      transport to release its resources. 
+   Application must call #pjmedia_transport_media_create() before using
+   the transport for a new session.
 
-    - pjmedia_transport_simulate_lost()
-    \n
-      This API can be used to instruct media transport to simulate packet lost
-      on a particular direction.
+   \subsection creat_oa Creating SDP Offer and Answer
+
+   The #pjmedia_transport_encode_sdp() is used to put additional information
+   from the transport to the local SDP, before the SDP is sent and negotiated
+   with remote SDP.
+
+   When creating an offer, call #pjmedia_transport_encode_sdp() with
+   local SDP (and NULL as \a rem_sdp). The media transport will add the
+   relevant attributes in the local SDP. Application then gives the local
+   SDP to the invite session to be sent to remote agent.
+
+   When creating an answer, also call #pjmedia_transport_encode_sdp(),
+   but this time specify both local and remote SDP to the function. The 
+   media transport will once again modify the local SDP and add relevant
+   attributes to the local SDP, if the appropriate attributes related to
+   the transport functionality are present in remote offer. The remote
+   SDP does not contain the relevant attributes, then the specific transport
+   functionality will not be activated for the session.
+
+   The #pjmedia_transport_encode_sdp() should also be called when application
+   sends subsequent SDP offer or answer. The media transport will encode
+   the appropriate attributes based on the state of the session.
+
+   \subsection media_start Offer/Answer Completion
+
+   Once both local and remote SDP have been negotiated by the 
+   \ref PJMEDIA_SDP_NEG (normally this is part of PJSIP invite session),
+   application should give both local and remote SDP to 
+   #pjmedia_transport_media_start() so that the settings are activated
+   for the session. This function should be called for both initial and
+   subsequent SDP negotiation.
+
+   \subsection media_stop Stopping Transport
+
+   Once session is stop application must call #pjmedia_transport_media_stop()
+   to deactivate the transport feature. Application may reuse the transport
+   for subsequent media session by repeating the #pjmedia_transport_media_create(),
+   #pjmedia_transport_encode_sdp(), #pjmedia_transport_media_start(), and
+   #pjmedia_transport_media_stop() above.
 
  * \section PJMEDIA_TRANSPORT_H_IMPL Implementing Media Transport
  *
@@ -198,14 +220,12 @@
  * mutex protection, since it may be called by application's thread (for
  * example, to send RTP/RTCP packets).
  *
- * For an example of media transport implementation, please refer to 
- * <tt>transport_udp.h</tt> and <tt>transport_udp.c</tt> in PJMEDIA source
- * distribution.
  */
 
-PJ_BEGIN_DECL
 
 #include <pjmedia/sdp.h>
+
+PJ_BEGIN_DECL
 
 
 /**
@@ -346,7 +366,7 @@ struct pjmedia_transport_op
 
     /**
      * This function is called by application to start the transport
-     * based on SDP negotiation result.
+     * based on local and remote SDP.
      *
      * Application should call #pjmedia_transport_media_start() instead of 
      * calling this function directly.
@@ -413,7 +433,7 @@ typedef enum pjmedia_transport_type
 
 
 /**
- * This structure declares stream transport. A stream transport is called
+ * This structure declares media transport. A media transport is called
  * by the stream to transmit a packet, and will notify stream when
  * incoming packet is arrived.
  */
@@ -637,8 +657,7 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
 
 
 /**
- * Prepare the media transport for a new media session, and optionally
- * encode the relevant information in the \a sdp_local. Application must
+ * Prepare the media transport for a new media session, Application must
  * call this function before starting a new media session using this
  * transport.
  *
@@ -648,8 +667,9 @@ PJ_INLINE(pj_status_t) pjmedia_transport_send_rtcp2(pjmedia_transport *tp,
  * @param tp		The media transport.
  * @param sdp_pool	Pool object to allocate memory related to SDP
  *			messaging components.
- * @param option	Option flags, from #pjmedia_tranport_media_option
- * @param rem_sdp	Remote SDP if it's available.
+ * @param options	Option flags, from #pjmedia_tranport_media_option
+ * @param rem_sdp	Remote SDP if local SDP is an answer, otherwise
+ *			specify NULL if SDP is an offer.
  * @param media_index	Media index in SDP.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -667,8 +687,8 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
 
 /**
  * Put transport specific information into the SDP. This function can be
- * called to create SDP offer or answer, depending whether \a rem_sdp
- * parameter is present.
+ * called to put transport specific information in the initial or
+ * subsequent SDP offer or answer.
  *
  * This is just a simple wrapper which calls <tt>encode_sdp()</tt> member 
  * of the transport.
@@ -678,7 +698,8 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_create(pjmedia_transport *tp,
  *			messaging components.
  * @param sdp		The local SDP to be filled in information from the
  *			media transport.
- * @param rem_sdp	Remote SDP if it's available.
+ * @param rem_sdp	Remote SDP if local SDP is an answer, otherwise
+ *			specify NULL if SDP is an offer.
  * @param media_index	Media index in SDP.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
@@ -694,25 +715,20 @@ PJ_INLINE(pj_status_t) pjmedia_transport_encode_sdp(pjmedia_transport *tp,
 
 
 /**
- * Start the transport with regards to SDP negotiation result. 
- * This API should be called after offer and answer are negotiated, and 
- * both SDPs are available, and before the media is started. For answerer
- * side, this callback will be called before the answer is sent to remote,
- * to allow media transport to put additional info in the SDP. For 
- * offerer side, this callback will be called after SDP answer is 
- * received. In this callback, the media transport has the final chance 
- * to negotiate/validate the offer and answer before media is really 
- * started (and answer is sent, for answerer side). 
+ * Start the transport session with the settings in both local and remote 
+ * SDP. The actual work that is done by this function depends on the 
+ * underlying transport type. For SRTP, this will activate the encryption
+ * and decryption based on the keys found the SDPs. For ICE, this will
+ * start ICE negotiation according to the information found in the SDPs.
  *
  * This is just a simple wrapper which calls <tt>media_start()</tt> member 
  * of the transport.
  *
  * @param tp		The media transport.
  * @param tmp_pool	The memory pool for allocating temporary objects.
- * @param option	The media transport option.
  * @param sdp_local	Local SDP.
  * @param sdp_remote	Remote SDP.
- * @param media_index	Media index to start.
+ * @param media_index	Media index in the SDP.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -728,9 +744,8 @@ PJ_INLINE(pj_status_t) pjmedia_transport_media_start(pjmedia_transport *tp,
 
 
 /**
- * Stop the transport. 
- * This API should be called when the media is stopped, to allow the media
- * transport to release its resources. 
+ * This API should be called when the session is stopped, to allow the media
+ * transport to release its resources used for the session.
  *
  * This is just a simple wrapper which calls <tt>media_stop()</tt> member 
  * of the transport.

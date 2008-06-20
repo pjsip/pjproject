@@ -30,7 +30,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_DNS_SERVER Simple DNS Server
- * @ingroup PJLIB_UTIL
+ * @ingroup PJ_DNS
  * @{
  * This contains a simple but fully working DNS server implementation, 
  * mostly for testing purposes. It supports serving various DNS resource 

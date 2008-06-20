@@ -30,7 +30,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_SCAN Fast Text Scanning
- * @ingroup PJLIB_UTIL
+ * @ingroup PJLIB_TEXT
  * @brief Text scanning utility.
  *
  * This module describes a fast text scanning functions.

@@ -54,7 +54,11 @@ TARGETS := pjlib-util pjlib-util-test
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjlib-util/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjlib-util/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean

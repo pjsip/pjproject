@@ -33,8 +33,9 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMEDIA_WAV_PLAYLIST WAV File Play List
  * @ingroup PJMEDIA_PORT
- * @brief WAV File Playlist
+ * @brief Audio playback of multiple WAV files
  * @{
+ *
  * The WAV play list port enables application to play back multiple
  * WAV files in a playlist.
  */

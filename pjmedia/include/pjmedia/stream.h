@@ -39,7 +39,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMED_STRM Streams
  * @ingroup PJMEDIA_PORT
- * @brief Media port for communicating with remote peer via the network.
+ * @brief Communicating with remote peer via the network
  * @{
  *
  * A media stream is a bidirectional multimedia communication between two
@@ -50,7 +50,7 @@ PJ_BEGIN_DECL
  *  - encoding channel, which transmits unidirectional media to remote, and
  *  - decoding channel, which receives unidirectional media from remote.
  *
- * A media stream exports media port interface (see @ref PJMEDIA_PORT_CONCEPT)
+ * A media stream exports media port interface (see @ref PJMEDIA_PORT)
  * and application normally uses this interface to interconnect the stream
  * to other PJMEDIA components.
  *
@@ -61,7 +61,7 @@ PJ_BEGIN_DECL
  *    direction),
  *  - one instance of RTCP session (#pjmedia_rtcp_session),
  *  - and a reference to media transport to send and receive packets
- *    to/from the network (see @ref PJMEDIA_TRANSPORT_H).
+ *    to/from the network (see @ref PJMEDIA_TRANSPORT).
  *
  * Streams are created by calling #pjmedia_stream_create(), specifying
  * #pjmedia_stream_info structure in the parameter. Application can construct

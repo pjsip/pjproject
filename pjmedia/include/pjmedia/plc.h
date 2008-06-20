@@ -29,10 +29,13 @@
 /**
  * @defgroup PJMED_PLC Packet Lost Concealment (PLC)
  * @ingroup PJMEDIA_FRAME_OP
+ * @brief Packet lost compensation algorithm
  * @{
+ *
  * This section describes PJMEDIA's implementation of Packet Lost
  * Concealment algorithm. This algorithm is used to implement PLC for
- * codecs that do not have built-in support for one (e.g. G.711 or GSM codecs).
+ * codecs that do not have built-in support for one (e.g. G.711 or GSM 
+ * codecs).
  *
  * The PLC algorithm (either built-in or external) is embedded in
  * PJMEDIA codec instance, and application can conceal lost frames

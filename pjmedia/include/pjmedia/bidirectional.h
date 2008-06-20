@@ -21,7 +21,7 @@
 
 /**
  * @file bidirectional.h
- * @brief Create bidirectional port from two unidirectional ports.
+ * @brief Bidirectional media port.
  */
 #include <pjmedia/port.h>
 
@@ -29,7 +29,8 @@
 /**
  * @defgroup PJMEDIA_BIDIRECTIONAL_PORT Bidirectional Port
  * @ingroup PJMEDIA_PORT
- * @brief Create bidirectional port from two unidirectional ports.
+ * @brief A bidirectional port combines two unidirectional ports into one
+ * bidirectional port
  * @{
  */
 

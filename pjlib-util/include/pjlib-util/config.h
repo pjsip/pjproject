@@ -26,8 +26,8 @@
  */
 
 /**
- * @defgroup PJLIB_UTIL_CONFIG PJLIB-UTIL Configuration
- * @ingroup PJLIB_UTIL
+ * @defgroup PJLIB_UTIL_CONFIG Configuration
+ * @ingroup PJLIB_UTIL_BASE
  * @{
  */
 

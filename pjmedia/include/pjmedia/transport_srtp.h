@@ -20,7 +20,7 @@
 #define __PJMEDIA_TRANSPORT_SRTP_H__
 
 /**
- * @file srtp.h
+ * @file transport_srtp.h
  * @brief Secure RTP (SRTP) transport.
  */
 
@@ -28,13 +28,13 @@
 
 
 /**
- * @defgroup PJMEDIA_TRANSPORT_SRTP Secure RTP (SRTP) Transport Adapter
+ * @defgroup PJMEDIA_TRANSPORT_SRTP Secure RTP (SRTP) Media Transport
  * @ingroup PJMEDIA_TRANSPORT
  * @brief Media transport adapter to add SRTP feature to existing transports
  * @{
  *
  * This module implements SRTP as described by RFC 3711, using RFC 4568 as
- * key exchange method. It implements \ref PJMEDIA_TRANSPORT_H to integrate
+ * key exchange method. It implements \ref PJMEDIA_TRANSPORT to integrate
  * with the rest of PJMEDIA framework.
  *
  * As we know, media transport is separated from the stream object (which 

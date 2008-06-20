@@ -30,8 +30,10 @@
 /**
  * @addtogroup PJMEDIA_SPLITCOMB Media channel splitter/combiner
  * @ingroup PJMEDIA_PORT
- * @brief Split and combine media channels in media streams
+ * @brief Split and combine multiple mono-channel media ports into
+ *  a single multiple-channels media port
  * @{
+ *
  * This section describes media port to split and combine media
  * channels in the stream.
  *

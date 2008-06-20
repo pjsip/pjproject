@@ -33,8 +33,10 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMED_RTCP RTCP Session and Encapsulation (RFC 3550)
- * @ingroup PJMEDIA_TRANSPORT
+ * @ingroup PJMEDIA_SESSION
+ * @brief RTCP format and session management
  * @{
+ *
  * PJMEDIA implements subsets of RTCP specification (RFC 3550) to monitor
  * the quality of the real-time media (audio/video) transmission. In
  * addition to the standard quality monitoring and reporting with RTCP

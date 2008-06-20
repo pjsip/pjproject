@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJLIB_UTIL_GETOPT Getopt
- * @ingroup PJLIB_UTIL
+ * @ingroup PJLIB_TEXT
  * @{
  */
 

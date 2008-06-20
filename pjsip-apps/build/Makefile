@@ -50,7 +50,6 @@ TARGETS := pjsua samples
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
 
 dep: depend
 distclean: realclean

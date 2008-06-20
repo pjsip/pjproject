@@ -37,6 +37,7 @@ PJ_BEGIN_DECL
  * @brief STUN aware socket transport
  * @ingroup PJNATH_STUN
  * @{
+ *
  * The STUN transport provides asynchronous UDP like socket transport
  * with the additional capability to query the publicly mapped transport
  * address (using STUN resolution), to refresh the NAT binding, and to
@@ -128,13 +129,13 @@ typedef struct pj_stun_sock_cb
      *	  the STUN server, this callback will be called with \a op argument
      *    set to PJ_STUN_SOCK_BINDING_OP \a status  argument set to 
      *    PJ_SUCCESS.
-     *  - anytime when the transport has detected that the publicly mapped
+     *	- anytime when the transport has detected that the publicly mapped
      *    address has changed, this callback will be called with \a op
      *    argument set to PJ_STUN_SOCK_KEEP_ALIVE_OP and \a status
      *    argument set to PJ_SUCCESS. On this case and the case above,
      *    application will get the resolved public address in the
      *    #pj_stun_sock_info structure.
-     *  - for any terminal error (such as STUN time-out, DNS resolution
+     *	- for any terminal error (such as STUN time-out, DNS resolution
      *    failure, or keep-alive failure), this callback will be called 
      *	  with the \a status argument set to non-PJ_SUCCESS.
      *

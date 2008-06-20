@@ -31,7 +31,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_MISC Miscelaneous
- * @ingroup PJ
  */
 
 /**

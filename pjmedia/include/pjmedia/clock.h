@@ -27,6 +27,39 @@
 
 
 /**
+ * @defgroup PJMEDIA_PORT_CLOCK Clock/Timing
+ * @ingroup PJMEDIA_PORT
+ * @brief Various types of classes that provide timing.
+ * @{
+
+ The media clock/timing extends the media port concept that is explained 
+ in @ref PJMEDIA_PORT. When clock is present in the ports 
+ interconnection, media will flow automatically (and with correct timing too!)
+ from one media port to another.
+ 
+ There are few objects in PJMEDIA that are able to provide clock/timing
+ to media ports interconnection:
+
+ - @ref PJMED_SND_PORT\n
+   The sound device makes a good candidate as the clock source, and
+   PJMEDIA @ref PJMED_SND is designed so that it is able to invoke
+   operations according to timing driven by the sound hardware clock
+   (this may sound complicated, but actually it just means that
+   the sound device abstraction provides callbacks to be called when
+   it has/wants media frames).\n
+   See @ref PJMED_SND_PORT for more details.
+
+ - @ref PJMEDIA_MASTER_PORT\n
+   The master port uses @ref PJMEDIA_CLOCK as the clock source. By using
+   @ref PJMEDIA_MASTER_PORT, it is possible to interconnect passive
+   media ports and let the frames flow automatically in timely manner.\n
+   Please see @ref PJMEDIA_MASTER_PORT for more details.
+
+ @}
+ */
+
+
+/**
  * @addtogroup PJMEDIA_CLOCK Clock Generator
  * @ingroup PJMEDIA_PORT_CLOCK
  * @brief Interface for generating clock.

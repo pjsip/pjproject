@@ -29,7 +29,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_OS Operating System Dependent Functionality.
- * @ingroup PJ
  */
 
 

@@ -31,8 +31,9 @@
 /**
  * @defgroup PJMEDIA_RESAMPLE Resampling Algorithm
  * @ingroup PJMEDIA_FRAME_OP
- * @brief Functions to alter frame's clock rate.
+ * @brief Sample rate conversion algorithm
  * @{
+ *
  * This section describes the base resampling functions. In addition to this,
  * application can use the @ref PJMEDIA_RESAMPLE_PORT which provides
  * media port abstraction for the base resampling algorithm.
@@ -122,9 +123,10 @@ PJ_DECL(void) pjmedia_resample_destroy(pjmedia_resample *resample);
 /**
  * @defgroup PJMEDIA_RESAMPLE_PORT Resample Port
  * @ingroup PJMEDIA_PORT
- * @brief Media port interface to change media stream's sampling rate.
+ * @brief Audio sample rate conversion
  * @{
- * This section describes media port abstractoin for @ref PJMEDIA_RESAMPLE.
+ *
+ * This section describes media port abstraction for @ref PJMEDIA_RESAMPLE.
  */
 
 

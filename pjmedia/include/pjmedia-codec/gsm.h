@@ -31,6 +31,7 @@
  * @ingroup PJMEDIA_CODEC
  * @brief Implementation of GSM FR based on GSM 06.10 library
  * @{
+ *
  * This section describes functions to register and register GSM codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.

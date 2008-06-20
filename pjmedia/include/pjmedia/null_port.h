@@ -30,7 +30,7 @@
 /**
  * @defgroup PJMEDIA_NULL_PORT Null Port
  * @ingroup PJMEDIA_PORT
- * @brief Null port is the simplest type of port.
+ * @brief The simplest type of media port which does nothing.
  * @{
  */
 

@@ -109,7 +109,11 @@ TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsip-test
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjsip/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjsip/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean

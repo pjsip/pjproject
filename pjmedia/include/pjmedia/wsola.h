@@ -28,12 +28,16 @@
 /**
  * @defgroup PJMED_WSOLA Waveform Similarity Based Overlap-Add (WSOLA)
  * @ingroup PJMEDIA_FRAME_OP
+ * @brief Time-scale modification to audio without affecting the pitch
  * @{
+ *
  * This section describes Waveform Similarity Based Overlap-Add (WSOLA)
  * implementation in PJMEDIA. The WSOLA API here can be used both to 
  * compress (speed-up) and stretch (expand, slow down) audio playback
  * without altering the pitch, or as a mean for performing packet loss
  * concealment (WSOLA).
+ *
+ * The WSOLA implementation is used by \ref PJMED_DELAYBUF and \ref PJMED_PLC.
  */
 
 PJ_BEGIN_DECL

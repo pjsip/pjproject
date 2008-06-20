@@ -29,8 +29,9 @@
 /**
  * @defgroup PJMEDIA_MASTER_PORT Master Port
  * @ingroup PJMEDIA_PORT_CLOCK
- * @brief Provides media clock for media ports.
+ * @brief Thread based media clock provider
  * @{
+ *
  * A master port has two media ports connected to it, and by convention
  * thay are called downstream and upstream ports. The media stream flowing to
  * the downstream port is called encoding or send direction, and media stream 

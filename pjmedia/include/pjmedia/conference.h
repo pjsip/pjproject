@@ -29,7 +29,7 @@
 /**
  * @defgroup PJMEDIA_CONF Conference Bridge
  * @ingroup PJMEDIA_PORT
- * @brief The implementation of conference bridge
+ * @brief Audio conference bridge implementation
  * @{
  *
  * This describes the conference bridge implementation in PJMEDIA. The

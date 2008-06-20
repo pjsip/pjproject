@@ -29,9 +29,12 @@
 #include <pjmedia/types.h>
 
 /**
- * @defgroup PJMED_DELAYBUF Delay Buffer
+ * @defgroup PJMED_DELAYBUF Adaptive Delay Buffer
  * @ingroup PJMEDIA_FRAME_OP
+ * @brief Adaptive delay buffer with high-quality time-scale
+ * modification
  * @{
+ *
  * This section describes PJMEDIA's implementation of delay buffer.
  * Delay buffer works quite similarly like a fixed jitter buffer, that
  * is it will delay the frame retrieval by some interval so that caller
@@ -43,13 +46,15 @@
  * will always get a frame from the buffer (assuming that the number of
  * get() and put() are matched).
  *
- * The delay buffer is mostly used by the sound port, to accommodate
- * for the burst frames returned by the sound device.
+ * The buffer is adaptive, that is it continuously learns the optimal delay
+ * to be applied to the audio flow at run-time. Once the optimal delay has 
+ * been learned, the delay buffer will apply this delay to the audio flow,
+ * expanding or shrinking the audio samples as necessary when the actual
+ * audio samples in the buffer are too low or too high. It does this without
+ * distorting the audio quality of the audio, by using \a PJMED_WSOLA.
  *
- * To determine the level of delay to be applied, the delay buffer
- * has a learning period on which it calculates the level of burst of
- * both the put() and get(), and use the maximum value of both as the
- * delay level.
+ * The delay buffer is used in \ref PJMED_SND_PORT, \ref PJMEDIA_SPLITCOMB,
+ * and \ref PJMEDIA_CONF.
  */
 
 PJ_BEGIN_DECL

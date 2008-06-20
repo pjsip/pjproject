@@ -78,7 +78,11 @@ TARGETS := pjnath pjnath-test pjturn-client pjturn-srv
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjnath/docs/html.." ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjnath/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean

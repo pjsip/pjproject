@@ -30,10 +30,10 @@
 /**
  * @defgroup PJMEDIA_ECHO_PORT Echo Cancellation Port
  * @ingroup PJMEDIA_PORT
- * @brief Echo Cancellation Port
- *
- * Echo canceller media port, using @ref PJMEDIA_Echo_Cancel backend.
+ * @brief Echo Cancellation
  * @{
+ *
+ * Wrapper to \ref PJMEDIA_Echo_Cancel into media port interface.
  */
 
 

@@ -33,7 +33,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJSIP_TRANSACT Transaction Layer
- * @ingroup PJSIP
  * @brief Provides statefull message processing.
  *
  * This module provides stateful processing to incoming or outgoing SIP

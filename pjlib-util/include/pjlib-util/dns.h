@@ -31,7 +31,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_DNS DNS and Asynchronous DNS Resolver
- * @ingroup PJLIB_UTIL
+ * @ingroup PJ_PROTOCOLS
  */
 
 /**

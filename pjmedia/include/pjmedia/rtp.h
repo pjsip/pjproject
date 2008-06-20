@@ -32,7 +32,8 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJMED_RTP RTP Session and Encapsulation (RFC 3550)
- * @ingroup PJMEDIA_TRANSPORT
+ * @ingroup PJMEDIA_SESSION
+ * @brief RTP format and session management
  * @{
  *
  * The RTP module is designed to be dependent only to PJLIB, it does not depend

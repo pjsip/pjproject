@@ -31,6 +31,7 @@
  * @ingroup PJMEDIA_CODEC
  * @brief Implementation of G.722 Codec
  * @{
+ *
  * This section describes functions to register and register G.722 codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.

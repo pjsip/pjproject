@@ -28,15 +28,15 @@
 #include <pj/sock.h>	    /* pjmedia_sock_info	*/
 #include <pj/string.h>	    /* pj_memcpy(), pj_memset() */
 
-
 /**
- * @defgroup PJMEDIA_FRAME_OP Frame Operations
- * @ingroup PJMEDIA
+ * @defgroup PJMEDIA_PORT Media Ports Framework
+ * @brief Extensible framework for media terminations
  */
 
+
 /**
- * @defgroup PJMEDIA_MISC Misc
- * @ingroup PJMEDIA
+ * @defgroup PJMEDIA_FRAME_OP Audio Manipulation Algorithms
+ * @brief Algorithms to manipulate audio frames
  */
 
 /**

@@ -303,7 +303,6 @@
 
 /**
  * @defgroup pj_config Build Configuration
- * @ingroup PJ
  * @{
  *
  * This section contains macros that can set during PJLIB build process
@@ -804,7 +803,6 @@
 
 /**
  * @defgroup pj_config Build Configuration
- * @ingroup PJ
  * @{
  */
 

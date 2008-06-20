@@ -32,7 +32,6 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_DS Data Structure.
- * @ingroup PJ
  */
 /**
  * @defgroup PJ_GUID Globally Unique Identifier

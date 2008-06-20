@@ -38,7 +38,7 @@ PJ_BEGIN_DECL
  * This section describes lower level abstraction for sound device
  * hardware. Application normally uses the higher layer @ref
  * PJMED_SND_PORT abstraction since it works seamlessly with 
- * @ref PJMEDIA_PORT_CONCEPT.
+ * @ref PJMEDIA_PORT.
  *
  * The sound hardware abstraction basically runs <b>asychronously</b>,
  * and application must register callbacks to be called to receive/

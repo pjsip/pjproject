@@ -107,7 +107,12 @@ TARGETS := pjmedia pjmedia-codec pjsdp
 all: $(TARGETS)
 
 doc:
-	cd .. && doxygen docs/doxygen.cfg
+	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
+	@if test ! "$(WWWDIR)" == ""; then \
+		echo "Copying to $(WWWDIR)/pjmedia/docs/html.." ; \
+		rm -rf $(WWWDIR)/pjmedia/docs/html/* ; \
+		cp -a ../docs/html/* $(WWWDIR)/pjmedia/docs/html/ ; \
+	fi
 
 dep: depend
 distclean: realclean

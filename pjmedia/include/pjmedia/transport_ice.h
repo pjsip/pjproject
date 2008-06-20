@@ -30,10 +30,13 @@
 
 
 /**
- * @defgroup PJMEDIA_TRANSPORT_ICE ICE Capable media transport 
+ * @defgroup PJMEDIA_TRANSPORT_ICE ICE Media Transport 
  * @ingroup PJMEDIA_TRANSPORT
- * @brief Implementation of media transport with ICE.
+ * @brief Interactive Connectivity Establishment (ICE) transport
  * @{
+ *
+ * This describes the implementation of media transport using
+ * Interactive Connectivity Establishment (ICE) protocol.
  */
 
 PJ_BEGIN_DECL
@@ -57,15 +60,29 @@ typedef struct pjmedia_ice_cb
 
 } pjmedia_ice_cb;
 
+
 /**
- * Create the media transport.
+ * Create the Interactive Connectivity Establishment (ICE) media transport
+ * using the specified configuration. When STUN or TURN (or both) is used,
+ * the creation operation will complete asynchronously, when STUN resolution
+ * and TURN allocation completes. When the initialization completes, the
+ * \a on_ice_complete() complete will be called with \a op parameter equal
+ * to PJ_ICE_STRANS_OP_INIT.
+ *
+ * In addition, this transport will also notify the application about the
+ * result of ICE negotiation, also in \a on_ice_complete() callback. In this
+ * case the callback will be called with \a op parameter equal to
+ * PJ_ICE_STRANS_OP_NEGOTIATION.
+ *
+ * Other than this, application should use the \ref PJMEDIA_TRANSPORT API
+ * to manipulate this media transport.
  *
  * @param endpt		The media endpoint.
  * @param name		Optional name to identify this ICE media transport
  *			for logging purposes.
  * @param comp_cnt	Number of components to be created.
  * @param cfg		Pointer to configuration settings.
- * @param cb		Optional callbacks.
+ * @param cb		Optional structure containing ICE specific callbacks.
  * @param p_tp		Pointer to receive the media transport instance.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.

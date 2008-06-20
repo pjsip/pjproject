@@ -144,7 +144,7 @@ PJ_DECL(void*) pjstun_msg_find_attr( pjstun_msg *msg, pjstun_attr_type t);
 
 /**
  * @defgroup PJLIB_UTIL_STUN_CLIENT Simple STUN Helper
- * @ingroup PJLIB_UTIL_STUN
+ * @ingroup PJ_PROTOCOLS
  * @brief A simple and small footprint STUN resolution helper
  * @{
  *

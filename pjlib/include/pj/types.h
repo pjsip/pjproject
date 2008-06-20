@@ -21,9 +21,6 @@
 
 
 /**
- * @defgroup PJ PJ Library
- */
-/**
  * @file types.h
  * @brief Declaration of basic types and utility.
  */

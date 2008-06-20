@@ -29,10 +29,14 @@
 
 
 /**
- * @defgroup PJMEDIA_TRANSPORT_UDP UDP Socket Transport
+ * @defgroup PJMEDIA_TRANSPORT_UDP UDP Media Transport
  * @ingroup PJMEDIA_TRANSPORT
  * @brief Implementation of media transport with UDP sockets.
  * @{
+ *
+ * The UDP media transport is the standard based media transport
+ * as described by RFC 3550/3551. It can be used to facilitate RTP/RTCP
+ * unicast or multicast communication.
  */
 
 PJ_BEGIN_DECL

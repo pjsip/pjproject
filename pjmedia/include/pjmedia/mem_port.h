@@ -31,8 +31,9 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJMEDIA_MEM_PLAYER Memory/Buffer-based Playback Port
  * @ingroup PJMEDIA_PORT
- * @brief Media playback from a fixed buffer
+ * @brief Media playback from a fixed size memory buffer
  * @{
+ *
  * A memory/buffer based playback port is used to play media from a fixed
  * size buffer. This is useful over @ref PJMEDIA_FILE_PLAY for 
  * situation where filesystems are not available in the target system.
@@ -113,8 +114,9 @@ pjmedia_mem_player_set_eof_cb( pjmedia_port *port,
 /**
  * @defgroup PJMEDIA_MEM_CAPTURE Memory/Buffer-based Capture Port
  * @ingroup PJMEDIA_PORT
- * @brief Capture to fixed size buffer
+ * @brief Media capture to fixed size memory buffer
  * @{
+ *
  * A memory based capture is used to save media streams to a fixed size
  * buffer. This is useful over @ref PJMEDIA_FILE_REC for 
  * situation where filesystems are not available in the target system.

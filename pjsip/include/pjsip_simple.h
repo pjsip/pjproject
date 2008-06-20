@@ -19,7 +19,6 @@
 
 /**
  * @defgroup PJSIP_SIMPLE Event and Presence Framework
- * @ingroup PJSIP
  */
 
 /**

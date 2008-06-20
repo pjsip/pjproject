@@ -26,12 +26,7 @@
 #include <pj/types.h>
 
 /**
- * @defgroup PJSIP PJSIP Library Collection
- */
-
-/**
  * @defgroup PJSIP_CORE Core SIP Library
- * @ingroup PJSIP
  * @brief The core framework from which all other SIP components depends on.
  * 
  * The PJSIP Core library only provides transport framework, event

@@ -28,10 +28,9 @@
 
 
 /**
-  @defgroup PJMEDIA_PORT_CONCEPT Media Ports Framework
-  @ingroup PJMEDIA
-  @brief Extensible framework for media terminations
-  
+  @addtogroup PJMEDIA_PORT Media Ports Framework
+  @{
+
   @section media_port_intro Media Port Concepts
   
   @subsection The Media Port
@@ -165,64 +164,7 @@
   PJMEDIA provides few mechanisms to make media flows automatically
   among media ports. This concept is described in @ref PJMEDIA_PORT_CLOCK 
   section.
-
- */
-
-
-/**
- * @defgroup PJMEDIA_PORT_INTERFACE Media Port Interface
- * @ingroup PJMEDIA_PORT_CONCEPT
- * @brief Declares the media port interface.
- */
-
-/**
- * @defgroup PJMEDIA_PORT Ports
- * @ingroup PJMEDIA_PORT_CONCEPT
- * @brief Contains various types of media ports/terminations.
- * @{
- * This page lists all types of media ports currently implemented
- * in PJMEDIA. The media port concept is explained in @ref PJMEDIA_PORT_CONCEPT.
- * @}
- */
-
-/**
- @defgroup PJMEDIA_PORT_CLOCK Clock/Timing
- @ingroup PJMEDIA_PORT_CONCEPT
- @brief Various types of classes that provide timing.
- @{
-
- The media clock/timing extends the media port concept that is explained 
- in @ref PJMEDIA_PORT_CONCEPT. When clock is present in the ports 
- interconnection, media will flow automatically (and with correct timing too!)
- from one media port to another.
- 
- There are few objects in PJMEDIA that are able to provide clock/timing
- to media ports interconnection:
-
- - @ref PJMED_SND_PORT\n
-   The sound device makes a good candidate as the clock source, and
-   PJMEDIA @ref PJMED_SND is designed so that it is able to invoke
-   operations according to timing driven by the sound hardware clock
-   (this may sound complicated, but actually it just means that
-   the sound device abstraction provides callbacks to be called when
-   it has/wants media frames).\n
-   See @ref PJMED_SND_PORT for more details.
-
- - @ref PJMEDIA_MASTER_PORT\n
-   The master port uses @ref PJMEDIA_CLOCK as the clock source. By using
-   @ref PJMEDIA_MASTER_PORT, it is possible to interconnect passive
-   media ports and let the frames flow automatically in timely manner.\n
-   Please see @ref PJMEDIA_MASTER_PORT for more details.
-
- @}
- */
-
-/**
- * @addtogroup PJMEDIA_PORT_INTERFACE
- * @{
- * This page contains the media port interface declarations. The media port
- * concept is explained in @ref PJMEDIA_PORT_CONCEPT.
- */
+*/
 
 PJ_BEGIN_DECL
 
@@ -230,7 +172,7 @@ PJ_BEGIN_DECL
 /**
  * Port operation setting.
  */
-enum pjmedia_port_op
+typedef enum pjmedia_port_op
 {
     /** 
      * No change to the port TX or RX settings.
@@ -253,13 +195,8 @@ enum pjmedia_port_op
      * Enable TX and RX to/from this port.
      */
     PJMEDIA_PORT_ENABLE
-};
 
-
-/**
- * @see pjmedia_port_op
- */
-typedef enum pjmedia_port_op pjmedia_port_op;
+} pjmedia_port_op;
 
 
 /**
@@ -296,7 +233,7 @@ typedef enum pjmedia_frame_type
 /** 
  * This structure describes a media frame. 
  */
-struct pjmedia_frame
+typedef struct pjmedia_frame
 {
     pjmedia_frame_type	 type;	    /**< Frame type.			    */
     void		*buf;	    /**< Pointer to buffer.		    */
@@ -307,30 +244,13 @@ struct pjmedia_frame
 					 at the octet boundary, so this field 
 					 may be used for specifying start & 
 					 end bit offset.		    */
-};
+} pjmedia_frame;
 
-
-/** 
- * @see pjmedia_frame
- */
-typedef struct pjmedia_frame pjmedia_frame;
-
-
-/**
- * For future graph.
- */
-typedef struct pjmedia_graph pjmedia_graph;
-
-
-/**
- * @see pjmedia_port
- */
-typedef struct pjmedia_port pjmedia_port;
 
 /**
  * Port interface.
  */
-struct pjmedia_port
+typedef struct pjmedia_port
 {
     pjmedia_port_info	 info;		    /**< Port information.  */
 
@@ -346,21 +266,22 @@ struct pjmedia_port
      * Sink interface. 
      * This should only be called by #pjmedia_port_put_frame().
      */
-    pj_status_t (*put_frame)(pjmedia_port *this_port, 
+    pj_status_t (*put_frame)(struct pjmedia_port *this_port, 
 			     const pjmedia_frame *frame);
 
     /**
      * Source interface. 
      * This should only be called by #pjmedia_port_get_frame().
      */
-    pj_status_t (*get_frame)(pjmedia_port *this_port, 
+    pj_status_t (*get_frame)(struct pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
 
     /**
      * Called to destroy this port.
      */
-    pj_status_t (*on_destroy)(pjmedia_port *this_port);
-};
+    pj_status_t (*on_destroy)(struct pjmedia_port *this_port);
+
+} pjmedia_port;
 
 
 /**

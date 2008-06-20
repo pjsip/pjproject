@@ -32,13 +32,8 @@
 PJ_BEGIN_DECL 
 
 /**
- * @defgroup PJMEDIA_SESSION Sessions
- * @ingroup PJMEDIA
- */
-
-/**
- * @defgroup PJMED_SES Media session
- * @ingroup PJMEDIA_SESSION
+ * @defgroup PJMEDIA_SESSION Media Sessions
+ * @brief Management of media sessions
  * @{
  *
  * A media session represents multimedia communication between two

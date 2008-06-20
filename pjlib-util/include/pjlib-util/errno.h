@@ -23,8 +23,8 @@
 #include <pj/errno.h>
 
 /**
- * @defgroup PJLIB_UTIL_ERROR PJLIB-UTIL Error Codes
- * @ingroup PJLIB_UTIL
+ * @defgroup PJLIB_UTIL_ERROR Error Codes
+ * @ingroup PJLIB_UTIL_BASE
  * @{
  */
 

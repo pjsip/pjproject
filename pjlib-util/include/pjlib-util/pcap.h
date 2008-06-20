@@ -30,7 +30,7 @@ PJ_BEGIN_DECL
 
 /**
  * @defgroup PJ_PCAP Simple PCAP file reader
- * @ingroup PJLIB_UTIL
+ * @ingroup PJ_FILE_FMT
  * @{
  * This module describes simple utility to read PCAP file. It is not intended
  * to support all PCAP features (that's what libpcap is for!), but it can

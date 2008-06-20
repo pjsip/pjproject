@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJLIB_UTIL_STRING String Escaping Utilities
- * @ingroup PJLIB_UTIL
+ * @ingroup PJLIB_TEXT
  * @{
  */
 

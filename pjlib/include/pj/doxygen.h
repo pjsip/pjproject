@@ -53,10 +53,6 @@
  * \a doxygen (http://www.doxygen.org). Doxygen is a great (and free!) 
  * tools for generating such documentation.
  *
- * @subsection doc_ver_subsec Version
- *
- * This document corresponds to PJLIB version 0.8.0.
- *
  *
  * @subsection find_samples_subsec How to Read This Document
  *
