@@ -103,6 +103,7 @@ struct pj_turn_session
 
     pj_hash_table_t	*peer_table;
 
+    pj_uint32_t		 send_ind_tsx_id[3];
     /* tx_pkt must be 16bit aligned */
     pj_uint8_t		 tx_pkt[PJ_TURN_MAX_PKT_LEN];
 
@@ -800,28 +801,43 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 	/* Peer has not been assigned Channel number, must use Send
 	 * Indication.
 	 */
-	pj_stun_tx_data *tdata;
+	pj_stun_sockaddr_attr peer_attr;
+	pj_stun_binary_attr data_attr;
+	pj_stun_msg send_ind;
+	pj_size_t send_ind_len;
+
+	/* Increment counter */
+	++sess->send_ind_tsx_id[3];
 
 	/* Create blank SEND-INDICATION */
-	status = pj_stun_session_create_ind(sess->stun, 
-					    PJ_STUN_SEND_INDICATION, &tdata);
+	status = pj_stun_msg_init(&send_ind, PJ_STUN_SEND_INDICATION,
+				  PJ_STUN_MAGIC, 
+				  (const pj_uint8_t*)sess->send_ind_tsx_id);
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
 	/* Add PEER-ADDRESS */
-	pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-				      PJ_STUN_ATTR_PEER_ADDR, PJ_TRUE,
-				      addr, addr_len);
+	pj_stun_sockaddr_attr_init(&peer_attr, PJ_STUN_ATTR_PEER_ADDR,
+				   PJ_TRUE, addr, addr_len);
+	pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&peer_attr);
 
 	/* Add DATA attribute */
-	pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
-				    PJ_STUN_ATTR_DATA, pkt, pkt_len);
+	pj_stun_binary_attr_init(&data_attr, NULL, PJ_STUN_ATTR_DATA, NULL, 0);
+	data_attr.data = (void*)pkt;
+	data_attr.length = pkt_len;
+	pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&data_attr);
 
-	/* Send the indication */
-	status = pj_stun_session_send_msg(sess->stun, NULL, PJ_FALSE, 
-					  PJ_FALSE, sess->srv_addr,
-					  pj_sockaddr_get_len(sess->srv_addr),
-					  tdata);
+	/* Encode the message */
+	status = pj_stun_msg_encode(&send_ind, sess->tx_pkt, 
+				    sizeof(sess->tx_pkt), 0,
+				    NULL, &send_ind_len);
+	if (status != PJ_SUCCESS)
+	    goto on_return;
+
+	/* Send the Send Indication */
+	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, send_ind_len,
+				      sess->srv_addr,
+				      pj_sockaddr_get_len(sess->srv_addr));
     }
 
 on_return:
