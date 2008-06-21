@@ -121,6 +121,7 @@ typedef struct pj_ice_strans_comp
 
     pj_stun_sock	*stun_sock;	/**< STUN transport.		*/
     pj_turn_sock	*turn_sock;	/**< TURN relay transport.	*/
+    pj_bool_t		 turn_log_off;	/**< TURN loggin off?		*/
 
     unsigned		 cand_cnt;	/**< # of candidates/aliaes.	*/
     pj_ice_sess_cand	 cand_list[PJ_ICE_ST_MAX_CAND];	/**< Cand array	*/
@@ -662,6 +663,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 		      "Disabling STUN Indication logging for "
 		      "component %d", i+1));
 	    pj_turn_sock_set_log(comp->turn_sock, 0xFFFF);
+	    comp->turn_log_off = PJ_FALSE;
 	}
 
 	for (j=0; j<comp->cand_cnt; ++j) {
@@ -908,6 +910,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 {
     pj_ssize_t pkt_size;
     pj_ice_strans_comp *comp;
+    unsigned def_cand;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(ice_st && comp_id && comp_id <= ice_st->comp_cnt &&
@@ -915,7 +918,14 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 
     comp = ice_st->comp[comp_id-1];
 
-    /* If ICE is available, send data with ICE */
+    /* Check that default candidate for the component exists */
+    def_cand = comp->default_cand;
+    if (def_cand >= comp->cand_cnt)
+	return PJ_EINVALIDOP;
+
+    /* If ICE is available, send data with ICE, otherwise send with the
+     * default candidate selected during initialization.
+     */
     if (ice_st->ice) {
 	if (comp->turn_sock) {
 	    pj_turn_sock_lock(comp->turn_sock);
@@ -926,12 +936,36 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 	}
 	return status;
 
-    } else if (comp->stun_sock) {
+    } else if (comp->cand_list[def_cand].status == PJ_SUCCESS) {
 
-	pkt_size = data_len;
-	status = pj_stun_sock_sendto(comp->stun_sock, NULL, data, data_len,
-				     0, dst_addr, dst_addr_len);
-	return (status==PJ_SUCCESS||status==PJ_EPENDING) ? PJ_SUCCESS : status;
+	if (comp->cand_list[def_cand].type == PJ_ICE_CAND_TYPE_RELAYED) {
+
+	    enum {
+		msg_disable_ind = 0xFFFF &
+				  ~(PJ_STUN_SESS_LOG_TX_IND|
+				    PJ_STUN_SESS_LOG_RX_IND)
+	    };
+
+	    if (!comp->turn_log_off) {
+		/* Disable logging for Send/Data indications */
+		PJ_LOG(5,(ice_st->obj_name, 
+			  "Disabling STUN Indication logging for "
+			  "component %d", comp->comp_id));
+		pj_turn_sock_set_log(comp->turn_sock, msg_disable_ind);
+		comp->turn_log_off = PJ_TRUE;
+	    }
+
+	    status = pj_turn_sock_sendto(comp->turn_sock, data, data_len,
+					 dst_addr, dst_addr_len);
+	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? 
+		    PJ_SUCCESS : status;
+	} else {
+	    pkt_size = data_len;
+	    status = pj_stun_sock_sendto(comp->stun_sock, NULL, data, 
+					 data_len, 0, dst_addr, dst_addr_len);
+	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? 
+		    PJ_SUCCESS : status;
+	}
 
     } else
 	return PJ_EINVALIDOP;
@@ -992,6 +1026,7 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 				  "component %d", i+1));
 			pj_turn_sock_set_log(ice_st->comp[i]->turn_sock,
 					     msg_disable_ind);
+			ice_st->comp[i]->turn_log_off = PJ_TRUE;
 		    }
 
 		    PJ_LOG(4,(ice_st->obj_name, " Comp %d: "
