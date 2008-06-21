@@ -1656,6 +1656,8 @@ PJ_DEF(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_binary_attr);
     INIT_ATTR(attr, attr_type, length);
 
+    attr->magic = PJ_STUN_MAGIC;
+
     if (data && length) {
 	attr->length = length;
 	attr->data = (pj_uint8_t*) pj_pool_alloc(pool, length);
@@ -2023,6 +2025,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
 	if (adesc == NULL) {
 	    /* Unrecognized attribute */
+	    pj_stun_binary_attr *attr;
 
 	    PJ_LOG(4,(THIS_FILE, "Unrecognized attribute type %d", 
 		      attr_type));
@@ -2046,6 +2049,36 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
 		return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_UNKNOWN_ATTRIBUTE);
 	    }
+
+	    /* Make sure we have rooms for the new attribute */
+	    if (msg->attr_count >= PJ_STUN_MAX_ATTR) {
+		if (p_response) {
+		    pj_stun_msg_create_response(pool, msg,
+						PJ_STUN_SC_SERVER_ERROR,
+						NULL, p_response);
+		}
+		return PJNATH_ESTUNTOOMANYATTR;
+	    }
+
+	    /* Create binary attribute to represent this */
+	    status = pj_stun_binary_attr_create(pool, attr_type, pdu+4, 
+						GETVAL16H(pdu, 2), &attr);
+	    if (status != PJ_SUCCESS) {
+		if (p_response) {
+		    pj_stun_msg_create_response(pool, msg,
+						PJ_STUN_SC_SERVER_ERROR,
+						NULL, p_response);
+		}
+
+		PJ_LOG(4,(THIS_FILE, 
+			  "Error parsing unknown STUN attribute type %d",
+			  attr_type));
+
+		return status;
+	    }
+
+	    /* Add the attribute */
+	    msg->attr[msg->attr_count++] = &attr->hdr;
 
 	} else {
 	    void *attr;
@@ -2124,7 +2157,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	    if (msg->attr_count >= PJ_STUN_MAX_ATTR) {
 		if (p_response) {
 		    pj_stun_msg_create_response(pool, msg,
-						PJ_STUN_SC_BAD_REQUEST,
+						PJ_STUN_SC_SERVER_ERROR,
 						NULL, p_response);
 		}
 		return PJNATH_ESTUNTOOMANYATTR;
@@ -2134,6 +2167,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 	    msg->attr[msg->attr_count++] = (pj_stun_attr_hdr*)attr;
 	}
 
+	/* Next attribute */
 	if (attr_val_len + 4 >= pdu_len) {
 	    pdu += pdu_len;
 	    pdu_len = 0;
@@ -2239,9 +2273,16 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	}
 
 	adesc = find_attr_desc(attr_hdr->type);
-	PJ_ASSERT_RETURN(adesc != NULL, PJ_EBUG);
+	if (adesc) {
+	    status = adesc->encode_attr(attr_hdr, buf, buf_size, &printed);
+	} else {
+	    /* This may be a generic attribute */
+	    const pj_stun_binary_attr *bin_attr = (const pj_stun_binary_attr*) 
+						   attr_hdr;
+	    PJ_ASSERT_RETURN(bin_attr->magic == PJ_STUN_MAGIC, PJ_EBUG);
+	    status = encode_binary_attr(bin_attr, buf, buf_size, &printed);
+	}
 
-	status = adesc->encode_attr(attr_hdr, buf, buf_size, &printed);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -2414,9 +2455,19 @@ PJ_DEF(pj_stun_attr_hdr*) pj_stun_attr_clone( pj_pool_t *pool,
 
     /* Get the attribute descriptor */
     adesc = find_attr_desc(attr->type);
-    PJ_ASSERT_RETURN(adesc != NULL, NULL);
-
-    return (pj_stun_attr_hdr*) (*adesc->clone_attr)(pool, attr);
+    if (adesc) {
+	return (pj_stun_attr_hdr*) (*adesc->clone_attr)(pool, attr);
+    } else {
+	/* Clone generic attribute */
+	const pj_stun_binary_attr *bin_attr = (const pj_stun_binary_attr*)
+					       attr;
+	PJ_ASSERT_RETURN(bin_attr->magic == PJ_STUN_MAGIC, NULL);
+	if (bin_attr->magic == PJ_STUN_MAGIC) {
+	    return (pj_stun_attr_hdr*) clone_binary_attr(pool, attr);
+	} else {
+	    return NULL;
+	}
+    }
 }
 
 

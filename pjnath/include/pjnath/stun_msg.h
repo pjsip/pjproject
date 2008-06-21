@@ -582,6 +582,12 @@ typedef struct pj_stun_binary_attr
     pj_stun_attr_hdr	hdr;
     
     /**
+     * Special signature to indicate that this is a valid attribute even
+     * though we don't have meta-data to describe this attribute.
+     */
+    pj_uint32_t		magic;
+
+    /**
      * Length of the data.
      */
     unsigned		length;

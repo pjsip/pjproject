@@ -163,7 +163,7 @@ static struct test
 	"Unknown but non-mandatory should be okay",
 	"\x00\x01\x00\x08\x21\x12\xa4\x42"
 	"\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00"
-	"\x80\xff\x00\x04\x00\x00\x00\x00",
+	"\x80\xff\x00\x03\x00\x00\x00\x00",
 	28,
 	NULL,
 	PJ_SUCCESS,
@@ -369,10 +369,31 @@ static int verify1(pj_stun_msg *msg)
 /* Attribute count should be zero since unknown attribute is not parsed */
 static int verify2(pj_stun_msg *msg)
 {
-    if (msg->attr_count != 0) {
-	PJ_LOG(1,(THIS_FILE, "    expecting zero attribute count"));
+    pj_stun_binary_attr *bin_attr;
+
+    if (msg->attr_count != 1) {
+	PJ_LOG(1,(THIS_FILE, "    expecting one attribute count"));
 	return -200;
     }
+
+    bin_attr = (pj_stun_binary_attr*)msg->attr[0];
+    if (bin_attr->hdr.type != 0x80ff) {
+	PJ_LOG(1,(THIS_FILE, "    expecting attribute type 0x80ff"));
+	return -210;
+    }
+    if (bin_attr->hdr.length != 3) {
+	PJ_LOG(1,(THIS_FILE, "    expecting attribute length = 4"));
+	return -220;
+    }
+    if (bin_attr->magic != PJ_STUN_MAGIC) {
+	PJ_LOG(1,(THIS_FILE, "    expecting PJ_STUN_MAGIC for unknown attr"));
+	return -230;
+    }
+    if (bin_attr->length != 3) {
+	PJ_LOG(1,(THIS_FILE, "    expecting data length 4"));
+	return -240;
+    }
+
     return 0;
 }
 
@@ -688,6 +709,90 @@ static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
 }
 
 
+/* Compare two messages */
+static int cmp_msg(const pj_stun_msg *msg1, const pj_stun_msg *msg2)
+{
+    unsigned i;
+
+    if (msg1->hdr.type != msg2->hdr.type)
+	return -10;
+    if (msg1->hdr.length != msg2->hdr.length)
+	return -20;
+    if (msg1->hdr.magic != msg2->hdr.magic)
+	return -30;
+    if (pj_memcmp(msg1->hdr.tsx_id, msg2->hdr.tsx_id, sizeof(msg1->hdr.tsx_id)))
+	return -40;
+    if (msg1->attr_count != msg2->attr_count)
+	return -50;
+
+    for (i=0; i<msg1->attr_count; ++i) {
+	const pj_stun_attr_hdr *a1 = msg1->attr[i];
+	const pj_stun_attr_hdr *a2 = msg2->attr[i];
+
+	if (a1->type != a2->type)
+	    return -60;
+	if (a1->length != a2->length)
+	    return -70;
+    }
+
+    return 0;
+}
+
+/* Decode and authenticate message with unknown non-mandatory attribute */
+static int handle_unknown_non_mandatory(void)
+{
+    pj_pool_t *pool = pj_pool_create(mem, NULL, 1000, 1000, NULL);
+    pj_stun_msg *msg0, *msg1, *msg2;
+    pj_uint8_t data[] = { 1, 2, 3, 4, 5, 6};
+    pj_uint8_t packet[500];
+    pj_stun_auth_cred cred;
+    unsigned len;
+    pj_status_t rc;
+
+    PJ_LOG(3,(THIS_FILE, "  handling unknown non-mandatory attr"));
+
+    PJ_LOG(3,(THIS_FILE, "    encoding"));
+    rc = pj_stun_msg_create(pool, PJ_STUN_BINDING_REQUEST, PJ_STUN_MAGIC, NULL, &msg0);
+    rc += pj_stun_msg_add_string_attr(pool, msg0, PJ_STUN_ATTR_USERNAME, &USERNAME);
+    rc += pj_stun_msg_add_binary_attr(pool, msg0, 0x80ff, data, sizeof(data));
+    rc += pj_stun_msg_add_msgint_attr(pool, msg0);
+    rc += pj_stun_msg_encode(msg0, packet, sizeof(packet), 0, &PASSWORD, &len);
+
+#if 0
+    if (1) {
+	unsigned i;
+	puts("");
+	printf("{ ");
+	for (i=0; i<len; ++i) printf("0x%02x, ", packet[i]);
+	puts(" }");
+    }
+#endif
+
+    PJ_LOG(3,(THIS_FILE, "    decoding"));
+    rc += pj_stun_msg_decode(pool, packet, len, PJ_STUN_IS_DATAGRAM | PJ_STUN_CHECK_PACKET,
+			     &msg1, NULL, NULL);
+
+    rc += cmp_msg(msg0, msg1);
+
+    pj_bzero(&cred, sizeof(cred));
+    cred.type = PJ_STUN_AUTH_CRED_STATIC;
+    cred.data.static_cred.username = USERNAME;
+    cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+    cred.data.static_cred.data = PASSWORD;
+
+    PJ_LOG(3,(THIS_FILE, "    authenticating"));
+    rc += pj_stun_authenticate_request(packet, len, msg1, &cred, pool, NULL, NULL);
+
+    PJ_LOG(3,(THIS_FILE, "    clone"));
+    msg2 = pj_stun_msg_clone(pool, msg1);
+    rc += cmp_msg(msg0, msg2);
+
+    pj_pool_release(pool);
+
+    return rc==0 ? 0 : -4410;
+}
+
+
 int stun_test(void)
 {
     int pad, rc;
@@ -703,6 +808,10 @@ int stun_test(void)
 	goto on_return;
 
     rc = fingerprint_test_vector();
+    if (rc != 0)
+	goto on_return;
+
+    rc = handle_unknown_non_mandatory();
     if (rc != 0)
 	goto on_return;
 
