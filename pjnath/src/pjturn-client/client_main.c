@@ -35,8 +35,8 @@
 
 struct peer
 {
-    pj_sock_t	sock;
-    pj_sockaddr	addr;
+    pj_stun_sock   *stun_sock;
+    pj_sockaddr	    mapped_addr;
 };
 
 
@@ -63,6 +63,7 @@ static struct options
     char	*user_name;
     char	*password;
     pj_bool_t	 use_fingerprint;
+    char	*stun_server;
 } o;
 
 
@@ -74,6 +75,14 @@ static void turn_on_rx_data(pj_turn_sock *relay,
 			    unsigned addr_len);
 static void turn_on_state(pj_turn_sock *relay, pj_turn_state_t old_state,
 			  pj_turn_state_t new_state);
+static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock, 
+				     pj_stun_sock_op op,
+				     pj_status_t status);
+static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
+				      void *pkt,
+				      unsigned pkt_len,
+				      const pj_sockaddr_t *src_addr,
+				      unsigned addr_len);
 
 
 static void my_perror(const char *title, pj_status_t status)
@@ -122,20 +131,36 @@ static int init()
      * Create peers
      */
     for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
-	int len;
-	pj_sockaddr addr;
-	pj_uint16_t port;
+	pj_stun_sock_cb stun_sock_cb;
+	char name[] = "peer0";
+	pj_str_t server;
 
-	CHECK( pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &g.peer[i].sock) );
-	CHECK( pj_sock_bind_in(g.peer[i].sock, 0, 0) );
+	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
+	stun_sock_cb.on_rx_data = &stun_sock_on_rx_data;
+	stun_sock_cb.on_status = &stun_sock_on_status;
 
-	len = sizeof(addr);
-	CHECK( pj_sock_getsockname(g.peer[i].sock, &addr, &len) );
-	port = pj_sockaddr_get_port(&addr);
+	g.peer[i].mapped_addr.addr.sa_family = pj_AF_INET();
 
-	CHECK( pj_gethostip(pj_AF_INET(), &g.peer[i].addr) );
-	pj_sockaddr_set_port(&g.peer[i].addr, port);
+	name[strlen(name)-1] = '0'+i;
+	status = pj_stun_sock_create(&g.stun_config, name, pj_AF_INET(), 
+				     &stun_sock_cb, NULL,
+				     &g.peer[i], &g.peer[i].stun_sock);
+	if (status != PJ_SUCCESS) {
+	    my_perror("pj_stun_sock_create()", status);
+	    return status;
+	}
 
+	if (o.stun_server)
+	    server = pj_str(o.stun_server);
+	else
+	    server = pj_str(o.srv_addr);
+	status = pj_stun_sock_start(g.peer[i].stun_sock, &server, 
+				    (pj_uint16_t)(o.srv_port?atoi(o.srv_port):PJ_STUN_PORT), 
+				    NULL);
+	if (status != PJ_SUCCESS) {
+	    my_perror("pj_stun_sock_start()", status);
+	    return status;
+	}
     }
 
     /* Start the worker thread */
@@ -161,9 +186,9 @@ static int shutdown()
 	g.relay = NULL;
     }
     for (i=0; i<PJ_ARRAY_SIZE(g.peer); ++i) {
-	if (g.peer[i].sock) {
-	    pj_sock_close(g.peer[i].sock);
-	    g.peer[i].sock = 0;
+	if (g.peer[i].stun_sock) {
+	    pj_stun_sock_destroy(g.peer[i].stun_sock);
+	    g.peer[i].stun_sock = NULL;
 	}
     }
     if (g.stun_config.timer_heap) {
@@ -191,8 +216,6 @@ static int worker_thread(void *unused)
 
     while (!g.quit) {
 	const pj_time_val delay = {0, 10};
-	int i, n=0;
-	pj_fd_set_t readset;
 
 	/* Poll ioqueue for the TURN client */
 	pj_ioqueue_poll(g.stun_config.ioqueue, &delay);
@@ -200,42 +223,6 @@ static int worker_thread(void *unused)
 	/* Poll the timer heap */
 	pj_timer_heap_poll(g.stun_config.timer_heap, NULL);
 
-	/* Poll peer sockets */
-	PJ_FD_ZERO(&readset);
-	for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
-	    PJ_FD_SET(g.peer[i].sock, &readset);
-	    if (g.peer[i].sock > n)
-		n = g.peer[i].sock;
-	}
-
-	if (pj_sock_select(n+1, &readset, NULL, NULL, &delay) <= 0)
-	    continue;
-
-	/* Handle incoming data on peer socket */
-	for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
-	    char buf[128];
-	    pj_ssize_t len;
-	    pj_sockaddr src_addr;
-	    int src_addr_len;
-	    pj_status_t status;
-
-	    if (!PJ_FD_ISSET(g.peer[i].sock, &readset))
-		continue;
-
-	    len = sizeof(buf);
-	    src_addr_len = sizeof(src_addr);
-
-	    status = pj_sock_recvfrom(g.peer[i].sock, buf, &len, 0, 
-				      &src_addr, &src_addr_len);
-	    if (status != PJ_SUCCESS) {
-		my_perror("recvfrom error", status);
-	    } else {
-		char addrinfo[80];
-		pj_sockaddr_print(&src_addr, addrinfo, sizeof(addrinfo), 3);
-		PJ_LOG(3,(THIS_FILE, "Peer%d received %d bytes from %s: %.*s",
-			  i, len, addrinfo, len, buf));
-	    }
-	}
     }
 
     return 0;
@@ -324,6 +311,62 @@ static void turn_on_state(pj_turn_sock *relay, pj_turn_state_t old_state,
     }
 }
 
+static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock, 
+				     pj_stun_sock_op op,
+				     pj_status_t status)
+{
+    struct peer *peer = (struct peer*) pj_stun_sock_get_user_data(stun_sock);
+
+    if (status == PJ_SUCCESS) {
+	PJ_LOG(4,(THIS_FILE, "peer%d: %s success", peer-g.peer,
+		  pj_stun_sock_op_name(op)));
+    } else {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(1,(THIS_FILE, "peer%d: %s error: %s", peer-g.peer,
+		  pj_stun_sock_op_name(op), errmsg));
+	return PJ_FALSE;
+    }
+
+    if (op==PJ_STUN_SOCK_BINDING_OP || op==PJ_STUN_SOCK_KEEP_ALIVE_OP) {
+	pj_stun_sock_info info;
+	int cmp;
+
+	pj_stun_sock_get_info(stun_sock, &info);
+	cmp = pj_sockaddr_cmp(&info.mapped_addr, &peer->mapped_addr);
+
+	if (cmp) {
+	    char straddr[PJ_INET6_ADDRSTRLEN+10];
+
+	    pj_sockaddr_cp(&peer->mapped_addr, &info.mapped_addr);
+	    pj_sockaddr_print(&peer->mapped_addr, straddr, sizeof(straddr), 3);
+	    PJ_LOG(3,(THIS_FILE, "peer%d: STUN mapped address is %s",
+		      peer-g.peer, straddr));
+	}
+    }
+
+    return PJ_TRUE;
+}
+
+static pj_bool_t stun_sock_on_rx_data(pj_stun_sock *stun_sock,
+				      void *pkt,
+				      unsigned pkt_len,
+				      const pj_sockaddr_t *src_addr,
+				      unsigned addr_len)
+{
+    struct peer *peer = (struct peer*) pj_stun_sock_get_user_data(stun_sock);
+    char straddr[PJ_INET6_ADDRSTRLEN+10];
+
+    ((char*)pkt)[pkt_len] = '\0';
+
+    pj_sockaddr_print(src_addr, straddr, sizeof(straddr), 3);
+    PJ_LOG(3,(THIS_FILE, "peer%d: received %d bytes data from %s: %s",
+	      peer-g.peer, pkt_len, straddr, (char*)pkt));
+
+    return PJ_TRUE;
+}
+
+
 static void menu(void)
 {
     pj_turn_session_info info;
@@ -341,8 +384,8 @@ static void menu(void)
 	strcpy(relay_addr, "0.0.0.0:0");
     }
 
-    pj_sockaddr_print(&g.peer[0].addr, peer0_addr, sizeof(peer0_addr), 3);
-    pj_sockaddr_print(&g.peer[1].addr, peer1_addr, sizeof(peer1_addr), 3);
+    pj_sockaddr_print(&g.peer[0].mapped_addr, peer0_addr, sizeof(peer0_addr), 3);
+    pj_sockaddr_print(&g.peer[1].mapped_addr, peer1_addr, sizeof(peer1_addr), 3);
 
 
     puts("\n");
@@ -372,7 +415,6 @@ static void console_main(void)
     while (!g.quit) {
 	char input[32];
 	struct peer *peer;
-	pj_ssize_t len;
 	pj_status_t status;
 
 	menu();
@@ -399,8 +441,8 @@ static void console_main(void)
 	    strcpy(input, "Hello from client");
 	    status = pj_turn_sock_sendto(g.relay, (const pj_uint8_t*)input, 
 					strlen(input)+1, 
-					&peer->addr, 
-					pj_sockaddr_get_len(&peer->addr));
+					&peer->mapped_addr, 
+					pj_sockaddr_get_len(&peer->mapped_addr));
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_sendto() failed", status);
 	    break;
@@ -414,8 +456,8 @@ static void console_main(void)
 	    else
 		peer = &g.peer[1];
 
-	    status = pj_turn_sock_bind_channel(g.relay, &peer->addr,
-					      pj_sockaddr_get_len(&peer->addr));
+	    status = pj_turn_sock_bind_channel(g.relay, &peer->mapped_addr,
+					      pj_sockaddr_get_len(&peer->mapped_addr));
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_bind_channel() failed", status);
 	    break;
@@ -434,9 +476,8 @@ static void console_main(void)
 	    }
 	    peer = &g.peer[input[0]-'0'];
 	    sprintf(input, "Hello from peer%d", input[0]-'0');
-	    len = strlen(input)+1;
-	    pj_sock_sendto(peer->sock, input, &len, 0, &g.relay_addr, 
-			   pj_sockaddr_get_len(&g.relay_addr));
+	    pj_stun_sock_sendto(peer->stun_sock, NULL, input, strlen(input)+1, 0,
+				&g.relay_addr, pj_sockaddr_get_len(&g.relay_addr));
 	    break;
 	case 'q':
 	    g.quit = PJ_TRUE;
@@ -448,9 +489,9 @@ static void console_main(void)
 
 static void usage(void)
 {
-    puts("Usage: pjturn_client TARGET [OPTIONS]");
+    puts("Usage: pjturn_client TURN-SERVER [OPTIONS]");
     puts("");
-    puts("where TARGET is \"host[:port]\"");
+    puts("where TURN-SERVER is \"host[:port]\"");
     puts("");
     puts("and OPTIONS:");
     puts(" --tcp, -T             Use TCP to connect to TURN server");
@@ -458,6 +499,7 @@ static void usage(void)
     puts(" --username, -u UID    Set username of the credential to UID");
     puts(" --password, -p PASSWD Set password of the credential to PASSWD");
     puts(" --fingerprint, -F     Use fingerprint for outgoing requests");
+    puts(" --stun-srv, -S        Use this STUN srv instead of TURN for Binding discovery");
     puts(" --help, -h");
 }
 
@@ -469,13 +511,14 @@ int main(int argc, char *argv[])
 	{ "password",	1, 0, 'p'},
 	{ "fingerprint",0, 0, 'F'},
 	{ "tcp",        0, 0, 'T'},
-	{ "help",	0, 0, 'h'}
+	{ "help",	0, 0, 'h'},
+	{ "stun-srv",   1, 0, 'S'}
     };
     int c, opt_id;
     char *pos;
     pj_status_t status;
 
-    while((c=pj_getopt_long(argc,argv, "r:u:p:N:hFT", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "r:u:p:S:hFT", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'r':
 	    o.realm = pj_optarg;
@@ -495,7 +538,9 @@ int main(int argc, char *argv[])
 	case 'T':
 	    o.use_tcp = PJ_TRUE;
 	    break;
-
+	case 'S':
+	    o.stun_server = pj_optarg;
+	    break;
 	default:
 	    printf("Argument \"%s\" is not valid. Use -h to see help",
 		   argv[pj_optind]);
