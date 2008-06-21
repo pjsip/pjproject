@@ -807,7 +807,7 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 	pj_size_t send_ind_len;
 
 	/* Increment counter */
-	++sess->send_ind_tsx_id[3];
+	++sess->send_ind_tsx_id[2];
 
 	/* Create blank SEND-INDICATION */
 	status = pj_stun_msg_init(&send_ind, PJ_STUN_SEND_INDICATION,
