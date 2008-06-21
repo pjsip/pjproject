@@ -1225,6 +1225,24 @@ PJ_DECL(int) pj_stun_set_padding_char(int chr);
 
 
 /**
+ * Initialize a generic STUN message.
+ *
+ * @param msg		The message structure to be initialized.
+ * @param msg_type	The 14bit message type (see pj_stun_msg_type 
+ *			constants).
+ * @param magic		Magic value to be put to the mesage; for requests,
+ *			the value normally should be PJ_STUN_MAGIC.
+ * @param tsx_id	Optional transaction ID, or NULL to let the
+ *			function generates a random transaction ID.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pj_stun_msg_init(pj_stun_msg *msg,
+				      unsigned msg_type,
+				      pj_uint32_t magic,
+				      const pj_uint8_t tsx_id[12]);
+
+/**
  * Create a generic STUN message.
  *
  * @param pool		Pool to create the STUN message.
@@ -1435,6 +1453,26 @@ PJ_DECL(pj_stun_attr_hdr*) pj_stun_attr_clone(pj_pool_t *pool,
 
 
 /**
+ * Initialize generic STUN IP address attribute. The \a addr_len and
+ * \a addr parameters specify whether the address is IPv4 or IPv4
+ * address.
+ *
+ * @param attr		The socket address attribute to initialize.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param xor_ed	If non-zero, the port and address will be XOR-ed
+ *			with magic, to make the XOR-MAPPED-ADDRESS attribute.
+ * @param addr		A pj_sockaddr_in or pj_sockaddr_in6 structure.
+ * @param addr_len	Length of \a addr parameter.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_sockaddr_attr_init(pj_stun_sockaddr_attr *attr,
+						int attr_type, 
+						pj_bool_t xor_ed,
+						const pj_sockaddr_t *addr,
+						unsigned addr_len);
+
+/**
  * Create a generic STUN IP address attribute. The \a addr_len and
  * \a addr parameters specify whether the address is IPv4 or IPv4
  * address.
@@ -1478,6 +1516,22 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
 						  pj_bool_t xor_ed,
 						  const pj_sockaddr_t *addr,
 						  unsigned addr_len);
+
+/**
+ * Initialize a STUN generic string attribute.
+ *
+ * @param attr		The string attribute to be initialized.
+ * @param pool		Pool to duplicate the value into the attribute,
+ *			if value is not NULL or empty.
+ * @param attr_type	Attribute type, from #pj_stun_attr_type.
+ * @param value		The string value to be assigned to the attribute.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_string_attr_init(pj_stun_string_attr *attr,
+					      pj_pool_t *pool,
+					      int attr_type,
+					      const pj_str_t *value);
 
 /**
  * Create a STUN generic string attribute.
@@ -1656,6 +1710,25 @@ PJ_DECL(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
 						  pj_stun_msg *msg,
 						  unsigned attr_cnt,
 						  const pj_uint16_t attr[]);
+
+/**
+ * Initialize STUN binary attribute.
+ *
+ * @param attr		The attribute to be initialized.
+ * @param pool		Pool to copy data, if the data and length are set.
+ * @param attr_type	The attribute type, from #pj_stun_attr_type.
+ * @param data		Data to be coped to the attribute, or NULL
+ *			if no data to be copied now.
+ * @param length	Length of data, or zero if no data is to be
+ *			copied now.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_stun_binary_attr_init(pj_stun_binary_attr *attr,
+					      pj_pool_t *pool,
+					      int attr_type,
+					      const pj_uint8_t *data,
+					      unsigned length);
 
 /**
  * Create STUN binary attribute.

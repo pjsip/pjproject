@@ -712,6 +712,28 @@ static void GETATTRHDR(const pj_uint8_t *buf, pj_stun_attr_hdr *hdr)
 #define STUN_GENERIC_IP_ADDR_LEN	8
 
 /*
+ * Init sockaddr attr
+ */
+PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_init( pj_stun_sockaddr_attr *attr,
+						int attr_type, 
+						pj_bool_t xor_ed,
+						const pj_sockaddr_t *addr,
+						unsigned addr_len)
+{
+    PJ_ASSERT_RETURN(attr && addr_len && addr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) ||
+		     addr_len == sizeof(pj_sockaddr_in6), PJ_EINVAL);
+
+    INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
+
+    pj_memcpy(&attr->sockaddr, addr, addr_len);
+    attr->xor_ed = xor_ed;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Create a generic STUN IP address attribute for IPv4 address.
  */
 PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
@@ -723,19 +745,11 @@ PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_create(pj_pool_t *pool,
 {
     pj_stun_sockaddr_attr *attr;
 
-    PJ_ASSERT_RETURN(pool && addr_len && addr && p_attr, PJ_EINVAL);
-    PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) ||
-		     addr_len == sizeof(pj_sockaddr_in6), PJ_EINVAL);
-
+    PJ_ASSERT_RETURN(pool && p_attr, PJ_EINVAL);
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
-    INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
-
-    pj_memcpy(&attr->sockaddr, addr, addr_len);
-    attr->xor_ed = xor_ed;
-
     *p_attr = attr;
-
-    return PJ_SUCCESS;
+    return pj_stun_sockaddr_attr_init(attr, attr_type, xor_ed, 
+				      addr, addr_len);
 }
 
 
@@ -897,6 +911,23 @@ static void* clone_sockaddr_attr(pj_pool_t *pool, const void *src)
  */
 
 /*
+ * Initialize a STUN generic string attribute.
+ */
+PJ_DEF(pj_status_t) pj_stun_string_attr_init( pj_stun_string_attr *attr,
+					      pj_pool_t *pool,
+					      int attr_type,
+					      const pj_str_t *value)
+{
+    INIT_ATTR(attr, attr_type, value->slen);
+    if (value && value->slen)
+	pj_strdup(pool, &attr->value, value);
+    else
+	attr->value.slen = 0;
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Create a STUN generic string attribute.
  */
 PJ_DEF(pj_status_t) pj_stun_string_attr_create(pj_pool_t *pool,
@@ -909,12 +940,9 @@ PJ_DEF(pj_status_t) pj_stun_string_attr_create(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && value && p_attr, PJ_EINVAL);
 
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_string_attr);
-    INIT_ATTR(attr, attr_type, value->slen);
-    pj_strdup(pool, &attr->value, value);
-
     *p_attr = attr;
 
-    return PJ_SUCCESS;
+    return pj_stun_string_attr_init(attr, pool, attr_type, value);
 }
 
 
@@ -1641,6 +1669,34 @@ static void* clone_unknown_attr(pj_pool_t *pool, const void *src)
  */
 
 /*
+ * Initialize STUN binary attribute.
+ */
+PJ_DEF(pj_status_t) pj_stun_binary_attr_init( pj_stun_binary_attr *attr,
+					      pj_pool_t *pool,
+					      int attr_type,
+					      const pj_uint8_t *data,
+					      unsigned length)
+{
+    PJ_ASSERT_RETURN(attr_type, PJ_EINVAL);
+
+    INIT_ATTR(attr, attr_type, length);
+
+    attr->magic = PJ_STUN_MAGIC;
+
+    if (data && length) {
+	attr->length = length;
+	attr->data = (pj_uint8_t*) pj_pool_alloc(pool, length);
+	pj_memcpy(attr->data, data, length);
+    } else {
+	attr->data = NULL;
+	attr->length = 0;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Create a blank binary attribute.
  */
 PJ_DEF(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
@@ -1652,21 +1708,9 @@ PJ_DEF(pj_status_t) pj_stun_binary_attr_create(pj_pool_t *pool,
     pj_stun_binary_attr *attr;
 
     PJ_ASSERT_RETURN(pool && attr_type && p_attr, PJ_EINVAL);
-
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_binary_attr);
-    INIT_ATTR(attr, attr_type, length);
-
-    attr->magic = PJ_STUN_MAGIC;
-
-    if (data && length) {
-	attr->length = length;
-	attr->data = (pj_uint8_t*) pj_pool_alloc(pool, length);
-	pj_memcpy(attr->data, data, length);
-    }
-
     *p_attr = attr;
-
-    return PJ_SUCCESS;
+    return pj_stun_binary_attr_init(attr, pool, attr_type, data, length);
 }
 
 
@@ -1753,6 +1797,46 @@ static void* clone_binary_attr(pj_pool_t *pool, const void *src)
 //////////////////////////////////////////////////////////////////////////////
 
 /*
+ * Initialize a generic STUN message.
+ */
+PJ_DEF(pj_status_t) pj_stun_msg_init( pj_stun_msg *msg,
+				      unsigned msg_type,
+				      pj_uint32_t magic,
+				      const pj_uint8_t tsx_id[12])
+{
+    PJ_ASSERT_RETURN(msg && msg_type, PJ_EINVAL);
+
+    msg->hdr.type = (pj_uint16_t) msg_type;
+    msg->hdr.length = 0;
+    msg->hdr.magic = magic;
+    msg->attr_count = 0;
+
+    if (tsx_id) {
+	pj_memcpy(&msg->hdr.tsx_id, tsx_id, sizeof(msg->hdr.tsx_id));
+    } else {
+	struct transaction_id
+	{
+	    pj_uint32_t	    proc_id;
+	    pj_uint32_t	    random;
+	    pj_uint32_t	    counter;
+	} id;
+	static pj_uint32_t pj_stun_tsx_id_counter;
+
+	if (!pj_stun_tsx_id_counter)
+	    pj_stun_tsx_id_counter = pj_rand();
+
+	id.proc_id = pj_getpid();
+	id.random = pj_rand();
+	id.counter = pj_stun_tsx_id_counter++;
+
+	pj_memcpy(&msg->hdr.tsx_id, &id, sizeof(msg->hdr.tsx_id));
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * Create a blank STUN message.
  */
 PJ_DEF(pj_status_t) pj_stun_msg_create( pj_pool_t *pool,
@@ -1766,30 +1850,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && msg_type && p_msg, PJ_EINVAL);
 
     msg = PJ_POOL_ZALLOC_T(pool, pj_stun_msg);
-    msg->hdr.type = (pj_uint16_t) msg_type;
-    msg->hdr.magic = magic;
-
-    if (tsx_id) {
-	pj_memcpy(&msg->hdr.tsx_id, tsx_id, sizeof(msg->hdr.tsx_id));
-    } else {
-	struct transaction_id
-	{
-	    pj_uint32_t	    proc_id;
-	    pj_uint32_t	    random;
-	    pj_uint32_t	    counter;
-	} id;
-	static pj_uint32_t pj_stun_tsx_id_counter;
-
-	id.proc_id = pj_getpid();
-	id.random = pj_rand();
-	id.counter = pj_stun_tsx_id_counter++;
-
-	pj_memcpy(&msg->hdr.tsx_id, &id, sizeof(msg->hdr.tsx_id));
-    }
-
     *p_msg = msg;
-
-    return PJ_SUCCESS;
+    return pj_stun_msg_init(msg, msg_type, magic, tsx_id);
 }
 
 
