@@ -622,6 +622,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
     pj_memcpy(&lcand->addr, addr, addr_len);
     pj_memcpy(&lcand->base_addr, base_addr, addr_len);
+    if (rel_addr == NULL)
+	rel_addr = base_addr;
     pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
 
     pj_ansi_strcpy(ice->tmp.txt, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
@@ -1880,7 +1882,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 				      PJ_ICE_CAND_TYPE_PRFLX,
 				      65535, &foundation,
 				      &xaddr->sockaddr, 
-				      &check->lcand->base_addr, NULL,
+				      &check->lcand->base_addr, 
+				      &check->lcand->base_addr,
 				      sizeof(pj_sockaddr_in), &cand_id);
 	if (status != PJ_SUCCESS) {
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, 
