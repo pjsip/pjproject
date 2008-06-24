@@ -85,7 +85,7 @@
  * Specify sound device latency default, in milisecond.
  */
 #ifndef PJMEDIA_SND_DEFAULT_REC_LATENCY
-#   define PJMEDIA_SND_DEFAULT_REC_LATENCY  10
+#   define PJMEDIA_SND_DEFAULT_REC_LATENCY  100
 #endif
 
 #ifndef PJMEDIA_SND_DEFAULT_PLAY_LATENCY
