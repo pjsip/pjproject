@@ -21,6 +21,9 @@ cfg_file = imp.load_source("cfg_file", sys.argv[2])
 # WAV similarity calculator
 COMPARE_WAV_EXE = "tools/cmp_wav.exe"
 
+# Threshold to declare degradation is too high when result is lower than this value
+COMPARE_THRESHOLD = 2
+
 # UserData
 class mod_media_playrec_user_data:
 	input_filename = ""
@@ -86,10 +89,10 @@ def post_func(t, ud):
 
 	# Evaluate the similarity value
 	sim_val = mo_sim_val.group(1)
-	if (sim_val > 0):
+	if (sim_val >= COMPARE_THRESHOLD):
 		endpt.trace("WAV similarity = " + sim_val)
 	else:
-		raise TestError("Degraded WAV heavily distorted")
+		raise TestError("WAV degraded heavily, similarity = " + sim_val)
 
 
 # Here where it all comes together
