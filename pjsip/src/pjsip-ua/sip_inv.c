@@ -2360,7 +2360,7 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	    
 	} else {
-	    /* Re-send BYE. */
+	    /* Re-send request. */
 	    status = pjsip_inv_send_msg(inv, tdata);
 	}
 
@@ -2516,6 +2516,91 @@ static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
 	pj_assert(!"Unexpected transaction type");
     }
 }
+
+/*
+ * Generic UAC transaction handler:
+ *  - resend request on 401 or 407 response.
+ *  - terminate dialog on 408 and 481 response.
+ */
+static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv, 
+					 pjsip_event *e)
+{
+    /* RFC 3261 Section 12.2.1.2:
+     *  If the response for a request within a dialog is a 481
+     *  (Call/Transaction Does Not Exist) or a 408 (Request Timeout), the UAC
+     *  SHOULD terminate the dialog.  A UAC SHOULD also terminate a dialog if
+     *  no response at all is received for the request (the client
+     *  transaction would inform the TU about the timeout.)
+     * 
+     *  For INVITE initiated dialogs, terminating the dialog consists of
+     *  sending a BYE.
+     *
+     * Note:
+     *  according to X, this should terminate dialog usage only, not the 
+     *  dialog.
+     */
+    pjsip_transaction *tsx = e->body.tsx_state.tsx;
+
+    pj_assert(tsx->role == PJSIP_UAC_ROLE);
+
+    /* Note that 481 response to CANCEL does not terminate dialog usage,
+     * but only the transaction.
+     */
+    if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
+	    tsx->method.id != PJSIP_CANCEL_METHOD) ||
+	tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
+	tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
+	tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
+    {
+	pjsip_tx_data *bye;
+	pj_status_t status;
+
+	inv_set_cause(inv, tsx->status_code, &tsx->status_text);
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+	/* Send BYE */
+	status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
+					  -1, &bye);
+	if (status == PJ_SUCCESS) {
+	    pjsip_inv_send_msg(inv, bye);
+	}
+
+	return PJ_TRUE; /* Handled */
+
+    } 
+    /* Handle 401/407 challenge. */
+    else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+	     (tsx->status_code == PJSIP_SC_UNAUTHORIZED ||
+	      tsx->status_code == PJSIP_SC_PROXY_AUTHENTICATION_REQUIRED)) 
+    {
+
+	pjsip_tx_data *tdata;
+	pj_status_t status;
+
+	status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
+					    e->body.tsx_state.src.rdata,
+					    tsx->last_tx, &tdata);
+    
+	if (status != PJ_SUCCESS) {
+	    /* Does not have proper credentials. End the session. */
+	    inv_set_cause(inv, PJSIP_SC_OK, NULL);
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    
+	} else {
+	    /* Re-send request. */
+	    if (tsx->method.id == PJSIP_INVITE_METHOD)
+		inv->invite_tsx = NULL;
+
+	    status = pjsip_inv_send_msg(inv, tdata);
+	}
+
+	return PJ_TRUE;	/* Handled */
+
+    } else {
+	return PJ_FALSE; /* Unhandled */
+    }
+}
+
 
 /*
  * State CALLING is after sending initial INVITE request but before
@@ -2873,78 +2958,11 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	inv_respond_incoming_prack(inv, e->body.tsx_state.src.rdata);
 
     } else if (tsx->role == PJSIP_ROLE_UAC) {
-	/*
-	 * Handle case when outgoing request is answered with 481 (Call/
-	 * Transaction Does Not Exist), 408, or when it's timed out. In these
-	 * cases, disconnect session (i.e. dialog usage only).
-	 * Note that 481 response to CANCEL does not terminate dialog usage,
-	 * but only the transaction.
-	 */
-	if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
-		tsx->method.id != PJSIP_CANCEL_METHOD) ||
-	    tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
-	    tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
-	    tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
-	{
-	    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-	}
+	
+	/* Generic handling for UAC tsx completion */
+	handle_uac_tsx_response(inv, e);
     }
 }
-
-/*
- * Handle 408, 481, or any other responses that terminates dialog.
- */
-static pj_bool_t handle_408_481_response(pjsip_inv_session *inv, 
-					 pjsip_event *e)
-{
-    /* RFC 3261 Section 12.2.1.2:
-     *  If the response for a request within a dialog is a 481
-     *  (Call/Transaction Does Not Exist) or a 408 (Request Timeout), the UAC
-     *  SHOULD terminate the dialog.  A UAC SHOULD also terminate a dialog if
-     *  no response at all is received for the request (the client
-     *  transaction would inform the TU about the timeout.)
-     * 
-     *  For INVITE initiated dialogs, terminating the dialog consists of
-     *  sending a BYE.
-     *
-     * Note:
-     *  according to X, this should terminate dialog usage only, not the 
-     *  dialog.
-     */
-    pjsip_transaction *tsx = e->body.tsx_state.tsx;
-
-    pj_assert(tsx->role == PJSIP_UAC_ROLE);
-
-    /* Note that 481 response to CANCEL does not terminate dialog usage,
-     * but only the transaction.
-     */
-    if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
-	    tsx->method.id != PJSIP_CANCEL_METHOD) ||
-	tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
-	tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
-	tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
-    {
-	pjsip_tx_data *bye;
-	pj_status_t status;
-
-	inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-
-	/* Send BYE */
-	status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
-					  -1, &bye);
-	if (status == PJ_SUCCESS) {
-	    pjsip_inv_send_msg(inv, bye);
-	}
-
-	return PJ_TRUE; /* Handled */
-
-    } else {
-	return PJ_FALSE; /* Unhandled */
-    }
-}
-
 
 /*
  * State CONNECTING is after 2xx response to INVITE is sent/received.
@@ -3057,7 +3075,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	/*
 	 * Handle response to outgoing UPDATE request.
 	 */
-	if (handle_408_481_response(inv, e) == PJ_FALSE)
+	if (handle_uac_tsx_response(inv, e) == PJ_FALSE)
 	    inv_handle_update_response(inv, e);
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
@@ -3071,7 +3089,8 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 
     } else if (tsx->role == PJSIP_ROLE_UAC) {
 	
-	handle_408_481_response(inv, e);
+	/* Generic handling for UAC tsx completion */
+	handle_uac_tsx_response(inv, e);
     }
 
 }
@@ -3308,30 +3327,10 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    /* Send ACK */
 	    inv_send_ack(inv, e);
 
-	} else if (handle_408_481_response(inv, e)) {
+	} else if (handle_uac_tsx_response(inv, e)) {
 
 	    /* Handle response that terminates dialog */
 	    /* Nothing to do (already handled) */
-
-	} else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
-		   (tsx->status_code==401 || tsx->status_code==407))
-	{
-	    pjsip_tx_data *tdata;
-	    pj_status_t status;
-
-	    /* Handle authentication challenge. */
-	    status = pjsip_auth_clt_reinit_req( &dlg->auth_sess,
-						e->body.tsx_state.src.rdata,
-						tsx->last_tx,
-						&tdata);
-	    if (status != PJ_SUCCESS)
-		return;
-
-	    /* Retry INVITE request */
-	    inv->invite_tsx = NULL;
-
-	    /* Send re-INVITE */
-	    status = pjsip_inv_send_msg( inv, tdata);
 
 	} else if (tsx->status_code >= 300 && tsx->status_code < 700) {
 
@@ -3361,7 +3360,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	/*
 	 * Handle response to outgoing UPDATE request.
 	 */
-	if (handle_408_481_response(inv, e) == PJ_FALSE)
+	if (handle_uac_tsx_response(inv, e) == PJ_FALSE)
 	    inv_handle_update_response(inv, e);
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
@@ -3375,9 +3374,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
     } else if (tsx->role == PJSIP_ROLE_UAC) {
 	/*
-	 * Handle 408/481 response
+	 * Handle 401/407/408/481 response
 	 */
-	handle_408_481_response(inv, e);
+	handle_uac_tsx_response(inv, e);
     }
 
 }
