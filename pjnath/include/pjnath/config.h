@@ -244,12 +244,41 @@
 
 
 /**
- * Maximum number of ICE components.
- *
- * Default: 8
+ * The number of bits to represent component IDs. This will affect
+ * the maximum number of components (PJ_ICE_MAX_COMP) value.
  */
-#ifndef PJ_ICE_MAX_COMP
-#   define PJ_ICE_MAX_COMP			    8
+#ifndef PJ_ICE_COMP_BITS
+#   define PJ_ICE_COMP_BITS			    3
+#endif
+
+
+/**
+ * Maximum number of ICE components.
+ */
+#define PJ_ICE_MAX_COMP		    (2<<PJ_ICE_COMP_BITS)
+
+
+/**
+ * The number of bits to represent candidate type preference.
+ */
+#ifndef PJ_ICE_CAND_TYPE_PREF_BITS
+#   define PJ_ICE_CAND_TYPE_PREF_BITS		    2
+#endif
+
+
+/**
+ * The number of bits to represent ICE candidate's local preference. The
+ * local preference is used to specify preference among candidates with
+ * the same type, and ICE draft suggests 65535 as the default local 
+ * preference, which means we need 16 bits to represent the value. But 
+ * since we don't have the facility to specify local preference, we'll
+ * just disable this feature and let the preference sorted by the 
+ * type only.
+ *
+ * Default: 0
+ */
+#ifndef PJ_ICE_LOCAL_PREF_BITS
+#   define PJ_ICE_LOCAL_PREF_BITS		    0
 #endif
 
 

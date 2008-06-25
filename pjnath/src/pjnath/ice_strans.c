@@ -45,10 +45,24 @@ enum tp_type
     TP_TURN
 };
 
-/* Candidate preference default values */
-#define SRFLX_PREF  65535
-#define HOST_PREF   65530
-#define RELAY_PREF  65525
+/* Candidate's local preference values. This is mostly used to
+ * specify preference among candidates with the same type. Since
+ * we don't have the facility to specify that, we'll just set it
+ * all to zero.
+ */
+#define SRFLX_PREF  0
+#define HOST_PREF   0
+#define RELAY_PREF  0
+
+/* The candidate type preference when STUN candidate is used */
+static pj_uint8_t srflx_pref_table[4] = 
+{
+    /* Keep it to 2 bits */
+    1,	/**< PJ_ICE_HOST_PREF	    */
+    2,	/**< PJ_ICE_SRFLX_PREF	    */
+    3,	/**< PJ_ICE_PRFLX_PREF	    */
+    0	/**< PJ_ICE_RELAYED_PREF    */
+};
 
 
 /* ICE callbacks */
@@ -639,7 +653,6 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
     /* Associate user data */
     ice_st->ice->user_data = (void*)ice_st;
 
-#if 0
     /* If default candidate for components are SRFLX one, upload a custom
      * type priority to ICE session so that SRFLX candidates will get
      * checked first.
@@ -648,9 +661,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 	ice_st->comp[0]->cand_list[ice_st->comp[0]->default_cand].type 
 	    == PJ_ICE_CAND_TYPE_SRFLX)
     {
-	pj_ice_sess_set_prefs(ice_st->ice, srflx_prio);
+	pj_ice_sess_set_prefs(ice_st->ice, srflx_pref_table);
     }
-#endif
 
     /* Add components/candidates */
     for (i=0; i<ice_st->comp_cnt; ++i) {

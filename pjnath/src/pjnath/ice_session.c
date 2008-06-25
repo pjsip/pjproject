@@ -65,13 +65,22 @@ static const char *role_names[] =
     "Controlling"
 };
 
-/* Default ICE session preferences, according to draft-ice */
+/* Candidate type preference */
 static pj_uint8_t cand_type_prefs[4] =
 {
+#if PJ_ICE_CAND_TYPE_PREF_BITS < 8
+    /* Keep it to 2 bits */
+    3,	    /**< PJ_ICE_HOST_PREF	*/
+    1,	    /**< PJ_ICE_SRFLX_PREF.	*/
+    2,	    /**< PJ_ICE_PRFLX_PREF	*/
+    0	    /**< PJ_ICE_RELAYED_PREF	*/
+#else
+    /* Default ICE session preferences, according to draft-ice */
     126,    /**< PJ_ICE_HOST_PREF	*/
     100,    /**< PJ_ICE_SRFLX_PREF.	*/
     110,    /**< PJ_ICE_PRFLX_PREF	*/
     0	    /**< PJ_ICE_RELAYED_PREF	*/
+#endif
 };
 
 #define CHECK_NAME_LEN		128
@@ -215,6 +224,7 @@ PJ_DEF(void) pj_ice_calc_foundation(pj_pool_t *pool,
 				    pj_ice_cand_type type,
 				    const pj_sockaddr *base_addr)
 {
+#if 0
     char buf[64];
     pj_uint32_t val;
 
@@ -227,6 +237,16 @@ PJ_DEF(void) pj_ice_calc_foundation(pj_pool_t *pool,
     pj_ansi_snprintf(buf, sizeof(buf), "%c%x",
 		     get_type_prefix(type), val);
     pj_strdup2(pool, foundation, buf);
+#else
+    /* Much shorter version, valid for candidates added by
+     * pj_ice_strans.
+     */
+    foundation->ptr = (char*) pj_pool_alloc(pool, 1);
+    *foundation->ptr = (char)get_type_prefix(type);
+    foundation->slen = 1;
+
+    PJ_UNUSED_ARG(base_addr);
+#endif
 }
 
 
@@ -450,10 +470,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_change_role(pj_ice_sess *ice,
 PJ_DEF(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
 					  const pj_uint8_t prefs[4])
 {
+    unsigned i;
     PJ_ASSERT_RETURN(ice && prefs, PJ_EINVAL);
     ice->prefs = (pj_uint8_t*) pj_pool_calloc(ice->pool, PJ_ARRAY_SIZE(prefs),
 					      sizeof(pj_uint8_t));
-    pj_memcpy(ice->prefs, prefs, sizeof(prefs));
+    for (i=0; i<4; ++i) {
+	pj_assert(prefs[i] < (2 << PJ_ICE_CAND_TYPE_PREF_BITS));
+	ice->prefs[i] = prefs[i];
+    }
     return PJ_SUCCESS;
 }
 
@@ -578,9 +602,27 @@ static pj_uint32_t CALC_CAND_PRIO(pj_ice_sess *ice,
 				  pj_uint32_t local_pref,
 				  pj_uint32_t comp_id)
 {
+#if 0
     return ((ice->prefs[type] & 0xFF) << 24) + 
 	   ((local_pref & 0xFFFF)    << 8) +
 	   (((256 - comp_id) & 0xFF) << 0);
+#else
+    enum {
+	type_mask   = ((2 << PJ_ICE_CAND_TYPE_PREF_BITS) - 1),
+	local_mask  = ((2 << PJ_ICE_LOCAL_PREF_BITS) - 1),
+	comp_mask   = ((2 << PJ_ICE_COMP_BITS) - 1),
+
+	comp_shift  = 0,
+	local_shift = (PJ_ICE_COMP_BITS),
+	type_shift  = (comp_shift + local_shift),
+
+	max_comp    = (2<<PJ_ICE_COMP_BITS),
+    };
+
+    return ((ice->prefs[type] & type_mask) << type_shift) + 
+	   ((local_pref & local_mask) << local_shift) +
+	   (((max_comp - comp_id) & comp_mask) << comp_shift);
+#endif
 }
 
 
@@ -1429,7 +1471,7 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     msg_data->data.req.ckid = check_id;
 
     /* Add PRIORITY */
-    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 65535, 
+    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 0, 
 			  lcand->comp_id);
     pj_stun_msg_add_uint_attr(check->tdata->pool, check->tdata->msg, 
 			      PJ_STUN_ATTR_PRIORITY, prio);
