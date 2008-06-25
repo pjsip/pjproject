@@ -38,61 +38,45 @@ class mod_pesq_user_data:
 
 # Test body function
 def test_func(t, user_data):
-	# module debugging purpose
-	#user_data.pesq_sample_rate_opt = "+16000"
-	#user_data.input_filename = "wavs/input.16.wav"
-	#user_data.output_filename = "wavs/tmp.16.wav"
-	#return
-
 	ua1 = t.process[0]
 	ua2 = t.process[1]
 
-	# Get conference clock rate of UA2 for PESQ sample rate option
-	ua2.send("cl")
-	clock_rate_line = ua2.expect("Port \#00\[\d+KHz")
-	if (clock_rate_line == None):
-		raise TestError("Failed getting")
-	clock_rate = re.match("Port \#00\[(\d+)KHz", clock_rate_line).group(1)
-	user_data.pesq_sample_rate_opt = "+" + clock_rate + "000"
-
 	# Get input file name
-	ua1.sync_stdout()
-	ua1.send("dc")
-	line = ua1.expect(const.MEDIA_PLAY_FILE)
-	user_data.input_filename = re.compile(const.MEDIA_PLAY_FILE).match(line).group(1)
+	user_data.input_filename = re.compile(const.MEDIA_PLAY_FILE).search(ua1.inst_param.arg).group(1)
 
 	# Get output file name
-	ua2.sync_stdout()
-	ua2.send("dc")
-	line = ua2.expect(const.MEDIA_REC_FILE)
-	user_data.output_filename = re.compile(const.MEDIA_REC_FILE).match(line).group(1)
+	user_data.output_filename = re.compile(const.MEDIA_REC_FILE).search(ua2.inst_param.arg).group(1)
 
 	# Find appropriate clock rate for the input file
-	clock_rate = re.compile(".+(\.\d+\.wav)$").match(user_data.output_filename)
-	if (clock_rate==None):
+	mo_clock_rate = re.compile("\.(\d+)\.wav").search(user_data.output_filename)
+	if (mo_clock_rate==None):
 		raise TestError("Cannot compare input & output, incorrect output filename format")
-	user_data.input_filename = re.sub("\.\d+\.wav$", clock_rate.group(1), user_data.input_filename)
+	clock_rate = mo_clock_rate.group(1)
+	user_data.input_filename = re.sub("\.\d+\.wav", "."+clock_rate+".wav", user_data.input_filename)
 
-	time.sleep(1)
-	ua1.sync_stdout()
-	ua2.sync_stdout()
+	if (clock_rate != "8") & (clock_rate != "16"):
+		raise TestError("PESQ only works on clock rate 8kHz or 16kHz, clock rate used = "+clock_rate+ "kHz")
+
+	# Get conference clock rate of UA2 for PESQ sample rate option
+	user_data.pesq_sample_rate_opt = "+" + clock_rate + "000"
 
 	# UA1 making call
 	ua1.send("m")
 	ua1.send(t.inst_params[1].uri)
 	ua1.expect(const.STATE_CALLING)
-	
-	# Auto answer, auto play, auto hangup
-	# Just wait for call disconnected
-
-	if ua1.expect(const.STATE_CONFIRMED, False)==None:
-		raise TestError("Call failed")
 	ua2.expect(const.STATE_CONFIRMED)
 
-	while True:
+	# Disconnect mic -> rec file to avoid echo recorded when using sound device
+	ua2.send("cd 0 1")
+
+	# Auto answer, auto play, auto hangup
+	# Just wait for call disconnected
+	# Assumed WAV input is no more than 30 secs
+	while 1:
 		line = ua2.proc.stdout.readline()
 		if line == "":
 			raise TestError(ua2.name + ": Premature EOF")
+
 		# Search for disconnected text
 		if re.search(const.STATE_DISCONNECTED, line) != None:
 			break
@@ -115,7 +99,7 @@ def post_func(t, user_data):
 
 	# Evaluate the similarity value
 	pesq_res = mo_pesq_out.group(1)
-	if (pesq_res >= PESQ_THRESHOLD):
+	if (float(pesq_res) >= PESQ_THRESHOLD):
 		endpt.trace("Success, PESQ result=" + pesq_res)
 	else:
 		endpt.trace("Failed, PESQ result=" + pesq_res)

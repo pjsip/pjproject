@@ -1,5 +1,6 @@
 # $Id$
 import random
+from config_site import *
 
 DEFAULT_ECHO = True
 DEFAULT_TRACE = True

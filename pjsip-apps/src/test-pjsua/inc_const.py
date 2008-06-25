@@ -42,8 +42,8 @@ MEDIA_CONN_PORT_SUCCESS = "Port \d+ \(.+\) transmitting to port"
 MEDIA_DISCONN_PORT_SUCCESS = "Port \d+ \(.+\) stop transmitting to port"
 
 # Filename to play / record
-MEDIA_PLAY_FILE = "--play-file (\S+)"
-MEDIA_REC_FILE = "--rec-file (\S+)"
+MEDIA_PLAY_FILE = "--play-file\s+(\S+)"
+MEDIA_REC_FILE = "--rec-file\s+(\S+)"
 
 ##########################
 # MISC

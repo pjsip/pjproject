@@ -2,11 +2,16 @@
 #
 from inc_cfg import *
 
-# Simple call
+ADD_PARAM = ""
+
+if (HAS_SND_DEV == 0):
+	ADD_PARAM += "--null-audio"
+
+# Call with default pjsua settings
 test_param = TestParam(
-		"PESQ",
+		"PESQ defaults pjsua settings",
 		[
-			InstanceParam("UA1", "--null-audio --max-calls=1 --play-file wavs/input.16.wav --auto-play-hangup"),
-			InstanceParam("UA2", "--null-audio --max-calls=1 --rec-file  wavs/tmp.16.wav --clock-rate 16000 --auto-answer 200 --auto-rec")
+			InstanceParam("UA1", ADD_PARAM + " --max-calls=1 --play-file wavs/input.16.wav --auto-play-hangup"),
+			InstanceParam("UA2", ADD_PARAM + " --max-calls=1 --rec-file  wavs/tmp.16.wav --clock-rate 16000 --auto-answer 200 --auto-rec")
 		]
 		)

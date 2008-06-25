@@ -34,17 +34,11 @@ def test_func(t, ud):
 	endpt = t.process[0]
 	
 	# Get input file name
-	endpt.sync_stdout()
-	endpt.send("dc")
-	line = endpt.expect(const.MEDIA_PLAY_FILE)
-	ud.input_filename = re.compile(const.MEDIA_PLAY_FILE).match(line).group(1)
+	ud.input_filename = re.compile(const.MEDIA_PLAY_FILE).search(endpt.inst_param.arg).group(1)
 	endpt.trace("Input file = " + ud.input_filename)
 
 	# Get output file name
-	endpt.sync_stdout()
-	endpt.send("dc")
-	line = endpt.expect(const.MEDIA_REC_FILE)
-	ud.output_filename = re.compile(const.MEDIA_REC_FILE).match(line).group(1)
+	ud.output_filename = re.compile(const.MEDIA_REC_FILE).search(endpt.inst_param.arg).group(1)
 	endpt.trace("Output file = " + ud.output_filename)
 
 	# Find appropriate clock rate for the input file
