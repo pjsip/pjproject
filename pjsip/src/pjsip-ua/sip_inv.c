@@ -2546,11 +2546,12 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
     /* Note that 481 response to CANCEL does not terminate dialog usage,
      * but only the transaction.
      */
-    if ((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED &&
+	((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
 	    tsx->method.id != PJSIP_CANCEL_METHOD) ||
-	tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
-	tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
-	tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR)
+	 tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
+	 tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
+	 tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR))
     {
 	pjsip_tx_data *bye;
 	pj_status_t status;
@@ -3303,13 +3304,14 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
     else if (tsx->method.id == PJSIP_INVITE_METHOD &&
 	     tsx->role == PJSIP_ROLE_UAC)
     {
-	/* Must not have other pending INVITE transaction */
-	pj_assert(inv->invite_tsx==NULL || tsx==inv->invite_tsx);
 
 	/*
 	 * Handle outgoing re-INVITE
 	 */
 	if (tsx->state == PJSIP_TSX_STATE_CALLING) {
+
+	    /* Must not have other pending INVITE transaction */
+	    pj_assert(inv->invite_tsx==NULL || tsx==inv->invite_tsx);
 
 	    /* Save pending invite transaction */
 	    inv->invite_tsx = tsx;
@@ -3418,6 +3420,12 @@ static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
 	    if (status != PJ_SUCCESS) return;
 
 	}
+
+    } else if (tsx->role == PJSIP_ROLE_UAC) {
+	/*
+	 * Handle 401/407/408/481 response
+	 */
+	handle_uac_tsx_response(inv, e);
     }
 }
 
