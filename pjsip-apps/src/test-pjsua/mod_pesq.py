@@ -15,6 +15,7 @@ import imp
 import sys
 import re
 import subprocess
+import wave
 import inc_const as const
 
 from inc_cfg import *
@@ -25,7 +26,7 @@ cfg_file = imp.load_source("cfg_file", sys.argv[2])
 # PESQ configs
 # PESQ_THRESHOLD specifies the minimum acceptable PESQ MOS value, so test can be declared successful
 PESQ = "tools/pesq.exe"
-PESQ_THRESHOLD = 3.0
+PESQ_DEFAULT_THRESHOLD = 3.4
 
 # UserData
 class mod_pesq_user_data:
@@ -38,9 +39,6 @@ class mod_pesq_user_data:
 
 # Test body function
 def test_func(t, user_data):
-
-	if len(t.process) == 0:
-		return
 
 	ua1 = t.process[0]
 	ua2 = t.process[1]
@@ -64,27 +62,41 @@ def test_func(t, user_data):
 	# Get conference clock rate of UA2 for PESQ sample rate option
 	user_data.pesq_sample_rate_opt = "+" + clock_rate + "000"
 
+	# Get WAV input length, in seconds
+	fin = wave.open(user_data.input_filename, "r")
+	if fin == None:
+		raise TestError("Failed opening input WAV file")
+	inwavlen = fin.getnframes() // fin.getframerate()
+	if (fin.getnframes() % fin.getframerate()) > 0:
+		inwavlen = inwavlen + 1
+	fin.close()
+
 	# UA1 making call
 	ua1.send("m")
 	ua1.send(t.inst_params[1].uri)
 	ua1.expect(const.STATE_CALLING)
+
+	# UA2 wait until call established
 	ua2.expect(const.STATE_CONFIRMED)
 
-	# Disconnect mic -> rec file to avoid echo recorded when using sound device
-	ua2.send("cd 0 1")
+	# Disconnect mic -> rec file, to avoid echo recorded when using sound device
+	# Disconnect stream -> spk, make it silent
+	# Connect stream -> rec file, start recording
+	ua2.send("cd 0 1\ncd 4 0\ncc 4 1")
 
-	# Auto answer, auto play, auto hangup
-	# Just wait for call disconnected
-	# Assumed WAV input is no more than 30 secs
-	while 1:
-		line = ua2.proc.stdout.readline()
-		if line == "":
-			raise TestError(ua2.name + ": Premature EOF")
+	# Disconnect mic -> stream, make stream purely sending from file
+	# Disconnect stream -> spk, make it silent
+	# Connect file -> stream, start sending
+	ua1.send("cd 0 4\ncd 4 0\ncc 1 4")
 
-		# Search for disconnected text
-		if re.search(const.STATE_DISCONNECTED, line) != None:
-			break
-	
+	time.sleep(inwavlen)
+
+	# Disconnect files from bridge
+	ua2.send("cd 4 1")
+	ua2.expect(const.MEDIA_DISCONN_PORT_SUCCESS)
+	ua1.send("cd 1 4")
+	ua1.expect(const.MEDIA_DISCONN_PORT_SUCCESS)
+
 
 # Post body function
 def post_func(t, user_data):
@@ -101,9 +113,15 @@ def post_func(t, user_data):
 	if (mo_pesq_out == None):
 		raise TestError("Failed to fetch PESQ result")
 
-	# Evaluate the similarity value
+	# Get threshold
+	if (cfg_file.pesq_threshold != None) | (cfg_file.pesq_threshold > -0.5 ):
+		threshold = cfg_file.pesq_threshold
+	else:
+		threshold = PESQ_DEFAULT_THRESHOLD
+
+	# Evaluate the PESQ MOS value
 	pesq_res = mo_pesq_out.group(1)
-	if (float(pesq_res) >= PESQ_THRESHOLD):
+	if (float(pesq_res) >= threshold):
 		endpt.trace("Success, PESQ result = " + pesq_res)
 	else:
 		endpt.trace("Failed, PESQ result = " + pesq_res)
