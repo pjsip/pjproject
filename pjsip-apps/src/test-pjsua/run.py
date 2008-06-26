@@ -61,11 +61,12 @@ class Expect:
 		self.trace_enabled = inst_param.trace_enabled
 		fullcmd = G_EXE + " " + inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
 		self.trace("Popen " + fullcmd)
-		self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=True)
+		self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
 	def send(self, cmd):
 		self.trace("send " + cmd)
 		self.proc.stdin.writelines(cmd + "\n")
-	def expect(self, pattern, raise_on_error=True):
+		self.proc.stdin.flush()
+	def expect(self, pattern, raise_on_error=True, title=""):
 		self.trace("expect " + pattern)
 		r = re.compile(pattern, re.I)
 		refresh_cnt = 0
@@ -88,7 +89,7 @@ class Expect:
 				if refresh_cnt >= 6:
 					self.trace("Timed-out!")
 					if raise_on_error:
-						raise TestError(self.name + ": Timeout expecting pattern: " + pattern)
+						raise TestError(self.name + " " + title + ": Timeout expecting pattern: \"" + pattern + "\"")
 					else:
 						return None		# timeout
 			# Search for expected text

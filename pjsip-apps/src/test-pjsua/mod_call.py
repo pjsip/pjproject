@@ -70,7 +70,7 @@ def test_func(t, user_data):
 
 	# Hold call by caller
 	caller.send("H")
-	caller.sync_stdout()
+	#caller.sync_stdout()
 	caller.expect(const.MEDIA_HOLD)
 	callee.expect(const.MEDIA_HOLD)
 	
@@ -81,9 +81,9 @@ def test_func(t, user_data):
 	# Release hold
 	time.sleep(2)
 	caller.send("v")
-	caller.sync_stdout()
-	callee.expect(const.MEDIA_ACTIVE)
-	caller.expect(const.MEDIA_ACTIVE)
+	#caller.sync_stdout()
+	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -99,7 +99,7 @@ def test_func(t, user_data):
 
 	# Hold call by callee
 	callee.send("H")
-	callee.sync_stdout()
+	#callee.sync_stdout()
 	caller.expect(const.MEDIA_HOLD)
 	callee.expect(const.MEDIA_HOLD)
 	
@@ -110,9 +110,9 @@ def test_func(t, user_data):
 	# Release hold
 	time.sleep(2)
 	callee.send("v")
-	callee.sync_stdout()
-	caller.expect(const.MEDIA_ACTIVE)
-	callee.expect(const.MEDIA_ACTIVE)
+	#callee.sync_stdout()
+	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -128,9 +128,9 @@ def test_func(t, user_data):
 
 	# UPDATE (by caller)
 	caller.send("U")
-	caller.sync_stdout()
-	callee.expect(const.MEDIA_ACTIVE)
-	caller.expect(const.MEDIA_ACTIVE)
+	#caller.sync_stdout()
+	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
+	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
 	
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -143,9 +143,9 @@ def test_func(t, user_data):
 
 	# UPDATE (by callee)
 	callee.send("U")
-	callee.sync_stdout()
-	caller.expect(const.MEDIA_ACTIVE)
-	callee.expect(const.MEDIA_ACTIVE)
+	#callee.sync_stdout()
+	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
+	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
 	
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -155,6 +155,47 @@ def test_func(t, user_data):
 	time.sleep(2)
 	check_media(caller, callee)
 	check_media(callee, caller)
+
+	# Synchronize stdout
+	caller.sync_stdout()
+	callee.sync_stdout()
+
+	# Set codecs in both caller and callee so that there is
+	# no common codec between them.
+	# In caller we only enable PCMU, in callee we only enable PCMA
+	caller.send("Cp")
+	caller.send("* 0")
+	caller.send("Cp")
+	caller.send("pcmu 120")
+	
+	callee.send("Cp")
+	callee.send("* 0")
+	callee.send("Cp")
+	callee.send("pcma 120")
+
+	# Test when UPDATE fails (by callee)
+	callee.send("U")
+	caller.expect("SIP/2.0 488")
+	callee.expect("SIP/2.0 488")
+	callee.sync_stdout()
+	caller.sync_stdout()
+	
+	# Test that media is still okay
+	time.sleep(2)
+	check_media(caller, callee)
+	check_media(callee, caller)
+
+	# Test when UPDATE fails (by caller)
+	caller.send("U")
+	callee.expect("SIP/2.0 488")
+	caller.expect("SIP/2.0 488")
+	caller.sync_stdout()
+	callee.sync_stdout()
+	
+	# Test that media is still okay
+	time.sleep(2)
+	check_media(callee, caller)
+	check_media(caller, callee)
 
 	# Hangup call
 	time.sleep(1)
