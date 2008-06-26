@@ -721,12 +721,27 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	status = pjmedia_sdp_parse(rdata->tp_info.pool, 
 				   (char*)rdata->msg_info.msg->body->data,
 				   rdata->msg_info.msg->body->len, &offer);
+	if (status == PJ_SUCCESS) {
+	    /* Validate */
+	    status = pjmedia_sdp_validate(offer);
+	}
+
 	if (status != PJ_SUCCESS) {
 	    const pj_str_t reason = pj_str("Bad SDP");
-	    pjsua_perror(THIS_FILE, "Error parsing SDP in incoming INVITE", 
+	    pjsip_hdr hdr_list;
+	    pjsip_warning_hdr *w;
+
+	    pjsua_perror(THIS_FILE, "Bad SDP in incoming INVITE", 
 			 status);
+
+	    w = pjsip_warning_hdr_create_from_status(rdata->tp_info.pool, 
+					     pjsip_endpt_name(pjsua_var.endpt),
+					     status);
+	    pj_list_init(&hdr_list);
+	    pj_list_push_back(&hdr_list, w);
+
 	    pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata, 400, 
-				&reason, NULL, NULL, NULL);
+				&reason, &hdr_list, NULL, NULL);
 	    PJSUA_UNLOCK();
 	    return PJ_TRUE;
 	}
