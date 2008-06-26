@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 from socket import *
 import re
@@ -207,6 +207,8 @@ class SendtoCfg:
 	inst_param = None
 	# Initial SDP
 	sdp = ""
+	# Extra headers to add to request
+	extra_headers = ""
 	# Expected code
 	resp_code = 0
 	# Use TCP?
@@ -216,11 +218,14 @@ class SendtoCfg:
 	# List of RE patterns that must NOT exist in response
 	resp_exclude = []
 	# Constructor
-	def __init__(self, name, pjsua_args, sdp, resp_code, resp_inc=[], resp_exc=[], use_tcp=False):
+	def __init__(self, name, pjsua_args, sdp, resp_code, 
+		     resp_inc=[], resp_exc=[], use_tcp=False,
+		     extra_headers=""):
 		self.sdp = sdp
 		self.resp_code = resp_code
 		self.resp_include = resp_inc
 		self.resp_exclude = resp_exc
 		self.use_tcp = use_tcp
+		self.extra_headers = extra_headers
 		self.inst_param = cfg.InstanceParam("pjsua", pjsua_args)
 

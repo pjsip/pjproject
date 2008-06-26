@@ -79,8 +79,8 @@ class TestParam:
 	def __init__(	self, 
 			title, 		# Test title
 			inst_params, 	# InstanceParam's as list
-			skip=False,
 			func=None,
+			skip=False,
 			post_func=None,
 			user_data=None):
 		self.title = title
