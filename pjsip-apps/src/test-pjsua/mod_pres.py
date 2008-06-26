@@ -107,11 +107,11 @@ def test_func(t, user_data):
 	# U1 send IM
 	im_text = "Hello World from U1"
 	u1.send("i")
-	u1.send("1")
-	u1.send(im_text)
+	u1.send(uri2)
 	u2.expect(" is typing")
-	u2.expect("MESSAGE from.*"+im_text)
+	u1.send(im_text)
 	u1.expect(im_text+".*delivered successfully")
+	u2.expect("MESSAGE from.*"+im_text)
 	
 	# Synchronize stdout
 	u1.sync_stdout()
