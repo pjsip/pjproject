@@ -36,7 +36,7 @@ def test_func(t, user_data):
 	caller.expect(const.STATE_CALLING)
 	
 	# Callee waits for call and answers with 180/Ringing
-	time.sleep(1)
+	time.sleep(0.2)
 	callee.expect(const.EVENT_INCOMING_CALL)
 	callee.send("a")
 	callee.send("180")
@@ -52,19 +52,19 @@ def test_func(t, user_data):
 	callee.send("200")
 
 	# Wait until call is connected in both endpoints
-	time.sleep(1)
+	time.sleep(0.2)
 	caller.expect(const.STATE_CONFIRMED)
 	callee.expect(const.STATE_CONFIRMED)
 
 	# Synchronize stdout
 	caller.sync_stdout()
 	callee.sync_stdout()
-	time.sleep(1)
+	time.sleep(0.1)
 	caller.sync_stdout()
 	callee.sync_stdout()
 
 	# Test that media is okay
-	time.sleep(2)
+	time.sleep(0.3)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -79,7 +79,7 @@ def test_func(t, user_data):
 	callee.sync_stdout()
 
 	# Release hold
-	time.sleep(2)
+	time.sleep(0.5)
 	caller.send("v")
 	#caller.sync_stdout()
 	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
@@ -108,7 +108,7 @@ def test_func(t, user_data):
 	callee.sync_stdout()
 
 	# Release hold
-	time.sleep(2)
+	time.sleep(0.5)
 	callee.send("v")
 	#callee.sync_stdout()
 	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
@@ -137,7 +137,7 @@ def test_func(t, user_data):
 	callee.sync_stdout()
 
 	# Test that media is okay
-	time.sleep(2)
+	time.sleep(0.1)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -152,7 +152,7 @@ def test_func(t, user_data):
 	callee.sync_stdout()
 
 	# Test that media is okay
-	time.sleep(2)
+	time.sleep(0.1)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -181,7 +181,7 @@ def test_func(t, user_data):
 	caller.sync_stdout()
 	
 	# Test that media is still okay
-	time.sleep(2)
+	time.sleep(0.1)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -193,14 +193,13 @@ def test_func(t, user_data):
 	callee.sync_stdout()
 	
 	# Test that media is still okay
-	time.sleep(2)
+	time.sleep(0.1)
 	check_media(callee, caller)
 	check_media(caller, callee)
 
 	# Hangup call
-	time.sleep(1)
+	time.sleep(0.1)
 	caller.send("h")
-	caller.sync_stdout()
 
 	# Wait until calls are cleared in both endpoints
 	caller.expect(const.STATE_DISCONNECTED)

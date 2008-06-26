@@ -59,7 +59,7 @@ class Expect:
 		self.name = inst_param.name
 		self.echo = inst_param.echo_enabled
 		self.trace_enabled = inst_param.trace_enabled
-		fullcmd = G_EXE + " " + inst_param.arg + " --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
+		fullcmd = G_EXE + " " + inst_param.arg + " --stdout-no-buf --stdout-refresh=5 --stdout-refresh-text=" + const.STDOUT_REFRESH
 		self.trace("Popen " + fullcmd)
 		self.proc = subprocess.Popen(fullcmd, shell=G_INUNIX, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
 	def send(self, cmd):

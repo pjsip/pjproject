@@ -464,6 +464,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES,
 	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT,
+#ifdef _IONBF
+	   OPT_STDOUT_NO_BUF,
+#endif
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC
     };
     struct pj_getopt_option long_options[] = {
@@ -554,6 +557,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "playback-lat",   1, 0, OPT_PLAYBACK_LAT},
 	{ "stdout-refresh", 1, 0, OPT_STDOUT_REFRESH},
 	{ "stdout-refresh-text", 1, 0, OPT_STDOUT_REFRESH_TEXT},
+#ifdef _IONBF
+	{ "stdout-no-buf",  0, 0, OPT_STDOUT_NO_BUF },
+#endif
 	{ "snd-auto-close", 1, 0, OPT_SND_AUTO_CLOSE},
 	{ "no-tones",    0, 0, OPT_NO_TONES},
 	{ NULL, 0, 0, 0}
@@ -1145,6 +1151,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_STDOUT_REFRESH_TEXT:
 	    stdout_refresh_text = pj_optarg;
 	    break;
+
+#ifdef _IONBF
+	case OPT_STDOUT_NO_BUF:
+	    setvbuf(stdout, NULL, _IONBF, 0);
+	    break;
+#endif
 
 	case OPT_CAPTURE_LAT:
 	    cfg->capture_lat = atoi(pj_optarg);
