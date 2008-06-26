@@ -55,7 +55,7 @@ class InstanceParam:
 		self.arg = arg + " --local-port=" + str(self.sip_port)
 		self.have_reg = have_reg
 		self.have_publish = have_publish
-		if not ("--publish" in self.arg):
+		if have_publish and have_reg and not ("--publish" in self.arg):
 			self.arg = self.arg + " --publish"
 		self.echo_enabled = echo_enabled
 		self.trace_enabled = trace_enabled

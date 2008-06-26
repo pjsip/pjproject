@@ -13,6 +13,7 @@ tests = []
 excluded_tests = [ "svn",
 		   "pyc",
 		   "scripts-call/150_srtp_2_1",				# SRTP optional 'cannot' call SRTP mandatory
+		   "scripts-call/301_ice_public_b.py",			# Doesn't work because OpenSER modifies SDP
 		   "scripts-media-playrec/100_resample_lf_8_11.py",	# related to clock-rate 11 kHz problem
 		   "scripts-media-playrec/100_resample_lf_8_22.py",	# related to clock-rate 22 kHz problem
 		   "scripts-media-playrec/100_resample_lf_11"		# related to clock-rate 11 kHz problem
