@@ -1,6 +1,7 @@
 # $Id$
 import os
 import sys
+import time
 
 # Usage:
 #  runall.py [test-to-resume]
@@ -13,6 +14,7 @@ tests = []
 excluded_tests = [ "svn",
 		   "pyc",
 		   "scripts-call/150_srtp_2_1",				# SRTP optional 'cannot' call SRTP mandatory
+		   "scripts-call/301_ice_public_a.py",			# Unreliable, proxy returns 408 sometimes
 		   "scripts-call/301_ice_public_b.py",			# Doesn't work because OpenSER modifies SDP
 		   "scripts-media-playrec/100_resample_lf_8_11.py",	# related to clock-rate 11 kHz problem
 		   "scripts-media-playrec/100_resample_lf_8_22.py",	# related to clock-rate 22 kHz problem
@@ -67,11 +69,17 @@ for t in tests:
 	    continue
 	resume_script=""
 	cmdline = "python run.py " + t
-	print "Running " + cmdline
+	t0 = time.time()
+	print "Running " + cmdline + "...",
 	ret = os.system(cmdline + " > output.log")
+	t1 = time.time()
 	if ret != 0:
-		print "Test " + t + " failed."
+		dur = int(t1 - t0)
+		print " failed!! [" + str(dur) + "s]"
 		print "Please see 'output.log' for the test log."
 		sys.exit(1)
+	else:
+		dur = int(t1 - t0)
+		print " ok [" + str(dur) + "s]"
 
 print "All tests completed successfully"
