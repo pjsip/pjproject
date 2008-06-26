@@ -138,7 +138,7 @@ typedef struct pjmedia_srtp_setting
     /**
      * Specify the usage policy. Default is PJMEDIA_SRTP_OPTIONAL.
      */
-    pjmedia_srtp_use use;
+    pjmedia_srtp_use		use;
 
     /**
      * Specify whether the SRTP transport should close the member transport 
@@ -179,6 +179,16 @@ typedef struct pjmedia_srtp_info
      * Specify the policy used by the SRTP session for transmit direction.
      */
     pjmedia_srtp_crypto		tx_policy;
+
+    /**
+     * Specify the usage policy.
+     */
+    pjmedia_srtp_use		use;
+
+    /**
+     * Specify the peer's usage policy.
+     */
+    pjmedia_srtp_use		peer_use;
 
 } pjmedia_srtp_info;
 

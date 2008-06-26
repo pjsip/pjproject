@@ -888,7 +888,14 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	/* Always create SRTP adapter */
 	pjmedia_srtp_setting_default(&srtp_opt);
 	srtp_opt.close_member_tp = PJ_FALSE;
-	srtp_opt.use = acc->cfg.use_srtp;
+	/* If media session has been ever established, let's use remote's 
+	 * preference in SRTP usage policy, especially when it is stricter.
+	 */
+	if (call->rem_srtp_use > acc->cfg.use_srtp)
+	    srtp_opt.use = call->rem_srtp_use;
+	else
+	    srtp_opt.use = acc->cfg.use_srtp;
+
 	status = pjmedia_transport_srtp_create(pjsua_var.med_endpt, 
 					       call->med_tp,
 					       &srtp_opt, &srtp);
@@ -1143,6 +1150,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	}
 
     } else {
+	pjmedia_srtp_info srtp_info;
+	pjmedia_transport_info tp_info;
+
 	/* Start/restart media transport */
 	status = pjmedia_transport_media_start(call->med_tp, 
 					       call->inv->pool,
@@ -1151,6 +1161,23 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    return status;
 
 	call->med_tp_st = PJSUA_MED_TP_RUNNING;
+
+	/* Get remote SRTP usage policy */
+	pjmedia_transport_info_init(&tp_info);
+	pjmedia_transport_get_info(call->med_tp, &tp_info);
+	if (tp_info.specific_info_cnt > 0) {
+	    int i;
+	    for (i = 0; i < tp_info.specific_info_cnt; ++i) {
+		if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
+		{
+		    pjmedia_srtp_info *srtp_info = 
+				(pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
+
+		    call->rem_srtp_use = srtp_info->peer_use;
+		    break;
+		}
+	    }
+	}
 
 	/* Override ptime, if this option is specified. */
 	if (pjsua_var.media_cfg.ptime != 0) {

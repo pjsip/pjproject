@@ -115,6 +115,7 @@ static void reset_call(pjsua_call_id id)
     call->res_time.sec = 0;
     call->res_time.msec = 0;
     call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
+    call->rem_srtp_use = PJMEDIA_SRTP_DISABLED;
 }
 
 

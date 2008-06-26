@@ -111,13 +111,12 @@ typedef struct transport_srtp
     /* Transport information */
     pjmedia_transport	*member_tp; /**< Underlying transport.       */
 
-    /* When in SRTP optional mode, instead of always offering RTP/AVP,
-     * we should create offer based on remote preference. At the first time,
-     * remote preference is unknown, it is known after media_start() called.
-     * So next time the same session need to create an offer, it will create
-     * SDP with transport type based on remote preference.
+    /* SRTP usage policy of peer. This field is updated when media is starting.
+     * This is useful when SRTP is in optional mode and peer is using mandatory
+     * mode, so when local is about to reinvite/update, it should offer 
+     * RTP/SAVP instead of offering RTP/AVP.
      */
-    pj_bool_t		 remote_prefer_rtp_savp;
+    pjmedia_srtp_use	 peer_use;
 
 } transport_srtp;
 
@@ -348,7 +347,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     srtp->pool = pool;
     srtp->session_inited = PJ_FALSE;
     srtp->bypass_srtp = PJ_FALSE;
-    srtp->remote_prefer_rtp_savp = PJ_FALSE;
+    srtp->peer_use = opt->use;
 
     if (opt) {
 	srtp->setting = *opt;
@@ -586,6 +585,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     srtp_info.active = srtp->session_inited;
     srtp_info.rx_policy = srtp->rx_policy;
     srtp_info.tx_policy = srtp->tx_policy;
+    srtp_info.use = srtp->setting.use;
+    srtp_info.peer_use = srtp->peer_use;
 
     spc_info_idx = info->specific_info_cnt++;
     info->spc_info[spc_info_idx].type = PJMEDIA_TRANSPORT_TYPE_SRTP;
@@ -1076,8 +1077,9 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	    case PJMEDIA_SRTP_DISABLED:
 		goto BYPASS_SRTP;
 	    case PJMEDIA_SRTP_OPTIONAL:
-		m_loc->desc.transport = srtp->remote_prefer_rtp_savp?
-					ID_RTP_SAVP : ID_RTP_AVP;
+		m_loc->desc.transport = 
+				(srtp->peer_use == PJMEDIA_SRTP_MANDATORY)?
+				ID_RTP_SAVP : ID_RTP_AVP;
 		break;
 	    case PJMEDIA_SRTP_MANDATORY:
 		m_loc->desc.transport = ID_RTP_SAVP;
@@ -1283,8 +1285,10 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     m_rem = sdp_remote->media[media_index];
     m_loc = sdp_local->media[media_index];
 
-    srtp->remote_prefer_rtp_savp = (pj_stricmp(&m_rem->desc.transport, 
-				   &ID_RTP_SAVP) == 0);
+    if (pj_stricmp(&m_rem->desc.transport, &ID_RTP_SAVP) == 0)
+	srtp->peer_use = PJMEDIA_SRTP_MANDATORY;
+    else
+	srtp->peer_use = PJMEDIA_SRTP_OPTIONAL;
 
     /* For answerer side, this function will just have to start SRTP */
 
@@ -1382,6 +1386,7 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
 BYPASS_SRTP:
     srtp->bypass_srtp = PJ_TRUE;
+    srtp->peer_use = PJMEDIA_SRTP_DISABLED;
 
 PROPAGATE_MEDIA_START:
     return pjmedia_transport_media_start(srtp->member_tp, pool, 

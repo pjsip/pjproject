@@ -74,6 +74,7 @@ typedef struct pjsua_call
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */
     pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
+    pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
     char    last_text_buf_[128];    /**< Buffer for last_text.		    */
 
