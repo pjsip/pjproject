@@ -2521,8 +2521,13 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
+	/* Do not deinitialize media since this may be a re-INVITE or
+	 * UPDATE (which in this case the media should not get affected
+	 * by the failed re-INVITE/UPDATE). The media will be shutdown
+	 * when call is disconnected anyway.
+	 */
 	/* Stop/destroy media, if any */
-	pjsua_media_channel_deinit(call->index);
+	/*pjsua_media_channel_deinit(call->index);*/
 
 	/* Disconnect call if we're not in the middle of initializing an
 	 * UAS dialog and if this is not a re-INVITE 
@@ -2570,7 +2575,10 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_perror(THIS_FILE, "Unable to create media session", 
 		     status);
 	call_disconnect(inv, PJSIP_SC_NOT_ACCEPTABLE_HERE);
-	pjsua_media_channel_deinit(call->index);
+	/* No need to deinitialize; media will be shutdown when call
+	 * state is disconnected anyway.
+	 */
+	/*pjsua_media_channel_deinit(call->index);*/
 	PJSUA_UNLOCK();
 	return;
     }
