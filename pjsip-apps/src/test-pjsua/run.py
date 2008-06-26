@@ -54,6 +54,7 @@ class Expect:
 	rh = re.compile(const.DESTROYED)
 	ra = re.compile(const.ASSERT, re.I)
 	rr = re.compile(const.STDOUT_REFRESH)
+	t0 = time.time()
 	def __init__(self, inst_param):
 		self.inst_param = inst_param
 		self.name = inst_param.name
@@ -98,15 +99,18 @@ class Expect:
 
 	def sync_stdout(self):
 		self.trace("sync_stdout")
-		self.send("echo 1")
-		self.expect("echo 1")
+		cmd = "echo 1" + str(random.randint(1000,9999))
+		self.send(cmd)
+		self.expect(cmd)
 
 	def wait(self):
 		self.trace("wait")
 		self.proc.wait()
 	def trace(self, s):
 		if self.trace_enabled:
-			print self.name + ": " + "====== " + s + " ======"
+			now = time.time()
+			fmt = self.name + ": " + "================== " + s + " ==================" + " [at t=%(time)03d]"
+			print fmt % {'time':int(now - self.t0)}
 
 #########################
 # Error handling

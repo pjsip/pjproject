@@ -2492,7 +2492,7 @@ static void keystroke_help(void)
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
-    puts("|  q  QUIT       sleep MS     echo [0|1]            n: detect NAT type        |");
+    puts("|  q  QUIT       sleep MS     echo [0|1|txt]        n: detect NAT type        |");
     puts("+=============================================================================+");
 
     i = pjsua_call_get_count();
@@ -3544,7 +3544,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    break;
 		}
 
-		cmd_echo = pj_strtoul(&tmp);
+		cmd_echo = *tmp.ptr != '0' || tmp.slen!=1;
 	    }
 	    break;
 
