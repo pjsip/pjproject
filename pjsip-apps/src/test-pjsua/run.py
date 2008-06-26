@@ -143,6 +143,10 @@ if script.test == None:
 	print "Error: no test defined"
 	sys.exit(1)
 
+if script.test.skip:
+	print "Test " + script.test.title + " is skipped"
+	sys.exit(0)
+
 if len(script.test.inst_params) == 0:
 	print "Error: test doesn't contain pjsua run descriptions"
 	sys.exit(1)

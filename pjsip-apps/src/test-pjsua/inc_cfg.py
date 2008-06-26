@@ -67,6 +67,8 @@ class TestParam:
 	title = ""
 	# params is list containing InstanceParams objects
 	inst_params = []
+	# flag if this tes should be skipped
+	skip = None
 	# list of Expect instances, to be filled at run-time by
         # the test program	
 	process = []
@@ -77,11 +79,13 @@ class TestParam:
 	def __init__(	self, 
 			title, 		# Test title
 			inst_params, 	# InstanceParam's as list
+			skip=False,
 			func=None,
 			post_func=None,
 			user_data=None):
 		self.title = title
 		self.inst_params = inst_params
+		self.skip = skip
 		self.test_func = func
 		self.post_func = post_func
 		self.user_data = user_data

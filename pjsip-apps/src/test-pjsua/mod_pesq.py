@@ -25,7 +25,7 @@ cfg_file = imp.load_source("cfg_file", sys.argv[2])
 # PESQ configs
 # PESQ_THRESHOLD specifies the minimum acceptable PESQ MOS value, so test can be declared successful
 PESQ = "tools/pesq.exe"
-PESQ_THRESHOLD = 1.0
+PESQ_THRESHOLD = 3.0
 
 # UserData
 class mod_pesq_user_data:
@@ -38,6 +38,10 @@ class mod_pesq_user_data:
 
 # Test body function
 def test_func(t, user_data):
+
+	if len(t.process) == 0:
+		return
+
 	ua1 = t.process[0]
 	ua2 = t.process[1]
 
@@ -93,16 +97,16 @@ def post_func(t, user_data):
 	pesq_out  = pesq_proc.communicate()
 
 	# Parse ouput
-	mo_pesq_out = re.compile("Prediction\s+:\s+PESQ_MOS\s+=\s+(.+)\s*").search(pesq_out[0])
+	mo_pesq_out = re.compile("Prediction[^=]+=\s+([\d\.]+)\s*").search(pesq_out[0])
 	if (mo_pesq_out == None):
 		raise TestError("Failed to fetch PESQ result")
 
 	# Evaluate the similarity value
 	pesq_res = mo_pesq_out.group(1)
 	if (float(pesq_res) >= PESQ_THRESHOLD):
-		endpt.trace("Success, PESQ result=" + pesq_res)
+		endpt.trace("Success, PESQ result = " + pesq_res)
 	else:
-		endpt.trace("Failed, PESQ result=" + pesq_res)
+		endpt.trace("Failed, PESQ result = " + pesq_res)
 		raise TestError("WAV seems to be degraded badly")
 
 
