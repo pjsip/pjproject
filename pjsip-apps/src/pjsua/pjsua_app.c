@@ -2773,9 +2773,10 @@ static void manage_codec_prio(void)
     }
 
     puts("");
-    puts("Enter codec name and its new priority (e.g. \"speex/16000 200\"), empty to cancel:");
+    puts("Enter codec id and its new priority "
+	 "(e.g. \"speex/16000 200\"), empty to cancel:");
 
-    printf("Codec name and priority: ");
+    printf("Codec name (\"*\" for all) and priority: ");
     fgets(input, sizeof(input), stdin);
     if (input[0]=='\r' || input[0]=='\n') {
 	puts("Done");

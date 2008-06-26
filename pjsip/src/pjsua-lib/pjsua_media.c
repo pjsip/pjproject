@@ -2227,9 +2227,13 @@ PJ_DEF(pj_status_t) pjsua_enum_codecs( pjsua_codec_info id[],
 PJ_DEF(pj_status_t) pjsua_codec_set_priority( const pj_str_t *codec_id,
 					      pj_uint8_t priority )
 {
+    const pj_str_t all = { NULL, 0 };
     pjmedia_codec_mgr *codec_mgr;
 
     codec_mgr = pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt);
+
+    if (codec_id->slen==1 && *codec_id->ptr=='*')
+	codec_id = &all;
 
     return pjmedia_codec_mgr_set_codec_priority(codec_mgr, codec_id, 
 					        priority);
@@ -2242,12 +2246,16 @@ PJ_DEF(pj_status_t) pjsua_codec_set_priority( const pj_str_t *codec_id,
 PJ_DEF(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
 					   pjmedia_codec_param *param )
 {
+    const pj_str_t all = { NULL, 0 };
     const pjmedia_codec_info *info;
     pjmedia_codec_mgr *codec_mgr;
     unsigned count = 1;
     pj_status_t status;
 
     codec_mgr = pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt);
+
+    if (codec_id->slen==1 && *codec_id->ptr=='*')
+	codec_id = &all;
 
     status = pjmedia_codec_mgr_find_codecs_by_id(codec_mgr, codec_id,
 						 &count, &info, NULL);

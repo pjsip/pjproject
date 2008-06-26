@@ -231,7 +231,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
 
     for (i=0; i<mgr->codec_cnt; ++i) {
 
-	if (pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
+	if (codec_id->slen == 0 ||
+	    pj_strnicmp2(codec_id, mgr->codec_desc[i].id, 
 			 codec_id->slen) == 0) 
 	{
 
