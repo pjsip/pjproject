@@ -2353,11 +2353,14 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
 	
 	if (status != PJ_SUCCESS) {
 	    
-	    /* Does not have proper credentials. 
-	     * End the session anyway.
+	    /* Somehow failed. Probably it's not a good idea to terminate
+	     * the session since this is just a request within dialog. And
+	     * even if we terminate we should send BYE.
 	     */
+	    /*
 	    inv_set_cause(inv, PJSIP_SC_OK, NULL);
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    */
 	    
 	} else {
 	    /* Re-send request. */
@@ -2578,20 +2581,25 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 	pjsip_tx_data *tdata;
 	pj_status_t status;
 
+	if (tsx->method.id == PJSIP_INVITE_METHOD)
+	    inv->invite_tsx = NULL;
+
 	status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
 					    e->body.tsx_state.src.rdata,
 					    tsx->last_tx, &tdata);
     
 	if (status != PJ_SUCCESS) {
-	    /* Does not have proper credentials. End the session. */
+	    /* Somehow failed. Probably it's not a good idea to terminate
+	     * the session since this is just a request within dialog. And
+	     * even if we terminate we should send BYE.
+	     */
+	    /*
 	    inv_set_cause(inv, PJSIP_SC_OK, NULL);
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+	    */
 	    
 	} else {
 	    /* Re-send request. */
-	    if (tsx->method.id == PJSIP_INVITE_METHOD)
-		inv->invite_tsx = NULL;
-
 	    status = pjsip_inv_send_msg(inv, tdata);
 	}
 
