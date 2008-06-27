@@ -257,7 +257,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_attr_get_rtpmap( const pjmedia_sdp_attr *attr,
      * null terminated.
      */
     if (attr->value.ptr[attr->value.slen] != 0 &&
-	attr->value.ptr[attr->value.slen] != '\r')
+	attr->value.ptr[attr->value.slen] != '\r' &&
+	attr->value.ptr[attr->value.slen] != '\n')
     {
 	pj_assert(!"Shouldn't happen");
 	term = attr->value.ptr[attr->value.slen];
