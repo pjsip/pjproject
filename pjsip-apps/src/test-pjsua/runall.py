@@ -60,12 +60,12 @@ if len(sys.argv) > 1:
 	resume_script=sys.argv[2]
     if sys.argv[1]=='/h' or sys.argv[1]=='-h' or sys.argv[1]=='--help' or sys.argv[1]=='/help':
         print "Usage:"
-	print "  runall.py [OPTIONS] [run.py OPTIONS]"
+	print "  runall.py [OPTIONS] [run.py-OPTIONS]"
 	print "Options:"
 	print "  --resume,-r RESUME"
-	print "  where"
 	print "      RESUME is string/substring to specify where to resume tests."
 	print "      If this argument is omited, tests will start from the beginning."
+	print "  run.py-OPTIONS are applicable here"
 	sys.exit(0)
 
 
@@ -83,13 +83,19 @@ for a in argv:
 
 
 # Init vars
-failed_cnt = 0
+fails_cnt = 0
+tests_cnt = 0
 
-# Create "logs" directory
+# Re-create "logs" directory
+try:
+    shutil.rmtree("logs")
+except:
+    print "Warning: failed in removing directory 'logs'"
+
 try:
     os.mkdir("logs")
 except:
-    print
+    print "Warning: failed in creating directory 'logs'"
 
 # Now run the tests
 for t in tests:
@@ -107,15 +113,18 @@ for t in tests:
 		print " failed!! [" + str(dur) + "s]"
 		logname = re.search(".*\s+(.*)", t).group(1)
 		logname = re.sub("[\\\/]", "_", logname)
+		logname = re.sub("\.py$", ".log", logname)
 		logname = "logs/" + logname
 		shutil.move("output.log", logname)
 		print "Please see '" + logname + "' for the test log."
+		fails_cnt += 1
 	else:
 		dur = int(t1 - t0)
 		print " ok [" + str(dur) + "s]"
+	tests_cnt += 1
 
 if failed_cnt == 0:
-	print "All tests completed successfully"
+	print "All " + str(tests_cnt) + " tests completed successfully"
 else:
-	print "Tests completed, with " +  str(failed_cnt) + " test(s) failed"
+	print str(tests_cnt) + " tests completed, " +  str(fails_cnt) + " test(s) failed"
 
