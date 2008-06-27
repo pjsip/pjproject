@@ -49,27 +49,41 @@ def test_func(t, user_data):
 	# Get output file name
 	user_data.output_filename = re.compile(const.MEDIA_REC_FILE).search(ua2.inst_param.arg).group(1)
 
-	# Find appropriate clock rate for the input file
+	# Get WAV input length, in seconds
+	fin = wave.open(user_data.input_filename, "r")
+	if fin == None:
+		raise TestError("Failed opening input WAV file")
+	inwavlen = fin.getnframes() * 1.0 / fin.getframerate()
+	inwavlen += 0.2
+	fin.close()
+	print "WAV input len = " + str(inwavlen) + "s"
+
+	# Get clock rate of the output
 	mo_clock_rate = re.compile("\.(\d+)\.wav").search(user_data.output_filename)
 	if (mo_clock_rate==None):
 		raise TestError("Cannot compare input & output, incorrect output filename format")
 	clock_rate = mo_clock_rate.group(1)
-	user_data.input_filename = re.sub("\.\d+\.wav", "."+clock_rate+".wav", user_data.input_filename)
+	
+	# Get channel count of the output
+	channel_count = 1
+	if re.search("--stereo", ua2.inst_param.arg) != None:
+		channel_count = 2
+	
+	# Get matched input file from output file
+	# (PESQ evaluates only files whose same clock rate & channel count)
+	if channel_count == 2:
+	    if re.search("\.\d+\.\d+\.wav", user_data.input_filename) != None:
+		    user_data.input_filename = re.sub("\.\d+\.\d+\.wav", 
+						      "." + str(channel_count) + "."+clock_rate+".wav", user_data.input_filename)
+	    else:
+		    user_data.input_filename = re.sub("\.\d+\.wav", 
+						      "." + str(channel_count) + "."+clock_rate+".wav", user_data.input_filename)
 
 	if (clock_rate != "8") & (clock_rate != "16"):
 		raise TestError("PESQ only works on clock rate 8kHz or 16kHz, clock rate used = "+clock_rate+ "kHz")
 
 	# Get conference clock rate of UA2 for PESQ sample rate option
 	user_data.pesq_sample_rate_opt = "+" + clock_rate + "000"
-
-	# Get WAV input length, in seconds
-	fin = wave.open(user_data.input_filename, "r")
-	if fin == None:
-		raise TestError("Failed opening input WAV file")
-	inwavlen = fin.getnframes() // fin.getframerate()
-	if (fin.getnframes() % fin.getframerate()) > 0:
-		inwavlen = inwavlen + 1
-	fin.close()
 
 	# UA1 making call
 	ua1.send("m")
@@ -109,7 +123,7 @@ def post_func(t, user_data):
 	pesq_out  = pesq_proc.communicate()
 
 	# Parse ouput
-	mo_pesq_out = re.compile("Prediction[^=]+=\s+([\d\.]+)\s*").search(pesq_out[0])
+	mo_pesq_out = re.compile("Prediction[^=]+=\s+([\-\d\.]+)\s*").search(pesq_out[0])
 	if (mo_pesq_out == None):
 		raise TestError("Failed to fetch PESQ result")
 

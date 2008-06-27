@@ -55,6 +55,7 @@ static int clock_thread(void *arg);
  */
 PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 					  unsigned clock_rate,
+					  unsigned channel_count,
 					  unsigned samples_per_frame,
 					  unsigned options,
 					  pjmedia_clock_callback *cb,
@@ -74,7 +75,8 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
-    clock->interval.u64 = samples_per_frame * clock->freq.u64 / clock_rate;
+    clock->interval.u64 = samples_per_frame * clock->freq.u64 / 
+			  channel_count / clock_rate;
     clock->next_tick.u64 = 0;
     clock->timestamp.u64 = 0;
     clock->max_jump = MAX_JUMP_MSEC * clock->freq.u64 / 1000;

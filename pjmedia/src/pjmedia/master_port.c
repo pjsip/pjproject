@@ -52,6 +52,7 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 {
     pjmedia_master_port *m;
     unsigned clock_rate;
+    unsigned channel_count;
     unsigned samples_per_frame;
     unsigned bytes_per_frame;
     pj_status_t status;
@@ -64,15 +65,20 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(u_port->info.clock_rate == d_port->info.clock_rate,
 		     PJMEDIA_ENCCLOCKRATE);
 
-    /* Both ports MUST have equal ptime */
-    PJ_ASSERT_RETURN(u_port->info.clock_rate/u_port->info.samples_per_frame==
-		     d_port->info.clock_rate/d_port->info.samples_per_frame,
+    /* Both ports MUST have equal samples per frame */
+    PJ_ASSERT_RETURN(u_port->info.samples_per_frame==
+		     d_port->info.samples_per_frame,
 		     PJMEDIA_ENCSAMPLESPFRAME);
+
+    /* Both ports MUST have equal channel count */
+    PJ_ASSERT_RETURN(u_port->info.channel_count == d_port->info.channel_count,
+		     PJMEDIA_ENCCHANNEL);
 
 
     /* Get clock_rate and samples_per_frame from one of the port. */
     clock_rate = u_port->info.clock_rate;
     samples_per_frame = u_port->info.samples_per_frame;
+    channel_count = u_port->info.channel_count;
 
 
     /* Get the bytes_per_frame value, to determine the size of the
@@ -102,8 +108,9 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
 	return status;
 
     /* Create media clock */
-    status = pjmedia_clock_create(pool, clock_rate, samples_per_frame, 
-				  options, &clock_callback, m, &m->clock);
+    status = pjmedia_clock_create(pool, clock_rate, channel_count, 
+				  samples_per_frame, options, &clock_callback,
+				  m, &m->clock);
     if (status != PJ_SUCCESS) {
 	pj_lock_destroy(m->lock);
 	return status;

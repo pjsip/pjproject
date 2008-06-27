@@ -121,9 +121,10 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  *
  * @param pool		    Pool to allocate memory.
  * @param clock_rate	    Number of samples per second.
+ * @param channel_count	    Number of channel.
  * @param samples_per_frame Number of samples per frame. This argument
- *			    along with clock_rate, specifies the interval
- *			    of each clock run (or clock ticks).
+ *			    along with clock_rate and channel_count, specifies 
+ *			    the interval of each clock run (or clock ticks).
  * @param options	    Bitmask of pjmedia_clock_options.
  * @param cb		    Callback to be called for each clock tick.
  * @param user_data	    User data, which will be passed to the callback.
@@ -134,6 +135,7 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
  */
 PJ_DECL(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 					   unsigned clock_rate,
+					   unsigned channel_count,
 					   unsigned samples_per_frame,
 					   unsigned options,
 					   pjmedia_clock_callback *cb,
