@@ -20,7 +20,7 @@ pjsua_args = "--null-audio --auto-answer 200"
 extra_headers = ""
 include = []
 exclude = []
-sendto_cfg = sip.SendtoCfg("Unsupported transport type", pjsua_args, sdp, 406, 
+sendto_cfg = sip.SendtoCfg("Unsupported transport type", pjsua_args, sdp, 488, 
 			   extra_headers=extra_headers,
 			   resp_inc=include, resp_exc=exclude) 
 			   

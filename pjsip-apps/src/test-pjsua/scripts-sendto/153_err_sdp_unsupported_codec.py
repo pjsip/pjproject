@@ -15,8 +15,7 @@ a=rtpmap:101 my-proprietary-codec
 
 pjsua_args = "--null-audio --auto-answer 200"
 extra_headers = ""
-include = ["Content-Type: application/sdp",	# response must include SDP
-	   "m=audio"]
+include = []
 exclude = []
 
 sendto_cfg = sip.SendtoCfg("Unsupported codec", pjsua_args, sdp, 488,

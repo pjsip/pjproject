@@ -976,9 +976,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     /* Reject offer if we couldn't find a good m=audio line in offer */
     if (call->audio_idx < 0) {
-	if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+	if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
 	pjsua_media_channel_deinit(call_id);
-	return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+	return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
     }
 
     PJ_LOG(4,(THIS_FILE, "Media index %d selected for call %d",

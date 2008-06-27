@@ -14,8 +14,7 @@ m=video 4000 RTP/AVP 0
 
 pjsua_args = "--null-audio --auto-answer 200"
 extra_headers = ""
-include = ["Content-Type: application/sdp",	# response must include SDP
-	   "m=audio"]
+include = []
 exclude = []
 
 sendto_cfg = sip.SendtoCfg("Video not acceptable", pjsua_args, sdp, 488,
