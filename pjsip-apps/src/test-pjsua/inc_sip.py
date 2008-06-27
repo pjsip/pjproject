@@ -205,6 +205,10 @@ class SendtoCfg:
 	name = ""
 	# pjsua InstanceParam
 	inst_param = None
+	# Complete INVITE message. If this is not empty, then this
+	# message will be sent instead and the "sdp" and "extra_headers"
+	# settings will be ignored.
+	complete_msg = ""
 	# Initial SDP
 	sdp = ""
 	# Extra headers to add to request
@@ -220,7 +224,8 @@ class SendtoCfg:
 	# Constructor
 	def __init__(self, name, pjsua_args, sdp, resp_code, 
 		     resp_inc=[], resp_exc=[], use_tcp=False,
-		     extra_headers=""):
+		     extra_headers="", complete_msg=""):
+	 	self.complete_msg = complete_msg
 		self.sdp = sdp
 		self.resp_code = resp_code
 		self.resp_include = resp_inc

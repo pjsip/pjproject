@@ -18,7 +18,10 @@ def test_func(t):
 	#dlg = sip.Dialog("127.0.0.1", 5060, tcp=cfg_file.sendto_cfg.use_tcp)
 	cfg = cfg_file.sendto_cfg
 	
-	req = dlg.create_invite(cfg.sdp, cfg.extra_headers)
+	if len(cfg.complete_msg) != 0:
+		req = cfg.complete_msg
+	else:
+		req = dlg.create_invite(cfg.sdp, cfg.extra_headers)
 	resp = dlg.send_request_wait(req, 10)
 	if resp=="":
 		raise TestError("Timed-out waiting for response")
