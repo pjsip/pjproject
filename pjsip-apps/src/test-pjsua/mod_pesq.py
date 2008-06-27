@@ -21,36 +21,35 @@ import inc_const as const
 from inc_cfg import *
 
 # Load configuration
-cfg_file = imp.load_source("cfg_file", sys.argv[2])
+cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 # PESQ configs
-# PESQ_THRESHOLD specifies the minimum acceptable PESQ MOS value, so test can be declared successful
-PESQ = "tools/pesq.exe"
-PESQ_DEFAULT_THRESHOLD = 3.4
+PESQ = "tools/pesq.exe"			# PESQ executable path
+PESQ_DEFAULT_THRESHOLD = 3.4		# Default minimum acceptable PESQ MOS value
 
-# UserData
-class mod_pesq_user_data:
-	# Sample rate option for PESQ
-	pesq_sample_rate_opt = ""
-	# Input/Reference filename
-	input_filename = ""
-	# Output/Degraded filename
-	output_filename = ""
+# PESQ params
+pesq_sample_rate_opt = ""		# Sample rate option for PESQ
+input_filename	= ""			# Input/Reference filename
+output_filename = ""			# Output/Degraded filename
+
 
 # Test body function
-def test_func(t, user_data):
+def test_func(t):
+	global pesq_sample_rate_opt
+	global input_filename
+	global output_filename
 
 	ua1 = t.process[0]
 	ua2 = t.process[1]
 
 	# Get input file name
-	user_data.input_filename = re.compile(const.MEDIA_PLAY_FILE).search(ua1.inst_param.arg).group(1)
+	input_filename = re.compile(const.MEDIA_PLAY_FILE).search(ua1.inst_param.arg).group(1)
 
 	# Get output file name
-	user_data.output_filename = re.compile(const.MEDIA_REC_FILE).search(ua2.inst_param.arg).group(1)
+	output_filename = re.compile(const.MEDIA_REC_FILE).search(ua2.inst_param.arg).group(1)
 
 	# Get WAV input length, in seconds
-	fin = wave.open(user_data.input_filename, "r")
+	fin = wave.open(input_filename, "r")
 	if fin == None:
 		raise TestError("Failed opening input WAV file")
 	inwavlen = fin.getnframes() * 1.0 / fin.getframerate()
@@ -59,7 +58,7 @@ def test_func(t, user_data):
 	print "WAV input len = " + str(inwavlen) + "s"
 
 	# Get clock rate of the output
-	mo_clock_rate = re.compile("\.(\d+)\.wav").search(user_data.output_filename)
+	mo_clock_rate = re.compile("\.(\d+)\.wav").search(output_filename)
 	if (mo_clock_rate==None):
 		raise TestError("Cannot compare input & output, incorrect output filename format")
 	clock_rate = mo_clock_rate.group(1)
@@ -72,18 +71,16 @@ def test_func(t, user_data):
 	# Get matched input file from output file
 	# (PESQ evaluates only files whose same clock rate & channel count)
 	if channel_count == 2:
-	    if re.search("\.\d+\.\d+\.wav", user_data.input_filename) != None:
-		    user_data.input_filename = re.sub("\.\d+\.\d+\.wav", 
-						      "." + str(channel_count) + "."+clock_rate+".wav", user_data.input_filename)
+	    if re.search("\.\d+\.\d+\.wav", input_filename) != None:
+		    input_filename = re.sub("\.\d+\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
 	    else:
-		    user_data.input_filename = re.sub("\.\d+\.wav", 
-						      "." + str(channel_count) + "."+clock_rate+".wav", user_data.input_filename)
+		    input_filename = re.sub("\.\d+\.wav", "." + str(channel_count) + "."+clock_rate+".wav", input_filename)
 
 	if (clock_rate != "8") & (clock_rate != "16"):
 		raise TestError("PESQ only works on clock rate 8kHz or 16kHz, clock rate used = "+clock_rate+ "kHz")
 
 	# Get conference clock rate of UA2 for PESQ sample rate option
-	user_data.pesq_sample_rate_opt = "+" + clock_rate + "000"
+	pesq_sample_rate_opt = "+" + clock_rate + "000"
 
 	# UA1 making call
 	ua1.send("m")
@@ -113,11 +110,15 @@ def test_func(t, user_data):
 
 
 # Post body function
-def post_func(t, user_data):
+def post_func(t):
+	global pesq_sample_rate_opt
+	global input_filename
+	global output_filename
+
 	endpt = t.process[0]
 
 	# Execute PESQ
-	fullcmd = PESQ + " " + user_data.pesq_sample_rate_opt + " " + user_data.input_filename + " " + user_data.output_filename
+	fullcmd = PESQ + " " + pesq_sample_rate_opt + " " + input_filename + " " + output_filename
 	endpt.trace("Popen " + fullcmd)
 	pesq_proc = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, universal_newlines=True)
 	pesq_out  = pesq_proc.communicate()
@@ -146,5 +147,4 @@ def post_func(t, user_data):
 test = cfg_file.test_param
 test.test_func = test_func
 test.post_func = post_func
-test.user_data = mod_pesq_user_data()
 

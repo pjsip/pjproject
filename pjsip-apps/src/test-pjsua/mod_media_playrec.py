@@ -14,9 +14,10 @@ import sys
 import re
 import subprocess
 import inc_const as const
+from inc_cfg import *
 
 # Load configuration
-cfg_file = imp.load_source("cfg_file", sys.argv[2])
+cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 # WAV similarity calculator
 COMPARE_WAV_EXE = "tools/cmp_wav.exe"
@@ -24,13 +25,15 @@ COMPARE_WAV_EXE = "tools/cmp_wav.exe"
 # Threshold to declare degradation is too high when result is lower than this value
 COMPARE_THRESHOLD = 2
 
-# UserData
-class mod_media_playrec_user_data:
-	input_filename = ""
-	output_filename = ""
+# COMPARE params
+input_filename	= ""			# Input filename
+output_filename = ""			# Output filename
 
 # Test body function
 def test_func(t, ud):
+	global input_filename
+	global output_filename
+
 	endpt = t.process[0]
 	
 	# Get input file name
@@ -67,6 +70,9 @@ def test_func(t, ud):
 
 # Post body function
 def post_func(t, ud):
+	global input_filename
+	global output_filename
+
 	endpt = t.process[0]
 
 	# Check WAV similarity
@@ -93,4 +99,3 @@ def post_func(t, ud):
 test = cfg_file.test_param
 test.test_func = test_func
 test.post_func = post_func
-test.user_data = mod_media_playrec_user_data()

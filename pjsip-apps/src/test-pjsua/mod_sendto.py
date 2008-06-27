@@ -7,10 +7,10 @@ import re
 from inc_cfg import *
 
 # Read configuration
-cfg_file = imp.load_source("cfg_file", sys.argv[2])
+cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 # Test body function
-def test_func(t, userdata):
+def test_func(t):
 	pjsua = t.process[0]
 	# Create dialog
 	dlg = sip.Dialog("127.0.0.1", pjsua.inst_param.sip_port, 

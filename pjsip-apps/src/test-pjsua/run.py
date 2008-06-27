@@ -6,39 +6,87 @@ import os
 import subprocess
 import random
 import time
+import getopt
 
 import inc_const as const
-from inc_cfg import *
+import inc_cfg as inc
+
+# Vars
+G_EXE = ""		# pjsua executable path
+G_INUNIX = False	# flags that test is running in Unix
+
+
+# Usage string
+usage = \
+"""
+run.py - Automated test driver
+
+Usage:
+	run.py [options] MODULE CONFIG
+Options:
+	--exe, -e		pjsua executable path
+	--null-audio, -n	use null audio
+Sample:
+	run.py -n mod_run.py scripts-run/100_simple.py
+"""
+
+# Parse arguments
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "hne:", ["help", "null-audio", "exe="])
+except getopt.GetoptError, err:
+    print str(err)
+    print usage
+    sys.exit(2)
+for o, a in opts:
+    if o in ("-h", "--help"):
+	print usage
+	sys.exit()
+    elif o in ("-n", "--null-audio"):
+        inc.HAS_SND_DEV = 0
+    elif o in ("-e", "--exe"):
+        G_EXE = a
+    else:
+        print "Unknown options"
+	sys.exit(2)
+
+if len(args) != 2:
+	print "Invalid arguments"
+	print usage
+	sys.exit(2)
+
+# Set global ARGS to be used by modules
+inc.ARGS = args
 
 # Get the pjsua executable name
-if sys.platform.find("win32")!=-1:
-    e = "../../bin/pjsua_vc6d.exe"
-    st1 = os.stat(e)
-    if st1 != None:
-	G_EXE = e
-    e = "../../bin/pjsua_vc6d.exe"
-    st2 = os.stat(e)
-    if st2 != None and st2.st_mtime > st1.st_mtime:
-	G_EXE = e
-	st1 = st2
-    if G_EXE=="":
-	print "Unable to find valid pjsua. Please build pjsip first"
-	sys.exit(1)
-    G_INUNIX = False
-else:
-    f = open("../../../build.mak", "r")
-    while True:
-	line = f.readline()
-	if not line:
-	    break
-	if line.find("TARGET_NAME")!=-1:
-	    print line
-	    G_EXE="../../bin/pjsua-" + line.split(":= ")[1]
-	    break
-    if G_EXE=="":
-	print "Unable to find ../../../build.mak. Please build pjsip first"
-	sys.exit(1)
-    G_INUNIX = True
+if G_EXE == "":
+	if sys.platform.find("win32")!=-1:
+	    e = "../../bin/pjsua_vc6d.exe"
+	    st1 = os.stat(e)
+	    if st1 != None:
+		G_EXE = e
+	    e = "../../bin/pjsua_vc6d.exe"
+	    st2 = os.stat(e)
+	    if st2 != None and st2.st_mtime > st1.st_mtime:
+		G_EXE = e
+		st1 = st2
+	    if G_EXE=="":
+		print "Unable to find valid pjsua. Please build pjsip first"
+		sys.exit(1)
+	    G_INUNIX = False
+	else:
+	    f = open("../../../build.mak", "r")
+	    while True:
+		line = f.readline()
+		if not line:
+		    break
+		if line.find("TARGET_NAME")!=-1:
+		    print line
+		    G_EXE="../../bin/pjsua-" + line.split(":= ")[1]
+		    break
+	    if G_EXE=="":
+		print "Unable to find ../../../build.mak. Please build pjsip first"
+		sys.exit(1)
+	    G_INUNIX = True
 
 
 G_EXE = G_EXE.rstrip("\n\r \t")
@@ -74,14 +122,14 @@ class Expect:
 		while True:
 			line = self.proc.stdout.readline()
 		  	if line == "":
-				raise TestError(self.name + ": Premature EOF")
+				raise inc.TestError(self.name + ": Premature EOF")
 			# Print the line if echo is ON
 			if self.echo:
 				print self.name + ": " + line,
 			# Trap assertion error
 			if self.ra.search(line) != None:
 				if raise_on_error:
-					raise TestError(self.name + ": " + line)
+					raise inc.TestError(self.name + ": " + line)
 				else:
 					return None
 			# Count stdout refresh text. 
@@ -90,7 +138,7 @@ class Expect:
 				if refresh_cnt >= 6:
 					self.trace("Timed-out!")
 					if raise_on_error:
-						raise TestError(self.name + " " + title + ": Timeout expecting pattern: \"" + pattern + "\"")
+						raise inc.TestError(self.name + " " + title + ": Timeout expecting pattern: \"" + pattern + "\"")
 					else:
 						return None		# timeout
 			# Search for expected text
@@ -130,15 +178,8 @@ def handle_error(errmsg, t, close_processes = True):
 #########################
 # MAIN	
 
-if len(sys.argv)!=3:
-	print "Usage: run.py MODULE CONFIG"
-	print "Sample:"
-	print "  run.py mod_run.py scripts-run/100_simple.py"
-	sys.exit(1)
-
-
 # Import the test script
-script = imp.load_source("script", sys.argv[1])  
+script = imp.load_source("script", inc.ARGS[0])  
 
 # Init random seed
 random.seed()
@@ -176,14 +217,14 @@ for inst_param in script.test.inst_params:
 		# add running instance
 		script.test.process.append(p)
 
-	except TestError, e:
+	except inc.TestError, e:
 		handle_error(e.desc, script.test)
 
 # Run the test function
 if script.test.test_func != None:
 	try:
-		script.test.test_func(script.test, script.test.user_data)
-	except TestError, e:
+		script.test.test_func(script.test)
+	except inc.TestError, e:
 		handle_error(e.desc, script.test)
 
 # Shutdown all instances
@@ -203,8 +244,8 @@ for p in script.test.process:
 # Run the post test function
 if script.test.post_func != None:
 	try:
-		script.test.post_func(script.test, script.test.user_data)
-	except TestError, e:
+		script.test.post_func(script.test)
+	except inc.TestError, e:
 		handle_error(e.desc, script.test, False)
 
 # Done

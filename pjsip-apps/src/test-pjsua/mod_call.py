@@ -6,7 +6,7 @@ import inc_const as const
 from inc_cfg import *
 
 # Load configuration
-cfg_file = imp.load_source("cfg_file", sys.argv[2])
+cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 # Check media flow between ua1 and ua2
 def check_media(ua1, ua2):
@@ -20,7 +20,7 @@ def check_media(ua1, ua2):
 
 
 # Test body function
-def test_func(t, user_data):
+def test_func(t):
 	callee = t.process[0]
 	caller = t.process[1]
 

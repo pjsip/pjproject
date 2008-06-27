@@ -3,13 +3,14 @@ import time
 import imp
 import sys
 import inc_const as const
+from inc_cfg import *
 
 # Load configuration
-cfg_file = imp.load_source("cfg_file", sys.argv[2])
+cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 
 # Test body function
-def test_func(t, user_data):
+def test_func(t):
 	u1 = t.process[0]
 	uri1 = cfg_file.test_param.inst_params[0].uri
 	acc1 = "-1"

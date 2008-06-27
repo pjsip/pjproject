@@ -2,6 +2,9 @@
 import os
 import sys
 import time
+import re
+import shutil
+
 
 # Usage:
 #  runall.py [test-to-resume]
@@ -53,15 +56,40 @@ for pat in excluded_tests:
 # Resume test?
 resume_script=""
 if len(sys.argv) > 1:
-    if sys.argv[1][0]=='-' or sys.argv[1][0]=='/':
+    if sys.argv[1]=='-r' or sys.argv[1]=='--resume':
+	resume_script=sys.argv[2]
+    if sys.argv[1]=='/h' or sys.argv[1]=='-h' or sys.argv[1]=='--help' or sys.argv[1]=='/help':
         print "Usage:"
-	print "  runall.py [RESUME]"
-	print "where"
-	print "  RESUME is string/substring to specify where to resume tests."
-	print "  If this argument is omited, tests will start from the beginning."
+	print "  runall.py [OPTIONS] [run.py OPTIONS]"
+	print "Options:"
+	print "  --resume,-r RESUME"
+	print "  where"
+	print "      RESUME is string/substring to specify where to resume tests."
+	print "      If this argument is omited, tests will start from the beginning."
 	sys.exit(0)
-    resume_script=sys.argv[1]
 
+
+# Generate arguments for run.py
+argv = sys.argv
+argv_to_skip = 1
+if resume_script != "":
+    argv_to_skip += 2
+argv_st = ""
+for a in argv:
+    if argv_to_skip > 0:
+        argv_to_skip -= 1
+    else:
+        argv_st += a + " "
+
+
+# Init vars
+failed_cnt = 0
+
+# Create "logs" directory
+try:
+    os.mkdir("logs")
+except:
+    print
 
 # Now run the tests
 for t in tests:
@@ -69,7 +97,7 @@ for t in tests:
 	    print "Skipping " + t +".."
 	    continue
 	resume_script=""
-	cmdline = "python run.py " + t
+	cmdline = "python run.py " + argv_st + t
 	t0 = time.time()
 	print "Running " + cmdline + "...",
 	ret = os.system(cmdline + " > output.log")
@@ -77,10 +105,17 @@ for t in tests:
 	if ret != 0:
 		dur = int(t1 - t0)
 		print " failed!! [" + str(dur) + "s]"
-		print "Please see 'output.log' for the test log."
-		sys.exit(1)
+		logname = re.search(".*\s+(.*)", t).group(1)
+		logname = re.sub("[\\\/]", "_", logname)
+		logname = "logs/" + logname
+		shutil.move("output.log", logname)
+		print "Please see '" + logname + "' for the test log."
 	else:
 		dur = int(t1 - t0)
 		print " ok [" + str(dur) + "s]"
 
-print "All tests completed successfully"
+if failed_cnt == 0:
+	print "All tests completed successfully"
+else:
+	print "Tests completed, with " +  str(failed_cnt) + " test(s) failed"
+
