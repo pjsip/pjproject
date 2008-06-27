@@ -224,7 +224,8 @@ class SendtoCfg:
 	# Constructor
 	def __init__(self, name, pjsua_args, sdp, resp_code, 
 		     resp_inc=[], resp_exc=[], use_tcp=False,
-		     extra_headers="", complete_msg=""):
+		     extra_headers="", complete_msg="",
+		     enable_buffer = False):
 	 	self.complete_msg = complete_msg
 		self.sdp = sdp
 		self.resp_code = resp_code
@@ -233,4 +234,5 @@ class SendtoCfg:
 		self.use_tcp = use_tcp
 		self.extra_headers = extra_headers
 		self.inst_param = cfg.InstanceParam("pjsua", pjsua_args)
+		self.inst_param.enable_buffer = enable_buffer 
 

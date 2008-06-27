@@ -28,6 +28,8 @@ class InstanceParam:
 	have_reg = False
 	# Does this have PUBLISH?
 	have_publish = False
+	# Enable stdout buffer?
+	enable_buffer = False
 	def __init__(	self, 
 			name,			# Instance name
 			arg, 			# Cmd-line arguments
@@ -37,7 +39,8 @@ class InstanceParam:
 			have_reg=False,		# Have registration?
 			have_publish=False,	# Have publish?
 			echo_enabled=DEFAULT_ECHO, 
-			trace_enabled=DEFAULT_TRACE):
+			trace_enabled=DEFAULT_TRACE,
+			enable_buffer = False):
 		# Instance name
 		self.name = name
 		# Give random sip_port if it's not specified
@@ -62,6 +65,7 @@ class InstanceParam:
 			self.arg = self.arg + " --publish"
 		self.echo_enabled = echo_enabled
 		self.trace_enabled = trace_enabled
+		self.enable_buffer = enable_buffer
 
 
 ############################################
@@ -83,7 +87,8 @@ class TestParam:
 			inst_params, 	# InstanceParam's as list
 			func=None,
 			skip=False,
-			post_func=None):
+			post_func=None,
+			need_stdout_buffer=False):
 		self.title = title
 		self.inst_params = inst_params
 		self.skip = skip

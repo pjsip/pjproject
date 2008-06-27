@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 import inc_sip as sip
 import inc_sdp as sdp
 
@@ -31,5 +31,6 @@ exclude = [
 
 sendto_cfg = sip.SendtoCfg( "caller sends only one component", 
 			    pjsua_args=args, sdp=sdp, resp_code=200, 
-			    resp_inc=include, resp_exc=exclude)
+			    resp_inc=include, resp_exc=exclude,
+			    enable_buffer = True)
 
