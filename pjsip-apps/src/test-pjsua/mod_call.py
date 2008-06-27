@@ -11,6 +11,7 @@ cfg_file = imp.load_source("cfg_file", sys.argv[2])
 # Check media flow between ua1 and ua2
 def check_media(ua1, ua2):
 	ua1.send("#")
+	ua1.expect("#")
 	ua1.send("1122")
 	ua2.expect(const.RX_DTMF + "1")
 	ua2.expect(const.RX_DTMF + "1")
@@ -70,7 +71,8 @@ def test_func(t, user_data):
 
 	# Hold call by caller
 	caller.send("H")
-	#caller.sync_stdout()
+	caller.expect("INVITE sip:")
+	callee.expect("INVITE sip:")
 	caller.expect(const.MEDIA_HOLD)
 	callee.expect(const.MEDIA_HOLD)
 	
@@ -81,9 +83,10 @@ def test_func(t, user_data):
 	# Release hold
 	time.sleep(0.5)
 	caller.send("v")
-	#caller.sync_stdout()
-	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	caller.expect("INVITE sip:")
+	callee.expect("INVITE sip:")
 	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
 	# Synchronize stdout
 	caller.sync_stdout()
@@ -99,7 +102,8 @@ def test_func(t, user_data):
 
 	# Hold call by callee
 	callee.send("H")
-	#callee.sync_stdout()
+	callee.expect("INVITE sip:")
+	caller.expect("INVITE sip:")
 	caller.expect(const.MEDIA_HOLD)
 	callee.expect(const.MEDIA_HOLD)
 	
@@ -108,17 +112,20 @@ def test_func(t, user_data):
 	callee.sync_stdout()
 
 	# Release hold
-	time.sleep(0.5)
+	time.sleep(0.1)
 	callee.send("v")
-	#callee.sync_stdout()
-	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	callee.expect("INVITE sip:")
+	caller.expect("INVITE sip:")
 	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
+	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active after call hold")
 
 	# Synchronize stdout
 	caller.sync_stdout()
 	callee.sync_stdout()
 
 	# Test that media is okay
+	# Wait for some time for ICE negotiation
+	time.sleep(0.6)
 	check_media(caller, callee)
 	check_media(callee, caller)
 
@@ -143,7 +150,8 @@ def test_func(t, user_data):
 
 	# UPDATE (by callee)
 	callee.send("U")
-	#callee.sync_stdout()
+	callee.expect("UPDATE sip:")
+	caller.expect("UPDATE sip:")
 	caller.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
 	callee.expect(const.MEDIA_ACTIVE, title="waiting for media active with UPDATE")
 	
@@ -164,13 +172,17 @@ def test_func(t, user_data):
 	# no common codec between them.
 	# In caller we only enable PCMU, in callee we only enable PCMA
 	caller.send("Cp")
+	caller.expect("Enter codec")
 	caller.send("* 0")
 	caller.send("Cp")
+	caller.expect("Enter codec")
 	caller.send("pcmu 120")
 	
 	callee.send("Cp")
+	callee.expect("Enter codec")
 	callee.send("* 0")
 	callee.send("Cp")
+	callee.expect("Enter codec")
 	callee.send("pcma 120")
 
 	# Test when UPDATE fails (by callee)
@@ -187,6 +199,8 @@ def test_func(t, user_data):
 
 	# Test when UPDATE fails (by caller)
 	caller.send("U")
+	caller.expect("UPDATE sip:")
+	callee.expect("UPDATE sip:")
 	callee.expect("SIP/2.0 488")
 	caller.expect("SIP/2.0 488")
 	caller.sync_stdout()
