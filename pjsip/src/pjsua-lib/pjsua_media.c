@@ -1150,7 +1150,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	}
 
     } else {
-	pjmedia_srtp_info srtp_info;
 	pjmedia_transport_info tp_info;
 
 	/* Start/restart media transport */
@@ -1543,10 +1542,12 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
 	return PJ_ENOMEM;
     }
 
-    status = pjmedia_wav_player_port_create(pool, path,
-					    pjsua_var.mconf_cfg.samples_per_frame *
-					      1000 / pjsua_var.media_cfg.clock_rate, 
-					    options, 0, &port);
+    status = pjmedia_wav_player_port_create(
+				    pool, path,
+				    pjsua_var.mconf_cfg.samples_per_frame *
+				    1000 / pjsua_var.media_cfg.channel_count / 
+				    pjsua_var.media_cfg.clock_rate, 
+				    options, 0, &port);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pjsua_perror(THIS_FILE, "Unable to open file for playback", status);

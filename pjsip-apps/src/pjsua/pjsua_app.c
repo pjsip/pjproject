@@ -233,7 +233,7 @@ static void usage(void)
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
-    puts  ("  --capture-lat=N     Audio capture latency, in ms (default=10)");
+    puts  ("  --capture-lat=N     Audio capture latency, in ms (default=100)");
     puts  ("  --playback-lat=N    Audio playback latency, in ms (default=100)");
     puts  ("  --snd-auto-close=N  Auto close audio device when it is idle for N seconds.");
     puts  ("                      Specify N=-1 (default) to disable this feature.");
@@ -2647,7 +2647,7 @@ static void conf_list(void)
 	printf("Port #%02d[%2dKHz/%dms/%d] %20.*s  transmitting to: %s\n", 
 	       info.slot_id, 
 	       info.clock_rate/1000,
-	       info.samples_per_frame * 1000 / info.clock_rate,
+	       info.samples_per_frame*1000/info.channel_count/info.clock_rate,
 	       info.channel_count,
 	       (int)info.name.slen, 
 	       info.name.ptr,
