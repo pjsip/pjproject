@@ -453,16 +453,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	 * channels.
 	 */
 	if (si->type == PJMEDIA_TYPE_AUDIO && rtpmap->param.slen) {
-	    
-	    if (rtpmap->param.slen == 2) {
-		si->fmt.channel_cnt = rtpmap->param.ptr[1] - '0';
-	    } else {
-		pj_str_t cnt;
-		cnt.ptr = rtpmap->param.ptr + 1;
-		cnt.slen = rtpmap->param.slen - 1;
-		si->fmt.channel_cnt = (unsigned) pj_strtoul(&cnt);
-	    }
-
+	    si->fmt.channel_cnt = (unsigned) pj_strtoul(&rtpmap->param);
 	} else {
 	    si->fmt.channel_cnt = 1;
 	}
