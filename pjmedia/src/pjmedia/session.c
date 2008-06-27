@@ -214,7 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     } else {
 
 	si->proto = PJMEDIA_TP_PROTO_UNKNOWN;
-	return PJMEDIA_SDP_EINPROTO;
+	return PJ_SUCCESS;
     }
 
 
@@ -253,7 +253,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     if (local_af==pj_AF_UNSPEC()) {
 	/* Unsupported address family */
-	return PJ_EAFNOTSUP;
+	return PJ_SUCCESS;
     }
 
     /* Set remote address: */
@@ -297,6 +297,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
 	si->dir = PJMEDIA_DIR_ENCODING_DECODING;
 
+    }
+
+    /* No need to do anything else if stream is rejected */
+    if (local_m->desc.port == 0) {
+	return PJ_SUCCESS;
     }
 
     /* If "rtcp" attribute is present in the SDP, set the RTCP address
