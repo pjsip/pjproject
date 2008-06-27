@@ -30,27 +30,27 @@ input_filename	= ""			# Input filename
 output_filename = ""			# Output filename
 
 # Test body function
-def test_func(t, ud):
+def test_func(t):
 	global input_filename
 	global output_filename
 
 	endpt = t.process[0]
 	
 	# Get input file name
-	ud.input_filename = re.compile(const.MEDIA_PLAY_FILE).search(endpt.inst_param.arg).group(1)
-	endpt.trace("Input file = " + ud.input_filename)
+	input_filename = re.compile(const.MEDIA_PLAY_FILE).search(endpt.inst_param.arg).group(1)
+	endpt.trace("Input file = " + input_filename)
 
 	# Get output file name
-	ud.output_filename = re.compile(const.MEDIA_REC_FILE).search(endpt.inst_param.arg).group(1)
-	endpt.trace("Output file = " + ud.output_filename)
+	output_filename = re.compile(const.MEDIA_REC_FILE).search(endpt.inst_param.arg).group(1)
+	endpt.trace("Output file = " + output_filename)
 
 	# Find appropriate clock rate for the input file
-	clock_rate = re.compile(".+(\.\d+\.wav)$").match(ud.output_filename).group(1)
+	clock_rate = re.compile(".+(\.\d+\.wav)$").match(output_filename).group(1)
 	if (clock_rate==None):
 		endpt.trace("Cannot compare input & output, incorrect output filename format")
 		return
-	ud.input_filename = re.sub("\.\d+\.wav$", clock_rate, ud.input_filename)
-	endpt.trace("WAV file to be compared with output = " + ud.input_filename)
+	input_filename = re.sub("\.\d+\.wav$", clock_rate, input_filename)
+	endpt.trace("WAV file to be compared with output = " + input_filename)
 
 	# Connect input-output file
 	endpt.sync_stdout()
@@ -69,14 +69,14 @@ def test_func(t, ud):
 
 
 # Post body function
-def post_func(t, ud):
+def post_func(t):
 	global input_filename
 	global output_filename
 
 	endpt = t.process[0]
 
 	# Check WAV similarity
-	fullcmd = COMPARE_WAV_EXE + " " + ud.input_filename + " " + ud.output_filename + " " + "3000"
+	fullcmd = COMPARE_WAV_EXE + " " + input_filename + " " + output_filename + " " + "3000"
 	endpt.trace("Popen " + fullcmd)
 	cmp_proc = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, universal_newlines=True)
 
