@@ -104,6 +104,7 @@ static void reset_call(pjsua_call_id id)
     call->inv = NULL;
     call->user_data = NULL;
     call->session = NULL;
+    call->audio_idx = -1;
     call->ssrc = pj_rand();
     call->xfer_sub = NULL;
     call->last_code = (pjsip_status_code) 0;

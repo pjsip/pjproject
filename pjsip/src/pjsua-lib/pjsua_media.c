@@ -851,14 +851,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     const pjmedia_sdp_session *rem_sdp,
 				     int *sip_err_code)
 {
-    enum { MEDIA_IDX = 0 };
     pjsua_call *call = &pjsua_var.calls[call_id];
     pj_status_t status;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pjmedia_srtp_setting srtp_opt;
-    pjmedia_transport *srtp;
+    pjmedia_transport *srtp = NULL;
 #endif
 
     PJ_UNUSED_ARG(role);
@@ -914,9 +913,80 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     PJ_UNUSED_ARG(security_level);
 #endif
 
+    /* Find out which media line in SDP that we support. If we are offerer,
+     * audio will be at index 0 in SDP. 
+     */
+    if (rem_sdp == 0) {
+	call->audio_idx = 0;
+    } 
+    /* Otherwise find out the candidate audio media line in SDP */
+    else {
+	unsigned i;
+	pj_bool_t srtp_active;
+
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+	srtp_active = acc->cfg.use_srtp && srtp != NULL;
+#else
+	srtp_active = PJ_FALSE;
+#endif
+
+	/* Media count must have been checked */
+	pj_assert(rem_sdp->media_count != 0);
+
+	for (i=0; i<rem_sdp->media_count; ++i) {
+	    const pjmedia_sdp_media *m = rem_sdp->media[i];
+
+	    /* Skip if media is not audio */
+	    if (pj_stricmp2(&m->desc.media, "audio") != 0)
+		continue;
+
+	    /* Skip if media is disabled */
+	    if (m->desc.port == 0)
+		continue;
+
+	    /* Skip if transport is not supported */
+	    if (pj_stricmp2(&m->desc.transport, "RTP/AVP") != 0 &&
+		pj_stricmp2(&m->desc.transport, "RTP/SAVP") != 0)
+	    {
+		continue;
+	    }
+
+	    if (call->audio_idx == -1) {
+		call->audio_idx = i;
+	    } else {
+		/* We've found multiple candidates. This could happen
+		 * e.g. when remote is offering both RTP/AVP and RTP/AVP,
+		 * or when remote for some reason offers two audio.
+		 */
+
+		if (srtp_active &&
+		    pj_stricmp2(&m->desc.transport, "RTP/SAVP")==0)
+		{
+		    /* Prefer RTP/SAVP when our media transport is SRTP */
+		    call->audio_idx = i;
+		} else if (!srtp_active &&
+		           pj_stricmp2(&m->desc.transport, "RTP/AVP")==0)
+		{
+		    /* Prefer RTP/AVP when our media transport is NOT SRTP */
+		    call->audio_idx = i;
+		}
+	    }
+	}
+    }
+
+    /* Reject offer if we couldn't find a good m=audio line in offer */
+    if (call->audio_idx < 0) {
+	if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+	pjsua_media_channel_deinit(call_id);
+	return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+    }
+
+    PJ_LOG(4,(THIS_FILE, "Media index %d selected for call %d",
+	      call->audio_idx, call->index));
+
     /* Create the media transport */
     status = pjmedia_transport_media_create(call->med_tp, tmp_pool, 0,
-					    rem_sdp, MEDIA_IDX);
+					    rem_sdp, call->audio_idx);
     if (status != PJ_SUCCESS) {
 	if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
 	pjsua_media_channel_deinit(call_id);
@@ -933,7 +1003,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 					   pjmedia_sdp_session **p_sdp,
 					   int *sip_status_code)
 {
-    enum { MAX_MEDIA = 1, MEDIA_IDX = 0 };
+    enum { MAX_MEDIA = 1 };
     pjmedia_sdp_session *sdp;
     pjmedia_transport_info tpinfo;
     pjsua_call *call = &pjsua_var.calls[call_id];
@@ -945,6 +1015,9 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     if (call->med_tp == NULL) {
 	return PJ_EBUSY;
     }
+
+    /* Media index must have been determined before */
+    pj_assert(call->audio_idx != -1);
 
     /* Create media if it's not created. This could happen when call is
      * currently on-hold
@@ -968,6 +1041,53 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     if (status != PJ_SUCCESS) {
 	if (sip_status_code) *sip_status_code = 500;
 	return status;
+    }
+
+    /* If we're answering and the selected media is not the first media
+     * in SDP, then fill in the unselected media with with zero port. 
+     * Otherwise we'll crash in transport_encode_sdp() because the media
+     * lines are not aligned between offer and answer.
+     */
+    if (rem_sdp && call->audio_idx != 0) {
+	unsigned i;
+
+	for (i=0; i<rem_sdp->media_count; ++i) {
+	    const pjmedia_sdp_media *rem_m = rem_sdp->media[i];
+	    pjmedia_sdp_media *m;
+	    const pjmedia_sdp_attr *a;
+
+	    if ((int)i == call->audio_idx)
+		continue;
+
+	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+	    pj_strdup(pool, &m->desc.media, &rem_m->desc.media);
+	    pj_strdup(pool, &m->desc.transport, &rem_m->desc.transport);
+	    m->desc.port = 0;
+
+	    /* Add one format, copy from the offer. And copy the corresponding
+	     * rtpmap and fmtp attributes too.
+	     */
+	    m->desc.fmt_count = 1;
+	    pj_strdup(pool, &m->desc.fmt[0], &rem_m->desc.fmt[0]);
+	    if ((a=pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
+					  "rtpmap", &m->desc.fmt[0])) != NULL)
+	    {
+		m->attr[m->attr_count++] = pjmedia_sdp_attr_clone(pool, a);
+	    }
+	    if ((a=pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
+					  "fmtp", &m->desc.fmt[0])) != NULL)
+	    {
+		m->attr[m->attr_count++] = pjmedia_sdp_attr_clone(pool, a);
+	    }
+
+	    if (i==sdp->media_count)
+		sdp->media[sdp->media_count++] = m;
+	    else {
+		pj_array_insert(sdp->media, sizeof(sdp->media[0]),
+				sdp->media_count, i, &m);
+		++sdp->media_count;
+	    }
+	}
     }
 
     /* Add NAT info in the SDP */
@@ -996,7 +1116,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
     /* Give the SDP to media transport */
     status = pjmedia_transport_encode_sdp(call->med_tp, pool, sdp, rem_sdp, 
-					  MEDIA_IDX);
+					  call->audio_idx);
     if (status != PJ_SUCCESS) {
 	if (sip_status_code) *sip_status_code = PJSIP_SC_NOT_ACCEPTABLE;
 	return status;
@@ -1078,7 +1198,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp)
 {
-    unsigned i;
     int prev_media_st = 0;
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjmedia_session_info sess_info;
@@ -1099,22 +1218,10 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Find which session is audio (we only support audio for now) */
-    for (i=0; i < sess_info.stream_cnt; ++i) {
-	if (sess_info.stream_info[i].type == PJMEDIA_TYPE_AUDIO &&
-	    (sess_info.stream_info[i].proto == PJMEDIA_TP_PROTO_RTP_AVP ||
-	     sess_info.stream_info[i].proto == PJMEDIA_TP_PROTO_RTP_SAVP))
-	{
-	    si = &sess_info.stream_info[i];
-	    break;
-	}
-    }
-
-    if (si == NULL) {
-	/* Not found */
-	return PJMEDIA_EINVALIMEDIATYPE;
-    }
-
+    /* Find which session is audio */
+    PJ_ASSERT_RETURN(call->audio_idx != -1, PJ_EBUG);
+    PJ_ASSERT_RETURN(call->audio_idx < (int)sess_info.stream_cnt, PJ_EBUG);
+    si = &sess_info.stream_info[call->audio_idx];
     
     /* Reset session info with only one media stream */
     sess_info.stream_cnt = 1;
