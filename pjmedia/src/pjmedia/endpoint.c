@@ -410,11 +410,10 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	    /* Can only support one digit channel count */
 	    pj_assert(codec_info->channel_cnt < 10);
 
-	    tmp_param[0] = '/';
-	    tmp_param[1] = (char)('0' + codec_info->channel_cnt);
+	    tmp_param[0] = (char)('0' + codec_info->channel_cnt);
 
 	    rtpmap.param.ptr = tmp_param;
-	    rtpmap.param.slen = 2;
+	    rtpmap.param.slen = 1;
 
 	} else {
 	    rtpmap.param.slen = 0;
