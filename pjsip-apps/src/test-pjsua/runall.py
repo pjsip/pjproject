@@ -123,7 +123,7 @@ for t in tests:
 		print " ok [" + str(dur) + "s]"
 	tests_cnt += 1
 
-if failed_cnt == 0:
+if fails_cnt == 0:
 	print "All " + str(tests_cnt) + " tests completed successfully"
 else:
 	print str(tests_cnt) + " tests completed, " +  str(fails_cnt) + " test(s) failed"
