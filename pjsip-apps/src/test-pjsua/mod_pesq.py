@@ -16,6 +16,7 @@ import sys
 import re
 import subprocess
 import wave
+import shutil
 import inc_const as const
 
 from inc_cfg import *
@@ -137,10 +138,21 @@ def post_func(t):
 	# Evaluate the PESQ MOS value
 	pesq_res = mo_pesq_out.group(1)
 	if (float(pesq_res) >= threshold):
-		endpt.trace("Success, PESQ result = " + pesq_res)
+		endpt.trace("Success, PESQ result = " + pesq_res + " (target=" + str(threshold) + ").")
 	else:
-		endpt.trace("Failed, PESQ result = " + pesq_res)
-		raise TestError("WAV seems to be degraded badly")
+		endpt.trace("Failed, PESQ result = " + pesq_res + " (target=" + str(threshold) + ").")
+		# Save the wav file
+		wavoutname = ARGS[1]
+		wavoutname = re.sub("[\\\/]", "_", wavoutname)
+		wavoutname = re.sub("\.py$", ".wav", wavoutname)
+		wavoutname = "logs/" + wavoutname
+		try:
+			shutil.copyfile(output_filename, wavoutname)
+			print "Output WAV is copied to " + wavoutname
+		except:
+			print "Couldn't copy output WAV, please check if 'logs' directory exists."
+
+		raise TestError("WAV seems to be degraded badly, PESQ = "+ pesq_res + " (target=" + str(threshold) + ").")
 
 
 # Here where it all comes together
