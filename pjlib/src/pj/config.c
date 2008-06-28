@@ -21,7 +21,7 @@
 #include <pj/ioqueue.h>
 
 static const char *id = "config.c";
-PJ_DEF_DATA(const char*) PJ_VERSION = "0.8.0-trunk";
+PJ_DEF_DATA(const char*) PJ_VERSION = "0.9.0-release";
 
 /*
  * Get PJLIB version string.
@@ -33,7 +33,7 @@ PJ_DEF(const char*) pj_get_version(void)
 
 PJ_DEF(void) pj_dump_config(void)
 {
-    PJ_LOG(3, (id, "PJLIB (c)2001-2007 Benny Prijono"));
+    PJ_LOG(3, (id, "PJLIB (c)2001-2008 Benny Prijono"));
     PJ_LOG(3, (id, "Dumping configurations:"));
     PJ_LOG(3, (id, " PJ_VERSION                : %s", PJ_VERSION));
     PJ_LOG(3, (id, " PJ_M_NAME                 : %s", PJ_M_NAME));
