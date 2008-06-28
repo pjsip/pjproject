@@ -967,7 +967,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 		comp->turn_log_off = PJ_TRUE;
 	    }
 
-	    status = pj_turn_sock_sendto(comp->turn_sock, data, data_len,
+	    status = pj_turn_sock_sendto(comp->turn_sock, (const pj_uint8_t*)data, data_len,
 					 dst_addr, dst_addr_len);
 	    return (status==PJ_SUCCESS||status==PJ_EPENDING) ? 
 		    PJ_SUCCESS : status;

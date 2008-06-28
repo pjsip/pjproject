@@ -823,7 +823,7 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 
 	/* Add DATA attribute */
 	pj_stun_binary_attr_init(&data_attr, NULL, PJ_STUN_ATTR_DATA, NULL, 0);
-	data_attr.data = (void*)pkt;
+	data_attr.data = (pj_uint8_t*)pkt;
 	data_attr.length = pkt_len;
 	pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&data_attr);
 
