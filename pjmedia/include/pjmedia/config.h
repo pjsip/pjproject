@@ -423,19 +423,6 @@
 
 
 /**
- * Enable Steve Underwood's PLC.
- *
- * ** This has now been deprecated. If the codec does not have **
- * ** PLC, then no PLC will be used for that particular codec. **
- *
- * Set this to zero, or other link error will occur.
- */
-#ifndef PJMEDIA_HAS_STEVEU_PLC
-#   define PJMEDIA_HAS_STEVEU_PLC		0
-#endif
-
-
-/**
  * Speex Accoustic Echo Cancellation (AEC).
  * By default is enabled.
  */
