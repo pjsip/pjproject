@@ -127,8 +127,16 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 	return PJ_FALSE;
     }
 #else
-    PJ_UNUSED_ARG(rdata);
-    PJ_UNUSED_ARG(p_accept_hdr);
+    pjsip_msg *msg;
+
+    msg = rdata->msg_info.msg;
+    if (msg->body == NULL) {
+	/* Create Accept header. */
+	if (p_accept_hdr)
+	    *p_accept_hdr = pjsua_im_create_accept(rdata->tp_info.pool);
+
+	return PJ_FALSE;
+    }
 #endif
 
     return PJ_TRUE;
