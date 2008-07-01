@@ -435,19 +435,15 @@ static void pubc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
 
     entry->id = 0;
     status = pjsip_publishc_publish(pubc, 1, &tdata);
-    if (status == PJ_SUCCESS) {
-	status = pjsip_publishc_send(pubc, tdata);
-    } 
-    
-    // Callback should have been called.
-    // Calling it here will crash the system since pubc might have been
-    // destroyed
-    //
-    //if (status != PJ_SUCCESS) {
-    //	char errmsg[PJ_ERR_MSG_SIZE];
-    //	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
-    //	call_callback(pubc, status, 400, &reason, NULL, -1);
-    //}
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_str_t reason = pj_strerror(status, errmsg, sizeof(errmsg));
+	call_callback(pubc, status, 400, &reason, NULL, -1);
+	return;
+    }
+
+    status = pjsip_publishc_send(pubc, tdata);
+    /* No need to call callback as it should have been called */
 }
 
 static void tsx_callback(void *token, pjsip_event *event)
@@ -478,22 +474,13 @@ static void tsx_callback(void *token, pjsip_event *event)
 					    rdata, 
 					    tsx->last_tx,  
 					    &tdata);
-
-	if (status == PJ_SUCCESS) {
-	    status = pjsip_publishc_send(pubc, tdata);
-	} 
-	
-	// Callback should have been called.
-	// Calling it here will crash the system since pubc might have been
-	// destroyed
-	//
-	//if (status != PJ_SUCCESS) {
-	//    call_callback(pubc, status, tsx->status_code, 
-	//		  &rdata->msg_info.msg->line.status.reason,
-	//		  rdata, -1);
-	//}
-
-	return;
+	if (status != PJ_SUCCESS) {
+	    call_callback(pubc, status, tsx->status_code, 
+			  &rdata->msg_info.msg->line.status.reason,
+			  rdata, -1);
+	} else {
+    	    status = pjsip_publishc_send(pubc, tdata);
+	}
 
     } else {
 	pjsip_rx_data *rdata;
