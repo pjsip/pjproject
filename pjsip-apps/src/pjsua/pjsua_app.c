@@ -206,6 +206,7 @@ static void usage(void)
     puts  ("  --tls-verify-server Verify server's certificate (default=no)");
     puts  ("  --tls-verify-client Verify client's certificate (default=no)");
     puts  ("  --tls-neg-timeout   Specify TLS negotiation timeout (default=no)");
+    puts  ("  --tls-srv-name      Specify TLS server name for multi-hosting server (optional)");
 
     puts  ("");
     puts  ("Media Options:");
@@ -460,7 +461,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NOREFERSUB,
 	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
-	   OPT_TLS_NEG_TIMEOUT,
+	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES,
 	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT,
@@ -551,6 +552,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "tls-verify-server", 0, 0, OPT_TLS_VERIFY_SERVER},
 	{ "tls-verify-client", 0, 0, OPT_TLS_VERIFY_CLIENT},
 	{ "tls-neg-timeout", 1, 0, OPT_TLS_NEG_TIMEOUT},
+	{ "tls-srv-name", 1, 0, OPT_TLS_SRV_NAME},
 	{ "capture-dev",    1, 0, OPT_CAPTURE_DEV},
 	{ "playback-dev",   1, 0, OPT_PLAYBACK_DEV},
 	{ "capture-lat",    1, 0, OPT_CAPTURE_LAT},
@@ -1136,6 +1138,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.tls_setting.timeout.sec = atoi(pj_optarg);
 	    break;
 
+	case OPT_TLS_SRV_NAME:
+	    cfg->udp_cfg.tls_setting.server_name = pj_str(pj_optarg);
+	    break;
+
 	case OPT_CAPTURE_DEV:
 	    cfg->capture_dev = atoi(pj_optarg);
 	    break;
@@ -1468,6 +1474,13 @@ static int write_settings(const struct app_config *config,
 	pj_ansi_sprintf(line, "--tls-password %.*s\n",
 			(int)config->udp_cfg.tls_setting.password.slen, 
 			config->udp_cfg.tls_setting.password.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    if (config->udp_cfg.tls_setting.server_name.slen) {
+	pj_ansi_sprintf(line, "--tls-srv-name %.*s\n",
+			(int)config->udp_cfg.tls_setting.server_name.slen, 
+			config->udp_cfg.tls_setting.server_name.ptr);
 	pj_strcat2(&cfg, line);
     }
 

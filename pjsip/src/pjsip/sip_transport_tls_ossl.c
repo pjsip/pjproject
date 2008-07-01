@@ -164,6 +164,7 @@ struct tls_transport
 
     /* TLS settings, copied from listener */
     struct {
+	pj_str_t	     server_name;
 	pj_time_val	     timeout;
     } setting;
 
@@ -512,6 +513,24 @@ static pj_status_t ssl_connect(struct tls_transport *tls)
 
     if (!SSL_in_connect_init(ssl))
 	SSL_set_connect_state(ssl);
+
+#ifdef SSL_set_tlsext_host_name
+    if (tls->setting.server_name.slen) {
+	char server_name[PJ_MAX_HOSTNAME];
+
+	if (tls->setting.server_name.slen >= PJ_MAX_HOSTNAME)
+	    return PJ_ENAMETOOLONG;
+
+	pj_memcpy(server_name, tls->setting.server_name.ptr, 
+		  tls->setting.server_name.slen);
+	server_name[tls->setting.server_name.slen] = '\0';
+
+	if (!SSL_set_tlsext_host_name(ssl, server_name)) {
+	    PJ_LOG(4,(tls->base.obj_name, 
+		      "SSL_set_tlsext_host_name() failed"));
+	}
+    }
+#endif
 
     PJ_LOG(5,(tls->base.obj_name, "Starting SSL_connect() negotiation"));
 
@@ -1231,6 +1250,8 @@ static pj_status_t tls_create( struct tls_listener *listener,
     pj_list_init(&tls->delayed_list);
     tls->base.pool = pool;
     tls->setting.timeout = listener->setting.timeout;
+    pj_strdup(pool, &tls->setting.server_name, 
+    	      &listener->setting.server_name);
 
     pj_ansi_snprintf(tls->base.obj_name, PJ_MAX_OBJ_NAME, 
 		     (is_server ? "tlss%p" :"tlsc%p"), tls);

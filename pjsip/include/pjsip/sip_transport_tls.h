@@ -109,6 +109,16 @@ typedef struct pjsip_tls_setting
     pj_str_t	ciphers;
 
     /**
+     * Optionally specify the server name instance to be contacted when
+     * making outgoing TLS connection. This setting is useful when the
+     * server is hosting multiple domains for the same TLS listening
+     * socket.
+     *
+     * Default: empty.
+     */
+    pj_str_t	server_name;
+
+    /**
      * When PJSIP is acting as a client (outgoing TLS connections), 
      * it will always receive a certificate from the peer. 
      * If \a verify_server is disabled (set to zero), PJSIP will not 
