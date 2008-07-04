@@ -1826,11 +1826,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 #endif
 
     /* Send RTCP BYE */
-    len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt, 
-			  stream->enc->out_pkt_size);
-    if (len != 0) {
-	pjmedia_transport_send_rtcp(stream->transport, 
-				    stream->enc->out_pkt, len);
+    if (stream->enc && stream->transport) {
+	len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt,
+			      stream->enc->out_pkt_size);
+	if (len != 0) {
+	    pjmedia_transport_send_rtcp(stream->transport, 
+					stream->enc->out_pkt, len);
+	}
     }
 
     /* Detach from transport 
