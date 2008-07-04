@@ -1,4 +1,4 @@
-/* $Id:$ */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -21,7 +21,7 @@
 
 /* Define your CPU MIPS here!! */
 
-#ifndef CPU_MIPS
+#ifndef CPU_IPS
     /*
     For complete table see:
     http://en.wikipedia.org/wiki/Million_instructions_per_second
@@ -51,11 +51,14 @@
 		ARMv7-M		Cortex-M3   1.250 MIPS/MHz
     */
 
-#   define CPU_MHZ	    (2666.666)
-#   define CPU_MIPS	    (CPU_MHZ * MEGA * 3.039)	/* P4 2.6GHz	*/
+//#   define CPU_MHZ	    (2666)
+//#   define CPU_IPS	    (CPU_MHZ * MEGA * 3.039)	/* P4 2.6GHz	*/
 
-//#   define CPU_MHZ	    700
-//#   define CPU_MIPS	    (700 * MEGA * 2.708)	/* P3 700Mhz	*/
+#   define CPU_MHZ	    700
+#   define CPU_IPS	    (700 * MEGA * 2.708)	/* P3 700Mhz	*/
+
+//#   define CPU_MHZ	    180
+//#   define CPU_IPS	    (CPU_MHZ * MEGA * 1.1)	/* ARM926EJ-S */
 #endif
 
 
@@ -1764,10 +1767,20 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 
     pool = pj_pool_create(mem, "pool", 1024, 1024, NULL);
     port = e->init(pool, clock_rate, 1, samples_per_frame, 0, e);
-    pj_assert(port != NULL);
+    if (port == NULL) {
+	t0.u64 = 0;
+	pj_pool_release(pool);
+	PJ_LOG(1,(THIS_FILE, " init error"));
+	return t0;
+    }
+
     gen_port = create_gen_port(pool, clock_rate, 1, 
 			       samples_per_frame, 100);
-    pj_assert(gen_port != NULL);
+    if (gen_port == NULL) {
+	t0.u64 = 0;
+	pj_pool_release(pool);
+	return t0;
+    }
 
     pj_get_timestamp(&t0);
     for (j=0; j<DURATION*clock_rate/samples_per_frame/1000; ++j) {
@@ -1888,7 +1901,7 @@ int mips_test(void)
     };
     unsigned i, c, k[2] = {K8, K16}, clock_rates[2] = {8000, 16000};
 
-    PJ_LOG(3,(THIS_FILE, "MIPS test, with CPU=%7.2fMhz, %f MIPS", CPU_MHZ, CPU_MIPS / 1000000));
+    PJ_LOG(3,(THIS_FILE, "MIPS test, with CPU=%dMhz, %6.1f MIPS", CPU_MHZ, CPU_IPS / 1000000));
     PJ_LOG(3,(THIS_FILE, "Clock  Item                                      Time     CPU    MIPS"));
     PJ_LOG(3,(THIS_FILE, " Rate                                           (usec)    (%%)       "));
     PJ_LOG(3,(THIS_FILE, "----------------------------------------------------------------------"));
@@ -1931,9 +1944,9 @@ int mips_test(void)
 	    usec = (pj_elapsed_usec(&tzero, &times[0]) + 
 		    pj_elapsed_usec(&tzero, &times[1])) / 2;
 
-	    mips = (float)(CPU_MIPS * usec / 1000000.0 / 1000000);
+	    mips = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
 	    cpu_pct = (float)(100.0 * usec / 1000000);
-	    PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d   %6.3f %7.2f", 
+	    PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d %8.3f %7.2f", 
 		      clock_rate/1000, e->title, usec, cpu_pct, mips));
 
 	}
