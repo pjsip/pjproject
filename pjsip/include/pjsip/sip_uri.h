@@ -255,9 +255,9 @@ PJ_INLINE(const pj_str_t*) pjsip_uri_get_scheme(const void *uri)
  * @param uri	    the URI.
  * @return	    the URI.
  */
-PJ_INLINE(void*) pjsip_uri_get_uri(void *uri)
+PJ_INLINE(void*) pjsip_uri_get_uri(const void *uri)
 {
-    return (*((pjsip_uri*)uri)->vptr->p_get_uri)(uri);
+    return (*((pjsip_uri*)uri)->vptr->p_get_uri)((void*)uri);
 }
 
 /**

@@ -762,7 +762,7 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 	    PJSIP_URI_SCHEME_IS_SIPS(topmost_route_uri))
 	{
 	    const pjsip_sip_uri *url = (const pjsip_sip_uri*)
-		pjsip_uri_get_uri((void*)topmost_route_uri);
+		pjsip_uri_get_uri((const void*)topmost_route_uri);
 	    has_lr_param = url->lr_param;
 	} else {
 	    has_lr_param = 0;

@@ -71,6 +71,11 @@ static int err_ret(const char *title, pj_status_t status)
     return 1;
 }
 
+static void usage(void)
+{
+    puts(desc);
+}
+
 int main(int argc, char *argv[])
 {
     pj_caching_pool cp;
@@ -100,6 +105,7 @@ int main(int argc, char *argv[])
 	    clock_rate = atoi(pj_optarg);
 	    if (clock_rate < 1000) {
 		puts("Error: invalid clock rate");
+		usage();
 		return -1;
 	    }
 	    break;
@@ -112,6 +118,7 @@ int main(int argc, char *argv[])
     /* Get output WAV name */
     if (pj_optind == argc) {
 	puts("Error: no WAV output is specified");
+	usage();
 	return 1;
     }
 
