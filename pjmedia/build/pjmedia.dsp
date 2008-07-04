@@ -257,6 +257,10 @@ SOURCE=..\src\pjmedia\transport_ice.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\transport_loop.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\transport_srtp.c
 # End Source File
 # Begin Source File
@@ -434,6 +438,10 @@ SOURCE=..\include\pjmedia\transport.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\transport_ice.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\transport_loop.h
 # End Source File
 # Begin Source File
 

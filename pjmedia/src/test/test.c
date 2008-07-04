@@ -51,14 +51,16 @@ int test_main(void)
     pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
 
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
+    pj_log_set_level(3);
 
     mem = &caching_pool.factory;
 
-    sdp_neg_test();
+    //sdp_neg_test();
     //sdp_test (&caching_pool.factory);
     //rtp_test(&caching_pool.factory);
     //session_test (&caching_pool.factory);
     //jbuf_main();
+    mips_test();
 
     PJ_LOG(3,(THIS_FILE," "));
 

@@ -27,9 +27,11 @@
 #include <pjmedia/types.h>
 #include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/bidirectional.h>
+#include <pjmedia/circbuf.h>
 #include <pjmedia/clock.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/conference.h>
+#include <pjmedia/delaybuf.h>
 #include <pjmedia/echo.h>
 #include <pjmedia/echo_port.h>
 #include <pjmedia/errno.h>
@@ -43,6 +45,7 @@
 #include <pjmedia/port.h>
 #include <pjmedia/resample.h>
 #include <pjmedia/rtcp.h>
+#include <pjmedia/rtcp_xr.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
@@ -52,14 +55,17 @@
 #include <pjmedia/sound_port.h>
 #include <pjmedia/splitcomb.h>
 #include <pjmedia/stereo.h>
+#include <pjmedia/stream.h>
 #include <pjmedia/tonegen.h>
 #include <pjmedia/transport.h>
 #include <pjmedia/transport_ice.h>
+#include <pjmedia/transport_loop.h>
 #include <pjmedia/transport_srtp.h>
 #include <pjmedia/transport_udp.h>
 #include <pjmedia/wav_playlist.h>
 #include <pjmedia/wav_port.h>
 #include <pjmedia/wave.h>
+#include <pjmedia/wsola.h>
 
 #endif	/* __PJMEDIA_H__ */
 

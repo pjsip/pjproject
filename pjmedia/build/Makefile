@@ -34,9 +34,12 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
+		   -L$(PJDIR)/third_party/lib \
+		   $(APP_THIRD_PARTY_LIBS) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
@@ -54,8 +57,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			resample_port.o rtcp.o rtcp_xr.o rtp.o \
 			sdp.o sdp_cmp.o sdp_neg.o \
 			session.o silencedet.o sound_port.o stereo_port.o \
-			stream.o tonegen.o transport_ice.o transport_srtp.o \
-			transport_udp.o \
+			stream.o tonegen.o transport_ice.o transport_loop.o \
+			transport_srtp.o transport_udp.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			wsola.o $(SOUND_OBJS) $(NULLSOUND_OBJS)
 
@@ -89,7 +92,8 @@ export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 # Defines for building test application
 #
 export PJMEDIA_TEST_SRCDIR = ../src/test
-export PJMEDIA_TEST_OBJS += jbuf_test.o main.o rtp_test.o sdp_neg_test.o test.o
+export PJMEDIA_TEST_OBJS += jbuf_test.o main.o mips_test.o rtp_test.o test.o
+#export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(_LDFLAGS)
 export PJMEDIA_TEST_EXE:=../bin/pjmedia-test-$(TARGET_NAME)$(HOST_EXE)
@@ -101,8 +105,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjmedia pjmedia-codec pjsdp
-#pjmedia-test
+TARGETS := pjmedia pjmedia-codec pjsdp pjmedia-test
 
 all: $(TARGETS)
 

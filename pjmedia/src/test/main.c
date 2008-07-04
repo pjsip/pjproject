@@ -1,4 +1,4 @@
-/* $Id$ */
+/* $Id:$ */
 /* 
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
