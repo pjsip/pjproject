@@ -1105,6 +1105,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjmedia\circbuf.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjmedia\clock.h"
 				>
 			</File>

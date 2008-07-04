@@ -297,6 +297,10 @@ SOURCE=..\include\pjmedia\bidirectional.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\circbuf.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\clock.h
 # End Source File
 # Begin Source File
