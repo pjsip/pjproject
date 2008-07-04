@@ -419,15 +419,15 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 
     /* Get encryption and authentication method */
     cr_tx_idx = au_tx_idx = get_crypto_idx(&tx->name);
-    if (tx->flags && PJMEDIA_SRTP_NO_ENCRYPTION)
+    if (tx->flags & PJMEDIA_SRTP_NO_ENCRYPTION)
 	cr_tx_idx = 0;
-    if (tx->flags && PJMEDIA_SRTP_NO_AUTHENTICATION)
+    if (tx->flags & PJMEDIA_SRTP_NO_AUTHENTICATION)
 	au_tx_idx = 0;
 
     cr_rx_idx = au_rx_idx = get_crypto_idx(&rx->name);
-    if (rx->flags && PJMEDIA_SRTP_NO_ENCRYPTION)
+    if (rx->flags & PJMEDIA_SRTP_NO_ENCRYPTION)
 	cr_rx_idx = 0;
-    if (rx->flags && PJMEDIA_SRTP_NO_AUTHENTICATION)
+    if (rx->flags & PJMEDIA_SRTP_NO_AUTHENTICATION)
 	au_rx_idx = 0;
 
     /* Check whether the crypto-suite requested is supported */
