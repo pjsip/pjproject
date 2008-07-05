@@ -974,6 +974,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\transport_loop.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\transport_srtp.c"
 				>
 			</File>
@@ -1242,6 +1246,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\transport_ice.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\transport_loop.h"
 				>
 			</File>
 			<File
