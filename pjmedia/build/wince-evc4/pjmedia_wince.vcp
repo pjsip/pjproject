@@ -394,6 +394,7 @@ NODEP_CPP_ALAW_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ALAW_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -439,6 +440,7 @@ DEP_CPP_ALAW_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -658,6 +660,7 @@ DEP_CPP_ALAW_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ALAW_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -703,6 +706,7 @@ DEP_CPP_ALAW_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -913,6 +917,7 @@ NODEP_CPP_ALAW_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ALAW_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -958,6 +963,7 @@ DEP_CPP_ALAW_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -1051,6 +1057,7 @@ NODEP_CPP_ALAW_U=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ALAW_U=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -1096,6 +1103,7 @@ DEP_CPP_ALAW_U=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -1315,6 +1323,7 @@ DEP_CPP_ALAW_U=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ALAW_U=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -1360,6 +1369,7 @@ DEP_CPP_ALAW_U=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -1570,6 +1580,7 @@ NODEP_CPP_ALAW_U=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ALAW_U=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -1615,6 +1626,7 @@ DEP_CPP_ALAW_U=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -1679,6 +1691,7 @@ DEP_CPP_BIDIR=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_BIDIR=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -1724,6 +1737,7 @@ DEP_CPP_BIDIR=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -1887,6 +1901,7 @@ DEP_CPP_BIDIR=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_BIDIR=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -1932,6 +1947,7 @@ DEP_CPP_BIDIR=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -2056,6 +2072,7 @@ DEP_CPP_BIDIR=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_BIDIR=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -2101,6 +2118,7 @@ DEP_CPP_BIDIR=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -2178,6 +2196,7 @@ DEP_CPP_CLOCK=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_CLOCK=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -2223,6 +2242,7 @@ DEP_CPP_CLOCK=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -2410,6 +2430,7 @@ DEP_CPP_CLOCK=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_CLOCK=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -2455,6 +2476,7 @@ DEP_CPP_CLOCK=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -2615,6 +2637,7 @@ DEP_CPP_CLOCK=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_CLOCK=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -2660,6 +2683,7 @@ DEP_CPP_CLOCK=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -2734,6 +2758,7 @@ NODEP_CPP_CODEC=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_CODEC=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -2779,6 +2804,7 @@ DEP_CPP_CODEC=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -2962,6 +2988,7 @@ DEP_CPP_CODEC=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_CODEC=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -3007,6 +3034,7 @@ DEP_CPP_CODEC=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -3159,6 +3187,7 @@ NODEP_CPP_CODEC=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_CODEC=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -3204,6 +3233,7 @@ DEP_CPP_CODEC=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -3295,6 +3325,7 @@ DEP_CPP_CONFE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_CONFE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -3340,6 +3371,7 @@ DEP_CPP_CONFE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -3360,16 +3392,19 @@ DEP_CPP_CONFE=\
 	"..\..\include\pjmedia\conference.h"\
 	"..\..\include\pjmedia\config.h"\
 	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\delaybuf.h"\
 	"..\..\include\pjmedia\endpoint.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\resample.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\silencedet.h"\
 	"..\..\include\pjmedia\sound.h"\
 	"..\..\include\pjmedia\sound_port.h"\
+	"..\..\include\pjmedia\stereo.h"\
 	"..\..\include\pjmedia\stream.h"\
 	"..\..\include\pjmedia\transport.h"\
 	"..\..\include\pjmedia\types.h"\
@@ -3582,6 +3617,7 @@ DEP_CPP_CONFE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_CONFE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -3627,6 +3663,7 @@ DEP_CPP_CONFE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -3842,6 +3879,7 @@ DEP_CPP_CONFE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_CONFE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -3887,6 +3925,7 @@ DEP_CPP_CONFE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -3913,6 +3952,7 @@ DEP_CPP_CONFE=\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\resample.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\silencedet.h"\
@@ -4004,6 +4044,7 @@ DEP_CPP_DELAY=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_DELAY=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -4049,6 +4090,7 @@ DEP_CPP_DELAY=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -4069,6 +4111,7 @@ DEP_CPP_DELAY=\
 	"..\..\include\pjmedia\delaybuf.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\types.h"\
+	"..\..\include\pjmedia\wsola.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Release"
@@ -4287,6 +4330,7 @@ DEP_CPP_DELAY=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_DELAY=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -4332,6 +4376,7 @@ DEP_CPP_DELAY=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -4568,6 +4613,7 @@ DEP_CPP_DELAY=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_DELAY=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -4613,6 +4659,7 @@ DEP_CPP_DELAY=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -4680,6 +4727,7 @@ DEP_CPP_ECHO_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ECHO_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -4725,6 +4773,7 @@ DEP_CPP_ECHO_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -4890,6 +4939,7 @@ DEP_CPP_ECHO_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ECHO_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -4935,6 +4985,7 @@ DEP_CPP_ECHO_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -5062,6 +5113,7 @@ DEP_CPP_ECHO_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ECHO_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -5107,6 +5159,7 @@ DEP_CPP_ECHO_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -5180,6 +5233,7 @@ DEP_CPP_ECHO_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ECHO_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -5225,6 +5279,7 @@ DEP_CPP_ECHO_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -5408,6 +5463,7 @@ DEP_CPP_ECHO_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ECHO_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -5453,6 +5509,7 @@ DEP_CPP_ECHO_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -5603,6 +5660,7 @@ DEP_CPP_ECHO_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ECHO_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -5648,6 +5706,7 @@ DEP_CPP_ECHO_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -5729,6 +5788,7 @@ NODEP_CPP_ECHO_S=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ECHO_S=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -5774,6 +5834,7 @@ DEP_CPP_ECHO_S=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -5975,6 +6036,7 @@ DEP_CPP_ECHO_S=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ECHO_S=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -6020,6 +6082,7 @@ DEP_CPP_ECHO_S=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -6191,6 +6254,7 @@ NODEP_CPP_ECHO_S=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ECHO_S=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -6236,6 +6300,7 @@ DEP_CPP_ECHO_S=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -6313,6 +6378,7 @@ DEP_CPP_ECHO_SU=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ECHO_SU=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -6358,6 +6424,7 @@ DEP_CPP_ECHO_SU=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -6537,6 +6604,7 @@ DEP_CPP_ECHO_SU=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ECHO_SU=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -6582,6 +6650,7 @@ DEP_CPP_ECHO_SU=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -6728,6 +6797,7 @@ DEP_CPP_ECHO_SU=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ECHO_SU=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -6773,6 +6843,7 @@ DEP_CPP_ECHO_SU=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -6852,6 +6923,7 @@ NODEP_CPP_ENDPO=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ENDPO=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -6897,6 +6969,7 @@ DEP_CPP_ENDPO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -7094,6 +7167,7 @@ DEP_CPP_ENDPO=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ENDPO=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -7139,6 +7213,7 @@ DEP_CPP_ENDPO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -7306,6 +7381,7 @@ NODEP_CPP_ENDPO=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ENDPO=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -7351,6 +7427,7 @@ DEP_CPP_ENDPO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -7423,6 +7500,7 @@ NODEP_CPP_ERRNO=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_ERRNO=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -7468,6 +7546,7 @@ DEP_CPP_ERRNO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -7637,6 +7716,7 @@ DEP_CPP_ERRNO=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_ERRNO=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -7682,6 +7762,7 @@ DEP_CPP_ERRNO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -7815,6 +7896,7 @@ NODEP_CPP_ERRNO=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_ERRNO=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -7860,6 +7942,7 @@ DEP_CPP_ERRNO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -7933,6 +8016,7 @@ NODEP_CPP_G711_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_G711_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -7978,6 +8062,7 @@ DEP_CPP_G711_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -8171,6 +8256,7 @@ DEP_CPP_G711_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_G711_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -8216,6 +8302,7 @@ DEP_CPP_G711_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -8371,6 +8458,7 @@ NODEP_CPP_G711_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_G711_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -8416,6 +8504,7 @@ DEP_CPP_G711_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -8496,6 +8585,7 @@ NODEP_CPP_JBUF_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_JBUF_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -8541,6 +8631,7 @@ DEP_CPP_JBUF_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -8720,6 +8811,7 @@ DEP_CPP_JBUF_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_JBUF_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -8765,6 +8857,7 @@ DEP_CPP_JBUF_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -8913,6 +9006,7 @@ NODEP_CPP_JBUF_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_JBUF_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -8958,6 +9052,7 @@ DEP_CPP_JBUF_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -9041,6 +9136,7 @@ DEP_CPP_MASTE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_MASTE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -9086,6 +9182,7 @@ DEP_CPP_MASTE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -9281,6 +9378,7 @@ DEP_CPP_MASTE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_MASTE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -9326,6 +9424,7 @@ DEP_CPP_MASTE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -9494,6 +9593,7 @@ DEP_CPP_MASTE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_MASTE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -9539,6 +9639,7 @@ DEP_CPP_MASTE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -9617,6 +9718,7 @@ DEP_CPP_MEM_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_MEM_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -9662,6 +9764,7 @@ DEP_CPP_MEM_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -9847,6 +9950,7 @@ DEP_CPP_MEM_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_MEM_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -9892,6 +9996,7 @@ DEP_CPP_MEM_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -10049,6 +10154,7 @@ DEP_CPP_MEM_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_MEM_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -10094,6 +10200,7 @@ DEP_CPP_MEM_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -10170,6 +10277,7 @@ DEP_CPP_MEM_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_MEM_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -10215,6 +10323,7 @@ DEP_CPP_MEM_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -10400,6 +10509,7 @@ DEP_CPP_MEM_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_MEM_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -10445,6 +10555,7 @@ DEP_CPP_MEM_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -10602,6 +10713,7 @@ DEP_CPP_MEM_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_MEM_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -10647,6 +10759,7 @@ DEP_CPP_MEM_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -10724,6 +10837,7 @@ DEP_CPP_NULL_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_NULL_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -10769,6 +10883,7 @@ DEP_CPP_NULL_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -10958,6 +11073,7 @@ DEP_CPP_NULL_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_NULL_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -11003,6 +11119,7 @@ DEP_CPP_NULL_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -11164,6 +11281,7 @@ DEP_CPP_NULL_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_NULL_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -11209,6 +11327,7 @@ DEP_CPP_NULL_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -11279,6 +11398,7 @@ NODEP_CPP_PASOU=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_PASOU=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -11324,6 +11444,7 @@ DEP_CPP_PASOU=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -11497,6 +11618,7 @@ DEP_CPP_PASOU=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_PASOU=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -11542,6 +11664,7 @@ DEP_CPP_PASOU=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -11679,6 +11802,7 @@ NODEP_CPP_PASOU=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_PASOU=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -11724,6 +11848,7 @@ DEP_CPP_PASOU=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -11800,6 +11925,7 @@ DEP_CPP_PLC_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_PLC_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -11845,6 +11971,7 @@ DEP_CPP_PLC_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -11865,6 +11992,7 @@ DEP_CPP_PLC_C=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\plc.h"\
 	"..\..\include\pjmedia\types.h"\
+	"..\..\include\pjmedia\wsola.h"\
 	
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Release"
@@ -12029,6 +12157,7 @@ DEP_CPP_PLC_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_PLC_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -12074,6 +12203,7 @@ DEP_CPP_PLC_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -12229,6 +12359,7 @@ DEP_CPP_PLC_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_PLC_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -12274,6 +12405,7 @@ DEP_CPP_PLC_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -12352,6 +12484,7 @@ DEP_CPP_PORT_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_PORT_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -12397,6 +12530,7 @@ DEP_CPP_PORT_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -12584,6 +12718,7 @@ DEP_CPP_PORT_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_PORT_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -12629,6 +12764,7 @@ DEP_CPP_PORT_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -12789,6 +12925,7 @@ DEP_CPP_PORT_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_PORT_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -12834,6 +12971,7 @@ DEP_CPP_PORT_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -12911,6 +13049,7 @@ DEP_CPP_RESAM=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_RESAM=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -12956,6 +13095,7 @@ DEP_CPP_RESAM=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -13145,6 +13285,7 @@ DEP_CPP_RESAM=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_RESAM=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -13190,6 +13331,7 @@ DEP_CPP_RESAM=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -13351,6 +13493,7 @@ DEP_CPP_RESAM=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_RESAM=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -13396,6 +13539,7 @@ DEP_CPP_RESAM=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -13491,6 +13635,7 @@ DEP_CPP_RESAMP=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_RESAMP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -13536,6 +13681,7 @@ DEP_CPP_RESAMP=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -13761,6 +13907,7 @@ DEP_CPP_RESAMP=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_RESAMP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -13806,6 +13953,7 @@ DEP_CPP_RESAMP=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -14019,6 +14167,7 @@ DEP_CPP_RESAMP=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_RESAMP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -14064,6 +14213,7 @@ DEP_CPP_RESAMP=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -14161,6 +14311,7 @@ DEP_CPP_RESAMPL=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_RESAMPL=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -14206,6 +14357,7 @@ DEP_CPP_RESAMPL=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -14435,6 +14587,7 @@ DEP_CPP_RESAMPL=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_RESAMPL=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -14480,6 +14633,7 @@ DEP_CPP_RESAMPL=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -14697,6 +14851,7 @@ DEP_CPP_RESAMPL=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_RESAMPL=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -14742,6 +14897,7 @@ DEP_CPP_RESAMPL=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -14814,6 +14970,7 @@ NODEP_CPP_RTCP_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_RTCP_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -14859,6 +15016,7 @@ DEP_CPP_RTCP_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -14878,6 +15036,7 @@ DEP_CPP_RTCP_=\
 	"..\..\include\pjmedia\config_auto.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\types.h"\
 	
@@ -15033,6 +15192,7 @@ DEP_CPP_RTCP_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_RTCP_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -15078,6 +15238,7 @@ DEP_CPP_RTCP_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -15216,6 +15377,7 @@ NODEP_CPP_RTCP_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_RTCP_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -15261,6 +15423,7 @@ DEP_CPP_RTCP_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -15280,6 +15443,7 @@ DEP_CPP_RTCP_=\
 	"..\..\include\pjmedia\config_auto.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\types.h"\
 	
@@ -15366,6 +15530,7 @@ DEP_CPP_RTCP_X=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_RTCP_X=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -15411,6 +15576,7 @@ DEP_CPP_RTCP_X=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -15656,6 +15822,7 @@ DEP_CPP_RTCP_X=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_RTCP_X=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -15701,6 +15868,7 @@ DEP_CPP_RTCP_X=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -15944,6 +16112,7 @@ DEP_CPP_RTCP_X=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_RTCP_X=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -15989,6 +16158,7 @@ DEP_CPP_RTCP_X=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -16062,6 +16232,7 @@ NODEP_CPP_RTP_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_RTP_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -16107,6 +16278,7 @@ DEP_CPP_RTP_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -16282,6 +16454,7 @@ DEP_CPP_RTP_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_RTP_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -16327,6 +16500,7 @@ DEP_CPP_RTP_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -16469,6 +16643,7 @@ NODEP_CPP_RTP_C=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_RTP_C=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -16514,6 +16689,7 @@ DEP_CPP_RTP_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -16602,6 +16778,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -16647,6 +16824,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -16856,6 +17034,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -16901,6 +17080,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -17084,6 +17264,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_bitwise.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\scanner_cis_uint.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -17129,6 +17310,7 @@ DEP_CPP_SDP_C=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -17202,6 +17384,7 @@ NODEP_CPP_SDP_CM=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SDP_CM=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -17247,6 +17430,7 @@ DEP_CPP_SDP_CM=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -17426,6 +17610,7 @@ DEP_CPP_SDP_CM=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_SDP_CM=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -17471,6 +17656,7 @@ DEP_CPP_SDP_CM=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -17619,6 +17805,7 @@ NODEP_CPP_SDP_CM=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_SDP_CM=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -17664,6 +17851,7 @@ DEP_CPP_SDP_CM=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -17741,6 +17929,7 @@ NODEP_CPP_SDP_N=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SDP_N=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -17786,6 +17975,7 @@ DEP_CPP_SDP_N=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -17975,6 +18165,7 @@ DEP_CPP_SDP_N=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_SDP_N=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -18020,6 +18211,7 @@ DEP_CPP_SDP_N=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -18181,6 +18373,7 @@ NODEP_CPP_SDP_N=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_SDP_N=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -18226,6 +18419,7 @@ DEP_CPP_SDP_N=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -18309,6 +18503,7 @@ NODEP_CPP_SESSI=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SESSI=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -18354,6 +18549,7 @@ DEP_CPP_SESSI=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -18376,6 +18572,7 @@ DEP_CPP_SESSI=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\session.h"\
@@ -18570,6 +18767,7 @@ DEP_CPP_SESSI=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_SESSI=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -18615,6 +18813,7 @@ DEP_CPP_SESSI=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -18800,6 +18999,7 @@ NODEP_CPP_SESSI=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_SESSI=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -18845,6 +19045,7 @@ DEP_CPP_SESSI=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -18867,6 +19068,7 @@ DEP_CPP_SESSI=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\session.h"\
@@ -18930,6 +19132,7 @@ DEP_CPP_SILEN=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SILEN=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -18975,6 +19178,7 @@ DEP_CPP_SILEN=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -19162,6 +19366,7 @@ DEP_CPP_SILEN=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_SILEN=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -19207,6 +19412,7 @@ DEP_CPP_SILEN=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -19365,6 +19571,7 @@ DEP_CPP_SILEN=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_SILEN=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -19410,6 +19617,7 @@ DEP_CPP_SILEN=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -19496,6 +19704,7 @@ DEP_CPP_SOUND=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SOUND=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -19541,6 +19750,7 @@ DEP_CPP_SOUND=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -19746,6 +19956,7 @@ DEP_CPP_SOUND=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_SOUND=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -19791,6 +20002,7 @@ DEP_CPP_SOUND=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -19968,6 +20180,7 @@ DEP_CPP_SOUND=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_SOUND=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -20013,6 +20226,7 @@ DEP_CPP_SOUND=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -20096,6 +20310,7 @@ DEP_CPP_SPLIT=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_SPLIT=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -20141,6 +20356,7 @@ DEP_CPP_SPLIT=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -20158,6 +20374,7 @@ DEP_CPP_SPLIT=\
 	"..\..\..\pjlib\include\pjlib.h"\
 	"..\..\include\pjmedia\config.h"\
 	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\delaybuf.h"\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\splitcomb.h"\
@@ -20333,6 +20550,7 @@ DEP_CPP_SPLIT=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_SPLIT=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -20378,6 +20596,7 @@ DEP_CPP_SPLIT=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -20543,6 +20762,7 @@ DEP_CPP_SPLIT=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_SPLIT=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -20588,6 +20808,7 @@ DEP_CPP_SPLIT=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -20692,6 +20913,7 @@ DEP_CPP_STERE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_STERE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -20722,6 +20944,7 @@ DEP_CPP_STERE=\
 	"..\..\..\pjlib\include\pj\compat\string.h"\
 	"..\..\..\pjlib\include\pj\config.h"\
 	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
 	"..\..\..\pjlib\include\pj\ctype.h"\
 	"..\..\..\pjlib\include\pj\errno.h"\
 	"..\..\..\pjlib\include\pj\except.h"\
@@ -20736,6 +20959,7 @@ DEP_CPP_STERE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -20975,6 +21199,7 @@ DEP_CPP_STERE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_STERE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -21020,6 +21245,7 @@ DEP_CPP_STERE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -21256,6 +21482,7 @@ DEP_CPP_STERE=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_STERE=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -21301,6 +21528,7 @@ DEP_CPP_STERE=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -21384,6 +21612,7 @@ NODEP_CPP_STREA=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_STREA=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -21430,6 +21659,7 @@ DEP_CPP_STREA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -21453,6 +21683,7 @@ DEP_CPP_STREA=\
 	"..\..\include\pjmedia\jbuf.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
@@ -21647,6 +21878,7 @@ DEP_CPP_STREA=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_STREA=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -21693,6 +21925,7 @@ DEP_CPP_STREA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -21878,6 +22111,7 @@ NODEP_CPP_STREA=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_STREA=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -21924,6 +22158,7 @@ DEP_CPP_STREA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -21947,6 +22182,7 @@ DEP_CPP_STREA=\
 	"..\..\include\pjmedia\jbuf.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
@@ -22036,6 +22272,7 @@ DEP_CPP_TONEG=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_TONEG=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -22081,6 +22318,7 @@ DEP_CPP_TONEG=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -22324,6 +22562,7 @@ DEP_CPP_TONEG=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_TONEG=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -22369,6 +22608,7 @@ DEP_CPP_TONEG=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -22609,6 +22849,7 @@ DEP_CPP_TONEG=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_TONEG=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -22654,6 +22895,7 @@ DEP_CPP_TONEG=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -22781,6 +23023,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -22826,6 +23069,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -22849,7 +23093,10 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjnath\include\pjnath\stun_config.h"\
 	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
 	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_sock.h"\
 	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\turn_session.h"\
+	"..\..\..\pjnath\include\pjnath\turn_sock.h"\
 	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
@@ -22858,6 +23105,7 @@ DEP_CPP_TRANS=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
@@ -23122,7 +23370,10 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjnath\include\pjnath\stun_config.h"\
 	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
 	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_sock.h"\
 	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\turn_session.h"\
+	"..\..\..\pjnath\include\pjnath\turn_sock.h"\
 	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
@@ -23148,6 +23399,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -23193,6 +23445,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -23216,7 +23469,10 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjnath\include\pjnath\stun_config.h"\
 	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
 	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_sock.h"\
 	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\turn_session.h"\
+	"..\..\..\pjnath\include\pjnath\turn_sock.h"\
 	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
@@ -23509,6 +23765,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib-util\include\pjlib-util\dns.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\resolver.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -23554,6 +23811,7 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -23577,7 +23835,10 @@ DEP_CPP_TRANS=\
 	"..\..\..\pjnath\include\pjnath\stun_config.h"\
 	"..\..\..\pjnath\include\pjnath\stun_msg.h"\
 	"..\..\..\pjnath\include\pjnath\stun_session.h"\
+	"..\..\..\pjnath\include\pjnath\stun_sock.h"\
 	"..\..\..\pjnath\include\pjnath\stun_transaction.h"\
+	"..\..\..\pjnath\include\pjnath\turn_session.h"\
+	"..\..\..\pjnath\include\pjnath\turn_sock.h"\
 	"..\..\..\pjnath\include\pjnath\types.h"\
 	"..\..\include\pjmedia\codec.h"\
 	"..\..\include\pjmedia\config.h"\
@@ -23586,6 +23847,7 @@ DEP_CPP_TRANS=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
@@ -23600,11 +23862,838 @@ DEP_CPP_TRANS=\
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\src\pjmedia\transport_srtp.c
+SOURCE=..\..\src\pjmedia\transport_loop.c
 
 !IF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Release"
 
 DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Release"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Debug"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Release"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4T) Release"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4T) Debug"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Release"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
+
+DEP_CPP_TRANSP=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
+	"..\..\..\pjlib\include\pj\addr_resolv.h"\
+	"..\..\..\pjlib\include\pj\array.h"\
+	"..\..\..\pjlib\include\pj\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\assert.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_armcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_codew.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_gcce.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_msvc.h"\
+	"..\..\..\pjlib\include\pj\compat\cc_mwcc.h"\
+	"..\..\..\pjlib\include\pj\compat\ctype.h"\
+	"..\..\..\pjlib\include\pj\compat\errno.h"\
+	"..\..\..\pjlib\include\pj\compat\high_precision.h"\
+	"..\..\..\pjlib\include\pj\compat\m_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_auto.h"\
+	"..\..\..\pjlib\include\pj\compat\os_darwinos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux.h"\
+	"..\..\..\pjlib\include\pj\compat\os_linux_kernel.h"\
+	"..\..\..\pjlib\include\pj\compat\os_palmos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_rtems.h"\
+	"..\..\..\pjlib\include\pj\compat\os_sunos.h"\
+	"..\..\..\pjlib\include\pj\compat\os_symbian.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32.h"\
+	"..\..\..\pjlib\include\pj\compat\os_win32_wince.h"\
+	"..\..\..\pjlib\include\pj\compat\setjmp.h"\
+	"..\..\..\pjlib\include\pj\compat\size_t.h"\
+	"..\..\..\pjlib\include\pj\compat\stdarg.h"\
+	"..\..\..\pjlib\include\pj\compat\string.h"\
+	"..\..\..\pjlib\include\pj\config.h"\
+	"..\..\..\pjlib\include\pj\config_site.h"\
+	"..\..\..\pjlib\include\pj\config_site_sample.h"\
+	"..\..\..\pjlib\include\pj\ctype.h"\
+	"..\..\..\pjlib\include\pj\errno.h"\
+	"..\..\..\pjlib\include\pj\except.h"\
+	"..\..\..\pjlib\include\pj\fifobuf.h"\
+	"..\..\..\pjlib\include\pj\file_access.h"\
+	"..\..\..\pjlib\include\pj\file_io.h"\
+	"..\..\..\pjlib\include\pj\guid.h"\
+	"..\..\..\pjlib\include\pj\hash.h"\
+	"..\..\..\pjlib\include\pj\ioqueue.h"\
+	"..\..\..\pjlib\include\pj\ip_helper.h"\
+	"..\..\..\pjlib\include\pj\list.h"\
+	"..\..\..\pjlib\include\pj\list_i.h"\
+	"..\..\..\pjlib\include\pj\lock.h"\
+	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
+	"..\..\..\pjlib\include\pj\os.h"\
+	"..\..\..\pjlib\include\pj\pool.h"\
+	"..\..\..\pjlib\include\pj\pool_alt.h"\
+	"..\..\..\pjlib\include\pj\pool_buf.h"\
+	"..\..\..\pjlib\include\pj\pool_i.h"\
+	"..\..\..\pjlib\include\pj\rand.h"\
+	"..\..\..\pjlib\include\pj\rbtree.h"\
+	"..\..\..\pjlib\include\pj\sock.h"\
+	"..\..\..\pjlib\include\pj\sock_select.h"\
+	"..\..\..\pjlib\include\pj\string.h"\
+	"..\..\..\pjlib\include\pj\string_i.h"\
+	"..\..\..\pjlib\include\pj\timer.h"\
+	"..\..\..\pjlib\include\pj\types.h"\
+	"..\..\..\pjlib\include\pj\unicode.h"\
+	"..\..\..\pjlib\include\pjlib.h"\
+	"..\..\include\pjmedia\codec.h"\
+	"..\..\include\pjmedia\config.h"\
+	"..\..\include\pjmedia\config_auto.h"\
+	"..\..\include\pjmedia\endpoint.h"\
+	"..\..\include\pjmedia\errno.h"\
+	"..\..\include\pjmedia\port.h"\
+	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
+	"..\..\include\pjmedia\rtp.h"\
+	"..\..\include\pjmedia\sdp.h"\
+	"..\..\include\pjmedia\sound.h"\
+	"..\..\include\pjmedia\stream.h"\
+	"..\..\include\pjmedia\transport.h"\
+	"..\..\include\pjmedia\transport_loop.h"\
+	"..\..\include\pjmedia\types.h"\
+	
+
+!ENDIF 
+
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\src\pjmedia\transport_srtp.c
+
+!IF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Release"
+
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -23703,10 +24792,11 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -23752,6 +24842,7 @@ DEP_CPP_TRANSP=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -23802,7 +24893,7 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Release"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -23901,7 +24992,7 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Debug"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -24000,7 +25091,7 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Release"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -24101,10 +25192,11 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -24150,6 +25242,7 @@ DEP_CPP_TRANSP=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -24200,7 +25293,7 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4T) Release"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -24299,7 +25392,7 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4T) Debug"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -24398,7 +25491,7 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Release"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
@@ -24497,10 +25590,11 @@ DEP_CPP_TRANSP=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
-DEP_CPP_TRANSP=\
+DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib-util\include\pjlib-util\base64.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\config.h"\
 	"..\..\..\pjlib-util\include\pjlib-util\types.h"\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -24546,6 +25640,7 @@ DEP_CPP_TRANSP=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -24603,7 +25698,7 @@ SOURCE=..\..\src\pjmedia\transport_udp.c
 
 !IF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Release"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
@@ -24658,7 +25753,8 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -24704,6 +25800,7 @@ DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -24726,6 +25823,7 @@ DEP_CPP_TRANSPO=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
@@ -24737,7 +25835,7 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Release"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
@@ -24792,7 +25890,7 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4I) Debug"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
@@ -24847,7 +25945,7 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Release"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
@@ -24929,7 +26027,8 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -24975,6 +26074,7 @@ DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -25009,7 +26109,7 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4T) Release"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
@@ -25064,7 +26164,7 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4T) Debug"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
@@ -25119,7 +26219,7 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Release"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
 	"..\..\..\pjlib\include\pj\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\assert.h"\
 	"..\..\..\pjlib\include\pj\compat\cc_gcc.h"\
@@ -25174,7 +26274,8 @@ DEP_CPP_TRANSPO=\
 
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
-DEP_CPP_TRANSPO=\
+DEP_CPP_TRANSPOR=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -25220,6 +26321,7 @@ DEP_CPP_TRANSPO=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -25242,6 +26344,7 @@ DEP_CPP_TRANSPO=\
 	"..\..\include\pjmedia\errno.h"\
 	"..\..\include\pjmedia\port.h"\
 	"..\..\include\pjmedia\rtcp.h"\
+	"..\..\include\pjmedia\rtcp_xr.h"\
 	"..\..\include\pjmedia\rtp.h"\
 	"..\..\include\pjmedia\sdp.h"\
 	"..\..\include\pjmedia\sound.h"\
@@ -25310,6 +26413,7 @@ DEP_CPP_WAV_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_WAV_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -25355,6 +26459,7 @@ DEP_CPP_WAV_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -25554,6 +26659,7 @@ DEP_CPP_WAV_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_WAV_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -25599,6 +26705,7 @@ DEP_CPP_WAV_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -25773,6 +26880,7 @@ DEP_CPP_WAV_P=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_WAV_P=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -25818,6 +26926,7 @@ DEP_CPP_WAV_P=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -25915,6 +27024,7 @@ DEP_CPP_WAV_PL=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_WAV_PL=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -25960,6 +27070,7 @@ DEP_CPP_WAV_PL=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -26189,6 +27300,7 @@ DEP_CPP_WAV_PL=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_WAV_PL=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -26234,6 +27346,7 @@ DEP_CPP_WAV_PL=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -26451,6 +27564,7 @@ DEP_CPP_WAV_PL=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_WAV_PL=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -26496,6 +27610,7 @@ DEP_CPP_WAV_PL=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -26580,6 +27695,7 @@ DEP_CPP_WAV_W=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_WAV_W=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -26625,6 +27741,7 @@ DEP_CPP_WAV_W=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -26824,6 +27941,7 @@ DEP_CPP_WAV_W=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_WAV_W=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -26869,6 +27987,7 @@ DEP_CPP_WAV_W=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -27043,6 +28162,7 @@ DEP_CPP_WAV_W=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_WAV_W=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -27088,6 +28208,7 @@ DEP_CPP_WAV_W=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -27160,6 +28281,7 @@ DEP_CPP_WAVE_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_WAVE_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -27205,6 +28327,7 @@ DEP_CPP_WAVE_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -27376,6 +28499,7 @@ DEP_CPP_WAVE_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_WAVE_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -27421,6 +28545,7 @@ DEP_CPP_WAVE_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -27559,6 +28684,7 @@ DEP_CPP_WAVE_=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_WAVE_=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -27604,6 +28730,7 @@ DEP_CPP_WAVE_=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -27705,6 +28832,7 @@ DEP_CPP_WSOLA=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE emulator) Debug"
 
 DEP_CPP_WSOLA=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -27750,6 +28878,7 @@ DEP_CPP_WSOLA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -27987,6 +29116,7 @@ DEP_CPP_WSOLA=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE ARMV4) Debug"
 
 DEP_CPP_WSOLA=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -28032,6 +29162,7 @@ DEP_CPP_WSOLA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -28267,6 +29398,7 @@ DEP_CPP_WSOLA=\
 !ELSEIF  "$(CFG)" == "pjmedia_wince - Win32 (WCE x86) Debug"
 
 DEP_CPP_WSOLA=\
+	"..\..\..\pjlib\include\pj\activesock.h"\
 	"..\..\..\pjlib\include\pj\addr_resolv.h"\
 	"..\..\..\pjlib\include\pj\array.h"\
 	"..\..\..\pjlib\include\pj\assert.h"\
@@ -28312,6 +29444,7 @@ DEP_CPP_WSOLA=\
 	"..\..\..\pjlib\include\pj\list_i.h"\
 	"..\..\..\pjlib\include\pj\lock.h"\
 	"..\..\..\pjlib\include\pj\log.h"\
+	"..\..\..\pjlib\include\pj\math.h"\
 	"..\..\..\pjlib\include\pj\os.h"\
 	"..\..\..\pjlib\include\pj\pool.h"\
 	"..\..\..\pjlib\include\pj\pool_alt.h"\
@@ -28492,6 +29625,10 @@ SOURCE=..\..\include\pjmedia\transport.h
 # Begin Source File
 
 SOURCE=..\..\include\pjmedia\transport_ice.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\include\pjmedia\transport_loop.h
 # End Source File
 # Begin Source File
 
