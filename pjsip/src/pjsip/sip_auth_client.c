@@ -941,7 +941,20 @@ static pj_status_t process_auth( pj_pool_t *req_pool,
      * other causes.
      */
     if (hdr != &tdata->msg->hdr) {
-	if (hchal->challenge.digest.stale == 0) {
+	pj_bool_t stale;
+
+	/* Detect "stale" state */
+	stale = hchal->challenge.digest.stale;
+	if (!stale) {
+	    /* If stale is false, check is nonce has changed. Some servers
+	     * (broken ones!) want to change nonce but they fail to set
+	     * stale to true.
+	     */
+	    stale = pj_strcmp(&hchal->challenge.digest.nonce,
+			      &sent_auth->credential.digest.nonce);
+	}
+
+	if (stale == PJ_FALSE) {
 	    /* Our credential is rejected. No point in trying to re-supply
 	     * the same credential.
 	     */
