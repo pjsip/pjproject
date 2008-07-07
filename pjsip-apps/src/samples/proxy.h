@@ -271,11 +271,12 @@ static pj_status_t init_proxy(void)
 	}
     }
 
-    /* No need to add this, this should have been added above.
+    /* Add loopback address. */
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
     global.name[global.name_cnt].host = pj_str("127.0.0.1");
     global.name[global.name_cnt].port = global.port;
     global.name_cnt++;
-    */
+#endif
 
     global.name[global.name_cnt].host = *pj_gethostname();
     global.name[global.name_cnt].port = global.port;

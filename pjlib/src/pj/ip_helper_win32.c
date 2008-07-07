@@ -40,10 +40,6 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 
-#ifndef PJ_IP_HELPER_IGNORE_LOOPBACK_IF
-#   define PJ_IP_HELPER_IGNORE_LOOPBACK_IF	1
-#endif
-
 typedef DWORD (WINAPI *PFN_GetIpAddrTable)(PMIB_IPADDRTABLE pIpAddrTable, 
 					   PULONG pdwSize, 
 					   BOOL bOrder);

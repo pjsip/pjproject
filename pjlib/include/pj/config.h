@@ -603,6 +603,17 @@
 
 
 /**
+ * Specify whether #pj_enum_ip_interface() function should exclude
+ * loopback interfaces.
+ *
+ * Default: 1
+ */
+#ifndef PJ_IP_HELPER_IGNORE_LOOPBACK_IF
+#   define PJ_IP_HELPER_IGNORE_LOOPBACK_IF	1
+#endif
+
+
+/**
  * Has semaphore functionality?
  *
  * Default: 1

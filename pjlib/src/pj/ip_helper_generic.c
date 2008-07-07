@@ -85,14 +85,17 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip when interface is down */
 	}
 
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 	if (it->ifa_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
 	    continue; /* Skip loopback interface */
 	}
+#endif
 
 	if (ad==NULL) {
 	    TRACE_((THIS_FILE, "  NULL address ignored"));
-	    continue; /* reported to happen on Linux 2.6.25.9 */
+	    continue; /* reported to happen on Linux 2.6.25.9 
+			 with ppp interface */
 	}
 
 	if (ad->sa_family != af) {
@@ -188,10 +191,12 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip when interface is down */
 	}
 
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 	if (itf->ifr_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
 	    continue; /* Skip loopback interface */
 	}
+#endif
 
 	/* Ignore 0.0.0.0/8 address. This is a special address
 	 * which doesn't seem to have practical use.
@@ -259,10 +264,12 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 	    continue; /* Skip when interface is down */
 	}
 
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 	if (ifreq.ifr_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
 	    continue; /* Skip loopback interface */
 	}
+#endif
 
 	/* Note: SIOCGIFADDR does not work for IPv6! */
 	if ((rc=ioctl(sock, SIOCGIFADDR, &ifreq)) != 0) {
