@@ -98,8 +98,28 @@ struct pjsip_publishc
  */
 PJ_DEF(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt)
 {
+    /* Note:
+	Commented out the capability registration below, since it's
+	wrong to include PUBLISH in Allow header of INVITE requests/
+	responses.
+
+	13.2.1 Creating the Initial INVITE
+	  An Allow header field (Section 20.5) SHOULD be present in the 
+	  INVITE. It indicates what methods can be invoked within a dialog
+
+	20.5 Allow
+	  The Allow header field lists the set of methods supported by the
+	  UA generating the message.
+
+	While the semantic of Allow header in non-dialog requests is unclear,
+	it's probably best not to include PUBLISH in Allow header for now
+	until we can find out how to customize the inclusion of methods in
+	Allow header for in-dialog vs out-dialog requests.
+
     return pjsip_endpt_add_capability( endpt, NULL, PJSIP_H_ALLOW, NULL,
 				       1, &pjsip_publish_method.name);
+     */
+    return PJ_SUCCESS;
 }
 
 
