@@ -49,6 +49,13 @@ def get_tag(msg, hdr="To"):
 	return ""
 	#return re.split("[;& ]", s)
 
+def get_header(msg, hname):
+	headers = msg.splitlines()
+	for hdr in headers:
+		hfields = hdr.split(": ", 2)
+		if hfields[0]==hname:
+			return hfields[1]
+	return None
 
 class Dialog:
 	sock = None
@@ -65,7 +72,7 @@ class Dialog:
 	inv_branch = ""
 	trace_enabled = True
 	last_request = ""
-	def __init__(self, dst_addr, dst_port=5060, tcp=False, trace=True):
+	def __init__(self, dst_addr, dst_port=5060, tcp=False, trace=True, local_port=0):
 		self.dst_addr = dst_addr
 		self.dst_port = dst_port
 		self.tcp = tcp
@@ -75,7 +82,7 @@ class Dialog:
 			self.sock.connect(dst_addr, dst_port)
 		else:
 			self.sock = socket(AF_INET, SOCK_DGRAM)
-			self.sock.bind(("127.0.0.1", 0))
+			self.sock.bind(("127.0.0.1", local_port))
 		
 		self.local_ip, self.local_port = self.sock.getsockname()
 		self.trace("Dialog socket bound to " + self.local_ip + ":" + str(self.local_port))
@@ -113,6 +120,19 @@ class Dialog:
 		msg = msg + sdp
 		return msg
 
+	def create_response(self, request, code, reason, to_tag=""):
+		response = "SIP/2.0 " + str(code) + " " + reason + "\r\n"
+		lines = request.splitlines()
+		for line in lines:
+			hdr = line.split(":", 1)[0]
+			if hdr in ["Via", "From", "To", "CSeq", "Call-ID"]:
+				if hdr=="To" and to_tag!="":
+					line = line + ";tag=" + to_tag
+				elif hdr=="Via":
+					line = line + ";received=127.0.0.1"
+				response = response + line + "\r\n"
+		return response
+
 	def create_invite(self, sdp, extra_headers=""):
 		self.inv_branch = str(random.random())
 		return self.create_req("INVITE", sdp, branch=self.inv_branch, extra_headers=extra_headers)
@@ -123,15 +143,18 @@ class Dialog:
 	def create_bye(self, extra_headers=""):
 		return self.create_req("BYE", "", extra_headers)
 
-	def send_msg(self, msg):
+	def send_msg(self, msg, dst_addr=None):
 		if (is_request(msg)):
 			self.last_request = msg.split(" ", 1)[0]
-		self.trace("============== TX MSG ============= \n" + msg)
-		self.sock.sendto(msg, 0, (self.dst_addr, self.dst_port))
+		if not dst_addr:
+			dst_addr = (self.dst_addr, self.dst_port)
+		self.trace("============== TX MSG to " + str(dst_addr) + " ============= \n" + msg)
+		self.sock.sendto(msg, 0, dst_addr)
 
-	def wait_msg(self, timeout):
+	def wait_msg_from(self, timeout):
 		endtime = time.time() + timeout
 		msg = ""
+		src_addr = None
 		while time.time() < endtime:
 			readset = select([self.sock], [], [], timeout)
 			if len(readset) < 1 or not self.sock in readset[0]:
@@ -143,22 +166,25 @@ class Dialog:
 					print "select other error"
 				continue
 			try:
-				msg = self.sock.recv(2048)
+				msg, src_addr = self.sock.recvfrom(2048)
 			except:
 				print "recv() exception: ", sys.exc_info()[0]
 				continue
 
 		if msg=="":
-			return ""
+			return "", None
 		if self.last_request=="INVITE" and self.rem_tag=="":
 			self.rem_tag = get_tag(msg, "To")
 			self.rem_tag = self.rem_tag.rstrip("\r\n;")
 			if self.rem_tag != "":
 				self.rem_tag = ";tag=" + self.rem_tag
 			self.trace("=== rem_tag:" + self.rem_tag)
-		self.trace("=========== RX MSG ===========\n" + msg)
-		return msg
+		self.trace("=========== RX MSG from " + str(src_addr) +  " ===========\n" + msg)
+		return (msg, src_addr)
 	
+	def wait_msg(self, timeout):
+		return self.wait_msg_from(timeout)[0]
+		
 	# Send request and wait for final response
 	def send_request_wait(self, msg, timeout):
 		t1 = 1.0
@@ -235,4 +261,70 @@ class SendtoCfg:
 		self.extra_headers = extra_headers
 		self.inst_param = cfg.InstanceParam("pjsua", pjsua_args)
 		self.inst_param.enable_buffer = enable_buffer 
+
+
+class RecvfromTransaction:
+	# The test title for this transaction
+	title = ""
+	# Optinal list of pjsua command and optional expect patterns 
+	# to be invoked to make pjsua send a request
+	# Sample:
+	#	(to make call and wait for INVITE to be sent)
+	#	cmds = [ ["m"], ["sip:127.0.0.1", "INVITE sip:"]  ]
+	cmds = []
+	# Check if the CSeq must be greater than last Cseq?
+	check_cseq = True
+	# List of RE patterns that must exists in incoming request
+	include = []
+	# List of RE patterns that MUST NOT exist in incoming request
+	exclude = []
+	# Response code to send
+	resp_code = 0
+	# Additional list of headers to be sent on the response
+	# Note: no need to add CRLF on the header
+	resp_hdr = []
+	# Message body. This should include the Content-Type header too.
+	# Sample:
+	#	body = """Content-Type: application/sdp\r\n
+	#	\r\n
+	#	v=0\r\n
+	#	...
+	#	"""
+	body = None
+	# Pattern to be expected on pjsua when receiving the response
+	expect = ""
+	
+	def __init__(self, title, resp_code, check_cseq=True,
+			include=[], exclude=[], cmds=[], resp_hdr=[], resp_body=None, expect=""):
+		self.title = title
+		self.cmds = cmds
+		self.include = include
+		self.exclude = exclude
+		self.resp_code = resp_code
+		self.resp_hdr = resp_hdr
+		self.resp_body = resp_body
+		self.expect = expect
+			
+
+class RecvfromCfg:
+	# Test name
+	name = ""
+	# pjsua InstanceParam
+	inst_param = None
+	# List of RecvfromTransaction
+	transaction = None
+	# Use TCP?
+	tcp = False
+
+	# Note:
+	#  Any "$PORT" string in the pjsua_args will be replaced
+	#  by server port
+	def __init__(self, name, pjsua_args, transaction, tcp=False):
+		self.name = name
+		self.inst_param = cfg.InstanceParam("pjsua", pjsua_args)
+		self.transaction = transaction
+		self.tcp=tcp
+
+
+
 
