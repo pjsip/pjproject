@@ -49,6 +49,10 @@ for f in os.listdir("scripts-media-playrec"):
 for f in os.listdir("scripts-pesq"):
     tests.append("mod_pesq.py scripts-pesq/" + f)
 
+# Add recvfrom tests
+for f in os.listdir("scripts-recvfrom"):
+    tests.append("mod_recvfrom.py scripts-recvfrom/" + f)
+
 # Filter-out excluded tests
 for pat in excluded_tests:
     tests = [t for t in tests if t.find(pat)==-1]
