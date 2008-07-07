@@ -105,7 +105,8 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjmedia pjmedia-codec pjsdp pjmedia-test
+TARGETS := pjmedia pjmedia-codec pjsdp
+#pjmedia-test
 
 all: $(TARGETS)
 
