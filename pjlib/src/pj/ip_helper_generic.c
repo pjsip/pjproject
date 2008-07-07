@@ -90,6 +90,11 @@ static pj_status_t if_enum_by_af(int af,
 	    continue; /* Skip loopback interface */
 	}
 
+	if (ad==NULL) {
+	    TRACE_((THIS_FILE, "  NULL address ignored"));
+	    continue; /* reported to happen on Linux 2.6.25.9 */
+	}
+
 	if (ad->sa_family != af) {
 	    TRACE_((THIS_FILE, "  address %s ignored (af=%d)", 
 		    get_addr(ad), ad->sa_family));
