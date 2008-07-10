@@ -17,8 +17,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-#ifndef pjmedia_circ_buf_H
-#define pjmedia_circ_buf_H
+#ifndef __PJMEDIA_CIRC_BUF_H__
+#define __PJMEDIA_CIRC_BUF_H__
 
 /**
  * @file circbuf.h
@@ -150,8 +150,8 @@ PJ_INLINE(void) pjmedia_circ_buf_set_len(pjmedia_circ_buf *circbuf,
  * @param count		    Distance from current read pointer, can only be
  *			    possitive number, in samples.
  *
- * @return		    PJ_SUCCESS when successful, otherwise the appropriate 
- *			    error will be returned.
+ * @return		    PJ_SUCCESS when successful, otherwise 
+ *			    the appropriate error will be returned.
  */
 PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_read_ptr(pjmedia_circ_buf *circbuf, 
 						     unsigned count)
@@ -179,8 +179,8 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_read_ptr(pjmedia_circ_buf *circbuf,
  * @param count		    Distance from current write pointer, can only be
  *			    possitive number, in samples.
  *
- * @return		    PJ_SUCCESS when successful, otherwise the appropriate 
- *			    error will be returned.
+ * @return		    PJ_SUCCESS when successful, otherwise 
+ *			    the appropriate error will be returned.
  */
 PJ_INLINE(pj_status_t) pjmedia_circ_buf_adv_write_ptr(pjmedia_circ_buf *circbuf,
 						      unsigned count)
@@ -222,7 +222,8 @@ PJ_INLINE(void) pjmedia_circ_buf_get_read_regions(pjmedia_circ_buf *circbuf,
 	*reg2_len = 0;
     }
 
-    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 && circbuf->len == 0));
+    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 && 
+					      circbuf->len == 0));
     PJMEDIA_CIRC_BUF_CHECK(*reg1_len + *reg2_len == circbuf->len);
 }
 
@@ -257,8 +258,10 @@ PJ_INLINE(void) pjmedia_circ_buf_get_write_regions(pjmedia_circ_buf *circbuf,
 	*reg2_len = 0;
     }
 
-    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 && circbuf->len == 0));
-    PJMEDIA_CIRC_BUF_CHECK(*reg1_len + *reg2_len == circbuf->capacity - circbuf->len);
+    PJMEDIA_CIRC_BUF_CHECK(*reg1_len != 0 || (*reg1_len == 0 && 
+					      circbuf->len == 0));
+    PJMEDIA_CIRC_BUF_CHECK(*reg1_len + *reg2_len == circbuf->capacity - 
+			   circbuf->len);
 }
 
 
@@ -269,8 +272,8 @@ PJ_INLINE(void) pjmedia_circ_buf_get_write_regions(pjmedia_circ_buf *circbuf,
  * @param data		    Buffer to store the read audio samples.
  * @param count		    Number of samples being read.
  *
- * @return		    PJ_SUCCESS when successful, otherwise the appropriate 
- *			    error will be returned.
+ * @return		    PJ_SUCCESS when successful, otherwise 
+ *			    the appropriate error will be returned.
  */
 PJ_INLINE(pj_status_t) pjmedia_circ_buf_read(pjmedia_circ_buf *circbuf, 
 					     pj_int16_t *data, 
@@ -303,8 +306,8 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_read(pjmedia_circ_buf *circbuf,
  * @param data		    Audio samples to be written.
  * @param count		    Number of samples being written.
  *
- * @return		    PJ_SUCCESS when successful, otherwise the appropriate 
- *			    error will be returned.
+ * @return		    PJ_SUCCESS when successful, otherwise
+ *			    the appropriate error will be returned.
  */
 PJ_INLINE(pj_status_t) pjmedia_circ_buf_write(pjmedia_circ_buf *circbuf, 
 					      pj_int16_t *data, 
@@ -328,6 +331,99 @@ PJ_INLINE(pj_status_t) pjmedia_circ_buf_write(pjmedia_circ_buf *circbuf,
 
     return pjmedia_circ_buf_adv_write_ptr(circbuf, count);
 }
+
+
+/**
+ * Copy audio samples from the circular buffer without changing its state. 
+ *
+ * @param circbuf	    The circular buffer.
+ * @param start_idx	    Starting sample index to be copied.
+ * @param data		    Buffer to store the read audio samples.
+ * @param count		    Number of samples being read.
+ *
+ * @return		    PJ_SUCCESS when successful, otherwise 
+ *			    the appropriate error will be returned.
+ */
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_copy(pjmedia_circ_buf *circbuf, 
+					     unsigned start_idx,
+					     pj_int16_t *data, 
+					     unsigned count)
+{
+    pj_int16_t *reg1, *reg2;
+    unsigned reg1cnt, reg2cnt;
+
+    /* Data in the buffer is less than requested */
+    if (count + start_idx > circbuf->len)
+	return PJ_ETOOBIG;
+
+    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt, 
+				      &reg2, &reg2cnt);
+    if (reg1cnt > start_idx) {
+	unsigned tmp_len;
+	tmp_len = reg1cnt - start_idx;
+	if (tmp_len > count)
+	    tmp_len = count;
+	pjmedia_copy_samples(data, reg1 + start_idx, tmp_len);
+	if (tmp_len < count)
+	    pjmedia_copy_samples(data + tmp_len, reg2, count - tmp_len);
+    } else {
+	pjmedia_copy_samples(data, reg2 + start_idx - reg1cnt, count);
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/**
+ * Pack the buffer so the first sample will be in the beginning of the buffer.
+ * This will also make the buffer contiguous.
+ *
+ * @param circbuf	    The circular buffer.
+ *
+ * @return		    PJ_SUCCESS when successful, otherwise 
+ *			    the appropriate error will be returned.
+ */
+PJ_INLINE(pj_status_t) pjmedia_circ_buf_pack_buffer(pjmedia_circ_buf *circbuf)
+{
+    pj_int16_t *reg1, *reg2;
+    unsigned reg1cnt, reg2cnt;
+    unsigned gap;
+
+    pjmedia_circ_buf_get_read_regions(circbuf, &reg1, &reg1cnt, 
+				      &reg2, &reg2cnt);
+
+    /* Check if not contigue */
+    if (reg2cnt != 0) {
+	/* Check if no space left to roll the buffer 
+	 * (or should this function provide temporary buffer?)
+	 */
+	gap = circbuf->capacity - pjmedia_circ_buf_get_len(circbuf);
+	if (gap == 0)
+	    return PJ_ETOOBIG;
+
+	/* Roll buffer left using the gap until reg2cnt == 0 */
+	do {
+	    if (gap > reg2cnt)
+		gap = reg2cnt;
+	    pjmedia_move_samples(reg1 - gap, reg1, reg1cnt);
+	    pjmedia_copy_samples(reg1 + reg1cnt - gap, reg2, gap);
+	    if (gap < reg2cnt)
+		pjmedia_move_samples(reg2, reg2 + gap, reg2cnt - gap);
+	    reg1 -= gap;
+	    reg1cnt += gap;
+	    reg2cnt -= gap;
+	} while (reg2cnt > 0);
+    }
+
+    /* Finally, Shift samples to the left edge */
+    if (reg1 != circbuf->buf)
+	pjmedia_move_samples(circbuf->buf, reg1, 
+			     pjmedia_circ_buf_get_len(circbuf));
+    circbuf->start = circbuf->buf;
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_END_DECL
 
