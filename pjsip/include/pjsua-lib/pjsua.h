@@ -833,6 +833,7 @@ typedef struct pjsua_callback
      # contact:	    string
      # mime_type:   string
      # body:	    string
+     # acc_id:      integer
 
      def on_pager(call_id, from, to, contact, mime_type, body):
 	    return
@@ -855,11 +856,12 @@ typedef struct pjsua_callback
      * @param mime_type	    MIME type of the message.
      * @param body	    The message content.
      * @param rdata	    The incoming MESSAGE request.
+     * @param acc_id	    Account ID most suitable for this message.
      */
     void (*on_pager2)(pjsua_call_id call_id, const pj_str_t *from,
 		      const pj_str_t *to, const pj_str_t *contact,
 		      const pj_str_t *mime_type, const pj_str_t *body,
-		      pjsip_rx_data *rdata);
+		      pjsip_rx_data *rdata, pjsua_acc_id acc_id);
 
     /**
      * Notify application about the delivery status of outgoing pager
@@ -884,6 +886,7 @@ typedef struct pjsua_callback
      # user_data:   string
      # status:	    integer
      # reason:	    string
+     # acc_id:      integer
 
      def on_pager_status(call_id, to, body, user_data, status, reason):
 	    return
@@ -913,6 +916,8 @@ typedef struct pjsua_callback
      * @param rdata	    The incoming MESSAGE response, or NULL if the
      *			    message transaction fails because of time out 
      *			    or transport error.
+     * @param acc_id	    Account ID from this the instant message was
+     *			    send.
      */
     void (*on_pager_status2)(pjsua_call_id call_id,
 			     const pj_str_t *to,
@@ -921,7 +926,8 @@ typedef struct pjsua_callback
 			     pjsip_status_code status,
 			     const pj_str_t *reason,
 			     pjsip_tx_data *tdata,
-			     pjsip_rx_data *rdata);
+			     pjsip_rx_data *rdata,
+			     pjsua_acc_id acc_id);
 
     /**
      * Notify application about typing indication.
@@ -950,6 +956,25 @@ typedef struct pjsua_callback
     void (*on_typing)(pjsua_call_id call_id, const pj_str_t *from,
 		      const pj_str_t *to, const pj_str_t *contact,
 		      pj_bool_t is_typing);
+
+    /**
+     * Notify application about typing indication.
+     *
+     * @param call_id	    Containts the ID of the call where the IM was
+     *			    sent, or PJSUA_INVALID_ID if the IM was sent
+     *			    outside call context.
+     * @param from	    URI of the sender.
+     * @param to	    URI of the destination message.
+     * @param contact	    The Contact URI of the sender, if present.
+     * @param is_typing	    Non-zero if peer is typing, or zero if peer
+     *			    has stopped typing a message.
+     * @param rdata	    The received request.
+     * @param acc_id	    Account ID most suitable for this message.
+     */
+    void (*on_typing2)(pjsua_call_id call_id, const pj_str_t *from,
+		       const pj_str_t *to, const pj_str_t *contact,
+		       pj_bool_t is_typing, pjsip_rx_data *rdata,
+		       pjsua_acc_id acc_id);
 
     /**
      * Callback when the library has finished performing NAT type

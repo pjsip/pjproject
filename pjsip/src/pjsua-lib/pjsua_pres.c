@@ -505,7 +505,7 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
 
     uapres = (pjsua_srv_pres*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (uapres) {
-	PJ_LOG(3,(THIS_FILE, "Server subscription to %s is %s",
+	PJ_LOG(4,(THIS_FILE, "Server subscription to %s is %s",
 		  uapres->remote, pjsip_evsub_get_state_name(sub)));
 
 	if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
@@ -983,7 +983,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 
     buddy = (pjsua_buddy*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (buddy) {
-	PJ_LOG(3,(THIS_FILE, 
+	PJ_LOG(4,(THIS_FILE, 
 		  "Presence subscription to %.*s is %s",
 		  (int)pjsua_var.buddy[buddy->index].uri.slen,
 		  pjsua_var.buddy[buddy->index].uri.ptr, 

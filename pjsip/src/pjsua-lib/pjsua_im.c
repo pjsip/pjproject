@@ -191,6 +191,21 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 					     is_typing);
 	}
 
+	if (pjsua_var.ua_cfg.cb.on_typing2) {
+	    pjsua_acc_id acc_id;
+
+	    if (call_id == PJSUA_INVALID_ID) {
+		acc_id = pjsua_acc_find_for_incoming(rdata);
+	    } else {
+		pjsua_call *call = &pjsua_var.calls[call_id];
+		acc_id = call->acc_id;
+	    }
+
+
+	    (*pjsua_var.ua_cfg.cb.on_typing2)(call_id, from, to, &contact,
+					      is_typing, rdata, acc_id);
+	}
+
     } else {
 	pj_str_t mime_type;
 	char buf[256];
@@ -219,8 +234,18 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	}
 
 	if (pjsua_var.ua_cfg.cb.on_pager2) {
+	    pjsua_acc_id acc_id;
+
+	    if (call_id == PJSUA_INVALID_ID) {
+		acc_id = pjsua_acc_find_for_incoming(rdata);
+	    } else {
+		pjsua_call *call = &pjsua_var.calls[call_id];
+		acc_id = call->acc_id;
+	    }
+
 	    (*pjsua_var.ua_cfg.cb.on_pager2)(call_id, from, to, &contact, 
-					     &mime_type, &text_body, rdata);
+					     &mime_type, &text_body, rdata,
+					     acc_id);
 	}
     }
 }
@@ -389,7 +414,7 @@ static void im_callback(void *token, pjsip_event *e)
 						    tsx->status_code,
 						 &tsx->status_text,
 						 tsx->last_tx,
-						 rdata);
+						 rdata, im_data->acc_id);
 	}
     }
 }
