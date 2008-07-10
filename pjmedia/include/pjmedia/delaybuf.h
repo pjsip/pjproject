@@ -150,5 +150,8 @@ PJ_DECL(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf *b);
 
 PJ_END_DECL
 
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_DELAYBUF_H__ */

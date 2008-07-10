@@ -18,6 +18,7 @@
  */
 
 #include <pjmedia/delaybuf.h>
+#include <pjmedia/circbuf.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wsola.h>
 #include <pj/assert.h>
@@ -60,16 +61,12 @@ struct pjmedia_delay_buf
     /* Properties and configuration */
     char	     obj_name[PJ_MAX_OBJ_NAME];
     pj_lock_t	    *lock;		/**< Lock object.		     */
-    pj_int16_t	    *frame_buf;
     unsigned	     samples_per_frame; /**< Number of samples in one frame  */
     unsigned	     ptime;		/**< Frame time, in ms		     */
     unsigned	     channel_count;	/**< Channel count, in ms	     */
-    unsigned	     max_cnt;		/**< Max buffered samples, in samples*/
-
-    /* Buffer pointer and counter */
-    unsigned	     put_pos;		/**< Position for put op, in samples */
-    unsigned	     get_pos;		/**< Position for get op, in samples */
-    unsigned	     buf_cnt;		/**< Number of buffered samples	     */
+    pjmedia_circ_buf *circ_buf;		/**< Circular buffer to store audio
+					     samples			     */
+    unsigned	     max_cnt;		/**< Maximum samples to be buffered  */
     unsigned	     eff_cnt;		/**< Effective count of buffered 
 					     samples to keep the optimum
 					     balance between delay and 
@@ -128,11 +125,12 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
-    b->frame_buf = (pj_int16_t*)
-		    pj_pool_zalloc(pool, b->max_cnt * sizeof(pj_int16_t));
+    status = pjmedia_circ_buf_create(pool, b->max_cnt, &b->circ_buf);
+    if (status != PJ_SUCCESS)
+	return status;
 
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
-				  PJMEDIA_WSOLA_NO_PLC, &b->wsola);
+				  0, &b->wsola);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -168,56 +166,30 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf *b)
  */
 static void shrink_buffer(pjmedia_delay_buf *b, unsigned erase_cnt)
 {
+    pj_int16_t *buf1, *buf2;
     unsigned buf1len;
     unsigned buf2len;
     pj_status_t status;
 
-    pj_assert(b && erase_cnt && b->buf_cnt);
+    pj_assert(b && erase_cnt && pjmedia_circ_buf_get_len(b->circ_buf));
 
-    if (b->get_pos < b->put_pos) {
-	/* sssss .. sssss
-	 *  ^          ^
-	 *  G          P
-	 */
-	buf1len = b->put_pos - b->get_pos;
-	buf2len = 0;
-    } else {
-	/* sssss .. sssss
-	 *  ^ ^
-	 *  P G
-	 */
-	buf1len = b->max_cnt - b->get_pos;
-	buf2len = b->put_pos;
-    }
-
-    /* Consistency checking */
-    pj_assert((buf1len + buf2len) == b->buf_cnt);
-
-    if (buf1len != 0)
-	status = pjmedia_wsola_discard(b->wsola, 
-				       &b->frame_buf[b->get_pos], buf1len,
-				       b->frame_buf, buf2len,
-				       &erase_cnt);
-    else
-	status = pjmedia_wsola_discard(b->wsola, 
-				       b->frame_buf, buf2len,
-				       NULL, 0,
-				       &erase_cnt);
+    pjmedia_circ_buf_get_read_regions(b->circ_buf, &buf1, &buf1len, 
+				      &buf2, &buf2len);
+    status = pjmedia_wsola_discard(b->wsola, buf1, buf1len, buf2, buf2len,
+				   &erase_cnt);
 
     if ((status == PJ_SUCCESS) && (erase_cnt > 0)) {
-	/* WSOLA discard will shrink only the second buffer, but it may
-	 * also shrink first buffer if second buffer is 'destroyed', so
-	 * it is safe to just set the new put_pos.
+	/* WSOLA discard will manage the first buffer to be full, unless 
+	 * erase_cnt is greater than second buffer length. So it is safe
+	 * to just set the circular buffer length.
 	 */
-	if (b->put_pos >= erase_cnt)
-	    b->put_pos -= erase_cnt;
-	else
-	    b->put_pos = b->max_cnt - (erase_cnt - b->put_pos);
 
-	b->buf_cnt -= erase_cnt;
+	pjmedia_circ_buf_set_len(b->circ_buf, 
+				 pjmedia_circ_buf_get_len(b->circ_buf) - 
+				 erase_cnt);
 
 	PJ_LOG(5,(b->obj_name,"%d samples reduced, buf_cnt=%d", 
-	       erase_cnt, b->buf_cnt));
+	       erase_cnt, pjmedia_circ_buf_get_len(b->circ_buf)));
     }
 }
 
@@ -265,13 +237,17 @@ static void update(pjmedia_delay_buf *b, enum OP op)
     }
 
     /* See if we need to shrink the buffer to reduce delay */
-    if (b->buf_cnt > b->samples_per_frame + b->eff_cnt) {
+    if (pjmedia_circ_buf_get_len(b->circ_buf) > 
+	b->samples_per_frame + b->eff_cnt)
+    {
 	unsigned erase_cnt = b->samples_per_frame >> 1;
-	unsigned old_buf_cnt = b->buf_cnt;
+	unsigned old_buf_cnt = pjmedia_circ_buf_get_len(b->circ_buf);
 
 	shrink_buffer(b, erase_cnt);
 	PJ_LOG(4,(b->obj_name,"Buffer size adjusted from %d to %d (eff_cnt=%d)",
-	          old_buf_cnt, b->buf_cnt, b->eff_cnt));
+	          old_buf_cnt,
+		  pjmedia_circ_buf_get_len(b->circ_buf),
+		  b->eff_cnt));
     }
 }
 
@@ -293,13 +269,15 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
     }
 
     /* Overflow checking */
-    if (b->buf_cnt + b->samples_per_frame > b->max_cnt)
+    if (pjmedia_circ_buf_get_len(b->circ_buf) + b->samples_per_frame > 
+	b->max_cnt)
     {
 	unsigned erase_cnt;
 	
 	/* shrink one frame or just the diff? */
 	//erase_cnt = b->samples_per_frame;
-	erase_cnt = b->buf_cnt + b->samples_per_frame - b->max_cnt;
+	erase_cnt = pjmedia_circ_buf_get_len(b->circ_buf) + 
+		    b->samples_per_frame - b->max_cnt;
 
 	shrink_buffer(b, erase_cnt);
 
@@ -307,36 +285,21 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
 	 * delaybuf needs to drop eldest samples, this is bad since the voice
 	 * samples get rough transition which may produce tick noise.
 	 */
-	if (b->buf_cnt + b->samples_per_frame > b->max_cnt) {
-	    erase_cnt = b->buf_cnt + b->samples_per_frame - b->max_cnt;
+	if (pjmedia_circ_buf_get_len(b->circ_buf) + b->samples_per_frame > 
+	    b->max_cnt) 
+	{
+	    erase_cnt = pjmedia_circ_buf_get_len(b->circ_buf) + 
+			b->samples_per_frame - b->max_cnt;
 
-	    b->buf_cnt -= erase_cnt;
-
-	    /* Shift get_pos forward */
-	    b->get_pos = (b->get_pos + erase_cnt) % b->max_cnt;
+	    pjmedia_circ_buf_adv_read_ptr(b->circ_buf, erase_cnt);
 
 	    PJ_LOG(4,(b->obj_name,"Shrinking failed or insufficient, dropping"
-		      " %d eldest samples, buf_cnt=%d", erase_cnt, b->buf_cnt));
+		      " %d eldest samples, buf_cnt=%d", erase_cnt, 
+		      pjmedia_circ_buf_get_len(b->circ_buf)));
 	}
     }
 
-    /* put the frame on put_pos */
-    if (b->put_pos + b->samples_per_frame <= b->max_cnt) {
-	pjmedia_copy_samples(&b->frame_buf[b->put_pos], frame, 
-			     b->samples_per_frame);
-    } else {
-	int remainder = b->put_pos + b->samples_per_frame - b->max_cnt;
-
-	pjmedia_copy_samples(&b->frame_buf[b->put_pos], frame, 
-			     b->samples_per_frame - remainder);
-	pjmedia_copy_samples(&b->frame_buf[0], 
-			     &frame[b->samples_per_frame - remainder], 
-			     remainder);
-    }
-
-    /* Update put_pos & buf_cnt */
-    b->put_pos = (b->put_pos + b->samples_per_frame) % b->max_cnt;
-    b->buf_cnt += b->samples_per_frame;
+    pjmedia_circ_buf_write(b->circ_buf, frame, b->samples_per_frame);
 
     pj_lock_release(b->lock);
     return PJ_SUCCESS;
@@ -354,59 +317,36 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
     update(b, OP_GET);
 
     /* Starvation checking */
-    if (b->buf_cnt < b->samples_per_frame) {
+    if (pjmedia_circ_buf_get_len(b->circ_buf) < b->samples_per_frame) {
 
 	PJ_LOG(4,(b->obj_name,"Underflow, buf_cnt=%d, will generate 1 frame",
-		  b->buf_cnt));
+		  pjmedia_circ_buf_get_len(b->circ_buf)));
 
 	status = pjmedia_wsola_generate(b->wsola, frame);
 
 	if (status == PJ_SUCCESS) {
 	    TRACE__((b->obj_name,"Successfully generate 1 frame"));
-	    if (b->buf_cnt == 0) {
+	    if (pjmedia_circ_buf_get_len(b->circ_buf) == 0) {
 		pj_lock_release(b->lock);
 		return PJ_SUCCESS;
 	    }
 
 	    /* Put generated frame into buffer */
-	    if (b->put_pos + b->samples_per_frame <= b->max_cnt) {
-		pjmedia_copy_samples(&b->frame_buf[b->put_pos], frame, 
-				     b->samples_per_frame);
-	    } else {
-		int remainder = b->put_pos + b->samples_per_frame - b->max_cnt;
-
-		pjmedia_copy_samples(&b->frame_buf[b->put_pos], &frame[0], 
-				     b->samples_per_frame - remainder);
-		pjmedia_copy_samples(&b->frame_buf[0], 
-				     &frame[b->samples_per_frame - remainder], 
-				     remainder);
-	    }
-    	
-	    b->put_pos = (b->put_pos + b->samples_per_frame) % b->max_cnt;
-	    b->buf_cnt += b->samples_per_frame;
+	    pjmedia_circ_buf_write(b->circ_buf, frame, b->samples_per_frame);
 
 	} else {
+	    unsigned buf_len = pjmedia_circ_buf_get_len(b->circ_buf);
+	    
 	    /* Give all what delay buffer has, then pad with zeroes */
 	    PJ_LOG(4,(b->obj_name,"Error generating frame, status=%d", 
 		      status));
 
-	    if (b->get_pos + b->buf_cnt <= b->max_cnt) {
-		pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos], b->buf_cnt);
-	    } else {
-		int remainder = b->get_pos + b->buf_cnt - b->max_cnt;
+	    pjmedia_circ_buf_read(b->circ_buf, frame, buf_len);
+	    pjmedia_zero_samples(&frame[buf_len], 
+				 b->samples_per_frame - buf_len);
 
-		pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos],
-				     b->buf_cnt - remainder);
-		pjmedia_copy_samples(&frame[b->buf_cnt - remainder],
-				     &b->frame_buf[0], remainder);
-	    }
-
-	    pjmedia_zero_samples(&frame[b->buf_cnt], 
-				 b->samples_per_frame - b->buf_cnt);
-
-	    /* Delay buf is empty */
-	    b->get_pos = b->put_pos = 0;
-	    b->buf_cnt = 0;
+	    /* The buffer is empty now, reset it */
+	    pjmedia_circ_buf_reset(b->circ_buf);
 
 	    pj_lock_release(b->lock);
 
@@ -414,21 +354,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
 	}
     }
 
-    if (b->get_pos + b->samples_per_frame <= b->max_cnt) {
-	pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos], 
-			     b->samples_per_frame);
-    } else {
-	int remainder = b->get_pos + b->samples_per_frame - b->max_cnt;
-
-	pjmedia_copy_samples(frame, &b->frame_buf[b->get_pos],
-			     b->samples_per_frame - remainder);
-	pjmedia_copy_samples(&frame[b->samples_per_frame - remainder],
-			     &b->frame_buf[0], 
-			     remainder);
-    }
-
-    b->get_pos = (b->get_pos + b->samples_per_frame) % b->max_cnt;
-    b->buf_cnt -= b->samples_per_frame;
+    pjmedia_circ_buf_read(b->circ_buf, frame, b->samples_per_frame);
 
     pj_lock_release(b->lock);
 
@@ -444,9 +370,10 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b)
 
     b->recalc_timer = RECALC_TIME;
 
-    /* clean up buffer */
-    b->buf_cnt = 0;
-    b->put_pos = b->get_pos = 0;
+    /* Reset buffer */
+    pjmedia_circ_buf_reset(b->circ_buf);
+
+    /* Reset WSOLA */
     pjmedia_wsola_reset(b->wsola, 0);
 
     pj_lock_release(b->lock);
