@@ -136,7 +136,7 @@ PJ_DECL(pj_status_t) pjmedia_wsola_reset(pjmedia_wsola *wsola,
  * @return	    PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_save(pjmedia_wsola *wsola, 
-					short frm[], 
+					pj_int16_t frm[], 
 					pj_bool_t prev_lost);
 
 /**
@@ -148,7 +148,7 @@ PJ_DECL(pj_status_t) pjmedia_wsola_save(pjmedia_wsola *wsola,
  * @return	    PJ_SUCCESS normally.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola, 
-					    short frm[]);
+					    pj_int16_t frm[]);
 
 
 /**
@@ -174,9 +174,9 @@ PJ_DECL(pj_status_t) pjmedia_wsola_generate(pjmedia_wsola *wsola,
  *		    of the parameters are not valid.
  */
 PJ_DECL(pj_status_t) pjmedia_wsola_discard(pjmedia_wsola *wsola, 
-					   short buf1[],
+					   pj_int16_t buf1[],
 					   unsigned buf1_cnt, 
-					   short buf2[],
+					   pj_int16_t buf2[],
 					   unsigned buf2_cnt,
 					   unsigned *erase_cnt);
 
