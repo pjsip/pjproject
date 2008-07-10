@@ -39,7 +39,7 @@
  */
 
 /* Buffer size including history, in frames */
-#define FRAME_CNT	5
+#define FRAME_CNT	6
 
 /* Number of history frames in buffer */
 #define HIST_CNT	1.5
@@ -52,6 +52,12 @@
 
 /* Number of frames in erase buffer */
 #define ERASE_CNT	((unsigned)3)
+
+/* Minimum distance from template for find_pitch() of expansion, in frames */
+#define EXP_MIN_DIST	0.5
+
+/* Maximum distance from template for find_pitch() of expansion, in frames */
+#define EXP_MAX_DIST	HIST_CNT
 
 
 #if 0
@@ -113,6 +119,12 @@ struct pjmedia_wsola
 
     pj_uint16_t		 min_extra;	    /* Minimum extra (const)	    */
     pj_uint16_t		 expand_cnt;	    /* Consecutive expansion count  */
+    pj_uint16_t		 expand_sr_min_dist;/* Minimum distance from template 
+					       for find_pitch() on expansion
+					       (const)			    */
+    pj_uint16_t		 expand_sr_max_dist;/* Maximum distance from template 
+					       for find_pitch() on expansion
+					       (const)			    */
 
 #if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
     float		*hanning;	    /* Hanning window.		    */
@@ -479,6 +491,10 @@ PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool,
     /* Setup with PLC */
     if ((options & PJMEDIA_WSOLA_NO_PLC) == 0) {
 	wsola->min_extra = wsola->hanning_size;
+	wsola->expand_sr_min_dist = (pj_uint16_t)
+				    (EXP_MIN_DIST * wsola->samples_per_frame);
+	wsola->expand_sr_max_dist = (pj_uint16_t)
+				    (EXP_MAX_DIST * wsola->samples_per_frame);
     }
 
     /* Setup with hanning */
@@ -538,16 +554,16 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
 
     for (rep=1;; ++rep) {
 	pj_int16_t *start, *templ;
-	unsigned min_dist, max_dist, dist;
+	unsigned dist;
 
 	templ = reg1 + reg1_len - wsola->hanning_size;
 	CHECK_(templ - reg1 >= wsola->hist_size);
 
-	max_dist = wsola->hist_size;
-	min_dist = wsola->hanning_size >> 1;
-
-	start = find_pitch(templ, templ - max_dist, templ - min_dist,
-			   wsola->templ_size, 1);
+	start = find_pitch(templ, 
+			   templ - wsola->expand_sr_max_dist, 
+			   templ - wsola->expand_sr_min_dist,
+			   wsola->templ_size, 
+			   1);
 
 	/* Should we make sure that "start" is really aligned to
 	 * channel #0, in case of stereo? Probably not necessary, as
