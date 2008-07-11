@@ -1,4 +1,4 @@
-/* $Id:$ */
+/* $Id$ */
 /* 
  * Copyright (C)2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -62,7 +62,7 @@ PJ_DECL_DATA(const unsigned) PJ_GUID_STRING_LENGTH;
 /**
  * Get #PJ_GUID_STRING_LENGTH constant.
  */
-PJ_DECL(unsigned) pj_GUID_STRING_LENGTH();
+PJ_DECL(unsigned) pj_GUID_STRING_LENGTH(void);
 
 /**
  * PJ_GUID_MAX_LENGTH specifies the maximum length of GUID string,

@@ -214,12 +214,12 @@ PJ_DECL_DATA(const pjsip_method) pjsip_notify_method;
 /**
  * SUBSCRIBE method constant.
  */
-PJ_DECL(const pjsip_method*) pjsip_get_subscribe_method();
+PJ_DECL(const pjsip_method*) pjsip_get_subscribe_method(void);
 
 /**
  * NOTIFY method constant.
  */
-PJ_DECL(const pjsip_method*) pjsip_get_notify_method();
+PJ_DECL(const pjsip_method*) pjsip_get_notify_method(void);
 
 
 /**

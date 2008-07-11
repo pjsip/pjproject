@@ -65,7 +65,7 @@ PJ_BEGIN_DECL
 PJ_DECL_DATA(const pjsip_method) pjsip_refer_method;
 
 /** Get REFER method constant */
-PJ_DECL(const pjsip_method*) pjsip_get_refer_method();
+PJ_DECL(const pjsip_method*) pjsip_get_refer_method(void);
 
 
 /**

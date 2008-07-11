@@ -622,7 +622,7 @@ PJ_DECL_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 /**
  * Get #PJ_NO_MEMORY_EXCEPTION constant.
  */ 
-PJ_DECL(int) pj_NO_MEMORY_EXCEPTION();
+PJ_DECL(int) pj_NO_MEMORY_EXCEPTION(void);
 
 /**
  * This global variable points to default memory pool factory policy.
