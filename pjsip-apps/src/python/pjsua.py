@@ -2153,7 +2153,9 @@ class Lib:
 
         """
         slot = _pjsua.player_get_conf_port(player_id)
-        self._err_check("player_get_slot()", self, -1, "Invalid player id")
+        if slot < 0:
+                self._err_check("player_get_slot()", self, -1, 
+                                "Invalid player id")
         return slot
 
     def player_set_pos(self, player_id, pos):
@@ -2202,7 +2204,9 @@ class Lib:
 
         """
         slot = _pjsua.recorder_get_conf_port(rec_id)
-        self._err_check("recorder_get_slot()", self, -1, "Invalid recorder id")
+        if slot < 1:
+            self._err_check("recorder_get_slot()", self, -1, 
+                            "Invalid recorder id")
         return slot
 
     def recorder_destroy(self, rec_id):
