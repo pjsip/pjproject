@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 # Object oriented PJSUA wrapper.
 #
@@ -38,7 +38,15 @@ import _pjsua
 import thread
 
 class Error:
-    "Error exception class"
+    """Error exception class.
+    
+    Member documentation:
+
+    op_name  -- name of the operation that generated this error.
+    obj      -- the object that generated this error.
+    err_code -- the error code.
+
+    """
     op_name = ""
     obj = None
     err_code = -1
@@ -66,7 +74,18 @@ class Error:
 #
 
 class TransportType:
-    "SIP transport type constants"
+    """SIP transport type constants.
+    
+    Member documentation:
+    UNSPECIFIED -- transport type is unknown or unspecified
+    UDP         -- UDP transport
+    TCP         -- TCP transport
+    TLS         -- TLS transport
+    IPV6        -- this is not a transport type but rather a flag
+                   to select the IPv6 version of a transport
+    UDP_IPV6    -- IPv6 UDP transport
+    TCP_IPV6    -- IPv6 TCP transport
+    """
     UNSPECIFIED = 0
     UDP = 1
     TCP = 2
@@ -76,18 +95,44 @@ class TransportType:
     TCP_IPV6 = TCP + IPV6
 
 class TransportFlag:
-    "Transport flags"
+    """Transport flags to indicate the characteristics of the transport.
+    
+    Member documentation:
+    
+    RELIABLE    -- transport is reliable.
+    SECURE      -- transport is secure.
+    DATAGRAM    -- transport is datagram based.
+    
+    """
     RELIABLE = 1
     SECURE = 2
     DATAGRAM = 4
 
 class CallRole:
-    "Call role constants"
+    """Call role constants.
+    
+    Member documentation:
+
+    CALLER  -- role is caller
+    CALLEE  -- role is callee
+
+    """
     CALLER = 0
     CALLEE = 1
 
 class CallState:
-    "Call state constants"
+    """Call state constants.
+    
+    Member documentation:
+
+    NULL            -- call is not initialized.
+    CALLING         -- initial INVITE is sent.
+    INCOMING        -- initial INVITE is received.
+    EARLY           -- provisional response has been sent or received.
+    CONNECTING      -- 200/OK response has been sent or received.
+    CONFIRMED       -- ACK has been sent or received.
+    DISCONNECTED    -- call is disconnected.
+    """
     NULL = 0
     CALLING = 1
     INCOMING = 2
@@ -98,7 +143,16 @@ class CallState:
 
 
 class MediaState:
-    "Call media state constants"
+    """Call media state constants.
+    
+    Member documentation:
+
+    NONE        -- media is not available.
+    ACTIVE      -- media is active.
+    LOCAL_HOLD  -- media is put on-hold by local party.
+    REMOTE_HOLD -- media is put on-hold by remote party.
+    ERROR       -- media error (e.g. ICE negotiation failure).
+    """
     NONE = 0
     ACTIVE = 1
     LOCAL_HOLD = 2
@@ -107,7 +161,15 @@ class MediaState:
 
 
 class MediaDir:
-    "Media direction constants"
+    """Media direction constants.
+    
+    Member documentation:
+
+    NONE              -- media is not active
+    ENCODING          -- media is active in transmit/encoding direction only.
+    DECODING          -- media is active in receive/decoding direction only
+    ENCODING_DECODING -- media is active in both directions.
+    """
     NONE = 0
     ENCODING = 1
     DECODING = 2
@@ -115,20 +177,45 @@ class MediaDir:
 
 
 class PresenceActivity:
-    "Presence activities constants"
+    """Presence activities constants.
+    
+    Member documentation:
+
+    UNKNOWN -- the person activity is unknown
+    AWAY    -- the person is currently away
+    BUSY    -- the person is currently engaging in other activity
+    """
     UNKNOWN = 0
     AWAY = 1
     BUSY = 2
 
 class TURNConnType:
-    "TURN connection type constants"
+    """These constants specifies the connection type to TURN server.
+    
+    Member documentation:
+    UDP     -- use UDP transport.
+    TCP     -- use TCP transport.
+    TLS     -- use TLS transport.
+    """
     UDP = 17
     TCP = 6
     TLS = 255
 
 
 class UAConfig:
-    "User agent configuration class"
+    """User agent configuration to be specified in Lib.init().
+    
+    Member documentation:
+
+    max_calls   -- maximum number of calls to be supported.
+    nameserver  -- array of nameserver hostnames or IP addresses. Nameserver
+                   must be configured if DNS SRV resolution is desired.
+    stun_domain -- if nameserver is configured, this can be used to query
+                   the STUN server with DNS SRV.
+    stun_host   -- the hostname or IP address of the STUN server. This will
+                   also be used if DNS SRV resolution for stun_domain fails.
+    user_agent  -- Optionally specify the user agent name.
+    """
     max_calls = 4
     nameserver = []
     stun_domain = ""
@@ -155,7 +242,23 @@ class UAConfig:
 
 
 class LogConfig:
-    "Logging configuration class."
+    """Logging configuration to be specified in Lib.init().
+    
+    Member documentation:
+
+    msg_logging   -- specify if SIP messages should be logged. Set to
+                     True.
+    level         -- specify the input verbosity level.
+    console_level -- specify the output verbosity level.
+    decor         -- specify log decoration.
+    filename      -- specify the log filename.
+    callback      -- specify callback to be called to write the logging
+                     messages. Sample function:
+
+                     def log_cb(level, str, len):
+                        print str,
+
+    """
     msg_logging = True
     level = 5
     console_level = 5
@@ -195,7 +298,48 @@ class LogConfig:
 
 
 class MediaConfig:
-    "Media configuration class."
+    """Media configuration to be specified in Lib.init().
+    
+    Member documentation:
+    
+    clock_rate          -- specify the core clock rate of the audio,
+                           most notably the conference bridge.
+    snd_clock_rate      -- optionally specify different clock rate for
+                           the sound device.
+    snd_auto_close_time -- specify the duration in seconds when the
+                           sound device should be closed after inactivity
+                           period.
+    channel_count       -- specify the number of channels to open the sound
+                           device and the conference bridge.
+    audio_frame_ptime   -- specify the length of audio frames in millisecond.
+    max_media_ports     -- specify maximum number of audio ports to be
+                           supported by the conference bridge.
+    quality             -- specify the audio quality setting (1-10)
+    ptime               -- specify the audio packet length of transmitted
+                           RTP packet.
+    no_vad              -- disable Voice Activity Detector (VAD) or Silence
+                           Detector (SD)
+    ilbc_mode           -- specify iLBC codec mode (must be 30 for now)
+    tx_drop_pct         -- randomly drop transmitted RTP packets (for
+                           simulation). Number is in percent.
+    rx_drop_pct         -- randomly drop received RTP packets (for
+                           simulation). Number is in percent.
+    ec_options          -- Echo Canceller option (specify zero).
+    ec_tail_len         -- specify Echo Canceller tail length in milliseconds.
+                           Value zero will disable the echo canceller.
+    jb_min              -- specify the minimum jitter buffer size in
+                           milliseconds. Put -1 for default.
+    jb_max              -- specify the maximum jitter buffer size in
+                           milliseconds. Put -1 for default.
+    enable_ice          -- enable Interactive Connectivity Establishment (ICE)
+    enable_turn         -- enable TURN relay. TURN server settings must also
+                           be configured.
+    turn_server         -- specify the domain or hostname or IP address of
+                           the TURN server, in "host[:port]" format.
+    turn_conn_type      -- specify connection type to the TURN server, from
+                           the TURNConnType constant.
+    turn_cred           -- specify AuthCred for the TURN credential.
+    """
     clock_rate = 16000
     snd_clock_rate = 0
     snd_auto_close_time = 5
@@ -280,7 +424,18 @@ class MediaConfig:
 
 
 class TransportConfig:
-    "SIP transport configuration class."
+    """SIP transport configuration class.
+    
+    Member configuration:
+
+    port        -- port number.
+    bound_addr  -- optionally specify the address to bind the socket to.
+                   Default is empty to bind to INADDR_ANY.
+    public_addr -- optionally override the published address for this
+                   transport. If empty, the default behavior is to get
+                   the public address from STUN or from the selected
+                   local interface. Format is "host:port".
+    """
     port = 0
     bound_addr = ""
     public_addr = ""
@@ -301,6 +456,17 @@ class TransportConfig:
 
 class TransportInfo:
     """SIP transport info.
+    
+    Member documentation:
+
+    type        -- transport type, from TransportType constants.
+    description -- longer description for this transport.
+    is_reliable -- True if transport is reliable.
+    is_secure   -- True if transport is secure.
+    is_datagram -- True if transport is datagram based.
+    host        -- the IP address of this transport.
+    port        -- the port number.
+    ref_cnt     -- number of objects referencing this transport.
     """
     type = ""
     description = ""
@@ -345,33 +511,65 @@ class Transport:
         return TransportInfo(ti)
 
     def enable(self):
+        """Enable this transport."""
         err = _pjsua.transport_set_enable(self._id, True)
         self._lib._err_check("enable()", self, err)
 
     def disable(self):
+        """Disable this transport."""
         err = _pjsua.transport_set_enable(self._id, 0)
         self._lib._err_check("disable()", self, err)
 
     def close(self, force=False):
+        """Close and destroy this transport.
+
+        Keyword argument:
+        force   -- force deletion of this transport (not recommended).
+        """
         err = _pjsua.transport_close(self._id, force)
         self._lib._err_check("close()", self, err)
 
 
 class SIPUri:
+    """Helper class to parse the most important components of SIP URI.
+
+    Member documentation:
+
+    scheme    -- URI scheme ("sip" or "sips")
+    user      -- user part of the URI (may be empty)
+    host      -- host name part
+    port      -- optional port number (zero if port is not specified).
+    transport -- transport parameter, or empty if transport is not
+                 specified.
+
+    """
     scheme = ""
     user = ""
     host = ""
     port = 0
     transport = ""
 
-    def __init__(self, uri):
-        self.decode(uri)
+    def __init__(self, uri=None):
+        if uri:
+            self.decode(uri)
 
     def decode(self, uri):
+        """Parse SIP URL.
+
+        Keyword argument:
+        uri -- the URI string.
+
+        """
         self.scheme, self.user, self.host, self.port, self.transport = \
             _pjsua.parse_simple_uri(uri)
 
     def encode(self):
+        """Encode this object into SIP URI string.
+
+        Return:
+            URI string.
+
+        """
         output = self.scheme + ":"
         if self.user and len(self.user):
             output = output + self.user + "@"
@@ -382,8 +580,18 @@ class SIPUri:
             output = output + ";transport=" + self.transport
         return output
 
+
 class AuthCred:
-    "Authentication credential."
+    """Authentication credential for SIP or TURN account.
+    
+    Member documentation:
+
+    scheme      -- authentication scheme (default is "Digest")
+    realm       -- realm
+    username    -- username
+    passwd_type -- password encoding (zero for plain-text)
+    passwd      -- the password
+    """
     scheme = "Digest"
     realm = "*"
     username = ""
@@ -399,7 +607,56 @@ class AuthCred:
 
 
 class AccountConfig:
-    """ This describes account configuration.
+    """ This describes account configuration to create an account.
+
+    Member documentation:
+
+    priority                -- account priority for matching incoming
+                               messages.
+    id                      -- SIP URI of this account. This setting is
+                               mandatory.
+    force_contact           -- force to use this URI as Contact URI. Setting
+                               this value is generally not recommended.
+    reg_uri                 -- specify the registrar URI. Mandatory if
+                               registration is required.
+    reg_timeout             -- specify the SIP registration refresh interval
+                               in seconds.
+    require_100rel          -- specify if reliable provisional response is
+                               to be enforced (with Require header).
+    publish_enabled         -- specify if PUBLISH should be used. When
+                               enabled, the PUBLISH will be sent to the
+                               registrar.
+    pidf_tuple_id           -- optionally specify the tuple ID in outgoing
+                               PIDF document.
+    proxy                   -- list of proxy URI.
+    auth_cred               -- list of AuthCred containing credentials to
+                               authenticate against the registrars and
+                               the proxies.
+    auth_initial_send       -- specify if empty Authorization header should be
+                               sent. May be needed for IMS.
+    auth_initial_algorithm  -- when auth_initial_send is enabled, optionally
+                               specify the authentication algorithm to use.
+                               Valid values are "md5", "akav1-md5", or
+                               "akav2-md5". 
+    transport_id            -- optionally specify the transport ID to be used
+                               by this account. Shouldn't be needed unless
+                               for specific requirements (e.g. in multi-homed
+                               scenario).
+    allow_contact_rewrite   -- specify whether the account should learn its
+                               Contact address from REGISTER response and 
+                               update the registration accordingly. Default is
+                               True.
+    ka_interval             -- specify the interval to send NAT keep-alive 
+                               packet.
+    ka_data                 -- specify the NAT keep-alive packet contents.
+    use_srtp                -- specify the SRTP usage policy. Valid values
+                               are: 0=disable, 1=optional, 2=mandatory.
+                               Default is 0.
+    srtp_secure_signaling   -- specify the signaling security level required
+                               by SRTP. Valid values are: 0=no secure 
+                               transport is required, 1=hop-by-hop secure
+                               transport such as TLS is required, 2=end-to-
+                               end secure transport is required (i.e. "sips").
     """
     priority = 0
     id = ""
@@ -539,6 +796,22 @@ class AccountInfo:
     """This describes Account info. Application retrives account info
     with Account.info().
 
+    Member documentation:
+
+    is_default      -- True if this is the default account.
+    uri             -- the account URI.
+    reg_active      -- True if registration is active for this account.
+    reg_expires     -- contains the current registration expiration value,
+                       in seconds.
+    reg_status      -- the registration status. If the value is less than
+                       700, it specifies SIP status code. Value greater than
+                       this specifies the error code.
+    reg_reason      -- contains the registration status text (e.g. the
+                       error message).
+    online_status   -- the account's presence online status, True if it's 
+                       publishing itself as online.
+    online_text     -- the account's presence status text.
+
     """
     is_default = False
     uri = ""
@@ -566,6 +839,11 @@ class AccountCallback:
     Derive a class from this class and register it to the Account object
     using Account.set_callback() to start receiving events from the Account
     object.
+
+    Member documentation:
+
+    account     -- the Account object.
+
     """
     account = None
 
@@ -829,6 +1107,11 @@ class CallCallback:
 
     Use Call.set_callback() method to install instance of this callback 
     class to receive event notifications from the call object.
+
+    Member documentation:
+
+    call    -- the Call object.
+
     """
     call = None
 
@@ -961,6 +1244,25 @@ class CallInfo:
     """This structure contains various information about Call.
 
     Application may retrieve this information with Call.info().
+
+    Member documentation:
+
+    role            -- CallRole
+    account         -- Account object.
+    uri             -- SIP URI of local account.
+    contact         -- local Contact URI.
+    remote_uri      -- remote SIP URI.
+    remote_contact  -- remote Contact URI
+    sip_call_id     -- call's Call-ID identification
+    state           -- CallState
+    state_text      -- state text.
+    last_code       -- last SIP status code
+    last_reason     -- text phrase for last_code
+    media_state     -- MediaState
+    media_dir       -- MediaDir
+    conf_slot       -- conference slot number for this call.
+    call_time       -- call's connected duration in seconds.
+    total_time      -- total call duration in seconds.
     """
     role = CallRole.CALLER
     account = None
@@ -1217,6 +1519,16 @@ class Call:
 class BuddyInfo:
     """This class contains information about Buddy. Application may 
     retrieve this information by calling Buddy.info().
+
+    Member documentation:
+
+    uri             -- the Buddy URI.
+    contact         -- the Buddy Contact URI, if available.
+    online_status   -- the presence online status.
+    online_text     -- the presence online status text.
+    activity        -- the PresenceActivity
+    subscribed      -- specify whether buddy's presence status is currently
+                       being subscribed.
     """
     uri = ""
     contact = ""
@@ -1242,6 +1554,10 @@ class BuddyCallback:
     """This class can be used to receive notifications about Buddy's
     presence status change. Application needs to derive a class from
     this class, and register the instance with Buddy.set_callback().
+
+    Member documentation:
+
+    buddy   -- the Buddy object.
     """
     buddy = None
 
@@ -1391,9 +1707,17 @@ class Buddy:
 
 # Sound device info
 class SoundDeviceInfo:
+    """This described the sound device info.
+
+    Member documentation:
+    name                -- device name.
+    input_channels      -- number of capture channels supported.
+    output_channels     -- number of playback channels supported.
+    default_clock_rate  -- default sampling rate.
+    """
     name = ""
     input_channels = 0
-    output_output_channels = 0
+    output_channels = 0
     default_clock_rate = 0
 
     def __init__(self, sdi):
@@ -1405,6 +1729,22 @@ class SoundDeviceInfo:
 
 # Codec info
 class CodecInfo:
+    """This describes codec info.
+
+    Member documentation:
+    name            -- codec name
+    priority        -- codec priority (0-255)
+    clock_rate      -- clock rate
+    channel_count   -- number of channels
+    avg_bps         -- average bandwidth in bits per second
+    frm_ptime       -- base frame length in milliseconds
+    ptime           -- RTP frame length in milliseconds.
+    pt              -- payload type.
+    vad_enabled     -- specify if Voice Activity Detection is currently
+                       enabled.
+    plc_enabled     -- specify if Packet Lost Concealment is currently
+                       enabled.
+    """
     name = ""
     priority = 0
     clock_rate = 0
@@ -1438,6 +1778,14 @@ class CodecInfo:
 
 # Codec parameter
 class CodecParameter:
+    """This specifies various parameters that can be configured for codec.
+
+    Member documentation:
+
+    ptime       -- specify the outgoing RTP packet length in milliseconds.
+    vad_enabled -- specify if VAD should be enabled.
+    plc_enabled -- specify if PLC should be enabled.
+    """
     ptime = 0
     vad_enabled = False
     plc_enabled = False

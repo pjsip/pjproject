@@ -2,6 +2,8 @@ from distutils.core import setup, Extension
 import os
 import sys
 
+VERSION = "0.9.0"
+
 # Fill in pj_inc_dirs
 pj_inc_dirs = []
 f = os.popen("make -f helper.mak inc_dir")
@@ -31,7 +33,7 @@ else:
 	extra_link_args = []
 
 
-setup(name="_pjsua", version="0.9",
+setup(name="_pjsua", version=VERSION,
 	ext_modules = [
 		Extension("_pjsua", 
 			  ["_pjsua.c"], 
@@ -41,4 +43,7 @@ setup(name="_pjsua", version="0.9",
 			  libraries=pj_libs,
 			  extra_link_args=extra_link_args),
 	])
+
+setup(name="pjsua", version=VERSION, py_modules=["pjsua"])
+
 

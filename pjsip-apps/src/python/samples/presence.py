@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 # Presence and instant messaging
 #
@@ -6,7 +6,6 @@
 #
 import sys
 import pjsua as pj
-import threading
 
 LOG_LEVEL = 3
 
