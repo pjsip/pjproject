@@ -19,7 +19,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
-#if PJ_POOL_DEBUG
+#if PJ_HAS_POOL_ALT_API
 
 #if PJ_HAS_MALLOC_H
 #   include <malloc.h>
@@ -41,24 +41,14 @@
 //#undef TRACE_
 
 
-struct pj_pool_mem
-{
-    struct pj_pool_mem *next;
-
-    /* data follows immediately */
-};
-
-
-struct pj_pool_t
-{
-    struct pj_pool_mem *first_mem;
-    pj_size_t		used_size;
-    pj_pool_callback   *cb;
-};
-
 
 int PJ_NO_MEMORY_EXCEPTION;
 
+
+PJ_DEF(int) pj_NO_MEMORY_EXCEPTION()
+{
+    return PJ_NO_MEMORY_EXCEPTION;
+}
 
 /* Create pool */
 PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
@@ -73,7 +63,6 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
     PJ_UNUSED_ARG(file);
     PJ_UNUSED_ARG(line);
     PJ_UNUSED_ARG(factory);
-    PJ_UNUSED_ARG(name);
     PJ_UNUSED_ARG(initial_size);
     PJ_UNUSED_ARG(increment_size);
 
@@ -81,6 +70,14 @@ PJ_DEF(pj_pool_t*) pj_pool_create_imp( const char *file, int line,
     if (!pool)
 	return NULL;
 
+    if (name) {
+	pj_ansi_strncpy(pool->obj_name, name, sizeof(pool->obj_name));
+	pool->obj_name[sizeof(pool->obj_name)-1] = '\0';
+    } else {
+	strcpy(pool->obj_name, "altpool");
+    }
+
+    pool->factory = NULL;
     pool->first_mem = NULL;
     pool->used_size = 0;
     pool->cb = callback;
@@ -184,8 +181,9 @@ PJ_DEF(void*) pj_pool_calloc_imp( const char *file, int line,
 PJ_DEF(void*) pj_pool_zalloc_imp( const char *file, int line, 
 				  pj_pool_t *pool, pj_size_t sz)
 {
-    return pj_pool_calloc_imp(file, line, pool, 1, sz);
+    return pj_pool_calloc_imp(file, line, pool, 1, sz); 
 }
 
 
-#endif	/* PJ_POOL_DEBUG */
+
+#endif	/* PJ_HAS_POOL_ALT_API */

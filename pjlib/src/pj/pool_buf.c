@@ -80,6 +80,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
 					 void *buf,
 					 pj_size_t size)
 {
+#if PJ_HAS_POOL_ALT_API == 0
     struct creation_param param;
     long align_diff;
 
@@ -105,5 +106,9 @@ PJ_DEF(pj_pool_t*) pj_pool_create_on_buf(const char *name,
 
     return pj_pool_create_int(&stack_based_factory, name, size, 0, 
 			      pj_pool_factory_default_policy.callback);
+#else
+    PJ_UNUSED_ARG(buf);
+    return pj_pool_create(NULL, name, size, size, NULL);
+#endif
 }
 
