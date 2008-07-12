@@ -677,6 +677,7 @@ static pj_status_t mod_tsx_layer_stop(void)
 				 pj_hash_this(mod_tsx_layer.htable, it);
 	pj_hash_iterator_t *next = pj_hash_next(mod_tsx_layer.htable, it);
 	if (tsx) {
+	    pjsip_tsx_terminate(tsx, PJSIP_SC_SERVICE_UNAVAILABLE);
 	    mod_tsx_layer_unregister_tsx(tsx);
 	    tsx_destroy(tsx);
 	}
