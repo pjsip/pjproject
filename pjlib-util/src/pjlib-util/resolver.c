@@ -150,8 +150,8 @@ struct cached_res
 {
     PJ_DECL_LIST_MEMBER(struct cached_res);
 
+    pj_pool_t		    *pool;	    /**< Cache's pool.		    */
     struct res_key	     key;	    /**< Resource key.		    */
-    char		     buf[RES_BUF_SZ];/**< Resource buffer.	    */
     pj_hash_entry_buf	     hbuf;	    /**< Hash buffer		    */
     pj_time_val		     expiry_time;   /**< Expiration time.	    */
     pj_dns_parsed_packet    *pkt;	    /**< The response packet.	    */
@@ -194,9 +194,6 @@ struct pj_dns_resolver
 
     /* Hash table for cached response */
     pj_hash_table_t	*hrescache;	/**< Cached response in hash table  */
-
-    /* Cached response free list */
-    struct cached_res	 res_free_nodes;
 
     /* Pending asynchronous query, hashed by transaction ID. */
     pj_hash_table_t	*hquerybyid;
@@ -295,9 +292,8 @@ PJ_DEF(pj_status_t) pj_dns_resolver_create( pj_pool_factory *pf,
 	    goto on_error;
     }
 
-    /* Response cache hash table and item list */
+    /* Response cache hash table */
     resv->hrescache = pj_hash_create(pool, RES_HASH_TABLE_SIZE);
-    pj_list_init(&resv->res_free_nodes);
 
     /* Query hash table and free list. */
     resv->hquerybyid = pj_hash_create(pool, Q_HASH_TABLE_SIZE);
@@ -351,14 +347,13 @@ on_error:
 PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 					     pj_bool_t notify)
 {
+    pj_hash_iterator_t it_buf, *it;
     PJ_ASSERT_RETURN(resolver, PJ_EINVAL);
 
     if (notify) {
 	/*
 	 * Notify pending queries if requested.
 	 */
-	pj_hash_iterator_t it_buf, *it;
-
 	it = pj_hash_first(resolver->hquerybyid, &it_buf);
 	while (it) {
 	    pj_dns_async_query *q = (pj_dns_async_query *)
@@ -375,6 +370,19 @@ PJ_DEF(pj_status_t) pj_dns_resolver_destroy( pj_dns_resolver *resolver,
 	    }
 	    it = pj_hash_next(resolver->hquerybyid, it);
 	}
+    }
+
+    /* Destroy cached entries */
+    it = pj_hash_first(resolver->hrescache, &it_buf);
+    while (it) {
+	struct cached_res *cache;
+
+	cache = (struct cached_res*) pj_hash_this(resolver->hrescache, it);
+	pj_hash_set(NULL, resolver->hrescache, &cache->key, 
+		    sizeof(cache->key), 0, NULL);
+	pj_pool_release(cache->pool);
+
+	it = pj_hash_first(resolver->hrescache, &it_buf);
     }
 
     if (resolver->own_timer && resolver->timer) {
@@ -639,6 +647,28 @@ static void init_res_key(struct res_key *key, int type, const pj_str_t *name)
 }
 
 
+/* Allocate new cache entry */
+static struct cached_res *alloc_entry(pj_dns_resolver *resolver)
+{
+    pj_pool_t *pool;
+    struct cached_res *cache;
+
+    pool = pj_pool_create(resolver->pool->factory, "dnscache",
+			  RES_BUF_SZ, 256, NULL);
+    cache = PJ_POOL_ZALLOC_T(pool, struct cached_res);
+    cache->pool = pool;
+
+    return cache;
+}
+
+/* Put unused/expired cached entry to the free list */
+static void free_entry(pj_dns_resolver *resolver, struct cached_res *cache)
+{
+    PJ_UNUSED_ARG(resolver);
+    pj_pool_release(cache->pool);
+}
+
+
 /*
  * Create and start asynchronous DNS query for a single resource.
  */
@@ -723,7 +753,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
 	pj_hash_set(NULL, resolver->hrescache, &key, sizeof(key), 0, NULL);
 
 	/* Store the entry into free nodes */
-	pj_list_push_back(&resolver->res_free_nodes, cache);
+	free_entry(resolver, cache);
 
 	/* Must continue with creating a query now */
     }
@@ -1065,16 +1095,14 @@ static void update_res_cache(pj_dns_resolver *resolver,
 			     const pj_dns_parsed_packet *pkt)
 {
     struct cached_res *cache;
-    pj_pool_t *res_pool;
     pj_uint32_t hval=0, ttl;
-    PJ_USE_EXCEPTION;
 
     /* If status is unsuccessful, clear the same entry from the cache */
     if (status != PJ_SUCCESS) {
 	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
 						  sizeof(*key), &hval);
 	if (cache)
-	    pj_list_push_back(&resolver->res_free_nodes, cache);
+	    free_entry(resolver, cache);
 	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
     }
 
@@ -1110,7 +1138,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
 	cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
 						  sizeof(*key), &hval);
 	if (cache)
-	    pj_list_push_back(&resolver->res_free_nodes, cache);
+	    free_entry(resolver, cache);
 	pj_hash_set(NULL, resolver->hrescache, key, sizeof(*key), hval, NULL);
 	return;
     }
@@ -1119,12 +1147,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
     cache = (struct cached_res *) pj_hash_get(resolver->hrescache, key, 
     					      sizeof(*key), &hval);
     if (cache == NULL) {
-	if (!pj_list_empty(&resolver->res_free_nodes)) {
-	    cache = resolver->res_free_nodes.next;
-	    pj_list_erase(cache);
-	} else {
-	    cache = PJ_POOL_ZALLOC_T(resolver->pool, struct cached_res);
-	}
+	cache = alloc_entry(resolver);
     }
 
     /* Duplicate the packet.
@@ -1133,19 +1156,10 @@ static void update_res_cache(pj_dns_resolver *resolver,
      * section since DNS A parser needs the query section to know
      * the name being requested.
      */
-    res_pool = pj_pool_create_on_buf("respool", cache->buf, sizeof(cache->buf));
-    PJ_TRY {
-	cache->pkt = NULL;
-	pj_dns_packet_dup(res_pool, pkt, 
-			  PJ_DNS_NO_NS | PJ_DNS_NO_AR,
-			  &cache->pkt);
-    }
-    PJ_CATCH_ANY {
-	PJ_LOG(1,(THIS_FILE, 
-		  "Not enough memory to duplicate DNS response. Response was "
-		  "truncated."));
-    }
-    PJ_END;
+    cache->pkt = NULL;
+    pj_dns_packet_dup(cache->pool, pkt, 
+		      PJ_DNS_NO_NS | PJ_DNS_NO_AR,
+		      &cache->pkt);
 
     /* Calculate expiration time */
     if (set_expiry) {
@@ -1162,6 +1176,7 @@ static void update_res_cache(pj_dns_resolver *resolver,
     /* Update the hash table */
     pj_hash_set_np(resolver->hrescache, &cache->key, sizeof(*key), hval,
 		   cache->hbuf, cache);
+
 }
 
 
@@ -1252,7 +1267,7 @@ static void on_read_complete(pj_ioqueue_key_t *key,
                              pj_ssize_t bytes_read)
 {
     pj_dns_resolver *resolver;
-    pj_pool_t *pool;
+    pj_pool_t *pool = NULL;
     pj_dns_parsed_packet *dns_pkt;
     pj_dns_async_query *q;
     pj_status_t status;
@@ -1382,6 +1397,10 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_list_push_back(&resolver->query_free_nodes, q);
 
 read_next_packet:
+    if (pool) {
+	/* needed just in case PJ_HAS_POOL_ALT_API is set */
+	pj_pool_release(pool);
+    }
     bytes_read = sizeof(resolver->udp_rx_pkt);
     resolver->udp_addr_len = sizeof(resolver->udp_src_addr);
     status = pj_ioqueue_recvfrom(resolver->udp_key, op_key, 
@@ -1515,8 +1534,6 @@ PJ_DEF(void) pj_dns_resolver_dump(pj_dns_resolver *resolver,
 	    it = pj_hash_next(resolver->hrescache, it);
 	}
     }
-    PJ_LOG(3,(resolver->name.ptr, "  Nb. of cached response free nodes: %u",
-	      pj_list_size(&resolver->res_free_nodes)));
     PJ_LOG(3,(resolver->name.ptr, "  Nb. of pending queries: %u (%u)",
 	      pj_hash_count(resolver->hquerybyid),
 	      pj_hash_count(resolver->hquerybyres)));

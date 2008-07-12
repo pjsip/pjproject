@@ -178,10 +178,10 @@
  * size (PJ_DNS_RESOLVER_MAX_UDP_SIZE), since the DNS replicator function
  * (#pj_dns_packet_dup()) is also capable of performing name compressions.
  *
- * Default: 1000 (as a broad guidance, 400 is good for 4 SRV entries).
+ * Default: 512
  */
 #ifndef PJ_DNS_RESOLVER_RES_BUF_SIZE
-#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    1000
+#   define PJ_DNS_RESOLVER_RES_BUF_SIZE		    512
 #endif
 
 
