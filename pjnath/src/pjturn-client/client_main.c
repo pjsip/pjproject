@@ -133,6 +133,7 @@ static int init()
     for (i=0; i<(int)PJ_ARRAY_SIZE(g.peer); ++i) {
 	pj_stun_sock_cb stun_sock_cb;
 	char name[] = "peer0";
+	pj_uint16_t port;
 	pj_str_t server;
 
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
@@ -150,13 +151,15 @@ static int init()
 	    return status;
 	}
 
-	if (o.stun_server)
+	if (o.stun_server) {
 	    server = pj_str(o.stun_server);
-	else
+	    port = PJ_STUN_PORT;
+	} else {
 	    server = pj_str(o.srv_addr);
+	    port = (pj_uint16_t)(o.srv_port?atoi(o.srv_port):PJ_STUN_PORT);
+	}
 	status = pj_stun_sock_start(g.peer[i].stun_sock, &server, 
-				    (pj_uint16_t)(o.srv_port?atoi(o.srv_port):PJ_STUN_PORT), 
-				    NULL);
+				    port,  NULL);
 	if (status != PJ_SUCCESS) {
 	    my_perror("pj_stun_sock_start()", status);
 	    return status;
