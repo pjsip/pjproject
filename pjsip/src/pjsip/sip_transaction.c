@@ -1458,7 +1458,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx, int code )
 
     PJ_ASSERT_RETURN(code >= 200, PJ_EINVAL);
 
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED)
+    if (tsx->state >= PJSIP_TSX_STATE_TERMINATED)
 	return PJ_SUCCESS;
 
     lock_tsx(tsx, &lck);
