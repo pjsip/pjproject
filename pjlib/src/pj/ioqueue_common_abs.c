@@ -33,6 +33,7 @@ static void ioqueue_init( pj_ioqueue_t *ioqueue )
 {
     ioqueue->lock = NULL;
     ioqueue->auto_delete_lock = 0;
+    ioqueue->default_concurrency = PJ_IOQUEUE_DEFAULT_ALLOW_CONCURRENCY;
 }
 
 static pj_status_t ioqueue_destroy(pj_ioqueue_t *ioqueue)
