@@ -232,7 +232,7 @@ PJ_DEF(void) pj_shutdown()
     pj_errno_clear_handlers();
 
     /* Shutdown Winsock */
-    //WSACleanup();
+    WSACleanup();
 }
 
 
