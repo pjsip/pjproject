@@ -119,6 +119,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt)
     return pjsip_endpt_add_capability( endpt, NULL, PJSIP_H_ALLOW, NULL,
 				       1, &pjsip_publish_method.name);
      */
+    PJ_UNUSED_ARG(endpt);
     return PJ_SUCCESS;
 }
 

@@ -157,18 +157,24 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 /**
  * Specify maximum transaction count in transaction hash table.
- * Default value is 16*1024
+ * For efficiency, the value should be 2^n-1 since it will be
+ * rounded up to 2^n.
+ *
+ * Default value is 1023
  */
 #ifndef PJSIP_MAX_TSX_COUNT
-#   define PJSIP_MAX_TSX_COUNT		(16*1024)
+#   define PJSIP_MAX_TSX_COUNT		(1024-1)
 #endif
 
 /**
  * Specify maximum number of dialogs in the dialog hash table.
- * Default value is 16*1024.
+ * For efficiency, the value should be 2^n-1 since it will be
+ * rounded up to 2^n.
+ *
+ * Default value is 511.
  */
 #ifndef PJSIP_MAX_DIALOG_COUNT
-#   define PJSIP_MAX_DIALOG_COUNT	(16*1024)
+#   define PJSIP_MAX_DIALOG_COUNT	(512-1)
 #endif
 
 
@@ -553,14 +559,14 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Initial memory size for UA layer
  */
 #ifndef PJSIP_POOL_LEN_UA
-#   define PJSIP_POOL_LEN_UA		4000
+#   define PJSIP_POOL_LEN_UA		512
 #endif
 
 /**
  * Memory increment for UA layer.
  */
 #ifndef PJSIP_POOL_INC_UA
-#   define PJSIP_POOL_INC_UA		4000
+#   define PJSIP_POOL_INC_UA		512
 #endif
 
 #define PJSIP_MAX_FORWARDS_VALUE	70
@@ -571,17 +577,23 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 /* Transaction related constants. */
 
 /**
- * Initial memory size for transaction layer
+ * Initial memory size for transaction layer. The bulk of pool usage
+ * for transaction layer will be used to create the hash table, so 
+ * setting this value too high will not help too much with reducing
+ * fragmentation and the memory will most likely be wasted.
  */
 #ifndef PJSIP_POOL_TSX_LAYER_LEN
-#   define PJSIP_POOL_TSX_LAYER_LEN	4000
+#   define PJSIP_POOL_TSX_LAYER_LEN	512
 #endif
 
 /**
- * Memory increment for transaction layer.
+ * Memory increment for transaction layer. The bulk of pool usage
+ * for transaction layer will be used to create the hash table, so 
+ * setting this value too high will not help too much with reducing
+ * fragmentation and the memory will most likely be wasted.
  */
 #ifndef PJSIP_POOL_TSX_LAYER_INC
-#   define PJSIP_POOL_TSX_LAYER_INC	4000
+#   define PJSIP_POOL_TSX_LAYER_INC	512
 #endif
 
 /**

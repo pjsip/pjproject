@@ -66,10 +66,10 @@
 #define THIS_FILE	"transport_tls_ossl.c"
 
 #define MAX_ASYNC_CNT	16
-#define POOL_LIS_INIT	4000
-#define POOL_LIS_INC	4001
-#define POOL_TP_INIT	4000
-#define POOL_TP_INC	4002
+#define POOL_LIS_INIT	512
+#define POOL_LIS_INC	512
+#define POOL_TP_INIT	512
+#define POOL_TP_INC	512
 
 
 
