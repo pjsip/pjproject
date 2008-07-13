@@ -284,18 +284,18 @@ PJ_DEF(pj_status_t) pjmedia_transport_udp_attach( pjmedia_endpt *endpt,
     /* Get ioqueue instance */
     ioqueue = pjmedia_endpt_get_ioqueue(endpt);
 
+    if (name==NULL)
+	name = "udp%p";
+
     /* Create transport structure */
     pool = pjmedia_endpt_create_pool(endpt, name, 512, 512);
     if (!pool)
 	return PJ_ENOMEM;
 
-    if (!name)
-	name = pool->obj_name;
-
     tp = PJ_POOL_ZALLOC_T(pool, struct transport_udp);
     tp->pool = pool;
     tp->options = options;
-    pj_ansi_strncpy(tp->base.name, name, PJ_MAX_OBJ_NAME-1);
+    pj_memcpy(tp->base.name, pool->obj_name, PJ_MAX_OBJ_NAME);
     tp->base.op = &transport_udp_op;
     tp->base.type = PJMEDIA_TRANSPORT_TYPE_UDP;
 
