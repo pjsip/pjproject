@@ -98,6 +98,7 @@ typedef struct pjsua_srv_pres
  */
 typedef struct pjsua_acc
 {
+    pj_pool_t	    *pool;	    /**< Pool for this account.		*/
     pjsua_acc_config cfg;	    /**< Account configuration.		*/
     pj_bool_t	     valid;	    /**< Is this account valid?		*/
 
@@ -155,6 +156,7 @@ typedef struct pjsua_transport_data
  */
 typedef struct pjsua_buddy
 {
+    pj_pool_t		*pool;	    /**< Pool for this buddy.		*/
     unsigned		 index;	    /**< Buddy index.			*/
     pj_str_t		 uri;	    /**< Buddy URI.			*/
     pj_str_t		 contact;   /**< Contact learned from subscrp.	*/

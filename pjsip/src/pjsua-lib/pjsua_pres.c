@@ -173,7 +173,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
  */
 static void reset_buddy(pjsua_buddy_id id)
 {
+    pj_pool_t *pool = pjsua_var.buddy[id].pool;
     pj_bzero(&pjsua_var.buddy[id], sizeof(pjsua_var.buddy[id]));
+    pjsua_var.buddy[id].pool = pool;
     pjsua_var.buddy[id].index = id;
 }
 
@@ -185,6 +187,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 				     pjsua_buddy_id *p_buddy_id)
 {
     pjsip_name_addr *url;
+    pjsua_buddy *buddy;
     pjsip_sip_uri *sip_uri;
     int index;
     pj_str_t tmp;
@@ -209,21 +212,37 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 	return PJ_ETOOMANY;
     }
 
+    buddy = &pjsua_var.buddy[index];
+
+    /* Create pool for this buddy */
+    if (buddy->pool) {
+	pj_pool_reset(buddy->pool);
+    } else {
+	char name[PJ_MAX_OBJ_NAME];
+	pj_ansi_snprintf(name, sizeof(name), "buddy%03d", index);
+	buddy->pool = pjsua_pool_create(name, 512, 256);
+    }
 
     /* Get name and display name for buddy */
-    pj_strdup_with_null(pjsua_var.pool, &tmp, &cfg->uri);
-    url = (pjsip_name_addr*)pjsip_parse_uri(pjsua_var.pool, tmp.ptr, tmp.slen,
+    pj_strdup_with_null(buddy->pool, &tmp, &cfg->uri);
+    url = (pjsip_name_addr*)pjsip_parse_uri(buddy->pool, tmp.ptr, tmp.slen,
 					    PJSIP_PARSE_URI_AS_NAMEADDR);
 
     if (url == NULL) {
 	pjsua_perror(THIS_FILE, "Unable to add buddy", PJSIP_EINVALIDURI);
+	pj_pool_release(buddy->pool);
+	buddy->pool = NULL;
 	PJSUA_UNLOCK();
 	return PJSIP_EINVALIDURI;
     }
 
     /* Only support SIP schemes */
-    if (!PJSIP_URI_SCHEME_IS_SIP(url) && !PJSIP_URI_SCHEME_IS_SIPS(url))
+    if (!PJSIP_URI_SCHEME_IS_SIP(url) && !PJSIP_URI_SCHEME_IS_SIPS(url)) {
+	pj_pool_release(buddy->pool);
+	buddy->pool = NULL;
+	PJSUA_UNLOCK();
 	return PJSIP_EINVALIDSCHEME;
+    }
 
     /* Reset buddy, to make sure everything is cleared with default
      * values
@@ -1049,7 +1068,7 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
     }
 
     buddy->contact.ptr = (char*)
-			 pj_pool_alloc(pjsua_var.pool, PJSIP_MAX_URL_SIZE);
+			 pj_pool_alloc(buddy->pool, PJSIP_MAX_URL_SIZE);
     buddy->contact.slen = pjsip_uri_print( PJSIP_URI_IN_CONTACT_HDR,
 					   contact_hdr->uri,
 					   buddy->contact.ptr, 
@@ -1116,6 +1135,7 @@ static pjsip_evsub_user pres_callback =
 /* It does what it says.. */
 static void subscribe_buddy_presence(unsigned index)
 {
+    pj_pool_t *tmp_pool = NULL;
     pjsua_buddy *buddy;
     int acc_id;
     pjsua_acc *acc;
@@ -1137,11 +1157,14 @@ static void subscribe_buddy_presence(unsigned index)
     if (acc->contact.slen) {
 	contact = acc->contact;
     } else {
-	status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
+	tmp_pool = pjsua_pool_create("tmpbuddy", 512, 256);
+
+	status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
 					      acc_id, &buddy->uri);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
 		         status);
+	    pj_pool_release(tmp_pool);
 	    return;
 	}
     }
@@ -1155,6 +1178,7 @@ static void subscribe_buddy_presence(unsigned index)
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create dialog", 
 		     status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
 	return;
     }
 
@@ -1165,6 +1189,7 @@ static void subscribe_buddy_presence(unsigned index)
 	pjsua_perror(THIS_FILE, "Unable to create presence client", 
 		     status);
 	pjsip_dlg_terminate(buddy->dlg);
+	if (tmp_pool) pj_pool_release(tmp_pool);
 	return;
     }
 
@@ -1202,6 +1227,7 @@ static void subscribe_buddy_presence(unsigned index)
 	buddy->sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create initial SUBSCRIBE", 
 		     status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
 	return;
     }
 
@@ -1215,8 +1241,11 @@ static void subscribe_buddy_presence(unsigned index)
 	buddy->sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to send initial SUBSCRIBE", 
 		     status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
 	return;
     }
+
+    if (tmp_pool) pj_pool_release(tmp_pool);
 }
 
 

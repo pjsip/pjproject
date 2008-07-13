@@ -580,7 +580,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);
 
     /* Create memory pool for application. */
-    pjsua_var.pool = pjsua_pool_create("pjsua", 4000, 4000);
+    pjsua_var.pool = pjsua_pool_create("pjsua", 1000, 1000);
     
     PJ_ASSERT_RETURN(pjsua_var.pool, PJ_ENOMEM);
 
@@ -1069,13 +1069,26 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	/* Terminate all presence subscriptions. */
 	pjsua_pres_shutdown();
 
-	/* Unregister, if required: */
+	/* Destroy pool in the buddy object */
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
+	    if (pjsua_var.buddy[i].pool) {
+		pj_pool_release(pjsua_var.buddy[i].pool);
+		pjsua_var.buddy[i].pool = NULL;
+	    }
+	}
+
+	/* Destroy accounts */
 	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 
 	    if (pjsua_var.acc[i].regc) {
 		pjsua_acc_set_registration(i, PJ_FALSE);
+	    }
+
+	    if (pjsua_var.acc[i].pool) {
+		pj_pool_release(pjsua_var.acc[i].pool);
+		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
 

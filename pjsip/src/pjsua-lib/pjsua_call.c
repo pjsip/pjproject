@@ -330,6 +330,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 					  const pjsua_msg_data *msg_data,
 					  pjsua_call_id *p_call_id)
 {
+    pj_pool_t *tmp_pool;
     pjsip_dialog *dlg = NULL;
     pjmedia_sdp_session *offer;
     pjsip_inv_session *inv = NULL;
@@ -382,30 +383,25 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     call = &pjsua_var.calls[call_id];
 
+    /* Create temporary pool */
+    tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
+
     /* Verify that destination URI is valid before calling 
      * pjsua_acc_create_uac_contact, or otherwise there  
      * a misleading "Invalid Contact URI" error will be printed
      * when pjsua_acc_create_uac_contact() fails.
      */
     if (1) {
-	pj_pool_t *pool;
 	pjsip_uri *uri;
 	pj_str_t dup;
 
-	pool = pjsua_pool_create("tmp-uri", 4000, 4000);
-	if (!pool) {
-	    pjsua_perror(THIS_FILE, "Unable to create pool", PJ_ENOMEM);
-	    PJSUA_UNLOCK();
-	    return PJ_ENOMEM;
-	}
-	
-	pj_strdup_with_null(pool, &dup, dest_uri);
-	uri = pjsip_parse_uri(pool, dup.ptr, dup.slen, 0);
-	pj_pool_release(pool);
+	pj_strdup_with_null(tmp_pool, &dup, dest_uri);
+	uri = pjsip_parse_uri(tmp_pool, dup.ptr, dup.slen, 0);
 
 	if (uri == NULL) {
 	    pjsua_perror(THIS_FILE, "Unable to make call", 
 			 PJSIP_EINVALIDREQURI);
+	    pj_pool_release(tmp_pool);
 	    PJSUA_UNLOCK();
 	    return PJSIP_EINVALIDREQURI;
 	}
@@ -426,11 +422,12 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     if (acc->contact.slen) {
 	contact = acc->contact;
     } else {
-	status = pjsua_acc_create_uac_contact(pjsua_var.pool, &contact,
+	status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
 					      acc_id, dest_uri);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
 			 status);
+	    pj_pool_release(tmp_pool);
 	    PJSUA_UNLOCK();
 	    return status;
 	}
@@ -442,6 +439,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 				   dest_uri, dest_uri, &dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Dialog creation failed", status);
+	pj_pool_release(tmp_pool);
 	PJSUA_UNLOCK();
 	return status;
     }
@@ -549,6 +547,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     if (p_call_id)
 	*p_call_id = call_id;
 
+    pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
 
     return PJ_SUCCESS;
@@ -566,6 +565,7 @@ on_error:
 	pjsua_media_channel_deinit(call_id);
     }
 
+    pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
     return status;
 }
@@ -2617,17 +2617,21 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
 				       pjmedia_sdp_session **p_answer)
 {
     pj_status_t status;
+    pj_pool_t *pool;
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_attr *attr;
     pjmedia_transport_info tp_info;
     pjmedia_sdp_session *sdp;
+
+    /* Use call's pool */
+    pool = call->inv->pool;
 
     /* Get media socket info */
     pjmedia_transport_info_init(&tp_info);
     pjmedia_transport_get_info(call->med_tp, &tp_info);
 
     /* Create new offer */
-    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pjsua_var.pool, 1,
+    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, 1,
 				      &tp_info.sock_info, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
@@ -2649,7 +2653,7 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
     pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
 
     /* Add inactive attribute */
-    attr = pjmedia_sdp_attr_create(pjsua_var.pool, "inactive", NULL);
+    attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
     pjmedia_sdp_media_add_attr(sdp->media[0], attr);
 
     *p_answer = sdp;
