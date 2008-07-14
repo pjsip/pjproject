@@ -528,6 +528,9 @@ pj_status_t pjsua_media_subsys_destroy(void)
 
     /* Close media transports */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
+	if (pjsua_var.calls[i].med_tp_st != PJSUA_MED_TP_IDLE) {
+	    pjsua_media_channel_deinit(i);
+	}
 	if (pjsua_var.calls[i].med_tp) {
 	    (*pjsua_var.calls[i].med_tp->op->destroy)(pjsua_var.calls[i].med_tp);
 	    pjsua_var.calls[i].med_tp = NULL;
@@ -1165,7 +1168,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 	call->med_tp_st = PJSUA_MED_TP_IDLE;
     }
 
-    if (call->med_orig && call->med_tp != call->med_orig) {
+    if (call->med_orig && call->med_tp && call->med_tp != call->med_orig) {
 	pjmedia_transport_close(call->med_tp);
 	call->med_tp = call->med_orig;
     }
