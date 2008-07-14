@@ -1091,10 +1091,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
-
-	/* Wait for some time to allow unregistration to complete: */
-	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
-	busy_sleep(1000);
     }
 
     /* Destroy media */
@@ -1102,6 +1098,12 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
     /* Destroy endpoint. */
     if (pjsua_var.endpt) {
+	/* Wait for some time to allow unregistration and ICE/TURN
+	 * transports shutdown to complete: 
+	*/
+	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
+	busy_sleep(1000);
+
 	pjsip_endpt_destroy(pjsua_var.endpt);
 	pjsua_var.endpt = NULL;
     }
