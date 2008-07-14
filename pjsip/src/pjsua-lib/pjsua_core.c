@@ -1069,26 +1069,13 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	/* Terminate all presence subscriptions. */
 	pjsua_pres_shutdown();
 
-	/* Destroy pool in the buddy object */
-	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
-	    if (pjsua_var.buddy[i].pool) {
-		pj_pool_release(pjsua_var.buddy[i].pool);
-		pjsua_var.buddy[i].pool = NULL;
-	    }
-	}
-
-	/* Destroy accounts */
+	/* Unregister all accounts */
 	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 
 	    if (pjsua_var.acc[i].regc) {
 		pjsua_acc_set_registration(i, PJ_FALSE);
-	    }
-
-	    if (pjsua_var.acc[i].pool) {
-		pj_pool_release(pjsua_var.acc[i].pool);
-		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
     }
@@ -1103,6 +1090,24 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	*/
 	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
 	busy_sleep(1000);
+
+	PJ_LOG(4,(THIS_FILE, "Destroying..."));
+
+	/* Destroy pool in the buddy object */
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
+	    if (pjsua_var.buddy[i].pool) {
+		pj_pool_release(pjsua_var.buddy[i].pool);
+		pjsua_var.buddy[i].pool = NULL;
+	    }
+	}
+
+	/* Destroy accounts */
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	    if (pjsua_var.acc[i].pool) {
+		pj_pool_release(pjsua_var.acc[i].pool);
+		pjsua_var.acc[i].pool = NULL;
+	    }
+	}
 
 	pjsip_endpt_destroy(pjsua_var.endpt);
 	pjsua_var.endpt = NULL;
