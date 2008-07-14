@@ -33,9 +33,10 @@
 #define THIS_FILE   "transport_srtp.c"
 
 /* Maximum size of packet */
-#define MAX_BUFFER_LEN	1500
-#define MAX_KEY_LEN	32
-#define DEACTIVATE_MEDIA(pool, m) pjmedia_sdp_media_deactivate(pool, m)
+#define MAX_RTP_BUFFER_LEN	    1500
+#define MAX_RTCP_BUFFER_LEN	    1500
+#define MAX_KEY_LEN		    32
+#define DEACTIVATE_MEDIA(pool, m)   pjmedia_sdp_media_deactivate(pool, m)
 
 static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
 static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
@@ -78,7 +79,8 @@ typedef struct transport_srtp
     pjmedia_transport	 base;	    /**< Base transport interface. */
     pj_pool_t		*pool;
     pj_lock_t		*mutex;
-    char		 tx_buffer[MAX_BUFFER_LEN];
+    char		 rtp_tx_buffer[MAX_RTP_BUFFER_LEN];
+    char		 rtcp_tx_buffer[MAX_RTCP_BUFFER_LEN];
     pjmedia_srtp_setting setting;
     unsigned		 media_option;
 
@@ -656,21 +658,21 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     if (!srtp->session_inited)
 	return PJ_SUCCESS;
 
-    if (size > sizeof(srtp->tx_buffer))
+    if (size > sizeof(srtp->rtp_tx_buffer))
 	return PJ_ETOOBIG;
 
+    pj_memcpy(srtp->rtp_tx_buffer, pkt, size);
+
     pj_lock_acquire(srtp->mutex);
-    pj_memcpy(srtp->tx_buffer, pkt, size);
-    
-    err = srtp_protect(srtp->srtp_tx_ctx, srtp->tx_buffer, &len);
+    err = srtp_protect(srtp->srtp_tx_ctx, srtp->rtp_tx_buffer, &len);
+    pj_lock_release(srtp->mutex);
+
     if (err == err_status_ok) {
-	status = pjmedia_transport_send_rtp(srtp->member_tp, srtp->tx_buffer, len);
+	status = pjmedia_transport_send_rtp(srtp->member_tp, srtp->rtp_tx_buffer, len);
     } else {
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
     }
     
-    pj_lock_release(srtp->mutex);
-
     return status;
 }
 
@@ -700,22 +702,21 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
     if (!srtp->session_inited)
 	return PJ_SUCCESS;
 
-    if (size > sizeof(srtp->tx_buffer))
+    if (size > sizeof(srtp->rtcp_tx_buffer))
 	return PJ_ETOOBIG;
 
-    pj_lock_acquire(srtp->mutex);
-    pj_memcpy(srtp->tx_buffer, pkt, size);
+    pj_memcpy(srtp->rtcp_tx_buffer, pkt, size);
 
-    err = srtp_protect_rtcp(srtp->srtp_tx_ctx, srtp->tx_buffer, &len);
-    
+    pj_lock_acquire(srtp->mutex);
+    err = srtp_protect_rtcp(srtp->srtp_tx_ctx, srtp->rtcp_tx_buffer, &len);
+    pj_lock_release(srtp->mutex);
+
     if (err == err_status_ok) {
 	status = pjmedia_transport_send_rtcp2(srtp->member_tp, addr, addr_len,
-					      srtp->tx_buffer, len);
+					      srtp->rtcp_tx_buffer, len);
     } else {
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
     }
-
-    pj_lock_release(srtp->mutex);
 
     return status;
 }
