@@ -360,6 +360,8 @@ cipher_type_self_test(const cipher_type_t *ct) {
         
   }
 
+  cipher_dealloc(c);
+
   return err_status_ok;
 }
 
