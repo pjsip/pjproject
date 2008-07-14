@@ -28,6 +28,7 @@ SOURCE	errno.c
 SOURCE	exception.c
 SOURCE	fifobuf.c
 SOURCE	file.c
+SOURCE	hash.c
 SOURCE	ioq_perf.c
 SOURCE	ioq_tcp.c
 SOURCE	ioq_udp.c
