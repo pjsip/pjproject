@@ -39,17 +39,15 @@ PJ_INLINE(void) hex2digit(unsigned value, char *p)
     *p++ = hex[ (value & 0x0F) ];
 }
 
-static void guid_to_str( const GUID *guid, pj_str_t *str )
+static void guid_to_str( GUID *guid, pj_str_t *str )
 {
     unsigned i;
-    GUID guid_copy;
-    const unsigned char *src = (const unsigned char*)&guid_copy;
+    const unsigned char *src = (const unsigned char*)guid;
     char *dst = str->ptr;
 
-    pj_memcpy(&guid_copy, guid, sizeof(*guid));
-    guid_copy.Data1 = pj_ntohl(guid_copy.Data1);
-    guid_copy.Data2 = pj_ntohs(guid_copy.Data2);
-    guid_copy.Data3 = pj_ntohs(guid_copy.Data3);
+    guid->Data1 = pj_ntohl(guid->Data1);
+    guid->Data2 = pj_ntohs(guid->Data2);
+    guid->Data3 = pj_ntohs(guid->Data3);
 
     for (i=0; i<16; ++i) {
 	hex2digit( *src, dst );
