@@ -614,7 +614,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	    pj_pool_release(pool);
 	    return PJ_FALSE;
 	}
-	pj_strdup2(acc->pool, &acc->contact, tmp);
+	pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
     }
 
     /* For UDP transport, if STUN is enabled then update the transport's
