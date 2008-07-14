@@ -102,6 +102,10 @@ int test_inner(void)
     DO_TEST( rbtree_test() );
 #endif
 
+#if INCLUDE_HASH_TEST
+    DO_TEST( hash_test() );
+#endif
+
 #if INCLUDE_TIMESTAMP_TEST
     DO_TEST( timestamp_test() );
 #endif

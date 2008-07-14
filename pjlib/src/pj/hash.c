@@ -276,7 +276,7 @@ PJ_DEF(pj_hash_iterator_t*) pj_hash_first( pj_hash_table_t *ht,
     it->index = 0;
     it->entry = NULL;
 
-    for (; it->index < ht->rows; ++it->index) {
+    for (; it->index <= ht->rows; ++it->index) {
 	it->entry = ht->table[it->index];
 	if (it->entry) {
 	    break;
@@ -294,7 +294,7 @@ PJ_DEF(pj_hash_iterator_t*) pj_hash_next( pj_hash_table_t *ht,
 	return it;
     }
 
-    for (++it->index; it->index < ht->rows; ++it->index) {
+    for (++it->index; it->index <= ht->rows; ++it->index) {
 	it->entry = ht->table[it->index];
 	if (it->entry) {
 	    break;
@@ -319,7 +319,7 @@ void pj_hash_dump_collision( pj_hash_table_t *ht )
     char line[120];
     int len, totlen = 0;
 
-    for (i=0; i<ht->rows; ++i) {
+    for (i=0; i<=ht->rows; ++i) {
 	unsigned count = 0;    
 	pj_hash_entry *entry = ht->table[i];
 	while (entry) {
