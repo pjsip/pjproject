@@ -161,7 +161,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 	int abs_corr = 0;
 
 	/* Do calculation on 8 samples at once */
-	for (i = 0; i<template_cnt; i+=8) {
+	for (i = 0; i<template_cnt-8; i+=8) {
 	    corr -= (int)sr[i+0] +
 		    (int)sr[i+1] +
 		    (int)sr[i+2] +
@@ -172,12 +172,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 		    (int)sr[i+7];
 	}
 
-	/* Reverse back i if template_cnt is not multiplication of 8,
-	 * the remaining samples will be processed below.
-	 */
-	if (i != template_cnt)
-	    i -= 8;
-
+	/* Process remaining samples */
 	for (; i<template_cnt; ++i)
 	    corr -= (int)sr[i];
 
@@ -220,7 +215,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 	unsigned i;
 
 	/* Do calculation on 8 samples at once */
-	for (i=0; i<template_cnt; i += 8) {
+	for (i=0; i<template_cnt-8; i += 8) {
 	    corr += ((float)frm[i+0]) * ((float)sr[i+0]) + 
 		    ((float)frm[i+1]) * ((float)sr[i+1]) + 
 		    ((float)frm[i+2]) * ((float)sr[i+2]) + 
@@ -231,12 +226,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 		    ((float)frm[i+7]) * ((float)sr[i+7]);
 	}
 
-	/* Reverse back i if template_cnt is not multiplication of 8,
-	 * the remaining samples will be processed below.
-	 */
-	if (i != template_cnt)
-	    i -= 8;
-
+	/* Process remaining samples. */
 	for (; i<template_cnt; ++i) {
 	    corr += ((float)frm[i]) * ((float)sr[i]);
 	}
@@ -316,7 +306,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 	unsigned i;
 
 	/* Do calculation on 8 samples at once */
-	for (i=0; i<template_cnt; i+=8) {
+	for (i=0; i<template_cnt-8; i+=8) {
 	    corr += ((int)frm[i+0]) * ((int)sr[i+0]) + 
 		    ((int)frm[i+1]) * ((int)sr[i+1]) + 
 		    ((int)frm[i+2]) * ((int)sr[i+2]) +
@@ -327,12 +317,7 @@ static pj_int16_t *find_pitch(pj_int16_t *frm, pj_int16_t *beg, pj_int16_t *end,
 		    ((int)frm[i+7]) * ((int)sr[i+7]);
 	}
 
-	/* Reverse back i if template_cnt is not multiplication of 8,
-	 * the remaining samples will be processed below.
-	 */
-	if (i != template_cnt)
-	    i -= 8;
-
+	/* Process remaining samples. */
 	for (; i<template_cnt; ++i) {
 	    corr += ((int)frm[i]) * ((int)sr[i]);
 	}
@@ -534,6 +519,7 @@ PJ_DEF(pj_status_t) pjmedia_wsola_reset( pjmedia_wsola *wsola,
 
     pjmedia_circ_buf_reset(wsola->buf);
     pjmedia_circ_buf_set_len(wsola->buf, wsola->hist_size + wsola->min_extra);
+    pjmedia_zero_samples(wsola->buf->start, wsola->buf->len); 
 
     return PJ_SUCCESS;
 }
@@ -574,6 +560,14 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
 	    overlapp_add_simple(wsola->merge_buf, wsola->hanning_size, 
 			        templ, start);
 	} else {
+	    /* Check if pointers are in the valid range */
+	    CHECK_(templ >= wsola->buf->buf &&
+		   templ + wsola->hanning_size <= 
+		   wsola->buf->buf + wsola->buf->capacity);
+	    CHECK_(start >= wsola->buf->buf &&
+		   start + wsola->hanning_size <= 
+		   wsola->buf->buf + wsola->buf->capacity);
+
 	    overlapp_add(wsola->merge_buf, wsola->hanning_size, templ, 
 			 start, wsola->hanning);
 	}
@@ -582,8 +576,10 @@ static void expand(pjmedia_wsola *wsola, unsigned needed)
 	dist = templ - start;
 
 	/* Not enough buffer to hold the result */
-	if (reg1_len + dist > wsola->buf_size)
+	if (reg1_len + dist > wsola->buf_size) {
+	    pj_assert(!"WSOLA buffer size may be to small!");
 	    break;
+	}
 
 	/* Copy the "tail" (excess frame) to the end */
 	pjmedia_move_samples(templ + wsola->hanning_size, 
@@ -671,7 +667,6 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
     pj_status_t status;
 
     buf_len = pjmedia_circ_buf_get_len(wsola->buf);
-    CHECK_(buf_len >= (unsigned)(wsola->hist_size + wsola->min_extra));
 
     /* Update vars */
     wsola->expand_cnt = 0;
@@ -686,8 +681,11 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 	pjmedia_circ_buf_get_read_regions(wsola->buf, &reg1, &reg1_len, 
 					  &reg2, &reg2_len);
 
+	CHECK_(pjmedia_circ_buf_get_len(wsola->buf) >= 
+	       (unsigned)(wsola->hist_size + (wsola->min_extra<<1)));
+
 	if (reg2_len == 0) {
-	    ola_left = reg1;
+	    ola_left = reg1 + reg1_len - wsola->min_extra;
 	} else if (reg2_len >= wsola->min_extra) {
 	    ola_left = reg2 + reg2_len - wsola->min_extra;
 	} else {
@@ -725,25 +723,25 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola, 
 					    pj_int16_t frm[])
 {
-    unsigned samples_len;
+    unsigned samples_len, samples_req;
+
+
     pj_status_t status = PJ_SUCCESS;
 
+    CHECK_(pjmedia_circ_buf_get_len(wsola->buf) >= wsola->hist_size + 
+	   wsola->min_extra);
+
+    /* Calculate how many samples in the buffer */
     samples_len = pjmedia_circ_buf_get_len(wsola->buf) - wsola->hist_size;
+
+    /* Calculate how many samples are required to be available in the buffer */
+    samples_req = wsola->samples_per_frame + (wsola->min_extra << 1);
+    
     wsola->ts.u64 += wsola->samples_per_frame;
 
-    if (samples_len < (unsigned)wsola->samples_per_frame + 
-	(unsigned)wsola->min_extra) 
-    {
-	unsigned new_samples;
-
-	/* Calculate how many samples are needed for a new frame */
-	new_samples = wsola->samples_per_frame + wsola->min_extra - 
-		      samples_len;
-	if (wsola->expand_cnt == 0)
-	    new_samples += wsola->min_extra;
-
+    if (samples_len < samples_req) {
 	/* Expand buffer */
-	expand(wsola, new_samples);
+	expand(wsola, samples_req - samples_len);
 	TRACE_((THIS_FILE, "Buf size after expanded = %d", 
 		pjmedia_circ_buf_get_len(wsola->buf)));
 	wsola->expand_cnt++;
