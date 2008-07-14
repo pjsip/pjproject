@@ -22,6 +22,7 @@
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/ip_helper.h>
+#include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -155,6 +156,7 @@ struct pj_ice_strans
     void		    *user_data;	/**< Application data.		*/
     pj_ice_strans_cfg	     cfg;	/**< Configuration.		*/
     pj_ice_strans_cb	     cb;	/**< Application callback.	*/
+    pj_lock_t		    *init_lock; /**< Initialization mutex.	*/
 
     pj_ice_sess		    *ice;	/**< ICE session.		*/
     pj_time_val		     start_time;/**< Time when ICE was started	*/
@@ -268,6 +270,10 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	    /* Add pending job */
 	    ///sess_add_ref(ice_st);
 
+	    PJ_LOG(4,(ice_st->obj_name, 
+		      "Comp %d: srflx candidate starts Binding discovery",
+		      comp_id));
+
 	    /* Start Binding resolution */
 	    status = pj_stun_sock_start(comp->stun_sock, 
 					&ice_st->cfg.stun.server,
@@ -285,7 +291,7 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 		return status;
 	    }
 
-	    /* Add srflx candidate with pending status */
+	    /* Add srflx candidate with pending status. */
 	    cand = &comp->cand_list[comp->cand_cnt++];
 	    cand->type = PJ_ICE_CAND_TYPE_SRFLX;
 	    cand->status = PJ_EPENDING;
@@ -296,12 +302,10 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	    pj_sockaddr_cp(&cand->rel_addr, &cand->base_addr);
 	    pj_ice_calc_foundation(ice_st->pool, &cand->foundation,
 				   cand->type, &cand->base_addr);
-	    PJ_LOG(4,(ice_st->obj_name, 
-		      "Comp %d: srflx candidate starts Binding discovery",
-		      comp_id));
 
 	    /* Set default candidate to srflx */
 	    comp->default_cand = cand - comp->cand_list;
+
 	}
 
 	/* Add local addresses to host candidates, unless no_host_cands
@@ -452,17 +456,33 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
 	return status;
     }
 
+    status = pj_lock_create_recursive_mutex(pool, ice_st->obj_name, 
+					    &ice_st->init_lock);
+    if (status != PJ_SUCCESS) {
+	destroy_ice_st(ice_st);
+	return status;
+    }
+
     ice_st->comp_cnt = comp_cnt;
     ice_st->comp = (pj_ice_strans_comp**) 
 		   pj_pool_calloc(pool, comp_cnt, sizeof(pj_ice_strans_comp*));
 
+    /* Acquire initialization mutex to prevent callback to be 
+     * called before we finish initialization.
+     */
+    pj_lock_acquire(ice_st->init_lock);
+
     for (i=0; i<comp_cnt; ++i) {
 	status = create_comp(ice_st, i+1);
 	if (status != PJ_SUCCESS) {
+	    pj_lock_release(ice_st->init_lock);
 	    destroy_ice_st(ice_st);
 	    return status;
 	}
     }
+
+    /* Done with initialization */
+    pj_lock_release(ice_st->init_lock);
 
     /* Check if all candidates are ready (this may call callback) */
     sess_init_update(ice_st);
@@ -500,6 +520,14 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
 	}
     }
     ice_st->comp_cnt = 0;
+
+    /* Destroy mutex */
+    if (ice_st->init_lock) {
+	pj_lock_acquire(ice_st->init_lock);
+	pj_lock_release(ice_st->init_lock);
+	pj_lock_destroy(ice_st->init_lock);
+	ice_st->init_lock = NULL;
+    }
 
     /* Destroy reference counter */
     if (ice_st->busy_cnt) {
@@ -1198,10 +1226,15 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
     pj_ice_sess_cand *cand = NULL;
     unsigned i;
 
+    pj_assert(status != PJ_EPENDING);
+
     comp = (pj_ice_strans_comp*) pj_stun_sock_get_user_data(stun_sock);
     ice_st = comp->ice_st;
 
     sess_add_ref(ice_st);
+
+    /* Wait until initialization completes */
+    pj_lock_acquire(ice_st->init_lock);
 
     /* Find the srflx cancidate */
     for (i=0; i<comp->cand_cnt; ++i) {
@@ -1211,7 +1244,15 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 	}
     }
 
-    pj_assert(status != PJ_EPENDING);
+    pj_lock_release(ice_st->init_lock);
+
+    /* It is possible that we don't have srflx candidate even though this
+     * callback is called. This could happen when we cancel adding srflx
+     * candidate due to initialization error.
+     */
+    if (cand == NULL) {
+	return sess_dec_ref(ice_st);
+    }
 
     switch (op) {
     case PJ_STUN_SOCK_DNS_OP:
@@ -1363,6 +1404,9 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	/* Get allocation info */
 	pj_turn_sock_get_info(turn_sock, &rel_info);
 
+	/* Wait until initialization completes */
+	pj_lock_acquire(comp->ice_st->init_lock);
+
 	/* Find relayed candidate in the component */
 	for (i=0; i<comp->cand_cnt; ++i) {
 	    if (comp->cand_list[i].type == PJ_ICE_CAND_TYPE_RELAYED) {
@@ -1371,6 +1415,8 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	    }
 	}
 	pj_assert(cand != NULL);
+
+	pj_lock_release(comp->ice_st->init_lock);
 
 	/* Update candidate */
 	pj_sockaddr_cp(&cand->addr, &rel_info.relay_addr);
