@@ -48,6 +48,7 @@ typedef struct pj_pool_t
 } pj_pool_t;
 
 
+#define PJ_POOL_SIZE	        (sizeof(struct pj_pool_t))
 
 /**
  * This constant denotes the exception number that will be thrown by default
