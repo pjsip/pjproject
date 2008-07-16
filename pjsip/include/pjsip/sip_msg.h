@@ -788,6 +788,25 @@ PJ_DECL(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
 					    const void *start);
 
 /** 
+ * Find a header in the message by its name and short name version.
+ *
+ * @param msg	    The message.
+ * @param name	    The header name to find.
+ * @param sname	    The short name version of the header name.
+ * @param start	    The first header field where the search should begin.
+ *		    If NULL is specified, then the search will begin from the
+ *		    first header, otherwise the search will begin at the
+ *		    specified header.
+ *
+ * @return	    The header field, or NULL if no header with the specified 
+ *		    type is found.
+ */
+PJ_DECL(void*)  pjsip_msg_find_hdr_by_names(const pjsip_msg *msg, 
+					    const pj_str_t *name, 
+					    const pj_str_t *sname,
+					    const void *start);
+
+/** 
  * Find and remove a header in the message. 
  *
  * @param msg	    The message.

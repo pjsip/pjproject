@@ -361,6 +361,25 @@ PJ_DEF(void*)  pjsip_msg_find_hdr_by_name( const pjsip_msg *msg,
     return NULL;
 }
 
+PJ_DEF(void*)  pjsip_msg_find_hdr_by_names( const pjsip_msg *msg, 
+					    const pj_str_t *name, 
+					    const pj_str_t *sname,
+					    const void *start)
+{
+    const pjsip_hdr *hdr=(const pjsip_hdr*)start, *end=&msg->hdr;
+
+    if (hdr == NULL) {
+	hdr = msg->hdr.next;
+    }
+    for (; hdr!=end; hdr = hdr->next) {
+	if (pj_stricmp(&hdr->name, name) == 0)
+	    return (void*)hdr;
+	if (pj_stricmp(&hdr->name, sname) == 0)
+	    return (void*)hdr;
+    }
+    return NULL;
+}
+
 PJ_DEF(void*) pjsip_msg_find_remove_hdr( pjsip_msg *msg, 
 				         pjsip_hdr_e hdr_type, void *start)
 {
