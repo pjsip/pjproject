@@ -248,6 +248,7 @@ struct dlgsub
 
 /* Static vars. */
 static const pj_str_t STR_EVENT	     = { "Event", 5 };
+static const pj_str_t STR_EVENT_S    = { "Event", 5 };
 static const pj_str_t STR_SUB_STATE  = { "Subscription-State", 18 };
 static const pj_str_t STR_TERMINATED = { "terminated", 10 };
 static const pj_str_t STR_ACTIVE     = { "active", 6 };
@@ -832,7 +833,8 @@ PJ_DEF(pj_status_t) pjsip_evsub_create_uas( pjsip_dialog *dlg,
      * the package name (don't want to add more arguments in the function).
      */
     event_hdr = (pjsip_event_hdr*) 
-	pjsip_msg_find_hdr_by_name(rdata->msg_info.msg, &STR_EVENT, NULL);
+		 pjsip_msg_find_hdr_by_names(rdata->msg_info.msg, &STR_EVENT,
+					     &STR_EVENT_S, NULL);
     if (event_hdr == NULL) {
 	return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
     }
@@ -1297,7 +1299,8 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
     }
 
     event_hdr = (pjsip_event_hdr*)
-    		pjsip_msg_find_hdr_by_name(msg, &STR_EVENT, NULL);
+    		pjsip_msg_find_hdr_by_names(msg, &STR_EVENT, 
+					    &STR_EVENT_S, NULL);
     if (!event_hdr) {
 	/* Not subscription related message */
 	return NULL;
@@ -1871,7 +1874,8 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	 * or package default expiration time.
 	 */
 	event_hdr = (pjsip_event_hdr*)
-		    pjsip_msg_find_hdr_by_name(msg, &STR_EVENT, NULL);
+		    pjsip_msg_find_hdr_by_names(msg, &STR_EVENT, 
+					        &STR_EVENT, NULL);
 	expires = (pjsip_expires_hdr*)
 		  pjsip_msg_find_hdr(msg, PJSIP_H_EXPIRES, NULL);
 	if (event_hdr && expires) {
