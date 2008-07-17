@@ -461,8 +461,13 @@ PJ_DEF(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
     pres = (pjsip_pres*) pjsip_evsub_get_mod_data(sub, mod_presence.id);
     PJ_ASSERT_RETURN(pres != NULL, PJSIP_SIMPLE_ENOPRESENCE);
 
-    /* Must have at least one presence info. */
-    PJ_ASSERT_RETURN(pres->status.info_cnt > 0, PJSIP_SIMPLE_ENOPRESENCEINFO);
+    /* Must have at least one presence info, unless state is 
+     * PJSIP_EVSUB_STATE_TERMINATED. This could happen if subscription
+     * has not been active (e.g. we're waiting for user authorization)
+     * and remote cancels the subscription.
+     */
+    PJ_ASSERT_RETURN(state==PJSIP_EVSUB_STATE_TERMINATED ||
+		     pres->status.info_cnt > 0, PJSIP_SIMPLE_ENOPRESENCEINFO);
 
 
     /* Lock object. */
@@ -474,11 +479,14 @@ PJ_DEF(pj_status_t) pjsip_pres_notify( pjsip_evsub *sub,
 	goto on_return;
 
 
-    /* Create message body to reflect the presence status. */
-    status = pres_create_msg_body( pres, tdata );
-    if (status != PJ_SUCCESS)
-	goto on_return;
-
+    /* Create message body to reflect the presence status. 
+     * Only do this if we have presence status info to send (see above).
+     */
+    if (pres->status.info_cnt > 0) {
+	status = pres_create_msg_body( pres, tdata );
+	if (status != PJ_SUCCESS)
+	    goto on_return;
+    }
 
     /* Done. */
     *p_tdata = tdata;
@@ -507,8 +515,11 @@ PJ_DEF(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
     pres = (pjsip_pres*) pjsip_evsub_get_mod_data(sub, mod_presence.id);
     PJ_ASSERT_RETURN(pres != NULL, PJSIP_SIMPLE_ENOPRESENCE);
 
-    /* Must have at least one presence info. */
-    PJ_ASSERT_RETURN(pres->status.info_cnt > 0, PJSIP_SIMPLE_ENOPRESENCEINFO);
+    /* We may not have a presence info yet, e.g. when we receive SUBSCRIBE
+     * to refresh subscription while we're waiting for user authorization.
+     */
+    //PJ_ASSERT_RETURN(pres->status.info_cnt > 0, 
+    //		       PJSIP_SIMPLE_ENOPRESENCEINFO);
 
 
     /* Lock object. */
@@ -521,10 +532,11 @@ PJ_DEF(pj_status_t) pjsip_pres_current_notify( pjsip_evsub *sub,
 
 
     /* Create message body to reflect the presence status. */
-    status = pres_create_msg_body( pres, tdata );
-    if (status != PJ_SUCCESS)
-	goto on_return;
-
+    if (pres->status.info_cnt > 0) {
+	status = pres_create_msg_body( pres, tdata );
+	if (status != PJ_SUCCESS)
+	    goto on_return;
+    }
 
     /* Done. */
     *p_tdata = tdata;

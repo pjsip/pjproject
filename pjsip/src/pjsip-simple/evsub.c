@@ -221,6 +221,7 @@ struct pjsip_evsub
     pj_str_t		  state_str;	/**< String describing the state.   */
     pjsip_evsub_state	  dst_state;	/**< Pending state to be set.	    */
     pj_str_t		  dst_state_str;/**< Pending state to be set.	    */
+    pj_str_t		  term_reason;	/**< Termination reason.	    */
     pjsip_method	  method;	/**< Method that established subscr.*/
     pjsip_event_hdr	 *event;	/**< Event description.		    */
     pjsip_expires_hdr	 *expires;	/**< Expires header		    */
@@ -550,7 +551,8 @@ static void evsub_destroy( pjsip_evsub *sub )
  * Set subscription session state.
  */
 static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
-		       const pj_str_t *state_str, pjsip_event *event)
+		       const pj_str_t *state_str, pjsip_event *event,
+		       const pj_str_t *reason)
 {
     pjsip_evsub_state prev_state = sub->state;
     pj_str_t old_state_str = sub->state_str;
@@ -561,6 +563,9 @@ static void set_state( pjsip_evsub *sub, pjsip_evsub_state state,
 	pj_strdup_with_null(sub->pool, &sub->state_str, state_str);
     else
 	sub->state_str = evsub_state_names[state];
+
+    if (reason && sub->term_reason.slen==0)
+	pj_strdup(sub->pool, &sub->term_reason, reason);
 
     PJ_LOG(4,(sub->obj_name, 
 	      "Subscription state changed %.*s --> %.*s",
@@ -638,9 +643,12 @@ static void on_timer( pj_timer_heap_t *timer_heap,
 
     case TIMER_TYPE_UAC_TERMINATE:
 	{
+	    pj_str_t timeout = {"timeout", 7};
+
 	    PJ_LOG(5,(sub->obj_name, "Timeout waiting for final NOTIFY. "
 				     "Terminating.."));
-	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL, 
+		      &timeout);
 	}
 	break;
 
@@ -912,7 +920,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_terminate( pjsip_evsub *sub,
     */
 
     sub->call_cb = notify;
-    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
+    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL, NULL);
 
     pjsip_dlg_dec_lock(sub->dlg);
     return PJ_SUCCESS;
@@ -934,6 +942,13 @@ PJ_DEF(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub)
     return sub->state_str.ptr;
 }
 
+/*
+ * Get termination reason.
+ */
+PJ_DEF(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub)
+{
+    return &sub->term_reason;
+}
 
 /*
  * Initiate client subscription
@@ -1085,10 +1100,10 @@ static pjsip_sub_state_hdr* sub_state_create( pj_pool_t *pool,
     switch (state) {
     case PJSIP_EVSUB_STATE_NULL:
     case PJSIP_EVSUB_STATE_SENT:
-    case PJSIP_EVSUB_STATE_ACCEPTED:
 	pj_assert(!"Invalid state!");
 	/* Treat as pending */
 
+    case PJSIP_EVSUB_STATE_ACCEPTED:
     case PJSIP_EVSUB_STATE_PENDING:
 	sub_state->sub_state = STR_PENDING;
 	sub_state->expires_param = delay.sec;
@@ -1155,7 +1170,9 @@ PJ_DEF(pj_status_t) pjsip_evsub_notify( pjsip_evsub *sub,
     /* Add Authentication headers. */
     pjsip_auth_clt_init_req( &sub->dlg->auth_sess, tdata );
 
-    
+    /* Update reason */
+    if (reason)
+	pj_strdup(sub->dlg->pool, &sub->term_reason, reason);
 
     /* Save destination state. */
     sub->dst_state = state;
@@ -1218,7 +1235,7 @@ PJ_DEF(pj_status_t) pjsip_evsub_send_request( pjsip_evsub *sub,
 
 	set_state(sub, sub->dst_state, 
 		  (sub->dst_state_str.slen ? &sub->dst_state_str : NULL), 
-		  NULL);
+		  NULL, NULL);
 
 	sub->dst_state = PJSIP_EVSUB_STATE_NULL;
 	sub->dst_state_str.slen = 0;
@@ -1546,7 +1563,7 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	if (sub->state == PJSIP_EVSUB_STATE_NULL &&
 	    tsx->state == PJSIP_TSX_STATE_CALLING)
 	{
-	    set_state(sub, PJSIP_EVSUB_STATE_SENT, NULL, event);
+	    set_state(sub, PJSIP_EVSUB_STATE_SENT, NULL, event, NULL);
 	    return;
 	}
 
@@ -1587,8 +1604,7 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    if (status != PJ_SUCCESS) {
 		/* Authentication failed! */
 		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED,
-			       NULL,
-			       event);
+			  NULL, event, &tsx->status_text);
 		return;
 	    }
 
@@ -1646,7 +1662,7 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    /* Set state, if necessary */
 	    pj_assert(sub->state != PJSIP_EVSUB_STATE_NULL);
 	    if (sub->state == PJSIP_EVSUB_STATE_SENT) {
-		set_state(sub, PJSIP_EVSUB_STATE_ACCEPTED, NULL, event);
+		set_state(sub, PJSIP_EVSUB_STATE_ACCEPTED, NULL, event, NULL);
 	    }
 
 	} else {
@@ -1685,7 +1701,7 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	    /* Set state to TERMINATED */
 	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, 
-		      NULL, event);
+		      NULL, event, &tsx->status_text);
 
 	}
 
@@ -1771,7 +1787,12 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 		unsigned timeout = TIME_UAC_WAIT_NOTIFY;
 		set_timer(sub, TIMER_TYPE_UAC_WAIT_NOTIFY, timeout);
 	    } else {
-		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
+		char errmsg[PJ_ERR_MSG_SIZE];
+		pj_str_t reason;
+
+		reason = pj_strerror(status, errmsg, sizeof(errmsg));
+		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL, 
+			  &reason);
 	    }
 
 	    return;
@@ -1815,9 +1836,15 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	/* Set the state */
 	if (status == PJ_SUCCESS) {
-	    set_state(sub, new_state, new_state_str, event);
+	    set_state(sub, new_state, new_state_str, event, 
+		      &sub_state->reason_param);
 	} else {
-	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event);
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_str_t reason;
+
+	    reason = pj_strerror(status, errmsg, sizeof(errmsg));
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event, 
+		      &reason);
 	}
 
 
@@ -1858,6 +1885,7 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	pjsip_msg_body *body = NULL;
 	pjsip_evsub_state old_state;
 	pj_str_t old_state_str;
+	pj_str_t reason = { NULL, 0 };
 	pj_status_t status;
 
 
@@ -1944,9 +1972,9 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	if (st_code/100==2) {
 	    
 	    if (sub->expires->ivalue == 0) {
-		set_state(sub, sub->state, NULL, event);
+		set_state(sub, sub->state, NULL, event, &reason);
 	    } else  if (sub->state == PJSIP_EVSUB_STATE_NULL) {
-		set_state(sub, sub->state, NULL, event);
+		set_state(sub, sub->state, NULL, event, &reason);
 	    }
 
 	    /* Set UAS timeout timer, when state is not terminated. */
@@ -1980,7 +2008,8 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	    if (status != PJ_SUCCESS) {
 		/* Can't authenticate. Terminate session (?) */
-		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL);
+		set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, NULL, 
+			  &tsx->status_text);
 		return;
 	    }
 
@@ -1993,7 +2022,8 @@ static void on_tsx_state_uas( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    (tsx->status_code==481 || tsx->status_code==408 ||
 	     tsx->status_code/100 == 7))
 	{
-	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event);
+	    set_state(sub, PJSIP_EVSUB_STATE_TERMINATED, NULL, event,
+		      &tsx->status_text);
 	    return;
 	}
 

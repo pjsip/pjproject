@@ -346,6 +346,17 @@ PJ_DECL(const char*) pjsip_evsub_get_state_name(pjsip_evsub *sub);
 
 
 /**
+ * Get subscription termination reason, if any. If remote did not
+ * send termination reason, this function will return empty string.
+ *
+ * @param sub		Event subscription instance.
+ *
+ * @return		NULL terminated string.
+ */
+PJ_DECL(const pj_str_t*) pjsip_evsub_get_termination_reason(pjsip_evsub *sub);
+
+
+/**
  * Call this function to create request to initiate subscription, to 
  * refresh subcription, or to request subscription termination.
  *
