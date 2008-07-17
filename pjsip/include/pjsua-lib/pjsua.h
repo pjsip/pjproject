@@ -393,6 +393,11 @@ typedef int pjsua_recorder_id;
 /** Conference port identification */
 typedef int pjsua_conf_port_id;
 
+/** Opaque declaration for server side presence subscription */
+typedef struct pjsua_srv_pres pjsua_srv_pres;
+
+/** Forward declaration for pjsua_msg_data */
+typedef struct pjsua_msg_data pjsua_msg_data;
 
 
 /**
@@ -791,6 +796,79 @@ typedef struct pjsua_callback
      * \endcode
      */
     void (*on_reg_state)(pjsua_acc_id acc_id);
+
+    /**
+     * Notification when incoming SUBSCRIBE request is received. Application
+     * may use this callback to authorize the incoming subscribe request
+     * (e.g. ask user permission if the request should be granted).
+     *
+     * If this callback is not implemented, all incoming presence subscription
+     * requests will be accepted.
+     *
+     * If this callback is implemented, application has several choices on
+     * what to do with the incoming request:
+     *	- it may reject the request immediately by specifying non-200 class
+     *    final response in the \a code argument.
+     *	- it may immediately accept the request by specifying 200 as the
+     *	  \a code argument. This is the default value if application doesn't
+     *	  set any value to the \a code argument. In this case, the library
+     *	  will automatically send NOTIFY request upon returning from this
+     *	  callback.
+     *  - it may delay the processing of the request, for example to request
+     *    user permission whether to accept or reject the request. In this 
+     *	  case, the application MUST set the \a code argument to 202, and 
+     *	  later calls #pjsua_pres_notify() to accept or reject the 
+     *	  subscription request.
+     *
+     * Any \a code other than 200 and 202 will be treated as 200.
+     *
+     * Application MUST return from this callback immediately (e.g. it must
+     * not block in this callback while waiting for user confirmation).
+     *
+     * @param srv_pres	    Server presence subscription instance. If
+     *			    application delays the acceptance of the request,
+     *			    it will need to specify this object when calling
+     *			    #pjsua_pres_notify().
+     * @param acc_id	    Account ID most appropriate for this request.
+     * @param buddy_id	    ID of the buddy matching the sender of the
+     *			    request, if any, or PJSUA_INVALID_ID if no
+     *			    matching buddy is found.
+     * @param from	    The From URI of the request.
+     * @param rdata	    The incoming request.
+     * @param code	    The status code to respond to the request. The
+     *			    default value is 200. Application may set this
+     *			    to other final status code to accept or reject
+     *			    the request.
+     * @param reason	    The reason phrase to respond to the request.
+     * @param msg_data	    If the application wants to send additional
+     *			    headers in the response, it can put it in this
+     *			    parameter.
+     */
+    void (*on_incoming_subscribe)(pjsua_acc_id acc_id,
+				  pjsua_srv_pres *srv_pres,
+				  pjsua_buddy_id buddy_id,
+				  const pj_str_t *from,
+				  pjsip_rx_data *rdata,
+				  pjsip_status_code *code,
+				  pj_str_t *reason,
+				  pjsua_msg_data *msg_data);
+
+    /**
+     * Notification when server side subscription state has changed.
+     * This callback is optional as application normally does not need
+     * to do anything to maintain server side presence subscription.
+     *
+     * @param acc_id	    The account ID.
+     * @param srv_pres	    Server presence subscription object.
+     * @param remote_uri    Remote URI string.
+     * @param state	    New subscription state.
+     * @param event	    PJSIP event that triggers the state change.
+     */
+    void (*on_srv_subscribe_state)(pjsua_acc_id acc_id,
+				   pjsua_srv_pres *srv_pres,
+				   const pj_str_t *remote_uri,
+				   pjsip_evsub_state state,
+				   pjsip_event *event);
 
     /**
      * Notify application when the buddy state has changed.
@@ -1193,7 +1271,7 @@ PJ_DECL(void) pjsua_config_dup(pj_pool_t *pool,
     msg_data = py_pjsua.msg_data_init()
  * \endcode
  */
-typedef struct pjsua_msg_data
+struct pjsua_msg_data
 {
     /**
      * Additional message headers as linked list. Application can add
@@ -1221,7 +1299,7 @@ typedef struct pjsua_msg_data
      */
     pj_str_t	msg_body;
 
-} pjsua_msg_data;
+};
 
 
 /**
@@ -2412,7 +2490,6 @@ PJ_DECL(pj_status_t) pjsua_acc_set_online_status2(pjsua_acc_id acc_id,
 PJ_DECL(pj_status_t) pjsua_acc_set_registration(pjsua_acc_id acc_id, 
 						pj_bool_t renew);
 
-
 /**
  * Get information about the specified account.
  *
@@ -3352,6 +3429,22 @@ typedef struct pjsua_buddy_info
     pj_bool_t		monitor_pres;
 
     /**
+     * If \a monitor_pres is enabled, this specifies the last state of the
+     * presence subscription. If presence subscription session is currently
+     * active, the value will be PJSIP_EVSUB_STATE_ACTIVE. If presence
+     * subscription request has been rejected, the value will be
+     * PJSIP_EVSUB_STATE_TERMINATED, and the termination reason will be
+     * specified in \a sub_term_reason.
+     */
+    pjsip_evsub_state	sub_state;
+
+    /**
+     * Specifies the last presence subscription terminatino reason. If 
+     * presence subscription is currently active, the value will be empty.
+     */
+    pj_str_t		sub_term_reason;
+
+    /**
      * Extended RPID information about the person.
      */
     pjrpid_element	rpid;
@@ -3519,6 +3612,35 @@ PJ_DECL(pj_status_t) pjsua_buddy_subscribe_pres(pjsua_buddy_id buddy_id,
  */
 PJ_DECL(pj_status_t) pjsua_buddy_update_pres(pjsua_buddy_id buddy_id);
 
+
+/**
+ * Send NOTIFY to inform account presence status or to terminate server
+ * side presence subscription. If application wants to reject the incoming
+ * request, it should set the \a state to PJSIP_EVSUB_STATE_TERMINATED.
+ *
+ * @param acc_id	Account ID.
+ * @param srv_pres	Server presence subscription instance.
+ * @param state		New state to set.
+ * @param state_str	Optionally specify the state string name, if state
+ *			is not "active", "pending", or "terminated".
+ * @param reason	If the new state is PJSIP_EVSUB_STATE_TERMINATED,
+ *			optionally specify the termination reason. 
+ * @param with_body	If the new state is PJSIP_EVSUB_STATE_TERMINATED,
+ *			this specifies whether the NOTIFY request should
+ *			contain message body containing account's presence
+ *			information.
+ * @param msg_data	Optional list of headers to be sent with the NOTIFY
+ *			request.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsua_pres_notify(pjsua_acc_id acc_id,
+				       pjsua_srv_pres *srv_pres,
+				       pjsip_evsub_state state,
+				       const pj_str_t *state_str,
+				       const pj_str_t *reason,
+				       pj_bool_t with_body,
+				       const pjsua_msg_data *msg_data);
 
 /**
  * Dump presence subscriptions to log.

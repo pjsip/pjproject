@@ -85,12 +85,15 @@ typedef struct pjsua_call
 /**
  * Server presence subscription list head.
  */
-typedef struct pjsua_srv_pres
+struct pjsua_srv_pres
 {
     PJ_DECL_LIST_MEMBER(struct pjsua_srv_pres);
-    pjsip_evsub	    *sub;
-    char	    *remote;
-} pjsua_srv_pres;
+    pjsip_evsub	    *sub;	    /**< The evsub.			    */
+    char	    *remote;	    /**< Remote URI.			    */
+    int		     acc_id;	    /**< Account ID.			    */
+    pjsip_dialog    *dlg;	    /**< Dialog.			    */
+    int		     expires;	    /**< "expires" value in the request.    */
+};
 
 
 /**
@@ -151,6 +154,9 @@ typedef struct pjsua_transport_data
 } pjsua_transport_data;
 
 
+/** Maximum length of subscription termination reason. */
+#define PJSUA_BUDDY_SUB_TERM_REASON_LEN	    32
+
 /**
  * Buddy data.
  */
@@ -167,6 +173,7 @@ typedef struct pjsua_buddy
     pj_bool_t		 monitor;   /**< Should we monitor?		*/
     pjsip_dialog	*dlg;	    /**< The underlying dialog.		*/
     pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
+    pj_str_t		 term_reason;/**< Subscription termination reason */
     pjsip_pres_status	 status;    /**< Buddy presence status.		*/
 
 } pjsua_buddy;

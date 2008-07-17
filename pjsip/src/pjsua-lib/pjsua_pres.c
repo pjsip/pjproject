@@ -163,6 +163,29 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     /* monitor pres */
     info->monitor_pres = buddy->monitor;
 
+    /* subscription state and termination reason */
+    if (buddy->sub) {
+	info->sub_state = pjsip_evsub_get_state(buddy->sub);
+	if (info->sub_state == PJSIP_EVSUB_STATE_TERMINATED &&
+	    total < sizeof(info->buf_)) 
+	{
+	    info->sub_term_reason.ptr = info->buf_ + total;
+	    pj_strncpy(&info->sub_term_reason,
+		       pjsip_evsub_get_termination_reason(buddy->sub),
+		       sizeof(info->buf_) - total);
+	    total += info->sub_term_reason.slen;
+	} else {
+	    info->sub_term_reason = pj_str("");
+	}
+    } else if (total < sizeof(info->buf_)) {
+	info->sub_term_reason.ptr = info->buf_ + total;
+	pj_strncpy(&info->sub_term_reason, &buddy->term_reason,
+		   sizeof(info->buf_) - total);
+	total += info->sub_term_reason.slen;
+    } else {
+	info->sub_term_reason = pj_str("");
+    }
+
     PJSUA_UNLOCK();
     return PJ_SUCCESS;
 }
@@ -222,6 +245,11 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
 	pj_ansi_snprintf(name, sizeof(name), "buddy%03d", index);
 	buddy->pool = pjsua_pool_create(name, 512, 256);
     }
+
+    /* Init buffers for presence subscription status */
+    buddy->term_reason.ptr = (char*) 
+			     pj_pool_alloc(buddy->pool, 
+					   PJSUA_BUDDY_SUB_TERM_REASON_LEN);
 
     /* Get name and display name for buddy */
     pj_strdup_with_null(buddy->pool, &tmp, &cfg->uri);
@@ -524,10 +552,23 @@ static void pres_evsub_on_srv_state( pjsip_evsub *sub, pjsip_event *event)
 
     uapres = (pjsua_srv_pres*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
     if (uapres) {
+	pjsip_evsub_state state;
+
 	PJ_LOG(4,(THIS_FILE, "Server subscription to %s is %s",
 		  uapres->remote, pjsip_evsub_get_state_name(sub)));
 
-	if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
+	state = pjsip_evsub_get_state(sub);
+
+	if (pjsua_var.ua_cfg.cb.on_srv_subscribe_state) {
+	    pj_str_t from;
+
+	    from = uapres->dlg->remote.info_str;
+	    (*pjsua_var.ua_cfg.cb.on_srv_subscribe_state)(uapres->acc_id, 
+							  uapres, &from,
+							  state, event);
+	}
+
+	if (state == PJSIP_EVSUB_STATE_TERMINATED) {
 	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
 	    pj_list_erase(uapres);
 	}
@@ -548,12 +589,11 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pjsua_srv_pres *uapres;
     pjsip_evsub *sub;
     pjsip_evsub_user pres_cb;
-    pjsip_tx_data *tdata;
-    pjsip_pres_status pres_status;
     pjsip_dialog *dlg;
+    pjsip_status_code st_code;
+    pj_str_t reason;
     pjsip_expires_hdr *expires_hdr;
-    pjsip_evsub_state ev_state;
-    pjsua_buddy_id buddy_id;
+    pjsua_msg_data msg_data;
     pj_status_t status;
 
     if (pjsip_method_cmp(req_method, pjsip_get_subscribe_method()) != 0)
@@ -627,6 +667,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     uapres = PJ_POOL_ALLOC_T(dlg->pool, pjsua_srv_pres);
     uapres->sub = sub;
     uapres->remote = (char*) pj_pool_alloc(dlg->pool, PJSIP_MAX_URL_SIZE);
+    uapres->acc_id = acc_id;
+    uapres->dlg = dlg;
     status = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, dlg->remote.info->uri,
 			     uapres->remote, PJSIP_MAX_URL_SIZE);
     if (status < 1)
@@ -640,8 +682,66 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     pj_list_push_back(&pjsua_var.acc[acc_id].pres_srv_list, uapres);
 
 
-    /* Create and send 200 (OK) to the SUBSCRIBE request: */
-    status = pjsip_pres_accept(sub, rdata, 200, NULL);
+    /* Capture the value of Expires header. */
+    expires_hdr = (pjsip_expires_hdr*)
+    		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES,
+				     NULL);
+    if (expires_hdr)
+	uapres->expires = expires_hdr->ivalue;
+    else
+	uapres->expires = -1;
+
+    st_code = 200;
+    reason = pj_str("OK");
+    pjsua_msg_data_init(&msg_data);
+
+    /* Notify application callback, if any */
+    if (pjsua_var.ua_cfg.cb.on_incoming_subscribe) {
+	pjsua_buddy_id buddy_id;
+
+	buddy_id = pjsua_find_buddy(rdata->msg_info.from->uri);
+
+	(*pjsua_var.ua_cfg.cb.on_incoming_subscribe)(acc_id, uapres, buddy_id,
+						     &dlg->remote.info_str, 
+						     rdata, &st_code, &reason,
+						     &msg_data);
+    }
+
+    /* Handle rejection case */
+    if (st_code >= 300) {
+	pjsip_tx_data *tdata;
+
+	/* Create response */
+	status = pjsip_dlg_create_response(dlg, rdata, st_code, 
+					   &reason, &tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating response",  status);
+	    pj_list_erase(uapres);
+	    pjsip_pres_terminate(sub, PJ_FALSE);
+	    PJSUA_UNLOCK();
+	    return PJ_FALSE;
+	}
+
+	/* Add header list, if any */
+	pjsua_process_msg_data(tdata, &msg_data);
+
+	/* Send the response */
+	status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata),
+					 tdata);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error sending response",  status);
+	    /* This is not fatal */
+	}
+
+	/* Terminate presence subscription */
+	pj_list_erase(uapres);
+	pjsip_pres_terminate(sub, PJ_FALSE);
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
+    }
+
+    /* Create and send 2xx response to the SUBSCRIBE request: */
+    status = pjsip_pres_accept(sub, rdata, st_code, &msg_data.hdr_list);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to accept presence subscription", 
 		     status);
@@ -651,48 +751,98 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_FALSE;
     }
 
+    /* If code is 200, send NOTIFY now */
+    if (st_code == 200) {
+	pjsua_pres_notify(acc_id, uapres, PJSIP_EVSUB_STATE_ACTIVE, 
+			  NULL, NULL, PJ_TRUE, &msg_data);
+    }
+
+    /* Done: */
+
+    PJSUA_UNLOCK();
+
+    return PJ_TRUE;
+}
+
+
+/*
+ * Send NOTIFY.
+ */
+PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
+				       pjsua_srv_pres *srv_pres,
+				       pjsip_evsub_state ev_state,
+				       const pj_str_t *state_str,
+				       const pj_str_t *reason,
+				       pj_bool_t with_body,
+				       const pjsua_msg_data *msg_data)
+{
+    pjsua_acc *acc;
+    pjsip_pres_status pres_status;
+    pjsua_buddy_id buddy_id;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    /* Check parameters */
+    PJ_ASSERT_RETURN(acc_id!=-1 && srv_pres, PJ_EINVAL);
+
+    /* Check that account ID is valid */
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
+    /* Check that account is valid */
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
+
+    PJSUA_LOCK();
+
+    acc = &pjsua_var.acc[acc_id];
+
+    /* Check that the server presence subscription is still valid */
+    if (pj_list_find_node(&acc->pres_srv_list, srv_pres) == NULL) {
+	/* Subscription has been terminated */
+	PJSUA_UNLOCK();
+	return PJ_EINVALIDOP;
+    }
 
     /* Set our online status: */
     pj_bzero(&pres_status, sizeof(pres_status));
     pres_status.info_cnt = 1;
-    pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
-    pres_status.info[0].id = pjsua_var.acc[acc_id].cfg.pidf_tuple_id;
+    pres_status.info[0].basic_open = acc->online_status;
+    pres_status.info[0].id = acc->cfg.pidf_tuple_id;
     //Both pjsua_var.local_uri and pjsua_var.contact_uri are enclosed in "<" and ">"
     //causing XML parsing to fail.
     //pres_status.info[0].contact = pjsua_var.local_uri;
 
-    pjsip_pres_set_status(sub, &pres_status);
+    pjsip_pres_set_status(srv_pres->sub, &pres_status);
 
     /* Check expires value. If it's zero, send our presense state but
      * set subscription state to TERMINATED.
      */
-    expires_hdr=(pjsip_expires_hdr*)
-    		pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES, NULL);
-
-    if (expires_hdr && expires_hdr->ivalue == 0)
+    if (srv_pres->expires == 0)
 	ev_state = PJSIP_EVSUB_STATE_TERMINATED;
-    else
-	ev_state = PJSIP_EVSUB_STATE_ACTIVE;
 
-    /* Create and send the first NOTIFY to active subscription: */
-    status = pjsip_pres_notify( sub, ev_state, NULL, NULL, &tdata);
+    /* Create and send the NOTIFY to active subscription: */
+    status = pjsip_pres_notify(srv_pres->sub, ev_state, state_str, 
+			       reason, &tdata);
     if (status == PJ_SUCCESS) {
-	pjsua_process_msg_data(tdata, NULL);
-	status = pjsip_pres_send_request( sub, tdata);
+	/* Force removal of message body if msg_body==FALSE */
+	if (!with_body) {
+	    tdata->msg->body = NULL;
+	}
+	pjsua_process_msg_data(tdata, msg_data);
+	status = pjsip_pres_send_request( srv_pres->sub, tdata);
     }
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create/send NOTIFY", 
 		     status);
-	pj_list_erase(uapres);
-	pjsip_pres_terminate(sub, PJ_FALSE);
+	pj_list_erase(srv_pres);
+	pjsip_pres_terminate(srv_pres->sub, PJ_FALSE);
 	PJSUA_UNLOCK();
-	return PJ_FALSE;
+	return status;
     }
 
 
     /* Subscribe to buddy's presence if we're not subscribed */
-    buddy_id = pjsua_find_buddy(dlg->remote.info->uri);
+    buddy_id = pjsua_find_buddy(srv_pres->dlg->remote.info->uri);
     if (buddy_id != PJSUA_INVALID_ID) {
 	pjsua_buddy *b = &pjsua_var.buddy[buddy_id];
 	if (b->monitor && b->sub == NULL) {
@@ -702,11 +852,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	}
     }
 
-    /* Done: */
-
     PJSUA_UNLOCK();
 
-    return PJ_TRUE;
+    return PJ_SUCCESS;
 }
 
 
@@ -1009,14 +1157,28 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 		  pjsip_evsub_get_state_name(sub)));
 
 	if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
-	    buddy->sub = NULL;
-	    buddy->status.info_cnt = 0;
-	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
+	    if (buddy->term_reason.ptr == NULL) {
+		buddy->term_reason.ptr = (char*) 
+					 pj_pool_alloc(buddy->pool,
+					   PJSUA_BUDDY_SUB_TERM_REASON_LEN);
+	    }
+	    pj_strncpy(&buddy->term_reason, 
+		       pjsip_evsub_get_termination_reason(sub), 
+		       PJSUA_BUDDY_SUB_TERM_REASON_LEN);
+	} else {
+	    buddy->term_reason.slen = 0;
 	}
 
 	/* Call callback */
 	if (pjsua_var.ua_cfg.cb.on_buddy_state)
 	    (*pjsua_var.ua_cfg.cb.on_buddy_state)(buddy->index);
+
+	/* Clear subscription */
+	if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
+	    buddy->sub = NULL;
+	    buddy->status.info_cnt = 0;
+	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
+	}
     }
 
     PJSUA_UNLOCK();
