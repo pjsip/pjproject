@@ -2184,6 +2184,408 @@ static void dump_media_session(const char *indent,
 	p += len;
 	*p++ = '\n';
 	*p = '\0';
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+#   define SAMPLES_TO_USEC(usec, samples, clock_rate) \
+	do { \
+	    if (samples <= 4294) \
+		usec = samples * 1000000 / clock_rate; \
+	    else { \
+		usec = samples * 1000 / clock_rate; \
+		usec *= 1000; \
+	    } \
+	} while(0)
+
+#   define PRINT_VOIP_MTC_VAL(s, v) \
+	if (v == 127) \
+	    sprintf(s, "(na)"); \
+	else \
+	    sprintf(s, "%d", v)
+
+#   define VALIDATE_PRINT_BUF() \
+	if (len < 1 || len > end-p) { *p = '\0'; return; } \
+	p += len; *p++ = '\n'; *p = '\0'
+
+
+	do {
+	    char loss[16], dup[16];
+	    char jitter[80];
+	    char toh[80];
+	    char plc[16], jba[16], jbr[16];
+	    char signal_lvl[16], noise_lvl[16], rerl[16];
+	    char r_factor[16], ext_r_factor[16], mos_lq[16], mos_cq[16];
+	    pjmedia_rtcp_xr_stat xr_stat;
+	    unsigned clock_rate;
+
+	    if (pjmedia_session_get_stream_stat_xr(session, i, &xr_stat) != 
+		PJ_SUCCESS)
+	    {
+		break;
+	    }
+
+	    clock_rate = info.stream_info[i].fmt.clock_rate;
+
+	    len = pj_ansi_snprintf(p, end-p, "\n%s  Extended reports:", indent);
+	    VALIDATE_PRINT_BUF();
+
+	    /* Statistics Summary */
+	    len = pj_ansi_snprintf(p, end-p, "%s   Statistics Summary", indent);
+	    VALIDATE_PRINT_BUF();
+
+	    if (xr_stat.rx.stat_sum.l)
+		sprintf(loss, "%d", xr_stat.rx.stat_sum.lost);
+	    else
+		sprintf(loss, "(na)");
+
+	    if (xr_stat.rx.stat_sum.d)
+		sprintf(dup, "%d", xr_stat.rx.stat_sum.dup);
+	    else
+		sprintf(dup, "(na)");
+
+	    if (xr_stat.rx.stat_sum.j) {
+		unsigned jmin, jmax, jmean, jdev;
+
+		SAMPLES_TO_USEC(jmin, xr_stat.rx.stat_sum.jitter.min, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmax, xr_stat.rx.stat_sum.jitter.max, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean, 
+				clock_rate);
+		SAMPLES_TO_USEC(jdev, 
+			       pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.jitter),
+			       clock_rate);
+		sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+			jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
+	    } else
+		sprintf(jitter, "(report not available)");
+
+	    if (xr_stat.rx.stat_sum.t) {
+		sprintf(toh, "%11d %11d %11d %11d", 
+			xr_stat.rx.stat_sum.toh.min,
+			xr_stat.rx.stat_sum.toh.mean,
+			xr_stat.rx.stat_sum.toh.max,
+			pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.toh));
+	    } else
+		sprintf(toh, "(report not available)");
+
+	    if (xr_stat.rx.stat_sum.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.rx.stat_sum.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     RX last update: %s\n"
+		    "%s        begin seq=%d, end seq=%d\n"
+		    "%s        pkt loss=%s, dup=%s\n"
+		    "%s              (msec)    min     avg     max     dev\n"
+		    "%s        jitter     : %s\n"
+		    "%s        toh        : %s",
+		    indent, last_update,
+		    indent,
+		    xr_stat.rx.stat_sum.begin_seq, xr_stat.rx.stat_sum.end_seq,
+		    indent, loss, dup,
+		    indent, 
+		    indent, jitter,
+		    indent, toh
+		    );
+	    VALIDATE_PRINT_BUF();
+
+	    if (xr_stat.tx.stat_sum.l)
+		sprintf(loss, "%d", xr_stat.tx.stat_sum.lost);
+	    else
+		sprintf(loss, "(na)");
+
+	    if (xr_stat.tx.stat_sum.d)
+		sprintf(dup, "%d", xr_stat.tx.stat_sum.dup);
+	    else
+		sprintf(dup, "(na)");
+
+	    if (xr_stat.tx.stat_sum.j) {
+		unsigned jmin, jmax, jmean, jdev;
+
+		SAMPLES_TO_USEC(jmin, xr_stat.tx.stat_sum.jitter.min, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmax, xr_stat.tx.stat_sum.jitter.max, 
+				clock_rate);
+		SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean, 
+				clock_rate);
+		SAMPLES_TO_USEC(jdev, 
+			       pj_math_stat_get_stddev(&xr_stat.tx.stat_sum.jitter),
+			       clock_rate);
+		sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
+			jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
+	    } else
+		sprintf(jitter, "(report not available)");
+
+	    if (xr_stat.tx.stat_sum.t) {
+		sprintf(toh, "%11d %11d %11d %11d", 
+			xr_stat.tx.stat_sum.toh.min,
+			xr_stat.tx.stat_sum.toh.mean,
+			xr_stat.tx.stat_sum.toh.max,
+			pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.toh));
+	    } else
+		sprintf(toh,    "(report not available)");
+
+	    if (xr_stat.tx.stat_sum.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.tx.stat_sum.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     TX last update: %s\n"
+		    "%s        begin seq=%d, end seq=%d\n"
+		    "%s        pkt loss=%s, dup=%s\n"
+		    "%s              (msec)    min     avg     max     dev\n"
+		    "%s        jitter     : %s\n"
+		    "%s        toh        : %s",
+		    indent, last_update,
+		    indent,
+		    xr_stat.tx.stat_sum.begin_seq, xr_stat.tx.stat_sum.end_seq,
+		    indent, loss, dup,
+		    indent,
+		    indent, jitter,
+		    indent, toh
+		    );
+	    VALIDATE_PRINT_BUF();
+
+
+	    /* VoIP Metrics */
+	    len = pj_ansi_snprintf(p, end-p, "%s   VoIP Metrics", indent);
+	    VALIDATE_PRINT_BUF();
+
+	    PRINT_VOIP_MTC_VAL(signal_lvl, xr_stat.rx.voip_mtc.signal_lvl);
+	    PRINT_VOIP_MTC_VAL(noise_lvl, xr_stat.rx.voip_mtc.noise_lvl);
+	    PRINT_VOIP_MTC_VAL(rerl, xr_stat.rx.voip_mtc.rerl);
+	    PRINT_VOIP_MTC_VAL(r_factor, xr_stat.rx.voip_mtc.r_factor);
+	    PRINT_VOIP_MTC_VAL(ext_r_factor, xr_stat.rx.voip_mtc.ext_r_factor);
+	    PRINT_VOIP_MTC_VAL(mos_lq, xr_stat.rx.voip_mtc.mos_lq);
+	    PRINT_VOIP_MTC_VAL(mos_cq, xr_stat.rx.voip_mtc.mos_cq);
+
+	    switch ((xr_stat.rx.voip_mtc.rx_config>>6) & 3) {
+		case PJMEDIA_RTCP_XR_PLC_DIS:
+		    sprintf(plc, "DISABLED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_ENH:
+		    sprintf(plc, "ENHANCED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_STD:
+		    sprintf(plc, "STANDARD");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_UNK:
+		default:
+		    sprintf(plc, "UNKNOWN");
+		    break;
+	    }
+
+	    switch ((xr_stat.rx.voip_mtc.rx_config>>4) & 3) {
+		case PJMEDIA_RTCP_XR_JB_FIXED:
+		    sprintf(jba, "FIXED");
+		    break;
+		case PJMEDIA_RTCP_XR_JB_ADAPTIVE:
+		    sprintf(jba, "ADAPTIVE");
+		    break;
+		default:
+		    sprintf(jba, "UNKNOWN");
+		    break;
+	    }
+
+	    sprintf(jbr, "%d", xr_stat.rx.voip_mtc.rx_config & 0x0F);
+
+	    if (xr_stat.rx.voip_mtc.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.rx.voip_mtc.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     RX last update: %s\n"
+		    "%s        packets    : loss rate=%d (%.2f%%), discard rate=%d (%.2f%%)\n"
+		    "%s        burst      : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        gap        : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        delay      : round trip=%d%s, end system=%d%s\n"
+		    "%s        level      : signal=%s%s, noise=%s%s, RERL=%s%s\n"
+		    "%s        quality    : R factor=%s, ext R factor=%s\n"
+		    "%s                     MOS LQ=%s, MOS CQ=%s\n"
+		    "%s        config     : PLC=%s, JB=%s, JB rate=%s, Gmin=%d\n"
+		    "%s        JB delay   : cur=%d%s, max=%d%s, abs max=%d%s",
+		    indent,
+		    last_update,
+		    /* packets */
+		    indent,
+		    xr_stat.rx.voip_mtc.loss_rate, xr_stat.rx.voip_mtc.loss_rate*100.0/256,
+		    xr_stat.rx.voip_mtc.discard_rate, xr_stat.rx.voip_mtc.discard_rate*100.0/256,
+		    /* burst */
+		    indent,
+		    xr_stat.rx.voip_mtc.burst_den, xr_stat.rx.voip_mtc.burst_den*100.0/256,
+		    xr_stat.rx.voip_mtc.burst_dur, "ms",
+		    /* gap */
+		    indent,
+		    xr_stat.rx.voip_mtc.gap_den, xr_stat.rx.voip_mtc.gap_den*100.0/256,
+		    xr_stat.rx.voip_mtc.gap_dur, "ms",
+		    /* delay */
+		    indent,
+		    xr_stat.rx.voip_mtc.rnd_trip_delay, "ms",
+		    xr_stat.rx.voip_mtc.end_sys_delay, "ms",
+		    /* level */
+		    indent,
+		    signal_lvl, "dB",
+		    noise_lvl, "dB",
+		    rerl, "",
+		    /* quality */
+		    indent,
+		    r_factor, ext_r_factor, 
+		    indent,
+		    mos_lq, mos_cq,
+		    /* config */
+		    indent,
+		    plc, jba, jbr, xr_stat.rx.voip_mtc.gmin,
+		    /* JB delay */
+		    indent,
+		    xr_stat.rx.voip_mtc.jb_nom, "ms",
+		    xr_stat.rx.voip_mtc.jb_max, "ms",
+		    xr_stat.rx.voip_mtc.jb_abs_max, "ms"
+		    );
+	    VALIDATE_PRINT_BUF();
+
+	    PRINT_VOIP_MTC_VAL(signal_lvl, xr_stat.tx.voip_mtc.signal_lvl);
+	    PRINT_VOIP_MTC_VAL(noise_lvl, xr_stat.tx.voip_mtc.noise_lvl);
+	    PRINT_VOIP_MTC_VAL(rerl, xr_stat.tx.voip_mtc.rerl);
+	    PRINT_VOIP_MTC_VAL(r_factor, xr_stat.tx.voip_mtc.r_factor);
+	    PRINT_VOIP_MTC_VAL(ext_r_factor, xr_stat.tx.voip_mtc.ext_r_factor);
+	    PRINT_VOIP_MTC_VAL(mos_lq, xr_stat.tx.voip_mtc.mos_lq);
+	    PRINT_VOIP_MTC_VAL(mos_cq, xr_stat.tx.voip_mtc.mos_cq);
+
+	    switch ((xr_stat.tx.voip_mtc.rx_config>>6) & 3) {
+		case PJMEDIA_RTCP_XR_PLC_DIS:
+		    sprintf(plc, "DISABLED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_ENH:
+		    sprintf(plc, "ENHANCED");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_STD:
+		    sprintf(plc, "STANDARD");
+		    break;
+		case PJMEDIA_RTCP_XR_PLC_UNK:
+		default:
+		    sprintf(plc, "unknown");
+		    break;
+	    }
+
+	    switch ((xr_stat.tx.voip_mtc.rx_config>>4) & 3) {
+		case PJMEDIA_RTCP_XR_JB_FIXED:
+		    sprintf(jba, "FIXED");
+		    break;
+		case PJMEDIA_RTCP_XR_JB_ADAPTIVE:
+		    sprintf(jba, "ADAPTIVE");
+		    break;
+		default:
+		    sprintf(jba, "unknown");
+		    break;
+	    }
+
+	    sprintf(jbr, "%d", xr_stat.tx.voip_mtc.rx_config & 0x0F);
+
+	    if (xr_stat.tx.voip_mtc.update.sec == 0)
+		strcpy(last_update, "never");
+	    else {
+		pj_gettimeofday(&now);
+		PJ_TIME_VAL_SUB(now, xr_stat.tx.voip_mtc.update);
+		sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+			now.sec / 3600,
+			(now.sec % 3600) / 60,
+			now.sec % 60,
+			now.msec);
+	    }
+
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     TX last update: %s\n"
+		    "%s        packets    : loss rate=%d (%.2f%%), discard rate=%d (%.2f%%)\n"
+		    "%s        burst      : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        gap        : density=%d (%.2f%%), duration=%d%s\n"
+		    "%s        delay      : round trip=%d%s, end system=%d%s\n"
+		    "%s        level      : signal=%s%s, noise=%s%s, RERL=%s%s\n"
+		    "%s        quality    : R factor=%s, ext R factor=%s\n"
+		    "%s                     MOS LQ=%s, MOS CQ=%s\n"
+		    "%s        config     : PLC=%s, JB=%s, JB rate=%s, Gmin=%d\n"
+		    "%s        JB delay   : cur=%d%s, max=%d%s, abs max=%d%s",
+		    indent,
+		    last_update,
+		    /* pakcets */
+		    indent,
+		    xr_stat.tx.voip_mtc.loss_rate, xr_stat.tx.voip_mtc.loss_rate*100.0/256,
+		    xr_stat.tx.voip_mtc.discard_rate, xr_stat.tx.voip_mtc.discard_rate*100.0/256,
+		    /* burst */
+		    indent,
+		    xr_stat.tx.voip_mtc.burst_den, xr_stat.tx.voip_mtc.burst_den*100.0/256,
+		    xr_stat.tx.voip_mtc.burst_dur, "ms",
+		    /* gap */
+		    indent,
+		    xr_stat.tx.voip_mtc.gap_den, xr_stat.tx.voip_mtc.gap_den*100.0/256,
+		    xr_stat.tx.voip_mtc.gap_dur, "ms",
+		    /* delay */
+		    indent,
+		    xr_stat.tx.voip_mtc.rnd_trip_delay, "ms",
+		    xr_stat.tx.voip_mtc.end_sys_delay, "ms",
+		    /* level */
+		    indent,
+		    signal_lvl, "dB",
+		    noise_lvl, "dB",
+		    rerl, "",
+		    /* quality */
+		    indent,
+		    r_factor, ext_r_factor, 
+		    indent,
+		    mos_lq, mos_cq,
+		    /* config */
+		    indent,
+		    plc, jba, jbr, xr_stat.tx.voip_mtc.gmin,
+		    /* JB delay */
+		    indent,
+		    xr_stat.tx.voip_mtc.jb_nom, "ms",
+		    xr_stat.tx.voip_mtc.jb_max, "ms",
+		    xr_stat.tx.voip_mtc.jb_abs_max, "ms"
+		    );
+	    VALIDATE_PRINT_BUF();
+
+
+	    /* RTT delay (by receiver side) */
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s   RTT (from recv)      min     avg     max     last    dev",
+		    indent);
+	    VALIDATE_PRINT_BUF();
+	    len = pj_ansi_snprintf(p, end-p, 
+		    "%s     RTT msec      : %7.3f %7.3f %7.3f %7.3f %7.3f", 
+		    indent,
+		    xr_stat.rtt.min / 1000.0,
+		    xr_stat.rtt.mean / 1000.0,
+		    xr_stat.rtt.max / 1000.0,
+		    xr_stat.rtt.last / 1000.0,
+		    pj_math_stat_get_stddev(&xr_stat.rtt) / 1000.0
+		   );
+	    VALIDATE_PRINT_BUF();
+	} while(0);
+#endif
+
     }
 }
 

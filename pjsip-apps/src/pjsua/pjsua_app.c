@@ -127,7 +127,7 @@ static const char      *stdout_refresh_text = "STDOUT_REFRESH";
 static pj_bool_t	stdout_refresh_quit = PJ_FALSE;
 static pj_str_t		uri_arg;
 
-static char some_buf[2048];
+static char some_buf[1024 * 3];
 
 #ifdef STEREO_DEMO
 static void stereo_demo();
@@ -1762,6 +1762,42 @@ static void app_dump(pj_bool_t detail)
     pjsua_dump(detail);
 }
 
+/*
+ * Print log of call states. Since call states may be too long for logger,
+ * printing it is a bit tricky, it should be printed part by part as long 
+ * as the logger can accept.
+ */
+static void log_call_dump(int call_id) {
+    unsigned call_dump_len;
+    unsigned part_len;
+    unsigned part_idx;
+    unsigned log_decor;
+
+    pjsua_call_dump(call_id, PJ_TRUE, some_buf, 
+		    sizeof(some_buf), "  ");
+    call_dump_len = strlen(some_buf);
+
+    log_decor = pj_log_get_decor();
+    pj_log_set_decor(log_decor & ~(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_CR));
+    PJ_LOG(3,(THIS_FILE, "\n"));
+    pj_log_set_decor(0);
+
+    part_idx = 0;
+    part_len = PJ_LOG_MAX_SIZE-80;
+    while (part_idx < call_dump_len) {
+	char p_orig, *p;
+
+	p = &some_buf[part_idx];
+	if (part_idx + part_len > call_dump_len)
+	    part_len = call_dump_len - part_idx;
+	p_orig = p[part_len];
+	p[part_len] = '\0';
+	PJ_LOG(3,(THIS_FILE, "%s", p));
+	p[part_len] = p_orig;
+	part_idx += part_len;
+    }
+    pj_log_set_decor(log_decor);
+}
 
 /*****************************************************************************
  * Console application
@@ -1962,11 +1998,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
 	/* Dump media state upon disconnected */
 	if (1) {
-	    pjsua_call_dump(call_id, PJ_TRUE, some_buf, 
-			    sizeof(some_buf), "  ");
 	    PJ_LOG(5,(THIS_FILE, 
-		      "Call %d disconnected, dumping media stats\n%s", 
-		      call_id, some_buf));
+		      "Call %d disconnected, dumping media stats..", 
+		      call_id));
+	    log_call_dump(call_id);
 	}
 
     } else {
@@ -3719,9 +3754,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    } else if (menuin[1] == 'q') {
 
 		if (current_call != PJSUA_INVALID_ID) {
-		    pjsua_call_dump(current_call, PJ_TRUE, some_buf, 
-				    sizeof(some_buf), "  ");
-		    PJ_LOG(3,(THIS_FILE, "\n%s", some_buf));
+		    log_call_dump(current_call);
 		} else {
 		    PJ_LOG(3,(THIS_FILE, "No current call"));
 		}

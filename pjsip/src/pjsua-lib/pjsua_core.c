@@ -2067,7 +2067,6 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 {
     unsigned old_decor;
     unsigned i;
-    char buf[1024];
 
     PJ_LOG(3,(THIS_FILE, "Start dumping application states:"));
 
@@ -2102,7 +2101,9 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     pjsip_tsx_layer_dump(detail);
     pjsip_ua_dump(detail);
 
-
+// Dumping complete call states may require a 'large' buffer 
+// (about 3KB per call session, including RTCP XR).
+#if 0
     /* Dump all invite sessions: */
     PJ_LOG(3,(THIS_FILE, "Dumping invite sessions:"));
 
@@ -2115,11 +2116,43 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 
 	for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	    if (pjsua_call_is_active(i)) {
+		/* Tricky logging, since call states log string tends to be 
+		 * longer than PJ_LOG_MAX_SIZE.
+		 */
+		char buf[1024 * 3];
+		unsigned call_dump_len;
+		unsigned part_len;
+		unsigned part_idx;
+		unsigned log_decor;
+
 		pjsua_call_dump(i, detail, buf, sizeof(buf), "  ");
-		PJ_LOG(3,(THIS_FILE, "%s", buf));
+		call_dump_len = strlen(buf);
+
+		log_decor = pj_log_get_decor();
+		pj_log_set_decor(log_decor & ~(PJ_LOG_HAS_NEWLINE | 
+					       PJ_LOG_HAS_CR));
+		PJ_LOG(3,(THIS_FILE, "\n"));
+		pj_log_set_decor(0);
+
+		part_idx = 0;
+		part_len = PJ_LOG_MAX_SIZE-80;
+		while (part_idx < call_dump_len) {
+		    char p_orig, *p;
+
+		    p = &buf[part_idx];
+		    if (part_idx + part_len > call_dump_len)
+			part_len = call_dump_len - part_idx;
+		    p_orig = p[part_len];
+		    p[part_len] = '\0';
+		    PJ_LOG(3,(THIS_FILE, "%s", p));
+		    p[part_len] = p_orig;
+		    part_idx += part_len;
+		}
+		pj_log_set_decor(log_decor);
 	    }
 	}
     }
+#endif
 
     /* Dump presence status */
     pjsua_pres_dump(detail);

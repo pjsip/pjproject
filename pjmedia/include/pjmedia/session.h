@@ -279,6 +279,26 @@ PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     unsigned index,
 						     pjmedia_rtcp_stat *stat);
 
+
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+/**
+ * Get extended session statistics. The extended statistic shows reports
+ * from RTCP XR, such as per interval statistics summary (packet count, 
+ * packet lost, jitter, etc), VoIP metrics (delay, quality, etc)
+ *
+ * @param session	The media session.
+ * @param index		Stream index.
+ * @param stat_xr	Stream extended statistics.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat_xr(
+					     pjmedia_session *session,
+					     unsigned index,
+					     pjmedia_rtcp_xr_stat *stat_xr);
+#endif
+
+
 /**
  * Dial DTMF digit to the stream, using RFC 2833 mechanism.
  *
