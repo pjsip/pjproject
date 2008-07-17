@@ -344,6 +344,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-test\hash_test.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-test\ioq_perf.c"
 				>
 				<FileConfiguration
