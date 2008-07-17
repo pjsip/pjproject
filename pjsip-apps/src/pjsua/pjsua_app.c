@@ -240,6 +240,7 @@ static void usage(void)
     puts  ("                      Specify N=-1 (default) to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");
     puts  ("  --no-tones          Disable audible tones");
+    puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -463,7 +464,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
 	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
-	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES,
+	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
 	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT,
 #ifdef _IONBF
 	   OPT_STDOUT_NO_BUF,
@@ -564,6 +565,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 #endif
 	{ "snd-auto-close", 1, 0, OPT_SND_AUTO_CLOSE},
 	{ "no-tones",    0, 0, OPT_NO_TONES},
+	{ "jb-max-size", 1, 0, OPT_JB_MAX_SIZE},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1180,6 +1182,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->no_tones = PJ_TRUE;
 	    break;
 
+	case OPT_JB_MAX_SIZE:
+	    cfg->media_cfg.jb_max = atoi(pj_optarg);
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1590,6 +1596,11 @@ static int write_settings(const struct app_config *config,
     }
     if (config->no_tones) {
 	pj_strcat2(&cfg, "--no-tones\n");
+    }
+    if (config->media_cfg.jb_max != -1) {
+	pj_ansi_sprintf(line, "--jb-max-size %d\n", 
+			config->media_cfg.jb_max);
+	pj_strcat2(&cfg, line);
     }
 
     /* Sound device latency */
