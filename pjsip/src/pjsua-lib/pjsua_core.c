@@ -1093,6 +1093,14 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
 
+	/* Must destroy endpoint first before destroying pools in
+	 * buddies or accounts, since shutting down transaction layer
+	 * may emit events which trigger some buddy or account callbacks
+	 * to be called.
+	 */
+	pjsip_endpt_destroy(pjsua_var.endpt);
+	pjsua_var.endpt = NULL;
+
 	/* Destroy pool in the buddy object */
 	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
 	    if (pjsua_var.buddy[i].pool) {
@@ -1108,9 +1116,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
-
-	pjsip_endpt_destroy(pjsua_var.endpt);
-	pjsua_var.endpt = NULL;
     }
 
     /* Destroy mutex */
