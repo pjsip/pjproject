@@ -507,6 +507,7 @@ typedef struct PyObj_pjsua_callback
     PyObject * on_call_replace_request;
     PyObject * on_call_replaced;
     PyObject * on_reg_state;
+    PyObject * on_incoming_subscribe;
     PyObject * on_buddy_state;
     PyObject * on_pager;
     PyObject * on_pager_status;
@@ -529,6 +530,7 @@ static void PyObj_pjsua_callback_delete(PyObj_pjsua_callback* self)
     Py_XDECREF(self->on_call_replace_request);
     Py_XDECREF(self->on_call_replaced);
     Py_XDECREF(self->on_reg_state);
+    Py_XDECREF(self->on_incoming_subscribe);
     Py_XDECREF(self->on_buddy_state);
     Py_XDECREF(self->on_pager);
     Py_XDECREF(self->on_pager_status);
@@ -616,6 +618,8 @@ static PyObject * PyObj_pjsua_callback_new(PyTypeObject *type,
             Py_DECREF(Py_None);
             return NULL;
         }
+	Py_INCREF(Py_None);
+        self->on_incoming_subscribe = Py_None;
         Py_INCREF(Py_None);
         self->on_buddy_state = Py_None;
         if (self->on_buddy_state == NULL)
@@ -717,6 +721,11 @@ static PyMemberDef PyObj_pjsua_callback_members[] =
         offsetof(PyObj_pjsua_callback, on_reg_state), 0,
         "Notify application when registration status has changed. Application "
         "may then query the account info to get the registration details."
+    },
+    {
+        "on_incoming_subscribe", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_callback, on_incoming_subscribe), 0,
+        "Notification when incoming SUBSCRIBE request is received."
     },
     {
         "on_buddy_state", T_OBJECT_EX,
@@ -2768,6 +2777,8 @@ typedef struct
     PyObject	*status_text;
     int		 monitor_pres;
     int		 activity;
+    int		 sub_state;
+    PyObject	*sub_term_reason;
 } PyObj_pjsua_buddy_info;
 
 
@@ -2781,6 +2792,7 @@ static void PyObj_pjsua_buddy_info_delete(PyObj_pjsua_buddy_info* self)
     Py_XDECREF(self->uri);
     Py_XDECREF(self->contact);
     Py_XDECREF(self->status_text);
+    Py_XDECREF(self->sub_term_reason);
     
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -2800,6 +2812,10 @@ static void PyObj_pjsua_buddy_info_import(PyObj_pjsua_buddy_info *obj,
 						  info->status_text.slen);
     obj->monitor_pres = info->monitor_pres;
     obj->activity = info->rpid.activity;
+    obj->sub_state = info->sub_state;
+    Py_XDECREF(obj->sub_term_reason);
+    obj->sub_term_reason = PyString_FromStringAndSize(info->sub_term_reason.ptr, 
+						      info->sub_term_reason.slen);
 }
 
 
@@ -2823,7 +2839,7 @@ static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
         if (self->uri == NULL) {
             Py_DECREF(self);
             return NULL;
-        }        
+        }
 	self->contact = PyString_FromString("");
         if (self->contact == NULL) {
             Py_DECREF(self);
@@ -2834,7 +2850,7 @@ static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
             Py_DECREF(self);
             return NULL;
         }
-	
+	self->sub_term_reason = PyString_FromString("");
     }
     return (PyObject *)self;
 }
@@ -2881,6 +2897,16 @@ static PyMemberDef PyObj_pjsua_buddy_info_members[] =
         "activity", T_INT, 
         offsetof(PyObj_pjsua_buddy_info, activity), 0,
         "Activity type. "
+    },
+    {
+        "sub_state", T_INT, 
+        offsetof(PyObj_pjsua_buddy_info, sub_state), 0,
+        "Subscription state."
+    },
+    {
+        "sub_term_reason", T_INT, 
+        offsetof(PyObj_pjsua_buddy_info, sub_term_reason), 0,
+        "Subscription termination reason."
     },
     
     

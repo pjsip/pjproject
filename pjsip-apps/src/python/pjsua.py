@@ -147,13 +147,13 @@ class MediaState:
     
     Member documentation:
 
-    NONE        -- media is not available.
+    NULL        -- media is not available.
     ACTIVE      -- media is active.
     LOCAL_HOLD  -- media is put on-hold by local party.
     REMOTE_HOLD -- media is put on-hold by remote party.
     ERROR       -- media error (e.g. ICE negotiation failure).
     """
-    NONE = 0
+    NULL = 0
     ACTIVE = 1
     LOCAL_HOLD = 2
     REMOTE_HOLD = 3
@@ -165,12 +165,12 @@ class MediaDir:
     
     Member documentation:
 
-    NONE              -- media is not active
+    NULL              -- media is not active
     ENCODING          -- media is active in transmit/encoding direction only.
     DECODING          -- media is active in receive/decoding direction only
     ENCODING_DECODING -- media is active in both directions.
     """
-    NONE = 0
+    NULL = 0
     ENCODING = 1
     DECODING = 2
     ENCODING_DECODING = 3
@@ -188,6 +188,20 @@ class PresenceActivity:
     UNKNOWN = 0
     AWAY = 1
     BUSY = 2
+
+
+class SubscriptionState:
+    """Presence subscription state constants.
+
+    """
+    NULL = 0
+    SENT = 1
+    ACCEPTED = 2
+    PENDING = 3
+    ACTIVE = 4
+    TERMINATED = 5
+    UNKNOWN = 6
+
 
 class TURNConnType:
     """These constants specifies the connection type to TURN server.
@@ -861,10 +875,37 @@ class AccountCallback:
         Unless this callback is implemented, the default behavior is to
         reject the call with default status code.
 
-    Keyword arguments:
-    call    -- the new incoming call
+        Keyword arguments:
+        call    -- the new incoming call
         """
         call.hangup()
+
+    def on_incoming_subscribe(self, buddy, from_uri, pres_obj):
+        """Notification when incoming SUBSCRIBE request is received. 
+        
+        Application may use this callback to authorize the incoming 
+        subscribe request (e.g. ask user permission if the request 
+        should be granted)
+
+        Keyword arguments:
+        buddy       -- The buddy object, if buddy is found. Otherwise
+                       the value is None.
+        from_uri    -- The URI string of the sender.
+        pres_obj    -- Opaque presence subscription object, which is
+                       needed by Account.pres_notify()
+
+        Return:
+            Tuple (code, reason), where:
+             code:      The status code. If code is >= 300, the
+                        request is rejected. If code is 200, the
+                        request is accepted and NOTIFY will be sent
+                        automatically. If code is 202, application
+                        must accept or reject the request later with
+                        Account.press_notify().
+             reason:    Optional reason phrase, or None to use the
+                        default reasoh phrase for the status code.
+        """
+        return (200, None)
 
     def on_pager(self, from_uri, contact, mime_type, body):
         """
@@ -951,7 +992,7 @@ class Account:
         lib -- the Lib instance.
         id  -- the pjsua account ID.
         """
-        _cb = AccountCallback(self)
+        self._cb = AccountCallback(self)
         self._id = id
         self._lib = lib
         self._lib._associate_account(self._id, self)
@@ -1101,6 +1142,19 @@ class Account:
         self._lib._err_check("add_buddy()", self, err)
         return Buddy(self._lib, buddy_id, self)
 
+    def pres_notify(self, pres_obj, state, reason="", hdr_list=None):
+        """Send NOTIFY to inform account presence status or to terminate
+        server side presence subscription.
+        
+        Keyword arguments:
+        pres_obj    -- The subscription object from on_incoming_subscribe()
+                       callback
+        state       -- Subscription state, from SubscriptionState
+        reason      -- Optional reason phrase.
+        hdr_list    -- Optional header list.
+        """
+        _pjsua.acc_pres_notify(self._id, pres_obj, state, reason, 
+                               Lib._create_msg_data(hdr_list))
 
 class CallCallback:
     """Class to receive event notification from Call objects. 
@@ -1275,8 +1329,8 @@ class CallInfo:
     state_text = ""
     last_code = 0
     last_reason = ""
-    media_state = MediaState.NONE
-    media_dir = MediaDir.NONE
+    media_state = MediaState.NULL
+    media_dir = MediaDir.NULL
     conf_slot = -1
     call_time = 0
     total_time = 0
@@ -1529,6 +1583,9 @@ class BuddyInfo:
     activity        -- the PresenceActivity
     subscribed      -- specify whether buddy's presence status is currently
                        being subscribed.
+    sub_state       -- SubscriptionState
+    sub_term_reason -- The termination reason string of the last presence
+                       subscription to this buddy, if any.
     """
     uri = ""
     contact = ""
@@ -1536,6 +1593,8 @@ class BuddyInfo:
     online_text = ""
     activity = PresenceActivity.UNKNOWN
     subscribed = False
+    sub_state = SubscriptionState.NULL
+    sub_term_reason = ""
 
     def __init__(self, pjsua_bi=None):
         if pjsua_bi:
@@ -1548,6 +1607,8 @@ class BuddyInfo:
         self.online_text = inf.status_text
         self.activity = inf.activity
         self.subscribed = inf.monitor_pres
+        self.sub_state = inf.sub_state
+        self.sub_term_reason = inf.sub_term_reason
 
 
 class BuddyCallback:
@@ -1866,6 +1927,7 @@ class Lib:
         py_ua_cfg.cb.on_call_replace_request = _cb_on_call_replace_request
         py_ua_cfg.cb.on_call_replaced = _cb_on_call_replaced
         py_ua_cfg.cb.on_reg_state = _cb_on_reg_state
+        py_ua_cfg.cb.on_incoming_subscribe = _cb_on_incoming_subscribe
         py_ua_cfg.cb.on_buddy_state = _cb_on_buddy_state
         py_ua_cfg.cb.on_pager = _cb_on_pager
         py_ua_cfg.cb.on_pager_status = _cb_on_pager_status
@@ -2266,11 +2328,9 @@ class Lib:
         self.buddy_by_uri[(uri.user, uri.host)] = buddy
 
     def _lookup_buddy(self, buddy_id, uri=None):
-        print "lookup_buddy, id=", buddy_id
         buddy = self.buddy.has_key(buddy_id) and self.buddy[buddy_id] or None
         if uri and not buddy:
             sip_uri = SIPUri(uri)
-            print "lookup_buddy, uri=", sip_uri.user, sip_uri.host
             buddy = self.buddy_by_uri.has_key( (sip_uri.user, sip_uri.host) ) \
                     and self.buddy_by_uri[(sip_uri.user, sip_uri.host)] or \
                     None
@@ -2288,6 +2348,14 @@ class Lib:
         acc = self._lookup_account(acc_id)
         if acc:
             acc._cb.on_reg_state()
+
+    def _cb_on_incoming_subscribe(self, acc_id, buddy_id, from_uri, pres_obj):
+        acc = self._lookup_account(acc_id)
+        if acc:
+            buddy = self._lookup_buddy(buddy_id)
+            return acc._cb.on_incoming_subscribe(buddy, from_uri, pres_obj)
+        else:
+            return (404, None)
 
     def _cb_on_incoming_call(self, acc_id, call_id, rdata):
         acc = self._lookup_account(acc_id)
@@ -2423,6 +2491,9 @@ def _cb_on_call_replaced(old_call_id, new_call_id):
 
 def _cb_on_reg_state(acc_id):
     _lib._cb_on_reg_state(acc_id)
+
+def _cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, pres):
+    return _lib._cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, pres)
 
 def _cb_on_buddy_state(buddy_id):
     _lib._cb_on_buddy_state(buddy_id)

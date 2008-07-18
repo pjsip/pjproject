@@ -340,6 +340,58 @@ static void cb_on_reg_state(pjsua_acc_id acc_id)
     }
 }
 
+/* 
+ * cb_on_incoming_subscribe
+ */
+static void cb_on_incoming_subscribe( pjsua_acc_id acc_id,
+				      pjsua_srv_pres *srv_pres,
+				      pjsua_buddy_id buddy_id,
+				      const pj_str_t *from,
+				      pjsip_rx_data *rdata,
+				      pjsip_status_code *code,
+				      pj_str_t *reason,
+				      pjsua_msg_data *msg_data)
+{
+    static char reason_buf[64];
+
+    PJ_UNUSED_ARG(rdata);
+    PJ_UNUSED_ARG(msg_data);
+
+    if (PyCallable_Check(g_obj_callback->on_incoming_subscribe))
+    {
+	PyObject *ret;
+
+	ENTER_PYTHON();
+
+        ret = PyObject_CallFunctionObjArgs(
+	    g_obj_callback->on_incoming_subscribe,
+	    Py_BuildValue("i", acc_id),
+	    Py_BuildValue("i", buddy_id),
+	    PyString_FromStringAndSize(from->ptr, from->slen),
+	    PyLong_FromLong((long)srv_pres),
+	    NULL
+	);
+
+	if (ret && PyTuple_Check(ret)) {
+	    if (PyTuple_Size(ret) >= 1)
+		*code = (int)PyInt_AsLong(PyTuple_GetItem(ret, 0));
+	    if (PyTuple_Size(ret) >= 2) {
+		if (PyTuple_GetItem(ret, 1) != Py_None) {
+		    pj_str_t tmp;
+		    tmp = PyString_to_pj_str(PyTuple_GetItem(ret, 1));
+		    reason->ptr = reason_buf;
+		    pj_strncpy(reason, &tmp, sizeof(reason_buf));
+		} else {
+		}
+	    }
+
+	} else if (ret) {
+	    Py_XDECREF(ret);
+	}
+
+	LEAVE_PYTHON();
+    }
+}
 
 /*
  * cb_on_buddy_state
@@ -371,6 +423,8 @@ static void cb_on_pager(pjsua_call_id call_id, const pj_str_t *from,
                         const pj_str_t *mime_type, const pj_str_t *body,
 			pjsip_rx_data *rdata, pjsua_acc_id acc_id)
 {
+    PJ_UNUSED_ARG(rdata);
+
     if (PyCallable_Check(g_obj_callback->on_pager))
     {
 	ENTER_PYTHON();
@@ -911,6 +965,7 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
     	cfg_ua.cb.on_call_replace_request = &cb_on_call_replace_request;
     	cfg_ua.cb.on_call_replaced = &cb_on_call_replaced;
     	cfg_ua.cb.on_reg_state = &cb_on_reg_state;
+	cfg_ua.cb.on_incoming_subscribe = &cb_on_incoming_subscribe;
     	cfg_ua.cb.on_buddy_state = &cb_on_buddy_state;
     	cfg_ua.cb.on_pager2 = &cb_on_pager;
     	cfg_ua.cb.on_pager_status2 = &cb_on_pager_status;
@@ -1878,6 +1933,66 @@ static PyObject *py_pjsua_acc_set_transport
     return Py_BuildValue("i", status);
 }
 
+
+/*
+ * py_pjsua_acc_pres_notify
+ */
+static PyObject *py_pjsua_acc_pres_notify
+(PyObject *pSelf, PyObject *pArgs)
+{
+    static char reason_buf[64];
+    int acc_id, state;
+    PyObject *arg_pres, *arg_msg_data;
+    void *srv_pres;
+    pjsua_msg_data msg_data;
+    const char *arg_reason;
+    pj_str_t reason;
+    pj_bool_t with_body;
+    pj_pool_t *pool = NULL;
+    int status;	
+    
+    PJ_UNUSED_ARG(pSelf);
+
+    if (!PyArg_ParseTuple(pArgs, "iOisO", &acc_id, &arg_pres, 
+			  &state, &arg_reason, &arg_msg_data))
+    {
+        return NULL;
+    }	
+    
+    srv_pres = (void*) PyLong_AsLong(arg_pres);
+    pjsua_msg_data_init(&msg_data);
+    with_body = (state != PJSIP_EVSUB_STATE_TERMINATED);
+
+    if (arg_reason) {
+	strncpy(reason_buf, arg_reason, sizeof(reason_buf));
+	reason.ptr = reason_buf;
+	reason.slen = strlen(arg_reason);
+    } else {
+	reason = pj_str("");
+    }
+
+    if (arg_msg_data && arg_msg_data != Py_None) {
+        PyObj_pjsua_msg_data *omd = (PyObj_pjsua_msg_data *)arg_msg_data;
+        msg_data.content_type.ptr = PyString_AsString(omd->content_type);
+        msg_data.content_type.slen = PyString_Size(omd->content_type);
+        msg_data.msg_body.ptr = PyString_AsString(omd->msg_body);
+        msg_data.msg_body.slen = PyString_Size(omd->msg_body);
+        pool = pjsua_pool_create("pytmp", POOL_SIZE, POOL_SIZE);
+        translate_hdr(pool, &msg_data.hdr_list, omd->hdr_list);
+    } else if (arg_msg_data) {
+	Py_XDECREF(arg_msg_data);    
+    }
+
+    status = pjsua_pres_notify(acc_id, (pjsua_srv_pres*)srv_pres,
+			       (pjsip_evsub_state)state, NULL,
+			       &reason, with_body, &msg_data);
+    
+    if (pool) {
+	pj_pool_release(pool);
+    }
+
+    return Py_BuildValue("i", status);
+}
 
 static char pjsua_acc_config_default_doc[] =
     "_pjsua.Acc_Config _pjsua.acc_config_default () "
@@ -5540,6 +5655,10 @@ static PyMethodDef py_pjsua_methods[] =
     {
         "acc_get_info", py_pjsua_acc_get_info, METH_VARARGS,
         pjsua_acc_get_info_doc
+    },
+    {
+	"acc_pres_notify", py_pjsua_acc_pres_notify, METH_VARARGS,
+	"Accept or reject subscription request"
     },
     {
         "enum_accs", py_pjsua_enum_accs, METH_VARARGS,
