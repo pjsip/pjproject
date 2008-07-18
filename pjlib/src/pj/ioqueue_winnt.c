@@ -786,7 +786,21 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
      * We also need to close handle to make sure that no further events
      * will come to the handle.
      */
-    CloseHandle(key->hnd);
+    /* Update 2008/07/18 (http://trac.pjsip.org/repos/ticket/575):
+     *  - It seems that CloseHandle() in itself does not actually close
+     *    the socket (i.e. it will still appear in "netstat" output). Also
+     *    if we only use CloseHandle(), an "Invalid Handle" exception will
+     *    be raised in WSACleanup().
+     *  - MSDN documentation says that CloseHandle() must be called after 
+     *    closesocket() call (see
+     *    http://msdn.microsoft.com/en-us/library/ms724211(VS.85).aspx).
+     *    But turns out that this will raise "Invalid Handle" exception
+     *    in debug mode.
+     *  So because of this, we replaced CloseHandle() with closesocket()
+     *  instead. These was tested on WinXP SP2.
+     */
+    //CloseHandle(key->hnd);
+    pj_sock_close((pj_sock_t)key->hnd);
 
     /* Reset callbacks */
     key->cb.on_accept_complete = NULL;
