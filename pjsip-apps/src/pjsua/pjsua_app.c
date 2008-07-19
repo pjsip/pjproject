@@ -158,6 +158,9 @@ static void usage(void)
     puts  ("  --log-file=fname    Log to filename (default stderr)");
     puts  ("  --log-level=N       Set log max level to N (0(none) to 6(trace)) (default=5)");
     puts  ("  --app-log-level=N   Set log max level for stdout display (default=4)");
+    puts  ("  --color             Use colorful logging (default yes on Win32)");
+    puts  ("  --no-color          Disable colorful logging");
+
     puts  ("");
     puts  ("SIP Account options:");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
@@ -442,6 +445,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     int c;
     int option_index;
     enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
+	   OPT_COLOR, OPT_NO_COLOR,
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
@@ -476,6 +480,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "log-file",	1, 0, OPT_LOG_FILE},
 	{ "log-level",	1, 0, OPT_LOG_LEVEL},
 	{ "app-log-level",1,0,OPT_APP_LOG_LEVEL},
+	{ "color",	0, 0, OPT_COLOR},
+	{ "no-color",	0, 0, OPT_NO_COLOR},
 	{ "help",	0, 0, OPT_HELP},
 	{ "version",	0, 0, OPT_VERSION},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
@@ -635,6 +641,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 			  "for --app-log-level"));
 		return PJ_EINVAL;
 	    }
+	    break;
+
+	case OPT_COLOR:
+	    cfg->log_cfg.decor |= PJ_LOG_HAS_COLOR;
+	    break;
+
+	case OPT_NO_COLOR:
+	    cfg->log_cfg.decor &= ~PJ_LOG_HAS_COLOR;
 	    break;
 
 	case OPT_HELP:
@@ -3756,7 +3770,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 		len = write_settings(&app_config, settings, sizeof(settings));
 		if (len < 1)
-		    PJ_LOG(3,(THIS_FILE, "Error: not enough buffer"));
+		    PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
 		else
 		    PJ_LOG(3,(THIS_FILE, 
 			      "Dumping configuration (%d bytes):\n%s\n",
@@ -3783,7 +3797,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 		len = write_settings(&app_config, settings, sizeof(settings));
 		if (len < 1)
-		    PJ_LOG(3,(THIS_FILE, "Error: not enough buffer"));
+		    PJ_LOG(1,(THIS_FILE, "Error: not enough buffer"));
 		else {
 		    pj_oshandle_t fd;
 		    pj_status_t status;
@@ -4081,7 +4095,7 @@ pj_status_t app_init(int argc, char *argv[])
 #endif
 
     if (transport_id == -1) {
-	PJ_LOG(3,(THIS_FILE, "Error: no transport is configured"));
+	PJ_LOG(1,(THIS_FILE, "Error: no transport is configured"));
 	status = -1;
 	goto on_error;
     }

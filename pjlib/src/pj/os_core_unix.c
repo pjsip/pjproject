@@ -1689,8 +1689,57 @@ PJ_DEF(pj_status_t) pj_event_destroy(pj_event_t *event)
  */
 PJ_DEF(pj_status_t) pj_term_set_color(pj_color_t color)
 {
-    PJ_UNUSED_ARG(color);
-    return PJ_EINVALIDOP;
+    /* put bright prefix to ansi_color */
+    char ansi_color[12] = "\033[01;3";
+
+    if (color & PJ_TERM_COLOR_BRIGHT) {
+	color ^= PJ_TERM_COLOR_BRIGHT;
+    } else {
+	strcpy(ansi_color, "\033[00;3");
+    }
+
+    switch (color) {
+    case 0:
+	/* black color */
+	strcat(ansi_color, "0m");
+	break;
+    case PJ_TERM_COLOR_R:
+	/* red color */
+	strcat(ansi_color, "1m");
+	break;
+    case PJ_TERM_COLOR_G:
+	/* green color */
+	strcat(ansi_color, "2m");
+	break;
+    case PJ_TERM_COLOR_B:
+	/* blue color */
+	strcat(ansi_color, "4m");
+	break;
+    case PJ_TERM_COLOR_R | PJ_TERM_COLOR_G:
+	/* yellow color */
+	strcat(ansi_color, "3m");
+	break;
+    case PJ_TERM_COLOR_R | PJ_TERM_COLOR_B:
+	/* magenta color */
+	strcat(ansi_color, "5m");
+	break;
+    case PJ_TERM_COLOR_G | PJ_TERM_COLOR_B:
+	/* cyan color */
+	strcat(ansi_color, "6m");
+	break;
+    case PJ_TERM_COLOR_R | PJ_TERM_COLOR_G | PJ_TERM_COLOR_B:
+	/* white color */
+	strcat(ansi_color, "7m");
+	break;
+    default:
+	/* default console color */
+	strcpy(ansi_color, "\033[00m");
+	break;
+    }
+
+    fputs(ansi_color, stdout);
+
+    return PJ_SUCCESS;
 }
 
 /**

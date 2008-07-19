@@ -68,15 +68,17 @@ PJ_BEGIN_DECL
  */
 enum pj_log_decoration
 {
-    PJ_LOG_HAS_DAY_NAME   =   1, /**< Include day name [default: no].	     */
-    PJ_LOG_HAS_YEAR       =   2, /**< Include year digit [default: no]	     */
-    PJ_LOG_HAS_MONTH	  =   4, /**< Include month [default: no]	     */
-    PJ_LOG_HAS_DAY_OF_MON =   8, /**< Include day of month [default: no]     */
-    PJ_LOG_HAS_TIME	  =  16, /**< Include time [default: yes].	     */
-    PJ_LOG_HAS_MICRO_SEC  =  32, /**< Include microseconds [yes]             */
-    PJ_LOG_HAS_SENDER	  =  64, /**< Include sender in the log [yes].	     */
-    PJ_LOG_HAS_NEWLINE	  = 128, /**< Terminate each call with newline [yes].*/
-    PJ_LOG_HAS_CR	  = 256  /**< Include carriage return [no].	     */
+    PJ_LOG_HAS_DAY_NAME   =    1, /**< Include day name [default: no] 	      */
+    PJ_LOG_HAS_YEAR       =    2, /**< Include year digit [no]		      */
+    PJ_LOG_HAS_MONTH	  =    4, /**< Include month [no]		      */
+    PJ_LOG_HAS_DAY_OF_MON =    8, /**< Include day of month [no]	      */
+    PJ_LOG_HAS_TIME	  =   16, /**< Include time [yes]		      */
+    PJ_LOG_HAS_MICRO_SEC  =   32, /**< Include microseconds [yes]             */
+    PJ_LOG_HAS_SENDER	  =   64, /**< Include sender in the log [yes] 	      */
+    PJ_LOG_HAS_NEWLINE	  =  128, /**< Terminate each call with newline [yes] */
+    PJ_LOG_HAS_CR	  =  256, /**< Include carriage return [no] 	      */
+    PJ_LOG_HAS_SPACE	  =  512, /**< Include two spaces before log [yes]    */
+    PJ_LOG_HAS_COLOR	  = 1024  /**< Colorize logs [yes on win32]	      */
 };
 
 /**
@@ -199,6 +201,23 @@ PJ_DECL(void) pj_log_set_decor(unsigned decor);
 PJ_DECL(unsigned) pj_log_get_decor(void);
 
 
+/**
+ * Set color of log messages.
+ *
+ * @param level	    Log level which color will be changed.
+ * @param color	    Desired color.
+ */
+PJ_DECL(void) pj_log_set_color(int level, pj_color_t color);
+
+/**
+ * Get color of log messages.
+ *
+ * @param level	    Log level which color will be returned.
+ * @return	    Log color.
+ */
+PJ_DECL(pj_color_t) pj_log_get_color(int level);
+
+
 #else	/* #if PJ_LOG_MAX_LEVEL >= 1 */
 
 /**
@@ -236,6 +255,14 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
 #  define pj_log_set_decor(decor)
 
 /**
+ * Set color of log messages.
+ *
+ * @param level	    Log level which color will be changed.
+ * @param color	    Desired color.
+ */
+#  define pj_log_set_color(level, color)
+
+/**
  * Get current maximum log verbositylevel.
  *
  * @return	    Current log maximum level.
@@ -248,6 +275,14 @@ PJ_DECL(unsigned) pj_log_get_decor(void);
  * @return	    Log decoration flag.
  */
 #  define pj_log_get_decor()	0
+
+/**
+ * Get color of log messages.
+ *
+ * @param level	    Log level which color will be returned.
+ * @return	    Log color.
+ */
+#  define pj_log_get_color(level) 0
 
 
 #endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */

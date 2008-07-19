@@ -40,7 +40,7 @@ PJ_DEF(void) pjsua_perror( const char *sender, const char *title,
     char errmsg[PJ_ERR_MSG_SIZE];
 
     pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(3,(sender, "%s: %s [status=%d]", title, errmsg, status));
+    PJ_LOG(1,(sender, "%s: %s [status=%d]", title, errmsg, status));
 }
 
 
@@ -69,7 +69,11 @@ PJ_DEF(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
     cfg->level = 5;
     cfg->console_level = 4;
     cfg->decor = PJ_LOG_HAS_SENDER | PJ_LOG_HAS_TIME | 
-		 PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE;
+		 PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE |
+		 PJ_LOG_HAS_SPACE;
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+    cfg->decor |= PJ_LOG_HAS_COLOR;
+#endif
 }
 
 PJ_DEF(void) pjsua_logging_config_dup(pj_pool_t *pool,
