@@ -160,6 +160,7 @@ static void usage(void)
     puts  ("  --app-log-level=N   Set log max level for stdout display (default=4)");
     puts  ("  --color             Use colorful logging (default yes on Win32)");
     puts  ("  --no-color          Disable colorful logging");
+    puts  ("  --light-bg          Use dark colors for light background (default is dark bg)");
 
     puts  ("");
     puts  ("SIP Account options:");
@@ -445,7 +446,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     int c;
     int option_index;
     enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
-	   OPT_COLOR, OPT_NO_COLOR,
+	   OPT_COLOR, OPT_NO_COLOR, OPT_LIGHT_BG,
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
@@ -455,7 +456,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
-	   OPT_USE_TURN,OPT_ICE_NO_HOST, OPT_TURN_SRV, OPT_TURN_TCP,
+	   OPT_USE_TURN, OPT_ICE_NO_HOST, OPT_TURN_SRV, OPT_TURN_TCP,
 	   OPT_TURN_USER, OPT_TURN_PASSWD,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
@@ -482,6 +483,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "app-log-level",1,0,OPT_APP_LOG_LEVEL},
 	{ "color",	0, 0, OPT_COLOR},
 	{ "no-color",	0, 0, OPT_NO_COLOR},
+	{ "light-bg",		0, 0, OPT_LIGHT_BG},
 	{ "help",	0, 0, OPT_HELP},
 	{ "version",	0, 0, OPT_VERSION},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
@@ -649,6 +651,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_NO_COLOR:
 	    cfg->log_cfg.decor &= ~PJ_LOG_HAS_COLOR;
+	    break;
+
+	case OPT_LIGHT_BG:
+	    pj_log_set_color(1, PJ_TERM_COLOR_R);
+	    pj_log_set_color(2, PJ_TERM_COLOR_R | PJ_TERM_COLOR_G);
+	    pj_log_set_color(3, PJ_TERM_COLOR_B | PJ_TERM_COLOR_G);
+	    pj_log_set_color(4, 0);
+	    pj_log_set_color(5, 0);
+	    pj_log_set_color(77, 0);
 	    break;
 
 	case OPT_HELP:
