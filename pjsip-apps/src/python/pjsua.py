@@ -11,27 +11,141 @@ This implements a fully featured multimedia communication client
 library based on PJSIP stack (http://www.pjsip.org)
 
 
-FEATURES
+1. FEATURES
 
-  - Session Initiation Protocol (SIP:
+  - Session Initiation Protocol (SIP) features:
      - Basic registration and call
      - Multiple accounts
      - Call hold, attended and unattended call transfer
      - Presence
      - Instant messaging
-  - Media stack:
+     - Multiple SIP accounts
+  - Media features:
      - Audio
      - Conferencing
      - Narrowband and wideband
      - Codecs: PCMA, PCMU, GSM, iLBC, Speex, G.722, L16
      - RTP/RTCP
-     - Secure RTP (SRTP
+     - Secure RTP (SRTP)
+     - WAV playback, recording, and playlist
   - NAT traversal features
      - Symmetric RTP
      - STUN
      - TURN
      - ICE
  
+
+2. USING
+
+See http://www.pjsip.org/trac/wiki/Python_SIP_Tutorial for a more thorough
+tutorial. The paragraphs below explain basic tasks on using this module.
+
+
+2.1 Initialization
+
+Instantiate Lib class. This class is a singleton class, there can only be
+one instance of this class in the program.
+
+Initialize the library with lib.init() method, and optionally specify various
+settings like UAConfig, MediaConfig, and LogConfig.
+
+Create one or more SIP Transport instances.
+
+Create one or more SIP Account's instances, as explained below.
+
+Once initialization is complete, call lib.start().
+
+
+2.2 Accounts
+
+At least one Account must be created in the program. Use Lib's create_account()
+or create_account_for_transport() to create the account instance.
+
+Account may emit events, and to capture these events, application must derive
+a class from AccountCallback class, and install the callback to the Account
+instance using set_callback() method.
+
+
+2.3 Calls
+
+Calls are represented with Call class. Use the Call methods to operate the
+call. Outgoing calls are made with make_call() method of Account class. 
+Incoming calls are reported by on_incoming_call() callback of AccountCallback 
+class.
+
+Call may emit events, and to capture these events, application must derive
+a class from CallCallback class, and install the callback to the Call instance
+using set_callback() method.
+
+Note that just like every other operations in this module, the make_call() 
+method is non-blocking (i.e. it doesn't wait until the call is established 
+before the function returns). Progress to the Call is reported via CallCallback
+class above.
+
+
+2.4 Media
+
+Every objects that can transmit or receive media/audio (e.g. calls, WAV player,
+WAV recorder, WAV playlist) are connected to a central conference bridge.
+Application can use the object's method or Lib's method to retrieve the slot
+number of that particular object in the conference bridge:
+  - to retrieve the slot number of a call, use Call.info().conf_slot
+  - to retrieve the slot number of a WAV player, use Lib.player_get_slot()
+  - to retrieve the slot number of a WAV recorder, use Lib.recorder_get_slot()
+  - to retrieve the slot number of a playlist, use Lib.playlist_get_slot()
+  - the slot number zero is used to identity the sound device.
+
+The conference bridge provides powerful switching and mixing functionality
+for application. With the conference bridge, each conference slot (e.g. 
+a call) can transmit to multiple destinations, and one destination can
+receive from multiple sources. If more than one media terminations are 
+terminated in the same slot, the conference bridge will mix the signal 
+automatically.
+
+Application connects one media termination/slot to another by calling
+lib.conf_connect() method. This will establish unidirectional media flow from 
+the source termination to the sink termination. To establish bidirectional 
+media flow, application would need to make another call to lib/conf_connect(), 
+this time inverting the source and destination slots in the parameter.
+
+
+2.5 Presence 
+
+To subscribe to presence information of a buddy, add Buddy object with
+add_buddy() method of Account class. Subsequent presence information for that
+Buddy will be reported via BuddyCallback class (which application should
+device and install to the Buddy object).
+
+Each Account has presence status associated with it, which will be informed
+to remote buddies when they subscribe to our presence information. Incoming
+presence subscription request by default will be accepted automatically,
+unless on_incoming_subscribe() method of AccountCallback is implemented.
+
+
+2.6 Instant Messaging
+
+Use Buddy's send_pager() and send_typing_ind() to send instant message and
+typing indication to the specified buddy.
+
+Incoming instant messages and typing indications will be reported via one of 
+the three mechanisms below.
+
+If the instant message or typing indication is received in the context of an
+active call, then it will be reported via on_pager() or on_typing() method
+of CallCallback class.
+
+If the instant message or typing indication is received outside any call 
+contexts, and it is received from a registered buddy, then it will be reported
+via on_pager() or on_typing() method of BuddyCallback class.
+
+If the criterias above are not met, the instant message or typing indication
+will be reported via on_pager() or on_typing() method of the AccountCallback 
+class.
+
+The delivery status of outgoing instant messages are reported via 
+on_pager_status() method of CallCallback, BuddyCallback, or AccountCallback,
+depending on whether the instant message was sent using Call, Buddy, or
+Account's send_pager() method.
 
 """
 import _pjsua
@@ -222,7 +336,7 @@ class UAConfig:
     Member documentation:
 
     max_calls   -- maximum number of calls to be supported.
-    nameserver  -- array of nameserver hostnames or IP addresses. Nameserver
+    nameserver  -- list of nameserver hostnames or IP addresses. Nameserver
                    must be configured if DNS SRV resolution is desired.
     stun_domain -- if nameserver is configured, this can be used to query
                    the STUN server with DNS SRV.
@@ -2049,12 +2163,12 @@ class Lib:
         """Enumerate sound devices in the system.
 
         Return:
-            array of SoundDeviceInfo. The index of the element specifies
+            list of SoundDeviceInfo. The index of the element specifies
             the device ID for the device.
         """
-        sdi_array = _pjsua.enum_snd_devs()
+        sdi_list = _pjsua.enum_snd_devs()
         info = []
-        for sdi in sdi_array:
+        for sdi in sdi_list:
             info.append(SoundDeviceInfo(sdi))
         return info
 
@@ -2132,18 +2246,60 @@ class Lib:
         err = _pjsua.conf_disconnect(src_slot, dst_slot)
         self._err_check("conf_disconnect()", self, err)
 
+    def conf_set_tx_level(self, slot, level):
+        """Adjust the signal level to be transmitted from the bridge to 
+        the specified port by making it louder or quieter.
+
+        Keyword arguments:
+        slot        -- integer to identify the conference slot number.
+        level       -- Signal level adjustment. Value 1.0 means no level
+                       adjustment, while value 0 means to mute the port.
+        """
+        err = _pjsua.conf_set_tx_level(slot, level)
+        self._err_check("conf_set_tx_level()", self, err)
+        
+    def conf_set_rx_level(self, slot, level):
+        """Adjust the signal level to be received from the specified port
+        (to the bridge) by making it louder or quieter.
+
+        Keyword arguments:
+        slot        -- integer to identify the conference slot number.
+        level       -- Signal level adjustment. Value 1.0 means no level
+                       adjustment, while value 0 means to mute the port.
+        """
+        err = _pjsua.conf_set_rx_level(slot, level)
+        self._err_check("conf_set_rx_level()", self, err)
+        
+    def conf_get_signal_level(self, slot):
+        """Get last signal level transmitted to or received from the 
+        specified port. The signal levels are float values from 0.0 to 1.0,
+        with 0.0 indicates no signal, and 1.0 indicates the loudest signal
+        level.
+
+        Keyword arguments:
+        slot        -- integer to identify the conference slot number.
+
+        Return value:
+            (tx_level, rx_level) tuple.
+        """
+        err, tx_level, rx_level = _pjsua.conf_get_signal_level(slot)
+        self._err_check("conf_get_signal_level()", self, err)
+        return (tx_level, rx_level)
+        
+
+
     # Codecs API
 
     def enum_codecs(self):
         """Return list of codecs supported by pjsua.
 
         Return:
-            array of CodecInfo
+            list of CodecInfo
 
         """
-        ci_array = _pjsua.enum_codecs()
+        ci_list = _pjsua.enum_codecs()
         codec_info = []
-        for ci in ci_array:
+        for ci in ci_list:
             cp = _pjsua.codec_get_param(ci.id)
             if cp:
                 codec_info.append(CodecInfo(ci, cp))
@@ -2191,8 +2347,8 @@ class Lib:
 
         Keyword arguments
         filename    -- WAV file name
-        loop        -- boolean to specify wheter playback shoudl
-                       automatically restart
+        loop        -- boolean to specify whether playback should
+                       automatically restart upon EOF
         Return:
             WAV player ID
 
@@ -2240,6 +2396,52 @@ class Lib:
         """
         err = _pjsua.player_destroy(player_id)
         self._err_check("player_destroy()", self, err)
+
+    def create_playlist(self, filelist, label="playlist", loop=True):
+        """Create WAV playlist.
+
+        Keyword arguments:
+        filelist    -- List of WAV file names.
+        label       -- Optional name to be assigned to the playlist
+                       object (useful for logging)
+        loop        -- boolean to specify whether playback should
+                       automatically restart upon EOF
+
+        Return:
+            playlist_id
+        """
+        opt = 0
+        if not loop:
+            opt = opt + 1
+        err, playlist_id = _pjsua.playlist_create(label, filelist, opt)
+        self._err_check("create_playlist()", self, err)
+        return playlist_id 
+
+    def playlist_get_slot(self, playlist_id):
+        """Get the conference port ID for the specified playlist.
+
+        Keyword arguments:
+        playlist_id  -- the WAV playlist ID
+        
+        Return:
+            Conference slot number for the playlist
+
+        """
+        slot = _pjsua.player_get_conf_port(playlist_id)
+        if slot < 0:
+                self._err_check("playlist_get_slot()", self, -1, 
+                                "Invalid playlist id")
+        return slot
+
+    def playlist_destroy(self, playlist_id):
+        """Destroy the WAV playlist.
+
+        Keyword arguments:
+        playlist_id   -- the WAV playlist ID.
+
+        """
+        err = _pjsua.player_destroy(playlist_id)
+        self._err_check("playlist_destroy()", self, err)
 
     def create_recorder(self, filename):
         """Create WAV file recorder.

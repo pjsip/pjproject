@@ -3457,6 +3457,76 @@ static PyObject *py_pjsua_conf_disconnect
 }
 
 /*
+ * py_pjsua_conf_set_tx_level
+ */
+static PyObject *py_pjsua_conf_set_tx_level
+(PyObject *pSelf, PyObject *pArgs)
+{    	
+    int slot;
+    float level;
+    int status;	
+    
+    PJ_UNUSED_ARG(pSelf);
+
+    if (!PyArg_ParseTuple(pArgs, "if", &slot, &level))
+    {
+        return NULL;
+    }	
+    
+    status = pjsua_conf_adjust_tx_level(slot, level);
+    
+    
+    return Py_BuildValue("i", status);
+}
+
+/*
+ * py_pjsua_conf_set_rx_level
+ */
+static PyObject *py_pjsua_conf_set_rx_level
+(PyObject *pSelf, PyObject *pArgs)
+{    	
+    int slot;
+    float level;
+    int status;	
+    
+    PJ_UNUSED_ARG(pSelf);
+
+    if (!PyArg_ParseTuple(pArgs, "if", &slot, &level))
+    {
+        return NULL;
+    }	
+    
+    status = pjsua_conf_adjust_rx_level(slot, level);
+    
+    
+    return Py_BuildValue("i", status);
+}
+
+/*
+ * py_pjsua_conf_get_signal_level
+ */
+static PyObject *py_pjsua_conf_get_signal_level
+(PyObject *pSelf, PyObject *pArgs)
+{    	
+    int slot;
+    unsigned tx_level, rx_level;
+    int status;	
+    
+    PJ_UNUSED_ARG(pSelf);
+
+    if (!PyArg_ParseTuple(pArgs, "i", &slot))
+    {
+        return NULL;
+    }	
+    
+    status = pjsua_conf_get_signal_level(slot, &tx_level, &rx_level);
+    
+    
+    return Py_BuildValue("iff", status, (float)(tx_level/255.0), 
+			        (float)(rx_level/255.0));
+}
+
+/*
  * py_pjsua_player_create
  */
 static PyObject *py_pjsua_player_create
@@ -3477,6 +3547,45 @@ static PyObject *py_pjsua_player_create
     str.ptr = PyString_AsString(filename);
     str.slen = strlen(PyString_AsString(filename));
     status = pjsua_player_create(&str, options, &id);
+    
+    return Py_BuildValue("ii", status, id);
+}
+
+/*
+ * py_pjsua_playlist_create
+ */
+static PyObject *py_pjsua_playlist_create
+(PyObject *pSelf, PyObject *pArgs)
+{    	
+    int id;
+    int options;
+    PyObject *arg_label, *arg_filelist;
+    pj_str_t label;
+    int count;
+    pj_str_t files[64];
+    int status;	
+    
+    PJ_UNUSED_ARG(pSelf);
+
+    if (!PyArg_ParseTuple(pArgs, "OOi", &arg_label, &arg_filelist, &options))
+    {
+        return NULL;
+    }	
+    label.ptr = PyString_AsString(arg_label);
+    label.slen = PyString_Size(arg_label);
+
+    if (!PyList_Check(arg_filelist))
+	return NULL;
+
+    count = 0;
+    for (count=0; count<PyList_Size(arg_filelist) && 
+		  count<PJ_ARRAY_SIZE(files); ++count) 
+    {
+	files[count].ptr = PyString_AsString(PyList_GetItem(arg_filelist, count));
+	files[count].slen = PyString_Size(PyList_GetItem(arg_filelist, count));
+    }
+
+    status = pjsua_playlist_create(files, count, &label, options, &id);
     
     return Py_BuildValue("ii", status, id);
 }
@@ -5765,8 +5874,26 @@ static PyMethodDef py_pjsua_methods[] =
         pjsua_conf_disconnect_doc
     },
     {
+	"conf_set_tx_level", py_pjsua_conf_set_tx_level, METH_VARARGS,
+	"Adjust the signal level to be transmitted from the bridge to the" 
+	" specified port by making it louder or quieter"
+    },
+    {
+	"conf_set_rx_level", py_pjsua_conf_set_rx_level, METH_VARARGS,
+	"Adjust the signal level to be received from the specified port (to"
+	" the bridge) by making it louder or quieter"
+    },
+    {
+	"conf_get_signal_level", py_pjsua_conf_get_signal_level, METH_VARARGS,
+	"Get last signal level transmitted to or received from the specified port"
+    },
+    {
         "player_create", py_pjsua_player_create, METH_VARARGS,
         pjsua_player_create_doc
+    },
+    {
+        "playlist_create", py_pjsua_playlist_create, METH_VARARGS,
+        "Create WAV playlist"
     },
     {
         "player_get_conf_port", py_pjsua_player_get_conf_port, METH_VARARGS,
