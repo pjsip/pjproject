@@ -3103,8 +3103,9 @@ static PyObject *py_pjsua_call_make_call(PyObject *pSelf, PyObject *pArgs)
     if (pool != NULL)
 	pj_pool_release(pool);
     
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
     	Py_XDECREF(pUserData);
+    }
 
     return Py_BuildValue("ii", status, call_id);	
 }
@@ -3244,8 +3245,9 @@ static PyObject *py_pjsua_call_set_user_data(PyObject *pSelf, PyObject *pArgs)
 
     status = pjsua_call_set_user_data(call_id, (void*)pUserData);
     
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
     	Py_XDECREF(pUserData);
+    }
 
     return Py_BuildValue("i", status);
 }
