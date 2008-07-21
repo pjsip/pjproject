@@ -8,12 +8,30 @@ import sys
 import pjsua as pj
 
 LOG_LEVEL = 3
+pending_pres = None
+pending_uri = None
 
 def log_cb(level, str, len):
     print str,
 
+class MyAccountCallback(pj.AccountCallback):
+    def __init__(self, account=None):
+        pj.AccountCallback.__init__(self, account)
+
+    def on_incoming_subscribe(self, buddy, from_uri, contact_uri, pres):
+        global pending_pres, pending_uri
+        # Allow buddy to subscribe to our presence
+        if buddy:
+            return (200, None)
+        print 'Incoming SUBSCRIBE request from', from_uri
+        print 'Press "A" to accept and add, "R" to reject the request'
+        pending_pres = pres
+        pending_uri = from_uri
+        return (202, None)
+
+
 class MyBuddyCallback(pj.BuddyCallback):
-    def __init__(self, buddy):
+    def __init__(self, buddy=None):
         pj.BuddyCallback.__init__(self, buddy)
 
     def on_state(self):
@@ -54,8 +72,9 @@ try:
     lib.start()
 
     # Create local account
-    acc = lib.create_account_for_transport(transport)
-
+    acc = lib.create_account_for_transport(transport, cb=MyAccountCallback())
+    acc.set_basic_status(True)
+    
     my_sip_uri = "sip:" + transport.info().host + \
                  ":" + str(transport.info().port)
 
@@ -64,7 +83,8 @@ try:
     # Menu loop
     while True:
         print "My SIP URI is", my_sip_uri
-        print "Menu:  a=add buddy, t=toggle online status, i=send IM, q=quit"
+        print "Menu:  a=add buddy, d=delete buddy, t=toggle", \
+              " online status, i=send IM, q=quit"
 
         input = sys.stdin.readline().rstrip("\r\n")
         if input == "a":
@@ -74,10 +94,7 @@ try:
             if input == "":
                 continue
 
-            buddy = acc.add_buddy(input)
-            cb = MyBuddyCallback(buddy)
-            buddy.set_callback(cb)
-
+            buddy = acc.add_buddy(input, cb=MyBuddyCallback())
             buddy.subscribe()
 
         elif input == "t":
@@ -97,11 +114,43 @@ try:
                 continue
             
             buddy.send_pager(input)
-            
+        
+        elif input == "d":
+            if buddy:
+                buddy.delete()
+                buddy = None
+            else:
+                print 'No buddy was added'
+
+        elif input == "A":
+            if pending_pres:
+                acc.pres_notify(pending_pres, pj.SubscriptionState.ACTIVE)
+                buddy = acc.add_buddy(pending_uri, cb=MyBuddyCallback())
+                buddy.subscribe()
+                pending_pres = None
+                pending_uri = None
+            else:
+                print "No pending request"
+
+        elif input == "R":
+            if pending_pres:
+                acc.pres_notify(pending_pres, pj.SubscriptionState.TERMINATED,
+                                "rejected")
+                pending_pres = None
+                pending_uri = None
+            else:
+                print "No pending request"
+
         elif input == "q":
             break
 
     # Shutdown the library
+    acc.delete()
+    acc = None
+    if pending_pres:
+        acc.pres_notify(pending_pres, pj.SubscriptionState.TERMINATED,
+                        "rejected")
+    transport = None
     lib.destroy()
     lib = None
 

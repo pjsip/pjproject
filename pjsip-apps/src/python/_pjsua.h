@@ -26,11 +26,11 @@
 #include <pjsua-lib/pjsua.h>
 
 
-PJ_INLINE(pj_str_t) PyString_to_pj_str(const PyObject *obj)
+PJ_INLINE(pj_str_t) PyString_ToPJ(const PyObject *obj)
 {
     pj_str_t str;
 
-    if (obj) {
+    if (obj && PyString_Check(obj)) {
 	str.ptr = PyString_AS_STRING(obj);
 	str.slen = PyString_GET_SIZE(obj);
     } else {
@@ -41,178 +41,10 @@ PJ_INLINE(pj_str_t) PyString_to_pj_str(const PyObject *obj)
     return str;
 }
 
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * PyObj_pj_pool
- */
-typedef struct
+PJ_INLINE(PyObject*) PyString_FromPJ(const pj_str_t *str)
 {
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    pj_pool_t * pool;
-} PyObj_pj_pool;
-
-
-/*
- * PyTyp_pj_pool_t
- */
-static PyTypeObject PyTyp_pj_pool_t =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                         /*ob_size*/
-    "_pjsua.Pj_Pool",        /*tp_name*/
-    sizeof(PyObj_pj_pool),    /*tp_basicsize*/
-    0,                         /*tp_itemsize*/
-    0,                         /*tp_dealloc*/
-    0,                         /*tp_print*/
-    0,                         /*tp_getattr*/
-    0,                         /*tp_setattr*/
-    0,                         /*tp_compare*/
-    0,                         /*tp_repr*/
-    0,                         /*tp_as_number*/
-    0,                         /*tp_as_sequence*/
-    0,                         /*tp_as_mapping*/
-    0,                         /*tp_hash */
-    0,                         /*tp_call*/
-    0,                         /*tp_str*/
-    0,                         /*tp_getattro*/
-    0,                         /*tp_setattro*/
-    0,                         /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    "pj_pool_t objects",       /* tp_doc */
-
-};
-
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * PyObj_pjsip_endpoint
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    pjsip_endpoint * endpt;
-} PyObj_pjsip_endpoint;
-
-
-/*
- * PyTyp_pjsip_endpoint
- */
-static PyTypeObject PyTyp_pjsip_endpoint =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                         /*ob_size*/
-    "_pjsua.Pjsip_Endpoint", /*tp_name*/
-    sizeof(PyObj_pjsip_endpoint),/*tp_basicsize*/
-    0,                         /*tp_itemsize*/
-    0,                         /*tp_dealloc*/
-    0,                         /*tp_print*/
-    0,                         /*tp_getattr*/
-    0,                         /*tp_setattr*/
-    0,                         /*tp_compare*/
-    0,                         /*tp_repr*/
-    0,                         /*tp_as_number*/
-    0,                         /*tp_as_sequence*/
-    0,                         /*tp_as_mapping*/
-    0,                         /*tp_hash */
-    0,                         /*tp_call*/
-    0,                         /*tp_str*/
-    0,                         /*tp_getattro*/
-    0,                         /*tp_setattro*/
-    0,                         /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    "pjsip_endpoint objects",  /* tp_doc */
-};
-
-
-/*
- * PyObj_pjmedia_endpt
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    pjmedia_endpt * endpt;
-} PyObj_pjmedia_endpt;
-
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * PyTyp_pjmedia_endpt
- */
-static PyTypeObject PyTyp_pjmedia_endpt =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                         /*ob_size*/
-    "_pjsua.Pjmedia_Endpt",  /*tp_name*/
-    sizeof(PyObj_pjmedia_endpt), /*tp_basicsize*/
-    0,                         /*tp_itemsize*/
-    0,                         /*tp_dealloc*/
-    0,                         /*tp_print*/
-    0,                         /*tp_getattr*/
-    0,                         /*tp_setattr*/
-    0,                         /*tp_compare*/
-    0,                         /*tp_repr*/
-    0,                         /*tp_as_number*/
-    0,                         /*tp_as_sequence*/
-    0,                         /*tp_as_mapping*/
-    0,                         /*tp_hash */
-    0,                         /*tp_call*/
-    0,                         /*tp_str*/
-    0,                         /*tp_getattro*/
-    0,                         /*tp_setattro*/
-    0,                         /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    "pjmedia_endpt objects",   /* tp_doc */
-
-};
-
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * PyObj_pj_pool_factory
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    pj_pool_factory * pool_fact;
-} PyObj_pj_pool_factory;
-
-
-
-/*
- * PyTyp_pj_pool_factory
- */
-static PyTypeObject PyTyp_pj_pool_factory =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                         /*ob_size*/
-    "_pjsua.Pj_Pool_Factory",/*tp_name*/
-    sizeof(PyObj_pj_pool_factory), /*tp_basicsize*/
-    0,                         /*tp_itemsize*/
-    0,                         /*tp_dealloc*/
-    0,                         /*tp_print*/
-    0,                         /*tp_getattr*/
-    0,                         /*tp_setattr*/
-    0,                         /*tp_compare*/
-    0,                         /*tp_repr*/
-    0,                         /*tp_as_number*/
-    0,                         /*tp_as_sequence*/
-    0,                         /*tp_as_mapping*/
-    0,                         /*tp_hash */
-    0,                         /*tp_call*/
-    0,                         /*tp_str*/
-    0,                         /*tp_getattro*/
-    0,                         /*tp_setattro*/
-    0,                         /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /*tp_flags*/
-    "pj_pool_factory objects", /* tp_doc */
-
-};
-
+    return PyString_FromStringAndSize(str->ptr, str->slen);
+}
 
 //////////////////////////////////////////////////////////////////////////////
 /*
@@ -249,24 +81,24 @@ static void PyObj_pjsip_cred_info_import(PyObj_pjsip_cred_info *obj,
 					 const pjsip_cred_info *cfg)
 {
     Py_XDECREF(obj->realm);
-    obj->realm = PyString_FromStringAndSize(cfg->realm.ptr, cfg->realm.slen);
+    obj->realm = PyString_FromPJ(&cfg->realm);
     Py_XDECREF(obj->scheme);
-    obj->scheme = PyString_FromStringAndSize(cfg->scheme.ptr, cfg->scheme.slen);
+    obj->scheme = PyString_FromPJ(&cfg->scheme);
     Py_XDECREF(obj->username);
-    obj->username = PyString_FromStringAndSize(cfg->username.ptr, cfg->username.slen);
+    obj->username = PyString_FromPJ(&cfg->username);
     obj->data_type = cfg->data_type;
     Py_XDECREF(obj->data);
-    obj->data = PyString_FromStringAndSize(cfg->data.ptr, cfg->data.slen);
+    obj->data = PyString_FromPJ(&cfg->data);
 }
 
 static void PyObj_pjsip_cred_info_export(pjsip_cred_info *cfg,
 					 PyObj_pjsip_cred_info *obj)
 {
-    cfg->realm	= PyString_to_pj_str(obj->realm);
-    cfg->scheme	= PyString_to_pj_str(obj->scheme);
-    cfg->username = PyString_to_pj_str(obj->username);
+    cfg->realm	= PyString_ToPJ(obj->realm);
+    cfg->scheme	= PyString_ToPJ(obj->scheme);
+    cfg->username = PyString_ToPJ(obj->username);
     cfg->data_type = obj->data_type;
-    cfg->data	= PyString_to_pj_str(obj->data);
+    cfg->data	= PyString_ToPJ(obj->data);
 }
 
 
@@ -284,33 +116,12 @@ static PyObject * PyObj_pjsip_cred_info_new(PyTypeObject *type,
     PJ_UNUSED_ARG(kwds);
 
     self = (PyObj_pjsip_cred_info *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
+    if (self != NULL) {
         self->realm = PyString_FromString("");
-        if (self->realm == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
         self->scheme = PyString_FromString("");
-        if (self->scheme == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
         self->username = PyString_FromString("");
-        if (self->username == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
         self->data = PyString_FromString("");
-        if (self->data == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
     }
 
     return (PyObject *)self;
@@ -386,7 +197,7 @@ static PyTypeObject PyTyp_pjsip_cred_info =
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
     0,                              /* tp_methods */
-    PyObj_pjsip_cred_info_members,         /* tp_members */
+    PyObj_pjsip_cred_info_members,  /* tp_members */
     0,                              /* tp_getset */
     0,                              /* tp_base */
     0,                              /* tp_dict */
@@ -395,98 +206,9 @@ static PyTypeObject PyTyp_pjsip_cred_info =
     0,                              /* tp_dictoffset */
     0,                              /* tp_init */
     0,                              /* tp_alloc */
-    PyObj_pjsip_cred_info_new,             /* tp_new */
+    PyObj_pjsip_cred_info_new,      /* tp_new */
 
 };
-
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * PyObj_pjsip_event
- * C/python typewrapper for event struct
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    pjsip_event * event;
-} PyObj_pjsip_event;
-
-
-
-/*
- * PyTyp_pjsip_event
- * event struct signatures
- */
-static PyTypeObject PyTyp_pjsip_event =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                          /*ob_size*/
-    "_pjsua.Pjsip_Event",     /*tp_name*/
-    sizeof(PyObj_pjsip_event),  /*tp_basicsize*/
-    0,                          /*tp_itemsize*/
-    0,                          /*tp_dealloc*/
-    0,                          /*tp_print*/
-    0,                          /*tp_getattr*/
-    0,                          /*tp_setattr*/
-    0,                          /*tp_compare*/
-    0,                          /*tp_repr*/
-    0,                          /*tp_as_number*/
-    0,                          /*tp_as_sequence*/
-    0,                          /*tp_as_mapping*/
-    0,                          /*tp_hash */
-    0,                          /*tp_call*/
-    0,                          /*tp_str*/
-    0,                          /*tp_getattro*/
-    0,                          /*tp_setattro*/
-    0,                          /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,         /*tp_flags*/
-    "pjsip_event object",       /*tp_doc */
-};
-
-
-//////////////////////////////////////////////////////////////////////////////
-/*
- * PyObj_pjsip_rx_data
- * C/python typewrapper for pjsip_rx_data struct
- */
-typedef struct
-{
-    PyObject_HEAD
-    /* Type-specific fields go here. */
-    pjsip_rx_data * rdata;
-} PyObj_pjsip_rx_data;
-
-
-/*
- * PyTyp_pjsip_rx_data
- */
-static PyTypeObject PyTyp_pjsip_rx_data =
-{
-    PyObject_HEAD_INIT(NULL)
-    0,                              /*ob_size*/
-    "_pjsua.Pjsip_Rx_Data",       /*tp_name*/
-    sizeof(PyObj_pjsip_rx_data),    /*tp_basicsize*/
-    0,                              /*tp_itemsize*/
-    0,                              /*tp_dealloc*/
-    0,                              /*tp_print*/
-    0,                              /*tp_getattr*/
-    0,                              /*tp_setattr*/
-    0,                              /*tp_compare*/
-    0,                              /*tp_repr*/
-    0,                              /*tp_as_number*/
-    0,                              /*tp_as_sequence*/
-    0,                              /*tp_as_mapping*/
-    0,                              /*tp_hash */
-    0,                              /*tp_call*/
-    0,                              /*tp_str*/
-    0,                              /*tp_getattro*/
-    0,                              /*tp_setattro*/
-    0,                              /*tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "pjsip_rx_data object",         /*tp_doc*/
-};
-
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -553,101 +275,21 @@ static PyObject * PyObj_pjsua_callback_new(PyTypeObject *type,
     PJ_UNUSED_ARG(kwds);
 
     self = (PyObj_pjsua_callback *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
-        Py_INCREF(Py_None);
-        self->on_call_state = Py_None;
-        if (self->on_call_state == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_incoming_call = Py_None;
-        if (self->on_incoming_call == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_call_media_state = Py_None;
-        if (self->on_call_media_state == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_dtmf_digit = Py_None;
-        if (self->on_dtmf_digit == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_call_transfer_request = Py_None;
-        if (self->on_call_transfer_request == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_call_transfer_status = Py_None;
-        if (self->on_call_transfer_status == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_call_replace_request = Py_None;
-        if (self->on_call_replace_request == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_call_replaced = Py_None;
-        if (self->on_call_replaced == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_reg_state = Py_None;
-        if (self->on_reg_state == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-	Py_INCREF(Py_None);
-        self->on_incoming_subscribe = Py_None;
-        Py_INCREF(Py_None);
-        self->on_buddy_state = Py_None;
-        if (self->on_buddy_state == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_pager = Py_None;
-        if (self->on_pager == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_pager_status = Py_None;
-        if (self->on_pager_status == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->on_typing = Py_None;
-        if (self->on_typing == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
+    if (self != NULL) {
+        self->on_call_state = Py_BuildValue("");
+        self->on_incoming_call = Py_BuildValue("");
+        self->on_call_media_state = Py_BuildValue("");
+        self->on_dtmf_digit = Py_BuildValue("");
+        self->on_call_transfer_request = Py_BuildValue("");
+        self->on_call_transfer_status = Py_BuildValue("");
+        self->on_call_replace_request = Py_BuildValue("");
+        self->on_call_replaced = Py_BuildValue("");
+        self->on_reg_state = Py_BuildValue("");
+        self->on_incoming_subscribe = Py_BuildValue("");
+        self->on_buddy_state = Py_BuildValue("");
+        self->on_pager = Py_BuildValue("");
+        self->on_pager_status = Py_BuildValue("");
+        self->on_typing = Py_BuildValue("");
     }
 
     return (PyObject *)self;
@@ -988,7 +630,7 @@ static PyMemberDef PyObj_pjsua_media_config_members[] =
         "Specify TURN password type."
     },
     {
-    	"turn_passw", T_OBJECT_EX,
+    	"turn_passwd", T_OBJECT_EX,
     	offsetof(PyObj_pjsua_media_config, turn_passwd), 0,
     	"Specify the TURN password."
     },
@@ -1007,8 +649,7 @@ static PyObject *PyObj_pjsua_media_config_new(PyTypeObject *type,
     PJ_UNUSED_ARG(kwds);
 
     self = (PyObj_pjsua_media_config*)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
+    if (self != NULL) {
 	self->turn_server = PyString_FromString("");
 	self->turn_realm = PyString_FromString("");
 	self->turn_username = PyString_FromString("");
@@ -1051,22 +692,18 @@ static void PyObj_pjsua_media_config_import(PyObj_pjsua_media_config *obj,
     obj->enable_ice	    = cfg->enable_ice;
     obj->enable_turn	    = cfg->enable_turn;
     Py_XDECREF(obj->turn_server);
-    obj->turn_server	    = PyString_FromStringAndSize(cfg->turn_server.ptr, 
-							 cfg->turn_server.slen);
+    obj->turn_server	    = PyString_FromPJ(&cfg->turn_server);
     obj->turn_conn_type	    = cfg->turn_conn_type;
     if (cfg->turn_auth_cred.type == PJ_STUN_AUTH_CRED_STATIC) {
 	const pj_stun_auth_cred *cred = &cfg->turn_auth_cred;
 
 	Py_XDECREF(obj->turn_realm);
-	obj->turn_realm	= PyString_FromStringAndSize(cred->data.static_cred.realm.ptr, 
-						     cred->data.static_cred.realm.slen);
+	obj->turn_realm	= PyString_FromPJ(&cred->data.static_cred.realm);
 	Py_XDECREF(obj->turn_username);
-	obj->turn_username = PyString_FromStringAndSize(cred->data.static_cred.username.ptr, 
-						        cred->data.static_cred.username.slen);
+	obj->turn_username = PyString_FromPJ(&cred->data.static_cred.username);
 	obj->turn_passwd_type = cred->data.static_cred.data_type;
 	Py_XDECREF(obj->turn_passwd);
-	obj->turn_passwd = PyString_FromStringAndSize(cred->data.static_cred.data.ptr, 
-						      cred->data.static_cred.data.slen);
+	obj->turn_passwd = PyString_FromPJ(&cred->data.static_cred.data);
     } else {
 	Py_XDECREF(obj->turn_realm);
 	obj->turn_realm	= PyString_FromString("");
@@ -1103,13 +740,13 @@ static void PyObj_pjsua_media_config_export(pjsua_media_config *cfg,
     cfg->enable_turn	    = obj->enable_turn;
 
     if (cfg->enable_turn) {
-	cfg->turn_server = PyString_to_pj_str(obj->turn_server);
+	cfg->turn_server = PyString_ToPJ(obj->turn_server);
 	cfg->turn_conn_type = obj->turn_conn_type;
 	cfg->turn_auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
-	cfg->turn_auth_cred.data.static_cred.realm = PyString_to_pj_str(obj->turn_realm);
-	cfg->turn_auth_cred.data.static_cred.username = PyString_to_pj_str(obj->turn_username);
+	cfg->turn_auth_cred.data.static_cred.realm = PyString_ToPJ(obj->turn_realm);
+	cfg->turn_auth_cred.data.static_cred.username = PyString_ToPJ(obj->turn_username);
 	cfg->turn_auth_cred.data.static_cred.data_type= obj->turn_passwd_type;
-	cfg->turn_auth_cred.data.static_cred.data = PyString_to_pj_str(obj->turn_passwd);
+	cfg->turn_auth_cred.data.static_cred.data = PyString_ToPJ(obj->turn_passwd);
     }
 }
 
@@ -1201,25 +838,24 @@ static void PyObj_pjsua_config_import(PyObj_pjsua_config *obj,
     obj->max_calls	= cfg->max_calls;
     obj->thread_cnt	= cfg->thread_cnt;
     Py_XDECREF(obj->outbound_proxy);
-    obj->outbound_proxy = PyString_FromStringAndSize(cfg->outbound_proxy[0].ptr,
-						     cfg->outbound_proxy[0].slen);
+    if (cfg->outbound_proxy_cnt)
+	obj->outbound_proxy = PyString_FromPJ(&cfg->outbound_proxy[0]);
+    else
+	obj->outbound_proxy = PyString_FromString("");
+
     Py_XDECREF(obj->stun_domain);
-    obj->stun_domain	= PyString_FromStringAndSize(cfg->stun_domain.ptr,
-						     cfg->stun_domain.slen);
+    obj->stun_domain	= PyString_FromPJ(&cfg->stun_domain);
     Py_XDECREF(obj->stun_host);
-    obj->stun_host	= PyString_FromStringAndSize(cfg->stun_host.ptr,
-						     cfg->stun_host.slen);
+    obj->stun_host	= PyString_FromPJ(&cfg->stun_host);
     Py_XDECREF(obj->nameserver);
     obj->nameserver = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->nameserver_count; ++i) {
 	PyObject * str;
-	str = PyString_FromStringAndSize(cfg->nameserver[i].ptr, 
-					 cfg->nameserver[i].slen);
+	str = PyString_FromPJ(&cfg->nameserver[i]);
 	PyList_Append((PyObject *)obj->nameserver, str);
     }
     Py_XDECREF(obj->user_agent);
-    obj->user_agent	= PyString_FromStringAndSize(cfg->user_agent.ptr,
-						     cfg->user_agent.slen);
+    obj->user_agent	= PyString_FromPJ(&cfg->user_agent);
 }
 
 
@@ -1232,7 +868,7 @@ static void PyObj_pjsua_config_export(pjsua_config *cfg,
     cfg->thread_cnt	= obj->thread_cnt;
     if (PyString_Size(obj->outbound_proxy) > 0) {
 	cfg->outbound_proxy_cnt = 1;
-	cfg->outbound_proxy[0] = PyString_to_pj_str(obj->outbound_proxy);
+	cfg->outbound_proxy[0] = PyString_ToPJ(obj->outbound_proxy);
     } else {
 	cfg->outbound_proxy_cnt = 0;
     }
@@ -1240,11 +876,12 @@ static void PyObj_pjsua_config_export(pjsua_config *cfg,
     if (cfg->nameserver_count > PJ_ARRAY_SIZE(cfg->nameserver))
 	cfg->nameserver_count = PJ_ARRAY_SIZE(cfg->nameserver);
     for (i = 0; i < cfg->nameserver_count; i++) {
-        cfg->nameserver[i] = PyString_to_pj_str(PyList_GetItem((PyObject *)obj->nameserver,i));
+	PyObject *item = PyList_GetItem((PyObject *)obj->nameserver,i);
+        cfg->nameserver[i] = PyString_ToPJ(item);
     }
-    cfg->stun_domain	= PyString_to_pj_str(obj->stun_domain);
-    cfg->stun_host	= PyString_to_pj_str(obj->stun_host);
-    cfg->user_agent	= PyString_to_pj_str(obj->user_agent);
+    cfg->stun_domain	= PyString_ToPJ(obj->stun_domain);
+    cfg->stun_host	= PyString_ToPJ(obj->stun_host);
+    cfg->user_agent	= PyString_ToPJ(obj->user_agent);
 
 }
 
@@ -1259,27 +896,13 @@ static PyObject *PyObj_pjsua_config_new(PyTypeObject *type,
     PJ_UNUSED_ARG(kwds);
 
     self = (PyObj_pjsua_config *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
+    if (self != NULL) {
         self->user_agent = PyString_FromString("");
-        if (self->user_agent == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
         self->outbound_proxy = PyString_FromString("");
-        if (self->outbound_proxy == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
+	self->stun_domain = PyString_FromString("");
+	self->stun_host = PyString_FromString("");
         self->cb = (PyObj_pjsua_callback *)
 		   PyType_GenericNew(&PyTyp_pjsua_callback, NULL, NULL);
-        if (self->cb == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
     }
     return (PyObject *)self;
 }
@@ -1425,6 +1048,8 @@ static void PyObj_pjsua_logging_config_import(PyObj_pjsua_logging_config *obj,
     obj->level		= cfg->level;
     obj->console_level	= cfg->console_level;
     obj->decor		= cfg->decor;
+    Py_XDECREF(obj->log_filename);
+    obj->log_filename = PyString_FromPJ(&cfg->log_filename);
 }
 
 static void PyObj_pjsua_logging_config_export(pjsua_logging_config *cfg,
@@ -1434,7 +1059,7 @@ static void PyObj_pjsua_logging_config_export(pjsua_logging_config *cfg,
     cfg->level		= obj->level;
     cfg->console_level	= obj->console_level;
     cfg->decor		= obj->decor;
-    cfg->log_filename	= PyString_to_pj_str(obj->log_filename);
+    cfg->log_filename	= PyString_ToPJ(obj->log_filename);
 }
 
 
@@ -1452,21 +1077,9 @@ static PyObject * PyObj_pjsua_logging_config_new(PyTypeObject *type,
     PJ_UNUSED_ARG(kwds);
 
     self = (PyObj_pjsua_logging_config *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
+    if (self != NULL) {
         self->log_filename = PyString_FromString("");
-        if (self->log_filename == NULL)
-    	{
-            Py_DECREF(self);
-            return NULL;
-        }
-        Py_INCREF(Py_None);
-        self->cb = Py_None;
-        if (self->cb == NULL)
-    	{
-            Py_DECREF(Py_None);
-            return NULL;
-        }
+        self->cb = Py_BuildValue("");
     }
 
     return (PyObject *)self;
@@ -1609,24 +1222,10 @@ static PyObject * PyObj_pjsua_msg_data_new(PyTypeObject *type,
     PJ_UNUSED_ARG(kwds);
 
     self = (PyObj_pjsua_msg_data *)type->tp_alloc(type, 0);
-    if (self != NULL)
-    {
-        Py_INCREF(Py_None);
-        self->hdr_list = Py_None;
-        if (self->hdr_list == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
+    if (self != NULL) {
+        self->hdr_list = PyList_New(0);
         self->content_type = PyString_FromString("");
-        if (self->content_type == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
         self->msg_body = PyString_FromString("");
-        if (self->msg_body == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
     }
 
     return (PyObject *)self;
@@ -1737,8 +1336,8 @@ static void PyObj_pjsua_transport_config_delete(PyObj_pjsua_transport_config* se
 static void PyObj_pjsua_transport_config_export(pjsua_transport_config *cfg,
 						PyObj_pjsua_transport_config *obj)
 {
-    cfg->public_addr	= PyString_to_pj_str(obj->public_addr);
-    cfg->bound_addr	= PyString_to_pj_str(obj->bound_addr);
+    cfg->public_addr	= PyString_ToPJ(obj->public_addr);
+    cfg->bound_addr	= PyString_ToPJ(obj->bound_addr);
     cfg->port		= obj->port;
 
 }
@@ -1747,12 +1346,10 @@ static void PyObj_pjsua_transport_config_import(PyObj_pjsua_transport_config *ob
 						const pjsua_transport_config *cfg)
 {
     Py_XDECREF(obj->public_addr);    
-    obj->public_addr = PyString_FromStringAndSize(cfg->public_addr.ptr, 
-						  cfg->public_addr.slen);
+    obj->public_addr = PyString_FromPJ(&cfg->public_addr);
 
     Py_XDECREF(obj->bound_addr);    
-    obj->bound_addr = PyString_FromStringAndSize(cfg->bound_addr.ptr, 
-					         cfg->bound_addr.slen);
+    obj->bound_addr = PyString_FromPJ(&cfg->bound_addr);
 
     obj->port = cfg->port;
 }
@@ -1774,15 +1371,7 @@ static PyObject * PyObj_pjsua_transport_config_new(PyTypeObject *type,
     self = (PyObj_pjsua_transport_config *)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->public_addr = PyString_FromString("");
-        if (self->public_addr == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->bound_addr = PyString_FromString("");
-        if (self->bound_addr == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
     }
 
     return (PyObject *)self;
@@ -1911,13 +1500,10 @@ static void PyObj_pjsua_transport_info_import(PyObj_pjsua_transport_info *obj,
 {
     obj->id	    = info->id;
     obj->type	    = info->type;
-    obj->type_name  = PyString_FromStringAndSize(info->type_name.ptr,
-						 info->type_name.slen);
-    obj->info	    = PyString_FromStringAndSize(info->info.ptr,
-						 info->info.slen);
+    obj->type_name  = PyString_FromPJ(&info->type_name);
+    obj->info	    = PyString_FromPJ(&info->info);
     obj->flag	    = info->flag;
-    obj->addr	    = PyString_FromStringAndSize(info->local_name.host.ptr,
-						 info->local_name.host.slen);
+    obj->addr	    = PyString_FromPJ(&info->local_name.host);
     obj->port	    = info->local_name.port;
     obj->usage_count= info->usage_count;
 }
@@ -1939,20 +1525,8 @@ static PyObject * PyObj_pjsua_transport_info_new(PyTypeObject *type,
     if (self != NULL)
     {
         self->type_name = PyString_FromString("");
-        if (self->type_name == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
         self->info = PyString_FromString(""); 
-        if (self->info == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
         self->addr = PyString_FromString("");
-        if (self->addr == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
     }
 
     return (PyObject *)self;
@@ -1971,7 +1545,7 @@ static PyMemberDef PyObj_pjsua_transport_info_members[] =
     },
     {
         "type", T_INT, 
-	offsetof(PyObj_pjsua_transport_info, id), 0,
+	offsetof(PyObj_pjsua_transport_info, type), 0,
         "Transport type."
     },
     {
@@ -2071,13 +1645,10 @@ typedef struct
     PyObject	    *reg_uri;
     int		     publish_enabled;
     PyObject	    *force_contact;
-    /*pj_str_t proxy[8];*/
     PyListObject    *proxy;
     unsigned	     reg_timeout;
-    /*pjsip_cred_info cred_info[8];*/
     PyListObject    *cred_info;
     int		     transport_id;
-
     int		     auth_initial_send;
     PyObject	    *auth_initial_algorithm;
     PyObject	    *pidf_tuple_id;
@@ -2115,20 +1686,17 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
 
     obj->priority   = cfg->priority;
     Py_XDECREF(obj->id);
-    obj->id	    = PyString_FromStringAndSize(cfg->id.ptr, cfg->id.slen);
+    obj->id	    = PyString_FromPJ(&cfg->id);
     Py_XDECREF(obj->reg_uri);
-    obj->reg_uri    = PyString_FromStringAndSize(cfg->reg_uri.ptr, 
-						 cfg->reg_uri.slen);
+    obj->reg_uri    = PyString_FromPJ(&cfg->reg_uri);
     obj->publish_enabled = cfg->publish_enabled;
     Py_XDECREF(obj->force_contact);
-    obj->force_contact = PyString_FromStringAndSize(cfg->force_contact.ptr,
-						    cfg->force_contact.slen);
+    obj->force_contact = PyString_FromPJ(&cfg->force_contact);
     Py_XDECREF(obj->proxy);
     obj->proxy = (PyListObject *)PyList_New(0);
     for (i=0; i<cfg->proxy_cnt; ++i) {
 	PyObject * str;
-	str = PyString_FromStringAndSize(cfg->proxy[i].ptr, 
-					 cfg->proxy[i].slen);
+	str = PyString_FromPJ(&cfg->proxy[i]);
 	PyList_Append((PyObject *)obj->proxy, str);
     }
 
@@ -2149,16 +1717,14 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
 
     obj->auth_initial_send = cfg->auth_pref.initial_auth;
     Py_XDECREF(obj->auth_initial_algorithm);
-    obj->auth_initial_algorithm = PyString_FromStringAndSize(cfg->auth_pref.algorithm.ptr, 
-							     cfg->auth_pref.algorithm.slen);
+    obj->auth_initial_algorithm = PyString_FromPJ(&cfg->auth_pref.algorithm);
     Py_XDECREF(obj->pidf_tuple_id);
-    obj->pidf_tuple_id = PyString_FromStringAndSize(cfg->pidf_tuple_id.ptr, 
-						    cfg->pidf_tuple_id.slen);
+    obj->pidf_tuple_id = PyString_FromPJ(&cfg->pidf_tuple_id);
     obj->require_100rel = cfg->require_100rel;
     obj->allow_contact_rewrite = cfg->allow_contact_rewrite;
     obj->ka_interval = cfg->ka_interval;
     Py_XDECREF(obj->ka_data);
-    obj->ka_data = PyString_FromStringAndSize(cfg->ka_data.ptr, cfg->ka_data.slen);
+    obj->ka_data = PyString_FromPJ(&cfg->ka_data);
     obj->use_srtp = cfg->use_srtp;
     obj->srtp_secure_signaling = cfg->srtp_secure_signaling;
 }
@@ -2169,36 +1735,39 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     unsigned i;
 
     cfg->priority   = obj->priority;
-    cfg->id	    = PyString_to_pj_str(obj->id);
-    cfg->reg_uri    = PyString_to_pj_str(obj->reg_uri);
+    cfg->id	    = PyString_ToPJ(obj->id);
+    cfg->reg_uri    = PyString_ToPJ(obj->reg_uri);
     cfg->publish_enabled = obj->publish_enabled;
-    cfg->force_contact = PyString_to_pj_str(obj->force_contact);
+    cfg->force_contact = PyString_ToPJ(obj->force_contact);
 
     cfg->proxy_cnt = PyList_Size((PyObject*)obj->proxy);
+    if (cfg->proxy_cnt > PJ_ARRAY_SIZE(cfg->proxy))
+	cfg->proxy_cnt = PJ_ARRAY_SIZE(cfg->proxy);
     for (i = 0; i < cfg->proxy_cnt; i++) {
-        /*cfg.proxy[i] = ac->proxy[i];*/
-        cfg->proxy[i] = PyString_to_pj_str(PyList_GetItem((PyObject *)obj->proxy,i));
+	PyObject *item = PyList_GetItem((PyObject *)obj->proxy, i);
+        cfg->proxy[i] = PyString_ToPJ(item);
     }
 
     cfg->reg_timeout = obj->reg_timeout;
 
     cfg->cred_count = PyList_Size((PyObject*)obj->cred_info);
+    if (cfg->cred_count > PJ_ARRAY_SIZE(cfg->cred_info))
+	cfg->cred_count = PJ_ARRAY_SIZE(cfg->cred_info);
     for (i = 0; i < cfg->cred_count; i++) {
-        /*cfg.cred_info[i] = ac->cred_info[i];*/
         PyObj_pjsip_cred_info *ci;
 	ci = (PyObj_pjsip_cred_info*) 
-	     PyList_GetItem((PyObject *)obj->cred_info,i);
+	     PyList_GetItem((PyObject *)obj->cred_info, i);
 	PyObj_pjsip_cred_info_export(&cfg->cred_info[i], ci);
     }
 
     cfg->transport_id = obj->transport_id;
     cfg->auth_pref.initial_auth = obj->auth_initial_send;
-    cfg->auth_pref.algorithm = PyString_to_pj_str(obj->auth_initial_algorithm);
-    cfg->pidf_tuple_id = PyString_to_pj_str(obj->pidf_tuple_id);
+    cfg->auth_pref.algorithm = PyString_ToPJ(obj->auth_initial_algorithm);
+    cfg->pidf_tuple_id = PyString_ToPJ(obj->pidf_tuple_id);
     cfg->require_100rel = obj->require_100rel;
     cfg->allow_contact_rewrite = obj->allow_contact_rewrite;
     cfg->ka_interval = obj->ka_interval;
-    cfg->ka_data = PyString_to_pj_str(obj->ka_data);
+    cfg->ka_data = PyString_ToPJ(obj->ka_data);
     cfg->use_srtp = obj->use_srtp;
     cfg->srtp_secure_signaling = obj->srtp_secure_signaling;
 }
@@ -2220,30 +1789,10 @@ static PyObject * PyObj_pjsua_acc_config_new(PyTypeObject *type,
     self = (PyObj_pjsua_acc_config *)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->id = PyString_FromString("");
-        if (self->id == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
         self->reg_uri = PyString_FromString("");
-        if (self->reg_uri == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
         self->force_contact = PyString_FromString("");
-        if (self->force_contact == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->proxy = (PyListObject *)PyList_New(0);
-	if (self->proxy == NULL) {
-	    Py_DECREF(self);
-	    return NULL;
-	}
 	self->cred_info = (PyListObject *)PyList_New(0);
-	if (self->cred_info == NULL) {
-	    Py_DECREF(self);
-	    return NULL;
-	}
 	self->auth_initial_algorithm = PyString_FromString("");
 	self->pidf_tuple_id = PyString_FromString("");
 	self->ka_data = PyString_FromString("");
@@ -2304,7 +1853,8 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
 	"proxies first (for example, border controllers)."
     },
     {
-        "reg_timeout", T_INT, offsetof(PyObj_pjsua_acc_config, reg_timeout), 0,
+        "reg_timeout", T_INT, 
+	offsetof(PyObj_pjsua_acc_config, reg_timeout), 0,
         "Optional interval for registration, in seconds. "
         "If the value is zero, default interval will be used "
         "(PJSUA_REG_INTERVAL, 55 seconds). "
@@ -2327,7 +1877,6 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
 	" application may want to have explicit control over the transport to"
 	" use, so in that case it can set this field."
     },
-    
     {
 	"auth_initial_send", T_INT,
 	offsetof(PyObj_pjsua_acc_config, auth_initial_send), 0,
@@ -2387,8 +1936,8 @@ static PyTypeObject PyTyp_pjsua_acc_config =
 {
     PyObject_HEAD_INIT(NULL)
     0,                              /*ob_size*/
-    "_pjsua.Acc_Config",      /*tp_name*/
-    sizeof(PyObj_pjsua_acc_config),  /*tp_basicsize*/
+    "_pjsua.Acc_Config",	    /*tp_name*/
+    sizeof(PyObj_pjsua_acc_config), /*tp_basicsize*/
     0,                              /*tp_itemsize*/
     (destructor)PyObj_pjsua_acc_config_delete,/*tp_dealloc*/
     0,                              /*tp_print*/
@@ -2406,15 +1955,15 @@ static PyTypeObject PyTyp_pjsua_acc_config =
     0,                              /*tp_setattro*/
     0,                              /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Acc Config objects",       /* tp_doc */
+    "Account settings",		    /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
     0,                              /* tp_richcompare */
     0,                              /* tp_weaklistoffset */
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
-    0/*acc_config_methods*/,                              /* tp_methods */
-    PyObj_pjsua_acc_config_members,         /* tp_members */
+    0,                              /* tp_methods */
+    PyObj_pjsua_acc_config_members, /* tp_members */
     0,                              /* tp_getset */
     0,                              /* tp_base */
     0,                              /* tp_dict */
@@ -2423,7 +1972,7 @@ static PyTypeObject PyTyp_pjsua_acc_config =
     0,                              /* tp_dictoffset */
     0,                              /* tp_init */
     0,                              /* tp_alloc */
-    PyObj_pjsua_acc_config_new,             /* tp_new */
+    PyObj_pjsua_acc_config_new,     /* tp_new */
 
 };
 
@@ -2467,16 +2016,16 @@ static void PyObj_pjsua_acc_info_import(PyObj_pjsua_acc_info *obj,
 {
     obj->id	    = info->id;
     obj->is_default = info->is_default;
-    obj->acc_uri    = PyString_FromStringAndSize(info->acc_uri.ptr, 
-						 info->acc_uri.slen);
+    Py_XDECREF(obj->acc_uri);
+    obj->acc_uri    = PyString_FromPJ(&info->acc_uri);
     obj->has_registration = info->has_registration;
     obj->expires    = info->expires;
     obj->status	    = info->status;
-    obj->status_text= PyString_FromStringAndSize(info->status_text.ptr,
-						 info->status_text.slen);
+    Py_XDECREF(obj->status_text);
+    obj->status_text= PyString_FromPJ(&info->status_text);
     obj->online_status = info->online_status;
-    obj->online_status_text = PyString_FromStringAndSize(info->online_status_text.ptr,
-							 info->online_status_text.slen);
+    Py_XDECREF(obj->online_status_text);
+    obj->online_status_text = PyString_FromPJ(&info->online_status_text);
 }
 
 
@@ -2496,20 +2045,8 @@ static PyObject * PyObj_pjsua_acc_info_new(PyTypeObject *type,
     self = (PyObj_pjsua_acc_info *)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->acc_uri = PyString_FromString("");
-        if (self->acc_uri == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->status_text = PyString_FromString("");
-        if (self->status_text == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->online_status_text = PyString_FromString("");
-        if (self->online_status_text == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }        
     }
 
     return (PyObject *)self;
@@ -2581,8 +2118,8 @@ static PyTypeObject PyTyp_pjsua_acc_info =
 {
     PyObject_HEAD_INIT(NULL)
     0,                              /*ob_size*/
-    "_pjsua.Acc_Info",      /*tp_name*/
-    sizeof(PyObj_pjsua_acc_info),  /*tp_basicsize*/
+    "_pjsua.Acc_Info",		    /*tp_name*/
+    sizeof(PyObj_pjsua_acc_info),   /*tp_basicsize*/
     0,                              /*tp_itemsize*/
     (destructor)PyObj_pjsua_acc_info_delete,/*tp_dealloc*/
     0,                              /*tp_print*/
@@ -2600,7 +2137,7 @@ static PyTypeObject PyTyp_pjsua_acc_info =
     0,                              /*tp_setattro*/
     0,                              /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Acc Info objects",             /* tp_doc */
+    "Account info",		    /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
     0,                              /* tp_richcompare */
@@ -2652,7 +2189,7 @@ static void PyObj_pjsua_buddy_config_import(PyObj_pjsua_buddy_config *obj,
 					    const pjsua_buddy_config *cfg)
 {
     Py_XDECREF(obj->uri);
-    obj->uri = PyString_FromStringAndSize(cfg->uri.ptr, cfg->uri.slen);
+    obj->uri = PyString_FromPJ(&cfg->uri);
     obj->subscribe = cfg->subscribe;
 }
 
@@ -2660,10 +2197,10 @@ static void PyObj_pjsua_buddy_config_import(PyObj_pjsua_buddy_config *obj,
 static void PyObj_pjsua_buddy_config_export(pjsua_buddy_config *cfg,
 					    PyObj_pjsua_buddy_config *obj)
 {
-    cfg->uri = PyString_to_pj_str(obj->uri);
+    cfg->uri = PyString_ToPJ(obj->uri);
     cfg->subscribe = obj->subscribe;
+    cfg->user_data = NULL;
 }
-
 
 
 /*
@@ -2682,10 +2219,6 @@ static PyObject *PyObj_pjsua_buddy_config_new(PyTypeObject *type,
     self = (PyObj_pjsua_buddy_config *)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->uri = PyString_FromString("");
-        if (self->uri == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }        
     }
     return (PyObject *)self;
 }
@@ -2740,7 +2273,7 @@ static PyTypeObject PyTyp_pjsua_buddy_config =
     0,                              /*tp_setattro*/
     0,                              /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Buddy Config objects",         /* tp_doc */
+    "Buddy config",		    /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
     0,                              /* tp_richcompare */
@@ -2748,7 +2281,7 @@ static PyTypeObject PyTyp_pjsua_buddy_config =
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
     0,                              /* tp_methods */
-    PyObj_pjsua_buddy_config_members,         /* tp_members */
+    PyObj_pjsua_buddy_config_members,/* tp_members */
     0,                              /* tp_getset */
     0,                              /* tp_base */
     0,                              /* tp_dict */
@@ -2803,19 +2336,17 @@ static void PyObj_pjsua_buddy_info_import(PyObj_pjsua_buddy_info *obj,
 {
     obj->id = info->id;
     Py_XDECREF(obj->uri);
-    obj->uri = PyString_FromStringAndSize(info->uri.ptr, info->uri.slen);
+    obj->uri = PyString_FromPJ(&info->uri);
     Py_XDECREF(obj->contact);
-    obj->contact = PyString_FromStringAndSize(info->contact.ptr, info->contact.slen);
+    obj->contact = PyString_FromPJ(&info->contact);
     obj->status = info->status;
     Py_XDECREF(obj->status_text);
-    obj->status_text = PyString_FromStringAndSize(info->status_text.ptr, 
-						  info->status_text.slen);
+    obj->status_text = PyString_FromPJ(&info->status_text);
     obj->monitor_pres = info->monitor_pres;
     obj->activity = info->rpid.activity;
     obj->sub_state = info->sub_state;
     Py_XDECREF(obj->sub_term_reason);
-    obj->sub_term_reason = PyString_FromStringAndSize(info->sub_term_reason.ptr, 
-						      info->sub_term_reason.slen);
+    obj->sub_term_reason = PyString_FromPJ(&info->sub_term_reason);
 }
 
 
@@ -2836,20 +2367,8 @@ static PyObject * PyObj_pjsua_buddy_info_new(PyTypeObject *type,
     self = (PyObj_pjsua_buddy_info *)type->tp_alloc(type, 0);
     if (self != NULL) {
         self->uri = PyString_FromString("");
-        if (self->uri == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->contact = PyString_FromString("");
-        if (self->contact == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->status_text = PyString_FromString("");
-        if (self->status_text == NULL) {
-            Py_DECREF(self);
-            return NULL;
-        }
 	self->sub_term_reason = PyString_FromString("");
     }
     return (PyObject *)self;
@@ -2923,8 +2442,8 @@ static PyTypeObject PyTyp_pjsua_buddy_info =
 {
     PyObject_HEAD_INIT(NULL)
     0,                              /*ob_size*/
-    "_pjsua.Buddy_Info",      /*tp_name*/
-    sizeof(PyObj_pjsua_buddy_info),  /*tp_basicsize*/
+    "_pjsua.Buddy_Info",	    /*tp_name*/
+    sizeof(PyObj_pjsua_buddy_info), /*tp_basicsize*/
     0,                              /*tp_itemsize*/
     (destructor)PyObj_pjsua_buddy_info_delete,/*tp_dealloc*/
     0,                              /*tp_print*/
@@ -2942,7 +2461,7 @@ static PyTypeObject PyTyp_pjsua_buddy_info =
     0,                              /*tp_setattro*/
     0,                              /*tp_as_buffer*/
     Py_TPFLAGS_DEFAULT,             /*tp_flags*/
-    "Buddy Info objects",       /* tp_doc */
+    "Buddy Info object",	    /* tp_doc */
     0,                              /* tp_traverse */
     0,                              /* tp_clear */
     0,                              /* tp_richcompare */
@@ -2950,7 +2469,7 @@ static PyTypeObject PyTyp_pjsua_buddy_info =
     0,                              /* tp_iter */
     0,                              /* tp_iternext */
     0,                              /* tp_methods */
-    PyObj_pjsua_buddy_info_members,         /* tp_members */
+    PyObj_pjsua_buddy_info_members, /* tp_members */
     0,                              /* tp_getset */
     0,                              /* tp_base */
     0,                              /* tp_dict */
@@ -2959,13 +2478,952 @@ static PyTypeObject PyTyp_pjsua_buddy_info =
     0,                              /* tp_dictoffset */
     0,                              /* tp_init */
     0,                              /* tp_alloc */
-    PyObj_pjsua_buddy_info_new,             /* tp_new */
+    PyObj_pjsua_buddy_info_new,     /* tp_new */
 
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+ * PyObj_pjsua_codec_info
+ * Codec Info
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    
+    PyObject * codec_id;
+    pj_uint8_t priority;    
+} PyObj_pjsua_codec_info;
+
+
+/*
+ * codec_info_dealloc
+ * deletes a codec_info from memory
+ */
+static void codec_info_dealloc(PyObj_pjsua_codec_info* self)
+{
+    Py_XDECREF(self->codec_id);    
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+
+/*
+ * codec_info_new
+ * constructor for codec_info object
+ */
+static PyObject * codec_info_new(PyTypeObject *type, PyObject *args,
+                                 PyObject *kwds)
+{
+    PyObj_pjsua_codec_info *self;
+
+    PJ_UNUSED_ARG(args);
+    PJ_UNUSED_ARG(kwds);
+
+    self = (PyObj_pjsua_codec_info *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->codec_id = PyString_FromString("");
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * codec_info_members
+ * !modified @ 071206
+ */
+static PyMemberDef codec_info_members[] =
+{    
+    {
+        "codec_id", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_codec_info, codec_id), 0,
+        "Codec unique identification."        
+    },
+    {
+        "priority", T_INT, 
+        offsetof(PyObj_pjsua_codec_info, priority), 0,
+        "Codec priority (integer 0-255)."
+    },
+
+    {NULL}  /* Sentinel */
+};
+
+/*
+ * PyTyp_pjsua_codec_info
+ */
+static PyTypeObject PyTyp_pjsua_codec_info =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.Codec_Info",	    /*tp_name*/
+    sizeof(PyObj_pjsua_codec_info), /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)codec_info_dealloc, /*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "Codec Info",		    /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    codec_info_members,		    /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    codec_info_new,		    /* tp_new */
+
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+ * PyObj_pjsua_conf_port_info
+ * Conf Port Info
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    
+    int		 slot_id;
+    PyObject	*name;
+    unsigned	 clock_rate;
+    unsigned	 channel_count;
+    unsigned	 samples_per_frame;
+    unsigned	 bits_per_sample;
+    PyObject	*listeners;
+
+} PyObj_pjsua_conf_port_info;
+
+
+/*
+ * conf_port_info_dealloc
+ * deletes a conf_port_info from memory
+ */
+static void conf_port_info_dealloc(PyObj_pjsua_conf_port_info* self)
+{
+    Py_XDECREF(self->name);    
+    Py_XDECREF(self->listeners);
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+
+/*
+ * conf_port_info_new
+ * constructor for conf_port_info object
+ */
+static PyObject * conf_port_info_new(PyTypeObject *type, PyObject *args,
+                                     PyObject *kwds)
+{
+    PyObj_pjsua_conf_port_info *self;
+
+    PJ_UNUSED_ARG(args);
+    PJ_UNUSED_ARG(kwds);
+
+    self = (PyObj_pjsua_conf_port_info *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->name = PyString_FromString("");
+	self->listeners = PyList_New(0);
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * conf_port_info_members
+ */
+static PyMemberDef conf_port_info_members[] =
+{   
+    {
+        "slot_id", T_INT, 
+        offsetof(PyObj_pjsua_conf_port_info, slot_id), 0,
+        "Conference port number."
+    },
+    {
+        "name", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_conf_port_info, name), 0,
+        "Port name"        
+    },
+    {
+        "clock_rate", T_INT, 
+        offsetof(PyObj_pjsua_conf_port_info, clock_rate), 0,
+        "Clock rate"
+    },
+    {
+        "channel_count", T_INT, 
+        offsetof(PyObj_pjsua_conf_port_info, channel_count), 0,
+        "Number of channels."
+    },
+    {
+        "samples_per_frame", T_INT, 
+        offsetof(PyObj_pjsua_conf_port_info, samples_per_frame), 0,
+        "Samples per frame "
+    },
+    {
+        "bits_per_sample", T_INT, 
+        offsetof(PyObj_pjsua_conf_port_info, bits_per_sample), 0,
+        "Bits per sample"
+    },
+    {
+        "listeners", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_conf_port_info, listeners), 0,
+        "Array of listeners (in other words, ports where this port "
+	"is transmitting to"
+    },
+    
+    {NULL}  /* Sentinel */
 };
 
 
 
 
+/*
+ * PyTyp_pjsua_conf_port_info
+ */
+static PyTypeObject PyTyp_pjsua_conf_port_info =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.Conf_Port_Info",	    /*tp_name*/
+    sizeof(PyObj_pjsua_conf_port_info),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)conf_port_info_dealloc,/*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "Conf Port Info objects",       /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    conf_port_info_members,         /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    conf_port_info_new,             /* tp_new */
+
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+ * PyObj_pjmedia_snd_dev_info
+ * PJMedia Snd Dev Info
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+        
+    unsigned  input_count;
+    unsigned  output_count;
+    unsigned  default_samples_per_sec;    
+    PyObject *name;
+
+} PyObj_pjmedia_snd_dev_info;
+
+/*
+ * pjmedia_snd_dev_info_dealloc
+ * deletes a pjmedia_snd_dev_info from memory
+ */
+static void pjmedia_snd_dev_info_dealloc(PyObj_pjmedia_snd_dev_info* self)
+{
+    Py_XDECREF(self->name);        
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+/*
+ * pjmedia_snd_dev_info_new
+ * constructor for pjmedia_snd_dev_info object
+ */
+static PyObject * pjmedia_snd_dev_info_new(PyTypeObject *type, 
+					   PyObject *args,
+					   PyObject *kwds)
+{
+    PyObj_pjmedia_snd_dev_info *self;
+
+    PJ_UNUSED_ARG(args);
+    PJ_UNUSED_ARG(kwds);
+
+    self = (PyObj_pjmedia_snd_dev_info *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->name = PyString_FromString("");	
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * pjmedia_snd_dev_info_members
+ */
+static PyMemberDef pjmedia_snd_dev_info_members[] =
+{
+    {
+        "input_count", T_INT, 
+        offsetof(PyObj_pjmedia_snd_dev_info, input_count), 0,
+        "Max number of input channels"
+    },
+    {
+        "output_count", T_INT, 
+        offsetof(PyObj_pjmedia_snd_dev_info, output_count), 0,
+        "Max number of output channels"
+    },
+    {
+        "default_samples_per_sec", T_INT, 
+        offsetof(PyObj_pjmedia_snd_dev_info, default_samples_per_sec), 0,
+        "Default sampling rate."
+    },
+    {
+        "name", T_OBJECT_EX,
+        offsetof(PyObj_pjmedia_snd_dev_info, name), 0,
+        "Device name"        
+    },
+        
+    {NULL}  /* Sentinel */
+};
+
+
+/*
+ * PyTyp_pjmedia_snd_dev_info
+ */
+static PyTypeObject PyTyp_pjmedia_snd_dev_info =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.PJMedia_Snd_Dev_Info",  /*tp_name*/
+    sizeof(PyObj_pjmedia_snd_dev_info),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)pjmedia_snd_dev_info_dealloc,/*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "PJMedia Snd Dev Info object",  /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    pjmedia_snd_dev_info_members,   /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    pjmedia_snd_dev_info_new,       /* tp_new */
+
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+ * PyObj_pjmedia_codec_param_info
+ * PJMedia Codec Param Info
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    
+    unsigned	clock_rate;
+    unsigned	channel_cnt;
+    pj_uint32_t avg_bps;
+    pj_uint16_t frm_ptime;
+    pj_uint8_t  pcm_bits_per_sample;
+    pj_uint8_t  pt;	
+
+} PyObj_pjmedia_codec_param_info;
+
+
+
+/*
+ * pjmedia_codec_param_info_members
+ */
+static PyMemberDef pjmedia_codec_param_info_members[] =
+{
+    {
+        "clock_rate", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_info, clock_rate), 0,
+        "Sampling rate in Hz"
+    },
+    {
+        "channel_cnt", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_info, channel_cnt), 0,
+        "Channel count"
+    },
+    {
+        "avg_bps", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_info, avg_bps), 0,
+        "Average bandwidth in bits/sec"
+    },
+    {
+        "frm_ptime", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_info, frm_ptime), 0,
+        "Base frame ptime in msec."
+    },
+    {
+        "pcm_bits_per_sample", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_info, pcm_bits_per_sample), 0,
+        "Bits/sample in the PCM side"
+    },
+    {
+        "pt", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_info, pt), 0,
+        "Payload type"
+    },
+    
+    {NULL}  /* Sentinel */
+};
+
+
+/*
+ * PyTyp_pjmedia_codec_param_info
+ */
+static PyTypeObject PyTyp_pjmedia_codec_param_info =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.PJMedia_Codec_Param_Info",      /*tp_name*/
+    sizeof(PyObj_pjmedia_codec_param_info),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    0,				    /*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "PJMedia Codec Param Info objects",/* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    pjmedia_codec_param_info_members,/* tp_members */
+};
+
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+ * PyObj_pjmedia_codec_param_setting
+ * PJMedia Codec Param Setting
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    pj_uint8_t  frm_per_pkt; 
+    unsigned    vad;
+    unsigned    cng;
+    unsigned    penh;
+    unsigned    plc;
+    pj_uint8_t  enc_fmtp_mode;
+    pj_uint8_t  dec_fmtp_mode; 
+
+} PyObj_pjmedia_codec_param_setting;
+
+
+
+/*
+ * pjmedia_codec_param_setting_members
+ */
+static PyMemberDef pjmedia_codec_param_setting_members[] =
+{
+    {
+        "frm_per_pkt", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, frm_per_pkt), 0,
+        "Number of frames per packet"
+    },
+    {
+        "vad", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, vad), 0,
+        "Voice Activity Detector"
+    },
+    {
+        "cng", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, cng), 0,
+        "Comfort Noise Generator"
+    },
+    {
+        "penh", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, penh), 0,
+        "Perceptual Enhancement"
+    },
+    {
+        "plc", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, plc), 0,
+        "Packet loss concealment"
+    },
+    {
+        "enc_fmtp_mode", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, enc_fmtp_mode), 0,
+        "Mode param in fmtp (def:0)"
+    },
+    {
+        "dec_fmtp_mode", T_INT, 
+        offsetof(PyObj_pjmedia_codec_param_setting, dec_fmtp_mode), 0,
+        "Mode param in fmtp (def:0)"
+    },
+    
+    {NULL}  /* Sentinel */
+};
+
+
+/*
+ * PyTyp_pjmedia_codec_param_setting
+ */
+static PyTypeObject PyTyp_pjmedia_codec_param_setting =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.PJMedia_Codec_Param_Setting",/*tp_name*/
+    sizeof(PyObj_pjmedia_codec_param_setting),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    0,				    /*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "PJMedia Codec Param Setting",  /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    pjmedia_codec_param_setting_members,/* tp_members */
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+
+/*
+ * PyObj_pjmedia_codec_param
+ * PJMedia Codec Param
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    
+    PyObj_pjmedia_codec_param_info * info;
+    PyObj_pjmedia_codec_param_setting * setting;
+
+} PyObj_pjmedia_codec_param;
+
+/*
+ * pjmedia_codec_param_dealloc
+ * deletes a pjmedia_codec_param from memory
+ */
+static void pjmedia_codec_param_dealloc(PyObj_pjmedia_codec_param* self)
+{
+    Py_XDECREF(self->info);        
+    Py_XDECREF(self->setting);        
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+/*
+ * pjmedia_codec_param_new
+ * constructor for pjmedia_codec_param object
+ */
+static PyObject * pjmedia_codec_param_new(PyTypeObject *type, 
+					  PyObject *args,
+					  PyObject *kwds)
+{
+    PyObj_pjmedia_codec_param *self;
+
+    PJ_UNUSED_ARG(args);
+    PJ_UNUSED_ARG(kwds);
+
+    self = (PyObj_pjmedia_codec_param *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->info = (PyObj_pjmedia_codec_param_info *)
+		     PyType_GenericNew(&PyTyp_pjmedia_codec_param_info, 
+				       NULL, NULL);
+	self->setting = (PyObj_pjmedia_codec_param_setting *)
+			PyType_GenericNew(&PyTyp_pjmedia_codec_param_setting,
+					  NULL, NULL);
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * pjmedia_codec_param_members
+ */
+static PyMemberDef pjmedia_codec_param_members[] =
+{   
+    
+    {
+        "info", T_OBJECT_EX,
+        offsetof(PyObj_pjmedia_codec_param, info), 0,
+        "The 'info' part of codec param describes the capability of the codec,"
+        " and the value should NOT be changed by application."        
+    },
+    {
+        "setting", T_OBJECT_EX,
+        offsetof(PyObj_pjmedia_codec_param, setting), 0, 
+        "The 'setting' part of codec param describes various settings to be "
+        "applied to the codec. When the codec param is retrieved from the "
+        "codec or codec factory, the values of these will be filled by "
+        "the capability of the codec. Any features that are supported by "
+        "the codec (e.g. vad or plc) will be turned on, so that application "
+        "can query which capabilities are supported by the codec. "
+        "Application may change the settings here before instantiating "
+        "the codec/stream."        
+    },
+    
+    {NULL}  /* Sentinel */
+};
+
+/*
+ * PyTyp_pjmedia_codec_param
+ */
+static PyTypeObject PyTyp_pjmedia_codec_param =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.PJMedia_Codec_Param",   /*tp_name*/
+    sizeof(PyObj_pjmedia_codec_param),/*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)pjmedia_codec_param_dealloc,/*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "PJMedia Codec Param",	    /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    pjmedia_codec_param_members,    /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    pjmedia_codec_param_new,        /* tp_new */
+
+};
+
+//////////////////////////////////////////////////////////////////////////////
+
+/*
+ * PyObj_pjsua_call_info
+ * Call Info
+ */
+typedef struct
+{
+    PyObject_HEAD
+    /* Type-specific fields go here. */ 
+    
+    int		 id;
+    int		 role;
+    int		 acc_id;
+    PyObject	*local_info;
+    PyObject	*local_contact;
+    PyObject	*remote_info;
+    PyObject	*remote_contact;
+    PyObject	*call_id;
+    int		 state;
+    PyObject	*state_text;
+    int		 last_status;
+    PyObject	*last_status_text;
+    int		 media_status;
+    int		 media_dir;
+    int		 conf_slot;
+    int		 connect_duration;
+    int		 total_duration;
+
+} PyObj_pjsua_call_info;
+
+
+/*
+ * call_info_dealloc
+ * deletes a call_info from memory
+ */
+static void call_info_dealloc(PyObj_pjsua_call_info* self)
+{
+    Py_XDECREF(self->local_info);
+    Py_XDECREF(self->local_contact);
+    Py_XDECREF(self->remote_info);
+    Py_XDECREF(self->remote_contact);
+    Py_XDECREF(self->call_id);
+    Py_XDECREF(self->state_text);
+    Py_XDECREF(self->last_status_text);
+    self->ob_type->tp_free((PyObject*)self);
+}
+
+
+/*
+ * call_info_new
+ * constructor for call_info object
+ */
+static PyObject * call_info_new(PyTypeObject *type, PyObject *args,
+                                    PyObject *kwds)
+{
+    PyObj_pjsua_call_info *self;
+
+    PJ_UNUSED_ARG(args);
+    PJ_UNUSED_ARG(kwds);
+
+    self = (PyObj_pjsua_call_info *)type->tp_alloc(type, 0);
+    if (self != NULL) {
+        self->local_info = PyString_FromString("");
+	self->local_contact = PyString_FromString("");
+	self->remote_info = PyString_FromString("");
+	self->remote_contact = PyString_FromString("");
+	self->call_id = PyString_FromString("");
+	self->state_text = PyString_FromString("");
+	self->last_status_text = PyString_FromString("");
+    }
+    return (PyObject *)self;
+}
+
+/*
+ * call_info_members
+ */
+static PyMemberDef call_info_members[] =
+{   
+    {
+        "id", T_INT, 
+        offsetof(PyObj_pjsua_call_info, id), 0,
+        "Call identification"
+    },
+    {
+        "role", T_INT, 
+        offsetof(PyObj_pjsua_call_info, role), 0,
+        "Initial call role (UAC == caller)"
+    },
+    {
+        "acc_id", T_INT, 
+        offsetof(PyObj_pjsua_call_info, acc_id), 0,
+        "The account ID where this call belongs."
+    },
+    {
+        "local_info", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, local_info), 0,
+        "Local URI"        
+    },
+    {
+        "local_contact", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, local_contact), 0,
+        "Local Contact"        
+    },
+    {
+        "remote_info", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, remote_info), 0,
+        "Remote URI"        
+    },
+    {
+        "remote_contact", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, remote_contact), 0,
+        "Remote Contact"        
+    },
+    {
+        "call_id", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, call_id), 0,
+        "Dialog Call-ID string"        
+    },
+    {
+        "state", T_INT, 
+        offsetof(PyObj_pjsua_call_info, state), 0,
+        "Call state"
+    },
+    {
+        "state_text", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, state_text), 0,
+        "Text describing the state "        
+    },
+    {
+        "last_status", T_INT, 
+        offsetof(PyObj_pjsua_call_info, last_status), 0,
+        "Last status code heard, which can be used as cause code"
+    },
+    {
+        "last_status_text", T_OBJECT_EX,
+        offsetof(PyObj_pjsua_call_info, last_status_text), 0,
+        "The reason phrase describing the status."        
+    },
+    {
+        "media_status", T_INT, 
+        offsetof(PyObj_pjsua_call_info, media_status), 0,
+        "Call media status."
+    },
+    {
+        "media_dir", T_INT, 
+        offsetof(PyObj_pjsua_call_info, media_dir), 0,
+        "Media direction"
+    },
+    {
+        "conf_slot", T_INT, 
+        offsetof(PyObj_pjsua_call_info, conf_slot), 0,
+        "The conference port number for the call"
+    },
+    {
+        "connect_duration", T_INT,
+        offsetof(PyObj_pjsua_call_info, connect_duration), 0,
+        "Up-to-date call connected duration(zero when call is not established)"
+    },
+    {
+        "total_duration", T_INT,
+        offsetof(PyObj_pjsua_call_info, total_duration), 0,
+        "Total call duration, including set-up time"        
+    },
+    
+    {NULL}  /* Sentinel */
+};
+
+
+
+
+/*
+ * PyTyp_pjsua_call_info
+ */
+static PyTypeObject PyTyp_pjsua_call_info =
+{
+    PyObject_HEAD_INIT(NULL)
+    0,                              /*ob_size*/
+    "_pjsua.Call_Info",		    /*tp_name*/
+    sizeof(PyObj_pjsua_call_info),  /*tp_basicsize*/
+    0,                              /*tp_itemsize*/
+    (destructor)call_info_dealloc,  /*tp_dealloc*/
+    0,                              /*tp_print*/
+    0,                              /*tp_getattr*/
+    0,                              /*tp_setattr*/
+    0,                              /*tp_compare*/
+    0,                              /*tp_repr*/
+    0,                              /*tp_as_number*/
+    0,                              /*tp_as_sequence*/
+    0,                              /*tp_as_mapping*/
+    0,                              /*tp_hash */
+    0,                              /*tp_call*/
+    0,                              /*tp_str*/
+    0,                              /*tp_getattro*/
+    0,                              /*tp_setattro*/
+    0,                              /*tp_as_buffer*/
+    Py_TPFLAGS_DEFAULT,             /*tp_flags*/
+    "Call Info",		    /* tp_doc */
+    0,                              /* tp_traverse */
+    0,                              /* tp_clear */
+    0,                              /* tp_richcompare */
+    0,                              /* tp_weaklistoffset */
+    0,                              /* tp_iter */
+    0,                              /* tp_iternext */
+    0,                              /* tp_methods */
+    call_info_members,		    /* tp_members */
+    0,                              /* tp_getset */
+    0,                              /* tp_base */
+    0,                              /* tp_dict */
+    0,                              /* tp_descr_get */
+    0,                              /* tp_descr_set */
+    0,                              /* tp_dictoffset */
+    0,                              /* tp_init */
+    0,                              /* tp_alloc */
+    call_info_new,		    /* tp_new */
+
+};
+
+
+
+//////////////////////////////////////////////////////////////////////////////
 
 #endif	/* __PY_PJSUA_H__ */
 

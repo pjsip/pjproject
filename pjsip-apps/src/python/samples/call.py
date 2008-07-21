@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 # SIP call sample.
 #
@@ -18,13 +18,12 @@ def log_cb(level, str, len):
 # Callback to receive events from account
 class MyAccountCallback(pj.AccountCallback):
 
-    def __init__(self, account):
+    def __init__(self, account=None):
         pj.AccountCallback.__init__(self, account)
 
     # Notification on incoming call
     def on_incoming_call(self, call):
         global current_call 
-
         if current_call:
             call.answer(486, "Busy")
             return
@@ -43,13 +42,12 @@ class MyAccountCallback(pj.AccountCallback):
 # Callback to receive events from Call
 class MyCallCallback(pj.CallCallback):
 
-    def __init__(self, call):
+    def __init__(self, call=None):
         pj.CallCallback.__init__(self, call)
 
     # Notification when call state has changed
     def on_state(self):
         global current_call
-
         print "Call with", self.call.info().remote_uri,
         print "is", self.call.info().state_text,
         print "last code =", self.call.info().last_code, 
@@ -57,6 +55,7 @@ class MyCallCallback(pj.CallCallback):
         
         if self.call.info().state == pj.CallState.DISCONNECTED:
             current_call = None
+            print 'Current call is', current_call
 
     # Notification when call's media state has changed.
     def on_media_state(self):
@@ -73,12 +72,9 @@ class MyCallCallback(pj.CallCallback):
 def make_call(uri):
     try:
         print "Making call to", uri
-        call = acc.make_call(uri)
-        call_cb = MyCallCallback(call)
-        call.set_callback(call_cb)
-        return call
+        return acc.make_call(uri, cb=MyCallCallback())
     except pj.Error, e:
-        print "Error: " + str(e)
+        print "Exception: " + str(e)
         return None
         
 
@@ -100,13 +96,14 @@ try:
     lib.start()
 
     # Create local account
-    acc = lib.create_account_for_transport(transport)
-    acc_cb = MyAccountCallback(acc)
-    acc.set_callback(acc_cb)
+    acc = lib.create_account_for_transport(transport, cb=MyAccountCallback())
 
     # If argument is specified then make call to the URI
     if len(sys.argv) > 1:
+        lck = lib.auto_lock()
         current_call = make_call(sys.argv[1])
+        print 'Current call is', current_call
+        del lck
 
     my_sip_uri = "sip:" + transport.info().host + \
                  ":" + str(transport.info().port)
@@ -125,7 +122,9 @@ try:
             input = sys.stdin.readline().rstrip("\r\n")
             if input == "":
                 continue
+            lck = lib.auto_lock()
             current_call = make_call(input)
+            del lck
 
         elif input == "h":
             if not current_call:
@@ -143,6 +142,9 @@ try:
             break
 
     # Shutdown the library
+    transport = None
+    acc.delete()
+    acc = None
     lib.destroy()
     lib = None
 

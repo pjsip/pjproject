@@ -150,6 +150,8 @@ Account's send_pager() method.
 """
 import _pjsua
 import thread
+import threading
+import weakref
 
 class Error:
     """Error exception class.
@@ -623,16 +625,21 @@ class Transport:
     _obj_name = ""
 
     def __init__(self, lib, id):
-        self._lib = lib
+        self._lib = weakref.proxy(lib)
         self._id = id
-        self._obj_name = "Transport " + self.info().description
+        self._obj_name = "{Transport " + self.info().description + "}"
+        _Trace((self, 'created'))
 
+    def __del__(self):
+        _Trace((self, 'destroyed'))
+        
     def __str__(self):
         return self._obj_name
 
     def info(self):
         """Get TransportInfo.
         """
+        lck = self._lib.auto_lock()
         ti = _pjsua.transport_get_info(self._id)
         if not ti:
             self._lib._err_check("info()", self, -1, "Invalid transport")
@@ -640,11 +647,13 @@ class Transport:
 
     def enable(self):
         """Enable this transport."""
+        lck = self._lib.auto_lock()
         err = _pjsua.transport_set_enable(self._id, True)
         self._lib._err_check("enable()", self, err)
 
     def disable(self):
         """Disable this transport."""
+        lck = self._lib.auto_lock()
         err = _pjsua.transport_set_enable(self._id, 0)
         self._lib._err_check("disable()", self, err)
 
@@ -654,6 +663,7 @@ class Transport:
         Keyword argument:
         force   -- force deletion of this transport (not recommended).
         """
+        lck = self._lib.auto_lock()
         err = _pjsua.transport_close(self._id, force)
         self._lib._err_check("close()", self, err)
 
@@ -975,8 +985,17 @@ class AccountCallback:
     """
     account = None
 
-    def __init__(self, account):
-        self.account = account
+    def __init__(self, account=None):
+        self._set_account(account)
+
+    def __del__(self):
+        pass
+
+    def _set_account(self, account):
+        if account:
+            self.account = weakref.proxy(account)
+        else:
+            self.account = None
 
     def on_reg_state(self):
         """Notification that the registration status has changed.
@@ -994,7 +1013,7 @@ class AccountCallback:
         """
         call.hangup()
 
-    def on_incoming_subscribe(self, buddy, from_uri, pres_obj):
+    def on_incoming_subscribe(self, buddy, from_uri, contact_uri, pres_obj):
         """Notification when incoming SUBSCRIBE request is received. 
         
         Application may use this callback to authorize the incoming 
@@ -1098,22 +1117,28 @@ class Account:
     _cb = AccountCallback(None)
     _obj_name = ""
 
-    def __init__(self, lib, id):
+    def __init__(self, lib, id, cb=None):
         """Construct this class. This is normally called by Lib class and
         not by application.
 
         Keyword arguments:
         lib -- the Lib instance.
         id  -- the pjsua account ID.
+        cb  -- AccountCallback instance to receive events from this Account.
+               If callback is not specified here, it must be set later
+               using set_callback().
         """
-        self._cb = AccountCallback(self)
         self._id = id
-        self._lib = lib
-        self._lib._associate_account(self._id, self)
-        self._obj_name = "Account " + self.info().uri
+        self._lib = weakref.ref(lib)
+        self._obj_name = "{Account " + self.info().uri + "}"
+        self.set_callback(cb)
+        _pjsua.acc_set_user_data(self._id, self)
+        _Trace((self, 'created'))
 
     def __del__(self):
-        self._lib._disassociate_account(self._id, self)
+        if self._id != -1:
+            _pjsua.acc_set_user_data(self._id, 0)
+        _Trace((self, 'destroyed'))
 
     def __str__(self):
         return self._obj_name
@@ -1121,9 +1146,10 @@ class Account:
     def info(self):
         """Retrieve AccountInfo for this account.
         """
+        lck = self._lib().auto_lock()
         ai = _pjsua.acc_get_info(self._id)
         if ai==None:
-            self._lib._err_check("info()", self, -1, "Invalid account")
+            self._lib()._err_check("info()", self, -1, "Invalid account")
         return AccountInfo(ai)
 
     def is_valid(self):
@@ -1131,6 +1157,7 @@ class Account:
         Check if this account is still valid.
 
         """
+        lck = self._lib().auto_lock()
         return _pjsua.acc_is_valid(self._id)
 
     def set_callback(self, cb):
@@ -1144,19 +1171,22 @@ class Account:
             self._cb = cb
         else:
             self._cb = AccountCallback(self)
+        self._cb._set_account(self)
 
     def set_default(self):
         """ Set this account as default account to send outgoing requests
         and as the account to receive incoming requests when more exact
         matching criteria fails.
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.acc_set_default(self._id)
-        self._lib._err_check("set_default()", self, err)
+        self._lib()._err_check("set_default()", self, err)
 
     def is_default(self):
         """ Check if this account is the default account.
 
         """
+        lck = self._lib().auto_lock()
         def_id = _pjsua.acc_get_default()
         return self.is_valid() and def_id==self._id
 
@@ -1164,8 +1194,12 @@ class Account:
         """ Delete this account.
         
         """
+        lck = self._lib().auto_lock()
+        err = _pjsua.acc_set_user_data(self._id, 0)
+        self._lib()._err_check("delete()", self, err)
         err = _pjsua.acc_del(self._id)
-        self._lib._err_check("delete()", self, err)
+        self._lib()._err_check("delete()", self, err)
+        self._id = -1
 
     def set_basic_status(self, is_online):
         """ Set basic presence status of this account.
@@ -1174,8 +1208,9 @@ class Account:
         is_online   -- boolean to indicate basic presence availability.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.acc_set_online_status(self._id, is_online)
-        self._lib._err_check("set_basic_status()", self, err)
+        self._lib()._err_check("set_basic_status()", self, err)
 
     def set_presence_status(self, is_online, 
                             activity=PresenceActivity.UNKNOWN, 
@@ -1190,9 +1225,10 @@ class Account:
         rpid_id     -- optional string to be placed as RPID ID. 
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.acc_set_online_status2(self._id, is_online, activity,
                                             pres_text, rpid_id)
-        self._lib._err_check("set_presence_status()", self, err)
+        self._lib()._err_check("set_presence_status()", self, err)
 
     def set_registration(self, renew):
         """Manually renew registration or unregister from the server.
@@ -1202,18 +1238,9 @@ class Account:
                    Setting this value for False will trigger unregistration.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.acc_set_registration(self._id, renew)
-        self._lib._err_check("set_registration()", self, err)
-
-    def has_registration(self):
-        """Returns True if registration is active for this account.
-
-        """
-        acc_info = _pjsua.acc_get_info(self._id)
-        if not acc_info:
-            self._lib._err_check("has_registration()", self, -1, 
-                                 "invalid account")
-        return acc_info.has_registration
+        self._lib()._err_check("set_registration()", self, err)
 
     def set_transport(self, transport):
         """Set this account to only use the specified transport to send
@@ -1223,38 +1250,54 @@ class Account:
         transport   -- Transport object.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.acc_set_transport(self._id, transport._id)
-        self._lib._err_check("set_transport()", self, err)
+        self._lib()._err_check("set_transport()", self, err)
 
-    def make_call(self, dst_uri, hdr_list=None):
+    def make_call(self, dst_uri, cb=None, hdr_list=None):
         """Make outgoing call to the specified URI.
 
         Keyword arguments:
         dst_uri  -- Destination SIP URI.
+        cb       -- CallCallback instance to be installed to the newly
+                    created Call object. If this CallCallback is not
+                    specified (i.e. None is given), it must be installed
+                    later using call.set_callback().
         hdr_list -- Optional list of headers to be sent with outgoing
                     INVITE
 
+        Return:
+            Call instance.
         """
+        lck = self._lib().auto_lock()
+        call = Call(self._lib(), -1, cb)
         err, cid = _pjsua.call_make_call(self._id, dst_uri, 0, 
-                                           0, Lib._create_msg_data(hdr_list))
-        self._lib._err_check("make_call()", self, err)
-        return Call(self._lib, cid)
+                                         call, Lib._create_msg_data(hdr_list))
+        self._lib()._err_check("make_call()", self, err)
+        call.attach_to_id(cid)
+        return call
 
-    def add_buddy(self, uri):
+    def add_buddy(self, uri, cb=None):
         """Add new buddy.
 
         Keyword argument:
-        uri         -- SIP URI of the buddy
+        uri     -- SIP URI of the buddy
+        cb      -- BuddyCallback instance to be installed to the newly
+                   created Buddy object. If this callback is not specified
+                   (i.e. None is given), it must be installed later using
+                   buddy.set_callback().
 
         Return:
             Buddy object
         """
+        lck = self._lib().auto_lock()
         buddy_cfg = _pjsua.buddy_config_default()
         buddy_cfg.uri = uri
         buddy_cfg.subscribe = False
         err, buddy_id = _pjsua.buddy_add(buddy_cfg)
-        self._lib._err_check("add_buddy()", self, err)
-        return Buddy(self._lib, buddy_id, self)
+        self._lib()._err_check("add_buddy()", self, err)
+        buddy = Buddy(self._lib(), buddy_id, self, cb)
+        return buddy
 
     def pres_notify(self, pres_obj, state, reason="", hdr_list=None):
         """Send NOTIFY to inform account presence status or to terminate
@@ -1267,6 +1310,7 @@ class Account:
         reason      -- Optional reason phrase.
         hdr_list    -- Optional header list.
         """
+        lck = self._lib().auto_lock()
         _pjsua.acc_pres_notify(self._id, pres_obj, state, reason, 
                                Lib._create_msg_data(hdr_list))
 
@@ -1283,8 +1327,17 @@ class CallCallback:
     """
     call = None
 
-    def __init__(self, call):
-        self.call = call
+    def __init__(self, call=None):
+        self._set_call(call)
+
+    def __del__(self):
+        pass
+
+    def _set_call(self, call):
+        if call:
+            self.call = weakref.proxy(call)
+        else:
+            self.call = None
 
     def on_state(self):
         """Notification that the call's state has changed.
@@ -1468,8 +1521,8 @@ class CallInfo:
         self.media_state = ci.media_status
         self.media_dir = ci.media_dir
         self.conf_slot = ci.conf_slot
-        self.call_time = ci.connect_duration.sec
-        self.total_time = ci.total_duration.sec
+        self.call_time = ci.connect_duration / 1000
+        self.total_time = ci.total_duration / 1000
 
 
 class Call:
@@ -1483,18 +1536,30 @@ class Call:
     _lib = None
     _obj_name = ""
 
-    def __init__(self, lib, call_id):
-        self._cb = CallCallback(self) 
-        self._id = call_id
-        self._lib = lib
-        self._lib._associate_call(call_id, self)
-        self._obj_name = "Call " + self.info().remote_uri
+    def __init__(self, lib, call_id, cb=None):
+        self._lib = weakref.ref(lib)
+        self.set_callback(cb)
+        self.attach_to_id(call_id)
+        _Trace((self, 'created'))
 
     def __del__(self):
-        self._lib._disassociate_call(self._id, self)
+        if self._id != -1:
+            _pjsua.call_set_user_data(self._id, 0)
+        _Trace((self, 'destroyed'))
 
     def __str__(self):
         return self._obj_name
+
+    def attach_to_id(self, call_id):
+        lck = self._lib().auto_lock()
+        if self._id != -1:
+            _pjsua.call_set_user_data(self._id, 0)
+        self._id = call_id
+        if self._id != -1:
+            _pjsua.call_set_user_data(self._id, self)
+            self._obj_name = "{Call " + self.info().remote_uri + "}"
+        else:
+            self._obj_name = "{Call object}"
 
     def set_callback(self, cb):
         """
@@ -1507,26 +1572,31 @@ class Call:
             self._cb = cb
         else:
             self._cb = CallCallback(self)
+        self._cb._set_call(self)
 
     def info(self):
         """
         Get the CallInfo.
         """
+        lck = self._lib().auto_lock()
         ci = _pjsua.call_get_info(self._id)
         if not ci:
-            self._lib._err_check("info", self, -1, "Invalid call")
-        return CallInfo(self._lib, ci)
+            self._lib()._err_check("info", self, -1, "Invalid call")
+        call_info = CallInfo(self._lib(), ci)
+        return call_info
 
     def is_valid(self):
         """
         Check if this call is still valid.
         """
+        lck = self._lib().auto_lock()
         return _pjsua.call_is_active(self._id)
 
     def dump_status(self, with_media=True, indent="", max_len=1024):
         """
         Dump the call status.
         """
+        lck = self._lib().auto_lock()
         return _pjsua.call_dump(self._id, with_media, max_len, indent)
 
     def answer(self, code=200, reason="", hdr_list=None):
@@ -1541,9 +1611,10 @@ class Call:
                     INVITE response.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_answer(self._id, code, reason, 
                                    Lib._create_msg_data(hdr_list))
-        self._lib._err_check("answer()", self, err)
+        self._lib()._err_check("answer()", self, err)
 
     def hangup(self, code=603, reason="", hdr_list=None):
         """
@@ -1557,9 +1628,10 @@ class Call:
                     message.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_hangup(self._id, code, reason, 
                                    Lib._create_msg_data(hdr_list))
-        self._lib._err_check("hangup()", self, err)
+        self._lib()._err_check("hangup()", self, err)
 
     def hold(self, hdr_list=None):
         """
@@ -1569,8 +1641,9 @@ class Call:
         hdr_list -- Optional list of headers to be sent with the
                     message.
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_set_hold(self._id, Lib._create_msg_data(hdr_list))
-        self._lib._err_check("hold()", self, err)
+        self._lib()._err_check("hold()", self, err)
 
     def unhold(self, hdr_list=None):
         """
@@ -1581,9 +1654,10 @@ class Call:
                     message.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_reinvite(self._id, True, 
                                      Lib._create_msg_data(hdr_list))
-        self._lib._err_check("unhold()", self, err)
+        self._lib()._err_check("unhold()", self, err)
 
     def reinvite(self, hdr_list=None):
         """
@@ -1594,9 +1668,10 @@ class Call:
                       message.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_reinvite(self._id, True, 
                                      Lib._create_msg_data(hdr_list))
-        self._lib._err_check("reinvite()", self, err)
+        self._lib()._err_check("reinvite()", self, err)
 
     def update(self, hdr_list=None, options=0):
         """
@@ -1608,9 +1683,10 @@ class Call:
         options    -- Must be zero for now.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_update(self._id, options, 
                                    Lib._create_msg_data(hdr_list))
-        self._lib._err_check("update()", self, err)
+        self._lib()._err_check("update()", self, err)
 
     def transfer(self, dest_uri, hdr_list=None):
         """
@@ -1622,9 +1698,10 @@ class Call:
                     message.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_xfer(self._id, dest_uri, 
                                  Lib._create_msg_data(hdr_list))
-        self._lib._err_check("transfer()", self, err)
+        self._lib()._err_check("transfer()", self, err)
 
     def transfer_to_call(self, call, hdr_list=None, options=0):
         """
@@ -1637,9 +1714,10 @@ class Call:
         options  -- Must be zero for now.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_xfer_replaces(self._id, call._id, options,
                                           Lib._create_msg_data(hdr_list))
-        self._lib._err_check("transfer_to_call()", self, err)
+        self._lib()._err_check("transfer_to_call()", self, err)
 
     def dial_dtmf(self, digits):
         """
@@ -1649,8 +1727,9 @@ class Call:
         digits  -- DTMF digit string.
 
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.call_dial_dtmf(self._id, digits)
-        self._lib._err_check("dial_dtmf()", self, err)
+        self._lib()._err_check("dial_dtmf()", self, err)
 
     def send_request(self, method, hdr_list=None, content_type=None,
                      body=None):
@@ -1669,6 +1748,7 @@ class Call:
         body         -- Optional SIP message body.
 
         """
+        lck = self._lib().auto_lock()
         if hdr_list and body:
             msg_data = _pjsua.Msg_Data()
             if hdr_list:
@@ -1681,7 +1761,7 @@ class Call:
             msg_data = None
                 
         err = _pjsua.call_send_request(self._id, method, msg_data)
-        self._lib._err_check("send_request()", self, err)
+        self._lib()._err_check("send_request()", self, err)
 
 
 class BuddyInfo:
@@ -1736,8 +1816,14 @@ class BuddyCallback:
     """
     buddy = None
 
-    def __init__(self, buddy):
-        self.buddy = buddy
+    def __init__(self, buddy=None):
+        self._set_buddy(buddy)
+
+    def _set_buddy(self, buddy):
+        if buddy:
+            self.buddy = weakref.proxy(buddy)
+        else:
+            self.buddy = None
 
     def on_state(self):
         """
@@ -1793,16 +1879,19 @@ class Buddy:
     _obj_name = ""
     _acc = None
 
-    def __init__(self, lib, id, account):
-        self._cb = BuddyCallback(self)
-        self._lib = lib
+    def __init__(self, lib, id, account, cb):
         self._id = id
-        self._acc = account
-        lib._associate_buddy(self._id, self)
-        self._obj_name = "Buddy " + self.info().uri
+        self._lib = weakref.ref(lib)
+        self._acc = weakref.ref(account)
+        self._obj_name = "{Buddy " + self.info().uri + "}"
+        self.set_callback(cb)
+        _pjsua.buddy_set_user_data(self._id, self)
+        _Trace((self, 'created'))
 
     def __del__(self):
-        self._lib._disassociate_buddy(self)
+        if self._id != -1:
+            _pjsua.buddy_set_user_data(self._id, 0)
+        _Trace((self, 'destroyed'))
 
     def __str__(self):
         return self._obj_name
@@ -1811,6 +1900,7 @@ class Buddy:
         """
         Get buddy info as BuddyInfo.
         """
+        lck = self._lib().auto_lock()
         return BuddyInfo(_pjsua.buddy_get_info(self._id))
 
     def set_callback(self, cb):
@@ -1823,27 +1913,33 @@ class Buddy:
             self._cb = cb
         else:
             self._cb = BuddyCallback(self)
+        self._cb._set_buddy(self)
 
     def subscribe(self):
         """
         Subscribe to buddy's presence status notification.
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.buddy_subscribe_pres(self._id, True)
-        self._lib._err_check("subscribe()", self, err)
+        self._lib()._err_check("subscribe()", self, err)
 
     def unsubscribe(self):
         """
         Unsubscribe from buddy's presence status notification.
         """
+        lck = self._lib().auto_lock()
         err = _pjsua.buddy_subscribe_pres(self._id, False)
-        self._lib._err_check("unsubscribe()", self, err)
+        self._lib()._err_check("unsubscribe()", self, err)
 
     def delete(self):
         """
         Remove this buddy from the buddy list.
         """
+        lck = self._lib().auto_lock()
+        if self._id != -1:
+            _pjsua.buddy_set_user_data(self._id, 0)
         err = _pjsua.buddy_del(self._id)
-        self._lib._err_check("delete()", self, err)
+        self._lib()._err_check("delete()", self, err)
 
     def send_pager(self, text, im_id=0, content_type="text/plain", \
                    hdr_list=None):
@@ -1859,11 +1955,12 @@ class Buddy:
                         request.
 
         """
-        err = _pjsua.im_send(self._acc._id, self.info().uri, \
+        lck = self._lib().auto_lock()
+        err = _pjsua.im_send(self._acc()._id, self.info().uri, \
                              content_type, text, \
                              Lib._create_msg_data(hdr_list), \
                              im_id)
-        self._lib._err_check("send_pager()", self, err)
+        self._lib()._err_check("send_pager()", self, err)
 
     def send_typing_ind(self, is_typing=True, hdr_list=None):
         """Send typing indication to remote buddy.
@@ -1874,9 +1971,10 @@ class Buddy:
                      request.
 
         """
-        err = _pjsua.im_typing(self._acc._id, self.info().uri, \
+        lck = self._lib().auto_lock()
+        err = _pjsua.im_typing(self._acc()._id, self.info().uri, \
                                is_typing, Lib._create_msg_data(hdr_list))
-        self._lib._err_check("send_typing_ind()", self, err)
+        self._lib()._err_check("send_typing_ind()", self, err)
 
 
 
@@ -1981,32 +2079,43 @@ class CodecParameter:
         return self._codec_param
 
 
+# Library mutex
+class _LibMutex:
+    def __init__(self, lck):
+        self._lck = lck
+        self._lck.acquire()
+        #print 'lck acquire'
+
+    def __del__(self):
+        self._lck.release()
+        #print 'lck release'
+
+
 # PJSUA Library
 _lib = None
 class Lib:
     """Library instance.
     
     """
-    call = {}
-    account = {}
-    buddy = {}
-    buddy_by_uri = {}
-    buddy_by_contact = {}
     _quit = False
     _has_thread = False
+    _lock = None
 
     def __init__(self):
         global _lib
         if _lib:
             raise Error("__init()__", None, -1, 
                         "Library instance already exist")
-            
+
+        self._lock = threading.RLock()
         err = _pjsua.create()
         self._err_check("_pjsua.create()", None, err)
         _lib = self
 
     def __del__(self):
         _pjsua.destroy()
+        del self._lock
+        print 'Lib destroyed'
 
     def __str__(self):
         return "Lib"
@@ -2048,7 +2157,7 @@ class Lib:
         py_ua_cfg.cb.on_typing = _cb_on_typing
 
         err = _pjsua.init(py_ua_cfg, log_cfg._cvt_to_pjsua(), 
-                            media_cfg._cvt_to_pjsua())
+                          media_cfg._cvt_to_pjsua())
         self._err_check("init()", self, err)
 
     def destroy(self):
@@ -2058,11 +2167,11 @@ class Lib:
             self._quit = 1
             loop = 0
             while self._quit != 2 and loop < 400:
-                _pjsua.handle_events(50)
+                self.handle_events(50)
                 loop = loop + 1
         _pjsua.destroy()
         _lib = None
-        
+
     def start(self, with_thread=True):
         """Start the library. 
 
@@ -2087,6 +2196,7 @@ class Lib:
         timeout -- in milliseconds.
 
         """
+        lck = self.auto_lock()
         return _pjsua.handle_events(timeout)
 
     def verify_sip_url(self, sip_url):
@@ -2100,6 +2210,7 @@ class Lib:
             code is returned.
 
         """
+        lck = self.auto_lock()
         return _pjsua.verify_sip_url(sip_url)
 
     def create_transport(self, type, cfg=None):
@@ -2113,12 +2224,13 @@ class Lib:
             Transport object
 
         """
+        lck = self.auto_lock()
         if not cfg: cfg=TransportConfig(type)
         err, tp_id = _pjsua.transport_create(type, cfg._cvt_to_pjsua())
         self._err_check("create_transport()", self, err)
         return Transport(self, tp_id)
 
-    def create_account(self, acc_config, set_default=True):
+    def create_account(self, acc_config, set_default=True, cb=None):
         """
         Create a new local pjsua account using the specified configuration.
 
@@ -2126,35 +2238,41 @@ class Lib:
         acc_config  -- AccountConfig
         set_default -- boolean to specify whether to use this as the
                        default account.
+        cb          -- AccountCallback instance.
 
         Return:
             Account instance
 
         """
+        lck = self.auto_lock()
         err, acc_id = _pjsua.acc_add(acc_config._cvt_to_pjsua(), set_default)
         self._err_check("create_account()", self, err)
-        return Account(self, acc_id)
+        return Account(self, acc_id, cb)
 
-    def create_account_for_transport(self, transport, set_default=True):
+    def create_account_for_transport(self, transport, set_default=True,
+                                     cb=None):
         """Create a new local pjsua transport for the specified transport.
 
         Keyword arguments:
         transport   -- the Transport instance.
         set_default -- boolean to specify whether to use this as the
                        default account.
+        cb          -- AccountCallback instance.
 
         Return:
             Account instance
 
         """
+        lck = self.auto_lock()
         err, acc_id = _pjsua.acc_add_local(transport._id, set_default)
         self._err_check("create_account_for_transport()", self, err)
-        return Account(self, acc_id)
+        return Account(self, acc_id, cb)
 
     def hangup_all(self):
         """Hangup all calls.
 
         """
+        lck = self.auto_lock()
         _pjsua.call_hangup_all()
 
     # Sound device API
@@ -2166,6 +2284,7 @@ class Lib:
             list of SoundDeviceInfo. The index of the element specifies
             the device ID for the device.
         """
+        lck = self.auto_lock()
         sdi_list = _pjsua.enum_snd_devs()
         info = []
         for sdi in sdi_list:
@@ -2178,6 +2297,7 @@ class Lib:
         Return:
             (capture_dev_id, playback_dev_id) tuple
         """
+        lck = self.auto_lock()
         return _pjsua.get_snd_dev()
 
     def set_snd_dev(self, capture_dev, playback_dev):
@@ -2188,6 +2308,7 @@ class Lib:
         playback_dev -- the device ID of playback device to be used.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.set_snd_dev(capture_dev, playback_dev)
         self._err_check("set_current_sound_devices()", self, err)
     
@@ -2196,6 +2317,7 @@ class Lib:
         does not have sound device installed.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.set_null_snd_dev()
         self._err_check("set_null_snd_dev()", self, err)
 
@@ -2209,6 +2331,7 @@ class Lib:
             conference bridge capacity.
 
         """
+        lck = self.auto_lock()
         return _pjsua.conf_get_max_ports()
 
     def conf_connect(self, src_slot, dst_slot):
@@ -2230,6 +2353,7 @@ class Lib:
                        the destination/receiver.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.conf_connect(src_slot, dst_slot)
         self._err_check("conf_connect()", self, err)
     
@@ -2243,6 +2367,7 @@ class Lib:
                        the destination/receiver.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.conf_disconnect(src_slot, dst_slot)
         self._err_check("conf_disconnect()", self, err)
 
@@ -2255,6 +2380,7 @@ class Lib:
         level       -- Signal level adjustment. Value 1.0 means no level
                        adjustment, while value 0 means to mute the port.
         """
+        lck = self.auto_lock()
         err = _pjsua.conf_set_tx_level(slot, level)
         self._err_check("conf_set_tx_level()", self, err)
         
@@ -2267,6 +2393,7 @@ class Lib:
         level       -- Signal level adjustment. Value 1.0 means no level
                        adjustment, while value 0 means to mute the port.
         """
+        lck = self.auto_lock()
         err = _pjsua.conf_set_rx_level(slot, level)
         self._err_check("conf_set_rx_level()", self, err)
         
@@ -2282,6 +2409,7 @@ class Lib:
         Return value:
             (tx_level, rx_level) tuple.
         """
+        lck = self.auto_lock()
         err, tx_level, rx_level = _pjsua.conf_get_signal_level(slot)
         self._err_check("conf_get_signal_level()", self, err)
         return (tx_level, rx_level)
@@ -2297,6 +2425,7 @@ class Lib:
             list of CodecInfo
 
         """
+        lck = self.auto_lock()
         ci_list = _pjsua.enum_codecs()
         codec_info = []
         for ci in ci_list:
@@ -2313,6 +2442,7 @@ class Lib:
         priority -- Codec priority, which range is 0-255.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.codec_set_priority(name, priority)
         self._err_check("set_codec_priority()", self, err)
 
@@ -2323,6 +2453,7 @@ class Lib:
         name    -- codec name.
 
         """
+        lck = self.auto_lock()
         cp = _pjsua.codec_get_param(name)
         if not cp:
             self._err_check("get_codec_parameter()", self, -1, 
@@ -2337,6 +2468,7 @@ class Lib:
         param   -- codec parameter.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.codec_set_param(name, param._cvt_to_pjsua())
         self._err_check("set_codec_parameter()", self, err)
     
@@ -2353,6 +2485,7 @@ class Lib:
             WAV player ID
 
         """
+        lck = self.auto_lock()
         opt = 0
         if not loop:
             opt = opt + 1
@@ -2370,6 +2503,7 @@ class Lib:
             Conference slot number for the player
 
         """
+        lck = self.auto_lock()
         slot = _pjsua.player_get_conf_port(player_id)
         if slot < 0:
                 self._err_check("player_get_slot()", self, -1, 
@@ -2384,6 +2518,7 @@ class Lib:
         pos         -- playback position, in samples
 
         """
+        lck = self.auto_lock()
         err = _pjsua.player_set_pos(player_id, pos)
         self._err_check("player_set_pos()", self, err)
         
@@ -2394,6 +2529,7 @@ class Lib:
         player_id   -- the WAV player ID.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.player_destroy(player_id)
         self._err_check("player_destroy()", self, err)
 
@@ -2410,6 +2546,7 @@ class Lib:
         Return:
             playlist_id
         """
+        lck = self.auto_lock()
         opt = 0
         if not loop:
             opt = opt + 1
@@ -2427,6 +2564,7 @@ class Lib:
             Conference slot number for the playlist
 
         """
+        lck = self.auto_lock()
         slot = _pjsua.player_get_conf_port(playlist_id)
         if slot < 0:
                 self._err_check("playlist_get_slot()", self, -1, 
@@ -2440,6 +2578,7 @@ class Lib:
         playlist_id   -- the WAV playlist ID.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.player_destroy(playlist_id)
         self._err_check("playlist_destroy()", self, err)
 
@@ -2453,6 +2592,7 @@ class Lib:
             WAV recorder ID
 
         """
+        lck = self.auto_lock()
         err, rec_id = _pjsua.recorder_create(filename, 0, None, -1, 0)
         self._err_check("create_recorder()", self, err)
         return rec_id
@@ -2467,6 +2607,7 @@ class Lib:
             Conference slot number for the recorder
 
         """
+        lck = self.auto_lock()
         slot = _pjsua.recorder_get_conf_port(rec_id)
         if slot < 1:
             self._err_check("recorder_get_slot()", self, -1, 
@@ -2480,6 +2621,7 @@ class Lib:
         rec_id   -- the WAV recorder ID.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.recorder_destroy(rec_id)
         self._err_check("recorder_destroy()", self, err)
 
@@ -2502,47 +2644,30 @@ class Lib:
         msg_data.hdr_list = hdr_list
         return msg_data
     
+    def auto_lock(self):
+        return _LibMutex(self._lock)
+
     # Internal dictionary manipulation for calls, accounts, and buddies
 
-    def _associate_call(self, call_id, call):
-        self.call[call_id] = call
-
     def _lookup_call(self, call_id):
-        return self.call.has_key(call_id) and self.call[call_id] or None
-
-    def _disassociate_call(self, call):
-        if self._lookup_call(call._id)==call:
-            del self.call[call._id]
-
-    def _associate_account(self, acc_id, account):
-        self.account[acc_id] = account
+        return _pjsua.call_get_user_data(call_id)
 
     def _lookup_account(self, acc_id):
-        return self.account.has_key(acc_id) and self.account[acc_id] or None
-
-    def _disassociate_account(self, account):
-        if self._lookup_account(account._id)==account:
-            del self.account[account._id]
-
-    def _associate_buddy(self, buddy_id, buddy):
-        self.buddy[buddy_id] = buddy
-        uri = SIPUri(buddy.info().uri)
-        self.buddy_by_uri[(uri.user, uri.host)] = buddy
+        return _pjsua.acc_get_user_data(acc_id)
 
     def _lookup_buddy(self, buddy_id, uri=None):
-        buddy = self.buddy.has_key(buddy_id) and self.buddy[buddy_id] or None
-        if uri and not buddy:
-            sip_uri = SIPUri(uri)
-            buddy = self.buddy_by_uri.has_key( (sip_uri.user, sip_uri.host) ) \
-                    and self.buddy_by_uri[(sip_uri.user, sip_uri.host)] or \
-                    None
+        if buddy_id != -1:
+            buddy = _pjsua.buddy_get_user_data(buddy_id)
+        elif uri:
+            buddy_id = _pjsua.buddy_find(uri)
+            if buddy_id != -1:
+                buddy = _pjsua.buddy_get_user_data(buddy_id)
+            else:
+                buddy = None
+        else:
+            buddy = None
+            
         return buddy 
-
-    def _disassociate_buddy(self, buddy):
-        if self._lookup_buddy(buddy._id)==buddy:
-            del self.buddy[buddy._id]
-        if self.buddy_by_uri.has_key(buddy.info().uri):
-            del self.buddy_by_uri[buddy.info().uri]
 
     # Account allbacks
 
@@ -2551,11 +2676,13 @@ class Lib:
         if acc:
             acc._cb.on_reg_state()
 
-    def _cb_on_incoming_subscribe(self, acc_id, buddy_id, from_uri, pres_obj):
+    def _cb_on_incoming_subscribe(self, acc_id, buddy_id, from_uri, 
+                                  contact_uri, pres_obj):
         acc = self._lookup_account(acc_id)
         if acc:
             buddy = self._lookup_buddy(buddy_id)
-            return acc._cb.on_incoming_subscribe(buddy, from_uri, pres_obj)
+            return acc._cb.on_incoming_subscribe(buddy, from_uri, contact_uri,
+                                                 pres_obj)
         else:
             return (404, None)
 
@@ -2571,7 +2698,14 @@ class Lib:
     def _cb_on_call_state(self, call_id):
         call = self._lookup_call(call_id)
         if call:
+            if call._id == -1:
+                call.attach_to_id(call_id)
+            done = (call.info().state == CallState.DISCONNECTED)
             call._cb.on_state()
+            if done:
+                _pjsua.call_set_user_data(call_id, 0)
+        else:
+            pass
 
     def _cb_on_call_media_state(self, call_id):
         call = self._lookup_call(call_id)
@@ -2694,8 +2828,9 @@ def _cb_on_call_replaced(old_call_id, new_call_id):
 def _cb_on_reg_state(acc_id):
     _lib._cb_on_reg_state(acc_id)
 
-def _cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, pres):
-    return _lib._cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, pres)
+def _cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, contact_uri, pres):
+    return _lib._cb_on_incoming_subscribe(acc_id, buddy_id, from_uri, 
+                                          contact_uri, pres)
 
 def _cb_on_buddy_state(buddy_id):
     _lib._cb_on_buddy_state(buddy_id)
@@ -2717,8 +2852,14 @@ def _worker_thread_main(arg):
     thread_desc = 0;
     err = _pjsua.thread_register("python worker", thread_desc)
     _lib._err_check("thread_register()", _lib, err)
-    while _lib._quit == 0:
-        _pjsua.handle_events(50)
-    _lib._quit = 2
+    while _lib and _lib._quit == 0:
+        _lib.handle_events(50)
+    if _lib:
+        _lib._quit = 2
 
-
+def _Trace(args):
+    if True:
+        print "** ",
+        for arg in args:
+            print arg,
+        print " **"
