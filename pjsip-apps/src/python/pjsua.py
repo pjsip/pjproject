@@ -152,6 +152,7 @@ import _pjsua
 import thread
 import threading
 import weakref
+import time
 
 class Error:
     """Error exception class.
@@ -2084,11 +2085,15 @@ class _LibMutex:
     def __init__(self, lck):
         self._lck = lck
         self._lck.acquire()
-        #print 'lck acquire'
+	#_Trace(('lock acquired',))
 
     def __del__(self):
-        self._lck.release()
-        #print 'lck release'
+        try:
+            self._lck.release()
+	    #_Trace(('lock released',))
+        except:
+	    #_Trace(('lock release error',))
+            pass
 
 
 # PJSUA Library
@@ -2115,7 +2120,7 @@ class Lib:
     def __del__(self):
         _pjsua.destroy()
         del self._lock
-        print 'Lib destroyed'
+        _Trace(('Lib destroyed',))
 
     def __str__(self):
         return "Lib"
@@ -2167,8 +2172,9 @@ class Lib:
             self._quit = 1
             loop = 0
             while self._quit != 2 and loop < 400:
-                self.handle_events(50)
+                self.handle_events(5)
                 loop = loop + 1
+		time.sleep(0.050)
         _pjsua.destroy()
         _lib = None
 
@@ -2180,6 +2186,7 @@ class Lib:
                        thread.
 
         """
+        lck = self.auto_lock()
         err = _pjsua.start()
         self._err_check("start()", self, err)
         self._has_thread = with_thread
@@ -2849,13 +2856,16 @@ def _cb_on_typing(call_id, from_uri, to, contact, is_typing, acc_id):
 # Worker thread
 def _worker_thread_main(arg):
     global _lib
+    _Trace(('worker thread started..',))
     thread_desc = 0;
     err = _pjsua.thread_register("python worker", thread_desc)
     _lib._err_check("thread_register()", _lib, err)
     while _lib and _lib._quit == 0:
-        _lib.handle_events(50)
+        _lib.handle_events(1)
+	time.sleep(0.050)
     if _lib:
         _lib._quit = 2
+    _Trace(('worker thread exited..',))
 
 def _Trace(args):
     if True:
@@ -2863,3 +2873,4 @@ def _Trace(args):
         for arg in args:
             print arg,
         print " **"
+
