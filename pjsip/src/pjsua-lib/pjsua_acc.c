@@ -159,7 +159,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	sip_reg_uri = NULL;
     }
 
-
     /* Save the user and domain part. These will be used when finding an 
      * account for incoming requests.
      */
@@ -382,6 +381,39 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     cfg.id = pj_str(uri);
     
     return pjsua_acc_add(&cfg, is_default, p_acc_id);
+}
+
+
+/*
+ * Set arbitrary data to be associated with the account.
+ */
+PJ_DEF(pj_status_t) pjsua_acc_set_user_data(pjsua_acc_id acc_id,
+					    void *user_data)
+{
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
+
+    PJSUA_LOCK();
+
+    pjsua_var.acc[acc_id].cfg.user_data = user_data;
+
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Retrieve arbitrary data associated with the account.
+ */
+PJ_DEF(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id)
+{
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     NULL);
+    PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, NULL);
+
+    return pjsua_var.acc[acc_id].cfg.user_data;
 }
 
 

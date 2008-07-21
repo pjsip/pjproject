@@ -2000,6 +2000,13 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 typedef struct pjsua_acc_config
 {
     /**
+     * Arbitrary user data to be associated with the newly created account.
+     * Application may set this later with #pjsua_acc_set_user_data() and
+     * retrieve it with #pjsua_acc_get_user_data().
+     */
+    void	   *user_data;
+
+    /**
      * Account priority, which is used to control the order of matching
      * incoming/outgoing requests. The higher the number means the higher
      * the priority is, and the account will be matched first.
@@ -2394,6 +2401,29 @@ PJ_DECL(pj_status_t) pjsua_acc_add(const pjsua_acc_config *acc_cfg,
 PJ_DECL(pj_status_t) pjsua_acc_add_local(pjsua_transport_id tid,
 					 pj_bool_t is_default,
 					 pjsua_acc_id *p_acc_id);
+
+/**
+ * Set arbitrary data to be associated with the account.
+ *
+ * @param acc_id	The account ID.
+ * @param user_data	User/application data.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_set_user_data(pjsua_acc_id acc_id,
+					     void *user_data);
+
+
+/**
+ * Retrieve arbitrary data associated with the account.
+ *
+ * @param acc_id	The account ID.
+ *
+ * @return		The user data. In the case where the account ID is
+ *			not valid, NULL is returned.
+ */
+PJ_DECL(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id);
+
 
 /**
  * Delete an account. This will unregister the account from the SIP server,
@@ -3359,6 +3389,12 @@ typedef struct pjsua_buddy_config
      */
     pj_bool_t	subscribe;
 
+    /**
+     * Specify arbitrary application data to be associated with with
+     * the buddy object.
+     */
+    void       *user_data;
+
 } pjsua_buddy_config;
 
 
@@ -3518,6 +3554,16 @@ PJ_DECL(pj_status_t) pjsua_enum_buddies(pjsua_buddy_id ids[],
 					unsigned *count);
 
 /**
+ * Find the buddy ID with the specified URI.
+ *
+ * @param uri		The buddy URI.
+ *
+ * @return		The buddy ID, or PJSUA_INVALID_ID if not found.
+ */
+PJ_DECL(pjsua_buddy_id) pjsua_buddy_find(const pj_str_t *uri);
+
+
+/**
  * Get detailed buddy info.
  *
  * @param buddy_id	The buddy identification.
@@ -3533,6 +3579,29 @@ PJ_DECL(pj_status_t) pjsua_enum_buddies(pjsua_buddy_id ids[],
  */
 PJ_DECL(pj_status_t) pjsua_buddy_get_info(pjsua_buddy_id buddy_id,
 					  pjsua_buddy_info *info);
+
+/**
+ * Set the user data associated with the buddy object.
+ *
+ * @param buddy_id	The buddy identification.
+ * @param user_data	Arbitrary application data to be associated with
+ *			the buddy object.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_buddy_set_user_data(pjsua_buddy_id buddy_id,
+					       void *user_data);
+
+
+/**
+ * Get the user data associated with the budy object.
+ *
+ * @param buddy_id	The buddy identification.
+ *
+ * @return		The application data.
+ */
+PJ_DECL(void*) pjsua_buddy_get_user_data(pjsua_buddy_id buddy_id);
+
 
 /**
  * Add new buddy to the buddy list. If presence subscription is enabled

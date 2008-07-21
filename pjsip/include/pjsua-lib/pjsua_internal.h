@@ -164,6 +164,7 @@ typedef struct pjsua_buddy
 {
     pj_pool_t		*pool;	    /**< Pool for this buddy.		*/
     unsigned		 index;	    /**< Buddy index.			*/
+    void		*user_data; /**< Application data.		*/
     pj_str_t		 uri;	    /**< Buddy URI.			*/
     pj_str_t		 contact;   /**< Contact learned from subscrp.	*/
     pj_str_t		 name;	    /**< Buddy name.			*/

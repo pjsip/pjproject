@@ -70,6 +70,31 @@ PJ_DEF(unsigned) pjsua_get_buddy_count(void)
 
 
 /*
+ * Find buddy.
+ */
+PJ_DEF(pjsua_buddy_id) pjsua_buddy_find(const pj_str_t *uri_str)
+{
+    pj_str_t input;
+    pj_pool_t *pool;
+    pjsip_uri *uri;
+    pjsua_buddy_id buddy_id;
+
+    pool = pjsua_pool_create("buddyfind", 512, 512);
+    pj_strdup_with_null(pool, &input, uri_str);
+
+    uri = pjsip_parse_uri(pool, input.ptr, input.slen, 0);
+    if (!uri)
+	buddy_id = PJSUA_INVALID_ID;
+    else
+	buddy_id = pjsua_find_buddy(uri);
+
+    pj_pool_release(pool);
+
+    return buddy_id;
+}
+
+
+/*
  * Check if buddy ID is valid.
  */
 PJ_DEF(pj_bool_t) pjsua_buddy_is_valid(pjsua_buddy_id buddy_id)
@@ -190,6 +215,46 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     return PJ_SUCCESS;
 }
 
+/*
+ * Set the user data associated with the buddy object.
+ */
+PJ_DEF(pj_status_t) pjsua_buddy_set_user_data( pjsua_buddy_id buddy_id,
+					       void *user_data)
+{
+    PJ_ASSERT_RETURN(buddy_id>=0 && 
+		       buddy_id<(int)PJ_ARRAY_SIZE(pjsua_var.buddy),
+		     PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    pjsua_var.buddy[buddy_id].user_data = user_data;
+
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get the user data associated with the budy object.
+ */
+PJ_DEF(void*) pjsua_buddy_get_user_data(pjsua_buddy_id buddy_id)
+{
+    void *user_data;
+
+    PJ_ASSERT_RETURN(buddy_id>=0 && 
+		       buddy_id<(int)PJ_ARRAY_SIZE(pjsua_var.buddy),
+		     NULL);
+
+    PJSUA_LOCK();
+
+    user_data = pjsua_var.buddy[buddy_id].user_data;
+
+    PJSUA_UNLOCK();
+
+    return user_data;
+}
+
 
 /*
  * Reset buddy descriptor.
@@ -288,6 +353,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_add( const pjsua_buddy_config *cfg,
     pjsua_var.buddy[index].monitor = cfg->subscribe;
     if (pjsua_var.buddy[index].port == 0)
 	pjsua_var.buddy[index].port = 5060;
+
+    /* Save user data */
+    pjsua_var.buddy[index].user_data = (void*)cfg->user_data;
 
     if (p_buddy_id)
 	*p_buddy_id = index;
