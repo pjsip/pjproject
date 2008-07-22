@@ -553,6 +553,10 @@ SOURCE=..\include\pj\log.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pj\math.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pj\os.h
 # End Source File
 # Begin Source File

@@ -1511,6 +1511,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pj\math.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pj\os.h"
 				>
 			</File>
