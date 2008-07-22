@@ -221,13 +221,6 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_get_ec_tail(pjmedia_snd_port *snd_port,
 
 
 /**
- * Enable or disable echo canceller. By default the EC is enabled after it
- * was created, so there is no need to enable the EC after creating it.
- * This function is only useful to disable the echo canceller temporarily,
- * for example during idle period, to prevent EC from using
- */
-
-/**
  * Connect a port to the sound device port. If the sound device port has a
  * sound recorder device, then this will start periodic function call to
  * the port's put_frame() function. If the sound device has a sound player
