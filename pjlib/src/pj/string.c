@@ -117,6 +117,8 @@ PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
 
     value = 0;
     for (i=0; i<(unsigned)str->slen; ++i) {
+	if (!pj_isdigit(str->ptr[i]))
+	    break;
 	value = value * 10 + (str->ptr[i] - '0');
     }
     return value;
