@@ -450,7 +450,9 @@ static void tu_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
      *	- timeout on the UAC side
      *  - receipt of 2xx response to INVITE
      */
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED && uac_data->uas_tsx) {
+    if (tsx->state == PJSIP_TSX_STATE_TERMINATED && uac_data &&
+	uac_data->uas_tsx) 
+    {
 
 	pjsip_transaction *uas_tsx;
 	struct uas_data *uas_data;
