@@ -4,6 +4,20 @@
 #
 # Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
 #
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+#
 
 """Multimedia communication client library based on SIP protocol.
 
@@ -40,112 +54,6 @@ library based on PJSIP stack (http://www.pjsip.org)
 See http://www.pjsip.org/trac/wiki/Python_SIP_Tutorial for a more thorough
 tutorial. The paragraphs below explain basic tasks on using this module.
 
-
-2.1 Initialization
-
-Instantiate Lib class. This class is a singleton class, there can only be
-one instance of this class in the program.
-
-Initialize the library with lib.init() method, and optionally specify various
-settings like UAConfig, MediaConfig, and LogConfig.
-
-Create one or more SIP Transport instances.
-
-Create one or more SIP Account's instances, as explained below.
-
-Once initialization is complete, call lib.start().
-
-
-2.2 Accounts
-
-At least one Account must be created in the program. Use Lib's create_account()
-or create_account_for_transport() to create the account instance.
-
-Account may emit events, and to capture these events, application must derive
-a class from AccountCallback class, and install the callback to the Account
-instance using set_callback() method.
-
-
-2.3 Calls
-
-Calls are represented with Call class. Use the Call methods to operate the
-call. Outgoing calls are made with make_call() method of Account class. 
-Incoming calls are reported by on_incoming_call() callback of AccountCallback 
-class.
-
-Call may emit events, and to capture these events, application must derive
-a class from CallCallback class, and install the callback to the Call instance
-using set_callback() method.
-
-Note that just like every other operations in this module, the make_call() 
-method is non-blocking (i.e. it doesn't wait until the call is established 
-before the function returns). Progress to the Call is reported via CallCallback
-class above.
-
-
-2.4 Media
-
-Every objects that can transmit or receive media/audio (e.g. calls, WAV player,
-WAV recorder, WAV playlist) are connected to a central conference bridge.
-Application can use the object's method or Lib's method to retrieve the slot
-number of that particular object in the conference bridge:
-  - to retrieve the slot number of a call, use Call.info().conf_slot
-  - to retrieve the slot number of a WAV player, use Lib.player_get_slot()
-  - to retrieve the slot number of a WAV recorder, use Lib.recorder_get_slot()
-  - to retrieve the slot number of a playlist, use Lib.playlist_get_slot()
-  - the slot number zero is used to identity the sound device.
-
-The conference bridge provides powerful switching and mixing functionality
-for application. With the conference bridge, each conference slot (e.g. 
-a call) can transmit to multiple destinations, and one destination can
-receive from multiple sources. If more than one media terminations are 
-terminated in the same slot, the conference bridge will mix the signal 
-automatically.
-
-Application connects one media termination/slot to another by calling
-lib.conf_connect() method. This will establish unidirectional media flow from 
-the source termination to the sink termination. To establish bidirectional 
-media flow, application would need to make another call to lib/conf_connect(), 
-this time inverting the source and destination slots in the parameter.
-
-
-2.5 Presence 
-
-To subscribe to presence information of a buddy, add Buddy object with
-add_buddy() method of Account class. Subsequent presence information for that
-Buddy will be reported via BuddyCallback class (which application should
-device and install to the Buddy object).
-
-Each Account has presence status associated with it, which will be informed
-to remote buddies when they subscribe to our presence information. Incoming
-presence subscription request by default will be accepted automatically,
-unless on_incoming_subscribe() method of AccountCallback is implemented.
-
-
-2.6 Instant Messaging
-
-Use Buddy's send_pager() and send_typing_ind() to send instant message and
-typing indication to the specified buddy.
-
-Incoming instant messages and typing indications will be reported via one of 
-the three mechanisms below.
-
-If the instant message or typing indication is received in the context of an
-active call, then it will be reported via on_pager() or on_typing() method
-of CallCallback class.
-
-If the instant message or typing indication is received outside any call 
-contexts, and it is received from a registered buddy, then it will be reported
-via on_pager() or on_typing() method of BuddyCallback class.
-
-If the criterias above are not met, the instant message or typing indication
-will be reported via on_pager() or on_typing() method of the AccountCallback 
-class.
-
-The delivery status of outgoing instant messages are reported via 
-on_pager_status() method of CallCallback, BuddyCallback, or AccountCallback,
-depending on whether the instant message was sent using Call, Buddy, or
-Account's send_pager() method.
 
 """
 import _pjsua
@@ -571,7 +479,7 @@ class TransportConfig:
     bound_addr = ""
     public_addr = ""
 
-    def __init__(self, port=5060, 
+    def __init__(self, port=0, 
                  bound_addr="", public_addr=""):
         self.port = port
         self.bound_addr = bound_addr
@@ -2098,6 +2006,8 @@ class _LibMutex:
 
 # PJSUA Library
 _lib = None
+enable_trace = False
+
 class Lib:
     """Library instance.
     
@@ -2232,7 +2142,7 @@ class Lib:
 
         """
         lck = self.auto_lock()
-        if not cfg: cfg=TransportConfig(type)
+        if not cfg: cfg=TransportConfig()
         err, tp_id = _pjsua.transport_create(type, cfg._cvt_to_pjsua())
         self._err_check("create_transport()", self, err)
         return Transport(self, tp_id)
@@ -2868,7 +2778,8 @@ def _worker_thread_main(arg):
     _Trace(('worker thread exited..',))
 
 def _Trace(args):
-    if True:
+    global enable_trace
+    if enable_trace:
         print "** ",
         for arg in args:
             print arg,
