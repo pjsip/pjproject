@@ -1,3 +1,6 @@
+#define SND_USE_NULL	0
+#define SND_USE_APS	0
+
 TARGET			symbian_ua_gui.exe
 UID			   0x100039CE 0xEBD12EE4
 VENDORID	  	  0
@@ -32,17 +35,30 @@ LIBRARY			commonengine.lib efsrv.lib estor.lib eikcoctl.lib eikdlg.lib
 LIBRARY			eikctl.lib bafl.lib fbscli.lib aknnotify.lib aknicon.lib
 LIBRARY			etext.lib gdi.lib egul.lib insock.lib
 LIBRARY			ecom.lib inetprotutil.lib http.lib esock.lib
+LIBRARY			charconv.lib estlib.lib 
 
 STATICLIBRARY	pjsua_lib.lib pjsip_ua.lib
 STATICLIBRARY	pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
 STATICLIBRARY	pjnath.lib pjlib_util.lib pjlib.lib
-STATICLIBRARY	symbian_audio.lib libsrtp.lib
+STATICLIBRARY	libsrtp.lib
 STATICLIBRARY	libgsmcodec.lib
 STATICLIBRARY	libspeexcodec.lib
 
-LIBRARY		charconv.lib estlib.lib 
-LIBRARY 	mediaclientaudiostream.lib
-LIBRARY 	mediaclientaudioinputstream.lib
+
+#if SND_USE_NULL || defined(WINSCW)
+    STATICLIBRARY	null_audio.lib
+    CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
+#elif SND_USE_APS
+    STATICLIBRARY	symbian_audio_aps.lib
+    LIBRARY		APSSession2.lib
+    CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
+    MACRO		PJMEDIA_SYM_SND_USE_APS=1
+#else
+    STATICLIBRARY	symbian_audio.lib
+    LIBRARY 		mediaclientaudiostream.lib
+    LIBRARY 		mediaclientaudioinputstream.lib
+    CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
+#endif
 
 LANG 				01
 
@@ -56,5 +72,3 @@ END
 SOURCEPATH		..\src
 SOURCE symbian_ua_guiContainerView.cpp symbian_ua_guiContainer.cpp symbian_ua_guiAppUi.cpp symbian_ua_guiDocument.cpp symbian_ua_guiApplication.cpp symbian_ua_guiSettingItemList.cpp Symbian_ua_guiSettingItemListSets.cpp symbian_ua_guiSettingItemListView.cpp
 SOURCE symbian_ua.cpp
-
-CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 

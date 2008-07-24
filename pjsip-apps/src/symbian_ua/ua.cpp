@@ -326,12 +326,17 @@ static pj_status_t app_startup()
     pjsua_logging_config_default(&log_cfg);
     log_cfg.console_level = 4;
     log_cfg.cb = &log_writer;
+    //log_cfg.log_filename = pj_str("C:\\data\\symbian_ua.log");
 
     pjsua_media_config_default(&med_cfg);
     med_cfg.thread_cnt = 0; // Disable threading on Symbian
     med_cfg.has_ioqueue = PJ_FALSE;
     med_cfg.clock_rate = 8000;
+#if defined(PJMEDIA_SYM_SND_USE_APS) && (PJMEDIA_SYM_SND_USE_APS==1)
+    med_cfg.audio_frame_ptime = 20;
+#else
     med_cfg.audio_frame_ptime = 40;
+#endif
     med_cfg.ec_tail_len = 0;
     med_cfg.enable_ice = USE_ICE;
     med_cfg.snd_auto_close_time = 5; // wait for 5 seconds idle before sound dev get auto-closed

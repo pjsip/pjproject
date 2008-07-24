@@ -17,6 +17,10 @@
 #endif
 // ]]] end generated region [Generated Includes]
 
+
+// Needed by APS
+TPtrC APP_UID = _L("EBD12EE4");
+
 /**
  * @brief Returns the application's UID (override from CApaApplication::AppDllUid())
  * @return UID for this application (KUidsymbian_ua_guiApplication)

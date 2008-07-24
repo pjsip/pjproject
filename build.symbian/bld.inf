@@ -1,3 +1,6 @@
+#define SND_USE_NULL	0
+#define SND_USE_APS	0
+
 prj_platforms
 winscw
 //armv5
@@ -10,8 +13,6 @@ pjlib.mmp
 pjlib_util.mmp
 pjnath.mmp
 pjsdp.mmp
-//null_audio.mmp
-symbian_audio.mmp
 pjmedia.mmp
 pjsip.mmp
 pjsip_simple.mmp
@@ -22,6 +23,15 @@ libsrtp.mmp
 /* Codecs */
 libgsmcodec.mmp
 libspeexcodec.mmp
+
+/* Sound device impl */
+#if SND_USE_NULL
+	null_audio.mmp
+#elif SND_USE_APS
+	symbian_audio_aps.mmp
+#else
+	symbian_audio.mmp
+#endif
 
 /* Applications */
 //pjlib_test.mmp

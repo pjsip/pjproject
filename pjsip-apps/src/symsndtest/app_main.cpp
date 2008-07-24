@@ -16,6 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include <pjmedia/delaybuf.h>
 #include <pjmedia/sound.h>
 #include <pj/errno.h>
 #include <pj/os.h>
@@ -27,10 +28,9 @@
 #define THIS_FILE		"app_main.cpp"
 #define CLOCK_RATE		8000
 #define CHANNEL_COUNT		1
-#define PTIME			100
-#define SAMPLES_PER_FRAME	(80)
+#define PTIME			20
+#define SAMPLES_PER_FRAME	(CLOCK_RATE*PTIME/1000)
 #define BITS_PER_SAMPLE		16
-#define LOOPBACK_BUFF_COUNT 100
 
 extern CConsoleBase* console;
 
@@ -39,9 +39,8 @@ static pjmedia_snd_stream *strm;
 static unsigned rec_cnt, play_cnt;
 static pj_time_val t_start;
 
-
-static pj_int16_t buff_loopback[SAMPLES_PER_FRAME*LOOPBACK_BUFF_COUNT];
-static pj_uint32_t pointer_w, pointer_r;
+pj_pool_t *pool;
+pjmedia_delay_buf *delaybuf;
 
 /* Logging callback */
 static void log_writer(int level, const char *buf, unsigned len)
@@ -73,7 +72,7 @@ static pj_status_t app_init()
     /* Redirect log */
     pj_log_set_log_func((void (*)(int,const char*,int)) &log_writer);
     pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
-    pj_log_set_level(5);
+    pj_log_set_level(3);
     
     /* Init pjlib */
     status = pj_init();
@@ -103,6 +102,26 @@ static pj_status_t app_init()
     		   i, info->name, info->input_count, info->output_count,
     		   info->default_samples_per_sec));	
     }
+
+    /* Create pool */
+    pool = pj_pool_create(&cp.factory, THIS_FILE, 512, 512, NULL);
+    if (pool == NULL) {
+    	app_perror("pj_pool_create()", status);
+        pj_caching_pool_destroy(&cp);
+    	pj_shutdown();
+    	return status;
+    }
+
+    /* Init delay buffer */
+    status = pjmedia_delay_buf_create(pool, THIS_FILE, CLOCK_RATE, 
+				      SAMPLES_PER_FRAME, CHANNEL_COUNT, 
+				      0, 0, &delaybuf);
+    if (status != PJ_SUCCESS) {
+    	app_perror("pjmedia_delay_buf_create()", status);
+        //pj_caching_pool_destroy(&cp);
+    	//pj_shutdown();
+    	//return status;
+    }
     
     return PJ_SUCCESS;
 }
@@ -116,21 +135,15 @@ static pj_status_t rec_cb(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(timestamp);
-    PJ_UNUSED_ARG(input);
     PJ_UNUSED_ARG(size);
 
-    pj_memcpy(&buff_loopback[pointer_w*SAMPLES_PER_FRAME], input, size);
+    pjmedia_delay_buf_put(delaybuf, (pj_int16_t*)input);
 
     if (size != SAMPLES_PER_FRAME*2) {
 		PJ_LOG(3, (THIS_FILE, "Size captured = %u",
 	 		   size));
-		pj_bzero(&buff_loopback[pointer_w*SAMPLES_PER_FRAME]+size/2, SAMPLES_PER_FRAME*2 - size);
     }
 
-    if (++pointer_w >= LOOPBACK_BUFF_COUNT) {
-    	pointer_w = 0;
-    }
-    
     ++rec_cnt;
     return PJ_SUCCESS;
 }
@@ -143,13 +156,9 @@ static pj_status_t play_cb(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
     PJ_UNUSED_ARG(timestamp);
+    PJ_UNUSED_ARG(size);
     
-    //pj_bzero(output, size);
-    pj_memcpy(output, &buff_loopback[pointer_r*SAMPLES_PER_FRAME], SAMPLES_PER_FRAME*2);
-
-    if (++pointer_r >= LOOPBACK_BUFF_COUNT) {
-    	pointer_r = 0;
-    }
+    pjmedia_delay_buf_get(delaybuf, (pj_int16_t*)output);
     
     ++play_cnt;
     return PJ_SUCCESS;	
@@ -186,6 +195,8 @@ static pj_status_t snd_start(unsigned flag)
     rec_cnt = play_cnt = 0;
     pj_gettimeofday(&t_start);
 
+    pjmedia_delay_buf_reset(delaybuf);
+
     status = pjmedia_snd_stream_start(strm);
     if (status != PJ_SUCCESS) {
     	app_perror("snd start", status);
@@ -194,9 +205,6 @@ static pj_status_t snd_start(unsigned flag)
     	return status;
     }
 
-    pointer_w = LOOPBACK_BUFF_COUNT/2;
-    pointer_r = 0;
-    
     return PJ_SUCCESS;
 }
 
@@ -231,6 +239,8 @@ static void app_fini()
     	snd_stop();
     
     pjmedia_snd_deinit();
+    pjmedia_delay_buf_destroy(delaybuf);
+    pj_pool_release(pool);
     pj_caching_pool_destroy(&cp);
     pj_shutdown();
 }
@@ -295,11 +305,11 @@ static void PrintMenu()
 {
     PJ_LOG(3, (THIS_FILE, "\n\n"
 	    "Menu:\n"
-	    "  b    Start bidir sound\n"
-	    "  r    Start recorder\n"
+	    "  a    Start bidir sound\n"
+	    "  t    Start recorder\n"
 	    "  p    Start player\n"
-	    "  c    Stop & close sound\n"
-	    "  q    Quit\n"));
+	    "  d    Stop & close sound\n"
+	    "  w    Quit\n"));
 }
 
 // Implementation: called when read has completed.
@@ -309,20 +319,20 @@ void ConsoleUI::RunL()
     pj_bool_t reschedule = PJ_TRUE;
     
     switch (kc) {
-    case 'q':
+    case 'w':
 	    asw_->AsyncStop();
 	    reschedule = PJ_FALSE;
 	    break;
-    case 'b':
+    case 'a':
     	snd_start(PJMEDIA_DIR_CAPTURE_PLAYBACK);
 	break;
-    case 'r':
+    case 't':
     	snd_start(PJMEDIA_DIR_CAPTURE);
 	break;
     case 'p':
     	snd_start(PJMEDIA_DIR_PLAYBACK);
     break;
-    case 'c':
+    case 'd':
     	snd_stop();
 	break;
     default:

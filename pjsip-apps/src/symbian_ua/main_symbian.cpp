@@ -27,6 +27,9 @@
 //  Global Variables
 CConsoleBase* console;
 
+// Needed by APS
+TPtrC APP_UID = _L("A000000E");
+
 
 ////////////////////////////////////////////////////////////////////////////
 class MyTask : public CActive
