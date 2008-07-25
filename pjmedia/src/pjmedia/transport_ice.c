@@ -271,7 +271,8 @@ static int print_sdp_cand_attr(char *buffer, int max_len,
     case PJ_ICE_CAND_TYPE_RELAYED:
     case PJ_ICE_CAND_TYPE_PRFLX:
 	len2 = pj_ansi_snprintf(buffer+len, max_len-len,
-			        "srflx raddr %s rport %d",
+			        "%s raddr %s rport %d",
+				pj_ice_get_cand_type_name(cand->type),
 				pj_sockaddr_print(&cand->rel_addr, ipaddr,
 						  sizeof(ipaddr), 0),
 				(int)pj_sockaddr_get_port(&cand->rel_addr));

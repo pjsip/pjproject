@@ -32,10 +32,10 @@
 /* String names for candidate types */
 static const char *cand_type_names[] =
 {
-    "Host",
-    "Server Reflexive",
-    "Peer Reflexive",
-    "Relayed"
+    "host",
+    "srflx",
+    "prflx",
+    "relay"
 
 };
 
