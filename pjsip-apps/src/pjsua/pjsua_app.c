@@ -1335,7 +1335,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     /*  */
     if (acc_cfg->allow_contact_rewrite==0)
     {
-	pj_ansi_sprintf(line, "--contact-rewrite %i\n",
+	pj_ansi_sprintf(line, "--auto-update-nat %i\n",
 			(int)acc_cfg->allow_contact_rewrite);
 	pj_strcat2(result, line);
     }
