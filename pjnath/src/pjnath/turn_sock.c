@@ -111,6 +111,7 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
     PJ_ASSERT_RETURN(cfg && p_turn_sock, PJ_EINVAL);
     PJ_ASSERT_RETURN(af==pj_AF_INET() || af==pj_AF_INET6(), PJ_EINVAL);
     PJ_ASSERT_RETURN(options==0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(conn_type!=PJ_TURN_TP_TCP || PJ_HAS_TCP, PJ_EINVAL);
 
     switch (conn_type) {
     case PJ_TURN_TP_UDP:
@@ -640,6 +641,7 @@ static void turn_on_state(pj_turn_session *sess,
 				    sizeof(addrtxt), 3)));
 
 	/* Initiate non-blocking connect */
+#if PJ_HAS_TCP
 	status=pj_activesock_start_connect(turn_sock->active_sock, 
 					   turn_sock->pool,
 					   &info.server, 
@@ -650,6 +652,9 @@ static void turn_on_state(pj_turn_session *sess,
 	    pj_turn_sock_destroy(turn_sock);
 	    return;
 	}
+#else
+	on_connect_complete(turn_sock->active_sock, PJ_SUCCESS);
+#endif
 
 	/* Done for now. Subsequent work will be done in 
 	 * on_connect_complete() callback.

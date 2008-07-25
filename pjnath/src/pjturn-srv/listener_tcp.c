@@ -19,6 +19,8 @@
 #include "turn.h"
 #include <pj/compat/socket.h>
 
+#if PJ_HAS_TCP
+
 struct accept_op
 {
     pj_ioqueue_op_key_t	op_key;
@@ -477,4 +479,11 @@ static void tcp_dec_ref(pj_turn_transport *tp,
 			       &tcp->timer, &delay);
     }
 }
+
+#else	/* PJ_HAS_TCP */
+
+/* To avoid empty translation unit warning */
+int listener_tcp_dummy = 0;
+
+#endif	/* PJ_HAS_TCP */
 

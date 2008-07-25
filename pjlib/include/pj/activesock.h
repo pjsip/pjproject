@@ -413,6 +413,7 @@ PJ_DECL(pj_status_t) pj_activesock_sendto(pj_activesock_t *asock,
 					  const pj_sockaddr_t *addr,
 					  int addr_len);
 
+#if PJ_HAS_TCP
 /**
  * Starts asynchronous socket accept() operations on this active socket. 
  * Application must bind the socket before calling this function. This 
@@ -457,6 +458,7 @@ PJ_DECL(pj_status_t) pj_activesock_start_connect(pj_activesock_t *asock,
 						 const pj_sockaddr_t *remaddr,
 						 int addr_len);
 
+#endif	/* PJ_HAS_TCP */
 
 /**
  * @}

@@ -75,13 +75,14 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 static void ioqueue_on_write_complete(pj_ioqueue_key_t *key, 
 				      pj_ioqueue_op_key_t *op_key,
 				      pj_ssize_t bytes_sent);
+#if PJ_HAS_TCP
 static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key, 
 				       pj_ioqueue_op_key_t *op_key,
 				       pj_sock_t sock, 
 				       pj_status_t status);
 static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key, 
 					pj_status_t status);
-
+#endif
 
 PJ_DEF(void) pj_activesock_cfg_default(pj_activesock_cfg *cfg)
 {
@@ -121,8 +122,10 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
     pj_bzero(&ioq_cb, sizeof(ioq_cb));
     ioq_cb.on_read_complete = &ioqueue_on_read_complete;
     ioq_cb.on_write_complete = &ioqueue_on_write_complete;
+#if PJ_HAS_TCP
     ioq_cb.on_connect_complete = &ioqueue_on_connect_complete;
     ioq_cb.on_accept_complete = &ioqueue_on_accept_complete;
+#endif
 
     status = pj_ioqueue_register_sock(pool, ioqueue, sock, asock, 
 				      &ioq_cb, &asock->key);
@@ -487,7 +490,7 @@ static void ioqueue_on_write_complete(pj_ioqueue_key_t *key,
     }
 }
 
-
+#if PJ_HAS_TCP
 PJ_DEF(pj_status_t) pj_activesock_start_accept(pj_activesock_t *asock,
 					       pj_pool_t *pool)
 {
@@ -577,7 +580,6 @@ PJ_DEF(pj_status_t) pj_activesock_start_connect( pj_activesock_t *asock,
     return pj_ioqueue_connect(asock->key, remaddr, addr_len);
 }
 
-
 static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key, 
 					pj_status_t status)
 {
@@ -594,4 +596,5 @@ static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key,
 	}
     }
 }
+#endif	/* PJ_HAS_TCP */
 
