@@ -56,6 +56,12 @@
 /** Constant for Win32 DirectSound sound backend. */
 #define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
 
+/** When this is set, pjmedia will not provide any sound device backend. 
+ *  Application will have to provide its own sound device backend
+ *  and link the application with it.
+ */
+#define PJMEDIA_SOUND_EXTERNAL		    3
+
 
 /**
  * Unless specified otherwise, sound device uses PortAudio implementation

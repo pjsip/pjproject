@@ -11,6 +11,7 @@ export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@
 #   - pa_win32:	    	PortAudio on Win32 (WMME)
 #   - ds:	    	Win32 DirectSound (dsound.c)
 #   - null:	    	Null sound device (nullsound.c)
+#   - external:		Link with no sounddev (app will provide)
 AC_PJMEDIA_SND=@ac_pjmedia_snd@
 
 # For Unix, specify if ALSA should be supported
@@ -90,11 +91,19 @@ export CFLAGS += -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_WIN32_DIRECT_SOUND
 endif
 
 #
-# Last resort, null sound device
+# Null sound device
 #
 ifeq ($(AC_PJMEDIA_SND),null)
 export SOUND_OBJS = nullsound.o
 export CFLAGS += -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_NULL_SOUND
+endif
+
+#
+# External sound device
+#
+ifeq ($(AC_PJMEDIA_SND),external)
+export SOUND_OBJS = 
+export CFLAGS += -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_EXTERNAL
 endif
 
 

@@ -414,6 +414,15 @@ else
  esac
 fi
 
+AC_ARG_ENABLE(ext_sound,
+	      AC_HELP_STRING([--enable-ext-sound],
+			     [PJMEDIA will not provide any sound device backend]),
+	      [if test "$enable_ext_sound" = "yes"; then
+		[ac_pjmedia_snd=external]
+		AC_MSG_RESULT([Checking if external sound is set... yes])
+	       fi]
+	      )
+
 dnl # Include resampling small filter
 AC_SUBST(ac_no_small_filter)
 AC_ARG_ENABLE(small-filter,

@@ -34,7 +34,7 @@ export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			main.o pjsua_app.o
 export PJSUA_CFLAGS += $(_CFLAGS)
-export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS)
+export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(TARGET_NAME)$(HOST_EXE)
 
 

@@ -859,6 +859,7 @@ Optional Features:
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-oss           Disable OSS audio (default: not disabled)
 
+  --enable-ext-sound      PJMEDIA will not provide any sound device backend
   --disable-small-filter  Exclude small filter in resampling
   --disable-large-filter  Exclude large filter in resampling
   --disable-speex-aec     Exclude Speex Acoustic Echo Canceller/AEC
@@ -10205,6 +10206,17 @@ fi;
 	;;
  esac
 fi
+
+# Check whether --enable-ext_sound or --disable-ext_sound was given.
+if test "${enable_ext_sound+set}" = set; then
+  enableval="$enable_ext_sound"
+  if test "$enable_ext_sound" = "yes"; then
+		ac_pjmedia_snd=external
+		echo "$as_me:$LINENO: result: Checking if external sound is set... yes" >&5
+echo "${ECHO_T}Checking if external sound is set... yes" >&6
+	       fi
+
+fi;
 
 
 # Check whether --enable-small-filter or --disable-small-filter was given.
