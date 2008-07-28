@@ -1500,6 +1500,30 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	++dlg->tsx_count;
     }
 
+    /* Update the target URI if this is a target refresh request.
+     * We have passed the basic checking for the request, I think we
+     * should update the target URI regardless of whether the request
+     * is accepted or not (e.g. when re-INVITE is answered with 488,
+     * we would still need to update the target URI, otherwise our
+     * target URI would be wrong, wouldn't it).
+     */
+    if (pjsip_method_creates_dialog(&rdata->msg_info.cseq->method)) {
+	pjsip_contact_hdr *contact;
+
+	contact = (pjsip_contact_hdr*)
+		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
+				     NULL);
+	if (contact && (dlg->remote.contact==NULL ||
+			pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, 
+				      dlg->remote.contact->uri, 
+				      contact->uri)))
+	{
+	    dlg->remote.contact = (pjsip_contact_hdr*) 
+	    			  pjsip_hdr_clone(dlg->pool, contact);
+	    dlg->target = dlg->remote.contact->uri;
+	}
+    }
+
     /* Report the request to dialog usages. */
     for (i=0; i<dlg->usage_cnt; ++i) {
 
@@ -1689,7 +1713,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	contact = (pjsip_contact_hdr*)
 		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
 				     NULL);
-	if (contact) {
+	if (contact && (dlg->remote.contact==NULL ||
+			pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, 
+				      dlg->remote.contact->uri, 
+				      contact->uri)))
+	{
 	    dlg->remote.contact = (pjsip_contact_hdr*) 
 	    			  pjsip_hdr_clone(dlg->pool, contact);
 	    dlg->target = dlg->remote.contact->uri;
@@ -1735,7 +1763,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	contact = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg,
 							  PJSIP_H_CONTACT, 
 				     			  NULL);
-	if (contact) {
+	if (contact && (dlg->remote.contact==NULL ||
+			pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, 
+				      dlg->remote.contact->uri, 
+				      contact->uri)))
+	{
 	    dlg->remote.contact = (pjsip_contact_hdr*) 
 	    			  pjsip_hdr_clone(dlg->pool, contact);
 	    dlg->target = dlg->remote.contact->uri;
