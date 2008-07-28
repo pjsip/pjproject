@@ -78,7 +78,8 @@ enum pj_log_decoration
     PJ_LOG_HAS_NEWLINE	  =  128, /**< Terminate each call with newline [yes] */
     PJ_LOG_HAS_CR	  =  256, /**< Include carriage return [no] 	      */
     PJ_LOG_HAS_SPACE	  =  512, /**< Include two spaces before log [yes]    */
-    PJ_LOG_HAS_COLOR	  = 1024  /**< Colorize logs [yes on win32]	      */
+    PJ_LOG_HAS_COLOR	  = 1024, /**< Colorize logs [yes on win32]	      */
+    PJ_LOG_HAS_LEVEL_TEXT = 2048  /**< Include level text string [no]	      */
 };
 
 /**

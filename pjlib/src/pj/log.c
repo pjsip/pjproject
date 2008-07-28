@@ -168,6 +168,12 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     pj_time_decode(&now, &ptime);
 
     pre = log_buffer;
+    if (log_decor & PJ_LOG_HAS_LEVEL_TEXT) {
+	static const char *ltexts[] = { "FATAL:", "ERROR:", " WARN:", 
+			      " INFO:", "DEBUG:", "TRACE:", "DETRC:"};
+	pj_ansi_strcpy(pre, ltexts[level]);
+	pre += 6;
+    }
     if (log_decor & PJ_LOG_HAS_DAY_NAME) {
 	static const char *wdays[] = { "Sun", "Mon", "Tue", "Wed",
 				       "Thu", "Fri", "Sat"};
