@@ -110,6 +110,10 @@ SOURCE=..\src\samples\invtester.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\latency.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\level.c
 # End Source File
 # Begin Source File

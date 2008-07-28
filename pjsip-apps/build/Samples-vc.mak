@@ -52,6 +52,7 @@ BINDIR = ..\bin\samples
 SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
 	  $(BINDIR)\encdec.exe \
+	  $(BINDIR)\latency.exe \
 	  $(BINDIR)\level.exe \
 	  $(BINDIR)\mix.exe \
 	  $(BINDIR)\pcaputil.exe\

@@ -15,6 +15,7 @@ BINDIR := ../bin/samples
 
 SAMPLES := confsample \
 	   encdec \
+	   latency \
 	   level \
 	   mix \
 	   pjsip-perf \

@@ -90,6 +90,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\latency.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\level.c"
 				>
 			</File>
