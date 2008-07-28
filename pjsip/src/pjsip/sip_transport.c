@@ -936,6 +936,12 @@ PJ_DEF(pj_status_t) pjsip_transport_shutdown(pjsip_transport *tp)
     if (status == PJ_SUCCESS)
 	tp->is_shutdown = PJ_TRUE;
 
+    /* If transport reference count is zero, start timer count-down */
+    if (pj_atomic_get(tp->ref_cnt) == 0) {
+	pjsip_transport_add_ref(tp);
+	pjsip_transport_dec_ref(tp);
+    }
+
     pj_lock_release(tp->lock);
     pj_lock_release(mgr->lock);
 

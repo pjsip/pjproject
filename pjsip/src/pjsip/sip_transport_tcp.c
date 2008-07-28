@@ -1067,6 +1067,19 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 
     tdata_op_key->tdata = NULL;
 
+    if (tdata_op_key->callback) {
+	/*
+	 * Notify sip_transport.c that packet has been sent.
+	 */
+	if (bytes_sent == 0)
+	    bytes_sent = -PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
+
+	tdata_op_key->callback(&tcp->base, tdata_op_key->token, bytes_sent);
+
+	/* Mark last activity time */
+	pj_gettimeofday(&tcp->last_activity);
+    }
+
     /* Check for error/closure */
     if (bytes_sent <= 0) {
 	pj_status_t status;
@@ -1080,18 +1093,6 @@ static void on_write_complete(pj_ioqueue_key_t *key,
 	pjsip_transport_shutdown(&tcp->base);
     }
 
-    if (tdata_op_key->callback) {
-	/*
-	 * Notify sip_transport.c that packet has been sent.
-	 */
-	if (bytes_sent == 0)
-	    bytes_sent = -PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
-
-	tdata_op_key->callback(&tcp->base, tdata_op_key->token, bytes_sent);
-
-	/* Mark last activity time */
-	pj_gettimeofday(&tcp->last_activity);
-    }
 }
 
 
