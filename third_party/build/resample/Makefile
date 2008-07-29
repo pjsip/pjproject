@@ -54,6 +54,5 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=RESAMPLE app=libresample $@
-	echo '$(RESAMPLE_LIB): .libresample-$(TARGET_NAME).depend' >> .libresample-$(TARGET_NAME).depend; \
 
 

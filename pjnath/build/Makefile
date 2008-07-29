@@ -131,6 +131,8 @@ depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJTURN_CLIENT app=pjturn-client $@
 	$(MAKE) -f $(RULES_MAK) APP=PJTURN_SRV app=pjturn-srv $@
-	echo '$(TEST_EXE): $(PJNATH_LIB)' >> .pjnath-test-$(TARGET_NAME).depend; \
+	echo '$(PJNATH_TEST_EXE): $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjnath-test-$(TARGET_NAME).depend
+	echo '$(PJTURN_CLIENT_EXE): $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjturn-client-$(TARGET_NAME).depend
+	echo '$(PJTURN_SRV_EXE): $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjturn-srv-$(TARGET_NAME).depend
 
 

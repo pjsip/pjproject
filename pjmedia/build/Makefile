@@ -171,8 +171,6 @@ depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
-	echo '$(PJMEDIA_LIB): .pjmedia-$(TARGET_NAME).depend' >> .pjmedia-$(TARGET_NAME).depend; \
-	echo '$(PJMEDIA_CODEC_LIB): .pjmedia-codec-$(TARGET_NAME).depend' >> .pjmedia-codec-$(TARGET_NAME).depend; \
-	echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB)' >> .pjmedia-test-$(TARGET_NAME).depend; \
+	echo '$(PJMEDIA_TEST_EXE): $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjmedia-test-$(TARGET_NAME).depend
 
 

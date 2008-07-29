@@ -82,7 +82,6 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=SRTP app=libsrtp $@
-	echo '$(SRTP_LIB): .libsrtp-$(TARGET_NAME).depend' >> .libsrtp-$(TARGET_NAME).depend; \
 
 
 

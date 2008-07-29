@@ -69,6 +69,5 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=SPEEX app=libspeex $@
-	echo '$(SPEEX_LIB): .libspeex-$(TARGET_NAME).depend' >> .libspeex-$(TARGET_NAME).depend; \
 
 

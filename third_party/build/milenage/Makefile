@@ -54,6 +54,5 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=MILENAGE app=libmilenage $@
-	echo '$(MILENAGE_LIB): .libmilenage-$(TARGET_NAME).depend' >> .libmilenage-$(TARGET_NAME).depend; \
 
 

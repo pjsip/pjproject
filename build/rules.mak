@@ -74,11 +74,13 @@ print_lib: print_common
 	@echo LIB=$(LIB)
 	@echo LIBDIR=$(LIBDIR)
 
-$(LIB): $(LIBDIR) $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+$(LIB): $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+	if test ! -d $(LIBDIR); then $(subst @@,$(subst /,$(HOST_PSEP),$(LIBDIR)),$(HOST_MKDIR)); fi
 	$(AR) $(LIB) $(OBJS)
 	$(RANLIB) $(LIB)
 
-$(EXE): $(BINDIR) $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+$(EXE): $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+	if test ! -d $(BINDIR); then $(subst @@,$(subst /,$(HOST_PSEP),$(BINDIR)),$(HOST_MKDIR)); fi
 	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$(EXE)) \
 	    $(subst /,$(HOST_PSEP),$(OBJS)) $($(APP)_LDFLAGS)
 

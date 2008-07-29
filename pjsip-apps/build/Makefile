@@ -70,7 +70,7 @@ clean depend realclean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $@
 	$(MAKE) -f Samples.mak $@
 	@if test "$@" = "depend"; then \
-	  echo '$(PJSUA_EXE): $(PJSIP_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE) $(PJSUA_LIB_LIB) $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB) $(PJMEDIA_LIB) $(PJMEDIA_CODEC_LIB) Makefile' >> .pjsua-$(TARGET_NAME).depend; \
+	  echo '$(PJSUA_EXE): $(APP_LIB_FILES)' >> .pjsua-$(TARGET_NAME).depend; \
 	fi
 
 

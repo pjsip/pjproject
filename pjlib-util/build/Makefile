@@ -68,7 +68,7 @@ distclean: realclean
 pjlib-util:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $(PJLIB_UTIL_LIB)
 
-pjlib-util-test: $(PJLIB_LIB)
+pjlib-util-test:
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $(UTIL_TEST_EXE)
 
 .PHONY: ../lib/pjlib-util.ko
@@ -93,6 +93,6 @@ realclean:
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $@
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $@
-	echo '$(TEST_EXE): $(PJLIB_UTIL_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
+	echo '$(UTIL_TEST_EXE): $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjlib-util-test-$(TARGET_NAME).depend; \
 
 

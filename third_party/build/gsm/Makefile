@@ -60,6 +60,5 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=GSM_CODEC app=libgsmcodec $@
-	echo '$(GSM_CODEC_LIB): .libgsmcodec-$(TARGET_NAME).depend' >> .libgsmcodec-$(TARGET_NAME).depend; \
 
 

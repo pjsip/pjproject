@@ -41,7 +41,7 @@ EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)-$(TARGET_NAME)$(HOST_EXE))
 
 all: $(OBJDIR) $(EXES)
 
-$(BINDIR)/%-$(TARGET_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(LIBS)
+$(BINDIR)/%-$(TARGET_NAME)$(HOST_EXE): $(OBJDIR)/%$(OBJEXT) $(PJ_LIB_FILES)
 	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$@) \
 	    $(subst /,$(HOST_PSEP),$<) \
 	    $(_LDFLAGS)

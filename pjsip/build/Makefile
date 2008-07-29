@@ -155,12 +155,20 @@ pjsip-test:
 	echo Making $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 
-clean depend:
+clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
+
+depend:
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP app=pjsip $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_UA app=pjsip-ua $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSIP_SIMPLE app=pjsip-simple $@
+	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $@
+	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $@
+	echo '$(TEST_EXE): $(PJMEDIA_LIB) $(PJSUA_LIB_LIB) $(PJSIP_SIMPLE_LIB) $(PJSIP_UA_LIB) $(PJSIP_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB)' >> .pjsip-test-$(TARGET_NAME).depend
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsip-$(TARGET_NAME).depend),$(HOST_RMR))

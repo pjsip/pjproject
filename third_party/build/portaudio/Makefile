@@ -65,5 +65,4 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PORTAUDIO app=libportaudio $@
-	echo '$(PORTAUDIO_LIB): .libportaudio-$(TARGET_NAME).depend' >> .libportaudio-$(TARGET_NAME).depend; \
 

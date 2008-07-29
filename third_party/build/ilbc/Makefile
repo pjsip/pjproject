@@ -61,6 +61,5 @@ realclean:
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=ILBC app=libilbccodec $@
-	echo '$(ILBC_LIB): .libilbccodec-$(TARGET_NAME).depend' >> .libilbccodec-$(TARGET_NAME).depend; \
 
 
