@@ -208,6 +208,7 @@ PJ_BEGIN_DECL
 typedef struct pj_ioqueue_op_key_t
 { 
     void *internal__[32];           /**< Internal I/O Queue data.   */
+    void *activesock_data;	    /**< Active socket data.	    */
     void *user_data;                /**< Application data.          */
 } pj_ioqueue_op_key_t;
 

@@ -201,6 +201,21 @@ typedef struct pj_activesock_cfg
      */
     int concurrency;
 
+    /**
+     * If this option is specified, the active socket will make sure that
+     * asynchronous send operation with stream oriented socket will only
+     * call the callback after all data has been sent. This means that the
+     * active socket will automatically resend the remaining data until
+     * all data has been sent.
+     *
+     * Please note that when this option is specified, it is possible that
+     * error is reported after partial data has been sent. Also setting
+     * this will disable the ioqueue concurrency for the socket.
+     *
+     * Default value is 1.
+     */
+    pj_bool_t whole_data;
+
 } pj_activesock_cfg;
 
 

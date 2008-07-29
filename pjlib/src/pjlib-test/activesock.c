@@ -246,12 +246,231 @@ on_return:
 }
 
 
+
+#define SIGNATURE   0xdeadbeef
+struct tcp_pkt
+{
+    pj_uint32_t	signature;
+    pj_uint32_t	seq;
+    char	fill[513];
+};
+
+struct tcp_state
+{
+    pj_bool_t	err;
+    pj_bool_t	sent;
+    pj_uint32_t	next_recv_seq;
+    pj_uint8_t	pkt[600];
+};
+
+struct send_key
+{
+    pj_ioqueue_op_key_t	op_key;
+};
+
+
+static pj_bool_t tcp_on_data_read(pj_activesock_t *asock,
+				  void *data,
+				  pj_size_t size,
+				  pj_status_t status,
+				  pj_size_t *remainder)
+{
+    struct tcp_state *st = (struct tcp_state*) pj_activesock_get_user_data(asock);
+    char *next = (char*) data;
+
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	PJ_LOG(1,("", "   err: status=%d", status));
+	st->err = PJ_TRUE;
+	return PJ_FALSE;
+    }
+
+    while (size >= sizeof(struct tcp_pkt)) {
+	struct tcp_pkt *tcp_pkt = (struct tcp_pkt*) next;
+
+	if (tcp_pkt->signature != SIGNATURE) {
+	    PJ_LOG(1,("", "   err: invalid signature at seq=%d", 
+			  st->next_recv_seq));
+	    st->err = PJ_TRUE;
+	    return PJ_FALSE;
+	}
+	if (tcp_pkt->seq != st->next_recv_seq) {
+	    PJ_LOG(1,("", "   err: wrong sequence"));
+	    st->err = PJ_TRUE;
+	    return PJ_FALSE;
+	}
+
+	st->next_recv_seq++;
+	next += sizeof(struct tcp_pkt);
+	size -= sizeof(struct tcp_pkt);
+    }
+
+    if (size) {
+	pj_memmove(data, next, size);
+	*remainder = size;
+    }
+
+    return PJ_TRUE;
+}
+
+static pj_bool_t tcp_on_data_sent(pj_activesock_t *asock,
+				  pj_ioqueue_op_key_t *op_key,
+				  pj_ssize_t sent)
+{
+    struct tcp_state *st=(struct tcp_state*)pj_activesock_get_user_data(asock);
+
+    st->sent = 1;
+
+    if (sent < 1) {
+	st->err = PJ_TRUE;
+	return PJ_FALSE;
+    }
+
+    return PJ_TRUE;
+}
+
+static int tcp_perf_test(void)
+{
+    enum { COUNT=100000 };
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_sock_t sock1=PJ_INVALID_SOCKET, sock2=PJ_INVALID_SOCKET;
+    pj_activesock_t *asock1 = NULL, *asock2 = NULL;
+    pj_activesock_cb cb;
+    struct tcp_state *state1, *state2;
+    unsigned i;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "tcpperf", 256, 256, NULL);
+
+    status = app_socketpair(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock1, 
+			    &sock2);
+    if (status != PJ_SUCCESS) {
+	status = -100;
+	goto on_return;
+    }
+
+    status = pj_ioqueue_create(pool, 4, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	status = -110;
+	goto on_return;
+    }
+
+    pj_bzero(&cb, sizeof(cb));
+    cb.on_data_read = &tcp_on_data_read;
+    cb.on_data_sent = &tcp_on_data_sent;
+
+    state1 = PJ_POOL_ZALLOC_T(pool, struct tcp_state);
+    status = pj_activesock_create(pool, sock1, pj_SOCK_STREAM(), NULL, ioqueue,
+				  &cb, state1, &asock1);
+    if (status != PJ_SUCCESS) {
+	status = -120;
+	goto on_return;
+    }
+
+    state2 = PJ_POOL_ZALLOC_T(pool, struct tcp_state);
+    status = pj_activesock_create(pool, sock2, pj_SOCK_STREAM(), NULL, ioqueue,
+				  &cb, state2, &asock2);
+    if (status != PJ_SUCCESS) {
+	status = -130;
+	goto on_return;
+    }
+
+    status = pj_activesock_start_read(asock1, pool, 1000, 0);
+    if (status != PJ_SUCCESS) {
+	status = -140;
+	goto on_return;
+    }
+
+    /* Send packet as quickly as possible */
+    for (i=0; i<COUNT && !state1->err && !state2->err; ++i) {
+	struct tcp_pkt *pkt;
+	struct send_key send_key[2], *op_key;
+	pj_ssize_t len;
+
+	pkt = (struct tcp_pkt*)state2->pkt;
+	pkt->signature = SIGNATURE;
+	pkt->seq = i;
+	pj_memset(pkt->fill, 'a', sizeof(pkt->fill));
+
+	op_key = &send_key[i%2];
+	pj_ioqueue_op_key_init(&op_key->op_key, sizeof(*op_key));
+
+	state2->sent = PJ_FALSE;
+	len = sizeof(*pkt);
+	status = pj_activesock_send(asock2, &op_key->op_key, pkt, &len, 0);
+	if (status == PJ_EPENDING) {
+	    do {
+		pj_ioqueue_poll(ioqueue, NULL);
+	    } while (!state2->sent);
+	} else if (status != PJ_SUCCESS) {
+		PJ_LOG(1,("", "   err: send status=%d", status));
+	    status = -180;
+	    break;
+	} else if (status == PJ_SUCCESS) {
+	    if (len != sizeof(*pkt)) {
+		PJ_LOG(1,("", "   err: shouldn't report partial sent"));
+		status = -190;
+		break;
+	    }
+	}
+    }
+
+    /* Wait until everything has been sent/received */
+    if (state1->next_recv_seq < COUNT) {
+	pj_time_val delay = {0, 100};
+	while (pj_ioqueue_poll(ioqueue, &delay) > 0)
+	    ;
+    }
+
+    if (status == PJ_EPENDING)
+	status = PJ_SUCCESS;
+
+    if (status != 0)
+	goto on_return;
+
+    if (state1->err) {
+	status = -183;
+	goto on_return;
+    }
+    if (state2->err) {
+	status = -186;
+	goto on_return;
+    }
+    if (state1->next_recv_seq != COUNT) {
+	PJ_LOG(3,("", "   err: only %u packets received, expecting %u", 
+		      state1->next_recv_seq, COUNT));
+	status = -195;
+	goto on_return;
+    }
+
+on_return:
+    if (asock2)
+	pj_activesock_close(asock2);
+    if (asock1)
+	pj_activesock_close(asock1);
+    if (ioqueue)
+	pj_ioqueue_destroy(ioqueue);
+    if (pool)
+	pj_pool_release(pool);
+
+    return status;
+}
+
+
+
 int activesock_test(void)
 {
     int ret;
 
+    ret = (int)&udp_ping_pong_test;
+
     PJ_LOG(3,("", "..udp ping/pong test"));
     ret = udp_ping_pong_test();
+    if (ret != 0)
+	return ret;
+
+    PJ_LOG(3,("", "..tcp perf test"));
+    ret = tcp_perf_test();
     if (ret != 0)
 	return ret;
 
