@@ -617,6 +617,11 @@ EXPORT void speex_echo_state_destroy(SpeexEchoState *st)
 #ifdef FIXED_POINT
    speex_free(st->wtmp2);
 #endif
+   speex_free(st->memX);
+   speex_free(st->memD);
+   speex_free(st->memE);
+   speex_free(st->notch_mem);
+
    speex_free(st->play_buf);
    speex_free(st);
    
