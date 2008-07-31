@@ -878,6 +878,9 @@ PJ_DEF(pj_status_t) pjsua_pres_notify( pjsua_acc_id acc_id,
     //Both pjsua_var.local_uri and pjsua_var.contact_uri are enclosed in "<" and ">"
     //causing XML parsing to fail.
     //pres_status.info[0].contact = pjsua_var.local_uri;
+    /* add RPID information */
+    pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
+	      sizeof(pjrpid_element));
 
     pjsip_pres_set_status(srv_pres->sub, &pres_status);
 

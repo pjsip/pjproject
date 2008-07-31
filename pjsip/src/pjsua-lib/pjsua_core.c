@@ -1070,6 +1070,14 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	/* Terminate all calls. */
 	pjsua_call_hangup_all();
 
+	/* Set all accounts to offline */
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	    if (!pjsua_var.acc[i].valid)
+		continue;
+	    pjsua_var.acc[i].online_status = PJ_FALSE;
+	    pj_bzero(&pjsua_var.acc[i].rpid, sizeof(pjrpid_element));
+	}
+
 	/* Terminate all presence subscriptions. */
 	pjsua_pres_shutdown();
 
