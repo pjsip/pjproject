@@ -83,7 +83,11 @@ int transport_tcp_test(void)
 
     /* Check again that reference counter is 1. */
     if (pj_atomic_get(tcp->ref_cnt) != 1)
-	return -70;
+	return -40;
+
+    /* Load test */
+    if (transport_load_test(url) != 0)
+	return -60;
 
     /* Basic transport's send/receive loopback test. */
     for (i=0; i<SEND_RECV_LOOP; ++i) {

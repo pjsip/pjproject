@@ -641,3 +641,119 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 
     return 0;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+/*
+ * Transport load testing
+ */
+static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata);
+
+static struct mod_load_test
+{
+    pjsip_module    mod;
+    pj_uint32_t	    next_seq;
+    pj_bool_t	    err;
+} mod_load = 
+{
+    {
+    NULL, NULL,				/* prev and next	*/
+    { "mod-load-test", 13},		/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_TSX_LAYER-1,	/* Priority		*/
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &load_on_rx_request,		/* on_rx_request()	*/
+    NULL,				/* on_rx_response()	*/
+    NULL,				/* tsx_handler()	*/
+    }
+};
+
+
+static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata)
+{
+    if (rdata->msg_info.cseq->cseq != mod_load.next_seq) {
+	PJ_LOG(1,("THIS_FILE", "    err: expecting cseq %u, got %u", 
+		  mod_load.next_seq, rdata->msg_info.cseq->cseq));
+	mod_load.err = PJ_TRUE;
+	mod_load.next_seq = rdata->msg_info.cseq->cseq + 1;
+    } else 
+	mod_load.next_seq++;
+    return PJ_TRUE;
+}
+
+int transport_load_test(char *target_url)
+{
+    enum { COUNT = 2000 };
+    unsigned i;
+    pj_status_t status;
+
+    /* exhaust packets */
+    do {
+	pj_time_val delay = {1, 0};
+	i = 0;
+	pjsip_endpt_handle_events2(endpt, &delay, &i);
+    } while (i != 0);
+
+    PJ_LOG(3,(THIS_FILE, "  transport load test..."));
+
+    if (mod_load.mod.id == -1) {
+	status = pjsip_endpt_register_module( endpt, &mod_load.mod);
+	if (status != PJ_SUCCESS) {
+	    app_perror("error registering module", status);
+	    return -1;
+	}
+    }
+    mod_load.err = PJ_FALSE;
+    mod_load.next_seq = 0;
+
+    for (i=0; i<COUNT && !mod_load.err; ++i) {
+	pj_str_t target, from, call_id;
+	pjsip_tx_data *tdata;
+
+	target = pj_str(target_url);
+	from = pj_str("<sip:user@host>");
+	call_id = pj_str("thecallid");
+	status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, 
+					    &target, &from, 
+					    &target, &from, &call_id, 
+					    i, NULL, &tdata );
+	if (status != PJ_SUCCESS) {
+	    app_perror("error creating request", status);
+	    goto on_return;
+	}
+
+	status = pjsip_endpt_send_request_stateless(endpt, tdata, NULL, NULL);
+	if (status != PJ_SUCCESS) {
+	    app_perror("error sending request", status);
+	    goto on_return;
+	}
+    }
+
+    do {
+	pj_time_val delay = {1, 0};
+	i = 0;
+	pjsip_endpt_handle_events2(endpt, &delay, &i);
+    } while (i != 0);
+
+    if (mod_load.next_seq != COUNT) {
+	PJ_LOG(1,("THIS_FILE", "    err: expecting %u msg, got only %u", 
+		  COUNT, mod_load.next_seq));
+	status = -2;
+	goto on_return;
+    }
+
+on_return:
+    if (mod_load.mod.id != -1) {
+	pjsip_endpt_unregister_module( endpt, &mod_load.mod);
+	mod_load.mod.id = -1;
+    }
+    if (status != PJ_SUCCESS || mod_load.err) {
+	return -2;
+    }
+    PJ_LOG(3,(THIS_FILE, "   success"));
+    return 0;
+}
+
+
