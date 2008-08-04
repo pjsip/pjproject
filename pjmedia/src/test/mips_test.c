@@ -422,7 +422,7 @@ static pjmedia_port* create_gen_port(pj_pool_t *pool,
 
 	    p = buf+c;
 	    for (i=0; i<PJ_ARRAY_SIZE(ref_signal); ++i) {
-		*p = ref_signal[i] * pct_level / 100;
+		*p = (pj_int16_t)(ref_signal[i] * pct_level / 100);
 		p += channel_count;
 	    }
 	}
@@ -532,7 +532,7 @@ static pjmedia_port* conf1_test_init(pj_pool_t *pool,
 				     struct test_entry *te)
 {
     return init_conf_port(1, pool, clock_rate, channel_count, 
-			  samples_per_frame, 0, te);
+			  samples_per_frame, flags, te);
 }
 
 
@@ -546,7 +546,7 @@ static pjmedia_port* conf2_test_init(pj_pool_t *pool,
 				     struct test_entry *te)
 {
     return init_conf_port(2, pool, clock_rate, channel_count, 
-			  samples_per_frame, 0, te);
+			  samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
@@ -559,7 +559,7 @@ static pjmedia_port* conf4_test_init(pj_pool_t *pool,
 				     struct test_entry *te)
 {
     return init_conf_port(4, pool, clock_rate, channel_count, 
-			  samples_per_frame, 0, te);
+			  samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
@@ -572,7 +572,7 @@ static pjmedia_port* conf8_test_init(pj_pool_t *pool,
 				     struct test_entry *te)
 {
     return init_conf_port(8, pool, clock_rate, channel_count, 
-			  samples_per_frame, 0, te);
+			  samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
@@ -584,8 +584,9 @@ static pjmedia_port* conf16_test_init(pj_pool_t *pool,
 				      unsigned flags,
 				      struct test_entry *te)
 {
+    PJ_UNUSED_ARG(flags);
     return init_conf_port(16, pool, clock_rate, channel_count, 
-			  samples_per_frame, 0, te);
+			  samples_per_frame, flags, te);
 }
 
 /***************************************************************************/
@@ -602,6 +603,9 @@ static pjmedia_port* updown_resample_get(pj_pool_t *pool,
     pjmedia_port *gen_port, *up, *down;
     unsigned opt = 0;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
 
     if (!high_quality)
 	opt |= PJMEDIA_RESAMPLE_USE_LINEAR;
@@ -734,6 +738,9 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
     unsigned count;
     pjmedia_codec_param codec_param;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
 
     codec_id = pj_str((char*)codec);
     cp = PJ_POOL_ZALLOC_T(pool, struct codec_port);
@@ -959,6 +966,9 @@ static pjmedia_port* create_wsola_plc(unsigned loss_pct,
     unsigned opt = 0;
     pj_status_t status;
 
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
+
     wp = PJ_POOL_ZALLOC_T(pool, struct wsola_plc_port);
     wp->loss_pct = loss_pct;
     wp->base.get_frame = &wsola_plc_get_frame;
@@ -1130,6 +1140,9 @@ static pjmedia_port* create_wsola_discard(unsigned discard_pct,
     unsigned i, opt = 0;
     pj_status_t status;
 
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
+
     wp = PJ_POOL_ZALLOC_T(pool, struct wsola_discard_port);
     wp->discard_pct = discard_pct;
     wp->base.get_frame = &wsola_discard_get_frame;
@@ -1249,6 +1262,9 @@ static pjmedia_port* ec_create(unsigned ec_tail_msec,
 {
     pjmedia_port *gen_port, *ec_port;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
 
     gen_port = create_gen_port(pool, clock_rate, channel_count, 
 			       samples_per_frame, 100);
@@ -1388,6 +1404,9 @@ static pjmedia_port* create_tonegen(unsigned freq1,
     pjmedia_tone_desc tones[2];
     pj_status_t status;
 
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
+
     status = pjmedia_tonegen_create(pool, clock_rate, channel_count,
 				    samples_per_frame, 16, 
 				    PJMEDIA_TONEGEN_LOOP, &tonegen);
@@ -1395,12 +1414,12 @@ static pjmedia_port* create_tonegen(unsigned freq1,
 	return NULL;
 
     pj_bzero(tones, sizeof(tones));
-    tones[0].freq1 = freq1;
-    tones[0].freq2 = freq2;
+    tones[0].freq1 = (short)freq1;
+    tones[0].freq2 = (short)freq2;
     tones[0].on_msec = 400;
     tones[0].off_msec = 0;
-    tones[1].freq1 = freq1;
-    tones[1].freq2 = freq2;
+    tones[1].freq1 = (short)freq1;
+    tones[1].freq2 = (short)freq2;
     tones[1].on_msec = 400;
     tones[1].off_msec = 100;
 
@@ -1483,6 +1502,8 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     pjmedia_codec_param codec_param;
     pjmedia_stream_info si;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(flags);
 
     codec_id = pj_str((char*)codec);
     sp = PJ_POOL_ZALLOC_T(pool, struct stream_port);
@@ -1752,6 +1773,227 @@ static pjmedia_port* create_stream_g722( pj_pool_t *pool,
 
 
 /***************************************************************************/
+/* Delay buffer */
+enum {DELAY_BUF_MAX_DELAY = 80};
+struct delaybuf_port
+{
+    pjmedia_port	 base;
+    pjmedia_delay_buf   *delaybuf;
+    pjmedia_port	*gen_port;
+    int			 drift_pct;
+};
+
+
+static pj_status_t delaybuf_get_frame(struct pjmedia_port *this_port, 
+				      pjmedia_frame *frame)
+{
+    struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
+    pj_status_t status;
+
+    status = pjmedia_delay_buf_get(dp->delaybuf, (pj_int16_t*)frame->buf);
+    pj_assert(status == PJ_SUCCESS);
+
+    /* Additional GET when drift_pct is negative */
+    if (dp->drift_pct < 0) {
+	int rnd;
+	rnd = pj_rand() % 100;
+
+	if (rnd < -dp->drift_pct) {
+	    status = pjmedia_delay_buf_get(dp->delaybuf, (pj_int16_t*)frame->buf);
+	    pj_assert(status == PJ_SUCCESS);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port, 
+				      const pjmedia_frame *frame)
+{
+    struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
+    pj_status_t status;
+    pjmedia_frame f = *frame;
+
+    status = pjmedia_port_get_frame(dp->gen_port, &f);
+    pj_assert(status == PJ_SUCCESS);
+    status = pjmedia_delay_buf_put(dp->delaybuf, (pj_int16_t*)f.buf);
+    pj_assert(status == PJ_SUCCESS);
+
+    /* Additional PUT when drift_pct is possitive */
+    if (dp->drift_pct > 0) {
+	int rnd;
+	rnd = pj_rand() % 100;
+
+	if (rnd < dp->drift_pct) {
+	    status = pjmedia_port_get_frame(dp->gen_port, &f);
+	    pj_assert(status == PJ_SUCCESS);
+	    status = pjmedia_delay_buf_put(dp->delaybuf, (pj_int16_t*)f.buf);
+	    pj_assert(status == PJ_SUCCESS);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t delaybuf_on_destroy(struct pjmedia_port *this_port)
+{
+    struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
+    pjmedia_port_destroy(dp->gen_port);
+    pjmedia_delay_buf_destroy(dp->delaybuf);
+    return PJ_SUCCESS;
+}
+
+static pjmedia_port* create_delaybuf(int drift_pct,
+				     pj_pool_t *pool,
+				     unsigned clock_rate,
+				     unsigned channel_count,
+				     unsigned samples_per_frame,
+				     unsigned flags,
+				     struct test_entry *te)
+{
+    struct delaybuf_port *dp;
+    pj_str_t name = pj_str("delaybuf");
+    unsigned opt = 0;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(flags);
+    PJ_UNUSED_ARG(te);
+
+    dp = PJ_POOL_ZALLOC_T(pool, struct delaybuf_port);
+    dp->drift_pct = drift_pct;
+    dp->base.get_frame = &delaybuf_get_frame;
+    dp->base.put_frame = &delaybuf_put_frame;
+    dp->base.on_destroy = &delaybuf_on_destroy;
+    pjmedia_port_info_init(&dp->base.info, &name, 0x5678, clock_rate, 
+			   channel_count, 16, samples_per_frame);
+
+    status = pjmedia_delay_buf_create(pool, "mips_test", clock_rate, 
+				      samples_per_frame, channel_count, 
+				      DELAY_BUF_MAX_DELAY,
+				      opt, &dp->delaybuf);
+    if (status != PJ_SUCCESS)
+	return NULL;
+
+    dp->gen_port = create_gen_port(pool, clock_rate, channel_count, 
+				   samples_per_frame, 100);
+    if (dp->gen_port == NULL)
+	return NULL;
+
+    return &dp->base;
+}
+
+
+/* Delay buffer without drift */
+static pjmedia_port* delaybuf_0( pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(0, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+
+/* Delay buffer with 2% drift */
+static pjmedia_port* delaybuf_p2( pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(2, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with 5% drift */
+static pjmedia_port* delaybuf_p5( pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(5, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with 10% drift */
+static pjmedia_port* delaybuf_p10(pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(10, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with 20% drift */
+static pjmedia_port* delaybuf_p20(pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(20, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with -2% drift */
+static pjmedia_port* delaybuf_n2( pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(-2, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with -5% drift */
+static pjmedia_port* delaybuf_n5( pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(-5, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with -10% drift */
+static pjmedia_port* delaybuf_n10(pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(-10, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+/* Delay buffer with -20% drift */
+static pjmedia_port* delaybuf_n20(pj_pool_t *pool,
+				  unsigned clock_rate,
+				  unsigned channel_count,
+				  unsigned samples_per_frame,
+				  unsigned flags,
+				  struct test_entry *te)
+{
+    return create_delaybuf(-20, pool, clock_rate, channel_count, 
+			   samples_per_frame, flags, te);
+}
+
+
+/***************************************************************************/
 /* Run test entry, return elapsed time */
 static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 {
@@ -1868,6 +2110,15 @@ int mips_test(void)
 	{ "WSOLA discard 10% excess", OP_GET, K8|K16, &wsola_discard_10},
 	{ "WSOLA discard 20% excess", OP_GET, K8|K16, &wsola_discard_20},
 	{ "WSOLA discard 50% excess", OP_GET, K8|K16, &wsola_discard_50},
+	{ "Delay buffer", OP_GET_PUT, K8|K16, &delaybuf_0},
+	{ "Delay buffer - drift -2%", OP_GET_PUT, K8|K16, &delaybuf_n2},
+	{ "Delay buffer - drift -5%", OP_GET_PUT, K8|K16, &delaybuf_n5},
+	{ "Delay buffer - drift -10%", OP_GET_PUT, K8|K16, &delaybuf_n10},
+	{ "Delay buffer - drift -20%", OP_GET_PUT, K8|K16, &delaybuf_n20},
+	{ "Delay buffer - drift +2%", OP_GET_PUT, K8|K16, &delaybuf_p2},
+	{ "Delay buffer - drift +5%", OP_GET_PUT, K8|K16, &delaybuf_p5},
+	{ "Delay buffer - drift +10%", OP_GET_PUT, K8|K16, &delaybuf_p10},
+	{ "Delay buffer - drift +20%", OP_GET_PUT, K8|K16, &delaybuf_p20},
 	{ "echo canceller 100ms tail len", OP_GET_PUT, K8|K16, &ec_create_100},
 	{ "echo canceller 128ms tail len", OP_GET_PUT, K8|K16, &ec_create_128},
 	{ "echo canceller 200ms tail len", OP_GET_PUT, K8|K16, &ec_create_200},
