@@ -99,6 +99,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 		       pjsip_transport *ref_tp,
 		       char *target_url,
 		       int *pkt_lost);
+int transport_load_test(char *target_url);
 
 /* Invite session */
 int inv_offer_answer_test(void);
