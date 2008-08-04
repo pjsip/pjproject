@@ -356,6 +356,26 @@ PJ_DECL(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
 					      pj_uint32_t flags);
 
 /**
+ * Same as #pj_activesock_start_read(), except that the application
+ * supplies the buffers for the read operation so that the acive socket
+ * does not have to allocate the buffers.
+ *
+ * @param asock	    The active socket.
+ * @param pool	    Pool used to allocate buffers for incoming data.
+ * @param buff_size The size of each buffer, in bytes.
+ * @param readbuf   Array of packet buffers, each has buff_size size.
+ * @param flags	    Flags to be given to pj_ioqueue_recv().
+ *
+ * @return	    PJ_SUCCESS if the operation has been successful,
+ *		    or the appropriate error code on failure.
+ */
+PJ_DECL(pj_status_t) pj_activesock_start_read2(pj_activesock_t *asock,
+					       pj_pool_t *pool,
+					       unsigned buff_size,
+					       void *readbuf[],
+					       pj_uint32_t flags);
+
+/**
  * Same as pj_activesock_start_read(), except that this function is used
  * only for datagram sockets, and it will trigger \a on_data_recvfrom()
  * callback instead.
@@ -372,6 +392,26 @@ PJ_DECL(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
 						  pj_pool_t *pool,
 						  unsigned buff_size,
 						  pj_uint32_t flags);
+
+/**
+ * Same as #pj_activesock_start_recvfrom() except that the recvfrom() 
+ * operation takes the buffer from the argument rather than creating
+ * new ones.
+ *
+ * @param asock	    The active socket.
+ * @param pool	    Pool used to allocate buffers for incoming data.
+ * @param buff_size The size of each buffer, in bytes.
+ * @param readbuf   Array of packet buffers, each has buff_size size.
+ * @param flags	    Flags to be given to pj_ioqueue_recvfrom().
+ *
+ * @return	    PJ_SUCCESS if the operation has been successful,
+ *		    or the appropriate error code on failure.
+ */
+PJ_DECL(pj_status_t) pj_activesock_start_recvfrom2(pj_activesock_t *asock,
+						   pj_pool_t *pool,
+						   unsigned buff_size,
+						   void *readbuf[],
+						   pj_uint32_t flags);
 
 /**
  * Send data using the socket.

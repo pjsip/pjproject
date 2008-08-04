@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/activesock.h>
+#include <pj/compat/socket.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/pool.h>
@@ -241,6 +242,28 @@ PJ_DEF(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
 					     unsigned buff_size,
 					     pj_uint32_t flags)
 {
+    void **readbuf;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(asock && pool && buff_size, PJ_EINVAL);
+
+    readbuf = (void**) pj_pool_calloc(pool, asock->async_count, 
+				      sizeof(void*));
+
+    for (i=0; i<asock->async_count; ++i) {
+	readbuf[i] = pj_pool_alloc(pool, buff_size);
+    }
+
+    return pj_activesock_start_read2(asock, pool, buff_size, readbuf, flags);
+}
+
+
+PJ_DEF(pj_status_t) pj_activesock_start_read2( pj_activesock_t *asock,
+					       pj_pool_t *pool,
+					       unsigned buff_size,
+					       void *readbuf[],
+					       pj_uint32_t flags)
+{
     unsigned i;
     pj_status_t status;
 
@@ -258,7 +281,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_read(pj_activesock_t *asock,
 	struct read_op *r = &asock->read_op[i];
 	pj_ssize_t size_to_read;
 
-	r->pkt = (pj_uint8_t*)pj_pool_alloc(pool, buff_size);
+	r->pkt = (pj_uint8_t*)readbuf[i];
 	r->max_size = size_to_read = buff_size;
 
 	status = pj_ioqueue_recv(asock->key, &r->op_key, r->pkt, &size_to_read,
@@ -278,6 +301,29 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
 						 unsigned buff_size,
 						 pj_uint32_t flags)
 {
+    void **readbuf;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(asock && pool && buff_size, PJ_EINVAL);
+
+    readbuf = (void**) pj_pool_calloc(pool, asock->async_count, 
+				      sizeof(void*));
+
+    for (i=0; i<asock->async_count; ++i) {
+	readbuf[i] = pj_pool_alloc(pool, buff_size);
+    }
+
+    return pj_activesock_start_recvfrom2(asock, pool, buff_size, 
+					 readbuf, flags);
+}
+
+
+PJ_DEF(pj_status_t) pj_activesock_start_recvfrom2( pj_activesock_t *asock,
+						   pj_pool_t *pool,
+						   unsigned buff_size,
+						   void *readbuf[],
+						   pj_uint32_t flags)
+{
     unsigned i;
     pj_status_t status;
 
@@ -294,7 +340,7 @@ PJ_DEF(pj_status_t) pj_activesock_start_recvfrom(pj_activesock_t *asock,
 	struct read_op *r = &asock->read_op[i];
 	pj_ssize_t size_to_read;
 
-	r->pkt = (pj_uint8_t*) pj_pool_alloc(pool, buff_size);
+	r->pkt = (pj_uint8_t*) readbuf[i];
 	r->max_size = size_to_read = buff_size;
 	r->src_addr_len = sizeof(r->src_addr);
 
@@ -371,8 +417,11 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 		r->size = 0;
 	    }
 
-	} else if (bytes_read <= 0) {
-
+	} else if (bytes_read <= 0 &&
+		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
+		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
+		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
+	{
 	    pj_size_t remainder;
 	    pj_bool_t ret;
 
