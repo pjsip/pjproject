@@ -91,6 +91,11 @@
 #  include <netinet/in.h>
 #endif
 
+#if defined(PJ_HAS_NETINET_IN_SYSTM_H) && PJ_HAS_NETINET_IN_SYSTM_H != 0
+/* Required to include netinet/ip.h in FreeBSD 7.0 */
+#  include <netinet/in_systm.h>
+#endif
+
 #if defined(PJ_HAS_NETINET_IP_H) && PJ_HAS_NETINET_IP_H != 0
 /* To pull in IPTOS_* constants */
 #  include <netinet/ip.h>
