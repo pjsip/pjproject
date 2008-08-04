@@ -2210,7 +2210,12 @@ static void on_call_media_state(pjsua_call_id call_id)
     /* Stop ringback */
     ring_stop(call_id);
 
-    if (call_info.media_status == PJSUA_CALL_MEDIA_ACTIVE) {
+    /* Connect ports appropriately when media status is ACTIVE or REMOTE HOLD,
+     * otherwise we should NOT connect the ports.
+     */
+    if (call_info.media_status == PJSUA_CALL_MEDIA_ACTIVE ||
+	call_info.media_status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
+    {
 	pj_bool_t connect_sound = PJ_TRUE;
 
 	/* Loopback sound, if desired */
@@ -2278,28 +2283,43 @@ static void on_call_media_state(pjsua_call_id call_id)
 		pjsua_conf_connect(0, app_config.rec_port);
 	    }
 	}
+    }
 
+    /* Handle media status */
+    switch (call_info.media_status) {
+    case PJSUA_CALL_MEDIA_ACTIVE:
 	PJ_LOG(3,(THIS_FILE, "Media for call %d is active", call_id));
+	break;
 
-    } else if (call_info.media_status == PJSUA_CALL_MEDIA_LOCAL_HOLD) {
+    case PJSUA_CALL_MEDIA_LOCAL_HOLD:
 	PJ_LOG(3,(THIS_FILE, "Media for call %d is suspended (hold) by local",
 		  call_id));
-    } else if (call_info.media_status == PJSUA_CALL_MEDIA_REMOTE_HOLD) {
+	break;
+
+    case PJSUA_CALL_MEDIA_REMOTE_HOLD:
 	PJ_LOG(3,(THIS_FILE, 
 		  "Media for call %d is suspended (hold) by remote",
 		  call_id));
-    } else if (call_info.media_status == PJSUA_CALL_MEDIA_ERROR) {
-	pj_str_t reason = pj_str("ICE negotiation failed");
+	break;
 
-	PJ_LOG(1,(THIS_FILE,
+    case PJSUA_CALL_MEDIA_ERROR:
+	PJ_LOG(3,(THIS_FILE,
 		  "Media has reported error, disconnecting call"));
+	{
+	    pj_str_t reason = pj_str("ICE negotiation failed");
+	    pjsua_call_hangup(call_id, 500, &reason, NULL);
+	}
+	break;
 
-	pjsua_call_hangup(call_id, 500, &reason, NULL);
-
-    } else {
+    case PJSUA_CALL_MEDIA_NONE:
 	PJ_LOG(3,(THIS_FILE, 
 		  "Media for call %d is inactive",
 		  call_id));
+	break;
+
+    default:
+	pj_assert(!"Unhandled media status");
+	break;
     }
 }
 

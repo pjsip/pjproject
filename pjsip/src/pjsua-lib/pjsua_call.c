@@ -66,10 +66,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_event *e);
 
 
-
-/* Create inactive SDP for call hold. */
-static pj_status_t create_inactive_sdp(pjsua_call *call,
-				       pjmedia_sdp_session **p_answer);
+/* Create SDP for call hold. */
+static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
+					   pjmedia_sdp_session **p_answer);
 
 /* Update SDP version in the offer */
 static void update_sdp_version(pjsua_call *call,
@@ -117,6 +116,7 @@ static void reset_call(pjsua_call_id id)
     call->res_time.msec = 0;
     call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
     call->rem_srtp_use = PJMEDIA_SRTP_DISABLED;
+    call->local_hold = PJ_FALSE;
 }
 
 
@@ -1426,7 +1426,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 	return PJSIP_ESESSIONSTATE;
     }
 
-    status = create_inactive_sdp(call, &sdp);
+    status = create_sdp_of_call_hold(call, &sdp);
     if (status != PJ_SUCCESS) {
 	pjsip_dlg_dec_lock(dlg);
 	return status;
@@ -1452,6 +1452,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
+
+    /* Set flag that local put the call on hold */
+    call->local_hold = PJ_TRUE;
 
     pjsip_dlg_dec_lock(dlg);
 
@@ -1487,10 +1490,13 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     }
 
     /* Create SDP */
-    PJ_UNUSED_ARG(unhold);
-    PJ_TODO(create_active_inactive_sdp_based_on_unhold_arg);
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
-					    NULL, &sdp, NULL);
+    if (call->local_hold && !unhold) {
+	status = create_sdp_of_call_hold(call, &sdp);
+    } else {
+	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+						NULL, &sdp, NULL);
+	call->local_hold = PJ_FALSE;
+    }
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
 		     status);
@@ -1573,10 +1579,12 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     /* Send the request */
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send UPDAT Erequest", status);
+	pjsua_perror(THIS_FILE, "Unable to send UPDATE request", status);
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
+
+    call->local_hold = PJ_FALSE;
 
     pjsip_dlg_dec_lock(dlg);
 
@@ -3012,57 +3020,54 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 }
 
 
-/*
- * Create inactive SDP for call hold.
- */
-static pj_status_t create_inactive_sdp(pjsua_call *call,
-				       pjmedia_sdp_session **p_answer)
+/* Create SDP for call hold. */
+static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
+					   pjmedia_sdp_session **p_answer)
 {
     pj_status_t status;
     pj_pool_t *pool;
-    pjmedia_sdp_conn *conn;
-    pjmedia_sdp_attr *attr;
-    pjmedia_transport_info tp_info;
     pjmedia_sdp_session *sdp;
 
     /* Use call's pool */
     pool = call->inv->pool;
 
-    /* Get media socket info */
-    pjmedia_transport_info_init(&tp_info);
-    pjmedia_transport_get_info(call->med_tp, &tp_info);
-
     /* Create new offer */
-    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, pool, 1,
-				      &tp_info.sock_info, &sdp);
+    status = pjsua_media_channel_create_sdp(call->index, pool, NULL, &sdp, 
+					    NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
 	return status;
     }
 
-    /* Get SDP media connection line */
-    conn = sdp->media[0]->conn;
-    if (!conn)
-	conn = sdp->conn;
+    /* Call-hold is done by set the media direction to 'sendonly' 
+     * (PJMEDIA_DIR_ENCODING), except when current media direction is 
+     * 'inactive' (PJMEDIA_DIR_NONE).
+     * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
+     */
+    if (call->media_dir != PJMEDIA_DIR_ENCODING) {
+	pjmedia_sdp_attr *attr;
 
-    /* Modify address */
-    conn->addr = pj_str("0.0.0.0");
+	/* Remove existing directions attributes */
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
 
-    /* Remove existing directions attributes */
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
-    pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
-
-    /* Add inactive attribute */
-    attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
-    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	if (call->media_dir == PJMEDIA_DIR_ENCODING_DECODING) {
+	    /* Add sendonly attribute */
+	    attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
+	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	} else {
+	    /* Add inactive attribute */
+	    attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	}
+    }
 
     *p_answer = sdp;
 
     return status;
 }
-
 
 /*
  * Called when session received new offer.
@@ -3070,58 +3075,54 @@ static pj_status_t create_inactive_sdp(pjsua_call *call,
 static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 				   const pjmedia_sdp_session *offer)
 {
-    const char *remote_state;
     pjsua_call *call;
     pjmedia_sdp_conn *conn;
     pjmedia_sdp_session *answer;
-    pj_bool_t is_remote_active;
     pj_status_t status;
 
     PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    /*
-     * See if remote is offering active media (i.e. not on-hold)
-     */
-    is_remote_active = PJ_TRUE;
-
     conn = offer->media[0]->conn;
     if (!conn)
 	conn = offer->conn;
 
-    if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-	pj_strcmp2(&conn->addr, "0")==0)
-    {
-	is_remote_active = PJ_FALSE;
-
-    } 
-    else if (pjmedia_sdp_media_find_attr2(offer->media[0], "inactive", NULL) ||
-	     pjmedia_sdp_media_find_attr2(offer->media[0], "sendonly", NULL))
-    {
-	is_remote_active = PJ_FALSE;
-    }
-
-    remote_state = (is_remote_active ? "active" : "inactive");
-
     /* Supply candidate answer */
-    if (call->media_st == PJSUA_CALL_MEDIA_LOCAL_HOLD || !is_remote_active) {
-	PJ_LOG(4,(THIS_FILE, 
-		  "Call %d: RX new media offer, creating inactive SDP "
-		  "(media in offer is %s)", call->index, remote_state));
-	status = create_inactive_sdp( call, &answer );
-    } else {
-	PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
-		  call->index));
+    PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
+	      call->index));
 
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
-					        offer, &answer, NULL);
-    }
-
+    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+					    offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
 	PJSUA_UNLOCK();
 	return;
+    }
+
+    /* Check if offer's conn address is zero */
+    if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+	pj_strcmp2(&conn->addr, "0")==0)
+    {
+	/* Modify address */
+	answer->conn->addr = pj_str("0.0.0.0");
+    }
+
+    /* Check if call is on-hold */
+    if (call->local_hold) {
+        pjmedia_sdp_attr *attr;
+
+	/* Remove existing directions attributes */
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "sendonly");
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "recvonly");
+	pjmedia_sdp_media_remove_all_attr(answer->media[0], "inactive");
+
+	/* Keep call on-hold by setting 'sendonly' attribute.
+	 * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
+	 */
+	attr = pjmedia_sdp_attr_create(call->inv->pool, "sendonly", NULL);
+	pjmedia_sdp_media_add_attr(answer->media[0], attr);
     }
 
     status = pjsip_inv_set_sdp_answer(call->inv, answer);
@@ -3149,11 +3150,11 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     /* See if we've put call on hold. */
-    if (call->media_st == PJSUA_CALL_MEDIA_LOCAL_HOLD) {
+    if (call->local_hold) {
 	PJ_LOG(4,(THIS_FILE, 
-		  "Call %d: call is on-hold locally, creating inactive SDP ",
+		  "Call %d: call is on-hold locally, creating call-hold SDP ",
 		  call->index));
-	status = create_inactive_sdp( call, offer );
+	status = create_sdp_of_call_hold( call, offer );
     } else {
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));

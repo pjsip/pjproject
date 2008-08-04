@@ -1231,20 +1231,13 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     if (si != &sess_info.stream_info[0])
 	pj_memcpy(&sess_info.stream_info[0], si, sizeof(pjmedia_stream_info));
 
-    /* Check if media is put on-hold */
+    /* Check if no media is active */
     if (sess_info.stream_cnt == 0 || si->dir == PJMEDIA_DIR_NONE)
     {
+	/* Call media state */
+	call->media_st = PJSUA_CALL_MEDIA_NONE;
 
-	/* Determine who puts the call on-hold */
-	if (prev_media_st == PJSUA_CALL_MEDIA_ACTIVE) {
-	    if (pjmedia_sdp_neg_was_answer_remote(call->inv->neg)) {
-		/* It was local who offer hold */
-		call->media_st = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-	    } else {
-		call->media_st = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-	    }
-	}
-
+	/* Call media direction */
 	call->media_dir = PJMEDIA_DIR_NONE;
 
 	/* Shutdown transport's session */
@@ -1367,9 +1360,16 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 	}
 
-	/* Call's media state is active */
-	call->media_st = PJSUA_CALL_MEDIA_ACTIVE;
+	/* Call media direction */
 	call->media_dir = si->dir;
+
+	/* Call media state */
+	if (call->local_hold)
+	    call->media_st = PJSUA_CALL_MEDIA_LOCAL_HOLD;
+	else if (call->media_dir == PJMEDIA_DIR_DECODING)
+	    call->media_st = PJSUA_CALL_MEDIA_REMOTE_HOLD;
+	else
+	    call->media_st = PJSUA_CALL_MEDIA_ACTIVE;
     }
 
     /* Print info. */
