@@ -48,6 +48,11 @@
 #define HNV_UNRESERVED	    "[]/?:+$"
 #define HDR_CHAR	    HNV_UNRESERVED UNRESERVED ESCAPED
 
+/* A generic URI can consist of (For a complete BNF see RFC 2396):
+     #?;:@&=+-_.!~*'()%$,/
+ */
+#define GENERIC_URI_CHARS   "#?;:@&=+-_.!~*'()%$,/" "%"
+
 #define PJSIP_VERSION		"SIP/2.0"
 
 #define UNREACHED(expr)
@@ -152,6 +157,9 @@ static void*	    int_parse_sip_url( pj_scanner *scanner,
 static pjsip_name_addr *
                     int_parse_name_addr( pj_scanner *scanner, 
 					 pj_pool_t *pool );
+static void*	    int_parse_other_uri(pj_scanner *scanner, 
+					pj_pool_t *pool,
+					pj_bool_t parse_params);
 static void	    parse_hdr_end( pj_scanner *scanner );
 
 static pjsip_hdr*   parse_hdr_accept( pjsip_parse_ctx *ctx );
@@ -375,6 +383,10 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pconst.pjsip_DISPLAY_SPEC, ":\r\n<");
     pj_cis_invert(&pconst.pjsip_DISPLAY_SPEC);
+
+    status = pj_cis_dup(&pconst.pjsip_OTHER_URI_CONTENT, &pconst.pjsip_ALNUM_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str( &pconst.pjsip_OTHER_URI_CONTENT, GENERIC_URI_CHARS);
 
     /*
      * Register URI parsers.
@@ -690,7 +702,7 @@ static pjsip_parse_uri_func* find_uri_handler(const pj_str_t *scheme)
 	if (parser_stricmp(uri_handler[i].scheme, (*scheme))==0)
 	    return uri_handler[i].parse;
     }
-    return NULL;
+    return &int_parse_other_uri;
 }
 
 /* Register URI parser. */
@@ -1460,6 +1472,33 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
     }
 
     return name_addr;
+}
+
+
+/* Parse other URI */
+static void* int_parse_other_uri(pj_scanner *scanner, 
+				 pj_pool_t *pool,
+				 pj_bool_t parse_params)
+{
+    pjsip_other_uri *uri = 0;
+    const pjsip_parser_const_t *pc = pjsip_parser_const();
+    int skip_ws = scanner->skip_ws;
+
+    PJ_UNUSED_ARG(parse_params);
+
+    scanner->skip_ws = 0;
+    
+    uri = pjsip_other_uri_create(pool); 
+    
+    pj_scan_get(scanner, &pc->pjsip_TOKEN_SPEC, &uri->scheme);
+    if (pj_scan_get_char(scanner) != ':') {
+	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+    }
+    
+    pj_scan_get(scanner, &pc->pjsip_OTHER_URI_CONTENT, &uri->content);
+    scanner->skip_ws = skip_ws;
+    
+    return uri;
 }
 
 

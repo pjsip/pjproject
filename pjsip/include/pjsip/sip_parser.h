@@ -358,6 +358,7 @@ typedef struct pjsip_parser_const_t
     pj_cis_t pjsip_NOT_COMMA_OR_NEWLINE;/**< Array elements.		*/
     pj_cis_t pjsip_DISPLAY_SPEC;	/**< Used when searching for display
 					     name.			*/
+    pj_cis_t pjsip_OTHER_URI_CONTENT;	/**< Generic URI content.	*/
 
 } pjsip_parser_const_t;
 

@@ -617,3 +617,96 @@ static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
     return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+static const pj_str_t *other_uri_get_scheme( const pjsip_other_uri*);
+static void *other_uri_get_uri( pjsip_other_uri*);
+static pj_ssize_t other_uri_print( pjsip_uri_context_e context,
+				   const pjsip_other_uri *url, 
+				   char *buf, pj_size_t size);
+static int other_uri_cmp( pjsip_uri_context_e context,
+			  const pjsip_other_uri *url1, 
+			  const pjsip_other_uri *url2);
+static pjsip_other_uri* other_uri_clone( pj_pool_t *pool, 
+					 const pjsip_other_uri *rhs);
+
+static pjsip_uri_vptr other_uri_vptr = 
+{
+    (P_GET_SCHEME)  &other_uri_get_scheme,
+    (P_GET_URI)	    &other_uri_get_uri,
+    (P_PRINT_URI)   &other_uri_print,
+    (P_CMP_URI)	    &other_uri_cmp,
+    (P_CLONE) 	    &other_uri_clone
+};
+
+
+PJ_DEF(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool) 
+{
+    pjsip_other_uri *uri = PJ_POOL_ZALLOC_T(pool, pjsip_other_uri);
+    uri->vptr = &other_uri_vptr;
+    return uri;
+}
+
+static const pj_str_t *other_uri_get_scheme( const pjsip_other_uri *uri )
+{
+	return &uri->scheme;
+}
+
+static void *other_uri_get_uri( pjsip_other_uri *uri )
+{
+    return uri;
+}
+
+static pj_ssize_t other_uri_print(pjsip_uri_context_e context,
+				  const pjsip_other_uri *uri, 
+				  char *buf, pj_size_t size)
+{
+    char *startbuf = buf;
+    char *endbuf = buf + size;
+    
+    PJ_UNUSED_ARG(context);
+    
+    if (uri->scheme.slen + uri->content.slen + 1 > (int)size)
+	return -1;
+
+    /* Print scheme. */
+    copy_advance(buf, uri->scheme);
+    *buf++ = ':';
+    
+    /* Print content. */
+    copy_advance(buf, uri->content);
+    
+    return (buf - startbuf);
+}
+
+static int other_uri_cmp(pjsip_uri_context_e context,
+			 const pjsip_other_uri *uri1,
+			 const pjsip_other_uri *uri2)
+{
+    PJ_UNUSED_ARG(context);
+    
+    /* Scheme must match. */
+    if (pj_stricmp(&uri1->scheme, &uri2->scheme) != 0) {
+	return PJSIP_ECMPSCHEME;
+    }
+    
+    /* Content must match. */
+    if(pj_stricmp(&uri1->content, &uri2->content) != 0) {
+	return -1;
+    }
+    
+    /* Equal. */
+    return 0;
+}
+
+/* Clone *: URI */
+static pjsip_other_uri* other_uri_clone(pj_pool_t *pool, 
+					const pjsip_other_uri *rhs) 
+{
+    pjsip_other_uri *uri = pjsip_other_uri_create(pool);
+    pj_strdup(pool, &uri->scheme, &rhs->scheme);
+    pj_strdup(pool, &uri->content, &rhs->content);
+
+    return uri;
+}
+

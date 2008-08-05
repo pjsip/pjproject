@@ -414,7 +414,36 @@ PJ_DECL(void)  pjsip_name_addr_assign(pj_pool_t *pool,
 				      pjsip_name_addr *addr, 
 				      const pjsip_name_addr *rhs);
 
+/**
+ * @}
+ */
 
+/**
+ * @defgroup PJSIP_OTHER_URI Other URI schemes
+ * @ingroup PJSIP_URI
+ * @brief Container for non SIP/tel URI scheme (e.g. "http:", "mailto:")
+ * @{
+ */
+
+/**
+ * Generic URI container for non SIP/tel URI scheme.
+ */
+typedef struct pjsip_other_uri 
+{
+    pjsip_uri_vptr *vptr;	/**< Pointer to virtual function table.	*/
+    pj_str_t scheme;		/**< The URI scheme (e.g. "mailto")	*/
+    pj_str_t content;		/**< The whole URI content		*/
+} pjsip_other_uri;
+
+
+/**
+ * Create a generic URI object.
+ *
+ * @param pool	    The pool to allocate memory from.
+ *
+ * @return	    The URI instance.
+ */
+PJ_DECL(pjsip_other_uri*) pjsip_other_uri_create(pj_pool_t *pool);
 
 
 /**
