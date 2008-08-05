@@ -307,7 +307,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 					    pjsip_dialog **p_dlg)
 {
     pj_status_t status;
-    pjsip_hdr *contact_hdr;
+    pjsip_hdr *pos = NULL;
+    pjsip_contact_hdr *contact_hdr;
     pjsip_rr_hdr *rr;
     pjsip_transaction *tsx = NULL;
     pj_str_t tmp;
@@ -416,16 +417,33 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     pj_strdup(dlg->pool, &dlg->remote.info_str, &tmp);
 
 
-    /* Init remote's contact from Contact header. */
-    contact_hdr = (pjsip_hdr*)
-    		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
-				     NULL);
+    /* Init remote's contact from Contact header. 
+     * Iterate the Contact URI until we find sip: or sips: scheme.
+     */
+    do {
+	contact_hdr = (pjsip_contact_hdr*)
+		      pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
+				         pos);
+	if (contact_hdr) {
+	    if (!PJSIP_URI_SCHEME_IS_SIP(contact_hdr->uri) && 
+		!PJSIP_URI_SCHEME_IS_SIPS(contact_hdr->uri))
+	    {
+		pos = (pjsip_hdr*)contact_hdr->next;
+		if (pos == &rdata->msg_info.msg->hdr)
+		    contact_hdr = NULL;
+	    } else {
+		break;
+	    }
+	}
+    } while (contact_hdr);
+
     if (!contact_hdr) {
 	status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_BAD_REQUEST);
 	goto on_error;
     }
+
     dlg->remote.contact = (pjsip_contact_hdr*) 
-    			  pjsip_hdr_clone(dlg->pool, contact_hdr);
+    			  pjsip_hdr_clone(dlg->pool, (pjsip_hdr*)contact_hdr);
 
     /* Init remote's CSeq from CSeq header */
     dlg->remote.cseq = dlg->remote.first_cseq = rdata->msg_info.cseq->cseq;

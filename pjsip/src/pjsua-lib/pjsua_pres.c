@@ -688,6 +688,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
 			 status);
 	    PJSUA_UNLOCK();
+	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, NULL,
+					  NULL, NULL);
 	    return PJ_TRUE;
 	}
     }
@@ -700,6 +702,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 		     "Unable to create UAS dialog for subscription", 
 		     status);
 	PJSUA_UNLOCK();
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 400, NULL,
+				      NULL, NULL);
 	return PJ_TRUE;
     }
 

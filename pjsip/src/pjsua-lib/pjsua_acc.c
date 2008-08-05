@@ -1674,15 +1674,30 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 	sip_uri = (pjsip_sip_uri*) 
 		pjsip_uri_get_uri(rdata->msg_info.record_route->name_addr.uri);
     } else {
+	pjsip_hdr *pos = NULL;
 	pjsip_contact_hdr *h_contact;
 	pjsip_uri *uri = NULL;
 
-	/* Otherwise URI is Contact URI */
-	h_contact = (pjsip_contact_hdr*)
-		    pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
-				       NULL);
-	if (h_contact)
-	    uri = (pjsip_uri*) pjsip_uri_get_uri(h_contact->uri);
+	/* Otherwise URI is Contact URI.
+	 * Iterate the Contact URI until we find sip: or sips: scheme.
+	 */
+	do {
+	    h_contact = (pjsip_contact_hdr*)
+			pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
+					   pos);
+	    if (h_contact) {
+		uri = (pjsip_uri*) pjsip_uri_get_uri(h_contact->uri);
+		if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
+		    !PJSIP_URI_SCHEME_IS_SIPS(uri))
+		{
+		    pos = (pjsip_hdr*)h_contact->next;
+		    if (pos == &rdata->msg_info.msg->hdr)
+			h_contact = NULL;
+		} else {
+		    break;
+		}
+	    }
+	} while (h_contact);
 	
 
 	/* Or if Contact URI is not present, take the remote URI from
