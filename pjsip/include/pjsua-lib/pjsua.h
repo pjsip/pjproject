@@ -4101,6 +4101,13 @@ struct pjsua_media_config
     pj_bool_t		ice_no_host_cands;
 
     /**
+     * Disable RTCP component.
+     *
+     * Default: no
+     */
+    pj_bool_t		ice_no_rtcp;
+
+    /**
      * Enable TURN relay candidate in ICE.
      */
     pj_bool_t		enable_turn;

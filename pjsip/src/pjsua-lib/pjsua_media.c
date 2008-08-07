@@ -758,7 +758,7 @@ static pj_status_t create_ice_media_transports(void)
 	pjsua_var.calls[i].med_tp_ready = PJ_EPENDING;
 
 	comp_cnt = 1;
-	if (PJMEDIA_ADVERTISE_RTCP)
+	if (PJMEDIA_ADVERTISE_RTCP && !pjsua_var.media_cfg.ice_no_rtcp)
 	    ++comp_cnt;
 
 	status = pjmedia_ice_create(pjsua_var.med_endpt, name, comp_cnt,

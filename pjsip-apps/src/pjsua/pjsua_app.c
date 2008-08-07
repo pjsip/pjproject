@@ -249,7 +249,8 @@ static void usage(void)
     puts  ("");
     puts  ("Media Transport Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
-    puts  ("  --ice-no-host       Disable ICE host candidates");
+    puts  ("  --ice-no-host       Disable ICE host candidates (default: no)");
+    puts  ("  --ice-no-rtcp       Disable RTCP component in ICE (default: no)");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
     puts  ("  --tx-drop-pct=PCT   Drop PCT percent of TX RTP (for pkt lost sim, default: 0)");
@@ -456,8 +457,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
 	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
-	   OPT_USE_TURN, OPT_ICE_NO_HOST, OPT_TURN_SRV, OPT_TURN_TCP,
-	   OPT_TURN_USER, OPT_TURN_PASSWD,
+	   OPT_USE_TURN, OPT_ICE_NO_HOST, OPT_ICE_NO_RTCP, OPT_TURN_SRV, 
+	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
@@ -529,6 +530,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "use-ice",    0, 0, OPT_USE_ICE},
 	{ "use-turn",	0, 0, OPT_USE_TURN},
 	{ "ice-no-host",0, 0, OPT_ICE_NO_HOST},
+	{ "ice-no-rtcp",0, 0, OPT_ICE_NO_RTCP},
 	{ "turn-srv",	1, 0, OPT_TURN_SRV},
 	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
 	{ "turn-user",	1, 0, OPT_TURN_USER},
@@ -945,6 +947,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_ICE_NO_HOST:
 	    cfg->media_cfg.ice_no_host_cands = PJ_TRUE;
+	    break;
+
+	case OPT_ICE_NO_RTCP:
+	    cfg->media_cfg.ice_no_rtcp = PJ_TRUE;
 	    break;
 
 	case OPT_TURN_SRV:
@@ -1554,6 +1560,9 @@ static int write_settings(const struct app_config *config,
 
     if (config->media_cfg.ice_no_host_cands)
 	pj_strcat2(&cfg, "--ice-no-host\n");
+
+    if (config->media_cfg.ice_no_rtcp)
+	pj_strcat2(&cfg, "--ice-no-rtcp\n");
 
     if (config->media_cfg.turn_server.slen) {
 	pj_ansi_sprintf(line, "--turn-srv %.*s\n",
