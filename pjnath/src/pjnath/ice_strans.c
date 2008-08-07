@@ -777,8 +777,7 @@ PJ_DEF(unsigned) pj_ice_strans_get_running_comp_cnt(pj_ice_strans *ice_st)
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
 
     if (ice_st->ice && ice_st->ice->rcand_cnt) {
-	return (ice_st->comp_cnt < ice_st->ice->rcand_cnt) ?
-		    ice_st->comp_cnt : ice_st->ice->rcand_cnt;
+	return ice_st->ice->comp_cnt;
     } else {
 	return ice_st->comp_cnt;
     }
