@@ -592,7 +592,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 	else
 	    *p_frame_type = PJMEDIA_JB_ZERO_PREFETCH_FRAME;
 
-	*size = 0;
+	if (size)
+	    *size = 0;
 
 	return;
     }
@@ -606,7 +607,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 	/* Can't return frame because jitter buffer is empty! */
 	pj_bzero(frame, jb->jb_frame_size);
 	*p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
-	*size = 0;
+	if (size)
+	    *size = 0;
 
 	return;
     }
