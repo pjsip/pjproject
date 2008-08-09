@@ -57,18 +57,37 @@ typedef struct pjmedia_echo_state pjmedia_echo_state;
 typedef enum pjmedia_echo_flag
 {
     /**
+     * Use any available backend echo canceller algorithm. This is
+     * the default settings. This setting is mutually exclusive with
+     * PJMEDIA_ECHO_SIMPLE and PJMEDIA_ECHO_SPEEX.
+     */
+    PJMEDIA_ECHO_DEFAULT= 0,
+
+    /**
+     * Force to use Speex AEC as the backend echo canceller algorithm.
+     * This setting is mutually exclusive with PJMEDIA_ECHO_SIMPLE.
+     */
+    PJMEDIA_ECHO_SPEEX	= 1,
+
+    /**
      * If PJMEDIA_ECHO_SIMPLE flag is specified during echo canceller
      * creation, then a simple echo suppressor will be used instead of
-     * an accoustic echo cancellation.
+     * an accoustic echo cancellation. This setting is mutually exclusive
+     * with PJMEDIA_ECHO_SPEEX.
      */
-    PJMEDIA_ECHO_SIMPLE	= 1,
+    PJMEDIA_ECHO_SIMPLE	= 2,
+
+    /**
+     * For internal use.
+     */
+    PJMEDIA_ECHO_ALGO_MASK = 15,
 
     /**
      * If PJMEDIA_ECHO_NO_LOCK flag is specified, no mutex will be created
      * for the echo canceller, but application will guarantee that echo
      * canceller will not be called by different threads at the same time.
      */
-    PJMEDIA_ECHO_NO_LOCK = 2
+    PJMEDIA_ECHO_NO_LOCK = 16
 
 } pjmedia_echo_flag;
 
@@ -102,6 +121,34 @@ PJ_DECL(pj_status_t) pjmedia_echo_create(pj_pool_t *pool,
 					 unsigned options,
 					 pjmedia_echo_state **p_echo );
 
+/**
+ * Create multi-channel the echo canceller. 
+ *
+ * @param pool		    Pool to allocate memory.
+ * @param clock_rate	    Media clock rate/sampling rate.
+ * @param channel_count	    Number of channels.
+ * @param samples_per_frame Number of samples per frame.
+ * @param tail_ms	    Tail length, miliseconds.
+ * @param latency_ms	    Total lacency introduced by playback and 
+ *			    recording device. Set to zero if the latency
+ *			    is not known.
+ * @param options	    Options. If PJMEDIA_ECHO_SIMPLE is specified,
+ *			    then a simple echo suppressor implementation 
+ *			    will be used instead of an accoustic echo 
+ *			    cancellation.
+ *			    See #pjmedia_echo_flag for other options.
+ * @param p_echo	    Pointer to receive the Echo Canceller state.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate status.
+ */
+PJ_DECL(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
+					  unsigned clock_rate,
+					  unsigned channel_count,
+					  unsigned samples_per_frame,
+					  unsigned tail_ms,
+					  unsigned latency_ms,
+					  unsigned options,
+					  pjmedia_echo_state **p_echo );
 
 /**
  * Destroy the Echo Canceller. 
@@ -114,7 +161,17 @@ PJ_DECL(pj_status_t) pjmedia_echo_destroy(pjmedia_echo_state *echo );
 
 
 /**
- * Let the Echo Canceller knows that a frame has been played to the speaker.
+ * Reset the echo canceller.
+ *
+ * @param echo		The Echo Canceller.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo );
+
+
+/**
+ * Let the Echo Canceller know that a frame has been played to the speaker.
  * The Echo Canceller will keep the frame in its internal buffer, to be used
  * when cancelling the echo with #pjmedia_echo_capture().
  *
@@ -131,10 +188,9 @@ PJ_DECL(pj_status_t) pjmedia_echo_playback(pjmedia_echo_state *echo,
 
 
 /**
- * Let the Echo Canceller knows that a frame has been captured from 
- * the microphone.
- * The Echo Canceller will cancel the echo from the captured signal, 
- * using the internal buffer (supplied by #pjmedia_echo_playback()) 
+ * Let the Echo Canceller know that a frame has been captured from the 
+ * microphone. The Echo Canceller will cancel the echo from the captured
+ * signal, using the internal buffer (supplied by #pjmedia_echo_playback())
  * as the FES (Far End Speech) reference.
  *
  * @param echo		The Echo Canceller.

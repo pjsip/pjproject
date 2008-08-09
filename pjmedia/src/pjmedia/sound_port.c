@@ -544,12 +544,16 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 	if (status != PJ_SUCCESS)
 	    si.rec_latency = si.play_latency = 0;
 
-	delay_ms = (si.rec_latency + si.play_latency) * 1000 /
-		   snd_port->clock_rate;
-	status = pjmedia_echo_create(pool, snd_port->clock_rate, 
-				    snd_port->samples_per_frame, 
-				    tail_ms, delay_ms,
-				    options, &snd_port->ec_state);
+	//No need to add input latency in the latency calculation,
+	//since actual input latency should be zero.
+	//delay_ms = (si.rec_latency + si.play_latency) * 1000 /
+	//	   snd_port->clock_rate;
+	delay_ms = si.play_latency * 1000 / snd_port->clock_rate;
+	status = pjmedia_echo_create2(pool, snd_port->clock_rate, 
+				      snd_port->channel_count,
+				      snd_port->samples_per_frame, 
+				      tail_ms, delay_ms,
+				      options, &snd_port->ec_state);
 	if (status != PJ_SUCCESS)
 	    snd_port->ec_state = NULL;
 	else

@@ -17,36 +17,56 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-#include <pjmedia/config.h>
 #include <pjmedia/echo.h>
+#include <pjmedia/delaybuf.h>
+#include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/list.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include "echo_internal.h"
 
+#define THIS_FILE   "echo_common.c"
+
 typedef struct ec_operations ec_operations;
+
+struct frame
+{
+    PJ_DECL_LIST_MEMBER(struct frame);
+    short   buf[1];
+};
 
 struct pjmedia_echo_state
 {
+    pj_pool_t	    *pool;
+    char	    *obj_name;
+    unsigned	     samples_per_frame;
     void	    *state;
     ec_operations   *op;
+
+    pj_bool_t	     lat_ready;	    /* lat_buf has been filled in.	    */
+    unsigned	     lat_target_cnt;/* Target number of frames in lat_buf   */
+    unsigned	     lat_buf_cnt;   /* Actual number of frames in lat_buf   */
+    struct frame     lat_buf;	    /* Frame queue for delayed playback	    */
+    struct frame     lat_free;	    /* Free frame list.			    */
+
+    pjmedia_delay_buf	*delay_buf;
 };
 
 
 struct ec_operations
 {
+    const char *name;
+
     pj_status_t (*ec_create)(pj_pool_t *pool,
-			    unsigned clock_rate,
-			    unsigned samples_per_frame,
-			    unsigned tail_ms,
-			    unsigned latency_ms,
-			    unsigned options,
-			    void **p_state );
+			     unsigned clock_rate,
+			     unsigned channel_count,
+			     unsigned samples_per_frame,
+			     unsigned tail_ms,
+			     unsigned options,
+			     void **p_state );
     pj_status_t (*ec_destroy)(void *state );
-    pj_status_t (*ec_playback)(void *state,
-			      pj_int16_t *play_frm );
-    pj_status_t (*ec_capture)(void *state,
-			      pj_int16_t *rec_frm,
-			      unsigned options );
+    void        (*ec_reset)(void *state );
     pj_status_t (*ec_cancel)(void *state,
 			     pj_int16_t *rec_frm,
 			     const pj_int16_t *play_frm,
@@ -57,10 +77,10 @@ struct ec_operations
 
 static struct ec_operations echo_supp_op = 
 {
+    "Echo suppressor",
     &echo_supp_create,
     &echo_supp_destroy,
-    &echo_supp_playback,
-    &echo_supp_capture,
+    &echo_supp_reset,
     &echo_supp_cancel_echo
 };
 
@@ -70,20 +90,30 @@ static struct ec_operations echo_supp_op =
  * Speex AEC prototypes
  */
 #if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC!=0
-static struct ec_operations aec_op = 
+static struct ec_operations speex_aec_op = 
 {
+    "AEC",
     &speex_aec_create,
     &speex_aec_destroy,
-    &speex_aec_playback,
-    &speex_aec_capture,
+    &speex_aec_reset,
     &speex_aec_cancel_echo
 };
-
-#else
-#define aec_op echo_supp_op
 #endif
 
 
+/*
+ * IPP AEC prototypes
+ */
+#if defined(PJMEDIA_HAS_INTEL_IPP_AEC) && PJMEDIA_HAS_INTEL_IPP_AEC!=0
+static struct ec_operations ipp_aec_op = 
+{
+    "IPP AEC",
+    &ipp_aec_create,
+    &ipp_aec_destroy,
+    &ipp_aec_reset,
+    &ipp_aec_cancel_echo
+};
+#endif
 
 /*
  * Create the echo canceller. 
@@ -96,34 +126,106 @@ PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
 					 unsigned options,
 					 pjmedia_echo_state **p_echo )
 {
+    return pjmedia_echo_create2(pool, clock_rate, 1, samples_per_frame,
+				tail_ms, latency_ms, options, p_echo);
+}
+
+/*
+ * Create the echo canceller. 
+ */
+PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
+					 unsigned clock_rate,
+					 unsigned channel_count,
+					 unsigned samples_per_frame,
+					 unsigned tail_ms,
+					 unsigned latency_ms,
+					 unsigned options,
+					 pjmedia_echo_state **p_echo )
+{
+    unsigned ptime;
     pjmedia_echo_state *ec;
     pj_status_t status;
 
-    /* Force to use simple echo suppressor if AEC is not available */
-#if !defined(PJMEDIA_HAS_SPEEX_AEC) || PJMEDIA_HAS_SPEEX_AEC==0
-    options |= PJMEDIA_ECHO_SIMPLE;
+    /* Create new pool and instantiate and init the EC */
+    pool = pj_pool_create(pool->factory, "ec%p", 256, 256, NULL);
+    ec = PJ_POOL_ZALLOC_T(pool, struct pjmedia_echo_state);
+    ec->pool = pool;
+    ec->obj_name = pool->obj_name;
+    pj_list_init(&ec->lat_buf);
+    pj_list_init(&ec->lat_free);
+
+    /* Select the backend algorithm */
+    if (0) {
+	/* Dummy */
+	;
+#if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC!=0
+    } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_SPEEX ||
+	       (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT) 
+    {
+	ec->op = &speex_aec_op;
 #endif
 
-    ec = PJ_POOL_ZALLOC_T(pool, struct pjmedia_echo_state);
+#if defined(PJMEDIA_HAS_INTEL_IPP_AEC) && PJMEDIA_HAS_INTEL_IPP_AEC!=0
+    } else if ((options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_IPP ||
+	       (options & PJMEDIA_ECHO_ALGO_MASK) == PJMEDIA_ECHO_DEFAULT)
+    {
+	ec->op = &ipp_aec_op;
 
-    if (options & PJMEDIA_ECHO_SIMPLE) {
-	ec->op = &echo_supp_op;
-	status = (*echo_supp_op.ec_create)(pool, clock_rate, samples_per_frame,
-					   tail_ms, latency_ms, options,
-					   &ec->state);
+#endif
+
     } else {
-	ec->op = &aec_op;
-	status = (*aec_op.ec_create)(pool, clock_rate, 
-				     samples_per_frame,
-				     tail_ms, latency_ms, options,
-				     &ec->state);
+	ec->op = &echo_supp_op;
     }
 
-    if (status != PJ_SUCCESS)
+    PJ_LOG(5,(ec->obj_name, "Creating %s", ec->op->name));
+
+    /* Instantiate EC object */
+    status = (*ec->op->ec_create)(pool, clock_rate, channel_count, 
+				  samples_per_frame, tail_ms, 
+				  options, &ec->state);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(pool);
 	return status;
+    }
 
-    pj_assert(ec->state != NULL);
+    /* Create latency buffers */
+    ptime = samples_per_frame * 1000 / clock_rate;
+    if (latency_ms == 0) {
+	/* Give at least one frame delay to simplify programming */
+	latency_ms = ptime;
+    }
+    ec->lat_target_cnt = latency_ms / ptime;
+    if (ec->lat_target_cnt != 0) {
+	unsigned i;
+	for (i=0; i < ec->lat_target_cnt; ++i)  {
+	    struct frame *frm;
 
+	    frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
+						      sizeof(struct frame));
+	    pj_list_push_back(&ec->lat_free, frm);
+	}
+    } else {
+	ec->lat_ready = PJ_TRUE;
+    }
+
+    /* Create delay buffer to compensate drifts */
+    status = pjmedia_delay_buf_create(ec->pool, ec->obj_name, clock_rate, 
+				      samples_per_frame, channel_count,
+				      (PJMEDIA_SOUND_BUFFER_COUNT+1) * ptime,
+				      0, &ec->delay_buf);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(pool);
+	return status;
+    }
+
+    PJ_LOG(4,(ec->obj_name, 
+	      "%s created, clock_rate=%d, channel=%d, "
+	      "samples per frame=%d, tail length=%d ms, "
+	      "latency=%d ms", 
+	      ec->op->name, clock_rate, channel_count, samples_per_frame,
+	      tail_ms, latency_ms));
+
+    /* Done */
     *p_echo = ec;
 
     return PJ_SUCCESS;
@@ -135,18 +237,63 @@ PJ_DEF(pj_status_t) pjmedia_echo_create( pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pjmedia_echo_destroy(pjmedia_echo_state *echo )
 {
-    return (*echo->op->ec_destroy)(echo->state);
+    (*echo->op->ec_destroy)(echo->state);
+    pj_pool_release(echo->pool);
+    return PJ_SUCCESS;
 }
 
 
+/*
+ * Reset the echo canceller.
+ */
+PJ_DEF(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo )
+{
+    while (!pj_list_empty(&echo->lat_buf)) {
+	struct frame *frm;
+	frm = echo->lat_buf.next;
+	pj_list_erase(frm);
+	pj_list_push_back(&echo->lat_free, frm);
+    }
+    echo->lat_ready = PJ_FALSE;
+    pjmedia_delay_buf_reset(echo->delay_buf);
+    echo->op->ec_reset(echo->state);
+    return PJ_SUCCESS;
+}
+
 
 /*
- * Let the Echo Canceller knows that a frame has been played to the speaker.
+ * Let the Echo Canceller know that a frame has been played to the speaker.
  */
 PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
 					   pj_int16_t *play_frm )
 {
-    return (*echo->op->ec_playback)(echo->state, play_frm);
+    if (!echo->lat_ready) {
+	/* We've not built enough latency in the buffer, so put this frame
+	 * in the latency buffer list.
+	 */
+	struct frame *frm;
+
+	if (pj_list_empty(&echo->lat_free)) {
+	    echo->lat_ready = PJ_TRUE;
+	    PJ_LOG(5,(echo->obj_name, "Latency bufferring complete"));
+	    pjmedia_delay_buf_put(echo->delay_buf, play_frm);
+	    return PJ_SUCCESS;
+	}
+	    
+	frm = echo->lat_free.prev;
+	pj_list_erase(frm);
+
+	pjmedia_copy_samples(frm->buf, play_frm, echo->samples_per_frame);
+	pj_list_push_back(&echo->lat_buf, frm);
+
+    } else {
+	/* Latency buffer is ready (full), so we put this frame in the
+	 * delay buffer.
+	 */
+	pjmedia_delay_buf_put(echo->delay_buf, play_frm);
+    }
+
+    return PJ_SUCCESS;
 }
 
 
@@ -158,7 +305,34 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
 					  pj_int16_t *rec_frm,
 					  unsigned options )
 {
-    return (*echo->op->ec_capture)(echo->state, rec_frm, options);
+    struct frame *oldest_frm;
+    pj_status_t status, rc;
+
+    if (!echo->lat_ready) {
+	/* Prefetching to fill in the desired latency */
+	PJ_LOG(5,(echo->obj_name, "Prefetching.."));
+	return PJ_SUCCESS;
+    }
+
+    /* Retrieve oldest frame from the latency buffer */
+    oldest_frm = echo->lat_buf.next;
+    pj_list_erase(oldest_frm);
+
+    /* Cancel echo using this reference frame */
+    status = pjmedia_echo_cancel(echo, rec_frm, oldest_frm->buf, 
+				 options, NULL);
+
+    /* Move one frame from delay buffer to the latency buffer. */
+    rc = pjmedia_delay_buf_get(echo->delay_buf, oldest_frm->buf);
+    if (rc != PJ_SUCCESS) {
+	/* Ooops.. no frame! */
+	PJ_LOG(5,(echo->obj_name, 
+		  "No frame from delay buffer. This will upset EC later"));
+	pjmedia_zero_samples(oldest_frm->buf, echo->samples_per_frame);
+    }
+    pj_list_push_back(&echo->lat_buf, oldest_frm);
+    
+    return status;
 }
 
 

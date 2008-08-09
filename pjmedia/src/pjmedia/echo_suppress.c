@@ -35,9 +35,7 @@
  */
 typedef struct echo_supp
 {
-    pj_bool_t		 suppressing;
     pjmedia_silence_det	*sd;
-    pj_time_val		 last_signal;
     unsigned		 samples_per_frame;
     unsigned		 tail_ms;
 } echo_supp;
@@ -49,9 +47,9 @@ typedef struct echo_supp
  */
 PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
 				      unsigned clock_rate,
+				      unsigned channel_count,
 				      unsigned samples_per_frame,
 				      unsigned tail_ms,
-				      unsigned latency_ms,
 				      unsigned options,
 				      void **p_state )
 {
@@ -59,8 +57,8 @@ PJ_DEF(pj_status_t) echo_supp_create( pj_pool_t *pool,
     pj_status_t status;
 
     PJ_UNUSED_ARG(clock_rate);
+    PJ_UNUSED_ARG(channel_count);
     PJ_UNUSED_ARG(options);
-    PJ_UNUSED_ARG(latency_ms);
 
     ec = PJ_POOL_ZALLOC_T(pool, struct echo_supp);
     ec->samples_per_frame = samples_per_frame;
@@ -91,67 +89,13 @@ PJ_DEF(pj_status_t) echo_supp_destroy(void *state)
 
 
 /*
- * Let the AEC knows that a frame has been played to the speaker.
+ * Reset
  */
-PJ_DEF(pj_status_t) echo_supp_playback( void *state,
-					pj_int16_t *play_frm )
+PJ_DEF(void) echo_supp_reset(void *state)
 {
-    echo_supp *ec = (echo_supp*) state;
-    pj_bool_t silence;
-    pj_bool_t last_suppressing = ec->suppressing;
-
-    silence = pjmedia_silence_det_detect(ec->sd, play_frm,
-					 ec->samples_per_frame, NULL);
-
-    ec->suppressing = !silence;
-
-    if (ec->suppressing) {
-	pj_gettimeofday(&ec->last_signal);
-    }
-
-    if (ec->suppressing!=0 && last_suppressing==0) {
-	PJ_LOG(5,(THIS_FILE, "Start suppressing.."));
-    } else if (ec->suppressing==0 && last_suppressing!=0) {
-	PJ_LOG(5,(THIS_FILE, "Stop suppressing.."));
-    }
-
-    return PJ_SUCCESS;
+    PJ_UNUSED_ARG(state);
+    return;
 }
-
-
-/*
- * Let the AEC knows that a frame has been captured from the microphone.
- */
-PJ_DEF(pj_status_t) echo_supp_capture( void *state,
-				       pj_int16_t *rec_frm,
-				       unsigned options )
-{
-    echo_supp *ec = (echo_supp*) state;
-    pj_time_val now;
-    unsigned delay_ms;
-
-    PJ_UNUSED_ARG(options);
-
-    pj_gettimeofday(&now);
-
-    PJ_TIME_VAL_SUB(now, ec->last_signal);
-    delay_ms = PJ_TIME_VAL_MSEC(now);
-
-    if (delay_ms < ec->tail_ms) {
-#if defined(PJMEDIA_ECHO_SUPPRESS_FACTOR) && PJMEDIA_ECHO_SUPPRESS_FACTOR!=0
-	unsigned i;
-	for (i=0; i<ec->samples_per_frame; ++i) {
-	    rec_frm[i] = (pj_int16_t)(rec_frm[i] >> 
-				      PJMEDIA_ECHO_SUPPRESS_FACTOR);
-	}
-#else
-	pjmedia_zero_samples(rec_frm, ec->samples_per_frame);
-#endif
-    }
-
-    return PJ_SUCCESS;
-}
-
 
 /*
  * Perform echo cancellation.

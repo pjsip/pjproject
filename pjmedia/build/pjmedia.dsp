@@ -125,6 +125,10 @@ SOURCE=..\src\pjmedia\echo_common.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\echo_internal.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\echo_port.c
 # End Source File
 # Begin Source File

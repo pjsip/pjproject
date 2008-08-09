@@ -32,10 +32,9 @@
 #include <pjlib-util.h>	/* pj_getopt */
 #include <pjlib.h>
 
-/* For logging purpose. */
-#define THIS_FILE   "playfile.c"
+#define THIS_FILE   "aectest.c"
 #define PTIME	    20
-#define TAIL_LENGTH 800
+#define TAIL_LENGTH 200
 
 static const char *desc = 
 " FILE		    						    \n"
@@ -48,12 +47,22 @@ static const char *desc =
 "		    						    \n"
 " USAGE		    						    \n"
 "		    						    \n"
-"  aectest INPUT.WAV OUTPUT.WAV					    \n"
+"  aectest [options] <PLAY.WAV> <REC.WAV> <OUTPUT.WAV>		    \n"
 "		    						    \n"
-"  INPUT.WAV is the file to be played to the speaker.		    \n"
-"  OUTPUT.WAV is the output file containing recorded signal from the\n"
-"  microphone.";
+"  <PLAY.WAV>   is the signal played to the speaker.		    \n"
+"  <REC.WAV>    is the signal captured from the microphone.	    \n"
+"  <OUTPUT.WAV> is the output file to store the test result	    \n"
+"\n"
+" options:\n"
+"  -d  The delay between playback and capture in ms. Default is zero.\n"
+"  -l  Set the echo tail length in ms. Default is 200 ms	    \n"
+"  -a  Algorithm: 0=default, 1=speex, 3=echo suppress		    \n";
 
+/* 
+ * Sample session:
+ *
+ * -d 100 -a 1 ../bin/orig8.wav ../bin/echo8.wav ../bin/result8.wav 
+ */
 
 static void app_perror(const char *sender, const char *title, pj_status_t st)
 {
@@ -72,20 +81,54 @@ int main(int argc, char *argv[])
     pj_caching_pool cp;
     pjmedia_endpt *med_endpt;
     pj_pool_t	  *pool;
-    pjmedia_port  *play_port;
-    pjmedia_port  *rec_port;
-    pjmedia_port  *bidir_port;
-    pjmedia_snd_port *snd;
-    char tmp[10];
+    pjmedia_port  *wav_play;
+    pjmedia_port  *wav_rec;
+    pjmedia_port  *wav_out;
     pj_status_t status;
+    pjmedia_echo_state *ec;
+    pjmedia_frame play_frame, rec_frame;
+    unsigned opt = 0;
+    unsigned latency_ms = 0;
+    unsigned tail_ms = TAIL_LENGTH;
+    pj_timestamp t0, t1;
+    int c;
 
+    pj_optind = 0;
+    while ((c=pj_getopt(argc, argv, "d:l:a:")) !=-1) {
+	switch (c) {
+	case 'd':
+	    latency_ms = atoi(pj_optarg);
+	    break;
+	case 'l':
+	    tail_ms = atoi(pj_optarg);
+	    break;
+	case 'a':
+	    {
+		int alg = atoi(pj_optarg);
+		switch (alg) {
+		case 0:
+		    opt = 0;
+		case 1:
+		    opt = PJMEDIA_ECHO_SPEEX;
+		    break;
+		case 3:
+		    opt = PJMEDIA_ECHO_SIMPLE;
+		    break;
+		default:
+		    puts("Invalid algorithm");
+		    puts(desc);
+		    return 1;
+		}
+	    }
+	    break;
+	}
+    }
 
-    if (argc != 3) {
-    	puts("Error: arguments required");
+    if (argc - pj_optind != 3) {
+	puts("Error: missing argument(s)");
 	puts(desc);
 	return 1;
     }
-
 
     /* Must init PJLIB first: */
     status = pj_init();
@@ -109,98 +152,98 @@ int main(int argc, char *argv[])
 			   NULL		    /* callback on error    */
 			   );
 
-    /* Create file media port from the WAV file */
-    status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
-					      argv[1],	/* file to play	    */
-					      PTIME,	/* ptime.	    */
-					      0,	/* flags	    */
-					      0,	/* default buffer   */
-					      &play_port);
+    /* Open wav_play */
+    status = pjmedia_wav_player_port_create(pool, argv[pj_optind], PTIME, 
+					    PJMEDIA_FILE_NO_LOOP, 0, 
+					    &wav_play);
     if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open input WAV file", status);
+	app_perror(THIS_FILE, "Error opening playback WAV file", status);
 	return 1;
     }
-
-    if (play_port->info.channel_count != 1) {
-	puts("Error: input WAV must have 1 channel audio");
-	return 1;
-    }
-    if (play_port->info.bits_per_sample != 16) {
-	puts("Error: input WAV must be encoded as 16bit PCM");
-	return 1;
-    }
-
-#ifdef PJ_DARWINOS
-    /* Need to force clock rate on MacOS */
-    if (play_port->info.clock_rate != 44100) {
-	pjmedia_port *resample_port;
-
-	status = pjmedia_resample_port_create(pool, play_port, 44100, 0,
-					      &resample_port);
-	if (status != PJ_SUCCESS) {
-	    app_perror(THIS_FILE, "Unable to create resampling port", status);
-	    return 1;
-	}
-
-	data.play_port = resample_port;
-    }
-#endif
-
-    /* Create WAV output file port */
-    status = pjmedia_wav_writer_port_create(pool, argv[2], 
-					    play_port->info.clock_rate,
-					    play_port->info.channel_count,
-					    play_port->info.samples_per_frame,
-					    play_port->info.bits_per_sample,
-					    0, 0, &rec_port);
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open output file", status);
-	return 1;
-    }
-
-    /* Create bidirectional port from the WAV ports */
-    pjmedia_bidirectional_port_create(pool, play_port, rec_port, &bidir_port);
-
-    /* Create sound device. */
-    status = pjmedia_snd_port_create(pool, -1, -1, 
-				     play_port->info.clock_rate,
-				     play_port->info.channel_count,
-				     play_port->info.samples_per_frame,
-				     play_port->info.bits_per_sample,
-				     0, &snd);
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to open sound device", status);
-	return 1;
-    }
-
-
-    /* Customize AEC */
-    pjmedia_snd_port_set_ec(snd, pool, TAIL_LENGTH, 0);
-
-    /* Connect sound to the port */
-    pjmedia_snd_port_connect(snd, bidir_port);
-
-
-    puts("");
-    printf("Playing %s and recording to %s\n", argv[1], argv[2]);
-    puts("Press <ENTER> to quit");
-
-    fgets(tmp, sizeof(tmp), stdin);
-
     
-    /* Start deinitialization: */
+    /* Open recorded wav */
+    status = pjmedia_wav_player_port_create(pool, argv[pj_optind+1], PTIME, 
+					    PJMEDIA_FILE_NO_LOOP, 0, 
+					    &wav_rec);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Error opening recorded WAV file", status);
+	return 1;
+    }
 
-    /* Destroy sound device */
-    status = pjmedia_snd_port_destroy( snd );
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+    /* play and rec WAVs must have the same clock rate */
+    if (wav_play->info.clock_rate != wav_rec->info.clock_rate) {
+	puts("Error: clock rate mismatch in the WAV files");
+	return 1;
+    }
 
+    /* .. and channel count */
+    if (wav_play->info.channel_count != wav_rec->info.channel_count) {
+	puts("Error: clock rate mismatch in the WAV files");
+	return 1;
+    }
+
+    /* Create output wav */
+    status = pjmedia_wav_writer_port_create(pool, argv[pj_optind+2],
+					    wav_play->info.clock_rate,
+					    wav_play->info.channel_count,
+					    wav_play->info.samples_per_frame,
+					    wav_play->info.bits_per_sample,
+					    0, 0, &wav_out);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Error opening output WAV file", status);
+	return 1;
+    }
+
+    /* Create echo canceller */
+    status = pjmedia_echo_create2(pool, wav_play->info.clock_rate,
+				  wav_play->info.channel_count,
+				  wav_play->info.samples_per_frame,
+				  tail_ms, latency_ms,
+				  opt, &ec);
+    if (status != PJ_SUCCESS) {
+	app_perror(THIS_FILE, "Error creating EC", status);
+	return 1;
+    }
+
+
+    /* Processing loop */
+    play_frame.buf = pj_pool_alloc(pool, wav_play->info.samples_per_frame<<1);
+    rec_frame.buf = pj_pool_alloc(pool, wav_play->info.samples_per_frame<<1);
+    pj_get_timestamp(&t0);
+    for (;;) {
+	play_frame.size = wav_play->info.samples_per_frame << 1;
+	status = pjmedia_port_get_frame(wav_play, &play_frame);
+	if (status != PJ_SUCCESS)
+	    break;
+
+	status = pjmedia_echo_playback(ec, (short*)play_frame.buf);
+
+	rec_frame.size = wav_play->info.samples_per_frame << 1;
+	status = pjmedia_port_get_frame(wav_rec, &rec_frame);
+	if (status != PJ_SUCCESS)
+	    break;
+
+	status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
+
+	//status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
+	//			     (short*)play_frame.buf, 0, NULL);
+
+	pjmedia_port_put_frame(wav_out, &rec_frame);
+    }
+    pj_get_timestamp(&t1);
+
+    PJ_LOG(3,(THIS_FILE, "Completed in %u msec\n", pj_elapsed_msec(&t0, &t1)));
 
     /* Destroy file port(s) */
-    status = pjmedia_port_destroy( play_port );
+    status = pjmedia_port_destroy( wav_play );
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-    status = pjmedia_port_destroy( rec_port );
+    status = pjmedia_port_destroy( wav_rec );
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+    status = pjmedia_port_destroy( wav_out );
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
+    /* Destroy ec */
+    pjmedia_echo_destroy(ec);
 
     /* Release application pool */
     pj_pool_release( pool );

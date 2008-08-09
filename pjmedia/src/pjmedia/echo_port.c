@@ -67,9 +67,10 @@ PJ_DEF(pj_status_t) pjmedia_echo_port_create(pj_pool_t *pool,
 			   dn_port->info.bits_per_sample,
 			   dn_port->info.samples_per_frame);
 
-    status = pjmedia_echo_create(pool, dn_port->info.clock_rate, 
-				 dn_port->info.samples_per_frame,
-				 tail_ms, latency_ms, options, &ec->ec);
+    status = pjmedia_echo_create2(pool, dn_port->info.clock_rate, 
+				  dn_port->info.channel_count,
+				  dn_port->info.samples_per_frame,
+				  tail_ms, latency_ms, options, &ec->ec);
     if (status != PJ_SUCCESS)
 	return status;
 
