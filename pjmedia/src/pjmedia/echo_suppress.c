@@ -79,7 +79,7 @@
 #   define TRACE_(expr)
 #endif
 
-PJ_INLINE(float) fabs(float val)
+PJ_INLINE(float) FABS(float val)
 {
     if (val < 0)
 	return -val;
@@ -483,7 +483,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	}
 
 	/* Calculate correlation and save to temporary array */
-	corr_diff = fabs(play_corr - rec_corr);
+	corr_diff = FABS(play_corr - rec_corr);
 	ec->tmp_corr[i] = corr_diff;
 
 	/* Also calculate the gain factor between mic and speaker level */
