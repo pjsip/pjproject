@@ -30,6 +30,11 @@ static char THIS_FILE[] = __FILE__;
 
 /////////////////////////////////////////////////////////////////////////////
 // Settings
+CPocketPJSettings::CPocketPJSettings()
+: m_UseStun(FALSE), m_UseIce(FALSE), m_UseSrtp(FALSE), m_UsePublish(FALSE),
+  m_EchoSuppress(TRUE), m_EcTail(200)
+{
+}
 
 // Load from registry
 void CPocketPJSettings::LoadRegistry()
@@ -98,14 +103,14 @@ void CPocketPJSettings::LoadRegistry()
     if (key.QueryValue(dwordVal, REG_ENABLE_EC) == ERROR_SUCCESS) {
 	m_EchoSuppress = dwordVal != 0;
     } else {
-	m_EchoSuppress = 0;
+	m_EchoSuppress = 1;
     }
 
     cbData = sizeof(dwordVal);
     if (key.QueryValue(dwordVal, REG_EC_TAIL) == ERROR_SUCCESS) {
 	m_EcTail = dwordVal;
     } else {
-	m_EcTail = 2;
+	m_EcTail = 200;
     }
 
     m_BuddyList.RemoveAll();

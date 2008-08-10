@@ -26,6 +26,8 @@ struct CPocketPJSettings
 
     CArray<CString,CString> m_BuddyList;
     
+    CPocketPJSettings();
+
     // Load from registry
     void    LoadRegistry();
     
