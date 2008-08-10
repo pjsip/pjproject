@@ -56,6 +56,7 @@ static const char *desc =
 " options:\n"
 "  -d  The delay between playback and capture in ms. Default is zero.\n"
 "  -l  Set the echo tail length in ms. Default is 200 ms	    \n"
+"  -r  Set repeat count (default=1)                                 \n"
 "  -a  Algorithm: 0=default, 1=speex, 3=echo suppress		    \n";
 
 /* 
@@ -91,10 +92,10 @@ int main(int argc, char *argv[])
     unsigned latency_ms = 0;
     unsigned tail_ms = TAIL_LENGTH;
     pj_timestamp t0, t1;
-    int c;
+    int i, repeat=1, c;
 
     pj_optind = 0;
-    while ((c=pj_getopt(argc, argv, "d:l:a:")) !=-1) {
+    while ((c=pj_getopt(argc, argv, "d:l:a:r:")) !=-1) {
 	switch (c) {
 	case 'd':
 	    latency_ms = atoi(pj_optarg);
@@ -119,6 +120,14 @@ int main(int argc, char *argv[])
 		    puts(desc);
 		    return 1;
 		}
+	    }
+	    break;
+	case 'r':
+	    repeat = atoi(pj_optarg);
+	    if (repeat < 1) {
+		puts("Invalid algorithm");
+		puts(desc);
+		return 1;
 	    }
 	    break;
 	}
@@ -210,25 +219,30 @@ int main(int argc, char *argv[])
     play_frame.buf = pj_pool_alloc(pool, wav_play->info.samples_per_frame<<1);
     rec_frame.buf = pj_pool_alloc(pool, wav_play->info.samples_per_frame<<1);
     pj_get_timestamp(&t0);
-    for (;;) {
-	play_frame.size = wav_play->info.samples_per_frame << 1;
-	status = pjmedia_port_get_frame(wav_play, &play_frame);
-	if (status != PJ_SUCCESS)
-	    break;
+    for (i=0; i < repeat; ++i) {
+	for (;;) {
+	    play_frame.size = wav_play->info.samples_per_frame << 1;
+	    status = pjmedia_port_get_frame(wav_play, &play_frame);
+	    if (status != PJ_SUCCESS)
+		break;
 
-	status = pjmedia_echo_playback(ec, (short*)play_frame.buf);
+	    status = pjmedia_echo_playback(ec, (short*)play_frame.buf);
 
-	rec_frame.size = wav_play->info.samples_per_frame << 1;
-	status = pjmedia_port_get_frame(wav_rec, &rec_frame);
-	if (status != PJ_SUCCESS)
-	    break;
+	    rec_frame.size = wav_play->info.samples_per_frame << 1;
+	    status = pjmedia_port_get_frame(wav_rec, &rec_frame);
+	    if (status != PJ_SUCCESS)
+		break;
 
-	status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
+	    status = pjmedia_echo_capture(ec, (short*)rec_frame.buf, 0);
 
-	//status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
-	//			     (short*)play_frame.buf, 0, NULL);
+	    //status = pjmedia_echo_cancel(ec, (short*)rec_frame.buf, 
+	    //			     (short*)play_frame.buf, 0, NULL);
 
-	pjmedia_port_put_frame(wav_out, &rec_frame);
+	    pjmedia_port_put_frame(wav_out, &rec_frame);
+	}
+
+	pjmedia_wav_player_port_set_pos(wav_play, 0);
+	pjmedia_wav_player_port_set_pos(wav_rec, 0);
     }
     pj_get_timestamp(&t1);
 
@@ -256,6 +270,14 @@ int main(int argc, char *argv[])
 
     /* Shutdown PJLIB */
     pj_shutdown();
+
+#if 0
+    {
+	char s[10];
+	puts("ENTER to quit");
+	fgets(s, sizeof(s), stdin);
+    }
+#endif
 
     /* Done. */
     return 0;
