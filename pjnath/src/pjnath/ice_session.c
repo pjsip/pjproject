@@ -1636,6 +1636,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     /* Checklist must have been created */
     PJ_ASSERT_RETURN(ice->clist.count > 0, PJ_EINVALIDOP);
 
+    /* Lock session */
+    pj_mutex_lock(ice->mutex);
+
     LOG4((ice->obj_name, "Starting ICE check.."));
 
     /* The agent examines the check list for the first media stream (a
@@ -1659,6 +1662,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     }
     if (i == clist->count) {
 	pj_assert(!"Unable to find checklist for component 1");
+	pj_mutex_unlock(ice->mutex);
 	return PJNATH_EICEINCOMPID;
     }
 
@@ -1710,6 +1714,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	clist->timer.id = PJ_FALSE;
     }
 
+    pj_mutex_unlock(ice->mutex);
     return status;
 }
 
@@ -2191,6 +2196,13 @@ static void handle_incoming_check(pj_ice_sess *ice,
      * candidate.
      */
     if (i == ice->rcand_cnt) {
+	if (ice->rcand_cnt >= PJ_ICE_MAX_CAND) {
+	    LOG4((ice->obj_name, 
+	          "Unable to add new peer reflexive candidate: too many "
+		  "candidates already (%d)", PJ_ICE_MAX_CAND));
+	    return;
+	}
+
 	rcand = &ice->rcand[ice->rcand_cnt++];
 	rcand->comp_id = (pj_uint8_t)rcheck->comp_id;
 	rcand->type = PJ_ICE_CAND_TYPE_PRFLX;
