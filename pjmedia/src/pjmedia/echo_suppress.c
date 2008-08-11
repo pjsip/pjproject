@@ -672,7 +672,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 	}
 
 	/* Smoothen the transition */
-	if (factor > ec->last_factor)
+	if (factor >= ec->last_factor)
 	    factor = (factor + ec->last_factor) / 2;
 	else
 	    factor = (factor + ec->last_factor*9) / 10;
