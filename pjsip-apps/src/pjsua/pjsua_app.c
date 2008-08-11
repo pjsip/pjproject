@@ -235,6 +235,8 @@ static void usage(void)
     puts  ("  --ptime=MSEC        Override codec ptime to MSEC (default=specific)");
     puts  ("  --no-vad            Disable VAD/silence detector (default=vad enabled)");
     puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default=256)");
+    puts  ("  --ec-opt=OPT        Select echo canceller algorithm (0=default, ");
+    puts  ("                        1=speex, 2=suppressor)");
     puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
@@ -462,7 +464,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
 	   OPT_COMPLEXITY, OPT_QUALITY, OPT_PTIME, OPT_NO_VAD,
-	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL,
+	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL, OPT_EC_OPT,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
 	   OPT_NOREFERSUB,
@@ -547,6 +549,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "ptime",      1, 0, OPT_PTIME},
 	{ "no-vad",     0, 0, OPT_NO_VAD},
 	{ "ec-tail",    1, 0, OPT_EC_TAIL},
+	{ "ec-opt",	1, 0, OPT_EC_OPT},
 	{ "ilbc-mode",	1, 0, OPT_ILBC_MODE},
 	{ "rx-drop-pct",1, 0, OPT_RX_DROP_PCT},
 	{ "tx-drop-pct",1, 0, OPT_TX_DROP_PCT},
@@ -1065,6 +1068,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 			  "is too big"));
 		return -1;
 	    }
+	    break;
+
+	case OPT_EC_OPT:
+	    cfg->media_cfg.ec_options = my_atoi(pj_optarg);
 	    break;
 
 	case OPT_QUALITY:
@@ -1707,6 +1714,12 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    /* ec-opt */
+    if (config->media_cfg.ec_options != 0) {
+	pj_ansi_sprintf(line, "--ec-opt %d\n",
+			config->media_cfg.ec_options);
+	pj_strcat2(&cfg, line);
+    } 
 
     /* ilbc-mode */
     if (config->media_cfg.ilbc_mode != PJSUA_DEFAULT_ILBC_MODE) {
