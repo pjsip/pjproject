@@ -601,6 +601,10 @@ static int pjsip_name_addr_compare(  pjsip_uri_context_e context,
 {
     int d;
 
+    /* Check that naddr2 is also a name_addr */
+    if (naddr1->vptr != naddr2->vptr)
+	return -1;
+
     /* I'm not sure whether display name is included in the comparison. */
     if (pj_strcmp(&naddr1->display, &naddr2->display) != 0) {
 	return -1;
@@ -684,6 +688,10 @@ static int other_uri_cmp(pjsip_uri_context_e context,
 			 const pjsip_other_uri *uri2)
 {
     PJ_UNUSED_ARG(context);
+
+    /* Check that uri2 is also an other_uri */
+    if (uri1->vptr != uri2->vptr)
+	return -1;
     
     /* Scheme must match. */
     if (pj_stricmp(&uri1->scheme, &uri2->scheme) != 0) {
