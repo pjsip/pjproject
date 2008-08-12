@@ -1666,9 +1666,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	return PJNATH_EICEINCOMPID;
     }
 
-    /* Set this check to WAITING */
-    check_set_state(ice, &clist->checks[i], 
-		    PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
+    /* Set this check to WAITING only if state is frozen. It may be possible
+     * that this check has already been started by a trigger check
+     */
+    if (clist->checks[i].state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
+	check_set_state(ice, &clist->checks[i], 
+			PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
+    }
+
     cand0 = clist->checks[i].lcand;
     flist[flist_cnt++] = &clist->checks[i].lcand->foundation;
 
@@ -1684,8 +1689,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	if (cand1->comp_id==cand0->comp_id &&
 	    find_str(flist, flist_cnt, &cand1->foundation)==NULL)
 	{
-	    check_set_state(ice, &clist->checks[i], 
-			    PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
+	    if (clist->checks[i].state == PJ_ICE_SESS_CHECK_STATE_FROZEN) {
+		check_set_state(ice, &clist->checks[i], 
+				PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
+	    }
 	    flist[flist_cnt++] = &cand1->foundation;
 	}
     }
