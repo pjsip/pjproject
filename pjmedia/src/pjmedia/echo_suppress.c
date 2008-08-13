@@ -381,14 +381,17 @@ PJ_DEF(void) echo_supp_soft_reset(void *state)
 
 
 /* Set state */
-static void echo_supp_set_state(echo_supp *ec, enum talk_state state)
+static void echo_supp_set_state(echo_supp *ec, enum talk_state state, 
+				unsigned level)
 {
+    PJ_UNUSED_ARG(level);
+
     if (state != ec->talk_state) {
-	TRACE_((THIS_FILE, "[%03d.%03d] %s --> %s", 
+	TRACE_((THIS_FILE, "[%03d.%03d] %s --> %s, level=%u", 
 			   (ec->update_cnt * SEGMENT_PTIME / 1000), 
 			   ((ec->update_cnt * SEGMENT_PTIME) % 1000),
 			   state_names[ec->talk_state],
-			   state_names[state]));
+			   state_names[state], level));
 	ec->talk_state = state;
     }
 }
@@ -465,22 +468,25 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	/* Bail out if remote isn't talking */
 	ulaw = pjmedia_linear2ulaw(sum_play_level/ec->templ_cnt) ^ 0xFF;
 	if (ulaw < MIN_SIGNAL_ULAW) {
-	    echo_supp_set_state(ec, ST_REM_SILENT);
+	    echo_supp_set_state(ec, ST_REM_SILENT, ulaw);
 	    return;
 	}
 
 	/* Bail out if local user is talking */
 	if (sum_rec_level >= sum_play_level) {
-	    echo_supp_set_state(ec, ST_LOCAL_TALK);
+	    echo_supp_set_state(ec, ST_LOCAL_TALK, ulaw);
 	    return;
 	}
 
+#if 0
+	// disabled: not a good idea if mic throws out loud echo
 	/* Also bail out if we suspect there's a doubletalk */
 	ulaw = pjmedia_linear2ulaw(sum_rec_level/ec->templ_cnt) ^ 0xFF;
 	if (ulaw > MIN_SIGNAL_ULAW) {
-	    echo_supp_set_state(ec, ST_DOUBLETALK);
+	    echo_supp_set_state(ec, ST_DOUBLETALK, ulaw);
 	    return;
 	}
+#endif
 
 	/* Calculate correlation and save to temporary array */
 	corr_diff = FABS(play_corr - rec_corr);
@@ -492,7 +498,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
     }
 
     /* We seem to have good signal, we can update the EC state */
-    echo_supp_set_state(ec, ST_REM_TALK);
+    echo_supp_set_state(ec, ST_REM_TALK, MIN_SIGNAL_ULAW);
 
     /* Accummulate the correlation value to the history and at the same
      * time find the tail index of the best correlation.
@@ -645,14 +651,21 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 		/* Mic is talking, speaker is idle. Let mic signal pass as is.
 		 */
 		factor = 1.0;
-		echo_supp_set_state(ec, ST_LOCAL_TALK);
-	    } else {
+		echo_supp_set_state(ec, ST_LOCAL_TALK, rec_level);
+	    } else if (rec_level >= play_level) {
 		/* Seems that both are talking. Scale the mic signal
 		 * down a little bit to reduce echo, while allowing both
 		 * parties to talk at the same time.
 		 */
 		factor = (float)(ec->avg_factor[ec->tail_index] * 2);
-		echo_supp_set_state(ec, ST_DOUBLETALK);
+		echo_supp_set_state(ec, ST_DOUBLETALK, rec_level);
+	    } else {
+		/* Speaker is active, but we've picked up large signal in
+		 * the microphone. Assume that this is an echo, so bring 
+		 * the level down to minimum too.
+		 */
+		factor = ec->min_factor[ec->tail_index] / 2;
+		echo_supp_set_state(ec, ST_REM_TALK, play_level);
 	    }
 	} else {
 	    if (play_level < MIN_SIGNAL_ULAW) {
@@ -661,13 +674,13 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 		 * echo.
 		 */
 		factor = ec->avg_factor[ec->tail_index] * 3 / 2;
-		echo_supp_set_state(ec, ST_REM_SILENT);
+		echo_supp_set_state(ec, ST_REM_SILENT, rec_level);
 	    } else {
 		/* Mic is idle, but there's something playing in speaker.
 		 * Scale the mic down to minimum
 		 */
 		factor = ec->min_factor[ec->tail_index] / 2;
-		echo_supp_set_state(ec, ST_REM_TALK);
+		echo_supp_set_state(ec, ST_REM_TALK, play_level);
 	    }
 	}
 
