@@ -31,6 +31,8 @@
     /* Speex default quality settings */
 #   define PJSUA_DEFAULT_CODEC_QUALITY	5
 #   define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	5
+
+#   define PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER	0
 #endif
 
 

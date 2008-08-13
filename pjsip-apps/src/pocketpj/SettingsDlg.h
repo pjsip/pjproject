@@ -23,7 +23,11 @@ struct CPocketPJSettings
     CString	m_DNS;
     bool	m_EchoSuppress;
     DWORD	m_EcTail;
+    bool	m_TCP;
+    bool	m_VAD;
+    bool	m_AutoAnswer;
 
+    CArray<CString,CString> m_Codecs;
     CArray<CString,CString> m_BuddyList;
     
     CPocketPJSettings();
@@ -48,6 +52,7 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CSettingsDlg)
 	enum { IDD = IDD_SETTING };
+	CComboBox	m_Codecs;
 	CString	m_Domain;
 	BOOL	m_ICE;
 	CString	m_Passwd;
@@ -59,6 +64,9 @@ public:
 	CString	m_Dns;
 	BOOL	m_EchoSuppress;
 	CString	m_EcTail;
+	BOOL	m_TCP;
+	BOOL	m_VAD;
+	BOOL	m_AutoAnswer;
 	//}}AFX_DATA
 
 
@@ -79,6 +87,8 @@ protected:
 	//{{AFX_MSG(CSettingsDlg)
 	afx_msg void OnStun();
 	afx_msg void OnEchoSuppress();
+	afx_msg void OnSelchangeCodecs();
+	virtual void OnOK();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

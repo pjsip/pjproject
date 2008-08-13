@@ -80,6 +80,7 @@ void CPocketPJDlg::Error(const CString &title, pj_status_t rc)
 
 BOOL CPocketPJDlg::Restart()
 {
+    unsigned i;
     pj_status_t status;
 
     char ver[80];
@@ -178,6 +179,7 @@ BOOL CPocketPJDlg::Restart()
     media_cfg.quality = 5;
     media_cfg.thread_cnt = 1;
     media_cfg.enable_ice = m_Cfg.m_UseIce;
+    media_cfg.no_vad = !m_Cfg.m_VAD;
 
     if (m_Cfg.m_EchoSuppress) {
 	media_cfg.ec_options = PJMEDIA_ECHO_SIMPLE;
@@ -195,7 +197,7 @@ BOOL CPocketPJDlg::Restart()
     }
 
     // Create one UDP transport
-    PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Add transport..");
+    PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Adding UDP transport..");
     pjsua_transport_id transport_id;
     pjsua_transport_config udp_cfg;
 
@@ -210,16 +212,35 @@ BOOL CPocketPJDlg::Restart()
 	return FALSE;
     }
 
+    if (m_Cfg.m_TCP) {
+	// Create one TCP transport
+	PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Adding TCP transport..");
+	pjsua_transport_id transport_id;
+	pjsua_transport_config tcp_cfg;
+
+	pjsua_transport_config_default(&tcp_cfg);
+	tcp_cfg.port = 0;
+	status = pjsua_transport_create(PJSIP_TRANSPORT_TCP,
+					&tcp_cfg, &transport_id);
+	if (status != PJ_SUCCESS) {
+	    Error(_T("Error creating TCP transport"), status);
+	    pjsua_destroy();
+	    PopUp_Hide(POPUP_REGISTRATION);
+	    return FALSE;
+	}
+    }
+
     // Adjust codecs priority
     pj_str_t tmp;
-    pjsua_codec_set_priority(pj_cstr(&tmp, "speex"), 0);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "speex/8000"), 200);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "GSM"),  180);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "PCMU"), 160);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "PCMA"), 150);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "iLBC"), 0);
-    pjsua_codec_set_priority(pj_cstr(&tmp, "L16"), 0);
+    pjsua_codec_set_priority(pj_cstr(&tmp, "*"), 0);
+    for (i=0; i<(unsigned)m_Cfg.m_Codecs.GetSize(); ++i) {
+	CString codec = m_Cfg.m_Codecs.GetAt(i);
+	char tmp_nam[80];
 
+	pj_unicode_to_ansi((LPCTSTR)codec, codec.GetLength(),
+			   tmp_nam, sizeof(tmp_nam));
+	pjsua_codec_set_priority(pj_cstr(&tmp, tmp_nam), 200-i);
+    }
 
     // Start!
     PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Starting..");
@@ -261,6 +282,15 @@ BOOL CPocketPJDlg::Restart()
     acc_cfg.srtp_secure_signaling = 0;
     acc_cfg.publish_enabled = m_Cfg.m_UsePublish;
     
+    char route[80];
+    if (m_Cfg.m_TCP) {
+	snprintf(route, sizeof(route), "<sip:%s;lr;transport=tcp>", domain);
+	acc_cfg.proxy[acc_cfg.proxy_cnt++] = pj_str(route);
+    } else {
+	snprintf(route, sizeof(route), "<sip:%s;lr>", domain);
+	acc_cfg.proxy[acc_cfg.proxy_cnt++] = pj_str(route);
+    }
+
     status = pjsua_acc_add(&acc_cfg, PJ_TRUE, &m_PjsuaAccId);
     if (status != PJ_SUCCESS) {
 	Error(_T("Invalid account settings"), status);
@@ -366,6 +396,8 @@ void CPocketPJDlg::OnCallState()
 	PopUp_Show(POPUP_CALL, "Incoming call..", ci.remote_info.ptr, "",
 		   "Answer", "Hangup", 0);
 	pjsua_call_answer(0, 180, NULL, NULL);
+	if (m_Cfg.m_AutoAnswer)
+	    OnPopUpButton(1);
 	break;
     case PJSIP_INV_STATE_EARLY:	    /**< After response with To tag.	    */
     case PJSIP_INV_STATE_CONNECTING:/**< After 2xx is sent/received.	    */
