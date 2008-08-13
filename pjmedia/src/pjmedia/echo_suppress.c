@@ -243,6 +243,12 @@ typedef struct echo_supp
     float	*tmp_corr;	    /* Temporary corr array calculation	    */
     float	 best_corr;	    /* Best correlation so far.		    */
 
+    unsigned	 sum_rec_level;	    /* Running sum of level in rec_hist	    */
+    float	 rec_corr;	    /* Running corr in rec_hist.	    */
+
+    unsigned	 sum_play_level0;   /* Running sum of level for first pos   */
+    float	 play_corr0;	    /* Running corr for first pos .	    */
+
     float	*min_factor;	    /* Array of minimum scaling factor	    */
     float	*avg_factor;	    /* Array of average scaling factor	    */
     float	*tmp_factor;	    /* Array to store provisional result    */
@@ -353,6 +359,8 @@ PJ_DEF(void) echo_supp_reset(void *state)
     ec->last_factor = 1.0;
     ec->residue = 0;
     ec->running_cnt = 0;
+    ec->sum_rec_level = ec->sum_play_level0 = 0;
+    ec->rec_corr = ec->play_corr0 = 0;
 }
 
 /*
@@ -375,6 +383,8 @@ PJ_DEF(void) echo_supp_soft_reset(void *state)
     ec->best_corr = MAX_FLOAT;
     ec->residue = 0;
     ec->running_cnt = 0;
+    ec->sum_rec_level = ec->sum_play_level0 = 0;
+    ec->rec_corr = ec->play_corr0 = 0;
 
     PJ_LOG(4,(THIS_FILE, "Echo suppressor soft reset. Re-learning.."));
 }
@@ -403,8 +413,9 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 			     const pj_int16_t *play_frm)
 {
     int prev_index;
-    unsigned i, frm_level, sum_rec_level;
-    float rec_corr;
+    unsigned i, j, frm_level, sum_play_level, ulaw;
+    pj_uint16_t old_rec_frm_level, old_play_frm_level;
+    float play_corr;
 
     ++ec->update_cnt;
     if (ec->update_cnt > 0x7FFFFFFF)
@@ -414,6 +425,9 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
     frm_level = pjmedia_calc_avg_signal(play_frm, ec->samples_per_segment);
     ++frm_level; /* to avoid division by zero */
 
+    /* Save the oldest frame level for later */
+    old_play_frm_level = ec->play_hist[0];
+
     /* Push current frame level to the back of the play history */
     pj_array_erase(ec->play_hist, sizeof(pj_uint16_t), ec->play_hist_cnt, 0);
     ec->play_hist[ec->play_hist_cnt-1] = (pj_uint16_t) frm_level;
@@ -421,6 +435,9 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
     /* Calculate level of current mic frame */
     frm_level = pjmedia_calc_avg_signal(rec_frm, ec->samples_per_segment);
     ++frm_level; /* to avoid division by zero */
+
+    /* Save the oldest frame level for later */
+    old_rec_frm_level = ec->rec_hist[0];
 
     /* Push to the back of the rec history */
     pj_array_erase(ec->rec_hist, sizeof(pj_uint16_t), ec->templ_cnt, 0);
@@ -437,33 +454,86 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 
 
     /* Calculate rec signal pattern */
-    rec_corr = 0;
-    sum_rec_level = 0;
-    for (i=0; i < ec->templ_cnt-1; ++i) {
-	float corr;
-	corr = (float)ec->rec_hist[i+1] / ec->rec_hist[i];
-	rec_corr += corr;
-	sum_rec_level += ec->rec_hist[i];
+    if (ec->sum_rec_level == 0) {
+	/* Buffer has just been filled up, do full calculation */
+	ec->rec_corr = 0;
+	ec->sum_rec_level = 0;
+	for (i=0; i < ec->templ_cnt-1; ++i) {
+	    float corr;
+	    corr = (float)ec->rec_hist[i+1] / ec->rec_hist[i];
+	    ec->rec_corr += corr;
+	    ec->sum_rec_level += ec->rec_hist[i];
+	}
+	ec->sum_rec_level += ec->rec_hist[i];
+    } else {
+	/* Update from previous calculation */
+	ec->sum_rec_level = ec->sum_rec_level - old_rec_frm_level + 
+			    ec->rec_hist[ec->templ_cnt-1];
+	ec->rec_corr = ec->rec_corr - ((float)ec->rec_hist[0] / 
+					      old_rec_frm_level) +
+		       ((float)ec->rec_hist[ec->templ_cnt-1] /
+			       ec->rec_hist[ec->templ_cnt-2]);
     }
-    sum_rec_level += ec->rec_hist[i];
 
     /* Iterate through the play history and calculate the signal correlation
      * for every tail position in the play_hist. Save the result in temporary
      * array since we may bail out early if the conversation state is not good
      * to detect echo.
      */
-    for (i=0; i < ec->tail_cnt; ++i) {
-	unsigned j, end, sum_play_level, ulaw;
-	float play_corr = 0, corr_diff;
-
+    /* 
+     * First phase: do full calculation for the first position 
+     */
+    if (ec->sum_play_level0 == 0) {
+	/* Buffer has just been filled up, do full calculation */
 	sum_play_level = 0;
-	for (j=i, end=i+ec->templ_cnt-1; j<end; ++j) {
+	play_corr = 0;
+	for (j=0; j<ec->templ_cnt-1; ++j) {
 	    float corr;
 	    corr = (float)ec->play_hist[j+1] / ec->play_hist[j];
 	    play_corr += corr;
 	    sum_play_level += ec->play_hist[j];
 	}
 	sum_play_level += ec->play_hist[j];
+	ec->sum_play_level0 = sum_play_level;
+	ec->play_corr0 = play_corr;
+    } else {
+	/* Update from previous calculation */
+	ec->sum_play_level0 = ec->sum_play_level0 - old_play_frm_level + 
+			      ec->play_hist[ec->templ_cnt-1];
+	ec->play_corr0 = ec->play_corr0 - ((float)ec->play_hist[0] / 
+					          old_play_frm_level) +
+		         ((float)ec->play_hist[ec->templ_cnt-1] /
+			         ec->play_hist[ec->templ_cnt-2]);
+	sum_play_level = ec->sum_play_level0;
+	play_corr = ec->play_corr0;
+    }
+    ec->tmp_corr[0] = FABS(play_corr - ec->rec_corr);
+    ec->tmp_factor[0] = (float)ec->sum_rec_level / sum_play_level;
+
+    /* Bail out if remote isn't talking */
+    ulaw = pjmedia_linear2ulaw(sum_play_level/ec->templ_cnt) ^ 0xFF;
+    if (ulaw < MIN_SIGNAL_ULAW) {
+	echo_supp_set_state(ec, ST_REM_SILENT, ulaw);
+	return;
+    }
+    /* Bail out if local user is talking */
+    if (ec->sum_rec_level > sum_play_level) {
+	echo_supp_set_state(ec, ST_LOCAL_TALK, ulaw);
+	return;
+    }
+
+    /*
+     * Second phase: do incremental calculation for the rest of positions
+     */
+    for (i=1; i < ec->tail_cnt; ++i) {
+	unsigned end;
+
+	end = i + ec->templ_cnt;
+
+	sum_play_level = sum_play_level - ec->play_hist[i-1] +
+			 ec->play_hist[end-1];
+	play_corr = play_corr - ((float)ec->play_hist[i]/ec->play_hist[i-1]) +
+		    ((float)ec->play_hist[end-1]/ec->play_hist[end-2]);
 
 	/* Bail out if remote isn't talking */
 	ulaw = pjmedia_linear2ulaw(sum_play_level/ec->templ_cnt) ^ 0xFF;
@@ -473,7 +543,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	}
 
 	/* Bail out if local user is talking */
-	if (sum_rec_level >= sum_play_level) {
+	if (ec->sum_rec_level > sum_play_level) {
 	    echo_supp_set_state(ec, ST_LOCAL_TALK, ulaw);
 	    return;
 	}
@@ -481,7 +551,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 #if 0
 	// disabled: not a good idea if mic throws out loud echo
 	/* Also bail out if we suspect there's a doubletalk */
-	ulaw = pjmedia_linear2ulaw(sum_rec_level/ec->templ_cnt) ^ 0xFF;
+	ulaw = pjmedia_linear2ulaw(ec->sum_rec_level/ec->templ_cnt) ^ 0xFF;
 	if (ulaw > MIN_SIGNAL_ULAW) {
 	    echo_supp_set_state(ec, ST_DOUBLETALK, ulaw);
 	    return;
@@ -489,11 +559,10 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 #endif
 
 	/* Calculate correlation and save to temporary array */
-	corr_diff = FABS(play_corr - rec_corr);
-	ec->tmp_corr[i] = corr_diff;
+	ec->tmp_corr[i] = FABS(play_corr - ec->rec_corr);
 
 	/* Also calculate the gain factor between mic and speaker level */
-	ec->tmp_factor[i] = (float)sum_rec_level / sum_play_level;
+	ec->tmp_factor[i] = (float)ec->sum_rec_level / sum_play_level;
 	pj_assert(ec->tmp_factor[i] < 1);
     }
 
@@ -652,7 +721,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 		 */
 		factor = 1.0;
 		echo_supp_set_state(ec, ST_LOCAL_TALK, rec_level);
-	    } else if (rec_level >= play_level) {
+	    } else if (rec_level > play_level) {
 		/* Seems that both are talking. Scale the mic signal
 		 * down a little bit to reduce echo, while allowing both
 		 * parties to talk at the same time.
@@ -688,7 +757,7 @@ PJ_DEF(pj_status_t) echo_supp_cancel_echo( void *state,
 	if (factor >= ec->last_factor)
 	    factor = (factor + ec->last_factor) / 2;
 	else
-	    factor = (factor + ec->last_factor*9) / 10;
+	    factor = (factor + ec->last_factor*19) / 20;
 
 	/* Amplify frame */
 	amplify_frame(rec_frm, ec->samples_per_frame, 

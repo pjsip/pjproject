@@ -51,14 +51,18 @@
 		ARMv7-M		Cortex-M3   1.250 MIPS/MHz
     */
 
-//#   define CPU_MHZ	    (2666)
-//#   define CPU_IPS	    (CPU_MHZ * MEGA * 3.039)	/* P4 2.6GHz	*/
+#   define CPU_MHZ	    (2666)
+#   define CPU_IPS	    (3.039 * CPU_MHZ * MEGA)	/* P4 2.6GHz	*/
 
-#   define CPU_MHZ	    700
-#   define CPU_IPS	    (700 * MEGA * 2.708)	/* P3 700Mhz	*/
+//#   define CPU_MHZ	    700
+//#   define CPU_IPS	    (700 * MEGA * 2.708)	/* P3 700Mhz	*/
 
 //#   define CPU_MHZ	    180
 //#   define CPU_IPS	    (CPU_MHZ * MEGA * 1.1)	/* ARM926EJ-S */
+
+//#   define CPU_MHZ	    312
+//#   define CPU_IPS	    (CPU_MHZ * MEGA * 1.282)	/* Dell Axim PDA */
+
 #endif
 
 
@@ -356,7 +360,7 @@ static const pj_int16_t ref_signal[] = {
 };
 
 #define THIS_FILE	    "mips_test.c"
-#define DURATION	    1000
+#define DURATION	    5000
 #define PTIME		    20	/* MUST be 20! */
 #define MEGA		    1000000
 #define GIGA		    1000000000
@@ -1263,7 +1267,6 @@ static pjmedia_port* ec_create(unsigned ec_tail_msec,
     pjmedia_port *gen_port, *ec_port;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(flags);
     PJ_UNUSED_ARG(te);
 
     gen_port = create_gen_port(pool, clock_rate, channel_count, 
@@ -1272,7 +1275,7 @@ static pjmedia_port* ec_create(unsigned ec_tail_msec,
 	return NULL;
 
     status = pjmedia_echo_port_create(pool, gen_port, ec_tail_msec, 0,
-				      0, &ec_port);
+				      flags, &ec_port);
     if (status != PJ_SUCCESS)
 	return NULL;
 
@@ -1287,6 +1290,7 @@ static pjmedia_port* ec_create_100(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(100, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1299,6 +1303,7 @@ static pjmedia_port* ec_create_128(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(128, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1311,6 +1316,7 @@ static pjmedia_port* ec_create_200(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(200, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1323,6 +1329,7 @@ static pjmedia_port* ec_create_256(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(256, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1336,6 +1343,7 @@ static pjmedia_port* ec_create_400(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(400, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1348,6 +1356,7 @@ static pjmedia_port* ec_create_500(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(500, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1360,6 +1369,7 @@ static pjmedia_port* ec_create_512(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(512, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1372,6 +1382,7 @@ static pjmedia_port* ec_create_600(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
     return ec_create(600, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -1384,6 +1395,127 @@ static pjmedia_port* ec_create_800(pj_pool_t *pool,
 				   unsigned flags,
 				   struct test_entry *te)
 {
+    flags = 0;
+    return ec_create(800, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+
+
+/* Echo suppressor with 100ms tail length */
+static pjmedia_port* es_create_100(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(100, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 128ms tail length */
+static pjmedia_port* es_create_128(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(128, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 200ms tail length */
+static pjmedia_port* es_create_200(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(200, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 256ms tail length */
+static pjmedia_port* es_create_256(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(256, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+
+/* Echo suppressor with 400ms tail length */
+static pjmedia_port* es_create_400(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(400, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 500ms tail length */
+static pjmedia_port* es_create_500(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(500, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 512ms tail length */
+static pjmedia_port* es_create_512(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(512, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 600ms tail length */
+static pjmedia_port* es_create_600(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
+    return ec_create(600, pool, clock_rate, channel_count, samples_per_frame,
+		     flags, te);
+}
+
+/* Echo suppressor with 800ms tail length */
+static pjmedia_port* es_create_800(pj_pool_t *pool,
+				   unsigned clock_rate,
+				   unsigned channel_count,
+				   unsigned samples_per_frame,
+				   unsigned flags,
+				   struct test_entry *te)
+{
+    flags = PJMEDIA_ECHO_SIMPLE;
     return ec_create(800, pool, clock_rate, channel_count, samples_per_frame,
 		     flags, te);
 }
@@ -2128,6 +2260,15 @@ int mips_test(void)
 	{ "echo canceller 512ms tail len", OP_GET_PUT, K8|K16, &ec_create_512},
 	{ "echo canceller 600ms tail len", OP_GET_PUT, K8|K16, &ec_create_600},
 	{ "echo canceller 800ms tail len", OP_GET_PUT, K8|K16, &ec_create_800},
+	{ "echo suppressor 100ms tail len", OP_GET_PUT, K8|K16, &es_create_100},
+	{ "echo suppressor 128ms tail len", OP_GET_PUT, K8|K16, &es_create_128},
+	{ "echo suppressor 200ms tail len", OP_GET_PUT, K8|K16, &es_create_200},
+	{ "echo suppressor 256ms tail len", OP_GET_PUT, K8|K16, &es_create_256},
+	{ "echo suppressor 400ms tail len", OP_GET_PUT, K8|K16, &es_create_400},
+	{ "echo suppressor 500ms tail len", OP_GET_PUT, K8|K16, &es_create_500},
+	{ "echo suppressor 512ms tail len", OP_GET_PUT, K8|K16, &es_create_512},
+	{ "echo suppressor 600ms tail len", OP_GET_PUT, K8|K16, &es_create_600},
+	{ "echo suppressor 800ms tail len", OP_GET_PUT, K8|K16, &es_create_800},
 	{ "tone generator with single freq", OP_GET, K8|K16, &create_tonegen1},
 	{ "tone generator with dual freq", OP_GET, K8|K16, &create_tonegen2},
 	{ "codec encode/decode - G.711", OP_PUT, K8, &g711_encode_decode},
@@ -2194,6 +2335,8 @@ int mips_test(void)
 	    tzero.u32.hi = tzero.u32.lo = 0;
 	    usec = (pj_elapsed_usec(&tzero, &times[0]) + 
 		    pj_elapsed_usec(&tzero, &times[1])) / 2;
+
+	    usec = usec / (DURATION / 1000);
 
 	    mips = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
 	    cpu_pct = (float)(100.0 * usec / 1000000);
