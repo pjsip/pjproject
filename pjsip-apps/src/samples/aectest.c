@@ -57,7 +57,8 @@ static const char *desc =
 "  -d  The delay between playback and capture in ms. Default is zero.\n"
 "  -l  Set the echo tail length in ms. Default is 200 ms	    \n"
 "  -r  Set repeat count (default=1)                                 \n"
-"  -a  Algorithm: 0=default, 1=speex, 3=echo suppress		    \n";
+"  -a  Algorithm: 0=default, 1=speex, 3=echo suppress		    \n"
+"  -i  Interactive						    \n";
 
 /* 
  * Sample session:
@@ -92,10 +93,10 @@ int main(int argc, char *argv[])
     unsigned latency_ms = 0;
     unsigned tail_ms = TAIL_LENGTH;
     pj_timestamp t0, t1;
-    int i, repeat=1, c;
+    int i, repeat=1, interactive=0, c;
 
     pj_optind = 0;
-    while ((c=pj_getopt(argc, argv, "d:l:a:r:")) !=-1) {
+    while ((c=pj_getopt(argc, argv, "d:l:a:r:i")) !=-1) {
 	switch (c) {
 	case 'd':
 	    latency_ms = atoi(pj_optarg);
@@ -129,6 +130,9 @@ int main(int argc, char *argv[])
 		puts(desc);
 		return 1;
 	    }
+	    break;
+	case 'i':
+	    interactive = 1;
 	    break;
 	}
     }
@@ -246,6 +250,10 @@ int main(int argc, char *argv[])
     }
     pj_get_timestamp(&t1);
 
+    i = pjmedia_wav_writer_port_get_pos(wav_out) * 1000 / 
+	(wav_out->info.clock_rate * wav_out->info.channel_count);
+    PJ_LOG(3,(THIS_FILE, "Processed %3d.%03ds audio",
+	      i / 1000, i % 1000));
     PJ_LOG(3,(THIS_FILE, "Completed in %u msec\n", pj_elapsed_msec(&t0, &t1)));
 
     /* Destroy file port(s) */
@@ -271,13 +279,11 @@ int main(int argc, char *argv[])
     /* Shutdown PJLIB */
     pj_shutdown();
 
-#if 0
-    {
+    if (interactive) {
 	char s[10];
 	puts("ENTER to quit");
 	fgets(s, sizeof(s), stdin);
     }
-#endif
 
     /* Done. */
     return 0;
