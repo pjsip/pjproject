@@ -384,9 +384,10 @@ PJ_DEF(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr)
 PJ_DEF(void) pj_sockaddr_copy_addr( pj_sockaddr *dst,
 				    const pj_sockaddr *src)
 {
-    pj_memcpy(pj_sockaddr_get_addr(dst),
-	      pj_sockaddr_get_addr(src),
-	      pj_sockaddr_get_addr_len(src));
+    /* Destination sockaddr might not be initialized */
+    const char *srcbuf = (char*)pj_sockaddr_get_addr(src);
+    char *dstbuf = ((char*)dst) + (srcbuf - (char*)src);
+    pj_memcpy(dstbuf, srcbuf, pj_sockaddr_get_addr_len(src));
 }
 
 /*
