@@ -2244,11 +2244,11 @@ static void on_call_media_state(pjsua_call_id call_id)
 	if (app_config.auto_loop) {
 	    pjsua_conf_connect(call_info.conf_slot, call_info.conf_slot);
 	    connect_sound = PJ_FALSE;
+	}
 
-	    /* Automatically record conversation, if desired */
-	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
-		pjsua_conf_connect(call_info.conf_slot, app_config.rec_port);
-	    }
+	/* Automatically record conversation, if desired */
+	if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
+	    pjsua_conf_connect(call_info.conf_slot, app_config.rec_port);
 	}
 
 	/* Stream a file, if desired */
