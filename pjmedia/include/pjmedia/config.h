@@ -410,11 +410,11 @@
  *
  * Use (-1) to disable this feature.
  *
- * Default: 500 ms
+ * Default: 5000 ms
  *
  */
 #ifndef PJMEDIA_CODEC_MAX_SILENCE_PERIOD
-#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	500
+#   define PJMEDIA_CODEC_MAX_SILENCE_PERIOD	5000
 #endif
 
 
