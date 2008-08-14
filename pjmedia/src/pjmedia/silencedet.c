@@ -267,6 +267,9 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
 		updated = PJ_FALSE;
 	    }
 
+	    if (new_threshold > PJMEDIA_SILENCE_DET_MAX_THRESHOLD)
+		new_threshold = PJMEDIA_SILENCE_DET_MAX_THRESHOLD;
+
 	    if (updated && sd->cur_threshold != new_threshold) {
 		PJ_LOG(5,(sd->objname, 
 			  "Vad cur_threshold updated %d-->%d. "

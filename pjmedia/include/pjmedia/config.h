@@ -429,6 +429,18 @@
 
 
 /**
+ * Maximum silence threshold in the silence detector. The silence detector
+ * will not cut the audio transmission if the audio level is above this
+ * level.
+ *
+ * Default: 25
+ */
+#ifndef PJMEDIA_SILENCE_DET_MAX_THRESHOLD
+#   define PJMEDIA_SILENCE_DET_MAX_THRESHOLD	25
+#endif
+
+
+/**
  * Speex Accoustic Echo Cancellation (AEC).
  * By default is enabled.
  */
