@@ -438,27 +438,6 @@
 
 
 /**
- * Initial signal threshold to be applied to echo suppressor. When
- * playback signal level is greater than this threshold, the microphone
- * signal will be reduced or cut.
- */
-#ifndef PJMEDIA_ECHO_SUPPRESS_THRESHOLD
-#   define PJMEDIA_ECHO_SUPPRESS_THRESHOLD	PJMEDIA_SILENCE_DET_THRESHOLD
-#endif
-
-
-/**
- * The signal reduction factor to be applied into the microphone signal
- * when the mic signal needs to be reduced. Valid values are [1-16], where
- * 1 will leave signal as it is (thus probably transmitting the echo) and
- * 16 will effectively zero the signal.
- */
-#ifndef PJMEDIA_ECHO_SUPPRESS_FACTOR
-#   define PJMEDIA_ECHO_SUPPRESS_FACTOR		10
-#endif
-
-
-/**
  * This specifies the behavior of the SDP negotiator when responding to an
  * offer, whether it should rather use the codec preference as set by
  * remote, or should it rather use the codec preference as specified by
