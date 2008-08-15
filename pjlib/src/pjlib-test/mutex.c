@@ -148,6 +148,59 @@ static int recursive_mutex_test(pj_pool_t *pool)
     return PJ_SUCCESS;
 }
 
+#if PJ_HAS_SEMAPHORE
+static int semaphore_test(pj_pool_t *pool)
+{
+    pj_sem_t *sem;
+    pj_status_t status;
+
+    PJ_LOG(3,("", "...testing semaphore"));
+
+    status = pj_sem_create(pool, NULL, 0, 1, &sem);
+    if (status != PJ_SUCCESS) {
+	app_perror("...error: pj_sem_create()", status);
+	return -151;
+    }
+
+    status = pj_sem_post(sem);
+    if (status != PJ_SUCCESS) {
+	app_perror("...error: pj_sem_post()", status);
+	pj_sem_destroy(sem);
+	return -153;
+    }
+
+    status = pj_sem_trywait(sem);
+    if (status != PJ_SUCCESS) {
+	app_perror("...error: pj_sem_trywait()", status);
+	pj_sem_destroy(sem);
+	return -156;
+    }
+
+    status = pj_sem_post(sem);
+    if (status != PJ_SUCCESS) {
+	app_perror("...error: pj_sem_post()", status);
+	pj_sem_destroy(sem);
+	return -159;
+    }
+
+    status = pj_sem_wait(sem);
+    if (status != PJ_SUCCESS) {
+	app_perror("...error: pj_sem_wait()", status);
+	pj_sem_destroy(sem);
+	return -161;
+    }
+
+    status = pj_sem_destroy(sem);
+    if (status != PJ_SUCCESS) {
+	app_perror("...error: pj_sem_destroy()", status);
+	return -163;
+    }
+
+    return 0;
+}
+#endif	/* PJ_HAS_SEMAPHORE */
+
+
 int mutex_test(void)
 {
     pj_pool_t *pool;
@@ -162,6 +215,12 @@ int mutex_test(void)
     rc = recursive_mutex_test(pool);
     if (rc != 0)
 	return rc;
+
+#if PJ_HAS_SEMAPHORE
+    rc = semaphore_test(pool);
+    if (rc != 0)
+	return rc;
+#endif
 
     pj_pool_release(pool);
 
