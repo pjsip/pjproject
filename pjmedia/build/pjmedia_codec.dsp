@@ -130,6 +130,10 @@ SOURCE="..\src\pjmedia-codec\ilbc.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-codec\ipp_codecs.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-codec\l16.c"
 
 !IF  "$(CFG)" == "pjmedia_codec - Win32 Release"
@@ -173,6 +177,10 @@ SOURCE="..\include\pjmedia-codec\gsm.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec\ilbc.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\ipp_codecs.h"
 # End Source File
 # Begin Source File
 

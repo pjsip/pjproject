@@ -42,7 +42,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="../include,../../pjlib/include,../../third_party/speex/include"
+				AdditionalIncludeDirectories="../include;../../pjlib/include;../../third_party/speex/include"
 				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1;HAVE_CONFIG_H"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -119,7 +119,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="../include,../../pjlib/include,../../third_party/speex/include"
+				AdditionalIncludeDirectories="../include;../../pjlib/include;../../third_party/speex/include;&quot;../../../ipp-samples/speech-codecs/core/usc/include&quot;"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1;HAVE_CONFIG_H"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -224,6 +224,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-codec\ipp_codecs.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-codec\l16.c"
 				>
 				<FileConfiguration
@@ -306,6 +310,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia-codec\ilbc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia-codec\ipp_codecs.h"
 				>
 			</File>
 			<File

@@ -83,5 +83,41 @@
 #endif
 
 
-#endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
+/**
+ * IPP codecs are excluded by default. IPP codecs contain various codecs,
+ * e.g: G.729, G.723.1, G.726, G.728, G.722.1, AMR.
+ */
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODECS
+#   define PJMEDIA_HAS_INTEL_IPP_CODECS		0
+#endif
 
+/**
+ * Specify IPP codecs content. If PJMEDIA_HAS_INTEL_IPP_CODECS is not set,
+ * these settings will be ignored.
+ */
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMR	1
+#endif
+
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G729
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G729	1
+#endif
+
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G723
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G723	1
+#endif
+
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G726
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G726	1
+#endif
+
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G728
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G728	1
+#endif
+
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1	1
+#endif
+
+
+#endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
