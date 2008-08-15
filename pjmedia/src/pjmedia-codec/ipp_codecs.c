@@ -230,11 +230,11 @@ ipp_codec[] =
 #   endif
 
 #   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G726) && PJMEDIA_HAS_INTEL_IPP_CODEC_G726 != 0
-    {1, "G726-16",  PJMEDIA_RTP_PT_G726_16,   &USC_G726_Fxns,	 8000, 1,  80, 
+    {0, "G726-16",  PJMEDIA_RTP_PT_G726_16,   &USC_G726_Fxns,	 8000, 1,  80, 
 		    16000, 16000, 2, 0, 0,
 		    NULL, NULL, NULL
     },
-    {1, "G726-24",  PJMEDIA_RTP_PT_G726_24,   &USC_G726_Fxns,	 8000, 1,  80, 
+    {0, "G726-24",  PJMEDIA_RTP_PT_G726_24,   &USC_G726_Fxns,	 8000, 1,  80, 
 		    24000, 24000, 2, 0, 0,
 		    NULL, NULL, NULL
     },
@@ -242,7 +242,7 @@ ipp_codec[] =
 		    32000, 32000, 2, 0, 0,
 		    NULL, NULL, NULL
     },
-    {1, "G726-40",  PJMEDIA_RTP_PT_G726_40,   &USC_G726_Fxns,	 8000, 1,  80, 
+    {0, "G726-40",  PJMEDIA_RTP_PT_G726_40,   &USC_G726_Fxns,	 8000, 1,  80, 
 		    40000, 40000, 2, 0, 0,
 		    NULL, NULL, NULL
     },
@@ -256,16 +256,8 @@ ipp_codec[] =
 #   endif
 
 #   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1) && PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 != 0
-    {1, "G722.1-16",PJMEDIA_RTP_PT_G722_1_16, &USC_G722_Fxns,	16000, 1, 320, 
-		    16000, 16000, 1, 0, 1,
-		    NULL, NULL, NULL
-    },
-    {0, "G722.1-24",PJMEDIA_RTP_PT_G722_1_24, &USC_G722_Fxns,	16000, 1, 320, 
-		    24000, 24000, 1, 0, 1,
-		    NULL, NULL, NULL
-    },
-    {0, "G722.1-32",PJMEDIA_RTP_PT_G722_1_32, &USC_G722_Fxns,	16000, 1, 320, 
-		    32000, 32000, 1, 0, 0,
+    {0, "G7221",    PJMEDIA_RTP_PT_G722_1,    &USC_G722_Fxns,	16000, 1, 320, 
+		    24000, 32000, 1, 0, 1,
 		    NULL, NULL, NULL
     },
 #   endif
@@ -618,7 +610,8 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 
     /* Setting the encoder params */
     codec_data->info->params.direction = USC_ENCODE;
-    codec_data->info->params.modes.vad = attr->setting.vad;
+    codec_data->info->params.modes.vad = attr->setting.vad && 
+				ipp_codec[codec_data->codec_idx].has_native_vad;
     codec_data->info->params.modes.bitrate = attr->info.avg_bps;
     codec_data->info->params.law = 0; /* Linear PCM input */
 
