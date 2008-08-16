@@ -141,41 +141,56 @@ extern USC_Fxns USC_AMRWBE_Fxns;
 
 /* CUSTOM CALLBACKS */
 
-/* Get frame attributes: frame_type and bitrate.
+/* This callback is useful for translating RTP frame into USC frame, e.g:
+ * reassigning frame attributes, reorder bitstream. Default behaviour of
+ * the translation is just setting the USC frame buffer & its size as 
+ * specified in RTP frame, setting USC frame frametype to 0, setting bitrate
+ * of USC frame to bitrate info of codec_data. Implement this callback when 
+ * the default behaviour is unapplicable.
  */
-typedef void (*frm_attr_cb)(void *frame, int frame_size, 
-			    int *bitrate, int *frametype);
+typedef void (*predecode_cb)(ipp_private_t *codec_data,
+			     const pjmedia_frame *rtp_frame,
+			     USC_Bitstream *usc_frame);
 
-/* Parse frames of a packet, returning PJ_SUCCESS on success. This is useful
- * for parsing a packet that contains multiple frames, while each frame may
- * be an SID frame or audio frame, this is also useful for multirate codec, 
- * i.e: AMR.
+/* Parse frames from a packet. Default behaviour of frame parsing is 
+ * just separating frames based on calculating frame length derived 
+ * from bitrate. Implement this callback when the default behaviour is 
+ * unapplicable.
  */
 typedef pj_status_t (*parse_cb)(ipp_private_t *codec_data, void *pkt, 
 				pj_size_t pkt_size, const pj_timestamp *ts,
 				unsigned *frame_cnt, pjmedia_frame frames[]);
 
-/* Pack frames into a packet.
+/* Pack frames into a packet. Default behaviour of packing frames is 
+ * just stacking the frames with octet aligned without adding any 
+ * payload header. Implement this callback when the default behaviour is
+ * unapplicable.
  */
 typedef pj_status_t (*pack_cb)(ipp_private_t *codec_data, void *pkt, 
 			       pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
 
 
-/* Callback implementations. */
-static void frm_attr_g723(void *frame, int frame_size, 
-		          int *bitrate, int *frametype);
-static void frm_attr_g729(void *frame, int frame_size, 
-		          int *bitrate, int *frametype);
+/* Custom callback implementations. */
+static    void predecode_g723( ipp_private_t *codec_data,
+			       const pjmedia_frame *rtp_frame,
+			       USC_Bitstream *usc_frame);
+static pj_status_t parse_g723( ipp_private_t *codec_data, void *pkt, 
+			       pj_size_t pkt_size, const pj_timestamp *ts,
+			       unsigned *frame_cnt, pjmedia_frame frames[]);
 
-static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt, 
+static void predecode_g729( ipp_private_t *codec_data,
+			    const pjmedia_frame *rtp_frame,
+			    USC_Bitstream *usc_frame);
+
+static    void predecode_amr( ipp_private_t *codec_data,
+			      const pjmedia_frame *rtp_frame,
+			      USC_Bitstream *usc_frame);
+static pj_status_t parse_amr( ipp_private_t *codec_data, void *pkt, 
 			      pj_size_t pkt_size, const pj_timestamp *ts,
 			      unsigned *frame_cnt, pjmedia_frame frames[]);
-static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt, 
-			     pj_size_t pkt_size, const pj_timestamp *ts,
-			     unsigned *frame_cnt, pjmedia_frame frames[]);
-static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt, 
-			    pj_size_t *pkt_size, pj_size_t max_pkt_size);
+static  pj_status_t pack_amr( ipp_private_t *codec_data, void *pkt, 
+			      pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
 
 /* IPP codec implementation descriptions. */
@@ -194,7 +209,8 @@ static struct ipp_codec {
     int		     has_native_vad;	/* Codec has internal VAD?	    */
     int		     has_native_plc;	/* Codec has internal PLC?	    */
 
-    frm_attr_cb	     frm_attr;		/* Callback to get frame attribute  */
+    predecode_cb     predecode;		/* Callback to translate RTP frame
+					   into USC frame		    */
     parse_cb	     parse;		/* Callback to parse bitstream	    */
     pack_cb	     pack;		/* Callback to pack bitstream	    */
 } 
@@ -204,7 +220,14 @@ ipp_codec[] =
 #   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
 		    5900, 12200, 4, 1, 1, 
-		    NULL, &parse_amr, &pack_amr
+		    &predecode_amr, &parse_amr, &pack_amr
+    },
+#   endif
+
+#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB != 0
+    {1, "AMR-WB",   PJMEDIA_RTP_PT_AMRWB,     &USC_AMRWB_Fxns,  16000, 1, 320, 
+		    15850, 23850, 4, 1, 1, 
+		    &predecode_amr, &parse_amr, &pack_amr
     },
 #   endif
 
@@ -217,7 +240,7 @@ ipp_codec[] =
      */
     {1, "G729",	    PJMEDIA_RTP_PT_G729,      &USC_G729AFP_Fxns, 8000, 1,  80,  
 		    8000, 11800, 2, 0, 1, 
-		    &frm_attr_g729, NULL, NULL
+		    &predecode_g729, NULL, NULL
     },
 #   endif
 
@@ -225,7 +248,7 @@ ipp_codec[] =
     /* This is actually G.723.1 */
     {1, "G723",	    PJMEDIA_RTP_PT_G723,      &USC_G723_Fxns,	 8000, 1, 240,  
 		    5300,  6300, 1, 1, 1, 
-		    &frm_attr_g723, &parse_g723, NULL
+		    &predecode_g723, &parse_g723, NULL
     },
 #   endif
 
@@ -265,8 +288,6 @@ ipp_codec[] =
 
 
 static int amr_get_mode(unsigned bitrate);
-static void amr_predecode(pj_bool_t AMRWB, pjmedia_frame *f, 
-			  int *frametype, int *bitrate);
 
 /*
  * Initialize and register IPP codec factory to pjmedia endpoint.
@@ -799,6 +820,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
     pj_size_t tx = 0;
     pj_int16_t *pcm_in   = (pj_int16_t*)input->buf;
     pj_int8_t  *bits_out = (pj_int8_t*) output->buf;
+    pj_uint8_t pt;
 
     /* Invoke external VAD if codec has no internal VAD */
     if (codec_data->vad && codec_data->vad_enabled) {
@@ -829,6 +851,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 
     nsamples = input->size >> 1;
     samples_per_frame=ipp_codec[codec_data->codec_idx].samples_per_frame;
+    pt = ipp_codec[codec_data->codec_idx].pt;
 
     PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
 		     PJMEDIA_CODEC_EPCMFRMINLEN);
@@ -849,7 +872,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 
 #if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
 	/* For AMR: reserve the first byte for frame info */
-	if (ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMR) {
+	if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
 	    ++out.pBuffer;
 	}
 #endif
@@ -860,7 +883,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 
 #if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
 	/* For AMR: put info (frametype, degraded, last frame) in the first byte */
-	if (ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMR) {
+	if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
 	    pj_uint8_t *info = (pj_uint8_t*)bits_out;
 
 	    ++out.nbytes;
@@ -870,22 +893,28 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	     * bit 6	: last frame flag
 	     * bit 7	: quality flag
 	     */
-	    if (out.frametype == 1 || out.frametype == 2 || out.frametype == 7) {
-		/* SID */
-		*info = 8;
+	    if (out.frametype == 0 || out.frametype == 4 || 
+		(pt == PJMEDIA_RTP_PT_AMR && out.frametype == 5) ||
+		(pt == PJMEDIA_RTP_PT_AMRWB && out.frametype == 6))
+	    {
+		/* Speech */
+		*info = (char)amr_get_mode(out.bitrate);
 		/* Degraded */
-		if (out.frametype == 7)
+		if (out.frametype == 5 || out.frametype == 6)
 		    *info |= 0x80;
-	    } else if (out.frametype == 3) {
+	    } else if (out.frametype == 1 || out.frametype == 2 || 
+		       (pt == PJMEDIA_RTP_PT_AMR && out.frametype == 6) ||
+		       (pt == PJMEDIA_RTP_PT_AMRWB && out.frametype == 7))
+	    {
+		/* SID */
+		*info = pt == PJMEDIA_RTP_PT_AMRWB? 9 : 8;
+		/* Degraded */
+		if (out.frametype == 6 || out.frametype == 7)
+		    *info |= 0x80;
+	    } else {
 		/* Untransmited */
 		*info = 15;
 		out.nbytes = 1;
-	    } else {
-		/* Normal */
-		*info = (char)amr_get_mode(out.bitrate);
-		/* Degraded */
-		if (out.frametype != 0)
-		    *info |= 0x80;
 	    }
 
 	    /* Last frame flag */
@@ -935,35 +964,25 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
     USC_Bitstream in;
     pj_uint8_t pt;
 
+    pt = ipp_codec[codec_data->codec_idx].pt; 
     samples_per_frame = ipp_codec[codec_data->codec_idx].samples_per_frame;
 
     PJ_ASSERT_RETURN(output_buf_len >= samples_per_frame << 1,
 		     PJMEDIA_CODEC_EPCMTOOSHORT);
 
     if (input->type == PJMEDIA_FRAME_TYPE_AUDIO) {
-	in.nbytes = input->size;
-	in.pBuffer = (char*)input->buf;
-	if (ipp_codec[codec_data->codec_idx].frm_attr) {
-	    ipp_codec[codec_data->codec_idx].frm_attr(input->buf, input->size,
-						       &in.bitrate, 
-						       &in.frametype);
+	if (ipp_codec[codec_data->codec_idx].predecode) {
+	    ipp_codec[codec_data->codec_idx].predecode(codec_data, input, &in);
 	} else {
 	    /* Most IPP codecs have frametype==0 for speech frame */
+	    in.pBuffer = (char*)input->buf;
+	    in.nbytes = input->size;
 	    in.frametype = 0;
 	    in.bitrate = codec_data->info->params.modes.bitrate;
 	}
 
 	out.pBuffer = output->buf;
-
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
-	/* For AMR: unorder the sensitivity order */
-	if (ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMR) {
-	    pjmedia_frame input_ = *input;
-	    amr_predecode(PJ_FALSE, &input_, &in.frametype, &in.bitrate);
-	    in.nbytes = input_.size;
-	}
     }
-#endif
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO ||
 	USC_NoError != ipp_codec[codec_data->codec_idx].fxns->Decode(
@@ -978,7 +997,6 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
 
 #if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G726) && PJMEDIA_HAS_INTEL_IPP_CODEC_G726 != 0
     /* For G.726: amplify decoding result (USC G.726 encoder deamplified it) */
-    pt = ipp_codec[codec_data->codec_idx].pt; 
     if (pt == PJMEDIA_RTP_PT_G726_16 || pt == PJMEDIA_RTP_PT_G726_24 ||
 	pt == PJMEDIA_RTP_PT_G726_32 || pt == PJMEDIA_RTP_PT_G726_40)
     {
@@ -1036,37 +1054,39 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
 
 #if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G729) && PJMEDIA_HAS_INTEL_IPP_CODEC_G729 != 0
 
-static void frm_attr_g729(void *frame, int frame_size, 
-		          int *bitrate, int *frametype)
+static void predecode_g729( ipp_private_t *codec_data,
+			    const pjmedia_frame *rtp_frame,
+			    USC_Bitstream *usc_frame)
 {
-    PJ_UNUSED_ARG(frame);
-
-    switch (frame_size) {
+    switch (rtp_frame->size) {
     case 2:
 	/* SID */
-	*frametype = 1;
-	*bitrate = 8000;
+	usc_frame->frametype = 1;
+	usc_frame->bitrate = codec_data->info->params.modes.bitrate;
 	break;
     case 8:  
 	/* G729D */
-	*frametype = 2;
-	*bitrate = 6400;
+	usc_frame->frametype = 2;
+	usc_frame->bitrate = 6400;
 	break;
     case 10: 
 	/* G729 */
-	*frametype = 3;
-	*bitrate = 8000;
+	usc_frame->frametype = 3;
+	usc_frame->bitrate = 8000;
 	break;
     case 15: 
 	/* G729E */
-	*frametype = 4;
-	*bitrate = 11800;
+	usc_frame->frametype = 4;
+	usc_frame->bitrate = 11800;
 	break;
     default: 
-	*frametype = 0;
-	*bitrate = 0;
+	usc_frame->frametype = 0;
+	usc_frame->bitrate = 0;
 	break;
     }
+
+    usc_frame->pBuffer = rtp_frame->buf;
+    usc_frame->nbytes = rtp_frame->size;
 }
 
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G729 */
@@ -1074,13 +1094,14 @@ static void frm_attr_g729(void *frame, int frame_size,
 
 #if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G723) && PJMEDIA_HAS_INTEL_IPP_CODEC_G723 != 0
 
-static void frm_attr_g723(void *frame, int frame_size, 
-		          int *bitrate, int *frametype)
+static    void predecode_g723( ipp_private_t *codec_data,
+			       const pjmedia_frame *rtp_frame,
+			       USC_Bitstream *usc_frame)
 {
     int i, HDR = 0;
-    pj_uint8_t *f = (pj_uint8_t*)frame;
+    pj_uint8_t *f = (pj_uint8_t*)rtp_frame->buf;
 
-    PJ_UNUSED_ARG(frame_size);
+    PJ_UNUSED_ARG(codec_data);
 
     for (i = 0; i < 2; ++i){
 	int tmp;
@@ -1088,8 +1109,10 @@ static void frm_attr_g723(void *frame, int frame_size,
 	HDR +=  tmp << i ;
     }
 
-    *bitrate = HDR == 0? 6300 : 5300;
-    *frametype = 0;
+    usc_frame->pBuffer = rtp_frame->buf;
+    usc_frame->nbytes = rtp_frame->size;
+    usc_frame->bitrate = HDR == 0? 6300 : 5300;
+    usc_frame->frametype = 0;
 }
 
 static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt, 
@@ -1652,12 +1675,19 @@ static pj_int16_t *AMRWB_ordermaps[9] =
     AMRWB_ordermap_2385
 };
 
-static pj_uint8_t AMRNB_framelen[]     = 
-    {12, 13, 15, 17, 19, 20, 26, 31, 5};
-static pj_uint8_t AMRNB_framelenbits[] = 
+static pj_uint8_t AMRNB_framelen[16] = 
+    {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 5};
+static pj_uint16_t AMRNB_framelenbits[9] = 
     {95, 103, 118, 134, 148, 159, 204, 244, 39};
-static pj_uint32_t AMRNB_bitrates[]    = 
+static pj_uint16_t AMRNB_bitrates[8] = 
     {4750, 5150, 5900, 6700, 7400, 7950, 10200, 12200};
+
+static pj_uint8_t AMRWB_framelen[16] = 
+    {17, 23, 32, 37, 40, 46, 50, 58, 60, 5, 0, 0, 0, 0, 0, 5};
+static pj_uint16_t AMRWB_framelenbits[10] = 
+    {132, 177, 253, 285, 317, 365, 397, 461, 477, 40};
+static pj_uint16_t AMRWB_bitrates[9] = 
+    {6600, 8850, 12650, 14250, 15850, 18250, 19850, 23050, 23850};
 
 
 /* Get mode based on bitrate */
@@ -1705,6 +1735,124 @@ static int amr_get_mode(unsigned bitrate)
     return mode;
 }
 
+/* Rearrange AMR bitstream of rtp_frame:
+ * - make the start_bit to be 0
+ * - if it is speech frame, reorder bitstream from sensitivity bits order
+ *   to encoder bits order.
+ */
+static void predecode_amr( ipp_private_t *codec_data,
+			   const pjmedia_frame *rtp_frame,
+			   USC_Bitstream *usc_frame)
+{
+    pj_uint8_t FT, Q;
+    pj_int8_t amr_bits[477 + 7] = {0};
+    pj_int8_t *p_amr_bits = &amr_bits[0];
+    unsigned i;
+    /* read cursor */
+    pj_uint8_t *r = (pj_uint8_t*)rtp_frame->buf;
+    pj_uint8_t start_bit;
+    /* write cursor */
+    pj_uint8_t *w = (pj_uint8_t*)rtp_frame->buf;
+    /* env vars for AMR or AMRWB */
+    pj_bool_t AMRWB;
+    pj_uint8_t SID_FT = 8;
+    pj_uint8_t *framelen_tbl = AMRNB_framelen;
+    pj_uint16_t *framelenbit_tbl = AMRNB_framelenbits;
+    pj_uint16_t *bitrate_tbl = AMRNB_bitrates;
+    pj_int16_t **order_map = AMRNB_ordermaps;
+
+    AMRWB = ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMRWB;
+    if (AMRWB) {
+	SID_FT = 9;
+	framelen_tbl = AMRWB_framelen;
+	framelenbit_tbl = AMRWB_framelenbits;
+	bitrate_tbl = AMRWB_bitrates;
+	order_map = AMRWB_ordermaps;
+    }
+
+    start_bit = (pj_uint8_t)((rtp_frame->bit_info & 0x0700) >> 8);
+    FT = (pj_uint8_t)(rtp_frame->bit_info & 0x0F);
+    Q = (pj_uint8_t)((rtp_frame->bit_info >> 16) & 0x01);
+
+    /* unpack AMR bitstream if there is any data */
+    if (FT <= SID_FT) {
+	i = 0;
+	if (start_bit) {
+	    for (; i < (unsigned)(8-start_bit); ++i)
+		*p_amr_bits++ = (pj_uint8_t)(*r >> (7-start_bit-i)) & 1;
+	    ++r;
+	}
+	for(; i < framelenbit_tbl[FT]; i += 8) {
+	    *p_amr_bits++ = (*r >> 7) & 1;
+	    *p_amr_bits++ = (*r >> 6) & 1;
+	    *p_amr_bits++ = (*r >> 5) & 1;
+	    *p_amr_bits++ = (*r >> 4) & 1;
+	    *p_amr_bits++ = (*r >> 3) & 1;
+	    *p_amr_bits++ = (*r >> 2) & 1;
+	    *p_amr_bits++ = (*r >> 1) & 1;
+	    *p_amr_bits++ = (*r ) & 1;
+	    ++r;
+	}
+    }
+
+    if (FT < SID_FT) {
+	/* Speech */
+	pj_int16_t *order_map_;
+
+	order_map_ = order_map[FT];
+	pj_bzero(rtp_frame->buf, rtp_frame->size);
+	for(i = 0; i < framelenbit_tbl[FT]; ++i) {
+	    if (amr_bits[i]) {
+		pj_uint16_t bitpos;
+		bitpos = order_map_[i];
+		w[bitpos>>3] |= 1 << (7 - (bitpos % 8));
+	    }
+	}
+	usc_frame->nbytes = framelen_tbl[FT];
+	if (Q)
+	    usc_frame->frametype = 0;
+	else
+	    usc_frame->frametype = AMRWB ? 6 : 5;
+	usc_frame->bitrate = bitrate_tbl[FT];
+    } else if (FT == SID_FT) {
+	/* SID */
+	pj_uint8_t w_bitptr = 0;
+	pj_uint8_t STI;
+	pj_uint8_t FT_;
+
+	STI = amr_bits[35];
+	if (AMRWB)
+	    FT_ = (amr_bits[36] << 3) | (amr_bits[37] << 2) | (amr_bits[38] << 1) | amr_bits[39];
+	else
+	    FT_ = (amr_bits[36] << 2) | (amr_bits[37] << 1) | amr_bits[38];
+
+	pj_bzero(rtp_frame->buf, rtp_frame->size);
+	for(i = 0; i < framelenbit_tbl[FT]; ++i) {
+	    if (amr_bits[i])
+		*w |= (1 << (7-w_bitptr));
+
+	    if (++w_bitptr == 8) {
+		++w;
+		w_bitptr = 0;
+	    }
+	}
+
+	usc_frame->nbytes = 5;
+	if (Q)
+	    usc_frame->frametype = STI? 2 : 1;
+	else
+	    usc_frame->frametype = AMRWB ? 7 : 6;
+	
+	usc_frame->bitrate = bitrate_tbl[FT_];
+    } else {
+	/* NO DATA */
+	usc_frame->nbytes = 0;
+	usc_frame->frametype = 3;
+	usc_frame->bitrate = 0;
+    }
+
+    usc_frame->pBuffer = rtp_frame->buf;
+}
 
 static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt, 
 			    pj_size_t *pkt_size, pj_size_t max_pkt_size)
@@ -1712,15 +1860,27 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
     /* Settings */
     pj_uint8_t CMR = 15; /* We don't request any code mode */
     pj_uint8_t octet_aligned = 0; /* default==0 when SDP not specifying */
-
     /* Write cursor */
     pj_uint8_t *w = (pj_uint8_t*)pkt;
     pj_uint8_t w_bitptr = 0;
-
     /* Read cursor */
     pj_uint8_t *r;
+    /* env vars for AMR or AMRWB */
+    pj_bool_t AMRWB;
+    pj_uint8_t SID_FT = 8;
+    pj_uint8_t *framelen_tbl = AMRNB_framelen;
+    pj_uint16_t *framelenbit_tbl = AMRNB_framelenbits;
+    pj_uint16_t *bitrate_tbl = AMRNB_bitrates;
+    pj_int16_t **order_map = AMRNB_ordermaps;
 
-    PJ_UNUSED_ARG(codec_data);
+    AMRWB = ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMRWB;
+    if (AMRWB) {
+	SID_FT = 9;
+	framelen_tbl = AMRWB_framelen;
+	framelenbit_tbl = AMRWB_framelenbits;
+	bitrate_tbl = AMRWB_bitrates;
+	order_map = AMRWB_ordermaps;
+    }
 
     PJ_TODO(Make_sure_buffer_is_enough_for_packing_AMR_packet);
 
@@ -1746,7 +1906,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	FT = (*r & 0x0F);
 	Q = (*r & 0x80) == 0;
 
-	pj_assert((FT >=0 && FT <= 8) || FT == 14 || FT == 15);
+	pj_assert(FT <= SID_FT || FT == 14 || FT == 15);
 	TOC = (pj_uint8_t)((F<<5) | (FT<<1) | Q);
 
 	if (w_bitptr == 0) {
@@ -1770,10 +1930,11 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	    w_bitptr = 0;
 	}
 
-	if (FT == 14 || FT == 15) 
+	if (FT > SID_FT)
+	    /* NO DATA */
 	    r += 1;
 	else
-	    r += AMRNB_framelen[FT] + 1;
+	    r += framelen_tbl[FT] + 1;
 
 	/* Last frame */
 	if (!F)
@@ -1791,17 +1952,17 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 
 	F = (*r & 0x40) == 0;
 	FT = (*r & 0x0F);
-	pj_assert((FT >=0 && FT <= 8) || FT == 14 || FT == 15);
+	pj_assert(FT <= SID_FT || FT == 14 || FT == 15);
 
 	++r;
-	if (FT == 14 || FT == 15) {
+	if (FT > SID_FT) {
 	    if (!F)
 		break;
 	    continue;
 	}
 
 	/* Unpack bits */
-	for(i = 0; i < AMRNB_framelen[FT]; ++i) {
+	for(i = 0; i < framelen_tbl[FT]; ++i) {
 	    *p_amr_bits++ = (*r >> 7) & 1;
 	    *p_amr_bits++ = (*r >> 6) & 1;
 	    *p_amr_bits++ = (*r >> 5) & 1;
@@ -1813,18 +1974,18 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	    ++r;
 	}
 
-	if (FT == 8) {
-	    /* SID */
-	    pj_uint8_t STI = 0;
+	if (FT < SID_FT) {
+	    /* Speech */
+	    pj_int16_t *order_map_;
 
-	    amr_bits[35] = (STI & 1);
-	    amr_bits[36] = (FT >> 2) & 1;
-	    amr_bits[37] = (FT >> 1) & 1;
-	    amr_bits[38] = (FT) & 1;
-
+	    /* Put bits in the packet, sensitivity descending ordered */
+	    order_map_ = order_map[FT];
 	    if (w_bitptr == 0) *w = 0;
-	    for(i = 0; i < AMRNB_framelenbits[FT]; ++i) {
-		if (amr_bits[i])
+	    for(i = 0; i < framelenbit_tbl[FT]; ++i) {
+		pj_uint8_t bit;
+		bit = amr_bits[order_map_[i]];
+		
+		if (bit)
 		    *w |= (1 << (7-w_bitptr));
 
 		if (++w_bitptr == 8) {
@@ -1838,18 +1999,26 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 		++w;
 		w_bitptr = 0;
 	    }
-	} else {
-	    /* Speech */
-	    pj_int16_t *order_map;
+	} else if (FT == SID_FT) {
+	    /* SID */
+	    pj_uint8_t STI = 0;
 
-	    /* Put bits in the packet, sensitivity descending ordered */
-	    order_map = AMRNB_ordermaps[FT];
+	    amr_bits[35] = (STI & 1);
+
+	    if (AMRWB) {
+		amr_bits[36] = (FT >> 3) & 1;
+		amr_bits[37] = (FT >> 2) & 1;
+		amr_bits[38] = (FT >> 1) & 1;
+		amr_bits[39] = (FT) & 1;
+	    } else {
+		amr_bits[36] = (FT >> 2) & 1;
+		amr_bits[37] = (FT >> 1) & 1;
+		amr_bits[38] = (FT) & 1;
+	    }
+
 	    if (w_bitptr == 0) *w = 0;
-	    for(i = 0; i < AMRNB_framelenbits[FT]; ++i) {
-		pj_uint8_t bit;
-		bit = amr_bits[order_map[i]];
-		
-		if (bit)
+	    for(i = 0; i < framelenbit_tbl[FT]; ++i) {
+		if (amr_bits[i])
 		    *w |= (1 << (7-w_bitptr));
 
 		if (++w_bitptr == 8) {
@@ -1881,9 +2050,9 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 
 /* Parse AMR payload into frames. Frame.bit_info will contain start_bit and
  * AMR frame type, it is mapped as below (bit 0:MSB - bit 31:LSB)
- * - bit  0-16: unused
+ * - bit  0-16: degraded quality flag (Q)
  * - bit 17-24: start_bit
- * - bit 25-32: frame_type
+ * - bit 25-32: frame_type (FT)
  */
 static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt, 
 			     pj_size_t pkt_size, const pj_timestamp *ts,
@@ -1891,16 +2060,26 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 {
     unsigned cnt = 0;
     pj_timestamp ts_ = *ts;
-
     /* Settings */
     pj_uint8_t CMR = 15; /* See if remote request code mode */
     pj_uint8_t octet_aligned = 0; /* default==0 when SDP not specifying */
-
     /* Read cursor */
     pj_uint8_t r_bitptr = 0;
     pj_uint8_t *r = (pj_uint8_t*)pkt;
+    /* env vars for AMR or AMRWB */
+    pj_bool_t AMRWB;
+    pj_uint8_t SID_FT = 8;
+    pj_uint8_t *framelen_tbl = AMRNB_framelen;
+    pj_uint16_t *framelenbit_tbl = AMRNB_framelenbits;
 
     PJ_UNUSED_ARG(pkt_size);
+
+    AMRWB = ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMRWB;
+    if (AMRWB) {
+	SID_FT = 9;
+	framelen_tbl = AMRWB_framelen;
+	framelenbit_tbl = AMRWB_framelenbits;
+    }
 
     *frame_cnt = 0;
 
@@ -1937,8 +2116,10 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 	FT = (TOC >> 1) & 0x0F;
 	Q = TOC & 1;
 
-	if (!((FT >=0 && FT <= 8) || FT == 14 || FT == 15))
+	if (FT > SID_FT && FT < 14) {
+	    pj_assert(!"Invalid AMR frametype, stream may be corrupted!");
 	    break;
+	}
 
 	if (octet_aligned) {
 	    ++r;
@@ -1946,14 +2127,12 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 	}
 
 	/* Set frame attributes */
-	if (FT != 14 && FT != 15) {
-	    frames[cnt].bit_info = FT;
-	    frames[cnt].timestamp = ts_;
-	    frames[cnt].type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frames[cnt].bit_info = FT | (Q << 16);
+	frames[cnt].timestamp = ts_;
+	frames[cnt].type = PJMEDIA_FRAME_TYPE_AUDIO;
 
-	    ++cnt;
-	}
 	ts_.u64 += ipp_codec[codec_data->codec_idx].samples_per_frame;
+	++cnt;
 
 	if (!F || cnt == *frame_cnt)
 	    break;
@@ -1966,112 +2145,34 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
     while (cnt < *frame_cnt) {
 	unsigned FT;
 
-	FT = frames[cnt].bit_info;
+	FT = frames[cnt].bit_info & 0x0F;
 
 	frames[cnt].bit_info |= (r_bitptr << 8);
 	frames[cnt].buf = r;
 
 	if (octet_aligned) {
-	    r += AMRNB_framelen[FT];
-	    frames[cnt].size = AMRNB_framelen[FT];
+	    r += framelen_tbl[FT];
+	    frames[cnt].size = framelen_tbl[FT];
 	} else {
-	    unsigned adv_bit;
+	    if (FT == 14 || FT == 15) {
+		/* NO DATA */
+		frames[cnt].size = 0;
+	    } else {
+		unsigned adv_bit;
 
-	    adv_bit = AMRNB_framelenbits[FT] + r_bitptr;
-	    r += adv_bit >> 3;
-	    r_bitptr = (pj_uint8_t)(adv_bit % 8);
+		adv_bit = framelenbit_tbl[FT] + r_bitptr;
+		r += adv_bit >> 3;
+		r_bitptr = (pj_uint8_t)(adv_bit % 8);
 
-	    frames[cnt].size = adv_bit >> 3;
-	    if (r_bitptr)
-		++frames[cnt].size;
+		frames[cnt].size = adv_bit >> 3;
+		if (r_bitptr)
+		    ++frames[cnt].size;
+	    }
 	}
 	++cnt;
     }
 
     return PJ_SUCCESS;
-}
-
-/* Rearrange bits in the frame so its start_bit is 0 and also
- * unorder bitstream (off the sensitivity order) if the frame
- * contains speech (not SID frame).
- */
-static void amr_predecode(pj_bool_t AMRWB, pjmedia_frame *f, 
-			  int *frametype, int *bitrate)
-{
-    pj_uint8_t FT;
-    pj_int8_t amr_bits[477 + 7] = {0};
-    pj_int8_t *p_amr_bits = &amr_bits[0];
-    unsigned i;
-    /* read cursor */
-    pj_uint8_t *r = (pj_uint8_t*)f->buf;
-    pj_uint8_t start_bit;
-    /* write cursor */
-    pj_uint8_t *w = (pj_uint8_t*)f->buf;
-
-    PJ_UNUSED_ARG(AMRWB);
-
-    start_bit = (pj_uint8_t)((f->bit_info & 0xFF00) >> 8);
-    FT = (pj_uint8_t)(f->bit_info & 0xFF);
-
-    /* unpack AMR bitstream */
-    i = 0;
-    if (start_bit) {
-	for (; i < (unsigned)(8-start_bit); ++i)
-	    *p_amr_bits++ = (pj_uint8_t)(*r >> (7-start_bit-i)) & 1;
-	++r;
-    }
-    for(; i < AMRNB_framelenbits[FT]; i += 8) {
-	*p_amr_bits++ = (*r >> 7) & 1;
-	*p_amr_bits++ = (*r >> 6) & 1;
-	*p_amr_bits++ = (*r >> 5) & 1;
-	*p_amr_bits++ = (*r >> 4) & 1;
-	*p_amr_bits++ = (*r >> 3) & 1;
-	*p_amr_bits++ = (*r >> 2) & 1;
-	*p_amr_bits++ = (*r >> 1) & 1;
-	*p_amr_bits++ = (*r ) & 1;
-	++r;
-    }
-
-    if (FT >= 0 && FT <= 7) {
-	/* Speech */
-	pj_int16_t *order_map;
-
-	order_map = AMRNB_ordermaps[FT];
-	pj_bzero(f->buf, f->size);
-	for(i = 0; i < AMRNB_framelenbits[FT]; ++i) {
-	    if (amr_bits[i]) {
-		pj_uint16_t bitpos;
-		bitpos = order_map[i];
-		w[bitpos>>3] |= 1 << (7 - (bitpos % 8));
-	    }
-	}
-	f->size = AMRNB_framelen[FT];
-	*frametype = 0;
-	*bitrate = AMRNB_bitrates[FT];
-    } else {
-	/* SID */
-	pj_uint8_t w_bitptr = 0;
-	pj_uint8_t STI;
-	pj_uint8_t mode;
-
-	STI = amr_bits[35];
-	mode = (amr_bits[36] << 2) | (amr_bits[37] << 1) | amr_bits[38];
-
-	pj_bzero(f->buf, f->size);
-	for(i = 0; i < AMRNB_framelenbits[FT]; ++i) {
-	    if (amr_bits[i])
-		*w |= (1 << (7-w_bitptr));
-
-	    if (++w_bitptr == 8) {
-		++w;
-		w_bitptr = 0;
-	    }
-	}
-
-	f->size = 5;
-	*frametype = STI? 2 : 1;
-	*bitrate = AMRNB_bitrates[mode];
-    }
 }
 
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_AMR */
