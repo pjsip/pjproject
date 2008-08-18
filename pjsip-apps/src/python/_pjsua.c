@@ -188,7 +188,7 @@ static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
     if (PyCallable_Check(g_obj_callback->on_dtmf_digit)) {
 	char digit_str[10];
 
-	ENTER_PYTHON();
+	PyGILState_STATE state = PyGILState_Ensure();
 
 	pj_ansi_snprintf(digit_str, sizeof(digit_str), "%c", digit);
 
@@ -200,7 +200,7 @@ static void cb_on_dtmf_digit(pjsua_call_id call_id, int digit)
 	    NULL
 	);
 
-	LEAVE_PYTHON();
+	PyGILState_Release(state);
     }
 }
 
