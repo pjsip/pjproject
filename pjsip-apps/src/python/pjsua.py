@@ -1939,10 +1939,10 @@ class CodecInfo:
     plc_enabled = False
 
     def __init__(self, codec_info, codec_param):
-        self.name = codec_info.id
+        self.name = codec_info.codec_id
         self.priority = codec_info.priority
         self.clock_rate = codec_param.info.clock_rate
-        self.channel_count = codec_param.info.channel_count
+        self.channel_count = codec_param.info.channel_cnt
         self.avg_bps = codec_param.info.avg_bps
         self.frm_ptime = codec_param.info.frm_ptime
         self.ptime = codec_param.info.frm_ptime * \
@@ -1953,7 +1953,7 @@ class CodecInfo:
 
     def _cvt_to_pjsua(self):
         ci = _pjsua.Codec_Info()
-        ci.id = self.name
+        ci.codec_id = self.name
         ci.priority = self.priority
         return ci
 
@@ -2346,7 +2346,7 @@ class Lib:
         ci_list = _pjsua.enum_codecs()
         codec_info = []
         for ci in ci_list:
-            cp = _pjsua.codec_get_param(ci.id)
+            cp = _pjsua.codec_get_param(ci.codec_id)
             if cp:
                 codec_info.append(CodecInfo(ci, cp))
         return codec_info
