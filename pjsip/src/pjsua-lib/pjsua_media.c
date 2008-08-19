@@ -569,6 +569,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 	    pjmedia_codec_g722_deinit();
 #	endif	/* PJMEDIA_HAS_G722_CODEC */
 
+#	if PJMEDIA_HAS_INTEL_IPP_CODECS
+	    pjmedia_codec_ipp_deinit();
+#	endif	/* PJMEDIA_HAS_INTEL_IPP_CODECS */
+
 #	if PJMEDIA_HAS_L16_CODEC
 	    pjmedia_codec_l16_deinit();
 #	endif	/* PJMEDIA_HAS_L16_CODEC */

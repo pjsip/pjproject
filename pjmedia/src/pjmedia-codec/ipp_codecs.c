@@ -921,13 +921,13 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	    if (nsamples == samples_per_frame)
 		*info |= 0x40;
 	}
+#endif
 
 	pcm_in += samples_per_frame;
 	nsamples -= samples_per_frame;
 	tx += out.nbytes;
 	bits_out += out.nbytes;
     }
-#endif
 
     if (ipp_codec[codec_data->codec_idx].pack != NULL) {
 	ipp_codec[codec_data->codec_idx].pack(codec_data, output->buf,
