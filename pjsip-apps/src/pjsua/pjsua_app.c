@@ -2365,6 +2365,30 @@ static void on_reg_state(pjsua_acc_id acc_id)
 
 
 /*
+ * Handler for incoming presence subscription request
+ */
+static void on_incoming_subscribe(pjsua_acc_id acc_id,
+				  pjsua_srv_pres *srv_pres,
+				  pjsua_buddy_id buddy_id,
+				  const pj_str_t *from,
+				  pjsip_rx_data *rdata,
+				  pjsip_status_code *code,
+				  pj_str_t *reason,
+				  pjsua_msg_data *msg_data)
+{
+    /* Just accept the request (the default behavior) */
+    PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(srv_pres);
+    PJ_UNUSED_ARG(buddy_id);
+    PJ_UNUSED_ARG(from);
+    PJ_UNUSED_ARG(rdata);
+    PJ_UNUSED_ARG(code);
+    PJ_UNUSED_ARG(reason);
+    PJ_UNUSED_ARG(msg_data);
+}
+
+
+/*
  * Handler on buddy state changed.
  */
 static void on_buddy_state(pjsua_buddy_id buddy_id)
@@ -3924,6 +3948,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     app_config.cfg.cb.on_dtmf_digit = &call_on_dtmf_callback;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
+    app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
