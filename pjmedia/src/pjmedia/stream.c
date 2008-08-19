@@ -143,12 +143,12 @@ struct pjmedia_stream
 					    /**< Flag to specify whether 
 						 normalization process 
 						 is needed		    */
-    unsigned		     rtp_tx_samples_per_pkt;
-					    /**< Normalized samples per packet 
+    unsigned		     rtp_tx_ts_len_per_pkt;
+					    /**< Normalized ts length per packet
 						 transmitted according to 
 						 'erroneous' definition	    */
-    unsigned		     rtp_rx_samples_per_frame;
-					    /**< Normalized samples per frame 
+    unsigned		     rtp_rx_ts_len_per_frame;
+					    /**< Normalized ts length per frame
 						 received according to 
 						 'erroneous' definition	    */
     pj_uint32_t		     rtp_rx_last_ts;/**< Last received RTP timestamp
@@ -686,7 +686,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 
     /* Number of samples in the frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
-	ts_len = (frame->size >> 1);
+	ts_len = (frame->size >> 1) / stream->codec_param.info.channel_cnt;
     else
 	ts_len = 0;
 
@@ -698,7 +698,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      * e.g: G722, MPEG audio.
      */
     if (stream->has_g722_mpeg_bug)
-	rtp_ts_len = stream->rtp_tx_samples_per_pkt;
+	rtp_ts_len = stream->rtp_tx_ts_len_per_pkt;
     else
 	rtp_ts_len = ts_len;
 #else
@@ -1246,13 +1246,13 @@ static void on_rx_rtp( void *data,
 			 || peer_frm_ts_diff == 
 				    stream->port.info.samples_per_frame >> 1))
 		    {
-			if (peer_frm_ts_diff < stream->rtp_rx_samples_per_frame)
-			    stream->rtp_rx_samples_per_frame = peer_frm_ts_diff;
+			if (peer_frm_ts_diff < stream->rtp_rx_ts_len_per_frame)
+			    stream->rtp_rx_ts_len_per_frame = peer_frm_ts_diff;
 
 			if (--stream->rtp_rx_check_cnt == 0) {
     			    PJ_LOG(4, (THIS_FILE, "G722 codec used, remote"
 				       " samples per frame detected = %d", 
-				       stream->rtp_rx_samples_per_frame));
+				       stream->rtp_rx_ts_len_per_frame));
 			    
 			    /* Reset jitter buffer once detection done */
 			    pjmedia_jbuf_reset(stream->jb);
@@ -1264,18 +1264,16 @@ static void on_rx_rtp( void *data,
 		stream->rtp_rx_last_cnt = count;
 	    }
 
-	    ts_span = stream->rtp_rx_samples_per_frame;
+	    ts_span = stream->rtp_rx_ts_len_per_frame;
 
 	} else {
 	    ts_span = stream->codec_param.info.frm_ptime * 
-		      stream->codec_param.info.clock_rate *
-		      stream->codec_param.info.channel_cnt /
+		      stream->codec_param.info.clock_rate /
 		      1000;
 	}
 #else
 	ts_span = stream->codec_param.info.frm_ptime * 
-		  stream->codec_param.info.clock_rate *
-		  stream->codec_param.info.channel_cnt /
+		  stream->codec_param.info.clock_rate /
 		  1000;
 #endif
 
@@ -1562,6 +1560,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	unsigned ptime;
 
 	stream->enc_samples_per_pkt = stream->codec_param.info.enc_ptime *
+				      stream->codec_param.info.channel_cnt *
 				      stream->port.info.clock_rate / 1000;
 
 	/* Set buffer size as twice the largest ptime value between
@@ -1612,8 +1611,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->has_g722_mpeg_bug = PJ_FALSE;
     stream->rtp_rx_last_ts = 0;
     stream->rtp_rx_last_cnt = 0;
-    stream->rtp_tx_samples_per_pkt = stream->enc_samples_per_pkt;
-    stream->rtp_rx_samples_per_frame = stream->port.info.samples_per_frame;
+    stream->rtp_tx_ts_len_per_pkt = stream->enc_samples_per_pkt /
+				     stream->codec_param.info.channel_cnt;
+    stream->rtp_rx_ts_len_per_frame = stream->port.info.samples_per_frame / 
+				       stream->codec_param.info.channel_cnt;
 
     /* Init RTCP session: */
 
@@ -1625,7 +1626,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 			  info->ssrc);
 	stream->has_g722_mpeg_bug = PJ_TRUE;
 	/* RTP clock rate = 1/2 real clock rate */
-	stream->rtp_tx_samples_per_pkt >>= 1;
+	stream->rtp_tx_ts_len_per_pkt >>= 1;
     } else {
 	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
 			  info->fmt.clock_rate, 
