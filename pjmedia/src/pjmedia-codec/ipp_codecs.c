@@ -30,9 +30,9 @@
 #include <pj/os.h>
 
 /*
- * Only build this file if PJMEDIA_HAS_INTEL_IPP_CODECS != 0
+ * Only build this file if PJMEDIA_HAS_INTEL_IPP != 0
  */
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODECS) && PJMEDIA_HAS_INTEL_IPP_CODECS != 0
+#if defined(PJMEDIA_HAS_INTEL_IPP) && PJMEDIA_HAS_INTEL_IPP != 0
 
 #include <usc.h>
 
@@ -217,21 +217,21 @@ static struct ipp_codec {
 
 ipp_codec[] = 
 {
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
 		    5900, 12200, 4, 1, 1, 
 		    &predecode_amr, &parse_amr, &pack_amr
     },
 #   endif
 
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB != 0
-    {1, "AMR-WB",   PJMEDIA_RTP_PT_AMRWB,     &USC_AMRWB_Fxns,  16000, 1, 320, 
-		    15850, 23850, 4, 1, 1, 
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
+    {1, "AMR-WB",   PJMEDIA_RTP_PT_AMRWB,     &USC_AMRWB_Fxns,  16000, 1, 320,
+		    15850, 23850, 1, 1, 1, 
 		    &predecode_amr, &parse_amr, &pack_amr
     },
 #   endif
 
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G729) && PJMEDIA_HAS_INTEL_IPP_CODEC_G729 != 0
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
     /* G.729 actually has internal VAD, but for now we need to disable it, 
      * since its RTP packaging (multiple frames per packet) requires 
      * SID frame to only be occured in the last frame, while controling 
@@ -244,15 +244,15 @@ ipp_codec[] =
     },
 #   endif
 
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G723) && PJMEDIA_HAS_INTEL_IPP_CODEC_G723 != 0
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1
     /* This is actually G.723.1 */
     {1, "G723",	    PJMEDIA_RTP_PT_G723,      &USC_G723_Fxns,	 8000, 1, 240,  
-		    5300,  6300, 1, 1, 1, 
+		    6300,  6300, 1, 1, 1, 
 		    &predecode_g723, &parse_g723, NULL
     },
 #   endif
 
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G726) && PJMEDIA_HAS_INTEL_IPP_CODEC_G726 != 0
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_G726
     {0, "G726-16",  PJMEDIA_RTP_PT_G726_16,   &USC_G726_Fxns,	 8000, 1,  80, 
 		    16000, 16000, 2, 0, 0,
 		    NULL, NULL, NULL
@@ -271,16 +271,16 @@ ipp_codec[] =
     },
 #   endif
 
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G728) && PJMEDIA_HAS_INTEL_IPP_CODEC_G728 != 0
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_G728
     {1, "G728",	    PJMEDIA_RTP_PT_G728,      &USC_G728_Fxns,	 8000, 1,  80, 
 		    16000, 16000, 2, 0, 1,
 		    NULL, NULL, NULL
     },
 #   endif
 
-#   if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1) && PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 != 0
+#   if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
     {0, "G7221",    PJMEDIA_RTP_PT_G722_1,    &USC_G722_Fxns,	16000, 1, 320, 
-		    24000, 32000, 1, 0, 1,
+		    16000, 32000, 1, 0, 1,
 		    NULL, NULL, NULL
     },
 #   endif
@@ -519,8 +519,7 @@ static pj_status_t ipp_alloc_codec( pjmedia_codec_factory *factory,
     }
 
     /* Create pool for codec instance */
-    pool = pjmedia_endpt_create_pool(ipp_factory.endpt, "IPP codec inst", 
-				     4000, 4000);
+    pool = pjmedia_endpt_create_pool(ipp_factory.endpt, "IPPcodec", 512, 512);
     codec = PJ_POOL_ZALLOC_T(pool, pjmedia_codec);
     PJ_ASSERT_RETURN(codec != NULL, PJ_ENOMEM);
     codec->op = &ipp_op;
@@ -604,26 +603,26 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 				   pjmedia_codec_param *attr )
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
+    struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
     int info_size;
     pj_pool_t *pool;
-    int i, j, idx;
+    int i, j;
     USC_MemBank *membanks;
     int nb_membanks;
 
     pool = codec_data->pool;
-    idx = codec_data->codec_idx;
 
     /* Get the codec info size */
-    if (USC_NoError != ipp_codec[idx].fxns->std.GetInfoSize(&info_size)) {
-	PJ_LOG(3,(THIS_FILE, "Error getting codec info size"));
+    if (USC_NoError != ippc->fxns->std.GetInfoSize(&info_size)) {
+	PJ_LOG(1,(THIS_FILE, "Error getting codec info size"));
 	goto on_error;
     }
     /* Get the codec info */
     codec_data->info = pj_pool_zalloc(pool, info_size);
-    if (USC_NoError != ipp_codec[idx].fxns->std.GetInfo((USC_Handle)NULL, 
-							 codec_data->info))
+    if (USC_NoError != ippc->fxns->std.GetInfo((USC_Handle)NULL, 
+					       codec_data->info))
     {
-	PJ_LOG(3,(THIS_FILE, "Error getting codec info"));
+	PJ_LOG(1,(THIS_FILE, "Error getting codec info"));
 	goto on_error;
     }
 
@@ -632,16 +631,15 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     /* Setting the encoder params */
     codec_data->info->params.direction = USC_ENCODE;
     codec_data->info->params.modes.vad = attr->setting.vad && 
-				ipp_codec[codec_data->codec_idx].has_native_vad;
+					   ippc->has_native_vad;
     codec_data->info->params.modes.bitrate = attr->info.avg_bps;
     codec_data->info->params.law = 0; /* Linear PCM input */
 
     /* Get number of memory blocks needed by the encoder */
-    if (USC_NoError != 
-	ipp_codec[idx].fxns->std.NumAlloc(&codec_data->info->params, 
-					   &nb_membanks))
+    if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params,
+					        &nb_membanks))
     {
-	PJ_LOG(3,(THIS_FILE, "Error getting no of memory blocks of encoder"));
+	PJ_LOG(1,(THIS_FILE, "Error getting no of memory blocks of encoder"));
 	goto on_error;
     }
 
@@ -649,10 +647,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     membanks = (USC_MemBank*) pj_pool_zalloc(pool, 
 					     sizeof(USC_MemBank) * nb_membanks);
     /* Get size of each memory block */
-    if (USC_NoError != 
-	ipp_codec[idx].fxns->std.MemAlloc(&codec_data->info->params, membanks))
+    if (USC_NoError != ippc->fxns->std.MemAlloc(&codec_data->info->params, 
+					        membanks))
     {
-	PJ_LOG(3,(THIS_FILE, "Error getting memory blocks size of encoder"));
+	PJ_LOG(1,(THIS_FILE, "Error getting memory blocks size of encoder"));
 	goto on_error;
     }
 
@@ -662,11 +660,11 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
 
     /* Create encoder instance */
-    if (USC_NoError != ipp_codec[idx].fxns->std.Init(&codec_data->info->params,
-						      membanks, 
-						      &codec_data->enc))
+    if (USC_NoError != ippc->fxns->std.Init(&codec_data->info->params,
+					    membanks, 
+					    &codec_data->enc))
     {
-	PJ_LOG(3,(THIS_FILE, "Error initializing encoder"));
+	PJ_LOG(1,(THIS_FILE, "Error initializing encoder"));
 	goto on_error;
     }
 
@@ -676,11 +674,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     codec_data->info->params.direction = USC_DECODE;
 
     /* Get number of memory blocks needed by the decoder */
-    if (USC_NoError != 
-	ipp_codec[idx].fxns->std.NumAlloc(&codec_data->info->params, 
-					   &nb_membanks))
+    if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params, 
+						 &nb_membanks))
     {
-	PJ_LOG(3,(THIS_FILE, "Error getting no of memory blocks of decoder"));
+	PJ_LOG(1,(THIS_FILE, "Error getting no of memory blocks of decoder"));
 	goto on_error;
     }
 
@@ -688,10 +685,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     membanks = (USC_MemBank*) pj_pool_zalloc(pool, 
 					     sizeof(USC_MemBank) * nb_membanks);
     /* Get size of each memory block */
-    if (USC_NoError != 
-	ipp_codec[idx].fxns->std.MemAlloc(&codec_data->info->params, membanks))
+    if (USC_NoError != ippc->fxns->std.MemAlloc(&codec_data->info->params, 
+						membanks))
     {
-	PJ_LOG(3,(THIS_FILE, "Error getting memory blocks size of decoder"));
+	PJ_LOG(1,(THIS_FILE, "Error getting memory blocks size of decoder"));
 	goto on_error;
     }
 
@@ -701,20 +698,19 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
 
     /* Create decoder instance */
-    if (USC_NoError != ipp_codec[idx].fxns->std.Init(&codec_data->info->params, 
-						      membanks, 
-						      &codec_data->dec))
+    if (USC_NoError != ippc->fxns->std.Init(&codec_data->info->params, 
+					    membanks, &codec_data->dec))
     {
-	PJ_LOG(3,(THIS_FILE, "Error initializing decoder"));
+	PJ_LOG(1,(THIS_FILE, "Error initializing decoder"));
 	goto on_error;
     }
 
     /* Update codec info */
-    ipp_codec[idx].fxns->std.GetInfo((USC_Handle)codec_data->enc, codec_data->info);
+    ippc->fxns->std.GetInfo((USC_Handle)codec_data->enc, codec_data->info);
 
     /* Get bitstream size */
-    i = codec_data->info->params.modes.bitrate * ipp_codec[idx].samples_per_frame;
-    j = ipp_codec[idx].clock_rate << 3;
+    i = codec_data->info->params.modes.bitrate * ippc->samples_per_frame;
+    j = ippc->clock_rate << 3;
     codec_data->frame_size = (pj_uint16_t)(i / j);
     if (i % j) ++codec_data->frame_size;
 
@@ -745,16 +741,17 @@ static pj_status_t  ipp_codec_modify(pjmedia_codec *codec,
 				     const pjmedia_codec_param *attr )
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
+    struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
 
     codec_data->vad_enabled = (attr->setting.vad != 0);
     codec_data->plc_enabled = (attr->setting.plc != 0);
 
-    if (ipp_codec[codec_data->codec_idx].has_native_vad) {
+    if (ippc->has_native_vad) {
 	USC_Modes modes;
 
 	modes = codec_data->info->params.modes;
 	modes.vad = codec_data->vad_enabled;
-	ipp_codec[codec_data->codec_idx].fxns->std.Control(&modes, codec_data->enc);
+	ippc->fxns->std.Control(&modes, codec_data->enc);
     }
 
     return PJ_SUCCESS;
@@ -771,21 +768,20 @@ static pj_status_t  ipp_codec_parse( pjmedia_codec *codec,
 				     pjmedia_frame frames[])
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
+    struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
     unsigned count = 0;
 
     PJ_ASSERT_RETURN(frame_cnt, PJ_EINVAL);
 
-    if (ipp_codec[codec_data->codec_idx].parse != NULL) {
-	return ipp_codec[codec_data->codec_idx].parse(codec_data, pkt, 
-					pkt_size, ts, frame_cnt, frames);
+    if (ippc->parse != NULL) {
+	return ippc->parse(codec_data, pkt,  pkt_size, ts, frame_cnt, frames);
     }
 
     while (pkt_size >= codec_data->frame_size && count < *frame_cnt) {
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].buf = pkt;
 	frames[count].size = codec_data->frame_size;
-	frames[count].timestamp.u64 = ts->u64 + count * 
-			ipp_codec[codec_data->codec_idx].samples_per_frame;
+	frames[count].timestamp.u64 = ts->u64 + count*ippc->samples_per_frame;
 
 	pkt = ((char*)pkt) + codec_data->frame_size;
 	pkt_size -= codec_data->frame_size;
@@ -797,8 +793,7 @@ static pj_status_t  ipp_codec_parse( pjmedia_codec *codec,
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].buf = pkt;
 	frames[count].size = pkt_size;
-	frames[count].timestamp.u64 = ts->u64 + count * 
-			ipp_codec[codec_data->codec_idx].samples_per_frame;
+	frames[count].timestamp.u64 = ts->u64 + count*ippc->samples_per_frame;
 	++count;
     }
 
@@ -815,6 +810,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
+    struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
     unsigned samples_per_frame;
     unsigned nsamples;
     pj_size_t tx = 0;
@@ -836,8 +832,8 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 						NULL);
 	if (is_silence &&
 	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_duration < (PJMEDIA_CODEC_MAX_SILENCE_PERIOD*
-	    (int)ipp_codec[codec_data->codec_idx].clock_rate/1000)) 
+	    silence_duration < (PJMEDIA_CODEC_MAX_SILENCE_PERIOD *
+				(int)ippc->clock_rate / 1000)) 
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
@@ -850,8 +846,8 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
     }
 
     nsamples = input->size >> 1;
-    samples_per_frame=ipp_codec[codec_data->codec_idx].samples_per_frame;
-    pt = ipp_codec[codec_data->codec_idx].pt;
+    samples_per_frame = ippc->samples_per_frame;
+    pt = ippc->pt;
 
     PJ_ASSERT_RETURN(nsamples % samples_per_frame == 0, 
 		     PJMEDIA_CODEC_EPCMFRMINLEN);
@@ -870,19 +866,21 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 
 	out.pBuffer = bits_out;
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
 	/* For AMR: reserve the first byte for frame info */
 	if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
 	    ++out.pBuffer;
 	}
 #endif
 
-	if (USC_NoError != ipp_codec[codec_data->codec_idx].fxns->Encode(codec_data->enc, &in, &out)) {
+	if (USC_NoError != ippc->fxns->Encode(codec_data->enc, &in, &out)) {
 	    break;
 	}
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
-	/* For AMR: put info (frametype, degraded, last frame) in the first byte */
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
+	/* For AMR: put info (frametype, degraded, last frame) in the 
+	 * first byte 
+	 */
 	if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
 	    pj_uint8_t *info = (pj_uint8_t*)bits_out;
 
@@ -907,7 +905,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 		       (pt == PJMEDIA_RTP_PT_AMRWB && out.frametype == 7))
 	    {
 		/* SID */
-		*info = pt == PJMEDIA_RTP_PT_AMRWB? 9 : 8;
+		*info = (pj_uint8_t)(pt == PJMEDIA_RTP_PT_AMRWB? 9 : 8);
 		/* Degraded */
 		if (out.frametype == 6 || out.frametype == 7)
 		    *info |= 0x80;
@@ -929,9 +927,8 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	bits_out += out.nbytes;
     }
 
-    if (ipp_codec[codec_data->codec_idx].pack != NULL) {
-	ipp_codec[codec_data->codec_idx].pack(codec_data, output->buf,
-					       &tx, output_buf_len);
+    if (ippc->pack != NULL) {
+	ippc->pack(codec_data, output->buf, &tx, output_buf_len);
     }
 
     /* Check if we don't need to transmit the frame (DTX) */
@@ -959,20 +956,21 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
+    struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
     unsigned samples_per_frame;
     USC_PCMStream out;
     USC_Bitstream in;
     pj_uint8_t pt;
 
-    pt = ipp_codec[codec_data->codec_idx].pt; 
-    samples_per_frame = ipp_codec[codec_data->codec_idx].samples_per_frame;
+    pt = ippc->pt; 
+    samples_per_frame = ippc->samples_per_frame;
 
     PJ_ASSERT_RETURN(output_buf_len >= samples_per_frame << 1,
 		     PJMEDIA_CODEC_EPCMTOOSHORT);
 
     if (input->type == PJMEDIA_FRAME_TYPE_AUDIO) {
-	if (ipp_codec[codec_data->codec_idx].predecode) {
-	    ipp_codec[codec_data->codec_idx].predecode(codec_data, input, &in);
+	if (ippc->predecode) {
+	    ippc->predecode(codec_data, input, &in);
 	} else {
 	    /* Most IPP codecs have frametype==0 for speech frame */
 	    in.pBuffer = (char*)input->buf;
@@ -985,8 +983,7 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
     }
 
     if (input->type != PJMEDIA_FRAME_TYPE_AUDIO ||
-	USC_NoError != ipp_codec[codec_data->codec_idx].fxns->Decode(
-						codec_data->dec, &in, &out)) 
+	USC_NoError != ippc->fxns->Decode(codec_data->dec, &in, &out)) 
     {
 	pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
 	output->size = samples_per_frame << 1;
@@ -995,7 +992,7 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
 	return PJ_SUCCESS;
     }
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G726) && PJMEDIA_HAS_INTEL_IPP_CODEC_G726 != 0
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G726
     /* For G.726: amplify decoding result (USC G.726 encoder deamplified it) */
     if (pt == PJMEDIA_RTP_PT_G726_16 || pt == PJMEDIA_RTP_PT_G726_24 ||
 	pt == PJMEDIA_RTP_PT_G726_32 || pt == PJMEDIA_RTP_PT_G726_40)
@@ -1027,11 +1024,12 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
 				      struct pjmedia_frame *output)
 {
     ipp_private_t *codec_data = (ipp_private_t*) codec->codec_data;
+    struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
     unsigned samples_per_frame;
 
     PJ_UNUSED_ARG(output_buf_len);
 
-    samples_per_frame = ipp_codec[codec_data->codec_idx].samples_per_frame;
+    samples_per_frame = ippc->samples_per_frame;
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = samples_per_frame << 1;
@@ -1042,8 +1040,7 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
 	} else {
 	    USC_PCMStream out;
 	    out.pBuffer = output->buf;
-	    ipp_codec[codec_data->codec_idx].fxns->Decode(codec_data->dec, 
-							   NULL, &out);
+	    ippc->fxns->Decode(codec_data->dec, NULL, &out);
 	}
     } else {
 	pjmedia_zero_samples((pj_int16_t*)output->buf, samples_per_frame);
@@ -1052,7 +1049,7 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G729) && PJMEDIA_HAS_INTEL_IPP_CODEC_G729 != 0
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
 
 static void predecode_g729( ipp_private_t *codec_data,
 			    const pjmedia_frame *rtp_frame,
@@ -1092,7 +1089,7 @@ static void predecode_g729( ipp_private_t *codec_data,
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G729 */
 
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_G723) && PJMEDIA_HAS_INTEL_IPP_CODEC_G723 != 0
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1
 
 static    void predecode_g723( ipp_private_t *codec_data,
 			       const pjmedia_frame *rtp_frame,
@@ -1140,7 +1137,7 @@ static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
 	else if (HDR == 3)
 	    framesize = 1;
 	else {
-	    pj_assert(!"Unknown G723.1 frametype, bitstream may be corrupted!");
+	    pj_assert(!"Unknown G723.1 frametype, packet may be corrupted!");
 	    return PJMEDIA_CODEC_EINMODE;
 	}
 
@@ -1160,167 +1157,167 @@ static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
     return PJ_SUCCESS;
 }
 
-#endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G723 */
+#endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1 */
 
 
-#if defined(PJMEDIA_HAS_INTEL_IPP_CODEC_AMR) && PJMEDIA_HAS_INTEL_IPP_CODEC_AMR != 0
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
 
 /* AMR bitstream sensitivity order map */
 static pj_int16_t AMRNB_ordermap122[244] =
 {
-    0,       1,       2,       3,       4,       5,       6,       7,       8,       9,
-    10,      11,      12,      13,      14,      23,      15,      16,      17,      18,
-    19,      20,      21,      22,      24,      25,      26,      27,      28,      38,
-    141,  39,     142,      40,     143,      41,     144,      42,     145,      43,
-    146,  44,     147,      45,     148,      46,     149,      47,      97,     150,
-    200,  48,      98,     151,     201,      49,      99,     152,     202,      86,
-    136, 189,     239,      87,     137,     190,     240,      88,     138,     191,
-    241,  91,     194,      92,     195,      93,     196,      94,     197,      95,
-    198,  29,      30,      31,      32,      33,      34,      35,      50,     100,
-    153, 203,      89,     139,     192,     242,      51,     101,     154,     204,
-    55,     105,     158,     208,      90,     140,     193,     243,      59,     109,
-    162, 212,      63,     113,     166,     216,      67,     117,     170,     220,
-    36,      37,      54,      53,      52,      58,      57,      56,      62,      61,
-    60,      66,      65,      64,      70,      69,      68,     104,     103,     102,
-    108, 107,     106,     112,     111,     110,     116,     115,     114,     120,
-    119, 118,     157,     156,     155,     161,     160,     159,     165,     164,
-    163, 169,     168,     167,     173,     172,     171,     207,     206,     205,
-    211, 210,     209,     215,     214,     213,     219,     218,     217,     223,
-    222, 221,      73,      72,      71,      76,      75,      74,      79,      78,
-    77,      82,      81,      80,      85,      84,      83,     123,     122,     121,
-    126, 125,     124,     129,     128,     127,     132,     131,     130,     135,
-    134, 133,     176,     175,     174,     179,     178,     177,     182,     181,
-    180, 185,     184,     183,     188,     187,     186,     226,     225,     224,
-    229, 228,     227,     232,     231,     230,     235,     234,     233,     238,
-    237, 236,      96,     199
+    0,    1,     2,    3,    4,    5,    6,    7,    8,    9,
+    10,   11,   12,   13,   14,   23,   15,   16,   17,   18,
+    19,   20,   21,   22,   24,   25,   26,   27,   28,   38,
+    141,  39,  142,   40,  143,   41,  144,   42,  145,   43,
+    146,  44,  147,   45,  148,   46,  149,   47,   97,  150,
+    200,  48,   98,  151,  201,   49,   99,  152,  202,   86,
+    136, 189,  239,   87,  137,  190,  240,   88,  138,  191,
+    241,  91,  194,   92,  195,   93,  196,   94,  197,   95,
+    198,  29,   30,   31,   32,   33,   34,   35,   50,  100,
+    153, 203,   89,  139,  192,  242,   51,  101,  154,  204,
+    55,  105,  158,  208,   90,  140,  193,  243,   59,  109,
+    162, 212,   63,  113,  166,  216,   67,  117,  170,  220,
+    36,   37,   54,   53,   52,   58,   57,   56,   62,   61,
+    60,   66,   65,   64,   70,   69,   68,  104,  103,  102,
+    108, 107,  106,  112,  111,  110,  116,  115,  114,  120,
+    119, 118,  157,  156,  155,  161,  160,  159,  165,  164,
+    163, 169,  168,  167,  173,  172,  171,  207,  206,  205,
+    211, 210,  209,  215,  214,  213,  219,  218,  217,  223,
+    222, 221,   73,   72,   71,   76,   75,   74,   79,   78,
+    77,   82,   81,   80,   85,   84,   83,  123,  122,  121,
+    126, 125,  124,  129,  128,  127,  132,  131,  130,  135,
+    134, 133,  176,  175,  174,  179,  178,  177,  182,  181,
+    180, 185,  184,  183,  188,  187,  186,  226,  225,  224,
+    229, 228,  227,  232,  231,  230,  235,  234,  233,  238,
+    237, 236,   96,  199
 };
 
 static pj_int16_t AMRNB_ordermap102[204] =
 {
-    7,   6,   5,   4,   3,   2,   1,   0,  16,  15,
-    14,  13,  12,  11,  10,   9,   8,  26,  27,  28,
-    29,  30,  31, 115, 116, 117, 118, 119, 120,  72,
-    73, 161, 162,  65,  68,  69, 108, 111, 112, 154,
+    7,     6,  5,    4,  3,    2,   1,   0,  16,  15,
+    14,   13,  12,  11,  10,   9,   8,  26,  27,  28,
+    29,   30,  31, 115, 116, 117, 118, 119, 120,  72,
+    73,  161, 162,  65,  68,  69, 108, 111, 112, 154,
     157, 158, 197, 200, 201,  32,  33, 121, 122,  74,
-    75, 163, 164,  66, 109, 155, 198,  19,  23,  21,
-    22,  18,  17,  20,  24,  25,  37,  36,  35,  34,
-    80,  79,  78,  77, 126, 125, 124, 123, 169, 168,
+    75,  163, 164,  66, 109, 155, 198,  19,  23,  21,
+    22,   18,  17,  20,  24,  25,  37,  36,  35,  34,
+    80,   79,  78,  77, 126, 125, 124, 123, 169, 168,
     167, 166,  70,  67,  71, 113, 110, 114, 159, 156,
     160, 202, 199, 203,  76, 165,  81,  82,  92,  91,
-    93,  83,  95,  85,  84,  94, 101, 102,  96, 104,
-    86, 103,  87,  97, 127, 128, 138, 137, 139, 129,
+    93,   83,  95,  85,  84,  94, 101, 102,  96, 104,
+    86,  103,  87,  97, 127, 128, 138, 137, 139, 129,
     141, 131, 130, 140, 147, 148, 142, 150, 132, 149,
     133, 143, 170, 171, 181, 180, 182, 172, 184, 174,
     173, 183, 190, 191, 185, 193, 175, 192, 176, 186,
-    38,  39,  49,  48,  50,  40,  52,  42,  41,  51,
-    58,  59,  53,  61,  43,  60,  44,  54, 194, 179,
+    38,   39,  49,  48,  50,  40,  52,  42,  41,  51,
+    58,   59,  53,  61,  43,  60,  44,  54, 194, 179,
     189, 196, 177, 195, 178, 187, 188, 151, 136, 146,
     153, 134, 152, 135, 144, 145, 105,  90, 100, 107,
-    88, 106,  89,  98,  99,  62,  47,  57,  64,  45,
-    63,  46,  55,  56
+    88,  106,  89,  98,  99,  62,  47,  57,  64,  45,
+    63,   46,  55,  56
 };
 
 static pj_int16_t AMRNB_ordermap795[159] =
 {
-    8,       7,       6,       5,       4,       3,       2,      14,      16,       9,
-    10,      12,      13,      15,      11,      17,      20,      22,      24,      23,
-    19,      18,      21,      56,      88,     122,     154,      57,      89,     123,
-    155,  58,      90,     124,     156,      52,      84,     118,     150,      53,
-    85,     119,     151,      27,      93,      28,      94,      29,      95,      30,
-    96,      31,      97,      61,     127,      62,     128,      63,     129,      59,
-    91,     125,     157,      32,      98,      64,     130,       1,       0,      25,
-    26,      33,      99,      34,     100,      65,     131,      66,     132,      54,
-    86,     120,     152,      60,      92,     126,     158,      55,      87,     121,
-    153, 117,     116,     115,      46,      78,     112,     144,      43,      75,
-    109, 141,      40,      72,     106,     138,      36,      68,     102,     134,
-    114, 149,     148,     147,     146,      83,      82,      81,      80,      51,
-    50,      49,      48,      47,      45,      44,      42,      39,      35,      79,
-    77,      76,      74,      71,      67,     113,     111,     110,     108,     105,
-    101, 145,     143,     142,     140,     137,     133,      41,      73,     107,
-    139,  37,      69,     103,     135,      38,      70,     104,     136
+    8,    7,    6,    5,    4,    3,    2,   14,   16,    9,
+    10,   12,   13,   15,   11,   17,   20,   22,   24,   23,
+    19,   18,   21,   56,   88,  122,  154,   57,   89,  123,
+    155,  58,   90,  124,  156,   52,   84,  118,  150,   53,
+    85,  119,  151,   27,   93,   28,   94,   29,   95,   30,
+    96,   31,   97,   61,  127,   62,  128,   63,  129,   59,
+    91,  125,  157,   32,   98,   64,  130,    1,    0,   25,
+    26,   33,   99,   34,  100,   65,  131,   66,  132,   54,
+    86,  120,  152,   60,   92,  126,  158,   55,   87,  121,
+    153, 117,  116,  115,   46,   78,  112,  144,   43,   75,
+    109, 141,   40,   72,  106,  138,   36,   68,  102,  134,
+    114, 149,  148,  147,  146,   83,   82,   81,   80,   51,
+    50,   49,   48,   47,   45,   44,   42,   39,   35,   79,
+    77,   76,   74,   71,   67,  113,  111,  110,  108,  105,
+    101, 145,  143,  142,  140,  137,  133,   41,   73,  107,
+    139,  37,   69,  103,  135,   38,   70,  104,  136
 
 };
 
 static pj_int16_t AMRNB_ordermap74[148] =
 {
-    0,   1,   2,   3,   4,   5,   6,   7,   8,   9,
-    10,  11,  12,  13,  14,  15,  16,  26,  87,  27,
-    88,  28,  89,  29,  90,  30,  91,  51,  80, 112,
+      0,   1,   2,   3,   4,   5,   6,   7,   8,   9,
+     10,  11,  12,  13,  14,  15,  16,  26,  87,  27,
+     88,  28,  89,  29,  90,  30,  91,  51,  80, 112,
     141,  52,  81, 113, 142,  54,  83, 115, 144,  55,
-    84, 116, 145,  58, 119,  59, 120,  21,  22,  23,
-    17,  18,  19,  31,  60,  92, 121,  56,  85, 117,
+     84, 116, 145,  58, 119,  59, 120,  21,  22,  23,
+     17,  18,  19,  31,  60,  92, 121,  56,  85, 117,
     146,  20,  24,  25,  50,  79, 111, 140,  57,  86,
     118, 147,  49,  78, 110, 139,  48,  77,  53,  82,
     114, 143, 109, 138,  47,  76, 108, 137,  32,  33,
-    61,  62,  93,  94, 122, 123,  41,  42,  43,  44,
-    45,  46,  70,  71,  72,  73,  74,  75, 102, 103,
+     61,  62,  93,  94, 122, 123,  41,  42,  43,  44,
+     45,  46,  70,  71,  72,  73,  74,  75, 102, 103,
     104, 105, 106, 107, 131, 132, 133, 134, 135, 136,
-    34,  63,  95, 124,  35,  64,  96, 125,  36,  65,
-    97, 126,  37,  66,  98, 127,  38,  67,  99, 128,
-    39,  68, 100, 129,  40,  69, 101, 130
+     34,  63,  95, 124,  35,  64,  96, 125,  36,  65,
+     97, 126,  37,  66,  98, 127,  38,  67,  99, 128,
+     39,  68, 100, 129,  40,  69, 101, 130
 };
 
 static pj_int16_t AMRNB_ordermap67[134] =
 {
-    0,       1,       4,       3,       5,       6,      13,       7,       2,       8,
-    9,      11,      15,      12,      14,      10,      28,      82,      29,      83,
-    27,      81,      26,      80,      30,      84,      16,      55,     109,      56,
-    110,  31,      85,      57,     111,      48,      73,     102,     127,      32,
-    86,      51,      76,     105,     130,      52,      77,     106,     131,      58,
-    112,  33,      87,      19,      23,      53,      78,     107,     132,      21,
-    22,      18,      17,      20,      24,      25,      50,      75,     104,     129,
-    47,      72,     101,     126,      54,      79,     108,     133,      46,      71,
-    100, 125,     128,     103,      74,      49,      45,      70,      99,     124,
-    42,      67,      96,     121,      39,      64,      93,     118,      38,      63,
-    92,     117,      35,      60,      89,     114,      34,      59,      88,     113,
-    44,      69,      98,     123,      43,      68,      97,     122,      41,      66,
-    95,     120,      40,      65,      94,     119,      37,      62,      91,     116,
-    36,      61,      90,     115
+      0,   1,    4,    3,    5,    6,   13,    7,    2,    8,
+      9,  11,   15,   12,   14,   10,   28,   82,   29,   83,
+     27,  81,   26,   80,   30,   84,   16,   55,  109,   56,
+    110,  31,   85,   57,  111,   48,   73,  102,  127,   32,
+     86,  51,   76,  105,  130,   52,   77,  106,  131,   58,
+    112,  33,   87,   19,   23,   53,   78,  107,  132,   21,
+     22,  18,   17,   20,   24,   25,   50,   75,  104,  129,
+     47,  72,  101,  126,   54,   79,  108,  133,   46,   71,
+    100, 125,  128,  103,   74,   49,   45,   70,   99,  124,
+     42,  67,   96,  121,   39,   64,   93,  118,   38,   63,
+     92, 117,   35,   60,   89,  114,   34,   59,   88,  113,
+     44,  69,   98,  123,   43,   68,   97,  122,   41,   66,
+     95, 120,   40,   65,   94,  119,   37,   62,   91,  116,
+     36,  61,   90,  115
 };
 
 static pj_int16_t AMRNB_ordermap59[118] =
 {
-    0,       1,       4,       5,       3,       6,       7,       2,      13,      15,
-    8,       9,      11,      12,      14,      10,      16,      28,      74,      29,
-    75,      27,      73,      26,      72,      30,      76,      51,      97,      50,
-    71,      96,     117,      31,      77,      52,      98,      49,      70,      95,
-    116,  53,      99,      32,      78,      33,      79,      48,      69,      94,
-    115,  47,      68,      93,     114,      46,      67,      92,     113,      19,
-    21,      23,      22,      18,      17,      20,      24,     111,      43,      89,
-    110,  64,      65,      44,      90,      25,      45,      66,      91,     112,
-    54,     100,      40,      61,      86,     107,      39,      60,      85,     106,
-    36,      57,      82,     103,      35,      56,      81,     102,      34,      55,
-    80,     101,      42,      63,      88,     109,      41,      62,      87,     108,
-    38,      59,      84,     105,      37,      58,      83,     104
+    0,     1,    4,    5,    3,    6,    7,    2,   13,   15,
+    8,     9,   11,   12,   14,   10,   16,   28,   74,   29,
+    75,   27,   73,   26,   72,   30,   76,   51,   97,   50,
+    71,   96,  117,   31,   77,   52,   98,   49,   70,   95,
+    116,  53,   99,   32,   78,   33,   79,   48,   69,   94,
+    115,  47,   68,   93,  114,   46,   67,   92,  113,   19,
+    21,   23,   22,   18,   17,   20,   24,  111,   43,   89,
+    110,  64,   65,   44,   90,   25,   45,   66,   91,  112,
+    54,  100,   40,   61,   86,  107,   39,   60,   85,  106,
+    36,   57,   82,  103,   35,   56,   81,  102,   34,   55,
+    80,  101,   42,   63,   88,  109,   41,   62,   87,  108,
+    38,   59,   84,  105,   37,   58,   83,  104
 };
 
 static pj_int16_t AMRNB_ordermap515[103] =
 {
-    7,       6,       5,       4,       3,       2,       1,       0,      15,      14,
-    13,      12,      11,      10,       9,       8,      23,      24,      25,      26,
-    27,      46,      65,      84,      45,      44,      43,      64,      63,      62,
-    83,      82,      81,     102,     101,     100,      42,      61,      80,      99,
-    28,      47,      66,      85,      18,      41,      60,      79,      98,      29,
-    48,      67,      17,      20,      22,      40,      59,      78,      97,      21,
-    30,      49,      68,      86,      19,      16,      87,      39,      38,      58,
-    57,      77,      35,      54,      73,      92,      76,      96,      95,      36,
-    55,      74,      93,      32,      51,      33,      52,      70,      71,      89,
-    90,      31,      50,      69,      88,      37,      56,      75,      94,      34,
-    53,      72,      91
+     7,    6,    5,    4,    3,    2,    1,    0,   15,   14,
+    13,   12,   11,   10,    9,    8,   23,   24,   25,   26,
+    27,   46,   65,   84,   45,   44,   43,   64,   63,   62,
+    83,   82,   81,  102,  101,  100,   42,   61,   80,   99,
+    28,   47,   66,   85,   18,   41,   60,   79,   98,   29,
+    48,   67,   17,   20,   22,   40,   59,   78,   97,   21,
+    30,   49,   68,   86,   19,   16,   87,   39,   38,   58,
+    57,   77,   35,   54,   73,   92,   76,   96,   95,   36,
+    55,   74,   93,   32,   51,   33,   52,   70,   71,   89,
+    90,   31,   50,   69,   88,   37,   56,   75,   94,   34,
+    53,   72,   91
 };
 
 static pj_int16_t AMRNB_ordermap475[95] =
 {
-    0,      1,      2,      3,      4,      5,      6,      7,      8,      9,
-    10,     11,     12,     13,     14,     15,     23,     24,     25,     26,
-    27,     28,     48,     49,     61,     62,     82,     83,     47,     46,
-    45,     44,     81,     80,     79,     78,     17,     18,     20,     22,
-    77,     76,     75,     74,     29,     30,     43,     42,     41,     40,
-    38,     39,     16,     19,     21,     50,     51,     59,     60,     63,
-    64,     72,     73,     84,     85,     93,     94,     32,     33,     35,
-    36,     53,     54,     56,     57,     66,     67,     69,     70,     87,
-    88,     90,     91,     34,     55,     68,     89,     37,     58,     71,
-    92,     31,     52,     65,     86
+     0,   1,   2,   3,   4,   5,   6,   7,   8,   9,
+    10,  11,  12,  13,  14,  15,  23,  24,  25,  26,
+    27,  28,  48,  49,  61,  62,  82,  83,  47,  46,
+    45,  44,  81,  80,  79,  78,  17,  18,  20,  22,
+    77,  76,  75,  74,  29,  30,  43,  42,  41,  40,
+    38,  39,  16,  19,  21,  50,  51,  59,  60,  63,
+    64,  72,  73,  84,  85,  93,  94,  32,  33,  35,
+    36,  53,  54,  56,  57,  66,  67,  69,  70,  87,
+    88,  90,  91,  34,  55,  68,  89,  37,  58,  71,
+    92,  31,  52,  65,  86
 };
 
 static pj_int16_t *AMRNB_ordermaps[8] =
@@ -1337,58 +1334,58 @@ static pj_int16_t *AMRNB_ordermaps[8] =
 
 static pj_int16_t AMRWB_ordermap_660[] =
 {
-    0, 5, 6, 7, 61, 84, 107, 130, 62, 85,
-    8, 4, 37, 38, 39, 40, 58, 81, 104, 127,
-    60, 83, 106, 129, 108, 131, 128, 41, 42, 80,
-    126, 1, 3, 57, 103, 82, 105, 59, 2, 63,
-    109, 110, 86, 19, 22, 23, 64, 87, 18, 20,
-    21, 17, 13, 88, 43, 89, 65, 111, 14, 24,
-    25, 26, 27, 28, 15, 16, 44, 90, 66, 112,
-    9, 11, 10, 12, 67, 113, 29, 30, 31, 32,
-    34, 33, 35, 36, 45, 51, 68, 74, 91, 97,
-    114, 120, 46, 69, 92, 115, 52, 75, 98, 121,
-    47, 70, 93, 116, 53, 76, 99, 122, 48, 71,
-    94, 117, 54, 77, 100, 123, 49, 72, 95, 118,
-    55, 78, 101, 124, 50, 73, 96, 119, 56, 79,
+      0,   5,   6,   7,  61,  84, 107, 130,  62,  85,
+      8,   4,  37,  38,  39,  40,  58,  81, 104, 127,
+     60,  83, 106, 129, 108, 131, 128,  41,  42,  80,
+    126,   1,   3,  57, 103,  82, 105,  59,   2,  63,
+    109, 110,  86,  19,  22,  23,  64,  87,  18,  20,
+     21,  17,  13,  88,  43,  89,  65, 111,  14,  24,
+     25,  26,  27,  28,  15,  16,  44,  90,  66, 112,
+      9,  11,  10,  12,  67, 113,  29,  30,  31,  32,
+     34,  33,  35,  36,  45,  51,  68,  74,  91,  97,
+    114, 120,  46,  69,  92, 115,  52,  75,  98, 121,
+     47,  70,  93, 116,  53,  76,  99, 122,  48,  71,
+     94, 117,  54,  77, 100, 123,  49,  72,  95, 118,
+     55,  78, 101, 124,  50,  73,  96, 119,  56,  79,
     102, 125
 };
 
 static pj_int16_t AMRWB_ordermap_885[] =
 {
-    0,   4,   6,   7,   5,   3,  47,  48,  49, 112,
+      0,   4,   6,   7,   5,   3,  47,  48,  49, 112,
     113, 114,  75, 106, 140, 171,  80, 111, 145, 176,
-    77, 108, 142, 173,  78, 109, 143, 174,  79, 110,
+     77, 108, 142, 173,  78, 109, 143, 174,  79, 110,
     144, 175,  76, 107, 141, 172,  50, 115,  51,   2,
-    1,  81, 116, 146,  19,  21,  12,  17,  18,  20,
-    16,  25,  13,  10,  14,  24,  23,  22,  26,   8,
-    15,  52, 117,  31,  82, 147,   9,  33,  11,  83,
+      1,  81, 116, 146,  19,  21,  12,  17,  18,  20,
+     16,  25,  13,  10,  14,  24,  23,  22,  26,   8,
+     15,  52, 117,  31,  82, 147,   9,  33,  11,  83,
     148,  53, 118,  28,  27,  84, 149,  34,  35,  29,
-    46,  32,  30,  54, 119,  37,  36,  39,  38,  40,
-    85, 150,  41,  42,  43,  44,  45,  55,  60,  65,
-    70,  86,  91,  96, 101, 120, 125, 130, 135, 151,
+     46,  32,  30,  54, 119,  37,  36,  39,  38,  40,
+     85, 150,  41,  42,  43,  44,  45,  55,  60,  65,
+     70,  86,  91,  96, 101, 120, 125, 130, 135, 151,
     156, 161, 166,  56,  87, 121, 152,  61,  92, 126,
     157,  66,  97, 131, 162,  71, 102, 136, 167,  57,
-    88, 122, 153,  62,  93, 127, 158,  67,  98, 132,
+     88, 122, 153,  62,  93, 127, 158,  67,  98, 132,
     163,  72, 103, 137, 168,  58,  89, 123, 154,  63,
-    94, 128, 159,  68,  99, 133, 164,  73, 104, 138,
+     94, 128, 159,  68,  99, 133, 164,  73, 104, 138,
     169,  59,  90, 124, 155,  64,  95, 129, 160,  69,
     100, 134, 165,  74, 105, 139, 170
 };
 
 static pj_int16_t AMRWB_ordermap_1265[] =
 {
-    0,   4,   6,  93, 143, 196, 246,   7,   5,   3,
-    47,  48,  49,  50,  51, 150, 151, 152, 153, 154,
-    94, 144, 197, 247,  99, 149, 202, 252,  96, 146,
+      0,   4,   6,  93, 143, 196, 246,   7,   5,   3,
+     47,  48,  49,  50,  51, 150, 151, 152, 153, 154,
+     94, 144, 197, 247,  99, 149, 202, 252,  96, 146,
     199, 249,  97, 147, 200, 250, 100, 203,  98, 148,
     201, 251,  95, 145, 198, 248,  52,   2,   1, 101,
     204, 155,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     156,  31, 102, 205,   9,  33,  11, 103, 206,  54,
     157,  28,  27, 104, 207,  34,  35,  29,  46,  32,
-    30,  55, 158,  37,  36,  39,  38,  40, 105, 208,
-    41,  42,  43,  44,  45,  56, 106, 159, 209,  57,
-    66,  75,  84, 107, 116, 125, 134, 160, 169, 178,
+     30,  55, 158,  37,  36,  39,  38,  40, 105, 208,
+     41,  42,  43,  44,  45,  56, 106, 159, 209,  57,
+     66,  75,  84, 107, 116, 125, 134, 160, 169, 178,
     187, 210, 219, 228, 237,  58, 108, 161, 211,  62,
     112, 165, 215,  67, 117, 170, 220,  71, 121, 174,
     224,  76, 126, 179, 229,  80, 130, 183, 233,  85,
@@ -1407,17 +1404,17 @@ static pj_int16_t AMRWB_ordermap_1265[] =
 
 static pj_int16_t AMRWB_ordermap_1425[] =
 {
-    0,   4,   6, 101, 159, 220, 278,   7,   5,   3,
-    47,  48,  49,  50,  51, 166, 167, 168, 169, 170,
+      0,   4,   6, 101, 159, 220, 278,   7,   5,   3,
+     47,  48,  49,  50,  51, 166, 167, 168, 169, 170,
     102, 160, 221, 279, 107, 165, 226, 284, 104, 162,
     223, 281, 105, 163, 224, 282, 108, 227, 106, 164,
     225, 283, 103, 161, 222, 280,  52,   2,   1, 109,
     228, 171,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     172,  31, 110, 229,   9,  33,  11, 111, 230,  54,
     173,  28,  27, 112, 231,  34,  35,  29,  46,  32,
-    30,  55, 174,  37,  36,  39,  38,  40, 113, 232,
-    41,  42,  43,  44,  45,  56, 114, 175, 233,  62,
+     30,  55, 174,  37,  36,  39,  38,  40, 113, 232,
+     41,  42,  43,  44,  45,  56, 114, 175, 233,  62,
     120, 181, 239,  75, 133, 194, 252,  57, 115, 176,
     234,  63, 121, 182, 240,  70, 128, 189, 247,  76,
     134, 195, 253,  83, 141, 202, 260,  92, 150, 211,
@@ -1440,17 +1437,17 @@ static pj_int16_t AMRWB_ordermap_1425[] =
 
 static pj_int16_t AMRWB_ordermap_1585[] =
 {
-    0,   4,   6, 109, 175, 244, 310,   7,   5,   3,
-    47,  48,  49,  50,  51, 182, 183, 184, 185, 186,
+      0,   4,   6, 109, 175, 244, 310,   7,   5,   3,
+     47,  48,  49,  50,  51, 182, 183, 184, 185, 186,
     110, 176, 245, 311, 115, 181, 250, 316, 112, 178,
     247, 313, 113, 179, 248, 314, 116, 251, 114, 180,
     249, 315, 111, 177, 246, 312,  52,   2,   1, 117,
     252, 187,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     188,  31, 118, 253,   9,  33,  11, 119, 254,  54,
     189,  28,  27, 120, 255,  34,  35,  29,  46,  32,
-    30,  55, 190,  37,  36,  39,  38,  40, 121, 256,
-    41,  42,  43,  44,  45,  56, 122, 191, 257,  63,
+     30,  55, 190,  37,  36,  39,  38,  40, 121, 256,
+     41,  42,  43,  44,  45,  56, 122, 191, 257,  63,
     129, 198, 264,  76, 142, 211, 277,  89, 155, 224,
     290, 102, 168, 237, 303,  57, 123, 192, 258,  70,
     136, 205, 271,  83, 149, 218, 284,  96, 162, 231,
@@ -1476,24 +1473,24 @@ static pj_int16_t AMRWB_ordermap_1585[] =
 
 static pj_int16_t AMRWB_ordermap_1825[] =
 {
-    0,   4,   6, 121, 199, 280, 358,   7,   5,   3,
-    47,  48,  49,  50,  51, 206, 207, 208, 209, 210,
+      0,   4,   6, 121, 199, 280, 358,   7,   5,   3,
+     47,  48,  49,  50,  51, 206, 207, 208, 209, 210,
     122, 200, 281, 359, 127, 205, 286, 364, 124, 202,
     283, 361, 125, 203, 284, 362, 128, 287, 126, 204,
     285, 363, 123, 201, 282, 360,  52,   2,   1, 129,
     288, 211,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     212,  31, 130, 289,   9,  33,  11, 131, 290,  54,
     213,  28,  27, 132, 291,  34,  35,  29,  46,  32,
-    30,  55, 214,  37,  36,  39,  38,  40, 133, 292,
-    41,  42,  43,  44,  45,  56, 134, 215, 293, 198,
+     30,  55, 214,  37,  36,  39,  38,  40, 133, 292,
+     41,  42,  43,  44,  45,  56, 134, 215, 293, 198,
     299, 136, 120, 138,  60, 279,  58,  62, 357, 139,
     140, 295, 156,  57, 219, 297,  63, 217, 137, 170,
     300, 222,  64, 106,  61,  78, 294,  92, 142, 141,
     135, 221, 296, 301, 343,  59, 298, 184, 329, 315,
     220, 216, 265, 251, 218, 237, 352, 223, 157,  86,
     171,  87, 164, 351, 111, 302,  65, 178, 115, 323,
-    72, 192, 101, 179,  93,  73, 193, 151, 337, 309,
+     72, 192, 101, 179,  93,  73, 193, 151, 337, 309,
     143, 274,  69, 324, 165, 150,  97, 338, 110, 310,
     330, 273,  68, 107, 175, 245, 114,  79, 113, 189,
     246, 259, 174,  71, 185,  96, 344, 100, 322,  83,
@@ -1517,68 +1514,68 @@ static pj_int16_t AMRWB_ordermap_1825[] =
 
 static pj_int16_t AMRWB_ordermap_1985[] =
 {
-    0,   4,   6, 129, 215, 304, 390,   7,   5,   3,
-    47,  48,  49,  50,  51, 222, 223, 224, 225, 226,
+      0,   4,   6, 129, 215, 304, 390,   7,   5,   3,
+     47,  48,  49,  50,  51, 222, 223, 224, 225, 226,
     130, 216, 305, 391, 135, 221, 310, 396, 132, 218,
     307, 393, 133, 219, 308, 394, 136, 311, 134, 220,
     309, 395, 131, 217, 306, 392,  52,   2,   1, 137,
     312, 227,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     228,  31, 138, 313,   9,  33,  11, 139, 314,  54,
     229,  28,  27, 140, 315,  34,  35,  29,  46,  32,
-    30,  55, 230,  37,  36,  39,  38,  40, 141, 316,
-    41,  42,  43,  44,  45,  56, 142, 231, 317,  63,
-    73,  92, 340,  82, 324, 149, 353, 159, 334, 165,
+     30,  55, 230,  37,  36,  39,  38,  40, 141, 316,
+     41,  42,  43,  44,  45,  56, 142, 231, 317,  63,
+     73,  92, 340,  82, 324, 149, 353, 159, 334, 165,
     338, 178, 163, 254,  77, 168, 257, 153, 343,  57,
     248, 238,  79, 252, 166,  67,  80, 201, 101, 267,
     143, 164, 341, 255, 339, 187, 376, 318,  78, 328,
     362, 115, 232, 242, 253, 290, 276,  62,  58, 158,
-    68,  93, 179, 319, 148, 169, 154,  72, 385, 329,
+     68,  93, 179, 319, 148, 169, 154,  72, 385, 329,
     333, 344, 102,  83, 144, 233, 323, 124, 243, 192,
     354, 237,  64, 247, 202, 209, 150, 116, 335, 268,
     239, 299, 188, 196, 298,  94, 195, 258, 123, 363,
     384, 109, 325, 371, 170, 370,  84, 110, 295, 180,
-    74, 210, 191, 106, 291, 205, 367, 381, 377, 206,
+     74, 210, 191, 106, 291, 205, 367, 381, 377, 206,
     355, 122, 119, 120, 383, 160, 105, 108, 277, 380,
     294, 284, 285, 345, 208, 269, 249, 366, 386, 300,
     297, 259, 125, 369, 197,  97, 194, 286, 211, 281,
     280, 183, 372,  87, 155, 283,  59, 348, 327, 184,
-    76, 111, 330, 203, 349,  69,  98, 152, 145, 189,
-    66, 320, 337, 173, 358, 251, 198, 174, 263, 262,
+     76, 111, 330, 203, 349,  69,  98, 152, 145, 189,
+     66, 320, 337, 173, 358, 251, 198, 174, 263, 262,
     126, 241, 193,  88, 388, 117,  95, 387, 112, 359,
     287, 244, 103, 272, 301, 171, 162, 234, 273, 127,
     373, 181, 292,  85, 378, 302, 121, 107, 364, 346,
     356, 212, 278, 213,  65, 382, 288, 207, 113, 175,
-    99, 296, 374, 368, 199, 260, 185, 336, 331, 161,
+     99, 296, 374, 368, 199, 260, 185, 336, 331, 161,
     270, 264, 250, 240,  75, 350, 151,  60,  89, 321,
     156, 274, 360, 326,  70, 282, 167, 146, 352,  81,
-    91, 389, 266, 245, 177, 235, 190, 256, 204, 342,
+     91, 389, 266, 245, 177, 235, 190, 256, 204, 342,
     128, 118, 303, 104, 379, 182, 114, 375, 200,  96,
     293, 172, 214, 365, 279,  86, 289, 351, 347, 357,
     261, 186, 176, 271,  90, 100, 147, 322, 275, 361,
-    71, 332,  61, 265, 157, 246, 236
+     71, 332,  61, 265, 157, 246, 236
 };
 
 static pj_int16_t AMRWB_ordermap_2305[] =
 {
-    0,   4,   6, 145, 247, 352, 454,   7,   5,   3,
-    47,  48,  49,  50,  51, 254, 255, 256, 257, 258,
+      0,   4,   6, 145, 247, 352, 454,   7,   5,   3,
+     47,  48,  49,  50,  51, 254, 255, 256, 257, 258,
     146, 248, 353, 455, 151, 253, 358, 460, 148, 250,
     355, 457, 149, 251, 356, 458, 152, 359, 150, 252,
     357, 459, 147, 249, 354, 456,  52,   2,   1, 153,
     360, 259,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     260,  31, 154, 361,   9,  33,  11, 155, 362,  54,
     261,  28,  27, 156, 363,  34,  35,  29,  46,  32,
-    30,  55, 262,  37,  36,  39,  38,  40, 157, 364,
-    41,  42,  43,  44,  45,  56, 158, 263, 365, 181,
+     30,  55, 262,  37,  36,  39,  38,  40, 157, 364,
+     41,  42,  43,  44,  45,  56, 158, 263, 365, 181,
     192, 170,  79,  57, 399,  90, 159, 297, 377, 366,
     275,  68, 183, 388, 286, 194, 299,  92,  70, 182,
     401, 172,  59,  91,  58, 400, 368, 161,  81, 160,
     264, 171,  80, 389, 390, 378, 379, 193, 298,  69,
     266, 265, 367, 277, 288, 276, 287, 184,  60, 195,
-    82,  93,  71, 369, 402, 173, 162, 444, 300, 391,
-    98,  76, 278,  61, 267, 374, 135, 411, 167, 102,
+     82,  93,  71, 369, 402, 173, 162, 444, 300, 391,
+     98,  76, 278,  61, 267, 374, 135, 411, 167, 102,
     380, 200,  87, 178,  65,  94, 204, 124,  72, 342,
     189, 305, 381, 396, 433, 301, 226, 407, 289, 237,
     113, 215, 185, 128, 309, 403, 116, 320, 196, 331,
@@ -1595,8 +1592,8 @@ static pj_int16_t AMRWB_ordermap_2305[] =
     406,  84, 201, 100,  67, 382, 175, 336, 202, 330,
     269, 393, 376, 383, 293, 307, 409, 179, 285, 314,
     302, 372, 398, 190, 180,  89,  99, 103, 232,  78,
-    88,  77, 136, 387, 165, 198, 394, 125, 176, 428,
-    74, 375, 238, 227,  66, 273, 282, 141, 306, 412,
+     88,  77, 136, 387, 165, 198, 394, 125, 176, 428,
+     74, 375, 238, 227,  66, 273, 282, 141, 306, 412,
     114,  85, 130, 348, 119, 291, 296, 386, 233, 397,
     303, 405, 284, 445, 423, 221, 210, 205, 450, 108,
     274, 434, 216, 343, 337, 142, 243, 321, 408, 451,
@@ -1612,27 +1609,27 @@ static pj_int16_t AMRWB_ordermap_2305[] =
 
 static pj_int16_t AMRWB_ordermap_2385[] =
 {
-    0,   4,   6, 145, 251, 360, 466,   7,   5,   3,
-    47,  48,  49,  50,  51, 262, 263, 264, 265, 266,
+      0,   4,   6, 145, 251, 360, 466,   7,   5,   3,
+     47,  48,  49,  50,  51, 262, 263, 264, 265, 266,
     146, 252, 361, 467, 151, 257, 366, 472, 148, 254,
     363, 469, 149, 255, 364, 470, 156, 371, 150, 256,
     365, 471, 147, 253, 362, 468,  52,   2,   1, 157,
     372, 267,  19,  21,  12,  17,  18,  20,  16,  25,
-    13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
+     13,  10,  14,  24,  23,  22,  26,   8,  15,  53,
     268,  31, 152, 153, 154, 155, 258, 259, 260, 261,
     367, 368, 369, 370, 473, 474, 475, 476, 158, 373,
-    9,  33,  11, 159, 374,  54, 269,  28,  27, 160,
+      9,  33,  11, 159, 374,  54, 269,  28,  27, 160,
     375,  34,  35,  29,  46,  32,  30,  55, 270,  37,
-    36,  39,  38,  40, 161, 376,  41,  42,  43,  44,
-    45,  56, 162, 271, 377, 185, 196, 174,  79,  57,
+     36,  39,  38,  40, 161, 376,  41,  42,  43,  44,
+     45,  56, 162, 271, 377, 185, 196, 174,  79,  57,
     411,  90, 163, 305, 389, 378, 283,  68, 187, 400,
     294, 198, 307,  92,  70, 186, 413, 176,  59,  91,
-    58, 412, 380, 165,  81, 164, 272, 175,  80, 401,
+     58, 412, 380, 165,  81, 164, 272, 175,  80, 401,
     402, 390, 391, 197, 306,  69, 274, 273, 379, 285,
     296, 284, 295, 188,  60, 199,  82,  93,  71, 381,
     414, 177, 166, 456, 308, 403,  98,  76, 286,  61,
     275, 386, 135, 423, 171, 102, 392, 204,  87, 182,
-    65,  94, 208, 124,  72, 350, 193, 313, 393, 408,
+     65,  94, 208, 124,  72, 350, 193, 313, 393, 408,
     445, 309, 230, 419, 297, 241, 113, 219, 189, 128,
     317, 415, 116, 328, 200, 339, 382, 434, 178,  64,
     404,  83, 437, 223, 134, 192, 444, 112, 439, 139,
@@ -1644,12 +1641,12 @@ static pj_int16_t AMRWB_ordermap_2385[] =
     106, 321, 118, 123,  73, 211, 433, 218, 396, 385,
     450,  62, 383, 349,  75, 461, 172, 331, 168, 246,
     428, 332, 312, 201, 343, 416, 279,  63, 195, 333,
-    96, 173, 235, 288, 320, 191, 418,  84, 205, 100,
-    67, 394, 179, 344, 206, 338, 277, 405, 388, 395,
+     96, 173, 235, 288, 320, 191, 418,  84, 205, 100,
+     67, 394, 179, 344, 206, 338, 277, 405, 388, 395,
     301, 315, 421, 183, 293, 322, 310, 384, 410, 194,
     184,  89,  99, 103, 236,  78,  88,  77, 136, 399,
     169, 202, 406, 125, 180, 440,  74, 387, 242, 231,
-    66, 281, 290, 141, 314, 424, 114,  85, 130, 356,
+     66, 281, 290, 141, 314, 424, 114,  85, 130, 356,
     119, 299, 304, 398, 237, 409, 311, 417, 292, 457,
     435, 225, 214, 209, 462, 108, 282, 446, 220, 351,
     345, 142, 247, 329, 420, 463, 318, 300, 120, 109,
@@ -1761,7 +1758,7 @@ static void predecode_amr( ipp_private_t *codec_data,
     pj_uint16_t *bitrate_tbl = AMRNB_bitrates;
     pj_int16_t **order_map = AMRNB_ordermaps;
 
-    AMRWB = ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMRWB;
+    AMRWB = (ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMRWB);
     if (AMRWB) {
 	SID_FT = 9;
 	framelen_tbl = AMRWB_framelen;
@@ -1779,18 +1776,18 @@ static void predecode_amr( ipp_private_t *codec_data,
 	i = 0;
 	if (start_bit) {
 	    for (; i < (unsigned)(8-start_bit); ++i)
-		*p_amr_bits++ = (pj_uint8_t)(*r >> (7-start_bit-i)) & 1;
+		*p_amr_bits++ = (pj_uint8_t)((*r >> (7-start_bit-i)) & 1);
 	    ++r;
 	}
 	for(; i < framelenbit_tbl[FT]; i += 8) {
-	    *p_amr_bits++ = (*r >> 7) & 1;
-	    *p_amr_bits++ = (*r >> 6) & 1;
-	    *p_amr_bits++ = (*r >> 5) & 1;
-	    *p_amr_bits++ = (*r >> 4) & 1;
-	    *p_amr_bits++ = (*r >> 3) & 1;
-	    *p_amr_bits++ = (*r >> 2) & 1;
-	    *p_amr_bits++ = (*r >> 1) & 1;
-	    *p_amr_bits++ = (*r ) & 1;
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 7) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 6) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 5) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 4) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 3) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 2) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 1) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r ) & 1);
 	    ++r;
 	}
     }
@@ -1822,9 +1819,11 @@ static void predecode_amr( ipp_private_t *codec_data,
 
 	STI = amr_bits[35];
 	if (AMRWB)
-	    FT_ = (amr_bits[36] << 3) | (amr_bits[37] << 2) | (amr_bits[38] << 1) | amr_bits[39];
+	    FT_ = (pj_uint8_t)((amr_bits[36] << 3) | (amr_bits[37] << 2) |
+		               (amr_bits[38] << 1) | amr_bits[39]);
 	else
-	    FT_ = (amr_bits[36] << 2) | (amr_bits[37] << 1) | amr_bits[38];
+	    FT_ = (pj_uint8_t)((amr_bits[36] << 2) | (amr_bits[37] << 1) | 
+	                       amr_bits[38]);
 
 	pj_bzero(rtp_frame->buf, rtp_frame->size);
 	for(i = 0; i < framelenbit_tbl[FT]; ++i) {
@@ -1890,7 +1889,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
     pj_memmove(r, w, *pkt_size);
 
     /* Code Mode Request, 4 bits */
-    *w = (CMR << 4);
+    *w = (pj_uint8_t)(CMR << 4);
     w_bitptr = 4;
     if (octet_aligned) {
 	++w;
@@ -1902,26 +1901,26 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	pj_uint8_t TOC;
 	pj_uint8_t F, FT, Q;
 
-	F = (*r & 0x40) == 0;
-	FT = (*r & 0x0F);
-	Q = (*r & 0x80) == 0;
+	F = (pj_uint8_t)((*r & 0x40) == 0);
+	FT = (pj_uint8_t)(*r & 0x0F);
+	Q = (pj_uint8_t)((*r & 0x80) == 0);
 
 	pj_assert(FT <= SID_FT || FT == 14 || FT == 15);
 	TOC = (pj_uint8_t)((F<<5) | (FT<<1) | Q);
 
 	if (w_bitptr == 0) {
-	    *w = TOC<<2;
+	    *w = (pj_uint8_t)(TOC<<2);
 	    w_bitptr = 6;
 	} else if (w_bitptr == 2) {
 	    *w++ |= TOC;
 	    w_bitptr = 0;
 	} else if (w_bitptr == 4) {
 	    *w++ |= TOC>>2;
-	    *w = TOC<<6;
+	    *w = (pj_uint8_t)(TOC<<6);
 	    w_bitptr = 2;
 	} else if (w_bitptr == 6) {
 	    *w++ |= TOC>>4;
-	    *w = TOC<<4;
+	    *w = (pj_uint8_t)(TOC<<4);
 	    w_bitptr = 4;
 	}
 
@@ -1950,8 +1949,8 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	pj_int8_t *p_amr_bits = &amr_bits[0];
 	unsigned i;
 
-	F = (*r & 0x40) == 0;
-	FT = (*r & 0x0F);
+	F = (pj_uint8_t)((*r & 0x40) == 0);
+	FT = (pj_uint8_t)(*r & 0x0F);
 	pj_assert(FT <= SID_FT || FT == 14 || FT == 15);
 
 	++r;
@@ -1963,14 +1962,14 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 
 	/* Unpack bits */
 	for(i = 0; i < framelen_tbl[FT]; ++i) {
-	    *p_amr_bits++ = (*r >> 7) & 1;
-	    *p_amr_bits++ = (*r >> 6) & 1;
-	    *p_amr_bits++ = (*r >> 5) & 1;
-	    *p_amr_bits++ = (*r >> 4) & 1;
-	    *p_amr_bits++ = (*r >> 3) & 1;
-	    *p_amr_bits++ = (*r >> 2) & 1;
-	    *p_amr_bits++ = (*r >> 1) & 1;
-	    *p_amr_bits++ = (*r ) & 1;
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 7) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 6) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 5) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 4) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 3) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 2) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r >> 1) & 1);
+	    *p_amr_bits++ = (pj_uint8_t)((*r ) & 1);
 	    ++r;
 	}
 
@@ -2003,17 +2002,17 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	    /* SID */
 	    pj_uint8_t STI = 0;
 
-	    amr_bits[35] = (STI & 1);
+	    amr_bits[35] = (pj_uint8_t)(STI & 1);
 
 	    if (AMRWB) {
-		amr_bits[36] = (FT >> 3) & 1;
-		amr_bits[37] = (FT >> 2) & 1;
-		amr_bits[38] = (FT >> 1) & 1;
-		amr_bits[39] = (FT) & 1;
+		amr_bits[36] = (pj_uint8_t)((FT >> 3) & 1);
+		amr_bits[37] = (pj_uint8_t)((FT >> 2) & 1);
+		amr_bits[38] = (pj_uint8_t)((FT >> 1) & 1);
+		amr_bits[39] = (pj_uint8_t)((FT) & 1);
 	    } else {
-		amr_bits[36] = (FT >> 2) & 1;
-		amr_bits[37] = (FT >> 1) & 1;
-		amr_bits[38] = (FT) & 1;
+		amr_bits[36] = (pj_uint8_t)((FT >> 2) & 1);
+		amr_bits[37] = (pj_uint8_t)((FT >> 1) & 1);
+		amr_bits[38] = (pj_uint8_t)((FT) & 1);
 	    }
 
 	    if (w_bitptr == 0) *w = 0;
@@ -2084,7 +2083,7 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
     *frame_cnt = 0;
 
     /* Code Mode Request, 4 bits */
-    CMR = (*r >> 4) & 0x0F;
+    CMR = (pj_uint8_t)((*r >> 4) & 0x0F);
     r_bitptr = 4;
     if (octet_aligned) {
 	++r;
@@ -2097,24 +2096,24 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 	pj_uint8_t F, FT, Q;
 
 	if (r_bitptr == 0) {
-	    TOC = *r >> 2;
+	    TOC = (pj_uint8_t)(*r >> 2);
 	    r_bitptr = 6;
 	} else if (r_bitptr == 2) {
-	    TOC = *r++ & 0x3F;
+	    TOC = (pj_uint8_t)(*r++ & 0x3F);
 	    r_bitptr = 0;
 	} else if (r_bitptr == 4) {
-	    TOC = (*r++ & 0x0f) << 2;
+	    TOC = (pj_uint8_t)((*r++ & 0x0f) << 2);
 	    TOC |= *r >> 6;
 	    r_bitptr = 2;
 	} else if (r_bitptr == 6) {
-	    TOC = (*r++ & 0x03) << 4;
+	    TOC = (pj_uint8_t)((*r++ & 0x03) << 4);
 	    TOC |= *r >> 4;
 	    r_bitptr = 4;
 	}
 
-	F = TOC >> 5;
-	FT = (TOC >> 1) & 0x0F;
-	Q = TOC & 1;
+	F = (pj_uint8_t)(TOC >> 5);
+	FT = (pj_uint8_t)((TOC >> 1) & 0x0F);
+	Q = (pj_uint8_t)(TOC & 1);
 
 	if (FT > SID_FT && FT < 14) {
 	    pj_assert(!"Invalid AMR frametype, stream may be corrupted!");
@@ -2178,14 +2177,14 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_AMR */
 
 
-#ifdef _MSC_VER
-#  pragma comment( lib, "ippcore.lib")
-#  pragma comment( lib, "ipps.lib")
-#  pragma comment( lib, "ippsc.lib")
-#  pragma comment( lib, "ippsr.lib")
-#  pragma comment( lib, "usc.lib")
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_IPP_LIBS
+#   pragma comment( lib, "ippcore.lib")
+#   pragma comment( lib, "ipps.lib")
+#   pragma comment( lib, "ippsc.lib")
+#   pragma comment( lib, "ippsr.lib")
+#   pragma comment( lib, "usc.lib")
 #endif
 
 
-#endif	/* PJMEDIA_HAS_INTEL_IPP_CODECS */
+#endif	/* PJMEDIA_HAS_INTEL_IPP */
 

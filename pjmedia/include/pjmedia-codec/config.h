@@ -84,41 +84,111 @@
 
 
 /**
- * IPP codecs are excluded by default. IPP codecs contain various codecs,
- * e.g: G.729, G.723.1, G.726, G.728, G.722.1, AMR.
+ * Enable the features provided by Intel IPP libraries, for example
+ * codecs such as G.729, G.723.1, G.726, G.728, G.722.1, and AMR.
+ *
+ * By default this is disabled. Please follow the instructions in
+ * http://trac.pjsip.org/repos/wiki/Intel_IPP_Codecs on how to setup
+ * Intel IPP with PJMEDIA.
  */
-#ifndef PJMEDIA_HAS_INTEL_IPP_CODECS
-#   define PJMEDIA_HAS_INTEL_IPP_CODECS		0
+#ifndef PJMEDIA_HAS_INTEL_IPP
+#   define PJMEDIA_HAS_INTEL_IPP		0
 #endif
 
+
 /**
- * Specify IPP codecs content. If PJMEDIA_HAS_INTEL_IPP_CODECS is not set,
- * these settings will be ignored.
+ * Visual Studio only: when this option is set, the Intel IPP libraries
+ * will be automatically linked to application using pragma(comment)
+ * constructs. This is convenient, however it will only link with
+ * the stub libraries and the Intel IPP DLL's will be required when
+ * distributing the application.
+ *
+ * If application wants to link with the different types of the Intel IPP
+ * libraries (for example, the static libraries), it must set this option
+ * to zero and specify the Intel IPP libraries in the application's input
+ * library specification manually.
+ *
+ * Default 1.
+ */
+#ifndef PJMEDIA_AUTO_LINK_IPP_LIBS
+#   define PJMEDIA_AUTO_LINK_IPP_LIBS		1
+#endif
+
+
+/**
+ * Enable Intel IPP AMR codec. This also needs to be enabled when AMR WB
+ * codec is enabled. This option is only used when PJMEDIA_HAS_INTEL_IPP 
+ * is enabled.
+ *
+ * Default: 1
  */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMR	1
 #endif
 
+
+/**
+ * Enable Intel IPP AMR wideband codec. The PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
+ * option must also be enabled to use this codec. This option is only used 
+ * when PJMEDIA_HAS_INTEL_IPP is enabled.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB	1
 #endif
 
+
+/**
+ * Enable Intel IPP G.729 codec. This option is only used when
+ * PJMEDIA_HAS_INTEL_IPP is enabled.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G729
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_G729	1
 #endif
 
-#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G723
-#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G723	1
+
+/**
+ * Enable Intel IPP G.723.1 codec. This option is only used when
+ * PJMEDIA_HAS_INTEL_IPP is enabled.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1
+#   define PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1	1
 #endif
 
+
+/**
+ * Enable Intel IPP G.726 codec. This option is only used when
+ * PJMEDIA_HAS_INTEL_IPP is enabled.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G726
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_G726	1
 #endif
 
+
+/**
+ * Enable Intel IPP G.728 codec. This option is only used when
+ * PJMEDIA_HAS_INTEL_IPP is enabled.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G728
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_G728	1
 #endif
 
+
+/**
+ * Enable Intel IPP G.722.1 codec. This option is only used when
+ * PJMEDIA_HAS_INTEL_IPP is enabled.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1	1
 #endif

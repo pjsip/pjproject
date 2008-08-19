@@ -160,7 +160,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     }
 #endif  /* PJMEDIA_HAS_G722_CODEC */
 
-#if PJMEDIA_HAS_INTEL_IPP_CODECS
+#if PJMEDIA_HAS_INTEL_IPP
     /* Register IPP codecs */
     status = pjmedia_codec_ipp_init(pjsua_var.med_endpt);
     if (status != PJ_SUCCESS) {
@@ -169,7 +169,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	return status;
     }
 
-#endif /* PJMEDIA_HAS_INTEL_IPP_CODECS */
+#endif /* PJMEDIA_HAS_INTEL_IPP */
 
 #if PJMEDIA_HAS_L16_CODEC
     /* Register L16 family codecs, but disable all */
