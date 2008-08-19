@@ -717,10 +717,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
     do {
 	c = pj_ioqueue_poll( endpt->ioqueue, &timeout);
 	if (c < 0) {
+	    pj_status_t err = pj_get_netos_error();
 	    pj_thread_sleep(PJ_TIME_VAL_MSEC(timeout));
 	    if (p_count)
 		*p_count = count;
-	    return pj_get_netos_error();
+	    return err;
 	} else if (c == 0) {
 	    break;
 	} else {
