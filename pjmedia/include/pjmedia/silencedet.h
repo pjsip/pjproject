@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
+ * Copyright (C) 2003-2007 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -108,26 +108,27 @@ PJ_DECL(pj_status_t) pjmedia_silence_det_set_adaptive(pjmedia_silence_det *sd,
  * Set other silence detector parameters.
  *
  * @param sd		    The silence detector
- * @param min_silence	    Minimum duration of silence (in msec) before 
+ * @param before_silence    Minimum duration of silence (in msec) before 
  *			    silence is reported. If -1 is specified, then
  *			    the default value will be used. The default is
  *			    400 msec.
- * @param min_signal	    Minimum duration of signal (in msec) before
- *			    signal is reported. If -1 is specified, then
- *			    the default value will be used. The default is
- *			    equal to one frame.
- * @param recalc_time	    The interval to recalculate signal and silence
- *			    proportion and to readjust the silence threshold
- *			    when adaptive silence detection is set. If -1
- *			    is specified, then the default value will be used.
- *			    The default value is 5000 (msec).
+ * @param recalc_time1	    The interval (in msec) to recalculate threshold
+ *			    in non-silence condition when adaptive silence 
+ *			    detection is set. If -1 is specified, then the 
+ *			    default value will be used. The default is 4000
+ *			    (msec).
+ * @param recalc_time2	    The interval (in msec) to recalculate threshold
+ *			    in silence condition when adaptive silence detection
+ *			    is set. If -1 is specified, then the default value 
+ *			    will be used. The default value is 2000 (msec).
  *
  * @return		    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_silence_det_set_params( pjmedia_silence_det *sd,
-						     int min_silence,
-						     int min_signal,
-						     int recalc_time);
+						     int before_silence,
+						     int recalc_time1,
+						     int recalc_time2);
+
 
 /**
  * Disable the silence detector.
