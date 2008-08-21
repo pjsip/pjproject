@@ -2127,20 +2127,22 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     /* Attempts to open the sound device with different clock rates */
     for (i=0; i<PJ_ARRAY_SIZE(clock_rates); ++i) {
 	char errmsg[PJ_ERR_MSG_SIZE];
-	unsigned fps;
+	unsigned samples_per_frame;
 
 	PJ_LOG(4,(THIS_FILE, 
 		  "pjsua_set_snd_dev(): attempting to open devices "
 		  "@%d Hz", clock_rates[i]));
 
+	samples_per_frame = clock_rates[i] *
+			    pjsua_var.media_cfg.audio_frame_ptime *
+			    pjsua_var.media_cfg.channel_count / 1000;
+
 	/* Create the sound device. Sound port will start immediately. */
-	fps = 1000 / pjsua_var.media_cfg.audio_frame_ptime;
 	status = pjmedia_snd_port_create(pjsua_var.snd_pool, capture_dev,
 					 playback_dev, 
 					 clock_rates[i], 
 					 pjsua_var.media_cfg.channel_count,
-					 clock_rates[i]/fps * 
-					 pjsua_var.media_cfg.channel_count,
+					 samples_per_frame,
 					 16, 0, &pjsua_var.snd_port);
 
 	if (status == PJ_SUCCESS) {
