@@ -33,6 +33,8 @@ APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio-$(LIB_SUFFIX)
 endif
 
+# Additional flags
+@ac_build_mak_vars@
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export PJDIR := @ac_pjdir@

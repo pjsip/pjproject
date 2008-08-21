@@ -83,9 +83,9 @@ export PJSDP_CFLAGS += $(_CFLAGS)
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			$(CODEC_OBJS)
+			ipp_codecs.o $(CODEC_OBJS)
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
-			$(ILBC_CFLAGS)
+			$(ILBC_CFLAGS) $(IPP_CFLAGS)
 
 
 ###############################################################################
