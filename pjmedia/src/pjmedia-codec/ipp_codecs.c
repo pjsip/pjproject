@@ -815,7 +815,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
     unsigned nsamples;
     pj_size_t tx = 0;
     pj_int16_t *pcm_in   = (pj_int16_t*)input->buf;
-    pj_int8_t  *bits_out = (pj_int8_t*) output->buf;
+    pj_uint8_t  *bits_out = (pj_uint8_t*) output->buf;
     pj_uint8_t pt;
 
     /* Invoke external VAD if codec has no internal VAD */
@@ -864,7 +864,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	in.pcmType.nChannels = codec_data->info->params.pcmType.nChannels;
 	in.pcmType.sample_frequency = codec_data->info->params.pcmType.sample_frequency;
 
-	out.pBuffer = bits_out;
+	out.pBuffer = (char*)bits_out;
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
 	/* For AMR: reserve the first byte for frame info */
