@@ -99,7 +99,7 @@ PJ_DEF(pj_status_t) pjmedia_silence_det_create( pj_pool_t *pool,
 
     sd = PJ_POOL_ZALLOC_T(pool, pjmedia_silence_det);
 
-    pj_ansi_snprintf(sd->objname, PJ_MAX_OBJ_NAME, THIS_FILE, sd);
+    pj_ansi_snprintf(sd->objname, PJ_MAX_OBJ_NAME, "sd%p", sd);
     sd->objname[PJ_MAX_OBJ_NAME-1] = '\0';
 
     sd->ptime = samples_per_frame * 1000 / clock_rate;
