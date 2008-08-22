@@ -251,6 +251,8 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 						void *pkt,
 						unsigned pkt_len)
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(tsx && pkt && pkt_len, PJ_EINVAL);
     PJ_ASSERT_RETURN(tsx->retransmit_timer.id == 0, PJ_EBUSY);
 
@@ -261,8 +263,45 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
     /* Update STUN retransmit flag */
     tsx->require_retransmit = retransmit;
 
+    /* For TCP, schedule timeout timer after PJ_STUN_TIMEOUT_VALUE.
+     * Since we don't have timeout timer, simulate this by using
+     * retransmit timer.
+     */
+    if (!retransmit) {
+	unsigned timeout;
+
+	pj_assert(tsx->retransmit_timer.id == 0);
+	tsx->transmit_count = PJ_STUN_MAX_TRANSMIT_COUNT;
+
+	timeout = tsx->rto_msec * 16;
+	tsx->retransmit_time.sec = timeout / 1000;
+	tsx->retransmit_time.msec = timeout % 1000;
+
+	/* Schedule timer first because when send_msg() failed we can
+	 * cancel it (as opposed to when schedule_timer() failed we cannot
+	 * cancel transmission).
+	 */;
+	status = pj_timer_heap_schedule(tsx->timer_heap, 
+					&tsx->retransmit_timer,
+					&tsx->retransmit_time);
+	if (status != PJ_SUCCESS) {
+	    tsx->retransmit_timer.id = 0;
+	    return status;
+	}
+    }
+
     /* Send the message */
-    return tsx_transmit_msg(tsx);
+    status = tsx_transmit_msg(tsx);
+    if (status != PJ_SUCCESS) {
+	if (tsx->retransmit_timer.id != 0) {
+	    pj_timer_heap_cancel(tsx->timer_heap, 
+				 &tsx->retransmit_timer);
+	    tsx->retransmit_timer.id = 0;
+	}
+	return status;
+    }
+
+    return PJ_SUCCESS;
 }
 
 

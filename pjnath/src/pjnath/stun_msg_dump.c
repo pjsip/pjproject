@@ -72,10 +72,9 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_CHANGED_ADDR:
     case PJ_STUN_ATTR_REFLECTED_FROM:
     case PJ_STUN_ATTR_PEER_ADDR:
-    case PJ_STUN_ATTR_RELAY_ADDR:
+    case PJ_STUN_ATTR_RELAYED_ADDR:
     case PJ_STUN_ATTR_XOR_MAPPED_ADDR:
     case PJ_STUN_ATTR_XOR_REFLECTED_FROM:
-    case PJ_STUN_ATTR_XOR_INTERNAL_ADDR:
     case PJ_STUN_ATTR_ALTERNATE_SERVER:
 	{
 	    const pj_stun_sockaddr_attr *attr;
@@ -122,6 +121,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_PRIORITY:
     case PJ_STUN_ATTR_FINGERPRINT:
     case PJ_STUN_ATTR_REFRESH_INTERVAL:
+    case PJ_STUN_ATTR_ICMP:
 	{
 	    const pj_stun_uint_attr *attr;
 
@@ -138,7 +138,7 @@ static int print_attr(char *buffer, unsigned length,
     case PJ_STUN_ATTR_PASSWORD:
     case PJ_STUN_ATTR_REALM:
     case PJ_STUN_ATTR_NONCE:
-    case PJ_STUN_ATTR_SERVER:
+    case PJ_STUN_ATTR_SOFTWARE:
 	{
 	    const pj_stun_string_attr *attr;
 

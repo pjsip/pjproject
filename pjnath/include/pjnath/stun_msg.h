@@ -290,12 +290,12 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_CHANNEL_NUMBER	    = 0x000C,/**< TURN CHANNEL-NUMBER	    */
     PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< TURN LIFETIME attr.	    */
     PJ_STUN_ATTR_MAGIC_COOKIE	    = 0x000F,/**< MAGIC-COOKIE attr (deprec)*/
-    PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< TURN BANDWIDTH attr.	    */
+    PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< TURN BANDWIDTH (deprec)   */
     PJ_STUN_ATTR_PEER_ADDR	    = 0x0012,/**< TURN PEER-ADDRESS attr.   */
     PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */
     PJ_STUN_ATTR_REALM		    = 0x0014,/**< REALM attribute.	    */
     PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
-    PJ_STUN_ATTR_RELAY_ADDR	    = 0x0016,/**< RELAY-ADDRESS attribute.  */
+    PJ_STUN_ATTR_RELAYED_ADDR	    = 0x0016,/**< RELAYED-ADDRESS attribute.*/
     PJ_STUN_ATTR_REQ_ADDR_TYPE	    = 0x0017,/**< REQUESTED-ADDRESS-TYPE    */
     PJ_STUN_ATTR_REQ_PROPS	    = 0x0018,/**< REQUESTED-PROPS	    */
     PJ_STUN_ATTR_REQ_TRANSPORT	    = 0x0019,/**< REQUESTED-TRANSPORT	    */
@@ -305,13 +305,13 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_XOR_REFLECTED_FROM = 0x0023,/**< XOR-REFLECTED-FROM	    */
     PJ_STUN_ATTR_PRIORITY	    = 0x0024,/**< PRIORITY		    */
     PJ_STUN_ATTR_USE_CANDIDATE	    = 0x0025,/**< USE-CANDIDATE		    */
-    PJ_STUN_ATTR_XOR_INTERNAL_ADDR  = 0x0026,/**< XOR-INTERNAL-ADDRESS	    */
+    PJ_STUN_ATTR_ICMP		    = 0x0030,/**< ICMP (TURN)		    */
 
     PJ_STUN_ATTR_END_MANDATORY_ATTR,
 
     PJ_STUN_ATTR_START_EXTENDED_ATTR= 0x8021,
 
-    PJ_STUN_ATTR_SERVER		    = 0x8022,/**< SERVER attribute.	    */
+    PJ_STUN_ATTR_SOFTWARE	    = 0x8022,/**< SOFTWARE attribute.	    */
     PJ_STUN_ATTR_ALTERNATE_SERVER   = 0x8023,/**< ALTERNATE-SERVER.	    */
     PJ_STUN_ATTR_REFRESH_INTERVAL   = 0x8024,/**< REFRESH-INTERVAL.	    */
     PJ_STUN_ATTR_FINGERPRINT	    = 0x8028,/**< FINGERPRINT attribute.    */
@@ -345,6 +345,7 @@ typedef enum pj_stun_status
     PJ_STUN_SC_ALLOCATION_MISMATCH      = 437,  /**< TURN Alloc Mismatch    */
     PJ_STUN_SC_STALE_NONCE	        = 438,  /**< Stale Nonce	    */
     PJ_STUN_SC_TRANSITIONING		= 439,  /**< Transitioning.	    */
+    PJ_STUN_SC_WRONG_CREDENTIALS	= 441,	/**< TURN Wrong Credentials */
     PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
 						     Protocol (TURN) */
     PJ_STUN_SC_INVALID_IP_ADDR		= 443,  /**< Invalid IP Address(TURN)*/
@@ -514,8 +515,7 @@ typedef struct pj_stun_empty_attr
 
 /**
  * This structure represents generic STUN string attributes, such as STUN
- * USERNAME, PASSWORD, SERVER, REALM, and NONCE attributes. Note that for REALM and
- * NONCE attributes, the text MUST be quoted with.
+ * USERNAME, PASSWORD, SOFTWARE, REALM, and NONCE attributes.
  */
 typedef struct pj_stun_string_attr
 {
@@ -739,14 +739,12 @@ typedef struct pj_stun_sockaddr_attr pj_stun_xor_mapped_addr_attr;
 
 
 /**
- * This describes STUN SERVER attribute.
- * The server attribute contains a textual description of the software
- * being used by the server, including manufacturer and version number.
- * The attribute has no impact on operation of the protocol, and serves
- * only as a tool for diagnostic and debugging purposes.  The value of
- * SERVER is variable length.
- */
-typedef struct pj_stun_string_attr pj_stun_server_attr;
+ * This describes STUN SOFTWARE attribute.
+ * The SOFTWARE attribute contains a textual description of the software
+ * being used by the agent sending the message.  It is used by clients
+ * and servers.  Its value SHOULD include manufacturer and version
+ * number. */
+typedef struct pj_stun_string_attr pj_stun_software_attr;
 
 
 /**
@@ -932,12 +930,12 @@ typedef struct pj_stun_binary_attr pj_stun_data_attr;
 
 
 /**
- * This describes the STUN RELAY-ADDRESS attribute.
- * The RELAY-ADDRESS is present in Allocate responses.  It specifies the
+ * This describes the STUN RELAYED-ADDRESS attribute.
+ * The RELAYED-ADDRESS is present in Allocate responses.  It specifies the
  * address and port that the server allocated to the client.  It is
  * encoded in the same way as XOR-MAPPED-ADDRESS.
  */
-typedef struct pj_stun_sockaddr_attr pj_stun_relay_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_relayed_addr_attr;
 
 
 /**
@@ -964,9 +962,9 @@ typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
  * the values in this attribute: #PJ_STUN_GET_PROP_TYPE(), and
  * #PJ_STUN_SET_PROP_TYPE().
  * 
- * This attribute allows the client to request certain properties for
- * the relayed transport address that is allocated by the server.  The
- * attribute is 32 bits long.  Its format is:
+ * This attribute allows the client to request that the allocation have
+ * certain properties, and by the server to indicate which properties
+ * are supported.  The attribute is 32 bits long.  Its format is:
 
  \verbatim
 
@@ -981,11 +979,32 @@ typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
  * The field labeled "Prop-type" is an 8-bit field specifying the
  * desired property.  The rest of the attribute is RFFU (Reserved For
  * Future Use) and MUST be set to 0 on transmission and ignored on
- * reception.  The values of the "Prop-type" field are:
- * 
- *    0x00  (Reserved)
- *    0x01  Even port number
- *    0x02  Pair of ports 
+ * reception.
+ *
+ * The "Prop-type" field is formatted as follows:
+
+ \verbatim
+
+      0 1 2 3 4 5 6 7 
+     +-+-+-+-+-+-+-+-+
+     |E|R|P|         |
+     +-+-+-+-+-+-+-+-+
+
+ \endverbatim
+
+   The bits in "Prop-type" are:
+
+   E: If 1, the port number for the relayed-transport-address must be
+      even.  If 0, the port number can be even or odd.
+
+   R: If 1, the server must reserve the next highest port for a
+      subsequent allocation.  If 0, no such reservation is requested.
+      If the client sets the R bit to 1, it MUST also set the E bit to 1
+      (however, the E bit may be 1 when the R bit is 0).
+
+   P: If 1, the allocation must be a Preserving allocation.  If 0, the
+      allocation can be either Preserving or Non-Preserving.
+
  */
 typedef struct pj_stun_uint_attr pj_stun_req_props_attr;
 
@@ -1090,16 +1109,6 @@ typedef struct pj_stun_uint_attr pj_stun_priority_attr;
 typedef struct pj_stun_empty_attr pj_stun_use_candidate_attr;
 
 /**
- * This structure describes STUN XOR-INTERNAL-ADDRESS attribute from
- * draft-wing-behave-nat-control-stun-usage-00.
- * This attribute MUST be present in a Binding Response and may be used
- * in other responses as well.  This attribute is necessary to allow a
- * STUN client to 'walk backwards' and communicate directly with all of
- * the STUN-aware NATs along the path.
- */
-typedef pj_stun_sockaddr_attr pj_stun_xor_internal_addr_attr;
-
-/**
  * This describes the STUN TIMER-VAL attribute.
  * The TIMER-VAL attribute is used only in conjunction with the Set
  * Active Destination response.  It conveys from the server, to the
@@ -1116,6 +1125,11 @@ typedef struct pj_stun_uint64_attr pj_stun_ice_controlling_attr;
  * This describes ICE-CONTROLLED attribute.
  */
 typedef struct pj_stun_uint64_attr pj_stun_ice_controlled_attr;
+
+/**
+ * This describes TURN ICMP attribute
+ */
+typedef struct pj_stun_uint_attr pj_stun_icmp_attr;
 
 /**
  * This structure describes a parsed STUN message. All integral fields

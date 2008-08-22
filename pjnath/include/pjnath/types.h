@@ -97,8 +97,8 @@ to determine the IP address and port allocated to them by a NAT and to
 keep NAT bindings open.
 
 This version of PJNATH implements the following STUN-bis draft:
-- <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-15.txt">
-  <B>draft-ietf-behave-rfc3489bis-15</b></A>: Session Traversal 
+- <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-18.txt">
+  <B>draft-ietf-behave-rfc3489bis-18</b></A>: Session Traversal 
     Utilities for (NAT) (STUN),
 
 
@@ -109,8 +109,8 @@ operation of the relay and to exchange packets with its peers using the relay.
 
 This version of PJNATH implements both TCP and UDP client transport and it
 complies with the following TURN draft:
- - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-07.txt">
-   <B>draft-ietf-behave-turn-07</B></A>: Obtaining Relay Addresses 
+ - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-09.txt">
+   <B>draft-ietf-behave-turn-09</B></A>: Obtaining Relay Addresses 
    from Simple Traversal Underneath NAT (STUN)
 
 

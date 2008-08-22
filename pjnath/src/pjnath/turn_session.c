@@ -914,7 +914,8 @@ on_return:
  */
 PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 					      void *pkt,
-					      unsigned pkt_len)
+					      unsigned pkt_len,
+					      unsigned *parsed_len)
 {
     pj_bool_t is_stun;
     pj_status_t status;
@@ -940,47 +941,58 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 	if (is_datagram)
 	    options |= PJ_STUN_IS_DATAGRAM;
 	status=pj_stun_session_on_rx_pkt(sess->stun, pkt, pkt_len,
-					 options, NULL, NULL,
+					 options, NULL, parsed_len,
 					 sess->srv_addr,
 					 pj_sockaddr_get_len(sess->srv_addr));
 
-    } else if (sess->cb.on_rx_data) {
-
-	/* This must be ChannelData. Only makes sense when on_rx_data() is
-	 * implemented by application.
-	 */
+    } else {
+	/* This must be ChannelData. */
 	pj_turn_channel_data cd;
 	struct peer *peer;
 
-	PJ_ASSERT_RETURN(pkt_len >= 4, PJ_ETOOSMALL);
+	if (pkt_len < 4) {
+	    if (parsed_len) *parsed_len = 0;
+	    return PJ_ETOOSMALL;
+	}
 
-	/* Lookup peer */
+	/* Decode ChannelData packet */
 	pj_memcpy(&cd, pkt, sizeof(pj_turn_channel_data));
 	cd.ch_number = pj_ntohs(cd.ch_number);
 	cd.length = pj_ntohs(cd.length);
+
+	/* Check that size is sane */
+	if (pkt_len < cd.length+sizeof(cd)) {
+	    if (parsed_len) {
+		if (is_datagram) {
+		    /* Discard the datagram */
+		    *parsed_len = pkt_len;
+		} else {
+		    /* Insufficient fragment */
+		    *parsed_len = 0;
+		}
+	    }
+	    status = PJ_ETOOSMALL;
+	    goto on_return;
+	} else {
+	    if (parsed_len) {
+		*parsed_len = cd.length + sizeof(cd);
+	    }
+	}
+
+	/* Lookup peer */
 	peer = lookup_peer_by_chnum(sess, cd.ch_number);
 	if (!peer || !peer->bound) {
 	    status = PJ_ENOTFOUND;
 	    goto on_return;
 	}
 
-	/* Check that size is correct, for UDP */
-	if (pkt_len < cd.length+sizeof(cd)) {
-	    status = PJ_ETOOSMALL;
-	    goto on_return;
+	/* Notify application */
+	if (sess->cb.on_rx_data) {
+	    (*sess->cb.on_rx_data)(sess, ((pj_uint8_t*)pkt)+sizeof(cd), 
+				   cd.length, &peer->addr,
+				   pj_sockaddr_get_len(&peer->addr));
 	}
 
-	/* Notify application */
-	(*sess->cb.on_rx_data)(sess, ((pj_uint8_t*)pkt)+sizeof(cd), 
-			       cd.length, &peer->addr,
-			       pj_sockaddr_get_len(&peer->addr));
-
-	status = PJ_SUCCESS;
-
-    } else {
-	/* This is ChannelData and application doesn't implement
-	 * on_rx_data() callback. Just ignore the packet.
-	 */
 	status = PJ_SUCCESS;
     }
 
@@ -1077,7 +1089,7 @@ static void on_allocate_success(pj_turn_session *sess,
 				const pj_stun_msg *msg)
 {
     const pj_stun_lifetime_attr *lf_attr;
-    const pj_stun_relay_addr_attr *raddr_attr;
+    const pj_stun_relayed_addr_attr *raddr_attr;
     const pj_stun_sockaddr_attr *mapped_attr;
     pj_str_t s;
     pj_time_val timeout;
@@ -1125,8 +1137,8 @@ static void on_allocate_success(pj_turn_session *sess,
     /* Check that relayed transport address contains correct
      * address family.
      */
-    raddr_attr = (const pj_stun_relay_addr_attr*)
-		 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_RELAY_ADDR, 0);
+    raddr_attr = (const pj_stun_relayed_addr_attr*)
+		 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_RELAYED_ADDR, 0);
     if (raddr_attr == NULL && method==PJ_STUN_ALLOCATE_METHOD) {
 	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
 		        pj_cstr(&s, "Error: Received ALLOCATE without "
@@ -1341,6 +1353,7 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
 {
     pj_turn_session *sess;
     pj_stun_peer_addr_attr *peer_attr;
+    pj_stun_icmp_attr *icmp;
     pj_stun_data_attr *data_attr;
 
     PJ_UNUSED_ARG(token);
@@ -1356,6 +1369,14 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
 	PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s indication",
 		  pj_stun_get_method_name(msg->hdr.type)));
 	return PJ_EINVALIDOP;
+    }
+
+    /* Check if there is ICMP attribute in the message */
+    icmp = (pj_stun_icmp_attr*)
+	   pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_ICMP, 0);
+    if (icmp != NULL) {
+	/* This is a forwarded ICMP packet. Ignore it for now */
+	return PJ_SUCCESS;
     }
 
     /* Get PEER-ADDRESS attribute */

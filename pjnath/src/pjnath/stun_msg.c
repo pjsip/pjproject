@@ -66,6 +66,7 @@ static struct
     { PJ_STUN_SC_ALLOCATION_MISMATCH,	    "Allocation Mismatch"},
     { PJ_STUN_SC_STALE_NONCE,		    "Stale Nonce"},
     { PJ_STUN_SC_TRANSITIONING,		    "Active Destination Already Set"},
+    { PJ_STUN_SC_WRONG_CREDENTIALS,	    "Wrong Credentials"},
     { PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,    "Unsupported Transport Protocol"},
     { PJ_STUN_SC_INVALID_IP_ADDR,	    "Invalid IP Address"},
     { PJ_STUN_SC_INVALID_PORT,		    "Invalid Port"},
@@ -309,7 +310,7 @@ static struct attr_desc mandatory_attr_desc[] =
     },
     {
 	/* PJ_STUN_ATTR_RELAY_ADDRESS, */
-	"RELAY-ADDRESS",
+	"RELAYED-ADDRESS",
 	&decode_xored_sockaddr_attr,
 	&encode_sockaddr_attr,
 	&clone_sockaddr_attr
@@ -420,11 +421,81 @@ static struct attr_desc mandatory_attr_desc[] =
 	&clone_empty_attr
     },
     {
-	/* PJ_STUN_ATTR_XOR_INTERNAL_ADDR, */
-	"XOR-INTERNAL-ADDRESS",
-	&decode_xored_sockaddr_attr,
-	&encode_sockaddr_attr,
-	&clone_sockaddr_attr
+	/* ID 0x0026 is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x0027 is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x0028 is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x0029 is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x002a is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x002b is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x002c is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x002d is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x002e is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* ID 0x002f is not assigned */
+	NULL,
+	NULL,
+	NULL,
+	NULL
+    },
+    {
+	/* PJ_STUN_ATTR_ICMP, */
+	"ICMP",
+	&decode_uint_attr,
+	&encode_uint_attr,
+	&clone_uint_attr
     },
 
     /* Sentinel */
@@ -447,8 +518,8 @@ static struct attr_desc extended_attr_desc[] =
 	NULL
     },
     {
-	/* PJ_STUN_ATTR_SERVER, */
-	"SERVER",
+	/* PJ_STUN_ATTR_SOFTWARE, */
+	"SOFTWARE",
 	&decode_string_attr,
 	&encode_string_attr,
 	&clone_string_attr

@@ -551,6 +551,43 @@ static pj_status_t on_rx_stun_request(pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
+/* Handle STUN Binding request */
+static void handle_binding_request(pj_turn_pkt *pkt,
+				   unsigned options)
+{
+    pj_stun_msg *request, *response;
+    pj_uint8_t pdu[200];
+    pj_size_t len;
+    pj_status_t status;
+
+    /* Decode request */
+    status = pj_stun_msg_decode(pkt->pool, pkt->pkt, pkt->len, options,
+				&request, NULL, NULL);
+    if (status != PJ_SUCCESS)
+	return;
+
+    /* Create response */
+    status = pj_stun_msg_create_response(pkt->pool, request, 0, NULL, 
+					 &response);
+    if (status != PJ_SUCCESS)
+	return;
+
+    /* Add XOR-MAPPED-ADDRESS */
+    pj_stun_msg_add_sockaddr_attr(pkt->pool, response, 
+				  PJ_STUN_ATTR_XOR_MAPPED_ADDR,
+				  PJ_TRUE,
+				  &pkt->src.clt_addr,
+				  pkt->src_addr_len);
+
+    /* Encode */
+    status = pj_stun_msg_encode(response, pdu, sizeof(pdu), 0, NULL, &len);
+    if (status != PJ_SUCCESS)
+	return;
+
+    /* Send response */
+    pkt->transport->sendto(pkt->transport, pdu, len, 0, 
+			   &pkt->src.clt_addr, pkt->src_addr_len);
+}
 
 /*
  * This callback is called by UDP listener on incoming packet. This is
@@ -612,6 +649,14 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
 			  pj_sockaddr_print(&pkt->src.clt_addr, ip, sizeof(ip), 3),
 			  errmsg));
 	    }
+	    return;
+	}
+
+	/* Special handling for Binding Request. We won't give it to the 
+	 * STUN session since this request is not authenticated.
+	 */
+	if (pkt->pkt[1] == 1) {
+	    handle_binding_request(pkt, options);
 	    return;
 	}
 

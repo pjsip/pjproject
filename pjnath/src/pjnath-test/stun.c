@@ -694,7 +694,7 @@ static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
     pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
 		       (pj_uint8_t*)v->tsx_id, &msg);
 
-    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SERVER, 
+    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
 				pj_cstr(&s1, "test vector"));
 
     pj_sockaddr_in_init(&mapped_addr, pj_cstr(&s1, "127.0.0.1"), 32853);

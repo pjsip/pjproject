@@ -125,10 +125,9 @@ PJ_DEF(pj_status_t) pj_turn_listener_create_udp( pj_turn_srv *srv,
     /* Create each read_op and kick off read operation */
     for (i=0; i<concurrency_cnt; ++i) {
 	pj_pool_t *rpool = pj_pool_create(srv->core.pf, "rop%p", 
-					  sizeof(struct read_op)+1000, 
-					  1000, NULL);
+					  1000, 1000, NULL);
 
-	udp->read_op[i] = PJ_POOL_ZALLOC_T(rpool, struct read_op);
+	udp->read_op[i] = PJ_POOL_ZALLOC_T(pool, struct read_op);
 	udp->read_op[i]->pkt.pool = rpool;
 
 	on_read_complete(udp->key, &udp->read_op[i]->op_key, 0);

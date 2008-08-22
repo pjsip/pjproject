@@ -212,7 +212,7 @@ static pj_status_t send_allocate_response(pj_turn_allocation *alloc,
 
     /* Add RELAYED-ADDRESS attribute */
     pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_RELAY_ADDR, PJ_TRUE,
+				  PJ_STUN_ATTR_RELAYED_ADDR, PJ_TRUE,
 				  &alloc->relay.hkey.addr,
 				  pj_sockaddr_get_len(&alloc->relay.hkey.addr));
 

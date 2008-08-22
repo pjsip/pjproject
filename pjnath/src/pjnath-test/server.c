@@ -309,8 +309,8 @@ static pj_stun_msg* create_success_response(test_server *test_srv,
     /* Add LIFETIME */
     pj_stun_msg_add_uint_attr(pool, resp, PJ_STUN_ATTR_LIFETIME, lifetime);
     if (lifetime != 0) {
-	/* Add RELAY-ADDRESS */
-	pj_stun_msg_add_sockaddr_attr(pool, resp, PJ_STUN_ATTR_RELAY_ADDR, PJ_TRUE, &alloc->alloc_addr,
+	/* Add RELAYED-ADDRESS */
+	pj_stun_msg_add_sockaddr_attr(pool, resp, PJ_STUN_ATTR_RELAYED_ADDR, PJ_TRUE, &alloc->alloc_addr,
 				      pj_sockaddr_get_len(&alloc->alloc_addr));
 	/* Add XOR-MAPPED-ADDRESS */
 	pj_stun_msg_add_sockaddr_attr(pool, resp, PJ_STUN_ATTR_XOR_MAPPED_ADDR, PJ_TRUE, &alloc->client_addr,

@@ -463,6 +463,7 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
 			      pj_size_t *remainder)
 {
     pj_turn_sock *turn_sock;
+    unsigned parsed_len;
     pj_bool_t ret = PJ_TRUE;
 
     turn_sock = (pj_turn_sock*) pj_activesock_get_user_data(asock);
@@ -470,8 +471,14 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
 
     if (status == PJ_SUCCESS && turn_sock->sess) {
 	/* Report incoming packet to TURN session */
-	PJ_TODO(REPORT_PARSED_LEN);
-	pj_turn_session_on_rx_pkt(turn_sock->sess, data,  size);
+	parsed_len = (unsigned)size;
+	pj_turn_session_on_rx_pkt(turn_sock->sess, data,  size, &parsed_len);
+	if (parsed_len < (unsigned)size) {
+	    *remainder = size - parsed_len;
+	    pj_memmove(data, ((char*)data)+parsed_len, *remainder);
+	} else {
+	    *remainder = 0;
+	}
     } else if (status != PJ_SUCCESS && 
 	       turn_sock->conn_type != PJ_TURN_TP_UDP) 
     {

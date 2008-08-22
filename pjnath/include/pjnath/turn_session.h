@@ -236,7 +236,9 @@ typedef struct pj_turn_alloc_param
 {
     /**
      * The requested BANDWIDTH. Default is zero to not request any
-     * specific bandwidth.
+     * specific bandwidth. Note that this attribute has been deprecated
+     * after TURN-08 draft, hence application should only use this
+     * attribute when talking to TURN-07 or older version.
      */
     int	    bandwidth;
 
@@ -581,6 +583,8 @@ PJ_DECL(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
  *			should contain either STUN encapsulated message or
  *			a ChannelData packet.
  * @param pkt_len	The length of the packet.
+ * @param parsed_len	Optional argument to receive the number of parsed
+ *			or processed data from the packet.
  *
  * @return		The function may return non-PJ_SUCCESS if it receives
  *			non-STUN and non-ChannelData packet, or if the
@@ -588,7 +592,8 @@ PJ_DECL(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
  */
 PJ_DECL(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 					       void *pkt,
-					       unsigned pkt_len);
+					       unsigned pkt_len,
+					       unsigned *parsed_len);
 
 
 /**

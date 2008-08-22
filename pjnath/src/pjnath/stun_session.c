@@ -216,9 +216,9 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     pj_status_t status = 0;
     pj_str_t realm, username, nonce, auth_key;
 
-    /* The server SHOULD include a SERVER attribute in all responses */
+    /* The server SHOULD include a SOFTWARE attribute in all responses */
     if (sess->srv_name.slen && PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
-	pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SERVER,
+	pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE,
 				    &sess->srv_name);
     }
 
