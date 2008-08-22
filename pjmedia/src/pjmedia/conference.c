@@ -357,11 +357,11 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 	 *     and 30ms, use 50ms)
 	 */
 	if (port_ptime > conf_ptime) {
-	    buff_ptime = conf_ptime * (port_ptime / conf_ptime);
+	    buff_ptime = port_ptime;
 	    if (port_ptime % conf_ptime)
 		buff_ptime += conf_ptime;
 	} else {
-	    buff_ptime = port_ptime * (conf_ptime / port_ptime);
+	    buff_ptime = conf_ptime;
 	    if (conf_ptime % port_ptime)
 		buff_ptime += port_ptime;
 	}
