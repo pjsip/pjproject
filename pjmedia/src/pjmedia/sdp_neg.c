@@ -533,6 +533,51 @@ static void update_media_direction(pj_pool_t *pool,
     }
 }
 
+/* Matching G722.1 bitrates between offer and answer.
+ */
+static pj_bool_t match_g7221( const pjmedia_sdp_media *offer,
+			      unsigned o_fmt_idx,
+			      const pjmedia_sdp_media *answer,
+			      unsigned a_fmt_idx)
+{
+    const pjmedia_sdp_attr *a_ans;
+    const pjmedia_sdp_attr *a_off;
+    pjmedia_sdp_fmtp fmtp;
+    unsigned a_bitrate = 0, o_bitrate = 0;
+    const pj_str_t bitrate = {"bitrate=", 8};
+    const char *p;
+
+    a_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
+					 &answer->desc.fmt[a_fmt_idx]);
+    if (!a_ans)
+	return PJ_FALSE;
+
+    if (pjmedia_sdp_attr_get_fmtp(a_ans, &fmtp) != PJ_SUCCESS)
+	return PJ_FALSE;
+
+    p = pj_stristr(&fmtp.fmt_param, &bitrate);
+    if (p == NULL)
+	return PJ_FALSE;
+
+    a_bitrate = atoi(p + bitrate.slen);
+
+    a_off = pjmedia_sdp_media_find_attr2(offer, "fmtp", 
+					 &offer->desc.fmt[o_fmt_idx]);
+    if (!a_off)
+	return PJ_FALSE;
+
+    if (pjmedia_sdp_attr_get_fmtp(a_off, &fmtp) != PJ_SUCCESS)
+	return PJ_FALSE;
+
+    p = pj_stristr(&fmtp.fmt_param, &bitrate);
+    if (p == NULL)
+	return PJ_FALSE;
+
+    o_bitrate = atoi(p + bitrate.slen);
+
+    return (a_bitrate == o_bitrate);
+}
+
 /* Update single local media description to after receiving answer
  * from remote.
  */
@@ -657,8 +702,14 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			    (pj_stricmp(&or_.param, &ar.param)==0 ||
 			     (ar.param.slen==1 && *ar.param.ptr=='1')))
 			{
-			    /* Match! */
-			    break;
+			    /* Further check for G7221, negotiate bitrate. */
+			    if (pj_strcmp2(&or_.enc_name, "G7221") == 0) {
+				if (match_g7221(offer, i, answer, j))
+				    break;
+			    } else {
+				/* Match! */
+				break;
+			    }
 			}
 		    }
 		}
@@ -871,10 +922,18 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			     (or_.param.slen==1 && *or_.param.ptr=='1'))) 
 			{
 			    /* Match! */
-			    if (is_codec)
+			    if (is_codec) {
+				/* Further check for G7221, negotiate bitrate. */
+				if (pj_strcmp2(&or_.enc_name, "G7221")  == 0 &&
+				    match_g7221(offer, i, preanswer, j) == 0)
+				{
+				    continue;
+				}
 				found_matching_codec = 1;
-			    else
+			    } else {
 				found_matching_telephone_event = 1;
+			    }
+
 			    pt_answer[pt_answer_count++] = preanswer->desc.fmt[j];
 			    break;
 			}

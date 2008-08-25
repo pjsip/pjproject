@@ -143,7 +143,7 @@ struct ilbc_codec
     float		 dec_block[BLOCKL_MAX];
 };
 
-
+static pj_str_t STR_MODE = {"mode", 4};
 
 /*
  * Initialize and register iLBC codec factory to pjmedia endpoint.
@@ -273,7 +273,12 @@ static pj_status_t ilbc_default_attr (pjmedia_codec_factory *factory,
     attr->setting.vad = 1;
     attr->setting.plc = 1;
     attr->setting.penh = 1;
-    attr->setting.dec_fmtp_mode = (pj_uint8_t)ilbc_factory.mode;
+    attr->setting.dec_fmtp.cnt = 1;
+    attr->setting.dec_fmtp.param[0].name = STR_MODE;
+    if (ilbc_factory.mode == 30)
+	attr->setting.dec_fmtp.param[0].val = pj_str("30");
+    else
+	attr->setting.dec_fmtp.param[0].val = pj_str("20");
 
     return PJ_SUCCESS;
 }
@@ -370,46 +375,65 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_status_t status;
+    unsigned i, dec_fmtp_mode = 0, enc_fmtp_mode = 0;
 
     pj_assert(ilbc_codec != NULL);
     pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
 	      ilbc_codec->dec_ready == PJ_FALSE);
 
+    /* Get decoder mode */
+    for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
+	if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, &STR_MODE) == 0)
+	{
+	    dec_fmtp_mode = (unsigned)
+			    pj_strtoul(&attr->setting.dec_fmtp.param[i].val);
+	    break;
+	}
+    }
+
     /* Decoder mode must be set */
-    PJ_ASSERT_RETURN(attr->setting.dec_fmtp_mode==20 ||
-		     attr->setting.dec_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
+    PJ_ASSERT_RETURN(dec_fmtp_mode == 20 || dec_fmtp_mode == 30, 
+		     PJMEDIA_CODEC_EINMODE);
+
+    /* Get encoder mode */
+    for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, &STR_MODE) == 0)
+	{
+	    enc_fmtp_mode = (unsigned)
+			    pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
+	    break;
+	}
+    }
 
     /* The enc mode must be set in the attribute 
      * (from the mode parameter in fmtp attribute in the SDP
      * received from remote) 
      */
-    if (attr->setting.enc_fmtp_mode == 0)
-	attr->setting.enc_fmtp_mode = attr->setting.dec_fmtp_mode;
+    if (enc_fmtp_mode == 0)
+	enc_fmtp_mode = dec_fmtp_mode;
 
-    PJ_ASSERT_RETURN(attr->setting.enc_fmtp_mode==20 ||
-		     attr->setting.enc_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
+    PJ_ASSERT_RETURN(enc_fmtp_mode==20 ||
+		     enc_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
 
     /* Update enc_ptime in the param */
-    if (attr->setting.enc_fmtp_mode != attr->setting.dec_fmtp_mode) {
-	attr->info.enc_ptime = attr->setting.enc_fmtp_mode;
+    if (enc_fmtp_mode != dec_fmtp_mode) {
+	attr->info.enc_ptime = (pj_uint16_t)enc_fmtp_mode;
     } else {
 	attr->info.enc_ptime = 0;
     }
 
     /* Create enc */
-    ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, 
-					    attr->setting.enc_fmtp_mode);
-    ilbc_codec->enc_samples_per_frame = CLOCK_RATE*attr->setting.enc_fmtp_mode/
-					1000;
+    ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, enc_fmtp_mode);
+    ilbc_codec->enc_samples_per_frame = CLOCK_RATE * enc_fmtp_mode / 1000;
     ilbc_codec->enc_ready = PJ_TRUE;
 
     /* Create decoder */
     ilbc_codec->dec_samples_per_frame = initDecode(&ilbc_codec->dec,
-						   attr->setting.dec_fmtp_mode,
+						   dec_fmtp_mode,
 						   attr->setting.penh);
-    if (attr->setting.dec_fmtp_mode == 20)
+    if (dec_fmtp_mode == 20)
 	ilbc_codec->dec_frame_size = 38;
-    else if (attr->setting.dec_fmtp_mode == 30)
+    else if (dec_fmtp_mode == 30)
 	ilbc_codec->dec_frame_size = 50;
     else {
 	pj_assert(!"Invalid iLBC mode");
@@ -435,7 +459,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 
     PJ_LOG(5,(ilbc_codec->obj_name, 
 	      "iLBC codec opened, encoder mode=%d, decoder mode=%d",
-	      attr->setting.enc_fmtp_mode, attr->setting.dec_fmtp_mode));
+	      enc_fmtp_mode, dec_fmtp_mode));
 
     return PJ_SUCCESS;
 }

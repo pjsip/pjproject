@@ -67,51 +67,76 @@ static const pj_str_t STR_RECVONLY = { "recvonly", 8 };
 
 
 /*
- * Get fmtp mode parameter associated with the codec.
+ * Parse fmtp for specified format/payload type.
  */
-static pj_status_t get_fmtp_mode(const pjmedia_sdp_media *m,
-				 const pj_str_t *fmt,
-				 int *p_mode)
+static void parse_fmtp( pj_pool_t *pool,
+			const pjmedia_sdp_media *m,
+			unsigned pt,
+			pjmedia_codec_fmtp *fmtp)
 {
     const pjmedia_sdp_attr *attr;
-    pjmedia_sdp_fmtp fmtp;
-    const pj_str_t str_mode = { "mode=", 5 };
-    char *pos;
+    pjmedia_sdp_fmtp sdp_fmtp;
+    char *p, *p_end, fmt_buf[8];
+    pj_str_t fmt;
+
+    pj_assert(m && fmtp);
+
+    pj_bzero(fmtp, sizeof(pjmedia_codec_fmtp));
 
     /* Get "fmtp" attribute for the format */
-    attr = pjmedia_sdp_media_find_attr2(m, "fmtp", fmt);
+    pj_ansi_sprintf(fmt_buf, "%d", pt);
+    fmt = pj_str(fmt_buf);
+    attr = pjmedia_sdp_media_find_attr2(m, "fmtp", &fmt);
     if (attr == NULL)
-	return -1;
+	return;
 
     /* Parse "fmtp" attribute */
-    if (pjmedia_sdp_attr_get_fmtp(attr, &fmtp) != PJ_SUCCESS)
-	return -1;
+    if (pjmedia_sdp_attr_get_fmtp(attr, &sdp_fmtp) != PJ_SUCCESS)
+	return;
 
-    /* Look for "mode=" string in the fmtp */
-    while (fmtp.fmt_param.slen >= str_mode.slen + 1) {
-	if (pj_strnicmp(&fmtp.fmt_param, &str_mode, str_mode.slen)==0) {
-	    /* Found "mode=" string */
+    /* Prepare parsing */
+    p = sdp_fmtp.fmt_param.ptr;
+    p_end = p + sdp_fmtp.fmt_param.slen;
+
+    /* Parse */
+    while (p < p_end) {
+	char *token, *start, *end;
+
+	/* Skip whitespaces */
+	while (p < p_end && (*p == ' ' || *p == '\t')) ++p;
+	if (p == p_end)
 	    break;
+
+	/* Get token */
+	start = p;
+	while (p < p_end && *p != ';' && *p != '=') ++p;
+	end = p - 1;
+
+	/* Right trim */
+	while (end >= start && (*end == ' '  || *end == '\t' || 
+				*end == '\r' || *end == '\n' ))
+	    --end;
+
+	/* Forward a char after trimming */
+	++end;
+
+	/* Store token */
+	if (end > start) {
+	    token = (char*)pj_pool_alloc(pool, end - start);
+	    pj_ansi_strncpy(token, start, end - start);
+	    if (*p == '=')
+		/* Got param name */
+		pj_strset(&fmtp->param[fmtp->cnt].name, token, end - start);
+	    else
+		/* Got param value */
+		pj_strset(&fmtp->param[fmtp->cnt++].val, token, end - start);
+	} else if (*p != '=') {
+	    ++fmtp->cnt;
 	}
 
-	fmtp.fmt_param.ptr++;
-	fmtp.fmt_param.slen--;
+	/* Next */
+	++p;
     }
-
-    if (fmtp.fmt_param.slen < str_mode.slen + 1) {
-	/* "mode=" param not found */
-	return -1;
-    }
-
-    /* Get the mode */
-    pos = fmtp.fmt_param.ptr + str_mode.slen;
-    *p_mode = 0;
-    while (pj_isdigit(*pos)) {
-	*p_mode = *p_mode * 10 + (*pos - '0');
-	++pos;
-    }
-
-    return PJ_SUCCESS;
 }
 
 
@@ -135,7 +160,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     int rem_af, local_af;
     pj_sockaddr local_addr;
     pjmedia_sdp_rtpmap *rtpmap;
-    int local_fmtp_mode = 0, rem_fmtp_mode = 0;
     unsigned i, pt, fmti;
     pj_status_t status;
 
@@ -400,7 +424,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	    
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG != 0)
 	    /* The session info should have the actual clock rate, because 
-	     * this info is used for calculationg buffer size, etc in stream */
+	     * this info is used for calculationg buffer size, etc in stream 
+	     */
 	    if (si->fmt.pt == PJMEDIA_RTP_PT_G722)
 		si->fmt.clock_rate = 16000;
 #endif
@@ -463,9 +488,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	    si->fmt.channel_cnt = 1;
 	}
 
-	/* Get fmtp mode= param in local SDP, if any */
-	get_fmtp_mode(local_m, &local_m->desc.fmt[fmti], &local_fmtp_mode);
-
 	/* Determine payload type for outgoing channel, by finding
 	 * dynamic payload type in remote SDP that matches the answer.
 	 */
@@ -493,9 +515,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 		/* Found matched codec. */
 		si->tx_pt = rpt;
 
-		/* Get fmtp mode param in remote SDP, if any */
-		get_fmtp_mode(rem_m, &rtpmap->pt, &rem_fmtp_mode);
-
 		break;
 	    }
 	}
@@ -509,6 +528,22 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     si->param = PJ_POOL_ALLOC_T(pool, pjmedia_codec_param);
     status = pjmedia_codec_mgr_get_default_param(mgr, &si->fmt, si->param);
 
+    /* Get remote fmtp for our encoder. */
+    parse_fmtp(pool, rem_m, si->tx_pt, &si->param->setting.enc_fmtp);
+
+    /* Get local fmtp for our decoder. */
+    parse_fmtp(pool, local_m, si->fmt.pt, &si->param->setting.dec_fmtp);
+
+    /* Get remote maxptime for our encoder. */
+    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
+				  "maxptime", NULL);
+    if (attr) {
+	pj_str_t tmp_val = attr->value;
+
+	pj_strltrim(&tmp_val);
+	si->tx_maxptime = pj_strtoul(&tmp_val);
+    }
+
     /* When direction is NONE (it means SDP negotiation has failed) we don't
      * need to return a failure here, as returning failure will cause
      * the whole SDP to be rejected. See ticket #:
@@ -518,12 +553,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
      */
     if (status != PJ_SUCCESS && si->dir != PJMEDIA_DIR_NONE)
 	return status;
-
-    /* Set fmtp mode for both local and remote */
-    if (local_fmtp_mode != 0)
-	si->param->setting.dec_fmtp_mode = (pj_int8_t)local_fmtp_mode;
-    if (rem_fmtp_mode != 0)
-	si->param->setting.enc_fmtp_mode = (pj_int8_t)rem_fmtp_mode;
 
 
     /* Get incomming payload type for telephone-events */

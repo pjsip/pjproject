@@ -29,6 +29,7 @@
 #include <pj/string.h>
 #include <pj/os.h>
 
+
 /*
  * Only build this file if PJMEDIA_HAS_INTEL_IPP != 0
  */
@@ -210,10 +211,12 @@ static struct ipp_codec {
     int		     has_native_plc;	/* Codec has internal PLC?	    */
 
     predecode_cb     predecode;		/* Callback to translate RTP frame
-					   into USC frame		    */
-    parse_cb	     parse;		/* Callback to parse bitstream	    */
-    pack_cb	     pack;		/* Callback to pack bitstream	    */
-} 
+					   into USC frame.		    */
+    parse_cb	     parse;		/* Callback to parse bitstream.	    */
+    pack_cb	     pack;		/* Callback to pack bitstream.	    */
+
+    pjmedia_codec_fmtp dec_fmtp;	/* Decoder's fmtp params.	    */
+}
 
 ipp_codec[] = 
 {
@@ -232,14 +235,8 @@ ipp_codec[] =
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
-    /* G.729 actually has internal VAD, but for now we need to disable it, 
-     * since its RTP packaging (multiple frames per packet) requires 
-     * SID frame to only be occured in the last frame, while controling 
-     * encoder on each loop (to enable/disable VAD) is considered inefficient.
-     * This should still be interoperable with other implementations.
-     */
     {1, "G729",	    PJMEDIA_RTP_PT_G729,      &USC_G729AFP_Fxns, 8000, 1,  80,  
-		    8000, 11800, 2, 0, 1, 
+		    8000, 11800, 2, 1, 1, 
 		    &predecode_g729, NULL, NULL
     },
 #   endif
@@ -279,9 +276,20 @@ ipp_codec[] =
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
-    {0, "G7221",    PJMEDIA_RTP_PT_G722_1,    &USC_G722_Fxns,	16000, 1, 320, 
-		    16000, 32000, 1, 0, 1,
-		    NULL, NULL, NULL
+    {0, "G7221",    PJMEDIA_RTP_PT_G722_1_16, &USC_G722_Fxns,	16000, 1, 320, 
+		    16000, 16000, 1, 0, 1,
+		    NULL, NULL, NULL,
+		    {1, {{{"bitrate", 7}, {"16000", 5}}} }
+    },
+    {1, "G7221",    PJMEDIA_RTP_PT_G722_1_24, &USC_G722_Fxns,	16000, 1, 320, 
+		    24000, 24000, 1, 0, 1,
+		    NULL, NULL, NULL,
+		    {1, {{{"bitrate", 7}, {"24000", 5}}} }
+    },
+    {1, "G7221",    PJMEDIA_RTP_PT_G722_1_32, &USC_G722_Fxns,	16000, 1, 320, 
+		    32000, 32000, 1, 0, 1,
+		    NULL, NULL, NULL,
+		    {1, {{{"bitrate", 7}, {"32000", 5}}} }
     },
 #   endif
 };
@@ -422,7 +430,8 @@ static pj_status_t ipp_default_attr (pjmedia_codec_factory *factory,
 	pj_str_t name = pj_str((char*)ipp_codec[i].name);
 	if ((pj_stricmp(&id->encoding_name, &name) == 0) &&
 	    (id->clock_rate == (unsigned)ipp_codec[i].clock_rate) &&
-	    (id->channel_cnt == (unsigned)ipp_codec[i].channel_count))
+	    (id->channel_cnt == (unsigned)ipp_codec[i].channel_count) &&
+	    (id->pt == (unsigned)ipp_codec[i].pt))
 	{
 	    attr->info.pt = (pj_uint8_t)id->pt;
 	    attr->info.channel_cnt = ipp_codec[i].channel_count;
@@ -437,10 +446,22 @@ static pj_status_t ipp_default_attr (pjmedia_codec_factory *factory,
 	    attr->setting.frm_per_pkt = ipp_codec[i].frm_per_pkt;
 
 	    /* Default flags. */
-	    attr->setting.cng = 0;
 	    attr->setting.plc = 1;
 	    attr->setting.penh= 0;
-	    attr->setting.vad = 1; /* Always disable for now */
+	    attr->setting.vad = 1;
+	    attr->setting.cng = attr->setting.vad;
+	    attr->setting.dec_fmtp = ipp_codec[i].dec_fmtp;
+
+	    if (attr->setting.vad == 0) {
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
+		if (id->pt == PJMEDIA_RTP_PT_G729) {
+		    /* Signal G729 Annex B is being disabled */
+		    attr->setting.dec_fmtp.cnt = 1;
+		    pj_strset2(&attr->setting.dec_fmtp.param[0].name, "annexb");
+		    pj_strset2(&attr->setting.dec_fmtp.param[0].val, "no");
+		}
+#endif
+	    }
 
 	    return PJ_SUCCESS;
 	}
@@ -631,9 +652,23 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     /* Setting the encoder params */
     codec_data->info->params.direction = USC_ENCODE;
     codec_data->info->params.modes.vad = attr->setting.vad && 
-					   ippc->has_native_vad;
+					 ippc->has_native_vad;
     codec_data->info->params.modes.bitrate = attr->info.avg_bps;
     codec_data->info->params.law = 0; /* Linear PCM input */
+
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
+    if (ippc->pt == PJMEDIA_RTP_PT_G729) {
+	/* Check if G729 Annex B is signaled to be disabled */
+	for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	    if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].name, "annexb")==0)
+	    {
+		if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].val, "no")==0)
+		    codec_data->info->params.modes.vad = 0;
+		break;
+	    }
+	}
+    }
+#endif
 
     /* Get number of memory blocks needed by the encoder */
     if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params,
@@ -672,6 +707,9 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 
     /* Setting the decoder params */
     codec_data->info->params.direction = USC_DECODE;
+
+    /* Not sure if VAD affects decoder, just try to be safe */
+    codec_data->info->params.modes.vad = ippc->has_native_vad;
 
     /* Get number of memory blocks needed by the decoder */
     if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params, 
@@ -925,6 +963,18 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	nsamples -= samples_per_frame;
 	tx += out.nbytes;
 	bits_out += out.nbytes;
+
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
+	if (out.frametype == 1) {
+	    /* SID */
+	    break;
+	} else if (out.frametype == 0) {
+	    /* Untransmitted */
+	    tx -= out.nbytes;
+	    break;
+	}
+#endif
+
     }
 
     if (ippc->pack != NULL) {

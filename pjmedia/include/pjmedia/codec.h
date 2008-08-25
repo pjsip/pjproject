@@ -238,6 +238,21 @@ typedef struct pjmedia_codec_info
     unsigned	    channel_cnt;    /**< Channel count.			*/
 } pjmedia_codec_info;
 
+#define PJMEDIA_CODEC_MAX_FMTP_CNT  8
+
+/** 
+ * Structure of codec specific parameters which contains name=value pairs.
+ * The codec specific parameters are to be used with SDP according to 
+ * the standards (e.g: RFC 3555).
+ */
+typedef struct pjmedia_codec_fmtp
+{
+    pj_uint8_t	    cnt;
+    struct param {
+	pj_str_t    name;
+	pj_str_t    val;
+    } param [PJMEDIA_CODEC_MAX_FMTP_CNT];
+} pjmedia_codec_fmtp;
 
 /** 
  * Detailed codec attributes used both to configure a codec and to query
@@ -277,8 +292,8 @@ typedef struct pjmedia_codec_param
 	unsigned    penh:1;	    /**< Perceptual Enhancement		*/
 	unsigned    plc:1;	    /**< Packet loss concealment	*/
 	unsigned    reserved:1;	    /**< Reserved, must be zero.	*/
-	pj_uint8_t  enc_fmtp_mode;  /**< Mode param in fmtp (def:0)	*/
-	pj_uint8_t  dec_fmtp_mode;  /**< Mode param in fmtp (def:0)	*/
+	pjmedia_codec_fmtp enc_fmtp;/**< Encoder's fmtp params.		*/
+	pjmedia_codec_fmtp dec_fmtp;/**< Decoder's fmtp params.		*/
     } setting;
 } pjmedia_codec_param;
 

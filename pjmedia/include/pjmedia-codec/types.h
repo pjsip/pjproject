@@ -61,7 +61,9 @@ enum
     PJMEDIA_RTP_PT_G726_24,			/**< G726 @ 24Kbps	    */
     /* PJMEDIA_RTP_PT_G726_32,*/		/**< G726 @ 32Kbps, static? */
     PJMEDIA_RTP_PT_G726_40,			/**< G726 @ 40Kbps	    */
-    PJMEDIA_RTP_PT_G722_1,			/**< G722.1 (16-32Kbps)	    */
+    PJMEDIA_RTP_PT_G722_1_16,			/**< G722.1 (16Kbps)	    */
+    PJMEDIA_RTP_PT_G722_1_24,			/**< G722.1 (24Kbps)	    */
+    PJMEDIA_RTP_PT_G722_1_32,			/**< G722.1 (32Kbps)	    */
 };
 
 

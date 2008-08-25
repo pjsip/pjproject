@@ -424,18 +424,55 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	    m->attr[m->attr_count++] = attr;
 	}
 
-	/* Add fmtp mode where applicable */
-	if (codec_param.setting.dec_fmtp_mode != 0) {
-	    const pj_str_t fmtp = { "fmtp", 4 };
+	/* Add fmtp params */
+	if (codec_param.setting.dec_fmtp.cnt > 0) {
+	    enum { MAX_FMTP_STR_LEN = 160 };
+	    char buf[MAX_FMTP_STR_LEN];
+	    unsigned buf_len = 0, i;
+	    pjmedia_codec_fmtp *dec_fmtp = &codec_param.setting.dec_fmtp;
+
+	    /* Print codec PT */
+	    buf_len += pj_ansi_snprintf(buf, 
+					MAX_FMTP_STR_LEN - buf_len, 
+					"%d", 
+					codec_info->pt);
+
+	    for (i = 0; i < dec_fmtp->cnt; ++i) {
+		unsigned test_len = 2;
+
+		/* Check if buf still available */
+		test_len = dec_fmtp->param[i].val.slen + 
+			   dec_fmtp->param[i].name.slen;
+		if (test_len + buf_len >= MAX_FMTP_STR_LEN)
+		    return PJ_ETOOBIG;
+
+		/* Print delimiter */
+		buf_len += pj_ansi_snprintf(&buf[buf_len], 
+					    MAX_FMTP_STR_LEN - buf_len,
+					    (i == 0?" ":";"));
+
+		/* Print an fmtp param */
+		if (dec_fmtp->param[i].name.slen)
+		    buf_len += pj_ansi_snprintf(
+					    &buf[buf_len],
+					    MAX_FMTP_STR_LEN - buf_len,
+					    "%.*s=%.*s",
+					    (int)dec_fmtp->param[i].name.slen,
+					    dec_fmtp->param[i].name.ptr,
+					    (int)dec_fmtp->param[i].val.slen,
+					    dec_fmtp->param[i].val.ptr);
+		else
+		    buf_len += pj_ansi_snprintf(&buf[buf_len], 
+					    MAX_FMTP_STR_LEN - buf_len,
+					    "%.*s", 
+					    (int)dec_fmtp->param[i].val.slen,
+					    dec_fmtp->param[i].val.ptr);
+	    }
+
 	    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
 
-	    attr->name = fmtp;
-	    attr->value.ptr = (char*) pj_pool_alloc(pool, 32);
-	    attr->value.slen = 
-		pj_ansi_snprintf( attr->value.ptr, 32,
-				  "%d mode=%d",
-				  codec_info->pt,
-				  codec_param.setting.dec_fmtp_mode);
+	    attr->name = pj_str("fmtp");
+	    attr->value = pj_strdup3(pool, buf);
 	    m->attr[m->attr_count++] = attr;
 	}
     }
