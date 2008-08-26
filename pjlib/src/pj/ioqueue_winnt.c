@@ -175,22 +175,31 @@ static void ioqueue_on_accept_complete(ioqueue_accept_rec *accept_overlapped)
     PJ_CHECK_STACK();
 
     /* Operation complete immediately. */
-    GetAcceptExSockaddrs( accept_overlapped->accept_buf,
-			  0, 
-			  ACCEPT_ADDR_LEN,
-			  ACCEPT_ADDR_LEN,
-			  &local,
-			  &locallen,
-			  &remote,
-			  &remotelen);
-    if (*accept_overlapped->addrlen >= locallen) {
-        pj_memcpy(accept_overlapped->local, local, locallen);
-        pj_memcpy(accept_overlapped->remote, remote, locallen);
-    } else {
-        pj_bzero(accept_overlapped->local, *accept_overlapped->addrlen);
-        pj_bzero(accept_overlapped->remote, *accept_overlapped->addrlen);
+    if (accept_overlapped->addrlen) {
+	GetAcceptExSockaddrs( accept_overlapped->accept_buf,
+			      0, 
+			      ACCEPT_ADDR_LEN,
+			      ACCEPT_ADDR_LEN,
+			      &local,
+			      &locallen,
+			      &remote,
+			      &remotelen);
+	if (*accept_overlapped->addrlen >= locallen) {
+	    if (accept_overlapped->local)
+		pj_memcpy(accept_overlapped->local, local, locallen);
+	    if (accept_overlapped->remote)
+		pj_memcpy(accept_overlapped->remote, remote, locallen);
+	} else {
+	    if (accept_overlapped->local)
+		pj_bzero(accept_overlapped->local, 
+			 *accept_overlapped->addrlen);
+	    if (accept_overlapped->remote)
+		pj_bzero(accept_overlapped->remote, 
+			 *accept_overlapped->addrlen);
+	}
+
+	*accept_overlapped->addrlen = locallen;
     }
-    *accept_overlapped->addrlen = locallen;
     if (accept_overlapped->newsock_ptr)
         *accept_overlapped->newsock_ptr = accept_overlapped->newsock;
     accept_overlapped->operation = 0;
@@ -700,18 +709,20 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
             if (key->cb.on_accept_complete) {
                 ioqueue_accept_rec *accept_rec = (ioqueue_accept_rec*)pOv;
 		pj_status_t status = PJ_SUCCESS;
+		pj_sock_t newsock;
 
-		if (accept_rec->newsock == PJ_INVALID_SOCKET) {
+		newsock = accept_rec->newsock;
+		accept_rec->newsock = PJ_INVALID_SOCKET;
+
+		if (newsock == PJ_INVALID_SOCKET) {
 		    int dwError = WSAGetLastError();
 		    if (dwError == 0) dwError = OSERR_ENOTCONN;
 		    status = PJ_RETURN_OS_ERROR(dwError);
 		}
 
-	        key->cb.on_accept_complete(key, 
-                                           (pj_ioqueue_op_key_t*)pOv, 
-                                           accept_rec->newsock,
-                                           status);
-		accept_rec->newsock = PJ_INVALID_SOCKET;
+	        key->cb.on_accept_complete(key, (pj_ioqueue_op_key_t*)pOv,
+                                           newsock, status);
+		
             }
 	    break;
 	case PJ_IOQUEUE_OP_CONNECT:
