@@ -1160,9 +1160,8 @@ static void stop_media_session(pjsua_call_id call_id)
     if (call->session) {
 	pjmedia_rtcp_stat stat;
 
-	if (pjmedia_session_get_stream_stat(call->session, 
-					    call->audio_idx, 
-					    &stat) == PJ_SUCCESS)
+	if (pjmedia_session_get_stream_stat(call->session, 0, &stat) 
+	    == PJ_SUCCESS)
 	{
 	    /* Save RTP timestamp & sequence, so when media session is 
 	     * restarted, those values will be restored as the initial 
