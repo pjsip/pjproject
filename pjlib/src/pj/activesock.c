@@ -467,8 +467,15 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 		 * anything useful in the source_addr, so just put NULL
 		 * there too.
 		 */
-		ret = (*asock->cb.on_data_recvfrom)(asock, NULL, 0,
-						    NULL, 0, status);
+		/* In some scenarios, status may be PJ_SUCCESS. The upper 
+		 * layer application may not expect the callback to be called
+		 * with successful status and NULL data, so lets not call the
+		 * callback if the status is PJ_SUCCESS.
+		 */
+		if (status != PJ_SUCCESS ) {
+		    ret = (*asock->cb.on_data_recvfrom)(asock, NULL, 0,
+							NULL, 0, status);
+		}
 	    }
 
 	    /* If callback returns false, we have been destroyed! */
@@ -503,7 +510,12 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 					 &r->src_addr, &r->src_addr_len);
 	}
 
-    } while (status != PJ_EPENDING && status != PJ_ECANCELLED);
+	if (status != PJ_EPENDING && status != PJ_ECANCELLED) {
+	    bytes_read = -status;
+	} else {
+	    break;
+	}
+    } while (1);
 
 }
 
