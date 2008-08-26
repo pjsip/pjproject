@@ -210,6 +210,9 @@ struct pjmedia_rtcp_stat
     pjmedia_rtcp_stream_stat rx;    /**< Decoder stream statistics.	    */
     
     pj_math_stat	     rtt;   /**< Round trip delay statistic(in usec)*/
+
+    pj_uint32_t		     rtp_tx_last_ts; /**< Last TX RTP timestamp.    */
+    pj_uint16_t		     rtp_tx_last_seq;/**< Last TX RTP sequence.	    */
 };
 
 

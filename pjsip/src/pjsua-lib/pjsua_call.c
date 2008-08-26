@@ -105,6 +105,9 @@ static void reset_call(pjsua_call_id id)
     call->session = NULL;
     call->audio_idx = -1;
     call->ssrc = pj_rand();
+    call->rtp_tx_seq = 0;
+    call->rtp_tx_ts = 0;
+    call->rtp_tx_seq_ts_set = 0;
     call->xfer_sub = NULL;
     call->last_code = (pjsip_status_code) 0;
     call->conf_slot = PJSUA_INVALID_ID;

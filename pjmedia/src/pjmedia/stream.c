@@ -872,6 +872,8 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 
     /* Update stat */
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
+    stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
+    stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
     return PJ_SUCCESS;
 }
@@ -1412,7 +1414,18 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Create RTP and RTCP sessions: */
 
-    status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
+    if (param->rtp_seq_ts_set == 0) {
+	status = pjmedia_rtp_session_init(&channel->rtp, pt, param->ssrc);
+    } else {
+	pjmedia_rtp_session_setting settings;
+
+	settings.flags = (param->rtp_seq_ts_set << 2) | 3;
+	settings.default_pt = pt;
+	settings.sender_ssrc = param->ssrc;
+	settings.seq = param->rtp_seq;
+	settings.ts = param->rtp_ts;
+	status = pjmedia_rtp_session_init2(&channel->rtp, settings);
+    }
     if (status != PJ_SUCCESS)
 	return status;
 

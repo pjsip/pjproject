@@ -220,6 +220,26 @@ struct pjmedia_rtp_status
 				 value will be one.			    */
 };
 
+
+/**
+ * RTP session settings.
+ */
+typedef struct pjmedia_rtp_session_setting
+{
+    pj_uint8_t	     flags;	    /**< Bitmask flags to specify whether such
+				         field is set. Bitmask contents are:
+					 (bit #0 is LSB)
+					 bit #0: default payload type
+					 bit #1: sender SSRC
+					 bit #2: sequence
+					 bit #3: timestamp		    */
+    int		     default_pt;    /**< Default payload type.		    */
+    pj_uint32_t	     sender_ssrc;   /**< Sender SSRC.			    */
+    pj_uint16_t	     seq;	    /**< Sequence.			    */
+    pj_uint32_t	     ts;	    /**< Timestamp.			    */
+} pjmedia_rtp_session_setting;
+
+
 /**
  * @see pjmedia_rtp_status
  */
@@ -238,6 +258,20 @@ typedef struct pjmedia_rtp_status pjmedia_rtp_status;
 PJ_DECL(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
 					       int default_pt, 
 					       pj_uint32_t sender_ssrc );
+
+/**
+ * This function will initialize the RTP session according to given parameters
+ * defined in RTP session settings.
+ *
+ * @param ses		The session.
+ * @param settings	RTP session settings.
+ *
+ * @return		PJ_SUCCESS if successfull.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtp_session_init2( 
+				    pjmedia_rtp_session *ses,
+				    pjmedia_rtp_session_setting settings);
+
 
 /**
  * Create the RTP header based on arguments and current state of the RTP

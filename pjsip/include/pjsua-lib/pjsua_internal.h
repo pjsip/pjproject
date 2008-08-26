@@ -66,6 +66,13 @@ typedef struct pjsua_call
     pjmedia_session	*session;   /**< The media session.		    */
     int			 audio_idx; /**< Index of m=audio in SDP.	    */
     pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
+    pj_uint32_t		 rtp_tx_ts; /**< Initial RTP timestamp for sender.  */
+    pj_uint16_t		 rtp_tx_seq;/**< Initial RTP sequence for sender.   */
+    pj_uint8_t		 rtp_tx_seq_ts_set;
+				    /**< Bitmask flags if initial RTP sequence
+				         and/or timestamp for sender are set.
+					 bit 0/LSB : sequence flag 
+					 bit 1     : timestamp flag 	    */
     int			 conf_slot; /**< Slot # in conference bridge.	    */
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */

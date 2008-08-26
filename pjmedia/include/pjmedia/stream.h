@@ -112,6 +112,13 @@ struct pjmedia_stream_info
     int		        tx_event_pt;/**< Outgoing pt for telephone-events.  */
     int			rx_event_pt;/**< Incoming pt for telephone-events.  */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
+    pj_uint32_t		rtp_ts;	    /**< Initial RTP timestamp.		    */
+    pj_uint16_t		rtp_seq;    /**< Initial RTP sequence number.	    */
+    pj_uint8_t		rtp_seq_ts_set;
+				    /**< Bitmask flags if initial RTP sequence 
+				         and/or timestamp for sender are set.
+					 bit 0/LSB : sequence flag 
+					 bit 1     : timestamp flag 	    */
     int			jb_init;    /**< Jitter buffer init delay in msec.  
 					 (-1 for default).		    */
     int			jb_min_pre; /**< Jitter buffer minimum prefetch

@@ -1158,6 +1158,23 @@ static void stop_media_session(pjsua_call_id call_id)
     }
 
     if (call->session) {
+	pjmedia_rtcp_stat stat;
+
+	if (pjmedia_session_get_stream_stat(call->session, 
+					    call->audio_idx, 
+					    &stat) == PJ_SUCCESS)
+	{
+	    /* Save RTP timestamp & sequence, so when media session is 
+	     * restarted, those values will be restored as the initial 
+	     * RTP timestamp & sequence of the new media session. So in 
+	     * the same call session, RTP timestamp and sequence are 
+	     * guaranteed to be contigue.
+	     */
+	    call->rtp_tx_seq_ts_set = 1 | (1 << 1);
+	    call->rtp_tx_seq = stat.rtp_tx_last_seq;
+	    call->rtp_tx_ts = stat.rtp_tx_last_ts;
+	}
+
 	if (pjsua_var.ua_cfg.cb.on_stream_destroyed) {
 	    pjsua_var.ua_cfg.cb.on_stream_destroyed(call_id, call->session, 0);
 	}
@@ -1321,6 +1338,15 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 	/* Set SSRC */
 	si->ssrc = call->ssrc;
+
+	/* Set RTP timestamp & sequence, normally these value are intialized
+	 * automatically when stream session created, but for some cases (e.g:
+	 * call reinvite, call update) timestamp and sequence need to be kept
+	 * contigue.
+	 */
+	si->rtp_ts = call->rtp_tx_ts;
+	si->rtp_seq = call->rtp_tx_seq;
+	si->rtp_seq_ts_set = call->rtp_tx_seq_ts_set;
 
 	/* Create session based on session info. */
 	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,

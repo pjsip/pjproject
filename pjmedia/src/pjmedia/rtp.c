@@ -84,6 +84,33 @@ PJ_DEF(pj_status_t) pjmedia_rtp_session_init( pjmedia_rtp_session *ses,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjmedia_rtp_session_init2( 
+				    pjmedia_rtp_session *ses,
+				    pjmedia_rtp_session_setting settings)
+{
+    pj_status_t status;
+    int		 pt = 0;
+    pj_uint32_t	 sender_ssrc = 0;
+
+    if (settings.flags & 1)
+	pt = settings.default_pt;
+    if (settings.flags & 2)
+	sender_ssrc = settings.sender_ssrc;
+
+    status = pjmedia_rtp_session_init(ses, pt, sender_ssrc);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (settings.flags & 4) {
+	ses->out_extseq = settings.seq;
+	ses->out_hdr.seq = pj_htons((pj_uint16_t)ses->out_extseq);
+    }
+    if (settings.flags & 8)
+	ses->out_hdr.ts = pj_htonl(settings.ts);
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses, 
 					    int pt, int m,
