@@ -91,6 +91,10 @@ def test_func(t):
 	# UA2 wait until call established
 	ua2.expect(const.STATE_CONFIRMED)
 
+	ua1.sync_stdout()
+	ua2.sync_stdout()
+	time.sleep(2)
+
 	# Disconnect mic -> rec file, to avoid echo recorded when using sound device
 	# Disconnect stream -> spk, make it silent
 	# Connect stream -> rec file, start recording
