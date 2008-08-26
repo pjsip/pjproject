@@ -61,12 +61,18 @@ inc.ARGS = args
 if G_EXE == "":
 	if sys.platform.find("win32")!=-1:
 	    e = "../../bin/pjsua_vc6d.exe"
-	    st1 = os.stat(e)
+	    if os.access(e, os.F_OK):
+	    	st1 = os.stat(e)
+	    else:
+	    	st1 = None
 	    if st1 != None:
 		G_EXE = e
-	    e = "../../bin/pjsua_vc6d.exe"
-	    st2 = os.stat(e)
-	    if st2 != None and st2.st_mtime > st1.st_mtime:
+	    e = "../../bin/pjsua_vc6.exe"
+	    if os.access(e, os.F_OK):
+	    	st2 = os.stat(e)
+	    else:
+	    	st2 = None
+	    if st2 != None and (st1==None or st2.st_mtime > st1.st_mtime):
 		G_EXE = e
 		st1 = st2
 	    if G_EXE=="":
