@@ -420,7 +420,8 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 	} else if (bytes_read <= 0 &&
 		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK) &&
 		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_EINPROGRESS) && 
-		   -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET)) 
+		   (asock->stream_oriented ||
+		    -bytes_read != PJ_STATUS_FROM_OS(OSERR_ECONNRESET))) 
 	{
 	    pj_size_t remainder;
 	    pj_bool_t ret;
