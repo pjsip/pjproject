@@ -1,5 +1,6 @@
 # $Id$
 import random
+import config_site
 
 DEFAULT_ECHO = True
 DEFAULT_TRACE = True
@@ -7,7 +8,7 @@ DEFAULT_START_SIP_PORT = 50000
 
 # Shared vars
 ARGS = []		# arguments containing script module & config
-HAS_SND_DEV = 1		# specify 1 if system has sound device and prefer to use sound device in the tests
+HAS_SND_DEV = config_site.HAS_SND_DEV
 
 # Individual pjsua instance configuration class
 class InstanceParam:
