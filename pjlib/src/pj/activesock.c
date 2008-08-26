@@ -511,7 +511,11 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 					 &r->src_addr, &r->src_addr_len);
 	}
 
-	if (status != PJ_EPENDING && status != PJ_ECANCELLED) {
+	if (status == PJ_SUCCESS) {
+	    /* Immediate data */
+	    ;
+	} else if (status != PJ_EPENDING && status != PJ_ECANCELLED) {
+	    /* Error */
 	    bytes_read = -status;
 	} else {
 	    break;
