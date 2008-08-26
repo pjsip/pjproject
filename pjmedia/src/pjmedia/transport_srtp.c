@@ -36,6 +36,13 @@
 #define MAX_RTP_BUFFER_LEN	    1500
 #define MAX_RTCP_BUFFER_LEN	    1500
 #define MAX_KEY_LEN		    32
+
+/* Initial value of probation counter. When probation counter > 0, 
+ * it means SRTP is in probation state, and it may restart when
+ * srtp_unprotect() returns err_status_replay_*
+ */
+#define PROBATION_CNT_INIT	    100
+
 #define DEACTIVATE_MEDIA(pool, m)   pjmedia_sdp_media_deactivate(pool, m)
 
 static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
@@ -76,9 +83,9 @@ static crypto_suite crypto_suites[] = {
 
 typedef struct transport_srtp
 {
-    pjmedia_transport	 base;	    /**< Base transport interface. */
-    pj_pool_t		*pool;
-    pj_lock_t		*mutex;
+    pjmedia_transport	 base;		    /**< Base transport interface.  */
+    pj_pool_t		*pool;		    /**< Pool for transport SRTP.   */
+    pj_lock_t		*mutex;		    /**< Mutex for libsrtp contexts.*/
     char		 rtp_tx_buffer[MAX_RTP_BUFFER_LEN];
     char		 rtcp_tx_buffer[MAX_RTCP_BUFFER_LEN];
     pjmedia_srtp_setting setting;
@@ -120,6 +127,10 @@ typedef struct transport_srtp
      */
     pjmedia_srtp_use	 peer_use;
 
+    /* When probation counter > 0, it means SRTP is in probation state, 
+     * and it may restart when srtp_unprotect() returns err_status_replay_*
+     */
+    unsigned		 probation_cnt;
 } transport_srtp;
 
 
@@ -349,6 +360,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     srtp->pool = pool;
     srtp->session_inited = PJ_FALSE;
     srtp->bypass_srtp = PJ_FALSE;
+    srtp->probation_cnt = PROBATION_CNT_INIT;
     srtp->peer_use = opt->use;
 
     if (opt) {
@@ -775,10 +787,34 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
     /* Make sure buffer is 32bit aligned */
     PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return );
 
+    if (srtp->probation_cnt > 0)
+	--srtp->probation_cnt;
+
     pj_lock_acquire(srtp->mutex);
 
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
-    
+
+    if (srtp->probation_cnt > 0 && 
+	(err == err_status_replay_old || err == err_status_replay_fail)) 
+    {
+	/* Handle such condition that stream is updated (RTP seq is reinited
+	* & SRTP is restarted), but some old packets are still coming 
+	* so SRTP is learning wrong RTP seq. While the newly inited RTP seq
+	* comes, SRTP thinks the RTP seq is replayed, so srtp_unprotect() 
+	* will returning err_status_replay_*. Restarting SRTP can resolve 
+	* this.
+	*/
+	if (pjmedia_transport_srtp_start((pjmedia_transport*)srtp, 
+					 &srtp->tx_policy, &srtp->rx_policy) 
+					 != PJ_SUCCESS)
+	{
+	    PJ_LOG(5,(srtp->pool->obj_name, "Failed to restart SRTP, err=%s", 
+		      get_libsrtp_errstr(err)));
+	} else {
+	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
+	}
+    }
+
     if (err == err_status_ok) {
 	srtp->rtp_cb(srtp->user_data, pkt, len);
     } else {
@@ -1377,6 +1413,9 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 
 	/* At this point, we get valid rx_policy_neg & tx_policy_neg. */
     }
+
+    /* Reset probation counts */
+    srtp->probation_cnt = PROBATION_CNT_INIT;
 
     /* Got policy_local & policy_remote, let's initalize the SRTP */
     status = pjmedia_transport_srtp_start(tp, &srtp->tx_policy_neg, &srtp->rx_policy_neg);
