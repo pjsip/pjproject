@@ -1419,7 +1419,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     } else {
 	pjmedia_rtp_session_setting settings;
 
-	settings.flags = (param->rtp_seq_ts_set << 2) | 3;
+	settings.flags = (pj_uint8_t)((param->rtp_seq_ts_set << 2) | 3);
 	settings.default_pt = pt;
 	settings.sender_ssrc = param->ssrc;
 	settings.seq = param->rtp_seq;
