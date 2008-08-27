@@ -783,7 +783,7 @@ int speex_get_next_frame(SpeexBits *bits)
 
 	if (submode == 15) {
 	    TRACE__((THIS_FUNC, "Found submode: terminator"));
-	    return 0;
+	    return -1;
 	} else if (submode == 14) {
 	    /* in-band signal; next 4 bits contain signal id */
 	    submode = speex_bits_unpack_unsigned(bits, 4);
@@ -797,7 +797,7 @@ int speex_get_next_frame(SpeexBits *bits)
 	    speex_bits_advance(bits, submode * 8);
 	} else if (submode > 8) {
 	    TRACE__((THIS_FUNC, "Unknown sub-mode %d", submode));
-	    return 0;
+	    return -1;
 	} else {
 	    /* NB frame */
 	    unsigned int advance = submode;
