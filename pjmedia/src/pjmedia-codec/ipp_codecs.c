@@ -965,13 +965,15 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	bits_out += out.nbytes;
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
-	if (out.frametype == 1) {
-	    /* SID */
-	    break;
-	} else if (out.frametype == 0) {
-	    /* Untransmitted */
-	    tx -= out.nbytes;
-	    break;
+	if (pt == PJMEDIA_RTP_PT_G729) {
+	    if (out.frametype == 1) {
+		/* SID */
+		break;
+	    } else if (out.frametype == 0) {
+		/* Untransmitted */
+		tx -= out.nbytes;
+		break;
+	    }
 	}
 #endif
 
