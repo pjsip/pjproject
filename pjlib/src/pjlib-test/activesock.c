@@ -318,6 +318,8 @@ static pj_bool_t tcp_on_data_sent(pj_activesock_t *asock,
 {
     struct tcp_state *st=(struct tcp_state*)pj_activesock_get_user_data(asock);
 
+    PJ_UNUSED_ARG(op_key);
+
     st->sent = 1;
 
     if (sent < 1) {
