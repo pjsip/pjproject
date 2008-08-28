@@ -59,7 +59,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         dwDesiredAccess |= GENERIC_WRITE;
         if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
             dwDesiredAccess |= FILE_APPEND_DATA;
-	    dwCreationDisposition |= OPEN_EXISTING;
+	    dwCreationDisposition |= OPEN_ALWAYS;
         } else {
             dwDesiredAccess &= ~(FILE_APPEND_DATA);
             dwCreationDisposition |= CREATE_ALWAYS;
