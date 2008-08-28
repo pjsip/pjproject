@@ -20,6 +20,7 @@
 #include <pjmedia/echo.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
@@ -66,7 +67,10 @@ PJ_DEF(pj_status_t) speex_aec_create(pj_pool_t *pool,
 					   clock_rate * tail_ms / 1000,
 					   channel_count, channel_count);
 #else
-    PJ_ASSERT_RETURN(channel_count==1, PJ_EINVAL);
+    if (channel_count != 1) {
+	PJ_LOG(2,("echo_speex.c", "Multichannel EC is not supported by this "
+				  "echo canceller. It may not work."));
+    }
     echo->state = speex_echo_state_init(echo->samples_per_frame,
     					clock_rate * tail_ms / 1000);
 #endif
