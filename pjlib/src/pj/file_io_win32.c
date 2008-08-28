@@ -59,6 +59,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
         dwDesiredAccess |= GENERIC_WRITE;
         if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
             dwDesiredAccess |= FILE_APPEND_DATA;
+	    dwCreationDisposition |= OPEN_EXISTING;
         } else {
             dwDesiredAccess &= ~(FILE_APPEND_DATA);
             dwCreationDisposition |= CREATE_ALWAYS;
@@ -84,6 +85,16 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     if (hFile == INVALID_HANDLE_VALUE) {
         *fd = 0;
         return PJ_RETURN_OS_ERROR(GetLastError());
+    }
+
+    if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
+	pj_status_t status;
+
+	status = pj_file_setpos(hFile, 0, PJ_SEEK_END);
+	if (status != PJ_SUCCESS) {
+	    pj_file_close(hFile);
+	    return status;
+	}
     }
 
     *fd = hFile;
