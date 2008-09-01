@@ -29,7 +29,7 @@ LIBRARY		charconv.lib euser.lib estlib.lib
 LIBRARY		esock.lib insock.lib
 STATICLIBRARY	pjlib.lib pjmedia.lib
 
-#if SND_USE_NULL || defined(WINSCW)
+#if SND_USE_NULL
     STATICLIBRARY	null_audio.lib
     CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
 #elif SND_USE_APS
