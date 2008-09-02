@@ -2935,6 +2935,32 @@ PJ_DECL(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id);
 
 
 /**
+ * Retrieve the media session associated with this call. Note that the media
+ * session may not be available depending on the current call's media status
+ * (the pjsua_call_media_status information in pjsua_call_info). Application
+ * may use the media session to retrieve more detailed information about the
+ * call's media.
+ *
+ * @param call_id	Call identification.
+ *
+ * @return		Call media session.
+ */
+PJ_DECL(pjmedia_session*) pjsua_call_get_media_session(pjsua_call_id call_id);
+
+
+/**
+ * Retrieve the media transport instance that is used for this call. 
+ * Application may use the media transport to query more detailed information
+ * about the media transport.
+ *
+ * @param cid		Call identification (the call_id).
+ *
+ * @return		Call media transport.
+ */
+PJ_DECL(pjmedia_transport*) pjsua_call_get_media_transport(pjsua_call_id cid);
+
+
+/**
  * Get the conference port identification associated with the call.
  *
  * @param call_id	Call identification.

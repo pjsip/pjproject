@@ -1024,6 +1024,28 @@ PJ_DEF(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id)
 }
 
 
+/*
+ * Retrieve the media session associated with this call.
+ */
+PJ_DEF(pjmedia_session*) pjsua_call_get_media_session(pjsua_call_id call_id)
+{
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
+		     NULL);
+    return pjsua_var.calls[call_id].session;
+}
+
+
+/*
+ * Retrieve the media transport instance that is used for this call.
+ */
+PJ_DEF(pjmedia_transport*) pjsua_call_get_media_transport(pjsua_call_id cid)
+{
+    PJ_ASSERT_RETURN(cid>=0 && cid<(int)pjsua_var.ua_cfg.max_calls, 
+		     NULL);
+    return pjsua_var.calls[cid].med_tp;
+}
+
+
 /* Acquire lock to the specified call_id */
 pj_status_t acquire_call(const char *title,
 				pjsua_call_id call_id,
