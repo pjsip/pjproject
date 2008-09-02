@@ -1287,8 +1287,18 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 
 		if (dup) {
 		    /* Duplicate found, remove the srflx candidate */
+		    unsigned idx = cand - comp->cand_list;
+
+		    /* Update default candidate index */
+		    if (comp->default_cand > idx) {
+			--comp->default_cand;
+		    } else if (comp->default_cand == idx) {
+			comp->default_cand = 0;
+		    }
+
+		    /* Remove srflx candidate */
 		    pj_array_erase(comp->cand_list, sizeof(comp->cand_list[0]),
-				   comp->cand_cnt, cand - comp->cand_list);
+				   comp->cand_cnt, idx);
 		    --comp->cand_cnt;
 		} else {
 		    /* Otherwise update the address */
