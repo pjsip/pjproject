@@ -2847,8 +2847,8 @@ static PyObject *py_pjsua_codec_get_param(PyObject *pSelf, PyObject *pArgs)
     ret->info->pcm_bits_per_sample = param.info.pcm_bits_per_sample;
     ret->info->pt = param.info.pt;
     ret->setting->cng = param.setting.cng;
-    ret->setting->dec_fmtp_mode = param.setting.dec_fmtp_mode;
-    ret->setting->enc_fmtp_mode = param.setting.enc_fmtp_mode;
+    //ret->setting->dec_fmtp_mode = param.setting.dec_fmtp_mode;
+    //ret->setting->enc_fmtp_mode = param.setting.enc_fmtp_mode;
     ret->setting->frm_per_pkt = param.setting.frm_per_pkt;
     ret->setting->penh = param.setting.penh;
     ret->setting->plc = param.setting.plc;
@@ -2888,8 +2888,8 @@ static PyObject *py_pjsua_codec_set_param(PyObject *pSelf, PyObject *pArgs)
         param.info.pcm_bits_per_sample = obj->info->pcm_bits_per_sample;
         param.info.pt = obj->info->pt;
         param.setting.cng = obj->setting->cng;
-        param.setting.dec_fmtp_mode = obj->setting->dec_fmtp_mode;
-        param.setting.enc_fmtp_mode = obj->setting->enc_fmtp_mode;
+        //param.setting.dec_fmtp_mode = obj->setting->dec_fmtp_mode;
+        //param.setting.enc_fmtp_mode = obj->setting->enc_fmtp_mode;
         param.setting.frm_per_pkt = obj->setting->frm_per_pkt;
         param.setting.penh = obj->setting->penh;
         param.setting.plc = obj->setting->plc;

@@ -2986,8 +2986,10 @@ typedef struct
     unsigned    cng;
     unsigned    penh;
     unsigned    plc;
+#if 0
     pj_uint8_t  enc_fmtp_mode;
     pj_uint8_t  dec_fmtp_mode; 
+#endif
 
 } PyObj_pjmedia_codec_param_setting;
 
@@ -3023,6 +3025,7 @@ static PyMemberDef pjmedia_codec_param_setting_members[] =
         offsetof(PyObj_pjmedia_codec_param_setting, plc), 0,
         "Packet loss concealment"
     },
+#if 0	// no longer valid with latest modification in codec
     {
         "enc_fmtp_mode", T_INT, 
         offsetof(PyObj_pjmedia_codec_param_setting, enc_fmtp_mode), 0,
@@ -3033,6 +3036,7 @@ static PyMemberDef pjmedia_codec_param_setting_members[] =
         offsetof(PyObj_pjmedia_codec_param_setting, dec_fmtp_mode), 0,
         "Mode param in fmtp (def:0)"
     },
+#endif
     
     {NULL}  /* Sentinel */
 };
