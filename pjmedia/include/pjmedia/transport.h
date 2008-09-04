@@ -427,7 +427,12 @@ typedef enum pjmedia_transport_type
      * stacked with other transport to enable encryption on the underlying
      * transport.
      */
-    PJMEDIA_TRANSPORT_TYPE_SRTP
+    PJMEDIA_TRANSPORT_TYPE_SRTP,
+
+    /**
+     * Start of user defined transport.
+     */
+    PJMEDIA_TRANSPORT_TYPE_USER
 
 } pjmedia_transport_type;
 

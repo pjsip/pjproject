@@ -543,10 +543,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 	if (pjsua_var.calls[i].med_tp_st != PJSUA_MED_TP_IDLE) {
 	    pjsua_media_channel_deinit(i);
 	}
-	if (pjsua_var.calls[i].med_tp) {
-	    (*pjsua_var.calls[i].med_tp->op->destroy)(pjsua_var.calls[i].med_tp);
-	    pjsua_var.calls[i].med_tp = NULL;
+	if (pjsua_var.calls[i].med_tp && pjsua_var.calls[i].med_tp_auto_del) {
+	    pjmedia_transport_close(pjsua_var.calls[i].med_tp);
 	}
+	pjsua_var.calls[i].med_tp = NULL;
     }
 
     /* Destroy media endpoint. */
@@ -841,7 +841,9 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
 
     /* Delete existing media transports */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-	if (pjsua_var.calls[i].med_tp != NULL) {
+	if (pjsua_var.calls[i].med_tp != NULL && 
+	    pjsua_var.calls[i].med_tp_auto_del) 
+	{
 	    pjmedia_transport_close(pjsua_var.calls[i].med_tp);
 	    pjsua_var.calls[i].med_tp = NULL;
 	}
@@ -850,16 +852,47 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
     /* Copy config */
     pjsua_transport_config_dup(pjsua_var.pool, &cfg, app_cfg);
 
+    /* Create the transports */
     if (pjsua_var.media_cfg.enable_ice) {
 	status = create_ice_media_transports();
     } else {
 	status = create_udp_media_transports(&cfg);
     }
 
+    /* Set media transport auto_delete to True */
+    for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
+	pjsua_var.calls[i].med_tp_auto_del = PJ_TRUE;
+    }
 
     PJSUA_UNLOCK();
 
     return status;
+}
+
+/*
+ * Attach application's created media transports.
+ */
+PJ_DEF(pj_status_t) pjsua_media_transports_attach(pjsua_media_transport tp[],
+						  unsigned count,
+						  pj_bool_t auto_delete)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(tp && count==pjsua_var.ua_cfg.max_calls, PJ_EINVAL);
+
+    /* Assign the media transports */
+    for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
+	if (pjsua_var.calls[i].med_tp != NULL && 
+	    pjsua_var.calls[i].med_tp_auto_del) 
+	{
+	    pjmedia_transport_close(pjsua_var.calls[i].med_tp);
+	}
+
+	pjsua_var.calls[i].med_tp = tp[i].transport;
+	pjsua_var.calls[i].med_tp_auto_del = auto_delete;
+    }
+
+    return PJ_SUCCESS;
 }
 
 

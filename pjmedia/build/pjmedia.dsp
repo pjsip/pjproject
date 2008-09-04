@@ -257,6 +257,10 @@ SOURCE=..\src\pjmedia\tonegen.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\transport_adapter_sample.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\transport_ice.c
 # End Source File
 # Begin Source File
@@ -438,6 +442,10 @@ SOURCE=..\include\pjmedia\tonegen.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\transport.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjmedia\transport_adapter_sample.h
 # End Source File
 # Begin Source File
 

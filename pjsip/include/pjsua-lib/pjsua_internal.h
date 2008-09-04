@@ -79,6 +79,7 @@ typedef struct pjsua_call
     pjmedia_transport	*med_tp;    /**< Current media transport.	    */
     pj_status_t		 med_tp_ready;/**< Media transport status.	    */
     pjmedia_transport	*med_orig;  /**< Original media transport	    */
+    pj_bool_t		 med_tp_auto_del; /**< May delete media transport   */
     pjsua_med_tp_st	 med_tp_st; /**< Media transport state		    */
     pj_timer_entry	 refresh_tm;/**< Timer to send re-INVITE.	    */
     pj_timer_entry	 hangup_tm; /**< Timer to hangup call.		    */

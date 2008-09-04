@@ -23,6 +23,7 @@
 #define NO_LIMIT	(int)0x7FFFFFFF
 
 //#define STEREO_DEMO
+//#define TRANSPORT_ADAPTER_SAMPLE
 
 /* Ringtones		    US	       UK  */
 #define RINGBACK_FREQ1	    440	    /* 400 */
@@ -131,6 +132,9 @@ static char some_buf[1024 * 3];
 
 #ifdef STEREO_DEMO
 static void stereo_demo();
+#endif
+#ifdef TRANSPORT_ADAPTER_SAMPLE
+static pj_status_t transport_adapter_sample(void);
 #endif
 pj_status_t app_destroy(void);
 
@@ -4206,7 +4210,12 @@ pj_status_t app_init(int argc, char *argv[])
     }
 
     /* Add RTP transports */
+#ifdef TRANSPORT_ADAPTER_SAMPLE
+    status = transport_adapter_sample();
+
+#else
     status = pjsua_media_transports_create(&app_config.rtp_cfg);
+#endif
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -4388,6 +4397,47 @@ static void stereo_demo()
     status = pjmedia_snd_port_connect(app_config.snd, splitter);
     pj_assert(status == PJ_SUCCESS);
 
+}
+#endif
+
+#ifdef TRANSPORT_ADAPTER_SAMPLE
+static pj_status_t create_transport_adapter(pjmedia_endpt *med_endpt, int port,
+					    pjmedia_transport **p_tp)
+{
+    pjmedia_transport *udp;
+    pj_status_t status;
+
+    /* Create the UDP media transport */
+    status = pjmedia_transport_udp_create(med_endpt, NULL, port, 0, &udp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Create the adapter */
+    status = pjmedia_tp_adapter_create(med_endpt, NULL, udp, p_tp);
+    if (status != PJ_SUCCESS) {
+	pjmedia_transport_close(udp);
+	return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t transport_adapter_sample(void)
+{
+    pjsua_media_transport tp[PJSUA_MAX_CALLS];
+    pj_status_t status;
+    int port = 7000;
+    unsigned i;
+
+    for (i=0; i<app_config.cfg.max_calls; ++i) {
+	status = create_transport_adapter(pjsua_get_pjmedia_endpt(), 
+					  port + i*10,
+					  &tp[i].transport);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    return pjsua_media_transports_attach(tp, i, PJ_TRUE);
 }
 #endif
 

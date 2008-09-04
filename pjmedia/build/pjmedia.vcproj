@@ -970,6 +970,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\transport_adapter_sample.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\transport_ice.c"
 				>
 			</File>
@@ -1242,6 +1246,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\transport.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\transport_adapter_sample.h"
 				>
 			</File>
 			<File

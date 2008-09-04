@@ -58,6 +58,7 @@
 #include <pjmedia/stream.h>
 #include <pjmedia/tonegen.h>
 #include <pjmedia/transport.h>
+#include <pjmedia/transport_adapter_sample.h>
 #include <pjmedia/transport_ice.h>
 #include <pjmedia/transport_loop.h>
 #include <pjmedia/transport_srtp.h>
