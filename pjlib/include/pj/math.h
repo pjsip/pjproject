@@ -167,6 +167,7 @@ PJ_INLINE(void) pj_math_stat_update(pj_math_stat *stat, int val)
  */
 PJ_INLINE(unsigned) pj_math_stat_get_stddev(pj_math_stat *stat)
 {
+    if (stat->n == 0) return 0;
     return (pj_isqrt((unsigned)(stat->m2_/stat->n)));
 }
 
