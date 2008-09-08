@@ -1179,7 +1179,16 @@ void pjsua_pres_update_acc(int acc_id, pj_bool_t force)
 	pjsip_tx_data *tdata;
 
 	pjsip_pres_get_status(uapres->sub, &pres_status);
-	if (force || pres_status.info[0].basic_open != acc->online_status) {
+
+	/* Only send NOTIFY once subscription is active. Some subscriptions
+	 * may still be in NULL (when app is adding a new buddy while in the
+	 * on_incoming_subscribe() callback) or PENDING (when user approval is
+	 * being requested) state and we don't send NOTIFY to these subs until
+	 * the user accepted the request.
+	 */
+	if (pjsip_evsub_get_state(uapres->sub)==PJSIP_EVSUB_STATE_ACTIVE &&
+	    (force || pres_status.info[0].basic_open != acc->online_status)) 
+	{
 
 	    pres_status.info[0].basic_open = acc->online_status;
 	    pj_memcpy(&pres_status.info[0].rpid, &acc->rpid, 
