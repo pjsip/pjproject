@@ -1377,6 +1377,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 {
     pjmedia_channel *channel;
     pj_status_t status;
+    unsigned min_out_pkt_size;
     
     /* Allocate memory for channel descriptor */
 
@@ -1406,6 +1407,15 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     if (channel->out_pkt_size > PJMEDIA_MAX_MTU)
 	channel->out_pkt_size = PJMEDIA_MAX_MTU;
+
+    /* It should big enough to hold (minimally) RTCP SR with an SDES. */
+    min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
+			sizeof(pjmedia_rtcp_common) +
+			(4 + stream->cname.slen) +
+			32;
+
+    if (channel->out_pkt_size < min_out_pkt_size)
+	channel->out_pkt_size = min_out_pkt_size;
 
     channel->out_pkt = pj_pool_alloc(pool, channel->out_pkt_size);
     PJ_ASSERT_RETURN(channel->out_pkt != NULL, PJ_ENOMEM);
