@@ -2093,7 +2093,7 @@ static void dump_media_session(const char *indent,
 	len = pj_ansi_snprintf(p, end-p,
 	       "%s     RX pt=%d, stat last update: %s\n"
 	       "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
-	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
+	       "%s        pkt loss=%d (%3.1f%%), discrd=%d (%3.1f%%), dup=%d (%2.1f%%), reord=%d (%3.1f%%)\n"
 	       "%s              (msec)    min     avg     max     last    dev\n"
 	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
 	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
@@ -2108,6 +2108,8 @@ static void dump_media_session(const char *indent,
 	       indent,
 	       stat.rx.loss,
 	       stat.rx.loss * 100.0 / (stat.rx.pkt + stat.rx.loss),
+	       stat.rx.discard, 
+	       stat.rx.discard * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	       stat.rx.dup, 
 	       stat.rx.dup * 100.0 / (stat.rx.pkt + stat.rx.loss),
 	       stat.rx.reorder, 
