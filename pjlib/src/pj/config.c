@@ -21,7 +21,7 @@
 #include <pj/ioqueue.h>
 
 static const char *id = "config.c";
-PJ_DEF_DATA(const char*) PJ_VERSION = "1.0-rc2";
+PJ_DEF_DATA(const char*) PJ_VERSION = "1.0-rc2-trunk";
 
 /*
  * Get PJLIB version string.
