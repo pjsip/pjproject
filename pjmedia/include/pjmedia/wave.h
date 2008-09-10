@@ -66,11 +66,27 @@ PJ_BEGIN_DECL
  */
 #define PJMEDIA_DATA_TAG	('a'<<24|'t'<<16|'a'<<8|'d')
 
+/**
+ * Standard FACT tag to identify fact chunks.
+ */
+#define PJMEDIA_FACT_TAG	('t'<<24|'c'<<16|'a'<<8|'f')
+
+
+/**
+ * Enumeration of format compression tag.
+ */
+typedef enum {
+    PJMEDIA_WAVE_FMT_TAG_PCM	= 1,
+    PJMEDIA_WAVE_FMT_TAG_ALAW	= 6,
+    PJMEDIA_WAVE_FMT_TAG_ULAW	= 7
+} pjmedia_wave_fmt_tag;
+
 
 /**
  * This file describes the simpler/canonical version of a WAVE file.
  * It does not support the full RIFF format specification.
  */
+#pragma pack(2)
 struct pjmedia_wave_hdr
 {
     /** This structure describes RIFF WAVE file header */
@@ -98,6 +114,7 @@ struct pjmedia_wave_hdr
 	pj_uint32_t len;		/**< Data length.		*/
     } data_hdr;
 };
+#pragma pack()
 
 /**
  * @see pjmedia_wave_hdr

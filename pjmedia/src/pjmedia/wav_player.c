@@ -17,6 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/wav_port.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/wave.h>
 #include <pj/assert.h>
@@ -31,8 +32,7 @@
 
 
 #define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'P', 'l', 'y')
-#define BYTES_PER_SAMPLE    2
-
+#define BITS_PER_SAMPLE	    16
 
 #if 1
 #   define TRACE_(x)	PJ_LOG(4,x)
@@ -56,6 +56,8 @@ struct file_reader_port
 {
     pjmedia_port     base;
     unsigned	     options;
+    pjmedia_wave_fmt_tag fmt_tag;
+    pj_uint16_t	     bytes_per_sample;
     pj_bool_t	     eof;
     pj_size_t	     bufsize;
     char	    *buf;
@@ -145,7 +147,8 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
     }
 
     /* Convert samples to host rep */
-    samples_to_host((pj_int16_t*)fport->buf, fport->bufsize/BYTES_PER_SAMPLE);
+    samples_to_host((pj_int16_t*)fport->buf, 
+		    fport->bufsize/fport->bytes_per_sample);
 
     return PJ_SUCCESS;
 }
@@ -165,7 +168,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     pj_ssize_t size_to_read, size_read;
     struct file_reader_port *fport;
     pj_off_t pos;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
 
     /* Check arguments. */
@@ -235,19 +238,33 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	return PJMEDIA_ENOTVALIDWAVE;
     }
 
-    /* Must be PCM with 16bits per sample */
-    if (wave_hdr.fmt_hdr.fmt_tag != 1 ||
-	wave_hdr.fmt_hdr.bits_per_sample != 16)
-    {
-	pj_file_close(fport->fd);
-	return PJMEDIA_EWAVEUNSUPP;
+    /* Validate format and its attributes (i.e: bits per sample, block align) */
+    switch (wave_hdr.fmt_hdr.fmt_tag) {
+    case PJMEDIA_WAVE_FMT_TAG_PCM:
+	if (wave_hdr.fmt_hdr.bits_per_sample != 16 || 
+	    wave_hdr.fmt_hdr.block_align != 2 * wave_hdr.fmt_hdr.nchan)
+	    status = PJMEDIA_EWAVEUNSUPP;
+	break;
+
+    case PJMEDIA_WAVE_FMT_TAG_ALAW:
+    case PJMEDIA_WAVE_FMT_TAG_ULAW:
+	if (wave_hdr.fmt_hdr.bits_per_sample != 8 ||
+	    wave_hdr.fmt_hdr.block_align != wave_hdr.fmt_hdr.nchan)
+	    status = PJMEDIA_ENOTVALIDWAVE;
+	break;
+
+    default:
+	status = PJMEDIA_EWAVEUNSUPP;
+	break;
     }
 
-    /* Block align must be 2*nchannels */
-    if (wave_hdr.fmt_hdr.block_align != wave_hdr.fmt_hdr.nchan*BYTES_PER_SAMPLE) {
+    if (status != PJ_SUCCESS) {
 	pj_file_close(fport->fd);
-	return PJMEDIA_EWAVEUNSUPP;
+	return status;
     }
+
+    fport->fmt_tag = wave_hdr.fmt_hdr.fmt_tag;
+    fport->bytes_per_sample = wave_hdr.fmt_hdr.bits_per_sample / 8;
 
     /* If length of fmt_header is greater than 16, skip the remaining
      * fmt header data.
@@ -299,7 +316,9 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVEUNSUPP;
     }
-    if (wave_hdr.data_hdr.len < 200) {
+    if (wave_hdr.data_hdr.len < ptime * wave_hdr.fmt_hdr.sample_rate *
+				wave_hdr.fmt_hdr.nchan / 1000)
+    {
 	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVETOOSHORT;
     }
@@ -312,7 +331,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* Update port info. */
     fport->base.info.channel_count = wave_hdr.fmt_hdr.nchan;
     fport->base.info.clock_rate = wave_hdr.fmt_hdr.sample_rate;
-    fport->base.info.bits_per_sample = wave_hdr.fmt_hdr.bits_per_sample;
+    fport->base.info.bits_per_sample = BITS_PER_SAMPLE;
     fport->base.info.samples_per_frame = fport->base.info.clock_rate *
 					 wave_hdr.fmt_hdr.nchan *
 					 ptime / 1000;
@@ -337,7 +356,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* samples_per_frame must be smaller than bufsize (because get_frame()
      * doesn't handle this case).
      */
-    if (fport->base.info.samples_per_frame * BYTES_PER_SAMPLE >=
+    if (fport->base.info.samples_per_frame * fport->bytes_per_sample >=
 	fport->bufsize)
     {
 	pj_file_close(fport->fd);
@@ -523,13 +542,21 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 	fport->eof = PJ_FALSE;
     }
 
-    //frame_size = fport->base.info.bytes_per_frame;
-    //pj_assert(frame->size == frame_size);
-    frame_size = frame->size;
+    //pj_assert(frame->size == fport->base.info.bytes_per_frame);
+    if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM) {
+	frame_size = frame->size;
+	//frame->size = frame_size;
+    } else {
+	/* Must be ULAW or ALAW */
+	pj_assert(fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW || 
+		  fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ALAW);
+
+	frame_size = frame->size >> 1;
+	frame->size = frame_size << 1;
+    }
 
     /* Copy frame from buffer. */
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    frame->size = frame_size;
     frame->timestamp.u64 = 0;
 
     if ((fport->readpos + frame_size) <= (fport->buf + fport->bufsize))
@@ -577,6 +604,27 @@ static pj_status_t file_get_frame(pjmedia_port *this_port,
 
 	pj_memcpy(((char*)frame->buf)+endread, fport->buf, frame_size-endread);
 	fport->readpos = fport->buf + (frame_size - endread);
+    }
+
+    if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW ||
+	fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ALAW)
+    {
+	unsigned i;
+	pj_uint16_t *dst;
+	pj_uint8_t *src;
+
+	dst = (pj_uint16_t*)frame->buf + frame_size - 1;
+	src = (pj_uint8_t*)frame->buf + frame_size - 1;
+
+	if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW) {
+	    for (i = 0; i < frame_size; ++i) {
+		*dst-- = (pj_uint16_t) pjmedia_ulaw2linear(*src--);
+	    }
+	} else {
+	    for (i = 0; i < frame_size; ++i) {
+		*dst-- = (pj_uint16_t) pjmedia_alaw2linear(*src--);
+	    }
+	}
     }
 
     return PJ_SUCCESS;

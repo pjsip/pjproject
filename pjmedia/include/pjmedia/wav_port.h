@@ -142,6 +142,27 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
  */
 
 
+/**
+ * WAV file writer options.
+ */
+enum pjmedia_file_writer_option
+{
+    /**
+     * Tell the file writer to save the audio in PCM format.
+     */
+    PJMEDIA_FILE_WRITE_PCM = 0,
+
+    /**
+     * Tell the file writer to save the audio in G711 Alaw format.
+     */
+    PJMEDIA_FILE_WRITE_ALAW = 1,
+
+    /**
+     * Tell the file writer to save the audio in G711 Alaw format.
+     */
+    PJMEDIA_FILE_WRITE_ULAW = 2,
+};
+
 
 /**
  * Create a media port to record streams to a WAV file. Note that the port
@@ -154,7 +175,7 @@ pjmedia_wav_player_set_eof_cb( pjmedia_port *port,
  * @param channel_count	    Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample (eg 16).
- * @param flags		    Port creation flags (must be 0 at present).
+ * @param flags		    Port creation flags.
  * @param buff_size	    Buffer size to be allocated. If the value is 
  *			    zero or negative, the port will use default buffer
  *			    size (which is about 4KB).
