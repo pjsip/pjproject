@@ -718,9 +718,22 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     /* Create server presence subscription: */
     status = pjsip_pres_create_uas( dlg, &pres_cb, rdata, &sub);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_terminate(dlg);
+	int code = PJSIP_ERRNO_TO_SIP_STATUS(status);
+	pjsip_tx_data *tdata;
+
 	pjsua_perror(THIS_FILE, "Unable to create server subscription", 
 		     status);
+
+	if (code==599 || code > 699 || code < 300) {
+	    code = 400;
+	}
+
+	status = pjsip_dlg_create_response(dlg, rdata, code, NULL, &tdata);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_dlg_send_response(dlg, pjsip_rdata_get_tsx(rdata),
+					     tdata);
+	}
+
 	PJSUA_UNLOCK();
 	return PJ_TRUE;
     }
