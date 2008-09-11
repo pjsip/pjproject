@@ -264,7 +264,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     }
 
     fport->fmt_tag = wave_hdr.fmt_hdr.fmt_tag;
-    fport->bytes_per_sample = wave_hdr.fmt_hdr.bits_per_sample / 8;
+    fport->bytes_per_sample = (pj_uint16_t) 
+			      (wave_hdr.fmt_hdr.bits_per_sample / 8);
 
     /* If length of fmt_header is greater than 16, skip the remaining
      * fmt header data.

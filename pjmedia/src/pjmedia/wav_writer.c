@@ -124,13 +124,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 
     wave_hdr.fmt_hdr.fmt = PJMEDIA_FMT_TAG;
     wave_hdr.fmt_hdr.len = 16;
-    wave_hdr.fmt_hdr.fmt_tag = fport->fmt_tag;
+    wave_hdr.fmt_hdr.fmt_tag = (pj_uint16_t)fport->fmt_tag;
     wave_hdr.fmt_hdr.nchan = (pj_int16_t)channel_count;
     wave_hdr.fmt_hdr.sample_rate = sampling_rate;
     wave_hdr.fmt_hdr.bytes_per_sec = sampling_rate * channel_count * 
 				     fport->bytes_per_sample;
-    wave_hdr.fmt_hdr.block_align = fport->bytes_per_sample * channel_count;
-    wave_hdr.fmt_hdr.bits_per_sample = fport->bytes_per_sample * 8;
+    wave_hdr.fmt_hdr.block_align = (pj_uint16_t)
+				   (fport->bytes_per_sample * channel_count);
+    wave_hdr.fmt_hdr.bits_per_sample = (pj_uint16_t)
+				       (fport->bytes_per_sample * 8);
 
     wave_hdr.data_hdr.data = PJMEDIA_DATA_TAG;
     wave_hdr.data_hdr.len = 0;	    /* will be filled later */
