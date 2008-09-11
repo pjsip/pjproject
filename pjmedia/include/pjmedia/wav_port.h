@@ -51,7 +51,9 @@ enum pjmedia_file_player_option
 
 
 /**
- * Create a media port to play streams from a WAV file.
+ * Create a media port to play streams from a WAV file. WAV player port
+ * supports for reading WAV file with uncompressed 16 bit PCM format or 
+ * compressed G.711 A-law/U-law format.
  *
  * @param pool		Pool to create memory buffers for this port.
  * @param filename	File name to open.
@@ -168,6 +170,9 @@ enum pjmedia_file_writer_option
  * Create a media port to record streams to a WAV file. Note that the port
  * must be closed properly (with #pjmedia_port_destroy()) so that the WAV
  * header can be filled with correct values (such as the file length).
+ * WAV writer port supports for writing audio in uncompressed 16 bit PCM format
+ * or compressed G.711 U-law/A-law format, this needs to be specified in 
+ * \a flags param.
  *
  * @param pool		    Pool to create memory buffers for this port.
  * @param filename	    File name.
@@ -175,11 +180,12 @@ enum pjmedia_file_writer_option
  * @param channel_count	    Number of channels.
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Number of bits per sample (eg 16).
- * @param flags		    Port creation flags.
+ * @param flags		    Port creation flags, see
+ *			    #pjmedia_file_writer_option.
  * @param buff_size	    Buffer size to be allocated. If the value is 
  *			    zero or negative, the port will use default buffer
  *			    size (which is about 4KB).
-  * @param p_port	    Pointer to receive the file port instance.
+ * @param p_port	    Pointer to receive the file port instance.
  *
  * @return		    PJ_SUCCESS on success.
  */
