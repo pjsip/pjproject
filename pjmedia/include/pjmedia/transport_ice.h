@@ -62,6 +62,23 @@ typedef struct pjmedia_ice_cb
 
 
 /**
+ * Options that can be specified when creating ICE transport.
+ */
+enum pjmedia_transport_ice_options
+{
+    /**
+     * Normally when remote doesn't use ICE, the ICE transport will 
+     * continuously check the source address of incoming packets to see 
+     * if it is different than the configured remote address, and switch 
+     * the remote address to the source address of the packet if they 
+     * are different after several packets are received.
+     * Specifying this option will disable this feature.
+     */
+    PJMEDIA_ICE_NO_SRC_ADDR_CHECKING = 1
+};
+
+
+/**
  * Create the Interactive Connectivity Establishment (ICE) media transport
  * using the specified configuration. When STUN or TURN (or both) is used,
  * the creation operation will complete asynchronously, when STUN resolution
@@ -93,6 +110,29 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 					const pj_ice_strans_cfg *cfg,
 					const pjmedia_ice_cb *cb,
 					pjmedia_transport **p_tp);
+
+
+/**
+ * The same as @pjmedia_ice_create with additional \a options param.
+ *
+ * @param endpt		The media endpoint.
+ * @param name		Optional name to identify this ICE media transport
+ *			for logging purposes.
+ * @param comp_cnt	Number of components to be created.
+ * @param cfg		Pointer to configuration settings.
+ * @param cb		Optional structure containing ICE specific callbacks.
+ * @param options	Options, see #pjmedia_transport_ice_options.
+ * @param p_tp		Pointer to receive the media transport instance.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
+					 const char *name,
+					 unsigned comp_cnt,
+					 const pj_ice_strans_cfg *cfg,
+					 const pjmedia_ice_cb *cb,
+					 unsigned options,
+					 pjmedia_transport **p_tp);
 
 PJ_END_DECL
 
