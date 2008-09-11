@@ -1696,6 +1696,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
      *
      * The workaround for this is to take the To tag received in the
      * 2xx response and set it as remote tag.
+     *
+     * New update:
+     * We also need to update the dialog for 1xx responses, to handle the
+     * case when 100rel is used, otherwise PRACK will be sent to the 
+     * wrong target.
      */
     if ((dlg->state == PJSIP_DIALOG_STATE_NULL && 
 	 pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
@@ -1704,7 +1709,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 ||
 	(dlg->role==PJSIP_ROLE_UAC &&
 	 !dlg->uac_has_2xx &&
-	 res_code/100 == 2 &&
+	 res_code/100 <= 2 &&
 	 pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
 	 pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag)))
     {

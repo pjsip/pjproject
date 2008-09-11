@@ -417,13 +417,25 @@ PJ_DEF(pj_status_t) pjsip_100rel_on_rx_prack( pjsip_inv_session *inv,
     pj_str_t method;
     pj_status_t status;
 
-    dd = (dlg_data*) inv->dlg->mod_data[mod_100rel.mod.id];
-    PJ_ASSERT_RETURN(dd != NULL, PJSIP_ENOTINITIALIZED);
-
     tsx = pjsip_rdata_get_tsx(rdata);
     pj_assert(tsx != NULL);
 
     msg = rdata->msg_info.msg;
+
+    dd = (dlg_data*) inv->dlg->mod_data[mod_100rel.mod.id];
+    if (dd == NULL) {
+	/* UAC sends us PRACK while we didn't send reliable provisional 
+	 * response. Respond with 400 (?) 
+	 */
+	const pj_str_t reason = pj_str("Unexpected PRACK");
+
+	status = pjsip_dlg_create_response(inv->dlg, rdata, 400, 
+					   &reason, &tdata);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_dlg_send_response(inv->dlg, tsx, tdata);
+	}
+	return PJSIP_ENOTINITIALIZED;
+    }
 
     /* Always reply with 200/OK for PRACK */
     status = pjsip_dlg_create_response(inv->dlg, rdata, 200, NULL, &tdata);
