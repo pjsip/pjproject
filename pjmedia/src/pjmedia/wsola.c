@@ -31,6 +31,19 @@
 #define THIS_FILE   "wsola.c"
 
 
+#if 0
+#   define TRACE_(x)	PJ_LOG(4,x)
+#else
+#   define TRACE_(x)
+#endif
+
+#if 0
+#   define CHECK_(x)	pj_assert(x)
+#else
+#   define CHECK_(x)
+#endif
+
+
 #if (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA) || \
     (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA_LITE)
 
@@ -59,18 +72,6 @@
 /* Maximum distance from template for find_pitch() of expansion, in frames */
 #define EXP_MAX_DIST	HIST_CNT
 
-
-#if 0
-#   define TRACE_(x)	PJ_LOG(4,x)
-#else
-#   define TRACE_(x)
-#endif
-
-#if 0
-#   define CHECK_(x)	pj_assert(x)
-#else
-#   define CHECK_(x)
-#endif
 
 /* Buffer content:
  *
