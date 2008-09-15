@@ -450,6 +450,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     /* Invalidate */
     pjsua_var.acc[acc_id].valid = PJ_FALSE;
+    pjsua_var.acc[acc_id].contact.slen = 0;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
