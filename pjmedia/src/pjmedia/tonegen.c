@@ -30,7 +30,7 @@
 #define DATA	double
 
 /* amplitude */
-#define AMP	8192
+#define AMP	PJMEDIA_TONEGEN_VOLUME
 
 
 #ifndef M_PI
@@ -115,7 +115,7 @@
 #   define MAXI			((unsigned)0xFFFFFFFF)
 #   define SIN			approximate_sin3
 #   if 1    /* set this to 0 to disable volume adjustment */
-#	define VOL(var,v)	(((v) * var.vol) >> 16)
+#	define VOL(var,v)	(((v) * var.vol) >> 15)
 #   else
 #	define VOL(var,v)	(v)
 #   endif

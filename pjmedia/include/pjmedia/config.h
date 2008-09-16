@@ -604,6 +604,16 @@
 
 
 /**
+ * The default tone generator amplitude (1-32767).
+ *
+ * Default value: 12288
+ */
+#ifndef PJMEDIA_TONEGEN_VOLUME
+#   define PJMEDIA_TONEGEN_VOLUME		    12288
+#endif
+
+
+/**
  * Enable support for SRTP media transport. This will require linking
  * with libsrtp from the third_party directory.
  *

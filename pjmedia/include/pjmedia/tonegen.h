@@ -63,7 +63,8 @@ typedef struct pjmedia_tone_desc
     short   freq2;	    /**< Optional second frequency.		    */
     short   on_msec;	    /**< Playback ON duration, in miliseconds.	    */
     short   off_msec;	    /**< Playback OFF duration, ini miliseconds.    */
-    short   volume;	    /**< Volume (1-16383), or 0 for default.	    */
+    short   volume;	    /**< Volume (1-32767), or 0 for default, which
+				 PJMEDIA_TONEGEN_VOLUME will be used.	    */
 } pjmedia_tone_desc;
 
 
@@ -77,7 +78,8 @@ typedef struct pjmedia_tone_digit
     char    digit;	    /**< The ASCI identification for the digit.	    */
     short   on_msec;	    /**< Playback ON duration, in miliseconds.	    */
     short   off_msec;	    /**< Playback OFF duration, ini miliseconds.    */
-    short   volume;	    /**< Volume (1-16383), or 0 for default.	    */
+    short   volume;	    /**< Volume (1-32767), or 0 for default, which
+				 PJMEDIA_TONEGEN_VOLUME will be used.	    */
 } pjmedia_tone_digit;
 
 
