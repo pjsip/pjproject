@@ -38,7 +38,8 @@
 #endif
 
 
-#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
+#if (defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0) || \
+    (defined(PJMEDIA_TONEGEN_FORCE_FLOAT) && PJMEDIA_TONEGEN_FORCE_FLOAT != 0)
 #   include <math.h>
 
 #   if defined(PJMEDIA_USE_HIGH_QUALITY_TONEGEN) && \
@@ -249,6 +250,8 @@ struct tonegen
     /* options */
     unsigned		options;
     unsigned		playback_options;
+    unsigned		fade_in_len;	/* fade in for this # of samples */
+    unsigned		fade_out_len;	/* fade out for this # of samples*/
 
     /* lock */
     pj_lock_t	       *lock;
@@ -334,6 +337,9 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     tonegen->base.get_frame = &tonegen_get_frame;
     tonegen->base.on_destroy = &tonegen_destroy;
     tonegen->digit_map = &digit_map;
+
+    tonegen->fade_in_len = PJMEDIA_TONEGEN_FADE_IN_TIME * clock_rate / 1000;
+    tonegen->fade_out_len = PJMEDIA_TONEGEN_FADE_OUT_TIME * clock_rate / 1000;
 
     /* Lock */
     if (options & PJMEDIA_TONEGEN_NO_LOCK) {
@@ -533,9 +539,43 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 		cnt = required;
 	    generate_tone(&tonegen->state, port->info.channel_count,
 			  cnt, dst);
+
 	    dst += cnt;
 	    tonegen->dig_samples += cnt;
 	    required -= cnt;
+
+	    if (tonegen->dig_samples == cnt) {
+		/* Fade in */
+		short *samp = (dst - cnt);
+		short *end;
+
+		if (cnt > tonegen->fade_in_len)
+		    cnt = tonegen->fade_in_len;
+		end = samp + cnt;
+		if (cnt) {
+		    const unsigned step = 0xFFFF / cnt;
+		    unsigned scale = 0;
+
+		    for (; samp < end; ++samp) {
+			(*samp) = (short)(((*samp) * scale) >> 16);
+			scale += step;
+		    }
+		}
+	    } else if (tonegen->dig_samples == on_samp) {
+		/* Fade out */
+		if (cnt > tonegen->fade_out_len)
+		    cnt = tonegen->fade_out_len;
+		if (cnt) {
+		    short *samp = (dst - cnt);
+		    const unsigned step = 0xFFFF / cnt;
+		    unsigned scale = 0xFFFF - step;
+
+		    for (; samp < dst; ++samp) {
+			(*samp) = (short)(((*samp) * scale) >> 16);
+			scale -= step;
+		    }
+		}
+	    }
 
 	    if (dst == end)
 		break;

@@ -541,10 +541,65 @@
  * Enable high quality of tone generation, the better quality will cost
  * more CPU load. This is only applied to floating point enabled machines.
  *
- * By default it is enabled.
+ * By default it is enabled when PJ_HAS_FLOATING_POINT is set.
+ *
+ * @see PJMEDIA_TONEGEN_FORCE_FLOAT
  */
 #ifndef PJMEDIA_USE_HIGH_QUALITY_TONEGEN
-#   define PJMEDIA_USE_HIGH_QUALITY_TONEGEN	    1
+#   define PJMEDIA_USE_HIGH_QUALITY_TONEGEN	    PJ_HAS_FLOATING_POINT
+#endif
+
+
+/**
+ * Force the tone generation to use floating point computation, even when
+ * PJ_HAS_FLOATING_POINT is disabled. This may be necessary if the tone
+ * generator is used to produce DTMF to be sent inband, since the fixed
+ * point algorithm may not have the correct frequency accuracy.
+ *
+ * This option, combined with PJ_HAS_FLOATING_POINT will produce the 
+ * following selection of tone generator algorithm:
+ *  - if both PJ_HAS_FLOATING_POINT and PJMEDIA_USE_HIGH_QUALITY_TONEGEN 
+ *    are set, the standard sin() function will be used. This will produce
+ *    the highest quality tones, at the expense of more processing power.
+ *  - if PJ_HAS_FLOATING_POINT is not set:
+ *	- if both PJMEDIA_USE_HIGH_QUALITY_TONEGEN and 
+ *        PJMEDIA_TONEGEN_FORCE_FLOAT are set, sin() based algorithm will
+ *        be used (similar as above).
+ *      - if PJMEDIA_USE_HIGH_QUALITY_TONEGEN is not set but the
+ *        PJMEDIA_TONEGEN_FORCE_FLOAT is set, a floating point approximation
+ *        algorithm will be used. This should produce good enough tone
+ *        for most uses, and the performance is faster than using pure
+ *        sin() based algorithm. Note that linking to math library may
+ *        still be needed.
+ *      - if both are not set, the fixed point approximation algorithm
+ *        will be used.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_TONEGEN_FORCE_FLOAT
+#   define PJMEDIA_TONEGEN_FORCE_FLOAT		    1
+#endif
+
+
+/**
+ * Fade-in duration for the tone, in milliseconds. Set to zero to disable
+ * this feature.
+ *
+ * Default: 1 (msec)
+ */
+#ifndef PJMEDIA_TONEGEN_FADE_IN_TIME
+#   define PJMEDIA_TONEGEN_FADE_IN_TIME		    1
+#endif
+
+
+/**
+ * Fade-out duration for the tone, in milliseconds. Set to zero to disable
+ * this feature.
+ *
+ * Default: 2 (msec)
+ */
+#ifndef PJMEDIA_TONEGEN_FADE_OUT_TIME
+#   define PJMEDIA_TONEGEN_FADE_OUT_TIME	    2
 #endif
 
 
