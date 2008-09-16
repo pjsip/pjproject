@@ -727,7 +727,7 @@ static pj_status_t do_uri_test(pj_pool_t *pool, struct uri_test *entry)
     pj_timestamp t1, t2;
 
     if (entry->len == 0)
-	entry->len = pj_native_strlen(entry->str);
+	entry->len = pj_ansi_strlen(entry->str);
 
 #if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
     input = pj_pool_alloc(pool, entry->len + 1);
