@@ -596,8 +596,8 @@ on_error:
 
 
 /* DirectSound enum device callback */
-static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCSTR lpcstrDescription,  
-				     LPCSTR lpcstrModule, LPVOID lpContext)
+static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCTSTR lpcstrDescription,  
+				     LPCTSTR lpcstrModule, LPVOID lpContext)
 {
     unsigned index, max = sizeof(dev_info[index].info.name);
     pj_bool_t is_capture_device = (lpContext != NULL);
@@ -626,7 +626,12 @@ static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCSTR lpcstrDescription,
 	return FALSE;
     }
 
+#ifdef UNICODE
+    WideCharToMultiByte(CP_ACP, 0, lpcstrDescription, wcslen(lpcstrDescription), dev_info[index].info.name, max, NULL, NULL);
+#else
     strncpy(dev_info[index].info.name, lpcstrDescription, max);
+#endif
+
     dev_info[index].info.name[max-1] = '\0';
     if (lpGuid == NULL) {
 	dev_info[index].lpGuid = NULL;

@@ -125,7 +125,7 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     char msgbuf2[PJSIP_MAX_PKT_LEN];
     enum { BUFLEN = 512 };
 
-    entry->len = pj_native_strlen(entry->msg);
+    entry->len = pj_ansi_strlen(entry->msg);
 
     if (var.flag & FLAG_PARSE_ONLY)
 	goto parse_msg;
@@ -672,7 +672,7 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 	"c=IN IP4 pc33.atlanta.com\r\n"
 	"m=audio 3456 RTP/AVP 0 1 3 99\r\n"
 	"a=rtpmap:0 PCMU/8000\r\n";
-    body->len = pj_native_strlen((const char*) body->data);
+    body->len = pj_ansi_strlen((const char*) body->data);
     body->print_body = &pjsip_print_text_body;
 
     return msg;

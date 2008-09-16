@@ -542,7 +542,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	return -610;
 
     /* Initialize static test data. */
-    pj_native_strcpy(rt_target_uri, target_url);
+    pj_ansi_strcpy(rt_target_uri, target_url);
     rt_call_id = pj_str("RT-Call-Id/");
     rt_stop = PJ_FALSE;
 
