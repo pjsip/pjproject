@@ -289,6 +289,21 @@ extern const pj_uint16_t PJ_SO_RCVBUF;
 /** Buffer size for send. @see pj_SO_SNDBUF() */
 extern const pj_uint16_t PJ_SO_SNDBUF;
 
+/** IP multicast interface. @see pj_IP_MULTICAST_IF() */
+extern const pj_uint16_t PJ_IP_MULTICAST_IF;
+ 
+/** IP multicast ttl. @see pj_IP_MULTICAST_TTL() */
+extern const pj_uint16_t PJ_IP_MULTICAST_TTL;
+
+/** IP multicast loopback. @see pj_IP_MULTICAST_LOOP() */
+extern const pj_uint16_t PJ_IP_MULTICAST_LOOP;
+
+/** Add an IP group membership. @see pj_IP_ADD_MEMBERSHIP() */
+extern const pj_uint16_t PJ_IP_ADD_MEMBERSHIP;
+
+/** Drop an IP group membership. @see pj_IP_DROP_MEMBERSHIP() */
+extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
+
 
 #if defined(PJ_DLL)
     /** Get #PJ_SO_TYPE constant */
@@ -299,6 +314,21 @@ extern const pj_uint16_t PJ_SO_SNDBUF;
 
     /** Get #PJ_SO_SNDBUF constant */
     PJ_DECL(pj_uint16_t) pj_SO_SNDBUF(void);
+
+    /** Get #PJ_IP_MULTICAST_IF constant */
+    PJ_DECL(pj_uint16_t) pj_IP_MULTICAST_IF(void);
+
+    /** Get #PJ_IP_MULTICAST_TTL constant */
+    PJ_DECL(pj_uint16_t) pj_IP_MULTICAST_TTL(void);
+
+    /** Get #PJ_IP_MULTICAST_LOOP constant */
+    PJ_DECL(pj_uint16_t) pj_IP_MULTICAST_LOOP(void);
+
+    /** Get #PJ_IP_ADD_MEMBERSHIP constant */
+    PJ_DECL(pj_uint16_t) pj_IP_ADD_MEMBERSHIP(void);
+
+    /** Get #PJ_IP_DROP_MEMBERSHIP constant */
+    PJ_DECL(pj_uint16_t) pj_IP_DROP_MEMBERSHIP(void);
 #else
     /** Get #PJ_SO_TYPE constant */
 #   define pj_SO_TYPE()	    PJ_SO_TYPE
@@ -308,6 +338,21 @@ extern const pj_uint16_t PJ_SO_SNDBUF;
 
     /** Get #PJ_SO_SNDBUF constant */
 #   define pj_SO_SNDBUF()   PJ_SO_SNDBUF
+
+    /** Get #PJ_IP_MULTICAST_IF constant */
+#   define pj_IP_MULTICAST_IF()    PJ_IP_MULTICAST_IF
+
+    /** Get #PJ_IP_MULTICAST_TTL constant */
+#   define pj_IP_MULTICAST_TTL()   PJ_IP_MULTICAST_TTL
+
+    /** Get #PJ_IP_MULTICAST_LOOP constant */
+#   define pj_IP_MULTICAST_LOOP()  PJ_IP_MULTICAST_LOOP
+
+    /** Get #PJ_IP_ADD_MEMBERSHIP constant */
+#   define pj_IP_ADD_MEMBERSHIP()  PJ_IP_ADD_MEMBERSHIP
+
+    /** Get #PJ_IP_DROP_MEMBERSHIP constant */
+#   define pj_IP_DROP_MEMBERSHIP() PJ_IP_DROP_MEMBERSHIP
 #endif
 
 
@@ -513,6 +558,15 @@ typedef union pj_sockaddr
     pj_sockaddr_in  ipv4;	/**< IPv4 transport address.	    */
     pj_sockaddr_in6 ipv6;	/**< IPv6 transport address.	    */
 } pj_sockaddr;
+
+
+/**
+ * This structure provides multicast group information for IPv4 addresses.
+ */
+typedef struct pj_ip_mreq {
+    pj_in_addr imr_multiaddr;	/**< IP multicast address of group. */
+    pj_in_addr imr_interface;	/**< local IP address of interface. */
+} pj_ip_mreq;
 
 
 /*****************************************************************************

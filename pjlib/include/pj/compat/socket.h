@@ -53,14 +53,14 @@
  * These VS uses Microsoft Platform SDK for Windows Server 2003 SP1, and
  * it has built-in IPv6 support.
  */
-#if defined(_MSC_VER) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+#if defined(_MSC_VER)
 #   ifndef s_addr
 #	define s_addr  S_un.S_addr
 #   endif
 
 #   include <ws2tcpip.h>
 
-#   ifndef IPPROTO_IPV6
+#   if !defined(IPPROTO_IPV6) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 	/* Need to download and install IPv6Kit for this platform.
 	 * Please see the comments above about Visual Studio 6.
 	 */

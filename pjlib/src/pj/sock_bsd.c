@@ -115,6 +115,11 @@ const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
 const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
 const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
+const pj_uint16_t pj_IP_MULTICAST_IF    = IP_MULTICAST_IF;
+const pj_uint16_t pj_IP_MULTICAST_TTL   = IP_MULTICAST_TTL;
+const pj_uint16_t pj_IP_MULTICAST_LOOP  = IP_MULTICAST_LOOP;
+const pj_uint16_t pj_IP_ADD_MEMBERSHIP  = IP_ADD_MEMBERSHIP;
+const pj_uint16_t pj_IP_DROP_MEMBERSHIP = IP_DROP_MEMBERSHIP;
 
 
 /* recv() and send() flags */

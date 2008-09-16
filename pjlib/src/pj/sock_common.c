@@ -686,6 +686,31 @@ PJ_DEF(pj_uint16_t) pj_SO_SNDBUF(void)
     return PJ_SO_SNDBUF;
 }
 
+PJ_DEF(pj_uint16_t) pj_IP_MULTICAST_IF(void)
+{
+    return PJ_IP_MULTICAST_IF;
+}
+
+PJ_DEF(pj_uint16_t) pj_IP_MULTICAST_TTL(void)
+{
+    return PJ_IP_MULTICAST_TTL;
+}
+
+PJ_DEF(pj_uint16_t) pj_IP_MULTICAST_LOOP(void)
+{
+    return PJ_IP_MULTICAST_LOOP;
+}
+
+PJ_DEF(pj_uint16_t) pj_IP_ADD_MEMBERSHIP(void)
+{
+    return PJ_IP_ADD_MEMBERSHIP;
+}
+
+PJ_DEF(pj_uint16_t) pj_IP_DROP_MEMBERSHIP(void)
+{
+    return PJ_IP_DROP_MEMBERSHIP;
+}
+
 PJ_DEF(int) pj_MSG_OOB(void)
 {
     return PJ_MSG_OOB;
