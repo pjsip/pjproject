@@ -918,6 +918,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
      * (e.g. application is starting)
      */
     if (call->med_tp == NULL) {
+	if (sip_err_code)
+	    *sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
 	return PJ_EBUSY;
     }
 
