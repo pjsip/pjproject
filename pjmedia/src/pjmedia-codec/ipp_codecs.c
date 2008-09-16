@@ -132,6 +132,7 @@ typedef struct ipp_private {
 
 /* USC codec implementations. */
 extern USC_Fxns USC_G729AFP_Fxns;
+extern USC_Fxns USC_G729I_Fxns;
 extern USC_Fxns USC_G723_Fxns;
 extern USC_Fxns USC_G726_Fxns;
 extern USC_Fxns USC_G728_Fxns;
@@ -139,6 +140,7 @@ extern USC_Fxns USC_G722_Fxns;
 extern USC_Fxns USC_GSMAMR_Fxns;
 extern USC_Fxns USC_AMRWB_Fxns;
 extern USC_Fxns USC_AMRWBE_Fxns;
+
 
 /* CUSTOM CALLBACKS */
 
@@ -235,10 +237,17 @@ ipp_codec[] =
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
-    {1, "G729",	    PJMEDIA_RTP_PT_G729,      &USC_G729AFP_Fxns, 8000, 1,  80,  
+#	if defined(PJ_HAS_FLOATING_POINT) && (PJ_HAS_FLOATING_POINT != 0)
+    {1, "G729",	    PJMEDIA_RTP_PT_G729,      &USC_G729AFP_Fxns, 8000, 1,  80,
 		    8000, 11800, 2, 1, 1, 
 		    &predecode_g729, NULL, NULL
     },
+#	else
+    {1, "G729",	    PJMEDIA_RTP_PT_G729,      &USC_G729I_Fxns,	 8000, 1,  80,
+		    8000, 11800, 2, 1, 1, 
+		    &predecode_g729, NULL, NULL
+    },
+#	endif
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1
