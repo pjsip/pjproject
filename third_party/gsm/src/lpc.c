@@ -6,6 +6,7 @@
 
 /* $Header: /tmp_amd/presto/export/kbs/jutta/src/gsm/RCS/lpc.c,v 1.5 1994/12/30 23:14:54 jutta Exp $ */
 
+#include "config.h"
 #include <stdio.h>
 #include <assert.h>
 

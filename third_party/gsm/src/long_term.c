@@ -6,6 +6,7 @@
 
 /* $Header: /tmp_amd/presto/export/kbs/jutta/src/gsm/RCS/long_term.c,v 1.6 1996/07/02 12:33:19 jutta Exp $ */
 
+#include "config.h"
 #include <stdio.h>
 #include <assert.h>
 

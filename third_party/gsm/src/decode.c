@@ -6,6 +6,7 @@
 
 /* $Header: /tmp_amd/presto/export/kbs/jutta/src/gsm/RCS/decode.c,v 1.1 1992/10/28 00:15:50 jutta Exp $ */
 
+#include "config.h"
 #include <stdio.h>
 
 #include	"private.h"

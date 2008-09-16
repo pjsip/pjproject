@@ -289,7 +289,7 @@ static pj_bool_t on_rx_request(pjsip_rx_data *rdata)
 	rdata->msg_info.msg->line.req.method.id == PJSIP_INVITE_METHOD)
     {
 	pjsip_dialog *dlg;
-	pjmedia_sdp_session *sdp;
+	pjmedia_sdp_session *sdp = NULL;
 	pj_str_t uri;
 	pjsip_tx_data *tdata;
 	pj_status_t status;

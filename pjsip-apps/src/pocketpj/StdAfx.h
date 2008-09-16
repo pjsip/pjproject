@@ -10,6 +10,7 @@
 #pragma once
 #endif // _MSC_VER >= 1000
 
+#pragma warning(disable:4496)
 
 
 #define VC_EXTRALEAN		// Exclude rarely-used stuff from Windows headers

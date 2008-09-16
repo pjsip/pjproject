@@ -10,6 +10,7 @@
  *  See private.h for the more commonly used macro versions.
  */
 
+#include	"config.h"
 #include	<stdio.h>
 #include	<assert.h>
 
