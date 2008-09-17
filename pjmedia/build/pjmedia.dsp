@@ -293,6 +293,10 @@ SOURCE=..\src\pjmedia\wave.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\wmme_sound.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\wsola.c
 # End Source File
 # End Group

@@ -56,11 +56,14 @@
 /** Constant for Win32 DirectSound sound backend. */
 #define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
 
+/** Constant for Win32 MME sound backend. */
+#define PJMEDIA_SOUND_WIN32_MME_SOUND	    3
+
 /** When this is set, pjmedia will not provide any sound device backend. 
  *  Application will have to provide its own sound device backend
  *  and link the application with it.
  */
-#define PJMEDIA_SOUND_EXTERNAL		    3
+#define PJMEDIA_SOUND_EXTERNAL		    255
 
 
 /**
@@ -70,6 +73,7 @@
 #ifndef PJMEDIA_SOUND_IMPLEMENTATION
 #  if defined(PJ_WIN32) && PJ_WIN32!=0
 /*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_DIRECT_SOUND*/
+/*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_MME_SOUND*/
 #   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
 #  else
 #   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND

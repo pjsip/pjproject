@@ -1096,6 +1096,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\wmme_sound.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\wsola.c"
 				>
 			</File>
