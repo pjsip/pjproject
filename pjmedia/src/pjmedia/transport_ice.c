@@ -1424,6 +1424,10 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 	pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, &cand.addr);
     }
 
+    /* Get remote address originating RTP & RTCP. */
+    info->rem_rtp_name  = tp_ice->rtp_src_addr;
+    info->rem_rtcp_name = tp_ice->rtcp_src_addr;
+
     return PJ_SUCCESS;
 }
 
@@ -1547,7 +1551,6 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 	 * have been received.
 	 */
 	if (!tp_ice->use_ice &&
-	    (tp_ice->options & PJMEDIA_ICE_NO_SRC_ADDR_CHECKING) == 0 &&
 	    pj_sockaddr_cmp(&tp_ice->remote_rtp, src_addr) != 0 )
 	{
 	    /* Check if the source address is recognized. */
@@ -1561,7 +1564,9 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 
 	    tp_ice->rtp_src_cnt++;
 
-	    if (tp_ice->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) {
+	    if ((tp_ice->options & PJMEDIA_ICE_NO_SRC_ADDR_CHECKING) == 0 &&
+		tp_ice->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) 
+	    {
     	
 		char addr_text[80];
 
@@ -1605,20 +1610,22 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 	 * different.
 	 */
 	if (!tp_ice->use_ice &&
-	    (tp_ice->options & PJMEDIA_ICE_NO_SRC_ADDR_CHECKING)==0 &&
 	    pj_sockaddr_cmp(&tp_ice->remote_rtcp, src_addr) != 0)
 	{
-	    char addr_text[80];
-
-	    pj_sockaddr_cp(&tp_ice->remote_rtcp, src_addr);
 	    pj_sockaddr_cp(&tp_ice->rtcp_src_addr, src_addr);
 
-	    pj_assert(tp_ice->addr_len == pj_sockaddr_get_len(src_addr));
+	    if ((tp_ice->options & PJMEDIA_ICE_NO_SRC_ADDR_CHECKING)==0) {
+		char addr_text[80];
 
-	    PJ_LOG(4,(tp_ice->base.name,
-		      "Remote RTCP address switched to %s",
-		      pj_sockaddr_print(&tp_ice->remote_rtcp, addr_text,
-					sizeof(addr_text), 3)));
+		pj_sockaddr_cp(&tp_ice->remote_rtcp, src_addr);
+
+		pj_assert(tp_ice->addr_len == pj_sockaddr_get_len(src_addr));
+
+		PJ_LOG(4,(tp_ice->base.name,
+			  "Remote RTCP address switched to %s",
+			  pj_sockaddr_print(&tp_ice->remote_rtcp, addr_text,
+					    sizeof(addr_text), 3)));
+	    }
 	}
     }
 

@@ -605,6 +605,10 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     info->sock_info.rtcp_sock = udp->rtcp_sock;
     info->sock_info.rtcp_addr_name = udp->rtcp_addr_name;
 
+    /* Get remote address originating RTP & RTCP. */
+    info->rem_rtp_name  = udp->rtp_src_addr;
+    info->rem_rtcp_name = udp->rtcp_src_addr;
+
     return PJ_SUCCESS;
 }
 

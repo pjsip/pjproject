@@ -2018,13 +2018,18 @@ const char *good_number(char *buf, pj_int32_t val)
 /* Dump media session */
 static void dump_media_session(const char *indent, 
 			       char *buf, unsigned maxlen,
-			       pjmedia_session *session)
+			       pjsua_call *call)
 {
     unsigned i;
     char *p = buf, *end = buf+maxlen;
     int len;
     pjmedia_session_info info;
+    pjmedia_session *session = call->session;
+    pjmedia_transport_info tp_info;
 
+    pjmedia_transport_info_init(&tp_info);
+
+    pjmedia_transport_get_info(call->med_tp, &tp_info);
     pjmedia_session_get_info(session, &info);
 
     for (i=0; i<info.stream_cnt; ++i) {
@@ -2037,8 +2042,17 @@ static void dump_media_session(const char *indent,
 	pj_time_val media_duration, now;
 
 	pjmedia_session_get_stream_stat(session, i, &stat);
-	rem_addr = pj_sockaddr_print(&info.stream_info[i].rem_addr,
-				     rem_addr_buf, sizeof(rem_addr_buf), 3);
+	// rem_addr will contain actual address of RTP originator, instead of
+	// remote RTP address specified by stream which is fetched from the SDP.
+	// Please note that we are assuming only one stream per call.
+	//rem_addr = pj_sockaddr_print(&info.stream_info[i].rem_addr,
+	//			     rem_addr_buf, sizeof(rem_addr_buf), 3);
+	if (pj_sockaddr_has_addr(&tp_info.rem_rtp_name)) {
+	    rem_addr = pj_sockaddr_print(&tp_info.rem_rtp_name, rem_addr_buf, 
+					 sizeof(rem_addr_buf), 3);
+	} else {
+	    pj_ansi_snprintf(rem_addr_buf, sizeof(rem_addr_buf), "-");
+	}
 
 	if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)
 	    dir = "sendonly";
@@ -2627,8 +2641,8 @@ static void dump_media_session(const char *indent,
 
 /* Print call info */
 void print_call(const char *title,
-		       int call_id, 
-		       char *buf, pj_size_t size)
+	        int call_id, 
+	        char *buf, pj_size_t size)
 {
     int len;
     pjsip_inv_session *inv = pjsua_var.calls[call_id].inv;
@@ -2758,7 +2772,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 
     /* Dump session statistics */
     if (with_media && call->session)
-	dump_media_session(indent, p, end-p, call->session);
+	dump_media_session(indent, p, end-p, call);
 
     pjsip_dlg_dec_lock(dlg);
 

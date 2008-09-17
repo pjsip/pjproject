@@ -493,6 +493,12 @@ struct pjmedia_transport_info
     pjmedia_sock_info sock_info;
 
     /**
+     * Remote address where RTP/RTCP originated from.
+     */
+    pj_sockaddr	    rem_rtp_name;
+    pj_sockaddr	    rem_rtcp_name;
+
+    /**
      * Specifies number of transport specific info included.
      */
     int specific_info_cnt;
