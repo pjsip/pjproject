@@ -48,6 +48,7 @@
 #define PJ_HAS_SYS_TYPES_H	    1
 #define PJ_HAS_TIME_H		    1
 #define PJ_HAS_UNISTD_H		    1
+#define PJ_HAS_SEMAPHORE_H	    1
 
 #define PJ_HAS_MSWSOCK_H	    0
 #define PJ_HAS_WINSOCK_H	    0
