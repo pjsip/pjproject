@@ -38,7 +38,6 @@
 #endif
 
 
-
 #define THIS_FILE	    "dsound.c"
 #define BITS_PER_SAMPLE	    16
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE/8)
@@ -113,7 +112,7 @@ struct pjmedia_snd_stream
     unsigned		    channel_count;	/**< Channel count.	    */
 
     pj_thread_t		   *thread;		/**< Thread handle.	    */
-    pj_bool_t		    thread_quit_flag;	/**< Quit signal to thread  */
+    HANDLE		    thread_quit_event;	/**< Quit signal to thread  */
 };
 
 
@@ -432,6 +431,29 @@ static BOOL AppWriteDataToBuffer(LPDIRECTSOUNDBUFFER lpDsb,  // The buffer.
     return FALSE; 
 }
 
+/*
+ * Check if there is space in playing buffer.
+ */
+static unsigned dsound_play_empty_size(struct dsound_stream *dsound_strm)
+{
+    HRESULT hr;
+    long size_available;
+    DWORD writePos, readPos;
+
+    hr = IDirectSoundBuffer_GetCurrentPosition(dsound_strm->ds.play.lpDsBuffer, 
+					       &readPos, &writePos);
+    if FAILED(hr)
+	return PJ_FALSE;
+
+    if (readPos < dsound_strm->dwBytePos)
+	size_available = readPos + dsound_strm->dwDsBufferSize - 
+			 dsound_strm->dwBytePos;
+    else
+	size_available = readPos - dsound_strm->dwBytePos;
+
+    return size_available;
+}
+
 
 /*
  * Check if there are captured frames in DirectSound capture buffer.
@@ -442,8 +464,9 @@ static unsigned dsound_captured_size(struct dsound_stream *dsound_strm)
     long size_available;
     DWORD writePos, readPos;
 
-    hr = IDirectSoundCaptureBuffer_GetCurrentPosition(dsound_strm->ds.capture.lpDsBuffer, 
-						      &writePos, &readPos);
+    hr = IDirectSoundCaptureBuffer_GetCurrentPosition(
+					dsound_strm->ds.capture.lpDsBuffer, 
+					&writePos, &readPos);
     if FAILED(hr)
 	return PJ_FALSE;
 
@@ -462,13 +485,14 @@ static unsigned dsound_captured_size(struct dsound_stream *dsound_strm)
 static int dsound_dev_thread(void *arg)
 {
     pjmedia_snd_stream *strm = arg;
-    HANDLE events[2];
+    HANDLE events[3];
     unsigned eventCount;
     unsigned bytes_per_frame;
     pj_status_t status;
 
 
     eventCount = 0;
+    events[eventCount++] = strm->thread_quit_event;
     if (strm->dir & PJMEDIA_DIR_PLAYBACK)
 	events[eventCount++] = strm->play_strm.hEvent;
     if (strm->dir & PJMEDIA_DIR_CAPTURE)
@@ -478,7 +502,7 @@ static int dsound_dev_thread(void *arg)
     /* Raise self priority. We don't want the audio to be distorted by
      * system activity.
      */
-    //SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
+    SetThreadPriority( GetCurrentThread(), THREAD_PRIORITY_HIGHEST);
 
     /* Calculate bytes per frame */
     bytes_per_frame = strm->samples_per_frame * BYTES_PER_SAMPLE;
@@ -487,27 +511,28 @@ static int dsound_dev_thread(void *arg)
      * Loop while not signalled to quit, wait for event objects to be 
      * signalled by DirectSound capture and play buffer.
      */
-    while (!strm->thread_quit_flag) {
+    while (PJ_TRUE) {
 	
 	DWORD rc;
 	pjmedia_dir signalled_dir;
 
-	rc = WaitForMultipleObjects(eventCount, events, FALSE, 
-				    100);
+	rc = WaitForMultipleObjects(eventCount, events, FALSE, INFINITE);
 	if (rc < WAIT_OBJECT_0 || rc >= WAIT_OBJECT_0+eventCount)
 	    continue;
 
 
-	if (rc == WAIT_OBJECT_0) {
-	    if (events[0] == strm->play_strm.hEvent)
-		signalled_dir = PJMEDIA_DIR_PLAYBACK;
-	    else
-		signalled_dir = PJMEDIA_DIR_CAPTURE;
-	} else {
+	if (rc == WAIT_OBJECT_0)
+		break;
+	if (rc == (WAIT_OBJECT_0 + 1)) {
 	    if (events[1] == strm->play_strm.hEvent)
-		signalled_dir = PJMEDIA_DIR_PLAYBACK;
+	        signalled_dir = PJMEDIA_DIR_PLAYBACK;
 	    else
-		signalled_dir = PJMEDIA_DIR_CAPTURE;
+	        signalled_dir = PJMEDIA_DIR_CAPTURE;
+	} else {
+	    if (events[2] == strm->play_strm.hEvent)
+	        signalled_dir = PJMEDIA_DIR_PLAYBACK;
+	    else
+	        signalled_dir = PJMEDIA_DIR_CAPTURE;
 	}
 
 
@@ -523,25 +548,27 @@ static int dsound_dev_thread(void *arg)
 	    dsound_strm = &strm->play_strm;
 	    status = PJ_SUCCESS;
 
-	    /* Get frame from application. */
-	    status = (*strm->play_cb)(strm->user_data, 
-				      dsound_strm->timestamp.u32.lo,
-				      strm->buffer,
+	    while (dsound_play_empty_size(dsound_strm) > bytes_per_frame) {
+		/* Get frame from application. */
+		status = (*strm->play_cb)(strm->user_data, 
+					  dsound_strm->timestamp.u32.lo,
+					  strm->buffer,
+					  bytes_per_frame);
+		if (status != PJ_SUCCESS)
+		    break;
+
+		/* Write to DirectSound buffer. */
+		AppWriteDataToBuffer( dsound_strm->ds.play.lpDsBuffer, 
+				      dsound_strm->dwBytePos,
+				      (LPBYTE)strm->buffer, 
 				      bytes_per_frame);
-	    if (status != PJ_SUCCESS)
-		break;
 
-	    /* Write to DirectSound buffer. */
-	    AppWriteDataToBuffer( dsound_strm->ds.play.lpDsBuffer, 
-				  dsound_strm->dwBytePos,
-				  (LPBYTE)strm->buffer, 
-				  bytes_per_frame);
-
-	    /* Increment position. */
-	    dsound_strm->dwBytePos += bytes_per_frame;
-	    if (dsound_strm->dwBytePos >= dsound_strm->dwDsBufferSize)
-		dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
-	    dsound_strm->timestamp.u64 += strm->samples_per_frame;
+		/* Increment position. */
+		dsound_strm->dwBytePos += bytes_per_frame;
+		if (dsound_strm->dwBytePos >= dsound_strm->dwDsBufferSize)
+		    dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
+		dsound_strm->timestamp.u64 += strm->samples_per_frame;
+	    }
 
 	} else {
 	    /*
@@ -554,13 +581,15 @@ static int dsound_dev_thread(void *arg)
 
 	    dsound_strm = &strm->rec_strm;
 
-	    do {
+	    /* Fetch while we have more than 1 frame */
+	    while (dsound_captured_size(dsound_strm) > bytes_per_frame) {
+
 		/* Capture from DirectSound buffer. */
 		rc = AppReadDataFromBuffer(dsound_strm->ds.capture.lpDsBuffer, 
 					   dsound_strm->dwBytePos,
 					   (LPBYTE)strm->buffer, 
 					   bytes_per_frame);
-		
+        	
 		if (!rc) {
 		    pj_bzero(strm->buffer, bytes_per_frame);
 		} 
@@ -581,10 +610,7 @@ static int dsound_dev_thread(void *arg)
 		if (dsound_strm->dwBytePos >= dsound_strm->dwDsBufferSize)
 		    dsound_strm->dwBytePos -= dsound_strm->dwDsBufferSize;
 		dsound_strm->timestamp.u64 += strm->samples_per_frame;
-
-		/* Fetch while we have more than 1 frame */
-	    } while (dsound_captured_size(dsound_strm) > bytes_per_frame);
-
+	    }
 	}
     }
 
@@ -627,7 +653,8 @@ static BOOL CALLBACK DSEnumCallback( LPGUID lpGuid, LPCTSTR lpcstrDescription,
     }
 
 #ifdef UNICODE
-    WideCharToMultiByte(CP_ACP, 0, lpcstrDescription, wcslen(lpcstrDescription), dev_info[index].info.name, max, NULL, NULL);
+    WideCharToMultiByte(CP_ACP, 0, lpcstrDescription, wcslen(lpcstrDescription),
+			dev_info[index].info.name, max, NULL, NULL);
 #else
     strncpy(dev_info[index].info.name, lpcstrDescription, max);
 #endif
@@ -767,6 +794,16 @@ static pj_status_t open_stream( pjmedia_dir dir,
 	return PJ_ENOMEM;
     }
 
+    /*
+     * Create event for stopping the worker thread.
+     */
+    strm->thread_quit_event = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (strm->thread_quit_event == NULL) {
+	status = pj_get_os_error();
+	pj_pool_release(pool);
+	return status;
+    }
+
     /* Create player stream */
     if (dir & PJMEDIA_DIR_PLAYBACK) {
 	unsigned buffer_count;
@@ -899,8 +936,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
     pi->channel_count = strm->channel_count;
     pi->samples_per_frame = strm->samples_per_frame;
     pi->bits_per_sample = strm->bits_per_sample;
-    pi->rec_latency = strm->rec_strm.latency;
-    pi->play_latency = strm->play_strm.latency;
+    pi->rec_latency = strm->rec_strm.latency * strm->clock_rate * 
+		      strm->channel_count/ 1000;
+    pi->play_latency = strm->play_strm.latency * strm->clock_rate * 
+		       strm->channel_count/ 1000;
 
     return PJ_SUCCESS;
 }
@@ -913,9 +952,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 {
     HRESULT hr;
 
-    PJ_UNUSED_ARG(stream);
-
     if (stream->play_strm.ds.play.lpDsBuffer) {
+	hr = IDirectSoundBuffer_SetCurrentPosition(
+				stream->play_strm.ds.play.lpDsBuffer, 0);
+	if (FAILED(hr))
+	    return PJ_RETURN_OS_ERROR(hr);
+	
+	stream->play_strm.dwBytePos = 0;
+
 	hr = IDirectSoundBuffer_Play(stream->play_strm.ds.play.lpDsBuffer, 
 				     0, 0, DSBPLAY_LOOPING);
 	if (FAILED(hr))
@@ -924,8 +968,15 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
     }
     
     if (stream->rec_strm.ds.capture.lpDsBuffer) {
-	hr = IDirectSoundCaptureBuffer_Start(stream->rec_strm.ds.capture.lpDsBuffer,
-					     DSCBSTART_LOOPING );
+	hr = IDirectSoundCaptureBuffer_GetCurrentPosition( 
+				stream->rec_strm.ds.capture.lpDsBuffer, 
+				NULL, &stream->rec_strm.dwBytePos );
+	if (FAILED(hr))
+	    return PJ_RETURN_OS_ERROR(hr);
+
+	hr = IDirectSoundCaptureBuffer_Start(
+				stream->rec_strm.ds.capture.lpDsBuffer,
+				DSCBSTART_LOOPING );
 	if (FAILED(hr))
 	    return PJ_RETURN_OS_ERROR(hr);
 	PJ_LOG(5,(THIS_FILE, "DirectSound capture stream started"));
@@ -965,10 +1016,16 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
     pjmedia_snd_stream_stop(stream);
 
     if (stream->thread) {
-	stream->thread_quit_flag = 1;
+	pj_assert(stream->thread_quit_event);
+	SetEvent(stream->thread_quit_event);
 	pj_thread_join(stream->thread);
 	pj_thread_destroy(stream->thread);
 	stream->thread = NULL;
+    }
+
+    if (stream->thread_quit_event) {
+	CloseHandle(stream->thread_quit_event);
+	stream->thread_quit_event = NULL;
     }
 
     if (stream->play_strm.lpDsNotify) {
