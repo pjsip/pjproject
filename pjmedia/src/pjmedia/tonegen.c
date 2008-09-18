@@ -25,66 +25,156 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
-
-/* float can be twice slower on i686! */
-#define DATA	double
-
 /* amplitude */
 #define AMP	PJMEDIA_TONEGEN_VOLUME
-
 
 #ifndef M_PI
 #   define M_PI  ((DATA)3.141592653589793238462643383279)
 #endif
 
+#if PJMEDIA_TONEGEN_ALG==PJMEDIA_TONEGEN_SINE
+    #include <math.h>
+    #define DATA	double
 
-#if (defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0) || \
-    (defined(PJMEDIA_TONEGEN_FORCE_FLOAT) && PJMEDIA_TONEGEN_FORCE_FLOAT != 0)
-#   include <math.h>
+    /*
+     * This is the good old tone generator using sin().
+     * Speed = 1347 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
+     *         approx. 10.91 MIPS
+     */
+    struct gen
+    {
+	DATA add;
+	DATA c;
+	DATA vol;
+    };
 
-#   if defined(PJMEDIA_USE_HIGH_QUALITY_TONEGEN) && \
-       PJMEDIA_USE_HIGH_QUALITY_TONEGEN!=0
+    #define GEN_INIT(var,R,F,A) var.add = ((DATA)F)/R, var.c=0, var.vol=A
+    #define GEN_SAMP(val,var)   val = (short)(sin(var.c * 2 * M_PI) * \
+					      var.vol); \
+			        var.c += var.add
 
-	/*
-	 * This is the good old tone generator using sin().
-	 * Speed = 222.5 cycles per sample.
+#elif PJMEDIA_TONEGEN_ALG==PJMEDIA_TONEGEN_FLOATING_POINT
+    #include <math.h>
+    #define DATA	float
+
+    /*
+     * Default floating-point based tone generation using sine wave 
+     * generation from:
+     *   http://www.musicdsp.org/showone.php?id=10.
+     * This produces good quality tone in relatively faster time than
+     * the normal sin() generator.
+     * Speed = 350 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
+     *         approx. 2.84 MIPS
+     */
+    struct gen
+    {
+	DATA a, s0, s1;
+    };
+
+    #define GEN_INIT(var,R,F,A) var.a = (DATA) (2.0 * sin(M_PI * F / R)); \
+			        var.s0 = 0; \
+			        var.s1 = (DATA)(0 - (int)A)
+    #define GEN_SAMP(val,var)   var.s0 = var.s0 - var.a * var.s1; \
+			        var.s1 = var.s1 + var.a * var.s0; \
+			        val = (short) var.s0
+
+#elif PJMEDIA_TONEGEN_ALG==PJMEDIA_TONEGEN_FIXED_POINT_CORDIC
+    /* Cordic algorithm with 28 bit size, from:
+     * http://www.dcs.gla.ac.uk/~jhw/cordic/
+     * Speed = 742 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
+     *         (PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP=7)
+     *         approx. 6.01 MIPS
+     */
+    #define CORDIC_1K		0x026DD3B6
+    #define CORDIC_HALF_PI	0x06487ED5
+    #define CORDIC_PI		(CORDIC_HALF_PI * 2)
+    #define CORDIC_MUL_BITS	26
+    #define CORDIC_MUL		(1 << CORDIC_MUL_BITS)
+    #define CORDIC_NTAB		28
+    #define CORDIC_LOOP		PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP
+
+    static int cordic_ctab [] = 
+    {
+	0x03243F6A, 0x01DAC670, 0x00FADBAF, 0x007F56EA, 0x003FEAB7, 
+	0x001FFD55, 0x000FFFAA, 0x0007FFF5, 0x0003FFFE, 0x0001FFFF, 
+	0x0000FFFF, 0x00007FFF, 0x00003FFF, 0x00001FFF, 0x00000FFF, 
+	0x000007FF, 0x000003FF, 0x000001FF, 0x000000FF, 0x0000007F, 
+	0x0000003F, 0x0000001F, 0x0000000F, 0x00000007, 0x00000003, 
+	0x00000001, 0x00000000, 0x00000000 
+    };
+
+    static pj_int32_t cordic(pj_int32_t theta, unsigned n)
+    {
+	unsigned k;
+	int d;
+	pj_int32_t tx;
+	pj_int32_t x = CORDIC_1K, y = 0, z = theta;
+
+	for (k=0; k<n; ++k) {
+	    #if 0
+	    d = (z>=0) ? 0 : -1;
+	    #else
+	    /* Only slightly (~2.5%) faster, but not portable? */
+	     d = z>>27;
+	    #endif
+	    tx = x - (((y>>k) ^ d) - d);
+	    y = y + (((x>>k) ^ d) - d);
+	    z = z - ((cordic_ctab[k] ^ d) - d);
+	    x = tx;
+	}  
+	return y;
+    }
+
+    /* Note: theta must be uint32 here */
+    static pj_int32_t cordic_sin(pj_uint32_t theta, unsigned n)
+    {
+	if (theta < CORDIC_HALF_PI)
+	    return cordic(theta, n);
+	else if (theta < CORDIC_PI)
+	    return cordic(CORDIC_HALF_PI-(theta-CORDIC_HALF_PI), n);
+	else if (theta < CORDIC_PI + CORDIC_HALF_PI)
+	    return -cordic(theta - CORDIC_PI, n);
+	else if (theta < 2 * CORDIC_PI)
+	    return -cordic(CORDIC_HALF_PI-(theta-3*CORDIC_HALF_PI), n);
+	else {
+	    pj_assert(!"Invalid cordic_sin() value");
+	    return 0;
+	}
+    }
+
+    struct gen
+    {
+	unsigned    add;
+	pj_uint32_t c;
+	unsigned    vol;
+    };
+
+    #define VOL(var,v)		(((v) * var.vol) >> 15)
+    #define GEN_INIT(var,R,F,A)	gen_init(&var, R, F, A)
+    #define GEN_SAMP(val,var)	val = gen_samp(&var)
+
+    static void gen_init(struct gen *var, unsigned R, unsigned F, unsigned A)
+    {
+	var->add = 2*CORDIC_PI/R * F;
+	var->c = 0;
+	var->vol = A;
+    }
+
+    PJ_INLINE(short) gen_samp(struct gen *var)
+    {
+	pj_int32_t val;
+	val = cordic_sin(var->c, CORDIC_LOOP);
+	/*val = (val * 32767) / CORDIC_MUL;
+	 *val = VOL((*var), val);
 	 */
-	struct gen
-	{
-	    DATA add;
-	    DATA c;
-	    DATA vol;
-	};
+	val = ((val >> 10) * var->vol) >> 16;
+	var->c += var->add;
+	if (var->c > 2*CORDIC_PI)
+	    var->c -= (2 * CORDIC_PI);
+	return (short) val;
+    }
 
-#	define GEN_INIT(var,R,F,A) var.add = ((DATA)F)/R, var.c=0, var.vol=A
-#	define GEN_SAMP(val,var)   val = (short)(sin(var.c * 2 * M_PI) * \
-						 var.vol); \
-				   var.c += var.add
-
-#   else
-
-	/*
-	 * Default floating-point based tone generation using sine wave 
-	 * generation from:
-	 *   http://www.musicdsp.org/showone.php?id=10.
-	 * This produces good quality tone in relatively faster time than
-	 * the normal sin() generator.
-	 * Speed = 40.6 cycles per sample.
-	 */
-	struct gen
-	{
-	    DATA a, s0, s1;
-	};
-
-#	define GEN_INIT(var,R,F,A) var.a = (DATA) (2.0 * sin(M_PI * F / R)); \
-				   var.s0 = A; \
-				   var.s1 = 0
-#	define GEN_SAMP(val,var)   var.s0 = var.s0 - var.a * var.s1; \
-				   var.s1 = var.s1 + var.a * var.s0; \
-				   val = (short) var.s0
-#   endif
-
-#else
+#elif PJMEDIA_TONEGEN_ALG==PJMEDIA_TONEGEN_FAST_FIXED_POINT
 
     /* 
      * Fallback algorithm when floating point is disabled.
@@ -92,9 +182,8 @@
      * approximation from
      *    http://www.audiomulch.com/~rossb/code/sinusoids/ 
      * Quality wise not so good, but it's blazing fast!
-     * Speed: 
-     *	- with volume adjustment: 14 cycles per sample 
-     *  - without volume adjustment: 12.22 cycles per sample
+     * Speed = 117 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
+     *         approx. 0.95 MIPS
      */
     PJ_INLINE(int) approximate_sin3(unsigned x)
     {	
@@ -112,17 +201,15 @@
 	unsigned vol;
     };
 
-#   define MAXI			((unsigned)0xFFFFFFFF)
-#   define SIN			approximate_sin3
-#   if 1    /* set this to 0 to disable volume adjustment */
-#	define VOL(var,v)	(((v) * var.vol) >> 15)
-#   else
-#	define VOL(var,v)	(v)
-#   endif
-#   define GEN_INIT(var,R,F,A)	var.add = MAXI/R * F, var.c=0, var.vol=A
-#   define GEN_SAMP(val,var)	val = (short) VOL(var,SIN(var.c)>>16);\
+    #define MAXI		((unsigned)0xFFFFFFFF)
+    #define SIN			approximate_sin3
+    #define VOL(var,v)		(((v) * var.vol) >> 15)
+    #define GEN_INIT(var,R,F,A)	var.add = MAXI/R * F, var.c=0, var.vol=A
+    #define GEN_SAMP(val,var)	val = (short) VOL(var,SIN(var.c)>>16); \
 				var.c += var.add
 
+#else
+    #error "PJMEDIA_TONEGEN_ALG is not set correctly"
 #endif
 
 struct gen_state
