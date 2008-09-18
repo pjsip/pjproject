@@ -2047,11 +2047,12 @@ static void dump_media_session(const char *indent,
 	// Please note that we are assuming only one stream per call.
 	//rem_addr = pj_sockaddr_print(&info.stream_info[i].rem_addr,
 	//			     rem_addr_buf, sizeof(rem_addr_buf), 3);
-	if (pj_sockaddr_has_addr(&tp_info.rem_rtp_name)) {
-	    rem_addr = pj_sockaddr_print(&tp_info.rem_rtp_name, rem_addr_buf, 
+	if (pj_sockaddr_has_addr(&tp_info.src_rtp_name)) {
+	    rem_addr = pj_sockaddr_print(&tp_info.src_rtp_name, rem_addr_buf, 
 					 sizeof(rem_addr_buf), 3);
 	} else {
 	    pj_ansi_snprintf(rem_addr_buf, sizeof(rem_addr_buf), "-");
+	    rem_addr = rem_addr_buf;
 	}
 
 	if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)

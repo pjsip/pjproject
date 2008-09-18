@@ -1424,9 +1424,13 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 	pj_sockaddr_cp(&info->sock_info.rtcp_addr_name, &cand.addr);
     }
 
-    /* Get remote address originating RTP & RTCP. */
-    info->rem_rtp_name  = tp_ice->rtp_src_addr;
-    info->rem_rtcp_name = tp_ice->rtcp_src_addr;
+    /* Set remote address originating RTP & RTCP if this transport has 
+     * received any packets.
+     */
+    if (tp_ice->rtp_src_cnt) {
+	info->src_rtp_name  = tp_ice->rtp_src_addr;
+	info->src_rtcp_name = tp_ice->rtcp_src_addr;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1453,6 +1457,11 @@ static pj_status_t transport_attach  (pjmedia_transport *tp,
     pj_memcpy(&tp_ice->remote_rtp, rem_addr, addr_len);
     pj_memcpy(&tp_ice->remote_rtcp, rem_rtcp, addr_len);
     tp_ice->addr_len = addr_len;
+
+    /* Init source RTP & RTCP addresses and counter */
+    tp_ice->rtp_src_addr = tp_ice->remote_rtp;
+    tp_ice->rtcp_src_addr = tp_ice->remote_rtcp;
+    tp_ice->rtp_src_cnt = 0;
 
     return PJ_SUCCESS;
 }
@@ -1550,55 +1559,58 @@ static void ice_on_rx_data(pj_ice_strans *ice_st, unsigned comp_id,
 	 * source packet address after several consecutive packets
 	 * have been received.
 	 */
-	if (!tp_ice->use_ice &&
-	    pj_sockaddr_cmp(&tp_ice->remote_rtp, src_addr) != 0 )
-	{
-	    /* Check if the source address is recognized. */
-	    if (pj_sockaddr_cmp(src_addr, &tp_ice->rtp_src_addr) != 0) {
-		/* Remember the new source address. */
-		pj_sockaddr_cp(&tp_ice->rtp_src_addr, src_addr);
+	if (!tp_ice->use_ice) {
 
-		/* Reset counter */
-		tp_ice->rtp_src_cnt = 0;
-	    }
+	    /* Increment counter and avoid zero */
+	    if (++tp_ice->rtp_src_cnt == 0) 
+		tp_ice->rtp_src_cnt = 1;
 
-	    tp_ice->rtp_src_cnt++;
+	    if (pj_sockaddr_cmp(&tp_ice->remote_rtp, src_addr) != 0) {
 
-	    if ((tp_ice->options & PJMEDIA_ICE_NO_SRC_ADDR_CHECKING) == 0 &&
-		tp_ice->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) 
-	    {
-    	
-		char addr_text[80];
+		/* Check if the source address is recognized. */
+		if (pj_sockaddr_cmp(src_addr, &tp_ice->rtp_src_addr) != 0) {
+		    /* Remember the new source address. */
+		    pj_sockaddr_cp(&tp_ice->rtp_src_addr, src_addr);
+		    /* Reset counter */
+		    tp_ice->rtp_src_cnt = 0;
+		}
 
-		/* Set remote RTP address to source address */
-		pj_sockaddr_cp(&tp_ice->remote_rtp, &tp_ice->rtp_src_addr);
-		tp_ice->addr_len = pj_sockaddr_get_len(&tp_ice->remote_rtp);
+		if ((tp_ice->options & PJMEDIA_ICE_NO_SRC_ADDR_CHECKING)==0 &&
+		    tp_ice->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) 
+		{
+		    char addr_text[80];
 
-		/* Reset counter */
-		tp_ice->rtp_src_cnt = 0;
+		    /* Set remote RTP address to source address */
+		    pj_sockaddr_cp(&tp_ice->remote_rtp, &tp_ice->rtp_src_addr);
+		    tp_ice->addr_len = pj_sockaddr_get_len(&tp_ice->remote_rtp);
 
-		PJ_LOG(4,(tp_ice->base.name,
-			  "Remote RTP address switched to %s",
-			  pj_sockaddr_print(&tp_ice->remote_rtp, addr_text,
-					    sizeof(addr_text), 3)));
-
-		/* Also update remote RTCP address if actual RTCP source
-		 * address is not heard yet.
-		 */
-		if (!pj_sockaddr_has_addr(&tp_ice->rtcp_src_addr)) {
-		    pj_uint16_t port;
-
-		    pj_sockaddr_cp(&tp_ice->remote_rtcp, &tp_ice->remote_rtp);
-
-		    port = (pj_uint16_t)
-			   (pj_sockaddr_get_port(&tp_ice->remote_rtp)+1);
-		    pj_sockaddr_set_port(&tp_ice->remote_rtcp, port);
+		    /* Reset counter */
+		    tp_ice->rtp_src_cnt = 0;
 
 		    PJ_LOG(4,(tp_ice->base.name,
-			      "Remote RTCP address switched to %s",
-			      pj_sockaddr_print(&tp_ice->remote_rtcp, addr_text,
+			      "Remote RTP address switched to %s",
+			      pj_sockaddr_print(&tp_ice->remote_rtp, addr_text,
 						sizeof(addr_text), 3)));
 
+		    /* Also update remote RTCP address if actual RTCP source
+		     * address is not heard yet.
+		     */
+		    if (!pj_sockaddr_has_addr(&tp_ice->rtcp_src_addr)) {
+			pj_uint16_t port;
+
+			pj_sockaddr_cp(&tp_ice->remote_rtcp, 
+				       &tp_ice->remote_rtp);
+
+			port = (pj_uint16_t)
+			       (pj_sockaddr_get_port(&tp_ice->remote_rtp)+1);
+			pj_sockaddr_set_port(&tp_ice->remote_rtcp, port);
+
+			PJ_LOG(4,(tp_ice->base.name,
+				  "Remote RTCP address switched to %s",
+				  pj_sockaddr_print(&tp_ice->remote_rtcp, 
+						    addr_text,
+						    sizeof(addr_text), 3)));
+		    }
 		}
 	    }
 	}

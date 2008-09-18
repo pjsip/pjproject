@@ -606,8 +606,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     info->sock_info.rtcp_addr_name = udp->rtcp_addr_name;
 
     /* Get remote address originating RTP & RTCP. */
-    info->rem_rtp_name  = udp->rtp_src_addr;
-    info->rem_rtcp_name = udp->rtcp_src_addr;
+    info->src_rtp_name  = udp->rtp_src_addr;
+    info->src_rtcp_name = udp->rtcp_src_addr;
 
     return PJ_SUCCESS;
 }
@@ -664,6 +664,11 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 
     /* Last, mark transport as attached */
     udp->attached = PJ_TRUE;
+
+    /* Reset source RTP & RTCP addresses and counter */
+    pj_bzero(&udp->rtp_src_addr, sizeof(udp->rtp_src_addr));
+    pj_bzero(&udp->rtcp_src_addr, sizeof(udp->rtcp_src_addr));
+    udp->rtp_src_cnt = 0;
 
     return PJ_SUCCESS;
 }
