@@ -40,6 +40,8 @@
      * This is the good old tone generator using sin().
      * Speed = 1347 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
      *         approx. 10.91 MIPS
+     *
+     *         506,535 usec/100.29 MIPS on ARM926EJ-S.
      */
     struct gen
     {
@@ -65,6 +67,8 @@
      * the normal sin() generator.
      * Speed = 350 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
      *         approx. 2.84 MIPS
+     *
+     *         18,037 usec/3.57 MIPS on ARM926EJ-S.
      */
     struct gen
     {
@@ -84,6 +88,12 @@
      * Speed = 742 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
      *         (PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP=7)
      *         approx. 6.01 MIPS
+     *
+     *         ARM926EJ-S results:
+     *	        loop=7:   8,943 usec/1.77 MIPS
+     *		loop=8:   9,872 usec/1.95 MIPS
+     *          loop=10: 11,662 usec/2.31 MIPS
+     *          loop=12: 13,561 usec/2.69 MIPS
      */
     #define CORDIC_1K		0x026DD3B6
     #define CORDIC_HALF_PI	0x06487ED5
@@ -184,6 +194,8 @@
      * Quality wise not so good, but it's blazing fast!
      * Speed = 117 usec to generate 1 second, 8KHz dual-tones (2.66GHz P4).
      *         approx. 0.95 MIPS
+     *
+     *         1,449 usec/0.29 MIPS on ARM926EJ-S.
      */
     PJ_INLINE(int) approximate_sin3(unsigned x)
     {	

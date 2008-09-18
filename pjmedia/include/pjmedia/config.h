@@ -577,7 +577,9 @@
 
 
 /**
- * Specify the tone generator algorithm to be used.
+ * Specify the tone generator algorithm to be used. Please see 
+ * http://trac.pjsip.org/repos/wiki/Tone_Generator for the performance
+ * analysis results of the various tone generator algorithms.
  *
  * Default value:
  *  - PJMEDIA_TONEGEN_FLOATING_POINT when PJ_HAS_FLOATING_POINT is set
@@ -600,10 +602,10 @@
  *
  * Valid values are 1 to 28.
  *
- * Default value: 7
+ * Default value: 10
  */
 #ifndef PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP
-#   define PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP  7
+#   define PJMEDIA_TONEGEN_FIXED_POINT_CORDIC_LOOP  10
 #endif
 
 
