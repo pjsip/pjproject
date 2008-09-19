@@ -253,6 +253,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     /* Init key list */
     pj_list_init(&ioqueue->free_list);
     pj_list_init(&ioqueue->closing_list);
+    pj_list_init(&ioqueue->active_list);
 
 
     /* Pre-create all keys according to max_fd */
@@ -491,6 +492,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     PJ_ASSERT_RETURN(key != NULL, PJ_EINVAL);
 
     ioqueue = key->ioqueue;
+
+    /* Lock the key to make sure no callback is simultaneously modifying
+     * the key. We need to lock the key before ioqueue here to prevent
+     * deadlock.
+     */
+    pj_mutex_lock(key->mutex);
+
+    /* Also lock ioqueue */
     pj_lock_acquire(ioqueue->lock);
 
     pj_assert(ioqueue->count > 0);
