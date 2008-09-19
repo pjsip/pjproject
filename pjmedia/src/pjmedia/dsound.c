@@ -25,6 +25,8 @@
 
 #if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_WIN32_DIRECT_SOUND
 
+#define	PJ_MIN(x, y)	((x < y) ? (x) : (y))
+
 #ifdef _MSC_VER
 #   pragma warning(push, 3)
 #endif
@@ -149,6 +151,7 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
     DSBUFFERDESC dsbdesc;
     DSBPOSITIONNOTIFY dsPosNotify[MAX_PACKET_BUFFER_COUNT];
     unsigned bytes_per_frame;
+    unsigned max_latency;
     unsigned i;
 
 
@@ -238,8 +241,16 @@ static pj_status_t init_player_stream( struct dsound_stream *ds_strm,
     ds_strm->dwBytePos = 0;
     ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
     ds_strm->timestamp.u64 = 0;
-    ds_strm->latency = buffer_count * samples_per_frame * 1000 / clock_rate / 
-		       channel_count;
+    /*
+     * Play latency does not need to be on a frame boundry, it is just how far
+     * ahead of the read pointer we set the write pointer.  So we should just
+     * use the user configured latency.  However, if the latency measured in
+     * bytes causes more buffers than we are allowed, we must cap the latency
+     * at the time contained in 1-buffer_count.
+     */
+    max_latency = (1 - buffer_count) * samples_per_frame * 1000 / clock_rate /
+        channel_count;
+    ds_strm->latency = PJ_MIN(max_latency, snd_output_latency);
 
     /* Done setting up play device. */
     PJ_LOG(5,(THIS_FILE, 
@@ -345,6 +356,10 @@ static pj_status_t init_capture_stream( struct dsound_stream *ds_strm,
 
     ds_strm->timestamp.u64 = 0;
     ds_strm->dwDsBufferSize = buffer_count * bytes_per_frame;
+    /*
+     * Capture latency must always be on a frame boundry,
+     * so compute it based off the calculated buffer_count.
+     */
     ds_strm->latency = buffer_count * samples_per_frame * 1000 / clock_rate / 
 		       channel_count;
 
@@ -811,6 +826,8 @@ static pj_status_t open_stream( pjmedia_dir dir,
 	/* Calculate buffer count, in frame unit */
 	buffer_count = clock_rate * snd_output_latency / samples_per_frame /
 		       1000;
+	/* There must always be one more buffer than required for the latency */
+	buffer_count += 1;
 	if (buffer_count < MIN_PACKET_BUFFER_COUNT)
 	    buffer_count = MIN_PACKET_BUFFER_COUNT;
 	if (buffer_count > MAX_PACKET_BUFFER_COUNT)
@@ -958,7 +975,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 	if (FAILED(hr))
 	    return PJ_RETURN_OS_ERROR(hr);
 	
-	stream->play_strm.dwBytePos = 0;
+	/* Set the write pointer ahead of the read pointer by latency bytes */
+	stream->play_strm.dwBytePos = BYTES_PER_SAMPLE * stream->clock_rate *
+		stream->channel_count * stream->play_strm.latency / 1000;
 
 	hr = IDirectSoundBuffer_Play(stream->play_strm.ds.play.lpDsBuffer, 
 				     0, 0, DSBPLAY_LOOPING);
