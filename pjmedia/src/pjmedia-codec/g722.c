@@ -277,7 +277,7 @@ static pj_status_t g722_default_attr( pjmedia_codec_factory *factory,
 
     attr->setting.frm_per_pkt = 1;
     attr->setting.vad = 1;
-    attr->setting.plc = 0;
+    attr->setting.plc = 1;
 
     /* Default all other flag bits disabled. */
 
