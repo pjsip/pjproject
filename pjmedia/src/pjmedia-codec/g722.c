@@ -40,7 +40,7 @@
 #define PTIME			(20)
 #define SAMPLES_PER_FRAME	(16000 * PTIME /1000)
 #define FRAME_LEN		(160)
-#define PLC_DISABLED		1		
+#define PLC_DISABLED		0
 
 /* Tracing */
 #ifndef PJ_TRACE
