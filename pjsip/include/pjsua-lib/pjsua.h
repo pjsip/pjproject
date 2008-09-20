@@ -1115,6 +1115,16 @@ typedef struct pjsua_config
     pj_str_t	    nameserver[4];
 
     /**
+     * Force loose-route to be used in all route/proxy URIs (outbound_proxy
+     * and account's proxy settings). When this setting is enabled, the
+     * library will check all the route/proxy URIs specified in the settings
+     * and append ";lr" parameter to the URI if the parameter is not present.
+     *
+     * Default: 1
+     */
+    pj_bool_t	    force_lr;
+
+    /**
      * Number of outbound proxies in the \a outbound_proxy array.
      */
     unsigned	    outbound_proxy_cnt;

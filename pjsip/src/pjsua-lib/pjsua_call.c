@@ -140,6 +140,14 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
+    /* Check the route URI's and force loose route if required */
+    for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
+	status = normalize_route_uri(pjsua_var.pool, 
+				     &pjsua_var.ua_cfg.outbound_proxy[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
     /* Initialize invite session callback. */
     pj_bzero(&inv_cb, sizeof(inv_cb));
     inv_cb.on_state_changed = &pjsua_call_on_state_changed;

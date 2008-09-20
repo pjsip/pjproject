@@ -277,6 +277,7 @@ static void usage(void)
     puts  ("  --duration=SEC      Set maximum call duration (default:no limit)");
     puts  ("  --norefersub        Suppress event subscription when transfering calls");
     puts  ("  --use-compact-form  Minimize SIP message size");
+    puts  ("  --no-force-lr       Allow strict-route to be used (i.e. do not force lr)");
 
     puts  ("");
     puts  ("When URL is specified, pjsua will immediately initiate call to that URL");
@@ -481,7 +482,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 #ifdef _IONBF
 	   OPT_STDOUT_NO_BUF,
 #endif
-	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC
+	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
+	   OPT_NO_FORCE_LR
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -513,6 +515,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "contact",	1, 0, OPT_CONTACT},
 	{ "auto-update-nat",	1, 0, OPT_AUTO_UPDATE_NAT},
         { "use-compact-form",	0, 0, OPT_USE_COMPACT_FORM},
+	{ "no-force-lr",0, 0, OPT_NO_FORCE_LR},
 	{ "realm",	1, 0, OPT_REALM},
 	{ "username",	1, 0, OPT_USERNAME},
 	{ "password",	1, 0, OPT_PASSWORD},
@@ -835,6 +838,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 		/* Do not include rtpmap for static payload types (<96) */
 		pjmedia_add_rtpmap_for_static_pt = PJ_FALSE;
             }
+	    break;
+
+	case OPT_NO_FORCE_LR:
+	    cfg->cfg.force_lr = PJ_FALSE;
 	    break;
 
 	case OPT_NEXT_ACCOUNT: /* Add more account. */
@@ -1798,6 +1805,10 @@ static int write_settings(const struct app_config *config,
     if (pjsip_use_compact_form)
     {
 	pj_strcat2(&cfg, "--use-compact-form\n");
+    }
+
+    if (config->cfg.force_lr) {
+	pj_strcat2(&cfg, "--no-force-lr\n");
     }
 
     pj_strcat2(&cfg, "\n#\n# Buddies:\n#\n");

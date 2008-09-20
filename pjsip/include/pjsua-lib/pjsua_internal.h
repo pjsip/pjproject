@@ -342,6 +342,11 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 #define PJSUA_UNLOCK()
 #endif
 
+/** 
+ * Normalize route URI (check for ";lr" and append one if it doesn't
+ * exist and pjsua_config.force_lr is set.
+ */
+pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri);
 
 /**
  * Resolve STUN server.

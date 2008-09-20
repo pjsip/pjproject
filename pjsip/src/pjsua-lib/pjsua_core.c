@@ -91,6 +91,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->max_calls = 4;
     cfg->thread_cnt = 1;
     cfg->nat_type_in_sdp = 1;
+    cfg->force_lr = PJ_TRUE;
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     cfg->use_srtp = PJSUA_DEFAULT_USE_SRTP;
     cfg->srtp_secure_signaling = PJSUA_DEFAULT_SRTP_SECURE_SIGNALING;
@@ -2075,6 +2076,68 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     return p ? 0 : -1;
 }
 
+
+/** 
+ * Normalize route URI (check for ";lr" and append one if it doesn't
+ * exist and pjsua_config.force_lr is set.
+ */
+pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri)
+{
+    pj_str_t tmp_uri;
+    pj_pool_t *tmp_pool;
+    pjsip_uri *uri_obj;
+    pjsip_sip_uri *sip_uri;
+
+    tmp_pool = pjsua_pool_create("tmplr%p", 512, 512);
+    if (!tmp_pool)
+	return PJ_ENOMEM;
+
+    pj_strdup_with_null(tmp_pool, &tmp_uri, uri);
+
+    uri_obj = pjsip_parse_uri(tmp_pool, tmp_uri.ptr, tmp_uri.slen, 0);
+    if (!uri_obj) {
+	PJ_LOG(1,(THIS_FILE, "Invalid route URI: %.*s", 
+		  (int)uri->slen, uri->ptr));
+	pj_pool_release(tmp_pool);
+	return PJSIP_EINVALIDURI;
+    }
+
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri_obj) && 
+	!PJSIP_URI_SCHEME_IS_SIP(uri_obj))
+    {
+	PJ_LOG(1,(THIS_FILE, "Route URI must be SIP URI: %.*s", 
+		  (int)uri->slen, uri->ptr));
+	pj_pool_release(tmp_pool);
+	return PJSIP_EINVALIDSCHEME;
+    }
+
+    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri_obj);
+
+    /* Done if force_lr is disabled or if lr parameter is present */
+    if (!pjsua_var.ua_cfg.force_lr || sip_uri->lr_param) {
+	pj_pool_release(tmp_pool);
+	return PJ_SUCCESS;
+    }
+
+    /* Set lr param */
+    sip_uri->lr_param = 1;
+
+    /* Print the URI */
+    tmp_uri.ptr = (char*) pj_pool_alloc(tmp_pool, PJSIP_MAX_URL_SIZE);
+    tmp_uri.slen = pjsip_uri_print(PJSIP_URI_IN_ROUTING_HDR, uri_obj, 
+				   tmp_uri.ptr, PJSIP_MAX_URL_SIZE);
+    if (tmp_uri.slen < 1) {
+	PJ_LOG(1,(THIS_FILE, "Route URI is too long: %.*s", 
+		  (int)uri->slen, uri->ptr));
+	pj_pool_release(tmp_pool);
+	return PJSIP_EURITOOLONG;
+    }
+
+    /* Clone the URI */
+    pj_strdup_with_null(pool, uri, &tmp_uri);
+
+    return PJ_SUCCESS;
+}
 
 /*
  * This is a utility function to dump the stack states to log, using

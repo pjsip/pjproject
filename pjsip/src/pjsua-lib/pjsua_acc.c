@@ -256,7 +256,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 				   pjsua_acc_id *p_acc_id)
 {
     pjsua_acc *acc;
-    unsigned id;
+    unsigned i, id;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pjsua_var.acc_cnt < PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -293,6 +293,13 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 	pjsua_var.acc[id].cfg.reg_timeout == 0)
     {
 	pjsua_var.acc[id].cfg.reg_timeout = PJSUA_REG_INTERVAL;
+    }
+
+    /* Check the route URI's and force loose route if required */
+    for (i=0; i<acc->cfg.proxy_cnt; ++i) {
+	status = normalize_route_uri(acc->pool, &acc->cfg.proxy[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     status = initialize_acc(id);
