@@ -424,9 +424,13 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	    inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED)
 	{
 	    /* Before we terminate INVITE transaction, process the SDP
-	     * in the ACK request, if any.
+	     * in the ACK request, if any. 
+	     * Only do this when invite state is not already disconnected
+	     * (http://trac.pjsip.org/repos/ticket/640).
 	     */
-	    inv_check_sdp_in_incoming_msg(inv, inv->invite_tsx, rdata);
+	    if (inv->state < PJSIP_INV_STATE_DISCONNECTED) {
+		inv_check_sdp_in_incoming_msg(inv, inv->invite_tsx, rdata);
+	    }
 
 	    /* Now we can terminate the INVITE transaction */
 	    pj_assert(inv->invite_tsx->status_code >= 200);
