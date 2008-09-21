@@ -806,6 +806,7 @@ static int hdr_test_via_ipv6_1(pjsip_hdr *h);
 static int hdr_test_via_ipv6_2(pjsip_hdr *h);
 static int hdr_test_via_ipv6_3(pjsip_hdr *h);
 static int hdr_test_retry_after1(pjsip_hdr *h);
+static int hdr_test_subject_utf(pjsip_hdr *h);
 
 
 #define GENERIC_PARAM	     "p0=a;p1=\"ab:;cd\";p2=ab%3acd;p3"
@@ -1022,6 +1023,13 @@ struct hdr_test_t
 	"Retry-After", NULL,
 	"10(Already Pending Register)",
 	&hdr_test_retry_after1
+    },
+
+    {
+	/* Non-ASCII UTF-8 characters in Subject */
+	"Subject", NULL,
+	"\xC0\x81",
+	&hdr_test_subject_utf
     }
 };
 
@@ -1694,6 +1702,20 @@ static int hdr_test_retry_after1(pjsip_hdr *h)
     
     if (pj_strcmp2(&hdr->comment, "Already Pending Register"))
 	return -2930;
+
+    return 0;
+}
+
+/* Subject: \xC0\x81 */
+static int hdr_test_subject_utf(pjsip_hdr *h)
+{
+    pjsip_subject_hdr *hdr = (pjsip_subject_hdr*)h;
+
+    if (pj_strcmp2(&h->name, "Subject"))
+	return -2950;
+
+    if (pj_strcmp2(&hdr->hvalue, "\xC0\x81"))
+	return -2960;
 
     return 0;
 }

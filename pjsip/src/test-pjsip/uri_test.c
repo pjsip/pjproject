@@ -78,6 +78,8 @@ static pjsip_uri *create_uri33( pj_pool_t *pool );
 static pjsip_uri *create_uri34( pj_pool_t *pool );
 static pjsip_uri *create_uri35( pj_pool_t *pool );
 static pjsip_uri *create_uri36( pj_pool_t *pool );
+static pjsip_uri *create_uri37( pj_pool_t *pool );
+static pjsip_uri *create_uri38( pj_pool_t *pool );
 static pjsip_uri *create_dummy( pj_pool_t *pool );
 
 #define ERR_NOT_EQUAL	-1001
@@ -332,6 +334,20 @@ struct uri_test
 	"sip:[::1];maddr=[::01]",
 	&create_uri36,
 	"sip:[::1];maddr=[::01]"
+    },
+    {
+	/* 37: Non-ASCII UTF-8 in display name, with quote */
+	PJ_SUCCESS,
+	"\"\xC0\x81\" <sip:localhost>",
+	&create_uri37,
+	"\"\xC0\x81\" <sip:localhost>"
+    },
+    {
+	/* 38: Non-ASCII UTF-8 in display name, without quote */
+	PJ_SUCCESS,
+	"\xC0\x81 <sip:localhost>",
+	&create_uri38,
+	"\"\xC0\x81\" <sip:localhost>"
     }
 
 };
@@ -703,6 +719,42 @@ static pjsip_uri *create_uri36( pj_pool_t *pool )
     url->host = pj_str("::1");
     url->maddr_param = pj_str("::01");
     return (pjsip_uri*)url;
+
+}
+
+/* "\"\xC0\x81\" <sip:localhost>" */
+static pjsip_uri *create_uri37( pj_pool_t *pool )
+{
+    pjsip_name_addr *name;
+    pjsip_sip_uri *url;
+
+    name = pjsip_name_addr_create(pool);
+    name->display = pj_str("\xC0\x81");
+
+    url = pjsip_sip_uri_create(pool, 0);
+    url->host = pj_str("localhost");
+    
+    name->uri = (pjsip_uri*)url;
+
+    return (pjsip_uri*)name;
+
+}
+
+/* "\xC0\x81 <sip:localhost>" */
+static pjsip_uri *create_uri38( pj_pool_t *pool )
+{
+    pjsip_name_addr *name;
+    pjsip_sip_uri *url;
+
+    name = pjsip_name_addr_create(pool);
+    name->display = pj_str("\xC0\x81");
+
+    url = pjsip_sip_uri_create(pool, 0);
+    url->host = pj_str("localhost");
+    
+    name->uri = (pjsip_uri*)url;
+
+    return (pjsip_uri*)name;
 
 }
 

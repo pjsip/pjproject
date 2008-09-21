@@ -651,7 +651,7 @@ static pj_bool_t load_on_rx_request(pjsip_rx_data *rdata);
 static struct mod_load_test
 {
     pjsip_module    mod;
-    pj_uint32_t	    next_seq;
+    pj_int32_t	    next_seq;
     pj_bool_t	    err;
 } mod_load = 
 {
