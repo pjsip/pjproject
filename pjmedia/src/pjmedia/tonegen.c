@@ -349,6 +349,7 @@ struct tonegen
     /* options */
     unsigned		options;
     unsigned		playback_options;
+    pj_bool_t		has_fading;	/* Enable fade-in and fade-out	 */
     unsigned		fade_in_len;	/* fade in for this # of samples */
     unsigned		fade_out_len;	/* fade out for this # of samples*/
 
@@ -437,6 +438,7 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     tonegen->base.on_destroy = &tonegen_destroy;
     tonegen->digit_map = &digit_map;
 
+    tonegen->has_fading = PJ_TRUE;
     tonegen->fade_in_len = PJMEDIA_TONEGEN_FADE_IN_TIME * clock_rate / 1000;
     tonegen->fade_out_len = PJMEDIA_TONEGEN_FADE_OUT_TIME * clock_rate / 1000;
 
@@ -643,7 +645,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    tonegen->dig_samples += cnt;
 	    required -= cnt;
 
-	    if (tonegen->dig_samples == cnt) {
+	    if (tonegen->has_fading && tonegen->dig_samples == cnt) {
 		/* Fade in */
 		short *samp = (dst - cnt);
 		short *end;
@@ -660,7 +662,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 			scale += step;
 		    }
 		}
-	    } else if (tonegen->dig_samples == on_samp) {
+	    } else if (tonegen->has_fading && tonegen->dig_samples==on_samp) {
 		/* Fade out */
 		if (cnt > tonegen->fade_out_len)
 		    cnt = tonegen->fade_out_len;
@@ -765,13 +767,19 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
     pj_memcpy(tonegen->digits + tonegen->count,
 	      tones, count * sizeof(pjmedia_tone_desc));
     
-    /* Normalize volume */
+    /* Normalize volume, and check if we need to disable fading.
+     * Disable fading if tone off time is zero. Application probably
+     * wants to play this tone continuously (e.g. dial tone).
+     */
+    tonegen->has_fading = PJ_TRUE;
     for (i=0; i<count; ++i) {
 	pjmedia_tone_desc *t = &tonegen->digits[i+tonegen->count];
 	if (t->volume == 0)
 	    t->volume = AMP;
 	else if (t->volume < 0)
 	    t->volume = (short) -t->volume;
+	if (t->off_msec == 0)
+	    tonegen->has_fading = PJ_FALSE;
     }
 
     tonegen->count += count;
