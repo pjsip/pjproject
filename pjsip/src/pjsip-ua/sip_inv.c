@@ -358,8 +358,11 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
     }
 
 
-    /* Set state to CONFIRMED (if we're not in CONFIRMED yet) */
-    if (inv->state != PJSIP_INV_STATE_CONFIRMED) {
+    /* Set state to CONFIRMED (if we're not in CONFIRMED yet).
+     * But don't set it to CONFIRMED if we're already DISCONNECTED
+     * (this may have been a late 200/OK response.
+     */
+    if (inv->state < PJSIP_INV_STATE_CONFIRMED) {
 	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
     }
 
