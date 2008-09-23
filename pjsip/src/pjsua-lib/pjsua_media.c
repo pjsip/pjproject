@@ -846,6 +846,7 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
 	{
 	    pjmedia_transport_close(pjsua_var.calls[i].med_tp);
 	    pjsua_var.calls[i].med_tp = NULL;
+	    pjsua_var.calls[i].med_orig = NULL;
 	}
     }
 
