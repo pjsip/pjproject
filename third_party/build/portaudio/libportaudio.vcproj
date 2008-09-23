@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				InlineFunctionExpansion="1"
-				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
 				StringPooling="true"
 				RuntimeLibrary="2"
