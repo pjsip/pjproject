@@ -62,7 +62,7 @@ PJ_INLINE(int) pj_isalpha(unsigned char c) { return isalpha(c); }
  * @return      Non-zero value if c is a particular representation of 
  *              an ASCII character.
  */
-PJ_INLINE(int) pj_isascii(unsigned char c) { return c<128 && c>=0; }
+PJ_INLINE(int) pj_isascii(unsigned char c) { return c<128; }
 
 /** 
  * Returns a non-zero value if c is a particular representation of 
