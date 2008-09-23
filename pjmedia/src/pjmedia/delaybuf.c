@@ -237,7 +237,7 @@ static void update(pjmedia_delay_buf *b, enum OP op)
     }
 
     /* See if we need to shrink the buffer to reduce delay */
-    if (pjmedia_circ_buf_get_len(b->circ_buf) > 
+    if (op == OP_PUT && pjmedia_circ_buf_get_len(b->circ_buf) > 
 	b->samples_per_frame + b->eff_cnt)
     {
 	unsigned erase_cnt = b->samples_per_frame >> 1;
