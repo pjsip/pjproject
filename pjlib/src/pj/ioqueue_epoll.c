@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C)2003-2008 Benny Prijono <benny@prijono.org>
+ * Copyright (C)2003-2007 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -171,14 +171,14 @@ struct pj_ioqueue_t
     DECLARE_COMMON_IOQUEUE
 
     unsigned		max, count;
-    pj_ioqueue_key_t	hlist;
+    //pj_ioqueue_key_t	hlist;
+    pj_ioqueue_key_t	active_list;    
     int			epfd;
-    struct epoll_event *events;
-    struct queue       *queue;
+    //struct epoll_event *events;
+    //struct queue       *queue;
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     pj_mutex_t	       *ref_cnt_mutex;
-    pj_ioqueue_key_t	active_list;
     pj_ioqueue_key_t	closing_list;
     pj_ioqueue_key_t	free_list;
 #endif
@@ -234,7 +234,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
     ioqueue->max = max_fd;
     ioqueue->count = 0;
-    pj_list_init(&ioqueue->hlist);
+    pj_list_init(&ioqueue->active_list);
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* When safe unregistration is used (the default), we pre-create
@@ -253,7 +253,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
     /* Init key list */
     pj_list_init(&ioqueue->free_list);
     pj_list_init(&ioqueue->closing_list);
-    pj_list_init(&ioqueue->active_list);
 
 
     /* Pre-create all keys according to max_fd */
@@ -291,12 +290,12 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
     }
     
-    ioqueue->events = pj_pool_calloc(pool, max_fd, sizeof(struct epoll_event));
+    /*ioqueue->events = pj_pool_calloc(pool, max_fd, sizeof(struct epoll_event));
     PJ_ASSERT_RETURN(ioqueue->events != NULL, PJ_ENOMEM);
 
     ioqueue->queue = pj_pool_calloc(pool, max_fd, sizeof(struct queue));
     PJ_ASSERT_RETURN(ioqueue->queue != NULL, PJ_ENOMEM);
-
+   */
     PJ_LOG(4, ("pjlib", "epoll I/O Queue created (%p)", ioqueue));
 
     *p_ioqueue = ioqueue;
@@ -431,7 +430,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     }
     
     /* Register */
-    pj_list_insert_before(&ioqueue->hlist, key);
+    pj_list_insert_before(&ioqueue->active_list, key);
     ++ioqueue->count;
 
     //TRACE_((THIS_FILE, "socket registered, count=%d", ioqueue->count));
@@ -607,8 +606,10 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 {
     int i, count, processed;
     int msec;
-    struct epoll_event *events = ioqueue->events;
-    struct queue *queue = ioqueue->queue;
+    //struct epoll_event *events = ioqueue->events;
+    //struct queue *queue = ioqueue->queue;
+    struct epoll_event events[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL];
+    struct queue queue[PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL];
     pj_timestamp t1, t2;
     
     PJ_CHECK_STACK();
@@ -618,7 +619,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
     TRACE_((THIS_FILE, "start os_epoll_wait, msec=%d", msec));
     pj_get_timestamp(&t1);
  
-    count = os_epoll_wait( ioqueue->epfd, events, ioqueue->max, msec);
+    //count = os_epoll_wait( ioqueue->epfd, events, ioqueue->max, msec);
+    count = os_epoll_wait( ioqueue->epfd, events, PJ_IOQUEUE_MAX_EVENTS_IN_SINGLE_POLL, msec);
     if (count == 0) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
     /* Check the closing keys only when there's no activity and when there are
@@ -655,7 +657,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	 * Check readability.
 	 */
 	if ((events[i].events & EPOLLIN) && 
-	    (key_has_pending_read(h) || key_has_pending_accept(h))) {
+	    (key_has_pending_read(h) || key_has_pending_accept(h)) && !IS_CLOSING(h) ) {
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
@@ -668,7 +670,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	/*
 	 * Check for writeability.
 	 */
-	if ((events[i].events & EPOLLOUT) && key_has_pending_write(h)) {
+	if ((events[i].events & EPOLLOUT) && key_has_pending_write(h) && !IS_CLOSING(h)) {
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
@@ -682,7 +684,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	/*
 	 * Check for completion of connect() operation.
 	 */
-	if ((events[i].events & EPOLLOUT) && (h->connecting)) {
+	if ((events[i].events & EPOLLOUT) && (h->connecting) && !IS_CLOSING(h)) {
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
@@ -696,7 +698,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	/*
 	 * Check for error condition.
 	 */
-	if (events[i].events & EPOLLERR && (h->connecting)) {
+	if (events[i].events & EPOLLERR && (h->connecting) && !IS_CLOSING(h)) {
 		
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
