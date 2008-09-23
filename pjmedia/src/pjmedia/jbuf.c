@@ -401,7 +401,6 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 {
     int diff, cur_size;
 
-    /* Update jb_max_size */
     cur_size = jb_framelist_size(&jb->jb_framelist);
 
     /* Only apply burst-level calculation on PUT operation since if VAD is 
@@ -422,6 +421,10 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	     * (not just short time impulse)
 	     */
 	    if (jb->jb_stable_hist > STABLE_HISTORY_LIMIT) {
+		
+		/* Update max_hist_level. */
+		jb->jb_max_hist_level = jb->jb_prefetch;
+
 		diff = (jb->jb_prefetch - jb->jb_max_hist_level) / 3;
 
 		if (diff < 1)
@@ -431,11 +434,10 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 		if (jb->jb_prefetch < jb->jb_min_prefetch) 
 		    jb->jb_prefetch = jb->jb_min_prefetch;
 
+		jb->jb_stable_hist = 0;
+
 		TRACE__((jb->name.ptr,"jb updated(1), prefetch=%d, size=%d", 
 			 jb->jb_prefetch, cur_size));
-
-		jb->jb_stable_hist = 0;
-		jb->jb_max_hist_level = 0;
 	    }
 	}
 
@@ -447,8 +449,10 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 				     (int)(jb->jb_max_count*4/5));
 	    if (jb->jb_prefetch > jb->jb_max_prefetch)
 		jb->jb_prefetch = jb->jb_max_prefetch;
+
 	    jb->jb_stable_hist = 0;
-	    jb->jb_max_hist_level = 0;
+	    // Keep max_hist_level.
+	    //jb->jb_max_hist_level = 0;
 
 	    TRACE__((jb->name.ptr,"jb updated(2), prefetch=%d, size=%d", 
 		     jb->jb_prefetch, cur_size));
@@ -461,7 +465,9 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
     }
 
     /* These code is used for shortening the delay in the jitter buffer. */
-    diff = cur_size - jb->jb_prefetch;
+    // Shrinking based on max_hist_level (recent max level).
+    //diff = cur_size - jb->jb_prefetch;
+    diff = cur_size - jb->jb_max_hist_level;
     if (diff > SAFE_SHRINKING_DIFF && 
 	jb->jb_framelist.flist_origin-jb->jb_last_del_seq > jb->jb_min_shrink_gap)
     {

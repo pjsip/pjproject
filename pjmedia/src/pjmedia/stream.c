@@ -1667,7 +1667,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (info->jb_max > 0)
 	jb_max = info->jb_max;
     else
-	jb_max = 360 / stream->codec_param.info.frm_ptime;
+	jb_max = 500 / stream->codec_param.info.frm_ptime;
 
     if (info->jb_min_pre >= 0)
 	jb_min_pre = info->jb_min_pre;
