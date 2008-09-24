@@ -2943,6 +2943,47 @@ static void pjsua_call_on_forked( pjsip_inv_session *inv,
 
 
 /*
+ * Callback from UA layer when forked dialog response is received.
+ */
+pjsip_dialog* on_dlg_forked(pjsip_dialog *dlg, pjsip_rx_data *res)
+{
+    if (dlg->uac_has_2xx && 
+	res->msg_info.cseq->method.id == PJSIP_INVITE_METHOD &&
+	pjsip_rdata_get_tsx(res) == NULL &&
+	res->msg_info.msg->line.status.code/100 == 2) 
+    {
+	pjsip_dialog *forked_dlg;
+	pjsip_tx_data *bye;
+	pj_status_t status;
+
+	/* Create forked dialog */
+	status = pjsip_dlg_fork(dlg, res, &forked_dlg);
+	if (status != PJ_SUCCESS)
+	    return NULL;
+
+	pjsip_dlg_inc_lock(forked_dlg);
+
+	/* Disconnect the call */
+	status = pjsip_dlg_create_request(forked_dlg, &pjsip_bye_method,
+					  -1, &bye);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_dlg_send_request(forked_dlg, bye, -1, NULL);
+	}
+
+	pjsip_dlg_dec_lock(forked_dlg);
+
+	if (status != PJ_SUCCESS) {
+	    return NULL;
+	}
+
+	return forked_dlg;
+
+    } else {
+	return dlg;
+    }
+}
+
+/*
  * Disconnect call upon error.
  */
 static void call_disconnect( pjsip_inv_session *inv, 

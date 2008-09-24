@@ -96,6 +96,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->use_srtp = PJSUA_DEFAULT_USE_SRTP;
     cfg->srtp_secure_signaling = PJSUA_DEFAULT_SRTP_SECURE_SIGNALING;
 #endif
+    cfg->hangup_forked_call = PJ_TRUE;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -622,6 +623,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     pjsua_config	 default_cfg;
     pjsua_media_config	 default_media_cfg;
     const pj_str_t	 STR_OPTIONS = { "OPTIONS", 7 };
+    pjsip_ua_init_param  ua_init_param;
     pj_status_t status;
 
 
@@ -694,7 +696,11 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
 
     /* Initialize UA layer module: */
-    status = pjsip_ua_init_module( pjsua_var.endpt, NULL );
+    pj_bzero(&ua_init_param, sizeof(ua_init_param));
+    if (ua_cfg->hangup_forked_call) {
+	ua_init_param.on_dlg_forked = &on_dlg_forked;
+    }
+    status = pjsip_ua_init_module( pjsua_var.endpt, &ua_init_param);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
 

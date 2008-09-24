@@ -832,6 +832,10 @@ retry_on_deadlock:
 	    if (mod_ua.param.on_dlg_forked) {
 		dlg = (*mod_ua.param.on_dlg_forked)(dlg_set->dlg_list.next, 
 						    rdata);
+		if (dlg == NULL) {
+		    pj_mutex_unlock(mod_ua.mutex);
+		    return PJ_TRUE;
+		}
 	    } else {
 		dlg = dlg_set->dlg_list.next;
 

@@ -1230,6 +1230,20 @@ typedef struct pjsua_config
     int		     srtp_secure_signaling;
 #endif
 
+    /**
+     * Disconnect other call legs when more than one 2xx responses for 
+     * outgoing INVITE are received due to forking. Currently the library
+     * is not able to handle simultaneous forked media, so disconnecting
+     * the other call legs is necessary. 
+     *
+     * With this setting enabled, the library will handle only one of the
+     * connected call leg, and the other connected call legs will be
+     * disconnected. 
+     *
+     * Default: PJ_TRUE (only disable this setting for testing purposes).
+     */
+    pj_bool_t	     hangup_forked_call;
+
 } pjsua_config;
 
 

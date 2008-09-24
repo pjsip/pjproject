@@ -580,31 +580,39 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
 				    pjsip_dialog **new_dlg )
 {
     pjsip_dialog *dlg;
-    const pjsip_route_hdr *r;
+    const pjsip_msg *msg = rdata->msg_info.msg;
+    const pjsip_hdr *end_hdr, *hdr;
+    const pjsip_contact_hdr *contact;
     pj_status_t status;
 
     /* Check arguments. */
     PJ_ASSERT_RETURN(first_dlg && rdata && new_dlg, PJ_EINVAL);
     
     /* rdata must be response message. */
-    PJ_ASSERT_RETURN(rdata->msg_info.msg->type == PJSIP_RESPONSE_MSG,
+    PJ_ASSERT_RETURN(msg->type == PJSIP_RESPONSE_MSG,
 		     PJSIP_ENOTRESPONSEMSG);
 
     /* Status code MUST be 1xx (but not 100), or 2xx */
-    status = rdata->msg_info.msg->line.status.code;
+    status = msg->line.status.code;
     PJ_ASSERT_RETURN( (status/100==1 && status!=100) ||
 		      (status/100==2), PJ_EBUG);
 
     /* To tag must present in the response. */
     PJ_ASSERT_RETURN(rdata->msg_info.to->tag.slen != 0, PJSIP_EMISSINGTAG);
 
+    /* Find Contact header in the response */
+    contact = (const pjsip_contact_hdr*)
+	      pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
+    if (contact == NULL)
+	return PJSIP_EMISSINGHDR;
+
     /* Create the dialog. */
     status = create_dialog((pjsip_user_agent*)first_dlg->ua, &dlg);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Clone remote target. */
-    dlg->target = (pjsip_uri*) pjsip_uri_clone(dlg->pool, first_dlg->target);
+    /* Set remote target from the response. */
+    dlg->target = (pjsip_uri*) pjsip_uri_clone(dlg->pool, contact->uri);
 
     /* Clone local info. */
     dlg->local.info = (pjsip_fromto_hdr*) 
@@ -636,7 +644,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     dlg->role = PJSIP_ROLE_UAC;
 
     /* Dialog state depends on the response. */
-    status = rdata->msg_info.msg->line.status.code/100;
+    status = msg->line.status.code/100;
     if (status == 1 || status == 2)
 	dlg->state = PJSIP_DIALOG_STATE_ESTABLISHED;
     else {
@@ -651,17 +659,18 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     dlg->call_id = (pjsip_cid_hdr*) 
     		   pjsip_hdr_clone(dlg->pool, first_dlg->call_id);
 
-    /* Duplicate Route-Set. */
+    /* Get route-set from the response. */
     pj_list_init(&dlg->route_set);
-    r = first_dlg->route_set.next;
-    while (r != &first_dlg->route_set) {
-	pjsip_route_hdr *h;
-
-	h = (pjsip_route_hdr*) pjsip_hdr_clone(dlg->pool, r);
-	pj_list_push_back(&dlg->route_set, h);
-
-	r = r->next;
+    end_hdr = &msg->hdr;
+    for (hdr=msg->hdr.prev; hdr!=end_hdr; hdr=hdr->prev) {
+	if (hdr->type == PJSIP_H_RECORD_ROUTE) {
+	    pjsip_route_hdr *r;
+	    r = (pjsip_route_hdr*) pjsip_hdr_clone(dlg->pool, hdr);
+	    pjsip_routing_hdr_set_route(r);
+	    pj_list_push_back(&dlg->route_set, r);
+	}
     }
+
     //dlg->route_set_frozen = PJ_TRUE;
 
     /* Clone client authentication session. */
@@ -1811,6 +1820,41 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 
 	if (processed)
 	    break;
+    }
+
+    /* Handle the case of forked response, when the application creates
+     * the forked dialog but not the invite session. In this case, the
+     * forked 200/OK response will be unhandled, and we must send ACK
+     * here.
+     */
+    if (dlg->usage_cnt==0) {
+	pj_status_t status;
+
+	if (rdata->msg_info.cseq->method.id==PJSIP_INVITE_METHOD && 
+	    rdata->msg_info.msg->line.status.code/100 == 2) 
+	{
+	    pjsip_tx_data *ack;
+
+	    status = pjsip_dlg_create_request(dlg, &pjsip_ack_method,
+					      rdata->msg_info.cseq->cseq,
+					      &ack);
+	    if (status == PJ_SUCCESS)
+		status = pjsip_dlg_send_request(dlg, ack, -1, NULL);
+	} else if (rdata->msg_info.msg->line.status.code==401 ||
+		   rdata->msg_info.msg->line.status.code==407)
+	{
+	    pjsip_transaction *tsx = pjsip_rdata_get_tsx(rdata);
+	    pjsip_tx_data *tdata;
+	    
+	    status = pjsip_auth_clt_reinit_req( &dlg->auth_sess, 
+						rdata, tsx->last_tx,
+						&tdata);
+	    
+	    if (status == PJ_SUCCESS) {
+		/* Re-send request. */
+		status = pjsip_dlg_send_request(dlg, tdata, -1, NULL);
+	    }
+	}
     }
 
     /* Unhandled response does not necessarily mean error because

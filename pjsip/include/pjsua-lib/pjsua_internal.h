@@ -498,7 +498,7 @@ void pjsua_parse_media_type( pj_pool_t *pool,
 void pjsua_init_tpselector(pjsua_transport_id tp_id,
 			   pjsip_tpselector *sel);
 
-
+pjsip_dialog* on_dlg_forked(pjsip_dialog *first_set, pjsip_rx_data *res);
 pj_status_t acquire_call(const char *title,
                          pjsua_call_id call_id,
                          pjsua_call **p_call,
