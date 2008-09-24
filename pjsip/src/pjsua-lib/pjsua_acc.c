@@ -537,6 +537,25 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
     return PJ_SUCCESS;
 }
 
+/* Check if IP is private IP address */
+static pj_bool_t is_private_ip(const pj_str_t *addr)
+{
+    const pj_str_t private_net[] = 
+    {
+	{ "10.", 3 },
+	{ "127.", 4 },
+	{ "172.16.", 7 },
+	{ "192.168.", 8 }
+    };
+    unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(private_net); ++i) {
+	if (pj_strncmp(addr, &private_net[i], private_net[i].slen)==0)
+	    return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
 
 /* Update NAT address from the REGISTER response */
 static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
@@ -548,6 +567,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     int rport;
     pjsip_sip_uri *uri;
     pjsip_via_hdr *via;
+    pj_str_t srv_ip;
 
     tp = param->rdata->tp_info.transport;
 
@@ -613,9 +633,25 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	return PJ_FALSE;
     }
 
+    /* Get server IP */
+    srv_ip = pj_str(param->rdata->pkt_info.src_name);
+
     /* At this point we've detected that the address as seen by registrar.
      * has changed.
      */
+
+    /* Do not switch if both Contact and server's IP address are
+     * public but response contains private IP. A NAT in the middle
+     * might have messed up with the SIP packets.
+     */
+    if (!is_private_ip(&uri->host) && !is_private_ip(&srv_ip) &&
+	is_private_ip(via_addr))
+    {
+	/* Don't switch */
+	pj_pool_release(pool);
+	return PJ_FALSE;
+    }
+
     PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
 			 "(%.*s:%d --> %.*s:%d). Updating registration..",
 			 acc->index,
