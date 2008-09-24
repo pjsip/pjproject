@@ -342,6 +342,12 @@ static void generate_tone(struct gen_state *state,
 #   define TRACE_(expr)
 #endif
 
+enum flags
+{
+    PJMEDIA_TONE_INITIALIZED	= 1,
+    PJMEDIA_TONE_ENABLE_FADE	= 2
+};
+
 struct tonegen
 {
     pjmedia_port	base;
@@ -349,7 +355,6 @@ struct tonegen
     /* options */
     unsigned		options;
     unsigned		playback_options;
-    pj_bool_t		has_fading;	/* Enable fade-in and fade-out	 */
     unsigned		fade_in_len;	/* fade in for this # of samples */
     unsigned		fade_out_len;	/* fade out for this # of samples*/
 
@@ -438,7 +443,6 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_create2(pj_pool_t *pool,
     tonegen->base.on_destroy = &tonegen_destroy;
     tonegen->digit_map = &digit_map;
 
-    tonegen->has_fading = PJ_TRUE;
     tonegen->fade_in_len = PJMEDIA_TONEGEN_FADE_IN_TIME * clock_rate / 1000;
     tonegen->fade_out_len = PJMEDIA_TONEGEN_FADE_OUT_TIME * clock_rate / 1000;
 
@@ -595,7 +599,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	TRACE_((THIS_FILE, "tonegen_get_frame(): next digit"));
     }
 
-    if (tonegen->cur_digit > tonegen->count) {
+    if (tonegen->cur_digit >= tonegen->count) {
 	/* After we're finished with the last digit, we have played all 
 	 * the digits 
 	 */
@@ -620,7 +624,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
     end = dst + port->info.samples_per_frame;
 
     while (dst < end) {
-	const pjmedia_tone_desc *dig = &tonegen->digits[tonegen->cur_digit];
+	pjmedia_tone_desc *dig = &tonegen->digits[tonegen->cur_digit];
 	unsigned required, cnt, on_samp, off_samp;
 
 	required = end - dst;
@@ -628,9 +632,17 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	off_samp = dig->off_msec * clock_rate / 1000;
 
 	/* Init tonegen */
-	if (tonegen->dig_samples == 0) {
+	if (tonegen->dig_samples == 0 && 
+	    (tonegen->count!=1 || !(dig->flags & PJMEDIA_TONE_INITIALIZED)))
+	{
 	    init_generate_tone(&tonegen->state, port->info.clock_rate,
 			       dig->freq1, dig->freq2, dig->volume);
+	    dig->flags |= PJMEDIA_TONE_INITIALIZED;
+	    if (tonegen->cur_digit > 0) {
+		/* Clear initialized flag of previous digit */
+		tonegen->digits[tonegen->cur_digit-1].flags &= 
+						(~PJMEDIA_TONE_INITIALIZED);
+	    }
 	}
 
 	/* Add tone signal */
@@ -645,7 +657,9 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    tonegen->dig_samples += cnt;
 	    required -= cnt;
 
-	    if (tonegen->has_fading && tonegen->dig_samples == cnt) {
+	    if ((dig->flags & PJMEDIA_TONE_ENABLE_FADE) && 
+		tonegen->dig_samples == cnt) 
+	    {
 		/* Fade in */
 		short *samp = (dst - cnt);
 		short *end;
@@ -662,7 +676,9 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 			scale += step;
 		    }
 		}
-	    } else if (tonegen->has_fading && tonegen->dig_samples==on_samp) {
+	    } else if ((dig->flags & PJMEDIA_TONE_ENABLE_FADE) &&
+			tonegen->dig_samples==on_samp) 
+	    {
 		/* Fade out */
 		if (cnt > tonegen->fade_out_len)
 		    cnt = tonegen->fade_out_len;
@@ -771,15 +787,16 @@ PJ_DEF(pj_status_t) pjmedia_tonegen_play( pjmedia_port *port,
      * Disable fading if tone off time is zero. Application probably
      * wants to play this tone continuously (e.g. dial tone).
      */
-    tonegen->has_fading = PJ_TRUE;
     for (i=0; i<count; ++i) {
 	pjmedia_tone_desc *t = &tonegen->digits[i+tonegen->count];
 	if (t->volume == 0)
 	    t->volume = AMP;
 	else if (t->volume < 0)
 	    t->volume = (short) -t->volume;
-	if (t->off_msec == 0)
-	    tonegen->has_fading = PJ_FALSE;
+	/* Reset flags */
+	t->flags = 0;
+	if (t->off_msec != 0)
+	    t->flags |= PJMEDIA_TONE_ENABLE_FADE;
     }
 
     tonegen->count += count;

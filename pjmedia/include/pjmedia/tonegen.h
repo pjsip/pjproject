@@ -65,6 +65,7 @@ typedef struct pjmedia_tone_desc
     short   off_msec;	    /**< Playback OFF duration, ini miliseconds.    */
     short   volume;	    /**< Volume (1-32767), or 0 for default, which
 				 PJMEDIA_TONEGEN_VOLUME will be used.	    */
+    short   flags;	    /**< Currently internal flags, must be 0	    */
 } pjmedia_tone_desc;
 
 
