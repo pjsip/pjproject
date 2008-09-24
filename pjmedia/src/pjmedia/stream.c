@@ -1669,7 +1669,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     else
 	jb_max = 500 / stream->codec_param.info.frm_ptime;
 
-    if (info->jb_min_pre >= 0)
+    if (info->jb_min_pre > 0)
 	jb_min_pre = info->jb_min_pre;
     else
 	//jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
@@ -1681,11 +1681,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	//jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
 	jb_max_pre = jb_max * 4 / 5;
 
-    if (info->jb_init >= 0)
+    if (info->jb_init > 0)
 	jb_init = info->jb_init;
     else
 	//jb_init = (jb_min_pre + jb_max_pre) / 2;
-	jb_init = jb_min_pre;
+	jb_init = 0;
 
 
     /* Create jitter buffer */

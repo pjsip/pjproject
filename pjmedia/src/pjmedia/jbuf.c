@@ -32,7 +32,6 @@
 
 #define SAFE_SHRINKING_DIFF	1
 #define MIN_SHRINK_GAP_MSEC	200
-#define USE_PREFETCH_BUFFERING	0
 
 typedef struct jb_framelist_t
 {
@@ -66,6 +65,7 @@ struct pjmedia_jbuf
     int		    jb_prefetch;	  // no. of frame to insert before removing some
 					  // (at the beginning of the framelist->flist_buffer operation)
     int		    jb_prefetch_cnt;	  // prefetch counter
+    int		    jb_def_prefetch;	  // Default prefetch
     int		    jb_min_prefetch;	  // Minimum allowable prefetch
     int		    jb_max_prefetch;	  // Maximum allowable prefetch
     int		    jb_status;		  // status is 'init' until the	first 'put' operation
@@ -78,6 +78,7 @@ struct pjmedia_jbuf
 
 #define JB_STATUS_INITIALIZING	0
 #define JB_STATUS_PROCESSING	1
+#define JB_STATUS_PREFETCHING	2
 
 /* Enabling this would log the jitter buffer state about once per 
  * second.
@@ -343,7 +344,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_fixed( pjmedia_jbuf *jb,
     PJ_ASSERT_RETURN(prefetch <= jb->jb_max_count, PJ_EINVAL);
 
     jb->jb_min_prefetch = jb->jb_max_prefetch = 
-	jb->jb_prefetch = prefetch;
+	jb->jb_prefetch = jb->jb_def_prefetch = prefetch;
 
     return PJ_SUCCESS;
 }
@@ -364,7 +365,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
 		     max_prefetch <= jb->jb_max_count,
 		     PJ_EINVAL);
 
-    jb->jb_prefetch = prefetch;
+    jb->jb_prefetch = jb->jb_def_prefetch = prefetch;
     jb->jb_min_prefetch = min_prefetch;
     jb->jb_max_prefetch = max_prefetch;
 
@@ -422,13 +423,13 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	     */
 	    if (jb->jb_stable_hist > STABLE_HISTORY_LIMIT) {
 		
-		/* Update max_hist_level. */
-		jb->jb_max_hist_level = jb->jb_prefetch;
-
 		diff = (jb->jb_prefetch - jb->jb_max_hist_level) / 3;
 
 		if (diff < 1)
 		    diff = 1;
+
+		/* Update max_hist_level. */
+		jb->jb_max_hist_level = jb->jb_prefetch;
 
 		jb->jb_prefetch -= diff;
 		if (jb->jb_prefetch < jb->jb_min_prefetch) 
@@ -541,8 +542,23 @@ PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb,
 				     PJ_MAX(jb->jb_max_count/4,1) );
 	}
 
-	if (jb->jb_prefetch_cnt < jb->jb_prefetch)	
+	if (jb->jb_prefetch_cnt < jb->jb_prefetch) {
 	    jb->jb_prefetch_cnt += seq_diff;
+	    
+	    TRACE__((jb->name.ptr, "PUT prefetch_cnt=%d/%d", 
+		     jb->jb_prefetch_cnt, jb->jb_prefetch));
+
+	    if (jb->jb_status == JB_STATUS_PREFETCHING && 
+		jb->jb_prefetch_cnt >= jb->jb_prefetch)
+	    {
+		int diff, cur_size;
+
+		cur_size = jb_framelist_size(&jb->jb_framelist);
+		jb->jb_status = JB_STATUS_PROCESSING;
+	    }
+	}
+
+
 
 	if (discarded)
 	    *discarded = PJ_FALSE;
@@ -582,13 +598,15 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 
     jbuf_update(jb, JB_OP_GET);
 
-#if USE_PREFETCH_BUFFERING
-
     if (jb_framelist_size(&jb->jb_framelist) == 0) {
 	jb->jb_prefetch_cnt = 0;
+	if (jb->jb_def_prefetch)
+	    jb->jb_status = JB_STATUS_PREFETCHING;
     }
 
-    if ((jb->jb_prefetch_cnt < jb->jb_prefetch)) {
+    if (jb->jb_status == JB_STATUS_PREFETCHING && 
+	jb->jb_prefetch_cnt < jb->jb_prefetch)
+    {
 	/* Can't return frame because jitter buffer is filling up
 	 * minimum prefetch.
 	 */
@@ -601,10 +619,10 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 	if (size)
 	    *size = 0;
 
+	TRACE__((jb->name.ptr, "GET prefetch_cnt=%d/%d",
+		 jb->jb_prefetch_cnt, jb->jb_prefetch));
 	return;
     }
-
-#endif
 
     /* Retrieve a frame from frame list */
     if (jb_framelist_get(&jb->jb_framelist,frame,size,&ftype,bit_info) ==

@@ -149,14 +149,16 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_set_fixed( pjmedia_jbuf *jb,
  * Set the jitter buffer to adaptive mode.
  *
  * @param jb		The jitter buffer.
- * @param prefetch	The prefetch value to be applied to the jitter
- *			buffer.
+ * @param prefetch	The initial prefetch value to be applied to the
+ *			jitter buffer. Setting this to other than 0 will
+ *			activate prefetch buffering, a jitter buffer feature
+ *			that each time it gets empty, it won't return a 
+ *			normal frame until its size reaches the number
+ *			specified here.
  * @param min_prefetch	The minimum delay that must be applied to each
- *			incoming packets, in number of frames. The
- *			default value is zero.
+ *			incoming packets, in number of frames.
  * @param max_prefetch	The maximum allowable value for prefetch delay,
- *			in number of frames. The default value is equal
- *			to the size of the jitter buffer.
+ *			in number of frames.
  *
  * @return		PJ_SUCCESS on success.
  */
