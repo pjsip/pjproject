@@ -441,8 +441,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_clone( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && sess && rhs, PJ_EINVAL);
 
-    sess->pool = pool;
-    sess->endpt = (pjsip_endpoint*)rhs->endpt;
+    pjsip_auth_clt_init(sess, (pjsip_endpoint*)rhs->endpt, pool, 0);
+    
     sess->cred_cnt = rhs->cred_cnt;
     sess->cred_info = (pjsip_cred_info*)
     		      pj_pool_alloc(pool, 
