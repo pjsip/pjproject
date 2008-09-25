@@ -551,9 +551,6 @@ PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb,
 	    if (jb->jb_status == JB_STATUS_PREFETCHING && 
 		jb->jb_prefetch_cnt >= jb->jb_prefetch)
 	    {
-		int diff, cur_size;
-
-		cur_size = jb_framelist_size(&jb->jb_framelist);
 		jb->jb_status = JB_STATUS_PROCESSING;
 	    }
 	}
