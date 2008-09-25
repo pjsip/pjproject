@@ -360,7 +360,6 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
 {
     PJ_ASSERT_RETURN(jb, PJ_EINVAL);
     PJ_ASSERT_RETURN(min_prefetch < max_prefetch &&
-		     prefetch >= min_prefetch &&
 		     prefetch <= max_prefetch &&
 		     max_prefetch <= jb->jb_max_count,
 		     PJ_EINVAL);
