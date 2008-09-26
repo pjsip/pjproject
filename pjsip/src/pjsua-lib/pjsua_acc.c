@@ -643,9 +643,13 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Do not switch if both Contact and server's IP address are
      * public but response contains private IP. A NAT in the middle
      * might have messed up with the SIP packets.
+     *
+     * This exception can be disabled by setting allow_contact_rewrite
+     * to 2. In this case, the switch will always be done whenever there
+     * is difference in the IP address in the response.
      */
-    if (!is_private_ip(&uri->host) && !is_private_ip(&srv_ip) &&
-	is_private_ip(via_addr))
+    if (acc->cfg.allow_contact_rewrite != 2 && !is_private_ip(&uri->host) &&
+	!is_private_ip(&srv_ip) && is_private_ip(via_addr))
     {
 	/* Don't switch */
 	pj_pool_release(pool);
