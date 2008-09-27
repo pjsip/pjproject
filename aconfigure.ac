@@ -176,6 +176,7 @@ AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)],[],
           	  #	include <winsock.h>
           	  #endif
           	 ])
+AC_CHECK_HEADER(ws2tcpip.h,[AC_DEFINE(PJ_HAS_WS2TCPIP_H,1)])
 AC_CHECK_HEADER(uuid/uuid.h,[ac_has_uuid_h=1])
 AC_CHECK_HEADER(net/if.h,[AC_DEFINE(PJ_HAS_NET_IF_H,1)],[],
 		 [#if PJ_HAS_SYS_SOCKET_H

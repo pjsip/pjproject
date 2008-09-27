@@ -32,6 +32,11 @@
 #  include <winsock.h>
 #endif
 
+#if defined(PJ_HAS_WS2TCPIP_H) && PJ_HAS_WS2TCPIP_H != 0
+#   include <ws2tcpip.h>
+#endif
+
+
 /*
  * IPv6 for Visual Studio's
  *
@@ -58,9 +63,6 @@
 #	define s_addr  S_un.S_addr
 #   endif
 
-#   include <ws2tcpip.h>
-#   define PJ_WS2TCPIP_H_INCLUDED
-
 #   if !defined(IPPROTO_IPV6)
 	/* Need to download and install IPv6Kit for this platform.
 	 * Please see the comments above about Visual Studio 6.
@@ -70,11 +72,6 @@
 
 #   define PJ_SOCK_HAS_GETADDRINFO  1
 #endif	/* _MSC_VER */
-
-/* Mingw32 needs ws2tcpip.h for the IGMP constants */
-#if defined(__GNUC__) && defined(WIN32) && !defined(PJ_WS2TCPIP_H_INCLUDED)
-#   include <ws2tcpip.h>
-#endif
 
 #if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
 #  include <sys/types.h>

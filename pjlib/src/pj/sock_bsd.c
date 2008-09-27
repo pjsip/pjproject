@@ -115,12 +115,20 @@ const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
 const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
 const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
+/* Multicasting is not supported e.g. in PocketPC 2003 SDK */
+#ifdef IP_MULTICAST_IF
 const pj_uint16_t PJ_IP_MULTICAST_IF    = IP_MULTICAST_IF;
 const pj_uint16_t PJ_IP_MULTICAST_TTL   = IP_MULTICAST_TTL;
 const pj_uint16_t PJ_IP_MULTICAST_LOOP  = IP_MULTICAST_LOOP;
 const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = IP_ADD_MEMBERSHIP;
 const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = IP_DROP_MEMBERSHIP;
-
+#else
+const pj_uint16_t PJ_IP_MULTICAST_IF    = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_TTL   = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_LOOP  = 0xFFFF;
+const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = 0xFFFF;
+const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
+#endif
 
 /* recv() and send() flags */
 const int PJ_MSG_OOB		= MSG_OOB;

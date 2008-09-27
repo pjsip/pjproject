@@ -59,6 +59,7 @@
 #define PJ_HAS_MSWSOCK_H	    1
 #define PJ_HAS_WINSOCK_H	    0
 #define PJ_HAS_WINSOCK2_H	    1
+#define PJ_HAS_WS2TCPIP_H	    1
 
 #define PJ_SOCK_HAS_INET_ATON	    0
 
