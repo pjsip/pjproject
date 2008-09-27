@@ -66,11 +66,11 @@ const pj_uint16_t PJ_SO_RCVBUF  = 0xFFFF;
 const pj_uint16_t PJ_SO_SNDBUF  = 0xFFFF;
 
 /* IP multicast is also not supported. */
-const pj_uint16_t pj_IP_MULTICAST_IF    = 0xFFFF;
-const pj_uint16_t pj_IP_MULTICAST_TTL   = 0xFFFF;
-const pj_uint16_t pj_IP_MULTICAST_LOOP  = 0xFFFF;
-const pj_uint16_t pj_IP_ADD_MEMBERSHIP  = 0xFFFF;
-const pj_uint16_t pj_IP_DROP_MEMBERSHIP = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_IF    = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_TTL   = 0xFFFF;
+const pj_uint16_t PJ_IP_MULTICAST_LOOP  = 0xFFFF;
+const pj_uint16_t PJ_IP_ADD_MEMBERSHIP  = 0xFFFF;
+const pj_uint16_t PJ_IP_DROP_MEMBERSHIP = 0xFFFF;
 
 /* Flags */
 const int PJ_MSG_OOB	     = 0;

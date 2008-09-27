@@ -53,14 +53,15 @@
  * These VS uses Microsoft Platform SDK for Windows Server 2003 SP1, and
  * it has built-in IPv6 support.
  */
-#if defined(_MSC_VER)
+#if defined(_MSC_VER) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 #   ifndef s_addr
 #	define s_addr  S_un.S_addr
 #   endif
 
 #   include <ws2tcpip.h>
+#   define PJ_WS2TCPIP_H_INCLUDED
 
-#   if !defined(IPPROTO_IPV6) && defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+#   if !defined(IPPROTO_IPV6)
 	/* Need to download and install IPv6Kit for this platform.
 	 * Please see the comments above about Visual Studio 6.
 	 */
@@ -70,6 +71,10 @@
 #   define PJ_SOCK_HAS_GETADDRINFO  1
 #endif	/* _MSC_VER */
 
+/* Mingw32 needs ws2tcpip.h for the IGMP constants */
+#if defined(__GNUC__) && defined(WIN32) && !defined(PJ_WS2TCPIP_H_INCLUDED)
+#   include <ws2tcpip.h>
+#endif
 
 #if defined(PJ_HAS_SYS_TYPES_H) && PJ_HAS_SYS_TYPES_H != 0
 #  include <sys/types.h>
