@@ -517,7 +517,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	return;
     }
     /* Bail out if local user is talking */
-    if (ec->sum_rec_level > sum_play_level) {
+    if (ec->sum_rec_level >= sum_play_level) {
 	echo_supp_set_state(ec, ST_LOCAL_TALK, ulaw);
 	return;
     }
@@ -543,7 +543,7 @@ static void echo_supp_update(echo_supp *ec, pj_int16_t *rec_frm,
 	}
 
 	/* Bail out if local user is talking */
-	if (ec->sum_rec_level > sum_play_level) {
+	if (ec->sum_rec_level >= sum_play_level) {
 	    echo_supp_set_state(ec, ST_LOCAL_TALK, ulaw);
 	    return;
 	}
