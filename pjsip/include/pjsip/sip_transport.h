@@ -554,8 +554,8 @@ struct pjsip_tx_data
  *
  * @see pjsip_endpt_create_tdata
  */
-pj_status_t pjsip_tx_data_create( pjsip_tpmgr *mgr,
-                                  pjsip_tx_data **tdata );
+PJ_DECL(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
+					   pjsip_tx_data **tdata );
 
 /**
  * Add reference counter to the transmit buffer. The reference counter controls
