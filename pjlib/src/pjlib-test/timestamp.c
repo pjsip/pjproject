@@ -51,7 +51,7 @@ static int timestamp_accuracy()
 {
     pj_timestamp freq, t1, t2;
     pj_time_val tv1, tv2, tvtmp;
-    pj_uint32_t msec, tics;
+    pj_int64_t msec, tics;
     pj_int64_t diff;
 
     PJ_LOG(3,(THIS_FILE, "...testing frequency accuracy (pls wait)"));
@@ -65,7 +65,7 @@ static int timestamp_accuracy()
     } while (PJ_TIME_VAL_EQ(tvtmp, tv1));
     pj_get_timestamp(&t1);
 
-    /* Sleep for 5 seconds */
+    /* Sleep for 10 seconds */
     pj_thread_sleep(10000);
 
     /* Get end time */
@@ -80,7 +80,7 @@ static int timestamp_accuracy()
     msec = PJ_TIME_VAL_MSEC(tv2);
 
     /* Check that the frequency match the elapsed time */
-    tics = (unsigned)(t2.u64 - t1.u64);
+    tics = t2.u64 - t1.u64;
     diff = tics - (msec * freq.u64 / 1000);
     if (diff < 0)
 	diff = -diff;
