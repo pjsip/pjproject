@@ -144,6 +144,8 @@ int check_pjlib_state(pj_stun_config *cfg,
 
 pj_pool_factory *mem;
 
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+		      PJ_LOG_HAS_MICRO_SEC;
 
 static int test_inner(void)
 {
@@ -154,8 +156,7 @@ static int test_inner(void)
 
 #if 1
     pj_log_set_level(3);
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
+    pj_log_set_decor(param_log_decor);
 #endif
 
     rc = pj_init();
