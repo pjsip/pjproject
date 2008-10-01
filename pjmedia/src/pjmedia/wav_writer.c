@@ -291,7 +291,7 @@ static pj_status_t flush_buffer(struct file_port *fport)
     pj_status_t status;
 
     /* Convert samples to little endian */
-    swap_samples((pj_int16_t*)fport->buf, bytes/BYTES_PER_SAMPLE);
+    swap_samples((pj_int16_t*)fport->buf, bytes/fport->bytes_per_sample);
 
     /* Write to file. */
     status = pj_file_write(fport->fd, fport->buf, &bytes);
