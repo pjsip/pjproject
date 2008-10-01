@@ -42,6 +42,8 @@ void app_perror(const char *msg, pj_status_t rc)
 
 pj_pool_factory *mem;
 
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+		      PJ_LOG_HAS_MICRO_SEC;
 
 static int test_inner(void)
 {
@@ -51,8 +53,7 @@ static int test_inner(void)
     mem = &caching_pool.factory;
 
     pj_log_set_level(3);
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
+    pj_log_set_decor(param_log_decor);
 
     rc = pj_init();
     if (rc != 0) {
