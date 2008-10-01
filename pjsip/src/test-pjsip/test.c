@@ -47,6 +47,8 @@
 
 pjsip_endpoint *endpt;
 int log_level = 3;
+int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
+		      PJ_LOG_HAS_MICRO_SEC;
 
 static pj_oshandle_t fd_report;
 const char *system_name = "Unknown";
@@ -233,10 +235,7 @@ int test_main(void)
     int line;
 
     pj_log_set_level(log_level);
-    /*
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
-                     PJ_LOG_HAS_MICRO_SEC);
-     */
+    pj_log_set_decor(param_log_decor);
 
     if ((rc=pj_init()) != PJ_SUCCESS) {
 	app_perror("pj_init", rc);

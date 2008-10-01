@@ -51,6 +51,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjnath_wince"="..\..\..\pjnath\build\wince-evc4\pjnath_wince.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjsip_core_wince"=".\pjsip_core_wince.vcp" - Package Owner=<4>
 
 Package=<5>
@@ -95,6 +107,42 @@ Package=<5>
 
 Package=<4>
 {{{
+}}}
+
+###############################################################################
+
+Project: "test_pjsip_wince"=".\test_pjsip_wince.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name pjlib_util_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjlib_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_core_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_simple_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsip_ua_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjsua_lib_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjnath_wince
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_wince
+    End Project Dependency
 }}}
 
 ###############################################################################
