@@ -48,6 +48,8 @@ static struct global
     pj_thread_t		*thread;
     pj_bool_t		 quit;
 
+    pj_dns_resolver	*resolver;
+
     pj_turn_sock	*relay;
     pj_sockaddr		 relay_addr;
 
@@ -64,6 +66,7 @@ static struct options
     char	*password;
     pj_bool_t	 use_fingerprint;
     char	*stun_server;
+    char	*nameserver;
 } o;
 
 
@@ -243,6 +246,25 @@ static pj_status_t create_relay(void)
 	return -1;
     }
 
+    /* Create DNS resolver if configured */
+    if (o.nameserver) {
+	pj_str_t ns = pj_str(o.nameserver);
+
+	status = pj_dns_resolver_create(&g.cp.factory, "resolver", 0, 
+					g.stun_config.timer_heap, 
+					g.stun_config.ioqueue, &g.resolver);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,(THIS_FILE, "Error creating resolver (err=%d)", status));
+	    return status;
+	}
+
+	status = pj_dns_resolver_set_ns(g.resolver, 1, &ns, NULL);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,(THIS_FILE, "Error configuring nameserver (err=%d)", status));
+	    return status;
+	}
+    }
+
     pj_bzero(&rel_cb, sizeof(rel_cb));
     rel_cb.on_rx_data = &turn_on_rx_data;
     rel_cb.on_state = &turn_on_state;
@@ -267,7 +289,7 @@ static pj_status_t create_relay(void)
     CHECK(pj_turn_sock_alloc(g.relay,				 /* the relay */
 			    &srv,				 /* srv addr */
 			    (o.srv_port?atoi(o.srv_port):PJ_STUN_PORT),/* def port */
-			    NULL,				 /* resolver */
+			    g.resolver,				 /* resolver */
 			    (o.user_name?&cred:NULL),		 /* credential */
 			    NULL)				 /* alloc param */
 			    );
@@ -502,7 +524,8 @@ static void usage(void)
     puts(" --username, -u UID    Set username of the credential to UID");
     puts(" --password, -p PASSWD Set password of the credential to PASSWD");
     puts(" --fingerprint, -F     Use fingerprint for outgoing requests");
-    puts(" --stun-srv, -S        Use this STUN srv instead of TURN for Binding discovery");
+    puts(" --stun-srv, -S  NAME  Use this STUN srv instead of TURN for Binding discovery");
+    puts(" --nameserver, -N IP   Activate DNS SRV, use this DNS server");
     puts(" --help, -h");
 }
 
@@ -515,13 +538,14 @@ int main(int argc, char *argv[])
 	{ "fingerprint",0, 0, 'F'},
 	{ "tcp",        0, 0, 'T'},
 	{ "help",	0, 0, 'h'},
-	{ "stun-srv",   1, 0, 'S'}
+	{ "stun-srv",   1, 0, 'S'},
+	{ "nameserver", 1, 0, 'N'}
     };
     int c, opt_id;
     char *pos;
     pj_status_t status;
 
-    while((c=pj_getopt_long(argc,argv, "r:u:p:S:hFT", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "r:u:p:S:N:hFT", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'r':
 	    o.realm = pj_optarg;
@@ -543,6 +567,9 @@ int main(int argc, char *argv[])
 	    break;
 	case 'S':
 	    o.stun_server = pj_optarg;
+	    break;
+	case 'N':
+	    o.nameserver = pj_optarg;
 	    break;
 	default:
 	    printf("Argument \"%s\" is not valid. Use -h to see help",
