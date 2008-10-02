@@ -38,14 +38,14 @@ struct pj_pool_mem
 };
 
 
-typedef struct pj_pool_t
+struct pj_pool_t
 {
     struct pj_pool_mem *first_mem;
     pj_pool_factory    *factory;
     char	        obj_name[32];
     pj_size_t		used_size;
     pj_pool_callback   *cb;
-} pj_pool_t;
+};
 
 
 #define PJ_POOL_SIZE	        (sizeof(struct pj_pool_t))
@@ -167,17 +167,27 @@ typedef struct pj_pool_factory_policy
 
 } pj_pool_factory_policy;
 
-typedef struct pj_pool_factory
+struct pj_pool_factory
 {
     pj_pool_factory_policy policy;
     int dummy;
-} pj_pool_factory;
+};
 
-typedef struct pj_caching_pool 
+struct pj_caching_pool 
 {
     pj_pool_factory factory;
-} pj_caching_pool;
 
+    /* just to make it compilable */
+    unsigned used_count;
+    unsigned used_size;
+    unsigned peak_used_size;
+};
+
+/* just to make it compilable */
+typedef struct pj_pool_block
+{
+    int dummy;
+} pj_pool_block;
 
 #define pj_caching_pool_init( cp, pol, mac)
 #define pj_caching_pool_destroy(cp)
