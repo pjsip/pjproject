@@ -529,8 +529,8 @@ PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec,
 	/* rhigh <= output high band pcm */
 
 	rx_qmf(dec, rlow, rhigh, &pcm1, &pcm2);
-	out[i*2] = (pj_int16_t)pcm1;
-	out[i*2+1] = (pj_int16_t)pcm2;
+	out[i*2] = (pj_int16_t)(pcm1 << 2);
+	out[i*2+1] = (pj_int16_t)(pcm2 << 2);
     }
 
     *nsamples = in_size << 1;
