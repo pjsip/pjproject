@@ -2155,8 +2155,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 {
     pjmedia_port *conf_port;
     const pjmedia_snd_dev_info *play_info;
-    unsigned clock_rates[] = {0, 22050, 44100, 48000, 32000, 16000, 
-			      8000};
+    unsigned clock_rates[] = {0, 44100, 48000, 32000, 16000, 8000};
     unsigned selected_clock_rate = 0;
     unsigned i;
     pjmedia_snd_stream *strm;
