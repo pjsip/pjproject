@@ -1,4 +1,4 @@
-/* $Id:$ */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -29,15 +29,18 @@
 #endif
 
 
-int main()
+int main(int argc, char *argv[])
 {
     int rc;
     char s[10];
 
     rc = test_main();
 
-    puts("\nPress <ENTER> to quit");
-    fgets(s, sizeof(s), stdin);
+    if (argc == 2 && argv[1][0]=='-' && argv[1][1]=='i') {
+	puts("\nPress <ENTER> to quit");
+	fgets(s, sizeof(s), stdin);
+    }
 
     return rc;
 }
+ 
