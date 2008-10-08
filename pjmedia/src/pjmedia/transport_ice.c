@@ -1425,9 +1425,9 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
     }
 
     /* Set remote address originating RTP & RTCP if this transport has 
-     * received any packets.
+     * ICE activated or received any packets.
      */
-    if (tp_ice->rtp_src_cnt) {
+    if (tp_ice->use_ice || tp_ice->rtp_src_cnt) {
 	info->src_rtp_name  = tp_ice->rtp_src_addr;
 	info->src_rtcp_name = tp_ice->rtcp_src_addr;
     }
