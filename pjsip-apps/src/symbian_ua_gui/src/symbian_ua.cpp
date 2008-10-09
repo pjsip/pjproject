@@ -400,6 +400,8 @@ int symbian_ua_destroy()
     // Close connection and socket server
     aConn.Close();
     aSocketServer.Close();
+    
+    CloseSTDLIB();
 
     return PJ_SUCCESS;
 }

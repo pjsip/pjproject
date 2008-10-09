@@ -46,8 +46,6 @@ Csymbian_ua_guiAppUi::~Csymbian_ua_guiAppUi()
 	// [[[ begin generated region: do not modify [Generated Contents]
 	TRAPD( err_Dlg_wait_init, RemoveDlg_wait_initL() );
 	// ]]] end generated region [Generated Contents]
-
-	symbian_ua_destroy();
 	}
 
 // [[[ begin generated function: do not modify
@@ -80,6 +78,7 @@ void Csymbian_ua_guiAppUi::HandleCommandL( TInt aCommand )
 		{
 		if ( aCommand == EAknSoftkeyExit || aCommand == EEikCmdExit )
 			{
+		    	symbian_ua_destroy();
 			Exit();
 			}
 		}
@@ -157,6 +156,7 @@ void Csymbian_ua_guiAppUi::ConstructL()
 	
 	// Init PJSUA
 	if (symbian_ua_init() != 0) {
+	    symbian_ua_destroy();
 	    Exit();
 	}
 	
