@@ -367,7 +367,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add_local( pjsua_transport_id tid,
     }
 
     /* Don't add transport parameter if it's UDP */
-    if ((t->type & PJSIP_TRANSPORT_UDP) == 0) {
+    if (t->type!=PJSIP_TRANSPORT_UDP && t->type!=PJSIP_TRANSPORT_UDP6) {
 	pj_ansi_snprintf(transport_param, sizeof(transport_param),
 		         ";transport=%s",
 			 pjsip_transport_get_type_name(t->type));
@@ -1651,7 +1651,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     }
 
     /* Don't add transport parameter if it's UDP */
-    if ((tp_type & PJSIP_TRANSPORT_UDP) == 0) {
+    if (tp_type!=PJSIP_TRANSPORT_UDP && tp_type!=PJSIP_TRANSPORT_UDP6) {
 	pj_ansi_snprintf(transport_param, sizeof(transport_param),
 		         ";transport=%s",
 			 pjsip_transport_get_type_name(tp_type));
@@ -1801,7 +1801,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     }
 
     /* Don't add transport parameter if it's UDP */
-    if ((tp_type & PJSIP_TRANSPORT_UDP) == 0) {
+    if (tp_type!=PJSIP_TRANSPORT_UDP && tp_type!=PJSIP_TRANSPORT_UDP6) {
 	pj_ansi_snprintf(transport_param, sizeof(transport_param),
 		         ";transport=%s",
 			 pjsip_transport_get_type_name(tp_type));
