@@ -413,7 +413,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: CRLF
  */
 #ifndef PJSIP_TCP_KEEP_ALIVE_DATA
-#   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n", 2 }
+#   define PJSIP_TCP_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
 #endif
 
 
@@ -436,7 +436,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Default: CRLF
  */
 #ifndef PJSIP_TLS_KEEP_ALIVE_DATA
-#   define PJSIP_TLS_KEEP_ALIVE_DATA	    { "\r\n", 2 }
+#   define PJSIP_TLS_KEEP_ALIVE_DATA	    { "\r\n\r\n", 4 }
 #endif
 
 
