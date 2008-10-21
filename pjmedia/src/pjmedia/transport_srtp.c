@@ -260,6 +260,8 @@ const char* get_libsrtp_errstr(int err)
 #endif
 }
 
+static void pjmedia_srtp_deinit_lib(void);
+
 static pj_status_t pjmedia_srtp_init_lib(void)
 {
     static pj_bool_t initialized = PJ_FALSE;
@@ -273,10 +275,30 @@ static pj_status_t pjmedia_srtp_init_lib(void)
 	    return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	}
 
+	if (pj_atexit(pjmedia_srtp_deinit_lib) != PJ_SUCCESS) {
+	    /* There will be memory leak when it fails to schedule libsrtp 
+	     * deinitialization, however the memory leak could be harmless,
+	     * since in modern OS's memory used by an application is released 
+	     * when the application terminates.
+	     */
+	    PJ_LOG(4, (THIS_FILE, "Failed to register libsrtp deinit."));
+	}
+
 	initialized = PJ_TRUE;
     }
     
     return PJ_SUCCESS;
+}
+
+static void pjmedia_srtp_deinit_lib(void)
+{
+    err_status_t err;
+
+    err = srtp_deinit();
+    if (err != err_status_ok) {
+	PJ_LOG(4, (THIS_FILE, "Failed to deinitialize libsrtp: %s", 
+		   get_libsrtp_errstr(err)));
+    }
 }
 
 static int get_crypto_idx(const pj_str_t* crypto_name)

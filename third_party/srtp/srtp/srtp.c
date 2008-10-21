@@ -1102,6 +1102,15 @@ srtp_init() {
   return err_status_ok;
 }
 
+err_status_t
+srtp_deinit() {
+  err_status_t status;
+
+  status = crypto_kernel_shutdown();
+
+  return status;
+}
+
 /* 
  * The following code is under consideration for removal.  See
  * SRTP_MAX_TRAILER_LEN 

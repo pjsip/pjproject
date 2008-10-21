@@ -258,6 +258,16 @@ err_status_t
 srtp_init(void);
 
 /**
+ * @brief srtp_deinit() deinitializes the srtp library.  
+ *
+ * @warning This function @b must be called on quitting application or
+ * after srtp is no longer used.
+ */
+
+err_status_t
+srtp_deinit(void);
+
+/**
  * @brief srtp_protect() is the Secure RTP sender-side packet processing
  * function.
  * 
