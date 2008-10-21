@@ -1110,14 +1110,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    parse_version(&scanner, &ctx);
 		    break;
 		case 13:
-		    /* Allow empty newline at the end of the message */
-		    pj_scan_get_char(&scanner);
-		    /* Continue below */
 		case 10:
 		    pj_scan_get_char(&scanner);
-		    if (!pj_scan_is_eof(&scanner)) {
-			ctx.last_error = PJMEDIA_SDP_EINSDP;
-			on_scanner_error(&scanner);
+		    /* Allow empty newlines at the end of the message */
+		    while (!pj_scan_is_eof(&scanner)) {
+			if (*scanner.curptr != 13 && *scanner.curptr != 10) {
+			    ctx.last_error = PJMEDIA_SDP_EINSDP;
+			    on_scanner_error(&scanner);
+			}
+			pj_scan_get_char(&scanner);
 		    }
 		    break;
 		default:
