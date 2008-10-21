@@ -805,21 +805,32 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	    return status;
 	}
 	
-	/* Verify address family matches */
-	if ((tp_ice->af==pj_AF_INET() && 
-	     pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
-	    (tp_ice->af==pj_AF_INET6() && 
-	     pj_strcmp(&rtcp_attr.addr_type, &STR_IP6)!=0))
-	{
-	    return PJMEDIA_SDP_ETPORTNOTEQUAL;
-	}
+	if (rtcp_attr.addr.slen) {
+	    /* Verify address family matches */
+	    if ((tp_ice->af==pj_AF_INET() && 
+		 pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
+		(tp_ice->af==pj_AF_INET6() && 
+		 pj_strcmp(&rtcp_attr.addr_type, &STR_IP6)!=0))
+	    {
+		return PJMEDIA_SDP_ETPORTNOTEQUAL;
+	    }
 
-	/* Assign RTCP address */
-	status = pj_sockaddr_init(tp_ice->af, &rtcp_addr,
-				  &rtcp_attr.addr,
-				  (pj_uint16_t)rtcp_attr.port);
-	if (status != PJ_SUCCESS) {
-	    return PJMEDIA_SDP_EINRTCP;
+	    /* Assign RTCP address */
+	    status = pj_sockaddr_init(tp_ice->af, &rtcp_addr,
+				      &rtcp_attr.addr,
+				      (pj_uint16_t)rtcp_attr.port);
+	    if (status != PJ_SUCCESS) {
+		return PJMEDIA_SDP_EINRTCP;
+	    }
+	} else {
+	    /* Assign RTCP address */
+	    status = pj_sockaddr_init(tp_ice->af, &rtcp_addr, 
+				      NULL, 
+				      (pj_uint16_t)rtcp_attr.port);
+	    if (status != PJ_SUCCESS) {
+		return PJMEDIA_SDP_EINRTCP;
+	    }
+	    pj_sockaddr_copy_addr(&rtcp_addr, &rem_conn_addr);
 	}
 
 	sdp_state->match_comp_cnt = 2;
