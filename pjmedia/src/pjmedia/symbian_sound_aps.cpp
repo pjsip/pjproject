@@ -728,8 +728,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
     pi->channel_count = strm->channel_count;
     pi->samples_per_frame = strm->samples_per_frame;
     pi->bits_per_sample = BYTES_PER_SAMPLE * 8;
-    pi->rec_latency = 0;
-    pi->play_latency = 0;
+    // latencies approximation (in samples)
+    pi->rec_latency  = strm->samples_per_frame * 2;
+    pi->play_latency = strm->samples_per_frame * 2;
 
     return PJ_SUCCESS;
 }

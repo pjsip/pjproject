@@ -850,8 +850,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
     pi->channel_count = strm->channel_count;
     pi->samples_per_frame = strm->samples_per_frame;
     pi->bits_per_sample = BYTES_PER_SAMPLE * 8;
-    pi->rec_latency = 0;
-    pi->play_latency = 0;
+    // Symbian uses 4096 bytes buffer (~2048 samples/256 ms) for PCM rec & play.
+    // The latencies below are rounded up to be a multiplication of 80.
+    pi->rec_latency  = 2080;
+    pi->play_latency = 2080;
 
     return PJ_SUCCESS;
 }
