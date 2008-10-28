@@ -164,6 +164,10 @@ SOURCE="..\src\pjmedia-codec\speex_codec.c"
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
+SOURCE="..\include\pjmedia-codec\amr_helper.h"
+# End Source File
+# Begin Source File
+
 SOURCE="..\include\pjmedia-codec\config.h"
 # End Source File
 # Begin Source File

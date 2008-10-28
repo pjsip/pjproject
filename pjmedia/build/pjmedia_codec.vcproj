@@ -297,6 +297,10 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
+				RelativePath="..\include\pjmedia-codec\amr_helper.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjmedia-codec\config.h"
 				>
 			</File>
