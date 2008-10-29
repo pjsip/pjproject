@@ -604,7 +604,7 @@ typedef struct pjmedia_codec_amr_bit_info {
     pj_uint8_t frame_type;	/**< AMR frame type.			*/
     pj_int8_t  mode;		/**< AMR mode.				*/
     pj_uint8_t start_bit;	/**< Frame start bit.			*/
-    pj_uint8_t good_quality:1;	/**< Flag if frame contains good data.	*/
+    pj_uint8_t good_quality:1;	/**< Flag if frame is good/degraded.	*/
 } pjmedia_codec_amr_bit_info;
 #pragma pack()
 
@@ -613,12 +613,14 @@ typedef struct pjmedia_codec_amr_bit_info {
  * This structure describes AMR settings.
  */
 typedef struct pjmedia_codec_amr_settings {
-    pj_bool_t  amr_nb;		/**< TRUE for AMR-NB, FALSE for AMR-WB	*/
-    pj_uint8_t CMR;		/**< Change Mode Request, 
-				     in band message from encoder.	*/
+    pj_bool_t  amr_nb;		/**< TRUE for AMR-NB, FALSE for AMR-WB.	*/
+    pj_bool_t  reorder;		/**< Reorder bitstream into descending 
+				     sensitivity order or vice versa.	*/
     pj_uint8_t octet_aligned;	/**< TRUE if payload is in octet-aligned mode,
 				     FALSE if payload is in bandwidth 
 				     efficient mode.			*/
+    pj_uint8_t CMR;		/**< Change Mode Request for remote
+				     encoder.				*/
 } pjmedia_codec_amr_settings;
 
 
@@ -630,9 +632,9 @@ typedef struct pjmedia_codec_amr_settings {
  * @return	    AMR mode.
  */
 
-PJ_INLINE(int) pjmedia_codec_amr_get_mode(unsigned bitrate)
+PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
 {
-    int mode = -1;
+    pj_int8_t mode = -1;
 
     if(bitrate==4750){
 	mode = 0;
@@ -675,20 +677,23 @@ PJ_INLINE(int) pjmedia_codec_amr_get_mode(unsigned bitrate)
 }
 
 /**
- * Rearrange AMR bitstream from sensitivity bits order into encoder bits order.
- * This will also make the start_bit to be 0. Basically this function should be
- * called before invoking decoder.
+ * Prepare a frame before pass it to decoder. This function will do:
+ * - reorder AMR bitstream from descending sensitivity order into 
+ *   encoder bits order. This can be enabled/disabled via param 
+ *   'setting' by setting/resetting field 'reorder'.
+ * - align left the start bit (make the start_bit to be 0).
  *
  * @param amr_nb    Set PJ_TRUE for AMR-NB and PJ_FALSE for AMR-WB.
  * @param in	    Input frame.
+ * @param setting   Settings, see @pjmedia_codec_amr_settings.
  * @param out	    Output frame.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_INLINE(pj_status_t) pjmedia_codec_amr_reorder_sens_to_enc(
-						pj_bool_t amr_nb,
-						const pjmedia_frame *in,
-						pjmedia_frame *out)
+PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
+				    const pjmedia_frame *in,
+				    const pjmedia_codec_amr_settings *setting,
+				    pjmedia_frame *out)
 {
     pj_int8_t    amr_bits[477 + 7] = {0};
     pj_int8_t   *p_amr_bits = &amr_bits[0];
@@ -712,7 +717,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_reorder_sens_to_enc(
 
     *out_info = *in_info;
 
-    if (amr_nb) {
+    if (setting->amr_nb) {
 	SID_FT		= 8;
 	framelen_tbl	= pjmedia_codec_amrnb_framelen;
 	framelenbit_tbl = pjmedia_codec_amrnb_framelenbits;
@@ -750,19 +755,27 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_reorder_sens_to_enc(
     if (in_info->frame_type < SID_FT) {
 
 	/* Speech */
-	const pj_int16_t *order_map;
-
 	out_info->mode = in_info->frame_type;
 	out->size = framelen_tbl[out_info->mode];
 	PJ_ASSERT_RETURN(out->size <= in->size, PJMEDIA_CODEC_EFRMINLEN);
 
-	order_map = order_maps[out_info->mode];
 	pj_bzero(out->buf, out->size);
-	for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
-	    if (amr_bits[i]) {
-		pj_uint16_t bitpos;
-		bitpos = order_map[i];
-		w[bitpos>>3] |= 1 << (7 - (bitpos % 8));
+
+	if (setting->reorder) {
+	    const pj_int16_t *order_map;
+
+	    order_map = order_maps[out_info->mode];
+	    for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
+		if (amr_bits[i]) {
+		    pj_uint16_t bitpos;
+		    bitpos = order_map[i];
+		    w[bitpos>>3] |= 1 << (7 - (bitpos % 8));
+		}
+	    }
+	} else {
+	    for(i = 0; i < framelenbit_tbl[out_info->mode]; ++i) {
+		if (amr_bits[i])
+		    w[i >> 3] |= 1 << (7 - (i % 8));
 	    }
 	}
 
@@ -772,7 +785,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_reorder_sens_to_enc(
 	pj_uint8_t w_bitptr = 0;
 	pj_uint8_t FT_;
 
-	if (amr_nb)
+	if (setting->amr_nb)
 	    FT_ = (pj_uint8_t)((amr_bits[36] << 2) | (amr_bits[37] << 1) | 
 	                       amr_bits[38]);
 	else
@@ -948,19 +961,33 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
 	if (info->frame_type < SID_FT) {
 
 	    /* Speech */
-	    const pj_int16_t *order_map;
-
-	    /* Put bits in the packet, sensitivity descending ordered */
-	    order_map = order_maps[info->frame_type];
 	    if (w_bitptr == 0) *w = 0;
-	    for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
-		if (amr_bits[order_map[j]])
-		    *w |= (1 << (7-w_bitptr));
 
-		if (++w_bitptr == 8) {
-		    w_bitptr = 0;
-		    ++w;
-		    *w = 0;
+	    if (setting->reorder) {
+		const pj_int16_t *order_map;
+
+		/* Put bits in the packet, sensitivity descending ordered */
+		order_map = order_maps[info->frame_type];
+		for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
+		    if (amr_bits[order_map[j]])
+			*w |= (1 << (7-w_bitptr));
+
+		    if (++w_bitptr == 8) {
+			w_bitptr = 0;
+			++w;
+			*w = 0;
+		    }
+		}
+	    } else {
+		for(j = 0; j < framelenbit_tbl[info->frame_type]; ++j) {
+		    if (amr_bits[j])
+			*w |= (1 << (7-w_bitptr));
+
+		    if (++w_bitptr == 8) {
+			w_bitptr = 0;
+			++w;
+			*w = 0;
+		    }
 		}
 	    }
 
@@ -1018,7 +1045,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
  * @param setting   Settings, see @pjmedia_codec_amr_settings.
  * @param frames    Frames parsed.
  * @param nframes   Number of frames parsed.
- * @param CMR	    Change Mode Request message from the encoder.
+ * @param CMR	    Change Mode Request message for local encoder.
  *
  * @return	    PJ_SUCCESS on success.
  */

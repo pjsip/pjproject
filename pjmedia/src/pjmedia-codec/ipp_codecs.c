@@ -114,6 +114,7 @@ static struct ipp_factory {
 /* IPP codecs private data. */
 typedef struct ipp_private {
     int			 codec_idx;	    /**< Codec index.		    */
+    void		*codec_setting;	    /**< Specific codec setting.    */
     pj_pool_t		*pool;		    /**< Pool for each instance.    */
 
     USC_Handle		 enc;		    /**< Encoder state.		    */
@@ -121,12 +122,14 @@ typedef struct ipp_private {
     USC_CodecInfo	*info;		    /**< Native codec info.	    */
     pj_uint16_t		 frame_size;	    /**< Bitstream frame size.	    */
 
-    pj_bool_t		 plc_enabled;
-    pjmedia_plc		*plc;
+    pj_bool_t		 plc_enabled;	    /**< PLC enabled flag.	    */
+    pjmedia_plc		*plc;		    /**< PJMEDIA PLC engine, NULL if 
+						 codec has internal PLC.    */
 
-    pj_bool_t		 vad_enabled;
-    pjmedia_silence_det	*vad;
-    pj_timestamp	 last_tx;
+    pj_bool_t		 vad_enabled;	    /**< VAD enabled flag.	    */
+    pjmedia_silence_det	*vad;		    /**< PJMEDIA VAD engine, NULL if 
+						 codec has internal VAD.    */
+    pj_timestamp	 last_tx;	    /**< Timestamp of last transmit.*/
 } ipp_private_t;
 
 
@@ -419,6 +422,13 @@ static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
 
 #include <pjmedia-codec/amr_helper.h>
 
+typedef struct amr_settings_t {
+    pjmedia_codec_amr_settings enc_setting;
+    pjmedia_codec_amr_settings dec_setting;
+    pj_int8_t enc_mode;
+} amr_settings_t;
+
+
 /* Rearrange AMR bitstream and convert RTP frame into USC frame:
  * - make the start_bit to be 0
  * - if it is speech frame, reorder bitstream from sensitivity bits order
@@ -431,17 +441,18 @@ static void predecode_amr( ipp_private_t *codec_data,
 {
     pjmedia_frame frame;
     pjmedia_codec_amr_bit_info *info;
-    pj_bool_t amr_nb;
+    pjmedia_codec_amr_settings *setting;
 
-    amr_nb = (ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMR);
+    setting = &((amr_settings_t*)codec_data->codec_setting)->dec_setting;
+
     frame = *rtp_frame;
-    pjmedia_codec_amr_reorder_sens_to_enc(amr_nb, rtp_frame, &frame);
+    pjmedia_codec_amr_predecode(rtp_frame, setting, &frame);
     info = (pjmedia_codec_amr_bit_info*) &frame.bit_info;
 
     usc_frame->pBuffer = frame.buf;
     usc_frame->nbytes = frame.size;
     if (info->mode != -1) {
-	usc_frame->bitrate = amr_nb? 
+	usc_frame->bitrate = setting->amr_nb? 
 			     pjmedia_codec_amrnb_bitrates[info->mode]:
 			     pjmedia_codec_amrwb_bitrates[info->mode];
     } else {
@@ -453,7 +464,7 @@ static void predecode_amr( ipp_private_t *codec_data,
 	if (info->good_quality)
 	    usc_frame->frametype = 0;
 	else
-	    usc_frame->frametype = amr_nb ? 5 : 6;
+	    usc_frame->frametype = setting->amr_nb ? 5 : 6;
     } else if (frame.size == 5) {
 	/* SID */
 	if (info->good_quality) {
@@ -461,7 +472,7 @@ static void predecode_amr( ipp_private_t *codec_data,
 	    STI = (((pj_uint8_t*)frame.buf)[35 >> 3] & 0x10) != 0;
 	    usc_frame->frametype = STI? 2 : 1;
 	} else {
-	    usc_frame->frametype = amr_nb ? 6 : 7;
+	    usc_frame->frametype = setting->amr_nb ? 6 : 7;
 	}
     } else {
 	/* no data */
@@ -475,18 +486,16 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 {
     enum {MAX_FRAMES_PER_PACKET = 16};
 
-    pjmedia_codec_amr_settings setting;
     pjmedia_frame frames[MAX_FRAMES_PER_PACKET];
     unsigned nframes = 0;
     pjmedia_codec_amr_bit_info *info;
     pj_uint8_t *r; /* Read cursor */
     pj_uint8_t SID_FT;
+    pjmedia_codec_amr_settings *setting;
 
-    setting.amr_nb = ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMR;
-    setting.CMR = 15; /* not requesting any mode */
-    setting.octet_aligned = 0;
+    setting = &((amr_settings_t*)codec_data->codec_setting)->enc_setting;
 
-    SID_FT = (pj_uint8_t)(setting.amr_nb? 8 : 9);
+    SID_FT = (pj_uint8_t)(setting->amr_nb? 8 : 9);
 
     /* Align pkt buf right */
     r = (pj_uint8_t*)pkt + max_pkt_size - *pkt_size;
@@ -520,7 +529,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 
     /* Pack */
     *pkt_size = max_pkt_size;
-    return pjmedia_codec_amr_pack(frames, nframes, &setting, pkt, pkt_size);
+    return pjmedia_codec_amr_pack(frames, nframes, setting, pkt, pkt_size);
 }
 
 
@@ -529,14 +538,24 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 			     pj_size_t pkt_size, const pj_timestamp *ts,
 			     unsigned *frame_cnt, pjmedia_frame frames[])
 {
-    pjmedia_codec_amr_settings setting;
+    amr_settings_t* s = (amr_settings_t*)codec_data->codec_setting;
+    pjmedia_codec_amr_settings *setting;
+    pj_status_t status;
     pj_uint8_t CMR;
 
-    setting.amr_nb = ipp_codec[codec_data->codec_idx].pt == PJMEDIA_RTP_PT_AMR;
-    setting.octet_aligned = 0;
+    setting = &s->dec_setting;
 
-    return pjmedia_codec_amr_parse(pkt, pkt_size, ts, &setting, frames, 
-				   frame_cnt, &CMR);
+    status = pjmedia_codec_amr_parse(pkt, pkt_size, ts, setting, frames, 
+				     frame_cnt, &CMR);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Check Change Mode Request. */
+    if ((setting->amr_nb && CMR <= 7) || (!setting->amr_nb && CMR <= 8)) {
+	s->enc_mode = CMR;
+    }
+
+    return PJ_SUCCESS;
 }
 
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_AMR */
@@ -1000,6 +1019,29 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     codec_data->vad_enabled = (attr->setting.vad != 0);
     codec_data->plc_enabled = (attr->setting.plc != 0);
 
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
+    /* Init AMR settings */
+    if (ippc->pt == PJMEDIA_RTP_PT_AMR || ippc->pt == PJMEDIA_RTP_PT_AMRWB) {
+	amr_settings_t *s;
+
+	s = PJ_POOL_ZALLOC_T(pool, amr_settings_t);
+	codec_data->codec_setting = s;
+
+	s->enc_mode = pjmedia_codec_amr_get_mode(ippc->def_bitrate);
+	if (s->enc_mode < 0)
+	    goto on_error;
+
+	s->enc_setting.amr_nb = ippc->pt == PJMEDIA_RTP_PT_AMR;
+	s->enc_setting.octet_aligned = 0;
+	s->enc_setting.reorder = PJ_TRUE;
+	s->enc_setting.CMR = 15;
+	
+	s->dec_setting.amr_nb = ippc->pt == PJMEDIA_RTP_PT_AMR;
+	s->dec_setting.octet_aligned = 0;
+	s->dec_setting.reorder = PJ_TRUE;
+    }
+#endif
+
     return PJ_SUCCESS;
 
 on_error:
@@ -1161,8 +1203,8 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	}
 
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
-	/* For AMR: put info (frametype, degraded, last frame) in the 
-	 * first byte 
+	/* For AMR: put info (frametype, degraded, last frame, mode) in the 
+	 * first two octets for payload packing.
 	 */
 	if (pt == PJMEDIA_RTP_PT_AMR || pt == PJMEDIA_RTP_PT_AMRWB) {
 	    pj_uint16_t *info = (pj_uint16_t*)bits_out;
