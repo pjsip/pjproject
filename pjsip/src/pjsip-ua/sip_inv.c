@@ -142,8 +142,10 @@ static struct mod_inv
 /* Invite session data to be attached to transaction. */
 struct tsx_inv_data
 {
-    pjsip_inv_session	*inv;
-    pj_bool_t		 sdp_done;
+    pjsip_inv_session	*inv;	    /* The invite session		    */
+    pj_bool_t		 sdp_done;  /* SDP negotiation done for this tsx?   */
+    pj_str_t		 done_tag;  /* To tag in RX response with answer    */
+    pj_bool_t		 done_early;/* Negotiation was done for early med?  */
 };
 
 /*
@@ -1407,26 +1409,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
     static const pj_str_t str_sdp = { "sdp", 3 };
     pj_status_t status;
     pjsip_msg *msg;
-    pjmedia_sdp_session *sdp;
-
-    /* Get/attach invite session's transaction data */
-    tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
-    if (tsx_inv_data == NULL) {
-	tsx_inv_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
-	tsx_inv_data->inv = inv;
-	tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
-    }
-
-    /* MUST NOT do multiple SDP offer/answer in a single transaction. 
-     */
-
-    if (tsx_inv_data->sdp_done) {
-	if (rdata->msg_info.msg->body) {
-	    PJ_LOG(4,(inv->obj_name, "SDP negotiation done, message "
-		      "body is ignored"));
-	}
-	return PJ_SUCCESS;
-    }
+    pjmedia_sdp_session *rem_sdp;
 
     /* Check if SDP is present in the message. */
 
@@ -1443,13 +1426,76 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	return PJMEDIA_SDP_EINSDP;
     }
 
+    /* Get/attach invite session's transaction data */
+    tsx_inv_data = (struct tsx_inv_data*) tsx->mod_data[mod_inv.mod.id];
+    if (tsx_inv_data == NULL) {
+	tsx_inv_data = PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
+	tsx_inv_data->inv = inv;
+	tsx->mod_data[mod_inv.mod.id] = tsx_inv_data;
+    }
+
+    /* MUST NOT do multiple SDP offer/answer in a single transaction,
+     * EXCEPT if:
+     *	- this is an initial UAC INVITE transaction (i.e. not re-INVITE), and
+     *	- the previous negotiation was done on an early media (18x) and
+     *    this response is a final/2xx response, and
+     *  - the 2xx response has different To tag than the 18x response
+     *    (i.e. the request has forked).
+     *
+     * The exception above is to add a rudimentary support for early media
+     * forking (sample case: custom ringback). See this ticket for more
+     * info: http://trac.pjsip.org/repos/ticket/657
+     */
+    if (tsx_inv_data->sdp_done) {
+	pj_str_t res_tag;
+
+	res_tag = rdata->msg_info.to->tag;
+
+	/* Allow final response after SDP has been negotiated in early
+	 * media, IF this response is a final response with different
+	 * tag.
+	 */
+	if (tsx->role == PJSIP_ROLE_UAC &&
+	    rdata->msg_info.msg->line.status.code/100 == 2 &&
+	    tsx_inv_data->done_early &&
+	    pj_strcmp(&tsx_inv_data->done_tag, &res_tag))
+	{
+	    const pjmedia_sdp_session *reoffer_sdp = NULL;
+
+	    PJ_LOG(4,(inv->obj_name, "Received forked final response "
+		      "after SDP negotiation has been done in early "
+		      "media. Renegotiating SDP.."));
+
+	    /* Retrieve original SDP offer from INVITE request */
+	    reoffer_sdp = (const pjmedia_sdp_session*) 
+			  tsx->last_tx->msg->body->data;
+
+	    /* Feed the original offer to negotiator */
+	    status = pjmedia_sdp_neg_modify_local_offer(inv->pool, inv->neg,
+						        reoffer_sdp);
+	    if (status != PJ_SUCCESS) {
+		PJ_LOG(1,(inv->obj_name, "Error updating local offer for "
+			  "forked 2xx response (err=%d)", status));
+		return status;
+	    }
+
+	} else {
+
+	    if (rdata->msg_info.msg->body) {
+		PJ_LOG(4,(inv->obj_name, "SDP negotiation done, message "
+			  "body is ignored"));
+	    }
+	    return PJ_SUCCESS;
+	}
+    }
+
     /* Parse the SDP body. */
 
     status = pjmedia_sdp_parse(rdata->tp_info.pool, 
 			       (char*)msg->body->data,
-			       msg->body->len, &sdp);
+			       msg->body->len, &rem_sdp);
     if (status == PJ_SUCCESS)
-	status = pjmedia_sdp_validate(sdp);
+	status = pjmedia_sdp_validate(rem_sdp);
 
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
@@ -1472,9 +1518,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	if (inv->neg == NULL) {
 	    status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL, 
-							 sdp, &inv->neg);
+							 rem_sdp, &inv->neg);
 	} else {
-	    status=pjmedia_sdp_neg_set_remote_offer(inv->pool, inv->neg, sdp);
+	    status=pjmedia_sdp_neg_set_remote_offer(inv->pool, inv->neg, 
+						    rem_sdp);
 	}
 
 	if (status != PJ_SUCCESS) {
@@ -1489,13 +1536,14 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	if (mod_inv.cb.on_rx_offer && inv->notify) {
 
-	    (*mod_inv.cb.on_rx_offer)(inv, sdp);
+	    (*mod_inv.cb.on_rx_offer)(inv, rem_sdp);
 
 	}
 
     } else if (pjmedia_sdp_neg_get_state(inv->neg) == 
 		PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) 
     {
+	int status_code;
 
 	/* This is an answer. 
 	 * Process and negotiate remote answer.
@@ -1504,7 +1552,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	PJ_LOG(5,(inv->obj_name, "Got SDP answer in %s", 
 		  pjsip_rx_data_get_info(rdata)));
 
-	status = pjmedia_sdp_neg_set_remote_answer(inv->pool, inv->neg, sdp);
+	status = pjmedia_sdp_neg_set_remote_answer(inv->pool, inv->neg, 
+						   rem_sdp);
 
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
@@ -1518,9 +1567,15 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	inv_negotiate_sdp(inv);
 
-	/* Mark this transaction has having SDP offer/answer done. */
+	/* Mark this transaction has having SDP offer/answer done, and
+	 * save the reference to the To tag
+	 */
 
 	tsx_inv_data->sdp_done = 1;
+	status_code = rdata->msg_info.msg->line.status.code;
+	tsx_inv_data->done_early = (status_code/100==1);
+	pj_strdup(tsx->pool, &tsx_inv_data->done_tag, 
+		  &rdata->msg_info.to->tag);
 
     } else {
 	
