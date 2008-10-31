@@ -798,7 +798,12 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
     err_status_t err;
 
     if (srtp->bypass_srtp) {
-	srtp->rtp_cb(srtp->user_data, pkt, size);
+	/* Callback may be NULL if we receive stray packets (or when packet
+	 * is received while we're being detached/re-attached).
+	 */
+	if (srtp->rtp_cb) {
+	    srtp->rtp_cb(srtp->user_data, pkt, size);
+	}
 	return;
     }
 
@@ -858,6 +863,9 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     err_status_t err;
 
     if (srtp->bypass_srtp) {
+	/* Callback may be NULL if we receive stray packets (or when packet
+	 * is received while we're being detached/re-attached).
+	 */
 	srtp->rtcp_cb(srtp->user_data, pkt, size);
 	return;
     }
