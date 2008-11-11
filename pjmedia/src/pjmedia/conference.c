@@ -1831,9 +1831,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	/* Put this level to port's last RX level. */
 	conf_port->rx_level = level;
 
+	// Ticket #671: Skipping very low audio signal may cause noise 
+	// to be generated in the remote end by some hardphones.
 	/* Skip processing frame if level is zero */
-	if (level == 0)
-	    continue;
+	//if (level == 0)
+	//    continue;
 
 	/* Add the signal to all listeners. */
 	for (cj=0; cj < conf_port->listener_cnt; ++cj) 
