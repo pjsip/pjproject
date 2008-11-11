@@ -612,16 +612,16 @@ typedef struct pjmedia_codec_amr_bit_info {
 /**
  * This structure describes AMR settings.
  */
-typedef struct pjmedia_codec_amr_settings {
-    pj_bool_t  amr_nb;		/**< TRUE for AMR-NB, FALSE for AMR-WB.	*/
-    pj_bool_t  reorder;		/**< Reorder bitstream into descending 
+typedef struct pjmedia_codec_amr_pack_setting {
+    pj_uint8_t amr_nb:1;	/**< Set 1 for AMR-NB, 0 for AMR-WB.	*/
+    pj_uint8_t reorder:1;	/**< Reorder bitstream into descending 
 				     sensitivity order or vice versa.	*/
-    pj_uint8_t octet_aligned;	/**< TRUE if payload is in octet-aligned mode,
+    pj_uint8_t octet_aligned:1;	/**< TRUE if payload is in octet-aligned mode,
 				     FALSE if payload is in bandwidth 
 				     efficient mode.			*/
-    pj_uint8_t CMR;		/**< Change Mode Request for remote
+    pj_uint8_t cmr:4;		/**< Change Mode Request for remote
 				     encoder.				*/
-} pjmedia_codec_amr_settings;
+} pjmedia_codec_amr_pack_setting;
 
 
 /**
@@ -685,15 +685,15 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
  *
  * @param amr_nb    Set PJ_TRUE for AMR-NB and PJ_FALSE for AMR-WB.
  * @param in	    Input frame.
- * @param setting   Settings, see @pjmedia_codec_amr_settings.
+ * @param setting   Settings, see @pjmedia_codec_amr_pack_setting.
  * @param out	    Output frame.
  *
  * @return	    PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
-				    const pjmedia_frame *in,
-				    const pjmedia_codec_amr_settings *setting,
-				    pjmedia_frame *out)
+			    const pjmedia_frame *in,
+			    const pjmedia_codec_amr_pack_setting *setting,
+			    pjmedia_frame *out)
 {
     pj_int8_t    amr_bits[477 + 7] = {0};
     pj_int8_t   *p_amr_bits = &amr_bits[0];
@@ -757,7 +757,6 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
 	/* Speech */
 	out_info->mode = in_info->frame_type;
 	out->size = framelen_tbl[out_info->mode];
-	PJ_ASSERT_RETURN(out->size <= in->size, PJMEDIA_CODEC_EFRMINLEN);
 
 	pj_bzero(out->buf, out->size);
 
@@ -825,7 +824,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
  *
  * @param frames    AMR frames to be packed.
  * @param nframes   Number of frames to be packed.
- * @param setting   Settings, see @pjmedia_codec_amr_settings.
+ * @param setting   Settings, see @pjmedia_codec_amr_pack_setting.
  * @param pkt	    Payload.
  * @param pkt_size  Payload size, as input this specifies payload maximum size,
  *		    as output this specifies payload packed size.
@@ -833,11 +832,11 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
  * @return	    PJ_SUCCESS on success.
  */
 PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
-				    const pjmedia_frame frames[],
-				    unsigned nframes,
-				    const pjmedia_codec_amr_settings *setting,
-				    void *pkt, 
-				    pj_size_t *pkt_size)
+			    const pjmedia_frame frames[],
+			    unsigned nframes,
+			    const pjmedia_codec_amr_pack_setting *setting,
+			    void *pkt, 
+			    pj_size_t *pkt_size)
 {
     /* Write cursor */
     pj_uint8_t *w = (pj_uint8_t*)pkt;
@@ -875,7 +874,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
     }
 
     /* Code Mode Request, 4 bits */
-    *w = (pj_uint8_t)(setting->CMR << 4);
+    *w = (pj_uint8_t)(setting->cmr << 4);
     w_bitptr = 4;
     if (setting->octet_aligned) {
 	++w;
@@ -1042,21 +1041,21 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
  * @param pkt	    Payload.
  * @param pkt_size  Payload size.
  * @param ts	    Base timestamp.
- * @param setting   Settings, see @pjmedia_codec_amr_settings.
+ * @param setting   Settings, see @pjmedia_codec_amr_pack_setting.
  * @param frames    Frames parsed.
  * @param nframes   Number of frames parsed.
- * @param CMR	    Change Mode Request message for local encoder.
+ * @param cmr	    Change Mode Request message for local encoder.
  *
  * @return	    PJ_SUCCESS on success.
  */
 PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
-				     void *pkt, 
-				     pj_size_t pkt_size, 
-				     const pj_timestamp *ts,
-				     const pjmedia_codec_amr_settings* setting,
-				     pjmedia_frame frames[], 
-				     unsigned *nframes,
-				     pj_uint8_t *CMR)
+			     void *pkt, 
+			     pj_size_t pkt_size, 
+			     const pj_timestamp *ts,
+			     const pjmedia_codec_amr_pack_setting* setting,
+			     pjmedia_frame frames[], 
+			     unsigned *nframes,
+			     pj_uint8_t *cmr)
 {
     unsigned cnt = 0;
     pj_timestamp ts_ = *ts;
@@ -1089,7 +1088,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
     PJ_UNUSED_ARG(pkt_size);
 
     /* Code Mode Request, 4 bits */
-    *CMR = (pj_uint8_t)((*r >> 4) & 0x0F);
+    *cmr = (pj_uint8_t)((*r >> 4) & 0x0F);
     r_bitptr = 4;
     if (setting->octet_aligned) {
 	++r;

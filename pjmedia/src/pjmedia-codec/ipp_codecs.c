@@ -229,6 +229,7 @@ ipp_codec[] =
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
 		    5900, 12200, 4, 1, 1, 
 		    &predecode_amr, &parse_amr, &pack_amr
+		    /*, {1, {{{"octet-align", 11}, {"1", 1}}} } */
     },
 #   endif
 
@@ -423,8 +424,8 @@ static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
 #include <pjmedia-codec/amr_helper.h>
 
 typedef struct amr_settings_t {
-    pjmedia_codec_amr_settings enc_setting;
-    pjmedia_codec_amr_settings dec_setting;
+    pjmedia_codec_amr_pack_setting enc_setting;
+    pjmedia_codec_amr_pack_setting dec_setting;
     pj_int8_t enc_mode;
 } amr_settings_t;
 
@@ -441,7 +442,7 @@ static void predecode_amr( ipp_private_t *codec_data,
 {
     pjmedia_frame frame;
     pjmedia_codec_amr_bit_info *info;
-    pjmedia_codec_amr_settings *setting;
+    pjmedia_codec_amr_pack_setting *setting;
 
     setting = &((amr_settings_t*)codec_data->codec_setting)->dec_setting;
 
@@ -491,7 +492,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
     pjmedia_codec_amr_bit_info *info;
     pj_uint8_t *r; /* Read cursor */
     pj_uint8_t SID_FT;
-    pjmedia_codec_amr_settings *setting;
+    pjmedia_codec_amr_pack_setting *setting;
 
     setting = &((amr_settings_t*)codec_data->codec_setting)->enc_setting;
 
@@ -539,20 +540,20 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 			     unsigned *frame_cnt, pjmedia_frame frames[])
 {
     amr_settings_t* s = (amr_settings_t*)codec_data->codec_setting;
-    pjmedia_codec_amr_settings *setting;
+    pjmedia_codec_amr_pack_setting *setting;
     pj_status_t status;
-    pj_uint8_t CMR;
+    pj_uint8_t cmr;
 
     setting = &s->dec_setting;
 
     status = pjmedia_codec_amr_parse(pkt, pkt_size, ts, setting, frames, 
-				     frame_cnt, &CMR);
+				     frame_cnt, &cmr);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Check Change Mode Request. */
-    if ((setting->amr_nb && CMR <= 7) || (!setting->amr_nb && CMR <= 8)) {
-	s->enc_mode = CMR;
+    if ((setting->amr_nb && cmr <= 7) || (!setting->amr_nb && cmr <= 8)) {
+	s->enc_mode = cmr;
     }
 
     return PJ_SUCCESS;
@@ -1023,6 +1024,19 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     /* Init AMR settings */
     if (ippc->pt == PJMEDIA_RTP_PT_AMR || ippc->pt == PJMEDIA_RTP_PT_AMRWB) {
 	amr_settings_t *s;
+	pj_uint8_t octet_align = 0;
+	const pj_str_t STR_FMTP_OCTET_ALIGN = {"octet-align", 11};
+
+	/* Check octet-align */
+	for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
+	    if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, 
+			   &STR_FMTP_OCTET_ALIGN) == 0)
+	    {
+		octet_align=(pj_uint8_t)
+			    (pj_strtoul(&attr->setting.dec_fmtp.param[i].val));
+		break;
+	    }
+	}
 
 	s = PJ_POOL_ZALLOC_T(pool, amr_settings_t);
 	codec_data->codec_setting = s;
@@ -1032,12 +1046,12 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	    goto on_error;
 
 	s->enc_setting.amr_nb = ippc->pt == PJMEDIA_RTP_PT_AMR;
-	s->enc_setting.octet_aligned = 0;
+	s->enc_setting.octet_aligned = octet_align;
 	s->enc_setting.reorder = PJ_TRUE;
-	s->enc_setting.CMR = 15;
+	s->enc_setting.cmr = 15;
 	
 	s->dec_setting.amr_nb = ippc->pt == PJMEDIA_RTP_PT_AMR;
-	s->dec_setting.octet_aligned = 0;
+	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = PJ_TRUE;
     }
 #endif
