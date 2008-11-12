@@ -40,7 +40,7 @@ struct wmme_dev_info
 
 static unsigned dev_count;
 static struct wmme_dev_info dev_info[MAX_HARDWARE];
-static int snd_init_count;
+static pj_bool_t snd_initialized = PJ_FALSE;
 
 /* Latency settings */
 static unsigned snd_input_latency  = PJMEDIA_SND_DEFAULT_REC_LATENCY;
@@ -483,8 +483,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
     int i;
     int inputDeviceCount, outputDeviceCount, maximumPossibleDeviceCount;
 
-    if (++snd_init_count != 1)
+    if (snd_initialized)
 	return PJ_SUCCESS;
+
+    pj_bzero(&dev_info, sizeof(dev_info));
 
     dev_count = 0;
     pool_factory = factory;
@@ -617,7 +619,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
  */
 PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
 {
-    --snd_init_count;
+    snd_initialized = PJ_FALSE;
     return PJ_SUCCESS;
 }
 
