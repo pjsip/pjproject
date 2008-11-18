@@ -222,7 +222,9 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
     ++sd->sum_cnt;
     avg_recent_level = (sd->sum_level / sd->sum_cnt);
 
-    if (level > sd->threshold) {
+    if (level > sd->threshold || 
+	(level >> 8) >= PJMEDIA_SILENCE_DET_MAX_THRESHOLD)
+    {
 	sd->silence_timer = 0;
 	sd->voiced_timer += sd->ptime;
 
