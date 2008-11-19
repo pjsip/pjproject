@@ -425,7 +425,7 @@
 /**
  * Suggested or default threshold to be set for fixed silence detection
  * or as starting threshold for adaptive silence detection. The threshold
- * has the range from zero to 255.
+ * has the range from zero to 0xFFFF.
  */
 #ifndef PJMEDIA_SILENCE_DET_THRESHOLD
 #   define PJMEDIA_SILENCE_DET_THRESHOLD	4
@@ -437,10 +437,12 @@
  * will not cut the audio transmission if the audio level is above this
  * level.
  *
- * Default: 25
+ * Use 0x10000 (or greater) to disable this feature.
+ *
+ * Default: 0x10000 (disabled)
  */
 #ifndef PJMEDIA_SILENCE_DET_MAX_THRESHOLD
-#   define PJMEDIA_SILENCE_DET_MAX_THRESHOLD	25
+#   define PJMEDIA_SILENCE_DET_MAX_THRESHOLD	0x10000
 #endif
 
 

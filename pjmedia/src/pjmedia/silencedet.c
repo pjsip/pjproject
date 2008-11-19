@@ -25,7 +25,7 @@
 
 #define THIS_FILE   "silencedet.c"
 
-#if 0
+#if 1
 #   define TRACE_(x)	PJ_LOG(3,x)
 #else
 #   define TRACE_(x)
@@ -223,7 +223,7 @@ PJ_DEF(pj_bool_t) pjmedia_silence_det_apply( pjmedia_silence_det *sd,
     avg_recent_level = (sd->sum_level / sd->sum_cnt);
 
     if (level > sd->threshold || 
-	(level >> 8) >= PJMEDIA_SILENCE_DET_MAX_THRESHOLD)
+	level >= PJMEDIA_SILENCE_DET_MAX_THRESHOLD)
     {
 	sd->silence_timer = 0;
 	sd->voiced_timer += sd->ptime;
