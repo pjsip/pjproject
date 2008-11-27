@@ -230,12 +230,19 @@ typedef struct pjsip_inv_callback
      *
      * @param inv	The invite session.
      * @param target	The current target to be tried.
-     * @param cmd	Action to be performed for the target. Set this
+     * @param e		The event that caused this callback to be called.
+     *			This could be the receipt of 3xx response, or
+     *			4xx/5xx response received for the INVITE sent to
+     *			subsequent targets, or NULL if this callback is
+     *			called from within #pjsip_inv_process_redirect()
+     *			context.
+     *
+     * @return		Action to be performed for the target. Set this
      *			parameter to one of the value below:
      *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
-     *			  redirection (default value). When set, the
+     *			  redirection to this target. When set, the
      *			  session will immediately resend INVITE request
-     *			  to the target.
+     *			  to the target after this callback returns.
      *			- PJSIP_REDIRECT_REJECT: immediately reject this
      *			  target. The session will continue retrying with
      *			  next target if present, or disconnect the call
@@ -251,15 +258,10 @@ typedef struct pjsip_inv_callback
      *			  then MUST call #pjsip_inv_process_redirect()
      *			  to either accept or reject the redirection upon
      *			  getting user decision.
-     * @param e		The event that caused this callback to be called.
-     *			This could be the receipt of 3xx response, or
-     *			4xx/5xx response received for the INVITE sent to
-     *			subsequent targets, or NULL if this callback is
-     *			called from within #pjsip_inv_process_redirect()
-     *			context.
      */
-    void (*on_redirected)(pjsip_inv_session *inv, const pjsip_uri *target,
-			  pjsip_redirect_op *cmd, const pjsip_event *e);
+    pjsip_redirect_op (*on_redirected)(pjsip_inv_session *inv, 
+				       const pjsip_uri *target,
+				       const pjsip_event *e);
 
 } pjsip_inv_callback;
 

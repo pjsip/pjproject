@@ -1937,7 +1937,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
 				 const pj_str_t *reason, pjsip_event *e)
 {
-    pjsip_redirect_op op = PJSIP_REDIRECT_ACCEPT;
+    pjsip_redirect_op op;
     pjsip_target *target;
 
     /* Won't redirect if the callback is not implemented. */
@@ -1980,7 +1980,7 @@ static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
      */
     pjsip_target_set_set_current(&inv->dlg->target_set, target);
 
-    (*mod_inv.cb.on_redirected)(inv, target->uri, &op, e);
+    op = (*mod_inv.cb.on_redirected)(inv, target->uri, e);
 
 
     /* Check what the application wants to do now */

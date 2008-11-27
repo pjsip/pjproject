@@ -1079,7 +1079,14 @@ typedef struct pjsua_callback
      *
      * @param call_id	The call ID.
      * @param target	The current target to be tried.
-     * @param cmd	Action to be performed for the target. Set this
+     * @param e		The event that caused this callback to be called.
+     *			This could be the receipt of 3xx response, or
+     *			4xx/5xx response received for the INVITE sent to
+     *			subsequent targets, or NULL if this callback is
+     *			called from within #pjsua_call_process_redirect()
+     *			context.
+     *
+     * @return		Action to be performed for the target. Set this
      *			parameter to one of the value below:
      *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
      *			  redirection (default value). When set, the
@@ -1100,15 +1107,10 @@ typedef struct pjsua_callback
      *			  then MUST call #pjsua_call_process_redirect()
      *			  to either accept or reject the redirection upon
      *			  getting user decision.
-     * @param e		The event that caused this callback to be called.
-     *			This could be the receipt of 3xx response, or
-     *			4xx/5xx response received for the INVITE sent to
-     *			subsequent targets, or NULL if this callback is
-     *			called from within #pjsua_call_process_redirect()
-     *			context.
      */
-    void (*on_call_redirected)(pjsua_call_id call_id, const pjsip_uri *target,
-			       pjsip_redirect_op *cmd, const pjsip_event *e);
+    pjsip_redirect_op (*on_call_redirected)(pjsua_call_id call_id, 
+					    const pjsip_uri *target,
+					    const pjsip_event *e);
 
 } pjsua_callback;
 

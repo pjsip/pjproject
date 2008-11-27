@@ -68,10 +68,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 /*
  * Redirection handler.
  */
-static void pjsua_call_on_redirected(pjsip_inv_session *inv, 
-				     const pjsip_uri *target,
-				     pjsip_redirect_op *cmd, 
-				     const pjsip_event *e);
+static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
+						  const pjsip_uri *target,
+						  const pjsip_event *e);
 
 
 /* Create SDP for call hold. */
@@ -3814,25 +3813,28 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
 
 /* Redirection handler */
-static void pjsua_call_on_redirected(pjsip_inv_session *inv, 
-				     const pjsip_uri *target,
-				     pjsip_redirect_op *cmd, 
-				     const pjsip_event *e)
+static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
+						  const pjsip_uri *target,
+						  const pjsip_event *e)
 {
     pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsip_redirect_op op;
 
     PJSUA_LOCK();
 
     if (pjsua_var.ua_cfg.cb.on_call_redirected) {
-	(*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index, target, cmd, e);
+	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index, 
+							 target, e);
     } else {
 	PJ_LOG(4,(THIS_FILE, "Unhandled redirection for call %d "
 		  "(callback not implemented by application). Disconnecting "
 		  "call.",
 		  call->index));
-	*cmd = PJSIP_REDIRECT_STOP;
+	op = PJSIP_REDIRECT_STOP;
     }
 
     PJSUA_UNLOCK();
+
+    return op;
 }
 

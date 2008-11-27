@@ -2393,14 +2393,13 @@ static void call_on_dtmf_callback(pjsua_call_id call_id, int dtmf)
 /*
  * Redirection handler.
  */
-static void call_on_redirected(pjsua_call_id call_id, const pjsip_uri *target,
-			       pjsip_redirect_op *cmd, const pjsip_event *e)
+static pjsip_redirect_op call_on_redirected(pjsua_call_id call_id, 
+					    const pjsip_uri *target,
+					    const pjsip_event *e)
 {
-    *cmd = app_config.redir_op;
-
     PJ_UNUSED_ARG(e);
 
-    if (*cmd == PJSIP_REDIRECT_PENDING) {
+    if (app_config.redir_op == PJSIP_REDIRECT_PENDING) {
 	char uristr[PJSIP_MAX_URL_SIZE];
 	int len;
 
@@ -2415,6 +2414,8 @@ static void call_on_redirected(pjsua_call_id call_id, const pjsip_uri *target,
 		  "disconnect.",
 		  call_id, len, uristr));
     }
+
+    return app_config.redir_op;
 }
 
 /*
