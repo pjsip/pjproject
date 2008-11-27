@@ -49,6 +49,139 @@ static const char *event_str[] =
 static pj_str_t str_TEXT = { "text", 4},
 		str_PLAIN = { "plain", 5 };
 
+/* Add URI to target-set */
+PJ_DEF(pj_status_t) pjsip_target_set_add_uri( pjsip_target_set *tset,
+					      pj_pool_t *pool,
+					      const pjsip_uri *uri,
+					      int q1000)
+{
+    pjsip_target *t, *pos = NULL;
+
+    PJ_ASSERT_RETURN(tset && pool && uri, PJ_EINVAL);
+
+    /* Set q-value to 1 if it is not set */
+    if (q1000 <= 0)
+	q1000 = 1000;
+
+    /* Scan all the elements to see for duplicates, and at the same time
+     * get the position where the new element should be inserted to
+     * based on the q-value.
+     */
+    t = tset->head.next;
+    while (t != &tset->head) {
+	if (pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, t->uri, uri)==PJ_SUCCESS)
+	    return PJ_EEXISTS;
+	if (pos==NULL && t->q1000 < q1000)
+	    pos = t;
+	t = t->next;
+    }
+
+    /* Create new element */
+    t = PJ_POOL_ZALLOC_T(pool, pjsip_target);
+    t->uri = pjsip_uri_clone(pool, uri);
+    t->q1000 = q1000;
+
+    /* Insert */
+    if (pos == NULL)
+	pj_list_push_back(&tset->head, t);
+    else
+	pj_list_insert_before(pos, t);
+
+    /* Set current target if this is the first URI */
+    if (tset->current == NULL)
+	tset->current = t;
+
+    return PJ_SUCCESS;
+}
+
+/* Add URI's in the Contact header in the message to target-set */
+PJ_DEF(pj_status_t) pjsip_target_set_add_from_msg( pjsip_target_set *tset,
+						   pj_pool_t *pool,
+						   const pjsip_msg *msg)
+{
+    const pjsip_hdr *hdr;
+    unsigned added = 0;
+
+    PJ_ASSERT_RETURN(tset && pool && msg, PJ_EINVAL);
+
+    /* Scan for Contact headers and add the URI */
+    hdr = msg->hdr.next;
+    while (hdr != &msg->hdr) {
+	if (hdr->type == PJSIP_H_CONTACT) {
+	    const pjsip_contact_hdr *cn_hdr = (const pjsip_contact_hdr*)hdr;
+
+	    if (!cn_hdr->star) {
+		pj_status_t rc;
+		rc = pjsip_target_set_add_uri(tset, pool, cn_hdr->uri, 
+					      cn_hdr->q1000);
+		if (rc == PJ_SUCCESS)
+		    ++added;
+	    }
+	}
+	hdr = hdr->next;
+    }
+
+    return added ? PJ_SUCCESS : PJ_EEXISTS;
+}
+
+
+/* Get next target, if any */
+PJ_DEF(pjsip_target*) pjsip_target_set_get_next(const pjsip_target_set *tset)
+{
+    const pjsip_target *t, *next = NULL;
+
+    t = tset->head.next;
+    while (t != &tset->head) {
+	if (PJSIP_IS_STATUS_IN_CLASS(t->code, 200)) {
+	    /* No more target since one target has been successful */
+	    return NULL;
+	}
+	if (PJSIP_IS_STATUS_IN_CLASS(t->code, 600)) {
+	    /* No more target since one target returned global error */
+	    return NULL;
+	}
+	if (t->code==0 && next==NULL) {
+	    /* This would be the next target as long as we don't find
+	     * targets with 2xx or 6xx status after this.
+	     */
+	    next = t;
+	}
+	t = t->next;
+    }
+
+    return (pjsip_target*)next;
+}
+
+
+/* Set current target */
+PJ_DEF(pj_status_t) pjsip_target_set_set_current( pjsip_target_set *tset,
+						  pjsip_target *target)
+{
+    PJ_ASSERT_RETURN(tset && target, PJ_EINVAL);
+    PJ_ASSERT_RETURN(pj_list_find_node(tset, target) != NULL, PJ_ENOTFOUND);
+
+    tset->current = target;
+
+    return PJ_SUCCESS;
+}
+
+
+/* Assign status to a target */
+PJ_DEF(pj_status_t) pjsip_target_assign_status( pjsip_target *target,
+					        pj_pool_t *pool,
+					        int status_code,
+					        const pj_str_t *reason)
+{
+    PJ_ASSERT_RETURN(target && pool && status_code && reason, PJ_EINVAL);
+
+    target->code = status_code;
+    pj_strdup(pool, &target->reason, reason);
+
+    return PJ_SUCCESS;
+}
+
+
+
 /*
  * Initialize transmit data (msg) with the headers and optional body.
  * This will just put the headers in the message as it is. Be carefull

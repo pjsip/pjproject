@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 import imp
 import sys
 import inc_sip as sip
@@ -67,15 +67,17 @@ def test_func(test):
 					tname = ""
 				raise TestError("Excluded pattern " + pat + " found" + tname)
 		# Create response
-		response = dlg.create_response(request, t.resp_code, "Status reason")
-		# Add headers to response
-		for h in t.resp_hdr:
-			response = response + h + "\r\n"
-		# Add message body if required
-		if t.body:
-			response = response + t.body
-		# Send response
-		dlg.send_msg(response, src_addr)
+		if t.resp_code!=0:
+			response = dlg.create_response(request, t.resp_code, "Status reason")
+			# Add headers to response
+			for h in t.resp_hdr:
+				response = response + h + "\r\n"
+			# Add message body if required
+			if t.body:
+				response = response + t.body
+			# Send response
+			dlg.send_msg(response, src_addr)
+
 		# Expect something to happen in pjsua
 		if t.expect != "":
 			pjsua.expect(t.expect)

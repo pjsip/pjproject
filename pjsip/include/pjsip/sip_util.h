@@ -26,6 +26,195 @@
 PJ_BEGIN_DECL
 
 /**
+ * @defgroup PJSIP_ENDPT_TARGET_URI Target URI Management
+ * @ingroup PJSIP_CORE_CORE
+ * @brief Management of target URI's in case of redirection
+ * @{
+ * This module provides utility functions to manage target set for UAC.
+ * The target set is provided as pjsip_target_set structure. Initially,
+ * the target set for UAC contains only one target, that is the target of
+ * the initial request. When 3xx/redirection class response is received, 
+ * the UAC can use the functionality of this module to add the URI's listed
+ * in the Contact header(s) in the response to the target set, and retry 
+ * sending the request to the next destination/target. The UAC may retry 
+ * this sequentially until one of the target answers with succesful/2xx 
+ * response, or one target returns global error/6xx response, or all targets
+ * are exhausted.
+ *
+ * This module is currently used by the \ref PJSIP_INV.
+ */
+
+/**
+ * This structure describes a target, which can be chained together to form
+ * a target set. Each target contains an URI, priority (as q-value), and 
+ * the last status code and reason phrase received from the target, if the 
+ * target has been contacted. If the target has not been contacted, the 
+ * status code field will be zero.
+ */
+typedef struct pjsip_target
+{
+    PJ_DECL_LIST_MEMBER(struct pjsip_target);/**< Standard list element */
+    pjsip_uri	       *uri;	/**< The target URI		    */
+    int			q1000;	/**< q-value multiplied by 1000	    */
+    pjsip_status_code	code;	/**< Last status code received	    */
+    pj_str_t		reason;	/**< Last reason phrase received    */
+} pjsip_target;
+
+
+/**
+ * This describes a target set. A target set contains a linked-list of
+ * pjsip_target.
+ */
+typedef struct pjsip_target_set
+{
+    pjsip_target     head;	    /**< Target linked-list head    */
+    pjsip_target    *current;	    /**< Current target.	    */
+} pjsip_target_set;
+
+
+/**
+ * These enumerations specify the action to be performed to a redirect
+ * response.
+ */
+typedef enum pjsip_redirect_op
+{
+    /**
+     * Reject the redirection to the current target. The UAC will
+     * select the next target from the target set if exists.
+     */
+    PJSIP_REDIRECT_REJECT,
+
+    /**
+     * Accept the redirection to the current target. The INVITE request
+     * will be resent to the current target.
+     */
+    PJSIP_REDIRECT_ACCEPT,
+
+    /**
+     * Defer the redirection decision, for example to request permission
+     * from the end user.
+     */
+    PJSIP_REDIRECT_PENDING,
+
+    /**
+     * Stop the whole redirection process altogether. This will cause
+     * the invite session to be disconnected.
+     */
+    PJSIP_REDIRECT_STOP
+
+} pjsip_redirect_op;
+
+
+/**
+ * Initialize target set. This will empty the list of targets in the
+ * target set.
+ *
+ * @param tset	    The target set.
+ */
+PJ_INLINE(void) pjsip_target_set_init(pjsip_target_set *tset)
+{
+    pj_list_init(&tset->head);
+    tset->current = NULL;
+}
+
+
+/**
+ * Add an URI to the target set, if the URI is not already in the target set.
+ * The URI comparison rule of pjsip_uri_cmp() will be used to determine the
+ * equality of this URI compared to existing URI's in the target set. The
+ * URI will be cloned using the specified memory pool before it is added to
+ * the list.
+ *
+ * The first URI added to the target set will also be made current target
+ * by this function.
+ *
+ * @param tset	    The target set.
+ * @param pool	    The memory pool to be used to duplicate the URI.
+ * @param uri	    The URI to be checked and added.
+ * @param q1000	    The q-value multiplied by 1000.
+ *
+ * @return	    PJ_SUCCESS if the URI was added to the target set,
+ *		    or PJ_EEXISTS if the URI already exists in the target
+ *		    set, or other error codes.
+ */
+PJ_DECL(pj_status_t) pjsip_target_set_add_uri(pjsip_target_set *tset,
+					      pj_pool_t *pool,
+					      const pjsip_uri *uri,
+					      int q1000);
+
+/**
+ * Extract URI's in the Contact headers of the specified (response) message
+ * and add them to the target set. This function will also check if the 
+ * URI's already exist in the target set before adding them to the list.
+ *
+ * @param tset	    The target set.
+ * @param pool	    The memory pool to be used to duplicate the URI's.
+ * @param msg	    SIP message from which the Contact headers will be
+ *		    scanned and the URI's to be extracted, checked, and
+ *		    added to the target set.
+ *
+ * @return	    PJ_SUCCESS if at least one URI was added to the 
+ *		    target set, or PJ_EEXISTS if all URI's in the message 
+ *		    already exists in the target set or if the message
+ *		    doesn't contain usable Contact headers, or other error
+ *		    codes.
+ */
+PJ_DECL(pj_status_t) pjsip_target_set_add_from_msg(pjsip_target_set *tset,
+						   pj_pool_t *pool,
+						   const pjsip_msg *msg);
+
+/**
+ * Get the next target to be retried. This function will scan the target set
+ * for target which hasn't been tried, and return one target with the
+ * highest q-value, if such target exists. This function will return NULL
+ * if there is one target with 2xx or 6xx code or if all targets have been
+ * tried.
+ *
+ * @param tset	    The target set.
+ *
+ * @return	    The next target to be tried, or NULL if all targets have
+ *		    been tried or at least one target returns 2xx or 6xx
+ *		    response.
+ */
+PJ_DECL(pjsip_target*) 
+pjsip_target_set_get_next(const pjsip_target_set *tset);
+
+
+/**
+ * Set the specified target as the current target in the target set. The
+ * current target may be used by application to keep track on which target
+ * is currently being operated on.
+ *
+ * @param tset	    The target set.
+ * @param target    The target to be set as current target.
+ *
+ * @return	    PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_target_set_set_current(pjsip_target_set *tset,
+						  pjsip_target *target);
+
+
+/**
+ * Set the status code and reason phrase of the specified target.
+ *
+ * @param target    The target.
+ * @param pool	    The memory pool to be used to duplicate the reason phrase.
+ * @param code	    The SIP status code to be set to the target.
+ * @param reason    The reason phrase  to be set to the target.
+ *
+ * @return	    PJ_SUCCESS on successful operation or the appropriate
+ *		    error code.
+ */
+PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
+					        pj_pool_t *pool,
+					        int status_code,
+					        const pj_str_t *reason);
+
+/**
+ * @}
+ */
+
+/**
  * @defgroup PJSIP_ENDPT_STATELESS Message Creation and Stateless Operations
  * @ingroup PJSIP_CORE_CORE
  * @brief Utilities to create various messages and base function to send messages.

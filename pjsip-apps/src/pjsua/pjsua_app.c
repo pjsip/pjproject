@@ -62,6 +62,7 @@ static struct app_config
     pj_bool_t		    use_tls;
     pjsua_transport_config  udp_cfg;
     pjsua_transport_config  rtp_cfg;
+    pjsip_redirect_op	    redir_op;
 
     unsigned		    acc_cnt;
     pjsua_acc_config	    acc_cfg[PJSUA_MAX_ACC];
@@ -278,6 +279,8 @@ static void usage(void)
     puts  ("  --norefersub        Suppress event subscription when transfering calls");
     puts  ("  --use-compact-form  Minimize SIP message size");
     puts  ("  --no-force-lr       Allow strict-route to be used (i.e. do not force lr)");
+    puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");
+    puts  ("                      0: reject, 1: follow automatically (default), 2: ask");
 
     puts  ("");
     puts  ("When URL is specified, pjsua will immediately initiate call to that URL");
@@ -303,6 +306,7 @@ static void default_config(struct app_config *cfg)
     cfg->udp_cfg.port = 5060;
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
+    cfg->redir_op = PJSIP_REDIRECT_ACCEPT;
     cfg->duration = NO_LIMIT;
     cfg->wav_id = PJSUA_INVALID_ID;
     cfg->rec_id = PJSUA_INVALID_ID;
@@ -472,7 +476,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_RX_DROP_PCT, OPT_TX_DROP_PCT, OPT_EC_TAIL, OPT_EC_OPT,
 	   OPT_NEXT_ACCOUNT, OPT_NEXT_CRED, OPT_MAX_CALLS, 
 	   OPT_DURATION, OPT_NO_TCP, OPT_NO_UDP, OPT_THREAD_CNT,
-	   OPT_NOREFERSUB,
+	   OPT_NOREFERSUB, OPT_ACCEPT_REDIRECT,
 	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
 	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME,
@@ -515,6 +519,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "contact",	1, 0, OPT_CONTACT},
 	{ "auto-update-nat",	1, 0, OPT_AUTO_UPDATE_NAT},
         { "use-compact-form",	0, 0, OPT_USE_COMPACT_FORM},
+	{ "accept-redirect", 1, 0, OPT_ACCEPT_REDIRECT},
 	{ "no-force-lr",0, 0, OPT_NO_FORCE_LR},
 	{ "realm",	1, 0, OPT_REALM},
 	{ "username",	1, 0, OPT_USERNAME},
@@ -838,6 +843,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 		/* Do not include rtpmap for static payload types (<96) */
 		pjmedia_add_rtpmap_for_static_pt = PJ_FALSE;
             }
+	    break;
+
+	case OPT_ACCEPT_REDIRECT:
+	    cfg->redir_op = my_atoi(pj_optarg);
+	    if (cfg->redir_op<0 || cfg->redir_op>PJSIP_REDIRECT_STOP) {
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: accept-redirect value '%s' ", pj_optarg));
+		return PJ_EINVAL;
+	    }
 	    break;
 
 	case OPT_NO_FORCE_LR:
@@ -1785,6 +1799,13 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    /* accept-redirect */
+    if (config->redir_op != PJSIP_REDIRECT_ACCEPT) {
+	pj_ansi_sprintf(line, "--accept-redirect %d\n",
+			config->redir_op);
+	pj_strcat2(&cfg, line);
+    }
+
     /* Max calls. */
     pj_ansi_sprintf(line, "--max-calls %d\n",
 		    config->cfg.max_calls);
@@ -1840,7 +1861,8 @@ static void app_dump(pj_bool_t detail)
  * printing it is a bit tricky, it should be printed part by part as long 
  * as the logger can accept.
  */
-static void log_call_dump(int call_id) {
+static void log_call_dump(int call_id) 
+{
     unsigned call_dump_len;
     unsigned part_len;
     unsigned part_idx;
@@ -2366,6 +2388,33 @@ static void on_call_media_state(pjsua_call_id call_id)
 static void call_on_dtmf_callback(pjsua_call_id call_id, int dtmf)
 {
     PJ_LOG(3,(THIS_FILE, "Incoming DTMF on call %d: %c", call_id, dtmf));
+}
+
+/*
+ * Redirection handler.
+ */
+static void call_on_redirected(pjsua_call_id call_id, const pjsip_uri *target,
+			       pjsip_redirect_op *cmd, const pjsip_event *e)
+{
+    *cmd = app_config.redir_op;
+
+    PJ_UNUSED_ARG(e);
+
+    if (*cmd == PJSIP_REDIRECT_PENDING) {
+	char uristr[PJSIP_MAX_URL_SIZE];
+	int len;
+
+	len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR, target, uristr, 
+			      sizeof(uristr));
+	if (len < 1) {
+	    pj_ansi_strcpy(uristr, "--URI too long--");
+	}
+
+	PJ_LOG(3,(THIS_FILE, "Call %d is being redirected to %.*s. "
+		  "Press 'Ra' to accept, 'Rr' to reject, or 'Rd' to "
+		  "disconnect.",
+		  call_id, len, uristr));
+    }
 }
 
 /*
@@ -3915,6 +3964,21 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    goto on_exit;
 
 
+	case 'R':
+	    if (!pjsua_call_is_active(current_call)) {
+		PJ_LOG(1,(THIS_FILE, "Call %d has gone", current_call));
+	    } else if (menuin[1] == 'a') {
+		pjsua_call_process_redirect(current_call, 
+					    PJSIP_REDIRECT_ACCEPT);
+	    } else if (menuin[1] == 'r') {
+		pjsua_call_process_redirect(current_call,
+					    PJSIP_REDIRECT_REJECT);
+	    } else {
+		pjsua_call_process_redirect(current_call,
+					    PJSIP_REDIRECT_STOP);
+	    }
+	    break;
+
 	default:
 	    if (menuin[0] != '\n' && menuin[0] != '\r') {
 		printf("Invalid input %s", menuin);
@@ -3962,6 +4026,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     app_config.cfg.cb.on_dtmf_digit = &call_on_dtmf_callback;
+    app_config.cfg.cb.on_call_redirected = &call_on_redirected;
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;

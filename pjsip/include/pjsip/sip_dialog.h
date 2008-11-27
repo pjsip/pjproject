@@ -29,6 +29,7 @@
 #include <pjsip/sip_auth.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_transport.h>
+#include <pjsip/sip_util.h>
 #include <pj/sock.h>
 #include <pj/assert.h>
 
@@ -121,6 +122,7 @@ struct pjsip_dialog
     /* Dialog's session properties. */
     pjsip_dialog_state	state;	    /**< Dialog state.			    */
     pjsip_uri	       *target;	    /**< Current target.		    */
+    pjsip_target_set	target_set; /**< Target set, for UAC only.	    */
     pjsip_hdr	        inv_hdr;    /**< Headers from hparam in dest URL    */
     pjsip_dlg_party     local;	    /**< Local party info.		    */
     pjsip_dlg_party     remote;	    /**< Remote party info.		    */

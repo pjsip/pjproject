@@ -115,7 +115,6 @@ typedef struct pjsip_inv_callback
      */
     void (*on_state_changed)(pjsip_inv_session *inv, pjsip_event *e);
 
-
     /**
      * This callback is called when the invite usage module has created 
      * a new dialog and invite because of forked outgoing request.
@@ -214,6 +213,54 @@ typedef struct pjsip_inv_callback
      */
     void (*on_send_ack)(pjsip_inv_session *inv, pjsip_rx_data *rdata);
 
+    /**
+     * This callback is called when the session is about to resend the 
+     * INVITE request to the specified target, following the previously
+     * received redirection response.
+     *
+     * Application may accept the redirection to the specified target 
+     * (the default behavior if this callback is implemented), reject 
+     * this target only and make the session continue to try the next 
+     * target in the list if such target exists, stop the whole
+     * redirection process altogether and cause the session to be
+     * disconnected, or defer the decision to ask for user confirmation.
+     *
+     * This callback is optional. If this callback is not implemented,
+     * the default behavior is to NOT follow the redirection response.
+     *
+     * @param inv	The invite session.
+     * @param target	The current target to be tried.
+     * @param cmd	Action to be performed for the target. Set this
+     *			parameter to one of the value below:
+     *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
+     *			  redirection (default value). When set, the
+     *			  session will immediately resend INVITE request
+     *			  to the target.
+     *			- PJSIP_REDIRECT_REJECT: immediately reject this
+     *			  target. The session will continue retrying with
+     *			  next target if present, or disconnect the call
+     *			  if there is no more target to try.
+     *			- PJSIP_REDIRECT_STOP: stop the whole redirection
+     *			  process and immediately disconnect the call. The
+     *			  on_state_changed() callback will be called with
+     *			  PJSIP_INV_STATE_DISCONNECTED state immediately
+     *			  after this callback returns.
+     *			- PJSIP_REDIRECT_PENDING: set to this value if
+     *			  no decision can be made immediately (for example
+     *			  to request confirmation from user). Application
+     *			  then MUST call #pjsip_inv_process_redirect()
+     *			  to either accept or reject the redirection upon
+     *			  getting user decision.
+     * @param e		The event that caused this callback to be called.
+     *			This could be the receipt of 3xx response, or
+     *			4xx/5xx response received for the INVITE sent to
+     *			subsequent targets, or NULL if this callback is
+     *			called from within #pjsip_inv_process_redirect()
+     *			context.
+     */
+    void (*on_redirected)(pjsip_inv_session *inv, const pjsip_uri *target,
+			  pjsip_redirect_op *cmd, const pjsip_event *e);
+
 } pjsip_inv_callback;
 
 
@@ -276,6 +323,7 @@ struct pjsip_inv_session
     unsigned		 options;		    /**< Options in use.    */
     pjmedia_sdp_neg	*neg;			    /**< Negotiator.	    */
     pjsip_transaction	*invite_tsx;		    /**< 1st invite tsx.    */
+    pjsip_tx_data	*invite_req;		    /**< Saved invite req   */
     pjsip_tx_data	*last_answer;		    /**< Last INVITE resp.  */
     pjsip_tx_data	*last_ack;		    /**< Last ACK request   */
     pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
@@ -472,6 +520,53 @@ PJ_DECL(pj_status_t) pjsip_inv_create_uas(pjsip_dialog *dlg,
 PJ_DECL(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
 				          int st_code,
 					  pj_bool_t notify );
+
+
+/**
+ * Restart UAC session and prepare the session for a new initial INVITE.
+ * This function can be called for example when the application wants to
+ * follow redirection response with a new call reusing this session so
+ * that the new call will have the same Call-ID and From headers. After
+ * the session is restarted, application may create and send a new INVITE
+ * request.
+ *
+ * @param inv		The invite session.
+ * @param new_offer	Should be set to PJ_TRUE since the application will
+ *			restart the session.
+ *
+ * @return		PJ_SUCCESS on successful operation.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
+					   pj_bool_t new_offer);
+
+
+/**
+ * Accept or reject redirection response. Application MUST call this function
+ * after it signaled PJSIP_REDIRECT_PENDING in the \a on_redirected() 
+ * callback, to notify the invite session whether to accept or reject the
+ * redirection to the current target. Application can use the combination of
+ * PJSIP_REDIRECT_PENDING command in \a on_redirected() callback and this
+ * function to ask for user permission before redirecting the call.
+ *
+ * Note that if the application chooses to reject or stop redirection (by 
+ * using PJSIP_REDIRECT_REJECT or PJSIP_REDIRECT_STOP respectively), the
+ * session disconnection callback will be called before this function returns.
+ * And if the application rejects the target, the \a on_redirected() callback
+ * may also be called before this function returns if there is another target
+ * to try.
+ *
+ * @param inv		The invite session.
+ * @param cmd		Redirection operation. The semantic of this argument
+ *			is similar to the description in the \a on_redirected()
+ *			callback, except that the PJSIP_REDIRECT_PENDING is
+ *			not accepted here.
+ * @param e		Should be set to NULL.
+ *
+ * @return		PJ_SUCCESS on successful operation.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_process_redirect(pjsip_inv_session *inv,
+						pjsip_redirect_op cmd,
+						pjsip_event *e);
 
 
 /**

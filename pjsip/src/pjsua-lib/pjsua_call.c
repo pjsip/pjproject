@@ -65,6 +65,14 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
 					    pjsip_event *e);
 
+/*
+ * Redirection handler.
+ */
+static void pjsua_call_on_redirected(pjsip_inv_session *inv, 
+				     const pjsip_uri *target,
+				     pjsip_redirect_op *cmd, 
+				     const pjsip_event *e);
+
 
 /* Create SDP for call hold. */
 static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
@@ -156,7 +164,7 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     inv_cb.on_rx_offer = &pjsua_call_on_rx_offer;
     inv_cb.on_create_offer = &pjsua_call_on_create_offer;
     inv_cb.on_tsx_state_changed = &pjsua_call_on_tsx_state_changed;
-
+    inv_cb.on_redirected = &pjsua_call_on_redirected;
 
     /* Initialize invite session module: */
     status = pjsip_inv_usage_init(pjsua_var.endpt, &inv_cb);
@@ -1430,6 +1438,32 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     pjsip_dlg_dec_lock(dlg);
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Accept or reject redirection.
+ */
+PJ_DEF(pj_status_t) pjsua_call_process_redirect( pjsua_call_id call_id,
+						 pjsip_redirect_op cmd)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    status = acquire_call("pjsua_call_process_redirect()", call_id, 
+			  &call, &dlg);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjsip_inv_process_redirect(call->inv, cmd, NULL);
+
+    pjsip_dlg_dec_lock(dlg);
+
+    return status;
 }
 
 
@@ -2827,11 +2861,18 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    pj_gettimeofday(&call->dis_time);
 	    if (call->res_time.sec == 0)
 		pj_gettimeofday(&call->res_time);
-	    if (e->body.tsx_state.tsx->status_code > call->last_code) {
+	    if (e->type == PJSIP_EVENT_TSX_STATE && 
+		e->body.tsx_state.tsx->status_code > call->last_code) 
+	    {
 		call->last_code = (pjsip_status_code) 
 				  e->body.tsx_state.tsx->status_code;
 		pj_strncpy(&call->last_text, 
 			   &e->body.tsx_state.tsx->status_text,
+			   sizeof(call->last_text_buf_));
+	    } else {
+		call->last_code = PJSIP_SC_REQUEST_TERMINATED;
+		pj_strncpy(&call->last_text,
+			   pjsip_get_status_text(call->last_code),
 			   sizeof(call->last_text_buf_));
 	    }
 	    break;
@@ -3770,3 +3811,28 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
     PJSUA_UNLOCK();
 }
+
+
+/* Redirection handler */
+static void pjsua_call_on_redirected(pjsip_inv_session *inv, 
+				     const pjsip_uri *target,
+				     pjsip_redirect_op *cmd, 
+				     const pjsip_event *e)
+{
+    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    PJSUA_LOCK();
+
+    if (pjsua_var.ua_cfg.cb.on_call_redirected) {
+	(*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index, target, cmd, e);
+    } else {
+	PJ_LOG(4,(THIS_FILE, "Unhandled redirection for call %d "
+		  "(callback not implemented by application). Disconnecting "
+		  "call.",
+		  call->index));
+	*cmd = PJSIP_REDIRECT_STOP;
+    }
+
+    PJSUA_UNLOCK();
+}
+

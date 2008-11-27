@@ -91,6 +91,7 @@ static pj_status_t create_dialog( pjsip_user_agent *ua,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    pjsip_target_set_init(&dlg->target_set);
 
     *p_dlg = dlg;
     return PJ_SUCCESS;
@@ -181,6 +182,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 	 */
 	pj_list_init(&uri->header_param);
     }
+
+    /* Add target to the target set */
+    pjsip_target_set_add_uri(&dlg->target_set, dlg->pool, dlg->target, 0);
 
     /* Init local info. */
     dlg->local.info = pjsip_from_hdr_create(dlg->pool);

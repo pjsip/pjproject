@@ -225,6 +225,10 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	    pjsip_tx_data_dec_ref(inv->last_ack);
 	    inv->last_ack = NULL;
 	}
+	if (inv->invite_req) {
+	    pjsip_tx_data_dec_ref(inv->invite_req);
+	    inv->invite_req = NULL;
+	}
 	pjsip_100rel_end_session(inv);
 	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
     }
@@ -1219,6 +1223,35 @@ PJ_DEF(pj_status_t) pjsip_inv_terminate( pjsip_inv_session *inv,
 }
 
 
+/*
+ * Restart UAC session, possibly because app or us wants to re-send the 
+ * INVITE request due to 401/407 challenge or 3xx response.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_uac_restart(pjsip_inv_session *inv,
+					  pj_bool_t new_offer)
+{
+    PJ_ASSERT_RETURN(inv, PJ_EINVAL);
+
+    inv->state = PJSIP_INV_STATE_NULL;
+    inv->invite_tsx = NULL;
+    if (inv->last_answer) {
+	pjsip_tx_data_dec_ref(inv->last_answer);
+	inv->last_answer = NULL;
+    }
+
+    if (new_offer && inv->neg) {
+	pjmedia_sdp_neg_state neg_state;
+
+	neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+	if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
+	    pjmedia_sdp_neg_cancel_offer(inv->neg);
+	}
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 static void *clone_sdp(pj_pool_t *pool, const void *data, unsigned len)
 {
     PJ_UNUSED_ARG(len);
@@ -1891,6 +1924,203 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     return PJ_SUCCESS;
 }
 
+/* Following redirection recursion, get next target from the target set and
+ * notify user.
+ *
+ * Returns PJ_FALSE if recursion fails (either because there's no more target
+ * or user rejects the recursion). If we return PJ_FALSE, caller should
+ * disconnect the session.
+ *
+ * Note:
+ *   the event 'e' argument may be NULL.
+ */
+static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
+				 const pj_str_t *reason, pjsip_event *e)
+{
+    pjsip_redirect_op op = PJSIP_REDIRECT_ACCEPT;
+    pjsip_target *target;
+
+    /* Won't redirect if the callback is not implemented. */
+    if (mod_inv.cb.on_redirected == NULL)
+	return PJ_FALSE;
+
+    if (reason == NULL)
+	reason = pjsip_get_status_text(code);
+
+    /* Set status of current target */
+    pjsip_target_assign_status(inv->dlg->target_set.current, inv->dlg->pool,
+			       code, reason);
+
+    /* Fetch next target from the target set. We only want to
+     * process SIP/SIPS URI for now.
+     */
+    for (;;) {
+	target = pjsip_target_set_get_next(&inv->dlg->target_set);
+	if (target == NULL) {
+	    /* No more target. */
+	    return PJ_FALSE;
+	}
+
+	if (!PJSIP_URI_SCHEME_IS_SIP(target->uri) &&
+	    !PJSIP_URI_SCHEME_IS_SIPS(target->uri))
+	{
+	    code = PJSIP_SC_UNSUPPORTED_URI_SCHEME;
+	    reason = pjsip_get_status_text(code);
+
+	    /* Mark this target as unusable and fetch next target. */
+	    pjsip_target_assign_status(target, inv->dlg->pool, code, reason);
+	} else {
+	    /* Found a target */
+	    break;
+	}
+    }
+
+    /* We have target in 'target'. Set this target as current target
+     * and notify callback. 
+     */
+    pjsip_target_set_set_current(&inv->dlg->target_set, target);
+
+    (*mod_inv.cb.on_redirected)(inv, target->uri, &op, e);
+
+
+    /* Check what the application wants to do now */
+    switch (op) {
+    case PJSIP_REDIRECT_ACCEPT:
+    case PJSIP_REDIRECT_STOP:
+	/* Must increment session counter, that's the convention of the 
+	 * pjsip_inv_process_redirect().
+	 */
+	pjsip_dlg_inc_session(inv->dlg, &mod_inv.mod);
+
+	/* Act on the recursion */
+	pjsip_inv_process_redirect(inv, op, e);
+	return PJ_TRUE;
+
+    case PJSIP_REDIRECT_PENDING:
+	/* Increment session so that the dialog/session is not destroyed 
+	 * while we're waiting for user confirmation.
+	 */
+	pjsip_dlg_inc_session(inv->dlg, &mod_inv.mod);
+
+	/* Also clear the invite_tsx variable, otherwise when this tsx is
+	 * terminated, it will also terminate the session.
+	 */
+	inv->invite_tsx = NULL;
+
+	/* Done. The processing will continue once the application calls
+	 * pjsip_inv_process_redirect().
+	 */
+	return PJ_TRUE;
+
+    case PJSIP_REDIRECT_REJECT:
+	/* Recursively call  this function again to fetch next target, if any.
+	 */
+	return inv_uac_recurse(inv, PJSIP_SC_REQUEST_TERMINATED, NULL, e);
+
+    }
+
+    pj_assert(!"Should not reach here");
+    return PJ_FALSE;
+}
+
+
+/* Process redirection/recursion */
+PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
+						pjsip_redirect_op op,
+						pjsip_event *e)
+{
+    const pjsip_status_code cancel_code = PJSIP_SC_REQUEST_TERMINATED;
+    pjsip_event usr_event;
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(inv && op != PJSIP_REDIRECT_PENDING, PJ_EINVAL);
+
+    if (e == NULL) {
+	PJSIP_EVENT_INIT_USER(usr_event, NULL, NULL, NULL, NULL);
+	e = &usr_event;
+    }
+
+    pjsip_dlg_inc_lock(inv->dlg);
+
+    /* Decrement session. That's the convention here to prevent the dialog 
+     * or session from being destroyed while we're waiting for user
+     * confirmation.
+     */
+    pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
+
+    /* See what the application wants to do now */
+    switch (op) {
+    case PJSIP_REDIRECT_ACCEPT:
+	/* User accept the redirection. Reset the session and resend the 
+	 * INVITE request.
+	 */
+	{
+	    pjsip_tx_data *tdata;
+	    pjsip_via_hdr *via;
+
+	    /* Get the original INVITE request. */
+	    tdata = inv->invite_req;
+	    pjsip_tx_data_add_ref(tdata);
+
+	    /* Restore strict route set.
+	     * See http://trac.pjsip.org/repos/ticket/492
+	     */
+	    pjsip_restore_strict_route_set(tdata);
+
+	    /* Set target */
+	    tdata->msg->line.req.uri = 
+	       pjsip_uri_clone(tdata->pool, inv->dlg->target_set.current->uri);
+
+	    /* Remove branch param in Via header. */
+	    via = (pjsip_via_hdr*) 
+		  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
+	    via->branch_param.slen = 0;
+
+	    /* Must invalidate the message! */
+	    pjsip_tx_data_invalidate_msg(tdata);
+
+	    /* Reset the session */
+	    pjsip_inv_uac_restart(inv, PJ_FALSE);
+
+	    /* (re)Send the INVITE request */
+	    status = pjsip_inv_send_msg(inv, tdata);
+	}
+	break;
+
+    case PJSIP_REDIRECT_STOP:
+	/* User doesn't want the redirection. Disconnect the session now. */
+	inv_set_cause(inv, cancel_code, pjsip_get_status_text(cancel_code));
+	inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+	/* Caller should expect that the invite session is gone now, so
+	 * we don't need to set status to PJSIP_ESESSIONTERMINATED here.
+	 */
+	break;
+
+    case PJSIP_REDIRECT_REJECT:
+	/* Current target is rejected. Fetch next target if any. */
+	if (inv_uac_recurse(inv, cancel_code, NULL, NULL) == PJ_FALSE) {
+	    inv_set_cause(inv, cancel_code, 
+			  pjsip_get_status_text(cancel_code));
+	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+
+	    /* Tell caller that the invite session is gone now */
+	    status = PJSIP_ESESSIONTERMINATED;
+	}
+	break;
+
+
+    case PJSIP_REDIRECT_PENDING:
+	pj_assert(!"Should not happen");
+	break;
+    }
+
+
+    pjsip_dlg_dec_lock(inv->dlg);
+
+    return status;
+}
+
 
 /*
  * Create re-INVITE.
@@ -2552,6 +2782,19 @@ static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
 
 	if (dlg->role == PJSIP_ROLE_UAC) {
 
+	    /* Save the original INVITE request, if on_redirected() callback
+	     * is implemented. We may need to resend the INVITE if we receive
+	     * redirection response.
+	     */
+	    if (mod_inv.cb.on_redirected) {
+		if (inv->invite_req) {
+		    pjsip_tx_data_dec_ref(inv->invite_req);
+		    inv->invite_req = NULL;
+		}
+		inv->invite_req = tsx->last_tx;
+		pjsip_tx_data_add_ref(inv->invite_req);
+	    }
+
 	    switch (tsx->state) {
 	    case PJSIP_TSX_STATE_CALLING:
 		inv_set_state(inv, PJSIP_INV_STATE_CALLING, e);
@@ -2673,6 +2916,105 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 }
 
 
+/* Handle call rejection, especially with regard to processing call
+ * redirection. We need to handle the following scenarios:
+ *  - 3xx response is received -- see if on_redirected() callback is
+ *    implemented. If so, add the Contact URIs in the response to the
+ *    target set and notify user.
+ *  - 4xx - 6xx resposne is received -- see if we're currently recursing,
+ *    if so fetch the next target if any and notify the on_redirected()
+ *    callback.
+ *  - for other cases -- disconnect the session.
+ */
+static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
+{
+    pjsip_transaction *tsx = e->body.tsx_state.tsx;
+    pj_status_t status;
+    
+    if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 300)) {
+
+	if (mod_inv.cb.on_redirected == NULL) {
+
+	    /* Redirection callback is not implemented, disconnect the
+	     * call.
+	     */
+	    goto terminate_session;
+
+	} else {
+	    const pjsip_msg *res_msg;
+
+	    res_msg = e->body.tsx_state.src.rdata->msg_info.msg;
+
+	    /* Gather all Contact URI's in the response and add them
+	     * to target set. The function will take care of removing
+	     * duplicate URI's.
+	     */
+	    pjsip_target_set_add_from_msg(&inv->dlg->target_set, 
+					  inv->dlg->pool, res_msg);
+
+	    /* Recurse to alternate targets if application allows us */
+	    if (!inv_uac_recurse(inv, tsx->status_code, &tsx->status_text, e))
+	    {
+		/* Recursion fails, terminate session now */
+		goto terminate_session;
+	    }
+
+	    /* Done */
+	}
+
+    } else if ((tsx->status_code==401 || tsx->status_code==407) &&
+		!inv->cancelling) 
+    {
+
+	/* Handle authentication failure:
+	 * Resend the request with Authorization header.
+	 */
+	pjsip_tx_data *tdata;
+
+	status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess, 
+					   e->body.tsx_state.src.rdata,
+					   tsx->last_tx,
+					   &tdata);
+
+	if (status != PJ_SUCCESS) {
+
+	    /* Does not have proper credentials. If we are currently 
+	     * recursing, try the next target. Otherwise end the session.
+	     */
+	    if (!inv_uac_recurse(inv, tsx->status_code, &tsx->status_text, e))
+	    {
+		/* Recursion fails, terminate session now */
+		goto terminate_session;
+	    }
+
+	} else {
+
+	    /* Restart session. */
+	    pjsip_inv_uac_restart(inv, PJ_FALSE);
+
+	    /* Send the request. */
+	    status = pjsip_inv_send_msg(inv, tdata);
+	}
+
+    } else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 600)) {
+	/* Global error */
+	goto terminate_session;
+
+    } else {
+	/* See if we have alternate target to try */
+	if (!inv_uac_recurse(inv, tsx->status_code, &tsx->status_text, e)) {
+	    /* Recursion fails, terminate session now */
+	    goto terminate_session;
+	}
+    }
+    return;
+
+terminate_session:
+    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
+    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+}
+
+
 /*
  * State CALLING is after sending initial INVITE request but before
  * any response (with tag) is received.
@@ -2735,47 +3077,8 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 		inv_check_sdp_in_incoming_msg(inv, tsx, 
 					      e->body.tsx_state.src.rdata);
 
-	    } else if ((tsx->status_code==401 || tsx->status_code==407) &&
-			!inv->cancelling) 
-	    {
-
-		/* Handle authentication failure:
-		 * Resend the request with Authorization header.
-		 */
-		pjsip_tx_data *tdata;
-
-		status = pjsip_auth_clt_reinit_req(&inv->dlg->auth_sess, 
-						   e->body.tsx_state.src.rdata,
-						   tsx->last_tx,
-						   &tdata);
-
-		if (status != PJ_SUCCESS) {
-
-		    /* Does not have proper credentials. 
-		     * End the session.
-		     */
-		    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-		    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-
-		} else {
-
-		    /* Restart session. */
-		    inv->state = PJSIP_INV_STATE_NULL;
-		    inv->invite_tsx = NULL;
-		    if (inv->last_answer) {
-			pjsip_tx_data_dec_ref(inv->last_answer);
-			inv->last_answer = NULL;
-		    }
-
-		    /* Send the request. */
-		    status = pjsip_inv_send_msg(inv, tdata);
-		}
-
 	    } else {
-
-		inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
-
+		handle_uac_call_rejection(inv, e);
 	    }
 	    break;
 
@@ -2941,6 +3244,10 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 		    inv_check_sdp_in_incoming_msg(inv, tsx, 
 						  e->body.tsx_state.src.rdata);
 		}
+
+	    } else if (tsx->role == PJSIP_ROLE_UAC) {
+
+		handle_uac_call_rejection(inv, e);
 
 	    } else {
 		inv_set_cause(inv, tsx->status_code, &tsx->status_text);
