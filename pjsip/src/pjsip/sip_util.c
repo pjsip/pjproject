@@ -78,7 +78,7 @@ PJ_DEF(pj_status_t) pjsip_target_set_add_uri( pjsip_target_set *tset,
 
     /* Create new element */
     t = PJ_POOL_ZALLOC_T(pool, pjsip_target);
-    t->uri = pjsip_uri_clone(pool, uri);
+    t->uri = (pjsip_uri*)pjsip_uri_clone(pool, uri);
     t->q1000 = q1000;
 
     /* Insert */
@@ -174,7 +174,7 @@ PJ_DEF(pj_status_t) pjsip_target_assign_status( pjsip_target *target,
 {
     PJ_ASSERT_RETURN(target && pool && status_code && reason, PJ_EINVAL);
 
-    target->code = status_code;
+    target->code = (pjsip_status_code)status_code;
     pj_strdup(pool, &target->reason, reason);
 
     return PJ_SUCCESS;
