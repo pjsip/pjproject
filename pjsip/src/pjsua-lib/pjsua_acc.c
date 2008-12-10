@@ -681,14 +681,16 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
-			       "<sip:%.*s%s%.*s:%d;transport=%s>",
+			       "<sip:%.*s%s%.*s:%d;transport=%s%.*s>",
 			       (int)acc->user_part.slen,
 			       acc->user_part.ptr,
 			       (acc->user_part.slen? "@" : ""),
 			       (int)via_addr->slen,
 			       via_addr->ptr,
 			       rport,
-			       tp->type_name);
+			       tp->type_name,
+			       (int)acc->cfg.contact_params.slen,
+			       acc->cfg.contact_params.ptr);
 	if (len < 1) {
 	    PJ_LOG(1,(THIS_FILE, "URI too long"));
 	    pj_pool_release(pool);
@@ -1663,7 +1665,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     /* Create the contact header */
     contact->ptr = (char*)pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s>",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -1676,7 +1678,9 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 				     local_addr.ptr,
 				     endquote,
 				     local_port,
-				     transport_param);
+				     transport_param,
+				     (int)acc->cfg.contact_params.slen,
+				     acc->cfg.contact_params.ptr);
 
     return PJ_SUCCESS;
 }
@@ -1813,7 +1817,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     /* Create the contact header */
     contact->ptr = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s>",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -1826,7 +1830,9 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 				     local_addr.ptr,
 				     endquote,
 				     local_port,
-				     transport_param);
+				     transport_param,
+				     (int)acc->cfg.contact_params.slen,
+				     acc->cfg.contact_params.ptr);
 
     return PJ_SUCCESS;
 }
