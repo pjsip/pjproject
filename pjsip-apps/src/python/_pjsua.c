@@ -2137,6 +2137,8 @@ static PyObject *py_pjsua_im_send(PyObject *pSelf, PyObject *pArgs)
     to = PyString_ToPJ(pTo);
     content = PyString_ToPJ(pContent);
 
+    pjsua_msg_data_init(&msg_data);
+
     if (pMsgData != Py_None) {
 	PyObj_pjsua_msg_data *omd;
 
@@ -2178,6 +2180,8 @@ static PyObject *py_pjsua_im_typing(PyObject *pSelf, PyObject *pArgs)
     }
 	
     to = PyString_ToPJ(pTo);
+
+    pjsua_msg_data_init(&msg_data);
 
     if (pMsgData != Py_None) {
 	PyObj_pjsua_msg_data *omd;

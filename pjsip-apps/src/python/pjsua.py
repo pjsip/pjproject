@@ -1672,7 +1672,28 @@ class Call:
         err = _pjsua.call_send_request(self._id, method, msg_data)
         self._lib()._err_check("send_request()", self, err)
 
+    def send_pager(self, text, im_id=0, content_type="text/plain", 
+    		   hdr_list=None):
+        """Send instant message inside a call.
 
+        Keyword arguments:
+        text         -- Instant message to be sent
+        im_id        -- Optional instant message ID to identify this
+                        instant message when delivery status callback
+                        is called.
+        content_type -- MIME type identifying the instant message
+        hdr_list     -- Optional list of headers to be sent with the
+                        request.
+
+        """
+        lck = self._lib().auto_lock()
+        err = _pjsua.call_send_im(self._id, \
+                             content_type, text, \
+                             Lib._create_msg_data(hdr_list), \
+                             im_id)
+        self._lib()._err_check("send_pager()", self, err)
+
+  
 class BuddyInfo:
     """This class contains information about Buddy. Application may 
     retrieve this information by calling Buddy.info().
@@ -2084,7 +2105,7 @@ class Lib:
             while self._quit != 2 and loop < 400:
                 self.handle_events(5)
                 loop = loop + 1
-		time.sleep(0.050)
+                time.sleep(0.050)
         _pjsua.destroy()
         _lib = None
 
@@ -2664,7 +2685,7 @@ class Lib:
     def _cb_on_pager(self, call_id, from_uri, to_uri, contact, mime_type, 
                      body, acc_id):
         call = None
-        if call_id == -1:
+        if call_id != -1:
             call = self._lookup_call(call_id)
         if call:
             call._cb.on_pager(mime_type, body)
@@ -2679,7 +2700,7 @@ class Lib:
     def _cb_on_pager_status(self, call_id, to_uri, body, user_data, 
                             code, reason, acc_id):
         call = None
-        if call_id == -1:
+        if call_id != -1:
             call = self._lookup_call(call_id)
         if call:
             call._cb.on_pager_status(body, user_data, code, reason)
@@ -2694,7 +2715,7 @@ class Lib:
     def _cb_on_typing(self, call_id, from_uri, to_uri, contact, is_typing, 
                       acc_id):
         call = None
-        if call_id == -1:
+        if call_id != -1:
             call = self._lookup_call(call_id)
         if call:
             call._cb.on_typing(is_typing)
