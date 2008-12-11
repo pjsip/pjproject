@@ -26,7 +26,7 @@
 #define THIS_FILE   "silencedet.c"
 
 #if 1
-#   define TRACE_(x)	PJ_LOG(3,x)
+#   define TRACE_(x)	PJ_LOG(5,x)
 #else
 #   define TRACE_(x)
 #endif
