@@ -2137,6 +2137,20 @@ class Lib:
         lck = self.auto_lock()
         return _pjsua.handle_events(timeout)
 
+    def thread_register(self, name):
+	"""Register external threads (threads that are not created by PJSIP,
+	such as threads that are created by Python API) to PJSIP.
+
+	The call must be made from the new thread before calling any pjlib 
+	functions.
+
+	Keyword arguments:
+	name	-- Non descriptive name for the thread
+	"""
+	dummy = 1
+	err = _pjsua.thread_register(name, dummy)
+	self._err_check("thread_register()", self, err)
+
     def verify_sip_url(self, sip_url):
         """Verify that the specified string is a valid URI. 
         
@@ -2731,9 +2745,6 @@ class Lib:
         buddy = self._lookup_buddy(buddy_id)
         if buddy:
             buddy._cb.on_state()
-
-
-
 
 #
 # Internal
