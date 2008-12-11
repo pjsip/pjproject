@@ -594,6 +594,14 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	/* ICE has failed, application should have terminated this call */
     }
 
+    /* Removing a=rtcp line when there is only one component. */
+    if (comp_cnt == 1) {
+	attr = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_RTCP, NULL);
+	if (attr)
+	    pjmedia_sdp_attr_remove(&m->attr_count, m->attr, attr);
+    }
+    
+
     return PJ_SUCCESS;
 }
 
@@ -748,9 +756,9 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 				  struct sdp_state *sdp_state)
 {
     const pjmedia_sdp_media *rem_m;
-    const pjmedia_sdp_attr *attr, *ufrag_attr, *pwd_attr;
+    const pjmedia_sdp_attr *ufrag_attr, *pwd_attr;
     const pjmedia_sdp_conn *rem_conn;
-    pj_bool_t comp1_found=PJ_FALSE, comp2_found=PJ_FALSE;
+    pj_bool_t comp1_found=PJ_FALSE, comp2_found=PJ_FALSE, has_rtcp=PJ_FALSE;
     pj_sockaddr rem_conn_addr, rtcp_addr;
     unsigned i;
     pj_status_t status;
@@ -767,7 +775,7 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     }
 
     /* Verify that default target for each component matches one of the 
-     * candidatefor the component. Otherwise stop ICE with ICE ice_mismatch 
+     * candidate for the component. Otherwise stop ICE with ICE ice_mismatch 
      * error.
      */
 
@@ -793,55 +801,62 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Component 2 is a=rtcp line, if present. */
-    attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
-				 &STR_RTCP, NULL);
-    if (attr && tp_ice->comp_cnt > 1) {
-	pjmedia_sdp_rtcp_attr rtcp_attr;
+    if (tp_ice->comp_cnt > 1) {
+	const pjmedia_sdp_attr *attr;
 
-	status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp_attr);
-	if (status != PJ_SUCCESS) {
-	    /* Error parsing a=rtcp attribute */
-	    return status;
-	}
-	
-	if (rtcp_attr.addr.slen) {
-	    /* Verify address family matches */
-	    if ((tp_ice->af==pj_AF_INET() && 
-		 pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
-		(tp_ice->af==pj_AF_INET6() && 
-		 pj_strcmp(&rtcp_attr.addr_type, &STR_IP6)!=0))
-	    {
-		return PJMEDIA_SDP_ETPORTNOTEQUAL;
-	    }
+	/* Get default RTCP candidate from a=rtcp line, if present, otherwise
+	 * calculate default RTCP candidate from default RTP target.
+	 */
+	attr = pjmedia_sdp_attr_find(rem_m->attr_count, rem_m->attr, 
+				     &STR_RTCP, NULL);
+	has_rtcp = (attr != NULL);
 
-	    /* Assign RTCP address */
-	    status = pj_sockaddr_init(tp_ice->af, &rtcp_addr,
-				      &rtcp_attr.addr,
-				      (pj_uint16_t)rtcp_attr.port);
+	if (attr) {
+	    pjmedia_sdp_rtcp_attr rtcp_attr;
+
+	    status = pjmedia_sdp_attr_get_rtcp(attr, &rtcp_attr);
 	    if (status != PJ_SUCCESS) {
-		return PJMEDIA_SDP_EINRTCP;
+		/* Error parsing a=rtcp attribute */
+		return status;
+	    }
+    	
+	    if (rtcp_attr.addr.slen) {
+		/* Verify address family matches */
+		if ((tp_ice->af==pj_AF_INET() && 
+		     pj_strcmp(&rtcp_attr.addr_type, &STR_IP4)!=0) ||
+		    (tp_ice->af==pj_AF_INET6() && 
+		     pj_strcmp(&rtcp_attr.addr_type, &STR_IP6)!=0))
+		{
+		    return PJMEDIA_SDP_ETPORTNOTEQUAL;
+		}
+
+		/* Assign RTCP address */
+		status = pj_sockaddr_init(tp_ice->af, &rtcp_addr,
+					  &rtcp_attr.addr,
+					  (pj_uint16_t)rtcp_attr.port);
+		if (status != PJ_SUCCESS) {
+		    return PJMEDIA_SDP_EINRTCP;
+		}
+	    } else {
+		/* Assign RTCP address */
+		status = pj_sockaddr_init(tp_ice->af, &rtcp_addr, 
+					  NULL, 
+					  (pj_uint16_t)rtcp_attr.port);
+		if (status != PJ_SUCCESS) {
+		    return PJMEDIA_SDP_EINRTCP;
+		}
+		pj_sockaddr_copy_addr(&rtcp_addr, &rem_conn_addr);
 	    }
 	} else {
-	    /* Assign RTCP address */
-	    status = pj_sockaddr_init(tp_ice->af, &rtcp_addr, 
-				      NULL, 
-				      (pj_uint16_t)rtcp_attr.port);
-	    if (status != PJ_SUCCESS) {
-		return PJMEDIA_SDP_EINRTCP;
-	    }
-	    pj_sockaddr_copy_addr(&rtcp_addr, &rem_conn_addr);
+	    unsigned rtcp_port;
+    	
+	    rtcp_port = pj_sockaddr_get_port(&rem_conn_addr) + 1;
+	    pj_sockaddr_cp(&rtcp_addr, &rem_conn_addr);
+	    pj_sockaddr_set_port(&rtcp_addr, (pj_uint16_t)rtcp_port);
 	}
-
-	sdp_state->match_comp_cnt = 2;
-
-    } else {
-	/* Don't have RTCP component */
-	comp2_found = PJ_TRUE;
-	sdp_state->match_comp_cnt = 1;
     }
 
-    /* Find the default address in a=candidate attributes. 
+    /* Find the default addresses in a=candidate attributes. 
      */
     for (i=0; i<rem_m->attr_count; ++i) {
 	pj_ice_sess_cand cand;
@@ -863,27 +878,32 @@ static pj_status_t verify_ice_sdp(struct transport_ice *tp_ice,
 	if (!comp1_found && cand.comp_id==COMP_RTP &&
 	    pj_sockaddr_cmp(&rem_conn_addr, &cand.addr)==0) 
 	{
-	    /* Found */
 	    comp1_found = PJ_TRUE;
-	    if (comp1_found && comp2_found)
-		break;
 	} else if (!comp2_found && cand.comp_id==COMP_RTCP &&
 		    pj_sockaddr_cmp(&rtcp_addr, &cand.addr)==0) 
 	{
-	    /* Found */
 	    comp2_found = PJ_TRUE;
-	    if (comp1_found && comp2_found)
-		break;
 	}
 
+	if (cand.comp_id == COMP_RTCP)
+	    has_rtcp = PJ_TRUE;
+
+	if (comp1_found && (comp2_found || tp_ice->comp_cnt==1))
+	    break;
     }
 
-    if (!comp1_found || !comp2_found) {
-	/* ICE ice_mismatch */
-	sdp_state->ice_mismatch = PJ_TRUE;
-    } else {
+    /* Check matched component count and ice_mismatch */
+    if (comp1_found && (tp_ice->comp_cnt==1 || !has_rtcp)) {
+	sdp_state->match_comp_cnt = 1;
 	sdp_state->ice_mismatch = PJ_FALSE;
+    } else if (comp1_found && comp2_found) {
+	sdp_state->match_comp_cnt = 2;
+	sdp_state->ice_mismatch = PJ_FALSE;
+    } else {
+	sdp_state->match_comp_cnt = (tp_ice->comp_cnt > 1 && has_rtcp)? 2 : 1;
+	sdp_state->ice_mismatch = PJ_TRUE;
     }
+
 
     /* Detect remote restarting session */
     if (pj_ice_strans_has_sess(tp_ice->ice_st) &&
