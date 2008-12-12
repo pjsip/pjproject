@@ -30,6 +30,17 @@
  */
 #define THIS_FILE   "wsola.c"
 
+/*
+ * http://trac.pjsip.org/repos/ticket/683:
+ *  Workaround for segfault problem in the fixed point version of create_win()
+ *  on ARM9 platform, possibly due to gcc optimization bug.
+ *
+ *  For now, we will use linear window when floating point is disabled.
+ */
+#ifndef PJMEDIA_WSOLA_LINEAR_WIN
+#   define PJMEDIA_WSOLA_LINEAR_WIN    (!PJ_HAS_FLOATING_POINT)
+#endif
+
 
 #if 0
 #   define TRACE_(x)	PJ_LOG(4,x)
@@ -368,7 +379,7 @@ static void overlapp_add_simple(pj_int16_t dst[], unsigned count,
     }
 }
 
-#if PJ_HAS_INT64
+#if PJ_HAS_INT64 && !PJMEDIA_WSOLA_LINEAR_WIN
 /* approx_cos():
  *   see: http://www.audiomulch.com/~rossb/code/sinusoids/ 
  */
@@ -388,7 +399,7 @@ static pj_uint32_t approx_cos( pj_uint32_t x )
 
     return j;
 }
-#endif	/* PJ_HAS_INT64 */
+#endif	/* PJ_HAS_INT64 && .. */
 
 static void create_win(pj_pool_t *pool, pj_uint16_t **pw, unsigned count)
 {
@@ -400,7 +411,7 @@ static void create_win(pj_pool_t *pool, pj_uint16_t **pw, unsigned count)
     *pw = w;
 
     for (i=0; i<count; i++) {
-#if PJ_HAS_INT64
+#if PJ_HAS_INT64 && !PJMEDIA_WSOLA_LINEAR_WIN
 	pj_uint32_t phase;
 	pj_uint64_t cos_val;
 
