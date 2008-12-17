@@ -525,7 +525,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key )
 	return PJ_SUCCESS;
 
     // Cancel pending async object
-    if (key->cbObj && key->cbObj->IsActive()) {
+    if (key->cbObj) {
 	key->cbObj->Cancel();
     }
 

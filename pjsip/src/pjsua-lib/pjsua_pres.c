@@ -776,7 +776,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     else
 	uapres->expires = -1;
 
-    st_code = 200;
+    st_code = (pjsip_status_code)200;
     reason = pj_str("OK");
     pjsua_msg_data_init(&msg_data);
 

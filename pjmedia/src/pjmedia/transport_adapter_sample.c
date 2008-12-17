@@ -1,4 +1,4 @@
-/* $Id:$ */
+/* $Id$ */
 /* 
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
@@ -131,7 +131,8 @@ PJ_DEF(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
     adapter->pool = pool;
     pj_ansi_strncpy(adapter->base.name, pool->obj_name, 
 		    sizeof(adapter->base.name));
-    adapter->base.type = PJMEDIA_TRANSPORT_TYPE_USER + 1;
+    adapter->base.type = (pjmedia_transport_type)
+			 (PJMEDIA_TRANSPORT_TYPE_USER + 1);
     adapter->base.op = &tp_adapter_op;
 
     /* Save the transport as the slave transport */

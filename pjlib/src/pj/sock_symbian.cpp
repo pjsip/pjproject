@@ -101,8 +101,7 @@ CPjSocketReader *CPjSocket::CreateReader(unsigned max_len)
 void CPjSocket::DestroyReader() 
 {
     if (sockReader_) {
-	if (sockReader_->IsActive())
-	    sockReader_->Cancel();
+	sockReader_->Cancel();
 	delete sockReader_;
 	sockReader_ = NULL;
     }

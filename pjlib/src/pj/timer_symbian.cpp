@@ -78,8 +78,7 @@ CPjTimerEntry::CPjTimerEntry(pj_timer_heap_t *timer_heap,
 
 CPjTimerEntry::~CPjTimerEntry() 
 {
-    if (IsActive())
-	Cancel();
+    Cancel();
     rtimer_.Close();
 }
 

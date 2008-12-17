@@ -297,7 +297,7 @@ void CPjAudioInputEngine::Stop()
 
 	// Wait until it's actually stopped
     	while (lastError_ == KRequestPending)
-	    pj_thread_sleep(100);
+	    pj_symbianos_poll(-1, 100);
     }
 
     if (iInputStream_) {
@@ -533,7 +533,7 @@ void CPjAudioOutputEngine::Stop()
 
 	// Wait until it's actually stopped
     	while (lastError_ == KRequestPending)
-	    pj_thread_sleep(100);
+	    pj_symbianos_poll(-1, 100);
     }
     
     if (iOutputStream_) {	

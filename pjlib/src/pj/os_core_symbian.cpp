@@ -89,8 +89,7 @@ CPjTimeoutTimer::CPjTimeoutTimer()
 
 CPjTimeoutTimer::~CPjTimeoutTimer()
 {
-    if (IsActive())
-	Cancel();
+    Cancel();
     timer_.Close();
 }
 
@@ -115,8 +114,7 @@ CPjTimeoutTimer *CPjTimeoutTimer::NewL()
 
 void CPjTimeoutTimer::StartTimer(TUint miliSeconds)
 {
-    if (IsActive())
-	Cancel();
+    Cancel();
 
     hasTimedOut_ = PJ_FALSE;
     timer_.After(iStatus, miliSeconds * 1000);
@@ -329,7 +327,7 @@ PJ_DEF(pj_status_t) pj_init(void)
     TInt err; 
     err = os->Initialize();
     if (err != KErrNone)
-    	return status;
+    	return PJ_RETURN_OS_ERROR(err);
     
     /* Initialize exception ID for the pool. 
      * Must do so after critical section is configured.
@@ -452,7 +450,7 @@ PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
     CPollTimeoutTimer *timer = NULL;
     
     if (priority==-1)
-    	priority = CActive::EPriorityStandard;
+    	priority = EPriorityNull;
     
     if (ms_timeout >= 0) {
     	timer = CPollTimeoutTimer::NewL(ms_timeout, priority);
@@ -463,8 +461,7 @@ PJ_DEF(pj_bool_t) pj_symbianos_poll(int priority, int ms_timeout)
     if (timer) {
         bool timer_is_active = timer->IsActive();
     
-        if (timer_is_active)
-            timer->Cancel();
+	timer->Cancel();
         
         delete timer;
         
@@ -622,11 +619,7 @@ PJ_DEF(pj_status_t) pj_thread_destroy(pj_thread_t *rec)
 PJ_DEF(pj_status_t) pj_thread_sleep(unsigned msec)
 {
     User::After(msec*1000);
-    
-    TInt aError;
-    while (CActiveScheduler::RunIfReady(aError, EPriorityMuchLess))
-    	;
-    
+
     return PJ_SUCCESS;
 }
 

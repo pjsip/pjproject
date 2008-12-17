@@ -37,7 +37,7 @@
 //
 // Account
 //
-#define HAS_SIP_ACCOUNT	1	// 0 to disable registration
+#define HAS_SIP_ACCOUNT	0	// 1 to enable registration
 #define SIP_DOMAIN	"pjsip.lab"
 #define SIP_USER	"400"
 #define SIP_PASSWD	"400"
@@ -53,8 +53,8 @@
 // Configure nameserver if DNS SRV is to be used with both SIP
 // or STUN (for STUN see other settings below)
 //
-//#define NAMESERVER	NULL
-#define NAMESERVER	"192.168.0.2"
+#define NAMESERVER	NULL
+//#define NAMESERVER	"192.168.0.2"
 
 //
 // STUN server
@@ -249,6 +249,8 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 }
 
 
+//#include<e32debug.h>
+
 /* Logging callback */
 static void log_writer(int level, const char *buf, int len)
 {
@@ -259,6 +261,7 @@ static void log_writer(int level, const char *buf, int len)
     pj_ansi_to_unicode(buf, len, buf16, PJ_ARRAY_SIZE(buf16));
 
     TPtrC16 aBuf((const TUint16*)buf16, (TInt)len);
+    //RDebug::Print(aBuf);
     console->Write(aBuf);
     
 }
@@ -435,7 +438,7 @@ static pj_status_t app_startup()
 class ConsoleUI : public CActive 
 {
 public:
-    ConsoleUI(CActiveSchedulerWait *asw, CConsoleBase *con);
+    ConsoleUI(CConsoleBase *con);
 
     // Run console UI
     void Run();
@@ -451,13 +454,12 @@ protected:
     void RunL();
     
 private:
-    CActiveSchedulerWait *asw_;
     CConsoleBase *con_;
 };
 
 
-ConsoleUI::ConsoleUI(CActiveSchedulerWait *asw, CConsoleBase *con) 
-: CActive(EPriorityStandard), asw_(asw), con_(con)
+ConsoleUI::ConsoleUI(CConsoleBase *con) 
+: CActive(EPriorityStandard), con_(con)
 {
     CActiveScheduler::Add(this);
 }
@@ -508,7 +510,7 @@ void ConsoleUI::RunL()
     
     switch (kc) {
     case 'w':
-	    asw_->AsyncStop();
+	    CActiveScheduler::Stop();
 	    reschedule = PJ_FALSE;
 	    break;
     case 'D':
@@ -685,14 +687,57 @@ on_return:
 
 #include <es_sock.h>
 
+#if 0
+// Force network connection to use the first IAP, 
+// this is useful for debugging on emulator without GUI. 
+// Include commdb.lib & apengine.lib in symbian_ua.mmp file
+// if this is enabled.
+
+#include <apdatahandler.h>
+
+inline void ForceUseFirstIAP() 
+{
+    TUint32 rank = 1;
+    TUint32 bearers;
+    TUint32 prompt;
+    TUint32 iap;
+
+    CCommsDatabase* commDb = CCommsDatabase::NewL(EDatabaseTypeIAP);
+    CleanupStack::PushL(commDb);
+
+    CApDataHandler* apDataHandler = CApDataHandler::NewLC(*commDb);
+    
+    TCommDbConnectionDirection direction = ECommDbConnectionDirectionOutgoing;
+    apDataHandler->GetPreferredIfDbIapTypeL(rank, direction, bearers, prompt, iap);
+    prompt = ECommDbDialogPrefDoNotPrompt;
+    apDataHandler->SetPreferredIfDbIapTypeL(rank, direction, bearers, (TCommDbDialogPref)prompt, iap, ETrue);
+    CleanupStack::PopAndDestroy(2); // apDataHandler, commDb
+}
+
+static void SelectIAP() 
+{
+    ForceUseFirstIAP();
+}
+
+#else
+
+static void SelectIAP() 
+{
+}
+
+#endif
+
+
 ////////////////////////////////////////////////////////////////////////////
 int ua_main() 
 {
-	RSocketServ aSocketServer;
-	RConnection aConn;
-	TInt err;
-	pj_symbianos_params sym_params;
+    RSocketServ aSocketServer;
+    RConnection aConn;
+    TInt err;
+    pj_symbianos_params sym_params;
     pj_status_t status;
+
+    SelectIAP();
     
     // Initialize RSocketServ
     if ((err=aSocketServer.Connect()) != KErrNone)
@@ -700,8 +745,8 @@ int ua_main()
     
     // Open up a connection
     if ((err=aConn.Open(aSocketServer)) != KErrNone) {
-	    aSocketServer.Close();
-		return PJ_STATUS_FROM_OS(err);
+	aSocketServer.Close();
+	return PJ_STATUS_FROM_OS(err);
     }
     
     if ((err=aConn.Start()) != KErrNone) {
@@ -722,39 +767,37 @@ int ua_main()
     if (status != PJ_SUCCESS) {
     	aConn.Close();
     	aSocketServer.Close();
-	    return status;
+	return status;
     }
 
     // Run the UI
-    CActiveSchedulerWait *asw = new CActiveSchedulerWait;
-    ConsoleUI *con = new ConsoleUI(asw, console);
+    ConsoleUI *con = new ConsoleUI(console);
     
     con->Run();
-    
     PrintMenu();
-    asw->Start();
+
+    CActiveScheduler::Start();
     
     delete con;
-    delete asw;
 
     // Dump memory statistics
     PJ_LOG(3,(THIS_FILE, "Max heap usage: %u.%03uMB",
-    		  pjsua_var.cp.peak_used_size / 1000000,
-    		  (pjsua_var.cp.peak_used_size % 1000000)/1000));
+	      pjsua_var.cp.peak_used_size / 1000000,
+	      (pjsua_var.cp.peak_used_size % 1000000)/1000));
     
     // check max stack usage
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
 	pj_thread_t* this_thread = pj_thread_this();
 	if (!this_thread)
-		return status;
+	    return status;
 	
 	const char* max_stack_file;
 	int max_stack_line;
 	status = pj_thread_get_stack_info(this_thread, &max_stack_file, &max_stack_line);
 	
 	PJ_LOG(3,(THIS_FILE, "Max stack usage: %u at %s:%d", 
-			pj_thread_get_stack_max_usage(this_thread), 
-			max_stack_file, max_stack_line));
+		  pj_thread_get_stack_max_usage(this_thread), 
+		  max_stack_file, max_stack_line));
 #endif
 	
     // Shutdown pjsua
@@ -762,7 +805,7 @@ int ua_main()
     
     // Close connection and socket server
     aConn.Close();
-	aSocketServer.Close();
+    aSocketServer.Close();
 	
     return status;
 }

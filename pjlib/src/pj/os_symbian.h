@@ -347,7 +347,7 @@ public:
     void WaitForActiveObjects(TInt aPriority = CActive::EPriorityStandard)
     {
 	TInt aError;
-	User::WaitForAnyRequest();
+	CActiveScheduler::Current()->WaitForAnyRequest();
 	CActiveScheduler::RunIfReady(aError, aPriority);
     }
 
