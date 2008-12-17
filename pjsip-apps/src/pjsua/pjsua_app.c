@@ -2187,6 +2187,9 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     /* Start ringback */
     ring_start(call_id);
 
+    if (current_call==PJSUA_INVALID_ID)
+	current_call = call_id;
+
     if (app_config.auto_answer > 0) {
 	pjsua_call_answer(call_id, app_config.auto_answer, NULL, NULL);
     }

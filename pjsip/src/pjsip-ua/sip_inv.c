@@ -2814,6 +2814,11 @@ static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
 		if (tsx->status_code > 100)
 		    inv_set_state(inv, PJSIP_INV_STATE_EARLY, e);
 		break;
+	    case PJSIP_TSX_STATE_TERMINATED:
+		/* there is a failure in sending response. */
+		inv_set_cause(inv, tsx->status_code, &tsx->status_text);
+		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+		break;
 	    default:
 		inv_on_state_incoming(inv, e);
 		break;

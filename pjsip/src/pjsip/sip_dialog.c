@@ -540,6 +540,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 on_error:
     if (tsx) {
 	pjsip_tsx_terminate(tsx, 500);
+	pj_assert(dlg->tsx_count>0);
 	--dlg->tsx_count;
     }
 
@@ -1412,6 +1413,14 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_response( pjsip_dialog *dlg,
     /* Ask transaction to send the response */
     status = pjsip_tsx_send_msg(tsx, tdata);
 
+    /* This function must decrement transmit data request counter 
+     * regardless of the operation status. The transaction only
+     * decrements the counter if the operation is successful.
+     */
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+    }
+
     pjsip_dlg_dec_lock(dlg);
 
     return status;
@@ -1898,7 +1907,14 @@ void pjsip_dlg_on_tsx_state( pjsip_dialog *dlg,
     }
 
 
-    if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
+    /* It is possible that the transaction is terminated and this function
+     * is called while we're calling on_tsx_state(). So only decrement
+     * the tsx_count if we're still attached to the transaction.
+     */
+    if (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
+	tsx->mod_data[dlg->ua->id] == dlg) 
+    {
+	pj_assert(dlg->tsx_count>0);
 	--dlg->tsx_count;
 	tsx->mod_data[dlg->ua->id] = NULL;
     }

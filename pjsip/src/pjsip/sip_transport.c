@@ -568,8 +568,17 @@ static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata)
 {
     /* Allocate buffer if necessary. */
     if (tdata->buf.start == NULL) {
-	tdata->buf.start = (char*) 
-			   pj_pool_alloc( tdata->pool, PJSIP_MAX_PKT_LEN);
+	PJ_USE_EXCEPTION;
+
+	PJ_TRY {
+	    tdata->buf.start = (char*) 
+			       pj_pool_alloc(tdata->pool, PJSIP_MAX_PKT_LEN);
+	}
+	PJ_CATCH_ANY {
+	    return PJ_ENOMEM;
+	}
+	PJ_END
+
 	tdata->buf.cur = tdata->buf.start;
 	tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
     }

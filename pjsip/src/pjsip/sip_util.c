@@ -1673,8 +1673,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_respond_stateless( pjsip_endpoint *endpt,
 
     /* Send! */
     status = pjsip_endpt_send_response( endpt, &res_addr, tdata, NULL, NULL );
+    if (status != PJ_SUCCESS) {
+	pjsip_tx_data_dec_ref(tdata);
+	return status;
+    }
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 

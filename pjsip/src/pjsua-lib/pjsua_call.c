@@ -909,12 +909,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    update_remote_nat_type(call, remote_sdp);
     }
 
-    /* Create and attach pjsua_var data to the dialog: */
-    call->inv = inv;
-
-    dlg->mod_data[pjsua_var.mod.id] = call;
-    inv->mod_data[pjsua_var.mod.id] = call;
-
     /* If account is locked to specific transport, then lock dialog
      * to this transport too.
      */
@@ -925,7 +919,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsip_dlg_set_transport(dlg, &tp_sel);
     }
 
-    /* Must answer with some response to initial INVITE.
+    /* Must answer with some response to initial INVITE. We'll do this before
+     * attaching the call to the invite session/dialog, so that the application
+     * will not get notification about this event (on another scenario, it is
+     * also possible that inv_send_msg() fails and causes the invite session to
+     * be disconnected. If we have the call attached at this time, this will
+     * cause the disconnection callback to be called before on_incoming_call()
+     * callback is called, which is not right).
      */
     status = pjsip_inv_initial_answer(inv, rdata, 
 				      100, NULL, NULL, &response);
@@ -943,8 +943,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
 	}
     }
+
+    /* Create and attach pjsua_var data to the dialog: */
+    call->inv = inv;
+
+    dlg->mod_data[pjsua_var.mod.id] = call;
+    inv->mod_data[pjsua_var.mod.id] = call;
 
     ++pjsua_var.call_cnt;
 
@@ -3725,9 +3733,16 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 					    pjsip_transaction *tsx,
 					    pjsip_event *e)
 {
-    pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+    pjsua_call *call;
 
     PJSUA_LOCK();
+
+    call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
+
+    if (call == NULL) {
+	PJSUA_UNLOCK();
+	return;
+    }
 
     /* Notify application callback first */
     if (pjsua_var.ua_cfg.cb.on_call_tsx_state) {
