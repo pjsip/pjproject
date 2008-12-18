@@ -73,6 +73,13 @@
 
 #   define PJSIP_MAX_PKT_LEN		2000
 
+    /* This is important for Symbian. Symbian lacks vsnprintf(), so
+     * if the log buffer is not long enough it's possible that
+     * large incoming packet will corrupt memory when the log tries
+     * to log the packet.
+     */
+#   define PJ_LOG_MAX_SIZE		(PJSIP_MAX_PKT_LEN+500)
+
     /* Since we don't have threads, log buffer can use static buffer */
 #   define PJ_LOG_USE_STACK_BUFFER	0
 
