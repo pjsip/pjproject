@@ -419,7 +419,8 @@ static pjmedia_port* create_gen_port(pj_pool_t *pool,
 	pj_int16_t *buf;
 	unsigned c;
 
-	buf = pj_pool_alloc(pool, sizeof(ref_signal)*channel_count);
+	buf = (pj_int16_t*)
+	      pj_pool_alloc(pool, sizeof(ref_signal)*channel_count);
 	for (c=0; c<channel_count; ++c) {
 	    unsigned i;
 	    pj_int16_t *p;

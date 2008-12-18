@@ -626,7 +626,7 @@ static pj_status_t g722_codec_decode(pjmedia_codec *codec,
 
 #if !PLC_DISABLED
     if (g722_data->plc_enabled)
-	pjmedia_plc_save(g722_data->plc, output->buf);
+	pjmedia_plc_save(g722_data->plc, (pj_int16_t*)output->buf);
 #endif
 
     TRACE_((THIS_FILE, "G722 decode done"));
@@ -642,14 +642,14 @@ static pj_status_t  g722_codec_recover(pjmedia_codec *codec,
 				       unsigned output_buf_len,
 				       struct pjmedia_frame *output)
 {
-    struct g722_data *g722_data = codec->codec_data;
+    struct g722_data *g722_data = (struct g722_data*)codec->codec_data;
 
     PJ_ASSERT_RETURN(g722_data->plc_enabled, PJ_EINVALIDOP);
 
     PJ_ASSERT_RETURN(output_buf_len >= SAMPLES_PER_FRAME * 2, 
                      PJMEDIA_CODEC_EPCMTOOSHORT);
 
-    pjmedia_plc_generate(g722_data->plc, output->buf);
+    pjmedia_plc_generate(g722_data->plc, (pj_int16_t*)output->buf);
 
     output->size = SAMPLES_PER_FRAME * 2;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;

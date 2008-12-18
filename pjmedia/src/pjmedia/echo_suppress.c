@@ -121,7 +121,7 @@ typedef enum talk_state
     ST_REM_SILENT,
     ST_DOUBLETALK,
     ST_REM_TALK
-} talk_state;
+} talk_state_t;
 
 const char *state_names[] = 
 {
@@ -225,7 +225,7 @@ typedef struct echo_supp
     pj_uint16_t  tail_samples;	    /* Tail length in samples.		    */
 
     pj_bool_t	 learning;	    /* Are we still learning yet?	    */
-    talk_state	 talk_state;	    /* Current talking state		    */
+    talk_state_t talk_state;	    /* Current talking state		    */
     int		 tail_index;	    /* Echo location, -1 if not found	    */
 
     unsigned	 max_calc;	    /* # of calc before learning complete.
@@ -391,7 +391,7 @@ PJ_DEF(void) echo_supp_soft_reset(void *state)
 
 
 /* Set state */
-static void echo_supp_set_state(echo_supp *ec, enum talk_state state, 
+static void echo_supp_set_state(echo_supp *ec, talk_state_t state, 
 				unsigned level)
 {
     PJ_UNUSED_ARG(level);

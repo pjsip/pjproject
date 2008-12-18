@@ -2068,7 +2068,7 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
 	    pjsip_restore_strict_route_set(tdata);
 
 	    /* Set target */
-	    tdata->msg->line.req.uri = 
+	    tdata->msg->line.req.uri = (pjsip_uri*)
 	       pjsip_uri_clone(tdata->pool, inv->dlg->target_set.current->uri);
 
 	    /* Remove branch param in Via header. */

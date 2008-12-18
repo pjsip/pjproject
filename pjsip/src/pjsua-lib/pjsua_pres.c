@@ -137,7 +137,7 @@ PJ_DEF(pj_status_t) pjsua_enum_buddies( pjsua_buddy_id ids[],
 PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
 					  pjsua_buddy_info *info)
 {
-    int total=0;
+    unsigned total=0;
     pjsua_buddy *buddy;
 
     PJ_ASSERT_RETURN(buddy_id>=0 && 
