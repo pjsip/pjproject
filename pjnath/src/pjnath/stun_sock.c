@@ -741,7 +741,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
 	char errmsg[PJ_ERR_MSG_SIZE];
 
 	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(stun_sock->obj_name, "recvfrom() error: %s", errmsg));
+	PJ_LOG(2,(stun_sock->obj_name, "recvfrom() error: %s", errmsg));
 	return PJ_TRUE;
     }
 
