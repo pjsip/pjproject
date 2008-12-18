@@ -55,7 +55,7 @@ STATICLIBRARY	libgsmcodec.lib libspeexcodec.lib
 	STATICLIBRARY   eexe.lib ecrt0.lib
 #endif
 
-LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib 
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib commdb.lib apengine.lib 
 
 // The default 8KB seems to be insufficient with all bells and
 // whistles turned on
