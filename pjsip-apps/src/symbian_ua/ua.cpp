@@ -46,7 +46,7 @@
 // Outbound proxy for all accounts
 //
 #define SIP_PROXY	NULL
-//#define SIP_PROXY	"sip:192.168.0.8"
+//#define SIP_PROXY	"<sip:192.168.0.8;lr>"
 
 
 //
@@ -61,10 +61,10 @@
 #if 0
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
-#   define STUN_SERVER	"stun.xten.com"
+#   define STUN_SERVER	"stun.pjsip.org"
 #elif 0
 	// Use this to have the STUN server resolved with DNS SRV
-#   define STUN_DOMAIN	"iptel.org"
+#   define STUN_DOMAIN	"pjsip.org"
 #   define STUN_SERVER	NULL
 #else
 	// Use this to disable STUN
@@ -327,7 +327,8 @@ static pj_status_t app_startup()
     
     
     pjsua_logging_config_default(&log_cfg);
-    log_cfg.console_level = 4;
+    log_cfg.level = LOG_LEVEL;
+    log_cfg.console_level = LOG_LEVEL;
     log_cfg.cb = &log_writer;
     //log_cfg.log_filename = pj_str("C:\\data\\symbian_ua.log");
 
