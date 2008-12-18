@@ -231,7 +231,7 @@ struct pj_stun_tx_data
 
     void		*pkt;		/**< The STUN packet.		    */
     unsigned		 max_len;	/**< Length of packet buffer.	    */
-    unsigned		 pkt_size;	/**< The actual length of STUN pkt. */
+    pj_size_t		 pkt_size;	/**< The actual length of STUN pkt. */
 
     unsigned		 addr_len;	/**< Length of destination address. */
     const pj_sockaddr_t	*dst_addr;	/**< Destination address.	    */
@@ -598,7 +598,7 @@ PJ_DECL(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					       pj_size_t pkt_size,
 					       unsigned options,
 					       void *token,
-					       unsigned *parsed_len,
+					       pj_size_t *parsed_len,
 					       const pj_sockaddr_t *src_addr,
 					       unsigned src_addr_len);
 

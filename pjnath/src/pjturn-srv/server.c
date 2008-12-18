@@ -615,7 +615,7 @@ PJ_DEF(void) pj_turn_srv_on_rx_pkt(pj_turn_srv *srv,
     } else {
 	/* Otherwise this is a new client */
 	unsigned options;
-	unsigned parsed_len;
+	pj_size_t parsed_len;
 	pj_status_t status;
 
 	/* Check that this is a STUN message */

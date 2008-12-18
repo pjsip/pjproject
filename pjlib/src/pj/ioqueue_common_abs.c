@@ -41,8 +41,9 @@ static pj_status_t ioqueue_destroy(pj_ioqueue_t *ioqueue)
     if (ioqueue->auto_delete_lock && ioqueue->lock ) {
 	pj_lock_release(ioqueue->lock);
         return pj_lock_destroy(ioqueue->lock);
-    } else
-        return PJ_SUCCESS;
+    }
+    
+    return PJ_SUCCESS;
 }
 
 /*

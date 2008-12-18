@@ -463,7 +463,7 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
 			      pj_size_t *remainder)
 {
     pj_turn_sock *turn_sock;
-    unsigned parsed_len;
+    pj_size_t parsed_len;
     pj_bool_t ret = PJ_TRUE;
 
     turn_sock = (pj_turn_sock*) pj_activesock_get_user_data(asock);

@@ -592,8 +592,8 @@ PJ_DECL(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
  */
 PJ_DECL(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 					       void *pkt,
-					       unsigned pkt_len,
-					       unsigned *parsed_len);
+					       pj_size_t pkt_len,
+					       pj_size_t *parsed_len);
 
 
 /**

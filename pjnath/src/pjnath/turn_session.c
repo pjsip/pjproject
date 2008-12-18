@@ -914,8 +914,8 @@ on_return:
  */
 PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 					      void *pkt,
-					      unsigned pkt_len,
-					      unsigned *parsed_len)
+					      pj_size_t pkt_len,
+					      pj_size_t *parsed_len)
 {
     pj_bool_t is_stun;
     pj_status_t status;

@@ -1054,7 +1054,7 @@ static pj_status_t send_response(pj_stun_session *sess, void *token,
 				 const pj_sockaddr_t *addr, unsigned addr_len)
 {
     pj_uint8_t *out_pkt;
-    unsigned out_max_len, out_len;
+    pj_size_t out_max_len, out_len;
     pj_status_t status;
 
     /* Apply options */
@@ -1319,7 +1319,7 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 					      pj_size_t pkt_size,
 					      unsigned options,
 					      void *token,
-					      unsigned *parsed_len,
+					      pj_size_t *parsed_len,
 					      const pj_sockaddr_t *src_addr,
 					      unsigned src_addr_len)
 {

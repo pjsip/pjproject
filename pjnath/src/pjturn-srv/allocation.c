@@ -934,7 +934,7 @@ PJ_DEF(void) pj_turn_allocation_on_rx_client_pkt(pj_turn_allocation *alloc,
 	 * with fingerprint checking.
 	 */
 	unsigned options = PJ_STUN_CHECK_PACKET | PJ_STUN_NO_FINGERPRINT_CHECK;
-	unsigned parsed_len = 0;
+	pj_size_t parsed_len = 0;
 
 	if (pkt->transport->listener->tp_type == PJ_TURN_TP_UDP)
 	    options |= PJ_STUN_IS_DATAGRAM;

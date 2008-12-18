@@ -687,7 +687,7 @@ int transport_load_test(char *target_url)
 {
     enum { COUNT = 2000 };
     unsigned i;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     /* exhaust packets */
     do {

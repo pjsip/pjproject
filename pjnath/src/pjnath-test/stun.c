@@ -242,7 +242,7 @@ static int decode_test(void)
 	pj_stun_msg *msg, *msg2;
 	pj_uint8_t buf[1500];
 	pj_str_t key;
-	unsigned len;
+	pj_size_t len;
 	pj_status_t status;
 
 	PJ_LOG(3,(THIS_FILE, "   %s", t->title));
@@ -543,8 +543,9 @@ static int fingerprint_test_vector()
     for (i=0; i<PJ_ARRAY_SIZE(test_vectors); ++i) {
 	struct test_vector *v;
 	pj_stun_msg *ref_msg, *msg;
-	unsigned parsed_len;
-	unsigned len, pos;
+	pj_size_t parsed_len;
+	pj_size_t len;
+	unsigned pos;
 	pj_uint8_t buf[1500];
 	char print[1500];
 	pj_str_t key;
@@ -746,7 +747,7 @@ static int handle_unknown_non_mandatory(void)
     pj_uint8_t data[] = { 1, 2, 3, 4, 5, 6};
     pj_uint8_t packet[500];
     pj_stun_auth_cred cred;
-    unsigned len;
+    pj_size_t len;
     pj_status_t rc;
 
     PJ_LOG(3,(THIS_FILE, "  handling unknown non-mandatory attr"));
