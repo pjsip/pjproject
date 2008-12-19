@@ -288,6 +288,10 @@ PJ_DEF(pj_status_t) pj_inet_pton(int af, const pj_str_t *src, void *dst)
 		PJ_STRING_TO_NATIVE(tempaddr,wtempaddr,sizeof(wtempaddr)), 
 		af, NULL, (LPSOCKADDR)&sock_addr, &addr_len);
 	if (rc != 0) {
+	    /* If you get rc 130022 Invalid argument (WSAEINVAL) with IPv6,
+	     * check that you have IPv6 enabled (install it in the network
+	     * adapter).
+	     */
 	    pj_status_t status = pj_get_netos_error();
 	    if (status == PJ_SUCCESS)
 		status = PJ_EUNKNOWN;
