@@ -47,7 +47,7 @@ struct pj_stun_sock
     pj_sockaddr		 srv_addr;	/* Resolved server addr	    */
     pj_sockaddr		 mapped_addr;	/* Our public address	    */
 
-    pj_dns_async_query	*q;		/* Pending DNS query	    */
+    pj_dns_srv_async_query *q;		/* Pending DNS query	    */
     pj_sock_t		 sock_fd;	/* Socket descriptor	    */
     pj_activesock_t	*active_sock;	/* Active socket object	    */
     pj_ioqueue_op_key_t	 send_key;	/* Default send key for app */
@@ -370,7 +370,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_start( pj_stun_sock *stun_sock,
 PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
 {
     if (stun_sock->q) {
-	pj_dns_resolver_cancel_query(stun_sock->q, PJ_FALSE);
+	pj_dns_srv_cancel_query(stun_sock->q, PJ_FALSE);
 	stun_sock->q = NULL;
     }
 

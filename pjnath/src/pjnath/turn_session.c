@@ -86,7 +86,7 @@ struct pj_turn_session
     pj_timer_heap_t	*timer_heap;
     pj_timer_entry	 timer;
 
-    pj_dns_async_query	*dns_async;
+    pj_dns_srv_async_query *dns_async;
     pj_uint16_t		 default_port;
 
     pj_uint16_t		 af;
@@ -342,7 +342,7 @@ static void sess_shutdown(pj_turn_session *sess,
 	break;
     case PJ_TURN_STATE_RESOLVING:
 	if (sess->dns_async != NULL) {
-	    pj_dns_resolver_cancel_query(sess->dns_async, PJ_FALSE);
+	    pj_dns_srv_cancel_query(sess->dns_async, PJ_FALSE);
 	    sess->dns_async = NULL;
 	}
 	break;

@@ -137,6 +137,9 @@ typedef struct pj_dns_srv_record
 } pj_dns_srv_record;
 
 
+/** Opaque declaration for DNS SRV query */
+typedef struct pj_dns_srv_async_query pj_dns_srv_async_query;
+
 /**
  * Type of callback function to receive notification from the resolver
  * when the resolution process completes.
@@ -184,7 +187,20 @@ PJ_DECL(pj_status_t) pj_dns_srv_resolve(const pj_str_t *domain_name,
 					unsigned option,
 					void *token,
 					pj_dns_srv_resolver_cb *cb,
-					pj_dns_async_query **p_query);
+					pj_dns_srv_async_query **p_query);
+
+
+/**
+ * Cancel an outstanding DNS SRV query.
+ *
+ * @param query	    The pending asynchronous query to be cancelled.
+ * @param notify    If non-zero, the callback will be called with failure
+ *		    status to notify that the query has been cancelled.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code,
+ */
+PJ_DECL(pj_status_t) pj_dns_srv_cancel_query(pj_dns_srv_async_query *query,
+					     pj_bool_t notify);
 
 
 /**
