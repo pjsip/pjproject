@@ -2158,7 +2158,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 
 	if (adesc == NULL) {
 	    /* Unrecognized attribute */
-	    pj_stun_binary_attr *attr;
+	    pj_stun_binary_attr *attr = NULL;
 
 	    PJ_LOG(5,(THIS_FILE, "Unrecognized attribute type 0x%x", 
 		      attr_type));
