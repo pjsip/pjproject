@@ -454,8 +454,7 @@ static void dns_callback(void *user_data,
 	query_job = srv->parent;
     } else {
 	pj_assert(!"Unexpected user data!");
-	query_job->last_error = status = PJ_EINVALIDOP;
-	goto on_error;
+	return;
     }
 
     /* Proceed to next stage */
