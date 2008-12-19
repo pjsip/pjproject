@@ -412,9 +412,9 @@ static int init(void)
     int i;
 
     nameservers[0] = pj_str("127.0.0.1");
-    ports[0] = 553;
+    ports[0] = 5553;
     nameservers[1] = pj_str("127.0.0.1");
-    ports[1] = 554;
+    ports[1] = 5554;
 
     g_server[0].port = ports[0];
     g_server[1].port = ports[1];
@@ -1367,6 +1367,8 @@ int resolver_test(void)
 #endif
 
     rc = init();
+    if (rc != 0)
+	goto on_error;
 
     rc = a_parser_test();
     if (rc != 0)
