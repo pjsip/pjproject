@@ -1,4 +1,4 @@
-# $Id:$
+# $Id$
 #
 # pjsua Setup script for Visual Studio
 #

@@ -2,7 +2,7 @@
 ========================================================================
  Name        : symbian_ua_guiSettingItemListView.cpp
  Author      : nanang
- Copyright   : (c) PJSIP 2008
+ Copyright   : (c) 2008-2009 Teluu Inc.
  Description : 
 ========================================================================
 */
