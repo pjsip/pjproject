@@ -1088,6 +1088,13 @@ static pj_status_t init_mutex(pj_mutex_t *mutex, const char *name, int type)
 	return PJ_RETURN_OS_ERROR(rc);
     }
     
+    rc = pthread_mutexattr_destroy(&attr);
+    if (rc != 0) {
+	pj_status_t status = PJ_RETURN_OS_ERROR(rc);
+	pthread_mutex_destroy(&mutex->mutex);
+	return status;
+    }
+
 #if PJ_DEBUG
     /* Set owner. */
     mutex->nesting_level = 0;
