@@ -57,6 +57,12 @@ for f in os.listdir("scripts-recvfrom"):
 for pat in excluded_tests:
     tests = [t for t in tests if t.find(pat)==-1]
 
+# List the tests only?
+if len(sys.argv)==2 and sys.argv[1]=="--list":
+    for t in tests:
+	print t
+    sys.exit(0)
+
 # Resume test?
 resume_script=""
 if len(sys.argv) > 1:

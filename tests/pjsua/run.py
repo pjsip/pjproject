@@ -80,7 +80,7 @@ if G_EXE == "":
 		sys.exit(1)
 	    G_INUNIX = False
 	else:
-	    f = open("../../../build.mak", "r")
+	    f = open("../../build.mak", "r")
 	    while True:
 		line = f.readline()
 		if not line:
