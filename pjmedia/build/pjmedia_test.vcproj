@@ -71,7 +71,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib  ole32.lib user32.lib"
-				OutputFile="../bin/pjmedia_test_vc8d.exe"
+				OutputFile="../bin/pjmedia-test-i386-win32-vc8-release.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
@@ -164,7 +164,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib"
-				OutputFile="../bin/pjmedia_test_vc8.exe"
+				OutputFile="../bin/pjmedia-test-i386-win32-vc8-release.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="true"
 				ProgramDatabaseFile=".\output\pjmedia_test_vc6_Release/pjmedia_test_vc6.pdb"

@@ -252,6 +252,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjnath-test\server.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjnath-test\sess_auth.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjnath-test\stun.c"
 				>
 				<FileConfiguration
@@ -274,6 +282,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjnath-test\stun_sock_test.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjnath-test\test.c"
 				>
 				<FileConfiguration
@@ -294,6 +306,10 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\pjnath-test\turn_sock_test.c"
+				>
 			</File>
 		</Filter>
 		<Filter
