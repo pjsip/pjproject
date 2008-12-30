@@ -69,15 +69,15 @@ update_ops = [Operation(Operation.UPDATE, "")]
 # The standard library tests (e.g. pjlib-test, pjsip-test, etc.)
 #
 std_test_ops= [
-    Operation(Operation.TEST, "./pjlib-test-$SUFFIX", name="pjlib test",
+    Operation(Operation.TEST, "./pjlib-test$SUFFIX", name="pjlib test",
               wdir="pjlib/bin"),
-    Operation(Operation.TEST, "./pjlib-util-test-$SUFFIX", 
+    Operation(Operation.TEST, "./pjlib-util-test$SUFFIX", 
               name="pjlib-util test", wdir="pjlib-util/bin"),
-    Operation(Operation.TEST, "./pjnath-test-$SUFFIX", name="pjnath test",
+    Operation(Operation.TEST, "./pjnath-test$SUFFIX", name="pjnath test",
               wdir="pjnath/bin"),
-    Operation(Operation.TEST, "./pjmedia-test-$SUFFIX", name="pjmedia test",
+    Operation(Operation.TEST, "./pjmedia-test$SUFFIX", name="pjmedia test",
               wdir="pjmedia/bin"),
-    Operation(Operation.TEST, "./pjsip-test-$SUFFIX", name="pjsip test",
+    Operation(Operation.TEST, "./pjsip-test$SUFFIX", name="pjsip test",
               wdir="pjsip/bin")
 ]
 
@@ -85,8 +85,8 @@ std_test_ops= [
 # These are operations to build the software on GNU/Posix systems
 #
 gnu_build_ops = [
-    Operation(Operation.CONFIGURE, "./configure"),
-    Operation(Operation.BUILD, "make distclean; make dep && make; cd pjsip-apps/src/python; python setup.py clean build"),
+    Operation(Operation.CONFIGURE, "sh ./configure"),
+    Operation(Operation.BUILD, "sh -c 'make distclean && make dep && make && cd pjsip-apps/src/python && python setup.py clean build'"),
     #Operation(Operation.BUILD, "python setup.py clean build",
     #          wdir="pjsip-apps/src/python")
 ]
@@ -94,8 +94,12 @@ gnu_build_ops = [
 #
 # These are pjsua Python based unit test operations
 #
-def build_pjsua_test_ops():
+def build_pjsua_test_ops(pjsua_exe=""):
     ops = []
+    if pjsua_exe:
+        exe = " -e ../../pjsip-apps/bin/" + pjsua_exe
+    else:
+        exe = ""
     cwd = os.getcwd()
     os.chdir("../pjsua")
     os.system("python runall.py --list > list")
@@ -105,8 +109,10 @@ def build_pjsua_test_ops():
         (mod,param) = e.split(None,2)
         name = mod[4:mod.find(".py")] + "_" + \
                param[param.find("/")+1:param.find(".py")]
-        ops.append(Operation(Operation.TEST, "python run.py " + e, name=name,
-                   wdir="tests/pjsua"))
+        ops.append(Operation(Operation.TEST, "python run.py" + exe + " " + \
+                             e, name=name, wdir="tests/pjsua"))
+    f.close()
+    os.remove("list") 
     os.chdir(cwd)
     return ops
 
@@ -126,6 +132,36 @@ def gcc_version(gcc):
             break
     proc.wait()
     return "gcc-" + ver
+
+#
+# Get Visual Studio version
+#
+def vs_get_version():
+    proc = subprocess.Popen("cl", stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    while True:
+        s = proc.stdout.readline()
+        if s=="":
+            break
+        pos = s.find("Version")
+        if pos > 0:
+            proc.wait()
+            s = s[pos+8:]
+            ver = s.split(None, 1)[0]
+            major = ver[0:2]
+            if major=="12":
+                return "vs6"
+            elif major=="13":
+                return "vs2003"
+            elif major=="14":
+                return "vs2005"
+            elif major=="15":
+                return "vs2008"
+            else:
+                return "vs-" + major
+    proc.wait()
+    return "vs-unknown"
+    
 
 #
 # Test config
@@ -183,20 +219,14 @@ class TestBuilder:
     def post_action(self):
         # Restore user.mak
         name = self.config.base_dir + "/user.mak"
-        if self.saved_user_mak:
-            f = open(name, "wt")
-            f.write(self.saved_user_mak)
-            f.close()
-        else:
-            os.remove(name)
+        f = open(name, "wt")
+        f.write(self.saved_user_mak)
+        f.close()
         # Restore config_site.h
         name = self.config.base_dir + "/pjlib/include/pj/config_site.h"
-        if self.saved_config_site:
-            f = open(name, "wt")
-            f.write(self.saved_config_site)
-            f.close()
-        else:
-            os.remove(name)
+        f = open(name, "wt")
+        f.write(self.saved_config_site)
+        f.close()
 
     def build_tests(self):
         # This should be overridden by subclasses
@@ -222,12 +252,11 @@ class TestBuilder:
                         included = True
                         break
             if excluded and not included:
-                print "Skipping test '%s'.." % (fullcmd)
+                if len(fullcmd)>60:
+                    fullcmd = fullcmd[0:60] + ".."
+                print "Skipping '%s'" % (fullcmd)
                 continue
 
-            #a.extend(["-o", "/tmp/xx" + a[0] + ".xml"])
-            #print a
-            #a = ["ccdash.py"].extend(a)
             b = ["ccdash.py"]
             b.extend(a)
             a = b
@@ -241,8 +270,28 @@ class TestBuilder:
 # GNU test configurator
 #
 class GNUTestBuilder(TestBuilder):
+    """\
+    This class creates list of tests suitable for GNU targets.
+
+    """
     def __init__(self, config, build_config_name="", user_mak="", \
                  config_site="", cross_compile="", exclude=[], not_exclude=[]):
+        """\
+        Parameters:
+        config              - BaseConfig instance
+        build_config_name   - Optional name to be added as suffix to the build
+                              name. Sample: "min-size", "O4", "TLS", etc.
+        user_mak            - Contents to be put on user.mak
+        config_site         - Contents to be put on config_site.h
+        cross_compile       - Optional cross-compile prefix. Must include the
+                              trailing dash, e.g. "arm-unknown-linux-"
+        exclude             - List of regular expression patterns for tests
+                              that will be excluded from the run
+        not_exclude         - List of regular expression patterns for tests
+                              that will be run regardless of whether they
+                              match the excluded pattern.
+
+        """
         TestBuilder.__init__(self, config, build_config_name=build_config_name,
                              user_mak=user_mak, config_site=config_site,
                              exclude=exclude, not_exclude=not_exclude)
@@ -252,13 +301,15 @@ class GNUTestBuilder(TestBuilder):
 
     def build_tests(self):
         if self.cross_compile:
-            suffix = self.cross_compile
-            build_name =  suffix + gcc_version(self.cross_compile + "gcc")
+            suffix = "-" + self.cross_compile[0:-1]
+            build_name =  self.cross_compile + \
+                          gcc_version(self.cross_compile + "gcc")
         else:
-            proc = subprocess.Popen(self.config.base_dir+"/config.guess",
-                                    stdout=subprocess.PIPE)
-            suffix = proc.stdout.readline().rstrip(" \r\n")
-            build_name =  suffix+"-"+gcc_version(self.cross_compile + "gcc")
+            proc = subprocess.Popen("sh "+self.config.base_dir+"/config.guess",
+                                    shell=True, stdout=subprocess.PIPE)
+            sys = proc.stdout.readline().rstrip(" \r\n")
+            build_name =  sys + "-"+gcc_version(self.cross_compile + "gcc")
+            suffix = "-" + sys
 
         if self.build_config_name:
             build_name = build_name + "-" + self.build_config_name
@@ -267,6 +318,71 @@ class GNUTestBuilder(TestBuilder):
         cmds.extend(gnu_build_ops)
         cmds.extend(std_test_ops)
         cmds.extend(build_pjsua_test_ops())
+        self.ccdash_args = []
+        for c in cmds:
+            c.cmdline = c.cmdline.replace("$SUFFIX", suffix)
+            args = c.encode(self.config.base_dir)
+            args.extend(["-U", self.config.url, 
+                         "-S", self.config.site, 
+                         "-T", self.stamp(), 
+                         "-B", build_name, 
+                         "-G", self.config.group])
+            args.extend(self.config.options)
+            self.ccdash_args.append(args)
+
+#
+# MSVC test configurator
+#
+class MSVCTestBuilder(TestBuilder):
+    """\
+    This class creates list of tests suitable for Visual Studio builds.
+
+    """
+    def __init__(self, config, vs_config="Release|Win32", build_config_name="", 
+                 config_site="", exclude=[], not_exclude=[]):
+        """\
+        Parameters:
+        config              - BaseConfig instance
+        vs_config           - Visual Studio build configuration to build.
+                              Sample: "Debug|Win32", "Release|Win32".
+        build_config_name   - Optional name to be added as suffix to the build
+                              name. Sample: "Debug", "Release", "IPv6", etc.
+        config_site         - Contents to be put on config_site.h
+        exclude             - List of regular expression patterns for tests
+                              that will be excluded from the run
+        not_exclude         - List of regular expression patterns for tests
+                              that will be run regardless of whether they
+                              match the excluded pattern.
+
+        """
+        TestBuilder.__init__(self, config, build_config_name=build_config_name,
+                             config_site=config_site, exclude=exclude, 
+                             not_exclude=not_exclude)
+        self.vs_config = vs_config.lower()
+
+    def build_tests(self):
+       
+        (vsbuild,sys) = self.vs_config.split("|",2)
+        
+        build_name = sys + "-" + vs_get_version() + "-" + vsbuild
+
+        if self.build_config_name:
+            build_name = build_name + "-" + self.build_config_name
+
+        vccmd = "vcbuild.exe /nologo /nohtmllog /nocolor /rebuild " + \
+                "pjproject-vs8.sln " + " \"" + self.vs_config + "\""
+        
+        suffix = "-i386-win32-vc8-" + vsbuild
+        pjsua = "pjsua_vc8"
+        if vsbuild=="debug":
+            pjsua = pjsua + "d"
+        
+        cmds = []
+        cmds.extend(update_ops)
+        cmds.extend([Operation(Operation.BUILD, vccmd)])
+        cmds.extend(std_test_ops)
+        cmds.extend(build_pjsua_test_ops(pjsua))
+
         self.ccdash_args = []
         for c in cmds:
             c.cmdline = c.cmdline.replace("$SUFFIX", suffix)
