@@ -1362,11 +1362,6 @@ int resolver_test(void)
 {
     int rc;
     
-#ifdef NDEBUG
-    PJ_LOG(3,(THIS_FILE, "  error: NDEBUG is declared"));
-    return -1;
-#endif
-
     rc = init();
     if (rc != 0)
 	goto on_error;
