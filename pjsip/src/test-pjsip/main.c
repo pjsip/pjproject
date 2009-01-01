@@ -82,7 +82,8 @@ int main(int argc, char *argv[])
     if (interractive) {
 	char s[10];
 	printf("<Press ENTER to quit>\n"); fflush(stdout);
-	fgets(s, sizeof(s), stdin);
+	if (fgets(s, sizeof(s), stdin) == NULL)
+	    return retval;
     }
 
     return retval;

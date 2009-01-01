@@ -202,8 +202,9 @@ static int open_device(int dev_id, pjmedia_dir dir,
     /* Let playback/capture runs for a while */
     //pj_thread_sleep(1000);
     puts("Press <ENTER> to stop");
-    fgets(tmp, sizeof(tmp), stdin);
-
+    if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
+	puts("EOF while reading stdin, will quit now..");
+    }
 
     pjmedia_snd_stream_close(strm);
 

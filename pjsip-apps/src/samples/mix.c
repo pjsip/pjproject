@@ -129,7 +129,8 @@ int main(int argc, char *argv[])
 
 	printf("File %s exists, overwrite? [Y/N] ", out_fname);
 	fflush(stdout);
-	fgets(in, sizeof(in), stdin);
+	if (fgets(in, sizeof(in), stdin) == NULL)
+	    return 1;
 	if (pj_tolower(in[0]) != 'y')
 	    return 1;
     }

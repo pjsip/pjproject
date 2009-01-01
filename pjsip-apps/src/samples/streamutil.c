@@ -616,7 +616,10 @@ int main(int argc, char *argv[])
 
 	printf("Command: "); fflush(stdout);
 
-	fgets(tmp, sizeof(tmp), stdin);
+	if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
+	    puts("EOF while reading stdin, will quit now..");
+	    break;
+	}
 
 	if (tmp[0] == 's')
 	    print_stream_stat(stream);

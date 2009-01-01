@@ -105,7 +105,8 @@ static pj_bool_t input(const char *title, char *buf, pj_size_t len)
     char *p;
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
-    fgets(buf, len, stdin);
+    if (fgets(buf, len, stdin) == NULL)
+	return PJ_FALSE;
 
     /* Remove trailing newlines. */
     for (p=buf; ; ++p) {
@@ -268,7 +269,7 @@ int main(int argc, char *argv[])
 	char tmp1[10];
 	char tmp2[10];
 	char *err;
-	int src, dst, level;
+	int src, dst, level, dur;
 
 	puts("");
 	conf_list(conf, 0);
@@ -285,7 +286,8 @@ int main(int argc, char *argv[])
 	
 	printf("Enter selection: "); fflush(stdout);
 
-	fgets(tmp, sizeof(tmp), stdin);
+	if (fgets(tmp, sizeof(tmp), stdin) == NULL)
+	    break;
 
 	switch (tmp[0]) {
 	case 's':
@@ -415,13 +417,13 @@ int main(int argc, char *argv[])
 
 	    if (!input("Duration to monitor (in seconds)", tmp1, sizeof(tmp1)) )
 		continue;
-	    strtol(tmp1, &err, 10);
+	    dur = strtol(tmp1, &err, 10);
 	    if (*err) {
 		puts("Invalid duration number");
 		continue;
 	    }
 
-	    monitor_level(conf, src, tmp2[0], strtol(tmp1, &err, 10));
+	    monitor_level(conf, src, tmp2[0], dur);
 	    break;
 
 	case 'q':

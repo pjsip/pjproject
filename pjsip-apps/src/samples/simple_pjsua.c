@@ -182,7 +182,10 @@ int main(int argc, char *argv[])
 	char option[10];
 
 	puts("Press 'h' to hangup all calls, 'q' to quit");
-	fgets(option, sizeof(option), stdin);
+	if (fgets(option, sizeof(option), stdin) == NULL) {
+	    puts("EOF while reading stdin, will quit now..");
+	    break;
+	}
 
 	if (option[0] == 'q')
 	    break;

@@ -53,7 +53,8 @@ int main(int argc, char *argv[])
 	char buf[10];
 
 	puts("Press <ENTER> to exit");
-	fgets(buf, sizeof(buf), stdin);
+	if (fgets(buf, sizeof(buf), stdin) == NULL)
+	    return rc;
     }
 
     return rc;

@@ -39,7 +39,8 @@ int main(int argc, char *argv[])
 
     if (argc == 2 && argv[1][0]=='-' && argv[1][1]=='i') {
 	puts("\nPress <ENTER> to quit");
-	fgets(s, sizeof(s), stdin);
+	if (fgets(s, sizeof(s), stdin) == NULL)
+	    return rc;
     }
 
     return rc;

@@ -1809,7 +1809,7 @@ int main(int argc, char *argv[])
 
     } else {
 	/* Server mode */
-	char s[10];
+	char s[10], *unused;
 	pj_status_t status;
 	unsigned i;
 
@@ -1844,7 +1844,8 @@ int main(int argc, char *argv[])
 
 	puts("\nPress <ENTER> to quit\n");
 	fflush(stdout);
-	fgets(s, sizeof(s), stdin);
+	unused = fgets(s, sizeof(s), stdin);
+	PJ_UNUSED_ARG(unused);
 
 	app.thread_quit = PJ_TRUE;
 	for (i=0; i<app.thread_count; ++i) {

@@ -108,7 +108,8 @@ static void console_main(pj_turn_srv *srv)
 	
 	menu();
 	    
-	fgets(line, sizeof(line), stdin);
+	if (fgets(line, sizeof(line), stdin) == NULL)
+	    break;
 
 	switch (line[0]) {
 	case 'd':

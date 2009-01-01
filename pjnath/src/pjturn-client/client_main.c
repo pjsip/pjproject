@@ -445,7 +445,8 @@ static void console_main(void)
 
 	menu();
 
-	fgets(input, sizeof(input), stdin);
+	if (fgets(input, sizeof(input), stdin) == NULL)
+	    break;
 	
 	switch (input[0]) {
 	case 'a':

@@ -54,7 +54,8 @@ int main(int argc, char *argv[])
 	char s[10];
 
 	puts("Press ENTER to quit");
-	fgets(s, sizeof(s), stdin);
+	if (fgets(s, sizeof(s), stdin) == NULL)
+	    return rc;
     }
 
     return rc;

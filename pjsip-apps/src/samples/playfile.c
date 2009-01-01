@@ -172,7 +172,9 @@ int main(int argc, char *argv[])
     puts("");
     puts("Press <ENTER> to stop playing and quit");
 
-    fgets(tmp, sizeof(tmp), stdin);
+    if (fgets(tmp, sizeof(tmp), stdin) == NULL) {
+	puts("EOF while reading stdin, will quit now..");
+    }
 
     
     /* Start deinitialization: */

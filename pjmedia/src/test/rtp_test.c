@@ -32,7 +32,10 @@ int rtp_test()
 
     pjmedia_rtp_session_init (&rtp, 4, 0x12345678);
     pjmedia_rtp_encode_rtp (&rtp, 4, 0, 0, 160, &rtphdr, &hdrlen);
-    fwrite (rtphdr, hdrlen, 1, fhnd);
+    if (fwrite (rtphdr, hdrlen, 1, fhnd) != 1) {
+	fclose(fhnd);
+	return -1;
+    }
     fclose(fhnd);
     return 0;
 }

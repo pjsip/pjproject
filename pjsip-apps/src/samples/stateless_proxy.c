@@ -221,7 +221,11 @@ int main(int argc, char *argv[])
 	     "  dd   dump detailed status\n"
 	     "");
 
-	fgets(line, sizeof(line), stdin);
+	if (fgets(line, sizeof(line), stdin) == NULL) {
+	    puts("EOF while reading stdin, will quit now..");
+	    global.quit_flag = PJ_TRUE;
+	    break;
+	}
 
 	if (line[0] == 'q') {
 	    global.quit_flag = PJ_TRUE;

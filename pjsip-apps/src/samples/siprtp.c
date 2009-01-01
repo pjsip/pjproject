@@ -1862,7 +1862,8 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
     char *p;
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
-    fgets(buf, len, stdin);
+    if (fgets(buf, len, stdin) == NULL)
+	return PJ_FALSE;
 
     /* Remove trailing newlines. */
     for (p=buf; ; ++p) {
@@ -1898,7 +1899,10 @@ static void console_main()
 
     for (;;) {
 	printf(">>> "); fflush(stdout);
-	fgets(input1, sizeof(input1), stdin);
+	if (fgets(input1, sizeof(input1), stdin) == NULL) {
+	    puts("EOF while reading stdin, will quit now..");
+	    break;
+	}
 
 	switch (input1[0]) {
 
@@ -2020,7 +2024,8 @@ static void app_log_writer(int level, const char *buffer, int len)
 	pj_log_write(level, buffer, len);
 
     if (log_file) {
-	fwrite(buffer, len, 1, log_file);
+	int count = fwrite(buffer, len, 1, log_file);
+	PJ_UNUSED_ARG(count);
 	fflush(log_file);
     }
 }

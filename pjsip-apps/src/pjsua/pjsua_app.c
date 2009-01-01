@@ -2750,7 +2750,8 @@ static pj_bool_t simple_input(const char *title, char *buf, pj_size_t len)
     char *p;
 
     printf("%s (empty to cancel): ", title); fflush(stdout);
-    fgets(buf, len, stdin);
+    if (fgets(buf, len, stdin) == NULL)
+	return PJ_FALSE;
 
     /* Remove trailing newlines. */
     for (p=buf; ; ++p) {
@@ -2794,7 +2795,8 @@ static void ui_input_url(const char *title, char *buf, int len,
     printf("%s: ", title);
 
     fflush(stdout);
-    fgets(buf, len, stdin);
+    if (fgets(buf, len, stdin) == NULL)
+	return;
     len = strlen(buf);
 
     /* Left trim */
@@ -3023,7 +3025,8 @@ static void manage_codec_prio(void)
 	 "(e.g. \"speex/16000 200\"), empty to cancel:");
 
     printf("Codec name (\"*\" for all) and priority: ");
-    fgets(input, sizeof(input), stdin);
+    if (fgets(input, sizeof(input), stdin) == NULL)
+	return;
     if (input[0]=='\r' || input[0]=='\n') {
 	puts("Done");
 	return;
