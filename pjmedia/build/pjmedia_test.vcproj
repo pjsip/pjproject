@@ -71,7 +71,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib  ole32.lib user32.lib"
-				OutputFile="../bin/pjmedia-test-i386-win32-vc8-release.exe"
+				OutputFile="../bin/pjmedia-test-i386-win32-vc8-debug.exe"
 				LinkIncremental="2"
 				SuppressStartupBanner="true"
 				GenerateDebugInformation="true"
