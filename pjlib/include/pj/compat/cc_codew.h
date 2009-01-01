@@ -49,6 +49,7 @@ typedef unsigned long long pj_uint64_t;
 #define PJ_UINT64(val)		val##LLU
 #define PJ_INT64_FMT		"L"
 
+#define PJ_UNREACHED(x)	    	
 
 #endif	/* __PJ_COMPAT_CC_CODEW_H__ */
 

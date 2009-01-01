@@ -404,7 +404,8 @@ void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 
     pkt_len = pj_ntohs((pj_uint16_t)rtcp_xr->common.length);
 
-    pj_assert((pkt_len + 1) <= (size / 4));
+    if ((pkt_len + 1) > (size / 4))
+	return;
 
     /* Parse report rpt_types */
     while ((pj_int32_t*)rb_hdr < (pj_int32_t*)pkt + pkt_len)

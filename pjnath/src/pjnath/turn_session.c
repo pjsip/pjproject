@@ -1076,9 +1076,8 @@ static void on_session_fail( pj_turn_session *sess,
 
 	PJ_LOG(4,(sess->obj_name, "Trying next server"));
 	set_state(sess, PJ_TURN_STATE_RESOLVED);
-	break;
 
-    } while (status != PJ_SUCCESS);
+    } while (0);
 }
 
 

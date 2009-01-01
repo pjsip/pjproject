@@ -69,6 +69,7 @@
 #   define PJ_HAS_BZERO		1
 #endif
 
+#define PJ_UNREACHED(x)	    	
 
 #endif	/* __PJ_COMPAT_CC_GCC_H__ */
 

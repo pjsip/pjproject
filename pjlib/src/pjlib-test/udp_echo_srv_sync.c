@@ -56,7 +56,7 @@ static int worker_thread(void *arg)
             continue;
         }
     }
-    return 0;
+    PJ_UNREACHED(return 0;)
 }
 
 
@@ -160,7 +160,7 @@ int echo_srv_common_loop(pj_atomic_t *bytes_counter)
                           (unsigned)(highest_bw/1000)));
         }
     }
-    return 0;
+    PJ_UNREACHED(return 0;)
 }
 
 

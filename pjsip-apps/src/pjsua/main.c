@@ -52,7 +52,7 @@ static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 	    PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
             app_destroy();
 	    ExitProcess(1);
-            return TRUE; 
+            PJ_UNREACHED(return TRUE;)
  
         default: 
  

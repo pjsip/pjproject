@@ -54,13 +54,13 @@
 static int throw_id_1(void)
 {
     PJ_THROW( ID_1 );
-    return -1;
+    PJ_UNREACHED(return -1;)
 }
 
 static int throw_id_2(void)
 {
     PJ_THROW( ID_2 );
-    return -1;
+    PJ_UNREACHED(return -1;)
 }
 
 

@@ -38,6 +38,13 @@
 #if PJ_CC_VER_1 >= 8 && !defined(_CRT_SECURE_NO_DEPRECATE)
 #   define _CRT_SECURE_NO_DEPRECATE
 #endif
+#if PJ_CC_VER_1 >= 8 && !defined(_CRT_SECURE_NO_WARNINGS)
+#   define _CRT_SECURE_NO_WARNINGS
+    /* The above doesn't seem to work, at least on VS2005, so lets use
+     * this construct as well.
+     */
+#   pragma warning(disable: 4996)
+#endif
 
 #pragma warning(disable: 4127) // conditional expression is constant
 #pragma warning(disable: 4611) // not wise to mix setjmp with C++
@@ -71,5 +78,7 @@ typedef unsigned __int64 pj_uint64_t;
 #define PJ_UINT64(val)		val##ui64
 #define PJ_INT64_FMT		"I64"
 
+#define PJ_UNREACHED(x)	    	
 
 #endif	/* __PJ_COMPAT_CC_MSVC_H__ */
+
