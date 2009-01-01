@@ -23,25 +23,35 @@ import sys
 
 # Each configurator must export this function
 def create_builder(args):
-    # (optional) args format:
-    #   [cfg_site] [--vs-config VSCFG]
-    #
-    #   cfg_site:   site configuration module. If not specified, "cfg_site" 
-    #               is implied
-    #   VSCFG:      Visual Studio build configuration to build. Sample values:
-    #               "Debug|Win32", "Release|Win32". If not specified then 
-    #               "Release|Win32" is assumed
+    usage = """\
+Usage:
+  main.py cfg_msvc [-h|--help] [-t|--target TARGET] [cfg_site]
+
+Arguments:
+  cfg_site:            site configuration module. If not specified, "cfg_site" 
+                       is implied
+  -t,--target TARGET:  Visual Studio build configuration to build. Default is
+                       "Release|Win32". Sample values: "Debug|Win32"
+  -h, --help           Show this help screen
+
+"""
 
     cfg_site = "cfg_site"
-    vs_cfg = "Release|Win32"
+    target = "Release|Win32"
     in_option = ""
     
     for arg in args:
-        if in_option=="--vs-config":
-            vs_cfg = arg
+        if in_option=="-t":
+            target = arg
             in_option = ""
-        elif arg=="--vs-config":
-            in_option = arg
+        elif arg=="--target" or arg=="-t":
+            in_option = "-t"
+        elif arg=="-h" or arg=="--help":
+            print usage
+            sys.exit(0)
+        elif arg[0]=="-":
+            print usage
+            sys.exit(1)
         else:
             cfg_site = arg
         
@@ -58,7 +68,7 @@ def create_builder(args):
 
     builders = [
         builder.MSVCTestBuilder(test_cfg, 
-                                vs_config=vs_cfg,
+                                target=target,
                                 build_config_name="default",
                                 config_site="#define PJ_TODO(x)\n",
                                 exclude=cfg_site.EXCLUDE,

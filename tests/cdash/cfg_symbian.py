@@ -1,5 +1,5 @@
 #
-# cfg_gnu.py - GNU target configurator
+# cfg_symbian.py - Symbian target configurator
 #
 # Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
 #
@@ -25,21 +25,28 @@ import sys
 def create_builder(args):
     usage = """\
 Usage:
-  main.py cfg_gnu [-h|--help] [cfg_site]
-
+  main.py cfg_symbian [-h|--help] [-t|--target TARGET] [cfg_site]
+ 
 Arguments:
   cfg_site:            site configuration module. If not specified, "cfg_site" 
                        is implied
+  -t,--target TARGET:  Symbian target to build. Default is "gcce urel". 
+                       Other values:
+                        "winscw udeb", "gcce udeb", etc.
   -h, --help           Show this help screen
-
-"""
-    # (optional) args format:
-    #   site configuration module. If not specified, "cfg_site" is implied
+"""           
 
     cfg_site = "cfg_site"
+    target = "gcce urel"
+    in_option = ""
     
     for arg in args:
-        if arg=="-h" or arg=="--help":
+        if in_option=="-t":
+            target = arg
+            in_option = ""
+        elif arg=="--target" or arg=="-t":
+            in_option = "-t"
+        elif arg=="--help" or arg=="-h":
             print usage
             sys.exit(0)
         elif arg[0]=="-":
@@ -58,13 +65,20 @@ Arguments:
                                   cfg_site.SITE_NAME, \
                                   cfg_site.GROUP, \
                                   cfg_site.OPTIONS)
+    config_site1 = """\
+#define PJ_TODO(x)
+#include <pj/config_site_sample.h>
+
+"""
 
     builders = [
-        builder.GNUTestBuilder(test_cfg, build_config_name="default",
-                               user_mak="export CFLAGS+=-Wall\n",
-                               config_site="#define PJ_TODO(x)\n",
-                               exclude=cfg_site.EXCLUDE,
-                               not_exclude=cfg_site.NOT_EXCLUDE)
+        builder.SymbianTestBuilder(test_cfg, 
+                                   target=target,
+                                   build_config_name="default",
+                                   config_site=config_site1,
+                                   exclude=cfg_site.EXCLUDE,
+                                   not_exclude=cfg_site.NOT_EXCLUDE)
         ]
 
     return builders
+

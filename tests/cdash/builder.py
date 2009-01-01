@@ -335,15 +335,17 @@ class GNUTestBuilder(TestBuilder):
 #
 class MSVCTestBuilder(TestBuilder):
     """\
-    This class creates list of tests suitable for Visual Studio builds.
-
+    This class creates list of tests suitable for Visual Studio builds. 
+    You need to set the MSVC environment variables (typically by calling
+    vcvars32.bat) prior to running this class.
+    
     """
-    def __init__(self, config, vs_config="Release|Win32", build_config_name="", 
+    def __init__(self, config, target="Release|Win32", build_config_name="", 
                  config_site="", exclude=[], not_exclude=[]):
         """\
         Parameters:
         config              - BaseConfig instance
-        vs_config           - Visual Studio build configuration to build.
+        target              - Visual Studio build configuration to build.
                               Sample: "Debug|Win32", "Release|Win32".
         build_config_name   - Optional name to be added as suffix to the build
                               name. Sample: "Debug", "Release", "IPv6", etc.
@@ -358,11 +360,11 @@ class MSVCTestBuilder(TestBuilder):
         TestBuilder.__init__(self, config, build_config_name=build_config_name,
                              config_site=config_site, exclude=exclude, 
                              not_exclude=not_exclude)
-        self.vs_config = vs_config.lower()
+        self.target = target.lower()
 
     def build_tests(self):
        
-        (vsbuild,sys) = self.vs_config.split("|",2)
+        (vsbuild,sys) = self.target.split("|",2)
         
         build_name = sys + "-" + vs_get_version() + "-" + vsbuild
 
@@ -370,7 +372,7 @@ class MSVCTestBuilder(TestBuilder):
             build_name = build_name + "-" + self.build_config_name
 
         vccmd = "vcbuild.exe /nologo /nohtmllog /nocolor /rebuild " + \
-                "pjproject-vs8.sln " + " \"" + self.vs_config + "\""
+                "pjproject-vs8.sln " + " \"" + self.target + "\""
         
         suffix = "-i386-win32-vc8-" + vsbuild
         pjsua = "pjsua_vc8"
@@ -395,4 +397,90 @@ class MSVCTestBuilder(TestBuilder):
             args.extend(self.config.options)
             self.ccdash_args.append(args)
 
+
+#
+# Symbian test configurator
+#
+class SymbianTestBuilder(TestBuilder):
+    """\
+    This class creates list of tests suitable for Symbian builds. You need to
+    set the command line build settings prior to running this class (typically
+    that involves setting the EPOCROOT variable and current device).
+    
+    """
+    def __init__(self, config, target="gcce urel", build_config_name="", 
+                 config_site="", exclude=[], not_exclude=[]):
+        """\
+        Parameters:
+        config              - BaseConfig instance
+        target              - Symbian target to build. Default is "gcce urel".
+        build_config_name   - Optional name to be added as suffix to the build
+                              name. Sample: "APS", "VAS", etc.
+        config_site         - Contents to be put on config_site.h
+        exclude             - List of regular expression patterns for tests
+                              that will be excluded from the run
+        not_exclude         - List of regular expression patterns for tests
+                              that will be run regardless of whether they
+                              match the excluded pattern.
+
+        """
+        TestBuilder.__init__(self, config, build_config_name=build_config_name,
+                             config_site=config_site, exclude=exclude, 
+                             not_exclude=not_exclude)
+        self.target = target.lower()
+        
+    def build_tests(self):
+       
+        # Check that EPOCROOT is set
+        if not "EPOCROOT" in os.environ:
+            print "Error: EPOCROOT environment variable is not set"
+            sys.exit(1)
+        epocroot = os.environ["EPOCROOT"]
+        # EPOCROOT must have trailing backslash
+        if epocroot[-1] != "\\":
+            epocroot = epocroot + "\\"
+            os.environ["EPOCROOT"] = epocroot
+        sdk1 = epocroot.split("\\")[-2]
+
+        # Check that correct device is set
+        proc = subprocess.Popen("devices", stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, shell=True)
+        sdk2 = ""
+        while True:
+            line = proc.stdout.readline()
+            if line.find("- default") > 0:
+                sdk2 = line.split(":",1)[0]
+                break
+        proc.wait()
+
+        if sdk1 != sdk2:
+            print "Error: default SDK in device doesn't match EPOCROOT"
+            print "Default device SDK =", sdk2
+            print "EPOCROOT SDK =", sdk1
+            sys.exit(1)
+
+        build_name = sdk2.replace("_", "-") + "-" + \
+                     self.target.replace(" ", "-")
+
+        if self.build_config_name:
+            build_name = build_name + "-" + self.build_config_name
+
+        cmdline = "cmd /C \"cd build.symbian && bldmake bldfiles && abld build %s\"" % (self.target)
+        
+        cmds = []
+        cmds.extend(update_ops)
+        cmds.extend([Operation(Operation.BUILD, cmdline)])
+
+        self.ccdash_args = []
+        suffix = ""
+        for c in cmds:
+            c.cmdline = c.cmdline.replace("$SUFFIX", suffix)
+            args = c.encode(self.config.base_dir)
+            args.extend(["-U", self.config.url, 
+                         "-S", self.config.site, 
+                         "-T", self.stamp(), 
+                         "-B", build_name, 
+                         "-G", self.config.group])
+            args.extend(self.config.options)
+            self.ccdash_args.append(args)
 
