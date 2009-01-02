@@ -191,7 +191,7 @@ class TestBuilder:
             self.saved_user_mak = f.read()
             f.close()
         if True:
-            f = open(name, "wt")
+            f = open(name, "w")
             f.write(self.user_mak)
             f.close()
         # Override config_site.h
@@ -301,16 +301,16 @@ class GNUTestBuilder(TestBuilder):
         else:
             proc = subprocess.Popen("sh "+self.config.base_dir+"/config.guess",
                                     shell=True, stdout=subprocess.PIPE)
-            sys = proc.stdout.readline().rstrip(" \r\n")
-            build_name =  sys + "-"+gcc_version(self.cross_compile + "gcc")
-            suffix = "-" + sys
+            plat = proc.stdout.readline().rstrip(" \r\n")
+            build_name =  plat + "-"+gcc_version(self.cross_compile + "gcc")
+            suffix = "-" + plat
 
         if self.build_config_name:
             build_name = build_name + "-" + self.build_config_name
         cmds = []
         cmds.extend(update_ops)
 	cmds.append(Operation(Operation.CONFIGURE, "sh ./configure"))
-	if sys.platform == "win32":
+	if sys.platform=="win32":
 	    # Don't build python module on Mingw
 	    cmds.append(Operation(Operation.BUILD, 
 			    "sh -c 'make distclean && make dep && make'"))
