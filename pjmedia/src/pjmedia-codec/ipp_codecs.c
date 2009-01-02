@@ -37,6 +37,7 @@
 #if defined(PJMEDIA_HAS_INTEL_IPP) && PJMEDIA_HAS_INTEL_IPP != 0
 
 #include <usc.h>
+#include <ippversion.h>
 
 #define THIS_FILE   "ipp_codecs.c"
 
@@ -1412,7 +1413,11 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
 #   pragma comment( lib, "ipps.lib")
 #   pragma comment( lib, "ippsc.lib")
 #   pragma comment( lib, "ippsr.lib")
-#   pragma comment( lib, "usc.lib")
+#   if defined(IPP_VERSION_MAJOR) && IPP_VERSION_MAJOR>=6
+#	pragma comment( lib, "speech.lib")
+#   else
+#	pragma comment( lib, "usc.lib")
+#   endif
 #endif
 
 
