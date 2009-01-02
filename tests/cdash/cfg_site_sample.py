@@ -35,6 +35,12 @@ BASE_DIR = "/root/project/pjproject"
 #OPTIONS = ["-o", "out.xml", "-y"]
 OPTIONS = []
 
+# What's the content of config_site.h
+CONFIG_SITE = ""
+
+# What's the content of user.mak
+USER_MAK = ""
+
 # List of regular expression of test patterns to be excluded
 EXCLUDE = []
 

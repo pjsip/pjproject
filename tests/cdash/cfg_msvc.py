@@ -66,11 +66,14 @@ Arguments:
                                   cfg_site.GROUP, \
                                   cfg_site.OPTIONS)
 
+    config_site = "#define PJ_TODO(x)\n" + cfg_site.CONFIG_SITE
+    user_mak = cfg_site.USER_MAK
+
     builders = [
         builder.MSVCTestBuilder(test_cfg, 
                                 target=target,
                                 build_config_name="default",
-                                config_site="#define PJ_TODO(x)\n",
+                                config_site=config_site,
                                 exclude=cfg_site.EXCLUDE,
                                 not_exclude=cfg_site.NOT_EXCLUDE)
         ]

@@ -82,16 +82,6 @@ std_test_ops= [
 ]
 
 #
-# These are operations to build the software on GNU/Posix systems
-#
-gnu_build_ops = [
-    Operation(Operation.CONFIGURE, "sh ./configure"),
-    Operation(Operation.BUILD, "sh -c 'make distclean && make dep && make && cd pjsip-apps/src/python && python setup.py clean build'"),
-    #Operation(Operation.BUILD, "python setup.py clean build",
-    #          wdir="pjsip-apps/src/python")
-]
-
-#
 # These are pjsua Python based unit test operations
 #
 def build_pjsua_test_ops(pjsua_exe=""):
@@ -236,6 +226,7 @@ class TestBuilder:
         if len(self.ccdash_args)==0:
             self.build_tests()
         self.pre_action()
+	mandatory_op = ["update", "configure", "build"]
         counter = 0
         for a in self.ccdash_args:
             # Check if this test is in exclusion list
@@ -261,7 +252,10 @@ class TestBuilder:
             b.extend(a)
             a = b
             #print a
-            ccdash.main(a)
+            rc = ccdash.main(a)
+	    if rc!=0 and a[1] in mandatory_op:
+		print "Stopping because of error.."
+		break
             counter = counter + 1
         self.post_action()
 
@@ -315,7 +309,17 @@ class GNUTestBuilder(TestBuilder):
             build_name = build_name + "-" + self.build_config_name
         cmds = []
         cmds.extend(update_ops)
-        cmds.extend(gnu_build_ops)
+	cmds.append(Operation(Operation.CONFIGURE, "sh ./configure"))
+	if sys.platform == "win32":
+	    # Don't build python module on Mingw
+	    cmds.append(Operation(Operation.BUILD, 
+			    "sh -c 'make distclean && make dep && make'"))
+	else:
+	    cmds.append(Operation(Operation.BUILD, 
+			    "sh -c 'make distclean && make dep && make" + \
+			    " && cd pjsip-apps/src/python && " + \
+			    "python setup.py clean build'"))
+
         cmds.extend(std_test_ops)
         cmds.extend(build_pjsua_test_ops())
         self.ccdash_args = []

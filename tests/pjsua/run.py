@@ -161,7 +161,8 @@ class Expect:
 
 	def wait(self):
 		self.trace("wait")
-		self.proc.wait()
+		self.proc.communicate("q")
+
 	def trace(self, s):
 		if self.trace_enabled:
 			now = time.time()
@@ -177,8 +178,20 @@ def handle_error(errmsg, t, close_processes = True):
 		for p in t.process:
 			p.send("q")
 			p.send("q")
-			p.expect(const.DESTROYED, False)
-			p.wait()
+			is_err = False
+			try:
+				ret = p.expect(const.DESTROYED, False)
+				if not ret:
+					is_err = True
+			except:
+				is_err = True
+			if is_err:
+				if sys.hexversion >= 0x02060000:
+					p.proc.terminate()
+				else:
+					p.wait()
+			else:
+				p.wait()
 	print "Test completed with error: " + errmsg
 	sys.exit(1)
 

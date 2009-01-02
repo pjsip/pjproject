@@ -59,10 +59,13 @@ Arguments:
                                   cfg_site.GROUP, \
                                   cfg_site.OPTIONS)
 
+    config_site = "#define PJ_TODO(x)\n" + cfg_site.CONFIG_SITE
+    user_mak = "export CFLAGS+=-Wall\n" + cfg_site.USER_MAK
+
     builders = [
         builder.GNUTestBuilder(test_cfg, build_config_name="default",
-                               user_mak="export CFLAGS+=-Wall\n",
-                               config_site="#define PJ_TODO(x)\n",
+                               user_mak=user_mak,
+                               config_site=config_site,
                                exclude=cfg_site.EXCLUDE,
                                not_exclude=cfg_site.NOT_EXCLUDE)
         ]

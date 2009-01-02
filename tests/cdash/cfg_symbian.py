@@ -71,6 +71,8 @@ Arguments:
 
 """
 
+    config_Site = config_site1 + cfg_site.CONFIG_SITE
+
     builders = [
         builder.SymbianTestBuilder(test_cfg, 
                                    target=target,

@@ -43,8 +43,17 @@ site and save them as different files.
 
      $ python main.py cfg_msvc
 
+   To execute tests for Symbian target:
+
+     $ python main.py cfg_symbian
+
 
    If you have a different site configuration file, you may specify it in the
 arguments, e.g.:
 
      $ python main.py cfg_gnu my_site_config
+
+   For more information you can also pass "-h" or "--help", e.g.:
+
+     $ python main.py cfg_gnu --help
+
