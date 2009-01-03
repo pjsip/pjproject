@@ -1413,6 +1413,13 @@ static pj_status_t  ipp_codec_recover(pjmedia_codec *codec,
 #   pragma comment( lib, "ipps.lib")
 #   pragma comment( lib, "ippsc.lib")
 #   pragma comment( lib, "ippsr.lib")
+//#   pragma comment( lib, "ippcorel.lib")
+//#   pragma comment( lib, "ippsemerged.lib")
+//#   pragma comment( lib, "ippsmerged.lib")
+//#   pragma comment( lib, "ippscemerged.lib")
+//#   pragma comment( lib, "ippscmerged.lib")
+//#   pragma comment( lib, "ippsremerged.lib")
+//#   pragma comment( lib, "ippsrmerged.lib")
 #   if defined(IPP_VERSION_MAJOR) && IPP_VERSION_MAJOR>=6
 #	pragma comment( lib, "speech.lib")
 #   else
