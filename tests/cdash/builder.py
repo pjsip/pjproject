@@ -252,7 +252,16 @@ class TestBuilder:
             b.extend(a)
             a = b
             #print a
-            rc = ccdash.main(a)
+            try:
+                rc = ccdash.main(a)
+            except Exception, e:
+                errmsg = str(e)
+                print "**** Error: ccdash got exception %s ****" % errmsg
+                rc = -1
+            except:
+                print "**** Error: ccdash got unknown exception ****"
+                rc = -1
+                
 	    if rc!=0 and a[1] in mandatory_op:
 		print "Stopping because of error.."
 		break
@@ -385,7 +394,8 @@ class MSVCTestBuilder(TestBuilder):
         
         cmds = []
         cmds.extend(update_ops)
-        cmds.extend([Operation(Operation.BUILD, vccmd)])
+        cmds.append(Operation(Operation.CONFIGURE, "CMD /C echo Nothing to do"))
+        cmds.append(Operation(Operation.BUILD, vccmd))
         cmds.extend(std_test_ops)
         cmds.extend(build_pjsua_test_ops(pjsua))
 
@@ -473,6 +483,7 @@ class SymbianTestBuilder(TestBuilder):
         
         cmds = []
         cmds.extend(update_ops)
+        cmds.append(Operation(Operation.CONFIGURE, "CMD /C echo Nothing to do"))
         cmds.extend([Operation(Operation.BUILD, cmdline)])
 
         self.ccdash_args = []
