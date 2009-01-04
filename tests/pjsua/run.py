@@ -161,7 +161,7 @@ class Expect:
 
 	def wait(self):
 		self.trace("wait")
-		self.proc.communicate("q")
+		self.proc.communicate()
 
 	def trace(self, s):
 		if self.trace_enabled:
