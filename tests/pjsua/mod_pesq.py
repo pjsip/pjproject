@@ -25,7 +25,7 @@ from inc_cfg import *
 cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 # PESQ configs
-PESQ = "tools/pesq.exe"			# PESQ executable path
+PESQ = "tools/pesq"			# PESQ executable path
 PESQ_DEFAULT_THRESHOLD = 3.4		# Default minimum acceptable PESQ MOS value
 
 # PESQ params
@@ -125,7 +125,7 @@ def post_func(t):
 	# Execute PESQ
 	fullcmd = PESQ + " " + pesq_sample_rate_opt + " " + input_filename + " " + output_filename
 	endpt.trace("Popen " + fullcmd)
-	pesq_proc = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, universal_newlines=True)
+	pesq_proc = subprocess.Popen(fullcmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
 	pesq_out  = pesq_proc.communicate()
 
 	# Parse ouput
