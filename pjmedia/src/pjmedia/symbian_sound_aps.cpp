@@ -22,6 +22,7 @@
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/os.h>
 
 #include <e32msgqueue.h>
@@ -267,7 +268,6 @@ public:
     ~CPjAudioEngine();
 
     static CPjAudioEngine *NewL(pjmedia_snd_stream *parent_strm,
-				pjmedia_dir dir,
 				pjmedia_snd_rec_cb rec_cb,
 				pjmedia_snd_play_cb play_cb,
 				void *user_data);
@@ -279,7 +279,6 @@ public:
 
 private:
     CPjAudioEngine(pjmedia_snd_stream *parent_strm,
-		   pjmedia_dir dir,
 		   pjmedia_snd_rec_cb rec_cb,
 		   pjmedia_snd_play_cb play_cb,
 		   void *user_data);
@@ -299,7 +298,6 @@ private:
 
     State			 state_;
     pjmedia_snd_stream		*parentStrm_;
-    pjmedia_dir			 dir_;
     pjmedia_snd_rec_cb		 recCb_;
     pjmedia_snd_play_cb		 playCb_;
     void			*userData_;
@@ -316,16 +314,26 @@ private:
     CQueueHandler		*iPlayCommHandler;
     CQueueHandler		*iRecCommHandler;
     CQueueHandler		*iRecHandler;
+    
+    static pj_uint8_t		 aps_samples_per_frame;
+    
+    pj_int16_t			*play_buf;
+    pj_uint16_t			 play_buf_len;
+    pj_uint16_t			 play_buf_start;
+    pj_int16_t			*rec_buf;
+    pj_uint16_t			 rec_buf_len;
 };
 
 
+pj_uint8_t CPjAudioEngine::aps_samples_per_frame = 0;
+
+
 CPjAudioEngine* CPjAudioEngine::NewL(pjmedia_snd_stream *parent_strm,
-				     pjmedia_dir dir,
 				     pjmedia_snd_rec_cb rec_cb,
 				     pjmedia_snd_play_cb play_cb,
 				     void *user_data)
 {
-    CPjAudioEngine* self = new (ELeave) CPjAudioEngine(parent_strm, dir,
+    CPjAudioEngine* self = new (ELeave) CPjAudioEngine(parent_strm,
 						       rec_cb, play_cb,
 						       user_data);
     CleanupStack::PushL(self);
@@ -335,13 +343,11 @@ CPjAudioEngine* CPjAudioEngine::NewL(pjmedia_snd_stream *parent_strm,
 }
 
 CPjAudioEngine::CPjAudioEngine(pjmedia_snd_stream *parent_strm,
-			       pjmedia_dir dir,
 			       pjmedia_snd_rec_cb rec_cb,
 			       pjmedia_snd_play_cb play_cb,
 			       void *user_data) 
       : state_(STATE_NULL),
 	parentStrm_(parent_strm),
-	dir_(dir),
 	recCb_(rec_cb),
 	playCb_(play_cb),
 	userData_(user_data),
@@ -363,7 +369,7 @@ CPjAudioEngine::~CPjAudioEngine()
     iSession.Close();
 
     if (state_ == STATE_READY) {
-	if (dir_ != PJMEDIA_DIR_PLAYBACK) {
+	if (parentStrm_->dir != PJMEDIA_DIR_PLAYBACK) {
 	    iReadQ.Close();
 	    iReadCommQ.Close();
 	}
@@ -473,6 +479,17 @@ void CPjAudioEngine::ConstructL()
     iSettings.iSettings.iChannels   = EMMFMono;
     iSettings.iSettings.iSampleRate = EMMFSampleRate8000Hz;
     iSettings.iSettings.iVolume	    = 0;
+    
+    /* play_buf size is samples per frame of parent stream. */
+    play_buf = (pj_int16_t*)pj_pool_alloc(parentStrm_->pool, 
+				          parentStrm_->samples_per_frame << 1);
+    play_buf_len = 0;
+    play_buf_start = 0;
+    
+    /* rec_buf size is samples per frame of parent stream. */
+    rec_buf  = (pj_int16_t*)pj_pool_alloc(parentStrm_->pool, 
+					  parentStrm_->samples_per_frame << 1);
+    rec_buf_len = 0;
 }
 
 TInt CPjAudioEngine::StartStreamL()
@@ -483,28 +500,33 @@ TInt CPjAudioEngine::StartStreamL()
     iSession.SetCng(EFalse);
     iSession.SetVadMode(EFalse);
     iSession.SetPlc(EFalse);
-    iSession.SetEncoderMode(EALawOr20ms);
-    iSession.SetDecoderMode(EALawOr20ms);
+    iSession.SetEncoderMode(EULawOr30ms);
+    iSession.SetDecoderMode(EULawOr30ms);
     iSession.ActivateLoudspeaker(act_loudspeaker);
 
     // Not only playback
-    if (dir_ != PJMEDIA_DIR_PLAYBACK) {
+    if (parentStrm_->dir != PJMEDIA_DIR_PLAYBACK) {
 	iRecHandler = CQueueHandler::NewL(this, &iReadQ, 
 					  CQueueHandler::ERecordQueue);
 	iRecHandler->Start();
 	iSession.Read();
+	TRACE_((THIS_FILE, "APS recorder started"));
     }
 
     // Not only capture
-    if (dir_ != PJMEDIA_DIR_CAPTURE) {
+    if (parentStrm_->dir != PJMEDIA_DIR_CAPTURE) {
 	iSession.Write();
+	TRACE_((THIS_FILE, "APS player started"));
     }
 
     state_ = STATE_STREAMING;
     return 0;
 }
 
+///////////////////////////////////////////////////////////
 // Inherited from MQueueHandlerObserver
+//
+
 void CPjAudioEngine::InputStreamInitialized(const TInt aStatus)
 {
     TRACE_((THIS_FILE, "InputStreamInitialized %d", aStatus));
@@ -520,7 +542,7 @@ void CPjAudioEngine::OutputStreamInitialized(const TInt aStatus)
     TRACE_((THIS_FILE, "OutputStreamInitialized %d", aStatus));
 
     if (aStatus == KErrNone) {
-	if (dir_ == PJMEDIA_DIR_PLAYBACK) {
+	if (parentStrm_->dir == PJMEDIA_DIR_PLAYBACK) {
 	    state_ = STATE_READY;
 	    // Only playback, start directly
 	    StartStreamL();
@@ -536,31 +558,92 @@ void CPjAudioEngine::NotifyError(const TInt aError)
 
 void CPjAudioEngine::RecCb(TAPSCommBuffer &buffer)
 {
-    pj_int16_t buf[160];
     pj_assert(buffer.iBuffer[0] == 1 && buffer.iBuffer[1] == 0);
 
-    for (int i=0; i<160; ++i)
-	 buf[i] = pjmedia_alaw2linear(buffer.iBuffer[i+2]);
+    /* Detect the recorder G.711 frame size, player frame size will follow 
+     * this recorder frame size. 
+     */
+    if (CPjAudioEngine::aps_samples_per_frame == 0) {
+	CPjAudioEngine::aps_samples_per_frame = buffer.iBuffer.Length() < 160?
+						 80 : 160;
+	TRACE_((THIS_FILE, "Detected APS G.711 frame size = %u samples", 
+		CPjAudioEngine::aps_samples_per_frame));
+    }
 
-    recCb_(userData_, 0, buf, sizeof(buf));
+    /* Decode APS buffer (coded in G.711) and put the PCM result into rec_buf.
+     * Whenever rec_buf is full, call parent stream callback.  
+     */ 
+    unsigned dec_len = 0;
+
+    while (dec_len < CPjAudioEngine::aps_samples_per_frame) {
+	unsigned tmp;
+
+	tmp = PJ_MIN(parentStrm_->samples_per_frame - rec_buf_len, 
+		     CPjAudioEngine::aps_samples_per_frame - dec_len);
+	pjmedia_ulaw_decode(&rec_buf[rec_buf_len], 
+			    buffer.iBuffer.Ptr() + 2 + dec_len, 
+			    tmp);
+	rec_buf_len += tmp;
+	dec_len += tmp;
+	
+	pj_assert(rec_buf_len <= parentStrm_->samples_per_frame);
+	
+	if (rec_buf_len == parentStrm_->samples_per_frame) {
+	    recCb_(userData_, 0, rec_buf, rec_buf_len << 1);
+	    rec_buf_len = 0;
+	}
+    }
 }
 
 void CPjAudioEngine::PlayCb(TAPSCommBuffer &buffer)
 {
-    pj_int16_t buf[160];
-
-    playCb_(userData_, 0, buf, sizeof(buf));
-
     buffer.iCommand = CQueueHandler::EAPSPlayData;
     buffer.iStatus = 0;
     buffer.iBuffer.Zero();
     buffer.iBuffer.Append(1);
     buffer.iBuffer.Append(0);
-    for (int i=0; i<160; ++i)
-	buffer.iBuffer.Append(pjmedia_linear2alaw(buf[i]));
+
+    /* Send 10ms silence frame if frame size hasn't been known. */
+    if (CPjAudioEngine::aps_samples_per_frame == 0) {
+	pjmedia_zero_samples(play_buf, 80);
+	pjmedia_ulaw_encode((pj_uint8_t*)play_buf, play_buf, 80);
+	buffer.iBuffer.Append((TUint8*)play_buf, 80);
+	iWriteQ.Send(buffer);
+	return;
+    }
+    
+    unsigned enc_len = 0;
+    
+    /* Call parent stream callback to get PCM samples to play,
+     * encode the PCM samples into G.711 and put it into APS buffer. 
+     */
+    while (enc_len < CPjAudioEngine::aps_samples_per_frame) {
+	if (play_buf_len == 0) {
+	    playCb_(userData_, 0, play_buf, 
+		    sizeof(parentStrm_->samples_per_frame<<1));
+	    play_buf_len = parentStrm_->samples_per_frame;
+	    play_buf_start = 0;
+	}
+	
+	unsigned tmp;
+	
+	tmp = PJ_MIN(play_buf_len, 
+		     CPjAudioEngine::aps_samples_per_frame - enc_len);
+	pjmedia_ulaw_encode((pj_uint8_t*)&play_buf[play_buf_start], 
+			    &play_buf[play_buf_start], 
+			    tmp);
+	buffer.iBuffer.Append((TUint8*)&play_buf[play_buf_start], tmp);
+	enc_len += tmp;
+	play_buf_len -= tmp;
+	play_buf_start += tmp;
+    }
 
     iWriteQ.Send(buffer);
 }
+
+//
+// End of inherited from MQueueHandlerObserver
+/////////////////////////////////////////////////////////////
 
 
 TInt CPjAudioEngine::ActivateSpeaker(TBool active)
@@ -641,8 +724,7 @@ static pj_status_t sound_open(pjmedia_dir dir,
     strm->samples_per_frame = samples_per_frame;
 
     // Create the audio engine.
-    TRAPD(err, strm->engine = CPjAudioEngine::NewL(strm, strm->dir, 
-						   rec_cb, play_cb, 
+    TRAPD(err, strm->engine = CPjAudioEngine::NewL(strm, rec_cb, play_cb, 
 						   user_data));
     if (err != KErrNone) {
     	pj_pool_release(pool);	
