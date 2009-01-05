@@ -12,6 +12,7 @@
 
 import time
 import imp
+import os
 import sys
 import re
 import subprocess
@@ -123,7 +124,7 @@ def post_func(t):
 	endpt = t.process[0]
 
 	# Execute PESQ
-	fullcmd = PESQ + " " + pesq_sample_rate_opt + " " + input_filename + " " + output_filename
+	fullcmd = os.path.normpath(PESQ) + " " + pesq_sample_rate_opt + " " + input_filename + " " + output_filename
 	endpt.trace("Popen " + fullcmd)
 	pesq_proc = subprocess.Popen(fullcmd, shell=True, stdout=subprocess.PIPE, universal_newlines=True)
 	pesq_out  = pesq_proc.communicate()
