@@ -619,8 +619,7 @@ void CPjAudioEngine::PlayCb(TAPSCommBuffer &buffer)
      */
     while (enc_len < CPjAudioEngine::aps_samples_per_frame) {
 	if (play_buf_len == 0) {
-	    playCb_(userData_, 0, play_buf, 
-		    sizeof(parentStrm_->samples_per_frame<<1));
+	    playCb_(userData_, 0, play_buf, parentStrm_->samples_per_frame<<1);
 	    play_buf_len = parentStrm_->samples_per_frame;
 	    play_buf_start = 0;
 	}
