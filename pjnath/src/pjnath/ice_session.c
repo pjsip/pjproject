@@ -2457,7 +2457,6 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     pj_ice_sess_comp *comp;
     pj_ice_msg_data *msg_data = NULL;
     unsigned i;
-    pj_status_t stun_status;
 
     PJ_ASSERT_RETURN(ice, PJ_EINVAL);
 
@@ -2465,8 +2464,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 
     comp = find_comp(ice, comp_id);
     if (comp == NULL) {
-	status = PJNATH_EICEINCOMPID;
-	goto on_return;
+	pj_mutex_unlock(ice->mutex);
+	return PJNATH_EICEINCOMPID;
     }
 
     /* Find transport */
@@ -2478,13 +2477,13 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
     }
     if (msg_data == NULL) {
 	pj_assert(!"Invalid transport ID");
-	status = PJ_EINVAL;
-	goto on_return;
+	pj_mutex_unlock(ice->mutex);
+	return PJ_EINVAL;
     }
 
-    stun_status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
-    				    PJ_STUN_IS_DATAGRAM);
-    if (stun_status == PJ_SUCCESS) {
+    status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
+    			       PJ_STUN_IS_DATAGRAM);
+    if (status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM, msg_data,
 					   NULL, src_addr, src_addr_len);
@@ -2493,14 +2492,18 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 	    LOG4((ice->obj_name, "Error processing incoming message: %s",
 		  ice->tmp.errmsg));
 	}
+	pj_mutex_unlock(ice->mutex);
     } else {
+	/* Not a STUN packet. Call application's callback instead, but release
+	 * the mutex now or otherwise we may get deadlock.
+	 */
+	pj_mutex_unlock(ice->mutex);
+
 	(*ice->cb.on_rx_data)(ice, comp_id, transport_id, pkt, pkt_size, 
 			      src_addr, src_addr_len);
+	status = PJ_SUCCESS;
     }
-    
 
-on_return:
-    pj_mutex_unlock(ice->mutex);
     return status;
 }
 
