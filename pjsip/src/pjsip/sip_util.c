@@ -441,7 +441,12 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request_from_hdr( pjsip_endpoint *endpt,
 	} else {
 	    contact = NULL;
 	}
-	call_id = (pjsip_cid_hdr*) pjsip_hdr_clone(tdata->pool, param_call_id);
+	call_id = pjsip_cid_hdr_create(tdata->pool);
+	if (param_call_id != NULL && param_call_id->id.slen)
+	    pj_strdup(tdata->pool, &call_id->id, &param_call_id->id);
+	else
+	    pj_create_unique_string(tdata->pool, &call_id->id);
+
 	cseq = pjsip_cseq_hdr_create(tdata->pool);
 	if (param_cseq >= 0)
 	    cseq->cseq = param_cseq;
