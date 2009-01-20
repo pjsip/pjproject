@@ -72,12 +72,12 @@ struct pjmedia_snd_stream
     pj_bool_t		 quit_flag;
 
     pj_bool_t		 rec_thread_exited;
-    //pj_bool_t		 rec_thread_initialized;
+    pj_bool_t		 rec_thread_initialized;
     pj_thread_desc	 rec_thread_desc;
     pj_thread_t		*rec_thread;
 
     pj_bool_t		 play_thread_exited;
-    //pj_bool_t		 play_thread_initialized;
+    pj_bool_t		 play_thread_initialized;
     pj_thread_desc	 play_thread_desc;
     pj_thread_t		*play_thread;
 
@@ -118,13 +118,18 @@ static int PaRecorderCallback(const void *input,
     if (input == NULL)
 	return paContinue;
 
-    // Sometime the thread, where this callback called from, is changed
-    // (e.g: in MacOS this happens when plugging/unplugging headphone)
-    // if (stream->rec_thread_initialized == 0) {
-    if (!pj_thread_is_registered()) {
+    /* Known cases of callback's thread:
+     * - The thread may be changed in the middle of a session, e.g: in MacOS 
+     *   it happens when plugging/unplugging headphone.
+     * - The same thread may be reused in consecutive sessions. The first
+     *   session will leave TLS set, but release the TLS data address,
+     *   so the second session must re-register the callback's thread.
+     */
+    if (stream->rec_thread_initialized == 0 || !pj_thread_is_registered()) 
+    {
 	status = pj_thread_register("pa_rec", stream->rec_thread_desc, 
 				    &stream->rec_thread);
-	//stream->rec_thread_initialized = 1;
+	stream->rec_thread_initialized = 1;
 	PJ_LOG(5,(THIS_FILE, "Recorder thread started"));
     }
 
@@ -214,13 +219,18 @@ static int PaPlayerCallback( const void *input,
     if (output == NULL)
 	return paContinue;
 
-    // Sometime the thread, where this callback called from, is changed
-    // (e.g: in MacOS this happens when plugging/unplugging headphone)
-    // if (stream->play_thread_initialized == 0) {
-    if (!pj_thread_is_registered()) {
+    /* Known cases of callback's thread:
+     * - The thread may be changed in the middle of a session, e.g: in MacOS 
+     *   it happens when plugging/unplugging headphone.
+     * - The same thread may be reused in consecutive sessions. The first
+     *   session will leave TLS set, but release the TLS data address,
+     *   so the second session must re-register the callback's thread.
+     */
+    if (stream->play_thread_initialized == 0 || !pj_thread_is_registered()) 
+    {
 	status = pj_thread_register("portaudio", stream->play_thread_desc,
 				    &stream->play_thread);
-	//stream->play_thread_initialized = 1;
+	stream->play_thread_initialized = 1;
 	PJ_LOG(5,(THIS_FILE, "Player thread started"));
     }
 
@@ -952,6 +962,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
 
     if (stream->rec_strm && stream->rec_strm != stream->play_strm)
 	err = Pa_StopStream(stream->rec_strm);
+
+    stream->play_thread_initialized = 0;
+    stream->rec_thread_initialized = 0;
 
     PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
