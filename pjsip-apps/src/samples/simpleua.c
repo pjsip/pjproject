@@ -348,6 +348,7 @@ int main(int argc, char *argv[])
 		pjsip_cred_info	cred[1];
 
 		cred[0].realm	  = pj_str("sip.server.realm");
+		cred[0].scheme    = pj_str("digest");
 		cred[0].username  = pj_str("theuser");
 		cred[0].data_type = PJSIP_CRED_DATA_PLAIN_PASSWD;
 		cred[0].data      = pj_str("thepassword");
