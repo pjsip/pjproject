@@ -384,7 +384,6 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     srtp->session_inited = PJ_FALSE;
     srtp->bypass_srtp = PJ_FALSE;
     srtp->probation_cnt = PROBATION_CNT_INIT;
-    srtp->peer_use = opt->use;
 
     if (opt) {
 	srtp->setting = *opt;
@@ -422,6 +421,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
 
     /* Set underlying transport */
     srtp->member_tp = tp;
+
+    /* Initialize peer's SRTP usage mode. */
+    srtp->peer_use = srtp->setting.use;
 
     /* Done */
     *p_tp = &srtp->base;
