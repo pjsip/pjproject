@@ -108,7 +108,8 @@
 #   define PJ_SUNOS	    1
 #   include <pj/compat/os_sunos.h>
 
-#elif defined(PJ_DARWINOS) || defined(__MACOSX__)
+#elif defined(PJ_DARWINOS) || defined(__MACOSX__) || \
+      defined (__APPLE__) || defined (__MACH__)
     /*
      * MacOS X
      */
