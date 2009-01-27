@@ -881,6 +881,7 @@ static pjmedia_port* g722_encode_decode(pj_pool_t *pool,
 			       samples_per_frame, flags, te);
 }
 
+#if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
 static pj_status_t init_l16_default(pjmedia_endpt *endpt)
 {
     return pjmedia_codec_l16_init(endpt, 0);
@@ -913,6 +914,7 @@ static pjmedia_port* l16_16_encode_decode(pj_pool_t *pool,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
+#endif
 
 /***************************************************************************/
 /* WSOLA PLC mode */
@@ -2279,8 +2281,10 @@ int mips_test(void)
 	{ "codec encode/decode - iLBC", OP_PUT, K8, &ilbc_encode_decode},
 	{ "codec encode/decode - Speex 8Khz", OP_PUT, K8, &speex8_encode_decode},
 	{ "codec encode/decode - Speex 16Khz", OP_PUT, K16, &speex16_encode_decode},
+#if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
 	{ "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
 	{ "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
+#endif
 	{ "stream TX/RX - G.711", OP_PUT_GET, K8, &create_stream_pcmu},
 	{ "stream TX/RX - G.711 SRTP 32bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_no_auth},
 	{ "stream TX/RX - G.711 SRTP 32bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_with_auth},

@@ -1328,7 +1328,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
     pjmedia_sdp_neg *neg;
     pj_status_t status;
 
-    status = pjmedia_sdp_parse(pool, oa->sdp1, pj_native_strlen(oa->sdp1),
+    status = pjmedia_sdp_parse(pool, oa->sdp1, pj_ansi_strlen(oa->sdp1),
 				&sdp1);
     if (status != PJ_SUCCESS) {
 	app_perror(status, "   error: unexpected parse status for sdp1");
@@ -1370,7 +1370,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 	}
 
 	/* Parse and validate remote answer */
-	status = pjmedia_sdp_parse(pool, oa->sdp2, pj_native_strlen(oa->sdp2),
+	status = pjmedia_sdp_parse(pool, oa->sdp2, pj_ansi_strlen(oa->sdp2),
 				   &sdp2);
 	if (status != PJ_SUCCESS) {
 	    app_perror(status, "   error: parsing sdp2");
@@ -1405,7 +1405,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 	}
 
 	/* Parse and validate the correct active media. */
-	status = pjmedia_sdp_parse(pool, oa->sdp3, pj_native_strlen(oa->sdp3),
+	status = pjmedia_sdp_parse(pool, oa->sdp3, pj_ansi_strlen(oa->sdp3),
 				   &sdp3);
 	if (status != PJ_SUCCESS) {
 	    app_perror(status, "   error: parsing sdp3");
@@ -1447,7 +1447,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 
 	if (oa->sdp2) {
 	    /* Parse and validate initial local capability */
-	    status = pjmedia_sdp_parse(pool, oa->sdp2, pj_native_strlen(oa->sdp2),
+	    status = pjmedia_sdp_parse(pool, oa->sdp2, pj_ansi_strlen(oa->sdp2),
 				       &sdp2);
 	    if (status != PJ_SUCCESS) {
 		app_perror(status, "   error: parsing sdp2");
@@ -1507,7 +1507,7 @@ static int offer_answer_test(pj_pool_t *pool, pjmedia_sdp_neg **p_neg,
 	}
 
 	/* Parse the correct answer. */
-	status = pjmedia_sdp_parse(pool, oa->sdp3, pj_native_strlen(oa->sdp3),
+	status = pjmedia_sdp_parse(pool, oa->sdp3, pj_ansi_strlen(oa->sdp3),
 				   &sdp3);
 	if (status != PJ_SUCCESS) {
 	    app_perror(status, "   error: parsing sdp3");
