@@ -824,7 +824,7 @@ struct hdr_test_t
 {
     char *hname;
     char *hshort_name;
-    char *hcontent;
+    char hcontent[1024];
     int  (*test)(pjsip_hdr*);
     unsigned flags;
 } hdr_test_data[] =
