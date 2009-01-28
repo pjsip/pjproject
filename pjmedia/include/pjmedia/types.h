@@ -47,8 +47,8 @@
  * @{
  */
 
-/** 
- * Top most media type. 
+/**
+ * Top most media type.
  */
 typedef enum pjmedia_type
 {
@@ -61,7 +61,7 @@ typedef enum pjmedia_type
     /** The media is video. */
     PJMEDIA_TYPE_VIDEO = 2,
 
-    /** Unknown media type, in this case the name will be specified in 
+    /** Unknown media type, in this case the name will be specified in
      *  encoding_name.
      */
     PJMEDIA_TYPE_UNKNOWN = 3,
@@ -72,8 +72,8 @@ typedef enum pjmedia_type
 } pjmedia_type;
 
 
-/** 
- * Media transport protocol. 
+/**
+ * Media transport protocol.
  */
 typedef enum pjmedia_tp_proto
 {
@@ -92,8 +92,8 @@ typedef enum pjmedia_tp_proto
 } pjmedia_tp_proto;
 
 
-/** 
- * Media direction. 
+/**
+ * Media direction.
  */
 typedef enum pjmedia_dir
 {
@@ -138,8 +138,8 @@ typedef enum pjmedia_dir
 	    (a<<24 | b<<16 | c<<8 | d)
 
 
-/** 
- * Opague declaration of media endpoint. 
+/**
+ * Opaque declaration of media endpoint.
  */
 typedef struct pjmedia_endpt pjmedia_endpt;
 
@@ -150,7 +150,7 @@ typedef struct pjmedia_endpt pjmedia_endpt;
 typedef struct pjmedia_stream pjmedia_stream;
 
 
-/** 
+/**
  * Media socket info is used to describe the underlying sockets
  * to be used as media transport.
  */
@@ -178,10 +178,34 @@ typedef struct pjmedia_sock_info
 
 } pjmedia_sock_info;
 
+/**
+ * Declaration of FourCC type.
+ */
+typedef union pjmedia_fourcc {
+   pj_uint32_t  u32;
+   char         c[4];
+} pjmedia_fourcc;
+
+
+/**
+ * FourCC packing macro.
+ */
+#define PJMEDIA_FOURCC_PACK(C1, C2, C3, C4) ( C1<<24 | C2<<16 | C3<<8 | C4 )
+
+/**
+ * FourCC identifier definitions.
+ */
+#define PJMEDIA_FOURCC_L16	PJMEDIA_FOURCC_PACK(' ', 'L', '1', '6')
+#define PJMEDIA_FOURCC_G711A	PJMEDIA_FOURCC_PACK('G', '7', '1', '1')
+#define PJMEDIA_FOURCC_G711U	PJMEDIA_FOURCC_PACK('U', 'L', 'A', 'W')
+#define PJMEDIA_FOURCC_AMR	PJMEDIA_FOURCC_PACK(' ', 'A', 'M', 'R')
+#define PJMEDIA_FOURCC_G729	PJMEDIA_FOURCC_PACK('G', '7', '2', '9')
+#define PJMEDIA_FOURCC_ILBC	PJMEDIA_FOURCC_PACK('i', 'L', 'B', 'C')
+
 
 /**
  * This is a general purpose function set PCM samples to zero.
- * Since this function is needed by many parts of the library, 
+ * Since this function is needed by many parts of the library,
  * by putting this functionality in one place, it enables some.
  * clever people to optimize this function.
  *
@@ -205,7 +229,7 @@ PJ_INLINE(void) pjmedia_zero_samples(pj_int16_t *samples, unsigned count)
 
 /**
  * This is a general purpose function to copy samples from/to buffers with
- * equal size. Since this function is needed by many parts of the library, 
+ * equal size. Since this function is needed by many parts of the library,
  * by putting this functionality in one place, it enables some.
  * clever people to optimize this function.
  */
@@ -220,7 +244,7 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
 #else
     unsigned i;
     count >>= 1;
-    for (i=0; i<count; ++i) 
+    for (i=0; i<count; ++i)
 	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
 #endif
 }
@@ -228,7 +252,7 @@ PJ_INLINE(void) pjmedia_copy_samples(pj_int16_t *dst, const pj_int16_t *src,
 
 /**
  * This is a general purpose function to copy samples from/to buffers with
- * equal size. Since this function is needed by many parts of the library, 
+ * equal size. Since this function is needed by many parts of the library,
  * by putting this functionality in one place, it enables some.
  * clever people to optimize this function.
  */
@@ -243,7 +267,7 @@ PJ_INLINE(void) pjmedia_move_samples(pj_int16_t *dst, const pj_int16_t *src,
 #else
     unsigned i;
     count >>= 1;
-    for (i=0; i<count; ++i) 
+    for (i=0; i<count; ++i)
 	((pj_int32_t*)dst)[i] = ((pj_int32_t*)src)[i];
 #endif
 }

@@ -23,6 +23,7 @@
 #include <pj/log.h>
 #include <pj/os.h>
 
+#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_MDA_SOUND
 
 /*
  * This file provides sound implementation for Symbian Audio Streaming
@@ -942,3 +943,5 @@ PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency,
     PJ_UNUSED_ARG(output_latency);
     return PJ_SUCCESS;
 }
+
+#endif

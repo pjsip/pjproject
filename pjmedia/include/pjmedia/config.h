@@ -44,6 +44,22 @@
 #   include <pjmedia/config_auto.h>
 #endif
 
+/**
+ * Specify whether we prefer to use audio switch board rather than 
+ * conference bridge.
+ *
+ * Audio switch board is a kind of simplified version of conference 
+ * bridge, but not really the subset of conference bridge. It has 
+ * stricter rules on audio routing among the pjmedia ports and has
+ * no audio mixing capability. The power of it is it could work with
+ * encoded audio frames where conference brigde couldn't.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CONF_USE_SWITCH_BOARD
+#   define PJMEDIA_CONF_USE_SWITCH_BOARD    0
+#endif
+
 /*
  * Types of sound stream backends.
  */
@@ -59,6 +75,16 @@
 
 /** Constant for Win32 MME sound backend. */
 #define PJMEDIA_SOUND_WIN32_MME_SOUND	    3
+
+/** Constant for Symbian Multimedia Audio Stream backend. */
+#define PJMEDIA_SOUND_SYMB_MDA_SOUND	    4
+
+/** Constant for Symbian APS backend. */
+#define PJMEDIA_SOUND_SYMB_APS_SOUND	    5
+
+/** Constant for Symbian VAS backend. */
+#define PJMEDIA_SOUND_SYMB_VAS_SOUND	    6
+
 
 /** When this is set, pjmedia will not provide any sound device backend. 
  *  Application will have to provide its own sound device backend

@@ -194,5 +194,13 @@
 #   define PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1	1
 #endif
 
+/**
+ * Enable Passthrough codecs.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_PASSTHROUGH_CODECS
+#   define PJMEDIA_HAS_PASSTHROUGH_CODECS	0
+#endif
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */

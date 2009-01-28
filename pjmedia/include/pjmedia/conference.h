@@ -56,6 +56,7 @@ typedef struct pjmedia_conf_port_info
 {
     unsigned		slot;		    /**< Slot number.		    */
     pj_str_t		name;		    /**< Port name.		    */
+    pjmedia_fourcc	format;		    /**< Format (FourCC identifier) */
     pjmedia_port_op	tx_setting;	    /**< Transmit settings.	    */
     pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
     unsigned		listener_cnt;	    /**< Number of listeners.	    */

@@ -25,6 +25,7 @@
  * @brief Port interface declaration
  */
 #include <pjmedia/types.h>
+#include <pj/assert.h>
 #include <pj/os.h>
 
 
@@ -211,6 +212,7 @@ typedef struct pjmedia_port_info
     pj_bool_t	    has_info;		/**< Has info?			    */
     pj_bool_t	    need_info;		/**< Need info on connect?	    */
     unsigned	    pt;			/**< Payload type (can be dynamic). */
+    pjmedia_fourcc  format;		/**< Format (FourCC identifier)	    */
     pj_str_t	    encoding_name;	/**< Encoding name.		    */
     unsigned	    clock_rate;		/**< Sampling rate.		    */
     unsigned	    channel_count;	/**< Number of channels.	    */
@@ -226,7 +228,8 @@ typedef struct pjmedia_port_info
 typedef enum pjmedia_frame_type
 {
     PJMEDIA_FRAME_TYPE_NONE,	    /**< No frame.		*/
-    PJMEDIA_FRAME_TYPE_AUDIO	    /**< Normal audio frame.	*/
+    PJMEDIA_FRAME_TYPE_AUDIO,	    /**< Normal audio frame.	*/
+    PJMEDIA_FRAME_TYPE_EXTENDED	    /**< Extended audio frame.	*/
 
 } pjmedia_frame_type;
 
@@ -248,6 +251,88 @@ typedef struct pjmedia_frame
 } pjmedia_frame;
 
 
+/**
+ * The pjmedia_frame_ext is used to carry a more complex audio frames than
+ * the typical PCM audio frames, and it is signaled by setting the "type"
+ * field of a pjmedia_frame to PJMEDIA_FRAME_TYPE_EXTENDED. With this set,
+ * application may typecast pjmedia_frame to pjmedia_frame_ext.
+ *
+ * This structure may contain more than one audio frames, which subsequently
+ * will be called subframes in this structure. The subframes section
+ * immediately follows the end of this structure, and each subframe is
+ * represented by pjmedia_frame_ext_subframe structure. Every next
+ * subframe immediately follows the previous subframe, and all subframes
+ * are byte-aligned although its payload may not be byte-aligned.
+ */
+typedef struct pjmedia_frame_ext {
+    pjmedia_frame   base;	    /**< Base frame info */
+    pj_uint16_t     samples_cnt;    /**< Number of samples in this frame */
+    pj_uint16_t     subframe_cnt;   /**< Number of (sub)frames in this frame */
+
+    /* Zero or more (sub)frames follows immediately after this,
+     * each will be represented by pjmedia_frame_ext_subframe
+     */
+} pjmedia_frame_ext;
+
+/**
+ * This structure represents the individual subframes in the
+ * pjmedia_frame_ext structure.
+ */
+typedef struct pjmedia_frame_ext_subframe {
+    pj_uint16_t     bitlen;	    /**< Number of bits in the data */
+    pj_uint8_t      data[1];	    /**< Start of encoded data */
+} pjmedia_frame_ext_subframe;
+
+
+/* Append one subframe to the frame_ext */
+PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
+						  const void *src,
+					          pj_uint16_t bitlen,
+						  pj_uint16_t samples_cnt)
+{
+    pj_uint8_t *p;
+    unsigned i, tmp;
+
+    p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
+    for (i = 0; i < frm->subframe_cnt; ++i) {
+	pjmedia_frame_ext_subframe *fsub;
+	fsub = (pjmedia_frame_ext_subframe*) p;
+	p += fsub->bitlen / 8;
+	if (fsub->bitlen % 8)
+	    ++p;
+    }
+
+    tmp = bitlen / 8;
+    if (bitlen % 8) ++tmp;
+    pj_memcpy(p, &bitlen, sizeof(bitlen));
+    pj_memcpy(p + sizeof(bitlen), src, tmp);
+    frm->subframe_cnt++;
+    frm->samples_cnt = frm->samples_cnt + samples_cnt;
+}
+
+/* Get the pointer and length of the n-th subframe */
+PJ_INLINE(pjmedia_frame_ext_subframe*) 
+	  pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm,
+					 unsigned n)
+{
+    pj_uint8_t *p;
+    unsigned i;
+    pjmedia_frame_ext_subframe *tmp;
+
+    pj_assert(n < frm->subframe_cnt);
+
+    p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
+    for (i = 0; i < n; ++i) {	
+	tmp = (pjmedia_frame_ext_subframe*) p;
+	p += tmp->bitlen / 8;
+	if (tmp->bitlen % 8)
+	    ++p;
+    }
+    
+    tmp = (pjmedia_frame_ext_subframe*) p;
+    return tmp;
+}
+	
 /**
  * Port interface.
  */

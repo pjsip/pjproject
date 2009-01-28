@@ -33,6 +33,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+#if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
@@ -1987,3 +1988,4 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     return status;
 }
 
+#endif
