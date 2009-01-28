@@ -824,7 +824,7 @@ struct hdr_test_t
 {
     char *hname;
     char *hshort_name;
-    char hcontent[1024];
+    char *hcontent;
     int  (*test)(pjsip_hdr*);
     unsigned flags;
 } hdr_test_data[] =
@@ -1734,6 +1734,11 @@ static int hdr_test(void)
 	pj_pool_t *pool;
 	pjsip_hdr *parsed_hdr1=NULL, *parsed_hdr2=NULL;
 	char *input, *output;
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+	static char hcontent[1024];
+#else
+	char *hcontent;
+#endif
 	int rc;
 
 	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
@@ -1741,8 +1746,15 @@ static int hdr_test(void)
 	/* Parse the header */
 	hname = pj_str(test->hname);
 	len = strlen(test->hcontent);
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+	PJ_ASSERT_RETURN(len < sizeof(hcontent), PJSIP_EMSGTOOLONG);
+	strcpy(hcontent, test->hcontent);
+#else
+	hcontent = test->hcontent;
+#endif
+	
 	parsed_hdr1 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, 
-						   test->hcontent, len, 
+						   hcontent, len, 
 						   &parsed_len);
 	if (parsed_hdr1 == NULL) {
 	    if (test->flags & HDR_FLAG_PARSE_FAIL) {
@@ -1765,7 +1777,14 @@ static int hdr_test(void)
 	if (test->hshort_name) {
 	    hname = pj_str(test->hshort_name);
 	    len = strlen(test->hcontent);
-	    parsed_hdr2 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, test->hcontent, len, &parsed_len);
+#if defined(PJSIP_UNESCAPE_IN_PLACE) && PJSIP_UNESCAPE_IN_PLACE!=0
+	    PJ_ASSERT_RETURN(len < sizeof(hcontent), PJSIP_EMSGTOOLONG);
+	    strcpy(hcontent, test->hcontent);
+#else
+	    hcontent = test->hcontent;
+#endif
+
+	    parsed_hdr2 = (pjsip_hdr*) pjsip_parse_hdr(pool, &hname, hcontent, len, &parsed_len);
 	    if (parsed_hdr2 == NULL) {
 		PJ_LOG(3,(THIS_FILE, "    error parsing header %s: %s", test->hshort_name, test->hcontent));
 		return -510;
