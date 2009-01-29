@@ -284,7 +284,14 @@ typedef struct pjmedia_frame_ext_subframe {
 } pjmedia_frame_ext_subframe;
 
 
-/* Append one subframe to the frame_ext */
+/**
+ * Append one subframe to #pjmedia_frame_ext.
+ *
+ * @param frm		    The #pjmedia_frame_ext.
+ * @param src		    Subframe data.
+ * @param bitlen	    Lenght of subframe, in bits.
+ * @param samples_cnt	    Number of audio samples in subframe.
+ */
 PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
 						  const void *src,
 					          pj_uint16_t bitlen,
@@ -310,27 +317,36 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
     frm->samples_cnt = frm->samples_cnt + samples_cnt;
 }
 
-/* Get the pointer and length of the n-th subframe */
+/**
+ * Get a subframe from #pjmedia_frame_ext.
+ *
+ * @param frm		    The #pjmedia_frame_ext.
+ * @param n		    Subframe index, zero based.
+ *
+ * @return		    The n-th subframe, or NULL if n is out-of-range.
+ */
 PJ_INLINE(pjmedia_frame_ext_subframe*) 
 	  pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm,
 					 unsigned n)
 {
-    pj_uint8_t *p;
-    unsigned i;
-    pjmedia_frame_ext_subframe *tmp;
+    pjmedia_frame_ext_subframe *sf = NULL;
 
-    pj_assert(n < frm->subframe_cnt);
+    if (n < frm->subframe_cnt) {
+	pj_uint8_t *p;
+	unsigned i;
 
-    p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
-    for (i = 0; i < n; ++i) {	
-	tmp = (pjmedia_frame_ext_subframe*) p;
-	p += tmp->bitlen / 8;
-	if (tmp->bitlen % 8)
-	    ++p;
+	p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
+	for (i = 0; i < n; ++i) {	
+	    sf = (pjmedia_frame_ext_subframe*) p;
+	    p += sf->bitlen / 8;
+	    if (sf->bitlen % 8)
+		++p;
+	}
+        
+	sf = (pjmedia_frame_ext_subframe*) p;
     }
-    
-    tmp = (pjmedia_frame_ext_subframe*) p;
-    return tmp;
+
+    return sf;
 }
 	
 /**
