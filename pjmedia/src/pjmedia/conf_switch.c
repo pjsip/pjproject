@@ -18,8 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/conference.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
+#include <pjmedia/silencedet.h>
 #include <pjmedia/sound_port.h>
 #include <pjmedia/stream.h>
 #include <pj/array.h>
@@ -40,18 +42,6 @@
 #else
 #   define TRACE_(x)
 #endif
-
-
-/* REC_FILE macro enables recording of the samples written to the sound
- * device. The file contains RAW PCM data with no header, and has the
- * same settings (clock rate etc) as the conference bridge.
- * This should only be enabled when debugging audio quality *only*.
- */
-//#define REC_FILE    "confrec.pcm"
-#ifdef REC_FILE
-static FILE *fhnd_rec;
-#endif
-
 
 #define THIS_FILE	    "conf_switch.c"
 
@@ -102,6 +92,7 @@ struct conf_port
 
     pj_timestamp	 ts_clock;
     pj_timestamp	 ts_rx;
+    pj_timestamp	 ts_tx;
 
     /* Tx buffer is a temporary buffer to be used when there's mismatch 
      * between port's ptime with conference's ptime. This buffer is used as 
@@ -109,23 +100,6 @@ struct conf_port
      * fulfill a complete frame to be transmitted to the port.
      */
     pj_uint8_t		 tx_buf[BUFFER_SIZE]; /**< Tx buffer.		    */
-
-    /* When the port is not receiving signal from any other ports (e.g. when
-     * no other ports is transmitting to this port), the bridge periodically
-     * transmit NULL frame to the port to keep the port "alive" (for example,
-     * a stream port needs this heart-beat to periodically transmit silence
-     * frame to keep NAT binding alive).
-     *
-     * This NULL frame should be sent to the port at the port's ptime rate.
-     * So if the port's ptime is greater than the bridge's ptime, the bridge
-     * needs to delay the NULL frame until it's the right time to do so.
-     *
-     * This variable keeps track of how many pending NULL samples are being
-     * "held" for this port. Once this value reaches samples_per_frame
-     * value of the port, a NULL frame is sent. The samples value on this
-     * variable is clocked at the port's clock rate.
-     */
-    unsigned		 tx_heart_beat;
 };
 
 
@@ -476,6 +450,10 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
 		     PJMEDIA_ENCCHANNEL);
     PJ_ASSERT_RETURN(conf->bits_per_sample == strm_port->info.bits_per_sample,
 		     PJMEDIA_ENCBITS);
+
+    /* Port's samples per frame should be equal to or multiplication of 
+     * conference's samples per frame.
+     */
     PJ_ASSERT_RETURN((conf->samples_per_frame %
 		     strm_port->info.samples_per_frame==0) ||
 		     (strm_port->info.samples_per_frame %
@@ -980,25 +958,29 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     return PJ_SUCCESS;
 }
 
-/* Deliver frm_src to a conference port (via frm_dst), eventually call 
- * port's put_frame() when samples count in the frm_dst are equal to 
- * port's samples_per_frame.
+/* Deliver frm_src to a listener port, eventually call  port's put_frame() 
+ * when samples count in the frm_dst are equal to port's samples_per_frame.
  */
-static pj_status_t deliver_frame(struct conf_port *cport_dst,
-			         pjmedia_frame *frm_dst,
-			         const pjmedia_frame *frm_src)
+static pj_status_t write_frame(struct conf_port *cport_dst,
+			       const pjmedia_frame *frm_src)
 {
+    pjmedia_frame *frm_dst = (pjmedia_frame*)cport_dst->tx_buf;
+    
     PJ_TODO(MAKE_SURE_DEST_FRAME_HAS_ENOUGH_SPACE);
 
+    frm_dst->type = frm_src->type;
+    frm_dst->timestamp = cport_dst->ts_tx;
+
     if (frm_src->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+
 	pjmedia_frame_ext *f_src = (pjmedia_frame_ext*)frm_src;
 	pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frm_dst;
 	unsigned i;
 
-	/* Copy frame to listener's TX buffer. */
 	for (i = 0; i < f_src->subframe_cnt; ++i) {
 	    pjmedia_frame_ext_subframe *sf;
 	    
+	    /* Copy frame to listener's TX buffer. */
 	    sf = pjmedia_frame_ext_get_subframe(f_src, i);
 	    pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen, 
 					      f_src->samples_cnt / 
@@ -1010,9 +992,13 @@ static pj_status_t deliver_frame(struct conf_port *cport_dst,
 	     */
 	    if (f_dst->samples_cnt == cport_dst->samples_per_frame)
 	    {
-		f_dst->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
 		if (cport_dst->port) {
-		    pjmedia_port_put_frame(cport_dst->port, (pjmedia_frame*)f_dst);
+		    pjmedia_port_put_frame(cport_dst->port, 
+					   (pjmedia_frame*)f_dst);
+
+		    /* Update TX timestamp. */
+		    pj_add_timestamp32(&cport_dst->ts_tx, 
+				       cport_dst->samples_per_frame);
 
 		    /* Reset TX buffer. */
 		    f_dst->subframe_cnt = 0;
@@ -1021,9 +1007,8 @@ static pj_status_t deliver_frame(struct conf_port *cport_dst,
 	    }
 	}
 
-    } else {
+    } else if (frm_src->type == PJMEDIA_FRAME_TYPE_AUDIO) {
 
-	pjmedia_frame *f_dst = (pjmedia_frame*)frm_dst;
 	pj_int16_t *f_start, *f_end;
 
 	f_start = (pj_int16_t*)frm_src->buf;
@@ -1031,32 +1016,94 @@ static pj_status_t deliver_frame(struct conf_port *cport_dst,
 	while (f_start < f_end) {
 	    unsigned nsamples_to_copy, nsamples_req;
 
+	    /* Copy frame to listener's TX buffer. */
 	    nsamples_to_copy = f_end - f_start;
-	    nsamples_req = cport_dst->samples_per_frame - (f_dst->size >> 1);
+	    nsamples_req = cport_dst->samples_per_frame - (frm_dst->size>>1);
 	    if (nsamples_to_copy > nsamples_req)
 		nsamples_to_copy = nsamples_req;
-	    pjmedia_copy_samples((pj_int16_t*)f_dst->buf + (f_dst->size >> 1), 
+	    pjmedia_copy_samples((pj_int16_t*)frm_dst->buf + (frm_dst->size>>1),
 				 f_start, 
 				 nsamples_to_copy);
-	    f_dst->size += nsamples_to_copy << 1;
+	    frm_dst->size += nsamples_to_copy << 1;
 	    f_start += nsamples_to_copy;
 
 	    /* Check if it's time to deliver the TX buffer to listener, 
 	     * i.e: samples count in TX buffer equal to listener's
 	     * samples per frame.
 	     */
-	    if ((f_dst->size >> 1) == cport_dst->samples_per_frame)
+	    if ((frm_dst->size >> 1) == cport_dst->samples_per_frame)
 	    {
-		f_dst->type = PJMEDIA_FRAME_TYPE_AUDIO;
 		if (cport_dst->port) {
-		    pjmedia_port_put_frame(cport_dst->port, f_dst);
+		    pjmedia_port_put_frame(cport_dst->port, frm_dst);
+
+		    /* Update TX timestamp. */
+		    pj_add_timestamp32(&cport_dst->ts_tx, 
+				       cport_dst->samples_per_frame);
 		 
 		    /* Reset TX buffer. */
-		    f_dst->size = 0;
+		    frm_dst->size = 0;
 		}
 	    }
 	}
 
+    } else if (frm_src->type == PJMEDIA_FRAME_TYPE_NONE) {
+
+	/* Check port format. */
+	if (cport_dst->port && (cport_dst->port->info.format.u32==0 ||
+	    cport_dst->port->info.format.u32 == PJMEDIA_FOURCC_L16))
+	{
+	    /* When there is already some samples in listener's TX buffer, 
+	     * pad the buffer with "zero samples".
+	     */
+	    if (frm_dst->size != 0) {
+		pjmedia_zero_samples((pj_int16_t*)frm_dst->buf,
+				     cport_dst->samples_per_frame - 
+				     (frm_dst->size>>1));
+
+		frm_dst->type = PJMEDIA_FRAME_TYPE_AUDIO;
+		frm_dst->size = cport_dst->samples_per_frame << 1;
+		if (cport_dst->port)
+		    pjmedia_port_put_frame(cport_dst->port, frm_dst);
+
+		/* Update TX timestamp. */
+		pj_add_timestamp32(&cport_dst->ts_tx, 
+				   cport_dst->samples_per_frame);
+
+		/* Reset TX buffer. */
+		frm_dst->size = 0;
+	    }
+	} else {
+	    pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frm_dst;
+
+	    if (f_dst->samples_cnt != 0) {
+		frm_dst->type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		pjmedia_frame_ext_append_subframe(f_dst, NULL, 0, (pj_uint16_t)
+						  (cport_dst->samples_per_frame-
+						  f_dst->samples_cnt));
+		if (cport_dst->port)
+		    pjmedia_port_put_frame(cport_dst->port, frm_dst);
+
+		/* Update TX timestamp. */
+		pj_add_timestamp32(&cport_dst->ts_tx, 
+				   cport_dst->samples_per_frame);
+
+		/* Reset TX buffer. */
+		f_dst->subframe_cnt = 0;
+		f_dst->samples_cnt = 0;
+	    }
+	}
+
+	/* Synchronize clock. */
+	while (pj_cmp_timestamp(&cport_dst->ts_clock, 
+				&cport_dst->ts_tx) >= 0)
+	{
+	    if (cport_dst->port) {
+		frm_dst->type = PJMEDIA_FRAME_TYPE_NONE;
+		frm_dst->timestamp = cport_dst->ts_tx;
+		pjmedia_port_put_frame(cport_dst->port, frm_dst);
+	    }
+	    pj_add_timestamp32(&cport_dst->ts_tx, cport_dst->samples_per_frame);
+	}
     }
 
     return PJ_SUCCESS;
@@ -1071,9 +1118,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     unsigned ci, i;
     
-    PJ_TODO(ADJUST_AND_CALC_RX_TX_LEVEL_FOR_PCM_FRAMES);
-
-    TRACE_((THIS_FILE, "- clock -"));
+    PJ_TODO(ADJUST_RX_TX_LEVEL_FOR_PCM_FRAMES);
 
     /* Must lock mutex */
     pj_mutex_lock(conf->mutex);
@@ -1093,27 +1138,28 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	/* Var "ci" is to count how many ports have been visited so far. */
 	++ci;
 
-	/* Skip if we're not allowed to receive from this port. */
-	if (cport->rx_setting == PJMEDIA_PORT_DISABLE) {
-	    cport->rx_level = 0;
-	    continue;
-	}
-
-	/* Also skip if this port doesn't have listeners. */
-	if (cport->listener_cnt == 0) {
-	    cport->rx_level = 0;
-	    continue;
-	}
-
+	/* Update clock of the port. */
 	pj_add_timestamp32(&cport->ts_clock, conf->samples_per_frame);
 
-	/* This loop will make sure the ptime between port & conf port 
-	 * are synchronized.
+	/* Skip if we're not allowed to receive from this port or 
+	 * the port doesn't have listeners.
+	 */
+	if (cport->rx_setting == PJMEDIA_PORT_DISABLE || 
+	    cport->listener_cnt == 0)
+	{
+	    cport->rx_level = 0;
+	    continue;
+	}
+
+	/* Get frame from each port, put it to the listener TX buffer,
+	 * and eventually call put_frame() of the listener. This loop 
+	 * will also make sure the ptime between conf & port synchronized.
 	 */
 	while (pj_cmp_timestamp(&cport->ts_clock, &cport->ts_rx) > 0) {
-	    pjmedia_frame *f = (pjmedia_frame*) conf->buf;
+	    pjmedia_frame *f = (pjmedia_frame*)conf->buf;
 	    pj_status_t status;
 	    unsigned j;
+	    pj_int32_t level;
 
 	    pj_add_timestamp32(&cport->ts_rx, cport->samples_per_frame);
 	    
@@ -1125,44 +1171,143 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    if (status != PJ_SUCCESS)
 		continue;
 
-	    if (f->type == PJMEDIA_FRAME_TYPE_NONE) {
-		if (cport->port->info.format.u32 == PJMEDIA_FOURCC_L16) {
-		    pjmedia_zero_samples((pj_int16_t*)f->buf,
-					 cport->samples_per_frame);
-		    f->size = cport->samples_per_frame << 1;
-		    f->type = PJMEDIA_FRAME_TYPE_AUDIO;
-		} else {
-		    /* Handle DTX */
-		    PJ_TODO(HANDLE_DTX);
-		}
+	    /* Calculate RX level. */
+	    if (f->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+		level = pjmedia_calc_avg_signal((const pj_int16_t*)f->buf,
+						f->size >>1 );
+	    } else if (f->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+		/* For extended frame, TX level is unknown, so we just set 
+		 * it to NORMAL_LEVEL. 
+		 */
+		level = NORMAL_LEVEL;
+	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
+		level = 0;
 	    }
+	    cport->rx_level = pjmedia_linear2ulaw(level) ^ 0xff;
 
 	    /* Put the frame to all listeners. */
 	    for (j=0; j < cport->listener_cnt; ++j) 
 	    {
 		struct conf_port *listener;
-		pjmedia_frame *frm_dst;
 
 		listener = conf->ports[cport->listener_slots[j]];
 
 		/* Skip if this listener doesn't want to receive audio */
-		if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
+		if (listener->tx_setting == PJMEDIA_PORT_DISABLE) {
+		    pj_add_timestamp32(&listener->ts_tx, 
+				       listener->samples_per_frame);
+		    listener->tx_level = 0;
 		    continue;
+		}
     	    
-		if (listener->port)
-		    frm_dst = frame;
-		else
-		    frm_dst = (pjmedia_frame*)listener->tx_buf;
-
-		status = deliver_frame(listener, frm_dst, f);
-		if (status != PJ_SUCCESS)
+		status = write_frame(listener, f);
+		if (status != PJ_SUCCESS) {
+		    listener->tx_level = 0;
 		    continue;
+		}
+
+		/* Set listener TX level equal to transmitter RX level. */
+		listener->tx_level = cport->rx_level;
 	    }
 	}
-	
-	/* Keep alive mechanism. */
-	PJ_TODO(SEND_KEEP_ALIVE_WHEN_NEEDED);
     }
+
+    /* Keep alive. Update TX timestamp and send frame type NONE to all 
+     * underflow ports at their own clock.
+     */
+    for (i=1, ci=1; i<conf->max_ports && ci<conf->port_cnt; ++i) {
+	struct conf_port *cport = conf->ports[i];
+
+	/* Skip empty port. */
+	if (!cport)
+	    continue;
+
+	/* Var "ci" is to count how many ports have been visited so far. */
+	++ci;
+
+	if (cport->tx_setting==PJMEDIA_PORT_MUTE || cport->transmitter_cnt==0)
+	{
+	    /* Clear left-over samples in tx_buffer, if any, so that it won't
+	     * be transmitted next time we have audio signal.
+	     */
+	    pj_bzero(cport->tx_buf, sizeof(pjmedia_frame_ext));
+	    
+	    cport->tx_level = 0;
+
+	    while (pj_cmp_timestamp(&cport->ts_clock, &cport->ts_tx) >= 0)
+	    {
+		if (cport->tx_setting == PJMEDIA_PORT_ENABLE) {
+		    pjmedia_frame tmp_f;
+
+		    tmp_f.timestamp = cport->ts_tx;
+		    tmp_f.type = PJMEDIA_FRAME_TYPE_NONE;
+		    tmp_f.buf = NULL;
+		    tmp_f.size = 0;
+
+		    pjmedia_port_put_frame(cport->port, &tmp_f);
+		    pj_add_timestamp32(&cport->ts_tx, cport->samples_per_frame);
+		}
+	    }
+	}
+    }
+
+    /* Return sound playback frame. */
+    do {
+	struct conf_port *this_cport = conf->ports[this_port->port_data.ldata];
+	pjmedia_frame *f_src = (pjmedia_frame*) this_cport->tx_buf;
+
+	frame->type = f_src->type;
+
+	if (f_src->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+	    pjmedia_frame_ext *f_src_ = (pjmedia_frame_ext*)f_src;
+	    pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame;
+	    pjmedia_frame_ext_subframe *sf;
+	    pj_uint16_t samples_per_subframe;
+	    
+	    f_dst->samples_cnt = 0;
+	    f_dst->subframe_cnt = 0;
+	    i = 0;
+	    samples_per_subframe = f_src_->samples_cnt / f_src_->subframe_cnt;
+
+	    while (f_dst->samples_cnt < this_cport->samples_per_frame) {
+		sf = pjmedia_frame_ext_get_subframe(f_src_, i++);
+		pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen,
+						  samples_per_subframe);
+	    }
+
+	    /* Shift left TX buffer. */
+	    sf = pjmedia_frame_ext_get_subframe(f_src_, i);
+	    if (sf) {
+		pjmedia_frame_ext_subframe *sf_end;
+		unsigned len;
+
+		sf_end = pjmedia_frame_ext_get_subframe(f_src_, 
+						    f_src_->subframe_cnt -1);
+		len = (pj_uint8_t*)sf_end - (pj_uint8_t*)sf + sf_end->bitlen/8;
+		if (sf_end->bitlen % 8 != 0)
+		    ++len;
+		pj_memmove(this_cport->tx_buf + sizeof(pjmedia_frame_ext), sf,
+			   len);
+	    }
+	    f_src_->samples_cnt = f_src_->samples_cnt - 
+				  (pj_uint16_t)(i * samples_per_subframe);
+	    f_src_->subframe_cnt = f_src_->subframe_cnt - (pj_uint16_t)i;
+
+	} else if (f_src->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+	    pjmedia_copy_samples((pj_int16_t*)frame->buf, 
+				 (pj_int16_t*)f_src->buf, 
+				 this_cport->samples_per_frame);
+	    frame->size = this_cport->samples_per_frame << 1;
+
+	    /* Shift left TX buffer. */
+	    f_src->size -= frame->size;
+	    if (f_src->size)
+		pjmedia_move_samples((pj_int16_t*)f_src->buf,
+				     (pj_int16_t*)f_src->buf + 
+				     this_cport->samples_per_frame,
+				     f_src->size >> 1);
+	}
+    } while (0);
 
     /* Unlock mutex */
     pj_mutex_unlock(conf->mutex);
@@ -1174,64 +1319,78 @@ static pj_status_t get_frame(pjmedia_port *this_port,
  * Recorder callback.
  */
 static pj_status_t put_frame(pjmedia_port *this_port, 
-			     const pjmedia_frame *frame)
+			     const pjmedia_frame *f)
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
-    struct conf_port *port = conf->ports[this_port->port_data.ldata];
+    struct conf_port *cport = conf->ports[this_port->port_data.ldata];
     unsigned j;
+    pj_int32_t level;
 
     /* Check for correct size. */
-    PJ_ASSERT_RETURN( frame->size == conf->samples_per_frame *
-				     conf->bits_per_sample / 8,
+    PJ_ASSERT_RETURN( f->size == conf->samples_per_frame *
+				 conf->bits_per_sample / 8,
 		      PJMEDIA_ENCSAMPLESPFRAME);
 
+    pj_add_timestamp32(&cport->ts_rx, cport->samples_per_frame);
+    
     /* Skip if this port is muted/disabled. */
-    if (port->rx_setting != PJMEDIA_PORT_ENABLE) {
+    if (cport->rx_setting == PJMEDIA_PORT_DISABLE) {
+	cport->rx_level = 0;
 	return PJ_SUCCESS;
     }
 
     /* Skip if no port is listening to the microphone */
-    if (port->listener_cnt == 0) {
+    if (cport->listener_cnt == 0) {
+	cport->rx_level = 0;
 	return PJ_SUCCESS;
     }
 
-    if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
-	if (this_port->info.format.u32 == PJMEDIA_FOURCC_L16) {
-	    pjmedia_frame *f = (pjmedia_frame*)port->tx_buf;
-
-	    pjmedia_zero_samples((pj_int16_t*)f->buf,
-				 port->samples_per_frame);
-	    f->size = port->samples_per_frame << 1;
-	    f->type = PJMEDIA_FRAME_TYPE_AUDIO;
-	    frame = f;
-	} else {
-	    /* Handle DTX */
-	    PJ_TODO(HANDLE_DTX);
-	}
+    /* Calculate RX level. */
+    if (f->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+	level = pjmedia_calc_avg_signal((const pj_int16_t*)f->buf,
+					f->size >>1 );
+    } else if (f->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+	/* For extended frame, TX level is unknown, so we just set 
+	 * it to NORMAL_LEVEL. 
+	 */
+	level = NORMAL_LEVEL;
+    } else { /* PJMEDIA_FRAME_TYPE_NONE. */
+	level = 0;
     }
+    cport->rx_level = pjmedia_linear2ulaw(level) ^ 0xff;
 
     /* Put the frame to all listeners. */
-    for (j=0; j < port->listener_cnt; ++j) 
+    for (j=0; j < cport->listener_cnt; ++j) 
     {
 	struct conf_port *listener;
-	pjmedia_frame *frm_dst;
 	pj_status_t status;
 
-	listener = conf->ports[port->listener_slots[j]];
+	listener = conf->ports[cport->listener_slots[j]];
 
 	/* Skip if this listener doesn't want to receive audio */
-	if (listener->tx_setting != PJMEDIA_PORT_ENABLE)
+	if (listener->tx_setting == PJMEDIA_PORT_DISABLE) {
+	    pj_add_timestamp32(&listener->ts_tx, 
+			       listener->samples_per_frame);
+	    listener->tx_level = 0;
 	    continue;
+	}
 
 	/* Skip loopback for now. */
-	if (listener == port)
+	if (listener == cport) {
+	    pj_add_timestamp32(&listener->ts_tx, 
+			       listener->samples_per_frame);
+	    listener->tx_level = 0;
 	    continue;
+	}
 	    
-	frm_dst = (pjmedia_frame*)listener->tx_buf;
-
-	status = deliver_frame(listener, frm_dst, frame);
-	if (status != PJ_SUCCESS)
+	status = write_frame(listener, f);
+	if (status != PJ_SUCCESS) {
+	    listener->tx_level = 0;
 	    continue;
+	}
+
+	/* Set listener TX level equal to transmitter RX level. */
+	listener->tx_level = cport->rx_level;
     }
 
     return PJ_SUCCESS;

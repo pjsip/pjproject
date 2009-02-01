@@ -264,6 +264,8 @@ typedef struct pjmedia_frame
  * subframe immediately follows the previous subframe, and all subframes
  * are byte-aligned although its payload may not be byte-aligned.
  */
+
+#pragma pack(1)
 typedef struct pjmedia_frame_ext {
     pjmedia_frame   base;	    /**< Base frame info */
     pj_uint16_t     samples_cnt;    /**< Number of samples in this frame */
@@ -273,15 +275,19 @@ typedef struct pjmedia_frame_ext {
      * each will be represented by pjmedia_frame_ext_subframe
      */
 } pjmedia_frame_ext;
+#pragma pack()
 
 /**
  * This structure represents the individual subframes in the
  * pjmedia_frame_ext structure.
  */
+#pragma pack(1)
 typedef struct pjmedia_frame_ext_subframe {
     pj_uint16_t     bitlen;	    /**< Number of bits in the data */
     pj_uint8_t      data[1];	    /**< Start of encoded data */
 } pjmedia_frame_ext_subframe;
+
+#pragma pack()
 
 
 /**
@@ -304,15 +310,18 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
     for (i = 0; i < frm->subframe_cnt; ++i) {
 	pjmedia_frame_ext_subframe *fsub;
 	fsub = (pjmedia_frame_ext_subframe*) p;
-	p += fsub->bitlen / 8;
+	p += sizeof(fsub->bitlen) + fsub->bitlen / 8;
 	if (fsub->bitlen % 8)
 	    ++p;
     }
 
     tmp = bitlen / 8;
     if (bitlen % 8) ++tmp;
+
     pj_memcpy(p, &bitlen, sizeof(bitlen));
-    pj_memcpy(p + sizeof(bitlen), src, tmp);
+    if (tmp)
+	pj_memcpy(p + sizeof(bitlen), src, tmp);
+
     frm->subframe_cnt++;
     frm->samples_cnt = frm->samples_cnt + samples_cnt;
 }
@@ -338,7 +347,7 @@ PJ_INLINE(pjmedia_frame_ext_subframe*)
 	p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
 	for (i = 0; i < n; ++i) {	
 	    sf = (pjmedia_frame_ext_subframe*) p;
-	    p += sf->bitlen / 8;
+	    p += sizeof(sf->bitlen) + sf->bitlen / 8;
 	    if (sf->bitlen % 8)
 		++p;
 	}
