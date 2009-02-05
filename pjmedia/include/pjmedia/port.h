@@ -381,7 +381,7 @@ PJ_INLINE(pj_status_t)
 
     move_src = (pj_uint8_t*)pjmedia_frame_ext_get_subframe(frm, n);
     sf = pjmedia_frame_ext_get_subframe(frm, frm->subframe_cnt-1);
-    move_len = (pj_uint8_t*)sf - move_src + sf->bitlen/8;
+    move_len = (pj_uint8_t*)sf - move_src + sizeof(sf->bitlen) + sf->bitlen/8;
     if (sf->bitlen % 8 != 0)
 	++move_len;
     pj_memmove((pj_uint8_t*)frm+sizeof(pjmedia_frame_ext), 

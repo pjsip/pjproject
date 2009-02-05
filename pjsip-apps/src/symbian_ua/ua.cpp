@@ -280,15 +280,6 @@ static void on_stream_created(pjsua_call_id call_id,
     if (strm_info->type != PJMEDIA_TYPE_AUDIO)
 	return;
 
-    /* Don't need to reopen sound device when the session doesn't use
-     * PCM format. 
-     */
-    if (strm_info->param->info.format.u32 == 0 ||
-	strm_info->param->info.format.u32 == PJMEDIA_FOURCC_L16) 
-    {
-	return;
-    }
-    
     pj_bzero(&setting, sizeof(setting));
     setting.format = strm_info->param->info.format;
     setting.bitrate = strm_info->param->info.avg_bps;
@@ -877,17 +868,16 @@ int ua_main()
 		  max_stack_file, max_stack_line));
 #endif
 	
-    // Let pjsua destroys app pool, since the pool may still be used by app
-    // until pjsua_destroy() finished.
-    // e.g: quitting app when there is an active call may cause sound port 
-    // memory destroyed before sound port itself gets closed/destroyed.
-    /*
+    if (snd_port) {
+	pjmedia_snd_port_destroy(snd_port);
+	snd_port = NULL;
+    }
+
     // Release application pool
     if (app_pool) {
 	pj_pool_release(app_pool);
 	app_pool = NULL;
     }
-    */
     
     // Shutdown pjsua
     pjsua_destroy();

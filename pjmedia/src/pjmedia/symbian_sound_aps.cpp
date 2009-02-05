@@ -758,47 +758,64 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
     buf.iBuffer.Zero();
 
     switch(strm->setting.format.u32) {
-    
     case PJMEDIA_FOURCC_G711U:
     case PJMEDIA_FOURCC_G711A:
-	/* Add header. */
-	buf.iBuffer.Append(1);
-	buf.iBuffer.Append(0);
-
-	/* Assume frame size is 10ms if frame size hasn't been known. */
-	if (g711_frame_len == 0)
-	    g711_frame_len = 80;
-	
-	/* Call parent stream callback to get samples to play. */
-	while (samples_ready < g711_frame_len) {
-	    if (frame->samples_cnt == 0) {
-		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
-		strm->play_cb(strm->user_data, 0, strm->play_buf,
-			      strm->samples_per_frame<<1);
-		
-		pj_assert(frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED ||
-			  frame->base.type == PJMEDIA_FRAME_TYPE_NONE);
-	    }
-
-	    if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
-		pjmedia_frame_ext_subframe *sf;
-		unsigned samples_cnt;
-		
-		sf = pjmedia_frame_ext_get_subframe(frame, 0);
-		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
-		if (sf->data && sf->bitlen)
-		    buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
-		else 
-		    buf.iBuffer.AppendFill(0, samples_cnt);
-		samples_ready += samples_cnt;
-		
-		pjmedia_frame_ext_pop_subframes(frame, 1);
+	{
+	    /* Add header. */
+	    buf.iBuffer.Append(1);
+	    buf.iBuffer.Append(0);
+    
+	    /* Assume frame size is 10ms if frame size hasn't been known. */
+	    if (g711_frame_len == 0)
+		g711_frame_len = 80;
 	    
-	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		buf.iBuffer.AppendFill(0, g711_frame_len - samples_ready);
-		samples_ready = g711_frame_len;
-		frame->samples_cnt = 0;
-		frame->subframe_cnt = 0;
+	    /* Call parent stream callback to get samples to play. */
+	    while (samples_ready < g711_frame_len) {
+		if (frame->samples_cnt == 0) {
+		    frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		    strm->play_cb(strm->user_data, 0, strm->play_buf,
+				  strm->samples_per_frame<<1);
+		    
+		    pj_assert(frame->base.type==PJMEDIA_FRAME_TYPE_EXTENDED ||
+			      frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
+		}
+    
+		if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+		    pjmedia_frame_ext_subframe *sf;
+		    unsigned samples_cnt;
+		    
+		    sf = pjmedia_frame_ext_get_subframe(frame, 0);
+		    samples_cnt = frame->samples_cnt / frame->subframe_cnt;
+		    if (sf->data && sf->bitlen)
+			buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
+		    else {
+			pj_uint8_t silence_code;
+			
+			if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U)
+			    silence_code = pjmedia_linear2ulaw(0);
+			else
+			    silence_code = pjmedia_linear2alaw(0);
+			
+			buf.iBuffer.AppendFill(silence_code, samples_cnt);
+		    }
+		    samples_ready += samples_cnt;
+		    
+		    pjmedia_frame_ext_pop_subframes(frame, 1);
+		
+		} else { /* PJMEDIA_FRAME_TYPE_NONE */
+		    pj_uint8_t silence_code;
+		    
+		    if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U)
+			silence_code = pjmedia_linear2ulaw(0);
+		    else
+			silence_code = pjmedia_linear2alaw(0);
+		    
+		    buf.iBuffer.AppendFill(silence_code, 
+					   g711_frame_len - samples_ready);
+		    samples_ready = g711_frame_len;
+		    frame->samples_cnt = 0;
+		    frame->subframe_cnt = 0;
+		}
 	    }
 	}
 	break;
@@ -806,8 +823,6 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
     default:
 	break;
     }
-    
-    unsigned tes = buf.iBuffer.Length();
 }
 
 /*
