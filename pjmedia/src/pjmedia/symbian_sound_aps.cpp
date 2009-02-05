@@ -17,10 +17,11 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia/symbian_sound_aps.h>
 #include <pjmedia/sound.h>
+#include <pjmedia/symbian_sound_aps.h>
 #include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/port.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/math.h>
@@ -59,9 +60,6 @@ static pjmedia_snd_dev_info symbian_snd_dev_info =
 /* App UID to open global APS queues to communicate with the APS server. */
 extern TPtrC		    APP_UID;
 
-/* Default setting */
-static pjmedia_snd_aps_setting def_setting;
-
 /* APS G.711 frame length */
 static pj_uint8_t aps_g711_frame_len;
 
@@ -87,6 +85,7 @@ struct pjmedia_snd_stream
     pjmedia_snd_rec_cb   rec_cb;
     pjmedia_snd_play_cb	 play_cb;
     void                *user_data;
+    pjmedia_snd_setting  setting;
 
     // Audio engine
     CPjAudioEngine	*engine;
@@ -404,13 +403,13 @@ CPjAudioEngine::~CPjAudioEngine()
     // panic KERN-EXEC 0, so let's wait for sometime before really closing
     // the client session.
     TTime start, now;
-    enum { APS_CLOSE_WAIT_TIME = 200 };
+    enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
+    
     start.UniversalTime();
-    now.UniversalTime();
-    while (now.MicroSecondsFrom(start) < APS_CLOSE_WAIT_TIME * 1000) {
+    do {
 	pj_symbianos_poll(-1, APS_CLOSE_WAIT_TIME);
 	now.UniversalTime();
-    }
+    } while (now.MicroSecondsFrom(start) < APS_CLOSE_WAIT_TIME * 1000);
 
     iSession.Close();
 
@@ -617,6 +616,7 @@ static void RecCbPcm(TAPSCommBuffer &buf, void *user_data)
 {
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
 
+    /* Buffer has to contain normal speech. */
     pj_assert(buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0);
 
     /* Detect the recorder G.711 frame size, player frame size will follow
@@ -659,6 +659,7 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
     unsigned g711_frame_len = aps_g711_frame_len;
 
+    /* Init buffer attributes and header. */
     buf.iCommand = CQueueHandler::EAPSPlayData;
     buf.iStatus = 0;
     buf.iBuffer.Zero();
@@ -696,10 +697,117 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
 
 static void RecCb(TAPSCommBuffer &buf, void *user_data)
 {
+    pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
+    pjmedia_frame_ext *frame = (pjmedia_frame_ext*) strm->rec_buf;
+    unsigned samples_processed = 0;
+
+    switch(strm->setting.format.u32) {
+    
+    case PJMEDIA_FOURCC_G711U:
+    case PJMEDIA_FOURCC_G711A:
+	pj_assert(buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0);
+
+	/* Detect the recorder G.711 frame size, player frame size will follow
+	 * this recorder frame size.
+	 */
+	if (aps_g711_frame_len == 0) {
+	    aps_g711_frame_len = buf.iBuffer.Length() < 160? 80 : 160;
+	    TRACE_((THIS_FILE, "Detected APS G.711 frame size = %u samples",
+		    aps_g711_frame_len));
+	}
+	
+	/* Convert APS buffer format into pjmedia_frame_ext. Whenever 
+	 * samples count in the frame is equal to stream's samples per frame,
+	 * call parent stream callback.
+	 */
+	while (samples_processed < aps_g711_frame_len) {
+	    unsigned tmp;
+	    const pj_uint8_t *pb = (const pj_uint8_t*)buf.iBuffer.Ptr() + 2 +
+				   samples_processed;
+
+	    tmp = PJ_MIN(strm->samples_per_frame - frame->samples_cnt,
+			 aps_g711_frame_len - samples_processed);
+	    
+	    pjmedia_frame_ext_append_subframe(frame, pb, tmp << 3, tmp);
+	    samples_processed += tmp;
+
+	    if (frame->samples_cnt == strm->samples_per_frame) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->rec_cb(strm->user_data, 0, strm->rec_buf, 0);
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
+    default:
+	break;
+    }
 }
 
 static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 {
+    pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
+    pjmedia_frame_ext *frame = (pjmedia_frame_ext*) strm->play_buf;
+    unsigned g711_frame_len = aps_g711_frame_len;
+    unsigned samples_ready = 0;
+
+    /* Init buffer attributes and header. */
+    buf.iCommand = CQueueHandler::EAPSPlayData;
+    buf.iStatus = 0;
+    buf.iBuffer.Zero();
+
+    switch(strm->setting.format.u32) {
+    
+    case PJMEDIA_FOURCC_G711U:
+    case PJMEDIA_FOURCC_G711A:
+	/* Add header. */
+	buf.iBuffer.Append(1);
+	buf.iBuffer.Append(0);
+
+	/* Assume frame size is 10ms if frame size hasn't been known. */
+	if (g711_frame_len == 0)
+	    g711_frame_len = 80;
+	
+	/* Call parent stream callback to get samples to play. */
+	while (samples_ready < g711_frame_len) {
+	    if (frame->samples_cnt == 0) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->play_cb(strm->user_data, 0, strm->play_buf,
+			      strm->samples_per_frame<<1);
+		
+		pj_assert(frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED ||
+			  frame->base.type == PJMEDIA_FRAME_TYPE_NONE);
+	    }
+
+	    if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+		pjmedia_frame_ext_subframe *sf;
+		unsigned samples_cnt;
+		
+		sf = pjmedia_frame_ext_get_subframe(frame, 0);
+		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
+		if (sf->data && sf->bitlen)
+		    buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
+		else 
+		    buf.iBuffer.AppendFill(0, samples_cnt);
+		samples_ready += samples_cnt;
+		
+		pjmedia_frame_ext_pop_subframes(frame, 1);
+	    
+	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
+		buf.iBuffer.AppendFill(0, g711_frame_len - samples_ready);
+		samples_ready = g711_frame_len;
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
+    default:
+	break;
+    }
+    
+    unsigned tes = buf.iBuffer.Length();
 }
 
 /*
@@ -708,14 +816,6 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
 {
     snd_pool_factory = factory;
-
-    def_setting.format.u32 = PJMEDIA_FOURCC_L16;
-    def_setting.mode = 0;
-    def_setting.bitrate = 128000;
-    def_setting.plc = PJ_FALSE;
-    def_setting.vad = PJ_FALSE;
-    def_setting.cng = PJ_FALSE;
-    def_setting.loudspk = PJ_FALSE;
 
     return PJ_SUCCESS;
 }
@@ -750,11 +850,12 @@ static pj_status_t sound_open(pjmedia_dir dir,
 			      pjmedia_snd_rec_cb rec_cb,
 			      pjmedia_snd_play_cb play_cb,
 			      void *user_data,
+			      const pjmedia_snd_setting *setting,
 			      pjmedia_snd_stream **p_snd_strm)
 {
     pj_pool_t *pool;
     pjmedia_snd_stream *strm;
-    CPjAudioSetting setting;
+    CPjAudioSetting aps_setting;
     PjAudioCallback aps_rec_cb;
     PjAudioCallback aps_play_cb;
 
@@ -778,51 +879,51 @@ static pj_status_t sound_open(pjmedia_dir dir,
     strm->clock_rate = clock_rate;
     strm->channel_count = channel_count;
     strm->samples_per_frame = samples_per_frame;
+    strm->setting = *setting;
+
+    if (strm->setting.format.u32 == 0)
+	strm->setting.format.u32 = PJMEDIA_FOURCC_L16;
 
     /* Set audio engine settings. */
-    if (def_setting.format.u32 == PJMEDIA_FOURCC_G711U ||
-	def_setting.format.u32 == PJMEDIA_FOURCC_L16)
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U ||
+	strm->setting.format.u32 == PJMEDIA_FOURCC_L16)
     {
-	setting.fourcc = TFourCC(KMCPFourCCIdG711);
+	aps_setting.fourcc = TFourCC(KMCPFourCCIdG711);
     } else {
-	setting.fourcc = TFourCC(def_setting.format.u32);
+	aps_setting.fourcc = TFourCC(strm->setting.format.u32);
     }
 
-    if (def_setting.format.u32 == PJMEDIA_FOURCC_AMR)
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_AMR)
     {
-	setting.mode = (TAPSCodecMode)def_setting.bitrate;
-    } else if (def_setting.format.u32 == PJMEDIA_FOURCC_G711U ||
-	       def_setting.format.u32 == PJMEDIA_FOURCC_L16   ||
-	      (def_setting.format.u32 == PJMEDIA_FOURCC_ILBC  &&
-	       def_setting.mode == 30))
+	aps_setting.mode = (TAPSCodecMode)strm->setting.bitrate;
+    } else if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U ||
+	       strm->setting.format.u32 == PJMEDIA_FOURCC_L16   ||
+	      (strm->setting.format.u32 == PJMEDIA_FOURCC_ILBC  &&
+	       strm->setting.mode == 30))
     {
-	setting.mode = EULawOr30ms;
+	aps_setting.mode = EULawOr30ms;
     } else {
-	setting.mode = EALawOr20ms;
+	aps_setting.mode = EALawOr20ms;
     }
 
-    setting.vad = def_setting.vad;
-    setting.plc = def_setting.plc;
-    setting.cng = def_setting.cng;
-    setting.loudspk = def_setting.loudspk;
+    aps_setting.vad = strm->setting.format.u32==PJMEDIA_FOURCC_L16? 
+					EFalse : strm->setting.vad;
+    aps_setting.plc = strm->setting.plc;
+    aps_setting.cng = strm->setting.cng;
+    aps_setting.loudspk = strm->setting.loudspk;
 
-    if (def_setting.format.u32 == PJMEDIA_FOURCC_AMR ||
-	def_setting.format.u32 == PJMEDIA_FOURCC_G711A ||
-	def_setting.format.u32 == PJMEDIA_FOURCC_G711U ||
-	def_setting.format.u32 == PJMEDIA_FOURCC_G729 ||
-	def_setting.format.u32 == PJMEDIA_FOURCC_ILBC)
-    {
-	aps_play_cb = &PlayCb;
-	aps_rec_cb  = &RecCb;
-    } else {
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_L16) {
 	aps_play_cb = &PlayCbPcm;
 	aps_rec_cb  = &RecCbPcm;
+    } else {
+	aps_play_cb = &PlayCb;
+	aps_rec_cb  = &RecCb;
     }
 
     // Create the audio engine.
     TRAPD(err, strm->engine = CPjAudioEngine::NewL(strm,
 						   aps_rec_cb, aps_play_cb,
-						   strm, setting));
+						   strm, aps_setting));
     if (err != KErrNone) {
     	pj_pool_release(pool);
 	return PJ_RETURN_OS_ERROR(err);
@@ -833,12 +934,12 @@ static pj_status_t sound_open(pjmedia_dir dir,
     strm->user_data = user_data;
 
     /* play_buf size is samples per frame. */
-    strm->play_buf = (pj_int16_t*)pj_pool_alloc(pool, samples_per_frame << 1);
+    strm->play_buf = (pj_int16_t*)pj_pool_zalloc(pool, samples_per_frame << 1);
     strm->play_buf_len = 0;
     strm->play_buf_start = 0;
 
     /* rec_buf size is samples per frame. */
-    strm->rec_buf  = (pj_int16_t*)pj_pool_alloc(pool, samples_per_frame << 1);
+    strm->rec_buf  = (pj_int16_t*)pj_pool_zalloc(pool, samples_per_frame << 1);
     strm->rec_buf_len = 0;
 
     // Done.
@@ -860,12 +961,18 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 					  void *user_data,
 					  pjmedia_snd_stream **p_snd_strm)
 {
+    pjmedia_snd_setting setting;
+    
     if (index < 0) index = 0;
     PJ_ASSERT_RETURN(index == 0, PJ_EINVAL);
 
+    pj_bzero(&setting, sizeof(setting));
+    setting.format.u32 = PJMEDIA_FOURCC_L16;
+    setting.bitrate = 128000;
+    
     return sound_open(PJMEDIA_DIR_CAPTURE, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, rec_cb, NULL,
-		      user_data, p_snd_strm);
+		      user_data, &setting, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
@@ -877,12 +984,18 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 					void *user_data,
 					pjmedia_snd_stream **p_snd_strm )
 {
+    pjmedia_snd_setting setting;
+    
     if (index < 0) index = 0;
     PJ_ASSERT_RETURN(index == 0, PJ_EINVAL);
 
+    pj_bzero(&setting, sizeof(setting));
+    setting.format.u32 = PJMEDIA_FOURCC_L16;
+    setting.bitrate = 128000;
+
     return sound_open(PJMEDIA_DIR_PLAYBACK, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, NULL, play_cb,
-		      user_data, p_snd_strm);
+		      user_data, &setting, p_snd_strm);
 }
 
 PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
@@ -896,13 +1009,41 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 				      void *user_data,
 				      pjmedia_snd_stream **p_snd_strm)
 {
+    pjmedia_snd_setting setting;
+
     if (rec_id < 0) rec_id = 0;
     if (play_id < 0) play_id = 0;
     PJ_ASSERT_RETURN(play_id == 0 && rec_id == 0, PJ_EINVAL);
 
+    pj_bzero(&setting, sizeof(setting));
+    setting.format.u32 = PJMEDIA_FOURCC_L16;
+    setting.bitrate = 128000;
+
     return sound_open(PJMEDIA_DIR_CAPTURE_PLAYBACK, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, rec_cb, play_cb,
-		      user_data, p_snd_strm);
+		      user_data, &setting, p_snd_strm);
+}
+
+PJ_DEF(pj_status_t) pjmedia_snd_open2( pjmedia_dir dir,
+				       int rec_id,
+				       int play_id,
+				       unsigned clock_rate,
+				       unsigned channel_count,
+				       unsigned samples_per_frame,
+				       unsigned bits_per_sample,
+				       pjmedia_snd_rec_cb rec_cb,
+				       pjmedia_snd_play_cb play_cb,
+				       void *user_data,
+				       const pjmedia_snd_setting *setting,
+				       pjmedia_snd_stream **p_snd_strm)
+{
+    if (rec_id < 0) rec_id = 0;
+    if (play_id < 0) play_id = 0;
+    PJ_ASSERT_RETURN(play_id == 0 && rec_id == 0, PJ_EINVAL);
+
+    return sound_open(dir, clock_rate, channel_count,
+		      samples_per_frame, bits_per_sample, rec_cb, play_cb,
+		      user_data, setting, p_snd_strm);
 }
 
 /*
@@ -993,7 +1134,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency,
     return PJ_SUCCESS;
 }
 
-
 /*
  * Activate/deactivate loudspeaker.
  */
@@ -1001,29 +1141,11 @@ PJ_DEF(pj_status_t) pjmedia_snd_aps_activate_loudspeaker(
 					pjmedia_snd_stream *stream,
 					pj_bool_t active)
 {
-    if (stream == NULL) {
-	def_setting.loudspk = active;
-    } else {
-	if (stream->engine == NULL)
-	    return PJ_EINVAL;
-
-	TInt err = stream->engine->ActivateSpeaker(active);
-	if (err != KErrNone)
-	    return PJ_RETURN_OS_ERROR(err);
-    }
-
-    return PJ_SUCCESS;
-}
-
-/**
- * Set a codec and its settings to be used on the next sound device session.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_aps_modify_setting(
-				    const pjmedia_snd_aps_setting *setting)
-{
-    PJ_ASSERT_RETURN(setting, PJ_EINVAL);
-
-    def_setting = *setting;
+    PJ_ASSERT_RETURN(stream && stream->engine, PJ_EINVAL);
+    
+    TInt err = stream->engine->ActivateSpeaker(active);
+    if (err != KErrNone)
+	return PJ_RETURN_OS_ERROR(err);
 
     return PJ_SUCCESS;
 }

@@ -459,13 +459,13 @@ static pj_status_t default_attr ( pjmedia_codec_factory *factory,
 				    (codec_desc[i].samples_per_frame * 1000 / 
 				    codec_desc[i].channel_count / 
 				    codec_desc[i].clock_rate);
-	    attr->info.format.u32 = codec_desc[i].format.u32;
+	    attr->info.format = codec_desc[i].format;
 
 	    /* Default flags. */
 	    attr->setting.frm_per_pkt = codec_desc[i].frm_per_pkt;
-	    attr->setting.plc = 1;
+	    attr->setting.plc = 0;
 	    attr->setting.penh= 0;
-	    attr->setting.vad = 1;
+	    attr->setting.vad = 0;
 	    attr->setting.cng = attr->setting.vad;
 	    attr->setting.dec_fmtp = codec_desc[i].dec_fmtp;
 
@@ -719,7 +719,7 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
 	frames[count].size = codec_data->avg_frame_size;
 	frames[count].timestamp.u64 = ts->u64 + count*desc->samples_per_frame;
 
-	pkt = ((char*)pkt) + codec_data->avg_frame_size;
+	pkt = (pj_uint8_t*)pkt + codec_data->avg_frame_size;
 	pkt_size -= codec_data->avg_frame_size;
 
 	++count;
@@ -799,8 +799,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     struct codec_desc *desc = &codec_desc[codec_data->codec_idx];
     pjmedia_frame_ext *output_ = (pjmedia_frame_ext*) output;
 
-    /* Check if input is formatted in pjmedia_frame */
-    pj_assert(input && input->type == PJMEDIA_FRAME_TYPE_AUDIO);
+    pj_assert(input && input->size > 0);
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
     /* Need to rearrange the AMR bitstream, since the bitstream may not be 
@@ -817,20 +816,16 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 	pjmedia_codec_amr_predecode(input, setting, &frame);
     }
 #endif
+    /*
+    PJ_ASSERT_RETURN(output_buf_len >= sizeof(pjmedia_frame_ext) +
+				       sizeof(pjmedia_frame_ext_subframe) +
+				       input->size,
+		     PJMEDIA_CODEC_EFRMTOOSHORT);
+     */
 
-    pj_bzero(output_, sizeof(pjmedia_frame_ext));
-    output_->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
-    
-    if (input && input->size > 0) {
-	PJ_ASSERT_RETURN(output_buf_len >= sizeof(pjmedia_frame_ext) +
-					   sizeof(pjmedia_frame_ext_subframe) +
-					   input->size,
-			 PJMEDIA_CODEC_EFRMTOOSHORT);
-
-	pjmedia_frame_ext_append_subframe(output_, input->buf, 
-					  (pj_uint16_t)(input->size << 3),
-					  (pj_uint16_t)desc->samples_per_frame);
-    }
+    pjmedia_frame_ext_append_subframe(output_, input->buf, 
+				      (pj_uint16_t)(input->size << 3),
+				      (pj_uint16_t)desc->samples_per_frame);
 
     return PJ_SUCCESS;
 }
@@ -842,7 +837,16 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
 				  unsigned output_buf_len, 
 				  struct pjmedia_frame *output)
 {
-    return codec_decode(codec, NULL, output_buf_len, output);
+    codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
+    struct codec_desc *desc = &codec_desc[codec_data->codec_idx];
+    pjmedia_frame_ext *output_ = (pjmedia_frame_ext*) output;
+
+    PJ_UNUSED_ARG(output_buf_len);
+
+    pjmedia_frame_ext_append_subframe(output_, NULL, 0,
+				      (pj_uint16_t)desc->samples_per_frame);
+
+    return PJ_SUCCESS;
 }
 
 #endif	/* PJMEDIA_HAS_PASSTHROUGH_CODECS */

@@ -359,6 +359,42 @@ PJ_INLINE(pjmedia_frame_ext_subframe*)
 }
 	
 /**
+ * Pop out first n subframes from #pjmedia_frame_ext.
+ *
+ * @param frm		    The #pjmedia_frame_ext.
+ * @param n		    Number of first subframes to be popped out.
+ *
+ * @return		    PJ_SUCCESS, or PJ_ENOTFOUND if frame is empty.
+ */
+PJ_INLINE(pj_status_t) 
+	  pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)
+{
+    pjmedia_frame_ext_subframe *sf;
+    pj_uint8_t *move_src;
+    unsigned move_len;
+
+    if (frm->subframe_cnt <= n) {
+	frm->subframe_cnt = 0;
+	frm->samples_cnt = 0;
+	return PJ_SUCCESS;
+    }
+
+    move_src = (pj_uint8_t*)pjmedia_frame_ext_get_subframe(frm, n);
+    sf = pjmedia_frame_ext_get_subframe(frm, frm->subframe_cnt-1);
+    move_len = (pj_uint8_t*)sf - move_src + sf->bitlen/8;
+    if (sf->bitlen % 8 != 0)
+	++move_len;
+    pj_memmove((pj_uint8_t*)frm+sizeof(pjmedia_frame_ext), 
+	       move_src, move_len);
+	    
+    frm->samples_cnt = (pj_uint16_t)
+		   (frm->samples_cnt - n*frm->samples_cnt/frm->subframe_cnt);
+    frm->subframe_cnt = (pj_uint16_t) (frm->subframe_cnt - n);
+
+    return PJ_SUCCESS;
+}
+	
+/**
  * Port interface.
  */
 typedef struct pjmedia_port

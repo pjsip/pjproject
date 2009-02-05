@@ -94,6 +94,22 @@ typedef struct pjmedia_snd_stream_info
 
 
 /** 
+ * Stream setting for opening sound device with non-PCM data.
+ */
+typedef struct pjmedia_snd_setting
+{
+    pjmedia_fourcc	format;	  /**< Format (FourCC ID).	    */ 
+    pj_uint32_t		bitrate;  /**< Bitrate (bps).		    */
+    pj_uint32_t		mode;	  /**< Mode, e.g: iLBC format has
+				       20ms or 30ms frame size.	    */
+    pj_bool_t		plc;	  /**< PLC enabled/disabled.	    */
+    pj_bool_t		vad;	  /**< VAD enabled/disabled.	    */
+    pj_bool_t		cng;	  /**< CNG enabled/disabled.	    */
+    pj_bool_t		loudspk;  /**< Audio routed to loudspeaker. */
+} pjmedia_snd_setting;
+
+
+/** 
  * This callback is called by player stream when it needs additional data
  * to be played by the device. Application must fill in the whole of output 
  * buffer with sound samples.
@@ -270,6 +286,46 @@ PJ_DECL(pj_status_t) pjmedia_snd_open_player( int index,
 					 pjmedia_snd_play_cb play_cb,
 					 void *user_data,
 					 pjmedia_snd_stream **p_snd_strm );
+
+
+/**
+ * Create sound stream for capturing audio and/or audio playback, from the 
+ * same device. This also allows opening sound stream with extended settings, 
+ * e.g: stream format, see #pjmedia_snd_setting.
+ *
+ * @param dir		    Sound stream direction.
+ * @param rec_id	    Device index for recorder/capture stream, or
+ *			    -1 to use the first capable device.
+ * @param play_id	    Device index for playback stream, or -1 to use 
+ *			    the first capable device.
+ * @param clock_rate	    Sound device's clock rate to set.
+ * @param channel_count	    Set number of channels, 1 for mono, or 2 for
+ *			    stereo. The channel count determines the format
+ *			    of the frame.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Set the number of bits per sample. The normal 
+ *			    value for this parameter is 16 bits per sample.
+ * @param rec_cb	    Callback to handle captured audio samples.
+ * @param play_cb	    Callback to be called when the sound player needs
+ *			    more audio samples to play.
+ * @param user_data	    User data to be associated with the stream.
+ * @param setting	    Sound device extended setting.
+ * @param p_snd_strm	    Pointer to receive the stream instance.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_open2( pjmedia_dir dir,
+				        int rec_id,
+				        int play_id,
+				        unsigned clock_rate,
+				        unsigned channel_count,
+				        unsigned samples_per_frame,
+				        unsigned bits_per_sample,
+				        pjmedia_snd_rec_cb rec_cb,
+				        pjmedia_snd_play_cb play_cb,
+				        void *user_data,
+					const pjmedia_snd_setting *setting,
+				        pjmedia_snd_stream **p_snd_strm);
 
 
 /**

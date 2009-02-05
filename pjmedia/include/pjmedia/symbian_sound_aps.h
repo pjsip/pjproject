@@ -53,8 +53,7 @@ typedef struct pjmedia_snd_aps_setting
  * will be routed to earpiece.
  *
  * @param stream	The sound device stream, the stream should be started 
- *			before calling this function. This param can be NULL
- *			to set the behaviour of next opened stream.
+ *			before calling this function.
  * @param active	Specify PJ_TRUE to activate loudspeaker, and PJ_FALSE
  *			otherwise.
  *
@@ -63,18 +62,6 @@ typedef struct pjmedia_snd_aps_setting
 PJ_DECL(pj_status_t) pjmedia_snd_aps_activate_loudspeaker(
 						pjmedia_snd_stream *stream,
 						pj_bool_t active);
-
-
-/**
- * Set a codec and its settings to be used on the next sound device session.
- *
- * @param setting	APS sound device setting, see @pjmedia_snd_aps_setting.
- *
- * @return		PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_snd_aps_modify_setting(
-				    const pjmedia_snd_aps_setting *setting);
-
 
 PJ_END_DECL
 

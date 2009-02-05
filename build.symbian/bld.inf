@@ -20,6 +20,7 @@ libsrtp.mmp
 /* Codecs */
 libgsmcodec.mmp
 libspeexcodec.mmp
+libpassthroughcodec.mmp
 
 /* Sound device impl */
 symbian_audio.mmp

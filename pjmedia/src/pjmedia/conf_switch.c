@@ -996,14 +996,15 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 		    pjmedia_port_put_frame(cport_dst->port, 
 					   (pjmedia_frame*)f_dst);
 
-		    /* Update TX timestamp. */
-		    pj_add_timestamp32(&cport_dst->ts_tx, 
-				       cport_dst->samples_per_frame);
-
 		    /* Reset TX buffer. */
 		    f_dst->subframe_cnt = 0;
 		    f_dst->samples_cnt = 0;
 		}
+
+		/* Update TX timestamp. */
+		pj_add_timestamp32(&cport_dst->ts_tx, 
+				   cport_dst->samples_per_frame);
+
 	    }
 	}
 
@@ -1036,13 +1037,13 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 		if (cport_dst->port) {
 		    pjmedia_port_put_frame(cport_dst->port, frm_dst);
 
-		    /* Update TX timestamp. */
-		    pj_add_timestamp32(&cport_dst->ts_tx, 
-				       cport_dst->samples_per_frame);
-		 
 		    /* Reset TX buffer. */
 		    frm_dst->size = 0;
 		}
+
+		/* Update TX timestamp. */
+		pj_add_timestamp32(&cport_dst->ts_tx, 
+				   cport_dst->samples_per_frame);
 	    }
 	}
 
@@ -1062,15 +1063,16 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 
 		frm_dst->type = PJMEDIA_FRAME_TYPE_AUDIO;
 		frm_dst->size = cport_dst->samples_per_frame << 1;
-		if (cport_dst->port)
+		if (cport_dst->port) {
 		    pjmedia_port_put_frame(cport_dst->port, frm_dst);
+
+		    /* Reset TX buffer. */
+		    frm_dst->size = 0;
+		}
 
 		/* Update TX timestamp. */
 		pj_add_timestamp32(&cport_dst->ts_tx, 
 				   cport_dst->samples_per_frame);
-
-		/* Reset TX buffer. */
-		frm_dst->size = 0;
 	    }
 	} else {
 	    pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frm_dst;
@@ -1079,29 +1081,31 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 		frm_dst->type = PJMEDIA_FRAME_TYPE_EXTENDED;
 		pjmedia_frame_ext_append_subframe(f_dst, NULL, 0, (pj_uint16_t)
 						  (cport_dst->samples_per_frame-
-						  f_dst->samples_cnt));
-		if (cport_dst->port)
+						   f_dst->samples_cnt));
+		if (cport_dst->port) {
 		    pjmedia_port_put_frame(cport_dst->port, frm_dst);
+
+		    /* Reset TX buffer. */
+		    f_dst->subframe_cnt = 0;
+		    f_dst->samples_cnt = 0;
+		}
 
 		/* Update TX timestamp. */
 		pj_add_timestamp32(&cport_dst->ts_tx, 
 				   cport_dst->samples_per_frame);
-
-		/* Reset TX buffer. */
-		f_dst->subframe_cnt = 0;
-		f_dst->samples_cnt = 0;
 	    }
 	}
 
 	/* Synchronize clock. */
 	while (pj_cmp_timestamp(&cport_dst->ts_clock, 
-				&cport_dst->ts_tx) >= 0)
+				&cport_dst->ts_tx) > 0)
 	{
-	    if (cport_dst->port) {
-		frm_dst->type = PJMEDIA_FRAME_TYPE_NONE;
-		frm_dst->timestamp = cport_dst->ts_tx;
+	    frm_dst->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frm_dst->timestamp = cport_dst->ts_tx;
+	    if (cport_dst->port)
 		pjmedia_port_put_frame(cport_dst->port, frm_dst);
-	    }
+
+	    /* Update TX timestamp. */
 	    pj_add_timestamp32(&cport_dst->ts_tx, cport_dst->samples_per_frame);
 	}
     }
@@ -1234,7 +1238,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    
 	    cport->tx_level = 0;
 
-	    while (pj_cmp_timestamp(&cport->ts_clock, &cport->ts_tx) >= 0)
+	    while (pj_cmp_timestamp(&cport->ts_clock, &cport->ts_tx) > 0)
 	    {
 		if (cport->tx_setting == PJMEDIA_PORT_ENABLE) {
 		    pjmedia_frame tmp_f;
@@ -1264,36 +1268,35 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    pjmedia_frame_ext_subframe *sf;
 	    pj_uint16_t samples_per_subframe;
 	    
+	    if (f_src_->samples_cnt < this_cport->samples_per_frame) {
+		pj_bzero(this_cport->tx_buf, sizeof(pjmedia_frame_ext));
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		break;
+	    }
+
 	    f_dst->samples_cnt = 0;
 	    f_dst->subframe_cnt = 0;
 	    i = 0;
 	    samples_per_subframe = f_src_->samples_cnt / f_src_->subframe_cnt;
 
+
 	    while (f_dst->samples_cnt < this_cport->samples_per_frame) {
 		sf = pjmedia_frame_ext_get_subframe(f_src_, i++);
+		pj_assert(sf);
 		pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen,
 						  samples_per_subframe);
 	    }
 
 	    /* Shift left TX buffer. */
-	    sf = pjmedia_frame_ext_get_subframe(f_src_, i);
-	    if (sf) {
-		pjmedia_frame_ext_subframe *sf_end;
-		unsigned len;
-
-		sf_end = pjmedia_frame_ext_get_subframe(f_src_, 
-						    f_src_->subframe_cnt -1);
-		len = (pj_uint8_t*)sf_end - (pj_uint8_t*)sf + sf_end->bitlen/8;
-		if (sf_end->bitlen % 8 != 0)
-		    ++len;
-		pj_memmove(this_cport->tx_buf + sizeof(pjmedia_frame_ext), sf,
-			   len);
-	    }
-	    f_src_->samples_cnt = f_src_->samples_cnt - 
-				  (pj_uint16_t)(i * samples_per_subframe);
-	    f_src_->subframe_cnt = f_src_->subframe_cnt - (pj_uint16_t)i;
+	    pjmedia_frame_ext_pop_subframes(f_src_, i);
 
 	} else if (f_src->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+	    if ((f_src->size>>1) < this_cport->samples_per_frame) {
+		pj_bzero(this_cport->tx_buf, sizeof(pjmedia_frame_ext));
+		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		break;
+	    }
+
 	    pjmedia_copy_samples((pj_int16_t*)frame->buf, 
 				 (pj_int16_t*)f_src->buf, 
 				 this_cport->samples_per_frame);
@@ -1306,6 +1309,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 				     (pj_int16_t*)f_src->buf + 
 				     this_cport->samples_per_frame,
 				     f_src->size >> 1);
+	} else { /* PJMEDIA_FRAME_TYPE_NONE */
+	    /* Reset TX buffer */
+	    pj_bzero(this_cport->tx_buf, sizeof(pjmedia_frame_ext));
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	}
     } while (0);
 
@@ -1325,11 +1332,6 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     struct conf_port *cport = conf->ports[this_port->port_data.ldata];
     unsigned j;
     pj_int32_t level;
-
-    /* Check for correct size. */
-    PJ_ASSERT_RETURN( f->size == conf->samples_per_frame *
-				 conf->bits_per_sample / 8,
-		      PJMEDIA_ENCSAMPLESPFRAME);
 
     pj_add_timestamp32(&cport->ts_rx, cport->samples_per_frame);
     

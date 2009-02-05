@@ -190,7 +190,7 @@ typedef union pjmedia_fourcc {
 /**
  * FourCC packing macro.
  */
-#define PJMEDIA_FOURCC_PACK(C1, C2, C3, C4) ( C1<<24 | C2<<16 | C3<<8 | C4 )
+#define PJMEDIA_FOURCC_PACK(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
 
 /**
  * FourCC identifier definitions.

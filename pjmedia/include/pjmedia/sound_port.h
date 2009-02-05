@@ -159,7 +159,44 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_player(pj_pool_t *pool,
 						    unsigned bits_per_sample,
 						    unsigned options,
 						    pjmedia_snd_port **p_port);
-					      
+
+
+/**
+ * Create unidirectional or bidirectional sound port. This also allows
+ * creating sound port with extended settings, e.g: audio format, see 
+ * #pjmedia_snd_setting.
+ *
+ * @param pool		    Pool to allocate sound port structure.
+ * @param dir		    Sound device direction.
+ * @param rec_id	    Device index for recorder/capture stream, or
+ *			    -1 to use the first capable device.
+ * @param play_id	    Device index for playback stream, or -1 to use 
+ *			    the first capable device.
+ * @param clock_rate	    Sound device's clock rate to set.
+ * @param channel_count	    Set number of channels, 1 for mono, or 2 for
+ *			    stereo. The channel count determines the format
+ *			    of the frame.
+ * @param samples_per_frame Number of samples per frame.
+ * @param bits_per_sample   Set the number of bits per sample. The normal 
+ *			    value for this parameter is 16 bits per sample.
+ * @param setting	    Sound device extended settings, see 
+ *			    #pjmedia_snd_setting.
+ * @param p_port	    Pointer to receive the sound device port instance.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
+					      pjmedia_dir dir,
+					      int rec_id,
+					      int play_id,
+					      unsigned clock_rate,
+					      unsigned channel_count,
+					      unsigned samples_per_frame,
+					      unsigned bits_per_sample,
+					      const pjmedia_snd_setting *setting,
+					      pjmedia_snd_port **p_port);
+
 
 /**
  * Destroy sound device port.

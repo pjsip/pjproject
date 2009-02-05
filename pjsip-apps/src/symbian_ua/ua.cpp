@@ -90,6 +90,9 @@ static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
 static pjsua_call_id g_call_id = PJSUA_INVALID_ID;
 static pjsua_buddy_id g_buddy_id = PJSUA_INVALID_ID;
 
+static pj_pool_t *app_pool;
+static pjmedia_snd_port *snd_port;
+
 
 /* Callback called by the library upon receiving incoming call */
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
@@ -129,6 +132,10 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
     	if (call_id == g_call_id)
     	    g_call_id = PJSUA_INVALID_ID;
+    	if (snd_port) {
+    	    pjmedia_snd_port_destroy(snd_port);
+    	    snd_port = NULL;
+    	}
     } else if (ci.state != PJSIP_INV_STATE_INCOMING) {
     	if (g_call_id == PJSUA_INVALID_ID)
     	    g_call_id = call_id;
@@ -249,6 +256,74 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 			 (int)new_ci.remote_info.slen, new_ci.remote_info.ptr));
 }
 
+/* Notification that stream is created. */
+static void on_stream_created(pjsua_call_id call_id, 
+			      pjmedia_session *sess,
+			      unsigned stream_idx, 
+			      pjmedia_port **p_port)
+{
+    pjmedia_port *conf;
+    pjmedia_session_info sess_info;
+    pjmedia_stream_info *strm_info;
+    pjmedia_snd_setting setting;
+    unsigned samples_per_frame;
+    pj_status_t status;
+    
+    status = pjmedia_session_get_info(sess, &sess_info);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to get session info, "
+			     "status=%d", status));
+	return;
+    }
+    
+    strm_info = &sess_info.stream_info[stream_idx];
+    if (strm_info->type != PJMEDIA_TYPE_AUDIO)
+	return;
+
+    /* Don't need to reopen sound device when the session doesn't use
+     * PCM format. 
+     */
+    if (strm_info->param->info.format.u32 == 0 ||
+	strm_info->param->info.format.u32 == PJMEDIA_FOURCC_L16) 
+    {
+	return;
+    }
+    
+    pj_bzero(&setting, sizeof(setting));
+    setting.format = strm_info->param->info.format;
+    setting.bitrate = strm_info->param->info.avg_bps;
+    setting.cng = strm_info->param->setting.cng;
+    setting.vad = strm_info->param->setting.vad;
+    setting.plc = strm_info->param->setting.plc;
+
+    /* Reopen sound device. */
+    conf = pjsua_set_no_snd_dev();
+
+    samples_per_frame = conf->info.samples_per_frame;
+    
+    status = pjmedia_snd_port_create2(app_pool, 
+				      PJMEDIA_DIR_CAPTURE_PLAYBACK,
+				      0,
+				      0,
+				      8000,
+				      1,
+				      samples_per_frame,
+				      16,
+				      &setting,
+				      &snd_port);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to reopen sound "
+			     "device, status=%d", status));
+	return;
+    }
+    
+    status = pjmedia_snd_port_connect(snd_port, conf);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to connect sound "
+			     "device to conference, status=%d", status));
+	return;
+    }
+}
 
 //#include<e32debug.h>
 
@@ -289,6 +364,9 @@ static pj_status_t app_startup()
     	return status;
     }
 
+    /* Create pool for application */
+    app_pool = pjsua_pool_create("pjsua-app", 1000, 1000);
+    
     /* Init pjsua */
     pjsua_config cfg;
     pjsua_logging_config log_cfg;
@@ -309,6 +387,7 @@ static pj_status_t app_startup()
     cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     cfg.cb.on_call_replaced = &on_call_replaced;
     cfg.cb.on_nat_detect = &on_nat_detect;
+    cfg.cb.on_stream_created = &on_stream_created;
     
     if (SIP_PROXY) {
 	    cfg.outbound_proxy_cnt = 1;
@@ -337,14 +416,10 @@ static pj_status_t app_startup()
     med_cfg.thread_cnt = 0; // Disable threading on Symbian
     med_cfg.has_ioqueue = PJ_FALSE;
     med_cfg.clock_rate = 8000;
-#if defined(PJMEDIA_SYM_SND_USE_APS) && (PJMEDIA_SYM_SND_USE_APS==1)
-    med_cfg.audio_frame_ptime = 20;
-#else
     med_cfg.audio_frame_ptime = 40;
-#endif
     med_cfg.ec_tail_len = 0;
     med_cfg.enable_ice = USE_ICE;
-    med_cfg.snd_auto_close_time = 5; // wait for 5 seconds idle before sound dev get auto-closed
+    med_cfg.snd_auto_close_time = 0; // wait for 0 seconds idle before sound dev get auto-closed
     
     status = pjsua_init(&cfg, &log_cfg, &med_cfg);
     if (status != PJ_SUCCESS) {
@@ -802,6 +877,18 @@ int ua_main()
 		  max_stack_file, max_stack_line));
 #endif
 	
+    // Let pjsua destroys app pool, since the pool may still be used by app
+    // until pjsua_destroy() finished.
+    // e.g: quitting app when there is an active call may cause sound port 
+    // memory destroyed before sound port itself gets closed/destroyed.
+    /*
+    // Release application pool
+    if (app_pool) {
+	pj_pool_release(app_pool);
+	app_pool = NULL;
+    }
+    */
+    
     // Shutdown pjsua
     pjsua_destroy();
     
