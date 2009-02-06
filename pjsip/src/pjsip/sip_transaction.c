@@ -1376,6 +1376,9 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 	pj_memcpy(&tsx->addr, &tsx->res_addr.addr, tsx->res_addr.addr_len);
 	tsx->addr_len = tsx->res_addr.addr_len;
 	tsx->is_reliable = PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport);
+    } else {
+	tsx->is_reliable = 
+	    (tsx->res_addr.dst_host.flag & PJSIP_TRANSPORT_RELIABLE);
     }
 
 
@@ -2315,7 +2318,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		     */
 		    timeout = timeout_timer_val;
 		    
-		} else if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+		} else if (!tsx->is_reliable) {
 		    
 		    /* For non-INVITE, start timer J at 64*T1 for unreliable
 		     * transport.
@@ -2655,9 +2658,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Start Timer D with TD/T4 timer if unreliable transport is used. */
 	/* Note: tsx->transport may be NULL! */
-	if ((tsx->transport && PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0)
-	    || ((tsx->transport_flag & PJSIP_TRANSPORT_RELIABLE) == 0)) 
-	{
+	if (!tsx->is_reliable) {
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		timeout = td_timer_val;
 	    } else {
@@ -2722,7 +2723,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    /* Timer I is T4 timer for unreliable transports, and
 	     * zero seconds for reliable transports.
 	     */
-	    if (PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport)==0) {
+	    if (!tsx->is_reliable) {
 		timeout.sec = 0; 
 		timeout.msec = 0;
 	    } else {
