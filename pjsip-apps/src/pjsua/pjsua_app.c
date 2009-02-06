@@ -1488,6 +1488,14 @@ static int write_settings(const struct app_config *config,
 
     pj_strcat2(&cfg, "\n#\n# Network settings:\n#\n");
 
+    /* Nameservers */
+    for (i=0; i<config->cfg.nameserver_count; ++i) {
+	pj_ansi_sprintf(line, "--nameserver %.*s\n",
+			      (int)config->cfg.nameserver[i].slen,
+			      config->cfg.nameserver[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
+
     /* Outbound proxy */
     for (i=0; i<config->cfg.outbound_proxy_cnt; ++i) {
 	pj_ansi_sprintf(line, "--outbound %.*s\n",
