@@ -91,11 +91,7 @@ class Dialog:
 		if self.trace_enabled:
 			print str(time.strftime("%H:%M:%S ")) + txt
 
-	def create_req(self, method, sdp, branch="", extra_headers=""):
-		if branch=="":
-			self.cseq = self.cseq + 1
-		msg = req_templ
-		msg = msg.replace("$METHOD", method)
+	def update_fields(self, msg):
 		if self.tcp:
 			transport_param = ";transport=tcp"
 		else:
@@ -103,14 +99,23 @@ class Dialog:
 		msg = msg.replace("$TARGET_URI", "sip:"+self.dst_addr+":"+str(self.dst_port) + transport_param)
 		msg = msg.replace("$LOCAL_IP", self.local_ip)
 		msg = msg.replace("$LOCAL_PORT", str(self.local_port))
-		if branch=="":
-			branch=str(random.random())
-		msg = msg.replace("$BRANCH", branch)
 		msg = msg.replace("$FROM_TAG", self.local_tag)
 		msg = msg.replace("$TO_TAG", self.rem_tag)
 		msg = msg.replace("$CALL_ID", self.call_id)
 		msg = msg.replace("$CSEQ", str(self.cseq))
+		branch=str(random.random())
+		msg = msg.replace("$BRANCH", branch)
+		return msg
+
+	def create_req(self, method, sdp, branch="", extra_headers=""):
+		if branch=="":
+			self.cseq = self.cseq + 1
+		msg = req_templ
+		msg = msg.replace("$METHOD", method)
 		msg = msg.replace("$SIP_HEADERS", extra_headers)
+		if branch=="":
+			branch=str(random.random())
+		msg = msg.replace("$BRANCH", branch)
 		if sdp!="":
 			msg = msg.replace("$CONTENT_LENGTH", str(len(sdp)))
 			msg = msg + "Content-Type: application/sdp\r\n"
@@ -118,7 +123,7 @@ class Dialog:
 			msg = msg.replace("$CONTENT_LENGTH", "0")
 		msg = msg + "\r\n"
 		msg = msg + sdp
-		return msg
+		return self.update_fields(msg)
 
 	def create_response(self, request, code, reason, to_tag=""):
 		response = "SIP/2.0 " + str(code) + " " + reason + "\r\n"

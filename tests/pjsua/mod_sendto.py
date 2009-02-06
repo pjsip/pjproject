@@ -19,7 +19,7 @@ def test_func(t):
 	cfg = cfg_file.sendto_cfg
 	
 	if len(cfg.complete_msg) != 0:
-		req = cfg.complete_msg
+		req = dlg.update_fields(cfg.complete_msg)
 	else:
 		req = dlg.create_invite(cfg.sdp, cfg.extra_headers)
 	resp = dlg.send_request_wait(req, 10)
