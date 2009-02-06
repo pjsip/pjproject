@@ -367,6 +367,18 @@ CPjAudioEngine::~CPjAudioEngine()
     delete iRecCommHandler;
     iRecCommHandler = NULL;
 
+    // On some devices, immediate closing after stopping may cause APS server
+    // panic KERN-EXEC 0, so let's wait for sometime before really closing
+    // the client session.
+    TTime start, now;
+    enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
+    
+    start.UniversalTime();
+    do {
+	pj_symbianos_poll(-1, APS_CLOSE_WAIT_TIME);
+	now.UniversalTime();
+    } while (now.MicroSecondsFrom(start) < APS_CLOSE_WAIT_TIME * 1000);
+    
     iSession.Close();
 
     if (state_ == STATE_READY) {
