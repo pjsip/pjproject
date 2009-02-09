@@ -310,13 +310,14 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
     for (i = 0; i < frm->subframe_cnt; ++i) {
 	pjmedia_frame_ext_subframe *fsub;
 	fsub = (pjmedia_frame_ext_subframe*) p;
-	p += sizeof(fsub->bitlen) + fsub->bitlen / 8;
-	if (fsub->bitlen % 8)
+	p += sizeof(fsub->bitlen) + (fsub->bitlen >> 3);
+	if (fsub->bitlen & 0x07)
 	    ++p;
     }
 
-    tmp = bitlen / 8;
-    if (bitlen % 8) ++tmp;
+    tmp = bitlen >> 3;
+    if (bitlen & 0x07)
+	++tmp;
 
     pj_memcpy(p, &bitlen, sizeof(bitlen));
     if (tmp)
@@ -347,8 +348,8 @@ PJ_INLINE(pjmedia_frame_ext_subframe*)
 	p = (pj_uint8_t*)frm + sizeof(pjmedia_frame_ext);
 	for (i = 0; i < n; ++i) {	
 	    sf = (pjmedia_frame_ext_subframe*) p;
-	    p += sizeof(sf->bitlen) + sf->bitlen / 8;
-	    if (sf->bitlen % 8)
+	    p += sizeof(sf->bitlen) + (sf->bitlen >> 3);
+	    if (sf->bitlen & 0x07)
 		++p;
 	}
         
@@ -381,8 +382,9 @@ PJ_INLINE(pj_status_t)
 
     move_src = (pj_uint8_t*)pjmedia_frame_ext_get_subframe(frm, n);
     sf = pjmedia_frame_ext_get_subframe(frm, frm->subframe_cnt-1);
-    move_len = (pj_uint8_t*)sf - move_src + sizeof(sf->bitlen) + sf->bitlen/8;
-    if (sf->bitlen % 8 != 0)
+    move_len = (pj_uint8_t*)sf - move_src + sizeof(sf->bitlen) + 
+	       (sf->bitlen >> 3);
+    if (sf->bitlen & 0x07)
 	++move_len;
     pj_memmove((pj_uint8_t*)frm+sizeof(pjmedia_frame_ext), 
 	       move_src, move_len);

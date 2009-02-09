@@ -280,18 +280,44 @@ static void on_stream_created(pjsua_call_id call_id,
     if (strm_info->type != PJMEDIA_TYPE_AUDIO)
 	return;
 
+    /* Init sound device setting based on stream info. */
     pj_bzero(&setting, sizeof(setting));
     setting.format = strm_info->param->info.format;
     setting.bitrate = strm_info->param->info.avg_bps;
     setting.cng = strm_info->param->setting.cng;
     setting.vad = strm_info->param->setting.vad;
     setting.plc = strm_info->param->setting.plc;
+    if (setting.format.u32 == PJMEDIA_FOURCC_ILBC) {
+	unsigned i;
+	pjmedia_codec_fmtp *fmtp = &strm_info->param->setting.dec_fmtp;
+	
+	/* Initialize mode. */
+	setting.mode = 30;
+	
+	/* Get mode. */
+	for (i = 0; i < fmtp->cnt; ++i) {
+	    if (pj_stricmp2(&fmtp->param[i].name, "mode") == 0) {
+		setting.mode = (pj_uint32_t) pj_strtoul(&fmtp->param[i].val);
+		break;
+	    }
+	}
+    }
+
+    samples_per_frame = strm_info->param->info.clock_rate *
+			strm_info->param->info.frm_ptime *
+			strm_info->param->info.channel_cnt /
+			1000;
+    
+    /* Close sound device. */
+    conf = pjsua_set_no_snd_dev();
+    
+    /* Reset conference attributes. */
+    conf->info.samples_per_frame = samples_per_frame;
+    conf->info.clock_rate = 8000;
+    conf->info.channel_count = 1;
+    conf->info.bits_per_sample = 16;
 
     /* Reopen sound device. */
-    conf = pjsua_set_no_snd_dev();
-
-    samples_per_frame = conf->info.samples_per_frame;
-    
     status = pjmedia_snd_port_create2(app_pool, 
 				      PJMEDIA_DIR_CAPTURE_PLAYBACK,
 				      0,

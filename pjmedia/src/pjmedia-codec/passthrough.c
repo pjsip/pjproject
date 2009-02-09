@@ -170,44 +170,45 @@ static struct codec_desc {
 codec_desc[] = 
 {
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
-    {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       PJMEDIA_FOURCC_AMR,
+    {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       {PJMEDIA_FOURCC_AMR},
 		    8000, 1, 160, 
-		    5900, 12200, 4,
+		    12200, 12200, 2,
 		    &parse_amr, &pack_amr
 		    /*, {1, {{{"octet-align", 11}, {"1", 1}}} } */
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
-    {1, "G729",	    PJMEDIA_RTP_PT_G729,      PJMEDIA_FOURCC_G729,
+    {1, "G729",	    PJMEDIA_RTP_PT_G729,      {PJMEDIA_FOURCC_G729},
 		    8000, 1,  80,
-		    8000, 11800, 2
+		    8000, 8000, 2
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
-    {1, "iLBC",	    PJMEDIA_RTP_PT_ILBC,      PJMEDIA_FOURCC_ILBC,
-		    8000, 1,  80,
-		    8000, 11800, 2,
+    {1, "iLBC",	    PJMEDIA_RTP_PT_ILBC,      {PJMEDIA_FOURCC_ILBC},
+		    8000, 1,  240,
+		    13333, 15200, 2,
 		    NULL, NULL,
 		    {1, {{{"mode", 4}, {"30", 2}}} }
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU
-    {1, "PCMU",	    PJMEDIA_RTP_PT_PCMU,      PJMEDIA_FOURCC_G711U,
+    {1, "PCMU",	    PJMEDIA_RTP_PT_PCMU,      {PJMEDIA_FOURCC_G711U},
 		    8000, 1,  80,
 		    64000, 64000, 2
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA
-    {1, "PCMA",	    PJMEDIA_RTP_PT_PCMA,      PJMEDIA_FOURCC_G711A,
+    {1, "PCMA",	    PJMEDIA_RTP_PT_PCMA,      {PJMEDIA_FOURCC_G711A},
 		    8000, 1,  80,
 		    64000, 64000, 2
     },
 #   endif
 };
+
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
 
@@ -226,61 +227,45 @@ static pj_status_t pack_amr ( codec_private_t *codec_data,
 			      unsigned output_buf_len, 
 			      struct pjmedia_frame *output)
 {
-    enum {MAX_FRAMES_PER_PACKET = 16};
+    enum {MAX_FRAMES_PER_PACKET = 8};
 
     pjmedia_frame frames[MAX_FRAMES_PER_PACKET];
-    unsigned nframes = 0;
-    pjmedia_codec_amr_bit_info *info;
-
-    PJ_TODO(DEFINE_AMR_FRAME_INFO_FOR_PJMEDIA_FRAME_EXT);
-
-#if 0
-
-    pj_uint8_t *r; /* Read cursor */
+    amr_settings_t* setting = (amr_settings_t*)codec_data->codec_setting;
+    pjmedia_codec_amr_pack_setting *enc_setting = &setting->enc_setting;
     pj_uint8_t SID_FT;
-    pjmedia_codec_amr_pack_setting *setting;
+    unsigned i;
 
-    setting = &((amr_settings_t*)codec_data->codec_setting)->enc_setting;
+    pj_assert(input->subframe_cnt <= MAX_FRAMES_PER_PACKET);
 
-    SID_FT = (pj_uint8_t)(setting->amr_nb? 8 : 9);
-
-    /* Align pkt buf right */
-    r = (pj_uint8_t*)pkt + max_pkt_size - *pkt_size;
-    pj_memmove(r, pkt, *pkt_size);
+    SID_FT = (pj_uint8_t)(enc_setting->amr_nb? 8 : 9);
 
     /* Get frames */
-    for (;;) {
-	pj_bool_t eof;
-	pj_uint16_t info_;
-
-	info_ = *((pj_uint16_t*)r);
-	eof = ((info_ & 0x40) != 0);
-
-	info = (pjmedia_codec_amr_bit_info*) &frames[nframes].bit_info;
+    for (i = 0; i < input->subframe_cnt; ++i) {
+	pjmedia_frame_ext_subframe *sf;
+	pjmedia_codec_amr_bit_info *info;
+	unsigned len;
+	
+	sf = pjmedia_frame_ext_get_subframe(input, i);
+	
+	len = sf->bitlen >> 3;
+	if (sf->bitlen & 0x07)
+	    ++len;
+	
+	info = (pjmedia_codec_amr_bit_info*) &frames[i].bit_info;
 	pj_bzero(info, sizeof(*info));
-	info->frame_type = (pj_uint8_t)(info_ & 0x0F);
+	info->frame_type = pjmedia_codec_amr_get_mode2(enc_setting->amr_nb, 
+						       len);
 	info->good_quality = 1;
-	info->mode = (pj_int8_t) ((info_ >> 8) & 0x0F);
+	info->mode = setting->enc_mode;
 
-	frames[nframes].buf = r + 2;
-	frames[nframes].size = info->frame_type <= SID_FT ?
-			       pjmedia_codec_amrnb_framelen[info->frame_type] :
-			       0;
-
-	r += frames[nframes].size + 2;
-
-	/* Last frame */
-	if (++nframes >= MAX_FRAMES_PER_PACKET || eof)
-	    break;
+	frames[i].buf = sf->data;
+	frames[i].size = len;
     }
 
-    /* Pack */
-    *pkt_size = max_pkt_size;
+    output->size = output_buf_len;
 
-    return pjmedia_codec_amr_pack(frames, nframes, setting, pkt, pkt_size);
-#endif
-
-    return PJ_ENOTSUP;
+    return pjmedia_codec_amr_pack(frames, input->subframe_cnt, enc_setting, 
+				  output->buf, &output->size);
 }
 
 
@@ -301,10 +286,11 @@ static pj_status_t parse_amr(codec_private_t *codec_data, void *pkt,
     if (status != PJ_SUCCESS)
 	return status;
 
+    // CMR is not supported for now. 
     /* Check Change Mode Request. */
-    if ((setting->amr_nb && cmr <= 7) || (!setting->amr_nb && cmr <= 8)) {
-	s->enc_mode = cmr;
-    }
+    //if ((setting->amr_nb && cmr <= 7) || (!setting->amr_nb && cmr <= 8)) {
+    //	s->enc_mode = cmr;
+    //}
 
     return PJ_SUCCESS;
 }
@@ -799,30 +785,30 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     struct codec_desc *desc = &codec_desc[codec_data->codec_idx];
     pjmedia_frame_ext *output_ = (pjmedia_frame_ext*) output;
 
-    pj_assert(input && input->size > 0);
+    pj_assert(input);
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
     /* Need to rearrange the AMR bitstream, since the bitstream may not be 
      * started from bit 0 or may need to be reordered from sensitivity order 
      * into encoder bits order.
      */
-    if (desc->pt == PJMEDIA_RTP_PT_AMR) {
-	pjmedia_frame frame;
+    if (desc->pt == PJMEDIA_RTP_PT_AMR || desc->pt == PJMEDIA_RTP_PT_AMRWB) {
+	pjmedia_frame input_;
 	pjmedia_codec_amr_pack_setting *setting;
 
 	setting = &((amr_settings_t*)codec_data->codec_setting)->dec_setting;
 
-	frame = *input;
-	pjmedia_codec_amr_predecode(input, setting, &frame);
+	input_ = *input;
+	pjmedia_codec_amr_predecode(input, setting, &input_);
+	
+	pjmedia_frame_ext_append_subframe(output_, input_.buf, 
+					  (pj_uint16_t)(input_.size << 3),
+					  (pj_uint16_t)desc->samples_per_frame);
+	
+	return PJ_SUCCESS;
     }
 #endif
-    /*
-    PJ_ASSERT_RETURN(output_buf_len >= sizeof(pjmedia_frame_ext) +
-				       sizeof(pjmedia_frame_ext_subframe) +
-				       input->size,
-		     PJMEDIA_CODEC_EFRMTOOSHORT);
-     */
-
+    
     pjmedia_frame_ext_append_subframe(output_, input->buf, 
 				      (pj_uint16_t)(input->size << 3),
 				      (pj_uint16_t)desc->samples_per_frame);

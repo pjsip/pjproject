@@ -200,7 +200,7 @@ typedef union pjmedia_fourcc {
 #define PJMEDIA_FOURCC_G711U	PJMEDIA_FOURCC_PACK('U', 'L', 'A', 'W')
 #define PJMEDIA_FOURCC_AMR	PJMEDIA_FOURCC_PACK(' ', 'A', 'M', 'R')
 #define PJMEDIA_FOURCC_G729	PJMEDIA_FOURCC_PACK('G', '7', '2', '9')
-#define PJMEDIA_FOURCC_ILBC	PJMEDIA_FOURCC_PACK('i', 'L', 'B', 'C')
+#define PJMEDIA_FOURCC_ILBC	PJMEDIA_FOURCC_PACK('I', 'L', 'B', 'C')
 
 
 /**

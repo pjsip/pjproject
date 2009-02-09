@@ -98,6 +98,7 @@ struct pjmedia_snd_stream
     pj_uint16_t		 play_buf_start;
     pj_int16_t		*rec_buf;
     pj_uint16_t		 rec_buf_len;
+    void                *strm_data;
 };
 
 
@@ -695,47 +696,126 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
     }
 }
 
+/* Pack/unpack G.729 frame of S60 DSP codec, taken from:  
+ * http://wiki.forum.nokia.com/index.php/TSS000776_-_Payload_conversion_for_G.729_audio_format
+ */
+#include "s60_g729_bitstream.h"
+#include <pjmedia-codec/amr_helper.h>
+
 static void RecCb(TAPSCommBuffer &buf, void *user_data)
 {
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
     pjmedia_frame_ext *frame = (pjmedia_frame_ext*) strm->rec_buf;
-    unsigned samples_processed = 0;
-
-    switch(strm->setting.format.u32) {
     
-    case PJMEDIA_FOURCC_G711U:
-    case PJMEDIA_FOURCC_G711A:
-	pj_assert(buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0);
-
-	/* Detect the recorder G.711 frame size, player frame size will follow
-	 * this recorder frame size.
-	 */
-	if (aps_g711_frame_len == 0) {
-	    aps_g711_frame_len = buf.iBuffer.Length() < 160? 80 : 160;
-	    TRACE_((THIS_FILE, "Detected APS G.711 frame size = %u samples",
-		    aps_g711_frame_len));
-	}
-	
-	/* Convert APS buffer format into pjmedia_frame_ext. Whenever 
-	 * samples count in the frame is equal to stream's samples per frame,
-	 * call parent stream callback.
-	 */
-	while (samples_processed < aps_g711_frame_len) {
-	    unsigned tmp;
-	    const pj_uint8_t *pb = (const pj_uint8_t*)buf.iBuffer.Ptr() + 2 +
-				   samples_processed;
-
-	    tmp = PJ_MIN(strm->samples_per_frame - frame->samples_cnt,
-			 aps_g711_frame_len - samples_processed);
+    switch(strm->setting.format.u32) {
+    case PJMEDIA_FOURCC_AMR:
+	{
+	    const pj_uint8_t *p = (const pj_uint8_t*)buf.iBuffer.Ptr() + 1;
+	    unsigned len = buf.iBuffer.Length() - 1;
 	    
-	    pjmedia_frame_ext_append_subframe(frame, pb, tmp << 3, tmp);
-	    samples_processed += tmp;
-
+	    pjmedia_frame_ext_append_subframe(frame, p, len << 3, 160);
 	    if (frame->samples_cnt == strm->samples_per_frame) {
 		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
 		strm->rec_cb(strm->user_data, 0, strm->rec_buf, 0);
 		frame->samples_cnt = 0;
 		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
+    case PJMEDIA_FOURCC_G729:
+	{
+	    /* Check if we got a normal or SID frame. */
+	    if (buf.iBuffer[0] != 0 || buf.iBuffer[1] != 0) {
+		enum { NORMAL_LEN = 22, SID_LEN = 8 };
+		TBitStream *bitstream = (TBitStream*)strm->strm_data;
+		unsigned src_len = buf.iBuffer.Length()- 2;
+		
+		pj_assert(src_len == NORMAL_LEN || src_len == SID_LEN);
+
+		const TDesC8& p = bitstream->CompressG729Frame(
+					    buf.iBuffer.Right(src_len), 
+					    src_len == SID_LEN);
+		
+		pjmedia_frame_ext_append_subframe(frame, p.Ptr(), 
+						  p.Length() << 3, 80);
+	    } else { /* We got null frame. */
+		pjmedia_frame_ext_append_subframe(frame, NULL, 0, 80);
+	    }
+	    
+	    if (frame->samples_cnt == strm->samples_per_frame) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->rec_cb(strm->user_data, 0, strm->rec_buf, 0);
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+
+    case PJMEDIA_FOURCC_ILBC:
+	{
+	    unsigned samples_got;
+	    
+	    samples_got = strm->setting.mode == 30? 240 : 160;
+	    
+	    /* Check if we got a normal frame. */
+	    if (buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0) {
+		const pj_uint8_t *p = (const pj_uint8_t*)buf.iBuffer.Ptr() + 2;
+		unsigned len = buf.iBuffer.Length() - 2;
+		
+		pjmedia_frame_ext_append_subframe(frame, p, len << 3,
+						  samples_got);
+	    } else { /* We got null frame. */
+		pjmedia_frame_ext_append_subframe(frame, NULL, 0, samples_got);
+	    }
+	    
+	    if (frame->samples_cnt == strm->samples_per_frame) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->rec_cb(strm->user_data, 0, strm->rec_buf, 0);
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
+    case PJMEDIA_FOURCC_G711U:
+    case PJMEDIA_FOURCC_G711A:
+	{
+	    unsigned samples_processed = 0;
+	    
+	    /* Make sure it is normal frame. */
+	    pj_assert(buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0);
+
+	    /* Detect the recorder G.711 frame size, player frame size will 
+	     * follow this recorder frame size.
+	     */
+	    if (aps_g711_frame_len == 0) {
+		aps_g711_frame_len = buf.iBuffer.Length() < 160? 80 : 160;
+		TRACE_((THIS_FILE, "Detected APS G.711 frame size = %u samples",
+			aps_g711_frame_len));
+	    }
+	    
+	    /* Convert APS buffer format into pjmedia_frame_ext. Whenever 
+	     * samples count in the frame is equal to stream's samples per 
+	     * frame, call parent stream callback.
+	     */
+	    while (samples_processed < aps_g711_frame_len) {
+		unsigned tmp;
+		const pj_uint8_t *pb = (const pj_uint8_t*)buf.iBuffer.Ptr() +
+				       2 + samples_processed;
+    
+		tmp = PJ_MIN(strm->samples_per_frame - frame->samples_cnt,
+			     aps_g711_frame_len - samples_processed);
+		
+		pjmedia_frame_ext_append_subframe(frame, pb, tmp << 3, tmp);
+		samples_processed += tmp;
+    
+		if (frame->samples_cnt == strm->samples_per_frame) {
+		    frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		    strm->rec_cb(strm->user_data, 0, strm->rec_buf, 0);
+		    frame->samples_cnt = 0;
+		    frame->subframe_cnt = 0;
+		}
 	    }
 	}
 	break;
@@ -749,8 +829,6 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 {
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
     pjmedia_frame_ext *frame = (pjmedia_frame_ext*) strm->play_buf;
-    unsigned g711_frame_len = aps_g711_frame_len;
-    unsigned samples_ready = 0;
 
     /* Init buffer attributes and header. */
     buf.iCommand = CQueueHandler::EAPSPlayData;
@@ -758,23 +836,160 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
     buf.iBuffer.Zero();
 
     switch(strm->setting.format.u32) {
+    case PJMEDIA_FOURCC_AMR:
+	{
+	    if (frame->samples_cnt == 0) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->play_cb(strm->user_data, 0, strm->play_buf, 0);
+		
+		pj_assert(frame->base.type==PJMEDIA_FRAME_TYPE_EXTENDED ||
+			  frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
+	    }
+
+	    if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+		pjmedia_frame_ext_subframe *sf;
+		unsigned samples_cnt;
+		
+		sf = pjmedia_frame_ext_get_subframe(frame, 0);
+		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
+		
+		if (sf->data && sf->bitlen) {
+		    /* AMR header for APS is one byte, the format (may be!):
+		     * 0xxxxy00, where xxxx:frame type, y:not sure. 
+		     */
+		    unsigned len = sf->bitlen>>3;
+		    enum {SID_FT = 8 };
+		    pj_uint8_t amr_header = 4, ft = SID_FT;
+
+		    if (sf->bitlen & 0x07)
+			++len;
+
+		    if (len >= pjmedia_codec_amrnb_framelen[0])
+			ft = pjmedia_codec_amr_get_mode2(PJ_TRUE, len);
+		    
+		    amr_header |= ft << 3;
+		    buf.iBuffer.Append(amr_header);
+		    
+		    buf.iBuffer.Append((TUint8*)sf->data, len);
+		} else {
+		    buf.iBuffer.Append(0);
+		}
+
+		pjmedia_frame_ext_pop_subframes(frame, 1);
+	    
+	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
+		buf.iBuffer.Append(0);
+		
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
+    case PJMEDIA_FOURCC_G729:
+	{
+	    if (frame->samples_cnt == 0) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->play_cb(strm->user_data, 0, strm->play_buf, 0);
+		
+		pj_assert(frame->base.type==PJMEDIA_FRAME_TYPE_EXTENDED ||
+			  frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
+	    }
+
+	    if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+		pjmedia_frame_ext_subframe *sf;
+		unsigned samples_cnt;
+		
+		sf = pjmedia_frame_ext_get_subframe(frame, 0);
+		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
+		
+		if (sf->data && sf->bitlen) {
+		    enum { NORMAL_LEN = 10, SID_LEN = 2 };
+		    pj_bool_t sid_frame = ((sf->bitlen >> 3) == SID_LEN);
+		    TBitStream *bitstream = (TBitStream*)strm->strm_data;
+		    const TPtrC8 src(sf->data, sf->bitlen>>3);
+		    const TDesC8 &dst = bitstream->ExpandG729Frame(src,
+								   sid_frame); 
+		    if (sid_frame) {
+			buf.iBuffer.Append(0);
+			buf.iBuffer.Append(1);
+		    } else {
+			buf.iBuffer.Append(1);
+			buf.iBuffer.Append(0);
+		    }
+		    buf.iBuffer.Append(dst);
+		} else {
+		    buf.iBuffer.Append(0);
+		    buf.iBuffer.Append(0);
+		}
+
+		pjmedia_frame_ext_pop_subframes(frame, 1);
+	    
+	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
+		buf.iBuffer.Append(0);
+		buf.iBuffer.Append(0);
+		
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
+    case PJMEDIA_FOURCC_ILBC:
+	{
+	    if (frame->samples_cnt == 0) {
+		frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		strm->play_cb(strm->user_data, 0, strm->play_buf, 0);
+		
+		pj_assert(frame->base.type==PJMEDIA_FRAME_TYPE_EXTENDED ||
+			  frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
+	    }
+
+	    if (frame->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) { 
+		pjmedia_frame_ext_subframe *sf;
+		unsigned samples_cnt;
+		
+		sf = pjmedia_frame_ext_get_subframe(frame, 0);
+		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
+		pj_assert((strm->setting.mode == 30 && samples_cnt == 240) ||
+			  (strm->setting.mode == 20 && samples_cnt == 160));
+		
+		if (sf->data && sf->bitlen) {
+		    buf.iBuffer.Append(1);
+		    buf.iBuffer.Append(0);
+		    buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
+		} else {
+		    buf.iBuffer.Append(0);
+		    buf.iBuffer.Append(0);
+		}
+
+		pjmedia_frame_ext_pop_subframes(frame, 1);
+	    
+	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
+		buf.iBuffer.Append(0);
+		buf.iBuffer.Append(0);
+		
+		frame->samples_cnt = 0;
+		frame->subframe_cnt = 0;
+	    }
+	}
+	break;
+	
     case PJMEDIA_FOURCC_G711U:
     case PJMEDIA_FOURCC_G711A:
 	{
-	    /* Add header. */
-	    buf.iBuffer.Append(1);
-	    buf.iBuffer.Append(0);
-    
+	    unsigned samples_ready = 0;
+	    unsigned samples_req = aps_g711_frame_len;
+	    
 	    /* Assume frame size is 10ms if frame size hasn't been known. */
-	    if (g711_frame_len == 0)
-		g711_frame_len = 80;
+	    if (samples_req == 0)
+		samples_req = 80;
 	    
 	    /* Call parent stream callback to get samples to play. */
-	    while (samples_ready < g711_frame_len) {
+	    while (samples_ready < samples_req) {
 		if (frame->samples_cnt == 0) {
 		    frame->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
-		    strm->play_cb(strm->user_data, 0, strm->play_buf,
-				  strm->samples_per_frame<<1);
+		    strm->play_cb(strm->user_data, 0, strm->play_buf, 0);
 		    
 		    pj_assert(frame->base.type==PJMEDIA_FRAME_TYPE_EXTENDED ||
 			      frame->base.type==PJMEDIA_FRAME_TYPE_NONE);
@@ -786,33 +1001,23 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		    
 		    sf = pjmedia_frame_ext_get_subframe(frame, 0);
 		    samples_cnt = frame->samples_cnt / frame->subframe_cnt;
-		    if (sf->data && sf->bitlen)
+		    if (sf->data && sf->bitlen) {
+			buf.iBuffer.Append(1);
+			buf.iBuffer.Append(0);
 			buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
-		    else {
-			pj_uint8_t silence_code;
-			
-			if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U)
-			    silence_code = pjmedia_linear2ulaw(0);
-			else
-			    silence_code = pjmedia_linear2alaw(0);
-			
-			buf.iBuffer.AppendFill(silence_code, samples_cnt);
+		    } else {
+			buf.iBuffer.Append(0);
+			buf.iBuffer.Append(0);
 		    }
 		    samples_ready += samples_cnt;
 		    
 		    pjmedia_frame_ext_pop_subframes(frame, 1);
 		
 		} else { /* PJMEDIA_FRAME_TYPE_NONE */
-		    pj_uint8_t silence_code;
-		    
-		    if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U)
-			silence_code = pjmedia_linear2ulaw(0);
-		    else
-			silence_code = pjmedia_linear2alaw(0);
-		    
-		    buf.iBuffer.AppendFill(silence_code, 
-					   g711_frame_len - samples_ready);
-		    samples_ready = g711_frame_len;
+		    buf.iBuffer.Append(0);
+		    buf.iBuffer.Append(0);
+
+		    samples_ready = samples_req;
 		    frame->samples_cnt = 0;
 		    frame->subframe_cnt = 0;
 		}
@@ -921,8 +1126,16 @@ static pj_status_t sound_open(pjmedia_dir dir,
 	aps_setting.mode = EALawOr20ms;
     }
 
-    aps_setting.vad = strm->setting.format.u32==PJMEDIA_FOURCC_L16? 
-					EFalse : strm->setting.vad;
+    /* Disable VAD on L16 and G711. */
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_L16 ||
+	strm->setting.format.u32 == PJMEDIA_FOURCC_G711U ||
+	strm->setting.format.u32 == PJMEDIA_FOURCC_G711A)
+    {
+	aps_setting.vad = EFalse;
+    } else {
+	aps_setting.vad = strm->setting.vad;
+    }
+    
     aps_setting.plc = strm->setting.plc;
     aps_setting.cng = strm->setting.cng;
     aps_setting.loudspk = strm->setting.loudspk;
@@ -957,6 +1170,13 @@ static pj_status_t sound_open(pjmedia_dir dir,
     strm->rec_buf  = (pj_int16_t*)pj_pool_zalloc(pool, samples_per_frame << 1);
     strm->rec_buf_len = 0;
 
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_G729) {
+	TBitStream *g729_bitstream = new TBitStream;
+	
+	PJ_ASSERT_RETURN(g729_bitstream, PJ_ENOMEM);
+	strm->strm_data = (void*)g729_bitstream;
+    }
+	
     // Done.
     *p_snd_strm = strm;
     return PJ_SUCCESS;
@@ -983,7 +1203,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 
     pj_bzero(&setting, sizeof(setting));
     setting.format.u32 = PJMEDIA_FOURCC_L16;
-    setting.bitrate = 128000;
     
     return sound_open(PJMEDIA_DIR_CAPTURE, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, rec_cb, NULL,
@@ -1006,7 +1225,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
 
     pj_bzero(&setting, sizeof(setting));
     setting.format.u32 = PJMEDIA_FOURCC_L16;
-    setting.bitrate = 128000;
 
     return sound_open(PJMEDIA_DIR_PLAYBACK, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, NULL, play_cb,
@@ -1032,7 +1250,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     pj_bzero(&setting, sizeof(setting));
     setting.format.u32 = PJMEDIA_FOURCC_L16;
-    setting.bitrate = 128000;
 
     return sound_open(PJMEDIA_DIR_CAPTURE_PLAYBACK, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, rec_cb, play_cb,
@@ -1119,6 +1336,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 
     delete stream->engine;
     stream->engine = NULL;
+
+    if (stream->setting.format.u32 == PJMEDIA_FOURCC_G729) {
+	TBitStream *g729_bitstream = (TBitStream*)stream->strm_data;
+	stream->strm_data = NULL;
+	delete g729_bitstream;
+    }
 
     pool = stream->pool;
     if (pool) {
