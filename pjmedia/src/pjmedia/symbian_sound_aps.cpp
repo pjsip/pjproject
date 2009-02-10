@@ -982,6 +982,9 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 	    if (samples_req == 0)
 		samples_req = 80;
 	    
+	    buf.iBuffer.Append(1);
+	    buf.iBuffer.Append(0);
+	    
 	    /* Call parent stream callback to get samples to play. */
 	    while (samples_ready < samples_req) {
 		if (frame->samples_cnt == 0) {
@@ -999,20 +1002,23 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		    sf = pjmedia_frame_ext_get_subframe(frame, 0);
 		    samples_cnt = frame->samples_cnt / frame->subframe_cnt;
 		    if (sf->data && sf->bitlen) {
-			buf.iBuffer.Append(1);
-			buf.iBuffer.Append(0);
 			buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
 		    } else {
-			buf.iBuffer.Append(0);
-			buf.iBuffer.Append(0);
+			pj_uint8_t silc;
+			silc = (strm->setting.format.u32==PJMEDIA_FOURCC_PCMU)?
+				pjmedia_linear2ulaw(0) : pjmedia_linear2alaw(0);
+			buf.iBuffer.AppendFill(silc, samples_cnt);
 		    }
 		    samples_ready += samples_cnt;
 		    
 		    pjmedia_frame_ext_pop_subframes(frame, 1);
 		
 		} else { /* PJMEDIA_FRAME_TYPE_NONE */
-		    buf.iBuffer.Append(0);
-		    buf.iBuffer.Append(0);
+		    pj_uint8_t silc;
+		    
+		    silc = (strm->setting.format.u32==PJMEDIA_FOURCC_PCMU)?
+			    pjmedia_linear2ulaw(0) : pjmedia_linear2alaw(0);
+		    buf.iBuffer.AppendFill(silc, samples_req - samples_ready);
 
 		    samples_ready = samples_req;
 		    frame->samples_cnt = 0;
