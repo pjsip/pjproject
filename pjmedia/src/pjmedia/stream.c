@@ -482,7 +482,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	    }
 
 	    if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
-		PJ_LOG(1,(stream->port.info.name.ptr,  "Frame lost!"));
+		PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
 	    } else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
 		/* Jitter buffer is empty. Check if this is the first "empty" 
 		 * state.
@@ -492,7 +492,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 
 		    /* Report the state of jitter buffer */
 		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
-		    PJ_LOG(1,(stream->port.info.name.ptr, 
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
 			      "Jitter buffer empty (prefetch=%d)", 
 			      jb_state.prefetch));
 		}
@@ -506,7 +506,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 		pjmedia_jbuf_get_state(stream->jb, &jb_state);
 
 		if (stream->jb_last_frm != frame_type) {
-		    PJ_LOG(1,(stream->port.info.name.ptr, 
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
 			      "Jitter buffer is bufferring (prefetch=%d)",
 			      jb_state.prefetch));
 		}

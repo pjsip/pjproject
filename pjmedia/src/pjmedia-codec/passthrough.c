@@ -162,6 +162,8 @@ static struct codec_desc {
     unsigned	     def_bitrate;	/* Default bitrate of this codec.   */
     unsigned	     max_bitrate;	/* Maximum bitrate of this codec.   */
     pj_uint8_t	     frm_per_pkt;	/* Default num of frames per packet.*/
+    pj_uint8_t	     vad;		/* VAD enabled/disabled.	    */
+    pj_uint8_t	     plc;		/* PLC enabled/disabled.	    */
     parse_cb	     parse;		/* Callback to parse bitstream.	    */
     pack_cb	     pack;		/* Callback to pack bitstream.	    */
     pjmedia_codec_fmtp dec_fmtp;	/* Decoder's fmtp params.	    */
@@ -172,7 +174,7 @@ codec_desc[] =
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       {PJMEDIA_FOURCC_AMR},
 		    8000, 1, 160, 
-		    12200, 12200, 2,
+		    7400, 12200, 2, 1, 1,
 		    &parse_amr, &pack_amr
 		    /*, {1, {{{"octet-align", 11}, {"1", 1}}} } */
     },
@@ -181,30 +183,30 @@ codec_desc[] =
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
     {1, "G729",	    PJMEDIA_RTP_PT_G729,      {PJMEDIA_FOURCC_G729},
 		    8000, 1,  80,
-		    8000, 8000, 2
+		    8000, 8000, 2, 1, 1
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
     {1, "iLBC",	    PJMEDIA_RTP_PT_ILBC,      {PJMEDIA_FOURCC_ILBC},
 		    8000, 1,  240,
-		    13333, 15200, 2,
+		    13333, 15200, 1, 1, 1,
 		    NULL, NULL,
 		    {1, {{{"mode", 4}, {"30", 2}}} }
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU
-    {1, "PCMU",	    PJMEDIA_RTP_PT_PCMU,      {PJMEDIA_FOURCC_G711U},
+    {1, "PCMU",	    PJMEDIA_RTP_PT_PCMU,      {PJMEDIA_FOURCC_PCMU},
 		    8000, 1,  80,
-		    64000, 64000, 2
+		    64000, 64000, 2, 1, 1
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA
-    {1, "PCMA",	    PJMEDIA_RTP_PT_PCMA,      {PJMEDIA_FOURCC_G711A},
+    {1, "PCMA",	    PJMEDIA_RTP_PT_PCMA,      {PJMEDIA_FOURCC_PCMA},
 		    8000, 1,  80,
-		    64000, 64000, 2
+		    64000, 64000, 2, 1, 1
     },
 #   endif
 };
@@ -246,15 +248,17 @@ static pj_status_t pack_amr ( codec_private_t *codec_data,
 	unsigned len;
 	
 	sf = pjmedia_frame_ext_get_subframe(input, i);
-	
-	len = sf->bitlen >> 3;
-	if (sf->bitlen & 0x07)
-	    ++len;
+	len = (sf->bitlen + 7) >> 3;
 	
 	info = (pjmedia_codec_amr_bit_info*) &frames[i].bit_info;
 	pj_bzero(info, sizeof(*info));
-	info->frame_type = pjmedia_codec_amr_get_mode2(enc_setting->amr_nb, 
-						       len);
+	
+	if (len == 0) {
+	    info->frame_type = (pj_uint8_t)(enc_setting->amr_nb? 14 : 15);
+	} else {
+	    info->frame_type = pjmedia_codec_amr_get_mode2(enc_setting->amr_nb, 
+							   len);
+	}
 	info->good_quality = 1;
 	info->mode = setting->enc_mode;
 
@@ -449,9 +453,9 @@ static pj_status_t default_attr ( pjmedia_codec_factory *factory,
 
 	    /* Default flags. */
 	    attr->setting.frm_per_pkt = codec_desc[i].frm_per_pkt;
-	    attr->setting.plc = 0;
+	    attr->setting.plc = codec_desc[i].plc;
 	    attr->setting.penh= 0;
-	    attr->setting.vad = 0;
+	    attr->setting.vad = codec_desc[i].vad;
 	    attr->setting.cng = attr->setting.vad;
 	    attr->setting.dec_fmtp = codec_desc[i].dec_fmtp;
 
@@ -758,14 +762,22 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 
 		sf = pjmedia_frame_ext_get_subframe(input_, i);
 		pj_assert(sf);
-		
-		sf_len = sf->bitlen >> 3;
-		if (sf->bitlen & 0x07)
-		    ++sf_len;
+
+		sf_len = (sf->bitlen + 7) >> 3;
 
 		pj_memcpy(p, sf->data, sf_len);
 		p += sf_len;
 		output->size += sf_len;
+
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
+		/* If there is SID or DTX frame, break the loop. */
+		if (desc->pt == PJMEDIA_RTP_PT_G729 && 
+		    sf_len < codec_data->avg_frame_size)
+		{
+		    break;
+		}
+#endif
+		
 	    }
 	}
     }

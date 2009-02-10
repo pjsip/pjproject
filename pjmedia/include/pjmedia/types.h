@@ -196,8 +196,8 @@ typedef union pjmedia_fourcc {
  * FourCC identifier definitions.
  */
 #define PJMEDIA_FOURCC_L16	PJMEDIA_FOURCC_PACK(' ', 'L', '1', '6')
-#define PJMEDIA_FOURCC_G711A	PJMEDIA_FOURCC_PACK('G', '7', '1', '1')
-#define PJMEDIA_FOURCC_G711U	PJMEDIA_FOURCC_PACK('U', 'L', 'A', 'W')
+#define PJMEDIA_FOURCC_PCMA	PJMEDIA_FOURCC_PACK('A', 'L', 'A', 'W')
+#define PJMEDIA_FOURCC_PCMU	PJMEDIA_FOURCC_PACK('u', 'L', 'A', 'W')
 #define PJMEDIA_FOURCC_AMR	PJMEDIA_FOURCC_PACK(' ', 'A', 'M', 'R')
 #define PJMEDIA_FOURCC_G729	PJMEDIA_FOURCC_PACK('G', '7', '2', '9')
 #define PJMEDIA_FOURCC_ILBC	PJMEDIA_FOURCC_PACK('I', 'L', 'B', 'C')

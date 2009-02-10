@@ -778,8 +778,8 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
 	}
 	break;
 	
-    case PJMEDIA_FOURCC_G711U:
-    case PJMEDIA_FOURCC_G711A:
+    case PJMEDIA_FOURCC_PCMU:
+    case PJMEDIA_FOURCC_PCMA:
 	{
 	    unsigned samples_processed = 0;
 	    
@@ -857,12 +857,9 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		    /* AMR header for APS is one byte, the format (may be!):
 		     * 0xxxxy00, where xxxx:frame type, y:not sure. 
 		     */
-		    unsigned len = sf->bitlen>>3;
+		    unsigned len = (sf->bitlen+7)>>3;
 		    enum {SID_FT = 8 };
 		    pj_uint8_t amr_header = 4, ft = SID_FT;
-
-		    if (sf->bitlen & 0x07)
-			++len;
 
 		    if (len >= pjmedia_codec_amrnb_framelen[0])
 			ft = pjmedia_codec_amr_get_mode2(PJ_TRUE, len);
@@ -975,8 +972,8 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 	}
 	break;
 	
-    case PJMEDIA_FOURCC_G711U:
-    case PJMEDIA_FOURCC_G711A:
+    case PJMEDIA_FOURCC_PCMU:
+    case PJMEDIA_FOURCC_PCMA:
 	{
 	    unsigned samples_ready = 0;
 	    unsigned samples_req = aps_g711_frame_len;
@@ -1104,8 +1101,9 @@ static pj_status_t sound_open(pjmedia_dir dir,
     if (strm->setting.format.u32 == 0)
 	strm->setting.format.u32 = PJMEDIA_FOURCC_L16;
 
-    /* Set audio engine settings. */
-    if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U ||
+    /* Set audio engine fourcc. */
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_PCMU ||
+	strm->setting.format.u32 == PJMEDIA_FOURCC_PCMA ||
 	strm->setting.format.u32 == PJMEDIA_FOURCC_L16)
     {
 	aps_setting.fourcc = TFourCC(KMCPFourCCIdG711);
@@ -1113,33 +1111,41 @@ static pj_status_t sound_open(pjmedia_dir dir,
 	aps_setting.fourcc = TFourCC(strm->setting.format.u32);
     }
 
+    /* Set audio engine mode. */
     if (strm->setting.format.u32 == PJMEDIA_FOURCC_AMR)
     {
 	aps_setting.mode = (TAPSCodecMode)strm->setting.bitrate;
-    } else if (strm->setting.format.u32 == PJMEDIA_FOURCC_G711U ||
-	       strm->setting.format.u32 == PJMEDIA_FOURCC_L16   ||
-	      (strm->setting.format.u32 == PJMEDIA_FOURCC_ILBC  &&
-	       strm->setting.mode == 30))
+    } 
+    else if (strm->setting.format.u32 == PJMEDIA_FOURCC_PCMU ||
+	     strm->setting.format.u32 == PJMEDIA_FOURCC_L16   ||
+	    (strm->setting.format.u32 == PJMEDIA_FOURCC_ILBC  &&
+	     strm->setting.mode == 30))
     {
 	aps_setting.mode = EULawOr30ms;
-    } else {
+    } 
+    else if (strm->setting.format.u32 == PJMEDIA_FOURCC_PCMA ||
+	    (strm->setting.format.u32 == PJMEDIA_FOURCC_ILBC &&
+	     strm->setting.mode == 20))
+    {
 	aps_setting.mode = EALawOr20ms;
     }
 
     /* Disable VAD on L16 and G711. */
-    if (strm->setting.format.u32 == PJMEDIA_FOURCC_L16 ||
-	strm->setting.format.u32 == PJMEDIA_FOURCC_G711U ||
-	strm->setting.format.u32 == PJMEDIA_FOURCC_G711A)
+    if (strm->setting.format.u32 == PJMEDIA_FOURCC_PCMU ||
+	strm->setting.format.u32 == PJMEDIA_FOURCC_PCMA ||
+	strm->setting.format.u32 == PJMEDIA_FOURCC_L16)
     {
 	aps_setting.vad = EFalse;
     } else {
 	aps_setting.vad = strm->setting.vad;
     }
     
+    /* Set other audio engine attributes. */
     aps_setting.plc = strm->setting.plc;
     aps_setting.cng = strm->setting.cng;
     aps_setting.loudspk = strm->setting.loudspk;
 
+    /* Set audio engine callbacks. */
     if (strm->setting.format.u32 == PJMEDIA_FOURCC_L16) {
 	aps_play_cb = &PlayCbPcm;
 	aps_rec_cb  = &RecCbPcm;
@@ -1148,7 +1154,7 @@ static pj_status_t sound_open(pjmedia_dir dir,
 	aps_rec_cb  = &RecCb;
     }
 
-    // Create the audio engine.
+    /* Create the audio engine. */
     TRAPD(err, strm->engine = CPjAudioEngine::NewL(strm,
 						   aps_rec_cb, aps_play_cb,
 						   strm, aps_setting));

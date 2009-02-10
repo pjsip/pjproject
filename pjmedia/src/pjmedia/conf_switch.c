@@ -51,6 +51,8 @@
 #define SLOT_TYPE	    unsigned
 #define INVALID_SLOT	    ((SLOT_TYPE)-1)
 #define BUFFER_SIZE	    PJMEDIA_MAX_MTU
+#define MAX_LEVEL	    (32767)
+#define MIN_LEVEL	    (-32768)
 
 /*
  * DON'T GET CONFUSED WITH TX/RX!!
@@ -152,6 +154,10 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     conf_port->rx_setting = PJMEDIA_PORT_ENABLE;
     conf_port->tx_setting = PJMEDIA_PORT_ENABLE;
 
+    /* Default level adjustment is 128 (which means no adjustment) */
+    conf_port->tx_adj_level = NORMAL_LEVEL;
+    conf_port->rx_adj_level = NORMAL_LEVEL;
+
     /* Create transmit flag array */
     conf_port->listener_slots = (SLOT_TYPE*)
 				pj_pool_zalloc(pool, 
@@ -165,7 +171,6 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     /* Init pjmedia_frame structure in the TX buffer. */
     f = (pjmedia_frame*)conf_port->tx_buf;
     f->buf = conf_port->tx_buf + sizeof(pjmedia_frame);
-    f->size = 0;
 
     /* Done */
     *p_conf_port = conf_port;
@@ -672,6 +677,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     }
 
     if (i != src_port->listener_cnt) {
+	pjmedia_frame_ext *f;
+
 	pj_assert(src_port->listener_cnt > 0 && 
 		  src_port->listener_cnt < conf->max_ports);
 	pj_assert(dst_port->transmitter_cnt > 0 && 
@@ -682,8 +689,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 	--src_port->listener_cnt;
 	--dst_port->transmitter_cnt;
 	
-	/* Clean up sink TX buffer. */
-	pj_bzero(dst_port->tx_buf, sizeof(pjmedia_frame_ext));
+	/* Cleanup listener TX buffer. */
+	f = (pjmedia_frame_ext*)dst_port->tx_buf;
+	f->base.type = PJMEDIA_FRAME_TYPE_NONE;
+	f->base.size = 0;
+	f->samples_cnt = 0;
+	f->subframe_cnt = 0;
 
 	PJ_LOG(4,(THIS_FILE,
 		  "Port %d (%.*s) stop transmitting to port %d (%.*s)",
@@ -776,6 +787,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     while (conf_port->listener_cnt) {
 	unsigned dst_slot;
 	struct conf_port *dst_port;
+	pjmedia_frame_ext *f;
 
 	dst_slot = conf_port->listener_slots[conf_port->listener_cnt-1];
 	dst_port = conf->ports[dst_slot];
@@ -784,8 +796,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 	pj_assert(conf->connect_cnt > 0);
 	--conf->connect_cnt;
 
-	/* Clean up TX buffer. */
-	pj_bzero(dst_port->tx_buf, sizeof(pjmedia_frame_ext));
+	/* Cleanup & reinit listener TX buffer. */
+	f = (pjmedia_frame_ext*)dst_port->tx_buf;
+	f->base.type = PJMEDIA_FRAME_TYPE_NONE;
+	f->base.size = 0;
+	f->samples_cnt = 0;
+	f->subframe_cnt = 0;
     }
 
     /* Remove the port. */
@@ -856,6 +872,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->samples_per_frame = conf_port->info->samples_per_frame;
     info->bits_per_sample = conf_port->info->bits_per_sample;
     info->format = conf_port->port->info.format;
+    info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
+    info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
 
     return PJ_SUCCESS;
 }
@@ -934,6 +952,11 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
 
     conf_port = conf->ports[slot];
 
+    /* Level adjustment is applicable only for ports that work with raw PCM. */
+    PJ_ASSERT_RETURN(conf_port->info->format.u32 == 0 || 
+		     conf_port->info->format.u32 == PJMEDIA_FOURCC_L16,
+		     PJ_EIGNORED);
+
     /* Set normalized adjustment level. */
     conf_port->rx_adj_level = adj_level + NORMAL_LEVEL;
 
@@ -963,6 +986,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(adj_level >= -128, PJ_EINVAL);
 
     conf_port = conf->ports[slot];
+
+    /* Level adjustment is applicable only for ports that work with raw PCM. */
+    PJ_ASSERT_RETURN(conf_port->info->format.u32 == 0 || 
+		     conf_port->info->format.u32 == PJMEDIA_FOURCC_L16,
+		     PJ_EIGNORED);
+
+    /* Set normalized adjustment level. */
+    conf_port->tx_adj_level = adj_level + NORMAL_LEVEL;
 
     return PJ_SUCCESS;
 }
@@ -1031,6 +1062,28 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 			  (frm_dst->size>>1);
 	    if (nsamples_to_copy > nsamples_req)
 		nsamples_to_copy = nsamples_req;
+
+	    /* Adjust TX level. */
+	    if (cport_dst->tx_adj_level != NORMAL_LEVEL) {
+		pj_int16_t *p, *p_end;
+
+		p = f_start;
+		p_end = p + nsamples_to_copy;
+		while (p < p_end) {
+		    pj_int32_t itemp = *p;
+
+		    /* Adjust the level */
+		    itemp = (itemp * cport_dst->tx_adj_level) >> 7;
+
+		    /* Clip the signal if it's too loud */
+		    if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+		    else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+		    /* Put back in the buffer. */
+		    *p = (pj_int16_t)itemp;
+		    ++p;
+		}
+	    }
 
 	    pjmedia_copy_samples((pj_int16_t*)frm_dst->buf + (frm_dst->size>>1),
 				 f_start, 
@@ -1131,8 +1184,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     unsigned ci, i;
     
-    PJ_TODO(ADJUST_RX_TX_LEVEL_FOR_PCM_FRAMES);
-
     /* Must lock mutex */
     pj_mutex_lock(conf->mutex);
 
@@ -1173,7 +1224,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    pjmedia_frame *f = (pjmedia_frame*)conf->buf;
 	    pj_status_t status;
 	    unsigned j;
-	    pj_int32_t level;
+	    pj_int32_t level = 0;
 
 	    pj_add_timestamp32(&cport->ts_rx, cport->info->samples_per_frame);
 	    
@@ -1185,18 +1236,41 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    if (status != PJ_SUCCESS)
 		continue;
 
-	    /* Calculate RX level. */
+	    /* Calculate & adjust RX level. */
 	    if (f->type == PJMEDIA_FRAME_TYPE_AUDIO) {
-		level = pjmedia_calc_avg_signal((const pj_int16_t*)f->buf,
-						f->size >>1 );
+		if (cport->rx_adj_level != NORMAL_LEVEL) {
+		    pj_int16_t *p = (pj_int16_t*)f->buf;
+		    pj_int16_t *end;
+
+		    end = p + (f->size >> 1);
+		    while (p < end) {
+			pj_int32_t itemp = *p;
+
+			/* Adjust the level */
+			itemp = (itemp * cport->rx_adj_level) >> 7;
+
+			/* Clip the signal if it's too loud */
+			if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+			else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+			level += PJ_ABS(itemp);
+
+			/* Put back in the buffer. */
+			*p = (pj_int16_t)itemp;
+			++p;
+		    }
+		    level /= (f->size >> 1);
+		} else {
+		    level = pjmedia_calc_avg_signal((const pj_int16_t*)f->buf,
+						    f->size >> 1);
+		}
 	    } else if (f->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
 		/* For extended frame, TX level is unknown, so we just set 
 		 * it to NORMAL_LEVEL. 
 		 */
 		level = NORMAL_LEVEL;
-	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		level = 0;
 	    }
+
 	    cport->rx_level = pjmedia_linear2ulaw(level) ^ 0xff;
 
 	    /* Put the frame to all listeners. */
@@ -1220,8 +1294,11 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		    continue;
 		}
 
-		/* Set listener TX level equal to transmitter RX level. */
-		listener->tx_level = cport->rx_level;
+		/* Set listener TX level based on transmitter RX level & 
+		 * listener TX level.
+		 */
+		listener->tx_level = (cport->rx_level * listener->tx_adj_level)
+				     >> 8;
 	    }
 	}
     }
@@ -1241,10 +1318,16 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	if (cport->tx_setting==PJMEDIA_PORT_MUTE || cport->transmitter_cnt==0)
 	{
+	    pjmedia_frame_ext *f;
+	    
 	    /* Clear left-over samples in tx_buffer, if any, so that it won't
 	     * be transmitted next time we have audio signal.
 	     */
-	    pj_bzero(cport->tx_buf, sizeof(pjmedia_frame_ext));
+	    f = (pjmedia_frame_ext*)cport->tx_buf;
+	    f->base.type = PJMEDIA_FRAME_TYPE_NONE;
+	    f->base.size = 0;
+	    f->samples_cnt = 0;
+	    f->subframe_cnt = 0;
 	    
 	    cport->tx_level = 0;
 
@@ -1279,8 +1362,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    pj_uint16_t samples_per_subframe;
 	    
 	    if (f_src_->samples_cnt < this_cport->info->samples_per_frame) {
-		pj_bzero(this_cport->tx_buf, sizeof(pjmedia_frame_ext));
-		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		f_dst->base.type = PJMEDIA_FRAME_TYPE_NONE;
+		f_dst->samples_cnt = 0;
+		f_dst->subframe_cnt = 0;
 		break;
 	    }
 
@@ -1302,8 +1386,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	} else if (f_src->type == PJMEDIA_FRAME_TYPE_AUDIO) {
 	    if ((f_src->size>>1) < this_cport->info->samples_per_frame) {
-		pj_bzero(this_cport->tx_buf, sizeof(pjmedia_frame_ext));
 		frame->type = PJMEDIA_FRAME_TYPE_NONE;
+		frame->size = 0;
 		break;
 	    }
 
@@ -1320,9 +1404,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 				     this_cport->info->samples_per_frame,
 				     f_src->size >> 1);
 	} else { /* PJMEDIA_FRAME_TYPE_NONE */
+	    pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame;
+
 	    /* Reset TX buffer */
-	    pj_bzero(this_cport->tx_buf, sizeof(pjmedia_frame_ext));
-	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    f_dst->base.type = PJMEDIA_FRAME_TYPE_NONE;
+	    f_dst->samples_cnt = 0;
+	    f_dst->subframe_cnt = 0;
 	}
     } while (0);
 
@@ -1341,7 +1428,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *cport = conf->ports[this_port->port_data.ldata];
     unsigned j;
-    pj_int32_t level;
+    pj_int32_t level = 0;
 
     pj_add_timestamp32(&cport->ts_rx, cport->info->samples_per_frame);
     
@@ -1357,18 +1444,41 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	return PJ_SUCCESS;
     }
 
-    /* Calculate RX level. */
+    /* Calculate & adjust RX level. */
     if (f->type == PJMEDIA_FRAME_TYPE_AUDIO) {
-	level = pjmedia_calc_avg_signal((const pj_int16_t*)f->buf,
-					f->size >>1 );
+	if (cport->rx_adj_level != NORMAL_LEVEL) {
+	    pj_int16_t *p = (pj_int16_t*)f->buf;
+	    pj_int16_t *end;
+
+	    end = p + (f->size >> 1);
+	    while (p < end) {
+		pj_int32_t itemp = *p;
+
+		/* Adjust the level */
+		itemp = (itemp * cport->rx_adj_level) >> 7;
+
+		/* Clip the signal if it's too loud */
+		if (itemp > MAX_LEVEL) itemp = MAX_LEVEL;
+		else if (itemp < MIN_LEVEL) itemp = MIN_LEVEL;
+
+		level += PJ_ABS(itemp);
+
+		/* Put back in the buffer. */
+		*p = (pj_int16_t)itemp;
+		++p;
+	    }
+	    level /= (f->size >> 1);
+	} else {
+	    level = pjmedia_calc_avg_signal((const pj_int16_t*)f->buf,
+					    f->size >> 1);
+	}
     } else if (f->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
 	/* For extended frame, TX level is unknown, so we just set 
 	 * it to NORMAL_LEVEL. 
 	 */
 	level = NORMAL_LEVEL;
-    } else { /* PJMEDIA_FRAME_TYPE_NONE. */
-	level = 0;
     }
+
     cport->rx_level = pjmedia_linear2ulaw(level) ^ 0xff;
 
     /* Put the frame to all listeners. */
@@ -1401,8 +1511,10 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	    continue;
 	}
 
-	/* Set listener TX level equal to transmitter RX level. */
-	listener->tx_level = cport->rx_level;
+	/* Set listener TX level based on transmitter RX level & listener
+	 * TX level.
+	 */
+	listener->tx_level = (cport->rx_level * listener->tx_adj_level) >> 8;
     }
 
     return PJ_SUCCESS;
