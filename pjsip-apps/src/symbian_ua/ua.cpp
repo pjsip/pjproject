@@ -19,6 +19,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
+#include <pjmedia/symbian_sound_aps.h>
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
@@ -577,18 +578,20 @@ void ConsoleUI::DoCancel()
     con_->ReadCancel();
 }
 
-static void PrintMenu() 
+static void PrintMainMenu() 
 {
     PJ_LOG(3, (THIS_FILE, "\n\n"
-	    "Menu:\n"
-	    "  d    Dump states\n"
-	    "  D    Dump states detail\n"
-	    "  P    Dump pool factory\n"
-   	    "  l    Start loopback audio device\n"
-   	    "  L    Stop loopback audio device\n"
+	    "Main Menu:\n"
+	    "  d    Enable/disable codecs\n"
 	    "  m    Call " SIP_DST_URI "\n"
 	    "  a    Answer call\n"
 	    "  g    Hangup all calls\n"
+#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
+   	    "  t    Switch audio route\n"
+#endif
+#if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
+   	    "  j    Start/stop loopback audio device\n"
+#endif
 	    "  s    Subscribe " SIP_DST_URI "\n"
 	    "  S    Unsubscribe presence\n"
 	    "  o    Set account online\n"
@@ -596,68 +599,168 @@ static void PrintMenu()
 	    "  w    Quit\n"));
 }
 
+static void PrintCodecMenu() 
+{
+    PJ_LOG(3, (THIS_FILE, "\n\n"
+	    "Codec Menu:\n"
+	    "  a    Enable all codecs\n"
+#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
+	    "  d    Enable only AMR\n"
+	    "  g    Enable only G.729\n"
+	    "  j    Enable only iLBC\n"
+#endif
+	    "  m    Enable only Speex\n"
+	    "  p    Enable only GSM\n"
+	    "  t    Enable only PCMU\n"
+	    "  w    Enable only PCMA\n"));
+}
+
+static void HandleMainMenu(TKeyCode kc) {
+    switch (kc) {
+    
+#   if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
+    case 't':
+	if (snd_port) {
+	    static pj_bool_t act_loudspk = PJ_TRUE;
+	    pjmedia_snd_stream *strm;
+	    
+	    strm = pjmedia_snd_port_get_snd_stream(snd_port);
+	    pjmedia_snd_aps_activate_loudspeaker(strm, act_loudspk);
+	    act_loudspk = !act_loudspk;
+	} else {
+	    PJ_LOG(3,(THIS_FILE, "Sound device is not active."));
+	}
+	break;
+#   endif
+	
+    case 'j':
+	do {
+	    static pj_bool_t loopback_active = PJ_FALSE;
+	    if (!loopback_active)
+		pjsua_conf_connect(0, 0);
+	    else
+		pjsua_conf_disconnect(0, 0);
+	    loopback_active = !loopback_active;
+	} while (0);
+	break;
+	
+    case 'm':
+	if (g_call_id != PJSUA_INVALID_ID) {
+		PJ_LOG(3,(THIS_FILE, "Another call is active"));	
+		break;
+	}
+
+	if (pjsua_verify_sip_url(SIP_DST_URI) == PJ_SUCCESS) {
+		pj_str_t dst = pj_str(SIP_DST_URI);
+		pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
+				     NULL, &g_call_id);
+	} else {
+		PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
+	}
+	break;
+    case 'a':
+	if (g_call_id != PJSUA_INVALID_ID)
+		pjsua_call_answer(g_call_id, 200, NULL, NULL);
+	break;
+    case 'g':
+	pjsua_call_hangup_all();
+	break;
+    case 's':
+    case 'S':
+	if (g_buddy_id != PJSUA_INVALID_ID)
+		pjsua_buddy_subscribe_pres(g_buddy_id, kc=='s');
+	break;
+    case 'o':
+    case 'O':
+	pjsua_acc_set_online_status(g_acc_id, kc=='o');
+	break;
+	    
+    default:
+	PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed", kc, kc));
+	break;
+    }
+
+    PrintMainMenu();
+}
+
+static void HandleCodecMenu(TKeyCode kc) {
+    const pj_str_t ID_ALL = {"*", 1};
+    pj_str_t codec = {NULL, 0};
+    
+    if (kc == 'a') {
+	pjsua_codec_set_priority(&ID_ALL, PJMEDIA_CODEC_PRIO_NORMAL);
+	PJ_LOG(3,(THIS_FILE, "All codecs activated"));
+    } else {
+	switch (kc) {
+	case 'd':
+	    codec = pj_str("AMR");
+	    break;
+	case 'g':
+	    codec = pj_str("G729");
+	    break;
+	case 'j':
+	    codec = pj_str("ILBC");
+	    break;
+	case 'm':
+	    codec = pj_str("SPEEX/8000");
+	    break;
+	case 'p':
+	    codec = pj_str("GSM");
+	    break;
+	case 't':
+	    codec = pj_str("PCMU");
+	    break;
+	case 'w':
+	    codec = pj_str("PCMA");
+	    break;
+	default:
+	    PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed", kc, kc));
+	    break;
+	}
+
+	if (codec.slen) {
+	    pj_status_t status;
+	    
+	    pjsua_codec_set_priority(&ID_ALL, PJMEDIA_CODEC_PRIO_DISABLED);
+		
+	    status = pjsua_codec_set_priority(&codec, 
+					      PJMEDIA_CODEC_PRIO_NORMAL);
+	    if (status == PJ_SUCCESS)
+		PJ_LOG(3,(THIS_FILE, "%s activated", codec.ptr));
+	    else
+		PJ_LOG(3,(THIS_FILE, "Failed activating %s, err=%d", 
+			  codec.ptr, status));
+	}
+    }
+}
+
 // Implementation: called when read has completed.
 void ConsoleUI::RunL() 
 {
+    enum {
+	MENU_TYPE_MAIN = 0,
+	MENU_TYPE_CODEC = 1
+    };
+    static int menu_type = MENU_TYPE_MAIN;
     TKeyCode kc = con_->KeyCode();
     pj_bool_t reschedule = PJ_TRUE;
     
-    switch (kc) {
-    case 'w':
+    if (menu_type == MENU_TYPE_MAIN) {
+	if (kc == 'w') {
 	    CActiveScheduler::Stop();
 	    reschedule = PJ_FALSE;
-	    break;
-    case 'D':
-    case 'd':
-	    pjsua_dump(kc == 'D');
-	    break;
-    case 'p':
-    case 'P':
-	    pj_pool_factory_dump(pjsua_get_pool_factory(), PJ_TRUE);
-	    break;
-    case 'l':
-		pjsua_conf_connect(0, 0);
-	    break;
-    case 'L':
-		pjsua_conf_disconnect(0, 0);
-	    break;
-    case 'm':
-	    if (g_call_id != PJSUA_INVALID_ID) {
-		    PJ_LOG(3,(THIS_FILE, "Another call is active"));	
-		    break;
-	    }
-    
-	    if (pjsua_verify_sip_url(SIP_DST_URI) == PJ_SUCCESS) {
-		    pj_str_t dst = pj_str(SIP_DST_URI);
-		    pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
-					 NULL, &g_call_id);
-	    } else {
-		    PJ_LOG(3,(THIS_FILE, "Invalid SIP URI"));
-	    }
-	    break;
-    case 'a':
-	    if (g_call_id != PJSUA_INVALID_ID)
-		    pjsua_call_answer(g_call_id, 200, NULL, NULL);
-	    break;
-    case 'g':
-	    pjsua_call_hangup_all();
-	    break;
-    case 's':
-    case 'S':
-	    if (g_buddy_id != PJSUA_INVALID_ID)
-		    pjsua_buddy_subscribe_pres(g_buddy_id, kc=='s');
-	    break;
-    case 'o':
-    case 'O':
-	    pjsua_acc_set_online_status(g_acc_id, kc=='o');
-	    break;
-    default:
-	    PJ_LOG(3,(THIS_FILE, "Keycode '%c' (%d) is pressed",
-		      kc, kc));
-	    break;
+	} else if (kc == 'd') {
+	    menu_type = MENU_TYPE_CODEC;
+	    PrintCodecMenu();
+	} else {
+	    HandleMainMenu(kc);
+	}
+    } else {
+	HandleCodecMenu(kc);
+	
+	menu_type = MENU_TYPE_MAIN;
+	PrintMainMenu();
     }
-
-    PrintMenu();
     
     if (reschedule)
 	Run();
@@ -868,7 +971,7 @@ int ua_main()
     ConsoleUI *con = new ConsoleUI(console);
     
     con->Run();
-    PrintMenu();
+    PrintMainMenu();
 
     CActiveScheduler::Start();
     
