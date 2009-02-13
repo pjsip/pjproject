@@ -442,6 +442,7 @@ static void* tel_uri_parse( pj_scanner *scanner, pj_pool_t *pool,
     }
 
     scanner->skip_ws = skip_ws;
+    pj_scan_skip_whitespace(scanner);
     return uri;
 }
 
