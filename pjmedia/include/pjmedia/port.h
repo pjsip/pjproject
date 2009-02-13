@@ -319,7 +319,7 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
 	pj_memcpy(fsub->data, src, (bitlen+7) >> 3);
 
     frm->subframe_cnt++;
-    frm->samples_cnt = frm->samples_cnt + (pj_uint16_t)samples_cnt;
+    frm->samples_cnt = (pj_uint16_t)(frm->samples_cnt + samples_cnt);
 }
 
 /**

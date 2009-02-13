@@ -641,14 +641,14 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	if (s->enc_mode < 0)
 	    return PJMEDIA_CODEC_EINMODE;
 
-	s->enc_setting.amr_nb = desc->pt == PJMEDIA_RTP_PT_AMR;
+	s->enc_setting.amr_nb = (pj_uint8_t)(desc->pt == PJMEDIA_RTP_PT_AMR);
 	s->enc_setting.octet_aligned = octet_align;
 	s->enc_setting.reorder = PJ_FALSE; /* Note this! passthrough codec
 					      doesn't do sensitivity bits 
 					      reordering */
 	s->enc_setting.cmr = 15;
 	
-	s->dec_setting.amr_nb = desc->pt == PJMEDIA_RTP_PT_AMR;
+	s->dec_setting.amr_nb = (pj_uint8_t)(desc->pt == PJMEDIA_RTP_PT_AMR);
 	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = PJ_FALSE; /* Note this! passthrough codec
 					      doesn't do sensitivity bits 
@@ -769,14 +769,12 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 		p += sf_len;
 		output->size += sf_len;
 
-#if PJMEDIA_HAS_INTEL_IPP_CODEC_G729
 		/* If there is SID or DTX frame, break the loop. */
 		if (desc->pt == PJMEDIA_RTP_PT_G729 && 
 		    sf_len < codec_data->avg_frame_size)
 		{
 		    break;
 		}
-#endif
 		
 	    }
 	}
@@ -798,6 +796,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     pjmedia_frame_ext *output_ = (pjmedia_frame_ext*) output;
 
     pj_assert(input);
+    PJ_UNUSED_ARG(output_buf_len);
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
     /* Need to rearrange the AMR bitstream, since the bitstream may not be 

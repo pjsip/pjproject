@@ -688,16 +688,16 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
 PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode2(pj_bool_t amrnb,
 						 unsigned frame_len)
 {
-    unsigned i;
+    int i;
 
     if (amrnb) {
 	for (i = 0; i < 9; ++i)
 	    if (frame_len == pjmedia_codec_amrnb_framelen[i])
-		return i;
+		return (pj_int8_t)i;
     } else {
 	for (i = 0; i < 10; ++i) {
 	    if (frame_len == pjmedia_codec_amrwb_framelen[i])
-		return i;
+		return (pj_int8_t)i;
 	}
     }
     

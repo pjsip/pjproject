@@ -109,6 +109,10 @@ SOURCE=..\src\pjmedia\codec.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\conf_switch.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\conference.c
 # End Source File
 # Begin Source File

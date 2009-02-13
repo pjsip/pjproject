@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/sound_port.h>
+#include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/delaybuf.h>
 #include <pjmedia/echo.h>
 #include <pjmedia/errno.h>
@@ -34,7 +35,6 @@
 #define THIS_FILE	    "sound_port.c"
 
 //#define TEST_OVERFLOW_UNDERFLOW
-
 
 struct pjmedia_snd_port
 {
@@ -62,6 +62,13 @@ struct pjmedia_snd_port
 #if PJMEDIA_SOUND_USE_DELAYBUF
     pjmedia_delay_buf	*delay_buf;
 #endif
+
+    /* Encoded sound emulation */
+#if !defined(PJMEDIA_SND_SUPPORT_OPEN2) || !PJMEDIA_SND_SUPPORT_OPEN2
+    unsigned		 frm_buf_size;
+    pj_uint8_t		*put_frm_buf;
+    pj_uint8_t		*get_frm_buf;
+#endif
 };
 
 /*
@@ -78,12 +85,6 @@ static pj_status_t play_cb(/* in */   void *user_data,
     pjmedia_frame frame;
     pj_status_t status;
 
-    /* We're risking accessing the port without holding any mutex.
-     * It's possible that port is disconnected then destroyed while
-     * we're trying to access it.
-     * But in the name of performance, we'll try this approach until
-     * someone complains when it crashes.
-     */
     port = snd_port->port;
     if (port == NULL)
 	goto no_frame;
@@ -197,12 +198,6 @@ static pj_status_t rec_cb(/* in */   void *user_data,
     pjmedia_port *port;
     pjmedia_frame frame;
 
-    /* We're risking accessing the port without holding any mutex.
-     * It's possible that port is disconnected then destroyed while
-     * we're trying to access it.
-     * But in the name of performance, we'll try this approach until
-     * someone complains when it crashes.
-     */
     port = snd_port->port;
     if (port == NULL)
 	return PJ_SUCCESS;
@@ -244,6 +239,10 @@ static pj_status_t play_cb_ext(/* in */   void *user_data,
 			       /* out */  void *output,
 			       /* out */  unsigned size)
 {
+#if defined(PJMEDIA_SND_SUPPORT_OPEN2) && PJMEDIA_SND_SUPPORT_OPEN2!=0
+    /* This is the version to use when the sound device supports
+     * open2().
+     */
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
     pjmedia_frame *frame = (pjmedia_frame*) output;
@@ -252,12 +251,6 @@ static pj_status_t play_cb_ext(/* in */   void *user_data,
     PJ_UNUSED_ARG(size);
     PJ_UNUSED_ARG(timestamp);
 
-    /* We're risking accessing the port without holding any mutex.
-     * It's possible that port is disconnected then destroyed while
-     * we're trying to access it.
-     * But in the name of performance, we'll try this approach until
-     * someone complains when it crashes.
-     */
     port = snd_port->port;
     if (port == NULL) {
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
@@ -267,6 +260,89 @@ static pj_status_t play_cb_ext(/* in */   void *user_data,
     status = pjmedia_port_get_frame(port, frame);
 
     return status;
+#else
+    /* This is the emulation version */
+    pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
+    pjmedia_port *port = snd_port->port;
+    pjmedia_frame_ext *fx = (pjmedia_frame_ext*) snd_port->get_frm_buf;
+    pj_status_t status;
+
+    if (port==NULL) {
+	goto no_frame;
+    }
+
+    pj_bzero(fx, sizeof(*fx));
+    fx->base.type = PJMEDIA_FRAME_TYPE_NONE;
+    fx->base.buf = ((pj_uint8_t*)fx) + sizeof(*fx);
+    fx->base.size = snd_port->frm_buf_size - sizeof(*fx);
+    fx->base.timestamp.u32.hi = 0;
+    fx->base.timestamp.u32.lo = timestamp;
+
+    status = pjmedia_port_get_frame(port, &fx->base);
+    if (status != PJ_SUCCESS)
+	goto no_frame;
+
+    if (fx->base.type == PJMEDIA_FRAME_TYPE_AUDIO) {
+	pj_assert(fx->base.size == size);
+	pj_memcpy(output, fx->base.buf, size);
+    } else if (fx->base.type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+	void (*decoder)(pj_int16_t*, const pj_uint8_t*, pj_size_t) = NULL;
+	unsigned i, size_decoded;
+
+	switch (snd_port->setting.format.u32) {
+	case PJMEDIA_FOURCC_PCMA:
+	    decoder = &pjmedia_alaw_decode;
+	    break;
+	case PJMEDIA_FOURCC_PCMU:
+	    decoder = &pjmedia_ulaw_decode;
+	    break;
+	default:
+	    PJ_LOG(1,(THIS_FILE, "Unsupported format %d", 
+		      snd_port->setting.format.u32));
+	    goto no_frame;
+	}
+
+	if (fx->samples_cnt > size>>1) {
+	    PJ_LOG(4,(THIS_FILE, "Frame too large by %d samples", 
+		      fx->samples_cnt - (size>>1)));
+	} else if (fx->samples_cnt < size>>1) {
+	    PJ_LOG(4,(THIS_FILE, "Not enough frame by %d samples", 
+		      (size>>1) - fx->samples_cnt));
+	}
+
+	for (i=0, size_decoded=0; 
+	     i<fx->subframe_cnt && size_decoded<size; 
+	     ++i) 
+	{
+	    pjmedia_frame_ext_subframe *subfrm;
+
+	    subfrm = pjmedia_frame_ext_get_subframe(fx, i);	    
+
+	    if ((subfrm->bitlen>>3) > (int)(size-size_decoded)) {
+		subfrm->bitlen = (pj_uint16_t)((size-size_decoded) << 3);
+	    }
+
+	    (*decoder)((short*)((pj_uint8_t*)output + size_decoded),
+		       subfrm->data, subfrm->bitlen>>3);
+
+	    size_decoded += (subfrm->bitlen>>3) << 1;
+	}
+
+	if (size_decoded < size) {
+	    pj_bzero((pj_uint8_t*)output + size_decoded, size-size_decoded);
+	}
+
+    } else {
+	goto no_frame;
+    }
+
+    return PJ_SUCCESS;
+
+no_frame:
+    pj_bzero(output, size);
+    return PJ_SUCCESS;
+
+#endif	/* PJMEDIA_SND_SUPPORT_OPEN2 */
 }
 
 
@@ -279,6 +355,10 @@ static pj_status_t rec_cb_ext(/* in */   void *user_data,
 			      /* in */   void *input,
 			      /* in*/    unsigned size)
 {
+#if defined(PJMEDIA_SND_SUPPORT_OPEN2) && PJMEDIA_SND_SUPPORT_OPEN2!=0
+    /* This is the version to use when the sound device supports
+     * open2().
+     */
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
     pjmedia_frame *frame = (pjmedia_frame*)input;
@@ -286,12 +366,6 @@ static pj_status_t rec_cb_ext(/* in */   void *user_data,
     PJ_UNUSED_ARG(size);
     PJ_UNUSED_ARG(timestamp);
 
-    /* We're risking accessing the port without holding any mutex.
-     * It's possible that port is disconnected then destroyed while
-     * we're trying to access it.
-     * But in the name of performance, we'll try this approach until
-     * someone complains when it crashes.
-     */
     port = snd_port->port;
     if (port == NULL)
 	return PJ_SUCCESS;
@@ -299,6 +373,42 @@ static pj_status_t rec_cb_ext(/* in */   void *user_data,
     pjmedia_port_put_frame(port, frame);
 
     return PJ_SUCCESS;
+#else
+    pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
+    pjmedia_port *port = snd_port->port;
+    pjmedia_frame_ext *fx = (pjmedia_frame_ext*) snd_port->put_frm_buf;
+    void (*encoder)(pj_uint8_t*, const pj_int16_t*, pj_size_t) = NULL;
+
+    if (port==NULL)
+	return PJ_SUCCESS;
+
+    pj_bzero(fx, sizeof(*fx));
+    fx->base.buf = NULL;
+    fx->base.size = snd_port->frm_buf_size - sizeof(*fx);
+    fx->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+    fx->base.timestamp.u32.lo = timestamp;
+
+    switch (snd_port->setting.format.u32) {
+    case PJMEDIA_FOURCC_PCMA:
+	encoder = &pjmedia_alaw_encode;
+	break;
+    case PJMEDIA_FOURCC_PCMU:
+	encoder = &pjmedia_ulaw_encode;
+	break;
+    default:
+	PJ_LOG(1,(THIS_FILE, "Unsupported format %d", 
+		  snd_port->setting.format.u32));
+	return PJ_SUCCESS;
+    }
+
+    (*encoder)((pj_uint8_t*)input, (pj_int16_t*)input, size >> 1);
+
+    pjmedia_frame_ext_append_subframe(fx, input, (size >> 1) << 3, 
+				      size >> 1);
+    pjmedia_port_put_frame(port, &fx->base);
+
+    return PJ_SUCCESS;
+#endif
 }
 
 /*
@@ -331,6 +441,7 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 	snd_play_cb = &play_cb_ext;
     }
 
+#if defined(PJMEDIA_SND_SUPPORT_OPEN2) && PJMEDIA_SND_SUPPORT_OPEN2!=0
     status = pjmedia_snd_open2( snd_port->dir,
 				snd_port->rec_id, 
 				snd_port->play_id,
@@ -343,6 +454,18 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 				snd_port,
 				&snd_port->setting,
 				&snd_port->snd_stream);
+#else
+    status = pjmedia_snd_open(  snd_port->rec_id, 
+				snd_port->play_id,
+				snd_port->clock_rate,
+				snd_port->channel_count,
+				snd_port->samples_per_frame,
+				snd_port->bits_per_sample,
+				snd_rec_cb,
+				snd_play_cb,
+				snd_port,
+				&snd_port->snd_stream);
+#endif
 
     if (status != PJ_SUCCESS)
 	return status;
@@ -571,7 +694,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     snd_port->channel_count = channel_count;
     snd_port->samples_per_frame = samples_per_frame;
     snd_port->bits_per_sample = bits_per_sample;
-    snd_port->setting = *setting;
+    pj_memcpy(&snd_port->setting, setting, sizeof(*setting));
     
 #if PJMEDIA_SOUND_USE_DELAYBUF
     if (snd_port->setting.format.u32 == 0 ||
@@ -588,6 +711,21 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
 					  PJMEDIA_SOUND_BUFFER_COUNT * ptime,
 					  0, &snd_port->delay_buf);
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    }
+#endif
+
+#if !defined(PJMEDIA_SND_SUPPORT_OPEN2) || PJMEDIA_SND_SUPPORT_OPEN2==0
+    /* For devices that doesn't support open2(), enable simulation */
+    if (snd_port->setting.format.u32 != 0 &&
+	snd_port->setting.format.u32 != PJMEDIA_FOURCC_L16) 
+    {
+	snd_port->frm_buf_size = sizeof(pjmedia_frame_ext) + 
+				 (samples_per_frame >> 1) +
+				 16 * sizeof(pjmedia_frame_ext_subframe);
+	snd_port->put_frm_buf = (pj_uint8_t*)
+				pj_pool_alloc(pool, snd_port->frm_buf_size);
+	snd_port->get_frm_buf = (pj_uint8_t*)
+				pj_pool_alloc(pool, snd_port->frm_buf_size);
     }
 #endif
 

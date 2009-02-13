@@ -107,6 +107,17 @@
 #  endif
 #endif
 
+/**
+ * Specify if the sound device implementation supports handling encoded
+ * frames. Setting this to zero will activate some emulation in the
+ * sound port.
+ */
+#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_SYMB_APS_SOUND || \
+    PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_SYMB_VAS_SOUND
+#   define PJMEDIA_SND_SUPPORT_OPEN2	1
+#else
+#   define PJMEDIA_SND_SUPPORT_OPEN2	0
+#endif
 
 /**
  * Specify whether we prefer to use DirectSound on Windows.

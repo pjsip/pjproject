@@ -1030,7 +1030,7 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 	     * i.e: samples count in TX buffer equal to listener's
 	     * samples per frame.
 	     */
-	    if (f_dst->samples_cnt == cport_dst->info->samples_per_frame)
+	    if (f_dst->samples_cnt >= cport_dst->info->samples_per_frame)
 	    {
 		if (cport_dst->slot) {
 		    pjmedia_port_put_frame(cport_dst->port, 
@@ -1359,7 +1359,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    pjmedia_frame_ext *f_src_ = (pjmedia_frame_ext*)f_src;
 	    pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame;
 	    pjmedia_frame_ext_subframe *sf;
-	    pj_uint16_t samples_per_subframe;
+	    unsigned samples_per_subframe;
 	    
 	    if (f_src_->samples_cnt < this_cport->info->samples_per_frame) {
 		f_dst->base.type = PJMEDIA_FRAME_TYPE_NONE;

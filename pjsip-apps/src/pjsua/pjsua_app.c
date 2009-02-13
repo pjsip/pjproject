@@ -2401,6 +2401,109 @@ static void on_call_media_state(pjsua_call_id call_id)
     }
 }
 
+#ifdef PJSUA_SIMULATE_APS_DIRECT
+/* To simulate APS direct, add these to config_site.h:
+#define PJSUA_SIMULATE_APS_DIRECT
+#ifdef PJSUA_SIMULATE_APS_DIRECT
+    #define PJMEDIA_CONF_USE_SWITCH_BOARD	1
+    #define PJMEDIA_HAS_PASSTHROUGH_CODECS	1
+
+    #define PJMEDIA_HAS_L16_CODEC		0
+    #define PJMEDIA_HAS_GSM_CODEC		0
+    #define PJMEDIA_HAS_SPEEX_CODEC		0
+    #define PJMEDIA_HAS_ILBC_CODEC		0
+    #define PJMEDIA_HAS_G722_CODEC		0
+    #define PJMEDIA_HAS_INTEL_IPP		0
+
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR   0
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_G729  0
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC  0
+#endif
+*/
+
+/* Global sound port. */
+static pjmedia_snd_port *g_snd_port;
+
+
+/* Reopen sound device on on_stream_created() pjsua callback. */
+static void on_call_stream_created(pjsua_call_id call_id, 
+				   pjmedia_session *sess,
+				   unsigned stream_idx, 
+				   pjmedia_port **p_port)
+{
+    pjmedia_port *conf;
+    pjmedia_session_info sess_info;
+    pjmedia_stream_info *strm_info;
+    pjmedia_snd_setting setting;
+    unsigned samples_per_frame;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(p_port);
+
+    /* Get active format for this stream, based on SDP negotiation result. */    
+    pjmedia_session_get_info(sess, &sess_info);
+    strm_info = &sess_info.stream_info[stream_idx];
+
+    /* Init sound device setting based on stream info. */
+    pj_bzero(&setting, sizeof(setting));
+    setting.format = strm_info->param->info.format;
+    setting.bitrate = strm_info->param->info.avg_bps;
+    setting.cng = strm_info->param->setting.cng;
+    setting.vad = strm_info->param->setting.vad;
+    setting.plc = strm_info->param->setting.plc;
+
+    /* Close sound device and get the conference port. */
+    conf = pjsua_set_no_snd_dev();
+    
+    samples_per_frame = strm_info->param->info.clock_rate *
+			strm_info->param->info.frm_ptime *
+			strm_info->param->setting.frm_per_pkt *
+			strm_info->param->info.channel_cnt /
+			1000;
+
+    /* Reset conference port attributes. */
+    conf->info.samples_per_frame = samples_per_frame;
+    conf->info.clock_rate = 8000;
+    conf->info.channel_count = 1;
+    conf->info.bits_per_sample = 16;
+
+    /* Reopen sound device. */
+    status = pjmedia_snd_port_create2(app_config.pool, 
+				      PJMEDIA_DIR_CAPTURE_PLAYBACK,
+				      -1,
+				      -1,
+				      8000,
+				      1,
+				      samples_per_frame,
+				      16,
+				      &setting,
+				      &g_snd_port);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error opening sound device", status);
+	return;
+    }
+
+    /* Connect sound to conference port. */
+    pjmedia_snd_port_connect(g_snd_port, conf);
+}
+
+static void on_call_stream_destroyed(pjsua_call_id call_id,
+				     pjmedia_session *sess, 
+				     unsigned stream_idx)
+{
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(stream_idx);
+
+    if (g_snd_port) {
+    	pjmedia_snd_port_destroy(g_snd_port);
+    	g_snd_port = NULL;
+    }
+}
+
+#endif
+
 /*
  * DTMF callback.
  */
@@ -4046,6 +4149,10 @@ pj_status_t app_init(int argc, char *argv[])
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
     app_config.cfg.cb.on_call_media_state = &on_call_media_state;
+#ifdef PJSUA_SIMULATE_APS_DIRECT
+    app_config.cfg.cb.on_stream_created = &on_call_stream_created;
+    app_config.cfg.cb.on_stream_destroyed = &on_call_stream_destroyed;
+#endif
     app_config.cfg.cb.on_incoming_call = &on_incoming_call;
     app_config.cfg.cb.on_call_tsx_state = &on_call_tsx_state;
     app_config.cfg.cb.on_dtmf_digit = &call_on_dtmf_callback;

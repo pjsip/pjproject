@@ -144,12 +144,12 @@ PJ_DECL(unsigned char) pjmedia_ulaw2alaw(unsigned char uval);
  *
  * @param dst	    Destination buffer for 8-bit U-Law data.
  * @param src	    Source, 16-bit linear PCM data.
- * @param len	    Number of samples.
+ * @param count	    Number of samples.
  */
 PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
-				    pj_size_t len)
+				    pj_size_t count)
 {
-    const pj_int16_t *end = src + len;
+    const pj_int16_t *end = src + count;
     
     while (src < end) {
 	*dst++ = pjmedia_linear2ulaw(*src++);
@@ -161,12 +161,12 @@ PJ_INLINE(void) pjmedia_ulaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
  *
  * @param dst	    Destination buffer for 8-bit A-Law data.
  * @param src	    Source, 16-bit linear PCM data.
- * @param len	    Number of samples.
+ * @param count	    Number of samples.
  */
 PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src, 
-				    pj_size_t len)
+				    pj_size_t count)
 {
-    const pj_int16_t *end = src + len;
+    const pj_int16_t *end = src + count;
     
     while (src < end) {
 	*dst++ = pjmedia_linear2alaw(*src++);
@@ -178,7 +178,7 @@ PJ_INLINE(void) pjmedia_alaw_encode(pj_uint8_t *dst, const pj_int16_t *src,
  *
  * @param dst	    Destination buffer for 16-bit PCM data.
  * @param src	    Source, 8-bit U-Law data.
- * @param len	    Number of samples.
+ * @param len	    Encoded frame/source length in bytes.
  */
 PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
 				    pj_size_t len)
@@ -195,7 +195,7 @@ PJ_INLINE(void) pjmedia_ulaw_decode(pj_int16_t *dst, const pj_uint8_t *src,
  *
  * @param dst	    Destination buffer for 16-bit PCM data.
  * @param src	    Source, 8-bit A-Law data.
- * @param len	    Number of samples.
+ * @param len	    Encoded frame/source length in bytes.
  */
 PJ_INLINE(void) pjmedia_alaw_decode(pj_int16_t *dst, const pj_uint8_t *src, 
 				    pj_size_t len)
