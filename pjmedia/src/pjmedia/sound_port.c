@@ -318,6 +318,9 @@ static pj_status_t play_cb_ext(/* in */   void *user_data,
 
 	    subfrm = pjmedia_frame_ext_get_subframe(fx, i);	    
 
+	    if (!subfrm || subfrm->bitlen==0)
+		continue;
+
 	    if ((subfrm->bitlen>>3) > (int)(size-size_decoded)) {
 		subfrm->bitlen = (pj_uint16_t)((size-size_decoded) << 3);
 	    }
@@ -720,7 +723,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
 	snd_port->setting.format.u32 != PJMEDIA_FOURCC_L16) 
     {
 	snd_port->frm_buf_size = sizeof(pjmedia_frame_ext) + 
-				 (samples_per_frame >> 1) +
+				 (samples_per_frame << 1) +
 				 16 * sizeof(pjmedia_frame_ext_subframe);
 	snd_port->put_frm_buf = (pj_uint8_t*)
 				pj_pool_alloc(pool, snd_port->frm_buf_size);

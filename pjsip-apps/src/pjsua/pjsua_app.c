@@ -2464,7 +2464,7 @@ static void on_call_stream_created(pjsua_call_id call_id,
 
     /* Reset conference port attributes. */
     conf->info.samples_per_frame = samples_per_frame;
-    conf->info.clock_rate = 8000;
+    conf->info.clock_rate = strm_info->param->info.clock_rate;
     conf->info.channel_count = 1;
     conf->info.bits_per_sample = 16;
 
@@ -2473,8 +2473,8 @@ static void on_call_stream_created(pjsua_call_id call_id,
 				      PJMEDIA_DIR_CAPTURE_PLAYBACK,
 				      -1,
 				      -1,
-				      8000,
-				      1,
+				      strm_info->param->info.clock_rate,
+				      strm_info->param->info.channel_cnt,
 				      samples_per_frame,
 				      16,
 				      &setting,
