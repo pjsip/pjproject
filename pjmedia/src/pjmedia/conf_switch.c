@@ -1404,12 +1404,12 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 				     this_cport->info->samples_per_frame,
 				     f_src->size >> 1);
 	} else { /* PJMEDIA_FRAME_TYPE_NONE */
-	    pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame;
+	    pjmedia_frame_ext *f_src_ = (pjmedia_frame_ext*)f_src;
 
-	    /* Reset TX buffer */
-	    f_dst->base.type = PJMEDIA_FRAME_TYPE_NONE;
-	    f_dst->samples_cnt = 0;
-	    f_dst->subframe_cnt = 0;
+	    /* Reset source/TX buffer */
+	    f_src_->base.size = 0;
+	    f_src_->samples_cnt = 0;
+	    f_src_->subframe_cnt = 0;
 	}
     } while (0);
 
