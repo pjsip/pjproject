@@ -98,7 +98,7 @@ typedef struct pjmedia_snd_stream_info
  */
 typedef struct pjmedia_snd_setting
 {
-    pjmedia_fourcc	format;	  /**< Format (FourCC ID).	    */ 
+    pjmedia_format	format;	  /**< Format.			    */ 
     pj_uint32_t		bitrate;  /**< Bitrate (bps).		    */
     pj_uint32_t		mode;	  /**< Mode, e.g: iLBC format has
 				       20ms or 30ms frame size.	    */

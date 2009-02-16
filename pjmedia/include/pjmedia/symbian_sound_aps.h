@@ -31,24 +31,6 @@
 PJ_BEGIN_DECL
 
 /**
- * Declaration of APS sound setting.  
- */
-typedef struct pjmedia_snd_aps_setting
-{
-    pjmedia_fourcc	format;	  /**< Format (FourCC ID).	*/ 
-    pj_uint32_t		bitrate;  /**< Bitrate (bps).		*/
-    pj_uint32_t		mode;	  /**< Mode, currently only used 
-				       for specifying iLBC mode,
-				       20ms or 30ms frame size.	*/
-    pj_bool_t		plc;	  /**< PLC enabled/disabled.	*/
-    pj_bool_t		vad;	  /**< VAD enabled/disabled.	*/
-    pj_bool_t		cng;	  /**< CNG enabled/disabled.	*/
-    pj_bool_t		loudspk;  /**< Audio routed to loudspeaker.*/
-    
-} pjmedia_snd_aps_setting;
-
-
-/**
  * Activate/deactivate loudspeaker, when loudspeaker is inactive, audio
  * will be routed to earpiece.
  *

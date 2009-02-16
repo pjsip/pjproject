@@ -92,7 +92,7 @@ static pjsua_call_id g_call_id = PJSUA_INVALID_ID;
 static pjsua_buddy_id g_buddy_id = PJSUA_INVALID_ID;
 
 static pj_pool_t *app_pool;
-static pjmedia_snd_port *snd_port;
+static pjmedia_snd_port *g_snd_port;
 
 
 /* Callback called by the library upon receiving incoming call */
@@ -133,10 +133,6 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
     if (ci.state == PJSIP_INV_STATE_DISCONNECTED) {
     	if (call_id == g_call_id)
     	    g_call_id = PJSUA_INVALID_ID;
-    	if (snd_port) {
-    	    pjmedia_snd_port_destroy(snd_port);
-    	    snd_port = NULL;
-    	}
     } else if (ci.state != PJSIP_INV_STATE_INCOMING) {
     	if (g_call_id == PJSUA_INVALID_ID)
     	    g_call_id = call_id;
@@ -270,6 +266,9 @@ static void on_stream_created(pjsua_call_id call_id,
     unsigned samples_per_frame;
     pj_status_t status;
     
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(p_port);
+    
     status = pjmedia_session_get_info(sess, &sess_info);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to get session info, "
@@ -288,7 +287,7 @@ static void on_stream_created(pjsua_call_id call_id,
     setting.cng = strm_info->param->setting.cng;
     setting.vad = strm_info->param->setting.vad;
     setting.plc = strm_info->param->setting.plc;
-    if (setting.format.u32 == PJMEDIA_FOURCC_ILBC) {
+    if (setting.format.u32 == PJMEDIA_FORMAT_ILBC) {
 	unsigned i;
 	pjmedia_codec_fmtp *fmtp = &strm_info->param->setting.dec_fmtp;
 	
@@ -314,32 +313,47 @@ static void on_stream_created(pjsua_call_id call_id,
     
     /* Reset conference attributes. */
     conf->info.samples_per_frame = samples_per_frame;
-    conf->info.clock_rate = 8000;
-    conf->info.channel_count = 1;
+    conf->info.clock_rate = strm_info->param->info.clock_rate;
+    conf->info.channel_count = strm_info->param->info.channel_cnt;
     conf->info.bits_per_sample = 16;
+    conf->info.format = strm_info->param->info.format;
 
     /* Reopen sound device. */
     status = pjmedia_snd_port_create2(app_pool, 
 				      PJMEDIA_DIR_CAPTURE_PLAYBACK,
 				      0,
 				      0,
-				      8000,
-				      1,
+				      strm_info->param->info.clock_rate,
+				      strm_info->param->info.channel_cnt,
 				      samples_per_frame,
 				      16,
 				      &setting,
-				      &snd_port);
+				      &g_snd_port);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to reopen sound "
 			     "device, status=%d", status));
 	return;
     }
     
-    status = pjmedia_snd_port_connect(snd_port, conf);
+    status = pjmedia_snd_port_connect(g_snd_port, conf);
     if (status != PJ_SUCCESS) {
 	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to connect sound "
 			     "device to conference, status=%d", status));
 	return;
+    }
+}
+
+static void on_stream_destroyed(pjsua_call_id call_id,
+				pjmedia_session *sess, 
+				unsigned stream_idx)
+{
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(sess);
+    PJ_UNUSED_ARG(stream_idx);
+
+    if (g_snd_port) {
+    	pjmedia_snd_port_destroy(g_snd_port);
+    	g_snd_port = NULL;
     }
 }
 
@@ -406,6 +420,7 @@ static pj_status_t app_startup()
     cfg.cb.on_call_replaced = &on_call_replaced;
     cfg.cb.on_nat_detect = &on_nat_detect;
     cfg.cb.on_stream_created = &on_stream_created;
+    cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     
     if (SIP_PROXY) {
 	    cfg.outbound_proxy_cnt = 1;
@@ -428,7 +443,7 @@ static pj_status_t app_startup()
     log_cfg.level = LOG_LEVEL;
     log_cfg.console_level = LOG_LEVEL;
     log_cfg.cb = &log_writer;
-    //log_cfg.log_filename = pj_str("C:\\data\\symbian_ua.log");
+    log_cfg.log_filename = pj_str("C:\\data\\symbian_ua.log");
 
     pjsua_media_config_default(&med_cfg);
     med_cfg.thread_cnt = 0; // Disable threading on Symbian
@@ -620,11 +635,11 @@ static void HandleMainMenu(TKeyCode kc) {
     
 #   if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
     case 't':
-	if (snd_port) {
+	if (g_snd_port) {
 	    static pj_bool_t act_loudspk = PJ_TRUE;
 	    pjmedia_snd_stream *strm;
 	    
-	    strm = pjmedia_snd_port_get_snd_stream(snd_port);
+	    strm = pjmedia_snd_port_get_snd_stream(g_snd_port);
 	    pjmedia_snd_aps_activate_loudspeaker(strm, act_loudspk);
 	    act_loudspk = !act_loudspk;
 	} else {
@@ -997,9 +1012,9 @@ int ua_main()
 		  max_stack_file, max_stack_line));
 #endif
 	
-    if (snd_port) {
-	pjmedia_snd_port_destroy(snd_port);
-	snd_port = NULL;
+    if (g_snd_port) {
+	pjmedia_snd_port_destroy(g_snd_port);
+	g_snd_port = NULL;
     }
 
     // Release application pool

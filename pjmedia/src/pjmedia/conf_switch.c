@@ -587,6 +587,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
 
+    /* Source and sink format must match. */
+    if (src_port->info->format.u32 != dst_port->info->format.u32) {
+	pj_mutex_unlock(conf->mutex);
+	return PJMEDIA_ENOTCOMPATIBLE;
+    }
+
     /* Source and sink ptime must be equal or a multiplication factor. */
     if ((src_port->info->samples_per_frame % 
 	 dst_port->info->samples_per_frame != 0) &&
@@ -597,14 +603,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 	return PJMEDIA_ENCSAMPLESPFRAME;
     }
     
-    /* Check if source and sink has compatible format */
-    if (src_slot != 0 && sink_slot != 0 && 
-	src_port->port->info.format.u32 != dst_port->port->info.format.u32)
-    {
-	pj_mutex_unlock(conf->mutex);
-	return PJMEDIA_ENOTCOMPATIBLE;
-    }
-
     /* Check if sink is listening to other ports */
     if (dst_port->transmitter_cnt > 0) {
 	pj_mutex_unlock(conf->mutex);
@@ -953,8 +951,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Level adjustment is applicable only for ports that work with raw PCM. */
-    PJ_ASSERT_RETURN(conf_port->info->format.u32 == 0 || 
-		     conf_port->info->format.u32 == PJMEDIA_FOURCC_L16,
+    PJ_ASSERT_RETURN(conf_port->info->format.u32 == PJMEDIA_FORMAT_L16,
 		     PJ_EIGNORED);
 
     /* Set normalized adjustment level. */
@@ -988,8 +985,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Level adjustment is applicable only for ports that work with raw PCM. */
-    PJ_ASSERT_RETURN(conf_port->info->format.u32 == 0 || 
-		     conf_port->info->format.u32 == PJMEDIA_FOURCC_L16,
+    PJ_ASSERT_RETURN(conf_port->info->format.u32 == PJMEDIA_FORMAT_L16,
 		     PJ_EIGNORED);
 
     /* Set normalized adjustment level. */
@@ -1113,8 +1109,8 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
     } else if (frm_src->type == PJMEDIA_FRAME_TYPE_NONE) {
 
 	/* Check port format. */
-	if (cport_dst->port && (cport_dst->port->info.format.u32==0 ||
-	    cport_dst->port->info.format.u32 == PJMEDIA_FOURCC_L16))
+	if (cport_dst->port &&
+	    cport_dst->port->info.format.u32 == PJMEDIA_FORMAT_L16)
 	{
 	    /* When there is already some samples in listener's TX buffer, 
 	     * pad the buffer with "zero samples".
@@ -1265,7 +1261,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 						    f->size >> 1);
 		}
 	    } else if (f->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
-		/* For extended frame, TX level is unknown, so we just set 
+		/* For extended frame, level is unknown, so we just set 
 		 * it to NORMAL_LEVEL. 
 		 */
 		level = NORMAL_LEVEL;
@@ -1473,7 +1469,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 					    f->size >> 1);
 	}
     } else if (f->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
-	/* For extended frame, TX level is unknown, so we just set 
+	/* For extended frame, level is unknown, so we just set 
 	 * it to NORMAL_LEVEL. 
 	 */
 	level = NORMAL_LEVEL;

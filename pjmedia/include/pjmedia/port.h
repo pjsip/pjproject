@@ -212,7 +212,7 @@ typedef struct pjmedia_port_info
     pj_bool_t	    has_info;		/**< Has info?			    */
     pj_bool_t	    need_info;		/**< Need info on connect?	    */
     unsigned	    pt;			/**< Payload type (can be dynamic). */
-    pjmedia_fourcc  format;		/**< Format (FourCC identifier)	    */
+    pjmedia_format  format;		/**< Format.			    */
     pj_str_t	    encoding_name;	/**< Encoding name.		    */
     unsigned	    clock_rate;		/**< Sampling rate.		    */
     unsigned	    channel_count;	/**< Number of channels.	    */
@@ -358,7 +358,7 @@ PJ_INLINE(pjmedia_frame_ext_subframe*)
  * @param frm		    The #pjmedia_frame_ext.
  * @param n		    Number of first subframes to be popped out.
  *
- * @return		    PJ_SUCCESS, or PJ_ENOTFOUND if frame is empty.
+ * @return		    PJ_SUCCESS when successful.
  */
 PJ_INLINE(pj_status_t) 
 	  pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)

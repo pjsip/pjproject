@@ -179,28 +179,28 @@ typedef struct pjmedia_sock_info
 } pjmedia_sock_info;
 
 /**
- * Declaration of FourCC type.
+ * Declaration of format.
  */
-typedef union pjmedia_fourcc {
+typedef union pjmedia_format {
    pj_uint32_t  u32;
    char         c[4];
-} pjmedia_fourcc;
+} pjmedia_format;
 
 
 /**
- * FourCC packing macro.
+ * Macro for packing format.
  */
-#define PJMEDIA_FOURCC_PACK(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
+#define PJMEDIA_FORMAT_PACK(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
 
 /**
- * FourCC identifier definitions.
+ * Format identifier definitions.
  */
-#define PJMEDIA_FOURCC_L16	PJMEDIA_FOURCC_PACK(' ', 'L', '1', '6')
-#define PJMEDIA_FOURCC_PCMA	PJMEDIA_FOURCC_PACK('A', 'L', 'A', 'W')
-#define PJMEDIA_FOURCC_PCMU	PJMEDIA_FOURCC_PACK('u', 'L', 'A', 'W')
-#define PJMEDIA_FOURCC_AMR	PJMEDIA_FOURCC_PACK(' ', 'A', 'M', 'R')
-#define PJMEDIA_FOURCC_G729	PJMEDIA_FOURCC_PACK('G', '7', '2', '9')
-#define PJMEDIA_FOURCC_ILBC	PJMEDIA_FOURCC_PACK('I', 'L', 'B', 'C')
+#define PJMEDIA_FORMAT_L16	0
+#define PJMEDIA_FORMAT_PCMA	PJMEDIA_FORMAT_PACK('A', 'L', 'A', 'W')
+#define PJMEDIA_FORMAT_PCMU	PJMEDIA_FORMAT_PACK('u', 'L', 'A', 'W')
+#define PJMEDIA_FORMAT_AMR	PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R')
+#define PJMEDIA_FORMAT_G729	PJMEDIA_FORMAT_PACK('G', '7', '2', '9')
+#define PJMEDIA_FORMAT_ILBC	PJMEDIA_FORMAT_PACK('I', 'L', 'B', 'C')
 
 
 /**

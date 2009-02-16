@@ -155,7 +155,7 @@ static struct codec_desc {
     int		     enabled;		/* Is this codec enabled?	    */
     const char	    *name;		/* Codec name.			    */
     pj_uint8_t	     pt;		/* Payload type.		    */
-    pjmedia_fourcc   format;		/* Source format.		    */
+    pjmedia_format   format;		/* Source format.		    */
     unsigned	     clock_rate;	/* Codec's clock rate.		    */
     unsigned	     channel_count;	/* Codec's channel count.	    */
     unsigned	     samples_per_frame;	/* Codec's samples count.	    */
@@ -172,7 +172,7 @@ static struct codec_desc {
 codec_desc[] = 
 {
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
-    {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       {PJMEDIA_FOURCC_AMR},
+    {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       {PJMEDIA_FORMAT_AMR},
 		    8000, 1, 160, 
 		    7400, 12200, 2, 1, 1,
 		    &parse_amr, &pack_amr
@@ -181,14 +181,14 @@ codec_desc[] =
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
-    {1, "G729",	    PJMEDIA_RTP_PT_G729,      {PJMEDIA_FOURCC_G729},
+    {1, "G729",	    PJMEDIA_RTP_PT_G729,      {PJMEDIA_FORMAT_G729},
 		    8000, 1,  80,
 		    8000, 8000, 2, 1, 1
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
-    {1, "iLBC",	    PJMEDIA_RTP_PT_ILBC,      {PJMEDIA_FOURCC_ILBC},
+    {1, "iLBC",	    PJMEDIA_RTP_PT_ILBC,      {PJMEDIA_FORMAT_ILBC},
 		    8000, 1,  240,
 		    13333, 15200, 1, 1, 1,
 		    NULL, NULL,
@@ -197,14 +197,14 @@ codec_desc[] =
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU
-    {1, "PCMU",	    PJMEDIA_RTP_PT_PCMU,      {PJMEDIA_FOURCC_PCMU},
+    {1, "PCMU",	    PJMEDIA_RTP_PT_PCMU,      {PJMEDIA_FORMAT_PCMU},
 		    8000, 1,  80,
 		    64000, 64000, 2, 1, 1
     },
 #   endif
 
 #   if PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA
-    {1, "PCMA",	    PJMEDIA_RTP_PT_PCMA,      {PJMEDIA_FOURCC_PCMA},
+    {1, "PCMA",	    PJMEDIA_RTP_PT_PCMA,      {PJMEDIA_FORMAT_PCMA},
 		    8000, 1,  80,
 		    64000, 64000, 2, 1, 1
     },
