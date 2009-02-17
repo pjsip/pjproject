@@ -313,6 +313,10 @@ SOURCE=..\include\pjmedia\alaw_ulaw.h
 # End Source File
 # Begin Source File
 
+SOURCE=..\include\pjmedia\audio_dev.h
+# End Source File
+# Begin Source File
+
 SOURCE=..\include\pjmedia\bidirectional.h
 # End Source File
 # Begin Source File
