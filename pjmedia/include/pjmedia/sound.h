@@ -92,6 +92,22 @@ typedef struct pjmedia_snd_stream_info
     unsigned	play_latency;	    /**< Playback latency, in samples.	    */
 } pjmedia_snd_stream_info;
 
+/**
+ * Audio routing destination.
+ */
+typedef enum pjmedia_snd_route
+{
+    /** Route to default destination */
+    PJMEDIA_SND_ROUTE_DEFAULT,
+
+    /** Route to loudspeaker */
+    PJMEDIA_SND_ROUTE_LOUDSPEAKER,
+
+    /** Route to earpiece */
+    PJMEDIA_SND_ROUTE_EARPIECE,
+
+} pjmedia_snd_route;
+
 
 /** 
  * Stream setting for opening sound device with non-PCM data.
@@ -99,13 +115,9 @@ typedef struct pjmedia_snd_stream_info
 typedef struct pjmedia_snd_setting
 {
     pjmedia_format	format;	  /**< Format.			    */ 
-    pj_uint32_t		bitrate;  /**< Bitrate (bps).		    */
-    pj_uint32_t		mode;	  /**< Mode, e.g: iLBC format has
-				       20ms or 30ms frame size.	    */
     pj_bool_t		plc;	  /**< PLC enabled/disabled.	    */
-    pj_bool_t		vad;	  /**< VAD enabled/disabled.	    */
     pj_bool_t		cng;	  /**< CNG enabled/disabled.	    */
-    pj_bool_t		loudspk;  /**< Audio routed to loudspeaker. */
+    pjmedia_snd_route	route;	  /**< Audio routing.		    */
 } pjmedia_snd_setting;
 
 

@@ -289,7 +289,7 @@ static pj_status_t play_cb_ext(/* in */   void *user_data,
 	void (*decoder)(pj_int16_t*, const pj_uint8_t*, pj_size_t) = NULL;
 	unsigned i, size_decoded;
 
-	switch (snd_port->setting.format.u32) {
+	switch (snd_port->setting.format.fmt_id) {
 	case PJMEDIA_FORMAT_PCMA:
 	    decoder = &pjmedia_alaw_decode;
 	    break;
@@ -298,7 +298,7 @@ static pj_status_t play_cb_ext(/* in */   void *user_data,
 	    break;
 	default:
 	    PJ_LOG(1,(THIS_FILE, "Unsupported format %d", 
-		      snd_port->setting.format.u32));
+		      snd_port->setting.format.fmt_id));
 	    goto no_frame;
 	}
 
@@ -391,7 +391,7 @@ static pj_status_t rec_cb_ext(/* in */   void *user_data,
     fx->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
     fx->base.timestamp.u32.lo = timestamp;
 
-    switch (snd_port->setting.format.u32) {
+    switch (snd_port->setting.format.fmt_id) {
     case PJMEDIA_FORMAT_PCMA:
 	encoder = &pjmedia_alaw_encode;
 	break;
@@ -400,7 +400,7 @@ static pj_status_t rec_cb_ext(/* in */   void *user_data,
 	break;
     default:
 	PJ_LOG(1,(THIS_FILE, "Unsupported format %d", 
-		  snd_port->setting.format.u32));
+		  snd_port->setting.format.fmt_id));
 	return PJ_SUCCESS;
     }
 
@@ -434,7 +434,7 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 		     snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK,
 		     PJ_EBUG);
 
-    if (snd_port->setting.format.u32 == PJMEDIA_FORMAT_L16) {
+    if (snd_port->setting.format.fmt_id == PJMEDIA_FORMAT_L16) {
 	snd_rec_cb = &rec_cb;
 	snd_play_cb = &play_cb;
     } else {
@@ -715,7 +715,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
 
 #if !defined(PJMEDIA_SND_SUPPORT_OPEN2) || PJMEDIA_SND_SUPPORT_OPEN2==0
     /* For devices that doesn't support open2(), enable simulation */
-    if (snd_port->setting.format.u32 != PJMEDIA_FORMAT_L16) {
+    if (snd_port->setting.format.fmt_id != PJMEDIA_FORMAT_L16) {
 	snd_port->frm_buf_size = sizeof(pjmedia_frame_ext) + 
 				 (samples_per_frame << 1) +
 				 16 * sizeof(pjmedia_frame_ext_subframe);

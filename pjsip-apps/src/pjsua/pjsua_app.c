@@ -2433,6 +2433,7 @@ static void on_call_stream_created(pjsua_call_id call_id,
 {
     pjmedia_port *conf;
     pjmedia_session_info sess_info;
+    pjmedia_port *port;
     pjmedia_stream_info *strm_info;
     pjmedia_snd_setting setting;
     unsigned samples_per_frame;
@@ -2445,12 +2446,12 @@ static void on_call_stream_created(pjsua_call_id call_id,
     pjmedia_session_get_info(sess, &sess_info);
     strm_info = &sess_info.stream_info[stream_idx];
 
+    pjmedia_session_get_port(sess, stream_idx, &port);
+
     /* Init sound device setting based on stream info. */
     pj_bzero(&setting, sizeof(setting));
-    setting.format = strm_info->param->info.format;
-    setting.bitrate = strm_info->param->info.avg_bps;
+    setting.format = port->info.format;
     setting.cng = strm_info->param->setting.cng;
-    setting.vad = strm_info->param->setting.vad;
     setting.plc = strm_info->param->setting.plc;
 
     /* Close sound device and get the conference port. */

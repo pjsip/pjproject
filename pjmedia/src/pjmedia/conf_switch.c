@@ -588,7 +588,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     dst_port = conf->ports[sink_slot];
 
     /* Source and sink format must match. */
-    if (src_port->info->format.u32 != dst_port->info->format.u32) {
+    if (src_port->info->format.fmt_id != dst_port->info->format.fmt_id) {
 	pj_mutex_unlock(conf->mutex);
 	return PJMEDIA_ENOTCOMPATIBLE;
     }
@@ -951,7 +951,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Level adjustment is applicable only for ports that work with raw PCM. */
-    PJ_ASSERT_RETURN(conf_port->info->format.u32 == PJMEDIA_FORMAT_L16,
+    PJ_ASSERT_RETURN(conf_port->info->format.fmt_id == PJMEDIA_FORMAT_L16,
 		     PJ_EIGNORED);
 
     /* Set normalized adjustment level. */
@@ -985,7 +985,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Level adjustment is applicable only for ports that work with raw PCM. */
-    PJ_ASSERT_RETURN(conf_port->info->format.u32 == PJMEDIA_FORMAT_L16,
+    PJ_ASSERT_RETURN(conf_port->info->format.fmt_id == PJMEDIA_FORMAT_L16,
 		     PJ_EIGNORED);
 
     /* Set normalized adjustment level. */
@@ -1110,7 +1110,7 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 
 	/* Check port format. */
 	if (cport_dst->port &&
-	    cport_dst->port->info.format.u32 == PJMEDIA_FORMAT_L16)
+	    cport_dst->port->info.format.fmt_id == PJMEDIA_FORMAT_L16)
 	{
 	    /* When there is already some samples in listener's TX buffer, 
 	     * pad the buffer with "zero samples".

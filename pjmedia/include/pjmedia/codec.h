@@ -275,7 +275,7 @@ typedef struct pjmedia_codec_param
 					     equal to decoder ptime.	    */
        pj_uint8_t  pcm_bits_per_sample;	/**< Bits/sample in the PCM side    */
        pj_uint8_t  pt;			/**< Payload type.		    */
-       pjmedia_format format;		/**< Source format, it's format of
+       pjmedia_format_id fmt_id;	/**< Source format, it's format of
 					     encoder input and decoder 
 					     output.			    */
     } info;

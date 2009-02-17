@@ -178,14 +178,6 @@ typedef struct pjmedia_sock_info
 
 } pjmedia_sock_info;
 
-/**
- * Declaration of format.
- */
-typedef union pjmedia_format {
-   pj_uint32_t  u32;
-   char         c[4];
-} pjmedia_format;
-
 
 /**
  * Macro for packing format.
@@ -193,14 +185,35 @@ typedef union pjmedia_format {
 #define PJMEDIA_FORMAT_PACK(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
 
 /**
- * Format identifier definitions.
+ * Format identifier definition.
  */
-#define PJMEDIA_FORMAT_L16	0
-#define PJMEDIA_FORMAT_PCMA	PJMEDIA_FORMAT_PACK('A', 'L', 'A', 'W')
-#define PJMEDIA_FORMAT_PCMU	PJMEDIA_FORMAT_PACK('u', 'L', 'A', 'W')
-#define PJMEDIA_FORMAT_AMR	PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R')
-#define PJMEDIA_FORMAT_G729	PJMEDIA_FORMAT_PACK('G', '7', '2', '9')
-#define PJMEDIA_FORMAT_ILBC	PJMEDIA_FORMAT_PACK('I', 'L', 'B', 'C')
+typedef enum pjmedia_format_id
+{
+    PJMEDIA_FORMAT_L16	    = 0,
+    PJMEDIA_FORMAT_PCMA	    = PJMEDIA_FORMAT_PACK('A', 'L', 'A', 'W'),
+    PJMEDIA_FORMAT_PCMU	    = PJMEDIA_FORMAT_PACK('u', 'L', 'A', 'W'),
+    PJMEDIA_FORMAT_AMR	    = PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R'),
+    PJMEDIA_FORMAT_G729	    = PJMEDIA_FORMAT_PACK('G', '7', '2', '9'),
+    PJMEDIA_FORMAT_ILBC	    = PJMEDIA_FORMAT_PACK('I', 'L', 'B', 'C')
+} pjmedia_format_id;
+
+
+/**
+ * Media format information.
+ */
+typedef struct pjmedia_format
+{
+    /** Format ID */
+    pjmedia_format_id	fmt_id;
+
+    /** Bitrate. */
+    pj_uint32_t		bitrate;
+
+    /** Flag to indicate whether VAD is enabled */
+    pj_bool_t		vad;
+
+} pjmedia_format;
+
 
 
 /**
