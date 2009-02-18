@@ -61,6 +61,7 @@ typedef struct pjmedia_conf_port_info
     pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
     unsigned		listener_cnt;	    /**< Number of listeners.	    */
     unsigned	       *listener_slots;	    /**< Array of listeners.	    */
+    unsigned		transmitter_cnt;    /**< Number of transmitter.	    */
     unsigned		clock_rate;	    /**< Clock rate of the port.    */
     unsigned		channel_count;	    /**< Number of channels.	    */
     unsigned		samples_per_frame;  /**< Samples per frame	    */

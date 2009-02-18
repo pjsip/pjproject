@@ -587,10 +587,24 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
 
-    /* Source and sink format must match. */
-    if (src_port->info->format.fmt_id != dst_port->info->format.fmt_id) {
+    /* Format must match. */
+    if (src_port->info->format.id != dst_port->info->format.id ||
+	src_port->info->format.bitrate != dst_port->info->format.bitrate) 
+    {
 	pj_mutex_unlock(conf->mutex);
 	return PJMEDIA_ENOTCOMPATIBLE;
+    }
+
+    /* Clock rate must match. */
+    if (src_port->info->clock_rate != dst_port->info->clock_rate) {
+	pj_mutex_unlock(conf->mutex);
+	return PJMEDIA_ENCCLOCKRATE;
+    }
+
+    /* Channel count must match. */
+    if (src_port->info->channel_count != dst_port->info->channel_count) {
+	pj_mutex_unlock(conf->mutex);
+	return PJMEDIA_ENCCLOCKRATE;
     }
 
     /* Source and sink ptime must be equal or a multiplication factor. */
@@ -865,6 +879,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->rx_setting = conf_port->rx_setting;
     info->listener_cnt = conf_port->listener_cnt;
     info->listener_slots = conf_port->listener_slots;
+    info->transmitter_cnt = conf_port->transmitter_cnt;
     info->clock_rate = conf_port->info->clock_rate;
     info->channel_count = conf_port->info->channel_count;
     info->samples_per_frame = conf_port->info->samples_per_frame;
@@ -951,7 +966,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Level adjustment is applicable only for ports that work with raw PCM. */
-    PJ_ASSERT_RETURN(conf_port->info->format.fmt_id == PJMEDIA_FORMAT_L16,
+    PJ_ASSERT_RETURN(conf_port->info->format.id == PJMEDIA_FORMAT_L16,
 		     PJ_EIGNORED);
 
     /* Set normalized adjustment level. */
@@ -985,7 +1000,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     conf_port = conf->ports[slot];
 
     /* Level adjustment is applicable only for ports that work with raw PCM. */
-    PJ_ASSERT_RETURN(conf_port->info->format.fmt_id == PJMEDIA_FORMAT_L16,
+    PJ_ASSERT_RETURN(conf_port->info->format.id == PJMEDIA_FORMAT_L16,
 		     PJ_EIGNORED);
 
     /* Set normalized adjustment level. */
@@ -1049,6 +1064,7 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 
 	f_start = (pj_int16_t*)frm_src->buf;
 	f_end   = f_start + (frm_src->size >> 1);
+
 	while (f_start < f_end) {
 	    unsigned nsamples_to_copy, nsamples_req;
 
@@ -1110,7 +1126,7 @@ static pj_status_t write_frame(struct conf_port *cport_dst,
 
 	/* Check port format. */
 	if (cport_dst->port &&
-	    cport_dst->port->info.format.fmt_id == PJMEDIA_FORMAT_L16)
+	    cport_dst->port->info.format.id == PJMEDIA_FORMAT_L16)
 	{
 	    /* When there is already some samples in listener's TX buffer, 
 	     * pad the buffer with "zero samples".
@@ -1209,6 +1225,8 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    cport->listener_cnt == 0)
 	{
 	    cport->rx_level = 0;
+	    pj_add_timestamp32(&cport->ts_rx, 
+			       conf->master_port->info.samples_per_frame);
 	    continue;
 	}
 
@@ -1225,7 +1243,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    pj_add_timestamp32(&cport->ts_rx, cport->info->samples_per_frame);
 	    
 	    f->buf = &conf->buf[sizeof(pjmedia_frame)];
-	    f->size = BUFFER_SIZE - sizeof(pjmedia_frame);
+	    f->size = cport->info->samples_per_frame<<1;
 
 	    /* Get frame from port. */
 	    status = pjmedia_port_get_frame(cport->port, f);

@@ -1171,6 +1171,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->rx_setting = conf_port->rx_setting;
     info->listener_cnt = conf_port->listener_cnt;
     info->listener_slots = conf_port->listener_slots;
+    info->transmitter_cnt = conf_port->transmitter_cnt;
     info->clock_rate = conf_port->clock_rate;
     info->channel_count = conf_port->channel_count;
     info->samples_per_frame = conf_port->samples_per_frame;

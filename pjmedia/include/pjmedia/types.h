@@ -204,7 +204,7 @@ typedef enum pjmedia_format_id
 typedef struct pjmedia_format
 {
     /** Format ID */
-    pjmedia_format_id	fmt_id;
+    pjmedia_format_id	id;
 
     /** Bitrate. */
     pj_uint32_t		bitrate;

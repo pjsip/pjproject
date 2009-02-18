@@ -91,9 +91,6 @@ static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
 static pjsua_call_id g_call_id = PJSUA_INVALID_ID;
 static pjsua_buddy_id g_buddy_id = PJSUA_INVALID_ID;
 
-static pj_pool_t *app_pool;
-static pjmedia_snd_port *g_snd_port;
-
 
 /* Callback called by the library upon receiving incoming call */
 static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
@@ -253,109 +250,6 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 			 (int)new_ci.remote_info.slen, new_ci.remote_info.ptr));
 }
 
-/* Notification that stream is created. */
-static void on_stream_created(pjsua_call_id call_id, 
-			      pjmedia_session *sess,
-			      unsigned stream_idx, 
-			      pjmedia_port **p_port)
-{
-    pjmedia_port *conf;
-    pjmedia_session_info sess_info;
-    pjmedia_stream_info *strm_info;
-    pjmedia_snd_setting setting;
-    unsigned samples_per_frame;
-    pj_status_t status;
-    
-    PJ_UNUSED_ARG(call_id);
-    PJ_UNUSED_ARG(p_port);
-    
-    status = pjmedia_session_get_info(sess, &sess_info);
-    if (status != PJ_SUCCESS) {
-	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to get session info, "
-			     "status=%d", status));
-	return;
-    }
-    
-    strm_info = &sess_info.stream_info[stream_idx];
-    if (strm_info->type != PJMEDIA_TYPE_AUDIO)
-	return;
-
-    /* Init sound device setting based on stream info. */
-    pj_bzero(&setting, sizeof(setting));
-    setting.format = strm_info->param->info.format;
-    setting.bitrate = strm_info->param->info.avg_bps;
-    setting.cng = strm_info->param->setting.cng;
-    setting.vad = strm_info->param->setting.vad;
-    setting.plc = strm_info->param->setting.plc;
-    if (setting.format.u32 == PJMEDIA_FORMAT_ILBC) {
-	unsigned i;
-	pjmedia_codec_fmtp *fmtp = &strm_info->param->setting.dec_fmtp;
-	
-	/* Initialize mode. */
-	setting.mode = 30;
-	
-	/* Get mode. */
-	for (i = 0; i < fmtp->cnt; ++i) {
-	    if (pj_stricmp2(&fmtp->param[i].name, "mode") == 0) {
-		setting.mode = (pj_uint32_t) pj_strtoul(&fmtp->param[i].val);
-		break;
-	    }
-	}
-    }
-
-    samples_per_frame = strm_info->param->info.clock_rate *
-			strm_info->param->info.frm_ptime *
-			strm_info->param->info.channel_cnt /
-			1000;
-    
-    /* Close sound device. */
-    conf = pjsua_set_no_snd_dev();
-    
-    /* Reset conference attributes. */
-    conf->info.samples_per_frame = samples_per_frame;
-    conf->info.clock_rate = strm_info->param->info.clock_rate;
-    conf->info.channel_count = strm_info->param->info.channel_cnt;
-    conf->info.bits_per_sample = 16;
-    conf->info.format = strm_info->param->info.format;
-
-    /* Reopen sound device. */
-    status = pjmedia_snd_port_create2(app_pool, 
-				      PJMEDIA_DIR_CAPTURE_PLAYBACK,
-				      0,
-				      0,
-				      strm_info->param->info.clock_rate,
-				      strm_info->param->info.channel_cnt,
-				      samples_per_frame,
-				      16,
-				      &setting,
-				      &g_snd_port);
-    if (status != PJ_SUCCESS) {
-	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to reopen sound "
-			     "device, status=%d", status));
-	return;
-    }
-    
-    status = pjmedia_snd_port_connect(g_snd_port, conf);
-    if (status != PJ_SUCCESS) {
-	PJ_LOG(1,(THIS_FILE, "on_stream_created() failed to connect sound "
-			     "device to conference, status=%d", status));
-	return;
-    }
-}
-
-static void on_stream_destroyed(pjsua_call_id call_id,
-				pjmedia_session *sess, 
-				unsigned stream_idx)
-{
-    PJ_UNUSED_ARG(call_id);
-    PJ_UNUSED_ARG(sess);
-    PJ_UNUSED_ARG(stream_idx);
-
-    if (g_snd_port) {
-    	pjmedia_snd_port_destroy(g_snd_port);
-    	g_snd_port = NULL;
-    }
-}
 
 //#include<e32debug.h>
 
@@ -396,9 +290,6 @@ static pj_status_t app_startup()
     	return status;
     }
 
-    /* Create pool for application */
-    app_pool = pjsua_pool_create("pjsua-app", 1000, 1000);
-    
     /* Init pjsua */
     pjsua_config cfg;
     pjsua_logging_config log_cfg;
@@ -419,8 +310,6 @@ static pj_status_t app_startup()
     cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     cfg.cb.on_call_replaced = &on_call_replaced;
     cfg.cb.on_nat_detect = &on_nat_detect;
-    cfg.cb.on_stream_created = &on_stream_created;
-    cfg.cb.on_stream_destroyed = &on_stream_destroyed;
     
     if (SIP_PROXY) {
 	    cfg.outbound_proxy_cnt = 1;
@@ -635,16 +524,17 @@ static void HandleMainMenu(TKeyCode kc) {
     
 #   if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
     case 't':
-	if (g_snd_port) {
-	    static pj_bool_t act_loudspk = PJ_TRUE;
-	    pjmedia_snd_stream *strm;
+	do {
+	    static pjmedia_snd_route route = PJMEDIA_SND_ROUTE_LOUDSPEAKER;
 	    
-	    strm = pjmedia_snd_port_get_snd_stream(g_snd_port);
-	    pjmedia_snd_aps_activate_loudspeaker(strm, act_loudspk);
-	    act_loudspk = !act_loudspk;
-	} else {
-	    PJ_LOG(3,(THIS_FILE, "Sound device is not active."));
-	}
+	    pjsua_set_snd_route(route);
+	    
+	    if (route == PJMEDIA_SND_ROUTE_LOUDSPEAKER)
+		route = PJMEDIA_SND_ROUTE_EARPIECE;
+	    else
+		route = PJMEDIA_SND_ROUTE_LOUDSPEAKER;
+		
+	} while(0);
 	break;
 #   endif
 	
@@ -1012,17 +902,6 @@ int ua_main()
 		  max_stack_file, max_stack_line));
 #endif
 	
-    if (g_snd_port) {
-	pjmedia_snd_port_destroy(g_snd_port);
-	g_snd_port = NULL;
-    }
-
-    // Release application pool
-    if (app_pool) {
-	pj_pool_release(app_pool);
-	app_pool = NULL;
-    }
-    
     // Shutdown pjsua
     pjsua_destroy();
     

@@ -116,7 +116,6 @@ typedef struct pjmedia_snd_setting
 {
     pjmedia_format	format;	  /**< Format.			    */ 
     pj_bool_t		plc;	  /**< PLC enabled/disabled.	    */
-    pj_bool_t		cng;	  /**< CNG enabled/disabled.	    */
     pjmedia_snd_route	route;	  /**< Audio routing.		    */
 } pjmedia_snd_setting;
 

@@ -707,7 +707,7 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
     pjmedia_snd_stream *strm = (pjmedia_snd_stream*) user_data;
     pjmedia_frame_ext *frame = (pjmedia_frame_ext*) strm->rec_buf;
     
-    switch(strm->setting.format.u32) {
+    switch(strm->setting.format.id) {
     case PJMEDIA_FORMAT_AMR:
 	{
 	    const pj_uint8_t *p = (const pj_uint8_t*)buf.iBuffer.Ptr() + 1;
@@ -756,7 +756,7 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
 	{
 	    unsigned samples_got;
 	    
-	    samples_got = strm->setting.mode == 30? 240 : 160;
+	    samples_got = strm->setting.format.bitrate == 15200? 160 : 240;
 	    
 	    /* Check if we got a normal frame. */
 	    if (buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0) {
@@ -835,7 +835,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
     buf.iStatus = 0;
     buf.iBuffer.Zero();
 
-    switch(strm->setting.format.u32) {
+    switch(strm->setting.format.id) {
     case PJMEDIA_FORMAT_AMR:
 	{
 	    if (frame->samples_cnt == 0) {
@@ -948,8 +948,11 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		
 		sf = pjmedia_frame_ext_get_subframe(frame, 0);
 		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
-		pj_assert((strm->setting.mode == 30 && samples_cnt == 240) ||
-			  (strm->setting.mode == 20 && samples_cnt == 160));
+		
+		pj_assert((strm->setting.format.bitrate == 15200 && 
+			   samples_cnt == 160) ||
+			  (strm->setting.format.bitrate != 15200 &&
+			   samples_cnt == 240));
 		
 		if (sf->data && sf->bitlen) {
 		    buf.iBuffer.Append(1);
@@ -1005,7 +1008,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 			buf.iBuffer.Append((TUint8*)sf->data, sf->bitlen>>3);
 		    } else {
 			pj_uint8_t silc;
-			silc = (strm->setting.format.u32==PJMEDIA_FORMAT_PCMU)?
+			silc = (strm->setting.format.id==PJMEDIA_FORMAT_PCMU)?
 				pjmedia_linear2ulaw(0) : pjmedia_linear2alaw(0);
 			buf.iBuffer.AppendFill(silc, samples_cnt);
 		    }
@@ -1016,7 +1019,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		} else { /* PJMEDIA_FRAME_TYPE_NONE */
 		    pj_uint8_t silc;
 		    
-		    silc = (strm->setting.format.u32==PJMEDIA_FORMAT_PCMU)?
+		    silc = (strm->setting.format.id==PJMEDIA_FORMAT_PCMU)?
 			    pjmedia_linear2ulaw(0) : pjmedia_linear2alaw(0);
 		    buf.iBuffer.AppendFill(silc, samples_req - samples_ready);
 
@@ -1105,51 +1108,62 @@ static pj_status_t sound_open(pjmedia_dir dir,
     strm->setting = *setting;
 
     /* Set audio engine fourcc. */
-    if (strm->setting.format.u32 == PJMEDIA_FORMAT_PCMU ||
-	strm->setting.format.u32 == PJMEDIA_FORMAT_PCMA ||
-	strm->setting.format.u32 == PJMEDIA_FORMAT_L16)
-    {
+    switch(strm->setting.format.id) {
+    case PJMEDIA_FORMAT_L16:
+    case PJMEDIA_FORMAT_PCMU:
+    case PJMEDIA_FORMAT_PCMA:
 	aps_setting.fourcc = TFourCC(KMCPFourCCIdG711);
-    } else {
-	aps_setting.fourcc = TFourCC(strm->setting.format.u32);
+	break;
+    case PJMEDIA_FORMAT_AMR:
+	aps_setting.fourcc = TFourCC(KMCPFourCCIdAMRNB);
+	break;
+    case PJMEDIA_FORMAT_G729:
+	aps_setting.fourcc = TFourCC(KMCPFourCCIdG729);
+	break;
+    case PJMEDIA_FORMAT_ILBC:
+	aps_setting.fourcc = TFourCC(KMCPFourCCIdILBC);
+	break;
+    default:
+	aps_setting.fourcc = 0;
+	break;
     }
 
     /* Set audio engine mode. */
-    if (strm->setting.format.u32 == PJMEDIA_FORMAT_AMR)
+    if (strm->setting.format.id == PJMEDIA_FORMAT_AMR)
     {
-	aps_setting.mode = (TAPSCodecMode)strm->setting.bitrate;
+	aps_setting.mode = (TAPSCodecMode)strm->setting.format.bitrate;
     } 
-    else if (strm->setting.format.u32 == PJMEDIA_FORMAT_PCMU ||
-	     strm->setting.format.u32 == PJMEDIA_FORMAT_L16 ||
-	    (strm->setting.format.u32 == PJMEDIA_FORMAT_ILBC  &&
-	     strm->setting.mode == 30))
+    else if (strm->setting.format.id == PJMEDIA_FORMAT_PCMU ||
+	     strm->setting.format.id == PJMEDIA_FORMAT_L16 ||
+	    (strm->setting.format.id == PJMEDIA_FORMAT_ILBC  &&
+	     strm->setting.format.bitrate != 15200))
     {
 	aps_setting.mode = EULawOr30ms;
     } 
-    else if (strm->setting.format.u32 == PJMEDIA_FORMAT_PCMA ||
-	    (strm->setting.format.u32 == PJMEDIA_FORMAT_ILBC &&
-	     strm->setting.mode == 20))
+    else if (strm->setting.format.id == PJMEDIA_FORMAT_PCMA ||
+	    (strm->setting.format.id == PJMEDIA_FORMAT_ILBC &&
+	     strm->setting.format.bitrate == 15200))
     {
 	aps_setting.mode = EALawOr20ms;
     }
 
     /* Disable VAD on L16 and G711. */
-    if (strm->setting.format.u32 == PJMEDIA_FORMAT_PCMU ||
-	strm->setting.format.u32 == PJMEDIA_FORMAT_PCMA ||
-	strm->setting.format.u32 == PJMEDIA_FORMAT_L16)
+    if (strm->setting.format.id == PJMEDIA_FORMAT_PCMU ||
+	strm->setting.format.id == PJMEDIA_FORMAT_PCMA ||
+	strm->setting.format.id == PJMEDIA_FORMAT_L16)
     {
 	aps_setting.vad = EFalse;
     } else {
-	aps_setting.vad = strm->setting.vad;
+	aps_setting.vad = strm->setting.format.vad;
     }
     
     /* Set other audio engine attributes. */
     aps_setting.plc = strm->setting.plc;
-    aps_setting.cng = strm->setting.cng;
-    aps_setting.loudspk = strm->setting.loudspk;
+    aps_setting.cng = aps_setting.vad;
+    aps_setting.loudspk = strm->setting.route == PJMEDIA_SND_ROUTE_LOUDSPEAKER;
 
     /* Set audio engine callbacks. */
-    if (strm->setting.format.u32 == PJMEDIA_FORMAT_L16) {
+    if (strm->setting.format.id == PJMEDIA_FORMAT_L16) {
 	aps_play_cb = &PlayCbPcm;
 	aps_rec_cb  = &RecCbPcm;
     } else {
@@ -1179,7 +1193,7 @@ static pj_status_t sound_open(pjmedia_dir dir,
     strm->rec_buf  = (pj_int16_t*)pj_pool_zalloc(pool, samples_per_frame << 1);
     strm->rec_buf_len = 0;
 
-    if (strm->setting.format.u32 == PJMEDIA_FORMAT_G729) {
+    if (strm->setting.format.id == PJMEDIA_FORMAT_G729) {
 	TBitStream *g729_bitstream = new TBitStream;
 	
 	PJ_ASSERT_RETURN(g729_bitstream, PJ_ENOMEM);
@@ -1211,7 +1225,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     PJ_ASSERT_RETURN(index == 0, PJ_EINVAL);
 
     pj_bzero(&setting, sizeof(setting));
-    setting.format.u32 = PJMEDIA_FORMAT_L16;
+    setting.format.id = PJMEDIA_FORMAT_L16;
     
     return sound_open(PJMEDIA_DIR_CAPTURE, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, rec_cb, NULL,
@@ -1233,7 +1247,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     PJ_ASSERT_RETURN(index == 0, PJ_EINVAL);
 
     pj_bzero(&setting, sizeof(setting));
-    setting.format.u32 = PJMEDIA_FORMAT_L16;
+    setting.format.id = PJMEDIA_FORMAT_L16;
 
     return sound_open(PJMEDIA_DIR_PLAYBACK, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, NULL, play_cb,
@@ -1258,7 +1272,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     PJ_ASSERT_RETURN(play_id == 0 && rec_id == 0, PJ_EINVAL);
 
     pj_bzero(&setting, sizeof(setting));
-    setting.format.u32 = PJMEDIA_FORMAT_L16;
+    setting.format.id = PJMEDIA_FORMAT_L16;
 
     return sound_open(PJMEDIA_DIR_CAPTURE_PLAYBACK, clock_rate, channel_count,
 		      samples_per_frame, bits_per_sample, rec_cb, play_cb,
@@ -1346,7 +1360,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
     delete stream->engine;
     stream->engine = NULL;
 
-    if (stream->setting.format.u32 == PJMEDIA_FORMAT_G729) {
+    if (stream->setting.format.id == PJMEDIA_FORMAT_G729) {
 	TBitStream *g729_bitstream = (TBitStream*)stream->strm_data;
 	stream->strm_data = NULL;
 	delete g729_bitstream;

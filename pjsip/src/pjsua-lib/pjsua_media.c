@@ -1509,6 +1509,138 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     return PJ_SUCCESS;
 }
 
+#if PJMEDIA_CONF_USE_SWITCH_BOARD
+
+/*
+ * Open sound device with extended setting.
+ */
+static pj_status_t open_snd_dev_ext( int capture_dev,
+				     int playback_dev,
+				     unsigned clock_rate,
+				     unsigned channel_count,
+				     unsigned samples_per_frame,
+				     const pjmedia_snd_setting *setting)
+{
+    pjmedia_port *conf_port;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(setting, PJ_EINVAL);
+
+    /* Check if NULL sound device is used */
+    if (NULL_SND_DEV_ID == capture_dev || NULL_SND_DEV_ID == playback_dev) {
+	return pjsua_set_null_snd_dev();
+    }
+
+    /* Close existing sound port */
+    close_snd_dev();
+
+    /* Create memory pool for sound device. */
+    pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
+    PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
+
+
+    /* Get the port0 of the conference bridge. */
+    conf_port = pjmedia_conf_get_master_port(pjsua_var.mconf);
+    pj_assert(conf_port != NULL);
+
+    PJ_LOG(4,(THIS_FILE, "Opening sound device @%d/%d/%s",
+	      clock_rate, channel_count,
+	      (setting->format.id==PJMEDIA_FORMAT_L16?"raw":"encoded")));
+
+    status = pjmedia_snd_port_create2( pjsua_var.snd_pool, 
+				       PJMEDIA_DIR_CAPTURE_PLAYBACK,
+				       capture_dev,
+				       playback_dev, 
+				       clock_rate, 
+				       channel_count,
+				       samples_per_frame,
+				       16, 
+				       setting, 
+				       &pjsua_var.snd_port);
+
+    /* Update port 0 info when sound dev opened successfully. */
+    if (status == PJ_SUCCESS) {
+	conf_port->info.format = setting->format;
+	conf_port->info.clock_rate = clock_rate;
+	conf_port->info.samples_per_frame = samples_per_frame;
+	conf_port->info.channel_count = channel_count;
+	conf_port->info.bits_per_sample = 16;
+    } else {
+	pjsua_perror(THIS_FILE, "Unable to open sound device", status);
+	return status;
+    }
+
+    /* Connect sound port to the bridge */
+    status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 
+				      conf_port ); 	 
+    if (status != PJ_SUCCESS) { 	 
+	pjsua_perror(THIS_FILE, "Unable to connect conference port to "
+			        "sound device", status); 	 
+	pjmedia_snd_port_destroy(pjsua_var.snd_port); 	 
+	pjsua_var.snd_port = NULL; 	 
+	return status; 	 
+    }
+
+    /* Save the device IDs */
+    pjsua_var.cap_dev = capture_dev;
+    pjsua_var.play_dev = playback_dev;
+
+    /* Update sound device name. */
+    do {
+	const pjmedia_snd_dev_info *play_info;
+	pjmedia_snd_stream *strm;
+	pjmedia_snd_stream_info si;
+        pj_str_t tmp;
+
+	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
+	pjmedia_snd_stream_get_info(strm, &si);
+	play_info = pjmedia_snd_get_dev_info(si.rec_id);
+
+	pjmedia_conf_set_port0_name(pjsua_var.mconf, 
+				    pj_cstr(&tmp, play_info->name));
+    } while(0);
+
+    return PJ_SUCCESS;
+}
+
+#endif
+
+
+/* Close existing sound device */
+static void close_snd_dev(void)
+{
+    /* Close sound device */
+    if (pjsua_var.snd_port) {
+	pjmedia_snd_dev_info cap_info, play_info;
+	pjmedia_snd_stream *strm;
+	pjmedia_snd_stream_info si;
+
+	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
+	pjmedia_snd_stream_get_info(strm, &si);
+	cap_info = *(pjmedia_snd_get_dev_info(si.rec_id));
+	play_info = *(pjmedia_snd_get_dev_info(si.play_id));
+
+	PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
+			     "%s sound capture device",
+			     play_info.name, cap_info.name));
+
+	pjmedia_snd_port_disconnect(pjsua_var.snd_port);
+	pjmedia_snd_port_destroy(pjsua_var.snd_port);
+	pjsua_var.snd_port = NULL;
+    }
+
+    /* Close null sound device */
+    if (pjsua_var.null_snd) {
+	PJ_LOG(4,(THIS_FILE, "Closing null sound device.."));
+	pjmedia_master_port_destroy(pjsua_var.null_snd, PJ_FALSE);
+	pjsua_var.null_snd = NULL;
+    }
+
+    if (pjsua_var.snd_pool) 
+	pj_pool_release(pjsua_var.snd_pool);
+    pjsua_var.snd_pool = NULL;
+}
+
 
 /*
  * Get maxinum number of conference ports.
@@ -1624,6 +1756,67 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	pjsua_var.snd_idle_timer.id = PJ_FALSE;
     }
 
+#if PJMEDIA_CONF_USE_SWITCH_BOARD
+
+    /* Check if sound device need to be reopened, i.e: its attributes
+     * (format, clock rate, channel count) must match to peer's. 
+     * Note that sound device can be reopened only if it doesn't have
+     * any connection.
+     */
+    do {
+	pjmedia_conf_port_info port0_info;
+	pjmedia_conf_port_info peer_info;
+	unsigned peer_id;
+	pj_bool_t need_reopen = PJ_FALSE;
+	pj_status_t status;
+
+	peer_id = (source!=0)? source : sink;
+	status = pjmedia_conf_get_port_info(pjsua_var.mconf, peer_id, 
+					    &peer_info);
+	pj_assert(status == PJ_SUCCESS);
+
+	status = pjmedia_conf_get_port_info(pjsua_var.mconf, 0, &port0_info);
+	pj_assert(status == PJ_SUCCESS);
+
+	/* Check if sound device is instantiated. */
+	need_reopen = (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
+		      !pjsua_var.no_snd);
+
+	/* Check if sound device need to reopen because it needs to modify 
+	 * settings to match its peer. Sound device must be idle in this case 
+	 * though.
+	 */
+	if (!need_reopen && 
+	    port0_info.listener_cnt==0 && port0_info.transmitter_cnt==0) 
+	{
+	    need_reopen = (peer_info.format.id != port0_info.format.id ||
+			   peer_info.format.bitrate != port0_info.format.bitrate ||
+			   peer_info.clock_rate != port0_info.clock_rate ||
+			   peer_info.channel_count != port0_info.channel_count);
+	}
+
+	if (need_reopen) {
+	    pjmedia_snd_setting setting;
+
+	    pj_bzero(&setting, sizeof(setting));
+	    setting.format = peer_info.format;
+	    setting.plc = PJ_FALSE;
+	    setting.route = PJMEDIA_SND_ROUTE_DEFAULT;
+	    
+	    status = open_snd_dev_ext(pjsua_var.cap_dev, pjsua_var.play_dev,
+				      peer_info.clock_rate,
+				      peer_info.channel_count,
+				      peer_info.samples_per_frame,
+				      &setting);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		return status;
+	    }
+	}
+    } while(0);
+
+#else
+
     /* Create sound port if none is instantiated */
     if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
 	!pjsua_var.no_snd) 
@@ -1636,6 +1829,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	    return status;
 	}
     }
+
+#endif
 
     return pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 0);
 }
@@ -2131,39 +2326,6 @@ PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_snd_dev_info info[],
 
     return PJ_SUCCESS;
 }
-
-
-/* Close existing sound device */
-static void close_snd_dev(void)
-{
-    /* Close sound device */
-    if (pjsua_var.snd_port) {
-	const pjmedia_snd_dev_info *cap_info, *play_info;
-
-	cap_info = pjmedia_snd_get_dev_info(pjsua_var.cap_dev);
-	play_info = pjmedia_snd_get_dev_info(pjsua_var.play_dev);
-
-	PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
-			     "%s sound capture device",
-			     play_info->name, cap_info->name));
-
-	pjmedia_snd_port_disconnect(pjsua_var.snd_port);
-	pjmedia_snd_port_destroy(pjsua_var.snd_port);
-	pjsua_var.snd_port = NULL;
-    }
-
-    /* Close null sound device */
-    if (pjsua_var.null_snd) {
-	PJ_LOG(4,(THIS_FILE, "Closing null sound device.."));
-	pjmedia_master_port_destroy(pjsua_var.null_snd, PJ_FALSE);
-	pjsua_var.null_snd = NULL;
-    }
-
-    if (pjsua_var.snd_pool) 
-	pj_pool_release(pjsua_var.snd_pool);
-    pjsua_var.snd_pool = NULL;
-}
-
 /*
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
@@ -2417,6 +2579,17 @@ PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Set sound device route.
+ */
+PJ_DEF(pj_status_t) pjsua_set_snd_route(pjmedia_snd_route route)
+{
+    PJ_UNUSED_ARG(route);
+
+    PJ_TODO(IMPLEMENT_SETTING_AUDIO_ROUTE);
+    return PJ_ENOTSUP;
+}
 
 /*****************************************************************************
  * Codecs.

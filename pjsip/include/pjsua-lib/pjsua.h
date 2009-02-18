@@ -4912,6 +4912,15 @@ PJ_DECL(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options);
 PJ_DECL(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms);
 
 
+/**
+ * Set sound device route.
+ *
+ * @param route		Sound device route to be set.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_set_snd_route(pjmedia_snd_route route);
+
 
 /*****************************************************************************
  * Codecs.
