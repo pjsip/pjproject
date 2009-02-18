@@ -60,13 +60,13 @@ typedef struct pjmedia_aud_dev_factory_op
      * Get the audio device information and capabilities.
      *
      * @param f		The audio device factory.
-     * @param id	The audio device ID.
+     * @param index	Device index.
      * @param info	The audio device information structure which will be
      *			initialized by this function once it returns 
      *			successfully.
      */
     pj_status_t	(*get_dev_info)(pjmedia_aud_dev_factory *f, 
-				pjmedia_aud_dev_id id,
+				unsigned index,
 				pjmedia_aud_dev_info *info);
 
     /**
@@ -74,11 +74,11 @@ typedef struct pjmedia_aud_dev_factory_op
      * values for the specified device.
      *
      * @param f		The audio device factory.
-     * @param id	Device ID.
+     * @param index	Device index.
      * @param param	The audio device parameter.
      */
     pj_status_t (*default_param)(pjmedia_aud_dev_factory *f,
-				 pjmedia_aud_dev_id id,
+				 unsigned index,
 				 pjmedia_aud_dev_param *param);
 
     /**
@@ -164,6 +164,8 @@ struct pjmedia_aud_stream
     /** Operations */
     pjmedia_aud_stream_op *op;
 };
+
+
 
 
 /**

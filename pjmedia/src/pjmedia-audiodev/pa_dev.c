@@ -26,7 +26,7 @@
 #include <portaudio.h>
 
 #define THIS_FILE	"pa_dev.c"
-#define DRIVER_NAME	"portaudio"
+#define DRIVER_NAME	"PA"
 
 struct pa_aud_factory
 {
@@ -101,10 +101,10 @@ static pj_status_t  pa_init(pjmedia_aud_dev_factory *f);
 static pj_status_t  pa_destroy(pjmedia_aud_dev_factory *f);
 static unsigned	    pa_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
-				    pjmedia_aud_dev_id id,
+				    unsigned index,
 				    pjmedia_aud_dev_info *info);
 static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
-				     pjmedia_aud_dev_id id,
+				     unsigned index,
 				     pjmedia_aud_dev_param *param);
 static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
 				     const pjmedia_aud_dev_param *param,
@@ -189,8 +189,6 @@ static int PaRecorderCallback(const void *input,
     if (statusFlags & paInputOverflow)
 	++stream->overflow;
 
-    stream->rec_timestamp.u64 += frameCount;
-
     /* Calculate number of samples we've got */
     nsamples = frameCount * stream->channel_count + stream->rec_buf_count;
 
@@ -201,30 +199,43 @@ static int PaRecorderCallback(const void *input,
 	 */
 	if (stream->rec_buf_count) {
 	    unsigned chunk_count = 0;
+	    pjmedia_frame frame;
 	
 	    chunk_count = stream->samples_per_frame - stream->rec_buf_count;
 	    pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_count,
 				 (pj_int16_t*)input, chunk_count);
-	    status = (*stream->rec_cb)(stream->user_data, 
-				       &stream->rec_timestamp,
-				       (void*) stream->rec_buf, 
-				       stream->samples_per_frame * 
-				       stream->bytes_per_sample);
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = (void*) stream->rec_buf;
+	    frame.size = stream->samples_per_frame * stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->rec_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->rec_cb)(stream->user_data, &frame);
 
 	    input = (pj_int16_t*) input + chunk_count;
 	    nsamples -= stream->samples_per_frame;
 	    stream->rec_buf_count = 0;
+	    stream->rec_timestamp.u64 += stream->samples_per_frame /
+					 stream->channel_count;
 	}
 
 	/* Give all frames we have */
 	while (nsamples >= stream->samples_per_frame && status == 0) {
-	    status = (*stream->rec_cb)(stream->user_data, 
-				       &stream->rec_timestamp,
-				       (void*) input, 
-				       stream->samples_per_frame * 
-				       stream->bytes_per_sample);
+	    pjmedia_frame frame;
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = (void*) input;
+	    frame.size = stream->samples_per_frame * stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->rec_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->rec_cb)(stream->user_data, &frame);
+
 	    input = (pj_int16_t*) input + stream->samples_per_frame;
 	    nsamples -= stream->samples_per_frame;
+	    stream->rec_timestamp.u64 += stream->samples_per_frame /
+					 stream->channel_count;
 	}
 
 	/* Store the remaining samples into the buffer */
@@ -290,7 +301,6 @@ static int PaPlayerCallback( const void *input,
     if (statusFlags & paOutputOverflow)
 	++stream->overflow;
 
-    stream->play_timestamp.u64 += frameCount;
 
     /* Check if any buffered samples */
     if (stream->play_buf_count) {
@@ -318,19 +328,39 @@ static int PaPlayerCallback( const void *input,
     /* Fill output buffer as requested */
     while (nsamples_req && status == 0) {
 	if (nsamples_req >= stream->samples_per_frame) {
-	    status = (*stream->play_cb)(stream->user_data, 
-					&stream->play_timestamp, 
-					output, 
-					stream->samples_per_frame * 
-					stream->bytes_per_sample);
+	    pjmedia_frame frame;
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = output;
+	    frame.size = stream->samples_per_frame *  stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->play_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->play_cb)(stream->user_data, &frame);
+	    if (status != PJ_SUCCESS)
+		goto on_break;
+
+	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+		pj_bzero(frame.buf, frame.size);
+
 	    nsamples_req -= stream->samples_per_frame;
 	    output = (pj_int16_t*)output + stream->samples_per_frame;
 	} else {
-	    status = (*stream->play_cb)(stream->user_data, 
-					&stream->play_timestamp, 
-					stream->play_buf,
-					stream->samples_per_frame * 
-					stream->bytes_per_sample);
+	    pjmedia_frame frame;
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = stream->play_buf;
+	    frame.size = stream->samples_per_frame *  stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->play_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->play_cb)(stream->user_data, &frame);
+	    if (status != PJ_SUCCESS)
+		goto on_break;
+
+	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+		pj_bzero(frame.buf, frame.size);
+
 	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
 				 nsamples_req);
 	    stream->play_buf_count = stream->samples_per_frame - nsamples_req;
@@ -339,6 +369,9 @@ static int PaPlayerCallback( const void *input,
 				 stream->play_buf_count);
 	    nsamples_req = 0;
 	}
+
+	stream->play_timestamp.u64 += stream->samples_per_frame /
+				      stream->channel_count;
     }
     
     if (status==0) 
@@ -452,14 +485,14 @@ static unsigned	pa_get_dev_count(pjmedia_aud_dev_factory *f)
 
 /* API: Get device info. */
 static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
-				    pjmedia_aud_dev_id id,
+				    unsigned index,
 				    pjmedia_aud_dev_info *info)
 {
     const PaDeviceInfo *pa_info;
 
     PJ_UNUSED_ARG(f);
 
-    pa_info = Pa_GetDeviceInfo(id);
+    pa_info = Pa_GetDeviceInfo(index);
     if (!pa_info)
 	return PJMEDIA_EAUD_INVDEV;
 
@@ -480,7 +513,7 @@ static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f,
 
 /* API: fill in with default parameter. */
 static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
-				     pjmedia_aud_dev_id id,
+				     unsigned index,
 				     pjmedia_aud_dev_param *param)
 {
     pjmedia_aud_dev_info adi;
@@ -488,22 +521,22 @@ static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
 
     PJ_UNUSED_ARG(f);
 
-    status = pjmedia_aud_dev_get_info(id, &adi);
+    status = pa_get_dev_info(f, index, &adi);
     if (status != PJ_SUCCESS)
 	return status;
 
     pj_bzero(param, sizeof(*param));
     if (adi.input_count && adi.output_count) {
 	param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
-	param->rec_id = id;
-	param->play_id = id;
+	param->rec_id = index;
+	param->play_id = index;
     } else if (adi.input_count) {
 	param->dir = PJMEDIA_DIR_CAPTURE;
-	param->rec_id = id;
+	param->rec_id = index;
 	param->play_id = PJMEDIA_AUD_DEV_DEFAULT_ID;
     } else if (adi.output_count) {
 	param->dir = PJMEDIA_DIR_PLAYBACK;
-	param->play_id = id;
+	param->play_id = index;
 	param->rec_id = PJMEDIA_AUD_DEV_DEFAULT_ID;
     } else {
 	return PJMEDIA_EAUD_INVDEV;
@@ -1079,12 +1112,12 @@ static pj_status_t strm_get_param(pjmedia_aud_stream *s,
     if (paRecSI) {
 	pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
 	pi->input_latency_ms = (unsigned)(paRecSI ? paRecSI->inputLatency * 
-						    paRecSI->sampleRate : 0);
+						    1000 : 0);
     }
     if (paPlaySI) {
 	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
 	pi->output_latency_ms = (unsigned)(paPlaySI? paPlaySI->outputLatency * 
-						     paPlaySI->sampleRate : 0);
+						     1000 : 0);
     }
 
     return PJ_SUCCESS;
@@ -1105,14 +1138,14 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
 	if (!si)
 	    return PJ_EINVALIDOP;
 
-	*(unsigned*)pval = (unsigned)(si->inputLatency * si->sampleRate);
+	*(unsigned*)pval = (unsigned)(si->inputLatency * 1000);
 	return PJ_SUCCESS;
     } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY && strm->play_strm) {
 	const PaStreamInfo *si = Pa_GetStreamInfo(strm->play_strm);
 	if (!si)
 	    return PJ_EINVALIDOP;
 
-	*(unsigned*)pval = (unsigned)(si->outputLatency * si->sampleRate);
+	*(unsigned*)pval = (unsigned)(si->outputLatency * 1000);
 	return PJ_SUCCESS;
     } else {
 	return PJ_ENOTSUP;

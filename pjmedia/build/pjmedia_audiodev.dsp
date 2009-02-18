@@ -95,6 +95,10 @@ SOURCE="..\src\pjmedia-audiodev\audiodev.c"
 
 SOURCE="..\src\pjmedia-audiodev\pa_dev.c"
 # End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-audiodev\wmme_dev.c"
+# End Source File
 # End Group
 # Begin Group "Header Files"
 

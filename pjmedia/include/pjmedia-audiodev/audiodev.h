@@ -24,7 +24,7 @@
  * @file audiodev.h
  * @brief Audio device API.
  */
-#include <pjmedia/types.h>
+#include <pjmedia/port.h>
 #include <pj/pool.h>
 
 
@@ -99,58 +99,79 @@ typedef enum pjmedia_aud_dev_cap
     PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY = 4,
 
     /** 
-     * Support for setting the audio device volume level. The value of this
-     * capability is an unsigned integer representing the audio volume in 
-     * percent.
+     * Support for setting/retrieving the audio input device volume level.
+     * The value of this capability is an unsigned integer representing 
+     * the input audio volume setting in percent.
      */
-    PJMEDIA_AUD_DEV_CAP_SET_VOLUME = 8,
+    PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING = 8,
 
     /** 
-     * Support for audio volume level query. The value of this capability 
-     * is unsigned integer representing the audio volume in percent.
+     * Support for setting/retrieving the audio output device volume level.
+     * The value of this capability is an unsigned integer representing 
+     * the output audio volume setting in percent.
      */
-    PJMEDIA_AUD_DEV_CAP_GET_VOLUME = 16,
+    PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING = 16,
 
     /** 
-     * Support for audio routing (e.g. loudspeaker vs earpiece). The value
-     * of this capability is an integer containing #pjmedia_aud_dev_route
+     * Support for monitoring the current audio input signal volume. 
+     * The value of this capability is an unsigned integer representing 
+     * the audio volume in percent.
+     */
+    PJMEDIA_AUD_DEV_CAP_INPUT_SIGNAL_VOLUME = 32,
+
+    /** 
+     * Support for monitoring the current audio output signal volume. 
+     * The value of this capability is an unsigned integer representing 
+     * the audio volume in percent.
+     */
+    PJMEDIA_AUD_DEV_CAP_OUTPUT_SIGNAL_VOLUME = 64,
+
+    /** 
+     * Support for audio input routing. The value of this capability is an 
+     * integer containing #pjmedia_aud_dev_route enumeration.
+     */
+    PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE = 128,
+
+    /** 
+     * Support for audio output routing (e.g. loudspeaker vs earpiece). The
+     * value of this capability is an integer containing #pjmedia_aud_dev_route
      * enumeration.
      */
-    PJMEDIA_AUD_DEV_CAP_ROUTE = 32,
+    PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE = 256,
 
     /** 
      * The audio device has echo cancellation feature. The value of this
      * capability is an integer containing boolean PJ_TRUE or PJ_FALSE.
      */
-    PJMEDIA_AUD_DEV_CAP_EC = 64,
+    PJMEDIA_AUD_DEV_CAP_EC = 512,
 
     /** 
      * The audio device supports setting echo cancellation fail length. The
      * value of this capability is an unsigned integer representing the
      * echo tail in milliseconds.
      */
-    PJMEDIA_AUD_DEV_CAP_EC_TAIL = 128,
+    PJMEDIA_AUD_DEV_CAP_EC_TAIL = 1024,
 
     /** 
      * The audio device has voice activity detection feature. The value
      * of this capability is an integer containing boolean PJ_TRUE or 
      * PJ_FALSE.
      */
-    PJMEDIA_AUD_DEV_CAP_VAD = 256,
+    PJMEDIA_AUD_DEV_CAP_VAD = 2048,
 
     /** 
      * The audio device has comfort noise generation feature. The value
      * of this capability is an integer containing boolean PJ_TRUE or 
      * PJ_FALSE.
      */
-    PJMEDIA_AUD_DEV_CAP_CNG = 512,
+    PJMEDIA_AUD_DEV_CAP_CNG = 4096,
 
     /** 
      * The audio device has packet loss concealment feature. The value
      * of this capability is an integer containing boolean PJ_TRUE or 
      * PJ_FALSE.
      */
-    PJMEDIA_AUD_DEV_CAP_PLC = 1024
+    PJMEDIA_AUD_DEV_CAP_PLC = 8192
     
 } pjmedia_aud_dev_cap;
 
@@ -238,34 +259,34 @@ typedef struct pjmedia_aud_dev_info
  * to be played by the device. Application must fill in the whole of output 
  * buffer with audio samples.
  *
- * @param user_data	User data associated with the stream.
- * @param ts		Timestamp, in samples.
- * @param output	Buffer to be filled out by application.
- * @param size		The size requested in bytes, which will be equal to
- *			the size of one whole packet.
+ * The frame argument contains the following values:
+ *  - timestamp	    Playback timestamp, in samples.
+ *  - buf	    Buffer to be filled out by application.
+ *  - size	    The size requested in bytes, which will be equal to
+ *		    the size of one whole packet.
  *
- * @return		Non-zero to stop the stream.
+ * @param user_data User data associated with the stream.
+ * @param frame	    Audio frame, which buffer is to be filled in by
+ *		    the application.
+ *
+ * @return	    Returning non-PJ_SUCCESS will cause the audio stream
+ *		    to stop
  */
-typedef pj_status_t (*pjmedia_aud_play_cb)(/* in */   void *user_data,
-					   /* in */   const pj_timestamp *ts,
-					   /* out */  void *output,
-					   /* out */  unsigned size);
+typedef pj_status_t (*pjmedia_aud_play_cb)(void *user_data,
+					   pjmedia_frame *frame);
 
 /**
  * This callback is called by recorder stream when it has captured the whole
  * packet worth of audio samples.
  *
- * @param user_data	User data associated with the stream.
- * @param ts		Timestamp, in samples.
- * @param output	Buffer containing the captured audio samples.
- * @param size		The size of the data in the buffer, in bytes.
+ * @param user_data User data associated with the stream.
+ * @param frame	    Captured frame.
  *
- * @return		Non-zero to stop the stream.
+ * @return	    Returning non-PJ_SUCCESS will cause the audio stream
+ *		    to stop
  */
-typedef pj_status_t (*pjmedia_aud_rec_cb)(/* in */   void *user_data,
-					  /* in */   const pj_timestamp *ts,
-					  /* in */   void *input,
-					  /* in*/    unsigned size);
+typedef pj_status_t (*pjmedia_aud_rec_cb)(void *user_data,
+					  pjmedia_frame *frame);
 
 /**
  * This structure specifies the parameters to open the audio device stream.
@@ -334,10 +355,10 @@ typedef struct pjmedia_aud_dev_param
     unsigned output_latency_ms;
 
     /** 
-     * Set the audio route. This setting is optional, and will only be used
-     * if PJMEDIA_AUD_DEV_CAP_ROUTE is set in the flags.
+     * Set the audio output route. This setting is optional, and will only be
+     * used if PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE is set in the flags.
      */
-    pjmedia_aud_dev_route route;
+    pjmedia_aud_dev_route out_route;
 
     /**
      * Enable/disable echo canceller, if the device supports it. This setting
@@ -544,6 +565,13 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 
 /* Invalid audio device */
 #define PJMEDIA_EAUD_INVDEV	-1
+
+/* Found no devices */
+#define PJMEDIA_EAUD_NODEV	-1
+
+/* Unknown system error */
+#define PJMEDIA_EAUD_SYSERR	-1
+
 
 /**
  * @)

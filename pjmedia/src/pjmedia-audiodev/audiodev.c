@@ -20,14 +20,25 @@
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/errno.h>
 
-
+/*
+ * The Device ID seen by application and driver is different. 
+ *
+ * At application level, device ID is a 32bit value. The high 16bit contains
+ * the factory ID, and the low 16bit contains the device index in the 
+ * specified factory. The device ID may also be -1 to denote default device.
+ *
+ * At driver level, device ID is a 16bit unsigned integer index.
+ */
 #define MAKE_DEV_ID(f_id, index)   (((f_id & 0xFFFF) << 16) & (index & 0xFFFF))
 #define GET_INDEX(dev_id)	   ((dev_id) & 0xFFFF)
 #define GET_FID(dev_id)		   ((dev_id) >> 16)
+#define DEFAULT_DEV_ID		    0
 
 
-/* extern */
+/* extern functions to create factories */
 pjmedia_aud_dev_factory* pjmedia_pa_factory(pj_pool_factory *pf);
+pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf);
+
 
 /* Array of factories */
 static struct factory
@@ -37,9 +48,14 @@ static struct factory
 
 } factories[] = 
 {
+    /* WMME */
+    {
+	&pjmedia_wmme_factory
+    },
+    /* PortAudio: */
     {
 	&pjmedia_pa_factory
-    }
+    },
 };
 static unsigned factory_cnt;
 
@@ -129,6 +145,9 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_id id,
 {
     int f_id, index;
 
+    if (id == PJMEDIA_AUD_DEV_DEFAULT_ID)
+	id = DEFAULT_DEV_ID;
+
     f_id = GET_FID(id);
     index = GET_INDEX(id);
 
@@ -150,6 +169,9 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_id id,
 {
     int f_id, index;
     pj_status_t status;
+
+    if (id == PJMEDIA_AUD_DEV_DEFAULT_ID)
+	id = DEFAULT_DEV_ID;
 
     f_id = GET_FID(id);
     index = GET_INDEX(id);
@@ -189,8 +211,10 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_dev_param *p,
     pj_memcpy(&param, p, sizeof(param));
 
     /* Set default device */
-    if (param.rec_id == PJMEDIA_AUD_DEV_DEFAULT_ID) param.rec_id = 0;
-    if (param.play_id == PJMEDIA_AUD_DEV_DEFAULT_ID) param.play_id = 0;
+    if (param.rec_id == PJMEDIA_AUD_DEV_DEFAULT_ID) 
+	param.rec_id = DEFAULT_DEV_ID;
+    if (param.play_id == PJMEDIA_AUD_DEV_DEFAULT_ID) 
+	param.play_id = DEFAULT_DEV_ID;
     
     if (param.dir & PJMEDIA_DIR_CAPTURE)
 	f_id = GET_FID(param.rec_id);
