@@ -225,7 +225,7 @@ typedef struct pjmedia_aud_dev_info
     /** 
      * The underlying driver name 
      */
-    char driver[64];
+    char driver[128];
 
     /** 
      * Device capabilities, as bitmask combination of #pjmedia_aud_dev_cap.
@@ -408,6 +408,14 @@ typedef struct pjmedia_aud_dev_factory pjmedia_aud_dev_factory;
  *			error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf);
+
+
+/**
+ * Get the pool factory registered to the audio subsystem.
+ *
+ * @return		The pool factory.
+ */
+PJ_DECL(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void);
 
 
 /**

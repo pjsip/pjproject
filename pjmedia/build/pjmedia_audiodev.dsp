@@ -93,6 +93,10 @@ SOURCE="..\src\pjmedia-audiodev\audiodev.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-audiodev\audiotest.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-audiodev\pa_dev.c"
 # End Source File
 # Begin Source File
@@ -110,6 +114,10 @@ SOURCE="..\include\pjmedia-audiodev\audiodev.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-audiodev\audiodev_imp.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-audiodev\audiotest.h"
 # End Source File
 # End Group
 # End Target

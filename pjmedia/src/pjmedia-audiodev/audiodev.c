@@ -29,7 +29,7 @@
  *
  * At driver level, device ID is a 16bit unsigned integer index.
  */
-#define MAKE_DEV_ID(f_id, index)   (((f_id & 0xFFFF) << 16) & (index & 0xFFFF))
+#define MAKE_DEV_ID(f_id, index)   (((f_id & 0xFFFF) << 16) | (index & 0xFFFF))
 #define GET_INDEX(dev_id)	   ((dev_id) & 0xFFFF)
 #define GET_FID(dev_id)		   ((dev_id) >> 16)
 #define DEFAULT_DEV_ID		    0
@@ -39,25 +39,23 @@
 pjmedia_aud_dev_factory* pjmedia_pa_factory(pj_pool_factory *pf);
 pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf);
 
+#define MAX_DRIVERS	16
 
-/* Array of factories */
-static struct factory
+/* The audio subsystem */
+static struct aud_subsys
 {
-    pjmedia_aud_dev_factory*   (*create)(pj_pool_factory*);
-    pjmedia_aud_dev_factory	*f;
+    pj_pool_factory *pf;
+    unsigned	     factory_cnt;
 
-} factories[] = 
-{
-    /* WMME */
+    struct factory
     {
-	&pjmedia_wmme_factory
-    },
-    /* PortAudio: */
-    {
-	&pjmedia_pa_factory
-    },
-};
-static unsigned factory_cnt;
+	pjmedia_aud_dev_factory*   (*create)(pj_pool_factory*);
+	pjmedia_aud_dev_factory	    *f;
+
+    } factories[MAX_DRIVERS];
+
+} aud_subsys;
+
 
 
 /* API: Initialize the audio subsystem. */
@@ -66,24 +64,36 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
     unsigned i;
     pj_status_t status = PJ_ENOMEM;
 
-    factory_cnt = 0;
+    aud_subsys.pf = pf;
+    aud_subsys.factory_cnt = 0;
 
-    for (i=0; i<PJ_ARRAY_SIZE(factories); ++i) {
-	factories[i].f = (*factories[i].create)(pf);
-	if (!factories[i].f)
+    aud_subsys.factories[aud_subsys.factory_cnt++].create = &pjmedia_pa_factory;
+    aud_subsys.factories[aud_subsys.factory_cnt++].create = &pjmedia_wmme_factory;
+
+    for (i=0; i<aud_subsys.factory_cnt; ++i) {
+	pjmedia_aud_dev_factory *f;
+
+	f = (*aud_subsys.factories[i].create)(pf);
+	if (!f)
 	    continue;
 
-	status = factories[i].f->op->init(factories[i].f);
+	status = f->op->init(f);
 	if (status != PJ_SUCCESS) {
-	    factories[i].f->op->destroy(factories[i].f);
-	    factories[i].f = NULL;
+	    f->op->destroy(f);
+	    continue;
 	}
 
-	factories[i].f->internal.id = i;
-	++factory_cnt;
+	aud_subsys.factories[i].f = f;
+	aud_subsys.factories[i].f->internal.id = i;
     }
 
-    return factory_cnt ? PJ_SUCCESS : status;
+    return aud_subsys.factory_cnt ? PJ_SUCCESS : status;
+}
+
+/* API: get the pool factory registered to the audio subsystem. */
+PJ_DEF(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void)
+{
+    return aud_subsys.pf;
 }
 
 /* API: Shutdown the audio subsystem. */
@@ -91,12 +101,14 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
 {
     unsigned i;
 
-    for (i=0; i<PJ_ARRAY_SIZE(factories); ++i) {
-	if (!factories[i].f)
+    for (i=0; i<aud_subsys.factory_cnt; ++i) {
+	pjmedia_aud_dev_factory *f = aud_subsys.factories[i].f;
+
+	if (!f)
 	    continue;
 
-	factories[i].f->op->destroy(factories[i].f);
-	factories[i].f = NULL;
+	f->op->destroy(f);
+	aud_subsys.factories[i].f = NULL;
     }
 
     return PJ_SUCCESS;
@@ -107,11 +119,13 @@ PJ_DEF(unsigned) pjmedia_aud_dev_count(void)
 {
     unsigned i, count = 0;
 
-    for (i=0; i<PJ_ARRAY_SIZE(factories); ++i) {
-	if (!factories[i].f)
+    for (i=0; i<aud_subsys.factory_cnt; ++i) {
+	pjmedia_aud_dev_factory *f = aud_subsys.factories[i].f;
+
+	if (!f)
 	    continue;
 
-	count += factories[i].f->op->get_dev_count(factories[i].f);
+	count += f->op->get_dev_count(f);
     }
 
     return count;
@@ -123,13 +137,14 @@ PJ_DEF(unsigned) pjmedia_aud_dev_enum(unsigned max_count,
 {
     unsigned i, count = 0;
 
-    for (i=0; i<PJ_ARRAY_SIZE(factories) && count < max_count; ++i) {
+    for (i=0; i<aud_subsys.factory_cnt && count < max_count; ++i) {
+	pjmedia_aud_dev_factory *f = aud_subsys.factories[i].f;
 	unsigned j, fcount;
 
-	if (!factories[i].f)
+	if (!f)
 	    continue;
 
-	fcount = factories[i].f->op->get_dev_count(factories[i].f);
+	fcount = f->op->get_dev_count(f);
 	for (j=0; j<fcount && count<max_count; ++j) {
 	    ids[count++] = MAKE_DEV_ID(i, j);
 	}
@@ -143,6 +158,7 @@ PJ_DEF(unsigned) pjmedia_aud_dev_enum(unsigned max_count,
 PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_id id,
 					     pjmedia_aud_dev_info *info)
 {
+    pjmedia_aud_dev_factory *f;
     int f_id, index;
 
     if (id == PJMEDIA_AUD_DEV_DEFAULT_ID)
@@ -151,14 +167,14 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_id id,
     f_id = GET_FID(id);
     index = GET_INDEX(id);
 
-    if (f_id < 0 || f_id >= PJ_ARRAY_SIZE(factories))
+    if (f_id < 0 || f_id >= (int)aud_subsys.factory_cnt)
 	return PJMEDIA_EAUD_INVDEV;
 
-    if (factories[f_id].f == NULL)
+    f = aud_subsys.factories[f_id].f;
+    if (f == NULL)
 	return PJMEDIA_EAUD_INVDEV;
 
-    return factories[f_id].f->op->get_dev_info(factories[f_id].f,
-					       index, info);
+    return f->op->get_dev_info(f, index, info);
 }
 
 /* API: Initialize the audio device parameters with default values for the
@@ -167,6 +183,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_id id,
 PJ_DEF(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_id id,
 						  pjmedia_aud_dev_param *param)
 {
+    pjmedia_aud_dev_factory *f;
     int f_id, index;
     pj_status_t status;
 
@@ -176,14 +193,14 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_id id,
     f_id = GET_FID(id);
     index = GET_INDEX(id);
 
-    if (f_id < 0 || f_id >= PJ_ARRAY_SIZE(factories))
+    if (f_id < 0 || f_id >= (int)aud_subsys.factory_cnt)
 	return PJMEDIA_EAUD_INVDEV;
 
-    if (factories[f_id].f == NULL)
+    f = aud_subsys.factories[f_id].f;
+    if (f == NULL)
 	return PJMEDIA_EAUD_INVDEV;
 
-    status = factories[f_id].f->op->default_param(factories[f_id].f,
-					          index, param);
+    status = f->op->default_param(f, index, param);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -203,6 +220,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_dev_param *p,
 					      void *user_data,
 					      pjmedia_aud_stream **p_aud_strm)
 {
+    pjmedia_aud_dev_factory *f;
     pjmedia_aud_dev_param param;
     int f_id;
     pj_status_t status;
@@ -221,23 +239,23 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_dev_param *p,
     else
 	f_id = GET_FID(param.play_id);
 
-    if (f_id < 0 || f_id >= PJ_ARRAY_SIZE(factories))
+    if (f_id < 0 || f_id >= (int)aud_subsys.factory_cnt)
 	return PJMEDIA_EAUD_INVDEV;
     
     /* Normalize device id's */
     param.rec_id = GET_INDEX(param.rec_id);
     param.play_id = GET_INDEX(param.play_id);
 
-    if (factories[f_id].f == NULL)
+    f = aud_subsys.factories[f_id].f;
+    if (f == NULL)
 	return PJMEDIA_EAUD_INVDEV;
 
-    status = factories[f_id].f->op->create_stream(factories[f_id].f,
-					          &param, rec_cb, play_cb,
-						  user_data, p_aud_strm);
+    status = f->op->create_stream(f, &param, rec_cb, play_cb,
+				  user_data, p_aud_strm);
     if (status != PJ_SUCCESS)
 	return status;
 
-    (*p_aud_strm)->factory = factories[f_id].f;
+    (*p_aud_strm)->factory = f;
     return PJ_SUCCESS;
 }
 
