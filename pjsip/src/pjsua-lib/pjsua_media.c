@@ -2579,13 +2579,17 @@ PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
     return PJ_SUCCESS;
 }
 
+/* 
+ * Header for specific Symbian APS audio routing.
+ */
+#include <pjmedia/symbian_sound_aps.h>
 
 /*
  * Set sound device route.
  */
 PJ_DEF(pj_status_t) pjsua_set_snd_route(pjmedia_snd_route route)
 {
-#if defined(PJ_SYMBIAN) || PJ_SYMBIAN==1
+#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
     pjmedia_snd_stream *strm;
 
     if (!pjsua_var.snd_port)
