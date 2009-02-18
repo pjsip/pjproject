@@ -2585,10 +2585,18 @@ PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
  */
 PJ_DEF(pj_status_t) pjsua_set_snd_route(pjmedia_snd_route route)
 {
-    PJ_UNUSED_ARG(route);
+#if defined(PJ_SYMBIAN) || PJ_SYMBIAN==1
+    pjmedia_snd_stream *strm;
 
-    PJ_TODO(IMPLEMENT_SETTING_AUDIO_ROUTE);
+    if (!pjsua_var.snd_port)
+	return PJ_ENOTFOUND;
+
+    strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
+    return pjmedia_snd_aps_set_route(strm, route);
+#else
+    PJ_UNUSED_ARG(route);
     return PJ_ENOTSUP;
+#endif
 }
 
 /*****************************************************************************

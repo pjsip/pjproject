@@ -525,15 +525,14 @@ static void HandleMainMenu(TKeyCode kc) {
 #   if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
     case 't':
 	do {
-	    static pjmedia_snd_route route = PJMEDIA_SND_ROUTE_LOUDSPEAKER;
-	    
-	    pjsua_set_snd_route(route);
+	    static pjmedia_snd_route route = PJMEDIA_SND_ROUTE_DEFAULT;
 	    
 	    if (route == PJMEDIA_SND_ROUTE_LOUDSPEAKER)
 		route = PJMEDIA_SND_ROUTE_EARPIECE;
 	    else
 		route = PJMEDIA_SND_ROUTE_LOUDSPEAKER;
-		
+
+	    pjsua_set_snd_route(route);
 	} while(0);
 	break;
 #   endif

@@ -1398,13 +1398,26 @@ PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency,
 /*
  * Activate/deactivate loudspeaker.
  */
-PJ_DEF(pj_status_t) pjmedia_snd_aps_activate_loudspeaker(
-					pjmedia_snd_stream *stream,
-					pj_bool_t active)
+PJ_DEF(pj_status_t) pjmedia_snd_aps_set_route( pjmedia_snd_stream *stream,
+					       pjmedia_snd_route route)
 {
     PJ_ASSERT_RETURN(stream && stream->engine, PJ_EINVAL);
+
+    TBool loudspk_active;
     
-    TInt err = stream->engine->ActivateSpeaker(active);
+    switch (route) {
+    case PJMEDIA_SND_ROUTE_DEFAULT:
+    case PJMEDIA_SND_ROUTE_EARPIECE:
+	loudspk_active = EFalse;
+	break;
+    case PJMEDIA_SND_ROUTE_LOUDSPEAKER:
+	loudspk_active = ETrue;
+	break;
+    default:
+	return PJ_EINVAL;
+    }
+    
+    TInt err = stream->engine->ActivateSpeaker(loudspk_active);
     if (err != KErrNone)
 	return PJ_RETURN_OS_ERROR(err);
 
