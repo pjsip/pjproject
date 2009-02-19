@@ -366,6 +366,14 @@ public:
     void Stop();
 
     TInt ActivateSpeaker(TBool active);
+    
+    TInt SetVolume(TInt vol) { return iSession.SetVolume(vol); }
+    TInt GetVolume() { return iSession.Volume(); }
+    TInt GetMaxVolume() { return iSession.MaxVolume(); }
+    
+    TInt SetGain(TInt gain) { return iSession.SetGain(gain); }
+    TInt GetGain() { return iSession.Gain(); }
+    TInt GetMaxGain() { return iSession.MaxGain(); }
 
 private:
     CPjAudioEngine(struct aps_stream *parent_strm,
@@ -1106,8 +1114,8 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     pj_ansi_strcpy(af->dev_info.name, "S60 APS");
     af->dev_info.default_samples_per_sec = 8000;
     af->dev_info.caps = PJMEDIA_AUD_DEV_CAP_EXT_FORMAT |
-			//PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
-			//PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
+			PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
+			PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
 			PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE |
 			PJMEDIA_AUD_DEV_CAP_VAD |
 			PJMEDIA_AUD_DEV_CAP_CNG;
@@ -1115,16 +1123,14 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 			  PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
     af->dev_info.input_count = 1;
     af->dev_info.output_count = 1;
-    
-    af->dev_info.ext_fmt_cnt = 2;
-    
-    af->dev_info.ext_fmt[0].id = PJMEDIA_FORMAT_AMR;
-    af->dev_info.ext_fmt[0].bitrate = 0;
-    af->dev_info.ext_fmt[0].vad = PJ_TRUE;
 
+    af->dev_info.ext_fmt_cnt = 6;
+    af->dev_info.ext_fmt[0].id = PJMEDIA_FORMAT_AMR;
     af->dev_info.ext_fmt[1].id = PJMEDIA_FORMAT_G729;
-    af->dev_info.ext_fmt[1].bitrate = 0;
-    af->dev_info.ext_fmt[1].vad = PJ_TRUE;
+    af->dev_info.ext_fmt[2].id = PJMEDIA_FORMAT_ILBC;
+    af->dev_info.ext_fmt[3].id = PJMEDIA_FORMAT_PCMU;
+    af->dev_info.ext_fmt[4].id = PJMEDIA_FORMAT_PCMA;
+    af->dev_info.ext_fmt[5].id = PJMEDIA_FORMAT_L16;
     
     PJ_LOG(4, (THIS_FILE, "APS initialized"));
 
@@ -1140,6 +1146,8 @@ static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f)
     af->pool = NULL;
     pj_pool_release(pool);
 
+    PJ_LOG(4, (THIS_FILE, "APS destroyed"));
+    
     return PJ_SUCCESS;
 }
 
@@ -1182,6 +1190,8 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     param->samples_per_frame = af->dev_info.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = BITS_PER_SAMPLE;
     param->flags = af->dev_info.caps;
+    param->ext_fmt.id = PJMEDIA_FORMAT_L16;
+    param->out_route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
 
     return PJ_SUCCESS;
 }
@@ -1351,8 +1361,34 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
+	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
+	    
+	    TInt max_gain = strm->engine->GetMaxGain();
+	    TInt gain = strm->engine->GetGain();
+	    
+	    if (max_gain > 0 && gain >= 0) {
+		*(unsigned*)pval = gain * 100 / max_gain; 
+		status = PJ_SUCCESS;
+	    } else {
+		status = PJMEDIA_EAUD_NOTREADY;
+	    }
+	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
+	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
+	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
+	    
+	    TInt max_vol = strm->engine->GetMaxVolume();
+	    TInt vol = strm->engine->GetVolume();
+	    
+	    if (max_vol > 0 && vol >= 0) {
+		*(unsigned*)pval = vol * 100 / max_vol; 
+		status = PJ_SUCCESS;
+	    } else {
+		status = PJMEDIA_EAUD_NOTREADY;
+	    }
+	}
 	break;
     default:
 	break;
@@ -1398,8 +1434,36 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
+	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
+	    
+	    TInt max_gain = strm->engine->GetMaxGain();
+	    if (max_gain > 0) {
+		TInt gain, err;
+		
+		gain = *(unsigned*)pval * max_gain / 100;
+		err = strm->engine->SetGain(gain);
+		status = (err==KErrNone)? PJ_SUCCESS:PJ_RETURN_OS_ERROR(err);
+	    } else {
+		status = PJMEDIA_EAUD_NOTREADY;
+	    }
+	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
+	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
+	    
+	    TInt max_vol = strm->engine->GetMaxVolume();
+	    if (max_vol > 0) {
+		TInt vol, err;
+		
+		vol = *(unsigned*)pval * max_vol / 100;
+		err = strm->engine->SetVolume(vol);
+		status = (err==KErrNone)? PJ_SUCCESS:PJ_RETURN_OS_ERROR(err);
+	    } else {
+		status = PJMEDIA_EAUD_NOTREADY;
+	    }
+	}
 	break;
     default:
 	break;

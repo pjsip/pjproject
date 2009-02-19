@@ -577,6 +577,9 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 /* Found no devices */
 #define PJMEDIA_EAUD_NODEV	-1
 
+/* Device not ready */
+#define PJMEDIA_EAUD_NOTREADY	-1
+
 /* Unknown system error */
 #define PJMEDIA_EAUD_SYSERR	-1
 
