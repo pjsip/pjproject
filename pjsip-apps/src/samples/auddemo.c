@@ -25,6 +25,7 @@
 
 #define THIS_FILE	"auddemo.c"
 #define MAX_DEVICES	64
+#define WAV_FILE	"auddemo.wav"
 
 
 static unsigned dev_count;
@@ -166,7 +167,7 @@ static void show_dev_info(unsigned index)
 	for (i=0; i<info.ext_fmt_cnt; ++i) {
 	    char bitrate[32];
 
-	    switch (info.ext_fmt[i].fmt_id) {
+	    switch (info.ext_fmt[i].id) {
 	    case PJMEDIA_FORMAT_L16:
 		strcat(formats, "L16/");
 		break;
@@ -275,6 +276,140 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
 }
 
 
+static pj_status_t wav_rec_cb(void *user_data, pjmedia_frame *frame)
+{
+    return pjmedia_port_put_frame((pjmedia_port*)user_data, frame);
+}
+
+static void record(unsigned rec_index, const char *filename)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_port *wav = NULL;
+    pjmedia_aud_dev_param param;
+    pjmedia_aud_stream *strm = NULL;
+    char line[10];
+    pj_status_t status;
+
+    if (filename == NULL)
+	filename = WAV_FILE;
+
+    pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(), "wav",
+			  1000, 1000, NULL);
+
+    status = pjmedia_wav_writer_port_create(pool, filename, 16000, 
+					    1, 320, 16, 0, 0, &wav);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error creating WAV file", status);
+	goto on_return;
+    }
+
+    status = pjmedia_aud_dev_default_param(dev_id[rec_index], &param);
+    if (status != PJ_SUCCESS) {
+	app_perror("pjmedia_aud_dev_default_param()", status);
+	goto on_return;
+    }
+
+    param.dir = PJMEDIA_DIR_CAPTURE;
+    param.clock_rate = wav->info.clock_rate;
+    param.samples_per_frame = wav->info.samples_per_frame;
+    param.channel_count = wav->info.channel_count;
+    param.bits_per_sample = wav->info.bits_per_sample;
+
+    status = pjmedia_aud_stream_create(&param, &wav_rec_cb, NULL, wav,
+				       &strm);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error opening the sound device", status);
+	goto on_return;
+    }
+
+    status = pjmedia_aud_stream_start(strm);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error starting the sound device", status);
+	goto on_return;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "Recording started, press ENTER to stop"));
+    fgets(line, sizeof(line), stdin);
+
+on_return:
+    if (strm) {
+	pjmedia_aud_stream_stop(strm);
+	pjmedia_aud_stream_destroy(strm);
+    }
+    if (wav)
+	pjmedia_port_destroy(wav);
+    if (pool)
+	pj_pool_release(pool);
+}
+
+
+static pj_status_t wav_play_cb(void *user_data, pjmedia_frame *frame)
+{
+    return pjmedia_port_get_frame((pjmedia_port*)user_data, frame);
+}
+
+
+static void play_file(unsigned play_index, const char *filename)
+{
+    pj_pool_t *pool = NULL;
+    pjmedia_port *wav = NULL;
+    pjmedia_aud_dev_param param;
+    pjmedia_aud_stream *strm = NULL;
+    char line[10];
+    pj_status_t status;
+
+    if (filename == NULL)
+	filename = WAV_FILE;
+
+    pool = pj_pool_create(pjmedia_aud_subsys_get_pool_factory(), "wav",
+			  1000, 1000, NULL);
+
+    status = pjmedia_wav_player_port_create(pool, filename, 20, 0, 0, &wav);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error opening WAV file", status);
+	goto on_return;
+    }
+
+    status = pjmedia_aud_dev_default_param(dev_id[play_index], &param);
+    if (status != PJ_SUCCESS) {
+	app_perror("pjmedia_aud_dev_default_param()", status);
+	goto on_return;
+    }
+
+    param.dir = PJMEDIA_DIR_PLAYBACK;
+    param.clock_rate = wav->info.clock_rate;
+    param.samples_per_frame = wav->info.samples_per_frame;
+    param.channel_count = wav->info.channel_count;
+    param.bits_per_sample = wav->info.bits_per_sample;
+
+    status = pjmedia_aud_stream_create(&param, NULL, &wav_play_cb, wav,
+				       &strm);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error opening the sound device", status);
+	goto on_return;
+    }
+
+    status = pjmedia_aud_stream_start(strm);
+    if (status != PJ_SUCCESS) {
+	app_perror("Error starting the sound device", status);
+	goto on_return;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "Playback started, press ENTER to stop"));
+    fgets(line, sizeof(line), stdin);
+
+on_return:
+    if (strm) {
+	pjmedia_aud_stream_stop(strm);
+	pjmedia_aud_stream_destroy(strm);
+    }
+    if (wav)
+	pjmedia_port_destroy(wav);
+    if (pool)
+	pj_pool_release(pool);
+}
+
+
 static void print_menu(void)
 {
     puts("");
@@ -288,6 +423,8 @@ static void print_menu(void)
     puts("                             CR:   clock rate");
     puts("                             PTIM: ptime in ms");
     puts("                             CH:   # of channels");
+    puts("  r RID [FILE]             Record capture device RID to WAV file");
+    puts("  p PID [FILE]             Playback WAV file to device ID PID");
     puts("  v                        Toggle log verbosity");
     puts("  q                        Quit");
     puts("");
@@ -388,6 +525,40 @@ int main()
 
 		test_device(dir, rec_id, play_id, clock_rate, ptime, chnum);
 		
+	    }
+	    break;
+
+	case 'r':
+	    /* record */
+	    {
+		int index;
+		char filename[80];
+		int count;
+
+		count = sscanf(line+2, "%d %s", &index, filename);
+		if (count==1)
+		    record(index, NULL);
+		else if (count==2)
+		    record(index, filename);
+		else
+		    puts("error: invalid command syntax");
+	    }
+	    break;
+
+	case 'p':
+	    /* playback */
+	    {
+		int index;
+		char filename[80];
+		int count;
+
+		count = sscanf(line+2, "%d %s", &index, filename);
+		if (count==1)
+		    play_file(index, NULL);
+		else if (count==2)
+		    play_file(index, filename);
+		else
+		    puts("error: invalid command syntax");
 	    }
 	    break;
 

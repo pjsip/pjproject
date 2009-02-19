@@ -685,6 +685,8 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
     const PaStreamInfo *paSI;
     PaError err;
 
+    PJ_ASSERT_RETURN(rec_cb && p_snd_strm, PJ_EINVAL);
+
     rec_id = param->rec_id;
     if (rec_id < 0) {
 	rec_id = pa_get_default_input_dev(param->channel_count);
@@ -787,6 +789,8 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
     const PaStreamInfo *paSI;
     unsigned paFrames, paRate, paLatency;
     PaError err;
+
+    PJ_ASSERT_RETURN(play_cb && p_snd_strm, PJ_EINVAL);
 
     play_id = param->play_id;
     if (play_id < 0) {
@@ -897,6 +901,8 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
     const PaStreamInfo *paSI;
     unsigned paFrames, paRate, paInputLatency, paOutputLatency;
     PaError err;
+
+    PJ_ASSERT_RETURN(play_cb && rec_cb && p_snd_strm, PJ_EINVAL);
 
     rec_id = param->rec_id;
     if (rec_id < 0) {

@@ -44,6 +44,7 @@ pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf);
 /* The audio subsystem */
 static struct aud_subsys
 {
+    unsigned	     init_count;
     pj_pool_factory *pf;
     unsigned	     factory_cnt;
 
@@ -63,6 +64,13 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 {
     unsigned i;
     pj_status_t status = PJ_ENOMEM;
+
+    /* Allow init() to be called multiple times as long as there is matching
+     * number of shutdown().
+     */
+    if (aud_subsys.init_count++ != 0) {
+	return PJ_SUCCESS;
+    }
 
     aud_subsys.pf = pf;
     aud_subsys.factory_cnt = 0;
@@ -100,6 +108,14 @@ PJ_DEF(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void)
 PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
 {
     unsigned i;
+
+    /* Allow shutdown() to be called multiple times as long as there is matching
+     * number of init().
+     */
+    if (aud_subsys.init_count == 0) {
+	return PJ_SUCCESS;
+    }
+    --aud_subsys.init_count;
 
     for (i=0; i<aud_subsys.factory_cnt; ++i) {
 	pjmedia_aud_dev_factory *f = aud_subsys.factories[i].f;
