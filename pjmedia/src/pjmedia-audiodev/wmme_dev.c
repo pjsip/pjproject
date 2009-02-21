@@ -120,16 +120,16 @@ static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
 					pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 					 unsigned index,
-					 pjmedia_aud_dev_param *param);
+					 pjmedia_aud_param *param);
 static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
-					 const pjmedia_aud_dev_param *param,
+					 const pjmedia_aud_param *param,
 					 pjmedia_aud_rec_cb rec_cb,
 					 pjmedia_aud_play_cb play_cb,
 					 void *user_data,
 					 pjmedia_aud_stream **p_aud_strm);
 
 static pj_status_t stream_get_param(pjmedia_aud_stream *strm,
-				    pjmedia_aud_dev_param *param);
+				    pjmedia_aud_param *param);
 static pj_status_t stream_get_cap(pjmedia_aud_stream *strm,
 				  pjmedia_aud_dev_cap cap,
 				  void *value);
@@ -398,7 +398,7 @@ static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 					 unsigned index,
-					 pjmedia_aud_dev_param *param)
+					 pjmedia_aud_param *param)
 {
     struct wmme_factory *wf = (struct wmme_factory*)f;
     struct wmme_dev_info *di = &wf->dev_info[index];
@@ -413,11 +413,11 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     } else if (di->info.input_count) {
 	param->dir = PJMEDIA_DIR_CAPTURE;
 	param->rec_id = index;
-	param->play_id = PJMEDIA_AUD_DEV_DEFAULT_ID;
+	param->play_id = PJMEDIA_AUD_DEV_DEFAULT;
     } else if (di->info.output_count) {
 	param->dir = PJMEDIA_DIR_PLAYBACK;
 	param->play_id = index;
-	param->rec_id = PJMEDIA_AUD_DEV_DEFAULT_ID;
+	param->rec_id = PJMEDIA_AUD_DEV_DEFAULT;
     } else {
 	return PJMEDIA_EAUD_INVDEV;
     }
@@ -815,7 +815,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 
 /* API: create stream */
 static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
-					 const pjmedia_aud_dev_param *param,
+					 const pjmedia_aud_param *param,
 					 pjmedia_aud_rec_cb rec_cb,
 					 pjmedia_aud_play_cb play_cb,
 					 void *user_data,
@@ -929,7 +929,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
 /* API: Get stream info. */
 static pj_status_t stream_get_param(pjmedia_aud_stream *s,
-				    pjmedia_aud_dev_param *pi)
+				    pjmedia_aud_param *pi)
 {
     struct wmme_stream *strm = (struct wmme_stream*)s;
 

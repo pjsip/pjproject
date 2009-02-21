@@ -13,6 +13,7 @@ PJLIB_UTIL_LIB = ..\..\pjlib-util\lib\pjlib-util-$(TARGET)$(LIBEXT)
 PJNATH_LIB = ..\..\pjnath\lib\pjnath-$(TARGET)$(LIBEXT)
 PJMEDIA_LIB = ..\..\pjmedia\lib\pjmedia-$(TARGET)$(LIBEXT)
 PJMEDIA_CODEC_LIB = ..\..\pjmedia\lib\pjmedia-codec-$(TARGET)$(LIBEXT)
+PJMEDIA_AUDIODEV_LIB = ..\..\pjmedia\lib\pjmedia-audiodev-$(TARGET)$(LIBEXT)
 PJSIP_LIB = ..\..\pjsip\lib\pjsip-core-$(TARGET)$(LIBEXT)
 PJSIP_UA_LIB = ..\..\pjsip\lib\pjsip-ua-$(TARGET)$(LIBEXT)
 PJSIP_SIMPLE_LIB = ..\..\pjsip\lib\pjsip-simple-$(TARGET)$(LIBEXT)
@@ -29,8 +30,8 @@ THIRD_PARTY_LIBS = $(GSM_LIB) $(ILBC_LIB) $(PORTAUDIO_LIB) $(RESAMPLE_LIB) \
 				   $(SPEEX_LIB) $(SRTP_LIB)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
-	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_LIB) $(PJNATH_LIB) \
-	  $(PJLIB_UTIL_LIB) $(PJLIB_LIB) \
+	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_AUDIODEV_LIB) \
+	  $(PJMEDIA_LIB) $(PJNATH_LIB) $(PJLIB_UTIL_LIB) $(PJLIB_LIB) \
 	  $(THIRD_PARTY_LIBS)
 
 CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
@@ -49,7 +50,8 @@ OBJDIR = .\output\samples-$(TARGET)
 BINDIR = ..\bin\samples
 
 
-SAMPLES = $(BINDIR)\confsample.exe \
+SAMPLES = $(BINDIR)\auddemo.exe \
+	  $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
 	  $(BINDIR)\encdec.exe \
 	  $(BINDIR)\latency.exe \
@@ -65,8 +67,6 @@ SAMPLES = $(BINDIR)\confsample.exe \
 	  $(BINDIR)\simple_pjsua.exe \
 	  $(BINDIR)\siprtp.exe \
 	  $(BINDIR)\sipstateless.exe \
-	  $(BINDIR)\sndinfo.exe \
-	  $(BINDIR)\sndtest.exe \
 	  $(BINDIR)\stateful_proxy.exe \
 	  $(BINDIR)\stateless_proxy.exe \
 	  $(BINDIR)\stereotest.exe \

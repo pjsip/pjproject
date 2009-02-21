@@ -51,7 +51,7 @@ struct stream_data
 struct test_data 
 {
     pj_pool_t			   *pool;
-    const pjmedia_aud_dev_param    *param;
+    const pjmedia_aud_param    *param;
     pjmedia_aud_test_results	   *result;
     pj_bool_t			    running;
     pj_bool_t			    has_error;
@@ -181,7 +181,7 @@ static void app_perror(const char *title, pj_status_t status)
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_dev_param *param,
+PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
 				      pjmedia_aud_test_results *result)
 {
     pj_status_t status = PJ_SUCCESS;

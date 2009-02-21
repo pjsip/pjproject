@@ -121,10 +121,6 @@ SOURCE=..\src\pjmedia\delaybuf.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\dsound.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\echo_common.c
 # End Source File
 # Begin Source File
@@ -174,14 +170,6 @@ SOURCE=..\src\pjmedia\mem_player.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\null_port.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\nullsound.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\pasound.c
 # End Source File
 # Begin Source File
 
@@ -294,10 +282,6 @@ SOURCE=..\src\pjmedia\wav_writer.c
 # Begin Source File
 
 SOURCE=..\src\pjmedia\wave.c
-# End Source File
-# Begin Source File
-
-SOURCE=..\src\pjmedia\wmme_sound.c
 # End Source File
 # Begin Source File
 

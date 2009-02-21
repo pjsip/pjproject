@@ -79,14 +79,14 @@ typedef struct pjmedia_aud_dev_factory_op
      */
     pj_status_t (*default_param)(pjmedia_aud_dev_factory *f,
 				 unsigned index,
-				 pjmedia_aud_dev_param *param);
+				 pjmedia_aud_param *param);
 
     /**
      * Open the audio device and create audio stream. See
      * #pjmedia_aud_stream_create()
      */
     pj_status_t (*create_stream)(pjmedia_aud_dev_factory *f,
-				 const pjmedia_aud_dev_param *param,
+				 const pjmedia_aud_param *param,
 				 pjmedia_aud_rec_cb rec_cb,
 				 pjmedia_aud_play_cb play_cb,
 				 void *user_data,
@@ -119,7 +119,7 @@ typedef struct pjmedia_aud_stream_op
      * See #pjmedia_aud_stream_get_param()
      */
     pj_status_t (*get_param)(pjmedia_aud_stream *strm,
-			     pjmedia_aud_dev_param *param);
+			     pjmedia_aud_param *param);
 
     /**
      * See #pjmedia_aud_stream_get_cap()
@@ -158,8 +158,8 @@ typedef struct pjmedia_aud_stream_op
  */
 struct pjmedia_aud_stream
 {
-    /** Factory */
-    pjmedia_aud_dev_factory *factory;
+    /** Factory id (internal) */
+    unsigned factory_id;
 
     /** Operations */
     pjmedia_aud_stream_op *op;

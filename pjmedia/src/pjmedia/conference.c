@@ -465,8 +465,8 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     /* Create sound device port: */
 
     if ((conf->options & PJMEDIA_CONF_NO_DEVICE) == 0) {
-	pjmedia_snd_stream *strm;
-	pjmedia_snd_stream_info si;
+	pjmedia_aud_stream *strm;
+	pjmedia_aud_param param;
 
 	/*
 	 * If capture is disabled then create player only port.
@@ -494,14 +494,14 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 	    return status;
 
 	strm = pjmedia_snd_port_get_snd_stream(conf->snd_dev_port);
-	status = pjmedia_snd_stream_get_info(strm, &si);
+	status = pjmedia_aud_stream_get_param(strm, &param);
 	if (status == PJ_SUCCESS) {
-	    const pjmedia_snd_dev_info *snd_dev_info;
+	    pjmedia_aud_dev_info snd_dev_info;
 	    if (conf->options & PJMEDIA_CONF_NO_MIC)
-		snd_dev_info = pjmedia_snd_get_dev_info(si.play_id);
+		pjmedia_aud_dev_get_info(param.play_id, &snd_dev_info);
 	    else
-		snd_dev_info = pjmedia_snd_get_dev_info(si.rec_id);
-	    pj_strdup2_with_null(pool, &conf_port->name, snd_dev_info->name);
+		pjmedia_aud_dev_get_info(param.rec_id, &snd_dev_info);
+	    pj_strdup2_with_null(pool, &conf_port->name, snd_dev_info.name);
 	}
     }
 

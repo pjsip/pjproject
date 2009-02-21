@@ -20,6 +20,7 @@
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/sdp.h>
+#include <pjmedia-audiodev/audiodev.h>
 #include <pj/assert.h>
 #include <pj/ioqueue.h>
 #include <pj/log.h>
@@ -121,7 +122,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     endpt->thread_cnt = worker_cnt;
 
     /* Sound */
-    status = pjmedia_snd_init(pf);
+    status = pjmedia_aud_subsys_init(pf);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -171,7 +172,7 @@ on_error:
     if (endpt->ioqueue && endpt->own_ioqueue)
 	pj_ioqueue_destroy(endpt->ioqueue);
 
-    pjmedia_snd_deinit();
+    pjmedia_aud_subsys_shutdown();
     pj_pool_release(pool);
     return status;
 }
@@ -212,7 +213,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 
     endpt->pf = NULL;
 
-    pjmedia_snd_deinit();
+    pjmedia_aud_subsys_shutdown();
     pj_pool_release (endpt->pool);
 
     return PJ_SUCCESS;

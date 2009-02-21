@@ -21,6 +21,15 @@
 #define __PJMEDIA_SOUND_H__
 
 
+/* This is legacy sound device code, which has been superseded by the
+ * new pjmedia-audiodev framework. Please see the documentation on how
+ * to use this legacy API.
+ */
+#if PJMEDIA_AUDIO_API==PJMEDIA_AUDIO_API_NEW_ONLY
+#   error "The sound device API is deprecated. Please see doc for details."
+#endif
+
+
 /**
  * @file sound.h
  * @brief Sound player and recorder device framework.

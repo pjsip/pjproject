@@ -64,96 +64,65 @@
  * Types of sound stream backends.
  */
 
-/** Constant for NULL sound backend. */
-#define PJMEDIA_SOUND_NULL_SOUND	    0
-
-/** Constant for PortAudio sound backend. */
-#define PJMEDIA_SOUND_PORTAUDIO_SOUND	    1
-
-/** Constant for Win32 DirectSound sound backend. */
-#define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
-
-/** Constant for Win32 MME sound backend. */
-#define PJMEDIA_SOUND_WIN32_MME_SOUND	    3
-
-/** Constant for Symbian Multimedia Audio Stream backend. */
-#define PJMEDIA_SOUND_SYMB_MDA_SOUND	    4
-
-/** Constant for Symbian APS backend. */
-#define PJMEDIA_SOUND_SYMB_APS_SOUND	    5
-
-/** Constant for Symbian VAS backend. */
-#define PJMEDIA_SOUND_SYMB_VAS_SOUND	    6
-
-
-/** When this is set, pjmedia will not provide any sound device backend. 
- *  Application will have to provide its own sound device backend
- *  and link the application with it.
- */
-#define PJMEDIA_SOUND_EXTERNAL		    255
-
-
 /**
- * Unless specified otherwise, sound device uses PortAudio implementation
- * by default.
+ * This macro has been deprecated in releasee 1.1. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more information.
  */
-#ifndef PJMEDIA_SOUND_IMPLEMENTATION
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
-/*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_DIRECT_SOUND*/
-/*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_MME_SOUND*/
-#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
-#  else
-#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
-#  endif
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION)
+#   error PJMEDIA_SOUND_IMPLEMENTATION has been deprecated
 #endif
 
 /**
- * Specify if the sound device implementation supports handling encoded
- * frames. Setting this to zero will activate some emulation in the
- * sound port.
+ * This macro has been deprecated in releasee 1.1. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more information.
  */
-#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_SYMB_APS_SOUND || \
-    PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_SYMB_VAS_SOUND
-#   define PJMEDIA_SND_SUPPORT_OPEN2	1
-#else
-#   define PJMEDIA_SND_SUPPORT_OPEN2	0
+#if defined(PJMEDIA_PREFER_DIRECT_SOUND)
+#   error PJMEDIA_PREFER_DIRECT_SOUND has been deprecated
 #endif
 
 /**
- * Specify whether we prefer to use DirectSound on Windows.
- *
- * Default: 0
+ * Setting PJMEDIA_AUDIO_API to this value will completely deprecate the use
+ * of old API, and inclusion of <pjmedia/sound.h> in the code will raise 
+ * compilation error.
  */
-#ifndef PJMEDIA_PREFER_DIRECT_SOUND
-#   define PJMEDIA_PREFER_DIRECT_SOUND	    0
+#define PJMEDIA_AUDIO_API_NEW_ONLY	    1
+
+/**
+ * Setting PJMEDIA_AUDIO_API to this value enables application to use the old
+ * sound device API to access audio devices provided by the new audio device 
+ * API. 
+ */
+#define PJMEDIA_AUDIO_API_HAS_OLD_API	    2
+
+/**
+ * Setting PJMEDIA_AUDIO_API to this value enables old sound device 
+ * implementation to be accessed via both old and new API's. 
+ */
+#define PJMEDIA_AUDIO_API_HAS_OLD_DEVICE    3
+
+/**
+ * Specify how the audio API should handle compatibility with old sound API.
+ * Valid values are: PJMEDIA_AUDIO_API_HAS_OLD_API (default, 
+ * PJMEDIA_AUDIO_API_NEW_ONLY, or PJMEDIA_AUDIO_API_HAS_OLD_DEVICE. Please
+ * see http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more info.
+ */
+#ifndef PJMEDIA_AUDIO_API
+#   define PJMEDIA_AUDIO_API		    PJMEDIA_AUDIO_API_NEW_ONLY
 #endif
 
 
 /**
- * Specify sound device latency default, in milisecond.
+ * Specify default sound device latency, in milisecond.
  */
 #ifndef PJMEDIA_SND_DEFAULT_REC_LATENCY
 #   define PJMEDIA_SND_DEFAULT_REC_LATENCY  100
 #endif
 
+/**
+ * Specify default sound device latency, in milisecond.
+ */
 #ifndef PJMEDIA_SND_DEFAULT_PLAY_LATENCY
 #   define PJMEDIA_SND_DEFAULT_PLAY_LATENCY 100
-#endif
-
-
-/**
- * Specify whether delay buffer is used for sound device.
- * When delay buffer is enabled, the sound device callback 
- * will be called one after another evenly.
- * The delay buffer also performs the best delay calculation
- * for the sound device, and will try to limit the delay caused
- * by uneven callback calls to this delay.
- *
- * When this setting is enabled, the PJMEDIA_SOUND_BUFFER_COUNT
- * macro will specify the maximum size of the delay buffer.
- */
-#ifndef PJMEDIA_SOUND_USE_DELAYBUF
-#   define PJMEDIA_SOUND_USE_DELAYBUF	    0
 #endif
 
 

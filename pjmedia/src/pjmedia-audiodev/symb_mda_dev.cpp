@@ -72,7 +72,7 @@ struct mda_stream
     pj_pool_t		*pool;			/**< Memory pool.       */
 
     // Common settings.
-    pjmedia_aud_dev_param param;		/**< Stream param.	*/
+    pjmedia_aud_param param;		/**< Stream param.	*/
 
     // Audio engine
     CPjAudioInputEngine	*in_engine;		/**< Record engine.	*/
@@ -89,16 +89,16 @@ static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
 					pjmedia_aud_dev_info *info);
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 					 unsigned index,
-					 pjmedia_aud_dev_param *param);
+					 pjmedia_aud_param *param);
 static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
-					 const pjmedia_aud_dev_param *param,
+					 const pjmedia_aud_param *param,
 					 pjmedia_aud_rec_cb rec_cb,
 					 pjmedia_aud_play_cb play_cb,
 					 void *user_data,
 					 pjmedia_aud_stream **p_aud_strm);
 
 static pj_status_t stream_get_param(pjmedia_aud_stream *strm,
-				    pjmedia_aud_dev_param *param);
+				    pjmedia_aud_param *param);
 static pj_status_t stream_get_cap(pjmedia_aud_stream *strm,
 				  pjmedia_aud_dev_cap cap,
 				  void *value);
@@ -844,7 +844,7 @@ static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f,
 /* API: create default device parameter */
 static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 					 unsigned index,
-					 pjmedia_aud_dev_param *param)
+					 pjmedia_aud_param *param)
 {
     struct mda_factory *af = (struct mda_factory*)f;
 
@@ -866,7 +866,7 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 
 /* API: create stream */
 static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
-					 const pjmedia_aud_dev_param *param,
+					 const pjmedia_aud_param *param,
 					 pjmedia_aud_rec_cb rec_cb,
 					 pjmedia_aud_play_cb play_cb,
 					 void *user_data,
@@ -921,7 +921,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
 /* API: Get stream info. */
 static pj_status_t stream_get_param(pjmedia_aud_stream *s,
-				    pjmedia_aud_dev_param *pi)
+				    pjmedia_aud_param *pi)
 {
     struct mda_stream *strm = (struct mda_stream*)s;
 

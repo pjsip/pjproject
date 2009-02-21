@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __AUDIOTEST_H__
-#define __AUDIOTEST_H__
+#ifndef __PJMEDIA_AUDIODEV_AUDIOTEST_H__
+#define __PJMEDIA_AUDIODEV_AUDIOTEST_H__
 
 /**
  * @file audiotest.h
@@ -91,7 +91,7 @@ typedef struct pjmedia_aud_test_results
 /**
  * Perform audio device testing.
  */
-PJ_DECL(pj_status_t) pjmedia_aud_test(const pjmedia_aud_dev_param *param,
+PJ_DECL(pj_status_t) pjmedia_aud_test(const pjmedia_aud_param *param,
 				      pjmedia_aud_test_results *result);
 
 /**
@@ -101,6 +101,6 @@ PJ_DECL(pj_status_t) pjmedia_aud_test(const pjmedia_aud_dev_param *param,
 PJ_END_DECL
 
 
-#endif	/* __AUDIOTEST_H__ */
+#endif	/* __PJMEDIA_AUDIODEV_AUDIOTEST_H__ */
 
 

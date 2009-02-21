@@ -1514,20 +1514,15 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 /*
  * Open sound device with extended setting.
  */
-static pj_status_t open_snd_dev_ext( int capture_dev,
-				     int playback_dev,
-				     unsigned clock_rate,
-				     unsigned channel_count,
-				     unsigned samples_per_frame,
-				     const pjmedia_snd_setting *setting)
+static pj_status_t open_snd_dev_ext(pjmedia_aud_param *param)
 {
     pjmedia_port *conf_port;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(setting, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
     /* Check if NULL sound device is used */
-    if (NULL_SND_DEV_ID == capture_dev || NULL_SND_DEV_ID == playback_dev) {
+    if (NULL_SND_DEV_ID==param->rec_id || NULL_SND_DEV_ID==param->play_id) {
 	return pjsua_set_null_snd_dev();
     }
 
@@ -1544,26 +1539,19 @@ static pj_status_t open_snd_dev_ext( int capture_dev,
     pj_assert(conf_port != NULL);
 
     PJ_LOG(4,(THIS_FILE, "Opening sound device @%d/%d/%s",
-	      clock_rate, channel_count,
-	      (setting->format.id==PJMEDIA_FORMAT_L16?"raw":"encoded")));
+	      param->clock_rate, param->channel_count,
+	      (param->ext_fmt.id==PJMEDIA_FORMAT_L16?"pcm":"encoded")));
 
     status = pjmedia_snd_port_create2( pjsua_var.snd_pool, 
-				       PJMEDIA_DIR_CAPTURE_PLAYBACK,
-				       capture_dev,
-				       playback_dev, 
-				       clock_rate, 
-				       channel_count,
-				       samples_per_frame,
-				       16, 
-				       setting, 
-				       &pjsua_var.snd_port);
+				       param,  &pjsua_var.snd_port);
 
     /* Update port 0 info when sound dev opened successfully. */
     if (status == PJ_SUCCESS) {
-	conf_port->info.format = setting->format;
-	conf_port->info.clock_rate = clock_rate;
-	conf_port->info.samples_per_frame = samples_per_frame;
-	conf_port->info.channel_count = channel_count;
+	pj_memcpy(&conf_port->info.format, &param->ext_fmt, 
+		  sizeof(conf_port->info.format));
+	conf_port->info.clock_rate = param->clock_rate;
+	conf_port->info.samples_per_frame = param->samples_per_frame;
+	conf_port->info.channel_count = param->channel_count;
 	conf_port->info.bits_per_sample = 16;
     } else {
 	pjsua_perror(THIS_FILE, "Unable to open sound device", status);
@@ -1582,23 +1570,23 @@ static pj_status_t open_snd_dev_ext( int capture_dev,
     }
 
     /* Save the device IDs */
-    pjsua_var.cap_dev = capture_dev;
-    pjsua_var.play_dev = playback_dev;
+    pjsua_var.cap_dev = param->rec_id;
+    pjsua_var.play_dev = param->play_id;
 
     /* Update sound device name. */
-    do {
-	const pjmedia_snd_dev_info *play_info;
-	pjmedia_snd_stream *strm;
-	pjmedia_snd_stream_info si;
+    {
+	pjmedia_aud_dev_info play_info;
+	pjmedia_aud_stream *strm;
+	pjmedia_aud_param si;
         pj_str_t tmp;
 
 	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-	pjmedia_snd_stream_get_info(strm, &si);
-	play_info = pjmedia_snd_get_dev_info(si.rec_id);
-
-	pjmedia_conf_set_port0_name(pjsua_var.mconf, 
-				    pj_cstr(&tmp, play_info->name));
-    } while(0);
+	pjmedia_aud_stream_get_param(strm, &si);
+	if (pjmedia_aud_dev_get_info(si.play_id, &play_info)==PJ_SUCCESS) {
+	    pjmedia_conf_set_port0_name(pjsua_var.mconf, 
+					pj_cstr(&tmp, play_info.name));
+	}
+    };
 
     return PJ_SUCCESS;
 }
@@ -1611,14 +1599,17 @@ static void close_snd_dev(void)
 {
     /* Close sound device */
     if (pjsua_var.snd_port) {
-	pjmedia_snd_dev_info cap_info, play_info;
-	pjmedia_snd_stream *strm;
-	pjmedia_snd_stream_info si;
+	pjmedia_aud_dev_info cap_info, play_info;
+	pjmedia_aud_stream *strm;
+	pjmedia_aud_param param;
 
 	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-	pjmedia_snd_stream_get_info(strm, &si);
-	cap_info = *(pjmedia_snd_get_dev_info(si.rec_id));
-	play_info = *(pjmedia_snd_get_dev_info(si.play_id));
+	pjmedia_aud_stream_get_param(strm, &param);
+
+	if (pjmedia_aud_dev_get_info(param.rec_id, &cap_info) != PJ_SUCCESS)
+	    cap_info.name[0] = '\0';
+	if (pjmedia_aud_dev_get_info(param.play_id, &play_info) != PJ_SUCCESS)
+	    play_info.name[0] = '\0';
 
 	PJ_LOG(4,(THIS_FILE, "Closing %s sound playback device and "
 			     "%s sound capture device",
@@ -1796,18 +1787,43 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	}
 
 	if (need_reopen) {
-	    pjmedia_snd_setting setting;
+	    pjmedia_aud_param param;
 
-	    pj_bzero(&setting, sizeof(setting));
-	    setting.format = peer_info.format;
-	    setting.plc = PJ_FALSE;
-	    setting.route = PJMEDIA_SND_ROUTE_DEFAULT;
+	    status = pjmedia_aud_dev_default_param(pjsua_var.cap_dev, &param);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Error retrieving default audio "
+					"device parameters", status);
+		return status;
+	    }
+
+	    param.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+	    param.rec_id = pjsua_var.cap_dev;
+	    param.play_id = pjsua_var.play_dev;
+	    param.clock_rate = peer_info.clock_rate;
+	    param.samples_per_frame = peer_info.samples_per_frame;
+	    param.channel_count = peer_info.channel_count;
+	    param.bits_per_sample = peer_info.bits_per_sample;
+	    /* Latency setting */
+	    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+			    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
+	    param.input_latency_ms = pjsua_var.media_cfg.snd_rec_latency;
+	    param.output_latency_ms = pjsua_var.media_cfg.snd_play_latency;
+	    /* EC settings */
+	    if (pjsua_var.media_cfg.ec_tail_len) {
+		param.flags |= (PJMEDIA_AUD_DEV_CAP_EC | PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+		param.ec_enabled = PJ_TRUE;
+		param.ec_tail_ms = pjsua_var.media_cfg.ec_tail_len;
+	    } else {
+		param.flags &= ~(PJMEDIA_AUD_DEV_CAP_EC | PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+	    }
+	    /* Format */
+	    param.flags |= (PJMEDIA_AUD_DEV_CAP_EXT_FORMAT | 
+			    PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE);
+	    param.ext_fmt = peer_info.format;
+	    //param.plc = PJ_FALSE;
+	    param.out_route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
 	    
-	    status = open_snd_dev_ext(pjsua_var.cap_dev, pjsua_var.play_dev,
-				      peer_info.clock_rate,
-				      peer_info.channel_count,
-				      peer_info.samples_per_frame,
-				      &setting);
+	    status = open_snd_dev_ext(&param);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error opening sound device", status);
 		return status;
@@ -2306,26 +2322,61 @@ PJ_DEF(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id)
 /*
  * Enum sound devices.
  */
-PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_snd_dev_info info[],
+#if PJMEDIA_AUDIO_API==PJMEDIA_AUDIO_API_NEW_ONLY
+PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_aud_dev_info info[],
 					 unsigned *count)
 {
     unsigned i, dev_count;
 
-    dev_count = pjmedia_snd_get_dev_count();
+    dev_count = pjmedia_aud_dev_count();
     
     if (dev_count > *count) dev_count = *count;
 
     for (i=0; i<dev_count; ++i) {
-	const pjmedia_snd_dev_info *ci;
+	pj_status_t status;
 
-	ci = pjmedia_snd_get_dev_info(i);
-	pj_memcpy(&info[i], ci, sizeof(*ci));
+	status = pjmedia_aud_dev_get_info(i, &info[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     *count = dev_count;
 
     return PJ_SUCCESS;
 }
+#else	/* PJMEDIA_AUDIO_API */
+PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_snd_dev_info info[],
+					 unsigned *count)
+{
+    unsigned i, dev_count;
+
+    dev_count = pjmedia_aud_dev_count();
+    
+    if (dev_count > *count) dev_count = *count;
+    pj_bzero(info, dev_count * sizeof(pjmedia_snd_dev_info));
+
+    for (i=0; i<dev_count; ++i) {
+	pjmedia_aud_dev_info ai;
+	pj_status_t status;
+
+	status = pjmedia_aud_dev_get_info(i, &ai);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	strncpy(info[i].name, ai.name, sizeof(info[i].name));
+	info[i].name[sizeof(info[i].name)-1] = '\0';
+	info[i].input_count = ai.input_count;
+	info[i].output_count = ai.output_count;
+	info[i].default_samples_per_sec = ai.default_samples_per_sec;
+    }
+
+    *count = dev_count;
+
+    return PJ_SUCCESS;
+}
+#endif
+
+
 /*
  * Select or change sound device. Application may call this function at
  * any time to replace current sound device.
@@ -2334,12 +2385,12 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 				       int playback_dev)
 {
     pjmedia_port *conf_port;
-    const pjmedia_snd_dev_info *play_info;
+    pjmedia_aud_dev_info play_info;
+    pjmedia_aud_param param;
     unsigned clock_rates[] = {0, 44100, 48000, 32000, 16000, 8000};
     unsigned selected_clock_rate = 0;
     unsigned i;
-    pjmedia_snd_stream *strm;
-    pjmedia_snd_stream_info si;
+    pjmedia_aud_stream *strm;
     pj_str_t tmp;
     pj_status_t status = -1;
 
@@ -2352,7 +2403,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     close_snd_dev();
 
     /* Create memory pool for sound device. */
-    pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
+    pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 1000, 1000);
     PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
 
     /* Set default clock rate */
@@ -2364,26 +2415,45 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     conf_port = pjmedia_conf_get_master_port(pjsua_var.mconf);
     pj_assert(conf_port != NULL);
 
+    /* Create default parameters for the device */
+    status = pjmedia_aud_dev_default_param(capture_dev, &param);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+    param.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    param.rec_id = capture_dev;
+    param.play_id = playback_dev;
+    param.channel_count = pjsua_var.media_cfg.channel_count;
+    /* Latency settings */
+    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+		    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
+    param.input_latency_ms = pjsua_var.media_cfg.snd_rec_latency;
+    param.output_latency_ms = pjsua_var.media_cfg.snd_play_latency;
+    /* EC settings */
+    if (pjsua_var.media_cfg.ec_tail_len) {
+	param.flags |= (PJMEDIA_AUD_DEV_CAP_EC | PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+	param.ec_enabled = PJ_TRUE;
+	param.ec_tail_ms = pjsua_var.media_cfg.ec_tail_len;
+    } else {
+	param.flags &= ~(PJMEDIA_AUD_DEV_CAP_EC | PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+    }
+
     /* Attempts to open the sound device with different clock rates */
     for (i=0; i<PJ_ARRAY_SIZE(clock_rates); ++i) {
 	char errmsg[PJ_ERR_MSG_SIZE];
-	unsigned samples_per_frame;
 
 	PJ_LOG(4,(THIS_FILE, 
 		  "pjsua_set_snd_dev(): attempting to open devices "
 		  "@%d Hz", clock_rates[i]));
 
-	samples_per_frame = clock_rates[i] *
-			    pjsua_var.media_cfg.audio_frame_ptime *
-			    pjsua_var.media_cfg.channel_count / 1000;
+	param.clock_rate = clock_rates[i];
+	param.samples_per_frame = clock_rates[i] *
+				  pjsua_var.media_cfg.audio_frame_ptime *
+				  pjsua_var.media_cfg.channel_count / 1000;
 
 	/* Create the sound device. Sound port will start immediately. */
-	status = pjmedia_snd_port_create(pjsua_var.snd_pool, capture_dev,
-					 playback_dev, 
-					 clock_rates[i], 
-					 pjsua_var.media_cfg.channel_count,
-					 samples_per_frame,
-					 16, 0, &pjsua_var.snd_port);
+	status = pjmedia_snd_port_create2(pjsua_var.snd_pool, &param,
+					  &pjsua_var.snd_port);
 
 	if (status == PJ_SUCCESS) {
 	    selected_clock_rate = clock_rates[i];
@@ -2437,11 +2507,6 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	return status;
     }
 
-    /* Set AEC */
-    pjmedia_snd_port_set_ec( pjsua_var.snd_port, pjsua_var.snd_pool, 
-			     pjsua_var.media_cfg.ec_tail_len, 
-			     pjsua_var.media_cfg.ec_options);
-
     /* Connect sound port to the bridge */ 	 
     status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 
 				      conf_port ); 	 
@@ -2459,20 +2524,20 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
     /* Update sound device name. */
     strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-    pjmedia_snd_stream_get_info(strm, &si);
-    play_info = pjmedia_snd_get_dev_info(si.rec_id);
+    pjmedia_aud_stream_get_param(strm, &param);
+    pjmedia_aud_dev_get_info(param.play_id, &play_info);
 
-    if (si.clock_rate != pjsua_var.media_cfg.clock_rate) {
+    if (param.clock_rate != pjsua_var.media_cfg.clock_rate) {
 	char tmp_buf[128];
 	int tmp_buf_len = sizeof(tmp_buf);
 
 	tmp_buf_len = pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf)-1, "%s (%dKHz)",
-				       play_info->name, si.clock_rate/1000);
+				       play_info.name, param.clock_rate/1000);
 	pj_strset(&tmp, tmp_buf, tmp_buf_len);
         pjmedia_conf_set_port0_name(pjsua_var.mconf, &tmp); 
     } else {
         pjmedia_conf_set_port0_name(pjsua_var.mconf, 
-				    pj_cstr(&tmp, play_info->name));
+				    pj_cstr(&tmp, play_info.name));
     }
 
     return PJ_SUCCESS;
@@ -2579,29 +2644,6 @@ PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
     return PJ_SUCCESS;
 }
 
-/* 
- * Header for specific Symbian APS audio routing.
- */
-#include <pjmedia/symbian_sound_aps.h>
-
-/*
- * Set sound device route.
- */
-PJ_DEF(pj_status_t) pjsua_set_snd_route(pjmedia_snd_route route)
-{
-#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
-    pjmedia_snd_stream *strm;
-
-    if (!pjsua_var.snd_port)
-	return PJ_ENOTFOUND;
-
-    strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-    return pjmedia_snd_aps_set_route(strm, route);
-#else
-    PJ_UNUSED_ARG(route);
-    return PJ_ENOTSUP;
-#endif
-}
 
 /*****************************************************************************
  * Codecs.

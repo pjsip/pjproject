@@ -4200,6 +4200,20 @@ struct pjsua_media_config
      */
     unsigned		ec_tail_len;
 
+    /**
+     * Audio capture buffer length, in milliseconds.
+     *
+     * Default: PJMEDIA_SND_DEFAULT_REC_LATENCY
+     */
+    unsigned		snd_rec_latency;
+
+    /**
+     * Audio playback buffer length, in milliseconds.
+     *
+     * Default: PJMEDIA_SND_DEFAULT_PLAY_LATENCY
+     */
+    unsigned		snd_play_latency;
+
     /** 
      * Jitter buffer initial prefetch delay in msec. The value must be
      * between jb_min_pre and jb_max_pre below.
@@ -4804,9 +4818,13 @@ PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
  * \endcode
  *
  */
+#if PJMEDIA_AUDIO_API==PJMEDIA_AUDIO_API_NEW_ONLY
+PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_aud_dev_info info[],
+					 unsigned *count);
+#else
 PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_snd_dev_info info[],
 					 unsigned *count);
-
+#endif
 
 
 /**
@@ -4879,7 +4897,20 @@ PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
 
 
 /**
- * Configure the echo canceller tail length of the sound port.
+ * Change the echo cancellation settings. The behavior of this function 
+ * depends on whether the sound device is currently active, and if it is,
+ * whether device or software AEC is being used. 
+ *
+ * If the sound device is currently active, and if the device supports AEC,
+ * this function will forward the change request to the device and it will
+ * be up to the device on whether support the request. If software AEC is
+ * being used (the software EC will be used if the device does not support
+ * AEC), this function will change the software EC settings. In all cases,
+ * the setting will be saved for future opening of the sound device.
+ *
+ * If the sound device is not currently active, this will only change the
+ * default AEC settings and the setting will be applied next time the 
+ * sound device is opened.
  *
  * @param tail_ms	The tail length, in miliseconds. Set to zero to
  *			disable AEC.
@@ -4910,16 +4941,6 @@ PJ_DECL(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options);
  * \endcode
  */
 PJ_DECL(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms);
-
-
-/**
- * Set sound device route.
- *
- * @param route		Sound device route to be set.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_set_snd_route(pjmedia_snd_route route);
 
 
 /*****************************************************************************

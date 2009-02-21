@@ -29,7 +29,6 @@
 
 
 static unsigned dev_count;
-static pjmedia_aud_dev_id dev_id[MAX_DEVICES];
 
 static void app_perror(const char *title, pj_status_t status)
 {
@@ -53,12 +52,10 @@ static void list_devices(void)
 
     PJ_LOG(3,(THIS_FILE, "Found %d devices:", dev_count));
 
-    dev_count = pjmedia_aud_dev_enum(PJ_ARRAY_SIZE(dev_id), dev_id);
-
     for (i=0; i<dev_count; ++i) {
 	pjmedia_aud_dev_info info;
 
-	status = pjmedia_aud_dev_get_info(dev_id[i], &info);
+	status = pjmedia_aud_dev_get_info(i, &info);
 	if (status != PJ_SUCCESS)
 	    continue;
 
@@ -70,63 +67,18 @@ static void list_devices(void)
 static const char *decode_caps(unsigned caps)
 {
     static char text[200];
+    unsigned i;
 
     text[0] = '\0';
 
-    if (caps & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT) {
-	strcat(text, "extfmt ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY) {
-	strcat(text, "inlatency ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY) {
-	strcat(text, "outlatency ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) {
-	strcat(text, "invol ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
-	strcat(text, "outvol ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_INPUT_SIGNAL_VOLUME) {
-	strcat(text, "insignal ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_OUTPUT_SIGNAL_VOLUME) {
-	strcat(text, "outsignal ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE) {
-	strcat(text, "inroute ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE) {
-	strcat(text, "outroute ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_EC) {
-	strcat(text, "ec ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_EC_TAIL) {
-	strcat(text, "ectail ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_VAD) {
-	strcat(text, "vad ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_CNG) {
-	strcat(text, "cng ");
-    }
-
-    if (caps & PJMEDIA_AUD_DEV_CAP_PLC) {
-	strcat(text, "plc ");
+    for (i=0; i<31; ++i) {
+	if ((1 << i) & caps) {
+	    const char *capname;
+	    capname = pjmedia_aud_dev_cap_name((pjmedia_aud_dev_cap)(1 << i), 
+					       NULL);
+	    strcat(text, capname);
+	    strcat(text, " ");
+	}
     }
 
     return text;
@@ -144,7 +96,7 @@ static void show_dev_info(unsigned index)
 	return;
     }
 
-    status = pjmedia_aud_dev_get_info(dev_id[index], &info);
+    status = pjmedia_aud_dev_get_info(index, &info);
     if (status != PJ_SUCCESS) {
 	app_perror("pjmedia_aud_dev_get_info() error", status);
 	return;
@@ -153,7 +105,7 @@ static void show_dev_info(unsigned index)
     PJ_LOG(3, (THIS_FILE, "Device at index %u:", index));
     PJ_LOG(3, (THIS_FILE, "-------------------------"));
 
-    PJ_LOG(3, (THIS_FILE, H": %u (0x%x)", "ID", dev_id[index], dev_id[index]));
+    PJ_LOG(3, (THIS_FILE, H": %u (0x%x)", "ID", index, index));
     PJ_LOG(3, (THIS_FILE, H": %s", "Name", info.name));
     PJ_LOG(3, (THIS_FILE, H": %s", "Driver", info.driver));
     PJ_LOG(3, (THIS_FILE, H": %u", "Input channels", info.input_count));
@@ -204,14 +156,14 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
 			unsigned clock_rate, unsigned ptime, 
 			unsigned chnum)
 {
-    pjmedia_aud_dev_param param;
+    pjmedia_aud_param param;
     pjmedia_aud_test_results result;
     pj_status_t status;
 
     if (dir & PJMEDIA_DIR_CAPTURE) {
-	status = pjmedia_aud_dev_default_param(dev_id[rec_id], &param);
+	status = pjmedia_aud_dev_default_param(rec_id, &param);
     } else {
-	status = pjmedia_aud_dev_default_param(dev_id[play_id], &param);
+	status = pjmedia_aud_dev_default_param(play_id, &param);
     }
 
     if (status != PJ_SUCCESS) {
@@ -220,8 +172,8 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
     }
 
     param.dir = dir;
-    param.rec_id = dev_id[rec_id];
-    param.play_id = dev_id[play_id];
+    param.rec_id = rec_id;
+    param.play_id = play_id;
     param.clock_rate = clock_rate;
     param.channel_count = chnum;
     param.samples_per_frame = clock_rate * chnum * ptime / 1000;
@@ -285,7 +237,7 @@ static void record(unsigned rec_index, const char *filename)
 {
     pj_pool_t *pool = NULL;
     pjmedia_port *wav = NULL;
-    pjmedia_aud_dev_param param;
+    pjmedia_aud_param param;
     pjmedia_aud_stream *strm = NULL;
     char line[10];
     pj_status_t status;
@@ -303,7 +255,7 @@ static void record(unsigned rec_index, const char *filename)
 	goto on_return;
     }
 
-    status = pjmedia_aud_dev_default_param(dev_id[rec_index], &param);
+    status = pjmedia_aud_dev_default_param(rec_index, &param);
     if (status != PJ_SUCCESS) {
 	app_perror("pjmedia_aud_dev_default_param()", status);
 	goto on_return;
@@ -353,7 +305,7 @@ static void play_file(unsigned play_index, const char *filename)
 {
     pj_pool_t *pool = NULL;
     pjmedia_port *wav = NULL;
-    pjmedia_aud_dev_param param;
+    pjmedia_aud_param param;
     pjmedia_aud_stream *strm = NULL;
     char line[10];
     pj_status_t status;
@@ -370,7 +322,7 @@ static void play_file(unsigned play_index, const char *filename)
 	goto on_return;
     }
 
-    status = pjmedia_aud_dev_default_param(dev_id[play_index], &param);
+    status = pjmedia_aud_dev_default_param(play_index, &param);
     if (status != PJ_SUCCESS) {
 	app_perror("pjmedia_aud_dev_default_param()", status);
 	goto on_return;

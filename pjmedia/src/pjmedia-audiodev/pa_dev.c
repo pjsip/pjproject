@@ -105,9 +105,9 @@ static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f,
 				    pjmedia_aud_dev_info *info);
 static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
 				     unsigned index,
-				     pjmedia_aud_dev_param *param);
+				     pjmedia_aud_param *param);
 static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
-				     const pjmedia_aud_dev_param *param,
+				     const pjmedia_aud_param *param,
 				     pjmedia_aud_rec_cb rec_cb,
 				     pjmedia_aud_play_cb play_cb,
 				     void *user_data,
@@ -115,7 +115,7 @@ static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
 
 /* Stream prototypes */
 static pj_status_t strm_get_param(pjmedia_aud_stream *strm,
-				  pjmedia_aud_dev_param *param);
+				  pjmedia_aud_param *param);
 static pj_status_t strm_get_cap(pjmedia_aud_stream *strm,
 	 		        pjmedia_aud_dev_cap cap,
 			        void *value);
@@ -514,7 +514,7 @@ static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f,
 /* API: fill in with default parameter. */
 static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
 				     unsigned index,
-				     pjmedia_aud_dev_param *param)
+				     pjmedia_aud_param *param)
 {
     pjmedia_aud_dev_info adi;
     pj_status_t status;
@@ -533,11 +533,11 @@ static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
     } else if (adi.input_count) {
 	param->dir = PJMEDIA_DIR_CAPTURE;
 	param->rec_id = index;
-	param->play_id = PJMEDIA_AUD_DEV_DEFAULT_ID;
+	param->play_id = PJMEDIA_AUD_DEV_DEFAULT;
     } else if (adi.output_count) {
 	param->dir = PJMEDIA_DIR_PLAYBACK;
 	param->play_id = index;
-	param->rec_id = PJMEDIA_AUD_DEV_DEFAULT_ID;
+	param->rec_id = PJMEDIA_AUD_DEV_DEFAULT;
     } else {
 	return PJMEDIA_EAUD_INVDEV;
     }
@@ -669,13 +669,13 @@ static int pa_get_default_output_dev(int channel_count)
 
 /* Internal: create capture/recorder stream */
 static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
-				      const pjmedia_aud_dev_param *param,
+				      const pjmedia_aud_param *param,
 				      pjmedia_aud_rec_cb rec_cb,
 				      void *user_data,
 				      pjmedia_aud_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pjmedia_aud_dev_id rec_id;
+    pjmedia_aud_dev_index rec_id;
     struct pa_aud_stream *stream;
     PaStreamParameters inputParam;
     int sampleFormat;
@@ -774,13 +774,13 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
 
 /* Internal: create playback stream */
 static pj_status_t create_play_stream(struct pa_aud_factory *pa,
-				      const pjmedia_aud_dev_param *param,
+				      const pjmedia_aud_param *param,
 				      pjmedia_aud_play_cb play_cb,
 				      void *user_data,
 				      pjmedia_aud_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pjmedia_aud_dev_id play_id;
+    pjmedia_aud_dev_index play_id;
     struct pa_aud_stream *stream;
     PaStreamParameters outputParam;
     int sampleFormat;
@@ -881,14 +881,14 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
 
 /* Internal: Create both player and recorder stream */
 static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
-				       const pjmedia_aud_dev_param *param,
+				       const pjmedia_aud_param *param,
 				       pjmedia_aud_rec_cb rec_cb,
 				       pjmedia_aud_play_cb play_cb,
 				       void *user_data,
 				       pjmedia_aud_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pjmedia_aud_dev_id rec_id, play_id;
+    pjmedia_aud_dev_index rec_id, play_id;
     struct pa_aud_stream *stream;
     PaStream *paStream = NULL;
     PaStreamParameters inputParam;
@@ -1060,7 +1060,7 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
 
 /* API: create stream */
 static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
-				     const pjmedia_aud_dev_param *param,
+				     const pjmedia_aud_param *param,
 				     pjmedia_aud_rec_cb rec_cb,
 				     pjmedia_aud_play_cb play_cb,
 				     void *user_data,
@@ -1091,7 +1091,7 @@ static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
 
 /* API: Get stream parameters */
 static pj_status_t strm_get_param(pjmedia_aud_stream *s,
-				  pjmedia_aud_dev_param *pi)
+				  pjmedia_aud_param *pi)
 {
     struct pa_aud_stream *strm = (struct pa_aud_stream*)s;
     const PaStreamInfo *paPlaySI = NULL, *paRecSI = NULL;

@@ -101,6 +101,16 @@ SOURCE="..\src\pjmedia-audiodev\pa_dev.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-audiodev\symb_aps_dev.cpp"
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-audiodev\symb_mda_dev.cpp"
+# PROP Exclude_From_Build 1
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-audiodev\wmme_dev.c"
 # End Source File
 # End Group
