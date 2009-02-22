@@ -413,6 +413,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
 					     pjmedia_snd_port **p_port)
 {
     pjmedia_snd_port *snd_port;
+    pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && prm && p_port, PJ_EINVAL);
 
@@ -429,15 +430,18 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     snd_port->bits_per_sample = prm->bits_per_sample;
     pj_memcpy(&snd_port->aud_param, prm, sizeof(*prm));
     
-    *p_port = snd_port;
-
-
     /* Start sound device immediately.
      * If there's no port connected, the sound callback will return
      * empty signal.
      */
-    return start_sound_device( pool, snd_port );
+    status = start_sound_device( pool, snd_port );
+    if (status != PJ_SUCCESS) {
+	pjmedia_snd_port_destroy(snd_port);
+	return status;
+    }
 
+    *p_port = snd_port;
+    return PJ_SUCCESS;
 }
 
 

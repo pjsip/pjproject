@@ -413,11 +413,11 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     } else if (di->info.input_count) {
 	param->dir = PJMEDIA_DIR_CAPTURE;
 	param->rec_id = index;
-	param->play_id = PJMEDIA_AUD_DEV_DEFAULT;
+	param->play_id = PJMEDIA_AUD_INVALID_DEV;
     } else if (di->info.output_count) {
 	param->dir = PJMEDIA_DIR_PLAYBACK;
 	param->play_id = index;
-	param->rec_id = PJMEDIA_AUD_DEV_DEFAULT;
+	param->rec_id = PJMEDIA_AUD_INVALID_DEV;
     } else {
 	return PJMEDIA_EAUD_INVDEV;
     }

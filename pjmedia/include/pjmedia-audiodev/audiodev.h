@@ -56,10 +56,27 @@ PJ_BEGIN_DECL
  */
 typedef pj_int32_t pjmedia_aud_dev_index;
 
-/** 
- * Constant to denote default device 
+/**
+ * Device index constants.
  */
-#define PJMEDIA_AUD_DEV_DEFAULT  (-1)
+enum
+{
+    /** 
+     * Constant to denote default capture device 
+     */
+    PJMEDIA_AUD_DEFAULT_CAPTURE_DEV = -1,
+
+    /** 
+     * Constant to denote default playback device 
+     */
+    PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV = -2,
+
+    /**
+     * Constant to denote invalid device index.
+     */
+    PJMEDIA_AUD_INVALID_DEV = -3
+};
+
 
 /** 
  * Type for device unique identifier. The unique device ID can be used to save
@@ -596,11 +613,17 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_stop(pjmedia_aud_stream *strm);
 PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 
 
+/* Audio subsystem not initialized */
+#define PJMEDIA_EAUD_INIT	-1
+
 /* Invalid audio device */
 #define PJMEDIA_EAUD_INVDEV	-1
 
 /* Found no devices */
 #define PJMEDIA_EAUD_NODEV	-1
+
+/* Unable to find default device */
+#define PJMEDIA_EAUD_NODEFDEV	-1
 
 /* Device not ready */
 #define PJMEDIA_EAUD_NOTREADY	-1

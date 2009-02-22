@@ -583,7 +583,8 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Set default sound device ID */
-    pjsua_var.cap_dev = pjsua_var.play_dev = -1;
+    pjsua_var.cap_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    pjsua_var.play_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
     /* Init caching pool. */
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);

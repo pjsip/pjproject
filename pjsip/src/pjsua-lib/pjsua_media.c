@@ -2399,6 +2399,10 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	return pjsua_set_null_snd_dev();
     }
 
+    /* Normalize device ID with new convention about default device ID */
+    if (playback_dev == PJMEDIA_AUD_DEFAULT_CAPTURE_DEV)
+	playback_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
     /* Close existing sound port */
     close_snd_dev();
 
@@ -2418,6 +2422,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     /* Create default parameters for the device */
     status = pjmedia_aud_dev_default_param(capture_dev, &param);
     if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error retrieving default audio "
+				"device parameters", status);
 	return status;
     }
     param.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;

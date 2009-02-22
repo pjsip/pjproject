@@ -79,6 +79,9 @@ struct driver
     char		     name[32];	/* Driver name			    */
     unsigned		     dev_cnt;	/* Number of devices		    */
     unsigned		     start_idx;	/* Start index in global list	    */
+    int			     rec_dev_idx;/* Default capture device.	    */
+    int			     play_dev_idx;/* Default playback device	    */
+    int			     dev_idx;	/* Default device.		    */
 };
 
 /* The audio subsystem */
@@ -96,6 +99,106 @@ static struct aud_subsys
 } aud_subsys;
 
 
+/* Internal: init driver */
+static pj_status_t init_driver(unsigned drv_idx)
+{
+    struct driver *drv = &aud_subsys.drv[drv_idx];
+    pjmedia_aud_dev_factory *f;
+    unsigned i, dev_cnt;
+    pj_status_t status;
+
+    /* Create the factory */
+    f = (*drv->create)(aud_subsys.pf);
+    if (!f)
+	return PJ_EUNKNOWN;
+
+    /* Call factory->init() */
+    status = f->op->init(f);
+    if (status != PJ_SUCCESS) {
+	f->op->destroy(f);
+	return status;
+    }
+
+    /* Get number of devices */
+    dev_cnt = f->op->get_dev_count(f);
+    if (dev_cnt + aud_subsys.dev_cnt > MAX_DEVS) {
+	PJ_LOG(4,(THIS_FILE, "%d device(s) cannot be registered because"
+			      " there are too many devices",
+			      aud_subsys.dev_cnt + dev_cnt - MAX_DEVS));
+	dev_cnt = MAX_DEVS - aud_subsys.dev_cnt;
+    }
+    if (dev_cnt == 0) {
+	f->op->destroy(f);
+	return PJMEDIA_EAUD_NODEV;
+    }
+
+    /* Fill in default devices */
+    drv->play_dev_idx = drv->rec_dev_idx = drv->dev_idx = -1;
+    for (i=0; i<dev_cnt; ++i) {
+	pjmedia_aud_dev_info info;
+
+	status = f->op->get_dev_info(f, i, &info);
+	if (status != PJ_SUCCESS) {
+	    f->op->destroy(f);
+	    return status;
+	}
+
+	if (drv->name[0]=='\0') {
+	    /* Set driver name */
+	    pj_ansi_strncpy(drv->name, info.driver, sizeof(drv->name));
+	    drv->name[sizeof(drv->name)-1] = '\0';
+	}
+
+	if (drv->play_dev_idx < 0 && info.output_count) {
+	    /* Set default playback device */
+	    drv->play_dev_idx = i;
+	}
+	if (drv->rec_dev_idx < 0 && info.input_count) {
+	    /* Set default capture device */
+	    drv->rec_dev_idx = i;
+	}
+	if (drv->dev_idx < 0 && info.input_count &&
+	    info.output_count)
+	{
+	    /* Set default capture and playback device */
+	    drv->dev_idx = i;
+	}
+
+	if (drv->play_dev_idx >= 0 && drv->rec_dev_idx >= 0 && 
+	    drv->dev_idx >= 0) 
+	{
+	    /* Done. */
+	    break;
+	}
+    }
+
+    /* Register the factory */
+    drv->f = f;
+    drv->f->sys.drv_idx = drv_idx;
+    drv->start_idx = aud_subsys.dev_cnt;
+    drv->dev_cnt = dev_cnt;
+
+    /* Register devices to global list */
+    for (i=0; i<dev_cnt; ++i) {
+	aud_subsys.dev_list[aud_subsys.dev_cnt++] = MAKE_DEV_ID(drv_idx, i);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/* Internal: deinit driver */
+static void deinit_driver(unsigned drv_idx)
+{
+    struct driver *drv = &aud_subsys.drv[drv_idx];
+
+    if (drv->f) {
+	drv->f->op->destroy(drv->f);
+	drv->f = NULL;
+    }
+
+    drv->dev_cnt = 0;
+    drv->play_dev_idx = drv->rec_dev_idx = drv->dev_idx = -1;
+}
 
 /* API: Initialize the audio subsystem. */
 PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
@@ -120,58 +223,14 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 
     /* Initialize each factory and build the device ID list */
     for (i=0; i<aud_subsys.drv_cnt; ++i) {
-	pjmedia_aud_dev_factory *f;
-	pjmedia_aud_dev_info info;
-	unsigned j, dev_cnt;
-
-	/* Create the factory */
-	f = (*aud_subsys.drv[i].create)(pf);
-	if (!f)
-	    continue;
-
-	/* Call factory->init() */
-	status = f->op->init(f);
+	status = init_driver(i);
 	if (status != PJ_SUCCESS) {
-	    f->op->destroy(f);
+	    deinit_driver(i);
 	    continue;
 	}
-
-	/* Build device list */
-	dev_cnt = f->op->get_dev_count(f);
-	if (dev_cnt == 0) {
-	    f->op->destroy(f);
-	    continue;
-	}
-
-	/* Get one device info */
-	status = f->op->get_dev_info(f, 0, &info);
-	if (status != PJ_SUCCESS) {
-	    f->op->destroy(f);
-	    continue;
-	}
-
-	/* Register the factory */
-	aud_subsys.drv[i].f = f;
-	aud_subsys.drv[i].f->internal.id = i;
-	aud_subsys.drv[i].start_idx = aud_subsys.dev_cnt;
-	pj_ansi_strncpy(aud_subsys.drv[i].name, info.driver,
-			sizeof(aud_subsys.drv[i].name));
-	aud_subsys.drv[i].name[sizeof(aud_subsys.drv[i].name)-1] = '\0';
-
-	/* Register devices */
-	if (aud_subsys.dev_cnt + dev_cnt > MAX_DEVS) {
-	    PJ_LOG(4,(THIS_FILE, "%d device(s) cannot be registered because"
-				  " there are too many sound devices",
-				  aud_subsys.dev_cnt + dev_cnt - MAX_DEVS));
-	    dev_cnt = MAX_DEVS - aud_subsys.dev_cnt;
-	}
-	for (j=0; j<dev_cnt; ++j) {
-	    aud_subsys.dev_list[aud_subsys.dev_cnt++] = MAKE_DEV_ID(i, j);
-	}
-
     }
 
-    return aud_subsys.drv_cnt ? PJ_SUCCESS : status;
+    return aud_subsys.dev_cnt ? PJ_SUCCESS : status;
 }
 
 /* API: get the pool factory registered to the audio subsystem. */
@@ -194,15 +253,10 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
     --aud_subsys.init_count;
 
     for (i=0; i<aud_subsys.drv_cnt; ++i) {
-	pjmedia_aud_dev_factory *f = aud_subsys.drv[i].f;
-
-	if (!f)
-	    continue;
-
-	f->op->destroy(f);
-	aud_subsys.drv[i].f = NULL;
+	deinit_driver(i);
     }
 
+    aud_subsys.pf = NULL;
     return PJ_SUCCESS;
 }
 
@@ -235,6 +289,25 @@ PJ_DEF(unsigned) pjmedia_aud_dev_count(void)
     return aud_subsys.dev_cnt;
 }
 
+/* Internal: convert local index to global device index */
+static pj_status_t make_global_index(unsigned drv_idx, 
+				     pjmedia_aud_dev_index *id)
+{
+    if (*id < 0) {
+	return PJ_SUCCESS;
+    }
+
+    /* Check that factory still exists */
+    PJ_ASSERT_RETURN(aud_subsys.drv[drv_idx].f, PJ_EBUG);
+
+    /* Check that device index is valid */
+    PJ_ASSERT_RETURN(*id>=0 && *id<(int)aud_subsys.drv[drv_idx].dev_cnt, 
+		     PJ_EBUG);
+
+    *id += aud_subsys.drv[drv_idx].start_idx;
+    return PJ_SUCCESS;
+}
+
 /* Internal: lookup device id */
 static pj_status_t lookup_dev(pjmedia_aud_dev_index id,
 			      pjmedia_aud_dev_factory **p_f,
@@ -242,11 +315,37 @@ static pj_status_t lookup_dev(pjmedia_aud_dev_index id,
 {
     int f_id, index;
 
-    if (id == PJMEDIA_AUD_DEV_DEFAULT)
-	id = DEFAULT_DEV_ID;
+    if (id < 0) {
+	unsigned i;
 
-    PJ_ASSERT_RETURN(id>=0 && id<(int)aud_subsys.dev_cnt, 
-		     PJMEDIA_EAUD_INVDEV);
+	if (id == PJMEDIA_AUD_INVALID_DEV)
+	    return PJMEDIA_EAUD_INVDEV;
+
+	for (i=0; i<aud_subsys.drv_cnt; ++i) {
+	    struct driver *drv = &aud_subsys.drv[i];
+	    if (drv->dev_idx >= 0) {
+		id = drv->dev_idx;
+		make_global_index(i, &id);
+		break;
+	    } else if (id==PJMEDIA_AUD_DEFAULT_CAPTURE_DEV && 
+		drv->rec_dev_idx >= 0) 
+	    {
+		id = drv->rec_dev_idx;
+		make_global_index(i, &id);
+		break;
+	    } else if (id==PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV && 
+		drv->play_dev_idx >= 0) 
+	    {
+		id = drv->play_dev_idx;
+		make_global_index(i, &id);
+		break;
+	    }
+	}
+
+	if (id < 0) {
+	    return PJMEDIA_EAUD_NODEFDEV;
+	}
+    }
 
     f_id = GET_FID(aud_subsys.dev_list[id]);
     index = GET_INDEX(aud_subsys.dev_list[id]);
@@ -264,25 +363,6 @@ static pj_status_t lookup_dev(pjmedia_aud_dev_index id,
 
 }
 
-/* Internal: convert local index to global device index */
-static pj_status_t make_global_index(pjmedia_aud_dev_factory *f,
-				     pjmedia_aud_dev_index *id)
-{
-    unsigned f_id = f->internal.id;
-
-    if (*id == PJMEDIA_AUD_DEV_DEFAULT)
-	return PJ_SUCCESS;
-
-    /* Check that factory still exists */
-    PJ_ASSERT_RETURN(f, PJ_EBUG);
-
-    /* Check that device index is valid */
-    PJ_ASSERT_RETURN(*id>=0 && *id<(int)aud_subsys.drv[f_id].dev_cnt, PJ_EBUG);
-
-    *id += aud_subsys.drv[f_id].start_idx;
-    return PJ_SUCCESS;
-}
-
 /* API: Get device information. */
 PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_index id,
 					     pjmedia_aud_dev_info *info)
@@ -291,7 +371,8 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_index id,
     unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(info, PJ_EINVAL);
+    PJ_ASSERT_RETURN(info && id!=PJMEDIA_AUD_INVALID_DEV, PJ_EINVAL);
+    PJ_ASSERT_RETURN(aud_subsys.pf, PJMEDIA_EAUD_INIT);
 
     status = lookup_dev(id, &f, &index);
     if (status != PJ_SUCCESS)
@@ -306,13 +387,14 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_lookup( const char *drv_name,
 					    pjmedia_aud_dev_index *id)
 {
     pjmedia_aud_dev_factory *f = NULL;
-    unsigned i, j;
+    unsigned drv_idx, dev_idx;
 
     PJ_ASSERT_RETURN(drv_name && dev_name && id, PJ_EINVAL);
+    PJ_ASSERT_RETURN(aud_subsys.pf, PJMEDIA_EAUD_INIT);
 
-    for (i=0; i<aud_subsys.drv_cnt; ++i) {
-	if (!pj_ansi_stricmp(drv_name, aud_subsys.drv[i].name)) {
-	    f = aud_subsys.drv[i].f;
+    for (drv_idx=0; drv_idx<aud_subsys.drv_cnt; ++drv_idx) {
+	if (!pj_ansi_stricmp(drv_name, aud_subsys.drv[drv_idx].name)) {
+	    f = aud_subsys.drv[drv_idx].f;
 	    break;
 	}
     }
@@ -320,11 +402,11 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_lookup( const char *drv_name,
     if (!f)
 	return PJ_ENOTFOUND;
 
-    for (j=0; j<aud_subsys.drv[i].dev_cnt; ++j) {
+    for (dev_idx=0; dev_idx<aud_subsys.drv[drv_idx].dev_cnt; ++dev_idx) {
 	pjmedia_aud_dev_info info;
 	pj_status_t status;
 
-	status = f->op->get_dev_info(f, j, &info);
+	status = f->op->get_dev_info(f, dev_idx, &info);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -332,11 +414,11 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_lookup( const char *drv_name,
 	    break;
     }
 
-    if (j==aud_subsys.drv[i].dev_cnt)
+    if (dev_idx==aud_subsys.drv[drv_idx].dev_cnt)
 	return PJ_ENOTFOUND;
 
-    *id = j;
-    make_global_index(f, id);
+    *id = dev_idx;
+    make_global_index(drv_idx, id);
 
     return PJ_SUCCESS;
 }
@@ -351,7 +433,8 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_index id,
     unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(param, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param && id!=PJMEDIA_AUD_INVALID_DEV, PJ_EINVAL);
+    PJ_ASSERT_RETURN(aud_subsys.pf, PJMEDIA_EAUD_INIT);
 
     status = lookup_dev(id, &f, &index);
     if (status != PJ_SUCCESS)
@@ -362,8 +445,8 @@ PJ_DEF(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_index id,
 	return status;
 
     /* Normalize device IDs */
-    make_global_index(f, &param->rec_id);
-    make_global_index(f, &param->play_id);
+    make_global_index(f->sys.drv_idx, &param->rec_id);
+    make_global_index(f->sys.drv_idx, &param->play_id);
 
     return PJ_SUCCESS;
 }
@@ -380,6 +463,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(prm && prm->dir && p_aud_strm, PJ_EINVAL);
+    PJ_ASSERT_RETURN(aud_subsys.pf, PJMEDIA_EAUD_INIT);
 
     /* Must make copy of param because we're changing device ID */
     pj_memcpy(&param, prm, sizeof(param));
@@ -387,6 +471,9 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
     /* Normalize rec_id */
     if (param.dir & PJMEDIA_DIR_CAPTURE) {
 	unsigned index;
+
+	if (param.rec_id < 0)
+	    param.rec_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
 
 	status = lookup_dev(param.rec_id, &rec_f, &index);
 	if (status != PJ_SUCCESS)
@@ -400,6 +487,9 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
     if (param.dir & PJMEDIA_DIR_PLAYBACK) {
 	unsigned index;
 
+	if (param.play_id < 0)
+	    param.play_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
 	status = lookup_dev(param.play_id, &play_f, &index);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -408,7 +498,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
 	f = play_f;
 
 	/* For now, rec_id and play_id must belong to the same factory */
-	PJ_ASSERT_RETURN(rec_f == play_f, PJ_EINVAL);
+	PJ_ASSERT_RETURN(rec_f == play_f, PJMEDIA_EAUD_INVDEV);
     }
 
     
@@ -419,7 +509,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
 	return status;
 
     /* Assign factory id to the stream */
-    (*p_aud_strm)->factory_id = f->internal.id;
+    (*p_aud_strm)->sys.drv_idx = f->sys.drv_idx;
     return PJ_SUCCESS;
 }
 
@@ -429,13 +519,16 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_get_param(pjmedia_aud_stream *strm,
 {
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(strm && param, PJ_EINVAL);
+    PJ_ASSERT_RETURN(aud_subsys.pf, PJMEDIA_EAUD_INIT);
+
     status = strm->op->get_param(strm, param);
     if (status != PJ_SUCCESS)
 	return status;
 
     /* Normalize device id's */
-    make_global_index(aud_subsys.drv[strm->factory_id].f, &param->rec_id);
-    make_global_index(aud_subsys.drv[strm->factory_id].f, &param->play_id);
+    make_global_index(strm->sys.drv_idx, &param->rec_id);
+    make_global_index(strm->sys.drv_idx, &param->play_id);
 
     return PJ_SUCCESS;
 }

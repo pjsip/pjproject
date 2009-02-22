@@ -100,10 +100,11 @@ typedef struct pjmedia_aud_dev_factory_op
  */
 struct pjmedia_aud_dev_factory
 {
-    /** Internal data to be initialized by the framework. */
+    /** Internal data to be initialized by audio subsystem. */
     struct {
-	unsigned    id;
-    } internal;
+	/** Driver index */
+	unsigned drv_idx;
+    } sys;
 
     /** Operations */
     pjmedia_aud_dev_factory_op *op;
@@ -158,8 +159,11 @@ typedef struct pjmedia_aud_stream_op
  */
 struct pjmedia_aud_stream
 {
-    /** Factory id (internal) */
-    unsigned factory_id;
+    /** Internal data to be initialized by audio subsystem */
+    struct {
+	/** Driver index */
+	unsigned drv_idx;
+    } sys;
 
     /** Operations */
     pjmedia_aud_stream_op *op;
