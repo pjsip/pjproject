@@ -23,8 +23,8 @@
 #include <pjmedia-audiodev/audiodev.h>
 
 /**
- * @defgroup PJMED_AUD_DEV_IMP_API Audio Device Implementors API
- * @ingroup PJMED_AUD_DEV
+ * @defgroup s8_audio_device_implementors_api Audio Device Implementors API
+ * @ingroup audio_device_api
  * @brief API for audio device implementors
  * @{
  */

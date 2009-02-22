@@ -331,8 +331,7 @@ PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,
  * @return		    The n-th subframe, or NULL if n is out-of-range.
  */
 PJ_INLINE(pjmedia_frame_ext_subframe*) 
-	  pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm,
-					 unsigned n)
+pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm, unsigned n)
 {
     pjmedia_frame_ext_subframe *sf = NULL;
 
@@ -353,6 +352,41 @@ PJ_INLINE(pjmedia_frame_ext_subframe*)
 }
 	
 /**
+ * Extract all frame payload to the specified buffer. 
+ *
+ * @param frm		    The frame.
+ * @param dst		    Destination buffer.
+ * @param maxsize	    Maximum size to copy (i.e. the size of the
+ *			    destination buffer).
+ *
+ * @return		    Total size of payload copied.
+ */
+PJ_INLINE(unsigned) 
+pjmedia_frame_ext_copy_payload(const pjmedia_frame_ext *frm,
+			       void *dst, 
+			       unsigned maxlen)
+{
+    unsigned i, copied=0;
+    for (i=0; i<frm->subframe_cnt; ++i) {
+	pjmedia_frame_ext_subframe *sf;
+	unsigned sz;
+
+	sf = pjmedia_frame_ext_get_subframe(frm, i);
+	if (!sf)
+	    continue;
+
+	sz = ((sf->bitlen + 7) >> 3);
+	if (sz + copied > maxlen)
+	    break;
+
+	pj_memcpy(((pj_uint8_t*)dst) + copied, sf->data, sz);
+	copied += sz;
+    }
+    return copied;
+}
+
+
+/**
  * Pop out first n subframes from #pjmedia_frame_ext.
  *
  * @param frm		    The #pjmedia_frame_ext.
@@ -361,7 +395,7 @@ PJ_INLINE(pjmedia_frame_ext_subframe*)
  * @return		    PJ_SUCCESS when successful.
  */
 PJ_INLINE(pj_status_t) 
-	  pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)
+pjmedia_frame_ext_pop_subframes(pjmedia_frame_ext *frm, unsigned n)
 {
     pjmedia_frame_ext_subframe *sf;
     pj_uint8_t *move_src;
@@ -386,7 +420,7 @@ PJ_INLINE(pj_status_t)
 
     return PJ_SUCCESS;
 }
-	
+
 /**
  * Port interface.
  */

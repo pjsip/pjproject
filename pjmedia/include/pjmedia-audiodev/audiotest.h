@@ -30,8 +30,8 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJMED_AUD_TEST Audio tests utility.
- * @ingroup PJMED_AUD_PORT
+ * @defgroup s30_audio_test_utility Audio tests utility.
+ * @ingroup audio_device_api
  * @brief Audio test utility.
  * @{
  */
@@ -95,7 +95,7 @@ PJ_DECL(pj_status_t) pjmedia_aud_test(const pjmedia_aud_param *param,
 				      pjmedia_aud_test_results *result);
 
 /**
- * @)
+ * @}
  */
 
 PJ_END_DECL

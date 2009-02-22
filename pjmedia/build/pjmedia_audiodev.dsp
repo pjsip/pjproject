@@ -129,6 +129,10 @@ SOURCE="..\include\pjmedia-audiodev\audiodev_imp.h"
 
 SOURCE="..\include\pjmedia-audiodev\audiotest.h"
 # End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-audiodev\config.h"
+# End Source File
 # End Group
 # End Target
 # End Project

@@ -20,6 +20,7 @@
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/errno.h>
 #include <pj/log.h>
+#include <pj/pool.h>
 #include <pj/string.h>
 
 #define THIS_FILE   "audiodev.c"
@@ -62,8 +63,14 @@ static struct cap_info
 
 
 /* extern functions to create factories */
+#if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
 pjmedia_aud_dev_factory* pjmedia_pa_factory(pj_pool_factory *pf);
+#endif
+
+#if PJMEDIA_AUDIO_DEV_HAS_WMME
 pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf);
+#endif
+
 
 #define MAX_DRIVERS	16
 #define MAX_DEVS	64
@@ -218,8 +225,12 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
     aud_subsys.dev_cnt = 0;
 
     /* Register creation functions */
+#if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_pa_factory;
+#endif
+#if PJMEDIA_AUDIO_DEV_HAS_WMME
     aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_wmme_factory;
+#endif
 
     /* Initialize each factory and build the device ID list */
     for (i=0; i<aud_subsys.drv_cnt; ++i) {

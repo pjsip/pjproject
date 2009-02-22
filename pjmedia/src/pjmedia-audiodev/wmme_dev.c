@@ -30,6 +30,7 @@
 
 #include <windows.h>
 #include <mmsystem.h>
+#include <mmreg.h>
 
 #ifdef _MSC_VER
 #   pragma warning(pop)
@@ -102,9 +103,13 @@ struct wmme_stream
 
     void    		*buffer;	    /**< Temp. frame buffer.   */
     unsigned             clock_rate;        /**< Clock rate.           */
+    unsigned		 bytes_per_frame;   /**< Bytes per frame       */
     unsigned             samples_per_frame; /**< Samples per frame.    */
     unsigned             bits_per_sample;   /**< Bits per sample.      */
     unsigned             channel_count;     /**< Channel count.        */
+
+    pjmedia_frame_ext	*xfrm;		    /**< Extended frame buffer */
+    unsigned		 xfrm_size;	    /**< Total ext frm size    */
 
     pj_thread_t         *thread;            /**< Thread handle.        */
     HANDLE               thread_quit_event; /**< Quit signal to thread */
@@ -192,7 +197,7 @@ pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf)
 
 /* Internal: build device info from WAVEINCAPS/WAVEOUTCAPS */
 static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi, 
-			   WAVEINCAPS *wic, WAVEOUTCAPS *woc)
+			   const WAVEINCAPS *wic, const WAVEOUTCAPS *woc)
 {
 #define WIC_WOC(wic,woc,field)	(wic? wic->field : woc->field)
 
@@ -204,7 +209,7 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
 	strncpy(wdi->info.name, "Wave mapper", sizeof(wdi->info.name));
 	wdi->info.name[sizeof(wdi->info.name)-1] = '\0';
     } else {
-	pj_char_t *szPname = WIC_WOC(wic, woc, szPname);
+	const pj_char_t *szPname = WIC_WOC(wic, woc, szPname);
 	PJ_DECL_ANSI_TEMP_BUF(wTmp, sizeof(wdi->info.name));
 	
 	strncpy(wdi->info.name, 
@@ -245,6 +250,16 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
 	    wdi->info.output_count = 2;
 	}
     }
+
+    /* Extended formats */
+    wdi->info.caps |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
+    wdi->info.ext_fmt_cnt = 2;
+    wdi->info.ext_fmt[0].id = PJMEDIA_FORMAT_PCMU;
+    wdi->info.ext_fmt[0].bitrate = 64000;
+    wdi->info.ext_fmt[0].vad = 0;
+    wdi->info.ext_fmt[1].id = PJMEDIA_FORMAT_PCMA;
+    wdi->info.ext_fmt[1].bitrate = 64000;
+    wdi->info.ext_fmt[1].vad = 0;
 }
 
 /* API: init factory */
@@ -279,7 +294,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 		   pj_pool_calloc(wf->pool, devCount, 
 				  sizeof(struct wmme_dev_info));
 
-    if (devCount) {
+    if (inputDeviceCount && outputDeviceCount) {
 	/* Attempt to add WAVE_MAPPER as input and output device */
 	WAVEINCAPS wic;
 	MMRESULT mr;
@@ -434,36 +449,66 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
 }
 
 /* Internal: init WAVEFORMATEX */
-static void init_waveformatex (LPWAVEFORMATEX pcmwf, 
-			       unsigned clock_rate,
-			       unsigned channel_count)
+static pj_status_t init_waveformatex(LPWAVEFORMATEX wfx, 
+				     const pjmedia_aud_param *prm)
 {
-    pj_bzero(pcmwf, sizeof(PCMWAVEFORMAT)); 
-    pcmwf->wFormatTag = WAVE_FORMAT_PCM; 
-    pcmwf->nChannels = (pj_uint16_t)channel_count;
-    pcmwf->nSamplesPerSec = clock_rate;
-    pcmwf->nBlockAlign = (pj_uint16_t)(channel_count * BYTES_PER_SAMPLE);
-    pcmwf->nAvgBytesPerSec = clock_rate * channel_count * BYTES_PER_SAMPLE;
-    pcmwf->wBitsPerSample = BITS_PER_SAMPLE;
+
+    pj_bzero(wfx, sizeof(PCMWAVEFORMAT)); 
+    if (prm->ext_fmt.id == PJMEDIA_FORMAT_L16) {
+	wfx->wFormatTag = WAVE_FORMAT_PCM; 
+	wfx->nChannels = (pj_uint16_t)prm->channel_count;
+	wfx->nSamplesPerSec = prm->clock_rate;
+	wfx->nBlockAlign = (pj_uint16_t)(prm->channel_count * 
+					 BYTES_PER_SAMPLE);
+	wfx->nAvgBytesPerSec = prm->clock_rate * prm->channel_count * 
+			       BYTES_PER_SAMPLE;
+	wfx->wBitsPerSample = BITS_PER_SAMPLE;
+
+	return PJ_SUCCESS;
+
+    } else if ((prm->flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT) &&
+	       (prm->ext_fmt.id == PJMEDIA_FORMAT_PCMA ||
+	        prm->ext_fmt.id == PJMEDIA_FORMAT_PCMU))
+    {
+	unsigned ptime;
+
+	ptime = prm->samples_per_frame * 1000 / 
+		(prm->clock_rate * prm->channel_count);
+	wfx->wFormatTag = (pj_uint16_t)
+			  ((prm->ext_fmt.id==PJMEDIA_FORMAT_PCMA) ?
+			    WAVE_FORMAT_ALAW : WAVE_FORMAT_MULAW);  
+	wfx->nChannels = (pj_uint16_t)prm->channel_count;
+	wfx->nSamplesPerSec = prm->clock_rate;
+	wfx->nAvgBytesPerSec = prm->clock_rate * prm->channel_count;
+	wfx->nBlockAlign = (pj_uint16_t)(wfx->nAvgBytesPerSec * ptime /
+					 1000);
+	wfx->wBitsPerSample = 8;
+	wfx->cbSize = 0;
+
+	return PJ_SUCCESS;
+
+    } else {
+
+	return PJMEDIA_EAUD_BADFORMAT;
+
+    }
 }
 
 
 /* Internal: create WMME player device. */
 static pj_status_t init_player_stream(  struct wmme_factory *wf,
 				        pj_pool_t *pool,
+					struct wmme_stream *parent,
 				        struct wmme_channel *wmme_strm,
-					unsigned dev_id,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned samples_per_frame,
+					const pjmedia_aud_param *prm,
 					unsigned buffer_count)
 {
     MMRESULT mr;
-    WAVEFORMATEX pcmwf; 
-    unsigned bytes_per_frame;
-    unsigned i;
+    WAVEFORMATEX wfx; 
+    unsigned i, ptime;
+    pj_status_t status;
 
-    PJ_ASSERT_RETURN(dev_id < wf->dev_count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(prm->play_id < (int)wf->dev_count, PJ_EINVAL);
 
     /*
      * Create a wait event.
@@ -475,14 +520,22 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     /*
      * Set up wave format structure for opening the device.
      */
-    init_waveformatex(&pcmwf, clock_rate, channel_count);
-    bytes_per_frame = samples_per_frame * BYTES_PER_SAMPLE;
+    status = init_waveformatex(&wfx, prm);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    ptime = prm->samples_per_frame * 1000 / 
+	    (prm->clock_rate * prm->channel_count);
+    ptime = prm->samples_per_frame * 1000 / 
+	    (prm->clock_rate * prm->channel_count);
+    parent->bytes_per_frame = wfx.nAvgBytesPerSec / ptime;
 
     /*
      * Open wave device.
      */
-    mr = waveOutOpen(&wmme_strm->hWave.Out, wf->dev_info[dev_id].deviceId, 
-		     &pcmwf, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
+    mr = waveOutOpen(&wmme_strm->hWave.Out, 
+		     wf->dev_info[prm->play_id].deviceId,
+		     &wfx, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
     if (mr != MMSYSERR_NOERROR) {
 	return CONVERT_MM_ERROR(mr);
     }
@@ -499,8 +552,9 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     wmme_strm->WaveHdr = (WAVEHDR*)
 			 pj_pool_zalloc(pool, sizeof(WAVEHDR) * buffer_count);
     for (i = 0; i < buffer_count; ++i) {
-	wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool, bytes_per_frame);
-	wmme_strm->WaveHdr[i].dwBufferLength = bytes_per_frame;
+	wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool, 
+						      parent->bytes_per_frame);
+	wmme_strm->WaveHdr[i].dwBufferLength = parent->bytes_per_frame;
 	mr = waveOutPrepareHeader(wmme_strm->hWave.Out, 
 				  &(wmme_strm->WaveHdr[i]),
 				  sizeof(WAVEHDR));
@@ -522,9 +576,9 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     PJ_LOG(5, (THIS_FILE, 
 	       " WaveAPI Sound player \"%s\" initialized (clock_rate=%d, "
 	       "channel_count=%d, samples_per_frame=%d (%dms))",
-	       wf->dev_info[dev_id].info.name,
-	       clock_rate, channel_count, samples_per_frame,
-	       samples_per_frame * 1000 / clock_rate));
+	       wf->dev_info[prm->play_id].info.name,
+	       prm->clock_rate, prm->channel_count, prm->samples_per_frame,
+	       prm->samples_per_frame * 1000 / prm->clock_rate));
 
     return PJ_SUCCESS;
 }
@@ -533,19 +587,16 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
 /* Internal: create Windows Multimedia recorder device */
 static pj_status_t init_capture_stream( struct wmme_factory *wf,
 				        pj_pool_t *pool,
+					struct wmme_stream *parent,
 					struct wmme_channel *wmme_strm,
-					unsigned dev_id,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned samples_per_frame,
+					const pjmedia_aud_param *prm,
 					unsigned buffer_count)
 {
     MMRESULT mr;
-    WAVEFORMATEX pcmwf; 
-    unsigned bytes_per_frame;
-    unsigned i;
+    WAVEFORMATEX wfx; 
+    unsigned i, ptime;
 
-    PJ_ASSERT_RETURN(dev_id < wf->dev_count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(prm->rec_id < (int)wf->dev_count, PJ_EINVAL);
 
     /*
     * Create a wait event.
@@ -558,14 +609,17 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
     /*
      * Set up wave format structure for opening the device.
      */
-    init_waveformatex(&pcmwf, clock_rate, channel_count);
-    bytes_per_frame = samples_per_frame * BYTES_PER_SAMPLE;
+    init_waveformatex(&wfx, prm);
+    ptime = prm->samples_per_frame * 1000 / 
+	    (prm->clock_rate * prm->channel_count);
+    parent->bytes_per_frame = wfx.nAvgBytesPerSec / ptime;
 
     /*
      * Open wave device.
      */
-    mr = waveInOpen(&wmme_strm->hWave.In, wf->dev_info[dev_id].deviceId, 
-		    &pcmwf, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
+    mr = waveInOpen(&wmme_strm->hWave.In, 
+		    wf->dev_info[prm->rec_id].deviceId, 
+		    &wfx, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
     if (mr != MMSYSERR_NOERROR) {
 	return CONVERT_MM_ERROR(mr);
     }
@@ -576,8 +630,9 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
     wmme_strm->WaveHdr = (WAVEHDR*)
 			 pj_pool_zalloc(pool, sizeof(WAVEHDR) * buffer_count);
     for (i = 0; i < buffer_count; ++i) {
-	wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool, bytes_per_frame);
-	wmme_strm->WaveHdr[i].dwBufferLength = bytes_per_frame;
+	wmme_strm->WaveHdr[i].lpData = pj_pool_zalloc(pool, 
+						      parent->bytes_per_frame);
+	wmme_strm->WaveHdr[i].dwBufferLength = parent->bytes_per_frame;
 	mr = waveInPrepareHeader(wmme_strm->hWave.In, 
 				 &(wmme_strm->WaveHdr[i]),
 				 sizeof(WAVEHDR));
@@ -599,9 +654,9 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
     PJ_LOG(5,(THIS_FILE, 
 	" WaveAPI Sound recorder \"%s\" initialized (clock_rate=%d, "
 	"channel_count=%d, samples_per_frame=%d (%dms))",
-	wf->dev_info[dev_id].info.name,
-	clock_rate, channel_count, samples_per_frame,
-	samples_per_frame * 1000 / clock_rate));
+	wf->dev_info[prm->rec_id].info.name,
+	prm->clock_rate, prm->channel_count, prm->samples_per_frame,
+	prm->samples_per_frame * 1000 / prm->clock_rate));
 
     return PJ_SUCCESS;
 }
@@ -613,9 +668,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     struct wmme_stream *strm = (struct wmme_stream*)arg;
     HANDLE events[3];
     unsigned eventCount;
-    unsigned bytes_per_frame;
     pj_status_t status = PJ_SUCCESS;
-
 
     eventCount = 0;
     events[eventCount++] = strm->thread_quit_event;
@@ -636,9 +689,6 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 #else
     SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
 #endif
-
-    /* Calculate bytes per frame */
-    bytes_per_frame = strm->samples_per_frame * BYTES_PER_SAMPLE;
 
     /*
      * Loop while not signalled to quit, wait for event objects to be 
@@ -676,7 +726,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 	if (signalled_dir == PJMEDIA_DIR_PLAYBACK)
 	{
 	    struct wmme_channel *wmme_strm = &strm->play_strm;
-	    MMRESULT mr = MMSYSERR_NOERROR;
+
 	    status = PJ_SUCCESS;
 
 	    /*
@@ -687,35 +737,76 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 	    while (wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwFlags & WHDR_DONE)
 	    {
 		void *buffer = wmme_strm->WaveHdr[wmme_strm->dwBufIdx].lpData;
-		pjmedia_frame frame;
+		pjmedia_frame pcm_frame, *frame;
+		pj_bool_t has_frame = PJ_FALSE;
 
 		//PJ_LOG(5,(THIS_FILE, "Finished writing buffer %d", 
 		//	  wmme_strm->dwBufIdx));
 
-		frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-		frame.size = bytes_per_frame;
-		frame.buf = buffer;
-		frame.timestamp.u64 = wmme_strm->timestamp.u64;
-		frame.bit_info = 0;
+		if (strm->xfrm == NULL) {
+		    /* PCM mode */
+		    frame = &pcm_frame;
+
+		    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+		    frame->size = strm->bytes_per_frame;
+		    frame->buf = buffer;
+		    frame->timestamp.u64 = wmme_strm->timestamp.u64;
+		    frame->bit_info = 0;
+		} else {
+		    /* Codec mode */
+		    frame = &strm->xfrm->base;
+
+		    strm->xfrm->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		    strm->xfrm->base.size = strm->bytes_per_frame;
+		    strm->xfrm->base.buf = NULL;
+		    strm->xfrm->base.timestamp.u64 = wmme_strm->timestamp.u64;
+		    strm->xfrm->base.bit_info = 0;
+		}
 
 		/* Get frame from application. */
-		status = (*strm->play_cb)(strm->user_data, &frame);
+		status = (*strm->play_cb)(strm->user_data, frame);
 
 		if (status != PJ_SUCCESS)
 		    break;
 
-		if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-		    pj_bzero(buffer, bytes_per_frame);
+		if (strm->xfrm == NULL) {
+		    /* PCM mode */
+		    if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
+			pj_bzero(buffer, strm->bytes_per_frame);
+			has_frame = PJ_TRUE;
+		    } else if (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+			pj_assert(!"Frame type not supported");
+		    } else if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+			has_frame = PJ_TRUE;
+		    } else {
+			pj_assert(!"Frame type not supported");
+		    }
+		} else {
+		    /* Codec mode */
+		    if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
+			/* Not supported */
+		    } else if (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED) {
+			unsigned sz;
+			sz = pjmedia_frame_ext_copy_payload(strm->xfrm,
+							    buffer,
+							    strm->bytes_per_frame);
+			pj_assert(sz == strm->bytes_per_frame);
+		    } else {
+			pj_assert(!"Frame type not supported");
+		    }
 		}
 
 		/* Write to the device. */
-		mr = waveOutWrite(wmme_strm->hWave.Out, 
-				  &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]), 
-				  sizeof(WAVEHDR));
-		if (mr != MMSYSERR_NOERROR)
-		{
-		    status = CONVERT_MM_ERROR(mr);
-		    break;
+		if (has_frame) {
+		    MMRESULT mr = MMSYSERR_NOERROR;
+
+		    mr = waveOutWrite(wmme_strm->hWave.Out, 
+				      &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]),
+				      sizeof(WAVEHDR));
+		    if (mr != MMSYSERR_NOERROR) {
+			status = CONVERT_MM_ERROR(mr);
+			break;
+		    }
 		}
 
 		/* Increment position. */
@@ -765,18 +856,46 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 			       wmme_strm->WaveHdr[wmme_strm->dwBufIdx].lpData;
 		unsigned cap_len = 
 			wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwBytesRecorded;
-		pjmedia_frame frame;
+		pjmedia_frame pcm_frame, *frame;
 
 		/*
 		PJ_LOG(5,(THIS_FILE, "Read %d bytes from buffer %d", cap_len, 
 			  wmme_strm->dwBufIdx));
 		*/
+	    
+		if (strm->xfrm == NULL) {
+		    /* PCM mode */
+		    if (cap_len < strm->bytes_per_frame)
+			pj_bzero(buffer + cap_len, 
+				 strm->bytes_per_frame - cap_len);
 
-		if (cap_len < bytes_per_frame)
-		    pj_bzero(buffer + cap_len, bytes_per_frame - cap_len);
+		    /* Copy the audio data out of the wave buffer. */
+		    pj_memcpy(strm->buffer, buffer, strm->bytes_per_frame);
 
-		/* Copy the audio data out of the wave buffer. */
-		pj_memcpy(strm->buffer, buffer, bytes_per_frame);
+		    /* Prepare frame */
+		    frame = &pcm_frame;
+		    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+		    frame->buf = strm->buffer;
+		    frame->size = strm->bytes_per_frame;
+		    frame->timestamp.u64 = wmme_strm->timestamp.u64;
+		    frame->bit_info = 0;
+
+		} else {
+		    /* Codec mode */
+		    frame = &strm->xfrm->base;
+
+		    frame->type = PJMEDIA_FRAME_TYPE_EXTENDED;
+		    frame->buf = NULL;
+		    frame->size = strm->bytes_per_frame;
+		    frame->timestamp.u64 = wmme_strm->timestamp.u64;
+		    frame->bit_info = 0;
+
+		    strm->xfrm->samples_cnt = 0;
+		    strm->xfrm->subframe_cnt = 0;
+		    pjmedia_frame_ext_append_subframe(strm->xfrm, buffer,
+						      strm->bytes_per_frame *8,
+						      strm->samples_per_frame);
+		}
 
 		/* Re-add the buffer to the device. */
 		mr = waveInAddBuffer(wmme_strm->hWave.In, 
@@ -787,15 +906,9 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 		    break;
 		}
 
-		/* Prepare frame */
-		frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
-		frame.buf = strm->buffer;
-		frame.size = bytes_per_frame;
-		frame.timestamp.u64 = wmme_strm->timestamp.u64;
-		frame.bit_info = 0;
 
 		/* Call callback */
-		status = (*strm->rec_cb)(strm->user_data, &frame);
+		status = (*strm->rec_cb)(strm->user_data, frame);
 		if (status != PJ_SUCCESS)
 		    break;
 
@@ -865,11 +978,9 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 		    param->channel_count / param->samples_per_frame / 1000;
 
 	status = init_player_stream(wf, strm->pool,
+				    strm,
 				    &strm->play_strm,
-				    param->play_id,
-				    param->clock_rate,
-				    param->channel_count,
-				    param->samples_per_frame,
+				    param,
 				    buf_count);
 
 	if (status != PJ_SUCCESS) {
@@ -891,17 +1002,26 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 		    param->channel_count / param->samples_per_frame / 1000;
 
 	status = init_capture_stream(wf, strm->pool,
+				     strm,
 				     &strm->rec_strm,
-				     param->rec_id,
-				     param->clock_rate,
-				     param->channel_count,
-				     param->samples_per_frame,
+				     param,
 				     buf_count);
 
 	if (status != PJ_SUCCESS) {
 	    stream_destroy(&strm->base);
 	    return status;
 	}
+    }
+
+    /* If format is extended, must create buffer for the extended frame. */
+    if (param->ext_fmt.id != PJMEDIA_FORMAT_L16) {
+	unsigned ptime = param->samples_per_frame * 1000 /
+			 (param->clock_rate * param->channel_count);
+	strm->xfrm_size = sizeof(pjmedia_frame_ext) + 
+			  32 * sizeof(pjmedia_frame_ext_subframe) +
+			  (8000 * ptime / 1000) + 4;
+	strm->xfrm = (pjmedia_frame_ext*)
+		     pj_pool_alloc(pool, strm->xfrm_size);
     }
 
     /* Create the stop event */

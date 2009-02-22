@@ -24,6 +24,7 @@
  * @file audiodev.h
  * @brief Audio device API.
  */
+#include <pjmedia-audiodev/config.h>
 #include <pjmedia/port.h>
 #include <pj/pool.h>
 
@@ -31,23 +32,9 @@
 PJ_BEGIN_DECL
 
 /**
- * @defgroup PJMED_AUD_DEV Audio device API
- * @ingroup PJMED_AUD_PORT
- * @brief API to work with audio devices and to implement new audio device backends.
- * @{
- *
- * The audio device API contains two parts:
- *  - the base API, for both applications and audio device implementors, and
- *  - the API for audio device implementors, for extending the audio device
- *    framework with new audio device drivers.
- *
- * @}
- */
-
-/**
- * @defgroup PJMED_AUD_DEV_API Base Audio Device API
- * @ingroup PJMED_AUD_DEV
- * @brief The base API, for both applications and audio device implementors
+ * @defgroup s2_audio_device_reference Audio Device API Reference
+ * @ingroup audio_device_api
+ * @brief API Reference
  * @{
  */
 
@@ -221,7 +208,7 @@ typedef enum pjmedia_aud_dev_route
 
 
 /**
- * Device information structure returned by #pjmedia_aud_get_dev_info.
+ * Device information structure returned by #pjmedia_aud_dev_get_info().
  */
 typedef struct pjmedia_aud_dev_info
 {
@@ -497,6 +484,7 @@ PJ_DECL(pj_status_t) pjmedia_aud_dev_get_info(pjmedia_aud_dev_index id,
  *
  * @param drv_name	The driver name.
  * @param dev_name	The device name.
+ * @param id		Pointer to store the returned device ID.
  *
  * @return		PJ_SUCCESS if the device can be found.
  */
@@ -529,7 +517,7 @@ PJ_DECL(pj_status_t) pjmedia_aud_dev_default_param(pjmedia_aud_dev_index id,
  *			audio frames to be played back.
  * @param user_data	Arbitrary user data, which will be given back in the
  *			callbacks.
- * @param p_aud_strm	Pointer to receive the audio stream.
+ * @param p_strm	Pointer to receive the audio stream.
  *
  * @return		PJ_SUCCESS on successful operation or the appropriate
  *			error code.
@@ -634,9 +622,11 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 /* Unknown system error */
 #define PJMEDIA_EAUD_SYSERR	-1
 
+/* Bad or invalid format */
+#define PJMEDIA_EAUD_BADFORMAT	-1
 
 /**
- * @)
+ * @}
  */
 
 PJ_END_DECL
