@@ -185,16 +185,55 @@ typedef struct pjmedia_sock_info
 #define PJMEDIA_FORMAT_PACK(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
 
 /**
- * Format identifier definition.
+ * This enumeration describes format ID. 
  */
 typedef enum pjmedia_format_id
 {
+    /**
+     * 16bit linear
+     */
     PJMEDIA_FORMAT_L16	    = 0,
+    
+    /**
+     * Alias for PJMEDIA_FORMAT_L16
+     */
+    PJMEDIA_FORMAT_PCM	    = PJMEDIA_FORMAT_L16,
+
+    /**
+     * G.711 ALAW
+     */
     PJMEDIA_FORMAT_PCMA	    = PJMEDIA_FORMAT_PACK('A', 'L', 'A', 'W'),
+
+    /**
+     * Alias for PJMEDIA_FORMAT_PCMA
+     */
+    PJMEDIA_FORMAT_ALAW	    = PJMEDIA_FORMAT_PCMA,
+
+    /**
+     * G.711 ULAW
+     */
     PJMEDIA_FORMAT_PCMU	    = PJMEDIA_FORMAT_PACK('u', 'L', 'A', 'W'),
+
+    /**
+     * Aliaw for PJMEDIA_FORMAT_PCMU
+     */
+    PJMEDIA_FORMAT_ULAW	    = PJMEDIA_FORMAT_PCMU,
+
+    /**
+     * AMR narrowband
+     */
     PJMEDIA_FORMAT_AMR	    = PJMEDIA_FORMAT_PACK(' ', 'A', 'M', 'R'),
+
+    /**
+     * ITU G.729
+     */
     PJMEDIA_FORMAT_G729	    = PJMEDIA_FORMAT_PACK('G', '7', '2', '9'),
+
+    /**
+     * Internet Low Bit-Rate Codec (ILBC)
+     */
     PJMEDIA_FORMAT_ILBC	    = PJMEDIA_FORMAT_PACK('I', 'L', 'B', 'C')
+
 } pjmedia_format_id;
 
 
