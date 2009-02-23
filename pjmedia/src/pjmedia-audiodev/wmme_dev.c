@@ -583,7 +583,7 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     wmme_strm->timestamp.u64 = 0;
 
     /* Done setting up play device. */
-    PJ_LOG(5, (THIS_FILE, 
+    PJ_LOG(4, (THIS_FILE, 
 	       " WaveAPI Sound player \"%s\" initialized ("
 	       "format=%s, clock_rate=%d, "
 	       "channel_count=%d, samples_per_frame=%d (%dms))",
@@ -663,7 +663,7 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
     wmme_strm->timestamp.u64 = 0;
 
     /* Done setting up play device. */
-    PJ_LOG(5,(THIS_FILE, 
+    PJ_LOG(4,(THIS_FILE, 
 	" WaveAPI Sound recorder \"%s\" initialized "
 	"(format=%s, clock_rate=%d, "
 	"channel_count=%d, samples_per_frame=%d (%dms))",
@@ -788,7 +788,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 		}
 
 		/* Get frame from application. */
-		PJ_LOG(5,(THIS_FILE, "xxx %u play_cb", play_cnt++));
+		//PJ_LOG(5,(THIS_FILE, "xxx %u play_cb", play_cnt++));
 		status = (*strm->play_cb)(strm->user_data, frame);
 
 		if (status != PJ_SUCCESS)
@@ -933,7 +933,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 
 
 		/* Call callback */
-		PJ_LOG(5,(THIS_FILE, "xxx %u rec_cb", rec_cnt++));
+		//PJ_LOG(5,(THIS_FILE, "xxx %u rec_cb", rec_cnt++));
 		status = (*strm->rec_cb)(strm->user_data, frame);
 		if (status != PJ_SUCCESS)
 		    break;
@@ -1197,7 +1197,7 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
 	if (mr != MMSYSERR_NOERROR) {
 	    return CONVERT_MM_ERROR(mr);
 	}
-	PJ_LOG(5,(THIS_FILE, "WMME playback stream started"));
+	PJ_LOG(4,(THIS_FILE, "WMME playback stream started"));
     }
 
     if (stream->rec_strm.hWave.In != NULL)
@@ -1206,7 +1206,7 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
 	if (mr != MMSYSERR_NOERROR) {
 	    return CONVERT_MM_ERROR(mr);
 	}
-	PJ_LOG(5,(THIS_FILE, "WMME capture stream started"));
+	PJ_LOG(4,(THIS_FILE, "WMME capture stream started"));
     }
 
     return PJ_SUCCESS;
@@ -1226,7 +1226,7 @@ static pj_status_t stream_stop(pjmedia_aud_stream *strm)
 	if (mr != MMSYSERR_NOERROR) {
 	    return CONVERT_MM_ERROR(mr);
 	}
-	PJ_LOG(5,(THIS_FILE, "Stopped WMME playback stream"));
+	PJ_LOG(4,(THIS_FILE, "Stopped WMME playback stream"));
     }
 
     if (stream->rec_strm.hWave.In != NULL)
@@ -1235,7 +1235,7 @@ static pj_status_t stream_stop(pjmedia_aud_stream *strm)
 	if (mr != MMSYSERR_NOERROR) {
 	    return CONVERT_MM_ERROR(mr);
 	}
-	PJ_LOG(5,(THIS_FILE, "Stopped WMME capture stream"));
+	PJ_LOG(4,(THIS_FILE, "Stopped WMME capture stream"));
     }
 
     return PJ_SUCCESS;

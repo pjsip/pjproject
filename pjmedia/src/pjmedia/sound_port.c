@@ -252,10 +252,11 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 				  snd_port->samples_per_frame);
 
     /* Create software EC if parameter specifies EC but device 
-     * doesn't support EC
+     * doesn't support EC. Only do this if the format is PCM!
      */
     if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC) &&
-	(snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0)
+	(snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 &&
+	param_copy.ext_fmt.id == PJMEDIA_FORMAT_PCM)
     {
 	if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC_TAIL)==0) {
 	    snd_port->aud_param.flags |= PJMEDIA_AUD_DEV_CAP_EC_TAIL;
@@ -531,9 +532,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 
     } else {
 	/* We use software EC */
-	/* Sound port must have 16bits per sample */
-	PJ_ASSERT_RETURN(snd_port->bits_per_sample == 16,
-			 PJ_EINVALIDOP);
 
 	/* Check if there is change in parameters */
 	if (tail_ms==snd_port->ec_tail_len && options==snd_port->ec_options) {
@@ -542,21 +540,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 	    return PJ_SUCCESS;
 	}
 
+	status = pjmedia_aud_stream_get_param(snd_port->aud_stream, &prm);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Audio stream must be in PCM format */
+	PJ_ASSERT_RETURN(prm.ext_fmt.id == PJMEDIA_FORMAT_PCM,
+			 PJ_EINVALIDOP);
+
 	/* Destroy AEC */
 	if (snd_port->ec_state) {
 	    pjmedia_echo_destroy(snd_port->ec_state);
 	    snd_port->ec_state = NULL;
 	}
 
-	snd_port->ec_options = options;
-	snd_port->ec_tail_len = tail_ms;
-
 	if (tail_ms != 0) {
 	    unsigned delay_ms;
-
-	    status = pjmedia_aud_stream_get_param(snd_port->aud_stream, &prm);
-	    if (status != PJ_SUCCESS)
-		prm.input_latency_ms = prm.output_latency_ms = 0;
 
 	    //No need to add input latency in the latency calculation,
 	    //since actual input latency should be zero.
@@ -577,6 +576,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 				 "sound port"));
 	    status = PJ_SUCCESS;
 	}
+
+	snd_port->ec_options = options;
+	snd_port->ec_tail_len = tail_ms;
     }
 
     return status;
