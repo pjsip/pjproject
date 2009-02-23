@@ -1292,7 +1292,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     }
 
     /* Return sound playback frame. */
-    {
+    do {
 	struct conf_port *this_cport = conf->ports[this_port->port_data.ldata];
 	pjmedia_frame *f_src = (pjmedia_frame*) this_cport->tx_buf;
 
@@ -1354,7 +1354,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	    f_src_->samples_cnt = 0;
 	    f_src_->subframe_cnt = 0;
 	}
-    }
+    } while (0);
 
     /* Unlock mutex */
     pj_mutex_unlock(conf->mutex);
