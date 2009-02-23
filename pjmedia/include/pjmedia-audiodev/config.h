@@ -105,12 +105,13 @@ contains many enhancements:
 
  - Built-in features:
 \n
-   The device capabilities framework enables applications to use audio features
-   built-in in the device, such as:
+   The device capabilities framework enables applications to use and control 
+   audio features built-in in the device, such as:
     - echo cancellation, 
     - built-in codecs, 
-    - audio routing, and 
-    - volume control. 
+    - audio routing (e.g. to earpiece or loudspeaker),
+    - volume control,
+    - etc.
 
  - Codec support:
 \n
@@ -124,7 +125,206 @@ contains many enhancements:
    The new API supports multiple audio backends (called factories or drivers in 
    the code) to be active simultaneously, and audio backends may be added or 
    removed during run-time. 
- */
+
+
+@section using Overview on using the API
+
+@subsection getting_started Getting started
+
+ -# <b>Configure the application's project settings</b>.\n
+    Add the following 
+    include:
+    \code
+    #include <pjmedia_audiodev.h>\endcode\n
+    And add <b>pjmedia-audiodev</b> library to your application link 
+    specifications.\n
+ -# <b>Compile time settings</b>.\n
+    Use the compile time settings to enable or
+    disable specific audio drivers. For more information, please see
+    \ref s1_audio_device_config.
+ -# <b>API initialization and cleaning up</b>.\n
+    Before anything else, application must initialize the API by calling:
+    \code
+    pjmedia_aud_subsys_init(pf);\endcode\n
+    And add this in the application cleanup sequence
+    \code
+    pjmedia_aud_subsys_shutdown();\endcode
+
+@subsection devices Working with devices
+
+ -# The following code prints the list of audio devices detected
+    in the system.
+    \code
+    int dev_count;
+    pjmedia_aud_dev_index dev_idx;
+    pj_status_t status;
+
+    dev_count = pjmedia_aud_dev_count();
+    printf("Got %d audio devices\n", dev_count);
+
+    for (dev_idx=0; dev_idx<dev_count; ++i) {
+	pjmedia_aud_dev_info info;
+
+	status = pjmedia_aud_dev_get_info(dev_idx, &info);
+	printf("%d. %s (in=%d, out=%d)\n",
+	       dev_idx, info.name, 
+	       info.input_count, info.output_count);
+    }
+    \endcode\n
+ -# Info: The #PJMEDIA_AUD_DEFAULT_CAPTURE_DEV and #PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
+    constants are used to denote default capture and playback devices
+    respectively.
+ -# Info: You may save the device and driver's name in your application
+    setting, for example to specify the prefered devices to be
+    used by your application. You can then retrieve the device index
+    for the device by calling:
+    \code
+	const char *drv_name = "WMME";
+	const char *dev_name = "Wave mapper";
+	pjmedia_aud_dev_index dev_idx;
+
+        status = pjmedia_aud_dev_lookup(drv_name, dev_name, &dev_idx);
+	if (status==PJ_SUCCESS)
+	    printf("Device index is %d\n", dev_idx);
+    \endcode
+
+@subsection caps Device capabilities
+
+Capabilities are encoded as #pjmedia_aud_dev_cap enumeration. Please see
+#pjmedia_aud_dev_cap enumeration for more information.
+
+ -# The following snippet prints the capabilities supported by the device:
+    \code
+    pjmedia_aud_dev_info info;
+    pj_status_t status;
+
+    status = pjmedia_aud_dev_get_info(PJMEDIA_AUD_DEFAULT_CAPTURE_DEV, &info);
+    if (status == PJ_SUCCESS) {
+	unsigned i;
+	// Enumerate capability bits
+	printf("Device capabilities: ");
+	for (i=0; i<32; ++i) {
+	    if (info.caps & (1 << i))
+		printf("%s ", pjmedia_aud_dev_cap_name(1 << i, NULL));
+	}
+    }
+    \endcode\n
+ -# Info: You can set the device settings when opening audio stream by setting
+    the flags and the appropriate setting in #pjmedia_aud_param when calling
+    #pjmedia_aud_stream_create()\n
+ -# Info: Once the audio stream is running, you can retrieve or change the stream 
+    setting by specifying the capability in #pjmedia_aud_stream_get_cap()
+    and #pjmedia_aud_stream_set_cap() respectively.
+
+
+@subsection creating_stream Creating audio streams
+
+The audio stream enables audio streaming to capture device, playback device,
+or both.
+
+ -# It is recommended to initialize the #pjmedia_aud_param with its default
+    values before using it:
+    \code
+    pjmedia_aud_param param;
+    pjmedia_aud_dev_index dev_idx;
+    pj_status_t status;
+
+    dev_idx = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    status = pjmedia_aud_dev_default_param(dev_idx, &param);
+    \endcode\n
+ -# Configure the mandatory parameters:
+    \code
+    param.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    param.rec_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    param.play_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+    param.clock_rate = 8000;
+    param.channel_count = 1;
+    param.samples_per_frame = 160;
+    param.bits_per_sample = 16;
+    \endcode\n
+ -# If you want the audio stream to use the device's built-in codec, specify
+    the codec in the #pjmedia_aud_param. You must make sure that the codec
+    is supported by the device, by looking at its supported format list in
+    the #pjmedia_aud_dev_info.\n
+    The snippet below sets the audio stream to use G.711 ULAW encoding:
+    \code
+    unsigned i;
+
+    // Make sure Ulaw is supported
+    if ((info.caps & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT) == 0)
+	error("Device does not support extended formats");
+    for (i = 0; i < info.ext_fmt_cnt; ++i) {
+	if (info.ext_fmt[i].id == PJMEDIA_FORMAT_ULAW)
+	    break;
+    }
+    if (i == info.ext_fmt_cnt)
+	error("Device does not support Ulaw format");
+
+    // Set Ulaw format
+    param.flags |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
+    param.ext_fmt.id = PJMEDIA_FORMAT_ULAW;
+    param.ext_fmt.bitrate = 64000;
+    param.ext_fmt.vad = PJ_FALSE;
+    \endcode\n
+ -# Note that if non-PCM format is configured on the audio stream, the
+    capture and/or playback functions (#pjmedia_aud_rec_cb and 
+    #pjmedia_aud_play_cb respectively) will report the audio frame as
+    #pjmedia_frame_ext structure instead of the #pjmedia_frame.
+ -# Optionally configure other device's capabilities. The following snippet
+    shows how to enable echo cancellation on the device (note that this
+    snippet may not be necessary since the setting may have been enabled 
+    when calling #pjmedia_aud_dev_default_param() above):
+    \code
+    if (info.caps & PJMEDIA_AUD_DEV_CAP_EC) {
+	param.flags |= PJMEDIA_AUD_DEV_CAP_EC;
+	param.ec_enabled = PJ_TRUE;
+    }
+    \endcode
+ -# Open the audio stream, specifying the capture and/or playback callback
+    functions:
+    \code
+       pjmedia_aud_stream *stream;
+
+       status = pjmedia_aud_stream_create(&param, &rec_cb, &play_cb, 
+                                          user_data, &stream);
+    \endcode
+
+@subsection working_with_stream Working with audio streams
+
+ -# To start the audio stream:
+    \code
+	status = pjmedia_aud_stream_start(stream);
+    \endcode\n
+    To stop the stream:
+    \code
+	status = pjmedia_aud_stream_stop(stream);
+    \endcode\n
+    And to destroy the stream:
+    \code
+	status = pjmedia_aud_stream_destroy(stream);
+    \endcode\n
+ -# Info: The following shows how to retrieve the capability value of the
+    stream (in this case, the current output volume setting).
+    \code
+    // Volume setting is an unsigned integer showing the level in percent.
+    unsigned vol;
+    status = pjmedia_aud_stream_get_cap(stream, 
+					PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+					&vol);
+    \endcode
+ -# Info: And following shows how to modify the capability value of the
+    stream (in this case, the current output volume setting).
+    \code
+    // Volume setting is an unsigned integer showing the level in percent.
+    unsigned vol = 50;
+    status = pjmedia_aud_stream_set_cap(stream, 
+					PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+					&vol);
+    \endcode
+
+
+*/
+
 
 /**
  * @}
