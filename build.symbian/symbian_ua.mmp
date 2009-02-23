@@ -35,7 +35,7 @@ STATICLIBRARY		pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
 STATICLIBRARY		pjnath.lib pjlib_util.lib pjlib.lib
 STATICLIBRARY		libsrtp.lib
 STATICLIBRARY		libgsmcodec.lib libspeexcodec.lib libpassthroughcodec.lib
-STATICLIBRARY		symbian_audio.lib
+STATICLIBRARY		pjmedia_audiodev.lib
 
 #if SND_USE_APS
 	LIBRARY		APSSession2.lib

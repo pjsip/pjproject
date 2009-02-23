@@ -797,7 +797,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     pj_ansi_strcpy(af->dev_info.name, "Symbian Audio");
     af->dev_info.default_samples_per_sec = 8000;
     af->dev_info.caps = PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
-			PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
+			PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     af->dev_info.input_count = 1;
     af->dev_info.output_count = 1;
 

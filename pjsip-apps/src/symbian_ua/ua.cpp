@@ -19,7 +19,7 @@
  */
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
-#include <pjmedia/symbian_sound_aps.h>
+//#include <pjmedia/symbian_sound_aps.h>
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
@@ -522,15 +522,15 @@ static void PrintCodecMenu()
 static void HandleMainMenu(TKeyCode kc) {
     switch (kc) {
     
-#   if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
+#   if 0  && PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
     case 't':
 	do {
-	    static pjmedia_snd_route route = PJMEDIA_SND_ROUTE_DEFAULT;
+	    static pjmedia_snd_route route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
 	    
-	    if (route == PJMEDIA_SND_ROUTE_LOUDSPEAKER)
-		route = PJMEDIA_SND_ROUTE_EARPIECE;
+	    if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER)
+		route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
 	    else
-		route = PJMEDIA_SND_ROUTE_LOUDSPEAKER;
+		route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
 
 	    pjsua_set_snd_route(route);
 	} while(0);
@@ -907,7 +907,7 @@ int ua_main()
     // Close connection and socket server
     aConn.Close();
     aSocketServer.Close();
-	
+    
     return status;
 }
 

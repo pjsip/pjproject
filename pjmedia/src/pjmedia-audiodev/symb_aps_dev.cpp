@@ -26,6 +26,8 @@
 #include <pj/os.h>
 #include <pj/string.h>
 
+#if PJMEDIA_AUDIO_DEV_HAS_SYMB_APS
+
 #include <e32msgqueue.h>
 #include <sounddevice.h>
 #include <APSClientSession.h>
@@ -1089,10 +1091,18 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 /****************************************************************************
  * Factory operations
  */
+
+/*
+ * C compatible declaration of APS factory.
+ */
+PJ_BEGIN_DECL
+PJ_DECL(pjmedia_aud_dev_factory*) pjmedia_aps_factory(pj_pool_factory *pf);
+PJ_END_DECL
+
 /*
  * Init APS audio driver.
  */
-pjmedia_aud_dev_factory* pjmedia_aps_factory(pj_pool_factory *pf)
+PJ_DEF(pjmedia_aud_dev_factory*) pjmedia_aps_factory(pj_pool_factory *pf)
 {
     struct aps_factory *f;
     pj_pool_t *pool;
@@ -1530,4 +1540,6 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm)
 
     return PJ_SUCCESS;
 }
+
+#endif // PJMEDIA_AUDIO_DEV_HAS_SYMB_APS
 

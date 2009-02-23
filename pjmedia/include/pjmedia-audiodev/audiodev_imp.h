@@ -178,4 +178,4 @@ struct pjmedia_aud_stream
 
 
 
-#endif __AUDIODEV_IMP_H__
+#endif /* __AUDIODEV_IMP_H__ */

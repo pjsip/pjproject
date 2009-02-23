@@ -22,8 +22,8 @@ libgsmcodec.mmp
 libspeexcodec.mmp
 libpassthroughcodec.mmp
 
-/* Sound device impl */
-symbian_audio.mmp
+/* Audio device. */
+pjmedia_audiodev.mmp
 
 /* Applications */
 //pjlib_test.mmp

@@ -11,6 +11,7 @@ SOURCEPATH	..\pjmedia\src\pjmedia-audiodev
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
+SOURCE		audiodev.c
 SOURCE		symb_aps_dev.cpp
 SOURCE		symb_mda_dev.cpp
 
