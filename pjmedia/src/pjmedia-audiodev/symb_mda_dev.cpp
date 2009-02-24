@@ -773,6 +773,13 @@ void CPjAudioOutputEngine::MaoscPlayComplete(TInt aError)
  * Factory operations
  */
 /*
+ * C compatible declaration of MDA factory.
+ */
+PJ_BEGIN_DECL
+PJ_DECL(pjmedia_aud_dev_factory*) pjmedia_symb_mda_factory(pj_pool_factory *pf);
+PJ_END_DECL
+
+/*
  * Init Symbian audio driver.
  */
 pjmedia_aud_dev_factory* pjmedia_symb_mda_factory(pj_pool_factory *pf)

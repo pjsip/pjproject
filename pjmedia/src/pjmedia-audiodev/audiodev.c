@@ -288,7 +288,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
 PJ_DEF(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
 					     const char **p_desc)
 {
-    char *desc;
+    const char *desc;
     unsigned i;
 
     if (p_desc==NULL) p_desc = &desc;
