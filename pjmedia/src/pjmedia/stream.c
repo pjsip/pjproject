@@ -1667,25 +1667,26 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 #endif
 
     /* Init jitter buffer parameters: */
-    if (info->jb_max > 0)
-	jb_max = info->jb_max;
+    if (info->jb_max >= stream->codec_param.info.frm_ptime)
+	jb_max = (info->jb_max + stream->codec_param.info.frm_ptime - 1) /
+		 stream->codec_param.info.frm_ptime;
     else
 	jb_max = 500 / stream->codec_param.info.frm_ptime;
 
-    if (info->jb_min_pre > 0)
-	jb_min_pre = info->jb_min_pre;
+    if (info->jb_min_pre >= stream->codec_param.info.frm_ptime)
+	jb_min_pre = info->jb_min_pre / stream->codec_param.info.frm_ptime;
     else
 	//jb_min_pre = 60 / stream->codec_param.info.frm_ptime;
 	jb_min_pre = 1;
 
-    if (info->jb_max_pre > 0)
-	jb_max_pre = info->jb_max_pre;
+    if (info->jb_max_pre >= stream->codec_param.info.frm_ptime)
+	jb_max_pre = info->jb_max_pre / stream->codec_param.info.frm_ptime;
     else
 	//jb_max_pre = 240 / stream->codec_param.info.frm_ptime;
 	jb_max_pre = jb_max * 4 / 5;
 
-    if (info->jb_init > 0)
-	jb_init = info->jb_init;
+    if (info->jb_init >= stream->codec_param.info.frm_ptime)
+	jb_init = info->jb_init / stream->codec_param.info.frm_ptime;
     else
 	//jb_init = (jb_min_pre + jb_max_pre) / 2;
 	jb_init = 0;
