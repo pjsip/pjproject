@@ -772,6 +772,7 @@ void CPjAudioOutputEngine::MaoscPlayComplete(TInt aError)
 /****************************************************************************
  * Factory operations
  */
+
 /*
  * C compatible declaration of MDA factory.
  */
@@ -885,7 +886,8 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 
     /* Can only support 16bits per sample raw PCM format. */
     PJ_ASSERT_RETURN(param->bits_per_sample == BITS_PER_SAMPLE, PJ_EINVAL);
-    PJ_ASSERT_RETURN((param->flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT)==0,
+    PJ_ASSERT_RETURN((param->flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT)==0 ||
+		     param->ext_fmt.id == PJMEDIA_FORMAT_L16,
 		     PJ_ENOTSUP);
 
     /* Create and Initialize stream descriptor */
