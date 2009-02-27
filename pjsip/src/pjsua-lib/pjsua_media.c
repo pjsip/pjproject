@@ -2651,6 +2651,20 @@ PJ_DEF(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms)
 }
 
 
+/*
+ * Get active sound port instance.
+ */
+PJ_DEF(pjmedia_aud_stream*) pjsua_get_aud_stream()
+{
+    pjmedia_aud_stream *aud_stream = NULL;
+
+    if (pjsua_var.snd_port)
+	aud_stream = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
+
+    return aud_stream;
+}
+
+
 /*****************************************************************************
  * Codecs.
  */

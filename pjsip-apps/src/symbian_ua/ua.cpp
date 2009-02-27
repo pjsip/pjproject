@@ -490,11 +490,9 @@ static void PrintMainMenu()
 	    "  m    Call " SIP_DST_URI "\n"
 	    "  a    Answer call\n"
 	    "  g    Hangup all calls\n"
-#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
-   	    "  t    Switch audio route\n"
-#endif
+   	    "  t    Toggle audio route\n"
 #if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
-   	    "  j    Start/stop loopback audio device\n"
+   	    "  j    Toggle loopback audio\n"
 #endif
 	    "  s    Subscribe " SIP_DST_URI "\n"
 	    "  S    Unsubscribe presence\n"
@@ -522,30 +520,47 @@ static void PrintCodecMenu()
 static void HandleMainMenu(TKeyCode kc) {
     switch (kc) {
     
-#   if 0  && PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
     case 't':
-	do {
-	    static pjmedia_snd_route route = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
-	    
-	    if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER)
-		route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
-	    else
-		route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
+	{
+	    pjmedia_aud_stream *aud_stream = pjsua_get_aud_stream();
 
-	    pjsua_set_snd_route(route);
-	} while(0);
+	    if (aud_stream) {
+		pjmedia_aud_dev_route route;
+		pj_status_t status;
+		
+		status = pjmedia_aud_stream_get_cap(
+					    aud_stream,
+					    PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+					    &route);
+		if (status == PJ_SUCCESS) {
+		    if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER)
+			route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
+		    else
+			route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
+
+		    status = pjmedia_aud_stream_set_cap(
+					aud_stream,
+					PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+					&route);
+		}
+
+		if (status != PJ_SUCCESS)
+		    pjsua_perror(THIS_FILE, "Error switch audio route", status);
+	    } else {
+		PJ_LOG(3,(THIS_FILE, "No active sound device."));
+	    }
+	}
 	break;
-#   endif
 	
     case 'j':
-	do {
+	{
 	    static pj_bool_t loopback_active = PJ_FALSE;
 	    if (!loopback_active)
 		pjsua_conf_connect(0, 0);
 	    else
 		pjsua_conf_disconnect(0, 0);
 	    loopback_active = !loopback_active;
-	} while (0);
+	}
 	break;
 	
     case 'm':

@@ -4943,6 +4943,15 @@ PJ_DECL(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options);
 PJ_DECL(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms);
 
 
+/**
+ * Get active audio device stream instance.
+ *
+ * @return		Audio device stream instance if any, otherwise 
+ *			NULL will be returned.
+ */
+PJ_DECL(pjmedia_aud_stream*) pjsua_get_aud_stream();
+
+
 /*****************************************************************************
  * Codecs.
  */
