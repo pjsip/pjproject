@@ -635,6 +635,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
     TInetAddr inetAddr;
     TRequestStatus reqStatus;
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     // Convert address
     status = PjSymbianOS::pj2Addr(*(const pj_sockaddr*)addr, addrlen, 
     				  inetAddr);
@@ -747,6 +750,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     // Forcing pending operation is not supported.
     PJ_ASSERT_RETURN((flags & PJ_IOQUEUE_ALWAYS_ASYNC)==0, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+
     // Clear flag
     flags &= ~PJ_IOQUEUE_ALWAYS_ASYNC;
 
@@ -784,6 +790,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 
     // Forcing pending operation is not supported.
     PJ_ASSERT_RETURN((flags & PJ_IOQUEUE_ALWAYS_ASYNC)==0, PJ_EINVAL);
+
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
 
     // Convert address
     status = PjSymbianOS::pj2Addr(*(const pj_sockaddr*)addr, addrlen, 

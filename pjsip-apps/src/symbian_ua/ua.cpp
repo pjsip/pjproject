@@ -441,6 +441,7 @@ class ConsoleUI : public CActive
 {
 public:
     ConsoleUI(CConsoleBase *con);
+    ~ConsoleUI();
 
     // Run console UI
     void Run();
@@ -466,6 +467,11 @@ ConsoleUI::ConsoleUI(CConsoleBase *con)
     CActiveScheduler::Add(this);
 }
 
+ConsoleUI::~ConsoleUI() 
+{
+    Stop();
+}
+
 // Run console UI
 void ConsoleUI::Run() 
 {
@@ -476,7 +482,7 @@ void ConsoleUI::Run()
 // Stop console UI
 void ConsoleUI::Stop() 
 {
-    DoCancel();
+    Cancel();
 }
 
 // Cancel asynchronous read.
@@ -730,6 +736,96 @@ static void SelectIAP()
 #endif
 
 
+// Class CConnMon to monitor network connection (RConnection). Whenever
+// the connection is down, it will notify PJLIB and restart PJSUA-LIB.
+class CConnMon : public CActive {
+public:
+    static CConnMon* NewL(RConnection &conn, RSocketServ &sserver) {
+	CConnMon *self = new (ELeave) CConnMon(conn, sserver);
+	CleanupStack::PushL(self);
+	self->ConstructL();
+	CleanupStack::Pop(self);
+	return self;
+    }
+    
+    void Start() {
+	conn_.ProgressNotification(nif_progress_, iStatus);
+	SetActive();
+    }
+    
+    void Stop() {
+	Cancel();
+    }
+    
+    ~CConnMon() { Stop(); }
+    
+private:
+    CConnMon(RConnection &conn, RSocketServ &sserver) : 
+	CActive(EPriorityHigh), 
+	conn_(conn), 
+	sserver_(sserver)
+    {
+	CActiveScheduler::Add(this);
+    }
+    
+    void ConstructL() {}
+
+    void DoCancel() {
+	conn_.CancelProgressNotification();
+    }
+
+    void RunL() {
+	int stage = nif_progress_().iStage;
+	
+	if (stage == KLinkLayerClosed) {
+	    pj_status_t status;
+	    TInt err;
+
+	    // Tell pjlib that connection is down.
+	    pj_symbianos_set_connection_status(PJ_FALSE);
+	    
+	    PJ_LOG(3, (THIS_FILE, "RConnection closed, restarting PJSUA.."));
+	    
+	    // Destroy pjsua
+	    pjsua_destroy();
+	    PJ_LOG(3, (THIS_FILE, "PJSUA destroyed."));
+
+	    // Reopen the connection
+	    err = conn_.Open(sserver_);
+	    if (err == KErrNone)
+		err = conn_.Start();
+	    if (err != KErrNone) {
+		CActiveScheduler::Stop();
+		return;
+	    }
+
+	    // Reinit Symbian OS param before pj_init()
+	    pj_symbianos_params sym_params;
+	    pj_bzero(&sym_params, sizeof(sym_params));
+	    sym_params.rsocketserv = &sserver_;
+	    sym_params.rconnection = &conn_;
+	    pj_symbianos_set_params(&sym_params);
+
+	    // Reinit pjsua
+	    status = app_startup();
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "app_startup() error", status);
+		CActiveScheduler::Stop();
+		return;
+	    }
+	    
+	    PJ_LOG(3, (THIS_FILE, "PJSUA restarted."));
+	    PrintMenu();
+	}
+	
+	Start();
+    }
+    
+    RConnection& conn_;
+    RSocketServ& sserver_;
+    TNifProgressBuf nif_progress_;
+};
+
 ////////////////////////////////////////////////////////////////////////////
 int ua_main() 
 {
@@ -772,14 +868,20 @@ int ua_main()
 	return status;
     }
 
+    
     // Run the UI
     ConsoleUI *con = new ConsoleUI(console);
     
     con->Run();
     PrintMenu();
 
+    // Init & start connection monitor
+    CConnMon *connmon = CConnMon::NewL(aConn, aSocketServer);
+    connmon->Start();
+
     CActiveScheduler::Start();
     
+    delete connmon;
     delete con;
 
     // Dump memory statistics
