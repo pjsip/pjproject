@@ -394,6 +394,18 @@ typedef struct pj_symbianos_params
  */
 PJ_DECL(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm);
 
+/**
+ *  Notify PJLIB that the access point connection has been down or unusable
+ *  and PJLIB should not try to access the Symbian socket API (especially ones
+ *  that send packets). Sending packet when RConnection is reconnected to 
+ *  different access point may cause the WaitForRequest() for the function to 
+ *  block indefinitely.
+ *  
+ *  @param up		If set to PJ_FALSE it will cause PJLIB to not try
+ *  			to access socket API, and error will be returned
+ *  			immediately instead.
+ */
+PJ_DECL(void) pj_symbianos_set_connection_status(pj_bool_t up);
 
 /**
  * @}

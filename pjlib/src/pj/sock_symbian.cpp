@@ -463,6 +463,9 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
 	TRequestStatus reqStatus;
 	THostName tmpName;
 
+	// Return empty hostname if access point is marked as down by app.
+	PJ_SYMBIAN_CHECK_CONNECTION2(&hostname);
+
 	resv.GetHostName(tmpName, reqStatus);
 	User::WaitForRequest(reqStatus);
 
@@ -488,6 +491,9 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     /* Sanity checks. */
     PJ_ASSERT_RETURN(p_sock!=NULL, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     /* Set proto if none is specified. */
     if (proto == 0) {
 	if (type == pj_SOCK_STREAM())
@@ -642,6 +648,9 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
@@ -678,6 +687,9 @@ PJ_DEF(pj_status_t) pj_sock_sendto(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 
@@ -716,6 +728,9 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
 
     PJ_ASSERT_RETURN(sock && buf && len, PJ_EINVAL);
     PJ_ASSERT_RETURN(*len > 0, PJ_EINVAL);
+
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
 
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
@@ -770,6 +785,9 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     PJ_ASSERT_RETURN(sock && buf && len && from && fromlen, PJ_EINVAL);
     PJ_ASSERT_RETURN(*len > 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(*fromlen >= (int)sizeof(pj_sockaddr_in), PJ_EINVAL);
+
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
 
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
@@ -868,6 +886,9 @@ PJ_DEF(pj_status_t) pj_sock_connect( pj_sock_t sock,
     PJ_ASSERT_RETURN(((pj_sockaddr*)addr)->addr.sa_family == PJ_AF_INET, 
 		     PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+    
     CPjSocket *pjSock = (CPjSocket*)sock;
     RSocket &rSock = pjSock->Socket();
 

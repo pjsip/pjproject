@@ -313,6 +313,21 @@ public:
     	}
     }
 
+    //
+    // Return true if the access point connection is up
+    //
+    bool IsConnectionUp() const
+    {
+	return isConnectionUp_;
+    }
+
+    //
+    // Set access point connection status
+    //
+    void SetConnectionStatus(bool up)
+    {
+	isConnectionUp_ = up;
+    }
 
     //
     // Unicode Converter
@@ -353,6 +368,8 @@ public:
     }
 
 private:
+    bool isConnectionUp_;
+    
     bool isSocketServInitialized_;
     RSocketServ socketServ_;
 
@@ -374,6 +391,17 @@ private:
     PjSymbianOS();
 };
 
+// This macro is used to check the access point connection status and return
+// failure if the AP connection is down or unusable. See the documentation
+// of pj_symbianos_set_connection_status() for more info
+#define PJ_SYMBIAN_CHECK_CONNECTION() \
+    PJ_SYMBIAN_CHECK_CONNECTION2(PJ_ECANCELLED)
+
+#define PJ_SYMBIAN_CHECK_CONNECTION2(retval) \
+    do { \
+	if (!PjSymbianOS::Instance()->IsConnectionUp()) \
+	    return retval; \
+    } while (0);
 
 #endif	/* __OS_SYMBIAN_H__ */
 

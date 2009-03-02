@@ -71,6 +71,9 @@ static pj_status_t getaddrinfo_by_af(int af, const pj_str_t *name,
     
     PJ_ASSERT_RETURN(name && count && ai, PJ_EINVAL);
 
+    // Return failure if access point is marked as down by app.
+    PJ_SYMBIAN_CHECK_CONNECTION();
+	
     // Get resolver for the specified address family
     RHostResolver &resv = PjSymbianOS::Instance()->GetResolver(af);
 

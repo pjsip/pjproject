@@ -151,7 +151,8 @@ TInt CPjTimeoutTimer::RunError(TInt aError)
 //
 
 PjSymbianOS::PjSymbianOS()
-: isSocketServInitialized_(false), isResolverInitialized_(false),
+: isConnectionUp_(false),
+  isSocketServInitialized_(false), isResolverInitialized_(false),
   console_(NULL), selectTimeoutTimer_(NULL),
   appSocketServ_(NULL), appConnection_(NULL), appHostResolver_(NULL),
   appHostResolver6_(NULL)
@@ -229,6 +230,8 @@ TInt PjSymbianOS::Initialize()
 	isResolverInitialized_ = true;
     }
 
+    isConnectionUp_ = true;
+    
     return KErrNone;
 
 on_error:
@@ -239,6 +242,8 @@ on_error:
 // Shutdown
 void PjSymbianOS::Shutdown()
 {
+    isConnectionUp_ = false;
+    
     if (isResolverInitialized_) {
 		hostResolver_.Close();
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
@@ -252,15 +257,16 @@ void PjSymbianOS::Shutdown()
 	isSocketServInitialized_ = false;
     }
 
-    if (console_) {
-	delete console_;
-	console_ = NULL;
-    }
+    delete console_;
+    console_ = NULL;
 
-    if (selectTimeoutTimer_) {
-	delete selectTimeoutTimer_;
-	selectTimeoutTimer_ = NULL;
-    }
+    delete selectTimeoutTimer_;
+    selectTimeoutTimer_ = NULL;
+    
+    appSocketServ_ = NULL;
+    appConnection_ = NULL;
+    appHostResolver_ = NULL;
+    appHostResolver6_ = NULL;
 }
 
 // Convert to Unicode
@@ -303,6 +309,13 @@ PJ_DEF(pj_status_t) pj_symbianos_set_params(pj_symbianos_params *prm)
     PJ_ASSERT_RETURN(prm != NULL, PJ_EINVAL);
     PjSymbianOS::Instance()->SetParameters(prm);
     return PJ_SUCCESS;
+}
+
+
+/* Set connection status */
+PJ_DEF(void) pj_symbianos_set_connection_status(pj_bool_t up)
+{
+    PjSymbianOS::Instance()->SetConnectionStatus(up != 0);
 }
 
 

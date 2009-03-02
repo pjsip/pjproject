@@ -835,8 +835,10 @@ static void busy_sleep(unsigned msec)
     pj_time_val_normalize(&timeout);
 
     do {
-	while (pjsua_handle_events(10) > 0)
-	    ;
+	int i;
+	i = msec / 10;
+	while (pjsua_handle_events(10) > 0 && i > 0)
+	    --i;
 	pj_gettimeofday(&now);
     } while (PJ_TIME_VAL_LT(now, timeout));
 }
