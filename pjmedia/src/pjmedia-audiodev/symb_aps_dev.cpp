@@ -730,6 +730,11 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
 	    f.size = strm->param.samples_per_frame << 1;
 	    
 	    strm->play_cb(strm->user_data, &f);
+	    if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
+		pjmedia_zero_samples(strm->play_buf, 
+				     strm->param.samples_per_frame);
+	    }
+	    
 	    strm->play_buf_len = strm->param.samples_per_frame;
 	    strm->play_buf_start = 0;
 	}

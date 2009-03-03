@@ -342,6 +342,7 @@ static pj_status_t app_startup()
     med_cfg.ec_tail_len = 0;
     med_cfg.enable_ice = USE_ICE;
     med_cfg.snd_auto_close_time = 0; // wait for 0 seconds idle before sound dev get auto-closed
+    //med_cfg.no_vad = PJ_TRUE;
     
     status = pjsua_init(&cfg, &log_cfg, &med_cfg);
     if (status != PJ_SUCCESS) {
@@ -506,9 +507,13 @@ static void PrintCodecMenu()
     PJ_LOG(3, (THIS_FILE, "\n\n"
 	    "Codec Menu:\n"
 	    "  a    Enable all codecs\n"
-#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_SYMB_APS_SOUND
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
 	    "  d    Enable only AMR\n"
+#endif
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
 	    "  g    Enable only G.729\n"
+#endif
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
 	    "  j    Enable only iLBC\n"
 #endif
 	    "  m    Enable only Speex\n"
