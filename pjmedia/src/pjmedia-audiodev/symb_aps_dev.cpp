@@ -1282,10 +1282,13 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 	aps_setting.mode = EALawOr20ms;
     }
 
-    /* Disable VAD on L16 and G711. */
+    /* Disable VAD on L16, G711, and also G729 (G729's VAD potentially 
+     * causes noise?).
+     */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMU ||
 	strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMA ||
-	strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16)
+	strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16 ||
+	strm->param.ext_fmt.id == PJMEDIA_FORMAT_G729)
     {
 	aps_setting.vad = EFalse;
     } else {
