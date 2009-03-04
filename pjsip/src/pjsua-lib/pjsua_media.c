@@ -2384,6 +2384,40 @@ PJ_DEF(pj_status_t) pjsua_enum_snd_devs( pjmedia_snd_dev_info info[],
 PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 				       int playback_dev)
 {
+#if PJMEDIA_CONF_USE_SWITCH_BOARD
+
+    pjmedia_aud_param param;
+    pj_status_t status;
+
+    /* Create default parameters for the device */
+    status = pjmedia_aud_dev_default_param(capture_dev, &param);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error retrieving default audio "
+				"device parameters", status);
+	return status;
+    }
+    param.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    param.rec_id = capture_dev;
+    param.play_id = playback_dev;
+    param.channel_count = pjsua_var.media_cfg.channel_count;
+    /* Latency settings */
+    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+		    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
+    param.input_latency_ms = pjsua_var.media_cfg.snd_rec_latency;
+    param.output_latency_ms = pjsua_var.media_cfg.snd_play_latency;
+    /* EC settings */
+    if (pjsua_var.media_cfg.ec_tail_len) {
+	param.flags |= (PJMEDIA_AUD_DEV_CAP_EC | PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+	param.ec_enabled = PJ_TRUE;
+	param.ec_tail_ms = pjsua_var.media_cfg.ec_tail_len;
+    } else {
+	param.flags &= ~(PJMEDIA_AUD_DEV_CAP_EC | PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+    }
+
+    return open_snd_dev_ext(&param);
+
+#else
+
     pjmedia_port *conf_port;
     pjmedia_aud_dev_info play_info;
     pjmedia_aud_param param;
@@ -2547,6 +2581,9 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     }
 
     return PJ_SUCCESS;
+
+#endif /* PJMEDIA_CONF_USE_SWITCH_BOARD */
+
 }
 
 
