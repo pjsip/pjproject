@@ -18,12 +18,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
-#include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
 #include <portaudio.h>
+
+#if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
+
 
 #define THIS_FILE	"pa_dev.c"
 #define DRIVER_NAME	"PA"
@@ -451,7 +453,7 @@ static pj_status_t pa_init(pjmedia_aud_dev_factory *f)
     PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
 			 pa_get_dev_count(f)));
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
@@ -470,7 +472,7 @@ static pj_status_t pa_destroy(pjmedia_aud_dev_factory *f)
     pa->pool = NULL;
     pj_pool_release(pool);
     
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
@@ -692,14 +694,14 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
 	rec_id = pa_get_default_input_dev(param->channel_count);
 	if (rec_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDREC;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     }
 
     paDevInfo = Pa_GetDeviceInfo(rec_id);
     if (!paDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
     if (param->bits_per_sample == 8)
@@ -709,7 +711,7 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
     else if (param->bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJMEDIA_ESNDINSAMPLEFMT;
+	return PJMEDIA_EAUD_SAMPFORMAT;
     
     pool = pj_pool_create(pa->pf, "recstrm", 1024, 1024, NULL);
     if (!pool)
@@ -752,7 +754,7 @@ static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
 			 paClipOff, &PaRecorderCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
-	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err);
     }
 
     paSI = Pa_GetStreamInfo(stream->rec_strm);
@@ -797,14 +799,14 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
 	play_id = pa_get_default_output_dev(param->channel_count);
 	if (play_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDPLAY;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     } 
 
     paDevInfo = Pa_GetDeviceInfo(play_id);
     if (!paDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
     if (param->bits_per_sample == 8)
@@ -814,7 +816,7 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
     else if (param->bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJMEDIA_ESNDINSAMPLEFMT;
+	return PJMEDIA_EAUD_SAMPFORMAT;
     
     pool = pj_pool_create(pa->pf, "playstrm", 1024, 1024, NULL);
     if (!pool)
@@ -858,7 +860,7 @@ static pj_status_t create_play_stream(struct pa_aud_factory *pa,
 			 paClipOff, &PaPlayerCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
-	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err);
     }
 
     paSI = Pa_GetStreamInfo(stream->play_strm);
@@ -909,14 +911,14 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
 	rec_id = pa_get_default_input_dev(param->channel_count);
 	if (rec_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDREC;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     }
 
     paRecDevInfo = Pa_GetDeviceInfo(rec_id);
     if (!paRecDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
     play_id = param->play_id;
@@ -924,14 +926,14 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
 	play_id = pa_get_default_output_dev(param->channel_count);
 	if (play_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDPLAY;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     } 
 
     paPlayDevInfo = Pa_GetDeviceInfo(play_id);
     if (!paPlayDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
 
@@ -942,7 +944,7 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
     else if (param->bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJMEDIA_ESNDINSAMPLEFMT;
+	return PJMEDIA_EAUD_SAMPFORMAT;
     
     pool = pj_pool_create(pa->pf, "sndstream", 1024, 1024, NULL);
     if (!pool)
@@ -1033,7 +1035,7 @@ static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
 
     if (err != paNoError) {
 	pj_pool_release(pool);
-	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err);
     }
 
     paSI = Pa_GetStreamInfo(stream->rec_strm);
@@ -1142,19 +1144,19 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
     if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY && strm->rec_strm) {
 	const PaStreamInfo *si = Pa_GetStreamInfo(strm->rec_strm);
 	if (!si)
-	    return PJ_EINVALIDOP;
+	    return PJMEDIA_EAUD_SYSERR;
 
 	*(unsigned*)pval = (unsigned)(si->inputLatency * 1000);
 	return PJ_SUCCESS;
     } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY && strm->play_strm) {
 	const PaStreamInfo *si = Pa_GetStreamInfo(strm->play_strm);
 	if (!si)
-	    return PJ_EINVALIDOP;
+	    return PJMEDIA_EAUD_SYSERR;
 
 	*(unsigned*)pval = (unsigned)(si->outputLatency * 1000);
 	return PJ_SUCCESS;
     } else {
-	return PJ_ENOTSUP;
+	return PJMEDIA_EAUD_INVCAP;
     }
 }
 
@@ -1169,7 +1171,7 @@ static pj_status_t strm_set_cap(pjmedia_aud_stream *strm,
     PJ_UNUSED_ARG(value);
 
     /* Nothing is supported */
-    return PJ_ENOTSUP;
+    return PJMEDIA_EAUD_INVCAP;
 }
 
 
@@ -1192,7 +1194,7 @@ static pj_status_t strm_start(pjmedia_aud_stream *s)
 
     PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
@@ -1223,7 +1225,7 @@ static pj_status_t strm_stop(pjmedia_aud_stream *s)
 
     PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
 
@@ -1254,6 +1256,8 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
 
     pj_pool_release(stream->pool);
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
+
+#endif	/* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 

@@ -97,6 +97,10 @@ SOURCE="..\src\pjmedia-audiodev\audiotest.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-audiodev\errno.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-audiodev\pa_dev.c"
 # End Source File
 # Begin Source File
@@ -132,6 +136,10 @@ SOURCE="..\include\pjmedia-audiodev\audiotest.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-audiodev\config.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-audiodev\errno.h"
 # End Source File
 # End Group
 # End Target

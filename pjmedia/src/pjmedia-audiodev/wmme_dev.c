@@ -18,12 +18,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
-#include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
 #include <pj/unicode.h>
+
+#if PJMEDIA_AUDIO_DEV_HAS_WMME
+
 #ifdef _MSC_VER
 #   pragma warning(push, 3)
 #endif
@@ -166,12 +168,6 @@ static pjmedia_aud_stream_op stream_op =
     &stream_stop,
     &stream_destroy
 };
-
-/* Utility: convert MMERROR to pj_status_t */
-PJ_INLINE(pj_status_t) CONVERT_MM_ERROR(MMRESULT mr)
-{
-    return PJ_RETURN_OS_ERROR(mr);
-}
 
 
 /****************************************************************************
@@ -547,13 +543,13 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
 		     wf->dev_info[prm->play_id].deviceId,
 		     &wfx, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
     if (mr != MMSYSERR_NOERROR) {
-	return CONVERT_MM_ERROR(mr);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
     }
 
     /* Pause the wave out device */
     mr = waveOutPause(wmme_strm->hWave.Out);
     if (mr != MMSYSERR_NOERROR) {
-	return CONVERT_MM_ERROR(mr);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
     }
 
     /*
@@ -569,12 +565,12 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
 				  &(wmme_strm->WaveHdr[i]),
 				  sizeof(WAVEHDR));
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr); 
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr); 
 	}
 	mr = waveOutWrite(wmme_strm->hWave.Out, &(wmme_strm->WaveHdr[i]), 
 			  sizeof(WAVEHDR));
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
 	}
     }
 
@@ -633,7 +629,7 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
 		    wf->dev_info[prm->rec_id].deviceId, 
 		    &wfx, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
     if (mr != MMSYSERR_NOERROR) {
-	return CONVERT_MM_ERROR(mr);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
     }
 
     /*
@@ -649,12 +645,12 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
 				 &(wmme_strm->WaveHdr[i]),
 				 sizeof(WAVEHDR));
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
 	}
 	mr = waveInAddBuffer(wmme_strm->hWave.In, &(wmme_strm->WaveHdr[i]), 
 			     sizeof(WAVEHDR));
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
 	}
     }
 
@@ -830,7 +826,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 				  &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]),
 				  sizeof(WAVEHDR));
 		if (mr != MMSYSERR_NOERROR) {
-		    status = CONVERT_MM_ERROR(mr);
+		    status = PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
 		    break;
 		}
 
@@ -927,7 +923,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 				     &(wmme_strm->WaveHdr[wmme_strm->dwBufIdx]), 
 				     sizeof(WAVEHDR));
 		if (mr != MMSYSERR_NOERROR) {
-		    status = CONVERT_MM_ERROR(mr);
+		    status = PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
 		    break;
 		}
 
@@ -1146,7 +1142,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 
 	mr = waveOutGetVolume(strm->play_strm.hWave.Out, &dwVol);
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
 	}
 
 	dwVol &= 0xFFFF;
@@ -1177,7 +1173,8 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	dwVol |= (dwVol << 16);
 
 	mr = waveOutSetVolume(strm->play_strm.hWave.Out, dwVol);
-	return (mr==MMSYSERR_NOERROR)? PJ_SUCCESS : CONVERT_MM_ERROR(mr);
+	return (mr==MMSYSERR_NOERROR)? PJ_SUCCESS : 
+				PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
     } else {
 	return PJ_ENOTSUP;
     }
@@ -1195,7 +1192,7 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
     {
 	mr = waveOutRestart(stream->play_strm.hWave.Out);
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
 	}
 	PJ_LOG(4,(THIS_FILE, "WMME playback stream started"));
     }
@@ -1204,7 +1201,7 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
     {
 	mr = waveInStart(stream->rec_strm.hWave.In);
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
 	}
 	PJ_LOG(4,(THIS_FILE, "WMME capture stream started"));
     }
@@ -1224,7 +1221,7 @@ static pj_status_t stream_stop(pjmedia_aud_stream *strm)
     {
 	mr = waveOutPause(stream->play_strm.hWave.Out);
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
 	}
 	PJ_LOG(4,(THIS_FILE, "Stopped WMME playback stream"));
     }
@@ -1233,7 +1230,7 @@ static pj_status_t stream_stop(pjmedia_aud_stream *strm)
     {
 	mr = waveInStop(stream->rec_strm.hWave.In);
 	if (mr != MMSYSERR_NOERROR) {
-	    return CONVERT_MM_ERROR(mr);
+	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
 	}
 	PJ_LOG(4,(THIS_FILE, "Stopped WMME capture stream"));
     }
@@ -1302,4 +1299,6 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm)
 
     return PJ_SUCCESS;
 }
+
+#endif	/* PJMEDIA_AUDIO_DEV_HAS_WMME */
 

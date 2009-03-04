@@ -25,6 +25,7 @@
  * @brief Audio device API.
  */
 #include <pjmedia-audiodev/config.h>
+#include <pjmedia-audiodev/errno.h>
 #include <pjmedia/port.h>
 #include <pj/pool.h>
 
@@ -600,30 +601,6 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_stop(pjmedia_aud_stream *strm);
  */
 PJ_DECL(pj_status_t) pjmedia_aud_stream_destroy(pjmedia_aud_stream *strm);
 
-
-/* Audio subsystem not initialized */
-#define PJMEDIA_EAUD_INIT	-1
-
-/* Invalid audio device */
-#define PJMEDIA_EAUD_INVDEV	-1
-
-/* Found no devices */
-#define PJMEDIA_EAUD_NODEV	-1
-
-/* Unable to find default device */
-#define PJMEDIA_EAUD_NODEFDEV	-1
-
-/* Device not ready */
-#define PJMEDIA_EAUD_NOTREADY	-1
-
-/* Invalid audio capability or audio capability not supported */
-#define PJMEDIA_EAUD_INVCAP	-1
-
-/* Unknown system error */
-#define PJMEDIA_EAUD_SYSERR	-1
-
-/* Bad or invalid format */
-#define PJMEDIA_EAUD_BADFORMAT	-1
 
 /**
  * @}

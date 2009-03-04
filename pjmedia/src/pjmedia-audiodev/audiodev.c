@@ -25,6 +25,8 @@
 
 #define THIS_FILE   "audiodev.c"
 
+#define DEFINE_CAP(name, info)	{name, info}
+
 /* Capability names */
 static struct cap_info
 {
@@ -32,20 +34,20 @@ static struct cap_info
     const char *info;
 } cap_infos[] = 
 {
-    {"ext-fmt",	    "Extended/non-PCM format"},
-    {"latency-in",  "Input latency/buffer size setting"},
-    {"latency-out", "Output latency/buffer size setting"},
-    {"vol-in",	    "Input volume setting"},
-    {"vol-out",	    "Output volume setting"},
-    {"meter-in",    "Input meter"},
-    {"meter-out",   "Output meter"},
-    {"route-in",    "Input routing"},
-    {"route-out",   "Output routing"},
-    {"aec",	    "Accoustic echo cancellation"},
-    {"aec-tail",    "Tail length setting for AEC"},
-    {"vad",	    "Voice activity detection"},
-    {"cng",	    "Comfort noise generation"},
-    {"plg",	    "Packet loss concealment"}
+    DEFINE_CAP("ext-fmt",     "Extended/non-PCM format"),
+    DEFINE_CAP("latency-in",  "Input latency/buffer size setting"),
+    DEFINE_CAP("latency-out", "Output latency/buffer size setting"),
+    DEFINE_CAP("vol-in",      "Input volume setting"),
+    DEFINE_CAP("vol-out",     "Output volume setting"),
+    DEFINE_CAP("meter-in",    "Input meter"),
+    DEFINE_CAP("meter-out",   "Output meter"),
+    DEFINE_CAP("route-in",    "Input routing"),
+    DEFINE_CAP("route-out",   "Output routing"),
+    DEFINE_CAP("aec",	      "Accoustic echo cancellation"),
+    DEFINE_CAP("aec-tail",    "Tail length setting for AEC"),
+    DEFINE_CAP("vad",	      "Voice activity detection"),
+    DEFINE_CAP("cng",	      "Comfort noise generation"),
+    DEFINE_CAP("plg",	      "Packet loss concealment")
 };
 
 
@@ -227,6 +229,12 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 	return PJ_SUCCESS;
     }
 
+    /* Register error subsystem */
+    pj_register_strerror(PJMEDIA_AUDIODEV_ERRNO_START, 
+			 PJ_ERRNO_SPACE_SIZE, 
+			 &pjmedia_audiodev_strerror);
+
+    /* Init */
     aud_subsys.pf = pf;
     aud_subsys.drv_cnt = 0;
     aud_subsys.dev_cnt = 0;
