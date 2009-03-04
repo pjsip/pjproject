@@ -669,10 +669,12 @@ static void sess_on_request_complete(pj_stun_session *sess,
 
 	pj_sockaddr_cp(&stun_sock->mapped_addr, &mapped_attr->sockaddr);
 
-	resched = (*stun_sock->cb.on_status)(stun_sock, op, PJ_SUCCESS);
-
-	goto on_return;
+	if (op==PJ_STUN_SOCK_KEEP_ALIVE_OP)
+	    op = PJ_STUN_SOCK_MAPPED_ADDR_CHANGE;
     }
+
+    /* Notify user */
+    resched = (*stun_sock->cb.on_status)(stun_sock, op, PJ_SUCCESS);
 
 on_return:
     /* Start/restart keep-alive timer */

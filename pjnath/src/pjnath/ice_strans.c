@@ -1265,12 +1265,16 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 	}
 	break;
     case PJ_STUN_SOCK_BINDING_OP:
+    case PJ_STUN_SOCK_MAPPED_ADDR_CHANGE:
 	if (status == PJ_SUCCESS) {
 	    pj_stun_sock_info info;
 
 	    status = pj_stun_sock_get_info(stun_sock, &info);
 	    if (status == PJ_SUCCESS) {
 		char ipaddr[PJ_INET6_ADDRSTRLEN+10];
+		const char *op_name = (op==PJ_STUN_SOCK_BINDING_OP) ?
+				    "Binding discovery complete" :
+				    "srflx address changed";
 		pj_bool_t dup = PJ_FALSE;
 
 		/* Eliminate the srflx candidate if the address is
@@ -1308,9 +1312,9 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		}
 
 		PJ_LOG(4,(comp->ice_st->obj_name, 
-			  "Comp %d: Binding discovery complete, "
+			  "Comp %d: %s, "
 			  "srflx address is %s",
-			  comp->comp_id, 
+			  comp->comp_id, op_name, 
 			  pj_sockaddr_print(&info.mapped_addr, ipaddr, 
 					     sizeof(ipaddr), 3)));
 
