@@ -21,21 +21,13 @@
 #define __PJMEDIA_SOUND_H__
 
 
-/* This is legacy sound device code, which has been superseded by the
- * new pjmedia-audiodev framework. Please see the documentation on how
- * to use this legacy API.
- */
-#if PJMEDIA_AUDIO_API==PJMEDIA_AUDIO_API_NEW_ONLY
-#   error "The sound device API is deprecated. Please see doc for details."
-#endif
-
-
 /**
  * @file sound.h
- * @brief Sound player and recorder device framework.
+ * @brief Legacy sound device API
  */
+#include <pjmedia-audiodev/audiodev.h>
 #include <pjmedia/types.h>
-#include <pj/pool.h>
+
 
 PJ_BEGIN_DECL
 
@@ -44,6 +36,11 @@ PJ_BEGIN_DECL
  * @ingroup PJMED_SND_PORT
  * @brief PJMEDIA abstraction for sound device hardware
  * @{
+ *
+ * <strong>Warning: this sound device API has been deprecated
+ * and replaced by PJMEDIA Audio Device API. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more
+ * information.</strong>
  *
  * This section describes lower level abstraction for sound device
  * hardware. Application normally uses the higher layer @ref
@@ -70,7 +67,7 @@ PJ_BEGIN_DECL
  * frames from/to the sound device.
  */
 
-/** Opaque data type for audio stream. */
+/** Opaque declaration for pjmedia_snd_stream. */
 typedef struct pjmedia_snd_stream pjmedia_snd_stream;
 
 /**
@@ -100,34 +97,6 @@ typedef struct pjmedia_snd_stream_info
     unsigned	rec_latency;	    /**< Record latency, in samples.	    */
     unsigned	play_latency;	    /**< Playback latency, in samples.	    */
 } pjmedia_snd_stream_info;
-
-/**
- * Audio routing destination.
- */
-typedef enum pjmedia_snd_route
-{
-    /** Route to default destination */
-    PJMEDIA_SND_ROUTE_DEFAULT,
-
-    /** Route to loudspeaker */
-    PJMEDIA_SND_ROUTE_LOUDSPEAKER,
-
-    /** Route to earpiece */
-    PJMEDIA_SND_ROUTE_EARPIECE,
-
-} pjmedia_snd_route;
-
-
-/** 
- * Stream setting for opening sound device with non-PCM data.
- */
-typedef struct pjmedia_snd_setting
-{
-    pjmedia_format	format;	  /**< Format.			    */ 
-    pj_bool_t		plc;	  /**< PLC enabled/disabled.	    */
-    pjmedia_snd_route	route;	  /**< Audio routing.		    */
-} pjmedia_snd_setting;
-
 
 /** 
  * This callback is called by player stream when it needs additional data
@@ -306,46 +275,6 @@ PJ_DECL(pj_status_t) pjmedia_snd_open_player( int index,
 					 pjmedia_snd_play_cb play_cb,
 					 void *user_data,
 					 pjmedia_snd_stream **p_snd_strm );
-
-
-/**
- * Create sound stream for capturing audio and/or audio playback, from the 
- * same device. This also allows opening sound stream with extended settings, 
- * e.g: stream format, see #pjmedia_snd_setting.
- *
- * @param dir		    Sound stream direction.
- * @param rec_id	    Device index for recorder/capture stream, or
- *			    -1 to use the first capable device.
- * @param play_id	    Device index for playback stream, or -1 to use 
- *			    the first capable device.
- * @param clock_rate	    Sound device's clock rate to set.
- * @param channel_count	    Set number of channels, 1 for mono, or 2 for
- *			    stereo. The channel count determines the format
- *			    of the frame.
- * @param samples_per_frame Number of samples per frame.
- * @param bits_per_sample   Set the number of bits per sample. The normal 
- *			    value for this parameter is 16 bits per sample.
- * @param rec_cb	    Callback to handle captured audio samples.
- * @param play_cb	    Callback to be called when the sound player needs
- *			    more audio samples to play.
- * @param user_data	    User data to be associated with the stream.
- * @param setting	    Sound device extended setting.
- * @param p_snd_strm	    Pointer to receive the stream instance.
- *
- * @return		    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_snd_open2( pjmedia_dir dir,
-				        int rec_id,
-				        int play_id,
-				        unsigned clock_rate,
-				        unsigned channel_count,
-				        unsigned samples_per_frame,
-				        unsigned bits_per_sample,
-				        pjmedia_snd_rec_cb rec_cb,
-				        pjmedia_snd_play_cb play_cb,
-				        void *user_data,
-					const pjmedia_snd_setting *setting,
-				        pjmedia_snd_stream **p_snd_strm);
 
 
 /**

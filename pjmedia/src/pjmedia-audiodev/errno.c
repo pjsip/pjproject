@@ -46,7 +46,7 @@ static const struct
     const char *msg;
 } err_str[] = 
 {
-    PJ_BUILD_ERR( PJMEDIA_AUDIODEV_ERROR,   "Unspecified audio device error" ),
+    PJ_BUILD_ERR( PJMEDIA_EAUD_ERR,	    "Unspecified audio device error" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_SYSERR,	    "Unknown error from audio driver" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_INIT,	    "Audio subsystem not initialized" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_INVDEV,	    "Invalid audio device" ),
@@ -56,7 +56,8 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_EAUD_INVCAP,	    "Invalid or unsupported audio capability" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_INVOP,	    "Invalid or unsupported audio device operation" ),
     PJ_BUILD_ERR( PJMEDIA_EAUD_BADFORMAT,   "Bad or invalid audio device format" ),
-    PJ_BUILD_ERR( PJMEDIA_EAUD_SAMPFORMAT,  "Invalid audio device sample format")
+    PJ_BUILD_ERR( PJMEDIA_EAUD_SAMPFORMAT,  "Invalid audio device sample format"),
+    PJ_BUILD_ERR( PJMEDIA_EAUD_BADLATENCY,  "Bad audio latency setting")
 
 };
 

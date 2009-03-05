@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
+#include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/log.h>
 #include <pj/pool.h>

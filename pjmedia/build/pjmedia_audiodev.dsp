@@ -101,6 +101,10 @@ SOURCE="..\src\pjmedia-audiodev\errno.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjmedia-audiodev\legacy_dev.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjmedia-audiodev\pa_dev.c"
 # End Source File
 # Begin Source File

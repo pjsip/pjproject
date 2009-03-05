@@ -19,7 +19,6 @@
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pjmedia/alaw_ulaw.h>
-#include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/math.h>

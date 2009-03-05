@@ -24,7 +24,7 @@
  * @file audiodev.h
  * @brief Audio device API.
  */
-#include <pjmedia/port.h>
+#include <pjmedia/types.h>
 #include <pj/pool.h>
 
 
@@ -46,7 +46,7 @@ PJ_BEGIN_DECL
  * This setting controls whether PortAudio support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
-#   define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO	0
+#   define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO	1
 #endif
 
 
@@ -71,8 +71,28 @@ PJ_BEGIN_DECL
  * framework) support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA
-#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA	0
+#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA	PJ_SYMBIAN
 #endif
+
+
+/**
+ * This setting controls whether the Audio Device API should support
+ * device implementation that is based on the old sound device API
+ * (sound.h). 
+ *
+ * Enable this API if:
+ *  - you have implemented your own sound device using the old sound
+ *    device API (sound.h), and
+ *  - you wish to be able to use your sound device implementation
+ *    using the new Audio Device API.
+ *
+ * Please see http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more
+ * info.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE
+#   define PJMEDIA_AUDIO_DEV_HAS_LEGACY_DEVICE	0
+#endif
+
 
 /**
  * @}

@@ -81,35 +81,19 @@
 #endif
 
 /**
- * Setting PJMEDIA_AUDIO_API to this value will completely deprecate the use
- * of old API, and inclusion of <pjmedia/sound.h> in the code will raise 
- * compilation error.
+ * This macro controls whether the legacy sound device API is to be
+ * implemented, for applications that still use the old sound device
+ * API (sound.h). If this macro is set to non-zero, the sound_legacy.c
+ * will be included in the compilation. The sound_legacy.c is an
+ * implementation of old sound device (sound.h) using the new Audio
+ * Device API.
+ *
+ * Please see http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more
+ * info.
  */
-#define PJMEDIA_AUDIO_API_NEW_ONLY	    1
-
-/**
- * Setting PJMEDIA_AUDIO_API to this value enables application to use the old
- * sound device API to access audio devices provided by the new audio device 
- * API. 
- */
-#define PJMEDIA_AUDIO_API_HAS_OLD_API	    2
-
-/**
- * Setting PJMEDIA_AUDIO_API to this value enables old sound device 
- * implementation to be accessed via both old and new API's. 
- */
-#define PJMEDIA_AUDIO_API_HAS_OLD_DEVICE    3
-
-/**
- * Specify how the audio API should handle compatibility with old sound API.
- * Valid values are: PJMEDIA_AUDIO_API_HAS_OLD_API (default, 
- * PJMEDIA_AUDIO_API_NEW_ONLY, or PJMEDIA_AUDIO_API_HAS_OLD_DEVICE. Please
- * see http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more info.
- */
-#ifndef PJMEDIA_AUDIO_API
-#   define PJMEDIA_AUDIO_API		    PJMEDIA_AUDIO_API_NEW_ONLY
+#ifndef PJMEDIA_HAS_LEGACY_SOUND_API
+#   define PJMEDIA_HAS_LEGACY_SOUND_API	    1
 #endif
-
 
 /**
  * Specify default sound device latency, in milisecond.

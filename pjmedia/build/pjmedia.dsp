@@ -229,6 +229,10 @@ SOURCE=..\src\pjmedia\silencedet.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjmedia\sound_legacy.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjmedia\sound_port.c
 # End Source File
 # Begin Source File

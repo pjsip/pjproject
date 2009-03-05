@@ -97,7 +97,7 @@ PJ_BEGIN_DECL
  * @hideinitializer
  * General/unknown error.
  */
-#define PJMEDIA_AUDIODEV_ERROR	(PJMEDIA_AUDIODEV_ERRNO_START+1) /* 420001 */
+#define PJMEDIA_EAUD_ERR	(PJMEDIA_AUDIODEV_ERRNO_START+1) /* 420001 */
 
 /**
  * @hideinitializer
@@ -158,6 +158,16 @@ PJ_BEGIN_DECL
  * Invalid audio device sample format
  */
 #define PJMEDIA_EAUD_SAMPFORMAT	(PJMEDIA_AUDIODEV_ERRNO_START+11) /* 4200011 */
+
+/**
+ * @hideinitializer
+ * Bad latency setting
+ */
+#define PJMEDIA_EAUD_BADLATENCY	(PJMEDIA_AUDIODEV_ERRNO_START+12) /* 4200012 */
+
+
+
+
 
 /**
  * Get error message for the specified error code. Note that this

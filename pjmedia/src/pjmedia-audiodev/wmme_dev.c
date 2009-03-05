@@ -1149,7 +1149,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 	*(unsigned*)pval = (dwVol * 100) / 0xFFFF;
 	return PJ_SUCCESS;
     } else {
-	return PJ_ENOTSUP;
+	return PJMEDIA_EAUD_INVCAP;
     }
 }
 
@@ -1175,11 +1175,9 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	mr = waveOutSetVolume(strm->play_strm.hWave.Out, dwVol);
 	return (mr==MMSYSERR_NOERROR)? PJ_SUCCESS : 
 				PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
-    } else {
-	return PJ_ENOTSUP;
     }
 
-    return PJ_ENOTSUP;
+    return PJMEDIA_EAUD_INVCAP;
 }
 
 /* API: Start stream. */
