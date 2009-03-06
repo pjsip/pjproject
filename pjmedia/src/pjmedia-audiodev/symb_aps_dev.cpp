@@ -18,8 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
+#include <pjmedia-audiodev/errno.h>
 #include <pjmedia/alaw_ulaw.h>
-#include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/math.h>
@@ -31,6 +31,13 @@
 #include <e32msgqueue.h>
 #include <sounddevice.h>
 #include <APSClientSession.h>
+#include <pjmedia-codec/amr_helper.h>
+
+/* Pack/unpack G.729 frame of S60 DSP codec, taken from:  
+ * http://wiki.forum.nokia.com/index.php/TSS000776_-_Payload_conversion_for_G.729_audio_format
+ */
+#include "s60_g729_bitstream.h"
+
 
 #define THIS_FILE			"symb_aps_dev.c"
 #define BITS_PER_SAMPLE			16
@@ -755,12 +762,6 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
 /****************************************************************************
  * Internal APS callbacks
  */
-
-/* Pack/unpack G.729 frame of S60 DSP codec, taken from:  
- * http://wiki.forum.nokia.com/index.php/TSS000776_-_Payload_conversion_for_G.729_audio_format
- */
-#include "../pjmedia/s60_g729_bitstream.h"
-#include <pjmedia-codec/amr_helper.h>
 
 static void RecCb(TAPSCommBuffer &buf, void *user_data)
 {

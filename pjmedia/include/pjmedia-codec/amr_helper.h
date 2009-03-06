@@ -822,7 +822,6 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
 
 	out_info->mode = FT_;
 	out->size = 5;
-	PJ_ASSERT_RETURN(out->size <= in->size, PJMEDIA_CODEC_EFRMINLEN);
 
 	pj_bzero(out->buf, out->size);
 	for(i = 0; i < framelenbit_tbl[SID_FT]; ++i) {

@@ -18,12 +18,15 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia-audiodev/audiodev_imp.h>
+#include <pjmedia-audiodev/errno.h>
 #include <pjmedia/alaw_ulaw.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/math.h>
 #include <pj/os.h>
 #include <pj/string.h>
+
+#if PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA
 
 /*
  * This file provides sound implementation for Symbian Audio Streaming
@@ -1104,3 +1107,4 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm)
     return PJ_SUCCESS;
 }
 
+#endif /* PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA */

@@ -114,7 +114,7 @@
 /*
  * Override features.
  */
-#define PJ_HAS_FLOATING_POINT	    1
+#define PJ_HAS_FLOATING_POINT	    0
 #define PJ_HAS_MALLOC               0
 #define PJ_HAS_SEMAPHORE	    1
 #define PJ_HAS_EVENT_OBJ	    0

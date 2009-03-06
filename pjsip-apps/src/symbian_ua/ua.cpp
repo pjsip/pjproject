@@ -23,7 +23,8 @@
 #include "ua.h"
 
 #define THIS_FILE	"symbian_ua.cpp"
-#define LOG_LEVEL	3
+#define CON_LOG_LEVEL	3 // console log level
+#define FILE_LOG_LEVEL	4 // logfile log level
 
 //
 // Basic config.
@@ -281,7 +282,7 @@ static pj_status_t app_startup()
     pj_log_set_log_func(&log_writer);
     
     /* Set log level */
-    pj_log_set_level(LOG_LEVEL);
+    pj_log_set_level(CON_LOG_LEVEL);
 
     /* Create pjsua first! */
     status = pjsua_create();
@@ -329,8 +330,8 @@ static pj_status_t app_startup()
     
     
     pjsua_logging_config_default(&log_cfg);
-    log_cfg.level = LOG_LEVEL;
-    log_cfg.console_level = LOG_LEVEL;
+    log_cfg.level = FILE_LOG_LEVEL;
+    log_cfg.console_level = CON_LOG_LEVEL;
     log_cfg.cb = &log_writer;
     log_cfg.log_filename = pj_str("C:\\data\\symbian_ua.log");
 
@@ -485,7 +486,8 @@ void ConsoleUI::DoCancel()
 
 static void PrintMainMenu() 
 {
-    PJ_LOG(3, (THIS_FILE, "\n\n"
+    const char *menu =
+	    "\n\n"
 	    "Main Menu:\n"
 	    "  d    Enable/disable codecs\n"
 	    "  m    Call " SIP_DST_URI "\n"
@@ -499,12 +501,15 @@ static void PrintMainMenu()
 	    "  S    Unsubscribe presence\n"
 	    "  o    Set account online\n"
 	    "  O    Set account offline\n"
-	    "  w    Quit\n"));
+	    "  w    Quit\n";
+    
+    PJ_LOG(3, (THIS_FILE, menu));
 }
 
 static void PrintCodecMenu() 
 {
-    PJ_LOG(3, (THIS_FILE, "\n\n"
+    const char *menu = 
+	    "\n\n"
 	    "Codec Menu:\n"
 	    "  a    Enable all codecs\n"
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
@@ -519,7 +524,9 @@ static void PrintCodecMenu()
 	    "  m    Enable only Speex\n"
 	    "  p    Enable only GSM\n"
 	    "  t    Enable only PCMU\n"
-	    "  w    Enable only PCMA\n"));
+	    "  w    Enable only PCMA\n";
+    
+    PJ_LOG(3, (THIS_FILE, menu));
 }
 
 static void HandleMainMenu(TKeyCode kc) {

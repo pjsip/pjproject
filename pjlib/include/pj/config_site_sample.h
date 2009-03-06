@@ -118,9 +118,14 @@
      * PJMEDIA settings
      */
 
+    /* Disable non-Symbian audio devices */
+    #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO	0
+    #define PJMEDIA_AUDIO_DEV_HAS_WMME		0
+
     /* Select codecs to disable */
     #define PJMEDIA_HAS_L16_CODEC		0
     #define PJMEDIA_HAS_ILBC_CODEC		0
+    #define PJMEDIA_HAS_G722_CODEC		0
 
     /* Fine tune Speex's default settings for best performance/quality */
     #define PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY	5
