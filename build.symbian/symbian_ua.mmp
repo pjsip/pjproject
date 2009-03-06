@@ -4,12 +4,15 @@
 
 TARGET 			symbian_ua.exe
 TARGETTYPE 		exe
-UID			0x0 0xA000000D
+UID			0x0 0x200235D3
 
 SOURCEPATH		..\pjsip-apps\src\symbian_ua
 
 MACRO			PJ_M_I386=1
 MACRO			PJ_SYMBIAN=1
+
+OPTION			GCCE -O2 -fno-unit-at-a-time
+SRCDBG
 
 // Source files
 
@@ -40,7 +43,7 @@ STATICLIBRARY		libpassthroughcodec.lib
 STATICLIBRARY		pjmedia_audiodev.lib 
 
 #if SND_HAS_APS
-LIBRARY		APSSession2.lib
+	LIBRARY		APSSession2.lib
 #endif
 
 #if SND_HAS_VAS
@@ -53,7 +56,7 @@ LIBRARY		APSSession2.lib
 #endif
 
 #if SND_HAS_APS || SND_HAS_VAS
-CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
 #else
 	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment
 #endif
@@ -66,5 +69,5 @@ LIBRARY			esock.lib insock.lib charconv.lib euser.lib estlib.lib commdb.lib apen
 
 // The default 8KB seems to be insufficient with all bells and
 // whistles turned on
-EPOCSTACKSIZE	12288
+EPOCSTACKSIZE		12288
 
