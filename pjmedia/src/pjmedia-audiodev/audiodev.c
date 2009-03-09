@@ -115,6 +115,123 @@ static struct aud_subsys
 
 } aud_subsys;
 
+/* API: get capability name/info */
+PJ_DEF(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
+					     const char **p_desc)
+{
+    const char *desc;
+    unsigned i;
+
+    if (p_desc==NULL) p_desc = &desc;
+
+    for (i=0; i<PJ_ARRAY_SIZE(cap_infos); ++i) {
+	if ((1 << i)==cap)
+	    break;
+    }
+
+    if (i==32) {
+	*p_desc = "??";
+	return "??";
+    }
+
+    *p_desc = cap_infos[i].info;
+    return cap_infos[i].name;
+}
+
+static pj_status_t get_cap_pointer(const pjmedia_aud_param *param,
+				   pjmedia_aud_dev_cap cap,
+				   void **ptr,
+				   unsigned *size)
+{
+#define FIELD_INFO(name)    *ptr = (void*)&param->name; \
+			    *size = sizeof(param->name)
+
+    switch (cap) {
+    case PJMEDIA_AUD_DEV_CAP_EXT_FORMAT:
+	FIELD_INFO(ext_fmt);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY:
+	FIELD_INFO(input_latency_ms);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY:
+	FIELD_INFO(output_latency_ms);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
+	FIELD_INFO(input_vol);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
+	FIELD_INFO(output_vol);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE:
+	FIELD_INFO(input_route);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE:
+	FIELD_INFO(output_route);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_EC:
+	FIELD_INFO(ec_enabled);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_EC_TAIL:
+	FIELD_INFO(ec_tail_ms);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_VAD:
+	FIELD_INFO(ext_fmt.vad);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_CNG:
+	FIELD_INFO(cng_enabled);
+	break;
+    case PJMEDIA_AUD_DEV_CAP_PLC:
+	FIELD_INFO(plc_enabled);
+	break;
+    default:
+	return PJMEDIA_EAUD_INVCAP;
+    }
+
+#undef FIELD_INFO
+
+    return PJ_SUCCESS;
+}
+
+/* API: set cap value to param */
+PJ_DEF(pj_status_t) pjmedia_aud_param_set_cap( pjmedia_aud_param *param,
+					       pjmedia_aud_dev_cap cap,
+					       const void *pval)
+{
+    void *cap_ptr;
+    unsigned cap_size;
+    pj_status_t status;
+
+    status = get_cap_pointer(param, cap, &cap_ptr, &cap_size);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_memcpy(cap_ptr, pval, cap_size);
+    param->flags |= cap;
+
+    return PJ_SUCCESS;
+}
+
+/* API: get cap value from param */
+PJ_DEF(pj_status_t) pjmedia_aud_param_get_cap( const pjmedia_aud_param *param,
+					       pjmedia_aud_dev_cap cap,
+					       void *pval)
+{
+    void *cap_ptr;
+    unsigned cap_size;
+    pj_status_t status;
+
+    status = get_cap_pointer(param, cap, &cap_ptr, &cap_size);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if ((param->flags & cap) == 0) {
+	pj_bzero(cap_ptr, cap_size);
+	return PJMEDIA_EAUD_INVCAP;
+    }
+
+    pj_memcpy(pval, cap_ptr, cap_size);
+    return PJ_SUCCESS;
+}
 
 /* Internal: init driver */
 static pj_status_t init_driver(unsigned drv_idx)
@@ -291,29 +408,6 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
 
     aud_subsys.pf = NULL;
     return PJ_SUCCESS;
-}
-
-/* API: get capability name/info */
-PJ_DEF(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
-					     const char **p_desc)
-{
-    const char *desc;
-    unsigned i;
-
-    if (p_desc==NULL) p_desc = &desc;
-
-    for (i=0; i<PJ_ARRAY_SIZE(cap_infos); ++i) {
-	if ((1 << i)==cap)
-	    break;
-    }
-
-    if (i==32) {
-	*p_desc = "??";
-	return "??";
-    }
-
-    *p_desc = cap_infos[i].info;
-    return cap_infos[i].name;
 }
 
 /* API: Get the number of sound devices installed in the system. */

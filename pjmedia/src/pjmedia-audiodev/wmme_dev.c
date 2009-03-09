@@ -47,7 +47,6 @@
 
 #define THIS_FILE			"wmme_dev.c"
 
-
 /* WMME device info */
 struct wmme_dev_info
 {
@@ -80,7 +79,6 @@ struct wmme_channel
     HANDLE        hEvent;
     DWORD         dwBufIdx;
     DWORD         dwMaxBufIdx;
-    unsigned	  latency_ms;
     pj_timestamp  timestamp;
 };
 
@@ -88,10 +86,8 @@ struct wmme_channel
 /* Sound stream. */
 struct wmme_stream
 {
-    pjmedia_aud_stream	 base;
-    pjmedia_dir          dir;               /**< Sound direction.      */
-    int                  play_id;           /**< Playback dev id.      */
-    int                  rec_id;            /**< Recording dev id.     */
+    pjmedia_aud_stream	 base;		    /**< Base stream	       */
+    pjmedia_aud_param	 param;		    /**< Settings	       */
     pj_pool_t           *pool;              /**< Memory pool.          */
 
     pjmedia_aud_rec_cb   rec_cb;            /**< Capture callback.     */
@@ -104,11 +100,7 @@ struct wmme_stream
     void    		*buffer;	    /**< Temp. frame buffer.   */
     pjmedia_format_id	 fmt_id;	    /**< Frame format	       */
     pj_uint8_t		 silence_char;	    /**< Silence pattern       */
-    unsigned             clock_rate;        /**< Clock rate.           */
     unsigned		 bytes_per_frame;   /**< Bytes per frame       */
-    unsigned             samples_per_frame; /**< Samples per frame.    */
-    unsigned             bits_per_sample;   /**< Bits per sample.      */
-    unsigned             channel_count;     /**< Channel count.        */
 
     pjmedia_frame_ext	*xfrm;		    /**< Extended frame buffer */
     unsigned		 xfrm_size;	    /**< Total ext frm size    */
@@ -437,7 +429,8 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     param->channel_count = 1;
     param->samples_per_frame = di->info.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = 16;
-    param->flags = di->info.caps;
+    param->flags = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
+		   PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
     param->input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     param->output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
 
@@ -497,7 +490,7 @@ static const char *get_fmt_name(pj_uint32_t id)
     static char name[8];
 
     if (id == PJMEDIA_FORMAT_L16)
-	return "l16";
+	return "PCM";
     pj_memcpy(name, &id, 4);
     name[4] = '\0';
     return name;
@@ -685,9 +678,9 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 
     eventCount = 0;
     events[eventCount++] = strm->thread_quit_event;
-    if (strm->dir & PJMEDIA_DIR_PLAYBACK)
+    if (strm->param.dir & PJMEDIA_DIR_PLAYBACK)
 	events[eventCount++] = strm->play_strm.hEvent;
-    if (strm->dir & PJMEDIA_DIR_CAPTURE)
+    if (strm->param.dir & PJMEDIA_DIR_CAPTURE)
 	events[eventCount++] = strm->rec_strm.hEvent;
 
 
@@ -695,7 +688,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
      * system activity.
      */
 #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE != 0
-    if (strm->dir & PJMEDIA_DIR_PLAYBACK)
+    if (strm->param.dir & PJMEDIA_DIR_PLAYBACK)
 	CeSetThreadPriority(GetCurrentThread(), 153);
     else
 	CeSetThreadPriority(GetCurrentThread(), 247);
@@ -833,8 +826,8 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 		/* Increment position. */
 		if (++wmme_strm->dwBufIdx >= wmme_strm->dwMaxBufIdx)
 		    wmme_strm->dwBufIdx = 0;
-		wmme_strm->timestamp.u64 += strm->samples_per_frame / 
-					    strm->channel_count;
+		wmme_strm->timestamp.u64 += strm->param.samples_per_frame /
+					    strm->param.channel_count;
 	    }
 	}
 	else
@@ -913,9 +906,11 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 
 		    strm->xfrm->samples_cnt = 0;
 		    strm->xfrm->subframe_cnt = 0;
-		    pjmedia_frame_ext_append_subframe(strm->xfrm, buffer,
-						      strm->bytes_per_frame *8,
-						      strm->samples_per_frame);
+		    pjmedia_frame_ext_append_subframe(
+			strm->xfrm, buffer,
+			strm->bytes_per_frame *8,
+			strm->param.samples_per_frame
+		    );
 		}
 
 		/* Re-add the buffer to the device. */
@@ -937,8 +932,8 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 		/* Increment position. */
 		if (++wmme_strm->dwBufIdx >= wmme_strm->dwMaxBufIdx)
 		    wmme_strm->dwBufIdx = 0;
-		wmme_strm->timestamp.u64 += strm->samples_per_frame / 
-					    strm->channel_count;
+		wmme_strm->timestamp.u64 += strm->param.samples_per_frame /
+					    strm->param.channel_count;
 	    }
 	}
     }
@@ -981,30 +976,24 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
     strm = PJ_POOL_ZALLOC_T(pool, struct wmme_stream);
-    strm->dir = param->dir;
-    strm->play_id = param->play_id;
-    strm->rec_id = param->rec_id;
+    pj_memcpy(&strm->param, param, sizeof(*param));
     strm->pool = pool;
     strm->rec_cb = rec_cb;
     strm->play_cb = play_cb;
     strm->user_data = user_data;
     strm->fmt_id = param->ext_fmt.id;
     strm->silence_char = silence_char;
-    strm->clock_rate = param->clock_rate;
-    strm->samples_per_frame = param->samples_per_frame;
-    strm->bits_per_sample = param->bits_per_sample;
-    strm->channel_count = param->channel_count;
 
     /* Create player stream */
     if (param->dir & PJMEDIA_DIR_PLAYBACK) {
 	unsigned buf_count;
 
-	if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY)
-	    strm->play_strm.latency_ms = param->output_latency_ms;
-	else
-	    strm->play_strm.latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+	if ((param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY)==0) {
+	    strm->param.flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+	    strm->param.output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+	}
 
-	buf_count = strm->play_strm.latency_ms * param->clock_rate * 
+	buf_count = strm->param.output_latency_ms * param->clock_rate * 
 		    param->channel_count / param->samples_per_frame / 1000;
 
 	status = init_player_stream(wf, strm->pool,
@@ -1023,12 +1012,12 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
 	unsigned buf_count;
 
-	if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY)
-	    strm->rec_strm.latency_ms = param->input_latency_ms;
-	else
-	    strm->rec_strm.latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+	if ((param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY)==0) {
+	    strm->param.flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
+	    strm->param.input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+	}
 
-	buf_count = strm->rec_strm.latency_ms * param->clock_rate * 
+	buf_count = strm->param.input_latency_ms * param->clock_rate * 
 		    param->channel_count / param->samples_per_frame / 1000;
 
 	status = init_capture_stream(wf, strm->pool,
@@ -1074,6 +1063,13 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 	return status;
     }
 
+    /* Apply the remaining settings */
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
+	stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+		       &param->output_vol);
+    }
+
+
     /* Done */
     strm->base.op = &stream_op;
     *p_aud_strm = &strm->base;
@@ -1089,26 +1085,8 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
 
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
-    pj_bzero(pi, sizeof(*pi));
-    pi->dir = strm->dir;
-    pi->play_id = strm->play_id;
-    pi->rec_id = strm->rec_id;
-    pi->clock_rate = strm->clock_rate;
-    pi->channel_count = strm->channel_count;
-    pi->samples_per_frame = strm->samples_per_frame;
-    pi->bits_per_sample = strm->bits_per_sample;
+    pj_memcpy(pi, &strm->param, sizeof(*pi));
     
-    if (pi->dir & PJMEDIA_DIR_CAPTURE) {
-	pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
-	pi->input_latency_ms = strm->rec_strm.latency_ms;
-    }
-
-    if (pi->dir & PJMEDIA_DIR_PLAYBACK) {
-	/* TODO: report the actual latency? */
-	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
-	pi->output_latency_ms = strm->play_strm.latency_ms;
-    }
-
     return PJ_SUCCESS;
 }
 
@@ -1122,31 +1100,31 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
     if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY && 
-	(strm->dir & PJMEDIA_DIR_CAPTURE)) 
+	(strm->param.dir & PJMEDIA_DIR_CAPTURE)) 
     {
 	/* Recording latency */
-	*(unsigned*)pval = strm->rec_strm.latency_ms;
+	*(unsigned*)pval = strm->param.input_latency_ms;
 	return PJ_SUCCESS;
     } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY  && 
-	       (strm->dir & PJMEDIA_DIR_PLAYBACK))
+	       (strm->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
 	/* Playback latency */
-	*(unsigned*)pval = strm->play_strm.latency_ms;
+	*(unsigned*)pval = strm->param.output_latency_ms;
 	return PJ_SUCCESS;
     } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
 	       strm->play_strm.hWave.Out)
     {
 	/* Output volume setting */
-	DWORD dwVol;
+	DWORD waveVol;
 	MMRESULT mr;
 
-	mr = waveOutGetVolume(strm->play_strm.hWave.Out, &dwVol);
+	mr = waveOutGetVolume(strm->play_strm.hWave.Out, &waveVol);
 	if (mr != MMSYSERR_NOERROR) {
 	    return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
 	}
 
-	dwVol &= 0xFFFF;
-	*(unsigned*)pval = (dwVol * 100) / 0xFFFF;
+	waveVol &= 0xFFFF;
+	*(unsigned*)pval = (waveVol * 100) / 0xFFFF;
 	return PJ_SUCCESS;
     } else {
 	return PJMEDIA_EAUD_INVCAP;
@@ -1166,15 +1144,24 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	strm->play_strm.hWave.Out)
     {
 	/* Output volume setting */
-	DWORD dwVol;
+	unsigned vol = *(unsigned*)pval;
+	DWORD waveVol;
 	MMRESULT mr;
+	pj_status_t status;
 
-	dwVol = ((*(unsigned*)pval) * 0xFFFF) / 100;
-	dwVol |= (dwVol << 16);
+	if (vol > 100)
+	    vol = 100;
 
-	mr = waveOutSetVolume(strm->play_strm.hWave.Out, dwVol);
-	return (mr==MMSYSERR_NOERROR)? PJ_SUCCESS : 
+	waveVol = (vol * 0xFFFF) / 100;
+	waveVol |= (waveVol << 16);
+
+	mr = waveOutSetVolume(strm->play_strm.hWave.Out, waveVol);
+	status = (mr==MMSYSERR_NOERROR)? PJ_SUCCESS : 
 				PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
+	if (status == PJ_SUCCESS) {
+	    strm->param.output_vol = *(unsigned*)pval;
+	}
+	return status;
     }
 
     return PJMEDIA_EAUD_INVCAP;

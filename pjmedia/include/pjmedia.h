@@ -52,12 +52,7 @@
 #include <pjmedia/sdp_neg.h>
 #include <pjmedia/session.h>
 #include <pjmedia/silencedet.h>
-/* This sound API is deprecated. Please see:
-http://trac.pjsip.org/repos/wiki/Audio_Dev_API
-*/
-#if PJMEDIA_AUDIO_API != PJMEDIA_AUDIO_API_NEW_ONLY
 #include <pjmedia/sound.h>
-#endif
 #include <pjmedia/sound_port.h>
 #include <pjmedia/splitcomb.h>
 #include <pjmedia/stereo.h>

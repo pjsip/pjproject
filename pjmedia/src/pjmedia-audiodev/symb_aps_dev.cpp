@@ -1205,9 +1205,9 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     param->channel_count = 1;
     param->samples_per_frame = af->dev_info.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = BITS_PER_SAMPLE;
-    param->flags = af->dev_info.caps;
+    param->flags = PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE;
     param->ext_fmt.id = PJMEDIA_FORMAT_L16;
-    param->out_route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
+    param->output_route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
 
     return PJ_SUCCESS;
 }
@@ -1300,7 +1300,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     aps_setting.plc = strm->param.plc_enabled;
     aps_setting.cng = aps_setting.vad;
     aps_setting.loudspk = 
-		strm->param.out_route==PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
+		strm->param.output_route==PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
 
     /* Set audio engine callbacks. */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16) {
@@ -1375,7 +1375,7 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
     switch (cap) {
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE: 
 	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
-	    *(pjmedia_aud_dev_route*)pval = strm->param.out_route;
+	    *(pjmedia_aud_dev_route*)pval = strm->param.output_route;
 	    status = PJ_SUCCESS;
 	}
 	break;
@@ -1449,7 +1449,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 		break;
 	    }
 	    if (status == PJ_SUCCESS)
-		strm->param.out_route = r; 
+		strm->param.output_route = r; 
 	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:

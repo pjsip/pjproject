@@ -66,13 +66,6 @@ enum
 };
 
 
-/** 
- * Type for device unique identifier. The unique device ID can be used to save
- * a reference to a particular device across software reboots.
- */
-typedef pj_uint32_t pjmedia_aud_dev_uid;
-
-
 /**
  * This enumeration identifies various audio device capabilities. These audio
  * capabilities indicates what features are supported by the underlying
@@ -186,8 +179,13 @@ typedef enum pjmedia_aud_dev_cap
      * of this capability is a pj_bool_t containing boolean PJ_TRUE or 
      * PJ_FALSE.
      */
-    PJMEDIA_AUD_DEV_CAP_PLC = 8192
+    PJMEDIA_AUD_DEV_CAP_PLC = 8192,
     
+    /**
+     * End of capability
+     */
+    PJMEDIA_AUD_DEV_CAP_MAX = 16384
+
 } pjmedia_aud_dev_cap;
 
 
@@ -369,11 +367,31 @@ typedef struct pjmedia_aud_param
      */
     unsigned output_latency_ms;
 
+    /**
+     * Input volume setting, in percent. This setting is optional, and will 
+     * only be used if PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING is set in 
+     * the flags.
+     */
+    unsigned input_vol;
+
+    /**
+     * Output volume setting, in percent. This setting is optional, and will 
+     * only be used if PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING is set in 
+     * the flags.
+     */
+    unsigned output_vol;
+
+    /** 
+     * Set the audio input route. This setting is optional, and will only be
+     * used if PJMEDIA_AUD_DEV_CAP_INPUT_ROUTE is set in the flags.
+     */
+    pjmedia_aud_dev_route input_route;
+
     /** 
      * Set the audio output route. This setting is optional, and will only be
      * used if PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE is set in the flags.
      */
-    pjmedia_aud_dev_route out_route;
+    pjmedia_aud_dev_route output_route;
 
     /**
      * Enable/disable echo canceller, if the device supports it. This setting
@@ -410,6 +428,52 @@ typedef struct pjmedia_aud_stream pjmedia_aud_stream;
 /** Forward declaration for audio device factory */
 typedef struct pjmedia_aud_dev_factory pjmedia_aud_dev_factory;
 
+/**
+ * Get string info for the specified capability.
+ *
+ * @param cap		The capability ID.
+ * @param p_desc	Optional pointer which will be filled with longer 
+ *			description about the capability.
+ *
+ * @return		Capability name.
+ */
+PJ_DECL(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
+					      const char **p_desc);
+
+
+/**
+ * Set a capability field value in #pjmedia_aud_param structure. This will
+ * also set the flags field for the specified capability in the structure.
+ *
+ * @param param		The structure.
+ * @param cap		The audio capability which value is to be set.
+ * @param value		Pointer to value. Please see the type of value to
+ *			be supplied in the pjmedia_aud_dev_cap documentation.
+ *
+ * @return		PJ_SUCCESS on successful operation or the appropriate
+ *			error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_aud_param_set_cap(pjmedia_aud_param *param,
+					       pjmedia_aud_dev_cap cap,
+					       const void *pval);
+
+
+/**
+ * Get a capability field value from #pjmedia_aud_param structure. This
+ * function will return PJMEDIA_EAUD_INVCAP error if the flag for that
+ * capability is not set in the flags field in the structure.
+ *
+ * @param param		The structure.
+ * @param cap		The audio capability which value is to be retrieved.
+ * @param value		Pointer to value. Please see the type of value to
+ *			be supplied in the pjmedia_aud_dev_cap documentation.
+ *
+ * @return		PJ_SUCCESS on successful operation or the appropriate
+ *			error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_aud_param_get_cap(const pjmedia_aud_param *param,
+					       pjmedia_aud_dev_cap cap,
+					       void *pval);
 
 /**
  * Initialize the audio subsystem. This will register all supported audio 
@@ -443,19 +507,6 @@ PJ_DECL(pj_pool_factory*) pjmedia_aud_subsys_get_pool_factory(void);
  *			error code.
  */
 PJ_DECL(pj_status_t) pjmedia_aud_subsys_shutdown(void);
-
-
-/**
- * Get string info for the specified capability.
- *
- * @param cap		The capability ID.
- * @param p_desc	Optional pointer which will be filled with longer 
- *			description about the capability.
- *
- * @return		Capability name.
- */
-PJ_DECL(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
-					      const char **p_desc);
 
 
 /**
@@ -548,7 +599,9 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_get_param(pjmedia_aud_stream *strm,
  * @param strm		The audio stream.
  * @param cap		The audio capability which value is to be retrieved.
  * @param value		Pointer to value to be filled in by this function 
- *			once it returns successfully.
+ *			once it returns successfully.  Please see the type 
+ *			of value to be supplied in the pjmedia_aud_dev_cap
+ *			documentation.
  *
  * @return		PJ_SUCCESS on successful operation or the appropriate
  *			error code.
@@ -562,7 +615,8 @@ PJ_DECL(pj_status_t) pjmedia_aud_stream_get_cap(pjmedia_aud_stream *strm,
  *
  * @param strm		The audio stream.
  * @param cap		The audio capability which value is to be set.
- * @param value		Pointer to value.
+ * @param value		Pointer to value. Please see the type of value to
+ *			be supplied in the pjmedia_aud_dev_cap documentation.
  *
  * @return		PJ_SUCCESS on successful operation or the appropriate
  *			error code.

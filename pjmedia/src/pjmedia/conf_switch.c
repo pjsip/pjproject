@@ -45,7 +45,7 @@
 
 #define THIS_FILE	    "conf_switch.c"
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('S', 'W', 'T', 'C')
+#define SIGNATURE	    PJMEDIA_CONF_SWITCH_SIGNATURE
 #define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('S', 'W', 'T', 'P')
 #define NORMAL_LEVEL	    128
 #define SLOT_TYPE	    unsigned
