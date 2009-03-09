@@ -180,7 +180,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->snd_rec_latency = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     cfg->snd_play_latency = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
-    cfg->snd_auto_close_time = -1;
+    cfg->snd_auto_close_time = 1;
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
 }

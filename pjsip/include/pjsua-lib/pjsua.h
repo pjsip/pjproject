@@ -4286,9 +4286,10 @@ struct pjsua_media_config
 
     /**
      * Specify idle time of sound device before it is automatically closed,
-     * in seconds.
+     * in seconds. Use value -1 to disable the auto-close feature of sound
+     * device
      *
-     * Default : -1 (Disable the auto-close feature of sound device)
+     * Default : 1
      */
     int			snd_auto_close_time;
 };
@@ -4801,7 +4802,20 @@ PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
  */
 
 /**
- * Enum all sound devices installed in the system.
+ * Enum all audio devices installed in the system.
+ *
+ * @param info		Array of info to be initialized.
+ * @param count		On input, specifies max elements in the array.
+ *			On return, it contains actual number of elements
+ *			that have been initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_enum_aud_devs(pjmedia_aud_dev_info info[],
+					 unsigned *count);
+
+/**
+ * Enum all sound devices installed in the system (old API).
  *
  * @param info		Array of info to be initialized.
  * @param count		On input, specifies max elements in the array.
@@ -4818,14 +4832,8 @@ PJ_DECL(pj_status_t) pjsua_recorder_destroy(pjsua_recorder_id id);
  * \endcode
  *
  */
-#if PJMEDIA_AUDIO_API==PJMEDIA_AUDIO_API_NEW_ONLY
-PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_aud_dev_info info[],
-					 unsigned *count);
-#else
 PJ_DECL(pj_status_t) pjsua_enum_snd_devs(pjmedia_snd_dev_info info[],
 					 unsigned *count);
-#endif
-
 
 /**
  * Get currently active sound devices. If sound devices has not been created
@@ -4897,9 +4905,12 @@ PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
 
 
 /**
- * Change the echo cancellation settings. The behavior of this function 
- * depends on whether the sound device is currently active, and if it is,
- * whether device or software AEC is being used. 
+ * Change the echo cancellation settings. Application may also use the
+ * #pjsua_snd_set_setting() to retrieve the echo cancellation setting.
+ *
+ * The behavior of this function depends on whether the sound device is
+ * currently active, and if it is, whether device or software AEC is 
+ * being used. 
  *
  * If the sound device is currently active, and if the device supports AEC,
  * this function will forward the change request to the device and it will
@@ -4928,7 +4939,8 @@ PJ_DECL(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options);
 
 
 /**
- * Get current echo canceller tail length.
+ * Get current echo canceller tail length. Application may also use the
+ * #pjsua_snd_set_setting() to retrieve the echo cancellation setting.
  *
  * @param p_tail_ms	Pointer to receive the tail length, in miliseconds. 
  *			If AEC is disabled, the value will be zero.
@@ -4944,12 +4956,61 @@ PJ_DECL(pj_status_t) pjsua_get_ec_tail(unsigned *p_tail_ms);
 
 
 /**
- * Get active audio device stream instance.
- *
- * @return		Audio device stream instance if any, otherwise 
- *			NULL will be returned.
+ * Check whether the sound device is currently active. The sound device
+ * may be inactive if the application has set the auto close feature to
+ * non-zero (the snd_auto_close_time setting in #pjsua_media_config), or
+ * if null sound device or no sound device has been configured via the
+ * #pjsua_set_no_snd_dev() function.
  */
-PJ_DECL(pjmedia_aud_stream*) pjsua_get_aud_stream();
+PJ_DECL(pj_bool_t) pjsua_snd_is_active(void);
+
+    
+/**
+ * Configure sound device setting to the sound device being used. If sound 
+ * device is currently active, the function will forward the setting to the
+ * sound device instance to be applied immediately, if it supports it. 
+ *
+ * The setting will be saved for future opening of the sound device, if the 
+ * "keep" argument is set to non-zero. If the sound device is currently
+ * inactive, and the "keep" argument is false, this function will return
+ * error.
+ * 
+ * Note that in case the setting is kept for future use, it will be applied
+ * to any devices, even when application has changed the sound device to be
+ * used.
+ *
+ * See also #pjmedia_aud_stream_set_cap() for more information about setting
+ * an audio device capability.
+ *
+ * @param cap		The sound device setting to change.
+ * @param pval		Pointer to value. Please see #pjmedia_aud_dev_cap
+ *			documentation about the type of value to be 
+ *			supplied for each setting.
+ * @param keep		Specify whether the setting is to be kept for future
+ *			use.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_snd_set_setting(pjmedia_aud_dev_cap cap,
+					   const void *pval,
+					   pj_bool_t keep);
+
+/**
+ * Retrieve a sound device setting. If sound device is currently active,
+ * the function will forward the request to the sound device. If sound device
+ * is currently inactive, and if application had previously set the setting
+ * and mark the setting as kept, then that setting will be returned.
+ * Otherwise, this function will return error.
+ *
+ * @param cap		The sound device setting to retrieve.
+ * @param pval		Pointer to receive the value. 
+ *			Please see #pjmedia_aud_dev_cap documentation about
+ *			the type of value to be supplied for each setting.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
+					   void *pval);
 
 
 /*****************************************************************************
