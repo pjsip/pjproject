@@ -1087,6 +1087,13 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
     
+    /* Update the volume setting */
+    if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+		      &pi->output_vol) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    }
+
     return PJ_SUCCESS;
 }
 
