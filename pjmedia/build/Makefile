@@ -18,8 +18,8 @@ PJNATH_LIB:=$(PJDIR)/pjnath/lib/libpjnath-$(TARGET_NAME)$(LIBEXT)
 export PJMEDIA_LIB:=../lib/libpjmedia-$(TARGET_NAME)$(LIBEXT)
 export PJMEDIA_CODEC_LIB:=../lib/libpjmedia-codec-$(TARGET_NAME)$(LIBEXT)
 export PJSDP_LIB:=../lib/libpjsdp-$(TARGET_NAME)$(LIBEXT)
+export PJMEDIA_AUDIODEV_LIB:=../lib/libpjmedia-audiodev-$(TARGET_NAME)$(LIBEXT)
 
-NULLSOUND_OBJS := nullsound.o
 
 ###############################################################################
 # Gather all flags.
@@ -34,6 +34,7 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
 export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJMEDIA_AUDIODEV_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
@@ -49,21 +50,30 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			alaw_ulaw.o alaw_ulaw_table.o clock_thread.o codec.o \
-			conference.o delaybuf.o echo_common.o echo_port.o \
-			echo_suppress.o endpoint.o errno.o \
+			conference.o conf_switch.o delaybuf.o echo_common.o \
+			echo_port.o echo_suppress.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
 			null_port.o plc_common.o port.o splitcomb.o \
 			resample_resample.o resample_libsamplerate.o \
 			resample_port.o rtcp.o rtcp_xr.o rtp.o \
-			sdp.o sdp_cmp.o sdp_neg.o \
-			session.o silencedet.o sound_port.o stereo_port.o \
+			sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
+			sound_legacy.o sound_port.o stereo_port.o \
 			stream.o tonegen.o transport_adapter_sample.o \
 			transport_ice.o transport_loop.o \
 			transport_srtp.o transport_udp.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
-			wsola.o $(SOUND_OBJS) $(NULLSOUND_OBJS)
+			wsola.o
 
 export PJMEDIA_CFLAGS += $(_CFLAGS)
+
+
+###############################################################################
+# Defines for building PJMEDIA-AUDIODEV library
+#
+export PJMEDIA_AUDIODEV_SRCDIR = ../src/pjmedia-audiodev
+export PJMEDIA_AUDIODEV_OBJS +=  audiodev.o audiotest.o errno.o legacy_dev.o pa_dev.o \
+				 wmme_dev.o
+export PJMEDIA_AUDIODEV_CFLAGS += $(_CFLAGS)
 
 
 ###############################################################################
@@ -106,7 +116,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 # $(TARGET) is defined in os-$(OS_NAME).mak file in current directory.
 #
-TARGETS := pjmedia pjmedia-codec pjsdp pjmedia-test
+TARGETS := pjmedia pjmedia-audiodev pjmedia-codec pjsdp pjmedia-test
 
 all: $(TARGETS)
 
@@ -121,13 +131,16 @@ doc:
 dep: depend
 distclean: realclean
 
-.PHONY: dep depend pjmedia pjmedia-codec pjmedia-test clean realclean distclean
+.PHONY: dep depend pjmedia pjmedia-codec pjmedia-audiodev pjmedia-test clean realclean distclean
 
 pjmedia:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $(PJMEDIA_LIB)
 
 pjmedia-codec:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $(PJMEDIA_CODEC_LIB)
+
+pjmedia-audiodev:
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_AUDIODEV app=pjmedia-audiodev $(PJMEDIA_AUDIODEV_LIB)
 
 pjsdp:
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $(PJSDP_LIB)
@@ -152,22 +165,26 @@ pjmedia-test: $(PJMEDIA_LIB)
 clean:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_AUDIODEV app=pjmedia-audiodev $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 
 realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-$(TARGET_NAME).depend),$(HOST_RMR))
+	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-audiodev-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-codec-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjmedia-test-$(TARGET_NAME).depend),$(HOST_RMR))
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsdp-$(TARGET_NAME).depend),$(HOST_RMR))
 	
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia-audiodev $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia-audiodev $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
