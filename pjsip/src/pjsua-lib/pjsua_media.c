@@ -76,6 +76,9 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     pjsua_var.aud_svmask &= ~(PJMEDIA_AUD_DEV_CAP_EXT_FORMAT |
 			      PJMEDIA_AUD_DEV_CAP_INPUT_SIGNAL_METER |
 			      PJMEDIA_AUD_DEV_CAP_OUTPUT_SIGNAL_METER);
+    /* EC settings use different API */
+    pjsua_var.aud_svmask &= ~(PJMEDIA_AUD_DEV_CAP_EC |
+			      PJMEDIA_AUD_DEV_CAP_EC_TAIL);
 
     /* Copy configuration */
     pjsua_media_config_dup(pjsua_var.pool, &pjsua_var.media_cfg, cfg);

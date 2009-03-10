@@ -4905,8 +4905,7 @@ PJ_DECL(pjmedia_port*) pjsua_set_no_snd_dev(void);
 
 
 /**
- * Change the echo cancellation settings. Application may also use the
- * #pjsua_snd_set_setting() to retrieve the echo cancellation setting.
+ * Change the echo cancellation settings.
  *
  * The behavior of this function depends on whether the sound device is
  * currently active, and if it is, whether device or software AEC is 
@@ -4939,8 +4938,7 @@ PJ_DECL(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options);
 
 
 /**
- * Get current echo canceller tail length. Application may also use the
- * #pjsua_snd_set_setting() to retrieve the echo cancellation setting.
+ * Get current echo canceller tail length. 
  *
  * @param p_tail_ms	Pointer to receive the tail length, in miliseconds. 
  *			If AEC is disabled, the value will be zero.
@@ -4979,6 +4977,9 @@ PJ_DECL(pj_bool_t) pjsua_snd_is_active(void);
  * to any devices, even when application has changed the sound device to be
  * used.
  *
+ * Note also that the echo cancellation setting should be set with 
+ * #pjsua_set_ec() API instead.
+ *
  * See also #pjmedia_aud_stream_set_cap() for more information about setting
  * an audio device capability.
  *
@@ -5001,6 +5002,9 @@ PJ_DECL(pj_status_t) pjsua_snd_set_setting(pjmedia_aud_dev_cap cap,
  * is currently inactive, and if application had previously set the setting
  * and mark the setting as kept, then that setting will be returned.
  * Otherwise, this function will return error.
+ *
+ * Note that echo cancellation settings should be retrieved with 
+ * #pjsua_get_ec_tail() API instead.
  *
  * @param cap		The sound device setting to retrieve.
  * @param pval		Pointer to receive the value. 
