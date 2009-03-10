@@ -2720,30 +2720,33 @@ PJ_DEF(pj_status_t) pjsua_snd_set_setting( pjmedia_aud_dev_cap cap,
 					   const void *pval,
 					   pj_bool_t keep)
 {
+    pj_status_t status;
+
     /* Check if we are allowed to set the cap */
-    if (cap & pjsua_var.aud_svmask) {
+    if ((cap & pjsua_var.aud_svmask) == 0) {
 	return PJMEDIA_EAUD_INVCAP;
     }
 
-    if (keep) {
-	/* Save in internal param for later device open */
-	pj_status_t status;
-
-	status = pjmedia_aud_param_set_cap(&pjsua_var.aud_param,
-					   cap, pval);
-	if (status != PJ_SUCCESS)
-	    return status;
-    }
-
+    /* If sound is active, set it immediately */
     if (pjsua_snd_is_active()) {
-	/* Sound is active, set it immediately */
 	pjmedia_aud_stream *strm;
 	
 	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-	return pjmedia_aud_stream_set_cap(strm, cap, pval);
+	status = pjmedia_aud_stream_set_cap(strm, cap, pval);
     } else {
-	return PJ_SUCCESS;
+	status = PJ_SUCCESS;
     }
+
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Save in internal param for later device open */
+    if (keep) {
+	status = pjmedia_aud_param_set_cap(&pjsua_var.aud_param,
+					   cap, pval);
+    }
+
+    return status;
 }
 
 /*
@@ -2756,8 +2759,11 @@ PJ_DEF(pj_status_t) pjsua_snd_get_setting( pjmedia_aud_dev_cap cap,
      * retrieve the initial setting from the device (e.g. audio
      * volume)
      */
-    if (pjsua_var.aud_open_cnt==0)
+    if (pjsua_var.aud_open_cnt==0) {
+	PJ_LOG(4,(THIS_FILE, "Opening sound device to get initial settings"));
 	pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+	close_snd_dev();
+    }
 
     if (pjsua_snd_is_active()) {
 	/* Sound is active, retrieve from device directly */
