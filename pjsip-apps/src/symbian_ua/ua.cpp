@@ -534,33 +534,25 @@ static void HandleMainMenu(TKeyCode kc) {
     
     case 't':
 	{
-	    pjmedia_aud_stream *aud_stream = pjsua_get_aud_stream();
+	    pjmedia_aud_dev_route route;
+	    pj_status_t status;
+	    
+	    status = pjsua_snd_get_setting(PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE, 
+					   &route);
+	    
+	    if (status == PJ_SUCCESS) {
+		if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER)
+		    route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
+		else
+		    route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
 
-	    if (aud_stream) {
-		pjmedia_aud_dev_route route;
-		pj_status_t status;
-		
-		status = pjmedia_aud_stream_get_cap(
-					    aud_stream,
-					    PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
-					    &route);
-		if (status == PJ_SUCCESS) {
-		    if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER)
-			route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
-		    else
-			route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
-
-		    status = pjmedia_aud_stream_set_cap(
-					aud_stream,
-					PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
-					&route);
-		}
-
-		if (status != PJ_SUCCESS)
-		    pjsua_perror(THIS_FILE, "Error switch audio route", status);
-	    } else {
-		PJ_LOG(3,(THIS_FILE, "No active sound device."));
+		status = pjsua_snd_set_setting(
+				    PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+				    &route, PJ_TRUE);
 	    }
+
+	    if (status != PJ_SUCCESS)
+		pjsua_perror(THIS_FILE, "Error switch audio route", status);
 	}
 	break;
 	

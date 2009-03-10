@@ -1130,7 +1130,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     pj_ansi_strcpy(af->dev_info.name, "S60 APS");
     af->dev_info.default_samples_per_sec = 8000;
     af->dev_info.caps = PJMEDIA_AUD_DEV_CAP_EXT_FORMAT |
-			PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
+			//PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
 			PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING |
 			PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE |
 			PJMEDIA_AUD_DEV_CAP_VAD |
@@ -1140,13 +1140,27 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     af->dev_info.input_count = 1;
     af->dev_info.output_count = 1;
 
-    af->dev_info.ext_fmt_cnt = 6;
+    af->dev_info.ext_fmt_cnt = 5;
+
     af->dev_info.ext_fmt[0].id = PJMEDIA_FORMAT_AMR;
+    af->dev_info.ext_fmt[0].bitrate = 7400;
+    af->dev_info.ext_fmt[0].vad = PJ_TRUE;
+
     af->dev_info.ext_fmt[1].id = PJMEDIA_FORMAT_G729;
+    af->dev_info.ext_fmt[1].bitrate = 8000;
+    af->dev_info.ext_fmt[1].vad = PJ_FALSE;
+
     af->dev_info.ext_fmt[2].id = PJMEDIA_FORMAT_ILBC;
+    af->dev_info.ext_fmt[2].bitrate = 13333;
+    af->dev_info.ext_fmt[2].vad = PJ_TRUE;
+
     af->dev_info.ext_fmt[3].id = PJMEDIA_FORMAT_PCMU;
+    af->dev_info.ext_fmt[3].bitrate = 64000;
+    af->dev_info.ext_fmt[3].vad = PJ_FALSE;
+
     af->dev_info.ext_fmt[4].id = PJMEDIA_FORMAT_PCMA;
-    af->dev_info.ext_fmt[5].id = PJMEDIA_FORMAT_L16;
+    af->dev_info.ext_fmt[4].bitrate = 64000;
+    af->dev_info.ext_fmt[4].vad = PJ_FALSE;
     
     PJ_LOG(4, (THIS_FILE, "APS initialized"));
 
@@ -1206,7 +1220,6 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     param->samples_per_frame = af->dev_info.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = BITS_PER_SAMPLE;
     param->flags = PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE;
-    param->ext_fmt.id = PJMEDIA_FORMAT_L16;
     param->output_route = PJMEDIA_AUD_DEV_ROUTE_EARPIECE;
 
     return PJ_SUCCESS;
@@ -1358,6 +1371,13 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
+
+    /* Update the output volume setting */
+    if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+		       &pi->output_vol) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    }
     
     return PJ_SUCCESS;
 }
@@ -1379,6 +1399,9 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 	    status = PJ_SUCCESS;
 	}
 	break;
+    
+    /* There is a case that GetMaxGain() stucks, e.g: in N95. */ 
+    /*
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
 	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
 	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
@@ -1394,6 +1417,8 @@ static pj_status_t stream_get_cap(pjmedia_aud_stream *s,
 	    }
 	}
 	break;
+    */
+
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
 	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
 	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
@@ -1452,6 +1477,9 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 		strm->param.output_route = r; 
 	}
 	break;
+
+    /* There is a case that GetMaxGain() stucks, e.g: in N95. */ 
+    /*
     case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
 	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
 	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
@@ -1466,10 +1494,14 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	    } else {
 		status = PJMEDIA_EAUD_NOTREADY;
 	    }
+	    if (status == PJ_SUCCESS)
+		strm->param.input_vol = *(unsigned*)pval;
 	}
 	break;
+    */
+
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
-	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
 	    PJ_ASSERT_RETURN(strm->engine, PJ_EINVAL);
 	    
 	    TInt max_vol = strm->engine->GetMaxVolume();
@@ -1482,6 +1514,8 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	    } else {
 		status = PJMEDIA_EAUD_NOTREADY;
 	    }
+	    if (status == PJ_SUCCESS)
+		strm->param.output_vol = *(unsigned*)pval;
 	}
 	break;
     default:
