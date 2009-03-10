@@ -673,6 +673,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     unsigned eventCount;
     pj_status_t status = PJ_SUCCESS;
     static unsigned rec_cnt, play_cnt;
+    enum { MAX_BURST = 1 };
 
     rec_cnt = play_cnt = 0;
 
@@ -706,7 +707,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 	DWORD rc;
 	pjmedia_dir signalled_dir;
 
-	/* Swap */
+	/* Swap hWaveIn and hWaveOut to get equal opportunity for both */
 	if (eventCount==3) {
 	    HANDLE hTemp = events[2];
 	    events[2] = events[1];
@@ -739,6 +740,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 	if (signalled_dir == PJMEDIA_DIR_PLAYBACK)
 	{
 	    struct wmme_channel *wmme_strm = &strm->play_strm;
+	    unsigned burst;
 
 	    status = PJ_SUCCESS;
 
@@ -747,7 +749,9 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 	     * playback buffer.
 	     */
 
-	    while (wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwFlags & WHDR_DONE)
+	    for (burst=0; burst<MAX_BURST &&
+		 (wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwFlags & WHDR_DONE);
+	         ++burst)
 	    {
 		void *buffer = wmme_strm->WaveHdr[wmme_strm->dwBufIdx].lpData;
 		pjmedia_frame pcm_frame, *frame;
@@ -828,11 +832,12 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 		    wmme_strm->dwBufIdx = 0;
 		wmme_strm->timestamp.u64 += strm->param.samples_per_frame /
 					    strm->param.channel_count;
-	    }
+	    } /* for */
 	}
 	else
 	{
 	    struct wmme_channel *wmme_strm = &strm->rec_strm;
+	    unsigned burst;
 	    MMRESULT mr = MMSYSERR_NOERROR;
 	    status = PJ_SUCCESS;
 
@@ -864,7 +869,9 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 	    }
 #endif
 
-	    while (wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwFlags & WHDR_DONE)
+	    for (burst=0; burst<MAX_BURST &&
+		 (wmme_strm->WaveHdr[wmme_strm->dwBufIdx].dwFlags & WHDR_DONE);
+	         ++burst)
 	    {
 		char* buffer = (char*)
 			       wmme_strm->WaveHdr[wmme_strm->dwBufIdx].lpData;
@@ -934,7 +941,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
 		    wmme_strm->dwBufIdx = 0;
 		wmme_strm->timestamp.u64 += strm->param.samples_per_frame /
 					    strm->param.channel_count;
-	    }
+	    } /* for */
 	}
     }
 
