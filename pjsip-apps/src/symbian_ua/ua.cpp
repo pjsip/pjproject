@@ -497,6 +497,7 @@ static void PrintMainMenu()
 #if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
    	    "  j    Toggle loopback audio\n"
 #endif
+   	    "up/dn  Increase/decrease output volume\n"
 	    "  s    Subscribe " SIP_DST_URI "\n"
 	    "  S    Unsubscribe presence\n"
 	    "  o    Set account online\n"
@@ -531,6 +532,32 @@ static void PrintCodecMenu()
 
 static void HandleMainMenu(TKeyCode kc) {
     switch (kc) {
+    
+    case EKeyUpArrow:
+    case EKeyDownArrow:
+	{
+	    unsigned vol;
+	    pj_status_t status;
+	    
+	    status = pjsua_snd_get_setting(
+			     PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, &vol);
+	    if (status == PJ_SUCCESS) {
+		if (kc == EKeyUpArrow)
+		    vol = PJ_MIN(100, vol+10);
+		else
+		    vol = (vol>=10 ? vol-10 : 0);
+		status = pjsua_snd_set_setting(
+				    PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+				    &vol, PJ_TRUE);
+	    }
+
+	    if (status == PJ_SUCCESS) {
+		PJ_LOG(3,(THIS_FILE, "Output volume set to %d", vol));
+	    } else {
+		pjsua_perror(THIS_FILE, "Error setting volume", status);
+	    }
+	}
+	break;
     
     case 't':
 	{

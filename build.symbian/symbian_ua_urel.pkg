@@ -1,10 +1,13 @@
 ; symbian_ua.pkg
 
+; for Carbide development, please use symbian_ua.pkg for comfortness
+; (epoc32 path, platform, and target are set automatically using env vars)
+
 ; Languages
 &EN
 
 ; Header
-#{"symbian_ua"},(0xA000000D), 0, 1, 1
+#{"symbian_ua"},(0x200235D3), 0, 1, 1
 
 ; Platform compatibility
 [0x101F7961], *, *, *,{"Series60ProductID"}

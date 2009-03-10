@@ -11,9 +11,6 @@ SOURCEPATH		..\pjsip-apps\src\symbian_ua
 MACRO			PJ_M_I386=1
 MACRO			PJ_SYMBIAN=1
 
-OPTION			GCCE -O2 -fno-unit-at-a-time
-SRCDBG
-
 // Source files
 
 SOURCE			ua.cpp
