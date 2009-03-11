@@ -57,6 +57,16 @@ typedef struct pjmedia_aud_test_stat
     unsigned max_interval;
 
     /** 
+     * Average inter-frame arrival time, in milliseconds 
+     */
+    unsigned avg_interval;
+
+    /** 
+     * Standard deviation of inter-frame arrival time, in milliseconds 
+     */
+    unsigned dev_interval;
+
+    /** 
      * Maximum number of frame burst 
      */
     unsigned max_burst;

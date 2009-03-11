@@ -192,9 +192,12 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
 	if (result.rec.frame_cnt==0) {
 	    PJ_LOG(1,(THIS_FILE, "Error: no frames captured!"));
 	} else {
-	    PJ_LOG(3,(THIS_FILE, "  %-20s: max interval=%u, burst=%u",
+	    PJ_LOG(3,(THIS_FILE, "  %-20s: interval (min/max/avg/dev)=%u/%u/%u/%u, burst=%u",
 		      "Recording result",
+		      result.rec.min_interval,
 		      result.rec.max_interval,
+		      result.rec.avg_interval,
+		      result.rec.dev_interval,
 		      result.rec.max_burst));
 	}
     }
@@ -203,15 +206,18 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
 	if (result.play.frame_cnt==0) {
 	    PJ_LOG(1,(THIS_FILE, "Error: no playback!"));
 	} else {
-	    PJ_LOG(3,(THIS_FILE, "  %-20s: max interval=%u, burst=%u",
+	    PJ_LOG(3,(THIS_FILE, "  %-20s: interval (min/max/avg/dev)=%u/%u/%u/%u, burst=%u",
 		      "Playback result",
+		      result.play.min_interval,
 		      result.play.max_interval,
+		      result.play.avg_interval,
+		      result.play.dev_interval,
 		      result.play.max_burst));
 	}
     }
 
     if (dir==PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-	if (result.rec_drift_per_sec) {
+	if (result.rec_drift_per_sec == 0) {
 	    PJ_LOG(3,(THIS_FILE, " No clock drift detected"));
 	} else {
 	    const char *which = result.rec_drift_per_sec>=0 ? "faster" : "slower";

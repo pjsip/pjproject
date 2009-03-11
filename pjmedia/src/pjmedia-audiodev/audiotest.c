@@ -30,28 +30,22 @@
 /* Skip the first msec from the calculation */
 #define SKIP_DURATION	    1000
 
-/* Max frames per sec (to calculate number of delays to keep). */
-#define MAX_FRAMES_PER_SEC  100
-
-/* Number of frame durations to keep */
-#define MAX_DELAY_COUNTER   (((DURATION/1000)+1)*MAX_FRAMES_PER_SEC)
-
+/* Division helper */
+#define DIV_ROUND_UP(a,b) (((a) + ((b) - 1)) / (b))
+#define DIV_ROUND(a,b) (((a) + ((b)/2 - 1)) / (b))
 
 struct stream_data
 {
     pj_uint32_t	    first_timestamp;
     pj_uint32_t	    last_timestamp;
     pj_timestamp    last_called;
-    unsigned	    counter;
-    unsigned	    min_delay;
-    unsigned	    max_delay;
-    unsigned	    delay[MAX_DELAY_COUNTER];
+    pj_math_stat    delay;
 };
 
 struct test_data 
 {
     pj_pool_t			   *pool;
-    const pjmedia_aud_param    *param;
+    const pjmedia_aud_param	   *param;
     pjmedia_aud_test_results	   *result;
     pj_bool_t			    running;
     pj_bool_t			    has_error;
@@ -79,36 +73,21 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     strm_data->last_timestamp = frame->timestamp.u32.lo;
 
     if (strm_data->last_called.u64 == 0) {
+	/* Init vars. */
 	pj_get_timestamp(&strm_data->last_called);
-	/* Init min_delay to one frame */
-	strm_data->min_delay = test_data->param->samples_per_frame * 1000000 /
-			       test_data->param->clock_rate;
+	pj_math_stat_init(&strm_data->delay);
 	strm_data->first_timestamp = frame->timestamp.u32.lo;
-
-    } else if (strm_data->counter <= MAX_DELAY_COUNTER) {
+    } else {
 	pj_timestamp now;
 	unsigned delay;
 
-	pj_get_timestamp(&now);
-	
 	/* Calculate frame interval */
+	pj_get_timestamp(&now);
 	delay = pj_elapsed_usec(&strm_data->last_called, &now);
-	if (delay < strm_data->min_delay)
-	    strm_data->min_delay = delay;
-	if (delay > strm_data->max_delay)
-	    strm_data->max_delay = delay;
-
 	strm_data->last_called = now;
 
-	/* Save the frame interval for later calculation */
-	strm_data->delay[strm_data->counter] = delay;
-	++strm_data->counter;
-
-    } else {
-
-	/* No space, can't take anymore frames */
-	test_data->running = 0;
-
+	/* Update frame interval statistic */
+	pj_math_stat_update(&strm_data->delay, delay);
     }
 
     pj_bzero(frame->buf, frame->size);
@@ -135,36 +114,21 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     strm_data->last_timestamp = frame->timestamp.u32.lo;
 
     if (strm_data->last_called.u64 == 0) {
+	/* Init vars. */
 	pj_get_timestamp(&strm_data->last_called);
-	/* Init min_delay to one frame */
-	strm_data->min_delay = test_data->param->samples_per_frame * 1000000 /
-			       test_data->param->clock_rate;
+	pj_math_stat_init(&strm_data->delay);
 	strm_data->first_timestamp = frame->timestamp.u32.lo;
-
-    } else if (strm_data->counter <= MAX_DELAY_COUNTER) {
+    } else {
 	pj_timestamp now;
 	unsigned delay;
 
-	pj_get_timestamp(&now);
-
 	/* Calculate frame interval */
+	pj_get_timestamp(&now);
 	delay = pj_elapsed_usec(&strm_data->last_called, &now);
-	if (delay < strm_data->min_delay)
-	    strm_data->min_delay = delay;
-	if (delay > strm_data->max_delay)
-	    strm_data->max_delay = delay;
-
 	strm_data->last_called = now;
 
-	/* Save the frame interval for later calculation */
-	strm_data->delay[strm_data->counter] = delay;
-	++strm_data->counter;
-
-    } else {
-
-	/* No space, can't take anymore frames */
-	test_data->running = 0;
-
+	/* Update frame interval statistic */
+	pj_math_stat_update(&strm_data->delay, delay);
     }
 
     pj_mutex_unlock(test_data->mutex);
@@ -187,6 +151,7 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
     pj_status_t status = PJ_SUCCESS;
     pjmedia_aud_stream *strm;
     struct test_data test_data;
+    unsigned ptime, tmp;
     
     /*
      * Init test parameters
@@ -255,17 +220,23 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
     /* 
      * Gather results
      */
-    result->rec.frame_cnt = test_data.capture_data.counter;
-    result->rec.min_interval = test_data.capture_data.min_delay / 1000;
-    result->rec.max_interval = test_data.capture_data.max_delay / 1000;
-    result->rec.max_burst = test_data.capture_data.max_delay / 1000 /
-			    (param->samples_per_frame * 1000 / param->clock_rate);
+    ptime = param->samples_per_frame * 1000 / param->clock_rate;
 
-    result->play.frame_cnt = test_data.playback_data.counter;
-    result->play.min_interval = test_data.playback_data.min_delay / 1000;
-    result->play.max_interval = test_data.playback_data.max_delay / 1000;
-    result->play.max_burst = test_data.playback_data.max_delay / 1000 /
-			     (param->samples_per_frame * 1000 / param->clock_rate);
+    tmp = pj_math_stat_get_stddev(&test_data.capture_data.delay);
+    result->rec.frame_cnt = test_data.capture_data.delay.n;
+    result->rec.min_interval = DIV_ROUND(test_data.capture_data.delay.min, 1000);
+    result->rec.max_interval = DIV_ROUND(test_data.capture_data.delay.max, 1000);
+    result->rec.avg_interval = DIV_ROUND(test_data.capture_data.delay.mean, 1000);
+    result->rec.dev_interval = DIV_ROUND(tmp, 1000);
+    result->rec.max_burst    = DIV_ROUND_UP(result->rec.max_interval, ptime);
+
+    tmp = pj_math_stat_get_stddev(&test_data.playback_data.delay);
+    result->play.frame_cnt = test_data.playback_data.delay.n;
+    result->play.min_interval = DIV_ROUND(test_data.playback_data.delay.min, 1000);
+    result->play.max_interval = DIV_ROUND(test_data.playback_data.delay.max, 1000);
+    result->play.avg_interval = DIV_ROUND(test_data.capture_data.delay.mean, 1000);
+    result->play.dev_interval = DIV_ROUND(tmp, 1000);
+    result->play.max_burst    = DIV_ROUND_UP(result->play.max_interval, ptime);
 
     /* Check drifting */
     if (param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
