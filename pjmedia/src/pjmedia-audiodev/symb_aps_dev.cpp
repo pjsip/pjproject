@@ -1333,6 +1333,12 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 	return PJ_RETURN_OS_ERROR(err);
     }
 
+    /* Apply output volume setting if specified */
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
+	stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+		       &param->output_vol);
+    }
+
     strm->rec_cb = rec_cb;
     strm->play_cb = play_cb;
     strm->user_data = user_data;
