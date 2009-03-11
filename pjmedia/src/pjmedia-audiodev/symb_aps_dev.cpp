@@ -359,8 +359,10 @@ public:
     enum State
     {
 	STATE_NULL,
+	STATE_INITIALIZING,
 	STATE_READY,
-	STATE_STREAMING
+	STATE_STREAMING,
+	STATE_PENDING_STOP
     };
 
     ~CPjAudioEngine();
@@ -481,13 +483,12 @@ CPjAudioEngine::~CPjAudioEngine()
 	iWriteQ.Close();
 	iWriteCommQ.Close();
     }
+    
+    TRACE_((THIS_FILE, "Sound device destroyed"));
 }
 
 TInt CPjAudioEngine::InitPlayL()
 {
-    if (state_ == STATE_STREAMING || state_ == STATE_READY)
-	return 0;
-
     TInt err = iSession.InitializePlayer(iPlaySettings);
     if (err != KErrNone) {
 	snd_perror("Failed to initialize player", err);
@@ -517,9 +518,6 @@ TInt CPjAudioEngine::InitPlayL()
 
 TInt CPjAudioEngine::InitRecL()
 {
-    if (state_ == STATE_STREAMING || state_ == STATE_READY)
-	return 0;
-
     // Initialize input stream device
     TInt err = iSession.InitializeRecorder(iRecSettings);
     if (err != KErrNone && err != KErrAlreadyExists) {
@@ -557,8 +555,12 @@ TInt CPjAudioEngine::StartL()
     if (state_ == STATE_READY)
 	return StartStreamL();
 
+    PJ_ASSERT_RETURN(state_ == STATE_NULL, PJMEDIA_EAUD_INVOP);
+    
     // Even if only capturer are opened, playback thread of APS Server need
     // to be run(?). Since some messages will be delivered via play comm queue.
+    state_ = STATE_INITIALIZING;
+
     return InitPlayL();
 }
 
@@ -568,6 +570,14 @@ void CPjAudioEngine::Stop()
 	iSession.Stop();
 	state_ = STATE_READY;
 	TRACE_((THIS_FILE, "Sound device stopped"));
+    } else if (state_ == STATE_INITIALIZING) {
+	// Initialization is on progress, so let's set the state to 
+	// STATE_PENDING_STOP to prevent it starting the stream.
+	state_ = STATE_PENDING_STOP;
+	
+	// Then wait until initialization done.
+	while (state_ != STATE_READY)
+	    pj_symbianos_poll(-1, 100);
     }
 }
 
@@ -595,9 +605,8 @@ void CPjAudioEngine::ConstructL()
 
 TInt CPjAudioEngine::StartStreamL()
 {
-    if (state_ == STATE_STREAMING)
-	return 0;
-
+    pj_assert(state_==STATE_READY || state_==STATE_INITIALIZING); 
+    
     iSession.SetCng(setting_.cng);
     iSession.SetVadMode(setting_.vad);
     iSession.SetPlc(setting_.plc);
@@ -618,6 +627,7 @@ TInt CPjAudioEngine::StartStreamL()
     }
 
     state_ = STATE_STREAMING;
+    
     return 0;
 }
 
@@ -625,9 +635,13 @@ void CPjAudioEngine::InputStreamInitialized(const TInt aStatus)
 {
     TRACE_((THIS_FILE, "Recorder initialized, err=%d", aStatus));
 
-    state_ = STATE_READY;
     if (aStatus == KErrNone) {
-	StartStreamL();
+	// Don't start the stream since Stop() has been requested. 
+	if (state_ != STATE_PENDING_STOP) {
+	    StartStreamL();
+	} else {
+	    state_ = STATE_READY;
+	}
     }
 }
 
@@ -637,9 +651,12 @@ void CPjAudioEngine::OutputStreamInitialized(const TInt aStatus)
 
     if (aStatus == KErrNone) {
 	if (parentStrm_->param.dir == PJMEDIA_DIR_PLAYBACK) {
-	    state_ = STATE_READY;
-	    // Only playback, start directly
-	    StartStreamL();
+	    // Don't start the stream since Stop() has been requested.
+	    if (state_ != STATE_PENDING_STOP) {
+		StartStreamL();
+	    } else {
+		state_ = STATE_READY;
+	    }
 	} else
 	    InitRecL();
     }
