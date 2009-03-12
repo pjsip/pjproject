@@ -244,7 +244,7 @@ static void usage(void)
     puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default=256)");
     puts  ("  --ec-opt=OPT        Select echo canceller algorithm (0=default, ");
     puts  ("                        1=speex, 2=suppressor)");
-    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
+    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 30)");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
     puts  ("  --capture-lat=N     Audio capture latency, in ms (default=100)");
