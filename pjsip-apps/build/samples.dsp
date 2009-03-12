@@ -90,6 +90,10 @@ SOURCE=..\src\samples\aectest.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\auddemo.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\confbench.c
 # End Source File
 # Begin Source File

@@ -632,7 +632,6 @@ typedef struct pjmedia_codec_amr_pack_setting {
  *
  * @return	    AMR mode.
  */
-
 PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
 {
     pj_int8_t mode = -1;
@@ -675,6 +674,35 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode(unsigned bitrate)
 	mode = 8;
     }
     return mode;
+}
+
+/**
+ * Get AMR mode based on frame length.
+ *
+ * @param amrnb	    Set to PJ_TRUE for AMR-NB domain or PJ_FALSE for AMR-WB.
+ * @param frame_len The frame length.
+ *
+ * @return	    AMR mode.
+ */
+
+PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode2(pj_bool_t amrnb,
+						 unsigned frame_len)
+{
+    int i;
+
+    if (amrnb) {
+	for (i = 0; i < 9; ++i)
+	    if (frame_len == pjmedia_codec_amrnb_framelen[i])
+		return (pj_int8_t)i;
+    } else {
+	for (i = 0; i < 10; ++i) {
+	    if (frame_len == pjmedia_codec_amrwb_framelen[i])
+		return (pj_int8_t)i;
+	}
+    }
+    
+    pj_assert(!"Invalid AMR frame length");
+    return -1;
 }
 
 /**
@@ -794,7 +822,6 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
 
 	out_info->mode = FT_;
 	out->size = 5;
-	PJ_ASSERT_RETURN(out->size <= in->size, PJMEDIA_CODEC_EFRMINLEN);
 
 	pj_bzero(out->buf, out->size);
 	for(i = 0; i < framelenbit_tbl[SID_FT]; ++i) {

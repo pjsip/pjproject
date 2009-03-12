@@ -29,73 +29,10 @@
 CConsoleBase* console;
 
 // Needed by APS
-TPtrC APP_UID = _L("A000000D");
+TPtrC APP_UID = _L("A000000E");
 
 int app_main();
 
-
-////////////////////////////////////////////////////////////////////////////
-class MyTask : public CActive
-{
-public:
-    static MyTask *NewL(CActiveSchedulerWait *asw);
-    ~MyTask();
-    void Start();
-
-protected:
-    MyTask(CActiveSchedulerWait *asw);
-    void ConstructL();
-    virtual void RunL();
-    virtual void DoCancel();
-
-private:
-    RTimer timer_;
-    CActiveSchedulerWait *asw_;
-};
-
-MyTask::MyTask(CActiveSchedulerWait *asw)
-: CActive(EPriorityNormal), asw_(asw)
-{
-}
-
-MyTask::~MyTask() 
-{
-    timer_.Close();
-}
-
-void MyTask::ConstructL()
-{
-    timer_.CreateLocal();
-    CActiveScheduler::Add(this);
-}
-
-MyTask *MyTask::NewL(CActiveSchedulerWait *asw)
-{
-    MyTask *self = new (ELeave) MyTask(asw);
-    CleanupStack::PushL(self);
-
-    self->ConstructL();
-
-    CleanupStack::Pop(self);
-    return self;
-}
-
-void MyTask::Start()
-{
-    timer_.After(iStatus, 0);
-    SetActive();
-}
-
-void MyTask::RunL()
-{
-    int rc = app_main();
-    asw_->AsyncStop();
-}
-
-void MyTask::DoCancel()
-{
-
-}
 
 ////////////////////////////////////////////////////////////////////////////
 
@@ -105,19 +42,8 @@ LOCAL_C void DoStartL()
     CleanupStack::PushL(scheduler);
     CActiveScheduler::Install(scheduler);
 
-    CActiveSchedulerWait *asw = new CActiveSchedulerWait;
-    CleanupStack::PushL(asw);
-    
-    MyTask *task = MyTask::NewL(asw);
-    task->Start();
+    app_main();
 
-    asw->Start();
-    
-    delete task;
-    
-    CleanupStack::Pop(asw);
-    delete asw;
-    
     CActiveScheduler::Install(NULL);
     CleanupStack::Pop(scheduler);
     delete scheduler;
@@ -142,13 +68,13 @@ GLDEF_C TInt E32Main()
 
     TRAPD(startError, DoStartL());
 
-    console->Printf(_L("[press any key to close]\n"));
-    console->Getch();
-    
+    //console->Printf(_L("[press any key to close]\n"));
+    //console->Getch();
+
     delete console;
     delete cleanup;
 
-    CloseSTDLIB(); 
+    CloseSTDLIB();
 
     // Mark end of heap usage, detect memory leaks
     __UHEAP_MARKEND;

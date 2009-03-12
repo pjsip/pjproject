@@ -37,7 +37,6 @@
  * to create a media session (#pjmedia_session_create()).
  */
 
-#include <pjmedia/sound.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/sdp.h>
 

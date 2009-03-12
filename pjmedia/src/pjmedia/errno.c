@@ -20,7 +20,8 @@
 #include <pjmedia/errno.h>
 #include <pjmedia/types.h>
 #include <pj/string.h>
-#if PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION) && \
+    PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
 #   include <portaudio.h>
 #endif
 
@@ -179,7 +180,8 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
     /* See if the error comes from PortAudio. */
-#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION) && \
+    PJMEDIA_SOUND_IMPLEMENTATION == PJMEDIA_SOUND_PORTAUDIO_SOUND
     if (statcode >= PJMEDIA_PORTAUDIO_ERRNO_START &&
 	statcode <= PJMEDIA_PORTAUDIO_ERRNO_END)
     {

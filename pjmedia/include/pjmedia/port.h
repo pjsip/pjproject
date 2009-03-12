@@ -25,6 +25,7 @@
  * @brief Port interface declaration
  */
 #include <pjmedia/types.h>
+#include <pj/assert.h>
 #include <pj/os.h>
 
 
@@ -211,6 +212,7 @@ typedef struct pjmedia_port_info
     pj_bool_t	    has_info;		/**< Has info?			    */
     pj_bool_t	    need_info;		/**< Need info on connect?	    */
     unsigned	    pt;			/**< Payload type (can be dynamic). */
+    pjmedia_format  format;		/**< Format.			    */
     pj_str_t	    encoding_name;	/**< Encoding name.		    */
     unsigned	    clock_rate;		/**< Sampling rate.		    */
     unsigned	    channel_count;	/**< Number of channels.	    */
@@ -218,34 +220,6 @@ typedef struct pjmedia_port_info
     unsigned	    samples_per_frame;	/**< No of samples per frame.	    */
     unsigned	    bytes_per_frame;	/**< No of samples per frame.	    */
 } pjmedia_port_info;
-
-
-/** 
- * Types of media frame. 
- */
-typedef enum pjmedia_frame_type
-{
-    PJMEDIA_FRAME_TYPE_NONE,	    /**< No frame.		*/
-    PJMEDIA_FRAME_TYPE_AUDIO	    /**< Normal audio frame.	*/
-
-} pjmedia_frame_type;
-
-
-/** 
- * This structure describes a media frame. 
- */
-typedef struct pjmedia_frame
-{
-    pjmedia_frame_type	 type;	    /**< Frame type.			    */
-    void		*buf;	    /**< Pointer to buffer.		    */
-    pj_size_t		 size;	    /**< Frame size in bytes.		    */
-    pj_timestamp	 timestamp; /**< Frame timestamp.		    */
-    pj_uint32_t		 bit_info;  /**< Bit info of the frame, sample case:
-					 a frame may not exactly start and end
-					 at the octet boundary, so this field 
-					 may be used for specifying start & 
-					 end bit offset.		    */
-} pjmedia_frame;
 
 
 /**

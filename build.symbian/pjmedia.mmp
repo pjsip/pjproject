@@ -40,6 +40,7 @@ SOURCE		bidirectional.c
 SOURCE		clock_thread.c
 SOURCE		codec.c
 SOURCE		conference.c
+SOURCE		conf_switch.c
 SOURCE		echo_common.c
 SOURCE		echo_port.c
 SOURCE		echo_suppress.c

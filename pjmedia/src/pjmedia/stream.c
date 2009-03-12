@@ -408,6 +408,116 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 }
 
 
+/* The other version of get_frame callback used when stream port format
+ * is non linear PCM.
+ */
+static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
+{
+    pjmedia_stream *stream = (pjmedia_stream*) port->port_data.pdata;
+    pjmedia_channel *channel = stream->dec;
+    pjmedia_frame_ext *f = (pjmedia_frame_ext*)frame;
+    unsigned samples_per_frame, samples_required;
+    pj_status_t status;
+
+    /* Return no frame if channel is paused */
+    if (channel->paused) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	return PJ_SUCCESS;
+    }
+
+    /* Repeat get frame from the jitter buffer and decode the frame
+     * until we have enough frames according to codec's ptime.
+     */
+
+    samples_required = stream->port.info.samples_per_frame;
+    samples_per_frame = stream->codec_param.info.frm_ptime *
+			stream->codec_param.info.clock_rate *
+			stream->codec_param.info.channel_cnt / 
+			1000;
+
+    pj_bzero(f, sizeof(pjmedia_frame_ext));
+    f->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+
+    while (f->samples_cnt < samples_required) {
+	char frame_type;
+	pj_size_t frame_size;
+	pj_uint32_t bit_info;
+
+	/* Lock jitter buffer mutex first */
+	pj_mutex_lock( stream->jb_mutex );
+
+	/* Get frame from jitter buffer. */
+	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
+			        &frame_type, &bit_info);
+	
+	/* Unlock jitter buffer mutex. */
+	pj_mutex_unlock( stream->jb_mutex );
+
+	if (frame_type == PJMEDIA_JB_NORMAL_FRAME) {
+	    /* Got "NORMAL" frame from jitter buffer */
+	    pjmedia_frame frame_in;
+
+	    /* Decode */
+	    frame_in.buf = channel->out_pkt;
+	    frame_in.size = frame_size;
+	    frame_in.bit_info = bit_info;
+	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;
+
+	    status = stream->codec->op->decode( stream->codec, &frame_in,
+						0, frame);
+	    if (status != PJ_SUCCESS) {
+		LOGERR_((port->info.name.ptr, "codec decode() error", 
+			 status));
+		pjmedia_frame_ext_append_subframe(f, NULL, 0,
+					    (pj_uint16_t)samples_per_frame);
+	    }
+	} else {
+	    status = (*stream->codec->op->recover)(stream->codec,
+						   0, frame);
+	    if (status != PJ_SUCCESS) {
+		pjmedia_frame_ext_append_subframe(f, NULL, 0,
+					    (pj_uint16_t)samples_per_frame);
+	    }
+
+	    if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
+		PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
+	    } else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
+		/* Jitter buffer is empty. Check if this is the first "empty" 
+		 * state.
+		 */
+		if (frame_type != stream->jb_last_frm) {
+		    pjmedia_jb_state jb_state;
+
+		    /* Report the state of jitter buffer */
+		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
+			      "Jitter buffer empty (prefetch=%d)", 
+			      jb_state.prefetch));
+		}
+	    } else {
+		pjmedia_jb_state jb_state;
+
+		/* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
+		pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
+
+		/* Get the state of jitter buffer */
+		pjmedia_jbuf_get_state(stream->jb, &jb_state);
+
+		if (stream->jb_last_frm != frame_type) {
+		    PJ_LOG(5,(stream->port.info.name.ptr, 
+			      "Jitter buffer is bufferring (prefetch=%d)",
+			      jb_state.prefetch));
+		}
+	    }
+	}
+
+	stream->jb_last_frm = frame_type;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Transmit DTMF
  */
@@ -686,6 +796,9 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     /* Number of samples in the frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO)
 	ts_len = (frame->size >> 1) / stream->codec_param.info.channel_cnt;
+    else if (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED)
+	ts_len = stream->port.info.samples_per_frame / 
+		 stream->port.info.channel_count;
     else
 	ts_len = 0;
 
@@ -752,6 +865,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
      */
     } else if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
 	       frame->buf == NULL &&
+	       stream->port.info.format.id == PJMEDIA_FORMAT_L16 &&
 	       (stream->dir & PJMEDIA_DIR_ENCODING) &&
 	       stream->codec_param.info.frm_ptime *
 	       stream->codec_param.info.channel_cnt *
@@ -1483,9 +1597,18 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
     stream->port.info.clock_rate = info->fmt.clock_rate;
     stream->port.info.channel_count = info->fmt.channel_cnt;
+    stream->port.info.format.id = info->param->info.fmt_id;
     stream->port.port_data.pdata = stream;
-    stream->port.put_frame = &put_frame;
-    stream->port.get_frame = &get_frame;
+    if (stream->port.info.format.id == PJMEDIA_FORMAT_L16) {
+	stream->port.put_frame = &put_frame;
+	stream->port.get_frame = &get_frame;
+    } else {
+	stream->port.info.format.bitrate = info->param->info.avg_bps;
+	stream->port.info.format.vad = (info->param->setting.vad != 0);
+
+	stream->port.put_frame = &put_frame;
+	stream->port.get_frame = &get_frame_ext;
+    }
 
 
     /* Init stream: */

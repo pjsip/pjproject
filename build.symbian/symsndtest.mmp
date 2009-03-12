@@ -1,53 +1,45 @@
-#define SND_USE_NULL	0
-#define SND_USE_APS	0
+#define SND_USE_APS	1
+#define SND_USE_VAS	0
 
-TARGET 		symsndtest.exe
-TARGETTYPE 	exe
-UID		0x0 0xA000000E
+TARGET 			symsndtest.exe
+TARGETTYPE 		exe
+UID			0x0 0xA000000E
 
-SOURCEPATH	..\pjsip-apps\src\symsndtest
+SOURCEPATH		..\pjsip-apps\src\symsndtest
 
-MACRO		PJ_M_I386=1
-MACRO		PJ_SYMBIAN=1
+MACRO			PJ_M_I386=1
+MACRO			PJ_SYMBIAN=1
 
 // Test files
 
-SOURCE	app_main.cpp
-SOURCE	main_symbian.cpp
+SOURCE			app_main.cpp
+SOURCE			main_symbian.cpp
 
-START RESOURCE  symsndtest_reg.rss
+START RESOURCE  	symsndtest_reg.rss
 	TARGETPATH	\private\10003a3f\apps
 END
 
-SYSTEMINCLUDE	..\pjlib\include
-SYSTEMINCLUDE	..\pjmedia\include
+SYSTEMINCLUDE		..\pjlib\include
+SYSTEMINCLUDE		..\pjmedia\include
 
-SYSTEMINCLUDE	\epoc32\include
-SYSTEMINCLUDE	\epoc32\include\libc
+SYSTEMINCLUDE		\epoc32\include
+SYSTEMINCLUDE		\epoc32\include\libc
 
-LIBRARY		charconv.lib euser.lib estlib.lib
-LIBRARY		esock.lib insock.lib
-STATICLIBRARY	pjlib.lib pjmedia.lib
+LIBRARY			charconv.lib euser.lib estlib.lib
+LIBRARY			esock.lib insock.lib
+STATICLIBRARY		pjlib.lib pjmedia.lib
+STATICLIBRARY		symbian_audio.lib
 
-#if SND_USE_NULL
-    STATICLIBRARY	null_audio.lib
-    CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
-#elif SND_USE_APS
-    SOURCEPATH                              ..\pjmedia\src\pjmedia 
-    SOURCE                                  symbian_sound_aps.cpp 
-
-    SYSTEMINCLUDE                           \epoc32\include\mmf\server 
-    SYSTEMINCLUDE                           \epoc32\include\mmf\common 
-    SYSTEMINCLUDE                           \epoc32\include\mda\common 
-
-    //STATICLIBRARY	symbian_audio_aps.lib
-    LIBRARY		APSSession2.lib
-    CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
+#if SND_USE_APS
+	LIBRARY		APSSession2.lib
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
+#elif SND_USE_VAS
+//	LIBRARY		
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment MultimediaDD
 #else
-    STATICLIBRARY	symbian_audio.lib
-    LIBRARY 		mediaclientaudiostream.lib
-    LIBRARY 		mediaclientaudioinputstream.lib
-    CAPABILITY		NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment 
+	LIBRARY 	mediaclientaudiostream.lib
+	LIBRARY 	mediaclientaudioinputstream.lib
+	CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment
 #endif
 
 #ifdef WINSCW

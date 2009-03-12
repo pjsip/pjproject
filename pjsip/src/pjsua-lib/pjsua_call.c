@@ -370,9 +370,13 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     PJSUA_LOCK();
 
-    /* Create sound port if none is instantiated */
-    if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL && 
-	!pjsua_var.no_snd) 
+    /* Create sound port if none is instantiated, to check if sound device
+     * can be used. But only do this with the conference bridge, as with 
+     * audio switchboard (i.e. APS-Direct), we can only open the sound 
+     * device once the correct format has been known
+     */
+    if (!pjsua_var.is_mswitch && pjsua_var.snd_port==NULL && 
+	pjsua_var.null_snd==NULL && !pjsua_var.no_snd) 
     {
 	pj_status_t status;
 

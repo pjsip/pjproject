@@ -90,13 +90,6 @@ LINK32=link.exe
 # Begin Source File
 
 SOURCE=..\src\samples\debug.c
-
-!IF  "$(CFG)" == "sample_debug - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "sample_debug - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # End Group
 # Begin Group "Header Files"

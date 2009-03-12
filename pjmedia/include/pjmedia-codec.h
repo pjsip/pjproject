@@ -31,6 +31,7 @@
 #include <pjmedia-codec/ilbc.h>
 #include <pjmedia-codec/g722.h>
 #include <pjmedia-codec/ipp_codecs.h>
+#include <pjmedia-codec/passthrough.h>
 
 
 #endif	/* __PJMEDIA_CODEC_PJMEDIA_CODEC_H__ */

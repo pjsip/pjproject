@@ -31,21 +31,16 @@
 PJ_BEGIN_DECL
 
 /**
- * Activate/deactivate loudspeaker, when loudspeaker is inactive, audio
- * will be routed to earpiece.
+ * Set audio routing for APS sound device.
  *
  * @param stream	The sound device stream, the stream should be started 
- *			before calling this function. This param can be NULL
- *			to set the behaviour of next opened stream.
- * @param active	Specify PJ_TRUE to activate loudspeaker, and PJ_FALSE
- *			otherwise.
+ *			before calling this function.
+ * @param route		Audio routing to be set.
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_snd_aps_activate_loudspeaker(
-						pjmedia_snd_stream *stream,
-						pj_bool_t active);
-
+PJ_DECL(pj_status_t) pjmedia_snd_aps_set_route( pjmedia_snd_stream *stream,
+						pjmedia_snd_route route);
 
 PJ_END_DECL
 

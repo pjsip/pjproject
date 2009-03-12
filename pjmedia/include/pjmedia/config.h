@@ -44,79 +44,69 @@
 #   include <pjmedia/config_auto.h>
 #endif
 
+/**
+ * Specify whether we prefer to use audio switch board rather than 
+ * conference bridge.
+ *
+ * Audio switch board is a kind of simplified version of conference 
+ * bridge, but not really the subset of conference bridge. It has 
+ * stricter rules on audio routing among the pjmedia ports and has
+ * no audio mixing capability. The power of it is it could work with
+ * encoded audio frames where conference brigde couldn't.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_CONF_USE_SWITCH_BOARD
+#   define PJMEDIA_CONF_USE_SWITCH_BOARD    0
+#endif
+
 /*
  * Types of sound stream backends.
  */
 
-/** Constant for NULL sound backend. */
-#define PJMEDIA_SOUND_NULL_SOUND	    0
-
-/** Constant for PortAudio sound backend. */
-#define PJMEDIA_SOUND_PORTAUDIO_SOUND	    1
-
-/** Constant for Win32 DirectSound sound backend. */
-#define PJMEDIA_SOUND_WIN32_DIRECT_SOUND    2
-
-/** Constant for Win32 MME sound backend. */
-#define PJMEDIA_SOUND_WIN32_MME_SOUND	    3
-
-/** When this is set, pjmedia will not provide any sound device backend. 
- *  Application will have to provide its own sound device backend
- *  and link the application with it.
- */
-#define PJMEDIA_SOUND_EXTERNAL		    255
-
-
 /**
- * Unless specified otherwise, sound device uses PortAudio implementation
- * by default.
+ * This macro has been deprecated in releasee 1.1. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more information.
  */
-#ifndef PJMEDIA_SOUND_IMPLEMENTATION
-#  if defined(PJ_WIN32) && PJ_WIN32!=0
-/*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_DIRECT_SOUND*/
-/*#   define PJMEDIA_SOUND_IMPLEMENTATION   PJMEDIA_SOUND_WIN32_MME_SOUND*/
-#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
-#  else
-#   define PJMEDIA_SOUND_IMPLEMENTATION	    PJMEDIA_SOUND_PORTAUDIO_SOUND
-#  endif
+#if defined(PJMEDIA_SOUND_IMPLEMENTATION)
+#   error PJMEDIA_SOUND_IMPLEMENTATION has been deprecated
 #endif
 
+/**
+ * This macro has been deprecated in releasee 1.1. Please see
+ * http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more information.
+ */
+#if defined(PJMEDIA_PREFER_DIRECT_SOUND)
+#   error PJMEDIA_PREFER_DIRECT_SOUND has been deprecated
+#endif
 
 /**
- * Specify whether we prefer to use DirectSound on Windows.
+ * This macro controls whether the legacy sound device API is to be
+ * implemented, for applications that still use the old sound device
+ * API (sound.h). If this macro is set to non-zero, the sound_legacy.c
+ * will be included in the compilation. The sound_legacy.c is an
+ * implementation of old sound device (sound.h) using the new Audio
+ * Device API.
  *
- * Default: 0
+ * Please see http://trac.pjsip.org/repos/wiki/Audio_Dev_API for more
+ * info.
  */
-#ifndef PJMEDIA_PREFER_DIRECT_SOUND
-#   define PJMEDIA_PREFER_DIRECT_SOUND	    0
+#ifndef PJMEDIA_HAS_LEGACY_SOUND_API
+#   define PJMEDIA_HAS_LEGACY_SOUND_API	    1
 #endif
 
-
 /**
- * Specify sound device latency default, in milisecond.
+ * Specify default sound device latency, in milisecond.
  */
 #ifndef PJMEDIA_SND_DEFAULT_REC_LATENCY
 #   define PJMEDIA_SND_DEFAULT_REC_LATENCY  100
 #endif
 
+/**
+ * Specify default sound device latency, in milisecond.
+ */
 #ifndef PJMEDIA_SND_DEFAULT_PLAY_LATENCY
 #   define PJMEDIA_SND_DEFAULT_PLAY_LATENCY 100
-#endif
-
-
-/**
- * Specify whether delay buffer is used for sound device.
- * When delay buffer is enabled, the sound device callback 
- * will be called one after another evenly.
- * The delay buffer also performs the best delay calculation
- * for the sound device, and will try to limit the delay caused
- * by uneven callback calls to this delay.
- *
- * When this setting is enabled, the PJMEDIA_SOUND_BUFFER_COUNT
- * macro will specify the maximum size of the delay buffer.
- */
-#ifndef PJMEDIA_SOUND_USE_DELAYBUF
-#   define PJMEDIA_SOUND_USE_DELAYBUF	    0
 #endif
 
 
@@ -285,7 +275,7 @@
  * Default file player/writer buffer size.
  */
 #ifndef PJMEDIA_FILE_PORT_BUFSIZE
-#   define PJMEDIA_FILE_PORT_BUFSIZE    4000
+#   define PJMEDIA_FILE_PORT_BUFSIZE		4000
 #endif
 
 

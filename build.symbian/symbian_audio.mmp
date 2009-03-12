@@ -24,22 +24,23 @@ TARGETTYPE 	lib
 SOURCEPATH	..\pjmedia\src\pjmedia
 
 OPTION		CW -lang c++
-
-//
-// GCCE optimization setting
-//
 OPTION		GCCE -O2 -fno-unit-at-a-time
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
+SOURCE		nullsound.c
 SOURCE		symbian_sound.cpp
+SOURCE		symbian_sound_aps.cpp
 
 SYSTEMINCLUDE	..\pjlib\include
 SYSTEMINCLUDE	..\pjmedia\include
 
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
+SYSTEMINCLUDE   \epoc32\include\mmf\server 
+SYSTEMINCLUDE   \epoc32\include\mmf\common 
+SYSTEMINCLUDE   \epoc32\include\mda\common 
 
 SYSTEMINCLUDE	\epoc32\include\mmf\plugin 
 

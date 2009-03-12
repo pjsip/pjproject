@@ -272,8 +272,15 @@ struct pjsua_data
     pjmedia_endpt	*med_endpt; /**< Media endpoint.		*/
     pjsua_conf_setting	 mconf_cfg; /**< Additionan conf. bridge. param */
     pjmedia_conf	*mconf;	    /**< Conference bridge.		*/
-    int			 cap_dev;   /**< Capture device ID.		*/
-    int			 play_dev;  /**< Playback device ID.		*/
+    pj_bool_t		 is_mswitch;/**< Are we using audio switchboard
+				         (a.k.a APS-Direct)		*/
+
+    /* Sound device */
+    pjmedia_aud_dev_index cap_dev;  /**< Capture device ID.		*/
+    pjmedia_aud_dev_index play_dev; /**< Playback device ID.		*/
+    pj_uint32_t		 aud_svmask;/**< Which settings to save		*/
+    pjmedia_aud_param	 aud_param; /**< User settings to sound dev	*/
+    pj_bool_t		 aud_open_cnt;/**< How many # device is opened	*/
     pj_bool_t		 no_snd;    /**< No sound (app will manage it)	*/
     pj_pool_t		*snd_pool;  /**< Sound's private pool.		*/
     pjmedia_snd_port	*snd_port;  /**< Sound port.			*/

@@ -434,6 +434,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\conf_switch.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\conference.c"
 				>
 				<FileConfiguration
@@ -458,28 +462,6 @@
 			<File
 				RelativePath="..\src\pjmedia\delaybuf.c"
 				>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\dsound.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\src\pjmedia\echo_common.c"
@@ -746,50 +728,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjmedia\nullsound.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\pasound.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\src\pjmedia\plc_common.c"
 				>
 				<FileConfiguration
@@ -1026,6 +964,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\sound_legacy.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\sound_port.c"
 				>
 				<FileConfiguration
@@ -1242,10 +1184,6 @@
 						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\pjmedia\wmme_sound.c"
-				>
 			</File>
 			<File
 				RelativePath="..\src\pjmedia\wsola.c"

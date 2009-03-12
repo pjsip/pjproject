@@ -177,8 +177,10 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->quality = PJSUA_DEFAULT_CODEC_QUALITY;
     cfg->ilbc_mode = PJSUA_DEFAULT_ILBC_MODE;
     cfg->ec_tail_len = PJSUA_DEFAULT_EC_TAIL_LEN;
+    cfg->snd_rec_latency = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+    cfg->snd_play_latency = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
-    cfg->snd_auto_close_time = -1;
+    cfg->snd_auto_close_time = 1;
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
 }
@@ -581,7 +583,8 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Set default sound device ID */
-    pjsua_var.cap_dev = pjsua_var.play_dev = -1;
+    pjsua_var.cap_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+    pjsua_var.play_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
     /* Init caching pool. */
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);

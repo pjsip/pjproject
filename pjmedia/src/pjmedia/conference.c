@@ -33,6 +33,7 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+#if !defined(PJMEDIA_CONF_USE_SWITCH_BOARD) || PJMEDIA_CONF_USE_SWITCH_BOARD==0
 
 /* CONF_DEBUG enables detailed operation of the conference bridge.
  * Beware that it prints large amounts of logs (several lines per frame).
@@ -63,7 +64,7 @@ static FILE *fhnd_rec;
 
 #define BYTES_PER_SAMPLE    2
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'F')
+#define SIGNATURE	    PJMEDIA_CONF_BRIDGE_SIGNATURE
 #define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'P')
 /* Normal level is hardcodec to 128 in all over places */
 #define NORMAL_LEVEL	    128
@@ -464,8 +465,8 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     /* Create sound device port: */
 
     if ((conf->options & PJMEDIA_CONF_NO_DEVICE) == 0) {
-	pjmedia_snd_stream *strm;
-	pjmedia_snd_stream_info si;
+	pjmedia_aud_stream *strm;
+	pjmedia_aud_param param;
 
 	/*
 	 * If capture is disabled then create player only port.
@@ -493,14 +494,14 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 	    return status;
 
 	strm = pjmedia_snd_port_get_snd_stream(conf->snd_dev_port);
-	status = pjmedia_snd_stream_get_info(strm, &si);
+	status = pjmedia_aud_stream_get_param(strm, &param);
 	if (status == PJ_SUCCESS) {
-	    const pjmedia_snd_dev_info *snd_dev_info;
+	    pjmedia_aud_dev_info snd_dev_info;
 	    if (conf->options & PJMEDIA_CONF_NO_MIC)
-		snd_dev_info = pjmedia_snd_get_dev_info(si.play_id);
+		pjmedia_aud_dev_get_info(param.play_id, &snd_dev_info);
 	    else
-		snd_dev_info = pjmedia_snd_get_dev_info(si.rec_id);
-	    pj_strdup2_with_null(pool, &conf_port->name, snd_dev_info->name);
+		pjmedia_aud_dev_get_info(param.rec_id, &snd_dev_info);
+	    pj_strdup2_with_null(pool, &conf_port->name, snd_dev_info.name);
 	}
     }
 
@@ -1170,6 +1171,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->rx_setting = conf_port->rx_setting;
     info->listener_cnt = conf_port->listener_cnt;
     info->listener_slots = conf_port->listener_slots;
+    info->transmitter_cnt = conf_port->transmitter_cnt;
     info->clock_rate = conf_port->clock_rate;
     info->channel_count = conf_port->channel_count;
     info->samples_per_frame = conf_port->samples_per_frame;
@@ -1987,3 +1989,4 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     return status;
 }
 
+#endif

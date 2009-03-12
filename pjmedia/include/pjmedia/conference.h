@@ -43,6 +43,18 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * The conference bridge signature in pjmedia_port_info.
+ */
+#define PJMEDIA_CONF_BRIDGE_SIGNATURE	\
+		    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'F')
+
+/**
+ * The audio switchboard signature in pjmedia_port_info.
+ */
+#define PJMEDIA_CONF_SWITCH_SIGNATURE	\
+		    PJMEDIA_PORT_SIGNATURE('A', 'S', 'W', 'I')
+
 
 /**
  * Opaque type for conference bridge.
@@ -56,10 +68,12 @@ typedef struct pjmedia_conf_port_info
 {
     unsigned		slot;		    /**< Slot number.		    */
     pj_str_t		name;		    /**< Port name.		    */
+    pjmedia_format	format;		    /**< Format.		    */
     pjmedia_port_op	tx_setting;	    /**< Transmit settings.	    */
     pjmedia_port_op	rx_setting;	    /**< Receive settings.	    */
     unsigned		listener_cnt;	    /**< Number of listeners.	    */
     unsigned	       *listener_slots;	    /**< Array of listeners.	    */
+    unsigned		transmitter_cnt;    /**< Number of transmitter.	    */
     unsigned		clock_rate;	    /**< Clock rate of the port.    */
     unsigned		channel_count;	    /**< Number of channels.	    */
     unsigned		samples_per_frame;  /**< Samples per frame	    */

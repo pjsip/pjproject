@@ -398,6 +398,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-codec\passthrough.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-codec\speex_codec.c"
 				>
 				<FileConfiguration

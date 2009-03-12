@@ -4158,6 +4158,12 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_replaced = &on_call_replaced;
     app_config.cfg.cb.on_nat_detect = &on_nat_detect;
 
+    /* Set sound device latency */
+    if (app_config.capture_lat > 0)
+	app_config.media_cfg.snd_rec_latency = app_config.capture_lat;
+    if (app_config.playback_lat)
+	app_config.media_cfg.snd_play_latency = app_config.playback_lat;
+
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
 			&app_config.media_cfg);
@@ -4422,9 +4428,6 @@ pj_status_t app_init(int argc, char *argv[])
 #endif
     if (status != PJ_SUCCESS)
 	goto on_error;
-
-    /* Set sound device latency */
-    pjmedia_snd_set_latency(app_config.capture_lat, app_config.playback_lat);
 
     /* Use null sound device? */
 #ifndef STEREO_DEMO

@@ -33,6 +33,7 @@ LIBS = 	pjlib/lib/libpj-$(TARGET_NAME).a \
 	pjlib-util/lib/libpjlib-util-$(TARGET_NAME).a \
 	pjnath/lib/libpjnath-$(TARGET_NAME).a \
 	pjmedia/lib/libpjmedia-$(TARGET_NAME).a \
+	pjmedia/lib/libpjmedia-audiodev-$(TARGET_NAME).a \
 	pjmedia/lib/libpjmedia-codec-$(TARGET_NAME).a \
        	pjsip/lib/libpjsip-$(TARGET_NAME).a \
 	pjsip/lib/libpjsip-ua-$(TARGET_NAME).a \

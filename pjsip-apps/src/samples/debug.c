@@ -28,5 +28,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "aectest.c"
+#include "auddemo.c"
 

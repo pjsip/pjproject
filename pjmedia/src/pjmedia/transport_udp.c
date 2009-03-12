@@ -23,6 +23,7 @@
 #include <pj/errno.h>
 #include <pj/ioqueue.h>
 #include <pj/log.h>
+#include <pj/pool.h>
 #include <pj/rand.h>
 #include <pj/string.h>
 

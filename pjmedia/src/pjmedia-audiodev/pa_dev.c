@@ -17,36 +17,36 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia/sound.h>
-#include <pjmedia/errno.h>
+#include <pjmedia-audiodev/audiodev_imp.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
 #include <portaudio.h>
 
-#if PJMEDIA_SOUND_IMPLEMENTATION==PJMEDIA_SOUND_PORTAUDIO_SOUND
+#if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
 
-#define THIS_FILE	"pasound.c"
 
-static int snd_init_count;
+#define THIS_FILE	"pa_dev.c"
+#define DRIVER_NAME	"PA"
 
-/* Latency settings */
-static unsigned snd_input_latency  = PJMEDIA_SND_DEFAULT_REC_LATENCY;
-static unsigned snd_output_latency = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
-
-static struct snd_mgr
+struct pa_aud_factory
 {
-    pj_pool_factory *factory;
-} snd_mgr;
+    pjmedia_aud_dev_factory	 base;
+    pj_pool_factory		*pf;
+    pj_pool_t			*pool;
+};
+
 
 /* 
  * Sound stream descriptor.
  * This struct may be used for both unidirectional or bidirectional sound
  * streams.
  */
-struct pjmedia_snd_stream
+struct pa_aud_stream
 {
+    pjmedia_aud_stream	 base;
+
     pj_pool_t		*pool;
     pj_str_t		 name;
     pjmedia_dir		 dir;
@@ -61,11 +61,11 @@ struct pjmedia_snd_stream
     PaStream		*play_strm;
 
     void		*user_data;
-    pjmedia_snd_rec_cb   rec_cb;
-    pjmedia_snd_play_cb  play_cb;
+    pjmedia_aud_rec_cb   rec_cb;
+    pjmedia_aud_play_cb  play_cb;
 
-    pj_uint32_t		 play_timestamp;
-    pj_uint32_t		 rec_timestamp;
+    pj_timestamp	 play_timestamp;
+    pj_timestamp	 rec_timestamp;
     pj_uint32_t		 underflow;
     pj_uint32_t		 overflow;
 
@@ -98,6 +98,59 @@ struct pjmedia_snd_stream
 };
 
 
+/* Factory prototypes */
+static pj_status_t  pa_init(pjmedia_aud_dev_factory *f);
+static pj_status_t  pa_destroy(pjmedia_aud_dev_factory *f);
+static unsigned	    pa_get_dev_count(pjmedia_aud_dev_factory *f);
+static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
+				    unsigned index,
+				    pjmedia_aud_dev_info *info);
+static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
+				     unsigned index,
+				     pjmedia_aud_param *param);
+static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
+				     const pjmedia_aud_param *param,
+				     pjmedia_aud_rec_cb rec_cb,
+				     pjmedia_aud_play_cb play_cb,
+				     void *user_data,
+				     pjmedia_aud_stream **p_aud_strm);
+
+/* Stream prototypes */
+static pj_status_t strm_get_param(pjmedia_aud_stream *strm,
+				  pjmedia_aud_param *param);
+static pj_status_t strm_get_cap(pjmedia_aud_stream *strm,
+	 		        pjmedia_aud_dev_cap cap,
+			        void *value);
+static pj_status_t strm_set_cap(pjmedia_aud_stream *strm,
+			        pjmedia_aud_dev_cap cap,
+			        const void *value);
+static pj_status_t strm_start(pjmedia_aud_stream *strm);
+static pj_status_t strm_stop(pjmedia_aud_stream *strm);
+static pj_status_t strm_destroy(pjmedia_aud_stream *strm);
+
+
+static pjmedia_aud_dev_factory_op pa_op = 
+{
+    &pa_init,
+    &pa_destroy,
+    &pa_get_dev_count,
+    &pa_get_dev_info,
+    &pa_default_param,
+    &pa_create_stream
+};
+
+static pjmedia_aud_stream_op pa_strm_op = 
+{
+    &strm_get_param,
+    &strm_get_cap,
+    &strm_set_cap,
+    &strm_start,
+    &strm_stop,
+    &strm_destroy
+};
+
+
+
 static int PaRecorderCallback(const void *input, 
 			      void *output,
 			      unsigned long frameCount,
@@ -105,7 +158,7 @@ static int PaRecorderCallback(const void *input,
 			      PaStreamCallbackFlags statusFlags,
 			      void *userData )
 {
-    pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
+    struct pa_aud_stream *stream = (struct pa_aud_stream*) userData;
     pj_status_t status = 0;
     unsigned nsamples;
 
@@ -138,8 +191,6 @@ static int PaRecorderCallback(const void *input,
     if (statusFlags & paInputOverflow)
 	++stream->overflow;
 
-    stream->rec_timestamp += frameCount;
-
     /* Calculate number of samples we've got */
     nsamples = frameCount * stream->channel_count + stream->rec_buf_count;
 
@@ -150,30 +201,43 @@ static int PaRecorderCallback(const void *input,
 	 */
 	if (stream->rec_buf_count) {
 	    unsigned chunk_count = 0;
+	    pjmedia_frame frame;
 	
 	    chunk_count = stream->samples_per_frame - stream->rec_buf_count;
 	    pjmedia_copy_samples(stream->rec_buf + stream->rec_buf_count,
 				 (pj_int16_t*)input, chunk_count);
-	    status = (*stream->rec_cb)(stream->user_data, 
-				       stream->rec_timestamp,
-				       (void*) stream->rec_buf, 
-				       stream->samples_per_frame * 
-				       stream->bytes_per_sample);
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = (void*) stream->rec_buf;
+	    frame.size = stream->samples_per_frame * stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->rec_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->rec_cb)(stream->user_data, &frame);
 
 	    input = (pj_int16_t*) input + chunk_count;
 	    nsamples -= stream->samples_per_frame;
 	    stream->rec_buf_count = 0;
+	    stream->rec_timestamp.u64 += stream->samples_per_frame /
+					 stream->channel_count;
 	}
 
 	/* Give all frames we have */
 	while (nsamples >= stream->samples_per_frame && status == 0) {
-	    status = (*stream->rec_cb)(stream->user_data, 
-				       stream->rec_timestamp,
-				       (void*) input, 
-				       stream->samples_per_frame * 
-				       stream->bytes_per_sample);
+	    pjmedia_frame frame;
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = (void*) input;
+	    frame.size = stream->samples_per_frame * stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->rec_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->rec_cb)(stream->user_data, &frame);
+
 	    input = (pj_int16_t*) input + stream->samples_per_frame;
 	    nsamples -= stream->samples_per_frame;
+	    stream->rec_timestamp.u64 += stream->samples_per_frame /
+					 stream->channel_count;
 	}
 
 	/* Store the remaining samples into the buffer */
@@ -206,7 +270,7 @@ static int PaPlayerCallback( const void *input,
 			     PaStreamCallbackFlags statusFlags,
 			     void *userData )
 {
-    pjmedia_snd_stream *stream = (pjmedia_snd_stream*) userData;
+    struct pa_aud_stream *stream = (struct pa_aud_stream*) userData;
     pj_status_t status = 0;
     unsigned nsamples_req = frameCount * stream->channel_count;
 
@@ -239,7 +303,6 @@ static int PaPlayerCallback( const void *input,
     if (statusFlags & paOutputOverflow)
 	++stream->overflow;
 
-    stream->play_timestamp += frameCount;
 
     /* Check if any buffered samples */
     if (stream->play_buf_count) {
@@ -267,19 +330,39 @@ static int PaPlayerCallback( const void *input,
     /* Fill output buffer as requested */
     while (nsamples_req && status == 0) {
 	if (nsamples_req >= stream->samples_per_frame) {
-	    status = (*stream->play_cb)(stream->user_data, 
-					stream->play_timestamp, 
-					output, 
-					stream->samples_per_frame * 
-					stream->bytes_per_sample);
+	    pjmedia_frame frame;
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = output;
+	    frame.size = stream->samples_per_frame *  stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->play_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->play_cb)(stream->user_data, &frame);
+	    if (status != PJ_SUCCESS)
+		goto on_break;
+
+	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+		pj_bzero(frame.buf, frame.size);
+
 	    nsamples_req -= stream->samples_per_frame;
 	    output = (pj_int16_t*)output + stream->samples_per_frame;
 	} else {
-	    status = (*stream->play_cb)(stream->user_data, 
-					stream->play_timestamp, 
-					stream->play_buf,
-					stream->samples_per_frame * 
-					stream->bytes_per_sample);
+	    pjmedia_frame frame;
+
+	    frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	    frame.buf = stream->play_buf;
+	    frame.size = stream->samples_per_frame *  stream->bytes_per_sample;
+	    frame.timestamp.u64 = stream->play_timestamp.u64;
+	    frame.bit_info = 0;
+
+	    status = (*stream->play_cb)(stream->user_data, &frame);
+	    if (status != PJ_SUCCESS)
+		goto on_break;
+
+	    if (frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
+		pj_bzero(frame.buf, frame.size);
+
 	    pjmedia_copy_samples((pj_int16_t*)output, stream->play_buf, 
 				 nsamples_req);
 	    stream->play_buf_count = stream->samples_per_frame - nsamples_req;
@@ -288,6 +371,9 @@ static int PaPlayerCallback( const void *input,
 				 stream->play_buf_count);
 	    nsamples_req = 0;
 	}
+
+	stream->play_timestamp.u64 += stream->samples_per_frame /
+				      stream->channel_count;
     }
     
     if (status==0) 
@@ -330,67 +416,147 @@ static void pa_log_cb(const char *log)
 typedef void (*PaUtilLogCallback ) (const char *log);
 void PaUtil_SetDebugPrintFunction(PaUtilLogCallback  cb);
 
+
 /*
- * Init sound library.
+ * Init PortAudio audio driver.
  */
-PJ_DEF(pj_status_t) pjmedia_snd_init(pj_pool_factory *factory)
+pjmedia_aud_dev_factory* pjmedia_pa_factory(pj_pool_factory *pf)
 {
-    if (++snd_init_count == 1) {
-	int err;
+    struct pa_aud_factory *f;
+    pj_pool_t *pool;
 
-	PaUtil_SetDebugPrintFunction(&pa_log_cb);
+    pool = pj_pool_create(pf, "portaudio", 64, 64, NULL);
+    f = PJ_POOL_ZALLOC_T(pool, struct pa_aud_factory);
+    f->pf = pf;
+    f->pool = pool;
+    f->base.op = &pa_op;
 
-	snd_mgr.factory = factory;
-	err = Pa_Initialize();
-
-	PJ_LOG(4,(THIS_FILE, 
-		  "PortAudio sound library initialized, status=%d", err));
-	PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
-			     Pa_GetHostApiCount()));
-	PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
-			     pjmedia_snd_get_dev_count()));
-
-	return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
-    } else {
-	return PJ_SUCCESS;
-    }
+    return &f->base;
 }
 
 
-/*
- * Get device count.
- */
-PJ_DEF(int) pjmedia_snd_get_dev_count(void)
+/* API: Init factory */
+static pj_status_t pa_init(pjmedia_aud_dev_factory *f)
+{
+    int err;
+
+    PJ_UNUSED_ARG(f);
+
+    PaUtil_SetDebugPrintFunction(&pa_log_cb);
+
+    err = Pa_Initialize();
+
+    PJ_LOG(4,(THIS_FILE, 
+	      "PortAudio sound library initialized, status=%d", err));
+    PJ_LOG(4,(THIS_FILE, "PortAudio host api count=%d",
+			 Pa_GetHostApiCount()));
+    PJ_LOG(4,(THIS_FILE, "Sound device count=%d",
+			 pa_get_dev_count(f)));
+
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+}
+
+
+/* API: Destroy factory */
+static pj_status_t pa_destroy(pjmedia_aud_dev_factory *f)
+{
+    struct pa_aud_factory *pa = (struct pa_aud_factory*)f;
+    pj_pool_t *pool;
+    int err;
+
+    PJ_LOG(4,(THIS_FILE, "PortAudio sound library shutting down.."));
+
+    err = Pa_Terminate();
+
+    pool = pa->pool;
+    pa->pool = NULL;
+    pj_pool_release(pool);
+    
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+}
+
+
+/* API: Get device count. */
+static unsigned	pa_get_dev_count(pjmedia_aud_dev_factory *f)
 {
     int count = Pa_GetDeviceCount();
+    PJ_UNUSED_ARG(f);
     return count < 0 ? 0 : count;
 }
 
 
-/*
- * Get device info.
- */
-PJ_DEF(const pjmedia_snd_dev_info*) pjmedia_snd_get_dev_info(unsigned index)
+/* API: Get device info. */
+static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
+				    unsigned index,
+				    pjmedia_aud_dev_info *info)
 {
-    static pjmedia_snd_dev_info info;
     const PaDeviceInfo *pa_info;
+
+    PJ_UNUSED_ARG(f);
 
     pa_info = Pa_GetDeviceInfo(index);
     if (!pa_info)
-	return NULL;
+	return PJMEDIA_EAUD_INVDEV;
 
-    pj_bzero(&info, sizeof(info));
-    strncpy(info.name, pa_info->name, sizeof(info.name));
-    info.name[sizeof(info.name)-1] = '\0';
-    info.input_count = pa_info->maxInputChannels;
-    info.output_count = pa_info->maxOutputChannels;
-    info.default_samples_per_sec = (unsigned)pa_info->defaultSampleRate;
+    pj_bzero(info, sizeof(*info));
+    strncpy(info->name, pa_info->name, sizeof(info->name));
+    info->name[sizeof(info->name)-1] = '\0';
+    info->input_count = pa_info->maxInputChannels;
+    info->output_count = pa_info->maxOutputChannels;
+    info->default_samples_per_sec = (unsigned)pa_info->defaultSampleRate;
+    strncpy(info->driver, DRIVER_NAME, sizeof(info->driver));
+    info->driver[sizeof(info->driver)-1] = '\0';
+    info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
+		 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
 
-    return &info;
+    return PJ_SUCCESS;
 }
 
 
-/* Get PortAudio default input device ID */
+/* API: fill in with default parameter. */
+static pj_status_t  pa_default_param(pjmedia_aud_dev_factory *f,
+				     unsigned index,
+				     pjmedia_aud_param *param)
+{
+    pjmedia_aud_dev_info adi;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(f);
+
+    status = pa_get_dev_info(f, index, &adi);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_bzero(param, sizeof(*param));
+    if (adi.input_count && adi.output_count) {
+	param->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+	param->rec_id = index;
+	param->play_id = index;
+    } else if (adi.input_count) {
+	param->dir = PJMEDIA_DIR_CAPTURE;
+	param->rec_id = index;
+	param->play_id = PJMEDIA_AUD_INVALID_DEV;
+    } else if (adi.output_count) {
+	param->dir = PJMEDIA_DIR_PLAYBACK;
+	param->play_id = index;
+	param->rec_id = PJMEDIA_AUD_INVALID_DEV;
+    } else {
+	return PJMEDIA_EAUD_INVDEV;
+    }
+
+    param->clock_rate = adi.default_samples_per_sec;
+    param->channel_count = 1;
+    param->samples_per_frame = adi.default_samples_per_sec * 20 / 1000;
+    param->bits_per_sample = 16;
+    param->flags = adi.caps;
+    param->input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
+    param->output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+
+    return PJ_SUCCESS;
+}
+
+
+/* Internal: Get PortAudio default input device ID */
 static int pa_get_default_input_dev(int channel_count)
 {
     int i, count;
@@ -434,7 +600,7 @@ static int pa_get_default_input_dev(int channel_count)
     }
 
     /* If still no device is found, enumerate all devices */
-    count = pjmedia_snd_get_dev_count();
+    count = Pa_GetDeviceCount();
     for (i=0; i<count; ++i) {
 	const PaDeviceInfo *paDevInfo;
 
@@ -446,7 +612,7 @@ static int pa_get_default_input_dev(int channel_count)
     return -1;
 }
 
-/* Get PortAudio default output device ID */
+/* Internal: Get PortAudio default output device ID */
 static int pa_get_default_output_dev(int channel_count)
 {
     int i, count;
@@ -490,7 +656,7 @@ static int pa_get_default_output_dev(int channel_count)
     }
 
     /* If still no device is found, enumerate all devices */
-    count = pjmedia_snd_get_dev_count();
+    count = Pa_GetDeviceCount();
     for (i=0; i<count; ++i) {
 	const PaDeviceInfo *paDevInfo;
 
@@ -503,20 +669,16 @@ static int pa_get_default_output_dev(int channel_count)
 }
 
 
-/*
- * Open stream.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
-					  unsigned clock_rate,
-					  unsigned channel_count,
-					  unsigned samples_per_frame,
-					  unsigned bits_per_sample,
-					  pjmedia_snd_rec_cb rec_cb,
-					  void *user_data,
-					  pjmedia_snd_stream **p_snd_strm)
+/* Internal: create capture/recorder stream */
+static pj_status_t create_rec_stream( struct pa_aud_factory *pa,
+				      const pjmedia_aud_param *param,
+				      pjmedia_aud_rec_cb rec_cb,
+				      void *user_data,
+				      pjmedia_aud_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pjmedia_snd_stream *stream;
+    pjmedia_aud_dev_index rec_id;
+    struct pa_aud_stream *stream;
     PaStreamParameters inputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
@@ -525,44 +687,47 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     const PaStreamInfo *paSI;
     PaError err;
 
-    if (index < 0) {
-	index = pa_get_default_input_dev(channel_count);
-	if (index < 0) {
+    PJ_ASSERT_RETURN(rec_cb && p_snd_strm, PJ_EINVAL);
+
+    rec_id = param->rec_id;
+    if (rec_id < 0) {
+	rec_id = pa_get_default_input_dev(param->channel_count);
+	if (rec_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDREC;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     }
 
-    paDevInfo = Pa_GetDeviceInfo(index);
+    paDevInfo = Pa_GetDeviceInfo(rec_id);
     if (!paDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
-    if (bits_per_sample == 8)
+    if (param->bits_per_sample == 8)
 	sampleFormat = paUInt8;
-    else if (bits_per_sample == 16)
+    else if (param->bits_per_sample == 16)
 	sampleFormat = paInt16;
-    else if (bits_per_sample == 32)
+    else if (param->bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJMEDIA_ESNDINSAMPLEFMT;
+	return PJMEDIA_EAUD_SAMPFORMAT;
     
-    pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
+    pool = pj_pool_create(pa->pf, "recstrm", 1024, 1024, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 
-    stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
+    stream = PJ_POOL_ZALLOC_T(pool, struct pa_aud_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
     stream->dir = PJMEDIA_DIR_CAPTURE;
-    stream->rec_id = index;
+    stream->rec_id = rec_id;
     stream->play_id = -1;
     stream->user_data = user_data;
-    stream->samples_per_sec = clock_rate;
-    stream->samples_per_frame = samples_per_frame;
-    stream->bytes_per_sample = bits_per_sample / 8;
-    stream->channel_count = channel_count;
+    stream->samples_per_sec = param->clock_rate;
+    stream->samples_per_frame = param->samples_per_frame;
+    stream->bytes_per_sample = param->bits_per_sample / 8;
+    stream->channel_count = param->channel_count;
     stream->rec_cb = rec_cb;
 
     stream->rec_buf = (pj_int16_t*)pj_pool_alloc(pool, 
@@ -570,23 +735,26 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
     stream->rec_buf_count = 0;
 
     pj_bzero(&inputParam, sizeof(inputParam));
-    inputParam.device = index;
-    inputParam.channelCount = channel_count;
+    inputParam.device = rec_id;
+    inputParam.channelCount = param->channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
-    inputParam.suggestedLatency = snd_input_latency / 1000.0;
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY)
+	inputParam.suggestedLatency = param->input_latency_ms / 1000.0;
+    else
+	inputParam.suggestedLatency = PJMEDIA_SND_DEFAULT_REC_LATENCY / 1000.0;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
     /* Frames in PortAudio is number of samples in a single channel */
-    paFrames = samples_per_frame / channel_count;
+    paFrames = param->samples_per_frame / param->channel_count;
 
     err = Pa_OpenStream( &stream->rec_strm, &inputParam, NULL,
-			 clock_rate, paFrames, 
+			 param->clock_rate, paFrames, 
 			 paClipOff, &PaRecorderCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
-	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err);
     }
 
     paSI = Pa_GetStreamInfo(stream->rec_strm);
@@ -597,26 +765,25 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_rec( int index,
 			 "rate=%d, ch=%d, "
 			 "bits=%d, %d samples per frame, latency=%d ms",
 			 paDevInfo->name, paHostApiInfo->name,
-			 paRate, channel_count,
-			 bits_per_sample, samples_per_frame,
+			 paRate, param->channel_count,
+			 param->bits_per_sample, param->samples_per_frame,
 			 paLatency));
 
-    *p_snd_strm = stream;
+    *p_snd_strm = &stream->base;
     return PJ_SUCCESS;
 }
 
 
-PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned samples_per_frame,
-					unsigned bits_per_sample,
-					pjmedia_snd_play_cb play_cb,
-					void *user_data,
-					pjmedia_snd_stream **p_snd_strm)
+/* Internal: create playback stream */
+static pj_status_t create_play_stream(struct pa_aud_factory *pa,
+				      const pjmedia_aud_param *param,
+				      pjmedia_aud_play_cb play_cb,
+				      void *user_data,
+				      pjmedia_aud_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pjmedia_snd_stream *stream;
+    pjmedia_aud_dev_index play_id;
+    struct pa_aud_stream *stream;
     PaStreamParameters outputParam;
     int sampleFormat;
     const PaDeviceInfo *paDevInfo = NULL;
@@ -625,68 +792,75 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     unsigned paFrames, paRate, paLatency;
     PaError err;
 
-    if (index < 0) {
-	index = pa_get_default_output_dev(channel_count);
-	if (index < 0) {
+    PJ_ASSERT_RETURN(play_cb && p_snd_strm, PJ_EINVAL);
+
+    play_id = param->play_id;
+    if (play_id < 0) {
+	play_id = pa_get_default_output_dev(param->channel_count);
+	if (play_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDPLAY;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     } 
 
-    paDevInfo = Pa_GetDeviceInfo(index);
+    paDevInfo = Pa_GetDeviceInfo(play_id);
     if (!paDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
-    if (bits_per_sample == 8)
+    if (param->bits_per_sample == 8)
 	sampleFormat = paUInt8;
-    else if (bits_per_sample == 16)
+    else if (param->bits_per_sample == 16)
 	sampleFormat = paInt16;
-    else if (bits_per_sample == 32)
+    else if (param->bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJMEDIA_ESNDINSAMPLEFMT;
+	return PJMEDIA_EAUD_SAMPFORMAT;
     
-    pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
+    pool = pj_pool_create(pa->pf, "playstrm", 1024, 1024, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 
-    stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
+    stream = PJ_POOL_ZALLOC_T(pool, struct pa_aud_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paDevInfo->name);
     stream->dir = PJMEDIA_DIR_PLAYBACK;
-    stream->play_id = index;
+    stream->play_id = play_id;
     stream->rec_id = -1;
     stream->user_data = user_data;
-    stream->samples_per_sec = clock_rate;
-    stream->samples_per_frame = samples_per_frame;
-    stream->bytes_per_sample = bits_per_sample / 8;
-    stream->channel_count = channel_count;
+    stream->samples_per_sec = param->clock_rate;
+    stream->samples_per_frame = param->samples_per_frame;
+    stream->bytes_per_sample = param->bits_per_sample / 8;
+    stream->channel_count = param->channel_count;
     stream->play_cb = play_cb;
 
     stream->play_buf = (pj_int16_t*)pj_pool_alloc(pool, 
-		       stream->samples_per_frame * stream->bytes_per_sample);
+					    stream->samples_per_frame * 
+					    stream->bytes_per_sample);
     stream->play_buf_count = 0;
 
     pj_bzero(&outputParam, sizeof(outputParam));
-    outputParam.device = index;
-    outputParam.channelCount = channel_count;
+    outputParam.device = play_id;
+    outputParam.channelCount = param->channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = snd_output_latency / 1000.0;
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY)
+	outputParam.suggestedLatency=param->output_latency_ms / 1000.0;
+    else
+	outputParam.suggestedLatency=PJMEDIA_SND_DEFAULT_PLAY_LATENCY/1000.0;
 
     paHostApiInfo = Pa_GetHostApiInfo(paDevInfo->hostApi);
 
     /* Frames in PortAudio is number of samples in a single channel */
-    paFrames = samples_per_frame / channel_count;
+    paFrames = param->samples_per_frame / param->channel_count;
 
     err = Pa_OpenStream( &stream->play_strm, NULL, &outputParam,
-			 clock_rate,  paFrames, 
+			 param->clock_rate,  paFrames, 
 			 paClipOff, &PaPlayerCallback, stream );
     if (err != paNoError) {
 	pj_pool_release(pool);
-	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err);
     }
 
     paSI = Pa_GetStreamInfo(stream->play_strm);
@@ -696,32 +870,28 @@ PJ_DEF(pj_status_t) pjmedia_snd_open_player( int index,
     PJ_LOG(5,(THIS_FILE, "Opened device %d: %s(%s) for playing, sample rate=%d"
 			 ", ch=%d, "
 			 "bits=%d, %d samples per frame, latency=%d ms",
-			 index, paDevInfo->name, paHostApiInfo->name, 
-			 paRate, channel_count,
-		 	 bits_per_sample, samples_per_frame, paLatency));
+			 play_id, paDevInfo->name, paHostApiInfo->name, 
+			 paRate, param->channel_count,
+		 	 param->bits_per_sample, param->samples_per_frame, 
+			 paLatency));
 
-    *p_snd_strm = stream;
+    *p_snd_strm = &stream->base;
 
     return PJ_SUCCESS;
 }
 
 
-/*
- * Open both player and recorder.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
-				      int play_id,
-				      unsigned clock_rate,
-				      unsigned channel_count,
-				      unsigned samples_per_frame,
-				      unsigned bits_per_sample,
-				      pjmedia_snd_rec_cb rec_cb,
-				      pjmedia_snd_play_cb play_cb,
-				      void *user_data,
-				      pjmedia_snd_stream **p_snd_strm)
+/* Internal: Create both player and recorder stream */
+static pj_status_t create_bidir_stream(struct pa_aud_factory *pa,
+				       const pjmedia_aud_param *param,
+				       pjmedia_aud_rec_cb rec_cb,
+				       pjmedia_aud_play_cb play_cb,
+				       void *user_data,
+				       pjmedia_aud_stream **p_snd_strm)
 {
     pj_pool_t *pool;
-    pjmedia_snd_stream *stream;
+    pjmedia_aud_dev_index rec_id, play_id;
+    struct pa_aud_stream *stream;
     PaStream *paStream = NULL;
     PaStreamParameters inputParam;
     PaStreamParameters outputParam;
@@ -734,59 +904,63 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     unsigned paFrames, paRate, paInputLatency, paOutputLatency;
     PaError err;
 
+    PJ_ASSERT_RETURN(play_cb && rec_cb && p_snd_strm, PJ_EINVAL);
+
+    rec_id = param->rec_id;
     if (rec_id < 0) {
-	rec_id = pa_get_default_input_dev(channel_count);
+	rec_id = pa_get_default_input_dev(param->channel_count);
 	if (rec_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDREC;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     }
 
     paRecDevInfo = Pa_GetDeviceInfo(rec_id);
     if (!paRecDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
+    play_id = param->play_id;
     if (play_id < 0) {
-	play_id = pa_get_default_output_dev(channel_count);
+	play_id = pa_get_default_output_dev(param->channel_count);
 	if (play_id < 0) {
 	    /* No such device. */
-	    return PJMEDIA_ENOSNDPLAY;
+	    return PJMEDIA_EAUD_NODEFDEV;
 	}
     } 
 
     paPlayDevInfo = Pa_GetDeviceInfo(play_id);
     if (!paPlayDevInfo) {
 	/* Assumed it is "No such device" error. */
-	return PJMEDIA_ESNDINDEVID;
+	return PJMEDIA_EAUD_INVDEV;
     }
 
 
-    if (bits_per_sample == 8)
+    if (param->bits_per_sample == 8)
 	sampleFormat = paUInt8;
-    else if (bits_per_sample == 16)
+    else if (param->bits_per_sample == 16)
 	sampleFormat = paInt16;
-    else if (bits_per_sample == 32)
+    else if (param->bits_per_sample == 32)
 	sampleFormat = paInt32;
     else
-	return PJMEDIA_ESNDINSAMPLEFMT;
+	return PJMEDIA_EAUD_SAMPFORMAT;
     
-    pool = pj_pool_create( snd_mgr.factory, "sndstream", 1024, 1024, NULL);
+    pool = pj_pool_create(pa->pf, "sndstream", 1024, 1024, NULL);
     if (!pool)
 	return PJ_ENOMEM;
 
-    stream = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_stream);
+    stream = PJ_POOL_ZALLOC_T(pool, struct pa_aud_stream);
     stream->pool = pool;
     pj_strdup2_with_null(pool, &stream->name, paRecDevInfo->name);
     stream->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
     stream->play_id = play_id;
     stream->rec_id = rec_id;
     stream->user_data = user_data;
-    stream->samples_per_sec = clock_rate;
-    stream->samples_per_frame = samples_per_frame;
-    stream->bytes_per_sample = bits_per_sample / 8;
-    stream->channel_count = channel_count;
+    stream->samples_per_sec = param->clock_rate;
+    stream->samples_per_frame = param->samples_per_frame;
+    stream->bytes_per_sample = param->bits_per_sample / 8;
+    stream->channel_count = param->channel_count;
     stream->rec_cb = rec_cb;
     stream->play_cb = play_cb;
 
@@ -800,31 +974,37 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     pj_bzero(&inputParam, sizeof(inputParam));
     inputParam.device = rec_id;
-    inputParam.channelCount = channel_count;
+    inputParam.channelCount = param->channel_count;
     inputParam.hostApiSpecificStreamInfo = NULL;
     inputParam.sampleFormat = sampleFormat;
-    inputParam.suggestedLatency = snd_input_latency / 1000.0;
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY)
+	inputParam.suggestedLatency = param->input_latency_ms / 1000.0;
+    else
+	inputParam.suggestedLatency = PJMEDIA_SND_DEFAULT_REC_LATENCY / 1000.0;
 
     paRecHostApiInfo = Pa_GetHostApiInfo(paRecDevInfo->hostApi);
 
     pj_bzero(&outputParam, sizeof(outputParam));
     outputParam.device = play_id;
-    outputParam.channelCount = channel_count;
+    outputParam.channelCount = param->channel_count;
     outputParam.hostApiSpecificStreamInfo = NULL;
     outputParam.sampleFormat = sampleFormat;
-    outputParam.suggestedLatency = snd_output_latency / 1000.0;
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY)
+	outputParam.suggestedLatency=param->output_latency_ms / 1000.0;
+    else
+	outputParam.suggestedLatency=PJMEDIA_SND_DEFAULT_PLAY_LATENCY/1000.0;
 
     paPlayHostApiInfo = Pa_GetHostApiInfo(paPlayDevInfo->hostApi);
 
     /* Frames in PortAudio is number of samples in a single channel */
-    paFrames = samples_per_frame / channel_count;
+    paFrames = param->samples_per_frame / param->channel_count;
 
     /* If both input and output are on the same device, open a single stream
      * for both input and output.
      */
     if (rec_id == play_id) {
 	err = Pa_OpenStream( &paStream, &inputParam, &outputParam,
-			     clock_rate, paFrames, 
+			     param->clock_rate, paFrames, 
 			     paClipOff, &PaRecorderPlayerCallback, stream );
 	if (err == paNoError) {
 	    /* Set play stream and record stream to the same stream */
@@ -841,12 +1021,12 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
     if (paStream == NULL) {
 	/* Open input stream */
 	err = Pa_OpenStream( &stream->rec_strm, &inputParam, NULL,
-			     clock_rate, paFrames, 
+			     param->clock_rate, paFrames, 
 			     paClipOff, &PaRecorderCallback, stream );
 	if (err == paNoError) {
 	    /* Open output stream */
 	    err = Pa_OpenStream( &stream->play_strm, NULL, &outputParam,
-				 clock_rate, paFrames, 
+				 param->clock_rate, paFrames, 
 				 paClipOff, &PaPlayerCallback, stream );
 	    if (err != paNoError)
 		Pa_CloseStream(stream->rec_strm);
@@ -855,7 +1035,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 
     if (err != paNoError) {
 	pj_pool_release(pool);
-	return PJMEDIA_ERRNO_FROM_PORTAUDIO(err);
+	return PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err);
     }
 
     paSI = Pa_GetStreamInfo(stream->rec_strm);
@@ -870,23 +1050,52 @@ PJ_DEF(pj_status_t) pjmedia_snd_open( int rec_id,
 			 "output latency=%d ms",
 			 paRecDevInfo->name, paRecHostApiInfo->name,
 			 paPlayDevInfo->name, paPlayHostApiInfo->name,
-			 paRate, channel_count,
-			 bits_per_sample, samples_per_frame,
+			 paRate, param->channel_count,
+			 param->bits_per_sample, param->samples_per_frame,
 			 paInputLatency, paOutputLatency));
 
-    *p_snd_strm = stream;
-
+    *p_snd_strm = &stream->base;
 
     return PJ_SUCCESS;
 }
 
 
-/*
- * Get stream info.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
-						pjmedia_snd_stream_info *pi)
+/* API: create stream */
+static pj_status_t  pa_create_stream(pjmedia_aud_dev_factory *f,
+				     const pjmedia_aud_param *param,
+				     pjmedia_aud_rec_cb rec_cb,
+				     pjmedia_aud_play_cb play_cb,
+				     void *user_data,
+				     pjmedia_aud_stream **p_aud_strm)
 {
+    struct pa_aud_factory *pa = (struct pa_aud_factory*)f;
+    pj_status_t status;
+
+    if (param->dir == PJMEDIA_DIR_CAPTURE) {
+	status = create_rec_stream(pa, param, rec_cb, user_data, p_aud_strm);
+    } else if (param->dir == PJMEDIA_DIR_PLAYBACK) {
+	status = create_play_stream(pa, param, play_cb, user_data, p_aud_strm);
+    } else if (param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
+	status = create_bidir_stream(pa, param, rec_cb, play_cb, user_data, 
+				     p_aud_strm);
+    } else {
+	return PJ_EINVAL;
+    }
+
+    if (status != PJ_SUCCESS)
+	return status;
+
+    (*p_aud_strm)->op = &pa_strm_op;
+
+    return PJ_SUCCESS;
+}
+
+
+/* API: Get stream parameters */
+static pj_status_t strm_get_param(pjmedia_aud_stream *s,
+				  pjmedia_aud_param *pi)
+{
+    struct pa_aud_stream *strm = (struct pa_aud_stream*)s;
     const PaStreamInfo *paPlaySI = NULL, *paRecSI = NULL;
 
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
@@ -908,20 +1117,68 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_get_info(pjmedia_snd_stream *strm,
     pi->channel_count = strm->channel_count;
     pi->samples_per_frame = strm->samples_per_frame;
     pi->bits_per_sample = strm->bytes_per_sample * 8;
-    pi->rec_latency = (unsigned)(paRecSI ? paRecSI->inputLatency * 
-					   paRecSI->sampleRate : 0);
-    pi->play_latency = (unsigned)(paPlaySI ? paPlaySI->outputLatency * 
-					     paPlaySI->sampleRate : 0);
+    if (paRecSI) {
+	pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY;
+	pi->input_latency_ms = (unsigned)(paRecSI ? paRecSI->inputLatency * 
+						    1000 : 0);
+    }
+    if (paPlaySI) {
+	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+	pi->output_latency_ms = (unsigned)(paPlaySI? paPlaySI->outputLatency * 
+						     1000 : 0);
+    }
 
     return PJ_SUCCESS;
 }
 
 
-/*
- * Start stream.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
+/* API: get capability */
+static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
+	 		        pjmedia_aud_dev_cap cap,
+			        void *pval)
 {
+    struct pa_aud_stream *strm = (struct pa_aud_stream*)s;
+
+    PJ_ASSERT_RETURN(strm && pval, PJ_EINVAL);
+
+    if (cap==PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY && strm->rec_strm) {
+	const PaStreamInfo *si = Pa_GetStreamInfo(strm->rec_strm);
+	if (!si)
+	    return PJMEDIA_EAUD_SYSERR;
+
+	*(unsigned*)pval = (unsigned)(si->inputLatency * 1000);
+	return PJ_SUCCESS;
+    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY && strm->play_strm) {
+	const PaStreamInfo *si = Pa_GetStreamInfo(strm->play_strm);
+	if (!si)
+	    return PJMEDIA_EAUD_SYSERR;
+
+	*(unsigned*)pval = (unsigned)(si->outputLatency * 1000);
+	return PJ_SUCCESS;
+    } else {
+	return PJMEDIA_EAUD_INVCAP;
+    }
+}
+
+
+/* API: set capability */
+static pj_status_t strm_set_cap(pjmedia_aud_stream *strm,
+			        pjmedia_aud_dev_cap cap,
+			        const void *value)
+{
+    PJ_UNUSED_ARG(strm);
+    PJ_UNUSED_ARG(cap);
+    PJ_UNUSED_ARG(value);
+
+    /* Nothing is supported */
+    return PJMEDIA_EAUD_INVCAP;
+}
+
+
+/* API: start stream. */
+static pj_status_t strm_start(pjmedia_aud_stream *s)
+{
+    struct pa_aud_stream *stream = (struct pa_aud_stream*)s;
     int err = 0;
 
     PJ_LOG(5,(THIS_FILE, "Starting %s stream..", stream->name.ptr));
@@ -937,14 +1194,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_start(pjmedia_snd_stream *stream)
 
     PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
-/*
- * Stop stream.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
+
+/* API: stop stream. */
+static pj_status_t strm_stop(pjmedia_aud_stream *s)
 {
+    struct pa_aud_stream *stream = (struct pa_aud_stream*)s;
     int i, err = 0;
 
     stream->quit_flag = 1;
@@ -968,14 +1225,14 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_stop(pjmedia_snd_stream *stream)
 
     PJ_LOG(5,(THIS_FILE, "Done, status=%d", err));
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
-/*
- * Destroy stream.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
+
+/* API: destroy stream. */
+static pj_status_t strm_destroy(pjmedia_aud_stream *s)
 {
+    struct pa_aud_stream *stream = (struct pa_aud_stream*)s;
     int i, err = 0;
 
     stream->quit_flag = 1;
@@ -999,39 +1256,8 @@ PJ_DEF(pj_status_t) pjmedia_snd_stream_close(pjmedia_snd_stream *stream)
 
     pj_pool_release(stream->pool);
 
-    return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+    return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
 }
 
-/*
- * Deinitialize sound library.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_deinit(void)
-{
-    if (--snd_init_count == 0) {
-	int err;
+#endif	/* PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO */
 
-	PJ_LOG(4,(THIS_FILE, "PortAudio sound library shutting down.."));
-
-	err = Pa_Terminate();
-
-	return err ? PJMEDIA_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
-    } else {
-	return PJ_SUCCESS;
-    }
-}
-
-/*
- * Set sound latency.
- */
-PJ_DEF(pj_status_t) pjmedia_snd_set_latency(unsigned input_latency, 
-					    unsigned output_latency)
-{
-    snd_input_latency  = (input_latency == 0)? 
-			 PJMEDIA_SND_DEFAULT_REC_LATENCY : input_latency;
-    snd_output_latency = (output_latency == 0)? 
-			 PJMEDIA_SND_DEFAULT_PLAY_LATENCY : output_latency;
-
-    return PJ_SUCCESS;
-}
-
-#endif	/* PJMEDIA_SOUND_IMPLEMENTATION */
