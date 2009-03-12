@@ -54,8 +54,6 @@
  */
 #define GENERIC_URI_CHARS   "#?;:@&=+-_.!~*'()%$,/" "%"
 
-#define PJSIP_VERSION		"SIP/2.0"
-
 #define UNREACHED(expr)
 
 #define IS_NEWLINE(c)	((c)=='\r' || (c)=='\n')
@@ -893,6 +891,36 @@ PJ_DEF(pjsip_uri*) pjsip_parse_uri( pj_pool_t *pool,
     return NULL;
 }
 
+/* SIP version */
+static void parse_sip_version(pj_scanner *scanner)
+{
+    pj_str_t SIP = { "SIP", 3 };
+    pj_str_t V2 = { "2.0", 3 };
+    pj_str_t sip, version;
+
+    pj_scan_get( scanner, &pconst.pjsip_ALPHA_SPEC, &sip);
+    if (pj_scan_get_char(scanner) != '/')
+	on_syntax_error(scanner);
+    pj_scan_get_n( scanner, 3, &version);
+    if (pj_stricmp(&sip, &SIP) || pj_stricmp(&version, &V2))
+	on_syntax_error(scanner);
+}
+
+static pj_bool_t is_next_sip_version(pj_scanner *scanner)
+{
+    pj_str_t SIP = { "SIP", 3 };
+    pj_str_t sip;
+    int c;
+
+    c = pj_scan_peek(scanner, &pconst.pjsip_ALPHA_SPEC, &sip);
+    /* return TRUE if it is "SIP" followed by "/" or space.
+     * we include space since the "/" may be separated by space,
+     * although this would mean it would return TRUE if it is a
+     * request and the method is "SIP"!
+     */
+    return c && (c=='/' || c==' ' || c=='\t') && pj_stricmp(&sip, &SIP)==0;
+}
+
 /* Internal function to parse SIP message */
 static pjsip_msg *int_parse_msg( pjsip_parse_ctx *ctx,
 				 pjsip_parser_err_report *err_list)
@@ -926,7 +954,7 @@ retry_parse:
 	    return NULL;
 
 	/* Parse request or status line */
-	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) == 0) {
+	if (is_next_sip_version(scanner)) {
 	    msg = pjsip_msg_create(pool, PJSIP_RESPONSE_MSG);
 	    int_parse_status_line( scanner, &msg->line.status );
 	} else {
@@ -1125,7 +1153,7 @@ PJ_DEF(void) pjsip_parse_uri_param_imp( pj_scanner *scanner, pj_pool_t *pool,
 }
 
 
-/* Parse parameter (";" pname ["=" pvalue]) in header. */
+/* Parse parameter (";" pname ["=" pvalue]) in SIP header. */
 static void int_parse_param( pj_scanner *scanner, pj_pool_t *pool,
 			     pj_str_t *pname, pj_str_t *pvalue,
 			     unsigned option)
@@ -1513,9 +1541,7 @@ static void int_parse_req_line( pj_scanner *scanner, pj_pool_t *pool,
     pjsip_method_init_np( &req_line->method, &token);
 
     req_line->uri = int_parse_uri(scanner, pool, PJ_TRUE);
-    if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION, 7) != 0)
-	PJ_THROW( PJSIP_SYN_ERR_EXCEPTION);
-    pj_scan_advance_n (scanner, 7, 1);
+    parse_sip_version(scanner);
     pj_scan_get_newline( scanner );
 }
 
@@ -1525,10 +1551,7 @@ static void int_parse_status_line( pj_scanner *scanner,
 {
     pj_str_t token;
 
-    if (pj_scan_stricmp_alnum(scanner, PJSIP_VERSION, 7) != 0)
-	PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-    pj_scan_advance_n( scanner, 7, 1);
-
+    parse_sip_version(scanner);
     pj_scan_get( scanner, &pconst.pjsip_DIGIT_SPEC, &token);
     status_line->code = pj_strtoul(&token);
     if (*scanner->curptr != '\r' && *scanner->curptr != '\n')
@@ -1618,12 +1641,32 @@ end:
 
 /* Parse generic string header. */
 static void parse_generic_string_hdr( pjsip_generic_string_hdr *hdr,
-				      pj_scanner *scanner )
+				      pjsip_parse_ctx *ctx)
 {
-    if (pj_cis_match(&pconst.pjsip_NOT_NEWLINE, *scanner->curptr))
+    pj_scanner *scanner = ctx->scanner;
+
+    hdr->hvalue.slen = 0;
+
+    /* header may be mangled hence the loop */
+    while (pj_cis_match(&pconst.pjsip_NOT_NEWLINE, *scanner->curptr)) {
+	pj_str_t next, tmp;
+
 	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &hdr->hvalue);
-    else
-	hdr->hvalue.slen = 0;
+	if (IS_NEWLINE(*scanner->curptr))
+	    break;
+	/* mangled, get next fraction */
+	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &next);
+	/* concatenate */
+	tmp.ptr = (char*)pj_pool_alloc(ctx->pool, 
+				       hdr->hvalue.slen + next.slen + 2);
+	tmp.slen = 0;
+	pj_strcpy(&tmp, &hdr->hvalue);
+	pj_strcat2(&tmp, " ");
+	pj_strcat(&tmp, &next);
+	tmp.ptr[tmp.slen] = '\0';
+
+	hdr->hvalue = tmp;
+    }
 
     parse_hdr_end(scanner);
 }
@@ -1934,13 +1977,12 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	pj_str_t pname, pvalue;
 
 	//Parse with PARAM_CHAR instead, to allow IPv6
+	//No, back to using int_parse_param() for the "`" character!
 	//int_parse_param( scanner, pool, &pname, &pvalue, 0);
-	/* Get ';' character */
-	pj_scan_get_char(scanner);
-
-	parse_param_imp(scanner, pool, &pname, &pvalue, 
-			&pconst.pjsip_PARAM_CHAR_SPEC,
-			&pconst.pjsip_PARAM_CHAR_SPEC_ESC, 0);
+	//parse_param_imp(scanner, pool, &pname, &pvalue, 
+	//		&pconst.pjsip_TOKEN_SPEC,
+	//		&pconst.pjsip_TOKEN_SPEC_ESC, 0);
+	int_parse_param(scanner, pool, &pname, &pvalue, 0);
 
 	if (!parser_stricmp(pname, pconst.pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;
@@ -2075,10 +2117,9 @@ static pjsip_hdr* parse_hdr_via( pjsip_parse_ctx *ctx )
 	else
 	    pj_list_insert_before(first, hdr);
 
-	if (pj_scan_stricmp_alnum( scanner, PJSIP_VERSION "/", 8) != 0)
-	    PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
-
-	pj_scan_advance_n( scanner, 8, 1);
+	parse_sip_version(scanner);
+	if (pj_scan_get_char(scanner) != '/')
+	    on_syntax_error(scanner);
 
 	pj_scan_get( scanner, &pconst.pjsip_TOKEN_SPEC, &hdr->transport);
 	int_parse_host(scanner, &hdr->sent_by.host);
@@ -2119,7 +2160,7 @@ static pjsip_hdr* parse_hdr_generic_string( pjsip_parse_ctx *ctx )
     pjsip_generic_string_hdr *hdr;
 
     hdr = pjsip_generic_string_hdr_create(ctx->pool, NULL, NULL);
-    parse_generic_string_hdr(hdr, ctx->scanner);
+    parse_generic_string_hdr(hdr, ctx);
     return (pjsip_hdr*)hdr;
 
 }

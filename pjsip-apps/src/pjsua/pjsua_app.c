@@ -4023,6 +4023,97 @@ on_exit:
     ;
 }
 
+/*****************************************************************************
+ * A simple module to handle otherwise unhandled request. We will register
+ * this with the lowest priority.
+ */
+
+/* Notification on incoming request */
+static pj_bool_t default_mod_on_rx_request(pjsip_rx_data *rdata)
+{
+    pjsip_tx_data *tdata;
+    pjsip_status_code status_code;
+    pj_status_t status;
+
+    /* Don't respond to ACK! */
+    if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method, 
+			 &pjsip_ack_method) == 0)
+	return PJ_TRUE;
+
+    /* Create basic response. */
+    if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method, 
+			 &pjsip_notify_method) == 0)
+    {
+	/* Unsolicited NOTIFY's, send with Bad Request */
+	status_code = PJSIP_SC_BAD_REQUEST;
+    } else {
+	/* Probably unknown method */
+	status_code = PJSIP_SC_METHOD_NOT_ALLOWED;
+    }
+    status = pjsip_endpt_create_response(pjsua_get_pjsip_endpt(), 
+					 rdata, status_code, 
+					 NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create response", status);
+	return PJ_TRUE;
+    }
+
+    /* Add Allow if we're responding with 405 */
+    if (status_code == PJSIP_SC_METHOD_NOT_ALLOWED) {
+	const pjsip_hdr *cap_hdr;
+	cap_hdr = pjsip_endpt_get_capability(pjsua_get_pjsip_endpt(), 
+					     PJSIP_H_ALLOW, NULL);
+	if (cap_hdr) {
+	    pjsip_msg_add_hdr(tdata->msg, pjsip_hdr_clone(tdata->pool, 
+							   cap_hdr));
+	}
+    }
+
+    /* Add User-Agent header */
+    {
+	pj_str_t user_agent;
+	char tmp[80];
+	const pj_str_t USER_AGENT = { "User-Agent", 10};
+	pjsip_hdr *h;
+
+	pj_ansi_snprintf(tmp, sizeof(tmp), "PJSUA v%s/%s", 
+			 pj_get_version(), PJ_OS_NAME);
+	pj_strdup2_with_null(tdata->pool, &user_agent, tmp);
+
+	h = (pjsip_hdr*) pjsip_generic_string_hdr_create(tdata->pool,
+							 &USER_AGENT,
+							 &user_agent);
+	pjsip_msg_add_hdr(tdata->msg, h);
+    }
+
+    pjsip_endpt_send_response2(pjsua_get_pjsip_endpt(), rdata, tdata, 
+			       NULL, NULL);
+
+    return PJ_TRUE;
+}
+
+
+/* The module instance. */
+static pjsip_module mod_default_handler = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-default-handler", 19 },	/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_APPLICATION+99,	/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &default_mod_on_rx_request,		/* on_rx_request()	*/
+    NULL,				/* on_rx_response()	*/
+    NULL,				/* on_tx_request.	*/
+    NULL,				/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+
+};
+
+
+
 
 /*****************************************************************************
  * Public API
@@ -4070,6 +4161,12 @@ pj_status_t app_init(int argc, char *argv[])
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
 			&app_config.media_cfg);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Initialize our module to handle otherwise unhandled request */
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
+					 &mod_default_handler);
     if (status != PJ_SUCCESS)
 	return status;
 
