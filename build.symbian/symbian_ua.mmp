@@ -31,13 +31,17 @@ SYSTEMINCLUDE		..\pjsip\include
 SYSTEMINCLUDE		\epoc32\include
 SYSTEMINCLUDE		\epoc32\include\libc
 
-STATICLIBRARY		pjsua_lib.lib pjsip_ua.lib
-STATICLIBRARY		pjsip_simple.lib pjsip.lib pjsdp.lib pjmedia.lib
-STATICLIBRARY		pjnath.lib pjlib_util.lib pjlib.lib
+// Ordering static libs based on dependencies, most to least dependent,
+// this could be necessary for some SDKs, e.g: S60 3rd MR
+STATICLIBRARY		pjsua_lib.lib
+STATICLIBRARY		pjsip_ua.lib pjsip_simple.lib pjsip.lib
+STATICLIBRARY		libgsmcodec.lib libspeexcodec.lib libpassthroughcodec.lib
+STATICLIBRARY		pjmedia.lib
+STATICLIBRARY		pjmedia_audiodev.lib
+STATICLIBRARY		pjsdp.lib
+STATICLIBRARY		pjnath.lib
+STATICLIBRARY		pjlib_util.lib pjlib.lib
 STATICLIBRARY		libsrtp.lib
-STATICLIBRARY		libgsmcodec.lib libspeexcodec.lib
-STATICLIBRARY		libpassthroughcodec.lib
-STATICLIBRARY		pjmedia_audiodev.lib 
 
 #if SND_HAS_APS
 	LIBRARY		APSSession2.lib
