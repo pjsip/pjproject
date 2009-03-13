@@ -22,6 +22,7 @@
 
 #define CRC32_INDEX(c)	    (c & 0xff)
 #define CRC32_SHIFTED(c)    (c >> 8)
+#define CRC32_SWAP(c)       (c)
 
 static const pj_uint32_t crc_tab[] = {
     0x00000000L, 0x77073096L, 0xee0e612cL, 0x990951baL, 0x076dc419L,
@@ -82,6 +83,10 @@ static const pj_uint32_t crc_tab[] = {
 #elif defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN != 0
 #define CRC32_INDEX(c)	    (c >> 24)
 #define CRC32_SHIFTED(c)    (c << 8)
+#define CRC32_SWAP(c)       ((((c) & 0xff000000) >> 24) | \
+                             (((c) & 0x00ff0000) >>  8) | \
+                             (((c) & 0x0000ff00) <<  8) | \
+                             (((c) & 0x000000ff) << 24))
 
 static const pj_uint32_t crc_tab[] = {
     0x00000000L, 0x96300777L, 0x2c610eeeL, 0xba510999L, 0x19c46d07L,
@@ -179,7 +184,7 @@ PJ_DEF(pj_uint32_t) pj_crc32_update(pj_crc32_context *ctx,
 
 PJ_DEF(pj_uint32_t) pj_crc32_final(pj_crc32_context *ctx)
 {
-    return ctx->crc_state;
+    return CRC32_SWAP(ctx->crc_state);
 }
 
 
