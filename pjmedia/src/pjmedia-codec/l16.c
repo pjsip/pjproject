@@ -425,7 +425,7 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
     if (count < *max_count) {
 	/* 48KHz stereo */
 	codecs[count].type = PJMEDIA_TYPE_AUDIO;
-	codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_MONO;
+	codecs[count].pt = PJMEDIA_RTP_PT_L16_48KHZ_STEREO;
 	codecs[count].encoding_name = STR_L16;
 	codecs[count].clock_rate = 48000;
 	codecs[count].channel_cnt = 2;
