@@ -28,8 +28,18 @@
 /* Machine name, filled in by autoconf script */
 #undef PJ_M_NAME
 
-/* Endianness, as detected by autoconf */
-#undef WORDS_BIGENDIAN
+/* Endianness. It's reported on pjsip list on 09/02/13 that autoconf
+ * endianness detection failed for universal build, so special case
+ * for it here. Thanks Ruud Klaver for the fix.
+ */
+#ifdef PJ_DARWINOS
+#  ifdef __BIG_ENDIAN__
+#    define WORDS_BIGENDIAN	1
+#  endif
+#else
+    /* Endianness, as detected by autoconf */
+#  undef WORDS_BIGENDIAN
+#endif
 
 #ifdef WORDS_BIGENDIAN
 #  define PJ_IS_LITTLE_ENDIAN	0
@@ -47,3 +57,4 @@
 #define PJ_HAS_PENTIUM		0
 
 #endif	/* __PJ_COMPAT_M_AUTO_H__ */
+
