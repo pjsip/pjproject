@@ -400,7 +400,7 @@ int main()
     status = pj_init();
     PJ_ASSERT_RETURN(status==PJ_SUCCESS, 1);
     
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_COLOR);
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
 
     /* Must create a pool factory before we can allocate any memory. */
     pj_caching_pool_init(&cp, &pj_pool_factory_default_policy, 0);
