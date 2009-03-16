@@ -623,12 +623,13 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
 
 	param.play_id = index;
 	f = play_f;
-
-	/* For now, rec_id and play_id must belong to the same factory */
-	PJ_ASSERT_RETURN(rec_f == play_f, PJMEDIA_EAUD_INVDEV);
     }
 
-    
+    /* For now, rec_id and play_id must belong to the same factory */
+    PJ_ASSERT_RETURN((param.dir != PJMEDIA_DIR_CAPTURE_PLAYBACK) || 
+		     (rec_f == play_f),
+		     PJMEDIA_EAUD_INVDEV);
+
     /* Create the stream */
     status = f->op->create_stream(f, &param, rec_cb, play_cb,
 				  user_data, p_aud_strm);
