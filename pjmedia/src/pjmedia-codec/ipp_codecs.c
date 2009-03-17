@@ -1047,12 +1047,12 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	if (s->enc_mode < 0)
 	    goto on_error;
 
-	s->enc_setting.amr_nb = ippc->pt == PJMEDIA_RTP_PT_AMR;
+	s->enc_setting.amr_nb = (pj_uint8_t)(ippc->pt == PJMEDIA_RTP_PT_AMR);
 	s->enc_setting.octet_aligned = octet_align;
 	s->enc_setting.reorder = PJ_TRUE;
 	s->enc_setting.cmr = 15;
 	
-	s->dec_setting.amr_nb = ippc->pt == PJMEDIA_RTP_PT_AMR;
+	s->dec_setting.amr_nb = (pj_uint8_t)(ippc->pt == PJMEDIA_RTP_PT_AMR);
 	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = PJ_TRUE;
     }
