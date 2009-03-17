@@ -245,7 +245,7 @@ static void record(unsigned rec_index, const char *filename)
     pjmedia_port *wav = NULL;
     pjmedia_aud_param param;
     pjmedia_aud_stream *strm = NULL;
-    char line[10];
+    char line[10], *dummy;
     pj_status_t status;
 
     if (filename == NULL)
@@ -287,7 +287,7 @@ static void record(unsigned rec_index, const char *filename)
     }
 
     PJ_LOG(3,(THIS_FILE, "Recording started, press ENTER to stop"));
-    fgets(line, sizeof(line), stdin);
+    dummy = fgets(line, sizeof(line), stdin);
 
 on_return:
     if (strm) {
@@ -313,7 +313,7 @@ static void play_file(unsigned play_index, const char *filename)
     pjmedia_port *wav = NULL;
     pjmedia_aud_param param;
     pjmedia_aud_stream *strm = NULL;
-    char line[10];
+    char line[10], *dummy;
     pj_status_t status;
 
     if (filename == NULL)
@@ -354,7 +354,7 @@ static void play_file(unsigned play_index, const char *filename)
     }
 
     PJ_LOG(3,(THIS_FILE, "Playback started, press ENTER to stop"));
-    fgets(line, sizeof(line), stdin);
+    dummy = fgets(line, sizeof(line), stdin);
 
 on_return:
     if (strm) {
