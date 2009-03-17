@@ -1597,12 +1597,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_strdup(pool, &stream->port.info.encoding_name, &info->fmt.encoding_name);
     stream->port.info.clock_rate = info->fmt.clock_rate;
     stream->port.info.channel_count = info->fmt.channel_cnt;
-    stream->port.info.format.id = info->param->info.fmt_id;
     stream->port.port_data.pdata = stream;
-    if (stream->port.info.format.id == PJMEDIA_FORMAT_L16) {
+    if (info->param==NULL || info->param->info.fmt_id == PJMEDIA_FORMAT_L16) {
+	stream->port.info.format.id = PJMEDIA_FORMAT_L16;
+
 	stream->port.put_frame = &put_frame;
 	stream->port.get_frame = &get_frame;
     } else {
+	stream->port.info.format.id = info->param->info.fmt_id;
 	stream->port.info.format.bitrate = info->param->info.avg_bps;
 	stream->port.info.format.vad = (info->param->setting.vad != 0);
 
