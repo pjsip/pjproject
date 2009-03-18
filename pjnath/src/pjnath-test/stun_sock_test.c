@@ -627,12 +627,16 @@ static int keep_alive_test(pj_stun_config *cfg)
     /* Check that client status is still okay and on_status() callback is NOT
      * called
      */
+    /* No longer valid due to this ticket:
+     *  http://trac.pjsip.org/repos/ticket/742
+
     if (client->on_status_cnt != 0) {
 	PJ_LOG(3, (THIS_FILE, "    error: on_status() must not be called on successful"
 			      "keep-alive when mapped-address does not change"));
 	ret = -430;
 	goto on_return;
     }
+    */
     /* Check that client doesn't receive anything */
     if (client->on_rx_data_cnt != 0) {
 	PJ_LOG(3,(THIS_FILE, "    error: client shouldn't have received anything"));
@@ -686,7 +690,7 @@ static int keep_alive_test(pj_stun_config *cfg)
 	goto on_return;
     }
     /* Check that callback was called with correct operation */
-    if (client->last_op != PJ_STUN_SOCK_KEEP_ALIVE_OP) {
+    if (client->last_op != PJ_STUN_SOCK_MAPPED_ADDR_CHANGE) {
 	PJ_LOG(3,(THIS_FILE, "    error: expecting keep-alive operation status"));
 	ret = -470;
 	goto on_return;
