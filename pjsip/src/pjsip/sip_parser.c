@@ -325,6 +325,14 @@ static pj_status_t init_parser()
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_del_str(&pconst.pjsip_TOKEN_SPEC_ESC, "%");
 
+    status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC, &pconst.pjsip_TOKEN_SPEC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC, ":");
+
+    status = pj_cis_dup(&pconst.pjsip_VIA_PARAM_SPEC_ESC, &pconst.pjsip_TOKEN_SPEC_ESC);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    pj_cis_add_str(&pconst.pjsip_VIA_PARAM_SPEC, ":");
+
     status = pj_cis_dup(&pconst.pjsip_HOST_SPEC, &pconst.pjsip_ALNUM_SPEC);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
     pj_cis_add_str( &pconst.pjsip_HOST_SPEC, HOST);
@@ -770,6 +778,8 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     const char *pos;
     const char *line;
     int content_length = -1;
+    pj_str_t cur_msg;
+    const pj_str_t end_hdr = { "\n\r\n", 3};
 
     *msg_size = size;
 
@@ -779,8 +789,12 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     }
 
 
-    /* Find the end of header area by finding an empty line. */
-    pos = pj_ansi_strstr(buf, "\n\r\n");
+    /* Find the end of header area by finding an empty line. 
+     * Don't use plain strstr() since we want to be able to handle
+     * NULL character in the message
+     */
+    cur_msg.ptr = (char*)buf; cur_msg.slen = size;
+    pos = pj_strstr(&cur_msg, &end_hdr);
     if (pos == NULL) {
 	return PJSIP_EPARTIALMSG;
     }
@@ -789,7 +803,7 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
     body_start = pos+3;
 
     /* Find "Content-Length" header the hard way. */
-    line = pj_ansi_strchr(buf, '\n');
+    line = pj_strchr(&cur_msg, '\n');
     while (line && line < hdr_end) {
 	++line;
 	if ( ((*line=='C' || *line=='c') && 
@@ -840,7 +854,9 @@ PJ_DEF(pj_bool_t) pjsip_find_msg( const char *buf, pj_size_t size,
 	    break;
 
 	/* Go to next line. */
-	line = pj_ansi_strchr(line, '\n');
+	cur_msg.slen -= (line - cur_msg.ptr);
+	cur_msg.ptr = (char*)line;
+	line = pj_strchr(&cur_msg, '\n');
     }
 
     /* Found Content-Length? */
@@ -1652,7 +1668,7 @@ static void parse_generic_string_hdr( pjsip_generic_string_hdr *hdr,
 	pj_str_t next, tmp;
 
 	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &hdr->hvalue);
-	if (IS_NEWLINE(*scanner->curptr))
+	if (pj_scan_is_eof(scanner) || IS_NEWLINE(*scanner->curptr))
 	    break;
 	/* mangled, get next fraction */
 	pj_scan_get( scanner, &pconst.pjsip_NOT_NEWLINE, &next);
@@ -1982,7 +1998,15 @@ static void int_parse_via_param( pjsip_via_hdr *hdr, pj_scanner *scanner,
 	//parse_param_imp(scanner, pool, &pname, &pvalue, 
 	//		&pconst.pjsip_TOKEN_SPEC,
 	//		&pconst.pjsip_TOKEN_SPEC_ESC, 0);
-	int_parse_param(scanner, pool, &pname, &pvalue, 0);
+	//int_parse_param(scanner, pool, &pname, &pvalue, 0);
+	// This should be the correct one:
+	//  added special spec for Via parameter, basically token plus
+	//  ":" to allow IPv6 address in the received param.
+	pj_scan_get_char(scanner);
+	parse_param_imp(scanner, pool, &pname, &pvalue,
+			&pconst.pjsip_VIA_PARAM_SPEC,
+			&pconst.pjsip_VIA_PARAM_SPEC_ESC,
+			0);
 
 	if (!parser_stricmp(pname, pconst.pjsip_BRANCH_STR) && pvalue.slen) {
 	    hdr->branch_param = pvalue;

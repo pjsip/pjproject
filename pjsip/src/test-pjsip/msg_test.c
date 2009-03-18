@@ -73,6 +73,7 @@ struct test_msg
     "P-Associated-URI:\r\n" /* empty header without space */
     "\r\n",
     &create_msg0,
+    0,
     PJ_SUCCESS
 },
 {
@@ -100,6 +101,136 @@ struct test_msg
     "m=audio 3456 RTP/AVP 0 1 3 99\r\n"
     "a=rtpmap:0 PCMU/8000\r\n",
     &create_msg1,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.1 A short tortuous INVITE
+     */
+    "INVITE sip:vivekg@chair-dnrc.example.com;unknownparam SIP/2.0\n"
+    "TO :\n"
+    " sip:vivekg@chair-dnrc.example.com ;   tag    = 1918181833n\n"
+    "from   : \"J Rosenberg \\\\\\\"\"       <sip:jdrosen@example.com>\n"
+    "  ;\n"
+    "  tag = 98asjd8\n"
+    "MaX-fOrWaRdS: 0068\n"
+    "Call-ID: wsinv.ndaksdj@192.0.2.1\n"
+    "Content-Length   : 150\n"
+    "cseq: 0009\n"
+    "  INVITE\n"
+    "Via  : SIP  /   2.0\n"
+    " /UDP\n"
+    "    192.0.2.2;rport;branch=390skdjuw\n"
+    "s :\n"
+    "NewFangledHeader:   newfangled value\n"
+    " continued newfangled value\n"
+    "UnknownHeaderWithUnusualValue: ;;,,;;,;\n"
+    "Content-Type: application/sdp\n"
+    "Route:\n"
+    " <sip:services.example.com;lr;unknownwith=value;unknown-no-value>\n"
+    "v:  SIP  / 2.0  / TCP     spindle.example.com   ;\n"
+    "  branch  =   z9hG4bK9ikj8  ,\n"
+    " SIP  /    2.0   / UDP  192.168.255.111   ; branch=\n"
+    " z9hG4bK30239\n"
+    "m:\"Quoted string \\\"\\\"\" <sip:jdrosen@example.com> ; newparam =\n"
+    "      newvalue ;\n"
+    "  secondparam ; q = 0.33\r\n"
+    "\r\n"
+    "v=0\r\n"
+    "o=mhandley 29739 7272939 IN IP4 192.0.2.3\r\n"
+    "s=-\r\n"
+    "c=IN IP4 192.0.2.4\r\n"
+    "t=0 0\r\n"
+    "m=audio 49217 RTP/AVP 0 12\r\n"
+    "m=video 3227 RTP/AVP 31\r\n"
+    "a=rtpmap:31 LPC\r\n",
+    NULL,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.2 Wide Range of Valid Characters
+     */
+    "!interesting-Method0123456789_*+`.%indeed'~ sip:1_unusual.URI~(to-be!sure)&isn't+it$/crazy?,/;;*:&it+has=1,weird!*pas$wo~d_too.(doesn't-it)@example.com SIP/2.0\n"
+    "Via: SIP/2.0/UDP host1.example.com;rport;branch=z9hG4bK-.!%66*_+`'~\n"
+    "To: \"BEL:\\\x07 NUL:\\\x00 DEL:\\\x7F\" <sip:1_unusual.URI~(to-be!sure)&isn't+it$/crazy?,/;;*@example.com>\n"
+    "From: token1~` token2'+_ token3*%!.- <sip:mundane@example.com> ;fromParam''~+*_!.-%=\"\xD1\x80\xD0\xB0\xD0\xB1\xD0\xBE\xD1\x82\xD0\xB0\xD1\x8E\xD1\x89\xD0\xB8\xD0\xB9\";tag=_token~1'+`*%!-.\n"
+    "Call-ID: intmeth.word%ZK-!.*_+'@word`~)(><:\\/\"][?}{\n"
+    "CSeq: 139122385 !interesting-Method0123456789_*+`.%indeed'~\n"
+    "Max-Forwards: 255\n"
+    "extensionHeader-!.%*+_`'~: \xEF\xBB\xBF\xE5\xA4\xA7\xE5\x81\x9C\xE9\x9B\xBB\n"
+    "Content-Length: 0\r\n\r\n",
+    NULL,
+    641,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.3 Valid Use of the % Escaping Mechanism
+     */
+    "INVITE sip:sips%3Auser%40example.com@example.net SIP/2.0\n"
+    "To: sip:%75se%72@example.com\n"
+    "From: <sip:I%20have%20spaces@example.net>;tag=1234\n"
+    "Max-Forwards: 87\n"
+    "i: esc01.239409asdfakjkn23onasd0-3234\n"
+    "CSeq: 234234 INVITE\n"
+    "Via: SIP/2.0/UDP host5.example.net;rport;branch=z9hG4bKkdjuw\n"
+    "C: application/sdp\n"
+    "Contact:\n"
+    "  <sip:cal%6Cer@192.168.0.2:5060;%6C%72;n%61me=v%61lue%25%34%31>\n"
+    "Content-Length: 150\r\n"
+    "\r\n"
+    "v=0\r\n"
+    "o=mhandley 29739 7272939 IN IP4 192.0.2.1\r\n"
+    "s=-\r\n"
+    "c=IN IP4 192.0.2.1\r\n"
+    "t=0 0\r\n"
+    "m=audio 49217 RTP/AVP 0 12\r\n"
+    "m=video 3227 RTP/AVP 31\r\n"
+    "a=rtpmap:31 LPC\r\n",
+    NULL,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.4 Escaped Nulls in URIs
+     */
+    "REGISTER sip:example.com SIP/2.0\r\n"
+    "To: sip:null-%00-null@example.com\r\n"
+    "From: sip:null-%00-null@example.com;tag=839923423\r\n"
+    "Max-Forwards: 70\r\n"
+    "Call-ID: escnull.39203ndfvkjdasfkq3w4otrq0adsfdfnavd\r\n"
+    "CSeq: 14398234 REGISTER\r\n"
+    "Via: SIP/2.0/UDP host5.example.com;rport;branch=z9hG4bKkdjuw\r\n"
+    "Contact: <sip:%00@host5.example.com>\r\n"
+    "Contact: <sip:%00%00@host5.example.com>\r\n"
+    "L:0\r\n"
+    "\r\n",
+    NULL,
+    0,
+    PJ_SUCCESS
+},
+{
+    /* Torture message from RFC 4475
+     * 3.1.1.5 Use of % When It Is Not an Escape
+     */
+    "RE%47IST%45R sip:registrar.example.com SIP/2.0\r\n"
+    "To: \"%Z%45\" <sip:resource@example.com>\r\n"
+    "From: \"%Z%45\" <sip:resource@example.com>;tag=f232jadfj23\r\n"
+    "Call-ID: esc02.asdfnqwo34rq23i34jrjasdcnl23nrlknsdf\r\n"
+    "Via: SIP/2.0/TCP host.example.com;rport;branch=z9hG4bK209%fzsnel234\r\n"
+    "CSeq: 29344 RE%47IST%45R\r\n"
+    "Max-Forwards: 70\r\n"
+    "Contact: <sip:alias1@host1.example.com>\r\n"
+    "C%6Fntact: <sip:alias2@host2.example.com>\r\n"
+    "Contact: <sip:alias3@host3.example.com>\r\n"
+    "l: 0\r\n"
+    "\r\n",
+    NULL,
+    0,
     PJ_SUCCESS
 }
 };
@@ -126,7 +257,8 @@ static pj_status_t test_entry( pj_pool_t *pool, struct test_msg *entry )
     char msgbuf2[PJSIP_MAX_PKT_LEN];
     enum { BUFLEN = 512 };
 
-    entry->len = pj_ansi_strlen(entry->msg);
+    if (entry->len==0)
+	entry->len = pj_ansi_strlen(entry->msg);
 
     if (var.flag & FLAG_PARSE_ONLY)
 	goto parse_msg;
@@ -180,7 +312,7 @@ parse_msg:
     pj_sub_timestamp(&t2, &t1);
     pj_add_timestamp(&var.parse_time, &t2);
 
-    if (var.flag & FLAG_PARSE_ONLY)
+    if ((var.flag & FLAG_PARSE_ONLY) || entry->creator==NULL)
 	return PJ_SUCCESS;
 
     /* Create reference message. */

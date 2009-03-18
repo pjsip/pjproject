@@ -336,6 +336,9 @@ typedef struct pjsip_parser_const_t
     pj_cis_t pjsip_ALNUM_SPEC;		/**< Decimal + Alpha.		*/
     pj_cis_t pjsip_TOKEN_SPEC;		/**< Token.			*/
     pj_cis_t pjsip_TOKEN_SPEC_ESC;	/**< Token without '%' character */
+    pj_cis_t pjsip_VIA_PARAM_SPEC;	/**< Via param is token + ":" for
+					     IPv6.			*/
+    pj_cis_t pjsip_VIA_PARAM_SPEC_ESC;	/**< .. as above without '%'	*/
     pj_cis_t pjsip_HEX_SPEC;  		/**< Hexadecimal digits.	*/
     pj_cis_t pjsip_PARAM_CHAR_SPEC;	/**< For scanning pname (or pvalue
 					     when it's  not quoted.) in URI */
