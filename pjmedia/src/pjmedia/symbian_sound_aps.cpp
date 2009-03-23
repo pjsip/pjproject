@@ -20,6 +20,7 @@
 #include <pjmedia/sound.h>
 #include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/symbian_sound_aps.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/math.h>
