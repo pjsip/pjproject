@@ -267,6 +267,13 @@ static pj_bool_t jb_framelist_put_at(jb_framelist_t *framelist,
 				    framelist->flist_max_count;
 	}
     } else {
+	// check if frame is not too late, but watch out for sequence restart.
+	if (index < framelist->flist_origin && 
+	    framelist->flist_origin - index < 0x7FFF) 
+	{
+	    return PJ_FALSE;
+	}
+
 	where = framelist->flist_tail;
 	framelist->flist_origin = index;
 	framelist->flist_tail = (framelist->flist_tail + 1) % 
