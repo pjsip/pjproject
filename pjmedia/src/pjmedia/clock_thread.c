@@ -35,7 +35,7 @@ struct pjmedia_clock
     pj_timestamp	     interval;
     pj_timestamp	     next_tick;
     pj_timestamp	     timestamp;
-    unsigned		     samples_per_frame;
+    unsigned		     timestamp_inc;
     unsigned		     options;
     pj_uint64_t		     max_jump;
     pjmedia_clock_callback  *cb;
@@ -81,7 +81,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     clock->next_tick.u64 = 0;
     clock->timestamp.u64 = 0;
     clock->max_jump = MAX_JUMP_MSEC * clock->freq.u64 / 1000;
-    clock->samples_per_frame = samples_per_frame;
+    clock->timestamp_inc = samples_per_frame / channel_count;
     clock->options = options;
     clock->cb = cb;
     clock->user_data = user_data;
@@ -200,7 +200,7 @@ PJ_DEF(pj_bool_t) pjmedia_clock_wait( pjmedia_clock *clock,
 	ts->u64 = clock->timestamp.u64;
 
     /* Increment timestamp */
-    clock->timestamp.u64 += clock->samples_per_frame;
+    clock->timestamp.u64 += clock->timestamp_inc;
 
     /* Calculate next tick */
     clock_calc_next_tick(clock, &now);
@@ -255,7 +255,7 @@ static int clock_thread(void *arg)
 	    (*clock->cb)(&clock->timestamp, clock->user_data);
 
 	/* Increment timestamp */
-	clock->timestamp.u64 += clock->samples_per_frame;
+	clock->timestamp.u64 += clock->timestamp_inc;
 
 	/* Calculate next tick */
 	clock_calc_next_tick(clock, &now);
