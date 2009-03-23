@@ -854,12 +854,17 @@ PJ_DEF(pj_status_t) pjsip_process_route_set(pjsip_tx_data *tdata,
 		     PJSIP_ENOTREQUESTMSG);
     PJ_ASSERT_RETURN(dest_info != NULL, PJ_EINVAL);
 
-    /* Assert if the request contains strict route and strict
-     * route processing has been applied before. We need to
-     * restore the strict route with pjsip_restore_strict_route_set()
-     * before we can call this function again, otherwise strict
-     * route will be swapped twice!
+    /* If the request contains strict route, check that the strict route
+     * has been restored to its original values before processing the
+     * route set. The strict route is restored to the original values
+     * with pjsip_restore_strict_route_set(). If caller did not restore
+     * the strict route before calling this function, we need to call it
+     * here, or otherwise the strict-route and Request-URI will be swapped
+     * twice!
      */
+    if (tdata->saved_strict_route != NULL) {
+	pjsip_restore_strict_route_set(tdata);
+    }
     PJ_ASSERT_RETURN(tdata->saved_strict_route==NULL, PJ_EBUG);
 
     /* Find the first and last "Route" headers from the message. */
