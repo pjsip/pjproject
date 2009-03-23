@@ -244,7 +244,7 @@ static void usage(void)
     puts  ("  --ec-tail=MSEC      Set echo canceller tail length (default=256)");
     puts  ("  --ec-opt=OPT        Select echo canceller algorithm (0=default, ");
     puts  ("                        1=speex, 2=suppressor)");
-    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 20)");
+    puts  ("  --ilbc-mode=MODE    Set iLBC codec mode (20 or 30, default is 30)");
     puts  ("  --capture-dev=id    Audio capture device ID (default=-1)");
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
     puts  ("  --capture-lat=N     Audio capture latency, in ms (default=100)");
@@ -1487,6 +1487,14 @@ static int write_settings(const struct app_config *config,
 
 
     pj_strcat2(&cfg, "\n#\n# Network settings:\n#\n");
+
+    /* Nameservers */
+    for (i=0; i<config->cfg.nameserver_count; ++i) {
+	pj_ansi_sprintf(line, "--nameserver %.*s\n",
+			      (int)config->cfg.nameserver[i].slen,
+			      config->cfg.nameserver[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
 
     /* Outbound proxy */
     for (i=0; i<config->cfg.outbound_proxy_cnt; ++i) {
