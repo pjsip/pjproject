@@ -52,8 +52,6 @@ struct pjmedia_channel
     pjmedia_dir		    dir;	    /**< Channel direction.	    */
     unsigned		    pt;		    /**< Payload type.		    */
     pj_bool_t		    paused;	    /**< Paused?.		    */
-    unsigned		    in_pkt_size;    /**< Size of input buffer.	    */
-    void		   *in_pkt;	    /**< Input buffer.		    */
     unsigned		    out_pkt_size;   /**< Size of output buffer.	    */
     void		   *out_pkt;	    /**< Output buffer.		    */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
@@ -1393,12 +1391,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
     channel->dir = dir;
     channel->paused = 1;
     channel->pt = pt;
-
-    /* Allocate buffer for incoming packet. */
-
-    channel->in_pkt_size = PJMEDIA_MAX_MTU;
-    channel->in_pkt = pj_pool_alloc( pool, channel->in_pkt_size );
-    PJ_ASSERT_RETURN(channel->in_pkt != NULL, PJ_ENOMEM);
 
     
     /* Allocate buffer for outgoing packet. */
