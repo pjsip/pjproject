@@ -98,7 +98,11 @@ static pjmedia_codec_op l16_op =
     &l16_parse,
     &l16_encode,
     &l16_decode,
+#if !PLC_DISABLED
     &l16_recover
+#else
+    NULL
+#endif
 };
 
 /* Definition for L16 codec factory operations. */
@@ -128,8 +132,8 @@ struct l16_data
     unsigned		 frame_size;    /* Frame size, in bytes */
     unsigned		 clock_rate;    /* Clock rate */
 
-    pj_bool_t		 plc_enabled;
 #if !PLC_DISABLED
+    pj_bool_t		 plc_enabled;
     pjmedia_plc		*plc;
 #endif
     pj_bool_t		 vad_enabled;
@@ -526,9 +530,17 @@ static pj_status_t l16_init( pjmedia_codec *codec, pj_pool_t *pool )
 static pj_status_t l16_open(pjmedia_codec *codec, 
 			    pjmedia_codec_param *attr )
 {
-    /* Nothing to do.. */
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(attr);
+    struct l16_data *data = NULL;
+    
+    PJ_ASSERT_RETURN(codec && codec->codec_data && attr, PJ_EINVAL);
+
+    data = (struct l16_data*) codec->codec_data;
+
+    data->vad_enabled = (attr->setting.vad != 0);
+#if !PLC_DISABLED
+    data->plc_enabled = (attr->setting.plc != 0);
+#endif
+
     return PJ_SUCCESS;
 }
 
@@ -547,7 +559,9 @@ static pj_status_t  l16_modify(pjmedia_codec *codec,
     pj_assert(data != NULL);
 
     data->vad_enabled = (attr->setting.vad != 0);
+#if !PLC_DISABLED
     data->plc_enabled = (attr->setting.plc != 0);
+#endif
 
     return PJ_SUCCESS;
 }
