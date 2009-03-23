@@ -74,6 +74,12 @@ typedef enum pj_stun_sock_op
      */
     PJ_STUN_SOCK_KEEP_ALIVE_OP,
 
+    /**
+     * IP address change notification from the keep-alive operation.
+     */
+    PJ_STUN_SOCK_MAPPED_ADDR_CHANGE
+
+
 } pj_stun_sock_op;
 
 
