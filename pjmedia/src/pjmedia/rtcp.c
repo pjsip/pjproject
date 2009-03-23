@@ -62,7 +62,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
 	      + sess->tv_base.sec + JAN_1970;
 
     /* Calculate seconds fractions */
-    ts.u64 %= sess->ts_freq.u64;
+    ts.u64 = (ts.u64 - sess->ts_base.u64) % sess->ts_freq.u64;
     pj_assert(ts.u64 < sess->ts_freq.u64);
     ts.u64 = (ts.u64 << 32) / sess->ts_freq.u64;
 
