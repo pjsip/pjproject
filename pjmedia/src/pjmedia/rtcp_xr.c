@@ -27,7 +27,7 @@
 #include <pj/sock.h>
 #include <pj/string.h>
 
-#if 1 //defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 
 #define THIS_FILE "rtcp_xr.c"
 
@@ -246,7 +246,7 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	pj_uint32_t c31;
 	pj_uint32_t c32;
 	pj_uint32_t c33;
-	pj_uint32_t ctotal, p32, p23, m;
+	pj_uint32_t ctotal, m;
 	unsigned est_extra_delay;
 
 	r = (pjmedia_rtcp_xr_rb_voip_mtc*) &sess->pkt.buf[size];
@@ -257,58 +257,78 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp_xr( pjmedia_rtcp_xr_session *sess,
 	r->header.specific = 0;
 	r->header.length = pj_htons(8);
 
-	/* Calculate additional transition counts. */
+	/* Use temp vars for easiness. */
 	c11 = sess->voip_mtc_stat.c11;
 	c13 = sess->voip_mtc_stat.c13;
 	c14 = sess->voip_mtc_stat.c14;
 	c22 = sess->voip_mtc_stat.c22;
 	c23 = sess->voip_mtc_stat.c23;
 	c33 = sess->voip_mtc_stat.c33;
+	m = sess->ptime * sess->frames_per_packet;
+
+	/* Calculate additional transition counts. */
 	c31 = c13;
 	c32 = c23;
 	ctotal = c11 + c14 + c13 + c22 + c23 + c31 + c32 + c33;
-	m = sess->ptime * sess->frames_per_packet;
 
-	/* Calculate burst and densities. */
-	if (c11 && (c23 || c33)) {
-	    p32 = c32 / (c31 + c32 + c33);
-	    if((c22 + c23) < 1) {
-		p23 = 1;
+	if (ctotal) {
+	    pj_uint32_t p32, p23;
+
+	    //original version:
+	    //p32 = c32 / (c31 + c32 + c33);
+	    if (c31 + c32 + c33 == 0)
+		p32 = 0;
+	    else
+		p32 = (c32 << 16) / (c31 + c32 + c33);
+
+	    //original version:
+	    //if ((c22 + c23) < 1) {
+	    //    p23 = 1;
+	    //} else {
+	    //    p23 = 1 - c22 / (c22 + c23);
+	    //}
+	    if (c23 == 0) {
+	        p23 = 0;
 	    } else {
-		p23 = 1 - c22/(c22 + c23);
+	        p23 = (c23 << 16) / (c22 + c23);
 	    }
-	    sess->stat.rx.voip_mtc.burst_den = (pj_uint8_t)(256*p23/(p23 + p32));
-	    sess->stat.rx.voip_mtc.gap_den = (pj_uint8_t)(256*c14/(c11 + c14));
 
-	    /* Calculate burst and gap durations in ms */
-	    sess->stat.rx.voip_mtc.gap_dur = (pj_uint16_t)((c11+c14+c13)*m/c13);
-	    sess->stat.rx.voip_mtc.burst_dur = (pj_uint16_t)(ctotal*m/c13 - 
-					       sess->stat.rx.voip_mtc.gap_dur);
+	    /* Calculate loss/discard densities, scaled of 0-256 */
+	    if (c11 == 0)
+		sess->stat.rx.voip_mtc.gap_den = 0;
+	    else
+		sess->stat.rx.voip_mtc.gap_den = (pj_uint8_t)
+						 ((c14 << 8) / (c11 + c14));
+	    if (p23 == 0)
+		sess->stat.rx.voip_mtc.burst_den = 0;
+	    else
+		sess->stat.rx.voip_mtc.burst_den = (pj_uint8_t)
+						   ((p23 << 8) / (p23 + p32));
+
+	    /* Calculate (average) durations, in ms */
+	    if (c13 == 0) {
+		c13 = 1;
+		ctotal += 1;
+	    }
+	    sess->stat.rx.voip_mtc.gap_dur = (pj_uint16_t)
+					    ((c11+c14+c13) * m / c13);
+	    sess->stat.rx.voip_mtc.burst_dur = (pj_uint16_t)
+					    ((ctotal - (c11+c14+c13)) * m / c13);
+
+	    /* Callculate loss/discard rates, scaled 0-256 */
+	    sess->stat.rx.voip_mtc.loss_rate = (pj_uint8_t)
+			((sess->voip_mtc_stat.loss_count << 8) / ctotal);
+	    sess->stat.rx.voip_mtc.discard_rate = (pj_uint8_t)
+			((sess->voip_mtc_stat.discard_count << 8) / ctotal);
 	} else {
-	    /* No burst occurred yet until this time?
-	     * Just report full gap.
-	     */
-	    ctotal = sess->rtcp_session->stat.rx.pkt + 
-		     sess->voip_mtc_stat.loss_count +
-		     sess->voip_mtc_stat.discard_count;
-
+	    /* No lost/discarded packet yet. */
+	    sess->stat.rx.voip_mtc.gap_den = 0;
 	    sess->stat.rx.voip_mtc.burst_den = 0;
-	    sess->stat.rx.voip_mtc.gap_den = (pj_uint8_t)(256 * 
-					(sess->voip_mtc_stat.loss_count + 
-					sess->voip_mtc_stat.discard_count) / 
-					ctotal);
-
-	    /* Calculate burst and gap durations in ms */
-	    sess->stat.rx.voip_mtc.gap_dur = (pj_uint16_t)((m*ctotal) < 0xFFFF?
-					     (m*ctotal) : 0xFFFF);
+	    sess->stat.rx.voip_mtc.gap_dur = 0;
 	    sess->stat.rx.voip_mtc.burst_dur = 0;
+	    sess->stat.rx.voip_mtc.loss_rate = 0;
+	    sess->stat.rx.voip_mtc.discard_rate = 0;
 	}
-
-	/* Calculate loss and discard rates */
-	sess->stat.rx.voip_mtc.loss_rate = (pj_uint8_t)
-			     (256 * sess->voip_mtc_stat.loss_count / ctotal);
-	sess->stat.rx.voip_mtc.discard_rate = (pj_uint8_t)
-			     (256 * sess->voip_mtc_stat.discard_count / ctotal);
 
 	/* Set round trip delay (in ms) to RTT calculated after receiving
 	 * DLRR or DLSR.
