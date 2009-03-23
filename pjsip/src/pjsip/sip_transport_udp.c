@@ -494,10 +494,25 @@ static pj_status_t get_published_name(pj_sock_t sock,
 	}
 
     } else {
+	/* If bound address specifies "INADDR_ANY" (IPv6), get the
+         * IP address of local hostname
+         */
+	pj_uint32_t loop6[4] = { 0, 0, 0, 0};
+
 	bound_name->port = pj_ntohs(tmp_addr.ipv6.sin6_port);
+
+	if (pj_memcmp(&tmp_addr.ipv6.sin6_addr, loop6, sizeof(loop6))==0) {
+	    status = pj_gethostip(tmp_addr.addr.sa_family, &tmp_addr);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+
 	status = pj_inet_ntop(tmp_addr.addr.sa_family, 
 			      pj_sockaddr_get_addr(&tmp_addr),
 			      hostbuf, hostbufsz);
+	if (status == PJ_SUCCESS) {
+	    bound_name->host.slen = pj_ansi_strlen(hostbuf);
+	}
     }
 
 
@@ -509,7 +524,7 @@ static void udp_set_pub_name(struct udp_transport *tp,
 			     const pjsip_host_port *a_name)
 {
     enum { INFO_LEN = 80 };
-    char local_addr[PJ_INET6_ADDRSTRLEN];
+    char local_addr[PJ_INET6_ADDRSTRLEN+10];
 
     pj_assert(a_name->host.slen != 0);
     pj_strdup_with_null(tp->base.pool, &tp->base.local_name.host, 
@@ -521,14 +536,11 @@ static void udp_set_pub_name(struct udp_transport *tp,
 	tp->base.info = (char*) pj_pool_alloc(tp->base.pool, INFO_LEN);
     }
 
-    pj_inet_ntop(tp->base.local_addr.addr.sa_family,
-		 pj_sockaddr_get_addr(&tp->base.local_addr), 
-		 local_addr, sizeof(local_addr));
+    pj_sockaddr_print(&tp->base.local_addr, local_addr, sizeof(local_addr), 3);
 
     pj_ansi_snprintf( 
-	tp->base.info, INFO_LEN, "udp %s:%d [published as %s:%d]",
+	tp->base.info, INFO_LEN, "udp %s [published as %s:%d]",
 	local_addr,
-	pj_sockaddr_get_port(&tp->base.local_addr),
 	tp->base.local_name.host.ptr,
 	tp->base.local_name.port);
 }
@@ -639,7 +651,7 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
 {
     pj_pool_t *pool;
     struct udp_transport *tp;
-    const char *format;
+    const char *format, *ipv6_quoteb, *ipv6_quotee;
     unsigned i;
     pj_status_t status;
 
@@ -647,10 +659,14 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
 		     PJ_EINVAL);
 
     /* Object name. */
-    if (type & PJSIP_TRANSPORT_IPV6)
+    if (type & PJSIP_TRANSPORT_IPV6) {
 	format = "udpv6%p";
-    else
+	ipv6_quoteb = "[";
+	ipv6_quotee = "]";
+    } else {
 	format = "udp%p";
+	ipv6_quoteb = ipv6_quotee = "";
+    }
 
     /* Create pool. */
     pool = pjsip_endpt_create_pool(endpt, format, PJSIP_POOL_LEN_TRANSPORT, 
@@ -767,12 +783,14 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
     /* Done. */
     if (p_transport)
 	*p_transport = &tp->base;
-
+    
     PJ_LOG(4,(tp->base.obj_name, 
-	      "SIP %s started, published address is %.*s:%d",
+	      "SIP %s started, published address is %s%.*s%s:%d",
 	      pjsip_transport_get_type_desc((pjsip_transport_type_e)tp->base.key.type),
+	      ipv6_quoteb,
 	      (int)tp->base.local_name.host.slen,
 	      tp->base.local_name.host.ptr,
+	      ipv6_quotee,
 	      tp->base.local_name.port));
 
     return PJ_SUCCESS;
@@ -859,7 +877,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start6(pjsip_endpoint *endpt,
 {
     pj_sock_t sock;
     pj_status_t status;
-    char addr_buf[PJ_INET_ADDRSTRLEN];
+    char addr_buf[PJ_INET6_ADDRSTRLEN];
     pjsip_host_port bound_name;
 
     PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
@@ -883,8 +901,8 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_start6(pjsip_endpoint *endpt,
 	a_name = &bound_name;
     }
 
-    return pjsip_udp_transport_attach( endpt, sock, a_name, async_cnt, 
-				       p_transport);
+    return pjsip_udp_transport_attach2(endpt, PJSIP_TRANSPORT_UDP6,
+				       sock, a_name, async_cnt, p_transport);
 }
 
 /*
@@ -981,7 +999,7 @@ PJ_DEF(pj_status_t) pjsip_udp_transport_restart(pjsip_transport *transport,
     tp = (struct udp_transport*) transport;
 
     if (option & PJSIP_UDP_TRANSPORT_DESTROY_SOCKET) {
-	char addr_buf[PJ_INET_ADDRSTRLEN];
+	char addr_buf[PJ_INET6_ADDRSTRLEN];
 	pjsip_host_port bound_name;
 
 	/* Request to recreate transport */
