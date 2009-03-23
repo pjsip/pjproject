@@ -1241,6 +1241,9 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 	pjmedia_transport_close(call->med_tp);
 	call->med_tp = call->med_orig;
     }
+
+    check_snd_dev_idle();
+
     return PJ_SUCCESS;
 }
 
