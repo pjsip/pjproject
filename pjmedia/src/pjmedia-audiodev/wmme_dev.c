@@ -1256,12 +1256,20 @@ static pj_status_t stream_destroy(pjmedia_aud_stream *strm)
 
     stream_stop(strm);
 
+    /* Stop the stream thread */
     if (stream->thread)
     {
 	SetEvent(stream->thread_quit_event);
 	pj_thread_join(stream->thread);
 	pj_thread_destroy(stream->thread);
 	stream->thread = NULL;
+    }
+
+    /* Close the thread quit event */
+    if (stream->thread_quit_event)
+    {
+	CloseHandle(stream->thread_quit_event);
+	stream->thread_quit_event = NULL;
     }
 
     /* Unprepare the headers and close the play device */
