@@ -681,7 +681,7 @@ static int PJ_THREAD_FUNC wmme_dev_thread(void *arg)
     unsigned eventCount;
     pj_status_t status = PJ_SUCCESS;
     static unsigned rec_cnt, play_cnt;
-    enum { MAX_BURST = 1 };
+    enum { MAX_BURST = 1000 };
 
     rec_cnt = play_cnt = 0;
 
