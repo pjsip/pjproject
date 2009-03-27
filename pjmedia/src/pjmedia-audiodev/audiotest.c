@@ -234,20 +234,20 @@ PJ_DEF(pj_status_t) pjmedia_aud_test( const pjmedia_aud_param *param,
     result->play.frame_cnt = test_data.playback_data.delay.n;
     result->play.min_interval = DIV_ROUND(test_data.playback_data.delay.min, 1000);
     result->play.max_interval = DIV_ROUND(test_data.playback_data.delay.max, 1000);
-    result->play.avg_interval = DIV_ROUND(test_data.capture_data.delay.mean, 1000);
+    result->play.avg_interval = DIV_ROUND(test_data.playback_data.delay.mean, 1000);
     result->play.dev_interval = DIV_ROUND(tmp, 1000);
     result->play.max_burst    = DIV_ROUND_UP(result->play.max_interval, ptime);
 
     /* Check drifting */
     if (param->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK) {
-	int end_diff, start_diff, drift;
+	int play_diff, cap_diff, drift;
 
-	end_diff = test_data.capture_data.last_timestamp -
-		   test_data.playback_data.last_timestamp;
-	start_diff = test_data.capture_data.first_timestamp-
-		      test_data.playback_data.first_timestamp;
-	drift = end_diff > start_diff? end_diff - start_diff :
-		start_diff - end_diff;
+	play_diff = test_data.playback_data.last_timestamp -
+		    test_data.playback_data.first_timestamp;
+	cap_diff  = test_data.capture_data.last_timestamp -
+		    test_data.capture_data.first_timestamp;
+	drift = play_diff > cap_diff? play_diff - cap_diff :
+		cap_diff - play_diff;
 
 	/* Allow one frame tolerance for clock drift detection */
 	if (drift < (int)param->samples_per_frame) {

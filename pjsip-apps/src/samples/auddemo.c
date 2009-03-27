@@ -29,6 +29,8 @@
 
 
 static unsigned dev_count;
+static unsigned playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+static unsigned capture_lat = PJMEDIA_SND_DEFAULT_REC_LATENCY;
 
 static void app_perror(const char *title, pj_status_t status)
 {
@@ -177,6 +179,12 @@ static void test_device(pjmedia_dir dir, unsigned rec_id, unsigned play_id,
     param.clock_rate = clock_rate;
     param.channel_count = chnum;
     param.samples_per_frame = clock_rate * chnum * ptime / 1000;
+
+    /* Latency settings */
+    param.flags |= (PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY | 
+		    PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY);
+    param.input_latency_ms = capture_lat;
+    param.output_latency_ms = playback_lat;
 
     PJ_LOG(3,(THIS_FILE, "Performing test.."));
 
@@ -383,6 +391,10 @@ static void print_menu(void)
     puts("                             CH:   # of channels");
     puts("  r RID [FILE]             Record capture device RID to WAV file");
     puts("  p PID [FILE]             Playback WAV file to device ID PID");
+    puts("  d [RLAT [PLAT]]          Get/set sound device latencies (in ms):");
+    puts("                             Specify no param to get current latencies setting");
+    puts("                             RLAT      :  record latency (-1 for default)");
+    puts("                             PLAT      :  playback latency (-1 for default)");
     puts("  v                        Toggle log verbosity");
     puts("  q                        Quit");
     puts("");
@@ -517,6 +529,26 @@ int main()
 		    play_file(index, filename);
 		else
 		    puts("error: invalid command syntax");
+	    }
+	    break;
+
+	case 'd':
+	    /* latencies */
+	    {
+		int rec_lat, play_lat;
+
+		if (sscanf(line+2, "%d %d", &rec_lat, &play_lat) == 2) {
+		    capture_lat = (unsigned) 
+			 (rec_lat>=0? rec_lat:PJMEDIA_SND_DEFAULT_REC_LATENCY);
+		    playback_lat = (unsigned)
+			 (play_lat >= 0? play_lat : PJMEDIA_SND_DEFAULT_PLAY_LATENCY);
+		    printf("Recording latency=%ums, playback latency=%ums",
+			   capture_lat, playback_lat);
+		} else {
+		    printf("Current latencies: record=%ums, playback=%ums",
+			   capture_lat, playback_lat);
+		}
+		puts("");
 	    }
 	    break;
 
