@@ -391,10 +391,10 @@ static void print_menu(void)
     puts("                             CH:   # of channels");
     puts("  r RID [FILE]             Record capture device RID to WAV file");
     puts("  p PID [FILE]             Playback WAV file to device ID PID");
-    puts("  d [RLAT [PLAT]]          Get/set sound device latencies (in ms):");
+    puts("  d [RLAT PLAT]            Get/set sound device latencies (in ms):");
     puts("                             Specify no param to get current latencies setting");
-    puts("                             RLAT      :  record latency (-1 for default)");
-    puts("                             PLAT      :  playback latency (-1 for default)");
+    puts("                             RLAT: record latency (-1 for default)");
+    puts("                             PLAT: playback latency (-1 for default)");
     puts("  v                        Toggle log verbosity");
     puts("  q                        Quit");
     puts("");
