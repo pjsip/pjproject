@@ -56,6 +56,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libspeex
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_auddev_wince
+    End Project Dependency
 }}}
 
 ###############################################################################
