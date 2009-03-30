@@ -1268,6 +1268,12 @@ PJ_DECL(pj_uint32_t) pj_elapsed_msec( const pj_timestamp *start,
                                       const pj_timestamp *stop );
 
 /**
+ * Variant of #pj_elapsed_msec() which returns 64bit value.
+ */
+PJ_DECL(pj_uint64_t) pj_elapsed_msec64(const pj_timestamp *start,
+                                       const pj_timestamp *stop );
+
+/**
  * Calculate the elapsed time in 32-bit microseconds.
  * This function calculates the elapsed time using highest precision
  * calculation that is available for current platform, considering

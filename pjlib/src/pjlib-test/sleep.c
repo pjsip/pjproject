@@ -55,19 +55,35 @@
 
 static int simple_sleep_test(void)
 {
-    enum { COUNT = 5 };
+    enum { COUNT = 10 };
     int i;
     pj_status_t rc;
     
     PJ_LOG(3,(THIS_FILE, "..will write messages every 1 second:"));
     
     for (i=0; i<COUNT; ++i) {
+	pj_time_val tv;
+	pj_parsed_time pt;
+
 	rc = pj_thread_sleep(1000);
 	if (rc != PJ_SUCCESS) {
 	    app_perror("...error: pj_thread_sleep()", rc);
 	    return -10;
 	}
-	PJ_LOG(3,(THIS_FILE, "...wake up.."));
+
+	rc = pj_gettimeofday(&tv);
+	if (rc != PJ_SUCCESS) {
+	    app_perror("...error: pj_gettimeofday()", rc);
+	    return -11;
+	}
+
+	pj_time_decode(&tv, &pt);
+
+	PJ_LOG(3,(THIS_FILE, 
+		  "...%04d-%02d-%02d %02d:%02d:%02d.%03d",
+		  pt.year, pt.mon, pt.day,
+		  pt.hour, pt.min, pt.sec, pt.msec));
+
     }
 
     return 0;
@@ -75,13 +91,15 @@ static int simple_sleep_test(void)
 
 static int sleep_duration_test(void)
 {
-    enum { MIS = 20, DURATION = 1000, DURATION2 = 500 };
+    enum { MIS = 20};
+    unsigned duration[] = { 2000, 1000, 500, 200, 100 };
+    unsigned i;
     pj_status_t rc;
 
     PJ_LOG(3,(THIS_FILE, "..running sleep duration test"));
 
     /* Test pj_thread_sleep() and pj_gettimeofday() */
-    {
+    for (i=0; i<PJ_ARRAY_SIZE(duration); ++i) {
         pj_time_val start, stop;
 	pj_uint32_t msec;
 
@@ -93,7 +111,7 @@ static int sleep_duration_test(void)
         }
 
         /* Sleep */
-        rc = pj_thread_sleep(DURATION);
+        rc = pj_thread_sleep(duration[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: pj_thread_sleep()", rc);
             return -20;
@@ -109,20 +127,20 @@ static int sleep_duration_test(void)
 	msec = PJ_TIME_VAL_MSEC(stop);
 
 	/* Check if it's within range. */
-	if (msec < DURATION * (100-MIS)/100 ||
-	    msec > DURATION * (100+MIS)/100)
+	if (msec < duration[i] * (100-MIS)/100 ||
+	    msec > duration[i] * (100+MIS)/100)
 	{
 	    PJ_LOG(3,(THIS_FILE, 
 		      "...error: slept for %d ms instead of %d ms "
 		      "(outside %d%% err window)",
-		      msec, DURATION, MIS));
+		      msec, duration[i], MIS));
 	    return -30;
 	}
     }
 
 
     /* Test pj_thread_sleep() and pj_get_timestamp() and friends */
-    {
+    for (i=0; i<PJ_ARRAY_SIZE(duration); ++i) {
 	pj_time_val t1, t2;
         pj_timestamp start, stop;
 	pj_uint32_t msec;
@@ -140,7 +158,7 @@ static int sleep_duration_test(void)
 	pj_gettimeofday(&t1);
 
         /* Sleep */
-        rc = pj_thread_sleep(DURATION2);
+        rc = pj_thread_sleep(duration[i]);
         if (rc != PJ_SUCCESS) {
             app_perror("...error: pj_thread_sleep()", rc);
             return -70;
@@ -162,13 +180,13 @@ static int sleep_duration_test(void)
         msec = pj_elapsed_msec(&start, &stop);
 
 	/* Check if it's within range. */
-	if (msec < DURATION2 * (100-MIS)/100 ||
-	    msec > DURATION2 * (100+MIS)/100)
+	if (msec < duration[i] * (100-MIS)/100 ||
+	    msec > duration[i] * (100+MIS)/100)
 	{
 	    PJ_LOG(3,(THIS_FILE, 
 		      "...error: slept for %d ms instead of %d ms "
 		      "(outside %d%% err window)",
-		      msec, DURATION2, MIS));
+		      msec, duration[i], MIS));
 	    PJ_TIME_VAL_SUB(t2, t1);
 	    PJ_LOG(3,(THIS_FILE, 
 		      "...info: gettimeofday() reported duration is "
