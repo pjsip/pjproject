@@ -1,10 +1,17 @@
 
-TARGET = i386-win32-vc$(VC_VER)-$(BUILD_MODE)
 LIBEXT = .lib
 
 !if "$(BUILD_MODE)" == "debug"
+TARGET = i386-win32-vc$(VC_VER)-debug
 BUILD_FLAGS = /MTd /Od /Zi /W4
+!elseif "$(BUILD_MODE)" == "debug-dynamic"
+TARGET = i386-win32-vc$(VC_VER)-debug
+BUILD_FLAGS = /MDd /Od /Zi /W4
+!elseif "$(BUILD_MODE)" == "release-static"
+TARGET = i386-win32-vc$(VC_VER)-release
+BUILD_FLAGS = /Ox /MT /DNDEBUG /W4
 !else
+TARGET = i386-win32-vc$(VC_VER)-$(BUILD_MODE)
 BUILD_FLAGS = /Ox /MD /DNDEBUG /W4
 !endif
 
