@@ -30,6 +30,7 @@
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/ilbc.h>
 #include <pjmedia-codec/g722.h>
+#include <pjmedia-codec/g7221.h>
 #include <pjmedia-codec/ipp_codecs.h>
 #include <pjmedia-codec/passthrough.h>
 

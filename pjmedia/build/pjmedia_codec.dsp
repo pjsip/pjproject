@@ -42,7 +42,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
-# ADD CPP /nologo /MD /W4 /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /I "../../third_party/speex/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /c
+# ADD CPP /nologo /MD /W4 /Zi /O2 /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /I "../../third_party" /I "../../third_party/speex/include" /D "NDEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
@@ -67,7 +67,7 @@ LIB32=link.exe -lib
 # PROP Target_Dir ""
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_MBCS" /D "_LIB" /YX /FD /GZ /c
-# ADD CPP /nologo /MTd /W4 /Gm /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /I "../../third_party/speex/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
+# ADD CPP /nologo /MTd /W4 /Gm /ZI /Od /I "../include" /I "../../pjlib/include" /I "../src/pjmedia-codec" /I "../../third_party" /I "../../third_party/speex/include" /D "_DEBUG" /D "WIN32" /D "_MBCS" /D "_LIB" /D PJ_WIN32=1 /D PJ_M_I386=1 /D "HAVE_CONFIG_H" /FR /FD /GZ /c
 # SUBTRACT CPP /YX
 # ADD BASE RSC /l 0x409 /d "_DEBUG"
 # ADD RSC /l 0x409 /d "_DEBUG"
@@ -110,6 +110,10 @@ SOURCE="..\src\pjmedia-codec\g722\g722_enc.h"
 # Begin Source File
 
 SOURCE="..\src\pjmedia-codec\g722.c"
+# End Source File
+# Begin Source File
+
+SOURCE="..\src\pjmedia-codec\g7221.c"
 # End Source File
 # Begin Source File
 
@@ -177,6 +181,10 @@ SOURCE="..\include\pjmedia-codec\config.h"
 # Begin Source File
 
 SOURCE="..\include\pjmedia-codec\g722.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjmedia-codec\g7221.h"
 # End Source File
 # Begin Source File
 

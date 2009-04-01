@@ -22,7 +22,6 @@
 
 #include <pjmedia-codec/config.h>
 
-
 /**
  * These are the dynamic payload types that are used by codecs in
  * this library. Also see the header file <pjmedia/codec.h> for list
@@ -44,12 +43,12 @@ enum
     PJMEDIA_RTP_PT_SPEEX_UWB,			/**< Speex 32KHz	    */
     PJMEDIA_RTP_PT_L16_8KHZ_MONO,		/**< L16 @ 8KHz, mono	    */
     PJMEDIA_RTP_PT_L16_8KHZ_STEREO,		/**< L16 @ 8KHz, stereo     */
-    PJMEDIA_RTP_PT_L16_11KHZ_MONO,		/**< L16 @ 11KHz, mono	    */
-    PJMEDIA_RTP_PT_L16_11KHZ_STEREO,		/**< L16 @ 11KHz, stereo    */
+    //PJMEDIA_RTP_PT_L16_11KHZ_MONO,		/**< L16 @ 11KHz, mono	    */
+    //PJMEDIA_RTP_PT_L16_11KHZ_STEREO,		/**< L16 @ 11KHz, stereo    */
     PJMEDIA_RTP_PT_L16_16KHZ_MONO,		/**< L16 @ 16KHz, mono	    */
     PJMEDIA_RTP_PT_L16_16KHZ_STEREO,		/**< L16 @ 16KHz, stereo    */
-    PJMEDIA_RTP_PT_L16_22KHZ_MONO,		/**< L16 @ 22KHz, mono	    */
-    PJMEDIA_RTP_PT_L16_22KHZ_STEREO,		/**< L16 @ 22KHz, stereo    */
+    //PJMEDIA_RTP_PT_L16_22KHZ_MONO,		/**< L16 @ 22KHz, mono	    */
+    //PJMEDIA_RTP_PT_L16_22KHZ_STEREO,		/**< L16 @ 22KHz, stereo    */
     PJMEDIA_RTP_PT_L16_32KHZ_MONO,		/**< L16 @ 32KHz, mono	    */
     PJMEDIA_RTP_PT_L16_32KHZ_STEREO,		/**< L16 @ 32KHz, stereo    */
     PJMEDIA_RTP_PT_L16_48KHZ_MONO,		/**< L16 @ 48KHz, mono	    */
@@ -65,6 +64,11 @@ enum
     PJMEDIA_RTP_PT_G722_1_16,			/**< G722.1 (16Kbps)	    */
     PJMEDIA_RTP_PT_G722_1_24,			/**< G722.1 (24Kbps)	    */
     PJMEDIA_RTP_PT_G722_1_32,			/**< G722.1 (32Kbps)	    */
+    PJMEDIA_RTP_PT_G7221C_24,			/**< G722.1 Annex C (24Kbps)*/
+    PJMEDIA_RTP_PT_G7221C_32,			/**< G722.1 Annex C (32Kbps)*/
+    PJMEDIA_RTP_PT_G7221C_48,			/**< G722.1 Annex C (48Kbps)*/
+    PJMEDIA_RTP_PT_G7221_RSV1,			/**< G722.1 reserve	    */
+    PJMEDIA_RTP_PT_G7221_RSV2,			/**< G722.1 reserve	    */
 };
 
 

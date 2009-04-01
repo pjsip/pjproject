@@ -330,6 +330,8 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 	++count;
     }
 
+// disable some L16 modes
+#if 0
     if (count < *max_count) {
 	/* 11025 Hz mono */
 	codecs[count].type = PJMEDIA_TYPE_AUDIO;
@@ -349,6 +351,7 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 	codecs[count].channel_cnt = 2;
 	++count;
     }
+#endif
 
     if (count < *max_count) {
 	/* 16000 Hz mono */
@@ -371,6 +374,8 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 	++count;
     }
 
+// disable some L16 modes
+#if 0
     if (count < *max_count) {
 	/* 22050 Hz mono */
 	codecs[count].type = PJMEDIA_TYPE_AUDIO;
@@ -391,6 +396,7 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 	codecs[count].channel_cnt = 2;
 	++count;
     }
+#endif
 
     if (count < *max_count) {
 	/* 32000 Hz mono */

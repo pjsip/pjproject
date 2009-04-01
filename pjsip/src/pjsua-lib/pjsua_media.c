@@ -202,6 +202,16 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     }
 #endif /* PJMEDIA_HAS_PASSTHROUGH_CODECS */
 
+#if PJMEDIA_HAS_G7221_CODEC
+    /* Register G722.1 codecs */
+    status = pjmedia_codec_g7221_init(pjsua_var.med_endpt);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing G722.1 codec",
+		     status);
+	return status;
+    }
+#endif /* PJMEDIA_HAS_G7221_CODEC */
+
 #if PJMEDIA_HAS_L16_CODEC
     /* Register L16 family codecs, but disable all */
     status = pjmedia_codec_l16_init(pjsua_var.med_endpt, 0);
@@ -611,6 +621,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 #	if PJMEDIA_HAS_PASSTHROUGH_CODECS
 	    pjmedia_codec_passthrough_deinit();
 #	endif /* PJMEDIA_HAS_PASSTHROUGH_CODECS */
+
+#	if PJMEDIA_HAS_G7221_CODEC
+	    pjmedia_codec_g7221_deinit();
+#	endif /* PJMEDIA_HAS_G7221_CODEC */
 
 #	if PJMEDIA_HAS_L16_CODEC
 	    pjmedia_codec_l16_deinit();
