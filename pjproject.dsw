@@ -3,7 +3,7 @@ Microsoft Developer Studio Workspace File, Format Version 6.00
 
 ###############################################################################
 
-Project: "libg7221"=.\third_party\build\g7221\libg7221.dsp - Package Owner=<4>
+Project: "libg7221codec"=.\third_party\build\g7221\libg7221.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -248,6 +248,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name pjmedia_audiodev
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libg7221codec
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -382,6 +385,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libg7221
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libg7221codec
     End Project Dependency
 }}}
 
@@ -553,6 +559,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name pjmedia_audiodev
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libg7221codec
     End Project Dependency
 }}}
 
