@@ -500,23 +500,27 @@ static pj_status_t enum_codecs( pjmedia_codec_factory *factory,
 				unsigned *count, 
 				pjmedia_codec_info codecs[])
 {
-    unsigned i;
+    unsigned i, max_cnt;
 
     PJ_ASSERT_RETURN(factory==&codec_factory.base, PJ_EINVAL);
     PJ_ASSERT_RETURN(codecs && *count > 0, PJ_EINVAL);
 
-    *count = PJ_MIN(*count, codec_factory.mode_count);
+    max_cnt = *count;
+    *count = 0;
     
-    for (i=0; i<*count; ++i) {
+    for (i=0; (i < codec_factory.mode_count) && (*count < max_cnt); ++i)
+    {
 	if (!codec_factory.modes[i].enabled)
 	    continue;
 
-	pj_bzero(&codecs[i], sizeof(pjmedia_codec_info));
-	codecs[i].encoding_name = pj_str((char*)CODEC_TAG);
-	codecs[i].pt = codec_factory.modes[i].pt;
-	codecs[i].type = PJMEDIA_TYPE_AUDIO;
-	codecs[i].clock_rate = codec_factory.modes[i].sample_rate;
-	codecs[i].channel_cnt = 1;
+	pj_bzero(&codecs[*count], sizeof(pjmedia_codec_info));
+	codecs[*count].encoding_name = pj_str((char*)CODEC_TAG);
+	codecs[*count].pt = codec_factory.modes[i].pt;
+	codecs[*count].type = PJMEDIA_TYPE_AUDIO;
+	codecs[*count].clock_rate = codec_factory.modes[i].sample_rate;
+	codecs[*count].channel_cnt = 1;
+
+	++ *count;
     }
 
     return PJ_SUCCESS;
