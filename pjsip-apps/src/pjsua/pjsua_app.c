@@ -3131,14 +3131,16 @@ void console_app_main(const pj_str_t *uri_to_call)
 		} else {
 		    pjsua_buddy_info binfo;
 		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
-		    uri = binfo.uri.ptr;
+		    tmp.ptr = buf;
+		    pj_strncpy(&tmp, &binfo.uri, sizeof(buf));
 		}
 
 	    } else if (result.uri_result) {
-		uri = result.uri_result;
+		tmp = pj_str(result.uri_result);
+	    } else {
+		tmp.slen = 0;
 	    }
 	    
-	    tmp = pj_str(uri);
 	    pjsua_call_make_call( current_acc, &tmp, 0, NULL, NULL, NULL);
 	    break;
 
@@ -3162,15 +3164,15 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    continue;
 		}
 		pjsua_buddy_get_info(result.nb_result-1, &binfo);
-		uri = binfo.uri.ptr;
+		tmp.ptr = buf;
+		pj_strncpy(&tmp, &binfo.uri, sizeof(buf));
 	    } else {
-		uri =  result.uri_result;
+		tmp = pj_str(result.uri_result);
 	    }
 
 	    for (i=0; i<my_atoi(menuin); ++i) {
 		pj_status_t status;
 	    
-		tmp = pj_str(uri);
 		status = pjsua_call_make_call(current_acc, &tmp, 0, NULL,
 					      NULL, NULL);
 		if (status != PJ_SUCCESS)
@@ -3208,7 +3210,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 		} else {
 		    pjsua_buddy_info binfo;
 		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
-		    uri = binfo.uri.ptr;
+		    tmp.ptr = buf;
+		    pj_strncpy_with_null(&tmp, &binfo.uri, sizeof(buf));
+		    uri = buf;
 		}
 
 	    } else if (result.uri_result) {
@@ -3765,7 +3769,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 		} else {
 		    pjsua_buddy_info binfo;
 		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
-		    uri = binfo.uri.ptr;
+		    tmp.ptr = buf;
+		    pj_strncpy_with_null(&tmp, &binfo.uri, sizeof(buf));
+		    uri = buf;
 		}
 
 	    } else if (result.uri_result) {
