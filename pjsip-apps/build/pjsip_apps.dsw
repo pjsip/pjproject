@@ -111,6 +111,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjmedia_audiodev"="..\..\pjmedia\build\pjmedia_audiodev.dsp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjmedia_codec"="..\..\pjmedia\build\pjmedia_codec.dsp" - Package Owner=<4>
 
 Package=<5>
@@ -221,6 +233,12 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name libspeex
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_audiodev
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsrtp
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -290,6 +308,9 @@ Package=<4>
     Begin Project Dependency
     Project_Dep_Name pjsua_lib
     End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_audiodev
+    End Project Dependency
 }}}
 
 ###############################################################################
@@ -340,6 +361,15 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libspeex
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name libsrtp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_audiodev
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjnath
     End Project Dependency
 }}}
 
