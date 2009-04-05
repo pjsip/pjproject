@@ -58,6 +58,7 @@ static struct app_config
     pjsua_logging_config    log_cfg;
     pjsua_media_config	    media_cfg;
     pj_bool_t		    no_refersub;
+    pj_bool_t		    ipv6;
     pj_bool_t		    no_tcp;
     pj_bool_t		    no_udp;
     pj_bool_t		    use_tls;
@@ -138,6 +139,7 @@ static void stereo_demo();
 #ifdef TRANSPORT_ADAPTER_SAMPLE
 static pj_status_t transport_adapter_sample(void);
 #endif
+static pj_status_t create_ipv6_media_transports(void);
 pj_status_t app_destroy(void);
 
 static void ringback_start(pjsua_call_id call_id);
@@ -195,11 +197,15 @@ static void usage(void)
     puts  ("  --next-account      Add more account");
     puts  ("");
     puts  ("Transport Options:");
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    puts  ("  --ipv6              Use IPv6 instead for SIP and media.");
+#endif
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
     puts  ("  --ip-addr=IP        Use the specifed address as SIP and RTP addresses.");
     puts  ("                      (Hint: the IP may be the public IP of the NAT/router)");
+    puts  ("  --bound-addr=IP     Bind transports to this IP interface");
     puts  ("  --no-tcp            Disable TCP transport.");
     puts  ("  --no-udp            Disable UDP transport.");
     puts  ("  --nameserver=NS     Add the specified nameserver to enable SRV resolution");
@@ -464,7 +470,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
-	   OPT_CONTACT_PARAMS,
+	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -485,7 +491,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
-	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT,
+	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6,
 #ifdef _IONBF
 	   OPT_STDOUT_NO_BUF,
 #endif
@@ -508,6 +514,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "null-audio", 0, 0, OPT_NULL_AUDIO},
 	{ "local-port", 1, 0, OPT_LOCAL_PORT},
 	{ "ip-addr",	1, 0, OPT_IP_ADDR},
+	{ "bound-addr", 1, 0, OPT_BOUND_ADDR},
 	{ "no-tcp",     0, 0, OPT_NO_TCP},
 	{ "no-udp",     0, 0, OPT_NO_UDP},
 	{ "norefersub", 0, 0, OPT_NOREFERSUB},
@@ -595,6 +602,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "snd-auto-close", 1, 0, OPT_SND_AUTO_CLOSE},
 	{ "no-tones",    0, 0, OPT_NO_TONES},
 	{ "jb-max-size", 1, 0, OPT_JB_MAX_SIZE},
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+	{ "ipv6",	 0, 0, OPT_IPV6},
+#endif
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -733,6 +743,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_IP_ADDR: /* ip-addr */
 	    cfg->udp_cfg.public_addr = pj_str(pj_optarg);
 	    cfg->rtp_cfg.public_addr = pj_str(pj_optarg);
+	    break;
+
+	case OPT_BOUND_ADDR: /* bound-addr */
+	    cfg->udp_cfg.bound_addr = pj_str(pj_optarg);
+	    cfg->rtp_cfg.bound_addr = pj_str(pj_optarg);
 	    break;
 
 	case OPT_NO_UDP: /* no-udp */
@@ -1257,6 +1272,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->media_cfg.jb_max = atoi(pj_optarg);
 	    break;
 
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+	case OPT_IPV6:
+	    cfg->ipv6 = PJ_TRUE;
+	    break;
+#endif
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1504,6 +1525,10 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    /* Transport options */
+    if (config->ipv6) {
+	pj_strcat2(&cfg, "--ipv6\n");
+    }
 
     /* UDP Transport. */
     pj_ansi_sprintf(line, "--local-port %d\n", config->udp_cfg.port);
@@ -1514,6 +1539,14 @@ static int write_settings(const struct app_config *config,
 	pj_ansi_sprintf(line, "--ip-addr %.*s\n", 
 			(int)config->udp_cfg.public_addr.slen,
 			config->udp_cfg.public_addr.ptr);
+	pj_strcat2(&cfg, line);
+    }
+
+    /* Bound IP address, if any. */
+    if (config->udp_cfg.bound_addr.slen) {
+	pj_ansi_sprintf(line, "--bound-addr %.*s\n", 
+			(int)config->udp_cfg.bound_addr.slen,
+			config->udp_cfg.bound_addr.ptr);
 	pj_strcat2(&cfg, line);
     }
 
@@ -4333,8 +4366,12 @@ pj_status_t app_init(int argc, char *argv[])
     /* Add UDP transport unless it's disabled. */
     if (!app_config.no_udp) {
 	pjsua_acc_id aid;
+	pjsip_transport_type_e type = PJSIP_TRANSPORT_UDP;
 
-	status = pjsua_transport_create(PJSIP_TRANSPORT_UDP,
+	if (app_config.ipv6)
+	    type = PJSIP_TRANSPORT_UDP6;
+
+	status = pjsua_transport_create(type,
 					&app_config.udp_cfg, 
 					&transport_id);
 	if (status != PJ_SUCCESS)
@@ -4430,7 +4467,10 @@ pj_status_t app_init(int argc, char *argv[])
     status = transport_adapter_sample();
 
 #else
-    status = pjsua_media_transports_create(&app_config.rtp_cfg);
+    if (app_config.ipv6)
+	status = create_ipv6_media_transports();
+    else
+	status = pjsua_media_transports_create(&app_config.rtp_cfg);
 #endif
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -4654,3 +4694,46 @@ static pj_status_t transport_adapter_sample(void)
 }
 #endif
 
+static pj_status_t create_ipv6_media_transports(void)
+{
+    pjsua_media_transport tp[PJSUA_MAX_CALLS];
+    pj_status_t status;
+    int port = app_config.rtp_cfg.port;
+    unsigned i;
+
+    for (i=0; i<app_config.cfg.max_calls; ++i) {
+	enum { MAX_RETRY = 10 };
+	unsigned j;
+
+	/* Get rid of uninitialized var compiler warning with MSVC */
+	status = PJ_SUCCESS;
+
+	for (j=0; j<MAX_RETRY; ++j) {
+	    status = pjmedia_transport_udp_create3(pjsua_get_pjmedia_endpt(), 
+						   pj_AF_INET6(),
+						   NULL, 
+						   &app_config.rtp_cfg.bound_addr,
+						   port, 
+						   0, &tp[i].transport);
+
+	    if (port != 0)
+		port += 10;
+	    else
+		break;
+
+	    if (status == PJ_SUCCESS)
+		break;
+	}
+
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating IPv6 UDP media transport", 
+			 status);
+	    for (j=0; j<i; ++j) {
+		pjmedia_transport_close(tp[j].transport);
+	    }
+	    return status;
+	}
+    }
+
+    return pjsua_media_transports_attach(tp, i, PJ_TRUE);
+}

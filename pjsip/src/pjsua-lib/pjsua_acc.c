@@ -678,16 +678,27 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Update account's Contact header */
     {
 	char *tmp;
+	const char *beginquote, *endquote;
 	int len;
+
+	/* Enclose IPv6 address in square brackets */
+	if (tp->key.type & PJSIP_TRANSPORT_IPV6) {
+	    beginquote = "[";
+	    endquote = "]";
+	} else {
+	    beginquote = endquote = "";
+	}
 
 	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
-			       "<sip:%.*s%s%.*s:%d;transport=%s%.*s>",
+			       "<sip:%.*s%s%s%.*s%s:%d;transport=%s%.*s>",
 			       (int)acc->user_part.slen,
 			       acc->user_part.ptr,
 			       (acc->user_part.slen? "@" : ""),
+			       beginquote,
 			       (int)via_addr->slen,
 			       via_addr->ptr,
+			       endquote,
 			       rport,
 			       tp->type_name,
 			       (int)acc->cfg.contact_params.slen,
