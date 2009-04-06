@@ -72,6 +72,7 @@ export APP_LIB_FILES = $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjmedia/lib/libpjmedia-codec-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjmedia/lib/libpjmedia-$(LIB_SUFFIX) \
+	$(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjnath/lib/libpjnath-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjlib-util/lib/libpjlib-util-$(LIB_SUFFIX) \
 	$(APP_THIRD_PARTY_LIB_FILES) \
