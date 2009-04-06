@@ -111,6 +111,18 @@ Package=<4>
 
 ###############################################################################
 
+Project: "pjmedia_auddev_wince"="..\..\..\pjmedia\build\wince-evc4\pjmedia_auddev_wince.vcp" - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
 Project: "pjmedia_codec_wince"="..\..\..\pjmedia\build\wince-evc4\pjmedia_codec_wince.vcp" - Package Owner=<4>
 
 Package=<5>
@@ -271,6 +283,9 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name libsrtp
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name pjmedia_auddev_wince
     End Project Dependency
 }}}
 
