@@ -763,12 +763,27 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 				      mlt_coefs, 
 				      codec_data->samples_per_frame);
 
-    /* Encode the mlt coefs */
+    /* Encode the mlt coefs. Note that encoder output stream is 16 bit array,
+     * so we need to take care about endianness.
+     */
     encoder(codec_data->frame_size_bits,
 	    codec_data->number_of_regions,
 	    mlt_coefs,
 	    mag_shift,
 	    output->buf);
+
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+    {
+	pj_uint16_t *p, *p_end;
+
+	p = (pj_uint16_t*)output->buf;
+	p_end = p + codec_data->frame_size/2;
+	while (p < p_end) {
+	    *p = pj_htons(*p);
+	    ++p;
+	}
+    }
+#endif
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = codec_data->frame_size;
@@ -800,6 +815,23 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 	/* Check frame in length size */
 	PJ_ASSERT_RETURN((pj_uint16_t)input->size == codec_data->frame_size,
 			 PJMEDIA_CODEC_EFRMINLEN);
+
+	/* Decoder requires input of 16-bits array, so we need to take care
+	 * about endianness.
+	 */
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+	{
+	    pj_uint16_t *p, *p_end;
+
+	    p = (pj_uint16_t*)input->buf;
+	    p_end = p + codec_data->frame_size/2;
+	    while (p < p_end) {
+		*p = pj_ntohs(*p);
+		++p;
+	    }
+	}
+#endif
+
 	bitobj.code_word_ptr = (Word16*)input->buf;
 	bitobj.current_word =  *bitobj.code_word_ptr;
 	bitobj.code_bit_count = 0;
