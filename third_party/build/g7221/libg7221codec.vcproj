@@ -2,7 +2,7 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="libg7221"
+	Name="libg7221codec"
 	ProjectGUID="{2A3F241E-682C-47E1-9543-DC28708B406A}"
 	>
 	<Platforms>
@@ -15,10 +15,9 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\libg7221-i386-win32-vc6-release"
-			IntermediateDirectory=".\output\libg7221-i386-win32-vc6-release"
+			OutputDirectory=".\output\libg7221codec-i386-win32-vc8-release"
+			IntermediateDirectory=".\output\libg7221codec-i386-win32-vc8-release"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -45,12 +44,12 @@
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				StringPooling="true"
-				RuntimeLibrary="0"
+				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\libg7221-i386-win32-vc6-release/libg7221.pch"
-				AssemblerListingLocation=".\output\libg7221-i386-win32-vc6-release/"
-				ObjectFile=".\output\libg7221-i386-win32-vc6-release/"
-				ProgramDataBaseFileName=".\output\libg7221-i386-win32-vc6-release/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
+				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
+				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 			/>
@@ -67,7 +66,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221-i386-win32-vc6-release.lib"
+				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -79,7 +78,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221-i386-win32-vc6-release/libg7221.bsc"
+				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -90,10 +89,9 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\libg7221-i386-win32-vc6-debug"
-			IntermediateDirectory=".\output\libg7221-i386-win32-vc6-debug"
+			OutputDirectory=".\output\libg7221codec-i386-win32-vc8-debug"
+			IntermediateDirectory=".\output\libg7221codec-i386-win32-vc8-debug"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -121,10 +119,10 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\libg7221-i386-win32-vc6-debug/libg7221.pch"
-				AssemblerListingLocation=".\output\libg7221-i386-win32-vc6-debug/"
-				ObjectFile=".\output\libg7221-i386-win32-vc6-debug/"
-				ProgramDataBaseFileName=".\output\libg7221-i386-win32-vc6-debug/"
+				PrecompiledHeaderFile=""
+				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-debug/"
+				ObjectFile=".\output\libg7221codec-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -142,7 +140,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221-i386-win32-vc6-debug.lib"
+				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -154,7 +152,7 @@
 			<Tool
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221-i386-win32-vc6-debug/libg7221.bsc"
+				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"

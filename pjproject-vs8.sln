@@ -145,7 +145,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjmedia_test", "pjmedia\bui
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "pjmedia_audiodev", "pjmedia\build\pjmedia_audiodev.vcproj", "{4281CA5E-1D48-45D4-A991-2718A454B4BA}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libg7221", "third_party\build\g7221\libg7221.vcproj", "{2A3F241E-682C-47E1-9543-DC28708B406A}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libg7221codec", "third_party\build\g7221\libg7221codec.vcproj", "{2A3F241E-682C-47E1-9543-DC28708B406A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
