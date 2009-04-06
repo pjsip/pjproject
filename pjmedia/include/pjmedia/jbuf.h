@@ -66,19 +66,28 @@ typedef enum pjmedia_jb_frame_type pjmedia_jb_frame_type;
 
 
 /**
- * This structure describes jitter buffer current status.
+ * This structure describes jitter buffer state.
  */
 struct pjmedia_jb_state
 {
+    /* Setting */
     unsigned	frame_size;	    /**< Individual frame size, in bytes.   */
-    unsigned	prefetch;	    /**< Current prefetch value, in frames  */
     unsigned	min_prefetch;	    /**< Minimum allowed prefetch, in frms. */
     unsigned	max_prefetch;	    /**< Maximum allowed prefetch, in frms. */
+
+    /* Status */
+    unsigned	prefetch;	    /**< Current prefetch value, in frames  */
     unsigned	size;		    /**< Current buffer size, in frames.    */
+
+    /* Statistic */
     unsigned	avg_delay;	    /**< Average delay, in ms.		    */
     unsigned	min_delay;	    /**< Minimum delay, in ms.		    */
     unsigned	max_delay;	    /**< Maximum delay, in ms.		    */
-    unsigned	dev_delay;	    /**< Standard deviation of delay, in ms. */
+    unsigned	dev_delay;	    /**< Standard deviation of delay, in ms.*/
+    unsigned	avg_burst;	    /**< Average burst, in frames.	    */
+    unsigned	lost;		    /**< Number of lost frames.		    */
+    unsigned	discard;	    /**< Number of discarded frames.	    */
+    unsigned	empty;		    /**< Number of empty on GET events.	    */
 };
 
 
