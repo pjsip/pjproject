@@ -60,11 +60,12 @@ int test_main(void)
     //sdp_test (&caching_pool.factory);
     //rtp_test(&caching_pool.factory);
     //session_test (&caching_pool.factory);
-    //jbuf_main();
-    mips_test();
+    DO_TEST(jbuf_main());
+    //DO_TEST(mips_test());
 
     PJ_LOG(3,(THIS_FILE," "));
 
+on_return:
     if (rc != 0) {
 	PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));
     } else {
@@ -72,5 +73,6 @@ int test_main(void)
     }
 
     pj_caching_pool_destroy(&caching_pool);
+
     return rc;
 }
