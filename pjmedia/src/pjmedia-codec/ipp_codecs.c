@@ -200,6 +200,11 @@ static pj_status_t parse_amr( ipp_private_t *codec_data, void *pkt,
 static  pj_status_t pack_amr( ipp_private_t *codec_data, void *pkt, 
 			      pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
+static    void predecode_g7221( ipp_private_t *codec_data,
+				const pjmedia_frame *rtp_frame,
+				USC_Bitstream *usc_frame);
+static  pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt, 
+			        pj_size_t *pkt_size, pj_size_t max_pkt_size);
 
 /* IPP codec implementation descriptions. */
 static struct ipp_codec {
@@ -293,17 +298,17 @@ ipp_codec[] =
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
     {0, "G7221",    PJMEDIA_RTP_PT_G722_1_16, &USC_G722_Fxns,	16000, 1, 320, 
 		    16000, 16000, 1, 0, 1,
-		    NULL, NULL, NULL,
+		    predecode_g7221, NULL, pack_g7221,
 		    {1, {{{"bitrate", 7}, {"16000", 5}}} }
     },
     {1, "G7221",    PJMEDIA_RTP_PT_G722_1_24, &USC_G722_Fxns,	16000, 1, 320, 
 		    24000, 24000, 1, 0, 1,
-		    NULL, NULL, NULL,
+		    predecode_g7221, NULL, pack_g7221,
 		    {1, {{{"bitrate", 7}, {"24000", 5}}} }
     },
     {1, "G7221",    PJMEDIA_RTP_PT_G722_1_32, &USC_G722_Fxns,	16000, 1, 320, 
 		    32000, 32000, 1, 0, 1,
-		    NULL, NULL, NULL,
+		    predecode_g7221, NULL, pack_g7221,
 		    {1, {{{"bitrate", 7}, {"32000", 5}}} }
     },
 #   endif
@@ -563,6 +568,58 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_AMR */
 
+
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
+
+static void predecode_g7221( ipp_private_t *codec_data,
+			     const pjmedia_frame *rtp_frame,
+			     USC_Bitstream *usc_frame)
+{
+    usc_frame->pBuffer = (char*)rtp_frame->buf;
+    usc_frame->nbytes = rtp_frame->size;
+    usc_frame->frametype = 0;
+    usc_frame->bitrate = codec_data->info->params.modes.bitrate;
+
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+    {
+	pj_uint16_t *p, *p_end;
+
+	p = (pj_uint16_t*)rtp_frame->buf;
+	p_end = p + rtp_frame->size/2;
+	while (p < p_end) {
+	    *p = pj_ntohs(*p);
+	    ++p;
+	}
+    }
+#endif
+}
+
+static pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt, 
+			       pj_size_t *pkt_size, pj_size_t max_pkt_size)
+{
+    PJ_UNUSED_ARG(codec_data);
+    PJ_UNUSED_ARG(max_pkt_size);
+
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+    {
+	pj_uint16_t *p, *p_end;
+
+	p = (pj_uint16_t*)pkt;
+	p_end = p + *pkt_size/2;
+	while (p < p_end) {
+	    *p = pj_htons(*p);
+	    ++p;
+	}
+    }
+#else
+    PJ_UNUSED_ARG(pkt);
+    PJ_UNUSED_ARG(pkt_size);
+#endif
+
+    return PJ_SUCCESS;
+}
+
+#endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 */
 
 /*
  * Initialize and register IPP codec factory to pjmedia endpoint.
