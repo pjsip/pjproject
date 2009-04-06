@@ -261,10 +261,16 @@ static pj_status_t init_driver(unsigned drv_idx)
 			      aud_subsys.dev_cnt + dev_cnt - MAX_DEVS));
 	dev_cnt = MAX_DEVS - aud_subsys.dev_cnt;
     }
+
+    /* enabling this will cause pjsua-lib initialization to fail when there
+     * is no sound device installed in the system, even when pjsua has been
+     * run with --null-audio
+     *
     if (dev_cnt == 0) {
 	f->op->destroy(f);
 	return PJMEDIA_EAUD_NODEV;
     }
+    */
 
     /* Fill in default devices */
     drv->play_dev_idx = drv->rec_dev_idx = drv->dev_idx = -1;
