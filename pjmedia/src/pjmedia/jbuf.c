@@ -335,17 +335,25 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 	}
     }
 
-    /* too soon or jump too far */
+    /* get distance of this frame to the first frame in the buffer */
     distance = index - framelist->origin;
+
+    /* far jump, the distance is greater than buffer capacity */
     if (distance >= (int)framelist->max_count) {
 	if (distance > MAX_DROPOUT) {
-	    /* jump too far */
+	    /* jump too far, reset the buffer */
 	    jb_framelist_reset(framelist);
 	    framelist->origin = index;
 	    distance = 0;
 	} else {
-	    /* too soon, buffer is not enough */
-	    return PJ_ETOOMANY;
+	    if (framelist->size == 0) {
+		/* if jbuf is empty, process the frame */
+		framelist->origin = index;
+		distance = 0;
+	    } else {
+		/* otherwise, reject the frame */
+		return PJ_ETOOMANY;
+	    }
 	}
     }
 
