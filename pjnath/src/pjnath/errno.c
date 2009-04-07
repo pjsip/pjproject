@@ -51,6 +51,7 @@ static const struct
 
     PJ_BUILD_ERR( PJNATH_ESTUNNOMAPPEDADDR, "STUN (XOR-)MAPPED-ADDRESS attribute not found"),
     PJ_BUILD_ERR( PJNATH_ESTUNIPV6NOTSUPP,  "STUN IPv6 attribute not supported"),
+    PJ_BUILD_ERR( PJNATH_EINVAF,	    "Invalid STUN address family value"),
     PJ_BUILD_ERR( PJNATH_ESTUNINSERVER,	    "Invalid STUN server or server not configured"),
 
     PJ_BUILD_ERR( PJNATH_ESTUNDESTROYED,    "STUN object has been destoyed"),

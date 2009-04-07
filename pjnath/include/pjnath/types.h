@@ -97,10 +97,9 @@ application protocols in dealing with NAT traversal. It allows a client
 to determine the IP address and port allocated to them by a NAT and to 
 keep NAT bindings open.
 
-This version of PJNATH implements the following STUN-bis draft:
-- <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-rfc3489bis-18.txt">
-  <B>draft-ietf-behave-rfc3489bis-18</b></A>: Session Traversal 
-    Utilities for (NAT) (STUN),
+This version of PJNATH implements the following STUN RFC:
+- <A HREF="http://www.ietf.org/rfc/rfc5389.txt"><B>RFC 5389</b></A>: 
+    Session Traversal Utilities for (NAT) (STUN),
 
 
 \subsection comp_turn TURN

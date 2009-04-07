@@ -88,69 +88,97 @@ struct attr_desc
 {
     const char   *name;
     pj_status_t	(*decode_attr)(pj_pool_t *pool, const pj_uint8_t *buf, 
-			       void **p_attr);
+			       const pj_stun_msg_hdr *msghdr, void **p_attr);
     pj_status_t (*encode_attr)(const void *a, pj_uint8_t *buf, 
-			       unsigned len, unsigned *printed);
+			       unsigned len, const pj_stun_msg_hdr *msghdr,
+			       unsigned *printed);
     void*       (*clone_attr)(pj_pool_t *pool, const void *src);
 };
 
 static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
-				       const pj_uint8_t *buf, 
-				       void **p_attr);
+				        const pj_uint8_t *buf, 
+				        const pj_stun_msg_hdr *msghdr,
+				        void **p_attr);
 static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool, 
 					      const pj_uint8_t *buf, 
+					      const pj_stun_msg_hdr *msghdr, 
 					      void **p_attr);
 static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
-				       unsigned len, 
-				       unsigned *printed);
+				        unsigned len, 
+					const pj_stun_msg_hdr *msghdr,
+				        unsigned *printed);
 static void*       clone_sockaddr_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_string_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf, 
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr);
 static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed);
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed);
 static void*       clone_string_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr);
 static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed);
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed);
 static void*       clone_msgint_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf,
+				       const pj_stun_msg_hdr *msghdr, 
 				       void **p_attr);
 static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
-				       unsigned len, unsigned *printed);
+				       unsigned len, 
+				       const pj_stun_msg_hdr *msghdr,
+				       unsigned *printed);
 static void*       clone_errcode_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf, 
+				       const pj_stun_msg_hdr *msghdr, 
 				       void **p_attr);
 static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf, 
-				       unsigned len, unsigned *printed);
+				       unsigned len, 
+				       const pj_stun_msg_hdr *msghdr,
+				       unsigned *printed);
 static void*       clone_unknown_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_uint_attr(pj_pool_t *pool, 
 				    const pj_uint8_t *buf, 
+				    const pj_stun_msg_hdr *msghdr, 
 				    void **p_attr);
 static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
-				    unsigned len, unsigned *printed);
+				    unsigned len, 
+				    const pj_stun_msg_hdr *msghdr,
+				    unsigned *printed);
 static void*       clone_uint_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_uint64_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf, 
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr);
 static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed);
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed);
 static void*       clone_uint64_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_binary_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr);
 static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed);
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed);
 static void*       clone_binary_attr(pj_pool_t *pool, const void *src);
 static pj_status_t decode_empty_attr(pj_pool_t *pool, 
 				     const pj_uint8_t *buf, 
+				     const pj_stun_msg_hdr *msghdr, 
 				     void **p_attr);
 static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf, 
-				     unsigned len, unsigned *printed);
+				     unsigned len, 
+				     const pj_stun_msg_hdr *msghdr,
+				     unsigned *printed);
 static void*       clone_empty_attr(pj_pool_t *pool, const void *src);
 
 static struct attr_desc mandatory_attr_desc[] = 
@@ -726,7 +754,7 @@ static pj_uint16_t GETVAL16H(const pj_uint8_t *buf, unsigned pos)
 			  (buf[pos + 1] << 0));
 }
 
-static pj_uint16_t GETVAL16N(const pj_uint8_t *buf, unsigned pos)
+PJ_INLINE(pj_uint16_t) GETVAL16N(const pj_uint8_t *buf, unsigned pos)
 {
     return pj_htons(GETVAL16H(buf,pos));
 }
@@ -737,7 +765,7 @@ static void PUTVAL16H(pj_uint8_t *buf, unsigned pos, pj_uint16_t hval)
     buf[pos+1] = (pj_uint8_t) ((hval & 0x00FF) >> 0);
 }
 
-static pj_uint32_t GETVAL32H(const pj_uint8_t *buf, unsigned pos)
+PJ_INLINE(pj_uint32_t) GETVAL32H(const pj_uint8_t *buf, unsigned pos)
 {
     return (pj_uint32_t) ((buf[pos + 0] << 24UL) | \
 	                  (buf[pos + 1] << 16UL) | \
@@ -745,7 +773,7 @@ static pj_uint32_t GETVAL32H(const pj_uint8_t *buf, unsigned pos)
 			  (buf[pos + 3] <<  0UL));
 }
 
-static pj_uint32_t GETVAL32N(const pj_uint8_t *buf, unsigned pos)
+PJ_INLINE(pj_uint32_t) GETVAL32N(const pj_uint8_t *buf, unsigned pos)
 {
     return pj_htonl(GETVAL32H(buf,pos));
 }
@@ -781,7 +809,8 @@ static void GETATTRHDR(const pj_uint8_t *buf, pj_stun_attr_hdr *hdr)
 /*
  * STUN generic IP address container
  */
-#define STUN_GENERIC_IP_ADDR_LEN	8
+#define STUN_GENERIC_IPV4_ADDR_LEN	8
+#define STUN_GENERIC_IPV6_ADDR_LEN	20
 
 /*
  * Init sockaddr attr
@@ -792,11 +821,14 @@ PJ_DEF(pj_status_t) pj_stun_sockaddr_attr_init( pj_stun_sockaddr_attr *attr,
 						const pj_sockaddr_t *addr,
 						unsigned addr_len)
 {
+    unsigned attr_len;
+
     PJ_ASSERT_RETURN(attr && addr_len && addr, PJ_EINVAL);
     PJ_ASSERT_RETURN(addr_len == sizeof(pj_sockaddr_in) ||
 		     addr_len == sizeof(pj_sockaddr_in6), PJ_EINVAL);
 
-    INIT_ATTR(attr, attr_type, STUN_GENERIC_IP_ADDR_LEN);
+    attr_len = pj_sockaddr_get_addr_len(addr) + 4;
+    INIT_ATTR(attr, attr_type, attr_len);
 
     pj_memcpy(&attr->sockaddr, addr, addr_len);
     attr->xor_ed = xor_ed;
@@ -848,32 +880,55 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_sockaddr_attr(pj_pool_t *pool,
 
 static pj_status_t decode_sockaddr_attr(pj_pool_t *pool, 
 				        const pj_uint8_t *buf, 
+					const pj_stun_msg_hdr *msghdr, 
 				        void **p_attr)
 {
     pj_stun_sockaddr_attr *attr;
+    int af;
+    unsigned addr_len;
     pj_uint32_t val;
 
     PJ_CHECK_STACK();
     
+    PJ_UNUSED_ARG(msghdr);
+
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_sockaddr_attr);
     GETATTRHDR(buf, &attr->hdr);
 
     /* Check that the attribute length is valid */
-    if (attr->hdr.length != STUN_GENERIC_IP_ADDR_LEN)
+    if (attr->hdr.length != STUN_GENERIC_IPV4_ADDR_LEN &&
+	attr->hdr.length != STUN_GENERIC_IPV6_ADDR_LEN)
+    {
 	return PJNATH_ESTUNINATTRLEN;
+    }
 
     /* Check address family */
     val = *(pj_uint8_t*)(buf + ATTR_HDR_LEN + 1);
 
-    /* Check address family is valid (only supports ipv4 for now) */
-    if (val != 1)
-	return PJNATH_ESTUNIPV6NOTSUPP;
+    /* Check address family is valid */
+    if (val == 1) {
+	if (attr->hdr.length != STUN_GENERIC_IPV4_ADDR_LEN)
+	    return PJNATH_ESTUNINATTRLEN;
+	af = pj_AF_INET();
+	addr_len = 4;
+    } else if (val == 2) {
+	if (attr->hdr.length != STUN_GENERIC_IPV6_ADDR_LEN)
+	    return PJNATH_ESTUNINATTRLEN;
+	af = pj_AF_INET6();
+	addr_len = 16;
+    } else {
+	/* Invalid address family */
+	return PJNATH_EINVAF;
+    }
 
     /* Get port and address */
-    pj_sockaddr_in_init(&attr->sockaddr.ipv4, NULL, 0);
-    attr->sockaddr.ipv4.sin_port = GETVAL16N(buf, ATTR_HDR_LEN+2);
-    attr->sockaddr.ipv4.sin_addr.s_addr = GETVAL32N(buf, ATTR_HDR_LEN+4);
+    pj_sockaddr_init(af, &attr->sockaddr, NULL, 0);
+    pj_sockaddr_set_port(&attr->sockaddr, 
+			 GETVAL16H(buf, ATTR_HDR_LEN+2));
+    pj_memcpy(pj_sockaddr_get_addr(&attr->sockaddr),
+	      buf+ATTR_HDR_LEN+4,
+	      addr_len);
 
     /* Done */
     *p_attr = (void*)attr;
@@ -884,20 +939,47 @@ static pj_status_t decode_sockaddr_attr(pj_pool_t *pool,
 
 static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool, 
 					      const pj_uint8_t *buf, 
+					      const pj_stun_msg_hdr *msghdr, 
 					      void **p_attr)
 {
     pj_stun_sockaddr_attr *attr;
     pj_status_t status;
 
-    status = decode_sockaddr_attr(pool, buf, p_attr);
+    status = decode_sockaddr_attr(pool, buf, msghdr, p_attr);
     if (status != PJ_SUCCESS)
 	return status;
 
     attr = *(pj_stun_sockaddr_attr**)p_attr;
 
     attr->xor_ed = PJ_TRUE;
-    attr->sockaddr.ipv4.sin_port ^= pj_htons(0x2112);
-    attr->sockaddr.ipv4.sin_addr.s_addr ^= pj_htonl(0x2112A442);
+
+    if (attr->sockaddr.addr.sa_family == pj_AF_INET()) {
+	attr->sockaddr.ipv4.sin_port ^= pj_htons(PJ_STUN_MAGIC >> 16);
+	attr->sockaddr.ipv4.sin_addr.s_addr ^= pj_htonl(PJ_STUN_MAGIC);
+    } else if (attr->sockaddr.addr.sa_family == pj_AF_INET6()) {
+	unsigned i;
+	pj_uint8_t *dst = (pj_uint8_t*) &attr->sockaddr.ipv6.sin6_addr;
+	pj_uint32_t magic = pj_htonl(PJ_STUN_MAGIC);
+
+	attr->sockaddr.ipv6.sin6_port ^= pj_htons(PJ_STUN_MAGIC >> 16);
+
+	/* If the IP address family is IPv6, X-Address is computed by
+	 * taking the mapped IP address in host byte order, XOR'ing it
+	 * with the concatenation of the magic cookie and the 96-bit 
+	 * transaction ID, and converting the result to network byte 
+	 * order.
+	 */
+	for (i=0; i<4; ++i) {
+	    dst[i] ^= ((const pj_uint8_t*)&magic)[i];
+	}
+	pj_assert(sizeof(msghdr->tsx_id[0]) == 1);
+	for (i=0; i<12; ++i) {
+	    dst[i+4] ^= msghdr->tsx_id[i];
+	}
+
+    } else {
+	return PJNATH_EINVAF;
+    }
 
     /* Done */
     *p_attr = attr;
@@ -907,61 +989,128 @@ static pj_status_t decode_xored_sockaddr_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_sockaddr_attr(const void *a, pj_uint8_t *buf, 
-				        unsigned len, unsigned *printed)
+				        unsigned len, 
+					const pj_stun_msg_hdr *msghdr,
+					unsigned *printed)
 {
-    enum {
-	ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IP_ADDR_LEN
-    };
     pj_uint8_t *start_buf = buf;
     const pj_stun_sockaddr_attr *ca = 
 	(const pj_stun_sockaddr_attr *)a;
 
-    if (len < ATTR_LEN) 
-	return PJ_ETOOSMALL;
-
     PJ_CHECK_STACK();
     
-    /* Copy and convert headers to network byte order */
+    /* Common: attribute type */
     PUTVAL16H(buf, 0, ca->hdr.type);
-    PUTVAL16H(buf, 2, STUN_GENERIC_IP_ADDR_LEN);
-    buf += ATTR_HDR_LEN;
+
+    if (ca->sockaddr.addr.sa_family == pj_AF_INET()) {
+	enum {
+	    ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IPV4_ADDR_LEN
+	};
+
+	if (len < ATTR_LEN) 
+	    return PJ_ETOOSMALL;
+
+	/* attribute len */
+	PUTVAL16H(buf, 2, STUN_GENERIC_IPV4_ADDR_LEN);
+	buf += ATTR_HDR_LEN;
     
-    /* Ignored */
-    *buf++ = '\0';
+	/* Ignored */
+	*buf++ = '\0';
 
-    /* Family (IPv4 only for now) */
-    PJ_ASSERT_RETURN(ca->sockaddr.addr.sa_family == pj_AF_INET(), PJ_EINVAL);
-    *buf++ = 1;
+	/* Address family, 1 for IPv4 */
+	*buf++ = 1;
 
-    if (ca->xor_ed) {
-	pj_uint32_t addr;
-	pj_uint16_t port;
+	/* IPv4 address */
+	if (ca->xor_ed) {
+	    pj_uint32_t addr;
+	    pj_uint16_t port;
 
-	addr = ca->sockaddr.ipv4.sin_addr.s_addr;
-	port = ca->sockaddr.ipv4.sin_port;
+	    addr = ca->sockaddr.ipv4.sin_addr.s_addr;
+	    port = ca->sockaddr.ipv4.sin_port;
 
-	port ^= pj_htons(0x2112);
-	addr ^= pj_htonl(0x2112A442);
+	    port ^= pj_htons(PJ_STUN_MAGIC >> 16);
+	    addr ^= pj_htonl(PJ_STUN_MAGIC);
 
-	/* Port */
-	pj_memcpy(buf, &port, 2);
-	buf += 2;
+	    /* Port */
+	    pj_memcpy(buf, &port, 2);
+	    buf += 2;
 
-	/* Address */
-	pj_memcpy(buf, &addr, 4);
-	buf += 4;
+	    /* Address */
+	    pj_memcpy(buf, &addr, 4);
+	    buf += 4;
+
+	} else {
+	    /* Port */
+	    pj_memcpy(buf, &ca->sockaddr.ipv4.sin_port, 2);
+	    buf += 2;
+
+	    /* Address */
+	    pj_memcpy(buf, &ca->sockaddr.ipv4.sin_addr, 4);
+	    buf += 4;
+	}
+
+	pj_assert(buf - start_buf == ATTR_LEN);
+
+    } else if (ca->sockaddr.addr.sa_family == pj_AF_INET6()) {
+	/* IPv6 address */
+	enum {
+	    ATTR_LEN = ATTR_HDR_LEN + STUN_GENERIC_IPV6_ADDR_LEN
+	};
+
+	if (len < ATTR_LEN) 
+	    return PJ_ETOOSMALL;
+
+	/* attribute len */
+	PUTVAL16H(buf, 2, STUN_GENERIC_IPV6_ADDR_LEN);
+	buf += ATTR_HDR_LEN;
+    
+	/* Ignored */
+	*buf++ = '\0';
+
+	/* Address family, 2 for IPv6 */
+	*buf++ = 2;
+
+	/* IPv6 address */
+	if (ca->xor_ed) {
+	    unsigned i;
+	    pj_uint8_t *dst;
+	    const pj_uint8_t *src;
+	    pj_uint32_t magic = pj_htonl(PJ_STUN_MAGIC);
+	    pj_uint16_t port = ca->sockaddr.ipv6.sin6_port;
+
+	    /* Port */
+	    port ^= pj_htons(PJ_STUN_MAGIC >> 16);
+	    pj_memcpy(buf, &port, 2);
+	    buf += 2;
+
+	    /* Address */
+	    dst = buf;
+	    src = (const pj_uint8_t*) &ca->sockaddr.ipv6.sin6_addr;
+	    for (i=0; i<4; ++i) {
+		dst[i] = (pj_uint8_t)(src[i] ^ ((const pj_uint8_t*)&magic)[i]);
+	    }
+	    pj_assert(sizeof(msghdr->tsx_id[0]) == 1);
+	    for (i=0; i<12; ++i) {
+		dst[i+4] = (pj_uint8_t)(src[i+4] ^ msghdr->tsx_id[i]);
+	    }
+
+	    buf += 16;
+
+	} else {
+	    /* Port */
+	    pj_memcpy(buf, &ca->sockaddr.ipv6.sin6_port, 2);
+	    buf += 2;
+
+	    /* Address */
+	    pj_memcpy(buf, &ca->sockaddr.ipv6.sin6_addr, 16);
+	    buf += 16;
+	}
+
+	pj_assert(buf - start_buf == ATTR_LEN);
 
     } else {
-	/* Port */
-	pj_memcpy(buf, &ca->sockaddr.ipv4.sin_port, 2);
-	buf += 2;
-
-	/* Address */
-	pj_memcpy(buf, &ca->sockaddr.ipv4.sin_addr, 4);
-	buf += 4;
+	return PJNATH_EINVAF;
     }
-
-    pj_assert(buf - start_buf == ATTR_LEN);
 
     /* Done */
     *printed = buf - start_buf;
@@ -1040,10 +1189,13 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_string_attr(pj_pool_t *pool,
 
 static pj_status_t decode_string_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf, 
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr)
 {
     pj_stun_string_attr *attr;
     pj_str_t value;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_string_attr);
@@ -1065,13 +1217,17 @@ static pj_status_t decode_string_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed)
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed)
 {
     const pj_stun_string_attr *ca = 
 	(const pj_stun_string_attr*)a;
 
     PJ_CHECK_STACK();
     
+    PJ_UNUSED_ARG(msghdr);
+
     /* Calculated total attr_len (add padding if necessary) */
     *printed = (ca->value.slen + ATTR_HDR_LEN + 3) & (~3);
     if (len < *printed) {
@@ -1154,9 +1310,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_empty_attr( pj_pool_t *pool,
 
 static pj_status_t decode_empty_attr(pj_pool_t *pool, 
 				     const pj_uint8_t *buf, 
+				     const pj_stun_msg_hdr *msghdr,
 				     void **p_attr)
 {
     pj_stun_empty_attr *attr;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Check that the struct address is valid */
     pj_assert(sizeof(pj_stun_empty_attr) == ATTR_HDR_LEN);
@@ -1177,9 +1336,13 @@ static pj_status_t decode_empty_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_empty_attr(const void *a, pj_uint8_t *buf, 
-				     unsigned len, unsigned *printed)
+				     unsigned len, 
+				     const pj_stun_msg_hdr *msghdr,
+				     unsigned *printed)
 {
     const pj_stun_empty_attr *ca = (pj_stun_empty_attr*)a;
+
+    PJ_UNUSED_ARG(msghdr);
 
     if (len < ATTR_HDR_LEN) 
 	return PJ_ETOOSMALL;
@@ -1247,9 +1410,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_uint_attr(pj_pool_t *pool,
 
 static pj_status_t decode_uint_attr(pj_pool_t *pool, 
 				    const pj_uint8_t *buf, 
+				    const pj_stun_msg_hdr *msghdr, 
 				    void **p_attr)
 {
     pj_stun_uint_attr *attr;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint_attr);
@@ -1269,11 +1435,15 @@ static pj_status_t decode_uint_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_uint_attr(const void *a, pj_uint8_t *buf, 
-				    unsigned len, unsigned *printed)
+				    unsigned len, 
+				    const pj_stun_msg_hdr *msghdr,
+				    unsigned *printed)
 {
     const pj_stun_uint_attr *ca = (const pj_stun_uint_attr*)a;
 
     PJ_CHECK_STACK();
+
+    PJ_UNUSED_ARG(msghdr);
     
     if (len < 8) 
 	return PJ_ETOOSMALL;
@@ -1343,9 +1513,12 @@ PJ_DEF(pj_status_t)  pj_stun_msg_add_uint64_attr(pj_pool_t *pool,
 
 static pj_status_t decode_uint64_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf, 
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr)
 {
     pj_stun_uint64_attr *attr;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_uint64_attr);
@@ -1364,11 +1537,15 @@ static pj_status_t decode_uint64_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_uint64_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed)
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed)
 {
     const pj_stun_uint64_attr *ca = (const pj_stun_uint64_attr*)a;
 
     PJ_CHECK_STACK();
+
+    PJ_UNUSED_ARG(msghdr);
     
     if (len < 12) 
 	return PJ_ETOOSMALL;
@@ -1433,9 +1610,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_msgint_attr(pj_pool_t *pool,
 
 static pj_status_t decode_msgint_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
+				      const pj_stun_msg_hdr *msghdr, 
 				      void **p_attr)
 {
     pj_stun_msgint_attr *attr;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Create attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_msgint_attr);
@@ -1455,12 +1635,16 @@ static pj_status_t decode_msgint_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_msgint_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed)
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed)
 {
     const pj_stun_msgint_attr *ca = (const pj_stun_msgint_attr*)a;
 
     PJ_CHECK_STACK();
     
+    PJ_UNUSED_ARG(msghdr);
+
     if (len < 24) 
 	return PJ_ETOOSMALL;
 
@@ -1544,10 +1728,13 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_errcode_attr(pj_pool_t *pool,
 
 static pj_status_t decode_errcode_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf,
+				       const pj_stun_msg_hdr *msghdr, 
 				       void **p_attr)
 {
     pj_stun_errcode_attr *attr;
     pj_str_t value;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_errcode_attr);
@@ -1570,13 +1757,17 @@ static pj_status_t decode_errcode_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_errcode_attr(const void *a, pj_uint8_t *buf, 
-				       unsigned len, unsigned *printed)
+				       unsigned len, 
+				       const pj_stun_msg_hdr *msghdr,
+				       unsigned *printed)
 {
     const pj_stun_errcode_attr *ca = 
 	(const pj_stun_errcode_attr*)a;
 
     PJ_CHECK_STACK();
     
+    PJ_UNUSED_ARG(msghdr);
+
     if (len < ATTR_HDR_LEN + 4 + (unsigned)ca->reason.slen) 
 	return PJ_ETOOSMALL;
 
@@ -1672,11 +1863,14 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_unknown_attr(pj_pool_t *pool,
 
 static pj_status_t decode_unknown_attr(pj_pool_t *pool, 
 				       const pj_uint8_t *buf, 
+				       const pj_stun_msg_hdr *msghdr, 
 				       void **p_attr)
 {
     pj_stun_unknown_attr *attr;
     const pj_uint16_t *punk_attr;
     unsigned i;
+
+    PJ_UNUSED_ARG(msghdr);
 
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_unknown_attr);
     GETATTRHDR(buf, &attr->hdr);
@@ -1698,7 +1892,9 @@ static pj_status_t decode_unknown_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf, 
-				       unsigned len, unsigned *printed)
+				       unsigned len, 
+				       const pj_stun_msg_hdr *msghdr,
+				       unsigned *printed)
 {
     const pj_stun_unknown_attr *ca = (const pj_stun_unknown_attr*) a;
     pj_uint16_t *dst_unk_attr;
@@ -1706,6 +1902,8 @@ static pj_status_t encode_unknown_attr(const void *a, pj_uint8_t *buf,
 
     PJ_CHECK_STACK();
     
+    PJ_UNUSED_ARG(msghdr);
+
     /* Check that buffer is enough */
     if (len < ATTR_HDR_LEN + (ca->attr_count << 1))
 	return PJ_ETOOSMALL;
@@ -1807,9 +2005,12 @@ PJ_DEF(pj_status_t) pj_stun_msg_add_binary_attr(pj_pool_t *pool,
 
 static pj_status_t decode_binary_attr(pj_pool_t *pool, 
 				      const pj_uint8_t *buf,
+				      const pj_stun_msg_hdr *msghdr,
 				      void **p_attr)
 {
     pj_stun_binary_attr *attr;
+
+    PJ_UNUSED_ARG(msghdr);
 
     /* Create the attribute */
     attr = PJ_POOL_ZALLOC_T(pool, pj_stun_binary_attr);
@@ -1829,12 +2030,16 @@ static pj_status_t decode_binary_attr(pj_pool_t *pool,
 
 
 static pj_status_t encode_binary_attr(const void *a, pj_uint8_t *buf, 
-				      unsigned len, unsigned *printed)
+				      unsigned len, 
+				      const pj_stun_msg_hdr *msghdr,
+				      unsigned *printed)
 {
     const pj_stun_binary_attr *ca = (const pj_stun_binary_attr*)a;
 
     PJ_CHECK_STACK();
     
+    PJ_UNUSED_ARG(msghdr);
+
     /* Calculated total attr_len (add padding if necessary) */
     *printed = (ca->length + ATTR_HDR_LEN + 3) & (~3);
     if (len < *printed)
@@ -2220,7 +2425,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_decode(pj_pool_t *pool,
 		 err_msg2[PJ_ERR_MSG_SIZE];
 
 	    /* Parse the attribute */
-	    status = (adesc->decode_attr)(pool, pdu, &attr);
+	    status = (adesc->decode_attr)(pool, pdu, &msg->hdr, &attr);
 
 	    if (status != PJ_SUCCESS) {
 		pj_strerror(status, err_msg1, sizeof(err_msg1));
@@ -2408,13 +2613,15 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
 	adesc = find_attr_desc(attr_hdr->type);
 	if (adesc) {
-	    status = adesc->encode_attr(attr_hdr, buf, buf_size, &printed);
+	    status = adesc->encode_attr(attr_hdr, buf, buf_size, &msg->hdr, 
+					&printed);
 	} else {
 	    /* This may be a generic attribute */
 	    const pj_stun_binary_attr *bin_attr = (const pj_stun_binary_attr*) 
 						   attr_hdr;
 	    PJ_ASSERT_RETURN(bin_attr->magic == PJ_STUN_MAGIC, PJ_EBUG);
-	    status = encode_binary_attr(bin_attr, buf, buf_size, &printed);
+	    status = encode_binary_attr(bin_attr, buf, buf_size, &msg->hdr,
+					&printed);
 	}
 
 	if (status != PJ_SUCCESS)
@@ -2519,7 +2726,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
 	/* Put this attribute in the message */
 	status = encode_msgint_attr(amsgint, buf, buf_size, 
-			            &printed);
+			            &msg->hdr, &printed);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -2541,7 +2748,7 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 
 	/* Put this attribute in the message */
 	status = encode_uint_attr(afingerprint, buf, buf_size, 
-				          &printed);
+				  &msg->hdr, &printed);
 	if (status != PJ_SUCCESS)
 	    return status;
 
