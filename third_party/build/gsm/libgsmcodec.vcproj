@@ -53,7 +53,7 @@
 				AssemblerListingLocation=".\output\gsm-i386-win32-vc8-debug/"
 				ObjectFile=".\output\gsm-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\gsm-i386-win32-vc8-debug/"
-				WarningLevel="2"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -167,7 +167,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\output\gsm-i386-win32-vc8-release"
-			IntermediateDirectory=".\output\gsm-i386-win32-vc8-release"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -191,8 +191,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				Optimization="3"
 				InlineFunctionExpansion="1"
+				FavorSizeOrSpeed="2"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				StringPooling="true"
@@ -202,6 +203,7 @@
 				AssemblerListingLocation=".\output\gsm-i386-win32-vc8-release/"
 				ObjectFile=".\output\gsm-i386-win32-vc8-release/"
 				ProgramDataBaseFileName=".\output\gsm-i386-win32-vc8-release/"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -347,7 +349,7 @@
 				AssemblerListingLocation=".\output\gsm-i386-win32-vc8-debug/"
 				ObjectFile=".\output\gsm-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\gsm-i386-win32-vc8-debug/"
-				WarningLevel="2"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -462,7 +464,7 @@
 		<Configuration
 			Name="Release-Dynamic|Win32"
 			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -486,8 +488,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				Optimization="3"
 				InlineFunctionExpansion="1"
+				FavorSizeOrSpeed="2"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				StringPooling="true"
@@ -497,6 +500,7 @@
 				AssemblerListingLocation=".\output\gsm-i386-win32-vc8-release/"
 				ObjectFile=".\output\gsm-i386-win32-vc8-release/"
 				ProgramDataBaseFileName=".\output\gsm-i386-win32-vc8-release/"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -643,7 +647,7 @@
 				AssemblerListingLocation=".\output\gsm-i386-win32-vc8-debug/"
 				ObjectFile=".\output\gsm-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\gsm-i386-win32-vc8-debug/"
-				WarningLevel="2"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -758,7 +762,7 @@
 		<Configuration
 			Name="Release-Static|Win32"
 			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -782,8 +786,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				Optimization="3"
 				InlineFunctionExpansion="1"
+				FavorSizeOrSpeed="2"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				StringPooling="true"
@@ -793,6 +798,7 @@
 				AssemblerListingLocation=".\output\gsm-i386-win32-vc8-release/"
 				ObjectFile=".\output\gsm-i386-win32-vc8-release/"
 				ProgramDataBaseFileName=".\output\gsm-i386-win32-vc8-release/"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -1960,11 +1966,11 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\gsm\inc\config.h"
+				RelativePath="config.h"
 				>
 			</File>
 			<File
-				RelativePath="config.h"
+				RelativePath="..\..\gsm\inc\config.h"
 				>
 			</File>
 			<File

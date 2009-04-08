@@ -52,7 +52,7 @@
 				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-debug/"
 				ObjectFile=".\output\ilbc-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-debug/"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -166,7 +166,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\output\ilbc-i386-win32-vc8-release"
-			IntermediateDirectory=".\output\ilbc-i386-win32-vc8-release"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -190,8 +190,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
+				Optimization="3"
 				InlineFunctionExpansion="1"
+				FavorSizeOrSpeed="2"
 				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
 				StringPooling="true"
 				RuntimeLibrary="2"
@@ -200,7 +201,7 @@
 				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-release/"
 				ObjectFile=".\output\ilbc-i386-win32-vc8-release/"
 				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-release/"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -345,7 +346,7 @@
 				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-debug/"
 				ObjectFile=".\output\ilbc-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-debug/"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -460,7 +461,7 @@
 		<Configuration
 			Name="Release-Dynamic|Win32"
 			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -494,7 +495,7 @@
 				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-release/"
 				ObjectFile=".\output\ilbc-i386-win32-vc8-release/"
 				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-release/"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 			/>
 			<Tool
@@ -640,7 +641,7 @@
 				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-debug/"
 				ObjectFile=".\output\ilbc-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-debug/"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
 			/>
@@ -755,7 +756,7 @@
 		<Configuration
 			Name="Release-Static|Win32"
 			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
@@ -789,7 +790,7 @@
 				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-release/"
 				ObjectFile=".\output\ilbc-i386-win32-vc8-release/"
 				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-release/"
-				WarningLevel="3"
+				WarningLevel="4"
 				SuppressStartupBanner="true"
 			/>
 			<Tool

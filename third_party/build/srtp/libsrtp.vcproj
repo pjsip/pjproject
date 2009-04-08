@@ -158,7 +158,7 @@
 		<Configuration
 			Name="Release|Win32"
 			OutputDirectory=".\output\libsrtp-i386-win32-vc8-release"
-			IntermediateDirectory=".\output\libsrtp-i386-win32-vc8-release"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -431,7 +431,7 @@
 		<Configuration
 			Name="Release-Dynamic|Win32"
 			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
@@ -705,7 +705,7 @@
 		<Configuration
 			Name="Release-Static|Win32"
 			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
 			CharacterSet="2"
 			WholeProgramOptimization="1"
