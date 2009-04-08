@@ -2009,6 +2009,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 	stream->jb_mutex = NULL;
     }
 
+    /* Destroy jitter buffer */
+    if (stream->jb)
+	pjmedia_jbuf_destroy(stream->jb);
+
     return PJ_SUCCESS;
 }
 
