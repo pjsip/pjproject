@@ -478,6 +478,19 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
 
 PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
 {
+    TRACE__((jb->jb_name.ptr, "\n"
+	    "  JB summary:\n"
+	    "    size=%d prefetch=%d\n"
+	    "    delay (min/max/avg/dev)=%d/%d/%d/%d ms\n"
+	    "    burst (min/max/avg/dev)=%d/%d/%d/%d frames\n"
+	    "    lost=%d discard=%d empty=%d\n",
+	    jb->jb_framelist.size, jb->jb_prefetch,
+	    jb->jb_delay.min, jb->jb_delay.max, jb->jb_delay.mean, 
+	    pj_math_stat_get_stddev(&jb->jb_delay),
+	    jb->jb_burst.min, jb->jb_burst.max, jb->jb_burst.mean, 
+	    pj_math_stat_get_stddev(&jb->jb_burst),
+	    jb->jb_lost, jb->jb_discard, jb->jb_empty));
+
     return jb_framelist_destroy(&jb->jb_framelist);
 }
 
@@ -745,11 +758,14 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 	 */
 	if (ftype == PJMEDIA_JB_NORMAL_FRAME) {
 	    *p_frame_type = PJMEDIA_JB_NORMAL_FRAME;
-	    pj_math_stat_update(&jb->jb_delay, cur_size * jb->jb_frame_ptime);
 	} else {
 	    *p_frame_type = PJMEDIA_JB_MISSING_FRAME;
 	    jb->jb_lost++;
 	}
+
+	/* Calculate delay on the first GET */
+	if (jb->jb_last_op == JB_OP_PUT)
+	    pj_math_stat_update(&jb->jb_delay, cur_size * jb->jb_frame_ptime);
     }
 
     jb->jb_level++;
