@@ -57,7 +57,7 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 
 	sscanf(p+1, "%s %u %u %u", mode_st, &param->init_prefetch, 
 	       &param->min_prefetch, &param->max_prefetch);
-	param->adaptive = (stricmp(mode_st, "adaptive") == 0);
+	param->adaptive = (pj_ansi_stricmp(mode_st, "adaptive") == 0);
 
     } else if (*p == '!') {
 	/* Success condition. */
@@ -65,15 +65,15 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 	unsigned cond_val;
 
 	sscanf(p+1, "%s %u", cond_st, &cond_val);
-	if (stricmp(cond_st, "burst") == 0)
+	if (pj_ansi_stricmp(cond_st, "burst") == 0)
 	    cond->burst = cond_val;
-	else if (stricmp(cond_st, "delay") == 0)
+	else if (pj_ansi_stricmp(cond_st, "delay") == 0)
 	    cond->delay = cond_val;
-	else if (stricmp(cond_st, "discard") == 0)
+	else if (pj_ansi_stricmp(cond_st, "discard") == 0)
 	    cond->discard = cond_val;
-	else if (stricmp(cond_st, "empty") == 0)
+	else if (pj_ansi_stricmp(cond_st, "empty") == 0)
 	    cond->empty = cond_val;
-	else if (stricmp(cond_st, "lost") == 0)
+	else if (pj_ansi_stricmp(cond_st, "lost") == 0)
 	    cond->lost = cond_val;
 
     } else if (*p == '=') {
