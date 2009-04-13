@@ -1057,7 +1057,7 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
  * application data onward to the peer.  This attribute has no value
  * part and thus the attribute length field is 0.
  */
-typedef struct pj_stun_empty_attr pj_stun_use_candidate_attr;
+typedef struct pj_stun_empty_attr pj_stun_dont_fragment_attr;
 
 
 /**

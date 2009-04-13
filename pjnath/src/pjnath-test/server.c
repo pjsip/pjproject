@@ -466,7 +466,7 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
 	    goto send_pkt;
 	}
 	pj_stun_msg_add_sockaddr_attr(alloc->pool, alloc->data_ind, 
-				      PJ_STUN_ATTR_PEER_ADDR, PJ_TRUE,
+				      PJ_STUN_ATTR_XOR_PEER_ADDR, PJ_TRUE,
 				      &alloc->alloc_addr,
 				      pj_sockaddr_get_len(&alloc->alloc_addr));
 	pj_stun_msg_add_binary_attr(alloc->pool, alloc->data_ind,
@@ -515,13 +515,13 @@ static pj_bool_t turn_on_data_recvfrom(pj_activesock_t *asock,
 	    } else
 		resp = create_success_response(test_srv, alloc, req, pool, 0, &auth_key);
 	} else if (req->hdr.type == PJ_STUN_SEND_INDICATION) {
-	    pj_stun_peer_addr_attr *pa;
+	    pj_stun_xor_peer_addr_attr *pa;
 	    pj_stun_data_attr *da;
 
 	    test_srv->turn_stat.rx_send_ind_cnt++;
 
-	    pa = (pj_stun_peer_addr_attr*)
-		 pj_stun_msg_find_attr(req, PJ_STUN_ATTR_PEER_ADDR, 0);
+	    pa = (pj_stun_xor_peer_addr_attr*)
+		 pj_stun_msg_find_attr(req, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
 	    da = (pj_stun_data_attr*)
 		 pj_stun_msg_find_attr(req, PJ_STUN_ATTR_DATA, 0);
 	    if (pa && da) {
@@ -588,7 +588,7 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
 				       pj_status_t status)
 {
     turn_allocation *alloc;
-    pj_stun_peer_addr_attr *pa;
+    pj_stun_xor_peer_addr_attr *pa;
     pj_stun_data_attr *da;
     char peer_info[PJ_INET6_ADDRSTRLEN+10];
     char client_info[PJ_INET6_ADDRSTRLEN+10];
@@ -623,8 +623,8 @@ static pj_bool_t alloc_on_data_recvfrom(pj_activesock_t *asock,
     }
 
     /* Format a Data indication */
-    pa = (pj_stun_peer_addr_attr*)
-	 pj_stun_msg_find_attr(alloc->data_ind, PJ_STUN_ATTR_PEER_ADDR, 0);
+    pa = (pj_stun_xor_peer_addr_attr*)
+	 pj_stun_msg_find_attr(alloc->data_ind, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
     da = (pj_stun_data_attr*)
 	 pj_stun_msg_find_attr(alloc->data_ind, PJ_STUN_ATTR_DATA, 0);
     pj_assert(pa && da);
