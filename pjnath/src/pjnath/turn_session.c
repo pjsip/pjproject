@@ -28,11 +28,14 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/rand.h>
 #include <pj/sock.h>
 
 #define PJ_TURN_CHANNEL_MIN	    0x4000
-#define PJ_TURN_CHANNEL_MAX	    0xFFFE  /* inclusive */
-#define PJ_TURN_PEER_HTABLE_SIZE    8
+#define PJ_TURN_CHANNEL_MAX	    0x7FFF  /* inclusive */
+#define PJ_TURN_CHANNEL_HTABLE_SIZE 8
+#define PJ_TURN_PERM_HTABLE_SIZE    8
+#define PJ_TURN_RENEWAL_BEFORE	    10	/* seconds before renewals */
 
 static const char *state_names[] = 
 {
@@ -53,15 +56,56 @@ enum timer_id_t
     TIMER_DESTROY
 };
 
-
-struct peer
+/* This structure describes a channel binding. A channel binding is index by
+ * the channel number or IP address and port number of the peer.
+ */
+struct ch_t
 {
-    pj_uint16_t	    ch_id;
+    /* The channel number */
+    pj_uint16_t	    num;
+
+    /* PJ_TRUE if we've received successful response to ChannelBind request
+     * for this channel.
+     */
     pj_bool_t	    bound;
+
+    /* The peer IP address and port */
     pj_sockaddr	    addr;
+
+    /* The channel binding expiration */
     pj_time_val	    expiry;
 };
 
+
+/* This structure describes a permission. A permission is identified by the
+ * IP address only.
+ */
+struct perm_t
+{
+    /* Cache of hash value to speed-up lookup */
+    pj_uint32_t	    hval;
+
+    /* The permission IP address. The port number MUST be zero */
+    pj_sockaddr	    addr;
+
+    /* Number of peers that uses this permission. */
+    unsigned	    peer_cnt;
+
+    /* Automatically renew this permission once it expires? */
+    pj_bool_t	    renew;
+
+    /* The permission expiration */
+    pj_time_val	    expiry;
+
+    /* Arbitrary/random pointer value (token) to map this perm with the 
+     * request to create it. It is used to invalidate this perm when the 
+     * request fails.
+     */
+    void	   *req_token;
+};
+
+
+/* The TURN client session structure */
 struct pj_turn_session
 {
     pj_pool_t		*pool;
@@ -102,7 +146,8 @@ struct pj_turn_session
     pj_sockaddr		 mapped_addr;
     pj_sockaddr		 relay_addr;
 
-    pj_hash_table_t	*peer_table;
+    pj_hash_table_t	*ch_table;
+    pj_hash_table_t	*perm_table;
 
     pj_uint32_t		 send_ind_tsx_id[3];
     /* tx_pkt must be 16bit aligned */
@@ -142,13 +187,19 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *sess,
 static void dns_srv_resolver_cb(void *user_data,
 				pj_status_t status,
 				const pj_dns_srv_record *rec);
-static struct peer *lookup_peer_by_addr(pj_turn_session *sess,
-					const pj_sockaddr_t *addr,
-					unsigned addr_len,
-					pj_bool_t update,
-					pj_bool_t bind_channel);
-static struct peer *lookup_peer_by_chnum(pj_turn_session *sess,
-					 pj_uint16_t chnum);
+static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
+				      const pj_sockaddr_t *addr,
+				      unsigned addr_len,
+				      pj_bool_t update,
+				      pj_bool_t bind_channel);
+static struct ch_t *lookup_ch_by_chnum(pj_turn_session *sess,
+				       pj_uint16_t chnum);
+static struct perm_t *lookup_perm(pj_turn_session *sess,
+				  const pj_sockaddr_t *addr,
+				  unsigned addr_len,
+				  pj_bool_t update);
+static void invalidate_perm(pj_turn_session *sess,
+			    struct perm_t *perm);
 static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e);
 
 
@@ -224,7 +275,10 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
 
     /* Peer hash table */
-    sess->peer_table = pj_hash_create(pool, PJ_TURN_PEER_HTABLE_SIZE);
+    sess->ch_table = pj_hash_create(pool, PJ_TURN_CHANNEL_HTABLE_SIZE);
+
+    /* Permission hash table */
+    sess->perm_table = pj_hash_create(pool, PJ_TURN_PERM_HTABLE_SIZE);
 
     /* Session lock */
     status = pj_lock_create_recursive_mutex(pool, sess->obj_name, 
@@ -482,6 +536,22 @@ PJ_DEF(void) pj_turn_session_set_log( pj_turn_session *sess,
 }
 
 
+/*
+ * Set software name
+ */
+PJ_DEF(pj_status_t) pj_turn_session_set_software_name( pj_turn_session *sess,
+						       const pj_str_t *sw)
+{
+    pj_status_t status;
+
+    pj_lock_acquire(sess->lock);
+    status = pj_stun_session_set_software_name(sess->stun, sw);
+    pj_lock_release(sess->lock);
+
+    return status;
+}
+
+
 /**
  * Set the server or domain name of the server.
  */
@@ -704,6 +774,101 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 
 
 /*
+ * Install or renew permissions
+ */
+PJ_DEF(pj_status_t) pj_turn_session_set_perm( pj_turn_session *sess,
+					      unsigned addr_cnt,
+					      const pj_sockaddr addr[],
+					      unsigned options)
+{
+    pj_stun_tx_data *tdata;
+    pj_hash_iterator_t it_buf, *it;
+    void *req_token;
+    unsigned i, attr_added=0;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(sess && addr_cnt && addr, PJ_EINVAL);
+
+    pj_lock_acquire(sess->lock);
+
+    /* Create a bare CreatePermission request */
+    status = pj_stun_session_create_req(sess->stun, 
+					PJ_STUN_CREATE_PERM_REQUEST,
+					PJ_STUN_MAGIC, NULL, &tdata);
+    if (status != PJ_SUCCESS) {
+	pj_lock_release(sess->lock);
+	return status;
+    }
+
+    /* Create request token to map the request to the perm structures
+     * which the request belongs.
+     */
+    req_token = (void*)(long)pj_rand();
+
+    /* Process the addresses */
+    for (i=0; i<addr_cnt; ++i) {
+	struct perm_t *perm;
+
+	/* Lookup the perm structure and create if it doesn't exist */
+	perm = lookup_perm(sess, &addr[i], pj_sockaddr_get_len(&addr[i]),
+			   PJ_TRUE);
+	perm->renew = (options & 0x01);
+
+	/* Only add to the request if the request doesn't contain this
+	 * address yet.
+	 */
+	if (perm->req_token != req_token) {
+	    perm->req_token = req_token;
+
+	    /* Add XOR-PEER-ADDRESS */
+	    status = pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
+						   PJ_STUN_ATTR_XOR_PEER_ADDR,
+						   PJ_TRUE,
+						   &addr[i],
+						   sizeof(addr[i]));
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    ++attr_added;
+	}
+    }
+
+    pj_assert(attr_added != 0);
+
+    /* Send the request */
+    status = pj_stun_session_send_msg(sess->stun, req_token, PJ_FALSE, 
+				      (sess->conn_type==PJ_TURN_TP_UDP),
+				      sess->srv_addr,
+				      pj_sockaddr_get_len(sess->srv_addr), 
+				      tdata);
+    if (status != PJ_SUCCESS) {
+	/* tdata is already destroyed */
+	tdata = NULL;
+	goto on_error;
+    }
+
+    pj_lock_release(sess->lock);
+    return PJ_SUCCESS;
+
+on_error:
+    /* destroy tdata */
+    if (tdata) {
+	pj_stun_msg_destroy_tdata(sess->stun, tdata);
+    }
+    /* invalidate perm structures associated with this request */
+    it = pj_hash_first(sess->perm_table, &it_buf);
+    while (it) {
+	struct perm_t *perm = (struct perm_t*)
+			      pj_hash_this(sess->perm_table, it);
+	it = pj_hash_next(sess->perm_table, it);
+	if (perm->req_token == req_token)
+	    invalidate_perm(sess, perm);
+    }
+    pj_lock_release(sess->lock);
+    return status;
+}
+
+/*
  * Send REFRESH
  */
 static void send_refresh(pj_turn_session *sess, int lifetime)
@@ -757,7 +922,8 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 					    const pj_sockaddr_t *addr,
 					    unsigned addr_len)
 {
-    struct peer *peer;
+    struct ch_t *ch;
+    struct perm_t *perm;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(sess && pkt && pkt_len && addr && addr_len, 
@@ -771,14 +937,29 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
     /* Lock session now */
     pj_lock_acquire(sess->lock);
 
-    /* Lookup peer to see whether we've assigned a channel number
-     * to this peer.
-     */
-    peer = lookup_peer_by_addr(sess, addr, addr_len, PJ_TRUE, PJ_FALSE);
-    pj_assert(peer != NULL);
+    /* Lookup permission first */
+    perm = lookup_perm(sess, addr, pj_sockaddr_get_len(addr), PJ_FALSE);
+    if (perm == NULL) {
+	/* Permission doesn't exist, install it first */
+	char ipstr[PJ_INET6_ADDRSTRLEN+2];
 
-    if (peer->ch_id != PJ_TURN_INVALID_CHANNEL && peer->bound) {
-	/* Peer is assigned Channel number, we can use ChannelData */
+	PJ_LOG(4,(sess->obj_name, 
+		  "sendto(): IP %s has no permission, requesting it first..",
+		  pj_sockaddr_print(addr, ipstr, sizeof(ipstr), 2)));
+
+	status = pj_turn_session_set_perm(sess, 1, (const pj_sockaddr*)addr, 
+					  0);
+	if (status != PJ_SUCCESS) {
+	    pj_lock_release(sess->lock);
+	    return status;
+	}
+    }
+
+    /* See if the peer is bound to a channel number */
+    ch = lookup_ch_by_addr(sess, addr, pj_sockaddr_get_len(addr), 
+			   PJ_FALSE, PJ_FALSE);
+    if (ch && ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound) {
+	/* Peer is assigned a channel number, we can use ChannelData */
 	pj_turn_channel_data *cd = (pj_turn_channel_data*)sess->tx_pkt;
 	
 	pj_assert(sizeof(*cd)==4);
@@ -788,7 +969,7 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 	    goto on_return;
 	}
 
-	cd->ch_number = pj_htons((pj_uint16_t)peer->ch_id);
+	cd->ch_number = pj_htons((pj_uint16_t)ch->num);
 	cd->length = pj_htons((pj_uint16_t)pkt_len);
 	pj_memcpy(cd+1, pkt, pkt_len);
 
@@ -799,9 +980,7 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 				      pj_sockaddr_get_len(sess->srv_addr));
 
     } else {
-	/* Peer has not been assigned Channel number, must use Send
-	 * Indication.
-	 */
+	/* Use Send Indication. */
 	pj_stun_sockaddr_attr peer_attr;
 	pj_stun_binary_attr data_attr;
 	pj_stun_msg send_ind;
@@ -817,8 +996,8 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
-	/* Add PEER-ADDRESS */
-	pj_stun_sockaddr_attr_init(&peer_attr, PJ_STUN_ATTR_PEER_ADDR,
+	/* Add XOR-PEER-ADDRESS */
+	pj_stun_sockaddr_attr_init(&peer_attr, PJ_STUN_ATTR_XOR_PEER_ADDR,
 				   PJ_TRUE, addr, addr_len);
 	pj_stun_msg_add_attr(&send_ind, (pj_stun_attr_hdr*)&peer_attr);
 
@@ -854,7 +1033,7 @@ PJ_DEF(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
 						 const pj_sockaddr_t *peer_adr,
 						 unsigned addr_len)
 {
-    struct peer *peer;
+    struct ch_t *ch;
     pj_stun_tx_data *tdata;
     pj_uint16_t ch_num;
     pj_status_t status;
@@ -871,17 +1050,18 @@ PJ_DEF(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    /* Lookup peer */
-    peer = lookup_peer_by_addr(sess, peer_adr, addr_len, PJ_TRUE, PJ_FALSE);
-    pj_assert(peer);
+    /* Lookup if this peer has already been assigned a number */
+    ch = lookup_ch_by_addr(sess, peer_adr, pj_sockaddr_get_len(peer_adr),
+			   PJ_TRUE, PJ_FALSE);
+    pj_assert(ch);
 
-    if (peer->ch_id != PJ_TURN_INVALID_CHANNEL) {
+    if (ch->num != PJ_TURN_INVALID_CHANNEL) {
 	/* Channel is already bound. This is a refresh request. */
-	ch_num = peer->ch_id;
+	ch_num = ch->num;
     } else {
 	PJ_ASSERT_ON_FAIL(sess->next_ch <= PJ_TURN_CHANNEL_MAX, 
 			    {status=PJ_ETOOMANY; goto on_return;});
-	peer->ch_id = ch_num = sess->next_ch++;
+	ch->num = ch_num = sess->next_ch++;
     }
 
     /* Add CHANNEL-NUMBER attribute */
@@ -889,15 +1069,15 @@ PJ_DEF(pj_status_t) pj_turn_session_bind_channel(pj_turn_session *sess,
 			      PJ_STUN_ATTR_CHANNEL_NUMBER,
 			      PJ_STUN_SET_CH_NB(ch_num));
 
-    /* Add PEER-ADDRESS attribute */
+    /* Add XOR-PEER-ADDRESS attribute */
     pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_PEER_ADDR, PJ_TRUE,
+				  PJ_STUN_ATTR_XOR_PEER_ADDR, PJ_TRUE,
 				  peer_adr, addr_len);
 
     /* Send the request, associate peer data structure with tdata 
      * for future reference when we receive the ChannelBind response.
      */
-    status = pj_stun_session_send_msg(sess->stun, peer, PJ_FALSE, 
+    status = pj_stun_session_send_msg(sess->stun, ch, PJ_FALSE, 
 				      (sess->conn_type==PJ_TURN_TP_UDP),
 				      sess->srv_addr,
 				      pj_sockaddr_get_len(sess->srv_addr),
@@ -949,7 +1129,7 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
     } else {
 	/* This must be ChannelData. */
 	pj_turn_channel_data cd;
-	struct peer *peer;
+	struct ch_t *ch;
 
 	if (pkt_len < 4) {
 	    if (parsed_len) *parsed_len = 0;
@@ -980,9 +1160,9 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 	    }
 	}
 
-	/* Lookup peer */
-	peer = lookup_peer_by_chnum(sess, cd.ch_number);
-	if (!peer || !peer->bound) {
+	/* Lookup channel */
+	ch = lookup_ch_by_chnum(sess, cd.ch_number);
+	if (!ch || !ch->bound) {
 	    status = PJ_ENOTFOUND;
 	    goto on_return;
 	}
@@ -990,8 +1170,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 	/* Notify application */
 	if (sess->cb.on_rx_data) {
 	    (*sess->cb.on_rx_data)(sess, ((pj_uint8_t*)pkt)+sizeof(cd), 
-				   cd.length, &peer->addr,
-				   pj_sockaddr_get_len(&peer->addr));
+				   cd.length, &ch->addr,
+				   pj_sockaddr_get_len(&ch->addr));
 	}
 
 	status = PJ_SUCCESS;
@@ -1089,7 +1269,7 @@ static void on_allocate_success(pj_turn_session *sess,
 				const pj_stun_msg *msg)
 {
     const pj_stun_lifetime_attr *lf_attr;
-    const pj_stun_relayed_addr_attr *raddr_attr;
+    const pj_stun_xor_relayed_addr_attr *raddr_attr;
     const pj_stun_sockaddr_attr *mapped_attr;
     pj_str_t s;
     pj_time_val timeout;
@@ -1137,8 +1317,8 @@ static void on_allocate_success(pj_turn_session *sess,
     /* Check that relayed transport address contains correct
      * address family.
      */
-    raddr_attr = (const pj_stun_relayed_addr_attr*)
-		 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_RELAYED_ADDR, 0);
+    raddr_attr = (const pj_stun_xor_relayed_addr_attr*)
+		 pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_RELAYED_ADDR, 0);
     if (raddr_attr == NULL && method==PJ_STUN_ALLOCATE_METHOD) {
 	on_session_fail(sess, method, PJNATH_EINSTUNMSG,
 		        pj_cstr(&s, "Error: Received ALLOCATE without "
@@ -1301,15 +1481,15 @@ static void stun_on_request_complete(pj_stun_session *stun,
 	    PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
 	{
 	    /* Successful ChannelBind response */
-	    struct peer *peer = (struct peer*)token;
+	    struct ch_t *ch = (struct ch_t*)token;
 
-	    pj_assert(peer->ch_id != PJ_TURN_INVALID_CHANNEL);
-	    peer->bound = PJ_TRUE;
+	    pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL);
+	    ch->bound = PJ_TRUE;
 
 	    /* Update hash table */
-	    lookup_peer_by_addr(sess, &peer->addr,
-				pj_sockaddr_get_len(&peer->addr),
-				PJ_TRUE, PJ_TRUE);
+	    lookup_ch_by_addr(sess, &ch->addr,
+			      pj_sockaddr_get_len(&ch->addr),
+			      PJ_TRUE, PJ_TRUE);
 
 	} else {
 	    /* Failed ChannelBind response */
@@ -1332,6 +1512,58 @@ static void stun_on_request_complete(pj_stun_session *stun,
 		      (int)err_msg.slen, err_msg.ptr));
 	}
 
+    } else if (method == PJ_STUN_CREATE_PERM_METHOD) {
+	/* Handle CreatePermission response */
+	if (status==PJ_SUCCESS && 
+	    PJ_STUN_IS_SUCCESS_RESPONSE(response->hdr.type)) 
+	{
+	    /* No special handling when the request is successful. */
+	} else {
+	    /* Iterate the permission table and invalidate all permissions
+	     * that are related to this request.
+	     */
+	    pj_hash_iterator_t it_buf, *it;
+	    char ipstr[PJ_INET6_ADDRSTRLEN+10];
+	    int err_code;
+	    char errbuf[PJ_ERR_MSG_SIZE];
+	    pj_str_t reason;
+
+	    if (status != PJ_SUCCESS) {
+		err_code = status;
+		reason = pj_strerror(status, errbuf, sizeof(errbuf));
+	    } else {
+		const pj_stun_errcode_attr *eattr;
+
+		eattr = (const pj_stun_errcode_attr*)
+			pj_stun_msg_find_attr(response, 
+					      PJ_STUN_ATTR_ERROR_CODE, 0);
+		if (eattr) {
+		    err_code = eattr->err_code;
+		    reason = eattr->reason;
+		} else {
+		    err_code = -1;
+		    reason = pj_str("?");
+		}
+	    }
+
+	    it = pj_hash_first(sess->perm_table, &it_buf);
+	    while (it) {
+		struct perm_t *perm = (struct perm_t*)
+				      pj_hash_this(sess->perm_table, it);
+		it = pj_hash_next(sess->perm_table, it);
+
+		if (perm->req_token == token) {
+		    PJ_LOG(1,(sess->obj_name, 
+			      "CreatePermission failed for IP %s: %d/%.*s",
+			      pj_sockaddr_print(&perm->addr, ipstr, 
+						sizeof(ipstr), 2),
+			      err_code, (int)reason.slen, reason.ptr));
+
+		    invalidate_perm(sess, perm);
+		}
+	    }
+	}
+
     } else {
 	PJ_LOG(4,(sess->obj_name, "Unexpected STUN %s response",
 		  pj_stun_get_method_name(response->hdr.type)));
@@ -1352,7 +1584,7 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
 					 unsigned src_addr_len)
 {
     pj_turn_session *sess;
-    pj_stun_peer_addr_attr *peer_attr;
+    pj_stun_xor_peer_addr_attr *peer_attr;
     pj_stun_icmp_attr *icmp;
     pj_stun_data_attr *data_attr;
 
@@ -1379,15 +1611,15 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *stun,
 	return PJ_SUCCESS;
     }
 
-    /* Get PEER-ADDRESS attribute */
-    peer_attr = (pj_stun_peer_addr_attr*)
-		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PEER_ADDR, 0);
+    /* Get XOR-PEER-ADDRESS attribute */
+    peer_attr = (pj_stun_xor_peer_addr_attr*)
+		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
 
     /* Get DATA attribute */
     data_attr = (pj_stun_data_attr*)
 		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_DATA, 0);
 
-    /* Must have both PEER-ADDRESS and DATA attributes */
+    /* Must have both XOR-PEER-ADDRESS and DATA attributes */
     if (!peer_attr || !data_attr) {
 	PJ_LOG(4,(sess->obj_name, 
 		  "Received Data indication with missing attributes"));
@@ -1472,61 +1704,108 @@ static void dns_srv_resolver_cb(void *user_data,
 /*
  * Lookup peer descriptor from its address.
  */
-static struct peer *lookup_peer_by_addr(pj_turn_session *sess,
-					const pj_sockaddr_t *addr,
-					unsigned addr_len,
-					pj_bool_t update,
-					pj_bool_t bind_channel)
+static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
+				      const pj_sockaddr_t *addr,
+				      unsigned addr_len,
+				      pj_bool_t update,
+				      pj_bool_t bind_channel)
 {
-    unsigned hval = 0;
-    struct peer *peer;
+    pj_uint32_t hval = 0;
+    struct ch_t *ch;
 
-    peer = (struct peer*) pj_hash_get(sess->peer_table, addr, addr_len, &hval);
-    if (peer == NULL && update) {
-	peer = PJ_POOL_ZALLOC_T(sess->pool, struct peer);
-	peer->ch_id = PJ_TURN_INVALID_CHANNEL;
-	pj_memcpy(&peer->addr, addr, addr_len);
+    ch = (struct ch_t*) 
+	 pj_hash_get(sess->ch_table, addr, addr_len, &hval);
+    if (ch == NULL && update) {
+	ch = PJ_POOL_ZALLOC_T(sess->pool, struct ch_t);
+	ch->num = PJ_TURN_INVALID_CHANNEL;
+	pj_memcpy(&ch->addr, addr, addr_len);
 
 	/* Register by peer address */
-	pj_hash_set(sess->pool, sess->peer_table, &peer->addr, addr_len,
-		    hval, peer);
+	pj_hash_set(sess->pool, sess->ch_table, &ch->addr, addr_len,
+		    hval, ch);
     }
 
-    if (peer && update) {
-	pj_gettimeofday(&peer->expiry);
-	if (peer->bound) {
-	    peer->expiry.sec += PJ_TURN_CHANNEL_TIMEOUT - 10;
-	} else {
-	    peer->expiry.sec += PJ_TURN_PERM_TIMEOUT - 10;
-	}
+    if (ch && update) {
+	pj_gettimeofday(&ch->expiry);
+	ch->expiry.sec += PJ_TURN_PERM_TIMEOUT - PJ_TURN_RENEWAL_BEFORE;
 
 	if (bind_channel) {
 	    pj_uint32_t hval = 0;
 	    /* Register by channel number */
-	    pj_assert(peer->ch_id != PJ_TURN_INVALID_CHANNEL && peer->bound);
+	    pj_assert(ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound);
 
-	    if (pj_hash_get(sess->peer_table, &peer->ch_id, 
-			    sizeof(peer->ch_id), &hval)==0) {
-		pj_hash_set(sess->pool, sess->peer_table, &peer->ch_id,
-			    sizeof(peer->ch_id), hval, peer);
+	    if (pj_hash_get(sess->ch_table, &ch->num, 
+			    sizeof(ch->num), &hval)==0) {
+		pj_hash_set(sess->pool, sess->ch_table, &ch->num,
+			    sizeof(ch->num), hval, ch);
 	    }
 	}
     }
 
-    return peer;
+    return ch;
 }
 
 
 /*
- * Lookup peer descriptor from its channel number.
+ * Lookup channel descriptor from its channel number.
  */
-static struct peer *lookup_peer_by_chnum(pj_turn_session *sess,
+static struct ch_t *lookup_ch_by_chnum(pj_turn_session *sess,
 					 pj_uint16_t chnum)
 {
-    return (struct peer*) pj_hash_get(sess->peer_table, &chnum, 
+    return (struct ch_t*) pj_hash_get(sess->ch_table, &chnum, 
 				      sizeof(chnum), NULL);
 }
 
+
+/*
+ * Lookup permission and optionally create if it doesn't exist.
+ */
+static struct perm_t *lookup_perm(pj_turn_session *sess,
+				  const pj_sockaddr_t *addr,
+				  unsigned addr_len,
+				  pj_bool_t update)
+{
+    pj_uint32_t hval = 0;
+    pj_sockaddr perm_addr;
+    struct perm_t *perm;
+
+    /* make sure port number if zero */
+    if (pj_sockaddr_get_port(addr) != 0) {
+	pj_memcpy(&perm_addr, addr, addr_len);
+	pj_sockaddr_set_port(&perm_addr, 0);
+	addr = &perm_addr;
+    }
+
+    /* lookup and create if it doesn't exist and wanted */
+    perm = (struct perm_t*) 
+	   pj_hash_get(sess->perm_table, addr, addr_len, &hval);
+    if (perm == NULL && update) {
+	perm = PJ_POOL_ZALLOC_T(sess->pool, struct perm_t);
+	pj_memcpy(&perm->addr, addr, addr_len);
+	perm->hval = hval;
+
+	pj_hash_set(sess->pool, sess->perm_table, &perm->addr, addr_len,
+		    perm->hval, perm);
+    }
+
+    if (perm && update) {
+	pj_gettimeofday(&perm->expiry);
+	perm->expiry.sec += PJ_TURN_PERM_TIMEOUT - PJ_TURN_RENEWAL_BEFORE;
+
+    }
+
+    return perm;
+}
+
+/*
+ * Delete permission
+ */
+static void invalidate_perm(pj_turn_session *sess,
+			    struct perm_t *perm)
+{
+    pj_hash_set(NULL, sess->perm_table, &perm->addr,
+		pj_sockaddr_get_len(&perm->addr), perm->hval, NULL);
+}
 
 /*
  * Timer event.
@@ -1564,21 +1843,21 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 	}
 
 	/* Scan hash table to refresh bound channels */
-	it = pj_hash_first(sess->peer_table, &itbuf);
+	it = pj_hash_first(sess->ch_table, &itbuf);
 	while (it) {
-	    struct peer *peer = (struct peer*) 
-				pj_hash_this(sess->peer_table, it);
-	    if (peer->bound && PJ_TIME_VAL_LTE(peer->expiry, now)) {
+	    struct ch_t *ch = (struct ch_t*) 
+			      pj_hash_this(sess->ch_table, it);
+	    if (ch->bound && PJ_TIME_VAL_LTE(ch->expiry, now)) {
 
 		/* Send ChannelBind to refresh channel binding and 
 		 * permission.
 		 */
-		pj_turn_session_bind_channel(sess, &peer->addr,
-					     pj_sockaddr_get_len(&peer->addr));
+		pj_turn_session_bind_channel(sess, &ch->addr,
+					     pj_sockaddr_get_len(&ch->addr));
 		pkt_sent = PJ_TRUE;
 	    }
 
-	    it = pj_hash_next(sess->peer_table, it);
+	    it = pj_hash_next(sess->ch_table, it);
 	}
 
 	/* If no packet is sent, send a blank Send indication to

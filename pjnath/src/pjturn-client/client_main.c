@@ -138,6 +138,7 @@ static int init()
 	pj_stun_sock_cb stun_sock_cb;
 	char name[] = "peer0";
 	pj_uint16_t port;
+	pj_stun_sock_cfg ss_cfg;
 	pj_str_t server;
 
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
@@ -146,9 +147,15 @@ static int init()
 
 	g.peer[i].mapped_addr.addr.sa_family = pj_AF_INET();
 
+	pj_stun_sock_cfg_default(&ss_cfg);
+#if 1
+	/* make reading the log easier */
+	ss_cfg.ka_interval = 300;
+#endif
+
 	name[strlen(name)-1] = '0'+i;
 	status = pj_stun_sock_create(&g.stun_config, name, pj_AF_INET(), 
-				     &stun_sock_cb, NULL,
+				     &stun_sock_cb, &ss_cfg,
 				     &g.peer[i], &g.peer[i].stun_sock);
 	if (status != PJ_SUCCESS) {
 	    my_perror("pj_stun_sock_create()", status);
@@ -415,22 +422,23 @@ static void menu(void)
 
 
     puts("\n");
-    puts("+====================================================================+");
-    puts("|             CLIENT                |             PEER-0             |");
-    puts("|                                   |                                |");
-    printf("| State     : %-12s          | Address: %-21s |\n",
+    puts("+=====================================================================+");
+    puts("|             CLIENT                 |             PEER-0             |");
+    puts("|                                    |                                |");
+    printf("| State     : %-12s           | Address: %-21s |\n",
 	   client_state, peer0_addr);
-    printf("| Relay addr: %-21s |                                |\n",
+    printf("| Relay addr: %-21s  |                                |\n",
 	   relay_addr);
-    puts("|                                   | 0  Send data to relay address  |");
-    puts("| a      Allocate relay             +--------------------------------+	");
-    puts("| s,ss   Send data to peer 0/1      |             PEER-1             |");
-    puts("| b,bb   BindChannel to peer 0/1    |                                |");
-    printf("| x      Delete allocation          | Address: %-21s |\n",
+    puts("|                                    | 0  Send data to relay address  |");
+    puts("| a      Allocate relay              |                                |");
+    puts("| p,pp   Set permission for peer 0/1 +--------------------------------+");
+    puts("| s,ss   Send data to peer 0/1       |             PEER-1             |");
+    puts("| b,bb   BindChannel to peer 0/1     |                                |");
+    printf("| x      Delete allocation           | Address: %-21s |\n",
 	  peer1_addr);
-    puts("+-----------------------------------+                                |");
-    puts("| q  Quit                  d  Dump  | 1  Send data to relay adderss  |");
-    puts("+-----------------------------------+--------------------------------+");
+    puts("+------------------------------------+                                |");
+    puts("| q  Quit                  d  Dump   | 1  Send data to relay adderss  |");
+    puts("+------------------------------------+--------------------------------+");
     printf(">>> ");
     fflush(stdout);
 }
@@ -487,6 +495,20 @@ static void console_main(void)
 					      pj_sockaddr_get_len(&peer->mapped_addr));
 	    if (status != PJ_SUCCESS)
 		my_perror("turn_udp_bind_channel() failed", status);
+	    break;
+	case 'p':
+	    if (g.relay == NULL) {
+		puts("Error: no relay");
+		continue;
+	    }
+	    if (input[1]!='p')
+		peer = &g.peer[0];
+	    else
+		peer = &g.peer[1];
+
+	    status = pj_turn_sock_set_perm(g.relay, 1, &peer->mapped_addr, 1);
+	    if (status != PJ_SUCCESS)
+		my_perror("pj_turn_sock_set_perm() failed", status);
 	    break;
 	case 'x':
 	    if (g.relay == NULL) {

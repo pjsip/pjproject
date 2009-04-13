@@ -83,6 +83,11 @@ enum pj_stun_method_e
     PJ_STUN_DATA_METHOD			    = 7,
 
     /**
+     * STUN/TURN CreatePermission method as defined by draft-ietf-behave-turn
+     */
+    PJ_STUN_CREATE_PERM_METHOD		    = 8,
+
+    /**
      * STUN/TURN ChannelBind as defined by draft-ietf-behave-turn
      */
     PJ_STUN_CHANNEL_BIND_METHOD		    = 9,
@@ -254,6 +259,22 @@ typedef enum pj_stun_msg_type
 
 
     /**
+     * TURN CreatePermission request
+     */
+    PJ_STUN_CREATE_PERM_REQUEST		    = 0x0008,
+
+    /**
+     * TURN CreatePermission successful response.
+     */
+    PJ_STUN_CREATE_PERM_RESPONSE	    = 0x0108,
+
+    /**
+     * TURN CreatePermission failure response
+     */
+    PJ_STUN_CREATE_PERM_ERROR_RESPONSE	    = 0x0118,
+
+
+    /**
      * STUN/TURN ChannelBind Request
      */
     PJ_STUN_CHANNEL_BIND_REQUEST	    = 0x0009,
@@ -292,14 +313,15 @@ typedef enum pj_stun_attr_type
     PJ_STUN_ATTR_LIFETIME	    = 0x000D,/**< TURN LIFETIME attr.	    */
     PJ_STUN_ATTR_MAGIC_COOKIE	    = 0x000F,/**< MAGIC-COOKIE attr (deprec)*/
     PJ_STUN_ATTR_BANDWIDTH	    = 0x0010,/**< TURN BANDWIDTH (deprec)   */
-    PJ_STUN_ATTR_PEER_ADDR	    = 0x0012,/**< TURN PEER-ADDRESS attr.   */
+    PJ_STUN_ATTR_XOR_PEER_ADDR	    = 0x0012,/**< TURN XOR-PEER-ADDRESS	    */
     PJ_STUN_ATTR_DATA		    = 0x0013,/**< DATA attribute.	    */
     PJ_STUN_ATTR_REALM		    = 0x0014,/**< REALM attribute.	    */
     PJ_STUN_ATTR_NONCE		    = 0x0015,/**< NONCE attribute.	    */
-    PJ_STUN_ATTR_RELAYED_ADDR	    = 0x0016,/**< RELAYED-ADDRESS attribute.*/
+    PJ_STUN_ATTR_XOR_RELAYED_ADDR   = 0x0016,/**< TURN XOR-RELAYED-ADDRESS  */
     PJ_STUN_ATTR_REQ_ADDR_TYPE	    = 0x0017,/**< REQUESTED-ADDRESS-TYPE    */
-    PJ_STUN_ATTR_REQ_PROPS	    = 0x0018,/**< REQUESTED-PROPS	    */
-    PJ_STUN_ATTR_REQ_TRANSPORT	    = 0x0019,/**< REQUESTED-TRANSPORT	    */
+    PJ_STUN_ATTR_EVEN_PORT	    = 0x0018,/**< TURN EVEN-PORT	    */
+    PJ_STUN_ATTR_REQ_TRANSPORT	    = 0x0019,/**< TURN REQUESTED-TRANSPORT  */
+    PJ_STUN_ATTR_DONT_FRAGMENT	    = 0x001A,/**< TURN DONT-FRAGMENT	    */
     PJ_STUN_ATTR_XOR_MAPPED_ADDR    = 0x0020,/**< XOR-MAPPED-ADDRESS	    */
     PJ_STUN_ATTR_TIMER_VAL	    = 0x0021,/**< TIMER-VAL attribute.	    */
     PJ_STUN_ATTR_RESERVATION_TOKEN  = 0x0022,/**< TURN RESERVATION-TOKEN    */
@@ -332,6 +354,7 @@ typedef enum pj_stun_status
     PJ_STUN_SC_TRY_ALTERNATE		= 300,  /**< Try Alternate	    */
     PJ_STUN_SC_BAD_REQUEST		= 400,  /**< Bad Request	    */
     PJ_STUN_SC_UNAUTHORIZED	        = 401,  /**< Unauthorized	    */
+    PJ_STUN_SC_FORBIDDEN		= 403,	/**< Forbidden (TURN)	    */
     PJ_STUN_SC_UNKNOWN_ATTRIBUTE        = 420,  /**< Unknown Attribute	    */
 #if 0
     /* These were obsolete in recent rfc3489bis */
@@ -349,8 +372,6 @@ typedef enum pj_stun_status
     PJ_STUN_SC_WRONG_CREDENTIALS	= 441,	/**< TURN Wrong Credentials */
     PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO   = 442,  /**< Unsupported Transport or
 						     Protocol (TURN) */
-    PJ_STUN_SC_INVALID_IP_ADDR		= 443,  /**< Invalid IP Address(TURN)*/
-    PJ_STUN_SC_INVALID_PORT	        = 444,  /**< Invalid Port (TURN)    */
     PJ_STUN_SC_OPER_TCP_ONLY		= 445,  /**< Operation for TCP Only */
     PJ_STUN_SC_CONNECTION_FAILURE       = 446,  /**< Connection Failure	    */
     PJ_STUN_SC_CONNECTION_TIMEOUT       = 447,  /**< Connection Timeout	    */
@@ -358,9 +379,7 @@ typedef enum pj_stun_status
 						     (TURN) */
     PJ_STUN_SC_ROLE_CONFLICT		= 487,  /**< Role Conflict	    */
     PJ_STUN_SC_SERVER_ERROR	        = 500,  /**< Server Error	    */
-    PJ_STUN_SC_INSUFFICIENT_CAPACITY    = 507,  /**< Insufficient Capacity 
-						     (TURN) */
-    PJ_STUN_SC_INSUFFICIENT_PORT_CAPACITY=508,  /**< Insufficient Port Capacity 
+    PJ_STUN_SC_INSUFFICIENT_CAPACITY	= 508,  /**< Insufficient Capacity 
 						     (TURN) */
     PJ_STUN_SC_GLOBAL_FAILURE	        = 600   /**< Global Failure	    */
 } pj_stun_status;
@@ -912,12 +931,12 @@ typedef struct pj_stun_uint_attr pj_stun_bandwidth_attr;
 
 
 /**
- * This describes the STUN PEER-ADDRESS attribute.
- * The PEER-ADDRESS specifies the address and port of the peer as seen
+ * This describes the STUN XOR-PEER-ADDRESS attribute.
+ * The XOR-PEER-ADDRESS specifies the address and port of the peer as seen
  * from the TURN server.  It is encoded in the same way as XOR-MAPPED-
  * ADDRESS. 
  */
-typedef struct pj_stun_sockaddr_attr pj_stun_peer_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_xor_peer_addr_attr;
 
 
 /**
@@ -931,12 +950,12 @@ typedef struct pj_stun_binary_attr pj_stun_data_attr;
 
 
 /**
- * This describes the STUN RELAYED-ADDRESS attribute.
- * The RELAYED-ADDRESS is present in Allocate responses.  It specifies the
+ * This describes the STUN XOR-RELAYED-ADDRESS attribute. The 
+ * XOR-RELAYED-ADDRESS is present in Allocate responses.  It specifies the
  * address and port that the server allocated to the client.  It is
  * encoded in the same way as XOR-MAPPED-ADDRESS.
  */
-typedef struct pj_stun_sockaddr_attr pj_stun_relayed_addr_attr;
+typedef struct pj_stun_sockaddr_attr pj_stun_xor_relayed_addr_attr;
 
 
 /**
@@ -955,71 +974,37 @@ typedef struct pj_stun_sockaddr_attr pj_stun_relayed_addr_attr;
 
  \endverbatim
  */
-typedef struct pj_stun_uint_attr pj_stun_req_addr_type;
+typedef struct pj_stun_uint_attr pj_stun_req_addr_type_attr;
+
 
 /**
- * This describes the TURN REQUESTED-PROPS attribute, encoded as
- * STUN 32bit integer attribute. Few macros are provided to manipulate
- * the values in this attribute: #PJ_STUN_GET_PROP_TYPE(), and
- * #PJ_STUN_SET_PROP_TYPE().
- * 
- * This attribute allows the client to request that the allocation have
- * certain properties, and by the server to indicate which properties
- * are supported.  The attribute is 32 bits long.  Its format is:
-
- \verbatim
-
-      0                   1                   2                   3
-      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-     |   Prop-type   |                  Reserved = 0                 |
-     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
- \endverbatim
-
- * The field labeled "Prop-type" is an 8-bit field specifying the
- * desired property.  The rest of the attribute is RFFU (Reserved For
- * Future Use) and MUST be set to 0 on transmission and ignored on
- * reception.
+ * This describes the TURN REQUESTED-TRANSPORT attribute, encoded in
+ * STUN generic integer attribute.
  *
- * The "Prop-type" field is formatted as follows:
+ * This attribute allows the client to request that the port in the
+ * relayed-transport-address be even, and (optionally) that the server
+ * reserve the next-higher port number.  The attribute is 8 bits long.
+ * Its format is:
 
- \verbatim
-
-      0 1 2 3 4 5 6 7 
+\verbatim
+      0
+      0 1 2 3 4 5 6 7
      +-+-+-+-+-+-+-+-+
-     |E|R|P|         |
+     |R|    RFFU     |
      +-+-+-+-+-+-+-+-+
 
- \endverbatim
+\endverbatim
 
-   The bits in "Prop-type" are:
-
-   E: If 1, the port number for the relayed-transport-address must be
-      even.  If 0, the port number can be even or odd.
-
-   R: If 1, the server must reserve the next highest port for a
-      subsequent allocation.  If 0, no such reservation is requested.
-      If the client sets the R bit to 1, it MUST also set the E bit to 1
-      (however, the E bit may be 1 when the R bit is 0).
-
-   P: If 1, the allocation must be a Preserving allocation.  If 0, the
-      allocation can be either Preserving or Non-Preserving.
-
+ * The attribute contains a single 1-bit flag:
+ * 
+ * R: If 1, the server is requested to reserve the next higher port
+ *    number (on the same IP address) for a subsequent allocation.  If
+ *    0, no such reservation is requested.
+ * 
+ * The other 7 bits of the attribute must be set to zero on transmission
+ * and ignored on reception.
  */
-typedef struct pj_stun_uint_attr pj_stun_req_props_attr;
-
-/**
- * Get the 8bit Prop-type value from a 32bit integral value of TURN 
- * TURN REQUESTED-PROPS attribute.
- */
-#define PJ_STUN_GET_PROP_TYPE(u32)	(u32 >> 24)
-
-/**
- * Convert 8bit Prop-type value to a 32bit integral value of TURN 
- * REQUESTED-PROPS attribute.
- */
-#define PJ_STUN_SET_PROP_TYPE(PropType)	(PropType << 24)
+typedef struct pj_stun_uint_attr pj_stun_even_port_attr;
 
 
 /**
@@ -1063,6 +1048,16 @@ typedef struct pj_stun_uint_attr pj_stun_req_transport_attr;
  */
 #define PJ_STUN_SET_RT_PROTO(proto)   (((pj_uint32_t)(proto)) << 24)
 
+
+/**
+ * This describes the TURN DONT-FRAGMENT attribute.
+ *
+ * This attribute is used by the client to request that the server set
+ * the DF (Don't Fragment) bit in the IP header when relaying the
+ * application data onward to the peer.  This attribute has no value
+ * part and thus the attribute length field is 0.
+ */
+typedef struct pj_stun_empty_attr pj_stun_use_candidate_attr;
 
 
 /**

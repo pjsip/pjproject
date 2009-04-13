@@ -217,8 +217,13 @@ static pj_status_t apply_msg_options(pj_stun_session *sess,
     pj_status_t status = 0;
     pj_str_t realm, username, nonce, auth_key;
 
-    /* The server SHOULD include a SOFTWARE attribute in all responses */
-    if (sess->srv_name.slen && PJ_STUN_IS_RESPONSE(msg->hdr.type)) {
+    /* If the agent is sending a request, it SHOULD add a SOFTWARE attribute
+     * to the request. The server SHOULD include a SOFTWARE attribute in all 
+     * responses 
+     */
+    if (sess->srv_name.slen && !PJ_STUN_IS_INDICATION(msg->hdr.type) &&
+	pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_SOFTWARE, 0)==NULL) 
+    {
 	pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE,
 				    &sess->srv_name);
     }
@@ -486,7 +491,7 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     
     sess->srv_name.ptr = (char*) pj_pool_alloc(pool, 32);
     sess->srv_name.slen = pj_ansi_snprintf(sess->srv_name.ptr, 32,
-					   "pj_stun-%s", pj_get_version());
+					   "pjnath-%s", pj_get_version());
 
     sess->rx_pool = pj_pool_create(sess->cfg->pf, name, 
 				   PJNATH_POOL_LEN_STUN_TDATA, 
@@ -590,12 +595,12 @@ PJ_DEF(pj_status_t) pj_stun_session_set_lock( pj_stun_session *sess,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
-						    const pj_str_t *srv_name)
+PJ_DEF(pj_status_t) pj_stun_session_set_software_name(pj_stun_session *sess,
+						      const pj_str_t *sw)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
-    if (srv_name)
-	pj_strdup(sess->pool, &sess->srv_name, srv_name);
+    if (sw && sw->slen)
+	pj_strdup(sess->pool, &sess->srv_name, sw);
     else
 	sess->srv_name.slen = 0;
     return PJ_SUCCESS;

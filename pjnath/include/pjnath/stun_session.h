@@ -327,15 +327,17 @@ PJ_DECL(pj_status_t) pj_stun_session_set_lock(pj_stun_session *sess,
 					      pj_bool_t auto_del);
 
 /**
- * Set server name to be included in all response.
+ * Set SOFTWARE name to be included in all requests and responses.
  *
  * @param sess	    The STUN session instance.
- * @param srv_name  Server name string.
+ * @param sw	    Software name string. If this argument is NULL or
+ *		    empty, the session will not include SOFTWARE attribute
+ *		    in STUN requests and responses.
  *
- * @return	    The user data associated with this STUN session.
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pj_stun_session_set_server_name(pj_stun_session *sess,
-						     const pj_str_t *srv_name);
+PJ_DECL(pj_status_t) pj_stun_session_set_software_name(pj_stun_session *sess,
+						       const pj_str_t *sw);
 
 /**
  * Set credential to be used by this session. Once credential is set, all

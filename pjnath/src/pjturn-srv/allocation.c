@@ -109,7 +109,6 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
     pj_stun_bandwidth_attr *attr_bw;
     pj_stun_req_transport_attr *attr_req_tp;
     pj_stun_res_token_attr *attr_res_token;
-    pj_stun_req_props_attr *attr_rpp;
     pj_stun_lifetime_attr *attr_lifetime;
 
     pj_bzero(cfg, sizeof(*cfg));
@@ -164,18 +163,6 @@ static pj_status_t parse_allocate_req(alloc_request *cfg,
 	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_BAD_REQUEST);
     }
 
-    /* Get REQUESTED-PROPS attribute, if any */
-    attr_rpp = (pj_stun_req_props_attr*)
-	       pj_stun_msg_find_attr(req, PJ_STUN_ATTR_REQ_PROPS, 0);
-    if (attr_rpp) {
-	/* We don't support REQUESTED-PROPS for now */
-	pj_stun_session_respond(sess, rdata, 
-				PJ_STUN_SC_BAD_REQUEST,
-				"REQUESTED-PROPS is not supported", 
-				NULL, PJ_TRUE, src_addr, src_addr_len);
-	return PJ_STATUS_FROM_STUN_CODE(PJ_STUN_SC_BAD_REQUEST);
-    }
-
     /* Get LIFETIME attribute */
     attr_lifetime = (pj_stun_uint_attr*)
 	            pj_stun_msg_find_attr(req, PJ_STUN_ATTR_LIFETIME, 0);
@@ -211,9 +198,9 @@ static pj_status_t send_allocate_response(pj_turn_allocation *alloc,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Add RELAYED-ADDRESS attribute */
+    /* Add XOR-RELAYED-ADDRESS attribute */
     pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg,
-				  PJ_STUN_ATTR_RELAYED_ADDR, PJ_TRUE,
+				  PJ_STUN_ATTR_XOR_RELAYED_ADDR, PJ_TRUE,
 				  &alloc->relay.hkey.addr,
 				  pj_sockaddr_get_len(&alloc->relay.hkey.addr));
 
@@ -1070,7 +1057,7 @@ static void handle_peer_pkt(pj_turn_allocation *alloc,
 	}
 
 	pj_stun_msg_add_sockaddr_attr(tdata->pool, tdata->msg, 
-				      PJ_STUN_ATTR_PEER_ADDR, PJ_TRUE,
+				      PJ_STUN_ATTR_XOR_PEER_ADDR, PJ_TRUE,
 				      src_addr, pj_sockaddr_get_len(src_addr));
 	pj_stun_msg_add_binary_attr(tdata->pool, tdata->msg,
 				    PJ_STUN_ATTR_DATA, 
@@ -1230,13 +1217,13 @@ static pj_status_t stun_on_rx_request(pj_stun_session *sess,
 	 * ChannelBind request.
 	 */
 	pj_stun_channel_number_attr *ch_attr;
-	pj_stun_peer_addr_attr *peer_attr;
+	pj_stun_xor_peer_addr_attr *peer_attr;
 	pj_turn_permission *p1, *p2;
 
 	ch_attr = (pj_stun_channel_number_attr*)
 		  pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_CHANNEL_NUMBER, 0);
-	peer_attr = (pj_stun_peer_addr_attr*)
-		    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PEER_ADDR, 0);
+	peer_attr = (pj_stun_xor_peer_addr_attr*)
+		    pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
 
 	if (!ch_attr || !peer_attr) {
 	    send_reply_err(alloc, rdata, PJ_TRUE, 
@@ -1333,7 +1320,7 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *sess,
 					 const pj_sockaddr_t *src_addr,
 					 unsigned src_addr_len)
 {
-    pj_stun_peer_addr_attr *peer_attr;
+    pj_stun_xor_peer_addr_attr *peer_attr;
     pj_stun_data_attr *data_attr;
     pj_turn_allocation *alloc;
     pj_turn_permission *perm;
@@ -1353,11 +1340,11 @@ static pj_status_t stun_on_rx_indication(pj_stun_session *sess,
 	return PJ_SUCCESS;
     }
 
-    /* Get PEER-ADDRESS attribute */
-    peer_attr = (pj_stun_peer_addr_attr*)
-		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_PEER_ADDR, 0);
+    /* Get XOR-PEER-ADDRESS attribute */
+    peer_attr = (pj_stun_xor_peer_addr_attr*)
+		pj_stun_msg_find_attr(msg, PJ_STUN_ATTR_XOR_PEER_ADDR, 0);
 
-    /* MUST have PEER-ADDRESS attribute */
+    /* MUST have XOR-PEER-ADDRESS attribute */
     if (!peer_attr)
 	return PJ_SUCCESS;
 

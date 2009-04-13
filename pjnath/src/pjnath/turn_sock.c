@@ -387,6 +387,20 @@ PJ_DEF(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,
 }
 
 /*
+ * Install permission
+ */
+PJ_DEF(pj_status_t) pj_turn_sock_set_perm( pj_turn_sock *turn_sock,
+					   unsigned addr_cnt,
+					   const pj_sockaddr addr[],
+					   unsigned options)
+{
+    if (turn_sock->sess == NULL)
+	return PJ_EINVALIDOP;
+
+    return pj_turn_session_set_perm(turn_sock->sess, addr_cnt, addr, options);
+}
+
+/*
  * Send packet.
  */ 
 PJ_DEF(pj_status_t) pj_turn_sock_sendto( pj_turn_sock *turn_sock,

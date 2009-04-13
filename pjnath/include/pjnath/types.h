@@ -107,11 +107,15 @@ This version of PJNATH implements the following STUN RFC:
 Traversal Using Relays around NAT (TURN) allows the host to control the
 operation of the relay and to exchange packets with its peers using the relay.
 
-This version of PJNATH implements both TCP and UDP client transport and it
-complies with the following TURN draft:
- - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-09.txt">
-   <B>draft-ietf-behave-turn-09</B></A>: Obtaining Relay Addresses 
+Features:
+ - <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-13.txt">
+   <B>draft-ietf-behave-turn-13</B></A>: Obtaining Relay Addresses 
    from Simple Traversal Underneath NAT (STUN)
+ - DNS SRV resolution
+ - Fallback to DNS A resolution if SRV record is not found
+ - UDP and TCP connection to TURN server
+ - automatic management of allocation refresh
+
 
 
 \subsection comp_ice ICE

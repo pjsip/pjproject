@@ -43,7 +43,7 @@ static const char *stun_method_names[PJ_STUN_METHOD_MAX] =
     "???",			/* 5 */
     "Send",			/* 6 */
     "Data",			/* 7 */
-    "???",			/* 8 */
+    "CreatePermission",		/* 8 */
     "ChannelBind",		/* 9 */
 };
 
@@ -56,6 +56,7 @@ static struct
     { PJ_STUN_SC_TRY_ALTERNATE,		    "Try Alternate"}, 
     { PJ_STUN_SC_BAD_REQUEST,		    "Bad Request"},
     { PJ_STUN_SC_UNAUTHORIZED,		    "Unauthorized"},
+    { PJ_STUN_SC_FORBIDDEN,		    "Forbidden"},
     { PJ_STUN_SC_UNKNOWN_ATTRIBUTE,	    "Unknown Attribute"},
     //{ PJ_STUN_SC_STALE_CREDENTIALS,	    "Stale Credentials"},
     //{ PJ_STUN_SC_INTEGRITY_CHECK_FAILURE, "Integrity Check Failure"},
@@ -69,8 +70,6 @@ static struct
     { PJ_STUN_SC_TRANSITIONING,		    "Active Destination Already Set"},
     { PJ_STUN_SC_WRONG_CREDENTIALS,	    "Wrong Credentials"},
     { PJ_STUN_SC_UNSUPP_TRANSPORT_PROTO,    "Unsupported Transport Protocol"},
-    { PJ_STUN_SC_INVALID_IP_ADDR,	    "Invalid IP Address"},
-    { PJ_STUN_SC_INVALID_PORT,		    "Invalid Port"},
     { PJ_STUN_SC_OPER_TCP_ONLY,		    "Operation for TCP Only"},
     { PJ_STUN_SC_CONNECTION_FAILURE,	    "Connection Failure"},
     { PJ_STUN_SC_CONNECTION_TIMEOUT,	    "Connection Timeout"},
@@ -78,7 +77,6 @@ static struct
     { PJ_STUN_SC_ROLE_CONFLICT,		    "Role Conflict"},
     { PJ_STUN_SC_SERVER_ERROR,		    "Server Error"},
     { PJ_STUN_SC_INSUFFICIENT_CAPACITY,	    "Insufficient Capacity"},
-    { PJ_STUN_SC_INSUFFICIENT_PORT_CAPACITY,"Insufficient Port Capacity"},
     { PJ_STUN_SC_GLOBAL_FAILURE,	    "Global Failure"}
 };
 
@@ -310,8 +308,8 @@ static struct attr_desc mandatory_attr_desc[] =
 	NULL
     },
     {
-	/* PJ_STUN_ATTR_PEER_ADDRESS, */
-	"PEER-ADDRESS",
+	/* PJ_STUN_ATTR_XOR_PEER_ADDRESS, */
+	"XOR-PEER-ADDRESS",
 	&decode_xored_sockaddr_attr,
 	&encode_sockaddr_attr,
 	&clone_sockaddr_attr
@@ -338,8 +336,8 @@ static struct attr_desc mandatory_attr_desc[] =
 	&clone_string_attr
     },
     {
-	/* PJ_STUN_ATTR_RELAY_ADDRESS, */
-	"RELAYED-ADDRESS",
+	/* PJ_STUN_ATTR_XOR_RELAYED_ADDR, */
+	"XOR-RELAYED-ADDRESS",
 	&decode_xored_sockaddr_attr,
 	&encode_sockaddr_attr,
 	&clone_sockaddr_attr
@@ -352,8 +350,8 @@ static struct attr_desc mandatory_attr_desc[] =
 	&clone_uint_attr
     },
     {
-	/* PJ_STUN_ATTR_REQUESTED_PROPS, */
-	"REQUESTED-PROPS",
+	/* PJ_STUN_ATTR_EVEN_PORT, */
+	"EVEN-PORT",
 	&decode_uint_attr,
 	&encode_uint_attr,
 	&clone_uint_attr
@@ -366,11 +364,11 @@ static struct attr_desc mandatory_attr_desc[] =
 	&clone_uint_attr
     },
     {
-	/* ID 0x001A is not assigned */
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	/* PJ_STUN_ATTR_DONT_FRAGMENT */
+	"DONT-FRAGMENT",
+	&decode_empty_attr,
+	&encode_empty_attr,
+	&clone_empty_attr
     },
     {
 	/* ID 0x001B is not assigned */
