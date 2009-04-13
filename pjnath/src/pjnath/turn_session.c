@@ -1241,10 +1241,10 @@ static void on_session_fail( pj_turn_session *sess,
 	    return;
 	}
 
-	/* Otherwise if this is REFRESH response, notify application
+	/* Otherwise if this is not ALLOCATE response, notify application
 	 * that session has been TERMINATED.
 	 */
-	if (method==PJ_STUN_REFRESH_METHOD) {
+	if (method!=PJ_STUN_ALLOCATE_METHOD) {
 	    set_state(sess, PJ_TURN_STATE_DEALLOCATED);
 	    sess_shutdown(sess, status);
 	    return;
@@ -1458,7 +1458,9 @@ static void stun_on_request_complete(pj_stun_session *stun,
 	    /* Failed Refresh request */
 	    const pj_str_t *err_msg = NULL;
 
-	    if (status == PJ_SUCCESS) {
+	    pj_assert(status != PJ_SUCCESS);
+
+	    if (response) {
 		const pj_stun_errcode_attr *err_attr;
 		err_attr = (const pj_stun_errcode_attr*)
 			   pj_stun_msg_find_attr(response,
@@ -1466,8 +1468,6 @@ static void stun_on_request_complete(pj_stun_session *stun,
 		if (err_attr) {
 		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
 		    err_msg = &err_attr->reason;
-		} else {
-		    status = PJNATH_EINSTUNMSG;
 		}
 	    }
 
@@ -1493,23 +1493,36 @@ static void stun_on_request_complete(pj_stun_session *stun,
 
 	} else {
 	    /* Failed ChannelBind response */
-	    pj_str_t err_msg = {"", 0};
+	    pj_str_t reason = {"", 0};
+	    int err_code = 0;
+	    char errbuf[PJ_ERR_MSG_SIZE];
 
-	    if (status == PJ_SUCCESS) {
+	    pj_assert(status != PJ_SUCCESS);
+
+	    if (response) {
 		const pj_stun_errcode_attr *err_attr;
 		err_attr = (const pj_stun_errcode_attr*)
 			   pj_stun_msg_find_attr(response,
 						 PJ_STUN_ATTR_ERROR_CODE, 0);
 		if (err_attr) {
+		    err_code = err_attr->err_code;
 		    status = PJ_STATUS_FROM_STUN_CODE(err_attr->err_code);
-		    err_msg = err_attr->reason;
-		} else {
-		    status = PJNATH_EINSTUNMSG;
+		    reason = err_attr->reason;
 		}
+	    } else {
+		err_code = status;
+		reason = pj_strerror(status, errbuf, sizeof(errbuf));
 	    }
 
-	    PJ_LOG(4,(sess->obj_name, "ChannelBind failed: %.*s",
-		      (int)err_msg.slen, err_msg.ptr));
+	    PJ_LOG(1,(sess->obj_name, "ChannelBind failed: %d/%.*s",
+		      err_code, (int)reason.slen, reason.ptr));
+
+	    if (err_code == PJ_STUN_SC_ALLOCATION_MISMATCH) {
+		/* Allocation mismatch means allocation no longer exists */
+		on_session_fail(sess, PJ_STUN_CHANNEL_BIND_METHOD,
+				status, &reason);
+		return;
+	    }
 	}
 
     } else if (method == PJ_STUN_CREATE_PERM_METHOD) {
@@ -1528,10 +1541,9 @@ static void stun_on_request_complete(pj_stun_session *stun,
 	    char errbuf[PJ_ERR_MSG_SIZE];
 	    pj_str_t reason;
 
-	    if (status != PJ_SUCCESS) {
-		err_code = status;
-		reason = pj_strerror(status, errbuf, sizeof(errbuf));
-	    } else {
+	    pj_assert(status != PJ_SUCCESS);
+
+	    if (response) {
 		const pj_stun_errcode_attr *eattr;
 
 		eattr = (const pj_stun_errcode_attr*)
@@ -1544,6 +1556,9 @@ static void stun_on_request_complete(pj_stun_session *stun,
 		    err_code = -1;
 		    reason = pj_str("?");
 		}
+	    } else {
+		err_code = status;
+		reason = pj_strerror(status, errbuf, sizeof(errbuf));
 	    }
 
 	    it = pj_hash_first(sess->perm_table, &it_buf);
@@ -1561,6 +1576,13 @@ static void stun_on_request_complete(pj_stun_session *stun,
 
 		    invalidate_perm(sess, perm);
 		}
+	    }
+
+	    if (err_code == PJ_STUN_SC_ALLOCATION_MISMATCH) {
+		/* Allocation mismatch means allocation no longer exists */
+		on_session_fail(sess, PJ_STUN_CREATE_PERM_METHOD,
+				status, &reason);
+		return;
 	    }
 	}
 
