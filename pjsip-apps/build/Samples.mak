@@ -16,6 +16,7 @@ BINDIR := ../bin/samples
 SAMPLES := auddemo \
 	   confsample \
 	   encdec \
+	   icedemo \
 	   latency \
 	   level \
 	   mix \

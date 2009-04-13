@@ -542,6 +542,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\auddemo.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\confbench.c"
 				>
 			</File>
@@ -555,6 +559,10 @@
 			</File>
 			<File
 				RelativePath="..\src\samples\footprint.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\samples\icedemo.c"
 				>
 			</File>
 			<File
