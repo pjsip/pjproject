@@ -195,6 +195,16 @@ typedef struct pjmedia_srtp_info
 
 
 /**
+ * Initialize SRTP library. This function should be called before
+ * any SRTP functions, however calling #pjmedia_transport_srtp_create() 
+ * will also invoke this function. This function will also register SRTP
+ * library deinitialization to #pj_atexit(), so the deinitialization
+ * of SRTP library will be performed automatically by PJLIB destructor.
+ */
+PJ_DECL(pj_status_t) pjmedia_srtp_init_lib(void);
+
+
+/**
  * Initialize SRTP setting with its default values.
  *
  * @param opt	SRTP setting to be initialized.

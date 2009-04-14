@@ -279,6 +279,16 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 				      &pjsua_var.null_port);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* Initialize SRTP library. */
+    status = pjmedia_srtp_init_lib();
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing SRTP library", 
+		     status);
+	return status;
+    }
+#endif
+
     /* Perform NAT detection */
     pjsua_detect_nat_type();
 

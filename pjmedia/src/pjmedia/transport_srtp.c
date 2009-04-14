@@ -263,12 +263,13 @@ const char* get_libsrtp_errstr(int err)
 
 static void pjmedia_srtp_deinit_lib(void);
 
-static pj_status_t pjmedia_srtp_init_lib(void)
+PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(void)
 {
     static pj_bool_t initialized = PJ_FALSE;
 
     if (initialized == PJ_FALSE) {
 	err_status_t err;
+
 	err = srtp_init();
 	if (err != err_status_ok) { 
 	    PJ_LOG(4, (THIS_FILE, "Failed to initialize libsrtp: %s", 
