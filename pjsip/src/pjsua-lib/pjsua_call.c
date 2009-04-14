@@ -467,6 +467,11 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 	return status;
     }
 
+    /* Increment the dialog's lock otherwise when invite session creation
+     * fails the dialog will be destroyed prematurely.
+     */
+    pjsip_dlg_inc_lock(dlg);
+
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
 
@@ -557,11 +562,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
 		     status);
 
-	/* Upon failure to send first request, both dialog and invite 
+	/* Upon failure to send first request, the invite 
 	 * session would have been cleared.
 	 */
 	inv = NULL;
-	dlg = NULL;
 	goto on_error;
     }
 
@@ -570,6 +574,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     if (p_call_id)
 	*p_call_id = call_id;
 
+    pjsip_dlg_dec_lock(dlg);
     pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
 
@@ -577,10 +582,13 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
 
 on_error:
+    if (dlg) {
+	/* This may destroy the dialog */
+	pjsip_dlg_dec_lock(dlg);
+    }
+
     if (inv != NULL) {
 	pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
-    } else if (dlg) {
-	pjsip_dlg_terminate(dlg);
     }
 
     if (call_id != -1) {
