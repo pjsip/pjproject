@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="libgsmcodec"
 	ProjectGUID="{E53AA5FF-B737-40AA-BD13-387EFA99023D}"
+	RootNamespace="libgsmcodec"
 	>
 	<Platforms>
 		<Platform
@@ -21,7 +22,7 @@
 			OutputDirectory=".\output\gsm-i386-win32-vc8-debug"
 			IntermediateDirectory=".\output\gsm-i386-win32-vc8-debug"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;$(SolutionDir)build\vs\pjproject-vs8-debug-defaults.vsprops;$(SolutionDir)build\vs\pjproject-vs8-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -1966,11 +1967,11 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="config.h"
+				RelativePath="..\..\gsm\inc\config.h"
 				>
 			</File>
 			<File
-				RelativePath="..\..\gsm\inc\config.h"
+				RelativePath="config.h"
 				>
 			</File>
 			<File

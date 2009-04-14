@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="libg7221codec"
 	ProjectGUID="{2A3F241E-682C-47E1-9543-DC28708B406A}"
+	RootNamespace="libg7221codec"
 	>
 	<Platforms>
 		<Platform
@@ -21,6 +22,7 @@
 			OutputDirectory=".\output\libg7221codec-i386-win32-vc8-release"
 			IntermediateDirectory=".\output\libg7221codec-i386-win32-vc8-release"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\pjproject-vs8-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -95,6 +97,7 @@
 			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\pjproject-vs8-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -176,9 +179,9 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\libg7221codec-i386-win32-vc8-debug"
-			IntermediateDirectory=".\output\libg7221codec-i386-win32-vc8-debug"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="$(SolutionDir)build\vs\pjproject-vs8-debug-defaults.vsprops;$(SolutionDir)build\vs\pjproject-vs8-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -210,6 +213,8 @@
 				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-debug/"
 				ObjectFile=".\output\libg7221codec-i386-win32-vc8-debug/"
 				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-debug/"
+				BrowseInformation="1"
+				BrowseInformationFile="$(IntDir)\"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
 				DebugInformationFormat="4"
@@ -253,6 +258,7 @@
 			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\pjproject-vs8-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
