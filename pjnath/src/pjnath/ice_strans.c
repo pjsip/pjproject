@@ -900,10 +900,39 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* If we have TURN candidate, now is the time to create the permissions */
+    if (ice_st->comp[0]->turn_sock) {
+	unsigned i;
+
+	for (i=0; i<ice_st->comp_cnt; ++i) {
+	    pj_ice_strans_comp *comp = ice_st->comp[i];
+	    pj_sockaddr addrs[PJ_ICE_ST_MAX_CAND];
+	    unsigned j, count=0;
+
+	    /* Gather remote addresses for this component */
+	    for (j=0; j<rem_cand_cnt && count<PJ_ARRAY_SIZE(addrs); ++j) {
+		if (rem_cand[j].comp_id==i+1) {
+		    pj_memcpy(&addrs[count++], &rem_cand[j].addr,
+			      pj_sockaddr_get_len(&rem_cand[j].addr));
+		}
+	    }
+
+	    if (count) {
+		status = pj_turn_sock_set_perm(comp->turn_sock, count, 
+					       addrs, 0);
+		if (status != PJ_SUCCESS) {
+		    pj_ice_strans_stop_ice(ice_st);
+		    return status;
+		}
+	    }
+	}
+    }
+
     /* Start ICE negotiation! */
     status = pj_ice_sess_start_check(ice_st->ice);
     if (status != PJ_SUCCESS) {
 	pj_ice_strans_stop_ice(ice_st);
+	return status;
     }
 
     return status;
@@ -1060,6 +1089,14 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 				      sizeof(rip), 3);
 
 		    if (check->lcand->transport_id == TP_TURN) {
+			/* Activate channel binding for the remote address
+			 * for more efficient data transfer using TURN.
+			 */
+			status = pj_turn_sock_bind_channel(
+					ice_st->comp[i]->turn_sock,
+					&check->rcand->addr,
+					sizeof(check->rcand->addr));
+
 			/* Disable logging for Send/Data indications */
 			PJ_LOG(5,(ice_st->obj_name, 
 				  "Disabling STUN Indication logging for "
