@@ -11,6 +11,11 @@ ifneq (@ac_no_speex_codec@,1)
 DIRS += speex
 endif
 
+ifneq (@ac_no_g7221_codec@,1)
+DIRS += g7221
+endif
+
 ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 DIRS += portaudio
 endif
+

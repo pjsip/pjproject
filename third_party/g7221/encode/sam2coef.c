@@ -120,7 +120,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
         
         acca = L_mac(acca,*--win_low, *--sam_low);
         acca = L_mac(acca,*win_high++, *sam_high++);
-        temp = round(acca); 
+        temp = itu_round(acca); 
         
         *dst_ptr++ = temp;
         move16();
@@ -145,7 +145,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
         neg_win_low = negate(*win_low++);
         samp_high = *--sam_high;
         acca = L_mac(acca, neg_win_low, samp_high);
-        temp = round(acca); 
+        temp = itu_round(acca); 
         
         *dst_ptr++=temp;
         move16();

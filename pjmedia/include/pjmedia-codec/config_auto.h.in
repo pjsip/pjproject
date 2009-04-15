@@ -60,6 +60,11 @@
 #undef PJMEDIA_HAS_G722_CODEC
 #endif
 
+/* G7221 codec */
+#ifndef PJMEDIA_HAS_G7221_CODEC
+#undef PJMEDIA_HAS_G7221_CODEC
+#endif
+
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_AUTO_H_ */
 

@@ -96,7 +96,7 @@ export PJMEDIA_CODEC_OBJS += \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			ipp_codecs.o $(CODEC_OBJS)
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
-			$(ILBC_CFLAGS) $(IPP_CFLAGS)
+			$(ILBC_CFLAGS) $(IPP_CFLAGS) $(G7221_CFLAGS)
 
 
 ###############################################################################

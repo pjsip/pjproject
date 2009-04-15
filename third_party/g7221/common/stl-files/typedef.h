@@ -16,6 +16,22 @@
 #ifndef TYPEDEF_H
 #define TYPEDEF_H "$Id $"
 
+#if 1
+
+/* Use PJLIB types definitions (for PJLIB sync'd platforms compatibility? 
+ * e.g: mingw32 was not supported by the original version).
+ */
+#include <pj/types.h>
+
+typedef pj_int8_t Word8;
+typedef pj_int16_t Word16;
+typedef pj_int32_t Word32;
+typedef pj_uint16_t UWord16;
+typedef pj_uint32_t UWord32;
+typedef int Flag;
+
+#else
+
 #include <limits.h>
 
 #if defined(__BORLANDC__) || defined(__WATCOMC__) || defined(_MSC_VER) || defined(__ZTC__) || defined(__CYGWIN__)
@@ -52,4 +68,7 @@ typedef unsigned int UWord32;
 typedef unsigned long UWord32;
 #endif
 
+#endif /* if 0 */
+
 #endif /* TYPEDEF_H */
+

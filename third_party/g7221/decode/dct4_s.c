@@ -291,7 +291,7 @@ void dct_type_iv_s (Word16 *input,Word16 *output,Word16 dct_length)
             {
                 sum = L_mac(sum, pair_ptr[i],dct_core_s[i][k]);
             }
-            buffer_swap[k] = round(sum);
+            buffer_swap[k] = itu_round(sum);
         }
         
         pair_ptr   += CORE_SIZE;
@@ -401,25 +401,25 @@ void dct_type_iv_s (Word16 *input,Word16 *output,Word16 dct_length)
                 
                 sum = L_mac(sum,cos_even,in_low_even);
                 sum = L_mac(sum,negate(msin_even),in_high_even);
-                out_low_even = round(L_shl(sum,1));
+                out_low_even = itu_round(L_shl(sum,1));
                 
                 sum = 0L;
                 move32();
                 sum = L_mac(sum,msin_even,in_low_even);
                 sum = L_mac(sum,cos_even,in_high_even);
-                out_high_even = round(L_shl(sum,1));
+                out_high_even = itu_round(L_shl(sum,1));
                 
                 sum = 0L;
                 move32();
                 sum = L_mac(sum,cos_odd,in_low_odd);
                 sum = L_mac(sum,msin_odd,in_high_odd);
-                out_low_odd = round(L_shl(sum,1));
+                out_low_odd = itu_round(L_shl(sum,1));
                 
                 sum = 0L;
                 move32();
                 sum = L_mac(sum,msin_odd,in_low_odd);
                 sum = L_mac(sum,negate(cos_odd),in_high_odd);
-                out_high_odd = round(L_shl(sum,1));
+                out_high_odd = itu_round(L_shl(sum,1));
                 
                 *out_ptr_low++  = out_low_even;
                 move16();

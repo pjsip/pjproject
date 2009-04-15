@@ -28,6 +28,11 @@ APP_THIRD_PARTY_LIBS += -lilbccodec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libilbccodec-$(LIB_SUFFIX)
 endif
 
+ifneq (@ac_no_g7221_codec@,1)
+APP_THIRD_PARTY_LIBS += -lg7221codec-$(TARGET_NAME)
+APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libg7221codec-$(LIB_SUFFIX)
+endif
+
 ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio-$(LIB_SUFFIX)

@@ -32,9 +32,10 @@ PORTAUDIO_LIB = ..\..\third_party\lib\libportaudio-$(TARGET)$(LIBEXT)
 RESAMPLE_LIB = ..\..\third_party\lib\libresample-$(TARGET)$(LIBEXT)
 SPEEX_LIB = ..\..\third_party\lib\libspeex-$(TARGET)$(LIBEXT)
 SRTP_LIB = ..\..\third_party\lib\libsrtp-$(TARGET)$(LIBEXT)
+G7221_LIB = ..\..\third_party\lib\libg7221codec-$(TARGET)$(LIBEXT)
 
 THIRD_PARTY_LIBS = $(GSM_LIB) $(ILBC_LIB) $(PORTAUDIO_LIB) $(RESAMPLE_LIB) \
-				   $(SPEEX_LIB) $(SRTP_LIB)
+				   $(SPEEX_LIB) $(SRTP_LIB) $(G7221_LIB)
 
 LIBS = $(PJSUA_LIB_LIB) $(PJSIP_UA_LIB) $(PJSIP_SIMPLE_LIB) \
 	  $(PJSIP_LIB) $(PJMEDIA_CODEC_LIB) $(PJMEDIA_AUDIODEV_LIB) \

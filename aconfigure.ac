@@ -533,6 +533,18 @@ AC_ARG_ENABLE(g722-codec,
 	       fi],
 	      AC_MSG_RESULT([Checking if G.722 codec is disabled...no]))
 
+dnl # Include G722.1 codec
+AC_SUBST(ac_no_g7221_codec)
+AC_ARG_ENABLE(g7221-codec,
+	      AC_HELP_STRING([--disable-g7221-codec],
+			     [Exclude G.7221 codec in the build]),
+	      [if test "$enable_g7221_codec" = "no"; then
+		[ac_no_g7221_codec=1]
+		AC_DEFINE(PJMEDIA_HAS_G7221_CODEC,0)
+		AC_MSG_RESULT([Checking if G.722.1 codec is disabled...yes])
+	       fi],
+	      AC_MSG_RESULT([Checking if G.722.1 codec is disabled...no]))
+
 dnl # Include Speex codec
 AC_SUBST(ac_no_speex_codec)
 AC_ARG_ENABLE(speex-codec,

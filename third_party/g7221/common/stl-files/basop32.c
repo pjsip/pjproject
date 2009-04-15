@@ -711,7 +711,7 @@ Word16 extract_l (Word32 L_var1)
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 round (Word32 L_var1)
+Word16 itu_round (Word32 L_var1)
 {
     Word16 var_out;
     Word32 L_rounded;

@@ -35,7 +35,7 @@
  */
 #if defined(PJMEDIA_HAS_G7221_CODEC) && PJMEDIA_HAS_G7221_CODEC!=0
 
-#include "../../third_party/g7221/common/defs.h"
+#include "../../../third_party/g7221/common/defs.h"
 
 #define THIS_FILE	    "g7221.c"
 

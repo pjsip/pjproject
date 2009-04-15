@@ -147,7 +147,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
         move32();
         sum = L_mac(sum,*win_new++, *--new_ptr);
         sum = L_mac(sum,*--win_old, *old_ptr++);
-        *out_ptr++ = round(L_shl(sum,2));
+        *out_ptr++ = itu_round(L_shl(sum,2));
         move16();
 
     }
@@ -160,7 +160,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
         move32();
         sum = L_mac(sum,*win_new++, *new_ptr++);
         sum = L_mac(sum,negate(*--win_old), *--old_ptr);
-        *out_ptr++ = round(L_shl(sum,2));
+        *out_ptr++ = itu_round(L_shl(sum,2));
         move16();
     }
         
