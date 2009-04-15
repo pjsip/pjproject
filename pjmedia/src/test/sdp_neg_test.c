@@ -39,7 +39,7 @@ struct offer_answer
     char *sdp3;			/* local active media	local answer	*/
 };
 
-struct test
+static struct test
 {
     const char		*title;
     unsigned		 offer_answer_count;
