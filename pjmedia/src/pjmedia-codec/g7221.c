@@ -237,6 +237,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt )
     }
 
     /* Initialize codec modes, by default all standard bitrates are enabled */
+    codec_factory.mode_count = 0;
+
     mode = &codec_factory.modes[codec_factory.mode_count++];
     mode->enabled = PJ_TRUE;
     mode->pt = PJMEDIA_RTP_PT_G722_1_24;
