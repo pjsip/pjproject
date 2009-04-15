@@ -35,7 +35,6 @@
 #define PJ_TURN_CHANNEL_MAX	    0x7FFF  /* inclusive */
 #define PJ_TURN_CHANNEL_HTABLE_SIZE 8
 #define PJ_TURN_PERM_HTABLE_SIZE    8
-#define PJ_TURN_RENEWAL_BEFORE	    10	/* seconds before renewals */
 
 static const char *state_names[] = 
 {
@@ -1749,7 +1748,7 @@ static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
 
     if (ch && update) {
 	pj_gettimeofday(&ch->expiry);
-	ch->expiry.sec += PJ_TURN_PERM_TIMEOUT - PJ_TURN_RENEWAL_BEFORE;
+	ch->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
 
 	if (bind_channel) {
 	    pj_uint32_t hval = 0;
@@ -1763,6 +1762,13 @@ static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
 	    }
 	}
     }
+
+    /* Also create/update permission for this destination. Ideally we
+     * should update this when we receive the successful response,
+     * but that would cause duplicate CreatePermission to be sent
+     * during refreshing.
+     */
+    lookup_perm(sess, &ch->addr, pj_sockaddr_get_len(&ch->addr), PJ_TRUE);
 
     return ch;
 }
@@ -1812,7 +1818,7 @@ static struct perm_t *lookup_perm(pj_turn_session *sess,
 
     if (perm && update) {
 	pj_gettimeofday(&perm->expiry);
-	perm->expiry.sec += PJ_TURN_PERM_TIMEOUT - PJ_TURN_RENEWAL_BEFORE;
+	perm->expiry.sec += PJ_TURN_PERM_TIMEOUT - sess->ka_interval - 1;
 
     }
 
@@ -1827,6 +1833,91 @@ static void invalidate_perm(pj_turn_session *sess,
 {
     pj_hash_set(NULL, sess->perm_table, &perm->addr,
 		pj_sockaddr_get_len(&perm->addr), perm->hval, NULL);
+}
+
+/*
+ * Scan permission's hash table to refresh the permission.
+ */
+static unsigned refresh_permissions(pj_turn_session *sess, 
+				    const pj_time_val *now)
+{
+    pj_stun_tx_data *tdata = NULL;
+    unsigned count = 0;
+    void *req_token = NULL;
+    pj_hash_iterator_t *it, itbuf;
+    pj_status_t status;
+
+    it = pj_hash_first(sess->perm_table, &itbuf);
+    while (it) {
+	struct perm_t *perm = (struct perm_t*)
+			      pj_hash_this(sess->perm_table, it);
+
+	it = pj_hash_next(sess->perm_table, it);
+
+	if (perm->expiry.sec-1 <= now->sec) {
+	    if (perm->renew) {
+		/* Renew this permission */
+		if (tdata == NULL) {
+		    /* Create a bare CreatePermission request */
+		    status = pj_stun_session_create_req(
+					sess->stun, 
+					PJ_STUN_CREATE_PERM_REQUEST,
+					PJ_STUN_MAGIC, NULL, &tdata);
+		    if (status != PJ_SUCCESS) {
+			PJ_LOG(1,(sess->obj_name, 
+				 "Error creating CreatePermission request: %d",
+				 status));
+			return 0;
+		    }
+
+		    /* Create request token to map the request to the perm
+		     * structures which the request belongs.
+		     */
+		    req_token = (void*)(long)pj_rand();
+		}
+
+		status = pj_stun_msg_add_sockaddr_attr(
+					tdata->pool, 
+					tdata->msg,
+					PJ_STUN_ATTR_XOR_PEER_ADDR,
+					PJ_TRUE,
+					&perm->addr,
+					sizeof(perm->addr));
+		if (status != PJ_SUCCESS) {
+		    pj_stun_msg_destroy_tdata(sess->stun, tdata);
+		    return 0;
+		}
+
+		perm->expiry = *now;
+		perm->expiry.sec += PJ_TURN_PERM_TIMEOUT-sess->ka_interval-1;
+		perm->req_token = req_token;
+		++count;
+
+	    } else {
+		/* This permission has expired and app doesn't want
+		 * us to renew, so delete it from the hash table.
+		 */
+		invalidate_perm(sess, perm);
+	    }
+	}
+    }
+
+    if (tdata) {
+	status = pj_stun_session_send_msg(sess->stun, req_token, PJ_FALSE, 
+					  (sess->conn_type==PJ_TURN_TP_UDP),
+					  sess->srv_addr,
+					  pj_sockaddr_get_len(sess->srv_addr), 
+					  tdata);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,(sess->obj_name, 
+		      "Error sending CreatePermission request: %d",
+		      status));
+	    count = 0;
+	}
+
+    }
+
+    return count;
 }
 
 /*
@@ -1881,6 +1972,10 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 
 	    it = pj_hash_next(sess->ch_table, it);
 	}
+
+	/* Scan permission table to refresh permissions */
+	if (refresh_permissions(sess, &now))
+	    pkt_sent = PJ_TRUE;
 
 	/* If no packet is sent, send a blank Send indication to
 	 * refresh local NAT.
