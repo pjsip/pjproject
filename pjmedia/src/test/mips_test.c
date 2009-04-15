@@ -378,6 +378,7 @@ enum clock_rate
 {
     K8	= 1,
     K16	= 2,
+    K32	= 4,
 };
 
 
@@ -677,7 +678,7 @@ struct codec_port
     pjmedia_codec   *codec;
     pj_status_t	   (*codec_deinit)();
     pj_uint8_t	     pkt[640];
-    pj_uint16_t	     pcm[320];
+    pj_uint16_t	     pcm[32000 * PTIME / 1000];
 };
 
 
@@ -877,6 +878,36 @@ static pjmedia_port* g722_encode_decode(pj_pool_t *pool,
 {
     return codec_encode_decode(pool, "g722", &pjmedia_codec_g722_init, 
 			       &pjmedia_codec_g722_deinit, 
+			       clock_rate, channel_count,
+			       samples_per_frame, flags, te);
+}
+
+/* G.722.1 benchmark benchmark */
+static pjmedia_port* g7221_encode_decode(pj_pool_t *pool,
+					 unsigned clock_rate,
+					 unsigned channel_count,
+					 unsigned samples_per_frame,
+					 unsigned flags,
+					 struct test_entry *te)
+{
+    return codec_encode_decode(pool, "g7221/16000", 
+			       &pjmedia_codec_g7221_init,
+			       &pjmedia_codec_g7221_deinit,
+			       clock_rate, channel_count,
+			       samples_per_frame, flags, te);
+}
+
+/* G.722.1 Annex C benchmark benchmark */
+static pjmedia_port* g7221c_encode_decode(pj_pool_t *pool,
+					  unsigned clock_rate,
+					  unsigned channel_count,
+					  unsigned samples_per_frame,
+					  unsigned flags,
+					  struct test_entry *te)
+{
+    return codec_encode_decode(pool, "g7221/32000", 
+			       &pjmedia_codec_g7221_init,
+			       &pjmedia_codec_g7221_deinit,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
@@ -1907,6 +1938,35 @@ static pjmedia_port* create_stream_g722( pj_pool_t *pool,
 			 samples_per_frame, flags, te);
 }
 
+/* G722.1 stream */
+static pjmedia_port* create_stream_g7221( pj_pool_t *pool,
+					  unsigned clock_rate,
+					  unsigned channel_count,
+					  unsigned samples_per_frame,
+					  unsigned flags,
+					  struct test_entry *te)
+{
+    return create_stream(pool, "g7221/16000", &pjmedia_codec_g7221_init, 
+			 &pjmedia_codec_g7221_deinit, 
+			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
+			 clock_rate, channel_count,
+			 samples_per_frame, flags, te);
+}
+
+/* G722.1 Annex C stream */
+static pjmedia_port* create_stream_g7221c( pj_pool_t *pool,
+					   unsigned clock_rate,
+					   unsigned channel_count,
+					   unsigned samples_per_frame,
+					   unsigned flags,
+					   struct test_entry *te)
+{
+    return create_stream(pool, "g7221/32000", &pjmedia_codec_g7221_init,
+			 &pjmedia_codec_g7221_deinit, 
+			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
+			 clock_rate, channel_count,
+			 samples_per_frame, flags, te);
+}
 
 /***************************************************************************/
 /* Delay buffer */
@@ -2137,7 +2197,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     pjmedia_port *port;
     pj_timestamp t0, t1;
     unsigned j, samples_per_frame;
-    pj_int16_t pcm[16000 * PTIME / 1000];
+    pj_int16_t pcm[32000 * PTIME / 1000];
     pjmedia_port *gen_port;
     pj_status_t status;
 
@@ -2275,29 +2335,54 @@ int mips_test(void)
 	{ "echo suppressor 800ms tail len", OP_GET_PUT, K8|K16, &es_create_800},
 	{ "tone generator with single freq", OP_GET, K8|K16, &create_tonegen1},
 	{ "tone generator with dual freq", OP_GET, K8|K16, &create_tonegen2},
+#if PJMEDIA_HAS_G711_CODEC
 	{ "codec encode/decode - G.711", OP_PUT, K8, &g711_encode_decode},
+#endif
+#if PJMEDIA_HAS_G722_CODEC
 	{ "codec encode/decode - G.722", OP_PUT, K16, &g722_encode_decode},
+#endif
+#if PJMEDIA_HAS_GSM_CODEC
 	{ "codec encode/decode - GSM", OP_PUT, K8, &gsm_encode_decode},
+#endif
+#if PJMEDIA_HAS_ILBC_CODEC
 	{ "codec encode/decode - iLBC", OP_PUT, K8, &ilbc_encode_decode},
+#endif
+#if PJMEDIA_HAS_SPEEX_CODEC
 	{ "codec encode/decode - Speex 8Khz", OP_PUT, K8, &speex8_encode_decode},
 	{ "codec encode/decode - Speex 16Khz", OP_PUT, K16, &speex16_encode_decode},
-#if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
+#endif
+#if PJMEDIA_HAS_G7221_CODEC
+	{ "codec encode/decode - G.722.1", OP_PUT, K16, &g7221_encode_decode},
+	{ "codec encode/decode - G.722.1c", OP_PUT, K32, &g7221c_encode_decode},
+#endif
+#if PJMEDIA_HAS_L16_CODEC
 	{ "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
 	{ "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
 #endif
+#if PJMEDIA_HAS_G711_CODEC
 	{ "stream TX/RX - G.711", OP_PUT_GET, K8, &create_stream_pcmu},
 	{ "stream TX/RX - G.711 SRTP 32bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_no_auth},
 	{ "stream TX/RX - G.711 SRTP 32bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp32_with_auth},
 	{ "stream TX/RX - G.711 SRTP 80bit", OP_PUT_GET, K8, &create_stream_pcmu_srtp80_no_auth},
 	{ "stream TX/RX - G.711 SRTP 80bit +auth", OP_PUT_GET, K8, &create_stream_pcmu_srtp80_with_auth},
+#endif
+#if PJMEDIA_HAS_G722_CODEC
 	{ "stream TX/RX - G.722", OP_PUT_GET, K16, &create_stream_g722},
+#endif
+#if PJMEDIA_HAS_GSM_CODEC
 	{ "stream TX/RX - GSM", OP_PUT_GET, K8, &create_stream_gsm},
 	{ "stream TX/RX - GSM SRTP 32bit", OP_PUT_GET, K8, &create_stream_gsm_srtp32_no_auth},
 	{ "stream TX/RX - GSM SRTP 32bit + auth", OP_PUT_GET, K8, &create_stream_gsm_srtp32_with_auth},
 	{ "stream TX/RX - GSM SRTP 80bit", OP_PUT_GET, K8, &create_stream_gsm_srtp80_no_auth},
 	{ "stream TX/RX - GSM SRTP 80bit + auth", OP_PUT_GET, K8, &create_stream_gsm_srtp80_with_auth},
+#endif
+#if PJMEDIA_HAS_G7221_CODEC
+	{ "stream TX/RX - G.722.1", OP_PUT_GET, K16, &create_stream_g7221},
+	{ "stream TX/RX - G.722.1c", OP_PUT_GET, K32, &create_stream_g7221c},
+#endif
     };
-    unsigned i, c, k[2] = {K8, K16}, clock_rates[2] = {8000, 16000};
+
+    unsigned i, c, k[3] = {K8, K16, K32}, clock_rates[3] = {8000, 16000, 32000};
 
     PJ_LOG(3,(THIS_FILE, "MIPS test, with CPU=%dMhz, %6.1f MIPS", CPU_MHZ, CPU_IPS / 1000000));
     PJ_LOG(3,(THIS_FILE, "Clock  Item                                      Time     CPU    MIPS"));
