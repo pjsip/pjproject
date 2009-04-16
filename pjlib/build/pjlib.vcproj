@@ -22,6 +22,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
@@ -86,6 +87,384 @@
 				Name="VCBscMakeTool"
 				SuppressStartupBanner="true"
 				OutputFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="2"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
+				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="1"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-debug/"
+				ObjectFile=".\output\pjlib-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-debug/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="4"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="../lib/pjlib-i386-win32-vc8-debug.lib"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="2"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				StringPooling="true"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
+				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				MinimalRebuild="true"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-debug/"
+				ObjectFile=".\output\pjlib-i386-win32-vc8-debug/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-debug/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="4"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="../lib/pjlib-i386-win32-vc8-debug.lib"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.bsc"
+			/>
+			<Tool
+				Name="VCFxCopTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Win32"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="2"
+				InlineFunctionExpansion="2"
+				AdditionalIncludeDirectories="../include"
+				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
+				StringPooling="true"
+				RuntimeLibrary="0"
+				EnableFunctionLevelLinking="true"
+				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
+				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
+				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
+				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
+				BrowseInformation="1"
+				WarningLevel="4"
+				SuppressStartupBanner="true"
+				DebugInformationFormat="3"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
+				SuppressStartupBanner="true"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+				SuppressStartupBanner="true"
+				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -240,81 +619,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="2"
-				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
@@ -455,80 +759,6 @@
 				AdditionalFiles=""
 			/>
 			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Static|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
@@ -678,81 +908,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release-Dynamic|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="2"
-				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 			ConfigurationType="4"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
@@ -894,80 +1049,6 @@
 				AdditionalFiles=""
 			/>
 			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Dynamic|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="0"
-				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-debug/pjlib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
@@ -1114,81 +1195,6 @@
 				AdditionalFiles=""
 			/>
 			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release-Static|Win32"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="2"
-				AdditionalIncludeDirectories="../include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32;PJ_M_I386"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjlib-i386-win32-vc8-release/pjlib.pch"
-				AssemblerListingLocation=".\output\pjlib-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjlib-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjlib-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLibrarianTool"
-				OutputFile="../lib/pjlib-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjlib-i386-win32-vc8-release/pjlib.bsc"
-			/>
-			<Tool
-				Name="VCFxCopTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
 			/>
 		</Configuration>
 		<Configuration
@@ -1825,6 +1831,56 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -1838,16 +1894,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -1867,16 +1913,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -1890,16 +1926,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -1919,16 +1945,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -1942,16 +1958,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Static|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2217,6 +2223,56 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Release|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -2230,16 +2286,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2259,16 +2305,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -2282,16 +2318,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2311,16 +2337,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -2334,16 +2350,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Static|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2442,6 +2448,53 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Win32"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
 					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -2455,15 +2508,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2483,16 +2527,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -2506,15 +2540,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -2534,16 +2559,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Win32"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
@@ -2557,15 +2572,6 @@
 					>
 					<Tool
 						Name="VCCLCompilerTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Static|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
 					/>
 				</FileConfiguration>
 				<FileConfiguration
@@ -3886,6 +3892,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -3899,16 +3955,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -3928,16 +3974,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -3951,16 +3987,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -3980,16 +4006,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4003,16 +4019,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4046,6 +4052,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4059,16 +4115,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4088,16 +4134,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4111,16 +4147,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4140,16 +4166,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4163,16 +4179,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4206,6 +4212,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4219,16 +4275,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4248,16 +4294,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4271,16 +4307,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4300,16 +4326,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4323,16 +4339,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4366,6 +4372,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4379,16 +4435,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4408,16 +4454,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4431,16 +4467,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4460,16 +4486,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4483,16 +4499,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4524,6 +4530,46 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4533,14 +4579,6 @@
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -4564,14 +4602,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4581,14 +4611,6 @@
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -4612,14 +4634,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4629,14 +4643,6 @@
 					</FileConfiguration>
 					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
 						ExcludedFromBuild="true"
 						>
 						<Tool
@@ -4674,6 +4680,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4687,16 +4743,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4716,16 +4762,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4739,16 +4775,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4768,16 +4794,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4791,16 +4807,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4834,6 +4840,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4847,16 +4903,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4876,16 +4922,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4899,16 +4935,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4928,16 +4954,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -4951,16 +4967,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -4994,6 +5000,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5007,16 +5063,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5036,16 +5082,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5059,16 +5095,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5088,16 +5114,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5111,16 +5127,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5154,6 +5160,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5167,16 +5223,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5196,16 +5242,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5219,16 +5255,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5248,16 +5274,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5271,16 +5287,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5314,6 +5320,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5327,16 +5383,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5356,16 +5402,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5379,16 +5415,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5408,16 +5434,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5431,16 +5447,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5474,6 +5480,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5487,16 +5543,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5516,16 +5562,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5539,16 +5575,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5568,16 +5594,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5591,16 +5607,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5634,6 +5640,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5647,16 +5703,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5676,16 +5722,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5699,16 +5735,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5728,16 +5754,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5751,16 +5767,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5794,6 +5800,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5807,16 +5863,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5836,16 +5882,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5859,16 +5895,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5888,16 +5914,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5911,16 +5927,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5954,6 +5960,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -5967,16 +6023,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -5996,16 +6042,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6019,16 +6055,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6048,16 +6074,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6071,16 +6087,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6114,6 +6120,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6127,16 +6183,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6156,16 +6202,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6179,16 +6215,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6208,16 +6234,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6231,16 +6247,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6274,6 +6280,56 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
+						Name="Release|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Debug-Dynamic|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
+						Name="Release-Static|Win32"
+						ExcludedFromBuild="true"
+						>
+						<Tool
+							Name="VCCLCompilerTool"
+							AdditionalIncludeDirectories=""
+							PreprocessorDefinitions=""
+						/>
+					</FileConfiguration>
+					<FileConfiguration
 						Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6287,16 +6343,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6316,16 +6362,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6339,16 +6375,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
@@ -6368,16 +6394,6 @@
 						/>
 					</FileConfiguration>
 					<FileConfiguration
-						Name="Debug-Dynamic|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
-						/>
-					</FileConfiguration>
-					<FileConfiguration
 						Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 						ExcludedFromBuild="true"
 						>
@@ -6391,16 +6407,6 @@
 						>
 						<Tool
 							Name="VCCLCompilerTool"
-						/>
-					</FileConfiguration>
-					<FileConfiguration
-						Name="Release-Static|Win32"
-						ExcludedFromBuild="true"
-						>
-						<Tool
-							Name="VCCLCompilerTool"
-							AdditionalIncludeDirectories=""
-							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
 					<FileConfiguration
