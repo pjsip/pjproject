@@ -3,7 +3,16 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjproject-vs8-common-defaults"
-	OutputDirectory=".\output\$(ProjectName)-i386-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+	OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 	IntermediateDirectory="$(OutDir)"
 	>
+	<Tool
+		Name="VCCLCompilerTool"
+		AssemblerListingLocation="$(IntDir)\"
+		WarningLevel="4"
+	/>
+	<UserMacro
+		Name="VSVer"
+		Value="8"
+	/>
 </VisualStudioPropertySheet>

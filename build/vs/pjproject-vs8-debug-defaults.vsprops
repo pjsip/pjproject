@@ -8,28 +8,16 @@
 	<Tool
 		Name="VCCLCompilerTool"
 		Optimization="0"
-		AdditionalIncludeDirectories="../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include,../../pjsip/include"
-		PreprocessorDefinitions="PJ_WIN32=1,PJ_M_I386=1"
 		BrowseInformation="1"
 		BrowseInformationFile="$(IntDir)\"
-		WarningLevel="4"
 		DebugInformationFormat="4"
 		CompileAs="0"
 	/>
 	<Tool
-		Name="VCLibrarianTool"
-		OutputFile="../lib/pjlib-util-i386-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
-	/>
-	<Tool
 		Name="VCLinkerTool"
 		AdditionalDependencies="Iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
-		OutputFile="..\bin\$(ProjectName)_vc$(VSVer).exe"
 		GenerateManifest="false"
 		GenerateDebugInformation="true"
 		GenerateMapFile="true"
-	/>
-	<UserMacro
-		Name="VSVer"
-		Value="8"
 	/>
 </VisualStudioPropertySheet>

@@ -13,16 +13,19 @@
 		<Platform
 			Name="Windows Mobile 6 Standard SDK (ARMV4I)"
 		/>
+		<Platform
+			Name="Windows Mobile 6 Professional SDK (ARMV4I)"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\gsm-i386-win32-vc8-debug"
-			IntermediateDirectory=".\output\gsm-i386-win32-vc8-debug"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;$(SolutionDir)build\vs\pjproject-vs8-debug-defaults.vsprops;$(SolutionDir)build\vs\pjproject-vs8-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -94,9 +97,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="output\$(ProjectName)-$(PlatformName)-$(ConfigurationName)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -166,11 +170,85 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release|Win32"
-			OutputDirectory=".\output\gsm-i386-win32-vc8-release"
+			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="0"
+				FavorSizeOrSpeed="0"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
+				ExceptionHandling="0"
+				RuntimeLibrary="1"
+				DebugInformationFormat="3"
+				CompileAs="0"
+				CompileForArchitecture="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=""
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -243,9 +321,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="output\$(ProjectName)-$(PlatformName)-$(ConfigurationName)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -314,11 +393,84 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug-Static|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
+				ExceptionHandling="0"
+				RuntimeLibrary="0"
+				DebugInformationFormat="0"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=""
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Win32"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -390,9 +542,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -463,11 +616,85 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release-Dynamic|Win32"
-			OutputDirectory="$(ConfigurationName)"
+			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="0"
+				FavorSizeOrSpeed="0"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
+				ExceptionHandling="0"
+				RuntimeLibrary="1"
+				DebugInformationFormat="3"
+				CompileAs="0"
+				CompileForArchitecture="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=""
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Win32"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -540,9 +767,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -612,11 +840,84 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug-Dynamic|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
+				ExceptionHandling="0"
+				RuntimeLibrary="0"
+				DebugInformationFormat="0"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=""
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Win32"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -688,9 +989,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -717,7 +1019,7 @@
 				AdditionalIncludeDirectories=".,../../gsm/inc"
 				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
 				ExceptionHandling="0"
-				RuntimeLibrary="1"
+				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="3"
 				CompileAs="0"
@@ -761,11 +1063,85 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Release-Static|Win32"
-			OutputDirectory="$(ConfigurationName)"
+			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="0"
+				FavorSizeOrSpeed="0"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
+				ExceptionHandling="0"
+				RuntimeLibrary="3"
+				DebugInformationFormat="3"
+				CompileAs="0"
+				CompileForArchitecture="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=""
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Win32"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -838,9 +1214,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -869,6 +1246,79 @@
 				ExceptionHandling="0"
 				RuntimeLibrary="0"
 				WarningLevel="3"
+				DebugInformationFormat="0"
+				CompileAs="0"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				AdditionalOptions=""
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+			IntermediateDirectory="$(OutDir)"
+			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				Optimization="2"
+				FavorSizeOrSpeed="2"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
+				ExceptionHandling="0"
+				RuntimeLibrary="0"
 				DebugInformationFormat="0"
 				CompileAs="0"
 			/>
@@ -1967,11 +2417,11 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\gsm\inc\config.h"
+				RelativePath="config.h"
 				>
 			</File>
 			<File
-				RelativePath="config.h"
+				RelativePath="..\..\gsm\inc\config.h"
 				>
 			</File>
 			<File
