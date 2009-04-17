@@ -3,6 +3,6 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjproject-vs8-win32-release-defaults"
-	InheritedPropertySheets=".\pjproject-vs8-win32-common-defaults.vsprops;.\pjproject-vs8-release-defaults.vsprops"
+	InheritedPropertySheets=".\pjproject-vs8-win32-common-defaults.vsprops"
 	>
 </VisualStudioPropertySheet>
