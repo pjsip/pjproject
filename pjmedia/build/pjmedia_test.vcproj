@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjmedia_test"
 	ProjectGUID="{21C0CECF-69DD-4F70-BC2B-9B4DE7F15277}"
+	RootNamespace="pjmedia_test"
 	>
 	<Platforms>
 		<Platform
@@ -21,7 +22,7 @@
 			OutputDirectory=".\output\pjmedia_test_vc8_Debug"
 			IntermediateDirectory=".\output\pjmedia_test_vc8_Debug"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-win32-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -45,7 +46,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 				PreprocessorDefinitions="_DEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_CONSOLE"
 				MinimalRebuild="true"
@@ -58,7 +58,6 @@
 				BrowseInformation="1"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

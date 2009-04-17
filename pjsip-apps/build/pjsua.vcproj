@@ -196,7 +196,7 @@
 			OutputDirectory=".\output\pjsua-i386-win32-vc8-debug"
 			IntermediateDirectory=".\output\pjsua-i386-win32-vc8-debug"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-win32-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -220,7 +220,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
 				PreprocessorDefinitions="_DEBUG;PJ_WIN32=1;PJ_M_I386=1;WIN32;_CONSOLE"
 				MinimalRebuild="true"
@@ -233,7 +232,6 @@
 				BrowseInformation="1"
 				WarningLevel="4"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

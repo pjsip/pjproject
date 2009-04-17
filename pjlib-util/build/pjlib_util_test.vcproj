@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="pjlib_util_test"
 	ProjectGUID="{ED02BE13-8297-4770-8097-27DC2CCABF9A}"
+	RootNamespace="pjlib_util_test"
 	>
 	<Platforms>
 		<Platform
@@ -185,7 +186,7 @@
 			OutputDirectory="./output/pjlib-util-test-i386-win32-vc8-debug"
 			IntermediateDirectory="./output/pjlib-util-test-i386-win32-vc8-debug"
 			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-win32-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -209,7 +210,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
 				MinimalRebuild="true"
@@ -222,7 +222,6 @@
 				BrowseInformation="1"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"

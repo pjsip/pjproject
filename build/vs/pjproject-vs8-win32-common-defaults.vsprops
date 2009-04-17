@@ -3,6 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjproject-vs8-win32-common-defaults"
+	InheritedPropertySheets=".\pjproject-vs8-common-defaults.vsprops"
 	>
 	<UserMacro
 		Name="TargetCPU"

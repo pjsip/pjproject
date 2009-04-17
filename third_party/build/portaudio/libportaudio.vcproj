@@ -4,6 +4,7 @@
 	Version="8.00"
 	Name="libportaudio"
 	ProjectGUID="{3CF9FFA9-8387-4635-9D1B-E7944CBEFEAA}"
+	RootNamespace="libportaudio"
 	>
 	<Platforms>
 		<Platform
@@ -24,7 +25,6 @@
 			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
 			IntermediateDirectory="$(OutDir)"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops"
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="2"
@@ -46,7 +46,6 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
 				MinimalRebuild="true"
@@ -58,7 +57,6 @@
 				ProgramDataBaseFileName=".\output\pa-i386-win32-vc8-debug/"
 				WarningLevel="3"
 				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
