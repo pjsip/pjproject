@@ -412,6 +412,7 @@ int codec_test_vectors(void)
 	  "../src/test/vectors/g722_1_enc_out_32000_be.pak"
 	},
 #endif
+	{ NULL }
     };
     struct dec_vectors {
 	char	    *codec_name;
@@ -434,6 +435,7 @@ int codec_test_vectors(void)
 	  "../src/test/vectors/g722_1_dec_out_32000.pcm"
 	},
 #endif
+	{ NULL }
     };
     unsigned i;
     pj_status_t status;
@@ -456,6 +458,8 @@ int codec_test_vectors(void)
     for (i=0; i<PJ_ARRAY_SIZE(enc_vectors); ++i) {
 	PJ_LOG(3,(THIS_FILE,"    %s @%d bps", enc_vectors[i].codec_name, 
 		  enc_vectors[i].bit_rate));
+	if (!enc_vectors[i].codec_name)
+	    continue;
 	rc = codec_test_encode(mgr, enc_vectors[i].codec_name,
 			       enc_vectors[i].bit_rate,
 			       enc_vectors[i].wav_file,
@@ -468,6 +472,8 @@ int codec_test_vectors(void)
     for (i=0; i<PJ_ARRAY_SIZE(dec_vectors); ++i) {
 	PJ_LOG(3,(THIS_FILE,"    %s @%d bps", dec_vectors[i].codec_name, 
 		  dec_vectors[i].bit_rate));
+	if (!dec_vectors[i].codec_name)
+	    continue;
 	rc = codec_test_decode(mgr, dec_vectors[i].codec_name,
 			       dec_vectors[i].bit_rate,
 			       dec_vectors[i].encoded_frame_len,

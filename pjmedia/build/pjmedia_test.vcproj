@@ -1049,6 +1049,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\test\codec_vectors.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\test\jbuf_test.c"
 				>
 				<FileConfiguration

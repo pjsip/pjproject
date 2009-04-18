@@ -103,7 +103,7 @@ export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 # Defines for building test application
 #
 export PJMEDIA_TEST_SRCDIR = ../src/test
-export PJMEDIA_TEST_OBJS += jbuf_test.o main.o mips_test.o rtp_test.o test.o
+export PJMEDIA_TEST_OBJS += codec_vectors.o jbuf_test.o main.o mips_test.o rtp_test.o test.o
 #export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(_LDFLAGS)
