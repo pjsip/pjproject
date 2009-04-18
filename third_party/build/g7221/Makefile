@@ -21,7 +21,7 @@ export _LDFLAGS := $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 
 export G7221_CODEC_SRCDIR = ../../g7221
 export G7221_CODEC_OBJS = common/common.o common/huff_tab.o common/tables.o \
-                	common/stl-files/basop32.o common/stl-files/count.o \
+                	common/stl-files/basop32.o  \
                 	decode/coef2sam.o decode/dct4_s.o decode/decoder.o \
                 	encode/dct4_a.o encode/sam2coef.o encode/encoder.o
 
