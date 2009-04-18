@@ -28,7 +28,7 @@
 #define JB_PTIME	    20
 #define JB_BUF_SIZE	    50
 
-#define REPORT
+//#define REPORT
 //#define PRINT_COMMENT
 
 typedef struct test_param_t {

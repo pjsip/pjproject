@@ -56,12 +56,13 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
-    //sdp_neg_test();
-    //sdp_test (&caching_pool.factory);
-    //rtp_test(&caching_pool.factory);
-    //session_test (&caching_pool.factory);
+    DO_TEST(sdp_neg_test());
+    //DO_TEST(sdp_test (&caching_pool.factory));
+    //DO_TEST(rtp_test(&caching_pool.factory));
+    //DO_TEST(session_test (&caching_pool.factory));
     DO_TEST(jbuf_main());
-    //DO_TEST(mips_test());
+    DO_TEST(mips_test());
+    DO_TEST(codec_test_vectors());
 
     PJ_LOG(3,(THIS_FILE," "));
 

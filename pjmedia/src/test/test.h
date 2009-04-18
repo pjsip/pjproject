@@ -30,6 +30,7 @@ int sdp_test(void);
 int jbuf_main(void);
 int sdp_neg_test(void);
 int mips_test(void);
+int codec_test_vectors(void);
 
 extern pj_pool_factory *mem;
 void app_perror(pj_status_t status, const char *title);
