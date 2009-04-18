@@ -84,7 +84,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
     Word16	temp2;
     Word16	temp5;
    
-    half_dct_size = shr(dct_length,1);
+    half_dct_size = shr_nocheck(dct_length,1);
    
     /*++++++++++++++++++++++++++++++++++++++++++++*/
     /* Get the first half of the windowed samples */
@@ -208,7 +208,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
             move16();
         }
         accb = L_mult(temp,9587);
-        acca = L_shr(accb,20);
+        acca = L_shr_nocheck(accb,20);
         temp5 = extract_l(acca);
         temp = norm_s(temp5);
         test();
@@ -230,7 +230,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
         acca = L_add(acca,temp);
     }
     
-    acca = L_shr(acca,7);
+    acca = L_shr_nocheck(acca,7);
     
     test();
     if (temp1 < acca)
@@ -243,7 +243,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
     {
         for(index=0;index<dct_length;index++)
         {
-            windowed_data[index] = shl(windowed_data[index],mag_shift);
+            windowed_data[index] = shl_nocheck(windowed_data[index],mag_shift);
         }
     }
     else 
@@ -254,7 +254,7 @@ Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coe
             n = negate(mag_shift);
             for(index=0;index<dct_length;index++)
             {
-                windowed_data[index] = shr(windowed_data[index],n);
+                windowed_data[index] = shr_nocheck(windowed_data[index],n);
                 move16();
             }
         }

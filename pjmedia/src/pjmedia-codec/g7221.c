@@ -222,6 +222,19 @@ static pj_bool_t validate_mode(unsigned sample_rate, unsigned bitrate)
     return PJ_TRUE;
 }
 
+#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
+PJ_INLINE(void) swap_bytes(pj_uint16_t *buf, unsigned count)
+{
+    pj_uint16_t *end = buf + count;
+    while (buf != end) {
+	*buf = (pj_uint16_t)((*buf << 8) | (*buf >> 8));
+	++buf;
+    }
+}
+#else
+#define swap_bytes(buf, count)
+#endif
+
 /*
  * Initialize and register G722.1 codec factory to pjmedia endpoint.
  */
@@ -774,18 +787,10 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 	    mag_shift,
 	    output->buf);
 
-#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
-    {
-	pj_uint16_t *p, *p_end;
-
-	p = (pj_uint16_t*)output->buf;
-	p_end = p + codec_data->frame_size/2;
-	while (p < p_end) {
-	    *p = pj_htons(*p);
-	    ++p;
-	}
-    }
-#endif
+    /* Encoder output are in native host byte order, while ITU says
+     * it must be in network byte order (MSB first).
+     */
+    swap_bytes((pj_uint16_t*)output->buf, codec_data->frame_size/2);
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = codec_data->frame_size;
@@ -818,21 +823,11 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 	PJ_ASSERT_RETURN((pj_uint16_t)input->size == codec_data->frame_size,
 			 PJMEDIA_CODEC_EFRMINLEN);
 
-	/* Decoder requires input of 16-bits array, so we need to take care
-	 * about endianness.
+	/* Decoder requires input of 16-bits array in native host byte
+	 * order, while the frame received from the network are in
+	 * network byte order (MSB first).
 	 */
-#if defined(PJ_IS_LITTLE_ENDIAN) && PJ_IS_LITTLE_ENDIAN!=0
-	{
-	    pj_uint16_t *p, *p_end;
-
-	    p = (pj_uint16_t*)input->buf;
-	    p_end = p + codec_data->frame_size/2;
-	    while (p < p_end) {
-		*p = pj_ntohs(*p);
-		++p;
-	    }
-	}
-#endif
+	swap_bytes((pj_uint16_t*)input->buf, codec_data->frame_size/2);
 
 	bitobj.code_word_ptr = (Word16*)input->buf;
 	bitobj.current_word =  *bitobj.code_word_ptr;

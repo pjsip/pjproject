@@ -35,6 +35,7 @@
                     operators L_mult0(), L_mac0(), L_msu0()
  ===========================================================================
 */
+#if 0
 #ifndef COUNT_H
 #define COUNT_H "$Id $"
 
@@ -71,7 +72,23 @@ void WMOPS_output (Word16 notPrintWorstWorstCase);
  *
  */
 
-Word32 fwc (void);
+PJ_INLINE(Word32) fwc (void)
+{
+#if WMOPS
+    Word32 tot;
+
+    tot = DeltaWeightedOperation ();
+    if (tot > wc[currCounter][funcid[currCounter]])
+        wc[currCounter][funcid[currCounter]] = tot;
+
+    funcid[currCounter]++;
+
+    return (tot);
+#else
+    return 0; /* Dummy */
+#endif
+}
+
 /*
  * worst worst case counter.
  *
@@ -82,12 +99,42 @@ Word32 fwc (void);
  *
  * The WMOPS_output function add together all parts and presents the sum.
  */
+PJ_INLINE(void) move16 (void)
+{
+#if WMOPS
+    multiCounter[currCounter].DataMove16++;
+#endif
+}
 
-void move16 (void);
-void move32 (void);
-void logic16 (void);
-void logic32 (void);
-void test (void);
+PJ_INLINE(void) move32 (void)
+{
+#if WMOPS
+    multiCounter[currCounter].DataMove32++;
+#endif
+}
+
+PJ_INLINE(void )logic16 (void)
+{
+#if WMOPS
+    multiCounter[currCounter].Logic16++;
+#endif
+}
+
+PJ_INLINE(void) logic32 (void)
+{
+#if WMOPS
+    multiCounter[currCounter].Logic32++;
+#endif
+}
+
+PJ_INLINE(void) test (void)
+{
+#if WMOPS
+    multiCounter[currCounter].Test++;
+#endif
+}
+
+
 /*
  * The functions above increases the corresponding operation counter for
  * the current counter group.
@@ -205,3 +252,12 @@ int main()
 #endif /* Example */
 
 #endif /* COUNT_H */
+#else
+
+#define move16()
+#define move32()
+#define logic16()
+#define logic32()
+#define test()
+
+#endif

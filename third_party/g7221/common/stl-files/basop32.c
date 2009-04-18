@@ -79,86 +79,29 @@ extern int currCounter;
 
 /*___________________________________________________________________________
  |                                                                           |
- |   Local Functions                                                         |
- |___________________________________________________________________________|
-*/
-Word16 saturate (Word32 L_var1);
-
-/*___________________________________________________________________________
- |                                                                           |
  |   Constants and Globals                                                   |
  |___________________________________________________________________________|
 */
-Flag Overflow = 0;
-Flag Carry = 0;
+#if INCLUDE_UNSAFE
+Flag g7221_Overflow = 0;
+Flag g7221_Carry = 0;
+#endif
 
 /*___________________________________________________________________________
  |                                                                           |
  |   Functions                                                               |
  |___________________________________________________________________________|
 */
-
 /*___________________________________________________________________________
  |                                                                           |
- |   Function Name : saturate                                                |
+ |   Function Name : shr                                                     |
  |                                                                           |
  |   Purpose :                                                               |
  |                                                                           |
- |    Limit the 32 bit input to the range of a 16 bit word.                  |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1                                                                 |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var1 <= 0x7fff ffff.                 |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 saturate (Word32 L_var1)
-{
-    Word16 var_out;
-
-    if (L_var1 > 0X00007fffL)
-    {
-        Overflow = 1;
-        var_out = MAX_16;
-    }
-    else if (L_var1 < (Word32) 0xffff8000L)
-    {
-        Overflow = 1;
-        var_out = MIN_16;
-    }
-    else
-    {
-        var_out = extract_l (L_var1);
-#if (WMOPS)
-        multiCounter[currCounter].extract_l--;
-#endif
-    }
-
-    return (var_out);
-}
-/* ------------------------- End of saturate() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : add                                                     |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |    Performs the addition (var1+var2) with overflow control and saturation;|
- |    the 16 bit result is set at +32767 when overflow occurs or at -32768   |
- |    when underflow occurs.                                                 |
+ |   Arithmetically shift the 16 bit input var1 right var2 positions with    |
+ |   sign extension. If var2 is negative, arithmetically shift var1 left by  |
+ |   -var2 with sign extension. Saturate the result in case of underflows or |
+ |   overflows.                                                              |
  |                                                                           |
  |   Complexity weight : 1                                                   |
  |                                                                           |
@@ -183,121 +126,20 @@ Word16 saturate (Word32 L_var1)
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 add (Word16 var1, Word16 var2)
+Word16 shr (Word16 var1, Word16 var2)
 {
-    Word16 var_out;
-    Word32 L_sum;
-
-    L_sum = (Word32) var1 + var2;
-    var_out = saturate (L_sum);
-#if (WMOPS)
-    multiCounter[currCounter].add++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of add() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : sub                                                     |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |    Performs the subtraction (var1+var2) with overflow control and satu-   |
- |    ration; the 16 bit result is set at +32767 when overflow occurs or at  |
- |    -32768 when underflow occurs.                                          |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    var1                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |    var2                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 sub (Word16 var1, Word16 var2)
-{
-    Word16 var_out;
-    Word32 L_diff;
-
-    L_diff = (Word32) var1 - var2;
-    var_out = saturate (L_diff);
-#if (WMOPS)
-    multiCounter[currCounter].sub++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of sub() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : abs_s                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |    Absolute value of var1; abs_s(-32768) = 32767.                         |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    var1                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0x0000 0000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 abs_s (Word16 var1)
-{
-    Word16 var_out;
-
-    if (var1 == (Word16) 0X8000)
+    if (var2 < 0)
     {
-        var_out = MAX_16;
+        if (var2 < -16)
+            var2 = -16;
+        return shl_nocheck(var1, (Word16) -var2);
     }
     else
     {
-        if (var1 < 0)
-        {
-            var_out = -var1;
-        }
-        else
-        {
-            var_out = var1;
-        }
+        return shr_nocheck(var1, var2);
     }
-#if (WMOPS)
-    multiCounter[currCounter].abs_s++;
-#endif
-    return (var_out);
 }
-/* ------------------------- End of abs_s() ------------------------- */
+/* ------------------------- End of shr() ------------------------- */
 
 
 /*___________________________________________________________________________
@@ -336,115 +178,17 @@ Word16 abs_s (Word16 var1)
 */
 Word16 shl (Word16 var1, Word16 var2)
 {
-    Word16 var_out;
-    Word32 result;
-
     if (var2 < 0)
     {
-        if (var2 < -16)
-            var2 = -16;
-        var_out = shr (var1, (Word16) -var2);
-#if (WMOPS)
-        multiCounter[currCounter].shr--;
-#endif
+        return shr_nocheck(var1, (Word16) -var2);
     }
     else
     {
-        result = (Word32) var1 *((Word32) 1 << var2);
-
-        if ((var2 > 15 && var1 != 0) || (result != (Word32) ((Word16) result)))
-        {
-            Overflow = 1;
-            var_out = (var1 > 0) ? MAX_16 : MIN_16;
-        }
-        else
-        {
-            var_out = extract_l (result);
-#if (WMOPS)
-            multiCounter[currCounter].extract_l--;
-#endif
-        }
+        return shl_nocheck(var1, var2);
     }
-#if (WMOPS)
-    multiCounter[currCounter].shl++;
-#endif
-    return (var_out);
 }
 /* ------------------------- End of shl() ------------------------- */
 
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : shr                                                     |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Arithmetically shift the 16 bit input var1 right var2 positions with    |
- |   sign extension. If var2 is negative, arithmetically shift var1 left by  |
- |   -var2 with sign extension. Saturate the result in case of underflows or |
- |   overflows.                                                              |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    var1                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |    var2                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 shr (Word16 var1, Word16 var2)
-{
-    Word16 var_out;
-
-    if (var2 < 0)
-    {
-        if (var2 < -16)
-            var2 = -16;
-        var_out = shl (var1, (Word16) -var2);
-#if (WMOPS)
-        multiCounter[currCounter].shl--;
-#endif
-    }
-    else
-    {
-        if (var2 >= 15)
-        {
-            var_out = (var1 < 0) ? -1 : 0;
-        }
-        else
-        {
-            if (var1 < 0)
-            {
-                var_out = ~((~var1) >> var2);
-            }
-            else
-            {
-                var_out = var1 >> var2;
-            }
-        }
-    }
-
-#if (WMOPS)
-    multiCounter[currCounter].shr++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of shr() ------------------------- */
 
 
 /*___________________________________________________________________________
@@ -504,289 +248,6 @@ Word16 mult (Word16 var1, Word16 var2)
 
 /*___________________________________________________________________________
  |                                                                           |
- |   Function Name : L_mult                                                  |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   L_mult is the 32 bit result of the multiplication of var1 times var2    |
- |   with one shift left i.e.:                                               |
- |        L_mult(var1,var2) = L_shl((var1 times var2),1) and                 |
- |        L_mult(-32768,-32768) = 2147483647.                                |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    var1                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |    var2                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
- |___________________________________________________________________________|
-*/
-Word32 L_mult (Word16 var1, Word16 var2)
-{
-    Word32 L_var_out;
-
-    L_var_out = (Word32) var1 *(Word32) var2;
-
-    if (L_var_out != (Word32) 0x40000000L)
-    {
-        L_var_out *= 2;
-    }
-    else
-    {
-        Overflow = 1;
-        L_var_out = MAX_32;
-    }
-
-#if (WMOPS)
-    multiCounter[currCounter].L_mult++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_mult() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : negate                                                  |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Negate var1 with saturation, saturate in the case where input is -32768:|
- |                negate(var1) = sub(0,var1).                                |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    var1                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 negate (Word16 var1)
-{
-    Word16 var_out;
-
-    var_out = (var1 == MIN_16) ? MAX_16 : -var1;
-#if (WMOPS)
-    multiCounter[currCounter].negate++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of negate() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : extract_h                                               |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Return the 16 MSB of L_var1.                                            |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1                                                                 |
- |             32 bit long signed integer (Word32 ) whose value falls in the |
- |             range : 0x8000 0000 <= L_var1 <= 0x7fff ffff.                 |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 extract_h (Word32 L_var1)
-{
-    Word16 var_out;
-
-    var_out = (Word16) (L_var1 >> 16);
-#if (WMOPS)
-    multiCounter[currCounter].extract_h++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of extract_h() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : extract_l                                               |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Return the 16 LSB of L_var1.                                            |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1                                                                 |
- |             32 bit long signed integer (Word32 ) whose value falls in the |
- |             range : 0x8000 0000 <= L_var1 <= 0x7fff ffff.                 |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 extract_l (Word32 L_var1)
-{
-    Word16 var_out;
-
-    var_out = (Word16) L_var1;
-#if (WMOPS)
-    multiCounter[currCounter].extract_l++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of extract_l() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : round                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Round the lower 16 bits of the 32 bit input number into the MS 16 bits  |
- |   with saturation. Shift the resulting bits right by 16 and return the 16 |
- |   bit number:                                                             |
- |               round(L_var1) = extract_h(L_add(L_var1,32768))              |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1                                                                 |
- |             32 bit long signed integer (Word32 ) whose value falls in the |
- |             range : 0x8000 0000 <= L_var1 <= 0x7fff ffff.                 |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    var_out                                                                |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
- |___________________________________________________________________________|
-*/
-Word16 itu_round (Word32 L_var1)
-{
-    Word16 var_out;
-    Word32 L_rounded;
-
-    L_rounded = L_add (L_var1, (Word32) 0x00008000L);
-#if (WMOPS)
-    multiCounter[currCounter].L_add--;
-#endif
-    var_out = extract_h (L_rounded);
-#if (WMOPS)
-    multiCounter[currCounter].extract_h--;
-    multiCounter[currCounter].round++;
-#endif
-    return (var_out);
-}
-/* ------------------------- End of round() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : L_mac                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Multiply var1 by var2 and shift the result left by 1. Add the 32 bit    |
- |   result to L_var3 with saturation, return a 32 bit result:               |
- |        L_mac(L_var3,var1,var2) = L_add(L_var3,L_mult(var1,var2)).         |
- |                                                                           |
- |   Complexity weight : 1                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var3   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |    var1                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |    var2                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
- |___________________________________________________________________________|
-*/
-Word32 L_mac (Word32 L_var3, Word16 var1, Word16 var2)
-{
-    Word32 L_var_out;
-    Word32 L_product;
-
-    L_product = L_mult (var1, var2);
-#if (WMOPS)
-    multiCounter[currCounter].L_mult--;
-#endif
-    L_var_out = L_add (L_var3, L_product);
-#if (WMOPS)
-    multiCounter[currCounter].L_add--;
-    multiCounter[currCounter].L_mac++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_mac() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
  |   Function Name : L_msu                                                   |
  |                                                                           |
  |   Purpose :                                                               |
@@ -839,7 +300,7 @@ Word32 L_msu (Word32 L_var3, Word16 var1, Word16 var2)
 }
 /* ------------------------- End of L_msu() ------------------------- */
 
-
+#if INCLUDE_UNSAFE
 /*___________________________________________________________________________
  |                                                                           |
  |   Function Name : L_macNs                                                 |
@@ -897,9 +358,10 @@ Word32 L_macNs (Word32 L_var3, Word16 var1, Word16 var2)
 #endif
     return (L_var_out);
 }
+#endif
 /* ------------------------- End of L_macNs() ------------------------- */
 
-
+#if INCLUDE_UNSAFE
 /*___________________________________________________________________________
  |                                                                           |
  |   Function Name : L_msuNs                                                 |
@@ -957,115 +419,12 @@ Word32 L_msuNs (Word32 L_var3, Word16 var1, Word16 var2)
 #endif
     return (L_var_out);
 }
+#endif
+
 /* ------------------------- End of L_msuNs() ------------------------- */
 
 
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : L_add                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   32 bits addition of the two 32 bits variables (L_var1+L_var2) with      |
- |   overflow control and saturation; the result is set at +2147483647 when  |
- |   overflow occurs or at -2147483648 when underflow occurs.                |
- |                                                                           |
- |   Complexity weight : 2                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |    L_var2   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
- |___________________________________________________________________________|
-*/
-Word32 L_add (Word32 L_var1, Word32 L_var2)
-{
-    Word32 L_var_out;
-
-    L_var_out = L_var1 + L_var2;
-
-    if (((L_var1 ^ L_var2) & MIN_32) == 0)
-    {
-        if ((L_var_out ^ L_var1) & MIN_32)
-        {
-            L_var_out = (L_var1 < 0) ? MIN_32 : MAX_32;
-            Overflow = 1;
-        }
-    }
-#if (WMOPS)
-    multiCounter[currCounter].L_add++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_add() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : L_sub                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   32 bits subtraction of the two 32 bits variables (L_var1-L_var2) with   |
- |   overflow control and saturation; the result is set at +2147483647 when  |
- |   overflow occurs or at -2147483648 when underflow occurs.                |
- |                                                                           |
- |   Complexity weight : 2                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |    L_var2   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
- |___________________________________________________________________________|
-*/
-Word32 L_sub (Word32 L_var1, Word32 L_var2)
-{
-    Word32 L_var_out;
-
-    L_var_out = L_var1 - L_var2;
-
-    if (((L_var1 ^ L_var2) & MIN_32) != 0)
-    {
-        if ((L_var_out ^ L_var1) & MIN_32)
-        {
-            L_var_out = (L_var1 < 0L) ? MIN_32 : MAX_32;
-            Overflow = 1;
-        }
-    }
-#if (WMOPS)
-    multiCounter[currCounter].L_sub++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_sub() ------------------------- */
-
-
+#if INCLUDE_UNSAFE
 /*___________________________________________________________________________
  |                                                                           |
  |   Function Name : L_add_c                                                 |
@@ -1109,13 +468,13 @@ Word32 L_add_c (Word32 L_var1, Word32 L_var2)
     Word32 L_test;
     Flag carry_int = 0;
 
-    L_var_out = L_var1 + L_var2 + Carry;
+    L_var_out = L_var1 + L_var2 + GET_CARRY();
 
     L_test = L_var1 + L_var2;
 
     if ((L_var1 > 0) && (L_var2 > 0) && (L_test < 0))
     {
-        Overflow = 1;
+        SET_OVERFLOW(1);
         carry_int = 0;
     }
     else
@@ -1124,12 +483,12 @@ Word32 L_add_c (Word32 L_var1, Word32 L_var2)
         {
             if (L_test >= 0)
 	    {
-                Overflow = 1;
+                SET_OVERFLOW(1);
                 carry_int = 1;
 	    }
             else
 	    {
-                Overflow = 0;
+                SET_OVERFLOW(0);
                 carry_int = 1;
 	    }
         }
@@ -1137,39 +496,39 @@ Word32 L_add_c (Word32 L_var1, Word32 L_var2)
         {
             if (((L_var1 ^ L_var2) < 0) && (L_test >= 0))
             {
-                Overflow = 0;
+                SET_OVERFLOW(0);
                 carry_int = 1;
             }
             else
             {
-                Overflow = 0;
+                SET_OVERFLOW(0);
                 carry_int = 0;
             }
         }
     }
 
-    if (Carry)
+    if (GET_CARRY())
     {
         if (L_test == MAX_32)
         {
-            Overflow = 1;
-            Carry = carry_int;
+            SET_OVERFLOW(1);
+            SET_CARRY(carry_int);
         }
         else
         {
             if (L_test == (Word32) 0xFFFFFFFFL)
             {
-                Carry = 1;
+                SET_CARRY(1);
             }
             else
             {
-                Carry = carry_int;
+                SET_CARRY(carry_int);
             }
         }
     }
     else
     {
-        Carry = carry_int;
+        SET_CARRY(carry_int);
     }
 
 #if (WMOPS)
@@ -1177,9 +536,11 @@ Word32 L_add_c (Word32 L_var1, Word32 L_var2)
 #endif
     return (L_var_out);
 }
+#endif
+
 /* ------------------------- End of L_add_c() ------------------------- */
 
-
+#if INCLUDE_UNSAFE
 /*___________________________________________________________________________
  |                                                                           |
  |   Function Name : L_sub_c                                                 |
@@ -1223,9 +584,9 @@ Word32 L_sub_c (Word32 L_var1, Word32 L_var2)
     Word32 L_test;
     Flag carry_int = 0;
 
-    if (Carry)
+    if (GET_CARRY())
     {
-        Carry = 0;
+        SET_CARRY(0);
         if (L_var2 != MIN_32)
         {
             L_var_out = L_add_c (L_var1, -L_var2);
@@ -1238,8 +599,8 @@ Word32 L_sub_c (Word32 L_var1, Word32 L_var2)
             L_var_out = L_var1 - L_var2;
             if (L_var1 > 0L)
             {
-                Overflow = 1;
-                Carry = 0;
+                SET_OVERFLOW(1);
+                SET_CARRY(0);
             }
         }
     }
@@ -1250,27 +611,27 @@ Word32 L_sub_c (Word32 L_var1, Word32 L_var2)
 
         if ((L_test < 0) && (L_var1 > 0) && (L_var2 < 0))
         {
-            Overflow = 1;
+            SET_OVERFLOW(1);
             carry_int = 0;
         }
         else if ((L_test > 0) && (L_var1 < 0) && (L_var2 > 0))
         {
-            Overflow = 1;
+            SET_OVERFLOW(1);
             carry_int = 1;
         }
         else if ((L_test > 0) && ((L_var1 ^ L_var2) > 0))
         {
-            Overflow = 0;
+            SET_OVERFLOW(0);
             carry_int = 1;
         }
         if (L_test == MIN_32)
         {
-            Overflow = 1;
-            Carry = carry_int;
+            SET_OVERFLOW(1);
+            SET_CARRY(carry_int);
         }
         else
         {
-            Carry = carry_int;
+            SET_CARRY(carry_int);
         }
     }
 
@@ -1279,6 +640,7 @@ Word32 L_sub_c (Word32 L_var1, Word32 L_var2)
 #endif
     return (L_var_out);
 }
+#endif
 /* ------------------------- End of L_sub_c() ------------------------- */
 
 
@@ -1377,154 +739,6 @@ Word16 mult_r (Word16 var1, Word16 var2)
 }
 /* ------------------------- End of mult_r() ------------------------- */
 
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : L_shl                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Arithmetically shift the 32 bit input L_var1 left var2 positions. Zero  |
- |   fill the var2 LSB of the result. If var2 is negative, arithmetically    |
- |   shift L_var1 right by -var2 with sign extension. Saturate the result in |
- |   case of underflows or overflows.                                        |
- |                                                                           |
- |   Complexity weight : 2                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |    var2                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
- |___________________________________________________________________________|
-*/
-Word32 L_shl (Word32 L_var1, Word16 var2)
-{
-    Word32 L_var_out;
-
-    if (var2 <= 0)
-    {
-        if (var2 < -32)
-            var2 = -32;
-        L_var_out = L_shr (L_var1, (Word16) -var2);
-#if (WMOPS)
-        multiCounter[currCounter].L_shr--;
-#endif
-    }
-    else
-    {
-        for (; var2 > 0; var2--)
-        {
-            if (L_var1 > (Word32) 0X3fffffffL)
-            {
-                Overflow = 1;
-                L_var_out = MAX_32;
-                break;
-            }
-            else
-            {
-                if (L_var1 < (Word32) 0xc0000000L)
-                {
-                    Overflow = 1;
-                    L_var_out = MIN_32;
-                    break;
-                }
-            }
-            L_var1 *= 2;
-            L_var_out = L_var1;
-        }
-    }
-#if (WMOPS)
-    multiCounter[currCounter].L_shl++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_shl() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
- |   Function Name : L_shr                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |   Arithmetically shift the 32 bit input L_var1 right var2 positions with  |
- |   sign extension. If var2 is negative, arithmetically shift L_var1 left   |
- |   by -var2 and zero fill the -var2 LSB of the result. Saturate the result |
- |   in case of underflows or overflows.                                     |
- |                                                                           |
- |   Complexity weight : 2                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1   32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var3 <= 0x7fff ffff.                 |
- |                                                                           |
- |    var2                                                                   |
- |             16 bit short signed integer (Word16) whose value falls in the |
- |             range : 0xffff 8000 <= var1 <= 0x0000 7fff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
- |___________________________________________________________________________|
-*/
-Word32 L_shr (Word32 L_var1, Word16 var2)
-{
-    Word32 L_var_out;
-
-    if (var2 < 0)
-    {
-        if (var2 < -32)
-            var2 = -32;
-        L_var_out = L_shl (L_var1, (Word16) -var2);
-#if (WMOPS)
-        multiCounter[currCounter].L_shl--;
-#endif
-    }
-    else
-    {
-        if (var2 >= 31)
-        {
-            L_var_out = (L_var1 < 0L) ? -1 : 0;
-        }
-        else
-        {
-            if (L_var1 < 0)
-            {
-                L_var_out = ~((~L_var1) >> var2);
-            }
-            else
-            {
-                L_var_out = L_var1 >> var2;
-            }
-        }
-    }
-#if (WMOPS)
-    multiCounter[currCounter].L_shr++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_shr() ------------------------- */
 
 
 /*___________________________________________________________________________
@@ -1930,65 +1144,6 @@ Word32 L_abs (Word32 L_var1)
 
 /*___________________________________________________________________________
  |                                                                           |
- |   Function Name : L_sat                                                   |
- |                                                                           |
- |   Purpose :                                                               |
- |                                                                           |
- |    32 bit L_var1 is set to 2147483647 if an overflow occured or to        |
- |    -2147483648 if an underflow occured on the most recent L_add_c,        |
- |    L_sub_c, L_macNs or L_msuNs operations. The carry and overflow values  |
- |    are binary values which can be tested and assigned values.             |
- |                                                                           |
- |   Complexity weight : 4                                                   |
- |                                                                           |
- |   Inputs :                                                                |
- |                                                                           |
- |    L_var1                                                                 |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= var1 <= 0x7fff ffff.                   |
- |                                                                           |
- |   Outputs :                                                               |
- |                                                                           |
- |    none                                                                   |
- |                                                                           |
- |   Return Value :                                                          |
- |                                                                           |
- |    L_var_out                                                              |
- |             32 bit long signed integer (Word32) whose value falls in the  |
- |             range : 0x8000 0000 <= var_out <= 0x7fff ffff.                |
- |___________________________________________________________________________|
-*/
-Word32 L_sat (Word32 L_var1)
-{
-    Word32 L_var_out;
-
-    L_var_out = L_var1;
-
-    if (Overflow)
-    {
-
-        if (Carry)
-        {
-            L_var_out = MIN_32;
-        }
-        else
-        {
-            L_var_out = MAX_32;
-        }
-
-        Carry = 0;
-        Overflow = 0;
-    }
-#if (WMOPS)
-    multiCounter[currCounter].L_sat++;
-#endif
-    return (L_var_out);
-}
-/* ------------------------- End of L_sat() ------------------------- */
-
-
-/*___________________________________________________________________________
- |                                                                           |
  |   Function Name : norm_s                                                  |
  |                                                                           |
  |   Purpose :                                                               |
@@ -2275,7 +1430,7 @@ Word32 L_mls (Word32 Lv, Word16 v)
 
    Temp = Lv & (Word32) 0x0000ffff ;
    Temp = Temp * (Word32) v ;
-   Temp = L_shr( Temp, (Word16) 15 ) ;
+   Temp = L_shr_nocheck( Temp, (Word16) 15 ) ;
    Temp = L_mac( Temp, v, extract_h(Lv) ) ;
 
 #if (WMOPS)
@@ -2357,14 +1512,14 @@ Word16 div_l (Word32  L_num, Word16 den)
         return MAX_16 ;
     }
     else {
-        L_num = L_shr(L_num, (Word16)1) ;
-        L_den = L_shr(L_den, (Word16)1);
+        L_num = L_shr_nocheck(L_num, (Word16)1) ;
+        L_den = L_shr_nocheck(L_den, (Word16)1);
 #if (WMOPS)
         multiCounter[currCounter].L_shr-=2;
 #endif
         for(iteration=(Word16)0; iteration< (Word16)15;iteration++) {
-            var_out = shl( var_out, (Word16)1);
-            L_num   = L_shl( L_num, (Word16)1);
+            var_out = shl_nocheck( var_out, (Word16)1);
+            L_num   = L_shl_nocheck( L_num, (Word16)1);
 #if (WMOPS)
             multiCounter[currCounter].shl--;
             multiCounter[currCounter].L_shl--;
@@ -2628,7 +1783,7 @@ UWord32 LU_shl (UWord32 L_var1, Word16 var2)
         {
             if (L_var1 > (UWord32) 0X7fffffffL)
             {
-                Overflow = 1;
+                SET_OVERFLOW(1);
                 L_var_out = UMAX_32;
                 break;
             }
@@ -2636,7 +1791,7 @@ UWord32 LU_shl (UWord32 L_var1, Word16 var2)
             {
                 if (L_var1 < (UWord32) 0x00000001L)
                 {
-                    Overflow = 1;
+                    SET_OVERFLOW(1);
                     L_var_out = MIN_32;
                     break;
                 }

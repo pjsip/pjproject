@@ -88,7 +88,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
 
     
 
-    half_dct_size = shr(dct_length,1);
+    half_dct_size = shr_nocheck(dct_length,1);
     
     /* Perform a Type IV (inverse) DCT on the coefficients */
     dct_type_iv_s(coefs, new_samples, dct_length);
@@ -98,7 +98,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
     {
         for(index=0;index<dct_length;index++)
         {
-            new_samples[index] = shr(new_samples[index],mag_shift);
+            new_samples[index] = shr_nocheck(new_samples[index],mag_shift);
             move16();
         }
     }
@@ -110,7 +110,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
             mag_shift = negate(mag_shift);
             for(index=0;index<dct_length;index++)
             {
-                new_samples[index] = shl(new_samples[index],mag_shift);
+                new_samples[index] = shl_nocheck(new_samples[index],mag_shift);
                 move16();
             }
         }
@@ -147,7 +147,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
         move32();
         sum = L_mac(sum,*win_new++, *--new_ptr);
         sum = L_mac(sum,*--win_old, *old_ptr++);
-        *out_ptr++ = itu_round(L_shl(sum,2));
+        *out_ptr++ = itu_round(L_shl_nocheck(sum,2));
         move16();
 
     }
@@ -160,7 +160,7 @@ void rmlt_coefs_to_samples(Word16 *coefs,
         move32();
         sum = L_mac(sum,*win_new++, *new_ptr++);
         sum = L_mac(sum,negate(*--win_old), *--old_ptr);
-        *out_ptr++ = itu_round(L_shl(sum,2));
+        *out_ptr++ = itu_round(L_shl_nocheck(sum,2));
         move16();
     }
         

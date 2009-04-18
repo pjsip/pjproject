@@ -140,7 +140,7 @@ void encoder(Word16  number_of_available_bits,
        This assumes that REGION_POWER_STEPSIZE_DB is defined
        to be exactly 3.010299957 or 20.0 times log base 10
        of square root of 2. */
-    temp = shl(mag_shift,1);
+    temp = shl_nocheck(mag_shift,1);
     mag_shift_offset = add(temp,REGION_POWER_TABLE_NUM_NEGATIVES);
     
     for (region=0; region<number_of_regions; region++)
@@ -258,7 +258,7 @@ void bits_to_words(UWord32 *region_mlt_bits,
         test();
         if (j >= 0)
         {
-            temp = extract_l(L_shr(current_word,j));
+            temp = extract_l(L_shr_nocheck(current_word,j));
             out_word = add(out_word,temp);
 
             out_words[out_word_index++] = out_word;
@@ -290,12 +290,12 @@ void bits_to_words(UWord32 *region_mlt_bits,
     for (region=0;region<number_of_regions; region++)
     {
         accb = L_deposit_l(out_word_index);
-        accb = L_shl(accb,4);
+        accb = L_shl_nocheck(accb,4);
         accb = L_sub(accb,number_of_bits_per_frame);
         test();
         if(accb < 0)        
         {
-            temp = shl(region,2);
+            temp = shl_nocheck(region,2);
             in_word_ptr = &region_mlt_bits[temp];
             region_bit_count = region_mlt_bit_counts[region];
             move16();
@@ -310,7 +310,7 @@ void bits_to_words(UWord32 *region_mlt_bits,
             current_word = *in_word_ptr++;
     
             acca = L_deposit_l(out_word_index);
-            acca = L_shl(acca,4);
+            acca = L_shl_nocheck(acca,4);
             acca = L_sub(acca,number_of_bits_per_frame);
             
             /* from while loop */
@@ -381,11 +381,11 @@ void bits_to_words(UWord32 *region_mlt_bits,
                     
                 }
                 acca = L_deposit_l(out_word_index);
-                acca = L_shl(acca,4);
+                acca = L_shl_nocheck(acca,4);
                 acca = L_sub(acca,number_of_bits_per_frame);
             }
             accb = L_deposit_l(out_word_index);
-            accb = L_shl(accb,4);
+            accb = L_shl_nocheck(accb,4);
             accb = L_sub(accb,number_of_bits_per_frame);
         }
     }
@@ -414,7 +414,7 @@ void bits_to_words(UWord32 *region_mlt_bits,
         move16();
         
         acca = L_deposit_l(out_word_index);
-        acca = L_shl(acca,4);
+        acca = L_shl_nocheck(acca,4);
         acca = L_sub(acca,number_of_bits_per_frame);
     }
 }
@@ -461,7 +461,7 @@ void adjust_abs_region_power_index(Word16 *absolute_region_power_index,Word16 *m
     for (region=0; region<number_of_regions; region++)
     {
         n = sub(absolute_region_power_index[region],39);
-        n = shr(n,1);
+        n = shr_nocheck(n,1);
         
         test();
         if (n > 0)
@@ -472,14 +472,14 @@ void adjust_abs_region_power_index(Word16 *absolute_region_power_index,Word16 *m
 
             for (i=0; i<REGION_SIZE; i++)
             {
-                acca = L_shl(*raw_mlt_ptr,16);
+                acca = L_shl_nocheck(*raw_mlt_ptr,16);
                 acca = L_add(acca,32768L);
-                acca = L_shr(acca,n);
-                acca = L_shr(acca,16);
+                acca = L_shr_nocheck(acca,n);
+                acca = L_shr_nocheck(acca,16);
                 *raw_mlt_ptr++ = extract_l(acca);
             }
 
-            temp = shl(n,1);
+            temp = shl_nocheck(n,1);
             temp = sub(absolute_region_power_index[region],temp);
             absolute_region_power_index[region] = temp;
             move16();
@@ -567,7 +567,7 @@ Word16 compute_region_powers(Word16  *mlt_coefs,
         while (acca > 0)
         {
             test();
-            long_accumulator = L_shr(long_accumulator,1);
+            long_accumulator = L_shr_nocheck(long_accumulator,1);
             
             acca = (long_accumulator & 0x7fff0000L);
             logic32();
@@ -587,12 +587,12 @@ Word16 compute_region_powers(Word16  *mlt_coefs,
             test();
             logic16();
             
-            long_accumulator = L_shl(long_accumulator,1);
+            long_accumulator = L_shl_nocheck(long_accumulator,1);
             acca = L_sub(long_accumulator,32767);
             power_shift--;
             temp = add(power_shift,15);
         }
-        long_accumulator = L_shr(long_accumulator,1);
+        long_accumulator = L_shr_nocheck(long_accumulator,1);
         /* 28963 corresponds to square root of 2 times REGION_SIZE(20). */
         acca = L_sub(long_accumulator,28963);
         
@@ -601,7 +601,7 @@ Word16 compute_region_powers(Word16  *mlt_coefs,
             power_shift = add(power_shift,1);
         
         acca = L_deposit_l(mag_shift);
-        acca = L_shl(acca,1);
+        acca = L_shl_nocheck(acca,1);
         acca = L_sub(power_shift,acca);
         acca = L_add(35,acca);
         acca = L_sub(acca,REGION_POWER_TABLE_NUM_NEGATIVES);
@@ -785,7 +785,7 @@ void vector_quantize_mlts(Word16 number_of_available_bits,
     Word16 temp2;
 
     /* Start in the middle of the categorization control range. */
-    temp = shr(num_categorization_control_possibilities,1);
+    temp = shr_nocheck(num_categorization_control_possibilities,1);
     temp = sub(temp,1);
     for (*p_categorization_control = 0; *p_categorization_control < temp; (*p_categorization_control)++)
     {
@@ -808,7 +808,7 @@ void vector_quantize_mlts(Word16 number_of_available_bits,
         {
             region_mlt_bit_counts[region] =
             vector_huffman(category, absolute_region_power_index[region],raw_mlt_ptr,
-                           &region_mlt_bits[shl(region,2)]);
+                           &region_mlt_bits[shl_nocheck(region,2)]);
         }
         else
         {
@@ -849,7 +849,7 @@ void vector_quantize_mlts(Word16 number_of_available_bits,
         {
             region_mlt_bit_counts[region] =
                 vector_huffman(category, absolute_region_power_index[region],raw_mlt_ptr,
-                           &region_mlt_bits[shl(region,2)]);
+                           &region_mlt_bits[shl_nocheck(region,2)]);
         }
         else
         {
@@ -895,7 +895,7 @@ void vector_quantize_mlts(Word16 number_of_available_bits,
         {
             region_mlt_bit_counts[region] =
                 vector_huffman(category, absolute_region_power_index[region],raw_mlt_ptr,
-                           &region_mlt_bits[shl(region,2)]);
+                           &region_mlt_bits[shl_nocheck(region,2)]);
         }
         else
         {
@@ -1002,16 +1002,16 @@ Word16 vector_huffman(Word16 category,
 
     /* compute inverse of step size * standard deviation */
     acca = L_mult(step_size_inverse_table[category],standard_deviation_inverse_table[power_index]);
-    acca = L_shr(acca,1);
+    acca = L_shr_nocheck(acca,1);
     acca = L_add(acca,4096);
-    acca = L_shr(acca,13);
+    acca = L_shr_nocheck(acca,13);
 
 	/*
 	 *  The next two lines are new to Release 1.2 
 	 */
      
 	mytemp = acca & 0x3;
-    acca = L_shr(acca,2);
+    acca = L_shr_nocheck(acca,2);
 
     inv_of_step_size_times_std_dev = extract_l(acca);
 
@@ -1032,16 +1032,16 @@ Word16 vector_huffman(Word16 category,
             k = abs_s(*raw_mlt_ptr);
             
             acca = L_mult(k,inv_of_step_size_times_std_dev);
-            acca = L_shr(acca,1);
+            acca = L_shr_nocheck(acca,1);
 		    
 			/*
 			 *  The next four lines are new to Release 1.2
 			 */
 
 			myacca = (Word16)L_mult(k,mytemp);
-			myacca = (Word16)L_shr(myacca,1);
+			myacca = (Word16)L_shr_nocheck(myacca,1);
 			myacca = (Word16)L_add(myacca,int_dead_zone_low_bits[category]);
-			myacca = (Word16)L_shr(myacca,2);
+			myacca = (Word16)L_shr_nocheck(myacca,2);
 
             acca = L_add(acca,int_dead_zone[category]);
 
@@ -1050,7 +1050,7 @@ Word16 vector_huffman(Word16 category,
 			 */
 
 			acca = L_add(acca,myacca);
-			acca = L_shr(acca,13);
+			acca = L_shr_nocheck(acca,13);
 
             k = extract_l(acca);
 
@@ -1058,7 +1058,7 @@ Word16 vector_huffman(Word16 category,
             if (k != 0)
             {
                 number_of_non_zero = add(number_of_non_zero,1);
-                signs_index = shl(signs_index,1);
+                signs_index = shl_nocheck(signs_index,1);
                 
                 test();
                 if (*raw_mlt_ptr > 0)
@@ -1074,7 +1074,7 @@ Word16 vector_huffman(Word16 category,
                     move16();
                 }
             }
-            acca = L_shr(L_mult(index,(kmax_plus_one)),1);
+            acca = L_shr_nocheck(L_mult(index,(kmax_plus_one)),1);
             index = extract_l(acca);
             index = add(index,k);
             raw_mlt_ptr++;
@@ -1104,7 +1104,7 @@ Word16 vector_huffman(Word16 category,
         else
         {
             j = negate(j);
-            acca = L_shr(code_bits,j);
+            acca = L_shr_nocheck(code_bits,j);
             current_word = L_add(current_word,acca);
             
             *word_ptr++ = current_word;

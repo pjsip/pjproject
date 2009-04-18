@@ -136,7 +136,7 @@ void decoder(Bit_Obj *bitobj,
         for (i=0; i<num_categorization_control_bits; i++) 
         {
         	get_next_bit(bitobj);
-        	categorization_control = shl(categorization_control,1);
+        	categorization_control = shl_nocheck(categorization_control,1);
         	categorization_control = add(categorization_control,bitobj->next_bit);
         }
         
@@ -246,7 +246,7 @@ void decode_envelope(Bit_Obj *bitobj,
     for (i=0; i<5; i++) 
     {
         get_next_bit(bitobj);
-        index = shl(index,1);
+        index = shl_nocheck(index,1);
         index = add(index,bitobj->next_bit);
     }
     bitobj->number_of_bits_left = sub(bitobj->number_of_bits_left,5);
@@ -332,7 +332,7 @@ void decode_envelope(Bit_Obj *bitobj,
     while ((i >= 0) && ((temp1 >= 0) || (temp2 > 0))) 
     {
         i = sub(i,1);
-        temp = shr(temp,1);
+        temp = shr_nocheck(temp,1);
         max_index = sub(max_index,2);
         temp1 = sub(temp,8);
         temp2 = sub(max_index,28);
@@ -530,13 +530,13 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
                     test();
                     if (bitobj->next_bit == 0)
 	                {
-                        temp = shl(index,1);
+                        temp = shl_nocheck(index,1);
                         index = (Word16)*(decoder_table_ptr + temp);
                         move16();
                     }
 	                else
 	                {
-                        temp = shl(index,1);
+                        temp = shl_nocheck(index,1);
                         index = (Word16)*(decoder_table_ptr + temp + 1);
                         move16();
                     }
@@ -567,18 +567,18 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
                         for (j=0; j<num_sign_bits; j++) 
                         {
 		                    get_next_bit(bitobj);
-       		                signs_index = shl(signs_index,1);
+       		                signs_index = shl_nocheck(signs_index,1);
 		                    signs_index = add(signs_index,bitobj->next_bit);
 		                    bitobj->number_of_bits_left = sub(bitobj->number_of_bits_left,1);
 	                    }
 	                    temp = sub(num_sign_bits,1);
-                        bit = shl(1,(temp));
+                        bit = shl_nocheck(1,(temp));
 	                }
 	                
                     for (j=0; j<vec_dim; j++) 
                     {
 	                    acca = L_mult0(standard_deviation,mlt_quant_centroid[category][k[j]]);
-                        acca = L_shr(acca,12);
+                        acca = L_shr_nocheck(acca,12);
                         decoder_mlt_value = extract_l(acca);
 	                    
                         test();
@@ -587,7 +587,7 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
 		                    test();
                             if ((signs_index & bit) == 0)
 		                        decoder_mlt_value = negate(decoder_mlt_value);
-		                    bit = shr(bit,1);
+		                    bit = shr_nocheck(bit,1);
 	                    }
                         *decoder_mlt_ptr++ = decoder_mlt_value;
                         move16();
@@ -652,7 +652,7 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
                     }
 	                *decoder_mlt_ptr = temp1;
                     move16();
-	                random_word = shr(random_word,1);
+	                random_word = shr_nocheck(random_word,1);
 	            }
 	            /* pointer arithmetic */
                 decoder_mlt_ptr++;
@@ -677,7 +677,7 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
                     }
 	                *decoder_mlt_ptr = temp1;
                     move16();
-	                random_word  = shr(random_word,1);
+	                random_word  = shr_nocheck(random_word,1);
 	            }
 	            /* pointer arithmetic */
                 decoder_mlt_ptr++;
@@ -710,7 +710,7 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
                 }
                 *decoder_mlt_ptr++ = temp1;
                 move16();
-                random_word = shr(random_word,1);
+                random_word = shr_nocheck(random_word,1);
             }
             random_word = get_rand(randobj);
             for (j=0; j<10; j++) 
@@ -730,7 +730,7 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
                 
                 *decoder_mlt_ptr++ = temp1;
                 move16();
-                random_word = shr(random_word,1);
+                random_word = shr_nocheck(random_word,1);
             }
         }
     }
@@ -1059,7 +1059,7 @@ void get_next_bit(Bit_Obj *bitobj)
         move16();
     }
     bitobj->code_bit_count = sub(bitobj->code_bit_count,1);
-    temp = shr(bitobj->current_word,bitobj->code_bit_count);
+    temp = shr_nocheck(bitobj->current_word,bitobj->code_bit_count);
     logic16();
     bitobj->next_bit = (Word16 )(temp & 1);
 

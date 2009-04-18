@@ -94,7 +94,7 @@ void categorize(Word16 number_of_available_bits,
     {
         number_of_available_bits = sub(number_of_available_bits,frame_size);
         number_of_available_bits = extract_l(L_mult0(number_of_available_bits,5));
-        number_of_available_bits = shr(number_of_available_bits,3);
+        number_of_available_bits = shr_nocheck(number_of_available_bits,3);
         number_of_available_bits = add(number_of_available_bits,frame_size);
     }
 
@@ -207,7 +207,7 @@ void comp_powercat_and_catbalance(Word16 *power_categories,
     for (j=0; j<num_categorization_control_possibilities-1; j++) 
     {
         min_plus_max = add(max,min);
-        two_x_number_of_available_bits = shl(number_of_available_bits,1);
+        two_x_number_of_available_bits = shl_nocheck(number_of_available_bits,1);
         
         temp = sub(min_plus_max,two_x_number_of_available_bits);
         test();
@@ -222,7 +222,7 @@ void comp_powercat_and_catbalance(Word16 *power_categories,
                 test();
                 if (max_rate_categories[region] > 0) 
                 {
-                    itemp0 = shl(max_rate_categories[region],1);
+                    itemp0 = shl_nocheck(max_rate_categories[region],1);
                     itemp1 = sub(offset,rms_index[region]);
                     itemp0 = sub(itemp1,itemp0);
                     
@@ -258,7 +258,7 @@ void comp_powercat_and_catbalance(Word16 *power_categories,
                 test();
                 if (temp < 0)
                 {
-                    itemp0 = shl(min_rate_categories[region],1);
+                    itemp0 = shl_nocheck(min_rate_categories[region],1);
                     itemp1 = sub(offset,rms_index[region]);
                     itemp0 = sub(itemp1,itemp0);
                     
@@ -356,7 +356,7 @@ Word16 calc_offset(Word16 *rms_index,Word16 number_of_regions,Word16 available_b
         for (region=0; region<number_of_regions; region++) 
         {
             j = sub(test_offset,rms_index[region]);
-            j = shr(j,1);
+            j = shr_nocheck(j,1);
             
             /* Ensure j is between 0 and NUM_CAT-1 */
             test();
@@ -391,7 +391,7 @@ Word16 calc_offset(Word16 *rms_index,Word16 number_of_regions,Word16 available_b
             answer = test_offset;
             move16();
         }
-        delta = shr(delta,1);
+        delta = shr_nocheck(delta,1);
         test(); /* for the while loop */
     } while (delta > 0);
 
@@ -440,7 +440,7 @@ void compute_raw_pow_categories(Word16 *power_categories,Word16 *rms_index,Word1
     for (region=0; region<number_of_regions; region++) 
     {
         j = sub(offset,rms_index[region]);
-        j = shr(j,1);
+        j = shr_nocheck(j,1);
         
         /* make sure j is between 0 and NUM_CAT-1 */
         test();

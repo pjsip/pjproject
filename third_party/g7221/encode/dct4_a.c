@@ -135,9 +135,9 @@ void dct_type_iv_a (Word16 *input,Word16 *output,Word16 dct_length)
         /*===========================================================*/
 
         /*    set_span      = 1 << (DCT_LENGTH_LOG - set_count_log); */
-        set_span = shr(dct_length,set_count_log);
+        set_span = shr_nocheck(dct_length,set_count_log);
 
-        set_count     = shl(1,set_count_log);
+        set_count     = shl_nocheck(1,set_count_log);
 
         in_ptr        = in_buffer;
         move16();
@@ -168,12 +168,15 @@ void dct_type_iv_a (Word16 *input,Word16 *output,Word16 dct_length)
             {
                 in_val_low      = *in_ptr++;
                 in_val_high     = *in_ptr++;
-                acca            = L_add(in_val_low,in_val_high);
-                acca            = L_shr(acca,1);
+		// blp: addition of two 16bits vars, there's no way
+		//      they'll overflow a 32bit var
+                //acca            = L_add(in_val_low,in_val_high);
+		acca = (in_val_low + in_val_high);
+		acca            = L_shr_nocheck(acca,1);
                 out_val_low     = extract_l(acca);
 
                 acca            = L_sub(in_val_low,in_val_high);
-                acca            = L_shr(acca,1);
+                acca            = L_shr_nocheck(acca,1);
                 out_val_high    = extract_l(acca);
 
                 *out_ptr_low++  = out_val_low;
@@ -213,18 +216,30 @@ void dct_type_iv_a (Word16 *input,Word16 *output,Word16 dct_length)
     move16();
 
     temp = sub(dct_length_log,1);
-    temp = shl(1,temp);
+    temp = shl_nocheck(1,temp);
 
     for (pairs_left=temp; pairs_left > 0; pairs_left--)
     {
         for ( k=0; k<CORE_SIZE; k++ )
         {
+#if PJ_HAS_INT64
+	    /* blp: danger danger! not really compatible but faster */
+	    pj_int64_t sum64=0;
+            move32();
+            
+            for ( i=0; i<CORE_SIZE; i++ )
+            {
+                sum64 += L_mult(pair_ptr[i], dct_core_a[i][k]);
+            }
+	    sum = L_saturate(sum64);
+#else
             sum=0L;
             move32();
             for ( i=0; i<CORE_SIZE; i++ )
             {
                 sum = L_mac(sum, pair_ptr[i],dct_core_a[i][k]);
             }
+#endif
             buffer_swap[k] = itu_round(sum);
         }
         /* address arithmetic */
@@ -250,9 +265,9 @@ void dct_type_iv_a (Word16 *input,Word16 *output,Word16 dct_length)
         /* Initialization for the loop over sets at the current size */
         /*===========================================================*/
         /*    set_span      = 1 << (DCT_LENGTH_LOG - set_count_log); */
-        set_span = shr(dct_length,set_count_log);
+        set_span = shr_nocheck(dct_length,set_count_log);
 
-        set_count     = shl(1,set_count_log);
+        set_count     = shl_nocheck(1,set_count_log);
         next_in_base  = in_buffer;
         move16();
 
@@ -277,7 +292,7 @@ void dct_type_iv_a (Word16 *input,Word16 *output,Word16 dct_length)
             /*|||||||||||||||||||||||||||||||||||||||||*/
             in_ptr_low     = next_in_base;
             move16();
-            temp           = shr(set_span,1);
+            temp           = shr_nocheck(set_span,1);
 
             /* address arithmetic */
             in_ptr_high    = in_ptr_low + temp;
