@@ -4,6 +4,12 @@
 	Version="8.00"
 	Name="pjproject-vs8-wm6-common-defaults"
 	>
+	<Tool
+		Name="VCCLCompilerTool"
+		PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_)"
+		DebugInformationFormat="3"
+		DisableSpecificWarnings="4214;4201"
+	/>
 	<UserMacro
 		Name="TargetCPU"
 		Value="armv4i"

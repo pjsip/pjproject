@@ -5,4 +5,9 @@
 	Name="pjproject-vs8-release-defaults"
 	InheritedPropertySheets=".\pjproject-vs8-common-defaults.vsprops"
 	>
+	<Tool
+		Name="VCCLCompilerTool"
+		Optimization="2"
+		PreprocessorDefinitions="NDEBUG"
+	/>
 </VisualStudioPropertySheet>

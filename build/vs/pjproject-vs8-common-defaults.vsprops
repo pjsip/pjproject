@@ -8,8 +8,17 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		AssemblerListingLocation="$(IntDir)\"
+		BrowseInformation="1"
 		WarningLevel="4"
+		CompileAs="0"
+	/>
+	<Tool
+		Name="VCLibrarianTool"
+		OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 	/>
 	<UserMacro
 		Name="VSVer"
