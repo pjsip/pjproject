@@ -127,6 +127,7 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
+			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
 			>
