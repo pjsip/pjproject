@@ -1,22 +1,5 @@
-/*
-  ===========================================================================
-   File: BASOP.H                                         v.1.1 - 05.Jul.2000
-  ===========================================================================
-
-		      ITU-T STL  BASIC OPERATORS
-
- 		      GLOBAL FUNCTION PROTOTYPES
-
-   History:
-   26.Jan.00	v1.0	Incorporated to the STL from updated G.723.1/G.729 
-                        basic operator library (based on basic_op.h) and 
-                        G.723.1's basop.h.
-   05.Jul.00    v1.1    Added 32-bit shiftless mult/mac/msub operators
-  ============================================================================
-*/
-
-#ifndef BASOP_H_DEFINED
-#define BASOP_H_DEFINED 110
+#ifndef __BASIC_OP_H__
+#define __BASIC_OP_H__
 
 /*___________________________________________________________________________
  |                                                                           |
@@ -26,14 +9,11 @@
  |___________________________________________________________________________|
 */
 
-extern Flag Overflow;
-extern Flag Carry;
-
 #define MAX_32 (Word32)0x7fffffffL
 #define MIN_32 (Word32)0x80000000L
 
 #define MAX_16 (Word16)0x7fff
-#define MIN_16 ((Word16)0x8000)
+#define MIN_16 (Word16)(pj_uint16_t)0x8000
 
 #define UMAX_32 (Word32)0xffffffffL
 #define UMIN_32 (Word32)0x00000000L
@@ -126,11 +106,10 @@ PJ_INLINE(Word16) saturate (Word32 L_var1);
 #   define GET_CARRY()	    0
 #endif
 
-#include "basop32_i.h"
+#include "basic_op_i.h"
 
 
 
-#endif /* BASOP_H_DEFINED */
+#endif /* __BASIC_OP_H__ */
 
 
-/* ************************* END OF BASIC_OP.H ************************* */

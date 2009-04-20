@@ -13,8 +13,8 @@
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
-#include "g7221/common/stl-files/typedef.h"
-#include "g7221/common/stl-files/basop32.h"
+#include "g7221/common/typedef.h"
+#include "g7221/common/basic_op.h"
 
 #define  PI             3.141592653589793238462
 

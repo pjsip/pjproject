@@ -1,61 +1,6 @@
-/*                                                      v.1.0 - 26.Jan.2000
-  =============================================================================
-
-                          U    U   GGG    SSSS  TTTTT
-                          U    U  G       S       T
-                          U    U  G  GG   SSSS    T
-                          U    U  G   G       S   T
-                           UUU     GG     SSS     T
-
-                   ========================================
-                    ITU-T - USER'S GROUP ON SOFTWARE TOOLS
-                   ========================================
-
-       =============================================================
-       COPYRIGHT NOTE: This source code, and all of its derivations,
-       is subject to the "ITU-T General Public License". Please have
-       it  read  in    the  distribution  disk,   or  in  the  ITU-T
-       Recommendation G.191 on "SOFTWARE TOOLS FOR SPEECH AND  AUDIO
-       CODING STANDARDS".
-       =============================================================
-
-MODULE:         BASOP, BASIC OPERATORS
-
-ORIGINAL BY:
-                Incorporated from anonymous contributions for 
-                ETSI Standards as well as G.723.1, G.729, and G.722.1
-
-DESCRIPTION:
-        This file contains the definition of 16- and 32-bit basic
-        operators to be used in the implementation of signal
-        processing algorithms. The basic operators try to resemble
-        assembly language instructions that are commonly found in
-        digital signal processor (DSP) CPUs, thus allowing algorithm
-        C-code implementations more directly mapeable to DSP assembly
-        code.
-
-        *********************************************************
-         NOTE: so far, this module does not have a demo program!
-        *********************************************************
-
-FUNCTIONS:
-  Defined in basop.h. Self-documentation within each function.
-
-HISTORY:
-  26.Jan.00	v1.0	Incorporated to the STL from updated G.723.1/G.729 
-                        basic operator library (based on basicop2.c) and 
-                        G.723.1's basop.c [L_mls(), div_l(), i_mult()]
-  05.Jul.00     v1.1    Added 32-bit shiftless accumulation basic 
-                        operators (L_msu0, L_mac0, L_mult0). Improved
-                        documentation for i_mult().
-  =============================================================================
-*/
-
 /*___________________________________________________________________________
  |                                                                           |
  | Basic arithmetic operators.                                               |
- |                                                                           |
- | $Id $
  |___________________________________________________________________________|
 */
 
@@ -68,7 +13,7 @@ HISTORY:
 #include <stdio.h>
 #include <stdlib.h>
 #include "typedef.h"
-#include "basop32.h"
+#include "basic_op.h"
 
 #if (WMOPS)
 #include "count.h"

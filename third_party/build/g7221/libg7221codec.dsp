@@ -43,7 +43,6 @@ RSC=rc.exe
 F90=df.exe
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /YX /FD /c
 # ADD CPP /nologo /MD /W3 /GX /O2 /I "../.." /I "../../g7221/common" /I "../../g7221/common/stl-files" /I "../../../pjlib/include" /D "WIN32" /D "NDEBUG" /D "_MBCS" /D "_LIB" /FR /YX /FD /c
-# SUBTRACT CPP /Z<none>
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
@@ -89,33 +88,29 @@ LIB32=link.exe -lib
 # Begin Group "common"
 
 # PROP Default_Filter ""
-# Begin Group "stl-files"
-
-# PROP Default_Filter ""
 # Begin Source File
 
-SOURCE="..\..\g7221\common\stl-files\basop32.c"
+SOURCE=..\..\g7221\common\basic_op.c
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\g7221\common\stl-files\basop32.h"
+SOURCE=..\..\g7221\common\basic_op.h
 # End Source File
 # Begin Source File
 
-SOURCE="..\..\g7221\common\stl-files\basop32_i.h"
+SOURCE=..\..\g7221\common\basic_op_i.h
 # End Source File
-# Begin Source File
-
-SOURCE="..\..\g7221\common\stl-files\count.h"
-# End Source File
-# Begin Source File
-
-SOURCE="..\..\g7221\common\stl-files\typedef.h"
-# End Source File
-# End Group
 # Begin Source File
 
 SOURCE=..\..\g7221\common\common.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\g7221\common\count.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\g7221\common\defs.h
 # End Source File
 # Begin Source File
 
@@ -136,6 +131,10 @@ SOURCE=..\..\g7221\common\tables.c
 # Begin Source File
 
 SOURCE=..\..\g7221\common\tables.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\..\g7221\common\typedef.h
 # End Source File
 # End Group
 # Begin Group "decode"
@@ -182,10 +181,6 @@ SOURCE=..\..\g7221\encode\sam2coef.c
 # Begin Group "Header Files"
 
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
-# Begin Source File
-
-SOURCE=..\..\g7221\common\defs.h
-# End Source File
 # End Group
 # End Target
 # End Project

@@ -1,4 +1,4 @@
-/* $Id: config.h 2427 2009-01-22 20:30:32Z bennylp $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
  *
@@ -16,13 +16,17 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef COUNT_H
-#define COUNT_H
+#ifndef TYPEDEF_H
+#define TYPEDEF_H
 
-#define move16()
-#define move32()
-#define logic16()
-#define logic32()
-#define test()
+#include <pj/types.h>
 
-#endif
+typedef pj_int8_t Word8;
+typedef pj_int16_t Word16;
+typedef pj_int32_t Word32;
+typedef pj_uint16_t UWord16;
+typedef pj_uint32_t UWord32;
+typedef int Flag;
+
+#endif /* TYPEDEF_H */
+

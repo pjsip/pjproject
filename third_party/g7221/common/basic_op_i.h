@@ -658,12 +658,12 @@ PJ_INLINE(Word16) abs_s (Word16 var1)
 #if 1
     if (var1 >= 0)
     	return var1;
-    else if (var1 == (Word16)0x8000)
+    else if (var1 == MIN_16)
  	return MAX_16;
     else
     	return (Word16)-var1;
 #else
-    if (var1 == (Word16) 0x8000)
+    if (var1 == MIN_16)
     {
         return MAX_16;
     }

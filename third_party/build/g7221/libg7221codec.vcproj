@@ -849,6 +849,18 @@
 				Name="common"
 				>
 				<File
+					RelativePath="..\..\g7221\common\basic_op.c"
+					>
+				</File>
+				<File
+					RelativePath="..\..\g7221\common\basic_op.h"
+					>
+				</File>
+				<File
+					RelativePath="..\..\g7221\common\basic_op_i.h"
+					>
+				</File>
+				<File
 					RelativePath="..\..\g7221\common\common.c"
 					>
 					<FileConfiguration
@@ -905,6 +917,10 @@
 							PreprocessorDefinitions=""
 						/>
 					</FileConfiguration>
+				</File>
+				<File
+					RelativePath="..\..\g7221\common\count.h"
+					>
 				</File>
 				<File
 					RelativePath="..\..\g7221\common\huff_def.h"
@@ -1034,84 +1050,10 @@
 					RelativePath="..\..\g7221\common\tables.h"
 					>
 				</File>
-				<Filter
-					Name="stl-files"
+				<File
+					RelativePath="..\..\g7221\common\typedef.h"
 					>
-					<File
-						RelativePath="..\..\g7221\common\stl-files\basop32.c"
-						>
-						<FileConfiguration
-							Name="Release|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release-Dynamic|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Release-Static|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug-Static|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-						<FileConfiguration
-							Name="Debug-Dynamic|Win32"
-							>
-							<Tool
-								Name="VCCLCompilerTool"
-								AdditionalIncludeDirectories=""
-								PreprocessorDefinitions=""
-							/>
-						</FileConfiguration>
-					</File>
-					<File
-						RelativePath="..\..\g7221\common\stl-files\basop32.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\g7221\common\stl-files\basop32_i.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\g7221\common\stl-files\count.h"
-						>
-					</File>
-					<File
-						RelativePath="..\..\g7221\common\stl-files\typedef.h"
-						>
-					</File>
-				</Filter>
+				</File>
 			</Filter>
 			<Filter
 				Name="decode"
