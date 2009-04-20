@@ -65,12 +65,13 @@
 				
 ***************************************************************************/
 
-Word16 samples_to_rmlt_coefs(Word16 *new_samples,Word16 *old_samples,Word16 *coefs,Word16 dct_length)
+Word16 samples_to_rmlt_coefs(const Word16 *new_samples,Word16 *old_samples,Word16 *coefs,Word16 dct_length)
 {
 
     Word16	index, vals_left,mag_shift,n;
     Word16	windowed_data[MAX_DCT_LENGTH];
-    Word16	*new_ptr, *old_ptr, *sam_low, *sam_high;
+    Word16	*old_ptr;
+    const Word16 *new_ptr, *sam_low, *sam_high;
     Word16	*win_low, *win_high;
     Word16	*dst_ptr;
     Word16  neg_win_low;

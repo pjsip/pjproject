@@ -572,6 +572,9 @@ int codec_test_vectors(void)
 	pjmedia_endpt_destroy(endpt);
 	return -7;
     }
+
+    /* Set shift value to zero for the test vectors */
+    pjmedia_codec_g7221_set_pcm_shift(0);
 #endif
 
     PJ_LOG(3,(THIS_FILE,"  encode tests:"));

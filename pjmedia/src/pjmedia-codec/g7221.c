@@ -137,6 +137,7 @@ static struct codec_factory {
     pj_pool_t		    *pool;	    /**< Codec factory pool.	    */
     pj_mutex_t		    *mutex;	    /**< Codec factory mutex.	    */
 
+    int			     pcm_shift;	    /**< Level adjustment	    */
     unsigned		     mode_count;    /**< Number of G722.1 modes.    */
     codec_mode		     modes[MAX_CODEC_MODES]; /**< The G722.1 modes. */
     unsigned		     mode_rsv_start;/**< Start index of G722.1 non-
@@ -164,8 +165,10 @@ typedef struct codec_private {
     pj_uint16_t		 frame_size;	    /**< Coded frame size.	    */
     pj_uint16_t		 frame_size_bits;   /**< Coded frame size in bits.  */
     pj_uint16_t		 number_of_regions; /**< Number of regions.	    */
+    int			 pcm_shift;	    /**< Adjustment for PCM in/out  */
     
     /* Encoder specific state */
+    Word16		*enc_frame;	    /**< 16bit to 14bit buffer	    */
     Word16		*enc_old_frame;
     
     /* Decoder specific state */
@@ -251,6 +254,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_init( pjmedia_endpt *endpt )
 
     /* Initialize codec modes, by default all standard bitrates are enabled */
     codec_factory.mode_count = 0;
+    codec_factory.pcm_shift = PJMEDIA_G7221_DEFAULT_PCM_SHIFT;
 
     mode = &codec_factory.modes[codec_factory.mode_count++];
     mode->enabled = PJ_TRUE;
@@ -406,6 +410,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
     return PJ_ETOOMANY;
 }
 
+
+/*
+ * Set level adjustment.
+ */
+PJ_DEF(pj_status_t)  pjmedia_codec_g7221_set_pcm_shift(int val)
+{
+    codec_factory.pcm_shift = val;
+    return PJ_SUCCESS;
+}
 
 /*
  * Unregister G722.1 codec factory from pjmedia endpoint.
@@ -644,10 +657,12 @@ static pj_status_t codec_open( pjmedia_codec *codec,
     codec_data->number_of_regions = (pj_uint16_t)
 				    (attr->info.clock_rate <= WB_SAMPLE_RATE?
 				     NUMBER_OF_REGIONS:MAX_NUMBER_OF_REGIONS);
+    codec_data->pcm_shift = codec_factory.pcm_shift;
 
     /* Initialize encoder state */
     tmp = codec_data->samples_per_frame << 1;
     codec_data->enc_old_frame = (Word16*)pj_pool_zalloc(pool, tmp);
+    codec_data->enc_frame = (Word16*)pj_pool_alloc(pool, tmp);
 
     /* Initialize decoder state */
     tmp = codec_data->samples_per_frame;
@@ -733,6 +748,7 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 				 struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
+    const Word16 *pcm_input;
     Word16 mlt_coefs[MAX_SAMPLES_PER_FRAME];
     Word16 mag_shift;
 
@@ -772,8 +788,21 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 	}
     }
 
+    /* Encoder adjust the input signal level */
+    if (codec_data->pcm_shift) {
+	unsigned i;
+	pcm_input = (const Word16*)input->buf;
+	for (i=0; i<codec_data->samples_per_frame; ++i) {
+	    codec_data->enc_frame[i] = 
+		(pj_int16_t)(pcm_input[i] >> codec_data->pcm_shift);
+	}
+	pcm_input = codec_data->enc_frame;
+    } else {
+	pcm_input = (const Word16*)input->buf;
+    }
+
     /* Convert input samples to rmlt coefs */
-    mag_shift = samples_to_rmlt_coefs((Word16*)input->buf,
+    mag_shift = samples_to_rmlt_coefs(pcm_input,
 				      codec_data->enc_old_frame, 
 				      mlt_coefs, 
 				      codec_data->samples_per_frame);
@@ -854,6 +883,16 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 			  (Word16*)output->buf, 
 			  codec_data->samples_per_frame, 
 			  mag_shift);
+
+    /* Decoder adjust PCM signal */
+    if (codec_data->pcm_shift) {
+	unsigned i;
+	pj_int16_t *buf = (Word16*)output->buf;
+
+	for (i=0; i<codec_data->samples_per_frame; ++i) {
+	    buf[i] <<= codec_data->pcm_shift;
+	}
+    }
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = codec_data->samples_per_frame << 1;

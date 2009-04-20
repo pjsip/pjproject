@@ -140,7 +140,7 @@ void decoder(Bit_Obj *bitobj,
 	         Word16 *old_decoder_mlt_coefs,
 	         Word16 frame_error_flag);
 
-Word16  samples_to_rmlt_coefs(Word16 *new_samples,Word16 *history,Word16 *coefs,Word16 dct_length);
+Word16  samples_to_rmlt_coefs(const Word16 *new_samples,Word16 *history,Word16 *coefs,Word16 dct_length);
 void rmlt_coefs_to_samples(Word16 *coefs,     
                            Word16 *old_samples,           
                            Word16 *out_samples,           

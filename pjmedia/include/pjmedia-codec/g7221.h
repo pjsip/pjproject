@@ -93,6 +93,21 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
 						  unsigned bitrate, 
 						  pj_bool_t enabled);
 
+/**
+ * Set the G.722.1 codec encoder and decoder level adjustment. 
+ * If the value is non-zero, then PCM input samples to the encoder will 
+ * be shifted right by this value, and similarly PCM output samples from
+ * the decoder will be shifted left by this value.
+ *
+ * Default value is PJMEDIA_G7221_DEFAULT_PCM_SHIFT.
+ *
+ * @param val		The value
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_pcm_shift(int val);
+
+
 
 /**
  * Unregister G722.1 codecs factory from pjmedia endpoint.

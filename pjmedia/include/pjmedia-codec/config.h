@@ -237,8 +237,22 @@
  * G.722.1 codec is disabled by default, it's currently under development.
  */
 #ifndef PJMEDIA_HAS_G7221_CODEC
-#   define PJMEDIA_HAS_G7221_CODEC    0
+#   define PJMEDIA_HAS_G7221_CODEC		0
 #endif
+
+/**
+ * Default G.722.1 codec encoder and decoder level adjustment. 
+ * If the value is non-zero, then PCM input samples to the encoder will 
+ * be shifted right by this value, and similarly PCM output samples from
+ * the decoder will be shifted left by this value.
+ *
+ * This can be changed at run-time after initialization by calling
+ * #pjmedia_codec_g7221_set_pcm_shift().
+ */
+#ifndef PJMEDIA_G7221_DEFAULT_PCM_SHIFT
+#   define PJMEDIA_G7221_DEFAULT_PCM_SHIFT	1
+#endif
+
 
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
