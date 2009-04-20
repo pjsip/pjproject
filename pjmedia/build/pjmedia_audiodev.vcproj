@@ -22,11 +22,11 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -45,34 +45,21 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -82,8 +69,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -94,12 +79,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -115,42 +99,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_)"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation="$(IntDir)/"
-				ObjectFile="$(IntDir)/"
-				ProgramDataBaseFileName="$(IntDir)/vc80.pdb"
-				BrowseInformation="0"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -160,8 +126,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -180,12 +144,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -201,42 +164,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_)"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation="$(IntDir)/"
-				ObjectFile="$(IntDir)/"
-				ProgramDataBaseFileName="$(IntDir)/vc80.pdb"
-				BrowseInformation="0"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -246,8 +191,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -266,11 +209,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -289,37 +232,21 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -329,8 +256,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -341,13 +266,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -363,42 +286,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -408,8 +313,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -428,13 +331,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -450,42 +351,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -495,8 +378,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -515,11 +396,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -538,35 +419,21 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -576,8 +443,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -588,13 +453,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -610,39 +473,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -652,8 +500,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -672,13 +518,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -694,39 +538,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -736,8 +565,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -756,11 +583,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -779,37 +606,21 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -819,8 +630,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -831,13 +640,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -853,42 +660,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -898,8 +687,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -918,13 +705,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -940,42 +725,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -985,8 +752,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1005,11 +770,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1028,34 +793,21 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1065,8 +817,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -1077,13 +827,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1099,39 +847,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1141,8 +874,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1161,13 +892,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1183,39 +912,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="_DEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1225,8 +939,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-debug/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1245,11 +957,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1268,35 +980,21 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1306,8 +1004,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -1318,13 +1014,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1340,42 +1034,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1385,8 +1061,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1405,13 +1079,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1427,42 +1099,24 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjnath/include,../../third_party/portaudio/include,../../third_party/speex/include,../../third_party/build/srtp,../../third_party/srtp/crypto/include,../../third_party/srtp/include,../.."
-				PreprocessorDefinitions="NDEBUG;WIN32;_LIB;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.pch"
-				AssemblerListingLocation=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ObjectFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\pjmedia-audiodev-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="3"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="../lib/pjmedia-audiodev-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1472,8 +1126,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\pjmedia-audiodev-i386-win32-vc8-release/pjmedia_audiodev.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"

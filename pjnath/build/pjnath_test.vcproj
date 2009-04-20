@@ -19,11 +19,14 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			ConfigurationType="1"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -39,31 +42,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.pch"
-				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-debug/"
-				ObjectFile="./output/pjnath-test-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -71,13 +63,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="../bin/pjnath-test-i386-win32-vc8-debug.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath-test-i386-win32-vc8-debug.pdb"
-				SubSystem="1"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -90,8 +75,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -108,10 +91,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -130,17 +116,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjlib/include"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -153,12 +133,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions=""
 				AdditionalDependencies="ws2.lib"
-				GenerateDebugInformation="true"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="0"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -186,11 +161,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			ConfigurationType="1"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -206,33 +184,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.pch"
-				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-release/"
-				ObjectFile="./output/pjnath-test-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -240,12 +205,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjnath-test-i386-win32-vc8-release.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-release/pjnath-test-i386-win32-vc8-release.pdb"
-				SubSystem="1"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -258,8 +217,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -276,10 +233,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -298,17 +258,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjlib/include"
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				WarningLevel="3"
-				DebugInformationFormat="0"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -321,11 +275,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions=""
 				AdditionalDependencies="ws2.lib"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="0"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -353,11 +303,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			ConfigurationType="1"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -373,32 +326,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.pch"
-				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-debug/"
-				ObjectFile="./output/pjnath-test-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -406,13 +347,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="../bin/pjnath-test-i386-win32-vc8-debug.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath-test-i386-win32-vc8-debug.pdb"
-				SubSystem="1"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -425,8 +359,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -443,10 +375,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -462,21 +397,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjlib/include"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -489,12 +417,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions=""
 				AdditionalDependencies="ws2.lib"
-				GenerateDebugInformation="true"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="0"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -522,11 +445,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			ConfigurationType="1"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -542,33 +468,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.pch"
-				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-release/"
-				ObjectFile="./output/pjnath-test-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -576,12 +489,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjnath-test-i386-win32-vc8-release.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-release/pjnath-test-i386-win32-vc8-release.pdb"
-				SubSystem="1"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -594,8 +501,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -612,10 +517,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -631,21 +539,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjlib/include"
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				WarningLevel="3"
-				DebugInformationFormat="0"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -658,11 +559,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions=""
 				AdditionalDependencies="ws2.lib"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="0"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -690,11 +587,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -710,31 +610,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.pch"
-				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-debug/"
-				ObjectFile="./output/pjnath-test-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-debug/"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -742,13 +631,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="../bin/pjnath-test-i386-win32-vc8-debug.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath-test-i386-win32-vc8-debug.pdb"
-				SubSystem="1"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -761,8 +643,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjnath-test-i386-win32-vc8-debug/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -779,10 +659,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -798,21 +681,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjlib/include"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -825,12 +701,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions=""
 				AdditionalDependencies="ws2.lib"
-				GenerateDebugInformation="true"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="0"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -858,11 +729,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -878,31 +752,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.pch"
-				AssemblerListingLocation="./output/pjnath-test-i386-win32-vc8-release/"
-				ObjectFile="./output/pjnath-test-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/pjnath-test-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -910,12 +773,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjnath-test-i386-win32-vc8-release.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile="./output/pjnath-test-i386-win32-vc8-release/pjnath-test-i386-win32-vc8-release.pdb"
-				SubSystem="1"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -928,8 +785,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjnath-test-i386-win32-vc8-release/pjnath_test.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -946,10 +801,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -965,21 +823,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjlib/include"
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				WarningLevel="3"
-				DebugInformationFormat="0"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -992,11 +843,7 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalOptions=""
 				AdditionalDependencies="ws2.lib"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
-				TargetMachine="0"
 			/>
 			<Tool
 				Name="VCALinkTool"

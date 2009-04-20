@@ -15,13 +15,14 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\libresample-dll-i386-win32-vc8-debug"
-			IntermediateDirectory=".\output\libresample-dll-i386-win32-vc8-debug"
-			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="2"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -37,50 +38,29 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=".,../../resample/include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.pch"
-				AssemblerListingLocation=".\output\libresample-dll-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libresample-dll-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libresample-dll-i386-win32-vc8-debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile="../../lib/libresampled.dll"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\output\libresample-dll-i386-win32-vc8-debug/libresampled.pdb"
-				ImportLibrary=".\output\libresample-dll-i386-win32-vc8-debug/libresampled.lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -93,8 +73,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -111,13 +89,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\libresample-dll-i386-win32-vc8-release"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="2"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -133,49 +112,29 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=".,../../resample/include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.pch"
-				AssemblerListingLocation=".\output\libresample-dll-i386-win32-vc8-release/"
-				ObjectFile=".\output\libresample-dll-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libresample-dll-i386-win32-vc8-release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile="../../lib/libresample.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile=".\output\libresample-dll-i386-win32-vc8-release/libresample.pdb"
-				ImportLibrary=".\output\libresample-dll-i386-win32-vc8-release/libresample.lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -188,8 +147,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -206,13 +163,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="2"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -228,50 +186,29 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=".,../../resample/include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.pch"
-				AssemblerListingLocation=".\output\libresample-dll-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libresample-dll-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libresample-dll-i386-win32-vc8-debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile="../../lib/libresampled.dll"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\output\libresample-dll-i386-win32-vc8-debug/libresampled.pdb"
-				ImportLibrary=".\output\libresample-dll-i386-win32-vc8-debug/libresampled.lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -284,8 +221,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -302,13 +237,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="2"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -324,49 +260,29 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=".,../../resample/include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.pch"
-				AssemblerListingLocation=".\output\libresample-dll-i386-win32-vc8-release/"
-				ObjectFile=".\output\libresample-dll-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libresample-dll-i386-win32-vc8-release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile="../../lib/libresample.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile=".\output\libresample-dll-i386-win32-vc8-release/libresample.pdb"
-				ImportLibrary=".\output\libresample-dll-i386-win32-vc8-release/libresample.lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -379,8 +295,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -397,13 +311,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
-			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="2"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -419,50 +334,29 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=".,../../resample/include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.pch"
-				AssemblerListingLocation=".\output\libresample-dll-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libresample-dll-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libresample-dll-i386-win32-vc8-debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile="../../lib/libresampled.dll"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\output\libresample-dll-i386-win32-vc8-debug/libresampled.pdb"
-				ImportLibrary=".\output\libresample-dll-i386-win32-vc8-debug/libresampled.lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -475,8 +369,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libresample-dll-i386-win32-vc8-debug/libresample_dll.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -493,13 +385,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			OutputDirectory="$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="2"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -515,49 +408,29 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=".,../../resample/include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.pch"
-				AssemblerListingLocation=".\output\libresample-dll-i386-win32-vc8-release/"
-				ObjectFile=".\output\libresample-dll-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libresample-dll-i386-win32-vc8-release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
-				OutputFile="../../lib/libresample.dll"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile=".\output\libresample-dll-i386-win32-vc8-release/libresample.pdb"
-				ImportLibrary=".\output\libresample-dll-i386-win32-vc8-release/libresample.lib"
-				TargetMachine="1"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -570,8 +443,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libresample-dll-i386-win32-vc8-release/libresample_dll.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"

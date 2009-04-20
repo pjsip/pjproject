@@ -22,13 +22,11 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -47,31 +45,22 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -81,8 +70,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -93,13 +80,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -115,40 +100,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -158,8 +128,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -178,13 +146,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -200,39 +166,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -242,8 +194,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -262,13 +212,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
-			IntermediateDirectory="$(ConfigurationName)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -287,32 +235,22 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				BrowseInformation="1"
-				BrowseInformationFile="$(IntDir)\"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -322,8 +260,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -334,13 +270,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -356,36 +290,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				BrowseInformation="0"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -395,8 +318,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -415,13 +336,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -437,35 +356,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -475,8 +384,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -495,13 +402,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -520,34 +425,22 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				BrowseInformation="1"
-				BrowseInformationFile="$(IntDir)\"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -557,8 +450,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -569,13 +460,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -591,39 +480,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -633,8 +508,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -653,13 +526,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -675,38 +546,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-debug/"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -716,8 +574,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -736,13 +592,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -761,34 +615,22 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=""
-				BrowseInformation="1"
-				BrowseInformationFile="$(IntDir)\"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -798,8 +640,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -810,13 +650,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -832,39 +670,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-debug/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -874,8 +698,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -894,13 +716,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -916,38 +736,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				MinimalRebuild="false"
-				ExceptionHandling="0"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-debug/"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -957,8 +764,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-debug/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -977,13 +782,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1002,32 +805,22 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1037,8 +830,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -1049,12 +840,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1070,40 +860,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1113,8 +888,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1133,13 +906,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1155,39 +926,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1197,8 +954,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1217,13 +972,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1242,31 +995,22 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1276,8 +1020,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -1288,13 +1030,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1310,40 +1050,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1353,8 +1078,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"
@@ -1373,13 +1096,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1395,39 +1116,25 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions=""
 				AdditionalIncludeDirectories="../..,../../g7221/common,../../g7221/common/stl-files"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=""
-				AssemblerListingLocation=".\output\libg7221codec-i386-win32-vc8-release/"
-				ObjectFile=".\output\libg7221codec-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\libg7221codec-i386-win32-vc8-release/"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libg7221codec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1437,8 +1144,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\libg7221codec-i386-win32-vc8-release/libg7221codec.bsc"
 			/>
 			<Tool
 				Name="VCCodeSignTool"

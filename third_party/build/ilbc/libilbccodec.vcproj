@@ -22,13 +22,14 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -47,32 +48,24 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\ilbc-i386-win32-vc8-debug/libilbccodec.pch"
-				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-debug/"
-				ObjectFile=".\output\ilbc-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-debug/"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libilbccodec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -82,8 +75,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\ilbc-i386-win32-vc8-debug/libilbccodec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -94,11 +85,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -117,17 +110,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -140,7 +127,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -168,11 +156,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -188,20 +178,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -214,7 +198,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -242,13 +227,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -267,35 +253,24 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="3"
-				InlineFunctionExpansion="1"
-				FavorSizeOrSpeed="2"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\ilbc-i386-win32-vc8-release/libilbccodec.pch"
-				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-release/"
-				ObjectFile=".\output\ilbc-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-release/"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libilbccodec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -305,8 +280,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\ilbc-i386-win32-vc8-release/libilbccodec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -317,11 +290,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -340,16 +315,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				WarningLevel="3"
-				DebugInformationFormat="0"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -362,7 +332,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -390,11 +361,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -410,19 +383,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				DebugInformationFormat="0"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -435,7 +403,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -463,13 +432,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -488,34 +458,24 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\ilbc-i386-win32-vc8-debug/libilbccodec.pch"
-				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-debug/"
-				ObjectFile=".\output\ilbc-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-debug/"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libilbccodec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -525,8 +485,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\ilbc-i386-win32-vc8-debug/libilbccodec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -537,11 +495,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -557,21 +517,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -584,7 +537,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -612,11 +566,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -632,20 +588,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="1"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -658,7 +608,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -686,13 +637,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -711,34 +663,24 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\ilbc-i386-win32-vc8-release/libilbccodec.pch"
-				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-release/"
-				ObjectFile=".\output\ilbc-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-release/"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libilbccodec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -748,8 +690,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\ilbc-i386-win32-vc8-release/libilbccodec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -760,11 +700,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -780,20 +722,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				WarningLevel="3"
-				DebugInformationFormat="0"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -806,7 +742,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -834,11 +771,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -854,19 +793,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				DebugInformationFormat="0"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -879,7 +813,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -907,13 +842,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -932,34 +868,24 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
-				PreprocessorDefinitions="WIN32;_DEBUG;_LIB"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="3"
-				PrecompiledHeaderFile=".\output\ilbc-i386-win32-vc8-debug/libilbccodec.pch"
-				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-debug/"
-				ObjectFile=".\output\ilbc-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-debug/"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libilbccodec-i386-win32-vc8-debug.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -969,8 +895,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\ilbc-i386-win32-vc8-debug/libilbccodec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -981,11 +905,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1001,21 +927,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="3"
-				WarningLevel="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1028,7 +947,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1056,11 +976,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1076,20 +998,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="0"
-				FavorSizeOrSpeed="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="_DEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;DEBUG;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="3"
-				DebugInformationFormat="3"
-				CompileAs="0"
-				CompileForArchitecture="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1102,7 +1018,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1130,13 +1047,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1155,34 +1073,24 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
-				PreprocessorDefinitions="WIN32;NDEBUG;_LIB"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\ilbc-i386-win32-vc8-release/libilbccodec.pch"
-				AssemblerListingLocation=".\output\ilbc-i386-win32-vc8-release/"
-				ObjectFile=".\output\ilbc-i386-win32-vc8-release/"
-				ProgramDataBaseFileName=".\output\ilbc-i386-win32-vc8-release/"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\libilbccodec-i386-win32-vc8-release.lib"
-				SuppressStartupBanner="true"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1192,8 +1100,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\ilbc-i386-win32-vc8-release/libilbccodec.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -1204,11 +1110,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1224,20 +1132,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				WarningLevel="3"
-				DebugInformationFormat="0"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1250,7 +1152,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1278,11 +1181,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
-			IntermediateDirectory="$(OutDir)"
-			ConfigurationType="4"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1298,19 +1203,14 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TargetEnvironment="1"
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				Optimization="2"
-				FavorSizeOrSpeed="2"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions=""
+
 				AdditionalIncludeDirectories=""
-				PreprocessorDefinitions="NDEBUG;_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_);SMARTPHONE2003_UI_MODEL;SMARTPHONE2003_UI_MODEL"
-				ExceptionHandling="0"
-				RuntimeLibrary="0"
-				DebugInformationFormat="0"
-				CompileAs="0"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1323,7 +1223,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				AdditionalOptions=""
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
