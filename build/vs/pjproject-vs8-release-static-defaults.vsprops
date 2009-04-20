@@ -5,4 +5,8 @@
 	Name="pjproject-vs8-release-static-defaults"
 	InheritedPropertySheets=".\pjproject-vs8-release-defaults.vsprops"
 	>
+	<Tool
+		Name="VCCLCompilerTool"
+		RuntimeLibrary="0"
+	/>
 </VisualStudioPropertySheet>

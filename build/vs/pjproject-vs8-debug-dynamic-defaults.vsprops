@@ -5,4 +5,8 @@
 	Name="pjproject-vs8-debug-dynamic-defaults"
 	InheritedPropertySheets=".\pjproject-vs8-debug-defaults.vsprops"
 	>
+	<Tool
+		Name="VCCLCompilerTool"
+		RuntimeLibrary="3"
+	/>
 </VisualStudioPropertySheet>

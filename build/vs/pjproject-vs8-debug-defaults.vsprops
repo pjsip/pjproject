@@ -16,7 +16,6 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		AdditionalDependencies="Iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib"
 		GenerateManifest="false"
 		GenerateDebugInformation="true"
 		GenerateMapFile="true"
