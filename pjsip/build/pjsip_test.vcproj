@@ -2,8 +2,9 @@
 <VisualStudioProject
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="test_pjsip"
+	Name="pjsip_test"
 	ProjectGUID="{B3F7D4E9-702F-4EB4-ADA8-098D0A83D770}"
+	RootNamespace="pjsip_test"
 	>
 	<Platforms>
 		<Platform
@@ -42,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 			/>
 			<Tool
@@ -174,7 +175,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 			/>
 			<Tool
@@ -306,7 +307,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 			/>
 			<Tool
@@ -438,7 +439,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 			/>
 			<Tool
@@ -570,7 +571,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 			/>
 			<Tool
@@ -702,7 +703,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include"
 			/>
 			<Tool
@@ -817,7 +818,7 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
-				RelativePath="..\src\test-pjsip\dlg_core_test.c"
+				RelativePath="..\src\test\dlg_core_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -875,7 +876,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\dns_test.c"
+				RelativePath="..\src\test\dns_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -933,11 +934,11 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\inv_offer_answer_test.c"
+				RelativePath="..\src\test\inv_offer_answer_test.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\main.c"
+				RelativePath="..\src\test\main.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1043,7 +1044,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\main_win32.c"
+				RelativePath="..\src\test\main_win32.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1095,7 +1096,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\msg_err_test.c"
+				RelativePath="..\src\test\msg_err_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1153,7 +1154,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\msg_logger.c"
+				RelativePath="..\src\test\msg_logger.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1211,7 +1212,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\msg_test.c"
+				RelativePath="..\src\test\msg_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1269,69 +1270,11 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\regc_test.c"
+				RelativePath="..\src\test\regc_test.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\test.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Static|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Dynamic|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Static|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
-				RelativePath="..\src\test-pjsip\transport_loop_test.c"
+				RelativePath="..\src\test\test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1389,7 +1332,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\transport_tcp_test.c"
+				RelativePath="..\src\test\transport_loop_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1447,7 +1390,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\transport_test.c"
+				RelativePath="..\src\test\transport_tcp_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1505,7 +1448,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\transport_udp_test.c"
+				RelativePath="..\src\test\transport_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1563,7 +1506,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\tsx_basic_test.c"
+				RelativePath="..\src\test\transport_udp_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1621,7 +1564,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\tsx_bench.c"
+				RelativePath="..\src\test\tsx_basic_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1679,7 +1622,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\tsx_uac_test.c"
+				RelativePath="..\src\test\tsx_bench.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1737,7 +1680,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\tsx_uas_test.c"
+				RelativePath="..\src\test\tsx_uac_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1795,7 +1738,7 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\txdata_test.c"
+				RelativePath="..\src\test\tsx_uas_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1853,7 +1796,65 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\test-pjsip\uri_test.c"
+				RelativePath="..\src\test\txdata_test.c"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\src\test\uri_test.c"
 				>
 				<FileConfiguration
 					Name="Release|Win32"
@@ -1916,7 +1917,7 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\src\test-pjsip\test.h"
+				RelativePath="..\src\test\test.h"
 				>
 			</File>
 		</Filter>

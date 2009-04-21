@@ -50,7 +50,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -113,7 +113,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -184,7 +184,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -256,7 +256,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -319,7 +319,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -390,7 +390,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -462,7 +462,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -525,7 +525,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -596,7 +596,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -668,7 +668,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -731,7 +731,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -802,7 +802,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -874,7 +874,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -937,7 +937,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -1008,7 +1008,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -1080,7 +1080,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -1143,7 +1143,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -1214,7 +1214,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>

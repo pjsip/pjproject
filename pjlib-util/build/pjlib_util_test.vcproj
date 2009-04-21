@@ -43,7 +43,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 			/>
 			<Tool
@@ -175,7 +175,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 			/>
 			<Tool
@@ -307,7 +307,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 			/>
 			<Tool
@@ -439,7 +439,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 			/>
 			<Tool
@@ -571,7 +571,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 			/>
 			<Tool
@@ -703,7 +703,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include"
 			/>
 			<Tool

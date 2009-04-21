@@ -6,7 +6,13 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		PreprocessorDefinitions="WIN32"
+		PreprocessorDefinitions="WIN32;PJ_WIN32=1;PJ_M_I386=1;"
+	/>
+	<Tool
+		Name="VCLinkerTool"
+		LinkIncremental="2"
+		SubSystem="1"
+		TargetMachine="1"
 	/>
 	<UserMacro
 		Name="TargetCPU"

@@ -50,7 +50,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 			/>
@@ -113,7 +113,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -184,7 +184,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -256,7 +256,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 			/>
@@ -319,7 +319,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -390,7 +390,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -462,7 +462,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 			/>
@@ -525,7 +525,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -596,7 +596,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -668,7 +668,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 			/>
@@ -731,7 +731,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -802,7 +802,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -874,7 +874,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 			/>
@@ -937,7 +937,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -1008,7 +1008,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -1080,7 +1080,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
 			/>
@@ -1143,7 +1143,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>
@@ -1214,7 +1214,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions="PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
 
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
 			/>

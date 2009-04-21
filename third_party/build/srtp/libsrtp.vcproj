@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -103,7 +103,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -168,7 +168,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -233,7 +233,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -290,7 +290,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -355,7 +355,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -420,7 +420,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -477,7 +477,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -542,7 +542,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -607,7 +607,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -664,7 +664,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -729,7 +729,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -794,7 +794,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -851,7 +851,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -916,7 +916,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -981,7 +981,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -1038,7 +1038,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool
@@ -1103,7 +1103,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories=".,../../srtp/include,../../srtp/crypto/include,../../../pjlib/include"
 			/>
 			<Tool

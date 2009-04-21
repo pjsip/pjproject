@@ -46,7 +46,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -102,7 +102,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -166,7 +166,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -231,7 +231,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -287,7 +287,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -351,7 +351,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -416,7 +416,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -472,7 +472,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -536,7 +536,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -601,7 +601,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -657,7 +657,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -721,7 +721,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -786,7 +786,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -842,7 +842,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -906,7 +906,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -971,7 +971,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -1027,7 +1027,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool
@@ -1091,7 +1091,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
 			/>
 			<Tool

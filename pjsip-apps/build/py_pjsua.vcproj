@@ -39,7 +39,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="..\..\pjlib\include,..\..\pjlib-util\include,..\..\pjmedia\include,..\..\pjsip\include,../../pjnath/include"
 			/>
 			<Tool
@@ -106,7 +106,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="..\..\pjlib\include,..\..\pjlib-util\include,..\..\pjmedia\include,..\..\pjsip\include,../../pjnath/include"
 			/>
 			<Tool

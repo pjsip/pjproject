@@ -22,11 +22,14 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -45,9 +48,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -61,6 +66,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -80,10 +86,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -102,10 +111,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -119,6 +129,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -146,10 +157,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -168,10 +182,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -185,6 +200,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -212,11 +228,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -235,9 +254,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="WIN32;_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -251,6 +272,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -270,10 +292,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -292,10 +317,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -309,6 +335,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -336,10 +363,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -358,10 +388,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -375,6 +406,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -402,11 +434,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -425,9 +460,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -441,6 +478,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -460,10 +498,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -482,10 +523,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -499,6 +541,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -526,10 +569,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -548,10 +594,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -565,6 +612,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -592,11 +640,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -615,9 +666,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -631,6 +684,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -650,10 +704,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -672,10 +729,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -689,6 +747,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -716,10 +775,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -738,10 +800,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -755,6 +818,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -782,11 +846,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -805,9 +872,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -821,6 +890,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -840,10 +910,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -862,10 +935,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -879,6 +953,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -906,10 +981,13 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -928,10 +1006,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -945,6 +1024,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -972,11 +1052,14 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			UseOfMFC="0"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="4"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -995,9 +1078,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1011,6 +1096,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1030,10 +1116,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1052,10 +1141,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1069,6 +1159,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1096,10 +1187,13 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			ConfigurationType="4"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="1"
+
+			ConfigurationType="4"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1118,10 +1212,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
-				PreprocessorDefinitions="_WINDOWS;HAVE_CONFIG_H"
 				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;_WINDOWS;HAVE_CONFIG_H;"
+
+				AdditionalIncludeDirectories=".,../../speex/include,../../../pjlib/include"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1135,6 +1230,7 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"

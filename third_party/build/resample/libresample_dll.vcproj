@@ -43,7 +43,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -117,7 +117,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -191,7 +191,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -265,7 +265,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -339,7 +339,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>
@@ -413,7 +413,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_WINDOWS;_USRDLL;LIBRESAMPLE_DLL_EXPORTS;"
 
 				AdditionalIncludeDirectories=".,../../resample/include"
 			/>

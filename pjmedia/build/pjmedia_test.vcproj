@@ -47,7 +47,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 			/>
@@ -189,7 +189,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 			/>
@@ -331,7 +331,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 			/>
@@ -473,7 +473,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 			/>
@@ -615,7 +615,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 			/>
@@ -757,7 +757,7 @@
 				Name="VCCLCompilerTool"
 				PrecompiledHeaderFile=""
 
-				PreprocessorDefinitions=""
+				PreprocessorDefinitions="_CONSOLE;"
 
 				AdditionalIncludeDirectories="../../pjlib/include,../include,../../pjnath/include,../../pjlib-util/include"
 			/>
