@@ -389,7 +389,7 @@
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="ARMV4"
+				PreprocessorDefinitions="ARMV4;_WIN32_WCE=$(CEVER)"
 				Culture="1033"
 			/>
 			<Tool

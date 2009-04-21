@@ -510,6 +510,7 @@ BOOL CPocketPJDlg::OnInitDialog()
 	    for (;;) {
 		CSettingsDlg dlg(m_Cfg);
 		if (dlg.DoModal() != IDOK) {
+		    DWORD err = GetLastError();
 		    EndDialog(IDOK);
 		    return TRUE;
 		}

@@ -53,7 +53,7 @@ static HWND	    hwndActionButton, hwndExitButton;
 
 //
 // STUN server
-#if 1
+#if 0
 	// Use this to have the STUN server resolved normally
 #   define STUN_DOMAIN	NULL
 #   define STUN_SERVER	"stun.fwdnet.net"
@@ -70,7 +70,7 @@ static HWND	    hwndActionButton, hwndExitButton;
 //
 // Use ICE?
 //
-#define USE_ICE		1
+#define USE_ICE		0
 
 
 //
