@@ -60,7 +60,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -118,7 +117,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -184,7 +184,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -250,7 +251,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -308,7 +308,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -374,7 +375,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -440,7 +442,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -498,7 +499,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -564,7 +566,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -630,7 +633,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -688,7 +690,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -754,7 +757,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -820,7 +824,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -878,7 +881,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -944,7 +948,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1010,7 +1015,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1068,7 +1072,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1134,7 +1139,8 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+
 			/>
 			<Tool
 				Name="VCALinkTool"

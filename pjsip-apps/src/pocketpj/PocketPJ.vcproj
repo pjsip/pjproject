@@ -129,6 +129,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
 				EntryPointSymbol="WinMainCRTStartup"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -333,6 +334,7 @@
 				StackCommitSize="4096"
 				EntryPointSymbol="WinMainCRTStartup"
 				BaseAddress="0x00010000"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -545,6 +547,7 @@
 				EntryPointSymbol="WinMainCRTStartup"
 				BaseAddress="0x00010000"
 				TargetMachine="0"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -761,6 +764,7 @@
 				EntryPointSymbol="WinMainCRTStartup"
 				BaseAddress="0x00010000"
 				TargetMachine="0"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -972,6 +976,7 @@
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
 				EntryPointSymbol="WinMainCRTStartup"
 				TargetMachine="0"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
