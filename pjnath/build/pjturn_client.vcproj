@@ -60,7 +60,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="..\..\bin\pjturn-client-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjturn-client-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -134,7 +135,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="..\..\bin\pjturn-client-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjturn-client-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool

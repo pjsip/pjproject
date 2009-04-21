@@ -60,7 +60,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -117,7 +117,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -182,7 +182,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -248,7 +248,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -305,7 +305,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -370,7 +370,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -436,7 +436,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -493,7 +493,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -558,7 +558,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -624,7 +624,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -681,7 +681,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -746,7 +746,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -812,7 +812,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -869,7 +869,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -934,7 +934,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1000,7 +1000,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1057,7 +1057,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1122,7 +1122,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjsip-simple-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"

@@ -58,7 +58,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
@@ -133,7 +134,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
@@ -208,7 +210,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
@@ -283,7 +286,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
@@ -358,7 +362,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 
 				AdditionalDependencies="odbc32.lib odbccp32.lib"
@@ -433,7 +438,8 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				OutputFile="..\..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\libresample-dll-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 
 				AdditionalDependencies="odbc32.lib odbccp32.lib"

@@ -61,7 +61,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib ole32.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -129,7 +129,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -196,7 +196,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib ole32.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -264,7 +264,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -331,7 +331,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib ole32.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -399,7 +399,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -466,7 +466,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib ole32.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -534,7 +534,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -601,7 +601,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib ole32.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -669,7 +669,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -736,7 +736,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib ole32.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -804,7 +804,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -875,7 +875,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -946,7 +946,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1017,7 +1017,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1088,7 +1088,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1159,7 +1159,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1230,7 +1230,7 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjlib-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"

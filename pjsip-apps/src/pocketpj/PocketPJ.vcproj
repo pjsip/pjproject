@@ -62,6 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -128,8 +129,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 				EntryPointSymbol="WinMainCRTStartup"
-				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -196,6 +197,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -262,6 +264,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -330,11 +333,11 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 				StackReserveSize="65536"
 				StackCommitSize="4096"
 				EntryPointSymbol="WinMainCRTStartup"
 				BaseAddress="0x00010000"
-				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -401,6 +404,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -470,6 +474,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -498,11 +503,9 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="1"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops"
+			UseOfMFC="2"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
 			>
@@ -542,12 +545,12 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 				StackReserveSize="65536"
 				StackCommitSize="4096"
 				EntryPointSymbol="WinMainCRTStartup"
 				BaseAddress="0x00010000"
 				TargetMachine="0"
-				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -617,6 +620,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -687,6 +691,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -715,8 +720,6 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			UseOfMFC="1"
@@ -759,12 +762,12 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 				StackReserveSize="65536"
 				StackCommitSize="4096"
 				EntryPointSymbol="WinMainCRTStartup"
 				BaseAddress="0x00010000"
 				TargetMachine="0"
-				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -834,6 +837,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -904,6 +908,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -932,8 +937,6 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			UseOfMFC="2"
@@ -974,9 +977,9 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 				EntryPointSymbol="WinMainCRTStartup"
 				TargetMachine="0"
-				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1046,6 +1049,219 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				TargetMachine="0"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Smartphone 2003 (ARMV4)"
+			OutputDirectory="Smartphone 2003 (ARMV4)\$(ConfigurationName)"
+			IntermediateDirectory="Smartphone 2003 (ARMV4)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				TargetMachine="0"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			UseOfMFC="1"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
+				UsePrecompiledHeader="2"
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				EntryPointSymbol="WinMainCRTStartup"
+				TargetMachine="0"
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Pocket PC 2003 (ARMV4)"
+			OutputDirectory="Pocket PC 2003 (ARMV4)\$(ConfigurationName)"
+			IntermediateDirectory="Pocket PC 2003 (ARMV4)\$(ConfigurationName)"
+			ConfigurationType="1"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops"
+			UseOfMFC="2"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+				TargetEnvironment="1"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -1212,6 +1428,30 @@
 						AdditionalIncludeDirectories=""
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Pocket PC 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="PocketPJ.rc"
@@ -1343,6 +1583,30 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Pocket PC 2003 (ARMV4)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1482,6 +1746,30 @@
 						AdditionalIncludeDirectories=""
 					/>
 				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Pocket PC 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="SettingsDlg.cpp"
@@ -1609,6 +1897,30 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Pocket PC 2003 (ARMV4)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1756,6 +2068,33 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						UsePrecompiledHeader="1"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Pocket PC 2003 (ARMV4)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1955,6 +2294,30 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Smartphone 2003 (ARMV4)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
+					ExcludedFromBuild="true"
+					>
+					<Tool
+						Name="VCCustomBuildTool"
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Pocket PC 2003 (ARMV4)"
 					ExcludedFromBuild="true"
 					>
 					<Tool

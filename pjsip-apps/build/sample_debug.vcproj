@@ -55,7 +55,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -123,7 +123,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -191,7 +191,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -259,7 +259,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -327,7 +327,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -395,7 +395,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="iphlpapi.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib oleaut32.lib uuid.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\sample-debug-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"

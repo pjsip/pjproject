@@ -65,7 +65,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -133,7 +133,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -201,7 +201,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -269,7 +269,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -337,7 +337,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -405,7 +405,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -473,7 +473,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -541,7 +541,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -609,7 +609,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -677,7 +677,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -745,7 +745,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -813,7 +813,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -881,7 +881,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -949,7 +949,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1017,7 +1017,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1085,7 +1085,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1153,7 +1153,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1221,7 +1221,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1289,7 +1289,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1357,7 +1357,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1428,8 +1428,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1457,8 +1457,6 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops"
 			UseOfMFC="0"
@@ -1500,8 +1498,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1572,8 +1570,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1601,8 +1599,6 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops"
 			UseOfMFC="0"
@@ -1644,8 +1640,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
+				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjsua-wince-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"

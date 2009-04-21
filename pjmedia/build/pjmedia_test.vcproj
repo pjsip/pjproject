@@ -61,7 +61,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib  ole32.lib user32.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -130,7 +131,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -198,7 +200,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -267,7 +270,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -335,7 +339,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib  ole32.lib user32.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -404,7 +409,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -472,7 +478,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -541,7 +548,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -609,7 +617,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib  ole32.lib user32.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -678,7 +687,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -746,7 +756,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib user32.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -815,7 +826,8 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -887,7 +899,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -959,7 +972,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -1031,7 +1045,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -1103,7 +1118,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -1175,7 +1191,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
@@ -1247,7 +1264,8 @@
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
 				TargetMachine="0"
-				OutputFile="..\..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjmedia-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+
 
 			/>
 			<Tool
