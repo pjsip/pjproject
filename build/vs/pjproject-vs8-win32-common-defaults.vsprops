@@ -10,7 +10,6 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		LinkIncremental="2"
 		SubSystem="1"
 		TargetMachine="1"
 	/>

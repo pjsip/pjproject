@@ -10,4 +10,8 @@
 		Optimization="2"
 		PreprocessorDefinitions="NDEBUG"
 	/>
+	<Tool
+		Name="VCLinkerTool"
+		LinkIncremental="1"
+	/>
 </VisualStudioPropertySheet>

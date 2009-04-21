@@ -15,5 +15,6 @@
 	<Tool
 		Name="VCLinkerTool"
 		GenerateDebugInformation="true"
+		ProgramDatabaseFile="$(IntDir)\$(TargetName).pdb"
 	/>
 </VisualStudioPropertySheet>
