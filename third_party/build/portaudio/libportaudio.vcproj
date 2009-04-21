@@ -22,14 +22,11 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="2"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -48,11 +45,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
-
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -66,7 +61,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -86,13 +80,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -111,11 +102,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;WIN32_PLATFORM_PSPC"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -129,7 +119,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -157,13 +146,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -182,11 +168,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;WIN32_PLATFORM_PSPC"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -200,7 +185,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -228,14 +212,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="2"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -254,11 +235,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
-
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -272,7 +251,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -292,13 +270,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -317,11 +292,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;WIN32_PLATFORM_PSPC"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -335,7 +309,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -363,13 +336,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -388,11 +358,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;WIN32_PLATFORM_PSPC"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -406,7 +375,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -434,14 +402,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="2"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -460,11 +425,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
-
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -478,7 +441,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -498,13 +460,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -523,11 +482,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -541,7 +499,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -569,13 +526,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -594,11 +548,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -612,7 +565,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -640,14 +592,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="2"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -666,11 +615,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
-
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -684,7 +631,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -704,13 +650,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -729,11 +672,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -747,7 +689,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -775,13 +716,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -800,11 +738,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -818,7 +755,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -846,14 +782,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="2"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -872,11 +805,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
-
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -890,7 +821,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -910,13 +840,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -935,11 +862,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -953,7 +879,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -981,13 +906,10 @@
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Windows Mobile 6 Professional SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1006,11 +928,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1024,7 +945,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1052,14 +972,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="2"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1078,11 +995,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
-
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win;&quot;$(DXSDK_DIR)include&quot;"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1096,7 +1011,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1116,13 +1030,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1141,11 +1052,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1159,7 +1069,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1187,13 +1096,10 @@
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Windows Mobile 6 Professional SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-
-			ATLMinimizesCRunTimeLibraryUsage="false"
-
-			CharacterSet="1"
-
 			ConfigurationType="4"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="1"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -1212,11 +1118,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
-				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
-
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories="..\..\portaudio\src\common;..\..\portaudio\include;..\..\portaudio\src\os\win"
+				PreprocessorDefinitions="_LIB;PA_ENABLE_DEBUG_OUTPUT;_CRT_SECURE_NO_DEPRECATE;PA_NO_ASIO;PA_NO_DS;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1230,7 +1135,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
-
 			/>
 			<Tool
 				Name="VCALinkTool"

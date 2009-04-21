@@ -7,6 +7,6 @@
 	>
 	<Tool
 		Name="VCCLCompilerTool"
-		RuntimeLibrary="3"
+		RuntimeLibrary="2"
 	/>
 </VisualStudioPropertySheet>

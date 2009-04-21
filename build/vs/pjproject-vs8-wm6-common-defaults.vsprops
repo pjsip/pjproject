@@ -10,6 +10,14 @@
 		DebugInformationFormat="3"
 		DisableSpecificWarnings="4214;4201"
 	/>
+	<Tool
+		Name="VCLinkerTool"
+		SubSystem="9"
+	/>
+	<Tool
+		Name="VCResourceCompilerTool"
+		PreprocessorDefinitions="_WIN32_WCE=$(CEVER);UNDER_CE;$(PLATFORMDEFINES);WINCE;$(ARCHFAM);$(_ARCHFAM_)"
+	/>
 	<UserMacro
 		Name="TargetCPU"
 		Value="armv4i"
