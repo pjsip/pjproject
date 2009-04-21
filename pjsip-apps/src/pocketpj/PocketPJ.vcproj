@@ -17,9 +17,6 @@
 		<Platform
 			Name="Pocket PC 2003 (ARMV4)"
 		/>
-		<Platform
-			Name="Windows Mobile 6 Standard SDK (ARMV4I)"
-		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
@@ -198,72 +195,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="msvcr80.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;atl80.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;MFC80U.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -494,72 +425,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles="msvcr80.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;atl80.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;msvcr80d.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;MFC80UD.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
 			Name="Debug-Dynamic|Smartphone 2003 (ARMV4)"
 			OutputDirectory="Smartphone 2003 (ARMV4)\$(ConfigurationName)"
 			IntermediateDirectory="Smartphone 2003 (ARMV4)\$(ConfigurationName)"
@@ -749,76 +614,6 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib secchk.lib ccrtrtti.lib"
-				TargetMachine="0"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="1"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
 				TargetMachine="0"
 			/>
 			<Tool
@@ -1062,76 +857,6 @@
 			/>
 		</Configuration>
 		<Configuration
-			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="1"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				TargetMachine="0"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
-		<Configuration
 			Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 			OutputDirectory="Smartphone 2003 (ARMV4)\$(ConfigurationName)"
 			IntermediateDirectory="Smartphone 2003 (ARMV4)\$(ConfigurationName)"
@@ -1342,76 +1067,6 @@
 			<DebuggerTool
 			/>
 		</Configuration>
-		<Configuration
-			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			OutputDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Standard SDK (ARMV4I)\$(ConfigurationName)"
-			ConfigurationType="1"
-			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			UseOfMFC="2"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-				TargetEnvironment="1"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				ExecutionBucket="7"
-				AdditionalIncludeDirectories="../../../pjlib/include,../../../pjlib-util/include,../../../pjnath/include,../../../pjmedia/include,../../../pjsip/include"
-				PrecompiledHeaderFile=""
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="commctrl.lib coredll.lib winsock.lib ws2.lib iphlpapi.lib"
-				TargetMachine="0"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
-			/>
-		</Configuration>
 	</Configurations>
 	<References>
 	</References>
@@ -1448,14 +1103,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1475,15 +1122,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1519,15 +1157,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1555,15 +1184,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1581,14 +1201,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1628,14 +1240,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1655,15 +1259,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1699,15 +1294,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1735,15 +1321,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1761,14 +1338,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1804,14 +1373,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1831,15 +1392,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1875,15 +1427,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1911,15 +1454,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -1937,14 +1471,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -1980,14 +1506,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -2007,15 +1525,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2051,15 +1560,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -2087,15 +1587,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -2113,14 +1604,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2159,15 +1642,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -2189,16 +1663,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						UsePrecompiledHeader="1"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2238,16 +1702,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						UsePrecompiledHeader="1"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -2278,16 +1732,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						UsePrecompiledHeader="1"
-						BrowseInformation="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 					>
 					<Tool
@@ -2307,15 +1751,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						UsePrecompiledHeader="1"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					>
 					<Tool
 						Name="VCCLCompilerTool"
@@ -2426,14 +1861,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug|Smartphone 2003 (ARMV4)"
 					ExcludedFromBuild="true"
 					>
@@ -2451,14 +1878,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Debug|Pocket PC 2003 (ARMV4)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
 					<Tool
@@ -2490,14 +1909,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Debug-Static|Smartphone 2003 (ARMV4)"
 					ExcludedFromBuild="true"
 					>
@@ -2522,14 +1933,6 @@
 					/>
 				</FileConfiguration>
 				<FileConfiguration
-					Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
 					Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
 					ExcludedFromBuild="true"
 					>
@@ -2547,14 +1950,6 @@
 				</FileConfiguration>
 				<FileConfiguration
 					Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
-					ExcludedFromBuild="true"
-					>
-					<Tool
-						Name="VCCustomBuildTool"
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
 					ExcludedFromBuild="true"
 					>
 					<Tool

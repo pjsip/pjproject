@@ -10,20 +10,17 @@
 		<Platform
 			Name="Win32"
 		/>
-		<Platform
-			Name="Windows Mobile 6 Standard SDK (ARMV4I)"
-		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -42,9 +39,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -82,80 +79,15 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
-				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjnath/include,../../pjmedia/include,../../pjsip/include"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ws2.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -174,9 +106,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -214,80 +146,15 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
-				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjnath/include,../../pjmedia/include,../../pjsip/include"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ws2.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
 			Name="Debug-Static|Win32"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -306,9 +173,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -346,80 +213,15 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
-				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjnath/include,../../pjmedia/include,../../pjsip/include"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ws2.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release-Dynamic|Win32"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -438,9 +240,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -478,80 +280,15 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
-				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjnath/include,../../pjmedia/include,../../pjsip/include"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ws2.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
 			Name="Debug-Dynamic|Win32"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -570,9 +307,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -610,80 +347,15 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Debug-Dynamic|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
-				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjnath/include,../../pjmedia/include,../../pjsip/include"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ws2.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 		<Configuration
 			Name="Release-Static|Win32"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			ConfigurationType="1"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
 			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -702,9 +374,9 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions="_CONSOLE;"
 				AdditionalIncludeDirectories="../../pjsip/include,../../pjlib/include,../../pjlib-util/include,../../pjmedia/include,../../pjnath/include"
+				PreprocessorDefinitions="_CONSOLE;"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -742,71 +414,6 @@
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
-			/>
-		</Configuration>
-		<Configuration
-			Name="Release-Static|Windows Mobile 6 Standard SDK (ARMV4I)"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="1"
-			ConfigurationType="1"
-			>
-			<Tool
-				Name="VCPreBuildEventTool"
-			/>
-			<Tool
-				Name="VCCustomBuildTool"
-			/>
-			<Tool
-				Name="VCXMLDataGeneratorTool"
-			/>
-			<Tool
-				Name="VCWebServiceProxyGeneratorTool"
-			/>
-			<Tool
-				Name="VCMIDLTool"
-			/>
-			<Tool
-				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-				PreprocessorDefinitions=""
-				AdditionalIncludeDirectories="../include,../../pjlib-util/include,../../pjnath/include,../../pjmedia/include,../../pjsip/include"
-			/>
-			<Tool
-				Name="VCManagedResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCResourceCompilerTool"
-			/>
-			<Tool
-				Name="VCPreLinkEventTool"
-			/>
-			<Tool
-				Name="VCLinkerTool"
-				AdditionalDependencies="ws2.lib"
-			/>
-			<Tool
-				Name="VCALinkTool"
-			/>
-			<Tool
-				Name="VCXDCMakeTool"
-			/>
-			<Tool
-				Name="VCBscMakeTool"
-			/>
-			<Tool
-				Name="VCCodeSignTool"
-			/>
-			<Tool
-				Name="VCPostBuildEventTool"
-			/>
-			<DeploymentTool
-				ForceDirty="-1"
-				RemoteDirectory=""
-				RegisterOutput="0"
-				AdditionalFiles=""
-			/>
-			<DebuggerTool
 			/>
 		</Configuration>
 	</Configurations>
