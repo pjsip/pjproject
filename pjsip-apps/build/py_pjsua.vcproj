@@ -15,13 +15,11 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory=".\output\py_pjsua-i386-win32-vc6-release"
-			IntermediateDirectory=".\output\py_pjsua-i386-win32-vc6-release"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -37,37 +35,18 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="NDEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\py_pjsua-i386-win32-vc6-release/py_pjsua.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="..\..\pjlib\include,..\..\pjlib-util\include,..\..\pjmedia\include,..\..\pjsip\include,../../pjnath/include"
-				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;_USRDLL;PY_PJSUA_EXPORTS"
-				StringPooling="true"
-				RuntimeLibrary="0"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile=".\output\py_pjsua-i386-win32-vc6-release/py_pjsua.pch"
-				AssemblerListingLocation=".\output\py_pjsua-i386-win32-vc6-release/"
-				ObjectFile=".\output\py_pjsua-i386-win32-vc6-release/"
-				ProgramDataBaseFileName=".\output\py_pjsua-i386-win32-vc6-release/"
-				BrowseInformation="1"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1057"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -75,17 +54,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="python24.lib ole32.lib shell32.lib user32.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib iphlpapi.lib"
-				OutputFile="..\lib\py_pjsua.pyd"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="../../pjlib/lib,../../pjlib-util/lib,../../pjmedia/lib,../../pjsip/lib"
-				IgnoreDefaultLibraryNames="libcmt.lib"
-				ModuleDefinitionFile="..\src\py_pjsua\py_pjsua.def"
-				ProgramDatabaseFile=".\output\py_pjsua-i386-win32-vc6-release/py_pjsua.pdb"
-				GenerateMapFile="true"
-				MapFileName=".\output\py_pjsua-i386-win32-vc6-release/py_pjsua.map"
-				ImportLibrary=".\output\py_pjsua-i386-win32-vc6-release/py_pjsua.lib"
-				TargetMachine="1"
+				OutputFile="..\bin\py-pjsua-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -98,8 +67,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\py_pjsua-i386-win32-vc6-release/py_pjsua.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -116,13 +83,11 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory=".\output\py_pjsua-i386-win32-vc6-debug"
-			IntermediateDirectory=".\output\py_pjsua-i386-win32-vc6-debug"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+			ATLMinimizesCRunTimeLibraryUsage="false"
+			CharacterSet="2"
 			ConfigurationType="2"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
 			UseOfMFC="0"
-			ATLMinimizesCRunTimeLibraryUsage="false"
-			CharacterSet="2"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -138,37 +103,18 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				PreprocessorDefinitions="_DEBUG"
-				MkTypLibCompatible="true"
-				SuppressStartupBanner="true"
-				TargetEnvironment="1"
-				TypeLibraryName=".\output\py_pjsua-i386-win32-vc6-debug/py_pjsua.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+				PreprocessorDefinitions="_LIB;"
 				AdditionalIncludeDirectories="..\..\pjlib\include,..\..\pjlib-util\include,..\..\pjmedia\include,..\..\pjsip\include,../../pjnath/include"
-				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;_USRDLL;PY_PJSUA_EXPORTS"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile=".\output\py_pjsua-i386-win32-vc6-debug/py_pjsua.pch"
-				AssemblerListingLocation=".\output\py_pjsua-i386-win32-vc6-debug/"
-				ObjectFile=".\output\py_pjsua-i386-win32-vc6-debug/"
-				ProgramDataBaseFileName=".\output\py_pjsua-i386-win32-vc6-debug/"
-				BrowseInformation="1"
-				WarningLevel="4"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1057"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -176,15 +122,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="python24_d.lib ole32.lib shell32.lib user32.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib iphlpapi.lib"
-				OutputFile="..\lib\py_pjsua_d.pyd"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				AdditionalLibraryDirectories="../../pjlib/lib,../../pjlib-util/lib,../../pjmedia/lib,../../pjsip/lib,F:\incoming\projects\divusi\Python-2.4\Python-2.4\PCbuild,F:\incoming\projects\divusi\Python-2.4\Python-2.4\PC\VC6"
-				ModuleDefinitionFile="..\src\py_pjsua\py_pjsua.def"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile=".\output\py_pjsua-i386-win32-vc6-debug/py_pjsua_d.pdb"
-				ImportLibrary=".\output\py_pjsua-i386-win32-vc6-debug/py_pjsua_d.lib"
-				TargetMachine="1"
+				OutputFile="..\bin\py-pjsua-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -197,8 +135,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile=".\output\py_pjsua-i386-win32-vc6-debug/py_pjsua.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"

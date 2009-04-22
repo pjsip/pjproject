@@ -16,13 +16,14 @@
 	<Configurations>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="./output/pjturn-client-i386-win32-vc8-release"
-			IntermediateDirectory="./output/pjturn-client-i386-win32-vc8-release"
-			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-release-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -38,33 +39,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjturn-client-i386-win32-vc8-release/pjturn_client.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				InlineFunctionExpansion="1"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;"
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="NDEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				StringPooling="true"
-				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
-				PrecompiledHeaderFile="./output/pjturn-client-i386-win32-vc8-release/pjturn_client.pch"
-				AssemblerListingLocation="./output/pjturn-client-i386-win32-vc8-release/"
-				ObjectFile="./output/pjturn-client-i386-win32-vc8-release/"
-				ProgramDataBaseFileName="./output/pjturn-client-i386-win32-vc8-release/"
-				BrowseInformation="1"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="NDEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -72,12 +60,9 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjturn-client-i386-win32-vc8-release.exe"
-				LinkIncremental="1"
-				SuppressStartupBanner="true"
-				ProgramDatabaseFile="./output/pjturn-client-i386-win32-vc8-release/pjturn-client-i386-win32-vc8-release.pdb"
-				SubSystem="1"
-				TargetMachine="1"
+				OutputFile="..\bin\pjturn-client-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -90,8 +75,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjturn-client-i386-win32-vc8-release/pjturn_client.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"
@@ -108,13 +91,14 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="./output/pjturn-client-i386-win32-vc8-debug"
-			IntermediateDirectory="./output/pjturn-client-i386-win32-vc8-debug"
-			ConfigurationType="1"
-			InheritedPropertySheets="$(VCInstallDir)VCProjectDefaults\UpgradeFromVC60.vsprops"
-			UseOfMFC="0"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-win32-common-defaults.vsprops"
+
 			ATLMinimizesCRunTimeLibraryUsage="false"
+
 			CharacterSet="2"
+
+			ConfigurationType="1"
+			UseOfMFC="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -130,33 +114,20 @@
 			/>
 			<Tool
 				Name="VCMIDLTool"
-				TypeLibraryName="./output/pjturn-client-i386-win32-vc8-debug/pjturn_client.tlb"
-				HeaderFileName=""
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="0"
+				PrecompiledHeaderFile=""
+
+				PreprocessorDefinitions="_LIB;"
+
 				AdditionalIncludeDirectories="../include,../../pjlib/include,../../pjlib-util/include"
-				PreprocessorDefinitions="_DEBUG;WIN32;_CONSOLE;PJ_WIN32=1;PJ_M_I386=1"
-				MinimalRebuild="true"
-				BasicRuntimeChecks="3"
-				RuntimeLibrary="1"
-				PrecompiledHeaderFile="./output/pjturn-client-i386-win32-vc8-debug/pjturn_client.pch"
-				AssemblerListingLocation="./output/pjturn-client-i386-win32-vc8-debug/"
-				ObjectFile="./output/pjturn-client-i386-win32-vc8-debug/"
-				ProgramDataBaseFileName="./output/pjturn-client-i386-win32-vc8-debug/"
-				BrowseInformation="1"
-				WarningLevel="3"
-				SuppressStartupBanner="true"
-				DebugInformationFormat="4"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
 			/>
 			<Tool
 				Name="VCResourceCompilerTool"
-				PreprocessorDefinitions="_DEBUG"
-				Culture="1033"
 			/>
 			<Tool
 				Name="VCPreLinkEventTool"
@@ -164,13 +135,9 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="../bin/pjturn-client-i386-win32-vc8-debug.exe"
-				LinkIncremental="2"
-				SuppressStartupBanner="true"
-				GenerateDebugInformation="true"
-				ProgramDatabaseFile="./output/pjturn-client-i386-win32-vc8-debug/pjturn-client-i386-win32-vc8-debug.pdb"
-				SubSystem="1"
-				TargetMachine="1"
+				OutputFile="..\bin\pjturn-client-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+
+
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -183,8 +150,6 @@
 			/>
 			<Tool
 				Name="VCBscMakeTool"
-				SuppressStartupBanner="true"
-				OutputFile="./output/pjturn-client-i386-win32-vc8-debug/pjturn_client.bsc"
 			/>
 			<Tool
 				Name="VCFxCopTool"

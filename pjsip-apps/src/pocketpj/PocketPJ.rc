@@ -98,7 +98,7 @@ BEGIN
 END
 
 IDD_SETTING DIALOG DISCARDABLE  0, 0, 140, 143
-STYLE DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "PocketPJ Settings.."
 FONT 8, "System"
 BEGIN
@@ -308,7 +308,7 @@ LANGUAGE 9, 1
 #endif //_WIN32
 #include "res\PocketPJ.rc2"  // non-Microsoft eMbedded Visual C++ edited resources
 #include "afxres.rc"         // Standard components
-#include "wceres.rc"         // WCE-specific components
+// #include "wceres.rc"         // WCE-specific components
 #endif
 
 /////////////////////////////////////////////////////////////////////////////
