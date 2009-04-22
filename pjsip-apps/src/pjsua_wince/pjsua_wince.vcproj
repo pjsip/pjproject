@@ -234,7 +234,6 @@
 			UseOfMFC="0"
 			ATLMinimizesCRunTimeLibraryUsage="false"
 			CharacterSet="1"
-			DeleteExtensionsOnClean="*.obj"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
