@@ -30,6 +30,7 @@
 /**
  * @defgroup PJNATH_ERROR NAT Helper Library Error Codes
  * @brief PJNATH specific error code constants
+ * @ingroup PJNATH_STUN_BASE
  * @{
  */
 

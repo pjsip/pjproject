@@ -32,17 +32,26 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
- * @defgroup PJNATH_TURN_SOCK TURN client transport
- * @brief Client transport utilizing TURN relay
- * @ingroup PJNATH_TURN
- * @{
- *
- * The TURN relay client transport can be used to relay data from the client
- * to peer via a TURN relay. The application establishes TURN connection to
- * the TURN server using UDP or TCP as the transport, then creates a relay
- * address in the TURN server to be advertised to remote peer(s) as the 
- * transport address. When application sends data to a remote address via
- * this transport, the data will be sent via the TURN relay, and vice versa.
+@addtogroup PJNATH_TURN_SOCK
+@{
+
+This is a ready to use object for relaying application data via a TURN server,
+by managing all the operations in \ref turn_op_sec.
+
+\section turnsock_using_sec Using TURN transport
+
+This object provides a thin wrapper to the \ref PJNATH_TURN_SESSION, hence the
+API is very much the same (apart from the obvious difference in the names).
+Please see \ref PJNATH_TURN_SESSION for the documentation on how to use the
+session.
+
+\section turnsock_samples_sec Samples
+
+The \ref turn_client_sample is a sample application to use the
+\ref PJNATH_TURN_SOCK.
+
+Also see <b>\ref samples_page</b> for other samples.
+
  */
 
 
@@ -204,6 +213,21 @@ PJ_DECL(pj_status_t) pj_turn_sock_unlock(pj_turn_sock *turn_sock);
  */
 PJ_DECL(void) pj_turn_sock_set_log(pj_turn_sock *turn_sock,
 				   unsigned flags);
+
+/**
+ * Configure the SOFTWARE name to be sent in all STUN requests by the
+ * TURN session.
+ *
+ * @param turn_sock	The TURN transport instance.
+ * @param sw	    Software name string. If this argument is NULL or
+ *		    empty, the session will not include SOFTWARE attribute
+ *		    in STUN requests and responses.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_turn_sock_set_software_name(pj_turn_sock *turn_sock,
+						    const pj_str_t *sw);
+
 
 /**
  * Allocate a relay address/resource in the TURN server. This function

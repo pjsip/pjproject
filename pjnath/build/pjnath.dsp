@@ -200,5 +200,33 @@ SOURCE=..\include\pjnath\turn_sock.h
 SOURCE=..\include\pjnath\types.h
 # End Source File
 # End Group
+# Begin Group "Doxygen Files"
+
+# PROP Default_Filter ""
+# Begin Source File
+
+SOURCE=..\docs\doc_ice.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\doc_mainpage.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\doc_nat.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\doc_samples.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\doc_stun.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\docs\doc_turn.h
+# End Source File
+# End Group
 # End Target
 # End Project

@@ -35,7 +35,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJNATH_STUN_AUTH STUN Authentication
  * @brief STUN authentication helper
- * @ingroup PJNATH_STUN
+ * @ingroup PJNATH_STUN_BASE
  * @{
  */
 

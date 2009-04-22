@@ -36,7 +36,7 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJNATH_STUN_TRANSACTION STUN Client Transaction
  * @brief STUN client transaction
- * @ingroup PJNATH_STUN
+ * @ingroup PJNATH_STUN_BASE
  * @{
  *
  The @ref PJNATH_STUN_TRANSACTION is used to manage outgoing STUN request,

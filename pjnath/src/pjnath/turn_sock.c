@@ -339,6 +339,15 @@ PJ_DEF(void) pj_turn_sock_set_log( pj_turn_sock *turn_sock,
 }
 
 /*
+ * Set software name
+ */
+PJ_DEF(pj_status_t) pj_turn_sock_set_software_name( pj_turn_sock *turn_sock,
+						    const pj_str_t *sw)
+{
+    return pj_turn_session_set_software_name(turn_sock->sess, sw);
+}
+
+/*
  * Initialize.
  */
 PJ_DEF(pj_status_t) pj_turn_sock_alloc(pj_turn_sock *turn_sock,

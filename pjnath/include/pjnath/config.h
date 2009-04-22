@@ -29,8 +29,9 @@
 #include <pj/types.h>
 
 /**
- * @defgroup PJNATH_CONFIG Configuration
+ * @defgroup PJNATH_CONFIG Compile-time configurations
  * @brief Various compile time settings
+ * @ingroup PJNATH_STUN_BASE
  * @{
  */
 

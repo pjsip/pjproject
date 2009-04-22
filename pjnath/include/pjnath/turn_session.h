@@ -30,25 +30,99 @@
 
 PJ_BEGIN_DECL
 
-/**
- * @defgroup PJNATH_TURN TURN Client Library
- */
-
 
 /* **************************************************************************/
 /**
- * @defgroup PJNATH_TURN_SESSION Transport independent TURN client session
- * @brief Transport independent TURN client session
- * @ingroup PJNATH_TURN
- * @{
- *
- * This module describes the transport independent TURN client session. This
- * interface is provided for implementors of a TURN client transport, and
- * application usually will want to use \ref PJNATH_TURN_SOCK instead.
- *
- * The transport independent TURN client session is created to facilitate
- * the creation of different types of transports between the client and the
- * TURN server.
+@addtogroup PJNATH_TURN_SESSION
+@{
+
+The \ref PJNATH_TURN_SESSION is a transport-independent object to
+manage a client TURN session. It contains the core logic for manage
+the TURN client session as listed in \ref turn_op_sec, but
+in transport-independent manner (i.e. it doesn't have a socket), so
+that developer can integrate TURN client functionality into existing
+framework that already has its own means to send and receive data,
+or to support new transport types to TURN, such as TLS.
+
+
+\section turn_sess_using_sec Using the TURN session
+
+These steps describes how to use the TURN session:
+
+ - <b>Creating the session</b>:\n
+   use #pj_turn_session_create() to create the session. 
+
+ - <b>Configuring credential</b>:\n
+   all TURN operations requires the use of authentication (it uses STUN 
+   long term autentication method). Use #pj_turn_session_set_credential()
+   to configure the TURN credential to be used by the session.
+
+ - <b>Configuring server</b>:\n
+   application must call #pj_turn_session_set_server() before it can send
+   Allocate request (with pj_turn_session_alloc()). This function will
+   resolve the TURN server using DNS SRV resolution if the \a resolver
+   is set. The server resolution process will complete asynchronously,
+   and application will be notified in \a on_state() callback of the 
+   #pj_turn_session_cb structurewith the session state set to 
+   PJ_TURN_STATE_RESOLVED.
+
+ - <b>Creating allocation</b>:\n
+   create one "relay port" (or called <b>relayed-transport-address</b>
+   in TURN terminology) in the TURN server by using #pj_turn_session_alloc().
+   This will send Allocate request to the server. This function will complete
+   immediately, and application will be notified about the allocation
+   result in the \a on_state() callback of the #pj_turn_session_cb structure.
+
+ - <b>Getting the allocation result</b>:\n
+   if allocation is successful, the session state will progress to
+   \a PJ_TURN_STATE_READY, otherwise the state will be 
+   \a PJ_TURN_STATE_DEALLOCATED or higher. Session state progression is
+   reported in the \a on_state() callback of the #pj_turn_session_cb 
+   structure. On successful allocation, application may retrieve the
+   allocation info by calling #pj_turn_session_get_info().
+
+ - <b>Sending data through the relay</b>.\n
+   Once allocation has been created, client may send data to any remote 
+   endpoints (called peers in TURN terminology) via the "relay port". It does
+   so by calling #pj_turn_session_sendto(), giving the peer address 
+   in the function argument. But note that at this point peers are not allowed
+   to send data towards the client (via the "relay port") before permission is
+   installed for that peer.
+
+ - <b>Creating permissions</b>.\n
+   Permission needs to be created in the TURN server so that a peer can send 
+   data to the client via the relay port (a peer in this case is identified by
+   its IP address). Without this, when the TURN server receives data from the
+   peer in the "relay port", it will drop this data. Create the permission by
+   calling #pj_turn_session_set_perm(), specifying the peer IP address in the
+   argument (the port part of the address is ignored). More than one IP 
+   addresses may be specified.
+
+ - <b>Receiving data from peers</b>.\n
+   Once permission has been installed for the peer, any data received by the 
+   TURN server (from that peer) in the "relay port" will be relayed back to 
+   client by the server, and application will be notified via \a on_rx_data
+   callback of the #pj_turn_session_cb.
+
+ - <b>Using ChannelData</b>.\n
+   TURN provides optimized framing to the data by using ChannelData 
+   packetization. The client activates this format for the specified peer by
+   calling #pj_turn_session_bind_channel(). Data sent or received to/for
+   this peer will then use ChannelData format instead of Send or Data 
+   Indications.
+
+ - <b>Refreshing the allocation, permissions, and channel bindings</b>.\n
+   Allocations, permissions, and channel bindings will be refreshed by the
+   session automatically when they about to expire.
+
+ - <b>Destroying the allocation</b>.\n
+   Once the "relay port" is no longer needed, client destroys the allocation
+   by calling #pj_turn_session_shutdown(). This function will return
+   immediately, and application will be notified about the deallocation
+   result in the \a on_state() callback of the #pj_turn_session_cb structure.
+   Once the state has reached PJ_TURN_STATE_DESTROYING, application must
+   assume that the session will be destroyed shortly after.
+
  */
 
 /** 

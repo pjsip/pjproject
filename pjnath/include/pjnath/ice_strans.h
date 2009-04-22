@@ -37,9 +37,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJNATH_ICE_STREAM_TRANSPORT ICE Stream Transport
- * @brief Transport for media streams using ICE
- * @ingroup PJNATH_ICE
+ * @addtogroup PJNATH_ICE_STREAM_TRANSPORT
  * @{
  *
  * This module describes ICE stream transport, as represented by #pj_ice_strans
@@ -53,6 +51,66 @@ PJ_BEGIN_DECL
  * \ref PJNATH_ICE_SESSION for performing connectivity checks among the.
  * various candidates of the transport addresses.
  *
+ *
+ * \section ice_strans_using_sec Using the ICE stream transport
+ *
+ * The steps below describe how to use ICE session:
+ *
+ *  - initialize a #pj_ice_strans_cfg structure. This contains various 
+ *    settings for the ICE stream transport, and among other things contains
+ *    the STUN and TURN settings.\n\n
+ *  - create the instance with #pj_ice_strans_create(). Among other things,
+ *    the function needs the following arguments:
+ *	- the #pj_ice_strans_cfg structure for the main configurations
+ *	- number of components to be supported
+ *	- instance of #pj_ice_strans_cb structure to report callbacks to
+ *	  application.\n\n
+ *  - while the #pj_ice_strans_create() call completes immediately, the
+ *    initialization will be running in the background to gather the 
+ *    candidates (for example STUN and TURN candidates, if they are enabled
+ *    in the #pj_ice_strans_cfg setting). Application will be notified when
+ *    the initialization completes in the \a on_ice_complete callback of
+ *    the #pj_ice_strans_cb structure (the \a op argument of this callback
+ *    will be PJ_ICE_STRANS_OP_INIT).\n\n
+ *  - when media stream is to be started (for example, a call is to be 
+ *    started), create an ICE session by calling #pj_ice_strans_init_ice().\n\n
+ *  - the application now typically will need to communicate local ICE
+ *    information to remote host. It can achieve this by using the following
+ *    functions to query local ICE information:
+ *	- #pj_ice_strans_get_ufrag_pwd()
+ *	- #pj_ice_strans_enum_cands()
+ *	- #pj_ice_strans_get_def_cand()\n
+ *    The application may need to encode the above information as SDP.\n\n
+ *  - when the application receives remote ICE information (for example, from
+ *    the SDP received from remote), it can now start ICE negotiation, by
+ *    calling #pj_ice_strans_start_ice(). This function requires some
+ *    information about remote ICE agent such as remote ICE username fragment
+ *    and password as well as array of remote candidates.\n\n
+ *  - note that the PJNATH library does not work with SDP; application would
+ *    need to encode and parse the SDP itself.\n\n
+ *  - once ICE negotiation has been started, application will be notified
+ *    about the completion in the \a on_ice_complete() callback of the
+ *    #pj_ice_strans_cb.\n\n
+ *  - at any time, application may send or receive data. However the ICE
+ *    stream transport may not be able to send it depending on its current
+ *    state. Before ICE negotiation is started, the data will be sent using
+ *    default candidate of the component. After negotiation is completed,
+ *    data will be sent using the candidate from the successful/nominated
+ *    pair. The ICE stream transport may not be able to send data while 
+ *    negotiation is in progress.\n\n
+ *  - application sends data by using #pj_ice_strans_sendto(). Incoming
+ *    data will be reported in \a on_rx_data() callback of the
+ *    #pj_ice_strans_cb.\n\n
+ *  - once the media session has finished (e.g. user hangs up the call),
+ *    destroy the ICE session with #pj_ice_strans_stop_ice().\n\n
+ *  - at this point, application may destroy the ICE stream transport itself,
+ *    or let it run so that it can be reused to create other ICE session.
+ *    The benefit of letting the ICE stream transport alive (without any
+ *    session active) is to avoid delay with the initialization, howerver
+ *    keeping the transport alive means the transport needs to keep the
+ *    STUN binding open by using keep-alive and also TURN allocation alive,
+ *    and this will consume power which is an important issue for mobile
+ *    applications.\n\n
  */
 
 /** Forward declaration for ICE stream transport. */

@@ -30,19 +30,11 @@
 #include <pj/sock.h>
 #include <pj/timer.h>
 
-/**
- * @defgroup PJNATH_ICE Interactive Connectivity Establishment (ICE)
- * @brief Interactive Connectivity Establishment (ICE)
- */
-
-
 PJ_BEGIN_DECL
 
 
 /**
- * @defgroup PJNATH_ICE_SESSION ICE Session
- * @brief Transport Independent ICE Session
- * @ingroup PJNATH_ICE
+ * @addtogroup PJNATH_ICE_SESSION
  * @{
  *
  * This module describes #pj_ice_sess, a transport independent ICE session,
@@ -204,16 +196,22 @@ typedef struct pj_ice_sess_comp
  */
 typedef struct pj_ice_msg_data
 {
+    /** Transport ID for this message */
     unsigned	transport_id;
+
+    /** Flag to indicate whether data.req contains data */
     pj_bool_t	has_req_data;
 
+    /** The data */
     union data {
+	/** Request data */
 	struct request_data {
-	    pj_ice_sess		    *ice;
-	    pj_ice_sess_checklist   *clist;
-	    unsigned		     ckid;
+	    pj_ice_sess		    *ice;   /**< ICE session	*/
+	    pj_ice_sess_checklist   *clist; /**< Checklist	*/
+	    unsigned		     ckid;  /**< Check ID	*/
 	} req;
     } data;
+
 } pj_ice_msg_data;
 
 
@@ -539,7 +537,7 @@ typedef enum pj_ice_sess_role
  */
 typedef struct pj_ice_rx_check
 {
-    PJ_DECL_LIST_MEMBER(struct pj_ice_rx_check);
+    PJ_DECL_LIST_MEMBER(struct pj_ice_rx_check); /**< Standard list     */
 
     unsigned		 comp_id;	/**< Component ID.		*/
     unsigned		 transport_id;	/**< Transport ID.		*/
@@ -600,7 +598,7 @@ struct pj_ice_sess
     unsigned		 rcand_cnt;		    /**< # of remote cand.  */
     pj_ice_sess_cand	 rcand[PJ_ICE_MAX_CAND];    /**< Array of cand.	    */
 
-    /* Array of transport datas */
+    /** Array of transport datas */
     pj_ice_msg_data	 tp_data[4];
 
     /* List of eearly checks */
@@ -612,7 +610,7 @@ struct pj_ice_sess
     /* Valid list */
     pj_ice_sess_checklist valid_list;		    /**< Valid list.	    */
     
-    /* Temporary buffer for misc stuffs to avoid using stack too much */
+    /** Temporary buffer for misc stuffs to avoid using stack too much */
     union {
     	char txt[128];
 	char errmsg[PJ_ERR_MSG_SIZE];

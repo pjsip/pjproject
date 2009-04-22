@@ -35,7 +35,7 @@ PJ_BEGIN_DECL
 /* **************************************************************************/
 /**
  * @defgroup PJNATH_STUN_MSG STUN Message Representation and Parsing
- * @ingroup PJNATH_STUN
+ * @ingroup PJNATH_STUN_BASE
  * @brief Low-level representation and parsing of STUN messages.
  * @{
  */
