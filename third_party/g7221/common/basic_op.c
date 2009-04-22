@@ -10,10 +10,11 @@
  |___________________________________________________________________________|
 */
 
-#include <stdio.h>
-#include <stdlib.h>
+//#include <stdio.h>
+//#include <stdlib.h>
 #include "typedef.h"
 #include "basic_op.h"
+#include <pj/assert.h>
 
 #if (WMOPS)
 #include "count.h"
@@ -1199,13 +1200,15 @@ Word16 div_s (Word16 var1, Word16 var2)
 
     if ((var1 > var2) || (var1 < 0) || (var2 < 0))
     {
-        printf ("Division Error var1=%d  var2=%d\n", var1, var2);
-        abort(); /* exit (0); */
+        //printf ("Division Error var1=%d  var2=%d\n", var1, var2);
+        //abort(); /* exit (0); */
+	pj_assert(!"Division Error");
     }
     if (var2 == 0)
     {
-        printf ("Division by 0, Fatal error \n");
-        abort(); /* exit (0); */
+        //printf ("Division by 0, Fatal error \n");
+        //abort(); /* exit (0); */
+	assert(!"Division by 0");
     }
     if (var1 == 0)
     {
@@ -1439,13 +1442,15 @@ Word16 div_l (Word32  L_num, Word16 den)
 #endif
 
     if ( den == (Word16) 0 ) {
-        printf("Division by 0 in div_l, Fatal error \n");
-        exit(0);
+        //printf("Division by 0 in div_l, Fatal error \n");
+        //exit(0);
+	assert(!"Division by 0");
     }
 
     if ( (L_num < (Word32) 0) || (den < (Word16) 0) ) {
-        printf("Division Error in div_l, Fatal error \n");
-        exit(0);
+        //printf("Division Error in div_l, Fatal error \n");
+        //exit(0);
+	assert(!"Division Error");
     }
 
     L_den = L_deposit_h( den ) ;
