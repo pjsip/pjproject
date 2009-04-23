@@ -422,10 +422,18 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_set_local_answer( pj_pool_t *pool,
     /* State now is STATE_WAIT_NEGO. */
     neg->state = PJMEDIA_SDP_NEG_STATE_WAIT_NEGO;
     if (local) {
-	if (!neg->initial_sdp) {
+	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
+	if (neg->initial_sdp) {
+	    /* I don't think there is anything in RFC 3264 that mandates
+	     * answerer to place the same origin (and increment version)
+	     * in the answer, but probably it won't hurt either.
+	     * Note that the version will be incremented in 
+	     * pjmedia_sdp_neg_negotiate()
+	     */
+	    neg->neg_local_sdp->origin.id = neg->initial_sdp->origin.id;
+	} else {
 	    neg->initial_sdp = pjmedia_sdp_session_clone(pool, local);
 	}
-	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, local);
     } else {
 	PJ_ASSERT_RETURN(neg->initial_sdp, PJMEDIA_SDPNEG_ENOINITIAL);
 	neg->neg_local_sdp = pjmedia_sdp_session_clone(pool, neg->initial_sdp);

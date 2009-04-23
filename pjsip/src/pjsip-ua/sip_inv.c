@@ -2248,11 +2248,16 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 	goto on_error;
     }
 
+    /* Notify negotiator about the new offer. This will fix the offer
+     * with correct SDP origin.
+     */
     status = pjmedia_sdp_neg_modify_local_offer(inv->pool,inv->neg,
 						offer);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Retrieve the "fixed" offer from negotiator */
+    pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
 
     /* Update Contact if required */
     if (new_contact) {
@@ -3619,9 +3624,16 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 		if (mod_inv.cb.on_create_offer)  {
 		    (*mod_inv.cb.on_create_offer)(inv, &sdp);
 		    if (sdp) {
+			/* Notify negotiator about the new offer. This will
+			 * fix the offer with correct SDP origin.
+			 */
 			status = pjmedia_sdp_neg_modify_local_offer(dlg->pool,
 								    inv->neg,
 								    sdp);
+
+			/* Retrieve the "fixed" offer from negotiator */
+			if (status==PJ_SUCCESS)
+			    pjmedia_sdp_neg_get_neg_local(inv->neg, &sdp);
 		    }
 		} 
 		

@@ -78,21 +78,6 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
 					   pjmedia_sdp_session **p_answer);
 
-/* Update SDP version in the offer */
-static void update_sdp_version(pjsua_call *call,
-			       pjmedia_sdp_session *sdp)
-{
-    const pjmedia_sdp_session *old_sdp = NULL;
-    pj_status_t status;
-
-    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &old_sdp);
-    if (status != PJ_SUCCESS || old_sdp == NULL)
-	return;
-
-    sdp->origin.version = old_sdp->origin.version + 1;
-}
-
-
 /*
  * Callback called by event framework when the xfer subscription state
  * has changed.
@@ -1519,8 +1504,6 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 	return status;
     }
 
-    update_sdp_version(call, sdp);
-
     /* Create re-INVITE with new offer */
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
@@ -1591,8 +1574,6 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 	return status;
     }
 
-    update_sdp_version(call, sdp);
-
     /* Create re-INVITE with new offer */
     status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
     if (status != PJ_SUCCESS) {
@@ -1649,8 +1630,6 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
-
-    update_sdp_version(call, sdp);
 
     /* Create UPDATE with new offer */
     status = pjsip_inv_update(call->inv, NULL, sdp, &tdata);
@@ -3320,8 +3299,6 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 	PJSUA_UNLOCK();
 	return;
     }
-
-    update_sdp_version(call, *offer);
 
     PJSUA_UNLOCK();
 }
