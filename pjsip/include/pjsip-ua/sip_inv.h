@@ -653,16 +653,32 @@ PJ_DECL(pj_status_t) pjsip_inv_set_sdp_answer(pjsip_inv_session *inv,
 /**
  * Create a SIP message to initiate invite session termination. Depending on 
  * the state of the session, this function may return CANCEL request, 
- * a non-2xx final response, or a BYE request. If the session has not answered
- * the incoming INVITE, this function creates the non-2xx final response with 
- * the specified status code in st_code and optional status text in st_text.
+ * a non-2xx final response, a BYE request, or even no request. 
+ *
+ * For UAS, if the session has not answered the incoming INVITE, this function
+ * creates the non-2xx final response with the specified status code in 
+ * \a st_code and optional status text in \a st_text. 
+ *
+ * For UAC, if the original INVITE has not been answered with a final 
+ * response, the behavior depends on whether provisional response has been
+ * received. If provisional response has been received, this function will
+ * create CANCEL request. If no provisional response has been received, the
+ * function will not create CANCEL request (the function will return 
+ * PJ_SUCCESS but the \a p_tdata will contain NULL) because we cannot send
+ * CANCEL before receiving provisional response. If then a provisional
+ * response is received, the invite session will send CANCEL automatically.
+ * 
+ * For both UAC and UAS, if the INVITE session has been answered with final
+ * response, a BYE request will be created.
  *
  * @param inv		The invite session.
  * @param st_code	Status code to be used for terminating the session.
  * @param st_text	Optional status text.
- * @param p_tdata	Pointer to receive the message to be created.
+ * @param p_tdata	Pointer to receive the message to be created. Note
+ *			that it's possible to receive NULL here while the
+ *			function returns PJ_SUCCESS, see the description.
  *
- * @return		PJ_SUCCESS if termination message can be created.
+ * @return		PJ_SUCCESS if termination is initiated.
  */
 PJ_DECL(pj_status_t) pjsip_inv_end_session( pjsip_inv_session *inv,
 					    int st_code,

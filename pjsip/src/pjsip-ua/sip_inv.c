@@ -1869,12 +1869,13 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	     */
 	    if (inv->invite_tsx->status_code < 100) {
 
-		pjsip_tsx_stop_retransmit(inv->invite_tsx);
+		/* Do not stop INVITE retransmission, see ticket #506 */
+		//pjsip_tsx_stop_retransmit(inv->invite_tsx);
 		inv->cancelling = PJ_TRUE;
 		inv->pending_cancel = PJ_TRUE;
 		*p_tdata = NULL;
-		PJ_LOG(4, (inv->obj_name, "Stopping retransmission, "
-			   "delaying CANCEL"));
+		PJ_LOG(4, (inv->obj_name, "Delaying CANCEL since no "
+			   "provisional response is received yet"));
 		return PJ_SUCCESS;
 	    }
 
