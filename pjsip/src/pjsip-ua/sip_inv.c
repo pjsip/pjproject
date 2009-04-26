@@ -1886,6 +1886,14 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	    status = pjsip_endpt_create_cancel(inv->dlg->endpt, 
 					       inv->invite_tsx->last_tx,
 					       &tdata);
+	    if (status != PJ_SUCCESS)
+		return status;
+
+	    /* Set timeout for the INVITE transaction, in case UAS is not
+	     * able to respond the INVITE with 487 final response. The 
+	     * timeout value is 64*T1.
+	     */
+	    pjsip_tsx_set_timeout(inv->invite_tsx, 64 * pjsip_cfg()->tsx.t1);
 
 	} else {
 

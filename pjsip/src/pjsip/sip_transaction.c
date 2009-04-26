@@ -1503,6 +1503,47 @@ PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
 
 
 /*
+ * Start a timer to terminate transaction after the specified time
+ * has elapsed. 
+ */
+PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
+					   unsigned millisec)
+{
+    struct tsx_lock_data lck;
+    pj_time_val timeout;
+
+    PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tsx->role == PJSIP_ROLE_UAC &&
+		     tsx->method.id == PJSIP_INVITE_METHOD,
+		     PJ_EINVALIDOP);
+
+    lock_tsx(tsx, &lck);
+
+    /* Transaction must not have got final response */
+    PJ_ASSERT_ON_FAIL(tsx->status_code < 200,
+		    { unlock_tsx(tsx, &lck); return PJ_EINVALIDOP; });
+
+    if (tsx->timeout_timer.id != 0) {
+	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+	tsx->timeout_timer.id = 0;
+    }
+
+    timeout.sec = 0;
+    timeout.msec = millisec;
+    pj_time_val_normalize(&timeout);
+
+    tsx->timeout_timer.id = TIMER_ACTIVE;
+    pjsip_endpt_schedule_timer(tsx->endpt, &tsx->timeout_timer,
+			       &timeout);
+
+
+    unlock_tsx(tsx, &lck);
+
+    return PJ_SUCCESS;
+}
+
+
+/*
  * This function is called by TU to send a message.
  */
 PJ_DEF(pj_status_t) pjsip_tsx_send_msg( pjsip_transaction *tsx, 
