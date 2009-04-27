@@ -127,7 +127,7 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 
 	return PJ_FALSE;
     }
-#else
+#elif 0
     pjsip_msg *msg;
 
     msg = rdata->msg_info.msg;
@@ -138,6 +138,10 @@ pj_bool_t pjsua_im_accept_pager(pjsip_rx_data *rdata,
 
 	return PJ_FALSE;
     }
+#else
+    /* Ticket #693: allow incoming MESSAGE without message body */
+    PJ_UNUSED_ARG(rdata);
+    PJ_UNUSED_ARG(p_accept_hdr);
 #endif
 
     return PJ_TRUE;
@@ -154,8 +158,11 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
     pj_str_t contact;
     pjsip_msg_body *body = rdata->msg_info.msg->body;
 
+#if 0
+    /* Ticket #693: allow incoming MESSAGE without message body */
     /* Body MUST have been checked before */
     pj_assert(body != NULL);
+#endif
 
 
     /* Build remote contact */
@@ -172,7 +179,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	contact.slen = 0;
     }
 
-    if (pj_stricmp(&body->content_type.type, &STR_MIME_APP)==0 &&
+    if (body && pj_stricmp(&body->content_type.type, &STR_MIME_APP)==0 &&
 	pj_stricmp(&body->content_type.subtype, &STR_MIME_ISCOMPOSING)==0)
     {
 	/* Expecting typing indication */
@@ -214,20 +221,27 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
 	pj_str_t text_body;
 	
 	/* Save text body */
-	text_body.ptr = (char*)rdata->msg_info.msg->body->data;
-	text_body.slen = rdata->msg_info.msg->body->len;
+	if (body) {
+	    text_body.ptr = (char*)rdata->msg_info.msg->body->data;
+	    text_body.slen = rdata->msg_info.msg->body->len;
 
-	/* Get mime type */
-	m = &rdata->msg_info.msg->body->content_type;
-	mime_type.ptr = buf;
-	mime_type.slen = pj_ansi_snprintf(buf, sizeof(buf),
-				          "%.*s/%.*s",
-				          (int)m->type.slen,
-					  m->type.ptr,
-					  (int)m->subtype.slen,
-					  m->subtype.ptr);
-	if (mime_type.slen < 1)
-	    mime_type.slen = 0;
+	    /* Get mime type */
+	    m = &rdata->msg_info.msg->body->content_type;
+	    mime_type.ptr = buf;
+	    mime_type.slen = pj_ansi_snprintf(buf, sizeof(buf),
+					      "%.*s/%.*s",
+					      (int)m->type.slen,
+					      m->type.ptr,
+					      (int)m->subtype.slen,
+					      m->subtype.ptr);
+	    if (mime_type.slen < 1)
+		mime_type.slen = 0;
+
+
+	} else {
+	    text_body.ptr = mime_type.ptr = "";
+	    text_body.slen = mime_type.slen = 0;
+	}
 
 	if (pjsua_var.ua_cfg.cb.on_pager) {
 	    (*pjsua_var.ua_cfg.cb.on_pager)(call_id, from, to, &contact, 
