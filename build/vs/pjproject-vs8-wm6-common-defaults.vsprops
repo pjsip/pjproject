@@ -13,6 +13,8 @@
 	<Tool
 		Name="VCLinkerTool"
 		SubSystem="9"
+		StackReserveSize="65536"
+		StackCommitSize="4096"
 		EntryPointSymbol="WinMainCRTStartup"
 	/>
 	<Tool
