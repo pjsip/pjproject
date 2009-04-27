@@ -133,8 +133,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		build\vs\pjproject-vs8-win32-common-defaults.vsprops = build\vs\pjproject-vs8-win32-common-defaults.vsprops
 		build\vs\pjproject-vs8-win32-release-defaults.vsprops = build\vs\pjproject-vs8-win32-release-defaults.vsprops
 		build\vs\pjproject-vs8-wm2003-common-defaults.vsprops = build\vs\pjproject-vs8-wm2003-common-defaults.vsprops
+		build\vs\pjproject-vs8-wm2003-release-defaults.vsprops = build\vs\pjproject-vs8-wm2003-release-defaults.vsprops
 		build\vs\pjproject-vs8-wm5-common-defaults.vsprops = build\vs\pjproject-vs8-wm5-common-defaults.vsprops
+		build\vs\pjproject-vs8-wm5-release-defaults.vsprops = build\vs\pjproject-vs8-wm5-release-defaults.vsprops
 		build\vs\pjproject-vs8-wm6-common-defaults.vsprops = build\vs\pjproject-vs8-wm6-common-defaults.vsprops
+		build\vs\pjproject-vs8-wm6-release-defaults.vsprops = build\vs\pjproject-vs8-wm6-release-defaults.vsprops
 	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "samples", "pjsip-apps\build\samples.vcproj", "{E378A1FC-0C9C-4462-860F-7E60BC1BF84E}"

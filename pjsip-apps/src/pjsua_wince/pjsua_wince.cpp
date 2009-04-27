@@ -286,6 +286,8 @@ static void on_reg_state(pjsua_acc_id acc_id)
  */
 static void on_buddy_state(pjsua_buddy_id buddy_id)
 {
+    /* Currently this is not processed */
+    PJ_UNUSED_ARG(buddy_id);
 }
 
 
@@ -296,6 +298,13 @@ static void on_pager(pjsua_call_id call_id, const pj_str_t *from,
 		     const pj_str_t *to, const pj_str_t *contact,
 		     const pj_str_t *mime_type, const pj_str_t *text)
 {
+    /* Currently this is not processed */
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(from);
+    PJ_UNUSED_ARG(to);
+    PJ_UNUSED_ARG(contact);
+    PJ_UNUSED_ARG(mime_type);
+    PJ_UNUSED_ARG(text);
 }
 
 
@@ -306,6 +315,30 @@ static void on_typing(pjsua_call_id call_id, const pj_str_t *from,
 		      const pj_str_t *to, const pj_str_t *contact,
 		      pj_bool_t is_typing)
 {
+    /* Currently this is not processed */
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(from);
+    PJ_UNUSED_ARG(to);
+    PJ_UNUSED_ARG(contact);
+    PJ_UNUSED_ARG(is_typing);
+}
+
+/** 
+ * Callback upon NAT detection completion 
+ */
+static void nat_detect_cb(const pj_stun_nat_detect_result *res)
+{
+    if (res->status != PJ_SUCCESS) {
+	char msg[250];
+	pj_ansi_snprintf(msg, sizeof(msg), "NAT detection failed: %s",
+			 res->status_text);
+	SetCallStatus(msg, pj_ansi_strlen(msg));
+    } else {
+	char msg[250];
+	pj_ansi_snprintf(msg, sizeof(msg), "NAT type is %s",
+			 res->nat_type_name);
+	SetCallStatus(msg, pj_ansi_strlen(msg));
+    }
 }
 
 
@@ -362,6 +395,7 @@ static BOOL OnInitStack(void)
     cfg.cb.on_buddy_state = &on_buddy_state;
     cfg.cb.on_pager = &on_pager;
     cfg.cb.on_typing = &on_typing;
+    cfg.cb.on_nat_detect = &nat_detect_cb;
 
     if (SIP_PROXY) {
 	    cfg.outbound_proxy_cnt = 1;
@@ -471,8 +505,9 @@ int WINAPI WinMain(HINSTANCE hInstance,
 {
     MSG msg;
     HACCEL hAccelTable;
-    
 
+    PJ_UNUSED_ARG(lpCmdLine);
+    PJ_UNUSED_ARG(hPrevInstance);
 
     // Perform application initialization:
     if (!InitInstance (hInstance, nCmdShow)) 
@@ -512,23 +547,6 @@ static ATOM MyRegisterClass(HINSTANCE hInstance, LPTSTR szWindowClass)
     wc.lpszClassName	= szWindowClass;
 
     return RegisterClass(&wc);
-}
-
-
-/* Callback upon NAT detection completion */
-static void nat_detect_cb(const pj_stun_nat_detect_result *res)
-{
-    if (res->status != PJ_SUCCESS) {
-	char msg[250];
-	pj_ansi_snprintf(msg, sizeof(msg), "NAT detection failed: %s",
-			 res->status_text);
-	SetCallStatus(msg, pj_ansi_strlen(msg));
-    } else {
-	char msg[250];
-	pj_ansi_snprintf(msg, sizeof(msg), "NAT type is %s",
-			 res->nat_type_name);
-	SetCallStatus(msg, pj_ansi_strlen(msg));
-    }
 }
 
 

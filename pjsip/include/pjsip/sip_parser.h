@@ -309,6 +309,13 @@ PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool,
  */
 
 
+#ifdef _MSC_VER
+#   pragma warning(push)
+#   pragma warning(disable:4510) // default constructor could not be generated
+#   pragma warning(disable:4512) // assignment operator could not be generated
+#   pragma warning(disable:4610) // user defined constructor required
+#endif
+
 /**
  * Parser constants. @see pjsip_parser_const()
  */
@@ -365,6 +372,10 @@ typedef struct pjsip_parser_const_t
     pj_cis_t pjsip_OTHER_URI_CONTENT;	/**< Generic URI content.	*/
 
 } pjsip_parser_const_t;
+
+#ifdef _MSC_VER
+#   pragma warning(pop)
+#endif
 
 
 /**

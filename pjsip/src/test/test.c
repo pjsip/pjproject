@@ -88,6 +88,8 @@ void flush_events(unsigned duration)
 
 pj_status_t register_static_modules(pj_size_t *count, pjsip_module **modules)
 {
+    PJ_UNUSED_ARG(modules);
+
     *count = 0;
     return PJ_SUCCESS;
 }

@@ -917,7 +917,7 @@ static int simple_uri_test(void)
 static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
 {
     unsigned i, loop;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     pj_timestamp zero;
     pj_time_val elapsed;
     pj_highprec_t avg_parse, avg_print, avg_cmp, kbytes;

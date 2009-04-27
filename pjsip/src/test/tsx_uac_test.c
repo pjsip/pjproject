@@ -551,6 +551,8 @@ static void send_response_callback( pj_timer_heap_t *timer_heap,
     struct response *r = (struct response*) entry->user_data;
     pjsip_transport *tp = r->res_addr.transport;
 
+    PJ_UNUSED_ARG(timer_heap);
+
     pjsip_endpt_send_response(endpt, &r->res_addr, r->tdata, NULL, NULL);
     if (tp)
 	pjsip_transport_dec_ref(tp);
@@ -563,6 +565,8 @@ static void terminate_tsx_callback( pj_timer_heap_t *timer_heap,
     struct my_timer *m = (struct my_timer *)entry;
     pjsip_transaction *tsx = pjsip_tsx_layer_find_tsx(&m->tsx_key, PJ_FALSE);
     int status_code = entry->id;
+
+    PJ_UNUSED_ARG(timer_heap);
 
     if (tsx) {
 	pjsip_tsx_terminate(tsx, status_code);
@@ -947,6 +951,8 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
     pj_time_val timeout;
     pj_status_t status;
 
+    PJ_UNUSED_ARG(dummy);
+
     PJ_LOG(3,(THIS_FILE, 
 	      "   please standby, this will take at most %d seconds..",
 	      test_time));
@@ -1077,7 +1083,7 @@ static int perform_tsx_test(int dummy, char *target_uri, char *from_uri,
  */
 static int tsx_uac_retransmit_test(void)
 {
-    int status, enabled;
+    int status = 0, enabled;
     int i;
     struct {
 	const pjsip_method *method;
@@ -1141,7 +1147,7 @@ static int tsx_uac_retransmit_test(void)
  */
 static int tsx_resolve_error_test(void)
 {
-    int status;
+    int status = 0;
 
     PJ_LOG(3,(THIS_FILE, "  test2: resolve error test"));
 
@@ -1226,7 +1232,7 @@ static int tsx_retransmit_fail_test(void)
 {
     int i;
     unsigned delay[] = {0, 10};
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_LOG(3,(THIS_FILE, 
 	      "  test4: transport fails after several retransmissions test"));
@@ -1297,7 +1303,7 @@ static int perform_generic_test( const char *title,
 				 char *branch_id,
 				 const pjsip_method *method)
 {
-    int i, status;
+    int i, status = 0;
     unsigned delay[] = { 1, 200 };
 
     PJ_LOG(3,(THIS_FILE, "  %s", title));

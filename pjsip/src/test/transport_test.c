@@ -159,6 +159,8 @@ static pj_bool_t my_on_rx_response(pjsip_rx_data *rdata)
 static void send_msg_callback(pjsip_send_state *stateless_data,
 			      pj_ssize_t sent, pj_bool_t *cont)
 {
+    PJ_UNUSED_ARG(stateless_data);
+
     if (sent < 1) {
 	/* Obtain the error code. */
 	send_status = -sent;
@@ -183,6 +185,9 @@ int transport_send_recv_test( pjsip_transport_type_e tp_type,
     pjsip_method method;
     pjsip_tx_data *tdata;
     pj_time_val timeout;
+
+    PJ_UNUSED_ARG(tp_type);
+    PJ_UNUSED_ARG(ref_tp);
 
     PJ_LOG(3,(THIS_FILE, "  single message round-trip test..."));
 
@@ -490,6 +495,8 @@ static int rt_worker_thread(void *arg)
     int i;
     pj_time_val poll_delay = { 0, 10 };
 
+    PJ_UNUSED_ARG(arg);
+
     /* Sleep to allow main threads to run. */
     pj_thread_sleep(10);
 
@@ -519,6 +526,9 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     unsigned usec_rt;
     unsigned total_sent;
     unsigned total_recv;
+
+    PJ_UNUSED_ARG(tp_type);
+    PJ_UNUSED_ARG(ref_tp);
 
     PJ_LOG(3,(THIS_FILE, "  multithreaded round-trip test (%d threads)...",
 		  THREADS));
@@ -550,8 +560,9 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
     /* Initialize thread data. */
     for (i=0; i<THREADS; ++i) {
 	char buf[1];
-	pj_str_t str_id = { buf, 1 };
-
+	pj_str_t str_id;
+	
+	pj_strset(&str_id, buf, 1);
 	pj_bzero(&rt_test_data[i], sizeof(rt_test_data[i]));
 
 	/* Init timer entry */
@@ -563,7 +574,7 @@ int transport_rt_test( pjsip_transport_type_e tp_type,
 	/* Generate Call-ID for each thread. */
 	rt_test_data[i].call_id.ptr = (char*) pj_pool_alloc(pool, rt_call_id.slen+1);
 	pj_strcpy(&rt_test_data[i].call_id, &rt_call_id);
-	buf[0] = '0' + i;
+	buf[0] = '0' + (char)i;
 	pj_strcat(&rt_test_data[i].call_id, &str_id);
 
 	/* Init mutex. */

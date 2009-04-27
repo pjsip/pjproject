@@ -222,8 +222,8 @@ static int read_ITU_format(FILE  *fp_bitstream,
     short zero = 0x007f;
     short frame_start = 0x6b21;
 
-    nsamp = fread(in_array, 2, 2 + 16*number_of_16bit_words_per_frame,
-		  fp_bitstream);
+    nsamp = (short)fread(in_array, 2, 2 + 16*number_of_16bit_words_per_frame,
+			 fp_bitstream);
 
     j = 0;
     bit = in_array[j++];

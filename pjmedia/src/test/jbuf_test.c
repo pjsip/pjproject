@@ -226,7 +226,7 @@ int jbuf_main(void)
 
 	/* Test session start */
 	while (1) {
-	    int c;
+	    char c;
 	    
 	    /* Get next line of test data */
 	    if (!p || *p == 0) {

@@ -26,6 +26,8 @@ static void term_set_color(int level)
 {
 #if defined(PJ_TERM_HAS_COLOR) && PJ_TERM_HAS_COLOR != 0
     pj_term_set_color(pj_log_get_color(level));
+#else
+    PJ_UNUSED_ARG(level);
 #endif
 }
 
