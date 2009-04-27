@@ -16,6 +16,18 @@
 		<Platform
 			Name="Windows Mobile 6 Professional SDK (ARMV4I)"
 		/>
+		<Platform
+			Name="Pocket PC 2003 (ARMV4)"
+		/>
+		<Platform
+			Name="Smartphone 2003 (ARMV4)"
+		/>
+		<Platform
+			Name="Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+		/>
+		<Platform
+			Name="Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+		/>
 	</Platforms>
 	<ToolFiles>
 	</ToolFiles>
@@ -48,11 +60,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -65,7 +76,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
@@ -112,11 +122,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -130,8 +140,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -185,11 +193,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -203,8 +211,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -259,11 +265,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -276,7 +281,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
@@ -323,11 +327,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -341,8 +345,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -396,11 +398,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -414,8 +416,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -470,11 +470,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -487,7 +486,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
@@ -534,11 +532,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -552,8 +550,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -607,11 +603,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -625,8 +621,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -681,11 +675,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -698,7 +691,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
@@ -745,11 +737,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -763,8 +755,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -818,11 +808,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -836,8 +826,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -892,11 +880,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -909,7 +896,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
@@ -956,11 +942,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -974,8 +960,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -1029,11 +1013,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1047,8 +1031,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -1103,11 +1085,10 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1120,7 +1101,6 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
@@ -1167,11 +1147,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1185,8 +1165,6 @@
 			<Tool
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
-
-
 
 			/>
 			<Tool
@@ -1240,11 +1218,11 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				PrecompiledHeaderFile=""
-
 				PreprocessorDefinitions="_LIB;"
 
+				ExecutionBucket="7"
 				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -1259,7 +1237,1709 @@
 				Name="VCLibrarianTool"
 				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
 
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Pocket PC 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-common-defaults.vsprops"
 
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Pocket PC 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Pocket PC 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Pocket PC 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Pocket PC 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Pocket PC 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Smartphone 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Smartphone 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Smartphone 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Smartphone 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Smartphone 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Smartphone 2003 (ARMV4)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm2003-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Windows Mobile 5.0 Pocket PC SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Static|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Dynamic|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Debug-Dynamic|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-debug-dynamic-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-common-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+
+			/>
+			<Tool
+				Name="VCALinkTool"
+			/>
+			<Tool
+				Name="VCXDCMakeTool"
+			/>
+			<Tool
+				Name="VCBscMakeTool"
+			/>
+			<Tool
+				Name="VCCodeSignTool"
+			/>
+			<Tool
+				Name="VCPostBuildEventTool"
+			/>
+			<DeploymentTool
+				ForceDirty="-1"
+				RemoteDirectory=""
+				RegisterOutput="0"
+				AdditionalFiles=""
+			/>
+			<DebuggerTool
+			/>
+		</Configuration>
+		<Configuration
+			Name="Release-Static|Windows Mobile 5.0 Smartphone SDK (ARMV4I)"
+			InheritedPropertySheets="..\..\..\build\vs\pjproject-vs8-release-static-defaults.vsprops;..\..\..\build\vs\pjproject-vs8-wm5-release-defaults.vsprops"
+
+			ATLMinimizesCRunTimeLibraryUsage="false"
+
+			CharacterSet="1"
+
+			ConfigurationType="4"
+			>
+			<Tool
+				Name="VCPreBuildEventTool"
+			/>
+			<Tool
+				Name="VCCustomBuildTool"
+			/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"
+			/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"
+			/>
+			<Tool
+				Name="VCMIDLTool"
+			/>
+			<Tool
+				Name="VCCLCompilerTool"
+				PreprocessorDefinitions="_LIB;"
+
+				ExecutionBucket="7"
+				AdditionalIncludeDirectories=".,../../gsm/inc"
+				PrecompiledHeaderFile=""
+			/>
+			<Tool
+				Name="VCManagedResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCResourceCompilerTool"
+			/>
+			<Tool
+				Name="VCPreLinkEventTool"
+			/>
+			<Tool
+				Name="VCLibrarianTool"
+				OutputFile="..\..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2344,11 +4024,11 @@
 			Filter="h;hpp;hxx;hm;inl"
 			>
 			<File
-				RelativePath="..\..\gsm\inc\config.h"
+				RelativePath="config.h"
 				>
 			</File>
 			<File
-				RelativePath="config.h"
+				RelativePath="..\..\gsm\inc\config.h"
 				>
 			</File>
 			<File

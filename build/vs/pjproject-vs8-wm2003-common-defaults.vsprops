@@ -2,7 +2,7 @@
 <VisualStudioPropertySheet
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="pjproject-vs8-wm6-common-defaults"
+	Name="pjproject-vs8-wm2003-common-defaults"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
@@ -21,6 +21,6 @@
 	/>
 	<UserMacro
 		Name="TargetCPU"
-		Value="armv4i"
+		Value="armv4"
 	/>
 </VisualStudioPropertySheet>
