@@ -93,7 +93,7 @@
   <send retrans="500">
     <![CDATA[
       SIP/2.0 200 OK
-      Via: SIP/2.0/UDP [remote_ip]:[remote_port];rport=[remote_port];[$3]
+      Via: SIP/2.0/UDP 127.0.0.1:5080;received=127.0.0.1;rport=5080;[$3]
       [last_From:]
       [last_To:];tag=2
       [last_Call-ID:]

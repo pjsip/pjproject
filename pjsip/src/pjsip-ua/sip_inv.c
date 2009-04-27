@@ -3361,6 +3361,22 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	
 	/* Generic handling for UAC tsx completion */
 	handle_uac_tsx_response(inv, e);
+
+    } else if (tsx->role == PJSIP_ROLE_UAS &&
+	       tsx->method.id == PJSIP_BYE_METHOD &&
+	       tsx->status_code < 200 &&
+	       e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+    {
+	/* Received BYE before the 2xx/OK response to INVITE.
+	 * Assume that the 2xx/OK response is lost and the BYE
+	 * arrives earlier.
+	 */
+	inv_respond_incoming_bye(inv, tsx, e->body.tsx_state.src.rdata, e);
+
+	/* Set timer just in case we will never get the final response
+	 * for INVITE.
+	 */
+	pjsip_tsx_set_timeout(inv->invite_tsx, 64*pjsip_cfg()->tsx.t1);
     }
 }
 

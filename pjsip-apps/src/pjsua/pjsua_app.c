@@ -3796,9 +3796,15 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    ui_input_url("Destination URI", buf, sizeof(buf), &result);
 	    if (result.nb_result != NO_NB) {
 
-		if (result.nb_result == -1 || result.nb_result == 0) {
+		if (result.nb_result == -1) {
 		    puts("Sorry you can't do that!");
 		    continue;
+		} else if (result.nb_result == 0) {
+		    uri = NULL;
+		    if (current_call == PJSUA_INVALID_ID) {
+			puts("No current call");
+			continue;
+		    }
 		} else {
 		    pjsua_buddy_info binfo;
 		    pjsua_buddy_get_info(result.nb_result-1, &binfo);
@@ -3811,9 +3817,18 @@ void console_app_main(const pj_str_t *uri_to_call)
 		uri = result.uri_result;
 	    }
 	    
-	    tmp = pj_str(uri);
-
-	    send_request(text, &tmp);
+	    if (uri) {
+		tmp = pj_str(uri);
+		send_request(text, &tmp);
+	    } else {
+		/* If you send call control request using this method
+		 * (such requests includes BYE, CANCEL, etc.), it will
+		 * not go well with the call state, so don't do it
+		 * unless it's for testing.
+		 */
+		pj_str_t method = pj_str(text);
+		pjsua_call_send_request(current_call, &method, NULL);
+	    }
 	    break;
 
 	case 'e':
