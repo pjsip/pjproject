@@ -26,6 +26,15 @@
 #include <pj/string.h>
 #include <pj/compat/socket.h>
 
+#if 0
+    /* Enable some tracing */
+    #include <pj/log.h>
+    #define THIS_FILE   "sock_common.c"
+    #define TRACE_(arg)	PJ_LOG(4,arg)
+#else
+    #define TRACE_(arg)
+#endif
+
 
 /*
  * Convert address string with numbers and dots to binary IP address.
@@ -445,70 +454,200 @@ PJ_DEF(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
     addr->sin_addr.s_addr = pj_htonl(hostaddr);
 }
 
+static pj_bool_t is_usable_ip(const pj_sockaddr *addr)
+{
+    if (addr->addr.sa_family==PJ_AF_INET) {
+	/* Only consider if the address is not 127.0.0.0/8 or 0.0.0.0/8.
+	 * The 0.0.0.0/8 is a special IP class that doesn't seem to be
+	 * practically useful for our purpose.
+	 */
+	if ((pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127)
+	    return PJ_FALSE;
+	if ((pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==0)
+	    return PJ_FALSE;
+
+	return PJ_TRUE;
+
+    } else if (addr->addr.sa_family==PJ_AF_INET6) {
+	pj_sockaddr ipv6_loop;
+	const pj_str_t loop = { "::1", 3};
+	pj_status_t status;
+
+	status = pj_sockaddr_set_str_addr(PJ_AF_INET6, &ipv6_loop, &loop);
+	if (status != PJ_SUCCESS)
+	    return PJ_TRUE;
+
+	if (pj_memcmp(&addr->ipv6.sin6_addr, &ipv6_loop.ipv6.sin6_addr, 16)==0)
+	    return PJ_FALSE;
+
+	return PJ_TRUE;
+    } else {
+	return PJ_TRUE;
+    }
+}
+
 /* Resolve the IP address of local machine */
 PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 {
-    unsigned count;
+    unsigned i, count, cand_cnt;
+    enum {
+	CAND_CNT = 8,
+	WEIGHT_HOSTNAME	= 1,	/* hostname IP is not always valid! */
+	WEIGHT_DEF_ROUTE = 2,
+	WEIGHT_INTERFACE = 1
+    };
+    /* candidates: */
+    pj_sockaddr cand_addr[CAND_CNT];
+    unsigned    cand_weight[CAND_CNT];
+    int	        selected_cand;
+    char	strip[PJ_INET6_ADDRSTRLEN+10];
     pj_addrinfo ai;
     pj_status_t status;
 
+    /* May not be used if TRACE_ is disabled */
+    PJ_UNUSED_ARG(strip);
 
 #ifdef _MSC_VER
     /* Get rid of "uninitialized he variable" with MS compilers */
     pj_bzero(&ai, sizeof(ai));
 #endif
 
+    cand_cnt = 0;
+    pj_bzero(cand_addr, sizeof(cand_addr));
+    pj_bzero(cand_weight, sizeof(cand_weight));
+    for (i=0; i<PJ_ARRAY_SIZE(cand_addr); ++i) {
+	cand_addr[i].addr.sa_family = (pj_uint16_t)af;
+	PJ_SOCKADDR_RESET_LEN(&cand_addr[i]);
+    }
+
     addr->addr.sa_family = (pj_uint16_t)af;
     PJ_SOCKADDR_RESET_LEN(addr);
 
-    /* Try with resolving local hostname first */
+    /* Get hostname's IP address */
     count = 1;
     status = pj_getaddrinfo(af, pj_gethostname(), &count, &ai);
     if (status == PJ_SUCCESS) {
     	pj_assert(ai.ai_addr.addr.sa_family == (pj_uint16_t)af);
-    	pj_sockaddr_copy_addr(addr, &ai.ai_addr);
+    	pj_sockaddr_copy_addr(&cand_addr[cand_cnt], &ai.ai_addr);
+	pj_sockaddr_set_port(&cand_addr[cand_cnt], 0);
+	cand_weight[cand_cnt] += WEIGHT_HOSTNAME;
+	++cand_cnt;
+
+	TRACE_((THIS_FILE, "hostname IP is %s",
+		pj_sockaddr_print(&ai.ai_addr, strip, sizeof(strip), 0)));
     }
 
 
-    /* If we end up with 127.0.0.0/8 or 0.0.0.0/8, resolve the IP
-     * by getting the default interface to connect to some public host.
-     * The 0.0.0.0/8 is a special IP class that doesn't seem to be
-     * practically useful for our purpose.
-     */
-    if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(addr) ||
-	(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127) ||
-	(af==PJ_AF_INET && (pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==0))
-    {
-		status = pj_getdefaultipinterface(af, addr);
+    /* Get default interface (interface for default route) */
+    if (cand_cnt < PJ_ARRAY_SIZE(cand_addr)) {
+	status = pj_getdefaultipinterface(af, addr);
+	if (status == PJ_SUCCESS) {
+	    TRACE_((THIS_FILE, "default IP is %s",
+		    pj_sockaddr_print(addr, strip, sizeof(strip), 0)));
+
+	    pj_sockaddr_set_port(addr, 0);
+	    for (i=0; i<cand_cnt; ++i) {
+		if (pj_sockaddr_cmp(&cand_addr[i], addr)==0)
+		    break;
+	    }
+
+	    cand_weight[i] += WEIGHT_DEF_ROUTE;
+	    if (i >= cand_cnt) {
+		pj_sockaddr_copy_addr(&cand_addr[i], addr);
+		++cand_cnt;
+	    }
+	}
     }
 
-    /* If failed, get the first available interface */
-    if (status != PJ_SUCCESS) {
-		pj_sockaddr itf[1];
-		unsigned count = PJ_ARRAY_SIZE(itf);
-	
-		status = pj_enum_ip_interface(af, &count, itf);
-		if (status == PJ_SUCCESS) {
-		    pj_assert(itf[0].addr.sa_family == (pj_uint16_t)af);
-		    pj_sockaddr_copy_addr(addr, &itf[0]);
+
+    /* Enumerate IP interfaces */
+    if (cand_cnt < PJ_ARRAY_SIZE(cand_addr)) {
+	unsigned start_if = cand_cnt;
+	unsigned count = PJ_ARRAY_SIZE(cand_addr) - start_if;
+
+	status = pj_enum_ip_interface(af, &count, &cand_addr[start_if]);
+	if (status == PJ_SUCCESS && count) {
+	    /* Clear the port number */
+	    for (i=0; i<count; ++i)
+		pj_sockaddr_set_port(&cand_addr[start_if+i], 0);
+
+	    /* For each candidate that we found so far (that is the hostname
+	     * address and default interface address, check if they're found
+	     * in the interface list. If found, add the weight, and if not,
+	     * decrease the weight.
+	     */
+	    for (i=0; i<cand_cnt; ++i) {
+		unsigned j;
+		for (j=0; j<count; ++j) {
+		    if (pj_sockaddr_cmp(&cand_addr[i], 
+					&cand_addr[start_if+j])==0)
+			break;
 		}
+
+		if (j == count) {
+		    /* Not found */
+		    cand_weight[i] -= WEIGHT_INTERFACE;
+		} else {
+		    cand_weight[i] += WEIGHT_INTERFACE;
+		}
+	    }
+
+	    /* Add remaining interface to candidate list. */
+	    for (i=0; i<count; ++i) {
+		unsigned j;
+		for (j=0; j<cand_cnt; ++j) {
+		    if (pj_sockaddr_cmp(&cand_addr[start_if+i], 
+					&cand_addr[j])==0)
+			break;
+		}
+
+		if (j == cand_cnt) {
+		    pj_sockaddr_copy_addr(&cand_addr[cand_cnt], 
+					  &cand_addr[start_if+i]);
+		    cand_weight[cand_cnt] += WEIGHT_INTERFACE;
+		    ++cand_cnt;
+		}
+	    }
+	}
+    }
+
+    /* Enumerate candidates to get the best IP address to choose */
+    selected_cand = -1;
+    for (i=0; i<cand_cnt; ++i) {
+	TRACE_((THIS_FILE, "Checking candidate IP %s, weight=%d",
+		pj_sockaddr_print(&cand_addr[i], strip, sizeof(strip), 0),
+		cand_weight[i]));
+
+	if (!is_usable_ip(&cand_addr[i])) {
+	    continue;
+	}
+
+	if (selected_cand == -1)
+	    selected_cand = i;
+	else if (cand_weight[i] > cand_weight[selected_cand])
+	    selected_cand = i;
     }
 
     /* If else fails, returns loopback interface as the last resort */
-    if (status != PJ_SUCCESS) {
-		if (af==PJ_AF_INET) {
-		    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
-		} else {
-		    pj_in6_addr *s6_addr;
-	
-		    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
-		    pj_bzero(s6_addr, sizeof(pj_in6_addr));
-		    s6_addr->s6_addr[15] = 1;
-		}
-		status = PJ_SUCCESS;
+    if (selected_cand == -1) {
+	if (af==PJ_AF_INET) {
+	    addr->ipv4.sin_addr.s_addr = pj_htonl (0x7f000001);
+	} else {
+	    pj_in6_addr *s6_addr;
+
+	    s6_addr = (pj_in6_addr*) pj_sockaddr_get_addr(addr);
+	    pj_bzero(s6_addr, sizeof(pj_in6_addr));
+	    s6_addr->s6_addr[15] = 1;
+	}
+	TRACE_((THIS_FILE, "Loopback IP %s returned",
+		pj_sockaddr_print(addr, strip, sizeof(strip), 0)));
+    } else {
+	pj_sockaddr_copy_addr(addr, &cand_addr[selected_cand]);
+	TRACE_((THIS_FILE, "Candidate %s selected",
+		pj_sockaddr_print(addr, strip, sizeof(strip), 0)));
     }
 
-    return status;
+    return PJ_SUCCESS;
 }
 
 /* Get the default IP interface */
