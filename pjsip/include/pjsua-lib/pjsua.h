@@ -2037,7 +2037,7 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
  * Default PUBLISH expiration
  */
 #ifndef PJSUA_PUBLISH_EXPIRATION
-#   define PJSUA_PUBLISH_EXPIRATION 600
+#   define PJSUA_PUBLISH_EXPIRATION PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED
 #endif
 
 
@@ -3493,7 +3493,8 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 
 /**
  * This specifies how long the library should retry resending SUBSCRIBE
- * if the previous SUBSCRIBE failed.
+ * if the previous SUBSCRIBE failed. This also controls the duration 
+ * before failed PUBLISH request will be retried.
  *
  * Default: 300 seconds
  */

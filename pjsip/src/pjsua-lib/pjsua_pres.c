@@ -961,6 +961,10 @@ static void publish_cb(struct pjsip_publishc_cbparam *param)
     pjsua_acc *acc = (pjsua_acc*) param->token;
 
     if (param->code/100 != 2 || param->status != PJ_SUCCESS) {
+
+	pjsip_publishc_destroy(param->pubc);
+	acc->publish_sess = NULL;
+
 	if (param->status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 
@@ -968,6 +972,12 @@ static void publish_cb(struct pjsip_publishc_cbparam *param)
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Client publication (PUBLISH) failed, status=%d, msg=%s",
 		       param->status, errmsg));
+	} else if (param->code == 412) {
+	    /* 412 (Conditional Request Failed)
+	     * The PUBLISH refresh has failed, retry with new one.
+	     */
+	    pjsua_pres_init_publish_acc(acc->index);
+	    
 	} else {
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Client publication (PUBLISH) failed (%d/%.*s)",
@@ -975,8 +985,14 @@ static void publish_cb(struct pjsip_publishc_cbparam *param)
 		       param->reason.ptr));
 	}
 
-	pjsip_publishc_destroy(param->pubc);
-	acc->publish_sess = NULL;
+    } else {
+	if (param->expiration == -1) {
+	    /* Could happen if server "forgot" to include Expires header
+	     * in the response. We will not renew, so destroy the pubc.
+	     */
+	    pjsip_publishc_destroy(param->pubc);
+	    acc->publish_sess = NULL;
+	}
     }
 }
 
@@ -1091,7 +1107,7 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
 	status = pjsip_publishc_init(acc->publish_sess, &STR_PRESENCE,
 				     &acc_cfg->id, &acc_cfg->id,
 				     &acc_cfg->id, 
-				     PJSUA_PRES_TIMER);
+				     PJSUA_PUBLISH_EXPIRATION);
 	if (status != PJ_SUCCESS) {
 	    acc->publish_sess = NULL;
 	    return status;
@@ -1606,7 +1622,15 @@ static void refresh_client_subscriptions(void)
 static void pres_timer_cb(pj_timer_heap_t *th,
 			  pj_timer_entry *entry)
 {
+    unsigned i;
     pj_time_val delay = { PJSUA_PRES_TIMER, 0 };
+
+    /* Retry failed PUBLISH requests */
+    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	pjsua_acc *acc = &pjsua_var.acc[i];
+	if (acc->cfg.publish_enabled && acc->publish_sess==NULL)
+	    pjsua_pres_init_publish_acc(acc->index);
+    }
 
     entry->id = PJ_FALSE;
     refresh_client_subscriptions();
