@@ -100,10 +100,6 @@ typedef struct {
 
 #endif
 
-#ifdef _MSC_VER
-#   pragma warning( pop ) 
-#endif
-
 
 typedef struct {
   uint16_t profile_specific;    /* profile-specific info               */
@@ -163,6 +159,11 @@ typedef struct {
   /* and then the variable-length auth tag */
 } srtcp_trailer_t;
 
+#endif
+
+
+#ifdef _MSC_VER
+#   pragma warning( pop ) 
 #endif
 
 

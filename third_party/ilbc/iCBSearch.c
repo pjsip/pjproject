@@ -234,22 +234,20 @@
 
            /* unrestricted search */
 
-           if (CB_RESRANGE == -1) {
+#	   if CB_RESRANGE == -1
+           //if (CB_RESRANGE == -1) {
                sInd=0;
                eInd=range-1;
                sIndAug=20;
                eIndAug=39;
-           }
+           //}
 
-
-
-
-
+#	   else
 
            /* restricted search around best index from first
            codebook section */
 
-           else {
+           //else {
                /* Initialize search indices */
                sIndAug=0;
                eIndAug=0;
@@ -307,7 +305,10 @@
                        eInd = range;
                    }
                }
-           }
+
+           //}
+#	   endif /* CB_RESRANGE == -1 */
+
 
            /* search of higher codebook section */
 
