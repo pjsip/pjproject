@@ -28,6 +28,7 @@
 #define PJ_OS_NAME		    "win32-wince"
 
 #define WIN32_LEAN_AND_MEAN
+#define RPC_NO_WINDOWS_H
 //#define PJ_WIN32_WINNT		    0x0400
 //#define _WIN32_WINNT		    PJ_WIN32_WINNT
 

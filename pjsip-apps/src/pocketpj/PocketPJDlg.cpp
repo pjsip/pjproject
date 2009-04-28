@@ -239,7 +239,7 @@ BOOL CPocketPJDlg::Restart()
 
 	pj_unicode_to_ansi((LPCTSTR)codec, codec.GetLength(),
 			   tmp_nam, sizeof(tmp_nam));
-	pjsua_codec_set_priority(pj_cstr(&tmp, tmp_nam), 200-i);
+	pjsua_codec_set_priority(pj_cstr(&tmp, tmp_nam), (pj_uint8_t)(200-i));
     }
 
     // Start!
@@ -322,6 +322,8 @@ void CPocketPJDlg::PopUp_Show( PopUpType type,
 				const CString& btn2,
 				unsigned userData)
 {
+    PJ_UNUSED_ARG(userData);
+
     if (!m_PopUpState[type])
 	++m_PopUpCount;
 
@@ -419,6 +421,9 @@ void CPocketPJDlg::OnCallState()
 
 void CPocketPJDlg::on_call_state(pjsua_call_id call_id, pjsip_event *e)
 {
+    PJ_UNUSED_ARG(e);
+    PJ_UNUSED_ARG(call_id);
+
     theDlg->OnCallState();
 }
 
@@ -436,6 +441,9 @@ void CPocketPJDlg::on_call_media_state(pjsua_call_id call_id)
 void CPocketPJDlg::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 				    pjsip_rx_data *rdata)
 {
+    PJ_UNUSED_ARG(acc_id);
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(rdata);
 }
 
 void CPocketPJDlg::OnRegState()
@@ -448,6 +456,7 @@ void CPocketPJDlg::OnRegState()
     if (ai.expires>0 && ai.status/100==2) {
 	/* Registration success */
 	HBITMAP old = m_BtnAcc.SetBitmap(::LoadBitmap(AfxGetInstanceHandle(), MAKEINTRESOURCE(IDB_ONLINE)) );
+	PJ_UNUSED_ARG(old);
 	acc_text += " (OK)";
 	m_AccId.SetWindowText(acc_text);
     } else if (ai.status/100 != 2) {
@@ -460,11 +469,15 @@ void CPocketPJDlg::OnRegState()
 
 void CPocketPJDlg::on_reg_state(pjsua_acc_id acc_id)
 {
+    PJ_UNUSED_ARG(acc_id);
+
     theDlg->OnRegState();
 }
 
 void CPocketPJDlg::on_buddy_state(pjsua_buddy_id buddy_id)
 {
+    PJ_UNUSED_ARG(buddy_id);
+
     theDlg->RedrawBuddyList();
 }
 
@@ -472,6 +485,12 @@ void CPocketPJDlg::on_pager(pjsua_call_id call_id, const pj_str_t *from,
 			    const pj_str_t *to, const pj_str_t *contact,
 			    const pj_str_t *mime_type, const pj_str_t *text)
 {
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(from);
+    PJ_UNUSED_ARG(to);
+    PJ_UNUSED_ARG(contact);
+    PJ_UNUSED_ARG(mime_type);
+    PJ_UNUSED_ARG(text);
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -740,6 +759,9 @@ void CPocketPJDlg::OnPopUpButton(int btnNo)
 void CPocketPJDlg::OnClickBuddyList(NMHDR* pNMHDR, LRESULT* pResult) 
 {
     POSITION pos = m_BuddyList.GetFirstSelectedItemPosition();
+
+    PJ_UNUSED_ARG(pNMHDR);
+
     if (pos != NULL) {
 	int iItem = m_BuddyList.GetNextSelectedItem(pos);
 	CString uri = m_BuddyList.GetItemText(iItem, 0);

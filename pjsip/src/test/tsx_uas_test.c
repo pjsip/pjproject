@@ -95,19 +95,19 @@
  **
  **/
 
-static char *TEST1_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test1";
-static char *TEST2_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test2";
-static char *TEST3_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test3";
-static char *TEST4_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test4";
-static char *TEST5_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test5";
-static char *TEST6_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test6";
-static char *TEST7_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test7";
-static char *TEST8_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test8";
-static char *TEST9_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test9";
-static char *TEST10_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test10";
-static char *TEST11_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test11";
-static char *TEST12_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test12";
-//static char *TEST13_BRANCH_ID = PJSIP_RFC3261_BRANCH_ID "-UAS-Test13";
+#define TEST1_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test1")
+#define TEST2_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test2")
+#define TEST3_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test3")
+#define TEST4_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test4")
+#define TEST5_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test5")
+#define TEST6_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test6")
+#define TEST7_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test7")
+#define TEST8_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test8")
+#define TEST9_BRANCH_ID  (PJSIP_RFC3261_BRANCH_ID "-UAS-Test9")
+#define TEST10_BRANCH_ID (PJSIP_RFC3261_BRANCH_ID "-UAS-Test10")
+#define TEST11_BRANCH_ID (PJSIP_RFC3261_BRANCH_ID "-UAS-Test11")
+#define TEST12_BRANCH_ID (PJSIP_RFC3261_BRANCH_ID "-UAS-Test12")
+//#define TEST13_BRANCH_ID (PJSIP_RFC3261_BRANCH_ID "-UAS-Test13")
 
 #define TEST1_STATUS_CODE	200
 #define TEST2_STATUS_CODE	301
@@ -211,6 +211,8 @@ static void send_response_timer( pj_timer_heap_t *timer_heap,
     pjsip_transaction *tsx;
     struct response *r = (struct response*) entry->user_data;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(timer_heap);
 
     tsx = pjsip_tsx_layer_find_tsx(&r->tsx_key, PJ_TRUE);
     if (!tsx) {

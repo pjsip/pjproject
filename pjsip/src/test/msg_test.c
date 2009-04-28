@@ -837,13 +837,12 @@ static pj_status_t simple_test(void)
 static int msg_benchmark(unsigned *p_detect, unsigned *p_parse, 
 			 unsigned *p_print)
 {
-    pj_status_t status;
     pj_pool_t *pool;
     int i, loop;
     pj_timestamp zero;
     pj_time_val elapsed;
     pj_highprec_t avg_detect, avg_parse, avg_print, kbytes;
-
+    pj_status_t status = PJ_SUCCESS;
 
     pj_bzero(&var, sizeof(var));
     zero.u64 = 0;

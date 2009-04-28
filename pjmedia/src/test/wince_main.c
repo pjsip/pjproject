@@ -17,9 +17,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include "test.h"
 #include <windows.h>
 #include <stdio.h>
-#include "test.h"
 
 #define TITLE	"PJMEDIA Test"
 #define CAPTION	"This will start pjmedia test. Please do not use the PDA while the test is in progress. The test may take couple of minutes to complete, and you will be notified again when it completes"
@@ -28,6 +28,8 @@ static FILE *fLog;
 
 static void log_writer_cb(int level, const char *data, int len)
 {
+    PJ_UNUSED_ARG(level);
+
     fwrite(data, len, 1, fLog);
 }
 
@@ -38,6 +40,11 @@ int WINAPI WinMain(HINSTANCE hInstance,
 		   int       nCmdShow)
 {
     int rc;
+
+    PJ_UNUSED_ARG(hInstance);
+    PJ_UNUSED_ARG(hPrevInstance);
+    PJ_UNUSED_ARG(lpCmdLine);
+    PJ_UNUSED_ARG(nCmdShow);
 
     rc = MessageBox(0, TEXT(CAPTION), TEXT(TITLE), MB_OKCANCEL);
     if (rc != IDOK)

@@ -2,7 +2,7 @@
 <VisualStudioPropertySheet
 	ProjectType="Visual C++"
 	Version="8.00"
-	Name="pjproject-vs8-wm6-common-defaults"
+	Name="pjproject-vs8-wm2003-common-defaults"
 	>
 	<Tool
 		Name="VCCLCompilerTool"
@@ -12,6 +12,7 @@
 	/>
 	<Tool
 		Name="VCLinkerTool"
+		AdditionalDependencies="secchk.lib ccrtrtti.lib"
 		SubSystem="9"
 		StackReserveSize="65536"
 		StackCommitSize="4096"
@@ -23,6 +24,6 @@
 	/>
 	<UserMacro
 		Name="TargetCPU"
-		Value="armv4i"
+		Value="armv4"
 	/>
 </VisualStudioPropertySheet>

@@ -194,6 +194,8 @@ static void on_rx_offer(pjsip_inv_session *inv,
 {
     pjmedia_sdp_session *sdp;
 
+    PJ_UNUSED_ARG(offer);
+
     sdp = create_sdp(inv->dlg->pool, oa_sdp[inv_test.oa_index].answer);
     pjsip_inv_set_sdp_answer(inv, sdp);
 
@@ -210,12 +212,17 @@ static void on_rx_offer(pjsip_inv_session *inv,
 static void on_create_offer(pjsip_inv_session *inv,
 			    pjmedia_sdp_session **p_offer)
 {
+    PJ_UNUSED_ARG(inv);
+    PJ_UNUSED_ARG(p_offer);
+
     pj_assert(!"Should not happen");
 }
 
 static void on_media_update(pjsip_inv_session *inv_ses, 
 			    pj_status_t status)
 {
+    PJ_UNUSED_ARG(status);
+
     if (inv_ses == inv_test.uas) {
 	inv_test.uas_update_cnt++;
 	pj_assert(inv_test.uas_update_cnt - inv_test.uac_update_cnt <= 1);
@@ -256,6 +263,8 @@ static void on_media_update(pjsip_inv_session *inv_ses,
 static void on_state_changed(pjsip_inv_session *inv, pjsip_event *e)
 {
     const char *who = NULL;
+
+    PJ_UNUSED_ARG(e);
 
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 	TRACE_((THIS_FILE, "      %s call disconnected",
@@ -611,12 +620,17 @@ static inv_test_param_t test_params[] =
 
 static pjsip_dialog* on_dlg_forked(pjsip_dialog *first_set, pjsip_rx_data *res)
 {
+    PJ_UNUSED_ARG(first_set);
+    PJ_UNUSED_ARG(res);
+
     return NULL;
 }
 
 
 static void on_new_session(pjsip_inv_session *inv, pjsip_event *e)
 {
+    PJ_UNUSED_ARG(inv);
+    PJ_UNUSED_ARG(e);
 }
 
 

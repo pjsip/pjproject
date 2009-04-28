@@ -425,7 +425,7 @@ static void create_win(pj_pool_t *pool, pj_uint16_t **pw, unsigned count)
 			      (WINDOW_MAX_VAL * cos_val) / 0xFFFFFFFF);
 #else
 	/* Revert to linear */
-	w[i] = i * WINDOW_MAX_VAL / count;
+	w[i] = (pj_uint16_t)(i * WINDOW_MAX_VAL / count);
 #endif
     }
 }

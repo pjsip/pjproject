@@ -15,8 +15,8 @@
 #define MAX_16 (Word16)0x7fff
 #define MIN_16 (Word16)(pj_uint16_t)0x8000
 
-#define UMAX_32 (Word32)0xffffffffL
-#define UMIN_32 (Word32)0x00000000L
+#define UMAX_32 (UWord32)0xffffffffL
+#define UMIN_32 (UWord32)0x00000000L
 
 /*___________________________________________________________________________
  |                                                                           |

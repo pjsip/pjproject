@@ -127,9 +127,9 @@ typedef struct cipher_test_case_t {
   int key_length_octets;                      /* octets in key            */
   uint8_t *key;                               /* key                      */
   uint8_t *idx;                               /* packet index             */
-  int plaintext_length_octets;                /* octets in plaintext      */ 
+  unsigned int plaintext_length_octets;	      /* octets in plaintext      */ 
   uint8_t *plaintext;                         /* plaintext                */
-  int ciphertext_length_octets;               /* octets in plaintext      */ 
+  unsigned int ciphertext_length_octets;      /* octets in plaintext      */ 
   uint8_t *ciphertext;                        /* ciphertext               */
   struct cipher_test_case_t *next_test_case;  /* pointer to next testcase */
 } cipher_test_case_t;

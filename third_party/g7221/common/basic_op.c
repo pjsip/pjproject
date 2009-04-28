@@ -1714,7 +1714,7 @@ Word32 L_msu0 (Word32 L_var3, Word16 var1, Word16 var2)
 UWord32 LU_shl (UWord32 L_var1, Word16 var2)
 {
     Word16 neg_var2;
-    UWord32 L_var_out;
+    UWord32 L_var_out = 0;
 
     if (var2 <= 0)
     {

@@ -149,10 +149,9 @@ hex_char_to_nibble(uint8_t c) {
   case ('E'): return 0xe;
   case ('f'): return 0xf;
   case ('F'): return 0xf;
-  default: return -1;   /* this flags an error */
+  default: break;   /* this flags an error */
   }
-  /* NOTREACHED */
-  return -1;  /* this keeps compilers from complaining */
+  return -1;
 }
 
 int

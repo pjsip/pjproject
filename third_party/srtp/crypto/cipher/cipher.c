@@ -269,7 +269,7 @@ cipher_type_self_test(const cipher_type_t *ct) {
   
   for (j=0; j < NUM_RAND_TESTS; j++) {
     unsigned length;
-    int plaintext_len;
+    unsigned plaintext_len;
     uint8_t key[MAX_KEY_LEN];
     uint8_t  iv[MAX_KEY_LEN];
 

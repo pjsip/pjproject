@@ -39,6 +39,8 @@ int main(int argc, char *argv[])
     int retval;
     char **opt_arg;
 
+    PJ_UNUSED_ARG(argc);
+
     /* Parse arguments. */
     opt_arg = argv+1;
     while (*opt_arg) {

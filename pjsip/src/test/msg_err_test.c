@@ -27,6 +27,9 @@
 static pj_bool_t verify_success(pjsip_msg *msg,
 				pjsip_parser_err_report *err_list)
 {
+    PJ_UNUSED_ARG(msg);
+    PJ_UNUSED_ARG(err_list);
+
     return PJ_TRUE;
 }
 
