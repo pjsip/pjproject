@@ -3657,8 +3657,11 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 								    sdp);
 
 			/* Retrieve the "fixed" offer from negotiator */
-			if (status==PJ_SUCCESS)
-			    pjmedia_sdp_neg_get_neg_local(inv->neg, &sdp);
+			if (status==PJ_SUCCESS) {
+			    const pjmedia_sdp_session *lsdp = NULL;
+			    pjmedia_sdp_neg_get_neg_local(inv->neg, &lsdp);
+			    sdp = (pjmedia_sdp_session*)lsdp;
+			}
 		    }
 		} 
 		
