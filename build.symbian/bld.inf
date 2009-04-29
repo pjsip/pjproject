@@ -20,6 +20,7 @@ libsrtp.mmp
 /* Codecs */
 libgsmcodec.mmp
 libspeexcodec.mmp
+libg7221codec.mmp
 libpassthroughcodec.mmp
 
 /* Audio device. */

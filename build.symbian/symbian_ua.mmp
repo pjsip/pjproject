@@ -35,7 +35,8 @@ SYSTEMINCLUDE		\epoc32\include\libc
 // this could be necessary for some SDKs, e.g: S60 3rd MR
 STATICLIBRARY		pjsua_lib.lib
 STATICLIBRARY		pjsip_ua.lib pjsip_simple.lib pjsip.lib
-STATICLIBRARY		libgsmcodec.lib libspeexcodec.lib libpassthroughcodec.lib
+STATICLIBRARY		libgsmcodec.lib libspeexcodec.lib 
+STATICLIBRARY		libg7221codec.lib libpassthroughcodec.lib
 STATICLIBRARY		pjmedia.lib
 STATICLIBRARY		pjmedia_audiodev.lib
 STATICLIBRARY		pjsdp.lib

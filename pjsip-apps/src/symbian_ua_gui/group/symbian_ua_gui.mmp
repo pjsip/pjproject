@@ -44,6 +44,7 @@ STATICLIBRARY	pjnath.lib pjlib_util.lib pjlib.lib
 STATICLIBRARY	libsrtp.lib
 STATICLIBRARY	libgsmcodec.lib
 STATICLIBRARY	libspeexcodec.lib
+STATICLIBRARY	libg7221codec.lib
 
 
 #if SND_USE_NULL
