@@ -216,11 +216,6 @@ static unsigned jb_framelist_size(jb_framelist_t *framelist)
     return framelist->size;
 }
 
-static unsigned jb_framelist_origin(jb_framelist_t *framelist) 
-{
-    return framelist->origin;
-}
-
 
 static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 				  void *frame, pj_size_t *size,
