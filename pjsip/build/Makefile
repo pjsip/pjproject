@@ -84,7 +84,7 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 ###############################################################################
 # Defines for building test application
 #
-export TEST_SRCDIR = ../src/test-pjsip
+export TEST_SRCDIR = ../src/test
 export TEST_OBJS += dlg_core_test.o dns_test.o msg_err_test.o \
 		    msg_logger.o msg_test.o regc_test.o \
 		    test.o transport_loop_test.o transport_tcp_test.o \

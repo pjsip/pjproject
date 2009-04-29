@@ -1,24 +1,24 @@
-# Microsoft Developer Studio Project File - Name="test_pjsip" - Package Owner=<4>
+# Microsoft Developer Studio Project File - Name="pjsip_test" - Package Owner=<4>
 # Microsoft Developer Studio Generated Build File, Format Version 6.00
 # ** DO NOT EDIT **
 
 # TARGTYPE "Win32 (x86) Console Application" 0x0103
 
-CFG=test_pjsip - Win32 Debug
+CFG=pjsip_test - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
 !MESSAGE 
-!MESSAGE NMAKE /f "test_pjsip.mak".
+!MESSAGE NMAKE /f "pjsip_test.mak".
 !MESSAGE 
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
 !MESSAGE 
-!MESSAGE NMAKE /f "test_pjsip.mak" CFG="test_pjsip - Win32 Debug"
+!MESSAGE NMAKE /f "pjsip_test.mak" CFG="pjsip_test - Win32 Debug"
 !MESSAGE 
 !MESSAGE Possible choices for configuration are:
 !MESSAGE 
-!MESSAGE "test_pjsip - Win32 Release" (based on "Win32 (x86) Console Application")
-!MESSAGE "test_pjsip - Win32 Debug" (based on "Win32 (x86) Console Application")
+!MESSAGE "pjsip_test - Win32 Release" (based on "Win32 (x86) Console Application")
+!MESSAGE "pjsip_test - Win32 Debug" (based on "Win32 (x86) Console Application")
 !MESSAGE 
 
 # Begin Project
@@ -28,7 +28,7 @@ CFG=test_pjsip - Win32 Debug
 CPP=cl.exe
 RSC=rc.exe
 
-!IF  "$(CFG)" == "test_pjsip - Win32 Release"
+!IF  "$(CFG)" == "pjsip_test - Win32 Release"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 0
@@ -53,7 +53,7 @@ LINK32=link.exe
 # ADD BASE LINK32 kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /machine:I386
 # ADD LINK32 dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib kernel32.lib netapi32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /subsystem:console /profile /map /debug /machine:I386 /out:"..\bin\test-pjsip-i386-win32-vc6-release.exe" /fixed:no
 
-!ELSEIF  "$(CFG)" == "test_pjsip - Win32 Debug"
+!ELSEIF  "$(CFG)" == "pjsip_test - Win32 Debug"
 
 # PROP BASE Use_MFC 0
 # PROP BASE Use_Debug_Libraries 1
@@ -82,86 +82,86 @@ LINK32=link.exe
 
 # Begin Target
 
-# Name "test_pjsip - Win32 Release"
-# Name "test_pjsip - Win32 Debug"
+# Name "pjsip_test - Win32 Release"
+# Name "pjsip_test - Win32 Debug"
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\dlg_core_test.c"
+SOURCE="..\src\test\dlg_core_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\dns_test.c"
+SOURCE="..\src\test\dns_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\inv_offer_answer_test.c"
+SOURCE="..\src\test\inv_offer_answer_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\main.c"
+SOURCE="..\src\test\main.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\msg_err_test.c"
+SOURCE="..\src\test\msg_err_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\msg_logger.c"
+SOURCE="..\src\test\msg_logger.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\msg_test.c"
+SOURCE="..\src\test\msg_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\regc_test.c"
+SOURCE="..\src\test\regc_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\test.c"
+SOURCE="..\src\test\test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\transport_loop_test.c"
+SOURCE="..\src\test\transport_loop_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\transport_tcp_test.c"
+SOURCE="..\src\test\transport_tcp_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\transport_test.c"
+SOURCE="..\src\test\transport_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\transport_udp_test.c"
+SOURCE="..\src\test\transport_udp_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\tsx_basic_test.c"
+SOURCE="..\src\test\tsx_basic_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\tsx_bench.c"
+SOURCE="..\src\test\tsx_bench.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\tsx_uac_test.c"
+SOURCE="..\src\test\tsx_uac_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\tsx_uas_test.c"
+SOURCE="..\src\test\tsx_uas_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\txdata_test.c"
+SOURCE="..\src\test\txdata_test.c"
 # End Source File
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\uri_test.c"
+SOURCE="..\src\test\uri_test.c"
 # End Source File
 # End Group
 # Begin Group "Header Files"
@@ -169,7 +169,7 @@ SOURCE="..\src\test-pjsip\uri_test.c"
 # PROP Default_Filter "h;hpp;hxx;hm;inl"
 # Begin Source File
 
-SOURCE="..\src\test-pjsip\test.h"
+SOURCE="..\src\test\test.h"
 # End Source File
 # End Group
 # Begin Group "Resource Files"
