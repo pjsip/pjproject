@@ -3,7 +3,7 @@
 	ProjectType="Visual C++"
 	Version="8.00"
 	Name="pjproject-vs8-common-defaults"
-	OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName)"
+	OutputDirectory=".\output\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName)"
 	IntermediateDirectory="$(OutDir)"
 	>
 	<Tool
@@ -14,11 +14,11 @@
 	/>
 	<Tool
 		Name="VCLibrarianTool"
-		OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+		OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 	/>
 	<Tool
 		Name="VCLinkerTool"
-		OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+		OutputFile="..\bin\$(ProjectName)-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 	/>
 	<UserMacro
 		Name="VSVer"

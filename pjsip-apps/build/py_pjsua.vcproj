@@ -54,7 +54,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="python24.lib ole32.lib shell32.lib user32.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib iphlpapi.lib"
-				OutputFile="..\bin\py-pjsua-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\py-pjsua-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -122,7 +122,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="python24_d.lib ole32.lib shell32.lib user32.lib odbc32.lib odbccp32.lib dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib iphlpapi.lib"
-				OutputFile="..\bin\py-pjsua-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\py-pjsua-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"

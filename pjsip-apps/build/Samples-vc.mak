@@ -1,7 +1,7 @@
 
 LIBEXT = .lib
 
-TARGET = i386-win32-vs$(VC_VER)-$(BUILD_MODE)
+TARGET = i386-win32-vc$(VC_VER)-$(BUILD_MODE)
 
 !if "$(BUILD_MODE)" == "debug"
 BUILD_FLAGS = /MTd /Od /Zi /W4
@@ -11,7 +11,7 @@ BUILD_FLAGS = /MTd /Od /Zi /W4
 BUILD_FLAGS = /MDd /Od /Zi /W4
 !elseif "$(BUILD_MODE)" == "release-static"
 BUILD_FLAGS = /Ox /MT /DNDEBUG /W4
-!elseif "$(BUILD_MODE)" == "release-dynamic"
+!else
 BUILD_FLAGS = /Ox /MD /DNDEBUG /W4
 !endif
 
@@ -90,8 +90,8 @@ $(SAMPLES): $(SRCDIR)\$(@B).c $(LIBS) $(SRCDIR)\util.h Samples-vc.mak
 	cl -nologo -c $(SRCDIR)\$(@B).c /Fo$(OBJDIR)\$(@B).obj $(CFLAGS) 
 	cl /nologo $(OBJDIR)\$(@B).obj /Fe$(BINDIR)\$(@B)-$(TARGET).exe /Fm$(OBJDIR)\$(@B).map $(LDFLAGS)
 	@rem the following two lines is just for cleaning up the 'bin' directory
-	del /Q $(BINDIR)\*$(TARGET).ilk
-	del /Q $(BINDIR)\*$(TARGET).pdb
+	if exist $(BINDIR)\*$(TARGET).ilk del /Q $(BINDIR)\*$(TARGET).ilk
+	if exist $(BINDIR)\*$(TARGET).pdb del /Q $(BINDIR)\*$(TARGET).pdb
 
 $(OBJDIR):
 	if not exist $(OBJDIR) mkdir $(OBJDIR)

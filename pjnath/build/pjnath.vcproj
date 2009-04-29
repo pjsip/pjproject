@@ -137,7 +137,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -208,7 +208,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -340,7 +340,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -411,7 +411,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -543,7 +543,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -614,7 +614,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -746,7 +746,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -817,7 +817,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -949,7 +949,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1020,7 +1020,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1152,7 +1152,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1223,7 +1223,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1294,7 +1294,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1365,7 +1365,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1436,7 +1436,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1507,7 +1507,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1578,7 +1578,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1649,7 +1649,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1720,7 +1720,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1791,7 +1791,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1862,7 +1862,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -1933,7 +1933,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2004,7 +2004,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2075,7 +2075,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2146,7 +2146,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2217,7 +2217,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2288,7 +2288,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2359,7 +2359,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2430,7 +2430,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2501,7 +2501,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2572,7 +2572,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2643,7 +2643,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2714,7 +2714,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2785,7 +2785,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2856,7 +2856,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool
@@ -2927,7 +2927,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\$(ProjectName)-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 
 			/>
 			<Tool

@@ -73,7 +73,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -140,7 +140,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -206,7 +206,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -273,7 +273,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -340,7 +340,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -406,7 +406,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -473,7 +473,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -540,7 +540,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -606,7 +606,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -673,7 +673,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -740,7 +740,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -806,7 +806,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -873,7 +873,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -940,7 +940,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1006,7 +1006,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1073,7 +1073,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="dsound.lib dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1140,7 +1140,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1206,7 +1206,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1272,7 +1272,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1338,7 +1338,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1404,7 +1404,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1470,7 +1470,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1536,7 +1536,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1602,7 +1602,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1668,7 +1668,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1734,7 +1734,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1800,7 +1800,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1866,7 +1866,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1932,7 +1932,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1998,7 +1998,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2064,7 +2064,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2130,7 +2130,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2196,7 +2196,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2262,7 +2262,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2328,7 +2328,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2394,7 +2394,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2460,7 +2460,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2526,7 +2526,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2592,7 +2592,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2658,7 +2658,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2724,7 +2724,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2790,7 +2790,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjsip-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 			/>
 			<Tool
 				Name="VCALinkTool"

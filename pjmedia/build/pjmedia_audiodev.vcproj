@@ -72,7 +72,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -131,7 +131,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -198,7 +198,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -265,7 +265,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -332,7 +332,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -399,7 +399,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -466,7 +466,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -532,7 +532,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -591,7 +591,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -658,7 +658,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -725,7 +725,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -792,7 +792,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -859,7 +859,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -926,7 +926,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -992,7 +992,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1051,7 +1051,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1118,7 +1118,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1185,7 +1185,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1252,7 +1252,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1319,7 +1319,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1386,7 +1386,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1452,7 +1452,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1511,7 +1511,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1578,7 +1578,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1645,7 +1645,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1712,7 +1712,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1779,7 +1779,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1846,7 +1846,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1912,7 +1912,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -1971,7 +1971,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2038,7 +2038,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2105,7 +2105,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2172,7 +2172,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2239,7 +2239,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2306,7 +2306,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2372,7 +2372,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2431,7 +2431,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2498,7 +2498,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2565,7 +2565,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2632,7 +2632,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2699,7 +2699,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -2766,7 +2766,7 @@
 			/>
 			<Tool
 				Name="VCLibrarianTool"
-				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).lib"
+				OutputFile="..\lib\pjmedia-audiodev-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).lib"
 			/>
 			<Tool
 				Name="VCALinkTool"

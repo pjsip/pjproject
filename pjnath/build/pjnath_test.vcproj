@@ -77,7 +77,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -148,7 +148,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -218,7 +218,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -290,7 +290,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -361,7 +361,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -431,7 +431,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -503,7 +503,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -574,7 +574,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -644,7 +644,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -716,7 +716,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -787,7 +787,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -857,7 +857,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -929,7 +929,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1000,7 +1000,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1070,7 +1070,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1142,7 +1142,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="netapi32.lib mswsock.lib ws2_32.lib odbc32.lib odbccp32.lib ole32.lib "
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-$(PlatformName)-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1213,7 +1213,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6std-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1283,7 +1283,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm6pro-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1353,7 +1353,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1423,7 +1423,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1493,7 +1493,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1563,7 +1563,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1633,7 +1633,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1703,7 +1703,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1773,7 +1773,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1843,7 +1843,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1913,7 +1913,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -1983,7 +1983,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2053,7 +2053,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2123,7 +2123,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm2003sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2193,7 +2193,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2263,7 +2263,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2333,7 +2333,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2403,7 +2403,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2473,7 +2473,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2543,7 +2543,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5ppc-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2613,7 +2613,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2683,7 +2683,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2753,7 +2753,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2823,7 +2823,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2893,7 +2893,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
@@ -2963,7 +2963,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="ws2.lib"
-				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vs$(VSVer)-$(ConfigurationName).exe"
+				OutputFile="..\bin\pjnath-test-$(TargetCPU)-wm5sp-vc$(VSVer)-$(ConfigurationName).exe"
 
 			/>
 			<Tool
