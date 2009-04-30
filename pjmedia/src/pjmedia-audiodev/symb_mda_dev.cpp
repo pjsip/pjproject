@@ -706,6 +706,9 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 	    return;
 	}
 
+	if (f.type != PJMEDIA_FRAME_TYPE_AUDIO)
+	    pj_bzero(frameBuf_, frameBufSize_);
+	
 	// Increment timestamp.
 	timestamp_ += (frameBufSize_ / BYTES_PER_SAMPLE);
 
@@ -744,6 +747,9 @@ void CPjAudioOutputEngine::MaoscBufferCopied(TInt aError,
 	    return;
 	}
 
+	if (f.type != PJMEDIA_FRAME_TYPE_AUDIO)
+	    pj_bzero(frameBuf_, frameBufSize_);
+	
 	// Increment timestamp.
 	timestamp_ += (frameBufSize_ / BYTES_PER_SAMPLE);
 
