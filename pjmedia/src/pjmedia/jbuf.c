@@ -315,10 +315,6 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 
     assert(frame_size <= framelist->frame_size);
 
-    /* the first ever frame since inited/resetted. */
-    if (framelist->origin == INVALID_OFFSET)
-	framelist->origin = index;
-
     /* too late or duplicated or sequence restart */
     if (index < framelist->origin) {
 	if (framelist->origin - index < MAX_MISORDER) {
@@ -328,6 +324,11 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 	    /* sequence restart */
 	    framelist->origin = index - framelist->size;
 	}
+    }
+
+    /* if jbuf is empty, just reset the origin */
+    if (framelist->size == 0) {
+	framelist->origin = index;
     }
 
     /* get distance of this frame to the first frame in the buffer */
@@ -341,14 +342,8 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 	    framelist->origin = index;
 	    distance = 0;
 	} else {
-	    if (framelist->size == 0) {
-		/* if jbuf is empty, process the frame */
-		framelist->origin = index;
-		distance = 0;
-	    } else {
-		/* otherwise, reject the frame */
-		return PJ_ETOOMANY;
-	    }
+	    /* otherwise, reject the frame */
+	    return PJ_ETOOMANY;
 	}
     }
 
