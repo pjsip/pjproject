@@ -2,6 +2,7 @@ TARGET 		libg7221codec.lib
 TARGETTYPE 	lib
 
 //OPTION		CW -lang c++
+OPTION		GCCE -O2 -fno-unit-at-a-time
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
