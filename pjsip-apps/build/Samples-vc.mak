@@ -55,7 +55,7 @@ LDFLAGS = $(BUILD_FLAGS) $(LIBS) \
 
 SRCDIR = ..\src\samples
 OBJDIR = .\output\samples-$(TARGET)
-BINDIR = ..\bin\samples
+BINDIR = ..\bin\samples\$(TARGET)
 
 
 SAMPLES = $(BINDIR)\auddemo.exe \
@@ -84,20 +84,24 @@ SAMPLES = $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\tonegen.exe
 
 
-all: $(OBJDIR) $(SAMPLES)
+all: $(BINDIR) $(OBJDIR) $(SAMPLES)
 
 $(SAMPLES): $(SRCDIR)\$(@B).c $(LIBS) $(SRCDIR)\util.h Samples-vc.mak
 	cl -nologo -c $(SRCDIR)\$(@B).c /Fo$(OBJDIR)\$(@B).obj $(CFLAGS) 
-	cl /nologo $(OBJDIR)\$(@B).obj /Fe$(BINDIR)\$(@B)-$(TARGET).exe /Fm$(OBJDIR)\$(@B).map $(LDFLAGS)
+	cl /nologo $(OBJDIR)\$(@B).obj /Fe$@ /Fm$(OBJDIR)\$(@B).map $(LDFLAGS)
 	@rem the following two lines is just for cleaning up the 'bin' directory
-	if exist $(BINDIR)\*$(TARGET).ilk del /Q $(BINDIR)\*$(TARGET).ilk
-	if exist $(BINDIR)\*$(TARGET).pdb del /Q $(BINDIR)\*$(TARGET).pdb
+	if exist $(BINDIR)\*.ilk del /Q $(BINDIR)\*.ilk
+	if exist $(BINDIR)\*.pdb del /Q $(BINDIR)\*.pdb
+
+$(BINDIR):
+	if not exist $(BINDIR) mkdir $(BINDIR)
 
 $(OBJDIR):
 	if not exist $(OBJDIR) mkdir $(OBJDIR)
 
 clean:
 	echo Cleaning up samples...
-	if exist $(BINDIR) del /Q $(BINDIR)\*$(TARGET).*
+	if exist $(BINDIR) del /Q $(BINDIR)\*
+	if exist $(BINDIR) rmdir $(BINDIR)
 	if exist $(OBJDIR) del /Q $(OBJDIR)\*.*
 
