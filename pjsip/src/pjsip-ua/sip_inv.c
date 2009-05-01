@@ -3768,6 +3768,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
 		pjmedia_sdp_neg_cancel_offer(inv->neg);
 	    }
+
+	    if (tsx == inv->invite_tsx)
+		inv->invite_tsx = NULL;
 	}
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
