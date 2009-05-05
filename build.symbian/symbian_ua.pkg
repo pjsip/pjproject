@@ -4,7 +4,8 @@
 &EN
 
 ; Header
-#{"symbian_ua"},(0x200235D3), 0, 1, 1
+;#{"symbian_ua"},(0x200235D3), 0, 1, 1
+#{"symbian_ua"},(0xA000000D), 0, 1, 1
 
 ; Platform compatibility
 [0x101F7961], *, *, *,{"Series60ProductID"}

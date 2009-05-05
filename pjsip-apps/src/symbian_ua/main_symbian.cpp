@@ -29,7 +29,8 @@
 CConsoleBase* console;
 
 // Needed by APS
-TPtrC APP_UID = _L("200235D3");
+//TPtrC APP_UID = _L("200235D3");
+TPtrC APP_UID = _L("A000000D");
 
 
 ////////////////////////////////////////////////////////////////////////////

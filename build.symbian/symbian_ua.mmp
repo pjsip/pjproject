@@ -4,7 +4,8 @@
 
 TARGET 			symbian_ua.exe
 TARGETTYPE 		exe
-UID			0x0 0x200235D3
+//UID			0x0 0x200235D3
+UID			0x0 0xA000000D
 
 SOURCEPATH		..\pjsip-apps\src\symbian_ua
 
