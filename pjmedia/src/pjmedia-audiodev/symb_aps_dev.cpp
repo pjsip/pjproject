@@ -20,6 +20,8 @@
 #include <pjmedia-audiodev/audiodev_imp.h>
 #include <pjmedia-audiodev/errno.h>
 #include <pjmedia/alaw_ulaw.h>
+#include <pjmedia/resample.h>
+#include <pjmedia/stereo.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/math.h>
@@ -80,7 +82,7 @@ struct aps_stream
     pj_pool_t		*pool;			/**< Memory pool.       */
 
     // Common settings.
-    pjmedia_aud_param param;		/**< Stream param.	*/
+    pjmedia_aud_param 	 param;			/**< Stream param.	*/
     pjmedia_aud_rec_cb   rec_cb;		/**< Record callback.  	*/
     pjmedia_aud_play_cb	 play_cb;		/**< Playback callback. */
     void                *user_data;		/**< Application data.  */
@@ -97,6 +99,20 @@ struct aps_stream
     pj_int16_t		*rec_buf;		/**< Record buffer.	*/
     pj_uint16_t		 rec_buf_len;		/**< Record buffer length. */
     void                *strm_data;		/**< Stream data.	*/
+
+    /* Resampling is needed, in case audio device is opened with clock rate 
+     * other than 8kHz (only for PCM format).
+     */
+    pjmedia_resample	*play_resample;		/**< Resampler for playback. */
+    pjmedia_resample	*rec_resample;		/**< Resampler for recording */
+    pj_uint16_t		 resample_factor;	/**< Resample factor, requested
+						     clock rate / 8000	     */
+
+    /* When stream is working in PCM format, where the samples may need to be
+     * resampled from/to different clock rate and/or channel count, PCM buffer
+     * is needed to perform such resampling operations.
+     */
+    pj_int16_t		*pcm_buf;		/**< PCM buffer.	     */
 };
 
 
@@ -677,7 +693,9 @@ TInt CPjAudioEngine::ActivateSpeaker(TBool active)
     return KErrNotReady;
 }
 
-
+/****************************************************************************
+ * Internal APS callbacks for PCM format
+ */
 
 static void RecCbPcm(TAPSCommBuffer &buf, void *user_data)
 {
@@ -698,28 +716,63 @@ static void RecCbPcm(TAPSCommBuffer &buf, void *user_data)
     /* Decode APS buffer (coded in G.711) and put the PCM result into rec_buf.
      * Whenever rec_buf is full, call parent stream callback.
      */
-    unsigned dec_len = 0;
+    unsigned samples_processed = 0;
 
-    while (dec_len < aps_g711_frame_len) {
-	unsigned tmp;
+    while (samples_processed < aps_g711_frame_len) {
+	unsigned samples_to_process;
+	unsigned samples_req;
 
-	tmp = PJ_MIN(strm->param.samples_per_frame - strm->rec_buf_len,
-		     aps_g711_frame_len - dec_len);
+	samples_to_process = aps_g711_frame_len - samples_processed;
+	samples_req = (strm->param.samples_per_frame /
+		       strm->param.channel_count /
+		       strm->resample_factor) -
+		      strm->rec_buf_len;
+	if (samples_to_process > samples_req)
+	    samples_to_process = samples_req;
+
 	pjmedia_ulaw_decode(&strm->rec_buf[strm->rec_buf_len],
-			    buf.iBuffer.Ptr() + 2 + dec_len,
-			    tmp);
-	strm->rec_buf_len += tmp;
-	dec_len += tmp;
+			    buf.iBuffer.Ptr() + 2 + samples_processed,
+			    samples_to_process);
 
-	pj_assert(strm->rec_buf_len <= strm->param.samples_per_frame);
+	strm->rec_buf_len += samples_to_process;
+	samples_processed += samples_to_process;
 
-	if (strm->rec_buf_len == strm->param.samples_per_frame) {
+	/* Buffer is full, time to call parent callback */
+	if (strm->rec_buf_len == strm->param.samples_per_frame / 
+				 strm->param.channel_count /
+				 strm->resample_factor) 
+	{
 	    pjmedia_frame f;
-	    
+
+	    /* Need to resample clock rate? */
+	    if (strm->rec_resample) {
+		unsigned resampled = 0;
+		
+		while (resampled < strm->rec_buf_len) {
+		    pjmedia_resample_run(strm->rec_resample, 
+				&strm->rec_buf[resampled],
+				strm->pcm_buf + 
+				resampled * strm->resample_factor);
+		    resampled += 80;
+		}
+		f.buf = strm->pcm_buf;
+	    } else {
+		f.buf = strm->rec_buf;
+	    }
+
+	    /* Need to convert channel count? */
+	    if (strm->param.channel_count != 1) {
+		pjmedia_convert_channel_1ton((pj_int16_t*)f.buf,
+					     (pj_int16_t*)f.buf,
+					     strm->param.channel_count,
+					     strm->param.samples_per_frame /
+					     strm->param.channel_count,
+					     0);
+	    }
+
+	    /* Call parent callback */
 	    f.type = PJMEDIA_FRAME_TYPE_AUDIO;
-	    f.buf = strm->rec_buf;
-	    f.size = strm->rec_buf_len << 1;
-	    
+	    f.size = strm->param.samples_per_frame << 1;
 	    strm->rec_cb(strm->user_data, &f);
 	    strm->rec_buf_len = 0;
 	}
@@ -745,39 +798,74 @@ static void PlayCbPcm(TAPSCommBuffer &buf, void *user_data)
     /* Call parent stream callback to get PCM samples to play,
      * encode the PCM samples into G.711 and put it into APS buffer.
      */
-    unsigned enc_len = 0;
-    while (enc_len < g711_frame_len) {
+    unsigned samples_processed = 0;
+    
+    while (samples_processed < g711_frame_len) {
+	/* Need more samples to play, time to call parent callback */
 	if (strm->play_buf_len == 0) {
 	    pjmedia_frame f;
+	    unsigned samples_got;
 	    
-	    f.buf = strm->play_buf;
 	    f.size = strm->param.samples_per_frame << 1;
-	    
+	    if (strm->play_resample || strm->param.channel_count != 1)
+		f.buf = strm->pcm_buf;
+	    else
+		f.buf = strm->play_buf;
+
+	    /* Call parent callback */
 	    strm->play_cb(strm->user_data, &f);
 	    if (f.type != PJMEDIA_FRAME_TYPE_AUDIO) {
-		pjmedia_zero_samples(strm->play_buf, 
+		pjmedia_zero_samples((pj_int16_t*)f.buf, 
 				     strm->param.samples_per_frame);
 	    }
 	    
-	    strm->play_buf_len = strm->param.samples_per_frame;
+	    samples_got = strm->param.samples_per_frame / 
+			  strm->param.channel_count /
+			  strm->resample_factor;
+
+	    /* Need to convert channel count? */
+	    if (strm->param.channel_count != 1) {
+		pjmedia_convert_channel_nto1((pj_int16_t*)f.buf,
+					     (pj_int16_t*)f.buf,
+					     strm->param.channel_count,
+					     strm->param.samples_per_frame,
+					     PJ_FALSE,
+					     0);
+	    }
+
+	    /* Need to resample clock rate? */
+	    if (strm->play_resample) {
+		unsigned resampled = 0;
+		
+		while (resampled < samples_got) 
+		{
+		    pjmedia_resample_run(strm->play_resample, 
+				strm->pcm_buf + 
+				resampled * strm->resample_factor,
+				&strm->play_buf[resampled]);
+		    resampled += 80;
+		}
+	    }
+	    
+	    strm->play_buf_len = samples_got;
 	    strm->play_buf_start = 0;
 	}
 
 	unsigned tmp;
 
-	tmp = PJ_MIN(strm->play_buf_len, g711_frame_len - enc_len);
+	tmp = PJ_MIN(strm->play_buf_len, g711_frame_len - samples_processed);
 	pjmedia_ulaw_encode((pj_uint8_t*)&strm->play_buf[strm->play_buf_start],
 			    &strm->play_buf[strm->play_buf_start],
 			    tmp);
 	buf.iBuffer.Append((TUint8*)&strm->play_buf[strm->play_buf_start], tmp);
-	enc_len += tmp;
+	samples_processed += tmp;
 	strm->play_buf_len -= tmp;
 	strm->play_buf_start += tmp;
     }
 }
 
 /****************************************************************************
- * Internal APS callbacks
+ * Internal APS callbacks for non-PCM format
  */
 
 static void RecCb(TAPSCommBuffer &buf, void *user_data)
@@ -1262,6 +1350,24 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     /* Can only support 16bits per sample */
     PJ_ASSERT_RETURN(param->bits_per_sample == BITS_PER_SAMPLE, PJ_EINVAL);
 
+    /* Supported clock rates:
+     * - for non-PCM format: 8kHz  
+     * - for PCM format: 8kHz and 16kHz  
+     */
+    PJ_ASSERT_RETURN(param->clock_rate == 8000 ||
+		     (param->clock_rate == 16000 && 
+		      param->ext_fmt.id == PJMEDIA_FORMAT_L16),
+		     PJ_EINVAL);
+
+    /* Supported channels number:
+     * - for non-PCM format: mono
+     * - for PCM format: mono and stereo  
+     */
+    PJ_ASSERT_RETURN(param->channel_count == 1 || 
+		     (param->channel_count == 2 &&
+		      param->ext_fmt.id == PJMEDIA_FORMAT_L16),
+		     PJ_EINVAL);
+
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(af->pf, "aps-dev", 1000, 1000, NULL);
     PJ_ASSERT_RETURN(pool, PJ_ENOMEM);
@@ -1341,6 +1447,73 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 	aps_rec_cb  = &RecCb;
     }
 
+    strm->rec_cb = rec_cb;
+    strm->play_cb = play_cb;
+    strm->user_data = user_data;
+    strm->resample_factor = strm->param.clock_rate / 8000;
+
+    /* play_buf size is samples per frame scaled in to 8kHz mono. */
+    strm->play_buf = (pj_int16_t*)pj_pool_zalloc(
+					pool, 
+					(strm->param.samples_per_frame / 
+					strm->resample_factor /
+					strm->param.channel_count) << 1);
+    strm->play_buf_len = 0;
+    strm->play_buf_start = 0;
+
+    /* rec_buf size is samples per frame scaled in to 8kHz mono. */
+    strm->rec_buf  = (pj_int16_t*)pj_pool_zalloc(
+					pool, 
+					(strm->param.samples_per_frame / 
+					strm->resample_factor /
+					strm->param.channel_count) << 1);
+    strm->rec_buf_len = 0;
+
+    if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_G729) {
+	TBitStream *g729_bitstream = new TBitStream;
+	
+	PJ_ASSERT_RETURN(g729_bitstream, PJ_ENOMEM);
+	strm->strm_data = (void*)g729_bitstream;
+    }
+	
+    /* Init resampler when format is PCM and clock rate is not 8kHz */
+    if (strm->param.clock_rate != 8000 && 
+	strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16)
+    {
+	pj_status_t status;
+	
+	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	    /* Create resample for recorder */
+	    status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1, 
+					      8000,
+					      strm->param.clock_rate,
+					      80,
+					      &strm->rec_resample);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+    
+	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
+	    /* Create resample for player */
+	    status = pjmedia_resample_create( pool, PJ_TRUE, PJ_FALSE, 1, 
+					      strm->param.clock_rate,
+					      8000,
+					      80 * strm->resample_factor,
+					      &strm->play_resample);
+	    if (status != PJ_SUCCESS)
+		return status;
+	}
+    }
+
+    /* Create PCM buffer, when the clock rate is not 8kHz or not mono */
+    if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16 &&
+	(strm->resample_factor > 1 || strm->param.channel_count != 1)) 
+    {
+	strm->pcm_buf = (pj_int16_t*)pj_pool_zalloc(pool, 
+					strm->param.samples_per_frame << 1);
+    }
+
+    
     /* Create the audio engine. */
     TRAPD(err, strm->engine = CPjAudioEngine::NewL(strm,
 						   aps_rec_cb, aps_play_cb,
@@ -1356,28 +1529,6 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 		       &param->output_vol);
     }
 
-    strm->rec_cb = rec_cb;
-    strm->play_cb = play_cb;
-    strm->user_data = user_data;
-
-    /* play_buf size is samples per frame. */
-    strm->play_buf = (pj_int16_t*)pj_pool_zalloc(pool, 
-					strm->param.samples_per_frame << 1);
-    strm->play_buf_len = 0;
-    strm->play_buf_start = 0;
-
-    /* rec_buf size is samples per frame. */
-    strm->rec_buf  = (pj_int16_t*)pj_pool_zalloc(pool, 
-					strm->param.samples_per_frame << 1);
-    strm->rec_buf_len = 0;
-
-    if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_G729) {
-	TBitStream *g729_bitstream = new TBitStream;
-	
-	PJ_ASSERT_RETURN(g729_bitstream, PJ_ENOMEM);
-	strm->strm_data = (void*)g729_bitstream;
-    }
-	
     /* Done */
     strm->base.op = &stream_op;
     *p_aud_strm = &strm->base;

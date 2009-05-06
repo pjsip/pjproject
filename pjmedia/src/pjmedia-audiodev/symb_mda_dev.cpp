@@ -270,7 +270,6 @@ CPjAudioInputEngine::CPjAudioInputEngine(struct mda_stream *parent_strm,
       iInputStream_(NULL), iStreamBuffer_(NULL), iFramePtr_(0, 0),
       lastError_(KErrNone), timeStamp_(0),
       frameLen_(parent_strm->param.samples_per_frame * 
-	        parent_strm->param.channel_count * 
 	        BYTES_PER_SAMPLE),
       frameRecBuf_(NULL), frameRecBufLen_(0)
 {
@@ -425,9 +424,9 @@ void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
 	return;
     }
 
-    if (frameRecBufLen_ || aBuffer.Size() < frameLen_) {
-	pj_memcpy(frameRecBuf_ + frameRecBufLen_, (void*) aBuffer.Ptr(), aBuffer.Size());
-	frameRecBufLen_ += aBuffer.Size();
+    if (frameRecBufLen_ || aBuffer.Length() < frameLen_) {
+	pj_memcpy(frameRecBuf_ + frameRecBufLen_, (void*) aBuffer.Ptr(), aBuffer.Length());
+	frameRecBufLen_ += aBuffer.Length();
     }
 
     if (frameRecBufLen_) {
@@ -453,7 +452,7 @@ void CPjAudioInputEngine::MaiscBufferCopied(TInt aError,
 	
 	f.type = PJMEDIA_FRAME_TYPE_AUDIO;
 	f.buf = (void*)aBuffer.Ptr();
-	f.size = aBuffer.Size();
+	f.size = aBuffer.Length();
 	f.timestamp.u32.lo = timeStamp_;
 	f.bit_info = 0;
 	
@@ -571,7 +570,6 @@ CPjAudioOutputEngine::CPjAudioOutputEngine(struct mda_stream *parent_strm,
 void CPjAudioOutputEngine::ConstructL()
 {
     frameBufSize_ = parentStrm_->param.samples_per_frame *
-		    parentStrm_->param.channel_count * 
 		    BYTES_PER_SAMPLE;
     frameBuf_ = new TUint8[frameBufSize_];
 }
@@ -897,6 +895,9 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     PJ_ASSERT_RETURN((param->flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT)==0 ||
 		     param->ext_fmt.id == PJMEDIA_FORMAT_L16,
 		     PJ_ENOTSUP);
+    
+    /* It seems that MDA recorder only supports for mono channel. */
+    PJ_ASSERT_RETURN(param->channel_count == 1, PJ_EINVAL);
 
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(mf->pf, "symb_aud_dev", 1000, 1000, NULL);
