@@ -576,6 +576,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -643,6 +644,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -710,6 +712,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -777,6 +780,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -844,6 +848,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -911,6 +916,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1036,6 +1042,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1103,6 +1110,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1170,6 +1178,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1237,6 +1246,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1304,6 +1314,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1371,6 +1382,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1496,6 +1508,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1563,6 +1576,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1630,6 +1644,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1697,6 +1712,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1764,6 +1780,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""
@@ -1831,6 +1848,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				ExecutionBucket="7"
+				Optimization="2"
 				AdditionalIncludeDirectories="../..;../../g7221/common;../../../pjlib/include"
 				PreprocessorDefinitions="_LIB;"
 				PrecompiledHeaderFile=""

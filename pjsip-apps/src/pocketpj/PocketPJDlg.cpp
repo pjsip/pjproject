@@ -176,7 +176,8 @@ BOOL CPocketPJDlg::Restart()
     media_cfg.ec_tail_len = 0;
     media_cfg.ilbc_mode = 30;
     media_cfg.max_media_ports = 8;
-    media_cfg.quality = 5;
+    // use default quality setting
+    //media_cfg.quality = 5;
     media_cfg.thread_cnt = 1;
     media_cfg.enable_ice = m_Cfg.m_UseIce;
     media_cfg.no_vad = !m_Cfg.m_VAD;

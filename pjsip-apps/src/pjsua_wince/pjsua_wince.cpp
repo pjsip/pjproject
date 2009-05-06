@@ -383,7 +383,8 @@ static BOOL OnInitStack(void)
     media_cfg.clock_rate = 8000;
     media_cfg.ec_options = PJMEDIA_ECHO_SIMPLE;
     media_cfg.ec_tail_len = 256;
-    media_cfg.quality = 1;
+    // use default quality setting
+    //media_cfg.quality = 1;
     media_cfg.ptime = 20;
     media_cfg.enable_ice = USE_ICE;
 
