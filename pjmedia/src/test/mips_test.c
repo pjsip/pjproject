@@ -882,6 +882,7 @@ static pjmedia_port* g722_encode_decode(pj_pool_t *pool,
 			       samples_per_frame, flags, te);
 }
 
+#if PJMEDIA_HAS_G7221_CODEC
 /* G.722.1 benchmark benchmark */
 static pjmedia_port* g7221_encode_decode(pj_pool_t *pool,
 					 unsigned clock_rate,
@@ -911,6 +912,7 @@ static pjmedia_port* g7221c_encode_decode(pj_pool_t *pool,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
+#endif	/* PJMEDIA_HAS_G7221_CODEC */
 
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
 static pj_status_t init_l16_default(pjmedia_endpt *endpt)
@@ -1939,6 +1941,7 @@ static pjmedia_port* create_stream_g722( pj_pool_t *pool,
 }
 
 /* G722.1 stream */
+#if PJMEDIA_HAS_G7221_CODEC
 static pjmedia_port* create_stream_g7221( pj_pool_t *pool,
 					  unsigned clock_rate,
 					  unsigned channel_count,
@@ -1967,6 +1970,7 @@ static pjmedia_port* create_stream_g7221c( pj_pool_t *pool,
 			 clock_rate, channel_count,
 			 samples_per_frame, flags, te);
 }
+#endif	/* PJMEDIA_HAS_G7221_CODEC */ 
 
 /***************************************************************************/
 /* Delay buffer */

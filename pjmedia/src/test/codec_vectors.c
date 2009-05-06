@@ -125,11 +125,14 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 	}
 
 	if (out_frame.size) {
-	    fwrite(out_frame.buf, out_frame.size, 1, output);
+	    int cnt;
+
+	    cnt = fwrite(out_frame.buf, out_frame.size, 1, output);
 
 	    if (encoded_frame_len == 0)
 		encoded_frame_len = out_frame.size;
-	}    }
+	}    
+    }
 
     fclose(output);
     output = NULL;
@@ -490,7 +493,7 @@ on_return:
     return rc;
 }
 
-
+#if PJMEDIA_HAS_G7221_CODEC
 /* For ITU testing, off the 2 lsbs. */
 static void g7221_pcm_manip(short *pcm, unsigned count)
 {
@@ -499,6 +502,7 @@ static void g7221_pcm_manip(short *pcm, unsigned count)
         pcm[i] &= 0xfffc;
 
 }
+#endif	/* PJMEDIA_HAS_G7221_CODEC */
 
 int codec_test_vectors(void)
 {

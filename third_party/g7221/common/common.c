@@ -169,7 +169,7 @@ void comp_powercat_and_catbalance(Word16 *power_categories,
     Word16 min_rate_categories[MAX_NUMBER_OF_REGIONS];
     Word16 temp_category_balances[2*MAX_NUM_CATEGORIZATION_CONTROL_POSSIBILITIES];
     Word16 raw_max, raw_min;
-    Word16 raw_max_index, raw_min_index;
+    Word16 raw_max_index=0, raw_min_index=0;
     Word16 max_rate_pointer, min_rate_pointer;
     Word16 max, min;
     Word16 itemp0;

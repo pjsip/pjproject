@@ -472,8 +472,8 @@ void decode_vector_quantized_mlt_indices(Bit_Obj  *bitobj,
     Word16 vec_dim;
     Word16 num_vecs;
     Word16 index;
-    Word16 bit;
-    Word16 signs_index;
+    Word16 bit=0;
+    Word16 signs_index=0;
     Word16 num_sign_bits;
     Word16 ran_out_of_bits_flag;
     Word16 *decoder_table_ptr;
