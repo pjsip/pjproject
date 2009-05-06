@@ -522,12 +522,16 @@ static void close_snd_timer_cb( pj_timer_heap_t *th,
 {
     PJ_UNUSED_ARG(th);
 
-    PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d seconds", 
-	      pjsua_var.media_cfg.snd_auto_close_time));
+    PJSUA_LOCK();
+    if (entry->id) {
+	PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d seconds", 
+		  pjsua_var.media_cfg.snd_auto_close_time));
 
-    entry->id = PJ_FALSE;
+	entry->id = PJ_FALSE;
 
-    close_snd_dev();
+	close_snd_dev();
+    }
+    PJSUA_UNLOCK();
 }
 
 
@@ -1666,10 +1670,12 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 					pjsua_conf_port_id sink)
 {
     /* If sound device idle timer is active, cancel it first. */
+    PJSUA_LOCK();
     if (pjsua_var.snd_idle_timer.id) {
 	pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
 	pjsua_var.snd_idle_timer.id = PJ_FALSE;
     }
+    PJSUA_UNLOCK();
 
 
     /* For audio switchboard (i.e. APS-Direct):
