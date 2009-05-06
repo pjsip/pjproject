@@ -234,7 +234,7 @@
 
 
 /**
- * G.722.1 codec is disabled by default, it's currently under development.
+ * G.722.1 codec is disabled by default.
  */
 #ifndef PJMEDIA_HAS_G7221_CODEC
 #   define PJMEDIA_HAS_G7221_CODEC		0
