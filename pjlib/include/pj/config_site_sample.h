@@ -133,8 +133,17 @@
     /* For CPU reason, disable speex AEC and use the echo suppressor. */
     #define PJMEDIA_HAS_SPEEX_AEC		0
 
-    /* Shouldn't use resampling for performance reason too. */
-    #define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
+    /* Previously, resampling is disabled due to performance reason and
+     * this condition prevented some 'light' wideband codecs (e.g: G722.1)
+     * to work along with narrowband codecs. Lately, some tests showed
+     * that 16kHz <-> 8kHz resampling using libresample small filter was 
+     * affordable on ARM9 222 MHz, so here we decided to enable resampling.
+     * Note that it is important to make sure that libresample is created
+     * using small filter. For example PJSUA_DEFAULT_CODEC_QUALITY must
+     * be set to 3 or 4 so pjsua-lib will apply small filter resampling.
+     */
+    //#define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_NONE
+    #define PJMEDIA_RESAMPLE_IMP		PJMEDIA_RESAMPLE_LIBRESAMPLE
 
     /* Use the lighter WSOLA implementation */
     #define PJMEDIA_WSOLA_IMP			PJMEDIA_WSOLA_IMP_WSOLA_LITE
@@ -172,8 +181,10 @@
      * PJSUA settings.
      */
 
-    /* Default codec quality */
-    #define PJSUA_DEFAULT_CODEC_QUALITY		5
+    /* Default codec quality, previously was set to 5, however it is now
+     * set to 4 to make sure pjsua instantiates resampler with small filter.
+     */
+    #define PJSUA_DEFAULT_CODEC_QUALITY		4
 
     /* Set maximum number of dialog/transaction/calls to minimum */
     #define PJSIP_MAX_TSX_COUNT 		31

@@ -45,6 +45,7 @@ STATICLIBRARY	libsrtp.lib
 STATICLIBRARY	libgsmcodec.lib
 STATICLIBRARY	libspeexcodec.lib
 STATICLIBRARY	libg7221codec.lib
+STATICLIBRARY	libresample.lib
 
 
 #if SND_USE_NULL

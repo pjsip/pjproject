@@ -98,6 +98,7 @@ SYSTEMINCLUDE	..\pjnath\include
 SYSTEMINCLUDE	..\third_party\srtp\include
 SYSTEMINCLUDE	..\third_party\srtp\crypto\include
 SYSTEMINCLUDE	..\third_party\build\srtp
+SYSTEMINCLUDE	..
 
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc

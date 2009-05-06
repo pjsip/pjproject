@@ -44,6 +44,7 @@ STATICLIBRARY		pjsdp.lib
 STATICLIBRARY		pjnath.lib
 STATICLIBRARY		pjlib_util.lib pjlib.lib
 STATICLIBRARY		libsrtp.lib
+STATICLIBRARY		libresample.lib
 
 #if SND_HAS_APS
 	LIBRARY		APSSession2.lib

@@ -23,6 +23,9 @@ libspeexcodec.mmp
 libg7221codec.mmp
 libpassthroughcodec.mmp
 
+/* Resample */
+libresample.mmp
+
 /* Audio device. */
 pjmedia_audiodev.mmp
 
