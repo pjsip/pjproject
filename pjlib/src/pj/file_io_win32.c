@@ -64,6 +64,7 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
 	     * to be working on WM6. All are tested on emulator though.
 	     * Removing this also seem to work (i.e. data is appended), so
 	     * I guess this flag is "optional".
+	     * See http://trac.pjsip.org/repos/ticket/825
 	     */
             dwDesiredAccess |= FILE_APPEND_DATA;
 #endif
