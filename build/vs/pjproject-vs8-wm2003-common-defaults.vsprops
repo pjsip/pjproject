@@ -17,6 +17,7 @@
 		StackReserveSize="65536"
 		StackCommitSize="4096"
 		EntryPointSymbol="WinMainCRTStartup"
+		TargetMachine="3"
 	/>
 	<Tool
 		Name="VCResourceCompilerTool"
