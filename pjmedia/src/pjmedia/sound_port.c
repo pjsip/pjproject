@@ -66,7 +66,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
 {
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
-    unsigned required_size = frame->size;
+    const unsigned required_size = frame->size;
     pj_status_t status;
 
     port = snd_port->port;
@@ -81,7 +81,6 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
 	goto no_frame;
 
     /* Must supply the required samples */
-    PJ_UNUSED_ARG(required_size);
     pj_assert(frame->size == required_size);
 
     if (snd_port->ec_state) {
@@ -98,6 +97,9 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     return PJ_SUCCESS;
 
 no_frame:
+    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    frame->size = required_size;
+    pj_bzero(frame->buf, frame->size);
 
     if (snd_port->ec_state && !snd_port->ec_suspended) {
 	++snd_port->ec_suspend_count;
