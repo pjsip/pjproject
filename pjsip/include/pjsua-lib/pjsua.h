@@ -472,6 +472,16 @@ typedef struct pjsua_logging_config
     pj_str_t	log_filename;
 
     /**
+     * Additional flags to be given to #pj_file_open() when opening
+     * the log file. By default, the flag is PJ_O_WRONLY. Application
+     * may set PJ_O_APPEND here so that logs are appended to existing
+     * file instead of overwriting it.
+     *
+     * Default is 0.
+     */
+    unsigned	log_file_flags;
+
+    /**
      * Optional callback function to be called to write log to 
      * application specific device. This function will be called for
      * log messages on input verbosity level.

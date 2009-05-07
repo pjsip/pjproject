@@ -476,10 +476,11 @@ PJ_DEF(pj_status_t) pjsua_reconfigure_logging(const pjsua_logging_config *cfg)
 
     /* If output log file is desired, create the file: */
     if (pjsua_var.log_cfg.log_filename.slen) {
-
+	unsigned flags = PJ_O_WRONLY;
+	flags |= pjsua_var.log_cfg.log_file_flags;
 	status = pj_file_open(pjsua_var.pool, 
 			      pjsua_var.log_cfg.log_filename.ptr,
-			      PJ_O_WRONLY, 
+			      flags, 
 			      &pjsua_var.log_file);
 
 	if (status != PJ_SUCCESS) {
