@@ -59,7 +59,14 @@ PJ_DEF(pj_status_t) pj_file_open( pj_pool_t *pool,
     if ((flags & PJ_O_WRONLY) == PJ_O_WRONLY) {
         dwDesiredAccess |= GENERIC_WRITE;
         if ((flags & PJ_O_APPEND) == PJ_O_APPEND) {
+#if !defined(PJ_WIN32_WINCE) || !PJ_WIN32_WINCE
+	    /* FILE_APPEND_DATA is invalid on WM2003 and WM5, but it seems
+	     * to be working on WM6. All are tested on emulator though.
+	     * Removing this also seem to work (i.e. data is appended), so
+	     * I guess this flag is "optional".
+	     */
             dwDesiredAccess |= FILE_APPEND_DATA;
+#endif
 	    dwCreationDisposition |= OPEN_ALWAYS;
         } else {
             dwDesiredAccess &= ~(FILE_APPEND_DATA);
