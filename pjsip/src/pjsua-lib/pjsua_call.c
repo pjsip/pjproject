@@ -3415,7 +3415,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    msg = rdata->msg_info.msg;
 	    body = msg->body;
 	    if (!body) {
-		PJ_LOG(4,(THIS_FILE, 
+		PJ_LOG(2,(THIS_FILE, 
 			  "Warning: received NOTIFY without message body"));
 		return;
 	    }
@@ -3424,7 +3424,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    if (pj_stricmp2(&body->content_type.type, "message") != 0 ||
 		pj_stricmp2(&body->content_type.subtype, "sipfrag") != 0)
 	    {
-		PJ_LOG(4,(THIS_FILE, 
+		PJ_LOG(2,(THIS_FILE, 
 			  "Warning: received NOTIFY with non message/sipfrag "
 			  "content"));
 		return;
@@ -3434,7 +3434,7 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	    status = pjsip_parse_status_line((char*)body->data, body->len, 
 					     &status_line);
 	    if (status != PJ_SUCCESS) {
-		PJ_LOG(4,(THIS_FILE, 
+		PJ_LOG(2,(THIS_FILE, 
 			  "Warning: received NOTIFY with invalid "
 			  "message/sipfrag content"));
 		return;

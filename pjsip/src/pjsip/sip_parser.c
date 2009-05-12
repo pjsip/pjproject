@@ -1588,7 +1588,8 @@ PJ_DEF(pj_status_t) pjsip_parse_status_line( char *buf, pj_size_t size,
     PJ_USE_EXCEPTION;
 
     pj_bzero(status_line, sizeof(*status_line));
-    pj_scan_init(&scanner, buf, size, 0, &on_syntax_error);
+    pj_scan_init(&scanner, buf, size, PJ_SCAN_AUTOSKIP_WS_HEADER, 
+		 &on_syntax_error);
 
     PJ_TRY {
 	int_parse_status_line(&scanner, status_line);

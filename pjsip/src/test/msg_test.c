@@ -815,10 +815,17 @@ static pjsip_msg *create_msg1(pj_pool_t *pool)
 
 static pj_status_t simple_test(void)
 {
+    char stbuf[] = "SIP/2.0 180 Ringing like it never rings before";
     unsigned i;
+    pjsip_status_line st_line;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  simple test.."));
+    
+    status = pjsip_parse_status_line(stbuf, pj_ansi_strlen(stbuf), &st_line);
+    if (status != PJ_SUCCESS)
+	return status;
+
     for (i=0; i<PJ_ARRAY_SIZE(test_array); ++i) {
 	pj_pool_t *pool;
 	pool = pjsip_endpt_create_pool(endpt, NULL, POOL_SIZE, POOL_SIZE);
