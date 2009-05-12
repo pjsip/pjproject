@@ -2710,8 +2710,8 @@ PJ_DEF(pj_status_t) pj_stun_msg_encode(pj_stun_msg *msg,
 	/* Calculate HMAC-SHA1 digest, add zero padding to input
 	 * if necessary to make the input 64 bytes aligned.
 	 */
-	pj_hmac_sha1_init(&ctx, (pj_uint8_t*)key->ptr, key->slen);
-	pj_hmac_sha1_update(&ctx, (pj_uint8_t*)start, buf-start);
+	pj_hmac_sha1_init(&ctx, (const pj_uint8_t*)key->ptr, key->slen);
+	pj_hmac_sha1_update(&ctx, (const pj_uint8_t*)start, buf-start);
 #if PJ_STUN_OLD_STYLE_MI_FINGERPRINT
 	// These are obsoleted in rfc3489bis-08
 	if ((buf-start) & 0x3F) {
