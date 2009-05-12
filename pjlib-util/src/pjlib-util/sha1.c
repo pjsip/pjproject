@@ -105,7 +105,7 @@ A million repetitions of "a"
 #undef SHA1HANDSOFF
 
 
-static void SHA1_Transform(pj_uint32_t state[5], const pj_uint8_t buffer[64]);
+static void SHA1_Transform(pj_uint32_t state[5], pj_uint8_t buffer[64]);
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
@@ -131,7 +131,7 @@ static void SHA1_Transform(pj_uint32_t state[5], const pj_uint8_t buffer[64]);
 
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
-static void SHA1_Transform(pj_uint32_t state[5], const pj_uint8_t buffer[64])
+static void SHA1_Transform(pj_uint32_t state[5], pj_uint8_t buffer[64])
 {
     pj_uint32_t a, b, c, d, e;
     typedef union {
@@ -215,7 +215,9 @@ PJ_DEF(void) pj_sha1_update(pj_sha1_context* context,
         pj_memcpy(&context->buffer[j], data, (i = 64-j));
         SHA1_Transform(context->state, context->buffer);
         for ( ; i + 63 < len; i += 64) {
-            SHA1_Transform(context->state, data + i);
+	    pj_uint8_t tmp[64];
+	    pj_memcpy(tmp, data + i, 64);
+            SHA1_Transform(context->state, tmp);
         }
         j = 0;
     }
