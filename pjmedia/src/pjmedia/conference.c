@@ -503,6 +503,8 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
 		pjmedia_aud_dev_get_info(param.rec_id, &snd_dev_info);
 	    pj_strdup2_with_null(pool, &conf_port->name, snd_dev_info.name);
 	}
+
+	PJ_LOG(5,(THIS_FILE, "Sound device successfully created for port 0"));
     }
 
 
@@ -510,8 +512,6 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     conf->ports[0] = conf_port;
     conf->port_cnt++;
 
-
-    PJ_LOG(5,(THIS_FILE, "Sound device successfully created for port 0"));
     return PJ_SUCCESS;
 }
 
