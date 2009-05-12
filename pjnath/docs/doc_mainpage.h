@@ -67,8 +67,8 @@ PJNATH has the following features:
    TURN is a protocol for relaying communications by means of using relay, 
    and combined with ICE it provides efficient last effort alternative for 
    the communication path. The TURN implementation in PJNATH complies to 
-   <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-13.txt">
-   draft-ietf-behave-turn-13</A> draft.\n\n
+   <A HREF="http://www.ietf.org/internet-drafts/draft-ietf-behave-turn-14.txt">
+   draft-ietf-behave-turn-14</A> draft.\n\n
 
  - <strong>Interactive Connectivity Establishmen (ICE)</strong> implementation.\n
    ICE is a protocol for discovering communication path(s) between two 
