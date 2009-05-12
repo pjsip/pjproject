@@ -1768,7 +1768,9 @@ static struct ch_t *lookup_ch_by_addr(pj_turn_session *sess,
      * but that would cause duplicate CreatePermission to be sent
      * during refreshing.
      */
-    lookup_perm(sess, &ch->addr, pj_sockaddr_get_len(&ch->addr), PJ_TRUE);
+    if (ch && update) {
+	lookup_perm(sess, &ch->addr, pj_sockaddr_get_len(&ch->addr), PJ_TRUE);
+    }
 
     return ch;
 }
