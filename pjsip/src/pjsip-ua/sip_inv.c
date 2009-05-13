@@ -2480,7 +2480,12 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
 	if (status == PJ_SUCCESS) {
 	    /* Remove the message body */
 	    tdata->msg->body = NULL;
-	    pjsip_dlg_send_response(inv->dlg, invite_tsx, tdata);
+	    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
+		status = pjsip_100rel_tx_response(inv, tdata);
+	    } else {
+		status = pjsip_dlg_send_response(inv->dlg, invite_tsx, 
+						 tdata);
+	    }
 	}
     }
 
