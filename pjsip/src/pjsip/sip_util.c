@@ -1181,6 +1181,40 @@ stateless_send_resolver_callback( pj_status_t status,
     /* Copy server addresses */
     pj_memcpy( &stateless_data->addr, addr, sizeof(pjsip_server_addresses));
 
+    /* RFC 3261 section 18.1.1:
+     * If a request is within 200 bytes of the path MTU, or if it is larger
+     * than 1300 bytes and the path MTU is unknown, the request MUST be sent
+     * using an RFC 2914 [43] congestion controlled transport protocol, such
+     * as TCP.
+     */
+    if (stateless_data->tdata->msg->type == PJSIP_REQUEST_MSG &&
+	addr->count > 0 && 
+	addr->entry[0].type == PJSIP_TRANSPORT_UDP)
+    {
+	char buf[1500];
+	int len;
+
+	/* Check if request message is larger than 1300 bytes. */
+	len = pjsip_msg_print(stateless_data->tdata->msg, buf, 1300);
+	if (len < 0) {
+	    int i;
+	    int count = stateless_data->addr.count;
+
+	    /* Insert "TCP version" of resolved UDP addresses at the
+	     * beginning.
+	     */
+	    if (count * 2 > PJSIP_MAX_RESOLVED_ADDRESSES)
+		count = PJSIP_MAX_RESOLVED_ADDRESSES / 2;
+	    for (i = 0; i < count; ++i) {
+		pj_memcpy(&stateless_data->addr.entry[i+count],
+			  &stateless_data->addr.entry[i],
+			  sizeof(stateless_data->addr.entry[0]));
+		stateless_data->addr.entry[i].type = PJSIP_TRANSPORT_TCP;
+	    }
+	    stateless_data->addr.count = count * 2;
+	}
+    }
+
     /* Process the addresses. */
     stateless_send_transport_cb( stateless_data, stateless_data->tdata,
 				 -PJ_EPENDING);
