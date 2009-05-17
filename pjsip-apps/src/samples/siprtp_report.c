@@ -77,7 +77,7 @@ static void print_call(int call_index)
 
     /* Call identification */
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
-    if (len < 1)
+    if (len < 0)
 	pj_ansi_strcpy(userinfo, "<--uri too long-->");
     else
 	userinfo[len] = '\0';
