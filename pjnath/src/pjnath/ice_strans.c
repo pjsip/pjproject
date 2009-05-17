@@ -158,6 +158,7 @@ struct pj_ice_strans
     pj_ice_strans_cfg	     cfg;	/**< Configuration.		*/
     pj_ice_strans_cb	     cb;	/**< Application callback.	*/
     pj_lock_t		    *init_lock; /**< Initialization mutex.	*/
+    pj_ice_sess_options	     opt;	/**< ICE session options	*/
 
     pj_ice_sess		    *ice;	/**< ICE session.		*/
     pj_time_val		     start_time;/**< Time when ICE was started	*/
@@ -200,6 +201,8 @@ PJ_DEF(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg)
     cfg->af = pj_AF_INET();
     cfg->stun.port = PJ_STUN_PORT;
     cfg->turn.conn_type = PJ_TURN_TP_UDP;
+
+    cfg->stun.max_host_cands = 64;
 }
 
 
@@ -245,7 +248,7 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
     comp->default_cand = 0;
 
     /* Create STUN transport if configured */
-    if (ice_st->cfg.stun.server.slen || !ice_st->cfg.stun.no_host_cands) {
+    if (ice_st->cfg.stun.server.slen || ice_st->cfg.stun.max_host_cands) {
 	pj_stun_sock_cb stun_sock_cb;
 	pj_ice_sess_cand *cand;
 
@@ -309,10 +312,10 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
 	}
 
-	/* Add local addresses to host candidates, unless no_host_cands
-	 * flag is set.
+	/* Add local addresses to host candidates, unless max_host_cands
+	 * is set to zero.
 	 */
-	if (ice_st->cfg.stun.no_host_cands == PJ_FALSE) {
+	if (ice_st->cfg.stun.max_host_cands) {
 	    pj_stun_sock_info stun_sock_info;
 	    unsigned i;
 
@@ -321,7 +324,9 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	    if (status != PJ_SUCCESS)
 		return status;
 
-	    for (i=0; i<stun_sock_info.alias_cnt; ++i) {
+	    for (i=0; i<stun_sock_info.alias_cnt && 
+		      i<ice_st->cfg.stun.max_host_cands; ++i) 
+	    {
 		char addrinfo[PJ_INET6_ADDRSTRLEN+10];
 		const pj_sockaddr *addr = &stun_sock_info.aliases[i];
 
@@ -443,6 +448,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     ice_st->pool = pool;
     ice_st->obj_name = pool->obj_name;
     ice_st->user_data = user_data;
+
+    pj_ice_sess_options_default(&ice_st->opt);
 
     PJ_LOG(4,(ice_st->obj_name, 
 	      "Creating ICE stream transport with %d component(s)",
@@ -647,6 +654,30 @@ PJ_DEF(void*) pj_ice_strans_get_user_data(pj_ice_strans *ice_st)
 
 
 /*
+ * Get the value of various options of the ICE stream transport.
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_get_options( pj_ice_strans *ice_st,
+					       pj_ice_sess_options *opt)
+{
+    PJ_ASSERT_RETURN(ice_st && opt, PJ_EINVAL);
+    pj_memcpy(opt, &ice_st->opt, sizeof(*opt));
+    return PJ_SUCCESS;
+}
+
+/*
+ * Specify various options for this ICE stream transport. 
+ */
+PJ_DEF(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
+					      const pj_ice_sess_options *opt)
+{
+    PJ_ASSERT_RETURN(ice_st && opt, PJ_EINVAL);
+    pj_memcpy(&ice_st->opt, opt, sizeof(*opt));
+    if (ice_st->ice)
+	pj_ice_sess_set_options(ice_st->ice, &ice_st->opt);
+    return PJ_SUCCESS;
+}
+
+/*
  * Create ICE!
  */
 PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
@@ -681,6 +712,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 
     /* Associate user data */
     ice_st->ice->user_data = (void*)ice_st;
+
+    /* Set options */
+    pj_ice_sess_set_options(ice_st->ice, &ice_st->opt);
 
     /* If default candidate for components are SRFLX one, upload a custom
      * type priority to ICE session so that SRFLX candidates will get

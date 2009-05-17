@@ -324,6 +324,39 @@
 
 
 /**
+ * For a controlled agent, specify how long it wants to wait (in milliseconds)
+ * for the controlling agent to complete sending connectivity check with
+ * nominated flag set to true for all components after the controlled agent
+ * has found that all connectivity checks in its checklist have been completed
+ * and there is at least one successful (but not nominated) check for every
+ * component.
+ *
+ * When selecting the value, bear in mind that the connectivity check from
+ * controlling agent may be delayed because of delay in receiving SDP answer
+ * from the controlled agent.
+ *
+ * Application may set this value to -1 to disable this timer.
+ *
+ * Default: 10000 (milliseconds)
+ */
+#ifndef ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT
+#   define ICE_CONTROLLED_AGENT_WAIT_NOMINATION_TIMEOUT	10000
+#endif
+
+
+/**
+ * For controlling agent if it uses regular nomination, specify the delay to
+ * perform nominated check (connectivity check with USE-CANDIDATE attribute)
+ * after all components have a valid pair.
+ *
+ * Default: 4*PJ_STUN_RTO_VALUE (milliseconds)
+ */
+#ifndef PJ_ICE_NOMINATED_CHECK_DELAY
+#   define PJ_ICE_NOMINATED_CHECK_DELAY		    (4*PJ_STUN_RTO_VALUE)
+#endif
+
+
+/**
  * Minimum interval value to be used for sending STUN keep-alive on the ICE
  * stream transport, in seconds. This minimum interval, plus a random value
  * which maximum is PJ_ICE_ST_KEEP_ALIVE_MAX_RAND, specify the actual interval

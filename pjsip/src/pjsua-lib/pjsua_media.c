@@ -810,7 +810,8 @@ static pj_status_t create_ice_media_transports(void)
 	ice_cfg.stun.server = pj_str(stunip);
 	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
     }
-    ice_cfg.stun.no_host_cands = pjsua_var.media_cfg.ice_no_host_cands;
+    if (pjsua_var.media_cfg.ice_no_host_cands)
+	ice_cfg.stun.max_host_cands = 0;
 
     /* Configure TURN settings */
     if (pjsua_var.media_cfg.enable_turn) {

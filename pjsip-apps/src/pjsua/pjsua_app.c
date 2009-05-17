@@ -4728,7 +4728,7 @@ static pj_status_t create_ipv6_media_transports(void)
 	for (j=0; j<MAX_RETRY; ++j) {
 	    status = pjmedia_transport_udp_create3(pjsua_get_pjmedia_endpt(), 
 						   pj_AF_INET6(),
-						   NULL, 
+						   app_config.rtp_cfg.public_addr.ptr, 
 						   &app_config.rtp_cfg.bound_addr,
 						   port, 
 						   0, &tp[i].transport);
