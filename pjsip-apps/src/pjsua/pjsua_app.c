@@ -4720,19 +4720,62 @@ static pj_status_t create_ipv6_media_transports(void)
 
     for (i=0; i<app_config.cfg.max_calls; ++i) {
 	enum { MAX_RETRY = 10 };
+	pj_sock_t sock[2];
+	pjmedia_sock_info si;
 	unsigned j;
 
 	/* Get rid of uninitialized var compiler warning with MSVC */
 	status = PJ_SUCCESS;
 
 	for (j=0; j<MAX_RETRY; ++j) {
-	    status = pjmedia_transport_udp_create3(pjsua_get_pjmedia_endpt(), 
-						   pj_AF_INET6(),
-						   app_config.rtp_cfg.public_addr.ptr, 
-						   &app_config.rtp_cfg.bound_addr,
-						   port, 
-						   0, &tp[i].transport);
+	    unsigned k;
 
+	    for (k=0; k<2; ++k) {
+		pj_sockaddr bound_addr;
+
+		status = pj_sock_socket(pj_AF_INET6(), pj_SOCK_DGRAM(), 0, &sock[k]);
+		if (status != PJ_SUCCESS)
+		    break;
+
+		status = pj_sockaddr_init(pj_AF_INET6(), &bound_addr,
+					  &app_config.rtp_cfg.bound_addr, 
+					  (unsigned short)(port+k));
+		if (status != PJ_SUCCESS)
+		    break;
+
+		status = pj_sock_bind(sock[k], &bound_addr, 
+				      pj_sockaddr_get_len(&bound_addr));
+		if (status != PJ_SUCCESS)
+		    break;
+	    }
+	    if (status != PJ_SUCCESS) {
+		if (k==1)
+		    pj_sock_close(sock[0]);
+
+		if (port != 0)
+		    port += 10;
+		else
+		    break;
+
+		continue;
+	    }
+
+	    pj_bzero(&si, sizeof(si));
+	    si.rtp_sock = sock[0];
+	    si.rtcp_sock = sock[1];
+	
+	    pj_sockaddr_init(pj_AF_INET6(), &si.rtp_addr_name, 
+			     &app_config.rtp_cfg.public_addr, 
+			     (unsigned short)(port));
+	    pj_sockaddr_init(pj_AF_INET6(), &si.rtcp_addr_name, 
+			     &app_config.rtp_cfg.public_addr, 
+			     (unsigned short)(port+1));
+
+	    status = pjmedia_transport_udp_attach(pjsua_get_pjmedia_endpt(),
+						  NULL,
+						  &si,
+						  0,
+						  &tp[i].transport);
 	    if (port != 0)
 		port += 10;
 	    else
