@@ -3687,7 +3687,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
 		}
 
-		pjsua_call_xfer_replaces(call, dst_call, 0, &msg_data);
+		pjsua_call_xfer_replaces(call, dst_call, 
+					 PJSUA_XFER_NO_REQUIRE_REPLACES, 
+					 &msg_data);
 	    }
 	    break;
 
