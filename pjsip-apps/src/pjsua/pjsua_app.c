@@ -264,7 +264,8 @@ static void usage(void)
     puts  ("");
     puts  ("Media Transport Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
-    puts  ("  --ice-no-host       Disable ICE host candidates (default: no)");
+    puts  ("  --ice-regular       Use ICE regular nomination (default: aggressive)");
+    puts  ("  --ice-max-hosts=N   Set maximum number of ICE host candidates");
     puts  ("  --ice-no-rtcp       Disable RTCP component in ICE (default: no)");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
@@ -476,8 +477,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
-	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
-	   OPT_USE_TURN, OPT_ICE_NO_HOST, OPT_ICE_NO_RTCP, OPT_TURN_SRV, 
+	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_USE_SRTP, OPT_SRTP_SECURE,
+	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV, 
 	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
@@ -553,8 +554,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 
 	{ "use-ice",    0, 0, OPT_USE_ICE},
+	{ "ice-regular",0, 0, OPT_ICE_REGULAR},
 	{ "use-turn",	0, 0, OPT_USE_TURN},
-	{ "ice-no-host",0, 0, OPT_ICE_NO_HOST},
+	{ "ice-max-hosts",1, 0, OPT_ICE_MAX_HOSTS},
 	{ "ice-no-rtcp",0, 0, OPT_ICE_NO_RTCP},
 	{ "turn-srv",	1, 0, OPT_TURN_SRV},
 	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
@@ -992,12 +994,16 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->media_cfg.enable_ice = PJ_TRUE;
 	    break;
 
+	case OPT_ICE_REGULAR:
+	    cfg->media_cfg.ice_opt.aggressive = PJ_FALSE;
+	    break;
+
 	case OPT_USE_TURN:
 	    cfg->media_cfg.enable_turn = PJ_TRUE;
 	    break;
 
-	case OPT_ICE_NO_HOST:
-	    cfg->media_cfg.ice_no_host_cands = PJ_TRUE;
+	case OPT_ICE_MAX_HOSTS:
+	    cfg->media_cfg.ice_max_host_cands = my_atoi(pj_optarg);
 	    break;
 
 	case OPT_ICE_NO_RTCP:
@@ -1644,11 +1650,17 @@ static int write_settings(const struct app_config *config,
     if (config->media_cfg.enable_ice)
 	pj_strcat2(&cfg, "--use-ice\n");
 
+    if (config->media_cfg.ice_opt.aggressive == PJ_FALSE)
+	pj_strcat2(&cfg, "--ice-regular\n");
+
     if (config->media_cfg.enable_turn)
 	pj_strcat2(&cfg, "--use-turn\n");
 
-    if (config->media_cfg.ice_no_host_cands)
-	pj_strcat2(&cfg, "--ice-no-host\n");
+    if (config->media_cfg.ice_max_host_cands >= 0) {
+	pj_ansi_sprintf(line, "--ice_max_host_cands %d\n",
+			config->media_cfg.ice_max_host_cands);
+	pj_strcat2(&cfg, line);
+    }
 
     if (config->media_cfg.ice_no_rtcp)
 	pj_strcat2(&cfg, "--ice-no-rtcp\n");
@@ -1885,7 +1897,7 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, "--use-compact-form\n");
     }
 
-    if (config->cfg.force_lr) {
+    if (!config->cfg.force_lr) {
 	pj_strcat2(&cfg, "--no-force-lr\n");
     }
 

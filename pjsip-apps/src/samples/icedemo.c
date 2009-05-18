@@ -311,6 +311,12 @@ static pj_status_t icedemo_init(void)
     if (icedemo.opt.max_host != -1)
 	icedemo.ice_cfg.stun.max_host_cands = icedemo.opt.max_host;
 
+    /* Nomination strategy */
+    if (icedemo.opt.regular)
+	icedemo.ice_cfg.opt.aggressive = PJ_FALSE;
+    else
+	icedemo.ice_cfg.opt.aggressive = PJ_TRUE;
+
     /* Configure STUN/srflx candidate resolution */
     if (icedemo.opt.stun_srv.slen) {
 	char *pos;
@@ -376,7 +382,6 @@ static pj_status_t icedemo_init(void)
 static void icedemo_create_instance(void)
 {
     pj_ice_strans_cb icecb;
-    pj_ice_sess_options opt;
     pj_status_t status;
 
     if (icedemo.icest != NULL) {
@@ -401,17 +406,6 @@ static void icedemo_create_instance(void)
 	icedemo_perror("error creating ice", status);
     else
 	PJ_LOG(3,(THIS_FILE, "ICE instance successfully created"));
-
-    status = pj_ice_strans_get_options(icedemo.icest, &opt);
-    pj_assert(status == PJ_SUCCESS);
-
-    if (icedemo.opt.regular)
-	opt.aggressive = PJ_FALSE;
-    else
-	opt.aggressive = PJ_TRUE;
-
-    status = pj_ice_strans_set_options(icedemo.icest, &opt);
-    pj_assert(status == PJ_SUCCESS);
 }
 
 /* Utility to nullify parsed remote info */

@@ -158,7 +158,6 @@ struct pj_ice_strans
     pj_ice_strans_cfg	     cfg;	/**< Configuration.		*/
     pj_ice_strans_cb	     cb;	/**< Application callback.	*/
     pj_lock_t		    *init_lock; /**< Initialization mutex.	*/
-    pj_ice_sess_options	     opt;	/**< ICE session options	*/
 
     pj_ice_sess		    *ice;	/**< ICE session.		*/
     pj_time_val		     start_time;/**< Time when ICE was started	*/
@@ -197,6 +196,8 @@ PJ_DEF(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg)
     pj_stun_config_init(&cfg->stun_cfg, NULL, 0, NULL, NULL);
     pj_stun_sock_cfg_default(&cfg->stun.cfg);
     pj_turn_alloc_param_default(&cfg->turn.alloc_param);
+
+    pj_ice_sess_options_default(&cfg->opt);
 
     cfg->af = pj_AF_INET();
     cfg->stun.port = PJ_STUN_PORT;
@@ -449,8 +450,6 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     ice_st->obj_name = pool->obj_name;
     ice_st->user_data = user_data;
 
-    pj_ice_sess_options_default(&ice_st->opt);
-
     PJ_LOG(4,(ice_st->obj_name, 
 	      "Creating ICE stream transport with %d component(s)",
 	      comp_cnt));
@@ -660,7 +659,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_get_options( pj_ice_strans *ice_st,
 					       pj_ice_sess_options *opt)
 {
     PJ_ASSERT_RETURN(ice_st && opt, PJ_EINVAL);
-    pj_memcpy(opt, &ice_st->opt, sizeof(*opt));
+    pj_memcpy(opt, &ice_st->cfg.opt, sizeof(*opt));
     return PJ_SUCCESS;
 }
 
@@ -671,9 +670,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
 					      const pj_ice_sess_options *opt)
 {
     PJ_ASSERT_RETURN(ice_st && opt, PJ_EINVAL);
-    pj_memcpy(&ice_st->opt, opt, sizeof(*opt));
+    pj_memcpy(&ice_st->cfg.opt, opt, sizeof(*opt));
     if (ice_st->ice)
-	pj_ice_sess_set_options(ice_st->ice, &ice_st->opt);
+	pj_ice_sess_set_options(ice_st->ice, &ice_st->cfg.opt);
     return PJ_SUCCESS;
 }
 
@@ -714,7 +713,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
     ice_st->ice->user_data = (void*)ice_st;
 
     /* Set options */
-    pj_ice_sess_set_options(ice_st->ice, &ice_st->opt);
+    pj_ice_sess_set_options(ice_st->ice, &ice_st->cfg.opt);
 
     /* If default candidate for components are SRFLX one, upload a custom
      * type priority to ICE session so that SRFLX candidates will get

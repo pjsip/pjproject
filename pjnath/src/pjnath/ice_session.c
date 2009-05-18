@@ -437,6 +437,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_options(pj_ice_sess *ice,
 {
     PJ_ASSERT_RETURN(ice && opt, PJ_EINVAL);
     pj_memcpy(&ice->opt, opt, sizeof(*opt));
+    LOG5((ice->obj_name, "ICE nomination type set to %s",
+	  (ice->opt.aggressive ? "aggressive" : "regular")));
     return PJ_SUCCESS;
 }
 
@@ -1409,7 +1411,7 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 	    /* Now it's time to send connectivity check with nomination 
 	     * flag set.
 	     */
-	    LOG5((ice->obj_name, 
+	    LOG4((ice->obj_name, 
 		  "All checks have completed, starting nominated checks now"));
 	    start_nominated_check(ice);
 	    return PJ_FALSE;
@@ -1439,7 +1441,7 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 	    return PJ_FALSE;
 	}
 
-	LOG5((ice->obj_name, 
+	LOG4((ice->obj_name, 
 	      "Scheduling nominated check in %d ms",
 	      ice->opt.nominated_check_delay));
 

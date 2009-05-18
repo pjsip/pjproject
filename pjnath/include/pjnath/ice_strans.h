@@ -197,6 +197,13 @@ typedef struct pj_ice_strans_cfg
     pj_dns_resolver	*resolver;
 
     /**
+     * This contains various STUN session options. Once the ICE stream
+     * transport is created, application may also change the options
+     * with #pj_ice_strans_set_options().
+     */
+    pj_ice_sess_options	 opt;
+
+    /**
      * STUN and local transport settings. This specifies the 
      * settings for local UDP socket, which will be resolved
      * to get the STUN mapped address.
