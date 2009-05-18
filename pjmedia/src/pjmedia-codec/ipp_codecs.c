@@ -234,9 +234,10 @@ ipp_codec[] =
 {
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
-		    5900, 12200, 4, 1, 1, 
+		    7400, 12200, 2, 0, 1, 
 		    &predecode_amr, &parse_amr, &pack_amr
 		    /*, {1, {{{"octet-align", 11}, {"1", 1}}} } */
+		    , {1, {{{"mode-set", 8}, {"1,4,5", 5}}} }
     },
 #   endif
 
@@ -560,7 +561,14 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 
     /* Check Change Mode Request. */
     if ((setting->amr_nb && cmr <= 7) || (!setting->amr_nb && cmr <= 8)) {
+	struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
+
 	s->enc_mode = cmr;
+	codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
+				pjmedia_codec_amrnb_bitrates[s->enc_mode] :
+				pjmedia_codec_amrwb_bitrates[s->enc_mode];
+	ippc->fxns->std.Control(&codec_data->info->params.modes, 
+				codec_data->enc);
     }
 
     return PJ_SUCCESS;
@@ -1033,7 +1041,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     codec_data->info->params.direction = USC_DECODE;
 
     /* Not sure if VAD affects decoder, just try to be safe */
-    codec_data->info->params.modes.vad = ippc->has_native_vad;
+    //codec_data->info->params.modes.vad = ippc->has_native_vad;
 
     /* Get number of memory blocks needed by the decoder */
     if (USC_NoError != ippc->fxns->std.NumAlloc(&codec_data->info->params, 
@@ -1084,34 +1092,79 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     if (ippc->pt == PJMEDIA_RTP_PT_AMR || ippc->pt == PJMEDIA_RTP_PT_AMRWB) {
 	amr_settings_t *s;
 	pj_uint8_t octet_align = 0;
-	const pj_str_t STR_FMTP_OCTET_ALIGN = {"octet-align", 11};
+	pj_int8_t enc_mode = -1;
 
-	/* Check octet-align */
+	/* Check AMR specific attributes */
+
 	for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
+	    /* octet-align, one of the parameters that must have same value 
+	     * in offer & answer (RFC 4867 Section 8.3.1). Just check fmtp
+	     * in the decoder side, since it's value is guaranteed to fulfil 
+	     * above requirement (by SDP negotiator).
+	     */
+	    const pj_str_t STR_FMTP_OCTET_ALIGN = {"octet-align", 11};
+	    
 	    if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, 
 			   &STR_FMTP_OCTET_ALIGN) == 0)
 	    {
 		octet_align=(pj_uint8_t)
-			    (pj_strtoul(&attr->setting.dec_fmtp.param[i].val));
+			    pj_strtoul(&attr->setting.dec_fmtp.param[i].val);
+		break;
+	    }
+	}
+	for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	    /* mode-set */
+	    const pj_str_t STR_FMTP_MODE_SET = {"mode-set", 8};
+	    
+	    if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, 
+			   &STR_FMTP_MODE_SET) == 0)
+	    {
+		pj_int8_t tmp;
+
+		/* Just get the first value. */
+		tmp = (pj_int8_t)
+		      pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
+
+		if ((ippc->pt == PJMEDIA_RTP_PT_AMR && tmp > 0 && tmp < 8) ||
+		    (ippc->pt == PJMEDIA_RTP_PT_AMRWB && tmp > 0 && tmp < 9))
+		{
+		    enc_mode = tmp;
+		    PJ_LOG(4,(THIS_FILE, "Remote specifies AMR mode-set attr, "
+			      "selected: %d", enc_mode));
+		}
 		break;
 	    }
 	}
 
+	/* Initialize AMR specific settings */
 	s = PJ_POOL_ZALLOC_T(pool, amr_settings_t);
 	codec_data->codec_setting = s;
-
-	s->enc_mode = pjmedia_codec_amr_get_mode(ippc->def_bitrate);
-	if (s->enc_mode < 0)
-	    goto on_error;
 
 	s->enc_setting.amr_nb = (pj_uint8_t)(ippc->pt == PJMEDIA_RTP_PT_AMR);
 	s->enc_setting.octet_aligned = octet_align;
 	s->enc_setting.reorder = PJ_TRUE;
 	s->enc_setting.cmr = 15;
-	
+
 	s->dec_setting.amr_nb = (pj_uint8_t)(ippc->pt == PJMEDIA_RTP_PT_AMR);
 	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = PJ_TRUE;
+
+	s->enc_mode = pjmedia_codec_amr_get_mode(
+				    codec_data->info->params.modes.bitrate);
+	if (s->enc_mode < 0)
+	    goto on_error;
+
+	if (enc_mode != -1) {
+	    s->enc_mode = enc_mode;
+
+	    /* Apply requested encoder bitrate */
+	    codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
+				    pjmedia_codec_amrnb_bitrates[s->enc_mode] :
+				    pjmedia_codec_amrwb_bitrates[s->enc_mode];
+	    ippc->fxns->std.Control(&codec_data->info->params.modes, 
+				    codec_data->enc);
+	}  
+
     }
 #endif
 
