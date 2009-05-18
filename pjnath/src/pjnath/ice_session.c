@@ -2041,7 +2041,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	    LOG4((ice->obj_name, "Resending check because of role conflict"));
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
 	    perform_check(ice, clist, msg_data->data.req.ckid, 
-			  check->nominated);
+			  check->nominated || ice->is_nominating);
 	    pj_mutex_unlock(ice->mutex);
 	    return;
 	}
