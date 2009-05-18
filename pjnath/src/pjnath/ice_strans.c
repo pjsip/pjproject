@@ -50,20 +50,34 @@ enum tp_type
 /* Candidate's local preference values. This is mostly used to
  * specify preference among candidates with the same type. Since
  * we don't have the facility to specify that, we'll just set it
- * all to zero.
+ * all to the same value.
  */
-#define SRFLX_PREF  0
-#define HOST_PREF   0
-#define RELAY_PREF  0
+#if PJNATH_ICE_PRIO_STD
+#   define SRFLX_PREF  65535
+#   define HOST_PREF   65535
+#   define RELAY_PREF  65535
+#else
+#   define SRFLX_PREF  0
+#   define HOST_PREF   0
+#   define RELAY_PREF  0
+#endif
+
 
 /* The candidate type preference when STUN candidate is used */
 static pj_uint8_t srflx_pref_table[4] = 
 {
+#if PJNATH_ICE_PRIO_STD
+    100,    /**< PJ_ICE_HOST_PREF	    */
+    126,    /**< PJ_ICE_SRFLX_PREF	    */
+    110,    /**< PJ_ICE_PRFLX_PREF	    */
+    0	    /**< PJ_ICE_RELAYED_PREF    */
+#else
     /* Keep it to 2 bits */
     1,	/**< PJ_ICE_HOST_PREF	    */
     2,	/**< PJ_ICE_SRFLX_PREF	    */
     3,	/**< PJ_ICE_PRFLX_PREF	    */
     0	/**< PJ_ICE_RELAYED_PREF    */
+#endif
 };
 
 

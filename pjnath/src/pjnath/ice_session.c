@@ -29,7 +29,6 @@
 #include <pj/rand.h>
 #include <pj/string.h>
 
-
 /* String names for candidate types */
 static const char *cand_type_names[] =
 {
@@ -242,7 +241,7 @@ PJ_DEF(void) pj_ice_calc_foundation(pj_pool_t *pool,
 				    pj_ice_cand_type type,
 				    const pj_sockaddr *base_addr)
 {
-#if 0
+#if PJNATH_ICE_PRIO_STD
     char buf[64];
     pj_uint32_t val;
 
@@ -658,7 +657,7 @@ static pj_uint32_t CALC_CAND_PRIO(pj_ice_sess *ice,
 				  pj_uint32_t local_pref,
 				  pj_uint32_t comp_id)
 {
-#if 0
+#if PJNATH_ICE_PRIO_STD
     return ((ice->prefs[type] & 0xFF) << 24) + 
 	   ((local_pref & 0xFFFF)    << 8) +
 	   (((256 - comp_id) & 0xFF) << 0);
@@ -1637,8 +1636,13 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     msg_data->data.req.ckid = check_id;
 
     /* Add PRIORITY */
+#if PJNATH_ICE_PRIO_STD
+    prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 65535, 
+			  lcand->comp_id);
+#else
     prio = CALC_CAND_PRIO(ice, PJ_ICE_CAND_TYPE_PRFLX, 0, 
 			  lcand->comp_id);
+#endif
     pj_stun_msg_add_uint_attr(check->tdata->pool, check->tdata->msg, 
 			      PJ_STUN_ATTR_PRIORITY, prio);
 

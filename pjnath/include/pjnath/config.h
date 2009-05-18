@@ -259,12 +259,23 @@
  */
 #define PJ_ICE_MAX_COMP		    (2<<PJ_ICE_COMP_BITS)
 
+/**
+ * Use the priority value according to the ice-draft.
+ */
+#ifndef PJNATH_ICE_PRIO_STD
+#   define PJNATH_ICE_PRIO_STD			    1
+#endif
+
 
 /**
  * The number of bits to represent candidate type preference.
  */
 #ifndef PJ_ICE_CAND_TYPE_PREF_BITS
-#   define PJ_ICE_CAND_TYPE_PREF_BITS		    2
+#   if PJNATH_ICE_PRIO_STD
+#	define PJ_ICE_CAND_TYPE_PREF_BITS	    8
+#   else
+#	define PJ_ICE_CAND_TYPE_PREF_BITS	    2
+#   endif
 #endif
 
 
