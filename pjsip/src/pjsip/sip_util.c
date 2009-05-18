@@ -1207,7 +1207,7 @@ stateless_send_resolver_callback( pj_status_t status,
 	}
 
 	/* Check if request message is larger than 1300 bytes. */
-	len = stateless_data->tdata->buf.end - 
+	len = stateless_data->tdata->buf.cur - 
 		stateless_data->tdata->buf.start;
 	if (len >= PJSIP_UDP_SIZE_THRESHOLD) {
 	    int i;
