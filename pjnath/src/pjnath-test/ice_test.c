@@ -64,6 +64,8 @@ struct test_cfg
     unsigned    destroy_delay;	/* Delay before destroy()	*/
 
     struct test_result expected;/* Expected result		*/
+
+    pj_bool_t   nom_regular;	/* Use regular nomination?	*/
 };
 
 /* ICE endpoint state */

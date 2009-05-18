@@ -580,6 +580,17 @@ PJ_DECL(void) pjsip_tx_data_add_ref( pjsip_tx_data *tdata );
 PJ_DECL(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata );
 
 /**
+ * Print the SIP message to transmit data buffer's internal buffer. This
+ * may allocate memory for the buffer, if the buffer has not been allocated
+ * yet, and encode the SIP message to that buffer.
+ *
+ * @param tdata	    The transmit buffer.
+ *
+ * @return	    PJ_SUCCESS on success of the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tx_data_encode(pjsip_tx_data *tdata);
+
+/**
  * Check if transmit data buffer contains a valid message.
  *
  * @param tdata	    The transmit buffer.

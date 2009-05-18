@@ -227,6 +227,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * RFC 3261 section 18.1.1:
+ * If a request is within 200 bytes of the path MTU, or if it is larger
+ * than 1300 bytes and the path MTU is unknown, the request MUST be sent
+ * using an RFC 2914 [43] congestion controlled transport protocol, such
+ * as TCP.
+ *
+ * This setting controls the threshold of the UDP packet, which if it's
+ * larger than this value the request will be sent with TCP. Default is
+ * 1300 bytes.
+ */
+#ifndef PJSIP_UDP_SIZE_THRESHOLD
+#   define PJSIP_UDP_SIZE_THRESHOLD	1300
+#endif
+
+/**
  * Encode SIP headers in their short forms to reduce size. By default,
  * SIP headers in outgoing messages will be encoded in their full names. 
  * If this option is enabled, then SIP headers for outgoing messages

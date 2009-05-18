@@ -1135,6 +1135,8 @@ static void stateless_send_transport_cb( void *token,
 	via->sent_by = stateless_data->cur_transport->local_name;
 	via->rport_param = 0;
 
+	pjsip_tx_data_invalidate_msg(tdata);
+
 	/* Send message using this transport. */
 	status = pjsip_transport_send( stateless_data->cur_transport,
 				       tdata,
@@ -1191,12 +1193,23 @@ stateless_send_resolver_callback( pj_status_t status,
 	addr->count > 0 && 
 	addr->entry[0].type == PJSIP_TRANSPORT_UDP)
     {
-	char buf[1500];
 	int len;
 
+	/* Encode the request */
+	status = pjsip_tx_data_encode(stateless_data->tdata);
+	if (status != PJ_SUCCESS) {
+	    if (stateless_data->app_cb) {
+		pj_bool_t cont = PJ_FALSE;
+		(*stateless_data->app_cb)(stateless_data, -status, &cont);
+	    }
+	    pjsip_tx_data_dec_ref(stateless_data->tdata);
+	    return;
+	}
+
 	/* Check if request message is larger than 1300 bytes. */
-	len = pjsip_msg_print(stateless_data->tdata->msg, buf, 1300);
-	if (len < 0) {
+	len = stateless_data->tdata->buf.end - 
+		stateless_data->tdata->buf.start;
+	if (len >= PJSIP_UDP_SIZE_THRESHOLD) {
 	    int i;
 	    int count = stateless_data->addr.count;
 

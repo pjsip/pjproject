@@ -434,6 +434,45 @@ PJ_DEF(void) pjsip_tx_data_invalidate_msg( pjsip_tx_data *tdata )
     tdata->info = NULL;
 }
 
+/*
+ * Print the SIP message to transmit data buffer's internal buffer.
+ */
+PJ_DEF(pj_status_t) pjsip_tx_data_encode(pjsip_tx_data *tdata)
+{
+    /* Allocate buffer if necessary. */
+    if (tdata->buf.start == NULL) {
+	PJ_USE_EXCEPTION;
+
+	PJ_TRY {
+	    tdata->buf.start = (char*) 
+			       pj_pool_alloc(tdata->pool, PJSIP_MAX_PKT_LEN);
+	}
+	PJ_CATCH_ANY {
+	    return PJ_ENOMEM;
+	}
+	PJ_END
+
+	tdata->buf.cur = tdata->buf.start;
+	tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
+    }
+
+    /* Do we need to reprint? */
+    if (!pjsip_tx_data_is_valid(tdata)) {
+	pj_ssize_t size;
+
+	size = pjsip_msg_print( tdata->msg, tdata->buf.start, 
+			        tdata->buf.end - tdata->buf.start);
+	if (size < 0) {
+	    return PJSIP_EMSGTOOLONG;
+	}
+	pj_assert(size != 0);
+	tdata->buf.cur[size] = '\0';
+	tdata->buf.cur += size;
+    }
+
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(pj_bool_t) pjsip_tx_data_is_valid( pjsip_tx_data *tdata )
 {
     return tdata->buf.cur != tdata->buf.start;
@@ -567,38 +606,7 @@ static void transport_send_callback(pjsip_transport *transport,
  */
 static pj_status_t mod_on_tx_msg(pjsip_tx_data *tdata)
 {
-    /* Allocate buffer if necessary. */
-    if (tdata->buf.start == NULL) {
-	PJ_USE_EXCEPTION;
-
-	PJ_TRY {
-	    tdata->buf.start = (char*) 
-			       pj_pool_alloc(tdata->pool, PJSIP_MAX_PKT_LEN);
-	}
-	PJ_CATCH_ANY {
-	    return PJ_ENOMEM;
-	}
-	PJ_END
-
-	tdata->buf.cur = tdata->buf.start;
-	tdata->buf.end = tdata->buf.start + PJSIP_MAX_PKT_LEN;
-    }
-
-    /* Do we need to reprint? */
-    if (!pjsip_tx_data_is_valid(tdata)) {
-	pj_ssize_t size;
-
-	size = pjsip_msg_print( tdata->msg, tdata->buf.start, 
-			        tdata->buf.end - tdata->buf.start);
-	if (size < 0) {
-	    return PJSIP_EMSGTOOLONG;
-	}
-	pj_assert(size != 0);
-	tdata->buf.cur[size] = '\0';
-	tdata->buf.cur += size;
-    }
-
-    return PJ_SUCCESS;
+    return pjsip_tx_data_encode(tdata);
 }
 
 /*
