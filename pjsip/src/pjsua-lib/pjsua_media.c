@@ -804,6 +804,8 @@ static pj_status_t create_ice_media_transports(void)
     ice_cfg.af = pj_AF_INET();
     ice_cfg.resolver = pjsua_var.resolver;
     
+    ice_cfg.opt = pjsua_var.media_cfg.ice_opt;
+
     /* Configure STUN settings */
     if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
 	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
