@@ -75,7 +75,7 @@ typedef enum timer_type
 				     valid check for every components.	*/
     TIMER_START_NOMINATED_CHECK,/**< Controlling agent start connectivity
 				     checks with USE-CANDIDATE flag.	*/
-					
+    TIMER_KEEP_ALIVE		/**< ICE keep-alive timer.		*/
 
 };
 
@@ -133,6 +133,7 @@ typedef struct timer_data
 /* Forward declarations */
 static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te);
 static void on_ice_complete(pj_ice_sess *ice, pj_status_t status);
+static void ice_keep_alive(pj_ice_sess *ice, pj_bool_t send_now);
 static void destroy_ice(pj_ice_sess *ice,
 			pj_status_t reason);
 static pj_status_t start_periodic_check(pj_timer_heap_t *th, 
@@ -1111,12 +1112,86 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 	on_ice_complete(ice, PJNATH_EICENOMTIMEOUT);
 	break;
     case TIMER_COMPLETION_CALLBACK:
+	/* Start keep-alive timer but don't send any packets yet.
+	 * Need to do it here just in case app destroy the session
+	 * in the callback.
+	 */
+	if (ice->ice_status == PJ_SUCCESS)
+	    ice_keep_alive(ice, PJ_FALSE);
+
+	/* Notify app about ICE completion*/
 	if (ice->cb.on_ice_complete)
 	    (*ice->cb.on_ice_complete)(ice, ice->ice_status);
 	break;
     case TIMER_START_NOMINATED_CHECK:
 	start_nominated_check(ice);
 	break;
+    case TIMER_KEEP_ALIVE:
+	ice_keep_alive(ice, PJ_TRUE);
+	break;
+    }
+}
+
+/* Send keep-alive */
+static void ice_keep_alive(pj_ice_sess *ice, pj_bool_t send_now)
+{
+    if (send_now) {
+	/* Send Binding Indication for the component */
+	pj_ice_sess_comp *comp = &ice->comp[ice->comp_ka];
+	pj_stun_tx_data *tdata;
+	pj_ice_sess_check *the_check;
+	pj_ice_msg_data *msg_data;
+	int addr_len;
+	pj_bool_t saved;
+	pj_status_t status;
+
+	/* Must have nominated check by now */
+	pj_assert(comp->nominated_check != NULL);
+	the_check = comp->nominated_check;
+
+	/* Create the Binding Indication */
+	status = pj_stun_session_create_ind(comp->stun_sess, 
+					    PJ_STUN_BINDING_INDICATION,
+					    &tdata);
+	if (status != PJ_SUCCESS)
+	    goto done;
+
+	/* Need the transport_id */
+	msg_data = PJ_POOL_ZALLOC_T(tdata->pool, pj_ice_msg_data);
+	msg_data->transport_id = the_check->lcand->transport_id;
+
+	/* Temporarily disable FINGERPRINT. The Binding Indication 
+	 * SHOULD NOT contain any attributes.
+	 */
+	saved = pj_stun_session_use_fingerprint(comp->stun_sess, PJ_FALSE);
+
+	/* Send to session */
+	addr_len = pj_sockaddr_get_len(&the_check->rcand->addr);
+	status = pj_stun_session_send_msg(comp->stun_sess, msg_data,
+					  PJ_FALSE, PJ_FALSE, 
+					  &the_check->rcand->addr, 
+					  addr_len, tdata);
+
+	/* Restore FINGERPRINT usage */
+	pj_stun_session_use_fingerprint(comp->stun_sess, saved);
+
+done:
+	ice->comp_ka = (ice->comp_ka + 1) % ice->comp_cnt;
+    }
+
+    if (ice->timer.id == TIMER_NONE) {
+	pj_time_val delay = { 0, 0 };
+
+	delay.msec = (PJ_ICE_SESS_KEEP_ALIVE_MIN + 
+		      (pj_rand() % PJ_ICE_SESS_KEEP_ALIVE_MAX_RAND)) * 1000 / 
+		     ice->comp_cnt;
+	pj_time_val_normalize(&delay);
+
+	ice->timer.id = TIMER_KEEP_ALIVE;
+	pj_timer_heap_schedule(ice->stun_cfg.timer_heap, &ice->timer, &delay);
+
+    } else {
+	pj_assert(!"Not expected any timer active");
     }
 }
 
@@ -2613,6 +2688,8 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 					 const pj_sockaddr_t *src_addr,
 					 unsigned src_addr_len)
 {
+    struct stun_data *sd;
+
     PJ_UNUSED_ARG(sess);
     PJ_UNUSED_ARG(pkt);
     PJ_UNUSED_ARG(pkt_len);
@@ -2621,9 +2698,18 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
     PJ_UNUSED_ARG(src_addr);
     PJ_UNUSED_ARG(src_addr_len);
 
-    PJ_TODO(SUPPORT_RX_BIND_REQUEST_AS_INDICATION);
+    sd = (struct stun_data*) pj_stun_session_get_user_data(sess);
 
-    return PJ_ENOTSUP;
+    if (msg->hdr.type == PJ_STUN_BINDING_INDICATION) {
+	LOG5((sd->ice->obj_name, "Received Binding Indication keep-alive "
+	      "for component %d", sd->comp_id));
+    } else {
+	LOG4((sd->ice->obj_name, "Received unexpected %s indication "
+	      "for component %d", pj_stun_get_method_name(msg->hdr.type), 
+	      sd->comp_id));
+    }
+
+    return PJ_SUCCESS;
 }
 
 

@@ -485,6 +485,18 @@ PJ_DECL(pj_status_t) pj_stun_session_set_credential(pj_stun_session *sess,
  */
 PJ_DECL(void) pj_stun_session_set_log(pj_stun_session *sess,
 				      unsigned flags);
+/**
+ * Configure whether the STUN session should utilize FINGERPRINT in
+ * outgoing messages.
+ *
+ * @param sess	    The STUN session instance.
+ * @param use	    Boolean for the setting.
+ *
+ * @return	    The previous configured value of FINGERPRINT
+ *		    utilization of the sessoin.
+ */
+PJ_DECL(pj_bool_t) pj_stun_session_use_fingerprint(pj_stun_session *sess,
+						   pj_bool_t use);
 
 /**
  * Create a STUN request message. After the message has been successfully

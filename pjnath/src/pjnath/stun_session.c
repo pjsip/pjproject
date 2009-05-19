@@ -635,6 +635,18 @@ PJ_DEF(void) pj_stun_session_set_log( pj_stun_session *sess,
     sess->log_flag = flags;
 }
 
+PJ_DEF(pj_bool_t) pj_stun_session_use_fingerprint(pj_stun_session *sess,
+						  pj_bool_t use)
+{
+    pj_bool_t old_use;
+
+    PJ_ASSERT_RETURN(sess, PJ_FALSE);
+
+    old_use = sess->use_fingerprint;
+    sess->use_fingerprint = use;
+    return old_use;
+}
+
 static pj_status_t get_auth(pj_stun_session *sess,
 			    pj_stun_tx_data *tdata)
 {

@@ -636,6 +636,7 @@ struct pj_ice_sess
     /* Components */
     unsigned		 comp_cnt;		    /**< # of components.   */
     pj_ice_sess_comp	 comp[PJ_ICE_MAX_COMP];	    /**< Component array    */
+    unsigned		 comp_ka;		    /**< Next comp for KA   */
 
     /* Local candidates */
     unsigned		 lcand_cnt;		    /**< # of local cand.   */

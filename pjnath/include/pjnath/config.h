@@ -369,31 +369,40 @@
 
 /**
  * Minimum interval value to be used for sending STUN keep-alive on the ICE
- * stream transport, in seconds. This minimum interval, plus a random value
- * which maximum is PJ_ICE_ST_KEEP_ALIVE_MAX_RAND, specify the actual interval
+ * session, in seconds. This minimum interval, plus a random value
+ * which maximum is PJ_ICE_SESS_KEEP_ALIVE_MAX_RAND, specify the actual interval
  * of the STUN keep-alive.
  *
- * Default: 20 seconds
+ * Default: 15 seconds
  *
- * @see PJ_ICE_ST_KEEP_ALIVE_MAX_RAND
+ * @see PJ_ICE_SESS_KEEP_ALIVE_MAX_RAND
  */
-#ifndef PJ_ICE_ST_KEEP_ALIVE_MIN
-#   define PJ_ICE_ST_KEEP_ALIVE_MIN		    20
+#ifndef PJ_ICE_SESS_KEEP_ALIVE_MIN
+#   define PJ_ICE_SESS_KEEP_ALIVE_MIN		    20
 #endif
 
+/* Warn about deprecated macro */
+#ifdef PJ_ICE_ST_KEEP_ALIVE_MIN
+#   error PJ_ICE_ST_KEEP_ALIVE_MIN is deprecated
+#endif
 
 /**
  * To prevent STUN keep-alives to be sent simultaneously, application should
- * add random interval to minimum interval (PJ_ICE_ST_KEEP_ALIVE_MIN). This
+ * add random interval to minimum interval (PJ_ICE_SESS_KEEP_ALIVE_MIN). This
  * setting specifies the maximum random value to be added to the minimum
  * interval, in seconds.
  *
  * Default: 5 seconds
  *
- * @see PJ_ICE_ST_KEEP_ALIVE_MIN
+ * @see PJ_ICE_SESS_KEEP_ALIVE_MIN
  */
-#ifndef PJ_ICE_ST_KEEP_ALIVE_MAX_RAND
-#   define PJ_ICE_ST_KEEP_ALIVE_MAX_RAND	    5
+#ifndef PJ_ICE_SESS_KEEP_ALIVE_MAX_RAND
+#   define PJ_ICE_SESS_KEEP_ALIVE_MAX_RAND	    5
+#endif
+
+/* Warn about deprecated macro */
+#ifdef PJ_ICE_ST_KEEP_ALIVE_MAX_RAND
+#   error PJ_ICE_ST_KEEP_ALIVE_MAX_RAND is deprecated
 #endif
 
 
