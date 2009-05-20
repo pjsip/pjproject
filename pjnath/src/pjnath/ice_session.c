@@ -65,7 +65,7 @@ static const char *role_names[] =
     "Controlling"
 };
 
-typedef enum timer_type
+enum timer_type
 {
     TIMER_NONE,			/**< Timer not active			*/
     TIMER_COMPLETION_CALLBACK,	/**< Call on_ice_complete() callback    */
@@ -1098,7 +1098,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 {
     pj_ice_sess *ice = (pj_ice_sess*) te->user_data;
-    enum timer_time type = (enum timer_type)te->id;
+    enum timer_type type = (enum timer_type)te->id;
 
     PJ_UNUSED_ARG(th);
 
@@ -1128,6 +1128,9 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 	break;
     case TIMER_KEEP_ALIVE:
 	ice_keep_alive(ice, PJ_TRUE);
+	break;
+    case TIMER_NONE:
+	/* Nothing to do, just to get rid of gcc warning */
 	break;
     }
 }
@@ -1225,6 +1228,30 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
     }
 }
 
+/* Update valid check and nominated check for the candidate */
+static void update_comp_check(pj_ice_sess *ice, unsigned comp_id, 
+			      pj_ice_sess_check *check)
+{
+    pj_ice_sess_comp *comp;
+
+    comp = find_comp(ice, comp_id);
+    if (comp->valid_check == NULL) {
+	comp->valid_check = check;
+    } else {
+	if (CMP_CHECK_PRIO(comp->valid_check, check) < 0)
+	    comp->valid_check = check;
+    }
+
+    if (check->nominated) {
+	/* Update the nominated check for the component */
+	if (comp->nominated_check == NULL) {
+	    comp->nominated_check = check;
+	} else {
+	    if (CMP_CHECK_PRIO(comp->nominated_check, check) < 0)
+		comp->nominated_check = check;
+	}
+    }
+}
 
 /* This function is called when one check completes */
 static pj_bool_t on_check_complete(pj_ice_sess *ice,
@@ -1258,14 +1285,6 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 	    {
 		check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
 	    }
-	}
-
-	/* Update valid check */
-	if (comp->valid_check == NULL) {
-	    comp->valid_check = check;
-	} else {
-	    if (CMP_CHECK_PRIO(comp->valid_check, check) < 0)
-		comp->valid_check = check;
 	}
 
 	LOG5((ice->obj_name, "Check %d is successful%s",
@@ -1332,14 +1351,6 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 		    }
 		}
 	    }
-	}
-
-	/* Update the nominated check for the component */
-	if (comp->nominated_check == NULL) {
-	    comp->nominated_check = check;
-	} else {
-	    if (CMP_CHECK_PRIO(comp->nominated_check, check) < 0)
-		comp->nominated_check = check;
 	}
     }
 
@@ -1863,23 +1874,40 @@ static void start_nominated_check(pj_ice_sess *ice)
      * highest priority to Waiting (it should have Success state now).
      */
     for (i=0; i<ice->comp_cnt; ++i) {
-	pj_assert(ice->comp[i].nominated_check == NULL);
-	pj_assert(ice->comp[i].valid_check->err_code == PJ_SUCCESS);
+	unsigned j;
+	const pj_ice_sess_check *vc = ice->comp[i].valid_check;
 
-	ice->comp[i].valid_check->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
-	check_set_state(ice, ice->comp[i].valid_check, 
-			PJ_ICE_SESS_CHECK_STATE_WAITING, PJ_SUCCESS);
+	pj_assert(ice->comp[i].nominated_check == NULL);
+	pj_assert(vc->err_code == PJ_SUCCESS);
+
+	for (j=0; j<ice->clist.count; ++j) {
+	    pj_ice_sess_check *c = &ice->clist.checks[j];
+	    if (c->lcand->transport_id == vc->lcand->transport_id &&
+		c->rcand == vc->rcand)
+	    {
+		pj_assert(c->err_code == PJ_SUCCESS);
+		c->state = PJ_ICE_SESS_CHECK_STATE_FROZEN;
+		check_set_state(ice, c, PJ_ICE_SESS_CHECK_STATE_WAITING, 
+			        PJ_SUCCESS);
+		break;
+	    }
+	}
     }
 
     /* And (re)start the periodic check */
     if (!ice->clist.timer.id) {
-	ice->clist.timer.id = PJ_TRUE;
-	delay.sec = delay.msec = 0;
-	status = pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
-					&ice->clist.timer, &delay);
-	if (status != PJ_SUCCESS) {
-	    ice->clist.timer.id = PJ_FALSE;
-	}
+	pj_timer_heap_cancel(ice->stun_cfg.timer_heap, &ice->clist.timer);
+	ice->clist.timer.id = PJ_FALSE;
+    }
+
+    ice->clist.timer.id = PJ_TRUE;
+    delay.sec = delay.msec = 0;
+    status = pj_timer_heap_schedule(ice->stun_cfg.timer_heap, 
+				    &ice->clist.timer, &delay);
+    if (status != PJ_SUCCESS) {
+	ice->clist.timer.id = PJ_FALSE;
+    } else {
+	LOG5((ice->obj_name, "Periodic timer rescheduled.."));
     }
 
     ice->is_nominating = PJ_TRUE;
@@ -2253,19 +2281,34 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      * equals the destination address to which the request was sent.    
      */
 
-    /* Add pair to valid list */
-    pj_assert(ice->valid_list.count < PJ_ICE_MAX_CHECKS);
-    new_check = &ice->valid_list.checks[ice->valid_list.count++];
-    new_check->lcand = lcand;
-    new_check->rcand = check->rcand;
-    new_check->prio = CALC_CHECK_PRIO(ice, lcand, check->rcand);
-    new_check->state = PJ_ICE_SESS_CHECK_STATE_SUCCEEDED;
-    new_check->nominated = check->nominated;
-    new_check->err_code = PJ_SUCCESS;
+    /* Add pair to valid list, if it's not there, otherwise just update
+     * nominated flag
+     */
+    for (i=0; i<ice->valid_list.count; ++i) {
+	if (ice->valid_list.checks[i].lcand == lcand &&
+	    ice->valid_list.checks[i].rcand == check->rcand)
+	    break;
+    }
+
+    if (i==ice->valid_list.count) {
+	pj_assert(ice->valid_list.count < PJ_ICE_MAX_CHECKS);
+	new_check = &ice->valid_list.checks[ice->valid_list.count++];
+	new_check->lcand = lcand;
+	new_check->rcand = check->rcand;
+	new_check->prio = CALC_CHECK_PRIO(ice, lcand, check->rcand);
+	new_check->state = PJ_ICE_SESS_CHECK_STATE_SUCCEEDED;
+	new_check->nominated = check->nominated;
+	new_check->err_code = PJ_SUCCESS;
+    } else {
+	new_check = &ice->valid_list.checks[i];
+	ice->valid_list.checks[i].nominated = check->nominated;
+    }
 
     /* Sort valid_list */
     sort_checklist(&ice->valid_list);
 
+    /* Update valid check and nominated check for the component */
+    update_comp_check(ice, new_check->lcand->comp_id, new_check);
 
     /* 7.1.2.2.2.  Updating Pair States
      * 
@@ -2633,8 +2676,17 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	    if (rcheck->use_candidate) {
 		for (j=0; j<ice->valid_list.count; ++j) {
 		    pj_ice_sess_check *vc = &ice->valid_list.checks[j];
-		    if (vc->lcand == c->lcand && vc->rcand == c->rcand) {
+		    if (vc->lcand->transport_id == c->lcand->transport_id && 
+			vc->rcand == c->rcand) 
+		    {
+			/* Set nominated flag */
 			vc->nominated = PJ_TRUE;
+
+			/* Update valid check and nominated check for the component */
+			update_comp_check(ice, vc->lcand->comp_id, vc);
+
+			dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), &ice->valid_list, vc);
+			LOG5((ice->obj_name, "Valid check %s is nominated", ice->tmp.txt));
 		    }
 		}
 	    }
