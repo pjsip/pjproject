@@ -57,11 +57,19 @@ static int print_attr(char *buffer, unsigned length,
 		      const pj_stun_attr_hdr *ahdr)
 {
     char *p = buffer, *end = buffer + length;
+    const char *attr_name = pj_stun_get_attr_name(ahdr->type);
+    char attr_buf[32];
     int len;
+
+    if (*attr_name == '?') {
+	pj_ansi_snprintf(attr_buf, sizeof(attr_buf), "Attr 0x%x", 
+			 ahdr->type);
+	attr_name = attr_buf;
+    }
 
     len = pj_ansi_snprintf(p, end-p,
 			   "  %s: length=%d",
-			   pj_stun_get_attr_name(ahdr->type),
+			   attr_name,
 			   (int)ahdr->length);
     APPLY();
 
