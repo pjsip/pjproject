@@ -233,18 +233,19 @@ static struct ipp_codec {
 ipp_codec[] = 
 {
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
+    /* AMR-NB SID seems to produce noise, so let's just disable its VAD. */
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
 		    7400, 12200, 2, 0, 1, 
-		    &predecode_amr, &parse_amr, &pack_amr
-		    /*, {1, {{{"octet-align", 11}, {"1", 1}}} } */
-		    , {1, {{{"mode-set", 8}, {"1,4,5", 5}}} }
+		    &predecode_amr, &parse_amr, &pack_amr,
+		    {1, {{{"octet-align", 11}, {"1", 1}}} }
     },
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
     {1, "AMR-WB",   PJMEDIA_RTP_PT_AMRWB,     &USC_AMRWB_Fxns,  16000, 1, 320,
 		    15850, 23850, 1, 1, 1, 
-		    &predecode_amr, &parse_amr, &pack_amr
+		    &predecode_amr, &parse_amr, &pack_amr,
+		    {1, {{{"octet-align", 11}, {"1", 1}}} }
     },
 #   endif
 
