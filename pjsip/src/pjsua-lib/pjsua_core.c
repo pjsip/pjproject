@@ -650,7 +650,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {
 	status = pjsua_reconfigure_logging(log_cfg);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     /* If nameserver is configured, create DNS resolver instance and
