@@ -28,6 +28,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/pool_buf.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 #include <pj/sock.h>
 #include <pj/timer.h>
@@ -783,6 +784,7 @@ PJ_DEF(pj_status_t) pj_dns_resolver_start_query( pj_dns_resolver *resolver,
     q = alloc_qnode(resolver, options, user_data, cb);
 
     /* Save the ID and key */
+    /* TODO: dnsext-forgery-resilient: randomize id for security */
     q->id = resolver->last_id++;
     if (resolver->last_id == 0)
 	resolver->last_id = 1;
