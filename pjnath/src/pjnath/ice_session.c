@@ -1102,6 +1102,8 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJ_UNUSED_ARG(th);
 
+    pj_mutex_lock(ice->mutex);
+
     te->id = TIMER_NONE;
 
     switch (type) {
@@ -1133,6 +1135,8 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 	/* Nothing to do, just to get rid of gcc warning */
 	break;
     }
+
+    pj_mutex_unlock(ice->mutex);
 }
 
 /* Send keep-alive */
@@ -1529,6 +1533,11 @@ static pj_bool_t on_check_complete(pj_ice_sess *ice,
 	LOG4((ice->obj_name, 
 	      "Scheduling nominated check in %d ms",
 	      ice->opt.nominated_check_delay));
+
+	if (ice->timer.id != TIMER_NONE) {
+	    pj_timer_heap_cancel(ice->stun_cfg.timer_heap, &ice->timer);
+	    ice->timer.id = TIMER_NONE;
+	}
 
 	/* All components have valid pair. Let connectivity checks run for
 	 * a little bit more time, then start our nominated check.
