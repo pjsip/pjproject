@@ -67,6 +67,7 @@ static const struct
     PJ_BUILD_ERR( PJNATH_EICEMISSINGSDP,    "Missing ICE SDP attribute"),
     PJ_BUILD_ERR( PJNATH_EICEINCANDSDP,	    "Invalid SDP \"candidate\" attribute"),
     PJ_BUILD_ERR( PJNATH_EICENOHOSTCAND,    "No host candidate associated with srflx"),
+    PJ_BUILD_ERR( PJNATH_EICENOMTIMEOUT,    "Controlled agent timed out waiting for nomination"),
 
     /* TURN related errors */
     PJ_BUILD_ERR( PJNATH_ETURNINTP,	    "Invalid/unsupported transport"),

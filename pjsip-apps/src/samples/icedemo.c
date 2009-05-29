@@ -39,7 +39,8 @@ static struct app_t
     {
 	unsigned    comp_cnt;
 	pj_str_t    ns;
-	pj_bool_t   no_host;
+	int	    max_host;
+	pj_bool_t   regular;
 	pj_str_t    stun_srv;
 	pj_str_t    turn_srv;
 	pj_bool_t   turn_tcp;
@@ -306,8 +307,15 @@ static pj_status_t icedemo_init(void)
 
     /* -= Start initializing ICE stream transport config =- */
 
-    /* Disable host candidates? */
-    icedemo.ice_cfg.stun.no_host_cands = icedemo.opt.no_host;
+    /* Maximum number of host candidates */
+    if (icedemo.opt.max_host != -1)
+	icedemo.ice_cfg.stun.max_host_cands = icedemo.opt.max_host;
+
+    /* Nomination strategy */
+    if (icedemo.opt.regular)
+	icedemo.ice_cfg.opt.aggressive = PJ_FALSE;
+    else
+	icedemo.ice_cfg.opt.aggressive = PJ_TRUE;
 
     /* Configure STUN/srflx candidate resolution */
     if (icedemo.opt.stun_srv.slen) {
@@ -960,7 +968,7 @@ static void icedemo_send_data(unsigned comp_id, const char *data)
     }
     */
 
-    if (comp_id > pj_ice_strans_get_running_comp_cnt(icedemo.icest)) {
+    if (comp_id<1||comp_id>pj_ice_strans_get_running_comp_cnt(icedemo.icest)) {
 	PJ_LOG(1,(THIS_FILE, "Error: invalid component ID"));
 	return;
     }
@@ -1137,7 +1145,8 @@ static void icedemo_usage()
     puts(" --comp-cnt, -c N          Component count (default=1)");
     puts(" --nameserver, -n IP       Configure nameserver to activate DNS SRV");
     puts("                           resolution");
-    puts(" --no-host, -H             Disable host candidates");
+    puts(" --max-host, -H N          Set max number of host candidates to N");
+    puts(" --regular, -R             Use regular nomination (default aggressive)");
     puts(" --help, -h                Display this screen.");
     puts("");
     puts("STUN related options:");
@@ -1165,21 +1174,23 @@ int main(int argc, char *argv[])
     struct pj_getopt_option long_options[] = {
 	{ "comp-cnt",           1, 0, 'c'},
 	{ "nameserver",		1, 0, 'n'},
-	{ "no-host",		0, 0, 'H'},
+	{ "max-host",		1, 0, 'H'},
 	{ "help",		0, 0, 'h'},
 	{ "stun-srv",		1, 0, 's'},
 	{ "turn-srv",		1, 0, 't'},
 	{ "turn-tcp",		0, 0, 'T'},
 	{ "turn-username",	1, 0, 'u'},
 	{ "turn-password",	1, 0, 'p'},
-	{ "turn-fingerprint",	0, 0, 'F'}
+	{ "turn-fingerprint",	0, 0, 'F'},
+	{ "regular",		0, 0, 'R'}
     };
     int c, opt_id;
     pj_status_t status;
 
     icedemo.opt.comp_cnt = 1;
+    icedemo.opt.max_host = -1;
 
-    while((c=pj_getopt_long(argc,argv, "n:s:t:u:p:HhTF", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "c:n:s:t:u:p:H:hTFR", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'c':
 	    icedemo.opt.comp_cnt = atoi(pj_optarg);
@@ -1192,7 +1203,7 @@ int main(int argc, char *argv[])
 	    icedemo.opt.ns = pj_str(pj_optarg);
 	    break;
 	case 'H':
-	    icedemo.opt.no_host = PJ_TRUE;
+	    icedemo.opt.max_host = atoi(pj_optarg);
 	    break;
 	case 'h':
 	    icedemo_usage();
@@ -1214,6 +1225,9 @@ int main(int argc, char *argv[])
 	    break;
 	case 'F':
 	    icedemo.opt.turn_fingerprint = PJ_TRUE;
+	    break;
+	case 'R':
+	    icedemo.opt.regular = PJ_TRUE;
 	    break;
 	default:
 	    printf("Argument \"%s\" is not valid. Use -h to see help",

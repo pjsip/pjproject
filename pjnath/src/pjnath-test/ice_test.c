@@ -64,6 +64,8 @@ struct test_cfg
     unsigned    destroy_delay;	/* Delay before destroy()	*/
 
     struct test_result expected;/* Expected result		*/
+
+    pj_bool_t   nom_regular;	/* Use regular nomination?	*/
 };
 
 /* ICE endpoint state */
@@ -141,9 +143,9 @@ static int create_ice_strans(struct test_sess *test_sess,
     }
 
     if (ept->cfg.enable_host == 0) {
-	ice_cfg.stun.no_host_cands = PJ_TRUE;
+	ice_cfg.stun.max_host_cands = 0;
     } else {
-	ice_cfg.stun.no_host_cands = PJ_FALSE;
+	//ice_cfg.stun.no_host_cands = PJ_FALSE;
 	ice_cfg.stun.loop_addr = PJ_TRUE;
     }
 

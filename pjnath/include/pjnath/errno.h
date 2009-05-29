@@ -196,7 +196,12 @@
  * host candidate.
  */
 #define PJNATH_EICENOHOSTCAND	    (PJNATH_ERRNO_START+92) /* 370092 */
-
+/**
+ * @hideinitializer
+ * Controlled agent timed-out in waiting for the controlling agent to 
+ * send nominated check after all connectivity checks have completed.
+ */
+#define PJNATH_EICENOMTIMEOUT	    (PJNATH_ERRNO_START+93) /* 370093 */
 
 /************************************************************
  * TURN ERROR CODES

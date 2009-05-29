@@ -804,13 +804,16 @@ static pj_status_t create_ice_media_transports(void)
     ice_cfg.af = pj_AF_INET();
     ice_cfg.resolver = pjsua_var.resolver;
     
+    ice_cfg.opt = pjsua_var.media_cfg.ice_opt;
+
     /* Configure STUN settings */
     if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
 	pj_sockaddr_print(&pjsua_var.stun_srv, stunip, sizeof(stunip), 0);
 	ice_cfg.stun.server = pj_str(stunip);
 	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
     }
-    ice_cfg.stun.no_host_cands = pjsua_var.media_cfg.ice_no_host_cands;
+    if (pjsua_var.media_cfg.ice_max_host_cands >= 0)
+	ice_cfg.stun.max_host_cands = pjsua_var.media_cfg.ice_max_host_cands;
 
     /* Configure TURN settings */
     if (pjsua_var.media_cfg.enable_turn) {

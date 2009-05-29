@@ -264,7 +264,8 @@ static void usage(void)
     puts  ("");
     puts  ("Media Transport Options:");
     puts  ("  --use-ice           Enable ICE (default:no)");
-    puts  ("  --ice-no-host       Disable ICE host candidates (default: no)");
+    puts  ("  --ice-regular       Use ICE regular nomination (default: aggressive)");
+    puts  ("  --ice-max-hosts=N   Set maximum number of ICE host candidates");
     puts  ("  --ice-no-rtcp       Disable RTCP component in ICE (default: no)");
     puts  ("  --rtp-port=N        Base port to try for RTP (default=4000)");
     puts  ("  --rx-drop-pct=PCT   Drop PCT percent of RX RTP (for pkt lost sim, default: 0)");
@@ -476,8 +477,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
-	   OPT_USE_ICE, OPT_USE_SRTP, OPT_SRTP_SECURE,
-	   OPT_USE_TURN, OPT_ICE_NO_HOST, OPT_ICE_NO_RTCP, OPT_TURN_SRV, 
+	   OPT_USE_ICE, OPT_ICE_REGULAR, OPT_USE_SRTP, OPT_SRTP_SECURE,
+	   OPT_USE_TURN, OPT_ICE_MAX_HOSTS, OPT_ICE_NO_RTCP, OPT_TURN_SRV, 
 	   OPT_TURN_TCP, OPT_TURN_USER, OPT_TURN_PASSWD,
 	   OPT_PLAY_FILE, OPT_PLAY_TONE, OPT_RTP_PORT, OPT_ADD_CODEC, 
 	   OPT_ILBC_MODE, OPT_REC_FILE, OPT_AUTO_REC,
@@ -553,8 +554,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "rtp-port",	1, 0, OPT_RTP_PORT},
 
 	{ "use-ice",    0, 0, OPT_USE_ICE},
+	{ "ice-regular",0, 0, OPT_ICE_REGULAR},
 	{ "use-turn",	0, 0, OPT_USE_TURN},
-	{ "ice-no-host",0, 0, OPT_ICE_NO_HOST},
+	{ "ice-max-hosts",1, 0, OPT_ICE_MAX_HOSTS},
 	{ "ice-no-rtcp",0, 0, OPT_ICE_NO_RTCP},
 	{ "turn-srv",	1, 0, OPT_TURN_SRV},
 	{ "turn-tcp",	0, 0, OPT_TURN_TCP},
@@ -992,12 +994,16 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->media_cfg.enable_ice = PJ_TRUE;
 	    break;
 
+	case OPT_ICE_REGULAR:
+	    cfg->media_cfg.ice_opt.aggressive = PJ_FALSE;
+	    break;
+
 	case OPT_USE_TURN:
 	    cfg->media_cfg.enable_turn = PJ_TRUE;
 	    break;
 
-	case OPT_ICE_NO_HOST:
-	    cfg->media_cfg.ice_no_host_cands = PJ_TRUE;
+	case OPT_ICE_MAX_HOSTS:
+	    cfg->media_cfg.ice_max_host_cands = my_atoi(pj_optarg);
 	    break;
 
 	case OPT_ICE_NO_RTCP:
@@ -1644,11 +1650,17 @@ static int write_settings(const struct app_config *config,
     if (config->media_cfg.enable_ice)
 	pj_strcat2(&cfg, "--use-ice\n");
 
+    if (config->media_cfg.ice_opt.aggressive == PJ_FALSE)
+	pj_strcat2(&cfg, "--ice-regular\n");
+
     if (config->media_cfg.enable_turn)
 	pj_strcat2(&cfg, "--use-turn\n");
 
-    if (config->media_cfg.ice_no_host_cands)
-	pj_strcat2(&cfg, "--ice-no-host\n");
+    if (config->media_cfg.ice_max_host_cands >= 0) {
+	pj_ansi_sprintf(line, "--ice_max_host_cands %d\n",
+			config->media_cfg.ice_max_host_cands);
+	pj_strcat2(&cfg, line);
+    }
 
     if (config->media_cfg.ice_no_rtcp)
 	pj_strcat2(&cfg, "--ice-no-rtcp\n");
@@ -1885,7 +1897,7 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, "--use-compact-form\n");
     }
 
-    if (config->cfg.force_lr) {
+    if (!config->cfg.force_lr) {
 	pj_strcat2(&cfg, "--no-force-lr\n");
     }
 
@@ -3687,7 +3699,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
 		}
 
-		pjsua_call_xfer_replaces(call, dst_call, 0, &msg_data);
+		pjsua_call_xfer_replaces(call, dst_call, 
+					 PJSUA_XFER_NO_REQUIRE_REPLACES, 
+					 &msg_data);
 	    }
 	    break;
 
@@ -4718,19 +4732,62 @@ static pj_status_t create_ipv6_media_transports(void)
 
     for (i=0; i<app_config.cfg.max_calls; ++i) {
 	enum { MAX_RETRY = 10 };
+	pj_sock_t sock[2];
+	pjmedia_sock_info si;
 	unsigned j;
 
 	/* Get rid of uninitialized var compiler warning with MSVC */
 	status = PJ_SUCCESS;
 
 	for (j=0; j<MAX_RETRY; ++j) {
-	    status = pjmedia_transport_udp_create3(pjsua_get_pjmedia_endpt(), 
-						   pj_AF_INET6(),
-						   NULL, 
-						   &app_config.rtp_cfg.bound_addr,
-						   port, 
-						   0, &tp[i].transport);
+	    unsigned k;
 
+	    for (k=0; k<2; ++k) {
+		pj_sockaddr bound_addr;
+
+		status = pj_sock_socket(pj_AF_INET6(), pj_SOCK_DGRAM(), 0, &sock[k]);
+		if (status != PJ_SUCCESS)
+		    break;
+
+		status = pj_sockaddr_init(pj_AF_INET6(), &bound_addr,
+					  &app_config.rtp_cfg.bound_addr, 
+					  (unsigned short)(port+k));
+		if (status != PJ_SUCCESS)
+		    break;
+
+		status = pj_sock_bind(sock[k], &bound_addr, 
+				      pj_sockaddr_get_len(&bound_addr));
+		if (status != PJ_SUCCESS)
+		    break;
+	    }
+	    if (status != PJ_SUCCESS) {
+		if (k==1)
+		    pj_sock_close(sock[0]);
+
+		if (port != 0)
+		    port += 10;
+		else
+		    break;
+
+		continue;
+	    }
+
+	    pj_bzero(&si, sizeof(si));
+	    si.rtp_sock = sock[0];
+	    si.rtcp_sock = sock[1];
+	
+	    pj_sockaddr_init(pj_AF_INET6(), &si.rtp_addr_name, 
+			     &app_config.rtp_cfg.public_addr, 
+			     (unsigned short)(port));
+	    pj_sockaddr_init(pj_AF_INET6(), &si.rtcp_addr_name, 
+			     &app_config.rtp_cfg.public_addr, 
+			     (unsigned short)(port+1));
+
+	    status = pjmedia_transport_udp_attach(pjsua_get_pjmedia_endpt(),
+						  NULL,
+						  &si,
+						  0,
+						  &tp[i].transport);
 	    if (port != 0)
 		port += 10;
 	    else

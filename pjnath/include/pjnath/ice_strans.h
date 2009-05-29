@@ -197,6 +197,13 @@ typedef struct pj_ice_strans_cfg
     pj_dns_resolver	*resolver;
 
     /**
+     * This contains various STUN session options. Once the ICE stream
+     * transport is created, application may also change the options
+     * with #pj_ice_strans_set_options().
+     */
+    pj_ice_sess_options	 opt;
+
+    /**
      * STUN and local transport settings. This specifies the 
      * settings for local UDP socket, which will be resolved
      * to get the STUN mapped address.
@@ -209,12 +216,12 @@ typedef struct pj_ice_strans_cfg
 	pj_stun_sock_cfg     cfg;
 
 	/**
-	 * Disable host candidates. When this option is set, no
-	 * host candidates will be added.
+	 * Maximum number of host candidates to be added. If the
+	 * value is zero, no host candidates will be added.
 	 *
-	 * Default: PJ_FALSE
+	 * Default: 64
 	 */
-	pj_bool_t	     no_host_cands;
+	unsigned	     max_host_cands;
 
 	/**
 	 * Include loopback addresses in the host candidates.
@@ -383,6 +390,32 @@ PJ_DECL(pj_status_t) pj_ice_strans_destroy(pj_ice_strans *ice_st);
  * @return		The user data.
  */
 PJ_DECL(void*) pj_ice_strans_get_user_data(pj_ice_strans *ice_st);
+
+
+/**
+ * Get the value of various options of the ICE stream transport.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param opt		The options to be initialized with the values
+ *			from the ICE stream transport.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_get_options(pj_ice_strans *ice_st,
+					       pj_ice_sess_options *opt);
+
+/**
+ * Specify various options for this ICE stream transport. Application 
+ * should call #pj_ice_strans_get_options() to initialize the options 
+ * with their default values.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param opt		Options to be applied to this ICE stream transport.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pj_ice_strans_set_options(pj_ice_strans *ice_st,
+					       const pj_ice_sess_options *opt);
 
 
 /**

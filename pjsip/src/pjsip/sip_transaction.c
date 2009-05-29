@@ -1725,6 +1725,19 @@ static void send_msg_callback( pjsip_send_state *send_state,
 		      "will try next server. Err=%d (%s)",
 		      pjsip_tx_data_get_info(send_state->tdata), -sent,
 		      pj_strerror(-sent, errmsg, sizeof(errmsg)).ptr));
+
+	    /* Reset retransmission count */
+	    tsx->retransmit_count = 0;
+
+	    /* And reset timeout timer */
+	    if (tsx->timeout_timer.id) {
+		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+		tsx->timeout_timer.id = TIMER_INACTIVE;
+
+		tsx->timeout_timer.id = TIMER_ACTIVE;
+		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
+					    &timeout_timer_val);
+	    }
 	}
     }
 

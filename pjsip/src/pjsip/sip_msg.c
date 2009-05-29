@@ -456,16 +456,18 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 
     /* Print each of the headers. */
     for (hdr=msg->hdr.next; hdr!=&msg->hdr; hdr=hdr->next) {
-	len = (*hdr->vptr->print_on)(hdr, p, end-p);
-	if (len < 1)
-	    return -1;
-	p += len;
-
-	if (p+3 >= end)
+	len = pjsip_hdr_print_on(hdr, p, end-p);
+	if (len < 0)
 	    return -1;
 
-	*p++ = '\r';
-	*p++ = '\n';
+	if (len > 0) {
+	    p += len;
+	    if (p+3 >= end)
+		return -1;
+
+	    *p++ = '\r';
+	    *p++ = '\n';
+	}
     }
 
     /* Process message body. */
@@ -1601,6 +1603,25 @@ static int pjsip_routing_hdr_print( pjsip_routing_hdr *hdr,
     char *startbuf = buf;
     char *endbuf = buf + size;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
+    pjsip_sip_uri *sip_uri;
+    pjsip_param *p;
+
+    /* Check the proprietary param 'hide', don't print this header 
+     * if it exists in the route URI.
+     */
+    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(hdr->name_addr.uri);
+    p = sip_uri->other_param.next;
+    while (p != &sip_uri->other_param) {
+	const pj_str_t st_hide = {"hide", 4};
+
+	if (pj_stricmp(&p->name, &st_hide) == 0) {
+	    /* Check if param 'hide' is specified without 'lr'. */
+	    pj_assert(sip_uri->lr_param != 0);
+	    return 0;
+	}
+	p = p->next;
+    }
+
     /* Route and Record-Route don't compact forms */
 
     copy_advance(buf, hdr->name);

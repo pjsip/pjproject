@@ -365,16 +365,16 @@ parse_msg:
     hdr2 = ref_msg->hdr.next;
 
     while (hdr1 != &parsed_msg->hdr && hdr2 != &ref_msg->hdr) {
-	len = hdr1->vptr->print_on(hdr1, str1.ptr, BUFLEN);
-	if (len < 1) {
+	len = pjsip_hdr_print_on(hdr1, str1.ptr, BUFLEN);
+	if (len < 0) {
 	    status = -40;
 	    goto on_return;
 	}
 	str1.ptr[len] = '\0';
 	str1.slen = len;
 
-	len = hdr2->vptr->print_on(hdr2, str2.ptr, BUFLEN);
-	if (len < 1) {
+	len = pjsip_hdr_print_on(hdr2, str2.ptr, BUFLEN);
+	if (len < 0) {
 	    status = -50;
 	    goto on_return;
 	}
@@ -1944,7 +1944,7 @@ static int hdr_test(void)
 	/* Print the parsed header*/
 	output = (char*) pj_pool_alloc(pool, 1024);
 	len = pjsip_hdr_print_on(parsed_hdr1, output, 1024);
-	if (len < 1 || len >= 1024) {
+	if (len < 0 || len >= 1024) {
 	    PJ_LOG(3,(THIS_FILE, "    header too long: %s: %s", test->hname, test->hcontent));
 	    return -530;
 	}

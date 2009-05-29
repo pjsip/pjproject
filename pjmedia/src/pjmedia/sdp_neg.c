@@ -865,12 +865,14 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			     (ar.param.slen==1 && *ar.param.ptr=='1')))
 			{
 			    /* Further check for G7221, negotiate bitrate. */
-			    if (pj_strcmp2(&or_.enc_name, "G7221") == 0) {
+			    if (pj_stricmp2(&or_.enc_name, "G7221") == 0) {
 				if (match_g7221(offer, i, answer, j))
 				    break;
 			    } else
 			    /* Further check for AMR, negotiate fmtp. */
-			    if (pj_strcmp2(&or_.enc_name, "AMR") == 0) {
+			    if (pj_stricmp2(&or_.enc_name, "AMR") == 0 ||
+				pj_stricmp2(&or_.enc_name, "AMR-WB") == 0) 
+			    {
 				if (match_amr(offer, i, answer, j, PJ_FALSE, 
 					      NULL))
 				    break;
@@ -1070,7 +1072,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		}
 		pjmedia_sdp_attr_get_rtpmap(a, &or_);
 
-		if (!pj_strcmp2(&or_.enc_name, "telephone-event")) {
+		if (!pj_stricmp2(&or_.enc_name, "telephone-event")) {
 		    master_has_telephone_event = 1;
 		    if (found_matching_telephone_event)
 			continue;
@@ -1097,19 +1099,21 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			 */
 			if (!pj_stricmp(&or_.enc_name, &lr.enc_name) &&
 			    or_.clock_rate == lr.clock_rate &&
-			    (pj_strcmp(&or_.param, &lr.param)==0 ||
+			    (pj_stricmp(&or_.param, &lr.param)==0 ||
 			     (or_.param.slen==1 && *or_.param.ptr=='1'))) 
 			{
 			    /* Match! */
 			    if (is_codec) {
 				/* Further check for G7221, negotiate bitrate */
-				if (pj_strcmp2(&or_.enc_name, "G7221") == 0 &&
+				if (pj_stricmp2(&or_.enc_name, "G7221") == 0 &&
 				    !match_g7221(master, i, slave, j))
 				{
 				    continue;
 				} else 
 				/* Further check for AMR, negotiate fmtp */
-				if (pj_strcmp2(&or_.enc_name, "AMR")==0) {
+				if (pj_stricmp2(&or_.enc_name, "AMR")==0 ||
+				    pj_stricmp2(&or_.enc_name, "AMR-WB")==0) 
+				{
 				    unsigned o_med_idx, a_med_idx;
 
 				    o_med_idx = prefer_remote_codec_order? i:j;

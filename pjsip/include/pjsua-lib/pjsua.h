@@ -4260,9 +4260,16 @@ struct pjsua_media_config
     pj_bool_t		enable_ice;
 
     /**
-     * Disable ICE host candidates.
+     * Set the maximum number of host candidates.
+     *
+     * Default: -1 (maximum not set)
      */
-    pj_bool_t		ice_no_host_cands;
+    int			ice_max_host_cands;
+
+    /**
+     * ICE session options.
+     */
+    pj_ice_sess_options	ice_opt;
 
     /**
      * Disable RTCP component.

@@ -528,6 +528,7 @@ PJ_DEF(pj_bool_t) pj_stun_auth_valid_for_msg(const pj_stun_msg *msg)
     switch (err_attr->err_code) {
     case PJ_STUN_SC_BAD_REQUEST:	    /* 400 (Bad Request)	    */
     case PJ_STUN_SC_UNAUTHORIZED:	    /* 401 (Unauthorized)	    */
+    case PJ_STUN_SC_STALE_NONCE:	    /* 438 (Stale Nonce)	    */
 
     /* Due to the way this response is generated here, we can't really
      * authenticate 420 (Unknown Attribute) response			    */

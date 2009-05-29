@@ -553,10 +553,32 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 	return PJMEDIA_ENCSAMPLESPFRAME;
     }
     
-    /* Check if sink is listening to other ports */
+    /* If sink is currently listening to other ports, it needs to be released
+     * first before the new connection made.
+     */ 
     if (dst_port->transmitter_cnt > 0) {
-	pj_mutex_unlock(conf->mutex);
-	return PJ_ETOOMANYCONN;
+	unsigned j;
+	pj_bool_t transmitter_found = PJ_FALSE;
+
+	pj_assert(dst_port->transmitter_cnt == 1);
+	for (j=0; j<conf->max_ports && !transmitter_found; ++j) {
+	    if (conf->ports[j]) {
+		unsigned k;
+
+		for (k=0; k < conf->ports[j]->listener_cnt; ++k) {
+		    if (conf->ports[j]->listener_slots[k] == sink_slot) {
+			PJ_LOG(4,(THIS_FILE, "Connection [%d->%d] is "
+				  "disconnected forcedly for the new "
+				  "connection [%d->%d]",
+				  j, sink_slot, src_slot, sink_slot));
+			pjmedia_conf_disconnect_port(conf, j, sink_slot);
+			transmitter_found = PJ_TRUE;
+			break;
+		    }
+		}
+	    }
+	}
+	pj_assert(dst_port->transmitter_cnt == 0);
     }
 
     /* Check if connection has been made */

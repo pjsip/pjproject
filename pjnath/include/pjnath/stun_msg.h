@@ -197,6 +197,10 @@ typedef enum pj_stun_msg_type
      */
     PJ_STUN_BINDING_ERROR_RESPONSE	    = 0x0111,
 
+    /**
+     * Binding Indication (ICE)
+     */
+    PJ_STUN_BINDING_INDICATION		    = 0x0011,
 
     /**
      * STUN SHARED-SECRET reqeust.

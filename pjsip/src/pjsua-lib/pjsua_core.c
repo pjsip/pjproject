@@ -182,6 +182,9 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->jb_init = cfg->jb_min_pre = cfg->jb_max_pre = cfg->jb_max = -1;
     cfg->snd_auto_close_time = 1;
 
+    cfg->ice_max_host_cands = -1;
+    pj_ice_sess_options_default(&cfg->ice_opt);
+
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
 }
 
@@ -647,7 +650,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     /* Initialize logging first so that info/errors can be captured */
     if (log_cfg) {
 	status = pjsua_reconfigure_logging(log_cfg);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     /* If nameserver is configured, create DNS resolver instance and
