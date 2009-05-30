@@ -22,6 +22,7 @@
 #include <pjmedia/endpoint.h>
 #include <pjlib-util/base64.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -980,6 +981,7 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 {
     pj_str_t input;
     char *token;
+    int token_len;
     pj_str_t tmp;
     pj_status_t status;
     int itmp;
@@ -993,9 +995,19 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 	PJ_LOG(4,(THIS_FILE, "Attribute crypto expecting tag"));
 	return PJMEDIA_SDP_EINATTR;
     }
-    *tag = atoi(token);
-    if (*tag == 0)
+    token_len = pj_ansi_strlen(token);
+
+    /* Tag must not use leading zeroes. */
+    if (token_len > 1 && *token == '0')
 	return PJMEDIA_SDP_EINATTR;
+
+    /* Tag must be decimal, i.e: contains only digit '0'-'9'. */
+    for (itmp = 0; itmp < token_len; ++itmp)
+	if (!pj_isdigit(token[itmp]))
+	    return PJMEDIA_SDP_EINATTR;
+
+    /* Get tag value. */
+    *tag = atoi(token);
 
     /* Crypto-suite */
     token = strtok(NULL, " ");
