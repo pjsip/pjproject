@@ -567,9 +567,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 
 		for (k=0; k < conf->ports[j]->listener_cnt; ++k) {
 		    if (conf->ports[j]->listener_slots[k] == sink_slot) {
-			PJ_LOG(4,(THIS_FILE, "Connection [%d->%d] is "
-				  "disconnected forcedly for the new "
-				  "connection [%d->%d]",
+			PJ_LOG(2,(THIS_FILE, "Connection [%d->%d] is "
+				  "disconnected for new connection [%d->%d]",
 				  j, sink_slot, src_slot, sink_slot));
 			pjmedia_conf_disconnect_port(conf, j, sink_slot);
 			transmitter_found = PJ_TRUE;
