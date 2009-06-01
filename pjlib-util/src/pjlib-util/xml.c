@@ -340,22 +340,42 @@ PJ_DEF(void) pj_xml_add_attr( pj_xml_node *node, pj_xml_attr *attr )
     pj_list_push_back(&node->attr_head, attr);
 }
 
-PJ_DEF(pj_xml_node*) pj_xml_find_node(pj_xml_node *parent, const pj_str_t *name)
+PJ_DEF(pj_xml_node*) pj_xml_find_node(const pj_xml_node *parent, 
+				      const pj_str_t *name)
 {
-    pj_xml_node *node = parent->node_head.next;
+    const pj_xml_node *node = parent->node_head.next;
 
     PJ_CHECK_STACK();
 
     while (node != (void*)&parent->node_head) {
 	if (pj_stricmp(&node->name, name) == 0)
-	    return node;
+	    return (pj_xml_node*)node;
 	node = node->next;
     }
     return NULL;
 }
 
+PJ_DEF(pj_xml_node*) pj_xml_find_node_rec(const pj_xml_node *parent, 
+					  const pj_str_t *name)
+{
+    const pj_xml_node *node = parent->node_head.next;
 
-PJ_DEF(pj_xml_node*) pj_xml_find_next_node( pj_xml_node *parent, pj_xml_node *node,
+    PJ_CHECK_STACK();
+
+    while (node != (void*)&parent->node_head) {
+	pj_xml_node *found;
+	if (pj_stricmp(&node->name, name) == 0)
+	    return (pj_xml_node*)node;
+	found = pj_xml_find_node_rec(node, name);
+	if (found)
+	    return (pj_xml_node*)found;
+	node = node->next;
+    }
+    return NULL;
+}
+
+PJ_DEF(pj_xml_node*) pj_xml_find_next_node( const pj_xml_node *parent, 
+					    const pj_xml_node *node,
 					    const pj_str_t *name)
 {
     PJ_CHECK_STACK();
@@ -363,24 +383,25 @@ PJ_DEF(pj_xml_node*) pj_xml_find_next_node( pj_xml_node *parent, pj_xml_node *no
     node = node->next;
     while (node != (void*)&parent->node_head) {
 	if (pj_stricmp(&node->name, name) == 0)
-	    return node;
+	    return (pj_xml_node*)node;
 	node = node->next;
     }
     return NULL;
 }
 
 
-PJ_DEF(pj_xml_attr*) pj_xml_find_attr( pj_xml_node *node, const pj_str_t *name,
+PJ_DEF(pj_xml_attr*) pj_xml_find_attr( const pj_xml_node *node, 
+				       const pj_str_t *name,
 				       const pj_str_t *value)
 {
-    pj_xml_attr *attr = node->attr_head.next;
+    const pj_xml_attr *attr = node->attr_head.next;
     while (attr != (void*)&node->attr_head) {
 	if (pj_stricmp(&attr->name, name)==0) {
 	    if (value) {
 		if (pj_stricmp(&attr->value, value)==0)
-		    return attr;
+		    return (pj_xml_attr*)attr;
 	    } else {
-		return attr;
+		return (pj_xml_attr*)attr;
 	    }
 	}
 	attr = attr->next;
@@ -390,26 +411,73 @@ PJ_DEF(pj_xml_attr*) pj_xml_find_attr( pj_xml_node *node, const pj_str_t *name,
 
 
 
-PJ_DEF(pj_xml_node*) pj_xml_find( pj_xml_node *parent, const pj_str_t *name,
+PJ_DEF(pj_xml_node*) pj_xml_find( const pj_xml_node *parent, 
+				  const pj_str_t *name,
 				  const void *data, 
-				  pj_bool_t (*match)(pj_xml_node *, const void*))
+				  pj_bool_t (*match)(const pj_xml_node *, 
+						     const void*))
 {
-    pj_xml_node *head = (pj_xml_node*) &parent->node_head, *node = head->next;
+    const pj_xml_node *node = (const pj_xml_node *)parent->node_head.next;
 
-    while (node != (void*)head) {
-	if (name && pj_stricmp(&node->name, name)==0) {
-	    if (match) {
-		if (match(node, data))
-		    return node;
-	    } else {
-		return node;
+    if (!name && !match)
+	return NULL;
+
+    while (node != (const pj_xml_node*) &parent->node_head) {
+	if (name) {
+	    if (pj_stricmp(&node->name, name)!=0) {
+		node = node->next;
+		continue;
 	    }
 	}
+	if (match) {
+	    if (match(node, data))
+		return (pj_xml_node*)node;
+	} else {
+	    return (pj_xml_node*)node;
+	}
+
 	node = node->next;
     }
     return NULL;
 }
 
+PJ_DEF(pj_xml_node*) pj_xml_find_rec( const pj_xml_node *parent, 
+				      const pj_str_t *name,
+				      const void *data, 
+				      pj_bool_t (*match)(const pj_xml_node*, 
+							 const void*))
+{
+    const pj_xml_node *node = (const pj_xml_node *)parent->node_head.next;
+
+    if (!name && !match)
+	return NULL;
+
+    while (node != (const pj_xml_node*) &parent->node_head) {
+	pj_xml_node *found;
+
+	if (name) {
+	    if (pj_stricmp(&node->name, name)==0) {
+		if (match) {
+		    if (match(node, data))
+			return (pj_xml_node*)node;
+		} else {
+		    return (pj_xml_node*)node;
+		}
+	    }
+
+	} else if (match) {
+	    if (match(node, data))
+		return (pj_xml_node*)node;
+	}
+
+	found = pj_xml_find_rec(node, name, data, match);
+	if (found)
+	    return found;
+
+	node = node->next;
+    }
+    return NULL;
+}
 
 PJ_DEF(pj_xml_node*) pj_xml_clone( pj_pool_t *pool, const pj_xml_node *rhs)
 {
