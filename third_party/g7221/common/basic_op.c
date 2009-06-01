@@ -1,3 +1,8 @@
+#include "config.h"
+
+#if !PJMEDIA_LIBG7221_FUNCS_INLINED || \
+    (PJMEDIA_LIBG7221_FUNCS_INLINED && defined(__BASIC_OP_H__))
+
 /*___________________________________________________________________________
  |                                                                           |
  | Basic arithmetic operators.                                               |
@@ -72,7 +77,7 @@ Flag g7221_Carry = 0;
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 shr (Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) shr (Word16 var1, Word16 var2)
 {
     if (var2 < 0)
     {
@@ -122,7 +127,7 @@ Word16 shr (Word16 var1, Word16 var2)
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 shl (Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) shl (Word16 var1, Word16 var2)
 {
     if (var2 < 0)
     {
@@ -171,7 +176,7 @@ Word16 shl (Word16 var1, Word16 var2)
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 mult (Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) mult (Word16 var1, Word16 var2)
 {
     Word16 var_out;
     Word32 L_product;
@@ -228,7 +233,7 @@ Word16 mult (Word16 var1, Word16 var2)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
  |___________________________________________________________________________|
 */
-Word32 L_msu (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word32) L_msu (Word32 L_var3, Word16 var1, Word16 var2)
 {
     Word32 L_var_out;
     Word32 L_product;
@@ -289,7 +294,7 @@ Word32 L_msu (Word32 L_var3, Word16 var1, Word16 var2)
  |    operators which take into account its value.                           |
  |___________________________________________________________________________|
 */
-Word32 L_macNs (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word32) L_macNs (Word32 L_var3, Word16 var1, Word16 var2)
 {
     Word32 L_var_out;
 
@@ -350,7 +355,7 @@ Word32 L_macNs (Word32 L_var3, Word16 var1, Word16 var2)
  |    operators which take into account its value.                           |
  |___________________________________________________________________________|
 */
-Word32 L_msuNs (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word32) L_msuNs (Word32 L_var3, Word16 var1, Word16 var2)
 {
     Word32 L_var_out;
 
@@ -408,7 +413,7 @@ Word32 L_msuNs (Word32 L_var3, Word16 var1, Word16 var2)
  |    operators which take into account its value.                           |
  |___________________________________________________________________________|
 */
-Word32 L_add_c (Word32 L_var1, Word32 L_var2)
+LIBG7221_DEF(Word32) L_add_c (Word32 L_var1, Word32 L_var2)
 {
     Word32 L_var_out;
     Word32 L_test;
@@ -524,7 +529,7 @@ Word32 L_add_c (Word32 L_var1, Word32 L_var2)
  |    operators which take into account its value.                           |
  |___________________________________________________________________________|
 */
-Word32 L_sub_c (Word32 L_var1, Word32 L_var2)
+LIBG7221_DEF(Word32) L_sub_c (Word32 L_var1, Word32 L_var2)
 {
     Word32 L_var_out;
     Word32 L_test;
@@ -617,7 +622,7 @@ Word32 L_sub_c (Word32 L_var1, Word32 L_var2)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
  |___________________________________________________________________________|
 */
-Word32 L_negate (Word32 L_var1)
+LIBG7221_DEF(Word32) L_negate (Word32 L_var1)
 {
     Word32 L_var_out;
 
@@ -663,7 +668,7 @@ Word32 L_negate (Word32 L_var1)
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 mult_r (Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) mult_r (Word16 var1, Word16 var2)
 {
     Word16 var_out;
     Word32 L_product_arr;
@@ -728,7 +733,7 @@ Word16 mult_r (Word16 var1, Word16 var2)
  |             range : 0xffff 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word16 shr_r (Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) shr_r (Word16 var1, Word16 var2)
 {
     Word16 var_out;
 
@@ -797,7 +802,7 @@ Word16 shr_r (Word16 var1, Word16 var2)
  |             range : 0x0000 8000 <= L_var_out <= 0x0000 7fff.              |
  |___________________________________________________________________________|
 */
-Word16 mac_r (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) mac_r (Word32 L_var3, Word16 var1, Word16 var2)
 {
     Word16 var_out;
 
@@ -857,7 +862,7 @@ Word16 mac_r (Word32 L_var3, Word16 var1, Word16 var2)
  |             range : 0x0000 8000 <= L_var_out <= 0x0000 7fff.              |
  |___________________________________________________________________________|
 */
-Word16 msu_r (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) msu_r (Word32 L_var3, Word16 var1, Word16 var2)
 {
     Word16 var_out;
 
@@ -907,7 +912,7 @@ Word16 msu_r (Word32 L_var3, Word16 var1, Word16 var2)
  |             range : 0x8000 0000 <= var_out <= 0x7fff 0000.                |
  |___________________________________________________________________________|
 */
-Word32 L_deposit_h (Word16 var1)
+LIBG7221_DEF(Word32) L_deposit_h (Word16 var1)
 {
     Word32 L_var_out;
 
@@ -948,7 +953,7 @@ Word32 L_deposit_h (Word16 var1)
  |             range : 0xFFFF 8000 <= var_out <= 0x0000 7fff.                |
  |___________________________________________________________________________|
 */
-Word32 L_deposit_l (Word16 var1)
+LIBG7221_DEF(Word32) L_deposit_l (Word16 var1)
 {
     Word32 L_var_out;
 
@@ -1002,7 +1007,7 @@ Word32 L_deposit_l (Word16 var1)
  |             range : 0x8000 0000 <= var_out <= 0x7fff ffff.                |
  |___________________________________________________________________________|
 */
-Word32 L_shr_r (Word32 L_var1, Word16 var2)
+LIBG7221_DEF(Word32) L_shr_r (Word32 L_var1, Word16 var2)
 {
     Word32 L_var_out;
 
@@ -1060,7 +1065,7 @@ Word32 L_shr_r (Word32 L_var1, Word16 var2)
  |             range : 0x0000 0000 <= var_out <= 0x7fff ffff.                |
  |___________________________________________________________________________|
 */
-Word32 L_abs (Word32 L_var1)
+LIBG7221_DEF(Word32) L_abs (Word32 L_var1)
 {
     Word32 L_var_out;
 
@@ -1120,7 +1125,7 @@ Word32 L_abs (Word32 L_var1)
  |             range : 0x0000 0000 <= var_out <= 0x0000 000f.                |
  |___________________________________________________________________________|
 */
-Word16 norm_s (Word16 var1)
+LIBG7221_DEF(Word16) norm_s (Word16 var1)
 {
     Word16 var_out;
 
@@ -1130,7 +1135,7 @@ Word16 norm_s (Word16 var1)
     }
     else
     {
-        if (var1 == (Word16) 0xffff)
+        if (var1 == (UWord16)0xffff)
         {
             var_out = 15;
         }
@@ -1191,7 +1196,7 @@ Word16 norm_s (Word16 var1)
  |             It's a Q15 value (point between b15 and b14).                 |
  |___________________________________________________________________________|
 */
-Word16 div_s (Word16 var1, Word16 var2)
+LIBG7221_DEF(Word16) div_s (Word16 var1, Word16 var2)
 {
     Word16 var_out = 0;
     Word16 iteration;
@@ -1291,7 +1296,7 @@ Word16 div_s (Word16 var1, Word16 var2)
  |             range : 0x0000 0000 <= var_out <= 0x0000 001f.                |
  |___________________________________________________________________________|
 */
-Word16 norm_l (Word32 L_var1)
+LIBG7221_DEF(Word16) norm_l (Word32 L_var1)
 {
     Word16 var_out;
 
@@ -1372,7 +1377,7 @@ Word16 norm_l (Word32 L_var1)
  |                                                                           |
  |___________________________________________________________________________|
 */
-Word32 L_mls (Word32 Lv, Word16 v)
+LIBG7221_DEF(Word32) L_mls (Word32 Lv, Word16 v)
 {
    Word32   Temp  ;
 
@@ -1431,7 +1436,7 @@ Word32 L_mls (Word32 Lv, Word16 v)
 |             It's a Q15 value (point between b15 and b14).                 |
 |___________________________________________________________________________|
 */
-Word16 div_l (Word32  L_num, Word16 den)
+LIBG7221_DEF(Word16) div_l (Word32  L_num, Word16 den)
 {
     Word16   var_out = (Word16)0;
     Word32   L_den;
@@ -1519,7 +1524,7 @@ Word16 div_l (Word32  L_num, Word16 den)
 |             are performed if ORIGINAL_G7231 is defined.                   |
 |___________________________________________________________________________|
 */
-Word16 i_mult (Word16 a, Word16 b)
+LIBG7221_DEF(Word16) i_mult (Word16 a, Word16 b)
 {
 #ifdef ORIGINAL_G7231
    return a*b ;
@@ -1568,7 +1573,7 @@ Word16 i_mult (Word16 a, Word16 b)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.
  |___________________________________________________________________________
 */
-Word32 L_mult0 (Word16 var1,Word16 var2)
+LIBG7221_DEF(Word32) L_mult0 (Word16 var1,Word16 var2)
 {
   Word32 L_var_out;
 
@@ -1612,7 +1617,7 @@ Word32 L_mult0 (Word16 var1,Word16 var2)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.
  |___________________________________________________________________________
 */
-Word32 L_mac0 (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word32) L_mac0 (Word32 L_var3, Word16 var1, Word16 var2)
 {
   Word32 L_var_out;
   Word32 L_product;
@@ -1660,7 +1665,7 @@ Word32 L_mac0 (Word32 L_var3, Word16 var1, Word16 var2)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.
  |___________________________________________________________________________
 */
-Word32 L_msu0 (Word32 L_var3, Word16 var1, Word16 var2)
+LIBG7221_DEF(Word32) L_msu0 (Word32 L_var3, Word16 var1, Word16 var2)
 {
   Word32 L_var_out;
   Word32 L_product;
@@ -1711,7 +1716,7 @@ Word32 L_msu0 (Word32 L_var3, Word16 var1, Word16 var2)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
  |___________________________________________________________________________|
 */
-UWord32 LU_shl (UWord32 L_var1, Word16 var2)
+LIBG7221_DEF(UWord32) LU_shl (UWord32 L_var1, Word16 var2)
 {
     Word16 neg_var2;
     UWord32 L_var_out = 0;
@@ -1742,7 +1747,7 @@ UWord32 LU_shl (UWord32 L_var1, Word16 var2)
                 if (L_var1 < (UWord32) 0x00000001L)
                 {
                     SET_OVERFLOW(1);
-                    L_var_out = MIN_32;
+                    L_var_out = (UWord32)MIN_32;
                     break;
                 }
             }
@@ -1791,7 +1796,7 @@ UWord32 LU_shl (UWord32 L_var1, Word16 var2)
  |             range : 0x8000 0000 <= L_var_out <= 0x7fff ffff.              |
  |___________________________________________________________________________|
 */
-UWord32 LU_shr (UWord32 L_var1, Word16 var2)
+LIBG7221_DEF(UWord32) LU_shr (UWord32 L_var1, Word16 var2)
 {
     Word16  neg_var2;
     UWord32 L_var_out;
@@ -1825,5 +1830,6 @@ UWord32 LU_shr (UWord32 L_var1, Word16 var2)
 }
 /* ------------------------- End of LU_shr() ------------------------- */
 
+#endif /* PJMEDIA_LIBG7221_FUNCS_INLINED */
 
 /* ************************** END OF BASOP32.C ************************** */
