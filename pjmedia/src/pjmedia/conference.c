@@ -571,13 +571,17 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
 
     /* Create port zero for sound device. */
     status = create_sound_port(pool, conf);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pjmedia_conf_destroy(conf);
 	return status;
+    }
 
     /* Create mutex. */
     status = pj_mutex_create_recursive(pool, "conf", &conf->mutex);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pjmedia_conf_destroy(conf);
 	return status;
+    }
 
     /* If sound device was created, connect sound device to the
      * master port.
@@ -626,6 +630,8 @@ static pj_status_t resume_sound( pjmedia_conf *conf )
  */
 PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 {
+    unsigned i, ci;
+
     PJ_ASSERT_RETURN(conf != NULL, PJ_EINVAL);
 
     /* Destroy sound device port. */
@@ -634,8 +640,24 @@ PJ_DEF(pj_status_t) pjmedia_conf_destroy( pjmedia_conf *conf )
 	conf->snd_dev_port = NULL;
     }
 
+    /* Destroy delay buf of all (passive) ports. */
+    for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
+	struct conf_port *cport;
+
+	cport = conf->ports[i];
+	if (!cport)
+	    continue;
+	
+	++ci;
+	if (cport->delay_buf) {
+	    pjmedia_delay_buf_destroy(cport->delay_buf);
+	    cport->delay_buf = NULL;
+	}
+    }
+
     /* Destroy mutex */
-    pj_mutex_destroy(conf->mutex);
+    if (conf->mutex)
+	pj_mutex_destroy(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -792,6 +814,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_passive_port( pjmedia_conf *conf,
     unsigned index;
     pj_str_t tmp;
     pj_status_t status;
+
+    PJ_LOG(1, (THIS_FILE, "This API has been deprecated since 1.3 and will "
+			  "be removed in the future release!"));
 
     PJ_ASSERT_RETURN(conf && pool, PJ_EINVAL);
 
@@ -1121,6 +1146,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 	--conf_port->listener_cnt;
 	pj_assert(conf->connect_cnt > 0);
 	--conf->connect_cnt;
+    }
+
+    /* Destroy pjmedia port if this conf port is passive port,
+     * i.e: has delay buf.
+     */
+    if (conf_port->delay_buf) {
+	pjmedia_port_destroy(conf_port->port);
+	conf_port->port = NULL;
     }
 
     /* Remove the port. */

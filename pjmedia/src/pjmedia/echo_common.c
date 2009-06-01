@@ -239,6 +239,12 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjmedia_echo_destroy(pjmedia_echo_state *echo )
 {
     (*echo->op->ec_destroy)(echo->state);
+
+    if (echo->delay_buf) {
+	pjmedia_delay_buf_destroy(echo->delay_buf);
+	echo->delay_buf = NULL;
+    }
+
     pj_pool_release(echo->pool);
     return PJ_SUCCESS;
 }

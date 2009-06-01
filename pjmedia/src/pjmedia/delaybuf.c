@@ -121,17 +121,20 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
     b->eff_cnt = b->max_cnt >> 1;
     b->recalc_timer = RECALC_TIME;
 
-    status = pj_lock_create_recursive_mutex(pool, b->obj_name, 
-					    &b->lock);
-    if (status != PJ_SUCCESS)
-	return status;
-
+    /* Create circular buffer */
     status = pjmedia_circ_buf_create(pool, b->max_cnt, &b->circ_buf);
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Create WSOLA */
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
 				  0, &b->wsola);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Finally, create mutex */
+    status = pj_lock_create_recursive_mutex(pool, b->obj_name, 
+					    &b->lock);
     if (status != PJ_SUCCESS)
 	return status;
 
