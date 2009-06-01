@@ -128,7 +128,7 @@ PJ_DEF(pjpidf_tuple*) pjpidf_pres_get_next_tuple(pjpidf_pres *pres,
     return pj_xml_find_next_node(pres, tuple, &TUPLE);
 }
 
-static pj_bool_t find_tuple_by_id(pj_xml_node *node, const void *id)
+static pj_bool_t find_tuple_by_id(const pj_xml_node *node, const void *id)
 {
     return pj_xml_find_attr(node, &ID, (const pj_str_t*)id) != NULL;
 }
