@@ -105,16 +105,16 @@ static pj_str_t evsub_state_names[] =
  */
 
 /* Number of seconds to send SUBSCRIBE before the actual expiration */
-#define TIME_UAC_REFRESH	5
+#define TIME_UAC_REFRESH	PJSIP_EVSUB_TIME_UAC_REFRESH
 
 /* Time to wait for the final NOTIFY after sending unsubscription */
-#define TIME_UAC_TERMINATE	5
+#define TIME_UAC_TERMINATE	PJSIP_EVSUB_TIME_UAC_TERMINATE
 
 /* If client responds NOTIFY with non-2xx final response (such as 401),
  * wait for this seconds for further NOTIFY, otherwise client will
  * unsubscribe
  */
-#define TIME_UAC_WAIT_NOTIFY	5
+#define TIME_UAC_WAIT_NOTIFY	PJSIP_EVSUB_TIME_UAC_WAIT_NOTIFY
 
 
 /*

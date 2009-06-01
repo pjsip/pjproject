@@ -792,6 +792,61 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/*****************************************************************************
+ *  SIP Event framework and presence settings.
+ */
+
+/**
+ * Specify the time (in seconds) to send SUBSCRIBE to refresh client 
+ * subscription before the actual interval expires.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJSIP_EVSUB_TIME_UAC_REFRESH
+#   define PJSIP_EVSUB_TIME_UAC_REFRESH		5
+#endif
+
+
+/**
+ * Specify the time (in seconds) to wait for the final NOTIFY from the
+ * server after client has sent un-SUBSCRIBE request.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJSIP_EVSUB_TIME_UAC_TERMINATE
+#   define PJSIP_EVSUB_TIME_UAC_TERMINATE	5
+#endif
+
+
+/**
+ * Specify the time (in seconds) for client subscription to wait for another
+ * NOTIFY from the server, if it has rejected the last NOTIFY with non-2xx
+ * final response (such as 401). If further NOTIFY is not received within
+ * this period, the client will unsubscribe.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJSIP_EVSUB_TIME_UAC_WAIT_NOTIFY
+#   define PJSIP_EVSUB_TIME_UAC_WAIT_NOTIFY	5
+#endif
+
+
+/**
+ * Specify the default expiration time for presence event subscription, for
+ * both client and server subscription. For client subscription, application
+ * can override this by specifying positive non-zero value in "expires" 
+ * parameter when calling #pjsip_pres_initiate(). For server subscription,
+ * we would take the expiration value from the Expires header sent by client
+ * in the SUBSCRIBE request if the header exists and its value is less than 
+ * this setting, otherwise this setting will be used.
+ *
+ * Default: 600 seconds (10 minutes)
+ */
+#ifndef PJSIP_PRES_DEFAULT_EXPIRES
+#   define PJSIP_PRES_DEFAULT_EXPIRES		600
+#endif
+
+
 PJ_END_DECL
 
 /**

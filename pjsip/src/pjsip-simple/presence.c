@@ -32,7 +32,7 @@
 
 
 #define THIS_FILE		    "presence.c"
-#define PRES_DEFAULT_EXPIRES	    600
+#define PRES_DEFAULT_EXPIRES	    PJSIP_PRES_DEFAULT_EXPIRES
 
 /*
  * Presence module (mod-presence)
