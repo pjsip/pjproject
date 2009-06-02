@@ -780,6 +780,8 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 	}
     }
 
+    output->timestamp = input->timestamp;
+
     return PJ_SUCCESS;
 }
 
@@ -815,6 +817,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 	pjmedia_frame_ext_append_subframe(output_, input_.buf, 
 					  (pj_uint16_t)(input_.size << 3),
 					  (pj_uint16_t)desc->samples_per_frame);
+	output->timestamp = input->timestamp;
 	
 	return PJ_SUCCESS;
     }
@@ -823,6 +826,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     pjmedia_frame_ext_append_subframe(output_, input->buf, 
 				      (pj_uint16_t)(input->size << 3),
 				      (pj_uint16_t)desc->samples_per_frame);
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }

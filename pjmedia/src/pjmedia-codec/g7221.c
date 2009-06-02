@@ -823,6 +823,7 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = codec_data->frame_size;
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }
@@ -862,6 +863,8 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 	bitobj.current_word =  *bitobj.code_word_ptr;
 	bitobj.code_bit_count = 0;
 	bitobj.number_of_bits_left = codec_data->frame_size_bits;
+
+	output->timestamp = input->timestamp;
     } else {
 	pj_bzero(&bitobj, sizeof(bitobj));
 	frame_error_flag = 1;

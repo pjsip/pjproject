@@ -656,6 +656,7 @@ static pj_status_t l16_encode(pjmedia_codec *codec,
     /* Done */
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = input->size;
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }
@@ -690,6 +691,7 @@ static pj_status_t l16_decode(pjmedia_codec *codec,
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = input->size;
+    output->timestamp = input->timestamp;
 
 #if !PLC_DISABLED
     if (l16_data->plc_enabled)
