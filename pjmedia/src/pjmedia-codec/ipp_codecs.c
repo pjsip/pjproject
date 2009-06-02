@@ -26,6 +26,7 @@
 #include <pjmedia/silencedet.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
@@ -1098,7 +1099,11 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     if (ippc->pt == PJMEDIA_RTP_PT_AMR || ippc->pt == PJMEDIA_RTP_PT_AMRWB) {
 	amr_settings_t *s;
 	pj_uint8_t octet_align = 0;
-	pj_int8_t enc_mode = -1;
+	pj_int8_t enc_mode;
+
+	enc_mode = pjmedia_codec_amr_get_mode(
+				codec_data->info->params.modes.bitrate);
+	pj_assert(enc_mode >= 0 && enc_mode <= 8);
 
 	/* Check AMR specific attributes */
 
@@ -1118,8 +1123,16 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 		break;
 	    }
 	}
+
 	for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
-	    /* mode-set */
+	    /* mode-set, encoding mode is chosen based on local default mode 
+	     * setting:
+	     * - if local default mode is included in the mode-set, use it
+	     * - otherwise, find the closest mode to local default mode;
+	     *   if there are two closest modes, prefer to use the higher
+	     *   one, e.g: local default mode is 4, the mode-set param
+	     *   contains '2,3,5,6', then 5 will be chosen.
+	     */
 	    const pj_str_t STR_FMTP_MODE_SET = {"mode-set", 8};
 	    
 	    if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, 
@@ -1127,21 +1140,32 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	    {
 		const char *p;
 		pj_size_t l;
-
-		/* Get the highest value, for better quality. */
+		pj_int8_t diff = 99;
+		
 		p = pj_strbuf(&attr->setting.enc_fmtp.param[i].val);
 		l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
 
 		while (l--) {
-		    if ((ippc->pt == PJMEDIA_RTP_PT_AMR && *p>='0' && *p<='7') ||
-		        (ippc->pt == PJMEDIA_RTP_PT_AMRWB && *p>='0' && *p<='8'))
+		    if ((ippc->pt==PJMEDIA_RTP_PT_AMR && *p>='0' && *p<='7') ||
+		        (ippc->pt==PJMEDIA_RTP_PT_AMRWB && *p>='0' && *p<='8'))
 		    {
-			pj_int8_t tmp = *p - '0';
-			if (enc_mode < tmp)
-			    enc_mode = tmp;
+			pj_int8_t tmp = *p - '0' - enc_mode;
+
+			if (PJ_ABS(diff) > PJ_ABS(tmp) || 
+			    (PJ_ABS(diff) == PJ_ABS(tmp) && tmp > diff))
+			{
+			    diff = tmp;
+			    if (diff == 0) break;
+			}
 		    }
 		    ++p;
 		}
+
+		if (diff == 99)
+		    goto on_error;
+
+		enc_mode = enc_mode + diff;
+
 		break;
 	    }
 	}
@@ -1159,17 +1183,8 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = PJ_TRUE;
 
-	if (enc_mode != -1) {
-	    s->enc_mode = enc_mode;
-	} else {
-	    s->enc_mode = pjmedia_codec_amr_get_mode(
-				    codec_data->info->params.modes.bitrate);
-	}
-
-	if (s->enc_mode < 0)
-	    goto on_error;
-
-	/* Apply requested encoder bitrate */
+	/* Apply encoder mode/bitrate */
+	s->enc_mode = enc_mode;
 	codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
 				pjmedia_codec_amrnb_bitrates[s->enc_mode]:
 				pjmedia_codec_amrwb_bitrates[s->enc_mode];
