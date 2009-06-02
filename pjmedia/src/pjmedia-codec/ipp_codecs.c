@@ -570,6 +570,11 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 				pjmedia_codec_amrwb_bitrates[s->enc_mode];
 	ippc->fxns->std.Control(&codec_data->info->params.modes, 
 				codec_data->enc);
+
+	PJ_LOG(4,(THIS_FILE, "AMR%s switched encoding mode to: %d (%dbps)",
+		  (s->enc_setting.amr_nb?"":"-WB"),
+		  s->enc_mode,
+		  codec_data->info->params.modes.bitrate));
     }
 
     return PJ_SUCCESS;
@@ -1120,18 +1125,22 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	    if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, 
 			   &STR_FMTP_MODE_SET) == 0)
 	    {
-		pj_int8_t tmp;
+		const char *p;
+		pj_size_t l;
 
-		/* Just get the first value. */
-		tmp = (pj_int8_t)
-		      pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
+		/* Get the highest value, for better quality. */
+		p = pj_strbuf(&attr->setting.enc_fmtp.param[i].val);
+		l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
 
-		if ((ippc->pt == PJMEDIA_RTP_PT_AMR && tmp > 0 && tmp < 8) ||
-		    (ippc->pt == PJMEDIA_RTP_PT_AMRWB && tmp > 0 && tmp < 9))
-		{
-		    enc_mode = tmp;
-		    PJ_LOG(4,(THIS_FILE, "Remote specifies AMR mode-set attr, "
-			      "selected: %d", enc_mode));
+		while (l--) {
+		    if ((ippc->pt == PJMEDIA_RTP_PT_AMR && *p>='0' && *p<='7') ||
+		        (ippc->pt == PJMEDIA_RTP_PT_AMRWB && *p>='0' && *p<='8'))
+		    {
+			pj_int8_t tmp = *p - '0';
+			if (enc_mode < tmp)
+			    enc_mode = tmp;
+		    }
+		    ++p;
 		}
 		break;
 	    }
@@ -1150,22 +1159,27 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	s->dec_setting.octet_aligned = octet_align;
 	s->dec_setting.reorder = PJ_TRUE;
 
-	s->enc_mode = pjmedia_codec_amr_get_mode(
+	if (enc_mode != -1) {
+	    s->enc_mode = enc_mode;
+	} else {
+	    s->enc_mode = pjmedia_codec_amr_get_mode(
 				    codec_data->info->params.modes.bitrate);
+	}
+
 	if (s->enc_mode < 0)
 	    goto on_error;
 
-	if (enc_mode != -1) {
-	    s->enc_mode = enc_mode;
+	/* Apply requested encoder bitrate */
+	codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
+				pjmedia_codec_amrnb_bitrates[s->enc_mode]:
+				pjmedia_codec_amrwb_bitrates[s->enc_mode];
+	ippc->fxns->std.Control(&codec_data->info->params.modes, 
+				codec_data->enc);
 
-	    /* Apply requested encoder bitrate */
-	    codec_data->info->params.modes.bitrate = s->enc_setting.amr_nb?
-				    pjmedia_codec_amrnb_bitrates[s->enc_mode] :
-				    pjmedia_codec_amrwb_bitrates[s->enc_mode];
-	    ippc->fxns->std.Control(&codec_data->info->params.modes, 
-				    codec_data->enc);
-	}  
-
+	PJ_LOG(4,(THIS_FILE, "AMR%s encoding mode: %d (%dbps)", 
+		  (s->enc_setting.amr_nb?"":"-WB"),
+		  s->enc_mode,
+		  codec_data->info->params.modes.bitrate));
     }
 #endif
 
