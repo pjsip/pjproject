@@ -1056,7 +1056,7 @@ static void tsx_callback(void *token, pjsip_event *event)
 	pj_lock_release(regc->lock);
 	call_callback(regc, PJ_SUCCESS, tsx->status_code, 
 		      (rdata ? &rdata->msg_info.msg->line.status.reason 
-			: pjsip_get_status_text(tsx->status_code)),
+			: &tsx->status_text),
 		      rdata, expiration, 
 		      contact_cnt, contact);
 	pj_lock_acquire(regc->lock);

@@ -23,6 +23,7 @@
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_event.h>
+#include <pjlib-util/errno.h>
 #include <pj/hash.h>
 #include <pj/pool.h>
 #include <pj/os.h>
@@ -1691,6 +1692,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	if (!*cont) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pjsip_status_code sc;
 	    pj_str_t err;
 
 	    tsx->transport_err = -sent;
@@ -1708,8 +1710,17 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    /* Mark that we have resolved the addresses. */
 	    tsx->transport_flag |= TSX_HAS_RESOLVED_SERVER;
 
+	    /* Server resolution error is now mapped to 502 instead of 503,
+	     * since with 503 normally client should try again.
+	     * See http://trac.pjsip.org/repos/ticket/870
+	     */
+	    if (-sent==PJ_ERESOLVE || -sent==PJLIB_UTIL_EDNS_NXDOMAIN)
+		sc = PJSIP_SC_BAD_GATEWAY;
+	    else
+		sc = PJSIP_SC_TSX_TRANSPORT_ERROR;
+
 	    /* Terminate transaction, if it's not already terminated. */
-	    tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+	    tsx_set_status_code(tsx, sc, &err);
 	    if (tsx->state != PJSIP_TSX_STATE_TERMINATED &&
 		tsx->state != PJSIP_TSX_STATE_DESTROYED)
 	    {
