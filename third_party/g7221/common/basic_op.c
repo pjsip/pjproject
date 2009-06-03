@@ -1143,7 +1143,7 @@ LIBG7221_DEF(Word16) norm_s (Word16 var1)
         {
             if (var1 < 0)
             {
-                var1 = ~var1;
+                var1 = (Word16)(~var1);
             }
             for (var_out = 0; var1 < 0x4000; var_out++)
             {
