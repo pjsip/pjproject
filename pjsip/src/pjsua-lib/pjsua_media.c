@@ -2594,6 +2594,11 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     unsigned i;
     pj_status_t status = -1;
 
+    /* Null-sound */
+    if (capture_dev==NULL_SND_DEV_ID && playback_dev==NULL_SND_DEV_ID) {
+	return pjsua_set_null_snd_dev();
+    }
+
     /* Set default clock rate */
     alt_cr[0] = pjsua_var.media_cfg.snd_clock_rate;
     if (alt_cr[0] == 0)
