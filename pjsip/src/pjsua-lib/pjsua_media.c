@@ -1720,26 +1720,39 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	}
 
 	if (need_reopen) {
-	    pjmedia_aud_param param;
+	    if (pjsua_var.cap_dev != NULL_SND_DEV_ID) {
+		pjmedia_aud_param param;
 
-	    /* Create parameter based on peer info */
-	    status = create_aud_param(&param, pjsua_var.cap_dev, 
-				      pjsua_var.play_dev,
-				      peer_info.clock_rate,
-				      peer_info.channel_count,
-				      peer_info.samples_per_frame,
-				      peer_info.bits_per_sample);
+		/* Create parameter based on peer info */
+		status = create_aud_param(&param, pjsua_var.cap_dev, 
+					  pjsua_var.play_dev,
+					  peer_info.clock_rate,
+					  peer_info.channel_count,
+					  peer_info.samples_per_frame,
+					  peer_info.bits_per_sample);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		    return status;
+		}
 
-	    /* And peer format */
-	    if (peer_info.format.id != PJMEDIA_FORMAT_PCM) {
-		param.flags |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
-		param.ext_fmt = peer_info.format;
-	    }
+		/* And peer format */
+		if (peer_info.format.id != PJMEDIA_FORMAT_PCM) {
+		    param.flags |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
+		    param.ext_fmt = peer_info.format;
+		}
 
-	    status = open_snd_dev(&param);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error opening sound device", status);
-		return status;
+		status = open_snd_dev(&param);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		    return status;
+		}
+	    } else {
+		/* Null-audio */
+		status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+		if (status != PJ_SUCCESS) {
+		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		    return status;
+		}
 	    }
 	}
 

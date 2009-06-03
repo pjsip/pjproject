@@ -597,6 +597,10 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
 
     PJ_ASSERT_RETURN(prm && prm->dir && p_aud_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(aud_subsys.pf, PJMEDIA_EAUD_INIT);
+    PJ_ASSERT_RETURN(prm->dir==PJMEDIA_DIR_CAPTURE ||
+		     prm->dir==PJMEDIA_DIR_PLAYBACK ||
+		     prm->dir==PJMEDIA_DIR_CAPTURE_PLAYBACK,
+		     PJ_EINVAL);
 
     /* Must make copy of param because we're changing device ID */
     pj_memcpy(&param, prm, sizeof(param));
@@ -630,6 +634,8 @@ PJ_DEF(pj_status_t) pjmedia_aud_stream_create(const pjmedia_aud_param *prm,
 	param.play_id = index;
 	f = play_f;
     }
+
+    PJ_ASSERT_RETURN(f != NULL, PJ_EBUG);
 
     /* For now, rec_id and play_id must belong to the same factory */
     PJ_ASSERT_RETURN((param.dir != PJMEDIA_DIR_CAPTURE_PLAYBACK) || 
