@@ -22,10 +22,10 @@
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/string.h>
-#include <portaudio.h>
 
 #if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
 
+#include <portaudio.h>
 
 #define THIS_FILE	"pa_dev.c"
 #define DRIVER_NAME	"PA"

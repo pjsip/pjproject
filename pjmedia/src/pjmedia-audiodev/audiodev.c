@@ -344,7 +344,7 @@ static void deinit_driver(unsigned drv_idx)
 PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 {
     unsigned i;
-    pj_status_t status = PJ_ENOMEM;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Allow init() to be called multiple times as long as there is matching
      * number of shutdown().

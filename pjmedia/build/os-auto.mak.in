@@ -102,9 +102,7 @@ endif
 # Null sound device
 #
 ifeq ($(AC_PJMEDIA_SND),null)
-# ***** Error ******
-# This will not work either with the new Audiodev
-export CFLAGS += -DPJMEDIA_SOUND_IMPLEMENTATION=PJMEDIA_SOUND_NULL_SOUND
+export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
 #
