@@ -871,34 +871,16 @@ static void stun_dns_srv_resolver_cb(void *user_data,
 	 * it with gethostbyname()
 	 */
 	if (pjsua_var.ua_cfg.stun_host.slen) {
-	    pj_str_t str_host, str_port;
-	    int port;
-	    pj_hostent he;
-
-	    str_port.ptr = pj_strchr(&pjsua_var.ua_cfg.stun_host, ':');
-	    if (str_port.ptr != NULL) {
-		str_host.ptr = pjsua_var.ua_cfg.stun_host.ptr;
-		str_host.slen = (str_port.ptr - str_host.ptr);
-		str_port.ptr++;
-		str_port.slen = pjsua_var.ua_cfg.stun_host.slen - 
-				str_host.slen - 1;
-		port = (int)pj_strtoul(&str_port);
-		if (port < 1 || port > 65535) {
-		    pjsua_perror(THIS_FILE, "Invalid STUN server", PJ_EINVAL);
-		    pjsua_var.stun_status = PJ_EINVAL;
-		    return;
-		}
+	    pjsua_var.stun_status = 
+		pj_sockaddr_parse(pj_AF_INET(), 0,
+				  &pjsua_var.ua_cfg.stun_host,
+				  &pjsua_var.stun_srv);
+	    if (pjsua_var.stun_status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Invalid STUN server", 
+			     pjsua_var.stun_status);
 	    } else {
-		str_host = pjsua_var.ua_cfg.stun_host;
-		port = 3478;
-	    }
-
-	    pjsua_var.stun_status = pj_gethostbyname(&str_host, &he);
-
-	    if (pjsua_var.stun_status == PJ_SUCCESS) {
-		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
-		pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
-		pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)port);
+		if (pj_sockaddr_get_port(&pjsua_var.stun_srv)==0)
+		    pj_sockaddr_set_port(&pjsua_var.stun_srv, 3478);
 
 		PJ_LOG(3,(THIS_FILE, 
 			  "STUN server %.*s resolved, address is %s:%d",
@@ -988,41 +970,18 @@ pj_status_t pjsua_resolve_stun_server(pj_bool_t wait)
 	 * gethostbyname().
 	 */
 	else if (pjsua_var.ua_cfg.stun_host.slen) {
-	    pj_str_t str_host, str_port;
-	    int port;
-	    pj_hostent he;
-
-	    str_port.ptr = pj_strchr(&pjsua_var.ua_cfg.stun_host, ':');
-	    if (str_port.ptr != NULL) {
-		str_host.ptr = pjsua_var.ua_cfg.stun_host.ptr;
-		str_host.slen = (str_port.ptr - str_host.ptr);
-		str_port.ptr++;
-		str_port.slen = pjsua_var.ua_cfg.stun_host.slen - 
-				str_host.slen - 1;
-		port = (int)pj_strtoul(&str_port);
-		if (port < 1 || port > 65535) {
-		    pjsua_perror(THIS_FILE, "Invalid STUN server", PJ_EINVAL);
-		    pjsua_var.stun_status = PJ_EINVAL;
-		    return pjsua_var.stun_status;
-		}
-	    } else {
-		str_host = pjsua_var.ua_cfg.stun_host;
-		port = 3478;
-	    }
-
 	    pjsua_var.stun_status = 
-		pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, &str_host, 
-				    (pj_uint16_t)port);
-
+		pj_sockaddr_parse(pj_AF_INET(), 0,
+				  &pjsua_var.ua_cfg.stun_host,
+				  &pjsua_var.stun_srv);
 	    if (pjsua_var.stun_status != PJ_SUCCESS) {
-		pjsua_var.stun_status = pj_gethostbyname(&str_host, &he);
-
-		if (pjsua_var.stun_status == PJ_SUCCESS) {
-		    pj_sockaddr_in_init(&pjsua_var.stun_srv.ipv4, NULL, 0);
-		    pjsua_var.stun_srv.ipv4.sin_addr = *(pj_in_addr*)he.h_addr;
-		    pjsua_var.stun_srv.ipv4.sin_port = pj_htons((pj_uint16_t)port);
-		}
+		pjsua_perror(THIS_FILE, "Invalid STUN server", 
+					pjsua_var.stun_status);
+		return pjsua_var.stun_status;
 	    }
+
+	    if (pj_sockaddr_get_port(&pjsua_var.stun_srv)==0)
+		pj_sockaddr_set_port(&pjsua_var.stun_srv, 3478);
 
 	    PJ_LOG(3,(THIS_FILE, 
 		      "STUN server %.*s resolved, address is %s:%d",
