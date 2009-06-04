@@ -171,6 +171,161 @@ static int format_test(void)
     return 0;
 }
 
+static int parse_test(void)
+{
+#define IPv4	1
+#define IPv6	2
+
+    struct test_t {
+	const char  *input;
+	int	     result_af;
+	const char  *result_ip;
+	pj_uint16_t  result_port;
+    };
+    struct test_t valid_tests[] = 
+    {
+	/* IPv4 */
+	{ "10.0.0.1:80", IPv4, "10.0.0.1", 80},
+	{ "10.0.0.1", IPv4, "10.0.0.1", 0},
+	{ "10.0.0.1:", IPv4, "10.0.0.1", 0},
+	{ "10.0.0.1:0", IPv4, "10.0.0.1", 0},
+	{ ":80", IPv4, "0.0.0.0", 80},
+	{ ":", IPv4, "0.0.0.0", 0},
+	{ "localhost", IPv4, "127.0.0.1", 0},
+	{ "localhost:", IPv4, "127.0.0.1", 0},
+	{ "localhost:80", IPv4, "127.0.0.1", 80},
+
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+	{ "fe::01:80", IPv6, "fe::01:80", 0},
+	{ "[fe::01]:80", IPv6, "fe::01", 80},
+	{ "fe::01", IPv6, "fe::01", 0},
+	{ "[fe::01]", IPv6, "fe::01", 0},
+	{ "fe::01:", IPv6, "fe::01", 0},
+	{ "[fe::01]:", IPv6, "fe::01", 0},
+	{ "::", IPv6, "::0", 0},
+	{ "[::]", IPv6, "::", 0},
+	{ ":::", IPv6, "::", 0},
+	{ "[::]:", IPv6, "::", 0},
+	{ ":::80", IPv6, "::", 80},
+	{ "[::]:80", IPv6, "::", 80},
+#endif
+    };
+    struct test_t invalid_tests[] = 
+    {
+	/* IPv4 */
+	{ "10.0.0.1:abcd", IPv4},   /* port not numeric */
+	{ "10.0.0.1:-1", IPv4},	    /* port contains illegal character */
+	{ "10.0.0.1:123456", IPv4}, /* port too big	*/
+	{ "1.2.3.4.5:80", IPv4},    /* invalid IP */
+
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+	{ "[fe::01]:abcd", IPv6},   /* port not numeric */
+	{ "[fe::01]:-1", IPv6},	    /* port contains illegal character */
+	{ "[fe::01]:123456", IPv6}, /* port too big	*/
+	{ "fe::01:02::03:04:80", IPv6},	    /* invalid IP */
+	{ "[fe::01:02::03:04]:80", IPv6},   /* invalid IP */
+	{ "[fe:01", IPv6},	    /* Unterminated bracket */
+#endif
+    };
+
+    unsigned i;
+
+    PJ_LOG(3,("test", "...IP address parsing"));
+
+    for (i=0; i<PJ_ARRAY_SIZE(valid_tests); ++i) {
+	pj_status_t status;
+	pj_str_t input;
+	pj_sockaddr addr, result;
+
+	switch (valid_tests[i].result_af) {
+	case IPv4:
+	    valid_tests[i].result_af = PJ_AF_INET;
+	    break;
+	case IPv6:
+	    valid_tests[i].result_af = PJ_AF_INET6;
+	    break;
+	default:
+	    pj_assert(!"Invalid AF!");
+	    continue;
+	}
+
+	/* Try parsing with PJ_AF_UNSPEC */
+	status = pj_sockaddr_parse(PJ_AF_UNSPEC, 0, 
+				   pj_cstr(&input, valid_tests[i].input), 
+				   &addr);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,("test", ".... failed when parsing %s", 
+		      valid_tests[i].input));
+	    return -10;
+	}
+
+	/* Build the correct result */
+	status = pj_sockaddr_init(valid_tests[i].result_af,
+				  &result,
+				  pj_cstr(&input, valid_tests[i].result_ip), 
+				  valid_tests[i].result_port);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,("test", ".... error building IP address %s", 
+		      valid_tests[i].input));
+	    return -30;
+	}
+
+	/* Compare the result */
+	if (pj_sockaddr_cmp(&addr, &result) != 0) {
+	    PJ_LOG(1,("test", ".... parsed result mismatched for %s", 
+		      valid_tests[i].input));
+	    return -40;
+	}
+
+	/* Parse again with the specified af */
+	status = pj_sockaddr_parse(valid_tests[i].result_af, 0, 
+				   pj_cstr(&input, valid_tests[i].input), 
+				   &addr);
+	if (status != PJ_SUCCESS) {
+	    PJ_LOG(1,("test", ".... failed when parsing %s", 
+		      valid_tests[i].input));
+	    return -50;
+	}
+
+	/* Compare the result again */
+	if (pj_sockaddr_cmp(&addr, &result) != 0) {
+	    PJ_LOG(1,("test", ".... parsed result mismatched for %s", 
+		      valid_tests[i].input));
+	    return -60;
+	}
+    }
+
+    for (i=0; i<PJ_ARRAY_SIZE(invalid_tests); ++i) {
+	pj_status_t status;
+	pj_str_t input;
+	pj_sockaddr addr;
+
+	switch (invalid_tests[i].result_af) {
+	case IPv4:
+	    invalid_tests[i].result_af = PJ_AF_INET;
+	    break;
+	case IPv6:
+	    invalid_tests[i].result_af = PJ_AF_INET6;
+	    break;
+	default:
+	    pj_assert(!"Invalid AF!");
+	    continue;
+	}
+
+	/* Try parsing with PJ_AF_UNSPEC */
+	status = pj_sockaddr_parse(PJ_AF_UNSPEC, 0, 
+				   pj_cstr(&input, invalid_tests[i].input), 
+				   &addr);
+	if (status == PJ_SUCCESS) {
+	    PJ_LOG(1,("test", ".... expecting failure when parsing %s", 
+		      invalid_tests[i].input));
+	    return -100;
+	}
+    }
+
+    return 0;
+}
+
 static int simple_sock_test(void)
 {
     int types[2];
@@ -573,6 +728,10 @@ int sock_test()
 #endif
     
     rc = format_test();
+    if (rc != 0)
+	return rc;
+
+    rc = parse_test();
     if (rc != 0)
 	return rc;
 

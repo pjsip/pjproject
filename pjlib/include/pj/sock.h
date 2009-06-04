@@ -940,6 +940,57 @@ PJ_DECL(pj_status_t) pj_sockaddr_set_port(pj_sockaddr *addr,
 PJ_DECL(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr, 
 				      pj_uint16_t hostport);
 
+/**
+ * Parse string containing IP address and optional port into socket address,
+ * possibly also with address family detection. This function supports both
+ * IPv4 and IPv6 parsing, however IPv6 parsing may only be done if IPv6 is
+ * enabled during compilation.
+ *
+ * This function supports parsing several formats. Sample IPv4 inputs and
+ * their default results::
+ *  - "10.0.0.1:80": address 10.0.0.1 and port 80.
+ *  - "10.0.0.1": address 10.0.0.1 and port zero.
+ *  - "10.0.0.1:": address 10.0.0.1 and port zero.
+ *  - "10.0.0.1:0": address 10.0.0.1 and port zero.
+ *  - ":80": address 0.0.0.0 and port 80.
+ *  - ":": address 0.0.0.0 and port 0.
+ *  - "localhost": address 127.0.0.1 and port 0.
+ *  - "localhost:": address 127.0.0.1 and port 0.
+ *  - "localhost:80": address 127.0.0.1 and port 80.
+ *
+ * Sample IPv6 inputs and their default results:
+ *  - "[fec0::01]:80": address fec0::01 and port 80
+ *  - "[fec0::01]": address fec0::01 and port 0
+ *  - "[fec0::01]:": address fec0::01 and port 0
+ *  - "[fec0::01]:0": address fec0::01 and port 0
+ *  - "fec0::01": address fec0::01 and port 0
+ *  - "fec0::01:80": address fec0::01:80 and port 0
+ *  - "::": address zero (::) and port 0
+ *  - "[::]": address zero (::) and port 0
+ *  - "[::]:": address zero (::) and port 0
+ *  - ":::": address zero (::) and port 0
+ *  - "[::]:80": address zero (::) and port 0
+ *  - ":::80": address zero (::) and port 80
+ *
+ * Note: when the IPv6 socket address contains port number, the IP 
+ * part of the socket address should be enclosed with square brackets, 
+ * otherwise the port number will be included as part of the IP address
+ * (see "fec0::01:80" example above).
+ *
+ * @param af	    Optionally specify the address family to be used. If the
+ *		    address family is to be deducted from the input, specify
+ *		    pj_AF_UNSPEC() here.
+ * @param options   Additional options to assist the parsing, must be zero
+ *		    for now.
+ * @param str	    The input string to be parsed.
+ * @param addr	    Pointer to store the result.
+ *
+ * @return	    PJ_SUCCESS if the parsing is successful.
+ */
+PJ_DECL(pj_status_t) pj_sockaddr_parse(int af, unsigned options,
+				       const pj_str_t *str,
+				       pj_sockaddr *addr);
+
 /*****************************************************************************
  *
  * HOST NAME AND ADDRESS.

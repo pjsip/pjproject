@@ -19,6 +19,7 @@
  */
 #include <pj/sock.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
 #include <pj/errno.h>
 #include <pj/ip_helper.h>
 #include <pj/os.h>
@@ -452,6 +453,191 @@ PJ_DEF(void) pj_sockaddr_in_set_addr(pj_sockaddr_in *addr,
 				     pj_uint32_t hostaddr)
 {
     addr->sin_addr.s_addr = pj_htonl(hostaddr);
+}
+
+/*
+ * Parse address
+ */
+PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
+				       const pj_str_t *str,
+				       pj_sockaddr *addr)
+{
+    const char *end = str->ptr + str->slen;
+    const char *last_colon_pos = NULL;
+
+    PJ_ASSERT_RETURN(addr, PJ_EINVAL);
+    PJ_ASSERT_RETURN(af==PJ_AF_UNSPEC ||
+		     af==PJ_AF_INET ||
+		     af==PJ_AF_INET6, PJ_EINVAL);
+    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
+
+    /* Deduce address family if it's not given */
+    if (af == PJ_AF_UNSPEC) {
+	unsigned colon_cnt = 0;
+	const char *p;
+
+	/* Can't accept NULL or empty input if address family is unknown */
+	PJ_ASSERT_RETURN(str && str->slen, PJ_EINVAL);
+
+	for (p=str->ptr; p!=end; ++p) {
+	    if (*p == ':') {
+		++colon_cnt;
+		last_colon_pos = p;
+	    }
+	}
+
+	if (colon_cnt > 1)
+	    af = PJ_AF_INET6;
+	else
+	    af = PJ_AF_INET;
+    } else {
+	/* Input may be NULL or empty as long as address family is given */
+	if (str == NULL || str->slen == 0)
+	    return pj_sockaddr_init(af, addr, NULL, 0);
+    }
+
+    if (af == PJ_AF_INET) {
+	/* Parse as IPv4. Supported formats:
+	 *  - "10.0.0.1:80"
+	 *  - "10.0.0.1"
+	 *  - "10.0.0.1:"
+	 *  - ":80"
+	 *  - ":"
+	 */
+	pj_str_t ip_part;
+	unsigned long port;
+
+	if (last_colon_pos == NULL)
+	    last_colon_pos = pj_strchr(str, ':');
+	
+	ip_part.ptr = (char*)str->ptr;
+
+	if (last_colon_pos) {
+	    pj_str_t port_part;
+	    int i;
+
+	    ip_part.slen = last_colon_pos - str->ptr;
+
+	    port_part.ptr = (char*)last_colon_pos + 1;
+	    port_part.slen = end - port_part.ptr;
+
+	    /* Make sure port number is valid */
+	    for (i=0; i<port_part.slen; ++i) {
+		if (!pj_isdigit(port_part.ptr[i]))
+		    return PJ_EINVAL;
+	    }
+	    port = pj_strtoul(&port_part);
+	    if (port > 65535)
+		return PJ_EINVAL;
+	} else {
+	    ip_part.slen = str->slen;
+	    port = 0;
+	}
+
+	return pj_sockaddr_in_init(&addr->ipv4, &ip_part, (pj_uint16_t)port);
+    }
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
+    else if (af == PJ_AF_INET6) {
+	/* Parse as IPv4. Supported formats:
+	 *  - "fe::01:80"  ==> note: port number is zero in this case, not 80!
+	 *  - "[fe::01]:80"
+	 *  - "fe::01"
+	 *  - "fe::01:"
+	 *  - "[fe::01]"
+	 *  - "[fe::01]:"
+	 *  - "[::]:80"
+	 *  - ":::80"
+	 *  - "[::]"
+	 *  - "[::]:"
+	 *  - ":::"
+	 *  - "::"
+	 */
+	pj_str_t ip_part, port_part;
+
+	if (*str->ptr == '[') {
+	    char *end_bracket = pj_strchr(str, ']');
+	    int i;
+	    unsigned long port;
+
+	    if (end_bracket == NULL)
+		return PJ_EINVAL;
+
+	    ip_part.ptr = (char*)str->ptr + 1;
+	    ip_part.slen = end_bracket - ip_part.ptr;
+
+	    if (last_colon_pos == NULL) {
+		const char *p;
+		for (p=str->ptr; p!=end; ++p) {
+		    if (*p == ':')
+			last_colon_pos = p;
+		}
+	    }
+
+	    if (last_colon_pos == NULL)
+		return PJ_EINVAL;
+
+	    if (last_colon_pos < end_bracket) {
+		port_part.ptr = NULL;
+		port_part.slen = 0;
+	    } else {
+		port_part.ptr = (char*)last_colon_pos + 1;
+		port_part.slen = end - port_part.ptr;
+	    }
+
+	    /* Make sure port number is valid */
+	    for (i=0; i<port_part.slen; ++i) {
+		if (!pj_isdigit(port_part.ptr[i]))
+		    return PJ_EINVAL;
+	    }
+	    port = pj_strtoul(&port_part);
+	    if (port > 65535)
+		return PJ_EINVAL;
+
+	    return pj_sockaddr_init(PJ_AF_INET6, addr, &ip_part, 
+				    (pj_uint16_t)port);
+	} else {
+	    int i;
+	    unsigned long port;
+
+	    /* First lets try to parse everything as IPv6 address */
+	    if (pj_sockaddr_init(PJ_AF_INET6, addr, str, 0)==PJ_SUCCESS)
+		return PJ_SUCCESS;
+
+	    /* Parse as IPv6:port */
+	    if (last_colon_pos == NULL) {
+		const char *p;
+		for (p=str->ptr; p!=end; ++p) {
+		    if (*p == ':')
+			last_colon_pos = p;
+		}
+	    }
+
+	    if (last_colon_pos == NULL)
+		return PJ_EINVAL;
+
+	    ip_part.ptr = (char*)str->ptr;
+	    ip_part.slen = last_colon_pos - str->ptr;
+
+	    port_part.ptr = (char*)last_colon_pos + 1;
+	    port_part.slen = end - port_part.ptr;
+
+	    /* Make sure port number is valid */
+	    for (i=0; i<port_part.slen; ++i) {
+		if (!pj_isdigit(port_part.ptr[i]))
+		    return PJ_EINVAL;
+	    }
+	    port = pj_strtoul(&port_part);
+	    if (port > 65535)
+		return PJ_EINVAL;
+
+	    return pj_sockaddr_init(PJ_AF_INET6, addr, &ip_part, 
+				    (pj_uint16_t)port);
+	}
+    }
+#endif
+    else {
+	return PJ_EIPV6NOTSUP;
+    }
 }
 
 static pj_bool_t is_usable_ip(const pj_sockaddr *addr)
