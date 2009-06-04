@@ -2901,9 +2901,16 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	case PJSIP_INV_STATE_EARLY:
 	case PJSIP_INV_STATE_CONNECTING:
 	    st_code = e->body.tsx_state.tsx->status_code;
-	    ev_state = PJSIP_EVSUB_STATE_ACTIVE;
+	    if (call->inv->state == PJSIP_INV_STATE_CONNECTING)
+		ev_state = PJSIP_EVSUB_STATE_TERMINATED;
+	    else
+		ev_state = PJSIP_EVSUB_STATE_ACTIVE;
 	    break;
 
+#if 0
+/* We don't need this, as we've terminated the subscription in
+ * CONNECTING state.
+ */
 	case PJSIP_INV_STATE_CONFIRMED:
 	    /* When state is confirmed, send the final 200/OK and terminate
 	     * subscription.
@@ -2911,6 +2918,7 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	    st_code = e->body.tsx_state.tsx->status_code;
 	    ev_state = PJSIP_EVSUB_STATE_TERMINATED;
 	    break;
+#endif
 
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    st_code = e->body.tsx_state.tsx->status_code;
@@ -3456,6 +3464,18 @@ static void xfer_client_on_evsub_state( pjsip_evsub *sub, pjsip_event *event)
 	if (!cont) {
 	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
 	}
+
+	/* If the call transfer has completed but the subscription is
+	 * not terminated, terminate it now.
+	 */
+	if (status_line.code/100 == 2 && !is_last) {
+	    pjsip_tx_data *tdata;
+
+	    status = pjsip_evsub_initiate(sub, &pjsip_subscribe_method, 
+					  0, &tdata);
+	    if (status == PJ_SUCCESS)
+		status = pjsip_evsub_send_request(sub, tdata);
+	}
     }
 }
 
@@ -3730,6 +3750,16 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (call == NULL) {
+	PJSUA_UNLOCK();
+	return;
+    }
+
+    if (call->inv == NULL) {
+	/* Shouldn't happen. It happens only when we don't terminate the
+	 * server subscription caused by REFER after the call has been
+	 * transfered (and this call has been disconnected), and we
+	 * receive another REFER for this call.
+	 */
 	PJSUA_UNLOCK();
 	return;
     }

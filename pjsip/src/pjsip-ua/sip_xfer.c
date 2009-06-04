@@ -28,6 +28,11 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+/* Subscription expiration */
+#ifndef PJSIP_XFER_EXPIRES
+#   define PJSIP_XFER_EXPIRES	    600
+#endif
+
 
 /*
  * Refer module (mod-refer)
@@ -154,7 +159,8 @@ PJ_DEF(pj_status_t) pjsip_xfer_init_module(pjsip_endpoint *endpt)
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pjsip_evsub_register_pkg( &mod_xfer, &STR_REFER, 300, 1, &accept);
+    status = pjsip_evsub_register_pkg(&mod_xfer, &STR_REFER, 
+				      PJSIP_XFER_EXPIRES, 1, &accept);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -586,7 +592,7 @@ static void xfer_on_evsub_client_refresh(pjsip_evsub *sub)
 	pj_status_t status;
 	pjsip_tx_data *tdata;
 
-	status = pjsip_xfer_initiate(sub, NULL, &tdata);
+	status = pjsip_evsub_initiate(sub, NULL, PJSIP_XFER_EXPIRES, &tdata);
 	if (status == PJ_SUCCESS)
 	    pjsip_xfer_send_request(sub, tdata);
     }
