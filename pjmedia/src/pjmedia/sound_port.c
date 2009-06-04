@@ -564,7 +564,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
 {
     pjmedia_port_info *pinfo;
     pjmedia_aud_param *param;
-    pjmedia_sync_param sync_param;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(snd_port && port, PJ_EINVAL);
@@ -609,18 +608,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
 	    return status;
     }
 
-    /* Create sync port */
-    pj_bzero(&sync_param, sizeof(sync_param));
-    sync_param.options = PJMEDIA_SYNC_DONT_DESTROY_DN;
-    status = pjmedia_sync_port_create(snd_port->pool, 
-				      (snd_port->echo_port?
-				       snd_port->echo_port:snd_port->port),
-				      &sync_param, &snd_port->sync_port);
-    if (status != PJ_SUCCESS)
-	return status;
+    /* Create sync port. Only do this if the format is PCM! */
+    if (param->ext_fmt.id == PJMEDIA_FORMAT_PCM) {
+	pjmedia_sync_param sync_param;
+	
+	pj_bzero(&sync_param, sizeof(sync_param));
+	sync_param.options = PJMEDIA_SYNC_DONT_DESTROY_DN;
+	status = pjmedia_sync_port_create(snd_port->pool, 
+					  (snd_port->echo_port?
+					   snd_port->echo_port:snd_port->port),
+					  &sync_param, &snd_port->sync_port);
+	if (status != PJ_SUCCESS)
+	    return status;
 
-    /* Update down port of sound port */
-    snd_port->dn_port = snd_port->sync_port;
+	/* Update down port of sound port */
+	snd_port->dn_port = snd_port->sync_port;
+    }
 
     return PJ_SUCCESS;
 }

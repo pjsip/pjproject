@@ -458,7 +458,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     pj_status_t status;
 
 
-    status = create_conf_port(conf, pool, &name, NULL, &conf_port);
+    status = create_conf_port(pool, conf, NULL, &name, &conf_port);
     if (status != PJ_SUCCESS)
 	return status;
 
