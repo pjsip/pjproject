@@ -19,7 +19,6 @@
  */
 
 #include <pjmedia/echo.h>
-#include <pjmedia/delaybuf.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/list.h>
@@ -50,8 +49,6 @@ struct pjmedia_echo_state
     unsigned	     lat_buf_cnt;   /* Actual number of frames in lat_buf   */
     struct frame     lat_buf;	    /* Frame queue for delayed playback	    */
     struct frame     lat_free;	    /* Free frame list.			    */
-
-    pjmedia_delay_buf	*delay_buf;
 };
 
 
@@ -146,6 +143,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
     unsigned ptime;
     pjmedia_echo_state *ec;
     pj_status_t status;
+    unsigned i;
 
     /* Create new pool and instantiate and init the EC */
     pool = pj_pool_create(pool->factory, "ec%p", 256, 256, NULL);
@@ -191,32 +189,17 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 
     /* Create latency buffers */
     ptime = samples_per_frame * 1000 / clock_rate;
-    if (latency_ms == 0) {
-	/* Give at least one frame delay to simplify programming */
+    /* Give at least one frame delay to simplify programming */
+    if (latency_ms < ptime) {
 	latency_ms = ptime;
     }
     ec->lat_target_cnt = latency_ms / ptime;
-    if (ec->lat_target_cnt != 0) {
-	unsigned i;
-	for (i=0; i < ec->lat_target_cnt; ++i)  {
-	    struct frame *frm;
+    for (i=0; i < ec->lat_target_cnt; ++i)  {
+	struct frame *frm;
 
-	    frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
-						      sizeof(struct frame));
-	    pj_list_push_back(&ec->lat_free, frm);
-	}
-    } else {
-	ec->lat_ready = PJ_TRUE;
-    }
-
-    /* Create delay buffer to compensate drifts */
-    status = pjmedia_delay_buf_create(ec->pool, ec->obj_name, clock_rate, 
-				      samples_per_frame, channel_count,
-				      (PJMEDIA_SOUND_BUFFER_COUNT+1) * ptime,
-				      0, &ec->delay_buf);
-    if (status != PJ_SUCCESS) {
-	pj_pool_release(pool);
-	return status;
+	frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
+						  sizeof(struct frame));
+	pj_list_push_back(&ec->lat_free, frm);
     }
 
     PJ_LOG(4,(ec->obj_name, 
@@ -240,11 +223,6 @@ PJ_DEF(pj_status_t) pjmedia_echo_destroy(pjmedia_echo_state *echo )
 {
     (*echo->op->ec_destroy)(echo->state);
 
-    if (echo->delay_buf) {
-	pjmedia_delay_buf_destroy(echo->delay_buf);
-	echo->delay_buf = NULL;
-    }
-
     pj_pool_release(echo->pool);
     return PJ_SUCCESS;
 }
@@ -262,7 +240,6 @@ PJ_DEF(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo )
 	pj_list_push_back(&echo->lat_free, frm);
     }
     echo->lat_ready = PJ_FALSE;
-    pjmedia_delay_buf_reset(echo->delay_buf);
     echo->op->ec_reset(echo->state);
     return PJ_SUCCESS;
 }
@@ -274,31 +251,26 @@ PJ_DEF(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo )
 PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
 					   pj_int16_t *play_frm )
 {
-    if (!echo->lat_ready) {
+    struct frame *frm;
+
+    if (echo->lat_ready) {
+	frm = echo->lat_buf.next;
+	pj_list_erase(frm);
+    } else {
 	/* We've not built enough latency in the buffer, so put this frame
 	 * in the latency buffer list.
 	 */
-	struct frame *frm;
-
+	frm = echo->lat_free.prev;
+	pj_list_erase(frm);
 	if (pj_list_empty(&echo->lat_free)) {
 	    echo->lat_ready = PJ_TRUE;
 	    PJ_LOG(5,(echo->obj_name, "Latency bufferring complete"));
-	    pjmedia_delay_buf_put(echo->delay_buf, play_frm);
-	    return PJ_SUCCESS;
 	}
-	    
-	frm = echo->lat_free.prev;
-	pj_list_erase(frm);
-
-	pjmedia_copy_samples(frm->buf, play_frm, echo->samples_per_frame);
-	pj_list_push_back(&echo->lat_buf, frm);
-
-    } else {
-	/* Latency buffer is ready (full), so we put this frame in the
-	 * delay buffer.
-	 */
-	pjmedia_delay_buf_put(echo->delay_buf, play_frm);
     }
+
+    /* Put the incoming frame into the end of latency buffer */
+    pjmedia_copy_samples(frm->buf, play_frm, echo->samples_per_frame);
+    pj_list_push_back(&echo->lat_buf, frm);
 
     return PJ_SUCCESS;
 }
@@ -313,7 +285,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
 					  unsigned options )
 {
     struct frame *oldest_frm;
-    pj_status_t status, rc;
+    pj_status_t status;
 
     if (!echo->lat_ready) {
 	/* Prefetching to fill in the desired latency */
@@ -323,22 +295,11 @@ PJ_DEF(pj_status_t) pjmedia_echo_capture( pjmedia_echo_state *echo,
 
     /* Retrieve oldest frame from the latency buffer */
     oldest_frm = echo->lat_buf.next;
-    pj_list_erase(oldest_frm);
 
     /* Cancel echo using this reference frame */
     status = pjmedia_echo_cancel(echo, rec_frm, oldest_frm->buf, 
 				 options, NULL);
 
-    /* Move one frame from delay buffer to the latency buffer. */
-    rc = pjmedia_delay_buf_get(echo->delay_buf, oldest_frm->buf);
-    if (rc != PJ_SUCCESS) {
-	/* Ooops.. no frame! */
-	PJ_LOG(5,(echo->obj_name, 
-		  "No frame from delay buffer. This will upset EC later"));
-	pjmedia_zero_samples(oldest_frm->buf, echo->samples_per_frame);
-    }
-    pj_list_push_back(&echo->lat_buf, oldest_frm);
-    
     return status;
 }
 
