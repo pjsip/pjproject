@@ -568,6 +568,10 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     int rport;
     pjsip_sip_uri *uri;
     pjsip_via_hdr *via;
+    pj_sockaddr contact_addr;
+    pj_sockaddr recv_addr;
+    pj_status_t status;
+    pj_bool_t matched;
     pj_str_t srv_ip;
 
     tp = param->rdata->tp_info.transport;
@@ -626,9 +630,25 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	uri->port = pjsip_transport_get_default_port_for_type(tp_type);
     }
 
-    if (uri->port == rport &&
-	pj_stricmp(&uri->host, via_addr)==0)
-    {
+    /* Convert IP address strings into sockaddr for comparison.
+     * (http://trac.pjsip.org/repos/ticket/863)
+     */
+    status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, &uri->host, 
+			       &contact_addr);
+    if (status == PJ_SUCCESS)
+	status = pj_sockaddr_parse(pj_AF_UNSPEC(), 0, via_addr, 
+				   &recv_addr);
+    if (status == PJ_SUCCESS) {
+	/* Compare the addresses as sockaddr according to the ticket above */
+	matched = (uri->port == rport &&
+		   pj_sockaddr_cmp(&contact_addr, &recv_addr)==0);
+    } else {
+	/* Compare the addresses as string, as before */
+	matched = (uri->port == rport &&
+		   pj_stricmp(&uri->host, via_addr)==0);
+    }
+
+    if (matched) {
 	/* Address doesn't change */
 	pj_pool_release(pool);
 	return PJ_FALSE;
