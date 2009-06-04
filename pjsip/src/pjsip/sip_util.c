@@ -806,6 +806,13 @@ static pj_status_t get_dest_info(const pjsip_uri *target_uri,
 	return PJSIP_EINVALIDSCHEME;
     }
 
+    /* Handle IPv6 (http://trac.pjsip.org/repos/ticket/861) */
+    if (dest_info->type != PJSIP_TRANSPORT_UNSPECIFIED && 
+	pj_strchr(&dest_info->addr.host, ':'))
+    {
+	dest_info->type |= PJSIP_TRANSPORT_IPV6;
+    }
+
     return PJ_SUCCESS;
 }
 
