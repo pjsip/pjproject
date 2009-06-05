@@ -637,6 +637,12 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     /* Must not be "attached" to existing application */
     PJ_ASSERT_RETURN(!udp->attached, PJ_EINVALIDOP);
 
+    /* Lock the ioqueue keys to make sure that callbacks are
+     * not executed. See ticket #844 for details.
+     */
+    pj_ioqueue_lock_key(udp->rtp_key);
+    pj_ioqueue_lock_key(udp->rtcp_key);
+
     /* "Attach" the application: */
 
     /* Copy remote RTP address */
@@ -671,6 +677,10 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     pj_bzero(&udp->rtp_src_addr, sizeof(udp->rtp_src_addr));
     pj_bzero(&udp->rtcp_src_addr, sizeof(udp->rtcp_src_addr));
     udp->rtp_src_cnt = 0;
+
+    /* Unlock keys */
+    pj_ioqueue_unlock_key(udp->rtcp_key);
+    pj_ioqueue_unlock_key(udp->rtp_key);
 
     return PJ_SUCCESS;
 }
