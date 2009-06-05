@@ -808,6 +808,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * Specify the time (in seconds) to send PUBLISH to refresh client 
+ * publication before the actual interval expires.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH
+#   define PJSIP_PUBLISHC_DELAY_BEFORE_REFRESH	5
+#endif
+
+
+/**
  * Specify the time (in seconds) to wait for the final NOTIFY from the
  * server after client has sent un-SUBSCRIBE request.
  *
