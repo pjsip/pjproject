@@ -3183,7 +3183,10 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
      * 'inactive' (PJMEDIA_DIR_NONE).
      * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
      */
-    if (call->media_dir != PJMEDIA_DIR_ENCODING) {
+    /* http://trac.pjsip.org/repos/ticket/880 
+       if (call->media_dir != PJMEDIA_DIR_ENCODING) {
+     */
+    if (1) {
 	pjmedia_sdp_attr *attr;
 
 	/* Remove existing directions attributes */
@@ -3192,7 +3195,7 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
 	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
 	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
 
-	if (call->media_dir == PJMEDIA_DIR_ENCODING_DECODING) {
+	if (call->media_dir & PJMEDIA_DIR_ENCODING) {
 	    /* Add sendonly attribute */
 	    attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
 	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
