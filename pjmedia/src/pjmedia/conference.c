@@ -236,7 +236,6 @@ struct pjmedia_conf
     unsigned		  channel_count;/**< Number of channels (1=mono).   */
     unsigned		  samples_per_frame;	/**< Samples per frame.	    */
     unsigned		  bits_per_sample;	/**< Bits per sample.	    */
-    pj_int16_t		 *master_port_buf;
 };
 
 
@@ -458,7 +457,7 @@ static pj_status_t create_sound_port( pj_pool_t *pool,
     pj_status_t status;
 
 
-    status = create_conf_port(pool, conf, NULL, &name, &conf_port);
+    status = create_pasv_port(conf, pool, &name, NULL, &conf_port);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -557,10 +556,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_create( pj_pool_t *pool,
     /* Create and initialize the master port interface. */
     conf->master_port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
     PJ_ASSERT_RETURN(conf->master_port, PJ_ENOMEM);
-
-    conf->master_port_buf = (pj_int16_t*)
-			    pj_pool_zalloc(pool, conf->samples_per_frame<<1);
-    PJ_ASSERT_RETURN(conf->master_port_buf, PJ_ENOMEM);
     
     pjmedia_port_info_init(&conf->master_port->info, &name, SIGNATURE,
 			   clock_rate, channel_count, bits_per_sample,
@@ -1056,13 +1051,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
 		  dst_port->name.ptr));
 
 	/* if source port is passive port and has no listener, reset delaybuf */
-	if (src_port->listener_cnt == 0) {
-	    if (src_port->delay_buf)
-		pjmedia_delay_buf_reset(src_port->delay_buf);
-	    if (src_port->port == NULL)
-		pjmedia_zero_samples(conf->master_port_buf, 
-				     conf->samples_per_frame);
-	}
+	if (src_port->delay_buf && src_port->listener_cnt == 0)
+	    pjmedia_delay_buf_reset(src_port->delay_buf);
     }
 
     pj_mutex_unlock(conf->mutex);
@@ -1851,17 +1841,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	}
 
 	/* Get frame from this port.
-	 * For port 0 (master port), get the frame from master_port_buf.
 	 * For passive ports, get the frame from the delay_buf.
 	 * For other ports, get the frame from the port. 
 	 */
-	if (conf_port->port == NULL) {
-
-	    pjmedia_copy_samples((pj_int16_t*)frame->buf, conf->master_port_buf,
-				 conf->samples_per_frame);
-
-	} else if (conf_port->delay_buf != NULL) {
-
+	if (conf_port->delay_buf != NULL) {
 	    pj_status_t status;
 	
 	    status = pjmedia_delay_buf_get(conf_port->delay_buf,
@@ -2071,11 +2054,15 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *port = conf->ports[this_port->port_data.ldata];
+    pj_status_t status;
 
     /* Check for correct size. */
     PJ_ASSERT_RETURN( frame->size == conf->samples_per_frame *
 				     conf->bits_per_sample / 8,
 		      PJMEDIA_ENCSAMPLESPFRAME);
+
+    /* Check existance of delay_buf instance */
+    PJ_ASSERT_RETURN( port->delay_buf, PJ_EBUG );
 
     /* Skip if this port is muted/disabled. */
     if (port->rx_setting != PJMEDIA_PORT_ENABLE) {
@@ -2087,10 +2074,9 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 	return PJ_SUCCESS;
     }
 
-    pjmedia_copy_samples(conf->master_port_buf, (pj_int16_t*)frame->buf,
-			 conf->samples_per_frame);
+    status = pjmedia_delay_buf_put(port->delay_buf, (pj_int16_t*)frame->buf);
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 #endif

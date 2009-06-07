@@ -249,10 +249,6 @@ SOURCE=..\src\pjmedia\stream.c
 # End Source File
 # Begin Source File
 
-SOURCE=..\src\pjmedia\sync_port.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\src\pjmedia\tonegen.c
 # End Source File
 # Begin Source File
@@ -438,10 +434,6 @@ SOURCE=..\include\pjmedia\stereo.h
 # Begin Source File
 
 SOURCE=..\include\pjmedia\stream.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\include\pjmedia\sync_port.h
 # End Source File
 # Begin Source File
 

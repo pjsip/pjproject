@@ -19,21 +19,23 @@
  */
 #include <pjmedia/sound_port.h>
 #include <pjmedia/alaw_ulaw.h>
-#include <pjmedia/echo_port.h>
+#include <pjmedia/delaybuf.h>
+#include <pjmedia/echo.h>
 #include <pjmedia/errno.h>
-#include <pjmedia/sync_port.h>
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/rand.h>
 #include <pj/string.h>	    /* pj_memset() */
 
 #define AEC_TAIL	    128	    /* default AEC length in ms */
+#define AEC_SUSPEND_LIMIT   5	    /* seconds of no activity	*/
 
 #define THIS_FILE	    "sound_port.c"
 
+//#define TEST_OVERFLOW_UNDERFLOW
+
 struct pjmedia_snd_port
 {
-    pj_pool_t		*pool;
     int			 rec_id;
     int			 play_id;
     pj_uint32_t		 aud_caps;
@@ -41,8 +43,6 @@ struct pjmedia_snd_port
     pjmedia_aud_stream	*aud_stream;
     pjmedia_dir		 dir;
     pjmedia_port	*port;
-    pjmedia_port	*dn_port;
-    pjmedia_port	*sync_port;
 
     unsigned		 clock_rate;
     unsigned		 channel_count;
@@ -50,9 +50,12 @@ struct pjmedia_snd_port
     unsigned		 bits_per_sample;
 
     /* software ec */
-    pjmedia_port	*echo_port;
+    pjmedia_echo_state	*ec_state;
     unsigned		 ec_options;
     unsigned		 ec_tail_len;
+    pj_bool_t		 ec_suspended;
+    unsigned		 ec_suspend_count;
+    unsigned		 ec_suspend_limit;
 };
 
 /*
@@ -66,7 +69,7 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     const unsigned required_size = frame->size;
     pj_status_t status;
 
-    port = snd_port->dn_port;
+    port = snd_port->port;
     if (port == NULL)
 	goto no_frame;
 
@@ -80,6 +83,16 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     /* Must supply the required samples */
     pj_assert(frame->size == required_size);
 
+    if (snd_port->ec_state) {
+	if (snd_port->ec_suspended) {
+	    snd_port->ec_suspended = PJ_FALSE;
+	    //pjmedia_echo_state_reset(snd_port->ec_state);
+	    PJ_LOG(4,(THIS_FILE, "EC activated"));
+	}
+	snd_port->ec_suspend_count = 0;
+	pjmedia_echo_playback(snd_port->ec_state, (pj_int16_t*)frame->buf);
+    }
+
 
     return PJ_SUCCESS;
 
@@ -87,6 +100,18 @@ no_frame:
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->size = required_size;
     pj_bzero(frame->buf, frame->size);
+
+    if (snd_port->ec_state && !snd_port->ec_suspended) {
+	++snd_port->ec_suspend_count;
+	if (snd_port->ec_suspend_count > snd_port->ec_suspend_limit) {
+	    snd_port->ec_suspended = PJ_TRUE;
+	    PJ_LOG(4,(THIS_FILE, "EC suspended because of inactivity"));
+	}
+	if (snd_port->ec_state) {
+	    /* To maintain correct delay in EC */
+	    pjmedia_echo_playback(snd_port->ec_state, (pj_int16_t*)frame->buf);
+	}
+    }
 
     return PJ_SUCCESS;
 }
@@ -101,9 +126,14 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
 
-    port = snd_port->dn_port;
+    port = snd_port->port;
     if (port == NULL)
 	return PJ_SUCCESS;
+
+    /* Cancel echo */
+    if (snd_port->ec_state && !snd_port->ec_suspended) {
+	pjmedia_echo_capture(snd_port->ec_state, (pj_int16_t*) frame->buf, 0);
+    }
 
     pjmedia_port_put_frame(port, frame);
 
@@ -152,11 +182,12 @@ static pj_status_t rec_cb_ext(void *user_data, pjmedia_frame *frame)
  * Start the sound stream.
  * This may be called even when the sound stream has already been started.
  */
-static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
+static pj_status_t start_sound_device( pj_pool_t *pool,
+				       pjmedia_snd_port *snd_port )
 {
     pjmedia_aud_rec_cb snd_rec_cb;
     pjmedia_aud_play_cb snd_play_cb;
-    pjmedia_aud_param *param;
+    pjmedia_aud_param param_copy;
     pj_status_t status;
 
     /* Check if sound has been started. */
@@ -168,13 +199,12 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
 		     snd_port->dir == PJMEDIA_DIR_CAPTURE_PLAYBACK,
 		     PJ_EBUG);
 
-    param = &snd_port->aud_param;
-
     /* Get device caps */
-    if (param->dir & PJMEDIA_DIR_CAPTURE) {
+    if (snd_port->aud_param.dir & PJMEDIA_DIR_CAPTURE) {
 	pjmedia_aud_dev_info dev_info;
 
-	status = pjmedia_aud_dev_get_info(param->rec_id, &dev_info);
+	status = pjmedia_aud_dev_get_info(snd_port->aud_param.rec_id, 
+					  &dev_info);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -183,8 +213,24 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
 	snd_port->aud_caps = 0;
     }
 
+    /* Process EC settings */
+    pj_memcpy(&param_copy, &snd_port->aud_param, sizeof(param_copy));
+    if (param_copy.flags & PJMEDIA_AUD_DEV_CAP_EC) {
+	/* EC is wanted */
+	if (snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC) {
+	    /* Device supports EC */
+	    /* Nothing to do */
+	} else {
+	    /* Device doesn't support EC, remove EC settings from
+	     * device parameters
+	     */
+	    param_copy.flags &= ~(PJMEDIA_AUD_DEV_CAP_EC |
+				  PJMEDIA_AUD_DEV_CAP_EC_TAIL);
+	}
+    }
+
     /* Use different callback if format is not PCM */
-    if (param->ext_fmt.id == PJMEDIA_FORMAT_L16) {
+    if (snd_port->aud_param.ext_fmt.id == PJMEDIA_FORMAT_L16) {
 	snd_rec_cb = &rec_cb;
 	snd_play_cb = &play_cb;
     } else {
@@ -193,7 +239,7 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
     }
 
     /* Open the device */
-    status = pjmedia_aud_stream_create(param,
+    status = pjmedia_aud_stream_create(&param_copy,
 				       snd_rec_cb,
 				       snd_play_cb,
 				       snd_port,
@@ -201,6 +247,34 @@ static pj_status_t start_sound_device( pjmedia_snd_port *snd_port )
 
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Inactivity limit before EC is suspended. */
+    snd_port->ec_suspend_limit = AEC_SUSPEND_LIMIT *
+				 (snd_port->clock_rate / 
+				  snd_port->samples_per_frame);
+
+    /* Create software EC if parameter specifies EC but device 
+     * doesn't support EC. Only do this if the format is PCM!
+     */
+    if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC) &&
+	(snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 &&
+	param_copy.ext_fmt.id == PJMEDIA_FORMAT_PCM)
+    {
+	if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC_TAIL)==0) {
+	    snd_port->aud_param.flags |= PJMEDIA_AUD_DEV_CAP_EC_TAIL;
+	    snd_port->aud_param.ec_tail_ms = AEC_TAIL;
+	    PJ_LOG(4,(THIS_FILE, "AEC tail is set to default %u ms",
+				 snd_port->aud_param.ec_tail_ms));
+	}
+	    
+	status = pjmedia_snd_port_set_ec(snd_port, pool, 
+					 snd_port->aud_param.ec_tail_ms, 0);
+	if (status != PJ_SUCCESS) {
+	    pjmedia_aud_stream_destroy(snd_port->aud_stream);
+	    snd_port->aud_stream = NULL;
+	    return status;
+	}
+    }
 
     /* Start sound stream. */
     status = pjmedia_aud_stream_start(snd_port->aud_stream);
@@ -225,6 +299,12 @@ static pj_status_t stop_sound_device( pjmedia_snd_port *snd_port )
 	pjmedia_aud_stream_stop(snd_port->aud_stream);
 	pjmedia_aud_stream_destroy(snd_port->aud_stream);
 	snd_port->aud_stream = NULL;
+    }
+
+    /* Destroy AEC */
+    if (snd_port->ec_state) {
+	pjmedia_echo_destroy(snd_port->ec_state);
+	snd_port->ec_state = NULL;
     }
 
     return PJ_SUCCESS;
@@ -340,11 +420,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && prm && p_port, PJ_EINVAL);
 
-    pool = pj_pool_create(pool->factory, pool->obj_name, 256, 256, NULL);
     snd_port = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_port);
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
-    snd_port->pool = pool;
     snd_port->dir = prm->dir;
     snd_port->rec_id = prm->rec_id;
     snd_port->play_id = prm->play_id;
@@ -359,7 +437,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
      * If there's no port connected, the sound callback will return
      * empty signal.
      */
-    status = start_sound_device( snd_port );
+    status = start_sound_device( pool, snd_port );
     if (status != PJ_SUCCESS) {
 	pjmedia_snd_port_destroy(snd_port);
 	return status;
@@ -375,19 +453,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
  */
 PJ_DEF(pj_status_t) pjmedia_snd_port_destroy(pjmedia_snd_port *snd_port)
 {
-    pj_status_t status;
-
     PJ_ASSERT_RETURN(snd_port, PJ_EINVAL);
 
-    /* Stop sound port */
-    status = stop_sound_device(snd_port);
-
-    /* Disconnect sound port */
-    pjmedia_snd_port_disconnect(snd_port);
-
-    pj_pool_release(snd_port->pool);
-
-    return status;
+    return stop_sound_device(snd_port);
 }
 
 
@@ -483,9 +551,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 			 PJ_EINVALIDOP);
 
 	/* Destroy AEC */
-	if (snd_port->echo_port) {
-	    pjmedia_port_destroy(snd_port->echo_port);
-	    snd_port->echo_port = NULL;
+	if (snd_port->ec_state) {
+	    pjmedia_echo_destroy(snd_port->ec_state);
+	    snd_port->ec_state = NULL;
 	}
 
 	if (tail_ms != 0) {
@@ -496,11 +564,15 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 	    //delay_ms = (si.rec_latency + si.play_latency) * 1000 /
 	    //	   snd_port->clock_rate;
 	    delay_ms = prm.output_latency_ms;
-	    status = pjmedia_echo_port_create(pool, snd_port->port,
-					      tail_ms, delay_ms,
-					      options, &snd_port->echo_port);
+	    status = pjmedia_echo_create2(pool, snd_port->clock_rate, 
+					  snd_port->channel_count,
+					  snd_port->samples_per_frame, 
+					  tail_ms, delay_ms,
+					  options, &snd_port->ec_state);
 	    if (status != PJ_SUCCESS)
-		snd_port->echo_port = NULL;
+		snd_port->ec_state = NULL;
+	    else
+		snd_port->ec_suspended = PJ_FALSE;
 	} else {
 	    PJ_LOG(4,(THIS_FILE, "Echo canceller is now disabled in the "
 				 "sound port"));
@@ -550,7 +622,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_get_ec_tail( pjmedia_snd_port *snd_port,
 
     } else {
 	/* We use software EC */
-	*p_length =  snd_port->echo_port ? snd_port->ec_tail_len : 0;
+	*p_length =  snd_port->ec_state ? snd_port->ec_tail_len : 0;
     }
     return PJ_SUCCESS;
 }
@@ -563,8 +635,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
 					      pjmedia_port *port)
 {
     pjmedia_port_info *pinfo;
-    pjmedia_aud_param *param;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(snd_port && port, PJ_EINVAL);
 
@@ -586,45 +656,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
 
     /* Port is okay. */
     snd_port->port = port;
-
-    /* Create software EC if parameter specifies EC but device 
-     * doesn't support EC. Only do this if the format is PCM!
-     */
-    param = &snd_port->aud_param;
-    if ((param->flags & PJMEDIA_AUD_DEV_CAP_EC) &&
-	(snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 &&
-	param->ext_fmt.id == PJMEDIA_FORMAT_PCM)
-    {
-	if ((param->flags & PJMEDIA_AUD_DEV_CAP_EC_TAIL)==0) {
-	    param->flags |= PJMEDIA_AUD_DEV_CAP_EC_TAIL;
-	    param->ec_tail_ms = AEC_TAIL;
-	    PJ_LOG(4,(THIS_FILE, "AEC tail is set to default %u ms",
-				 param->ec_tail_ms));
-	}
-	    
-	status = pjmedia_snd_port_set_ec(snd_port, snd_port->pool, 
-					 param->ec_tail_ms, 0);
-	if (status != PJ_SUCCESS)
-	    return status;
-    }
-
-    /* Create sync port. Only do this if the format is PCM! */
-    if (param->ext_fmt.id == PJMEDIA_FORMAT_PCM) {
-	pjmedia_sync_param sync_param;
-	
-	pj_bzero(&sync_param, sizeof(sync_param));
-	sync_param.options = PJMEDIA_SYNC_DONT_DESTROY_DN;
-	status = pjmedia_sync_port_create(snd_port->pool, 
-					  (snd_port->echo_port?
-					   snd_port->echo_port:snd_port->port),
-					  &sync_param, &snd_port->sync_port);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	/* Update down port of sound port */
-	snd_port->dn_port = snd_port->sync_port;
-    }
-
     return PJ_SUCCESS;
 }
 
@@ -647,21 +678,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_disconnect(pjmedia_snd_port *snd_port)
     PJ_ASSERT_RETURN(snd_port, PJ_EINVAL);
 
     snd_port->port = NULL;
-    snd_port->dn_port = NULL;
-
-    /* Destroy sync port */
-    if (snd_port->sync_port) {
-	pjmedia_port_destroy(snd_port->sync_port);
-	snd_port->sync_port = NULL;
-    }
-
-    /* Destroy EC port */
-    if (snd_port->echo_port) {
-	pjmedia_port_destroy(snd_port->echo_port);
-	snd_port->echo_port = NULL;
-	snd_port->ec_tail_len = 0;
-	snd_port->ec_options = 0;
-    }
 
     return PJ_SUCCESS;
 }

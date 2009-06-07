@@ -67,7 +67,6 @@ SOURCE		sound_port.c
 SOURCE		splitcomb.c
 SOURCE		stereo_port.c
 SOURCE		stream.c
-SOURCE		sync_port.c
 SOURCE		tonegen.c
 SOURCE		transport_adapter_sample.c
 SOURCE		transport_ice.c
