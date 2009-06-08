@@ -1190,6 +1190,7 @@ stateless_send_resolver_callback( pj_status_t status,
     /* Copy server addresses */
     pj_memcpy( &stateless_data->addr, addr, sizeof(pjsip_server_addresses));
 
+#if !defined(PJSIP_DONT_SWITCH_TO_TCP) || PJSIP_DONT_SWITCH_TO_TCP==0
     /* RFC 3261 section 18.1.1:
      * If a request is within 200 bytes of the path MTU, or if it is larger
      * than 1300 bytes and the path MTU is unknown, the request MUST be sent
@@ -1234,6 +1235,7 @@ stateless_send_resolver_callback( pj_status_t status,
 	    stateless_data->addr.count = count * 2;
 	}
     }
+#endif /* !PJSIP_DONT_SWITCH_TO_TCP */
 
     /* Process the addresses. */
     stateless_send_transport_cb( stateless_data, stateless_data->tdata,

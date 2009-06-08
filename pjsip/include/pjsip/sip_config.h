@@ -233,13 +233,27 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * using an RFC 2914 [43] congestion controlled transport protocol, such
  * as TCP.
  *
+ * Disable the behavior of automatic switching to TCP whenever UDP packet
+ * size exceeds the threshold defined in PJSIP_UDP_SIZE_THRESHOLD.
+ *
+ * Default is 0 (no).
+ */
+#ifndef PJSIP_DONT_SWITCH_TO_TCP
+#   define PJSIP_DONT_SWITCH_TO_TCP	0
+#endif
+
+
+/**
  * This setting controls the threshold of the UDP packet, which if it's
- * larger than this value the request will be sent with TCP. Default is
- * 1300 bytes.
+ * larger than this value the request will be sent with TCP. This setting
+ * is useful only when PJSIP_DONT_SWITCH_TO_TCP is set to 0.
+ *
+ * Default is 1300 bytes.
  */
 #ifndef PJSIP_UDP_SIZE_THRESHOLD
 #   define PJSIP_UDP_SIZE_THRESHOLD	1300
 #endif
+
 
 /**
  * Encode SIP headers in their short forms to reduce size. By default,
