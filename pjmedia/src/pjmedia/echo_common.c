@@ -52,6 +52,7 @@ struct pjmedia_echo_state
     struct frame     lat_free;	    /* Free frame list.			    */
 
     pjmedia_delay_buf	*delay_buf;
+    pj_int16_t	    *frm_buf;
 };
 
 
@@ -152,6 +153,8 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
     ec = PJ_POOL_ZALLOC_T(pool, struct pjmedia_echo_state);
     ec->pool = pool;
     ec->obj_name = pool->obj_name;
+    ec->samples_per_frame = samples_per_frame;
+    ec->frm_buf = (pj_int16_t*)pj_pool_alloc(pool, samples_per_frame<<1);
     pj_list_init(&ec->lat_buf);
     pj_list_init(&ec->lat_free);
 
@@ -274,6 +277,23 @@ PJ_DEF(pj_status_t) pjmedia_echo_reset(pjmedia_echo_state *echo )
 PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
 					   pj_int16_t *play_frm )
 {
+    /* Playing frame should be stored, as it will be used by echo_capture() 
+     * as reference frame, delay buffer is used for storing the playing frames
+     * as in case there was clock drift between mic & speaker.
+     *
+     * Ticket #830:
+     * Note that pjmedia_delay_buf_put() may modify the input frame and those
+     * modified frames may not be smooth, i.e: if there were two or more
+     * consecutive pjmedia_delay_buf_get() before next pjmedia_delay_buf_put(),
+     * so we'll just feed the delay buffer with the copy of playing frame,
+     * instead of the original playing frame. However this will cause the EC 
+     * uses slight 'different' frames (for reference) than actually played 
+     * by the speaker.
+     */
+    pjmedia_copy_samples(echo->frm_buf, play_frm, 
+			 echo->samples_per_frame);
+    pjmedia_delay_buf_put(echo->delay_buf, echo->frm_buf);
+
     if (!echo->lat_ready) {
 	/* We've not built enough latency in the buffer, so put this frame
 	 * in the latency buffer list.
@@ -283,21 +303,16 @@ PJ_DEF(pj_status_t) pjmedia_echo_playback( pjmedia_echo_state *echo,
 	if (pj_list_empty(&echo->lat_free)) {
 	    echo->lat_ready = PJ_TRUE;
 	    PJ_LOG(5,(echo->obj_name, "Latency bufferring complete"));
-	    pjmedia_delay_buf_put(echo->delay_buf, play_frm);
 	    return PJ_SUCCESS;
 	}
 	    
 	frm = echo->lat_free.prev;
 	pj_list_erase(frm);
 
-	pjmedia_copy_samples(frm->buf, play_frm, echo->samples_per_frame);
+	/* Move one frame from delay buffer to the latency buffer. */
+	pjmedia_delay_buf_get(echo->delay_buf, echo->frm_buf);
+	pjmedia_copy_samples(frm->buf, echo->frm_buf, echo->samples_per_frame);
 	pj_list_push_back(&echo->lat_buf, frm);
-
-    } else {
-	/* Latency buffer is ready (full), so we put this frame in the
-	 * delay buffer.
-	 */
-	pjmedia_delay_buf_put(echo->delay_buf, play_frm);
     }
 
     return PJ_SUCCESS;
