@@ -495,13 +495,39 @@ on_error:
 /* Check if sound device is idle. */
 static void check_snd_dev_idle()
 {
+    unsigned call_cnt;
+
+    /* Get the call count, we shouldn't close the sound device when there is
+     * any calls active.
+     */
+    call_cnt = pjsua_call_get_count();
+
+    /* When this function is called from pjsua_media_channel_deinit() upon
+     * disconnecting call, actually the call count hasn't been updated/
+     * decreased. So we put additional check here, if there is only one
+     * call and it's in DISCONNECTED state, there is actually no active
+     * call.
+     */
+    if (call_cnt == 1) {
+	pjsua_call_id call_id;
+	pj_status_t status;
+
+	status = pjsua_enum_calls(&call_id, &call_cnt);
+	if (status == PJ_SUCCESS && call_cnt > 0 &&
+	    !pjsua_call_is_active(call_id))
+	{
+	    call_cnt = 0;
+	}
+    }
 
     /* Activate sound device auto-close timer if sound device is idle.
-     * It is idle when there is no port connection in the bridge.
+     * It is idle when there is no port connection in the bridge and
+     * there is no active call.
      */
     if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL) && 
 	pjsua_var.snd_idle_timer.id == PJ_FALSE &&
 	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0 &&
+	call_cnt == 0 &&
 	pjsua_var.media_cfg.snd_auto_close_time >= 0)
     {
 	pj_time_val delay;
