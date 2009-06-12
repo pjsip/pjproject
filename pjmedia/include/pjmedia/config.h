@@ -696,6 +696,68 @@
 #endif
 
 
+/**
+ * Value to be specified in PJMEDIA_STREAM_ENABLE_KA setting.
+ * This indicates that an empty RTP packet should be used as
+ * the keep-alive packet.
+ */
+#define PJMEDIA_STREAM_KA_EMPTY_RTP		    1
+
+/**
+ * Value to be specified in PJMEDIA_STREAM_ENABLE_KA setting.
+ * This indicates that a user defined packet should be used
+ * as the keep-alive packet. The content of the user-defined
+ * packet is specified by PJMEDIA_STREAM_KA_USER_PKT. Default
+ * content is a CR-LF packet.
+ */
+#define PJMEDIA_STREAM_KA_USER			    2
+
+/**
+ * The content of the user defined keep-alive packet. The format
+ * of the packet is initializer to pj_str_t structure. Note that
+ * the content may contain NULL character.
+ */
+#ifndef PJMEDIA_STREAM_KA_USER_PKT
+#   define PJMEDIA_STREAM_KA_USER_PKT	{ "\r\n", 2 }
+#endif
+
+/**
+ * Specify another type of keep-alive and NAT hole punching 
+ * mechanism (the other type is PJMEDIA_STREAM_VAD_SUSPEND_MSEC
+ * and PJMEDIA_CODEC_MAX_SILENCE_PERIOD) to be used by stream. 
+ * When this feature is enabled, the stream will initially 
+ * transmit one packet to punch a hole in NAT, and periodically
+ * transmit keep-alive packets.
+ *
+ * When this alternative keep-alive mechanism is used, application
+ * may disable the other keep-alive mechanisms, i.e: by setting 
+ * PJMEDIA_STREAM_VAD_SUSPEND_MSEC to zero and 
+ * PJMEDIA_CODEC_MAX_SILENCE_PERIOD to -1.
+ *
+ * The value of this macro specifies the type of packet used
+ * for the keep-alive mechanism. Valid values are
+ * PJMEDIA_STREAM_KA_EMPTY_RTP and PJMEDIA_STREAM_KA_USER.
+ * 
+ * The duration of the keep-alive interval further can be set
+ * with PJMEDIA_STREAM_KA_INTERVAL setting.
+ *
+ * Default: 0 (disabled)
+ */
+#ifndef PJMEDIA_STREAM_ENABLE_KA
+#   define PJMEDIA_STREAM_ENABLE_KA		    0
+#endif
+
+
+/**
+ * Specify the keep-alive interval of PJMEDIA_STREAM_ENABLE_KA
+ * mechanism, in seconds.
+ *
+ * Default: 5 seconds
+ */
+#ifndef PJMEDIA_STREAM_KA_INTERVAL
+#	define PJMEDIA_STREAM_KA_INTERVAL	    5
+#endif
+
 
 /**
  * @}

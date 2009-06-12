@@ -168,6 +168,11 @@ struct pjmedia_stream
     unsigned		     rtcp_xr_dest_len; /**< Length of RTCP XR dest
 					            address		    */
 #endif
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
+					            packet		    */
+#endif
 };
 
 
@@ -192,6 +197,49 @@ static void stream_perror(const char *sender, const char *title,
     PJ_LOG(4,(sender, "%s: %s [err:%d]", title, errmsg, status));
 }
 
+/*
+ * Send keep-alive packet.
+ */
+static void send_keep_alive_packet(pjmedia_stream *stream)
+{
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && \
+    PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_EMPTY_RTP
+
+    /* Keep-alive packet is empty RTP */
+    pj_status_t status;
+    int pkt_len;
+
+
+    status = pjmedia_rtp_encode_rtp( &stream->enc->rtp,
+				     stream->enc->pt, 1,
+				     1,
+				     0,
+				     (const void**)stream->enc->out_pkt,
+				     &pkt_len);
+    pj_assert(status == PJ_SUCCESS);
+    pjmedia_transport_send_rtp(stream->transport, stream->enc->out_pkt,
+			       pkt_len);
+    TRC_((stream->port.info.name.ptr, "Keep-alive sent (empty RTP)"));
+
+#elif defined(PJMEDIA_STREAM_ENABLE_KA) && \
+      PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
+
+    /* Keep-alive packet is defined in PJMEDIA_STREAM_KA_USER_PKT */
+    int pkt_len;
+    const pj_str_t str_ka = PJMEDIA_STREAM_KA_USER_PKT;
+
+    pj_memcpy(stream->enc->out_pkt, str_ka.ptr, str_ka.slen);
+    pkt_len = str_ka.slen;
+    pjmedia_transport_send_rtp(stream->transport, stream->enc->out_pkt,
+			       pkt_len);
+    TRC_((stream->port.info.name.ptr, "Keep-alive sent"));
+
+#else
+    
+    PJ_UNUSED_ARG(stream);
+
+#endif
+}
 
 /*
  * play_callback()
@@ -787,6 +835,25 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     int rtphdrlen;
     int inc_timestamp = 0;
 
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
+    /* If the interval since last sending packet is greater than
+     * PJMEDIA_STREAM_KA_INTERVAL, send keep-alive packet.
+     */
+    {
+	pj_uint32_t dtx_duration;
+
+	dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent, 
+					   &frame->timestamp);
+	if (dtx_duration >
+	    PJMEDIA_STREAM_KA_INTERVAL * stream->port.info.clock_rate)
+	{
+	    send_keep_alive_packet(stream);
+	    stream->last_frm_ts_sent = frame->timestamp;
+	}
+    }
+#endif
+
     /* Don't do anything if stream is paused */
     if (channel->paused) {
 	stream->enc_buf_pos = stream->enc_buf_count = 0;
@@ -989,6 +1056,11 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
     stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    /* Update timestamp of last sending packet. */
+    stream->last_frm_ts_sent = frame->timestamp;
+#endif
 
     return PJ_SUCCESS;
 }
@@ -1909,6 +1981,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	pjmedia_transport_send_rtcp(stream->transport, 
 				    stream->enc->out_pkt, len);
     }
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    /* NAT hole punching by sending KA packet via RTP transport. */
+    send_keep_alive_packet(stream);
+#endif
 
     /* Success! */
     *p_stream = stream;
