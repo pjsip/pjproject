@@ -207,16 +207,19 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 
     /* Keep-alive packet is empty RTP */
     pj_status_t status;
+    void *rtphdr;
     int pkt_len;
 
 
     status = pjmedia_rtp_encode_rtp( &stream->enc->rtp,
-				     stream->enc->pt, 1,
+				     stream->enc->pt, 0,
 				     1,
 				     0,
-				     (const void**)stream->enc->out_pkt,
+				     (const void**)&rtphdr,
 				     &pkt_len);
     pj_assert(status == PJ_SUCCESS);
+
+    pj_memcpy(stream->enc->out_pkt, rtphdr, pkt_len);
     pjmedia_transport_send_rtp(stream->transport, stream->enc->out_pkt,
 			       pkt_len);
     TRC_((stream->port.info.name.ptr, "Keep-alive sent (empty RTP)"));
@@ -1805,7 +1808,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
     /* Initially disable the VAD in the stream, to help traverse NAT better */
     stream->vad_enabled = stream->codec_param.setting.vad;
-    if (stream->vad_enabled) {
+    if (PJMEDIA_STREAM_VAD_SUSPEND_MSEC > 0 && stream->vad_enabled) {
 	stream->codec_param.setting.vad = 0;
 	stream->ts_vad_disabled = 0;
 	stream->codec->op->modify(stream->codec, &stream->codec_param);
