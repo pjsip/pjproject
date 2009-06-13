@@ -563,8 +563,8 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 						(input->size >> 1),
 						NULL);
 	if (is_silence &&
-	    PJMEDIA_CODEC_MAX_SILENCE_PERIOD != -1 &&
-	    silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000)
+	    (PJMEDIA_CODEC_MAX_SILENCE_PERIOD == -1 ||
+	     silence_period < PJMEDIA_CODEC_MAX_SILENCE_PERIOD*8000/1000))
 	{
 	    output->type = PJMEDIA_FRAME_TYPE_NONE;
 	    output->buf = NULL;
