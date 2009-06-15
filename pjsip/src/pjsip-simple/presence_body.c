@@ -100,6 +100,29 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 	pidf_status = pjpidf_tuple_get_status(pidf_tuple);
 	pjpidf_status_set_basic_open(pidf_status, 
 				     status->info[i].basic_open);
+
+	/* Add <timestamp> if configured */
+#if defined(PJSIP_PRES_PIDF_ADD_TIMESTAMP) && PJSIP_PRES_PIDF_ADD_TIMESTAMP
+	if (PJSIP_PRES_PIDF_ADD_TIMESTAMP) {
+	  char buf[50];
+	  int tslen = 0;
+	  pj_time_val tv;
+	  pj_parsed_time pt;
+
+	  pj_gettimeofday(&tv);
+	  /* TODO: convert time to GMT! (unsupported by pjlib) */
+	  pj_time_decode( &tv, &pt);
+
+	  tslen = pj_ansi_snprintf(buf, sizeof(buf),
+				   "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
+				   pt.year, pt.mon, pt.day, 
+				   pt.hour, pt.min, pt.sec, pt.msec);
+	  if (tslen > 0 && tslen < sizeof(buf)) {
+	      pj_str_t time = pj_str(buf);
+	      pjpidf_tuple_set_timestamp(pool, pidf_tuple, &time);
+	  }
+	}
+#endif
     }
 
     /* Create <person> (RPID) */
@@ -179,8 +202,11 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf( pjsip_rx_data *rdata,
     pres_status->info_cnt = 0;
 
     pidf_tuple = pjpidf_pres_get_first_tuple(pidf);
-    while (pidf_tuple) {
+    while (pidf_tuple && pres_status->info_cnt < PJSIP_PRES_STATUS_MAX_INFO) {
 	pjpidf_status *pidf_status;
+
+	pres_status->info[pres_status->info_cnt].tuple_node = 
+	    pj_xml_clone(pool, pidf_tuple);
 
 	pj_strdup(pool, 
 		  &pres_status->info[pres_status->info_cnt].id,
@@ -231,6 +257,7 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
 	      pjxpidf_get_uri(xpidf));
     pres_status->info[0].basic_open = pjxpidf_get_status(xpidf);
     pres_status->info[0].id.slen = 0;
+    pres_status->info[0].tuple_node = NULL;
 
     return PJ_SUCCESS;
 }

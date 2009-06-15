@@ -2907,6 +2907,11 @@ typedef struct pjsua_buddy_info
     pjrpid_element	rpid;
 
     /**
+     * Extended presence info.
+     */
+    pjsip_pres_status	pres_status;
+
+    /**
      * Internal buffer.
      */
     char		buf_[512];

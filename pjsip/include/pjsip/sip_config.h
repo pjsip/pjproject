@@ -872,6 +872,17 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/**
+ * Add "timestamp" information in generated PIDF document for both server
+ * subscription and presence publication.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJSIP_PRES_PIDF_ADD_TIMESTAMP
+#   define PJSIP_PRES_PIDF_ADD_TIMESTAMP	1
+#endif
+
+
 PJ_END_DECL
 
 /**

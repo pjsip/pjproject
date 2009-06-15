@@ -90,6 +90,14 @@ struct pjsip_pres_status
 	pj_str_t	id;		/**< Tuple id.			    */
 	pj_str_t	contact;	/**< Optional contact address.	    */
 
+	pj_xml_node    *tuple_node;	/**< Pointer to tuple XML node of
+					     parsed PIDF body received from
+					     remote agent. Only valid for
+					     client subscription. If the
+					     last received NOTIFY request
+					     does not contain any PIDF body,
+					     this valud will be set to NULL */
+
     } info[PJSIP_PRES_STATUS_MAX_INFO];	/**< Array of info.		    */
 
     pj_bool_t		_is_valid;	/**< Internal flag.		    */

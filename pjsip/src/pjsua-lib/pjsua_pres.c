@@ -166,6 +166,9 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     pj_strncpy(&info->contact, &buddy->contact, sizeof(info->buf_)-total);
     total += info->contact.slen;
 
+    /* Presence status */
+    pj_memcpy(&info->pres_status, &buddy->status, sizeof(pjsip_pres_status));
+
     /* status and status text */    
     if (buddy->sub == NULL || buddy->status.info_cnt==0) {
 	info->status = PJSUA_BUDDY_STATUS_UNKNOWN;
