@@ -254,5 +254,21 @@
 #endif
 
 
+/**
+ * Enabling both G.722.1 codec implementations, internal PJMEDIA and IPP,
+ * may cause problem in SDP, i.e: payload types duplications. So, let's 
+ * just trap such case here at compile time.
+ *
+ * Application can control which implementation to be used by manipulating
+ * PJMEDIA_HAS_G7221_CODEC and PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 in
+ * config_site.h.
+ */
+#if (PJMEDIA_HAS_G7221_CODEC != 0) && (PJMEDIA_HAS_INTEL_IPP != 0) && \
+    (PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 != 0)
+#   error Only one G.722.1 implementation can be enabled at the same time. \
+	  Please use PJMEDIA_HAS_G7221_CODEC and \
+	  PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 in your config_site.h \
+	  to control which implementation to be used.
+#endif
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */
