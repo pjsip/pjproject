@@ -23,6 +23,7 @@
 #include <pjsip/sip_transport.h>
 #include <pj/guid.h>
 #include <pj/log.h>
+#include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 
