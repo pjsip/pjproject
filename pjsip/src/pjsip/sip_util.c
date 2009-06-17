@@ -810,7 +810,8 @@ static pj_status_t get_dest_info(const pjsip_uri *target_uri,
     if (dest_info->type != PJSIP_TRANSPORT_UNSPECIFIED && 
 	pj_strchr(&dest_info->addr.host, ':'))
     {
-	dest_info->type |= PJSIP_TRANSPORT_IPV6;
+	dest_info->type = (pjsip_transport_type_e)
+			  ((int)dest_info->type | PJSIP_TRANSPORT_IPV6);
     }
 
     return PJ_SUCCESS;
