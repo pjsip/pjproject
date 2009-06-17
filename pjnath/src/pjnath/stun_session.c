@@ -302,8 +302,10 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
     if (sess->auth_type != PJ_STUN_AUTH_LONG_TERM)
 	return PJ_SUCCESS;
     
-    if (!PJ_STUN_IS_ERROR_RESPONSE(response->hdr.type))
+    if (!PJ_STUN_IS_ERROR_RESPONSE(response->hdr.type)) {
+	sess->auth_retry = 0;
 	return PJ_SUCCESS;
+    }
 
     ea = (const pj_stun_errcode_attr*)
 	 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_ERROR_CODE, 0);
