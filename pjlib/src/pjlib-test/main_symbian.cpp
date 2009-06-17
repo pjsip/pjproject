@@ -44,21 +44,6 @@ int main()
 LOCAL_D CConsoleBase* console;  // write all messages to this
 
 
-//  Local Functions
-
-LOCAL_C void MainL()
-{
-    //
-    // add your program code here, example code below
-    //
-    test_main();
-
-    console->Printf(_L(" [press any key]\n"));
-    console->Getch();
-
-    CActiveScheduler::Stop();
-}
-
 class MyScheduler : public CActiveScheduler
 {
 public:
@@ -73,67 +58,6 @@ void MyScheduler::Error(TInt aError) const
     PJ_UNUSED_ARG(aError);
 }
 
-class ProgramStarter : public CActive
-{
-public:
-    static ProgramStarter *NewL();
-    void Start();
-
-protected:
-    ProgramStarter();
-    void ConstructL();
-    virtual void RunL();
-    virtual void DoCancel();
-    TInt RunError(TInt aError);
-
-private:
-    RTimer timer_;
-};
-
-ProgramStarter::ProgramStarter()
-: CActive(EPriorityNormal)
-{
-}
-
-void ProgramStarter::ConstructL()
-{
-    timer_.CreateLocal();
-    CActiveScheduler::Add(this);
-}
-
-ProgramStarter *ProgramStarter::NewL()
-{
-    ProgramStarter *self = new (ELeave) ProgramStarter;
-    CleanupStack::PushL(self);
-
-    self->ConstructL();
-
-    CleanupStack::Pop(self);
-    return self;
-}
-
-void ProgramStarter::Start()
-{
-    timer_.After(iStatus, 0);
-    SetActive();
-}
-
-void ProgramStarter::RunL()
-{
-    MainL();
-}
-
-void ProgramStarter::DoCancel()
-{
-}
-
-TInt ProgramStarter::RunError(TInt aError)
-{
-    PJ_UNUSED_ARG(aError);
-    return KErrNone;
-}
-
-
 LOCAL_C void DoStartL()
     {
     // Create active scheduler (to run active objects)
@@ -141,25 +65,36 @@ LOCAL_C void DoStartL()
     CleanupStack::PushL(scheduler);
     CActiveScheduler::Install(scheduler);
 
-    ProgramStarter *starter = ProgramStarter::NewL();
-    starter->Start();
+    test_main();
 
-    CActiveScheduler::Start();
+    CActiveScheduler::Install(NULL);
+    CleanupStack::Pop(scheduler);
+    delete scheduler;
     }
 
+#define WRITE_TO_DEBUG_CONSOLE
+
+#ifdef WRITE_TO_DEBUG_CONSOLE
+#include<e32debug.h>
+#endif
 
 //  Global Functions
-
 static void log_writer(int level, const char *buf, int len)
 {
-    wchar_t buf16[PJ_LOG_MAX_SIZE];
+    static wchar_t buf16[PJ_LOG_MAX_SIZE];
 
     PJ_UNUSED_ARG(level);
     
     pj_ansi_to_unicode(buf, len, buf16, PJ_ARRAY_SIZE(buf16));
-
+    buf16[len] = 0;
+    buf16[len+1] = 0;
+    
     TPtrC16 aBuf((const TUint16*)buf16, (TInt)len);
     console->Write(aBuf);
+    
+#ifdef WRITE_TO_DEBUG_CONSOLE
+    RDebug::Print(aBuf);
+#endif
 }
 
 
@@ -180,12 +115,17 @@ GLDEF_C TInt E32Main()
     TRAPD(mainError, DoStartL());
     if (mainError)
         console->Printf(_L(" failed, leave code = %d"), mainError);
+    
     console->Printf(_L(" [press any key]\n"));
     console->Getch();
     
     delete console;
     delete cleanup;
+    
+    CloseSTDLIB(); 
+    
     __UHEAP_MARKEND;
+    
     return KErrNone;
     }
 

@@ -65,7 +65,9 @@
 #endif
 
 #define HELLO_WORLD	"Hello World"
+#define HELLO_WORLD_LEN	11
 #define JUST_HELLO	"Hello"
+#define JUST_HELLO_LEN	5
 #define UL_VALUE	3456789012UL
 
 #if 1
@@ -290,8 +292,8 @@ static int strcmp_test(void)
 
 int string_test(void)
 {
-    const pj_str_t hello_world = { HELLO_WORLD, strlen(HELLO_WORLD) };
-    const pj_str_t just_hello = { JUST_HELLO, strlen(JUST_HELLO) };
+    const pj_str_t hello_world = { HELLO_WORLD, HELLO_WORLD_LEN };
+    const pj_str_t just_hello = { JUST_HELLO, JUST_HELLO_LEN };
     pj_str_t s1, s2, s3, s4, s5;
     enum { RCOUNT = 10, RLEN = 16 };
     pj_str_t random[RCOUNT];

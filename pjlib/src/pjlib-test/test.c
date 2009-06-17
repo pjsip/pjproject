@@ -197,6 +197,9 @@ on_return:
 	PJ_LOG(3,("test", "Looks like everything is okay!.."));
     else
 	PJ_LOG(3,("test", "Test completed with error(s)"));
+    
+    pj_shutdown();
+    
     return 0;
 }
 
