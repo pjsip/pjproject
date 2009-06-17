@@ -22,6 +22,12 @@ SOURCEPATH	..\pjlib-util\src\pjlib-util
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
+// Must compile as C++, otherwise exception would not work
+OPTION          CW -lang c++
+OPTION          ARMCC --cpp
+OPTION          GCC -x c++
+OPTION          GCCE -x c++
+
 //
 // PJLIB-UTIL files
 //

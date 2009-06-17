@@ -25,7 +25,11 @@ SOURCEPATH	..\pjsip\src\pjsip-ua
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
-//OPTION		CW -lang c++
+// Must compile as C++, otherwise exception would not work
+OPTION          CW -lang c++
+OPTION          ARMCC --cpp
+OPTION          GCC     -x c++
+OPTION          GCCE    -x c++
 
 
 // PJSIP-UA files

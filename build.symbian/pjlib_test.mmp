@@ -8,6 +8,12 @@ SOURCEPATH	..\pjlib\src\pjlib-test
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1
 
+// Must compile as C++, otherwise exception would not work
+OPTION CW -lang c++
+OPTION ARMCC --cpp
+OPTION GCC -x c++
+OPTION GCCE -x c++
+
 #if defined(PJ_BUILD_DLL)
 MACRO		PJ_DLL
 LIBRARY		pjlib.lib 
@@ -24,7 +30,7 @@ SOURCE	errno.c
 SOURCE	exception.c
 SOURCE	fifobuf.c
 SOURCE	file.c
-SOURCE	hash.c
+SOURCE	hash_test.c
 SOURCE	ioq_perf.c
 SOURCE	ioq_tcp.c
 SOURCE	ioq_udp.c
@@ -62,4 +68,7 @@ LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib
 #ifdef WINSCW
 STATICLIBRARY   eexe.lib ecrt0.lib
 #endif
+
+// Need a bit of mem for logging in the app.
+EPOCSTACKSIZE		32768
 

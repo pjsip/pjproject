@@ -35,3 +35,4 @@ pjmedia_audiodev.mmp
 symbian_ua.mmp
 ..\pjsip-apps\src\symbian_ua_gui\group\symbian_ua_gui.mmp
 gnumakefile ..\pjsip-apps\src\symbian_ua_gui\group\Icons_aif_scalable_dc.mk
+pjlib_test.mmp

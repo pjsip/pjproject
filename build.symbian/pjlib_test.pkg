@@ -1,0 +1,18 @@
+; pjlib_test.pkg
+
+; Languages
+&EN
+
+; Header
+;#{"pjlib_test"},(0x200235D3), 0, 1, 1
+#{"pjlib_test"},(0xA000000D), 0, 1, 1
+
+; Platform compatibility
+[0x101F7961], *, *, *,{"Series60ProductID"}
+
+; vendor
+%{"PJSIP"}
+:"PJSIP"
+
+; Target
+"$(EPOCROOT)Epoc32\release\$(PLATFORM)\$(TARGET)\pjlib_test.exe"-"!:\sys\bin\pjlib_test.exe"
