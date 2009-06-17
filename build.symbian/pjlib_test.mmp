@@ -59,6 +59,10 @@ SOURCE	main_symbian.cpp
 
 DOCUMENT test.h
 
+START RESOURCE  	pjlib_test_reg.rss
+	TARGETPATH      \private\10003a3f\apps
+END
+
 SYSTEMINCLUDE	..\pjlib\include
 
 SYSTEMINCLUDE	\epoc32\include
