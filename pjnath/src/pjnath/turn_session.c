@@ -707,9 +707,10 @@ PJ_DEF(pj_status_t) pj_turn_session_alloc(pj_turn_session *sess,
 
     pj_lock_acquire(sess->lock);
 
+    if (param && param != &sess->alloc_param) 
+	pj_turn_alloc_param_copy(sess->pool, &sess->alloc_param, param);
+
     if (sess->state < PJ_TURN_STATE_RESOLVED) {
-	if (param && param != &sess->alloc_param) 
-	    pj_turn_alloc_param_copy(sess->pool, &sess->alloc_param, param);
 	sess->pending_alloc = PJ_TRUE;
 
 	PJ_LOG(4,(sess->obj_name, "Pending ALLOCATE in state %s",
