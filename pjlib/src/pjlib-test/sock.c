@@ -191,9 +191,11 @@ static int parse_test(void)
 	{ "10.0.0.1:0", IPv4, "10.0.0.1", 0},
 	{ ":80", IPv4, "0.0.0.0", 80},
 	{ ":", IPv4, "0.0.0.0", 0},
+#if !PJ_SYMBIAN
 	{ "localhost", IPv4, "127.0.0.1", 0},
 	{ "localhost:", IPv4, "127.0.0.1", 0},
 	{ "localhost:80", IPv4, "127.0.0.1", 80},
+#endif
 
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
 	{ "fe::01:80", IPv6, "fe::01:80", 0},
@@ -254,8 +256,8 @@ static int parse_test(void)
 				   pj_cstr(&input, valid_tests[i].input), 
 				   &addr);
 	if (status != PJ_SUCCESS) {
-	    PJ_LOG(1,("test", ".... failed when parsing %s", 
-		      valid_tests[i].input));
+	    PJ_LOG(1,("test", ".... failed when parsing %s (i=%d)", 
+		      valid_tests[i].input, i));
 	    return -10;
 	}
 
