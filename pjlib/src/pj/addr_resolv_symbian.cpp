@@ -157,7 +157,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 				   unsigned *count, pj_addrinfo ai[]) 
 {
     unsigned start;
-    pj_status_t status;
+    pj_status_t status = PJ_EAFNOTSUP;
     
     PJ_ASSERT_RETURN(af==PJ_AF_INET || af==PJ_AF_INET6 || af==PJ_AF_UNSPEC,
     		     PJ_EAFNOTSUP);
