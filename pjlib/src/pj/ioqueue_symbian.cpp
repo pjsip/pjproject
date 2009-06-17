@@ -213,7 +213,16 @@ pj_status_t CIoqueueCallback::StartRead(pj_ioqueue_op_key_t *op_key,
     } else {
 	aAddress_.SetAddress(0);
 	aAddress_.SetPort(0);
-	sock_->Socket().Recv(aBufferPtr_, flags, iStatus);
+
+	if (sock_->IsDatagram()) {
+	    sock_->Socket().Recv(aBufferPtr_, flags, iStatus);
+	} else {
+	    // Using static like this is not pretty, but we don't need to use
+	    // the value anyway, hence doing it like this is probably most
+	    // optimal.
+	    static TSockXfrLength len;
+	    sock_->Socket().RecvOneOrMore(aBufferPtr_, flags, iStatus, len);
+	}
     }
 
     SetActive();
@@ -277,6 +286,7 @@ void CIoqueueCallback::HandleReadCompletion()
 CPjSocket *CIoqueueCallback::HandleAcceptCompletion() 
 {
 	CPjSocket *pjNewSock = new CPjSocket(get_pj_socket()->GetAf(), 
+					     get_pj_socket()->GetSockType(),
 					     blank_sock_);
 	int addrlen = 0;
 	

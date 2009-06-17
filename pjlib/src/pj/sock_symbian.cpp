@@ -125,13 +125,7 @@ CPjSocketReader::CPjSocketReader(CPjSocket &sock)
 
 void CPjSocketReader::ConstructL(unsigned max_len)
 {
-    TProtocolDesc aProtocol;
-    TInt err;
-
-    err = sock_.Socket().Info(aProtocol);
-    User::LeaveIfError(err);
-
-    isDatagram_ = (aProtocol.iSockType == KSockDatagram);
+    isDatagram_ = sock_.IsDatagram();
 
     TUint8 *ptr = new TUint8[max_len];
     buffer_.Set(ptr, 0, (TInt)max_len);
@@ -517,7 +511,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
 
     /* Wrap Symbian RSocket into PJLIB's CPjSocket, and return to caller */
-    CPjSocket *pjSock = new CPjSocket(af, rSock);
+    CPjSocket *pjSock = new CPjSocket(af, type, rSock);
     *p_sock = (pj_sock_t)pjSock;
 
     return PJ_SUCCESS;
@@ -733,7 +727,6 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
     PJ_SYMBIAN_CHECK_CONNECTION();
 
     CPjSocket *pjSock = (CPjSocket*)sock;
-    RSocket &rSock = pjSock->Socket();
 
     if (pjSock->Reader()) {
 	CPjSocketReader *reader = pjSock->Reader();
@@ -757,7 +750,15 @@ PJ_DEF(pj_status_t) pj_sock_recv(pj_sock_t sock,
     TSockXfrLength recvLen;
     TPtr8 data((TUint8*)buf, (TInt)*len, (TInt)*len);
 
-    rSock.Recv(data, flags, reqStatus, recvLen);
+    if (pjSock->IsDatagram()) {
+	pjSock->Socket().Recv(data, flags, reqStatus);
+    } else {
+	// Using static like this is not pretty, but we don't need to use
+	// the value anyway, hence doing it like this is probably most
+	// optimal.
+	static TSockXfrLength len;
+	pjSock->Socket().RecvOneOrMore(data, flags, reqStatus, len);
+    }
     User::WaitForRequest(reqStatus);
 
     if (reqStatus == KErrNone) {
@@ -997,7 +998,8 @@ PJ_DEF(pj_status_t) pj_sock_accept( pj_sock_t serverfd,
     }
 
     // Create PJ socket
-    CPjSocket *newPjSock = new CPjSocket(pjSock->GetAf(), newSock);
+    CPjSocket *newPjSock = new CPjSocket(pjSock->GetAf(), pjSock->GetSockType(),
+					 newSock);
     newPjSock->SetConnected(true);
 
     *newsock = (pj_sock_t) newPjSock;

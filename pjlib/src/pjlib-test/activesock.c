@@ -212,7 +212,11 @@ static int udp_ping_pong_test(void)
 
 	for (i=0; i<10 && last_rx1 == srv1->rx_cnt && last_rx2 == srv2->rx_cnt; ++i) {
 	    pj_time_val delay = {0, 10};
+#ifdef PJ_SYMBIAN
+	    pj_symbianos_poll(-1, 100);
+#else
 	    pj_ioqueue_poll(ioqueue, &delay);
+#endif
 	}
 
 	if (srv1->rx_err_cnt+srv1->tx_err_cnt != 0 ||
@@ -403,26 +407,47 @@ static int tcp_perf_test(void)
 	status = pj_activesock_send(asock2, &op_key->op_key, pkt, &len, 0);
 	if (status == PJ_EPENDING) {
 	    do {
+#if PJ_SYMBIAN
+		pj_symbianos_poll(-1, -1);
+#else
 		pj_ioqueue_poll(ioqueue, NULL);
+#endif
 	    } while (!state2->sent);
-	} else if (status != PJ_SUCCESS) {
-		PJ_LOG(1,("", "   err: send status=%d", status));
-	    status = -180;
-	    break;
-	} else if (status == PJ_SUCCESS) {
-	    if (len != sizeof(*pkt)) {
-		PJ_LOG(1,("", "   err: shouldn't report partial sent"));
-		status = -190;
-		break;
-	    }
+	} else {
+#if PJ_SYMBIAN
+		/* The Symbian socket always returns PJ_SUCCESS for TCP send,
+		 * eventhough the remote end hasn't received the data yet.
+		 * If we continue sending, eventually send() will block,
+		 * possibly because the send buffer is full. So we need to
+		 * poll the ioqueue periodically, to let receiver gets the 
+		 * data.
+		 */
+		pj_symbianos_poll(-1, 0);
+#endif
+		if (status != PJ_SUCCESS) {
+		    PJ_LOG(1,("", "   err: send status=%d", status));
+		    status = -180;
+		    break;
+		} else if (status == PJ_SUCCESS) {
+		    if (len != sizeof(*pkt)) {
+			PJ_LOG(1,("", "   err: shouldn't report partial sent"));
+			status = -190;
+			break;
+		    }
+		}
 	}
     }
 
     /* Wait until everything has been sent/received */
     if (state1->next_recv_seq < COUNT) {
+#ifdef PJ_SYMBIAN
+	while (pj_symbianos_poll(-1, 1000) == PJ_TRUE)
+	    ;
+#else
 	pj_time_val delay = {0, 100};
 	while (pj_ioqueue_poll(ioqueue, &delay) > 0)
 	    ;
+#endif
     }
 
     if (status == PJ_EPENDING)
