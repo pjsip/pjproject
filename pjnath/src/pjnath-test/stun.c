@@ -502,7 +502,9 @@ static struct test_vector
 	"",
 	"",
 	&create_msgint2
-    },
+    }
+#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
+    ,
     {
 	PJ_STUN_BINDING_RESPONSE,
 	"\xb7\xe7\xa7\x01\xbc\x34\xd6\x86\xfa\x87\xdf\xae",
@@ -530,7 +532,7 @@ static struct test_vector
         "\xbf\xe3\xed\x41" // }
         "\x80\x28\x00\x04" //    FINGERPRINT attribute header
         "\xc8\xfb\x0b\x4c" //    CRC32 fingerprint
-,
+	,
 	92,
 	USE_MESSAGE_INTEGRITY | USE_FINGERPRINT,
 	"evtj:h6vY",
@@ -539,6 +541,7 @@ static struct test_vector
 	"",
 	&create_msgint3
     }
+#endif
 };
 
 
@@ -633,6 +636,11 @@ static int fingerprint_test_vector()
 
 	/* Create our message */
 	msg = v->create(pool, v);
+	if (msg == NULL) {
+	    PJ_LOG(1,(THIS_FILE, "    Error creating stun message"));
+	    rc = -1030;
+	    goto on_return;
+	}
 
 	/* Encode message */
 	if (v->options & USE_MESSAGE_INTEGRITY) {
@@ -722,24 +730,43 @@ static pj_stun_msg* create_msgint1(pj_pool_t *pool, test_vector *v)
     pj_stun_msg *msg;
     pj_timestamp u64;
     pj_str_t s1;
+    pj_status_t status;
 
-    pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
-		       (pj_uint8_t*)v->tsx_id, &msg);
+    status = pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
+				(pj_uint8_t*)v->tsx_id, &msg);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_PRIORITY, 0x6e0001ff);
+    status = pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_PRIORITY, 
+				       0x6e0001ff);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     u64.u32.hi = 0x932ff9b1;
     u64.u32.lo = 0x51263b36;
-    pj_stun_msg_add_uint64_attr(pool, msg, PJ_STUN_ATTR_ICE_CONTROLLED,
-				&u64);
+    status = pj_stun_msg_add_uint64_attr(pool, msg, 
+					 PJ_STUN_ATTR_ICE_CONTROLLED, &u64);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_USERNAME, 
-				pj_cstr(&s1, v->username));
+    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_USERNAME, 
+					 pj_cstr(&s1, v->username));
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_msgint_attr(pool, msg);
+    status = pj_stun_msg_add_msgint_attr(pool, msg);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
+    status = pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     return msg;
+
+on_error:
+    app_perror("    error: create_msgint1()", status);
+    return NULL;
 }
 
 static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
@@ -747,22 +774,43 @@ static pj_stun_msg* create_msgint2(pj_pool_t *pool, test_vector *v)
     pj_stun_msg *msg;
     pj_sockaddr_in mapped_addr;
     pj_str_t s1;
+    pj_status_t status;
 
-    pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
-		       (pj_uint8_t*)v->tsx_id, &msg);
+    status = pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
+				(pj_uint8_t*)v->tsx_id, &msg);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
-				pj_cstr(&s1, "test vector"));
+    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
+					 pj_cstr(&s1, "test vector"));
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_sockaddr_in_init(&mapped_addr, pj_cstr(&s1, "192.0.2.1"), 32853);
-    pj_stun_msg_add_sockaddr_attr(pool, msg, PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-				  PJ_TRUE, &mapped_addr, 
-				  sizeof(pj_sockaddr_in));
+    status = pj_sockaddr_in_init(&mapped_addr, pj_cstr(&s1, "192.0.2.1"), 
+				 32853);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_msgint_attr(pool, msg);
-    pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
+    status = pj_stun_msg_add_sockaddr_attr(pool, msg, 
+					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
+					   PJ_TRUE, &mapped_addr, 
+					   sizeof(pj_sockaddr_in));
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_stun_msg_add_msgint_attr(pool, msg);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     return msg;
+
+on_error:
+    app_perror("    error: create_msgint2()", status);
+    return NULL;
 }
 
 
@@ -771,25 +819,44 @@ static pj_stun_msg* create_msgint3(pj_pool_t *pool, test_vector *v)
     pj_stun_msg *msg;
     pj_sockaddr mapped_addr;
     pj_str_t s1;
+    pj_status_t status;
 
-    pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
-		       (pj_uint8_t*)v->tsx_id, &msg);
+    status = pj_stun_msg_create(pool, v->msg_type, PJ_STUN_MAGIC,
+				(pj_uint8_t*)v->tsx_id, &msg);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
-				pj_cstr(&s1, "test vector"));
+    status = pj_stun_msg_add_string_attr(pool, msg, PJ_STUN_ATTR_SOFTWARE, 
+					 pj_cstr(&s1, "test vector"));
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_sockaddr_init(pj_AF_INET6(), &mapped_addr,
-		     pj_cstr(&s1, "2001:db8:1234:5678:11:2233:4455:6677"),
-		     32853);
+    status = pj_sockaddr_init(pj_AF_INET6(), &mapped_addr,
+		      pj_cstr(&s1, "2001:db8:1234:5678:11:2233:4455:6677"),
+		      32853);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_sockaddr_attr(pool, msg, PJ_STUN_ATTR_XOR_MAPPED_ADDR,
-				  PJ_TRUE, &mapped_addr, 
-				  sizeof(pj_sockaddr));
+    status = pj_stun_msg_add_sockaddr_attr(pool, msg, 
+					   PJ_STUN_ATTR_XOR_MAPPED_ADDR,
+					   PJ_TRUE, &mapped_addr, 
+					   sizeof(pj_sockaddr));
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
-    pj_stun_msg_add_msgint_attr(pool, msg);
-    pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
+    status = pj_stun_msg_add_msgint_attr(pool, msg);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    status = pj_stun_msg_add_uint_attr(pool, msg, PJ_STUN_ATTR_FINGERPRINT, 0);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     return msg;
+
+on_error:
+    app_perror("    error: create_msgint3()", status);
+    return NULL;
 }
 
 
