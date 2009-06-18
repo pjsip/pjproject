@@ -158,10 +158,36 @@ static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb,
 
 int jbuf_main(void)
 {
-    FILE *input = fopen("JBTEST.DAT", "rt");
+    FILE *input;
     pj_bool_t data_eof = PJ_FALSE;
     int old_log_level;
     int rc = 0;
+    const char* input_filename = "Jbtest.dat";
+    const char* input_search_path[] = { 
+	"../build"
+    };
+
+    /* Try to open test data file in the working directory */
+    input = fopen(input_filename, "rt");
+
+    /* If that fails, try to open test data file in specified search paths */
+    if (input == NULL) {
+	char input_path[PJ_MAXPATH];
+	int i;
+
+	for (i = 0; !input && i < PJ_ARRAY_SIZE(input_search_path); ++i) {
+	    pj_ansi_snprintf(input_path, PJ_MAXPATH, "%s/%s",
+			     input_search_path[i],
+			     input_filename);
+	    input = fopen(input_path, "rt");
+	}
+    }
+    
+    /* Failed to open test data file. */
+    if (input == NULL) {
+	printf("Failed to open test data file, Jbtest.dat\n");
+	return -1;
+    }
 
     old_log_level = pj_log_get_level();
     pj_log_set_level(5);
