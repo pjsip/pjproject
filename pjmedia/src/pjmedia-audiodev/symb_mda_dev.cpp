@@ -476,7 +476,7 @@ void CPjAudioInputEngine::MaiscRecordComplete(TInt aError)
 {
     lastError_ = aError;
     state_ = STATE_INACTIVE;
-    if (aError != KErrNone) {
+    if (aError != KErrNone && aError != KErrCancel) {
     	snd_perror("Error in MaiscRecordComplete()", aError);
     }
 }
@@ -770,7 +770,7 @@ void CPjAudioOutputEngine::MaoscPlayComplete(TInt aError)
 {
     lastError_ = aError;
     state_ = STATE_INACTIVE;
-    if (aError != KErrNone) {
+    if (aError != KErrNone && aError != KErrCancel) {
     	snd_perror("Error in MaoscPlayComplete()", aError);
     }
 }
