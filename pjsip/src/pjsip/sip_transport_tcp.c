@@ -805,33 +805,33 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     status = pj_activesock_start_connect(tcp->asock, tcp->base.pool, rem_addr,
 					 sizeof(pj_sockaddr_in));
     if (status == PJ_SUCCESS) {
-	tcp->has_pending_connect = PJ_FALSE;
+	on_connect_complete(tcp->asock, PJ_SUCCESS);
     } else if (status != PJ_EPENDING) {
 	tcp_destroy(&tcp->base, status);
 	return status;
     }
 
-    /* Update (again) local address, just in case local address currently
-     * set is different now that asynchronous connect() is started.
-     */
-    addr_len = sizeof(pj_sockaddr_in);
-    if (pj_sock_getsockname(sock, &local_addr, &addr_len)==PJ_SUCCESS) {
-	pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tcp->base.local_addr;
-
-	/* Some systems (like old Win32 perhaps) may not set local address
-	 * properly before socket is fully connected.
-	 */
-	if (tp_addr->sin_addr.s_addr != local_addr.sin_addr.s_addr &&
-	    local_addr.sin_addr.s_addr != 0) 
-	{
-	    tp_addr->sin_addr.s_addr = local_addr.sin_addr.s_addr;
-	    tp_addr->sin_port = local_addr.sin_port;
-	    sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
-				  &local_addr);
-	}
-    }
-
     if (tcp->has_pending_connect) {
+	/* Update (again) local address, just in case local address currently
+	 * set is different now that asynchronous connect() is started.
+	 */
+	addr_len = sizeof(pj_sockaddr_in);
+	if (pj_sock_getsockname(sock, &local_addr, &addr_len)==PJ_SUCCESS) {
+	    pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tcp->base.local_addr;
+
+	    /* Some systems (like old Win32 perhaps) may not set local address
+	     * properly before socket is fully connected.
+	     */
+	    if (tp_addr->sin_addr.s_addr != local_addr.sin_addr.s_addr &&
+		local_addr.sin_addr.s_addr != 0) 
+	    {
+		tp_addr->sin_addr.s_addr = local_addr.sin_addr.s_addr;
+		tp_addr->sin_port = local_addr.sin_port;
+		sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
+				      &local_addr);
+	    }
+	}
+	
 	PJ_LOG(4,(tcp->base.obj_name, 
 		  "TCP transport %.*s:%d is connecting to %.*s:%d...",
 		  (int)tcp->base.local_name.host.slen,

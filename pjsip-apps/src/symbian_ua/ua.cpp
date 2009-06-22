@@ -51,6 +51,10 @@
 #define SIP_PROXY	NULL
 //#define SIP_PROXY	"<sip:192.168.0.8;lr>"
 
+//
+// Set to 1 if TCP is desired (experimental)
+//
+#define ENABLE_SIP_TCP	0
 
 //
 // Configure nameserver if DNS SRV is to be used with both SIP
@@ -378,11 +382,23 @@ static pj_status_t app_startup()
     tcfg.port = SIP_PORT;
     status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, &tid);
     if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error creating transport", status);
+	    pjsua_perror(THIS_FILE, "Error creating UDP transport", status);
 	    pjsua_destroy();
 	    return status;
     }
 
+    /* Add TCP transport */
+#if ENABLE_SIP_TCP
+    pjsua_transport_config_default(&tcfg);
+    tcfg.port = SIP_PORT;
+    status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tcfg, &tid);
+    if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating TCP transport", status);
+	    pjsua_destroy();
+	    return status;
+    }
+#endif
+    
     /* Add account for the transport */
     pjsua_acc_add_local(tid, PJ_TRUE, &g_acc_id);
 
