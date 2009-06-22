@@ -512,6 +512,11 @@ static int perform_test(const char *title,
     rc = start_ice(&sess->callee, &sess->caller);
     if (rc != PJ_SUCCESS) {
 	destroy_sess(sess, 500);
+	if (rc == PJ_ETOOMANY) {
+	    /* Ignore this, probably the host has too many interfaces */
+	    PJ_LOG(3,("", "    The previous error was ignored"));
+	    return 0;
+	}
 	return -120;
     }
 
