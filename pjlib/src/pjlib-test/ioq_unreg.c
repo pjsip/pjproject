@@ -250,11 +250,12 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 	    PJ_TIME_VAL_GTE(now, time_to_unregister) &&
 	    sock_data.pool) 
 	{
-	    pj_mutex_lock(sock_data.mutex);
+	    //Can't do this otherwise it'll deadlock
+	    //pj_mutex_lock(sock_data.mutex);
 
 	    sock_data.unregistered = 1;
 	    pj_ioqueue_unregister(sock_data.key);
-	    pj_mutex_unlock(sock_data.mutex);
+	    //pj_mutex_unlock(sock_data.mutex);
 	    pj_mutex_destroy(sock_data.mutex);
 	    pj_pool_release(sock_data.pool);
 	    sock_data.pool = NULL;
