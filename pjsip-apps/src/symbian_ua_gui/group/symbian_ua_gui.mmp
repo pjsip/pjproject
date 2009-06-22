@@ -50,6 +50,7 @@ STATICLIBRARY		libsrtp.lib
 STATICLIBRARY		libgsmcodec.lib
 STATICLIBRARY		libspeexcodec.lib
 STATICLIBRARY		libg7221codec.lib
+STATICLIBRARY		libpassthroughcodec.lib
 STATICLIBRARY		libresample.lib
 
 
