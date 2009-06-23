@@ -512,11 +512,6 @@ static int perform_test(const char *title,
     rc = start_ice(&sess->callee, &sess->caller);
     if (rc != PJ_SUCCESS) {
 	destroy_sess(sess, 500);
-	if (rc == PJ_ETOOMANY) {
-	    /* Ignore this, probably the host has too many interfaces */
-	    PJ_LOG(3,("", "    The previous error was ignored"));
-	    return 0;
-	}
 	return -120;
     }
 
@@ -677,9 +672,9 @@ int ice_test(void)
 	if (rc != 0)
 	    goto on_return;
 
-	cfg.ua1.comp_cnt = 4;
-	cfg.ua2.comp_cnt = 4;
-	rc = perform_test("Basic with host candidates, 4 components", 
+	cfg.ua1.comp_cnt = 2;
+	cfg.ua2.comp_cnt = 2;
+	rc = perform_test("Basic with host candidates, 2 components", 
 			  &stun_cfg, cfg.server_flag, 
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
@@ -702,10 +697,10 @@ int ice_test(void)
 	if (rc != 0)
 	    goto on_return;
 
-	cfg.ua1.comp_cnt = 4;
-	cfg.ua2.comp_cnt = 4;
+	cfg.ua1.comp_cnt = 2;
+	cfg.ua2.comp_cnt = 2;
 
-	rc = perform_test("Basic with srflx candidates, 4 components", 
+	rc = perform_test("Basic with srflx candidates, 2 components", 
 			  &stun_cfg, cfg.server_flag, 
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
@@ -728,10 +723,10 @@ int ice_test(void)
 	if (rc != 0)
 	    goto on_return;
 
-	cfg.ua1.comp_cnt = 4;
-	cfg.ua2.comp_cnt = 4;
+	cfg.ua1.comp_cnt = 2;
+	cfg.ua2.comp_cnt = 2;
 
-	rc = perform_test("Basic with relay candidates, 4 components", 
+	rc = perform_test("Basic with relay candidates, 2 components", 
 			  &stun_cfg, cfg.server_flag, 
 			  &cfg.ua1, &cfg.ua2);
 	if (rc != 0)
@@ -771,8 +766,8 @@ int ice_test(void)
 	    "TURN allocation failure",
 	    0xFFFF,
 	    /*  Role    comp#   host?   stun?   turn?   flag?  ans_del snd_del des_del */
-	    {ROLE1,	4,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}},
-	    {ROLE2,	4,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}}
+	    {ROLE1,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}},
+	    {ROLE2,	2,	 NO,    NO,	YES, WRONG_TURN,    0,	    0,	    0, {PJ_STATUS_FROM_STUN_CODE(401), -1}}
 	};
 
 	rc = perform_test(cfg.title, &stun_cfg, cfg.server_flag, 
