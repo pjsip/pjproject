@@ -539,6 +539,7 @@ static pj_status_t  g711_encode(pjmedia_codec *codec,
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = (input->size >> 1);
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }
@@ -582,6 +583,7 @@ static pj_status_t  g711_decode(pjmedia_codec *codec,
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->size = (input->size << 1);
+    output->timestamp = input->timestamp;
 
 #if !PLC_DISABLED
     if (priv->plc_enabled)

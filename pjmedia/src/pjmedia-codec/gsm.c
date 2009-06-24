@@ -566,6 +566,7 @@ static pj_status_t gsm_codec_encode( pjmedia_codec *codec,
     }
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
 }
@@ -595,6 +596,7 @@ static pj_status_t gsm_codec_decode( pjmedia_codec *codec,
 
     output->size = 320;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    output->timestamp = input->timestamp;
 
 #if !PLC_DISABLED
     if (gsm_data->plc_enabled)

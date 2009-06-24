@@ -578,6 +578,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
     }
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    output->timestamp = input->timestamp;
     
     TRACE_((THIS_FILE, "G722 encode(): size=%d", output->size));
     return PJ_SUCCESS;
@@ -624,6 +625,7 @@ static pj_status_t g722_codec_decode(pjmedia_codec *codec,
     pj_assert(output->size == SAMPLES_PER_FRAME);
     output->size = SAMPLES_PER_FRAME * 2;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    output->timestamp = input->timestamp;
 
 #if !PLC_DISABLED
     if (g722_data->plc_enabled)
