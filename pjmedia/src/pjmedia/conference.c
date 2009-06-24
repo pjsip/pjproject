@@ -886,8 +886,14 @@ PJ_DEF(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && slot<conf->max_ports, PJ_EINVAL);
 
+    pj_mutex_lock(conf->mutex);
+
     /* Port must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
+    conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     conf_port = conf->ports[slot];
 
@@ -896,6 +902,8 @@ PJ_DEF(pj_status_t) pjmedia_conf_configure_port( pjmedia_conf *conf,
 
     if (rx != PJMEDIA_PORT_NO_CHANGE)
 	conf_port->rx_setting = rx;
+
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -917,17 +925,18 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports && 
 		     sink_slot<conf->max_ports, PJ_EINVAL);
 
-    /* Ports must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[src_slot] != NULL, PJ_EINVAL);
-    PJ_ASSERT_RETURN(conf->ports[sink_slot] != NULL, PJ_EINVAL);
-
     /* For now, level MUST be zero. */
     PJ_ASSERT_RETURN(level == 0, PJ_EINVAL);
 
     pj_mutex_lock(conf->mutex);
 
+    /* Ports must be valid. */
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
+    if (!src_port || !dst_port) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     /* Check if connection has been made */
     for (i=0; i<src_port->listener_cnt; ++i) {
@@ -979,14 +988,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_disconnect_port( pjmedia_conf *conf,
     PJ_ASSERT_RETURN(conf && src_slot<conf->max_ports && 
 		     sink_slot<conf->max_ports, PJ_EINVAL);
 
-    /* Ports must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[src_slot] != NULL, PJ_EINVAL);
-    PJ_ASSERT_RETURN(conf->ports[sink_slot] != NULL, PJ_EINVAL);
-
     pj_mutex_lock(conf->mutex);
 
+    /* Ports must be valid. */
     src_port = conf->ports[src_slot];
     dst_port = conf->ports[sink_slot];
+    if (!src_port || !dst_port) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     /* Check if connection has been made */
     for (i=0; i<src_port->listener_cnt; ++i) {
@@ -1057,9 +1067,6 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && port < conf->max_ports, PJ_EINVAL);
 
-    /* Port must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[port] != NULL, PJ_EINVAL);
-
     /* Suspend the sound devices.
      * Don't want to remove port while port is being accessed by sound
      * device's threads!
@@ -1067,7 +1074,13 @@ PJ_DEF(pj_status_t) pjmedia_conf_remove_port( pjmedia_conf *conf,
 
     pj_mutex_lock(conf->mutex);
 
+    /* Port must be valid. */
     conf_port = conf->ports[port];
+    if (conf_port == NULL) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
+
     conf_port->tx_setting = PJMEDIA_PORT_DISABLE;
     conf_port->rx_setting = PJMEDIA_PORT_DISABLE;
 
@@ -1136,12 +1149,18 @@ PJ_DEF(pj_status_t) pjmedia_conf_enum_ports( pjmedia_conf *conf,
 
     PJ_ASSERT_RETURN(conf && p_count && ports, PJ_EINVAL);
 
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
+
     for (i=0; i<conf->max_ports && count<*p_count; ++i) {
 	if (!conf->ports[i])
 	    continue;
 
 	ports[count++] = i;
     }
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
 
     *p_count = count;
     return PJ_SUCCESS;
@@ -1159,10 +1178,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && slot<conf->max_ports, PJ_EINVAL);
 
-    /* Port must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
 
+    /* Port must be valid. */
     conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     info->slot = slot;
     info->name = conf_port->name;
@@ -1177,6 +1201,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_port_info( pjmedia_conf *conf,
     info->tx_adj_level = conf_port->tx_adj_level - NORMAL_LEVEL;
     info->rx_adj_level = conf_port->rx_adj_level - NORMAL_LEVEL;
 
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
+
     return PJ_SUCCESS;
 }
 
@@ -1189,6 +1216,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
 
     PJ_ASSERT_RETURN(conf && size && info, PJ_EINVAL);
 
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
+
     for (i=0; i<conf->max_ports && count<*size; ++i) {
 	if (!conf->ports[i])
 	    continue;
@@ -1196,6 +1226,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_ports_info(pjmedia_conf *conf,
 	pjmedia_conf_get_port_info(conf, i, &info[count]);
 	++count;
     }
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
 
     *size = count;
     return PJ_SUCCESS;
@@ -1215,10 +1248,15 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_signal_level( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && slot<conf->max_ports, PJ_EINVAL);
 
-    /* Port must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
 
+    /* Port must be valid. */
     conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     if (tx_level != NULL) {
 	*tx_level = conf_port->tx_level;
@@ -1226,6 +1264,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_get_signal_level( pjmedia_conf *conf,
 
     if (rx_level != NULL) 
 	*rx_level = conf_port->rx_level;
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1243,19 +1284,27 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_rx_level( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && slot<conf->max_ports, PJ_EINVAL);
 
-    /* Port must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
-
     /* Value must be from -128 to +127 */
     /* Disabled, you can put more than +127, at your own risk: 
      PJ_ASSERT_RETURN(adj_level >= -128 && adj_level <= 127, PJ_EINVAL);
      */
     PJ_ASSERT_RETURN(adj_level >= -128, PJ_EINVAL);
 
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid. */
     conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     /* Set normalized adjustment level. */
     conf_port->rx_adj_level = adj_level + NORMAL_LEVEL;
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
@@ -1273,19 +1322,27 @@ PJ_DEF(pj_status_t) pjmedia_conf_adjust_tx_level( pjmedia_conf *conf,
     /* Check arguments */
     PJ_ASSERT_RETURN(conf && slot<conf->max_ports, PJ_EINVAL);
 
-    /* Port must be valid. */
-    PJ_ASSERT_RETURN(conf->ports[slot] != NULL, PJ_EINVAL);
-
     /* Value must be from -128 to +127 */
     /* Disabled, you can put more than +127,, at your own risk:
      PJ_ASSERT_RETURN(adj_level >= -128 && adj_level <= 127, PJ_EINVAL);
      */
     PJ_ASSERT_RETURN(adj_level >= -128, PJ_EINVAL);
 
+    /* Lock mutex */
+    pj_mutex_lock(conf->mutex);
+
+    /* Port must be valid. */
     conf_port = conf->ports[slot];
+    if (conf_port == NULL) {
+	pj_mutex_unlock(conf->mutex);
+	return PJ_EINVAL;
+    }
 
     /* Set normalized adjustment level. */
     conf_port->tx_adj_level = adj_level + NORMAL_LEVEL;
+
+    /* Unlock mutex */
+    pj_mutex_unlock(conf->mutex);
 
     return PJ_SUCCESS;
 }
