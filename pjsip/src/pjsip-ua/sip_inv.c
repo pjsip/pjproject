@@ -1367,8 +1367,10 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
 	const pjmedia_sdp_session *offer;
 
 	status = pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    pjsip_tx_data_dec_ref(tdata);
 	    goto on_return;
+	}
 
 	tdata->msg->body = create_sdp_body(tdata->pool, offer);
     }

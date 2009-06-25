@@ -1442,13 +1442,21 @@ static void subscribe_buddy_presence(unsigned index)
 	return;
     }
 
+    /* Increment the dialog's lock otherwise when presence session creation
+     * fails the dialog will be destroyed prematurely.
+     */
+    pjsip_dlg_inc_lock(buddy->dlg);
+
     status = pjsip_pres_create_uac( buddy->dlg, &pres_callback, 
 				    PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
     if (status != PJ_SUCCESS) {
 	pjsua_var.buddy[index].sub = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create presence client", 
 		     status);
-	pjsip_dlg_terminate(buddy->dlg);
+	/* This should destroy the dialog since there's no session
+	 * referencing it
+	 */
+	pjsip_dlg_dec_lock(buddy->dlg);
 	if (tmp_pool) pj_pool_release(tmp_pool);
 	return;
     }
@@ -1481,6 +1489,7 @@ static void subscribe_buddy_presence(unsigned index)
 
     status = pjsip_pres_initiate(buddy->sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(buddy->dlg);
 	if (buddy->sub) {
 	    pjsip_pres_terminate(buddy->sub, PJ_FALSE);
 	}
@@ -1495,6 +1504,7 @@ static void subscribe_buddy_presence(unsigned index)
 
     status = pjsip_pres_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(buddy->dlg);
 	if (buddy->sub) {
 	    pjsip_pres_terminate(buddy->sub, PJ_FALSE);
 	}
@@ -1505,6 +1515,7 @@ static void subscribe_buddy_presence(unsigned index)
 	return;
     }
 
+    pjsip_dlg_dec_lock(buddy->dlg);
     if (tmp_pool) pj_pool_release(tmp_pool);
 }
 
