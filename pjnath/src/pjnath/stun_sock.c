@@ -534,8 +534,17 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
 	info->alias_cnt = 1;
 	pj_sockaddr_cp(&info->aliases[0], &info->bound_addr);
     } else {
+	pj_sockaddr def_addr;
+	pj_uint16_t port = pj_sockaddr_get_port(&info->bound_addr); 
 	unsigned i;
 
+	/* Get the default address */
+	status = pj_gethostip(stun_sock->af, &def_addr);
+	if (status != PJ_SUCCESS)
+	    return status;
+	
+	pj_sockaddr_set_port(&def_addr, port);
+	
 	/* Enum all IP interfaces in the host */
 	info->alias_cnt = PJ_ARRAY_SIZE(info->aliases);
 	status = pj_enum_ip_interface(stun_sock->af, &info->alias_cnt, 
@@ -545,10 +554,18 @@ PJ_DEF(pj_status_t) pj_stun_sock_get_info( pj_stun_sock *stun_sock,
 
 	/* Set the port number for each address.
 	 */
-	if (stun_sock->af == pj_AF_INET()) {
-	    for (i=0; i<info->alias_cnt; ++i) {
-		pj_sockaddr_set_port(&info->aliases[i],
-				     pj_sockaddr_get_port(&info->bound_addr));
+	for (i=0; i<info->alias_cnt; ++i) {
+	    pj_sockaddr_set_port(&info->aliases[i], port);
+	}
+
+	/* Put the default IP in the first slot */
+	for (i=0; i<info->alias_cnt; ++i) {
+	    if (pj_sockaddr_cmp(&info->aliases[i], &def_addr)==0) {
+		if (i!=0) {
+		    pj_sockaddr_cp(&info->aliases[i], &info->aliases[0]);
+		    pj_sockaddr_cp(&info->aliases[0], &def_addr);
+		}
+		break;
 	    }
 	}
     }
