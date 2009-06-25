@@ -64,10 +64,13 @@ static void digest_to_hex(const pj_uint8_t digest[PJ_SHA1_DIGEST_SIZE],
 
 static int sha1_test1(void)
 {
+    enum { MILLION = 1000000 };
     int k;
     pj_sha1_context context;
     pj_uint8_t digest[20];
     char output[80];
+    pj_pool_t *pool;
+    pj_uint8_t *block;
 
     PJ_LOG(3, (THIS_FILE, "  SHA1 test vector 1 from sha1.c.."));
     
@@ -86,7 +89,7 @@ static int sha1_test1(void)
 
     /* million 'a' vector we feed separately */
     pj_sha1_init(&context);
-    for (k = 0; k < 1000000; k++)
+    for (k = 0; k < MILLION; k++)
         pj_sha1_update(&context, (pj_uint8_t*)"a", 1);
     pj_sha1_final(&context, digest);
     digest_to_hex(digest, output);
@@ -94,6 +97,32 @@ static int sha1_test1(void)
 	PJ_LOG(3, (THIS_FILE, "    incorrect hash result!"));
         return -20;
     }
+
+    /* million 'a' test, using block */
+    pool = pj_pool_create(mem, "sha1test", 256, 512, NULL);
+    block = (pj_uint8_t*)pj_pool_alloc(pool, MILLION);
+    pj_memset(block, 'a', MILLION);
+
+    pj_sha1_init(&context);
+    pj_sha1_update(&context, block, MILLION);
+    pj_sha1_final(&context, digest);
+    digest_to_hex(digest, output);
+    if (strcmp(output, sha1_test_results[2])) {
+	pj_pool_release(pool);
+	PJ_LOG(3, (THIS_FILE, "    incorrect hash result for block update!"));
+        return -21;
+    }
+
+    /* verify that original buffer was not modified */
+    for (k=0; k<MILLION; ++k) {
+	if (block[k] != 'a') {
+	    pj_pool_release(pool);
+	    PJ_LOG(3, (THIS_FILE, "    block was modified!"));
+	    return -22;
+	}
+    }
+
+    pj_pool_release(pool);
 
     /* success */
     return(0);
