@@ -139,7 +139,16 @@ static int test_timer_heap(void)
 	    pj_gettimeofday(&now);
 
 	    pj_get_timestamp(&t1);
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
+	    /* On Symbian, we must use OS poll (Active Scheduler poll) since 
+	     * timer is implemented using Active Object.
+	     */
+	    rc = 0;
+	    while (pj_symbianos_poll(-1, 0))
+		++rc;
+#else
 	    rc = pj_timer_heap_poll(timer, NULL);
+#endif
 	    pj_get_timestamp(&t2);
 	    if (rc > 0) {
 		done += rc;
