@@ -311,7 +311,6 @@ PJ_DECL(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool,
 				           const pjsip_method *method,
 				           const pjsip_rx_data *rdata );
 
-
 /**
  * Force terminate transaction.
  *
@@ -330,8 +329,36 @@ PJ_DECL(pj_status_t) pjsip_tsx_terminate( pjsip_transaction *tsx,
  * This operation normally is used for INVITE transaction only, when
  * the transaction is cancelled before any provisional response has been
  * received.
+ *
+ * @param tsx       The transaction.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx);
+
+
+/**
+ * Start a timer to terminate transaction after the specified time
+ * has elapsed. This function is only valid for INVITE transaction,
+ * and only before final response is received for the INVITE transaction.
+ * It is normally called after the UAC has sent CANCEL for this
+ * INVITE transaction. 
+ *
+ * The purpose of this function is to terminate the transaction if UAS 
+ * does not send final response to this INVITE transaction even after 
+ * it sends 200/OK to CANCEL (for example when the UAS complies to RFC
+ * 2543).
+ *
+ * Once this timer is set, the transaction will be terminated either when
+ * a final response is received or the timer expires.
+ *
+ * @param tsx       The transaction.
+ * @param millisec  Timeout value in milliseconds.
+ *
+ * @return          PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tsx_set_timeout(pjsip_transaction *tsx,
+					   unsigned millisec);
 
 
 /**
