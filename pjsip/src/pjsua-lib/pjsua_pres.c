@@ -389,6 +389,12 @@ PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id)
 
     PJSUA_LOCK();
 
+    /* Not interested with further events for this buddy */
+    if (pjsua_var.buddy[buddy_id].sub) {
+	pjsip_evsub_set_mod_data(pjsua_var.buddy[buddy_id].sub, 
+				 pjsua_var.mod.id, NULL);
+    }
+
     /* Remove buddy */
     pjsua_var.buddy[buddy_id].uri.slen = 0;
     pjsua_var.buddy_cnt--;
