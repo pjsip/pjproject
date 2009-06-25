@@ -1697,7 +1697,10 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    tsx->transport = NULL;
 	}
 
-	if (!*cont) {
+	/* Also stop processing if transaction has been flagged with
+	 * pending destroy (http://trac.pjsip.org/repos/ticket/906)
+	 */
+	if ((!*cont) || (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pjsip_status_code sc;
 	    pj_str_t err;
@@ -1732,6 +1735,14 @@ static void send_msg_callback( pjsip_send_state *send_state,
 		tsx->state != PJSIP_TSX_STATE_DESTROYED)
 	    {
 		tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+			       PJSIP_EVENT_TRANSPORT_ERROR, send_state->tdata);
+	    } 
+	    /* Don't forget to destroy if we have pending destroy flag
+	     * (http://trac.pjsip.org/repos/ticket/906)
+	     */
+	    else if (tsx->transport_flag & TSX_HAS_PENDING_DESTROY)
+	    {
+		tsx_set_state( tsx, PJSIP_TSX_STATE_DESTROYED, 
 			       PJSIP_EVENT_TRANSPORT_ERROR, send_state->tdata);
 	    }
 
