@@ -32,6 +32,10 @@ PJ_IDEF(pj_str_t*) pj_strdup(pj_pool_t *pool,
 			      pj_str_t *dst,
 			      const pj_str_t *src)
 {
+    /* Without this, destination will be corrupted */
+    if (dst == src)
+	return dst;
+
     if (src->slen) {
 	dst->ptr = (char*)pj_pool_alloc(pool, src->slen);
 	pj_memcpy(dst->ptr, src->ptr, src->slen);
