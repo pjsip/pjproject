@@ -54,8 +54,9 @@ public:
     };
 
     // Construct CPjSocket
-    CPjSocket(int af, RSocket &sock)
-	: af_(af), sock_(sock), connected_(false), sockReader_(NULL)
+    CPjSocket(int af, int sock_type, RSocket &sock)
+	: af_(af), sock_(sock), sock_type_(sock_type), connected_(false), 
+	  sockReader_(NULL)
     { 
     }
 
@@ -86,6 +87,18 @@ public:
 	connected_ = connected;
     }
 
+    // Get socket type
+    int GetSockType() const
+    {
+	return sock_type_;
+    }
+    
+    // Returns true if socket is a datagram
+    bool IsDatagram() const
+    {
+	return sock_type_ == KSockDatagram;
+    }
+    
     // Get socket reader, if any.
     // May return NULL.
     CPjSocketReader *Reader()
@@ -103,6 +116,8 @@ private:
     int		     af_;
     RSocket	     sock_;	    // Must not be reference, or otherwise
 				    // it may point to local variable!
+    unsigned   	     sock_type_;
+    
     bool	     connected_;
     CPjSocketReader *sockReader_;
 };
