@@ -727,7 +727,8 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
         /* Scan for readable socket. */
 	if ((key_has_pending_read(h) || key_has_pending_accept(h))
-            && PJ_FD_ISSET(h->fd, &rfdset) && !IS_CLOSING(h))
+            && PJ_FD_ISSET(h->fd, &rfdset) && !IS_CLOSING(h) &&
+	    counter<count)
         {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
@@ -739,7 +740,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 
 #if PJ_HAS_TCP
         if (key_has_pending_connect(h) && PJ_FD_ISSET(h->fd, &xfdset) &&
-	    !IS_CLOSING(h)) 
+	    !IS_CLOSING(h) && counter<count) 
 	{
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	    increment_counter(h);
