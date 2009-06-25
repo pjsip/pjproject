@@ -152,6 +152,12 @@ PJ_DEF(pj_uint32_t) pj_elapsed_msec( const pj_timestamp *start,
     return (pj_uint32_t)elapsed_msec(start, stop);
 }
 
+PJ_DEF(pj_uint64_t) pj_elapsed_msec64(const pj_timestamp *start,
+                                      const pj_timestamp *stop )
+{
+    return (pj_uint64_t)elapsed_msec(start, stop);
+}
+
 PJ_DEF(pj_time_val) pj_elapsed_time( const pj_timestamp *start,
                                      const pj_timestamp *stop )
 {

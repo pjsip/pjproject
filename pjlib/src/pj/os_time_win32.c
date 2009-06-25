@@ -19,6 +19,7 @@
  */
 #include <pj/os.h>
 #include <pj/string.h>
+#include <pj/log.h>
 #include <windows.h>
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -27,11 +28,133 @@
 
 static LARGE_INTEGER base_time;
 
-// Find 1st Jan 1970 as a FILETIME 
-static void get_base_time(void)
+#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
+#   define WINCE_TIME
+#endif
+
+#ifdef WINCE_TIME
+/* Note:
+ *  In Windows CE/Windows Mobile platforms, the availability of milliseconds
+ *  time resolution in SYSTEMTIME.wMilliseconds depends on the OEM, and most
+ *  likely it won't be available. When it's not available, the 
+ *  SYSTEMTIME.wMilliseconds will contain a constant arbitrary value.
+ *
+ *  Because of that, we need to emulate the milliseconds time resolution
+ *  using QueryPerformanceCounter() (via pj_get_timestamp() API). However 
+ *  there is limitation on using this, i.e. the time returned by 
+ *  pj_gettimeofday() may be off by up to plus/minus 999 msec (the second
+ *  part will be correct, however the msec part may be off), because we're 
+ *  not synchronizing the msec field with the change of value of the "second"
+ *  field of the system time.
+ *
+ *  Also there is other caveat which need to be handled (and they are 
+ *  handled by this implementation):
+ *   - user may change system time, so pj_gettimeofday() needs to periodically
+ *     checks if system time has changed. The period on which system time is
+ *     checked is controlled by PJ_WINCE_TIME_CHECK_INTERVAL macro.
+ */
+static LARGE_INTEGER g_start_time;  /* Time gettimeofday() is first called  */
+static pj_timestamp  g_start_tick;  /* TS gettimeofday() is first called  */
+static pj_timestamp  g_last_update; /* Last time check_system_time() is 
+				       called, to periodically synchronize
+				       with up-to-date system time (in case
+				       user changes system time).	    */
+static pj_uint64_t   g_update_period; /* Period (in TS) check_system_time()
+				         should be called.		    */
+
+/* Period on which check_system_time() is called, in seconds		    */
+#ifndef PJ_WINCE_TIME_CHECK_INTERVAL
+#   define PJ_WINCE_TIME_CHECK_INTERVAL (10)
+#endif
+
+#endif
+
+#ifdef WINCE_TIME
+static pj_status_t init_start_time(void)
 {
     SYSTEMTIME st;
     FILETIME ft;
+    pj_timestamp freq;
+    pj_status_t status;
+
+    GetLocalTime(&st);
+    SystemTimeToFileTime(&st, &ft);
+
+    g_start_time.LowPart = ft.dwLowDateTime;
+    g_start_time.HighPart = ft.dwHighDateTime;
+    g_start_time.QuadPart /= SECS_TO_FT_MULT;
+    g_start_time.QuadPart -= base_time.QuadPart;
+
+    status = pj_get_timestamp(&g_start_tick);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    g_last_update.u64 = g_start_tick.u64;
+
+    status = pj_get_timestamp_freq(&freq);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    g_update_period = PJ_WINCE_TIME_CHECK_INTERVAL * freq.u64;
+
+    PJ_LOG(4,("os_time_win32.c", "WinCE time (re)started"));
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t check_system_time(pj_uint64_t ts_elapsed)
+{
+    enum { MIS = 5 };
+    SYSTEMTIME st;
+    FILETIME ft;
+    LARGE_INTEGER cur, calc;
+    DWORD diff;
+    pj_timestamp freq;
+    pj_status_t status;
+
+    /* Get system's current time */
+    GetLocalTime(&st);
+    SystemTimeToFileTime(&st, &ft);
+    
+    cur.LowPart = ft.dwLowDateTime;
+    cur.HighPart = ft.dwHighDateTime;
+    cur.QuadPart /= SECS_TO_FT_MULT;
+    cur.QuadPart -= base_time.QuadPart;
+
+    /* Get our calculated system time */
+    status = pj_get_timestamp_freq(&freq);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    calc.QuadPart = g_start_time.QuadPart + ts_elapsed / freq.u64;
+
+    /* See the difference between calculated and actual system time */
+    if (calc.QuadPart >= cur.QuadPart) {
+	diff = (DWORD)(calc.QuadPart - cur.QuadPart);
+    } else {
+	diff = (DWORD)(cur.QuadPart - calc.QuadPart);
+    }
+
+    if (diff > MIS) {
+	/* System time has changed */
+	PJ_LOG(3,("os_time_win32.c", "WinCE system time changed detected "
+				      "(diff=%u)", diff));
+	status = init_start_time();
+    } else {
+	status = PJ_SUCCESS;
+    }
+
+    return status;
+}
+
+#endif
+
+// Find 1st Jan 1970 as a FILETIME 
+static pj_status_t get_base_time(void)
+{
+    SYSTEMTIME st;
+    FILETIME ft;
+    pj_status_t status = PJ_SUCCESS;
 
     memset(&st,0,sizeof(st));
     st.wYear=1970;
@@ -42,17 +165,58 @@ static void get_base_time(void)
     base_time.LowPart = ft.dwLowDateTime;
     base_time.HighPart = ft.dwHighDateTime;
     base_time.QuadPart /= SECS_TO_FT_MULT;
+
+#ifdef WINCE_TIME
+    pj_enter_critical_section();
+    status = init_start_time();
+    pj_leave_critical_section();
+#endif
+
+    return status;
 }
 
 PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
 {
+#ifdef WINCE_TIME
+    pj_timestamp tick;
+    pj_uint64_t msec_elapsed;
+#else
     SYSTEMTIME st;
     FILETIME ft;
     LARGE_INTEGER li;
+#endif
+    pj_status_t status;
 
-    if (base_time.QuadPart == 0)
-	get_base_time();
+    if (base_time.QuadPart == 0) {
+	status = get_base_time();
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
+#ifdef WINCE_TIME
+    do {
+	status = pj_get_timestamp(&tick);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	if (tick.u64 - g_last_update.u64 >= g_update_period) {
+	    pj_enter_critical_section();
+	    if (tick.u64 - g_last_update.u64 >= g_update_period) {
+		g_last_update.u64 = tick.u64;
+		check_system_time(tick.u64 - g_start_tick.u64);
+	    }
+	    pj_leave_critical_section();
+	} else {
+	    break;
+	}
+    } while (1);
+
+    msec_elapsed = pj_elapsed_msec64(&g_start_tick, &tick);
+
+    tv->sec = (long)(g_start_time.QuadPart + msec_elapsed/1000);
+    tv->msec = (long)(msec_elapsed % 1000);
+#else
+    /* Standard Win32 GetLocalTime */
     GetLocalTime(&st);
     SystemTimeToFileTime(&st, &ft);
 
@@ -63,6 +227,7 @@ PJ_DEF(pj_status_t) pj_gettimeofday(pj_time_val *tv)
 
     tv->sec = li.LowPart;
     tv->msec = st.wMilliseconds;
+#endif	/* WINCE_TIME */
 
     return PJ_SUCCESS;
 }
