@@ -67,6 +67,14 @@ PJ_BEGIN_DECL
 
 
 /**
+ * This setting controls whether Symbian VAS support should be included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS
+#   define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS	0
+#endif
+
+
+/**
  * This setting controls whether Symbian audio (using built-in multimedia 
  * framework) support should be included.
  */

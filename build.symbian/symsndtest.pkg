@@ -14,6 +14,6 @@
 :"PJSIP"
 
 ; Target
-"C:\Symbian\9.1\S60_3rd_MR\Epoc32\release\gcce\UDEB\symsndtest.exe"-"!:\sys\bin\symsndtest.exe"
-"C:\Symbian\9.1\S60_3rd_MR\Epoc32\data\z\private\10003a3f\apps\symsndtest_reg.rSC"-"!:\private\10003a3f\import\apps\symsndtest_reg.rSC"
+"$(EPOCROOT)Epoc32\release\$(PLATFORM)\$(TARGET)\symsndtest.exe"-"!:\sys\bin\symsndtest.exe"
+"$(EPOCROOT)Epoc32\data\z\private\10003a3f\apps\symsndtest_reg.rSC"-"!:\private\10003a3f\import\apps\symsndtest_reg.rSC"
 

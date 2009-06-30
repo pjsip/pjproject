@@ -15,6 +15,7 @@ SOURCE		audiodev.c
 SOURCE		errno.c
 SOURCE		symb_aps_dev.cpp
 SOURCE		symb_mda_dev.cpp
+SOURCE		symb_vas_dev.cpp
 
 SYSTEMINCLUDE	..\pjmedia\include
 SYSTEMINCLUDE	..\pjlib\include 

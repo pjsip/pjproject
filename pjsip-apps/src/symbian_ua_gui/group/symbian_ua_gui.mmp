@@ -62,7 +62,7 @@ STATICLIBRARY		libresample.lib
 #endif
 
 #if SND_HAS_VAS
-//	LIBRARY		
+	LIBRARY		VoIPAudioIntfc.lib		
 #endif
 
 #if SND_HAS_MDA

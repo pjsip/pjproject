@@ -240,6 +240,34 @@
 
 
 /*
+ * Additional configuration to activate VAS-Direct feature for
+ * Nokia S60 target
+ *
+ * Please see http://trac.pjsip.org/repos/wiki/Nokia_APS_VAS_Direct
+ */
+#ifdef PJ_CONFIG_NOKIA_VAS_DIRECT
+
+    /* MUST use switchboard rather than the conference bridge */
+    #define PJMEDIA_CONF_USE_SWITCH_BOARD	1
+
+    /* Enable APS sound device backend and disable MDA */
+    #define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA	0
+    #define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS	1
+
+    /* Enable passthrough codec framework */
+    #define PJMEDIA_HAS_PASSTHROUGH_CODECS	1
+
+    /* And selectively enable which codecs are supported by the handset */
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU	1
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA	1
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR	1
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_G729	1
+    #define PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC	1
+
+#endif
+
+
+/*
  * Configuration to activate "APS-Direct" media mode on Windows,
  * useful for testing purposes only.
  */
