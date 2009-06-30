@@ -195,6 +195,7 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
     /* subscription state and termination reason */
     if (buddy->sub) {
 	info->sub_state = pjsip_evsub_get_state(buddy->sub);
+	info->sub_state_name = pjsip_evsub_get_state_name(buddy->sub);
 	if (info->sub_state == PJSIP_EVSUB_STATE_TERMINATED &&
 	    total < sizeof(info->buf_)) 
 	{
@@ -207,11 +208,13 @@ PJ_DEF(pj_status_t) pjsua_buddy_get_info( pjsua_buddy_id buddy_id,
 	    info->sub_term_reason = pj_str("");
 	}
     } else if (total < sizeof(info->buf_)) {
+	info->sub_state_name = "NULL";
 	info->sub_term_reason.ptr = info->buf_ + total;
 	pj_strncpy(&info->sub_term_reason, &buddy->term_reason,
 		   sizeof(info->buf_) - total);
 	total += info->sub_term_reason.slen;
     } else {
+	info->sub_state_name = "NULL";
 	info->sub_term_reason = pj_str("");
     }
 

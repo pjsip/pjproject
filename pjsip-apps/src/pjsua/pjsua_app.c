@@ -2533,11 +2533,12 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
     pjsua_buddy_info info;
     pjsua_buddy_get_info(buddy_id, &info);
 
-    PJ_LOG(3,(THIS_FILE, "%.*s status is %.*s",
+    PJ_LOG(3,(THIS_FILE, "%.*s status is %.*s (subscription state is %s)",
 	      (int)info.uri.slen,
 	      info.uri.ptr,
 	      (int)info.status_text.slen,
-	      info.status_text.ptr));
+	      info.status_text.ptr,
+	      info.sub_state_name));
 }
 
 

@@ -2896,6 +2896,11 @@ typedef struct pjsua_buddy_info
     pjsip_evsub_state	sub_state;
 
     /**
+     * String representation of subscription state.
+     */
+    const char	       *sub_state_name;
+
+    /**
      * Specifies the last presence subscription terminatino reason. If 
      * presence subscription is currently active, the value will be empty.
      */
