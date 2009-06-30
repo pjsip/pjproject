@@ -312,7 +312,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt )
 
     if (codec_factory.pool != NULL) {
 	/* Already initialized. */
-	return PJ_SUCCESS;
+	return PJ_EEXISTS;
     }
 
     /* Create passthrough codec factory. */
@@ -354,11 +354,44 @@ on_error:
 }
 
 /*
+ * Initialize and register passthrough codec factory to pjmedia endpoint.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_passthrough_init2( 
+		      pjmedia_endpt *endpt,
+		      const pjmedia_codec_passthrough_setting *setting)
+{
+    if (codec_factory.pool != NULL) {
+	/* Already initialized. */
+	return PJ_EEXISTS;
+    }
+
+    if (setting != NULL) {
+	unsigned i;
+
+	/* Enable/disable codecs based on the specified encoding formats */
+	for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
+	    pj_bool_t enabled = PJ_FALSE;
+	    unsigned j;
+
+	    for (j = 0; j < setting->fmt_cnt && !enabled; ++j) {
+		if (codec_desc[i].fmt_id == setting->fmts[j].id)
+		    enabled = PJ_TRUE;
+	    }
+
+	    codec_desc[i].enabled = enabled;
+	}
+    }
+
+    return pjmedia_codec_passthrough_init(endpt);
+}
+
+/*
  * Unregister passthrough codecs factory from pjmedia endpoint.
  */
 PJ_DEF(pj_status_t) pjmedia_codec_passthrough_deinit(void)
 {
     pjmedia_codec_mgr *codec_mgr;
+    unsigned i;
     pj_status_t status;
 
     if (codec_factory.pool == NULL) {
@@ -386,6 +419,11 @@ PJ_DEF(pj_status_t) pjmedia_codec_passthrough_deinit(void)
     /* Destroy pool. */
     pj_pool_release(codec_factory.pool);
     codec_factory.pool = NULL;
+
+    /* Re-enable all codecs in the codec_desc. */
+    for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
+	codec_desc[i].enabled = PJ_TRUE;
+    }
 
     return status;
 }

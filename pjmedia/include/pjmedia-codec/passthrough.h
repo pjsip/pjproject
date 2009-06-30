@@ -48,8 +48,22 @@
 
 PJ_BEGIN_DECL
 
+
+/** 
+ * Codec passthrough configuration settings.
+ */
+typedef struct pjmedia_codec_passthrough_setting
+{
+    unsigned		 fmt_cnt;	/**< Number of encoding formats
+					     to be enabled.		*/
+    pjmedia_format	*fmts;		/**< Encoding formats to be 
+					     enabled.			*/
+} pjmedia_codec_passthrough_setting;
+
+
 /**
- * Initialize and register passthrough codecs factory to pjmedia endpoint.
+ * Initialize and register passthrough codecs factory to pjmedia endpoint,
+ * all supported encoding formats will be enabled.
  *
  * @param endpt	    The pjmedia endpoint.
  *
@@ -57,6 +71,19 @@ PJ_BEGIN_DECL
  */
 PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init( pjmedia_endpt *endpt );
 
+
+/**
+ * Initialize and register passthrough codecs factory to pjmedia endpoint
+ * with only specified encoding formats enabled.
+ *
+ * @param endpt	    The pjmedia endpoint.
+ * @param setting   The settings, see @pjmedia_codec_passthrough_setting.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_passthrough_init2(
+		       pjmedia_endpt *endpt,
+		       const pjmedia_codec_passthrough_setting *setting);
 
 
 /**

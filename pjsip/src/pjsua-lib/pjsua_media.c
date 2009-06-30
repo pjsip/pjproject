@@ -194,11 +194,55 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS
     /* Register passthrough codecs */
-    status = pjmedia_codec_passthrough_init(pjsua_var.med_endpt);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing passthrough codecs",
-		     status);
-	return status;
+    {
+	unsigned aud_idx;
+	unsigned ext_fmt_cnt = 0;
+	pjmedia_format ext_fmts[32];
+	pjmedia_codec_passthrough_setting setting;
+
+	/* List extended formats supported by audio devices */
+	for (aud_idx = 0; aud_idx < pjmedia_aud_dev_count(); ++aud_idx) {
+	    pjmedia_aud_dev_info aud_info;
+	    unsigned i;
+	    
+	    status = pjmedia_aud_dev_get_info(aud_idx, &aud_info);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Error querying audio device info",
+			     status);
+		return status;
+	    }
+	    
+	    /* Collect extended formats supported by this audio device */
+	    for (i = 0; i < aud_info.ext_fmt_cnt; ++i) {
+		unsigned j;
+		pj_bool_t is_listed = PJ_FALSE;
+
+		/* See if this extended format is already in the list */
+		for (j = 0; j < ext_fmt_cnt && !is_listed; ++j) {
+		    if (ext_fmts[j].id == aud_info.ext_fmt[i].id &&
+			ext_fmts[j].bitrate == aud_info.ext_fmt[i].bitrate)
+		    {
+			is_listed = PJ_TRUE;
+		    }
+		}
+		
+		/* Put this format into the list, if it is not in the list */
+		if (!is_listed)
+		    ext_fmts[ext_fmt_cnt++] = aud_info.ext_fmt[i];
+
+		pj_assert(ext_fmt_cnt <= PJ_ARRAY_SIZE(ext_fmts));
+	    }
+	}
+
+	/* Init the passthrough codec with supported formats only */
+	setting.fmt_cnt = ext_fmt_cnt;
+	setting.fmts = ext_fmts;
+	status = pjmedia_codec_passthrough_init2(pjsua_var.med_endpt, &setting);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error initializing passthrough codecs",
+			 status);
+	    return status;
+	}
     }
 #endif /* PJMEDIA_HAS_PASSTHROUGH_CODECS */
 
