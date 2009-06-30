@@ -1378,10 +1378,21 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	dlgsub = dlgsub->next;
     }
 
-    if (dlgsub == dlgsub_head) {
+    /* Note: 
+     *  the second condition is for http://trac.pjsip.org/repos/ticket/911 
+     */
+    if (dlgsub == dlgsub_head ||
+	(dlgsub->sub && 
+	    pjsip_evsub_get_state(dlgsub->sub)==PJSIP_EVSUB_STATE_TERMINATED))
+    {
+	const char *reason_msg = 
+	    (dlgsub == dlgsub_head ? "Subscription Does Not Exist" :
+	     "Subscription already terminated");
+
 	/* This could be incoming request to create new subscription */
 	PJ_LOG(4,(THIS_FILE, 
-		  "Subscription not found for %.*s, event=%.*s;id=%.*s",
+		  "%s for %.*s, event=%.*s;id=%.*s",
+		  reason_msg,
 		  (int)tsx->method.name.slen,
 		  tsx->method.name.ptr,
 		  (int)event_hdr->event_type.slen,
@@ -1393,10 +1404,11 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	if (tsx->state == PJSIP_TSX_STATE_TRYING &&
 	    pjsip_method_cmp(&tsx->method, &pjsip_notify_method)==0)
 	{
-	    pj_str_t reason = pj_str("Subscription Does Not Exist");
+	    pj_str_t reason;
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
 
+	    pj_cstr(&reason, reason_msg);
 	    status = pjsip_dlg_create_response(dlg, 
 					       event->body.tsx_state.src.rdata, 
 					       481, &reason, 
