@@ -93,9 +93,6 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	if (PJ_TIME_VAL_GTE(now, time_to_unregister)) { 
 	    sock_data.unregistered = 1;
 	    pj_ioqueue_unregister(key);
-	    pj_mutex_destroy(sock_data.mutex);
-	    pj_pool_release(sock_data.pool);
-	    sock_data.pool = NULL;
 	    return;
 	}
     }
@@ -243,31 +240,30 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
     /* Loop until test time ends */
     for (;;) {
 	pj_time_val now, timeout;
+	int n;
 
 	pj_gettimeofday(&now);
 
 	if (test_method == UNREGISTER_IN_APP && 
 	    PJ_TIME_VAL_GTE(now, time_to_unregister) &&
-	    sock_data.pool) 
+	    !sock_data.unregistered) 
 	{
-	    //Can't do this otherwise it'll deadlock
-	    //pj_mutex_lock(sock_data.mutex);
-
 	    sock_data.unregistered = 1;
+	    /* Wait (as much as possible) for callback to complete */
+	    pj_mutex_lock(sock_data.mutex);
+	    pj_mutex_unlock(sock_data.mutex);
 	    pj_ioqueue_unregister(sock_data.key);
-	    //pj_mutex_unlock(sock_data.mutex);
-	    pj_mutex_destroy(sock_data.mutex);
-	    pj_pool_release(sock_data.pool);
-	    sock_data.pool = NULL;
 	}
 
 	if (PJ_TIME_VAL_GT(now, end_time) && sock_data.unregistered)
 	    break;
 
 	timeout.sec = 0; timeout.msec = 10;
-	pj_ioqueue_poll(ioqueue, &timeout);
-	//pj_thread_sleep(1);
-
+	n = pj_ioqueue_poll(ioqueue, &timeout);
+	if (n < 0) {
+	    app_perror("pj_ioqueue_poll error", -n);
+	    pj_thread_sleep(1);
+	}
     }
 
     thread_quitting = 1;
@@ -276,6 +272,11 @@ static int perform_unreg_test(pj_ioqueue_t *ioqueue,
 	pj_thread_join(thread[i]);
 	pj_thread_destroy(thread[i]);
     }
+
+    /* Destroy data */
+    pj_mutex_destroy(sock_data.mutex);
+    pj_pool_release(sock_data.pool);
+    sock_data.pool = NULL;
 
     if (other_socket) {
 	pj_ioqueue_unregister(osd.key);
@@ -314,7 +315,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
 	return -12;
     }
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 0/3 (%s)", 
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 0/3, unregister in app (%s)", 
 	       pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
 	pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -324,7 +325,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     }
 
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 1/3 (%s)",
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 1/3, unregister in app (%s)",
 	       pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
 	pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -335,7 +336,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
 
     test_method = UNREGISTER_IN_CALLBACK;
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 2/3 (%s)", 
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 2/3, unregister in cb (%s)", 
 	       pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
 	pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -345,7 +346,7 @@ static int udp_ioqueue_unreg_test_imp(pj_bool_t allow_concur)
     }
 
 
-    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 3/3 (%s)", 
+    PJ_LOG(3, (THIS_FILE, "...ioqueue unregister stress test 3/3, unregister in cb (%s)", 
 	       pj_ioqueue_name()));
     for (i=0; i<LOOP; ++i) {
 	pj_ansi_sprintf(title, "repeat %d/%d", i, LOOP);
@@ -366,7 +367,7 @@ int udp_ioqueue_unreg_test(void)
 
     rc = udp_ioqueue_unreg_test_imp(PJ_TRUE);
     if (rc != 0)
-	return rc;
+    	return rc;
 
     rc = udp_ioqueue_unreg_test_imp(PJ_FALSE);
     if (rc != 0)

@@ -687,6 +687,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_recv(  pj_ioqueue_key_t *key,
     read_op->flags = flags;
 
     pj_mutex_lock(key->mutex);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+	pj_mutex_unlock(key->mutex);
+	return PJ_ECANCELLED;
+    }
     pj_list_insert_before(&key->read_list, read_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_mutex_unlock(key->mutex);
@@ -755,6 +763,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_recvfrom( pj_ioqueue_key_t *key,
     read_op->rmt_addrlen = addrlen;
 
     pj_mutex_lock(key->mutex);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+	pj_mutex_unlock(key->mutex);
+	return PJ_ECANCELLED;
+    }
     pj_list_insert_before(&key->read_list, read_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_mutex_unlock(key->mutex);
@@ -861,6 +877,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_send( pj_ioqueue_key_t *key,
     write_op->flags = flags;
     
     pj_mutex_lock(key->mutex);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+	pj_mutex_unlock(key->mutex);
+	return PJ_ECANCELLED;
+    }
     pj_list_insert_before(&key->write_list, write_op);
     ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
     pj_mutex_unlock(key->mutex);
@@ -978,6 +1002,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
     write_op->rmt_addrlen = addrlen;
     
     pj_mutex_lock(key->mutex);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+	pj_mutex_unlock(key->mutex);
+	return PJ_ECANCELLED;
+    }
     pj_list_insert_before(&key->write_list, write_op);
     ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
     pj_mutex_unlock(key->mutex);
@@ -1047,6 +1079,14 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     accept_op->local_addr = local;
 
     pj_mutex_lock(key->mutex);
+    /* Check again. Handle may have been closed after the previous check
+     * in multithreaded app. If we add bad handle to the set it will
+     * corrupt the ioqueue set. See #913
+     */
+    if (IS_CLOSING(key)) {
+	pj_mutex_unlock(key->mutex);
+	return PJ_ECANCELLED;
+    }
     pj_list_insert_before(&key->accept_list, accept_op);
     ioqueue_add_to_set(key->ioqueue, key, READABLE_EVENT);
     pj_mutex_unlock(key->mutex);
@@ -1083,6 +1123,13 @@ PJ_DEF(pj_status_t) pj_ioqueue_connect( pj_ioqueue_key_t *key,
 	if (status == PJ_STATUS_FROM_OS(PJ_BLOCKING_CONNECT_ERROR_VAL)) {
 	    /* Pending! */
             pj_mutex_lock(key->mutex);
+	    /* Check again. Handle may have been closed after the previous 
+	     * check in multithreaded app. See #913
+	     */
+	    if (IS_CLOSING(key)) {
+		pj_mutex_unlock(key->mutex);
+		return PJ_ECANCELLED;
+	    }
 	    key->connecting = PJ_TRUE;
             ioqueue_add_to_set(key->ioqueue, key, WRITEABLE_EVENT);
             ioqueue_add_to_set(key->ioqueue, key, EXCEPTION_EVENT);
