@@ -2694,8 +2694,9 @@ static void handle_incoming_check(pj_ice_sess *ice,
 			/* Update valid check and nominated check for the component */
 			update_comp_check(ice, vc->lcand->comp_id, vc);
 
-			dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), &ice->valid_list, vc);
-			LOG5((ice->obj_name, "Valid check %s is nominated", ice->tmp.txt));
+			LOG5((ice->obj_name, "Valid check %s is nominated", 
+			      dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
+					 &ice->valid_list, vc)));
 		    }
 		}
 	    }
