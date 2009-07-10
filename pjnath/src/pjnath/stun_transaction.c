@@ -184,7 +184,8 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 {
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(tsx->retransmit_timer.id == 0, PJ_EBUSY);
+    PJ_ASSERT_RETURN(tsx->retransmit_timer.id == 0 ||
+		     !tsx->require_retransmit, PJ_EBUSY);
 
     if (tsx->require_retransmit) {
 	/* Calculate retransmit/timeout delay */
@@ -289,6 +290,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
 	    tsx->retransmit_timer.id = 0;
 	    return status;
 	}
+	tsx->retransmit_timer.id = TIMER_ACTIVE;
     }
 
     /* Send the message */
