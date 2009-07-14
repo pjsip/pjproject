@@ -13,12 +13,20 @@ typedef unsigned int   RES_UWORD;
 #   define DECL(T)  T
 #endif
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 DECL(int) res_SrcLinear(const RES_HWORD X[], RES_HWORD Y[], 
 		        double pFactor, RES_UHWORD nx);
 DECL(int) res_Resample(const RES_HWORD X[], RES_HWORD Y[], double pFactor, 
 		       RES_UHWORD nx, RES_BOOL LargeF, RES_BOOL Interp);
 DECL(int) res_GetXOFF(double pFactor, RES_BOOL LargeF);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
 

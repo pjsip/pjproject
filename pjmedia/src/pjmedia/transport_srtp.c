@@ -215,6 +215,13 @@ static pjmedia_transport_op transport_srtp_op =
     &transport_destroy
 };
 
+/* This function may also be used by other module, e.g: pjmedia/errno.c,
+ * it should have C compatible declaration.
+ */
+PJ_BEGIN_DECL
+    const char* get_libsrtp_errstr(int err);
+PJ_END_DECL
+
 const char* get_libsrtp_errstr(int err)
 {
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)

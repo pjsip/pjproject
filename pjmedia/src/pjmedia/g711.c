@@ -20,6 +20,7 @@
 /* This file contains file from Sun Microsystems, Inc, with the complete 
  * notice in the second half of this file.
  */
+#include <pjmedia/g711.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/alaw_ulaw.h>
 #include <pjmedia/endpoint.h>
