@@ -312,7 +312,7 @@ CPjAudioEngine* CPjAudioEngine::NewL(struct vas_stream *parent_strm,
 void CPjAudioEngine::ConstructL()
 {
     TInt err;
-    const TVersion ver(1, 0, 0);
+    const TVersion ver(1, 0, 0); /* Not really used at this time */
 
     err = CVoIPUtilityFactory::CreateFactory(iFactory);
     User::LeaveIfError(err);
@@ -395,24 +395,30 @@ TInt CPjAudioEngine::InitRec()
     err = iVoIPUplink->SetFormat(setting_.format, enc_fmt_if);
     if (err != KErrNone)
 	return err;
-
+    
+    err = enc_fmt_if->SetObserver(*this);
+    if (err != KErrNone)
+	return err;
+    
     return iVoIPUplink->Open(*this);
 }
 
 TInt CPjAudioEngine::StartPlay()
 {
+    TInt err;
+    
     pj_assert(iVoIPDnlink);
     pj_assert(dn_state_ == STATE_READY);
 
     /* Configure specific codec setting */
     switch (setting_.format) {
     case EG711:
-    //case EG711_10MS:
 	{
 	    CVoIPG711DecoderIntfc *g711dec_if = (CVoIPG711DecoderIntfc*)
 						dec_fmt_if;
-	    g711dec_if->SetMode((CVoIPFormatIntfc::TG711CodecMode)
-				setting_.mode);
+	    err = g711dec_if->SetMode((CVoIPFormatIntfc::TG711CodecMode)
+				      setting_.mode);
+	    pj_assert(err == KErrNone);
 	}
 	break;
 	
@@ -420,8 +426,9 @@ TInt CPjAudioEngine::StartPlay()
 	{
 	    CVoIPILBCDecoderIntfc *ilbcdec_if = (CVoIPILBCDecoderIntfc*)
 						dec_fmt_if;
-	    ilbcdec_if->SetMode((CVoIPFormatIntfc::TILBCCodecMode)
-				setting_.mode);
+	    err = ilbcdec_if->SetMode((CVoIPFormatIntfc::TILBCCodecMode)
+				      setting_.mode);
+	    pj_assert(err == KErrNone);
 	}
 	break;
 
@@ -433,7 +440,7 @@ TInt CPjAudioEngine::StartPlay()
     ActivateSpeaker(setting_.loudspk);
 
     /* Start player */
-    TInt err = iVoIPDnlink->Start();
+    err = iVoIPDnlink->Start();
     
     if (err == KErrNone) {
 	dn_state_ = STATE_STREAMING;
@@ -447,21 +454,20 @@ TInt CPjAudioEngine::StartPlay()
 
 TInt CPjAudioEngine::StartRec()
 {
+    TInt err;
+    
     pj_assert(iVoIPUplink);
     pj_assert(up_state_ == STATE_READY);
 
-    /* Configure general codec setting */
-    enc_fmt_if->SetVAD(setting_.vad);
-    
     /* Configure specific codec setting */
     switch (setting_.format) {
     case EG711:
-    //case EG711_10MS:
 	{
 	    CVoIPG711EncoderIntfc *g711enc_if = (CVoIPG711EncoderIntfc*)
 						enc_fmt_if;
-	    g711enc_if->SetMode((CVoIPFormatIntfc::TG711CodecMode)
-				setting_.mode);
+	    err = g711enc_if->SetMode((CVoIPFormatIntfc::TG711CodecMode)
+				      setting_.mode);
+	    pj_assert(err == KErrNone);
 	}
 	break;
 
@@ -469,8 +475,9 @@ TInt CPjAudioEngine::StartRec()
 	{
 	    CVoIPILBCEncoderIntfc *ilbcenc_if = (CVoIPILBCEncoderIntfc*)
 						enc_fmt_if;
-	    ilbcenc_if->SetMode((CVoIPFormatIntfc::TILBCCodecMode)
-				setting_.mode);
+	    err = ilbcenc_if->SetMode((CVoIPFormatIntfc::TILBCCodecMode)
+				      setting_.mode);
+	    pj_assert(err == KErrNone);
 	}
 	break;
 	
@@ -478,8 +485,11 @@ TInt CPjAudioEngine::StartRec()
 	break;
     }
     
+    /* Configure general codec setting */
+    enc_fmt_if->SetVAD(setting_.vad);
+    
     /* Start recorder */
-    TInt err = iVoIPUplink->Start();
+    err = iVoIPUplink->Start();
     
     if (err == KErrNone) {
 	up_state_ = STATE_STREAMING;
@@ -600,7 +610,7 @@ void CPjAudioEngine::Event(const CVoIPAudioDownlinkStream& /*aSrc*/,
     switch (aEventType) {
     case MVoIPDownlinkObserver::KOpenComplete:
 	if (aError == KErrNone) {
-	    State last_state = up_state_;
+	    State last_state = dn_state_;
 
 	    dn_state_ = STATE_READY;
 	    TRACE_((THIS_FILE, "Downlink opened"));
@@ -943,13 +953,13 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
     case PJMEDIA_FORMAT_G729:
 	{
 	    /* Check if we got a normal or SID frame. */
-	    if (buffer[0] != 0 || buffer[1] != 0) {
+	    if (buffer[0] != 0) {
 		enum { NORMAL_LEN = 22, SID_LEN = 8 };
 		TBitStream *bitstream = (TBitStream*)strm->strm_data;
 		unsigned src_len = buffer.Length()- 2;
 		
 		pj_assert(src_len == NORMAL_LEN || src_len == SID_LEN);
-
+		
 		const TDesC8& p = bitstream->CompressG729Frame(
 					    buffer.Right(src_len), 
 					    src_len == SID_LEN);
@@ -975,8 +985,8 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
 	    
 	    samples_got = strm->param.ext_fmt.bitrate == 15200? 160 : 240;
 	    
-	    /* Check if we got a normal frame. */
-	    if (buffer[0] == 1 && buffer[1] == 0) {
+	    /* Check if we got a normal or SID frame. */
+	    if (buffer[0] != 0) {
 		const pj_uint8_t *p = (const pj_uint8_t*)buffer.Ptr() + 2;
 		unsigned len = buffer.Length() - 2;
 		
@@ -1125,26 +1135,27 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		    const TDesC8 &dst = bitstream->ExpandG729Frame(src,
 								   sid_frame); 
 		    if (sid_frame) {
+			buffer.Append(2);
 			buffer.Append(0);
-			buffer.Append(1);
 		    } else {
 			buffer.Append(1);
 			buffer.Append(0);
 		    }
 		    buffer.Append(dst);
 		} else {
+		    buffer.Append(2);
 		    buffer.Append(0);
-		    buffer.Append(0);
+
+		    buffer.AppendFill(0, 22);
 		}
 
 		pjmedia_frame_ext_pop_subframes(frame, 1);
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		buffer.Append(0);
+		buffer.Append(2);
 		buffer.Append(0);
 		
-		frame->samples_cnt = 0;
-		frame->subframe_cnt = 0;
+		buffer.AppendFill(0, 22);
 	    }
 	}
 	break;
@@ -1175,18 +1186,29 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		    buffer.Append(0);
 		    buffer.Append((TUint8*)sf->data, sf->bitlen>>3);
 		} else {
+		    unsigned frame_len;
+		    
+		    buffer.Append(1);
 		    buffer.Append(0);
-		    buffer.Append(0);
+		    
+		    /* VAS iLBC frame is 20ms or 30ms */
+		    frame_len = strm->param.ext_fmt.bitrate == 15200? 38 : 50;
+		    buffer.AppendFill(0, frame_len);
 		}
 
 		pjmedia_frame_ext_pop_subframes(frame, 1);
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		buffer.Append(0);
+		
+		unsigned frame_len;
+		
+		buffer.Append(1);
 		buffer.Append(0);
 		
-		frame->samples_cnt = 0;
-		frame->subframe_cnt = 0;
+		/* VAS iLBC frame is 20ms or 30ms */
+		frame_len = strm->param.ext_fmt.bitrate == 15200? 38 : 50;
+		buffer.AppendFill(0, frame_len);
+
 	    }
 	}
 	break;
@@ -1288,8 +1310,11 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 {
     struct vas_factory *af = (struct vas_factory*)f;
     CVoIPUtilityFactory *vas_factory;
+    CVoIPAudioUplinkStream *vas_uplink;
+    CVoIPAudioDownlinkStream *vas_dnlink;
     RArray<TVoIPCodecFormat> uplink_formats, dnlink_formats;
     unsigned ext_fmt_cnt = 0;
+    TVersion vas_version(1, 0, 0); /* Not really used at this time */
     TInt err;
 
     pj_ansi_strcpy(af->dev_info.name, "S60 VAS");
@@ -1311,6 +1336,21 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     if (err != KErrNone)
 	goto on_error;
 
+    /* On VAS 2.0, uplink & downlink stream should be instantiated before 
+     * querying formats.
+     */
+    err = vas_factory->CreateUplinkStream(vas_version, 
+				          CVoIPUtilityFactory::EVoIPCall,
+				          vas_uplink);
+    if (err != KErrNone)
+	goto on_error;
+    
+    err = vas_factory->CreateDownlinkStream(vas_version, 
+				            CVoIPUtilityFactory::EVoIPCall,
+				            vas_dnlink);
+    if (err != KErrNone)
+	goto on_error;
+    
     uplink_formats.Reset();
     err = vas_factory->GetSupportedUplinkFormats(uplink_formats);
     if (err != KErrNone)
@@ -1321,6 +1361,12 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     if (err != KErrNone)
 	goto on_error;
 
+    /* Free the streams, they are just used for querying formats */
+    delete vas_uplink;
+    vas_uplink = NULL;
+    delete vas_dnlink;
+    vas_dnlink = NULL;
+    
     for (TInt i = 0; i < dnlink_formats.Count(); i++) {
 	/* Format must be supported by both downlink & uplink. */
 	if (uplink_formats.Find(dnlink_formats[i]) == KErrNotFound)
@@ -1346,6 +1392,9 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 	    break;
 
 	case EG711:
+#if PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION==2
+	case EG711_10MS:
+#endif
 	    af->dev_info.ext_fmt[ext_fmt_cnt].id = PJMEDIA_FORMAT_PCMU;
 	    af->dev_info.ext_fmt[ext_fmt_cnt].bitrate = 64000;
 	    af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
@@ -1540,12 +1589,13 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 	vas_setting.mode = 0;
     }
 
-    /* Disable VAD on L16, G711, and also G729 (G729's VAD potentially 
-     * causes noise?).
+    /* Disable VAD on L16, G711, iLBC, and also G729 (G729's SID 
+     * potentially cause noise?).
      */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMU ||
 	strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMA ||
 	strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16 ||
+	strm->param.ext_fmt.id == PJMEDIA_FORMAT_ILBC ||
 	strm->param.ext_fmt.id == PJMEDIA_FORMAT_G729)
     {
 	vas_setting.vad = EFalse;

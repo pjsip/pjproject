@@ -222,9 +222,10 @@
     /* MUST use switchboard rather than the conference bridge */
     #define PJMEDIA_CONF_USE_SWITCH_BOARD	1
 
-    /* Enable APS sound device backend and disable MDA */
+    /* Enable APS sound device backend and disable MDA & VAS */
     #define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA	0
     #define PJMEDIA_AUDIO_DEV_HAS_SYMB_APS	1
+    #define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS	0
 
     /* Enable passthrough codec framework */
     #define PJMEDIA_HAS_PASSTHROUGH_CODECS	1
@@ -250,8 +251,9 @@
     /* MUST use switchboard rather than the conference bridge */
     #define PJMEDIA_CONF_USE_SWITCH_BOARD	1
 
-    /* Enable APS sound device backend and disable MDA */
+    /* Enable VAS sound device backend and disable MDA & APS */
     #define PJMEDIA_AUDIO_DEV_HAS_SYMB_MDA	0
+    #define PJMEDIA_AUDIO_DEV_HAS_SYMB_APS	0
     #define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS	1
 
     /* Enable passthrough codec framework */

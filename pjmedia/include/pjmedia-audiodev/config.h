@@ -73,6 +73,16 @@ PJ_BEGIN_DECL
 #   define PJMEDIA_AUDIO_DEV_HAS_SYMB_VAS	0
 #endif
 
+/**
+ * This setting controls Symbian VAS version to be used. Currently, valid
+ * values are only 1 (for VAS 1.0) and 2 (for VAS 2.0).
+ *
+ * Default: 1 (VAS version 1.0)
+ */
+#ifndef PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION
+#   define PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION	1
+#endif
+
 
 /**
  * This setting controls whether Symbian audio (using built-in multimedia 
