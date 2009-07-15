@@ -114,6 +114,10 @@ typedef struct codec_private {
     int			 codec_idx;	    /**< Codec index.		    */
     void		*codec_setting;	    /**< Specific codec setting.    */
     pj_uint16_t		 avg_frame_size;    /**< Average of frame size.	    */
+    unsigned		 samples_per_frame; /**< Samples per frame, for iLBC
+						 this can be 240 or 160, can
+						 only be known after codec is
+						 opened.		    */
 } codec_private_t;
 
 
@@ -380,6 +384,23 @@ PJ_DEF(pj_status_t) pjmedia_codec_passthrough_init2(
 
 	    codec_desc[i].enabled = enabled;
 	}
+
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
+	/* Update iLBC codec description based on default mode setting. */
+	for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
+	    if (codec_desc[i].enabled && 
+		codec_desc[i].fmt_id == PJMEDIA_FORMAT_ILBC)
+	    {
+		codec_desc[i].samples_per_frame = 
+				(setting->ilbc_mode == 20? 160 : 240);
+		codec_desc[i].def_bitrate = 
+				(setting->ilbc_mode == 20? 15200 : 13333);
+		pj_strset2(&codec_desc[i].dec_fmtp.param[0].val, 
+				(setting->ilbc_mode == 20? "20" : "30"));
+		break;
+	    }
+	}
+#endif
     }
 
     return pjmedia_codec_passthrough_init(endpt);
@@ -645,8 +666,11 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 
     pool = codec_data->pool;
 
-    /* Get bitstream size */
-    i = attr->info.avg_bps * desc->samples_per_frame;
+    /* Cache samples per frame value */
+    codec_data->samples_per_frame = desc->samples_per_frame;
+
+    /* Calculate bitstream size */
+    i = attr->info.avg_bps * codec_data->samples_per_frame;
     j = desc->clock_rate << 3;
     codec_data->avg_frame_size = (pj_uint16_t)(i / j);
     if (i % j) ++codec_data->avg_frame_size;
@@ -691,6 +715,63 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	s->dec_setting.reorder = PJ_FALSE; /* Note this! passthrough codec
 					      doesn't do sensitivity bits 
 					      reordering */
+    }
+#endif
+
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
+    {
+	enum { DEFAULT_MODE = 30 };
+	static pj_str_t STR_MODE = {"mode", 4};
+	pj_uint16_t dec_fmtp_mode = DEFAULT_MODE, 
+		    enc_fmtp_mode = DEFAULT_MODE;
+
+	/* Get decoder mode */
+	for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
+	    if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, &STR_MODE) == 0)
+	    {
+		dec_fmtp_mode = (pj_uint16_t)
+				pj_strtoul(&attr->setting.dec_fmtp.param[i].val);
+		break;
+	    }
+	}
+
+	/* Decoder mode must be set */
+	PJ_ASSERT_RETURN(dec_fmtp_mode == 20 || dec_fmtp_mode == 30, 
+			 PJMEDIA_CODEC_EINMODE);
+
+	/* Get encoder mode */
+	for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	    if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, &STR_MODE) == 0)
+	    {
+		enc_fmtp_mode = (pj_uint16_t)
+				pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
+		break;
+	    }
+	}
+
+	PJ_ASSERT_RETURN(enc_fmtp_mode==20 || enc_fmtp_mode==30, 
+			 PJMEDIA_CODEC_EINMODE);
+
+	/* Both sides of a bi-directional session MUST use the same "mode" value.
+	 * In this point, possible values are only 20 or 30, so when encoder and
+	 * decoder modes are not same, just use the default mode, it is 30.
+	 */
+	if (enc_fmtp_mode != dec_fmtp_mode) {
+	    enc_fmtp_mode = dec_fmtp_mode = DEFAULT_MODE;
+	    PJ_LOG(4,(pool->obj_name, 
+		      "Normalized iLBC encoder and decoder modes to %d", 
+		      DEFAULT_MODE));
+	}
+
+	/* Update some attributes based on negotiated mode. */
+	attr->info.avg_bps = (dec_fmtp_mode == 30? 13333 : 15200);
+	attr->info.frm_ptime = dec_fmtp_mode;
+
+	/* Override average frame size */
+	codec_data->avg_frame_size = (dec_fmtp_mode == 30? 50 : 38);
+
+	/* Override samples per frame */
+	codec_data->samples_per_frame = (dec_fmtp_mode == 30? 240 : 160);
     }
 #endif
 
@@ -745,7 +826,8 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].buf = pkt;
 	frames[count].size = codec_data->avg_frame_size;
-	frames[count].timestamp.u64 = ts->u64 + count*desc->samples_per_frame;
+	frames[count].timestamp.u64 = ts->u64 + 
+				      count * codec_data->samples_per_frame;
 
 	pkt = (pj_uint8_t*)pkt + codec_data->avg_frame_size;
 	pkt_size -= codec_data->avg_frame_size;
@@ -757,7 +839,8 @@ static pj_status_t codec_parse( pjmedia_codec *codec,
 	frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
 	frames[count].buf = pkt;
 	frames[count].size = pkt_size;
-	frames[count].timestamp.u64 = ts->u64 + count*desc->samples_per_frame;
+	frames[count].timestamp.u64 = ts->u64 + 
+				       count * codec_data->samples_per_frame;
 	++count;
     }
 
@@ -854,7 +937,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 	
 	pjmedia_frame_ext_append_subframe(output_, input_.buf, 
 					  (pj_uint16_t)(input_.size << 3),
-					  (pj_uint16_t)desc->samples_per_frame);
+					  (pj_uint16_t)codec_data->samples_per_frame);
 	output->timestamp = input->timestamp;
 	
 	return PJ_SUCCESS;
@@ -863,7 +946,7 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
     
     pjmedia_frame_ext_append_subframe(output_, input->buf, 
 				      (pj_uint16_t)(input->size << 3),
-				      (pj_uint16_t)desc->samples_per_frame);
+				      (pj_uint16_t)codec_data->samples_per_frame);
     output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
@@ -883,7 +966,7 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
     PJ_UNUSED_ARG(output_buf_len);
 
     pjmedia_frame_ext_append_subframe(output_, NULL, 0,
-				      (pj_uint16_t)desc->samples_per_frame);
+				      (pj_uint16_t)codec_data->samples_per_frame);
 
     return PJ_SUCCESS;
 }

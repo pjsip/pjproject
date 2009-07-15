@@ -58,6 +58,7 @@ typedef struct pjmedia_codec_passthrough_setting
 					     to be enabled.		*/
     pjmedia_format	*fmts;		/**< Encoding formats to be 
 					     enabled.			*/
+    unsigned		 ilbc_mode;	/**< iLBC default mode.		*/
 } pjmedia_codec_passthrough_setting;
 
 

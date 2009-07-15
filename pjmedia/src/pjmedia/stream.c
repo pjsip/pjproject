@@ -1673,20 +1673,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->port.info.clock_rate = info->fmt.clock_rate;
     stream->port.info.channel_count = info->fmt.channel_cnt;
     stream->port.port_data.pdata = stream;
-    if (info->param==NULL || info->param->info.fmt_id == PJMEDIA_FORMAT_L16) {
-	stream->port.info.format.id = PJMEDIA_FORMAT_L16;
-
-	stream->port.put_frame = &put_frame;
-	stream->port.get_frame = &get_frame;
-    } else {
-	stream->port.info.format.id = info->param->info.fmt_id;
-	stream->port.info.format.bitrate = info->param->info.avg_bps;
-	stream->port.info.format.vad = (info->param->setting.vad != 0);
-
-	stream->port.put_frame = &put_frame;
-	stream->port.get_frame = &get_frame_ext;
-    }
-
 
     /* Init stream: */
     stream->endpt = endpt;
@@ -1745,7 +1731,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (stream->codec_param.setting.frm_per_pkt < 1)
 	stream->codec_param.setting.frm_per_pkt = 1;
 
-    /* Set additional info. */
+    /* Open the codec. */
+    status = stream->codec->op->open(stream->codec, &stream->codec_param);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
+    /* Set additional info and callbacks. */
     stream->port.info.bits_per_sample = 16;
     stream->port.info.samples_per_frame = info->fmt.clock_rate * 
 					  stream->codec_param.info.channel_cnt *
@@ -1762,11 +1753,16 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	++stream->port.info.bytes_per_frame;
     }
 
-    /* Open the codec: */
-
-    status = stream->codec->op->open(stream->codec, &stream->codec_param);
-    if (status != PJ_SUCCESS)
-	goto err_cleanup;
+    stream->port.info.format.id = stream->codec_param.info.fmt_id;
+    if (stream->codec_param.info.fmt_id == PJMEDIA_FORMAT_L16) {
+	stream->port.put_frame = &put_frame;
+	stream->port.get_frame = &get_frame;
+    } else {
+	stream->port.info.format.bitrate = stream->codec_param.info.avg_bps;
+	stream->port.info.format.vad = (stream->codec_param.setting.vad != 0);
+	stream->port.put_frame = &put_frame;
+	stream->port.get_frame = &get_frame_ext;
+    }
 
     /* If encoder and decoder's ptime are asymmetric, then we need to
      * create buffer on the encoder side. This could happen for example

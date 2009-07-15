@@ -376,7 +376,9 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_status_t status;
-    unsigned i, dec_fmtp_mode = 0, enc_fmtp_mode = 0;
+    unsigned i;
+    pj_uint16_t dec_fmtp_mode = DEFAULT_MODE, 
+		enc_fmtp_mode = DEFAULT_MODE;
 
     pj_assert(ilbc_codec != NULL);
     pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
@@ -386,7 +388,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
 	if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, &STR_MODE) == 0)
 	{
-	    dec_fmtp_mode = (unsigned)
+	    dec_fmtp_mode = (pj_uint16_t)
 			    pj_strtoul(&attr->setting.dec_fmtp.param[i].val);
 	    break;
 	}
@@ -400,30 +402,31 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
 	if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, &STR_MODE) == 0)
 	{
-	    enc_fmtp_mode = (unsigned)
+	    enc_fmtp_mode = (pj_uint16_t)
 			    pj_strtoul(&attr->setting.enc_fmtp.param[i].val);
 	    break;
 	}
     }
 
-    /* The enc mode must be set in the attribute 
-     * (from the mode parameter in fmtp attribute in the SDP
-     * received from remote) 
+    PJ_ASSERT_RETURN(enc_fmtp_mode==20 || enc_fmtp_mode==30, 
+		     PJMEDIA_CODEC_EINMODE);
+
+    /* Both sides of a bi-directional session MUST use the same "mode" value.
+     * In this point, possible values are only 20 or 30, so when encoder and
+     * decoder modes are not same, just use the default mode, it is 30.
      */
-    if (enc_fmtp_mode == 0)
-	enc_fmtp_mode = dec_fmtp_mode;
-
-    PJ_ASSERT_RETURN(enc_fmtp_mode==20 ||
-		     enc_fmtp_mode==30, PJMEDIA_CODEC_EINMODE);
-
-    /* Update enc_ptime in the param */
     if (enc_fmtp_mode != dec_fmtp_mode) {
-	attr->info.enc_ptime = (pj_uint16_t)enc_fmtp_mode;
-    } else {
-	attr->info.enc_ptime = 0;
+	enc_fmtp_mode = dec_fmtp_mode = DEFAULT_MODE;
+	PJ_LOG(4,(ilbc_codec->obj_name, 
+		  "Normalized iLBC encoder and decoder modes to %d", 
+		  DEFAULT_MODE));
     }
 
-    /* Create enc */
+    /* Update some attributes based on negotiated mode. */
+    attr->info.avg_bps = (dec_fmtp_mode == 30? 13333 : 15200);
+    attr->info.frm_ptime = dec_fmtp_mode;
+
+    /* Create encoder */
     ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, enc_fmtp_mode);
     ilbc_codec->enc_samples_per_frame = CLOCK_RATE * enc_fmtp_mode / 1000;
     ilbc_codec->enc_ready = PJ_TRUE;
@@ -432,14 +435,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     ilbc_codec->dec_samples_per_frame = initDecode(&ilbc_codec->dec,
 						   dec_fmtp_mode,
 						   attr->setting.penh);
-    if (dec_fmtp_mode == 20)
-	ilbc_codec->dec_frame_size = 38;
-    else if (dec_fmtp_mode == 30)
-	ilbc_codec->dec_frame_size = 50;
-    else {
-	pj_assert(!"Invalid iLBC mode");
-	ilbc_codec->dec_frame_size = ilbc_codec->enc_frame_size;
-    }
+    ilbc_codec->dec_frame_size = (dec_fmtp_mode == 20? 38 : 50);
     ilbc_codec->dec_ready = PJ_TRUE;
 
     /* Save plc flags */
@@ -459,8 +455,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     pj_set_timestamp32(&ilbc_codec->last_tx, 0, 0);
 
     PJ_LOG(5,(ilbc_codec->obj_name, 
-	      "iLBC codec opened, encoder mode=%d, decoder mode=%d",
-	      enc_fmtp_mode, dec_fmtp_mode));
+	      "iLBC codec opened, mode=%d", dec_fmtp_mode));
 
     return PJ_SUCCESS;
 }

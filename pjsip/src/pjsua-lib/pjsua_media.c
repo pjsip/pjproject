@@ -237,6 +237,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	/* Init the passthrough codec with supported formats only */
 	setting.fmt_cnt = ext_fmt_cnt;
 	setting.fmts = ext_fmts;
+	setting.ilbc_mode = cfg->ilbc_mode;
 	status = pjmedia_codec_passthrough_init2(pjsua_var.med_endpt, &setting);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error initializing passthrough codecs",
