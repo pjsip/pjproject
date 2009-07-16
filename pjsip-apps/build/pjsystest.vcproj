@@ -88,8 +88,6 @@
 		</Configuration>
 		<Configuration
 			Name="Debug|Windows Mobile 6 Professional SDK (ARMV4I)"
-			OutputDirectory="$(SolutionDir)Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
 			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-debug-static-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-common-defaults.vsprops"
 			CharacterSet="1"
@@ -154,7 +152,7 @@
 				ForceDirty="-1"
 				RemoteDirectory=""
 				RegisterOutput="0"
-				AdditionalFiles=""
+				AdditionalFiles="input.8.wav|$(ProjectDir)\..\..\tests\pjsua\wavs\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;tock8.wav|$(ProjectDir)\..\..\tests\pjsua\wavs\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
 			/>
 			<DebuggerTool
 			/>
@@ -229,9 +227,8 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Windows Mobile 6 Professional SDK (ARMV4I)"
-			IntermediateDirectory="Windows Mobile 6 Professional SDK (ARMV4I)\$(ConfigurationName)"
 			ConfigurationType="1"
-			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops;..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops"
+			InheritedPropertySheets="..\..\build\vs\pjproject-vs8-release-dynamic-defaults.vsprops;..\..\build\vs\pjproject-vs8-wm6-release-defaults.vsprops"
 			CharacterSet="1"
 			>
 			<Tool
@@ -294,7 +291,7 @@
 				ForceDirty="-1"
 				RemoteDirectory=""
 				RegisterOutput="0"
-				AdditionalFiles="msvcr80.dll"
+				AdditionalFiles="msvcr80.dll|$(BINDIR)\$(INSTRUCTIONSET)\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;input.8.wav|$(ProjectDir)\..\..\tests\pjsua\wavs\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;tock8.wav|$(ProjectDir)\..\..\tests\pjsua\wavs\|%CSIDL_PROGRAM_FILES%\$(ProjectName)|0;"
 			/>
 			<DebuggerTool
 			/>
