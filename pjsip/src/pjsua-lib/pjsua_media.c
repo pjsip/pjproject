@@ -2724,6 +2724,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	return status;
     }
 
+    pjsua_var.no_snd = PJ_FALSE;
+
     return PJ_SUCCESS;
 }
 
@@ -2785,6 +2787,8 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
 
     pjsua_var.cap_dev = NULL_SND_DEV_ID;
     pjsua_var.play_dev = NULL_SND_DEV_ID;
+
+    pjsua_var.no_snd = PJ_FALSE;
 
     return PJ_SUCCESS;
 }
