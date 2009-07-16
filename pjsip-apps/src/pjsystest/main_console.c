@@ -1,3 +1,21 @@
+/* $Id$ */
+/* 
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ */
 #include "systest.h"
 #include "gui.h"
 #include <stdio.h>
@@ -5,7 +23,7 @@
 
 static pj_bool_t console_quit;
 
-PJ_DEF(enum gui_key) gui_msgbox(const char *title, const char *message, enum gui_flag flag)
+enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag flag)
 {
     puts(title);
     puts(message);
@@ -30,7 +48,7 @@ PJ_DEF(enum gui_key) gui_msgbox(const char *title, const char *message, enum gui
     }
 }
 
-PJ_DEF(pj_status_t) gui_init(gui_menu *menu)
+pj_status_t gui_init(gui_menu *menu)
 {
     PJ_UNUSED_ARG(menu);
     return PJ_SUCCESS;
@@ -57,7 +75,7 @@ static void print_menu(const char *indent, char *menu_id, gui_menu *menu)
     }
 }
 
-PJ_DEF(pj_status_t) gui_start(gui_menu *menu)
+pj_status_t gui_start(gui_menu *menu)
 {
     while (!console_quit) {
 	unsigned i;
@@ -103,12 +121,12 @@ PJ_DEF(pj_status_t) gui_start(gui_menu *menu)
     return PJ_SUCCESS;
 }
 
-PJ_DEF(void) gui_destroy(void)
+void gui_destroy(void)
 {
     console_quit = PJ_TRUE;
 }
 
-PJ_DEF(void) gui_sleep(unsigned sec)
+void gui_sleep(unsigned sec)
 {
     pj_thread_sleep(sec * 1000);
 }

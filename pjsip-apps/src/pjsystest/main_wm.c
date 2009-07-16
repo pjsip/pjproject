@@ -1,3 +1,21 @@
+/* $Id$ */
+/* 
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ */
 #include "gui.h"
 #include "systest.h"
 #include <windows.h>
@@ -10,7 +28,7 @@
 #include <aygshell.h>
 
 #define MAINWINDOWCLASS TEXT("SysTestDlg")
-#define MAINWINDOWTITLE TEXT("SysTest")
+#define MAINWINDOWTITLE TEXT("PJSYSTEST")
 
 typedef struct menu_handler_t {
     UINT		 id;
@@ -187,13 +205,12 @@ LRESULT CALLBACK DialogProc(const HWND hWnd,
 
 /* === API === */
 
-PJ_DEF(pj_status_t) gui_init(gui_menu *menu)
+pj_status_t gui_init(gui_menu *menu)
 {
     WNDCLASS wc;
     HWND hWnd = NULL;	
     RECT r;
     DWORD dwStyle;
-    unsigned log_decor;
 
     pj_status_t status  = PJ_SUCCESS;
     
@@ -334,7 +351,7 @@ static pj_status_t gui_update_menu(gui_menu *menu)
     return PJ_SUCCESS;
 }
 
-PJ_DEF(enum gui_key) gui_msgbox(const char *title, const char *message, enum gui_flag flag)
+enum gui_key gui_msgbox(const char *title, const char *message, enum gui_flag flag)
 {
     wchar_t buf_title[64];
     wchar_t buf_msg[512];
@@ -370,12 +387,12 @@ PJ_DEF(enum gui_key) gui_msgbox(const char *title, const char *message, enum gui
     }
 }
 
-PJ_DEF(void) gui_sleep(unsigned sec)
+void gui_sleep(unsigned sec)
 {
     pj_thread_sleep(sec * 1000);
 }
 
-PJ_DEF(pj_status_t) gui_start(gui_menu *menu)
+pj_status_t gui_start(gui_menu *menu)
 {
     MSG msg;
 
@@ -389,7 +406,7 @@ PJ_DEF(pj_status_t) gui_start(gui_menu *menu)
     return (msg.wParam);
 }
 
-PJ_DEF(void) gui_destroy(void)
+void gui_destroy(void)
 {
     if (g_hWndMain) {
 	DestroyWindow(g_hWndMain);

@@ -1,3 +1,21 @@
+/* $Id$ */
+/* 
+ * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
+ */
 #include "systest.h"
 #include "gui.h"
 
@@ -677,7 +695,11 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	    *lat_max = lat;
 
 	/* Advance next loop */
-	start_pos += wav->info.clock_rate;
+	if (start_pos == 0) {
+	    start_pos = max_signal_pos + wav->info.clock_rate * 9 / 10;
+	} else {
+	    start_pos += wav->info.clock_rate;
+	}
     }
 
     return 0;
@@ -742,8 +764,8 @@ static void systest_latency_test(void)
 
     /* Setup the test */
     //status = pjsua_conf_connect(0, 0);
-    status = pjsua_conf_connect(0, rec_slot);
     status = pjsua_conf_connect(play_slot, 0);
+    status = pjsua_conf_connect(0, rec_slot);
     status = pjsua_conf_connect(play_slot, rec_slot);
     
 
@@ -753,8 +775,8 @@ static void systest_latency_test(void)
     /* Done with the test */
     //status = pjsua_conf_disconnect(0, 0);
     status = pjsua_conf_disconnect(play_slot, rec_slot);
-    status = pjsua_conf_disconnect(play_slot, 0);
     status = pjsua_conf_disconnect(0, rec_slot);
+    status = pjsua_conf_disconnect(play_slot, 0);
 
     pjsua_recorder_destroy(rec_id);
     rec_id = PJSUA_INVALID_ID;
@@ -773,7 +795,9 @@ static void systest_latency_test(void)
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    status = pjsua_conf_connect(pjsua_player_get_conf_port(play_id), 0);
+    play_slot = pjsua_player_get_conf_port(play_id);
+
+    status = pjsua_conf_connect(play_slot, 0);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -781,6 +805,10 @@ static void systest_latency_test(void)
 		     "The captured audio is being played back now. "
 		     "Can you hear the 'tock' echo?",
 		     WITH_YESNO);
+
+    pjsua_player_destroy(play_id);
+    play_id = PJSUA_INVALID_ID;
+
     if (key != KEY_YES)
 	goto on_return;
 
