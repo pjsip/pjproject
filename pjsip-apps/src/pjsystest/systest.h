@@ -24,11 +24,27 @@
 /*
  * Overrideable parameters
  */
-#define OVERRIDE_AUDDEV_REC_LAT		100
-#define OVERRIDE_AUDDEV_PLAY_LAT	200
+#define REC_DEV_ID			PJMEDIA_AUD_DEFAULT_CAPTURE_DEV
+#define PLAY_DEV_ID			PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
+//#define REC_DEV_ID			5
+//#define PLAY_DEV_ID			5
+#define OVERRIDE_AUDDEV_REC_LAT		0
+#define OVERRIDE_AUDDEV_PLAY_LAT	0
 #define OVERRIDE_AUD_FRAME_PTIME	0
-#define CLOCK_RATE			8000
+
+/* Don't change this */
 #define CHANNEL_COUNT			1
+
+/* If you change CLOCK_RATE then the input WAV files need to be
+ * changed, so normally don't need to change this.
+ */
+#define TEST_CLOCK_RATE			8000
+
+/* You may change sound device's clock rate as long as resampling
+ * is enabled.
+ */
+#define DEV_CLOCK_RATE			8000
+
 
 #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
     #define LOG_OUT_PATH		"\\PJSYSTEST.LOG"
@@ -39,11 +55,11 @@
     #define WAV_LATENCY_OUT_PATH	"\\PJSYSTEST_LATREC.WAV"
 #else
     #define LOG_OUT_PATH		"PJSYSTEST.LOG"
-    #define RESULT_OUT_PATH		"PJSYSTEST.TXT"
-    #define WAV_PLAYBACK_PATH		"pjsip8.wav"
-    #define WAV_REC_OUT_PATH		"TESTREC.WAV"
-    #define WAV_TOCK8_PATH		"TOCK8.WAV"
-    #define WAV_LATENCY_OUT_PATH	"LATENCY.WAV"
+    #define RESULT_OUT_PATH		"PJSYSTEST_RESULT.TXT"
+    #define WAV_PLAYBACK_PATH		"input.8.wav"
+    #define WAV_REC_OUT_PATH		"PJSYSTEST_TESTREC.WAV"
+    #define WAV_TOCK8_PATH		"tock8.wav"
+    #define WAV_LATENCY_OUT_PATH	"PJSYSTEST_LATREC.WAV"
 #endif
 
 #ifdef __cplusplus

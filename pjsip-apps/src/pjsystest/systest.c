@@ -377,11 +377,6 @@ static void systest_rec_audio(void)
     pjsua_recorder_destroy(rec_id);
     rec_id = PJSUA_INVALID_ID;
 
-    key = gui_msgbox(title,
-		     "Recording has been stopped. Press OK to playback "
-		     "the recorded audio.", 
-		      WITH_OK);
-    
     status = pjsua_player_create(&filename, 0, &play_id);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -393,6 +388,7 @@ static void systest_rec_audio(void)
 	goto on_return;
 
     key = gui_msgbox(title,
+		     "Recording has been stopped. "
 		     "The recorded audio is being played now to "
 		     "the speaker device, in a loop. Listen for "
 		     "any audio impairments. Press OK to stop.", 
@@ -486,7 +482,7 @@ static void systest_audio_test(void)
     param.dir = dir;
     param.rec_id = systest.rec_id;
     param.play_id = systest.play_id;
-    param.clock_rate = systest.media_cfg.clock_rate;
+    param.clock_rate = systest.media_cfg.snd_clock_rate;
     param.channel_count = systest.media_cfg.channel_count;
     param.samples_per_frame = param.clock_rate * param.channel_count * 
 			      systest.media_cfg.audio_frame_ptime / 1000;
@@ -568,8 +564,8 @@ static void systest_audio_test(void)
 			    -result.rec_drift_per_sec;
 
 	pj_ansi_snprintf(drifttext, sizeof(drifttext),
-			"Clock drifts detected. Capture device "
-			"is running %d samples per second %s "
+			"Clock drifts detected. Capture "
+			"is %d samples/sec %s "
 			"than the playback device",
 			drift, which);
 	problems[problem_count++] = drifttext;
@@ -680,7 +676,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 
 	lat = (max_echo_pos - max_signal_pos) * 1000 / wav->info.clock_rate;
 
-#if 1
+#if 0
 	PJ_LOG(4,(THIS_FILE, "Signal at %dms, echo at %d ms, latency %d ms",
 		  max_signal_pos * 1000 / wav->info.clock_rate,
 		  max_echo_pos * 1000 / wav->info.clock_rate,
@@ -770,6 +766,7 @@ static void systest_latency_test(void)
     
 
     /* We're running */
+    PJ_LOG(3,(THIS_FILE, "Please wait while test is running (~10 sec)"));
     gui_sleep(10);
 
     /* Done with the test */
@@ -946,8 +943,12 @@ static void systest_display_settings(void)
 		     pj_get_version());
     len = strlen(textbuf);
 
-    pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Clock rate: %d\r\n",
+    pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Test clock rate: %d\r\n",
 		     systest.media_cfg.clock_rate);
+    len = strlen(textbuf);
+
+    pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Device clock rate: %d\r\n",
+		     systest.media_cfg.snd_clock_rate);
     len = strlen(textbuf);
 
     pj_ansi_snprintf(textbuf+len, sizeof(textbuf)-len, "Aud frame ptime: %d\r\n",
@@ -1031,12 +1032,13 @@ int systest_init(void)
 
     pjsua_config_default(&systest.ua_cfg);
     pjsua_media_config_default(&systest.media_cfg);
-    systest.media_cfg.clock_rate = CLOCK_RATE;
+    systest.media_cfg.clock_rate = TEST_CLOCK_RATE;
+    systest.media_cfg.snd_clock_rate = DEV_CLOCK_RATE;
     if (OVERRIDE_AUD_FRAME_PTIME)
 	systest.media_cfg.audio_frame_ptime = OVERRIDE_AUD_FRAME_PTIME;
     systest.media_cfg.channel_count = CHANNEL_COUNT;
-    systest.rec_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
-    systest.play_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+    systest.rec_id = REC_DEV_ID;
+    systest.play_id = PLAY_DEV_ID;
     systest.media_cfg.ec_tail_len = 0;
 
 #if defined(OVERRIDE_AUDDEV_PLAY_LAT) && OVERRIDE_AUDDEV_PLAY_LAT!=0

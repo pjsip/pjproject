@@ -91,13 +91,6 @@ LINK32=link.exe
 # Begin Source File
 
 SOURCE=..\src\pjsystest\main_console.c
-
-!IF  "$(CFG)" == "pjsystest - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjsystest - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
