@@ -515,6 +515,7 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
     MMRESULT mr;
     WAVEFORMATEX wfx; 
     unsigned i, ptime;
+    DWORD flag;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(prm->play_id < (int)wf->dev_count, PJ_EINVAL);
@@ -537,12 +538,16 @@ static pj_status_t init_player_stream(  struct wmme_factory *wf,
 	    (prm->clock_rate * prm->channel_count);
     parent->bytes_per_frame = wfx.nAvgBytesPerSec * ptime / 1000;
 
+    flag = CALLBACK_EVENT;
+    if (prm->ext_fmt.id == PJMEDIA_FORMAT_L16)
+	flag |= WAVE_FORMAT_DIRECT;
+
     /*
      * Open wave device.
      */
     mr = waveOutOpen(&wmme_strm->hWave.Out, 
 		     wf->dev_info[prm->play_id].deviceId,
-		     &wfx, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
+		     &wfx, (DWORD)wmme_strm->hEvent, 0, flag);
     if (mr != MMSYSERR_NOERROR) {
 	return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_OUT(mr);
     }
@@ -603,6 +608,7 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
 {
     MMRESULT mr;
     WAVEFORMATEX wfx; 
+    DWORD flag;
     unsigned i, ptime;
 
     PJ_ASSERT_RETURN(prm->rec_id < (int)wf->dev_count, PJ_EINVAL);
@@ -623,12 +629,16 @@ static pj_status_t init_capture_stream( struct wmme_factory *wf,
 	    (prm->clock_rate * prm->channel_count);
     parent->bytes_per_frame = wfx.nAvgBytesPerSec * ptime / 1000;
 
+    flag = CALLBACK_EVENT;
+    if (prm->ext_fmt.id == PJMEDIA_FORMAT_L16)
+	flag |= WAVE_FORMAT_DIRECT;
+
     /*
      * Open wave device.
      */
     mr = waveInOpen(&wmme_strm->hWave.In, 
 		    wf->dev_info[prm->rec_id].deviceId, 
-		    &wfx, (DWORD)wmme_strm->hEvent, 0, CALLBACK_EVENT);
+		    &wfx, (DWORD)wmme_strm->hEvent, 0, flag);
     if (mr != MMSYSERR_NOERROR) {
 	return PJMEDIA_AUDIODEV_ERRNO_FROM_WMME_IN(mr);
     }
