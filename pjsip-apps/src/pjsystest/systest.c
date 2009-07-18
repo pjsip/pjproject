@@ -615,6 +615,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
     short *buf;
     unsigned i, samples_per_frame, read, len;
     unsigned start_pos;
+    pj_bool_t first;
     pj_status_t status;
 
     *lat_sum = 0;
@@ -644,8 +645,14 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	return -1;
     }
 
+    /* Zero the first 500ms to remove loud click noises 
+     * (keypad press, etc.)
+     */
+    pjmedia_zero_samples(buf, wav->info.clock_rate / 2);
+
     /* Loop to calculate latency */
     start_pos = 0;
+    first = PJ_TRUE;
     while (start_pos < len/2 - wav->info.clock_rate) {
 	int max_signal = 0;
 	unsigned max_signal_pos = start_pos;
@@ -691,8 +698,9 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	    *lat_max = lat;
 
 	/* Advance next loop */
-	if (start_pos == 0) {
+	if (first) {
 	    start_pos = max_signal_pos + wav->info.clock_rate * 9 / 10;
+	    first = PJ_FALSE;
 	} else {
 	    start_pos += wav->info.clock_rate;
 	}
