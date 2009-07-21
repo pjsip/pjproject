@@ -33,7 +33,7 @@ static int pj_log_max_level = PJ_LOG_MAX_LEVEL;
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
 			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
-			    PJ_LOG_HAS_SPACE 
+			    PJ_LOG_HAS_SPACE
 #if defined(PJ_WIN32) && PJ_WIN32!=0
 			    | PJ_LOG_HAS_COLOR
 #endif
@@ -218,6 +218,22 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	    int i;
 	    for (i=0; i<SENDER_WIDTH; ++i)
 		*pre++ = *sender++;
+	}
+    }
+    if (log_decor & PJ_LOG_HAS_THREAD_ID) {
+	enum { THREAD_WIDTH = 12 };
+	const char *thread_name = pj_thread_get_name(pj_thread_this());
+	int thread_len = strlen(thread_name);
+	*pre++ = ' ';
+	if (thread_len <= THREAD_WIDTH) {
+	    while (thread_len < THREAD_WIDTH)
+		*pre++ = ' ', ++thread_len;
+	    while (*thread_name)
+		*pre++ = *thread_name++;
+	} else {
+	    int i;
+	    for (i=0; i<THREAD_WIDTH; ++i)
+		*pre++ = *thread_name++;
 	}
     }
 
