@@ -675,11 +675,7 @@ PJ_DECL(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex);
  * @param mutex	    The mutex.
  * @return	    Non-zero if yes.
  */
-#if defined(PJ_DEBUG) && PJ_DEBUG != 0
-   PJ_DECL(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex);
-#else
-#  define pj_mutex_is_locked(mutex)	    1
-#endif
+PJ_DECL(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex);
 
 /**
  * @}

@@ -329,6 +329,18 @@
 #endif
 
 /**
+ * Enable this macro to activate logging to mutex/semaphore related events.
+ * This is useful to troubleshoot concurrency problems such as deadlocks.
+ * In addition, you should also add PJ_LOG_HAS_THREAD_ID flag to the
+ * log decoration to assist the troubleshooting.
+ *
+ * Default: 0
+ */
+#ifndef PJ_DEBUG_MUTEX
+#   define PJ_DEBUG_MUTEX	    0
+#endif
+
+/**
  * Expand functions in *_i.h header files as inline.
  *
  * Default: 0.

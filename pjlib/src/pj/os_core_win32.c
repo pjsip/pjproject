@@ -38,6 +38,17 @@
 #  include <winsock2.h>
 #endif
 
+/* Activate mutex related logging if PJ_DEBUG_MUTEX is set, otherwise
+ * use default level 6 logging.
+ */
+#if defined(PJ_DEBUG_MUTEX) && PJ_DEBUG_MUTEX
+#   undef PJ_DEBUG
+#   define PJ_DEBUG	    1
+#   define LOG_MUTEX(expr)  PJ_LOG(5,expr)
+#else
+#   define LOG_MUTEX(expr)  PJ_LOG(6,expr)
+#endif
+
 #define THIS_FILE	"os_core_win32.c"
 
 /*
@@ -904,7 +915,7 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
-    PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s is waiting", 
+    LOG_MUTEX((mutex->obj_name, "Mutex: thread %s is waiting", 
 				pj_thread_this()->obj_name));
 
 #if PJ_WIN32_WINNT >= 0x0400
@@ -917,7 +928,7 @@ PJ_DEF(pj_status_t) pj_mutex_lock(pj_mutex_t *mutex)
         status = PJ_STATUS_FROM_OS(GetLastError());
 
 #endif
-    PJ_LOG(6,(mutex->obj_name, 
+    LOG_MUTEX((mutex->obj_name, 
 	      (status==PJ_SUCCESS ? "Mutex acquired by thread %s" : "FAILED by %s"),
 	      pj_thread_this()->obj_name));
 
@@ -948,7 +959,7 @@ PJ_DEF(pj_status_t) pj_mutex_unlock(pj_mutex_t *mutex)
     }
 #endif
 
-    PJ_LOG(6,(mutex->obj_name, "Mutex released by thread %s", 
+    LOG_MUTEX((mutex->obj_name, "Mutex released by thread %s", 
 				pj_thread_this()->obj_name));
 
 #if PJ_WIN32_WINNT >= 0x0400
@@ -971,7 +982,7 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
-    PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s is trying", 
+    LOG_MUTEX((mutex->obj_name, "Mutex: thread %s is trying", 
 				pj_thread_this()->obj_name));
 
 #if PJ_WIN32_WINNT >= 0x0400
@@ -981,7 +992,7 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
                 PJ_SUCCESS : PJ_ETIMEDOUT;
 #endif
     if (status==PJ_SUCCESS) {
-	PJ_LOG(6,(mutex->obj_name, "Mutex acquired by thread %s", 
+	LOG_MUTEX((mutex->obj_name, "Mutex acquired by thread %s", 
 				  pj_thread_this()->obj_name));
 
 #if PJ_DEBUG
@@ -989,7 +1000,7 @@ PJ_DEF(pj_status_t) pj_mutex_trylock(pj_mutex_t *mutex)
 	++mutex->nesting_level;
 #endif
     } else {
-	PJ_LOG(6,(mutex->obj_name, "Mutex: thread %s's trylock() failed", 
+	LOG_MUTEX((mutex->obj_name, "Mutex: thread %s's trylock() failed", 
 				    pj_thread_this()->obj_name));
     }
 
@@ -1004,7 +1015,7 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(mutex, PJ_EINVAL);
 
-    PJ_LOG(6,(mutex->obj_name, "Mutex destroyed"));
+    LOG_MUTEX((mutex->obj_name, "Mutex destroyed"));
 
 #if PJ_WIN32_WINNT >= 0x0400
     DeleteCriticalSection(&mutex->crit);
@@ -1015,15 +1026,18 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
 #endif
 }
 
-#if PJ_DEBUG
 /*
  * pj_mutex_is_locked()
  */
 PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
 {
+#if PJ_DEBUG
     return mutex->owner == pj_thread_this();
-}
+#else
+    pj_assert(!"PJ_DEBUG is not set!");
+    return 1;
 #endif
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
@@ -1082,7 +1096,7 @@ PJ_DEF(pj_status_t) pj_sem_create( pj_pool_t *pool,
 	sem->obj_name[PJ_MAX_OBJ_NAME-1] = '\0';
     }
 
-    PJ_LOG(6, (sem->obj_name, "Semaphore created"));
+    LOG_MUTEX((sem->obj_name, "Semaphore created"));
 
     *sem_ptr = sem;
     return PJ_SUCCESS;
@@ -1095,15 +1109,15 @@ static pj_status_t pj_sem_wait_for(pj_sem_t *sem, unsigned timeout)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
-    PJ_LOG(6, (sem->obj_name, "Semaphore: thread %s is waiting", 
+    LOG_MUTEX((sem->obj_name, "Semaphore: thread %s is waiting", 
 			      pj_thread_this()->obj_name));
 
     result = WaitForSingleObject(sem->hSemaphore, timeout);
     if (result == WAIT_OBJECT_0) {
-	PJ_LOG(6, (sem->obj_name, "Semaphore acquired by thread %s", 
+	LOG_MUTEX((sem->obj_name, "Semaphore acquired by thread %s", 
 				  pj_thread_this()->obj_name));
     } else {
-	PJ_LOG(6, (sem->obj_name, "Semaphore: thread %s FAILED to acquire", 
+	LOG_MUTEX((sem->obj_name, "Semaphore: thread %s FAILED to acquire", 
 				  pj_thread_this()->obj_name));
     }
 
@@ -1145,7 +1159,7 @@ PJ_DEF(pj_status_t) pj_sem_post(pj_sem_t *sem)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
-    PJ_LOG(6, (sem->obj_name, "Semaphore released by thread %s",
+    LOG_MUTEX((sem->obj_name, "Semaphore released by thread %s",
 			      pj_thread_this()->obj_name));
 
     if (ReleaseSemaphore(sem->hSemaphore, 1, NULL))
@@ -1162,7 +1176,7 @@ PJ_DEF(pj_status_t) pj_sem_destroy(pj_sem_t *sem)
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(sem, PJ_EINVAL);
 
-    PJ_LOG(6, (sem->obj_name, "Semaphore destroyed by thread %s",
+    LOG_MUTEX((sem->obj_name, "Semaphore destroyed by thread %s",
 			      pj_thread_this()->obj_name));
 
     if (CloseHandle(sem->hSemaphore))
