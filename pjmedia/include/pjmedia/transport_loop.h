@@ -35,8 +35,15 @@
  * @brief Loopback transport for testing.
  * @{
  *
- * This is the loopback media transport, where packet sent to this transport
- * will immediately be sent back to the callback.
+ * This is the loopback media transport, where packets sent to this transport
+ * will be sent back to the streams attached to this transport. Unlike the
+ * other PJMEDIA transports, the loop transport may be attached to multiple
+ * streams (in other words, application should specify the same loop transport
+ * instance when calling #pjmedia_stream_create()). Any RTP or RTCP packets
+ * sent by one stream to this transport by default will be sent back to all 
+ * streams that are attached to this transport, including to the stream that
+ * sends the packet. Application may individually select which stream to
+ * receive packets by calling #pjmedia_transport_loop_disable_rx().
  */
 
 PJ_BEGIN_DECL
@@ -54,6 +61,12 @@ PJ_DECL(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
 						   pjmedia_transport **p_tp);
 
 
+/**
+ * Set this stream as the receiver of incoming packets.
+ */
+PJ_DECL(pj_status_t) pjmedia_transport_loop_disable_rx(pjmedia_transport *tp,
+						       void *user,
+						       pj_bool_t disabled);
 
 
 PJ_END_DECL

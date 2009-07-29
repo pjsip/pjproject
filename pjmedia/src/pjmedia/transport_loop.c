@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/transport_loop.h>
+#include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/ioqueue.h>
@@ -27,22 +28,25 @@
 #include <pj/string.h>
 
 
-struct transport_loop
+struct user
 {
-    pjmedia_transport	base;		/**< Base transport.		    */
-
-    pj_pool_t	       *pool;		/**< Memory pool		    */
+    pj_bool_t		rx_disabled;	/**< Doesn't want to receive pkt?   */
     void	       *user_data;	/**< Only valid when attached	    */
-    pj_bool_t		attached;	/**< Has attachment?		    */
-    pj_sockaddr		rem_rtp_addr;	/**< Remote RTP address		    */
-    pj_sockaddr		rem_rtcp_addr;	/**< Remote RTCP address	    */
-    int			addr_len;	/**< Length of addresses.	    */
     void  (*rtp_cb)(	void*,		/**< To report incoming RTP.	    */
 			void*,
 			pj_ssize_t);
     void  (*rtcp_cb)(	void*,		/**< To report incoming RTCP.	    */
 			void*,
 			pj_ssize_t);
+};
+
+struct transport_loop
+{
+    pjmedia_transport	base;		/**< Base transport.		    */
+
+    pj_pool_t	       *pool;		/**< Memory pool		    */
+    unsigned		user_cnt;	/**< Number of attachments	    */
+    struct user		users[4];	/**< Array of users.		    */
 
     unsigned		tx_drop_pct;	/**< Percent of tx pkts to drop.    */
     unsigned		rx_drop_pct;	/**< Percent of rx pkts to drop.    */
@@ -148,6 +152,23 @@ PJ_DEF(pj_status_t) pjmedia_transport_loop_create(pjmedia_endpt *endpt,
 }
 
 
+PJ_DEF(pj_status_t) pjmedia_transport_loop_disable_rx( pjmedia_transport *tp,
+						       void *user,
+						       pj_bool_t disabled)
+{
+    struct transport_loop *loop = (struct transport_loop*) tp;
+    unsigned i;
+
+    for (i=0; i<loop->user_cnt; ++i) {
+	if (loop->users[i].user_data == user) {
+	    loop->users[i].rx_disabled = disabled;
+	    return PJ_SUCCESS;
+	}
+    }
+    pj_assert(!"Invalid stream user");
+    return PJ_ENOTFOUND;
+}
+
 /**
  * Close loopback transport.
  */
@@ -193,29 +214,30 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
 						       pj_ssize_t))
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
+    unsigned i;
     const pj_sockaddr *rtcp_addr;
 
     /* Validate arguments */
     PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
 
-    /* Must not be "attached" to existing application */
-    PJ_ASSERT_RETURN(!loop->attached, PJ_EINVALIDOP);
+    /* Must not be "attached" to same user */
+    for (i=0; i<loop->user_cnt; ++i) {
+	PJ_ASSERT_RETURN(loop->users[i].user_data != user_data,
+			 PJ_EINVALIDOP);
+    }
+    PJ_ASSERT_RETURN(loop->user_cnt != PJ_ARRAY_SIZE(loop->users), 
+		     PJ_ETOOMANY);
 
     PJ_UNUSED_ARG(rem_rtcp);
     PJ_UNUSED_ARG(rtcp_addr);
 
     /* "Attach" the application: */
 
-    /* Save the callbacks */
-    loop->rtp_cb = rtp_cb;
-    loop->rtcp_cb = rtcp_cb;
-    loop->user_data = user_data;
-
-    /* Save address length */
-    loop->addr_len = addr_len;
-
-    /* Last, mark transport as attached */
-    loop->attached = PJ_TRUE;
+    /* Save the new user */
+    loop->users[loop->user_cnt].rtp_cb = rtp_cb;
+    loop->users[loop->user_cnt].rtcp_cb = rtcp_cb;
+    loop->users[loop->user_cnt].user_data = user_data;
+    ++loop->user_cnt;
 
     return PJ_SUCCESS;
 }
@@ -226,24 +248,20 @@ static void transport_detach( pjmedia_transport *tp,
 			      void *user_data)
 {
     struct transport_loop *loop = (struct transport_loop*) tp;
+    unsigned i;
 
     pj_assert(tp);
 
-    if (loop->attached) {
-	/* User data is unreferenced on Release build */
-	PJ_UNUSED_ARG(user_data);
-
-	/* As additional checking, check if the same user data is specified */
-	pj_assert(user_data == loop->user_data);
-
-	/* First, mark transport as unattached */
-	loop->attached = PJ_FALSE;
-
-	/* Clear up application infos from transport */
-	loop->rtp_cb = NULL;
-	loop->rtcp_cb = NULL;
-	loop->user_data = NULL;
+    for (i=0; i<loop->user_cnt; ++i) {
+	if (loop->users[i].user_data == user_data)
+	    break;
     }
+    PJ_ASSERT_ON_FAIL(i != loop->user_cnt, return);
+
+    /* Remove this user */
+    pj_array_erase(loop->users, sizeof(loop->users[0]),
+		   loop->user_cnt, i);
+    --loop->user_cnt;
 }
 
 
@@ -253,11 +271,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 				       pj_size_t size)
 {
     struct transport_loop *loop = (struct transport_loop*)tp;
-    void (*cb)(void*,void*,pj_ssize_t);
-    void *user_data;
-
-    /* Must be attached */
-    PJ_ASSERT_RETURN(loop->attached, PJ_EINVALIDOP);
+    unsigned i;
 
     /* Simulate packet lost on TX direction */
     if (loop->tx_drop_pct) {
@@ -269,9 +283,6 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 	}
     }
 
-    cb = loop->rtp_cb;
-    user_data = loop->user_data;
-
     /* Simulate packet lost on RX direction */
     if (loop->rx_drop_pct) {
 	if ((pj_rand() % 100) <= (int)loop->rx_drop_pct) {
@@ -282,8 +293,12 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
 	}
     }
 
-    if (loop->attached && cb)
-	(*cb)(user_data, (void*)pkt, size);
+    /* Distribute to users */
+    for (i=0; i<loop->user_cnt; ++i) {
+	if (!loop->users[i].rx_disabled && loop->users[i].rtp_cb)
+	    (*loop->users[i].rtp_cb)(loop->users[i].user_data, (void*)pkt, 
+				     size);
+    }
 
     return PJ_SUCCESS;
 }
@@ -305,19 +320,17 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 				        pj_size_t size)
 {
     struct transport_loop *loop = (struct transport_loop*)tp;
-    void (*cb)(void*,void*,pj_ssize_t);
-    void *user_data;
-
-    PJ_ASSERT_RETURN(loop->attached, PJ_EINVALIDOP);
+    unsigned i;
 
     PJ_UNUSED_ARG(addr_len);
     PJ_UNUSED_ARG(addr);
 
-    cb = loop->rtcp_cb;
-    user_data = loop->user_data;
-
-    if (loop->attached && cb)
-	(*cb)(user_data, (void*)pkt, size);
+    /* Distribute to users */
+    for (i=0; i<loop->user_cnt; ++i) {
+	if (!loop->users[i].rx_disabled && loop->users[i].rtcp_cb)
+	    (*loop->users[i].rtcp_cb)(loop->users[i].user_data, (void*)pkt,
+				      size);
+    }
 
     return PJ_SUCCESS;
 }
