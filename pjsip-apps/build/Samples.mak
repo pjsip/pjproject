@@ -17,6 +17,7 @@ SAMPLES := auddemo \
 	   confsample \
 	   encdec \
 	   icedemo \
+	   jbsim \
 	   latency \
 	   level \
 	   mix \
