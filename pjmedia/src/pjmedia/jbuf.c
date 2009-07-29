@@ -211,7 +211,7 @@ static pj_status_t jb_framelist_reset(jb_framelist_t *framelist)
 }
 
 
-static unsigned jb_framelist_size(jb_framelist_t *framelist) 
+static unsigned jb_framelist_size(const jb_framelist_t *framelist) 
 {
     return framelist->size;
 }
@@ -468,12 +468,12 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
 
 PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
 {
-    TRACE__((jb->jb_name.ptr, "\n"
-	    "  JB summary:\n"
-	    "    size=%d prefetch=%d\n"
-	    "    delay (min/max/avg/dev)=%d/%d/%d/%d ms\n"
-	    "    burst (min/max/avg/dev)=%d/%d/%d/%d frames\n"
-	    "    lost=%d discard=%d empty=%d\n",
+    TRACE__((jb->jb_name.ptr, ""
+	    "JB summary:"
+	    " size=%d prefetch=%d,"
+	    " delay (min/max/avg/dev)=%d/%d/%d/%d ms,"
+	    " burst (min/max/avg/dev)=%d/%d/%d/%d frames,"
+	    " lost=%d discard=%d empty=%d",
 	    jb->jb_framelist.size, jb->jb_prefetch,
 	    jb->jb_delay.min, jb->jb_delay.max, jb->jb_delay.mean, 
 	    pj_math_stat_get_stddev(&jb->jb_delay),
@@ -765,7 +765,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 /*
  * Get jitter buffer state.
  */
-PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( pjmedia_jbuf *jb,
+PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
 					    pjmedia_jb_state *state )
 {
     PJ_ASSERT_RETURN(jb && state, PJ_EINVAL);

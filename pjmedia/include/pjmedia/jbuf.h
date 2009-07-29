@@ -300,7 +300,7 @@ PJ_DECL(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_jbuf_get_state( pjmedia_jbuf *jb,
+PJ_DECL(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
 					     pjmedia_jb_state *state );
 
 

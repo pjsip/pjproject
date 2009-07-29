@@ -327,6 +327,7 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	     */
 	    if (frame_type != stream->jb_last_frm) {
 		pjmedia_jb_state jb_state;
+		const char *with_plc = "";
 
 		/* Activate PLC to smoothen the missing frame */
 		if (stream->codec->op->recover && 
@@ -346,13 +347,14 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 		    } while (samples_count < samples_required);
 
+		    with_plc = ", plc invoked";
 		} 
 
 		/* Report the state of jitter buffer */
 		pjmedia_jbuf_get_state(stream->jb, &jb_state);
 		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Jitter buffer empty (prefetch=%d)", 
-			  jb_state.prefetch));
+			  "Jitter buffer empty (prefetch=%d)%s", 
+			  jb_state.prefetch, with_plc));
 
 	    }
 
@@ -1879,7 +1881,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	//jb_init = (jb_min_pre + jb_max_pre) / 2;
 	jb_init = 0;
 
-
     /* Create jitter buffer */
     status = pjmedia_jbuf_create(pool, &stream->port.info.name,
 				 stream->frame_size, 
@@ -2170,6 +2171,16 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
     return PJ_ENOTFOUND;
 }
 #endif
+
+/*
+ * Get jitter buffer state.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_get_stat_jbuf(const pjmedia_stream *stream,
+						 pjmedia_jb_state *state)
+{
+    PJ_ASSERT_RETURN(stream && state, PJ_EINVAL);
+    return pjmedia_jbuf_get_state(stream->jb, state);
+}
 
 /*
  * Pause stream.

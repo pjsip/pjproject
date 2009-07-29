@@ -28,6 +28,7 @@
 
 #include <pjmedia/codec.h>
 #include <pjmedia/endpoint.h>
+#include <pjmedia/jbuf.h>
 #include <pjmedia/port.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/transport.h>
@@ -214,7 +215,8 @@ PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
 
 
 /**
- * Get the stream statistics.
+ * Get the stream statistics. See also
+ * #pjmedia_stream_get_stat_jbuf()
  *
  * @param stream	The media stream.
  * @param stat		Media stream statistics.
@@ -236,6 +238,19 @@ PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
 PJ_DECL(pj_status_t) pjmedia_stream_get_stat_xr( const pjmedia_stream *stream,
 					         pjmedia_rtcp_xr_stat *stat);
 #endif
+
+/**
+ * Get current jitter buffer state. See also
+ * #pjmedia_stream_get_stat()
+ *
+ * @param stream	The media stream.
+ * @param state		Jitter buffer state.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_stat_jbuf(const pjmedia_stream *stream,
+						  pjmedia_jb_state *state);
+
 
 /**
  * Pause the individual channel in the stream.

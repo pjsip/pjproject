@@ -857,6 +857,17 @@ PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat_xr(
 }
 #endif
 
+PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat_jbuf(
+					    pjmedia_session *session,
+					    unsigned index,
+					    pjmedia_jb_state *state)
+{
+    PJ_ASSERT_RETURN(session && state && index < session->stream_cnt, 
+		     PJ_EINVAL);
+
+    return pjmedia_stream_get_stat_jbuf(session->stream[index], state);
+}
+
 /*
  * Dial DTMF digit to the stream, using RFC 2833 mechanism.
  */

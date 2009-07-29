@@ -269,6 +269,7 @@ PJ_DECL(pj_status_t) pjmedia_session_get_port( pjmedia_session *session,
 /**
  * Get session statistics. The stream statistic shows various
  * indicators such as packet count, packet lost, jitter, delay, etc.
+ * See also #pjmedia_session_get_stream_stat_jbuf()
  *
  * @param session	The media session.
  * @param index		Stream index.
@@ -299,6 +300,21 @@ PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat_xr(
 					     pjmedia_rtcp_xr_stat *stat_xr);
 #endif
 
+
+/**
+ * Get current jitter buffer state for the specified stream.
+ * See also #pjmedia_session_get_stream_stat()
+ *
+ * @param session	The media session.
+ * @param index		Stream index.
+ * @param state		Jitter buffer state.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat_jbuf(
+					    pjmedia_session *session,
+					    unsigned index,
+					    pjmedia_jb_state *state);
 
 /**
  * Dial DTMF digit to the stream, using RFC 2833 mechanism.
