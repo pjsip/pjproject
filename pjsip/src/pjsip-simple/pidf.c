@@ -290,6 +290,7 @@ PJ_DEF(void) pjpidf_tuple_set_timestamp(pj_pool_t *pool, pjpidf_tuple *t,
     if (!node) {
 	node = PJ_POOL_ALLOC_T(pool, pj_xml_node);
 	xml_init_node(pool, node, &TIMESTAMP, ts);
+	pj_xml_add_node(t, node);
     } else {
 	pj_strdup(pool, &node->content, ts);
     }
