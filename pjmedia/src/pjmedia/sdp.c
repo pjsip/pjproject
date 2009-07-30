@@ -34,7 +34,9 @@ enum {
     SKIP_WS = 0,
     SYNTAX_ERROR = 1,
 };
-#define TOKEN		"-.!%*_=`'~"
+// New token definition from RFC 4566 (SDP)
+#define TOKEN		"!#$%&'*+-.^_`{|}~"
+//#define TOKEN		"-.!%*_=`'~"
 //#define TOKEN		"'`-./:?\"#$&*;=@[]^_`{|}+~!"
 #define NTP_OFFSET	((pj_uint32_t)2208988800)
 #define THIS_FILE	"sdp.c"
