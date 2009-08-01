@@ -128,7 +128,7 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 
     /* Create WSOLA */
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
-				  0, &b->wsola);
+				  PJMEDIA_WSOLA_NO_FADING, &b->wsola);
     if (status != PJ_SUCCESS)
 	return status;
 

@@ -70,10 +70,10 @@
 #define HIST_CNT	1.5
 
 /* Template size, in msec */
-#define TEMPLATE_PTIME	5
+#define TEMPLATE_PTIME	PJMEDIA_WSOLA_TEMPLATE_LENGTH_MSEC
 
 /* Hanning window size, in msec */
-#define HANNING_PTIME	5
+#define HANNING_PTIME	PJMEDIA_WSOLA_DELAY_MSEC
 
 /* Number of frames in erase buffer */
 #define ERASE_CNT	((unsigned)3)
@@ -83,6 +83,11 @@
 
 /* Maximum distance from template for find_pitch() of expansion, in frames */
 #define EXP_MAX_DIST	HIST_CNT
+
+/* Duration of a continuous synthetic frames after which the volume 
+ * of the synthetic frame will be set to zero with fading-out effect.
+ */
+#define MAX_EXPAND_MSEC	PJMEDIA_WSOLA_MAX_EXPAND_MSEC
 
 
 /* Buffer content:
@@ -131,7 +136,8 @@ struct pjmedia_wsola
     pj_uint16_t		 hist_size;	    /* History size (const)	    */
 
     pj_uint16_t		 min_extra;	    /* Minimum extra (const)	    */
-    pj_uint16_t		 expand_cnt;	    /* Consecutive expansion count  */
+    unsigned		 max_expand_cnt;    /* Max # of synthetic samples   */
+    unsigned		 fade_out_pos;	    /* Last fade-out position	    */
     pj_uint16_t		 expand_sr_min_dist;/* Minimum distance from template 
 					       for find_pitch() on expansion
 					       (const)			    */
@@ -146,6 +152,7 @@ struct pjmedia_wsola
 #endif
 
     pj_timestamp	 ts;		    /* Running timestamp.	    */
+
 };
 
 #if (PJMEDIA_WSOLA_IMP==PJMEDIA_WSOLA_IMP_WSOLA_LITE)
@@ -432,6 +439,64 @@ static void create_win(pj_pool_t *pool, pj_uint16_t **pw, unsigned count)
 
 #endif	/* PJ_HAS_FLOATING_POINT */
 
+/* Apply fade-in to the buffer.
+ *  - fade_cnt is the number of samples on which the volume
+ *       will go from zero to 100%
+ *  - fade_pos is current sample position within fade_cnt range.
+ *       It is zero for the first sample, so the first sample will
+ *	 have zero volume. This value is increasing.
+ */
+static void fade_in(pj_int16_t buf[], int count,
+		    int fade_in_pos, int fade_cnt)
+{
+#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
+    float fade_pos = (float)fade_in_pos;
+#else
+    int fade_pos = fade_in_pos;
+#endif
+
+    if (fade_cnt - fade_pos < count) {
+	for (; fade_pos < fade_cnt; ++fade_pos, ++buf) {
+	    *buf = (pj_int16_t)(*buf * fade_pos / fade_cnt);
+	}
+	/* Leave the remaining samples as is */
+    } else {
+	pj_int16_t *end = buf + count;
+	for (; buf != end; ++fade_pos, ++buf) {
+	    *buf = (pj_int16_t)(*buf * fade_pos / fade_cnt);
+	}
+    }
+}
+
+/* Apply fade-out to the buffer. */
+static void wsola_fade_out(pjmedia_wsola *wsola, 
+			   pj_int16_t buf[], int count)
+{
+    pj_int16_t *end = buf + count;
+    int fade_cnt = wsola->max_expand_cnt;
+#if defined(PJ_HAS_FLOATING_POINT) && PJ_HAS_FLOATING_POINT!=0
+    float fade_pos = (float)wsola->fade_out_pos;
+#else
+    int fade_pos = wsola->fade_out_pos;
+#endif
+
+    if (wsola->fade_out_pos == 0) {
+	pjmedia_zero_samples(buf, count);
+    } else if (fade_pos < count) {
+	for (; fade_pos; --fade_pos, ++buf) {
+	    *buf = (pj_int16_t)(*buf * fade_pos / fade_cnt);
+	}
+	if (buf != end)
+	    pjmedia_zero_samples(buf, end - buf);
+	wsola->fade_out_pos = 0;
+    } else {
+	for (; buf != end; --fade_pos, ++buf) {
+	    *buf = (pj_int16_t)(*buf * fade_pos / fade_cnt);
+	}
+	wsola->fade_out_pos -= count;
+    }
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool, 
 					  unsigned clock_rate,
@@ -455,6 +520,8 @@ PJ_DEF(pj_status_t) pjmedia_wsola_create( pj_pool_t *pool,
     wsola->samples_per_frame = (pj_uint16_t) samples_per_frame;
     wsola->channel_count = (pj_uint16_t) channel_count;
     wsola->options = (pj_uint16_t) options;
+    wsola->max_expand_cnt = clock_rate * MAX_EXPAND_MSEC / 1000;
+    wsola->fade_out_pos = wsola->max_expand_cnt;
 
     /* Create circular buffer */
     wsola->buf_size = (pj_uint16_t) (samples_per_frame * FRAME_CNT);
@@ -523,6 +590,13 @@ PJ_DEF(pj_status_t) pjmedia_wsola_destroy(pjmedia_wsola *wsola)
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjmedia_wsola_set_max_expand(pjmedia_wsola *wsola,
+						  unsigned msec)
+{
+    PJ_ASSERT_RETURN(wsola, PJ_EINVAL);
+    wsola->max_expand_cnt = msec * wsola->clock_rate / 1000;
+    return PJ_SUCCESS;
+}
 
 PJ_DEF(pj_status_t) pjmedia_wsola_reset( pjmedia_wsola *wsola,
 					 unsigned options)
@@ -533,6 +607,7 @@ PJ_DEF(pj_status_t) pjmedia_wsola_reset( pjmedia_wsola *wsola,
     pjmedia_circ_buf_reset(wsola->buf);
     pjmedia_circ_buf_set_len(wsola->buf, wsola->hist_size + wsola->min_extra);
     pjmedia_zero_samples(wsola->buf->start, wsola->buf->len); 
+    wsola->fade_out_pos = wsola->max_expand_cnt;
 
     return PJ_SUCCESS;
 }
@@ -682,7 +757,6 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
     buf_len = pjmedia_circ_buf_get_len(wsola->buf);
 
     /* Update vars */
-    wsola->expand_cnt = 0;
     wsola->ts.u64 += wsola->samples_per_frame;
 
     /* If previous frame was lost, smoothen this frame with the generated one */
@@ -691,12 +765,34 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 	unsigned reg1_len, reg2_len;
 	pj_int16_t *ola_left;
 
+	/* Trim excessive len */
+	if ((int)buf_len > wsola->hist_size + (wsola->min_extra<<1)) {
+	    buf_len = wsola->hist_size + (wsola->min_extra<<1);
+	    pjmedia_circ_buf_set_len(wsola->buf, buf_len);
+	}
+
 	pjmedia_circ_buf_get_read_regions(wsola->buf, &reg1, &reg1_len, 
 					  &reg2, &reg2_len);
 
 	CHECK_(pjmedia_circ_buf_get_len(wsola->buf) >= 
 	       (unsigned)(wsola->hist_size + (wsola->min_extra<<1)));
 
+	/* Continue applying fade out to the extra samples */
+	if ((wsola->options & PJMEDIA_WSOLA_NO_FADING)==0) {
+	    if (reg2_len == 0) {
+		wsola_fade_out(wsola, reg1 + reg1_len - (wsola->min_extra<<1),
+			       (wsola->min_extra<<1));
+	    } else if ((int)reg2_len >= (wsola->min_extra<<1)) {
+		wsola_fade_out(wsola, reg2 + reg2_len - (wsola->min_extra<<1),
+			       (wsola->min_extra<<1));
+	    } else {
+		unsigned tmp = (wsola->min_extra<<1) - reg2_len;
+		wsola_fade_out(wsola, reg1 + reg1_len - tmp, tmp);
+		wsola_fade_out(wsola, reg2, reg2_len);
+	    }
+	}
+
+	/* Get the region in buffer to be merged with the frame */
 	if (reg2_len == 0) {
 	    ola_left = reg1 + reg1_len - wsola->min_extra;
 	} else if (reg2_len >= wsola->min_extra) {
@@ -710,11 +806,73 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 	    ola_left = wsola->merge_buf;
 	}
 
+	/* Apply fade-in to the frame before merging */
+	if ((wsola->options & PJMEDIA_WSOLA_NO_FADING)==0) {
+	    unsigned count = wsola->min_extra;
+	    int fade_in_pos;
+
+	    /* Scale fade_in position based on last fade-out */
+	    fade_in_pos = wsola->fade_out_pos * count /
+			  wsola->max_expand_cnt;
+
+	    /* Fade-in it */
+	    fade_in(frm, wsola->samples_per_frame,
+		    fade_in_pos, count);
+	}
+
+	/* Merge it */
 	overlapp_add_simple(frm, wsola->min_extra, ola_left, frm);
 
+	/* Trim len */
 	buf_len -= wsola->min_extra;
 	pjmedia_circ_buf_set_len(wsola->buf, buf_len);
+
+    } else if ((wsola->options & PJMEDIA_WSOLA_NO_FADING)==0 &&
+	       wsola->fade_out_pos != wsola->max_expand_cnt) 
+    {
+	unsigned count = wsola->min_extra;
+	int fade_in_pos;
+
+	/* Fade out the remaining synthetic samples */
+	if (buf_len > wsola->hist_size) {
+	    pj_int16_t *reg1, *reg2;
+	    unsigned reg1_len, reg2_len;
+
+	    /* Number of samples to fade out */
+	    count = buf_len - wsola->hist_size;
+
+	    pjmedia_circ_buf_get_read_regions(wsola->buf, &reg1, &reg1_len, 
+					      &reg2, &reg2_len);
+
+	    CHECK_(pjmedia_circ_buf_get_len(wsola->buf) >= 
+		   (unsigned)(wsola->hist_size + (wsola->min_extra<<1)));
+
+	    /* Continue applying fade out to the extra samples */
+	    if (reg2_len == 0) {
+		wsola_fade_out(wsola, reg1 + reg1_len - count, count);
+	    } else if ((int)reg2_len >= count) {
+		wsola_fade_out(wsola, reg2 + reg2_len - count, count);
+	    } else {
+		unsigned tmp = count - reg2_len;
+		wsola_fade_out(wsola, reg1 + reg1_len - tmp, tmp);
+		wsola_fade_out(wsola, reg2, reg2_len);
+	    }
+	}
+
+	/* Apply fade-in to the frame */
+	count = wsola->min_extra;
+
+	/* Scale fade_in position based on last fade-out */
+	fade_in_pos = wsola->fade_out_pos * count /
+		      wsola->max_expand_cnt;
+
+	/* Fade it in */
+	fade_in(frm, wsola->samples_per_frame,
+		fade_in_pos, count);
+
     }
+
+    wsola->fade_out_pos = wsola->max_expand_cnt;
 
     status = pjmedia_circ_buf_write(wsola->buf, frm, wsola->samples_per_frame);
     if (status != PJ_SUCCESS) {
@@ -737,8 +895,6 @@ PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola,
 					    pj_int16_t frm[])
 {
     unsigned samples_len, samples_req;
-
-
     pj_status_t status = PJ_SUCCESS;
 
     CHECK_(pjmedia_circ_buf_get_len(wsola->buf) >= wsola->hist_size + 
@@ -757,7 +913,6 @@ PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola,
 	expand(wsola, samples_req - samples_len);
 	TRACE_((THIS_FILE, "Buf size after expanded = %d", 
 		pjmedia_circ_buf_get_len(wsola->buf)));
-	wsola->expand_cnt++;
     }
 
     status = pjmedia_circ_buf_copy(wsola->buf, wsola->hist_size, frm, 
@@ -768,6 +923,11 @@ PJ_DEF(pj_status_t) pjmedia_wsola_generate( pjmedia_wsola *wsola,
     }
 
     pjmedia_circ_buf_adv_read_ptr(wsola->buf, wsola->samples_per_frame);
+
+    /* Apply fade-out to the frame */
+    if ((wsola->options & PJMEDIA_WSOLA_NO_FADING)==0) {
+	wsola_fade_out(wsola, frm, wsola->samples_per_frame);
+    }
 
     return PJ_SUCCESS;
 }

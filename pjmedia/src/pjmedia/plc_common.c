@@ -125,6 +125,7 @@ static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate,
 			      unsigned samples_per_frame)
 {
     struct wsola_plc *o;
+    unsigned flag;
     pj_status_t status;
 
     PJ_UNUSED_ARG(clock_rate);
@@ -132,8 +133,12 @@ static void* plc_wsola_create(pj_pool_t *pool, unsigned clock_rate,
     o = PJ_POOL_ZALLOC_T(pool, struct wsola_plc);
     o->prev_lost = PJ_FALSE;
 
+    flag = PJMEDIA_WSOLA_NO_DISCARD;
+    if (PJMEDIA_WSOLA_PLC_NO_FADING)
+	flag |= PJMEDIA_WSOLA_NO_FADING;
+
     status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
-				  PJMEDIA_WSOLA_NO_DISCARD, &o->wsola);
+				  flag, &o->wsola);
     if (status != PJ_SUCCESS)
 	return NULL;
 
