@@ -1149,7 +1149,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 		    if ((ippc->pt==PJMEDIA_RTP_PT_AMR && *p>='0' && *p<='7') ||
 		        (ippc->pt==PJMEDIA_RTP_PT_AMRWB && *p>='0' && *p<='8'))
 		    {
-			pj_int8_t tmp = *p - '0' - enc_mode;
+			pj_int8_t tmp = (pj_int8_t)(*p - '0' - enc_mode);
 
 			if (PJ_ABS(diff) > PJ_ABS(tmp) || 
 			    (PJ_ABS(diff) == PJ_ABS(tmp) && tmp > diff))
@@ -1164,7 +1164,7 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 		if (diff == 99)
 		    goto on_error;
 
-		enc_mode = enc_mode + diff;
+		enc_mode = (pj_int8_t)(enc_mode + diff);
 
 		break;
 	    }
