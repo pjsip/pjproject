@@ -1653,6 +1653,8 @@ typedef struct
     int		     auth_initial_send;
     PyObject	    *auth_initial_algorithm;
     PyObject	    *pidf_tuple_id;
+    PyObject	    *contact_params;
+    PyObject	    *contact_uri_params;
     int		     require_100rel;
     int		     allow_contact_rewrite;
     int		     ka_interval;
@@ -1675,6 +1677,8 @@ static void PyObj_pjsua_acc_config_delete(PyObj_pjsua_acc_config* self)
     Py_XDECREF(self->cred_info);
     Py_XDECREF(self->auth_initial_algorithm);
     Py_XDECREF(self->pidf_tuple_id);
+    Py_XDECREF(self->contact_params);
+    Py_XDECREF(self->contact_uri_params);
     Py_XDECREF(self->ka_data);
     self->ob_type->tp_free((PyObject*)self);
 }
@@ -1721,6 +1725,10 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->auth_initial_algorithm = PyString_FromPJ(&cfg->auth_pref.algorithm);
     Py_XDECREF(obj->pidf_tuple_id);
     obj->pidf_tuple_id = PyString_FromPJ(&cfg->pidf_tuple_id);
+    Py_XDECREF(obj->contact_params);
+    obj->contact_params = PyString_FromPJ(&cfg->contact_params);
+    Py_XDECREF(obj->contact_uri_params);
+    obj->contact_uri_params = PyString_FromPJ(&cfg->contact_uri_params);
     obj->require_100rel = cfg->require_100rel;
     obj->allow_contact_rewrite = cfg->allow_contact_rewrite;
     obj->ka_interval = cfg->ka_interval;
@@ -1765,6 +1773,8 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     cfg->auth_pref.initial_auth = obj->auth_initial_send;
     cfg->auth_pref.algorithm = PyString_ToPJ(obj->auth_initial_algorithm);
     cfg->pidf_tuple_id = PyString_ToPJ(obj->pidf_tuple_id);
+    cfg->contact_params = PyString_ToPJ(obj->contact_params);
+    cfg->contact_uri_params = PyString_ToPJ(obj->contact_uri_params);
     cfg->require_100rel = obj->require_100rel;
     cfg->allow_contact_rewrite = obj->allow_contact_rewrite;
     cfg->ka_interval = obj->ka_interval;
@@ -1796,6 +1806,8 @@ static PyObject * PyObj_pjsua_acc_config_new(PyTypeObject *type,
 	self->cred_info = (PyListObject *)PyList_New(0);
 	self->auth_initial_algorithm = PyString_FromString("");
 	self->pidf_tuple_id = PyString_FromString("");
+	self->contact_params = PyString_FromString("");
+	self->contact_uri_params = PyString_FromString("");
 	self->ka_data = PyString_FromString("");
     }
 
@@ -1892,6 +1904,16 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
 	"pidf_tuple_id", T_OBJECT_EX,
 	offsetof(PyObj_pjsua_acc_config, pidf_tuple_id), 0,
 	"PIDF tuple id."
+    },
+    {
+	"contact_params", T_OBJECT_EX,
+	offsetof(PyObj_pjsua_acc_config, contact_params), 0,
+	"Additional parameters for Contact header."
+    },
+    {
+	"contact_uri_params", T_OBJECT_EX,
+	offsetof(PyObj_pjsua_acc_config, contact_uri_params), 0,
+	"Additional parameters for Contact URI."
     },
     {
 	"require_100rel", T_INT,

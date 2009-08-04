@@ -180,7 +180,8 @@ static void usage(void)
     puts  ("  --registrar=url     Set the URL of registrar server");
     puts  ("  --id=url            Set the URL of local ID (used in From header)");
     puts  ("  --contact=url       Optionally override the Contact information");
-    puts  ("  --contact-params=S  Append the specified parameters S in Contact URI");
+    puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
+    puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
     puts  ("  --proxy=url         Optional URL of proxy server to visit");
     puts  ("                      May be specified multiple times");
     puts  ("  --reg-timeout=SEC   Optional registration interval (default 55)");
@@ -471,7 +472,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
-	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS,
+	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
@@ -529,6 +530,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "id",		1, 0, OPT_ID},
 	{ "contact",	1, 0, OPT_CONTACT},
 	{ "contact-params",1,0, OPT_CONTACT_PARAMS},
+	{ "contact-uri-params",1,0, OPT_CONTACT_URI_PARAMS},
 	{ "auto-update-nat",	1, 0, OPT_AUTO_UPDATE_NAT},
         { "use-compact-form",	0, 0, OPT_USE_COMPACT_FORM},
 	{ "accept-redirect", 1, 0, OPT_ACCEPT_REDIRECT},
@@ -849,6 +851,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_CONTACT_PARAMS:
 	    cur_acc->contact_params = pj_str(pj_optarg);
+	    break;
+
+	case OPT_CONTACT_URI_PARAMS:
+	    cur_acc->contact_uri_params = pj_str(pj_optarg);
 	    break;
 
 	case OPT_AUTO_UPDATE_NAT:   /* OPT_AUTO_UPDATE_NAT */
@@ -1405,11 +1411,19 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 	pj_strcat2(result, line);
     }
 
-    /* Contact parameters */
+    /* Contact header parameters */
     if (acc_cfg->contact_params.slen) {
 	pj_ansi_sprintf(line, "--contact-params %.*s\n", 
 			(int)acc_cfg->contact_params.slen, 
 			acc_cfg->contact_params.ptr);
+	pj_strcat2(result, line);
+    }
+
+    /* Contact URI parameters */
+    if (acc_cfg->contact_uri_params.slen) {
+	pj_ansi_sprintf(line, "--contact-uri-params %.*s\n", 
+			(int)acc_cfg->contact_uri_params.slen, 
+			acc_cfg->contact_uri_params.ptr);
 	pj_strcat2(result, line);
     }
 

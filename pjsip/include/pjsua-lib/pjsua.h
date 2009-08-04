@@ -1666,7 +1666,7 @@ typedef struct pjsua_acc_config
     pj_str_t	    force_contact;
 
     /**
-     * Additional URI parameters that will be appended in the Contact header
+     * Additional parameters that will be appended in the Contact header
      * for this account. This will affect the Contact header in all SIP 
      * messages sent on behalf of this account, including but not limited to
      * REGISTER, INVITE, and SUBCRIBE requests or responses.
@@ -1676,6 +1676,18 @@ typedef struct pjsua_acc_config
      *	 ";my-param=X;another-param=Hi%20there"
      */
     pj_str_t	    contact_params;
+
+    /**
+     * Additional URI parameters that will be appended in the Contact URI
+     * for this account. This will affect the Contact URI in all SIP
+     * messages sent on behalf of this account, including but not limited to
+     * REGISTER, INVITE, and SUBCRIBE requests or responses.
+     *
+     * The parameters should be preceeded by semicolon, and all strings must
+     * be properly escaped. Example:
+     *	 ";my-param=X;another-param=Hi%20there"
+     */
+    pj_str_t	    contact_uri_params;
 
     /**
      * Specify whether support for reliable provisional response (100rel and
