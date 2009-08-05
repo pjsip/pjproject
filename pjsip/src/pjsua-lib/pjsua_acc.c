@@ -573,6 +573,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     pj_status_t status;
     pj_bool_t matched;
     pj_str_t srv_ip;
+    pjsip_contact_hdr *contact_hdr;
+    const pj_str_t STR_CONTACT = { "Contact", 7 };
 
     tp = param->rdata->tp_info.transport;
 
@@ -619,8 +621,11 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     /* Compare received and rport with the URI in our registration */
     pool = pjsua_pool_create("tmp", 512, 512);
-    uri = (pjsip_sip_uri*)
-	  pjsip_parse_uri(pool, acc->contact.ptr, acc->contact.slen, 0);
+    contact_hdr = (pjsip_contact_hdr*)
+		  pjsip_parse_hdr(pool, &STR_CONTACT, acc->contact.ptr, 
+				  acc->contact.slen, NULL);
+    pj_assert(contact_hdr != NULL);
+    uri = (pjsip_sip_uri*) contact_hdr->uri;
     pj_assert(uri != NULL);
     uri = (pjsip_sip_uri*) pjsip_uri_get_uri(uri);
 

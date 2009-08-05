@@ -307,6 +307,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
     pjsip_cid_hdr *call_id;
     pj_str_t tmp;
     pj_status_t status;
+    const pj_str_t STR_CONTACT = { "Contact", 7 };
     PJ_USE_EXCEPTION;
 
     status = pjsip_endpt_create_tdata(endpt, &tdata);
@@ -348,11 +349,11 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_request(  pjsip_endpoint *endpt,
 
 	/* Contact. */
 	if (param_contact) {
-	    contact = pjsip_contact_hdr_create(tdata->pool);
 	    pj_strdup_with_null(tdata->pool, &tmp, param_contact);
-	    contact->uri = pjsip_parse_uri( tdata->pool, tmp.ptr, tmp.slen,
-					    PJSIP_PARSE_URI_AS_NAMEADDR);
-	    if (contact->uri == NULL) {
+	    contact = (pjsip_contact_hdr*)
+		      pjsip_parse_hdr(tdata->pool, &STR_CONTACT, tmp.ptr, 
+				      tmp.slen, NULL);
+	    if (contact == NULL) {
 		status = PJSIP_EINVALIDHDR;
 		goto on_error;
 	    }

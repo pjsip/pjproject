@@ -509,16 +509,19 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     const pj_str_t STR_CONTACT = { "Contact", 7 };
     pjsip_media_type media_type;
     pjsua_im_data *im_data;
+    pjsua_acc *acc;
     pj_str_t contact;
     pj_status_t status;
 
     /* To and message body must be specified. */
     PJ_ASSERT_RETURN(to && content, PJ_EINVAL);
 
+    acc = &pjsua_var.acc[acc_id];
+
     /* Create request. */
     status = pjsip_endpt_create_request(pjsua_var.endpt, 
 					&pjsip_message_method, to, 
-					&pjsua_var.acc[acc_id].cfg.id,
+					&acc->cfg.id,
 					to, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
@@ -528,10 +531,10 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     /* If account is locked to specific transport, then set transport to
      * the request.
      */
-    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
 	pjsip_tpselector tp_sel;
 
-	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
 	pjsip_tx_data_set_transport(tdata, &tp_sel);
     }
 
@@ -539,12 +542,18 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pjsip_msg_add_hdr( tdata->msg, 
 		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
-    /* Add contact. */
-    status = pjsua_acc_create_uac_contact(tdata->pool, &contact, acc_id, to);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	pjsip_tx_data_dec_ref(tdata);
-	return status;
+    /* Create suitable Contact header unless a Contact header has been
+     * set in the account.
+     */
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	status = pjsua_acc_create_uac_contact(tdata->pool, &contact, acc_id, to);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	    pjsip_tx_data_dec_ref(tdata);
+	    return status;
+	}
     }
 
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
@@ -584,7 +593,7 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     pjsua_process_msg_data(tdata, msg_data);
 
     /* Add route set */
-    pjsua_set_msg_route_set(tdata, &pjsua_var.acc[acc_id].route_set);
+    pjsua_set_msg_route_set(tdata, &acc->route_set);
 
     /* Send request (statefully) */
     status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1, 
@@ -609,12 +618,15 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     const pj_str_t STR_CONTACT = { "Contact", 7 };
     pjsua_im_data *im_data;
     pjsip_tx_data *tdata;
+    pjsua_acc *acc;
     pj_str_t contact;
     pj_status_t status;
 
+    acc = &pjsua_var.acc[acc_id];
+
     /* Create request. */
     status = pjsip_endpt_create_request( pjsua_var.endpt, &pjsip_message_method,
-					 to, &pjsua_var.acc[acc_id].cfg.id,
+					 to, &acc->cfg.id,
 					 to, NULL, NULL, -1, NULL, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create request", status);
@@ -625,10 +637,10 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     /* If account is locked to specific transport, then set transport to
      * the request.
      */
-    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
 	pjsip_tpselector tp_sel;
 
-	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
 	pjsip_tx_data_set_transport(tdata, &tp_sel);
     }
 
@@ -637,12 +649,18 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
 		       (pjsip_hdr*)pjsua_im_create_accept(tdata->pool));
 
 
-    /* Add contact. */
-    status = pjsua_acc_create_uac_contact(tdata->pool, &contact, acc_id, to);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
-	pjsip_tx_data_dec_ref(tdata);
-	return status;
+    /* Create suitable Contact header unless a Contact header has been
+     * set in the account.
+     */
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	status = pjsua_acc_create_uac_contact(tdata->pool, &contact, acc_id, to);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", status);
+	    pjsip_tx_data_dec_ref(tdata);
+	    return status;
+	}
     }
 
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
@@ -658,7 +676,7 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
     pjsua_process_msg_data(tdata, msg_data);
 
     /* Add route set */
-    pjsua_set_msg_route_set(tdata, &pjsua_var.acc[acc_id].route_set);
+    pjsua_set_msg_route_set(tdata, &acc->route_set);
 
     /* Create data to reauthenticate */
     im_data = PJ_POOL_ZALLOC_T(tdata->pool, pjsua_im_data);

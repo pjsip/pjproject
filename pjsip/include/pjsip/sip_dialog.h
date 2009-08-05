@@ -183,9 +183,18 @@ PJ_DECL(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m);
  *
  * @param ua		    The user agent module instance.
  * @param local_uri	    Dialog local URI (i.e. From header).
- * @param local_contact_uri Optional dialog local Contact URI. 
- *			    If this argument is NULL, the Contact will be
- *			    taken from the local URI.
+ * @param local_contact	    Optional dialog local Contact to be put as Contact
+ *			    header value, hence the format must follow
+ *			    RFC 3261 Section 20.10:
+ *			    When the header field value contains a display 
+ *			    name, the URI including all URI parameters is 
+ *			    enclosed in "<" and ">".  If no "<" and ">" are 
+ *			    present, all parameters after the URI are header
+ *			    parameters, not URI parameters.  The display name 
+ *			    can be tokens, or a quoted string, if a larger 
+ *			    character set is desired.
+ *			    If this argument is NULL, the Contact will be taken
+ *			    from the local URI.
  * @param remote_uri	    Dialog remote URI (i.e. To header).
  * @param target	    Optional initial remote target. If this argument
  *			    is NULL, the initial target will be set to
@@ -196,7 +205,7 @@ PJ_DECL(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m);
  */
 PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
 					   const pj_str_t *local_uri,
-					   const pj_str_t *local_contact_uri,
+					   const pj_str_t *local_contact,
 					   const pj_str_t *remote_uri,
 					   const pj_str_t *target,
 					   pjsip_dialog **p_dlg);
@@ -220,8 +229,17 @@ PJ_DECL(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
  * @param ua		    The user agent module instance.
  * @param rdata		    The incoming request that creates the dialog,
  *			    such as INVITE, SUBSCRIBE, or REFER.
- * @param contact	    Optional URI to be used as local Contact. If
- *			    this argument is NULL, the local contact will be
+ * @param contact	    Optional dialog local Contact to be put as Contact
+ *			    header value, hence the format must follow
+ *			    RFC 3261 Section 20.10:
+ *			    When the header field value contains a display 
+ *			    name, the URI including all URI parameters is 
+ *			    enclosed in "<" and ">".  If no "<" and ">" are 
+ *			    present, all parameters after the URI are header
+ *			    parameters, not URI parameters.  The display name 
+ *			    can be tokens, or a quoted string, if a larger 
+ *			    character set is desired.
+ *			    If this argument is NULL, the local contact will be
  *			    initialized from the value of To header in the
  *			    request.
  * @param p_dlg		    Pointer to receive the dialog.

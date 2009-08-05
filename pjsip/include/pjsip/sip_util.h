@@ -243,7 +243,15 @@ PJ_DECL(pj_status_t) pjsip_target_assign_status(pjsip_target *target,
  * @param target    Target URI.
  * @param from	    URL to put in From header.
  * @param to	    URL to put in To header.
- * @param contact   URL to put in Contact header.
+ * @param contact   Contact to be put as Contact header value, hence
+ *		    the format must follow RFC 3261 Section 20.10:
+ *		    When the header field value contains a display 
+ *		    name, the URI including all URI parameters is 
+ *		    enclosed in "<" and ">".  If no "<" and ">" are 
+ *		    present, all parameters after the URI are header
+ *		    parameters, not URI parameters.  The display name 
+ *		    can be tokens, or a quoted string, if a larger 
+ *		    character set is desired.
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
  * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
  * @param text	    Optional text body (put NULL to omit body).
@@ -280,9 +288,9 @@ PJ_DECL(pj_status_t) pjsip_endpt_create_request( pjsip_endpoint *endpt,
  * @param endpt	    Endpoint instance.
  * @param method    SIP Method.
  * @param target    Target URI.
- * @param from	    URL to put in From header.
- * @param to	    URL to put in To header.
- * @param contact   URL to put in Contact header.
+ * @param from	    From header.
+ * @param to	    To header.
+ * @param contact   Contact header.
  * @param call_id   Optional Call-ID (put NULL to generate unique Call-ID).
  * @param cseq	    Optional CSeq (put -1 to generate random CSeq).
  * @param text	    Optional text body (put NULL to omit body).

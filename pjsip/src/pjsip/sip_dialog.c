@@ -43,6 +43,8 @@ long pjsip_dlg_lock_tls_id;
 /* Config */
 pj_bool_t pjsip_include_allow_hdr_in_dlg = PJSIP_INCLUDE_ALLOW_HDR_IN_DLG;
 
+/* Contact header string */
+static const pj_str_t HCONTACT = { "Contact", 7 };
 
 PJ_DEF(pj_bool_t) pjsip_method_creates_dialog(const pjsip_method *m)
 {
@@ -210,12 +212,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     dlg->local.cseq = dlg->local.first_cseq;
 
     /* Init local contact. */
-    dlg->local.contact = pjsip_contact_hdr_create(dlg->pool);
     pj_strdup_with_null(dlg->pool, &tmp, 
 			local_contact ? local_contact : local_uri);
-    dlg->local.contact->uri = pjsip_parse_uri(dlg->pool, tmp.ptr, tmp.slen,
-					      PJSIP_PARSE_URI_AS_NAMEADDR);
-    if (!dlg->local.contact->uri) {
+    dlg->local.contact = pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr, 
+					 tmp.slen, NULL);
+    if (!dlg->local.contact) {
 	status = PJSIP_EINVALIDURI;
 	goto on_error;
     }
@@ -390,11 +391,10 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     if (contact) {
 	pj_str_t tmp;
 
-	dlg->local.contact = pjsip_contact_hdr_create(dlg->pool);
 	pj_strdup_with_null(dlg->pool, &tmp, contact);
-	dlg->local.contact->uri = pjsip_parse_uri(dlg->pool, tmp.ptr, tmp.slen,
-						  PJSIP_PARSE_URI_AS_NAMEADDR);
-	if (!dlg->local.contact->uri) {
+	dlg->local.contact = pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr, 
+					     tmp.slen, NULL);
+	if (!dlg->local.contact) {
 	    status = PJSIP_EINVALIDURI;
 	    goto on_error;
 	}
@@ -1225,11 +1225,9 @@ static void dlg_beautify_response(pjsip_dialog *dlg,
 	if (st_class==2 || st_class==3 || (st_class==1 && st_code != 100) ||
 	    st_code==485) 
 	{
-	    pj_str_t hcontact = { "Contact", 7 };
-
 	    /* Add contact header only if one is not present. */
 	    if (pjsip_msg_find_hdr(tdata->msg, PJSIP_H_CONTACT, NULL) == 0 &&
-		pjsip_msg_find_hdr_by_name(tdata->msg, &hcontact, NULL) == 0) 
+		pjsip_msg_find_hdr_by_name(tdata->msg, &HCONTACT, NULL) == 0) 
 	    {
 		hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, 
 						   dlg->local.contact);

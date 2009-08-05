@@ -2163,11 +2163,11 @@ PJ_DECL(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
 
 
 /**
- * Create a suitable URI to be put as Contact based on the specified
- * target URI for the specified account.
+ * Create a suitable Contact header value, based on the specified target URI 
+ * for the specified account.
  *
  * @param pool		Pool to allocate memory for the string.
- * @param contact	The string where the Contact URI will be stored.
+ * @param contact	The string where the Contact will be stored.
  * @param acc_id	Account ID.
  * @param uri		Destination URI of the request.
  *
@@ -2181,11 +2181,11 @@ PJ_DECL(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 
 
 /**
- * Create a suitable URI to be put as Contact based on the information
- * in the incoming request.
+ * Create a suitable Contact header value, based on the information in the 
+ * incoming request.
  *
  * @param pool		Pool to allocate memory for the string.
- * @param contact	The string where the Contact URI will be stored.
+ * @param contact	The string where the Contact will be stored.
  * @param acc_id	Account ID.
  * @param rdata		Incoming request.
  *

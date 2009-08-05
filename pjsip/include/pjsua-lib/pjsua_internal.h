@@ -118,7 +118,7 @@ typedef struct pjsua_acc
     int		     index;	    /**< Index in accounts array.	*/
     pj_str_t	     display;	    /**< Display name, if any.		*/
     pj_str_t	     user_part;	    /**< User part of local URI.	*/
-    pj_str_t	     contact;	    /**< Our Contact URI for REGISTER	*/
+    pj_str_t	     contact;	    /**< Our Contact header.		*/
 
     pj_str_t	     srv_domain;    /**< Host part of reg server.	*/
     int		     srv_port;	    /**< Port number of reg server.	*/

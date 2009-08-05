@@ -166,7 +166,15 @@ PJ_DECL(pj_pool_t*) pjsip_regc_get_pool(pjsip_regc *regc);
  * @param to_url    The address of record for which the registration is targetd, must
  *		    be a SIP/SIPS URL.
  * @param ccnt	    Number of contacts in the array.
- * @param contact   Array of contacts.
+ * @param contact   Array of contacts, each contact item must be formatted
+ *		    as described in RFC 3261 Section 20.10:
+ *		    When the header field value contains a display 
+ *		    name, the URI including all URI parameters is 
+ *		    enclosed in "<" and ">".  If no "<" and ">" are 
+ *		    present, all parameters after the URI are header
+ *		    parameters, not URI parameters.  The display name 
+ *		    can be tokens, or a quoted string, if a larger 
+ *		    character set is desired.
  * @param expires   Default expiration interval (in seconds) to be applied for
  *		    contact URL that doesn't have expiration settings. If the
  *		    value PJSIP_REGC_EXPIRATION_NOT_SPECIFIED is given, then 
@@ -303,8 +311,8 @@ PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
 
 /**
  * Update Contact details in the client registration structure. For each
- * contact URI, if the uri is not found in existing contact, it will be
- * added to the Contact list. If the URI matches existing contact, nothing
+ * contact, if the contact is not found in existing contact, it will be
+ * added to the Contact list. If it matches existing contact, nothing
  * will be added. This function will also mark existing contacts which
  * are not specified in the new contact list as to be removed, by adding
  * "expires=0" parameter to these contacts.
@@ -317,7 +325,15 @@ PJ_DECL(pj_status_t) pjsip_regc_unregister_all(pjsip_regc *regc,
  *
  * @param regc	    The client registration structure.
  * @param ccnt	    Number of contacts.
- * @param contact   Array of contact URIs.
+ * @param contact   Array of contacts, each contact item must be formatted
+ *		    as described in RFC 3261 Section 20.10:
+ *		    When the header field value contains a display 
+ *		    name, the URI including all URI parameters is 
+ *		    enclosed in "<" and ">".  If no "<" and ">" are 
+ *		    present, all parameters after the URI are header
+ *		    parameters, not URI parameters.  The display name 
+ *		    can be tokens, or a quoted string, if a larger 
+ *		    character set is desired.
  * @return	    PJ_SUCCESS if sucessfull.
  */
 PJ_DECL(pj_status_t) pjsip_regc_update_contact( pjsip_regc *regc,

@@ -272,7 +272,7 @@ static pj_status_t set_contact( pjsip_regc *regc,
 	hdr = (pjsip_contact_hdr*)
               pjsip_parse_hdr(regc->pool, &CONTACT, tmp.ptr, tmp.slen, NULL);
 	if (hdr == NULL) {
-	    PJ_LOG(4,(THIS_FILE, "Invalid Contact URI: \"%.*s\"", 
+	    PJ_LOG(4,(THIS_FILE, "Invalid Contact: \"%.*s\"", 
 		     (int)tmp.slen, tmp.ptr));
 	    return PJSIP_EINVALIDURI;
 	}
