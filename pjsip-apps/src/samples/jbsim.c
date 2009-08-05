@@ -39,16 +39,17 @@
 
 /* Defaults settings */
 #define CODEC		"PCMU"
-#define LOG_FILE	"jbsim.out"
+#define LOG_FILE	"jbsim.csv"
 #define WAV_REF		"../../tests/pjsua/wavs/input.8.wav"
 #define WAV_OUT		"jbsim.wav"
-#define DURATION	20
+#define DURATION	60
 #define DTX		PJ_TRUE
 #define PLC		PJ_TRUE
 #define MIN_LOST_BURST	0
 #define MAX_LOST_BURST	20
 #define LOSS_CORR	0
 #define LOSS_EXTRA	2
+#define SILENT		1
 
 /*
    Test setup:
@@ -121,6 +122,7 @@ struct log_entry
 struct test_cfg
 {
     /* General options */
+    pj_bool_t	     silent;		/* Write little to stdout   */
     const char	    *log_file;		/* The output log file	    */
 
     /* Test settings */
@@ -187,7 +189,7 @@ static struct global_app g_app;
 /*****************************************************************************
  * Logging
  */
-static void write_log(struct log_entry *entry)
+static void write_log(struct log_entry *entry, pj_bool_t to_stdout)
 {
     /* Format (CSV): */
     const char *format = "TIME;EVENT;#RX packets;#packets lost;#JB prefetch;#JB size;#JBDISCARD;#JBEMPTY;Log Message";
@@ -208,6 +210,8 @@ static void write_log(struct log_entry *entry)
 	    pj_ssize_t size = strlen(log);
 	    pj_file_write(g_app.log_fd, log, &size);
 	}
+	if (to_stdout && !g_app.cfg.silent)
+	    printf("%s", log);
 	header_written = PJ_TRUE;
     }
 
@@ -259,6 +263,9 @@ static void write_log(struct log_entry *entry)
 	pj_ssize_t size = strlen(log);
 	pj_file_write(g_app.log_fd, log, &size);
     }
+
+    if (to_stdout && !g_app.cfg.silent)
+	printf("%s", log);
 }
 
 static void log_cb(int level, const char *data, int len)
@@ -274,7 +281,7 @@ static void log_cb(int level, const char *data, int len)
     entry.event = EVENT_LOG;
     entry.log = data;
     entry.wall_clock = g_app.wall_clock;
-    write_log(&entry);
+    write_log(&entry, PJ_FALSE);
 }
 
 static void jbsim_perror(const char *title, pj_status_t status)
@@ -479,7 +486,10 @@ static pj_status_t test_init(void)
     pjmedia_codec_g722_init(g_app.endpt);
 #endif
 #if defined(PJMEDIA_HAS_ILBC_CODEC) && PJMEDIA_HAS_ILBC_CODEC != 0
-    pjmedia_codec_ilbc_init(g_app.endpt, 30);
+    /* Init ILBC with mode=20 to make the losts occur at the same
+     * places as other codecs.
+     */
+    pjmedia_codec_ilbc_init(g_app.endpt, 20);
 #endif
 #if defined(PJMEDIA_HAS_INTEL_IPP) && PJMEDIA_HAS_INTEL_IPP != 0
     pjmedia_codec_ipp_init(g_app.endpt);
@@ -584,7 +594,7 @@ static void run_one_frame(pjmedia_port *src, pjmedia_port *dst,
     pj_bzero(&frame, sizeof(frame));
     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame.buf = g_app.framebuf;
-    frame.size = src->info.samples_per_frame * 2;
+    frame.size = dst->info.samples_per_frame * 2;
     
     status = pjmedia_port_get_frame(src, &frame);
     pj_assert(status == PJ_SUCCESS);
@@ -704,7 +714,7 @@ static void tx_tick(const pj_time_val *t)
 	    strm->state.tx.cur_lost_burst = 0;
 	}
 
-	write_log(&entry);
+	write_log(&entry, PJ_TRUE);
 
 	++strm->state.tx.total_tx;
 
@@ -792,7 +802,7 @@ static void rx_tick(const pj_time_val *t)
 	    entry.stat = &stat;
 	    entry.jb_state = &jstate;
 
-	    write_log(&entry);
+	    write_log(&entry, PJ_TRUE);
 
 	    /* GET */
 	    run_one_frame(g_app.rx->port, g_app.rx_wav, &has_frame);
@@ -815,7 +825,7 @@ static void rx_tick(const pj_time_val *t)
 	    if (!has_frame)
 		strcat(msg, "** NULL frame was returned **");
 
-	    write_log(&entry);
+	    write_log(&entry, PJ_TRUE);
 
 	}
 
@@ -960,6 +970,7 @@ static int init_options(int argc, char *argv[])
     /* Init default config */
     g_app.cfg.codec = pj_str(CODEC);
     g_app.cfg.duration_msec = DURATION * 1000;
+    g_app.cfg.silent = SILENT;
     g_app.cfg.log_file = LOG_FILE;
     g_app.cfg.tx_wav_in = WAV_REF;
     g_app.cfg.tx_ptime = 0;
