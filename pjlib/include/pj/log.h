@@ -220,6 +220,10 @@ PJ_DECL(void) pj_log_set_color(int level, pj_color_t color);
  */
 PJ_DECL(pj_color_t) pj_log_get_color(int level);
 
+/**
+ * Internal function to be called by pj_init()
+ */
+pj_status_t pj_log_init(void);
 
 #else	/* #if PJ_LOG_MAX_LEVEL >= 1 */
 
@@ -287,6 +291,11 @@ PJ_DECL(pj_color_t) pj_log_get_color(int level);
  */
 #  define pj_log_get_color(level) 0
 
+
+/**
+ * Internal.
+ */
+#   define pj_log_init()	PJ_SUCCESS
 
 #endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
 

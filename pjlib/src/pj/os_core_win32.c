@@ -152,6 +152,9 @@ PJ_DEF(pj_status_t) pj_init(void)
 	return rc;
     }
     
+    /* Init logging */
+    pj_log_init();
+
     /* Init random seed. */
     /* Or probably not. Let application in charge of this */
     /* pj_srand( GetCurrentProcessId() ); */

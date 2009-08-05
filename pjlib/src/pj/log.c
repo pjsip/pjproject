@@ -30,6 +30,7 @@ PJ_DEF_DATA(int) pj_log_max_level = PJ_LOG_MAX_LEVEL;
 #else
 static int pj_log_max_level = PJ_LOG_MAX_LEVEL;
 #endif
+static long thread_suspended_tls_id = -1;
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
 			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
@@ -65,6 +66,27 @@ static pj_color_t PJ_LOG_COLOR_77 = PJ_TERM_COLOR_R |
 #if PJ_LOG_USE_STACK_BUFFER==0
 static char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
+
+static void logging_shutdown(void)
+{
+#if PJ_HAS_THREADS
+    if (thread_suspended_tls_id != -1) {
+	pj_thread_local_free(thread_suspended_tls_id);
+	thread_suspended_tls_id = -1;
+    }
+#endif
+}
+
+pj_status_t pj_log_init(void)
+{
+#if PJ_HAS_THREADS
+    if (thread_suspended_tls_id == -1) {
+	pj_thread_local_alloc(&thread_suspended_tls_id);
+	pj_atexit(&logging_shutdown);
+    }
+#endif
+    return PJ_SUCCESS;
+}
 
 PJ_DEF(void) pj_log_set_decor(unsigned decor)
 {
@@ -148,6 +170,64 @@ PJ_DEF(pj_log_func*) pj_log_get_log_func(void)
     return log_writer;
 }
 
+/* Temporarily suspend logging facility for this thread.
+ * If thread local storage/variable is not used or not initialized, then
+ * we can only suspend the logging globally across all threads. This may
+ * happen e.g. when log function is called before PJLIB is fully initialized
+ * or after PJLIB is shutdown.
+ */
+static void suspend_logging(int *saved_level)
+{
+#if PJ_HAS_THREADS
+    if (thread_suspended_tls_id != -1) 
+    {
+	pj_thread_local_set(thread_suspended_tls_id, (void*)PJ_TRUE);
+    } 
+    else
+#endif
+    {
+	pj_log_max_level = 0;
+    }
+    /* Save the level regardless, just in case PJLIB is shutdown
+     * between suspend and resume.
+     */
+    *saved_level = pj_log_max_level;
+}
+
+/* Resume logging facility for this thread */
+static void resume_logging(int *saved_level)
+{
+#if PJ_HAS_THREADS
+    if (thread_suspended_tls_id != -1) 
+    {
+	pj_thread_local_set(thread_suspended_tls_id, (void*)PJ_FALSE);
+    }
+    else
+#endif
+    {
+	/* Only revert the level if application doesn't change the
+	 * logging level between suspend and resume.
+	 */
+	if (pj_log_max_level==0 && *saved_level)
+	    pj_log_max_level = *saved_level;
+    }
+}
+
+/* Is logging facility suspended for this thread? */
+static pj_bool_t is_logging_suspended(void)
+{
+#if PJ_HAS_THREADS
+    if (thread_suspended_tls_id != -1) 
+    {
+	return pj_thread_local_get(thread_suspended_tls_id) != NULL;
+    }
+    else
+#endif
+    {
+	return pj_log_max_level != 0;
+    }
+}
+
 PJ_DEF(void) pj_log( const char *sender, int level, 
 		     const char *format, va_list marker)
 {
@@ -157,12 +237,21 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 #if PJ_LOG_USE_STACK_BUFFER
     char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
-    int len, print_len;
+    int saved_level, len, print_len;
 
     PJ_CHECK_STACK();
 
     if (level > pj_log_max_level)
 	return;
+
+    if (is_logging_suspended())
+	return;
+
+    /* Temporarily disable logging for this thread. Some of PJLIB APIs that
+     * this function calls below will recursively call the logging function 
+     * back, hence it will cause infinite recursive calls if we allow that.
+     */
+    suspend_logging(&saved_level);
 
     /* Get current date/time. */
     pj_gettimeofday(&now);
@@ -273,6 +362,11 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	}
 	log_buffer[sizeof(log_buffer)-1] = '\0';
     }
+
+    /* It should be safe to resume logging at this point. Application can
+     * recursively call the logging function inside the callback.
+     */
+    resume_logging(&saved_level);
 
     if (log_writer)
 	(*log_writer)(level, log_buffer, len);

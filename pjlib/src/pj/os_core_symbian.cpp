@@ -342,7 +342,10 @@ PJ_DEF(pj_status_t) pj_init(void)
     err = os->Initialize();
     if (err != KErrNone)
     	return PJ_RETURN_OS_ERROR(err);
-    
+
+    /* Init logging */
+    pj_log_init();
+
     /* Initialize exception ID for the pool. 
      * Must do so after critical section is configured.
      */ 
