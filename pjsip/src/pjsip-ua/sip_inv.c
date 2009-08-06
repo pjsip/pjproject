@@ -908,7 +908,9 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 		if (!supp)
 		    unsupp_tags[unsupp_cnt++] = req_hdr->values[i];
 
-	    } else {
+	    } else if (!pjsip_endpt_has_capability(endpt, PJSIP_H_SUPPORTED,
+						   NULL, &req_hdr->values[i]))
+	    {
 		/* Unknown/unsupported extension tag!  */
 		unsupp_tags[unsupp_cnt++] = req_hdr->values[i];
 	    }
