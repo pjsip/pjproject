@@ -1791,7 +1791,7 @@ static int write_settings(const struct app_config *config,
 	pj_ansi_sprintf(line, "--capture-lat %d\n", config->capture_lat);
 	pj_strcat2(&cfg, line);
     }
-    if (config->playback_dev != PJMEDIA_SND_DEFAULT_PLAY_LATENCY) {
+    if (config->playback_lat != PJMEDIA_SND_DEFAULT_PLAY_LATENCY) {
 	pj_ansi_sprintf(line, "--playback-lat %d\n", config->playback_lat);
 	pj_strcat2(&cfg, line);
     }
