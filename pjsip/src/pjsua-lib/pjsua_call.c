@@ -479,8 +479,11 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     /* Create the INVITE session: */
     options |= PJSIP_INV_SUPPORT_100REL;
+    options |= PJSIP_INV_SUPPORT_TIMER;
     if (acc->cfg.require_100rel)
 	options |= PJSIP_INV_REQUIRE_100REL;
+    if (acc->cfg.require_timer)
+	options |= PJSIP_INV_REQUIRE_TIMER;
 
     status = pjsip_inv_create_uac( dlg, offer, options, &inv);
     if (status != PJ_SUCCESS) {
@@ -488,6 +491,20 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 	goto on_error;
     }
 
+    /* Init Session Timers */
+    {
+	pjsip_timer_setting timer_setting;
+
+	pjsip_timer_default_setting(&timer_setting);
+	timer_setting.sess_expires = acc->cfg.timer_se;
+	timer_setting.min_se = acc->cfg.timer_min_se;
+
+	status = pjsip_timer_init_session(inv, &timer_setting);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Session Timer init failed", status);
+	    goto on_error;
+	}
+    }
 
     /* Create and associate our data in the session. */
     call->acc_id = acc_id;
@@ -805,8 +822,11 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
+    options |= PJSIP_INV_SUPPORT_TIMER;
     if (pjsua_var.acc[acc_id].cfg.require_100rel)
 	options |= PJSIP_INV_REQUIRE_100REL;
+    if (pjsua_var.acc[acc_id].cfg.require_timer)
+	options |= PJSIP_INV_REQUIRE_TIMER;
 
     status = pjsip_inv_verify_request2(rdata, &options, offer, answer, NULL,
 				       pjsua_var.endpt, &response);
@@ -895,6 +915,29 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    /* Init Session Timers */
+    {
+	pjsip_timer_setting timer_setting;
+
+	pjsip_timer_default_setting(&timer_setting);
+	timer_setting.sess_expires = pjsua_var.acc[acc_id].cfg.timer_se;
+	timer_setting.min_se = pjsua_var.acc[acc_id].cfg.timer_min_se;
+
+	status = pjsip_timer_init_session(inv, &timer_setting);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Session Timer init failed", status);
+	    status = pjsip_inv_end_session(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+					   NULL, &response);
+	    if (status == PJ_SUCCESS && response)
+		status = pjsip_inv_send_msg(inv, response);
+
+	    pjsua_media_channel_deinit(call->index);
+
+	    PJSUA_UNLOCK();
+	    return PJ_TRUE;
+	}
+    }
+
     /* Update NAT type of remote endpoint, only when there is SDP in
      * incoming INVITE! 
      */
@@ -928,11 +971,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     status = pjsip_inv_initial_answer(inv, rdata, 
 				      100, NULL, NULL, &response);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send answer to incoming INVITE", 
-		     status);
-
-	pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
-	pjsip_inv_terminate(inv, 500, PJ_FALSE);
+	if (response == NULL) {
+	    pjsua_perror(THIS_FILE, "Unable to send answer to incoming INVITE",
+			 status);
+	    pjsip_dlg_respond(dlg, rdata, 500, NULL, NULL, NULL);
+	    pjsip_inv_terminate(inv, 500, PJ_FALSE);
+	} else {
+	    pjsip_inv_send_msg(inv, response);
+	    pjsip_inv_terminate(inv, PJSIP_ERRNO_TO_SIP_STATUS(status), 
+				PJ_FALSE);
+	}
 	pjsua_media_channel_deinit(call->index);
 	PJSUA_UNLOCK();
 	return PJ_TRUE;

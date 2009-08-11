@@ -19,6 +19,7 @@
  */
 #include <pjsip-ua/sip_inv.h>
 #include <pjsip-ua/sip_100rel.h>
+#include <pjsip-ua/sip_timer.h>
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_event.h>
@@ -231,6 +232,7 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	    inv->invite_req = NULL;
 	}
 	pjsip_100rel_end_session(inv);
+	pjsip_timer_end_session(inv);
 	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
     }
 }
@@ -481,6 +483,7 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     pjsip_dialog *dlg;
     pjsip_inv_session *inv;
     pjsip_msg *msg = rdata->msg_info.msg;
+    pj_status_t status;
 
     dlg = pjsip_rdata_get_dlg(rdata);
 
@@ -506,6 +509,23 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	inv_send_ack(inv, &e);
 	return PJ_TRUE;
 
+    }
+
+    /* Pass response to timer session module */
+    status = pjsip_timer_process_resp(inv, rdata);
+    if (status != PJ_SUCCESS) {
+	pjsip_event e;
+	pjsip_tx_data *tdata;
+
+	PJSIP_EVENT_INIT_RX_MSG(e, rdata);
+	inv_send_ack(inv, &e);
+
+	status = pjsip_inv_end_session(inv, PJSIP_ERRNO_TO_SIP_STATUS(status),
+				       NULL, &tdata);
+	if (tdata && status == PJ_SUCCESS)
+	    pjsip_inv_send_msg(inv, tdata);
+
+	return PJ_TRUE;
     }
 
     /* No other processing needs to be done here. */
@@ -634,7 +654,6 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     /* Normalize options */
     if (options & PJSIP_INV_REQUIRE_100REL)
 	options |= PJSIP_INV_SUPPORT_100REL;
-
     if (options & PJSIP_INV_REQUIRE_TIMER)
 	options |= PJSIP_INV_SUPPORT_TIMER;
 
@@ -716,7 +735,6 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     /* Normalize options */
     if (*options & PJSIP_INV_REQUIRE_100REL)
 	*options |= PJSIP_INV_SUPPORT_100REL;
-
     if (*options & PJSIP_INV_REQUIRE_TIMER)
 	*options |= PJSIP_INV_SUPPORT_TIMER;
 
@@ -867,13 +885,13 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 	      pjsip_msg_find_hdr(msg, PJSIP_H_SUPPORTED, NULL);
     if (sup_hdr) {
 	unsigned i;
-	pj_str_t STR_100REL = { "100rel", 6};
-	pj_str_t STR_TIMER = { "timer", 5 };
+	const pj_str_t STR_100REL = { "100rel", 6};
+	const pj_str_t STR_TIMER = { "timer", 5};
 
 	for (i=0; i<sup_hdr->count; ++i) {
 	    if (pj_stricmp(&sup_hdr->values[i], &STR_100REL)==0)
 		rem_option |= PJSIP_INV_SUPPORT_100REL;
-	    else if (pj_stricmp(&sup_hdr->values[i], &STR_TIMER)==0)
+	    if (pj_stricmp(&sup_hdr->values[i], &STR_TIMER)==0)
 		rem_option |= PJSIP_INV_SUPPORT_TIMER;
 	}
     }
@@ -884,8 +902,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     if (req_hdr) {
 	unsigned i;
 	const pj_str_t STR_100REL = { "100rel", 6};
-	const pj_str_t STR_TIMER = { "timer", 5 };
 	const pj_str_t STR_REPLACES = { "replaces", 8 };
+	const pj_str_t STR_TIMER = { "timer", 5 };
 	unsigned unsupp_cnt = 0;
 	pj_str_t unsupp_tags[PJSIP_GENERIC_ARRAY_MAX_COUNT];
 	
@@ -895,8 +913,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 	    {
 		rem_option |= PJSIP_INV_REQUIRE_100REL;
 
-	    } else if ((*options && PJSIP_INV_SUPPORT_TIMER) &&
-		       pj_stricmp(&req_hdr->values[i], &STR_TIMER)==0)
+	    } else if ((*options & PJSIP_INV_SUPPORT_TIMER) && 
+		pj_stricmp(&req_hdr->values[i], &STR_TIMER)==0)
 	    {
 		rem_option |= PJSIP_INV_REQUIRE_TIMER;
 
@@ -956,8 +974,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
      */
     if ( ((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
 	  (rem_option & PJSIP_INV_SUPPORT_100REL)==0) ||
-	 ((*options & PJSIP_INV_REQUIRE_TIMER)!=0 &&
-	  (rem_option & PJSIP_INV_SUPPORT_TIMER)==0))
+	 ((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
+	  (rem_option & PJSIP_INV_SUPPORT_100REL)==0))
     {
 	code = PJSIP_SC_EXTENSION_REQUIRED;
 	status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
@@ -971,7 +989,6 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 
 	    if (*options & PJSIP_INV_REQUIRE_100REL)
 		req_hdr->values[req_hdr->count++] = pj_str("100rel");
-
 	    if (*options & PJSIP_INV_REQUIRE_TIMER)
 		req_hdr->values[req_hdr->count++] = pj_str("timer");
 
@@ -1097,7 +1114,6 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     /* Normalize options */
     if (options & PJSIP_INV_REQUIRE_100REL)
 	options |= PJSIP_INV_SUPPORT_100REL;
-
     if (options & PJSIP_INV_REQUIRE_TIMER)
 	options |= PJSIP_INV_SUPPORT_TIMER;
 
@@ -1169,7 +1185,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Create 100rel handler */
     if (inv->options & PJSIP_INV_REQUIRE_100REL) {
-	    pjsip_100rel_attach(inv);
+	pjsip_100rel_attach(inv);
     }
 
     /* Done */
@@ -1394,15 +1410,24 @@ PJ_DEF(pj_status_t) pjsip_inv_invite( pjsip_inv_session *inv,
     }
 
     /* Add Require header. */
-    if (inv->options & PJSIP_INV_REQUIRE_100REL) {
-	    const pj_str_t HREQ = { "Require", 7 };
-	    const pj_str_t tag_100rel = { "100rel", 6 };
-	    pjsip_generic_string_hdr *hreq;
+    if ((inv->options & PJSIP_INV_REQUIRE_100REL) ||
+	(inv->options & PJSIP_INV_REQUIRE_TIMER)) 
+    {
+	pjsip_require_hdr *hreq;
 
-	    hreq = pjsip_generic_string_hdr_create(tdata->pool, &HREQ, 
-						   &tag_100rel);
-	    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) hreq);
+	hreq = pjsip_require_hdr_create(tdata->pool);
+
+	if (inv->options & PJSIP_INV_REQUIRE_100REL)
+	    hreq->values[hreq->count++] = pj_str("100rel");
+	if (inv->options & PJSIP_INV_REQUIRE_TIMER)
+	    hreq->values[hreq->count++] = pj_str("timer");
+
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*) hreq);
     }
+
+    status = pjsip_timer_update_req(inv, tdata);
+    if (status != PJ_SUCCESS)
+	goto on_return;
 
     /* Done. */
     *p_tdata = tdata;
@@ -1745,6 +1770,27 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    /* Invoke Session Timers module */
+    status = pjsip_timer_process_req(inv, rdata);
+    if (status != PJ_SUCCESS) {
+	pj_status_t status2;
+
+	status2 = pjsip_dlg_modify_response(inv->dlg, tdata, 
+					    PJSIP_ERRNO_TO_SIP_STATUS(status),
+					    NULL);
+	if (status2 != PJ_SUCCESS) {
+	    pjsip_tx_data_dec_ref(tdata);
+	    goto on_return;
+	}
+	status2 = pjsip_timer_update_resp(inv, tdata);
+	if (status2 == PJ_SUCCESS)
+	    *p_tdata = tdata;
+	else
+	    pjsip_tx_data_dec_ref(tdata);
+
+	goto on_return;
+    }
+
     /* Process SDP in answer */
     status = process_answer(inv, st_code, tdata, sdp);
     if (status != PJ_SUCCESS) {
@@ -1757,6 +1803,9 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
     pjsip_tx_data_add_ref(inv->last_answer);
     PJ_LOG(5,(inv->dlg->obj_name, "Initial answer %s",
 	      pjsip_tx_data_get_info(inv->last_answer)));
+
+    /* Invoke Session Timers */
+    pjsip_timer_update_resp(inv, tdata);
 
     *p_tdata = tdata;
 
@@ -1808,6 +1857,8 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 	goto on_return;
     }
 
+    /* Invoke Session Timers */
+    pjsip_timer_update_resp(inv, last_res);
 
     *p_tdata = last_res;
 
@@ -1912,6 +1963,9 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
     case PJSIP_INV_STATE_CONNECTING:
     case PJSIP_INV_STATE_CONFIRMED:
+	/* End Session Timer */
+	pjsip_timer_end_session(inv);
+
 	/* For established dialog, send BYE */
 	status = pjsip_dlg_create_request(inv->dlg, pjsip_get_bye_method(), 
 					  -1, &tdata);
@@ -2300,6 +2354,10 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     /* Unlock dialog. */
     pjsip_dlg_dec_lock(inv->dlg);
 
+    status = pjsip_timer_update_req(inv, tdata);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
     *p_tdata = tdata;
 
     return PJ_SUCCESS;
@@ -2581,6 +2639,15 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
     pj_status_t status;
     pjsip_tx_data *tdata = NULL;
 
+    /* Invoke Session Timers module */
+    status = pjsip_timer_process_req(inv, rdata);
+    if (status != PJ_SUCCESS) {
+	status = pjsip_dlg_create_response(inv->dlg, rdata, 
+					   PJSIP_ERRNO_TO_SIP_STATUS(status),
+					   NULL, &tdata);
+	goto on_return;
+    }
+
     neg_state = pjmedia_sdp_neg_get_state(inv->neg);
 
     /* Send 491 if we receive UPDATE while we're waiting for an answer */
@@ -2633,6 +2700,11 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 	    }
 	}
     }
+
+on_return:
+    /* Invoke Session Timers */
+    if (status == PJ_SUCCESS)
+	status = pjsip_timer_update_resp(inv, tdata);
 
     if (status != PJ_SUCCESS) {
 	if (tdata != NULL) {
@@ -3609,6 +3681,20 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    /* Save the invite transaction. */
 	    inv->invite_tsx = tsx;
 
+	    /* Process session timers headers in the re-INVITE */
+	    status = pjsip_timer_process_req(inv, rdata);
+	    if (status != PJ_SUCCESS) {
+		status = pjsip_dlg_create_response(inv->dlg, rdata, 
+					   PJSIP_ERRNO_TO_SIP_STATUS(status), 
+					   NULL, &tdata);
+		if (status != PJ_SUCCESS)
+		    return;
+
+		pjsip_timer_update_resp(inv, tdata);
+		status = pjsip_dlg_send_response(dlg, tsx, tdata);
+		return;
+	    }
+
 	    /* Process SDP in incoming message. */
 	    status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
 
@@ -3715,6 +3801,9 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 		}
 		return;
 	    }
+
+	    /* Invoke Session Timers */
+	    pjsip_timer_update_resp(inv, tdata);
 
 	    /* Send 2xx regardless of the status of negotiation */
 	    status = pjsip_inv_send_msg(inv, tdata);

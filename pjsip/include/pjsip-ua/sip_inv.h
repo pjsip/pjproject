@@ -305,8 +305,16 @@ enum pjsip_inv_option
      */
     PJSIP_INV_REQUIRE_TIMER	= 64,
 
+    /**  
+     * Session timer extension will always be used even when peer doesn't
+     * support/want session timer.
+     */
+    PJSIP_INV_ALWAYS_USE_TIMER	= 128,
+
 };
 
+/* Forward declaration of Session Timers */
+struct pjsip_timer;
 
 /**
  * This structure describes the invite session.
@@ -331,6 +339,7 @@ struct pjsip_inv_session
     pjsip_tx_data	*last_ack;		    /**< Last ACK request   */
     pj_int32_t		 last_ack_cseq;		    /**< CSeq of last ACK   */
     void		*mod_data[PJSIP_MAX_MODULE];/**< Modules data.	    */
+    struct pjsip_timer	*timer;			    /**< Session Timers.    */
 };
 
 

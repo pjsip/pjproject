@@ -926,6 +926,33 @@ typedef struct pjsua_config
      */
     pj_bool_t	    require_100rel;
 
+    /**
+     * Specify whether support for Session Timers should be required by 
+     * default. Note that this setting can be further customized in account
+     * configuration (#pjsua_acc_config).
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t	    require_timer;
+
+    /**
+     * Specify session expiration period of Session Timers, in seconds. 
+     * Note that this setting can be further customized in account 
+     * configuration (#pjsua_acc_config).
+     *
+     * Default: 1800 (seconds)
+     */
+    unsigned	    timer_se;
+
+    /**
+     * Specify minimum session expiration period of Session Timers, 
+     * in seconds. Note that this setting can be further customized in 
+     * account configuration (#pjsua_acc_config).
+     *
+     * Default: 90 (seconds)
+     */
+    unsigned	    timer_min_se;
+
     /** 
      * Number of credentials in the credential array.
      */
@@ -1696,6 +1723,30 @@ typedef struct pjsua_acc_config
      * Default: PJ_FALSE
      */
     pj_bool_t	    require_100rel;
+
+    /**
+     * Specify whether support for Session Timers should be required for all 
+     * sessions of this account.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t	    require_timer;
+
+    /**
+     * Specify session expiration period of Session Timers, in seconds,
+     * for this account. 
+     *
+     * Default: 1800 (seconds)
+     */
+    unsigned	    timer_se;
+
+    /**
+     * Specify minimum session expiration period of Session Timers, 
+     * in seconds, for this account.
+     *
+     * Default: 90 (seconds)
+     */
+    unsigned	    timer_min_se;
 
     /**
      * Number of proxies in the proxy array below.

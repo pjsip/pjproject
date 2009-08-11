@@ -657,7 +657,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #define PJSIP_POOL_INC_DIALOG		512
 
 /* Maximum header types. */
-#define PJSIP_MAX_HEADER_TYPES		64
+#define PJSIP_MAX_HEADER_TYPES		72
 
 /* Maximum URI types. */
 #define PJSIP_MAX_URI_TYPES		4

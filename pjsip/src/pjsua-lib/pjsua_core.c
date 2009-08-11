@@ -87,6 +87,8 @@ PJ_DEF(void) pjsua_logging_config_dup(pj_pool_t *pool,
 
 PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 {
+    pjsip_timer_setting timer_setting;
+
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->max_calls = ((PJSUA_MAX_CALLS) < 4) ? (PJSUA_MAX_CALLS) : 4;
@@ -98,6 +100,10 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->srtp_secure_signaling = PJSUA_DEFAULT_SRTP_SECURE_SIGNALING;
 #endif
     cfg->hangup_forked_call = PJ_TRUE;
+
+    pjsip_timer_default_setting(&timer_setting);
+    cfg->timer_se = timer_setting.sess_expires;
+    cfg->timer_min_se = timer_setting.min_se;
 }
 
 PJ_DEF(void) pjsua_config_dup(pj_pool_t *pool,
@@ -150,6 +156,9 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->transport_id = PJSUA_INVALID_ID;
     cfg->allow_contact_rewrite = PJ_TRUE;
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
+    cfg->require_timer = pjsua_var.ua_cfg.require_timer;
+    cfg->timer_se = pjsua_var.ua_cfg.timer_se;
+    cfg->timer_min_se = pjsua_var.ua_cfg.timer_min_se;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -719,6 +728,10 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
     /* Initialize 100rel support */
     status = pjsip_100rel_init_module(pjsua_var.endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+
+    /* Initialize session timer support */
+    status = pjsip_timer_init_module(pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     /* Initialize and register PJSUA application module. */

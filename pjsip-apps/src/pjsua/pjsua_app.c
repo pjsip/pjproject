@@ -190,6 +190,9 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
+    puts  ("  --use-timer         Require session timers");
+    puts  ("  --timer-se          Session timers expiration period, in secs (def:1800)");
+    puts  ("  --timer-min-se      Session timers minimum expiration period, in secs (def:90)");
     puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
     puts  ("                      symmetric NAT (default 1)");
     puts  ("  --next-cred         Add another credentials");
@@ -498,7 +501,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_STDOUT_NO_BUF,
 #endif
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
-	   OPT_NO_FORCE_LR
+	   OPT_NO_FORCE_LR,
+	   OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -609,6 +613,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
 	{ "ipv6",	 0, 0, OPT_IPV6},
 #endif
+	{ "use-timer",  0, 0, OPT_TIMER},
+	{ "timer-se",   1, 0, OPT_TIMER_SE},
+	{ "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -823,6 +830,33 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_100REL: /** 100rel */
 	    cur_acc->require_100rel = PJ_TRUE;
 	    cfg->cfg.require_100rel = PJ_TRUE;
+	    break;
+
+	case OPT_TIMER: /** session timer */
+	    cur_acc->require_timer = PJ_TRUE;
+	    cfg->cfg.require_timer = PJ_TRUE;
+	    break;
+
+	case OPT_TIMER_SE: /** session timer session expiration */
+	    cur_acc->timer_se = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (cur_acc->timer_se < 90) {
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid value for --timer-se "
+			  "(expecting higher than 90)"));
+		return PJ_EINVAL;
+	    }
+	    cfg->cfg.timer_se = cur_acc->timer_se;
+	    break;
+
+	case OPT_TIMER_MIN_SE: /** session timer minimum session expiration */
+	    cur_acc->timer_min_se = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (cur_acc->timer_min_se < 90) {
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: invalid value for --timer-min-se "
+			  "(expecting higher than 90)"));
+		return PJ_EINVAL;
+	    }
+	    cfg->cfg.timer_min_se = cur_acc->timer_min_se;
 	    break;
 
 	case OPT_USE_IMS: /* Activate IMS settings */
