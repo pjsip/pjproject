@@ -66,13 +66,12 @@ typedef struct pjsip_timer
 
 /* External global vars */
 extern pj_bool_t pjsip_use_compact_form;
-extern const pjsip_method pjsip_update_method;
 
 /* Local functions & vars */
 static void stop_timer(pjsip_inv_session *inv);
 static void start_timer(pjsip_inv_session *inv);
 static pj_bool_t is_initialized;
-
+const pjsip_method pjsip_update_method = { PJSIP_OTHER_METHOD, {"UPDATE", 6}};
 /*
  * Session-Expires header vptr.
  */

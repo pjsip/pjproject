@@ -54,7 +54,7 @@ export PJSIP_CFLAGS += $(_CFLAGS)
 export PJSIP_UA_SRCDIR = ../src/pjsip-ua
 export PJSIP_UA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			sip_inv.o sip_reg.o sip_replaces.o sip_xfer.o \
-			sip_100rel.o
+			sip_100rel.o sip_timer.o
 export PJSIP_UA_CFLAGS += $(_CFLAGS)
 
 

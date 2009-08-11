@@ -71,7 +71,7 @@ static const char *inv_state_names[] =
 };
 
 /* UPDATE method */
-const pjsip_method pjsip_update_method =
+static const pjsip_method pjsip_update_method =
 {
     PJSIP_OTHER_METHOD,
     { "UPDATE", 6 }

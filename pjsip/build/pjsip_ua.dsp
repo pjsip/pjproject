@@ -105,6 +105,10 @@ SOURCE="..\src\pjsip-ua\sip_replaces.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjsip-ua\sip_timer.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjsip-ua\sip_xfer.c"
 # End Source File
 # End Group
@@ -130,6 +134,10 @@ SOURCE="..\include\pjsip-ua\sip_regc.h"
 # Begin Source File
 
 SOURCE="..\include\pjsip-ua\sip_replaces.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsip-ua\sip_timer.h"
 # End Source File
 # Begin Source File
 
