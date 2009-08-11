@@ -546,7 +546,7 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
      * twice!
      */
     pj_assert(pj_hash_get( mod_tsx_layer.htable, 
-			   &tsx->transaction_key.ptr,
+			   tsx->transaction_key.ptr,
 			   tsx->transaction_key.slen, 
 			   NULL) == NULL);
 
