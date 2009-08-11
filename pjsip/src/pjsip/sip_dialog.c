@@ -214,7 +214,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     /* Init local contact. */
     pj_strdup_with_null(dlg->pool, &tmp, 
 			local_contact ? local_contact : local_uri);
-    dlg->local.contact = pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr, 
+    dlg->local.contact = (pjsip_contact_hdr*)
+			 pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr, 
 					 tmp.slen, NULL);
     if (!dlg->local.contact) {
 	status = PJSIP_EINVALIDURI;
@@ -392,7 +393,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 	pj_str_t tmp;
 
 	pj_strdup_with_null(dlg->pool, &tmp, contact);
-	dlg->local.contact = pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr, 
+	dlg->local.contact = (pjsip_contact_hdr*)
+			     pjsip_parse_hdr(dlg->pool, &HCONTACT, tmp.ptr, 
 					     tmp.slen, NULL);
 	if (!dlg->local.contact) {
 	    status = PJSIP_EINVALIDURI;
