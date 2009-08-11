@@ -883,6 +883,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/**
+ * Default session interval for Session Timer (RFC 4028) extension, in
+ * seconds. As specified in RFC 4028 Section 4, this value must not be 
+ * less than the absolute minimum for the Session-Expires header field
+ * 90 seconds, and the recommended value is 1800 seconds.
+ *
+ * Default: 1800 seconds
+ */
+#ifndef PJSIP_SESS_TIMER_DEF_SE
+#   define PJSIP_SESS_TIMER_DEF_SE		1800
+#endif
+
+
 PJ_END_DECL
 
 /**

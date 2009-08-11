@@ -936,22 +936,11 @@ typedef struct pjsua_config
     pj_bool_t	    require_timer;
 
     /**
-     * Specify session expiration period of Session Timers, in seconds. 
+     * Specify Session Timer settings, see #pjsip_timer_setting. 
      * Note that this setting can be further customized in account 
      * configuration (#pjsua_acc_config).
-     *
-     * Default: 1800 (seconds)
      */
-    unsigned	    timer_se;
-
-    /**
-     * Specify minimum session expiration period of Session Timers, 
-     * in seconds. Note that this setting can be further customized in 
-     * account configuration (#pjsua_acc_config).
-     *
-     * Default: 90 (seconds)
-     */
-    unsigned	    timer_min_se;
+    pjsip_timer_setting timer_setting;
 
     /** 
      * Number of credentials in the credential array.
@@ -1733,20 +1722,9 @@ typedef struct pjsua_acc_config
     pj_bool_t	    require_timer;
 
     /**
-     * Specify session expiration period of Session Timers, in seconds,
-     * for this account. 
-     *
-     * Default: 1800 (seconds)
+     * Specify Session Timer settings, see #pjsip_timer_setting. 
      */
-    unsigned	    timer_se;
-
-    /**
-     * Specify minimum session expiration period of Session Timers, 
-     * in seconds, for this account.
-     *
-     * Default: 90 (seconds)
-     */
-    unsigned	    timer_min_se;
+    pjsip_timer_setting timer_setting;
 
     /**
      * Number of proxies in the proxy array below.

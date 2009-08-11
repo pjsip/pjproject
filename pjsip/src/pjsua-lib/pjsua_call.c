@@ -492,18 +492,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Init Session Timers */
-    {
-	pjsip_timer_setting timer_setting;
-
-	pjsip_timer_default_setting(&timer_setting);
-	timer_setting.sess_expires = acc->cfg.timer_se;
-	timer_setting.min_se = acc->cfg.timer_min_se;
-
-	status = pjsip_timer_init_session(inv, &timer_setting);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Session Timer init failed", status);
-	    goto on_error;
-	}
+    status = pjsip_timer_init_session(inv, &acc->cfg.timer_setting);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Session Timer init failed", status);
+	goto on_error;
     }
 
     /* Create and associate our data in the session. */
@@ -916,26 +908,19 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     /* Init Session Timers */
-    {
-	pjsip_timer_setting timer_setting;
+    status = pjsip_timer_init_session(inv, 
+				    &pjsua_var.acc[acc_id].cfg.timer_setting);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Session Timer init failed", status);
+	status = pjsip_inv_end_session(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
+				       NULL, &response);
+	if (status == PJ_SUCCESS && response)
+	    status = pjsip_inv_send_msg(inv, response);
 
-	pjsip_timer_default_setting(&timer_setting);
-	timer_setting.sess_expires = pjsua_var.acc[acc_id].cfg.timer_se;
-	timer_setting.min_se = pjsua_var.acc[acc_id].cfg.timer_min_se;
+	pjsua_media_channel_deinit(call->index);
 
-	status = pjsip_timer_init_session(inv, &timer_setting);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Session Timer init failed", status);
-	    status = pjsip_inv_end_session(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
-					   NULL, &response);
-	    if (status == PJ_SUCCESS && response)
-		status = pjsip_inv_send_msg(inv, response);
-
-	    pjsua_media_channel_deinit(call->index);
-
-	    PJSUA_UNLOCK();
-	    return PJ_TRUE;
-	}
+	PJSUA_UNLOCK();
+	return PJ_TRUE;
     }
 
     /* Update NAT type of remote endpoint, only when there is SDP in
@@ -978,7 +963,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_inv_terminate(inv, 500, PJ_FALSE);
 	} else {
 	    pjsip_inv_send_msg(inv, response);
-	    pjsip_inv_terminate(inv, PJSIP_ERRNO_TO_SIP_STATUS(status), 
+	    pjsip_inv_terminate(inv, response->msg->line.status.code, 
 				PJ_FALSE);
 	}
 	pjsua_media_channel_deinit(call->index);

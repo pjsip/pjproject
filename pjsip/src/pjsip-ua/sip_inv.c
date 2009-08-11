@@ -484,6 +484,7 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     pjsip_inv_session *inv;
     pjsip_msg *msg = rdata->msg_info.msg;
     pj_status_t status;
+    pjsip_status_code st_code;
 
     dlg = pjsip_rdata_get_dlg(rdata);
 
@@ -512,7 +513,7 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     }
 
     /* Pass response to timer session module */
-    status = pjsip_timer_process_resp(inv, rdata);
+    status = pjsip_timer_process_resp(inv, rdata, &st_code);
     if (status != PJ_SUCCESS) {
 	pjsip_event e;
 	pjsip_tx_data *tdata;
@@ -520,8 +521,7 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	PJSIP_EVENT_INIT_RX_MSG(e, rdata);
 	inv_send_ack(inv, &e);
 
-	status = pjsip_inv_end_session(inv, PJSIP_ERRNO_TO_SIP_STATUS(status),
-				       NULL, &tdata);
+	status = pjsip_inv_end_session(inv, st_code, NULL, &tdata);
 	if (tdata && status == PJ_SUCCESS)
 	    pjsip_inv_send_msg(inv, tdata);
 
@@ -974,8 +974,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
      */
     if ( ((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
 	  (rem_option & PJSIP_INV_SUPPORT_100REL)==0) ||
-	 ((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
-	  (rem_option & PJSIP_INV_SUPPORT_100REL)==0))
+	 ((*options & PJSIP_INV_REQUIRE_TIMER)!=0 && 
+	  (rem_option & PJSIP_INV_SUPPORT_TIMER)==0))
     {
 	code = PJSIP_SC_EXTENSION_REQUIRED;
 	status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
@@ -1755,6 +1755,7 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 {
     pjsip_tx_data *tdata;
     pj_status_t status;
+    pjsip_status_code st_code2;
 
     /* Verify arguments. */
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
@@ -1771,13 +1772,11 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 	goto on_return;
 
     /* Invoke Session Timers module */
-    status = pjsip_timer_process_req(inv, rdata);
+    status = pjsip_timer_process_req(inv, rdata, &st_code2);
     if (status != PJ_SUCCESS) {
 	pj_status_t status2;
 
-	status2 = pjsip_dlg_modify_response(inv->dlg, tdata, 
-					    PJSIP_ERRNO_TO_SIP_STATUS(status),
-					    NULL);
+	status2 = pjsip_dlg_modify_response(inv->dlg, tdata, st_code2, NULL);
 	if (status2 != PJ_SUCCESS) {
 	    pjsip_tx_data_dec_ref(tdata);
 	    goto on_return;
@@ -2638,12 +2637,12 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
     pjmedia_sdp_neg_state neg_state;
     pj_status_t status;
     pjsip_tx_data *tdata = NULL;
+    pjsip_status_code st_code;
 
     /* Invoke Session Timers module */
-    status = pjsip_timer_process_req(inv, rdata);
+    status = pjsip_timer_process_req(inv, rdata, &st_code);
     if (status != PJ_SUCCESS) {
-	status = pjsip_dlg_create_response(inv->dlg, rdata, 
-					   PJSIP_ERRNO_TO_SIP_STATUS(status),
+	status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
 					   NULL, &tdata);
 	goto on_return;
     }
@@ -3659,6 +3658,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
+	    pjsip_status_code st_code;
 
 	    /* Check if we have INVITE pending. */
 	    if (inv->invite_tsx && inv->invite_tsx!=tsx) {
@@ -3682,11 +3682,10 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    inv->invite_tsx = tsx;
 
 	    /* Process session timers headers in the re-INVITE */
-	    status = pjsip_timer_process_req(inv, rdata);
+	    status = pjsip_timer_process_req(inv, rdata, &st_code);
 	    if (status != PJ_SUCCESS) {
-		status = pjsip_dlg_create_response(inv->dlg, rdata, 
-					   PJSIP_ERRNO_TO_SIP_STATUS(status), 
-					   NULL, &tdata);
+		status = pjsip_dlg_create_response(inv->dlg, rdata, st_code,
+						   NULL, &tdata);
 		if (status != PJ_SUCCESS)
 		    return;
 

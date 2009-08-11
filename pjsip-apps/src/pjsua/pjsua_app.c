@@ -838,25 +838,25 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_TIMER_SE: /** session timer session expiration */
-	    cur_acc->timer_se = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (cur_acc->timer_se < 90) {
+	    cur_acc->timer_setting.sess_expires = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (cur_acc->timer_setting.min_se < 90) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: invalid value for --timer-se "
 			  "(expecting higher than 90)"));
 		return PJ_EINVAL;
 	    }
-	    cfg->cfg.timer_se = cur_acc->timer_se;
+	    cfg->cfg.timer_setting.sess_expires = cur_acc->timer_setting.sess_expires;
 	    break;
 
 	case OPT_TIMER_MIN_SE: /** session timer minimum session expiration */
-	    cur_acc->timer_min_se = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (cur_acc->timer_min_se < 90) {
+	    cur_acc->timer_setting.min_se = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (cur_acc->timer_setting.min_se < 90) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: invalid value for --timer-min-se "
 			  "(expecting higher than 90)"));
 		return PJ_EINVAL;
 	    }
-	    cfg->cfg.timer_min_se = cur_acc->timer_min_se;
+	    cfg->cfg.timer_setting.min_se = cur_acc->timer_setting.min_se;
 	    break;
 
 	case OPT_USE_IMS: /* Activate IMS settings */

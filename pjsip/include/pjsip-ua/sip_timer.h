@@ -125,7 +125,7 @@ PJ_DECL(pj_status_t) pjsip_timer_init_module(pjsip_endpoint *endpt);
  *
  * @return		PJ_SUCCESS on successful.
  */
-PJ_DECL(pj_status_t) pjsip_timer_default_setting(pjsip_timer_setting *setting);
+PJ_DECL(pj_status_t) pjsip_timer_setting_default(pjsip_timer_setting *setting);
 
 
 /**
@@ -191,11 +191,14 @@ PJ_DECL(pj_status_t) pjsip_timer_update_req(pjsip_inv_session *inv,
  *
  * @param inv		The invite session.
  * @param rdata		Incoming response data.
+ * @param st_code	Output buffer to store corresponding SIP status code 
+ *			when function returning non-PJ_SUCCESS.
  *
  * @return		PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
-					      const pjsip_rx_data *rdata);
+					      const pjsip_rx_data *rdata,
+					      pjsip_status_code *st_code);
 
 
 /**
@@ -207,11 +210,14 @@ PJ_DECL(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
  *
  * @param inv		The invite session.
  * @param rdata		Incoming INVITE or UPDATE request.
+ * @param st_code	Output buffer to store corresponding SIP status code 
+ *			when function returning non-PJ_SUCCESS.
  *
  * @return		PJ_SUCCESS on successful.
  */
 PJ_DECL(pj_status_t) pjsip_timer_process_req(pjsip_inv_session *inv,
-					     const pjsip_rx_data *rdata);
+					     const pjsip_rx_data *rdata,
+					     pjsip_status_code *st_code);
 
 
 /**

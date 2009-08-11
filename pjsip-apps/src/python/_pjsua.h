@@ -1734,8 +1734,8 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     obj->contact_uri_params = PyString_FromPJ(&cfg->contact_uri_params);
     obj->require_100rel = cfg->require_100rel;
     obj->require_timer = cfg->require_timer;
-    obj->timer_se = cfg->timer_se;
-    obj->timer_min_se = cfg->timer_min_se;
+    obj->timer_se = cfg->timer_setting.sess_expires;
+    obj->timer_min_se = cfg->timer_setting.min_se;
     obj->allow_contact_rewrite = cfg->allow_contact_rewrite;
     obj->ka_interval = cfg->ka_interval;
     Py_XDECREF(obj->ka_data);
@@ -1783,8 +1783,8 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     cfg->contact_uri_params = PyString_ToPJ(obj->contact_uri_params);
     cfg->require_100rel = obj->require_100rel;
     cfg->require_timer = obj->require_timer;
-    cfg->timer_se = obj->timer_se;
-    cfg->timer_min_se = obj->timer_min_se;
+    cfg->timer_setting.sess_expires = obj->timer_se;
+    cfg->timer_setting.min_se = obj->timer_min_se;
     cfg->allow_contact_rewrite = obj->allow_contact_rewrite;
     cfg->ka_interval = obj->ka_interval;
     cfg->ka_data = PyString_ToPJ(obj->ka_data);

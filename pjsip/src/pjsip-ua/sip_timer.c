@@ -27,9 +27,8 @@
 #define THIS_FILE		"sip_timer.c"
 
 
-/* Constant values of Session Timers */
+/* Constant of Session Timers */
 #define ABS_MIN_SE		90	/* Absolute Min-SE, in seconds	    */
-#define DEF_SE			1800	/* Default SE, in seconds	    */
 
 
 /* String definitions */
@@ -60,6 +59,8 @@ typedef struct pjsip_timer
     pj_timer_entry		 timer;		/**< Timer entry	    */
     pj_bool_t			 use_update;	/**< Use UPDATE method to
 						     refresh the session    */
+    pjsip_role_e		 role;		/**< Role in last INVITE/
+						     UPDATE transaction.    */
 
 } pjsip_timer;
 
@@ -120,6 +121,10 @@ static int se_hdr_print(pjsip_sess_expires_hdr *hdr,
     const pjsip_parser_const_t *pc = pjsip_parser_const();
     const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
+    /* Print header name and value */
+    if ((endbuf - p) < (hname->slen + 16))
+	return -1;
+
     copy_advance(p, (*hname));
     *p++ = ':';
     *p++ = ' ';
@@ -127,14 +132,19 @@ static int se_hdr_print(pjsip_sess_expires_hdr *hdr,
     printed = pj_utoa(hdr->sess_expires, p);
     p += printed;
 
-    if (hdr->refresher.slen && (endbuf-p) > (hdr->refresher.slen + 2))
+    /* Print 'refresher' param */
+    if (hdr->refresher.slen)
     {
+	if  ((endbuf - p) < (STR_REFRESHER.slen + 2 + hdr->refresher.slen))
+	    return -1;
+
 	*p++ = ';';
 	copy_advance(p, STR_REFRESHER);
 	*p++ = '=';
 	copy_advance(p, hdr->refresher);
     }
 
+    /* Print generic params */
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
 				   &pc->pjsip_TOKEN_SPEC, 
 				   &pc->pjsip_TOKEN_SPEC, ';');
@@ -176,6 +186,10 @@ static int min_se_hdr_print(pjsip_min_se_hdr *hdr,
     int printed;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
+    /* Print header name and value */
+    if ((endbuf - p) < (hdr->name.slen + 16))
+	return -1;
+
     copy_advance(p, hdr->name);
     *p++ = ':';
     *p++ = ' ';
@@ -183,6 +197,7 @@ static int min_se_hdr_print(pjsip_min_se_hdr *hdr,
     printed = pj_utoa(hdr->min_se, p);
     p += printed;
 
+    /* Print generic params */
     printed = pjsip_param_print_on(&hdr->other_param, p, endbuf-p,
 				   &pc->pjsip_TOKEN_SPEC, 
 				   &pc->pjsip_TOKEN_SPEC, ';');
@@ -323,8 +338,8 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     /* Check our role */
     as_refresher = 
-	(inv->timer->refresher == TR_UAC && inv->role == PJSIP_ROLE_UAC) ||
-	(inv->timer->refresher == TR_UAS && inv->role == PJSIP_ROLE_UAS);
+	(inv->timer->refresher == TR_UAC && inv->timer->role == PJSIP_ROLE_UAC) ||
+	(inv->timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS);
 
     /* Do action based on role, refresher or refreshee */
     if (as_refresher) {
@@ -417,8 +432,8 @@ static void start_timer(pjsip_inv_session *inv)
 			timer_cb);	    /* callback */
     
     /* Set delay based on role, refresher or refreshee */
-    if ((timer->refresher == TR_UAC && inv->role == PJSIP_ROLE_UAC) ||
-	(timer->refresher == TR_UAS && inv->role == PJSIP_ROLE_UAS))
+    if ((timer->refresher == TR_UAC && inv->timer->role == PJSIP_ROLE_UAC) ||
+	(timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS))
     {
 	/* Next refresh, the delay is half of session expire */
 	delay.sec = timer->setting.sess_expires / 2;
@@ -487,11 +502,11 @@ PJ_DEF(pj_status_t) pjsip_timer_init_module(pjsip_endpoint *endpt)
 /*
  * Initialize Session Timers setting with default values.
  */
-PJ_DEF(pj_status_t) pjsip_timer_default_setting(pjsip_timer_setting *setting)
+PJ_DEF(pj_status_t) pjsip_timer_setting_default(pjsip_timer_setting *setting)
 {
     pj_bzero(setting, sizeof(pjsip_timer_setting));
 
-    setting->sess_expires = DEF_SE;
+    setting->sess_expires = PJSIP_SESS_TIMER_DEF_SE;
     setting->min_se = ABS_MIN_SE;
 
     return PJ_SUCCESS;
@@ -526,7 +541,7 @@ PJ_DEF(pj_status_t) pjsip_timer_init_session(
 
 	pj_memcpy(s, setting, sizeof(*s));
     } else {
-	pjsip_timer_default_setting(s);
+	pjsip_timer_setting_default(s);
     }
 
     return PJ_SUCCESS;
@@ -604,11 +619,13 @@ PJ_DEF(pj_status_t) pjsip_timer_update_req(pjsip_inv_session *inv,
  * - 2xx final response
  */
 PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
-					     const pjsip_rx_data *rdata)
+					     const pjsip_rx_data *rdata,
+					     pjsip_status_code *st_code)
 {
     const pjsip_msg *msg;
 
-    PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
+    PJ_ASSERT_ON_FAIL(inv && rdata,
+	{if(st_code)*st_code=PJSIP_SC_INTERNAL_SERVER_ERROR;return PJ_EINVAL;});
 
     /* Check if Session Timers is supported */
     if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0)
@@ -704,6 +721,8 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	     * require or force to use Session Timers.
 	     */
 	    if (inv->options & PJSIP_INV_REQUIRE_TIMER) {
+		if (st_code)
+		    *st_code = PJSIP_SC_EXTENSION_REQUIRED;
 		pjsip_timer_end_session(inv);
 		return PJSIP_ERRNO_FROM_SIP_STATUS(
 					    PJSIP_SC_EXTENSION_REQUIRED);
@@ -726,6 +745,8 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	if (se_hdr && 
 	    se_hdr->sess_expires < inv->timer->setting.min_se)
 	{
+	    if (st_code)
+		*st_code = PJSIP_SC_SESSION_TIMER_TOO_SMALL;
 	    pjsip_timer_end_session(inv);
 	    return PJSIP_ERRNO_FROM_SIP_STATUS(
 					    PJSIP_SC_SESSION_TIMER_TOO_SMALL);
@@ -757,6 +778,9 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 
 	PJ_TODO(CHECK_IF_REMOTE_SUPPORT_UPDATE);
 
+	/* Remember our role in this transaction */
+	inv->timer->role = PJSIP_ROLE_UAC;
+
 	/* Finally, set active flag and start the Session Timers */
 	inv->timer->active = PJ_TRUE;
 	start_timer(inv);
@@ -769,14 +793,16 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
  * Handle incoming INVITE or UPDATE request.
  */
 PJ_DEF(pj_status_t) pjsip_timer_process_req(pjsip_inv_session *inv,
-					    const pjsip_rx_data *rdata)
+					    const pjsip_rx_data *rdata,
+					    pjsip_status_code *st_code)
 {
     pjsip_min_se_hdr *min_se_hdr;
     pjsip_sess_expires_hdr *se_hdr;
     const pjsip_msg *msg;
     unsigned min_se;
 
-    PJ_ASSERT_RETURN(inv && rdata, PJ_EINVAL);
+    PJ_ASSERT_ON_FAIL(inv && rdata,
+	{if(st_code)*st_code=PJSIP_SC_INTERNAL_SERVER_ERROR;return PJ_EINVAL;});
 
     /* Check if Session Timers is supported */
     if ((inv->options & PJSIP_INV_SUPPORT_TIMER) == 0)
@@ -827,8 +853,11 @@ PJ_DEF(pj_status_t) pjsip_timer_process_req(pjsip_inv_session *inv,
     /* Validate SE. Session-Expires cannot be lower than Min-SE 
      * (or 90 seconds if Min-SE is not set).
      */
-    if (se_hdr && se_hdr->sess_expires < min_se)
+    if (se_hdr && se_hdr->sess_expires < min_se) {
+	if (st_code)
+	    *st_code = PJSIP_SC_SESSION_TIMER_TOO_SMALL;
 	return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_SESSION_TIMER_TOO_SMALL);
+    }
 
     /* Update SE. Note that there is a case that SE is not available in the
      * request (which means remote doesn't want/support it), but local insists
@@ -881,8 +910,11 @@ PJ_DEF(pj_status_t) pjsip_timer_update_resp(pjsip_inv_session *inv,
 
     if (msg->line.status.code/100 == 2)
     {
-	/* Add Session-Expires header and start the timer */
 	if (inv->timer && inv->timer->active) {
+	    /* Remember our role in this transaction */
+	    inv->timer->role = PJSIP_ROLE_UAS;
+
+	    /* Add Session-Expires header and start the timer */
 	    add_timer_headers(inv, tdata, PJ_TRUE, PJ_FALSE);
 	    start_timer(inv);
 	}
