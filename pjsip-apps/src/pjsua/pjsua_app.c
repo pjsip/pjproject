@@ -191,8 +191,8 @@ static void usage(void)
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
     puts  ("  --use-timer         Require SIP session timers");
-    puts  ("  --timer-se          Session timers expiration period, in secs (def:1800)");
-    puts  ("  --timer-min-se      Session timers minimum expiration period, in secs (def:90)");
+    puts  ("  --timer-se=N        Session timers expiration period, in secs (def:1800)");
+    puts  ("  --timer-min-se=N    Session timers minimum expiration period, in secs (def:90)");
     puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
     puts  ("                      symmetric NAT (default 1)");
     puts  ("  --next-cred         Add another credentials");
@@ -839,7 +839,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_TIMER_SE: /** session timer session expiration */
 	    cur_acc->timer_setting.sess_expires = pj_strtoul(pj_cstr(&tmp, pj_optarg));
-	    if (cur_acc->timer_setting.min_se < 90) {
+	    if (cur_acc->timer_setting.sess_expires < 90) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: invalid value for --timer-se "
 			  "(expecting higher than 90)"));
