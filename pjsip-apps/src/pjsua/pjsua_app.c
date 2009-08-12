@@ -190,7 +190,7 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
-    puts  ("  --use-timer         Require session timers");
+    puts  ("  --use-timer         Require SIP session timers");
     puts  ("  --timer-se          Session timers expiration period, in secs (def:1800)");
     puts  ("  --timer-min-se      Session timers minimum expiration period, in secs (def:90)");
     puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
@@ -216,7 +216,8 @@ static void usage(void)
     puts  ("                      This option can be specified multiple times.");
     puts  ("  --outbound=url      Set the URL of global outbound proxy server");
     puts  ("                      May be specified multiple times");
-    puts  ("  --stun-srv=name     Set STUN server host or domain");
+    puts  ("  --stun-srv=FORMAT   Set STUN server host or domain. This option may be");
+    puts  ("                      specified more than once. FORMAT is hostdom[:PORT]");
     puts  ("");
     puts  ("TLS Options:");
     puts  ("  --use-tls           Enable TLS transport (default=no)");
@@ -477,7 +478,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
-	   OPT_NAMESERVER, OPT_STUN_DOMAIN, OPT_STUN_SRV,
+	   OPT_NAMESERVER, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
@@ -543,7 +544,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "username",	1, 0, OPT_USERNAME},
 	{ "password",	1, 0, OPT_PASSWORD},
 	{ "nameserver", 1, 0, OPT_NAMESERVER},
-	{ "stun-domain",1, 0, OPT_STUN_DOMAIN},
 	{ "stun-srv",   1, 0, OPT_STUN_SRV},
 	{ "add-buddy",  1, 0, OPT_ADD_BUDDY},
 	{ "offer-x-ms-msg",0,0,OPT_OFFER_X_MS_MSG},
@@ -959,12 +959,13 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 	    break;
 
-	case OPT_STUN_DOMAIN:   /* STUN domain */
-	    cfg->cfg.stun_domain = pj_str(pj_optarg);
-	    break;
-
 	case OPT_STUN_SRV:   /* STUN server */
 	    cfg->cfg.stun_host = pj_str(pj_optarg);
+	    if (cfg->cfg.stun_srv_cnt==PJ_ARRAY_SIZE(cfg->cfg.stun_srv)) {
+		PJ_LOG(1,(THIS_FILE, "Error: too many STUN servers"));
+		return PJ_ETOOMANY;
+	    }
+	    cfg->cfg.stun_srv[cfg->cfg.stun_srv_cnt++] = pj_str(pj_optarg);
 	    break;
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */
@@ -1615,16 +1616,10 @@ static int write_settings(const struct app_config *config,
     }
 
     /* STUN */
-    if (config->cfg.stun_domain.slen) {
-	pj_ansi_sprintf(line, "--stun-domain %.*s\n",
-			(int)config->cfg.stun_domain.slen, 
-			config->cfg.stun_domain.ptr);
-	pj_strcat2(&cfg, line);
-    }
-    if (config->cfg.stun_host.slen) {
+    for (i=0; i<config->cfg.stun_srv_cnt; ++i) {
 	pj_ansi_sprintf(line, "--stun-srv %.*s\n",
-			(int)config->cfg.stun_host.slen, 
-			config->cfg.stun_host.ptr);
+			(int)config->cfg.stun_srv[i].slen, 
+			config->cfg.stun_srv[i].ptr);
 	pj_strcat2(&cfg, line);
     }
 

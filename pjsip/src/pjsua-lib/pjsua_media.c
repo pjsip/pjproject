@@ -359,7 +359,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     pj_sock_t sock[2];
 
     /* Make sure STUN server resolution has completed */
-    status = pjsua_resolve_stun_server(PJ_TRUE);
+    status = resolve_stun_server(PJ_TRUE);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	return status;
@@ -860,7 +860,7 @@ static pj_status_t create_ice_media_transports(void)
     pj_status_t status;
 
     /* Make sure STUN server resolution has completed */
-    status = pjsua_resolve_stun_server(PJ_TRUE);
+    status = resolve_stun_server(PJ_TRUE);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
 	return status;

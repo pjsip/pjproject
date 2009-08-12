@@ -891,6 +891,10 @@ typedef struct pjsua_config
     pj_str_t	    outbound_proxy[4];
 
     /**
+     * Warning: deprecated, please use \a stun_srv field instead. To maintain
+     * backward compatibility, if \a stun_srv_cnt is zero then the value of
+     * this field will be copied to \a stun_srv field, if present.
+     *
      * Specify domain name to be resolved with DNS SRV resolution to get the
      * address of the STUN server. Alternatively application may specify
      * \a stun_host instead.
@@ -901,10 +905,50 @@ typedef struct pjsua_config
     pj_str_t	    stun_domain;
 
     /**
+     * Warning: deprecated, please use \a stun_srv field instead. To maintain
+     * backward compatibility, if \a stun_srv_cnt is zero then the value of
+     * this field will be copied to \a stun_srv field, if present.
+     *
      * Specify STUN server to be used, in "HOST[:PORT]" format. If port is
      * not specified, default port 3478 will be used.
      */
     pj_str_t	    stun_host;
+
+    /**
+     * Number of STUN server entries in \a stun_srv array.
+     */
+    unsigned	    stun_srv_cnt;
+
+    /**
+     * Array of STUN servers to try. The library will try to resolve and
+     * contact each of the STUN server entry until it finds one that is
+     * usable. Each entry may be a domain name, host name, IP address, and
+     * it may contain an optional port number. For example:
+     *	- "pjsip.org" (domain name)
+     *	- "sip.pjsip.org" (host name)
+     *	- "pjsip.org:33478" (domain name and a non-standard port number)
+     *	- "10.0.0.1:3478" (IP address and port number)
+     *
+     * When nameserver is configured in the \a pjsua_config.nameserver field,
+     * if entry is not an IP address, it will be resolved with DNS SRV 
+     * resolution first, and it will fallback to use DNS A resolution if this
+     * fails. Port number may be specified even if the entry is a domain name,
+     * in case the DNS SRV resolution should fallback to a non-standard port.
+     *
+     * When nameserver is not configured, entries will be resolved with
+     * #pj_gethostbyname() if it's not an IP address. Port number may be
+     * specified if the server is not listening in standard STUN port.
+     */
+    pj_str_t	    stun_srv[8];
+
+    /**
+     * This specifies if the library startup should ignore failure with the
+     * STUN servers. If this is set to PJ_FALSE, the library will refuse to
+     * start if it fails to resolve or contact any of the STUN servers.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t	    stun_ignore_failure;
 
     /**
      * Support for adding and parsing NAT type in the SDP to assist 
@@ -1215,6 +1259,46 @@ PJ_DECL(pj_pool_factory*) pjsua_get_pool_factory(void);
  */
 
 /**
+ * This structure is used to represent the result of the STUN server 
+ * resolution and testing, the #pjsua_resolve_stun_servers() function.
+ * This structure will be passed in #pj_stun_resolve_cb callback.
+ */
+typedef struct pj_stun_resolve_result
+{
+    /**
+     * Arbitrary data that was passed to #pjsua_resolve_stun_servers()
+     * function.
+     */
+    void	    *token;
+
+    /**
+     * This will contain PJ_SUCCESS if at least one usable STUN server
+     * is found, otherwise it will contain the last error code during
+     * the operation.
+     */
+    pj_status_t	     status;
+
+    /**
+     * The server name that yields successful result. This will only
+     * contain value if status is successful.
+     */
+    pj_str_t	     name;
+
+    /**
+     * The server IP address. This will only contain value if status 
+     * is successful.
+     */
+    pj_sockaddr	     addr;
+
+} pj_stun_resolve_result;
+
+
+/**
+ * Typedef of callback to be registered to #pjsua_resolve_stun_servers().
+ */
+typedef void (*pj_stun_resolve_cb)(const pj_stun_resolve_result *result);
+
+/**
  * This is a utility function to detect NAT type in front of this
  * endpoint. Once invoked successfully, this function will complete 
  * asynchronously and report the result in \a on_nat_detect() callback
@@ -1250,6 +1334,55 @@ PJ_DECL(pj_status_t) pjsua_detect_nat_type(void);
  * @see pjsua_call_get_rem_nat_type()
  */
 PJ_DECL(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type);
+
+
+/**
+ * Auxiliary function to resolve and contact each of the STUN server
+ * entries (sequentially) to find which is usable. The #pjsua_init() must
+ * have been called before calling this function.
+ *
+ * @param count		Number of STUN server entries to try.
+ * @param srv		Array of STUN server entries to try. Please see
+ *			the \a stun_srv field in the #pjsua_config 
+ *			documentation about the format of this entry.
+ * @param wait		Specify non-zero to make the function block until
+ *			it gets the result. In this case, the function
+ *			will block while the resolution is being done,
+ *			and the callback will be called before this function
+ *			returns.
+ * @param token		Arbitrary token to be passed back to application
+ *			in the callback.
+ * @param cb		Callback to be called to notify the result of
+ *			the function.
+ *
+ * @return		If \a wait parameter is non-zero, this will return
+ *			PJ_SUCCESS if one usable STUN server is found.
+ *			Otherwise it will always return PJ_SUCCESS, and
+ *			application will be notified about the result in
+ *			the callback.
+ */
+PJ_DECL(pj_status_t) pjsua_resolve_stun_servers(unsigned count,
+						pj_str_t srv[],
+						pj_bool_t wait,
+						void *token,
+						pj_stun_resolve_cb cb);
+
+/**
+ * Cancel pending STUN resolution which match the specified token. 
+ *
+ * @param token		The token to match. This token was given to 
+ *			#pjsua_resolve_stun_servers()
+ * @param notify_cb	Boolean to control whether the callback should
+ *			be called for cancelled resolutions. When the
+ *			callback is called, the status in the result
+ *			will be set as PJ_ECANCELLED.
+ *
+ * @return		PJ_SUCCESS if there is at least one pending STUN
+ *			resolution cancelled, or PJ_ENOTFOUND if there is
+ *			no matching one, or other error.
+ */
+PJ_DECL(pj_status_t) pjsua_cancel_stun_resolution(void *token,
+						  pj_bool_t notify_cb);
 
 
 /**

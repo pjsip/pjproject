@@ -212,6 +212,22 @@ typedef struct pjsua_conf_setting
     unsigned	bits_per_sample;
 } pjsua_conf_setting;
 
+typedef struct pjsua_stun_resolve
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_stun_resolve);
+
+    pj_pool_t		*pool;	    /**< Pool		    */
+    unsigned		 count;	    /**< # of entries	    */
+    pj_str_t		*srv;	    /**< Array of entries   */
+    unsigned		 idx;	    /**< Current index	    */
+    void		*token;	    /**< App token	    */
+    pj_stun_resolve_cb	 cb;	    /**< App callback	    */
+    pj_bool_t		 blocking;  /**< Blocking?	    */
+    pj_status_t		 status;    /**< Session status	    */
+    pj_sockaddr		 addr;	    /**< Result		    */
+    pj_stun_sock	*stun_sock; /**< Testing STUN sock  */
+} pjsua_stun_resolve;
+
 
 /**
  * Global pjsua application data.
@@ -241,6 +257,7 @@ struct pjsua_data
     pj_stun_config	 stun_cfg;  /**< Global STUN settings.		*/
     pj_sockaddr		 stun_srv;  /**< Resolved STUN server address	*/
     pj_status_t		 stun_status; /**< STUN server status.		*/
+    pjsua_stun_resolve	 stun_res;  /**< List of pending STUN resolution*/
     pj_dns_resolver	*resolver;  /**< DNS resolver.			*/
 
     /* Detected NAT type */
@@ -350,16 +367,17 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 #define PJSUA_UNLOCK()
 #endif
 
+/******
+ * STUN resolution
+ */
+/* Resolve the STUN server */
+pj_status_t resolve_stun_server(pj_bool_t wait);
+
 /** 
  * Normalize route URI (check for ";lr" and append one if it doesn't
  * exist and pjsua_config.force_lr is set.
  */
 pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri);
-
-/**
- * Resolve STUN server.
- */
-pj_status_t pjsua_resolve_stun_server(pj_bool_t wait);
 
 /**
  * Handle incoming invite request.
