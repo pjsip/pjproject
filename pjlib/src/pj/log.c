@@ -178,6 +178,11 @@ PJ_DEF(pj_log_func*) pj_log_get_log_func(void)
  */
 static void suspend_logging(int *saved_level)
 {
+	/* Save the level regardless, just in case PJLIB is shutdown
+	 * between suspend and resume.
+	 */
+	*saved_level = pj_log_max_level;
+
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id != -1) 
     {
@@ -188,10 +193,6 @@ static void suspend_logging(int *saved_level)
     {
 	pj_log_max_level = 0;
     }
-    /* Save the level regardless, just in case PJLIB is shutdown
-     * between suspend and resume.
-     */
-    *saved_level = pj_log_max_level;
 }
 
 /* Resume logging facility for this thread */
@@ -224,7 +225,7 @@ static pj_bool_t is_logging_suspended(void)
     else
 #endif
     {
-	return pj_log_max_level != 0;
+	return pj_log_max_level == 0;
     }
 }
 
