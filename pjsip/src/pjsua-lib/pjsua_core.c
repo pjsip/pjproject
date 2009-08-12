@@ -348,15 +348,17 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 	pjsip_msg_add_hdr(tdata->msg, h);
     }
 
-    /* Get media socket info */
-    pjmedia_transport_info_init(&tpinfo);
-    pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &tpinfo);
+    /* Get media socket info, make sure transport is ready */
+    if (pjsua_var.calls[0].med_tp) {
+	pjmedia_transport_info_init(&tpinfo);
+	pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &tpinfo);
 
-    /* Add SDP body, using call0's RTP address */
-    status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 1,
-				      &tpinfo.sock_info, &sdp);
-    if (status == PJ_SUCCESS) {
-	pjsip_create_sdp_body(tdata->pool, sdp, &tdata->msg->body);
+	/* Add SDP body, using call0's RTP address */
+	status = pjmedia_endpt_create_sdp(pjsua_var.med_endpt, tdata->pool, 1,
+					  &tpinfo.sock_info, &sdp);
+	if (status == PJ_SUCCESS) {
+	    pjsip_create_sdp_body(tdata->pool, sdp, &tdata->msg->body);
+	}
     }
 
     /* Send response statelessly */
@@ -1248,9 +1250,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	}
     }
 
-    /* Destroy media */
-    pjsua_media_subsys_destroy();
-
     /* Destroy endpoint. */
     if (pjsua_var.endpt) {
 
@@ -1271,6 +1270,16 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	busy_sleep(1000);
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
+
+	/* Terminate all calls again, just in case there's new call
+	 * picked up during busy_sleep()
+	 */
+	pjsua_call_hangup_all();
+
+	/* Destroy media after all polling is done, as there may be
+	 * incoming request that needs handling (e.g. OPTIONS)
+	 */
+	pjsua_media_subsys_destroy();
 
 	/* Must destroy endpoint first before destroying pools in
 	 * buddies or accounts, since shutting down transaction layer
@@ -1295,6 +1304,9 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
+    } else {
+	/* Destroy media */
+	pjsua_media_subsys_destroy();
     }
 
     /* Destroy mutex */
