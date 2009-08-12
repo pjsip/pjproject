@@ -49,7 +49,7 @@ enum timer_refresher {
 };
 
 /* Structure definition of Session Timers */
-typedef struct pjsip_timer 
+struct pjsip_timer 
 {
     pj_bool_t			 active;	/**< Active/inactive flag   */
     pjsip_timer_setting		 setting;	/**< Session Timers setting */
@@ -62,7 +62,7 @@ typedef struct pjsip_timer
     pjsip_role_e		 role;		/**< Role in last INVITE/
 						     UPDATE transaction.    */
 
-} pjsip_timer;
+};
 
 /* External global vars */
 extern pj_bool_t pjsip_use_compact_form;
