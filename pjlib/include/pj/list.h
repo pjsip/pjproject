@@ -96,7 +96,7 @@ PJ_INLINE(void) pj_list_init(pj_list_type * node)
  *
  * @param node	The list head.
  *
- * @return Non-zero if the list is not-empty, or zero if it is empty.
+ * @return Non-zero if the list is empty, or zero if it is not empty.
  *
  */
 PJ_INLINE(int) pj_list_empty(const pj_list_type * node)
