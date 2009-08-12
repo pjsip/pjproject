@@ -979,17 +979,54 @@ PJ_DECL(void) pj_sockaddr_in_set_port(pj_sockaddr_in *addr,
  *
  * @param af	    Optionally specify the address family to be used. If the
  *		    address family is to be deducted from the input, specify
- *		    pj_AF_UNSPEC() here.
+ *		    pj_AF_UNSPEC() here. Other supported values are
+ *		    #pj_AF_INET() and #pj_AF_INET6()
  * @param options   Additional options to assist the parsing, must be zero
  *		    for now.
  * @param str	    The input string to be parsed.
  * @param addr	    Pointer to store the result.
  *
  * @return	    PJ_SUCCESS if the parsing is successful.
+ *
+ * @see pj_sockaddr_parse2()
  */
 PJ_DECL(pj_status_t) pj_sockaddr_parse(int af, unsigned options,
 				       const pj_str_t *str,
 				       pj_sockaddr *addr);
+
+/**
+ * This function is similar to #pj_sockaddr_parse(), except that it will not
+ * convert the hostpart into IP address (thus possibly resolving the hostname
+ * into a #pj_sockaddr. 
+ *
+ * Unlike #pj_sockaddr_parse(), this function has a limitation that if port 
+ * number is specified in an IPv6 input string, the IP part of the IPv6 socket
+ * address MUST be enclosed in square brackets, otherwise the port number will
+ * be considered as part of the IPv6 IP address.
+ *
+ * @param af	    Optionally specify the address family to be used. If the
+ *		    address family is to be deducted from the input, specify
+ *		    #pj_AF_UNSPEC() here. Other supported values are
+ *		    #pj_AF_INET() and #pj_AF_INET6()
+ * @param options   Additional options to assist the parsing, must be zero
+ *		    for now.
+ * @param str	    The input string to be parsed.
+ * @param hostpart  Optional pointer to store the host part of the socket 
+ *		    address, with any brackets removed.
+ * @param port	    Optional pointer to store the port number. If port number
+ *		    is not found, this will be set to zero upon return.
+ * @param raf	    Optional pointer to store the detected address family of
+ *		    the input address.
+ *
+ * @return	    PJ_SUCCESS if the parsing is successful.
+ *
+ * @see pj_sockaddr_parse()
+ */
+PJ_DECL(pj_status_t) pj_sockaddr_parse2(int af, unsigned options,
+				        const pj_str_t *str,
+				        pj_str_t *hostpart,
+				        pj_uint16_t *port,
+					int *raf);
 
 /*****************************************************************************
  *

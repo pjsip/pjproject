@@ -219,6 +219,7 @@ static int parse_test(void)
 	{ "10.0.0.1:-1", IPv4},	    /* port contains illegal character */
 	{ "10.0.0.1:123456", IPv4}, /* port too big	*/
 	{ "1.2.3.4.5:80", IPv4},    /* invalid IP */
+	{ "10:0:80", IPv4},	    /* hostname has colon */
 
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
 	{ "[fe::01]:abcd", IPv6},   /* port not numeric */
