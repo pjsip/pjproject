@@ -279,7 +279,7 @@ static void cpool_dump_status(pj_pool_factory *factory, pj_bool_t detail )
         PJ_LOG(3,("cachpool", "  Dumping all active pools:"));
 	while (pool != (void*)&cp->used_list) {
 	    unsigned pool_capacity = pj_pool_get_capacity(pool);
-	    PJ_LOG(3,("cachpool", "   %12s: %8d of %8d (%d%%) used", 
+	    PJ_LOG(3,("cachpool", "   %16s: %8d of %8d (%d%%) used", 
 				  pj_pool_getobjname(pool), 
 				  pj_pool_get_used_size(pool), 
 				  pool_capacity,
