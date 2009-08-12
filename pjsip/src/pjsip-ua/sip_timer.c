@@ -359,7 +359,7 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
 	    status = pjsip_inv_invite(inv, &tdata);
 	    if (status == PJ_SUCCESS)
-		status = pjmedia_sdp_neg_send_local_offer(inv->pool, 
+		status = pjmedia_sdp_neg_send_local_offer(inv->pool_prov, 
 							  inv->neg, &offer);
 	    if (status == PJ_SUCCESS)
 		status = pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);

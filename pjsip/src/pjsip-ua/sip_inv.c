@@ -77,6 +77,9 @@ static const pjsip_method pjsip_update_method =
     { "UPDATE", 6 }
 };
 
+#define POOL_INIT_SIZE	256
+#define POOL_INC_SIZE	256
+
 /*
  * Static prototypes.
  */
@@ -234,6 +237,10 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 	pjsip_100rel_end_session(inv);
 	pjsip_timer_end_session(inv);
 	pjsip_dlg_dec_session(inv->dlg, &mod_inv.mod);
+
+	/* Release the flip-flop pools */
+	pj_pool_release(inv->pool_prov);
+	pj_pool_release(inv->pool_active);
     }
 }
 
@@ -669,13 +676,21 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     inv->notify = PJ_TRUE;
     inv->cause = (pjsip_status_code) 0;
 
+    /* Create flip-flop pool (see ticket #877) */
+    /* (using inv->obj_name as temporary variable for pool names */
+    pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg->pool);
+    inv->pool_prov = pjsip_endpt_create_pool(dlg->endpt, inv->obj_name,
+					     POOL_INIT_SIZE, POOL_INC_SIZE);
+    inv->pool_active = pjsip_endpt_create_pool(dlg->endpt, inv->obj_name,
+					       POOL_INIT_SIZE, POOL_INC_SIZE);
+
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
 
     /* Create negotiator if local_sdp is specified. */
     if (local_sdp) {
-	status = pjmedia_sdp_neg_create_w_local_offer(dlg->pool, local_sdp,
-						      &inv->neg);
+	status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
+						      local_sdp, &inv->neg);
 	if (status != PJ_SUCCESS) {
 	    pjsip_dlg_dec_lock(dlg);
 	    return status;
@@ -1129,6 +1144,14 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     inv->notify = PJ_TRUE;
     inv->cause = (pjsip_status_code) 0;
 
+    /* Create flip-flop pool (see ticket #877) */
+    /* (using inv->obj_name as temporary variable for pool names */
+    pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg->pool);
+    inv->pool_prov = pjsip_endpt_create_pool(dlg->endpt, inv->obj_name,
+					     POOL_INIT_SIZE, POOL_INC_SIZE);
+    inv->pool_active = pjsip_endpt_create_pool(dlg->endpt, inv->obj_name,
+					       POOL_INIT_SIZE, POOL_INC_SIZE);
+
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
 
@@ -1150,12 +1173,13 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
 
     /* Create negotiator. */
     if (rem_sdp) {
-	status = pjmedia_sdp_neg_create_w_remote_offer(inv->pool, local_sdp,
-						       rem_sdp, &inv->neg);
+	status = pjmedia_sdp_neg_create_w_remote_offer(inv->pool, 
+						       local_sdp, rem_sdp, 
+						       &inv->neg);
 						
     } else if (local_sdp) {
-	status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, local_sdp,
-						      &inv->neg);
+	status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
+						      local_sdp, &inv->neg);
     } else {
 	status = PJ_SUCCESS;
     }
@@ -1439,6 +1463,14 @@ on_return:
 }
 
 
+/* Util: swap pool */
+static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
+{
+    pj_pool_t *tmp = *p1;
+    *p1 = *p2;
+    *p2 = tmp;
+}
+
 /*
  * Initiate SDP negotiation in the SDP negotiator.
  */
@@ -1450,12 +1482,16 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
 		     PJMEDIA_SDP_NEG_STATE_WAIT_NEGO, 
 		     PJMEDIA_SDPNEG_EINSTATE);
 
-    status = pjmedia_sdp_neg_negotiate(inv->pool, inv->neg, 0);
+    status = pjmedia_sdp_neg_negotiate(inv->pool_prov, inv->neg, 0);
 
     PJ_LOG(5,(inv->obj_name, "SDP negotiation done, status=%d", status));
 
     if (mod_inv.cb.on_media_update && inv->notify)
 	(*mod_inv.cb.on_media_update)(inv, status);
+
+    /* Swap the flip-flop pool, and reset the new provisional pool */
+    swap_pool(&inv->pool_prov, &inv->pool_active);
+    pj_pool_reset(inv->pool_prov);
 
     return status;
 }
@@ -1534,7 +1570,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 			  tsx->last_tx->msg->body->data;
 
 	    /* Feed the original offer to negotiator */
-	    status = pjmedia_sdp_neg_modify_local_offer(inv->pool, inv->neg,
+	    status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov, 
+							inv->neg,
 						        reoffer_sdp);
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(1,(inv->obj_name, "Error updating local offer for "
@@ -1580,10 +1617,10 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 		  pjsip_rx_data_get_info(rdata)));
 
 	if (inv->neg == NULL) {
-	    status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL, 
+	    status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL,
 							 rem_sdp, &inv->neg);
 	} else {
-	    status=pjmedia_sdp_neg_set_remote_offer(inv->pool, inv->neg, 
+	    status=pjmedia_sdp_neg_set_remote_offer(inv->pool_prov, inv->neg, 
 						    rem_sdp);
 	}
 
@@ -1615,7 +1652,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	PJ_LOG(5,(inv->obj_name, "Got SDP answer in %s", 
 		  pjsip_rx_data_get_info(rdata)));
 
-	status = pjmedia_sdp_neg_set_remote_answer(inv->pool, inv->neg, 
+	status = pjmedia_sdp_neg_set_remote_answer(inv->pool_prov, inv->neg,
 						   rem_sdp);
 
 	if (status != PJ_SUCCESS) {
@@ -1668,12 +1705,13 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
     if (local_sdp && (st_code/100==1 || st_code/100==2)) {
 
 	if (inv->neg == NULL) {
-	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, local_sdp,
+	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
+							  local_sdp,
 							  &inv->neg);
 	} else if (pjmedia_sdp_neg_get_state(inv->neg)==
 		   PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
 	{
-	    status = pjmedia_sdp_neg_set_local_answer(inv->pool, inv->neg,
+	    status = pjmedia_sdp_neg_set_local_answer(inv->pool_prov, inv->neg,
 						      local_sdp);
 	} else {
 
@@ -1878,7 +1916,7 @@ PJ_DEF(pj_status_t) pjsip_inv_set_sdp_answer( pjsip_inv_session *inv,
     PJ_ASSERT_RETURN(inv && sdp, PJ_EINVAL);
 
     pjsip_dlg_inc_lock(inv->dlg);
-    status = pjmedia_sdp_neg_set_local_answer( inv->pool, inv->neg, sdp);
+    status = pjmedia_sdp_neg_set_local_answer( inv->pool_prov, inv->neg, sdp);
     pjsip_dlg_dec_lock(inv->dlg);
 
     return status;
@@ -2227,7 +2265,8 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 
     if (new_offer) {
 	if (!inv->neg) {
-	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, new_offer,
+	    status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
+							  new_offer,
 							  &inv->neg);
 	    if (status != PJ_SUCCESS)
 		goto on_return;
@@ -2246,7 +2285,8 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 		break;
 
 	    case PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER:
-		status = pjmedia_sdp_neg_set_local_answer(inv->pool, inv->neg,
+		status = pjmedia_sdp_neg_set_local_answer(inv->pool_prov, 
+							  inv->neg,
 							  new_offer);
 		if (status != PJ_SUCCESS)
 		    goto on_return;
@@ -2259,7 +2299,8 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 		break;
 
 	    case PJMEDIA_SDP_NEG_STATE_DONE:
-		status = pjmedia_sdp_neg_modify_local_offer(inv->pool,inv->neg,
+		status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov,
+							    inv->neg,
 							    new_offer);
 		if (status != PJ_SUCCESS)
 		    goto on_return;
@@ -2315,7 +2356,7 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     /* Notify negotiator about the new offer. This will fix the offer
      * with correct SDP origin.
      */
-    status = pjmedia_sdp_neg_modify_local_offer(inv->pool,inv->neg,
+    status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov, inv->neg,
 						offer);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -3744,9 +3785,10 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 			/* Notify negotiator about the new offer. This will
 			 * fix the offer with correct SDP origin.
 			 */
-			status = pjmedia_sdp_neg_modify_local_offer(dlg->pool,
-								    inv->neg,
-								    sdp);
+			status = 
+			    pjmedia_sdp_neg_modify_local_offer(inv->pool_prov,
+							       inv->neg,
+							       sdp);
 
 			/* Retrieve the "fixed" offer from negotiator */
 			if (status==PJ_SUCCESS) {
@@ -3759,7 +3801,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 		
 		if (sdp == NULL) {
 		    const pjmedia_sdp_session *active_sdp = NULL;
-		    status = pjmedia_sdp_neg_send_local_offer(dlg->pool, 
+		    status = pjmedia_sdp_neg_send_local_offer(inv->pool_prov,
 							      inv->neg, 
 							      &active_sdp);
 		    if (status == PJ_SUCCESS)

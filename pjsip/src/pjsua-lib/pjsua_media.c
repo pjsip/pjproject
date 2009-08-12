@@ -1426,7 +1426,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
     /* Create media session info based on SDP parameters. 
      */    
-    status = pjmedia_session_info_from_sdp( call->inv->dlg->pool, 
+    status = pjmedia_session_info_from_sdp( call->inv->pool_prov, 
 					    pjsua_var.med_endpt, 
 					    PJMEDIA_MAX_SDP_MEDIA, &sess_info,
 					    local_sdp, remote_sdp);
@@ -1469,7 +1469,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
 	/* Start/restart media transport */
 	status = pjmedia_transport_media_start(call->med_tp, 
-					       call->inv->pool,
+					       call->inv->pool_prov,
 					       local_sdp, remote_sdp, 0);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -1572,7 +1572,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    if (port_name.slen < 1) {
 		port_name = pj_str("call");
 	    }
-	    status = pjmedia_conf_add_port( pjsua_var.mconf, call->inv->pool,
+	    status = pjmedia_conf_add_port( pjsua_var.mconf, 
+					    call->inv->pool_prov,
 					    media_port, 
 					    &port_name,
 					    (unsigned*)&call->conf_slot);

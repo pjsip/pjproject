@@ -318,11 +318,39 @@ struct pjsip_timer;
 
 /**
  * This structure describes the invite session.
+ *
+ * Note regarding the invite session's pools. The inv_sess used to have
+ * only one pool, which is just a pointer to the dialog's pool. Ticket
+ * http://trac.pjsip.org/repos/ticket/877 has found that the memory
+ * usage will grow considerably everytime re-INVITE or UPDATE is
+ * performed.
+ *
+ * Ticket #877 then created two more memory pools for the inv_sess, so
+ * now we have three memory pools:
+ *  - pool: to be used to allocate long term data for the session
+ *  - pool_prov and pool_active: this is a flip-flop pools to be used
+ *     interchangably during re-INVITE and UPDATE. pool_prov is
+ *     "provisional" pool, used to allocate SDP offer or answer for
+ *     the re-INVITE and UPDATE. Once SDP negotiation is done, the
+ *     provisional pool will be made as the active pool, then the
+ *     existing active pool will be reset, to release the memory
+ *     back to the OS. So these pool's lifetime is synchronized to
+ *     the SDP offer-answer negotiation.
+ *
+ * Higher level application such as PJSUA-LIB has been modified to
+ * make use of these flip-flop pools, i.e. by creating media objects
+ * from the provisional pool rather than from the long term pool.
+ *
+ * Other applications that want to use these pools must understand
+ * that the flip-flop pool's lifetimes are synchronized to the
+ * SDP offer-answer negotiation.
  */
 struct pjsip_inv_session
 {
     char		 obj_name[PJ_MAX_OBJ_NAME]; /**< Log identification */
-    pj_pool_t		*pool;			    /**< Dialog's pool.	    */
+    pj_pool_t		*pool;			    /**< Long term pool.    */
+    pj_pool_t		*pool_prov;		    /**< Provisional pool   */
+    pj_pool_t		*pool_active;		    /**< Active/current pool*/
     pjsip_inv_state	 state;			    /**< Invite sess state. */
     pj_bool_t		 cancelling;		    /**< CANCEL requested   */
     pj_bool_t		 pending_cancel;	    /**< Wait to send CANCEL*/

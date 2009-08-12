@@ -1596,7 +1596,8 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     if (call->local_hold && !unhold) {
 	status = create_sdp_of_call_hold(call, &sdp);
     } else {
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+	status = pjsua_media_channel_create_sdp(call->index, 
+						call->inv->pool_prov,
 						NULL, &sdp, NULL);
 	call->local_hold = PJ_FALSE;
     }
@@ -1655,7 +1656,8 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 	return status;
 
     /* Create SDP */
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+    status = pjsua_media_channel_create_sdp(call->index, 
+					    call->inv->pool_prov, 
 					    NULL, &sdp, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
@@ -3200,8 +3202,8 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
     pj_pool_t *pool;
     pjmedia_sdp_session *sdp;
 
-    /* Use call's pool */
-    pool = call->inv->pool;
+    /* Use call's provisional pool */
+    pool = call->inv->pool_prov;
 
     /* Create new offer */
     status = pjsua_media_channel_create_sdp(call->index, pool, NULL, &sdp, 
@@ -3267,7 +3269,8 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 	      call->index));
 
-    status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+    status = pjsua_media_channel_create_sdp(call->index, 
+					    call->inv->pool_prov, 
 					    offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
@@ -3296,7 +3299,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	/* Keep call on-hold by setting 'sendonly' attribute.
 	 * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
 	 */
-	attr = pjmedia_sdp_attr_create(call->inv->pool, "sendonly", NULL);
+	attr = pjmedia_sdp_attr_create(call->inv->pool_prov, "sendonly", NULL);
 	pjmedia_sdp_media_add_attr(answer->media[0], attr);
     }
 
@@ -3334,7 +3337,8 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 	PJ_LOG(4,(THIS_FILE, "Call %d: asked to send a new offer",
 		  call->index));
 
-	status = pjsua_media_channel_create_sdp(call->index, call->inv->pool, 
+	status = pjsua_media_channel_create_sdp(call->index, 
+						call->inv->pool_prov, 
 					        NULL, offer, NULL);
     }
 
