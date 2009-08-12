@@ -605,6 +605,24 @@ PJ_DEF(pj_status_t) pjsip_timer_update_req(pjsip_inv_session *inv,
     if (inv->timer == NULL)
 	pjsip_timer_init_session(inv, NULL);
 
+    /* If refresher role (i.e: ours or peer) has been set/negotiated, 
+     * better to keep it.
+     */
+    if (inv->timer->refresher != TR_UNKNOWN) {
+	pj_bool_t as_refresher;
+
+	/* Check our refresher role */
+	as_refresher = 
+	    (inv->timer->refresher==TR_UAC && inv->timer->role==PJSIP_ROLE_UAC) ||
+	    (inv->timer->refresher==TR_UAS && inv->timer->role==PJSIP_ROLE_UAS);
+
+	/* Update transaction role */
+	inv->timer->role = PJSIP_ROLE_UAC;
+
+	/* Update refresher role */
+	inv->timer->refresher = as_refresher? TR_UAC : TR_UAS;
+    }
+
     /* Add Session Timers headers */
     add_timer_headers(inv, tdata, PJ_TRUE, PJ_TRUE);
 
@@ -878,11 +896,30 @@ PJ_DEF(pj_status_t) pjsip_timer_process_req(pjsip_inv_session *inv,
 	inv->timer->refresher = TR_UAC;
     else if (se_hdr && pj_stricmp(&se_hdr->refresher, &STR_UAS) == 0)
 	inv->timer->refresher = TR_UAS;
-    else
-	/* If UAC support timer (currently check the existance of 
-	 * Session-Expires header in the request), set UAC as refresher.
+    else {
+	/* If refresher role (i.e: ours or peer) has been set/negotiated, 
+	 * better to keep it.
 	 */
-	inv->timer->refresher = se_hdr? TR_UAC : TR_UAS;
+	if (inv->timer->refresher != TR_UNKNOWN) {
+	    pj_bool_t as_refresher;
+
+	    /* Check our refresher role */
+	    as_refresher = 
+		(inv->timer->refresher==TR_UAC && inv->timer->role==PJSIP_ROLE_UAC) ||
+		(inv->timer->refresher==TR_UAS && inv->timer->role==PJSIP_ROLE_UAS);
+
+	    /* Update refresher role */
+	    inv->timer->refresher = as_refresher? TR_UAS : TR_UAC;
+	} else {
+	    /* If UAC support timer (currently check the existance of 
+	     * Session-Expires header in the request), set UAC as refresher.
+	     */
+	    inv->timer->refresher = se_hdr? TR_UAC : TR_UAS;
+	}
+    }
+
+    /* Remember our role in this transaction */
+    inv->timer->role = PJSIP_ROLE_UAS;
 
     /* Set active flag */
     inv->timer->active = PJ_TRUE;
@@ -910,9 +947,6 @@ PJ_DEF(pj_status_t) pjsip_timer_update_resp(pjsip_inv_session *inv,
     if (msg->line.status.code/100 == 2)
     {
 	if (inv->timer && inv->timer->active) {
-	    /* Remember our role in this transaction */
-	    inv->timer->role = PJSIP_ROLE_UAS;
-
 	    /* Add Session-Expires header and start the timer */
 	    add_timer_headers(inv, tdata, PJ_TRUE, PJ_FALSE);
 	    start_timer(inv);
