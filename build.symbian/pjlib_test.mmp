@@ -27,7 +27,7 @@ SOURCE	activesock.c
 SOURCE	atomic.c
 SOURCE	echo_clt.c
 SOURCE	errno.c
-SOURCE	exception.c
+SOURCE	exception_wrap.cpp
 SOURCE	fifobuf.c
 SOURCE	file.c
 SOURCE	hash_test.c
@@ -38,7 +38,7 @@ SOURCE	ioq_unreg.c
 SOURCE	list.c
 SOURCE	mutex.c
 SOURCE	os.c
-SOURCE	pool.c
+SOURCE	pool_wrap.cpp
 SOURCE	pool_perf.c
 SOURCE	rand.c
 SOURCE	rbtree.c
@@ -47,7 +47,7 @@ SOURCE	sleep.c
 SOURCE	sock.c
 SOURCE	sock_perf.c
 SOURCE	string.c
-SOURCE	test.c
+SOURCE	test_wrap.cpp
 SOURCE	thread.c
 SOURCE	timer.c
 SOURCE	timestamp.c

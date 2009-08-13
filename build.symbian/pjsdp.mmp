@@ -32,7 +32,7 @@ OPTION          GCCE    -x c++
 // Platform independent source
 //
 SOURCE		errno.c
-SOURCE		sdp.c
+SOURCE		sdp_wrap.cpp
 SOURCE		sdp_cmp.c
 SOURCE		sdp_neg.c
 

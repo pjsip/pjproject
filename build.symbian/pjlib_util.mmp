@@ -42,14 +42,14 @@ SOURCE	hmac_md5.c
 SOURCE	hmac_sha1.c
 SOURCE	md5.c
 SOURCE	pcap.c
-SOURCE	resolver.c
+SOURCE	resolver_wrap.cpp
 SOURCE	scanner.c
 SOURCE	sha1.c
 SOURCE	srv_resolver.c
 SOURCE	string.c
 SOURCE	stun_simple.c
 SOURCE	stun_simple_client.c
-SOURCE	xml.c
+SOURCE	xml_wrap.cpp
 
 //
 // Header files
