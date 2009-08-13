@@ -28,8 +28,8 @@
 #include <pjmedia-codec/types.h>
 
 /**
- * @defgroup PJMED_G711 G711
- * @ingroup PJMEDIA_CODEC
+ * @defgroup PJMED_G711 G711 G.711 Codec
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Standard G.711/PCMA and PCMU codec.
  * @{
  * This section describes functions to register and register G.711 codec

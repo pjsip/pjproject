@@ -33,7 +33,7 @@
 
 /**
  * @defgroup PJMED_AMR_CODEC_HELPER AMR Codec Helper
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief AMR common tables and helper functions.
  * @{
  *

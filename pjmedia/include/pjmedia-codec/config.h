@@ -20,7 +20,20 @@
 #ifndef __PJMEDIA_CODEC_CONFIG_H__
 #define __PJMEDIA_CODEC_CONFIG_H__
 
+/**
+ * @file config.h
+ * @brief PJMEDIA-CODEC compile time settings
+ */
+
+/**
+ * @defgroup pjmedia_codec_config PJMEDIA-CODEC Compile Time Settings
+ * @ingroup PJMEDIA_CODEC
+ * @brief Various compile time settings such as to enable/disable codecs
+ * @{
+ */
+
 #include <pjmedia/types.h>
+
 
 /*
  * Include config_auto.h if autoconf is used (PJ_AUTOCONF is set)
@@ -203,22 +216,47 @@
 #   define PJMEDIA_HAS_PASSTHROUGH_CODECS	0
 #endif
 
+/**
+ * Enable AMR passthrough codec.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
 #   define PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR	1
 #endif
 
+/**
+ * Enable G.729 passthrough codec.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
 #   define PJMEDIA_HAS_PASSTHROUGH_CODEC_G729	1
 #endif
 
+/**
+ * Enable iLBC passthrough codec.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
 #   define PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC	1
 #endif
 
+/**
+ * Enable PCMU passthrough codec.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU
 #   define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMU	1
 #endif
 
+/**
+ * Enable PCMA passthrough codec.
+ *
+ * Default: 1
+ */
 #ifndef PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA
 #   define PJMEDIA_HAS_PASSTHROUGH_CODEC_PCMA	1
 #endif
@@ -270,5 +308,9 @@
 	  PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 in your config_site.h \
 	  to control which implementation to be used.
 #endif
+
+/**
+ * @}
+ */
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */

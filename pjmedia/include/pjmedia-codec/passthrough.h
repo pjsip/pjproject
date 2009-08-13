@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJMED_PASSTHROUGH_CODEC Passthrough Codecs
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Implementation of passthrough codecs
  * @{
  *

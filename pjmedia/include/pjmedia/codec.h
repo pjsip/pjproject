@@ -859,6 +859,20 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_dealloc_codec(pjmedia_codec_mgr *mgr,
  * @}
  */
 
+/**
+ * @defgroup PJMEDIA_CODEC_CODECS Supported codecs
+ * @ingroup PJMEDIA_CODEC
+ * @brief Documentation about individual codec supported by PJMEDIA
+ * @{
+ * Please see the APIs provided by the individual codecs below.
+ */
+/**
+ * @}
+ */
+
+
+
+
 PJ_END_DECL
 
 

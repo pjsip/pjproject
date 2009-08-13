@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJMED_GSM GSM 06.10 Codec
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Implementation of GSM FR based on GSM 06.10 library
  * @{
  *

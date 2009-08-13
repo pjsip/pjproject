@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJMED_IPP_CODEC IPP Codecs
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Implementation of IPP codecs
  * @{
  *

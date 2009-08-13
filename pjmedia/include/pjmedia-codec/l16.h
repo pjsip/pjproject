@@ -25,7 +25,7 @@
 
 /**
  * @defgroup PJMED_L16 L16 Codec Family
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief PCM/16bit/linear codecs
  * @{
  *

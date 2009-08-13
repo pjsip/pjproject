@@ -20,7 +20,21 @@
 #ifndef __PJMEDIA_CODEC_TYPES_H__
 #define __PJMEDIA_CODEC_TYPES_H__
 
+/**
+ * @file types.h
+ * @brief PJMEDIA-CODEC types and constants
+ */
+
 #include <pjmedia-codec/config.h>
+
+/**
+ * @defgroup pjmedia_codec_types PJMEDIA-CODEC Types and Constants
+ * @ingroup PJMEDIA_CODEC
+ * @brief Constants used by PJMEDIA-CODEC
+ * @{
+ */
+
+
 
 /**
  * These are the dynamic payload types that are used by codecs in
@@ -71,6 +85,9 @@ enum
     PJMEDIA_RTP_PT_G7221_RSV2,			/**< G722.1 reserve	    */
 };
 
+/**
+ * @}
+ */
 
 
 #endif	/* __PJMEDIA_CODEC_TYPES_H__ */

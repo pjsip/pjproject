@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJMED_SPEEX Speex Codec Family
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Implementation of Speex codecs (narrow/wide/ultrawide-band).
  * @{
  *

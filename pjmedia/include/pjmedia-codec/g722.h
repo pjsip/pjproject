@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJMED_G722 G.722 Codec
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Implementation of G.722 Codec
  * @{
  *

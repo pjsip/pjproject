@@ -29,7 +29,7 @@
 
 /**
  * @defgroup PJMED_ILBC iLBC Codec
- * @ingroup PJMEDIA_CODEC
+ * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Implementation of iLBC Codec
  * @{
  *
