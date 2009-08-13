@@ -84,9 +84,15 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 
 	/* Add tuple id. */
 	if (status->info[i].id.slen == 0) {
-	    pj_create_unique_string(pool, &id);
 	    /* xs:ID must start with letter */
+	    //pj_create_unique_string(pool, &id);
+	    id.ptr = (char*)pj_pool_alloc(pool, PJ_GUID_STRING_LENGTH+2);
+	    id.ptr += 2;
+	    pj_generate_unique_string(&id);
+	    id.ptr -= 2;
 	    id.ptr[0] = 'p';
+	    id.ptr[1] = 'j';
+	    id.slen += 2;
 	} else {
 	    id = status->info[i].id;
 	}
