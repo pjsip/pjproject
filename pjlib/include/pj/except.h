@@ -57,17 +57,6 @@ PJ_BEGIN_DECL
  * The exception handling mechanism is completely thread safe, so the exception
  * thrown by one thread will not interfere with other thread.
  *
- * CAVEATS:
- *  - unlike C++ exception, the scheme here won't call destructors of local
- *    objects if exception is thrown. Care must be taken when a function
- *    hold some resorce such as pool or mutex etc.
- *  - You CAN NOT make nested exception in one single function without using
- *    a nested PJ_USE_EXCEPTION.
- *  - You can not provide more than PJ_CATCH or PJ_CATCH_ANY nor use PJ_CATCH
- *    and PJ_CATCH_ANY for a single PJ_TRY.
- *  - Exceptions will always be caught by the first handler (unlike C++ where
- *    exception is only caught if the type matches.
- *
  * The exception handling constructs are similar to C++. The blocks will be
  * constructed similar to the following sample:
  *
@@ -127,6 +116,66 @@ PJ_BEGIN_DECL
  * #PJ_NO_MEMORY_EXCEPTION which is declared in <pj/pool.h>. This exception
  * ID is raised by default pool policy when it fails to allocate memory.
  *
+ * CAVEATS:
+ *  - unlike C++ exception, the scheme here won't call destructors of local
+ *    objects if exception is thrown. Care must be taken when a function
+ *    hold some resorce such as pool or mutex etc.
+ *  - You CAN NOT make nested exception in one single function without using
+ *    a nested PJ_USE_EXCEPTION. Samples:
+  \verbatim
+	void wrong_sample()
+	{
+	    PJ_USE_EXCEPTION;
+
+	    PJ_TRY {
+		// Do stuffs
+		...
+	    }
+	    PJ_CATCH_ANY {
+		// Do other stuffs
+		....
+		..
+
+		// The following block is WRONG! You MUST declare 
+		// PJ_USE_EXCEPTION once again in this block.
+		PJ_TRY {
+		    ..
+		}
+		PJ_CATCH_ANY {
+		    ..
+		}
+		PJ_END;
+	    }
+	    PJ_END;
+	}
+
+  \endverbatim
+
+ *  - You MUST NOT exit the function inside the PJ_TRY block. The correct way
+ *    is to return from the function after PJ_END block is executed. 
+ *    For example, the following code will yield crash not in this code,
+ *    but rather in the subsequent execution of PJ_TRY block:
+  \verbatim
+        void wrong_sample()
+	{
+	    PJ_USE_EXCEPTION;
+
+	    PJ_TRY {
+		// do some stuffs
+		...
+		return;	        <======= DO NOT DO THIS!
+	    }
+	    PJ_CATCH_ANY {
+	    }
+	    PJ_END;
+	}
+  \endverbatim
+  
+ *  - You can not provide more than PJ_CATCH or PJ_CATCH_ANY nor use PJ_CATCH
+ *    and PJ_CATCH_ANY for a single PJ_TRY.
+ *  - Exceptions will always be caught by the first handler (unlike C++ where
+ *    exception is only caught if the type matches.
+
  * \section PJ_EX_KEYWORDS Keywords
  *
  * \subsection PJ_THROW PJ_THROW(expression)
@@ -310,7 +359,7 @@ PJ_DECL(void) pj_push_exception_handler_(struct pj_exception_state_t *rec);
 /**
  * Pop exception handler.
  */
-PJ_DECL(void) pj_pop_exception_handler_(void);
+PJ_DECL(void) pj_pop_exception_handler_(struct pj_exception_state_t *rec);
 
 /**
  * Declare that the function will use exception.
@@ -343,7 +392,7 @@ PJ_DECL(void) pj_pop_exception_handler_(void);
  * End of exception specification block.
  * @hideinitializer
  */
-#define PJ_END			pj_pop_exception_handler_(); \
+#define PJ_END			pj_pop_exception_handler_(&pj_x_except__); \
 			    } else {}
 
 /**

@@ -63,6 +63,53 @@ static int throw_id_2(void)
     PJ_UNREACHED(return -1;)
 }
 
+static int try_catch_test(void)
+{
+    PJ_USE_EXCEPTION;
+    int rc = -200;
+
+    PJ_TRY {
+	PJ_THROW(ID_1);
+    }
+    PJ_CATCH_ANY {
+	rc = 0;
+    }
+    PJ_END;
+    return rc;
+}
+
+static int throw_in_handler(void)
+{
+    PJ_USE_EXCEPTION;
+    int rc = 0;
+
+    PJ_TRY {
+	PJ_THROW(ID_1);
+    }
+    PJ_CATCH_ANY {
+	if (PJ_GET_EXCEPTION() != ID_1)
+	    rc = -300;
+	else
+	    PJ_THROW(ID_2);
+    }
+    PJ_END;
+    return rc;
+}
+
+static int return_in_handler(void)
+{
+    PJ_USE_EXCEPTION;
+
+    PJ_TRY {
+	PJ_THROW(ID_1);
+    }
+    PJ_CATCH_ANY {
+	return 0;
+    }
+    PJ_END;
+    return -400;
+}
+
 
 static int test(void)
 {
@@ -152,6 +199,61 @@ static int test(void)
 
     if (rc != 0)
 	return rc;
+
+    /*
+     * Nested handlers
+     */
+    PJ_TRY {
+	rc = try_catch_test();
+    }
+    PJ_CATCH_ANY {
+	rc = -70;
+    }
+    PJ_END;
+
+    if (rc != 0)
+	return rc;
+
+    /*
+     * Throwing exception inside handler
+     */
+    rc = -80;
+    PJ_TRY {
+	int rc2;
+	rc2 = throw_in_handler();
+	if (rc2)
+	    rc = rc2;
+    }
+    PJ_CATCH_ANY {
+	if (PJ_GET_EXCEPTION() == ID_2) {
+	    rc = 0;
+	} else {
+	    rc = -90;
+	}
+    }
+    PJ_END;
+
+    if (rc != 0)
+	return rc;
+
+
+    /*
+     * Return from handler. Returning from the function inside a handler
+     * should be okay (though returning from the function inside the
+     * PJ_TRY block IS NOT OKAY!!). We want to test to see if handler
+     * is cleaned up properly, but not sure how to do this.
+     */
+    PJ_TRY {
+	int rc2;
+	rc2 = return_in_handler();
+	if (rc2)
+	    rc = rc2;
+    }
+    PJ_CATCH_ANY {
+	rc = -100;
+    }
+    PJ_END;
+
 
     return 0;
 }

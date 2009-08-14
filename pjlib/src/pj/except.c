@@ -50,6 +50,7 @@ PJ_DEF(void) pj_throw_exception_(int exception_id)
         pj_assert(handler != NULL);
         /* This will crash the system! */
     }
+    pj_pop_exception_handler_(handler);
     pj_longjmp(handler->state, exception_id);
 }
 
@@ -86,14 +87,15 @@ PJ_DEF(void) pj_push_exception_handler_(struct pj_exception_state_t *rec)
     pj_thread_local_set(thread_local_id, rec);
 }
 
-PJ_DEF(void) pj_pop_exception_handler_(void)
+PJ_DEF(void) pj_pop_exception_handler_(struct pj_exception_state_t *rec)
 {
     struct pj_exception_state_t *handler;
 
     handler = (struct pj_exception_state_t *)
 	      pj_thread_local_get(thread_local_id);
-    pj_assert(handler != NULL);
-    pj_thread_local_set(thread_local_id, handler->prev);
+    if (handler && handler==rec) {
+	pj_thread_local_set(thread_local_id, handler->prev);
+    }
 }
 #endif
 
