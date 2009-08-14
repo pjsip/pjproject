@@ -1489,8 +1489,12 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
     if (mod_inv.cb.on_media_update && inv->notify)
 	(*mod_inv.cb.on_media_update)(inv, status);
 
-    /* Swap the flip-flop pool, and reset the new provisional pool */
-    swap_pool(&inv->pool_prov, &inv->pool_active);
+    /* Swap the flip-flop pool when SDP negotiation success. */
+    if (status == PJ_SUCCESS) {
+	swap_pool(&inv->pool_prov, &inv->pool_active);
+    }
+
+    /* Reset the provisional pool regardless SDP negotiation result. */
     pj_pool_reset(inv->pool_prov);
 
     return status;
