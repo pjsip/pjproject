@@ -417,6 +417,7 @@ static int txdata_test_uri_params(void)
     pj_str_t target = pj_str("sip:alice@wonderland:5061;x-param=param%201"
 			     "?X-Hdr-1=Header%201"
 			     "&X-Empty-Hdr=");
+    pj_str_t contact;
     pj_str_t pname = pj_str("x-param");
     pj_str_t hname = pj_str("X-Hdr-1");
     pj_str_t hemptyname = pj_str("X-Empty-Hdr");
@@ -435,9 +436,17 @@ static int txdata_test_uri_params(void)
 
     PJ_LOG(3,(THIS_FILE, "   header param in URI to create request"));
 
+    /* Due to #930, contact argument is now parsed as Contact header, so
+     * must enclose it with <> to make it be parsed as URI.
+     */
+    pj_ansi_snprintf(msgbuf, sizeof(msgbuf), "<%.*s>",
+		     (int)target.slen, target.ptr);
+    contact.ptr = msgbuf;
+    contact.slen = strlen(msgbuf);
+
     /* Create request with header param in target URI. */
     status = pjsip_endpt_create_request(endpt, &pjsip_invite_method, &target,
-					&target, &target, &target, NULL, -1,
+					&target, &target, &contact, NULL, -1,
 					NULL, &tdata);
     if (status != 0) {
 	app_perror("   error: Unable to create request", status);
