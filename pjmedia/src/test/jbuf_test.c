@@ -164,7 +164,9 @@ int jbuf_main(void)
     int rc = 0;
     const char* input_filename = "Jbtest.dat";
     const char* input_search_path[] = { 
-	"../build"
+	"../build",
+	"pjmedia/build",
+	"build"
     };
 
     /* Try to open test data file in the working directory */
