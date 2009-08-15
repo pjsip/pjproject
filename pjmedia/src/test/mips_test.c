@@ -387,6 +387,7 @@ struct test_entry
     const char	    *title;
     unsigned	     valid_op;
     unsigned	     valid_clock_rate;
+
     pjmedia_port*  (*init)(pj_pool_t *pool,
 			  unsigned clock_rate,
 			  unsigned channel_count,
@@ -833,6 +834,7 @@ static pjmedia_port* ilbc_encode_decode( pj_pool_t *pool,
 					 unsigned flags,
 					 struct test_entry *te)
 {
+    samples_per_frame = 30 * clock_rate / 1000;
     return codec_encode_decode(pool, "ilbc", &ilbc_init, 
 			       &pjmedia_codec_ilbc_deinit, clock_rate, 
 			       channel_count, samples_per_frame, flags, te);
@@ -2215,6 +2217,9 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
 	PJ_LOG(1,(THIS_FILE, " init error"));
 	return t0;
     }
+
+    /* Port may decide to use different ptime (e.g. iLBC) */
+    samples_per_frame = port->info.samples_per_frame;
 
     gen_port = create_gen_port(pool, clock_rate, 1, 
 			       samples_per_frame, 100);

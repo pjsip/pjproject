@@ -23,6 +23,10 @@
 #include <pjmedia.h>
 #include <pjlib.h>
 
+#define HAS_SDP_NEG_TEST	1
+#define HAS_JBUF_TEST		1
+#define HAS_MIPS_TEST		1
+#define HAS_CODEC_VECTOR_TEST	1
 
 int session_test(void);
 int rtp_test(void);
