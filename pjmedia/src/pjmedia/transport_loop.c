@@ -256,12 +256,13 @@ static void transport_detach( pjmedia_transport *tp,
 	if (loop->users[i].user_data == user_data)
 	    break;
     }
-    PJ_ASSERT_ON_FAIL(i != loop->user_cnt, return);
 
     /* Remove this user */
-    pj_array_erase(loop->users, sizeof(loop->users[0]),
-		   loop->user_cnt, i);
-    --loop->user_cnt;
+    if (i != loop->user_cnt) {
+	pj_array_erase(loop->users, sizeof(loop->users[0]),
+		       loop->user_cnt, i);
+	--loop->user_cnt;
+    }
 }
 
 
