@@ -940,7 +940,7 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
 {
     pjsua_stun_resolve *sess;
 
-    sess = pj_stun_sock_get_user_data(stun_sock);
+    sess = (pjsua_stun_resolve*) pj_stun_sock_get_user_data(stun_sock);
     pj_assert(stun_sock == sess->stun_sock);
 
     if (status != PJ_SUCCESS) {
