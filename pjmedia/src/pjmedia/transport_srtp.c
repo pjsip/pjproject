@@ -269,13 +269,12 @@ const char* get_libsrtp_errstr(int err)
 #endif
 }
 
+static pj_bool_t libsrtp_initialized;
 static void pjmedia_srtp_deinit_lib(void);
 
 PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(void)
 {
-    static pj_bool_t initialized = PJ_FALSE;
-
-    if (initialized == PJ_FALSE) {
+    if (libsrtp_initialized == PJ_FALSE) {
 	err_status_t err;
 
 	err = srtp_init();
@@ -294,7 +293,7 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(void)
 	    PJ_LOG(4, (THIS_FILE, "Failed to register libsrtp deinit."));
 	}
 
-	initialized = PJ_TRUE;
+	libsrtp_initialized = PJ_TRUE;
     }
     
     return PJ_SUCCESS;
@@ -309,6 +308,8 @@ static void pjmedia_srtp_deinit_lib(void)
 	PJ_LOG(4, (THIS_FILE, "Failed to deinitialize libsrtp: %s", 
 		   get_libsrtp_errstr(err)));
     }
+
+    libsrtp_initialized = PJ_FALSE;
 }
 
 static int get_crypto_idx(const pj_str_t* crypto_name)
