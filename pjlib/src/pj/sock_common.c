@@ -640,6 +640,11 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
     if (status != PJ_SUCCESS)
 	return status;
     
+#if !defined(PJ_HAS_IPV6) || !PJ_HAS_IPV6
+    if (af==PJ_AF_INET6)
+	return PJ_EIPV6NOTSUP;
+#endif
+
     status = pj_sockaddr_init(af, addr, &hostpart, port);
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
     if (status != PJ_SUCCESS && af == PJ_AF_INET6) {
