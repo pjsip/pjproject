@@ -332,9 +332,18 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     PJ_UNUSED_ARG(timer_heap);
 
-    /* Must NOT have a pending INVITE transaction */
-    if (inv->invite_tsx != NULL)
+    /* When there is a pending INVITE transaction, delay/reschedule this timer
+     * for five seconds to cover the case that pending INVITE fails and the
+     * previous session is still active. If the pending INVITE is successful, 
+     * timer state will be updated, i.e: restarted or stopped.
+     */
+    if (inv->invite_tsx != NULL) {
+	pj_time_val delay = {5};
+
+	inv->timer->timer.id = 1;
+	pjsip_endpt_schedule_timer(inv->dlg->endpt, &inv->timer->timer, &delay);
 	return;
+    }
 
     /* Lock dialog. */
     pjsip_dlg_inc_lock(inv->dlg);
