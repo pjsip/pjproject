@@ -23,8 +23,9 @@
 
 
 /*
- * These are defined in pjsua.c.
+ * These are defined in pjsua_app.c.
  */
+extern pj_bool_t app_restart;
 pj_status_t app_init(int argc, char *argv[]);
 pj_status_t app_main(void);
 pj_status_t app_destroy(void);
@@ -75,16 +76,20 @@ static void setup_signal_handler(void)
 
 int main(int argc, char *argv[])
 {
-    if (app_init(argc, argv) != PJ_SUCCESS)
-	return 1;
+    do {
+	app_restart = PJ_FALSE;
 
-    setup_signal_handler();
+	if (app_init(argc, argv) != PJ_SUCCESS)
+	    return 1;
 
-    app_main();
-    app_destroy();
+	setup_signal_handler();
 
-    /* This is on purpose */
-    app_destroy();
+	app_main();
+	app_destroy();
+
+	/* This is on purpose */
+	app_destroy();
+    } while (app_restart);
 
     return 0;
 }

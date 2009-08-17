@@ -146,6 +146,7 @@ static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
 
+pj_bool_t app_restart;
 
 /*****************************************************************************
  * Configuration manipulation
@@ -2823,7 +2824,7 @@ static void keystroke_help(void)
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |  f  Save config   |");
     puts("+------------------------------+--------------------------+-------------------+");
-    puts("|  q  QUIT       sleep MS     echo [0|1|txt]        n: detect NAT type        |");
+    puts("|  q  QUIT   L  ReLoad   sleep MS   echo [0|1|txt]     n: detect NAT type     |");
     puts("+=============================================================================+");
 
     i = pjsua_call_get_count();
@@ -4103,9 +4104,12 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    break;
 
 
+	case 'L':   /* Restart */
+	    app_restart = PJ_TRUE;
+	    /* Continues below */
+
 	case 'q':
 	    goto on_exit;
-
 
 	case 'R':
 	    if (!pjsua_call_is_active(current_call)) {
@@ -4237,6 +4241,8 @@ pj_status_t app_init(int argc, char *argv[])
     pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_status_t status;
+
+    app_restart = PJ_FALSE;
 
     /* Create pjsua */
     status = pjsua_create();
