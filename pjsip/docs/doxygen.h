@@ -118,11 +118,6 @@
   which can be downloaded from http://www.pjsip.org/docs.htm.
 
   \n
-  @subsection doc_ver Version
-
-  This document corresponds to PJSIP version 0.5.10.
-
-  \n
   @subsection doc_how_to_read How to Read This Document
 
   For main navigation, please go to <A HREF="modules.htm"><b>Modules</b></A>
