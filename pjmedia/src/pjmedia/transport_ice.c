@@ -1273,6 +1273,14 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	return PJ_SUCCESS;
     }
 
+    /* Special case for Session Timer. The re-INVITE for session refresh
+     * doesn't call transport_encode_sdp(), causing current_oa_role to
+     * be set to ROLE_NONE. This is a workaround.
+     */
+    if (current_oa_role == ROLE_NONE) {
+	current_oa_role = ROLE_OFFERER;
+    }
+
     /* Processing depends on the offer/answer role */
     if (current_oa_role == ROLE_OFFERER) {
 	/*
