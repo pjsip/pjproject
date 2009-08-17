@@ -64,6 +64,8 @@ static void init_data()
     pjsua_var.stun_status = PJ_EUNKNOWN;
     pjsua_var.nat_status = PJ_EPENDING;
     pj_list_init(&pjsua_var.stun_res);
+
+    pjsua_config_default(&pjsua_var.ua_cfg);
 }
 
 
