@@ -332,6 +332,10 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     PJ_UNUSED_ARG(timer_heap);
 
+    /* Must NOT have a pending INVITE transaction */
+    if (inv->invite_tsx != NULL)
+	return;
+
     /* Lock dialog. */
     pjsip_dlg_inc_lock(inv->dlg);
 
