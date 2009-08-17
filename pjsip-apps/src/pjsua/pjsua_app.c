@@ -1515,6 +1515,26 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 	    pj_strcat2(result, "--next-cred\n");
     }
 
+    /* 100rel extension */
+    if (acc_cfg->require_100rel) {
+	pj_strcat2(result, "--use-100rel\n");
+    }
+
+    /* Session Timer extension */
+    if (acc_cfg->require_timer) {
+	pj_strcat2(result, "--use-timer\n");
+    }
+    if (acc_cfg->timer_setting.min_se != 90) {
+	pj_ansi_sprintf(line, "--timer-min-se %d\n",
+			      acc_cfg->timer_setting.min_se);
+	pj_strcat2(result, line);
+    }
+    if (acc_cfg->timer_setting.sess_expires != PJSIP_SESS_TIMER_DEF_SE) {
+	pj_ansi_sprintf(line, "--timer-se %d\n",
+			      acc_cfg->timer_setting.sess_expires);
+	pj_strcat2(result, line);
+    }
+
 }
 
 
@@ -1955,6 +1975,26 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    /* SIP extensions. */
+    pj_strcat2(&cfg, "\n#\n# SIP extensions:\n#\n");
+    /* 100rel extension */
+    if (config->cfg.require_100rel) {
+	pj_strcat2(&cfg, "--use-100rel\n");
+    }
+    /* Session Timer extension */
+    if (config->cfg.require_timer) {
+	pj_strcat2(&cfg, "--use-timer\n");
+    }
+    if (config->cfg.timer_setting.min_se != 90) {
+	pj_ansi_sprintf(line, "--timer-min-se %d\n",
+			      config->cfg.timer_setting.min_se);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->cfg.timer_setting.sess_expires != PJSIP_SESS_TIMER_DEF_SE) {
+	pj_ansi_sprintf(line, "--timer-se %d\n",
+			      config->cfg.timer_setting.sess_expires);
+	pj_strcat2(&cfg, line);
+    }
 
     *(cfg.ptr + cfg.slen) = '\0';
     return cfg.slen;
