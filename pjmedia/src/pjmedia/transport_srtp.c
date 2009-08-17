@@ -332,6 +332,8 @@ PJ_DEF(void) pjmedia_srtp_setting_default(pjmedia_srtp_setting *opt)
 {
     unsigned i;
 
+    pj_assert(opt);
+
     pj_bzero(opt, sizeof(pjmedia_srtp_setting));
     opt->close_member_tp = PJ_TRUE;
     opt->use = PJMEDIA_SRTP_OPTIONAL;
@@ -357,7 +359,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     pj_status_t status;
     unsigned i;
 
-    PJ_ASSERT_RETURN(endpt && p_tp, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt && tp && p_tp, PJ_EINVAL);
 
     /* Check crypto availability */
     if (opt && opt->crypto_count == 0 && 
@@ -458,6 +460,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     int		     cr_rx_idx = 0;
     int		     au_rx_idx = 0;
     int		     crypto_suites_cnt;
+
+    PJ_ASSERT_RETURN(tp && tx && rx, PJ_EINVAL);
 
     if (srtp->session_inited) {
 	pjmedia_transport_srtp_stop(tp);
@@ -585,6 +589,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
     transport_srtp *p_srtp = (transport_srtp*) srtp;
     err_status_t err;
 
+    PJ_ASSERT_RETURN(srtp, PJ_EINVAL);
+
     if (!p_srtp->session_inited)
 	return PJ_SUCCESS;
 
@@ -657,6 +663,8 @@ static pj_status_t transport_attach(pjmedia_transport *tp,
 {
     transport_srtp *srtp = (transport_srtp*) tp;
     pj_status_t status;
+
+    PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
 
     /* Save the callbacks */
     srtp->rtp_cb = rtp_cb;
@@ -778,6 +786,8 @@ static pj_status_t transport_simulate_lost(pjmedia_transport *tp,
 					   unsigned pct_lost)
 {
     transport_srtp *srtp = (transport_srtp *) tp;
+    
+    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
     return pjmedia_transport_simulate_lost(srtp->member_tp, dir, pct_lost);
 }
@@ -787,10 +797,10 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
     transport_srtp *srtp = (transport_srtp *) tp;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
     pj_lock_acquire(srtp->mutex);
 
-    pjmedia_transport_detach(tp, NULL);
-    
     if (srtp->setting.close_member_tp && srtp->member_tp) {
 	pjmedia_transport_close(srtp->member_tp);
     }
@@ -1086,7 +1096,7 @@ static pj_status_t transport_media_create(pjmedia_transport *tp,
     } else {
 
 	pjmedia_sdp_media *m_rem;
-	
+
 	m_rem = sdp_remote->media[media_index];
 
 	/* Nothing to do on inactive media stream */
@@ -1489,6 +1499,8 @@ static pj_status_t transport_media_stop(pjmedia_transport *tp)
     struct transport_srtp *srtp = (struct transport_srtp*) tp;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(tp, PJ_EINVAL);
+
     status = pjmedia_transport_media_stop(srtp->member_tp);
     if (status != PJ_SUCCESS)
 	PJ_LOG(4, (srtp->pool->obj_name, 
@@ -1509,7 +1521,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
     if (srtp->bypass_srtp)
 	return PJ_SUCCESS;
 
-    PJ_ASSERT_RETURN(*pkt_len>0, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tp && pkt && (*pkt_len>0), PJ_EINVAL);
     PJ_ASSERT_RETURN(srtp->session_inited, PJ_EINVALIDOP);
 
     /* Make sure buffer is 32bit aligned */
