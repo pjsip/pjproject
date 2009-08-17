@@ -27,8 +27,11 @@
 #include <pjsip/sip_ua_layer.h>
 #include <pjsip/sip_util.h>
 #include <pj/assert.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/string.h>
+
+#define THIS_FILE		"sip_replaces.c"
 
 
 /*
@@ -50,6 +53,7 @@ static pjsip_hdr_vptr replaces_hdr_vptr =
 
 /* Globals */
 static pjsip_endpoint *the_endpt;
+static pj_bool_t is_initialized;
 
 PJ_DEF(pjsip_replaces_hdr*) pjsip_replaces_hdr_create(pj_pool_t *pool)
 {
@@ -156,6 +160,13 @@ static pjsip_hdr *parse_hdr_replaces(pjsip_parse_ctx *ctx)
     return (pjsip_hdr*)hdr;
 }
 
+
+/* Deinitialize Replaces */
+static void pjsip_replaces_deinit_module(void)
+{
+    is_initialized = PJ_FALSE;
+}
+
 /*
  * Initialize Replaces support in PJSIP. 
  */
@@ -163,7 +174,6 @@ PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
 {
     pj_status_t status;
     const pj_str_t STR_REPLACES = { "replaces", 8 };
-    static pj_bool_t is_initialized;
 
     the_endpt = endpt;
 
@@ -179,6 +189,16 @@ PJ_DEF(pj_status_t) pjsip_replaces_init_module(pjsip_endpoint *endpt)
     /* Register "replaces" capability */
     status = pjsip_endpt_add_capability(endpt, NULL, PJSIP_H_SUPPORTED, NULL,
 					1, &STR_REPLACES);
+
+    /* Register deinit module to be executed when PJLIB shutdown */
+    if (pj_atexit(&pjsip_replaces_deinit_module) != PJ_SUCCESS) {
+	/* Failure to register this function may cause this module won't 
+	 * work properly when the stack is restarted (without quitting 
+	 * application).
+	 */
+	pj_assert(!"Failed to register Replaces deinit.");
+	PJ_LOG(1, (THIS_FILE, "Failed to register Replaces deinit."));
+    }
 
     is_initialized = PJ_TRUE;
     return PJ_SUCCESS;
