@@ -71,9 +71,14 @@ static pj_status_t getaddrinfo_by_af(int af, const pj_str_t *name,
     
     PJ_ASSERT_RETURN(name && count && ai, PJ_EINVAL);
 
+#if !defined(PJ_HAS_IPV6) || !PJ_HAS_IPV6
+    if (af == PJ_AF_INET6)
+    	return PJ_EIPV6NOTSUP;
+#endif
+	
     // Return failure if access point is marked as down by app.
     PJ_SYMBIAN_CHECK_CONNECTION();
-	
+
     // Get resolver for the specified address family
     RHostResolver &resv = PjSymbianOS::Instance()->GetResolver(af);
 
