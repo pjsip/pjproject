@@ -475,6 +475,12 @@ static void stop_timer(pjsip_inv_session *inv)
     }
 }
 
+/* Deinitialize Session Timers */
+static void pjsip_timer_deinit_module(void)
+{
+    is_initialized = PJ_FALSE;
+}
+
 /*
  * Initialize Session Timers support in PJSIP. 
  */
@@ -504,6 +510,16 @@ PJ_DEF(pj_status_t) pjsip_timer_init_module(pjsip_endpoint *endpt)
 					NULL, 1, &STR_TIMER);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Register deinit module to be executed when PJLIB shutdown */
+    if (pj_atexit(&pjsip_timer_deinit_module) != PJ_SUCCESS) {
+	/* Failure to register this function may cause this module won't 
+	 * work properly when the stack is restarted (without quitting 
+	 * application).
+	 */
+	pj_assert(!"Failed to register Session Timer deinit.");
+	PJ_LOG(1, (THIS_FILE, "Failed to register Session Timer deinit."));
+    }
 
     is_initialized = PJ_TRUE;
 
@@ -992,4 +1008,3 @@ PJ_DEF(pj_status_t) pjsip_timer_end_session(pjsip_inv_session *inv)
 
     return PJ_SUCCESS;
 }
-
