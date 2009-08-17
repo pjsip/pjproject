@@ -20,7 +20,14 @@ from inc_cfg import *
 cfg_file = imp.load_source("cfg_file", ARGS[1])
 
 # WAV similarity calculator
-COMPARE_WAV_EXE = "tools/cmp_wav.exe"
+COMPARE_WAV_EXE = ""
+if sys.platform.find("win32")!=-1:
+    COMPARE_WAV_EXE = "tools/cmp_wav.exe"
+    G_INUNIX = False
+else:
+    COMPARE_WAV_EXE = "tools/cmp_wav"
+    G_INUNIX = True
+
 
 # Threshold to declare degradation is too high when result is lower than this value
 COMPARE_THRESHOLD = 2
@@ -78,7 +85,7 @@ def post_func(t):
 	# Check WAV similarity
 	fullcmd = COMPARE_WAV_EXE + " " + input_filename + " " + output_filename + " " + "3000"
 	endpt.trace("Popen " + fullcmd)
-	cmp_proc = subprocess.Popen(fullcmd, stdout=subprocess.PIPE, universal_newlines=True)
+	cmp_proc = subprocess.Popen(fullcmd, shell=G_INUNIX, stdout=subprocess.PIPE, universal_newlines=True)
 
 	# Parse similarity ouput
 	line = cmp_proc.stdout.readline()

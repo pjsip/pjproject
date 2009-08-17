@@ -2,7 +2,7 @@
 import inc_sip as sip
 import inc_sdp as sdp
 
-# There's some report that incoming MESSAGE without body will crash pjsua
+# Incoming MESSAGE without body is now accepted
 #
 complete_msg = \
 """MESSAGE sip:localhost SIP/2.0
@@ -20,5 +20,5 @@ Content-Length: 50
 
 
 sendto_cfg = sip.SendtoCfg( "empty MESSAGE", "--null-audio --auto-answer 200", 
-			    "", 488, complete_msg=complete_msg)
+			    "", 200, complete_msg=complete_msg)
 
