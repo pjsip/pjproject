@@ -21,6 +21,7 @@
 #include <pjsip/sip_parser.h>
 #include <pjsip/print_util.h>
 #include <pjsip/sip_errno.h>
+#include <pj/ctype.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
@@ -1903,7 +1904,14 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     /* SIP/2.0/transport host:port */
     pj_memcpy(buf, sip_ver.ptr, sip_ver.slen);
     buf += sip_ver.slen;
-    pj_memcpy(buf, hdr->transport.ptr, hdr->transport.slen);
+    //pj_memcpy(buf, hdr->transport.ptr, hdr->transport.slen);
+    /* Convert transport type to UPPERCASE (some endpoints want that) */
+    {
+	int i;
+	for (i=0; i<hdr->transport.slen; ++i) {
+	    buf[i] = (char)pj_toupper(hdr->transport.ptr[i]);
+	}
+    }
     buf += hdr->transport.slen;
     *buf++ = ' ';
 
