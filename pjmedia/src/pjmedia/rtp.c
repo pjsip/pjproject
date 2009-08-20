@@ -170,7 +170,7 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
     if ((*hdr)->x) {
 	pjmedia_rtp_ext_hdr *ext = (pjmedia_rtp_ext_hdr*) 
 				    (((pj_uint8_t*)pkt) + offset);
-	offset += (pj_ntohs(ext->length) * sizeof(pj_uint32_t));
+	offset += ((pj_ntohs(ext->length)+1) * sizeof(pj_uint32_t));
     }
 
     /* Check that offset is less than packet size */
