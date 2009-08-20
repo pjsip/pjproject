@@ -2313,11 +2313,13 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	ice->valid_list.checks[i].nominated = check->nominated;
     }
 
-    /* Sort valid_list */
-    sort_checklist(&ice->valid_list);
-
     /* Update valid check and nominated check for the component */
     update_comp_check(ice, new_check->lcand->comp_id, new_check);
+
+    /* Sort valid_list (must do so after update_comp_check(), otherwise
+     * new_check will point to something else (#953)
+     */
+    sort_checklist(&ice->valid_list);
 
     /* 7.1.2.2.2.  Updating Pair States
      * 
