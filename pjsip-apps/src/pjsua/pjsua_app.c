@@ -23,7 +23,7 @@
 #define THIS_FILE	"pjsua_app.c"
 #define NO_LIMIT	(int)0x7FFFFFFF
 
-//#define STEREO_DEMO
+#define STEREO_DEMO
 //#define TRANSPORT_ADAPTER_SAMPLE
 
 /* Ringtones		    US	       UK  */
@@ -103,6 +103,8 @@ static struct app_config
 
 #ifdef STEREO_DEMO
     pjmedia_snd_port	   *snd;
+    pjmedia_port	   *sc, *sc_ch1;
+    pjsua_conf_port_id	    sc_ch1_slot;
 #endif
 
     float		    mic_level,
@@ -4678,6 +4680,16 @@ pj_status_t app_destroy(void)
 	pjmedia_snd_port_destroy(app_config.snd);
 	app_config.snd = NULL;
     }
+    if (app_config.sc_ch1) {
+	pjsua_conf_remove_port(app_config.sc_ch1_slot);
+	app_config.sc_ch1_slot = PJSUA_INVALID_ID;
+	pjmedia_port_destroy(app_config.sc_ch1);
+	app_config.sc_ch1 = NULL;
+    }
+    if (app_config.sc) {
+	pjmedia_port_destroy(app_config.sc);
+	app_config.sc = NULL;
+    }
 #endif
 
     /* Close ringback port */
@@ -4717,9 +4729,25 @@ pj_status_t app_destroy(void)
 
 
 #ifdef STEREO_DEMO
+/*
+ * In this stereo demo, we open the sound device in stereo mode and
+ * arrange the attachment to the PJSUA-LIB conference bridge as such
+ * so that channel0/left channel of the sound device corresponds to
+ * slot 0 in the bridge, and channel1/right channel of the sound
+ * device corresponds to slot 1 in the bridge. Then user can independently
+ * feed different media to/from the speakers/microphones channels, by
+ * connecting them to slot 0 or 1 respectively.
+ *
+ * Here's how the connection looks like:
+ *
+   +-----------+ stereo +-----------------+ 2x mono +-----------+
+   | AUDIO DEV |<------>| SPLITCOMB   left|<------->|#0  BRIDGE |
+   +-----------+        |            right|<------->|#1         |
+                        +-----------------+         +-----------+
+ */
 static void stereo_demo()
 {
-    pjmedia_port *conf, *splitter, *ch1;
+    pjmedia_port *conf;
     pj_status_t status;
 
     /* Disable existing sound device */
@@ -4732,27 +4760,28 @@ static void stereo_demo()
 				      2 * conf->info.samples_per_frame,
 				      conf->info.bits_per_sample,
 				      0	    /* options */,
-				      &splitter);
+				      &app_config.sc);
     pj_assert(status == PJ_SUCCESS);
 
     /* Connect channel0 (left channel?) to conference port slot0 */
-    status = pjmedia_splitcomb_set_channel(splitter, 0 /* ch0 */, 
+    status = pjmedia_splitcomb_set_channel(app_config.sc, 0 /* ch0 */, 
 					   0 /*options*/,
 					   conf);
     pj_assert(status == PJ_SUCCESS);
 
     /* Create reverse channel for channel1 (right channel?)... */
     status = pjmedia_splitcomb_create_rev_channel(app_config.pool,
-						  splitter,
+						  app_config.sc,
 						  1  /* ch1 */,
 						  0  /* options */,
-						  &ch1);
+						  &app_config.sc_ch1);
     pj_assert(status == PJ_SUCCESS);
 
     /* .. and register it to conference bridge (it would be slot1
      * if there's no other devices connected to the bridge)
      */
-    status = pjsua_conf_add_port(app_config.pool, ch1, NULL);
+    status = pjsua_conf_add_port(app_config.pool, app_config.sc_ch1, 
+				 &app_config.sc_ch1_slot);
     pj_assert(status == PJ_SUCCESS);
     
     /* Create sound device */
@@ -4766,7 +4795,7 @@ static void stereo_demo()
 
 
     /* Connect the splitter to the sound device */
-    status = pjmedia_snd_port_connect(app_config.snd, splitter);
+    status = pjmedia_snd_port_connect(app_config.snd, app_config.sc);
     pj_assert(status == PJ_SUCCESS);
 
 }
