@@ -23,7 +23,7 @@
 #define THIS_FILE	"pjsua_app.c"
 #define NO_LIMIT	(int)0x7FFFFFFF
 
-#define STEREO_DEMO
+//#define STEREO_DEMO
 //#define TRANSPORT_ADAPTER_SAMPLE
 
 /* Ringtones		    US	       UK  */
