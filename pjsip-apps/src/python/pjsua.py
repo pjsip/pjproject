@@ -1222,6 +1222,28 @@ class Account:
         lck = self._lib().auto_lock()
         _pjsua.acc_pres_notify(self._id, pres_obj, state, reason, 
                                Lib._create_msg_data(hdr_list))
+    
+    def send_pager(self, uri, text, im_id=0, content_type="text/plain", \
+                   hdr_list=None):
+        """Send instant message to arbitrary URI.
+
+        Keyword arguments:
+        text         -- Instant message to be sent
+        uri          -- URI to send the Instant Message to.
+        im_id        -- Optional instant message ID to identify this
+                        instant message when delivery status callback
+                        is called.
+        content_type -- MIME type identifying the instant message
+        hdr_list     -- Optional list of headers to be sent with the
+                        request.
+
+        """
+        lck = self._lib().auto_lock()
+        err = _pjsua.im_send(self._id, uri, \
+                             content_type, text, \
+                             Lib._create_msg_data(hdr_list), \
+                             im_id)
+        self._lib()._err_check("send_pager()", self, err)
 
 class CallCallback:
     """Class to receive event notification from Call objects. 
