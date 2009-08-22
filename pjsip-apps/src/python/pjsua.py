@@ -1680,7 +1680,7 @@ class Call:
 
         """
         lck = self._lib().auto_lock()
-        if hdr_list and body:
+        if hdr_list or body:
             msg_data = _pjsua.Msg_Data()
             if hdr_list:
                 msg_data.hdr_list = hdr_list
