@@ -89,7 +89,8 @@ typedef struct pj_addrinfo
  * For host resolution function that also works with IPv6, please see
  * #pj_getaddrinfo().
  *
- * @param name	    Host name, or IPv4 address in standard dot notation.
+ * @param name	    Host name to resolve. Specifying IPv4 address here
+ *		    may fail on some platforms (e.g. Windows)
  * @param he	    The pj_hostent structure to be filled. Note that
  *		    the pointers in this structure points to temporary
  *		    variables which value will be reset upon subsequent
