@@ -4,14 +4,19 @@
 #
 import pjsua as pj
 
+# Set of admins. If empty then everyone is admin!
+admins = set([])
+
 # acc_cfg holds the account config (set it to None to disable account)
+acc_cfg = None
 acc_cfg = pj.AccountConfig()
-acc_cfg.id = "sip:102@pjsip.org"
-acc_cfg.reg_uri = "sip:pjsip.org"
-acc_cfg.proxy = [ "sip:pjsip.org;lr;transport=tcp" ]
-acc_cfg.auth_cred = [ pj.AuthCred("*", "102", "pw102") ]
-acc_cfg.publish_enabled = True
-acc_cfg.require_timer = True
+if acc_cfg:
+	acc_cfg.id = "sip:bot@pjsip.org"
+	acc_cfg.reg_uri = "sip:pjsip.org"
+	acc_cfg.proxy = [ "sip:pjsip.org;lr;transport=tcp" ]
+	acc_cfg.auth_cred = [ pj.AuthCred("*", "bot", "secretpass") ]
+	acc_cfg.publish_enabled = True
+	#acc_cfg.require_timer = True
 
 # Transport configs (set them to None to disable the transport)
 udp_cfg = pj.TransportConfig(5080)

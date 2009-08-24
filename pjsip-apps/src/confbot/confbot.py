@@ -81,7 +81,15 @@ class BuddyCb(pj.BuddyCallback):
 	def on_typing(self, is_typing):
 		self.member.on_typing(is_typing, buddy=self.buddy)
 
+
+
+
+##############################################################################
+#
+#
 # This class represents individual room member (either/both chat and voice conf)
+#
+#
 class Member:
 	def __init__(self, bot, uri):
 		self.uri = uri
@@ -92,6 +100,7 @@ class Member:
 		self.in_chat = False
 		self.in_voice = False
 		self.im_error = False
+		self.html = False
 	
 	def __str__(self):
 		str = string.ljust(self.uri, 30) + " -- " 
@@ -102,11 +111,16 @@ class Member:
 			str = str + "Offline"
 		str = str + " ["
 		if (self.in_voice):
-			str = str + " incall"
+			str = str + " voice"
 		if (self.in_chat):
-			str = str + " inchat "
+			str = str + " chat"
+			if (self.html):
+				str = str + " html"
+			else:
+				str = str + " plain"
+
 		if (self.im_error):
-			str = str + " imerror"
+			str = str + " im_error"
 		str = str + "]"
 		return str
 		
@@ -133,6 +147,13 @@ class Member:
 	def send_pager(self, body, mime="text/plain"):
 		self.bot.DEBUG("send_pager() to " + self.uri)
 		if self.in_chat and not self.im_error and self.buddy:
+			if self.html:
+				#This will make us receive html!
+				#mime = "text/html"
+				body = body.replace("<", "&lt;")
+				body = body.replace(">", "&gt;")
+				body = body.replace('"', "&quot;")
+				body = body.replace("\n", "<BR>\n")
 			self.buddy.send_pager(body, content_type=mime)
 			self.bot.DEBUG("..sent\n")
 		else:
@@ -240,7 +261,14 @@ class Member:
 	def on_pager_status(self, body, im_id, code, reason, call=None, buddy=None):
 		self.im_error = (code/100 != 2)
 
+
+
+##############################################################################
+#
+#
 # The Bot instance (singleton)
+#
+#
 class Bot(pj.AccountCallback):
 	def __init__(self):
 		pj.AccountCallback.__init__(self, None)
@@ -248,6 +276,7 @@ class Bot(pj.AccountCallback):
 		self.acc = None
 		self.calls = []
 		self.members = {}
+		self.cfg = None
 
 	def DEBUG(self, msg, level=TRACE):
 		print msg,
@@ -256,6 +285,7 @@ class Bot(pj.AccountCallback):
 		return """
 --h[elp]            Display this help screen
 --j[oin]            Join the chat room
+--html on|off       Set to receive HTML or plain text
 
 Participant commands:
 --s[how]            Show confbot settings
@@ -278,7 +308,7 @@ Admin commands:
 	def listmembers(self):
 		msg = ""
 		for uri, m in self.members.iteritems():
-			msg = msg + str(m)
+			msg = msg + str(m) + "\n"
 		return msg
 	
 	def showsettings(self):
@@ -295,7 +325,7 @@ ConfBot status and settings:
   
 	def main(self, cfg_file):
 		try:
-			cfg = __import__(cfg_file)
+			cfg = self.cfg = __import__(cfg_file)
 			
 			self.lib.init(ua_cfg=cfg.ua_cfg, log_cfg=cfg.log_cfg, media_cfg=cfg.media_cfg)
 			self.lib.set_null_snd_dev()
@@ -363,24 +393,115 @@ ConfBot status and settings:
 			del self.members[member.uri]
 			del member
 			
+	def handle_admin_cmd(self, member, body):
+		if member and self.cfg.admins and not member.uri in self.cfg.admins:
+			member.send_pager("You are not admin")
+			return
+		args = body.split()
+		msg = ""
+
+		if len(args)==1:
+			args.append(" ")
+
+		if args[1]=="list":
+			if not self.cfg.admins:
+				msg = "Everyone is admin!"
+			else:
+				msg = str(self.cfg.admins)
+		elif args[1]=="add":
+			if len(args)!=3:
+				msg = "Usage: add <URI>"
+			else:
+				self.cfg.admins.append(args[2])
+				msg = args[2] + " added as admin"
+		elif args[1]=="del":
+			if len(args)!=3:
+				msg = "Usage: del <URI>"
+			elif args[2] not in self.cfg.admins:
+				msg = args[2] + " is not admin"
+			else:
+				self.cfg.admins.remove(args[2])
+				msg = args[2] + " has been removed from admins"
+		elif args[1]=="rr":
+			msg = "Reregistering.."
+			self.acc.set_registration(True)
+		elif args[1]=="call":
+			if len(args)!=3:
+				msg = "Usage: call <URI>"
+			else:
+				uri = args[2]
+				try:
+					call = self.acc.make_call(uri)
+				except pj.Error, e:
+					msg = "Error: " + str(e)
+					call = None
+
+				if call:
+					if not uri in self.members:
+						m = Member(self, uri)
+						self.members[m.uri] = m
+					else:
+						m = self.members[uri]
+					msg = "Adding " + m.uri + " to voice conference.."
+					m.join_call(call)
+		elif args[1]=="dc" or args[1]=="hold" or args[1]=="update" or args[1]=="reinvite":
+			if len(args)!=3:
+				msg = "Usage: " + args[1] + " <URI>"
+			else:
+				uri = args[2]
+				if not uri in self.members:
+					msg = "Member not found/URI doesn't match (note: case matters!)"
+				else:
+					m = self.members[uri]
+					if m.call:
+						if args[1]=="dc":
+							msg = "Disconnecting.."
+							m.call.hangup(603, "You're disconnected by admin")
+						elif args[1]=="hold":
+							msg = "Holding the call"
+							m.call.hold()
+						elif args[1]=="update":
+							msg = "Sending UPDATE"
+							m.call.update()
+						elif args[1]=="reinvite":
+							msg = "Sending re-INVITE"
+							m.call.reinvite()
+					else:
+						msg = "He is not in call"
+		else:
+			msg = "Unknown admin command " + body
+
+		#print "msg is '%(msg)s'" % {'msg': msg}
+
+		if True:
+			if member:
+				member.send_pager(msg)
+			else:
+				print msg
+
 	def handle_cmd(self, member, from_uri, body):
 		body = body.strip(" \t\r\n")
 		msg = ""
 		handled = True
-		if body=="--list" or body=="--l":
+		if body=="--l" or body=="--list":
 			msg = self.listmembers()
 			if msg=="":
 				msg = "Nobody is here"
-		elif body=="--show" or body=="--s":
+		elif body[0:3]=="--s":
 			msg = self.showsettings()
-		elif body=="--help" or body=="--h":
+		elif body[0:6]=="--html" and member:
+			if body[8:11]=="off":
+				member.html = False
+			else:
+				member.html = True
+		elif body=="--h" or body=="--help":
 			msg = self.helpstring()
 		elif body=="--leave":
 			if not member or not member.buddy:
 				msg = "You are not in chatroom"
 			else:
 				member.buddy.unsubscribe()
-		elif body=="--join" or body=="--j":
+		elif body[0:3]=="--j":
 			if not from_uri in self.members:
 				m = Member(self, from_uri)
 				self.members[m.uri] = m
@@ -390,6 +511,9 @@ ConfBot status and settings:
 				m = self.members[from_uri]
 				self.DEBUG("Adding " + m.uri + " to chatroom\n")
 				m.join_chat()
+		elif body[0:3]=="--a":
+			self.handle_admin_cmd(member, body)
+			handled = True
 		else:
 			handled = False
 
@@ -422,7 +546,8 @@ ConfBot status and settings:
 		ai = self.acc.info()
 		self.DEBUG("Registration state: %(code)d/%(reason)s\n" % \
 					{'code': ai.reg_status, 'reason': ai.reg_reason}, INFO)
-		pass
+		if ai.reg_status/100==2 and ai.reg_expires > 0:
+			self.acc.set_basic_status(True)
 
 	def on_pager(self, from_uri, contact, mime_type, body):
 		body = body.strip(" \t\r\n")
@@ -436,8 +561,13 @@ ConfBot status and settings:
 		pass
 
 
+
+
+##############################################################################
+#
 #
 # main()
+#
 #
 if __name__ == "__main__":
 	bot = Bot()
