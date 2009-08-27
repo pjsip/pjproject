@@ -51,6 +51,7 @@ SOURCE	sip_transport_wrap.cpp
 SOURCE	sip_transport_loop.c
 SOURCE	sip_transport_tcp.c
 SOURCE	sip_transport_udp.c
+SOURCE	sip_transport_tls.c
 SOURCE	sip_ua_layer.c
 SOURCE	sip_uri.c
 SOURCE	sip_util_wrap.cpp

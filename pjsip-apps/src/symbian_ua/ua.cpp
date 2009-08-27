@@ -35,7 +35,7 @@
 //
 // Destination URI (to make call, or to subscribe presence)
 //
-#define SIP_DST_URI	"sip:100@pjsip.lab"
+#define SIP_DST_URI	"<sip:100@pjsip.lab>"
 
 //
 // Account
@@ -52,9 +52,11 @@
 //#define SIP_PROXY	"<sip:192.168.0.8;lr>"
 
 //
-// Set to 1 if TCP is desired (experimental)
+// SIP transports
 //
-#define ENABLE_SIP_TCP	0
+#define ENABLE_SIP_UDP	1
+#define ENABLE_SIP_TCP	0 // experimental
+#define ENABLE_SIP_TLS	0 // experimental
 
 //
 // Configure nameserver if DNS SRV is to be used with both SIP
@@ -373,11 +375,13 @@ static pj_status_t app_startup()
         	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
         	&codec_id, PJMEDIA_CODEC_PRIO_DISABLED);
     }
+
     
-    /* Add UDP transport. */
     pjsua_transport_config tcfg;
     pjsua_transport_id tid;
 
+#if ENABLE_SIP_UDP
+    /* Add UDP transport. */
     pjsua_transport_config_default(&tcfg);
     tcfg.port = SIP_PORT;
     status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, &tid);
@@ -386,14 +390,27 @@ static pj_status_t app_startup()
 	    pjsua_destroy();
 	    return status;
     }
-
-    /* Add TCP transport */
+#endif
+    
 #if ENABLE_SIP_TCP
+    /* Add TCP transport */
     pjsua_transport_config_default(&tcfg);
     tcfg.port = SIP_PORT;
     status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tcfg, &tid);
     if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating TCP transport", status);
+	    pjsua_destroy();
+	    return status;
+    }
+#endif
+    
+#if ENABLE_SIP_TLS
+    /* Add TLS transport */
+    pjsua_transport_config_default(&tcfg);
+    tcfg.port = SIP_PORT + 1;
+    status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &tcfg, &tid);
+    if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error creating TLS transport", status);
 	    pjsua_destroy();
 	    return status;
     }

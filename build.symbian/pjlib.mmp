@@ -71,6 +71,8 @@ SOURCE		os_timestamp_common.c
 SOURCE		os_time_unix.c
 SOURCE		os_timestamp_posix.c
 SOURCE		pool_policy_new.cpp
+SOURCE		ssl_sock_common.c
+SOURCE		ssl_sock_symbian.cpp
 SOURCE		sock_symbian.cpp
 SOURCE		sock_select_symbian.cpp
 SOURCE		timer_symbian.cpp
