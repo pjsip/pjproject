@@ -719,6 +719,8 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 #endif
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
+    /* Init iLBC settings */
+    if (desc->pt == PJMEDIA_RTP_PT_ILBC)
     {
 	enum { DEFAULT_MODE = 30 };
 	static pj_str_t STR_MODE = {"mode", 4};
