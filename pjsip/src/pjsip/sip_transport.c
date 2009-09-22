@@ -1439,6 +1439,14 @@ PJ_DEF(pj_ssize_t) pjsip_tpmgr_receive_packet( pjsip_tpmgr *mgr,
 	    if (rdata->msg_info.via->rport_param == 0) {
 		rdata->msg_info.via->rport_param = rdata->pkt_info.src_port;
 	    }
+	} else {
+	    /* Drop malformed responses */
+	    if (rdata->msg_info.msg->line.status.code < 100 ||
+		rdata->msg_info.msg->line.status.code >= 700)
+	    {
+		mgr->on_rx_msg(mgr->endpt, PJSIP_EINVALIDSTATUS, rdata);
+		goto finish_process_fragment;
+	    }
 	}
 
 	/* Drop response message if it has more than one Via.
