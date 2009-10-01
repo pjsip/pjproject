@@ -2840,6 +2840,15 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 
 	    /* Process incoming ACK request. */
 
+	    /* Verify that this is an INVITE transaction */
+	    if (tsx->method.id != PJSIP_INVITE_METHOD) {
+		PJ_LOG(2, (tsx->obj_name, 
+			   "Received illegal ACK for %.*s transaction",
+			   (int)tsx->method.name.slen,
+			   tsx->method.name.ptr));
+		return PJSIP_EINVALIDMETHOD;
+	    }
+
 	    /* Cease retransmission. */
 	    if (tsx->retransmit_timer.id != 0) {
 		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
