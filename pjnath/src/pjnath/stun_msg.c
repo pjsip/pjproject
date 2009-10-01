@@ -1234,8 +1234,11 @@ static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
     }
 
     PUTVAL16H(buf, 0, ca->hdr.type);
-    PUTVAL16H(buf, 2, (pj_uint16_t)ca->value.slen);
-    
+
+    /* Set the length to be 4-bytes aligned so that we can
+     * communicate with RFC 3489 endpoints
+     */
+    PUTVAL16H(buf, 2, (pj_uint16_t)((ca->value.slen + 3) & (~3)));
 
     /* Copy the string */
     pj_memcpy(buf+ATTR_HDR_LEN, ca->value.ptr, ca->value.slen);
