@@ -380,6 +380,9 @@ static void im_callback(void *token, pjsip_event *e)
 		/* Must duplicate im_data */
 		im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
 
+		/* Increment CSeq */
+		PJSIP_MSG_CSEQ_HDR(tdata->msg)->cseq++;
+
 		/* Re-send request */
 		status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
 						   im_data2, &im_callback);
@@ -478,6 +481,9 @@ static void typing_callback(void *token, pjsip_event *e)
 
 		/* Must duplicate im_data */
 		im_data2 = pjsua_im_data_dup(tdata->pool, im_data);
+
+		/* Increment CSeq */
+		PJSIP_MSG_CSEQ_HDR(tdata->msg)->cseq++;
 
 		/* Re-send request */
 		status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1,
