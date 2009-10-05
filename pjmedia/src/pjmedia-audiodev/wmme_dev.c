@@ -450,7 +450,7 @@ static pj_status_t init_waveformatex(LPWAVEFORMATEX wfx,
 				     const pjmedia_aud_param *prm)
 {
 
-    pj_bzero(wfx, sizeof(PCMWAVEFORMAT)); 
+    pj_bzero(wfx, sizeof(WAVEFORMATEX));
     if (prm->ext_fmt.id == PJMEDIA_FORMAT_L16) {
 	enum { BYTES_PER_SAMPLE = 2 };
 	wfx->wFormatTag = WAVE_FORMAT_PCM; 
