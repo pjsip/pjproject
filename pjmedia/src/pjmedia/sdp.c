@@ -1019,7 +1019,9 @@ static pjmedia_sdp_attr *parse_attr( pj_pool_t *pool, pj_scanner *scanner,
     /* get attr name. */
     pj_scan_get(scanner, &cs_token, &attr->name);
 
-    if (*scanner->curptr != '\r' && *scanner->curptr != '\n') {
+    if (*scanner->curptr && *scanner->curptr != '\r' && 
+	*scanner->curptr != '\n') 
+    {
 	/* skip ':' if present. */
 	if (*scanner->curptr == ':')
 	    pj_scan_get_char(scanner);
