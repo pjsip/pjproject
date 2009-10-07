@@ -479,7 +479,9 @@ static struct test_vector
 	"",
 	"",
 	&create_msgint1
-    },
+    }
+    /* disabled: see http://trac.pjsip.org/repos/ticket/960
+    ,
     {
 	PJ_STUN_BINDING_RESPONSE,
 	"\xb7\xe7\xa7\x01\xbc\x34\xd6\x86\xfa\x87\xdf\xae",
@@ -503,6 +505,9 @@ static struct test_vector
 	"",
 	&create_msgint2
     }
+    */
+
+    /* disabled: see http://trac.pjsip.org/repos/ticket/960
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
     ,
     {
@@ -542,6 +547,7 @@ static struct test_vector
 	&create_msgint3
     }
 #endif
+    */
 };
 
 
