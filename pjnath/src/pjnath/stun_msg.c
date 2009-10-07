@@ -1235,10 +1235,22 @@ static pj_status_t encode_string_attr(const void *a, pj_uint8_t *buf,
 
     PUTVAL16H(buf, 0, ca->hdr.type);
 
-    /* Set the length to be 4-bytes aligned so that we can
-     * communicate with RFC 3489 endpoints
+    /* Special treatment for SOFTWARE attribute:
+     * This attribute had caused interop problem when talking to 
+     * legacy RFC 3489 STUN servers, due to different "length"
+     * rules with RFC 5389.
      */
-    PUTVAL16H(buf, 2, (pj_uint16_t)((ca->value.slen + 3) & (~3)));
+    if (msghdr->magic != PJ_STUN_MAGIC ||
+	ca->hdr.type == PJ_STUN_ATTR_SOFTWARE)
+    {
+	/* Set the length to be 4-bytes aligned so that we can
+	 * communicate with RFC 3489 endpoints
+	 */
+	PUTVAL16H(buf, 2, (pj_uint16_t)((ca->value.slen + 3) & (~3)));
+    } else {
+	/* Use RFC 5389 rule */
+	PUTVAL16H(buf, 2, (pj_uint16_t)ca->value.slen);
+    }
 
     /* Copy the string */
     pj_memcpy(buf+ATTR_HDR_LEN, ca->value.ptr, ca->value.slen);
