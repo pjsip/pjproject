@@ -803,6 +803,7 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 			   se_hdr->sess_expires, inv->timer->setting.min_se));
 
 		inv->timer->setting.sess_expires = se_hdr->sess_expires;
+		inv->timer->setting.min_se = se_hdr->sess_expires;
 	    }
 
 	    //if (st_code)
