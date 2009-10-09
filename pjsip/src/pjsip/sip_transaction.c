@@ -1626,6 +1626,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 			       pj_ssize_t sent, pj_bool_t *cont )
 {
     pjsip_transaction *tsx = (pjsip_transaction*) send_state->token;
+    pjsip_tx_data *tdata = send_state->tdata;
     struct tsx_lock_data lck;
 
     lock_tsx(tsx, &lck);
@@ -1644,9 +1645,9 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    pjsip_transport_add_ref(tsx->transport);
 
 	    /* Update remote address. */
-	    tsx->addr_len = send_state->addr.entry[send_state->cur_addr].addr_len;
+	    tsx->addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
 	    pj_memcpy(&tsx->addr, 
-		      &send_state->addr.entry[send_state->cur_addr].addr,
+		      &tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr,
 		      tsx->addr_len);
 
 	    /* Update is_reliable flag. */

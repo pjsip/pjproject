@@ -27,6 +27,7 @@
 
 #include <pjsip/sip_msg.h>
 #include <pjsip/sip_parser.h>
+#include <pjsip/sip_resolve.h>
 #include <pj/sock.h>
 #include <pj/list.h>
 #include <pj/ioqueue.h>
@@ -521,6 +522,26 @@ struct pjsip_tx_data
 
     /** Callback to be called when this tx_data has been transmitted.	*/
     void	       (*cb)(void*, pjsip_tx_data*, pj_ssize_t);
+
+    /** Destination information, to be used to determine the network address
+     *  of the message. For a request, this information is  initialized when
+     *  the request is sent with #pjsip_endpt_send_request_stateless() and
+     *  network address is resolved. For CANCEL request, this information
+     *  will be copied from the original INVITE to make sure that the CANCEL
+     *  request goes to the same physical network address as the INVITE
+     *  request.
+     */
+    struct
+    {
+	/** Server addresses resolved. 
+	 */
+	pjsip_server_addresses   addr;
+
+	/** Current server address being tried. 
+	 */
+	unsigned cur_addr;
+
+    } dest_info;
 
     /** Transport information, only valid during on_tx_request() and 
      *  on_tx_response() callback.

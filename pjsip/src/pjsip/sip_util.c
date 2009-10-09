@@ -754,6 +754,18 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 	    break;
     }
 
+    /* Must also copy the saved strict route header, otherwise CANCEL will be
+     * sent with swapped Route and request URI!
+     */
+    if (req_tdata->saved_strict_route) {
+	cancel_tdata->saved_strict_route = (pjsip_route_hdr*)
+	    pjsip_hdr_clone(cancel_tdata->pool, req_tdata->saved_strict_route);
+    }
+
+    /* Finally copy the destination info from the original request */
+    pj_memcpy(&cancel_tdata->dest_info, &req_tdata->dest_info,
+	      sizeof(req_tdata->dest_info));
+
     /* Done.
      * Return the transmit buffer containing the CANCEL request.
      */
@@ -1057,7 +1069,7 @@ static void stateless_send_transport_cb( void *token,
 	     * (2) Failure (i.e. sent <= 0)
 	     */
 	    cont = (sent > 0) ? PJ_FALSE :
-		   (stateless_data->cur_addr<stateless_data->addr.count-1);
+		   (tdata->dest_info.cur_addr<tdata->dest_info.addr.count-1);
 	    if (stateless_data->app_cb) {
 		(*stateless_data->app_cb)(stateless_data, sent, &cont);
 	    } else {
@@ -1084,11 +1096,11 @@ static void stateless_send_transport_cb( void *token,
 	 * first invocation. 
 	 */
 	if (sent != -PJ_EPENDING) {
-	    stateless_data->cur_addr++;
+	    tdata->dest_info.cur_addr++;
 	}
 
 	/* Have next address? */
-	if (stateless_data->cur_addr >= stateless_data->addr.count) {
+	if (tdata->dest_info.cur_addr >= tdata->dest_info.addr.count) {
 	    /* This only happens when a rather buggy application has
 	     * sent 'cont' to PJ_TRUE when the initial value was PJ_FALSE.
 	     * In this case just stop the processing; we don't need to
@@ -1100,9 +1112,9 @@ static void stateless_send_transport_cb( void *token,
 	}
 
 	/* Keep current server address information handy. */
-	cur_addr = &stateless_data->addr.entry[stateless_data->cur_addr].addr;
-	cur_addr_type = stateless_data->addr.entry[stateless_data->cur_addr].type;
-	cur_addr_len = stateless_data->addr.entry[stateless_data->cur_addr].addr_len;
+	cur_addr = &tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr;
+	cur_addr_type = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].type;
+	cur_addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
 
 	/* Acquire transport. */
 	status = pjsip_endpt_acquire_transport( stateless_data->endpt,
@@ -1178,6 +1190,7 @@ stateless_send_resolver_callback( pj_status_t status,
 				  const struct pjsip_server_addresses *addr)
 {
     pjsip_send_state *stateless_data = (pjsip_send_state*) token;
+    pjsip_tx_data *tdata = stateless_data->tdata;
 
     /* Fail on server resolution. */
     if (status != PJ_SUCCESS) {
@@ -1185,12 +1198,16 @@ stateless_send_resolver_callback( pj_status_t status,
 	    pj_bool_t cont = PJ_FALSE;
 	    (*stateless_data->app_cb)(stateless_data, -status, &cont);
 	}
-	pjsip_tx_data_dec_ref(stateless_data->tdata);
+	pjsip_tx_data_dec_ref(tdata);
 	return;
     }
 
     /* Copy server addresses */
-    pj_memcpy( &stateless_data->addr, addr, sizeof(pjsip_server_addresses));
+    if (addr && addr != &tdata->dest_info.addr) {
+	pj_memcpy( &tdata->dest_info.addr, addr, 
+	           sizeof(pjsip_server_addresses));
+    }
+    pj_assert(tdata->dest_info.addr.count != 0);
 
 #if !defined(PJSIP_DONT_SWITCH_TO_TCP) || PJSIP_DONT_SWITCH_TO_TCP==0
     /* RFC 3261 section 18.1.1:
@@ -1199,29 +1216,33 @@ stateless_send_resolver_callback( pj_status_t status,
      * using an RFC 2914 [43] congestion controlled transport protocol, such
      * as TCP.
      */
-    if (stateless_data->tdata->msg->type == PJSIP_REQUEST_MSG &&
-	addr->count > 0 && 
-	addr->entry[0].type == PJSIP_TRANSPORT_UDP)
+    if (tdata->msg->type == PJSIP_REQUEST_MSG &&
+	tdata->dest_info.addr.count > 0 && 
+	tdata->dest_info.addr.entry[0].type == PJSIP_TRANSPORT_UDP)
     {
 	int len;
 
 	/* Encode the request */
-	status = pjsip_tx_data_encode(stateless_data->tdata);
+	status = pjsip_tx_data_encode(tdata);
 	if (status != PJ_SUCCESS) {
 	    if (stateless_data->app_cb) {
 		pj_bool_t cont = PJ_FALSE;
 		(*stateless_data->app_cb)(stateless_data, -status, &cont);
 	    }
-	    pjsip_tx_data_dec_ref(stateless_data->tdata);
+	    pjsip_tx_data_dec_ref(tdata);
 	    return;
 	}
 
 	/* Check if request message is larger than 1300 bytes. */
-	len = stateless_data->tdata->buf.cur - 
-		stateless_data->tdata->buf.start;
+	len = tdata->buf.cur - tdata->buf.start;
 	if (len >= PJSIP_UDP_SIZE_THRESHOLD) {
 	    int i;
-	    int count = stateless_data->addr.count;
+	    int count = tdata->dest_info.addr.count;
+
+	    PJ_LOG(5,(THIS_FILE, "%s exceeds UDP size threshold (%u), "
+				 "sending with TCP",
+				 pjsip_tx_data_get_info(tdata),
+				 PJSIP_UDP_SIZE_THRESHOLD));
 
 	    /* Insert "TCP version" of resolved UDP addresses at the
 	     * beginning.
@@ -1229,19 +1250,18 @@ stateless_send_resolver_callback( pj_status_t status,
 	    if (count * 2 > PJSIP_MAX_RESOLVED_ADDRESSES)
 		count = PJSIP_MAX_RESOLVED_ADDRESSES / 2;
 	    for (i = 0; i < count; ++i) {
-		pj_memcpy(&stateless_data->addr.entry[i+count],
-			  &stateless_data->addr.entry[i],
-			  sizeof(stateless_data->addr.entry[0]));
-		stateless_data->addr.entry[i].type = PJSIP_TRANSPORT_TCP;
+		pj_memcpy(&tdata->dest_info.addr.entry[i+count],
+			  &tdata->dest_info.addr.entry[i],
+			  sizeof(tdata->dest_info.addr.entry[0]));
+		tdata->dest_info.addr.entry[i].type = PJSIP_TRANSPORT_TCP;
 	    }
-	    stateless_data->addr.count = count * 2;
+	    tdata->dest_info.addr.count = count * 2;
 	}
     }
 #endif /* !PJSIP_DONT_SWITCH_TO_TCP */
 
     /* Process the addresses. */
-    stateless_send_transport_cb( stateless_data, stateless_data->tdata,
-				 -PJ_EPENDING);
+    stateless_send_transport_cb( stateless_data, tdata, -PJ_EPENDING);
 }
 
 /*
@@ -1275,11 +1295,22 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
     stateless_data->tdata = tdata;
     stateless_data->app_cb = cb;
 
-    /* Resolve destination host.
-     * The processing then resumed when the resolving callback is called.
+    /* If destination info has not been initialized (this applies for most
+     * all requests except CANCEL), resolve destination host. The processing
+     * then resumed when the resolving callback is called. For CANCEL, the
+     * destination info must have been copied from the original INVITE so
+     * proceed to sending the request directly.
      */
-    pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, stateless_data,
-			 &stateless_send_resolver_callback);
+    if (tdata->dest_info.addr.count == 0) {
+	pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, stateless_data,
+			     &stateless_send_resolver_callback);
+    } else {
+	PJ_LOG(5,(THIS_FILE, "%s: skipping target resolution because "
+	                     "address is already set",
+			     pjsip_tx_data_get_info(tdata)));
+	stateless_send_resolver_callback(PJ_SUCCESS, stateless_data,
+					 &tdata->dest_info.addr);
+    }
     return PJ_SUCCESS;
 }
 
@@ -1590,7 +1621,7 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
     }
 
     /* Update address in send_state. */
-    send_state->addr = *addr;
+    pj_memcpy(&send_state->tdata->dest_info.addr, addr, sizeof(*addr));
 
     /* Send response using the transoprt. */
     status = pjsip_transport_send( send_state->cur_transport, 

@@ -451,14 +451,6 @@ typedef struct pjsip_send_state
      */
     pjsip_tx_data *tdata;
 
-    /** Server addresses resolved. 
-     */
-    pjsip_server_addresses   addr;
-
-    /** Current server address being tried. 
-     */
-    unsigned cur_addr;
-
     /** Current transport being used. 
      */
     pjsip_transport *cur_transport;
