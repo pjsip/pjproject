@@ -791,11 +791,25 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	if (se_hdr && 
 	    se_hdr->sess_expires < inv->timer->setting.min_se)
 	{
-	    if (st_code)
-		*st_code = PJSIP_SC_SESSION_TIMER_TOO_SMALL;
-	    pjsip_timer_end_session(inv);
-	    return PJSIP_ERRNO_FROM_SIP_STATUS(
-					    PJSIP_SC_SESSION_TIMER_TOO_SMALL);
+	    /* See ticket #954, instead of returning non-PJ_SUCCESS (which
+	     * may cause disconnecting call/dialog), let's just accept the
+	     * SE and update our local SE, as long as it isn't less than 90s.
+	     */
+	    if (se_hdr->sess_expires >= ABS_MIN_SE) {
+		PJ_LOG(3, (inv->pool->obj_name, 
+			   "Peer responds with bad Session-Expires, %ds, "
+			   "which is less than Min-SE specified in request, "
+			   "%ds. Well, let's just accept and use it.",
+			   se_hdr->sess_expires, inv->timer->setting.min_se));
+
+		inv->timer->setting.sess_expires = se_hdr->sess_expires;
+	    }
+
+	    //if (st_code)
+	    //	*st_code = PJSIP_SC_SESSION_TIMER_TOO_SMALL;
+	    //pjsip_timer_end_session(inv);
+	    //return PJSIP_ERRNO_FROM_SIP_STATUS(
+	    //				    PJSIP_SC_SESSION_TIMER_TOO_SMALL);
 	}
 
 	/* Update SE. Session-Expires in response cannot be lower than Min-SE.
