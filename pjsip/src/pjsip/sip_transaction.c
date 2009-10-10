@@ -545,10 +545,15 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
      * Do not use PJ_ASSERT_RETURN since it evaluates the expression
      * twice!
      */
-    pj_assert(pj_hash_get( mod_tsx_layer.htable, 
-			   tsx->transaction_key.ptr,
-			   tsx->transaction_key.slen, 
-			   NULL) == NULL);
+    if(pj_hash_get(mod_tsx_layer.htable, 
+		   tsx->transaction_key.ptr,
+		   tsx->transaction_key.slen, 
+		   NULL))
+    {
+	pj_mutex_unlock(mod_tsx_layer.mutex);
+	PJ_LOG(2,(THIS_FILE, "Unable to register transaction (key exists)"));
+	return PJ_EEXISTS;
+    }
 
     TSX_TRACE_((THIS_FILE, 
 		"Transaction %p registered with hkey=0x%p and key=%.*s",
@@ -1344,6 +1349,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     status = pjsip_tsx_create_key(tsx->pool, &tsx->transaction_key, 
                                   PJSIP_ROLE_UAS, &tsx->method, rdata);
     if (status != PJ_SUCCESS) {
+	unlock_tsx(tsx, &lck);
         tsx_destroy(tsx);
         return status;
     }
@@ -1371,6 +1377,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     /* Get response address. */
     status = pjsip_get_response_addr( tsx->pool, rdata, &tsx->res_addr );
     if (status != PJ_SUCCESS) {
+	unlock_tsx(tsx, &lck);
 	tsx_destroy(tsx);
 	return status;
     }
@@ -1393,6 +1400,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
     /* Register the transaction. */
     status = mod_tsx_layer_register_tsx(tsx);
     if (status != PJ_SUCCESS) {
+	unlock_tsx(tsx, &lck);
 	tsx_destroy(tsx);
 	return status;
     }

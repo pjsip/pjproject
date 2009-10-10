@@ -1532,7 +1532,18 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	rdata->msg_info.msg->line.req.method.id != PJSIP_ACK_METHOD) 
     {
 	status = pjsip_tsx_create_uas(dlg->ua, rdata, &tsx);
-	PJ_ASSERT_ON_FAIL(status==PJ_SUCCESS,{goto on_return;});
+	if (status != PJ_SUCCESS) {
+	    /* Once case for this is when re-INVITE contains same
+	     * Via branch value as previous INVITE (ticket #965).
+	     */
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_str_t reason;
+
+	    reason = pj_strerror(status, errmsg, sizeof(errmsg));
+	    pjsip_endpt_respond_stateless(dlg->endpt, rdata, 500, &reason,
+					  NULL, NULL);
+	    goto on_return;
+	}
 
 	/* Put this dialog in the transaction data. */
 	tsx->mod_data[dlg->ua->id] = dlg;
