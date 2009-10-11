@@ -310,7 +310,7 @@ static pj_status_t stream_init(const struct stream_cfg *cfg, struct stream **p_s
     struct stream *stream = NULL;
     pjmedia_codec_mgr *cm;
     unsigned count;
-    pjmedia_codec_info *ci;
+    const pjmedia_codec_info *ci;
     pjmedia_stream_info si;
     pj_status_t status;
 

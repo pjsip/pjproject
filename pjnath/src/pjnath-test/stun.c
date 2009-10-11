@@ -597,6 +597,10 @@ static int fingerprint_test_vector()
     unsigned i;
     int rc = 0;
 
+    /* To avoid function not referenced warnings */
+    (void)create_msgint2;
+    (void)create_msgint3;
+
     PJ_LOG(3,(THIS_FILE, "  draft-denis-behave-rfc3489bis-test-vectors-02"));
 
     pool = pj_pool_create(mem, "fingerprint", 1024, 1024, NULL);

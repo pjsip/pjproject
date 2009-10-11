@@ -2942,18 +2942,18 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 		ev_state = PJSIP_EVSUB_STATE_ACTIVE;
 	    break;
 
+	case PJSIP_INV_STATE_CONFIRMED:
 #if 0
 /* We don't need this, as we've terminated the subscription in
  * CONNECTING state.
  */
-	case PJSIP_INV_STATE_CONFIRMED:
 	    /* When state is confirmed, send the final 200/OK and terminate
 	     * subscription.
 	     */
 	    st_code = e->body.tsx_state.tsx->status_code;
 	    ev_state = PJSIP_EVSUB_STATE_TERMINATED;
-	    break;
 #endif
+	    break;
 
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    st_code = e->body.tsx_state.tsx->status_code;
