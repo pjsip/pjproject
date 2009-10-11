@@ -4,12 +4,15 @@
 #include <pj/config.h>
 
 /**
- * Expand basic operation functions as inline.
+ * Expand all basic operation functions as inline. Even if this is set to
+ * zero, some critical functions would still be expanded as inline. Note
+ * also that enabling this may generate some warning messages about functions
+ * not being referenced (with gcc).
  *
- * Default: 1 (yes)
+ * Default: 0 (no)
  */
 #ifndef PJMEDIA_LIBG7221_FUNCS_INLINED
-#   define PJMEDIA_LIBG7221_FUNCS_INLINED   1
+#   define PJMEDIA_LIBG7221_FUNCS_INLINED   0
 #endif
 
 /* Declare/define a function that may be expanded as inline. */
