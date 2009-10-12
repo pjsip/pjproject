@@ -174,6 +174,12 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 	pubc->_delete_flag = 1;
 	pubc->cb = NULL;
     } else {
+	/* Cancel existing timer, if any */
+	if (pubc->timer.id != 0) {
+	    pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
+	    pubc->timer.id = 0;
+	}
+
 	pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
     }
 
