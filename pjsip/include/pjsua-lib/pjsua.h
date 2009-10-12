@@ -1797,6 +1797,11 @@ typedef struct pjsua_acc_config
     pj_bool_t	    publish_enabled;
 
     /**
+     * Event publication options.
+     */
+    pjsip_publishc_opt	publish_opt;
+
+    /**
      * Authentication preference.
      */
     pjsip_auth_clt_pref auth_pref;

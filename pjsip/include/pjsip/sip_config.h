@@ -896,6 +896,20 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/**
+ * Specify whether the client publication session should queue the
+ * PUBLISH request should there be another PUBLISH transaction still
+ * pending. If this is set to false, the client will return error
+ * on the PUBLISH request if there is another PUBLISH transaction still
+ * in progress.
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJSIP_PUBLISHC_QUEUE_REQUEST
+#   define PJSIP_PUBLISHC_QUEUE_REQUEST		1
+#endif
+
+
 PJ_END_DECL
 
 /**

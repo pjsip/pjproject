@@ -57,6 +57,15 @@ const pjsip_method pjsip_publish_method =
 
 
 /**
+ * Pending request list.
+ */
+typedef struct pending_publish
+{
+    PJ_DECL_LIST_MEMBER(pjsip_tx_data);
+} pending_publish;
+
+
+/**
  * SIP client publication structure.
  */
 struct pjsip_publishc
@@ -65,7 +74,9 @@ struct pjsip_publishc
     pjsip_endpoint		*endpt;
     pj_bool_t			 _delete_flag;
     int				 pending_tsx;
+    pj_mutex_t			*mutex;
 
+    pjsip_publishc_opt		 opt;
     void			*token;
     pjsip_publishc_cb		*cb;
 
@@ -91,8 +102,17 @@ struct pjsip_publishc
     pj_time_val			 last_refresh;
     pj_time_val			 next_refresh;
     pj_timer_entry		 timer;
+
+    /* Pending PUBLISH request */
+    pending_publish		 pending_reqs;
 };
 
+
+PJ_DEF(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt)
+{
+    pj_bzero(opt, sizeof(*opt));
+    opt->queue_request = PJSIP_PUBLISHC_QUEUE_REQUEST;
+}
 
 
 /*
@@ -127,20 +147,18 @@ PJ_DEF(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt)
 
 
 PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt, 
-					   unsigned options,
+					   const pjsip_publishc_opt *opt,
 					   void *token,
 					   pjsip_publishc_cb *cb,	
 					   pjsip_publishc **p_pubc)
 {
     pj_pool_t *pool;
     pjsip_publishc *pubc;
+    pjsip_publishc_opt default_opt;
     pj_status_t status;
 
     /* Verify arguments. */
     PJ_ASSERT_RETURN(endpt && cb && p_pubc, PJ_EINVAL);
-    PJ_ASSERT_RETURN(options == 0, PJ_EINVAL);
-
-    PJ_UNUSED_ARG(options);
 
     pool = pjsip_endpt_create_pool(endpt, "pubc%p", 1024, 1024);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
@@ -153,9 +171,25 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
     pubc->cb = cb;
     pubc->expires = PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED;
 
-    status = pjsip_auth_clt_init(&pubc->auth_sess, endpt, pubc->pool, 0);
-    if (status != PJ_SUCCESS)
+    if (!opt) {
+	pjsip_publishc_opt_default(&default_opt);
+	opt = &default_opt;
+    }
+    pj_memcpy(&pubc->opt, opt, sizeof(*opt));
+    pj_list_init(&pubc->pending_reqs);
+
+    status = pj_mutex_create_recursive(pubc->pool, "pubc%p", &pubc->mutex);
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(pool);
 	return status;
+    }
+
+    status = pjsip_auth_clt_init(&pubc->auth_sess, endpt, pubc->pool, 0);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_destroy(pubc->mutex);
+	pj_pool_release(pool);
+	return status;
+    }
 
     pj_list_init(&pubc->route_set);
     pj_list_init(&pubc->usr_hdr);
@@ -180,6 +214,8 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 	    pubc->timer.id = 0;
 	}
 
+	if (pubc->mutex)
+	    pj_mutex_destroy(pubc->mutex);
 	pjsip_endpt_release_pool(pubc->endpt, pubc->pool);
     }
 
@@ -576,6 +612,12 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    if (pubc->auto_refresh && expiration!=0 && expiration!=0xFFFF) {
 		pj_time_val delay = { 0, 0};
 
+		/* Cancel existing timer, if any */
+		if (pubc->timer.id != 0) {
+		    pjsip_endpt_cancel_timer(pubc->endpt, &pubc->timer);
+		    pubc->timer.id = 0;
+		}
+
 		delay.sec = expiration - DELAY_BEFORE_REFRESH;
 		if (pubc->expires != PJSIP_PUBC_EXPIRATION_NOT_SPECIFIED && 
 		    delay.sec > (pj_int32_t)pubc->expires) 
@@ -613,6 +655,22 @@ static void tsx_callback(void *token, pjsip_event *event)
 		      rdata, expiration);
 
 	--pubc->pending_tsx;
+
+	/* If we have pending request(s), send them now */
+	pj_mutex_lock(pubc->mutex);
+	while (!pj_list_empty(&pubc->pending_reqs)) {
+	    pjsip_tx_data *tdata = pubc->pending_reqs.next;
+	    pj_list_erase(tdata);
+	    status = pjsip_publishc_send(pubc, tdata);
+	    if (status == PJ_EPENDING) {
+		pj_assert(!"Not expected");
+		pj_list_erase(tdata);
+		pjsip_tx_data_dec_ref(tdata);
+	    } else if (status == PJ_SUCCESS) {
+		break;
+	    }
+	}
+	pj_mutex_unlock(pubc->mutex);
     }
 
     /* Delete the record if user destroy pubc during the callback. */
@@ -629,13 +687,26 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
     pjsip_cseq_hdr *cseq_hdr;
     pj_uint32_t cseq;
 
+    PJ_ASSERT_RETURN(pubc && tdata, PJ_EINVAL);
+
     /* Make sure we don't have pending transaction. */
+    pj_mutex_lock(pubc->mutex);
     if (pubc->pending_tsx) {
-	PJ_LOG(4,(THIS_FILE, "Unable to send request, pubc has another "
-			     "transaction pending"));
-	pjsip_tx_data_dec_ref( tdata );
-	return PJSIP_EBUSY;
+	if (pubc->opt.queue_request) {
+	    pj_list_push_back(&pubc->pending_reqs, tdata);
+	    pj_mutex_unlock(pubc->mutex);
+	    PJ_LOG(4,(THIS_FILE, "Request is queued, pubc has another "
+				 "transaction pending"));
+	    return PJ_EPENDING;
+	} else {
+	    pjsip_tx_data_dec_ref(tdata);
+	    pj_mutex_unlock(pubc->mutex);
+	    PJ_LOG(4,(THIS_FILE, "Unable to send request, pubc has another "
+				 "transaction pending"));
+	    return PJ_EBUSY;
+	}
     }
+    pj_mutex_unlock(pubc->mutex);
 
     /* Invalidate message buffer. */
     pjsip_tx_data_invalidate_msg(tdata);

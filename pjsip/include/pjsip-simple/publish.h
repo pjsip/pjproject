@@ -65,6 +65,25 @@ extern const pjsip_method pjsip_publish_method;
 typedef struct pjsip_publishc pjsip_publishc;
 
 
+/**
+ * Client publication options. Application should initialize this structure
+ * with its default values by calling #pjsip_publishc_opt_default()
+ */
+typedef struct pjsip_publishc_opt
+{
+    /**
+     * Specify whether the client publication session should queue the
+     * PUBLISH request should there be another PUBLISH transaction still
+     * pending. If this is set to false, the client will return error
+     * on the PUBLISH request if there is another PUBLISH transaction still
+     * in progress.
+     *
+     * Default: PJSIP_PUBLISHC_QUEUE_REQUEST
+     */
+    pj_bool_t	queue_request;
+
+} pjsip_publishc_opt;
+
 
 /** Structure to hold parameters when calling application's callback.
  *  The application's callback is called when the client publication process
@@ -89,6 +108,14 @@ typedef void pjsip_publishc_cb(struct pjsip_publishc_cbparam *param);
 
 
 /**
+ * Initialize client publication session option with default values.
+ *
+ * @param opt	    The option.
+ */
+PJ_DECL(void) pjsip_publishc_opt_default(pjsip_publishc_opt *opt);
+
+
+/**
  * Initialize client publication module.
  *
  * @param endpt	    SIP endpoint.
@@ -98,12 +125,11 @@ typedef void pjsip_publishc_cb(struct pjsip_publishc_cbparam *param);
 PJ_DECL(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt);
 
 
-
 /**
  * Create client publication structure.
  *
  * @param endpt	    Endpoint, used to allocate pool from.
- * @param options   Option flags.
+ * @param opt	    Options, or NULL to specify default options.
  * @param token	    Opaque data to be associated with the client publication.
  * @param cb	    Pointer to callback function to receive publication status.
  * @param p_pubc    Pointer to receive client publication structure.
@@ -111,7 +137,7 @@ PJ_DECL(pj_status_t) pjsip_publishc_init_module(pjsip_endpoint *endpt);
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt, 
-					    unsigned options,
+					    const pjsip_publishc_opt *opt,
 					    void *token,
 				            pjsip_publishc_cb *cb, 
 					    pjsip_publishc **p_pubc);
@@ -269,10 +295,23 @@ PJ_DECL(pj_status_t) pjsip_publishc_update_expires(pjsip_publishc *pubc,
  * and application will be notified via the callback when the process 
  * completes.
  *
+ * If the session has another PUBLISH request outstanding, the behavior
+ * depends on whether request queueing is enabled in the session (this was
+ * set by setting \a queue_request field of #pjsip_publishc_opt to true
+ * when calling #pjsip_publishc_create(). Default is true). If request
+ * queueing is enabled, the request will be queued and the function will 
+ * return PJ_EPENDING. One the outstanding request is complete, the queued
+ * request will be sent automatically. If request queueing is disabled, the
+ * function will reject the request and return PJ_EBUSY.
+ *
  * @param pubc	    The client publication structure.
  * @param tdata	    Transmit data.
  *
- * @return	    PJ_SUCCESS on success.
+ * @return	    - PJ_SUCCESS on success, or 
+ *		    - PJ_EPENDING if request is queued, or
+ *		    - PJ_EBUSY if request is rejected because another PUBLISH
+ *		      request is in progress, or
+ *		    - other status code to indicate the error.
  */
 PJ_DECL(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc, 
 					 pjsip_tx_data *tdata);

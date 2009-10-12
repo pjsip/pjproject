@@ -1073,7 +1073,10 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 
     /* Send the PUBLISH request */
     status = pjsip_publishc_send(acc->publish_sess, tdata);
-    if (status != PJ_SUCCESS) {
+    if (status == PJ_EPENDING) {
+	PJ_LOG(3,(THIS_FILE, "Previous request is in progress, "
+		  "PUBLISH request is queued"));
+    } else if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error sending PUBLISH request", status);
 	goto on_error;
     }
@@ -1102,7 +1105,8 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id)
     if (acc_cfg->publish_enabled) {
 
 	/* Create client publication */
-	status = pjsip_publishc_create(pjsua_var.endpt, 0, acc, &publish_cb,
+	status = pjsip_publishc_create(pjsua_var.endpt, &acc_cfg->publish_opt, 
+				       acc, &publish_cb,
 				       &acc->publish_sess);
 	if (status != PJ_SUCCESS) {
 	    acc->publish_sess = NULL;

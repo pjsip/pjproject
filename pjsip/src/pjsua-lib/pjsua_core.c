@@ -161,6 +161,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
+    pjsip_publishc_opt_default(&cfg->publish_opt);
     cfg->transport_id = PJSUA_INVALID_ID;
     cfg->allow_contact_rewrite = PJ_TRUE;
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
