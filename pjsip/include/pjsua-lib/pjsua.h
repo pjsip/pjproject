@@ -1751,6 +1751,22 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * Maximum time to wait for unpublication transaction(s) to complete
+ * during shutdown process, before sending unregistration. The library
+ * tries to wait for the unpublication (un-PUBLISH) to complete before
+ * sending REGISTER request to unregister the account, during library
+ * shutdown process. If the value is set too short, it is possible that
+ * the unregistration is sent before unpublication completes, causing
+ * unpublication request to fail.
+ *
+ * Default: 2000 (2 seconds)
+ */
+#ifndef PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC
+#   define PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC	2000
+#endif
+
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -1800,6 +1816,19 @@ typedef struct pjsua_acc_config
      * Event publication options.
      */
     pjsip_publishc_opt	publish_opt;
+
+    /**
+     * Maximum time to wait for unpublication transaction(s) to complete
+     * during shutdown process, before sending unregistration. The library
+     * tries to wait for the unpublication (un-PUBLISH) to complete before
+     * sending REGISTER request to unregister the account, during library
+     * shutdown process. If the value is set too short, it is possible that
+     * the unregistration is sent before unpublication completes, causing
+     * unpublication request to fail.
+     *
+     * Default: PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC
+     */
+    unsigned	    unpublish_max_wait_time_msec;
 
     /**
      * Authentication preference.

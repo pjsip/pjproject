@@ -992,7 +992,7 @@ static void publish_cb(struct pjsip_publishc_cbparam *param)
 	}
 
     } else {
-	if (param->expiration == -1) {
+	if (param->expiration < 1) {
 	    /* Could happen if server "forgot" to include Expires header
 	     * in the response. We will not renew, so destroy the pubc.
 	     */
@@ -1201,10 +1201,13 @@ void pjsua_pres_delete_acc(int acc_id)
     if (acc->publish_sess) {
 	acc->online_status = PJ_FALSE;
 	send_publish(acc_id, PJ_FALSE);
+	/* By ticket #364, don't destroy the session yet (let the callback
+	   destroy it)
 	if (acc->publish_sess) {
 	    pjsip_publishc_destroy(acc->publish_sess);
 	    acc->publish_sess = NULL;
 	}
+	*/
 	acc_cfg->publish_enabled = PJ_FALSE;
     }
 }
