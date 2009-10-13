@@ -283,7 +283,15 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 
     if (devCount==0) {
 	PJ_LOG(4,(THIS_FILE, "WMME found no sound devices"));
+	/* Enabling this will cause pjsua-lib initialization to fail when there
+	 * is no sound device installed in the system, even when pjsua has been
+	 * run with --null-audio. Moreover, it might be better to think that
+	 * the WMME backend initialization is successfull, regardless there is
+	 * no audio device installed, as later application can check it using 
+	 * get_dev_count().
 	return PJMEDIA_EAUD_NODEV;
+	 */
+	return PJ_SUCCESS;
     }
 
     wf->dev_info = (struct wmme_dev_info*)
