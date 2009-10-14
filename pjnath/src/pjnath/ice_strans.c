@@ -173,6 +173,7 @@ struct pj_ice_strans
     pj_ice_strans_cb	     cb;	/**< Application callback.	*/
     pj_lock_t		    *init_lock; /**< Initialization mutex.	*/
 
+    pj_ice_strans_state	     state;	/**< Session state.		*/
     pj_ice_sess		    *ice;	/**< ICE session.		*/
     pj_time_val		     start_time;/**< Time when ICE was started	*/
 
@@ -488,6 +489,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     ice_st->comp = (pj_ice_strans_comp**) 
 		   pj_pool_calloc(pool, comp_cnt, sizeof(pj_ice_strans_comp*));
 
+    /* Move state to candidate gathering */
+    ice_st->state = PJ_ICE_STRANS_STATE_INIT;
+
     /* Acquire initialization mutex to prevent callback to be 
      * called before we finish initialization.
      */
@@ -561,6 +565,29 @@ static void destroy_ice_st(pj_ice_strans *ice_st)
     pj_pool_release(ice_st->pool);
 }
 
+/* Get ICE session state. */
+PJ_DEF(pj_ice_strans_state) pj_ice_strans_get_state(pj_ice_strans *ice_st)
+{
+    return ice_st->state;
+}
+
+/* State string */
+PJ_DEF(const char*) pj_ice_strans_state_name(pj_ice_strans_state state)
+{
+    const char *names[] = {
+	"Null",
+	"Candidate Gathering",
+	"Candidate Gathering Complete",
+	"Session Initialized",
+	"Negotiation In Progress",
+	"Negotiation Success",
+	"Negotiation Failed"
+    };
+
+    PJ_ASSERT_RETURN(state <= PJ_ICE_STRANS_STATE_FAILED, "???");
+    return names[state];
+}
+
 /* Notification about failure */
 static void sess_fail(pj_ice_strans *ice_st, pj_ice_strans_op op,
 		      const char *title, pj_status_t status)
@@ -603,6 +630,7 @@ static void sess_init_update(pj_ice_strans *ice_st)
 
     /* All candidates have been gathered */
     ice_st->cb_called = PJ_TRUE;
+    ice_st->state = PJ_ICE_STRANS_STATE_READY;
     if (ice_st->cb.on_ice_complete)
 	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_INIT, 
 				      PJ_SUCCESS);
@@ -781,6 +809,9 @@ PJ_DEF(pj_status_t) pj_ice_strans_init_ice(pj_ice_strans *ice_st,
 		goto on_error;
 	}
     }
+
+    /* ICE session is ready for negotiation */
+    ice_st->state = PJ_ICE_STRANS_STATE_SESS_READY;
 
     return PJ_SUCCESS;
 
@@ -982,6 +1013,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_start_ice( pj_ice_strans *ice_st,
 	return status;
     }
 
+    ice_st->state = PJ_ICE_STRANS_STATE_NEGO;
     return status;
 }
 
@@ -1011,6 +1043,7 @@ PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
 	ice_st->ice = NULL;
     }
 
+    ice_st->state = PJ_ICE_STRANS_STATE_INIT;
     return PJ_SUCCESS;
 }
 
@@ -1168,6 +1201,9 @@ static void on_ice_complete(pj_ice_sess *ice, pj_status_t status)
 		}
 	    }
 	}
+
+	ice_st->state = (status==PJ_SUCCESS) ? PJ_ICE_STRANS_STATE_RUNNING :
+					       PJ_ICE_STRANS_STATE_FAILED;
 
 	(*ice_st->cb.on_ice_complete)(ice_st, PJ_ICE_STRANS_OP_NEGOTIATION, 
 				      status);

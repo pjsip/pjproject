@@ -2829,11 +2829,11 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 	*p = '\0';
     }
 
-    /* Get SRTP status */
+    /* Get and ICE SRTP status */
     pjmedia_transport_info_init(&tp_info);
     pjmedia_transport_get_info(call->med_tp, &tp_info);
     if (tp_info.specific_info_cnt > 0) {
-	int i;
+	unsigned i;
 	for (i = 0; i < tp_info.specific_info_cnt; ++i) {
 	    if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
 	    {
@@ -2850,7 +2850,23 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 		    *p++ = '\n';
 		    *p = '\0';
 		}
-		break;
+	    } else if (tp_info.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
+		const pjmedia_ice_transport_info *ii;
+
+		ii = (const pjmedia_ice_transport_info*) 
+		     tp_info.spc_info[i].buffer;
+
+		len = pj_ansi_snprintf(p, end-p, 
+				       "%s  ICE role: %s, state: %s, comp_cnt: %u",
+				       indent,
+				       pj_ice_sess_role_name(ii->role),
+				       pj_ice_strans_state_name(ii->sess_state),
+				       ii->comp_cnt);
+		if (len > 0 && len < end-p) {
+		    p += len;
+		    *p++ = '\n';
+		    *p = '\0';
+		}
 	    }
 	}
     }

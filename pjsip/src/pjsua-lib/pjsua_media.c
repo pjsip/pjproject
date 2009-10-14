@@ -821,6 +821,33 @@ static void on_ice_complete(pjmedia_transport *tp,
 	    if (pjsua_var.ua_cfg.cb.on_call_media_state) {
 		pjsua_var.ua_cfg.cb.on_call_media_state(id);
 	    }
+	} else {
+	    /* Send UPDATE if default transport address is different than
+	     * what was advertised (ticket #881)
+	     */
+	    pjmedia_transport_info tpinfo;
+	    pjmedia_ice_transport_info *ii = NULL;
+	    unsigned i;
+
+	    pjmedia_transport_info_init(&tpinfo);
+	    pjmedia_transport_get_info(tp, &tpinfo);
+	    for (i=0; i<tpinfo.specific_info_cnt; ++i) {
+		if (tpinfo.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
+		    ii = (pjmedia_ice_transport_info*)
+			 tpinfo.spc_info[i].buffer;
+		    break;
+		}
+	    }
+
+	    if (ii && ii->role==PJ_ICE_SESS_ROLE_CONTROLLING &&
+		pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
+				&pjsua_var.calls[id].med_rtp_addr))
+	    {
+		PJ_LOG(4,(THIS_FILE, 
+		          "ICE default transport address has changed for "
+			  "call %d, sending UPDATE", id));
+		pjsua_call_update(id, 0, NULL);
+	    }
 	}
 	break;
     }
@@ -1320,6 +1347,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	return status;
     }
 
+    /* Update currently advertised RTP source address */
+    pj_memcpy(&call->med_rtp_addr, &tpinfo.sock_info.rtp_addr_name, 
+	      sizeof(pj_sockaddr));
+
     *p_sdp = sdp;
     return PJ_SUCCESS;
 }
@@ -1482,7 +1513,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	pjmedia_transport_info_init(&tp_info);
 	pjmedia_transport_get_info(call->med_tp, &tp_info);
 	if (tp_info.specific_info_cnt > 0) {
-	    int i;
+	    unsigned i;
 	    for (i = 0; i < tp_info.specific_info_cnt; ++i) {
 		if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
 		{

@@ -82,6 +82,9 @@ typedef struct pjsua_call
     pjmedia_transport	*med_orig;  /**< Original media transport	    */
     pj_bool_t		 med_tp_auto_del; /**< May delete media transport   */
     pjsua_med_tp_st	 med_tp_st; /**< Media transport state		    */
+    pj_sockaddr		 med_rtp_addr; /**< Current RTP source address
+					    (used to update ICE default
+					    address)			    */
     pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 

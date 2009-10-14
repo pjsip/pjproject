@@ -1473,6 +1473,38 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 	info->src_rtcp_name = tp_ice->rtcp_src_addr;
     }
 
+    /* Fill up transport specific info */
+    if (info->specific_info_cnt < PJ_ARRAY_SIZE(info->spc_info)) {
+	pjmedia_transport_specific_info *tsi;
+	pjmedia_ice_transport_info *ii;
+	unsigned i;
+
+	pj_assert(sizeof(*ii) <= sizeof(tsi->buffer));
+	tsi = &info->spc_info[info->specific_info_cnt++];
+	tsi->type = PJMEDIA_TRANSPORT_TYPE_ICE;
+	tsi->cbsize = sizeof(*ii);
+
+	ii = (pjmedia_ice_transport_info*) tsi->buffer;
+	pj_bzero(ii, sizeof(*ii));
+
+	if (pj_ice_strans_has_sess(tp_ice->ice_st))
+	    ii->role = pj_ice_strans_get_role(tp_ice->ice_st);
+	else
+	    ii->role = PJ_ICE_SESS_ROLE_UNKNOWN;
+	ii->sess_state = pj_ice_strans_get_state(tp_ice->ice_st);
+	ii->comp_cnt = pj_ice_strans_get_running_comp_cnt(tp_ice->ice_st);
+	
+	for (i=1; i<=ii->comp_cnt && i<=PJ_ARRAY_SIZE(ii->comp); ++i) {
+	    const pj_ice_sess_check *chk;
+
+	    chk = pj_ice_strans_get_valid_pair(tp_ice->ice_st, i);
+	    if (chk) {
+		ii->comp[i-1].lcand_type = chk->lcand->type;
+		ii->comp[i-1].rcand_type = chk->rcand->type;
+	    }
+	}
+    }
+
     return PJ_SUCCESS;
 }
 

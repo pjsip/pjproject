@@ -63,6 +63,52 @@ typedef struct pjmedia_ice_cb
 
 
 /**
+ * This structure specifies ICE transport specific info. This structure
+ * will be filled in media transport specific info.
+ */
+typedef struct pjmedia_ice_transport_info
+{
+    /**
+     * ICE sesion state.
+     */
+    pj_ice_strans_state sess_state;
+
+    /**
+     * Session role.
+     */
+    pj_ice_sess_role role;
+
+    /**
+     * Number of components in the component array. Before ICE negotiation
+     * is complete, the number represents the number of components of the
+     * local agent. After ICE negotiation has been completed successfully,
+     * the number represents the number of common components between local
+     * and remote agents.
+     */
+    unsigned comp_cnt;
+
+    /**
+     * Array of ICE components. Typically the first element denotes RTP and
+     * second element denotes RTCP.
+     */
+    struct
+    {
+	/**
+	 * Local candidate type.
+	 */
+	pj_ice_cand_type    lcand_type;
+
+	/**
+	 * Remote candidate type.
+	 */
+	pj_ice_cand_type    rcand_type;
+
+    } comp[2];
+
+} pjmedia_ice_transport_info;
+
+
+/**
  * Options that can be specified when creating ICE transport.
  */
 enum pjmedia_transport_ice_options

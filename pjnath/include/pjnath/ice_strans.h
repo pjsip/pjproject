@@ -327,6 +327,51 @@ typedef struct pj_ice_strans_cfg
 } pj_ice_strans_cfg;
 
 
+/**
+ * ICE stream transport's state.
+ */
+typedef enum pj_ice_strans_state
+{
+    /**
+     * ICE stream transport is not created.
+     */
+    PJ_ICE_STRANS_STATE_NULL,
+
+    /**
+     * ICE candidate gathering process is in progress.
+     */
+    PJ_ICE_STRANS_STATE_INIT,
+
+    /**
+     * ICE stream transport initialization/candidate gathering process is
+     * complete, ICE session may be created on this stream transport.
+     */
+    PJ_ICE_STRANS_STATE_READY,
+
+    /**
+     * New session has been created and the session is ready.
+     */
+    PJ_ICE_STRANS_STATE_SESS_READY,
+
+    /**
+     * ICE negotiation is in progress.
+     */
+    PJ_ICE_STRANS_STATE_NEGO,
+
+    /**
+     * ICE negotiation has completed successfully and media is ready
+     * to be used.
+     */
+    PJ_ICE_STRANS_STATE_RUNNING,
+
+    /**
+     * ICE negotiation has completed with failure.
+     */
+    PJ_ICE_STRANS_STATE_FAILED
+
+} pj_ice_strans_state;
+
+
 /** 
  * Initialize ICE transport configuration with default values.
  *
@@ -369,6 +414,26 @@ PJ_DECL(pj_status_t) pj_ice_strans_create(const char *name,
 					  void *user_data,
 					  const pj_ice_strans_cb *cb,
 					  pj_ice_strans **p_ice_st);
+
+/**
+ * Get ICE session state.
+ *
+ * @param ice_st	The ICE stream transport.
+ *
+ * @return		ICE session state.
+ */
+PJ_DECL(pj_ice_strans_state) pj_ice_strans_get_state(pj_ice_strans *ice_st);
+
+
+/**
+ * Get string representation of ICE state.
+ *
+ * @param state		ICE stream transport state.
+ *
+ * @return		String.
+ */
+PJ_DECL(const char*) pj_ice_strans_state_name(pj_ice_strans_state state);
+
 
 /**
  * Destroy the ICE stream transport. This will destroy the ICE session

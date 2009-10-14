@@ -503,7 +503,7 @@ struct pjmedia_transport_info
     /**
      * Specifies number of transport specific info included.
      */
-    int specific_info_cnt;
+    unsigned specific_info_cnt;
 
     /**
      * Buffer storage of transport specific info.
