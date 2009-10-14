@@ -682,6 +682,14 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 
     /* Incoming SUBSCRIBE: */
 
+    /* Don't want to accept the request if shutdown is in progress */
+    if (pjsua_var.thread_quit_flag) {
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
+				      NULL, NULL);
+	return PJ_TRUE;
+    }
+
     PJSUA_LOCK();
 
     /* Find which account for the incoming request. */
@@ -1720,6 +1728,8 @@ void pjsua_pres_refresh()
 void pjsua_pres_shutdown(void)
 {
     unsigned i;
+
+    PJ_LOG(4,(THIS_FILE, "Shutting down presence.."));
 
     if (pjsua_var.pres_timer.id != 0) {
 	pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.pres_timer);

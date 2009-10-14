@@ -161,6 +161,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
+    cfg->unreg_timeout = PJSUA_UNREG_TIMEOUT;
     pjsip_publishc_opt_default(&cfg->publish_opt);
     cfg->unpublish_max_wait_time_msec = PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC;
     cfg->transport_id = PJSUA_INVALID_ID;
@@ -303,6 +304,14 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 			 pjsip_get_options_method()) != 0)
     {
 	return PJ_FALSE;
+    }
+
+    /* Don't want to handle if shutdown is in progress */
+    if (pjsua_var.thread_quit_flag) {
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
+				      NULL, NULL);
+	return PJ_TRUE;
     }
 
     /* Create basic response. */
@@ -1231,6 +1240,8 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     if (pjsua_var.endpt) {
 	unsigned max_wait;
 
+	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
+
 	/* Terminate all calls. */
 	pjsua_call_hangup_all();
 
@@ -1244,6 +1255,9 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
 	/* Terminate all presence subscriptions. */
 	pjsua_pres_shutdown();
+
+	/* Destroy media (to shutdown media transports etc) */
+	pjsua_media_subsys_destroy();
 
 	/* Wait for sometime until all publish client sessions are done
 	 * (ticket #364)
@@ -1290,10 +1304,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		pjsua_acc_set_registration(i, PJ_FALSE);
 	    }
 	}
-    }
-
-    /* Destroy endpoint. */
-    if (pjsua_var.endpt) {
 
 	/* Terminate any pending STUN resolution */
 	if (!pj_list_empty(&pjsua_var.stun_res)) {
@@ -1305,23 +1315,40 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	    }
 	}
 
+	/* Wait until all unregistrations are done (ticket #364) */
+	/* First stage, get the maximum wait time */
+	max_wait = 100;
+	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	    if (!pjsua_var.acc[i].valid)
+		continue;
+	    if (pjsua_var.acc[i].cfg.unreg_timeout > max_wait)
+		max_wait = pjsua_var.acc[i].cfg.unreg_timeout;
+	}
+	
+	/* Second stage, wait for unregistrations to complete */
+	for (i=0; i<(int)(max_wait/50); ++i) {
+	    unsigned j;
+	    for (j=0; j<PJ_ARRAY_SIZE(pjsua_var.acc); ++j) {
+		if (!pjsua_var.acc[j].valid)
+		    continue;
+
+		if (pjsua_var.acc[j].regc)
+		    break;
+	    }
+	    if (j != PJ_ARRAY_SIZE(pjsua_var.acc))
+		busy_sleep(50);
+	    else
+		break;
+	}
+	/* Note variable 'i' is used below */
+
 	/* Wait for some time to allow unregistration and ICE/TURN
 	 * transports shutdown to complete: 
-	*/
-	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
-	busy_sleep(1000);
+	 */
+	if (i < 20)
+	    busy_sleep(1000 - i*50);
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
-
-	/* Terminate all calls again, just in case there's new call
-	 * picked up during busy_sleep()
-	 */
-	pjsua_call_hangup_all();
-
-	/* Destroy media after all polling is done, as there may be
-	 * incoming request that needs handling (e.g. OPTIONS)
-	 */
-	pjsua_media_subsys_destroy();
 
 	/* Must destroy endpoint first before destroying pools in
 	 * buddies or accounts, since shutting down transaction layer
@@ -1346,9 +1373,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		pjsua_var.acc[i].pool = NULL;
 	    }
 	}
-    } else {
-	/* Destroy media */
-	pjsua_media_subsys_destroy();
     }
 
     /* Destroy mutex */

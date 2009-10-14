@@ -640,6 +640,8 @@ pj_status_t pjsua_media_subsys_destroy(void)
 {
     unsigned i;
 
+    PJ_LOG(4,(THIS_FILE, "Shutting down media.."));
+
     close_snd_dev();
 
     if (pjsua_var.mconf) {

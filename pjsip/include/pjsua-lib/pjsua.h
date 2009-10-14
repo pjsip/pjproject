@@ -1725,6 +1725,17 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * Default maximum time to wait for account unregistration transactions to
+ * complete during library shutdown sequence.
+ *
+ * Default: 4000 (4 seconds)
+ */
+#ifndef PJSUA_UNREG_TIMEOUT
+#   define PJSUA_UNREG_TIMEOUT	    4000
+#endif
+
+
+/**
  * Default PUBLISH expiration
  */
 #ifndef PJSUA_PUBLISH_EXPIRATION
@@ -1918,6 +1929,14 @@ typedef struct pjsua_acc_config
      * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).
      */
     unsigned	    reg_timeout;
+
+    /**
+     * Specify the maximum time to wait for unregistration requests to
+     * complete during library shutdown sequence.
+     *
+     * Default: PJSUA_UNREG_TIMEOUT
+     */
+    unsigned	    unreg_timeout;
 
     /** 
      * Number of credentials in the credential array.

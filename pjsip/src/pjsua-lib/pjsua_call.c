@@ -645,6 +645,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (dlg || tsx)
 	return PJ_FALSE;
 
+    /* Don't want to accept the call if shutdown is in progress */
+    if (pjsua_var.thread_quit_flag) {
+	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 
+				      PJSIP_SC_TEMPORARILY_UNAVAILABLE, NULL,
+				      NULL, NULL);
+	return PJ_TRUE;
+    }
+
     PJSUA_LOCK();
 
     /* Find free call slot. */
