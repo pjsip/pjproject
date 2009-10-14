@@ -1904,7 +1904,7 @@ static void start_nominated_check(pj_ice_sess *ice)
     }
 
     /* And (re)start the periodic check */
-    if (!ice->clist.timer.id) {
+    if (ice->clist.timer.id) {
 	pj_timer_heap_cancel(ice->stun_cfg.timer_heap, &ice->clist.timer);
 	ice->clist.timer.id = PJ_FALSE;
     }
