@@ -1208,14 +1208,16 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     sock = WSAAccept((SOCKET)key->hnd, remote, addrlen, NULL, 0);
     if (sock != INVALID_SOCKET) {
         /* Yes! New socket is available! */
-        int status;
+	if (local && addrlen) {
+	    int status;
 
-        status = getsockname(sock, local, addrlen);
-        if (status != 0) {
-            DWORD dwError = WSAGetLastError();
-            closesocket(sock);
-            return PJ_RETURN_OS_ERROR(dwError);
-        }
+	    status = getsockname(sock, local, addrlen);
+	    if (status != 0) {
+		DWORD dwError = WSAGetLastError();
+		closesocket(sock);
+		return PJ_RETURN_OS_ERROR(dwError);
+	    }
+	}
 
         *new_sock = sock;
         return PJ_SUCCESS;
