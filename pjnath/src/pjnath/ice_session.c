@@ -1099,6 +1099,7 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 {
     pj_ice_sess *ice = (pj_ice_sess*) te->user_data;
     enum timer_type type = (enum timer_type)te->id;
+    pj_bool_t has_mutex = PJ_TRUE;
 
     PJ_UNUSED_ARG(th);
 
@@ -1114,16 +1115,27 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 	on_ice_complete(ice, PJNATH_EICENOMTIMEOUT);
 	break;
     case TIMER_COMPLETION_CALLBACK:
-	/* Start keep-alive timer but don't send any packets yet.
-	 * Need to do it here just in case app destroy the session
-	 * in the callback.
-	 */
-	if (ice->ice_status == PJ_SUCCESS)
-	    ice_keep_alive(ice, PJ_FALSE);
+	{
+	    void (*on_ice_complete)(pj_ice_sess *ice, pj_status_t status);
+	    pj_status_t ice_status;
 
-	/* Notify app about ICE completion*/
-	if (ice->cb.on_ice_complete)
-	    (*ice->cb.on_ice_complete)(ice, ice->ice_status);
+	    /* Start keep-alive timer but don't send any packets yet.
+	     * Need to do it here just in case app destroy the session
+	     * in the callback.
+	     */
+	    if (ice->ice_status == PJ_SUCCESS)
+		ice_keep_alive(ice, PJ_FALSE);
+
+	    /* Release mutex in case app destroy us in the callback */
+	    ice_status = ice->ice_status;
+	    on_ice_complete = ice->cb.on_ice_complete;
+	    has_mutex = PJ_FALSE;
+	    pj_mutex_unlock(ice->mutex);
+
+	    /* Notify app about ICE completion*/
+	    if (on_ice_complete)
+		(*on_ice_complete)(ice, ice_status);
+	}
 	break;
     case TIMER_START_NOMINATED_CHECK:
 	start_nominated_check(ice);
@@ -1136,7 +1148,8 @@ static void on_timer(pj_timer_heap_t *th, pj_timer_entry *te)
 	break;
     }
 
-    pj_mutex_unlock(ice->mutex);
+    if (has_mutex)
+	pj_mutex_unlock(ice->mutex);
 }
 
 /* Send keep-alive */
