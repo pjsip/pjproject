@@ -60,26 +60,37 @@ const pj_uint16_t PJ_SOCK_RDM	= SOCK_RDM;
 const pj_uint16_t PJ_SOL_SOCKET	= SOL_SOCKET;
 #ifdef SOL_IP
 const pj_uint16_t PJ_SOL_IP	= SOL_IP;
+#elif defined(PJ_WIN32) && PJ_WIN32
+const pj_uint16_t PJ_SOL_IP	= IPPROTO_IP;
 #else
 const pj_uint16_t PJ_SOL_IP	= 0xFFFF;
 #endif /* SOL_IP */
+
 #if defined(SOL_TCP)
 const pj_uint16_t PJ_SOL_TCP	= SOL_TCP;
 #elif defined(IPPROTO_TCP)
 const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
+#elif defined(PJ_WIN32) && PJ_WIN32
+const pj_uint16_t PJ_SOL_TCP	= IPPROTO_TCP;
 #else
 const pj_uint16_t PJ_SOL_TCP	= 0xFFFF;
 #endif /* SOL_TCP */
+
 #ifdef SOL_UDP
 const pj_uint16_t PJ_SOL_UDP	= SOL_UDP;
+#elif defined(PJ_WIN32) && PJ_WIN32
+const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
 #else
 const pj_uint16_t PJ_SOL_UDP	= 0xFFFF;
-#endif
+#endif /* SOL_UDP */
+
 #ifdef SOL_IPV6
 const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
+#elif defined(PJ_WIN32) && PJ_WIN32
+const pj_uint16_t PJ_SOL_IPV6	= IPPROTO_IPV6;
 #else
 const pj_uint16_t PJ_SOL_IPV6	= 0xFFFF;
-#endif
+#endif /* SOL_IPV6 */
 
 /* IP_TOS */
 #ifdef IP_TOS
@@ -116,6 +127,9 @@ const pj_uint16_t PJ_IPTOS_MINCOST	= 0x02;
 const pj_uint16_t PJ_SO_TYPE    = SO_TYPE;
 const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
+const pj_uint16_t PJ_TCP_NODELAY= TCP_NODELAY;
+const pj_uint16_t PJ_SO_REUSEADDR= SO_REUSEADDR;
+
 /* Multicasting is not supported e.g. in PocketPC 2003 SDK */
 #ifdef IP_MULTICAST_IF
 const pj_uint16_t PJ_IP_MULTICAST_IF    = IP_MULTICAST_IF;

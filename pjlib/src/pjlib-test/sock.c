@@ -167,6 +167,22 @@ static int format_test(void)
 
     /* pj_gethostaddr() */
 
+    /* Various constants */
+#if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
+    if (PJ_SOL_IP==0xFFFF) return -5500;
+    if (PJ_SOL_TCP==0xFFFF) return -5510;
+    if (PJ_SOL_UDP==0xFFFF) return -5520;
+    if (PJ_SOL_IPV6==0xFFFF) return -5530;
+
+    if (PJ_SO_TYPE==0xFFFF) return -5540;
+    if (PJ_SO_RCVBUF==0xFFFF) return -5550;
+    if (PJ_SO_SNDBUF==0xFFFF) return -5560;
+    if (PJ_TCP_NODELAY==0xFFFF) return -5570;
+    if (PJ_SO_REUSEADDR==0xFFFF) return -5580;
+
+    if (PJ_MSG_OOB==0xFFFF) return -5590;
+    if (PJ_MSG_PEEK==0xFFFF) return -5600;
+#endif
 
     return 0;
 }

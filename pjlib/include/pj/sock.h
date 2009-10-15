@@ -290,6 +290,13 @@ extern const pj_uint16_t PJ_SO_RCVBUF;
 /** Buffer size for send. @see pj_SO_SNDBUF() */
 extern const pj_uint16_t PJ_SO_SNDBUF;
 
+/** Disables the Nagle algorithm for send coalescing. @see pj_TCP_NODELAY */
+extern const pj_uint16_t PJ_TCP_NODELAY;
+
+/** Allows the socket to be bound to an address that is already in use.
+ *  @see pj_SO_REUSEADDR */
+extern const pj_uint16_t PJ_SO_REUSEADDR;
+
 /** IP multicast interface. @see pj_IP_MULTICAST_IF() */
 extern const pj_uint16_t PJ_IP_MULTICAST_IF;
  
@@ -316,6 +323,12 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
     /** Get #PJ_SO_SNDBUF constant */
     PJ_DECL(pj_uint16_t) pj_SO_SNDBUF(void);
 
+    /** Get #PJ_TCP_NODELAY constant */
+    PJ_DECL(pj_uint16_t) pj_TCP_NODELAY(void);
+
+    /** Get #PJ_SO_REUSEADDR constant */
+    PJ_DECL(pj_uint16_t) pj_SO_REUSEADDR(void);
+
     /** Get #PJ_IP_MULTICAST_IF constant */
     PJ_DECL(pj_uint16_t) pj_IP_MULTICAST_IF(void);
 
@@ -339,6 +352,12 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
 
     /** Get #PJ_SO_SNDBUF constant */
 #   define pj_SO_SNDBUF()   PJ_SO_SNDBUF
+
+    /** Get #PJ_TCP_NODELAY constant */
+#   define pj_TCP_NODELAY() PJ_TCP_NODELAY
+
+    /** Get #PJ_SO_REUSEADDR constant */
+#   define pj_SO_REUSEADDR() PJ_SO_REUSEADDR
 
     /** Get #PJ_IP_MULTICAST_IF constant */
 #   define pj_IP_MULTICAST_IF()    PJ_IP_MULTICAST_IF

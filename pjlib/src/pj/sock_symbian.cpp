@@ -47,7 +47,7 @@ const pj_uint16_t PJ_SOCK_DGRAM	= KSockDatagram;
 const pj_uint16_t PJ_SOCK_RAW	= 0xFFFF;
 const pj_uint16_t PJ_SOCK_RDM	= 0xFFFF;
 
-/* setsockop() is not really supported. */
+/* we don't support setsockopt(), these are just dummy values */
 const pj_uint16_t PJ_SOL_SOCKET	= 0xFFFF;
 const pj_uint16_t PJ_SOL_IP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_TCP	= 0xFFFF;
@@ -60,6 +60,10 @@ const pj_uint16_t PJ_IPTOS_LOWDELAY	= 0;
 const pj_uint16_t PJ_IPTOS_THROUGHPUT	= 0;
 const pj_uint16_t PJ_IPTOS_RELIABILITY	= 0;
 const pj_uint16_t PJ_IPTOS_MINCOST	= 0;
+
+/* Misc */
+const pj_uint16_t PJ_TCP_NODELAY = 0xFFFF;
+const pj_uint16_t PJ_SO_REUSEADDR = 0xFFFF;
 
 /* ioctl() is also not supported. */
 const pj_uint16_t PJ_SO_TYPE    = 0xFFFF;
