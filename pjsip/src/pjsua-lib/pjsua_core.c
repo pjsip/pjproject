@@ -2378,6 +2378,7 @@ pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri)
     /* Clone the URI */
     pj_strdup_with_null(pool, uri, &tmp_uri);
 
+    pj_pool_release(tmp_pool);
     return PJ_SUCCESS;
 }
 
