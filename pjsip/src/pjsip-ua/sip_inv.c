@@ -108,6 +108,10 @@ static pj_status_t process_answer( pjsip_inv_session *inv,
 				   pjsip_tx_data *tdata,
 				   const pjmedia_sdp_session *local_sdp);
 
+static pj_status_t handle_timer_response(pjsip_inv_session *inv,
+				         const pjsip_rx_data *rdata,
+				         pj_bool_t end_sess_on_failure);
+
 static void (*inv_state_handler[])( pjsip_inv_session *inv, pjsip_event *e) = 
 {
     &inv_on_state_null,
@@ -477,6 +481,29 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
     return PJ_FALSE;
 }
 
+/* This function will process Session Timer headers in received 
+ * 2xx or 422 response of INVITE/UPDATE request.
+ */
+static pj_status_t handle_timer_response(pjsip_inv_session *inv,
+				         const pjsip_rx_data *rdata,
+					 pj_bool_t end_sess_on_failure)
+{
+    pjsip_status_code st_code;
+    pj_status_t status;
+
+    status = pjsip_timer_process_resp(inv, rdata, &st_code);
+    if (status != PJ_SUCCESS && end_sess_on_failure) {
+	pjsip_tx_data *tdata;
+	pj_status_t status2;
+
+	status2 = pjsip_inv_end_session(inv, st_code, NULL, &tdata);
+	if (tdata && status2 == PJ_SUCCESS)
+	    pjsip_inv_send_msg(inv, tdata);
+    }
+
+    return status;
+}
+
 /*
  * Module on_rx_response().
  *
@@ -490,8 +517,6 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
     pjsip_dialog *dlg;
     pjsip_inv_session *inv;
     pjsip_msg *msg = rdata->msg_info.msg;
-    pj_status_t status;
-    pjsip_status_code st_code;
 
     dlg = pjsip_rdata_get_dlg(rdata);
 
@@ -517,22 +542,6 @@ static pj_bool_t mod_inv_on_rx_response(pjsip_rx_data *rdata)
 	inv_send_ack(inv, &e);
 	return PJ_TRUE;
 
-    }
-
-    /* Pass response to timer session module */
-    status = pjsip_timer_process_resp(inv, rdata, &st_code);
-    if (status != PJ_SUCCESS) {
-	pjsip_event e;
-	pjsip_tx_data *tdata;
-
-	PJSIP_EVENT_INIT_RX_MSG(e, rdata);
-	inv_send_ack(inv, &e);
-
-	status = pjsip_inv_end_session(inv, st_code, NULL, &tdata);
-	if (tdata && status == PJ_SUCCESS)
-	    pjsip_inv_send_msg(inv, tdata);
-
-	return PJ_TRUE;
     }
 
     /* No other processing needs to be done here. */
@@ -2774,8 +2783,8 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
 
     /* Handle 401/407 challenge. */
     if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
-	(tsx->status_code == 401 || tsx->status_code == 407)) {
-
+	(tsx->status_code == 401 || tsx->status_code == 407))
+    {
 	pjsip_tx_data *tdata;
 	
 	status = pjsip_auth_clt_reinit_req( &inv->dlg->auth_sess, 
@@ -2798,17 +2807,30 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
 	    /* Re-send request. */
 	    status = pjsip_inv_send_msg(inv, tdata);
 	}
+    }
+
+    /* Process 422 response */
+    else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+	     tsx->status_code == 422)
+    {
+	status = handle_timer_response(inv, e->body.tsx_state.src.rdata,
+				       PJ_FALSE);
+    }
 
     /* Process 2xx response */
-    } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+    else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
 	tsx->status_code/100 == 2 &&
 	e->body.tsx_state.src.rdata->msg_info.msg->body)
     {
+	status = handle_timer_response(inv, e->body.tsx_state.src.rdata,
+				       PJ_FALSE);
 	status = inv_check_sdp_in_incoming_msg(inv, tsx, 
-					    e->body.tsx_state.src.rdata);
-
-    } else {
-	/* Get/attach invite session's transaction data */
+					     e->body.tsx_state.src.rdata);
+    }
+    
+    /* Get/attach invite session's transaction data */
+    else 
+    {
 	tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
 	if (tsx_inv_data == NULL) {
 	    tsx_inv_data=PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);
@@ -2974,6 +2996,7 @@ static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
  * Generic UAC transaction handler:
  *  - resend request on 401 or 407 response.
  *  - terminate dialog on 408 and 481 response.
+ *  - resend request on 422 response.
  */
 static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv, 
 					 pjsip_event *e)
@@ -3052,6 +3075,16 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 	    /* Re-send request. */
 	    status = pjsip_inv_send_msg(inv, tdata);
 	}
+
+	return PJ_TRUE;	/* Handled */
+    }
+
+    /* Handle session timer 422 response. */
+    else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+	     tsx->status_code == PJSIP_SC_SESSION_TIMER_TOO_SMALL) 
+    {
+	handle_timer_response(inv, e->body.tsx_state.src.rdata, 
+			      PJ_FALSE);
 
 	return PJ_TRUE;	/* Handled */
 
@@ -3141,6 +3174,15 @@ static void handle_uac_call_rejection(pjsip_inv_session *inv, pjsip_event *e)
 	    status = pjsip_inv_send_msg(inv, tdata);
 	}
 
+    } else if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+	       tsx->status_code == PJSIP_SC_SESSION_TIMER_TOO_SMALL) 
+    {
+	/* Handle session timer 422 response:
+	 * Resend the request with requested session timer setting.
+	 */
+	status = handle_timer_response(inv, e->body.tsx_state.src.rdata,
+				       PJ_TRUE);
+
     } else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 600)) {
 	/* Global error */
 	goto terminate_session;
@@ -3212,11 +3254,19 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 
 	case PJSIP_TSX_STATE_COMPLETED:
 	    if (tsx->status_code/100 == 2) {
-		
+
 		/* This should not happen.
 		 * When transaction receives 2xx, it should be terminated
 		 */
 		pj_assert(0);
+
+		/* Process session timer response. */
+		status = handle_timer_response(inv,
+					       e->body.tsx_state.src.rdata,
+					       PJ_TRUE);
+		if (status != PJ_SUCCESS)
+		    break;
+
 		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
     
 		inv_check_sdp_in_incoming_msg(inv, tsx, 
@@ -3234,6 +3284,13 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	     */
 	    if (tsx->status_code/100 == 2) {
 		/* This must be receipt of 2xx response */
+
+		/* Process session timer response. */
+		status = handle_timer_response(inv,
+					       e->body.tsx_state.src.rdata,
+					       PJ_TRUE);
+		if (status != PJ_SUCCESS)
+		    break;
 
 		/* Set state to CONNECTING */
 		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
@@ -3386,6 +3443,15 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	    if (tsx->status_code/100 == 2) {
 		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 		if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+		    pj_status_t status;
+
+		    /* Process session timer response. */
+		    status = handle_timer_response(inv, 
+						   e->body.tsx_state.src.rdata,
+						   PJ_TRUE);
+		    if (status != PJ_SUCCESS)
+			break;
+
 		    inv_check_sdp_in_incoming_msg(inv, tsx, 
 						  e->body.tsx_state.src.rdata);
 		}
@@ -3417,6 +3483,15 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 		inv_set_state(inv, PJSIP_INV_STATE_CONNECTING, e);
 
 		if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG) {
+		    pj_status_t status;
+		    
+		    /* Process session timer response. */
+		    status = handle_timer_response(inv, 
+						   e->body.tsx_state.src.rdata,
+						   PJ_TRUE);
+		    if (status != PJ_SUCCESS)
+			break;
+
 		    inv_check_sdp_in_incoming_msg(inv, tsx, 
 						  e->body.tsx_state.src.rdata);
 		}
@@ -3885,8 +3960,16 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	} else if (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
 		   tsx->status_code/100 == 2) 
 	{
+	    pj_status_t status;
 
 	    /* Re-INVITE was accepted. */
+
+	    /* Process session timer response. */
+	    status = handle_timer_response(inv, 
+					   e->body.tsx_state.src.rdata,
+					   PJ_TRUE);
+	    if (status != PJ_SUCCESS)
+		return;
 
 	    /* Process SDP */
 	    inv_check_sdp_in_incoming_msg(inv, tsx, 
@@ -3945,7 +4028,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
     } else if (tsx->role == PJSIP_ROLE_UAC) {
 	/*
-	 * Handle 401/407/408/481 response
+	 * Handle 401/407/408/481/422 response
 	 */
 	handle_uac_tsx_response(inv, e);
     }
@@ -3992,7 +4075,7 @@ static void inv_on_state_disconnected( pjsip_inv_session *inv, pjsip_event *e)
 
     } else if (tsx->role == PJSIP_ROLE_UAC) {
 	/*
-	 * Handle 401/407/408/481 response
+	 * Handle 401/407/408/481/422 response
 	 */
 	handle_uac_tsx_response(inv, e);
     }
