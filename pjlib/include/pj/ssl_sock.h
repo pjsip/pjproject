@@ -45,16 +45,140 @@ PJ_BEGIN_DECL
  * described more detail) in \ref PJ_ACTIVESOCK.
  */
 
-/**
- * Opaque declaration of certificate or endpoint credentials. This may contains
- * certificate, private key, and trusted Certificate Authorities lists.
- */
-typedef struct pj_ssl_cert_t pj_ssl_cert_t;
 
-/**
+ /**
  * This opaque structure describes the secure socket.
  */
 typedef struct pj_ssl_sock_t pj_ssl_sock_t;
+
+
+/**
+ * Opaque declaration of endpoint certificate or credentials. This may contains
+ * certificate, private key, and trusted Certificate Authorities list.
+ */
+typedef struct pj_ssl_cert_t pj_ssl_cert_t;
+
+
+/**
+ * Create credential from files.
+ *
+ * @param CA_file	The file of trusted CA list.
+ * @param cert_file	The file of certificate.
+ * @param privkey_file	The file of private key.
+ * @param privkey_pass	The password of private key, if any.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
+						 const pj_str_t *CA_file,
+						 const pj_str_t *cert_file,
+						 const pj_str_t *privkey_file,
+						 const pj_str_t *privkey_pass,
+						 pj_ssl_cert_t **p_cert);
+
+
+/** 
+ * Cipher suites enumeration.
+ */
+typedef enum pj_ssl_cipher {
+
+    /* NULL */
+    TLS_NULL_WITH_NULL_NULL               = 0x00000000,
+
+    /* TLS/SSLv3 */
+    TLS_RSA_WITH_NULL_MD5                 = 0x00000001,
+    TLS_RSA_WITH_NULL_SHA                 = 0x00000002,
+    TLS_RSA_WITH_NULL_SHA256              = 0x0000003B,
+    TLS_RSA_WITH_RC4_128_MD5              = 0x00000004,
+    TLS_RSA_WITH_RC4_128_SHA              = 0x00000005,
+    TLS_RSA_WITH_3DES_EDE_CBC_SHA         = 0x0000000A,
+    TLS_RSA_WITH_AES_128_CBC_SHA          = 0x0000002F,
+    TLS_RSA_WITH_AES_256_CBC_SHA          = 0x00000035,
+    TLS_RSA_WITH_AES_128_CBC_SHA256       = 0x0000003C,
+    TLS_RSA_WITH_AES_256_CBC_SHA256       = 0x0000003D,
+    TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA      = 0x0000000D,
+    TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA      = 0x00000010,
+    TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA     = 0x00000013,
+    TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA     = 0x00000016,
+    TLS_DH_DSS_WITH_AES_128_CBC_SHA       = 0x00000030,
+    TLS_DH_RSA_WITH_AES_128_CBC_SHA       = 0x00000031,
+    TLS_DHE_DSS_WITH_AES_128_CBC_SHA      = 0x00000032,
+    TLS_DHE_RSA_WITH_AES_128_CBC_SHA      = 0x00000033,
+    TLS_DH_DSS_WITH_AES_256_CBC_SHA       = 0x00000036,
+    TLS_DH_RSA_WITH_AES_256_CBC_SHA       = 0x00000037,
+    TLS_DHE_DSS_WITH_AES_256_CBC_SHA      = 0x00000038,
+    TLS_DHE_RSA_WITH_AES_256_CBC_SHA      = 0x00000039,
+    TLS_DH_DSS_WITH_AES_128_CBC_SHA256    = 0x0000003E,
+    TLS_DH_RSA_WITH_AES_128_CBC_SHA256    = 0x0000003F,
+    TLS_DHE_DSS_WITH_AES_128_CBC_SHA256   = 0x00000040,
+    TLS_DHE_RSA_WITH_AES_128_CBC_SHA256   = 0x00000067,
+    TLS_DH_DSS_WITH_AES_256_CBC_SHA256    = 0x00000068,
+    TLS_DH_RSA_WITH_AES_256_CBC_SHA256    = 0x00000069,
+    TLS_DHE_DSS_WITH_AES_256_CBC_SHA256   = 0x0000006A,
+    TLS_DHE_RSA_WITH_AES_256_CBC_SHA256   = 0x0000006B,
+    TLS_DH_anon_WITH_RC4_128_MD5          = 0x00000018,
+    TLS_DH_anon_WITH_3DES_EDE_CBC_SHA     = 0x0000001B,
+    TLS_DH_anon_WITH_AES_128_CBC_SHA      = 0x00000034,
+    TLS_DH_anon_WITH_AES_256_CBC_SHA      = 0x0000003A,
+    TLS_DH_anon_WITH_AES_128_CBC_SHA256   = 0x0000006C,
+    TLS_DH_anon_WITH_AES_256_CBC_SHA256   = 0x0000006D,
+
+    /* TLS (deprecated) */
+    TLS_RSA_EXPORT_WITH_RC4_40_MD5        = 0x00000003,
+    TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5    = 0x00000006,
+    TLS_RSA_WITH_IDEA_CBC_SHA             = 0x00000007,
+    TLS_RSA_EXPORT_WITH_DES40_CBC_SHA     = 0x00000008,
+    TLS_RSA_WITH_DES_CBC_SHA              = 0x00000009,
+    TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA  = 0x0000000B,
+    TLS_DH_DSS_WITH_DES_CBC_SHA           = 0x0000000C,
+    TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA  = 0x0000000E,
+    TLS_DH_RSA_WITH_DES_CBC_SHA           = 0x0000000F,
+    TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = 0x00000011,
+    TLS_DHE_DSS_WITH_DES_CBC_SHA          = 0x00000012,
+    TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = 0x00000014,
+    TLS_DHE_RSA_WITH_DES_CBC_SHA          = 0x00000015,
+    TLS_DH_anon_EXPORT_WITH_RC4_40_MD5    = 0x00000017,
+    TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA = 0x00000019,
+    TLS_DH_anon_WITH_DES_CBC_SHA          = 0x0000001A,
+
+    /* SSLv3 */
+    SSL_FORTEZZA_KEA_WITH_NULL_SHA        = 0x0000001C,
+    SSL_FORTEZZA_KEA_WITH_FORTEZZA_CBC_SHA= 0x0000001D,
+    SSL_FORTEZZA_KEA_WITH_RC4_128_SHA     = 0x0000001E,
+    
+    /* SSLv2 */
+    SSL_CK_RC4_128_WITH_MD5               = 0x00010080,
+    SSL_CK_RC4_128_EXPORT40_WITH_MD5      = 0x00020080,
+    SSL_CK_RC2_128_CBC_WITH_MD5           = 0x00030080,
+    SSL_CK_RC2_128_CBC_EXPORT40_WITH_MD5  = 0x00040080,
+    SSL_CK_IDEA_128_CBC_WITH_MD5          = 0x00050080,
+    SSL_CK_DES_64_CBC_WITH_MD5            = 0x00060040,
+    SSL_CK_DES_192_EDE3_CBC_WITH_MD5      = 0x000700C0
+
+} pj_ssl_cipher;
+
+
+/**
+ * Get cipher list supported by SSL/TLS backend.
+ *
+ * @param ciphers	The ciphers buffer to receive cipher list.
+ * @param cipher_num	Maximum number of ciphers to be received.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cipher_get_availables(pj_ssl_cipher ciphers[],
+					          unsigned *cipher_num);
+
+
+/**
+ * Get cipher name string.
+ *
+ * @param cipher	The cipher.
+ *
+ * @return		The cipher name or NULL if cipher is not recognized.
+ */
+PJ_DECL(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher);
+
 
 /**
  * This structure contains the callbacks to be called by the secure socket.
@@ -180,10 +304,10 @@ typedef enum pj_ssl_sock_proto
 {
     PJ_SSL_SOCK_PROTO_DEFAULT,	    /**< Default protocol of backend.	*/
     PJ_SSL_SOCK_PROTO_TLS1,	    /**< TLSv1.0 protocol.		*/
-    PJ_SSL_SOCK_PROTO_SSL2,	    /**< SSLv2.0 protocol.		*/
     PJ_SSL_SOCK_PROTO_SSL3,	    /**< SSLv3.0 protocol.		*/
     PJ_SSL_SOCK_PROTO_SSL23,	    /**< SSLv3.0 but can roll back to 
 					 SSLv2.0.			*/
+    PJ_SSL_SOCK_PROTO_SSL2,	    /**< SSLv2.0 protocol.		*/
     PJ_SSL_SOCK_PROTO_DTLS1	    /**< DTLSv1.0 protocol.		*/
 } pj_ssl_sock_proto;
 
@@ -203,10 +327,10 @@ typedef struct pj_ssl_sock_info
      */
     pj_ssl_sock_proto proto;
     /**
-     * Describes cipher suite being used, this can be known only when 
-     * connection is established.
+     * Describes cipher suite being used, this will only be set when connection
+     * is established.
      */
-    pj_str_t cipher;
+    pj_ssl_cipher cipher;
     /**
      * Describes local address.
      */
@@ -217,6 +341,7 @@ typedef struct pj_ssl_sock_info
     pj_sockaddr remote_addr;
    
 } pj_ssl_sock_info;
+
 
 /**
  * Definition of secure socket creation parameters.
@@ -316,10 +441,27 @@ typedef struct pj_ssl_sock_param
     pj_size_t send_buffer_size;
 
     /**
-     * Cipher list string. If empty, then default cipher list of the backend 
+     * Specify buffer size for receiving encrypted (and perhaps compressed)
+     * data on underlying socket. This setting is unused on Symbian, since 
+     * SSL/TLS Symbian backend, CSecureSocket, can use application buffer 
+     * directly.
+     *
+     * Default value is 1500.
+     */
+    pj_size_t read_buffer_size;
+
+    /**
+     * Number of ciphers contained in the specified cipher preference. 
+     * If this is set to zero, then default cipher list of the backend 
      * will be used.
      */
-    pj_str_t ciphers;
+    unsigned ciphers_num;
+
+    /**
+     * Ciphers and order preference. If empty, then default cipher list and
+     * its default order of the backend will be used.
+     */
+    pj_ssl_cipher *ciphers;
 
     /**
      * Security negotiation timeout. If this is set to zero (both sec and 

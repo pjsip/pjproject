@@ -240,13 +240,18 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
     ssock_param.cb.on_data_read = &on_data_read;
     ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = async_cnt;
-    ssock_param.ciphers = listener->tls_setting.ciphers;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(endpt);
     ssock_param.require_client_cert = listener->tls_setting.require_client_cert;
     ssock_param.servername = listener->tls_setting.server_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = listener;
     ssock_param.verify_peer = listener->tls_setting.verify_client;
+    if (ssock_param.send_buffer_size < PJSIP_MAX_PKT_LEN)
+	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
+    if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
+	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
+
+    has_listener = PJ_FALSE;
 
     switch(listener->tls_setting.method) {
     case PJSIP_TLSV1_METHOD:
@@ -279,10 +284,30 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 	pj_sockaddr_in_init(listener_addr, NULL, 0);
     }
 
+    /* Check if certificate for SSL socket is set */
+    if (listener->tls_setting.cert_file.slen) 
+    {
+	pj_ssl_cert_t *cert;
+
+	status = pj_ssl_cert_load_from_files(pool,
+			&listener->tls_setting.ca_list_file,
+			&listener->tls_setting.cert_file,
+			&listener->tls_setting.privkey_file,
+			&listener->tls_setting.password,
+			&cert);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	status = pj_ssl_sock_set_certificate(listener->ssock, pool, cert);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+
     /* Start accepting incoming connections. Note that some TLS/SSL backends
      * may not support for SSL socket server.
      */
     has_listener = PJ_FALSE;
+
     status = pj_ssl_sock_start_accept(listener->ssock, pool, 
 			  (pj_sockaddr_t*)listener_addr, 
 			  pj_sockaddr_get_len((pj_sockaddr_t*)listener_addr));
@@ -351,12 +376,17 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 	goto on_error;
     }
 
-    PJ_LOG(4,(listener->factory.obj_name, 
-	     "SIP TLS listener is ready%s at %.*s:%d",
-	     (has_listener?" for incoming connections":""),
-	     (int)listener->factory.addr_name.host.slen,
-	     listener->factory.addr_name.host.ptr,
-	     listener->factory.addr_name.port));
+    if (has_listener) {
+	PJ_LOG(4,(listener->factory.obj_name, 
+		 "SIP TLS listener is ready for incoming connections "
+		 "at %.*s:%d",
+		 (int)listener->factory.addr_name.host.slen,
+		 listener->factory.addr_name.host.ptr,
+		 listener->factory.addr_name.port));
+    } else {
+	PJ_LOG(4,(listener->factory.obj_name, "SIP TLS is ready "
+		  "(client only)"));
+    }
 
     /* Return the pointer to user */
     if (p_factory) *p_factory = &listener->factory;
@@ -756,14 +786,18 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.cb.on_data_read = &on_data_read;
     ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = 1;
-    ssock_param.ciphers = listener->tls_setting.ciphers;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
-    PJ_TODO(SET_PROPER_SERVERNAME_BASED_ON_TARGET);
+    PJ_TODO(set_proper_servername_based_on_target);
+    PJ_TODO(synchronize_tls_cipher_type_with_ssl_sock_cipher_type);
     ssock_param.servername = listener->tls_setting.server_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = NULL; /* pending, must be set later */
     ssock_param.verify_peer = listener->tls_setting.verify_server;
-    
+    if (ssock_param.send_buffer_size < PJSIP_MAX_PKT_LEN)
+	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
+    if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
+	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
+
     switch(listener->tls_setting.method) {
     case PJSIP_TLSV1_METHOD:
 	ssock_param.proto = PJ_SSL_SOCK_PROTO_TLS1;
@@ -893,7 +927,11 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
 			 (const pj_sockaddr_in*)&listener->factory.local_addr,
 			 (const pj_sockaddr_in*)src_addr, &tls);
+    
     if (status == PJ_SUCCESS) {
+	/* Set the "pending" SSL socket user data */
+	pj_ssl_sock_set_user_data(new_ssock, tls);
+
 	status = tls_start_read(tls);
 	if (status != PJ_SUCCESS) {
 	    PJ_LOG(3,(tls->base.obj_name, "New transport cancelled"));
@@ -1172,9 +1210,6 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
 
-    /* Mark that pending connect() operation has completed. */
-    tls->has_pending_connect = PJ_FALSE;
-
     /* Check connect() status */
     if (status != PJ_SUCCESS) {
 
@@ -1203,16 +1238,6 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	return PJ_FALSE;
     }
 
-    PJ_LOG(4,(tls->base.obj_name, 
-	      "TLS transport %.*s:%d is connected to %.*s:%d",
-	      (int)tls->base.local_name.host.slen,
-	      tls->base.local_name.host.ptr,
-	      tls->base.local_name.port,
-	      (int)tls->base.remote_name.host.slen,
-	      tls->base.remote_name.host.ptr,
-	      tls->base.remote_name.port));
-
-
     /* Update (again) local address, just in case local address currently
      * set is different now that the socket is connected (could happen
      * on some systems, like old Win32 probably?).
@@ -1232,6 +1257,18 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 				  tp_addr);
 	}
     }
+
+    PJ_LOG(4,(tls->base.obj_name, 
+	      "TLS transport %.*s:%d is connected to %.*s:%d",
+	      (int)tls->base.local_name.host.slen,
+	      tls->base.local_name.host.ptr,
+	      tls->base.local_name.port,
+	      (int)tls->base.remote_name.host.slen,
+	      tls->base.remote_name.host.ptr,
+	      tls->base.remote_name.port));
+
+    /* Mark that pending connect() operation has completed. */
+    tls->has_pending_connect = PJ_FALSE;
 
     /* Start pending read */
     status = tls_start_read(tls);
@@ -1260,6 +1297,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 
     return PJ_TRUE;
 }
+
 
 /* Transport keep-alive timer callback */
 static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)

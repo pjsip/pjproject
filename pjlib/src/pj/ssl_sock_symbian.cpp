@@ -20,6 +20,7 @@
 #include <pj/compat/socket.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/math.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
 #include <pj/string.h>
@@ -413,10 +414,55 @@ struct pj_ssl_sock_t
 
     pj_ssl_sock_proto	 proto;
     pj_time_val		 timeout;
-    pj_str_t		 ciphers;
+    unsigned		 ciphers_num;
+    pj_ssl_cipher	*ciphers;
     pj_str_t		 servername;
 };
 
+
+/*
+ * Get cipher list supported by SSL/TLS backend.
+ */
+PJ_DEF(pj_status_t) pj_ssl_cipher_get_availables (pj_ssl_cipher ciphers[],
+					          unsigned *cipher_num)
+{
+    /* Available ciphers */
+    static pj_ssl_cipher ciphers_[64];
+    static unsigned ciphers_num_ = 0;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(ciphers && cipher_num, PJ_EINVAL);
+    
+    if (ciphers_num_ == 0) {
+        RSocket sock;
+        CSecureSocket *secure_sock;
+        TPtrC16 proto(_L16("TLS1.0"));
+
+        secure_sock = CSecureSocket::NewL(sock, proto);
+        if (secure_sock) {
+            TBuf8<128> ciphers_buf(0);
+            secure_sock->AvailableCipherSuites(ciphers_buf);
+            
+            ciphers_num_ = ciphers_buf.Length() / 2;
+            if (ciphers_num_ > PJ_ARRAY_SIZE(ciphers_))
+        	ciphers_num_ = PJ_ARRAY_SIZE(ciphers_);
+            for (i = 0; i < ciphers_num_; ++i)
+                ciphers_[i] = (pj_ssl_cipher)ciphers_buf[i*2];
+        }
+        
+        delete secure_sock;
+    }
+    
+    if (ciphers_num_ == 0) {
+	return PJ_ENOTFOUND;
+    }
+    
+    *cipher_num = PJ_MIN(*cipher_num, ciphers_num_);
+    for (i = 0; i < *cipher_num; ++i)
+        ciphers[i] = ciphers_[i];
+    
+    return PJ_SUCCESS;
+}
 
 /*
  * Create SSL socket instance. 
@@ -444,13 +490,38 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->sock_type = param->sock_type;
     ssock->cb = param->cb;
     ssock->user_data = param->user_data;
-    pj_strdup_with_null(pool, &ssock->ciphers, &param->ciphers);
+    ssock->ciphers_num = param->ciphers_num;
+    if (param->ciphers_num > 0) {
+	unsigned i;
+	ssock->ciphers = (pj_ssl_cipher*)
+			 pj_pool_calloc(pool, param->ciphers_num, 
+					sizeof(pj_ssl_cipher));
+	for (i = 0; i < param->ciphers_num; ++i)
+	    ssock->ciphers[i] = param->ciphers[i];
+    }
     pj_strdup_with_null(pool, &ssock->servername, &param->servername);
 
     /* Finally */
     *p_ssock = ssock;
 
     return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
+                                        	const pj_str_t *CA_file,
+                                        	const pj_str_t *cert_file,
+                                        	const pj_str_t *privkey_file,
+                                        	const pj_str_t *privkey_pass,
+                                        	pj_ssl_cert_t **p_cert)
+{
+    PJ_UNUSED_ARG(pool);
+    PJ_UNUSED_ARG(CA_file);
+    PJ_UNUSED_ARG(cert_file);
+    PJ_UNUSED_ARG(privkey_file);
+    PJ_UNUSED_ARG(privkey_pass);
+    PJ_UNUSED_ARG(p_cert);
+    return PJ_ENOTSUP;
 }
 
 /*
@@ -521,36 +592,6 @@ PJ_DEF(void*) pj_ssl_sock_get_user_data(pj_ssl_sock_t *ssock)
 PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 					  pj_ssl_sock_info *info)
 {
-    const char *cipher_names[0x1B] = {
-	"TLS_RSA_WITH_NULL_MD5",
-	"TLS_RSA_WITH_NULL_SHA",
-	"TLS_RSA_EXPORT_WITH_RC4_40_MD5",
-	"TLS_RSA_WITH_RC4_128_MD5",
-	"TLS_RSA_WITH_RC4_128_SHA",
-	"TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5",
-	"TLS_RSA_WITH_IDEA_CBC_SHA",
-	"TLS_RSA_EXPORT_WITH_DES40_CBC_SHA",
-	"TLS_RSA_WITH_DES_CBC_SHA",
-	"TLS_RSA_WITH_3DES_EDE_CBC_SHA",
-	"TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA",
-	"TLS_DH_DSS_WITH_DES_CBC_SHA",
-	"TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA",
-	"TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA",
-	"TLS_DH_RSA_WITH_DES_CBC_SHA",
-	"TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA",
-	"TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA",
-	"TLS_DHE_DSS_WITH_DES_CBC_SHA",
-	"TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA",
-	"TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA",
-	"TLS_DHE_RSA_WITH_DES_CBC_SHA",
-	"TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA",
-	"TLS_DH_anon_EXPORT_WITH_RC4_40_MD5",
-	"TLS_DH_anon_WITH_RC4_128_MD5",
-	"TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA",
-	"TLS_DH_anon_WITH_DES_CBC_SHA",
-	"TLS_DH_anon_WITH_3DES_EDE_CBC_SHA"
-    };
-    
     PJ_ASSERT_RETURN(ssock && info, PJ_EINVAL);
     
     pj_bzero(info, sizeof(*info));
@@ -570,19 +611,16 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 	pj_sockaddr_cp(&info->local_addr, &ssock->local_addr);
     }
 
-    /* Remote address */
-    pj_sockaddr_cp((pj_sockaddr_t*)&info->remote_addr, 
-		   (pj_sockaddr_t*)&ssock->rem_addr);
-
-    /* Cipher suite */
     if (info->established) {
-	TBuf8<8> cipher;
+	/* Cipher suite */
+	TBuf8<4> cipher;
 	if (ssock->sock->GetCipher(cipher) == KErrNone) {
-	    TLex8 lex(cipher);
-	    TUint cipher_code = cipher[1];    
-	    if (cipher_code>=1 && cipher_code<=0x1B)
-		info->cipher = pj_str((char*)cipher_names[cipher_code-1]); 
+	    info->cipher = (pj_ssl_cipher)cipher[1]; 
 	}
+
+	/* Remote address */
+        pj_sockaddr_cp((pj_sockaddr_t*)&info->remote_addr, 
+    		   (pj_sockaddr_t*)&ssock->rem_addr);
     }
 
     /* Protocol */
