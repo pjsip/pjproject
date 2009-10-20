@@ -87,7 +87,11 @@ const pj_uint16_t PJ_SOL_UDP	= 0xFFFF;
 #ifdef SOL_IPV6
 const pj_uint16_t PJ_SOL_IPV6	= SOL_IPV6;
 #elif defined(PJ_WIN32) && PJ_WIN32
-const pj_uint16_t PJ_SOL_IPV6	= IPPROTO_IPV6;
+#   if defined(IPPROTO_IPV6) || (_WIN32_WINNT >= 0x0501)
+	const pj_uint16_t PJ_SOL_IPV6	= IPPROTO_IPV6;
+#   else
+	const pj_uint16_t PJ_SOL_IPV6	= 41;
+#   endif
 #else
 const pj_uint16_t PJ_SOL_IPV6	= 0xFFFF;
 #endif /* SOL_IPV6 */
