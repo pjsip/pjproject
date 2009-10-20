@@ -384,12 +384,15 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     call_id = alloc_call_id();
 
     if (call_id == PJSUA_INVALID_ID) {
-	pjsua_perror(THIS_FILE, "Error making file", PJ_ETOOMANY);
+	pjsua_perror(THIS_FILE, "Error making call", PJ_ETOOMANY);
 	PJSUA_UNLOCK();
 	return PJ_ETOOMANY;
     }
 
     call = &pjsua_var.calls[call_id];
+
+    /* Associate session with account */
+    call->acc_id = acc_id;
 
     /* Create temporary pool */
     tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
@@ -499,7 +502,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     }
 
     /* Create and associate our data in the session. */
-    call->acc_id = acc_id;
     call->inv = inv;
 
     dlg->mod_data[pjsua_var.mod.id] = call;
