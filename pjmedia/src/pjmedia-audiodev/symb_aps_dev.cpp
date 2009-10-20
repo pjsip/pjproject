@@ -1072,23 +1072,25 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		    const TDesC8 &dst = bitstream->ExpandG729Frame(src,
 								   sid_frame); 
 		    if (sid_frame) {
+			buf.iBuffer.Append(2);
 			buf.iBuffer.Append(0);
-			buf.iBuffer.Append(1);
 		    } else {
 			buf.iBuffer.Append(1);
 			buf.iBuffer.Append(0);
 		    }
 		    buf.iBuffer.Append(dst);
 		} else {
+		    buf.iBuffer.Append(2);
 		    buf.iBuffer.Append(0);
-		    buf.iBuffer.Append(0);
+		    buf.iBuffer.AppendFill(0, 22);
 		}
 
 		pjmedia_frame_ext_pop_subframes(frame, 1);
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		buf.iBuffer.Append(0);
-		buf.iBuffer.Append(0);
+	        buf.iBuffer.Append(2);
+	        buf.iBuffer.Append(0);
+	        buf.iBuffer.AppendFill(0, 22);
 		
 		frame->samples_cnt = 0;
 		frame->subframe_cnt = 0;
