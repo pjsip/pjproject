@@ -1147,7 +1147,9 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     pj_status_t status;
 
     /* Validate media transport */
-    /* For now, this transport only support RTP/AVP transport */
+    /* This transport only support RTP/AVP transport, unless if
+     * transport checking is disabled
+     */
     if ((tp_ice->media_option & PJMEDIA_TPMED_NO_TRANSPORT_CHECKING) == 0) {
 	pjmedia_sdp_media *loc_m, *rem_m;
 
@@ -1409,6 +1411,17 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 		return status;
 	    }
 	}
+
+	/* Ticket #977: Update role if turns out we're supposed to be the 
+	 * Controlling agent (e.g. when talking to ice-lite peer). 
+	 */
+	if (tp_ice->rem_offer_state.local_role==PJ_ICE_SESS_ROLE_CONTROLLING &&
+	    pj_ice_strans_has_sess(tp_ice->ice_st)) 
+	{
+	    pj_ice_strans_change_role(tp_ice->ice_st, 
+				      PJ_ICE_SESS_ROLE_CONTROLLING);
+	}
+
 
 	/* start ICE */
     }
