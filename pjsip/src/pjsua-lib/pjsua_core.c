@@ -2318,6 +2318,23 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     return p ? 0 : -1;
 }
 
+/*
+ * Schedule a timer entry. 
+ */
+PJ_DEF(pj_status_t) pjsua_schedule_timer( pj_timer_entry *entry,
+					  const pj_time_val *delay)
+{
+    return pjsip_endpt_schedule_timer(pjsua_var.endpt, entry, delay);
+}
+
+/*
+ * Cancel the previously scheduled timer.
+ *
+ */
+PJ_DEF(void) pjsua_cancel_timer(pj_timer_entry *entry)
+{
+    pjsip_endpt_cancel_timer(pjsua_var.endpt, entry);
+}
 
 /** 
  * Normalize route URI (check for ";lr" and append one if it doesn't

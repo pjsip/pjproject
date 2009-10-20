@@ -2619,12 +2619,16 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
     pjsua_buddy_info info;
     pjsua_buddy_get_info(buddy_id, &info);
 
-    PJ_LOG(3,(THIS_FILE, "%.*s status is %.*s (subscription state is %s)",
+    PJ_LOG(3,(THIS_FILE, "%.*s status is %.*s, subscription state is %s "
+			 "(last termination reason code=%d %.*s)",
 	      (int)info.uri.slen,
 	      info.uri.ptr,
 	      (int)info.status_text.slen,
 	      info.status_text.ptr,
-	      info.sub_state_name));
+	      info.sub_state_name,
+	      info.sub_term_code,
+	      (int)info.sub_term_reason.slen,
+	      info.sub_term_reason.ptr));
 }
 
 

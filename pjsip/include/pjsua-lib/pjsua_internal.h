@@ -185,9 +185,10 @@ typedef struct pjsua_buddy
     pj_bool_t		 monitor;   /**< Should we monitor?		*/
     pjsip_dialog	*dlg;	    /**< The underlying dialog.		*/
     pjsip_evsub		*sub;	    /**< Buddy presence subscription	*/
+    unsigned		 term_code; /**< Subscription termination code	*/
     pj_str_t		 term_reason;/**< Subscription termination reason */
     pjsip_pres_status	 status;    /**< Buddy presence status.		*/
-
+    pj_timer_entry	 timer;	    /**< Resubscription timer		*/
 } pjsua_buddy;
 
 

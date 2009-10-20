@@ -1397,6 +1397,32 @@ PJ_DECL(pj_status_t) pjsua_verify_sip_url(const char *url);
 
 
 /**
+ * Schedule a timer entry. Note that the timer callback may be executed
+ * by different thread, depending on whether worker thread is enabled or
+ * not.
+ *
+ * @param entry		Timer heap entry.
+ * @param delay     The interval to expire.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ *
+ * @see pjsip_endpt_schedule_timer()
+ */
+PJ_DECL(pj_status_t) pjsua_schedule_timer(pj_timer_entry *entry,
+					  const pj_time_val *delay);
+
+
+/**
+ * Cancel the previously scheduled timer.
+ *
+ * @param entry		Timer heap entry.
+ *
+ * @see pjsip_endpt_cancel_timer()
+ */
+PJ_DECL(void) pjsua_cancel_timer(pj_timer_entry *entry);
+
+
+/**
  * This is a utility function to display error message for the specified 
  * error code. The error message will be sent to the log.
  *
@@ -3128,7 +3154,16 @@ typedef struct pjsua_buddy_info
     const char	       *sub_state_name;
 
     /**
-     * Specifies the last presence subscription terminatino reason. If 
+     * Specifies the last presence subscription termination code. This would
+     * return the last status of the SUBSCRIBE request. If the subscription
+     * is terminated with NOTIFY by the server, this value will be set to
+     * 200, and subscription termination reason will be given in the
+     * \a sub_term_reason field.
+     */
+    unsigned		sub_term_code;
+
+    /**
+     * Specifies the last presence subscription termination reason. If 
      * presence subscription is currently active, the value will be empty.
      */
     pj_str_t		sub_term_reason;
