@@ -1406,6 +1406,12 @@ static void buddy_resubscribe(pjsua_buddy *buddy, pj_bool_t resched,
     if (resched) {
 	pj_time_val delay;
 
+	PJ_LOG(4,(THIS_FILE,  
+	          "Resubscribing buddy id %u in %u ms (reason: %.*s)", 
+		  buddy->index, msec_interval,
+		  (int)buddy->term_reason.slen,
+		  buddy->term_reason.ptr));
+
 	pj_timer_entry_init(&buddy->timer, 0, buddy, &buddy_timer_cb);
 	delay.sec = 0;
 	delay.msec = msec_interval;
