@@ -1467,7 +1467,14 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 			/* 481: we refreshed too late? resubscribe
 			 * immediately.
 			 */
-			resub_delay = 500;
+			/* But this must only happen when the 481 is received
+			 * on subscription refresh request. We MUST NOT try to
+			 * resubscribe automatically if the 481 is received
+			 * on the initial SUBSCRIBE (if server returns this
+			 * response for some reason).
+			 */
+			if (buddy->dlg->remote.contact)
+			    resub_delay = 500;
 			break;
 		    }
 		} else if (pjsip_method_cmp(&tsx->method,
@@ -1530,8 +1537,9 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 	    }
 
 	    buddy_resubscribe(buddy, PJ_TRUE, resub_delay);
-				  
+
 	} else {
+	    /* This will clear the last termination code/reason */
 	    buddy->term_code = 0;
 	    buddy->term_reason.slen = 0;
 	}

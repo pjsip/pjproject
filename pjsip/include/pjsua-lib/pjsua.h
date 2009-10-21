@@ -3037,9 +3037,12 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 
 
 /**
- * This specifies how long the library should retry resending SUBSCRIBE
- * if the previous SUBSCRIBE failed. This also controls the duration 
- * before failed PUBLISH request will be retried.
+ * This specifies how long the library should wait before retrying failed
+ * SUBSCRIBE request, and there is no rule to automatically resubscribe 
+ * (for example, no "retry-after" parameter in Subscription-State header).
+ *
+ * This also controls the duration  before failed PUBLISH request will be
+ * retried.
  *
  * Default: 300 seconds
  */
