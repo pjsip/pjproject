@@ -1719,6 +1719,7 @@ PJ_DEF(pjsip_retry_after_hdr*) pjsip_retry_after_hdr_init( pj_pool_t *pool,
 
     init_hdr(hdr, PJSIP_H_RETRY_AFTER, &retry_after_hdr_vptr);
     hdr->ivalue = value;
+    hdr->comment.slen = 0;
     pj_list_init(&hdr->param);
     return hdr;
 }
