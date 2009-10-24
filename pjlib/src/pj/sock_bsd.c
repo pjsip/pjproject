@@ -78,6 +78,8 @@ const pj_uint16_t PJ_SOL_TCP	= 0xFFFF;
 
 #ifdef SOL_UDP
 const pj_uint16_t PJ_SOL_UDP	= SOL_UDP;
+#elif defined(IPPROTO_UDP)
+const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
 #elif defined(PJ_WIN32) && PJ_WIN32
 const pj_uint16_t PJ_SOL_UDP	= IPPROTO_UDP;
 #else
