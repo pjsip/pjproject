@@ -41,6 +41,7 @@
 #define PJ_HAS_MALLOC_H		    1
 #define PJ_HAS_NETDB_H		    0
 #define PJ_HAS_NETINET_IN_H	    0
+#define PJ_HAS_NETINET_TCP_H	    0
 #define PJ_HAS_SETJMP_H		    1
 #define PJ_HAS_STDARG_H		    1
 #define PJ_HAS_STDDEF_H		    1

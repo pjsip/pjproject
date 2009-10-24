@@ -150,6 +150,7 @@ AC_CHECK_HEADER(netinet/ip.h,[AC_DEFINE(PJ_HAS_NETINET_IP_H,1)],[],
           	  #	include <netinet/in_systm.h>
           	  #endif
           	 ])
+AC_CHECK_HEADER(netinet/tcp.h,[AC_DEFINE(PJ_HAS_NETINET_TCP_H,1)])
 AC_CHECK_HEADER(ifaddrs.h,[AC_DEFINE(PJ_HAS_IFADDRS_H,1)])
 AC_CHECK_HEADER(semaphore.h,[AC_DEFINE(PJ_HAS_SEMAPHORE_H,1)])
 AC_CHECK_HEADER(setjmp.h,[AC_DEFINE(PJ_HAS_SETJMP_H,1)])
