@@ -18,8 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/string.h>
 #include <pj/compat/string.h>
+#include <pj/compat/stdarg.h>
 #include <pj/assert.h>
 
 /* Prototype for platform specific error message, which will be defined 
@@ -195,4 +197,31 @@ PJ_DEF(pj_str_t) pj_strerror( pj_status_t statcode,
 
     return errstr;
 }
+
+#if PJ_LOG_MAX_LEVEL >= 1
+static void call_logger(const char *sender, int level, const char *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
+    pj_log(sender, level, format, arg);
+    va_end(arg);
+}
+
+/*
+ * perror()
+ */
+PJ_DEF(void) pj_perror(int log_level, const char *sender, 
+		       pj_status_t status, const char *title,
+		       int options)
+{
+    char errmsg[PJ_ERR_MSG_SIZE];
+
+    PJ_ASSERT_ON_FAIL(options==0, return);
+    PJ_UNUSED_ARG(options);
+
+    pj_strerror(status, errmsg, sizeof(errmsg));
+    call_logger(sender, log_level, "%s: %s", title, errmsg);
+}
+#endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
+
 

@@ -112,6 +112,27 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
 			       char *buf, pj_size_t bufsize);
 
 /**
+ * Print the error message pertaining to the specified error code to
+ * the log.
+ *
+ * @param log_level The log will be printed at this log level.
+ * @param sender    The log sender string.
+ * @param status    The error code which error message will be printed.
+ * @param title	    String to be printed before the error message. Note
+ *		    that a colon will be added automatically between
+ *		    this string and the error message.
+ * @param options   Options, currently must be zero.
+ */
+#if PJ_LOG_MAX_LEVEL >= 1
+PJ_DECL(void) pj_perror(int log_level, const char *sender, 
+			pj_status_t status, const char *title,
+			int options);
+#else
+#   define pj_perror(level, sender, status, title, options)
+#endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
+
+
+/**
  * Type of callback to be specified in #pj_register_strerror()
  *
  * @param e	    The error code to lookup.
