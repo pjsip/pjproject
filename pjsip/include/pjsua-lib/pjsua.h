@@ -1517,6 +1517,24 @@ typedef struct pjsua_transport_config
      */
     pjsip_tls_setting	tls_setting;
 
+    /**
+     * QoS traffic type to be set on this transport. When application wants
+     * to apply QoS tagging to the transport, it's preferable to set this
+     * field rather than \a qos_param fields since this is more portable.
+     *
+     * Default is QoS not set.
+     */
+    pj_qos_type		qos_type;
+
+    /**
+     * Set the low level QoS parameters to the transport. This is a lower
+     * level operation than setting the \a qos_type field and may not be
+     * supported on all platforms.
+     *
+     * Default is QoS not set.
+     */
+    pj_qos_params	qos_params;
+
 } pjsua_transport_config;
 
 

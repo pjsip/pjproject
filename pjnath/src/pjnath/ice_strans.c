@@ -211,6 +211,7 @@ PJ_DEF(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg)
     pj_stun_config_init(&cfg->stun_cfg, NULL, 0, NULL, NULL);
     pj_stun_sock_cfg_default(&cfg->stun.cfg);
     pj_turn_alloc_param_default(&cfg->turn.alloc_param);
+    pj_turn_sock_cfg_default(&cfg->turn.cfg);
 
     pj_ice_sess_options_default(&cfg->opt);
 
@@ -273,6 +274,17 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	stun_sock_cb.on_status = &stun_on_status;
 	stun_sock_cb.on_data_sent = &stun_on_data_sent;
 	
+	/* Override component specific QoS settings, if any */
+	if (ice_st->cfg.comp[comp_id-1].qos_type) {
+	    ice_st->cfg.stun.cfg.qos_type = 
+		ice_st->cfg.comp[comp_id-1].qos_type;
+	}
+	if (ice_st->cfg.comp[comp_id-1].qos_params.flags) {
+	    pj_memcpy(&ice_st->cfg.stun.cfg.qos_params,
+		      &ice_st->cfg.comp[comp_id-1].qos_params,
+		      sizeof(ice_st->cfg.stun.cfg.qos_params));
+	}
+
 	/* Create the STUN transport */
 	status = pj_stun_sock_create(&ice_st->cfg.stun_cfg, NULL,
 				     ice_st->cfg.af, &stun_sock_cb,
@@ -391,10 +403,22 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	turn_sock_cb.on_rx_data = &turn_on_rx_data;
 	turn_sock_cb.on_state = &turn_on_state;
 
+	/* Override with component specific QoS settings, if any */
+	if (ice_st->cfg.comp[comp_id-1].qos_type) {
+	    ice_st->cfg.turn.cfg.qos_type = 
+		ice_st->cfg.comp[comp_id-1].qos_type;
+	}
+	if (ice_st->cfg.comp[comp_id-1].qos_params.flags) {
+	    pj_memcpy(&ice_st->cfg.turn.cfg.qos_params,
+		      &ice_st->cfg.comp[comp_id-1].qos_params,
+		      sizeof(ice_st->cfg.turn.cfg.qos_params));
+	}
+
+	/* Create the TURN transport */
 	status = pj_turn_sock_create(&ice_st->cfg.stun_cfg, ice_st->cfg.af,
 				     ice_st->cfg.turn.conn_type,
-				     &turn_sock_cb, 0, comp, 
-				     &comp->turn_sock);
+				     &turn_sock_cb, &ice_st->cfg.turn.cfg, 
+				     comp, &comp->turn_sock);
 	if (status != PJ_SUCCESS) {
 	    return status;
 	}
@@ -453,7 +477,8 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     if (status != PJ_SUCCESS)
 	return status;
 
-    PJ_ASSERT_RETURN(comp_cnt && cb && p_ice_st, PJ_EINVAL);
+    PJ_ASSERT_RETURN(comp_cnt && cb && p_ice_st &&
+		     comp_cnt <= PJ_ICE_MAX_COMP , PJ_EINVAL);
 
     if (name == NULL)
 	name = "ice%p";

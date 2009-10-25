@@ -341,6 +341,14 @@ SOURCE=..\src\pj\sock_common.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pj\sock_qos_bsd.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\sock_qos_common.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\sock_select.c
 # End Source File
 # Begin Source File
@@ -586,6 +594,10 @@ SOURCE=..\include\pj\rbtree.h
 # Begin Source File
 
 SOURCE=..\include\pj\sock.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\sock_qos.h
 # End Source File
 # Begin Source File
 

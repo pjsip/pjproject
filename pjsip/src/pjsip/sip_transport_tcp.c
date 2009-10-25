@@ -57,6 +57,8 @@ struct tcp_listener
     pjsip_endpoint	    *endpt;
     pjsip_tpmgr		    *tpmgr;
     pj_activesock_t	    *asock;
+    pj_qos_type		     qos_type;
+    pj_qos_params	     qos_params;
 };
 
 
@@ -164,6 +166,17 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
     host_port->port = pj_sockaddr_get_port(addr);
 }
 
+/*
+ * Initialize pjsip_tcp_transport_cfg structure with default values.
+ */
+PJ_DEF(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
+					     int af)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->af = af;
+    pj_sockaddr_init(cfg->af, &cfg->bind_addr, NULL, 0);
+    cfg->async_cnt = 1;
+}
 
 
 /****************************************************************************
@@ -174,32 +187,33 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
  * This is the public API to create, initialize, register, and start the
  * TCP listener.
  */
-PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
-					       const pj_sockaddr_in *local,
-					       const pjsip_host_port *a_name,
-					       unsigned async_cnt,
-					       pjsip_tpfactory **p_factory)
+PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
+					pjsip_endpoint *endpt,
+					const pjsip_tcp_transport_cfg *cfg,
+					pjsip_tpfactory **p_factory
+					)
 {
     pj_pool_t *pool;
     pj_sock_t sock = PJ_INVALID_SOCKET;
     struct tcp_listener *listener;
     pj_activesock_cfg asock_cfg;
     pj_activesock_cb listener_cb;
-    pj_sockaddr_in *listener_addr;
+    pj_sockaddr *listener_addr;
     int addr_len;
     pj_status_t status;
 
     /* Sanity check */
-    PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt && cfg->async_cnt, PJ_EINVAL);
 
     /* Verify that address given in a_name (if any) is valid */
-    if (a_name && a_name->host.slen) {
-	pj_sockaddr_in tmp;
+    if (cfg->addr_name.host.slen) {
+	pj_sockaddr tmp;
 
-	status = pj_sockaddr_in_init(&tmp, &a_name->host, 
-				     (pj_uint16_t)a_name->port);
-	if (status != PJ_SUCCESS || tmp.sin_addr.s_addr == PJ_INADDR_ANY ||
-	    tmp.sin_addr.s_addr == PJ_INADDR_NONE)
+	status = pj_sockaddr_init(cfg->af, &tmp, &cfg->addr_name.host, 
+				  (pj_uint16_t)cfg->addr_name.port);
+	if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+	    (cfg->af==pj_AF_INET() && 
+	     tmp.ipv4.sin_addr.s_addr==PJ_INADDR_NONE)) 
 	{
 	    /* Invalid address */
 	    return PJ_EINVAL;
@@ -217,6 +231,9 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
     listener->factory.type_name = "tcp";
     listener->factory.flag = 
 	pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TCP);
+    listener->qos_type = cfg->qos_type;
+    pj_memcpy(&listener->qos_params, &cfg->qos_params,
+	      sizeof(cfg->qos_params));
 
     pj_ansi_strcpy(listener->factory.obj_name, "tcplis");
 
@@ -226,24 +243,27 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 	goto on_error;
 
 
-    /* Create and bind socket */
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
+    /* Create socket */
+    status = pj_sock_socket(cfg->af, pj_SOCK_STREAM(), 0, &sock);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    listener_addr = (pj_sockaddr_in*)&listener->factory.local_addr;
-    if (local) {
-	pj_memcpy(listener_addr, local, sizeof(pj_sockaddr_in));
-    } else {
-	pj_sockaddr_in_init(listener_addr, NULL, 0);
-    }
+    /* Apply QoS, if specified */
+    status = pj_sock_apply_qos2(sock, cfg->qos_type, &cfg->qos_params, 
+				2, listener->factory.obj_name, 
+				"SIP TCP listener socket");
 
-    status = pj_sock_bind(sock, listener_addr, sizeof(pj_sockaddr_in));
+    /* Bind socket */
+    listener_addr = &listener->factory.local_addr;
+    pj_sockaddr_cp(listener_addr, &cfg->bind_addr);
+
+    status = pj_sock_bind(sock, listener_addr, 
+			  pj_sockaddr_get_len(listener_addr));
     if (status != PJ_SUCCESS)
 	goto on_error;
 
     /* Retrieve the bound address */
-    addr_len = sizeof(pj_sockaddr_in);
+    addr_len = pj_sockaddr_get_len(listener_addr);
     status = pj_sock_getsockname(sock, listener_addr, &addr_len);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -251,12 +271,12 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
     /* If published host/IP is specified, then use that address as the
      * listener advertised address.
      */
-    if (a_name && a_name->host.slen) {
+    if (cfg->addr_name.host.slen) {
 	/* Copy the address */
-	listener->factory.addr_name = *a_name;
+	listener->factory.addr_name = cfg->addr_name;
 	pj_strdup(listener->factory.pool, &listener->factory.addr_name.host, 
-		  &a_name->host);
-	listener->factory.addr_name.port = a_name->port;
+		  &cfg->addr_name.host);
+	listener->factory.addr_name.port = cfg->addr_name.port;
 
     } else {
 	/* No published address is given, use the bound address */
@@ -264,24 +284,27 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 	/* If the address returns 0.0.0.0, use the default
 	 * interface address as the transport's address.
 	 */
-	if (listener_addr->sin_addr.s_addr == 0) {
+	if (!pj_sockaddr_has_addr(listener_addr)) {
 	    pj_sockaddr hostip;
 
 	    status = pj_gethostip(pj_AF_INET(), &hostip);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    listener_addr->sin_addr.s_addr = hostip.ipv4.sin_addr.s_addr;
+	    pj_memcpy(pj_sockaddr_get_addr(listener_addr),
+		      pj_sockaddr_get_addr(&hostip),
+		      pj_sockaddr_get_addr_len(&hostip));
 	}
 
 	/* Save the address name */
 	sockaddr_to_host_port(listener->factory.pool, 
-			      &listener->factory.addr_name, listener_addr);
+			      &listener->factory.addr_name, 
+			      (pj_sockaddr_in*)listener_addr);
     }
 
     /* If port is zero, get the bound port */
     if (listener->factory.addr_name.port == 0) {
-	listener->factory.addr_name.port = pj_ntohs(listener_addr->sin_port);
+	listener->factory.addr_name.port = pj_sockaddr_get_port(listener_addr);
     }
 
     pj_ansi_snprintf(listener->factory.obj_name, 
@@ -296,9 +319,11 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 
 
     /* Create active socket */
-    if (async_cnt > MAX_ASYNC_CNT) async_cnt = MAX_ASYNC_CNT;
     pj_activesock_cfg_default(&asock_cfg);
-    asock_cfg.async_cnt = async_cnt;
+    if (cfg->async_cnt > MAX_ASYNC_CNT) 
+	asock_cfg.async_cnt = MAX_ASYNC_CNT;
+    else
+	asock_cfg.async_cnt = cfg->async_cnt;
 
     pj_bzero(&listener_cb, sizeof(listener_cb));
     listener_cb.on_accept_complete = &on_accept_complete;
@@ -341,6 +366,35 @@ on_error:
 	pj_sock_close(sock);
     lis_destroy(&listener->factory);
     return status;
+}
+
+
+/*
+ * This is the public API to create, initialize, register, and start the
+ * TCP listener.
+ */
+PJ_DEF(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
+					       const pj_sockaddr_in *local,
+					       const pjsip_host_port *a_name,
+					       unsigned async_cnt,
+					       pjsip_tpfactory **p_factory)
+{
+    pjsip_tcp_transport_cfg cfg;
+
+    pjsip_tcp_transport_cfg_default(&cfg, pj_AF_INET());
+
+    if (local)
+	pj_sockaddr_cp(&cfg.bind_addr, local);
+    else
+	pj_sockaddr_init(cfg.af, &cfg.bind_addr, NULL, 0);
+
+    if (a_name)
+	pj_memcpy(&cfg.addr_name, a_name, sizeof(*a_name));
+
+    if (async_cnt)
+	cfg.async_cnt = async_cnt;
+
+    return pjsip_tcp_transport_start3(endpt, &cfg, p_factory);
 }
 
 
@@ -774,6 +828,12 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Apply QoS, if specified */
+    status = pj_sock_apply_qos2(sock, listener->qos_type, 
+				&listener->qos_params, 
+				2, listener->factory.obj_name, 
+				"outgoing SIP TCP socket");
+
     /* Bind to any port */
     status = pj_sock_bind_in(sock, 0, 0);
     if (status != PJ_SUCCESS) {
@@ -877,6 +937,12 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 	      listener->factory.addr_name.port,
 	      pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
 	      sock));
+
+    /* Apply QoS, if specified */
+    status = pj_sock_apply_qos2(sock, listener->qos_type, 
+				&listener->qos_params, 
+				2, listener->factory.obj_name, 
+				"incoming SIP TCP socket");
 
     /* 
      * Incoming connection!

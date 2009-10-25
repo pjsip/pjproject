@@ -1526,12 +1526,12 @@ static const char *addr_string(const pj_sockaddr_t *addr)
  * address via STUN, depending on config).
  */
 static pj_status_t create_sip_udp_sock(int af,
-				       const pj_str_t *bind_param,
-				       int port,
+				       const pjsua_transport_config *cfg,
 				       pj_sock_t *p_sock,
 				       pj_sockaddr *p_pub_addr)
 {
     char stun_ip_addr[PJ_INET6_ADDRSTRLEN];
+    unsigned port = cfg->port;
     pj_str_t stun_srv;
     pj_sock_t sock;
     pj_sockaddr bind_addr;
@@ -1545,8 +1545,8 @@ static pj_status_t create_sip_udp_sock(int af,
     }
 
     /* Initialize bound address */
-    if (bind_param->slen) {
-	status = pj_sockaddr_init(af, &bind_addr, bind_param, 
+    if (cfg->bound_addr.slen) {
+	status = pj_sockaddr_init(af, &bind_addr, &cfg->bound_addr, 
 				  (pj_uint16_t)port);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, 
@@ -1558,12 +1558,19 @@ static pj_status_t create_sip_udp_sock(int af,
 	pj_sockaddr_init(af, &bind_addr, NULL, (pj_uint16_t)port);
     }
 
+    /* Create socket */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "socket() error", status);
 	return status;
     }
 
+    /* Apply QoS, if specified */
+    status = pj_sock_apply_qos2(sock, cfg->qos_type, 
+				&cfg->qos_params, 
+				2, THIS_FILE, "SIP UDP socket");
+
+    /* Bind socket */
     status = pj_sock_bind(sock, &bind_addr, pj_sockaddr_get_len(&bind_addr));
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "bind() error", status);
@@ -1711,8 +1718,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	 * (only when public address is not specified).
 	 */
 	status = create_sip_udp_sock(pjsip_transport_type_get_af(type),
-				     &cfg->bound_addr, cfg->port,
-				     &sock, &pub_addr);
+				     cfg, &sock, &pub_addr);
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
@@ -1743,9 +1749,10 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	 * Create TCP transport.
 	 */
 	pjsua_transport_config config;
-	pjsip_host_port a_name;
 	pjsip_tpfactory *tcp;
-	pj_sockaddr_in local_addr;
+	pjsip_tcp_transport_cfg tcp_cfg;
+
+	pjsip_tcp_transport_cfg_default(&tcp_cfg, pj_AF_INET());
 
 	/* Supply default config if it's not specified */
 	if (cfg == NULL) {
@@ -1753,14 +1760,14 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	    cfg = &config;
 	}
 
-	/* Init local address */
-	pj_sockaddr_in_init(&local_addr, 0, 0);
-
+	/* Configure bind address */
 	if (cfg->port)
-	    local_addr.sin_port = pj_htons((pj_uint16_t)cfg->port);
+	    pj_sockaddr_set_port(&tcp_cfg.bind_addr, (pj_uint16_t)cfg->port);
 
 	if (cfg->bound_addr.slen) {
-	    status = pj_sockaddr_in_set_str_addr(&local_addr,&cfg->bound_addr);
+	    status = pj_sockaddr_set_str_addr(tcp_cfg.af, 
+					      &tcp_cfg.bind_addr,
+					      &cfg->bound_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, 
 			     "Unable to resolve transport bound address", 
@@ -1769,14 +1776,17 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	    }
 	}
 
-	/* Init published name */
-	pj_bzero(&a_name, sizeof(pjsip_host_port));
+	/* Set published name */
 	if (cfg->public_addr.slen)
-	    a_name.host = cfg->public_addr;
+	    tcp_cfg.addr_name.host = cfg->public_addr;
+
+	/* Copy the QoS settings */
+	tcp_cfg.qos_type = cfg->qos_type;
+	pj_memcpy(&tcp_cfg.qos_params, &cfg->qos_params, 
+		  sizeof(cfg->qos_params));
 
 	/* Create the TCP transport */
-	status = pjsip_tcp_transport_start2(pjsua_var.endpt, &local_addr, 
-					    &a_name, 1, &tcp);
+	status = pjsip_tcp_transport_start3(pjsua_var.endpt, &tcp_cfg, &tcp);
 
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating SIP TCP listener", 

@@ -25,6 +25,7 @@
  * @brief TURN relay using UDP client as transport protocol
  */
 #include <pjnath/turn_session.h>
+#include <pj/sock_qos.h>
 
 
 PJ_BEGIN_DECL
@@ -101,6 +102,48 @@ typedef struct pj_turn_sock_cb
 
 
 /**
+ * This structure describes options that can be specified when creating
+ * the TURN socket. Application should call #pj_turn_sock_cfg_default()
+ * to initialize this structure with its default values before using it.
+ */
+typedef struct pj_turn_sock_cfg
+{
+    /**
+     * QoS traffic type to be set on this transport. When application wants
+     * to apply QoS tagging to the transport, it's preferable to set this
+     * field rather than \a qos_param fields since this is more portable.
+     *
+     * Default value is PJ_QOS_TYPE_BEST_EFFORT.
+     */
+    pj_qos_type qos_type;
+
+    /**
+     * Set the low level QoS parameters to the transport. This is a lower
+     * level operation than setting the \a qos_type field and may not be
+     * supported on all platforms.
+     *
+     * By default all settings in this structure are not set.
+     */
+    pj_qos_params qos_params;
+
+    /**
+     * Specify if STUN socket should ignore any errors when setting the QoS
+     * traffic type/parameters.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t qos_ignore_error;
+
+} pj_turn_sock_cfg;
+
+
+/**
+ * Initialize pj_turn_sock_cfg structure with default values.
+ */
+PJ_DECL(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg);
+
+
+/**
  * Create a TURN transport instance with the specified address family and
  * connection type. Once TURN transport instance is created, application
  * must call pj_turn_sock_alloc() to allocate a relay address in the TURN
@@ -114,7 +157,9 @@ typedef struct pj_turn_sock_cb
  * @param conn_type	Connection type to the TURN server. Both TCP and
  *			UDP are supported.
  * @param cb		Callback to receive events from the TURN transport.
- * @param options	Option flags, currently this value must be zero.
+ * @param setting	Optional settings to be specified to the transport.
+ *			If this parameter is NULL, default values will be
+ *			used.
  * @param user_data	Arbitrary application data to be associated with
  *			this transport.
  * @param p_turn_sock	Pointer to receive the created instance of the
@@ -127,7 +172,7 @@ PJ_DECL(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
 					 int af,
 					 pj_turn_tp_type conn_type,
 					 const pj_turn_sock_cb *cb,
-					 unsigned options,
+					 const pj_turn_sock_cfg *setting,
 					 void *user_data,
 					 pj_turn_sock **p_turn_sock);
 

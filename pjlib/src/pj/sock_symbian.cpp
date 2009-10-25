@@ -64,6 +64,7 @@ const pj_uint16_t PJ_IPTOS_MINCOST	= 0;
 /* Misc */
 const pj_uint16_t PJ_TCP_NODELAY = 0xFFFF;
 const pj_uint16_t PJ_SO_REUSEADDR = 0xFFFF;
+const pj_uint16_t PJ_SO_PRIORITY = 0xFFFF;
 
 /* ioctl() is also not supported. */
 const pj_uint16_t PJ_SO_TYPE    = 0xFFFF;

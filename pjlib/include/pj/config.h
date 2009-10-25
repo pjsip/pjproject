@@ -748,6 +748,37 @@
 #   define PJ_HAS_STRICMP_ALNUM	    0
 #endif
 
+
+/*
+ * Types of QoS backend implementation.
+ */
+
+/** 
+ * Dummy QoS backend implementation, will always return error on all
+ * the APIs.
+ */
+#define PJ_QOS_DUMMY	    1
+
+/** QoS backend based on setsockopt(IP_TOS) */
+#define PJ_QOS_BSD	    2
+
+/** QoS backend for Windows Mobile 6 */
+#define PJ_QOS_WM	    3
+
+/** QoS backend for Symbian */
+#define PJ_QOS_SYMBIAN	    4
+
+/**
+ * Force the use of some QoS backend API for some platforms.
+ */
+#ifndef PJ_QOS_IMPLEMENTATION
+#   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE && _WIN32_WCE >= 0x502
+	/* Windows Mobile 6 or later */
+#	define PJ_QOS_IMPLEMENTATION    PJ_QOS_WM
+#   endif
+#endif
+
+
 /** @} */
 
 /********************************************************************

@@ -46,6 +46,7 @@ struct pj_turn_sock
 
     pj_turn_alloc_param	 alloc_param;
     pj_stun_config	 cfg;
+    pj_turn_sock_cfg	 setting;
 
     pj_bool_t		 destroy_request;
     pj_timer_entry	 timer;
@@ -92,6 +93,14 @@ static void destroy(pj_turn_sock *turn_sock);
 static void timer_cb(pj_timer_heap_t *th, pj_timer_entry *e);
 
 
+/* Init config */
+PJ_DEF(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
+    cfg->qos_ignore_error = PJ_TRUE;
+}
+
 /*
  * Create.
  */
@@ -99,20 +108,25 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
 					int af,
 					pj_turn_tp_type conn_type,
 					const pj_turn_sock_cb *cb,
-					unsigned options,
+					const pj_turn_sock_cfg *setting,
 					void *user_data,
 					pj_turn_sock **p_turn_sock)
 {
     pj_turn_sock *turn_sock;
     pj_turn_session_cb sess_cb;
+    pj_turn_sock_cfg default_setting;
     pj_pool_t *pool;
     const char *name_tmpl;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(cfg && p_turn_sock, PJ_EINVAL);
     PJ_ASSERT_RETURN(af==pj_AF_INET() || af==pj_AF_INET6(), PJ_EINVAL);
-    PJ_ASSERT_RETURN(options==0, PJ_EINVAL);
     PJ_ASSERT_RETURN(conn_type!=PJ_TURN_TP_TCP || PJ_HAS_TCP, PJ_EINVAL);
+
+    if (!setting) {
+	pj_turn_sock_cfg_default(&default_setting);
+	setting = &default_setting;
+    }
 
     switch (conn_type) {
     case PJ_TURN_TP_UDP:
@@ -138,6 +152,9 @@ PJ_DEF(pj_status_t) pj_turn_sock_create(pj_stun_config *cfg,
 
     /* Copy STUN config (this contains ioqueue, timer heap, etc.) */
     pj_memcpy(&turn_sock->cfg, cfg, sizeof(*cfg));
+
+    /* Copy setting (QoS parameters etc */
+    pj_memcpy(&turn_sock->setting, setting, sizeof(*setting));
 
     /* Set callback */
     if (cb) {
@@ -648,6 +665,16 @@ static void turn_on_state(pj_turn_session *sess,
 	/* Init socket */
 	status = pj_sock_socket(turn_sock->af, sock_type, 0, &sock);
 	if (status != PJ_SUCCESS) {
+	    pj_turn_sock_destroy(turn_sock);
+	    return;
+	}
+
+        /* Apply QoS, if specified */
+	status = pj_sock_apply_qos2(sock, turn_sock->setting.qos_type,
+				    &turn_sock->setting.qos_params, 
+				    (turn_sock->setting.qos_ignore_error?2:1),
+				    turn_sock->pool->obj_name, NULL);
+	if (status != PJ_SUCCESS && !turn_sock->setting.qos_ignore_error) {
 	    pj_turn_sock_destroy(turn_sock);
 	    return;
 	}

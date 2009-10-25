@@ -50,6 +50,7 @@ SOURCE		pool_caching.c
 SOURCE		rand.c
 SOURCE		rbtree.c
 SOURCE		sock_common.c
+SOURCE		sock_qos_common.c
 SOURCE		types.c
 
 
@@ -75,6 +76,7 @@ SOURCE		ssl_sock_common.c
 SOURCE		ssl_sock_symbian.cpp
 SOURCE		sock_symbian.cpp
 SOURCE		sock_select_symbian.cpp
+SOURCE		sock_qos_symbian.cpp
 SOURCE		timer_symbian.cpp
 SOURCE		unicode_symbian.cpp
 

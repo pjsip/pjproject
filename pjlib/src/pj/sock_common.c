@@ -1072,6 +1072,11 @@ PJ_DEF(pj_uint16_t) pj_SO_REUSEADDR(void)
     return PJ_SO_REUSEADDR;
 }
 
+PJ_DEF(pj_uint16_t) pj_SO_PRIORITY(void)
+{
+    return PJ_SO_PRIORITY;
+}
+
 PJ_DEF(pj_uint16_t) pj_IP_MULTICAST_IF(void)
 {
     return PJ_IP_MULTICAST_IF;

@@ -271,6 +271,13 @@ typedef struct pj_ice_strans_cfg
      */
     struct {
 	/**
+	 * Optional TURN socket settings. The default values will be
+	 * initialized by #pj_turn_sock_cfg_default(). This contains
+	 * settings such as QoS.
+	 */
+	pj_turn_sock_cfg     cfg;
+
+	/**
 	 * Specify the TURN server domain or hostname or IP address.
 	 * If DNS SRV resolution is required, application must fill
 	 * in this setting with the domain name of the TURN server 
@@ -323,6 +330,34 @@ typedef struct pj_ice_strans_cfg
 	pj_turn_alloc_param  alloc_param;
 
     } turn;
+
+    /**
+     * Component specific settings, which will override the settings in
+     * the STUN and TURN settings above. For example, setting the QoS
+     * parameters here allows the application to have different QoS
+     * traffic type for RTP and RTCP component.
+     */
+    struct {
+	/**
+	 * QoS traffic type to be set on this transport. When application
+	 * wants to apply QoS tagging to the transport, it's preferable to
+	 * set this field rather than \a qos_param fields since this is 
+	 * more portable.
+	 *
+	 * Default value is PJ_QOS_TYPE_BEST_EFFORT.
+	 */
+	pj_qos_type qos_type;
+
+	/**
+	 * Set the low level QoS parameters to the transport. This is a 
+	 * lower level operation than setting the \a qos_type field and
+	 * may not be supported on all platforms.
+	 *
+	 * By default all settings in this structure are disabled.
+	 */
+	pj_qos_params qos_params;
+
+    } comp[PJ_ICE_MAX_COMP];
 
 } pj_ice_strans_cfg;
 

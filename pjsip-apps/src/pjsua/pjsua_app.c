@@ -59,6 +59,7 @@ static struct app_config
     pjsua_media_config	    media_cfg;
     pj_bool_t		    no_refersub;
     pj_bool_t		    ipv6;
+    pj_bool_t		    enable_qos;
     pj_bool_t		    no_tcp;
     pj_bool_t		    no_udp;
     pj_bool_t		    use_tls;
@@ -207,6 +208,7 @@ static void usage(void)
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
     puts  ("  --ipv6              Use IPv6 instead for SIP and media.");
 #endif
+    puts  ("  --set-qos           Enable QoS tagging for SIP and media.");
     puts  ("  --local-port=port   Set TCP/UDP port. This implicitly enables both ");
     puts  ("                      TCP and UDP transports on the specified port, unless");
     puts  ("                      if TCP or UDP is disabled.");
@@ -500,7 +502,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
-	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6,
+	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS,
 #ifdef _IONBF
 	   OPT_STDOUT_NO_BUF,
 #endif
@@ -616,6 +618,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 #if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6
 	{ "ipv6",	 0, 0, OPT_IPV6},
 #endif
+	{ "set-qos",	 0, 0, OPT_QOS},
 	{ "use-timer",  0, 0, OPT_TIMER},
 	{ "timer-se",   1, 0, OPT_TIMER_SE},
 	{ "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
@@ -1327,7 +1330,17 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->ipv6 = PJ_TRUE;
 	    break;
 #endif
-
+	case OPT_QOS:
+	    cfg->enable_qos = PJ_TRUE;
+	    /* Set RTP traffic type to Voice */
+	    cfg->rtp_cfg.qos_type = PJ_QOS_TYPE_VOICE;
+	    /* Directly apply DSCP value to SIP traffic. Say lets
+	     * set it to CS3 (DSCP 011000). Note that this will not 
+	     * work on all platforms.
+	     */
+	    cfg->udp_cfg.qos_params.flags = PJ_QOS_PARAM_HAS_DSCP;
+	    cfg->udp_cfg.qos_params.dscp_val = 0x18;
+	    break;
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1606,6 +1619,9 @@ static int write_settings(const struct app_config *config,
     /* Transport options */
     if (config->ipv6) {
 	pj_strcat2(&cfg, "--ipv6\n");
+    }
+    if (config->enable_qos) {
+	pj_strcat2(&cfg, "--set-qos\n");
     }
 
     /* UDP Transport. */

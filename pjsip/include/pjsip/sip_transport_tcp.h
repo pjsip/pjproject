@@ -26,6 +26,7 @@
  */
 
 #include <pjsip/sip_transport.h>
+#include <pj/sock_qos.h>
 
 
 /* Only declare the API if PJ_HAS_TCP is true */
@@ -42,6 +43,74 @@ PJ_BEGIN_DECL
  * The functions below are used to create TCP transport and register 
  * the transport to the framework.
  */
+
+/**
+ * Settings to be specified when creating the TCP transport. Application 
+ * should initialize this structure with its default values by calling 
+ * pjsip_tcp_transport_cfg_default().
+ */
+typedef struct pjsip_tcp_transport_cfg
+{
+    /**
+     * Address family to use. Valid values are pj_AF_INET() and
+     * pj_AF_INET6(). Default is pj_AF_INET().
+     */
+    int			af;
+
+    /**
+     * Optional address to bind the socket to. Default is to bind to 
+     * PJ_INADDR_ANY and to any available port.
+     */
+    pj_sockaddr		bind_addr;
+
+    /**
+     * Optional published address, which is the address to be
+     * advertised as the address of this SIP transport. 
+     * By default the bound address will be used as the published address.
+     */
+    pjsip_host_port	addr_name;
+
+    /**
+     * Number of simultaneous asynchronous accept() operations to be 
+     * supported. It is recommended that the number here corresponds to 
+     * the number of processors in the system (or the number of SIP
+     * worker threads).
+     *
+     * Default: 1
+     */
+    unsigned	       async_cnt;
+
+    /**
+     * QoS traffic type to be set on this transport. When application wants
+     * to apply QoS tagging to the transport, it's preferable to set this
+     * field rather than \a qos_param fields since this is more portable.
+     *
+     * Default is QoS not set.
+     */
+    pj_qos_type		qos_type;
+
+    /**
+     * Set the low level QoS parameters to the transport. This is a lower
+     * level operation than setting the \a qos_type field and may not be
+     * supported on all platforms.
+     *
+     * Default is QoS not set.
+     */
+    pj_qos_params	qos_params;
+
+} pjsip_tcp_transport_cfg;
+
+
+/**
+ * Initialize pjsip_tcp_transport_cfg structure with default values for
+ * the specifed address family.
+ *
+ * @param cfg		The structure to initialize.
+ * @param af		Address family to be used.
+ */
+PJ_DECL(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
+					      int af);
+
 
 /**
  * Register support for SIP TCP transport by creating TCP listener on
@@ -110,6 +179,24 @@ PJ_DECL(pj_status_t) pjsip_tcp_transport_start2(pjsip_endpoint *endpt,
 					        unsigned async_cnt,
 					        pjsip_tpfactory **p_factory);
 
+/**
+ * Another variant of #pjsip_tcp_transport_start().
+ *
+ * @param endpt		The SIP endpoint.
+ * @param cfg		TCP transport settings. Application should initialize
+ *			this setting with #pjsip_tcp_transport_cfg_default().
+ * @param p_factory	Optional pointer to receive the instance of the
+ *			SIP TCP transport factory just created.
+ *
+ * @return		PJ_SUCCESS when the transport has been successfully
+ *			started and registered to transport manager, or
+ *			the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tcp_transport_start3(
+					pjsip_endpoint *endpt,
+					const pjsip_tcp_transport_cfg *cfg,
+					pjsip_tpfactory **p_factory
+					);
 
 
 PJ_END_DECL

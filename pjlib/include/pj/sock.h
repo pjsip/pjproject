@@ -297,6 +297,10 @@ extern const pj_uint16_t PJ_TCP_NODELAY;
  *  @see pj_SO_REUSEADDR */
 extern const pj_uint16_t PJ_SO_REUSEADDR;
 
+/** Set the protocol-defined priority for all packets to be sent on socket.
+ */
+extern const pj_uint16_t PJ_SO_PRIORITY;
+
 /** IP multicast interface. @see pj_IP_MULTICAST_IF() */
 extern const pj_uint16_t PJ_IP_MULTICAST_IF;
  
@@ -329,6 +333,9 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
     /** Get #PJ_SO_REUSEADDR constant */
     PJ_DECL(pj_uint16_t) pj_SO_REUSEADDR(void);
 
+    /** Get #PJ_SO_PRIORITY constant */
+    PJ_DECL(pj_uint16_t) pj_SO_PRIORITY(void);
+
     /** Get #PJ_IP_MULTICAST_IF constant */
     PJ_DECL(pj_uint16_t) pj_IP_MULTICAST_IF(void);
 
@@ -358,6 +365,9 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
 
     /** Get #PJ_SO_REUSEADDR constant */
 #   define pj_SO_REUSEADDR() PJ_SO_REUSEADDR
+
+    /** Get #PJ_SO_PRIORITY constant */
+#   define pj_SO_PRIORITY() PJ_SO_PRIORITY
 
     /** Get #PJ_IP_MULTICAST_IF constant */
 #   define pj_IP_MULTICAST_IF()    PJ_IP_MULTICAST_IF

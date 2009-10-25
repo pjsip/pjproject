@@ -136,6 +136,8 @@ PJ_DEF(void) pj_stun_sock_cfg_default(pj_stun_sock_cfg *cfg)
     cfg->max_pkt_size = PJ_STUN_SOCK_PKT_LEN;
     cfg->async_cnt = 1;
     cfg->ka_interval = PJ_STUN_KEEP_ALIVE_SEC;
+    cfg->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
+    cfg->qos_ignore_error = PJ_TRUE;
 }
 
 
@@ -200,6 +202,14 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Apply QoS, if specified */
+    status = pj_sock_apply_qos2(stun_sock->sock_fd, cfg->qos_type,
+				&cfg->qos_params, 2, stun_sock->obj_name,
+				NULL);
+    if (status != PJ_SUCCESS && !cfg->qos_ignore_error)
+	goto on_error;
+
+    /* Bind socket */
     if (pj_sockaddr_has_addr(&cfg->bound_addr)) {
 	status = pj_sock_bind(stun_sock->sock_fd, &cfg->bound_addr,
 			      pj_sockaddr_get_len(&cfg->bound_addr));
@@ -758,10 +768,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
 
     /* Log socket error */
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(2,(stun_sock->obj_name, "recvfrom() error: %s", errmsg));
+	pj_perror(2, stun_sock->obj_name, status, "recvfrom() error", 0);
 	return PJ_TRUE;
     }
 

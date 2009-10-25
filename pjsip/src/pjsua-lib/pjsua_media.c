@@ -384,13 +384,19 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     /* Loop retry to bind RTP and RTCP sockets. */
     for (i=0; i<RTP_RETRY; ++i, next_rtp_port += 2) {
 
-	/* Create and bind RTP socket. */
+	/* Create RTP socket. */
 	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[0]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    return status;
 	}
 
+	/* Apply QoS to RTP socket, if specified */
+	status = pj_sock_apply_qos2(sock[0], cfg->qos_type, 
+				    &cfg->qos_params, 
+				    2, THIS_FILE, "RTP socket");
+
+	/* Bind RTP socket */
 	status=pj_sock_bind_in(sock[0], pj_ntohl(bound_addr.sin_addr.s_addr), 
 			       next_rtp_port);
 	if (status != PJ_SUCCESS) {
@@ -399,7 +405,7 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    continue;
 	}
 
-	/* Create and bind RTCP socket. */
+	/* Create RTCP socket. */
 	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[1]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "socket() error", status);
@@ -407,6 +413,12 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	    return status;
 	}
 
+	/* Apply QoS to RTCP socket, if specified */
+	status = pj_sock_apply_qos2(sock[1], cfg->qos_type, 
+				    &cfg->qos_params, 
+				    2, THIS_FILE, "RTCP socket");
+
+	/* Bind RTCP socket */
 	status=pj_sock_bind_in(sock[1], pj_ntohl(bound_addr.sin_addr.s_addr), 
 			       (pj_uint16_t)(next_rtp_port+1));
 	if (status != PJ_SUCCESS) {
@@ -881,7 +893,7 @@ static pj_status_t parse_host_port(const pj_str_t *host_port,
 }
 
 /* Create ICE media transports (when ice is enabled) */
-static pj_status_t create_ice_media_transports(void)
+static pj_status_t create_ice_media_transports(pjsua_transport_config *cfg)
 {
     char stunip[PJ_INET6_ADDRSTRLEN];
     pj_ice_strans_cfg ice_cfg;
@@ -915,6 +927,11 @@ static pj_status_t create_ice_media_transports(void)
     if (pjsua_var.media_cfg.ice_max_host_cands >= 0)
 	ice_cfg.stun.max_host_cands = pjsua_var.media_cfg.ice_max_host_cands;
 
+    /* Copy QoS setting to STUN setting */
+    ice_cfg.stun.cfg.qos_type = cfg->qos_type;
+    pj_memcpy(&ice_cfg.stun.cfg.qos_params, &cfg->qos_params,
+	      sizeof(cfg->qos_params));
+
     /* Configure TURN settings */
     if (pjsua_var.media_cfg.enable_turn) {
 	status = parse_host_port(&pjsua_var.media_cfg.turn_server,
@@ -930,6 +947,11 @@ static pj_status_t create_ice_media_transports(void)
 	pj_memcpy(&ice_cfg.turn.auth_cred, 
 		  &pjsua_var.media_cfg.turn_auth_cred,
 		  sizeof(ice_cfg.turn.auth_cred));
+
+	/* Copy QoS setting to TURN setting */
+	ice_cfg.turn.cfg.qos_type = cfg->qos_type;
+	pj_memcpy(&ice_cfg.turn.cfg.qos_params, &cfg->qos_params,
+		  sizeof(cfg->qos_params));
     }
 
     /* Create each media transport */
@@ -1025,7 +1047,7 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
 
     /* Create the transports */
     if (pjsua_var.media_cfg.enable_ice) {
-	status = create_ice_media_transports();
+	status = create_ice_media_transports(&cfg);
     } else {
 	status = create_udp_media_transports(&cfg);
     }
