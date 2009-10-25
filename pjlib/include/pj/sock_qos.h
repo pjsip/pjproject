@@ -31,7 +31,7 @@ PJ_BEGIN_DECL
 
 
 /**
- * @defgroup socket_qos Socket Quality of Service (QoS) API
+ * @defgroup socket_qos Socket Quality of Service (QoS) API: TOS, DSCP, WMM, IEEE 802.1p
  * @ingroup PJ_SOCK
  * @{
 
@@ -63,7 +63,7 @@ PJ_BEGIN_DECL
 
     At the Internet layer, you can use Differentiated Services/Diffserv and
     set the value of the Differentiated Services Code Point (DSCP) in the 
-    IP header. As defined in RFC 2472, the DSCP value is the high-order 6 bits
+    IP header. As defined in RFC 2474, the DSCP value is the high-order 6 bits
     of the IP version 4 (IPv4) TOS field and the IP version 6 (IPv6) Traffic 
     Class field.
 
@@ -179,7 +179,7 @@ PJ_BEGIN_DECL
      typedef enum pj_qos_flag
      {
 	PJ_QOS_PARAM_HAS_DSCP = 1,
-	PJ_QOS_PARAM_HAS_802_1_P = 2,
+	PJ_QOS_PARAM_HAS_SO_PRIO = 2,
 	PJ_QOS_PARAM_HAS_WMM = 4
      } pj_qos_flag;
 
@@ -195,7 +195,7 @@ PJ_BEGIN_DECL
      {
 	pj_uint8_t      flags;    // Determines which values to 
 				  // set, bitmask of pj_qos_flag
-	pj_uint8_t      dscp_val; // DSCP value to set
+	pj_uint8_t      dscp_val; // The 6 bits DSCP value to set
 	pj_uint8_t      so_prio;  // SO_PRIORITY value
 	pj_qos_wmm_prio wmm_prio; // WMM priority value
      } pj_qos_params;
@@ -248,7 +248,7 @@ typedef enum pj_qos_type
 typedef enum pj_qos_flag
 {
     PJ_QOS_PARAM_HAS_DSCP = 1,	    /**< DSCP field is set.	    */
-    PJ_QOS_PARAM_HAS_802_1_P = 2,   /**< IEEE 802.1p  field is set  */
+    PJ_QOS_PARAM_HAS_SO_PRIO = 2,   /**< Socket SO_PRIORITY	    */
     PJ_QOS_PARAM_HAS_WMM = 4	    /**< WMM  field is set. 	    */
 } pj_qos_flag;
 
@@ -272,7 +272,7 @@ typedef struct pj_qos_params
 {
     pj_uint8_t      flags;    /**< Determines which values to 
 				   set, bitmask of pj_qos_flag	    */
-    pj_uint8_t      dscp_val; /**< DSCP value to set		    */
+    pj_uint8_t      dscp_val; /**< The 6 bits DSCP value to set	    */
     pj_uint8_t      so_prio;  /**< SO_PRIORITY value		    */
     pj_qos_wmm_prio wmm_prio; /**< WMM priority value		    */
 } pj_qos_params;

@@ -41,7 +41,8 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
 
     /* Set TOS/DSCP */
     if (param->flags & PJ_QOS_PARAM_HAS_DSCP) {
-	int val = param->dscp_val;
+	/* Value is dscp_val << 2 */
+	int val = (param->dscp_val << 2);
 	status = pj_sock_setsockopt(sock, pj_SOL_IP(), pj_IP_TOS(), 
 				    &val, sizeof(val));
 	if (status != PJ_SUCCESS) {
@@ -51,12 +52,12 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
     }
 
     /* Set SO_PRIORITY */
-    if (param->flags & PJ_QOS_PARAM_HAS_802_1_P) {
+    if (param->flags & PJ_QOS_PARAM_HAS_SO_PRIO) {
 	int val = param->so_prio;
 	status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_PRIORITY(),
 				    &val, sizeof(val));
 	if (status != PJ_SUCCESS) {
-	    param->flags &= ~(PJ_QOS_PARAM_HAS_802_1_P);
+	    param->flags &= ~(PJ_QOS_PARAM_HAS_SO_PRIO);
 	    last_err = status;
 	}
     }
@@ -93,7 +94,7 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
 				&val, &optlen);
     if (status == PJ_SUCCESS) {
 	p_param->flags |= PJ_QOS_PARAM_HAS_DSCP;
-	p_param->dscp_val = (pj_uint8_t)val;
+	p_param->dscp_val = (pj_uint8_t)(val >> 2);
     } else {
 	last_err = status;
     }
@@ -103,7 +104,7 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_params(pj_sock_t sock,
     status = pj_sock_getsockopt(sock, pj_SOL_SOCKET(), pj_SO_PRIORITY(),
 				&val, &optlen);
     if (status == PJ_SUCCESS) {
-	p_param->flags |= PJ_QOS_PARAM_HAS_802_1_P;
+	p_param->flags |= PJ_QOS_PARAM_HAS_SO_PRIO;
 	p_param->so_prio = (pj_uint8_t)val;
     } else {
 	last_err = status;
@@ -128,3 +129,4 @@ PJ_DEF(pj_status_t) pj_sock_get_qos_type(pj_sock_t sock,
 }
 
 #endif	/* PJ_QOS_IMPLEMENTATION */
+

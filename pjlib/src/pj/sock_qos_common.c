@@ -23,7 +23,7 @@
 #include <pj/string.h>
 
 #define THIS_FILE   "sock_qos_common.c"
-#define ALL_FLAGS   (PJ_QOS_PARAM_HAS_DSCP | PJ_QOS_PARAM_HAS_802_1_P | \
+#define ALL_FLAGS   (PJ_QOS_PARAM_HAS_DSCP | PJ_QOS_PARAM_HAS_SO_PRIO | \
                      PJ_QOS_PARAM_HAS_WMM)
 
 /* "Standard" mapping between traffic type and QoS params */
@@ -66,7 +66,7 @@ PJ_DEF(pj_status_t) pj_qos_get_type( const pj_qos_params *param,
 	++count;
     }
 
-    if (param->flags & PJ_QOS_PARAM_HAS_802_1_P) {
+    if (param->flags & PJ_QOS_PARAM_HAS_SO_PRIO) {
 	for (i=0; i<=PJ_QOS_TYPE_CONTROL; ++i) {
 	    if (param->so_prio >= qos_map[i].so_prio)
 		prio_type = (pj_qos_type)i;

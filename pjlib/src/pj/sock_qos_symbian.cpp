@@ -27,7 +27,7 @@ PJ_DEF(pj_status_t) pj_sock_set_qos_params(pj_sock_t sock,
     pj_status_t last_err = PJ_ENOTSUP;
     
     /* SO_PRIORITY and WMM are not supported */
-    param->flags &= ~(PJ_QOS_PARAM_HAS_802_1_P | PJ_QOS_PARAM_HAS_WMM);
+    param->flags &= ~(PJ_QOS_PARAM_HAS_SO_PRIO | PJ_QOS_PARAM_HAS_WMM);
     
     if (param->flags & PJ_QOS_PARAM_HAS_DSCP) {
 	TInt err;
