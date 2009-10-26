@@ -328,7 +328,11 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     /* If accounts has registration enabled, start registration */
     if (pjsua_var.acc[id].cfg.reg_uri.slen)
 	pjsua_acc_set_registration(id, PJ_TRUE);
-
+    else {
+	/* Otherwise subscribe to MWI, if it's enabled */
+	if (pjsua_var.acc[id].cfg.mwi_enabled)
+	    pjsua_start_mwi(&pjsua_var.acc[id]);
+    }
 
     return PJ_SUCCESS;
 }
@@ -1056,6 +1060,10 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    /* Send initial PUBLISH if it is enabled */
 	    if (acc->cfg.publish_enabled && acc->publish_sess==NULL)
 		pjsua_pres_init_publish_acc(acc->index);
+
+	    /* Subscribe to MWI, if it's enabled */
+	    if (acc->cfg.mwi_enabled)
+		pjsua_start_mwi(acc);
 	}
 
     } else {

@@ -600,6 +600,20 @@ PJ_DEF(const pj_str_t*) pjsip_get_status_text(int code)
 
 ///////////////////////////////////////////////////////////////////////////////
 /*
+ * Media type
+ */
+PJ_DEF(void) pjsip_media_type_cp( pj_pool_t *pool,
+				  pjsip_media_type *dst,
+				  const pjsip_media_type *src)
+{
+    PJ_ASSERT_ON_FAIL(pool && dst && src, return);
+    pj_strdup(pool, &dst->type,    &src->type);
+    pj_strdup(pool, &dst->subtype, &src->subtype);
+    pj_strdup(pool, &dst->param,   &src->param);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/*
  * Generic pjsip_hdr_names/hvalue header.
  */
 

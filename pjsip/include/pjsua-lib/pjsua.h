@@ -379,6 +379,17 @@ PJ_DECL(void) pjsua_logging_config_dup(pj_pool_t *pool,
 
 
 /**
+ * Structure to be passed on MWI callback.
+ */
+typedef struct pjsua_mwi_info
+{
+    pjsip_evsub	    *evsub;	/**< Event subscription session, for
+				     reference.				*/
+    pjsip_rx_data   *rdata;	/**< The received NOTIFY request.	*/
+} pjsua_mwi_info;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL, 
  * although definitely application would want to implement some of
@@ -820,6 +831,17 @@ typedef struct pjsua_callback
     pjsip_redirect_op (*on_call_redirected)(pjsua_call_id call_id, 
 					    const pjsip_uri *target,
 					    const pjsip_event *e);
+
+    /**
+     * This callback is called when a NOTIFY request for message summary / 
+     * message waiting indication is received.
+     *
+     * @param acc_id	The account ID.
+     * @param mwi_info	Structure containing details of the event,
+     *			including the received NOTIFY request in the
+     *			\a rdata field.
+     */
+    void (*on_mwi_info)(pjsua_acc_id acc_id, pjsua_mwi_info *mwi_info);
 
 } pjsua_callback;
 
@@ -1858,6 +1880,14 @@ typedef struct pjsua_acc_config
      * value is empty, no account registration will be performed.
      */
     pj_str_t	    reg_uri;
+
+    /**
+     * Enable message summary and message waiting indication subscription
+     * (RFC 3842) for this account.
+     *
+     * Default: no
+     */
+    pj_bool_t	    mwi_enabled;
 
     /**
      * If this flag is set, the presence information of this account will

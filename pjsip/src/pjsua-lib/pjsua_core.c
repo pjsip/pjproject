@@ -820,6 +820,9 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = pjsip_pres_init_module( pjsua_var.endpt, pjsip_evsub_instance());
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Initialize MWI support */
+    status = pjsip_mwi_init_module(pjsua_var.endpt, pjsip_evsub_instance());
+
     /* Init PUBLISH module */
     pjsip_publishc_init_module(pjsua_var.endpt);
 

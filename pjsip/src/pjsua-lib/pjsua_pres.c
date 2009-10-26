@@ -1853,6 +1853,230 @@ static pj_status_t refresh_client_subscriptions(void)
     return PJ_SUCCESS;
 }
 
+/***************************************************************************
+ * MWI
+ */
+/* Callback called when *client* subscription state has changed. */
+static void mwi_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
+{
+    pjsua_acc *acc;
+
+    PJ_UNUSED_ARG(event);
+
+    /* Note: #937: no need to acuire PJSUA_LOCK here. Since the buddy has
+     *   a dialog attached to it, lock_buddy() will use the dialog
+     *   lock, which we are currently holding!
+     */
+    acc = (pjsua_acc*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+    if (!acc)
+	return;
+
+    PJ_LOG(4,(THIS_FILE, 
+	      "MWI subscription for %.*s is %s",
+	      (int)acc->cfg.id.slen, acc->cfg.id.ptr, 
+	      pjsip_evsub_get_state_name(sub)));
+
+    if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
+	/* Clear subscription */
+	acc->mwi_dlg = NULL;
+	acc->mwi_sub = NULL;
+	pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
+
+    }
+}
+
+/* Callback called when we receive NOTIFY */
+static void mwi_evsub_on_rx_notify(pjsip_evsub *sub, 
+				   pjsip_rx_data *rdata,
+				   int *p_st_code,
+				   pj_str_t **p_st_text,
+				   pjsip_hdr *res_hdr,
+				   pjsip_msg_body **p_body)
+{
+    pjsua_mwi_info mwi_info;
+    pjsua_acc *acc;
+
+    PJ_UNUSED_ARG(p_st_code);
+    PJ_UNUSED_ARG(p_st_text);
+    PJ_UNUSED_ARG(res_hdr);
+    PJ_UNUSED_ARG(p_body);
+
+    acc = (pjsua_acc*) pjsip_evsub_get_mod_data(sub, pjsua_var.mod.id);
+    if (!acc)
+	return;
+
+    /* Construct mwi_info */
+    pj_bzero(&mwi_info, sizeof(mwi_info));
+    mwi_info.evsub = sub;
+    mwi_info.rdata = rdata;
+
+    /* Call callback */
+    if (pjsua_var.ua_cfg.cb.on_mwi_info) {
+	(*pjsua_var.ua_cfg.cb.on_mwi_info)(acc->index, &mwi_info);
+    }
+}
+
+
+/* Event subscription callback. */
+static pjsip_evsub_user mwi_cb = 
+{
+    &mwi_evsub_on_state,  
+    NULL,   /* on_tsx_state: not interested */
+    NULL,   /* on_rx_refresh: don't care about SUBSCRIBE refresh, unless 
+	     * we want to authenticate 
+	     */
+
+    &mwi_evsub_on_rx_notify,
+
+    NULL,   /* on_client_refresh: Use default behaviour, which is to 
+	     * refresh client subscription. */
+
+    NULL,   /* on_server_timeout: Use default behaviour, which is to send 
+	     * NOTIFY to terminate. 
+	     */
+};
+
+void pjsua_start_mwi(pjsua_acc *acc)
+{
+    pj_pool_t *tmp_pool = NULL;
+    pj_str_t contact;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    if (!acc->cfg.mwi_enabled) {
+	if (acc->mwi_sub) {
+	    /* Terminate MWI subscription */
+	    pjsip_tx_data *tdata;
+	    pjsip_evsub *sub = acc->mwi_sub;
+
+	    /* Detach sub from this account */
+	    acc->mwi_sub = NULL;
+	    acc->mwi_dlg = NULL;
+	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
+
+	    /* Unsubscribe */
+	    status = pjsip_mwi_initiate(acc->mwi_sub, 0, &tdata);
+	    if (status == PJ_SUCCESS) {
+		status = pjsip_mwi_send_request(acc->mwi_sub, tdata);
+	    }
+	}
+	return;
+    }
+
+    if (acc->mwi_sub) {
+	/* Subscription is already active */
+	return;
+
+    }
+
+    /* Generate suitable Contact header unless one is already set in 
+     * the account
+     */
+    if (acc->contact.slen) {
+	contact = acc->contact;
+    } else {
+	tmp_pool = pjsua_pool_create("tmpmwi", 512, 256);
+	status = pjsua_acc_create_uac_contact(tmp_pool, &contact,
+					      acc->index, &acc->cfg.id);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
+		         status);
+	    pj_pool_release(tmp_pool);
+	    return;
+	}
+    }
+
+    /* Create UAC dialog */
+    status = pjsip_dlg_create_uac( pjsip_ua_instance(),
+				   &acc->cfg.id,
+				   &contact,
+				   &acc->cfg.id,
+				   NULL, &acc->mwi_dlg);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create dialog", status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
+	return;
+    }
+
+    /* Increment the dialog's lock otherwise when presence session creation
+     * fails the dialog will be destroyed prematurely.
+     */
+    pjsip_dlg_inc_lock(acc->mwi_dlg);
+
+    /* Create UAC subscription */
+    status = pjsip_mwi_create_uac(acc->mwi_dlg, &mwi_cb, 
+				  PJSIP_EVSUB_NO_EVENT_ID, &acc->mwi_sub);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error creating MWI subscription", status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
+	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	return;
+    }
+
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(acc->mwi_dlg, &tp_sel);
+    }
+
+    /* Set route-set */
+    if (!pj_list_empty(&acc->route_set)) {
+	pjsip_dlg_set_route_set(acc->mwi_dlg, &acc->route_set);
+    }
+
+    /* Set credentials */
+    if (acc->cred_cnt) {
+	pjsip_auth_clt_set_credentials( &acc->mwi_dlg->auth_sess, 
+					acc->cred_cnt, acc->cred);
+    }
+
+    /* Set authentication preference */
+    pjsip_auth_clt_set_prefs(&acc->mwi_dlg->auth_sess, &acc->cfg.auth_pref);
+
+    pjsip_evsub_set_mod_data(acc->mwi_sub, pjsua_var.mod.id, acc);
+
+    status = pjsip_mwi_initiate(acc->mwi_sub, -1, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	if (acc->mwi_sub) {
+	    pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
+	}
+	acc->mwi_sub = NULL;
+	acc->mwi_dlg = NULL;
+	pjsua_perror(THIS_FILE, "Unable to create initial MWI SUBSCRIBE", 
+		     status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
+	return;
+    }
+
+    pjsua_process_msg_data(tdata, NULL);
+
+    status = pjsip_pres_send_request(acc->mwi_sub, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	if (acc->mwi_sub) {
+	    pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
+	}
+	acc->mwi_sub = NULL;
+	acc->mwi_dlg = NULL;
+	pjsua_perror(THIS_FILE, "Unable to send initial MWI SUBSCRIBE", 
+		     status);
+	if (tmp_pool) pj_pool_release(tmp_pool);
+	return;
+    }
+
+    pjsip_dlg_dec_lock(acc->mwi_dlg);
+    if (tmp_pool) pj_pool_release(tmp_pool);
+
+}
+
+
+/***************************************************************************/
+
 /* Timer callback to re-create client subscription */
 static void pres_timer_cb(pj_timer_heap_t *th,
 			  pj_timer_entry *entry)
@@ -1860,14 +2084,20 @@ static void pres_timer_cb(pj_timer_heap_t *th,
     unsigned i;
     pj_time_val delay = { PJSUA_PRES_TIMER, 0 };
 
-    /* Retry failed PUBLISH requests */
+    entry->id = PJ_FALSE;
+
+    /* Retry failed PUBLISH and MWI SUBSCRIBE requests */
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pjsua_acc *acc = &pjsua_var.acc[i];
+
+	/* Retry PUBLISH */
 	if (acc->cfg.publish_enabled && acc->publish_sess==NULL)
 	    pjsua_pres_init_publish_acc(acc->index);
-    }
 
-    entry->id = PJ_FALSE;
+	/* Re-subscribe MWI subscription if it's terminated prematurely */
+	if (acc->cfg.mwi_enabled && !acc->mwi_sub)
+	    pjsua_start_mwi(acc);
+    }
 
     /* #937: No need to do bulk client refresh, as buddies have their
      *       own individual timer now.

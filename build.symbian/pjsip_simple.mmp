@@ -37,6 +37,7 @@ SOURCE	errno.c
 SOURCE	evsub.c
 SOURCE	evsub_msg.c
 SOURCE	iscomposing.c
+SOURCE	mwi.c
 SOURCE	pidf.c
 SOURCE	presence.c
 SOURCE	presence_body.c

@@ -193,6 +193,7 @@ static void usage(void)
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
+    puts  ("  --mwi               Subscribe to message summary/waiting indication");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
     puts  ("  --use-timer         Require SIP session timers");
     puts  ("  --timer-se=N        Session timers expiration period, in secs (def:1800)");
@@ -483,7 +484,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
-	   OPT_NAMESERVER, OPT_STUN_SRV,
+	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
@@ -535,6 +536,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "registrar",	1, 0, OPT_REGISTRAR},
 	{ "reg-timeout",1, 0, OPT_REG_TIMEOUT},
 	{ "publish",    0, 0, OPT_PUBLISH},
+	{ "mwi",	0, 0, OPT_MWI},
 	{ "use-100rel", 0, 0, OPT_100REL},
 	{ "use-ims",    0, 0, OPT_USE_IMS},
 	{ "id",		1, 0, OPT_ID},
@@ -831,6 +833,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_PUBLISH:   /* publish */
 	    cur_acc->publish_enabled = PJ_TRUE;
+	    break;
+
+	case OPT_MWI:	/* mwi */
+	    cur_acc->mwi_enabled = PJ_TRUE;
 	    break;
 
 	case OPT_100REL: /** 100rel */
@@ -1550,6 +1556,13 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 	pj_strcat2(result, line);
     }
 
+    /* Publish */
+    if (acc_cfg->publish_enabled)
+	pj_strcat2(result, "--publish\n");
+
+    /* MWI */
+    if (acc_cfg->mwi_enabled)
+	pj_strcat2(result, "--mwi\n");
 }
 
 
@@ -2739,6 +2752,37 @@ static void on_nat_detect(const pj_stun_nat_detect_result *res)
     } else {
 	PJ_LOG(3, (THIS_FILE, "NAT detected as %s", res->nat_type_name));
     }
+}
+
+
+/*
+ * MWI indication
+ */
+static void on_mwi_info(pjsua_acc_id acc_id, pjsua_mwi_info *mwi_info)
+{
+    pj_str_t body;
+    
+    PJ_LOG(3,(THIS_FILE, "Received MWI for acc %d:", acc_id));
+
+    if (mwi_info->rdata->msg_info.ctype) {
+	const pjsip_ctype_hdr *ctype = mwi_info->rdata->msg_info.ctype;
+
+	PJ_LOG(3,(THIS_FILE, " Content-Type: %.*s/%.*s",
+	          (int)ctype->media.type.slen,
+		  ctype->media.type.ptr,
+		  (int)ctype->media.subtype.slen,
+		  ctype->media.subtype.ptr));
+    }
+
+    if (!mwi_info->rdata->msg_info.msg->body) {
+	PJ_LOG(3,(THIS_FILE, "  no message body"));
+	return;
+    }
+
+    body.ptr = mwi_info->rdata->msg_info.msg->body->data;
+    body.slen = mwi_info->rdata->msg_info.msg->body->len;
+
+    PJ_LOG(3,(THIS_FILE, " Body:\n%.*s", (int)body.slen, body.ptr));
 }
 
 
@@ -4337,6 +4381,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     app_config.cfg.cb.on_call_replaced = &on_call_replaced;
     app_config.cfg.cb.on_nat_detect = &on_nat_detect;
+    app_config.cfg.cb.on_mwi_info = &on_mwi_info;
 
     /* Set sound device latency */
     if (app_config.capture_lat > 0)

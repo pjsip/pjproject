@@ -144,6 +144,8 @@ typedef struct pjsua_acc
     pjsip_publishc  *publish_sess;  /**< Client publication session.	*/
     pj_bool_t	     publish_state; /**< Last published online status	*/
 
+    pjsip_evsub	    *mwi_sub;	    /**< MWI client subscription	*/
+    pjsip_dialog    *mwi_dlg;	    /**< Dialog for MWI sub.		*/
 } pjsua_acc;
 
 
@@ -450,6 +452,11 @@ void pjsua_pres_delete_acc(int acc_id);
  * Init IM module handler to handle incoming MESSAGE outside dialog.
  */
 pj_status_t pjsua_im_init(void);
+
+/**
+ * Start MWI subscription
+ */
+void pjsua_start_mwi(pjsua_acc *acc);
 
 /**
  * Init call subsystem.
