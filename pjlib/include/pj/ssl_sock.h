@@ -60,12 +60,27 @@ typedef struct pj_ssl_cert_t pj_ssl_cert_t;
 
 
 /**
+ * Describe structure of certificate info.
+ */
+typedef struct pj_ssl_cert_info {
+    pj_str_t	subject;	    /**< Subject.		*/
+    pj_str_t	issuer;		    /**< Issuer.		*/
+    unsigned	version;	    /**< Certificate version.	*/
+    pj_time_val	validity_start;	    /**< Validity start.	*/
+    pj_time_val	validity_end;	    /**< Validity end.		*/
+    pj_bool_t	validity_use_gmt;   /**< Flag if validity date/time 
+					 use GMT.		*/
+} pj_ssl_cert_info;
+
+
+/**
  * Create credential from files.
  *
  * @param CA_file	The file of trusted CA list.
  * @param cert_file	The file of certificate.
  * @param privkey_file	The file of private key.
  * @param privkey_pass	The password of private key, if any.
+ * @param p_cert	Pointer to credential instance to be created.
  *
  * @return		PJ_SUCCESS when successful.
  */
@@ -322,23 +337,37 @@ typedef struct pj_ssl_sock_info
      * handshaking has been done successfully.
      */
     pj_bool_t established;
+
     /**
      * Describes secure socket protocol being used.
      */
     pj_ssl_sock_proto proto;
+
     /**
      * Describes cipher suite being used, this will only be set when connection
      * is established.
      */
     pj_ssl_cipher cipher;
+
     /**
      * Describes local address.
      */
     pj_sockaddr local_addr;
+
     /**
      * Describes remote address.
      */
     pj_sockaddr remote_addr;
+   
+    /**
+     * Describes active local certificate info.
+     */
+    pj_ssl_cert_info local_cert_info;
+   
+    /**
+     * Describes active remote certificate info.
+     */
+    pj_ssl_cert_info remote_cert_info;
    
 } pj_ssl_sock_info;
 
@@ -367,6 +396,13 @@ typedef struct pj_ssl_sock_param
      * active socket operations, see \ref PJ_ACTIVESOCK for more detail.
      */
     pj_ioqueue_t *ioqueue;
+
+    /**
+     * Specify the timer heap to use. Secure socket uses the timer to provide
+     * auto cancelation on asynchronous operation when it takes longer time 
+     * than specified timeout period, e.g: security negotiation timeout.
+     */
+    pj_timer_heap_t *timer_heap;
 
     /**
      * Specify secure socket callbacks, see #pj_ssl_sock_cb.
@@ -430,13 +466,12 @@ typedef struct pj_ssl_sock_param
     pj_bool_t whole_data;
 
     /**
-     * Specify buffer size for delayed send operation. This setting is only
-     * applied for some platforms that restrict more than one outstanding 
-     * send operation at a time, e.g: Symbian. So delaying/buffering send 
-     * mechanism is used to allow application to send data anytime without 
-     * worrying about current outstanding send operations.
+     * Specify buffer size for sending operation. Buffering sending data
+     * is used for allowing application to perform multiple outstanding 
+     * send operations. Whenever application specifies this setting too
+     * small, sending operation may return PJ_ENOMEM.
      *  
-     * Default value is 0, except for Symbian 8192 bytes.
+     * Default value is 8192 bytes.
      */
     pj_size_t send_buffer_size;
 
@@ -495,7 +530,7 @@ typedef struct pj_ssl_sock_param
      *
      * Default value is zero/not-set.
      */
-    pj_str_t servername;
+    pj_str_t server_name;
     
 } pj_ssl_sock_param;
 
@@ -691,12 +726,12 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_recvfrom2(pj_ssl_sock_t *ssock,
  * @param size		The size of the data.
  * @param flags		Flags to be given to pj_ioqueue_send().
  *
- *
  * @return		PJ_SUCCESS if data has been sent immediately, or
- *			PJ_EPENDING if data cannot be sent immediately. In
- *			this case the \a on_data_sent() callback will be
- *			called when data is actually sent. Any other return
- *			value indicates error condition.
+ *			PJ_EPENDING if data cannot be sent immediately or
+ *			PJ_ENOMEM when sending buffer could not handle all
+ *			queued data, see \a send_buffer_size. The callback
+ *			\a on_data_sent() will be called when data is actually
+ *			sent. Any other return value indicates error condition.
  */
 PJ_DECL(pj_status_t) pj_ssl_sock_send(pj_ssl_sock_t *ssock,
 				      pj_ioqueue_op_key_t *send_key,
@@ -783,6 +818,23 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
 					       const pj_sockaddr_t *localaddr,
 					       const pj_sockaddr_t *remaddr,
 					       int addr_len);
+
+
+/**
+ * Starts SSL/TLS renegotiation over an already established SSL connection
+ * for this socket. This operation is performed transparently, no callback 
+ * will be called once the renegotiation completed successfully. However, 
+ * when the renegotiation fails, the connection will be closed and callback
+ * \a on_data_read() will be invoked with non-PJ_SUCCESS status code.
+ *
+ * @param ssock		The secure socket.
+ *
+ * @return		PJ_SUCCESS if renegotiation is completed immediately,
+ *			or PJ_EPENDING if renegotiation has been started and
+ *			waiting for completion, or the appropriate error code 
+ *			on failure.
+ */
+PJ_DECL(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock);
 
 
 /**

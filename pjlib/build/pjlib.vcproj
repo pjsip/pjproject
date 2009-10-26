@@ -5645,6 +5645,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pj\ssl_sock_common.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pj\ssl_sock_ossl.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pj\string.c"
 				>
 				<FileConfiguration
@@ -11635,6 +11643,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pj\sock_select.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pj\ssl_sock.h"
 				>
 			</File>
 			<File

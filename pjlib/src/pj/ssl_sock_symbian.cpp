@@ -499,7 +499,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
 	for (i = 0; i < param->ciphers_num; ++i)
 	    ssock->ciphers[i] = param->ciphers[i];
     }
-    pj_strdup_with_null(pool, &ssock->servername, &param->servername);
+    pj_strdup_with_null(pool, &ssock->servername, &param->server_name);
 
     /* Finally */
     *p_ssock = ssock;
@@ -1085,3 +1085,9 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
     return status;
 }
 
+
+PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
+{
+    PJ_UNUSED_ARG(ssock);
+    return PJ_ENOTSUP;
+}

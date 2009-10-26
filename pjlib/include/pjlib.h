@@ -52,6 +52,7 @@
 #include <pj/sock.h>
 #include <pj/sock_qos.h>
 #include <pj/sock_select.h>
+#include <pj/ssl_sock.h>
 #include <pj/string.h>
 #include <pj/timer.h>
 #include <pj/unicode.h>

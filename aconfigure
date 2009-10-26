@@ -11500,6 +11500,10 @@ echo "${ECHO_T}OpenSSL library found, SSL support enabled" >&6; }
 #define PJSIP_HAS_TLS_TRANSPORT 1
 _ACEOF
 
+			cat >>confdefs.h <<\_ACEOF
+#define PJ_HAS_SSL_SOCK 1
+_ACEOF
+
 		else
 			{ echo "$as_me:$LINENO: result: ** OpenSSL libraries not found, disabling SSL support **" >&5
 echo "${ECHO_T}** OpenSSL libraries not found, disabling SSL support **" >&6; }

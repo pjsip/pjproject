@@ -779,6 +779,18 @@
 #endif
 
 
+/**
+ * Enable secure socket. For most platforms, this is implemented using
+ * OpenSSL, so this will require OpenSSL to be installed. For Symbian
+ * platform, this is implemented natively using CSecureSocket.
+ *
+ * Default: 0 (for now)
+ */
+#ifndef PJ_HAS_SSL_SOCK
+#  define PJ_HAS_SSL_SOCK	    0
+#endif
+
+
 /** @} */
 
 /********************************************************************

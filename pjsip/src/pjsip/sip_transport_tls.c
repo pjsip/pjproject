@@ -242,7 +242,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
     ssock_param.async_cnt = async_cnt;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(endpt);
     ssock_param.require_client_cert = listener->tls_setting.require_client_cert;
-    ssock_param.servername = listener->tls_setting.server_name;
+    ssock_param.server_name = listener->tls_setting.server_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = listener;
     ssock_param.verify_peer = listener->tls_setting.verify_client;
@@ -789,7 +789,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
     PJ_TODO(set_proper_servername_based_on_target);
     PJ_TODO(synchronize_tls_cipher_type_with_ssl_sock_cipher_type);
-    ssock_param.servername = listener->tls_setting.server_name;
+    ssock_param.server_name = listener->tls_setting.server_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = NULL; /* pending, must be set later */
     ssock_param.verify_peer = listener->tls_setting.verify_server;

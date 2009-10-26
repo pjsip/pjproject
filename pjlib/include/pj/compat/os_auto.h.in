@@ -181,5 +181,11 @@
  */
 #undef PJ_THREAD_ALLOCATE_STACK
 
+/* SSL socket availability. */
+#ifndef PJ_HAS_SSL_SOCK
+#undef PJ_HAS_SSL_SOCK
+#endif
+
+
 #endif	/* __PJ_COMPAT_OS_AUTO_H__ */
 

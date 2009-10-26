@@ -353,6 +353,14 @@ SOURCE=..\src\pj\sock_select.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pj\ssl_sock_common.c
+# End Source File
+# Begin Source File
+
+SOURCE=..\src\pj\ssl_sock_ossl.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\string.c
 # End Source File
 # Begin Source File
@@ -602,6 +610,10 @@ SOURCE=..\include\pj\sock_qos.h
 # Begin Source File
 
 SOURCE=..\include\pj\sock_select.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pj\ssl_sock.h
 # End Source File
 # Begin Source File
 
