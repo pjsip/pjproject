@@ -458,8 +458,15 @@ static void ioqueue_on_read_complete(pj_ioqueue_key_t *key,
 		 * connection.
 		 * If there is no remainder data, set the packet to NULL.
 		 */
-		ret = (*asock->cb.on_data_read)(asock, (r->size? r->pkt:NULL),
-						r->size, status, &remainder);
+
+		/* Shouldn't set the packet to NULL, as there may be active 
+		 * socket user, such as SSL socket, that needs to have access
+		 * to the read buffer packet.
+		 */
+		//ret = (*asock->cb.on_data_read)(asock, (r->size? r->pkt:NULL),
+		//				r->size, status, &remainder);
+		ret = (*asock->cb.on_data_read)(asock, r->pkt, r->size,
+						status, &remainder);
 
 	    } else if (asock->read_type == TYPE_RECV_FROM && 
 		       asock->cb.on_data_recvfrom) 
