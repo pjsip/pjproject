@@ -20,11 +20,8 @@
 #include "test.h"
 #include <pjlib.h>
 
-#define ECHO_SERVER_NAME	    "localhost"
-#define ECHO_SERVER_ADDR	    "localhost"
-#define ECHO_SERVER_PORT	    12345
 
-#define CERT_DIR		    "..\\build\\"
+#define CERT_DIR		    "../build/"
 #define CERT_CA_FILE		    NULL
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
@@ -49,7 +46,7 @@ static int get_cipher_list(void) {
     status = pj_ssl_cipher_get_availables(ciphers, &cipher_num);
     if (status != PJ_SUCCESS) {
 	app_perror("...FAILED to get available ciphers", status);
-	return -10;
+	return status;
     }
 
     PJ_LOG(3, ("", "...Found %u ciphers:", cipher_num));
@@ -454,7 +451,7 @@ static int echo_test(pj_ssl_sock_proto proto, pj_ssl_cipher srv_cipher,
     pj_ssl_sock_param param;
     struct test_state state_serv = { 0 };
     struct test_state state_cli = { 0 };
-    pj_sockaddr local_addr, rem_addr;
+    pj_sockaddr laddr, raddr;
     pj_str_t tmp_st;
     pj_ssl_cipher ciphers[1];
     pj_ssl_cert_t *cert = NULL;
@@ -509,8 +506,8 @@ static int echo_test(pj_ssl_sock_proto proto, pj_ssl_cipher srv_cipher,
 	goto on_return;
     }
 
-    pj_sockaddr_init(PJ_AF_INET, &local_addr, pj_strset2(&tmp_st, ECHO_SERVER_ADDR), ECHO_SERVER_PORT);
-    status = pj_ssl_sock_start_accept(ssock_serv, pool, &local_addr, sizeof(local_addr));
+    pj_sockaddr_init(PJ_AF_INET, &laddr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    status = pj_ssl_sock_start_accept(ssock_serv, pool, &laddr, pj_sockaddr_get_len(&laddr));
     if (status != PJ_SUCCESS) {
 	goto on_return;
     }
@@ -541,9 +538,14 @@ static int echo_test(pj_ssl_sock_proto proto, pj_ssl_cipher srv_cipher,
 	goto on_return;
     }
 
-    pj_sockaddr_init(PJ_AF_INET, &local_addr, pj_strset2(&tmp_st, "0.0.0.0"), 0);
-    pj_sockaddr_init(PJ_AF_INET, &rem_addr, pj_strset2(&tmp_st, ECHO_SERVER_ADDR), ECHO_SERVER_PORT);
-    status = pj_ssl_sock_start_connect(ssock_cli, pool, &local_addr, &rem_addr, sizeof(rem_addr));
+    {
+	pj_ssl_sock_info info;
+
+	pj_ssl_sock_get_info(ssock_serv, &info);
+	pj_sockaddr_cp(&raddr, &info.local_addr);
+    }
+
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, &laddr, &raddr, pj_sockaddr_get_len(&raddr));
     if (status == PJ_SUCCESS) {
 	ssl_on_connect_complete(ssock_cli, PJ_SUCCESS);
     } else if (status == PJ_EPENDING) {
@@ -683,9 +685,9 @@ static int client_non_ssl(unsigned ms_timeout)
     param.cb.on_data_read = &ssl_on_data_read;
     param.cb.on_data_sent = &ssl_on_data_sent;
     param.ioqueue = ioqueue;
+    param.timer_heap = timer;
     param.timeout.sec = 0;
     param.timeout.msec = ms_timeout;
-    param.timer_heap = timer;
     pj_time_val_normalize(&param.timeout);
 
     /* SERVER */
@@ -702,10 +704,17 @@ static int client_non_ssl(unsigned ms_timeout)
 	goto on_return;
     }
 
-    pj_sockaddr_init(PJ_AF_INET, &listen_addr, pj_strset2(&tmp_st, ECHO_SERVER_ADDR), ECHO_SERVER_PORT);
-    status = pj_ssl_sock_start_accept(ssock_serv, pool, &listen_addr, sizeof(listen_addr));
+    pj_sockaddr_init(PJ_AF_INET, &listen_addr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    status = pj_ssl_sock_start_accept(ssock_serv, pool, &listen_addr, pj_sockaddr_get_len(&listen_addr));
     if (status != PJ_SUCCESS) {
 	goto on_return;
+    }
+
+    {
+	pj_ssl_sock_info info;
+
+	pj_ssl_sock_get_info(ssock_serv, &info);
+	pj_sockaddr_cp(&listen_addr, &info.local_addr);
     }
 
     /* CLIENT */
@@ -800,8 +809,8 @@ int ssl_sock_test(void)
 
     PJ_LOG(3,("", "..echo test w/ incompatible ciphers"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA);
-    if (ret == 0)
-	return -10;
+    if (ret != PJ_EEOF)
+	return ret;
 
     PJ_LOG(3,("", "..client non-SSL timeout in 5 secs"));
     ret = client_non_ssl(5000);

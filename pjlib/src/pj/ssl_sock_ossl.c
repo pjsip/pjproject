@@ -479,6 +479,14 @@ static void reset_ssl_sock_state(pj_ssl_sock_t *ssock)
 	pj_sock_close(ssock->sock);
 	ssock->sock = PJ_INVALID_SOCKET;
     }
+
+    /* Upon error, OpenSSL may leave any error description in the thread 
+     * error queue, which sometime may cause next call to SSL API returning
+     * false error alarm, e.g: in Linux, SSL_CTX_use_certificate_chain_file()
+     * returning false error after a handshake error (in different SSL_CTX!).
+     * For now, just clear thread error queue here.
+     */
+    ERR_clear_error();
 }
 
 
