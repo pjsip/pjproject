@@ -103,6 +103,10 @@ SOURCE="..\src\pjsip-simple\iscomposing.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjsip-simple\mwi.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjsip-simple\pidf.c"
 # End Source File
 # Begin Source File
@@ -144,6 +148,10 @@ SOURCE="..\include\pjsip-simple\evsub_msg.h"
 # Begin Source File
 
 SOURCE="..\include\pjsip-simple\iscomposing.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjsip-simple\mwi.h"
 # End Source File
 # Begin Source File
 
