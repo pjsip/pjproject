@@ -359,9 +359,9 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
     case PJ_SSL_SOCK_PROTO_SSL23:
 	ssl_method = (SSL_METHOD*)SSLv23_method();
 	break;
-    case PJ_SSL_SOCK_PROTO_DTLS1:
-	ssl_method = (SSL_METHOD*)DTLSv1_method();
-	break;
+    //case PJ_SSL_SOCK_PROTO_DTLS1:
+	//ssl_method = (SSL_METHOD*)DTLSv1_method();
+	//break;
     default:
 	return PJ_EINVAL;
     }
