@@ -11496,10 +11496,8 @@ fi
 		if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
 	        	{ echo "$as_me:$LINENO: result: OpenSSL library found, SSL support enabled" >&5
 echo "${ECHO_T}OpenSSL library found, SSL support enabled" >&6; }
-			cat >>confdefs.h <<\_ACEOF
-#define PJSIP_HAS_TLS_TRANSPORT 1
-_ACEOF
-
+			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
+			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
 			cat >>confdefs.h <<\_ACEOF
 #define PJ_HAS_SSL_SOCK 1
 _ACEOF

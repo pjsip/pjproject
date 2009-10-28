@@ -513,10 +513,10 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Enable TLS SIP transport support. For most systems this means that
  * OpenSSL must be installed.
  *
- * Default: 0 (for now)
+ * Default: follow PJ_HAS_SSL_SOCK setting, which is 0 (disabled) by default.
  */
 #ifndef PJSIP_HAS_TLS_TRANSPORT
-#   define PJSIP_HAS_TLS_TRANSPORT	    0
+#   define PJSIP_HAS_TLS_TRANSPORT          PJ_HAS_SSL_SOCK
 #endif
 
 

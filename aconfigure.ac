@@ -758,7 +758,8 @@ AC_ARG_ENABLE(ssl,
 		AC_CHECK_LIB(crypto,ERR_load_BIO_strings,[libcrypto_present=1 && LIBS="$LIBS -lcrypto"])
 		if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
 	        	AC_MSG_RESULT([OpenSSL library found, SSL support enabled])
-			AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
+			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK
+			#AC_DEFINE(PJSIP_HAS_TLS_TRANSPORT, 1)
 			AC_DEFINE(PJ_HAS_SSL_SOCK, 1)
 		else
 			AC_MSG_RESULT([** OpenSSL libraries not found, disabling SSL support **])

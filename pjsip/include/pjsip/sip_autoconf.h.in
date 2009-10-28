@@ -26,14 +26,14 @@
  *        autoconf)
  */
 
-/**
+/*
  * Enable/disable TLS transport, as configured by autoconf.
  * But only do this if user doesn't explicitly configure in pj/config_site.h.
  */
-#ifndef PJSIP_HAS_TLS_TRANSPORT
-#undef PJSIP_HAS_TLS_TRANSPORT
-#endif
-
+/* Since 1.5, the default setting will follow PJ_HAS_SSL_SOCK setting. */
+//#ifndef PJSIP_HAS_TLS_TRANSPORT
+//#undef PJSIP_HAS_TLS_TRANSPORT
+//#endif
 
 #endif	/* __PJSIP_SIP_AUTOCONF_H__ */
 
