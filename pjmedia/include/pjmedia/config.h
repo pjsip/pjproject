@@ -103,10 +103,16 @@
 #endif
 
 /**
- * Specify default sound device latency, in milisecond.
+ * Specify default sound device latency, in milisecond. 
+ *
+ * Default is 160ms for Windows Mobile and 140ms for other platforms.
  */
 #ifndef PJMEDIA_SND_DEFAULT_PLAY_LATENCY
-#   define PJMEDIA_SND_DEFAULT_PLAY_LATENCY 100
+#   if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+#	define PJMEDIA_SND_DEFAULT_PLAY_LATENCY	    160
+#   else
+#	define PJMEDIA_SND_DEFAULT_PLAY_LATENCY	    140
+#   endif
 #endif
 
 
@@ -220,10 +226,10 @@
  * The setting here currently is used by the conference bridge, the splitter
  * combiner port, and dsound.c.
  *
- * Default: 6
+ * Default: (PJMEDIA_SND_DEFAULT_PLAY_LATENCY+20)/20
  */
 #ifndef PJMEDIA_SOUND_BUFFER_COUNT
-#   define PJMEDIA_SOUND_BUFFER_COUNT	    6
+#   define PJMEDIA_SOUND_BUFFER_COUNT	    ((PJMEDIA_SND_DEFAULT_PLAY_LATENCY+20)/20)
 #endif
 
 
