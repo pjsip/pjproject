@@ -235,6 +235,7 @@ typedef struct PyObj_pjsua_callback
     PyObject * on_pager;
     PyObject * on_pager_status;
     PyObject * on_typing;
+    PyObject * on_mwi_info;
 } PyObj_pjsua_callback;
 
 
@@ -258,6 +259,7 @@ static void PyObj_pjsua_callback_delete(PyObj_pjsua_callback* self)
     Py_XDECREF(self->on_pager);
     Py_XDECREF(self->on_pager_status);
     Py_XDECREF(self->on_typing);
+    Py_XDECREF(self->on_mwi_info);
     self->ob_type->tp_free((PyObject*)self);
 }
 
@@ -291,6 +293,7 @@ static PyObject * PyObj_pjsua_callback_new(PyTypeObject *type,
         self->on_pager = Py_BuildValue("");
         self->on_pager_status = Py_BuildValue("");
         self->on_typing = Py_BuildValue("");
+	self->on_mwi_info = Py_BuildValue("");
     }
 
     return (PyObject *)self;
@@ -393,6 +396,11 @@ static PyMemberDef PyObj_pjsua_callback_members[] =
         "on_typing", T_OBJECT_EX, 
 	offsetof(PyObj_pjsua_callback, on_typing), 0,
         "Notify application about typing indication."
+    },
+    {
+        "on_mwi_info", T_OBJECT_EX, 
+	offsetof(PyObj_pjsua_callback, on_mwi_info), 0,
+        "Notify application about MWI indication."
     },
     {NULL}  /* Sentinel */
 };
@@ -1645,6 +1653,7 @@ typedef struct
     PyObject	    *id;
     PyObject	    *reg_uri;
     int		     publish_enabled;
+    int		     mwi_enabled;
     PyObject	    *force_contact;
     PyListObject    *proxy;
     unsigned	     reg_timeout;
@@ -1698,6 +1707,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     Py_XDECREF(obj->reg_uri);
     obj->reg_uri    = PyString_FromPJ(&cfg->reg_uri);
     obj->publish_enabled = cfg->publish_enabled;
+    obj->mwi_enabled = cfg->mwi_enabled;
     Py_XDECREF(obj->force_contact);
     obj->force_contact = PyString_FromPJ(&cfg->force_contact);
     Py_XDECREF(obj->proxy);
@@ -1753,6 +1763,7 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     cfg->id	    = PyString_ToPJ(obj->id);
     cfg->reg_uri    = PyString_ToPJ(obj->reg_uri);
     cfg->publish_enabled = obj->publish_enabled;
+    cfg->mwi_enabled = obj->mwi_enabled;
     cfg->force_contact = PyString_ToPJ(obj->force_contact);
 
     cfg->proxy_cnt = PyList_Size((PyObject*)obj->proxy);
@@ -1856,6 +1867,11 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
         "publish_enabled", T_INT, 
         offsetof(PyObj_pjsua_acc_config, publish_enabled), 0,
         "Publish presence? "
+    },
+    {
+        "mwi_enabled", T_INT, 
+        offsetof(PyObj_pjsua_acc_config, mwi_enabled), 0,
+        "Enable MWI subscription "
     },
     {
         "force_contact", T_OBJECT_EX,

@@ -993,6 +993,19 @@ class AccountCallback:
         """
         pass
 
+    def on_mwi_info(self, body):
+        """
+        Notification about change in Message Summary / Message Waiting
+	Indication (RFC 3842) status. MWI subscription must be enabled
+	in the account config to receive this notification.
+
+        Keyword arguments:
+        body      -- String containing message body as received in the
+                     NOTIFY request.
+
+        """
+        pass
+
 
 
 class Account:
@@ -2113,6 +2126,7 @@ class Lib:
         py_ua_cfg.cb.on_pager = _cb_on_pager
         py_ua_cfg.cb.on_pager_status = _cb_on_pager_status
         py_ua_cfg.cb.on_typing = _cb_on_typing
+	py_ua_cfg.cb.on_mwi_info = _cb_on_mwi_info;
 
         err = _pjsua.init(py_ua_cfg, log_cfg._cvt_to_pjsua(), 
                           media_cfg._cvt_to_pjsua())
@@ -2763,6 +2777,11 @@ class Lib:
             else:
                 acc._cb.on_typing(from_uri, contact, is_typing)
 
+    def _cb_on_mwi_info(self, acc_id, body):
+        acc = self._lookup_account(acc_id)
+        if acc:
+            return acc._cb.on_mwi_info(body)
+
     def _cb_on_buddy_state(self, buddy_id):
         buddy = self._lookup_buddy(buddy_id)
         if buddy:
@@ -2816,6 +2835,8 @@ def _cb_on_pager_status(call_id, to, body, user_data, status, reason, acc_id):
 def _cb_on_typing(call_id, from_uri, to, contact, is_typing, acc_id):
     _lib._cb_on_typing(call_id, from_uri, to, contact, is_typing, acc_id)
 
+def _cb_on_mwi_info(acc_id, body):
+    _lib._cb_on_mwi_info(acc_id, body)
 
 # Worker thread
 def _worker_thread_main(arg):

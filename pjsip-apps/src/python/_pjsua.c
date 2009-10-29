@@ -630,6 +630,33 @@ static void cb_on_typing(pjsua_call_id call_id, const pj_str_t *from,
 }
 
 
+/*
+ * on_mwi_info
+ */
+static void cb_on_mwi_info(pjsua_acc_id acc_id, pjsua_mwi_info *mwi_info)
+{
+    if (PyCallable_Check(g_obj_callback->on_mwi_info)) {
+	PyObject *param_acc_id, *param_body;
+	pj_str_t body;
+
+	ENTER_PYTHON();
+
+	body.ptr = mwi_info->rdata->msg_info.msg->body->data;
+	body.slen = mwi_info->rdata->msg_info.msg->body->len;
+
+        PyObject_CallFunctionObjArgs(
+		g_obj_callback->on_mwi_info,
+		param_acc_id	= Py_BuildValue("i",acc_id),
+		param_body	= PyString_FromPJ(&body),
+		NULL
+	    );
+
+	Py_DECREF(param_acc_id);
+	Py_DECREF(param_body);
+
+	LEAVE_PYTHON();
+    }
+}
 
 /* 
  * translate_hdr
@@ -901,6 +928,7 @@ static PyObject *py_pjsua_init(PyObject *pSelf, PyObject *pArgs)
     	cfg_ua.cb.on_pager2 = &cb_on_pager;
     	cfg_ua.cb.on_pager_status2 = &cb_on_pager_status;
     	cfg_ua.cb.on_typing2 = &cb_on_typing;
+	cfg_ua.cb.on_mwi_info = &cb_on_mwi_info;
 
         p_cfg_ua = &cfg_ua;
 
