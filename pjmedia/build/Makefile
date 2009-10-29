@@ -177,14 +177,14 @@ realclean:
 	$(subst @@,$(subst /,$(HOST_PSEP),.pjsdp-$(TARGET_NAME).depend),$(HOST_RMR))
 	
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
-	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia-audiodev $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_AUDIODEV app=pjmedia-audiodev $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
 
 depend:
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia $@
-	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA app=pjmedia-audiodev $@
+	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_AUDIODEV app=pjmedia-audiodev $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_CODEC app=pjmedia-codec $@
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $@
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $@
