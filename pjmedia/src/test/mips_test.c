@@ -2407,7 +2407,7 @@ int mips_test(void)
 	    struct test_entry *e = &entries[i];
 	    pj_timestamp times[RETRY], tzero;
 	    int usec;
-	    float cpu_pct, mips;
+	    float cpu_pct, mips_val;
 	    unsigned j, clock_rate = clock_rates[c];
 
 	    if ((e->valid_clock_rate & k[c]) == 0)
@@ -2438,10 +2438,10 @@ int mips_test(void)
 
 	    usec = usec / (DURATION / 1000);
 
-	    mips = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
+	    mips_val = (float)(CPU_IPS * usec / 1000000.0 / 1000000);
 	    cpu_pct = (float)(100.0 * usec / 1000000);
 	    PJ_LOG(3,(THIS_FILE, "%2dKHz %-38s % 8d %8.3f %7.2f", 
-		      clock_rate/1000, e->title, usec, cpu_pct, mips));
+		      clock_rate/1000, e->title, usec, cpu_pct, mips_val));
 
 	}
     }
