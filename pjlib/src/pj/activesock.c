@@ -718,6 +718,8 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
     pj_activesock_t *asock = (pj_activesock_t*) pj_ioqueue_get_user_data(key);
     struct accept_op *accept_op = (struct accept_op*) op_key;
 
+    PJ_UNUSED_ARG(new_sock);
+
     do {
 	if (status==PJ_SUCCESS && asock->cb.on_accept_complete) {
 	    pj_bool_t ret;
