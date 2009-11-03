@@ -723,7 +723,7 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
 	    pj_bool_t ret;
 
 	    /* Notify callback */
-	    ret = (*asock->cb.on_accept_complete)(asock, new_sock,
+	    ret = (*asock->cb.on_accept_complete)(asock, accept_op->new_sock,
 						  &accept_op->rem_addr,
 						  accept_op->rem_addr_len);
 
