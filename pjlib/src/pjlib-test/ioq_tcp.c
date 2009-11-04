@@ -757,30 +757,28 @@ static int compliance_test_2(pj_bool_t allow_concur)
 		++pending_op;
 	    }
 
-	}
-
-
-	// Poll until all connected
-	while (pending_op) {
-	    pj_time_val timeout = {1, 0};
+	    // Poll until connection of this pair established
+	    while (pending_op) {
+		pj_time_val timeout = {1, 0};
 
 #ifdef PJ_SYMBIAN
-	    status = pj_symbianos_poll(-1, 1000);
+		status = pj_symbianos_poll(-1, 1000);
 #else
-	    status = pj_ioqueue_poll(ioque, &timeout);
+		status = pj_ioqueue_poll(ioque, &timeout);
 #endif
-	    if (status > 0) {
-		if (status > pending_op) {
-		    PJ_LOG(3,(THIS_FILE,
-			      "...error: pj_ioqueue_poll() returned %d "
-			      "(only expecting %d)",
-			      status, pending_op));
-		    return -110;
-		}
-		pending_op -= status;
+		if (status > 0) {
+		    if (status > pending_op) {
+			PJ_LOG(3,(THIS_FILE,
+				  "...error: pj_ioqueue_poll() returned %d "
+				  "(only expecting %d)",
+				  status, pending_op));
+			return -110;
+		    }
+		    pending_op -= status;
 
-		if (pending_op == 0) {
-		    status = 0;
+		    if (pending_op == 0) {
+			status = 0;
+		    }
 		}
 	    }
 	}
