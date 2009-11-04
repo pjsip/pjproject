@@ -171,7 +171,10 @@ static int format_test(void)
 #if !defined(PJ_SYMBIAN) || PJ_SYMBIAN==0
     if (PJ_AF_INET==0xFFFF) return -5500;
     if (PJ_AF_INET6==0xFFFF) return -5501;
+#if !defined(PJ_WIN32) || PJ_WIN32==0
+    /* SOL_SOCKET is 0xFFFF on Windows Platform SDK */
     if (PJ_SOL_SOCKET==0xFFFF) return -5503;
+#endif
     if (PJ_SOL_IP==0xFFFF) return -5502;
     if (PJ_SOL_TCP==0xFFFF) return -5510;
     if (PJ_SOL_UDP==0xFFFF) return -5520;
