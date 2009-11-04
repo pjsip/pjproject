@@ -1007,11 +1007,17 @@ parse_headers:
 	    if (handler) {
 		hdr = (*handler)(ctx);
 
+		/* Note:
+		 *  hdr MAY BE NULL, if parsing does not yield a new header
+		 *  instance, e.g. the values have been added to existing
+		 *  header. See http://trac.pjsip.org/repos/ticket/940
+		 */
+
 		/* Check if we've just parsed a Content-Type header. 
 		 * We will check for a message body if we've got Content-Type 
 		 * header.
 		 */
-		if (hdr->type == PJSIP_H_CONTENT_TYPE) {
+		if (hdr && hdr->type == PJSIP_H_CONTENT_TYPE) {
 		    ctype_hdr = (pjsip_ctype_hdr*)hdr;
 		}
 
@@ -1027,7 +1033,8 @@ parse_headers:
 	     * different Contact headers.
 	     * So here we must insert list instead of just insert one header.
 	     */
-	    pj_list_insert_nodes_before(&msg->hdr, hdr);
+	    if (hdr)
+		pj_list_insert_nodes_before(&msg->hdr, hdr);
 	    
 	    /* Parse until EOF or an empty line is found. */
 	} while (!pj_scan_is_eof(scanner) && !IS_NEWLINE(*scanner->curptr));
@@ -1639,7 +1646,14 @@ static void parse_generic_array_hdr( pjsip_generic_array_hdr *hdr,
 	goto end;
     }
 
-    pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, &hdr->values[0]);
+    if (hdr->count >= PJ_ARRAY_SIZE(hdr->values)) {
+	/* Too many elements */
+	on_syntax_error(scanner);
+	return;
+    }
+
+    pj_scan_get( scanner, &pconst.pjsip_NOT_COMMA_OR_NEWLINE, 
+		 &hdr->values[hdr->count]);
     hdr->count++;
 
     while (*scanner->curptr == ',') {
@@ -1917,13 +1931,19 @@ static pjsip_hdr* parse_hdr_from( pjsip_parse_ctx *ctx )
 /* Parse Require: header. */
 static pjsip_hdr* parse_hdr_require( pjsip_parse_ctx *ctx )
 {
-    pjsip_require_hdr *hdr = pjsip_require_hdr_create(ctx->pool);
+    pjsip_require_hdr *hdr;
+    pj_bool_t new_hdr = (ctx->rdata->msg_info.require == NULL);
+    
+    if (ctx->rdata && ctx->rdata->msg_info.require) {
+	hdr = ctx->rdata->msg_info.require;
+    } else {
+	hdr = pjsip_require_hdr_create(ctx->pool);
+	ctx->rdata->msg_info.require = hdr;
+    }
+
     parse_generic_array_hdr(hdr, ctx->scanner);
 
-    if (ctx->rdata && ctx->rdata->msg_info.require == NULL)
-        ctx->rdata->msg_info.require = hdr;
-
-    return (pjsip_hdr*)hdr;
+    return new_hdr ? (pjsip_hdr*)hdr : NULL;
 }
 
 /* Parse Retry-After: header. */
@@ -1960,11 +1980,19 @@ static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
 /* Parse Supported: header. */
 static pjsip_hdr* parse_hdr_supported(pjsip_parse_ctx *ctx)
 {
-    pjsip_supported_hdr *hdr = pjsip_supported_hdr_create(ctx->pool);
-    parse_generic_array_hdr(hdr, ctx->scanner);
-    return (pjsip_hdr*)hdr;
-}
+    pjsip_supported_hdr *hdr;
+    pj_bool_t new_hdr = (ctx->rdata->msg_info.supported == NULL);
 
+    if (ctx->rdata && ctx->rdata->msg_info.supported) {
+	hdr = ctx->rdata->msg_info.supported;
+    } else {
+	hdr = pjsip_supported_hdr_create(ctx->pool);
+	ctx->rdata->msg_info.supported = hdr;
+    }
+
+    parse_generic_array_hdr(hdr, ctx->scanner);
+    return new_hdr ? (pjsip_hdr*)hdr : NULL;
+}
 
 /* Parse To: header. */
 static pjsip_hdr* parse_hdr_to( pjsip_parse_ctx *ctx )
