@@ -28,6 +28,9 @@
 
 #define DEFAULT_MAX_TIMED_OUT_PER_POLL  (64)
 
+// Maximum number of miliseconds that RTimer.At() supports
+#define MAX_RTIMER_INTERVAL		2147
+
 
 /**
  * The implementation of timer heap.
@@ -65,15 +68,18 @@ private:
     pj_timer_heap_t *timer_heap_;
     pj_timer_entry  *entry_;
     RTimer	     rtimer_;
+    pj_uint32_t	     interval_left_;
     
     CPjTimerEntry(pj_timer_heap_t *timer_heap, pj_timer_entry *entry);
     void ConstructL(const pj_time_val *delay);
+    void Schedule();
 };
 
 
 CPjTimerEntry::CPjTimerEntry(pj_timer_heap_t *timer_heap,
 			     pj_timer_entry *entry)
-: CActive(PJ_SYMBIAN_TIMER_PRIORITY), timer_heap_(timer_heap), entry_(entry)
+: CActive(PJ_SYMBIAN_TIMER_PRIORITY), timer_heap_(timer_heap), entry_(entry),
+  interval_left_(0)
 {
 }
 
@@ -83,17 +89,28 @@ CPjTimerEntry::~CPjTimerEntry()
     rtimer_.Close();
 }
 
+void CPjTimerEntry::Schedule()
+{
+    pj_int32_t interval;
+    
+    if (interval_left_ > MAX_RTIMER_INTERVAL) {
+	interval = MAX_RTIMER_INTERVAL;
+    } else {
+	interval = interval_left_;
+    }
+    
+    interval_left_ -= interval;
+    rtimer_.After(iStatus, interval * 1000);
+    SetActive();
+}
+
 void CPjTimerEntry::ConstructL(const pj_time_val *delay) 
 {
     rtimer_.CreateLocal();
     CActiveScheduler::Add(this);
     
-    pj_int32_t interval = PJ_TIME_VAL_MSEC(*delay) * 1000;
-    if (interval < 0) {
-    	interval = 0;
-    }
-    rtimer_.After(iStatus, interval);
-    SetActive();
+    interval_left_ = PJ_TIME_VAL_MSEC(*delay);
+    Schedule();
 }
 
 CPjTimerEntry* CPjTimerEntry::NewL(pj_timer_heap_t *timer_heap,
@@ -110,6 +127,11 @@ CPjTimerEntry* CPjTimerEntry::NewL(pj_timer_heap_t *timer_heap,
 
 void CPjTimerEntry::RunL() 
 {
+    if (interval_left_ > 0) {
+	Schedule();
+	return;
+    }
+    
     --timer_heap_->cur_size;
     entry_->_timer_id = NULL;
     entry_->cb(timer_heap_, entry_);
