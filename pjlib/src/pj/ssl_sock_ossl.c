@@ -192,16 +192,14 @@ static pj_status_t flush_delayed_send(pj_ssl_sock_t *ssock);
 #define PJ_SSL_ERRNO_START		(PJ_ERRNO_START_USER + \
 					 PJ_ERRNO_SPACE_SIZE*6)
 
-#define PJ_SSL_ERRNO_SPACE_SIZE		5000
+#define PJ_SSL_ERRNO_SPACE_SIZE		PJ_ERRNO_SPACE_SIZE
 
-#define PJ_STATUS_FROM_OSSL(ossl_err)	(ossl_err == SSL_ERROR_NONE? \
-					 PJ_SUCCESS : \
-					 (PJ_SSL_ERRNO_START + ossl_err))
-
-#define PJ_STATUS_TO_OSSL(status)	(status == PJ_SUCCESS? \
-					 SSL_ERROR_NONE : \
-					(status - PJ_SSL_ERRNO_START))
-
+#define GET_SSL_STATUS(status) { \
+    unsigned long e = ERR_get_error();\
+    status = ERR_GET_LIB(e)*300 + ERR_GET_REASON(e);\
+    pj_assert(status < PJ_SSL_ERRNO_SPACE_SIZE);\
+    if (status) status += PJ_SSL_ERRNO_START;\
+}
 
 /*
  * Get error string of OpenSSL.
@@ -210,21 +208,35 @@ static pj_str_t ssl_strerror(pj_status_t status,
 			     char *buf, pj_size_t bufsize)
 {
     pj_str_t errstr;
-    unsigned long ssl_err = PJ_STATUS_TO_OSSL(status);
+    unsigned long ssl_err = status;
+
+    if (ssl_err) {
+	unsigned long l, r;
+	ssl_err -= PJ_SSL_ERRNO_START;
+	l = ssl_err/300;
+	r = ssl_err%300;
+	ssl_err = ERR_PACK(l, 0, r);
+    }
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
-    ERR_error_string_n(ssl_err, buf, bufsize);
-    errstr = pj_str(buf);
+    {
+	const char *tmp = NULL;
+	tmp = ERR_reason_error_string(ssl_err);
 
-#else
+	if (tmp) {
+	    pj_ansi_strncpy(buf, tmp, bufsize);
+	    errstr = pj_str(buf);
+	    return errstr;
+	}
+    }
+
+#endif	/* PJ_HAS_ERROR_STRING */
 
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
 				   "Unknown OpenSSL error %d",
 				   ssl_err);
-
-#endif	/* PJ_HAS_ERROR_STRING */
 
     return errstr;
 }
@@ -336,6 +348,7 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
     SSL_CTX *ctx;
     pj_ssl_cert_t *cert;
     int mode, rc;
+    pj_status_t status;
         
     pj_assert(ssock && p_ctx);
 
@@ -369,8 +382,8 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
     /* Create SSL context for the listener */
     ctx = SSL_CTX_new(ssl_method);
     if (ctx == NULL) {
-	PJ_LOG(1,(ssock->pool->obj_name, "Error creating OpenSSL context"));
-	return PJ_STATUS_FROM_OSSL(ERR_get_error());
+	GET_SSL_STATUS(status);
+	return status;
     }
 
     /* Apply credentials */
@@ -381,10 +394,11 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
 	    rc = SSL_CTX_load_verify_locations(ctx, cert->CA_file.ptr, NULL);
 
 	    if (rc != 1) {
+		GET_SSL_STATUS(status);
 		PJ_LOG(1,(ssock->pool->obj_name, "Error loading CA list file "
 			  "'%s'", cert->CA_file.ptr));
 		SSL_CTX_free(ctx);
-		return PJ_STATUS_FROM_OSSL(ERR_get_error());
+		return status;
 	    }
 	}
     
@@ -402,10 +416,11 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
 	    rc = SSL_CTX_use_certificate_chain_file(ctx, cert->cert_file.ptr);
 
 	    if(rc != 1) {
+		GET_SSL_STATUS(status);
 		PJ_LOG(1,(ssock->pool->obj_name, "Error loading certificate "
 			  "chain file '%s'", cert->cert_file.ptr));
 		SSL_CTX_free(ctx);
-		return PJ_STATUS_FROM_OSSL(ERR_get_error());
+		return status;
 	    }
 	}
 
@@ -417,10 +432,11 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
 					     SSL_FILETYPE_PEM);
 
 	    if(rc != 1) {
+		GET_SSL_STATUS(status);
 		PJ_LOG(1,(ssock->pool->obj_name, "Error adding private key "
 			  "from '%s'", cert->privkey_file.ptr));
 		SSL_CTX_free(ctx);
-		return PJ_STATUS_FROM_OSSL(ERR_get_error());
+		return status;
 	    }
 	}
     }
@@ -542,8 +558,11 @@ static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock)
 
     /* Finally, set chosen cipher list */
     ret = SSL_set_cipher_list(ssock->ossl_ssl, buf);
-    if (ret < 1)
-	return PJ_STATUS_FROM_OSSL(SSL_get_error(ssock->ossl_ssl, ret));
+    if (ret < 1) {
+	pj_status_t status;
+	GET_SSL_STATUS(status);
+	return status;
+    }
 
     return PJ_SUCCESS;
 }
@@ -687,6 +706,16 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
     if (ssock->is_server) {
 	if (status != PJ_SUCCESS) {
 	    /* Handshake failed in accepting, destroy our self silently. */
+
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    char buf[PJ_INET6_ADDRSTRLEN+10];
+
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    PJ_LOG(3,(ssock->pool->obj_name, "Handshake failed in accepting "
+		      "%s: %s",
+		      pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3),
+		      errmsg));
+
 	    pj_ssl_sock_close(ssock);
 	    return PJ_FALSE;
 	}
@@ -874,8 +903,9 @@ static pj_status_t do_handshake(pj_ssl_sock_t *ssock)
 	if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ) 
 	{
 	    /* Handshake fails */
+	    GET_SSL_STATUS(status);
 	    pj_lock_release(ssock->write_mutex);
-	    return PJ_STATUS_FROM_OSSL(err);
+	    return status;
 	}
     }
 
@@ -921,7 +951,7 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 	/* Consume the whole data */
 	nwritten = BIO_write(ssock->ossl_rbio, data, size);
 	if (nwritten < size) {
-	    status = PJ_STATUS_FROM_OSSL(ERR_get_error());
+	    GET_SSL_STATUS(status);
 	    goto on_error;
 	}
     }
@@ -994,13 +1024,8 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 		 */
 		if (err != SSL_ERROR_NONE && err != SSL_ERROR_WANT_READ)
 		{
-		    char errmsg[PJ_ERR_MSG_SIZE];
-
-		    pj_strerror(status, errmsg, sizeof(errmsg));
-		    PJ_LOG(1,(ssock->pool->obj_name, "SSL_read() failed: %s",
-			      errmsg));
-
 		    /* Reset SSL socket state, then return PJ_FALSE */
+		    GET_SSL_STATUS(status);
 		    reset_ssl_sock_state(ssock);
 		    goto on_error;
 		}
@@ -1017,19 +1042,13 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 		    pj_lock_release(ssock->write_mutex);
 
 		    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-			char errmsg[PJ_ERR_MSG_SIZE];
-
-			pj_strerror(status, errmsg, sizeof(errmsg));
-			PJ_LOG(1,(ssock->pool->obj_name, "Failed to flush "
-				  "delayed send: %s", errmsg));
+			pj_perror(1, ssock->pool->obj_name, status, 
+				  "Failed to flush delayed send", 0);
 			goto on_error;
 		    }
 		} else if (status != PJ_EPENDING) {
-		    char errmsg[PJ_ERR_MSG_SIZE];
-
-		    pj_strerror(status, errmsg, sizeof(errmsg));
-		    PJ_LOG(1,(ssock->pool->obj_name, "Renegotiation failed: "
-			      "%s", errmsg));
+		    pj_perror(1, ssock->pool->obj_name, status, 
+			      "Renegotiation failed", 0);
 		    goto on_error;
 		}
 
@@ -1121,12 +1140,8 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     pj_activesock_cfg asock_cfg;
     unsigned i;
     pj_status_t status;
-    char buf[64];
 
     PJ_UNUSED_ARG(src_addr_len);
-
-    PJ_LOG(4,(ssock_parent->pool->obj_name, "Incoming connection from %s",
-	      pj_sockaddr_print(src_addr, buf, sizeof(buf), 3)));
 
     /* Create new SSL socket instance */
     status = pj_ssl_sock_create(ssock_parent->pool, &ssock_parent->param,
@@ -1149,8 +1164,12 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     ssock->addr_len = src_addr_len;
     status = pj_sock_getsockname(ssock->sock, &ssock->local_addr, 
 				 &ssock->addr_len);
-    if (status != PJ_SUCCESS)
-	goto on_return;
+    if (status != PJ_SUCCESS) {
+	/* This fails on few envs, e.g: win IOCP, just tolerate this and
+	 * use parent local address instead.
+	 */
+	pj_sockaddr_cp(&ssock->local_addr, &ssock_parent->local_addr);
+    }
 
     /* Set remote address */
     pj_sockaddr_cp(&ssock->rem_addr, src_addr);
@@ -1163,8 +1182,7 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     /* Create SSL instance */
     ssock->ossl_ssl = SSL_new(ssock->ossl_ctx);
     if (ssock->ossl_ssl == NULL) {
-	PJ_LOG(1,(ssock->pool->obj_name, "Error creating SSL instance"));
-	status = PJ_STATUS_FROM_OSSL(ERR_get_error());
+	GET_SSL_STATUS(status);
 	goto on_return;
     }
 
@@ -1244,13 +1262,15 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     ssock->ssl_state = SSL_STATE_HANDSHAKING;
     SSL_set_accept_state(ssock->ossl_ssl);
     status = do_handshake(ssock);
-    if (status != PJ_EPENDING)
-	goto on_return;
-
-    return PJ_TRUE;
 
 on_return:
-    return on_handshake_complete(ssock, status);
+    if (ssock && status != PJ_EPENDING)
+	on_handshake_complete(ssock, status);
+
+    /* Must return PJ_TRUE whatever happened, as active socket must 
+     * continue listening.
+     */
+    return PJ_TRUE;
 }
 
 
@@ -1279,8 +1299,7 @@ static pj_bool_t asock_on_connect_complete (pj_activesock_t *asock,
     /* Create SSL instance */
     ssock->ossl_ssl = SSL_new(ssock->ossl_ctx);
     if (ssock->ossl_ssl == NULL) {
-	PJ_LOG(1,(ssock->pool->obj_name, "Error creating SSL instance"));
-	status = PJ_STATUS_FROM_OSSL(ERR_get_error());
+	GET_SSL_STATUS(status);
 	goto on_return;
     }
 
@@ -1722,7 +1741,7 @@ static pj_status_t ssl_write(pj_ssl_sock_t *ssock,
 		status = PJ_EBUSY;
 	} else {
 	    /* Some problem occured */
-	    status = PJ_STATUS_FROM_OSSL(err);
+	    GET_SSL_STATUS(status);
 	}
     } else {
 	/* nwritten < *size, shouldn't happen, unless write BIO cannot hold 
@@ -2017,7 +2036,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_renegotiate(pj_ssl_sock_t *ssock)
 
     ret = SSL_renegotiate(ssock->ossl_ssl);
     if (ret <= 0) {
-	status = PJ_STATUS_FROM_OSSL(SSL_get_error(ssock->ossl_ssl, ret));
+	GET_SSL_STATUS(status);
     } else {
 	status = do_handshake(ssock);
     }

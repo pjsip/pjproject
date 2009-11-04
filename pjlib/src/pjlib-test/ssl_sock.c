@@ -150,6 +150,14 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
 	}
     }
 
+    /* Start reading data */
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(ssock, st->pool, sizeof(st->read_buf), (void**)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+	app_perror("...ERROR pj_ssl_sock_start_read2()", status);
+	goto on_return;
+    }
+
     /* Start sending data */
     while (st->sent < st->send_str_len) {
 	pj_ssize_t size;
@@ -166,14 +174,6 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
 	    st->sent += size;
 	else
 	    break;
-    }
-
-    /* Start reading data */
-    read_buf[0] = st->read_buf;
-    status = pj_ssl_sock_start_read2(ssock, st->pool, sizeof(st->read_buf), (void**)read_buf, 0);
-    if (status != PJ_SUCCESS  && status != PJ_EPENDING) {
-	app_perror("...ERROR pj_ssl_sock_start_read2()", status);
-	goto on_return;
     }
 
 on_return:
@@ -195,7 +195,7 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 					int src_addr_len)
 {
     struct test_state *parent_st = (struct test_state*) 
-			    pj_ssl_sock_get_user_data(ssock);
+				   pj_ssl_sock_get_user_data(ssock);
     struct test_state *st;
     void *read_buf[1];
     pj_status_t status;
@@ -238,6 +238,14 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 	}
     }
 
+    /* Start reading data */
+    read_buf[0] = st->read_buf;
+    status = pj_ssl_sock_start_read2(newsock, st->pool, sizeof(st->read_buf), (void**)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+	app_perror("...ERROR pj_ssl_sock_start_read2()", status);
+	goto on_return;
+    }
+
     /* Start sending data */
     while (st->sent < st->send_str_len) {
 	pj_ssize_t size;
@@ -254,14 +262,6 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 	    st->sent += size;
 	else
 	    break;
-    }
-
-    /* Start reading data */
-    read_buf[0] = st->read_buf;
-    status = pj_ssl_sock_start_read2(newsock, st->pool, sizeof(st->read_buf), (void**)read_buf, 0);
-    if (status != PJ_SUCCESS  && status != PJ_EPENDING) {
-	app_perror("...ERROR pj_ssl_sock_start_read2()", status);
-	goto on_return;
     }
 
 on_return:
@@ -421,10 +421,11 @@ static pj_bool_t ssl_on_data_sent(pj_ssl_sock_t *ssock,
 #define HTTP_SERVER_ADDR	"trac.pjsip.org"
 #define HTTP_SERVER_PORT	443
 
-static int https_client_test(void)
+static int https_client_test(unsigned ms_timeout)
 {
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
     pj_ssl_sock_t *ssock = NULL;
     pj_ssl_sock_param param;
     pj_status_t status;
@@ -435,6 +436,11 @@ static int https_client_test(void)
     pool = pj_pool_create(mem, "https_get", 256, 256, NULL);
 
     status = pj_ioqueue_create(pool, 4, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    status = pj_timer_heap_create(pool, 4, &timer);
     if (status != PJ_SUCCESS) {
 	goto on_return;
     }
@@ -451,6 +457,10 @@ static int https_client_test(void)
     param.ioqueue = ioqueue;
     param.user_data = &state;
     param.server_name = pj_str((char*)HTTP_SERVER_ADDR);
+    param.timer_heap = timer;
+    param.timeout.sec = 0;
+    param.timeout.msec = ms_timeout;
+    pj_time_val_normalize(&param.timeout);
 
     status = pj_ssl_sock_create(pool, &param, &ssock);
     if (status != PJ_SUCCESS) {
@@ -475,6 +485,7 @@ static int https_client_test(void)
 #else
 	pj_time_val delay = {0, 100};
 	pj_ioqueue_poll(ioqueue, &delay);
+	pj_timer_heap_poll(timer, &delay);
 #endif
     }
 
@@ -491,6 +502,8 @@ on_return:
 	pj_ssl_sock_close(ssock);
     if (ioqueue)
 	pj_ioqueue_destroy(ioqueue);
+    if (timer)
+	pj_timer_heap_destroy(timer);
     if (pool)
 	pj_pool_release(pool);
 
@@ -632,6 +645,12 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 #endif
     }
 
+    /* Clean up sockets */
+    {
+	pj_time_val delay = {0, 100};
+	while (pj_ioqueue_poll(ioqueue, &delay) > 0);
+    }
+
     if (state_serv.err || state_cli.err) {
 	if (state_serv.err != PJ_SUCCESS)
 	    status = state_serv.err;
@@ -682,6 +701,13 @@ static pj_bool_t asock_on_data_read(pj_activesock_t *asock,
 
     st->err = status;
 
+    if (st->err != PJ_SUCCESS || st->done) {
+	pj_activesock_close(asock);
+	if (!st->is_server)
+	    clients_num--;
+	return PJ_FALSE;
+    }
+
     return PJ_TRUE;
 }
 
@@ -693,10 +719,24 @@ static pj_bool_t asock_on_connect_complete(pj_activesock_t *asock,
 			     pj_activesock_get_user_data(asock);
 
     if (status == PJ_SUCCESS) {
-	status = pj_activesock_start_read(asock, st->pool, 1, 0);
+	void *read_buf[1];
+
+	/* Start reading data */
+	read_buf[0] = st->read_buf;
+	status = pj_activesock_start_read2(asock, st->pool, sizeof(st->read_buf), (void**)read_buf, 0);
+	if (status != PJ_SUCCESS) {
+	    app_perror("...ERROR pj_ssl_sock_start_read2()", status);
+	}
     }
 
     st->err = status;
+
+    if (st->err != PJ_SUCCESS) {
+	pj_activesock_close(asock);
+	if (!st->is_server)
+	    clients_num--;
+	return PJ_FALSE;
+    }
 
     return PJ_TRUE;
 }
@@ -845,7 +885,7 @@ static int client_non_ssl(unsigned ms_timeout)
 on_return:
     if (ssock_serv)
 	pj_ssl_sock_close(ssock_serv);
-    if (asock_cli)
+    if (asock_cli && !state_cli.err && !state_cli.done)
 	pj_activesock_close(asock_cli);
     if (timer)
 	pj_timer_heap_destroy(timer);
@@ -858,6 +898,9 @@ on_return:
 }
 
 
+/* Test will perform multiple clients trying to connect to single server.
+ * Once SSL connection established, echo test will be performed.
+ */
 static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 {
     pj_pool_t *pool = NULL;
@@ -1022,6 +1065,12 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 #endif
     }
 
+    /* Clean up sockets */
+    {
+	pj_time_val delay = {0, 500};
+	while (pj_ioqueue_poll(ioqueue, &delay) > 0);
+    }
+
     if (state_serv.err != PJ_SUCCESS) {
 	status = state_serv.err;
 	goto on_return;
@@ -1077,13 +1126,13 @@ int ssl_sock_test(void)
     if (ret != 0)
 	return ret;
 
-    // Disable this test as requiring internet connection.
-#if 0
     PJ_LOG(3,("", "..https client test"));
-    ret = https_client_test();
-    if (ret != 0)
-	return ret;
-#endif
+    ret = https_client_test(30000);
+    // Ignore test result as internet connection may not be available.
+    //if (ret != 0)
+	//return ret;
+
+#ifndef PJ_SYMBIAN
 
     PJ_LOG(3,("", "..echo test w/ TLSv1 and TLS_RSA_WITH_DES_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
@@ -1109,7 +1158,7 @@ int ssl_sock_test(void)
     if (ret == 0)
 	return PJ_EBUG;
 
-    PJ_LOG(3,("", "..client non-SSL timeout in 5 secs"));
+    PJ_LOG(3,("", "..client non-SSL (handshake timeout 5 secs)"));
     ret = client_non_ssl(5000);
     if (ret != 0)
 	return ret;
@@ -1118,6 +1167,8 @@ int ssl_sock_test(void)
     ret = perf_test(PJ_IOQUEUE_MAX_HANDLES/2 - 1, 0);
     if (ret != 0)
 	return ret;
+
+#endif
 
     return 0;
 }
