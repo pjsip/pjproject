@@ -322,8 +322,33 @@ static void update_digest_session( pj_pool_t *ses_pool,
 				   pjsip_cached_auth *cached_auth,
 				   const pjsip_www_authenticate_hdr *hdr )
 {
-    if (hdr->challenge.digest.qop.slen == 0)
+    if (hdr->challenge.digest.qop.slen == 0) {
+#if PJSIP_AUTH_AUTO_SEND_NEXT!=0
+	if (!cached_auth->last_chal || pj_stricmp2(&hdr->scheme, "digest")) {
+	    cached_auth->last_chal = (pjsip_www_authenticate_hdr*)
+				     pjsip_hdr_clone(ses_pool, hdr);
+	} else {
+	    /* Only update if the new challenge is "significantly different"
+	     * than the one in the cache, to reduce memory usage.
+	     */
+	    const pjsip_digest_challenge *d1 = 
+			&cached_auth->last_chal->challenge.digest;
+	    const pjsip_digest_challenge *d2 = &hdr->challenge.digest;
+
+	    if (pj_strcmp(&d1->domain, &d2->domain) ||
+		pj_strcmp(&d1->realm, &d2->realm) ||
+		pj_strcmp(&d1->nonce, &d2->nonce) ||
+		pj_strcmp(&d1->opaque, &d2->opaque) ||
+		pj_strcmp(&d1->algorithm, &d2->algorithm) ||
+		pj_strcmp(&d1->qop, &d2->qop))
+	    {
+		cached_auth->last_chal = (pjsip_www_authenticate_hdr*)
+				         pjsip_hdr_clone(ses_pool, hdr);
+	    }
+	}
+#endif
 	return;
+    }
 
     /* Initialize cnonce and qop if not present. */
     if (cached_auth->cnonce.slen == 0) {
