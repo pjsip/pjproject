@@ -46,6 +46,7 @@ SOURCE	select.c
 SOURCE	sleep.c
 SOURCE	sock.c
 SOURCE	sock_perf.c
+SOURCE	ssl_sock.c
 SOURCE	string.c
 SOURCE	test_wrap.cpp
 SOURCE	thread.c
@@ -68,7 +69,7 @@ SYSTEMINCLUDE	..\pjlib\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib 
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib securesocket.lib 
 #ifdef WINSCW
 STATICLIBRARY   eexe.lib ecrt0.lib
 #endif
@@ -76,3 +77,4 @@ STATICLIBRARY   eexe.lib ecrt0.lib
 // Need a bit of mem for logging in the app.
 EPOCSTACKSIZE		32768
 
+CAPABILITY	NetworkServices LocalServices ReadUserData WriteUserData UserEnvironment

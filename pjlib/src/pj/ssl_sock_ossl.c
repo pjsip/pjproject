@@ -248,7 +248,7 @@ static pj_str_t ssl_strerror(pj_status_t status,
 
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown OpenSSL error %d",
+				   "Unknown OpenSSL error %ul",
 				   ssl_err);
 
     return errstr;
@@ -267,8 +267,10 @@ static unsigned openssl_cipher_num;
 /* Initialize OpenSSL */
 static pj_status_t init_openssl(void)
 {
-    if (++openssl_init_count != 1)
+    if (openssl_init_count)
 	return PJ_SUCCESS;
+
+    openssl_init_count = 1;
 
     /* Register error subsystem */
     if (!openssl_reg_strerr) {
@@ -334,8 +336,7 @@ static pj_status_t init_openssl(void)
 /* Shutdown OpenSSL */
 static void shutdown_openssl(void)
 {
-    if (--openssl_init_count != 0)
-	return;
+    PJ_UNUSED_ARG(openssl_init_count);
 }
 
 

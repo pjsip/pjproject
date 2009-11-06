@@ -610,7 +610,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	pj_time_val now;
 
 	pj_gettimeofday(&now);
-	pj_srand((pj_rand()%now.sec) * (pj_rand()%now.msec));
+	pj_srand((unsigned)now.sec);
 	state_cli.send_str_len = (pj_rand() % 5 + 1) * 1024 + pj_rand() % 1024;
     }
     state_cli.send_str = pj_pool_alloc(pool, state_cli.send_str_len);
@@ -1006,7 +1006,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 	pj_time_val now;
 
 	pj_gettimeofday(&now);
-	pj_srand((pj_rand()%now.sec) * (pj_rand()%now.msec));
+	pj_srand((unsigned)now.sec);
     }
 
     /* Allocate SSL socket pointers and test state */

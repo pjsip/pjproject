@@ -447,7 +447,8 @@ PJ_DEF(pj_status_t) pj_ssl_cipher_get_availables (pj_ssl_cipher ciphers[],
             if (ciphers_num_ > PJ_ARRAY_SIZE(ciphers_))
         	ciphers_num_ = PJ_ARRAY_SIZE(ciphers_);
             for (i = 0; i < ciphers_num_; ++i)
-                ciphers_[i] = (pj_ssl_cipher)ciphers_buf[i*2];
+                ciphers_[i] = (pj_ssl_cipher)(ciphers_buf[i*2]*10 + 
+					      ciphers_buf[i*2+1]);
         }
         
         delete secure_sock;
