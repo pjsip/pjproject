@@ -36,6 +36,9 @@
 
 #define THIS_FILE		"ssl_sock_ossl.c"
 
+/* Workaround for ticket #985 */
+#define DELAYED_CLOSE_TIMEOUT	200
+
 /* 
  * Include OpenSSL headers 
  */
@@ -62,6 +65,16 @@ enum ssl_state {
     SSL_STATE_NULL,
     SSL_STATE_HANDSHAKING,
     SSL_STATE_ESTABLISHED
+};
+
+/*
+ * Internal timer types.
+ */
+enum timer_id
+{
+    TIMER_NONE,
+    TIMER_HANDSHAKE_TIMEOUT,
+    TIMER_CLOSE
 };
 
 /*
@@ -138,7 +151,7 @@ struct pj_ssl_sock_t
     pj_bool_t		  is_server;
     enum ssl_state	  ssl_state;
     pj_ioqueue_op_key_t	  handshake_op_key;
-    pj_timer_entry	  handshake_timer;
+    pj_timer_entry	  timer;
 
     pj_sock_t		  sock;
     pj_activesock_t	 *asock;
@@ -695,8 +708,10 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 				       pj_status_t status)
 {
     /* Cancel handshake timer */
-    if (ssock->param.timer_heap)
-	pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->handshake_timer);
+    if (ssock->timer.id == TIMER_HANDSHAKE_TIMEOUT) {
+	pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
+	ssock->timer.id = TIMER_NONE;
+    }
 
     /* Update certificates info on successful handshake */
     if (status == PJ_SUCCESS)
@@ -716,7 +731,26 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 		      pj_sockaddr_print(&ssock->rem_addr, buf, sizeof(buf), 3),
 		      errmsg));
 
-	    pj_ssl_sock_close(ssock);
+	    /* Workaround for ticket #985 */
+#if defined(PJ_WIN32) && PJ_WIN32!=0
+	    if (ssock->param.timer_heap) {
+		pj_time_val interval = {0, DELAYED_CLOSE_TIMEOUT};
+
+		reset_ssl_sock_state(ssock);
+
+		ssock->timer.id = TIMER_CLOSE;
+		pj_time_val_normalize(&interval);
+		if (pj_timer_heap_schedule(ssock->param.timer_heap, 
+					   &ssock->timer, &interval) != 0)
+		{
+		    ssock->timer.id = TIMER_NONE;
+		    pj_ssl_sock_close(ssock);
+		}
+	    } else 
+#endif	/* PJ_WIN32 */
+	    {
+		pj_ssl_sock_close(ssock);
+	    }
 	    return PJ_FALSE;
 	}
 	/* Notify application the newly accepted SSL socket */
@@ -874,17 +908,29 @@ static pj_status_t flush_write_bio(pj_ssl_sock_t *ssock,
 }
 
 
-static void handshake_timeout_cb(pj_timer_heap_t *th,
-				 struct pj_timer_entry *te)
+static void on_timer(pj_timer_heap_t *th, struct pj_timer_entry *te)
 {
     pj_ssl_sock_t *ssock = (pj_ssl_sock_t*)te->user_data;
+    int timer_id = te->id;
+
+    te->id = TIMER_NONE;
 
     PJ_UNUSED_ARG(th);
 
-    PJ_LOG(1,(ssock->pool->obj_name, "SSL handshake timeout after %d.%ds",
-	      ssock->param.timeout.sec, ssock->param.timeout.msec));
+    switch (timer_id) {
+    case TIMER_HANDSHAKE_TIMEOUT:
+	PJ_LOG(1,(ssock->pool->obj_name, "SSL handshake timeout after %d.%ds",
+		  ssock->param.timeout.sec, ssock->param.timeout.msec));
 
-    on_handshake_complete(ssock, PJ_ETIMEDOUT);
+	on_handshake_complete(ssock, PJ_ETIMEDOUT);
+	break;
+    case TIMER_CLOSE:
+	pj_ssl_sock_close(ssock);
+	break;
+    default:
+	pj_assert(!"Unknown timer");
+	break;
+    }
 }
 
 
@@ -1252,10 +1298,13 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     if (ssock->param.timer_heap && (ssock->param.timeout.sec != 0 ||
 	ssock->param.timeout.msec != 0))
     {
-	pj_timer_entry_init(&ssock->handshake_timer, 0, ssock, 
-			    &handshake_timeout_cb);
-	pj_timer_heap_schedule(ssock->param.timer_heap, &ssock->handshake_timer,
-			       &ssock->param.timeout);
+	pj_assert(ssock->timer.id == TIMER_NONE);
+	ssock->timer.id = TIMER_HANDSHAKE_TIMEOUT;
+	status = pj_timer_heap_schedule(ssock->param.timer_heap, 
+				        &ssock->timer,
+					&ssock->param.timeout);
+	if (status != PJ_SUCCESS)
+	    ssock->timer.id = TIMER_NONE;
     }
 
     /* Start SSL handshake */
@@ -1347,11 +1396,13 @@ static pj_bool_t asock_on_connect_complete (pj_activesock_t *asock,
     if (ssock->param.timer_heap && (ssock->param.timeout.sec != 0 ||
 	ssock->param.timeout.msec != 0))
     {
-	pj_timer_entry_init(&ssock->handshake_timer, 0, ssock, 
-			    &handshake_timeout_cb);
-	pj_timer_heap_schedule(ssock->param.timer_heap,
-			       &ssock->handshake_timer,
-			       &ssock->param.timeout);
+	pj_assert(ssock->timer.id == TIMER_NONE);
+	ssock->timer.id = TIMER_HANDSHAKE_TIMEOUT;
+	status = pj_timer_heap_schedule(ssock->param.timer_heap,
+					&ssock->timer,
+				        &ssock->param.timeout);
+	if (status != PJ_SUCCESS)
+	    ssock->timer.id = TIMER_NONE;
     }
 
 #ifdef SSL_set_tlsext_host_name
@@ -1486,6 +1537,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->ssl_state = SSL_STATE_NULL;
     pj_list_init(&ssock->write_pending);
     pj_list_init(&ssock->write_pending_empty);
+    pj_timer_entry_init(&ssock->timer, 0, ssock, &on_timer);
 
     /* Create secure socket mutex */
     status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
@@ -1525,6 +1577,14 @@ PJ_DEF(pj_status_t) pj_ssl_sock_close(pj_ssl_sock_t *ssock)
     pj_pool_t *pool;
 
     PJ_ASSERT_RETURN(ssock, PJ_EINVAL);
+
+    if (!ssock->pool)
+	return PJ_SUCCESS;
+
+    if (ssock->timer.id != TIMER_NONE) {
+	pj_timer_heap_cancel(ssock->param.timer_heap, &ssock->timer);
+	ssock->timer.id = TIMER_NONE;
+    }
 
     reset_ssl_sock_state(ssock);
     pj_lock_destroy(ssock->write_mutex);
