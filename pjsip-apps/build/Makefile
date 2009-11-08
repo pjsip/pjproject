@@ -39,12 +39,23 @@ export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(TARGET_NAME)$(HOST_EXE)
 
 
+###############################################################################
+# Defines for building pjsystest
+#
+export PJSYSTEST_SRCDIR = ../src/pjsystest
+export PJSYSTEST_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
+			systest.o main_console.o
+export PJSYSTEST_CFLAGS += $(_CFLAGS)
+export PJSYSTEST_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
+export PJSYSTEST_EXE:=../bin/pjsystest-$(TARGET_NAME)$(HOST_EXE)
+
+
 export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT 
 ###############################################################################
 # Main entry
 #
 #
-TARGETS := pjsua samples
+TARGETS := pjsua pjsystest samples
 
 .PHONY: $(TARGETS)
 
@@ -60,6 +71,9 @@ distclean: realclean
 pjsua:
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA app=pjsua $(PJSUA_EXE)
 
+pjsystest:
+	$(MAKE) -f $(RULES_MAK) APP=PJSYSTEST app=pjsystest $(PJSYSTEST_EXE)
+
 samples:
 	$(MAKE) -f Samples.mak
 
@@ -72,6 +86,7 @@ clean depend realclean:
 	$(MAKE) -f Samples.mak $@
 	@if test "$@" = "depend"; then \
 	  echo '$(PJSUA_EXE): $(APP_LIB_FILES)' >> .pjsua-$(TARGET_NAME).depend; \
+	  echo '$(PJSYSTEST_EXE): $(APP_LIB_FILES)' >> .pjsystest-$(TARGET_NAME).depend; \
 	fi
 
 

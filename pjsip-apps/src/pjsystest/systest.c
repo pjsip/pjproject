@@ -114,7 +114,7 @@ static void systest_perror(const char *title, pj_status_t status)
 	errmsg[0] = '\0';
     
     strcpy(themsg, title);
-    strncat(themsg, errmsg, sizeof(themsg));
+    strncat(themsg, errmsg, sizeof(themsg)-1);
     themsg[sizeof(themsg)-1] = '\0';
 
     gui_msgbox("Error", themsg, WITH_OK);
@@ -245,16 +245,32 @@ on_return:
     return;
 }
 
+/* Util: create file player, each time trying different paths until we get
+ * the file.
+ */
+static pj_status_t create_player(unsigned path_cnt, const char *paths[], 
+				 pjsua_player_id *p_id)
+{
+    pj_str_t name;
+    pj_status_t status = PJ_ENOTFOUND;
+    unsigned i;
+
+    for (i=0; i<path_cnt; ++i) {
+	status = pjsua_player_create(pj_cstr(&name, paths[i]), 0, p_id);
+	if (status == PJ_SUCCESS)
+	    return PJ_SUCCESS;
+    }
+    return status;
+}
 
 /*****************************************************************************
  * test: play WAV file
  */
-static void systest_play_wav(const char *filename)
+static void systest_play_wav(unsigned path_cnt, const char *paths[])
 {
     pjsua_player_id play_id = PJSUA_INVALID_ID;
     enum gui_key key;
     test_item_t *ti;
-    pj_str_t name;
     const char *title = "WAV File Playback Test";
     pj_status_t status;
 
@@ -268,7 +284,7 @@ static void systest_play_wav(const char *filename)
 		     "impairments such as stutter. Let this test run "
 		     "for a while to make sure that everything is okay."
 		     " Press OK to start, CANCEL to skip",
-		     filename);
+		     paths[0]);
 
     key = gui_msgbox(title, textbuf,
 		     WITH_OKCANCEL);
@@ -280,7 +296,7 @@ static void systest_play_wav(const char *filename)
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
     /* WAV port */
-    status = pjsua_player_create(pj_cstr(&name, filename), 0, &play_id);
+    status = create_player(path_cnt, paths, &play_id);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -313,12 +329,16 @@ on_return:
 
 static void systest_play_wav1(void)
 {
-    systest_play_wav(WAV_PLAYBACK_PATH);
+    const char *paths[] = { WAV_PLAYBACK_PATH, 
+			    ALT_PATH1 WAV_PLAYBACK_PATH };
+    systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
 static void systest_play_wav2(void)
 {
-    systest_play_wav(WAV_TOCK8_PATH);
+    const char *paths[] = { WAV_TOCK8_PATH, 
+			    ALT_PATH1 WAV_TOCK8_PATH};
+    systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
 
@@ -712,7 +732,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 
 static void systest_latency_test(void)
 {
-    const pj_str_t ref_wav_file = pj_str(WAV_TOCK8_PATH);
+    const char *ref_wav_paths[] = { WAV_TOCK8_PATH, ALT_PATH1 WAV_TOCK8_PATH };
     const pj_str_t rec_wav_file = pj_str(WAV_LATENCY_OUT_PATH);
     pjsua_player_id play_id = PJSUA_INVALID_ID;
     pjsua_conf_port_id play_slot = PJSUA_INVALID_ID;
@@ -754,7 +774,8 @@ static void systest_latency_test(void)
 
     PJ_LOG(3,(THIS_FILE, "Running %s", title));
 
-    status = pjsua_player_create(&ref_wav_file, 0, &play_id);
+    status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths, 
+			   &play_id);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
