@@ -98,7 +98,6 @@ PJ_DEF(pj_status_t) pj_sock_apply_qos( pj_sock_t sock,
 				       const char *log_sender,
 				       const char *sock_name)
 {
-    char fmt[60];
     pj_status_t qos_type_rc = PJ_SUCCESS,
 		qos_params_rc = PJ_SUCCESS;
 
@@ -111,20 +110,18 @@ PJ_DEF(pj_status_t) pj_sock_apply_qos( pj_sock_t sock,
 	qos_type_rc = pj_sock_set_qos_type(sock, qos_type);
 
 	if (qos_type_rc != PJ_SUCCESS) {
-	    pj_ansi_snprintf(fmt, sizeof(fmt),
-			     "Error setting QoS type %d to %s",
-			     qos_type, sock_name);
-	    pj_perror(log_level, log_sender,  qos_type_rc, fmt, 0);
+	    pj_perror(log_level, log_sender,  qos_type_rc, 
+		      "Error setting QoS type %d to %s", 
+		      qos_type, sock_name);
 	}
     }
 
     if (qos_params && qos_params->flags) {
 	qos_params_rc = pj_sock_set_qos_params(sock, qos_params);
 	if (qos_params_rc != PJ_SUCCESS) {
-	    pj_ansi_snprintf(fmt, sizeof(fmt),
-			     "Error setting QoS params (flags=%d) to %s",
-			     qos_params->flags, sock_name);
-	    pj_perror(log_level, log_sender,  qos_params_rc, fmt, 0);
+	    pj_perror(log_level, log_sender,  qos_params_rc, 
+		      "Error setting QoS params (flags=%d) to %s", 
+		      qos_params->flags, sock_name);
 	    if (qos_type_rc != PJ_SUCCESS)
 		return qos_params_rc;
 	}

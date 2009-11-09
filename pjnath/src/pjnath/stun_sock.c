@@ -439,12 +439,11 @@ static pj_bool_t sess_fail(pj_stun_sock *stun_sock,
 			   pj_stun_sock_op op,
 			   pj_status_t status)
 {
-    char errmsg[PJ_ERR_MSG_SIZE];
     pj_bool_t ret;
 
-    pj_strerror(status, errmsg, sizeof(errmsg));
-    PJ_LOG(4,(stun_sock->obj_name, "Session failed because %s failed: %s",
-	      pj_stun_sock_op_name(op), errmsg));
+    PJ_PERROR(4,(stun_sock->obj_name, status, 
+	         "Session failed because %s failed",
+		 pj_stun_sock_op_name(op)));
 
     ret = (*stun_sock->cb.on_status)(stun_sock, op, status);
 
@@ -768,7 +767,7 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
 
     /* Log socket error */
     if (status != PJ_SUCCESS) {
-	pj_perror(2, stun_sock->obj_name, status, "recvfrom() error", 0);
+	PJ_PERROR(2,(stun_sock->obj_name, status, "recvfrom() error"));
 	return PJ_TRUE;
     }
 
