@@ -4600,6 +4600,11 @@ pj_status_t app_init(int argc, char *argv[])
 
 	pjsua_acc_id acc_id;
 
+	/* Copy the QoS settings */
+	tcp_cfg.tls_setting.qos_type = tcp_cfg.qos_type;
+	pj_memcpy(&tcp_cfg.tls_setting.qos_params, &tcp_cfg.qos_params, 
+		  sizeof(tcp_cfg.qos_params));
+
 	/* Set TLS port as TCP port+1 */
 	tcp_cfg.port++;
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TLS,

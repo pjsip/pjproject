@@ -27,6 +27,7 @@
 
 #include <pjsip/sip_transport.h>
 #include <pj/string.h>
+#include <pj/sock_qos.h>
 
 
 PJ_BEGIN_DECL
@@ -160,6 +161,32 @@ typedef struct pjsip_tls_setting
      */
     pj_time_val	timeout;
 
+    /**
+     * QoS traffic type to be set on this transport. When application wants
+     * to apply QoS tagging to the transport, it's preferable to set this
+     * field rather than \a qos_param fields since this is more portable.
+     *
+     * Default value is PJ_QOS_TYPE_BEST_EFFORT.
+     */
+    pj_qos_type qos_type;
+
+    /**
+     * Set the low level QoS parameters to the transport. This is a lower
+     * level operation than setting the \a qos_type field and may not be
+     * supported on all platforms.
+     *
+     * By default all settings in this structure are disabled.
+     */
+    pj_qos_params qos_params;
+
+    /**
+     * Specify if the transport should ignore any errors when setting the QoS
+     * traffic type/parameters.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t qos_ignore_error;
+
 } pjsip_tls_setting;
 
 
@@ -171,6 +198,8 @@ typedef struct pjsip_tls_setting
 PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
 {
     pj_memset(tls_opt, 0, sizeof(*tls_opt));
+    tls_opt->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
+    tls_opt->qos_ignore_error = PJ_TRUE;
 }
 
 

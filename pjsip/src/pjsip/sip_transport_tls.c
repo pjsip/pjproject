@@ -250,6 +250,10 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
     if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
+    ssock_param.qos_type = listener->tls_setting.qos_type;
+    ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
+    pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
+	      sizeof(ssock_param.qos_params));
 
     has_listener = PJ_FALSE;
 
@@ -797,6 +801,10 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
     if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
+    ssock_param.qos_type = listener->tls_setting.qos_type;
+    ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
+    pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
+	      sizeof(ssock_param.qos_params));
 
     switch(listener->tls_setting.method) {
     case PJSIP_TLSV1_METHOD:

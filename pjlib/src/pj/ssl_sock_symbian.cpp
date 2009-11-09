@@ -97,8 +97,11 @@ public:
 	SSL_STATE_ESTABLISHED
     };
     
-    static CPjSSLSocket *NewL(const TDesC8 &ssl_proto) {
-	CPjSSLSocket *self = new (ELeave) CPjSSLSocket();
+    static CPjSSLSocket *NewL(const TDesC8 &ssl_proto,
+			      pj_qos_type qos_type,
+			      const pj_qos_params &qos_params) 
+    {
+	CPjSSLSocket *self = new (ELeave) CPjSSLSocket(qos_type, qos_params);
 	CleanupStack::PushL(self);
 	self->ConstructL(ssl_proto);
 	CleanupStack::Pop(self);
@@ -130,6 +133,10 @@ private:
     pj_sock_t	    	 sock_;
     CSecureSocket  	*securesock_;
     bool	    	 is_connected_;
+    
+    pj_qos_type 	 qos_type_;
+    pj_qos_params 	 qos_params_;
+    			      
     CPjSSLSocketReader  *reader_;
     TBuf<32> 	    	 ssl_proto_;
     TInetAddr       	 rem_addr_;
@@ -143,11 +150,11 @@ private:
     void DoCancel();
     void RunL();
 
-    CPjSSLSocket() :
+    CPjSSLSocket(pj_qos_type qos_type, const pj_qos_params &qos_params) :
 	CActive(0), state_(SSL_STATE_NULL), sock_(PJ_INVALID_SOCKET), 
-	securesock_(NULL), 
-	is_connected_(false), reader_(NULL),
-	cb_(NULL), key_(NULL)
+	securesock_(NULL), is_connected_(false),
+	qos_type_(qos_type), qos_params_(qos_params),
+	reader_(NULL), 	cb_(NULL), key_(NULL)
     {}
     
     void ConstructL(const TDesC8 &ssl_proto) {
@@ -164,7 +171,7 @@ private:
 	    securesock_ = NULL;
 	}
 	if (sock_ != PJ_INVALID_SOCKET) {
-	    delete (CPjSocket*)sock_;
+	    pj_sock_close(sock_);
 	    sock_ = PJ_INVALID_SOCKET;
 	}	    
     }
@@ -183,6 +190,10 @@ int CPjSSLSocket::Connect(CPjSSLSocket_cb cb, void *key,
     if (status != PJ_SUCCESS)
 	return status;
 
+    // Apply QoS
+    status = pj_sock_apply_qos2(sock_, qos_type_, &qos_params_, 
+    				2,  THIS_FILE, NULL);
+    
     RSocket &rSock = ((CPjSocket*)sock_)->Socket();
 
     local_addr_ = local_addr;
@@ -412,6 +423,12 @@ struct pj_ssl_sock_t
     pj_sockaddr		 local_addr;
     pj_sockaddr		 rem_addr;
 
+    /* QoS settings */
+    pj_qos_type		 qos_type;
+    pj_qos_params	 qos_params;
+    pj_bool_t		 qos_ignore_error;
+
+
     pj_ssl_sock_proto	 proto;
     pj_time_val		 timeout;
     unsigned		 ciphers_num;
@@ -501,6 +518,11 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
 	    ssock->ciphers[i] = param->ciphers[i];
     }
     pj_strdup_with_null(pool, &ssock->servername, &param->server_name);
+
+    ssock->qos_type = param->qos_type;
+    ssock->qos_ignore_error = param->qos_ignore_error;
+    pj_memcpy(&ssock->qos_params, &param->qos_params,
+	      sizeof(param->qos_params));
 
     /* Finally */
     *p_ssock = ssock;
@@ -1061,7 +1083,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_connect (pj_ssl_sock_t *ssock,
     pj_sockaddr_cp((pj_sockaddr_t*)&ssock->rem_addr, remaddr);
 
     /* Init SSL engine */
-    TRAPD(err, sock = CPjSSLSocket::NewL(proto));
+    TRAPD(err, sock = CPjSSLSocket::NewL(proto, ssock->qos_type, 
+				         ssock->qos_params));
     if (err != KErrNone)
 	return PJ_ENOMEM;
     

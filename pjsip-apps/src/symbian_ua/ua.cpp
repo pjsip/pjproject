@@ -92,6 +92,16 @@
 #define USE_SRTP 	PJSUA_DEFAULT_USE_SRTP
 
 //
+// Set QoS on transports? Yes!
+// As an example, we set SIP transports DSCP value to CS3 (DSCP
+// value 24 or 0x18), for no reason, and tag RTP/RTCP packets 
+// with VOICE type.
+//
+#define SIP_QOS_DSCP	0x18
+#define RTP_QOS_TYPE	PJ_QOS_TYPE_VOICE
+
+
+//
 // Globals
 //
 static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
@@ -384,6 +394,10 @@ static pj_status_t app_startup()
     /* Add UDP transport. */
     pjsua_transport_config_default(&tcfg);
     tcfg.port = SIP_PORT;
+    if (SIP_QOS_DSCP) {
+	tcfg.qos_params.flags |= PJ_QOS_PARAM_HAS_DSCP;
+	tcfg.qos_params.dscp_val = SIP_QOS_DSCP;
+    }
     status = pjsua_transport_create(PJSIP_TRANSPORT_UDP, &tcfg, &tid);
     if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating UDP transport", status);
@@ -396,6 +410,10 @@ static pj_status_t app_startup()
     /* Add TCP transport */
     pjsua_transport_config_default(&tcfg);
     tcfg.port = SIP_PORT;
+    if (SIP_QOS_DSCP) {
+	tcfg.qos_params.flags |= PJ_QOS_PARAM_HAS_DSCP;
+	tcfg.qos_params.dscp_val = SIP_QOS_DSCP;
+    }
     status = pjsua_transport_create(PJSIP_TRANSPORT_TCP, &tcfg, &tid);
     if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating TCP transport", status);
@@ -408,6 +426,11 @@ static pj_status_t app_startup()
     /* Add TLS transport */
     pjsua_transport_config_default(&tcfg);
     tcfg.port = SIP_PORT + 1;
+    if (SIP_QOS_DSCP) {
+	tcfg.qos_params.flags |= PJ_QOS_PARAM_HAS_DSCP;
+	tcfg.qos_params.dscp_val = SIP_QOS_DSCP;
+	tcfg.tls_setting.qos_params = tcfg.qos_params;
+    }
     status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &tcfg, &tid);
     if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating TLS transport", status);
@@ -419,7 +442,18 @@ static pj_status_t app_startup()
     /* Add account for the transport */
     pjsua_acc_add_local(tid, PJ_TRUE, &g_acc_id);
 
-
+    /* Create media transports */
+    pjsua_transport_config mtcfg;
+    pjsua_transport_config_default(&mtcfg);
+    mtcfg.port = 4000;
+    mtcfg.qos_type = RTP_QOS_TYPE;
+    status = pjsua_media_transports_create(&mtcfg);
+    if (status != PJ_SUCCESS) {
+    	pjsua_perror(THIS_FILE, "Error creating media transports", status);
+    	pjsua_destroy();
+    	return status;
+    }
+    
     /* Initialization is done, now start pjsua */
     status = pjsua_start();
     if (status != PJ_SUCCESS) {
