@@ -174,6 +174,7 @@ PJ_DEF(pjmedia_sdp_attr*) pjmedia_sdp_attr_find2(unsigned count,
 }
 
 
+
 PJ_DEF(pj_status_t) pjmedia_sdp_attr_add(unsigned *count,
 					 pjmedia_sdp_attr *attr_array[],
 					 pjmedia_sdp_attr *attr)
@@ -680,6 +681,12 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_add_attr( pjmedia_sdp_media *m,
     return pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 }
 
+PJ_DEF(pj_status_t) pjmedia_sdp_session_add_attr(pjmedia_sdp_session *s,
+						 pjmedia_sdp_attr *attr)
+{
+    return pjmedia_sdp_attr_add(&s->attr_count, s->attr, attr);
+}
+
 PJ_DEF(unsigned) pjmedia_sdp_media_remove_all_attr(pjmedia_sdp_media *m,
 						   const char *name)
 {
@@ -978,13 +985,22 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     /* format list */
     med->desc.fmt_count = 0;
     while (*scanner->curptr == ' ') {
+	pj_str_t fmt;
+
 	pj_scan_get_char(scanner);
 
 	/* Check again for the end of the line */
 	if ((*scanner->curptr == '\r') || (*scanner->curptr == '\n'))
 		break;
 
-	pj_scan_get(scanner, &cs_token, &med->desc.fmt[med->desc.fmt_count++]);
+	pj_scan_get(scanner, &cs_token, &fmt);
+	if (med->desc.fmt_count < PJMEDIA_MAX_SDP_FMT)
+	    med->desc.fmt[med->desc.fmt_count++] = fmt;
+	else
+	    PJ_PERROR(2,(THIS_FILE, PJ_ETOOMANY, 
+		         "Error adding SDP media format %.*s, "
+			 "format is ignored",
+			 (int)fmt.slen, fmt.ptr));
     }
 
     /* We've got what we're looking for, skip anything until newline */
@@ -1082,9 +1098,9 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		    attr = parse_attr(pool, &scanner, &ctx);
 		    if (attr) {
 			if (media) {
-			    media->attr[media->attr_count++] = attr;
+			    pjmedia_sdp_media_add_attr(media, attr);
 			} else {
-			    session->attr[session->attr_count++] = attr;
+			    pjmedia_sdp_session_add_attr(session, attr);
 			}
 		    }
 		    break;
@@ -1109,7 +1125,11 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 		case 'm':
 		    media = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
 		    parse_media(&scanner, media, &ctx);
-		    session->media[ session->media_count++ ] = media;
+		    if (session->media_count < PJMEDIA_MAX_SDP_MEDIA)
+			session->media[ session->media_count++ ] = media;
+		    else
+			PJ_PERROR(2,(THIS_FILE, PJ_ETOOMANY,
+				     "Error adding media, media is ignored"));
 		    break;
 		case 'v':
 		    parse_version(&scanner, &ctx);
@@ -1352,11 +1372,14 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
     pjmedia_sdp_attr *attr;
     static const pj_str_t ID_INACTIVE = { "inactive", 8 };
 
+    if (m->attr_count >= PJMEDIA_MAX_SDP_ATTR)
+	return PJ_ETOOMANY;
+
     attr = pjmedia_sdp_attr_create(pool, ID_INACTIVE.ptr, NULL);
     if (NULL == attr)
 	return PJ_ENOMEM;
 
-    m->attr[m->attr_count++] = attr;
+    pjmedia_sdp_media_add_attr(m, attr);
     m->desc.port = 0;
 
     return PJ_SUCCESS;

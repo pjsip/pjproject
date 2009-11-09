@@ -652,6 +652,18 @@ PJ_DECL(pj_status_t) pjmedia_sdp_session_cmp(const pjmedia_sdp_session *sd1,
 					     unsigned option);
 
 
+/**
+ * Add new attribute to the session descriptor.
+ *
+ * @param s		The SDP session description.
+ * @param attr		Attribute to add.
+ *
+ * @return		PJ_SUCCESS or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_session_add_attr(pjmedia_sdp_session *m,
+						  pjmedia_sdp_attr *attr);
+
+
 PJ_END_DECL
 
 /**
