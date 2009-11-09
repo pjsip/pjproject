@@ -1089,13 +1089,13 @@ static pj_bool_t asock_on_data_read (pj_activesock_t *asock,
 		    pj_lock_release(ssock->write_mutex);
 
 		    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-			pj_perror(1, ssock->pool->obj_name, status, 
-				  "Failed to flush delayed send", 0);
+			PJ_PERROR(1,(ssock->pool->obj_name, status, 
+				     "Failed to flush delayed send"));
 			goto on_error;
 		    }
 		} else if (status != PJ_EPENDING) {
-		    pj_perror(1, ssock->pool->obj_name, status, 
-			      "Renegotiation failed", 0);
+		    PJ_PERROR(1,(ssock->pool->obj_name, status, 
+			         "Renegotiation failed"));
 		    goto on_error;
 		}
 
