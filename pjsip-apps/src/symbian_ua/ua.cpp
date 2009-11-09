@@ -58,6 +58,9 @@
 #define ENABLE_SIP_TCP	0 // experimental
 #define ENABLE_SIP_TLS	0 // experimental
 
+#define TLS_SRV_NAME	"pjsip.org"	// TLS servername (required for
+					// TLS transport)
+
 //
 // Configure nameserver if DNS SRV is to be used with both SIP
 // or STUN (for STUN see other settings below)
@@ -431,6 +434,7 @@ static pj_status_t app_startup()
 	tcfg.qos_params.dscp_val = SIP_QOS_DSCP;
 	tcfg.tls_setting.qos_params = tcfg.qos_params;
     }
+    tcfg.tls_setting.server_name = pj_str(TLS_SRV_NAME);
     status = pjsua_transport_create(PJSIP_TRANSPORT_TLS, &tcfg, &tid);
     if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating TLS transport", status);
