@@ -917,7 +917,9 @@ static pj_status_t codec_decode( pjmedia_codec *codec,
 				 struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
+#if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
     struct codec_desc *desc = &codec_desc[codec_data->codec_idx];
+#endif
     pjmedia_frame_ext *output_ = (pjmedia_frame_ext*) output;
 
     pj_assert(input);
@@ -962,7 +964,6 @@ static pj_status_t codec_recover( pjmedia_codec *codec,
 				  struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
-    struct codec_desc *desc = &codec_desc[codec_data->codec_idx];
     pjmedia_frame_ext *output_ = (pjmedia_frame_ext*) output;
 
     PJ_UNUSED_ARG(output_buf_len);
