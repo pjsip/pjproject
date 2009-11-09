@@ -527,8 +527,17 @@ static pj_status_t tls_create( struct tls_listener *listener,
 		     (int)pj_ntohs(remote->sin_port));
 
     tls->base.addr_len = sizeof(pj_sockaddr_in);
-    pj_memcpy(&tls->base.local_addr, local, sizeof(pj_sockaddr_in));
-    sockaddr_to_host_port(pool, &tls->base.local_name, local);
+    
+    /* Set initial local address */
+    if (!pj_sockaddr_has_addr(local)) {
+        pj_sockaddr_cp(&tls->base.local_addr,
+                       &listener->factory.local_addr);
+    } else {
+	pj_sockaddr_cp(&tls->base.local_addr, local);
+    }
+    
+    sockaddr_to_host_port(pool, &tls->base.local_name, 
+			  (pj_sockaddr_in*)&tls->base.local_addr);
     sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
 
     tls->base.endpt = listener->endpt;
@@ -856,32 +865,33 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     if (tls->has_pending_connect) {
 	pj_ssl_sock_info info;
 
-	/* Update (again) local address, just in case local address currently
-	 * set is different now that asynchronous connect() is started.
+	/* Update local address, just in case local address currently set is 
+	 * different now that asynchronous connect() is started.
 	 */
 
 	/* Retrieve the bound address */
 	status = pj_ssl_sock_get_info(tls->ssock, &info);
 	if (status == PJ_SUCCESS) {
-	    pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tls->base.local_addr;
+	    pj_uint16_t new_port;
 
-	    pj_assert(pj_sockaddr_get_len((pj_sockaddr_t*)&info.local_addr) <= 
-		      sizeof(local_addr));
-	    pj_sockaddr_cp((pj_sockaddr_t*)&local_addr, (pj_sockaddr_t*)&info.local_addr);
+	    new_port = pj_sockaddr_get_port((pj_sockaddr_t*)&info.local_addr);
 
-	    /* Some systems (like old Win32 perhaps) may not set local address
-	     * properly before socket is fully connected.
-	     */
-	    if (tp_addr->sin_addr.s_addr != local_addr.sin_addr.s_addr &&
-		local_addr.sin_addr.s_addr != 0) 
+	    if (pj_sockaddr_has_addr((pj_sockaddr_t*)&info.local_addr)) {
+		/* Update sockaddr */
+		pj_sockaddr_cp((pj_sockaddr_t*)&tls->base.local_addr,
+			       (pj_sockaddr_t*)&info.local_addr);
+	    } else if (new_port && new_port != pj_sockaddr_get_port(
+					(pj_sockaddr_t*)&tls->base.local_addr))
 	    {
-		tp_addr->sin_addr.s_addr = local_addr.sin_addr.s_addr;
-		tp_addr->sin_port = local_addr.sin_port;
-		sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
-				      &local_addr);
+		/* Update port only */
+		pj_sockaddr_set_port((pj_sockaddr_t*)&tls->base.local_addr, 
+				     new_port);
 	    }
+
+	    sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+				  (pj_sockaddr_in*)&tls->base.local_addr);
 	}
-	
+
 	PJ_LOG(4,(tls->base.obj_name, 
 		  "TLS transport %.*s:%d is connecting to %.*s:%d...",
 		  (int)tls->base.local_name.host.slen,

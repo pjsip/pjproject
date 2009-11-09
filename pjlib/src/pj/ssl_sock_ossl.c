@@ -2089,8 +2089,13 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
     ssock->addr_len = addr_len;
     status = pj_sock_getsockname(ssock->sock, &ssock->local_addr,
 				 &ssock->addr_len);
-    if (status != PJ_SUCCESS)
-	pj_sockaddr_cp(&ssock->local_addr, localaddr);
+    /* Note that we may not get an IP address here. This can
+     * happen for example on Windows, where getsockname()
+     * would return 0.0.0.0 if socket has just started the
+     * async connect. In this case, just leave the local
+     * address with 0.0.0.0 for now; it will be updated
+     * once the socket is established.
+     */
 
     /* Set remote address */
     pj_sockaddr_cp(&ssock->rem_addr, remaddr);
