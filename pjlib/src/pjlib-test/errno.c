@@ -158,6 +158,10 @@ int errno_test(void)
     PJ_LOG(3,(THIS_FILE, "...msg for rc=PJ_EBUG, cut at %d chars: '%s'", 
               CUT, errbuf));
 
+    /* Perror */
+    pj_perror(3, THIS_FILE, PJ_SUCCESS, "...testing %s", "pj_perror");
+    PJ_PERROR(3,(THIS_FILE, PJ_SUCCESS, "...testing %s", "PJ_PERROR"));
+
     return 0;
 }
 

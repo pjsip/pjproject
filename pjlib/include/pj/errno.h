@@ -22,21 +22,24 @@
 
 /**
  * @file errno.h
- * @brief PJLIB Error Codes
+ * @brief PJLIB Error Subsystem
  */
 #include <pj/types.h>
 #include <pj/compat/errno.h>
+#include <stdarg.h>
 
 PJ_BEGIN_DECL
 
 /**
- * @defgroup pj_errno Error Codes
+ * @defgroup pj_errno Error Subsystem
  * @{
  *
- * In PJLIB, error/status codes from operating system are translated
- * into PJLIB error namespace, and stored in @a pj_status_t. All functions
- * that work with @a pj_status_t expect to get PJLIB error code instead
- * of native codes.
+ * The PJLIB Error Subsystem is a framework to unify all error codes
+ * produced by all components into a single error space, and provide
+ * uniform set of APIs to access them. With this framework, any error
+ * codes are encoded as pj_status_t value. The framework is extensible,
+ * application may register new error spaces to be recognized by
+ * the framework.
  *
  * @section pj_errno_retval Return Values
  *
@@ -47,19 +50,32 @@ PJ_BEGIN_DECL
  * #PJ_STATUS_FROM_OS() macro. The function will do this automatically
  * before returning the error to caller.
  *
- * @section pj_errno_errmsg Error Message
+ * @section err_services Retrieving and Displaying Error Messages
  *
- * To get the error message corresponding to a particular code, use function
- * #pj_strerror(). This function expects error code in PJLIB error namespace,
- * not the native error code. Application can pass the value from the 
- * following sources to this function:
- *  - #pj_get_os_error()
- *  - #pj_get_netos_error()
- *  - any return value from function returning @a pj_status_t.
+ * The framework provides the following APIs to retrieve and/or display
+ * error messages:
  *
- * Application MUST NOT pass native error code (such as error code from
+ *   - #pj_strerror(): this is the base API to retrieve error string
+ *      description for the specified pj_status_t error code.
+ *
+ *   - #PJ_PERROR() macro: use this macro similar to PJ_LOG to format
+ *      an error message and display them to the log
+ *
+ *   - #pj_perror(): this function is similar to PJ_PERROR() but unlike
+ *      #PJ_PERROR(), this function will always be included in the
+ *      link process. Due to this reason, prefer to use #PJ_PERROR()
+ *      if the application is concerned about the executable size.
+ *
+ * Application MUST NOT pass native error codes (such as error code from
  * functions like GetLastError() or errno) to PJLIB functions expecting
  * @a pj_status_t.
+ *
+ * @section err_extending Extending the Error Space
+ *
+ * Application may register new error space to be recognized by the
+ * framework by using #pj_register_strerror(). Use the range started
+ * from PJ_ERRNO_START_USER to avoid conflict with existing error
+ * spaces.
  *
  */
 
@@ -67,6 +83,14 @@ PJ_BEGIN_DECL
  * Guidelines on error message length.
  */
 #define PJ_ERR_MSG_SIZE  80
+
+/**
+ * Buffer for title string of #PJ_PERROR().
+ */
+#ifndef PJ_PERROR_TITLE_BUF_SIZE
+#   define PJ_PERROR_TITLE_BUF_SIZE	120
+#endif
+
 
 /**
  * Get the last platform error/status, folded into pj_status_t.
@@ -112,24 +136,71 @@ PJ_DECL(pj_str_t) pj_strerror( pj_status_t statcode,
 			       char *buf, pj_size_t bufsize);
 
 /**
- * Print the error message pertaining to the specified error code to
- * the log.
+ * A utility macro to print error message pertaining to the specified error 
+ * code to the log. This macro will construct the error message title 
+ * according to the 'title_fmt' argument, and add the error string pertaining
+ * to the error code after the title string. A colon (':') will be added 
+ * automatically between the title and the error string.
  *
- * @param log_level The log will be printed at this log level.
- * @param sender    The log sender string.
- * @param status    The error code which error message will be printed.
- * @param title	    String to be printed before the error message. Note
- *		    that a colon will be added automatically between
- *		    this string and the error message.
- * @param options   Options, currently must be zero.
+ * This function is similar to pj_perror() function, but has the advantage
+ * that the function call can be omitted from the link process if the
+ * log level argument is below PJ_LOG_MAX_LEVEL threshold.
+ *
+ * Note that the title string constructed from the title_fmt will be built on
+ * a string buffer which size is PJ_PERROR_TITLE_BUF_SIZE, which normally is
+ * allocated from the stack. By default this buffer size is small (around
+ * 120 characters). Application MUST ensure that the constructed title string
+ * will not exceed this limit, since not all platforms support truncating
+ * the string.
+ *
+ * @see pj_perror()
+ *
+ * @param level	    The logging verbosity level, valid values are 0-6. Lower
+ *		    number indicates higher importance, with level zero 
+ *		    indicates fatal error. Only numeral argument is 
+ *		    permitted (e.g. not variable).
+ * @param arg	    Enclosed 'printf' like arguments, with the following
+ *		    arguments:
+ *		     - the sender (NULL terminated string),
+ *		     - the error code (pj_status_t)
+ *		     - the format string (title_fmt), and 
+ *		     - optional variable number of arguments suitable for the 
+ *		       format string.
+ *
+ * Sample:
+ * \verbatim
+   PJ_PERROR(2, (__FILE__, PJ_EBUSY, "Error making %s", "coffee"));
+   \endverbatim
+ * @hideinitializer
  */
-#if PJ_LOG_MAX_LEVEL >= 1
-PJ_DECL(void) pj_perror(int log_level, const char *sender, 
-			pj_status_t status, const char *title,
-			int options);
-#else
-#   define pj_perror(level, sender, status, title, options)
-#endif	/* #if PJ_LOG_MAX_LEVEL >= 1 */
+#define PJ_PERROR(level,arg)	do { \
+				    pj_perror_wrapper_##level(arg); \
+				} while (0)
+
+/**
+ * A utility function to print error message pertaining to the specified error 
+ * code to the log. This function will construct the error message title 
+ * according to the 'title_fmt' argument, and add the error string pertaining
+ * to the error code after the title string. A colon (':') will be added 
+ * automatically between the title and the error string.
+ *
+ * Unlike the PJ_PERROR() macro, this function takes the \a log_level argument
+ * as a normal argument, unlike in PJ_PERROR() where a numeral value must be
+ * given. However this function will always be linked to the executable,
+ * unlike PJ_PERROR() which can be omitted when the level is below the 
+ * PJ_LOG_MAX_LEVEL.
+ *
+ * Note that the title string constructed from the title_fmt will be built on
+ * a string buffer which size is PJ_PERROR_TITLE_BUF_SIZE, which normally is
+ * allocated from the stack. By default this buffer size is small (around
+ * 120 characters). Application MUST ensure that the constructed title string
+ * will not exceed this limit, since not all platforms support truncating
+ * the string.
+ *
+ * @see PJ_PERROR()
+ */
+PJ_DECL(void) pj_perror(int log_level, const char *sender, pj_status_t status,
+		        const char *title_fmt, ...);
 
 
 /**
@@ -401,6 +472,102 @@ PJ_DECL(pj_status_t) pj_register_strerror(pj_status_t start_code,
 
 /* Internal */
 void pj_errno_clear_handlers(void);
+
+
+/****** Internal for PJ_PERROR *******/
+
+/**
+ * @def pj_perror_wrapper_1(arg)
+ * Internal function to write log with verbosity 1. Will evaluate to
+ * empty expression if PJ_LOG_MAX_LEVEL is below 1.
+ * @param arg       Log expression.
+ */
+#if PJ_LOG_MAX_LEVEL >= 1
+    #define pj_perror_wrapper_1(arg)	pj_perror_1 arg
+    /** Internal function. */
+    PJ_DECL(void) pj_perror_1(const char *sender, pj_status_t status, 
+			      const char *title_fmt, ...);
+#else
+    #define pj_perror_wrapper_1(arg)
+#endif
+
+/**
+ * @def pj_perror_wrapper_2(arg)
+ * Internal function to write log with verbosity 2. Will evaluate to
+ * empty expression if PJ_LOG_MAX_LEVEL is below 2.
+ * @param arg       Log expression.
+ */
+#if PJ_LOG_MAX_LEVEL >= 2
+    #define pj_perror_wrapper_2(arg)	pj_perror_2 arg
+    /** Internal function. */
+    PJ_DECL(void) pj_perror_2(const char *sender, pj_status_t status, 
+			      const char *title_fmt, ...);
+#else
+    #define pj_perror_wrapper_2(arg)
+#endif
+
+/**
+ * @def pj_perror_wrapper_3(arg)
+ * Internal function to write log with verbosity 3. Will evaluate to
+ * empty expression if PJ_LOG_MAX_LEVEL is below 3.
+ * @param arg       Log expression.
+ */
+#if PJ_LOG_MAX_LEVEL >= 3
+    #define pj_perror_wrapper_3(arg)	pj_perror_3 arg
+    /** Internal function. */
+    PJ_DECL(void) pj_perror_3(const char *sender, pj_status_t status, 
+			      const char *title_fmt, ...);
+#else
+    #define pj_perror_wrapper_3(arg)
+#endif
+
+/**
+ * @def pj_perror_wrapper_4(arg)
+ * Internal function to write log with verbosity 4. Will evaluate to
+ * empty expression if PJ_LOG_MAX_LEVEL is below 4.
+ * @param arg       Log expression.
+ */
+#if PJ_LOG_MAX_LEVEL >= 4
+    #define pj_perror_wrapper_4(arg)	pj_perror_4 arg
+    /** Internal function. */
+    PJ_DECL(void) pj_perror_4(const char *sender, pj_status_t status, 
+			      const char *title_fmt, ...);
+#else
+    #define pj_perror_wrapper_4(arg)
+#endif
+
+/**
+ * @def pj_perror_wrapper_5(arg)
+ * Internal function to write log with verbosity 5. Will evaluate to
+ * empty expression if PJ_LOG_MAX_LEVEL is below 5.
+ * @param arg       Log expression.
+ */
+#if PJ_LOG_MAX_LEVEL >= 5
+    #define pj_perror_wrapper_5(arg)	pj_perror_5 arg
+    /** Internal function. */
+    PJ_DECL(void) pj_perror_5(const char *sender, pj_status_t status, 
+			      const char *title_fmt, ...);
+#else
+    #define pj_perror_wrapper_5(arg)
+#endif
+
+/**
+ * @def pj_perror_wrapper_6(arg)
+ * Internal function to write log with verbosity 6. Will evaluate to
+ * empty expression if PJ_LOG_MAX_LEVEL is below 6.
+ * @param arg       Log expression.
+ */
+#if PJ_LOG_MAX_LEVEL >= 6
+    #define pj_perror_wrapper_6(arg)	pj_perror_6 arg
+    /** Internal function. */
+    PJ_DECL(void) pj_perror_6(const char *sender, pj_status_t status, 
+			      const char *title_fmt, ...);
+#else
+    #define pj_perror_wrapper_6(arg)
+#endif
+
+
+
 
 PJ_END_DECL
 
