@@ -161,15 +161,7 @@ SOURCE=..\src\pjsip\sip_transport_tls.c
 # Begin Source File
 
 SOURCE=..\src\pjsip\sip_transport_tls_ossl.c
-
-!IF  "$(CFG)" == "pjsip_core - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjsip_core - Win32 Debug"
-
 # PROP Exclude_From_Build 1
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
