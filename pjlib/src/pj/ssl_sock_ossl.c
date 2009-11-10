@@ -248,7 +248,7 @@ static pj_str_t ssl_strerror(pj_status_t status,
 
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown OpenSSL error %ul",
+				   "Unknown OpenSSL error %lu",
 				   ssl_err);
 
     return errstr;
