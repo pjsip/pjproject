@@ -2061,6 +2061,10 @@ static PyObject *py_pjsua_buddy_set_user_data(PyObject *pSelf, PyObject *pArgs)
         return NULL;
     }
 
+    if (!pjsua_buddy_is_valid(buddy_id)) {
+	return Py_BuildValue("i", 0);
+    }
+
     old_user_data = (PyObject*) pjsua_buddy_get_user_data(buddy_id);
 
     status = pjsua_buddy_set_user_data(buddy_id, (void*)user_data);
