@@ -77,7 +77,7 @@ static void unload_iphlp_module(void)
 #endif
 }
 
-static FARPROC GetIpHlpApiProc(pj_char_t *lpProcName)
+static FARPROC GetIpHlpApiProc(char *lpProcName)
 {
     if(NULL == s_hDLL) {
 	s_hDLL = LoadLibrary(PJ_T("IpHlpApi"));
@@ -98,7 +98,7 @@ static DWORD MyGetIpAddrTable(PMIB_IPADDRTABLE pIpAddrTable,
 {
     if(NULL == s_pfnGetIpAddrTable) {
 	s_pfnGetIpAddrTable = (PFN_GetIpAddrTable) 
-	    GetIpHlpApiProc(PJ_T("GetIpAddrTable"));
+	    GetIpHlpApiProc("GetIpAddrTable");
     }
     
     if(NULL != s_pfnGetIpAddrTable) {
@@ -117,7 +117,7 @@ static DWORD MyGetAdapterAddresses(ULONG Family,
 {
     if(NULL == s_pfnGetAdapterAddresses) {
 	s_pfnGetAdapterAddresses = (PFN_GetAdapterAddresses) 
-	    GetIpHlpApiProc(PJ_T("GetAdapterAddresses"));
+	    GetIpHlpApiProc("GetAdapterAddresses");
     }
     
     if(NULL != s_pfnGetAdapterAddresses) {
@@ -134,7 +134,7 @@ static DWORD MyGetIfEntry(MIB_IFROW *pIfRow)
 {
     if(NULL == s_pfnGetIfEntry) {
 	s_pfnGetIfEntry = (PFN_GetIfEntry) 
-	    GetIpHlpApiProc(PJ_T("GetIfEntry"));
+	    GetIpHlpApiProc("GetIfEntry");
     }
     
     if(NULL != s_pfnGetIfEntry) {
@@ -152,7 +152,7 @@ static DWORD MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable,
 {
     if(NULL == s_pfnGetIpForwardTable) {
 	s_pfnGetIpForwardTable = (PFN_GetIpForwardTable) 
-	    GetIpHlpApiProc(PJ_T("GetIpForwardTable"));
+	    GetIpHlpApiProc("GetIpForwardTable");
     }
     
     if(NULL != s_pfnGetIpForwardTable) {

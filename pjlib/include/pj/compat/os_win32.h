@@ -111,7 +111,12 @@
 #ifndef PJ_OS_HAS_CHECK_STACK
 #   define PJ_OS_HAS_CHECK_STACK	1
 #endif
-#define PJ_NATIVE_STRING_IS_UNICODE	0
+
+#ifdef UNICODE
+#   define PJ_NATIVE_STRING_IS_UNICODE    1
+#else
+#   define PJ_NATIVE_STRING_IS_UNICODE    0
+#endif
 
 #define PJ_ATOMIC_VALUE_TYPE		long
 
