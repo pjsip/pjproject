@@ -1932,13 +1932,15 @@ static pjsip_hdr* parse_hdr_from( pjsip_parse_ctx *ctx )
 static pjsip_hdr* parse_hdr_require( pjsip_parse_ctx *ctx )
 {
     pjsip_require_hdr *hdr;
-    pj_bool_t new_hdr = (ctx->rdata->msg_info.require == NULL);
+    pj_bool_t new_hdr = (ctx->rdata==NULL ||
+			 ctx->rdata->msg_info.require == NULL);
     
     if (ctx->rdata && ctx->rdata->msg_info.require) {
 	hdr = ctx->rdata->msg_info.require;
     } else {
 	hdr = pjsip_require_hdr_create(ctx->pool);
-	ctx->rdata->msg_info.require = hdr;
+	if (ctx->rdata)
+	    ctx->rdata->msg_info.require = hdr;
     }
 
     parse_generic_array_hdr(hdr, ctx->scanner);
@@ -1981,13 +1983,15 @@ static pjsip_hdr* parse_hdr_retry_after(pjsip_parse_ctx *ctx)
 static pjsip_hdr* parse_hdr_supported(pjsip_parse_ctx *ctx)
 {
     pjsip_supported_hdr *hdr;
-    pj_bool_t new_hdr = (ctx->rdata->msg_info.supported == NULL);
+    pj_bool_t new_hdr = (ctx->rdata==NULL || 
+		         ctx->rdata->msg_info.supported == NULL);
 
     if (ctx->rdata && ctx->rdata->msg_info.supported) {
 	hdr = ctx->rdata->msg_info.supported;
     } else {
 	hdr = pjsip_supported_hdr_create(ctx->pool);
-	ctx->rdata->msg_info.supported = hdr;
+	if (ctx->rdata)
+	    ctx->rdata->msg_info.supported = hdr;
     }
 
     parse_generic_array_hdr(hdr, ctx->scanner);
