@@ -1345,6 +1345,7 @@ static void PyObj_pjsua_transport_config_delete(PyObj_pjsua_transport_config* se
 static void PyObj_pjsua_transport_config_export(pjsua_transport_config *cfg,
 						PyObj_pjsua_transport_config *obj)
 {
+    pjsua_transport_config_default(cfg);
     cfg->public_addr	= PyString_ToPJ(obj->public_addr);
     cfg->bound_addr	= PyString_ToPJ(obj->bound_addr);
     cfg->port		= obj->port;

@@ -3903,6 +3903,7 @@ static PyObject *py_pj_parse_simple_sip(PyObject *pSelf, PyObject *pArgs)
     item = PyString_FromPJ(&sip_uri->transport_param);
     PyTuple_SetItem(ret, 4, item);
 
+    pj_pool_release(pool);
     return ret;
 }
 
