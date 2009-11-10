@@ -49,7 +49,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 #
 export PJMEDIA_SRCDIR = ../src/pjmedia
 export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			alaw_ulaw.o alaw_ulaw_table.o clock_thread.o codec.o \
+			alaw_ulaw.o alaw_ulaw_table.o bidirectional.o clock_thread.o codec.o \
 			conference.o conf_switch.o delaybuf.o echo_common.o \
 			echo_port.o echo_suppress.o endpoint.o errno.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
