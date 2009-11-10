@@ -531,7 +531,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_set_prefs(pj_ice_sess *ice,
     ice->prefs = (pj_uint8_t*) pj_pool_calloc(ice->pool, PJ_ARRAY_SIZE(prefs),
 					      sizeof(pj_uint8_t));
     for (i=0; i<4; ++i) {
+#if PJ_ICE_CAND_TYPE_PREF_BITS < 8
 	pj_assert(prefs[i] < (2 << PJ_ICE_CAND_TYPE_PREF_BITS));
+#endif
 	ice->prefs[i] = prefs[i];
     }
     return PJ_SUCCESS;

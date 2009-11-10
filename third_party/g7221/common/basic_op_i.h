@@ -99,7 +99,7 @@ PJ_INLINE(Word16) saturate (Word32 L_var1)
     if (val16 == L_var1)
 	return val16;
 
-    if (val16 > MAX_16)
+    if (L_var1 > MAX_16)
         return MAX_16;
     return MIN_16;
 }
