@@ -687,6 +687,19 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	return PJ_FALSE;
     }
 
+    /* Also don't switch if only the port number part is different, and
+     * the Via received address is private.
+     * See http://trac.pjsip.org/repos/ticket/864
+     */
+    if (acc->cfg.allow_contact_rewrite != 2 &&
+	pj_sockaddr_cmp(&contact_addr, &recv_addr)==0 &&
+	is_private_ip(via_addr))
+    {
+	/* Don't switch */
+	pj_pool_release(pool);
+	return PJ_FALSE;
+    }
+
     PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
 			 "(%.*s:%d --> %.*s:%d). Updating registration..",
 			 acc->index,
@@ -743,16 +756,9 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
     }
 
-    /* For UDP transport, if STUN is enabled then update the transport's
-     * published name as well.
-     */
-    if (tp->key.type==PJSIP_TRANSPORT_UDP &&
-	(pjsua_var.ua_cfg.stun_domain.slen != 0 ||
-	 pjsua_var.ua_cfg.stun_host.slen != 0))
-    {
-	pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
-	tp->local_name.port = rport;
-    }
+    /* Always update, by http://trac.pjsip.org/repos/ticket/864. */
+    pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
+    tp->local_name.port = rport;
 
     /* Perform new registration */
     pjsua_acc_set_registration(acc->index, PJ_TRUE);
