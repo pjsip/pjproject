@@ -1456,7 +1456,7 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 	    buddy->term_code = 200;
 
 	    /* Determine whether to resubscribe automatically */
-	    if (event->type==PJSIP_EVENT_TSX_STATE) {
+	    if (event && event->type==PJSIP_EVENT_TSX_STATE) {
 		const pjsip_transaction *tsx = event->body.tsx_state.tsx;
 		if (pjsip_method_cmp(&tsx->method, 
 				     &pjsip_subscribe_method)==0)
