@@ -683,6 +683,12 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	    return status;
     }
 
+    /* Verify settings */
+    if (ua_cfg->max_calls >= PJSUA_MAX_CALLS) {
+	pjsua_perror(THIS_FILE, "Invalid max_calls setting", PJ_ETOOMANY);
+	return PJ_EINVAL;
+    }
+
     /* If nameserver is configured, create DNS resolver instance and
      * set it to be used by SIP resolver.
      */
