@@ -1048,6 +1048,20 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 	    cli_err++;
 	    continue;
 	}
+
+	/* Give chance to server to accept this client */
+	{
+	    unsigned n = 5;
+
+#ifdef PJ_SYMBIAN
+	    while(n && pj_symbianos_poll(-1, 1000))
+		n--;
+#else
+	    pj_time_val delay = {0, 100};
+	    while(n && pj_ioqueue_poll(ioqueue, &delay) > 0)
+		n--;
+#endif
+	}
     }
 
     /* Get start timestamp */
