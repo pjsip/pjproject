@@ -1135,7 +1135,7 @@ LIBG7221_DEF(Word16) norm_s (Word16 var1)
     }
     else
     {
-        if (var1 == (UWord16)0xffff)
+        if ((UWord16)var1 == (UWord16)0xffff)
         {
             var_out = 15;
         }
