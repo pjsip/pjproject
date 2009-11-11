@@ -129,7 +129,7 @@ static struct test
 	    "m=audio 49170 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"	/* <-- this is not necessary */
+	    //"a=rtpmap:31 H261/90000\r\n"	/* <-- this is not necessary */
 	    "m=video 53000 RTP/AVP 32\r\n"
 	    "a=rtpmap:32 MPV/90000\r\n"
 	    "m=audio 0 RTP/AVP 110\r\n"
