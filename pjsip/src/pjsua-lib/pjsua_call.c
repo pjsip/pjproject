@@ -133,6 +133,11 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Copy config */
     pjsua_config_dup(pjsua_var.pool, &pjsua_var.ua_cfg, cfg);
 
+    /* Verify settings */
+    if (pjsua_var.ua_cfg.max_calls >= PJSUA_MAX_CALLS) {
+	pjsua_var.ua_cfg.max_calls = PJSUA_MAX_CALLS;
+    }
+
     /* Check the route URI's and force loose route if required */
     for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
 	status = normalize_route_uri(pjsua_var.pool, 
