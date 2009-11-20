@@ -213,7 +213,7 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * This mainly affects the size of mod_data array in various components.
  */
 #ifndef PJSIP_MAX_MODULE
-#   define PJSIP_MAX_MODULE		16
+#   define PJSIP_MAX_MODULE		32
 #endif
 
 
