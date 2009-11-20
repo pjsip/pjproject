@@ -101,7 +101,6 @@ static struct app_config
     pjsua_conf_port_id	    rec_port;
     unsigned		    auto_answer;
     unsigned		    duration;
-    pj_bool_t		    unsolicited_mwi;
 
 #ifdef STEREO_DEMO
     pjmedia_snd_port	   *snd;
@@ -145,7 +144,6 @@ static pj_status_t transport_adapter_sample(void);
 #endif
 static pj_status_t create_ipv6_media_transports(void);
 pj_status_t app_destroy(void);
-static void enable_unsolicited_mwi(void);
 
 static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
@@ -196,7 +194,6 @@ static void usage(void)
     puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --mwi               Subscribe to message summary/waiting indication");
-    puts  ("  --unsolicited-mwi   Handle unsolicited MWI requests");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
     puts  ("  --use-timer         Require SIP session timers");
     puts  ("  --timer-se=N        Session timers expiration period, in secs (def:1800)");
@@ -487,7 +484,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
-	   OPT_MWI, OPT_UNSOLICITED_MWI, OPT_NAMESERVER, OPT_STUN_SRV,
+	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
@@ -540,7 +537,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "reg-timeout",1, 0, OPT_REG_TIMEOUT},
 	{ "publish",    0, 0, OPT_PUBLISH},
 	{ "mwi",	0, 0, OPT_MWI},
-	{ "unsolicited-mwi", 0, 0, OPT_UNSOLICITED_MWI},
 	{ "use-100rel", 0, 0, OPT_100REL},
 	{ "use-ims",    0, 0, OPT_USE_IMS},
 	{ "id",		1, 0, OPT_ID},
@@ -841,10 +837,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_MWI:	/* mwi */
 	    cur_acc->mwi_enabled = PJ_TRUE;
-	    break;
-
-	case OPT_UNSOLICITED_MWI:
-	    cfg->unsolicited_mwi = PJ_TRUE;
 	    break;
 
 	case OPT_100REL: /** 100rel */
@@ -1998,10 +1990,6 @@ static int write_settings(const struct app_config *config,
     if (pjsip_use_compact_form)
     {
 	pj_strcat2(&cfg, "--use-compact-form\n");
-    }
-
-    if (config->unsolicited_mwi) {
-	pj_strcat2(&cfg, "--unsolicited-mwi\n");
     }
 
     if (!config->cfg.force_lr) {
@@ -4407,10 +4395,6 @@ pj_status_t app_init(int argc, char *argv[])
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Initialize unsolicited MWI */
-    if (app_config.unsolicited_mwi)
-	enable_unsolicited_mwi();
-
     /* Initialize our module to handle otherwise unhandled request */
     status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
 					 &mod_default_handler);
@@ -5013,90 +4997,5 @@ static pj_status_t create_ipv6_media_transports(void)
     }
 
     return pjsua_media_transports_attach(tp, i, PJ_TRUE);
-}
-
-/*****************************************************************************
- * Asterisk unsolicited MWI module
- */
-static pj_bool_t mwi_on_rx_request(pjsip_rx_data *rdata)
-{
-    pjsip_msg *msg = rdata->msg_info.msg;
-    pj_str_t EVENT_HDR  = { "Event", 5 };
-    pj_str_t MWI = { "message-summary", 15 };
-    pjsip_event_hdr *eh;
-    pj_str_t body;
-
-    if (pjsip_method_cmp(&msg->line.req.method, &pjsip_notify_method)!=0) {
-	/* Only interested with NOTIFY request */
-	return PJ_FALSE;
-    }
-
-    eh = (pjsip_event_hdr*) pjsip_msg_find_hdr_by_name(msg, &EVENT_HDR, NULL);
-    if (!eh) {
-	/* Something wrong with the request, it has no Event hdr */
-	return PJ_FALSE;
-    }
-
-    if (pj_stricmp(&eh->event_type, &MWI) != 0) {
-	/* Not MWI event */
-	return PJ_FALSE;
-    }
-
-    /* Got unsolicited MWI request, respond with 200/OK first */
-    pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata, 200, NULL,
-			NULL, NULL, NULL);
-
-
-    PJ_LOG(3,(THIS_FILE, "Received MWI info:"));
-
-    if (rdata->msg_info.ctype) {
-	const pjsip_ctype_hdr *ctype = rdata->msg_info.ctype;
-
-	PJ_LOG(3,(THIS_FILE, " Content-Type: %.*s/%.*s",
-	          (int)ctype->media.type.slen,
-		  ctype->media.type.ptr,
-		  (int)ctype->media.subtype.slen,
-		  ctype->media.subtype.ptr));
-    }
-
-    if (!rdata->msg_info.msg->body) {
-	PJ_LOG(3,(THIS_FILE, "  no message body"));
-	return PJ_TRUE;
-    }
-
-    body.ptr = rdata->msg_info.msg->body->data;
-    body.slen = rdata->msg_info.msg->body->len;
-
-    PJ_LOG(3,(THIS_FILE, " Body:\n%.*s", (int)body.slen, body.ptr));
-    
-    return PJ_TRUE;
-}
-
-/* The module instance. */
-static pjsip_module pjsua_mwi_mod = 
-{
-    NULL, NULL,				/* prev, next.		*/
-    { "mod-unsolicited-mwi", 19 },	/* Name.		*/
-    -1,					/* Id			*/
-    PJSIP_MOD_PRIORITY_UA_PROXY_LAYER-1,/* Priority	        */
-    NULL,				/* load()		*/
-    NULL,				/* start()		*/
-    NULL,				/* stop()		*/
-    NULL,				/* unload()		*/
-    &mwi_on_rx_request,			/* on_rx_request()	*/
-    NULL,				/* on_rx_response()	*/
-    NULL,				/* on_tx_request.	*/
-    NULL,				/* on_tx_response()	*/
-    NULL,				/* on_tsx_state()	*/
-};
-
-static void enable_unsolicited_mwi(void)
-{
-    pj_status_t status;
-
-    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), 
-					 &pjsua_mwi_mod);
-    if (status != PJ_SUCCESS)
-	pjsua_perror(THIS_FILE, "Error registering MWI module", status);
 }
 

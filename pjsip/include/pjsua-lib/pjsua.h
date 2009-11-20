@@ -1002,6 +1002,21 @@ typedef struct pjsua_config
     pj_bool_t	    require_timer;
 
     /**
+     * Handle unsolicited NOTIFY requests containing message waiting 
+     * indication (MWI) info. Unsolicited MWI is incoming NOTIFY requests 
+     * which are not requested by client with SUBSCRIBE request. 
+     *
+     * If this is enabled, the library will respond 200/OK to the NOTIFY
+     * request and forward the request to \a on_mwi_info() callback.
+     *
+     * See also \a mwi_enabled field #on pjsua_acc_config.
+     *
+     * Default: PJ_TRUE
+     *
+     */
+    pj_bool_t	    enable_unsolicited_mwi;
+
+    /**
      * Specify Session Timer settings, see #pjsip_timer_setting. 
      * Note that this setting can be further customized in account 
      * configuration (#pjsua_acc_config).
@@ -1882,8 +1897,9 @@ typedef struct pjsua_acc_config
     pj_str_t	    reg_uri;
 
     /**
-     * Enable message summary and message waiting indication subscription
-     * (RFC 3842) for this account.
+     * Subscribe to message waiting indication events (RFC 3842).
+     *
+     * See also \a enable_unsolicited_mwi field on #pjsua_config.
      *
      * Default: no
      */

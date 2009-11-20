@@ -2075,6 +2075,87 @@ void pjsua_start_mwi(pjsua_acc *acc)
 }
 
 
+/***************************************************************************
+ * Unsolicited MWI
+ */
+static pj_bool_t unsolicited_mwi_on_rx_request(pjsip_rx_data *rdata)
+{
+    pjsip_msg *msg = rdata->msg_info.msg;
+    pj_str_t EVENT_HDR  = { "Event", 5 };
+    pj_str_t MWI = { "message-summary", 15 };
+    pjsip_event_hdr *eh;
+
+    if (pjsip_method_cmp(&msg->line.req.method, &pjsip_notify_method)!=0) {
+	/* Only interested with NOTIFY request */
+	return PJ_FALSE;
+    }
+
+    eh = (pjsip_event_hdr*) pjsip_msg_find_hdr_by_name(msg, &EVENT_HDR, NULL);
+    if (!eh) {
+	/* Something wrong with the request, it has no Event hdr */
+	return PJ_FALSE;
+    }
+
+    if (pj_stricmp(&eh->event_type, &MWI) != 0) {
+	/* Not MWI event */
+	return PJ_FALSE;
+    }
+
+    /* Got unsolicited MWI request, respond with 200/OK first */
+    pjsip_endpt_respond(pjsua_get_pjsip_endpt(), NULL, rdata, 200, NULL,
+			NULL, NULL, NULL);
+
+
+    /* Call callback */
+    if (pjsua_var.ua_cfg.cb.on_mwi_info) {
+	pjsua_acc_id acc_id;
+	pjsua_mwi_info mwi_info;
+
+	acc_id = pjsua_acc_find_for_incoming(rdata);
+
+	pj_bzero(&mwi_info, sizeof(mwi_info));
+	mwi_info.rdata = rdata;
+
+	(*pjsua_var.ua_cfg.cb.on_mwi_info)(acc_id, &mwi_info);
+    }
+
+    
+    return PJ_TRUE;
+}
+
+/* The module instance. */
+static pjsip_module pjsua_unsolicited_mwi_mod = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-unsolicited-mwi", 19 },	/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_APPLICATION,	/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &unsolicited_mwi_on_rx_request,	/* on_rx_request()	*/
+    NULL,				/* on_rx_response()	*/
+    NULL,				/* on_tx_request.	*/
+    NULL,				/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+};
+
+static pj_status_t enable_unsolicited_mwi(void)
+{
+    pj_status_t status;
+
+    status = pjsip_endpt_register_module(pjsua_get_pjsip_endpt(), 
+					 &pjsua_unsolicited_mwi_mod);
+    if (status != PJ_SUCCESS)
+	pjsua_perror(THIS_FILE, "Error registering unsolicited MWI module", 
+		     status);
+
+    return status;
+}
+
+
+
 /***************************************************************************/
 
 /* Timer callback to re-create client subscription */
@@ -2148,6 +2229,12 @@ pj_status_t pjsua_pres_start(void)
 	pjsip_endpt_schedule_timer(pjsua_var.endpt, &pjsua_var.pres_timer,
 				   &pres_interval);
 	pjsua_var.pres_timer.id = PJ_TRUE;
+    }
+
+    if (pjsua_var.ua_cfg.enable_unsolicited_mwi) {
+	pj_status_t status = enable_unsolicited_mwi();
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     return PJ_SUCCESS;

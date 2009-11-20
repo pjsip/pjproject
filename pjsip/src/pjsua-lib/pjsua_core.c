@@ -101,6 +101,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->nat_type_in_sdp = 1;
     cfg->stun_ignore_failure = PJ_TRUE;
     cfg->force_lr = PJ_TRUE;
+    cfg->enable_unsolicited_mwi = PJ_TRUE;
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     cfg->use_srtp = PJSUA_DEFAULT_USE_SRTP;
     cfg->srtp_secure_signaling = PJSUA_DEFAULT_SRTP_SECURE_SIGNALING;
