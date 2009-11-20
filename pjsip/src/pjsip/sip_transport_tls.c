@@ -884,7 +884,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 					(pj_sockaddr_t*)&tls->base.local_addr))
 	    {
 		/* Update port only */
-		pj_sockaddr_set_port((pj_sockaddr_t*)&tls->base.local_addr, 
+		pj_sockaddr_set_port(&tls->base.local_addr, 
 				     new_port);
 	    }
 

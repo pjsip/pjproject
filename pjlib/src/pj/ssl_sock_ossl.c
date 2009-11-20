@@ -767,15 +767,17 @@ static pj_bool_t on_handshake_complete(pj_ssl_sock_t *ssock,
 
     /* Connecting */
     else {
+	/* On failure, reset SSL socket state first, as app may try to 
+	 * reconnect in the callback.
+	 */
+	if (status != PJ_SUCCESS) {
+	    reset_ssl_sock_state(ssock);
+	}
 	if (ssock->param.cb.on_connect_complete) {
 	    pj_bool_t ret;
 	    ret = (*ssock->param.cb.on_connect_complete)(ssock, status);
 	    if (ret == PJ_FALSE)
 		return PJ_FALSE;
-	}
-	if (status != PJ_SUCCESS) {
-	    /* Reset SSL socket state */
-	    reset_ssl_sock_state(ssock);
 	}
     }
 
@@ -2077,6 +2079,9 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Save remote address */
+    pj_sockaddr_cp(&ssock->rem_addr, remaddr);
+
     status = pj_activesock_start_connect(ssock->asock, pool, remaddr,
 					 addr_len);
 
@@ -2096,9 +2101,6 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
      * address with 0.0.0.0 for now; it will be updated
      * once the socket is established.
      */
-
-    /* Set remote address */
-    pj_sockaddr_cp(&ssock->rem_addr, remaddr);
 
     /* Update SSL state */
     ssock->is_server = PJ_FALSE;
