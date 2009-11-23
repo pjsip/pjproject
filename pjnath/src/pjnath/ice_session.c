@@ -949,12 +949,24 @@ static void clist_set_state(pj_ice_sess *ice, pj_ice_sess_checklist *clist,
 }
 
 /* Sort checklist based on priority */
-static void sort_checklist(pj_ice_sess_checklist *clist)
+static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 {
     unsigned i;
+    pj_ice_sess_check **check_ptr[PJ_ICE_MAX_COMP*2];
+    unsigned check_ptr_cnt = 0;
+
+    for (i=0; i<ice->comp_cnt; ++i) {
+	if (ice->comp[i].valid_check) {
+	    check_ptr[check_ptr_cnt++] = &ice->comp[i].valid_check;
+	}
+	if (ice->comp[i].nominated_check) {
+	    check_ptr[check_ptr_cnt++] = &ice->comp[i].nominated_check;
+	}
+    }
 
     for (i=0; i<clist->count-1; ++i) {
 	unsigned j, highest = i;
+
 	for (j=i+1; j<clist->count; ++j) {
 	    if (CMP_CHECK_PRIO(&clist->checks[j], &clist->checks[highest]) > 0) {
 		highest = j;
@@ -963,12 +975,23 @@ static void sort_checklist(pj_ice_sess_checklist *clist)
 
 	if (highest != i) {
 	    pj_ice_sess_check tmp;
+	    unsigned k;
 
 	    pj_memcpy(&tmp, &clist->checks[i], sizeof(pj_ice_sess_check));
 	    pj_memcpy(&clist->checks[i], &clist->checks[highest], 
 		      sizeof(pj_ice_sess_check));
 	    pj_memcpy(&clist->checks[highest], &tmp, 
 		      sizeof(pj_ice_sess_check));
+
+	    /* Update valid and nominated check pointers, since we're moving
+	     * around checks
+	     */
+	    for (k=0; k<check_ptr_cnt; ++k) {
+		if (*check_ptr[k] == &clist->checks[highest])
+		    *check_ptr[k] = &clist->checks[i];
+		else if (*check_ptr[k] == &clist->checks[i])
+		    *check_ptr[k] = &clist->checks[highest];
+	    }
 	}
     }
 }
@@ -1666,7 +1689,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
     }
 
     /* Sort checklist based on priority */
-    sort_checklist(clist);
+    sort_checklist(ice, clist);
 
     /* Prune the checklist */
     status = prune_checklist(ice, clist);
@@ -2334,7 +2357,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     /* Sort valid_list (must do so after update_comp_check(), otherwise
      * new_check will point to something else (#953)
      */
-    sort_checklist(&ice->valid_list);
+    sort_checklist(ice, &ice->valid_list);
 
     /* 7.1.2.2.2.  Updating Pair States
      * 
