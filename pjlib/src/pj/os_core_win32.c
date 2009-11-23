@@ -1037,6 +1037,7 @@ PJ_DEF(pj_bool_t) pj_mutex_is_locked(pj_mutex_t *mutex)
 #if PJ_DEBUG
     return mutex->owner == pj_thread_this();
 #else
+    PJ_UNUSED_ARG(mutex);
     pj_assert(!"PJ_DEBUG is not set!");
     return 1;
 #endif
