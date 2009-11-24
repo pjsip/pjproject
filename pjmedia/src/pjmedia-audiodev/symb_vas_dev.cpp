@@ -245,6 +245,8 @@ public:
     TInt GetGain() { TInt gain;iVoIPUplink->GetGain(gain);return gain; }
     TInt GetMaxGain() { TInt gain;iVoIPUplink->GetMaxGain(gain);return gain; }
 
+    TBool IsStarted();
+    
 private:
     CPjAudioEngine(struct vas_stream *parent_strm,
 		   PjAudioCallback rec_cb,
@@ -260,21 +262,21 @@ private:
     TInt StartRec();
 
     // From MVoIPDownlinkObserver
-    virtual void FillBuffer(const CVoIPAudioDownlinkStream& aSrc,
+    void FillBuffer(const CVoIPAudioDownlinkStream& aSrc,
                             CVoIPDataBuffer* aBuffer);
-    virtual void Event(const CVoIPAudioDownlinkStream& aSrc,
+    void Event(const CVoIPAudioDownlinkStream& aSrc,
                        TInt aEventType,
                        TInt aError);
 
     // From MVoIPUplinkObserver
-    virtual void EmptyBuffer(const CVoIPAudioUplinkStream& aSrc,
+    void EmptyBuffer(const CVoIPAudioUplinkStream& aSrc,
                              CVoIPDataBuffer* aBuffer);
-    virtual void Event(const CVoIPAudioUplinkStream& aSrc,
+    void Event(const CVoIPAudioUplinkStream& aSrc,
                        TInt aEventType,
                        TInt aError);
 
     // From MVoIPFormatObserver
-    virtual void Event(const CVoIPFormatIntfc& aSrc, TInt aEventType);
+    void Event(const CVoIPFormatIntfc& aSrc, TInt aEventType);
 
     State			 dn_state_;
     State			 up_state_;
@@ -367,6 +369,14 @@ CPjAudioEngine::~CPjAudioEngine()
     delete iFactory;
     
     TRACE_((THIS_FILE, "Sound device destroyed"));
+}
+
+TBool CPjAudioEngine::IsStarted()
+{
+    return ((((parentStrm_->param.dir & PJMEDIA_DIR_CAPTURE) == 0) || 
+	       up_state_ == STATE_STREAMING) &&
+	    (((parentStrm_->param.dir & PJMEDIA_DIR_PLAYBACK) == 0) || 
+	       dn_state_ == STATE_STREAMING));
 }
 
 TInt CPjAudioEngine::InitPlay()
@@ -668,8 +678,9 @@ void CPjAudioEngine::Event(const CVoIPAudioUplinkStream& /*aSrc*/,
 
 // Callback from MVoIPFormatObserver
 void CPjAudioEngine::Event(const CVoIPFormatIntfc& /*aSrc*/, 
-			   TInt /*aEventType*/)
+			   TInt aEventType)
 {
+    snd_perror("Format event", aEventType);
 }
 
 /****************************************************************************
@@ -1309,7 +1320,7 @@ PJ_DEF(pjmedia_aud_dev_factory*) pjmedia_symb_vas_factory(pj_pool_factory *pf)
 static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 {
     struct vas_factory *af = (struct vas_factory*)f;
-    CVoIPUtilityFactory *vas_factory;
+    CVoIPUtilityFactory *vas_factory_;
     CVoIPAudioUplinkStream *vas_uplink;
     CVoIPAudioDownlinkStream *vas_dnlink;
     RArray<TVoIPCodecFormat> uplink_formats, dnlink_formats;
@@ -1332,32 +1343,32 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     af->dev_info.ext_fmt_cnt = 0;
 
     /* Enumerate supported formats */
-    err = CVoIPUtilityFactory::CreateFactory(vas_factory);
+    err = CVoIPUtilityFactory::CreateFactory(vas_factory_);
     if (err != KErrNone)
 	goto on_error;
 
     /* On VAS 2.0, uplink & downlink stream should be instantiated before 
      * querying formats.
      */
-    err = vas_factory->CreateUplinkStream(vas_version, 
+    err = vas_factory_->CreateUplinkStream(vas_version, 
 				          CVoIPUtilityFactory::EVoIPCall,
 				          vas_uplink);
     if (err != KErrNone)
 	goto on_error;
     
-    err = vas_factory->CreateDownlinkStream(vas_version, 
+    err = vas_factory_->CreateDownlinkStream(vas_version, 
 				            CVoIPUtilityFactory::EVoIPCall,
 				            vas_dnlink);
     if (err != KErrNone)
 	goto on_error;
     
     uplink_formats.Reset();
-    err = vas_factory->GetSupportedUplinkFormats(uplink_formats);
+    err = vas_factory_->GetSupportedUplinkFormats(uplink_formats);
     if (err != KErrNone)
 	goto on_error;
 
     dnlink_formats.Reset();
-    err = vas_factory->GetSupportedDownlinkFormats(dnlink_formats);
+    err = vas_factory_->GetSupportedDownlinkFormats(dnlink_formats);
     if (err != KErrNone)
 	goto on_error;
 
@@ -1366,6 +1377,8 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     vas_uplink = NULL;
     delete vas_dnlink;
     vas_dnlink = NULL;
+    delete vas_factory_;
+    vas_factory_ = NULL;
     
     for (TInt i = 0; i < dnlink_formats.Count(); i++) {
 	/* Format must be supported by both downlink & uplink. */
@@ -1883,12 +1896,28 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
     if (stream->engine) {
+	enum { VAS_WAIT_START = 2000 }; /* in msecs */
+	TTime start, now;
 	TInt err = stream->engine->Start();
+	
     	if (err != KErrNone)
     	    return PJ_RETURN_OS_ERROR(err);
-    }
 
-    return PJ_SUCCESS;
+    	/* Perform synchronous start, timeout after VAS_WAIT_START ms */
+	start.UniversalTime();
+	do {
+    	    pj_symbianos_poll(-1, 100);
+    	    now.UniversalTime();
+    	} while (!stream->engine->IsStarted() &&
+		 (now.MicroSecondsFrom(start) < VAS_WAIT_START * 1000));
+	
+	if (stream->engine->IsStarted())
+	    return PJ_SUCCESS;
+	else
+	    return PJ_ETIMEDOUT;
+    }    
+
+    return PJ_EINVALIDOP;
 }
 
 /* API: Stop stream. */
