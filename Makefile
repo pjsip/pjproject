@@ -70,6 +70,26 @@ xhdrid:
 		cp /tmp/id $$f; \
 	done
 
+selftest: pjlib-test pjlib-util-test pjnath-test pjmedia-test pjsip-test pjsua-test
+
+pjlib-test: pjlib/bin/pjlib-test-$(TARGET_NAME)
+	cd pjlib/build && ../bin/pjlib-test-$(TARGET_NAME)
+
+pjlib-util-test: pjlib-util/bin/pjlib-util-test-$(TARGET_NAME)
+	cd pjlib-util/build && ../bin/pjlib-util-test-$(TARGET_NAME)
+
+pjnath-test: pjnath/bin/pjnath-test-$(TARGET_NAME)
+	cd pjnath/build && ../bin/pjnath-test-$(TARGET_NAME)
+
+pjmedia-test: pjmedia/bin/pjmedia-test-$(TARGET_NAME)
+	cd pjmedia/build && ../bin/pjmedia-test-$(TARGET_NAME)
+
+pjsip-test: pjsip/bin/pjsip-test-$(TARGET_NAME)
+	cd pjsip/build && ../bin/pjsip-test-$(TARGET_NAME)
+
+pjsua-test:
+	cd tests/pjsua && python runall.py
+
 prefix = /usr/local
 install:
 	mkdir -p $(DESTDIR)$(prefix)/lib
