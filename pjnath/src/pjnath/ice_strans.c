@@ -912,6 +912,27 @@ PJ_DEF(pj_status_t) pj_ice_strans_get_ufrag_pwd( pj_ice_strans *ice_st,
 }
 
 /*
+ * Get number of candidates
+ */
+PJ_DEF(unsigned) pj_ice_strans_get_cands_count(pj_ice_strans *ice_st,
+					       unsigned comp_id)
+{
+    unsigned i, cnt;
+
+    PJ_ASSERT_RETURN(ice_st && ice_st->ice && comp_id && 
+		     comp_id <= ice_st->comp_cnt, 0);
+
+    cnt = 0;
+    for (i=0; i<ice_st->ice->lcand_cnt; ++i) {
+	if (ice_st->ice->lcand[i].comp_id != comp_id)
+	    continue;
+	++cnt;
+    }
+
+    return cnt;
+}
+
+/*
  * Enum candidates
  */
 PJ_DEF(pj_status_t) pj_ice_strans_enum_cands(pj_ice_strans *ice_st,

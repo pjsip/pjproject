@@ -47,6 +47,7 @@ static struct app_t
 	pj_str_t    turn_username;
 	pj_str_t    turn_password;
 	pj_bool_t   turn_fingerprint;
+	const char *log_file;
     } opt;
 
     /* Our global variables */
@@ -56,6 +57,7 @@ static struct app_t
     pj_bool_t		 thread_quit_flag;
     pj_ice_strans_cfg	 ice_cfg;
     pj_ice_strans	*icest;
+    FILE		*log_fhnd;
 
     /* Variables to store parsed remote ICE info */
     struct rem_info
@@ -109,6 +111,12 @@ static void err_exit(const char *title, pj_status_t status)
     pj_caching_pool_destroy(&icedemo.cp);
 
     pj_shutdown();
+
+    if (icedemo.log_fhnd) {
+	fclose(icedemo.log_fhnd);
+	icedemo.log_fhnd = NULL;
+    }
+
     exit(status != PJ_SUCCESS);
 }
 
@@ -216,11 +224,13 @@ static void cb_on_rx_data(pj_ice_strans *ice_st,
     PJ_UNUSED_ARG(src_addr_len);
     PJ_UNUSED_ARG(pkt);
 
-    ((char*)pkt)[size] = '\0';
+    // Don't do this! It will ruin the packet buffer in case TCP is used!
+    //((char*)pkt)[size] = '\0';
 
-    PJ_LOG(3,(THIS_FILE, "Component %d: received %d bytes data from %s: \"%s\"",
+    PJ_LOG(3,(THIS_FILE, "Component %d: received %d bytes data from %s: \"%.*s\"",
 	      comp_id, size,
 	      pj_sockaddr_print(src_addr, ipstr, sizeof(ipstr), 3),
+	      (unsigned)size,
 	      (char*)pkt));
 }
 
@@ -236,8 +246,6 @@ static void cb_on_ice_complete(pj_ice_strans *ice_st,
 	(op==PJ_ICE_STRANS_OP_INIT? "initialization" :
 	    (op==PJ_ICE_STRANS_OP_NEGOTIATION ? "negotiation" : "unknown_op"));
 
-    PJ_UNUSED_ARG(ice_st);
-
     if (status == PJ_SUCCESS) {
 	PJ_LOG(3,(THIS_FILE, "ICE %s successful", opname));
     } else {
@@ -245,9 +253,18 @@ static void cb_on_ice_complete(pj_ice_strans *ice_st,
 
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	PJ_LOG(1,(THIS_FILE, "ICE %s failed: %s", opname, errmsg));
+	pj_ice_strans_destroy(ice_st);
+	icedemo.icest = NULL;
     }
 }
 
+/* log callback to write to file */
+static void log_func(int level, const char *data, int len)
+{
+    if (icedemo.log_fhnd)
+	fwrite(data, len, 1, icedemo.log_fhnd);
+    pj_log_write(level, data, len);
+}
 
 /*
  * This is the main application initialization function. It is called
@@ -257,6 +274,11 @@ static void cb_on_ice_complete(pj_ice_strans *ice_st,
 static pj_status_t icedemo_init(void)
 {
     pj_status_t status;
+
+    if (icedemo.opt.log_file) {
+	icedemo.log_fhnd = fopen(icedemo.opt.log_file, "a");
+	pj_log_set_log_func(&log_func);
+    }
 
     /* Initialize the libraries before anything else */
     CHECK( pj_init() );
@@ -1147,6 +1169,7 @@ static void icedemo_usage()
     puts("                           resolution");
     puts(" --max-host, -H N          Set max number of host candidates to N");
     puts(" --regular, -R             Use regular nomination (default aggressive)");
+    puts(" --log-file, -L FILE       Save output to log FILE");
     puts(" --help, -h                Display this screen.");
     puts("");
     puts("STUN related options:");
@@ -1182,7 +1205,8 @@ int main(int argc, char *argv[])
 	{ "turn-username",	1, 0, 'u'},
 	{ "turn-password",	1, 0, 'p'},
 	{ "turn-fingerprint",	0, 0, 'F'},
-	{ "regular",		0, 0, 'R'}
+	{ "regular",		0, 0, 'R'},
+	{ "log-file",		1, 0, 'L'},
     };
     int c, opt_id;
     pj_status_t status;
@@ -1190,7 +1214,7 @@ int main(int argc, char *argv[])
     icedemo.opt.comp_cnt = 1;
     icedemo.opt.max_host = -1;
 
-    while((c=pj_getopt_long(argc,argv, "c:n:s:t:u:p:H:hTFR", long_options, &opt_id))!=-1) {
+    while((c=pj_getopt_long(argc,argv, "c:n:s:t:u:p:H:L:hTFR", long_options, &opt_id))!=-1) {
 	switch (c) {
 	case 'c':
 	    icedemo.opt.comp_cnt = atoi(pj_optarg);
@@ -1228,6 +1252,9 @@ int main(int argc, char *argv[])
 	    break;
 	case 'R':
 	    icedemo.opt.regular = PJ_TRUE;
+	    break;
+	case 'L':
+	    icedemo.opt.log_file = pj_optarg;
 	    break;
 	default:
 	    printf("Argument \"%s\" is not valid. Use -h to see help",

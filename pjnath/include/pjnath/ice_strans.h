@@ -622,6 +622,17 @@ PJ_DECL(pj_status_t) pj_ice_strans_get_ufrag_pwd(pj_ice_strans *ice_st,
 
 
 /**
+ * Get the number of local candidates for the specified component ID.
+ *
+ * @param ice_st	The ICE stream transport.
+ * @param comp_id	Component ID.
+ *
+ * @return		The number of candidates.
+ */
+PJ_DECL(unsigned) pj_ice_strans_get_cands_count(pj_ice_strans *ice_st,
+					        unsigned comp_id);
+
+/**
  * Enumerate the local candidates for the specified component.
  *
  * @param ice_st	The ICE stream transport.

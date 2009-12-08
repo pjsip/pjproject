@@ -461,10 +461,13 @@ PJ_DEF(pj_status_t) pj_turn_session_shutdown(pj_turn_session *sess)
 /**
  * Forcefully destroy the TURN session.
  */
-PJ_DEF(pj_status_t) pj_turn_session_destroy( pj_turn_session *sess)
+PJ_DEF(pj_status_t) pj_turn_session_destroy( pj_turn_session *sess,
+					     pj_status_t last_err)
 {
     PJ_ASSERT_RETURN(sess, PJ_EINVAL);
 
+    if (last_err != PJ_SUCCESS && sess->last_status == PJ_SUCCESS)
+	sess->last_status = last_err;
     set_state(sess, PJ_TURN_STATE_DEALLOCATED);
     sess_shutdown(sess, PJ_SUCCESS);
     return PJ_SUCCESS;
@@ -959,12 +962,16 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
     ch = lookup_ch_by_addr(sess, addr, pj_sockaddr_get_len(addr), 
 			   PJ_FALSE, PJ_FALSE);
     if (ch && ch->num != PJ_TURN_INVALID_CHANNEL && ch->bound) {
+	unsigned total_len;
+
 	/* Peer is assigned a channel number, we can use ChannelData */
 	pj_turn_channel_data *cd = (pj_turn_channel_data*)sess->tx_pkt;
 	
 	pj_assert(sizeof(*cd)==4);
 
-	if (pkt_len > sizeof(sess->tx_pkt)-sizeof(*cd)) {
+	/* Calculate total length, including paddings */
+	total_len = (pkt_len + sizeof(*cd) + 3) & (~3);
+	if (total_len > sizeof(sess->tx_pkt)) {
 	    status = PJ_ETOOBIG;
 	    goto on_return;
 	}
@@ -975,7 +982,7 @@ PJ_DEF(pj_status_t) pj_turn_session_sendto( pj_turn_session *sess,
 
 	pj_assert(sess->srv_addr != NULL);
 
-	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, pkt_len+sizeof(*cd),
+	status = sess->cb.on_send_pkt(sess, sess->tx_pkt, total_len,
 				      sess->srv_addr,
 				      pj_sockaddr_get_len(sess->srv_addr));
 
@@ -1156,7 +1163,8 @@ PJ_DEF(pj_status_t) pj_turn_session_on_rx_pkt(pj_turn_session *sess,
 	    goto on_return;
 	} else {
 	    if (parsed_len) {
-		*parsed_len = cd.length + sizeof(cd);
+		/* Apply padding too */
+		*parsed_len = ((cd.length + 3) & (~3)) + sizeof(cd);
 	    }
 	}
 

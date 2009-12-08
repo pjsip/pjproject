@@ -28,5 +28,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "jbsim.c"
+#include "icedemo.c"
 
