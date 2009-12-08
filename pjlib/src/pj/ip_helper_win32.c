@@ -44,13 +44,11 @@
 typedef DWORD (WINAPI *PFN_GetIpAddrTable)(PMIB_IPADDRTABLE pIpAddrTable, 
 					   PULONG pdwSize, 
 					   BOOL bOrder);
-#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 typedef DWORD (WINAPI *PFN_GetAdapterAddresses)(ULONG Family,
 					        ULONG Flags,
 					        PVOID Reserved,
 					        PIP_ADAPTER_ADDRESSES AdapterAddresses,
 					        PULONG SizePointer);
-#endif	/* PJ_HAS_IPV6 */
 typedef DWORD (WINAPI *PFN_GetIpForwardTable)(PMIB_IPFORWARDTABLE pIpForwardTable,
 					      PULONG pdwSize, 
 					      BOOL bOrder);
@@ -58,9 +56,7 @@ typedef DWORD (WINAPI *PFN_GetIfEntry)(PMIB_IFROW pIfRow);
 
 static HANDLE s_hDLL;
 static PFN_GetIpAddrTable s_pfnGetIpAddrTable;
-#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
-    static PFN_GetAdapterAddresses s_pfnGetAdapterAddresses;
-#endif	/* PJ_HAS_IPV6 */
+static PFN_GetAdapterAddresses s_pfnGetAdapterAddresses;
 static PFN_GetIpForwardTable s_pfnGetIpForwardTable;
 static PFN_GetIfEntry s_pfnGetIfEntry;
 
@@ -72,9 +68,7 @@ static void unload_iphlp_module(void)
     s_pfnGetIpAddrTable = NULL;
     s_pfnGetIpForwardTable = NULL;
     s_pfnGetIfEntry = NULL;
-#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
     s_pfnGetAdapterAddresses = NULL;
-#endif
 }
 
 static FARPROC GetIpHlpApiProc(char *lpProcName)
@@ -108,7 +102,6 @@ static DWORD MyGetIpAddrTable(PMIB_IPADDRTABLE pIpAddrTable,
     return ERROR_NOT_SUPPORTED;
 }
 
-#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 static DWORD MyGetAdapterAddresses(ULONG Family,
 				   ULONG Flags,
 				   PVOID Reserved,
@@ -117,7 +110,7 @@ static DWORD MyGetAdapterAddresses(ULONG Family,
 {
     if(NULL == s_pfnGetAdapterAddresses) {
 	s_pfnGetAdapterAddresses = (PFN_GetAdapterAddresses) 
-	    GetIpHlpApiProc("GetAdapterAddresses");
+	    GetIpHlpApiProc("GetAdaptersAddresses");
     }
     
     if(NULL != s_pfnGetAdapterAddresses) {
@@ -127,7 +120,6 @@ static DWORD MyGetAdapterAddresses(ULONG Family,
     
     return ERROR_NOT_SUPPORTED;
 }
-#endif	/* PJ_HAS_IPV6 */
 
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
 static DWORD MyGetIfEntry(MIB_IFROW *pIfRow)
@@ -230,12 +222,11 @@ static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
 /* Enumerate local IP interface using GetAdapterAddresses(),
  * which works for both IPv4 and IPv6.
  */
-#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
 static pj_status_t enum_ipv4_ipv6_interface(int af,
 					    unsigned *p_cnt,
 					    pj_sockaddr ifs[])
 {
-    pj_uint8_t buffer[1024];
+    pj_uint8_t buffer[1600];
     IP_ADAPTER_ADDRESSES *adapter = (IP_ADAPTER_ADDRESSES*)buffer;
     ULONG size = sizeof(buffer);
     unsigned i;
@@ -251,9 +242,9 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
 	pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
     }
 
+    *p_cnt = i;
     return PJ_SUCCESS;
 }
-#endif
 
 
 /*
@@ -269,20 +260,10 @@ PJ_DEF(pj_status_t) pj_enum_ip_interface(int af,
     PJ_ASSERT_RETURN(af==PJ_AF_UNSPEC || af==PJ_AF_INET || af==PJ_AF_INET6,
 		     PJ_EAFNOTSUP);
 
-#if defined(PJ_HAS_IPV6) && PJ_HAS_IPV6!=0
     status = enum_ipv4_ipv6_interface(af, p_cnt, ifs);
     if (status != PJ_SUCCESS && (af==PJ_AF_INET || af==PJ_AF_UNSPEC))
 	status = enum_ipv4_interface(p_cnt, ifs);
     return status;
-#else
-    if (af==PJ_AF_INET6)
-	return PJ_EIPV6NOTSUP;
-    else if (af != PJ_AF_INET && af != PJ_AF_UNSPEC)
-	return PJ_EAFNOTSUP;
-
-    status = enum_ipv4_interface(p_cnt, ifs);
-    return status;
-#endif
 }
 
 /*
