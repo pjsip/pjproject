@@ -854,6 +854,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_try_inc_lock(pjsip_dialog *dlg)
  */
 PJ_DEF(void) pjsip_dlg_dec_lock(pjsip_dialog *dlg)
 {
+    PJ_ASSERT_ON_FAIL(dlg!=NULL, return);
+
     PJ_LOG(6,(dlg->obj_name, "Entering pjsip_dlg_dec_lock(), sess_count=%d", 
 	      dlg->sess_count));
 

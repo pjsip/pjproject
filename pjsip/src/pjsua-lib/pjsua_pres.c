@@ -508,6 +508,12 @@ PJ_DEF(pj_status_t) pjsua_buddy_del(pjsua_buddy_id buddy_id)
     pjsua_var.buddy[buddy_id].uri.slen = 0;
     pjsua_var.buddy_cnt--;
 
+    /* Clear timer */
+    if (pjsua_var.buddy[buddy_id].timer.id) {
+	pjsua_cancel_timer(&pjsua_var.buddy[buddy_id].timer);
+	pjsua_var.buddy[buddy_id].timer.id = PJ_FALSE;
+    }
+
     /* Reset buddy struct */
     reset_buddy(buddy_id);
 
@@ -1728,7 +1734,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 	/* This should destroy the dialog since there's no session
 	 * referencing it
 	 */
-	pjsip_dlg_dec_lock(buddy->dlg);
+	if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
 	if (tmp_pool) pj_pool_release(tmp_pool);
 	return;
     }
@@ -1761,7 +1767,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     status = pjsip_pres_initiate(buddy->sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_dec_lock(buddy->dlg);
+	if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
 	if (buddy->sub) {
 	    pjsip_pres_terminate(buddy->sub, PJ_FALSE);
 	}
@@ -1776,7 +1782,7 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 
     status = pjsip_pres_send_request(buddy->sub, tdata);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_dec_lock(buddy->dlg);
+	if (buddy->dlg) pjsip_dlg_dec_lock(buddy->dlg);
 	if (buddy->sub) {
 	    pjsip_pres_terminate(buddy->sub, PJ_FALSE);
 	}
@@ -2009,7 +2015,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating MWI subscription", status);
 	if (tmp_pool) pj_pool_release(tmp_pool);
-	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
 	return;
     }
 
@@ -2041,7 +2047,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
 
     status = pjsip_mwi_initiate(acc->mwi_sub, -1, &tdata);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
 	if (acc->mwi_sub) {
 	    pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
 	}
@@ -2057,7 +2063,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
 
     status = pjsip_pres_send_request(acc->mwi_sub, tdata);
     if (status != PJ_SUCCESS) {
-	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
 	if (acc->mwi_sub) {
 	    pjsip_pres_terminate(acc->mwi_sub, PJ_FALSE);
 	}
