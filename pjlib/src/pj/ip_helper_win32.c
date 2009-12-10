@@ -237,9 +237,11 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
 	return PJ_RETURN_OS_ERROR(rc);
 
     for (i=0; i<*p_cnt && adapter; ++i, adapter = adapter->Next) {
-	SOCKET_ADDRESS *pAddr = &adapter->FirstUnicastAddress->Address;
-	ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
-	pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
+	if (adapter->FirstUnicastAddress) {
+	    SOCKET_ADDRESS *pAddr = &adapter->FirstUnicastAddress->Address;
+	    ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
+	    pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
+	}
     }
 
     *p_cnt = i;
