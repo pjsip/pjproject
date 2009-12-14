@@ -1611,7 +1611,17 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
 			  (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, r));
 	r = r->next;
     }
-    
+
+    /* If account is locked to specific transport, then set that transport to
+     * the transmit data.
+     */
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+	pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
+
     /* Done */
     *p_tdata = tdata;
     return PJ_SUCCESS;
