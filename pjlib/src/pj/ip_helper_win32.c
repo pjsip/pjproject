@@ -41,6 +41,45 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 
+/* Dealing with Unicode quirks:
+
+ There seems to be a difference with GetProcAddress() API signature between
+ Windows (i.e. Win32) and Windows CE (e.g. Windows Mobile). On Windows, the
+ API is declared as:
+
+   FARPROC GetProcAddress(
+     HMODULE hModule,
+     LPCSTR lpProcName);
+ 
+ while on Windows CE:
+
+   FARPROC GetProcAddress(
+     HMODULE hModule,
+     LPCWSTR lpProcName);
+
+ Notice the difference with lpProcName argument type. This means that on 
+ Windows, even on Unicode Windows, the lpProcName always takes ANSI format, 
+ while on Windows CE, the argument follows the UNICODE setting.
+
+ Because of this, we use a different Unicode treatment here than the usual
+ PJ_NATIVE_STRING_IS_UNICODE PJLIB setting (<pj/unicode.h>):
+   - GPA_TEXT macro: convert literal string to platform's native literal 
+         string
+   - gpa_char: the platform native character type
+
+ Note that "GPA" and "gpa" are abbreviations for GetProcAddress.
+*/
+#if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    /* on CE, follow the PJLIB Unicode setting */
+#   define GPA_TEXT(x)	PJ_T(x)
+#   define gpa_char	pj_char_t
+#else
+    /* on non-CE, always use ANSI format */
+#   define GPA_TEXT(x)	x
+#   define gpa_char	char
+#endif
+
+
 typedef DWORD (WINAPI *PFN_GetIpAddrTable)(PMIB_IPADDRTABLE pIpAddrTable, 
 					   PULONG pdwSize, 
 					   BOOL bOrder);
@@ -71,7 +110,7 @@ static void unload_iphlp_module(void)
     s_pfnGetAdapterAddresses = NULL;
 }
 
-static FARPROC GetIpHlpApiProc(char *lpProcName)
+static FARPROC GetIpHlpApiProc(gpa_char *lpProcName)
 {
     if(NULL == s_hDLL) {
 	s_hDLL = LoadLibrary(PJ_T("IpHlpApi"));
@@ -92,7 +131,7 @@ static DWORD MyGetIpAddrTable(PMIB_IPADDRTABLE pIpAddrTable,
 {
     if(NULL == s_pfnGetIpAddrTable) {
 	s_pfnGetIpAddrTable = (PFN_GetIpAddrTable) 
-	    GetIpHlpApiProc("GetIpAddrTable");
+	    GetIpHlpApiProc(GPA_TEXT("GetIpAddrTable"));
     }
     
     if(NULL != s_pfnGetIpAddrTable) {
@@ -110,7 +149,7 @@ static DWORD MyGetAdapterAddresses(ULONG Family,
 {
     if(NULL == s_pfnGetAdapterAddresses) {
 	s_pfnGetAdapterAddresses = (PFN_GetAdapterAddresses) 
-	    GetIpHlpApiProc("GetAdaptersAddresses");
+	    GetIpHlpApiProc(GPA_TEXT("GetAdaptersAddresses"));
     }
     
     if(NULL != s_pfnGetAdapterAddresses) {
@@ -126,7 +165,7 @@ static DWORD MyGetIfEntry(MIB_IFROW *pIfRow)
 {
     if(NULL == s_pfnGetIfEntry) {
 	s_pfnGetIfEntry = (PFN_GetIfEntry) 
-	    GetIpHlpApiProc("GetIfEntry");
+	    GetIpHlpApiProc(GPA_TEXT("GetIfEntry"));
     }
     
     if(NULL != s_pfnGetIfEntry) {
@@ -144,7 +183,7 @@ static DWORD MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable,
 {
     if(NULL == s_pfnGetIpForwardTable) {
 	s_pfnGetIpForwardTable = (PFN_GetIpForwardTable) 
-	    GetIpHlpApiProc("GetIpForwardTable");
+	    GetIpHlpApiProc(GPA_TEXT("GetIpForwardTable"));
     }
     
     if(NULL != s_pfnGetIpForwardTable) {
