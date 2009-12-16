@@ -64,11 +64,7 @@ PJ_BEGIN_DECL
 /**
  * The type for internal timer ID.
  */
-#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
-typedef void *pj_timer_id_t;
-#else
 typedef int pj_timer_id_t;
-#endif
 
 /** 
  * Forward declaration for pj_timer_entry. 
