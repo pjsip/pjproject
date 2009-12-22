@@ -1280,7 +1280,9 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     if (pj_sock_getsockname(tcp->sock, &addr, &addrlen)==PJ_SUCCESS) {
 	pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tcp->base.local_addr;
 
-	if (tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) {
+	if (pj_sockaddr_has_addr(&addr) &&
+	    tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) 
+	{
 	    tp_addr->sin_addr.s_addr = addr.sin_addr.s_addr;
 	    tp_addr->sin_port = addr.sin_port;
 	    sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
