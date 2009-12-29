@@ -131,13 +131,18 @@ BOOL CPocketPJDlg::Restart()
     char nameserver[60];
     {
 	FIXED_INFO fi;
+	PIP_ADDR_STRING pDNS = NULL;
 	ULONG len = sizeof(fi);
 	CString err;
 
 	PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Retrieving network parameters..");
 	if (GetNetworkParams(&fi, &len) != ERROR_SUCCESS) {
 	    err = _T("Info: Error querying network parameters. You must configure DNS server.");
-	} else if (fi.CurrentDnsServer == NULL) {
+	} else if (fi.CurrentDnsServer) {
+	    pDNS = fi.CurrentDnsServer;
+	} else if (fi.DnsServerList.IpAddress.String[0] != 0) {
+	    pDNS = &fi.DnsServerList;
+	} else {
 	    err = _T("Info: DNS server not configured. You must configure DNS server.");
 	} 
 	
@@ -154,7 +159,7 @@ BOOL CPocketPJDlg::Restart()
 		return FALSE;
 	    }
 	} else {
-	    strcpy(nameserver, fi.CurrentDnsServer->IpAddress.String);
+	    strcpy(nameserver, pDNS->IpAddress.String);
 	    cfg.nameserver_count = 1;
 	    cfg.nameserver[0] = pj_str(nameserver);
 	}
@@ -168,6 +173,7 @@ BOOL CPocketPJDlg::Restart()
     }
 
     pjsua_logging_config_default(&log_cfg);
+    log_cfg.msg_logging = PJ_TRUE;
     log_cfg.log_filename = pj_str("\\PocketPJ.TXT");
 
     pjsua_media_config_default(&media_cfg);
@@ -213,7 +219,10 @@ BOOL CPocketPJDlg::Restart()
 	return FALSE;
     }
 
-    if (m_Cfg.m_TCP) {
+    // Always instantiate TCP to support auto-switching to TCP when
+    // packet is larger than 1300 bytes. If TCP is disabled when
+    // no auto-switching will occur
+    if (1) {
 	// Create one TCP transport
 	PopUp_Modify(POPUP_REGISTRATION, POPUP_EL_TITLE3, "Adding TCP transport..");
 	pjsua_transport_id transport_id;
