@@ -338,7 +338,7 @@ PJ_DEF(pj_bool_t) pj_sockaddr_has_addr(const pj_sockaddr_t *addr)
      * This may break some parts of upper layer libraries.
      */
     //PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
-    //		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+    //		     a->addr.sa_family == PJ_AF_INET6, PJ_FALSE);
 
     if (a->addr.sa_family!=PJ_AF_INET && a->addr.sa_family!=PJ_AF_INET6) {
 	return PJ_FALSE;
@@ -372,7 +372,7 @@ PJ_DEF(unsigned) pj_sockaddr_get_addr_len(const pj_sockaddr_t *addr)
 {
     const pj_sockaddr *a = (const pj_sockaddr*) addr;
     PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
-		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+		     a->addr.sa_family == PJ_AF_INET6, 0);
     return a->addr.sa_family == PJ_AF_INET6 ?
 	    sizeof(pj_in6_addr) : sizeof(pj_in_addr);
 }
@@ -384,7 +384,7 @@ PJ_DEF(unsigned) pj_sockaddr_get_len(const pj_sockaddr_t *addr)
 {
     const pj_sockaddr *a = (const pj_sockaddr*) addr;
     PJ_ASSERT_RETURN(a->addr.sa_family == PJ_AF_INET ||
-		     a->addr.sa_family == PJ_AF_INET6, PJ_EAFNOTSUP);
+		     a->addr.sa_family == PJ_AF_INET6, 0);
     return a->addr.sa_family == PJ_AF_INET6 ?
 	    sizeof(pj_sockaddr_in6) : sizeof(pj_sockaddr_in);
 }
