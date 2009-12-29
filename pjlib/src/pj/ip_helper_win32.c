@@ -275,11 +275,16 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
     if (rc != ERROR_SUCCESS)
 	return PJ_RETURN_OS_ERROR(rc);
 
-    for (i=0; i<*p_cnt && adapter; ++i, adapter = adapter->Next) {
+    for (i=0; i<*p_cnt && adapter; adapter = adapter->Next) {
 	if (adapter->FirstUnicastAddress) {
 	    SOCKET_ADDRESS *pAddr = &adapter->FirstUnicastAddress->Address;
-	    ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
-	    pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
+	    if (pAddr->lpSockaddr->sa_family == PJ_AF_INET ||
+		pAddr->lpSockaddr->sa_family == PJ_AF_INET6)
+	    {
+		ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
+		pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
+		++i;
+	    }
 	}
     }
 
