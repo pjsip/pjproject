@@ -1279,6 +1279,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_TLS_VERIFY_CLIENT:
 	    cfg->udp_cfg.tls_setting.verify_client = PJ_TRUE;
+	    cfg->udp_cfg.tls_setting.require_client_cert = PJ_TRUE;
 	    break;
 
 	case OPT_TLS_NEG_TIMEOUT:

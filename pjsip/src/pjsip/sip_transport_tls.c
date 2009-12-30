@@ -54,6 +54,7 @@ struct tls_listener
     pjsip_endpoint	    *endpt;
     pjsip_tpmgr		    *tpmgr;
     pj_ssl_sock_t	    *ssock;
+    pj_ssl_cert_t	    *cert;
     pjsip_tls_setting	     tls_setting;
 };
 
@@ -288,21 +289,21 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 	pj_sockaddr_in_init(listener_addr, NULL, 0);
     }
 
-    /* Check if certificate for SSL socket is set */
-    if (listener->tls_setting.cert_file.slen) 
+    /* Check if certificate/CA list for SSL socket is set */
+    if (listener->tls_setting.cert_file.slen ||
+	listener->tls_setting.ca_list_file.slen) 
     {
-	pj_ssl_cert_t *cert;
-
 	status = pj_ssl_cert_load_from_files(pool,
 			&listener->tls_setting.ca_list_file,
 			&listener->tls_setting.cert_file,
 			&listener->tls_setting.privkey_file,
 			&listener->tls_setting.password,
-			&cert);
+			&listener->cert);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	status = pj_ssl_sock_set_certificate(listener->ssock, pool, cert);
+	status = pj_ssl_sock_set_certificate(listener->ssock, pool, 
+					     listener->cert);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
@@ -836,6 +837,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     status = pj_ssl_sock_create(pool, &ssock_param, &ssock);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Apply SSL certificate */
+    if (listener->cert) {
+	status = pj_ssl_sock_set_certificate(ssock, pool, listener->cert);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     /* Initially set bind address to PJ_INADDR_ANY port 0 */
     pj_sockaddr_in_init(&local_addr, NULL, 0);
