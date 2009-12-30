@@ -199,25 +199,30 @@ static DWORD MyGetIpForwardTable(PMIB_IPFORWARDTABLE pIpForwardTable,
 static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
 				       pj_sockaddr ifs[])
 {
-    /* Provide enough buffer or otherwise it will fail with 
-     * error 22 ("Not Enough Buffer") error.
-     */
-    char ipTabBuff[1024];
-    MIB_IPADDRTABLE *pTab;
-    ULONG tabSize;
+    char ipTabBuff[512];
+    MIB_IPADDRTABLE *pTab = (MIB_IPADDRTABLE*)ipTabBuff;
+    ULONG tabSize = sizeof(ipTabBuff);
     unsigned i, count;
     DWORD rc = NO_ERROR;
 
     PJ_ASSERT_RETURN(p_cnt && ifs, PJ_EINVAL);
 
-    pTab = (MIB_IPADDRTABLE*)ipTabBuff;
-
     /* Get IP address table */
-    tabSize = sizeof(ipTabBuff);
-
     rc = MyGetIpAddrTable(pTab, &tabSize, FALSE);
-    if (rc != NO_ERROR)
-	return PJ_RETURN_OS_ERROR(rc);
+    if (rc != NO_ERROR) {
+	if (rc == ERROR_INSUFFICIENT_BUFFER) {
+	    /* Retry with larger buffer */
+	    pTab = (MIB_IPADDRTABLE*)malloc(tabSize);
+	    if (pTab)
+		rc = MyGetIpAddrTable(pTab, &tabSize, FALSE);
+	}
+
+	if (rc != NO_ERROR) {
+	    if (pTab != (MIB_IPADDRTABLE*)ipTabBuff)
+		free(pTab);
+	    return PJ_RETURN_OS_ERROR(rc);
+	}
+    }
 
     /* Reset result */
     pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
@@ -254,9 +259,11 @@ static pj_status_t enum_ipv4_interface(unsigned *p_cnt,
 	(*p_cnt)++;
     }
 
+    if (pTab != (MIB_IPADDRTABLE*)ipTabBuff)
+	free(pTab);
+
     return (*p_cnt) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
-
 
 /* Enumerate local IP interface using GetAdapterAddresses(),
  * which works for both IPv4 and IPv6.
@@ -265,31 +272,89 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
 					    unsigned *p_cnt,
 					    pj_sockaddr ifs[])
 {
-    pj_uint8_t buffer[1600];
+    pj_uint8_t buffer[600];
     IP_ADAPTER_ADDRESSES *adapter = (IP_ADAPTER_ADDRESSES*)buffer;
     ULONG size = sizeof(buffer);
+    ULONG flags;
     unsigned i;
     DWORD rc;
 
-    rc = MyGetAdapterAddresses(af, 0, NULL, adapter, &size);
-    if (rc != ERROR_SUCCESS)
-	return PJ_RETURN_OS_ERROR(rc);
+    flags = GAA_FLAG_SKIP_FRIENDLY_NAME |
+	    GAA_FLAG_SKIP_DNS_SERVER |
+	    GAA_FLAG_SKIP_MULTICAST;
 
-    for (i=0; i<*p_cnt && adapter; adapter = adapter->Next) {
-	if (adapter->FirstUnicastAddress) {
-	    SOCKET_ADDRESS *pAddr = &adapter->FirstUnicastAddress->Address;
-	    if (pAddr->lpSockaddr->sa_family == PJ_AF_INET ||
-		pAddr->lpSockaddr->sa_family == PJ_AF_INET6)
-	    {
-		ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
-		pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
-		++i;
-	    }
+    rc = MyGetAdapterAddresses(af, flags, NULL, adapter, &size);
+    if (rc != ERROR_SUCCESS) {
+	if (rc == ERROR_BUFFER_OVERFLOW) {
+	    /* Retry with larger memory size */
+	    adapter = (IP_ADAPTER_ADDRESSES*) malloc(size);
+	    if (adapter != NULL)
+		rc = MyGetAdapterAddresses(af, flags, NULL, adapter, &size);
+	} 
+
+	if (rc != ERROR_SUCCESS) {
+	    if (adapter != (IP_ADAPTER_ADDRESSES*)buffer)
+		free(adapter);
+	    return PJ_RETURN_OS_ERROR(rc);
 	}
     }
 
+    /* Reset result */
+    pj_bzero(ifs, sizeof(ifs[0]) * (*p_cnt));
+
+    /* Enumerate interface */
+    for (i=0; i<*p_cnt && adapter; adapter = adapter->Next) {
+	if (adapter->FirstUnicastAddress) {
+	    SOCKET_ADDRESS *pAddr = &adapter->FirstUnicastAddress->Address;
+
+	    /* Ignore address family which we didn't request, just in case */
+	    if (pAddr->lpSockaddr->sa_family != PJ_AF_INET &&
+		pAddr->lpSockaddr->sa_family != PJ_AF_INET6)
+	    {
+		continue;
+	    }
+
+	    /* Apply some filtering to known IPv4 unusable addresses */
+	    if (pAddr->lpSockaddr->sa_family == PJ_AF_INET) {
+		const pj_sockaddr_in *addr_in = 
+		    (const pj_sockaddr_in*)pAddr->lpSockaddr;
+
+		/* Ignore 0.0.0.0 address (interface is down?) */
+		if (addr_in->sin_addr.s_addr == 0)
+		    continue;
+
+		/* Ignore 0.0.0.0/8 address. This is a special address
+		 * which doesn't seem to have practical use.
+		 */
+		if ((pj_ntohl(addr_in->sin_addr.s_addr) >> 24) == 0)
+		    continue;
+	    }
+
+#if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
+	    /* Ignore loopback interfaces */
+	    /* This should have been IF_TYPE_SOFTWARE_LOOPBACK according to
+	     * MSDN, and this macro should have been declared in Ipifcons.h, 
+	     * but some SDK versions don't have it.
+	     */
+	    if (adapter->IfType == MIB_IF_TYPE_LOOPBACK)
+		continue;
+#endif
+
+	    /* Ignore down interface */
+	    if (adapter->OperStatus != IfOperStatusUp)
+		continue;
+
+	    ifs[i].addr.sa_family = pAddr->lpSockaddr->sa_family;
+	    pj_memcpy(&ifs[i], pAddr->lpSockaddr, pAddr->iSockaddrLength);
+	    ++i;
+	}
+    }
+
+    if (adapter != (IP_ADAPTER_ADDRESSES*)buffer)
+	free(adapter);
+
     *p_cnt = i;
-    return PJ_SUCCESS;
+    return (*p_cnt) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
 
