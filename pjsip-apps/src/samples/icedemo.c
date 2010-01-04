@@ -261,9 +261,11 @@ static void cb_on_ice_complete(pj_ice_strans *ice_st,
 /* log callback to write to file */
 static void log_func(int level, const char *data, int len)
 {
-    if (icedemo.log_fhnd)
-	fwrite(data, len, 1, icedemo.log_fhnd);
     pj_log_write(level, data, len);
+    if (icedemo.log_fhnd) {
+	if (fwrite(data, len, 1, icedemo.log_fhnd) != 1)
+	    return;
+    }
 }
 
 /*
