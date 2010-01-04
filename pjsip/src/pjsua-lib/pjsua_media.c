@@ -334,9 +334,6 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     }
 #endif
 
-    /* Perform NAT detection */
-    pjsua_detect_nat_type();
-
     return PJ_SUCCESS;
 }
 
@@ -640,6 +637,9 @@ pj_status_t pjsua_media_subsys_start(void)
 
     pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL, 
 			&close_snd_timer_cb);
+
+    /* Perform NAT detection */
+    pjsua_detect_nat_type();
 
     return PJ_SUCCESS;
 }
