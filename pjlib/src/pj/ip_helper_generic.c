@@ -121,6 +121,7 @@ static pj_status_t if_enum_by_af(int af,
 
 	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
 	pj_memcpy(&ifs[*p_cnt], ad, pj_sockaddr_get_len(ad));
+	PJ_SOCKADDR_RESET_LEN(&ifs[*p_cnt]);
 	(*p_cnt)++;
     }
 
@@ -215,6 +216,7 @@ static pj_status_t if_enum_by_af(int af,
 
 	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
 	pj_memcpy(&ifs[*p_cnt], ad, pj_sockaddr_get_len(ad));
+	PJ_SOCKADDR_RESET_LEN(&ifs[*p_cnt]);
 	(*p_cnt)++;
     }
 
@@ -305,6 +307,7 @@ static pj_status_t if_enum_by_af(int af, unsigned *p_cnt, pj_sockaddr ifs[])
 
 	pj_bzero(&ifs[*p_cnt], sizeof(ifs[0]));
 	pj_memcpy(&ifs[*p_cnt], ad, pj_sockaddr_get_len(ad));
+	PJ_SOCKADDR_RESET_LEN(&ifs[*p_cnt]);
 	(*p_cnt)++;
     }
 

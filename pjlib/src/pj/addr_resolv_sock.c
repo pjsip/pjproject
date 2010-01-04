@@ -73,18 +73,28 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
-    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
-    if (pj_inet_pton(af, nodename, pj_sockaddr_get_addr(&ai[0].ai_addr)) 
-	 == PJ_SUCCESS) 
-    {
-	pj_str_t tmp;
+    if (af == PJ_AF_UNSPEC) {
+	if (pj_inet_pton(PJ_AF_INET, nodename, 
+			 &ai[0].ai_addr.ipv4.sin_addr) == PJ_SUCCESS)
+	{
+	    af = PJ_AF_INET;
+	}
+	else if (pj_inet_pton(PJ_AF_INET6, nodename, 
+			      &ai[0].ai_addr.ipv6.sin6_addr) == PJ_SUCCESS)
+	{
+	    af = PJ_AF_INET6;
+	}
 
-	tmp.ptr = ai[0].ai_canonname;
-	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
-	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
-	*count = 1;
+	if (af != PJ_AF_UNSPEC) {
+	    pj_str_t tmp;
 
-	return PJ_SUCCESS;
+	    tmp.ptr = ai[0].ai_canonname;
+	    pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	    *count = 1;
+
+	    return PJ_SUCCESS;
+	}
     }
 
     /* Copy node name to null terminated string. */
@@ -121,6 +131,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	/* Store address */
 	PJ_ASSERT_ON_FAIL(res->ai_addrlen <= sizeof(pj_sockaddr), continue);
 	pj_memcpy(&ai[i].ai_addr, res->ai_addr, res->ai_addrlen);
+	PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
 
 	/* Next slot */
 	++i;
@@ -139,18 +150,28 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
-    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
-    if (pj_inet_pton(af, nodename, pj_sockaddr_get_addr(&ai[0].ai_addr)) 
-	 == PJ_SUCCESS) 
-    {
-	pj_str_t tmp;
+    if (af == PJ_AF_UNSPEC) {
+	if (pj_inet_pton(PJ_AF_INET, nodename, 
+			 &ai[0].ai_addr.ipv4.sin_addr) == PJ_SUCCESS)
+	{
+	    af = PJ_AF_INET;
+	}
+	else if (pj_inet_pton(PJ_AF_INET6, nodename, 
+			      &ai[0].ai_addr.ipv6.sin6_addr) == PJ_SUCCESS)
+	{
+	    af = PJ_AF_INET6;
+	}
 
-	tmp.ptr = ai[0].ai_canonname;
-	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
-	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
-	*count = 1;
+	if (af != PJ_AF_UNSPEC) {
+	    pj_str_t tmp;
 
-	return PJ_SUCCESS;
+	    tmp.ptr = ai[0].ai_canonname;
+	    pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	    *count = 1;
+
+	    return PJ_SUCCESS;
+	}
     }
 
     if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
@@ -180,6 +201,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 	    ai[*count].ai_addr.ipv4.sin_family = PJ_AF_INET;
 	    pj_memcpy(&ai[*count].ai_addr.ipv4.sin_addr,
 		      he.h_addr_list[i], he.h_length);
+	    PJ_SOCKADDR_RESET_LEN(&ai[*count].ai_addr);
 
 	    (*count)++;
 	}
