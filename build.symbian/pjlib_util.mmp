@@ -24,7 +24,7 @@ MACRO		PJ_SYMBIAN=1
 
 // Must compile as C++, otherwise exception would not work
 OPTION          CW -lang c++
-OPTION          ARMCC --cpp
+OPTION          ARMCC --cpp --gnu
 OPTION          GCC -x c++
 OPTION          GCCE -x c++
 

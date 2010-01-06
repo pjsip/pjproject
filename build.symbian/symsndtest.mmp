@@ -5,6 +5,8 @@ TARGET 			symsndtest.exe
 TARGETTYPE 		exe
 UID			0x0 0xA000000E
 
+OPTION			ARMCC --gnu
+
 SOURCEPATH		..\pjsip-apps\src\symsndtest
 
 MACRO			PJ_M_I386=1

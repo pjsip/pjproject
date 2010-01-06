@@ -2,6 +2,8 @@ TARGET 		pjstun_client.exe
 TARGETTYPE 	exe
 UID		0x0 0xA000000A
 
+OPTION          ARMCC --gnu
+
 SOURCEPATH	..\pjnath\src\pjstun-client
 
 MACRO		PJ_M_I386=1

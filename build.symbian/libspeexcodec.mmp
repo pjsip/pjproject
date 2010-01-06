@@ -9,6 +9,7 @@ MACRO		PJ_SYMBIAN=1
 // GCCE optimization setting
 //
 OPTION		GCCE -O2 -fno-unit-at-a-time
+OPTION          ARMCC --gnu
 
 //
 // Speex files

@@ -22,6 +22,7 @@ TARGETTYPE 	lib
 SOURCEPATH	..\pjmedia\src\pjmedia
 
 OPTION		CW -lang c++
+OPTION          ARMCC --gnu
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1

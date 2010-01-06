@@ -7,6 +7,7 @@ SOURCEPATH	..\pjmedia\src\pjmedia-audiodev
 // GCCE optimization setting
 //
 //OPTION		GCCE -O2 -fno-unit-at-a-time
+OPTION          ARMCC --gnu
 
 MACRO		PJ_M_I386=1
 MACRO		PJ_SYMBIAN=1

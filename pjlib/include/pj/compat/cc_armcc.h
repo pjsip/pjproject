@@ -30,9 +30,9 @@
 #endif
 
 #define PJ_CC_NAME		"armcc"
-#define PJ_CC_VER_1		__ARMCC__
-#define PJ_CC_VER_2		__ARMCC_MINOR__
-#define PJ_CC_VER_3		__ARMCC_PATCHLEVEL__
+#define PJ_CC_VER_1             (__ARMCC_VERSION/100000)
+#define PJ_CC_VER_2             ((__ARMCC_VERSION%100000)/10000)
+#define PJ_CC_VER_3             (__ARMCC_VERSION%10000)
 
 #ifdef __cplusplus
 #  define PJ_INLINE_SPECIFIER	inline

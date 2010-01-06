@@ -1,6 +1,6 @@
 prj_platforms
 winscw
-//armv5
+armv5
 gcce
 
 prj_mmpfiles
@@ -30,7 +30,6 @@ libresample.mmp
 pjmedia_audiodev.mmp
 
 /* Applications */
-//pjlib_test.mmp
 //symsndtest.mmp
 symbian_ua.mmp
 ..\pjsip-apps\src\symbian_ua_gui\group\symbian_ua_gui.mmp

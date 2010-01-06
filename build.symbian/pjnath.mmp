@@ -17,6 +17,8 @@ TARGETTYPE 	lib
 
 #endif
 
+OPTION          ARMCC --gnu
+
 SOURCEPATH	..\pjnath\src\pjnath
 
 MACRO		PJ_M_I386=1
