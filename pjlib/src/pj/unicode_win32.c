@@ -30,7 +30,13 @@ PJ_DEF(wchar_t*) pj_ansi_to_unicode(const char *s, pj_size_t len,
 
     len = MultiByteToWideChar(CP_ACP, 0, s, len, 
 			      buf, buf_count);
-    buf[len] = 0;
+    if (buf_count) {
+	if (len < buf_count)
+	    buf[len] = 0;
+	else
+	    buf[len-1] = 0;
+    }
+
     return buf;
 }
 
@@ -41,7 +47,13 @@ PJ_DEF(char*) pj_unicode_to_ansi( const wchar_t *wstr, pj_size_t len,
     PJ_ASSERT_RETURN(wstr && buf, NULL);
 
     len = WideCharToMultiByte(CP_ACP, 0, wstr, len, buf, buf_size, NULL, NULL);
-    buf[len] = '\0';
+    if (buf_size) {
+	if (len < buf_size)
+	    buf[len] = '\0';
+	else
+	    buf[len-1] = '\0';
+    }
+
     return buf;
 }
 
