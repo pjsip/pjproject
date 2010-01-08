@@ -231,13 +231,15 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	if (ip_addr_ver != 0) {
 	    /* Target is an IP address, no need to resolve */
 	    if (ip_addr_ver == 4) {
-		svr_addr.entry[0].addr.addr.sa_family = pj_AF_INET();
+		pj_sockaddr_init(pj_AF_INET(), &svr_addr.entry[0].addr, 
+				 NULL, 0);
 		pj_inet_aton(&target->addr.host,
 			     &svr_addr.entry[0].addr.ipv4.sin_addr);
 	    } else {
-		svr_addr.entry[0].addr.addr.sa_family = pj_AF_INET6();
+		pj_sockaddr_init(pj_AF_INET6(), &svr_addr.entry[0].addr, 
+				 NULL, 0);
 		pj_inet_pton(pj_AF_INET6(), &target->addr.host,
-			&svr_addr.entry[0].addr.ipv4.sin_addr);
+			     &svr_addr.entry[0].addr.ipv6.sin6_addr);
 	    }
 	} else {
 	    pj_addrinfo ai;
