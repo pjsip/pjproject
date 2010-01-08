@@ -97,6 +97,15 @@ static void on_ioqueue_accept(pj_ioqueue_key_t *key,
 			  "invalid socket and status is %d", status));
 	}
     } else {
+        pj_sockaddr addr;
+        int client_addr_len;
+
+        client_addr_len = sizeof(addr);
+        status = pj_sock_getsockname(sock, &addr, &client_addr_len);
+        if (status != PJ_SUCCESS) {
+            app_perror("...ERROR in pj_sock_getsockname()", status);
+        }
+
 	callback_accept_key = key;
 	callback_accept_op = op_key;
 	callback_accept_status = status;

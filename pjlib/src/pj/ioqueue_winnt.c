@@ -167,13 +167,26 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue);
 /*
  * Process the socket when the overlapped accept() completed.
  */
-static void ioqueue_on_accept_complete(ioqueue_accept_rec *accept_overlapped)
+static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
+                                       ioqueue_accept_rec *accept_overlapped)
 {
     struct sockaddr *local;
     struct sockaddr *remote;
     int locallen, remotelen;
+    pj_status_t status;
 
     PJ_CHECK_STACK();
+
+    /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket 
+     * addresses can be obtained with getsockname() and getpeername().
+     */
+    status = setsockopt(accept_overlapped->newsock, SOL_SOCKET,
+                        SO_UPDATE_ACCEPT_CONTEXT, 
+                        (char*)&key->hnd, 
+                        sizeof(SOCKET));
+    /* SO_UPDATE_ACCEPT_CONTEXT is for WinXP or later.
+     * So ignore the error status.
+     */
 
     /* Operation complete immediately. */
     if (accept_overlapped->addrlen) {
@@ -706,7 +719,7 @@ static pj_bool_t poll_iocp( HANDLE hIocp, DWORD dwTimeout,
 #if PJ_HAS_TCP
 	case PJ_IOQUEUE_OP_ACCEPT:
 	    /* special case for accept. */
-	    ioqueue_on_accept_complete((ioqueue_accept_rec*)pOv);
+	    ioqueue_on_accept_complete(key, (ioqueue_accept_rec*)pOv);
             if (key->cb.on_accept_complete) {
                 ioqueue_accept_rec *accept_rec = (ioqueue_accept_rec*)pOv;
 		pj_status_t status = PJ_SUCCESS;
@@ -1211,6 +1224,15 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 	if (local && addrlen) {
 	    int status;
 
+	    /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket 
+	     * addresses can be obtained with getsockname() and getpeername().
+	     */
+	    status = setsockopt(sock, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+				(char*)&key->hnd, sizeof(SOCKET));
+	    /* SO_UPDATE_ACCEPT_CONTEXT is for WinXP or later.
+	     * So ignore the error status.
+	     */
+
 	    status = getsockname(sock, local, addrlen);
 	    if (status != 0) {
 		DWORD dwError = WSAGetLastError();
@@ -1240,16 +1262,6 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* On WinXP or later, use SO_UPDATE_ACCEPT_CONTEXT so that socket 
-     * addresses can be obtained with getsockname() and getpeername().
-     */
-    status = setsockopt(op_key_rec->accept.newsock, SOL_SOCKET,
-                        SO_UPDATE_ACCEPT_CONTEXT, 
-                        (char*)&key->hnd, sizeof(SOCKET));
-    /* SO_UPDATE_ACCEPT_CONTEXT is for WinXP or later.
-     * So ignore the error status.
-     */
-
     op_key_rec->accept.operation = PJ_IOQUEUE_OP_ACCEPT;
     op_key_rec->accept.addrlen = addrlen;
     op_key_rec->accept.local = local;
@@ -1265,7 +1277,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_accept( pj_ioqueue_key_t *key,
 		   &op_key_rec->accept.overlapped );
 
     if (rc == TRUE) {
-	ioqueue_on_accept_complete(&op_key_rec->accept);
+	ioqueue_on_accept_complete(key, &op_key_rec->accept);
 	return PJ_SUCCESS;
     } else {
 	DWORD dwStatus = WSAGetLastError();
