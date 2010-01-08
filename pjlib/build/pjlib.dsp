@@ -240,28 +240,11 @@ SOURCE=..\src\pj\ioqueue_common_abs.h
 # Begin Source File
 
 SOURCE=..\src\pj\ioqueue_select.c
-
-!IF  "$(CFG)" == "pjlib - Win32 Release"
-
-# PROP Exclude_From_Build 1
-
-!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 
 SOURCE=..\src\pj\ioqueue_winnt.c
-
-!IF  "$(CFG)" == "pjlib - Win32 Release"
-
-!ELSEIF  "$(CFG)" == "pjlib - Win32 Debug"
-
 # PROP Exclude_From_Build 1
-
-!ENDIF 
-
 # End Source File
 # Begin Source File
 

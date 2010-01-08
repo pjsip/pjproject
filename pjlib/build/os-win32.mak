@@ -13,8 +13,8 @@ export PJLIB_OBJS += 	addr_resolv_sock.o guid_win32.o  \
 			os_timestamp_win32.o \
 			pool_policy_malloc.o sock_bsd.o sock_select.o
 
-export PJLIB_OBJS +=	ioqueue_winnt.o
-#export PJLIB_OBJS +=	ioqueue_select.o
+#export PJLIB_OBJS +=	ioqueue_winnt.o
+export PJLIB_OBJS +=	ioqueue_select.o
 
 export PJLIB_OBJS +=	file_io_win32.o file_access_win32.o
 #export PJLIB_OBJS +=	file_io_ansi.o
