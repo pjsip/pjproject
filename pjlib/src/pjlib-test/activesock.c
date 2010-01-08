@@ -490,8 +490,6 @@ int activesock_test(void)
 {
     int ret;
 
-    ret = (int)&udp_ping_pong_test;
-
     PJ_LOG(3,("", "..udp ping/pong test"));
     ret = udp_ping_pong_test();
     if (ret != 0)
