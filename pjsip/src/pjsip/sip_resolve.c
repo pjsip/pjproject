@@ -198,7 +198,7 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	} else {
 	    /* No type or explicit port is specified, and the address is
 	     * not IP address.
-	     * In this case, full resolution must be performed.
+	     * In this case, full NAPTR resolution must be performed.
 	     * But we don't support it (yet).
 	     */
 #if PJ_HAS_TCP
@@ -225,63 +225,69 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
      * we can just finish the resolution now using pj_gethostbyname()
      */
     if (ip_addr_ver || resolver->res == NULL) {
-
-	char ip_addr[PJ_INET6_ADDRSTRLEN];
-	int af;
-	pj_addrinfo ai;
-	unsigned count;
+	char addr_str[PJ_INET6_ADDRSTRLEN+10];
 	pj_uint16_t srv_port;
 
-	if (!ip_addr_ver) {
-	    PJ_LOG(5,(THIS_FILE, 
+	if (ip_addr_ver != 0) {
+	    /* Target is an IP address, no need to resolve */
+	    if (ip_addr_ver == 4) {
+		svr_addr.entry[0].addr.addr.sa_family = pj_AF_INET();
+		pj_inet_aton(&target->addr.host,
+			     &svr_addr.entry[0].addr.ipv4.sin_addr);
+	    } else {
+		svr_addr.entry[0].addr.addr.sa_family = pj_AF_INET6();
+		pj_inet_pton(pj_AF_INET6(), &target->addr.host,
+			&svr_addr.entry[0].addr.ipv4.sin_addr);
+	    }
+	} else {
+	    pj_addrinfo ai;
+	    unsigned count;
+	    int af;
+
+	    PJ_LOG(5,(THIS_FILE,
 		      "DNS resolver not available, target '%.*s:%d' type=%s "
-		      "will be resolved with gethostbyname()",
+		      "will be resolved with getaddrinfo()",
 		      target->addr.host.slen,
 		      target->addr.host.ptr,
 		      target->addr.port,
 		      pjsip_transport_get_type_name(target->type)));
+
+	    if (type & PJSIP_TRANSPORT_IPV6) {
+		af = pj_AF_INET6();
+	    } else {
+		af = pj_AF_INET();
+	    }
+
+	    /* Resolve */
+	    count = 1;
+	    status = pj_getaddrinfo(af, &target->addr.host, &count, &ai);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    svr_addr.entry[0].addr.addr.sa_family = (pj_uint16_t)af;
+	    pj_memcpy(&svr_addr.entry[0].addr, &ai.ai_addr,
+		      sizeof(pj_sockaddr));
 	}
 
-	/* Set the port number if not specified. */
+	/* Set the port number */
 	if (target->addr.port == 0) {
 	   srv_port = (pj_uint16_t)
 		      pjsip_transport_get_default_port_for_type(type);
 	} else {
 	   srv_port = (pj_uint16_t)target->addr.port;
 	}
-
-	if (type & PJSIP_TRANSPORT_IPV6) {
-	    af = pj_AF_INET6();
-	} else {
-	    af = pj_AF_INET();
-	}
-
-	/* Resolve */
-	count = 1;
-	status = pj_getaddrinfo(af, &target->addr.host, &count, &ai);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	svr_addr.entry[0].addr.addr.sa_family = (pj_uint16_t)af;
-	pj_memcpy(&svr_addr.entry[0].addr, &ai.ai_addr, sizeof(pj_sockaddr));
-
-	if (af == pj_AF_INET6()) {
-	    svr_addr.entry[0].addr.ipv6.sin6_port = pj_htons(srv_port);
-	} else {
-	    svr_addr.entry[0].addr.ipv4.sin_port = pj_htons(srv_port);
-	}
+	pj_sockaddr_set_port(&svr_addr.entry[0].addr, srv_port);
 
 	/* Call the callback. */
 	PJ_LOG(5,(THIS_FILE, 
 		  "Target '%.*s:%d' type=%s resolved to "
-		  "'%s:%d' type=%s (%s)",
+		  "'%s' type=%s (%s)",
 		  (int)target->addr.host.slen,
 		  target->addr.host.ptr,
 		  target->addr.port,
 		  pjsip_transport_get_type_name(target->type),
-		  pj_inet_ntop2(af, pj_sockaddr_get_addr(&svr_addr.entry[0].addr),
-				ip_addr, sizeof(ip_addr)),
-		  srv_port,
+		  pj_sockaddr_print(&svr_addr.entry[0].addr, addr_str,
+				    sizeof(addr_str), 3),
 		  pjsip_transport_get_type_name(type),
 		  pjsip_transport_get_type_desc(type)));
 	svr_addr.count = 1;
