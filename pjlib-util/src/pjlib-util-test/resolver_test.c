@@ -813,8 +813,8 @@ static int dns_test(void)
     /* Now only server 0 should get packet, since both servers are
      * in STATE_ACTIVE state
      */
-    pj_assert(g_server[0].pkt_count == 1);
-    pj_assert(g_server[1].pkt_count == 0);
+    pj_assert((g_server[0].pkt_count == 1 && g_server[1].pkt_count == 0) ||
+	      (g_server[1].pkt_count == 1 && g_server[0].pkt_count == 0));
 
     /* Wait to allow probing period to complete */
     PJ_LOG(3,(THIS_FILE, "  waiting for active NS to expire (%d sec)",

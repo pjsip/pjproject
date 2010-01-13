@@ -146,8 +146,14 @@ AC_CHECK_HEADER(netdb.h,[AC_DEFINE(PJ_HAS_NETDB_H,1)])
 AC_CHECK_HEADER(netinet/in_systm.h,[AC_DEFINE(PJ_HAS_NETINET_IN_SYSTM_H,1)])
 AC_CHECK_HEADER(netinet/in.h,[AC_DEFINE(PJ_HAS_NETINET_IN_H,1)])
 AC_CHECK_HEADER(netinet/ip.h,[AC_DEFINE(PJ_HAS_NETINET_IP_H,1)],[],
-		 [#if PJ_HAS_NETINET_IN_SYSTM_H
+		 [#if PJ_HAS_SYS_TYPES_H
+          	  #	include <sys/types.h>
+          	  #endif
+		  #if PJ_HAS_NETINET_IN_SYSTM_H
           	  #	include <netinet/in_systm.h>
+          	  #endif
+		  #if PJ_HAS_NETINET_IN_H
+          	  #	include <netinet/in.h>
           	  #endif
           	 ])
 AC_CHECK_HEADER(netinet/tcp.h,[AC_DEFINE(PJ_HAS_NETINET_TCP_H,1)])
@@ -180,11 +186,14 @@ AC_CHECK_HEADER(mswsock.h,[AC_DEFINE(PJ_HAS_MSWSOCK_H,1)],[],
 AC_CHECK_HEADER(ws2tcpip.h,[AC_DEFINE(PJ_HAS_WS2TCPIP_H,1)])
 AC_CHECK_HEADER(uuid/uuid.h,[ac_has_uuid_h=1])
 AC_CHECK_HEADER(net/if.h,[AC_DEFINE(PJ_HAS_NET_IF_H,1)],[],
-		 [#if PJ_HAS_SYS_SOCKET_H
+		 [#if PJ_HAS_SYS_TYPES_H
+          	  #	include <sys/types.h>
+          	  #endif
+		  #if PJ_HAS_SYS_SOCKET_H
+
           	  #	include <sys/socket.h>
           	  #endif
           	 ])
-
 AC_MSG_RESULT([Setting PJ_OS_NAME to $target])
 AC_DEFINE_UNQUOTED(PJ_OS_NAME,["$target"])
 
@@ -256,7 +265,8 @@ AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
 
 dnl # Determine if socklen_t is available
 AC_MSG_CHECKING([if socklen_t is available])
-AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/socket.h>]],
+AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <sys/types.h>
+                                     #include <sys/socket.h>]],
 		    		   [socklen_t xxx = 0;])],
 		  [AC_DEFINE(PJ_HAS_SOCKLEN_T,1)
 		   AC_MSG_RESULT(yes)],
@@ -754,8 +764,8 @@ AC_ARG_ENABLE(ssl,
 		AC_SUBST(libssl_present)
 		AC_SUBST(libcrypto_present)
 		AC_CHECK_HEADER(openssl/ssl.h,[openssl_h_present=1])
-		AC_CHECK_LIB(ssl,SSL_library_init,[libssl_present=1 && LIBS="$LIBS -lssl"])
 		AC_CHECK_LIB(crypto,ERR_load_BIO_strings,[libcrypto_present=1 && LIBS="$LIBS -lcrypto"])
+		AC_CHECK_LIB(ssl,SSL_library_init,[libssl_present=1 && LIBS="$LIBS -lssl"])
 		if test "x$openssl_h_present" = "x1" -a "x$libssl_present" = "x1" -a "x$libcrypto_present" = "x1"; then
 	        	AC_MSG_RESULT([OpenSSL library found, SSL support enabled])
 			# PJSIP_HAS_TLS_TRANSPORT setting follows PJ_HAS_SSL_SOCK

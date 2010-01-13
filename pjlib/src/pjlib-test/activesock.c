@@ -337,7 +337,7 @@ static pj_bool_t tcp_on_data_sent(pj_activesock_t *asock,
 
 static int tcp_perf_test(void)
 {
-    enum { COUNT=100000 };
+    enum { COUNT=10000 };
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
     pj_sock_t sock1=PJ_INVALID_SOCKET, sock2=PJ_INVALID_SOCKET;
@@ -436,6 +436,15 @@ static int tcp_perf_test(void)
 		    }
 		}
 	}
+
+#ifndef PJ_SYMBIAN
+	for (;;) {
+	    pj_time_val timeout = {0, 10};
+	    if (pj_ioqueue_poll(ioqueue, &timeout) < 1)
+		break;
+	}
+#endif
+
     }
 
     /* Wait until everything has been sent/received */

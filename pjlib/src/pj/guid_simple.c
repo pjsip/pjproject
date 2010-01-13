@@ -67,10 +67,12 @@ PJ_DEF(pj_str_t*) pj_generate_unique_string(pj_str_t *str)
     pj_assert(PJ_GUID_STRING_LENGTH % 2 == 0);
 
     for (p=str->ptr, end=p+PJ_GUID_STRING_LENGTH; p<end; ) {
-	/* Assumes rand() only has 16bit randomness */
-	unsigned short val = pj_rand();
-	*p++ = guid_chars[(val >> 8)   & 63];
-	*p++ = guid_chars[(val & 0xFF) & 63];
+	pj_uint32_t rand_val = pj_rand();
+	pj_uint32_t rand_idx = RAND_MAX;
+
+	for ( ; rand_idx>0 && p<end; rand_idx>>=8, rand_val>>=8, p++) {
+	    *p = guid_chars[(rand_val & 0xFF) & 63];
+	}
     }
 
     str->slen = PJ_GUID_STRING_LENGTH;

@@ -308,7 +308,14 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
     if (rc != 0)
 	return -1;
 
+#if defined _POSIX_PRIORITY_SCHEDULING
     return sched_get_priority_min(policy);
+#elif defined __OpenBSD__
+    return 0;
+#else
+    pj_assert("pj_thread_get_prio_min() not supported!");
+    return 0;
+#endif
 }
 
 
@@ -325,7 +332,14 @@ PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
     if (rc != 0)
 	return -1;
 
+#if defined _POSIX_PRIORITY_SCHEDULING
     return sched_get_priority_max(policy);
+#elif defined __OpenBSD__
+    return 31;
+#else
+    pj_assert("pj_thread_get_prio_max() not supported!");
+    return 0;
+#endif
 }
 
 
