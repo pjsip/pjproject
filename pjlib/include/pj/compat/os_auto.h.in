@@ -71,6 +71,8 @@
 #undef PJ_HAS_SYS_TIME_H
 #undef PJ_HAS_SYS_TIMEB_H
 #undef PJ_HAS_SYS_TYPES_H
+#undef PJ_HAS_SYS_FILIO_H
+#undef PJ_HAS_SYS_SOCKIO_H
 #undef PJ_HAS_TIME_H
 #undef PJ_HAS_UNISTD_H
 

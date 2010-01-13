@@ -4717,6 +4717,20 @@ if test "x$ac_cv_header_sys_types_h" = x""yes; then :
 fi
 
 
+ac_fn_c_check_header_mongrel "$LINENO" "sys/filio.h" "ac_cv_header_sys_filio_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_filio_h" = x""yes; then :
+  $as_echo "#define PJ_HAS_SYS_FILIO_H 1" >>confdefs.h
+
+fi
+
+
+ac_fn_c_check_header_mongrel "$LINENO" "sys/sockio.h" "ac_cv_header_sys_sockio_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_sockio_h" = x""yes; then :
+  $as_echo "#define PJ_HAS_SYS_SOCKIO_H 1" >>confdefs.h
+
+fi
+
+
 ac_fn_c_check_header_mongrel "$LINENO" "time.h" "ac_cv_header_time_h" "$ac_includes_default"
 if test "x$ac_cv_header_time_h" = x""yes; then :
   $as_echo "#define PJ_HAS_TIME_H 1" >>confdefs.h

@@ -139,6 +139,14 @@
 #  include <unistd.h>
 #endif
 
+#if defined(PJ_HAS_SYS_FILIO_H) && PJ_HAS_SYS_FILIO_H != 0
+#   include <sys/filio.h>
+#endif
+
+#if defined(PJ_HAS_SYS_SOCKIO_H) && PJ_HAS_SYS_SOCKIO_H != 0
+#   include <sys/sockio.h>
+#endif
+
 
 /*
  * Define common errors.
