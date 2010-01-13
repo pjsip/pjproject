@@ -33,9 +33,15 @@ APP_THIRD_PARTY_LIBS += -lg7221codec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libg7221codec-$(LIB_SUFFIX)
 endif
 
+ifneq (x@ac_pa_path@,x)
+# We're using external PortAudio
+APP_THIRD_PARTY_LIBS += -L@ac_pa_path@/lib -lportaudio
+APP_THIRD_PARTY_LIB_FILES += 
+else
 ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio-$(LIB_SUFFIX)
+endif
 endif
 
 # Additional flags

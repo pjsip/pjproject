@@ -30,6 +30,11 @@
 #define THIS_FILE	"pa_dev.c"
 #define DRIVER_NAME	"PA"
 
+/* Enable call to PaUtil_SetDebugPrintFunction, but this is not always
+ * available across all PortAudio versions (?)
+ */
+/*#define USE_PA_DEBUG_PRINT */
+
 struct pa_aud_factory
 {
     pjmedia_aud_dev_factory	 base;
@@ -404,6 +409,7 @@ static int PaRecorderPlayerCallback( const void *input,
     return rc;
 }
 
+#ifdef USE_PA_DEBUG_PRINT
 /* Logging callback from PA */
 static void pa_log_cb(const char *log)
 {
@@ -415,6 +421,7 @@ static void pa_log_cb(const char *log)
  */
 typedef void (*PaUtilLogCallback ) (const char *log);
 void PaUtil_SetDebugPrintFunction(PaUtilLogCallback  cb);
+#endif
 
 
 /*
@@ -442,7 +449,9 @@ static pj_status_t pa_init(pjmedia_aud_dev_factory *f)
 
     PJ_UNUSED_ARG(f);
 
+#ifdef USE_PA_DEBUG_PRINT
     PaUtil_SetDebugPrintFunction(&pa_log_cb);
+#endif
 
     err = Pa_Initialize();
 

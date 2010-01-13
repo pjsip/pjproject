@@ -1,7 +1,6 @@
 include ../../build.mak
 
 THIRD_PARTY:=$(PJDIR)/third_party
-PA_DIR := $(THIRD_PARTY)/build/portaudio/src
 
 SRTP_INC=$(CC_INC)$(THIRD_PARTY)/build/srtp \
 	 $(CC_INC)$(THIRD_PARTY)/srtp/crypto/include \

@@ -388,6 +388,30 @@ AC_ARG_ENABLE(sound,
 	       fi]
 	      )
 
+dnl # PortAudio path. If ac_pa_path is not empty, we're using PortAudio
+dnl # in external location (not under third_party)
+AC_SUBST(ac_pa_path)
+AC_ARG_WITH(pa-path,
+    AC_HELP_STRING([--with-pa-path=DIR],
+		   [Specify PortAudio alternate location (e.g. /usr). When this option is set, we will not use our copy of PortAudio in third_party directory.]),
+    [
+	if test "x$with_pa_path" != "xno"; then
+		ac_pa_path=$with_pa_path
+		# Remove trailing backslash
+		ac_pa_path=`echo $ac_pa_path | sed 's/\/$//'`
+		# Test the path
+    		#if test ! -f $ac_pa_path/include/portaudio.h; then
+		#	AC_MSG_ERROR([Wrong --with-pa-path value, $ac_pa_path/include/portaudio.h does not exist])
+		#fi
+    		#if test ! -d $ac_pa_path/lib; then
+		#	AC_MSG_ERROR([Wrong --with-pa-path value, $ac_pa_path/lib does not exist])
+		#fi
+		AC_MSG_RESULT([** Using PortAudio in $ac_pa_path **])
+	fi
+    ]
+    )
+
+
 AC_SUBST(ac_pa_cflags)
 AC_CHECK_HEADER(sys/soundcard.h,
 	 	[ac_pa_cflags="$ac_pa_cflags -DHAVE_SYS_SOUNDCARD_H"])

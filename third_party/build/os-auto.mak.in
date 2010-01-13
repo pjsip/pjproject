@@ -15,7 +15,10 @@ ifneq (@ac_no_g7221_codec@,1)
 DIRS += g7221
 endif
 
+ifeq (x@ac_pa_path@,x)
+# Only if we're using our own PA in third_party
 ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 DIRS += portaudio
+endif
 endif
 
