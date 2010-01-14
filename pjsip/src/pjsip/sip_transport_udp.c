@@ -50,12 +50,19 @@
  *
  * More experiments are needed probably.
  */
+/* 2010/01/14
+ *  Too many people complained about seeing "Error setting SNDBUF" log,
+ *  so lets just remove this. People who want to have SNDBUF set can
+ *  still do so by declaring these two macros in config_site.h
+ */
 #ifndef PJSIP_UDP_SO_SNDBUF_SIZE
-#   define PJSIP_UDP_SO_SNDBUF_SIZE	(24*1024*1024)
+/*#   define PJSIP_UDP_SO_SNDBUF_SIZE	(24*1024*1024)*/
+#   define PJSIP_UDP_SO_SNDBUF_SIZE	0
 #endif
 
 #ifndef PJSIP_UDP_SO_RCVBUF_SIZE
-#   define PJSIP_UDP_SO_RCVBUF_SIZE	(24*1024*1024)
+/*#   define PJSIP_UDP_SO_RCVBUF_SIZE	(24*1024*1024)*/
+#   define PJSIP_UDP_SO_RCVBUF_SIZE	0
 #endif
 
 
@@ -550,10 +557,13 @@ static void udp_set_socket(struct udp_transport *tp,
 			   pj_sock_t sock,
 			   const pjsip_host_port *a_name)
 {
+#if PJSIP_UDP_SO_RCVBUF_SIZE || PJSIP_UDP_SO_SNDBUF_SIZE
     long sobuf_size;
     pj_status_t status;
+#endif
 
     /* Adjust socket rcvbuf size */
+#if PJSIP_UDP_SO_RCVBUF_SIZE
     sobuf_size = PJSIP_UDP_SO_RCVBUF_SIZE;
     status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_RCVBUF(),
 				&sobuf_size, sizeof(sobuf_size));
@@ -563,8 +573,10 @@ static void udp_set_socket(struct udp_transport *tp,
 	PJ_LOG(4,(THIS_FILE, "Error setting SO_RCVBUF: %s [%d]", errmsg,
 		  status));
     }
+#endif
 
     /* Adjust socket sndbuf size */
+#if PJSIP_UDP_SO_SNDBUF_SIZE
     sobuf_size = PJSIP_UDP_SO_SNDBUF_SIZE;
     status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_SNDBUF(),
 				&sobuf_size, sizeof(sobuf_size));
@@ -574,6 +586,7 @@ static void udp_set_socket(struct udp_transport *tp,
 	PJ_LOG(4,(THIS_FILE, "Error setting SO_SNDBUF: %s [%d]", errmsg,
 		  status));
     }
+#endif
 
     /* Set the socket. */
     tp->sock = sock;
