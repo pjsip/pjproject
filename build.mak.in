@@ -14,13 +14,24 @@ export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME) -lmilenage-$(TARGET_NAM
 export APP_THIRD_PARTY_LIB_FILES = $(PJ_DIR)/third_party/lib/libresample-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libsrtp-$(LIB_SUFFIX)
 
 ifneq (@ac_no_gsm_codec@,1)
+ifeq (@ac_external_gsm@,1)
+# External GSM library
+APP_THIRD_PARTY_LIBS += -lgsm
+APP_THIRD_PARTY_LIB_FILES +=
+else
 APP_THIRD_PARTY_LIBS += -lgsmcodec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libgsmcodec-$(LIB_SUFFIX)
 endif
+endif
 
 ifneq (@ac_no_speex_codec@,1)
+ifeq (@ac_external_speex@,1)
+APP_THIRD_PARTY_LIBS += -lspeex -lspeexdsp
+APP_THIRD_PARTY_LIB_FILES +=
+else
 APP_THIRD_PARTY_LIBS += -lspeex-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libspeex-$(LIB_SUFFIX)
+endif
 endif
 
 ifneq (@ac_no_ilbc_codec@,1)
@@ -33,12 +44,11 @@ APP_THIRD_PARTY_LIBS += -lg7221codec-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libg7221codec-$(LIB_SUFFIX)
 endif
 
-ifneq (x@ac_pa_path@,x)
-# We're using external PortAudio
-APP_THIRD_PARTY_LIBS += -L@ac_pa_path@/lib -lportaudio
+ifneq ($(findstring pa,@ac_pjmedia_snd@),)
+ifeq (@ac_external_pa@,1)
+APP_THIRD_PARTY_LIBS += -lportaudio
 APP_THIRD_PARTY_LIB_FILES += 
 else
-ifneq ($(findstring pa,@ac_pjmedia_snd@),)
 APP_THIRD_PARTY_LIBS += -lportaudio-$(TARGET_NAME)
 APP_THIRD_PARTY_LIB_FILES += $(PJ_DIR)/third_party/lib/libportaudio-$(LIB_SUFFIX)
 endif

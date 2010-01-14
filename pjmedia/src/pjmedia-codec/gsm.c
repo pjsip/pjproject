@@ -28,12 +28,17 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
-#include "../../third_party/gsm/inc/gsm.h"
 
 /*
  * Only build this file if PJMEDIA_HAS_GSM_CODEC != 0
  */
 #if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
+
+#if defined(PJMEDIA_EXTERNAL_GSM_CODEC) && PJMEDIA_EXTERNAL_GSM_CODEC
+#   include <gsm/gsm.h>
+#else
+#   include "../../third_party/gsm/inc/gsm.h"
+#endif
 
 /* We removed PLC in 0.6 (and re-enabled it again in 0.9!) */
 #define PLC_DISABLED	0

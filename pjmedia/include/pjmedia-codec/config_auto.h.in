@@ -42,12 +42,14 @@
 #undef PJMEDIA_HAS_GSM_CODEC
 #endif
 
+#undef PJMEDIA_EXTERNAL_GSM_CODEC
 
 /* Speex codec */
 #ifndef PJMEDIA_HAS_SPEEX_CODEC
 #undef PJMEDIA_HAS_SPEEX_CODEC
 #endif
 
+#undef PJMEDIA_EXTERNAL_SPEEX_CODEC
 
 /* iLBC codec */
 #ifndef PJMEDIA_HAS_ILBC_CODEC
