@@ -1001,8 +1001,9 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 
 
     /* Encode audio frame */
-    } else if (frame->type != PJMEDIA_FRAME_TYPE_NONE &&
-	       frame->buf != NULL) 
+    } else if ((frame->type == PJMEDIA_FRAME_TYPE_AUDIO &&
+	        frame->buf != NULL) ||
+	       (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED))
     {
 	/* Encode! */
 	status = stream->codec->op->encode( stream->codec, frame, 
