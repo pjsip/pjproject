@@ -5,8 +5,9 @@ exec_prefix=${prefix}
 libdir=${exec_prefix}/lib
 includedir=${prefix}/include
 
-Name: libpj
+Name: libpjproject
 Description: Multimedia communication library
-Version: 0.5.10.3
-Libs: -L${libdir} -lpjsua -lpjsip -lpjmedia -lpjsip-ua -lpjsip-simple -lpjsip-ua -lpjmedia-codec -lpjlib-util -lpj
-Cflags: -I${includedir}
+URL: http://www.pjsip.org
+Version: @PJ_VERSION@
+Libs: -L${libdir} @PJ_LDLIBS@
+Cflags: -I${includedir} @PJ_INSTALL_CFLAGS@

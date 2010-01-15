@@ -40,6 +40,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
 		   -L$(PJDIR)/third_party/lib \
 		   $(APP_THIRD_PARTY_LIBS) \
+		   $(APP_THIRD_PARTY_EXT) \
 		   $(CC_LDFLAGS) $(OS_LDFLAGS) $(M_LDFLAGS) $(HOST_LDFLAGS) \
 		   $(LDFLAGS) 
 
