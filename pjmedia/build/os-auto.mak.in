@@ -89,7 +89,7 @@ ifneq ($(findstring pa,$(AC_PJMEDIA_SND)),)
 ifeq (@ac_external_pa@,1)
 # External PA
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1
-#else
+else
 # Our PA in third_party
 export CFLAGS += -I$(THIRD_PARTY)/build/portaudio -I$(THIRD_PARTY)/portaudio/include -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=1
 endif
