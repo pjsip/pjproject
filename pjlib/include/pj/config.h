@@ -177,14 +177,14 @@
 #elif defined (PJ_M_M68K) && PJ_M_M68K != 0
 
     /*
-     * Motorola m64k processor, little endian
+     * Motorola m68k processor, big endian
      */
 #   undef PJ_M_M68K
 #   define PJ_M_M68K		1
 #   define PJ_M_NAME		"m68k"
 #   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	1
-#   define PJ_IS_BIG_ENDIAN	0
+#   define PJ_IS_LITTLE_ENDIAN	0
+#   define PJ_IS_BIG_ENDIAN	1
 
 
 #elif defined (PJ_M_ALPHA) || defined (__alpha__) || defined (__alpha) || \
