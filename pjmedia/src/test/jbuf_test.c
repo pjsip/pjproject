@@ -81,6 +81,10 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 	++p;
 	while (*p && isspace(*p)) ++p;
 	printf("%s", p);
+
+    } else if (*p == '#') {
+	/* Ignore comment line. */
+
     } else {
 	/* Unknown header, perhaps this is the test data */
 
@@ -122,7 +126,7 @@ static pj_bool_t process_test_data(char data, pjmedia_jbuf *jb,
 	printf("Sequence restarting, from %u to %u\n", *last_seq, *seq);
 	break;
     case 'J': /* Sequence jumps */
-	(*seq) += 5000;
+	(*seq) += 20;
 	printf("Sequence jumping, from %u to %u\n", *last_seq, *seq);
 	break;
     case 'D': /* Frame duplicated */

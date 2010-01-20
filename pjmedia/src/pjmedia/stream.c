@@ -120,6 +120,7 @@ struct pjmedia_stream
     pj_mutex_t		    *jb_mutex;
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
     char		     jb_last_frm;   /**< Last frame type from jb    */
+    unsigned		     jb_last_frm_cnt;/**< Last JB frame type counter*/
 
     pjmedia_rtcp_session     rtcp;	    /**< RTCP for incoming RTP.	    */
 
@@ -325,14 +326,22 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		/* Either PLC failed or PLC not supported/enabled */
 		pjmedia_zero_samples(p_out_samp + samples_count,
 				     samples_required - samples_count);
-		PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
+	    }
 
+	    if (frame_type != stream->jb_last_frm) {
+		/* Report changing frame type event */
+		PJ_LOG(5,(stream->port.info.name.ptr, "Frame lost%s!",
+		          (status == PJ_SUCCESS? ", recovered":"")));
+
+		stream->jb_last_frm = frame_type;
+		stream->jb_last_frm_cnt = 1;
 	    } else {
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Lost frame recovered"));
+		stream->jb_last_frm_cnt++;
 	    }
 
 	} else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
+
+	    const char *with_plc = "";
 
 	    /* Jitter buffer is empty. If this is the first "empty" state,
 	     * activate PLC to smoothen the fade-out, otherwise zero
@@ -342,9 +351,6 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	    //lost and not the subsequent ones.
 	    //if (frame_type != stream->jb_last_frm) {
 	    if (1) {
-		pjmedia_jb_state jb_state;
-		const char *with_plc = "";
-
 		/* Activate PLC to smoothen the missing frame */
 		if (stream->codec->op->recover && 
 		    stream->codec_param.setting.plc &&
@@ -369,13 +375,6 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 		    with_plc = ", plc invoked";
 		} 
-
-		/* Report the state of jitter buffer */
-		pjmedia_jbuf_get_state(stream->jb, &jb_state);
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Jitter buffer empty (prefetch=%d)%s", 
-			  jb_state.prefetch, with_plc));
-
 	    }
 
 	    if (samples_count < samples_required) {
@@ -384,18 +383,28 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		samples_count = samples_required;
 	    }
 
-	    stream->jb_last_frm = frame_type;
+	    if (stream->jb_last_frm != frame_type) {
+		pjmedia_jb_state jb_state;
+
+		/* Report changing frame type event */
+		pjmedia_jbuf_get_state(stream->jb, &jb_state);
+		PJ_LOG(5,(stream->port.info.name.ptr, 
+			  "Jitter buffer empty (prefetch=%d)%s", 
+			  jb_state.prefetch, with_plc));
+
+		stream->jb_last_frm = frame_type;
+		stream->jb_last_frm_cnt = 1;
+	    } else {
+		stream->jb_last_frm_cnt++;
+	    }
 	    break;
 
 	} else if (frame_type != PJMEDIA_JB_NORMAL_FRAME) {
 
-	    pjmedia_jb_state jb_state;
+	    const char *with_plc = "";
 
 	    /* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
 	    pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
-
-	    /* Get the state of jitter buffer */
-	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
 
 	    /* Always activate PLC when it's available.. */
 	    if (stream->codec->op->recover && 
@@ -419,25 +428,29 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		} while (samples_count < samples_required &&
 			 stream->plc_cnt < stream->max_plc_cnt);
 
-		//if (stream->jb_last_frm != frame_type) {
-		if (1) {
-		    PJ_LOG(5,(stream->port.info.name.ptr, 
-			      "Jitter buffer is bufferring with plc (prefetch=%d)",
-			      jb_state.prefetch));
-		}
-
+		with_plc = ", plc invoked";
 	    } 
 
 	    if (samples_count < samples_required) {
 		pjmedia_zero_samples(p_out_samp + samples_count,
 				     samples_required - samples_count);
 		samples_count = samples_required;
-		PJ_LOG(5,(stream->port.info.name.ptr, 
-			  "Jitter buffer is bufferring (prefetch=%d)..", 
-			  jb_state.prefetch));
 	    }
 
-	    stream->jb_last_frm = frame_type;
+	    if (stream->jb_last_frm != frame_type) {
+		pjmedia_jb_state jb_state;
+
+		/* Report changing frame type event */
+		pjmedia_jbuf_get_state(stream->jb, &jb_state);
+		PJ_LOG(5,(stream->port.info.name.ptr, 
+			  "Jitter buffer is bufferring (prefetch=%d)%s", 
+			  jb_state.prefetch, with_plc));
+
+		stream->jb_last_frm = frame_type;
+		stream->jb_last_frm_cnt = 1;
+	    } else {
+		stream->jb_last_frm_cnt++;
+	    }
 	    break;
 
 	} else {
@@ -463,9 +476,20 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		pjmedia_zero_samples(p_out_samp + samples_count, 
 				     samples_per_frame);
 	    }
-	}
 
-	stream->jb_last_frm = frame_type;
+	    if (stream->jb_last_frm != frame_type) {
+		/* Report changing frame type event */
+		PJ_LOG(5,(stream->port.info.name.ptr, 
+			  "Jitter buffer starts returning normal frames "
+			  "(after %d empty/lost)",
+			  stream->jb_last_frm_cnt, stream->jb_last_frm));
+
+		stream->jb_last_frm = frame_type;
+		stream->jb_last_frm_cnt = 1;
+	    } else {
+		stream->jb_last_frm_cnt++;
+	    }
+	}
     }
 
 
@@ -551,6 +575,20 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 		pjmedia_frame_ext_append_subframe(f, NULL, 0,
 					    (pj_uint16_t)samples_per_frame);
 	    }
+
+	    if (stream->jb_last_frm != frame_type) {
+		/* Report changing frame type event */
+		PJ_LOG(5,(stream->port.info.name.ptr, 
+			  "Jitter buffer starts returning normal frames "
+			  "(after %d empty/lost)",
+			  stream->jb_last_frm_cnt, stream->jb_last_frm));
+
+		stream->jb_last_frm = frame_type;
+		stream->jb_last_frm_cnt = 1;
+	    } else {
+		stream->jb_last_frm_cnt++;
+	    }
+
 	} else {
 	    status = (*stream->codec->op->recover)(stream->codec,
 						   0, frame);
@@ -560,38 +598,51 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	    }
 
 	    if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
-		PJ_LOG(5,(stream->port.info.name.ptr,  "Frame lost!"));
+		if (frame_type != stream->jb_last_frm) {
+		    /* Report changing frame type event */
+		    PJ_LOG(5,(stream->port.info.name.ptr, "Frame lost!"));
+
+		    stream->jb_last_frm = frame_type;
+		    stream->jb_last_frm_cnt = 1;
+		} else {
+		    stream->jb_last_frm_cnt++;
+		}
 	    } else if (frame_type == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
-		/* Jitter buffer is empty. Check if this is the first "empty" 
-		 * state.
-		 */
 		if (frame_type != stream->jb_last_frm) {
 		    pjmedia_jb_state jb_state;
 
-		    /* Report the state of jitter buffer */
+		    /* Report changing frame type event */
 		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
 		    PJ_LOG(5,(stream->port.info.name.ptr, 
 			      "Jitter buffer empty (prefetch=%d)", 
 			      jb_state.prefetch));
+
+		    stream->jb_last_frm = frame_type;
+		    stream->jb_last_frm_cnt = 1;
+		} else {
+		    stream->jb_last_frm_cnt++;
 		}
 	    } else {
-		pjmedia_jb_state jb_state;
 
 		/* It can only be PJMEDIA_JB_ZERO_PREFETCH frame */
 		pj_assert(frame_type == PJMEDIA_JB_ZERO_PREFETCH_FRAME);
 
-		/* Get the state of jitter buffer */
-		pjmedia_jbuf_get_state(stream->jb, &jb_state);
-
 		if (stream->jb_last_frm != frame_type) {
+		    pjmedia_jb_state jb_state;
+
+		    /* Report changing frame type event */
+		    pjmedia_jbuf_get_state(stream->jb, &jb_state);
 		    PJ_LOG(5,(stream->port.info.name.ptr, 
 			      "Jitter buffer is bufferring (prefetch=%d)",
 			      jb_state.prefetch));
+
+		    stream->jb_last_frm = frame_type;
+		    stream->jb_last_frm_cnt = 1;
+		} else {
+		    stream->jb_last_frm_cnt++;
 		}
 	    }
 	}
-
-	stream->jb_last_frm = frame_type;
     }
 
     return PJ_SUCCESS;
@@ -1715,6 +1766,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->tx_event_pt = info->tx_event_pt ? info->tx_event_pt : -1;
     stream->rx_event_pt = info->rx_event_pt ? info->rx_event_pt : -1;
     stream->last_dtmf = -1;
+    stream->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
 
     /* Build random RTCP CNAME. CNAME has user@host format */
     stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);

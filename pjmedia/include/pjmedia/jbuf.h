@@ -76,6 +76,7 @@ struct pjmedia_jb_state
     unsigned	max_prefetch;	    /**< Maximum allowed prefetch, in frms. */
 
     /* Status */
+    unsigned	burst;		    /**< Current burst level, in frames	    */
     unsigned	prefetch;	    /**< Current prefetch value, in frames  */
     unsigned	size;		    /**< Current buffer size, in frames.    */
 
