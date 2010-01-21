@@ -735,24 +735,32 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     pj_strdup(sub->pool, &sub->event->event_type, event);
 
 
-    /* Create subcription list: */
+    /* Check if another subscription has been registered to the dialog. In
+     * that case, just add ourselves to the subscription list, otherwise
+     * create and register a new subscription list.
+     */
+    if (pjsip_dlg_has_usage(dlg, &mod_evsub.mod)) {
+	dlgsub_head = (struct dlgsub*) dlg->mod_data[mod_evsub.mod.id];
+	dlgsub = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
+	dlgsub->sub = sub;
+	pj_list_push_back(dlgsub_head, dlgsub);
+    } else {
+	dlgsub_head = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
+	dlgsub = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
+	dlgsub->sub = sub;
 
-    dlgsub_head = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
-    dlgsub = PJ_POOL_ALLOC_T(sub->pool, struct dlgsub);
-    dlgsub->sub = sub;
-
-    pj_list_init(dlgsub_head);
-    pj_list_push_back(dlgsub_head, dlgsub);
+	pj_list_init(dlgsub_head);
+	pj_list_push_back(dlgsub_head, dlgsub);
 
 
-    /* Register as dialog usage: */
+	/* Register as dialog usage: */
 
-    status = pjsip_dlg_add_usage(dlg, &mod_evsub.mod, dlgsub_head);
-    if (status != PJ_SUCCESS) {
-	pjsip_dlg_dec_lock(dlg);
-	return status;
+	status = pjsip_dlg_add_usage(dlg, &mod_evsub.mod, dlgsub_head);
+	if (status != PJ_SUCCESS) {
+	    pjsip_dlg_dec_lock(dlg);
+	    return status;
+	}
     }
-
 
     PJ_LOG(5,(sub->obj_name, "%s subscription created, using dialog %s",
 	      (role==PJSIP_ROLE_UAC ? "UAC" : "UAS"),

@@ -894,6 +894,27 @@ PJ_DEF(pj_status_t) pjsip_dlg_dec_session( pjsip_dialog *dlg,
 }
 
 /*
+ * Check if the module is registered as a usage
+ */
+PJ_DEF(pj_bool_t) pjsip_dlg_has_usage( pjsip_dialog *dlg,
+					  pjsip_module *mod)
+{
+    unsigned index;
+    pj_bool_t found = PJ_FALSE;
+
+    pjsip_dlg_inc_lock(dlg);
+    for (index=0; index<dlg->usage_cnt; ++index) {
+    	if (dlg->usage[index] == mod) {
+    	    found = PJ_TRUE;
+    	    break;
+    	}
+    }
+    pjsip_dlg_dec_lock(dlg);
+
+    return found;
+}
+
+/*
  * Add usage.
  */
 PJ_DEF(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,

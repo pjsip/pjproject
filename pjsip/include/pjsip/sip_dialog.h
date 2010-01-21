@@ -372,6 +372,18 @@ PJ_DECL(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
 					  void *mod_data );
 
 /**
+ * Check if the specified module has been registered as usage to the dialog.
+ *
+ * @param dlg		    The dialog.
+ * @param module	    The module.
+ *
+ * @return		    PJ_TRUE if the specified module is currently
+ * 			    registered as a usage to the dialog.
+ */
+PJ_DECL(pj_bool_t) pjsip_dlg_has_usage(pjsip_dialog *dlg,
+					  pjsip_module *module);
+
+/**
  * Attach module specific data to the dialog. Application can also set 
  * the value directly by accessing dlg->mod_data[module_id].
  *
