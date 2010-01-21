@@ -48,7 +48,7 @@
  * synthetic frames, so we need to set this to a reasonably large value
  * just as precaution
  */
-#define MAX_PLC_MSEC			240
+#define MAX_PLC_MSEC			PJMEDIA_MAX_PLC_DURATION_MSEC
 
 /**
  * Media channel.
