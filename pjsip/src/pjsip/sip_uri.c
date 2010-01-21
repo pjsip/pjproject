@@ -398,8 +398,8 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
      * in comparing SIP and SIPS URIs.
      */
 
-    /* Characters other than those in the “reserved” set (see RFC 2396 [5])
-     * are equivalent to their “encoding.
+    /* Characters other than those in the reserved set (see RFC 2396 [5])
+     * are equivalent to their encoding.
      */
 
     /* An IP address that is the result of a DNS lookup of a host name 
@@ -532,6 +532,7 @@ PJ_DEF(void) pjsip_name_addr_init(pjsip_name_addr *name)
     name->vptr = &name_addr_vptr;
     name->uri = NULL;
     name->display.slen = 0;
+    name->display.ptr = NULL;
 }
 
 PJ_DEF(pjsip_name_addr*) pjsip_name_addr_create(pj_pool_t *pool)
