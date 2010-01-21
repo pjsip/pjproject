@@ -485,7 +485,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     pjsip_tx_data *tdata;
     pjsip_msg *msg, *req_msg;
     pjsip_hdr *hdr;
-    pjsip_via_hdr *via;
+    pjsip_to_hdr *to_hdr;
+    pjsip_via_hdr *top_via = NULL, *via;
     pjsip_rr_hdr *rr;
     pj_status_t status;
 
@@ -527,7 +528,13 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     /* Copy all the via headers, in order. */
     via = rdata->msg_info.via;
     while (via) {
-	pjsip_msg_add_hdr( msg, (pjsip_hdr*)pjsip_hdr_clone(tdata->pool, via));
+	pjsip_via_hdr *new_via;
+
+	new_via = (pjsip_via_hdr*)pjsip_hdr_clone(tdata->pool, via);
+	if (top_via == NULL)
+	    top_via = new_via;
+
+	pjsip_msg_add_hdr( msg, (pjsip_hdr*)new_via);
 	via = via->next;
 	if (via != (void*)&req_msg->hdr)
 	    via = (pjsip_via_hdr*) 
@@ -558,8 +565,18 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
     pjsip_msg_add_hdr( msg, hdr);
 
     /* Copy To header. */
-    hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rdata->msg_info.to);
-    pjsip_msg_add_hdr( msg, hdr);
+    to_hdr = (pjsip_to_hdr*) pjsip_hdr_clone(tdata->pool, rdata->msg_info.to);
+    pjsip_msg_add_hdr( msg, (pjsip_hdr*)to_hdr);
+
+    /* Must add To tag in the response (Section 8.2.6.2), except if this is
+     * 100 (Trying) response. Same tag must be created for the same request
+     * (e.g. same tag in provisional and final response). The easiest way
+     * to do this is to derive the tag from Via branch parameter (or to
+     * use it directly).
+     */
+    if (st_code > 100 && top_via) {
+	to_hdr->tag = top_via->branch_param;
+    }
 
     /* Copy CSeq header. */
     hdr = (pjsip_hdr*) pjsip_hdr_clone(tdata->pool, rdata->msg_info.cseq);
