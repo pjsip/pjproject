@@ -569,6 +569,10 @@ struct pjsip_tx_data
      */
     pjsip_tpselector	    tp_sel;
 
+    /**
+     * Arbitrary data attached by PJSIP modules.
+     */
+    void		    *mod_data[PJSIP_MAX_MODULE];
 };
 
 

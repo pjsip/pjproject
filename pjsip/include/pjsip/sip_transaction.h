@@ -97,7 +97,6 @@ struct pjsip_transaction
     pj_str_t			transaction_key;/**< Hash table key.        */
     pj_uint32_t			hashed_key;	/**< Key's hashed value.    */
     pj_str_t			branch;         /**< The branch Id.         */
-    pjsip_tpselector		tp_sel;		/**< Transport selector.    */
 
     /*
      * State and status.
@@ -121,6 +120,10 @@ struct pjsip_transaction
     pjsip_response_addr		res_addr;	/**< Response address.	    */
     unsigned			transport_flag;	/**< Miscelaneous flag.	    */
     pj_status_t			transport_err;	/**< Internal error code.   */
+    pjsip_tpselector		tp_sel;		/**< Transport selector.    */
+    pjsip_tx_data	       *pending_tx;	/**< Tdata which caused
+						     pending transport flag
+						     to be set on tsx.	    */
 
     /*
      * Messages and timer.

@@ -581,6 +581,15 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
  */
 static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
 {
+    if (mod_tsx_layer.mod.id == -1) {
+	/* The transaction layer has been unregistered. This could happen
+	 * if the transaction was pending on transport and the application
+	 * is shutdown. See http://trac.pjsip.org/repos/ticket/1033. In
+	 * this case just do nothing.
+	 */
+	return;
+    }
+
     pj_assert(tsx->transaction_key.slen != 0);
     //pj_assert(tsx->state != PJSIP_TSX_STATE_NULL);
 
@@ -1115,20 +1124,27 @@ static void tsx_set_state( pjsip_transaction *tsx,
     if (state == PJSIP_TSX_STATE_TERMINATED) {
 	pj_time_val timeout = {0, 0};
 
-	/* Reschedule timeout timer to destroy this transaction. */
+	/* If we're still waiting for a message to be sent.. */
 	if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
-	    tsx->transport_flag |= TSX_HAS_PENDING_DESTROY;
-	} else {
-	    /* Cancel timeout timer. */
-	    if (tsx->timeout_timer.id != 0) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-		tsx->timeout_timer.id = 0;
-	    }
-
-	    tsx->timeout_timer.id = TIMER_ACTIVE;
-	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-					&timeout);
+	    /* Disassociate ourselves from the outstanding transmit data
+	     * so that when the send callback is called we will be able
+	     * to ignore that (otherwise we'll get assertion, see
+	     * http://trac.pjsip.org/repos/ticket/1033)
+	     */
+	    tsx->pending_tx->mod_data[mod_tsx_layer.mod.id] = NULL;
+	    tsx->pending_tx = NULL;
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 	}
+
+	/* Cancel timeout timer. */
+	if (tsx->timeout_timer.id != 0) {
+	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+	    tsx->timeout_timer.id = 0;
+	}
+
+	tsx->timeout_timer.id = TIMER_ACTIVE;
+	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer,
+				    &timeout);
 
 
     } else if (state == PJSIP_TSX_STATE_DESTROYED) {
@@ -1637,6 +1653,17 @@ static void send_msg_callback( pjsip_send_state *send_state,
     pjsip_tx_data *tdata = send_state->tdata;
     struct tsx_lock_data lck;
 
+    /* Check if transaction has cancelled itself from this transmit
+     * notification (https://trac.pjsip.org/repos/ticket/1033).
+     */
+    if (tdata->mod_data[mod_tsx_layer.mod.id] == NULL) {
+	return;
+    }
+
+    /* Reset */
+    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
+    tsx->pending_tx = NULL;
+
     lock_tsx(tsx, &lck);
 
     if (sent > 0) {
@@ -1906,6 +1933,13 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
      */
     pjsip_tx_data_add_ref(tdata);
 
+    /* Also attach ourselves to the transmit data so that we'll be able
+     * to unregister ourselves from the send notification of this
+     * transmit data.
+     */
+    tdata->mod_data[mod_tsx_layer.mod.id] = tsx;
+    tsx->pending_tx = tdata;
+
     /* Begin resolving destination etc to send the message. */
     if (tdata->msg->type == PJSIP_REQUEST_MSG) {
 
@@ -1914,8 +1948,11 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 						    &send_msg_callback);
 	if (status == PJ_EPENDING)
 	    status = PJ_SUCCESS;
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
 	    pjsip_tx_data_dec_ref(tdata);
+	    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
+	    tsx->pending_tx = NULL;
+	}
 	
 	/* Check if transaction is terminated. */
 	if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TERMINATED)
@@ -1929,8 +1966,11 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 					    &send_msg_callback);
 	if (status == PJ_EPENDING)
 	    status = PJ_SUCCESS;
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
 	    pjsip_tx_data_dec_ref(tdata);
+	    tdata->mod_data[mod_tsx_layer.mod.id] = NULL;
+	    tsx->pending_tx = NULL;
+	}
 
 	/* Check if transaction is terminated. */
 	if (status==PJ_SUCCESS && tsx->state == PJSIP_TSX_STATE_TERMINATED)
