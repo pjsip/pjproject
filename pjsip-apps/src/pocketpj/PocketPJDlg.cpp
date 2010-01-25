@@ -394,6 +394,19 @@ void CPocketPJDlg::PopUp_Hide(PopUpType type)
     }
 }
 
+void CPocketPJDlg::OnIncomingCall()
+{
+    pjsua_call_info ci;
+
+    pjsua_call_get_info(0, &ci);
+
+    PopUp_Show(POPUP_CALL, "Incoming call..", ci.remote_info.ptr, "",
+	       "Answer", "Hangup", 0);
+    pjsua_call_answer(0, 180, NULL, NULL);
+    if (m_Cfg.m_AutoAnswer)
+	OnPopUpButton(1);
+}
+
 void CPocketPJDlg::OnCallState()
 {
     pjsua_call_info ci;
@@ -408,11 +421,7 @@ void CPocketPJDlg::OnCallState()
 		   "", "Hangup", 0);
 	break;
     case PJSIP_INV_STATE_INCOMING:  /**< After INVITE is received.	    */
-	PopUp_Show(POPUP_CALL, "Incoming call..", ci.remote_info.ptr, "",
-		   "Answer", "Hangup", 0);
-	pjsua_call_answer(0, 180, NULL, NULL);
-	if (m_Cfg.m_AutoAnswer)
-	    OnPopUpButton(1);
+	OnIncomingCall();
 	break;
     case PJSIP_INV_STATE_EARLY:	    /**< After response with To tag.	    */
     case PJSIP_INV_STATE_CONNECTING:/**< After 2xx is sent/received.	    */
@@ -454,6 +463,8 @@ void CPocketPJDlg::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     PJ_UNUSED_ARG(acc_id);
     PJ_UNUSED_ARG(call_id);
     PJ_UNUSED_ARG(rdata);
+
+    theDlg->OnIncomingCall();
 }
 
 void CPocketPJDlg::OnRegState()

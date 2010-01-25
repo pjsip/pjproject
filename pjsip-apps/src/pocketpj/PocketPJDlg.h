@@ -23,6 +23,7 @@ public:
 	CPocketPJDlg(CWnd* pParent = NULL);	// standard constructor
 
 	void OnPopUpButton(int btnNo);
+	void OnIncomingCall();
 
 // Dialog Data
 	//{{AFX_DATA(CPocketPJDlg)
@@ -39,6 +40,7 @@ public:
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 	//}}AFX_VIRTUAL
+
 
 // Implementation
 protected:
