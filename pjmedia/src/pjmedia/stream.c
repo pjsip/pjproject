@@ -590,9 +590,16 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	    }
 
 	} else {
-	    status = (*stream->codec->op->recover)(stream->codec,
-						   0, frame);
-	    if (status != PJ_SUCCESS) {
+
+	    /* Try to generate frame by invoking PLC (when any) */
+	    status = PJ_SUCCESS;
+	    if (stream->codec->op->recover) {
+		status = (*stream->codec->op->recover)(stream->codec,
+						       0, frame);
+	    }
+	    
+	    /* No PLC or PLC failed */
+	    if (!stream->codec->op->recover || status != PJ_SUCCESS) {
 		pjmedia_frame_ext_append_subframe(f, NULL, 0,
 					    (pj_uint16_t)samples_per_frame);
 	    }
