@@ -4483,8 +4483,7 @@ PJ_DECL(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
  * Set codec parameters.
  *
  * @param codec_id	Codec ID.
- * @param param		Codec parameter to set. Set to NULL to reset
- *			codec parameter to library default settings.
+ * @param param		Codec parameter to set.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */

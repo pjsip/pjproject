@@ -491,10 +491,6 @@ TInt CPjAudioEngine::StartRec()
 	}
 	break;
 	
-    case EAMR_NB:
-	enc_fmt_if->SetBitRate(setting_.mode);
-	break;
-	
     default:
 	break;
     }

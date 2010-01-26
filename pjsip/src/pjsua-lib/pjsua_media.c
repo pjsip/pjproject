@@ -3054,30 +3054,11 @@ PJ_DEF(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
 /*
  * Set codec parameters.
  */
-PJ_DEF(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
+PJ_DEF(pj_status_t) pjsua_codec_set_param( const pj_str_t *id,
 					   const pjmedia_codec_param *param)
 {
-    const pjmedia_codec_info *info[2];
-    pjmedia_codec_mgr *codec_mgr;
-    unsigned count = 2;
-    pj_status_t status;
-
-    codec_mgr = pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt);
-
-    status = pjmedia_codec_mgr_find_codecs_by_id(codec_mgr, codec_id,
-						 &count, info, NULL);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Codec ID should be specific, except for G.722.1 */
-    if (count > 1 && 
-	pj_strnicmp2(codec_id, "G7221/16", 8) != 0 &&
-	pj_strnicmp2(codec_id, "G7221/32", 8) != 0)
-    {
-	pj_assert(!"Codec ID is not specific");
-	return PJ_ETOOMANY;
-    }
-
-    status = pjmedia_codec_mgr_set_default_param(codec_mgr, info[0], param);
-    return status;
+    PJ_UNUSED_ARG(id);
+    PJ_UNUSED_ARG(param);
+    PJ_TODO(set_codec_param);
+    return PJ_SUCCESS;
 }

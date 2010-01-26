@@ -22,18 +22,12 @@
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/pool.h>
 #include <pj/string.h>
 
 #define THIS_FILE   "codec.c"
 
 
-
-/* Definition of default codecs parameters */
-struct pjmedia_codec_default_param
-{
-    pj_pool_t		*pool;
-    pjmedia_codec_param	*param;
-};
 
 
 /* Sort codecs in codec manager based on priorities */
@@ -43,55 +37,12 @@ static void sort_codecs(pjmedia_codec_mgr *mgr);
 /*
  * Initialize codec manager.
  */
-PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
-					    pj_pool_factory *pf)
+PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr)
 {
-    pj_status_t status;
-
-    PJ_ASSERT_RETURN(mgr && pf, PJ_EINVAL);
-
-    /* Init codec manager */
-    pj_bzero(mgr, sizeof(pjmedia_codec_mgr));
-    mgr->pf = pf;
-    pj_list_init (&mgr->factory_list);
-    mgr->codec_cnt = 0;
-
-    /* Create pool */
-    mgr->pool = pj_pool_create(mgr->pf, "codec-mgr", 256, 256, NULL);
-
-    /* Create mutex */
-    status = pj_mutex_create_recursive(mgr->pool, "codec-mgr", &mgr->mutex);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    return PJ_SUCCESS;
-}
-
-/*
- * Initialize codec manager.
- */
-PJ_DEF(pj_status_t) pjmedia_codec_mgr_destroy (pjmedia_codec_mgr *mgr)
-{
-    unsigned i;
-
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
-    /* Cleanup all pools of all codec default params */
-    for (i=0; i<mgr->codec_cnt; ++i) {
-	if (mgr->codec_desc[i].param) {
-	    pj_assert(mgr->codec_desc[i].param->pool);
-	    pj_pool_release(mgr->codec_desc[i].param->pool);
-	}
-    }
-
-    /* Destroy mutex */
-    pj_mutex_destroy(mgr->mutex);
-
-    /* Release pool */
-    pj_pool_release(mgr->pool);
-
-    /* Just for safety, set codec manager states to zero */
-    pj_bzero(mgr, sizeof(pjmedia_codec_mgr));
+    pj_list_init (&mgr->factory_list);
+    mgr->codec_cnt = 0;
 
     return PJ_SUCCESS;
 }
@@ -114,14 +65,11 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
     status = factory->op->enum_info(factory, &count, info);
     if (status != PJ_SUCCESS)
 	return status;
-
-    pj_mutex_lock(mgr->mutex);
+    
 
     /* Check codec count */
-    if (count + mgr->codec_cnt > PJ_ARRAY_SIZE(mgr->codec_desc)) {
-	pj_mutex_unlock(mgr->mutex);
+    if (count + mgr->codec_cnt > PJ_ARRAY_SIZE(mgr->codec_desc))
 	return PJ_ETOOMANY;
-    }
 
 
     /* Save the codecs */
@@ -144,7 +92,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
     /* Add factory to the list */
     pj_list_push_back(&mgr->factory_list, factory);
 
-    pj_mutex_unlock(mgr->mutex);
 
     return PJ_SUCCESS;
 }
@@ -160,13 +107,9 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
     unsigned i;
     PJ_ASSERT_RETURN(mgr && factory, PJ_EINVAL);
 
-    pj_mutex_lock(mgr->mutex);
-
     /* Factory must be registered. */
-    if (pj_list_find_node(&mgr->factory_list, factory) != factory) {
-	pj_mutex_unlock(mgr->mutex);
-	return PJ_ENOTFOUND;
-    }
+    PJ_ASSERT_RETURN(pj_list_find_node(&mgr->factory_list, factory)==factory,
+		     PJ_ENOTFOUND);
 
     /* Erase factory from the factory list */
     pj_list_erase(factory);
@@ -178,13 +121,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
     for (i=0; i<mgr->codec_cnt; ) {
 
 	if (mgr->codec_desc[i].factory == factory) {
-	    /* Release pool of codec default param */
-	    if (mgr->codec_desc[i].param) {
-		pj_assert(mgr->codec_desc[i].param->pool);
-		pj_pool_release(mgr->codec_desc[i].param->pool);
-	    }
 
-	    /* Remove the codec from array of codec descriptions */
 	    pj_array_erase(mgr->codec_desc, sizeof(mgr->codec_desc[0]), 
 			   mgr->codec_cnt, i);
 	    --mgr->codec_cnt;
@@ -194,7 +131,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_unregister_factory(
 	}
     }
 
-    pj_mutex_unlock(mgr->mutex);
 
     return PJ_SUCCESS;
 }
@@ -212,8 +148,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr,
 
     PJ_ASSERT_RETURN(mgr && count && codecs, PJ_EINVAL);
 
-    pj_mutex_lock(mgr->mutex);
-
     if (*count > mgr->codec_cnt)
 	*count = mgr->codec_cnt;
     
@@ -227,8 +161,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_enum_codecs(pjmedia_codec_mgr *mgr,
 	for (i=0; i < *count; ++i)
 	    prio[i] = mgr->codec_desc[i].prio;
     }
-
-    pj_mutex_unlock(mgr->mutex);
 
     return PJ_SUCCESS;
 }
@@ -245,18 +177,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_codec_info( pjmedia_codec_mgr *mgr,
 
     PJ_ASSERT_RETURN(mgr && p_info && pt>=0 && pt < 96, PJ_EINVAL);
 
-    pj_mutex_lock(mgr->mutex);
-
     for (i=0; i<mgr->codec_cnt; ++i) {
 	if (mgr->codec_desc[i].info.pt == pt) {
 	    *p_info = &mgr->codec_desc[i].info;
-
-	    pj_mutex_unlock(mgr->mutex);
 	    return PJ_SUCCESS;
 	}
     }
-
-    pj_mutex_unlock(mgr->mutex);
 
     return PJMEDIA_CODEC_EUNSUP;
 }
@@ -304,8 +230,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
 
     PJ_ASSERT_RETURN(mgr && codec_id && count && *count, PJ_EINVAL);
 
-    pj_mutex_lock(mgr->mutex);
-
     for (i=0; i<mgr->codec_cnt; ++i) {
 
 	if (codec_id->slen == 0 ||
@@ -325,8 +249,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_find_codecs_by_id( pjmedia_codec_mgr *mgr,
 	}
 
     }
-
-    pj_mutex_unlock(mgr->mutex);
 
     *count = found;
 
@@ -391,8 +313,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_codec_priority(
 
     PJ_ASSERT_RETURN(mgr && codec_id, PJ_EINVAL);
 
-    pj_mutex_lock(mgr->mutex);
-
     /* Update the priorities of affected codecs */
     for (i=0; i<mgr->codec_cnt; ++i) 
     {
@@ -405,15 +325,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_codec_priority(
 	}
     }
 
-    if (!found) {
-	pj_mutex_unlock(mgr->mutex);
+    if (!found)
 	return PJ_ENOTFOUND;
-    }
 
     /* Re-sort codecs */
     sort_codecs(mgr);
-
-    pj_mutex_unlock(mgr->mutex);
+ 
 
     return PJ_SUCCESS;
 }
@@ -433,25 +350,20 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_alloc_codec(pjmedia_codec_mgr *mgr,
 
     *p_codec = NULL;
 
-    pj_mutex_lock(mgr->mutex);
-
     factory = mgr->factory_list.next;
     while (factory != &mgr->factory_list) {
 
 	if ( (*factory->op->test_alloc)(factory, info) == PJ_SUCCESS ) {
 
 	    status = (*factory->op->alloc_codec)(factory, info, p_codec);
-	    if (status == PJ_SUCCESS) {
-		pj_mutex_unlock(mgr->mutex);
+	    if (status == PJ_SUCCESS)
 		return PJ_SUCCESS;
-	    }
 
 	}
 
 	factory = factory->next;
     }
 
-    pj_mutex_unlock(mgr->mutex);
 
     return PJMEDIA_CODEC_EUNSUP;
 }
@@ -466,36 +378,9 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
 {
     pjmedia_codec_factory *factory;
     pj_status_t status;
-    pjmedia_codec_id codec_id;
-    struct pjmedia_codec_desc *codec_desc = NULL;
-    unsigned i;
 
     PJ_ASSERT_RETURN(mgr && info && param, PJ_EINVAL);
 
-    if (!pjmedia_codec_info_to_id(info, (char*)&codec_id, sizeof(codec_id)))
-	return PJ_EINVAL;
-
-    pj_mutex_lock(mgr->mutex);
-
-    /* First, lookup default param in codec desc */
-    for (i=0; i < mgr->codec_cnt; ++i) {
-	if (pj_ansi_stricmp(codec_id, mgr->codec_desc[i].id) == 0) {
-	    codec_desc = &mgr->codec_desc[i];
-	    break;
-	}
-    }
-
-    /* If we found the codec and its default param is set, return it */
-    if (codec_desc && codec_desc->param) {
-	pj_assert(codec_desc->param->param);
-	pj_memcpy(param, codec_desc->param->param, 
-		  sizeof(pjmedia_codec_param));
-
-	pj_mutex_unlock(mgr->mutex);
-	return PJ_SUCCESS;
-    }
-
-    /* Otherwise query the default param from codec factory */
     factory = mgr->factory_list.next;
     while (factory != &mgr->factory_list) {
 
@@ -507,7 +392,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
 		if (param->info.max_bps < param->info.avg_bps)
 		    param->info.max_bps = param->info.avg_bps;
 
-		pj_mutex_unlock(mgr->mutex);
 		return PJ_SUCCESS;
 	    }
 
@@ -516,88 +400,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
 	factory = factory->next;
     }
 
-    pj_mutex_unlock(mgr->mutex);
-
 
     return PJMEDIA_CODEC_EUNSUP;
-}
-
-
-/*
- * Set default codec parameter.
- */
-PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_default_param( 
-					    pjmedia_codec_mgr *mgr,
-					    const pjmedia_codec_info *info,
-					    const pjmedia_codec_param *param )
-{
-    unsigned i;
-    pjmedia_codec_id codec_id;
-    pj_pool_t *pool;
-    struct pjmedia_codec_desc *codec_desc = NULL;
-    pjmedia_codec_default_param *p;
-
-    PJ_ASSERT_RETURN(mgr && info, PJ_EINVAL);
-
-    if (!pjmedia_codec_info_to_id(info, (char*)&codec_id, sizeof(codec_id)))
-	return PJ_EINVAL;
-
-    pj_mutex_lock(mgr->mutex);
-
-    /* Lookup codec desc */
-    for (i=0; i < mgr->codec_cnt; ++i) {
-	if (pj_ansi_stricmp(codec_id, mgr->codec_desc[i].id) == 0) {
-	    codec_desc = &mgr->codec_desc[i];
-	    break;
-	}
-    }
-
-    /* Codec not found */
-    if (!codec_desc) {
-	pj_mutex_unlock(mgr->mutex);
-	return PJMEDIA_CODEC_EUNSUP;
-    }
-
-    /* If codec param is previously set, release codec param pool */
-    if (codec_desc->param) {
-	pj_assert(codec_desc->param->pool);
-	pj_pool_release(codec_desc->param->pool);
-	codec_desc->param = NULL;
-    }
-
-    /* When param is set to NULL, i.e: setting default codec param to library
-     * default setting, just return PJ_SUCCESS.
-     */
-    if (NULL == param) {
-	pj_mutex_unlock(mgr->mutex);
-	return PJ_SUCCESS;
-    }
-
-    /* Instantiate and initialize codec param */
-    pool = pj_pool_create(mgr->pf, (char*)codec_id, 256, 256, NULL);
-    codec_desc->param = PJ_POOL_ZALLOC_T(pool, pjmedia_codec_default_param);
-    p = codec_desc->param;
-    p->pool = pool;
-    p->param = PJ_POOL_ZALLOC_T(pool, pjmedia_codec_param);
-
-    /* Update codec param */
-    pj_memcpy(p->param, param, sizeof(pjmedia_codec_param));
-    for (i = 0; i < param->setting.dec_fmtp.cnt; ++i) {
-	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].name, 
-		  &param->setting.dec_fmtp.param[i].name);
-	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].val, 
-		  &param->setting.dec_fmtp.param[i].val);
-    }
-    for (i = 0; i < param->setting.dec_fmtp.cnt; ++i) {
-	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].name, 
-		  &param->setting.dec_fmtp.param[i].name);
-	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].val, 
-		  &param->setting.dec_fmtp.param[i].val);
-    }
-
-    pj_mutex_unlock(mgr->mutex);
-
-    return PJ_SUCCESS;
 }
 
 
