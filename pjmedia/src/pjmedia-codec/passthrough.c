@@ -24,6 +24,7 @@
 #include <pjmedia/port.h>
 #include <pj/assert.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
@@ -696,10 +697,56 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	    }
 	}
 
+	for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	    /* mode-set, encoding mode is chosen based on local default mode 
+	     * setting:
+	     * - if local default mode is included in the mode-set, use it
+	     * - otherwise, find the closest mode to local default mode;
+	     *   if there are two closest modes, prefer to use the higher
+	     *   one, e.g: local default mode is 4, the mode-set param
+	     *   contains '2,3,5,6', then 5 will be chosen.
+	     */
+	    const pj_str_t STR_FMTP_MODE_SET = {"mode-set", 8};
+	    
+	    if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, 
+			   &STR_FMTP_MODE_SET) == 0)
+	    {
+		const char *p;
+		pj_size_t l;
+		pj_int8_t diff = 99;
+		
+		p = pj_strbuf(&attr->setting.enc_fmtp.param[i].val);
+		l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
+
+		while (l--) {
+		    if ((desc->pt==PJMEDIA_RTP_PT_AMR && *p>='0' && *p<='7') ||
+		        (desc->pt==PJMEDIA_RTP_PT_AMRWB && *p>='0' && *p<='8'))
+		    {
+			pj_int8_t tmp = (pj_int8_t)(*p - '0' - enc_mode);
+
+			if (PJ_ABS(diff) > PJ_ABS(tmp) || 
+			    (PJ_ABS(diff) == PJ_ABS(tmp) && tmp > diff))
+			{
+			    diff = tmp;
+			    if (diff == 0) break;
+			}
+		    }
+		    ++p;
+		}
+
+		if (diff == 99)
+		    return PJMEDIA_CODEC_EFAILED;
+
+		enc_mode = (pj_int8_t)(enc_mode + diff);
+
+		break;
+	    }
+	}
+
 	s = PJ_POOL_ZALLOC_T(pool, amr_settings_t);
 	codec_data->codec_setting = s;
 
-	s->enc_mode = pjmedia_codec_amr_get_mode(desc->def_bitrate);
+	s->enc_mode = enc_mode;
 	if (s->enc_mode < 0)
 	    return PJMEDIA_CODEC_EINMODE;
 

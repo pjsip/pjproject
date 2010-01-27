@@ -28,6 +28,7 @@
 
 #include <pjmedia/port.h>
 #include <pj/list.h>
+#include <pj/pool.h>
 
 PJ_BEGIN_DECL
 
@@ -244,20 +245,26 @@ typedef struct pjmedia_codec_info
 /** 
  * Structure of codec specific parameters which contains name=value pairs.
  * The codec specific parameters are to be used with SDP according to 
- * the standards (e.g: RFC 3555).
+ * the standards (e.g: RFC 3555) in SDP 'a=fmtp' attribute.
  */
 typedef struct pjmedia_codec_fmtp
 {
-    pj_uint8_t	    cnt;
+    pj_uint8_t	    cnt;	    /**< Number of parameters.		*/
     struct param {
-	pj_str_t    name;
-	pj_str_t    val;
-    } param [PJMEDIA_CODEC_MAX_FMTP_CNT];
+	pj_str_t    name;	    /**< Parameter name.		*/
+	pj_str_t    val;	    /**< Parameter value.		*/
+    } param [PJMEDIA_CODEC_MAX_FMTP_CNT]; /**< The parameters.		*/
 } pjmedia_codec_fmtp;
 
 /** 
- * Detailed codec attributes used both to configure a codec and to query
- * the capability of codec factories.
+ * Detailed codec attributes used in configuring a codec and in querying
+ * the capability of codec factories. Default attributes of any codecs could
+ * be queried using #pjmedia_codec_mgr_get_default_param() and modified
+ * using #pjmedia_codec_mgr_set_default_param().
+ *
+ * Please note that codec parameter also contains SDP specific setting, 
+ * #dec_fmtp and #enc_fmtp, which may need to be set appropriately based on
+ * the effective setting. See each codec documentation for more detail.
  */
 typedef struct pjmedia_codec_param
 {
@@ -628,6 +635,11 @@ typedef enum pjmedia_codec_priority
 typedef char pjmedia_codec_id[32];
 
 
+/**
+ * Opaque declaration of default codecs parameters.
+ */
+typedef struct pjmedia_codec_default_param pjmedia_codec_default_param;
+
 /** 
  * Codec manager maintains array of these structs for each supported
  * codec.
@@ -638,6 +650,8 @@ struct pjmedia_codec_desc
     pjmedia_codec_id	    id;		/**< Fully qualified name   */
     pjmedia_codec_priority  prio;	/**< Priority.		    */
     pjmedia_codec_factory  *factory;	/**< The factory.	    */
+    pjmedia_codec_default_param *param; /**< Default codecs 
+					     parameters.	    */
 };
 
 
@@ -648,14 +662,23 @@ struct pjmedia_codec_desc
  */
 typedef struct pjmedia_codec_mgr
 {
-    /** List of codec factories registered to codec manager. */
-    pjmedia_codec_factory	factory_list;
+    /** Media endpoint instance. */
+    pj_pool_factory		*pf;
 
-    /** Number of supported codesc. */
-    unsigned			codec_cnt;
+    /** Codec manager pool. */
+    pj_pool_t			*pool;
+
+    /** Codec manager mutex. */
+    pj_mutex_t			*mutex;
+
+    /** List of codec factories registered to codec manager. */
+    pjmedia_codec_factory	 factory_list;
+
+    /** Number of supported codecs. */
+    unsigned			 codec_cnt;
 
     /** Array of codec descriptor. */
-    struct pjmedia_codec_desc	codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
+    struct pjmedia_codec_desc	 codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
 
 } pjmedia_codec_mgr;
 
@@ -666,10 +689,23 @@ typedef struct pjmedia_codec_mgr
  * endpoint's initialization code.
  *
  * @param mgr	    Codec manager instance.
+ * @param pf	    Pool factory instance.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_mgr_init(pjmedia_codec_mgr *mgr);
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_init(pjmedia_codec_mgr *mgr, 
+					    pj_pool_factory *pf);
+
+
+/**
+ * Destroy codec manager. Normally this function is called by pjmedia
+ * endpoint's deinitialization code.
+ *
+ * @param mgr	    Codec manager instance.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_mgr_destroy(pjmedia_codec_mgr *mgr);
 
 
 /** 
@@ -820,6 +856,25 @@ PJ_DECL(pj_status_t)
 pjmedia_codec_mgr_get_default_param( pjmedia_codec_mgr *mgr,
 				     const pjmedia_codec_info *info,
 				     pjmedia_codec_param *param );
+
+
+/**
+ * Set default codec param for the specified codec info.
+ *
+ * @param mgr	    The codec manager instance. Application can get the
+ *		    instance by calling #pjmedia_endpt_get_codec_mgr().
+ * @param info	    The codec info, which default parameter's is being
+ *		    updated.
+ * @param param	    The new default codec parameter. Set to NULL to reset
+ *		    codec parameter to library default settings.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_codec_mgr_set_default_param( pjmedia_codec_mgr *mgr,
+				     const pjmedia_codec_info *info,
+				     const pjmedia_codec_param *param );
+
 
 /**
  * Request the codec manager to allocate one instance of codec with the

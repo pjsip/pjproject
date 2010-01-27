@@ -1195,6 +1195,9 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 		  (s->enc_setting.amr_nb?"":"-WB"),
 		  s->enc_mode,
 		  codec_data->info->params.modes.bitrate));
+
+	/* Return back bitrate info to application */
+	attr->info.avg_bps = codec_data->info->params.modes.bitrate;
     }
 #endif
 
