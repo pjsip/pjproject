@@ -709,6 +709,7 @@ struct pjsip_transport
     pj_lock_t		   *lock;	    /**< Lock object.		    */
     pj_bool_t		    tracing;	    /**< Tracing enabled?	    */
     pj_bool_t		    is_shutdown;    /**< Being shutdown?	    */
+    pj_bool_t		    is_destroying;  /**< Destroy in progress?	    */
 
     /** Key for indexing this transport in hash table. */
     pjsip_transport_key	    key;

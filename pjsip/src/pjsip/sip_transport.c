@@ -816,8 +816,10 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 
     if (pj_atomic_dec_and_get(tp->ref_cnt) == 0) {
 	pj_lock_acquire(tp->tpmgr->lock);
-	/* Verify again. */
-	if (pj_atomic_get(tp->ref_cnt) == 0) {
+	/* Verify again. Do not register timer if the transport is
+	 * being destroyed.
+	 */
+	if (pj_atomic_get(tp->ref_cnt) == 0 && !tp->is_destroying) {
 	    pj_time_val delay;
 	    
 	    /* If transport is in graceful shutdown, then this is the
@@ -897,6 +899,8 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
 
     pj_lock_acquire(tp->lock);
     pj_lock_acquire(mgr->lock);
+
+    tp->is_destroying = PJ_TRUE;
 
     /*
      * Unregister timer, if any.
