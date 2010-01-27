@@ -318,6 +318,7 @@ PJ_DEF(void) pj_timer_heap_destroy( pj_timer_heap_t *ht )
 	unsigned i;
 	for (i=0; i<ht->max_size; ++i) {
 	    if (ht->entries[i]) {
+		ht->entries[i]->entry_ = NULL;
 		ht->entries[i]->Cancel();
 		delete ht->entries[i];
 		ht->entries[i] = NULL;
