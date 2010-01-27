@@ -70,6 +70,10 @@ static struct cap_info
 pjmedia_aud_dev_factory* pjmedia_pa_factory(pj_pool_factory *pf);
 #endif
 
+#if PJMEDIA_AUDIO_DEV_HAS_ALSA
+pjmedia_aud_dev_factory* pjmedia_alsa_factory(pj_pool_factory *pf);
+#endif
+
 #if PJMEDIA_AUDIO_DEV_HAS_WMME
 pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf);
 #endif
@@ -368,6 +372,9 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
     aud_subsys.dev_cnt = 0;
 
     /* Register creation functions */
+#if PJMEDIA_AUDIO_DEV_HAS_ALSA
+    aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_alsa_factory;
+#endif
 #if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_pa_factory;
 #endif

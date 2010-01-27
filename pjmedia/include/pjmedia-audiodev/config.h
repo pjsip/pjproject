@@ -59,6 +59,14 @@ PJ_BEGIN_DECL
 
 
 /**
+ * This setting controls whether native ALSA support should be included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_ALSA
+#   define PJMEDIA_AUDIO_DEV_HAS_ALSA		0
+#endif
+
+
+/**
  * This setting controls whether WMME support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WMME
