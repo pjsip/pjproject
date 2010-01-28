@@ -214,6 +214,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 
     endpt->pf = NULL;
 
+    pjmedia_codec_mgr_destroy(&endpt->codec_mgr);
     pjmedia_aud_subsys_shutdown();
     pj_pool_release (endpt->pool);
 
