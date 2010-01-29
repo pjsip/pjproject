@@ -33,14 +33,43 @@
  * @brief Implementation of Speex codecs (narrow/wide/ultrawide-band).
  * @{
  *
- * This section describes functions to register and register speex codec
+ * This section describes functions to initialize and register speex codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ *
+ * The Speex codec uses multiple bit rates, and supports ultra-wideband 
+ * (32 kHz sampling rate), wideband (16 kHz sampling rate) and narrowband 
+ * (telephone quality, 8 kHz sampling rate)
  *
  * By default, the speex codec factory registers three Speex codecs:
  * "speex/8000" narrowband codec, "speex/16000" wideband codec, and 
  * "speex/32000" ultra-wideband codec. This behavior can be changed by
  * specifying #pjmedia_speex_options flags during initialization.
+ *
+ *
+ * \section codec_setting Codec Settings
+ *
+ * \subsection general_setting General Settings
+ *
+ * General codec settings for this codec such as VAD and PLC can be 
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * Please see the documentation of #pjmedia_codec_param for more info.
+ *
+ * \subsection specific_setting Codec Specific Settings
+ *
+ * The following settings are applicable for this codec.
+ *
+ * \subsubsection quality_vs_complexity Quality vs Complexity
+ *
+ * The Speex codec quality versus computational complexity and bandwidth
+ * requirement can be adjusted by modifying the quality and complexity
+ * setting, by calling #pjmedia_codec_speex_set_param(). The RFC 5574
+ * Section 5 shows the relationship between quality setting and the
+ * resulting bitrate.
+ *
+ * The default setting of quality is specified in 
+ * #PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY. And the default setting of
+ * complexity is specified in #PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY.
  */
 
 PJ_BEGIN_DECL

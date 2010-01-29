@@ -28,13 +28,32 @@
 #include <pjmedia-codec/types.h>
 
 /**
- * @defgroup PJMED_G711 G711 G.711 Codec
+ * @defgroup PJMED_G711 G.711 Codec
  * @ingroup PJMEDIA_CODEC_CODECS
  * @brief Standard G.711/PCMA and PCMU codec.
  * @{
- * This section describes functions to register and register G.711 codec
+ *
+ * This section describes functions to initialize and register G.711 codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ *
+ * The G.711 is an ultra low complexity codecs and in trade-off it results
+ * in high bitrate, i.e: 64kbps for 16-bit PCM with sampling rate 8000Hz.
+ *
+ * The factory contains two main compression algorithms, PCMU/u-Law and 
+ * PCMA/A-Law.
+ *
+ * \section codec_setting Codec Settings
+ *
+ * \subsection general_setting General Settings
+ *
+ * General codec settings for this codec such as VAD and PLC can be 
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * Please see the documentation of #pjmedia_codec_param for more info.
+ *
+ * \subsection specific_setting Codec Specific Settings
+ *
+ * Currently none.
  */
 
 PJ_BEGIN_DECL

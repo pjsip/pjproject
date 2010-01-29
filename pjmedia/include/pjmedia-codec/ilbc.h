@@ -33,9 +33,52 @@
  * @brief Implementation of iLBC Codec
  * @{
  *
- * This section describes functions to register and register iLBC codec
+ * This section describes functions to initialize and register iLBC codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ *
+ * The iLBC codec is developed by Global IP Solutions (GIPS), formerly 
+ * Global IP Sound. The iLBC offers low bitrate and graceful audio quality 
+ * degradation on frame losses.
+ *
+ * The iLBC codec supports 16-bit PCM audio signal with sampling rate of 
+ * 8000Hz operating at two modes: 20ms and 30ms frame length modes, resulting
+ * in bitrates of 15.2kbps for 20ms mode and 13.33kbps for 30ms mode.
+ *
+ *
+ * \section codec_setting Codec Settings
+ *
+ * \subsection general_setting General Settings
+ *
+ * General codec settings for this codec such as VAD and PLC can be 
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * Please see the documentation of #pjmedia_codec_param for more info.
+ *
+ * \subsection specific_setting Codec Specific Settings
+ *
+ * The following settings are applicable for this codec.
+ *
+ * \subsubsection mode Mode
+ *
+ * The default mode should be set upon initialization, see
+ * #pjmedia_codec_ilbc_init(). After the codec is initialized, the default
+ * mode can be modified using #pjmedia_codec_mgr_set_default_param().
+ *
+ * In #pjmedia_codec_param, iLBC mode can be set by specifying SDP
+ * format parameter "mode" in the SDP "a=fmtp" attribute for decoding
+ * direction. Valid values are "20" and "30" (for 20ms and 30ms mode 
+ * respectively).
+ *
+ * Here is an example to set up #pjmedia_codec_param to use mode 20ms:
+ *  \code
+    pjmedia_codec_param param;
+    ...
+    // setting iLBC mode in SDP
+    param.setting.dec_fmtp.cnt = 1;
+    param.setting.dec_fmtp.param[0].name = pj_str("mode");
+    param.setting.dec_fmtp.param[0].val  = pj_str("20");
+    ...
+ \endcode
  */
 
 PJ_BEGIN_DECL

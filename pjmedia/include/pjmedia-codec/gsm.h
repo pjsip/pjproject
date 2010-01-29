@@ -33,9 +33,24 @@
  * @brief Implementation of GSM FR based on GSM 06.10 library
  * @{
  *
- * This section describes functions to register and register GSM codec
+ * This section describes functions to initialize and register GSM codec
  * factory to the codec manager. After the codec factory has been registered,
  * application can use @ref PJMEDIA_CODEC API to manipulate the codec.
+ *
+ * The GSM codec supports 16-bit PCM with sampling rate of 8000Hz resulting
+ * in 13.2kbps bitrate.
+ *
+ * \section codec_setting Codec Settings
+ *
+ * \subsection general_setting General Settings
+ *
+ * General codec settings for this codec such as VAD and PLC can be 
+ * manipulated through the <tt>setting</tt> field in #pjmedia_codec_param. 
+ * Please see the documentation of #pjmedia_codec_param for more info.
+ *
+ * \subsection specific_setting Codec Specific Settings
+ *
+ * Currently none.
  */
 
 PJ_BEGIN_DECL
