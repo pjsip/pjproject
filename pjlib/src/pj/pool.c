@@ -31,7 +31,8 @@
 #  include <pj/pool_i.h>
 #endif
 
-#define LOG(expr)   PJ_LOG(6,expr)
+#define LOG(expr)   			PJ_LOG(6,expr)
+#define ALIGN_PTR(PTR,ALIGNMENT)	(PTR + (-(long)(PTR) & (ALIGNMENT-1)))
 
 PJ_DEF_DATA(int) PJ_NO_MEMORY_EXCEPTION;
 
@@ -71,9 +72,7 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
     block->end = ((unsigned char*)block) + size;
 
     /* Set the start pointer, aligning it as needed */
-    block->cur = (unsigned char*)
-                 (((unsigned long)block->buf + PJ_POOL_ALIGNMENT - 1) & 
-                  ~(PJ_POOL_ALIGNMENT - 1));
+    block->cur = ALIGN_PTR(block->buf, PJ_POOL_ALIGNMENT);
 
     /* Insert in the front of the list. */
     pj_list_insert_after(&pool->block_list, block);
@@ -216,9 +215,7 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
     block->end = buffer + initial_size;
 
     /* Set the start pointer, aligning it as needed */
-    block->cur = (unsigned char*)
-                 (((unsigned long)block->buf + PJ_POOL_ALIGNMENT - 1) &
-                  ~(PJ_POOL_ALIGNMENT - 1));
+    block->cur = ALIGN_PTR(block->buf, PJ_POOL_ALIGNMENT);
 
     pj_list_insert_after(&pool->block_list, block);
 
@@ -262,9 +259,7 @@ static void reset_pool(pj_pool_t *pool)
     block = pool->block_list.next;
 
     /* Set the start pointer, aligning it as needed */
-    block->cur = (unsigned char*)
-                 (((unsigned long)block->buf + PJ_POOL_ALIGNMENT - 1) &
-                  ~(PJ_POOL_ALIGNMENT - 1));
+    block->cur = ALIGN_PTR(block->buf, PJ_POOL_ALIGNMENT);
 
     pool->capacity = block->end - (unsigned char*)pool;
 }
