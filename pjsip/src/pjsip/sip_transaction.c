@@ -1131,8 +1131,10 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	     * to ignore that (otherwise we'll get assertion, see
 	     * http://trac.pjsip.org/repos/ticket/1033)
 	     */
-	    tsx->pending_tx->mod_data[mod_tsx_layer.mod.id] = NULL;
-	    tsx->pending_tx = NULL;
+	    if (tsx->pending_tx) {
+		tsx->pending_tx->mod_data[mod_tsx_layer.mod.id] = NULL;
+		tsx->pending_tx = NULL;
+	    }
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 	}
 
