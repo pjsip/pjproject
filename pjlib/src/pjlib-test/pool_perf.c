@@ -127,8 +127,12 @@ int pool_perf_test()
 
     /* Initialize size of chunks to allocate in for the test. */
     for (i=0; i<COUNT; ++i) {
+	unsigned aligned_size;
 	sizes[i] = MIN_SIZE + (pj_rand() % MAX_SIZE);
-	total_size += sizes[i];
+	aligned_size = sizes[i];
+	if (aligned_size & (PJ_POOL_ALIGNMENT-1))
+	    aligned_size = ((aligned_size + PJ_POOL_ALIGNMENT - 1)) & ~(PJ_POOL_ALIGNMENT - 1);
+	total_size += aligned_size;
     }
 
     /* Add some more for pool admin area */

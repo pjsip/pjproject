@@ -212,8 +212,14 @@ PJ_DEF(pj_pool_t*) pj_pool_create_int( pj_pool_factory *f, const char *name,
 
     /* Create the first block from the memory. */
     block = (pj_pool_block*) (buffer + sizeof(*pool));
-    block->cur = block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
+    block->buf = ((unsigned char*)block) + sizeof(pj_pool_block);
     block->end = buffer + initial_size;
+
+    /* Set the start pointer, aligning it as needed */
+    block->cur = (unsigned char*)
+                 (((unsigned long)block->buf + PJ_POOL_ALIGNMENT - 1) &
+                  ~(PJ_POOL_ALIGNMENT - 1));
+
     pj_list_insert_after(&pool->block_list, block);
 
     pj_pool_init_int(pool, name, increment_size, callback);
@@ -254,7 +260,12 @@ static void reset_pool(pj_pool_t *pool)
     }
 
     block = pool->block_list.next;
-    block->cur = block->buf;
+
+    /* Set the start pointer, aligning it as needed */
+    block->cur = (unsigned char*)
+                 (((unsigned long)block->buf + PJ_POOL_ALIGNMENT - 1) &
+                  ~(PJ_POOL_ALIGNMENT - 1));
+
     pool->capacity = block->end - (unsigned char*)pool;
 }
 
