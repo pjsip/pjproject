@@ -118,9 +118,13 @@ static int
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
-    Yend = Ystart + (unsigned)(nx * pFactor);
+    Yend = Ystart + (unsigned)(nx * pFactor + 0.5);
     endTime = time + (1<<Np)*(RES_WORD)nx;
-    while (time < endTime)
+    
+    // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
+    // so it may cause resample write pass the output buffer (Y >= Yend).
+    // while (time < endTime)
+    while (Y < Yend)
     {
 	iconst = (time) & Pmask;
 	xp = &X[(time)>>Np];      /* Ptr to current input sample */
@@ -257,7 +261,7 @@ static int SrcUp(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
     dtb = dt*(1<<Np) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
-    Yend = Ystart + (unsigned)(nx * pFactor);
+    Yend = Ystart + (unsigned)(nx * pFactor + 0.5);
     endTime = time + (1<<Np)*(RES_WORD)nx;
 
     // Integer round down in dtb calculation may cause (endTime % dtb > 0), 
@@ -305,7 +309,7 @@ static int SrcUD(const RES_HWORD X[], RES_HWORD Y[], double pFactor,
     dhb = dh*(1<<Na) + 0.5;     /* Fixed-point representation */
     
     Ystart = Y;
-    Yend = Ystart + (unsigned)(nx * pFactor);
+    Yend = Ystart + (unsigned)(nx * pFactor + 0.5);
     endTime = time + (1<<Np)*(RES_WORD)nx;
 
     // Integer round down in dtb calculation may cause (endTime % dtb > 0), 

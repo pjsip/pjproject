@@ -372,7 +372,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 	//conf_port->rx_buf_cap = (unsigned)(conf_port->samples_per_frame +
 	//				   conf->samples_per_frame * 
 	//				   conf_port->clock_rate * 1.0 /
-	//				   conf->clock_rate);
+	//				   conf->clock_rate + 0.5);
 	conf_port->rx_buf_cap = conf_port->clock_rate * buff_ptime / 1000;
 	if (conf_port->channel_count > conf->channel_count)
 	    conf_port->rx_buf_cap *= conf_port->channel_count;
@@ -1437,7 +1437,7 @@ static pj_status_t read_port( pjmedia_conf *conf,
 	 */
 
 	samples_req = (unsigned) (count * 1.0 * 
-		      cport->clock_rate / conf->clock_rate);
+		      cport->clock_rate / conf->clock_rate + 0.5);
 
 	while (cport->rx_buf_count < samples_req) {
 
@@ -1509,7 +1509,7 @@ static pj_status_t read_port( pjmedia_conf *conf,
 	    pjmedia_resample_run( cport->rx_resample,cport->rx_buf, frame);
 
 	    src_count = (unsigned)(count * 1.0 * cport->clock_rate / 
-				   conf->clock_rate);
+				   conf->clock_rate + 0.5);
 	    cport->rx_buf_count -= src_count;
 	    if (cport->rx_buf_count) {
 		pjmedia_move_samples(cport->rx_buf, cport->rx_buf+src_count,
@@ -1693,7 +1693,7 @@ static pj_status_t write_port(pjmedia_conf *conf, struct conf_port *cport,
 	pjmedia_resample_run( cport->tx_resample, buf, 
 			      cport->tx_buf + cport->tx_buf_count );
 	dst_count = (unsigned)(conf->samples_per_frame * 1.0 *
-			       cport->clock_rate / conf->clock_rate);
+			       cport->clock_rate / conf->clock_rate + 0.5);
     } else {
 	/* Same clock rate.
 	 * Just copy the samples to tx_buffer.

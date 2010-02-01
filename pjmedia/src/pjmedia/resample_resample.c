@@ -123,7 +123,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_create( pj_pool_t *pool,
 
 	/* Allocate temporary output buffer */
 	size = (unsigned) (resample->frame_size * sizeof(pj_int16_t) * 
-			   resample->factor / channel_count);
+			   resample->factor / channel_count + 0.5);
 	resample->tmp_buffer = (pj_int16_t*) pj_pool_alloc(pool, size);
 	PJ_ASSERT_RETURN(resample->tmp_buffer, PJ_ENOMEM);
     }
@@ -245,7 +245,7 @@ PJ_DEF(void) pjmedia_resample_run( pjmedia_resample *resample,
 	    unsigned mono_frm_sz_out;
     	
 	    mono_frm_sz_in  = resample->frame_size / resample->channel_cnt;
-	    mono_frm_sz_out = (unsigned)(mono_frm_sz_in * resample->factor);
+	    mono_frm_sz_out = (unsigned)(mono_frm_sz_in * resample->factor + 0.5);
 
 	    /* Deinterleave input */
 	    dst_buf = resample->in_buffer[i] + resample->xoff*2;
