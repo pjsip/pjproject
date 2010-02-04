@@ -357,8 +357,34 @@
 
 //#define PJ_STATUS_FROM_STUN_CODE(code)	(PJLIB_UTIL_ERRNO_START+code)
 
-
-
+/************************************************************
+ * HTTP Client ERROR
+ ***********************************************************/
+/**
+ * @hideinitializer
+ * Invalid URL format
+ */
+#define PJLIB_UTIL_EHTTPINURL	    (PJLIB_UTIL_ERRNO_START+151)/* 320151 */
+/**
+ * @hideinitializer
+ * Invalid port number
+ */
+#define PJLIB_UTIL_EHTTPINPORT	    (PJLIB_UTIL_ERRNO_START+152)/* 320152 */
+/**
+ * @hideinitializer
+ * Incomplete headers received
+ */
+#define PJLIB_UTIL_EHTTPINCHDR	    (PJLIB_UTIL_ERRNO_START+153)/* 320153 */
+/**
+ * @hideinitializer
+ * Insufficient buffer
+ */
+#define PJLIB_UTIL_EHTTPINSBUF	    (PJLIB_UTIL_ERRNO_START+154)/* 320154 */
+/**
+ * @hideinitializer
+ * Connection lost
+ */
+#define PJLIB_UTIL_EHTTPLOST	    (PJLIB_UTIL_ERRNO_START+155)/* 320155 */
 
 /**
  * @}

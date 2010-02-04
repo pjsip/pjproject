@@ -16,6 +16,7 @@ BINDIR := ../bin/samples/$(TARGET_NAME)
 SAMPLES := auddemo \
 	   confsample \
 	   encdec \
+	   httpdemo \
 	   icedemo \
 	   jbsim \
 	   latency \

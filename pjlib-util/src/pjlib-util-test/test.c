@@ -85,6 +85,10 @@ static int test_inner(void)
     DO_TEST(resolver_test());
 #endif
 
+#if INCLUDE_HTTP_CLIENT_TEST
+    DO_TEST(http_client_test());
+#endif
+
 on_return:
     return rc;
 }

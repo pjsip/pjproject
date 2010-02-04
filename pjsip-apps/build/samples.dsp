@@ -110,6 +110,10 @@ SOURCE=..\src\samples\footprint.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\samples\httpdemo.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\samples\icedemo.c
 # End Source File
 # Begin Source File

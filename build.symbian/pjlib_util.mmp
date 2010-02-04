@@ -40,6 +40,7 @@ SOURCE	errno.c
 SOURCE	getopt.c
 SOURCE	hmac_md5.c
 SOURCE	hmac_sha1.c
+SOURCE	http_client.c
 SOURCE	md5.c
 SOURCE	pcap.c
 SOURCE	resolver_wrap.cpp
@@ -61,6 +62,7 @@ SOURCE	xml_wrap.cpp
 //DOCUMENT pjlib-util\\getopt.h
 //DOCUMENT pjlib-util\\hmac_md5.h
 //DOCUMENT pjlib-util\hmac_sha1.h
+//DOCUMENT pjlib-util\http_client.h
 //DOCUMENT pjlib-util\md5.h
 //DOCUMENT pjlib-util\resolver.h
 //DOCUMENT pjlib-util\scanner.h

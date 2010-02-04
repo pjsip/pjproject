@@ -62,6 +62,7 @@ SAMPLES = $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
 	  $(BINDIR)\encdec.exe \
+	  $(BINDIR)\httpdemo.exe \
 	  $(BINDIR)\icedemo.exe \
 	  $(BINDIR)\jbsim.exe \
 	  $(BINDIR)\latency.exe \

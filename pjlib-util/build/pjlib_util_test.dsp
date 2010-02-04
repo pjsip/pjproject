@@ -91,6 +91,10 @@ SOURCE="..\src\pjlib-util-test\encryption.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util-test\http_client.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util-test\main.c"
 # End Source File
 # Begin Source File

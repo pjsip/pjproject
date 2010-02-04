@@ -125,6 +125,10 @@ SOURCE="..\src\pjlib-util\hmac_sha1.c"
 # End Source File
 # Begin Source File
 
+SOURCE="..\src\pjlib-util\http_client.c"
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\pjlib-util\md5.c"
 # End Source File
 # Begin Source File
@@ -216,6 +220,10 @@ SOURCE="..\include\pjlib-util\hmac_md5.h"
 # Begin Source File
 
 SOURCE="..\include\pjlib-util\hmac_sha1.h"
+# End Source File
+# Begin Source File
+
+SOURCE="..\include\pjlib-util\http_client.h"
 # End Source File
 # Begin Source File
 

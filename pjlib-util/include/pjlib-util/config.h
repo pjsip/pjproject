@@ -255,6 +255,17 @@
 #endif
 
 
+/* **************************************************************************
+ * HTTP Client configuration
+ */
+/**
+ * Timeout value for HTTP request operation. The value is in ms.
+ * Default: 60000ms
+ */
+#ifndef PJ_HTTP_DEFAULT_TIMEOUT
+#   define PJ_HTTP_DEFAULT_TIMEOUT         (60000)
+#endif
+
 /**
  * @}
  */

@@ -60,4 +60,7 @@
 /* PCAP */
 #include <pjlib-util/pcap.h>
 
+/* HTTP */
+#include <pjlib-util/http_client.h>
+
 #endif	/* __PJLIB_UTIL_H__ */

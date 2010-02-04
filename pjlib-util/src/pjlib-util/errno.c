@@ -88,6 +88,13 @@ static const struct
     PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNOREALM,	"Missing STUN REALM attribute"),
     PJ_BUILD_ERR( PJLIB_UTIL_ESTUNNONCE,	"Missing/stale STUN NONCE attribute value"),
     PJ_BUILD_ERR( PJLIB_UTIL_ESTUNTSXFAILED,	"STUN transaction terminates with failure"),
+
+    /* HTTP Client */
+    PJ_BUILD_ERR( PJLIB_UTIL_EHTTPINURL,	"Invalid URL format"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EHTTPINPORT,	"Invalid URL port number"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EHTTPINCHDR,	"Incomplete response header received"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EHTTPINSBUF,	"Insufficient buffer"),
+    PJ_BUILD_ERR( PJLIB_UTIL_EHTTPLOST,	        "Connection lost"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 
