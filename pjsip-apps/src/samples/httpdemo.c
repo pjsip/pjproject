@@ -43,6 +43,18 @@ static FILE *f = NULL;
 //#define VERBOSE
 #define THIS_FILE	    "http_demo"
 
+static void on_response(pj_http_req *http_req, const pj_http_resp *resp)
+{
+    PJ_LOG(3,(THIS_FILE, "%.*s %d %.*s", (int)resp->version.slen, resp->version.ptr,
+				           resp->status_code,
+				           (int)resp->reason.slen, resp->reason.ptr));
+}
+
+static void on_send_data(pj_http_req *http_req, void **data, pj_size_t *size)
+{
+
+}
+
 static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
 {
     PJ_UNUSED_ARG(hreq);
@@ -51,7 +63,7 @@ static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
         fwrite(data, 1, size, f);
         fflush(f);
 #ifdef VERBOSE
-        PJ_LOG(3, (THIS_FILE, "\nData received: %d bytes\n", size));
+        PJ_LOG(3, (THIS_FILE, "Data received: %d bytes", size));
         printf("%.*s\n", (int)size, (char *)data);
 #endif
     }
@@ -62,17 +74,11 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
 {
     PJ_UNUSED_ARG(hreq);
 
-    if (status == PJ_ECANCELLED) {
-        PJ_LOG(3, (THIS_FILE, "Request cancelled\n"));
-        return;
-    } else if (status == PJ_ETIMEDOUT) {
-        PJ_LOG(3, (THIS_FILE, "Request timed out!\n"));
-        return;
-    } else if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-        PJ_LOG(3, (THIS_FILE, "Error %d\n", status));
+    if (status != PJ_SUCCESS) {
+        PJ_PERROR(1, (THIS_FILE, status, "HTTP request completed with error"));
         return;
     }
-    PJ_LOG(3, (THIS_FILE, "\nData completed: %d bytes\n", resp->size));
+    PJ_LOG(3, (THIS_FILE, "Data completed: %d bytes", resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)resp->size, (char *)resp->data);
@@ -89,6 +95,8 @@ pj_status_t getURL(const char *curl)
     pj_bzero(&hcb, sizeof(hcb));
     hcb.on_complete = &on_complete;
     hcb.on_data_read = &on_data_read;
+    hcb.on_send_data = &on_send_data;
+    hcb.on_response = &on_response;
 
     /* Create pool, timer, and ioqueue */
     pool = pj_pool_create(mem, NULL, 8192, 4096, NULL);
@@ -127,25 +135,32 @@ int main(int argc, char *argv[])
     pj_caching_pool cp;
     pj_status_t status;
 
-    if (argc != 3) {
-	puts("Usage: httpdemo URL filename");
+    if (argc < 2 || argc > 3) {
+	puts("Usage: httpdemo URL [output-filename]");
 	return 1;
     }
 
-    pj_log_set_level(3);
+    pj_log_set_level(5);
 
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
     mem = &cp.factory;
     pjlib_util_init();
 
-    f = fopen(argv[2], "wb");
+    if (argc > 2)
+	f = fopen(argv[2], "wb");
+    else
+	f = stdout;
+
     status = getURL(argv[1]);
     if (status != PJ_SUCCESS) {
         PJ_PERROR(1, (THIS_FILE, status, "Error"));
     }
-    fclose(f);
 
+    if (f != stdout)
+	fclose(f);
+
+    pj_caching_pool_destroy(&cp);
     pj_shutdown();
     return 0;
 }

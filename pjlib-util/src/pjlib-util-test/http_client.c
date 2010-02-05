@@ -133,7 +133,7 @@ static void on_data_read(pj_http_req *hreq, void *data, pj_size_t size)
     PJ_UNUSED_ARG(hreq);
     PJ_UNUSED_ARG(data);
 
-    PJ_LOG(5, (THIS_FILE, "\nData received: %d bytes\n", size));
+    PJ_LOG(5, (THIS_FILE, "\nData received: %d bytes", size));
     if (size > 0) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)size, (char *)data);
@@ -160,7 +160,7 @@ static void on_send_data(pj_http_req *hreq,
     *data = sdata;
     *size = sendsz;
 
-    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %d out of %d bytes\n", 
+    PJ_LOG(5, (THIS_FILE, "\nSending data progress: %d out of %d bytes", 
            send_size, total_size));
 }
 
@@ -171,16 +171,16 @@ static void on_complete(pj_http_req *hreq, pj_status_t status,
     PJ_UNUSED_ARG(hreq);
 
     if (status == PJ_ECANCELLED) {
-        PJ_LOG(5, (THIS_FILE, "Request cancelled\n"));
+        PJ_LOG(5, (THIS_FILE, "Request cancelled"));
         return;
     } else if (status == PJ_ETIMEDOUT) {
-        PJ_LOG(5, (THIS_FILE, "Request timed out!\n"));
+        PJ_LOG(5, (THIS_FILE, "Request timed out!"));
         return;
-    } else if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-        PJ_LOG(3, (THIS_FILE, "Error %d\n", status));
+    } else if (status != PJ_SUCCESS) {
+        PJ_LOG(3, (THIS_FILE, "Error %d", status));
         return;
     }
-    PJ_LOG(5, (THIS_FILE, "\nData completed: %d bytes\n", resp->size));
+    PJ_LOG(5, (THIS_FILE, "\nData completed: %d bytes", resp->size));
     if (resp->size > 0 && resp->data) {
 #ifdef VERBOSE
         printf("%.*s\n", (int)resp->size, (char *)resp->data);
@@ -197,8 +197,8 @@ static void on_response(pj_http_req *hreq, const pj_http_resp *resp)
     PJ_UNUSED_ARG(i);
 
 #ifdef VERBOSE
-    printf("%.*s, %.*s, %.*s\n", STR_PREC(resp->version),
-           STR_PREC(resp->status_code), STR_PREC(resp->reason));
+    printf("%.*s, %d, %.*s\n", STR_PREC(resp->version),
+           resp->status_code, STR_PREC(resp->reason));
     for (i = 0; i < resp->headers.count; i++) {
         printf("%.*s : %.*s\n", 
                STR_PREC(resp->headers.header[i].name),

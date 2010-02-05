@@ -217,7 +217,7 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
     } 
 
     hreq->tcp_state.current_send_size += sent;
-    TRACE_((THIS_FILE, "\nData sent: %d out of %d bytes\n", 
+    TRACE_((THIS_FILE, "\nData sent: %d out of %d bytes", 
            hreq->tcp_state.current_send_size, hreq->tcp_state.send_size));
     if (hreq->tcp_state.current_send_size == hreq->tcp_state.send_size) {
         /* Find out whether there is a request body to send. */
@@ -279,7 +279,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
 {
     pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
 
-    TRACE_((THIS_FILE, "\nData received: %d bytes\n", size));
+    TRACE_((THIS_FILE, "\nData received: %d bytes", size));
 
     if (hreq->state == ABORTING)
         return PJ_FALSE;
@@ -471,6 +471,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     char *cptr;
     void *newdata;
     pj_scanner scanner;
+    pj_str_t s;
     pj_status_t status;
 
     PJ_USE_EXCEPTION;
@@ -508,7 +509,8 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     PJ_TRY {
         pj_scan_get_until_ch(&scanner, ' ', &response->version);
         pj_scan_advance_n(&scanner, 1, PJ_FALSE);
-        pj_scan_get_until_ch(&scanner, ' ', &response->status_code);
+        pj_scan_get_until_ch(&scanner, ' ', &s);
+        response->status_code = (pj_uint16_t)pj_strtoul(&s);
         pj_scan_advance_n(&scanner, 1, PJ_FALSE);
         pj_scan_get_until_ch(&scanner, '\n', &response->reason);
         if (response->reason.ptr[response->reason.slen-1] == '\r')
@@ -908,7 +910,7 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
 
         pj_strcat2(&pkt, "\n");
         pkt.ptr[pkt.slen] = 0;
-        TRACE_((THIS_FILE, "%s\n", pkt.ptr));
+        TRACE_((THIS_FILE, "%s", pkt.ptr));
     } else {
         pkt.ptr = hreq->param.reqdata.data;
         pkt.slen = hreq->param.reqdata.size;

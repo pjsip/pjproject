@@ -133,7 +133,7 @@ typedef struct pj_http_req_param
 typedef struct pj_http_resp
 {
     pj_str_t        version;        /**< HTTP version of the server */
-    pj_str_t        status_code;    /**< Status code of the request */
+    pj_uint16_t     status_code;    /**< Status code of the request */
     pj_str_t        reason;         /**< Reason phrase */
     pj_http_headers headers;        /**< Response headers */
     /**
