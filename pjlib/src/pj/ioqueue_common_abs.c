@@ -199,7 +199,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 #if defined(PJ_HAS_TCP) && PJ_HAS_TCP!=0
     if (h->connecting) {
 	/* Completion of connect() operation */
-	pj_ssize_t bytes_transfered;
+	pj_status_t status;
 	pj_bool_t has_lock;
 
 	/* Clear operation. */
@@ -226,13 +226,13 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	     * application will get error as soon as it tries to use
 	     * the socket to send/receive.
 	     */
-	    bytes_transfered = 0;
+	      status = PJ_SUCCESS;
 	  } else {
-            bytes_transfered = value;
+	      status = PJ_STATUS_FROM_OS(value);
 	  }
  	}
 #elif defined(PJ_WIN32) && PJ_WIN32!=0
-	bytes_transfered = 0; /* success */
+	status = PJ_SUCCESS; /* success */
 #else
 	/* Excellent information in D.J. Bernstein page:
 	 * http://cr.yp.to/docs/connect.html
@@ -245,12 +245,11 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	 * of suggestions from Douglas C. Schmidt and Ken Keys.
 	 */
 	{
-	    int gp_rc;
 	    struct sockaddr_in addr;
-	    socklen_t addrlen = sizeof(addr);
+	    int addrlen = sizeof(addr);
 
-	    gp_rc = getpeername(h->fd, (struct sockaddr*)&addr, &addrlen);
-	    bytes_transfered = (gp_rc < 0) ? gp_rc : -gp_rc;
+	    status = pj_sock_getpeername(h->fd, (struct sockaddr*)&addr,
+				         &addrlen);
 	}
 #endif
 
@@ -269,7 +268,7 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 
 	/* Call callback. */
         if (h->cb.on_connect_complete && !IS_CLOSING(h))
-	    (*h->cb.on_connect_complete)(h, bytes_transfered);
+	    (*h->cb.on_connect_complete)(h, status);
 
 	/* Unlock if we still hold the lock */
 	if (has_lock) {
