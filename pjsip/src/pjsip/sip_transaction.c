@@ -1805,6 +1805,10 @@ static void send_msg_callback( pjsip_send_state *send_state,
 		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 					    &timeout_timer_val);
 	    }
+
+	    /* Put again pending tdata */
+	    tdata->mod_data[mod_tsx_layer.mod.id] = tsx;
+	    tsx->pending_tx = tdata;
 	}
     }
 
