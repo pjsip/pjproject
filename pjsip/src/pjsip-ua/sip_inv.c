@@ -244,7 +244,9 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 
 	/* Release the flip-flop pools */
 	pj_pool_release(inv->pool_prov);
+	inv->pool_prov = NULL;
 	pj_pool_release(inv->pool_active);
+	inv->pool_active = NULL;
     }
 }
 
@@ -1498,13 +1500,24 @@ static pj_status_t inv_negotiate_sdp( pjsip_inv_session *inv )
     if (mod_inv.cb.on_media_update && inv->notify)
 	(*mod_inv.cb.on_media_update)(inv, status);
 
-    /* Swap the flip-flop pool when SDP negotiation success. */
-    if (status == PJ_SUCCESS) {
-	swap_pool(&inv->pool_prov, &inv->pool_active);
-    }
+    /* Invite session may have been terminated by the application even 
+     * after a successful SDP negotiation, for example when no audio 
+     * codec is present in the offer (see ticket #1034).
+     */
+    if (inv->state != PJSIP_INV_STATE_DISCONNECTED) {
 
-    /* Reset the provisional pool regardless SDP negotiation result. */
-    pj_pool_reset(inv->pool_prov);
+	/* Swap the flip-flop pool when SDP negotiation success. */
+	if (status == PJ_SUCCESS) {
+	    swap_pool(&inv->pool_prov, &inv->pool_active);
+	}
+
+	/* Reset the provisional pool regardless SDP negotiation result. */
+	pj_pool_reset(inv->pool_prov);
+
+    } else {
+
+	status = PJSIP_ERRNO_FROM_SIP_STATUS(inv->cause);
+    }
 
     return status;
 }
