@@ -1942,16 +1942,16 @@ static int write_settings(const struct app_config *config,
 		    config->rtp_cfg.port);
     pj_strcat2(&cfg, line);
 
-    /* Add codec. */
-    for (i=0; i<config->codec_cnt; ++i) {
-	pj_ansi_sprintf(line, "--add-codec %s\n",
-		    config->codec_arg[i].ptr);
-	pj_strcat2(&cfg, line);
-    }
     /* Disable codec */
     for (i=0; i<config->codec_dis_cnt; ++i) {
 	pj_ansi_sprintf(line, "--dis-codec %s\n",
 		    config->codec_dis[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
+    /* Add codec. */
+    for (i=0; i<config->codec_cnt; ++i) {
+	pj_ansi_sprintf(line, "--add-codec %s\n",
+		    config->codec_arg[i].ptr);
 	pj_strcat2(&cfg, line);
     }
 
@@ -4643,15 +4643,15 @@ pj_status_t app_init(int argc, char *argv[])
 	    goto on_error;
     }
 
+    /* Optionally disable some codec */
+    for (i=0; i<app_config.codec_dis_cnt; ++i) {
+	pjsua_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
+    }
+
     /* Optionally set codec orders */
     for (i=0; i<app_config.codec_cnt; ++i) {
 	pjsua_codec_set_priority(&app_config.codec_arg[i],
 				 (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
-    }
-
-    /* Optionally disable some codec */
-    for (i=0; i<app_config.codec_dis_cnt; ++i) {
-	pjsua_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
     }
 
     /* Add RTP transports */
