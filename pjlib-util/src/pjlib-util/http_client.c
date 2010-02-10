@@ -948,7 +948,7 @@ static pj_status_t http_req_start_reading(pj_http_req *hreq)
     hreq->tcp_state.current_read_size = 0;
     pj_assert(hreq->buffer.ptr);
     status = pj_activesock_start_read2(hreq->asock, hreq->pool, BUF_SIZE, 
-                                       &hreq->buffer.ptr, 0);
+                                       (void**)&hreq->buffer.ptr, 0);
     if (status != PJ_SUCCESS) {
         /* Error reading */
         http_req_end_request(hreq);
