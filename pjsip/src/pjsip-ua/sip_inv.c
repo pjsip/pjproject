@@ -351,9 +351,12 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
     PJ_LOG(5,(inv->obj_name, "Received %s, sending ACK",
 	      pjsip_rx_data_get_info(rdata)));
 
-    /* Check if we have cached ACK request */
-    if (inv->last_ack && rdata->msg_info.cseq->cseq == inv->last_ack_cseq) {
-
+    /* Check if we have cached ACK request. Must not use the cached ACK
+     * if it's still marked as pending by transport (#1011)
+     */
+    if (inv->last_ack && rdata->msg_info.cseq->cseq == inv->last_ack_cseq &&
+	!inv->last_ack->is_pending)
+    {
 	pjsip_tx_data_add_ref(inv->last_ack);
 
     } else if (mod_inv.cb.on_send_ack) {
