@@ -1275,11 +1275,29 @@ pj_status_t pjsua_pres_init_acc(int acc_id)
 }
 
 
+/* Unpublish presence publication */
+void pjsua_pres_unpublish(pjsua_acc *acc)
+{
+    if (acc->publish_sess) {
+	pjsua_acc_config *acc_cfg = &acc->cfg;
+
+	acc->online_status = PJ_FALSE;
+	send_publish(acc->index, PJ_FALSE);
+	/* By ticket #364, don't destroy the session yet (let the callback
+	   destroy it)
+	if (acc->publish_sess) {
+	    pjsip_publishc_destroy(acc->publish_sess);
+	    acc->publish_sess = NULL;
+	}
+	*/
+	acc_cfg->publish_enabled = PJ_FALSE;
+    }
+}
+
 /* Terminate server subscription for the account */
 void pjsua_pres_delete_acc(int acc_id)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
-    pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
     pjsua_srv_pres *uapres;
 
     uapres = pjsua_var.acc[acc_id].pres_srv_list.next;
@@ -1314,18 +1332,7 @@ void pjsua_pres_delete_acc(int acc_id)
     pj_list_init(&acc->pres_srv_list);
 
     /* Terminate presence publication, if any */
-    if (acc->publish_sess) {
-	acc->online_status = PJ_FALSE;
-	send_publish(acc_id, PJ_FALSE);
-	/* By ticket #364, don't destroy the session yet (let the callback
-	   destroy it)
-	if (acc->publish_sess) {
-	    pjsip_publishc_destroy(acc->publish_sess);
-	    acc->publish_sess = NULL;
-	}
-	*/
-	acc_cfg->publish_enabled = PJ_FALSE;
-    }
+    pjsua_pres_unpublish(acc);
 }
 
 

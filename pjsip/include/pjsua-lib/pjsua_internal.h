@@ -444,6 +444,11 @@ pj_status_t pjsua_pres_init_acc(int acc_id);
 pj_status_t pjsua_pres_init_publish_acc(int acc_id);
 
 /**
+ *  Send un-PUBLISH
+ */
+void pjsua_pres_unpublish(pjsua_acc *acc);
+
+/**
  * Terminate server subscription for the account 
  */
 void pjsua_pres_delete_acc(int acc_id);

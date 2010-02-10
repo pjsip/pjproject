@@ -1264,6 +1264,9 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    status = PJ_EINVALIDOP;
 	    goto on_return;
 	}
+
+	pjsua_pres_unpublish(&pjsua_var.acc[acc_id]);
+
 	status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
 
