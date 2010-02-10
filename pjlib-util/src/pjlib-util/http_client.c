@@ -56,7 +56,7 @@ enum http_protocol
     PROTOCOL_HTTPS
 };
 
-static char *http_protocol_names[NUM_PROTOCOL] =
+static const char *http_protocol_names[NUM_PROTOCOL] =
 {
     "HTTP",
     "HTTPS"
@@ -75,7 +75,7 @@ enum http_method
     HTTP_DELETE
 };
 
-static char *http_method_names[3] =
+static const char *http_method_names[3] =
 {
     "GET",
     "PUT",
@@ -155,7 +155,7 @@ static pj_uint16_t get_http_default_port(const pj_str_t *protocol)
     return 0;
 }
 
-static char * get_protocol(const pj_str_t *protocol)
+static const char * get_protocol(const pj_str_t *protocol)
 {
     int i;
 
@@ -469,7 +469,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
 {
     pj_size_t i;
     char *cptr;
-    void *newdata;
+    char *newdata;
     pj_scanner scanner;
     pj_str_t s;
     pj_status_t status;
@@ -501,7 +501,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     pj_bzero(response, sizeof(response));
     response->content_length = -1;
 
-    newdata = pj_pool_alloc(pool, i);
+    newdata = (char*) pj_pool_alloc(pool, i);
     pj_memcpy(newdata, data, i);
 
     /* Parse the status-line. */
@@ -523,7 +523,7 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     PJ_END;
 
     /* Parse the response headers. */
-    size = i - 2 - (scanner.curptr - (char *)newdata);
+    size = i - 2 - (scanner.curptr - newdata);
     if (size > 0) {
         status = http_headers_parse(scanner.curptr + 1, size, 
                                     &response->headers);
@@ -604,8 +604,8 @@ PJ_DEF(void) pj_http_req_param_default(pj_http_req_param *param)
     pj_assert(param);
     pj_bzero(param, sizeof(*param));
     param->addr_family = pj_AF_INET();
-    pj_strset2(&param->method, http_method_names[HTTP_GET]);
-    pj_strset2(&param->version, HTTP_1_0);
+    pj_strset2(&param->method, (char*)http_method_names[HTTP_GET]);
+    pj_strset2(&param->version, (char*)HTTP_1_0);
     param->timeout.msec = PJ_HTTP_DEFAULT_TIMEOUT;
     pj_time_val_normalize(&param->timeout);
 }
@@ -630,9 +630,11 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
         /* Parse the protocol */
         pj_scan_get_until_ch(&scanner, ':', &s);
         if (!pj_stricmp2(&s, http_protocol_names[PROTOCOL_HTTP])) {
-            pj_strset2(&hurl->protocol, http_protocol_names[PROTOCOL_HTTP]);
+            pj_strset2(&hurl->protocol,
+        	       (char*)http_protocol_names[PROTOCOL_HTTP]);
         } else if (!pj_stricmp2(&s, http_protocol_names[PROTOCOL_HTTPS])) {
-            pj_strset2(&hurl->protocol, http_protocol_names[PROTOCOL_HTTPS]);
+            pj_strset2(&hurl->protocol,
+		       (char*)http_protocol_names[PROTOCOL_HTTPS]);
         } else {
             PJ_THROW(PJ_ENOTSUP); // unsupported protocol
         }
@@ -912,7 +914,7 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
         pkt.ptr[pkt.slen] = 0;
         TRACE_((THIS_FILE, "%s", pkt.ptr));
     } else {
-        pkt.ptr = hreq->param.reqdata.data;
+        pkt.ptr = (char*)hreq->param.reqdata.data;
         pkt.slen = hreq->param.reqdata.size;
     }
 

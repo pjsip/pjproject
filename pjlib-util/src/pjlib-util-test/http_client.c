@@ -67,7 +67,7 @@ static int server_thread(void *p)
     pj_sock_t newsock;
 
     while (!thread_quit) {
-	char *pkt = pj_pool_alloc(pool, srv->buf_size);
+	char *pkt = (char*)pj_pool_alloc(pool, srv->buf_size);
 	pj_ssize_t pkt_len;
 	int rc;
         pj_fd_set_t rset;
@@ -154,7 +154,7 @@ static void on_send_data(pj_http_req *hreq,
     }
     send_size += sendsz;
 
-    sdata = pj_pool_alloc(pool, sendsz);
+    sdata = (char*)pj_pool_alloc(pool, sendsz);
     pj_create_random_string(sdata, sendsz);
     pj_ansi_sprintf(sdata, "\nSegment #%d\n", ++counter);
     *data = sdata;
@@ -418,11 +418,23 @@ int http_client_test2()
     param.timeout.msec = 50;
 #endif
 
-    pj_http_headers_add_elmt2(&param.headers, "Accept", 
-                              "image/gif, image/x-xbitmap, image/jpeg, image/pjpeg, application/x-ms-application, application/vnd.ms-xpsdocument, application/xaml+xml, application/x-ms-xbap, application/x-shockwave-flash, application/vnd.ms-excel, application/vnd.ms-powerpoint, application/msword, */*");
-    pj_http_headers_add_elmt2(&param.headers, "Accept-Language", "en-sg");
-    pj_http_headers_add_elmt2(&param.headers, "User-Agent", 
-                              "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; SLCC1; .NET CLR 2.0.50727; .NET CLR 3.0.04506)");
+    pj_http_headers_add_elmt2(&param.headers, (char*)"Accept",
+			     (char*)"image/gif, image/x-xbitmap, image/jpeg, "
+				    "image/pjpeg, application/x-ms-application,"
+				    " application/vnd.ms-xpsdocument, "
+			            "application/xaml+xml, "
+			            "application/x-ms-xbap, "
+			            "application/x-shockwave-flash, "
+			            "application/vnd.ms-excel, "
+			            "application/vnd.ms-powerpoint, "
+			            "application/msword, */*");
+    pj_http_headers_add_elmt2(&param.headers, (char*)"Accept-Language",
+	                      (char*)"en-sg");
+    pj_http_headers_add_elmt2(&param.headers, (char*)"User-Agent",
+                              (char*)"Mozilla/4.0 (compatible; MSIE 7.0; "
+                                     "Windows NT 6.0; SLCC1; "
+                                     ".NET CLR 2.0.50727; "
+                                     ".NET CLR 3.0.04506)");
     if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
                            &param, &hcb, &http_req))
         return -43;
@@ -522,8 +534,8 @@ int http_client_test_put1()
 #endif
 
     pj_http_req_param_default(&param);
-    pj_strset2(&param.method, "PUT");
-    data = pj_pool_alloc(pool, length);
+    pj_strset2(&param.method, (char*)"PUT");
+    data = (char*)pj_pool_alloc(pool, length);
     pj_create_random_string(data, length);
     pj_ansi_sprintf(data, "PUT test\n");
     param.reqdata.data = data;
@@ -612,7 +624,7 @@ int http_client_test_put2()
 #endif
 
     pj_http_req_param_default(&param);
-    pj_strset2(&param.method, "PUT");
+    pj_strset2(&param.method, (char*)"PUT");
     total_size = 15383;
     send_size = 0;
     param.reqdata.total_size = total_size;
@@ -693,7 +705,7 @@ int http_client_test_delete()
 #endif
 
     pj_http_req_param_default(&param);
-    pj_strset2(&param.method, "DELETE");
+    pj_strset2(&param.method, (char*)"DELETE");
     if (pj_http_req_create(pool, &url, timer_heap, ioqueue, 
                            &param, &hcb, &http_req))
         return -63;
