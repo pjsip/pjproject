@@ -703,7 +703,9 @@ enable_speex_codec
 enable_ilbc_codec
 enable_libsamplerate
 enable_ipp
-enable_ipp_samples
+with_ipp
+with_ipp_samples
+with_ipp_arch
 enable_ssl
 '
       ac_precious_vars='build_alias
@@ -1356,8 +1358,6 @@ Optional Features:
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
                           --with-ipp-samples options
-  --with-ipp=DIR          Specify the Intel IPP location
-  --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --disable-ssl           Exclude SSL support the build (default: autodetect)
 
 
@@ -1379,6 +1379,10 @@ Optional Packages:
                           set, make sure that PortAudio is accessible to use
                           (hint: use CFLAGS and LDFLAGS env var to set the
                           include/lib paths)
+  --with-ipp=DIR          Specify the Intel IPP location
+  --with-ipp-samples=DIR  Specify the Intel IPP samples location
+  --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
+                          "em64t"
 
 Some influential environment variables:
   CC          C compiler command
@@ -5637,20 +5641,32 @@ else
 fi
 
 
-# Check whether --enable-ipp was given.
-if test "${enable_ipp+set}" = set; then :
-  enableval=$enable_ipp;
+
+# Check whether --with-ipp was given.
+if test "${with_ipp+set}" = set; then :
+  withval=$with_ipp;
 else
   with_ipp=no
 
 fi
 
 
-# Check whether --enable-ipp-samples was given.
-if test "${enable_ipp_samples+set}" = set; then :
-  enableval=$enable_ipp_samples;
+
+# Check whether --with-ipp-samples was given.
+if test "${with_ipp_samples+set}" = set; then :
+  withval=$with_ipp_samples;
 else
   with_ipp_samples=no
+
+fi
+
+
+
+# Check whether --with-ipp-arch was given.
+if test "${with_ipp_arch+set}" = set; then :
+  withval=$with_ipp_arch;
+else
+  with_ipp_arch=no
 
 fi
 
@@ -5674,6 +5690,16 @@ $as_echo "autodetected in $IPPROOT" >&6; }
 $as_echo "$IPPROOT" >&6; }
     fi
 
+    if test "x$with_ipp_arch" != "xno"; then
+	IPP_SUFFIX="em64t"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: IPP arch suffix is set to $IPP_SUFFIX" >&5
+$as_echo "IPP arch suffix is set to $IPP_SUFFIX" >&6; }
+    else
+	IPP_SUFFIX=""
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: IPP arch suffix is set to empty" >&5
+$as_echo "IPP arch suffix is set to empty" >&6; }
+    fi
+
     if test x$IPPROOT = x; then
 	as_fn_error "the location is neither specified nor can be guessed. Please specify with IPPROOT env var or with --with-ipp option" "$LINENO" 5
     elif test ! -d $IPPROOT; then
@@ -5683,7 +5709,7 @@ $as_echo "$IPPROOT" >&6; }
     else
 	# IPP directory looks okay.
 	# Remove trailing backslash
-	IPPROOT=`echo $IPPROOT/ | sed 's/\/$//'`
+	IPPROOT=`echo $IPPROOT | sed 's/\/$//'`
 
 	SAVED_CFLAGS="$CFLAGS"
 	SAVED_LDFLAGS="$LDFLAGS"
@@ -5691,7 +5717,7 @@ $as_echo "$IPPROOT" >&6; }
 
 	IPP_CFLAGS="-I$IPPROOT/include"
 	IPP_LDFLAGS="-L$IPPROOT/sharedlib"
-	IPP_LIBS="-lippsc -lipps -lippsr -lippcore -lguide"
+	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippsr${IPP_SUFFIX} -lippcore${IPP_SUFFIX} -lguide"
 	#IPP_LDFLAGS="-L$IPPROOT/sharedlib"
 	#IPP_LIBS="-lippscmerged -lippsrmerged -lippsmerged -lippcore"
 
@@ -5720,8 +5746,9 @@ $as_echo "ok" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error "failed
-See \`config.log' for more details." "$LINENO" 5; }
+{ as_fn_set_status run with --help for more info
+as_fn_error "Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly
+See \`config.log' for more details." "$LINENO" 5; }; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
@@ -5759,33 +5786,62 @@ $as_echo "$IPPSAMPLES" >&6; }
 	# Remove trailing backslash
 	IPPSAMPLES=`echo $IPPSAMPLES | sed 's/\/$//'`
 
-	# Guess the libusc.a build location
+	# Guess the libusc.a/libspeech.a build location
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Intel IPP USC build location" >&5
 $as_echo_n "checking Intel IPP USC build location... " >&6; }
-	IPPSAMPLESLIB=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
-	if test ! -d $IPPSAMPLESLIB; then
+	if test -d $IPPSAMPLES/speech-codecs/bin; then
+	    IPPVER=5
+	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
+	elif test -d $IPPSAMPLES/speech-codecs/_bin; then
+	    IPPVER=6
+	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib | head -1`
+	else
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error "the $IPPSAMPLES/speech-codecs/bin/*gcc*/lib directory not found. Have you built the samples?
+as_fn_error "unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?
 See \`config.log' for more details." "$LINENO" 5; }
 	fi
-	if test ! -f $IPPSAMPLESLIB/libusc.a; then
+
+	# Test the directory
+	if test ! -d $IPPSAMP_DIR; then
 	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-as_fn_error "libusc.a doesn't exist in $IPPSAMPLESLIB
+as_fn_error "There's something wrong with this script, directory $IPPSAMP_DIR does not exist
+See \`config.log' for more details." "$LINENO" 5; }
+	    exit 1;
+	fi
+
+    	if test "x$IPPVER" = "x5"; then
+	    IPPSAMP_LIBS="libusc.a"
+	    IPPSAMP_LDLIBS="-lusc"
+	elif test "x$IPPVER" = "x6"; then
+	    IPPSAMP_LIBS="libspeech.a"
+	    IPPSAMP_LDLIBS="-lspeech"
+	else
+	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "bug in this script: unsupported IPP version
 See \`config.log' for more details." "$LINENO" 5; }
 	fi
-	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $IPPSAMPLESLIB" >&5
-$as_echo "$IPPSAMPLESLIB" >&6; }
+
+	if test ! -f $IPPSAMP_DIR/$IPPSAMP_LIBS; then
+	    { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
+$as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
+as_fn_error "$IPPSAMP_LIBS doesn't exist in $IPPSAMP_DIR
+See \`config.log' for more details." "$LINENO" 5; }
+	fi
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $IPPSAMP_DIR" >&5
+$as_echo "$IPPSAMP_DIR" >&6; }
 
 	SAVED_CFLAGS="$CFLAGS"
 	SAVED_LDFLAGS="$LDFLAGS"
 	SAVED_LIBS="$LIBS"
 
-	IPPSAMPLESINC="-I$IPPSAMPLES/speech-codecs/core/usc/include"
-	CFLAGS="$CFLAGS $IPPSAMPLESINC"
-	LDFLAGS="$LDFLAGS -L$IPPSAMPLESLIB"
-	LIBS="-lusc $LIBS"
+	IPPSAMP_INC="-I$IPPSAMPLES/speech-codecs/core/usc/include"
+	CFLAGS="$CFLAGS $IPPSAMP_INC"
+	LDFLAGS="$LDFLAGS -L$IPPSAMP_DIR"
+	LIBS="$IPPSAMP_LDLIBS $LIBS"
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: checking Intel IPP USC usability" >&5
 $as_echo_n "checking Intel IPP USC usability... " >&6; }
@@ -5814,13 +5870,17 @@ rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext
 
 	CFLAGS="$SAVED_CFLAGS"
-	LDFLAGS="\$(IPP_LDFLAGS) $SAVED_LDFLAGS"
-	LIBS="\$(IPP_LIBS) $SAVED_LIBS"
+	LDFLAGS="$IPP_LDFLAGS $SAVED_LDFLAGS"
+	LIBS="$IPP_LIBS $SAVED_LIBS"
 
-	IPP_CFLAGS="$IPP_CFLAGS $IPPSAMPLESINC"
-	IPP_LDFLAGS="$IPP_LDFLAGS -L$IPPSAMPLESLIB"
-	IPP_LIBS="-lusc $IPP_LIBS"
+	IPP_CFLAGS="$IPP_CFLAGS $IPPSAMP_INC"
+	IPP_LDFLAGS="$IPP_LDFLAGS -L$IPPSAMP_DIR"
+	IPP_LIBS="$IPPSAMP_LDLIBS $IPP_LIBS"
     fi
+
+    CFLAGS="$CFLAGS $IPP_CFLAGS"
+    LDFLAGS="$LDFLAGS $IPP_LDFLAGS"
+    LIBS="$LIBS $IPP_LIBS"
 
     ac_build_mak_vars="$ac_build_mak_vars\n\
 export IPP_CFLAGS=$IPP_CFLAGS\n\

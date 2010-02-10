@@ -667,18 +667,25 @@ AC_ARG_ENABLE(ipp,
     [enable_ipp=no]
     )
 
-AC_ARG_ENABLE(ipp,
+AC_ARG_WITH(ipp,
     AC_HELP_STRING([--with-ipp=DIR],
 		   [Specify the Intel IPP location]),
     [],
     [with_ipp=no]
     )
 
-AC_ARG_ENABLE(ipp-samples,
+AC_ARG_WITH(ipp-samples,
     AC_HELP_STRING([--with-ipp-samples=DIR],
 		   [Specify the Intel IPP samples location]),
     [],
     [with_ipp_samples=no]
+    )
+
+AC_ARG_WITH(ipp-arch,
+    AC_HELP_STRING([--with-ipp-arch=ARCH],
+		   [Specify the Intel IPP ARCH suffix, e.g. "64" or "em64t. Default is blank for IA32"]),
+    [],
+    [with_ipp_arch=no]
     )
 
 if test "x$enable_ipp" != "xno"; then
@@ -699,6 +706,14 @@ if test "x$enable_ipp" != "xno"; then
 	AC_MSG_RESULT([$IPPROOT])
     fi
 
+    if test "x$with_ipp_arch" != "xno"; then
+	IPP_SUFFIX="em64t"
+	AC_MSG_RESULT([IPP arch suffix is set to $IPP_SUFFIX])
+    else
+	IPP_SUFFIX=""
+	AC_MSG_RESULT([IPP arch suffix is set to empty])
+    fi
+
     if test x$IPPROOT = x; then
 	AC_MSG_ERROR([the location is neither specified nor can be guessed. Please specify with IPPROOT env var or with --with-ipp option])
     elif test ! -d $IPPROOT; then
@@ -708,7 +723,7 @@ if test "x$enable_ipp" != "xno"; then
     else
 	# IPP directory looks okay.
 	# Remove trailing backslash
-	IPPROOT=`echo $IPPROOT/ | sed 's/\/$//'`
+	IPPROOT=`echo $IPPROOT | sed 's/\/$//'`
 
 	SAVED_CFLAGS="$CFLAGS"
 	SAVED_LDFLAGS="$LDFLAGS"
@@ -716,7 +731,7 @@ if test "x$enable_ipp" != "xno"; then
 
 	IPP_CFLAGS="-I$IPPROOT/include"
 	IPP_LDFLAGS="-L$IPPROOT/sharedlib"
-	IPP_LIBS="-lippsc -lipps -lippsr -lippcore -lguide"
+	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippsr${IPP_SUFFIX} -lippcore${IPP_SUFFIX} -lguide"
 	#IPP_LDFLAGS="-L$IPPROOT/sharedlib"
 	#IPP_LIBS="-lippscmerged -lippsrmerged -lippsmerged -lippcore"
 
@@ -730,7 +745,7 @@ if test "x$enable_ipp" != "xno"; then
 					   ]],
 					   [ippStaticInit();])],
 		  [AC_MSG_RESULT(ok)],
-		  [AC_MSG_FAILURE(failed)])
+		  [AC_MSG_FAILURE(Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info)])
 
 	CFLAGS="$SAVED_CFLAGS"
 	LDFLAGS="$SAVED_LDFLAGS"
@@ -763,26 +778,49 @@ if test "x$enable_ipp" != "xno"; then
     else
 	# Remove trailing backslash
 	IPPSAMPLES=`echo $IPPSAMPLES | sed 's/\/$//'`
-
-	# Guess the libusc.a build location
+	
+	# Guess the libusc.a/libspeech.a build location
 	AC_MSG_CHECKING([Intel IPP USC build location])
-	IPPSAMPLESLIB=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
-	if test ! -d $IPPSAMPLESLIB; then
-	    AC_MSG_FAILURE([the $IPPSAMPLES/speech-codecs/bin/*gcc*/lib directory not found. Have you built the samples?])
+	if test -d $IPPSAMPLES/speech-codecs/bin; then
+	    IPPVER=5 
+	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
+	elif test -d $IPPSAMPLES/speech-codecs/_bin; then
+	    IPPVER=6
+	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib | head -1`
+	else
+	    AC_MSG_FAILURE([unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?])
 	fi
-	if test ! -f $IPPSAMPLESLIB/libusc.a; then
-	    AC_MSG_FAILURE([libusc.a doesn't exist in $IPPSAMPLESLIB])
+
+	# Test the directory
+	if test ! -d $IPPSAMP_DIR; then
+	    AC_MSG_FAILURE([There's something wrong with this script, directory $IPPSAMP_DIR does not exist])
+	    exit 1;
 	fi
-	AC_MSG_RESULT([$IPPSAMPLESLIB])
+
+    	if test "x$IPPVER" = "x5"; then
+	    IPPSAMP_LIBS="libusc.a"
+	    IPPSAMP_LDLIBS="-lusc"
+	elif test "x$IPPVER" = "x6"; then
+	    IPPSAMP_LIBS="libspeech.a"
+	    IPPSAMP_LDLIBS="-lspeech"
+	else
+	    AC_MSG_FAILURE([bug in this script: unsupported IPP version])
+	fi
+
+	if test ! -f $IPPSAMP_DIR/$IPPSAMP_LIBS; then
+	    AC_MSG_FAILURE([$IPPSAMP_LIBS doesn't exist in $IPPSAMP_DIR])
+	fi
+
+	AC_MSG_RESULT([$IPPSAMP_DIR])
 
 	SAVED_CFLAGS="$CFLAGS"
 	SAVED_LDFLAGS="$LDFLAGS"
 	SAVED_LIBS="$LIBS"
 
-	IPPSAMPLESINC="-I$IPPSAMPLES/speech-codecs/core/usc/include"
-	CFLAGS="$CFLAGS $IPPSAMPLESINC"
-	LDFLAGS="$LDFLAGS -L$IPPSAMPLESLIB"
-	LIBS="-lusc $LIBS"
+	IPPSAMP_INC="-I$IPPSAMPLES/speech-codecs/core/usc/include"
+	CFLAGS="$CFLAGS $IPPSAMP_INC"
+	LDFLAGS="$LDFLAGS -L$IPPSAMP_DIR"
+	LIBS="$IPPSAMP_LDLIBS $LIBS"
 
 	AC_MSG_CHECKING([Intel IPP USC usability])
 	AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <usc.h>
@@ -792,13 +830,17 @@ if test "x$enable_ipp" != "xno"; then
 		  [AC_MSG_FAILURE(failed)])
 
 	CFLAGS="$SAVED_CFLAGS"
-	LDFLAGS="\$(IPP_LDFLAGS) $SAVED_LDFLAGS"
-	LIBS="\$(IPP_LIBS) $SAVED_LIBS"
+	LDFLAGS="$IPP_LDFLAGS $SAVED_LDFLAGS"
+	LIBS="$IPP_LIBS $SAVED_LIBS"
 
-	IPP_CFLAGS="$IPP_CFLAGS $IPPSAMPLESINC"
-	IPP_LDFLAGS="$IPP_LDFLAGS -L$IPPSAMPLESLIB"
-	IPP_LIBS="-lusc $IPP_LIBS"
+	IPP_CFLAGS="$IPP_CFLAGS $IPPSAMP_INC"
+	IPP_LDFLAGS="$IPP_LDFLAGS -L$IPPSAMP_DIR"
+	IPP_LIBS="$IPPSAMP_LDLIBS $IPP_LIBS"
     fi
+
+    CFLAGS="$CFLAGS $IPP_CFLAGS"
+    LDFLAGS="$LDFLAGS $IPP_LDFLAGS"
+    LIBS="$LIBS $IPP_LIBS"
 
     ac_build_mak_vars="$ac_build_mak_vars\n\
 export IPP_CFLAGS=$IPP_CFLAGS\n\
