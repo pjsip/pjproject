@@ -184,7 +184,7 @@ static pj_bool_t http_on_connect(pj_activesock_t *asock,
 {
     pj_http_req *hreq = (pj_http_req*) pj_activesock_get_user_data(asock);
 
-    if (hreq->state == ABORTING)
+    if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
     if (status != PJ_SUCCESS) {
@@ -207,7 +207,7 @@ static pj_bool_t http_on_data_sent(pj_activesock_t *asock,
 
     PJ_UNUSED_ARG(op_key);
 
-    if (hreq->state == ABORTING)
+    if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
     if (sent <= 0) {
@@ -281,7 +281,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
 
     TRACE_((THIS_FILE, "\nData received: %d bytes", size));
 
-    if (hreq->state == ABORTING)
+    if (hreq->state == ABORTING || hreq->state == IDLE)
         return PJ_FALSE;
 
     if (hreq->state == READING_RESPONSE) {
@@ -325,24 +325,18 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                 (*hreq->cb.on_response)(hreq, &hreq->response);
             hreq->response.data = NULL;
             hreq->response.size = 0;
-            if (rem > 0) {
-                /* There is some response data remaining after parsing the
-                 * header, move it to the front of the buffer.
-                 */
-                pj_memmove((char *)data, (char *)data + size - rem, rem);
-                *remainder = rem;
-            }
-            /* Speed up the operation a bit rather than waiting for EOF */
-            if (hreq->response.content_length == 0) {
-                return http_on_data_read(asock, NULL, 0, PJ_SUCCESS, NULL);
-            }
 
+	    if (rem > 0 || hreq->response.content_length == 0)
+		http_on_data_read(asock, (rem == 0 ? NULL:
+		   	          (char *)data + size - rem),
+				  rem, PJ_SUCCESS, NULL);
         }
 
         return PJ_TRUE;
     }
 
-    pj_assert(hreq->state == READING_DATA);
+    if (hreq->state != READING_DATA)
+	return PJ_FALSE;
     if (hreq->cb.on_data_read) {
         /* If application wishes to receive the data once available, call
          * its callback.
@@ -385,8 +379,9 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
     /* If the total data received so far is equal to the content length
      * or if it's already EOF.
      */
-    if ((pj_ssize_t)hreq->tcp_state.current_read_size >= 
-        hreq->response.content_length ||
+    if ((hreq->response.content_length >=0 &&
+	(pj_ssize_t)hreq->tcp_state.current_read_size >=
+        hreq->response.content_length) ||
         (status == PJ_EEOF && hreq->response.content_length == -1)) 
     {
         /* Finish reading */
@@ -782,10 +777,10 @@ PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
         status = pj_sockaddr_init(http_req->param.addr_family, 
                                   &http_req->addr, &http_req->hurl.host,
 				  http_req->hurl.port);
-	if (status != PJ_SUCCESS || 
+	if (status != PJ_SUCCESS ||
 	    !pj_sockaddr_has_addr(&http_req->addr) ||
-	    (http_req->param.addr_family==pj_AF_INET() && 
-	     http_req->addr.ipv4.sin_addr.s_addr==PJ_INADDR_NONE)) 
+	    (http_req->param.addr_family==pj_AF_INET() &&
+	     http_req->addr.ipv4.sin_addr.s_addr==PJ_INADDR_NONE))
 	{
 	    return status; // cannot resolve host name
         }
