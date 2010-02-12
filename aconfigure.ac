@@ -730,9 +730,21 @@ if test "x$enable_ipp" != "xno"; then
 	SAVED_LIBS="$LIBS"
 
 	IPP_CFLAGS="-I$IPPROOT/include"
-	IPP_LDFLAGS="-L$IPPROOT/sharedlib"
-	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippsr${IPP_SUFFIX} -lippcore${IPP_SUFFIX} -lguide"
+	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippsr${IPP_SUFFIX} -lippcore${IPP_SUFFIX}"
+
+	# Some differences between Mac OS X and Linux
+	case $target in 
+	    *darwin* )
+		IPP_LDFLAGS="-L$IPPROOT/Libraries -L$IPPROOT/lib"
+		;;
+	    *)
+		IPP_LDFLAGS="-L$IPPROOT/sharedlib"
+		IPP_LIBS="$IPP_LIBS -lguide"
+		;;
+	esac
+
 	#IPP_LDFLAGS="-L$IPPROOT/sharedlib"
+	#Static:
 	#IPP_LIBS="-lippscmerged -lippsrmerged -lippsmerged -lippcore"
 
 	CFLAGS="$CFLAGS $IPP_CFLAGS"
@@ -786,7 +798,15 @@ if test "x$enable_ipp" != "xno"; then
 	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/bin/*gcc*/lib | head -1`
 	elif test -d $IPPSAMPLES/speech-codecs/_bin; then
 	    IPPVER=6
-	    IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib | head -1`
+	    if test -d $IPPSAMPLES/speech-codecs/_bin/*gcc*; then
+		# gcc compiler
+	    	IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib | head -1`
+	    elif test -d $IPPSAMPLES/speech-codecs/_bin/*icc*; then
+		# icc compiler
+	    	IPPSAMP_DIR=`ls -d $IPPSAMPLES/speech-codecs/_bin/*icc*/lib | head -1`
+	    else
+		AC_MSG_FAILURE([Unable to find to find built binaries under $IPPSAMPLES/speech-codecs/{bin,_bin}. Have you built the IPP samples?])
+	    fi
 	else
 	    AC_MSG_FAILURE([unable to find $IPPSAMPLES/speech-codecs/bin/*gcc*/lib or $IPPSAMPLES/speech-codecs/_bin/*gcc*/lib directory. Have you built the samples?])
 	fi
