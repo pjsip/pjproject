@@ -681,13 +681,18 @@ static pj_status_t codec_open( pjmedia_codec *codec,
     if (desc->pt == PJMEDIA_RTP_PT_AMR || desc->pt == PJMEDIA_RTP_PT_AMRWB) {
 	amr_settings_t *s;
 	pj_uint8_t octet_align = 0;
-	const pj_str_t STR_FMTP_OCTET_ALIGN = {"octet-align", 11};
+	pj_int8_t enc_mode;
+	
+	enc_mode = pjmedia_codec_amr_get_mode(attr->info.avg_bps);
+	pj_assert(enc_mode >= 0 && enc_mode <= 8);
 
-	/* Fetch octet-align setting. It should be fine to fetch only 
-	 * the decoder, since encoder & decoder must use the same setting 
-	 * (RFC 4867 section 8.3.1).
-	 */
 	for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
+	    const pj_str_t STR_FMTP_OCTET_ALIGN = {"octet-align", 11};
+	    
+	    /* Fetch octet-align setting. It should be fine to fetch only 
+	     * the decoder, since encoder & decoder must use the same setting 
+	     * (RFC 4867 section 8.3.1).
+	     */
 	    if (pj_stricmp(&attr->setting.dec_fmtp.param[i].name, 
 			   &STR_FMTP_OCTET_ALIGN) == 0)
 	    {
@@ -698,6 +703,8 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	}
 
 	for (i = 0; i < attr->setting.enc_fmtp.cnt; ++i) {
+	    const pj_str_t STR_FMTP_MODE_SET = {"mode-set", 8};
+
 	    /* mode-set, encoding mode is chosen based on local default mode 
 	     * setting:
 	     * - if local default mode is included in the mode-set, use it
@@ -706,8 +713,6 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	     *   one, e.g: local default mode is 4, the mode-set param
 	     *   contains '2,3,5,6', then 5 will be chosen.
 	     */
-	    const pj_str_t STR_FMTP_MODE_SET = {"mode-set", 8};
-	    
 	    if (pj_stricmp(&attr->setting.enc_fmtp.param[i].name, 
 			   &STR_FMTP_MODE_SET) == 0)
 	    {
@@ -762,6 +767,11 @@ static pj_status_t codec_open( pjmedia_codec *codec,
 	s->dec_setting.reorder = PJ_FALSE; /* Note this! passthrough codec
 					      doesn't do sensitivity bits 
 					      reordering */
+	
+	/* Return back bitrate info to application */
+	attr->info.avg_bps = s->enc_setting.amr_nb?
+			     pjmedia_codec_amrnb_bitrates[s->enc_mode]:
+			     pjmedia_codec_amrwb_bitrates[s->enc_mode];
     }
 #endif
 
