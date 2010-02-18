@@ -68,8 +68,8 @@ static pj_uint8_t srflx_pref_table[4] =
 {
 #if PJNATH_ICE_PRIO_STD
     100,    /**< PJ_ICE_HOST_PREF	    */
-    126,    /**< PJ_ICE_SRFLX_PREF	    */
-    110,    /**< PJ_ICE_PRFLX_PREF	    */
+    110,    /**< PJ_ICE_SRFLX_PREF	    */
+    126,    /**< PJ_ICE_PRFLX_PREF	    */
     0	    /**< PJ_ICE_RELAYED_PREF    */
 #else
     /* Keep it to 2 bits */
