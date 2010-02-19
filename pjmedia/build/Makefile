@@ -71,8 +71,8 @@ export PJMEDIA_CFLAGS += $(_CFLAGS)
 # Defines for building PJMEDIA-AUDIODEV library
 #
 export PJMEDIA_AUDIODEV_SRCDIR = ../src/pjmedia-audiodev
-export PJMEDIA_AUDIODEV_OBJS +=  audiodev.o audiotest.o errno.o legacy_dev.o pa_dev.o \
-				 wmme_dev.o alsa_dev.o
+export PJMEDIA_AUDIODEV_OBJS +=  audiodev.o audiotest.o errno.o \
+				 legacy_dev.o null_dev.o pa_dev.o wmme_dev.o alsa_dev.o
 export PJMEDIA_AUDIODEV_CFLAGS += $(_CFLAGS)
 
 

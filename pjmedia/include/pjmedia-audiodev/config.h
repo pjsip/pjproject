@@ -67,6 +67,14 @@ PJ_BEGIN_DECL
 
 
 /**
+ * This setting controls whether null audio support should be included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO
+#   define PJMEDIA_AUDIO_DEV_HAS_NULL_AUDIO	0
+#endif
+
+
+/**
  * This setting controls whether WMME support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_WMME
