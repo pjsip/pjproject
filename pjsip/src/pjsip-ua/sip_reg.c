@@ -934,6 +934,7 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_status_t status;
     pjsip_regc *regc = (pjsip_regc*) token;
     pjsip_transaction *tsx = event->body.tsx_state.tsx;
+    pj_bool_t handled = PJ_TRUE;
 
     pj_atomic_inc(regc->busy_ctr);
     pj_lock_acquire(regc->lock);
@@ -1000,7 +1001,92 @@ static void tsx_callback(void *token, pjsip_event *event)
 	/* Just reset current op */
 	regc->current_op = REGC_IDLE;
 
+    } else if (tsx->status_code == PJSIP_SC_INTERVAL_TOO_BRIEF &&
+	       regc->current_op == REGC_REGISTERING)
+    {
+	/* Handle 423 response automatically:
+	 *  - set requested expiration to Min-Expires header, ONLY IF
+	 *    the original request is a registration (as opposed to
+	 *    unregistration) and the requested expiration was indeed
+	 *    lower than Min-Expires)
+	 *  - resend the request
+	 */
+	pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+	pjsip_min_expires_hdr *me_hdr;
+	pjsip_tx_data *tdata;
+	pj_int32_t min_exp;
+
+	/* reset current op */
+	regc->current_op = REGC_IDLE;
+
+	/* Update requested expiration */
+	me_hdr = (pjsip_min_expires_hdr*)
+		 pjsip_msg_find_hdr(rdata->msg_info.msg,
+				    PJSIP_H_MIN_EXPIRES, NULL);
+	if (me_hdr) {
+	    min_exp = me_hdr->ivalue;
+	} else {
+	    /* Broken server, Min-Expires doesn't exist.
+	     * Just guestimate then, BUT ONLY if if this is the
+	     * first time we received such response.
+	     */
+	    enum {
+		/* Note: changing this value would require changing couple of
+		 *       Python test scripts.
+		 */
+		UNSPECIFIED_MIN_EXPIRES = 3601
+	    };
+	    if (!regc->expires_hdr ||
+		 regc->expires_hdr->ivalue != UNSPECIFIED_MIN_EXPIRES)
+	    {
+		min_exp = UNSPECIFIED_MIN_EXPIRES;
+	    } else {
+		handled = PJ_FALSE;
+		PJ_LOG(4,(THIS_FILE, "Registration failed: 423 response "
+				     "without Min-Expires header is invalid"));
+		goto handle_err;
+	    }
+	}
+
+	if (regc->expires_hdr && regc->expires_hdr->ivalue >= min_exp) {
+	    /* But we already send with greater expiration time, why does
+	     * the server send us with 423? Oh well, just fail the request.
+	     */
+	    handled = PJ_FALSE;
+	    PJ_LOG(4,(THIS_FILE, "Registration failed: invalid "
+			         "Min-Expires header value in response"));
+	    goto handle_err;
+	}
+
+	set_expires(regc, min_exp);
+
+	status = pjsip_regc_register(regc, regc->auto_reg, &tdata);
+	if (status == PJ_SUCCESS) {
+	    status = pjsip_regc_send(regc, tdata);
+	}
+
+	if (status != PJ_SUCCESS) {
+	    /* Only call callback if application is still interested
+	     * in it.
+	     */
+	    if (!regc->_delete_flag) {
+		/* Should be safe to release the lock temporarily.
+		 * We do this to avoid deadlock.
+		 */
+		pj_lock_release(regc->lock);
+		call_callback(regc, status, tsx->status_code,
+			      &rdata->msg_info.msg->line.status.reason,
+			      rdata, -1, 0, NULL);
+		pj_lock_acquire(regc->lock);
+	    }
+	}
+
     } else {
+	handled = PJ_FALSE;
+    }
+
+handle_err:
+    if (!handled) {
 	pjsip_rx_data *rdata;
 	pj_int32_t expiration = NOEXP;
 	unsigned contact_cnt = 0;
