@@ -914,7 +914,7 @@ PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
 	return status;
     }
 
-    status = pj_sock_connect(fd, &a, sizeof(a));
+    status = pj_sock_connect(fd, &a, pj_sockaddr_get_len(&a));
     if (status != PJ_SUCCESS) {
 	pj_sock_close(fd);
 	return status;
