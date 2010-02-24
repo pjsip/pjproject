@@ -166,6 +166,36 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
     host_port->port = pj_sockaddr_get_port(addr);
 }
 
+
+static void tcp_init_shutdown(struct tcp_transport *tcp, pj_status_t status)
+{
+    pjsip_tp_state_callback *state_cb;
+
+    if (tcp->close_reason == PJ_SUCCESS)
+	tcp->close_reason = status;
+
+    if (tcp->base.is_shutdown)
+	return;
+
+    /* Notify application of transport disconnected state */
+    state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+
+	pj_bzero(&state_info, sizeof(state_info));
+	state_info.status = tcp->close_reason;
+	(*state_cb)(&tcp->base, PJSIP_TP_STATE_DISCONNECTED, &state_info);
+    }
+
+    /* We can not destroy the transport since high level objects may
+     * still keep reference to this transport. So we can only 
+     * instruct transport manager to gracefully start the shutdown
+     * procedure for this transport.
+     */
+    pjsip_transport_shutdown(&tcp->base);
+}
+
+
 /*
  * Initialize pjsip_tcp_transport_cfg structure with default values.
  */
@@ -921,6 +951,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     struct tcp_listener *listener;
     struct tcp_transport *tcp;
     char addr[PJ_INET6_ADDRSTRLEN+10];
+    pjsip_tp_state_callback *state_cb;
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
@@ -965,6 +996,15 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 					   &delay);
 		tcp->ka_timer.id = PJ_TRUE;
 		pj_gettimeofday(&tcp->last_activity);
+	    }
+
+	    /* Notify application of transport state accepted */
+	    state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
+	    if (state_cb) {
+		pjsip_transport_state_info state_info;
+            
+		pj_bzero(&state_info, sizeof(state_info));
+		(*state_cb)(&tcp->base, PJSIP_TP_STATE_ACCEPTED, &state_info);
 	    }
 	}
     }
@@ -1013,8 +1053,8 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
 
 	status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
 				     -bytes_sent;
-	if (tcp->close_reason==PJ_SUCCESS) tcp->close_reason = status;
-	pjsip_transport_shutdown(&tcp->base);
+
+	tcp_init_shutdown(tcp, status);
 
 	return PJ_FALSE;
     }
@@ -1109,8 +1149,8 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
 
 		if (status == PJ_SUCCESS) 
 		    status = PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
-		if (tcp->close_reason==PJ_SUCCESS) tcp->close_reason = status;
-		pjsip_transport_shutdown(&tcp->base);
+
+		tcp_init_shutdown(tcp, status);
 	    }
 	}
     }
@@ -1199,14 +1239,7 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
 	/* Transport is closed */
 	PJ_LOG(4,(tcp->base.obj_name, "TCP connection closed"));
 	
-	/* We can not destroy the transport since high level objects may
-	 * still keep reference to this transport. So we can only 
-	 * instruct transport manager to gracefully start the shutdown
-	 * procedure for this transport.
-	 */
-	if (tcp->close_reason==PJ_SUCCESS) 
-	    tcp->close_reason = status;
-	pjsip_transport_shutdown(&tcp->base);
+	tcp_init_shutdown(tcp, status);
 
 	return PJ_FALSE;
 
@@ -1228,6 +1261,8 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     struct tcp_transport *tcp;
     pj_sockaddr_in addr;
     int addrlen;
+
+    pjsip_tp_state_callback *state_cb;
 
     tcp = (struct tcp_transport*) pj_activesock_get_user_data(asock);
 
@@ -1252,14 +1287,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 	    on_data_sent(tcp->asock, op_key, -status);
 	}
 
-	/* We can not destroy the transport since high level objects may
-	 * still keep reference to this transport. So we can only 
-	 * instruct transport manager to gracefully start the shutdown
-	 * procedure for this transport.
-	 */
-	if (tcp->close_reason==PJ_SUCCESS) tcp->close_reason = status;
-	pjsip_transport_shutdown(&tcp->base);
-	return PJ_FALSE;
+	tcp_init_shutdown(tcp, status);
     }
 
     PJ_LOG(4,(tcp->base.obj_name, 
@@ -1293,14 +1321,17 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     /* Start pending read */
     status = tcp_start_read(tcp);
     if (status != PJ_SUCCESS) {
-	/* We can not destroy the transport since high level objects may
-	 * still keep reference to this transport. So we can only 
-	 * instruct transport manager to gracefully start the shutdown
-	 * procedure for this transport.
-	 */
-	if (tcp->close_reason==PJ_SUCCESS) tcp->close_reason = status;
-	pjsip_transport_shutdown(&tcp->base);
+	tcp_init_shutdown(tcp, status);
 	return PJ_FALSE;
+    }
+
+    /* Notify application of transport state connected */
+    state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+    
+	pj_bzero(&state_info, sizeof(state_info));
+	(*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
     }
 
     /* Flush all pending send operations */
@@ -1358,7 +1389,7 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	tcp_perror(tcp->base.obj_name, 
 		   "Error sending keep-alive packet", status);
-	pjsip_transport_shutdown(&tcp->base);
+	tcp_init_shutdown(tcp, status);
 	return;
     }
 

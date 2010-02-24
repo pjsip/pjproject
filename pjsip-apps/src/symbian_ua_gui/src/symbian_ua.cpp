@@ -263,7 +263,7 @@ int symbian_ua_init()
     pj_status_t status;
     
     // Initialize RSocketServ
-    if ((err=aSocketServer.Connect()) != KErrNone)
+    if ((err=aSocketServer.Connect(32)) != KErrNone)
     	return PJ_STATUS_FROM_OS(err);
     
     // Open up a connection

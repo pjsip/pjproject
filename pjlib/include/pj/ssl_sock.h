@@ -60,17 +60,126 @@ typedef struct pj_ssl_sock_t pj_ssl_sock_t;
 typedef struct pj_ssl_cert_t pj_ssl_cert_t;
 
 
+typedef enum pj_ssl_cert_verify_flag_t
+{
+    /**
+     * No error in verification.
+     */
+    PJ_SSL_CERT_ESUCCESS				= 0,
+
+    /**
+     * The issuer certificate cannot be found.
+     */
+    PJ_SSL_CERT_EISSUER_NOT_FOUND			= (1 << 0),
+
+    /**
+     * The certificate is untrusted.
+     */
+    PJ_SSL_CERT_EUNTRUSTED				= (1 << 1),
+
+    /**
+     * The certificate has expired or not yet valid.
+     */
+    PJ_SSL_CERT_EVALIDITY_PERIOD			= (1 << 2),
+
+    /**
+     * One or more fields of the certificate cannot be decoded due to
+     * invalid format.
+     */
+    PJ_SSL_CERT_EINVALID_FORMAT				= (1 << 3),
+
+    /**
+     * The certificate cannot be used for the specified purpose.
+     */
+    PJ_SSL_CERT_EINVALID_PURPOSE			= (1 << 4),
+
+    /**
+     * The issuer info in the certificate does not match to the (candidate) 
+     * issuer certificate, e.g: issuer name not match to subject name
+     * of (candidate) issuer certificate.
+     */
+    PJ_SSL_CERT_EISSUER_MISMATCH			= (1 << 5),
+
+    /**
+     * The CRL certificate cannot be found or cannot be read properly.
+     */
+    PJ_SSL_CERT_ECRL_FAILURE				= (1 << 6),
+
+    /**
+     * The certificate has been revoked.
+     */
+    PJ_SSL_CERT_EREVOKED				= (1 << 7),
+
+    /**
+     * The certificate chain length is too long.
+     */
+    PJ_SSL_CERT_ECHAIN_TOO_LONG				= (1 << 8),
+
+    /**
+     * The server identity does not match to any identities specified in 
+     * the certificate, e.g: subjectAltName extension, subject common name.
+     * This flag will only be set by application as SSL socket does not 
+     * perform server identity verification.
+     */
+    PJ_SSL_CERT_EIDENTITY_NOT_MATCH			= (1 << 30),
+
+    /**
+     * Unknown verification error.
+     */
+    PJ_SSL_CERT_EUNKNOWN				= (1 << 31)
+
+} pj_ssl_cert_verify_flag_t;
+
+
+typedef enum pj_ssl_cert_name_type
+{
+    PJ_SSL_CERT_NAME_UNKNOWN = 0,
+    PJ_SSL_CERT_NAME_RFC822,
+    PJ_SSL_CERT_NAME_DNS,
+    PJ_SSL_CERT_NAME_URI,
+    PJ_SSL_CERT_NAME_IP
+} pj_ssl_cert_name_type;
+
 /**
  * Describe structure of certificate info.
  */
 typedef struct pj_ssl_cert_info {
-    pj_str_t	subject;	    /**< Subject.		*/
-    pj_str_t	issuer;		    /**< Issuer.		*/
-    unsigned	version;	    /**< Certificate version.	*/
-    pj_time_val	validity_start;	    /**< Validity start.	*/
-    pj_time_val	validity_end;	    /**< Validity end.		*/
-    pj_bool_t	validity_use_gmt;   /**< Flag if validity date/time 
-					 use GMT.		*/
+
+    unsigned	version;	    /**< Certificate version	*/
+
+    pj_uint8_t	serial_no[20];	    /**< Serial number, array of
+				         octets, first index is
+					 MSB			*/
+
+    struct {
+        pj_str_t	cn;	    /**< Common name		*/
+        pj_str_t	info;	    /**< One line subject, fields
+					 are separated by slash */
+    } subject;			    /**< Subject		*/
+
+    struct {
+        pj_str_t	cn;	    /**< Common name		*/
+        pj_str_t	info;	    /**< One line subject, fields
+					 are separated by slash.*/
+    } issuer;			    /**< Issuer			*/
+
+    struct {
+	pj_time_val	start;	    /**< Validity start		*/
+	pj_time_val	end;	    /**< Validity end		*/
+	pj_bool_t	gmt;	    /**< Flag if validity date/time 
+					 use GMT		*/
+    } validity;			    /**< Validity		*/
+
+    struct {
+	unsigned	cnt;	    /**< # of entry		*/
+	struct {
+	    pj_ssl_cert_name_type type;
+				    /**< Name type		*/
+	    pj_str_t	name;	    /**< The name		*/
+	} *entry;		    /**< Subject alt name entry */
+    } subj_alt_name;		    /**< Subject alternative
+					 name extension		*/
+
 } pj_ssl_cert_info;
 
 
@@ -91,6 +200,39 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
 						 const pj_str_t *privkey_file,
 						 const pj_str_t *privkey_pass,
 						 pj_ssl_cert_t **p_cert);
+
+
+/**
+ * Dump SSL certificate info.
+ *
+ * @param ci		The certificate info.
+ * @param prefix	Prefix string for each line.
+ * @param buf		The buffer where certificate info will be printed on.
+ * @param buf_size	The buffer size.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
+					   const char *prefix,
+					   char *buf,
+					   pj_size_t buf_size);
+
+
+/**
+ * Get SSL certificate verification error messages from verification status.
+ *
+ * @param verify_status	The SSL certificate verification status.
+ * @param error_strings	Array of strings to receive the verification error 
+ *			messages.
+ * @param count		On input it specifies maximum error messages should be
+ *			retrieved. On output it specifies the number of error
+ *			messages retrieved.
+ *
+ * @return		PJ_SUCCESS when successful.
+ */
+PJ_DECL(pj_status_t) pj_ssl_cert_verify_error_st(pj_uint32_t verify_status, 
+						 const char *error_strings[],
+						 unsigned *count);
 
 
 /** 
@@ -363,13 +505,18 @@ typedef struct pj_ssl_sock_info
     /**
      * Describes active local certificate info.
      */
-    pj_ssl_cert_info local_cert_info;
+    pj_ssl_cert_info *local_cert_info;
    
     /**
      * Describes active remote certificate info.
      */
-    pj_ssl_cert_info remote_cert_info;
-   
+    pj_ssl_cert_info *remote_cert_info;
+
+    /**
+     * Status of peer certificate verification.
+     */
+    pj_uint32_t		verify_status;
+
 } pj_ssl_sock_info;
 
 
@@ -523,11 +670,11 @@ typedef struct pj_ssl_sock_param
     pj_bool_t require_client_cert;
 
     /**
-     * When secure socket is acting as client (perform outgoing connection)
-     * and it needs to verify server name (e.g: host or domain name) by
-     * matching it to the name specified in the server certificate. This 
-     * setting is useful when the server is hosting multiple domains for
-     * the same listening socket.
+     * Server name indication. When secure socket is acting as client 
+     * (perform outgoing connection) and the server may host multiple
+     * 'virtual' servers at a single underlying network address, setting
+     * this will allow client to tell the server a name of the server
+     * it is contacting.
      *
      * Default value is zero/not-set.
      */

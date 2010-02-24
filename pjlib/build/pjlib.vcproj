@@ -5649,6 +5649,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pj\ssl_sock_dump.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pj\ssl_sock_ossl.c"
 				>
 			</File>

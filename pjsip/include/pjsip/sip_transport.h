@@ -540,6 +540,10 @@ struct pjsip_tx_data
      */
     struct
     {
+	/** Server name. 
+	 */
+	pj_str_t		 name;
+
 	/** Server addresses resolved. 
 	 */
 	pjsip_server_addresses   addr;
@@ -687,6 +691,11 @@ typedef struct pjsip_transport_key
      * Transport type.
      */
     long		    type;
+
+    /**
+     * Hash of host name.
+     */
+    pj_uint32_t		    hname;
 
     /**
      * Destination address.
@@ -918,7 +927,8 @@ struct pjsip_tpfactory
     pjsip_host_port	    addr_name;	    /**< Published name.	*/
 
     /**
-     * Create new outbound connection.
+     * Create new outbound connection suitable for sending SIP message
+     * to specified remote address.
      * Note that the factory is responsible for both creating the
      * transport and registering it to the transport manager.
      */
@@ -928,6 +938,21 @@ struct pjsip_tpfactory
 				    const pj_sockaddr *rem_addr,
 				    int addr_len,
 				    pjsip_transport **transport);
+
+    /**
+     * Create new outbound connection suitable for sending SIP message
+     * to specified remote address by also considering outgoing SIP 
+     * message data.
+     * Note that the factory is responsible for both creating the
+     * transport and registering it to the transport manager.
+     */
+    pj_status_t (*create_transport2)(pjsip_tpfactory *factory,
+				     pjsip_tpmgr *mgr,
+				     pjsip_endpoint *endpt,
+				     const pj_sockaddr *rem_addr,
+				     int addr_len,
+				     pjsip_tx_data *tdata,
+				     pjsip_transport **transport);
 
     /**
      * Destroy the listener.
@@ -1100,6 +1125,34 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						   pjsip_transport **tp);
 
 /**
+ * Find suitable transport for sending SIP message to specified remote 
+ * destination by also considering the outgoing SIP message. If no suitable 
+ * transport is found, a new one will be created.
+ *
+ * This is an internal function since normally application doesn't have access
+ * to transport manager. Application should use pjsip_endpt_acquire_transport()
+ * instead.
+ *
+ * @param mgr	    The transport manager instance.
+ * @param type	    The type of transport to be acquired.
+ * @param remote    The remote address to send message to.
+ * @param addr_len  Length of the remote address.
+ * @param sel	    Optional pointer to transport selector instance which is
+ *		    used to find explicit transport, if required.
+ * @param tdata	    Optional pointer to data to be sent.
+ * @param tp	    Pointer to receive the transport instance, if one is found.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
+						    pjsip_transport_type_e type,
+						    const pj_sockaddr_t *remote,
+						    int addr_len,
+						    const pjsip_tpselector *sel,
+						    pjsip_tx_data *tdata,
+						    pjsip_transport **tp);
+
+/**
  * Type of callback to receive notification when message or raw data
  * has been sent.
  *
@@ -1186,6 +1239,94 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_send_raw(pjsip_tpmgr *mgr,
 					  int addr_len,
 					  void *token,
 					  pjsip_tp_send_callback cb);
+
+
+/**
+ * Enumeration of transport state types.
+ */
+typedef enum pjsip_transport_state_type {
+
+    /** Transport connected.	*/
+    PJSIP_TP_STATE_CONNECTED	    = (1 << 0),
+
+    /** Transport accepted.	*/
+    PJSIP_TP_STATE_ACCEPTED	    = (1 << 1),
+
+    /** Transport disconnected.	*/
+    PJSIP_TP_STATE_DISCONNECTED	    = (1 << 2),
+
+    /** Incoming connection rejected.	*/
+    PJSIP_TP_STATE_REJECTED	    = (1 << 3),
+
+    /** TLS verification error.	*/
+    PJSIP_TP_STATE_TLS_VERIF_ERROR  = (1 << 8)
+
+} pjsip_transport_state_type;
+
+
+/**
+ * Structure of transport state info.
+ */
+typedef struct pjsip_transport_state_info {
+    /**
+     * The last error code related to the transport state.
+     */
+    pj_status_t		 status;
+    
+    /**
+     * Optional extended info, the content is specific for each transport type.
+     */
+    void		*ext_info;
+} pjsip_transport_state_info;
+
+
+/**
+ * Type of callback to receive transport state notifications, such as
+ * transport connected, disconnected or TLS verification error.
+ *
+ * @param tp		The transport instance.
+ * @param state		The transport state, this may contain single or 
+ *			combination of transport state types defined in
+ *			#pjsip_transport_state_type.
+ * @param info		The transport state info.
+ *
+ * @return		When TLS verification fails and peer verification in
+ *			#pjsip_tls_setting is not set, application may return
+ *			PJ_TRUE to ignore the verification result and continue
+ *			using the transport. On other cases, this return value
+ *			is currently not used and will be ignored.
+ */
+typedef pj_bool_t (*pjsip_tp_state_callback)(
+				    pjsip_transport *tp,
+				    pj_uint32_t state,
+				    const pjsip_transport_state_info *info);
+
+
+/**
+ * Setting callback of transport state notification. The caller will be
+ * notified whenever the state of transport is changed. The type of
+ * events are defined in #pjsip_transport_state_type.
+ * 
+ * @param mgr	    Transport manager.
+ * @param cb	    Callback to be called to notify caller about transport 
+ *		    status changing.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
+					       pjsip_tp_state_callback *cb);
+
+
+/**
+ * Getting the callback of transport state notification.
+ * 
+ * @param mgr	    Transport manager.
+ *
+ * @return	    The transport state callback or NULL if it is not set.
+ */
+PJ_DECL(pjsip_tp_state_callback*) pjsip_tpmgr_get_status_cb(
+					       const pjsip_tpmgr *mgr);
+
 
 /**
  * @}

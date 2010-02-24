@@ -45,6 +45,7 @@
 #include <openssl/bio.h>
 #include <openssl/ssl.h>
 #include <openssl/err.h>
+#include <openssl/x509v3.h>
 
 
 #ifdef _MSC_VER
@@ -152,6 +153,7 @@ struct pj_ssl_sock_t
     enum ssl_state	  ssl_state;
     pj_ioqueue_op_key_t	  handshake_op_key;
     pj_timer_entry	  timer;
+    pj_status_t		  verify_status;
 
     pj_sock_t		  sock;
     pj_activesock_t	 *asock;
@@ -207,11 +209,15 @@ static pj_status_t flush_delayed_send(pj_ssl_sock_t *ssock);
 
 #define PJ_SSL_ERRNO_SPACE_SIZE		PJ_ERRNO_SPACE_SIZE
 
-#define GET_SSL_STATUS(status) { \
-    unsigned long e = ERR_get_error();\
-    status = ERR_GET_LIB(e)*300 + ERR_GET_REASON(e);\
+#define STATUS_FROM_SSL_ERR(err, status) { \
+    status = ERR_GET_LIB(err)*300 + ERR_GET_REASON(err);\
     pj_assert(status < PJ_SSL_ERRNO_SPACE_SIZE);\
     if (status) status += PJ_SSL_ERRNO_START;\
+}
+
+#define GET_SSL_STATUS(status) { \
+    unsigned long e = ERR_get_error();\
+    STATUS_FROM_SSL_ERR(e, status);\
 }
 
 /*
@@ -235,7 +241,11 @@ static pj_str_t ssl_strerror(pj_status_t status,
 
     {
 	const char *tmp = NULL;
-	tmp = ERR_reason_error_string(ssl_err);
+
+	if (ssl_err >= 300)
+	    tmp = ERR_reason_error_string(ssl_err);
+	else
+	    tmp = X509_verify_cert_error_string(ssl_err);
 
 	if (tmp) {
 	    pj_ansi_strncpy(buf, tmp, bufsize);
@@ -262,6 +272,9 @@ static int openssl_reg_strerr;
 /* OpenSSL available ciphers */
 static pj_ssl_cipher openssl_ciphers[100];
 static unsigned openssl_cipher_num;
+
+/* OpenSSL application data index */
+static int sslsock_idx;
 
 
 /* Initialize OpenSSL */
@@ -329,6 +342,9 @@ static pj_status_t init_openssl(void)
 	openssl_cipher_num = n;
     }
 
+    /* Create OpenSSL application data index for SSL socket */
+    sslsock_idx = SSL_get_ex_new_index(0, "SSL socket", NULL, NULL, NULL);
+
     return PJ_SUCCESS;
 }
 
@@ -355,8 +371,107 @@ static int password_cb(char *buf, int num, int rwflag, void *user_data)
 }
 
 
-/* Create and initialize new SSL context */
-static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
+/* SSL password callback. */
+static int verify_cb(int preverify_ok, X509_STORE_CTX *x509_ctx)
+{
+    pj_ssl_sock_t *ssock;
+    SSL *ossl_ssl;
+    int err;
+
+    /* Get SSL instance */
+    ossl_ssl = X509_STORE_CTX_get_ex_data(x509_ctx, 
+				    SSL_get_ex_data_X509_STORE_CTX_idx());
+    pj_assert(ossl_ssl);
+
+    /* Get SSL socket instance */
+    ssock = SSL_get_ex_data(ossl_ssl, sslsock_idx);
+    pj_assert(ssock);
+
+    /* Store verification status */
+    err = X509_STORE_CTX_get_error(x509_ctx);
+    switch (err) {
+    case X509_V_OK:
+	break;
+
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT:
+	ssock->verify_status |= PJ_SSL_CERT_EISSUER_NOT_FOUND;
+	break;
+
+    case X509_V_ERR_ERROR_IN_CERT_NOT_BEFORE_FIELD:
+    case X509_V_ERR_ERROR_IN_CERT_NOT_AFTER_FIELD:
+    case X509_V_ERR_UNABLE_TO_DECRYPT_CERT_SIGNATURE:
+    case X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
+	ssock->verify_status |= PJ_SSL_CERT_EINVALID_FORMAT;
+	break;
+
+    case X509_V_ERR_CERT_NOT_YET_VALID:
+    case X509_V_ERR_CERT_HAS_EXPIRED:
+	ssock->verify_status |= PJ_SSL_CERT_EVALIDITY_PERIOD;
+	break;
+
+    case X509_V_ERR_UNABLE_TO_GET_CRL:
+    case X509_V_ERR_CRL_NOT_YET_VALID:
+    case X509_V_ERR_CRL_HAS_EXPIRED:
+    case X509_V_ERR_UNABLE_TO_DECRYPT_CRL_SIGNATURE:
+    case X509_V_ERR_CRL_SIGNATURE_FAILURE:
+    case X509_V_ERR_ERROR_IN_CRL_LAST_UPDATE_FIELD:
+    case X509_V_ERR_ERROR_IN_CRL_NEXT_UPDATE_FIELD:
+	ssock->verify_status |= PJ_SSL_CERT_ECRL_FAILURE;
+	break;	
+
+    case X509_V_ERR_DEPTH_ZERO_SELF_SIGNED_CERT:
+    case X509_V_ERR_CERT_UNTRUSTED:
+    case X509_V_ERR_SELF_SIGNED_CERT_IN_CHAIN:
+    case X509_V_ERR_UNABLE_TO_GET_ISSUER_CERT_LOCALLY:
+	ssock->verify_status |= PJ_SSL_CERT_EUNTRUSTED;
+	break;	
+
+    case X509_V_ERR_CERT_SIGNATURE_FAILURE:
+    case X509_V_ERR_UNABLE_TO_VERIFY_LEAF_SIGNATURE:
+    case X509_V_ERR_SUBJECT_ISSUER_MISMATCH:
+    case X509_V_ERR_AKID_SKID_MISMATCH:
+    case X509_V_ERR_AKID_ISSUER_SERIAL_MISMATCH:
+    case X509_V_ERR_KEYUSAGE_NO_CERTSIGN:
+	ssock->verify_status |= PJ_SSL_CERT_EISSUER_MISMATCH;
+	break;
+
+    case X509_V_ERR_CERT_REVOKED:
+	ssock->verify_status |= PJ_SSL_CERT_EREVOKED;
+	break;	
+
+    case X509_V_ERR_INVALID_PURPOSE:
+    case X509_V_ERR_CERT_REJECTED:
+    case X509_V_ERR_INVALID_CA:
+	ssock->verify_status |= PJ_SSL_CERT_EINVALID_PURPOSE;
+	break;
+
+    case X509_V_ERR_CERT_CHAIN_TOO_LONG: /* not really used */
+    case X509_V_ERR_PATH_LENGTH_EXCEEDED:
+	ssock->verify_status |= PJ_SSL_CERT_ECHAIN_TOO_LONG;
+	break;
+
+    /* Unknown errors */
+    case X509_V_ERR_OUT_OF_MEM:
+    default:
+	ssock->verify_status |= PJ_SSL_CERT_EUNKNOWN;
+	break;
+    }
+
+    /* When verification is not requested just return ok here, however
+     * application can still get the verification status.
+     */
+    if (PJ_FALSE == ssock->param.verify_peer)
+	preverify_ok = 1;
+
+    return preverify_ok;
+}
+
+/* Setting SSL sock cipher list */
+static pj_status_t set_cipher_list(pj_ssl_sock_t *ssock);
+
+
+/* Create and initialize new SSL context and instance */
+static pj_status_t create_ssl(pj_ssl_sock_t *ssock)
 {
     SSL_METHOD *ssl_method;
     SSL_CTX *ctx;
@@ -364,7 +479,7 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
     int mode, rc;
     pj_status_t status;
         
-    pj_assert(ssock && p_ctx);
+    pj_assert(ssock);
 
     cert = ssock->cert;
 
@@ -393,7 +508,7 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
 	return PJ_EINVAL;
     }
 
-    /* Create SSL context for the listener */
+    /* Create SSL context */
     ctx = SSL_CTX_new(ssl_method);
     if (ctx == NULL) {
 	GET_SSL_STATUS(status);
@@ -455,29 +570,55 @@ static pj_status_t create_ssl_ctx(pj_ssl_sock_t *ssock, SSL_CTX **p_ctx)
 	}
     }
 
-
-    /* SSL verification options */
-    if (ssock->param.verify_peer) {
-	mode = SSL_VERIFY_PEER;
-    } else {
-	mode = SSL_VERIFY_NONE;
+    /* Create SSL instance */
+    ssock->ossl_ctx = ctx;
+    ssock->ossl_ssl = SSL_new(ssock->ossl_ctx);
+    if (ssock->ossl_ssl == NULL) {
+	GET_SSL_STATUS(status);
+	return status;
     }
 
+    /* Set SSL sock as application data of SSL instance */
+    SSL_set_ex_data(ssock->ossl_ssl, sslsock_idx, ssock);
+
+    /* SSL verification options */
+    mode = SSL_VERIFY_PEER;
     if (ssock->is_server && ssock->param.require_client_cert)
-	mode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT | SSL_VERIFY_PEER;
+	mode |= SSL_VERIFY_FAIL_IF_NO_PEER_CERT;
 
-    SSL_CTX_set_verify(ctx, mode, NULL);
+    SSL_set_verify(ssock->ossl_ssl, mode, &verify_cb);
 
-    *p_ctx = ctx;
+    /* Set cipher list */
+    status = set_cipher_list(ssock);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Setup SSL BIOs */
+    ssock->ossl_rbio = BIO_new(BIO_s_mem());
+    ssock->ossl_wbio = BIO_new(BIO_s_mem());
+    BIO_set_close(ssock->ossl_rbio, BIO_CLOSE);
+    BIO_set_close(ssock->ossl_wbio, BIO_CLOSE);
+    SSL_set_bio(ssock->ossl_ssl, ssock->ossl_rbio, ssock->ossl_wbio);
 
     return PJ_SUCCESS;
 }
 
 
-/* Destroy SSL context */
-static void destroy_ssl_ctx(SSL_CTX *ctx)
+/* Destroy SSL context and instance */
+static void destroy_ssl(pj_ssl_sock_t *ssock)
 {
-    SSL_CTX_free(ctx);
+    /* Destroy SSL instance */
+    if (ssock->ossl_ssl) {
+	SSL_shutdown(ssock->ossl_ssl);
+	SSL_free(ssock->ossl_ssl); /* this will also close BIOs */
+	ssock->ossl_ssl = NULL;
+    }
+
+    /* Destroy SSL context */
+    if (ssock->ossl_ctx) {
+	SSL_CTX_free(ssock->ossl_ctx);
+	ssock->ossl_ctx = NULL;
+    }
 
     /* Potentially shutdown OpenSSL library if this is the last
      * context exists.
@@ -491,15 +632,8 @@ static void reset_ssl_sock_state(pj_ssl_sock_t *ssock)
 {
     ssock->ssl_state = SSL_STATE_NULL;
 
-    if (ssock->ossl_ssl) {
-	SSL_shutdown(ssock->ossl_ssl);
-	SSL_free(ssock->ossl_ssl); /* this will also close BIOs */
-	ssock->ossl_ssl = NULL;
-    }
-    if (ssock->ossl_ctx) {
-	destroy_ssl_ctx(ssock->ossl_ctx);
-	ssock->ossl_ctx = NULL;
-    }
+    destroy_ssl(ssock);
+
     if (ssock->asock) {
 	pj_activesock_close(ssock->asock);
 	ssock->asock = NULL;
@@ -639,42 +773,143 @@ static pj_bool_t parse_ossl_asn1_time(pj_time_val *tv, pj_bool_t *gmt,
 }
 
 
-/* Get certificate info from OpenSSL X509 */
+/* Get Common Name field string from a general name string */
+static void get_cn_from_gen_name(const pj_str_t *gen_name, pj_str_t *cn)
+{
+    pj_str_t CN_sign = {"/CN=", 4};
+    char *p, *q;
+
+    pj_bzero(cn, sizeof(cn));
+
+    p = pj_strstr(gen_name, &CN_sign);
+    if (!p)
+	return;
+
+    p += 4; /* shift pointer to value part */
+    pj_strset(cn, p, gen_name->slen - (p - gen_name->ptr));
+    q = pj_strchr(cn, '/');
+    if (q)
+	cn->slen = q - p;
+}
+
+
+/* Get certificate info from OpenSSL X509, in case the certificate info
+ * hal already populated, this function will check if the contents need 
+ * to be updated by inspecting the issuer and the serial number.
+ */
 static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci, X509 *x)
 {
-    pj_ssl_cert_info info;
-    char buf1[256];
-    char buf2[256];
+    pj_bool_t update_needed;
+    char buf[512];
+    pj_uint8_t serial_no[64] = {0}; /* should be >= sizeof(ci->serial_no) */
+    pj_uint8_t *p;
+    unsigned len;
+    GENERAL_NAMES *names = NULL;
 
-    pj_assert(pool && ci);
+    pj_assert(pool && ci && x);
 
-    if (!x) {
-	pj_bzero(ci, sizeof(pj_ssl_cert_info));
+    /* Get issuer */
+    X509_NAME_oneline(X509_get_issuer_name(x), buf, sizeof(buf));
+
+    /* Get serial no */
+    p = (pj_uint8_t*) M_ASN1_STRING_data(X509_get_serialNumber(x));
+    len = M_ASN1_STRING_length(X509_get_serialNumber(x));
+    if (len > sizeof(ci->serial_no)) 
+	len = sizeof(ci->serial_no);
+    pj_memcpy(serial_no + sizeof(ci->serial_no) - len, p, len);
+
+    /* Check if the contents need to be updated. */
+    update_needed = pj_strcmp2(&ci->issuer.info, buf) || 
+	            pj_memcmp(ci->serial_no, serial_no, sizeof(ci->serial_no));
+    if (!update_needed)
 	return;
-    }
 
-    pj_bzero(&info, sizeof(info));
+    /* Update cert info */
 
-    /* Populate cert info */
-    info.subject = pj_str(X509_NAME_oneline(X509_get_subject_name(x),buf1,
-					    sizeof(buf1)));
-    info.issuer = pj_str(X509_NAME_oneline(X509_get_issuer_name(x), buf2,
-					   sizeof(buf2)));
-    info.version = X509_get_version(x) + 1;
-    parse_ossl_asn1_time(&info.validity_start, &info.validity_use_gmt,
+    pj_bzero(ci, sizeof(pj_ssl_cert_info));
+
+    /* Version */
+    ci->version = X509_get_version(x) + 1;
+
+    /* Issuer */
+    pj_strdup2(pool, &ci->issuer.info, buf);
+    get_cn_from_gen_name(&ci->issuer.info, &ci->issuer.cn);
+
+    /* Serial number */
+    pj_memcpy(ci->serial_no, serial_no, sizeof(ci->serial_no));
+
+    /* Subject */
+    pj_strdup2(pool, &ci->subject.info, 
+	       X509_NAME_oneline(X509_get_subject_name(x),
+				 buf, sizeof(buf)));
+    get_cn_from_gen_name(&ci->subject.info, &ci->subject.cn);
+
+    /* Validity */
+    parse_ossl_asn1_time(&ci->validity.start, &ci->validity.gmt,
 			 X509_get_notBefore(x));
-    parse_ossl_asn1_time(&info.validity_end, &info.validity_use_gmt,
+    parse_ossl_asn1_time(&ci->validity.end, &ci->validity.gmt,
 			 X509_get_notAfter(x));
 
-    /* Update certificate info */
-    if (pj_strcmp(&ci->subject, &info.subject))
-	pj_strdup(pool, &ci->subject, &info.subject);
-    if (pj_strcmp(&ci->issuer, &info.issuer))
-	pj_strdup(pool, &ci->issuer, &info.issuer);
-    ci->version = info.version;
-    ci->validity_start = info.validity_start;
-    ci->validity_end = info.validity_end;
-    ci->validity_use_gmt = info.validity_use_gmt;
+    /* Subject Alternative Name extension */
+    if (ci->version >= 3) {
+	names = (GENERAL_NAMES*) X509_get_ext_d2i(x, NID_subject_alt_name,
+						  NULL, NULL);
+    }
+    if (names) {
+        unsigned i, cnt;
+
+        cnt = sk_GENERAL_NAME_num(names);
+	ci->subj_alt_name.entry = pj_pool_calloc(pool, cnt, 
+					    sizeof(*ci->subj_alt_name.entry));
+
+        for (i = 0; i < cnt; ++i) {
+	    unsigned char *p = 0;
+	    pj_ssl_cert_name_type type = PJ_SSL_CERT_NAME_UNKNOWN;
+            const GENERAL_NAME *name;
+	    
+	    name = sk_GENERAL_NAME_value(names, i);
+
+            switch (name->type) {
+                case GEN_EMAIL:
+                    len = ASN1_STRING_to_UTF8(&p, name->d.ia5);
+		    type = PJ_SSL_CERT_NAME_RFC822;
+                    break;
+                case GEN_DNS:
+                    len = ASN1_STRING_to_UTF8(&p, name->d.ia5);
+		    type = PJ_SSL_CERT_NAME_DNS;
+                    break;
+                case GEN_URI:
+                    len = ASN1_STRING_to_UTF8(&p, name->d.ia5);
+		    type = PJ_SSL_CERT_NAME_URI;
+                    break;
+                case GEN_IPADD:
+		    p = ASN1_STRING_data(name->d.ip);
+		    len = ASN1_STRING_length(name->d.ip);
+		    type = PJ_SSL_CERT_NAME_IP;
+                    break;
+		default:
+		    break;
+            }
+
+	    if (p && len && type != PJ_SSL_CERT_NAME_UNKNOWN) {
+		ci->subj_alt_name.entry[ci->subj_alt_name.cnt].type = type;
+		if (type == PJ_SSL_CERT_NAME_IP) {
+		    int af = pj_AF_INET();
+		    if (len == sizeof(pj_in6_addr)) af = pj_AF_INET6();
+		    pj_inet_ntop2(af, p, buf, sizeof(buf));
+		    pj_strdup2(pool, 
+		          &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name,
+		          buf);
+		} else {
+		    pj_strdup2(pool, 
+			  &ci->subj_alt_name.entry[ci->subj_alt_name.cnt].name, 
+			  (char*)p);
+		    OPENSSL_free(p);
+		}
+		ci->subj_alt_name.cnt++;
+	    }
+        }
+    }
 }
 
 
@@ -689,14 +924,22 @@ static void update_certs_info(pj_ssl_sock_t *ssock)
 
     /* Active local certificate */
     x = SSL_get_certificate(ssock->ossl_ssl);
-    get_cert_info(ssock->pool, &ssock->local_cert_info, x);
-    /* Don't free local's X509! */
+    if (x) {
+	get_cert_info(ssock->pool, &ssock->local_cert_info, x);
+	/* Don't free local's X509! */
+    } else {
+	pj_bzero(&ssock->local_cert_info, sizeof(pj_ssl_cert_info));
+    }
 
     /* Active remote certificate */
     x = SSL_get_peer_certificate(ssock->ossl_ssl);
-    get_cert_info(ssock->pool, &ssock->remote_cert_info, x);
-    /* Free peer's X509 */
-    X509_free(x);
+    if (x) {
+	get_cert_info(ssock->pool, &ssock->remote_cert_info, x);
+	/* Free peer's X509 */
+	X509_free(x);
+    } else {
+	pj_bzero(&ssock->remote_cert_info, sizeof(pj_ssl_cert_info));
+    }
 }
 
 
@@ -1231,28 +1474,9 @@ static pj_bool_t asock_on_accept_complete (pj_activesock_t *asock,
     pj_sockaddr_cp(&ssock->rem_addr, src_addr);
 
     /* Create SSL context */
-    status = create_ssl_ctx(ssock, &ssock->ossl_ctx);
+    status = create_ssl(ssock);
     if (status != PJ_SUCCESS)
 	goto on_return;
-
-    /* Create SSL instance */
-    ssock->ossl_ssl = SSL_new(ssock->ossl_ctx);
-    if (ssock->ossl_ssl == NULL) {
-	GET_SSL_STATUS(status);
-	goto on_return;
-    }
-
-    /* Set cipher list */
-    status = set_cipher_list(ssock);
-    if (status != PJ_SUCCESS)
-	goto on_return;
-
-    /* Setup SSL BIOs */
-    ssock->ossl_rbio = BIO_new(BIO_s_mem());
-    ssock->ossl_wbio = BIO_new(BIO_s_mem());
-    BIO_set_close(ssock->ossl_rbio, BIO_CLOSE);
-    BIO_set_close(ssock->ossl_wbio, BIO_CLOSE);
-    SSL_set_bio(ssock->ossl_ssl, ssock->ossl_rbio, ssock->ossl_wbio);
 
     /* Prepare read buffer */
     ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
@@ -1351,28 +1575,9 @@ static pj_bool_t asock_on_connect_complete (pj_activesock_t *asock,
 	goto on_return;
 
     /* Create SSL context */
-    status = create_ssl_ctx(ssock, &ssock->ossl_ctx);
+    status = create_ssl(ssock);
     if (status != PJ_SUCCESS)
 	goto on_return;
-
-    /* Create SSL instance */
-    ssock->ossl_ssl = SSL_new(ssock->ossl_ctx);
-    if (ssock->ossl_ssl == NULL) {
-	GET_SSL_STATUS(status);
-	goto on_return;
-    }
-
-    /* Set cipher list */
-    status = set_cipher_list(ssock);
-    if (status != PJ_SUCCESS)
-	goto on_return;
-
-    /* Setup SSL BIOs */
-    ssock->ossl_rbio = BIO_new(BIO_s_mem());
-    ssock->ossl_wbio = BIO_new(BIO_s_mem());
-    BIO_set_close(ssock->ossl_rbio, BIO_CLOSE);
-    BIO_set_close(ssock->ossl_wbio, BIO_CLOSE);
-    SSL_set_bio(ssock->ossl_ssl, ssock->ossl_rbio, ssock->ossl_wbio);
 
     /* Prepare read buffer */
     ssock->asock_rbuf = (void**)pj_pool_calloc(ssock->pool, 
@@ -1651,9 +1856,9 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
     pj_sockaddr_cp(&info->local_addr, &ssock->local_addr);
     
     if (info->established) {
-	/* Current cipher */
 	const SSL_CIPHER *cipher;
 
+	/* Current cipher */
 	cipher = SSL_get_current_cipher(ssock->ossl_ssl);
 	info->cipher = (cipher->id & 0x00FFFFFF);
 
@@ -1661,8 +1866,11 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 	pj_sockaddr_cp(&info->remote_addr, &ssock->rem_addr);
 
 	/* Certificates info */
-	info->local_cert_info = ssock->local_cert_info;
-	info->remote_cert_info = ssock->remote_cert_info;
+	info->local_cert_info = &ssock->local_cert_info;
+	info->remote_cert_info = &ssock->remote_cert_info;
+
+	/* Verification status */
+	info->verify_status = ssock->verify_status;
     }
 
     return PJ_SUCCESS;

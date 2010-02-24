@@ -49,6 +49,8 @@ SOURCE		pool_buf.c
 SOURCE		pool_caching.c
 SOURCE		rand.c
 SOURCE		rbtree.c
+SOURCE		ssl_sock_common.c
+SOURCE		ssl_sock_dump.c
 SOURCE		sock_common.c
 SOURCE		sock_qos_common.c
 SOURCE		types.c
@@ -72,7 +74,6 @@ SOURCE		os_timestamp_common.c
 SOURCE		os_time_unix.c
 SOURCE		os_timestamp_posix.c
 SOURCE		pool_policy_new.cpp
-SOURCE		ssl_sock_common.c
 SOURCE		ssl_sock_symbian.cpp
 SOURCE		sock_symbian.cpp
 SOURCE		sock_select_symbian.cpp

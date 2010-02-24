@@ -71,7 +71,8 @@ STATICLIBRARY		libresample.lib
 	STATICLIBRARY   eexe.lib ecrt0.lib
 #endif
 
-LIBRARY			esock.lib insock.lib charconv.lib euser.lib estlib.lib commdb.lib apengine.lib securesocket.lib 
+LIBRARY			esock.lib insock.lib charconv.lib euser.lib estlib.lib commdb.lib apengine.lib 
+LIBRARY			securesocket.lib x509.lib crypto.lib x500.lib 
 
 // The default 8KB seems to be insufficient with all bells and
 // whistles turned on

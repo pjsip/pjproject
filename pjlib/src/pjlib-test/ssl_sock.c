@@ -22,7 +22,7 @@
 
 
 #define CERT_DIR		    "../build/"
-#define CERT_CA_FILE		    NULL
+#define CERT_CA_FILE		    CERT_DIR "cacert.pem"
 #define CERT_FILE		    CERT_DIR "cacert.pem"
 #define CERT_PRIVKEY_FILE	    CERT_DIR "privkey.pem"
 #define CERT_PRIVKEY_PASS	    ""
@@ -83,26 +83,40 @@ struct test_state
     struct send_key send_key;	    /* send op key			    */
 };
 
-static void dump_cert_info(const char *prefix, const pj_ssl_cert_info *ci)
+static void dump_ssl_info(const pj_ssl_sock_info *si)
 {
-    const char *wdays[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-    pj_parsed_time pt1;
-    pj_parsed_time pt2;
+    const char *tmp_st;
 
-    pj_time_decode(&ci->validity_start, &pt1);
-    pj_time_decode(&ci->validity_end, &pt2);
+    /* Print cipher name */
+    tmp_st = pj_ssl_cipher_name(si->cipher);
+    if (tmp_st == NULL)
+	tmp_st = "[Unknown]";
+    PJ_LOG(3, ("", ".....Cipher: %s", tmp_st));
 
-    PJ_LOG(3, ("", "%sSubject    : %.*s", prefix, ci->subject.slen, ci->subject.ptr));
-    PJ_LOG(3, ("", "%sIssuer     : %.*s", prefix, ci->issuer.slen, ci->issuer.ptr));
-    PJ_LOG(3, ("", "%sVersion    : v%d", prefix, ci->version));
-    PJ_LOG(3, ("", "%sValid from : %s %4d-%02d-%02d %02d:%02d:%02d.%03d %s", 
-		   prefix, wdays[pt1.wday], pt1.year, pt1.mon+1, pt1.day,
-		   pt1.hour, pt1.min, pt1.sec, pt1.msec,
-		   (ci->validity_use_gmt? "GMT":"")));
-    PJ_LOG(3, ("", "%sValid to   : %s %4d-%02d-%02d %02d:%02d:%02d.%03d %s", 
-		   prefix, wdays[pt2.wday], pt2.year, pt2.mon+1, pt2.day,
-		   pt2.hour, pt2.min, pt2.sec, pt2.msec,
-		   (ci->validity_use_gmt? "GMT":"")));
+    /* Print remote certificate info and verification result */
+    if (si->remote_cert_info && si->remote_cert_info->subject.info.slen) 
+    {
+	char buf[2048];
+	const char *verif_msgs[32];
+	unsigned verif_msg_cnt;
+
+	/* Dump remote TLS certificate info */
+	PJ_LOG(3, ("", ".....Remote certificate info:"));
+	pj_ssl_cert_info_dump(si->remote_cert_info, "  ", buf, sizeof(buf));
+	PJ_LOG(3,("", "\n%s", buf));
+
+	/* Dump remote TLS certificate verification result */
+	verif_msg_cnt = PJ_ARRAY_SIZE(verif_msgs);
+	pj_ssl_cert_verify_error_st(si->verify_status,
+				    verif_msgs, &verif_msg_cnt);
+	PJ_LOG(3,("", ".....Remote certificate verification result: %s",
+		  (verif_msg_cnt == 1? verif_msgs[0]:"")));
+	if (verif_msg_cnt > 1) {
+	    unsigned i;
+	    for (i = 0; i < verif_msg_cnt; ++i)
+		PJ_LOG(3,("", "..... - %s", verif_msgs[i]));
+	}
+    }
 }
 
 
@@ -130,25 +144,8 @@ static pj_bool_t ssl_on_connect_complete(pj_ssl_sock_t *ssock,
     pj_sockaddr_print((pj_sockaddr_t*)&info.remote_addr, buf2, sizeof(buf2), 1);
     PJ_LOG(3, ("", "...Connected %s -> %s!", buf1, buf2));
 
-    if (st->is_verbose) {
-	const char *tmp_st;
-
-	/* Print cipher name */
-	tmp_st = pj_ssl_cipher_name(info.cipher);
-	if (tmp_st == NULL)
-	    tmp_st = "[Unknown]";
-	PJ_LOG(3, ("", ".....Cipher: %s", tmp_st));
-
-	/* Print certificates info */
-	if (info.local_cert_info.subject.slen) {
-	    PJ_LOG(3, ("", ".....Local certificate info:"));
-	    dump_cert_info(".......", &info.local_cert_info);
-	}
-	if (info.remote_cert_info.subject.slen) {
-	    PJ_LOG(3, ("", ".....Remote certificate info:"));
-	    dump_cert_info(".......", &info.remote_cert_info);
-	}
-    }
+    if (st->is_verbose)
+	dump_ssl_info(&info);
 
     /* Start reading data */
     read_buf[0] = st->read_buf;
@@ -198,6 +195,8 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
 				   pj_ssl_sock_get_user_data(ssock);
     struct test_state *st;
     void *read_buf[1];
+    pj_ssl_sock_info info;
+    char buf[64];
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
@@ -207,36 +206,17 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     *st = *parent_st;
     pj_ssl_sock_set_user_data(newsock, st);
 
-    if (st->is_verbose) {
-	pj_ssl_sock_info info;
-	char buf[64];
-	const char *tmp_st;
-
-	status = pj_ssl_sock_get_info(newsock, &info);
-	if (status != PJ_SUCCESS) {
-	    app_perror("...ERROR pj_ssl_sock_get_info()", status);
-	    goto on_return;
-	}
-
-	pj_sockaddr_print(src_addr, buf, sizeof(buf), 1);
-	PJ_LOG(3, ("", "...Accepted connection from %s", buf));
-
-	/* Print cipher name */
-	tmp_st = pj_ssl_cipher_name(info.cipher);
-	if (tmp_st == NULL)
-	    tmp_st = "[Unknown]";
-	PJ_LOG(3, ("", ".....Cipher: %s", tmp_st));
-
-	/* Print certificates info */
-	if (info.local_cert_info.subject.slen) {
-	    PJ_LOG(3, ("", ".....Local certificate info:"));
-	    dump_cert_info(".......", &info.local_cert_info);
-	}
-	if (info.remote_cert_info.subject.slen) {
-	    PJ_LOG(3, ("", ".....Remote certificate info:"));
-	    dump_cert_info(".......", &info.remote_cert_info);
-	}
+    status = pj_ssl_sock_get_info(newsock, &info);
+    if (status != PJ_SUCCESS) {
+	app_perror("...ERROR pj_ssl_sock_get_info()", status);
+	goto on_return;
     }
+
+    pj_sockaddr_print(src_addr, buf, sizeof(buf), 1);
+    PJ_LOG(3, ("", "...Accepted connection from %s", buf));
+
+    if (st->is_verbose)
+	dump_ssl_info(&info);
 
     /* Start reading data */
     read_buf[0] = st->read_buf;
@@ -460,6 +440,7 @@ static int https_client_test(unsigned ms_timeout)
     param.timer_heap = timer;
     param.timeout.sec = 0;
     param.timeout.msec = ms_timeout;
+    param.proto = PJ_SSL_SOCK_PROTO_SSL23;
     pj_time_val_normalize(&param.timeout);
 
     status = pj_ssl_sock_create(pool, &param, &ssock);
@@ -512,7 +493,8 @@ on_return:
 
 
 static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
-		     pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher)
+		     pj_ssl_cipher srv_cipher, pj_ssl_cipher cli_cipher,
+		     pj_bool_t req_client_cert, pj_bool_t client_provide_cert)
 {
     pj_pool_t *pool = NULL;
     pj_ioqueue_t *ioqueue = NULL;
@@ -533,21 +515,6 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	goto on_return;
     }
 
-    /* Set cert */
-    {
-	pj_str_t tmp1, tmp2, tmp3, tmp4;
-
-	status = pj_ssl_cert_load_from_files(pool, 
-					     pj_strset2(&tmp1, (char*)CERT_CA_FILE), 
-					     pj_strset2(&tmp2, (char*)CERT_FILE), 
-					     pj_strset2(&tmp3, (char*)CERT_PRIVKEY_FILE), 
-					     pj_strset2(&tmp4, (char*)CERT_PRIVKEY_PASS), 
-					     &cert);
-	if (status != PJ_SUCCESS) {
-	    goto on_return;
-	}
-    }
-
     pj_ssl_sock_param_default(&param);
     param.cb.on_accept_complete = &ssl_on_accept_complete;
     param.cb.on_connect_complete = &ssl_on_connect_complete;
@@ -562,10 +529,11 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	pj_sockaddr_init(PJ_AF_INET, &addr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
     }
 
-    /* SERVER */
+    /* === SERVER === */
     param.proto = srv_proto;
     param.user_data = &state_serv;
     param.ciphers_num = (srv_cipher == -1)? 0 : 1;
+    param.require_client_cert = req_client_cert;
     ciphers[0] = srv_cipher;
 
     state_serv.pool = pool;
@@ -578,9 +546,24 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	goto on_return;
     }
 
-    status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
-    if (status != PJ_SUCCESS) {
-	goto on_return;
+    /* Set server cert */
+    {
+	pj_str_t tmp1, tmp2, tmp3, tmp4;
+
+	status = pj_ssl_cert_load_from_files(pool, 
+					     pj_strset2(&tmp1, (char*)CERT_CA_FILE), 
+					     pj_strset2(&tmp2, (char*)CERT_FILE), 
+					     pj_strset2(&tmp3, (char*)CERT_PRIVKEY_FILE), 
+					     pj_strset2(&tmp4, (char*)CERT_PRIVKEY_PASS), 
+					     &cert);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
+
+	status = pj_ssl_sock_set_certificate(ssock_serv, pool, cert);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
     }
 
     status = pj_ssl_sock_start_accept(ssock_serv, pool, &addr, pj_sockaddr_get_len(&addr));
@@ -596,7 +579,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	pj_sockaddr_cp(&listen_addr, &info.local_addr);
     }
 
-    /* CLIENT */
+    /* === CLIENT === */
     param.proto = cli_proto;
     param.user_data = &state_cli;
     param.ciphers_num = (cli_cipher == -1)? 0 : 1;
@@ -623,6 +606,28 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
     status = pj_ssl_sock_create(pool, &param, &ssock_cli);
     if (status != PJ_SUCCESS) {
 	goto on_return;
+    }
+
+    /* Set cert for client */
+    {
+
+	if (!client_provide_cert) {
+	    pj_str_t tmp1, tmp2;
+
+	    pj_strset2(&tmp1, (char*)CERT_CA_FILE);
+	    pj_strset2(&tmp2, NULL);
+	    status = pj_ssl_cert_load_from_files(pool, 
+						 &tmp1, &tmp2, &tmp2, &tmp2,
+						 &cert);
+	    if (status != PJ_SUCCESS) {
+		goto on_return;
+	    }
+	}
+
+	status = pj_ssl_sock_set_certificate(ssock_cli, pool, cert);
+	if (status != PJ_SUCCESS) {
+	    goto on_return;
+	}
     }
 
     status = pj_ssl_sock_start_connect(ssock_cli, pool, &addr, &listen_addr, pj_sockaddr_get_len(&addr));
@@ -1013,6 +1018,9 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     ssock_cli = pj_pool_calloc(pool, clients, sizeof(pj_ssl_sock_t*));
     state_cli = pj_pool_calloc(pool, clients, sizeof(struct test_state));
 
+    /* Get start timestamp */
+    pj_gettimeofday(&start);
+
     /* Setup clients */
     for (i = 0; i < clients; ++i) {
 	param.user_data = &state_cli[i];
@@ -1063,9 +1071,6 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 #endif
 	}
     }
-
-    /* Get start timestamp */
-    pj_gettimeofday(&start);
 
     /* Wait until everything has been sent/received or error */
     while (clients_num)
@@ -1150,27 +1155,45 @@ int ssl_sock_test(void)
 
     PJ_LOG(3,("", "..echo test w/ TLSv1 and TLS_RSA_WITH_DES_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
-		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_DES_CBC_SHA);
+		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_DES_CBC_SHA, 
+		    PJ_FALSE, PJ_FALSE);
     if (ret != 0)
 	return ret;
 
     PJ_LOG(3,("", "..echo test w/ SSLv23 and TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_SSL23, PJ_SSL_SOCK_PROTO_SSL23, 
-		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA);
+		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_FALSE, PJ_FALSE);
     if (ret != 0)
 	return ret;
 
     PJ_LOG(3,("", "..echo test w/ incompatible proto"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_SSL3, 
-		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_DES_CBC_SHA);
+		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_DES_CBC_SHA,
+		    PJ_FALSE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
 
     PJ_LOG(3,("", "..echo test w/ incompatible ciphers"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
-		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA);
+		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_FALSE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
+
+    PJ_LOG(3,("", "..echo test w/ client cert required but not provided"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
+		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_TRUE, PJ_FALSE);
+    if (ret == 0)
+	return PJ_EBUG;
+
+    PJ_LOG(3,("", "..echo test w/ client cert required and provided"));
+    ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
+		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_TRUE, PJ_TRUE);
+    if (ret != 0)
+	return ret;
 
     PJ_LOG(3,("", "..client non-SSL (handshake timeout 5 secs)"));
     ret = client_non_ssl(5000);

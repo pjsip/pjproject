@@ -340,6 +340,10 @@ SOURCE=..\src\pj\ssl_sock_common.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pj\ssl_sock_dump.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pj\ssl_sock_ossl.c
 # End Source File
 # Begin Source File

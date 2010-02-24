@@ -1810,9 +1810,6 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	/*
 	 * Create TLS transport.
 	 */
-	/*
-	 * Create TCP transport.
-	 */
 	pjsua_transport_config config;
 	pjsip_host_port a_name;
 	pjsip_tpfactory *tls;
@@ -1867,6 +1864,11 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	goto on_return;
     }
 
+    /* Set transport state callback */
+    if (pjsua_var.ua_cfg.cb.on_transport_state) {
+	pjsip_tpmgr_set_status_cb(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
+				  &pjsua_var.ua_cfg.cb.on_transport_state);
+    }
 
     /* Return the ID */
     if (p_id) *p_id = id;

@@ -127,6 +127,11 @@ public:
 	    return securesock_->CurrentCipherSuite(cipher);
 	return KErrNotFound;
     }
+    const CX509Certificate *GetPeerCert() {
+	if (securesock_)
+	    return securesock_->ServerCert();
+	return NULL;
+    }
 
 private:
     enum ssl_state	 state_;
@@ -409,6 +414,7 @@ typedef struct write_state_t {
  */
 struct pj_ssl_sock_t
 {
+    pj_pool_t		*pool;
     pj_ssl_sock_cb	 cb;
     void		*user_data;
     
@@ -434,7 +440,130 @@ struct pj_ssl_sock_t
     unsigned		 ciphers_num;
     pj_ssl_cipher	*ciphers;
     pj_str_t		 servername;
+    pj_ssl_cert_info	 remote_cert_info;
 };
+
+
+static pj_str_t get_cert_name(pj_pool_t *pool,
+                              const CX500DistinguishedName &name)
+{
+    TInt i;
+    char buf[1024];
+    TUint8 *p;
+    TInt l = sizeof(buf);
+    
+    p = (TUint8*)buf;
+    for(i = 0; i < name.Count(); ++i) {
+	const CX520AttributeTypeAndValue &attr = name.Element(i);
+
+	/* Print element separator */
+	*p++ = '/';
+	if (0 == --l) break;
+
+	/* Print the type. */
+	TPtr8 type(p, l);
+	type.Copy(attr.Type());
+	p += type.Length();
+	l -= type.Length();
+	if (0 >= --l) break;
+
+	/* Print equal sign */
+	*p++ = '=';
+	if (0 == --l) break;
+	
+	/* Print the value. Let's just get the raw data here */
+	TPtr8 value(p, l);
+	value.Copy(attr.EncodedValue().Mid(2));
+	p += value.Length();
+	l -= value.Length();
+	if (0 >= --l) break;
+    }
+    
+    pj_str_t src, res;
+    pj_strset(&src, buf, sizeof(buf) - l);
+    pj_strdup(pool, &res, &src);
+    
+    return res;
+}
+                            
+/* Get certificate info from CX509Certificate.
+ */
+static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
+                          const CX509Certificate *x)
+{
+    unsigned len;
+    
+    pj_assert(pool && ci && x);
+    
+    pj_bzero(ci, sizeof(*ci));
+    
+    /* Version */
+    ci->version = x->Version();
+    
+    /* Serial number */
+    len = x->SerialNumber().Length();
+    if (len > sizeof(ci->serial_no)) 
+	len = sizeof(ci->serial_no);
+    pj_memcpy(ci->serial_no + sizeof(ci->serial_no) - len, 
+              x->SerialNumber().Ptr(), len);
+    
+    /* Subject */
+    {
+	HBufC *subject = NULL;
+	TRAPD(err, subject = x->SubjectL());
+	if (err == KErrNone) {
+	    TPtr16 ptr16(subject->Des());
+	    len = ptr16.Length();
+	    TPtr8 ptr8((TUint8*)pj_pool_alloc(pool, len), len);
+	    ptr8.Copy(ptr16);
+	    pj_strset(&ci->subject.cn, (char*)ptr8.Ptr(), ptr8.Length());
+	}
+	ci->subject.info = get_cert_name(pool, x->SubjectName());
+    }
+
+    /* Issuer */
+    {
+	HBufC *issuer = NULL;
+	TRAPD(err, issuer = x->IssuerL());
+	if (err == KErrNone) {
+	    TPtr16 ptr16(issuer->Des());
+	    len = ptr16.Length();
+	    TPtr8 ptr8((TUint8*)pj_pool_alloc(pool, len), len);
+	    ptr8.Copy(ptr16);
+	    pj_strset(&ci->issuer.cn, (char*)ptr8.Ptr(), ptr8.Length());
+	}
+	ci->issuer.info = get_cert_name(pool, x->IssuerName());
+    }
+    
+    /* Validity */
+    const CValidityPeriod &valid_period = x->ValidityPeriod();
+    TTime base_time(TDateTime(1970, EJanuary, 0, 0, 0, 0, 0));
+    TTimeIntervalSeconds tmp_sec;
+    valid_period.Start().SecondsFrom(base_time, tmp_sec);
+    ci->validity.start.sec = tmp_sec.Int(); 
+    valid_period.Finish().SecondsFrom(base_time, tmp_sec);
+    ci->validity.end.sec = tmp_sec.Int();
+}
+
+
+/* Update certificates info. This function should be called after handshake
+ * or renegotiation successfully completed.
+ */
+static void update_certs_info(pj_ssl_sock_t *ssock)
+{
+    const CX509Certificate *x;
+
+    pj_assert(ssock && ssock->sock &&
+              ssock->sock->GetState() == CPjSSLSocket::SSL_STATE_ESTABLISHED);
+        
+    /* Active remote certificate */
+    x = ssock->sock->GetPeerCert();
+    if (x) {
+	get_cert_info(ssock->pool, &ssock->remote_cert_info, x);
+    } else {
+	pj_bzero(&ssock->remote_cert_info, sizeof(pj_ssl_cert_info));
+    }
+}
 
 
 /*
@@ -504,6 +633,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->write_state.start = ssock->write_state.buf;
     
     /* Init secure socket */
+    ssock->pool = pool;
     ssock->sock_af = param->sock_af;
     ssock->sock_type = param->sock_type;
     ssock->cb = param->cb;
@@ -643,7 +773,10 @@ PJ_DEF(pj_status_t) pj_ssl_sock_get_info (pj_ssl_sock_t *ssock,
 
 	/* Remote address */
         pj_sockaddr_cp((pj_sockaddr_t*)&info->remote_addr, 
-    		   (pj_sockaddr_t*)&ssock->rem_addr);
+    		       (pj_sockaddr_t*)&ssock->rem_addr);
+        
+        /* Certificates info */
+        info->remote_cert_info = &ssock->remote_cert_info;
     }
 
     /* Protocol */
@@ -728,14 +861,20 @@ static void read_cb(int err, void *key)
 	ssock->read_state.read_buf->SetLength(0);
 	status = reader->Read(&read_cb, ssock, *ssock->read_state.read_buf, 
 			      ssock->read_state.flags);
-	if (status != PJ_EPENDING) {
-	    /* Notify error */
-	    (*ssock->cb.on_data_read)(ssock, NULL, 0, status, NULL);
-	}
     }
     
+    /* Connection closed or something goes wrong */
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	/* Connection closed or something goes wrong */
+	/* Notify error */
+	if (ssock->cb.on_data_read) {
+	    pj_bool_t ret = (*ssock->cb.on_data_read)(ssock, NULL, 0, 
+						      status, NULL);
+	    if (!ret) {
+		/* We've been destroyed */
+		return;
+	    }
+	}
+	
 	delete ssock->read_state.read_buf;
 	delete ssock->read_state.orig_buf;
 	ssock->read_state.read_buf = NULL;
@@ -1001,6 +1140,7 @@ static void connect_cb(int err, void *key)
     status = (err == KErrNone)? PJ_SUCCESS : PJ_RETURN_OS_ERROR(err);
     if (status == PJ_SUCCESS) {
 	ssock->established = PJ_TRUE;
+	update_certs_info(ssock);
     } else {
 	delete ssock->sock;
 	ssock->sock = NULL;

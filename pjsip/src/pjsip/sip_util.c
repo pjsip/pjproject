@@ -779,6 +779,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_cancel( pjsip_endpoint *endpt,
 	    pjsip_hdr_clone(cancel_tdata->pool, req_tdata->saved_strict_route);
     }
 
+    /* Copy the destination host name from the original request */
+    pj_strdup(cancel_tdata->pool, &cancel_tdata->dest_info.name,
+	      &req_tdata->dest_info.name);
+
     /* Finally copy the destination info from the original request */
     pj_memcpy(&cancel_tdata->dest_info, &req_tdata->dest_info,
 	      sizeof(req_tdata->dest_info));
@@ -1134,11 +1138,12 @@ static void stateless_send_transport_cb( void *token,
 	cur_addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
 
 	/* Acquire transport. */
-	status = pjsip_endpt_acquire_transport( stateless_data->endpt,
+	status = pjsip_endpt_acquire_transport2(stateless_data->endpt,
 						cur_addr_type,
 						cur_addr,
 						cur_addr_len,
 						&tdata->tp_sel,
+						tdata,
 						&stateless_data->cur_transport);
 	if (status != PJ_SUCCESS) {
 	    sent = -status;
@@ -1319,6 +1324,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_request_stateless(pjsip_endpoint *endpt,
      * proceed to sending the request directly.
      */
     if (tdata->dest_info.addr.count == 0) {
+	/* Copy the destination host name to TX data */
+	pj_strdup(tdata->pool, &tdata->dest_info.name, &dest_info.addr.host);
+
 	pjsip_endpt_resolve( endpt, tdata->pool, &dest_info, stateless_data,
 			     &stateless_send_resolver_callback);
     } else {
@@ -1465,6 +1473,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_raw_to_uri(pjsip_endpoint *endpt,
 	pj_memcpy(sraw_data->sel, sel, sizeof(pjsip_tpselector));
 	pjsip_tpselector_add_ref(sraw_data->sel);
     }
+
+    /* Copy the destination host name to TX data */
+    pj_strdup(tdata->pool, &tdata->dest_info.name, &dest_info.addr.host);
 
     /* Resolve destination host.
      * The processing then resumed when the resolving callback is called.
@@ -1622,11 +1633,12 @@ static void send_response_resolver_cb( pj_status_t status, void *token,
     /* Only handle the first address resolved. */
 
     /* Acquire transport. */
-    status = pjsip_endpt_acquire_transport( send_state->endpt, 
+    status = pjsip_endpt_acquire_transport2(send_state->endpt, 
 					    addr->entry[0].type,
 					    &addr->entry[0].addr,
 					    addr->entry[0].addr_len,
 					    &send_state->tdata->tp_sel,
+					    send_state->tdata,
 					    &send_state->cur_transport);
     if (status != PJ_SUCCESS) {
 	if (send_state->app_cb) {
@@ -1702,6 +1714,10 @@ PJ_DEF(pj_status_t) pjsip_endpt_send_response( pjsip_endpoint *endpt,
 	    return status;
 	}
     } else {
+	/* Copy the destination host name to TX data */
+	pj_strdup(tdata->pool, &tdata->dest_info.name, 
+		  &res_addr->dst_host.addr.host);
+
 	pjsip_endpt_resolve(endpt, tdata->pool, &res_addr->dst_host, 
 			    send_state, &send_response_resolver_cb);
 	return PJ_SUCCESS;

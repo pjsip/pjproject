@@ -24,6 +24,7 @@
 #include <pj/addr_resolv.h>
 #include <pj/ssl_sock.h>
 #include <pj/assert.h>
+#include <pj/hash.h>
 #include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
@@ -80,12 +81,14 @@ struct tls_transport
 {
     pjsip_transport	     base;
     pj_bool_t		     is_server;
+    pj_str_t		     remote_name;
 
     pj_bool_t		     is_registered;
     pj_bool_t		     is_closing;
     pj_status_t		     close_reason;
     pj_ssl_sock_t	    *ssock;
     pj_bool_t		     has_pending_connect;
+    pj_bool_t		     verify_server;
 
     /* Keep-alive timer. */
     pj_timer_entry	     ka_timer;
@@ -135,6 +138,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 					pjsip_endpoint *endpt,
 					const pj_sockaddr *rem_addr,
 					int addr_len,
+					pjsip_tx_data *tdata,
 					pjsip_transport **transport);
 
 /* Common function to create and initialize transport */
@@ -144,6 +148,7 @@ static pj_status_t tls_create(struct tls_listener *listener,
 			      pj_bool_t is_server,
 			      const pj_sockaddr_in *local,
 			      const pj_sockaddr_in *remote,
+			      const pj_str_t *remote_name,
 			      struct tls_transport **p_tls);
 
 
@@ -168,6 +173,34 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
     host_port->port = pj_sockaddr_get_port(addr);
 }
 
+
+static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
+{
+    pjsip_tp_state_callback *state_cb;
+
+    if (tls->close_reason == PJ_SUCCESS)
+	tls->close_reason = status;
+
+    if (tls->base.is_shutdown)
+	return;
+
+    /* Notify application of transport disconnected state */
+    state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+
+	pj_bzero(&state_info, sizeof(state_info));
+	state_info.status = tls->close_reason;
+	(*state_cb)(&tls->base, PJSIP_TP_STATE_DISCONNECTED, &state_info);
+    }
+
+    /* We can not destroy the transport since high level objects may
+     * still keep reference to this transport. So we can only 
+     * instruct transport manager to gracefully start the shutdown
+     * procedure for this transport.
+     */
+    pjsip_transport_shutdown(&tls->base);
+}
 
 
 /****************************************************************************
@@ -243,10 +276,10 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
     ssock_param.async_cnt = async_cnt;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(endpt);
     ssock_param.require_client_cert = listener->tls_setting.require_client_cert;
-    ssock_param.server_name = listener->tls_setting.server_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = listener;
-    ssock_param.verify_peer = listener->tls_setting.verify_client;
+    ssock_param.verify_peer = PJ_FALSE; /* avoid SSL socket closing the socket
+					 * due to verification error */
     if (ssock_param.send_buffer_size < PJSIP_MAX_PKT_LEN)
 	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
     if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
@@ -371,7 +404,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
     /* Register to transport manager */
     listener->endpt = endpt;
     listener->tpmgr = pjsip_endpt_get_tpmgr(endpt);
-    listener->factory.create_transport = lis_create_transport;
+    listener->factory.create_transport2 = lis_create_transport;
     listener->factory.destroy = lis_destroy;
     listener->is_registered = PJ_TRUE;
     status = pjsip_tpmgr_register_tpfactory(listener->tpmgr,
@@ -480,6 +513,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 			       pj_bool_t is_server,
 			       const pj_sockaddr_in *local,
 			       const pj_sockaddr_in *remote,
+			       const pj_str_t *remote_name,
 			       struct tls_transport **p_tls)
 {
     struct tls_transport *tls;
@@ -501,6 +535,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
      */
     tls = PJ_POOL_ZALLOC_T(pool, struct tls_transport);
     tls->is_server = is_server;
+    tls->verify_server = listener->tls_setting.verify_server;
     pj_list_init(&tls->delayed_list);
     tls->base.pool = pool;
 
@@ -517,8 +552,13 @@ static pj_status_t tls_create( struct tls_listener *listener,
 	goto on_error;
     }
 
+    if (remote_name)
+	pj_strdup(pool, &tls->remote_name, remote_name);
+
     tls->base.key.type = PJSIP_TRANSPORT_TLS;
     pj_memcpy(&tls->base.key.rem_addr, remote, sizeof(pj_sockaddr_in));
+    tls->base.key.hname = pj_hash_calc_tolower(0, (char*)tls->remote_name.ptr,
+					       &tls->remote_name);
     tls->base.type_name = "tls";
     tls->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
 
@@ -769,6 +809,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 					pjsip_endpoint *endpt,
 					const pj_sockaddr *rem_addr,
 					int addr_len,
+					pjsip_tx_data *tdata,
 					pjsip_transport **p_transport)
 {
     struct tls_listener *listener;
@@ -777,6 +818,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_ssl_sock_t *ssock;
     pj_ssl_sock_param ssock_param;
     pj_sockaddr_in local_addr;
+    pj_str_t remote_name;
     pj_status_t status;
 
     /* Sanity checks */
@@ -794,6 +836,12 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 				   POOL_TP_INIT, POOL_TP_INC);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
 
+    /* Get remote host name from tdata */
+    if (tdata)
+	remote_name = tdata->dest_info.name;
+    else
+	pj_bzero(&remote_name, sizeof(remote_name));
+
     /* Build SSL socket param */
     pj_ssl_sock_param_default(&ssock_param);
     ssock_param.cb.on_connect_complete = &on_connect_complete;
@@ -801,12 +849,12 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = 1;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
-    PJ_TODO(set_proper_servername_based_on_target);
     PJ_TODO(synchronize_tls_cipher_type_with_ssl_sock_cipher_type);
-    ssock_param.server_name = listener->tls_setting.server_name;
+    ssock_param.server_name = remote_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = NULL; /* pending, must be set later */
-    ssock_param.verify_peer = listener->tls_setting.verify_server;
+    ssock_param.verify_peer = PJ_FALSE; /* avoid SSL socket closing the socket
+					 * due to verification error */
     if (ssock_param.send_buffer_size < PJSIP_MAX_PKT_LEN)
 	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
     if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
@@ -850,7 +898,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
-			(pj_sockaddr_in*)rem_addr, &tls);
+			(pj_sockaddr_in*)rem_addr, &remote_name, &tls);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -928,8 +976,12 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 {
     struct tls_listener *listener;
     struct tls_transport *tls;
+    pj_ssl_sock_info ssl_info;
     char addr[PJ_INET6_ADDRSTRLEN+10];
     pj_status_t status;
+
+    pjsip_tp_state_callback *state_cb;
+    pj_bool_t tls_verif_ignored;
 
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -946,32 +998,84 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 	      pj_sockaddr_print(src_addr, addr, sizeof(addr), 3),
 	      new_ssock));
 
+    /* Retrieve SSL socket info, close the socket if this is failed
+     * as the SSL socket info availability is rather critical here.
+     */
+    status = pj_ssl_sock_get_info(new_ssock, &ssl_info);
+    if (status != PJ_SUCCESS) {
+	pj_ssl_sock_close(new_ssock);
+	return PJ_TRUE;
+    }
+
     /* 
      * Incoming connection!
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
 			 (const pj_sockaddr_in*)&listener->factory.local_addr,
-			 (const pj_sockaddr_in*)src_addr, &tls);
+			 (const pj_sockaddr_in*)src_addr, NULL, &tls);
     
-    if (status == PJ_SUCCESS) {
-	/* Set the "pending" SSL socket user data */
-	pj_ssl_sock_set_user_data(new_ssock, tls);
+    if (status != PJ_SUCCESS)
+	return PJ_TRUE;
 
-	status = tls_start_read(tls);
-	if (status != PJ_SUCCESS) {
-	    PJ_LOG(3,(tls->base.obj_name, "New transport cancelled"));
-	    tls_destroy(&tls->base, status);
+    /* Set the "pending" SSL socket user data */
+    pj_ssl_sock_set_user_data(new_ssock, tls);
+
+    tls_verif_ignored = !listener->tls_setting.verify_client;
+
+    /* Notify transport state to application */
+    state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+	pjsip_tls_state_info tls_info;
+	pj_uint32_t tp_state = 0;
+
+	/* Init transport state notification callback */
+	pj_bzero(&tls_info, sizeof(tls_info));
+	pj_bzero(&state_info, sizeof(state_info));
+
+	/* Set transport state based on verification status */
+	if (ssl_info.verify_status) {
+	    state_info.status = PJSIP_TLS_EACCEPT;
+	    tp_state |= PJSIP_TP_STATE_TLS_VERIF_ERROR;
+	    if (listener->tls_setting.verify_client)
+		tp_state |= PJSIP_TP_STATE_REJECTED;
+	    else
+		tp_state |= PJSIP_TP_STATE_ACCEPTED;
 	} else {
-	    /* Start keep-alive timer */
-	    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
-		pj_time_val delay = {PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0};
-		pjsip_endpt_schedule_timer(listener->endpt, 
-					   &tls->ka_timer, 
-					   &delay);
-		tls->ka_timer.id = PJ_TRUE;
-		pj_gettimeofday(&tls->last_activity);
-	    }
+	    tp_state |= PJSIP_TP_STATE_ACCEPTED;
+	}
+
+	tls_info.ssl_sock_info = &ssl_info;
+	state_info.ext_info = &tls_info;
+
+	tls_verif_ignored = (*state_cb)(&tls->base, tp_state, &state_info);
+    }
+
+    /* Transport should be destroyed when there is TLS verification error
+     * and application doesn't want to ignore it.
+     */
+    if (ssl_info.verify_status && 
+	(listener->tls_setting.verify_client || !tls_verif_ignored))
+    {
+	tls_destroy(&tls->base, PJSIP_TLS_EACCEPT);
+	return PJ_TRUE;
+    }
+
+    status = tls_start_read(tls);
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(3,(tls->base.obj_name, "New transport cancelled"));
+	tls_init_shutdown(tls, status);
+	tls_destroy(&tls->base, status);
+    } else {
+	/* Start keep-alive timer */
+	if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
+	    pj_time_val delay = {PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0};
+	    pjsip_endpt_schedule_timer(listener->endpt, 
+				       &tls->ka_timer, 
+				       &delay);
+	    tls->ka_timer.id = PJ_TRUE;
+	    pj_gettimeofday(&tls->last_activity);
 	}
     }
 
@@ -1019,8 +1123,8 @@ static pj_bool_t on_data_sent(pj_ssl_sock_t *ssock,
 
 	status = (bytes_sent == 0) ? PJ_RETURN_OS_ERROR(OSERR_ENOTCONN) :
 				     -bytes_sent;
-	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
-	pjsip_transport_shutdown(&tls->base);
+
+	tls_init_shutdown(tls, status);
 
 	return PJ_FALSE;
     }
@@ -1115,8 +1219,8 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
 
 		if (status == PJ_SUCCESS) 
 		    status = PJ_RETURN_OS_ERROR(OSERR_ENOTCONN);
-		if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
-		pjsip_transport_shutdown(&tls->base);
+
+		tls_init_shutdown(tls, status);
 	    }
 	}
     }
@@ -1204,15 +1308,8 @@ static pj_bool_t on_data_read(pj_ssl_sock_t *ssock,
 
 	/* Transport is closed */
 	PJ_LOG(4,(tls->base.obj_name, "TLS connection closed"));
-	
-	/* We can not destroy the transport since high level objects may
-	 * still keep reference to this transport. So we can only 
-	 * instruct transport manager to gracefully start the shutdown
-	 * procedure for this transport.
-	 */
-	if (tls->close_reason==PJ_SUCCESS) 
-	    tls->close_reason = status;
-	pjsip_transport_shutdown(&tls->base);
+
+	tls_init_shutdown(tls, status);
 
 	return PJ_FALSE;
 
@@ -1232,8 +1329,12 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 				     pj_status_t status)
 {
     struct tls_transport *tls;
-    pj_ssl_sock_info info;
-    
+    pj_ssl_sock_info ssl_info;
+    pj_sockaddr_in addr, *tp_addr;
+
+    pjsip_tp_state_callback *state_cb;
+    pj_bool_t tls_verif_ignored;
+
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
 
     /* Check connect() status */
@@ -1254,35 +1355,129 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	    on_data_sent(tls->ssock, op_key, -status);
 	}
 
-	/* We can not destroy the transport since high level objects may
-	 * still keep reference to this transport. So we can only 
-	 * instruct transport manager to gracefully start the shutdown
-	 * procedure for this transport.
-	 */
-	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
-	pjsip_transport_shutdown(&tls->base);
-	return PJ_FALSE;
+	goto on_error;
     }
+
+    /* Retrieve SSL socket info, shutdown the transport if this is failed
+     * as the SSL socket info availability is rather critical here.
+     */
+    status = pj_ssl_sock_get_info(tls->ssock, &ssl_info);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     /* Update (again) local address, just in case local address currently
      * set is different now that the socket is connected (could happen
      * on some systems, like old Win32 probably?).
      */
-
-    /* Retrieve the bound address */
-    status = pj_ssl_sock_get_info(tls->ssock, &info);
-    if (status == PJ_SUCCESS) {
-	pj_sockaddr_in addr;
-	pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tls->base.local_addr;
-	
-	pj_sockaddr_cp((pj_sockaddr_t*)&addr, (pj_sockaddr_t*)&info.local_addr);
-	if (tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) {
-	    tp_addr->sin_addr.s_addr = addr.sin_addr.s_addr;
-	    tp_addr->sin_port = addr.sin_port;
-	    sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
-				  tp_addr);
-	}
+    tp_addr = (pj_sockaddr_in*)&tls->base.local_addr;
+    pj_sockaddr_cp((pj_sockaddr_t*)&addr, 
+		   (pj_sockaddr_t*)&ssl_info.local_addr);
+    if (tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) {
+	tp_addr->sin_addr.s_addr = addr.sin_addr.s_addr;
+	tp_addr->sin_port = addr.sin_port;
+	sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
+			      tp_addr);
     }
+
+    /* Server identity verification based on server certificate. */
+    if (ssl_info.remote_cert_info->version) {
+	pj_str_t *remote_name;
+	pj_ssl_cert_info *serv_cert = ssl_info.remote_cert_info;
+	pj_bool_t matched = PJ_FALSE;
+	unsigned i;
+
+	/* Remote name may be hostname or IP address */
+	if (tls->remote_name.slen)
+	    remote_name = &tls->remote_name;
+	else
+	    remote_name = &tls->base.remote_name.host;
+
+	/* Start matching remote name with SubjectAltName fields of 
+	 * server certificate.
+	 */
+	for (i = 0; i < serv_cert->subj_alt_name.cnt && !matched; ++i) {
+	    pj_str_t *cert_name = &serv_cert->subj_alt_name.entry[i].name;
+
+	    switch (serv_cert->subj_alt_name.entry[i].type) {
+	    case PJ_SSL_CERT_NAME_DNS:
+	    case PJ_SSL_CERT_NAME_IP:
+		matched = !pj_stricmp(remote_name, cert_name);
+		break;
+	    case PJ_SSL_CERT_NAME_URI:
+		if (pj_strnicmp2(cert_name, "sip:", 4) == 0 ||
+		    pj_strnicmp2(cert_name, "sips:", 5) == 0)
+		{
+		    pj_str_t host_part;
+		    char *p;
+
+		    p = pj_strchr(cert_name, ':') + 1;
+		    pj_strset(&host_part, p, cert_name->slen - 
+					     (p - cert_name->ptr));
+		    matched = !pj_stricmp(remote_name, &host_part);
+		}
+		break;
+	    default:
+		break;
+	    }
+	}
+    	
+	/* When still not matched or no SubjectAltName fields in server
+	 * certificate, try with Common Name of Subject field.
+	 */
+	if (!matched) {
+	    matched = !pj_stricmp(remote_name, &serv_cert->subject.cn);
+	}
+
+	if (!matched)
+	    ssl_info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
+    }
+
+    tls_verif_ignored = !tls->verify_server;
+
+    /* Notify transport state to application */
+    state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
+    if (state_cb) {
+	pjsip_transport_state_info state_info;
+	pjsip_tls_state_info tls_info;
+	pj_uint32_t tp_state = 0;
+
+	/* Init transport state notification callback */
+	pj_bzero(&state_info, sizeof(state_info));
+	pj_bzero(&tls_info, sizeof(tls_info));
+
+	/* Set transport state info */
+	state_info.ext_info = &tls_info;
+	tls_info.ssl_sock_info = &ssl_info;
+
+	/* Set transport state based on verification status */
+	if (ssl_info.verify_status) {
+	    state_info.status = PJSIP_TLS_ECONNECT;
+	    tp_state |= PJSIP_TP_STATE_TLS_VERIF_ERROR;
+	    if (tls->verify_server)
+		tp_state |= PJSIP_TP_STATE_DISCONNECTED;
+	    else
+		tp_state |= PJSIP_TP_STATE_CONNECTED;
+	} else {
+	    tp_state |= PJSIP_TP_STATE_CONNECTED;
+	}
+
+	tls_verif_ignored = (*state_cb)(&tls->base, tp_state, &state_info);
+    }
+
+    /* Transport should be shutdown when there is TLS verification error
+     * and application doesn't want to ignore it.
+     */
+    if (ssl_info.verify_status && 
+	(tls->verify_server || !tls_verif_ignored))
+    {
+	if (tls->close_reason == PJ_SUCCESS) 
+	    tls->close_reason = PJSIP_TLS_ECONNECT;
+	pjsip_transport_shutdown(&tls->base);
+	return PJ_FALSE;
+    }
+
+    /* Mark that pending connect() operation has completed. */
+    tls->has_pending_connect = PJ_FALSE;
 
     PJ_LOG(4,(tls->base.obj_name, 
 	      "TLS transport %.*s:%d is connected to %.*s:%d",
@@ -1293,21 +1488,10 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	      tls->base.remote_name.host.ptr,
 	      tls->base.remote_name.port));
 
-    /* Mark that pending connect() operation has completed. */
-    tls->has_pending_connect = PJ_FALSE;
-
     /* Start pending read */
     status = tls_start_read(tls);
-    if (status != PJ_SUCCESS) {
-	/* We can not destroy the transport since high level objects may
-	 * still keep reference to this transport. So we can only 
-	 * instruct transport manager to gracefully start the shutdown
-	 * procedure for this transport.
-	 */
-	if (tls->close_reason==PJ_SUCCESS) tls->close_reason = status;
-	pjsip_transport_shutdown(&tls->base);
-	return PJ_FALSE;
-    }
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     /* Flush all pending send operations */
     tls_flush_pending_tx(tls);
@@ -1322,6 +1506,11 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     }
 
     return PJ_TRUE;
+
+on_error:
+    tls_init_shutdown(tls, status);
+
+    return PJ_FALSE;
 }
 
 
@@ -1365,7 +1554,8 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	tls_perror(tls->base.obj_name, 
 		   "Error sending keep-alive packet", status);
-	pjsip_transport_shutdown(&tls->base);
+
+	tls_init_shutdown(tls, status);
 	return;
     }
 

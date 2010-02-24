@@ -69,7 +69,9 @@ SYSTEMINCLUDE	..\pjlib\include
 SYSTEMINCLUDE	\epoc32\include
 SYSTEMINCLUDE	\epoc32\include\libc
 
-LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib securesocket.lib 
+LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib 
+LIBRARY		securesocket.lib x509.lib crypto.lib x500.lib 
+ 
 #ifdef WINSCW
 STATICLIBRARY   eexe.lib ecrt0.lib
 #endif

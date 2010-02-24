@@ -1075,6 +1075,22 @@ PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport(pjsip_endpoint *endpt,
 
 
 /*
+ * Find/create transport.
+ */
+PJ_DEF(pj_status_t) pjsip_endpt_acquire_transport2(pjsip_endpoint *endpt,
+						   pjsip_transport_type_e type,
+						   const pj_sockaddr_t *remote,
+						   int addr_len,
+						   const pjsip_tpselector *sel,
+						   pjsip_tx_data *tdata,
+						   pjsip_transport **transport)
+{
+    return pjsip_tpmgr_acquire_transport2(endpt->transport_mgr, type, remote, 
+					  addr_len, sel, tdata, transport);
+}
+
+
+/*
  * Report error.
  */
 PJ_DEF(void) pjsip_endpt_log_error(  pjsip_endpoint *endpt,

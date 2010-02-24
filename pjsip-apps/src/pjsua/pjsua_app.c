@@ -2788,6 +2788,85 @@ static void on_mwi_info(pjsua_acc_id acc_id, pjsua_mwi_info *mwi_info)
 
 
 /*
+ * Transport status notification
+ */
+static pj_bool_t on_transport_state(pjsip_transport *tp, pj_uint32_t state,
+				    const pjsip_transport_state_info *info)
+{
+    char host_port[128];
+
+    pj_ansi_snprintf(host_port, sizeof(host_port), "[%.*s:%d]",
+		     (int)tp->remote_name.host.slen,
+		     tp->remote_name.host.ptr,
+		     tp->remote_name.port);
+
+    if (state & PJSIP_TP_STATE_CONNECTED) {
+	PJ_LOG(3,(THIS_FILE, "SIP transport %s is connected to %s", 
+		 tp->type_name, host_port));
+    } 
+    else if (state & PJSIP_TP_STATE_ACCEPTED) {
+	PJ_LOG(3,(THIS_FILE, "SIP transport %s accepted %s",
+		 tp->type_name, host_port));
+    } 
+    else if (state & PJSIP_TP_STATE_DISCONNECTED) {
+	char buf[100];
+
+	snprintf(buf, sizeof(buf), "SIP transport %s is disconnected from %s",
+		 tp->type_name, host_port);
+	pjsua_perror(THIS_FILE, buf, info->status);
+    }
+    else if (state & PJSIP_TP_STATE_REJECTED) {
+	char buf[100];
+
+	snprintf(buf, sizeof(buf), "SIP transport %s rejected %s",
+		 tp->type_name, host_port);
+	pjsua_perror(THIS_FILE, buf, info->status);
+    }
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+
+    if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
+	(state == PJSIP_TP_STATE_CONNECTED || 
+	 (state & PJSIP_TP_STATE_TLS_VERIF_ERROR)))
+    {
+	pjsip_tls_state_info *tls_info = (pjsip_tls_state_info*)info->ext_info;
+	pj_ssl_sock_info *ssl_sock_info = (pj_ssl_sock_info*)
+					  tls_info->ssl_sock_info;
+	char buf[2048];
+	const char *verif_msgs[32];
+	unsigned verif_msg_cnt;
+
+	/* Dump server TLS certificate */
+	pj_ssl_cert_info_dump(ssl_sock_info->remote_cert_info, "  ",
+			      buf, sizeof(buf));
+	PJ_LOG(4,(THIS_FILE, "TLS cert info of %s:\n%s", host_port, buf));
+
+	/* Dump server TLS certificate verification result */
+	verif_msg_cnt = PJ_ARRAY_SIZE(verif_msgs);
+	pj_ssl_cert_verify_error_st(ssl_sock_info->verify_status,
+				    verif_msgs, &verif_msg_cnt);
+	PJ_LOG(3,(THIS_FILE, "TLS cert verification result of %s : %s",
+			     host_port,
+			     (verif_msg_cnt == 1? verif_msgs[0]:"")));
+	if (verif_msg_cnt > 1) {
+	    unsigned i;
+	    for (i = 0; i < verif_msg_cnt; ++i)
+		PJ_LOG(3,(THIS_FILE, "- %s", verif_msgs[i]));
+	}
+
+	if (state & PJSIP_TP_STATE_TLS_VERIF_ERROR && 
+	    !app_config.udp_cfg.tls_setting.verify_server) 
+	{
+	    PJ_LOG(3,(THIS_FILE, "PJSUA is configured to ignore TLS cert "
+				 "verification errors"));
+	}
+    }
+
+#endif
+    return PJ_TRUE;
+}
+
+/*
  * Print buddy list.
  */
 static void print_buddy_list(void)
@@ -4383,6 +4462,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_call_replaced = &on_call_replaced;
     app_config.cfg.cb.on_nat_detect = &on_nat_detect;
     app_config.cfg.cb.on_mwi_info = &on_mwi_info;
+    app_config.cfg.cb.on_transport_state = &on_transport_state;
 
     /* Set sound device latency */
     if (app_config.capture_lat > 0)

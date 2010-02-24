@@ -270,6 +270,63 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 			 (int)new_ci.remote_info.slen, new_ci.remote_info.ptr));
 }
 
+/*
+ * Transport status notification
+ */
+static pj_bool_t on_transport_state(pjsip_transport *tp, pj_uint32_t state,
+				    const pjsip_transport_state_info *info)
+{
+    char host_port[128];
+
+    pj_ansi_snprintf(host_port, sizeof(host_port), "[%.*s:%d]",
+		     (int)tp->remote_name.host.slen,
+		     tp->remote_name.host.ptr,
+		     tp->remote_name.port);
+
+    if (state & PJSIP_TP_STATE_CONNECTED) {
+	PJ_LOG(3,(THIS_FILE, "SIP transport %s is connected to %s", 
+		 tp->type_name, host_port));
+    } 
+    else if (state & PJSIP_TP_STATE_ACCEPTED) {
+	PJ_LOG(3,(THIS_FILE, "SIP transport %s accepted %s",
+		 tp->type_name, host_port));
+    } 
+    else if (state & PJSIP_TP_STATE_DISCONNECTED) {
+	char buf[100];
+
+	snprintf(buf, sizeof(buf), "SIP transport %s is disconnected from %s",
+		 tp->type_name, host_port);
+	pjsua_perror(THIS_FILE, buf, info->status);
+    }
+    else if (state & PJSIP_TP_STATE_REJECTED) {
+	char buf[100];
+
+	snprintf(buf, sizeof(buf), "SIP transport %s rejected %s",
+		 tp->type_name, host_port);
+	pjsua_perror(THIS_FILE, buf, info->status);
+    }
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
+
+    if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
+	(state == PJSIP_TP_STATE_CONNECTED || 
+	 (state & PJSIP_TP_STATE_TLS_VERIF_ERROR)))
+    {
+	pjsip_tls_state_info *tls_info = (pjsip_tls_state_info*)info->ext_info;
+	pj_ssl_sock_info *ssl_sock_info = (pj_ssl_sock_info*)
+					  tls_info->ssl_sock_info;
+	char buf[2048];
+
+	/* Dump server TLS certificate */
+	pj_ssl_cert_info_dump(ssl_sock_info->remote_cert_info, "  ",
+			      buf, sizeof(buf));
+	PJ_LOG(4,(THIS_FILE, "TLS cert info of %s:\n%s", host_port, buf));
+    }
+
+#endif
+    return PJ_TRUE;
+}
+
 
 //#include<e32debug.h>
 
@@ -330,6 +387,7 @@ static pj_status_t app_startup()
     cfg.cb.on_call_transfer_status = &on_call_transfer_status;
     cfg.cb.on_call_replaced = &on_call_replaced;
     cfg.cb.on_nat_detect = &on_nat_detect;
+    cfg.cb.on_transport_state = &on_transport_state;
     
     if (SIP_PROXY) {
 	    cfg.outbound_proxy_cnt = 1;
@@ -1054,7 +1112,7 @@ int ua_main()
     SelectIAP();
     
     // Initialize RSocketServ
-    if ((err=aSocketServer.Connect()) != KErrNone)
+    if ((err=aSocketServer.Connect(32)) != KErrNone)
     	return PJ_STATUS_FROM_OS(err);
     
     // Open up a connection

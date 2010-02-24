@@ -89,6 +89,8 @@ struct pjsip_tpmgr
 #endif
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
+    pjsip_tp_state_callback *tp_state_cb;
+    void *tp_state_user_data;
 };
 
 
@@ -864,7 +866,7 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     /* 
      * Register to hash table (see Trac ticket #42).
      */
-    key_len = sizeof(tp->key.type) + tp->addr_len;
+    key_len = sizeof(tp->key.type) + sizeof(tp->key.hname) + tp->addr_len;
     pj_lock_acquire(mgr->lock);
 
     /* If entry already occupied, unregister previous entry */
@@ -914,7 +916,7 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     /*
      * Unregister from hash table (see Trac ticket #42).
      */
-    key_len = sizeof(tp->key.type) + tp->addr_len;
+    key_len = sizeof(tp->key.type) + sizeof(tp->key.hname) + tp->addr_len;
     hval = 0;
     entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
     if (entry == (void*)tp)
@@ -1502,6 +1504,24 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 						  const pjsip_tpselector *sel,
 						  pjsip_transport **tp)
 {
+    return pjsip_tpmgr_acquire_transport2(mgr, type, remote, addr_len, sel,
+					  NULL, tp);
+}
+
+/*
+ * pjsip_tpmgr_acquire_transport2()
+ *
+ * Get transport suitable to communicate to remote. Create a new one
+ * if necessary.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
+						   pjsip_transport_type_e type,
+						   const pj_sockaddr_t *remote,
+						   int addr_len,
+						   const pjsip_tpselector *sel,
+						   pjsip_tx_data *tdata,
+						   pjsip_transport **tp)
+{
     pjsip_tpfactory *factory;
     pj_status_t status;
 
@@ -1571,18 +1591,42 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 	int key_len;
 	pjsip_transport *transport;
 
+	/*
+	 * Find factory that can create such transport.
+	 */
+	factory = mgr->factory_list.next;
+	while (factory != &mgr->factory_list) {
+	    if (factory->type == type)
+		break;
+	    factory = factory->next;
+	}
+	if (factory == &mgr->factory_list)
+	    factory = NULL;
+
 	pj_bzero(&key, sizeof(key));
-	key_len = sizeof(key.type) + addr_len;
+	key_len = sizeof(key.type) + sizeof(key.hname) + addr_len;
 
 	/* First try to get exact destination. */
 	key.type = type;
 	pj_memcpy(&key.rem_addr, remote, addr_len);
+	if (factory && factory->create_transport2 && 
+	    tdata && tdata->dest_info.name.slen)
+	{
+	    /* Only include hostname hash in the key when the factory support
+	     * create_transport2() and tdata is supplied.
+	     */
+	    key.hname = pj_hash_calc_tolower(0, 
+				    (char*)tdata->dest_info.name.ptr,
+				    &tdata->dest_info.name);
+	}
 
 	transport = (pjsip_transport*)
 		    pj_hash_get(mgr->table, &key, key_len, NULL);
+
 	if (transport == NULL) {
 	    unsigned flag = pjsip_transport_get_flag_from_type(type);
 	    const pj_sockaddr *remote_addr = (const pj_sockaddr*)remote;
+
 
 	    /* Ignore address for loop transports. */
 	    if (type == PJSIP_TRANSPORT_LOOP ||
@@ -1591,7 +1635,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 		pj_sockaddr *addr = &key.rem_addr;
 
 		pj_bzero(addr, addr_len);
-		key_len = sizeof(key.type) + addr_len;
+		key_len = sizeof(key.type) + sizeof(key.hname) + addr_len;
 		transport = (pjsip_transport*) 
 			    pj_hash_get(mgr->table, &key, key_len, NULL);
 	    }
@@ -1604,7 +1648,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 		pj_bzero(addr, addr_len);
 		addr->addr.sa_family = remote_addr->addr.sa_family;
 
-		key_len = sizeof(key.type) + addr_len;
+		key_len = sizeof(key.type) + sizeof(key.hname) + addr_len;
 		transport = (pjsip_transport*)
 			    pj_hash_get(mgr->table, &key, key_len, NULL);
 	    }
@@ -1624,31 +1668,28 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
 
 	/*
 	 * Transport not found!
-	 * Find factory that can create such transport.
 	 */
-	factory = mgr->factory_list.next;
-	while (factory != &mgr->factory_list) {
-	    if (factory->type == type)
-		break;
-	    factory = factory->next;
-	}
-
-	if (factory == &mgr->factory_list) {
+	if (NULL == factory) {
 	    /* No factory can create the transport! */
 	    pj_lock_release(mgr->lock);
 	    TRACE_((THIS_FILE, "No suitable factory was found either"));
 	    return PJSIP_EUNSUPTRANSPORT;
 	}
-
     }
 
     
     TRACE_((THIS_FILE, "Creating new transport from factory"));
 
     /* Request factory to create transport. */
-    status = factory->create_transport(factory, mgr, mgr->endpt,
-				       (const pj_sockaddr*) remote, addr_len,
-				       tp);
+    if (factory->create_transport2) {
+	status = factory->create_transport2(factory, mgr, mgr->endpt,
+					    (const pj_sockaddr*) remote, 
+					    addr_len, tdata, tp);
+    } else {
+	status = factory->create_transport(factory, mgr, mgr->endpt,
+					   (const pj_sockaddr*) remote, 
+					   addr_len, tp);
+    }
     if (status == PJ_SUCCESS) {
 	PJ_ASSERT_ON_FAIL(tp!=NULL, 
 	    {pj_lock_release(mgr->lock); return PJ_EBUG;});
@@ -1711,3 +1752,20 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 #endif
 }
 
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
+					      pjsip_tp_state_callback *cb)
+{
+    PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
+
+    mgr->tp_state_cb = cb;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pjsip_tp_state_callback*) pjsip_tpmgr_get_status_cb(
+					      const pjsip_tpmgr *mgr)
+{
+    PJ_ASSERT_RETURN(mgr, NULL);
+
+    return mgr->tp_state_cb;
+}
