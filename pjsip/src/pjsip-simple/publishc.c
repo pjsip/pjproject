@@ -661,6 +661,30 @@ static void tsx_callback(void *token, pjsip_event *event)
 	while (!pj_list_empty(&pubc->pending_reqs)) {
 	    pjsip_tx_data *tdata = pubc->pending_reqs.next;
 	    pj_list_erase(tdata);
+
+	    /* Add SIP-If-Match if we have etag and the request doesn't have
+	     * one (http://trac.pjsip.org/repos/ticket/996)
+	     */
+	    if (pubc->etag.slen) {
+		const pj_str_t STR_HNAME = { "SIP-If-Match", 12 };
+		pjsip_generic_string_hdr *sim_hdr;
+
+		sim_hdr = (pjsip_generic_string_hdr*)
+			  pjsip_msg_find_hdr_by_name(tdata->msg, &STR_HNAME, NULL);
+		if (!sim_hdr) {
+		    /* Create the header */
+		    sim_hdr = pjsip_generic_string_hdr_create(tdata->pool,
+							      &STR_HNAME,
+							      &pubc->etag);
+		    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)sim_hdr);
+
+		} else {
+		    /* Update */
+		    if (pj_strcmp(&pubc->etag, &sim_hdr->hvalue))
+			pj_strdup(tdata->pool, &sim_hdr->hvalue, &pubc->etag);
+		}
+	    }
+
 	    status = pjsip_publishc_send(pubc, tdata);
 	    if (status == PJ_EPENDING) {
 		pj_assert(!"Not expected");
