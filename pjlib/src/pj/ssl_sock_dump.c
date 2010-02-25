@@ -70,21 +70,21 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
     
     /* Subject */
     len = pj_ansi_snprintf( p, end-p, "%sSubject    : %.*s\n", indent,
-			    ci->subject.cn.slen, 
+			    (int)ci->subject.cn.slen,
 			    ci->subject.cn.ptr);
     CHECK_BUF_LEN();
     len = pj_ansi_snprintf( p, end-p, "%s             %.*s\n", indent,
-			    ci->subject.info.slen,
+			    (int)ci->subject.info.slen,
 			    ci->subject.info.ptr);
     CHECK_BUF_LEN();
 
     /* Issuer */
     len = pj_ansi_snprintf( p, end-p, "%sIssuer     : %.*s\n", indent,
-			    ci->issuer.cn.slen,
+			    (int)ci->issuer.cn.slen,
 			    ci->issuer.cn.ptr);
     CHECK_BUF_LEN();
     len = pj_ansi_snprintf( p, end-p, "%s             %.*s\n", indent,
-			    ci->issuer.info.slen,
+			    (int)ci->issuer.info.slen,
 			    ci->issuer.info.ptr);
     CHECK_BUF_LEN();
 
@@ -133,7 +133,7 @@ PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 	    if (type) {
 		len = pj_ansi_snprintf( p, end-p, "%s      %s : %.*s\n", indent, 
 					type, 
-					ci->subj_alt_name.entry[i].name.slen, 
+					(int)ci->subj_alt_name.entry[i].name.slen,
 					ci->subj_alt_name.entry[i].name.ptr);
 		CHECK_BUF_LEN();
 	    }
