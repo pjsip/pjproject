@@ -143,7 +143,6 @@ struct pjmedia_jbuf
 #define JB_STATUS_PREFETCHING	2
 
 
-/* === Experimental feature === */
 
 /* Progressive discard algorithm introduced to reduce JB latency
  * by discarding incoming frames with adaptive aggressiveness based on
@@ -156,7 +155,6 @@ struct pjmedia_jbuf
  */
 #define PJMEDIA_JB_DISCARDED_FRAME 1024
 
-/* == End of experimental feature == */
 
 
 /* Enabling this would log the jitter buffer state about once per 
