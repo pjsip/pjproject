@@ -846,21 +846,8 @@ typedef struct pjsua_callback
     /**
      * This callback is called when transport state is changed. See also
      * #pjsip_tp_state_callback.
-     *
-     * @param tp	The transport instance.
-     * @param state	The transport state, this may contain single or 
-     *			combination of transport state types defined in
-     *			#pjsip_transport_state_type.
-     * @param info	The transport state info.
-     *
-     * @return		When TLS verification fails and peer verification in
-     *			#pjsip_tls_setting is not set, application may return
-     *			PJ_TRUE to ignore the verification result and continue
-     *			using the transport. On other cases, this return value
-     *			is currently not used and will be ignored.
      */
-    pj_bool_t (*on_transport_state)(pjsip_transport *tp, pj_uint32_t state,
-				    const pjsip_transport_state_info *info);
+    pjsip_tp_state_callback on_transport_state;
 
 } pjsua_callback;
 

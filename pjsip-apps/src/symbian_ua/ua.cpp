@@ -273,8 +273,9 @@ static void on_call_replaced(pjsua_call_id old_call_id,
 /*
  * Transport status notification
  */
-static pj_bool_t on_transport_state(pjsip_transport *tp, pj_uint32_t state,
-				    const pjsip_transport_state_info *info)
+static void on_transport_state(pjsip_transport *tp, 
+                               pjsip_transport_state state,
+                               const pjsip_transport_state_info *info)
 {
     char host_port[128];
 
@@ -283,34 +284,32 @@ static pj_bool_t on_transport_state(pjsip_transport *tp, pj_uint32_t state,
 		     tp->remote_name.host.ptr,
 		     tp->remote_name.port);
 
-    if (state & PJSIP_TP_STATE_CONNECTED) {
-	PJ_LOG(3,(THIS_FILE, "SIP transport %s is connected to %s", 
-		 tp->type_name, host_port));
-    } 
-    else if (state & PJSIP_TP_STATE_ACCEPTED) {
-	PJ_LOG(3,(THIS_FILE, "SIP transport %s accepted %s",
-		 tp->type_name, host_port));
-    } 
-    else if (state & PJSIP_TP_STATE_DISCONNECTED) {
-	char buf[100];
+    switch (state) {
+    case PJSIP_TP_STATE_CONNECTED:
+	{
+	    PJ_LOG(3,(THIS_FILE, "SIP transport %s is connected to %s", 
+		     tp->type_name, host_port));
+	}
+	break;
 
-	snprintf(buf, sizeof(buf), "SIP transport %s is disconnected from %s",
-		 tp->type_name, host_port);
-	pjsua_perror(THIS_FILE, buf, info->status);
-    }
-    else if (state & PJSIP_TP_STATE_REJECTED) {
-	char buf[100];
+    case PJSIP_TP_STATE_DISCONNECTED:
+	{
+	    char buf[100];
 
-	snprintf(buf, sizeof(buf), "SIP transport %s rejected %s",
-		 tp->type_name, host_port);
-	pjsua_perror(THIS_FILE, buf, info->status);
+	    snprintf(buf, sizeof(buf), "SIP transport %s is disconnected from %s",
+		     tp->type_name, host_port);
+	    pjsua_perror(THIS_FILE, buf, info->status);
+	}
+	break;
+
+    default:
+	break;
     }
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
 
     if (!pj_ansi_stricmp(tp->type_name, "tls") && info->ext_info &&
-	(state == PJSIP_TP_STATE_CONNECTED || 
-	 (state & PJSIP_TP_STATE_TLS_VERIF_ERROR)))
+	state == PJSIP_TP_STATE_CONNECTED) 
     {
 	pjsip_tls_state_info *tls_info = (pjsip_tls_state_info*)info->ext_info;
 	pj_ssl_sock_info *ssl_sock_info = (pj_ssl_sock_info*)
@@ -324,7 +323,6 @@ static pj_bool_t on_transport_state(pjsip_transport *tp, pj_uint32_t state,
     }
 
 #endif
-    return PJ_TRUE;
 }
 
 

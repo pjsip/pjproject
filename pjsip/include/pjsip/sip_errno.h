@@ -504,6 +504,11 @@ PJ_BEGIN_DECL
  * SSL negotiation has exceeded the maximum configured timeout.
  */
 #define PJSIP_TLS_ETIMEDOUT	(PJSIP_ERRNO_START_PJSIP+172)	/* 171172 */
+/**
+ * @hideinitializer
+ * SSL certificate verification error.
+ */
+#define PJSIP_TLS_ECERTVERIF	(PJSIP_ERRNO_START_PJSIP+173)	/* 171173 */
 
 
 /**

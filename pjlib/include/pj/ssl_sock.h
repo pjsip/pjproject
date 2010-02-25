@@ -154,7 +154,8 @@ typedef struct pj_ssl_cert_info {
     struct {
         pj_str_t	cn;	    /**< Common name		*/
         pj_str_t	info;	    /**< One line subject, fields
-					 are separated by slash */
+					 are separated by slash, e.g:
+					 "CN=sample.org/OU=HRD" */
     } subject;			    /**< Subject		*/
 
     struct {
@@ -206,16 +207,17 @@ PJ_DECL(pj_status_t) pj_ssl_cert_load_from_files(pj_pool_t *pool,
  * Dump SSL certificate info.
  *
  * @param ci		The certificate info.
- * @param prefix	Prefix string for each line.
+ * @param indent	String for left indentation.
  * @param buf		The buffer where certificate info will be printed on.
  * @param buf_size	The buffer size.
  *
- * @return		PJ_SUCCESS when successful.
+ * @return		The length of the dump result, or -1 when buffer size
+ *			is not sufficient.
  */
-PJ_DECL(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
-					   const char *prefix,
-					   char *buf,
-					   pj_size_t buf_size);
+PJ_DECL(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
+					  const char *indent,
+					  char *buf,
+					  pj_size_t buf_size);
 
 
 /**
@@ -230,7 +232,8 @@ PJ_DECL(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
  *
  * @return		PJ_SUCCESS when successful.
  */
-PJ_DECL(pj_status_t) pj_ssl_cert_verify_error_st(pj_uint32_t verify_status, 
+PJ_DECL(pj_status_t) pj_ssl_cert_get_verify_status_strings(
+						 pj_uint32_t verify_status, 
 						 const char *error_strings[],
 						 unsigned *count);
 
@@ -241,77 +244,77 @@ PJ_DECL(pj_status_t) pj_ssl_cert_verify_error_st(pj_uint32_t verify_status,
 typedef enum pj_ssl_cipher {
 
     /* NULL */
-    TLS_NULL_WITH_NULL_NULL               = 0x00000000,
+    PJ_TLS_NULL_WITH_NULL_NULL               	= 0x00000000,
 
     /* TLS/SSLv3 */
-    TLS_RSA_WITH_NULL_MD5                 = 0x00000001,
-    TLS_RSA_WITH_NULL_SHA                 = 0x00000002,
-    TLS_RSA_WITH_NULL_SHA256              = 0x0000003B,
-    TLS_RSA_WITH_RC4_128_MD5              = 0x00000004,
-    TLS_RSA_WITH_RC4_128_SHA              = 0x00000005,
-    TLS_RSA_WITH_3DES_EDE_CBC_SHA         = 0x0000000A,
-    TLS_RSA_WITH_AES_128_CBC_SHA          = 0x0000002F,
-    TLS_RSA_WITH_AES_256_CBC_SHA          = 0x00000035,
-    TLS_RSA_WITH_AES_128_CBC_SHA256       = 0x0000003C,
-    TLS_RSA_WITH_AES_256_CBC_SHA256       = 0x0000003D,
-    TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA      = 0x0000000D,
-    TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA      = 0x00000010,
-    TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA     = 0x00000013,
-    TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA     = 0x00000016,
-    TLS_DH_DSS_WITH_AES_128_CBC_SHA       = 0x00000030,
-    TLS_DH_RSA_WITH_AES_128_CBC_SHA       = 0x00000031,
-    TLS_DHE_DSS_WITH_AES_128_CBC_SHA      = 0x00000032,
-    TLS_DHE_RSA_WITH_AES_128_CBC_SHA      = 0x00000033,
-    TLS_DH_DSS_WITH_AES_256_CBC_SHA       = 0x00000036,
-    TLS_DH_RSA_WITH_AES_256_CBC_SHA       = 0x00000037,
-    TLS_DHE_DSS_WITH_AES_256_CBC_SHA      = 0x00000038,
-    TLS_DHE_RSA_WITH_AES_256_CBC_SHA      = 0x00000039,
-    TLS_DH_DSS_WITH_AES_128_CBC_SHA256    = 0x0000003E,
-    TLS_DH_RSA_WITH_AES_128_CBC_SHA256    = 0x0000003F,
-    TLS_DHE_DSS_WITH_AES_128_CBC_SHA256   = 0x00000040,
-    TLS_DHE_RSA_WITH_AES_128_CBC_SHA256   = 0x00000067,
-    TLS_DH_DSS_WITH_AES_256_CBC_SHA256    = 0x00000068,
-    TLS_DH_RSA_WITH_AES_256_CBC_SHA256    = 0x00000069,
-    TLS_DHE_DSS_WITH_AES_256_CBC_SHA256   = 0x0000006A,
-    TLS_DHE_RSA_WITH_AES_256_CBC_SHA256   = 0x0000006B,
-    TLS_DH_anon_WITH_RC4_128_MD5          = 0x00000018,
-    TLS_DH_anon_WITH_3DES_EDE_CBC_SHA     = 0x0000001B,
-    TLS_DH_anon_WITH_AES_128_CBC_SHA      = 0x00000034,
-    TLS_DH_anon_WITH_AES_256_CBC_SHA      = 0x0000003A,
-    TLS_DH_anon_WITH_AES_128_CBC_SHA256   = 0x0000006C,
-    TLS_DH_anon_WITH_AES_256_CBC_SHA256   = 0x0000006D,
+    PJ_TLS_RSA_WITH_NULL_MD5                 	= 0x00000001,
+    PJ_TLS_RSA_WITH_NULL_SHA                 	= 0x00000002,
+    PJ_TLS_RSA_WITH_NULL_SHA256              	= 0x0000003B,
+    PJ_TLS_RSA_WITH_RC4_128_MD5              	= 0x00000004,
+    PJ_TLS_RSA_WITH_RC4_128_SHA              	= 0x00000005,
+    PJ_TLS_RSA_WITH_3DES_EDE_CBC_SHA         	= 0x0000000A,
+    PJ_TLS_RSA_WITH_AES_128_CBC_SHA          	= 0x0000002F,
+    PJ_TLS_RSA_WITH_AES_256_CBC_SHA          	= 0x00000035,
+    PJ_TLS_RSA_WITH_AES_128_CBC_SHA256       	= 0x0000003C,
+    PJ_TLS_RSA_WITH_AES_256_CBC_SHA256       	= 0x0000003D,
+    PJ_TLS_DH_DSS_WITH_3DES_EDE_CBC_SHA      	= 0x0000000D,
+    PJ_TLS_DH_RSA_WITH_3DES_EDE_CBC_SHA      	= 0x00000010,
+    PJ_TLS_DHE_DSS_WITH_3DES_EDE_CBC_SHA     	= 0x00000013,
+    PJ_TLS_DHE_RSA_WITH_3DES_EDE_CBC_SHA     	= 0x00000016,
+    PJ_TLS_DH_DSS_WITH_AES_128_CBC_SHA       	= 0x00000030,
+    PJ_TLS_DH_RSA_WITH_AES_128_CBC_SHA       	= 0x00000031,
+    PJ_TLS_DHE_DSS_WITH_AES_128_CBC_SHA      	= 0x00000032,
+    PJ_TLS_DHE_RSA_WITH_AES_128_CBC_SHA      	= 0x00000033,
+    PJ_TLS_DH_DSS_WITH_AES_256_CBC_SHA       	= 0x00000036,
+    PJ_TLS_DH_RSA_WITH_AES_256_CBC_SHA       	= 0x00000037,
+    PJ_TLS_DHE_DSS_WITH_AES_256_CBC_SHA      	= 0x00000038,
+    PJ_TLS_DHE_RSA_WITH_AES_256_CBC_SHA      	= 0x00000039,
+    PJ_TLS_DH_DSS_WITH_AES_128_CBC_SHA256    	= 0x0000003E,
+    PJ_TLS_DH_RSA_WITH_AES_128_CBC_SHA256    	= 0x0000003F,
+    PJ_TLS_DHE_DSS_WITH_AES_128_CBC_SHA256   	= 0x00000040,
+    PJ_TLS_DHE_RSA_WITH_AES_128_CBC_SHA256   	= 0x00000067,
+    PJ_TLS_DH_DSS_WITH_AES_256_CBC_SHA256    	= 0x00000068,
+    PJ_TLS_DH_RSA_WITH_AES_256_CBC_SHA256    	= 0x00000069,
+    PJ_TLS_DHE_DSS_WITH_AES_256_CBC_SHA256   	= 0x0000006A,
+    PJ_TLS_DHE_RSA_WITH_AES_256_CBC_SHA256   	= 0x0000006B,
+    PJ_TLS_DH_anon_WITH_RC4_128_MD5          	= 0x00000018,
+    PJ_TLS_DH_anon_WITH_3DES_EDE_CBC_SHA     	= 0x0000001B,
+    PJ_TLS_DH_anon_WITH_AES_128_CBC_SHA      	= 0x00000034,
+    PJ_TLS_DH_anon_WITH_AES_256_CBC_SHA      	= 0x0000003A,
+    PJ_TLS_DH_anon_WITH_AES_128_CBC_SHA256   	= 0x0000006C,
+    PJ_TLS_DH_anon_WITH_AES_256_CBC_SHA256   	= 0x0000006D,
 
     /* TLS (deprecated) */
-    TLS_RSA_EXPORT_WITH_RC4_40_MD5        = 0x00000003,
-    TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5    = 0x00000006,
-    TLS_RSA_WITH_IDEA_CBC_SHA             = 0x00000007,
-    TLS_RSA_EXPORT_WITH_DES40_CBC_SHA     = 0x00000008,
-    TLS_RSA_WITH_DES_CBC_SHA              = 0x00000009,
-    TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA  = 0x0000000B,
-    TLS_DH_DSS_WITH_DES_CBC_SHA           = 0x0000000C,
-    TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA  = 0x0000000E,
-    TLS_DH_RSA_WITH_DES_CBC_SHA           = 0x0000000F,
-    TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA = 0x00000011,
-    TLS_DHE_DSS_WITH_DES_CBC_SHA          = 0x00000012,
-    TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA = 0x00000014,
-    TLS_DHE_RSA_WITH_DES_CBC_SHA          = 0x00000015,
-    TLS_DH_anon_EXPORT_WITH_RC4_40_MD5    = 0x00000017,
-    TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA = 0x00000019,
-    TLS_DH_anon_WITH_DES_CBC_SHA          = 0x0000001A,
+    PJ_TLS_RSA_EXPORT_WITH_RC4_40_MD5        	= 0x00000003,
+    PJ_TLS_RSA_EXPORT_WITH_RC2_CBC_40_MD5    	= 0x00000006,
+    PJ_TLS_RSA_WITH_IDEA_CBC_SHA             	= 0x00000007,
+    PJ_TLS_RSA_EXPORT_WITH_DES40_CBC_SHA     	= 0x00000008,
+    PJ_TLS_RSA_WITH_DES_CBC_SHA              	= 0x00000009,
+    PJ_TLS_DH_DSS_EXPORT_WITH_DES40_CBC_SHA  	= 0x0000000B,
+    PJ_TLS_DH_DSS_WITH_DES_CBC_SHA           	= 0x0000000C,
+    PJ_TLS_DH_RSA_EXPORT_WITH_DES40_CBC_SHA  	= 0x0000000E,
+    PJ_TLS_DH_RSA_WITH_DES_CBC_SHA           	= 0x0000000F,
+    PJ_TLS_DHE_DSS_EXPORT_WITH_DES40_CBC_SHA 	= 0x00000011,
+    PJ_TLS_DHE_DSS_WITH_DES_CBC_SHA          	= 0x00000012,
+    PJ_TLS_DHE_RSA_EXPORT_WITH_DES40_CBC_SHA 	= 0x00000014,
+    PJ_TLS_DHE_RSA_WITH_DES_CBC_SHA          	= 0x00000015,
+    PJ_TLS_DH_anon_EXPORT_WITH_RC4_40_MD5    	= 0x00000017,
+    PJ_TLS_DH_anon_EXPORT_WITH_DES40_CBC_SHA 	= 0x00000019,
+    PJ_TLS_DH_anon_WITH_DES_CBC_SHA          	= 0x0000001A,
 
     /* SSLv3 */
-    SSL_FORTEZZA_KEA_WITH_NULL_SHA        = 0x0000001C,
-    SSL_FORTEZZA_KEA_WITH_FORTEZZA_CBC_SHA= 0x0000001D,
-    SSL_FORTEZZA_KEA_WITH_RC4_128_SHA     = 0x0000001E,
+    PJ_SSL_FORTEZZA_KEA_WITH_NULL_SHA        	= 0x0000001C,
+    PJ_SSL_FORTEZZA_KEA_WITH_FORTEZZA_CBC_SHA	= 0x0000001D,
+    PJ_SSL_FORTEZZA_KEA_WITH_RC4_128_SHA     	= 0x0000001E,
     
     /* SSLv2 */
-    SSL_CK_RC4_128_WITH_MD5               = 0x00010080,
-    SSL_CK_RC4_128_EXPORT40_WITH_MD5      = 0x00020080,
-    SSL_CK_RC2_128_CBC_WITH_MD5           = 0x00030080,
-    SSL_CK_RC2_128_CBC_EXPORT40_WITH_MD5  = 0x00040080,
-    SSL_CK_IDEA_128_CBC_WITH_MD5          = 0x00050080,
-    SSL_CK_DES_64_CBC_WITH_MD5            = 0x00060040,
-    SSL_CK_DES_192_EDE3_CBC_WITH_MD5      = 0x000700C0
+    PJ_SSL_CK_RC4_128_WITH_MD5               	= 0x00010080,
+    PJ_SSL_CK_RC4_128_EXPORT40_WITH_MD5      	= 0x00020080,
+    PJ_SSL_CK_RC2_128_CBC_WITH_MD5           	= 0x00030080,
+    PJ_SSL_CK_RC2_128_CBC_EXPORT40_WITH_MD5  	= 0x00040080,
+    PJ_SSL_CK_IDEA_128_CBC_WITH_MD5          	= 0x00050080,
+    PJ_SSL_CK_DES_64_CBC_WITH_MD5            	= 0x00060040,
+    PJ_SSL_CK_DES_192_EDE3_CBC_WITH_MD5      	= 0x000700C0
 
 } pj_ssl_cipher;
 

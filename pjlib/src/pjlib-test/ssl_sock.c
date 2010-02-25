@@ -107,8 +107,8 @@ static void dump_ssl_info(const pj_ssl_sock_info *si)
 
 	/* Dump remote TLS certificate verification result */
 	verif_msg_cnt = PJ_ARRAY_SIZE(verif_msgs);
-	pj_ssl_cert_verify_error_st(si->verify_status,
-				    verif_msgs, &verif_msg_cnt);
+	pj_ssl_cert_get_verify_status_strings(si->verify_status,
+					      verif_msgs, &verif_msg_cnt);
 	PJ_LOG(3,("", ".....Remote certificate verification result: %s",
 		  (verif_msg_cnt == 1? verif_msgs[0]:"")));
 	if (verif_msg_cnt > 1) {
@@ -1153,44 +1153,44 @@ int ssl_sock_test(void)
 
 #ifndef PJ_SYMBIAN
 
-    PJ_LOG(3,("", "..echo test w/ TLSv1 and TLS_RSA_WITH_DES_CBC_SHA cipher"));
+    PJ_LOG(3,("", "..echo test w/ TLSv1 and PJ_TLS_RSA_WITH_DES_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
-		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_DES_CBC_SHA, 
+		    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_DES_CBC_SHA, 
 		    PJ_FALSE, PJ_FALSE);
     if (ret != 0)
 	return ret;
 
-    PJ_LOG(3,("", "..echo test w/ SSLv23 and TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
+    PJ_LOG(3,("", "..echo test w/ SSLv23 and PJ_TLS_RSA_WITH_AES_256_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_SSL23, PJ_SSL_SOCK_PROTO_SSL23, 
-		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
 		    PJ_FALSE, PJ_FALSE);
     if (ret != 0)
 	return ret;
 
     PJ_LOG(3,("", "..echo test w/ incompatible proto"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_SSL3, 
-		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_DES_CBC_SHA,
+		    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_DES_CBC_SHA,
 		    PJ_FALSE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
 
     PJ_LOG(3,("", "..echo test w/ incompatible ciphers"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
-		    TLS_RSA_WITH_DES_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_TLS_RSA_WITH_DES_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
 		    PJ_FALSE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
 
     PJ_LOG(3,("", "..echo test w/ client cert required but not provided"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
-		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
 		    PJ_TRUE, PJ_FALSE);
     if (ret == 0)
 	return PJ_EBUG;
 
     PJ_LOG(3,("", "..echo test w/ client cert required and provided"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_DEFAULT, PJ_SSL_SOCK_PROTO_DEFAULT, 
-		    TLS_RSA_WITH_AES_256_CBC_SHA, TLS_RSA_WITH_AES_256_CBC_SHA,
+		    PJ_TLS_RSA_WITH_AES_256_CBC_SHA, PJ_TLS_RSA_WITH_AES_256_CBC_SHA,
 		    PJ_TRUE, PJ_TRUE);
     if (ret != 0)
 	return ret;

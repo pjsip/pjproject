@@ -866,7 +866,7 @@ PJ_DEF(pj_status_t) pjsip_transport_register( pjsip_tpmgr *mgr,
     /* 
      * Register to hash table (see Trac ticket #42).
      */
-    key_len = sizeof(tp->key.type) + sizeof(tp->key.hname) + tp->addr_len;
+    key_len = sizeof(tp->key.type) + tp->addr_len;
     pj_lock_acquire(mgr->lock);
 
     /* If entry already occupied, unregister previous entry */
@@ -916,7 +916,7 @@ static pj_status_t destroy_transport( pjsip_tpmgr *mgr,
     /*
      * Unregister from hash table (see Trac ticket #42).
      */
-    key_len = sizeof(tp->key.type) + sizeof(tp->key.hname) + tp->addr_len;
+    key_len = sizeof(tp->key.type) + tp->addr_len;
     hval = 0;
     entry = pj_hash_get(mgr->table, &tp->key, key_len, &hval);
     if (entry == (void*)tp)
@@ -1591,34 +1591,12 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	int key_len;
 	pjsip_transport *transport;
 
-	/*
-	 * Find factory that can create such transport.
-	 */
-	factory = mgr->factory_list.next;
-	while (factory != &mgr->factory_list) {
-	    if (factory->type == type)
-		break;
-	    factory = factory->next;
-	}
-	if (factory == &mgr->factory_list)
-	    factory = NULL;
-
 	pj_bzero(&key, sizeof(key));
-	key_len = sizeof(key.type) + sizeof(key.hname) + addr_len;
+	key_len = sizeof(key.type) + addr_len;
 
 	/* First try to get exact destination. */
 	key.type = type;
 	pj_memcpy(&key.rem_addr, remote, addr_len);
-	if (factory && factory->create_transport2 && 
-	    tdata && tdata->dest_info.name.slen)
-	{
-	    /* Only include hostname hash in the key when the factory support
-	     * create_transport2() and tdata is supplied.
-	     */
-	    key.hname = pj_hash_calc_tolower(0, 
-				    (char*)tdata->dest_info.name.ptr,
-				    &tdata->dest_info.name);
-	}
 
 	transport = (pjsip_transport*)
 		    pj_hash_get(mgr->table, &key, key_len, NULL);
@@ -1635,7 +1613,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 		pj_sockaddr *addr = &key.rem_addr;
 
 		pj_bzero(addr, addr_len);
-		key_len = sizeof(key.type) + sizeof(key.hname) + addr_len;
+		key_len = sizeof(key.type) + addr_len;
 		transport = (pjsip_transport*) 
 			    pj_hash_get(mgr->table, &key, key_len, NULL);
 	    }
@@ -1648,7 +1626,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 		pj_bzero(addr, addr_len);
 		addr->addr.sa_family = remote_addr->addr.sa_family;
 
-		key_len = sizeof(key.type) + sizeof(key.hname) + addr_len;
+		key_len = sizeof(key.type) + addr_len;
 		transport = (pjsip_transport*)
 			    pj_hash_get(mgr->table, &key, key_len, NULL);
 	    }
@@ -1668,8 +1646,16 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 
 	/*
 	 * Transport not found!
+	 * Find factory that can create such transport.
 	 */
-	if (NULL == factory) {
+	factory = mgr->factory_list.next;
+	while (factory != &mgr->factory_list) {
+	    if (factory->type == type)
+		break;
+	    factory = factory->next;
+	}
+
+	if (factory == &mgr->factory_list) {
 	    /* No factory can create the transport! */
 	    pj_lock_release(mgr->lock);
 	    TRACE_((THIS_FILE, "No suitable factory was found either"));
@@ -1677,7 +1663,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_acquire_transport2(pjsip_tpmgr *mgr,
 	}
     }
 
-    
     TRACE_((THIS_FILE, "Creating new transport from factory"));
 
     /* Request factory to create transport. */

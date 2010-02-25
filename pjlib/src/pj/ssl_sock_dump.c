@@ -27,16 +27,17 @@
 
 #define THIS_FILE	"ssl_sock_dump.c"
 
-#define CHECK_BUF_LEN()							\
-    if ((len < 0) || ((p+=len) >= end)) {				\
-	*(p-1) = '\0';							\
-	return PJ_ETOOSMALL;						\
-    }
+#define CHECK_BUF_LEN()						\
+    if ((len < 0) || (len >= end-p)) {				\
+	*p = '\0';						\
+	return -1;						\
+    }								\
+    p += len;
 
-PJ_DEF(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
-					  const char *prefix,
-					  char *buf,
-					  pj_size_t buf_size)
+PJ_DEF(pj_ssize_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
+					 const char *indent,
+					 char *buf,
+					 pj_size_t buf_size)
 {
     const char *wdays[] = {"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
     pj_parsed_time pt1;
@@ -53,11 +54,11 @@ PJ_DEF(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 
     /* Version */
     len = pj_ansi_snprintf(p, end-p, "%sVersion    : v%d\n", 
-			   prefix, ci->version);
+			   indent, ci->version);
     CHECK_BUF_LEN();
     
     /* Serial number */
-    len = pj_ansi_snprintf(p, end-p, "%sSerial     : ", prefix);
+    len = pj_ansi_snprintf(p, end-p, "%sSerial     : ", indent);
     CHECK_BUF_LEN();
 
     for (i = 0; i < sizeof(ci->serial_no) && !ci->serial_no[i]; ++i);
@@ -68,35 +69,35 @@ PJ_DEF(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
     *(p-1) = '\n';
     
     /* Subject */
-    len = pj_ansi_snprintf( p, end-p, "%sSubject    : %.*s\n", prefix,
+    len = pj_ansi_snprintf( p, end-p, "%sSubject    : %.*s\n", indent,
 			    ci->subject.cn.slen, 
 			    ci->subject.cn.ptr);
     CHECK_BUF_LEN();
-    len = pj_ansi_snprintf( p, end-p, "%s             %.*s\n", prefix,
+    len = pj_ansi_snprintf( p, end-p, "%s             %.*s\n", indent,
 			    ci->subject.info.slen,
 			    ci->subject.info.ptr);
     CHECK_BUF_LEN();
 
     /* Issuer */
-    len = pj_ansi_snprintf( p, end-p, "%sIssuer     : %.*s\n", prefix,
+    len = pj_ansi_snprintf( p, end-p, "%sIssuer     : %.*s\n", indent,
 			    ci->issuer.cn.slen,
 			    ci->issuer.cn.ptr);
     CHECK_BUF_LEN();
-    len = pj_ansi_snprintf( p, end-p, "%s             %.*s\n", prefix,
+    len = pj_ansi_snprintf( p, end-p, "%s             %.*s\n", indent,
 			    ci->issuer.info.slen,
 			    ci->issuer.info.ptr);
     CHECK_BUF_LEN();
 
     /* Validity period */
     len = pj_ansi_snprintf( p, end-p, "%sValid from : %s %4d-%02d-%02d "
-			    "%02d:%02d:%02d.%03d %s\n", prefix,
+			    "%02d:%02d:%02d.%03d %s\n", indent,
 			    wdays[pt1.wday], pt1.year, pt1.mon+1, pt1.day,
 			    pt1.hour, pt1.min, pt1.sec, pt1.msec,
 			    (ci->validity.gmt? "GMT":""));
     CHECK_BUF_LEN();
 
     len = pj_ansi_snprintf( p, end-p, "%sValid to   : %s %4d-%02d-%02d "
-			    "%02d:%02d:%02d.%03d %s\n", prefix,
+			    "%02d:%02d:%02d.%03d %s\n", indent,
 			    wdays[pt2.wday], pt2.year, pt2.mon+1, pt2.day,
 			    pt2.hour, pt2.min, pt2.sec, pt2.msec,
 			    (ci->validity.gmt? "GMT":""));
@@ -107,7 +108,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 	unsigned i;
 
 	len = pj_ansi_snprintf(p, end-p, "%ssubjectAltName extension\n", 
-			       prefix);
+			       indent);
 	CHECK_BUF_LEN();
 
 	for (i = 0; i < ci->subj_alt_name.cnt; ++i) {
@@ -130,7 +131,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 		break;
 	    }
 	    if (type) {
-		len = pj_ansi_snprintf( p, end-p, "%s      %s : %.*s\n", prefix, 
+		len = pj_ansi_snprintf( p, end-p, "%s      %s : %.*s\n", indent, 
 					type, 
 					ci->subj_alt_name.entry[i].name.slen, 
 					ci->subj_alt_name.entry[i].name.ptr);
@@ -139,7 +140,7 @@ PJ_DEF(pj_status_t) pj_ssl_cert_info_dump(const pj_ssl_cert_info *ci,
 	}
     }
 
-    return PJ_SUCCESS;
+    return (p-buf);
 }
 
 

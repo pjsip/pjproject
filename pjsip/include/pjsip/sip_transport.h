@@ -693,16 +693,29 @@ typedef struct pjsip_transport_key
     long		    type;
 
     /**
-     * Hash of host name.
-     */
-    pj_uint32_t		    hname;
-
-    /**
      * Destination address.
      */
     pj_sockaddr		    rem_addr;
 
 } pjsip_transport_key;
+
+
+/**
+ * Enumeration of transport direction types.
+ */
+typedef enum pjsip_transport_dir
+{
+    PJSIP_TP_DIR_NONE,		    /**< Direction not set, normally used by
+				         connectionless transports such as 
+					 UDP transport.			    */
+    PJSIP_TP_DIR_OUTGOING,	    /**< Outgoing connection or client mode,
+				         this is only for connection-oriented 
+					 transports.			    */
+    PJSIP_TP_DIR_INCOMING,	    /**< Incoming connection or server mode,
+					 this is only for connection-oriented
+					 transports.			    */
+} pjsip_transport_dir;
+
 
 /**
  * This structure represent the "public" interface of a SIP transport.
@@ -731,6 +744,7 @@ struct pjsip_transport
     pj_sockaddr		    local_addr;	    /**< Bound address.		    */
     pjsip_host_port	    local_name;	    /**< Published name (eg. STUN). */
     pjsip_host_port	    remote_name;    /**< Remote address name.	    */
+    pjsip_transport_dir	    dir;	    /**< Connection direction.	    */
     
     pjsip_endpoint	   *endpt;	    /**< Endpoint instance.	    */
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
@@ -1130,7 +1144,7 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_acquire_transport(pjsip_tpmgr *mgr,
  * transport is found, a new one will be created.
  *
  * This is an internal function since normally application doesn't have access
- * to transport manager. Application should use pjsip_endpt_acquire_transport()
+ * to transport manager. Application should use pjsip_endpt_acquire_transport2()
  * instead.
  *
  * @param mgr	    The transport manager instance.
@@ -1244,35 +1258,26 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_send_raw(pjsip_tpmgr *mgr,
 /**
  * Enumeration of transport state types.
  */
-typedef enum pjsip_transport_state_type {
-
-    /** Transport connected.	*/
-    PJSIP_TP_STATE_CONNECTED	    = (1 << 0),
-
-    /** Transport accepted.	*/
-    PJSIP_TP_STATE_ACCEPTED	    = (1 << 1),
-
-    /** Transport disconnected.	*/
-    PJSIP_TP_STATE_DISCONNECTED	    = (1 << 2),
-
-    /** Incoming connection rejected.	*/
-    PJSIP_TP_STATE_REJECTED	    = (1 << 3),
-
-    /** TLS verification error.	*/
-    PJSIP_TP_STATE_TLS_VERIF_ERROR  = (1 << 8)
-
-} pjsip_transport_state_type;
+typedef enum pjsip_transport_state
+{
+    PJSIP_TP_STATE_CONNECTED,	    /**< Transport connected, applicable only
+					 to connection-oriented transports
+					 such as TCP and TLS.		    */
+    PJSIP_TP_STATE_DISCONNECTED	    /**< Transport disconnected, applicable
+					 only to connection-oriented 
+					 transports such as TCP and TLS.    */
+} pjsip_transport_state;
 
 
 /**
- * Structure of transport state info.
+ * Structure of transport state info passed by #pjsip_tp_state_callback.
  */
 typedef struct pjsip_transport_state_info {
     /**
      * The last error code related to the transport state.
      */
     pj_status_t		 status;
-    
+
     /**
      * Optional extended info, the content is specific for each transport type.
      */
@@ -1282,30 +1287,23 @@ typedef struct pjsip_transport_state_info {
 
 /**
  * Type of callback to receive transport state notifications, such as
- * transport connected, disconnected or TLS verification error.
+ * transport connected/disconnected. Application may shutdown the transport
+ * in this callback.
  *
  * @param tp		The transport instance.
- * @param state		The transport state, this may contain single or 
- *			combination of transport state types defined in
- *			#pjsip_transport_state_type.
+ * @param state		The transport state.
  * @param info		The transport state info.
- *
- * @return		When TLS verification fails and peer verification in
- *			#pjsip_tls_setting is not set, application may return
- *			PJ_TRUE to ignore the verification result and continue
- *			using the transport. On other cases, this return value
- *			is currently not used and will be ignored.
  */
-typedef pj_bool_t (*pjsip_tp_state_callback)(
+typedef void (*pjsip_tp_state_callback)(
 				    pjsip_transport *tp,
-				    pj_uint32_t state,
+				    pjsip_transport_state state,
 				    const pjsip_transport_state_info *info);
 
 
 /**
  * Setting callback of transport state notification. The caller will be
  * notified whenever the state of transport is changed. The type of
- * events are defined in #pjsip_transport_state_type.
+ * events are defined in #pjsip_transport_state.
  * 
  * @param mgr	    Transport manager.
  * @param cb	    Callback to be called to notify caller about transport 

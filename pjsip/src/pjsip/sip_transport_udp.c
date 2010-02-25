@@ -736,6 +736,9 @@ static pj_status_t transport_attach( pjsip_endpoint *endpt,
 	tp->base.remote_name.host = pj_str("::0");
     tp->base.remote_name.port = 0;
 
+    /* Init direction */
+    tp->base.dir = PJSIP_TP_DIR_NONE;
+
     /* Set endpoint. */
     tp->base.endpt = endpt;
 

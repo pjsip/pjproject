@@ -557,8 +557,6 @@ static pj_status_t tls_create( struct tls_listener *listener,
 
     tls->base.key.type = PJSIP_TRANSPORT_TLS;
     pj_memcpy(&tls->base.key.rem_addr, remote, sizeof(pj_sockaddr_in));
-    tls->base.key.hname = pj_hash_calc_tolower(0, (char*)tls->remote_name.ptr,
-					       &tls->remote_name);
     tls->base.type_name = "tls";
     tls->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
 
@@ -568,6 +566,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 		     (int)pj_ntohs(remote->sin_port));
 
     tls->base.addr_len = sizeof(pj_sockaddr_in);
+    tls->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
     
     /* Set initial local address */
     if (!pj_sockaddr_has_addr(local)) {
@@ -978,10 +977,9 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
     char addr[PJ_INET6_ADDRSTRLEN+10];
-    pj_status_t status;
-
     pjsip_tp_state_callback *state_cb;
-    pj_bool_t tls_verif_ignored;
+    pj_bool_t is_shutdown;
+    pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
 
@@ -1021,46 +1019,54 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     /* Set the "pending" SSL socket user data */
     pj_ssl_sock_set_user_data(new_ssock, tls);
 
-    tls_verif_ignored = !listener->tls_setting.verify_client;
+    /* Prevent immediate transport destroy as application may access it 
+     * (getting info, etc) in transport state notification callback.
+     */
+    pjsip_transport_add_ref(&tls->base);
+
+    /* If there is verification error and verification is mandatory, shutdown
+     * and destroy the transport.
+     */
+    if (ssl_info.verify_status && listener->tls_setting.verify_client) {
+	if (tls->close_reason == PJ_SUCCESS) 
+	    tls->close_reason = PJSIP_TLS_ECERTVERIF;
+	pjsip_transport_shutdown(&tls->base);
+    }
 
     /* Notify transport state to application */
     state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
 	pjsip_tls_state_info tls_info;
-	pj_uint32_t tp_state = 0;
+	pjsip_transport_state tp_state;
 
-	/* Init transport state notification callback */
+	/* Init transport state info */
 	pj_bzero(&tls_info, sizeof(tls_info));
 	pj_bzero(&state_info, sizeof(state_info));
-
-	/* Set transport state based on verification status */
-	if (ssl_info.verify_status) {
-	    state_info.status = PJSIP_TLS_EACCEPT;
-	    tp_state |= PJSIP_TP_STATE_TLS_VERIF_ERROR;
-	    if (listener->tls_setting.verify_client)
-		tp_state |= PJSIP_TP_STATE_REJECTED;
-	    else
-		tp_state |= PJSIP_TP_STATE_ACCEPTED;
-	} else {
-	    tp_state |= PJSIP_TP_STATE_ACCEPTED;
-	}
-
 	tls_info.ssl_sock_info = &ssl_info;
 	state_info.ext_info = &tls_info;
 
-	tls_verif_ignored = (*state_cb)(&tls->base, tp_state, &state_info);
+	/* Set transport state based on verification status */
+	if (ssl_info.verify_status && listener->tls_setting.verify_client)
+	{
+	    tp_state = PJSIP_TP_STATE_DISCONNECTED;
+	    state_info.status = PJSIP_TLS_ECERTVERIF;
+	} else {
+	    tp_state = PJSIP_TP_STATE_CONNECTED;
+	    state_info.status = PJ_SUCCESS;
+	}
+
+	(*state_cb)(&tls->base, tp_state, &state_info);
     }
 
-    /* Transport should be destroyed when there is TLS verification error
-     * and application doesn't want to ignore it.
+    /* Release transport reference. If transport is shutting down, it may
+     * get destroyed here.
      */
-    if (ssl_info.verify_status && 
-	(listener->tls_setting.verify_client || !tls_verif_ignored))
-    {
-	tls_destroy(&tls->base, PJSIP_TLS_EACCEPT);
+    is_shutdown = tls->base.is_shutdown;
+    pjsip_transport_dec_ref(&tls->base);
+    if (is_shutdown)
 	return PJ_TRUE;
-    }
+
 
     status = tls_start_read(tls);
     if (status != PJ_SUCCESS) {
@@ -1331,9 +1337,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
     pj_sockaddr_in addr, *tp_addr;
-
     pjsip_tp_state_callback *state_cb;
-    pj_bool_t tls_verif_ignored;
+    pj_bool_t is_shutdown;
 
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
 
@@ -1432,7 +1437,19 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	    ssl_info.verify_status |= PJ_SSL_CERT_EIDENTITY_NOT_MATCH;
     }
 
-    tls_verif_ignored = !tls->verify_server;
+    /* Prevent immediate transport destroy as application may access it 
+     * (getting info, etc) in transport state notification callback.
+     */
+    pjsip_transport_add_ref(&tls->base);
+
+    /* If there is verification error and verification is mandatory, shutdown
+     * and destroy the transport.
+     */
+    if (ssl_info.verify_status && tls->verify_server) {
+	if (tls->close_reason == PJ_SUCCESS) 
+	    tls->close_reason = PJSIP_TLS_ECERTVERIF;
+	pjsip_transport_shutdown(&tls->base);
+    }
 
     /* Notify transport state to application */
     state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
@@ -1441,40 +1458,33 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 	pjsip_tls_state_info tls_info;
 	pj_uint32_t tp_state = 0;
 
-	/* Init transport state notification callback */
+	/* Init transport state info */
 	pj_bzero(&state_info, sizeof(state_info));
 	pj_bzero(&tls_info, sizeof(tls_info));
-
-	/* Set transport state info */
 	state_info.ext_info = &tls_info;
 	tls_info.ssl_sock_info = &ssl_info;
 
 	/* Set transport state based on verification status */
-	if (ssl_info.verify_status) {
-	    state_info.status = PJSIP_TLS_ECONNECT;
-	    tp_state |= PJSIP_TP_STATE_TLS_VERIF_ERROR;
-	    if (tls->verify_server)
-		tp_state |= PJSIP_TP_STATE_DISCONNECTED;
-	    else
-		tp_state |= PJSIP_TP_STATE_CONNECTED;
+	if (ssl_info.verify_status && tls->verify_server)
+	{
+	    tp_state = PJSIP_TP_STATE_DISCONNECTED;
+	    state_info.status = PJSIP_TLS_ECERTVERIF;
 	} else {
-	    tp_state |= PJSIP_TP_STATE_CONNECTED;
+	    tp_state = PJSIP_TP_STATE_CONNECTED;
+	    state_info.status = PJ_SUCCESS;
 	}
 
-	tls_verif_ignored = (*state_cb)(&tls->base, tp_state, &state_info);
+	(*state_cb)(&tls->base, tp_state, &state_info);
     }
 
-    /* Transport should be shutdown when there is TLS verification error
-     * and application doesn't want to ignore it.
+    /* Release transport reference. If transport is shutting down, it may
+     * get destroyed here.
      */
-    if (ssl_info.verify_status && 
-	(tls->verify_server || !tls_verif_ignored))
-    {
-	if (tls->close_reason == PJ_SUCCESS) 
-	    tls->close_reason = PJSIP_TLS_ECONNECT;
-	pjsip_transport_shutdown(&tls->base);
+    is_shutdown = tls->base.is_shutdown;
+    pjsip_transport_dec_ref(&tls->base);
+    if (is_shutdown)
 	return PJ_FALSE;
-    }
+
 
     /* Mark that pending connect() operation has completed. */
     tls->has_pending_connect = PJ_FALSE;

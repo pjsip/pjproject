@@ -131,6 +131,7 @@ static const struct
     PJ_BUILD_ERR( PJSIP_TLS_ESEND,	"Unknown error when sending SSL data"),
     PJ_BUILD_ERR( PJSIP_TLS_EREAD,	"Unknown error when reading SSL data"),
     PJ_BUILD_ERR( PJSIP_TLS_ETIMEDOUT,	"SSL negotiation has timed out"),
+    PJ_BUILD_ERR( PJSIP_TLS_ECERTVERIF,	"SSL certificate verification error"),
 };
 
 

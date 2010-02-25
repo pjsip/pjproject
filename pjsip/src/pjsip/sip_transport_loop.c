@@ -381,6 +381,7 @@ PJ_DEF(pj_status_t) pjsip_loop_start( pjsip_endpoint *endpt,
 	pjsip_transport_get_default_port_for_type((pjsip_transport_type_e)
 						  loop->base.key.type);
     loop->base.addr_len = sizeof(pj_sockaddr_in);
+    loop->base.dir = PJSIP_TP_DIR_NONE;
     loop->base.endpt = endpt;
     loop->base.tpmgr = pjsip_endpt_get_tpmgr(endpt);
     loop->base.send_msg = &loop_send_msg;

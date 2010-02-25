@@ -444,13 +444,12 @@ struct pj_ssl_sock_t
 };
 
 
-static pj_str_t get_cert_name(pj_pool_t *pool,
+static pj_str_t get_cert_name(char *buf, unsigned buf_len,
                               const CX500DistinguishedName &name)
 {
     TInt i;
-    char buf[1024];
     TUint8 *p;
-    TInt l = sizeof(buf);
+    TInt l = buf_len;
     
     p = (TUint8*)buf;
     for(i = 0; i < name.Count(); ++i) {
@@ -479,11 +478,10 @@ static pj_str_t get_cert_name(pj_pool_t *pool,
 	if (0 >= --l) break;
     }
     
-    pj_str_t src, res;
-    pj_strset(&src, buf, sizeof(buf) - l);
-    pj_strdup(pool, &res, &src);
+    pj_str_t src;
+    pj_strset(&src, buf, buf_len - l);
     
-    return res;
+    return src;
 }
                             
 /* Get certificate info from CX509Certificate.
@@ -491,10 +489,14 @@ static pj_str_t get_cert_name(pj_pool_t *pool,
 static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
                           const CX509Certificate *x)
 {
+    enum { tmp_buf_len = 512 };
+    char *tmp_buf;
     unsigned len;
     
     pj_assert(pool && ci && x);
     
+    /* Init */
+    tmp_buf = new char[tmp_buf_len];
     pj_bzero(ci, sizeof(*ci));
     
     /* Version */
@@ -518,7 +520,9 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 	    ptr8.Copy(ptr16);
 	    pj_strset(&ci->subject.cn, (char*)ptr8.Ptr(), ptr8.Length());
 	}
-	ci->subject.info = get_cert_name(pool, x->SubjectName());
+	pj_str_t tmp = get_cert_name(tmp_buf, tmp_buf_len,
+				     x->SubjectName());
+	pj_strdup(pool, &ci->subject.info, &tmp);
     }
 
     /* Issuer */
@@ -532,7 +536,9 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
 	    ptr8.Copy(ptr16);
 	    pj_strset(&ci->issuer.cn, (char*)ptr8.Ptr(), ptr8.Length());
 	}
-	ci->issuer.info = get_cert_name(pool, x->IssuerName());
+	pj_str_t tmp = get_cert_name(tmp_buf, tmp_buf_len,
+				     x->IssuerName());
+	pj_strdup(pool, &ci->issuer.info, &tmp);
     }
     
     /* Validity */
@@ -543,6 +549,9 @@ static void get_cert_info(pj_pool_t *pool, pj_ssl_cert_info *ci,
     ci->validity.start.sec = tmp_sec.Int(); 
     valid_period.Finish().SecondsFrom(base_time, tmp_sec);
     ci->validity.end.sec = tmp_sec.Int();
+    
+    /* Deinit */
+    delete [] tmp_buf;
 }
 
 

@@ -584,6 +584,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_memcpy(&tcp->base.local_addr, local, sizeof(pj_sockaddr_in));
     sockaddr_to_host_port(pool, &tcp->base.local_name, local);
     sockaddr_to_host_port(pool, &tcp->base.remote_name, remote);
+    tcp->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
 
     tcp->base.endpt = listener->endpt;
     tcp->base.tpmgr = listener->tpmgr;
@@ -1004,7 +1005,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 		pjsip_transport_state_info state_info;
             
 		pj_bzero(&state_info, sizeof(state_info));
-		(*state_cb)(&tcp->base, PJSIP_TP_STATE_ACCEPTED, &state_info);
+		(*state_cb)(&tcp->base, PJSIP_TP_STATE_CONNECTED, &state_info);
 	    }
 	}
     }

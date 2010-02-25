@@ -122,42 +122,36 @@ typedef struct pjsip_tls_setting
     pj_str_t	server_name;
 
     /**
-     * Specifies the action when verification of server TLS certificate
-     * resulting errors:
+     * Specifies TLS transport behavior on the server TLS certificate 
+     * verification result:
      * - If \a verify_server is disabled (set to PJ_FALSE), TLS transport 
      *   will just notify the application via #pjsip_tp_state_callback with
-     *   state (PJSIP_TP_STATE_CONNECTED | PJSIP_TP_STATE_TLS_VERIF_ERROR)
-     *   whenever there is any TLS verification error, the return value of 
-     *   the callback will be used to decide whether transport should be 
-     *   shutdown.
+     *   state PJSIP_TP_STATE_CONNECTED regardless TLS verification result.
      * - If \a verify_server is enabled (set to PJ_TRUE), TLS transport 
      *   will be shutdown and application will be notified with state
-     *   (PJSIP_TP_STATE_DISCONNECTED | PJSIP_TP_STATE_TLS_VERIF_ERROR)
-     *   whenever there is any TLS verification error.
+     *   PJSIP_TP_STATE_DISCONNECTED whenever there is any TLS verification
+     *   error, otherwise PJSIP_TP_STATE_CONNECTED will be notified.
      *
-     * When the verification resulting success, application will be notified
-     * via #pjsip_tp_state_callback with state PJSIP_TP_STATE_CONNECTED.
+     * In any cases, application can inspect #pjsip_tls_state_info in the
+     * callback to see the verification detail.
      *
      * Default value is PJ_FALSE.
      */
     pj_bool_t	verify_server;
 
     /**
-     * Specifies the action when verification of server TLS certificate
-     * resulting errors:
+     * Specifies TLS transport behavior on the client TLS certificate 
+     * verification result:
      * - If \a verify_client is disabled (set to PJ_FALSE), TLS transport 
      *   will just notify the application via #pjsip_tp_state_callback with
-     *   state (PJSIP_TP_STATE_ACCEPTED | PJSIP_TP_STATE_TLS_VERIF_ERROR)
-     *   whenever there is any TLS verification error, the return value of 
-     *   the callback will be used to decide whether transport should be 
-     *   shutdown.
+     *   state PJSIP_TP_STATE_CONNECTED regardless TLS verification result.
      * - If \a verify_client is enabled (set to PJ_TRUE), TLS transport 
      *   will be shutdown and application will be notified with state
-     *   (PJSIP_TP_STATE_REJECTED | PJSIP_TP_STATE_TLS_VERIF_ERROR)
-     *   whenever there is any TLS verification error.
+     *   PJSIP_TP_STATE_DISCONNECTED whenever there is any TLS verification
+     *   error, otherwise PJSIP_TP_STATE_CONNECTED will be notified.
      *
-     * When the verification resulting success, application will be notified
-     * via #pjsip_tp_state_callback with state PJSIP_TP_STATE_ACCEPTED.
+     * In any cases, application can inspect #pjsip_tls_state_info in the
+     * callback to see the verification detail.
      *
      * Default value is PJ_FALSE.
      */
@@ -165,7 +159,7 @@ typedef struct pjsip_tls_setting
 
     /**
      * When acting as server (incoming TLS connections), reject inocming
-     * connection if client doesn't have a valid certificate.
+     * connection if client doesn't supply a TLS certificate.
      *
      * This setting corresponds to SSL_VERIFY_FAIL_IF_NO_PEER_CERT flag.
      * Default value is PJ_FALSE.
@@ -209,8 +203,9 @@ typedef struct pjsip_tls_setting
 
 
 /**
- * This structure defines transport state extended info specifically for
- * TLS transport.
+ * This structure defines TLS transport extended info in <tt>ext_info</tt>
+ * field of #pjsip_transport_state_info for the transport state notification
+ * callback #pjsip_tp_state_callback.
  */
 typedef struct pjsip_tls_state_info
 {
