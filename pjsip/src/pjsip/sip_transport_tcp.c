@@ -1289,6 +1289,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 	}
 
 	tcp_init_shutdown(tcp, status);
+	return PJ_FALSE;
     }
 
     PJ_LOG(4,(tcp->base.obj_name, 
