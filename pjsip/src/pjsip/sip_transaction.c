@@ -1659,6 +1659,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
      * notification (https://trac.pjsip.org/repos/ticket/1033).
      */
     if (tdata->mod_data[mod_tsx_layer.mod.id] == NULL) {
+	*cont = PJ_FALSE;
 	return;
     }
 
