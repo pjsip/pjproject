@@ -563,7 +563,10 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 	    //since actual input latency should be zero.
 	    //delay_ms = (si.rec_latency + si.play_latency) * 1000 /
 	    //	   snd_port->clock_rate;
-	    delay_ms = prm.output_latency_ms;
+	    /* Set EC latency to 3/4 of output latency to reduce the
+	     * possibility of missing/late reference frame.
+	     */
+	    delay_ms = prm.output_latency_ms * 3/4;
 	    status = pjmedia_echo_create2(pool, snd_port->clock_rate, 
 					  snd_port->channel_count,
 					  snd_port->samples_per_frame, 

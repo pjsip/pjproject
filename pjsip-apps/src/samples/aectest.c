@@ -55,11 +55,19 @@ static const char *desc =
 "  <OUTPUT.WAV> is the output file to store the test result	    \n"
 "\n"
 " options:\n"
-"  -d  The delay between playback and capture in ms. Default is zero.\n"
+"  -d  The delay between playback and capture in ms, at least 25 ms.\n"
+"      Default is 25 ms. See note below.                            \n"
 "  -l  Set the echo tail length in ms. Default is 200 ms	    \n"
 "  -r  Set repeat count (default=1)                                 \n"
 "  -a  Algorithm: 0=default, 1=speex, 3=echo suppress		    \n"
-"  -i  Interactive						    \n";
+"  -i  Interactive						    \n"
+"\n"
+" Note that for the AEC internal buffering mechanism, it is required\n"
+" that the echoed signal (in REC.WAV) is delayed from the           \n"
+" corresponding reference signal (in PLAY.WAV) at least as much as  \n"
+" frame time + PJMEDIA_WSOLA_DELAY_MSEC. In this application, frame \n"
+" time is 20 ms and default PJMEDIA_WSOLA_DELAY_MSEC is 5 ms, hence \n"
+" 25 ms delay is the minimum value.                                 \n";
 
 /* 
  * Sample session:
@@ -91,7 +99,7 @@ int main(int argc, char *argv[])
     pjmedia_echo_state *ec;
     pjmedia_frame play_frame, rec_frame;
     unsigned opt = 0;
-    unsigned latency_ms = 0;
+    unsigned latency_ms = 25;
     unsigned tail_ms = TAIL_LENGTH;
     pj_timestamp t0, t1;
     int i, repeat=1, interactive=0, c;
@@ -101,6 +109,10 @@ int main(int argc, char *argv[])
 	switch (c) {
 	case 'd':
 	    latency_ms = atoi(pj_optarg);
+	    if (latency_ms < 25) {
+		puts("Invalid delay");
+		puts(desc);
+	    }
 	    break;
 	case 'l':
 	    tail_ms = atoi(pj_optarg);
@@ -127,7 +139,7 @@ int main(int argc, char *argv[])
 	case 'r':
 	    repeat = atoi(pj_optarg);
 	    if (repeat < 1) {
-		puts("Invalid algorithm");
+		puts("Invalid repeat count");
 		puts(desc);
 		return 1;
 	    }
@@ -251,7 +263,7 @@ int main(int argc, char *argv[])
     }
     pj_get_timestamp(&t1);
 
-    i = pjmedia_wav_writer_port_get_pos(wav_out) * 1000 / 
+    i = pjmedia_wav_writer_port_get_pos(wav_out) / sizeof(pj_int16_t) * 1000 / 
 	(wav_out->info.clock_rate * wav_out->info.channel_count);
     PJ_LOG(3,(THIS_FILE, "Processed %3d.%03ds audio",
 	      i / 1000, i % 1000));

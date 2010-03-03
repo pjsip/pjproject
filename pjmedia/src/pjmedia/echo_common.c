@@ -24,6 +24,7 @@
 #include <pj/assert.h>
 #include <pj/list.h>
 #include <pj/log.h>
+#include <pj/math.h>
 #include <pj/pool.h>
 #include "echo_internal.h"
 
@@ -46,8 +47,6 @@ struct pjmedia_echo_state
     ec_operations   *op;
 
     pj_bool_t	     lat_ready;	    /* lat_buf has been filled in.	    */
-    unsigned	     lat_target_cnt;/* Target number of frames in lat_buf   */
-    unsigned	     lat_buf_cnt;   /* Actual number of frames in lat_buf   */
     struct frame     lat_buf;	    /* Frame queue for delayed playback	    */
     struct frame     lat_free;	    /* Free frame list.			    */
 
@@ -144,7 +143,7 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 					 unsigned options,
 					 pjmedia_echo_state **p_echo )
 {
-    unsigned ptime;
+    unsigned ptime, lat_cnt;
     pjmedia_echo_state *ec;
     pj_status_t status;
 
@@ -194,22 +193,21 @@ PJ_DEF(pj_status_t) pjmedia_echo_create2(pj_pool_t *pool,
 
     /* Create latency buffers */
     ptime = samples_per_frame * 1000 / clock_rate;
-    if (latency_ms == 0) {
+    if (latency_ms > ptime) {
+	/* Normalize latency with delaybuf/WSOLA latency */
+	latency_ms -= PJ_MIN(ptime, PJMEDIA_WSOLA_DELAY_MSEC);
+    }
+    if (latency_ms < ptime) {
 	/* Give at least one frame delay to simplify programming */
 	latency_ms = ptime;
     }
-    ec->lat_target_cnt = latency_ms / ptime;
-    if (ec->lat_target_cnt != 0) {
-	unsigned i;
-	for (i=0; i < ec->lat_target_cnt; ++i)  {
-	    struct frame *frm;
+    lat_cnt = latency_ms / ptime;
+    while (lat_cnt--)  {
+	struct frame *frm;
 
-	    frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
-						      sizeof(struct frame));
-	    pj_list_push_back(&ec->lat_free, frm);
-	}
-    } else {
-	ec->lat_ready = PJ_TRUE;
+	frm = (struct frame*) pj_pool_alloc(pool, (samples_per_frame<<1) +
+						  sizeof(struct frame));
+	pj_list_push_back(&ec->lat_free, frm);
     }
 
     /* Create delay buffer to compensate drifts */
