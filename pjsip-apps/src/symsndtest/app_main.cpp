@@ -40,9 +40,27 @@ static pj_caching_pool cp;
 static pjmedia_aud_stream *strm;
 static unsigned rec_cnt, play_cnt;
 static pj_time_val t_start;
+static pjmedia_aud_param param;
+static pj_pool_t *pool;
+static pjmedia_delay_buf *delaybuf;
+static char frame_buf[256];
 
-pj_pool_t *pool;
-pjmedia_delay_buf *delaybuf;
+static void copy_frame_ext(pjmedia_frame_ext *f_dst, 
+                           const pjmedia_frame_ext *f_src) 
+{
+    pj_bzero(f_dst, sizeof(*f_dst));
+    if (f_src->subframe_cnt) {
+	f_dst->base.type = PJMEDIA_FRAME_TYPE_EXTENDED;
+	for (unsigned i = 0; i < f_src->subframe_cnt; ++i) {
+	    pjmedia_frame_ext_subframe *sf;
+	    sf = pjmedia_frame_ext_get_subframe(f_src, i);
+	    pjmedia_frame_ext_append_subframe(f_dst, sf->data, sf->bitlen, 
+					      param.samples_per_frame);
+	}
+    } else {
+	f_dst->base.type = PJMEDIA_FRAME_TYPE_NONE;
+    }
+}
 
 /* Logging callback */
 static void log_writer(int level, const char *buf, unsigned len)
@@ -137,11 +155,18 @@ static pj_status_t rec_cb(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
-    pjmedia_delay_buf_put(delaybuf, (pj_int16_t*)frame->buf);
-
-    if (frame->size != SAMPLES_PER_FRAME*2) {
-		PJ_LOG(3, (THIS_FILE, "Size captured = %u",
-	 		   frame->size));
+    if (param.ext_fmt.id == PJMEDIA_FORMAT_PCM) {
+	pjmedia_delay_buf_put(delaybuf, (pj_int16_t*)frame->buf);
+    
+	if (frame->size != SAMPLES_PER_FRAME*2) {
+		    PJ_LOG(3, (THIS_FILE, "Size captured = %u",
+			       frame->size));
+	}
+    } else {
+	pjmedia_frame_ext *f_src = (pjmedia_frame_ext*)frame;
+	pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame_buf;
+	
+	copy_frame_ext(f_dst, f_src);
     }
 
     ++rec_cnt;
@@ -154,9 +179,16 @@ static pj_status_t play_cb(void *user_data,
 {
     PJ_UNUSED_ARG(user_data);
 
-    pjmedia_delay_buf_get(delaybuf, (pj_int16_t*)frame->buf);
-    frame->size = SAMPLES_PER_FRAME*2;
-    frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    if (param.ext_fmt.id == PJMEDIA_FORMAT_PCM) {
+	pjmedia_delay_buf_get(delaybuf, (pj_int16_t*)frame->buf);
+	frame->size = SAMPLES_PER_FRAME*2;
+	frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    } else {
+	pjmedia_frame_ext *f_src = (pjmedia_frame_ext*)frame_buf;
+	pjmedia_frame_ext *f_dst = (pjmedia_frame_ext*)frame;
+
+	copy_frame_ext(f_dst, f_src);
+    }
 
     ++play_cnt;
     return PJ_SUCCESS;
@@ -165,7 +197,6 @@ static pj_status_t play_cb(void *user_data,
 /* Start sound */
 static pj_status_t snd_start(unsigned flag)
 {
-    pjmedia_aud_param param;
     pj_status_t status;
 
     if (strm != NULL) {
@@ -178,6 +209,9 @@ static pj_status_t snd_start(unsigned flag)
     param.clock_rate = CLOCK_RATE;
     param.samples_per_frame = SAMPLES_PER_FRAME;
     param.dir = (pjmedia_dir) flag;
+    param.ext_fmt.id = PJMEDIA_FORMAT_AMR;
+    param.ext_fmt.bitrate = 12200;
+    param.output_route = PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
 
     status = pjmedia_aud_stream_create(&param, &rec_cb, &play_cb, NULL, &strm);
     if (status != PJ_SUCCESS) {

@@ -415,7 +415,7 @@ TInt CPjAudioEngine::InitRec()
 
 TInt CPjAudioEngine::StartPlay()
 {
-    TInt err;
+    TInt err = KErrNone;
     
     pj_assert(iVoIPDnlink);
     pj_assert(dn_state_ == STATE_READY);
@@ -428,7 +428,6 @@ TInt CPjAudioEngine::StartPlay()
 						dec_fmt_if;
 	    err = g711dec_if->SetMode((CVoIPFormatIntfc::TG711CodecMode)
 				      setting_.mode);
-	    pj_assert(err == KErrNone);
 	}
 	break;
 	
@@ -438,20 +437,28 @@ TInt CPjAudioEngine::StartPlay()
 						dec_fmt_if;
 	    err = ilbcdec_if->SetMode((CVoIPFormatIntfc::TILBCCodecMode)
 				      setting_.mode);
-	    pj_assert(err == KErrNone);
 	}
 	break;
 
+    case EAMR_NB:
+	/* Ticket #1008: AMR playback issue on few devices, e.g: E72, E52 */
+	err = dec_fmt_if->SetFrameMode(ETrue);
+	break;
+	
     default:
 	break;
     }
+
+    if (err != KErrNone)
+	goto on_return;
     
     /* Configure audio routing */
     ActivateSpeaker(setting_.loudspk);
 
     /* Start player */
     err = iVoIPDnlink->Start();
-    
+
+on_return:
     if (err == KErrNone) {
 	dn_state_ = STATE_STREAMING;
 	TRACE_((THIS_FILE, "Downlink started"));
@@ -464,7 +471,7 @@ TInt CPjAudioEngine::StartPlay()
 
 TInt CPjAudioEngine::StartRec()
 {
-    TInt err;
+    TInt err = KErrNone;
     
     pj_assert(iVoIPUplink);
     pj_assert(up_state_ == STATE_READY);
@@ -477,7 +484,6 @@ TInt CPjAudioEngine::StartRec()
 						enc_fmt_if;
 	    err = g711enc_if->SetMode((CVoIPFormatIntfc::TG711CodecMode)
 				      setting_.mode);
-	    pj_assert(err == KErrNone);
 	}
 	break;
 
@@ -487,24 +493,27 @@ TInt CPjAudioEngine::StartRec()
 						enc_fmt_if;
 	    err = ilbcenc_if->SetMode((CVoIPFormatIntfc::TILBCCodecMode)
 				      setting_.mode);
-	    pj_assert(err == KErrNone);
 	}
 	break;
 	
     case EAMR_NB:
-	enc_fmt_if->SetBitRate(setting_.mode);
+	err = enc_fmt_if->SetBitRate(setting_.mode);
 	break;
 	
     default:
 	break;
     }
     
+    if (err != KErrNone)
+	goto on_return;
+    
     /* Configure general codec setting */
     enc_fmt_if->SetVAD(setting_.vad);
     
     /* Start recorder */
     err = iVoIPUplink->Start();
-    
+
+on_return:
     if (err == KErrNone) {
 	up_state_ = STATE_STREAMING;
 	TRACE_((THIS_FILE, "Uplink started"));
@@ -1112,13 +1121,19 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		    
 		    buffer.Append((TUint8*)sf->data, len);
 		} else {
-		    buffer.Append(0);
+		    enum {NO_DATA_FT = 15 };
+		    pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+
+		    buffer.Append(amr_header);
 		}
 
 		pjmedia_frame_ext_pop_subframes(frame, 1);
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		buffer.Append(0);
+		enum {NO_DATA_FT = 15 };
+		pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+
+		buffer.Append(amr_header);
 		
 		frame->samples_cnt = 0;
 		frame->subframe_cnt = 0;

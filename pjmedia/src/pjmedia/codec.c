@@ -85,10 +85,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_destroy (pjmedia_codec_mgr *mgr)
     }
 
     /* Destroy mutex */
-    pj_mutex_destroy(mgr->mutex);
+    if (mgr->mutex)
+	pj_mutex_destroy(mgr->mutex);
 
     /* Release pool */
-    pj_pool_release(mgr->pool);
+    if (mgr->pool)
+	pj_pool_release(mgr->pool);
 
     /* Just for safety, set codec manager states to zero */
     pj_bzero(mgr, sizeof(pjmedia_codec_mgr));

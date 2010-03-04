@@ -1034,14 +1034,20 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		    
 		    buf.iBuffer.Append((TUint8*)sf->data, len);
 		} else {
-		    buf.iBuffer.Append(0);
+		    enum {NO_DATA_FT = 15 };
+		    pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+
+		    buf.iBuffer.Append(amr_header);
 		}
 
 		pjmedia_frame_ext_pop_subframes(frame, 1);
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
-		buf.iBuffer.Append(0);
-		
+		enum {NO_DATA_FT = 15 };
+		pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+
+		buf.iBuffer.Append(amr_header);
+
 		frame->samples_cnt = 0;
 		frame->subframe_cnt = 0;
 	    }
