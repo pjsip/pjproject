@@ -68,6 +68,7 @@ static int get_cipher_list(void) {
 struct test_state
 {
     pj_pool_t	   *pool;	    /* pool				    */
+    pj_ioqueue_t   *ioqueue;	    /* ioqueue				    */
     pj_bool_t	    is_server;	    /* server role flag			    */
     pj_bool_t	    is_verbose;	    /* verbose flag, e.g: cert info	    */
     pj_bool_t	    echo;	    /* echo received data		    */
@@ -746,6 +747,47 @@ static pj_bool_t asock_on_connect_complete(pj_activesock_t *asock,
     return PJ_TRUE;
 }
 
+static pj_bool_t asock_on_accept_complete(pj_activesock_t *asock,
+					  pj_sock_t newsock,
+					  const pj_sockaddr_t *src_addr,
+					  int src_addr_len)
+{
+    struct test_state *st;
+    void *read_buf[1];
+    pj_activesock_t *new_asock;
+    pj_activesock_cb asock_cb = { 0 };
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(src_addr);
+    PJ_UNUSED_ARG(src_addr_len);
+
+    st = (struct test_state*) pj_activesock_get_user_data(asock);
+
+    asock_cb.on_data_read = &asock_on_data_read;
+    status = pj_activesock_create(st->pool, newsock, pj_SOCK_STREAM(), NULL, 
+				  st->ioqueue, &asock_cb, st, &new_asock);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    /* Start reading data */
+    read_buf[0] = st->read_buf;
+    status = pj_activesock_start_read2(new_asock, st->pool, 
+				       sizeof(st->read_buf), 
+				       (void**)read_buf, 0);
+    if (status != PJ_SUCCESS) {
+	app_perror("...ERROR pj_ssl_sock_start_read2()", status);
+    }
+
+on_return:
+    st->err = status;
+
+    if (st->err != PJ_SUCCESS)
+	pj_activesock_close(new_asock);
+
+    return PJ_TRUE;
+}
+
 
 /* Raw TCP socket try to connect to SSL socket server, once
  * connection established, it will just do nothing, SSL socket
@@ -892,6 +934,158 @@ on_return:
 	pj_ssl_sock_close(ssock_serv);
     if (asock_cli && !state_cli.err && !state_cli.done)
 	pj_activesock_close(asock_cli);
+    if (timer)
+	pj_timer_heap_destroy(timer);
+    if (ioqueue)
+	pj_ioqueue_destroy(ioqueue);
+    if (pool)
+	pj_pool_release(pool);
+
+    return status;
+}
+
+
+/* SSL socket try to connect to raw TCP socket server, once
+ * connection established, SSL socket will try to perform SSL
+ * handshake. SSL client socket should be able to close the
+ * connection after specified timeout period (set ms_timeout to 
+ * 0 to disable timer).
+ */
+static int server_non_ssl(unsigned ms_timeout)
+{
+    pj_pool_t *pool = NULL;
+    pj_ioqueue_t *ioqueue = NULL;
+    pj_timer_heap_t *timer = NULL;
+    pj_activesock_t *asock_serv = NULL;
+    pj_ssl_sock_t *ssock_cli = NULL;
+    pj_activesock_cb asock_cb = { 0 };
+    pj_sock_t sock = PJ_INVALID_SOCKET;
+    pj_ssl_sock_param param;
+    struct test_state state_serv = { 0 };
+    struct test_state state_cli = { 0 };
+    pj_sockaddr addr, listen_addr;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "ssl_connect_raw_tcp", 256, 256, NULL);
+
+    status = pj_ioqueue_create(pool, 4, &ioqueue);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    status = pj_timer_heap_create(pool, 4, &timer);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    /* SERVER */
+    state_serv.pool = pool;
+    state_serv.ioqueue = ioqueue;
+
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    /* Init bind address */
+    {
+	pj_str_t tmp_st;
+	pj_sockaddr_init(PJ_AF_INET, &listen_addr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    }
+
+    status = pj_sock_bind(sock, (pj_sockaddr_t*)&listen_addr, 
+			  pj_sockaddr_get_len((pj_sockaddr_t*)&listen_addr));
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    status = pj_sock_listen(sock, PJ_SOMAXCONN);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    asock_cb.on_accept_complete = &asock_on_accept_complete;
+    status = pj_activesock_create(pool, sock, pj_SOCK_STREAM(), NULL, 
+				  ioqueue, &asock_cb, &state_serv, &asock_serv);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    status = pj_activesock_start_accept(asock_serv, pool);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Update listener address */
+    {
+	int addr_len;
+
+	addr_len = sizeof(listen_addr);
+	pj_sock_getsockname(sock, (pj_sockaddr_t*)&listen_addr, &addr_len);
+    }
+
+    /* CLIENT */
+    pj_ssl_sock_param_default(&param);
+    param.cb.on_connect_complete = &ssl_on_connect_complete;
+    param.cb.on_data_read = &ssl_on_data_read;
+    param.cb.on_data_sent = &ssl_on_data_sent;
+    param.ioqueue = ioqueue;
+    param.timer_heap = timer;
+    param.timeout.sec = 0;
+    param.timeout.msec = ms_timeout;
+    pj_time_val_normalize(&param.timeout);
+    param.user_data = &state_cli;
+
+    state_cli.pool = pool;
+    state_cli.is_server = PJ_FALSE;
+    state_cli.is_verbose = PJ_TRUE;
+
+    status = pj_ssl_sock_create(pool, &param, &ssock_cli);
+    if (status != PJ_SUCCESS) {
+	goto on_return;
+    }
+
+    /* Init default bind address */
+    {
+	pj_str_t tmp_st;
+	pj_sockaddr_init(PJ_AF_INET, &addr, pj_strset2(&tmp_st, "127.0.0.1"), 0);
+    }
+
+    status = pj_ssl_sock_start_connect(ssock_cli, pool, 
+				       (pj_sockaddr_t*)&addr, 
+				       (pj_sockaddr_t*)&listen_addr, 
+				       pj_sockaddr_get_len(&listen_addr));
+    if (status != PJ_EPENDING) {
+	goto on_return;
+    }
+
+    /* Wait until everything has been sent/received or error */
+    while ((!state_serv.err && !state_serv.done) || (!state_cli.err && !state_cli.done))
+    {
+#ifdef PJ_SYMBIAN
+	pj_symbianos_poll(-1, 1000);
+#else
+	pj_time_val delay = {0, 100};
+	pj_ioqueue_poll(ioqueue, &delay);
+	pj_timer_heap_poll(timer, &delay);
+#endif
+    }
+
+    if (state_serv.err || state_cli.err) {
+	if (state_cli.err != PJ_SUCCESS)
+	    status = state_cli.err;
+	else
+	    status = state_serv.err;
+
+	goto on_return;
+    }
+
+    PJ_LOG(3, ("", "...Done!"));
+
+on_return:
+    if (asock_serv)
+	pj_activesock_close(asock_serv);
+    if (ssock_cli && !state_cli.err && !state_cli.done)
+	pj_ssl_sock_close(ssock_cli);
     if (timer)
 	pj_timer_heap_destroy(timer);
     if (ioqueue)
@@ -1152,6 +1346,11 @@ int ssl_sock_test(void)
 	//return ret;
 
 #ifndef PJ_SYMBIAN
+   
+    /* On Symbian platforms, SSL socket is implemented using CSecureSocket, 
+     * and it hasn't supported server mode, so exclude the following tests,
+     * which require SSL server, for now.
+     */
 
     PJ_LOG(3,("", "..echo test w/ TLSv1 and PJ_TLS_RSA_WITH_DES_CBC_SHA cipher"));
     ret = echo_test(PJ_SSL_SOCK_PROTO_TLS1, PJ_SSL_SOCK_PROTO_TLS1, 
@@ -1195,17 +1394,23 @@ int ssl_sock_test(void)
     if (ret != 0)
 	return ret;
 
-    PJ_LOG(3,("", "..client non-SSL (handshake timeout 5 secs)"));
-    ret = client_non_ssl(5000);
-    if (ret != 0)
-	return ret;
-
     PJ_LOG(3,("", "..performance test"));
     ret = perf_test(PJ_IOQUEUE_MAX_HANDLES/2 - 1, 0);
     if (ret != 0)
 	return ret;
 
+    PJ_LOG(3,("", "..client non-SSL (handshake timeout 5 secs)"));
+    ret = client_non_ssl(5000);
+    /* PJ_TIMEDOUT won't be returned as accepted socket is deleted silently */
+    if (ret != 0)
+	return ret;
+
 #endif
+
+    PJ_LOG(3,("", "..server non-SSL (handshake timeout 5 secs)"));
+    ret = server_non_ssl(5000);
+    if (ret != PJ_ETIMEDOUT)
+	return ret;
 
     return 0;
 }

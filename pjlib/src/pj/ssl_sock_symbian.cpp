@@ -171,7 +171,8 @@ private:
 	delete reader_;
 	reader_ = NULL;
 	if (securesock_) {
-	    securesock_->Close();
+	    if (state_ == SSL_STATE_ESTABLISHED)
+		securesock_->Close();
 	    delete securesock_;
 	    securesock_ = NULL;
 	}
@@ -213,10 +214,9 @@ int CPjSSLSocket::Connect(CPjSSLSocket_cb cb, void *key,
     key_ = key;
     rem_addr_ = rem_addr;
     servername_.Set(servername);
-    state_ = SSL_STATE_CONNECTING;
-
     rSock.Connect(rem_addr_, iStatus);
     SetActive();
+    state_ = SSL_STATE_CONNECTING;
     
     rSock.LocalName(local_addr_);
 
@@ -276,20 +276,16 @@ void CPjSSLSocket::DoCancel()
     case SSL_STATE_CONNECTING:
 	{
 	    RSocket &rSock = ((CPjSocket*)sock_)->Socket();
-	    rSock.CancelConnect();
-	    
-	    CleanupSubObjects();
 
+	    rSock.CancelConnect();
+	    CleanupSubObjects();
 	    state_ = SSL_STATE_NULL;
 	}
 	break;
     case SSL_STATE_HANDSHAKING:
 	{
 	    securesock_->CancelHandshake();
-	    securesock_->Close();
-	    
 	    CleanupSubObjects();
-	    
 	    state_ = SSL_STATE_NULL;
 	}
 	break;
@@ -322,7 +318,15 @@ void CPjSSLSocket::RunL()
 	    if (servername_.Length() > 0)
 		securesock_->SetOpt(KSoSSLDomainName, KSolInetSSL,
 				    servername_);
-	    securesock_->FlushSessionCache();
+
+	    // FlushSessionCache() seems to also fire signals to all 
+	    // completed AOs (something like CActiveScheduler::RunIfReady())
+	    // which may cause problem, e.g: we've experienced that when 
+	    // SSL timeout is set to 1s, the SSL timeout timer fires up
+	    // at this point and securesock_ instance gets deleted here!
+	    // So be careful using this. And we don't think we need it here.
+	    //securesock_->FlushSessionCache();
+
 	    securesock_->StartClientHandshake(iStatus);
 	    SetActive();
 	    state_ = SSL_STATE_HANDSHAKING;
@@ -647,6 +651,7 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     ssock->sock_type = param->sock_type;
     ssock->cb = param->cb;
     ssock->user_data = param->user_data;
+    ssock->timeout = param->timeout;
     ssock->ciphers_num = param->ciphers_num;
     if (param->ciphers_num > 0) {
 	unsigned i;
@@ -1153,6 +1158,7 @@ static void connect_cb(int err, void *key)
     } else {
 	delete ssock->sock;
 	ssock->sock = NULL;
+	if (err == KErrTimedOut) status = PJ_ETIMEDOUT;
     }
     
     if (ssock->cb.on_connect_complete) {

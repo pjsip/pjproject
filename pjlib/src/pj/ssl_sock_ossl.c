@@ -1165,7 +1165,7 @@ static void on_timer(pj_timer_heap_t *th, struct pj_timer_entry *te)
 
     switch (timer_id) {
     case TIMER_HANDSHAKE_TIMEOUT:
-	PJ_LOG(1,(ssock->pool->obj_name, "SSL handshake timeout after %d.%ds",
+	PJ_LOG(1,(ssock->pool->obj_name, "SSL timeout after %d.%ds",
 		  ssock->param.timeout.sec, ssock->param.timeout.msec));
 
 	on_handshake_complete(ssock, PJ_ETIMEDOUT);
@@ -1606,19 +1606,6 @@ static pj_bool_t asock_on_connect_complete (pj_activesock_t *asock,
     ssock->write_state.max_len = ssock->param.send_buffer_size;
     ssock->write_state.start = ssock->write_state.buf;
     ssock->write_state.len = 0;
-
-    /* Start handshake timer */
-    if (ssock->param.timer_heap && (ssock->param.timeout.sec != 0 ||
-	ssock->param.timeout.msec != 0))
-    {
-	pj_assert(ssock->timer.id == TIMER_NONE);
-	ssock->timer.id = TIMER_HANDSHAKE_TIMEOUT;
-	status = pj_timer_heap_schedule(ssock->param.timer_heap,
-					&ssock->timer,
-				        &ssock->param.timeout);
-	if (status != PJ_SUCCESS)
-	    ssock->timer.id = TIMER_NONE;
-    }
 
 #ifdef SSL_set_tlsext_host_name
     /* Set server name to connect */
@@ -2289,6 +2276,19 @@ PJ_DECL(pj_status_t) pj_ssl_sock_start_connect(pj_ssl_sock_t *ssock,
 
     /* Save remote address */
     pj_sockaddr_cp(&ssock->rem_addr, remaddr);
+
+    /* Start timer */
+    if (ssock->param.timer_heap && (ssock->param.timeout.sec != 0 ||
+	ssock->param.timeout.msec != 0))
+    {
+	pj_assert(ssock->timer.id == TIMER_NONE);
+	ssock->timer.id = TIMER_HANDSHAKE_TIMEOUT;
+	status = pj_timer_heap_schedule(ssock->param.timer_heap,
+					&ssock->timer,
+				        &ssock->param.timeout);
+	if (status != PJ_SUCCESS)
+	    ssock->timer.id = TIMER_NONE;
+    }
 
     status = pj_activesock_start_connect(ssock->asock, pool, remaddr,
 					 addr_len);
