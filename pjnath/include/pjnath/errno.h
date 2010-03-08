@@ -154,7 +154,12 @@
 #define PJNATH_EICEINPROGRESS	    (PJNATH_ERRNO_START+81) /* 370081 */
 /**
  * @hideinitializer
- * All ICE checklists failed
+ * This error indicates that ICE connectivity check has failed, because
+ * there is at least one ICE component that does not have a valid check.
+ * Normally this happens because the network topology had caused the
+ * connectivity check to fail (e.g. no route between the two agents),
+ * however other reasons may include software incompatibility between
+ * the two agents, or incomplete candidates gathered by the agent(s).
  */
 #define PJNATH_EICEFAILED	    (PJNATH_ERRNO_START+82) /* 370082 */
 /**
