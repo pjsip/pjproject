@@ -1312,7 +1312,7 @@ typedef void (*pjsip_tp_state_callback)(
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
-					       pjsip_tp_state_callback *cb);
+					       pjsip_tp_state_callback cb);
 
 
 /**
@@ -1322,7 +1322,7 @@ PJ_DECL(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
  *
  * @return	    The transport state callback or NULL if it is not set.
  */
-PJ_DECL(pjsip_tp_state_callback*) pjsip_tpmgr_get_status_cb(
+PJ_DECL(pjsip_tp_state_callback) pjsip_tpmgr_get_status_cb(
 					       const pjsip_tpmgr *mgr);
 
 

@@ -169,7 +169,7 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
 
 static void tcp_init_shutdown(struct tcp_transport *tcp, pj_status_t status)
 {
-    pjsip_tp_state_callback *state_cb;
+    pjsip_tp_state_callback state_cb;
 
     if (tcp->close_reason == PJ_SUCCESS)
 	tcp->close_reason = status;
@@ -952,7 +952,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     struct tcp_listener *listener;
     struct tcp_transport *tcp;
     char addr[PJ_INET6_ADDRSTRLEN+10];
-    pjsip_tp_state_callback *state_cb;
+    pjsip_tp_state_callback state_cb;
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
@@ -1262,8 +1262,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     struct tcp_transport *tcp;
     pj_sockaddr_in addr;
     int addrlen;
-
-    pjsip_tp_state_callback *state_cb;
+    pjsip_tp_state_callback state_cb;
 
     tcp = (struct tcp_transport*) pj_activesock_get_user_data(asock);
 

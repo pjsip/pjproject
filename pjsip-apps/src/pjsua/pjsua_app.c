@@ -2804,7 +2804,7 @@ static void on_transport_state(pjsip_transport *tp,
     switch (state) {
     case PJSIP_TP_STATE_CONNECTED:
 	{
-	    PJ_LOG(3,(THIS_FILE, "SIP transport %s is connected to %s", 
+	    PJ_LOG(3,(THIS_FILE, "SIP %s transport is connected to %s",
 		     tp->type_name, host_port));
 	}
 	break;
@@ -2813,7 +2813,7 @@ static void on_transport_state(pjsip_transport *tp,
 	{
 	    char buf[100];
 
-	    snprintf(buf, sizeof(buf), "SIP transport %s is disconnected from %s",
+	    snprintf(buf, sizeof(buf), "SIP %s transport is disconnected from %s",
 		     tp->type_name, host_port);
 	    pjsua_perror(THIS_FILE, buf, info->status);
 	}

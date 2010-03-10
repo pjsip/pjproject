@@ -1525,6 +1525,19 @@ static const char *addr_string(const pj_sockaddr_t *addr)
     return str;
 }
 
+/* Callback to receive transport state notifications */
+static void on_tp_state_callback(pjsip_transport *tp,
+				 pjsip_transport_state state,
+				 const pjsip_transport_state_info *info)
+{
+    if (pjsua_var.ua_cfg.cb.on_transport_state) {
+	(*pjsua_var.ua_cfg.cb.on_transport_state)(tp, state, info);
+    }
+    if (pjsua_var.old_tp_cb) {
+	(*pjsua_var.old_tp_cb)(tp, state, info);
+    }
+}
+
 /*
  * Create and initialize SIP socket (and possibly resolve public
  * address via STUN, depending on config).
@@ -1866,8 +1879,16 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 
     /* Set transport state callback */
     if (pjsua_var.ua_cfg.cb.on_transport_state) {
-	pjsip_tpmgr_set_status_cb(pjsip_endpt_get_tpmgr(pjsua_var.endpt),
-				  &pjsua_var.ua_cfg.cb.on_transport_state);
+	pjsip_tp_state_callback tpcb;
+	pjsip_tpmgr *tpmgr;
+
+	tpmgr = pjsip_endpt_get_tpmgr(pjsua_var.endpt);
+	tpcb = pjsip_tpmgr_get_status_cb(tpmgr);
+
+	if (tpcb != &on_tp_state_callback) {
+	    pjsua_var.old_tp_cb = tpcb;
+	    pjsip_tpmgr_set_status_cb(tpmgr, &on_tp_state_callback);
+	}
     }
 
     /* Return the ID */

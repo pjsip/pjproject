@@ -89,7 +89,7 @@ struct pjsip_tpmgr
 #endif
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
-    pjsip_tp_state_callback *tp_state_cb;
+    pjsip_tp_state_callback tp_state_cb;
     void *tp_state_user_data;
 };
 
@@ -1738,7 +1738,7 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 }
 
 PJ_DEF(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
-					      pjsip_tp_state_callback *cb)
+					      pjsip_tp_state_callback cb)
 {
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
@@ -1747,7 +1747,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pjsip_tp_state_callback*) pjsip_tpmgr_get_status_cb(
+PJ_DEF(pjsip_tp_state_callback) pjsip_tpmgr_get_status_cb(
 					      const pjsip_tpmgr *mgr)
 {
     PJ_ASSERT_RETURN(mgr, NULL);

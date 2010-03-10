@@ -176,7 +176,7 @@ static void sockaddr_to_host_port( pj_pool_t *pool,
 
 static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
 {
-    pjsip_tp_state_callback *state_cb;
+    pjsip_tp_state_callback state_cb;
 
     if (tls->close_reason == PJ_SUCCESS)
 	tls->close_reason = status;
@@ -977,7 +977,7 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
     char addr[PJ_INET6_ADDRSTRLEN+10];
-    pjsip_tp_state_callback *state_cb;
+    pjsip_tp_state_callback state_cb;
     pj_bool_t is_shutdown;
     pj_status_t status;
 
@@ -1337,7 +1337,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
     pj_sockaddr_in addr, *tp_addr;
-    pjsip_tp_state_callback *state_cb;
+    pjsip_tp_state_callback state_cb;
     pj_bool_t is_shutdown;
 
     tls = (struct tls_transport*) pj_ssl_sock_get_user_data(ssock);
