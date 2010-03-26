@@ -690,53 +690,78 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse( int af, unsigned options,
     return status;
 }
 
-static pj_bool_t is_usable_ip(const pj_sockaddr *addr)
-{
-    if (addr->addr.sa_family==PJ_AF_INET) {
-	/* Only consider if the address is not 127.0.0.0/8 or 0.0.0.0/8.
-	 * The 0.0.0.0/8 is a special IP class that doesn't seem to be
-	 * practically useful for our purpose.
-	 */
-	if ((pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==127)
-	    return PJ_FALSE;
-	if ((pj_ntohl(addr->ipv4.sin_addr.s_addr)>>24)==0)
-	    return PJ_FALSE;
-
-	return PJ_TRUE;
-
-    } else if (addr->addr.sa_family==PJ_AF_INET6) {
-	pj_sockaddr ipv6_loop;
-	const pj_str_t loop = { "::1", 3};
-	pj_status_t status;
-
-	status = pj_sockaddr_set_str_addr(PJ_AF_INET6, &ipv6_loop, &loop);
-	if (status != PJ_SUCCESS)
-	    return PJ_TRUE;
-
-	if (pj_memcmp(&addr->ipv6.sin6_addr, &ipv6_loop.ipv6.sin6_addr, 16)==0)
-	    return PJ_FALSE;
-
-	return PJ_TRUE;
-    } else {
-	return PJ_TRUE;
-    }
-}
-
 /* Resolve the IP address of local machine */
 PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 {
     unsigned i, count, cand_cnt;
     enum {
 	CAND_CNT = 8,
+
+	/* Weighting to be applied to found addresses */
 	WEIGHT_HOSTNAME	= 1,	/* hostname IP is not always valid! */
 	WEIGHT_DEF_ROUTE = 2,
-	WEIGHT_INTERFACE = 1
+	WEIGHT_INTERFACE = 1,
+	WEIGHT_LOOPBACK = -4,
+	WEIGHT_LINK_LOCAL = -3,
+	WEIGHT_DISABLED = -50,
+
+	MIN_WEIGHT = WEIGHT_DISABLED+1	/* minimum weight to use */
     };
     /* candidates: */
     pj_sockaddr cand_addr[CAND_CNT];
-    unsigned    cand_weight[CAND_CNT];
+    int		cand_weight[CAND_CNT];
     int	        selected_cand;
     char	strip[PJ_INET6_ADDRSTRLEN+10];
+    /* Special IPv4 addresses. */
+    struct spec_ipv4_t
+    {
+	pj_uint32_t addr;
+	pj_uint32_t mask;
+	int	    weight;
+    } spec_ipv4[] =
+    {
+	/* 127.0.0.0/8, loopback addr will be used if there is no other
+	 * addresses.
+	 */
+	{ 0x7f000000, 0xFF000000, WEIGHT_LOOPBACK },
+
+	/* 0.0.0.0/8, special IP that doesn't seem to be practically useful */
+	{ 0x00000000, 0xFF000000, WEIGHT_DISABLED },
+
+	/* 169.254.0.0/16, a zeroconf/link-local address, which has higher
+	 * priority than loopback and will be used if there is no other
+	 * valid addresses.
+	 */
+	{ 0xa9fe0000, 0xFFFF0000, WEIGHT_LINK_LOCAL }
+    };
+    /* Special IPv6 addresses */
+    struct spec_ipv6_t
+    {
+	pj_uint8_t addr[16];
+	pj_uint8_t mask[16];
+	int	   weight;
+    } spec_ipv6[] =
+    {
+	/* Loopback address, ::1/128 */
+	{ {0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1},
+	  {0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+	   0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff},
+	  WEIGHT_LOOPBACK
+	},
+
+	/* Link local, fe80::/10 */
+	{ {0xfe,0x80,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	  {0xff,0xc0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	  WEIGHT_LINK_LOCAL
+	},
+
+	/* Disabled, ::/128 */
+	{ {0x0,0x0,0,0,0,0,0,0,0,0,0,0,0,0,0,0},
+	{ 0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff,
+	  0xff,0xff,0xff,0xff,0xff,0xff,0xff,0xff},
+	  WEIGHT_DISABLED
+	}
+    };
     pj_addrinfo ai;
     pj_status_t status;
 
@@ -847,6 +872,46 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	}
     }
 
+    /* Apply weight adjustment for special IPv4/IPv6 addresses
+     * See http://trac.pjsip.org/repos/ticket/1046
+     */
+    if (af == PJ_AF_INET) {
+	for (i=0; i<cand_cnt; ++i) {
+	    unsigned j;
+	    for (j=0; j<PJ_ARRAY_SIZE(spec_ipv4); ++j) {
+		    pj_uint32_t a = pj_ntohl(cand_addr[i].ipv4.sin_addr.s_addr);
+		    pj_uint32_t pa = spec_ipv4[j].addr;
+		    pj_uint32_t pm = spec_ipv4[j].mask;
+
+		    if ((a & pm) == pa) {
+			cand_weight[i] += spec_ipv4[j].weight;
+			break;
+		    }
+	    }
+	}
+    } else if (af == PJ_AF_INET6) {
+	for (i=0; i<PJ_ARRAY_SIZE(spec_ipv6); ++i) {
+		unsigned j;
+		for (j=0; j<cand_cnt; ++j) {
+		    pj_uint8_t *a = cand_addr[j].ipv6.sin6_addr.s6_addr;
+		    pj_uint8_t am[16];
+		    pj_uint8_t *pa = spec_ipv6[i].addr;
+		    pj_uint8_t *pm = spec_ipv6[i].mask;
+		    unsigned k;
+
+		    for (k=0; k<16; ++k) {
+			am[k] = (a[k] & pm[k]) & 0xFF;
+		    }
+
+		    if (pj_memcmp(am, pa, 16)==0) {
+			cand_weight[j] += spec_ipv6[i].weight;
+		    }
+		}
+	}
+    } else {
+	return PJ_EAFNOTSUP;
+    }
+
     /* Enumerate candidates to get the best IP address to choose */
     selected_cand = -1;
     for (i=0; i<cand_cnt; ++i) {
@@ -854,7 +919,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 		pj_sockaddr_print(&cand_addr[i], strip, sizeof(strip), 0),
 		cand_weight[i]));
 
-	if (!is_usable_ip(&cand_addr[i])) {
+	if (cand_weight[i] < MIN_WEIGHT) {
 	    continue;
 	}
 
