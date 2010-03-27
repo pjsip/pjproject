@@ -1,0 +1,24 @@
+Variables:
+-----------------------------
+DISABLED = 	"$(DISABLED)"
+GCC = 		"$(GCC)"
+HOSTNAME = 	"$(HOSTNAME)"
+OS = 		"$(OS)"
+PJDIR = 	"$(PJDIR)"
+SUFFIX = 	"$(SUFFIX)"
+
+S60 only:
+------------------------------
+S60TARGET = 	"$(S60TARGET)"
+S60TARGETNAME = "$(S60TARGETNAME)"
+
+VS only:
+------------------------------
+VS = 		"$(VS)"
+VSTARGET = 	"$(VSTARGET)"
+
+PJSUA-TESTS:
+------------------------------
+$(PJSUA-TESTS)
+------------------------------
+

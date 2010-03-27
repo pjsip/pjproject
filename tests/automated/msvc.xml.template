@@ -10,6 +10,7 @@
 #define PJMEDIA_HAS_G7221_CODEC 1
 ]]>			
 		</Write>
+		<Configure cmd="cmd /c echo success" />
 		<Build cmd='vcbuild.exe /nologo /nohtmllog /nocolor /rebuild pjproject-vs8.sln "$(VSTARGET)|Win32"' />
 		<Test name="pjlib-test" info="" wdir="pjlib/bin" cmd="pjlib-test-i386-Win32-vs8-$(VSTARGET)" />
 		<Test name="pjlib-util-test" info="" wdir="pjlib-util/bin" cmd="pjlib-util-test-i386-Win32-vs8-$(VSTARGET)" />
