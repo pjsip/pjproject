@@ -5,6 +5,7 @@ import time
 import re
 import shutil
 
+PYTHON = os.path.basename(sys.executable)
 
 # Usage:
 #  runall.py [test-to-resume]
@@ -102,7 +103,10 @@ while len(sys.argv):
                         (mod,param) = t.split(None,2)
 		        tname = mod[4:mod.find(".py")] + "_" + \
 		                param[param.find("/")+1:param.find(".py")]
-                        tcmd = 'python run.py ' + t
+			c = ""
+			if len(sys.argv):
+				c = " ".join(sys.argv) + " "
+                        tcmd = PYTHON + ' run.py ' + c + t
                         print '\t\t<Test name="%s" cmd="%s" wdir="tests/pjsua" />' % (tname, tcmd)
                 sys.exit(0)
         elif sys.argv[0] == '-s' or sys.argv[0] == '--shell':
