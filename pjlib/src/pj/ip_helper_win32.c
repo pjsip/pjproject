@@ -274,6 +274,7 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
 {
     pj_uint8_t buffer[600];
     IP_ADAPTER_ADDRESSES *adapter = (IP_ADAPTER_ADDRESSES*)buffer;
+    void *adapterBuf = NULL;
     ULONG size = sizeof(buffer);
     ULONG flags;
     unsigned i;
@@ -287,14 +288,15 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
     if (rc != ERROR_SUCCESS) {
 	if (rc == ERROR_BUFFER_OVERFLOW) {
 	    /* Retry with larger memory size */
-	    adapter = (IP_ADAPTER_ADDRESSES*) malloc(size);
+	    adapterBuf = malloc(size);
+	    adapter = (IP_ADAPTER_ADDRESSES*) adapterBuf;
 	    if (adapter != NULL)
 		rc = MyGetAdapterAddresses(af, flags, NULL, adapter, &size);
 	} 
 
 	if (rc != ERROR_SUCCESS) {
-	    if (adapter != (IP_ADAPTER_ADDRESSES*)buffer)
-		free(adapter);
+	    if (adapterBuf)
+		free(adapterBuf);
 	    return PJ_RETURN_OS_ERROR(rc);
 	}
     }
@@ -350,8 +352,8 @@ static pj_status_t enum_ipv4_ipv6_interface(int af,
 	}
     }
 
-    if (adapter != (IP_ADAPTER_ADDRESSES*)buffer)
-	free(adapter);
+    if (adapterBuf)
+	free(adapterBuf);
 
     *p_cnt = i;
     return (*p_cnt) ? PJ_SUCCESS : PJ_ENOTFOUND;
