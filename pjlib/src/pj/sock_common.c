@@ -900,7 +900,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 		    unsigned k;
 
 		    for (k=0; k<16; ++k) {
-			am[k] = (a[k] & pm[k]) & 0xFF;
+			am[k] = (pj_uint8_t)((a[k] & pm[k]) & 0xFF);
 		    }
 
 		    if (pj_memcmp(am, pa, 16)==0) {
