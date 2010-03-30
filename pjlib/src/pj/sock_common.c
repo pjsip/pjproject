@@ -701,8 +701,8 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	WEIGHT_HOSTNAME	= 1,	/* hostname IP is not always valid! */
 	WEIGHT_DEF_ROUTE = 2,
 	WEIGHT_INTERFACE = 1,
-	WEIGHT_LOOPBACK = -4,
-	WEIGHT_LINK_LOCAL = -3,
+	WEIGHT_LOOPBACK = -5,
+	WEIGHT_LINK_LOCAL = -4,
 	WEIGHT_DISABLED = -50,
 
 	MIN_WEIGHT = WEIGHT_DISABLED+1	/* minimum weight to use */
