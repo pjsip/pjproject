@@ -1,6 +1,9 @@
+// The part below will be overwritten by automated test
+// =BEGIN
 #define SND_HAS_APS	0
 #define SND_HAS_VAS	0
 #define SND_HAS_MDA	1
+// =END
 
 TARGET			symbian_ua_gui.exe
 UID			0x100039CE 0xEBD12EE4

@@ -3,20 +3,20 @@
  
 	<Submit group="Experimental" build="$(OS)-$(VS)-$(VSTARGET)-default" >
 		<Update />
-		<Write file="pjlib/include/pj/config_site.h">
+		<FileWrite file="pjlib/include/pj/config_site.h">
 		  <![CDATA[
 /* Written by ccdash */
 #define PJ_HAS_IPV6		1
 #define PJMEDIA_HAS_G7221_CODEC 1
 ]]>			
-		</Write>
+		</FileWrite>
 		<Configure cmd="cmd /c echo success" />
 		<Build cmd='vcbuild.exe /nologo /nohtmllog /nocolor /rebuild pjproject-vs8.sln "$(VSTARGET)|Win32"' />
-		<Test name="pjlib-test" info="" wdir="pjlib/bin" cmd="pjlib-test-i386-Win32-vs8-$(VSTARGET)" />
-		<Test name="pjlib-util-test" info="" wdir="pjlib-util/bin" cmd="pjlib-util-test-i386-Win32-vs8-$(VSTARGET)" />
-		<Test name="pjnath-test" info="" wdir="pjnath/bin" cmd="pjnath-test-i386-Win32-vs8-$(VSTARGET)" />
-		<Test name="pjmedia-test" info="" wdir="pjmedia/bin" cmd="pjmedia-test-i386-Win32-vs8-$(VSTARGET)" />
-		<Test name="pjsip-test" info="" wdir="pjsip/bin" cmd="pjsip-test-i386-Win32-vs8-$(VSTARGET)" />
+		<Test name="pjlib-test" info="" wdir="pjlib/bin" cmd="pjlib-test-i386-Win32-vc8-$(VSTARGET)" />
+		<Test name="pjlib-util-test" info="" wdir="pjlib-util/bin" cmd="pjlib-util-test-i386-Win32-vc8-$(VSTARGET)" />
+		<Test name="pjnath-test" info="" wdir="pjnath/bin" cmd="pjnath-test-i386-Win32-vc8-$(VSTARGET)" />
+		<Test name="pjmedia-test" info="" wdir="pjmedia/bin" cmd="pjmedia-test-i386-Win32-vc8-$(VSTARGET)" />
+		<Test name="pjsip-test" info="" wdir="pjsip/bin" cmd="pjsip-test-i386-Win32-vc8-$(VSTARGET)" />
 		$(PJSUA-TESTS)
 	</Submit>
 	

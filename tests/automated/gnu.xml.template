@@ -3,18 +3,18 @@
  
 	<Submit group="Experimental" build="$(SUFFIX)-$(GCC)-default" disabled="$(DISABLED)" >
 		<Update />
-		<Write file="user.mak">
+		<FileWrite file="user.mak">
 		  <![CDATA[
 # Written by ccdash
 ]]>			
-		</Write>
-		<Write file="pjlib/include/pj/config_site.h">
+		</FileWrite>
+		<FileWrite file="pjlib/include/pj/config_site.h">
 		  <![CDATA[
 /* Written by ccdash */
 #define PJ_HAS_IPV6		1
 #define PJMEDIA_HAS_G7221_CODEC 1
 ]]>			
-		</Write>
+		</FileWrite>
 		<Configure cmd="./aconfigure" />
 		<Build cmd="make dep &amp;&amp; make distclean &amp;&amp; make" />
 		<Test name="pjlib-test" info="" wdir="pjlib/bin" cmd="./pjlib-test-$(SUFFIX)" />

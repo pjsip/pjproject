@@ -66,9 +66,13 @@ class VSVersion:
 			self.version = "9"
 			self.release = "2008"
 			break
-		    else:
+		    elif major=="16":
 			self.version = "10"
 			self.release = "2010"
+			break
+		    else:
+			self.version = "11"
+			self.release = "2012"
 			break
 	    proc.wait()
 	    self.vs_version = "vs" + self.version
