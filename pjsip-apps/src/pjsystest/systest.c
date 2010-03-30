@@ -23,6 +23,9 @@
 
 unsigned    test_item_count;
 test_item_t test_items[SYSTEST_MAX_TEST];
+char	    doc_path[PATH_LENGTH] = {0};
+char	    res_path[PATH_LENGTH] = {0};
+char	    fpath[PATH_LENGTH];
 
 #define USER_ERROR  "User used said not okay"
 
@@ -82,9 +85,16 @@ static gui_menu root_menu = {
 
 /*****************************************************************/
 
+PJ_INLINE(char *) add_path(const char *path, const char *fname)
+{
+    strncpy(fpath, path, PATH_LENGTH);
+    strncat(fpath, fname, PATH_LENGTH);
+    return fpath;
+}
+
 static void exit_app(void)
 {
-    systest_save_result(RESULT_OUT_PATH);
+    systest_save_result(add_path(doc_path, RESULT_OUT_PATH));
     gui_destroy();
 }
 
@@ -329,14 +339,14 @@ on_return:
 
 static void systest_play_wav1(void)
 {
-    const char *paths[] = { WAV_PLAYBACK_PATH, 
+    const char *paths[] = { add_path(res_path, WAV_PLAYBACK_PATH),
 			    ALT_PATH1 WAV_PLAYBACK_PATH };
     systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
 
 static void systest_play_wav2(void)
 {
-    const char *paths[] = { WAV_TOCK8_PATH, 
+    const char *paths[] = { add_path(res_path, WAV_TOCK8_PATH),
 			    ALT_PATH1 WAV_TOCK8_PATH};
     systest_play_wav(PJ_ARRAY_SIZE(paths), paths);
 }
@@ -347,7 +357,7 @@ static void systest_play_wav2(void)
  */
 static void systest_rec_audio(void)
 {
-    const pj_str_t filename = pj_str(WAV_REC_OUT_PATH);
+    const pj_str_t filename = pj_str(add_path(doc_path, WAV_REC_OUT_PATH));
     pj_pool_t *pool = NULL;
     enum gui_key key;
     pjsua_recorder_id rec_id = PJSUA_INVALID_ID;
@@ -732,8 +742,8 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 
 static void systest_latency_test(void)
 {
-    const char *ref_wav_paths[] = { WAV_TOCK8_PATH, ALT_PATH1 WAV_TOCK8_PATH };
-    const pj_str_t rec_wav_file = pj_str(WAV_LATENCY_OUT_PATH);
+    const char *ref_wav_paths[] = { add_path(res_path, WAV_TOCK8_PATH), ALT_PATH1 WAV_TOCK8_PATH };
+    pj_str_t rec_wav_file;
     pjsua_player_id play_id = PJSUA_INVALID_ID;
     pjsua_conf_port_id play_slot = PJSUA_INVALID_ID;
     pjsua_recorder_id rec_id = PJSUA_INVALID_ID;
@@ -781,6 +791,7 @@ static void systest_latency_test(void)
 
     play_slot = pjsua_player_get_conf_port(play_id);
 
+    rec_wav_file = pj_str(add_path(doc_path, WAV_LATENCY_OUT_PATH));
     status = pjsua_recorder_create(&rec_wav_file, 0, NULL, -1, 0, &rec_id);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -1057,7 +1068,7 @@ int systest_init(void)
     }
 
     pjsua_logging_config_default(&log_cfg);
-    log_cfg.log_filename = pj_str(LOG_OUT_PATH);
+    log_cfg.log_filename = pj_str(add_path(doc_path, LOG_OUT_PATH));
 
     pjsua_config_default(&systest.ua_cfg);
     pjsua_media_config_default(&systest.media_cfg);

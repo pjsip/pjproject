@@ -86,6 +86,9 @@ typedef struct test_item_t
 #define SYSTEST_MAX_TEST    32
 extern unsigned	    test_item_count;
 extern test_item_t  test_items[SYSTEST_MAX_TEST];
+#define PATH_LENGTH	    128
+extern char	    doc_path[PATH_LENGTH];
+extern char	    res_path[PATH_LENGTH];
 
 test_item_t *systest_alloc_test_item(const char *title);
 
