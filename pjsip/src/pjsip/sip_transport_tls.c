@@ -184,6 +184,12 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
     if (tls->base.is_shutdown)
 	return;
 
+    /* Prevent immediate transport destroy by application, as transport
+     * state notification callback may be stacked and transport instance
+     * must remain valid at any point in the callback.
+     */
+    pjsip_transport_add_ref(&tls->base);
+
     /* Notify application of transport disconnected state */
     state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
     if (state_cb) {
@@ -200,6 +206,9 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
      * procedure for this transport.
      */
     pjsip_transport_shutdown(&tls->base);
+
+    /* Now, it is ok to destroy the transport. */
+    pjsip_transport_dec_ref(&tls->base);
 }
 
 
@@ -517,7 +526,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 			       struct tls_transport **p_tls)
 {
     struct tls_transport *tls;
-    const pj_str_t ka_pkt = PJSIP_TCP_KEEP_ALIVE_DATA;
+    const pj_str_t ka_pkt = PJSIP_TLS_KEEP_ALIVE_DATA;
     pj_status_t status;
     
 
@@ -578,7 +587,12 @@ static pj_status_t tls_create( struct tls_listener *listener,
     
     sockaddr_to_host_port(pool, &tls->base.local_name, 
 			  (pj_sockaddr_in*)&tls->base.local_addr);
-    sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
+    if (tls->remote_name.slen) {
+	tls->base.remote_name.host = tls->remote_name;
+	tls->base.remote_name.port = pj_sockaddr_in_get_port(remote);
+    } else {
+	sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
+    }
 
     tls->base.endpt = listener->endpt;
     tls->base.tpmgr = listener->tpmgr;
@@ -1075,8 +1089,8 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 	tls_destroy(&tls->base, status);
     } else {
 	/* Start keep-alive timer */
-	if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
-	    pj_time_val delay = {PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0};
+	if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
+	    pj_time_val delay = {PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0};
 	    pjsip_endpt_schedule_timer(listener->endpt, 
 				       &tls->ka_timer, 
 				       &delay);
@@ -1507,8 +1521,8 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     tls_flush_pending_tx(tls);
 
     /* Start keep-alive timer */
-    if (PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
-	pj_time_val delay = { PJSIP_TCP_KEEP_ALIVE_INTERVAL, 0 };
+    if (PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
+	pj_time_val delay = { PJSIP_TLS_KEEP_ALIVE_INTERVAL, 0 };
 	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
 				   &delay);
 	tls->ka_timer.id = PJ_TRUE;
@@ -1540,9 +1554,9 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     pj_gettimeofday(&now);
     PJ_TIME_VAL_SUB(now, tls->last_activity);
 
-    if (now.sec > 0 && now.sec < PJSIP_TCP_KEEP_ALIVE_INTERVAL) {
+    if (now.sec > 0 && now.sec < PJSIP_TLS_KEEP_ALIVE_INTERVAL) {
 	/* There has been activity, so don't send keep-alive */
-	delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL - now.sec;
+	delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL - now.sec;
 	delay.msec = 0;
 
 	pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 
@@ -1570,7 +1584,7 @@ static void tls_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e)
     }
 
     /* Register next keep-alive */
-    delay.sec = PJSIP_TCP_KEEP_ALIVE_INTERVAL;
+    delay.sec = PJSIP_TLS_KEEP_ALIVE_INTERVAL;
     delay.msec = 0;
 
     pjsip_endpt_schedule_timer(tls->base.endpt, &tls->ka_timer, 

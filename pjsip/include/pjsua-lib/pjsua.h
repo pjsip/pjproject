@@ -1865,6 +1865,18 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * Default auto retry re-registration interval, in seconds. Set to 0
+ * to disable this. Application can set the timer on per account basis 
+ * by setting the pjsua_acc_config.reg_retry_interval field instead.
+ *
+ * Default: 300 (5 minutes)
+ */
+#ifndef PJSUA_REG_RETRY_INTERVAL
+#   define PJSUA_REG_RETRY_INTERVAL	300
+#endif
+
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -2115,6 +2127,24 @@ typedef struct pjsua_acc_config
      */
     int		     srtp_secure_signaling;
 #endif
+
+    /**
+     * Specify interval of auto registration retry upon registration failure
+     * (including caused by transport problem), in second. Set to 0 to
+     * disable auto re-registration.
+     *
+     * Default: #PJSUA_REG_RETRY_INTERVAL
+     */
+    unsigned	     reg_retry_interval;
+
+    /**
+     * Specify whether calls of the configured account should be dropped
+     * after registration failure and an attempt of re-registration has 
+     * also failed.
+     *
+     * Default: PJ_FALSE (disabled)
+     */
+    pj_bool_t	     drop_calls_on_reg_fail;
 
 } pjsua_acc_config;
 

@@ -176,6 +176,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;
 #endif
+    cfg->reg_retry_interval = PJSUA_REG_RETRY_INTERVAL;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
@@ -1525,6 +1526,10 @@ static const char *addr_string(const pj_sockaddr_t *addr)
     return str;
 }
 
+void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
+				   pjsip_transport_state state,
+				   const pjsip_transport_state_info *info);
+
 /* Callback to receive transport state notifications */
 static void on_tp_state_callback(pjsip_transport *tp,
 				 pjsip_transport_state state,
@@ -1536,6 +1541,7 @@ static void on_tp_state_callback(pjsip_transport *tp,
     if (pjsua_var.old_tp_cb) {
 	(*pjsua_var.old_tp_cb)(tp, state, info);
     }
+    pjsua_acc_on_tp_state_changed(tp, state, info);
 }
 
 /*

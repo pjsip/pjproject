@@ -94,6 +94,7 @@ struct pjsip_regc_info
     pj_bool_t	auto_reg;   /**< Will register automatically?		    */
     int		interval;   /**< Registration interval (seconds).	    */
     int		next_reg;   /**< Time until next registration (seconds).    */
+    pjsip_transport *transport; /**< Last transport used.		    */
 };
 
 /**

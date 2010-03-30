@@ -177,6 +177,12 @@ static void tcp_init_shutdown(struct tcp_transport *tcp, pj_status_t status)
     if (tcp->base.is_shutdown)
 	return;
 
+    /* Prevent immediate transport destroy by application, as transport
+     * state notification callback may be stacked and transport instance
+     * must remain valid at any point in the callback.
+     */
+    pjsip_transport_add_ref(&tcp->base);
+
     /* Notify application of transport disconnected state */
     state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
     if (state_cb) {
@@ -193,6 +199,9 @@ static void tcp_init_shutdown(struct tcp_transport *tcp, pj_status_t status)
      * procedure for this transport.
      */
     pjsip_transport_shutdown(&tcp->base);
+
+    /* Now, it is ok to destroy the transport. */
+    pjsip_transport_dec_ref(&tcp->base);
 }
 
 

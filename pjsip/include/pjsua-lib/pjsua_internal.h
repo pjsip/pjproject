@@ -128,6 +128,13 @@ typedef struct pjsua_acc
     pj_status_t	     reg_last_err;  /**< Last registration error.	*/
     int		     reg_last_code; /**< Last status last register.	*/
 
+    struct {
+	pj_bool_t	 active;    /**< Flag of reregister status.	*/
+	pj_timer_entry   timer;	    /**< Timer for reregistration.	*/
+	void		*reg_tp;    /**< Transport for registration.	*/
+	unsigned	 attempt_cnt; /**< Attempt counter.		*/
+    } auto_rereg;		    /**< Reregister/reconnect data.	*/
+
     pj_timer_entry   ka_timer;	    /**< Keep-alive timer for UDP.	*/
     pjsip_transport *ka_transport;  /**< Transport for keep-alive.	*/
     pj_sockaddr	     ka_target;	    /**< Destination address for K-A	*/

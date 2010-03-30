@@ -24,6 +24,8 @@
 #define THIS_FILE		"pjsua_acc.c"
 
 
+static void schedule_reregistration(pjsua_acc *acc);
+
 /*
  * Get number of current accounts.
  */
@@ -441,6 +443,9 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     PJ_ASSERT_RETURN(pjsua_var.acc[acc_id].valid, PJ_EINVALIDOP);
 
     PJSUA_LOCK();
+
+    /* Cancel any re-registration timer */
+    pjsua_cancel_timer(&pjsua_var.acc[acc_id].auto_rereg.timer);
 
     /* Delete registration */
     if (pjsua_var.acc[acc_id].regc != NULL) {
@@ -1031,6 +1036,10 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     } else if (PJSIP_IS_STATUS_IN_CLASS(param->code, 200)) {
 
+	/* Update auto registration flag */
+	acc->auto_rereg.active = PJ_FALSE;
+	acc->auto_rereg.attempt_cnt = 0;
+
 	if (param->expiration < 1) {
 	    pjsip_regc_destroy(acc->regc);
 	    acc->regc = NULL;
@@ -1081,6 +1090,21 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     if (pjsua_var.ua_cfg.cb.on_reg_state)
 	(*pjsua_var.ua_cfg.cb.on_reg_state)(acc->index);
+
+    /* Check if we need to auto retry registration. Basically, registration
+     * failure codes triggering auto-retry are those of temporal failures
+     * considered to be recoverable in relatively short term.
+     */
+    if (acc->cfg.reg_retry_interval && 
+	(param->code == PJSIP_SC_REQUEST_TIMEOUT ||
+	 param->code == PJSIP_SC_INTERNAL_SERVER_ERROR ||
+	 param->code == PJSIP_SC_BAD_GATEWAY ||
+	 param->code == PJSIP_SC_SERVICE_UNAVAILABLE ||
+	 param->code == PJSIP_SC_SERVER_TIMEOUT ||
+	 PJSIP_IS_STATUS_IN_CLASS(param->code, 600))) /* Global failure */
+    {
+	schedule_reregistration(acc);
+    }
 
     PJSUA_UNLOCK();
 }
@@ -1220,6 +1244,12 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 
     PJSUA_LOCK();
 
+    /* Cancel any re-registration timer */
+    pjsua_cancel_timer(&pjsua_var.acc[acc_id].auto_rereg.timer);
+
+    /* Reset pointer to registration transport */
+    pjsua_var.acc[acc_id].auto_rereg.reg_tp = NULL;
+
     if (renew) {
 	if (pjsua_var.acc[acc_id].regc == NULL) {
 	    status = pjsua_regc_init(acc_id);
@@ -1273,6 +1303,14 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     if (status == PJ_SUCCESS) {
 	//pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_regc_send( pjsua_var.acc[acc_id].regc, tdata );
+    }
+
+    /* Update pointer to registration transport */
+    if (status == PJ_SUCCESS) {
+	pjsip_regc_info reg_info;
+
+	pjsip_regc_get_info(pjsua_var.acc[acc_id].regc, &reg_info);
+	pjsua_var.acc[acc_id].auto_rereg.reg_tp = reg_info.transport;
     }
 
     if (status != PJ_SUCCESS) {
@@ -1925,3 +1963,122 @@ PJ_DEF(pj_status_t) pjsua_acc_set_transport( pjsua_acc_id acc_id,
     return PJ_SUCCESS;
 }
 
+
+/* Auto re-registration timeout callback */
+static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
+{
+    pjsua_acc *acc;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(th);
+    acc = (pjsua_acc*) te->user_data;
+    pj_assert(acc);
+
+    PJSUA_LOCK();
+
+    if (!acc->valid || !acc->auto_rereg.active)
+	goto on_return;
+
+    /* Start re-registration */
+    acc->auto_rereg.attempt_cnt++;
+    status = pjsua_acc_set_registration(acc->index, PJ_TRUE);
+    if (status != PJ_SUCCESS)
+	schedule_reregistration(acc);
+
+    /* If configured, disconnect calls of this account after the first
+     * reregistration attempt failed.
+     */
+    if (acc->cfg.drop_calls_on_reg_fail && acc->auto_rereg.attempt_cnt > 1)
+    {
+	unsigned i, cnt;
+
+	for (i = 0, cnt = 0; i < pjsua_var.ua_cfg.max_calls; ++i) {
+	    if (pjsua_var.calls[i].acc_id == acc->index) {
+		pjsua_call_hangup(i, 0, NULL, NULL);
+		++cnt;
+	    }
+	}
+
+	if (cnt) {
+	    PJ_LOG(3, (THIS_FILE, "Disconnecting %d call(s) of account #%d "
+				  "after reregistration attempt failed",
+				  cnt, acc->index));
+	}
+    }
+
+on_return:
+
+    PJSUA_UNLOCK();
+}
+
+
+/* Schedule reregistration for specified account. Note that the first 
+ * re-registration after a registration failure will be done immediately.
+ * Also note that this function should be called within PJSUA mutex.
+ */
+static void schedule_reregistration(pjsua_acc *acc)
+{
+    pj_time_val delay;
+
+    pj_assert(acc && acc->valid && acc->cfg.reg_retry_interval);
+
+    /* Cancel any re-registration timer */
+    pjsua_cancel_timer(&acc->auto_rereg.timer);
+
+    /* Update re-registration flag */
+    acc->auto_rereg.active = PJ_TRUE;
+
+    /* Set up timer for reregistration */
+    acc->auto_rereg.timer.cb = &auto_rereg_timer_cb;
+    acc->auto_rereg.timer.user_data = acc;
+
+    /* Reregistration attempt. The first attempt will be done immediately. */
+    delay.sec = acc->auto_rereg.attempt_cnt? acc->cfg.reg_retry_interval : 0;
+    delay.msec = 0;
+    pjsua_schedule_timer(&acc->auto_rereg.timer, &delay);
+}
+
+
+/* Internal function to perform auto-reregistration on transport 
+ * connection/disconnection events.
+ */
+void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
+				   pjsip_transport_state state,
+				   const pjsip_transport_state_info *info)
+{
+    unsigned i;
+
+    PJ_UNUSED_ARG(info);
+
+    /* Only care for transport disconnection events */
+    if (state != PJSIP_TP_STATE_DISCONNECTED)
+	return;
+
+    /* Shutdown this transport, to make sure that the transport manager 
+     * will create a new transport for reconnection.
+     */
+    pjsip_transport_shutdown(tp);
+
+    PJSUA_LOCK();
+
+    /* Enumerate accounts using this transport and perform actions
+     * based on the transport state.
+     */
+    for (i = 0; i < PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	pjsua_acc *acc = &pjsua_var.acc[i];
+
+	/* Skip if this account is not valid OR auto re-registration
+	 * feature is disabled OR this transport is not used by this account.
+	 */
+	if (!acc->valid || !acc->cfg.reg_retry_interval || 
+	    tp != acc->auto_rereg.reg_tp)
+	{
+	    continue;
+	}
+
+	/* Schedule reregistration for this account */
+	schedule_reregistration(acc);
+    }
+
+    PJSUA_UNLOCK();
+}

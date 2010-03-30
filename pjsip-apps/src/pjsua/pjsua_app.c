@@ -189,6 +189,7 @@ static void usage(void)
     puts  ("  --proxy=url         Optional URL of proxy server to visit");
     puts  ("                      May be specified multiple times");
     puts  ("  --reg-timeout=SEC   Optional registration interval (default 55)");
+    puts  ("  --rereg-delay=SEC   Optional auto retry registration interval (default 300)");
     puts  ("  --realm=string      Set realm");
     puts  ("  --username=string   Set authentication username");
     puts  ("  --password=string   Set authentication password");
@@ -484,6 +485,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
+	   OPT_REG_RETRY_INTERVAL,
 	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
@@ -550,6 +552,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "realm",	1, 0, OPT_REALM},
 	{ "username",	1, 0, OPT_USERNAME},
 	{ "password",	1, 0, OPT_PASSWORD},
+	{ "rereg-delay",1, 0, OPT_REG_RETRY_INTERVAL},
 	{ "nameserver", 1, 0, OPT_NAMESERVER},
 	{ "stun-srv",   1, 0, OPT_STUN_SRV},
 	{ "add-buddy",  1, 0, OPT_ADD_BUDDY},
@@ -957,6 +960,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cur_acc->cred_info[cur_acc->cred_count].ext.aka.k = pj_str(pj_optarg);
 	    cur_acc->cred_info[cur_acc->cred_count].ext.aka.cb = &pjsip_auth_create_aka_response;
 #endif
+	    break;
+
+	case OPT_REG_RETRY_INTERVAL:
+	    cur_acc->reg_retry_interval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    break;
 
 	case OPT_NEXT_CRED: /* next credential */

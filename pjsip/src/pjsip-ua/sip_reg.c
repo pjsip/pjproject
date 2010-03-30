@@ -203,6 +203,7 @@ PJ_DEF(pj_status_t) pjsip_regc_get_info( pjsip_regc *regc,
     info->is_busy = (pj_atomic_get(regc->busy_ctr) || regc->has_tsx);
     info->auto_reg = regc->auto_reg;
     info->interval = regc->expires;
+    info->transport = regc->last_transport;
     
     if (regc->has_tsx)
 	info->next_reg = 0;
@@ -1202,11 +1203,32 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     else
 	regc->current_op = REGC_REGISTERING;
 
+    /* Prevent deletion of tdata, e.g: when something wrong in sending,
+     * we need tdata to retrieve the transport.
+     */
+    pjsip_tx_data_add_ref(tdata);
+
     status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
 				      regc, &tsx_callback);
     if (status!=PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
+
+    /* Get last transport used and add reference to it */
+    if (tdata->tp_info.transport != regc->last_transport) {
+	if (regc->last_transport) {
+	    pjsip_transport_dec_ref(regc->last_transport);
+	    regc->last_transport = NULL;
+	}
+
+	if (tdata->tp_info.transport) {
+	    regc->last_transport = tdata->tp_info.transport;
+	    pjsip_transport_add_ref(regc->last_transport);
+	}
+    }
+
+    /* Release tdata */
+    pjsip_tx_data_dec_ref(tdata);
 
     pj_lock_release(regc->lock);
 
