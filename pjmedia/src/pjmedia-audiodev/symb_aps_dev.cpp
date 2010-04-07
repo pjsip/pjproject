@@ -44,6 +44,7 @@
 #define THIS_FILE			"symb_aps_dev.c"
 #define BITS_PER_SAMPLE			16
 
+
 #if 1
 #   define TRACE_(st) PJ_LOG(3, st)
 #else
@@ -413,12 +414,14 @@ private:
     TInt InitPlayL();
     TInt InitRecL();
     TInt StartStreamL();
+    void Deinit();
 
     // Inherited from MQueueHandlerObserver
     virtual void InputStreamInitialized(const TInt aStatus);
     virtual void OutputStreamInitialized(const TInt aStatus);
     virtual void NotifyError(const TInt aError);
 
+    TBool			 session_opened;
     State			 state_;
     struct aps_stream		*parentStrm_;
     CPjAudioSetting		 setting_;
@@ -429,8 +432,10 @@ private:
 
     RMsgQueue<TAPSCommBuffer>    iReadQ;
     RMsgQueue<TAPSCommBuffer>    iReadCommQ;
+    TBool			 readq_opened;
     RMsgQueue<TAPSCommBuffer>    iWriteQ;
     RMsgQueue<TAPSCommBuffer>    iWriteCommQ;
+    TBool			 writeq_opened;
 
     CQueueHandler		*iPlayCommHandler;
     CQueueHandler		*iRecCommHandler;
@@ -460,9 +465,12 @@ CPjAudioEngine::CPjAudioEngine(struct aps_stream *parent_strm,
 			       void *user_data,
 			       const CPjAudioSetting &setting)
       : MQueueHandlerObserver(rec_cb, play_cb, user_data),
+        session_opened(EFalse),
 	state_(STATE_NULL),
 	parentStrm_(parent_strm),
 	setting_(setting),
+	readq_opened(EFalse),
+	writeq_opened(EFalse),
 	iPlayCommHandler(0),
 	iRecCommHandler(0),
 	iRecHandler(0)
@@ -471,35 +479,8 @@ CPjAudioEngine::CPjAudioEngine(struct aps_stream *parent_strm,
 
 CPjAudioEngine::~CPjAudioEngine()
 {
-    Stop();
+    Deinit();
 
-    delete iRecHandler;
-    delete iPlayCommHandler;
-    delete iRecCommHandler;
-
-    // On some devices, immediate closing after stopping may cause APS server
-    // panic KERN-EXEC 0, so let's wait for sometime before really closing
-    // the client session.
-    TTime start, now;
-    enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
-    
-    start.UniversalTime();
-    do {
-	pj_symbianos_poll(-1, APS_CLOSE_WAIT_TIME);
-	now.UniversalTime();
-    } while (now.MicroSecondsFrom(start) < APS_CLOSE_WAIT_TIME * 1000);
-
-    iSession.Close();
-
-    if (state_ == STATE_READY) {
-	if (parentStrm_->param.dir != PJMEDIA_DIR_PLAYBACK) {
-	    iReadQ.Close();
-	    iReadCommQ.Close();
-	}
-	iWriteQ.Close();
-	iWriteCommQ.Close();
-    }
-    
     TRACE_((THIS_FILE, "Sound device destroyed"));
 }
 
@@ -507,6 +488,7 @@ TInt CPjAudioEngine::InitPlayL()
 {
     TInt err = iSession.InitializePlayer(iPlaySettings);
     if (err != KErrNone) {
+	Deinit();
 	snd_perror("Failed to initialize player", err);
 	return err;
     }
@@ -521,6 +503,8 @@ TInt CPjAudioEngine::InitPlayL()
 	User::After(10);
     while (iWriteCommQ.OpenGlobal(buf3))
 	User::After(10);
+        
+    writeq_opened = ETrue;
 
     // Construct message queue handler
     iPlayCommHandler = CQueueHandler::NewL(this, &iWriteCommQ, &iWriteQ,
@@ -537,6 +521,7 @@ TInt CPjAudioEngine::InitRecL()
     // Initialize input stream device
     TInt err = iSession.InitializeRecorder(iRecSettings);
     if (err != KErrNone && err != KErrAlreadyExists) {
+	Deinit();
 	snd_perror("Failed to initialize recorder", err);
 	return err;
     }
@@ -552,6 +537,8 @@ TInt CPjAudioEngine::InitRecL()
 	User::After(10);
     while (iReadCommQ.OpenGlobal(buf4))
 	User::After(10);
+
+    readq_opened = ETrue;
 
     // Construct message queue handlers
     iRecHandler = CQueueHandler::NewL(this, &iReadQ, NULL,
@@ -573,6 +560,13 @@ TInt CPjAudioEngine::StartL()
 
     PJ_ASSERT_RETURN(state_ == STATE_NULL, PJMEDIA_EAUD_INVOP);
     
+    if (!session_opened) {
+	TInt err = iSession.Connect();
+	if (err != KErrNone)
+	    return err;
+	session_opened = ETrue;
+    }
+
     // Even if only capturer are opened, playback thread of APS Server need
     // to be run(?). Since some messages will be delivered via play comm queue.
     state_ = STATE_INITIALIZING;
@@ -592,7 +586,7 @@ void CPjAudioEngine::Stop()
 	state_ = STATE_PENDING_STOP;
 	
 	// Then wait until initialization done.
-	while (state_ != STATE_READY)
+	while (state_ != STATE_READY && state_ != STATE_NULL)
 	    pj_symbianos_poll(-1, 100);
     }
 }
@@ -617,6 +611,7 @@ void CPjAudioEngine::ConstructL()
     iPlaySettings.iSettings.iVolume	= 0;
 
     User::LeaveIfError(iSession.Connect());
+    session_opened = ETrue;
 }
 
 TInt CPjAudioEngine::StartStreamL()
@@ -647,6 +642,46 @@ TInt CPjAudioEngine::StartStreamL()
     return 0;
 }
 
+void CPjAudioEngine::Deinit()
+{
+    Stop();
+
+    delete iRecHandler;
+    delete iPlayCommHandler;
+    delete iRecCommHandler;
+
+    if (session_opened) {
+	TTime start, now;
+	enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
+	
+	// On some devices, immediate closing after stopping may cause 
+	// APS server panic KERN-EXEC 0, so let's wait for sometime before
+	// closing the client session.
+	start.UniversalTime();
+	do {
+	    pj_symbianos_poll(-1, APS_CLOSE_WAIT_TIME);
+	    now.UniversalTime();
+	} while (now.MicroSecondsFrom(start) < APS_CLOSE_WAIT_TIME * 1000);
+
+	iSession.Close();
+	session_opened = EFalse;
+    }
+
+    if (readq_opened) {
+	iReadQ.Close();
+	iReadCommQ.Close();
+	readq_opened = EFalse;
+    }
+
+    if (writeq_opened) {
+	iWriteQ.Close();
+	iWriteCommQ.Close();
+	writeq_opened = EFalse;
+    }
+
+    state_ = STATE_NULL;
+}
+
 void CPjAudioEngine::InputStreamInitialized(const TInt aStatus)
 {
     TRACE_((THIS_FILE, "Recorder initialized, err=%d", aStatus));
@@ -658,6 +693,8 @@ void CPjAudioEngine::InputStreamInitialized(const TInt aStatus)
 	} else {
 	    state_ = STATE_READY;
 	}
+    } else {
+	Deinit();
     }
 }
 
@@ -675,11 +712,14 @@ void CPjAudioEngine::OutputStreamInitialized(const TInt aStatus)
 	    }
 	} else
 	    InitRecL();
+    } else {
+	Deinit();
     }
 }
 
 void CPjAudioEngine::NotifyError(const TInt aError)
 {
+    Deinit();
     snd_perror("Error from CQueueHandler", aError);
 }
 
