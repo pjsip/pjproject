@@ -29,8 +29,9 @@ SYSTEMINCLUDE		\epoc32\include\libc
 
 LIBRARY			charconv.lib euser.lib estlib.lib
 LIBRARY			esock.lib insock.lib
-STATICLIBRARY		pjlib.lib pjmedia.lib
 STATICLIBRARY		pjmedia_audiodev.lib
+STATICLIBRARY		pjmedia.lib
+STATICLIBRARY		pjlib.lib 
 STATICLIBRARY		libresample.lib
 
 #if SND_USE_APS

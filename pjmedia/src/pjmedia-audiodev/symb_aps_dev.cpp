@@ -1293,28 +1293,129 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     af->dev_info.input_count = 1;
     af->dev_info.output_count = 1;
 
-    af->dev_info.ext_fmt_cnt = 5;
+    /* Enumerate codecs by trying to initialize each codec and examining
+     * the error code. Consider the following:
+     * - not possible to reinitialize the same APS session with 
+     *   different settings,
+     * - closing APS session and trying to immediately reconnect may fail,
+     *   clients should wait ~5s before attempting to reconnect.
+     */
 
-    af->dev_info.ext_fmt[0].id = PJMEDIA_FORMAT_AMR;
-    af->dev_info.ext_fmt[0].bitrate = 7400;
-    af->dev_info.ext_fmt[0].vad = PJ_TRUE;
+    unsigned i, fmt_cnt = 0;
+    pj_bool_t g711_supported = PJ_FALSE;
 
-    af->dev_info.ext_fmt[1].id = PJMEDIA_FORMAT_G729;
-    af->dev_info.ext_fmt[1].bitrate = 8000;
-    af->dev_info.ext_fmt[1].vad = PJ_FALSE;
+    /* Do not change the order! */
+    TFourCC fourcc[] = {
+	TFourCC(KMCPFourCCIdAMRNB),
+	TFourCC(KMCPFourCCIdG711),
+	TFourCC(KMCPFourCCIdG729),
+	TFourCC(KMCPFourCCIdILBC)
+    };
 
-    af->dev_info.ext_fmt[2].id = PJMEDIA_FORMAT_ILBC;
-    af->dev_info.ext_fmt[2].bitrate = 13333;
-    af->dev_info.ext_fmt[2].vad = PJ_TRUE;
+    for (i = 0; i < PJ_ARRAY_SIZE(fourcc); ++i) {
+	pj_bool_t supported = PJ_FALSE;
+	unsigned retry_cnt = 0;
+	enum { MAX_RETRY = 3 }; 
 
-    af->dev_info.ext_fmt[3].id = PJMEDIA_FORMAT_PCMU;
-    af->dev_info.ext_fmt[3].bitrate = 64000;
-    af->dev_info.ext_fmt[3].vad = PJ_FALSE;
+#if (PJMEDIA_AUDIO_DEV_SYMB_APS_DETECTS_CODEC == 0)
+	/* Codec detection is disabled */
+	supported = PJ_TRUE;
+#elif (PJMEDIA_AUDIO_DEV_SYMB_APS_DETECTS_CODEC == 1)
+	/* Minimal codec detection, AMR-NB and G.711 only */
+	if (i > 1) {
+	    /* If G.711 has been checked, skip G.729 and iLBC checks */
+	    retry_cnt = MAX_RETRY;
+	    supported = g711_supported;
+	}
+#endif
+	
+	while (!supported && ++retry_cnt <= MAX_RETRY) {
+	    RAPSSession iSession;
+	    TAPSInitSettings iPlaySettings;
+	    TAPSInitSettings iRecSettings;
+	    TInt err;
 
-    af->dev_info.ext_fmt[4].id = PJMEDIA_FORMAT_PCMA;
-    af->dev_info.ext_fmt[4].bitrate = 64000;
-    af->dev_info.ext_fmt[4].vad = PJ_FALSE;
+	    // Recorder settings
+	    iRecSettings.iGlobal		= APP_UID;
+	    iRecSettings.iPriority		= TMdaPriority(100);
+	    iRecSettings.iPreference		= TMdaPriorityPreference(0x05210001);
+	    iRecSettings.iSettings.iChannels	= EMMFMono;
+	    iRecSettings.iSettings.iSampleRate	= EMMFSampleRate8000Hz;
+
+	    // Player settings
+	    iPlaySettings.iGlobal		= APP_UID;
+	    iPlaySettings.iPriority		= TMdaPriority(100);
+	    iPlaySettings.iPreference		= TMdaPriorityPreference(0x05220001);
+	    iPlaySettings.iSettings.iChannels	= EMMFMono;
+	    iPlaySettings.iSettings.iSampleRate = EMMFSampleRate8000Hz;
+
+	    iRecSettings.iFourCC = iPlaySettings.iFourCC = fourcc[i];
+
+	    err = iSession.Connect();
+	    if (err == KErrNone)
+		err = iSession.InitializePlayer(iPlaySettings);
+	    if (err == KErrNone)
+		err = iSession.InitializeRecorder(iRecSettings);
+	    iSession.Close();
+
+	    if (err == KErrNone) {
+		/* All fine, stop retyring */
+		supported = PJ_TRUE;
+	    }  else if (err == KErrAlreadyExists && retry_cnt < MAX_RETRY) {
+		/* Seems that the previous session is still arround,
+		 * let's wait before retrying.
+		 */
+		enum { RETRY_WAIT = 3000 }; /* in msecs */
+		TTime start, now;
+                
+		start.UniversalTime();
+		do {
+		    pj_symbianos_poll(-1, RETRY_WAIT);
+		    now.UniversalTime();
+		} while (now.MicroSecondsFrom(start) < RETRY_WAIT * 1000);
+	    } else {
+		/* Seems that this format is not supported */
+		retry_cnt = MAX_RETRY;
+	    }
+	}
+
+	if (supported) {
+	    switch(i) {
+	    case 0: /* AMRNB */
+		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_AMR;
+		af->dev_info.ext_fmt[fmt_cnt].bitrate = 7400;
+		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_TRUE;
+		++fmt_cnt;
+		break;
+	    case 1: /* G.711 */
+		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_PCMU;
+		af->dev_info.ext_fmt[fmt_cnt].bitrate = 64000;
+		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
+		++fmt_cnt;
+		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_PCMA;
+		af->dev_info.ext_fmt[fmt_cnt].bitrate = 64000;
+		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
+		++fmt_cnt;
+		g711_supported = PJ_TRUE;
+		break;
+	    case 2: /* G.729 */
+		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_G729;
+		af->dev_info.ext_fmt[fmt_cnt].bitrate = 8000;
+		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
+		++fmt_cnt;
+		break;
+	    case 3: /* iLBC */
+		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_ILBC;
+		af->dev_info.ext_fmt[fmt_cnt].bitrate = 13333;
+		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_TRUE;
+		++fmt_cnt;
+		break;
+	    }
+	}
+    }
     
+    af->dev_info.ext_fmt_cnt = fmt_cnt;
+
     PJ_LOG(4, (THIS_FILE, "APS initialized"));
 
     return PJ_SUCCESS;

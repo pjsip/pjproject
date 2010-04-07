@@ -123,6 +123,39 @@ static pj_status_t app_init()
     	PJ_LOG(3, (THIS_FILE, "%d: %s %d/%d %dHz",
     		   i, info.name, info.input_count, info.output_count,
     		   info.default_samples_per_sec));
+    	
+	unsigned j;
+
+	/* Print extended formats supported by this audio device */
+	PJ_LOG(3, (THIS_FILE, "   Extended formats supported:"));
+	for (j = 0; j < info.ext_fmt_cnt; ++j) {
+	    const char *fmt_name = NULL;
+	    
+	    switch (info.ext_fmt[j].id) {
+	    case PJMEDIA_FORMAT_PCMA:
+		fmt_name = "PCMA";
+		break;
+	    case PJMEDIA_FORMAT_PCMU:
+		fmt_name = "PCMU";
+		break;
+	    case PJMEDIA_FORMAT_AMR:
+		fmt_name = "AMR-NB";
+		break;
+	    case PJMEDIA_FORMAT_G729:
+		fmt_name = "G729";
+		break;
+	    case PJMEDIA_FORMAT_ILBC:
+		fmt_name = "ILBC";
+		break;
+	    case PJMEDIA_FORMAT_PCM:
+		fmt_name = "PCM";
+		break;
+	    default:
+		fmt_name = "Unknown";
+		break;
+	    }
+	    PJ_LOG(3, (THIS_FILE, "   - %s", fmt_name));
+	}
     }
 
     /* Create pool */
