@@ -181,6 +181,20 @@ static void snd_perror(const char *title, TInt rc)
     PJ_LOG(1,(THIS_FILE, "%s (error code=%d)", title, rc));
 }
 
+/*
+ * Utility: wait for specified time.
+ */
+static void snd_wait(unsigned ms) 
+{
+    TTime start, now;
+    
+    start.UniversalTime();
+    do {
+	pj_symbianos_poll(-1, ms);
+	now.UniversalTime();
+    } while (now.MicroSecondsFrom(start) < ms * 1000);
+}
+
 typedef void(*PjAudioCallback)(TAPSCommBuffer &buf, void *user_data);
 
 /**
@@ -651,17 +665,12 @@ void CPjAudioEngine::Deinit()
     delete iRecCommHandler;
 
     if (session_opened) {
-	TTime start, now;
 	enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
 	
 	// On some devices, immediate closing after stopping may cause 
 	// APS server panic KERN-EXEC 0, so let's wait for sometime before
 	// closing the client session.
-	start.UniversalTime();
-	do {
-	    pj_symbianos_poll(-1, APS_CLOSE_WAIT_TIME);
-	    now.UniversalTime();
-	} while (now.MicroSecondsFrom(start) < APS_CLOSE_WAIT_TIME * 1000);
+	snd_wait(APS_CLOSE_WAIT_TIME);
 
 	iSession.Close();
 	session_opened = EFalse;
@@ -1356,6 +1365,12 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 		err = iSession.InitializePlayer(iPlaySettings);
 	    if (err == KErrNone)
 		err = iSession.InitializeRecorder(iRecSettings);
+	    
+	    // On some devices, immediate closing causes APS Server panic,
+	    // e.g: N95, so let's just wait for some time before closing.
+	    enum { APS_CLOSE_WAIT_TIME = 200 }; /* in msecs */
+	    snd_wait(APS_CLOSE_WAIT_TIME);
+	    
 	    iSession.Close();
 
 	    if (err == KErrNone) {
@@ -1365,14 +1380,8 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 		/* Seems that the previous session is still arround,
 		 * let's wait before retrying.
 		 */
-		enum { RETRY_WAIT = 3000 }; /* in msecs */
-		TTime start, now;
-                
-		start.UniversalTime();
-		do {
-		    pj_symbianos_poll(-1, RETRY_WAIT);
-		    now.UniversalTime();
-		} while (now.MicroSecondsFrom(start) < RETRY_WAIT * 1000);
+		enum { RETRY_WAIT_TIME = 3000 }; /* in msecs */
+		snd_wait(RETRY_WAIT_TIME);
 	    } else {
 		/* Seems that this format is not supported */
 		retry_cnt = MAX_RETRY;
