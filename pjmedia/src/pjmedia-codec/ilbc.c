@@ -30,9 +30,16 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/os.h>
-#include "../../third_party/ilbc/iLBC_encode.h"
-#include "../../third_party/ilbc/iLBC_decode.h"
 
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    #include <AudioToolbox/AudioToolbox.h>
+    #define iLBC_Enc_Inst_t AudioConverterRef
+    #define iLBC_Dec_Inst_t AudioConverterRef
+    #define BLOCKL_MAX 		1
+#else
+    #include "../../third_party/ilbc/iLBC_encode.h"
+    #include "../../third_party/ilbc/iLBC_decode.h"
+#endif
 
 /*
  * Only build this file if PJMEDIA_HAS_ILBC_CODEC != 0
@@ -131,6 +138,7 @@ struct ilbc_codec
     pj_bool_t		 plc_enabled;
     pj_timestamp	 last_tx;
 
+
     pj_bool_t		 enc_ready;
     iLBC_Enc_Inst_t	 enc;
     unsigned		 enc_frame_size;
@@ -142,6 +150,16 @@ struct ilbc_codec
     unsigned		 dec_frame_size;
     unsigned		 dec_samples_per_frame;
     float		 dec_block[BLOCKL_MAX];
+
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    unsigned		 enc_total_packets;
+    char		 *enc_buffer;
+    unsigned		 enc_buffer_offset;
+
+    unsigned		 dec_total_packets;
+    char		 *dec_buffer;
+    unsigned		 dec_buffer_offset;
+#endif
 };
 
 static pj_str_t STR_MODE = {"mode", 4};
@@ -352,6 +370,18 @@ static pj_status_t ilbc_dealloc_codec( pjmedia_codec_factory *factory,
     PJ_ASSERT_RETURN(factory == &ilbc_factory.base, PJ_EINVAL);
 
     ilbc_codec = (struct ilbc_codec*) codec;
+
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    if (ilbc_codec->enc) {
+	AudioConverterDispose(ilbc_codec->enc);
+	ilbc_codec->enc = NULL;
+    }
+    if (ilbc_codec->dec) {
+	AudioConverterDispose(ilbc_codec->dec);
+	ilbc_codec->dec = NULL;
+    }
+#endif
+
     pj_pool_release(ilbc_codec->pool);
 
     return PJ_SUCCESS;
@@ -379,6 +409,28 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     unsigned i;
     pj_uint16_t dec_fmtp_mode = DEFAULT_MODE, 
 		enc_fmtp_mode = DEFAULT_MODE;
+
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    AudioStreamBasicDescription srcFormat, dstFormat;
+    UInt32 size;
+
+    srcFormat.mSampleRate       = attr->info.clock_rate;
+    srcFormat.mFormatID         = kAudioFormatLinearPCM;
+    srcFormat.mFormatFlags      = kLinearPCMFormatFlagIsSignedInteger
+				  | kLinearPCMFormatFlagIsPacked;
+    srcFormat.mBitsPerChannel   = attr->info.pcm_bits_per_sample;
+    srcFormat.mChannelsPerFrame = attr->info.channel_cnt;
+    srcFormat.mBytesPerFrame    = srcFormat.mChannelsPerFrame
+	                          * srcFormat.mBitsPerChannel >> 3;
+    srcFormat.mFramesPerPacket  = 1;
+    srcFormat.mBytesPerPacket   = srcFormat.mBytesPerFrame *
+				  srcFormat.mFramesPerPacket;
+
+    memset(&dstFormat, 0, sizeof(dstFormat));
+    dstFormat.mSampleRate 	= attr->info.clock_rate;
+    dstFormat.mFormatID 	= kAudioFormatiLBC;
+    dstFormat.mChannelsPerFrame = attr->info.channel_cnt;
+#endif
 
     pj_assert(ilbc_codec != NULL);
     pj_assert(ilbc_codec->enc_ready == PJ_FALSE && 
@@ -427,14 +479,34 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     attr->info.frm_ptime = dec_fmtp_mode;
 
     /* Create encoder */
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    dstFormat.mFramesPerPacket  = CLOCK_RATE * enc_fmtp_mode / 1000;
+    dstFormat.mBytesPerPacket   = (enc_fmtp_mode == 20? 38 : 50);
+
+    /* Use AudioFormat API to fill out the rest of the description */
+    size = sizeof(dstFormat);
+    AudioFormatGetProperty(kAudioFormatProperty_FormatInfo,
+ 	                   0, NULL, &size, &dstFormat);
+
+    if (AudioConverterNew(&srcFormat, &dstFormat, &ilbc_codec->enc) != noErr)
+	return PJMEDIA_CODEC_EFAILED;
+    ilbc_codec->enc_frame_size = (enc_fmtp_mode == 20? 38 : 50);
+#else
     ilbc_codec->enc_frame_size = initEncode(&ilbc_codec->enc, enc_fmtp_mode);
+#endif
     ilbc_codec->enc_samples_per_frame = CLOCK_RATE * enc_fmtp_mode / 1000;
     ilbc_codec->enc_ready = PJ_TRUE;
 
     /* Create decoder */
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    if (AudioConverterNew(&dstFormat, &srcFormat, &ilbc_codec->dec) != noErr)
+	return PJMEDIA_CODEC_EFAILED;
+    ilbc_codec->dec_samples_per_frame = CLOCK_RATE * dec_fmtp_mode / 1000;
+#else
     ilbc_codec->dec_samples_per_frame = initDecode(&ilbc_codec->dec,
 						   dec_fmtp_mode,
 						   attr->setting.penh);
+#endif
     ilbc_codec->dec_frame_size = (dec_fmtp_mode == 20? 38 : 50);
     ilbc_codec->dec_ready = PJ_TRUE;
 
@@ -510,7 +582,7 @@ static pj_status_t  ilbc_codec_parse( pjmedia_codec *codec,
 	frames[count].buf = pkt;
 	frames[count].size = ilbc_codec->dec_frame_size;
 	frames[count].timestamp.u64 = ts->u64 + count * 
-					  ilbc_codec->dec_samples_per_frame;
+				      ilbc_codec->dec_samples_per_frame;
 
 	pkt = ((char*)pkt) + ilbc_codec->dec_frame_size;
 	pkt_size -= ilbc_codec->dec_frame_size;
@@ -521,6 +593,69 @@ static pj_status_t  ilbc_codec_parse( pjmedia_codec *codec,
     *frame_cnt = count;
     return PJ_SUCCESS;
 }
+
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+static OSStatus encodeDataProc (
+    AudioConverterRef             inAudioConverter,
+    UInt32                        *ioNumberDataPackets,
+    AudioBufferList               *ioData,
+    AudioStreamPacketDescription  **outDataPacketDescription,
+    void                          *inUserData
+)
+{
+    struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)inUserData;
+
+    /* Initialize in case of failure */
+    ioData->mBuffers[0].mData = NULL;
+    ioData->mBuffers[0].mDataByteSize = 0;
+
+    if (ilbc_codec->enc_total_packets < *ioNumberDataPackets) {
+	*ioNumberDataPackets = ilbc_codec->enc_total_packets;
+    }
+
+    if (*ioNumberDataPackets) {
+	ioData->mBuffers[0].mData = ilbc_codec->enc_buffer +
+				    ilbc_codec->enc_buffer_offset;
+	ioData->mBuffers[0].mDataByteSize = *ioNumberDataPackets *
+					    ilbc_codec->enc_samples_per_frame
+					    << 1;
+	ilbc_codec->enc_buffer_offset += ioData->mBuffers[0].mDataByteSize;
+    }
+
+    ilbc_codec->enc_total_packets -= *ioNumberDataPackets;
+    return noErr;
+}
+
+static OSStatus decodeDataProc (
+    AudioConverterRef             inAudioConverter,
+    UInt32                        *ioNumberDataPackets,
+    AudioBufferList               *ioData,
+    AudioStreamPacketDescription  **outDataPacketDescription,
+    void                          *inUserData
+)
+{
+    struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)inUserData;
+
+    /* Initialize in case of failure */
+    ioData->mBuffers[0].mData = NULL;
+    ioData->mBuffers[0].mDataByteSize = 0;
+
+    if (ilbc_codec->dec_total_packets < *ioNumberDataPackets) {
+	*ioNumberDataPackets = ilbc_codec->dec_total_packets;
+    }
+
+    if (*ioNumberDataPackets) {
+	ioData->mBuffers[0].mData = ilbc_codec->dec_buffer +
+				    ilbc_codec->dec_buffer_offset;
+	ioData->mBuffers[0].mDataByteSize = *ioNumberDataPackets *
+					    ilbc_codec->dec_frame_size;
+	ilbc_codec->dec_buffer_offset += ioData->mBuffers[0].mDataByteSize;
+    }
+
+    ilbc_codec->dec_total_packets -= *ioNumberDataPackets;
+    return noErr;
+}
+#endif
 
 /*
  * Encode frame.
@@ -533,6 +668,11 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_int16_t *pcm_in;
     unsigned nsamples;
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    UInt32 npackets;
+    OSStatus err;
+    AudioBufferList theABL;
+#endif
 
     pj_assert(ilbc_codec && input && output);
 
@@ -573,6 +713,25 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 
     /* Encode */
     output->size = 0;
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    npackets = nsamples / ilbc_codec->enc_samples_per_frame;
+
+    theABL.mNumberBuffers = 1;
+    theABL.mBuffers[0].mNumberChannels = 1;
+    theABL.mBuffers[0].mDataByteSize = output_buf_len;
+    theABL.mBuffers[0].mData = output->buf;
+
+    ilbc_codec->enc_total_packets = npackets;
+    ilbc_codec->enc_buffer = (char *)input->buf;
+    ilbc_codec->enc_buffer_offset = 0;
+
+    err = AudioConverterFillComplexBuffer(ilbc_codec->enc, encodeDataProc,
+					  ilbc_codec, &npackets,
+					  &theABL, NULL);
+    if (err == noErr) {
+	output->size = npackets * ilbc_codec->enc_frame_size;
+    }
+#else
     while (nsamples >= ilbc_codec->enc_samples_per_frame) {
 	unsigned i;
 	
@@ -588,6 +747,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 	output->size += ilbc_codec->enc.no_of_bytes;
 	nsamples -= ilbc_codec->enc_samples_per_frame;
     }
+#endif
 
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
@@ -604,7 +764,13 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    UInt32 npackets;
+    OSStatus err;
+    AudioBufferList theABL;
+#else
     unsigned i;
+#endif
 
     pj_assert(ilbc_codec != NULL);
     PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
@@ -616,6 +782,26 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EFRMINLEN;
 
     /* Decode to temporary buffer */
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    npackets = input->size / ilbc_codec->dec_frame_size *
+	       ilbc_codec->dec_samples_per_frame;
+
+    theABL.mNumberBuffers = 1;
+    theABL.mBuffers[0].mNumberChannels = 1;
+    theABL.mBuffers[0].mDataByteSize = output_buf_len;
+    theABL.mBuffers[0].mData = output->buf;
+
+    ilbc_codec->dec_total_packets = npackets;
+    ilbc_codec->dec_buffer = (char *)input->buf;
+    ilbc_codec->dec_buffer_offset = 0;
+
+    err = AudioConverterFillComplexBuffer(ilbc_codec->dec, decodeDataProc,
+					  ilbc_codec, &npackets,
+					  &theABL, NULL);
+    if (err == noErr) {
+	output->size = npackets * (ilbc_codec->dec_samples_per_frame << 1);
+    }
+#else
     iLBC_decode(ilbc_codec->dec_block, (unsigned char*) input->buf,
 		&ilbc_codec->dec, 1);
 
@@ -624,6 +810,8 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 	((short*)output->buf)[i] = (short)ilbc_codec->dec_block[i];
     }
     output->size = (ilbc_codec->dec_samples_per_frame << 1);
+#endif
+
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;
 
@@ -639,7 +827,13 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 				      struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    UInt32 npackets;
+    OSStatus err;
+    AudioBufferList theABL;
+#else
     unsigned i;
+#endif
 
     pj_assert(ilbc_codec != NULL);
     PJ_ASSERT_RETURN(output, PJ_EINVAL);
@@ -648,6 +842,29 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     /* Decode to temporary buffer */
+#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+    npackets = 1;
+
+    theABL.mNumberBuffers = 1;
+    theABL.mBuffers[0].mNumberChannels = 1;
+    theABL.mBuffers[0].mDataByteSize = output_buf_len;
+    theABL.mBuffers[0].mData = output->buf;
+
+    ilbc_codec->dec_total_packets = npackets;
+    ilbc_codec->dec_buffer_offset = 0;
+    if (ilbc_codec->dec_buffer) {
+	err = AudioConverterFillComplexBuffer(ilbc_codec->dec, decodeDataProc,
+					      ilbc_codec, &npackets,
+					      &theABL, NULL);
+	if (err == noErr) {
+	    output->size = npackets *
+		           (ilbc_codec->dec_samples_per_frame << 1);
+	}
+    } else {
+	output->size = npackets * (ilbc_codec->dec_samples_per_frame << 1);
+	pj_bzero(output->buf, output->size);
+    }
+#else
     iLBC_decode(ilbc_codec->dec_block, NULL, &ilbc_codec->dec, 0);
 
     /* Convert decodec samples from float to short */
@@ -655,6 +872,7 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 	((short*)output->buf)[i] = (short)ilbc_codec->dec_block[i];
     }
     output->size = (ilbc_codec->dec_samples_per_frame << 1);
+#endif
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     return PJ_SUCCESS;
@@ -662,4 +880,3 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 
 
 #endif	/* PJMEDIA_HAS_ILBC_CODEC */
-
