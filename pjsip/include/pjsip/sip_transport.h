@@ -750,6 +750,8 @@ struct pjsip_transport
     pjsip_tpmgr		   *tpmgr;	    /**< Transport manager.	    */
     pj_timer_entry	    idle_timer;	    /**< Timer when ref cnt is zero.*/
 
+    void		   *data;	    /**< Internal transport data.   */
+
     /**
      * Function to be called by transport manager to send SIP message.
      *
@@ -1270,6 +1272,11 @@ typedef enum pjsip_transport_state
 
 
 /**
+ * Definition of transport state listener key.
+ */
+typedef void pjsip_tp_state_listener_key;
+
+/**
  * Structure of transport state info passed by #pjsip_tp_state_callback.
  */
 typedef struct pjsip_transport_state_info {
@@ -1282,6 +1289,13 @@ typedef struct pjsip_transport_state_info {
      * Optional extended info, the content is specific for each transport type.
      */
     void		*ext_info;
+
+    /**
+     * Optional user data. In global transport state notification, this will
+     * always be NULL.
+     */
+    void		*user_data;
+
 } pjsip_transport_state_info;
 
 
@@ -1301,29 +1315,69 @@ typedef void (*pjsip_tp_state_callback)(
 
 
 /**
- * Setting callback of transport state notification. The caller will be
- * notified whenever the state of transport is changed. The type of
- * events are defined in #pjsip_transport_state.
+ * Set callback of global transport state notification. The caller will be
+ * notified whenever the state of any transport is changed. The type of events
+ * are defined in #pjsip_transport_state.
+ *
+ * Note that this function will override the existing callback, if any, so
+ * application is recommended to keep the old callback and manually forward
+ * the notification to the old callback, otherwise other component that 
+ * concerns about the transport state will no longer receive transport state 
+ * events.
  * 
  * @param mgr	    Transport manager.
  * @param cb	    Callback to be called to notify caller about transport 
- *		    status changing.
+ *		    state changing.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
-					       pjsip_tp_state_callback cb);
+PJ_DECL(pj_status_t) pjsip_tpmgr_set_state_cb(pjsip_tpmgr *mgr,
+					      pjsip_tp_state_callback cb);
 
 
 /**
- * Getting the callback of transport state notification.
+ * Get the callback of global transport state notification.
  * 
  * @param mgr	    Transport manager.
  *
  * @return	    The transport state callback or NULL if it is not set.
  */
-PJ_DECL(pjsip_tp_state_callback) pjsip_tpmgr_get_status_cb(
-					       const pjsip_tpmgr *mgr);
+PJ_DECL(pjsip_tp_state_callback) pjsip_tpmgr_get_state_cb(
+					      const pjsip_tpmgr *mgr);
+
+
+/**
+ * Add a listener to the specified transport for transport state notification.
+ * 
+ * @param tp	    The transport.
+ * @param cb	    Callback to be called to notify listener about transport 
+ *		    state changing.
+ * @param user_data The user data.
+ * @param key	    Output key, used to remove this listener.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_add_state_listener (
+					    pjsip_transport *tp,
+					    pjsip_tp_state_callback cb,
+					    void *user_data,
+					    pjsip_tp_state_listener_key **key);
+
+
+/**
+ * Remove a listener from the specified transport for transport state 
+ * notification.
+ * 
+ * @param tp	    The transport.
+ * @param key	    The listener key.
+ * @param user_data The user data, for validation purpose.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_transport_remove_state_listener (
+				    pjsip_transport *tp,
+				    pjsip_tp_state_listener_key *key,
+				    const void *user_data);
 
 
 /**

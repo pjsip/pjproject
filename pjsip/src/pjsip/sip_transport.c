@@ -33,6 +33,7 @@
 #include <pj/pool.h>
 #include <pj/assert.h>
 #include <pj/lock.h>
+#include <pj/list.h>
 
 
 #define THIS_FILE    "sip_transport.c"
@@ -90,8 +91,28 @@ struct pjsip_tpmgr
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
     pjsip_tp_state_callback tp_state_cb;
-    void *tp_state_user_data;
 };
+
+
+/* Transport state listener list type */
+typedef struct tp_state_listener
+{
+    PJ_DECL_LIST_MEMBER(struct tp_state_listener);
+
+    pjsip_tp_state_callback  cb;
+    void *user_data;
+} tp_state_listener;
+
+
+/*
+ * Transport data.
+ */
+typedef struct transport_data
+{
+    /* Transport listeners */
+    tp_state_listener	    st_listeners;
+    tp_state_listener	    st_listeners_empty;
+} transport_data;
 
 
 /*****************************************************************************
@@ -177,6 +198,11 @@ struct transport_names_t
 	PJSIP_TRANSPORT_RELIABLE
     },
 };
+
+static void tp_state_callback(pjsip_transport *tp,
+			      pjsip_transport_state state,
+			      const pjsip_transport_state_info *info);
+
 
 struct transport_names_t *get_tpname(pjsip_transport_type_e type)
 {
@@ -1091,6 +1117,11 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 	return status;
 #endif
 
+    /* Set transport state callback */
+    status = pjsip_tpmgr_set_state_cb(mgr, &tp_state_callback);
+    if (status != PJ_SUCCESS)
+	return status;
+
     PJ_LOG(5, (THIS_FILE, "Transport manager created."));
 
     *p_mgr = mgr;
@@ -1737,8 +1768,11 @@ PJ_DEF(void) pjsip_tpmgr_dump_transports(pjsip_tpmgr *mgr)
 #endif
 }
 
-PJ_DEF(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
-					      pjsip_tp_state_callback cb)
+/**
+ * Set callback of global transport state notification.
+ */
+PJ_DEF(pj_status_t) pjsip_tpmgr_set_state_cb(pjsip_tpmgr *mgr,
+					     pjsip_tp_state_callback cb)
 {
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
 
@@ -1747,10 +1781,152 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_set_status_cb(pjsip_tpmgr *mgr,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pjsip_tp_state_callback) pjsip_tpmgr_get_status_cb(
-					      const pjsip_tpmgr *mgr)
+/**
+ * Get callback of global transport state notification.
+ */
+PJ_DEF(pjsip_tp_state_callback) pjsip_tpmgr_get_state_cb(
+					     const pjsip_tpmgr *mgr)
 {
     PJ_ASSERT_RETURN(mgr, NULL);
 
     return mgr->tp_state_cb;
+}
+
+
+/**
+ * Allocate and init transport data.
+ */
+static void init_tp_data(pjsip_transport *tp)
+{
+    transport_data *tp_data;
+
+    pj_assert(tp && !tp->data);
+
+    tp_data = PJ_POOL_ZALLOC_T(tp->pool, transport_data);
+    pj_list_init(&tp_data->st_listeners);
+    pj_list_init(&tp_data->st_listeners_empty);
+    tp->data = tp_data;
+}
+
+
+static void tp_state_callback(pjsip_transport *tp,
+			      pjsip_transport_state state,
+			      const pjsip_transport_state_info *info)
+{
+    transport_data *tp_data;
+
+    pj_lock_acquire(tp->lock);
+
+    tp_data = (transport_data*)tp->data;
+
+    /* Notify the transport state listeners, if any. */
+    if (!tp_data || pj_list_empty(&tp_data->st_listeners)) {
+	goto on_return;
+    } else {
+	pjsip_transport_state_info st_info;
+	tp_state_listener *st_listener = tp_data->st_listeners.next;
+
+	/* As we need to put the user data into the transport state info,
+	 * let's use a copy of transport state info.
+	 */
+	pj_memcpy(&st_info, info, sizeof(st_info));
+	while (st_listener != &tp_data->st_listeners) {
+	    st_info.user_data = st_listener->user_data;
+	    (*st_listener->cb)(tp, state, &st_info);
+
+	    st_listener = st_listener->next;
+	}
+    }
+
+on_return:
+    pj_lock_release(tp->lock);
+}
+
+
+/**
+ * Add a listener to the specified transport for transport state notification.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_add_state_listener (
+					    pjsip_transport *tp,
+					    pjsip_tp_state_callback cb,
+					    void *user_data,
+					    pjsip_tp_state_listener_key **key)
+{
+    transport_data *tp_data;
+    tp_state_listener *entry;
+
+    PJ_ASSERT_RETURN(tp && cb && key, PJ_EINVAL);
+
+    pj_lock_acquire(tp->lock);
+
+    /* Init transport data, if it hasn't */
+    if (!tp->data)
+	init_tp_data(tp);
+
+    tp_data = (transport_data*)tp->data;
+
+    /* Init the new listener entry. Use available empty slot, if any,
+     * otherwise allocate it using the transport pool.
+     */
+    if (!pj_list_empty(&tp_data->st_listeners_empty)) {
+	entry = tp_data->st_listeners_empty.next;
+	pj_list_erase(entry);
+    } else {
+	entry = PJ_POOL_ZALLOC_T(tp->pool, tp_state_listener);
+    }
+    entry->cb = cb;
+    entry->user_data = user_data;
+
+    /* Add the new listener entry to the listeners list */
+    pj_list_push_back(&tp_data->st_listeners, entry);
+
+    *key = entry;
+
+    pj_lock_release(tp->lock);
+
+    return PJ_SUCCESS;
+}
+
+/**
+ * Remove a listener from the specified transport for transport state 
+ * notification.
+ */
+PJ_DEF(pj_status_t) pjsip_transport_remove_state_listener (
+				    pjsip_transport *tp,
+				    pjsip_tp_state_listener_key *key,
+				    const void *user_data)
+{
+    transport_data *tp_data;
+    tp_state_listener *entry;
+
+    PJ_ASSERT_RETURN(tp && key, PJ_EINVAL);
+
+    pj_lock_acquire(tp->lock);
+
+    tp_data = (transport_data*)tp->data;
+
+    /* Transport data is NULL or no registered listener? */
+    if (!tp_data || pj_list_empty(&tp_data->st_listeners)) {
+	pj_lock_release(tp->lock);
+	return PJ_ENOTFOUND;
+    }
+
+    entry = (tp_state_listener*)key;
+
+    /* Validate the user data */
+    if (entry->user_data != user_data) {
+	pj_assert(!"Invalid transport state listener key");
+	pj_lock_release(tp->lock);
+	return PJ_EBUG;
+    }
+
+    /* Reset the entry and move it to the empty list */
+    entry->cb = NULL;
+    entry->user_data = NULL;
+    pj_list_erase(entry);
+    pj_list_push_back(&tp_data->st_listeners_empty, entry);
+
+    pj_lock_release(tp->lock);
+
+    return PJ_SUCCESS;
 }

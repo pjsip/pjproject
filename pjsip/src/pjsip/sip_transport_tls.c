@@ -191,7 +191,7 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
     pjsip_transport_add_ref(&tls->base);
 
     /* Notify application of transport disconnected state */
-    state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(tls->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
 
@@ -1048,7 +1048,7 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     }
 
     /* Notify transport state to application */
-    state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(tls->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
 	pjsip_tls_state_info tls_info;
@@ -1466,7 +1466,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
     }
 
     /* Notify transport state to application */
-    state_cb = pjsip_tpmgr_get_status_cb(tls->base.tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(tls->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
 	pjsip_tls_state_info tls_info;

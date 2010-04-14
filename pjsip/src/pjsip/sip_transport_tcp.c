@@ -184,7 +184,7 @@ static void tcp_init_shutdown(struct tcp_transport *tcp, pj_status_t status)
     pjsip_transport_add_ref(&tcp->base);
 
     /* Notify application of transport disconnected state */
-    state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
 
@@ -1009,7 +1009,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 	    }
 
 	    /* Notify application of transport state accepted */
-	    state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
+	    state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
 	    if (state_cb) {
 		pjsip_transport_state_info state_info;
             
@@ -1336,7 +1336,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
     }
 
     /* Notify application of transport state connected */
-    state_cb = pjsip_tpmgr_get_status_cb(tcp->base.tpmgr);
+    state_cb = pjsip_tpmgr_get_state_cb(tcp->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
     

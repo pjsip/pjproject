@@ -180,6 +180,10 @@ static pj_status_t tsx_on_state_destroyed(	pjsip_transaction *tsx,
 					        pjsip_event *event);
 static void        tsx_timer_callback( pj_timer_heap_t *theap, 
 			               pj_timer_entry *entry);
+static void	   tsx_tp_state_callback(
+				       pjsip_transport *tp,
+				       pjsip_transport_state state,
+				       const pjsip_transport_state_info *info);
 static pj_status_t tsx_create( pjsip_module *tsx_user,
 			       pjsip_transaction **p_tsx);
 static pj_status_t tsx_destroy( pjsip_transaction *tsx );
@@ -187,6 +191,8 @@ static void	   tsx_resched_retransmission( pjsip_transaction *tsx );
 static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched);
 static int         tsx_send_msg( pjsip_transaction *tsx, 
                                  pjsip_tx_data *tdata);
+static void        tsx_update_transport( pjsip_transaction *tsx, 
+					 pjsip_transport *tp);
 
 
 /* State handlers for UAC, indexed by state */
@@ -985,11 +991,9 @@ static pj_status_t tsx_destroy( pjsip_transaction *tsx )
 {
     struct tsx_lock_data *lck;
 
-    /* Decrement transport reference counter. */
-    if (tsx->transport) {
-	pjsip_transport_dec_ref( tsx->transport );
-	tsx->transport = NULL;
-    }
+    /* Release the transport */
+    tsx_update_transport(tsx, NULL);
+
     /* Decrement reference counter in transport selector */
     pjsip_tpselector_dec_ref(&tsx->tp_sel);
 
@@ -1404,8 +1408,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
      * transport.
      */
     if (tsx->res_addr.transport) {
-	tsx->transport = tsx->res_addr.transport;
-	pjsip_transport_add_ref(tsx->transport);
+	tsx_update_transport(tsx, tsx->res_addr.transport);
 	pj_memcpy(&tsx->addr, &tsx->res_addr.addr, tsx->res_addr.addr_len);
 	tsx->addr_len = tsx->res_addr.addr_len;
 	tsx->is_reliable = PJSIP_TRANSPORT_IS_RELIABLE(tsx->transport);
@@ -1675,12 +1678,7 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	if (tsx->transport != send_state->cur_transport) {
 	    /* Update transport. */
-	    if (tsx->transport) {
-		pjsip_transport_dec_ref(tsx->transport);
-		tsx->transport = NULL;
-	    }
-	    tsx->transport = send_state->cur_transport;
-	    pjsip_transport_add_ref(tsx->transport);
+	    tsx_update_transport(tsx, send_state->cur_transport);
 
 	    /* Update remote address. */
 	    tsx->addr_len = tdata->dest_info.addr.entry[tdata->dest_info.cur_addr].addr_len;
@@ -1729,12 +1727,8 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	/* If transaction is using the same transport as the failed one, 
 	 * release the transport.
 	 */
-	if (send_state->cur_transport==tsx->transport &&
-	    tsx->transport != NULL)
-	{
-	    pjsip_transport_dec_ref(tsx->transport);
-	    tsx->transport = NULL;
-	}
+	if (send_state->cur_transport==tsx->transport)
+	    tsx_update_transport(tsx, NULL);
 
 	/* Also stop processing if transaction has been flagged with
 	 * pending destroy (http://trac.pjsip.org/repos/ticket/906)
@@ -1836,9 +1830,8 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 
 	lock_tsx(tsx, &lck);
 
-	/* Dereference transport. */
-	pjsip_transport_dec_ref(tsx->transport);
-	tsx->transport = NULL;
+	/* Release transport. */
+	tsx_update_transport(tsx, NULL);
 
 	/* Terminate transaction. */
 	tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
@@ -1848,6 +1841,40 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 	unlock_tsx(tsx, &lck);
    }
 }
+
+
+/*
+ * Callback when transport state changes.
+ */
+static void tsx_tp_state_callback( pjsip_transport *tp,
+				   pjsip_transport_state state,
+				   const pjsip_transport_state_info *info)
+{
+    if (state == PJSIP_TP_STATE_DISCONNECTED) {
+	pjsip_transaction *tsx;
+	struct tsx_lock_data lck;
+
+	pj_assert(tp && info && info->user_data);
+
+	tsx = (pjsip_transaction*)info->user_data;
+
+	lock_tsx(tsx, &lck);
+
+	/* Terminate transaction when transport disconnected */
+	if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
+	    pj_str_t err;
+	    char errmsg[PJ_ERR_MSG_SIZE];
+
+	    err = pj_strerror(info->status, errmsg, sizeof(errmsg));
+	    tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+			   PJSIP_EVENT_TRANSPORT_ERROR, NULL);
+	}
+
+	unlock_tsx(tsx, &lck);
+    }
+}
+
 
 /*
  * Send message to the transport.
@@ -1886,10 +1913,8 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	    /* On error, release transport to force using full transport
 	     * resolution procedure.
 	     */
-	    if (tsx->transport) {
-		pjsip_transport_dec_ref(tsx->transport);
-		tsx->transport = NULL;
-	    }
+	    tsx_update_transport(tsx, NULL);
+
 	    tsx->addr_len = 0;
 	    tsx->res_addr.transport = NULL;
 	    tsx->res_addr.addr_len = 0;
@@ -2095,6 +2120,26 @@ static pj_status_t tsx_retransmit( pjsip_transaction *tsx, int resched)
     }
 
     return PJ_SUCCESS;
+}
+
+static void tsx_update_transport( pjsip_transaction *tsx, 
+				  pjsip_transport *tp)
+{
+    pj_assert(tsx);
+
+    if (tsx->transport) {
+	pjsip_transport_remove_state_listener(tsx->transport, 
+					       tsx->tp_st_key, tsx);
+	pjsip_transport_dec_ref( tsx->transport );
+	tsx->transport = NULL;
+    }
+
+    if (tp) {
+	tsx->transport = tp;
+	pjsip_transport_add_ref(tp);
+	pjsip_transport_add_state_listener(tp, &tsx_tp_state_callback, tsx,
+					    &tsx->tp_st_key);
+    }
 }
 
 

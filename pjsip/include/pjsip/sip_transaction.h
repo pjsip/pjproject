@@ -124,6 +124,8 @@ struct pjsip_transaction
     pjsip_tx_data	       *pending_tx;	/**< Tdata which caused
 						     pending transport flag
 						     to be set on tsx.	    */
+    pjsip_tp_state_listener_key *tp_st_key;     /**< Transport state listener
+						     key.		    */
 
     /*
      * Messages and timer.
