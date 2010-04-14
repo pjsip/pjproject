@@ -1985,10 +1985,25 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
     if (status != PJ_SUCCESS)
 	schedule_reregistration(acc);
 
+on_return:
+    PJSUA_UNLOCK();
+}
+
+
+/* Schedule reregistration for specified account. Note that the first 
+ * re-registration after a registration failure will be done immediately.
+ * Also note that this function should be called within PJSUA mutex.
+ */
+static void schedule_reregistration(pjsua_acc *acc)
+{
+    pj_time_val delay;
+
+    pj_assert(acc && acc->valid && acc->cfg.reg_retry_interval);
+
     /* If configured, disconnect calls of this account after the first
      * reregistration attempt failed.
      */
-    if (acc->cfg.drop_calls_on_reg_fail && acc->auto_rereg.attempt_cnt > 1)
+    if (acc->cfg.drop_calls_on_reg_fail && acc->auto_rereg.attempt_cnt >= 1)
     {
 	unsigned i, cnt;
 
@@ -2005,22 +2020,6 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 				  cnt, acc->index));
 	}
     }
-
-on_return:
-
-    PJSUA_UNLOCK();
-}
-
-
-/* Schedule reregistration for specified account. Note that the first 
- * re-registration after a registration failure will be done immediately.
- * Also note that this function should be called within PJSUA mutex.
- */
-static void schedule_reregistration(pjsua_acc *acc)
-{
-    pj_time_val delay;
-
-    pj_assert(acc && acc->valid && acc->cfg.reg_retry_interval);
 
     /* Cancel any re-registration timer */
     pjsua_cancel_timer(&acc->auto_rereg.timer);
