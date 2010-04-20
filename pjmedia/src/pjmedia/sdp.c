@@ -1235,7 +1235,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 
     pj_scan_fini(&scanner);
 
-    apply_media_direction(session);
+    if (session)
+	apply_media_direction(session);
 
     *p_sdp = session;
     return ctx.last_error;
