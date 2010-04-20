@@ -81,6 +81,35 @@ PJ_DEF(void) pjsip_cred_info_dup(pj_pool_t *pool,
 }
 
 
+PJ_DEF(int) pjsip_cred_info_cmp(const pjsip_cred_info *cred1,
+				const pjsip_cred_info *cred2)
+{
+    int result;
+
+    result = pj_strcmp(&cred1->realm, &cred2->realm);
+    if (result) return result;
+    result = pj_strcmp(&cred1->scheme, &cred2->scheme);
+    if (result) return result;
+    result = pj_strcmp(&cred1->username, &cred2->username);
+    if (result) return result;
+    result = pj_strcmp(&cred1->data, &cred2->data);
+    if (result) return result;
+    if (cred1->data_type != cred2->data_type)
+	return -1;
+
+    if ((cred1->data_type & EXT_MASK) == PJSIP_CRED_DATA_EXT_AKA) {
+	result = pj_strcmp(&cred1->ext.aka.k, &cred2->ext.aka.k);
+	if (result) return result;
+	result = pj_strcmp(&cred1->ext.aka.op, &cred2->ext.aka.op);
+	if (result) return result;
+	result = pj_strcmp(&cred1->ext.aka.amf, &cred2->ext.aka.amf);
+	if (result) return result;
+    }
+
+    return result;
+}
+
+
 /* Transform digest to string.
  * output must be at least PJSIP_MD5STRLEN+1 bytes.
  *

@@ -95,6 +95,21 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup(pool, &dst->ka_data, &src->ka_data);
 }
 
+/*
+ * Calculate CRC of proxy list.
+ */
+static pj_uint32_t calc_proxy_crc(const pj_str_t proxy[], pj_size_t cnt)
+{
+    pj_crc32_context ctx;
+    unsigned i;
+    
+    pj_crc32_init(&ctx);
+    for (i=0; i<cnt; ++i) {
+	pj_crc32_update(&ctx, (pj_uint8_t*)proxy[i].ptr, proxy[i].slen);
+    }
+
+    return pj_crc32_final(&ctx);
+}
 
 /*
  * Initialize a new account (after configuration is set).
@@ -217,7 +232,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	pj_list_push_back(&acc->route_set, r);
     }
 
-    
     /* Concatenate credentials from account config and global config */
     acc->cred_cnt = 0;
     for (i=0; i<acc_cfg->cred_count; ++i) {
@@ -298,6 +312,13 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 	pjsua_var.acc[id].cfg.reg_timeout = PJSUA_REG_INTERVAL;
     }
 
+    /* Get CRC of account proxy setting */
+    acc->local_route_crc = calc_proxy_crc(acc->cfg.proxy, acc->cfg.proxy_cnt);
+
+    /* Get CRC of global outbound proxy setting */
+    acc->global_route_crc=calc_proxy_crc(pjsua_var.ua_cfg.outbound_proxy,
+					 pjsua_var.ua_cfg.outbound_proxy_cnt);
+    
     /* Check the route URI's and force loose route if required */
     for (i=0; i<acc->cfg.proxy_cnt; ++i) {
 	status = normalize_route_uri(acc->pool, &acc->cfg.proxy[i]);
@@ -502,10 +523,380 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 				      const pjsua_acc_config *cfg)
 {
-    PJ_TODO(pjsua_acc_modify);
-    PJ_UNUSED_ARG(acc_id);
-    PJ_UNUSED_ARG(cfg);
-    return PJ_EINVALIDOP;
+    pjsua_acc *acc;
+    pjsip_name_addr *id_name_addr = NULL;
+    pjsip_sip_uri *id_sip_uri = NULL;
+    pjsip_sip_uri *reg_sip_uri = NULL;
+    pj_uint32_t local_route_crc, global_route_crc;
+    pjsip_route_hdr global_route;
+    pjsip_route_hdr local_route;
+    pj_str_t acc_proxy[PJSUA_ACC_MAX_PROXIES];
+    pj_bool_t update_reg = PJ_FALSE;
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
+		     PJ_EINVAL);
+
+    PJSUA_LOCK();
+
+    acc = &pjsua_var.acc[acc_id];
+    if (!acc->valid) {
+	status = PJ_EINVAL;
+	goto on_return;
+    }
+
+    /* == Validate first == */
+
+    /* Account id */
+    if (pj_strcmp(&acc->cfg.id, &cfg->id)) {
+	/* Need to parse id to get the elements: */
+	id_name_addr = (pjsip_name_addr*)
+			pjsip_parse_uri(acc->pool, cfg->id.ptr, cfg->id.slen,
+					PJSIP_PARSE_URI_AS_NAMEADDR);
+	if (id_name_addr == NULL) {
+	    status = PJSIP_EINVALIDURI;
+	    pjsua_perror(THIS_FILE, "Invalid local URI", status);
+	    goto on_return;
+	}
+
+	/* URI MUST be a SIP or SIPS: */
+	if (!PJSIP_URI_SCHEME_IS_SIP(id_name_addr) && 
+	    !PJSIP_URI_SCHEME_IS_SIPS(id_name_addr)) 
+	{
+	    status = PJSIP_EINVALIDSCHEME;
+	    pjsua_perror(THIS_FILE, "Invalid local URI", status);
+	    goto on_return;
+	}
+
+	/* Get the SIP URI object: */
+	id_sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(id_name_addr);
+    }
+
+    /* Registrar URI */
+    if (pj_strcmp(&acc->cfg.reg_uri, &cfg->reg_uri) && cfg->reg_uri.slen) {
+	pjsip_uri *reg_uri;
+
+	/* Need to parse reg_uri to get the elements: */
+	reg_uri = pjsip_parse_uri(acc->pool, cfg->reg_uri.ptr, 
+				  cfg->reg_uri.slen, 0);
+	if (reg_uri == NULL) {
+	    status = PJSIP_EINVALIDURI;
+	    pjsua_perror(THIS_FILE, "Invalid registrar URI", status);
+	    goto on_return;
+	}
+
+	/* Registrar URI MUST be a SIP or SIPS: */
+	if (!PJSIP_URI_SCHEME_IS_SIP(reg_uri) && 
+	    !PJSIP_URI_SCHEME_IS_SIPS(reg_uri)) 
+	{
+	    status = PJSIP_EINVALIDSCHEME;
+	    pjsua_perror(THIS_FILE, "Invalid registar URI", status);
+	    goto on_return;
+	}
+
+	reg_sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(reg_uri);
+    }
+
+    /* Global outbound proxy */
+    global_route_crc = calc_proxy_crc(pjsua_var.ua_cfg.outbound_proxy, 
+				      pjsua_var.ua_cfg.outbound_proxy_cnt);
+    if (global_route_crc != acc->global_route_crc) {
+	pjsip_route_hdr *r;
+	unsigned i;
+
+	/* Validate the global route and save it to temporary var */
+	pj_list_init(&global_route);
+	for (i=0; i < pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
+    	    pj_str_t hname = { "Route", 5};
+	    pj_str_t tmp;
+
+	    pj_strdup_with_null(acc->pool, &tmp, 
+				&pjsua_var.ua_cfg.outbound_proxy[i]);
+	    r = (pjsip_route_hdr*)
+		pjsip_parse_hdr(acc->pool, &hname, tmp.ptr, tmp.slen, NULL);
+	    if (r == NULL) {
+		status = PJSIP_EINVALIDURI;
+		pjsua_perror(THIS_FILE, "Invalid outbound proxy URI", status);
+		goto on_return;
+	    }
+	    pj_list_push_back(&global_route, r);
+	}
+    }
+
+    /* Account proxy */
+    local_route_crc = calc_proxy_crc(cfg->proxy, cfg->proxy_cnt);
+    if (local_route_crc != acc->local_route_crc) {
+	pjsip_route_hdr *r;
+	unsigned i;
+
+	/* Validate the local route and save it to temporary var */
+	pj_list_init(&local_route);
+	for (i=0; i<cfg->proxy_cnt; ++i) {
+	    pj_str_t hname = { "Route", 5};
+
+	    pj_strdup_with_null(acc->pool, &acc_proxy[i], &cfg->proxy[i]);
+	    status = normalize_route_uri(acc->pool, &acc_proxy[i]);
+	    if (status != PJ_SUCCESS)
+		goto on_return;
+	    r = (pjsip_route_hdr*)
+		pjsip_parse_hdr(acc->pool, &hname, acc_proxy[i].ptr, 
+				acc_proxy[i].slen, NULL);
+	    if (r == NULL) {
+		status = PJSIP_EINVALIDURI;
+		pjsua_perror(THIS_FILE, "Invalid URI in account route set",
+			     status);
+		goto on_return;
+	    }
+
+	    pj_list_push_back(&local_route, r);
+	}
+    }
+
+
+    /* == Apply the new config == */
+
+    /* Account ID. */
+    if (id_name_addr && id_sip_uri) {
+	pj_strdup_with_null(acc->pool, &acc->cfg.id, &cfg->id);
+	acc->display = id_name_addr->display;
+	acc->user_part = id_sip_uri->user;
+	acc->srv_domain = id_sip_uri->host;
+	acc->srv_port = 0;
+	update_reg = PJ_TRUE;
+    }
+
+    /* User data */
+    acc->cfg.user_data = cfg->user_data;
+
+    /* Priority */
+    if (acc->cfg.priority != cfg->priority) {
+	unsigned i;
+
+	acc->cfg.priority = cfg->priority;
+	
+	/* Resort accounts priority */
+	for (i=0; i<pjsua_var.acc_cnt; ++i) {
+	    if (pjsua_var.acc_ids[i] == acc_id)
+		break;
+	}
+	pj_assert(i < pjsua_var.acc_cnt);
+	pj_array_erase(pjsua_var.acc_ids, sizeof(acc_id),
+		       pjsua_var.acc_cnt, i);
+	for (i=0; i<pjsua_var.acc_cnt; ++i) {
+	    if (pjsua_var.acc[pjsua_var.acc_ids[i]].cfg.priority <
+		acc->cfg.priority)
+	    {
+		break;
+	    }
+	}
+	pj_array_insert(pjsua_var.acc_ids, sizeof(acc_id),
+			pjsua_var.acc_cnt, i, &acc_id);
+    }
+
+    /* MWI */
+    acc->cfg.mwi_enabled = cfg->mwi_enabled;
+
+    /* PIDF tuple ID */
+    if (pj_strcmp(&acc->cfg.pidf_tuple_id, &cfg->pidf_tuple_id))
+	pj_strdup_with_null(acc->pool, &acc->cfg.pidf_tuple_id,
+			    &cfg->pidf_tuple_id);
+
+    /* Publish */
+    acc->cfg.publish_opt = cfg->publish_opt;
+    acc->cfg.unpublish_max_wait_time_msec = cfg->unpublish_max_wait_time_msec;
+    if (acc->cfg.publish_enabled != cfg->publish_enabled) {
+	acc->cfg.publish_enabled = cfg->publish_enabled;
+	if (!acc->cfg.publish_enabled)
+	    pjsua_pres_unpublish(acc);
+	else
+	    update_reg = PJ_TRUE;
+    }
+
+    /* Force contact URI */
+    if (pj_strcmp(&acc->cfg.force_contact, &cfg->force_contact)) {
+	pj_strdup_with_null(acc->pool, &acc->cfg.force_contact,
+			    &cfg->force_contact);
+	update_reg = PJ_TRUE;
+    }
+
+    /* Contact param */
+    if (pj_strcmp(&acc->cfg.contact_params, &cfg->contact_params)) {
+	pj_strdup_with_null(acc->pool, &acc->cfg.contact_params,
+			    &cfg->contact_params);
+	update_reg = PJ_TRUE;
+    }
+
+    /* Contact URI params */
+    if (pj_strcmp(&acc->cfg.contact_uri_params, &cfg->contact_uri_params)) {
+	pj_strdup_with_null(acc->pool, &acc->cfg.contact_uri_params,
+			    &cfg->contact_uri_params);
+	update_reg = PJ_TRUE;
+    }
+
+    /* Reliable provisional response */
+    acc->cfg.require_100rel = cfg->require_100rel;
+
+    /* Session timer */
+    acc->cfg.require_timer = cfg->require_timer;
+    acc->cfg.timer_setting = cfg->timer_setting;
+
+    /* Transport and keep-alive */
+    if (acc->cfg.transport_id != cfg->transport_id) {
+	acc->cfg.transport_id = cfg->transport_id;
+	update_reg = PJ_TRUE;
+    }
+    acc->cfg.ka_interval = cfg->ka_interval;
+    if (pj_strcmp(&acc->cfg.ka_data, &cfg->ka_data))
+	pj_strdup(acc->pool, &acc->cfg.ka_data, &cfg->ka_data);
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    acc->cfg.use_srtp = cfg->use_srtp;
+    acc->cfg.srtp_secure_signaling = cfg->srtp_secure_signaling;
+#endif
+
+    /* Global outbound proxy */
+    if (global_route_crc != acc->global_route_crc) {
+	unsigned i, rcnt;
+
+	/* Remove the outbound proxies from the route set */
+	rcnt = pj_list_size(&acc->route_set);
+	for (i=0; i < rcnt - acc->cfg.proxy_cnt; ++i) {
+	    pjsip_route_hdr *r = acc->route_set.next;
+	    pj_list_erase(r);
+	}
+
+	/* Insert the outbound proxies to the beginning of route set */
+	pj_list_merge_first(&acc->route_set, &global_route);
+
+	/* Update global route CRC */
+	acc->global_route_crc = global_route_crc;
+
+	update_reg = PJ_TRUE;
+    }
+
+    /* Account proxy */
+    if (local_route_crc != acc->local_route_crc) {
+	unsigned i;
+
+	/* Remove the current account proxies from the route set */
+	for (i=0; i < acc->cfg.proxy_cnt; ++i) {
+	    pjsip_route_hdr *r = acc->route_set.prev;
+	    pj_list_erase(r);
+	}
+
+	/* Insert new proxy setting to the route set */
+	pj_list_merge_last(&acc->route_set, &local_route);
+
+	/* Update the proxy setting */
+	acc->cfg.proxy_cnt = cfg->proxy_cnt;
+	for (i = 0; i < cfg->proxy_cnt; ++i)
+	    acc->cfg.proxy[i] = acc_proxy[i];
+
+	/* Update local route CRC */
+	acc->local_route_crc = local_route_crc;
+
+	update_reg = PJ_TRUE;
+    }
+
+    /* Credential info */
+    {
+	unsigned i;
+
+	/* Selective update credential info. */
+	for (i = 0; i < cfg->cred_count; ++i) {
+	    unsigned j;
+	    pjsip_cred_info ci;
+
+	    /* Find if this credential is already listed */
+	    for (j = i; j < acc->cfg.cred_count; ++i) {
+		if (pjsip_cred_info_cmp(&acc->cfg.cred_info[j], 
+					&cfg->cred_info[i]) == 0)
+		{
+		    /* Found, but different index/position, swap */
+		    if (j != i) {
+			ci = acc->cfg.cred_info[i];
+			acc->cfg.cred_info[i] = acc->cfg.cred_info[j];
+			acc->cfg.cred_info[j] = ci;
+		    }
+		    break;
+		}
+	    }
+
+	    /* Not found, insert this */
+	    if (j == acc->cfg.cred_count) {
+		/* If account credential is full, discard the last one. */
+		if (acc->cfg.cred_count == PJ_ARRAY_SIZE(acc->cfg.cred_info)) {
+    		    pj_array_erase(acc->cfg.cred_info, sizeof(pjsip_cred_info),
+				   acc->cfg.cred_count, acc->cfg.cred_count-1);
+		    acc->cfg.cred_count--;
+		}
+
+		/* Insert this */
+		pjsip_cred_info_dup(acc->pool, &ci, &cfg->cred_info[i]);
+		pj_array_insert(acc->cfg.cred_info, sizeof(pjsip_cred_info),
+				acc->cfg.cred_count, i, &ci);
+	    }
+	}
+	acc->cfg.cred_count = cfg->cred_count;
+
+	/* Concatenate credentials from account config and global config */
+	acc->cred_cnt = 0;
+	for (i=0; i<acc->cfg.cred_count; ++i) {
+	    acc->cred[acc->cred_cnt++] = acc->cfg.cred_info[i];
+	}
+	for (i=0; i<pjsua_var.ua_cfg.cred_count && 
+		  acc->cred_cnt < PJ_ARRAY_SIZE(acc->cred); ++i)
+	{
+	    acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
+	}
+    }
+
+    /* Authentication preference */
+    acc->cfg.auth_pref.initial_auth = cfg->auth_pref.initial_auth;
+    if (pj_strcmp(&acc->cfg.auth_pref.algorithm, &cfg->auth_pref.algorithm))
+	pj_strdup_with_null(acc->pool, &acc->cfg.auth_pref.algorithm, 
+			    &cfg->auth_pref.algorithm);
+
+    /* Registration */
+    acc->cfg.reg_timeout = cfg->reg_timeout;
+    acc->cfg.unreg_timeout = cfg->unreg_timeout;
+    acc->cfg.allow_contact_rewrite = cfg->allow_contact_rewrite;
+    acc->cfg.reg_retry_interval = cfg->reg_retry_interval;
+    acc->cfg.drop_calls_on_reg_fail = cfg->drop_calls_on_reg_fail;
+
+    /* Normalize registration timeout */
+    if (acc->cfg.reg_uri.slen && acc->cfg.reg_timeout == 0)
+	acc->cfg.reg_timeout = PJSUA_REG_INTERVAL;
+
+    /* Registrar URI */
+    if (pj_strcmp(&acc->cfg.reg_uri, &cfg->reg_uri)) {
+	if (cfg->reg_uri.slen) {
+	    pj_strdup_with_null(acc->pool, &acc->cfg.reg_uri, &cfg->reg_uri);
+	    if (reg_sip_uri)
+		acc->srv_port = reg_sip_uri->port;
+	} else {
+	    /* Unregister if registration was set */
+	    if (acc->cfg.reg_uri.slen)
+		pjsua_acc_set_registration(acc->index, PJ_FALSE);
+	    pj_bzero(&acc->cfg.reg_uri, sizeof(acc->cfg.reg_uri));
+	}
+	update_reg = PJ_TRUE;
+    }
+
+    /* Update registration */
+    if (update_reg) {
+	/* If accounts has registration enabled, start registration */
+	if (acc->cfg.reg_uri.slen)
+	    pjsua_acc_set_registration(acc->index, PJ_TRUE);
+	else {
+	    /* Otherwise subscribe to MWI, if it's enabled */
+	    if (acc->cfg.mwi_enabled)
+		pjsua_start_mwi(acc);
+	}
+    }
+
+on_return:
+    PJSUA_UNLOCK();
+    return status;
 }
 
 

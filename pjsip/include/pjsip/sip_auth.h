@@ -234,6 +234,18 @@ PJ_DECL(void) pjsip_cred_info_dup(pj_pool_t *pool,
 				  const pjsip_cred_info *src);
 
 /**
+ * Compare two credential infos.
+ *
+ * @param cred1	    The credential info to compare.
+ * @param cred2	    The credential info to compare.
+ *
+ * @return	    0 if both credentials are equal.
+ */
+PJ_DECL(int) pjsip_cred_info_cmp(const pjsip_cred_info *cred1,
+				 const pjsip_cred_info *cred2);
+
+
+/**
  * Type of function to lookup credential for the specified name.
  *
  * @param pool		Pool to initialize the credential info.

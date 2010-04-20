@@ -141,6 +141,8 @@ typedef struct pjsua_acc
     unsigned	     ka_target_len; /**< Length of ka_target.		*/
 
     pjsip_route_hdr  route_set;	    /**< Complete route set inc. outbnd.*/
+    pj_uint32_t	     global_route_crc; /** CRC of global route setting. */
+    pj_uint32_t	     local_route_crc;  /** CRC of account route setting.*/
 
     unsigned	     cred_cnt;	    /**< Number of credentials.		*/
     pjsip_cred_info  cred[PJSUA_ACC_MAX_PROXIES]; /**< Complete creds.	*/
