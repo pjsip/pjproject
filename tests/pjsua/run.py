@@ -93,6 +93,11 @@ if G_EXE == "":
 		print "Unable to find ../../../build.mak. Please build pjsip first"
 		sys.exit(1)
 	    G_INUNIX = True
+else:
+	if sys.platform.lower().find("win32")!=-1 or sys.platform.lower().find("microsoft")!=-1:
+		G_INUNIX = False
+	else:
+		G_INUNIX = True
 
 
 G_EXE = G_EXE.rstrip("\n\r \t")
