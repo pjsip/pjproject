@@ -86,7 +86,7 @@ class S60SDK:
 	def __init__(self):
 		# Check that EPOCROOT is set
 		if not "EPOCROOT" in os.environ:
-		    print "Error: EPOCROOT environment variable is not set"
+		    sys.stderr.write("Error: EPOCROOT environment variable is not set\n")
 		    sys.exit(1)
 		epocroot = os.environ["EPOCROOT"]
 		# EPOCROOT must have trailing backslash
@@ -107,9 +107,9 @@ class S60SDK:
 		proc.wait()
 
 		if sdk1 != sdk2:
-		    print "Error: default SDK in device doesn't match EPOCROOT"
-		    print "Default device SDK =", sdk2
-		    print "EPOCROOT SDK =", sdk1
+		    sys.stderr.write("Error: default SDK in device doesn't match EPOCROOT\n")
+		    sys.stderr.write("Default device SDK = " + sdk2 + "\n")
+		    sys.stderr.write("EPOCROOT SDK = " + sdk1 + "\n")
 		    sys.exit(1)
 
 		self.name = sdk2.replace("_", "-")
@@ -129,7 +129,7 @@ def replace_vars(text):
 		if platform.system().lower() == "microsoft":
 			os_info = platform.release() + "-" + platform.version() + "-" + platform.win32_ver()[2]
 	elif platform.system().lower() == "linux":
-                os_info =  + "-" + "-".join(platform.linux_distribution()[0:2])
+                os_info =  "-" + "-".join(platform.linux_distribution()[0:2])
 
 	# vs_target
 	if not vs_target and text.find("$(VSTARGET)") >= 0:
@@ -159,7 +159,7 @@ def replace_vars(text):
 					shell=True, stdout=subprocess.PIPE)
 		suffix = proc.stdout.readline().rstrip(" \r\n")
 	else:
-		sys.stderr.write("Error: unsupported built type " + build_type + "\n")
+		sys.stderr.write("Error: unsupported build type '" + build_type + "'\n")
 		sys.exit(1)
 
         while True:
@@ -184,6 +184,21 @@ def replace_vars(text):
                         text = text.replace("$(S60TARGETNAME)", s60_target.replace(" ", "-"))
                 elif text.find("$(DISABLED)") >= 0:
                         text = text.replace("$(DISABLED)", "0")
+                elif text.find("$(IPPROOT)") >= 0:
+                        if not os.environ.has_key("IPPROOT"):
+                                sys.stderr.write("Error: environment variable IPPROOT is needed but not set\n")
+                                sys.exit(1)
+                        text = text.replace("$(IPPROOT)", os.environ["IPPROOT"])
+                elif text.find("$(IPPSAMPLES)") >= 0:
+                        if not os.environ.has_key("IPPSAMPLES"):
+                                sys.stderr.write("Error: environment variable IPPSAMPLES is needed but not set\n")
+                                sys.exit(1)
+                        text = text.replace("$(IPPSAMPLES)", os.environ["IPPSAMPLES"])
+                elif text.find("$(IPPARCH)") >= 0:
+                        if not os.environ.has_key("IPPARCH"):
+                                text = text.replace("$(IPPARCH)", "")
+                        else:
+                                text = text.replace("$(IPPARCH)", os.environ["IPPARCH"])
                 elif text.find("$(OS)") >= 0:
                         text = text.replace("$(OS)", os_info)
                 elif text.find("$(SUFFIX)") >= 0:
@@ -201,11 +216,12 @@ def replace_vars(text):
 
 def main(args):
 	global vs_target, s60_target, build_type
+        output = sys.stdout
         usage = """Usage: configure.py [OPTIONS] scenario_template_file
 
 Where OPTIONS:
-  -t TYPE		Specify build type for Windows since we support both
-			Visual Studio and Mingw. If not specified, it will be
+  -o FILE               Output to file, otherwise to stdout.
+  -t TYPE		Specify build type. If not specified, it will be
 			asked if necessary. Values are: 
 			    vs:    Visual Studio
 			    gnu:   Makefile based
@@ -225,7 +241,15 @@ Where OPTIONS:
 
         args.pop(0)
 	while len(args):
-		if args[0]=='-vstarget':
+                if args[0]=='-o':
+                        args.pop(0)
+                        if len(args):
+                                output = open(args[0], "wt")
+                                args.pop(0)
+                        else:
+                                sys.stderr.write("Error: needs value for -o\n")
+                                sys.exit(1)
+		elif args[0]=='-vstarget':
 			args.pop(0)
 			if len(args):
 				vs_target = args[0]
@@ -256,10 +280,10 @@ Where OPTIONS:
 			break
 
         if len(args) != 1:
-                print usage
+                sys.stderr.write(usage + "\n")
                 return 1
         
-	if not build_type and (platform.system().lower() == "windows" or platform.system().lower() == "microsoft"):
+	if not build_type:
 	    print "Enter the build type (values: vs, gnu, s60) [vs]: ",
 	    build_type = sys.stdin.readline().replace("\n", "").replace("\r", "")
 	    if not build_type:
@@ -276,7 +300,9 @@ Where OPTIONS:
         f.close()
         
         tpl = replace_vars(tpl)
-        print tpl
+        output.write(tpl)
+        if output != sys.stdout:
+                output.close()
         return 0
 
 
