@@ -396,7 +396,6 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 	codecs[count].channel_cnt = 2;
 	++count;
     }
-#endif
 
     if (count < *max_count) {
 	/* 32000 Hz mono */
@@ -437,6 +436,7 @@ static pj_status_t l16_enum_codecs( pjmedia_codec_factory *factory,
 	codecs[count].channel_cnt = 2;
 	++count;
     }
+#endif
 
 
     *max_count = count;
