@@ -270,6 +270,7 @@ int http_client_test1()
     pj_str_t url;
     pj_http_req_callback hcb;
     pj_http_req_param param;
+    char urlbuf[80];
 
     pj_bzero(&hcb, sizeof(hcb));
     hcb.on_complete = &on_complete;
@@ -286,12 +287,10 @@ int http_client_test1()
 
 #ifdef USE_LOCAL_SERVER
 
-    pj_cstr(&url, "http://127.0.0.1:8080/about-us/");
     thread_quit = PJ_FALSE;
     g_server.action = ACTION_REPLY;
     g_server.send_content_length = PJ_TRUE;
     g_server.data_size = 2970;
-    g_server.port = 8080;
     g_server.buf_size = 1024;
 
     sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
@@ -299,11 +298,24 @@ int http_client_test1()
     if (sstatus != PJ_SUCCESS)
         return -41;
 
-    pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)g_server.port);
+    pj_sockaddr_in_init(&addr, NULL, 0);
 
     sstatus = pj_sock_bind(g_server.sock, &addr, sizeof(addr));
     if (sstatus != PJ_SUCCESS)
         return -43;
+
+    {
+	pj_sockaddr_in addr;
+	int addr_len = sizeof(addr);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	if (sstatus != PJ_SUCCESS)
+	    return -44;
+	g_server.port = pj_sockaddr_in_get_port(&addr);
+	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+			 "http://127.0.0.1:%d/about-us/",
+			 g_server.port);
+	url = pj_str(urlbuf);
+    }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
     if (sstatus != PJ_SUCCESS)
@@ -366,6 +378,7 @@ int http_client_test2()
     pj_http_req_callback hcb;
     pj_http_req_param param;
     pj_time_val timeout;
+    char urlbuf[80];
 
     pj_bzero(&hcb, sizeof(hcb));
     hcb.on_complete = &on_complete;
@@ -389,7 +402,6 @@ int http_client_test2()
     g_server.action = ACTION_IGNORE;
     g_server.send_content_length = PJ_FALSE;
     g_server.data_size = 4173;
-    g_server.port = 380;
     g_server.buf_size = 1024;
 
     sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
@@ -397,11 +409,24 @@ int http_client_test2()
     if (sstatus != PJ_SUCCESS)
         return -41;
 
-    pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)g_server.port);
+    pj_sockaddr_in_init(&addr, NULL, 0);
 
     sstatus = pj_sock_bind(g_server.sock, &addr, sizeof(addr));
     if (sstatus != PJ_SUCCESS)
         return -43;
+
+    {
+	pj_sockaddr_in addr;
+	int addr_len = sizeof(addr);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	if (sstatus != PJ_SUCCESS)
+	    return -44;
+	g_server.port = pj_sockaddr_in_get_port(&addr);
+	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+			 "http://127.0.0.1:%d",
+			 g_server.port);
+	url = pj_str(urlbuf);
+    }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
     if (sstatus != PJ_SUCCESS)
@@ -486,6 +511,7 @@ int http_client_test_put1()
     pj_http_req_param param;
     char *data;
     int length = 3875;
+    char urlbuf[80];
 
     pj_bzero(&hcb, sizeof(hcb));
     hcb.on_complete = &on_complete;
@@ -500,12 +526,10 @@ int http_client_test_put1()
         return -52;
 
 #ifdef USE_LOCAL_SERVER
-    pj_cstr(&url, "http://127.0.0.1:380/test/test.txt");
     thread_quit = PJ_FALSE;
     g_server.action = ACTION_REPLY;
     g_server.send_content_length = PJ_TRUE;
     g_server.data_size = 0;
-    g_server.port = 380;
     g_server.buf_size = 4096;
 
     sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
@@ -513,11 +537,24 @@ int http_client_test_put1()
     if (sstatus != PJ_SUCCESS)
         return -41;
 
-    pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)g_server.port);
+    pj_sockaddr_in_init(&addr, NULL, 0);
 
     sstatus = pj_sock_bind(g_server.sock, &addr, sizeof(addr));
     if (sstatus != PJ_SUCCESS)
         return -43;
+
+    {
+	pj_sockaddr_in addr;
+	int addr_len = sizeof(addr);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	if (sstatus != PJ_SUCCESS)
+	    return -44;
+	g_server.port = pj_sockaddr_in_get_port(&addr);
+	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+			 "http://127.0.0.1:%d/test/test.txt",
+			 g_server.port);
+	url = pj_str(urlbuf);
+    }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
     if (sstatus != PJ_SUCCESS)
@@ -575,6 +612,7 @@ int http_client_test_put2()
     pj_str_t url;
     pj_http_req_callback hcb;
     pj_http_req_param param;
+    char urlbuf[80];
 
     pj_bzero(&hcb, sizeof(hcb));
     hcb.on_complete = &on_complete;
@@ -590,12 +628,10 @@ int http_client_test_put2()
         return -52;
 
 #ifdef USE_LOCAL_SERVER
-    pj_cstr(&url, "http://127.0.0.1:380/test/test2.txt");
     thread_quit = PJ_FALSE;
     g_server.action = ACTION_REPLY;
     g_server.send_content_length = PJ_TRUE;
     g_server.data_size = 0;
-    g_server.port = 380;
     g_server.buf_size = 16384;
 
     sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
@@ -603,11 +639,24 @@ int http_client_test_put2()
     if (sstatus != PJ_SUCCESS)
         return -41;
 
-    pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)g_server.port);
+    pj_sockaddr_in_init(&addr, NULL, 0);
 
     sstatus = pj_sock_bind(g_server.sock, &addr, sizeof(addr));
     if (sstatus != PJ_SUCCESS)
         return -43;
+
+    {
+	pj_sockaddr_in addr;
+	int addr_len = sizeof(addr);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	if (sstatus != PJ_SUCCESS)
+	    return -44;
+	g_server.port = pj_sockaddr_in_get_port(&addr);
+	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+			 "http://127.0.0.1:%d/test/test2.txt",
+			 g_server.port);
+	url = pj_str(urlbuf);
+    }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
     if (sstatus != PJ_SUCCESS)
@@ -659,6 +708,7 @@ int http_client_test_delete()
     pj_str_t url;
     pj_http_req_callback hcb;
     pj_http_req_param param;
+    char urlbuf[80];
 
     pj_bzero(&hcb, sizeof(hcb));
     hcb.on_complete = &on_complete;
@@ -672,12 +722,10 @@ int http_client_test_delete()
         return -62;
 
 #ifdef USE_LOCAL_SERVER
-    pj_cstr(&url, "http://127.0.0.1:380/test/test2.txt");
     thread_quit = PJ_FALSE;
     g_server.action = ACTION_REPLY;
     g_server.send_content_length = PJ_TRUE;
     g_server.data_size = 0;
-    g_server.port = 380;
     g_server.buf_size = 1024;
 
     sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
@@ -685,11 +733,24 @@ int http_client_test_delete()
     if (sstatus != PJ_SUCCESS)
         return -41;
 
-    pj_sockaddr_in_init(&addr, NULL, (pj_uint16_t)g_server.port);
+    pj_sockaddr_in_init(&addr, NULL, 0);
 
     sstatus = pj_sock_bind(g_server.sock, &addr, sizeof(addr));
     if (sstatus != PJ_SUCCESS)
         return -43;
+
+    {
+	pj_sockaddr_in addr;
+	int addr_len = sizeof(addr);
+	sstatus = pj_sock_getsockname(g_server.sock, &addr, &addr_len);
+	if (sstatus != PJ_SUCCESS)
+	    return -44;
+	g_server.port = pj_sockaddr_in_get_port(&addr);
+	pj_ansi_snprintf(urlbuf, sizeof(urlbuf),
+			 "http://127.0.0.1:%d/test/test2.txt",
+			 g_server.port);
+	url = pj_str(urlbuf);
+    }
 
     sstatus = pj_sock_listen(g_server.sock, 8);
     if (sstatus != PJ_SUCCESS)
