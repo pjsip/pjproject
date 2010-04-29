@@ -1,7 +1,7 @@
 <?xml version="1.0" ?>
 <Scenario site="$(HOSTNAME)" url="http://my.cdash.org/submit.php?project=PJSIP" wdir="$(PJDIR)">
  
-	<Submit group="Experimental" build="$(OS)-$(VS)-$(VSTARGET)-default" >
+	<Submit group="Experimental" build="$(OS)-$(VS)-$(VSTARGET)-default" exclude="(.*amr.*)">
 		<Update />
 		<FileWrite file="pjlib/include/pj/config_site.h">
 		  <![CDATA[
