@@ -393,7 +393,9 @@ static void update_digest_session( pj_pool_t *ses_pool,
 	cached_auth->nc = 1;
 
 	/* Save realm. */
+	/* Note: allow empty realm (http://trac.pjsip.org/repos/ticket/1061)
 	pj_assert(cached_auth->realm.slen != 0);
+	*/
 	if (cached_auth->realm.slen == 0) {
 	    pj_strdup(ses_pool, &cached_auth->realm, 
 		      &hdr->challenge.digest.realm);
