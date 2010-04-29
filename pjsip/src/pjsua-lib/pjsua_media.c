@@ -1476,6 +1476,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     pjmedia_port *media_port;
     pj_status_t status;
 
+    if (!pjsua_var.med_endpt) {
+	/* We're being shutdown */
+	return PJ_EBUSY;
+    }
+
     /* Destroy existing media session, if any. */
     prev_media_st = call->media_st;
     stop_media_session(call->index);
