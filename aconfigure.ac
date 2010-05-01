@@ -408,17 +408,30 @@ AC_ARG_WITH(external-gsm,
 		   [Use external GSM codec library, not the one in "third_party" directory. When this option is set, make sure that the GSM include/lib files are accessible to use (hint: use CFLAGS and LDFLAGS env var to set the include/lib paths)]),
     [
 	if test "x$with_external_gsm" != "xno"; then
-		# Test GSM library installation
-		AC_MSG_CHECKING([if external GSM devkit is installed])
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <gsm/gsm.h>
-						                   ]],
-						                   [gsm_create(); ])
-						  ],
-				          [AC_MSG_RESULT(yes!!)
-				           AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
-				           ac_external_gsm="1"
-				          ],
-				          [AC_MSG_ERROR([Unable to use external GSM library. If GSM development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])])
+                # Test GSM library installation
+                AC_MSG_CHECKING([if external GSM devkit is installed as gsm/gsm.h])
+                AC_COMPILE_IFELSE(
+                    [AC_LANG_PROGRAM([[#include <gsm/gsm.h> ]], [gsm_create(); ]) ],
+                    [AC_MSG_RESULT(yes!!)
+                     AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
+                     AC_DEFINE(PJMEDIA_EXTERNAL_GSM_GSM_H, 1)
+                     ac_external_gsm="1"
+                    ],
+                    [
+                     AC_MSG_RESULT(no)
+                     AC_MSG_CHECKING([if external GSM devkit is installed as gsm.h])
+                     AC_COMPILE_IFELSE(
+                        [AC_LANG_PROGRAM([[#include <gsm.h> ]], [gsm_create(); ]) ],
+                        [AC_MSG_RESULT(yes!!)
+                         AC_DEFINE(PJMEDIA_EXTERNAL_GSM_CODEC, 1)
+                         AC_DEFINE(PJMEDIA_EXTERNAL_GSM_H, 1)
+                         ac_external_gsm="1"
+                        ],
+                        [AC_MSG_ERROR([Unable to use external GSM library. If GSM development files are not available in the default locations, use CFLAGS and LDFLAGS env var to set the include/lib paths])
+                        ]
+                     )
+                    ]
+                )
 	fi
     ]
     )

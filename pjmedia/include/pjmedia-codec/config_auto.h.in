@@ -43,6 +43,8 @@
 #endif
 
 #undef PJMEDIA_EXTERNAL_GSM_CODEC
+#undef PJMEDIA_EXTERNAL_GSM_GSM_H
+#undef PJMEDIA_EXTERNAL_GSM_H
 
 /* Speex codec */
 #ifndef PJMEDIA_HAS_SPEEX_CODEC

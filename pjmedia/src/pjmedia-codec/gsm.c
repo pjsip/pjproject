@@ -35,7 +35,13 @@
 #if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
 
 #if defined(PJMEDIA_EXTERNAL_GSM_CODEC) && PJMEDIA_EXTERNAL_GSM_CODEC
+# if PJMEDIA_EXTERNAL_GSM_GSM_H
 #   include <gsm/gsm.h>
+# elif PJMEDIA_EXTERNAL_GSM_H
+#   include <gsm.h>
+# else
+#   error Please set the location of gsm.h
+# endif
 #else
 #   include "../../third_party/gsm/inc/gsm.h"
 #endif
