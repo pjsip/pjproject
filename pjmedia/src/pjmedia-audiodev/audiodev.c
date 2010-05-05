@@ -97,14 +97,14 @@ pjmedia_aud_dev_factory* pjmedia_null_audio_factory(pj_pool_factory *pf);
 #define MAX_DRIVERS	16
 #define MAX_DEVS	64
 
-/* typedef for factory creation function */
-typedef pjmedia_aud_dev_factory*  (*create_func_ptr)(pj_pool_factory*);
 
 /* driver structure */
 struct driver
 {
-    create_func_ptr	     create;	/* Creation function.		    */
-    pjmedia_aud_dev_factory *f;		/* Factory instance.		    */
+    /* Creation function */
+    pjmedia_aud_dev_factory_create_func_ptr create;
+    /* Factory instance */
+    pjmedia_aud_dev_factory *f;
     char		     name[32];	/* Driver name			    */
     unsigned		     dev_cnt;	/* Number of devices		    */
     unsigned		     start_idx;	/* Start index in global list	    */
@@ -408,6 +408,53 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
     }
 
     return aud_subsys.dev_cnt ? PJ_SUCCESS : status;
+}
+
+/* API: register an audio device factory to the audio subsystem. */
+PJ_DEF(pj_status_t)
+pjmedia_aud_register_factory(pjmedia_aud_dev_factory_create_func_ptr adf)
+{
+    pj_status_t status;
+
+    if (aud_subsys.init_count == 0)
+	return PJMEDIA_EAUD_INIT;
+
+    aud_subsys.drv[aud_subsys.drv_cnt].create = adf;
+    status = init_driver(aud_subsys.drv_cnt);
+    if (status == PJ_SUCCESS) {
+	aud_subsys.drv_cnt++;
+    } else {
+	deinit_driver(aud_subsys.drv_cnt);
+    }
+
+    return status;
+}
+
+/* API: unregister an audio device factory from the audio subsystem. */
+PJ_DEF(pj_status_t)
+pjmedia_aud_unregister_factory(pjmedia_aud_dev_factory_create_func_ptr adf)
+{
+    unsigned i, j;
+
+    if (aud_subsys.init_count == 0)
+	return PJMEDIA_EAUD_INIT;
+
+    for (i=0; i<aud_subsys.drv_cnt; ++i) {
+	struct driver *drv = &aud_subsys.drv[i];
+
+	if (drv->create == adf) {
+	    for (j = drv->start_idx; j < drv->start_idx + drv->dev_cnt; j++)
+	    {
+		aud_subsys.dev_list[j] = PJMEDIA_AUD_INVALID_DEV;
+	    }
+
+	    deinit_driver(i);
+	    pj_bzero(drv, sizeof(*drv));
+	    return PJ_SUCCESS;
+	}
+    }
+
+    return PJMEDIA_EAUD_ERR;
 }
 
 /* API: get the pool factory registered to the audio subsystem. */
