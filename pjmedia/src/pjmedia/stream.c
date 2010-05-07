@@ -50,6 +50,22 @@
  */
 #define MAX_PLC_MSEC			PJMEDIA_MAX_PLC_DURATION_MSEC
 
+
+/* Tracing jitter buffer operations in a stream session to a CSV file.
+ * The trace will contain JB operation timestamp, frame info, RTP info, and
+ * the JB state right after the operation.
+ */
+#define TRACE_JB			0	/* Enable/disable trace.    */
+#define TRACE_JB_PATH_PREFIX		""	/* Optional path/prefix
+						   for the CSV filename.    */
+#if TRACE_JB
+#   include <pj/file_io.h>
+#   define TRACE_JB_INVALID_FD		((pj_oshandle_t)-1)
+#   define TRACE_JB_OPENED(s)		(s->trace_jb_fd != TRACE_JB_INVALID_FD)
+#endif
+
+
+
 /**
  * Media channel.
  */
@@ -184,6 +200,11 @@ struct pjmedia_stream
     pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
 					            packet		    */
 #endif
+
+#if TRACE_JB
+    pj_oshandle_t	    trace_jb_fd;	    /**< Jitter tracing file handle.*/
+    char		   *trace_jb_buf;	    /**< Jitter tracing buffer.	    */
+#endif
 };
 
 
@@ -207,6 +228,157 @@ static void stream_perror(const char *sender, const char *title,
     pj_strerror(status, errmsg, sizeof(errmsg));
     PJ_LOG(4,(sender, "%s: %s [err:%d]", title, errmsg, status));
 }
+
+
+#if TRACE_JB
+
+PJ_INLINE(int) trace_jb_print_timestamp(char **buf, pj_ssize_t len)
+{
+    pj_time_val now;
+    pj_parsed_time ptime;
+    char *p = *buf;
+
+    if (len < 14)
+	return -1;
+
+    pj_gettimeofday(&now);
+    pj_time_decode(&now, &ptime);
+    p += pj_utoa_pad(ptime.hour, p, 2, '0');
+    *p++ = ':';
+    p += pj_utoa_pad(ptime.min, p, 2, '0');
+    *p++ = ':';
+    p += pj_utoa_pad(ptime.sec, p, 2, '0');
+    *p++ = '.';
+    p += pj_utoa_pad(ptime.msec, p, 3, '0');
+    *p++ = ',';
+
+    *buf = p;
+
+    return 0;
+}
+
+PJ_INLINE(int) trace_jb_print_state(pjmedia_stream *stream, 
+				    char **buf, pj_ssize_t len)
+{
+    char *p = *buf;
+    char *endp = *buf + len;
+    pjmedia_jb_state state;
+
+    pjmedia_jbuf_get_state(stream->jb, &state);
+
+    len = pj_ansi_snprintf(p, endp-p, "%d, %d, %d",
+			   state.size, state.burst, state.prefetch);
+    if ((len < 0) || (len >= endp-p))
+	return -1;
+
+    p += len;
+    *buf = p;
+    return 0;
+}
+
+static void trace_jb_get(pjmedia_stream *stream, pjmedia_jb_frame_type ft,
+			 pj_size_t fsize)
+{
+    char *p = stream->trace_jb_buf;
+    char *endp = stream->trace_jb_buf + PJ_LOG_MAX_SIZE;
+    pj_ssize_t len = 0;
+    const char* ft_st;
+
+    if (!TRACE_JB_OPENED(stream))
+	return;
+
+    /* Print timestamp. */
+    if (trace_jb_print_timestamp(&p, endp-p))
+	goto on_insuff_buffer;
+
+    /* Print frame type and size */
+    switch(ft) {
+	case PJMEDIA_JB_MISSING_FRAME:
+	    ft_st = "missing";
+	    break;
+	case PJMEDIA_JB_NORMAL_FRAME:
+	    ft_st = "normal";
+	    break;
+	case PJMEDIA_JB_ZERO_PREFETCH_FRAME:
+	    ft_st = "prefetch";
+	    break;
+	case PJMEDIA_JB_ZERO_EMPTY_FRAME:
+	    ft_st = "empty";
+	    break;
+	default:
+	    ft_st = "unknown";
+	    break;
+    }
+
+    /* Print operation, size, frame count, frame type */
+    len = pj_ansi_snprintf(p, endp-p, "GET,%d,1,%s,,,,", fsize, ft_st);
+    if ((len < 0) || (len >= endp-p))
+	goto on_insuff_buffer;
+    p += len;
+
+    /* Print JB state */
+    if (trace_jb_print_state(stream, &p, endp-p))
+	goto on_insuff_buffer;
+
+    /* Print end of line */
+    if (endp-p < 2)
+	goto on_insuff_buffer;
+    *p++ = '\n';
+
+    /* Write and flush */
+    len = p - stream->trace_jb_buf;
+    pj_file_write(stream->trace_jb_fd, stream->trace_jb_buf, &len);
+    pj_file_flush(stream->trace_jb_fd);
+    return;
+
+on_insuff_buffer:
+    pj_assert(!"Trace buffer too small, check PJ_LOG_MAX_SIZE!");
+}
+
+static void trace_jb_put(pjmedia_stream *stream, const pjmedia_rtp_hdr *hdr,
+			 unsigned payloadlen, unsigned frame_cnt)
+{
+    char *p = stream->trace_jb_buf;
+    char *endp = stream->trace_jb_buf + PJ_LOG_MAX_SIZE;
+    pj_ssize_t len = 0;
+
+    if (!TRACE_JB_OPENED(stream))
+	return;
+
+    /* Print timestamp. */
+    if (trace_jb_print_timestamp(&p, endp-p))
+	goto on_insuff_buffer;
+
+    /* Print operation, size, frame count, RTP info */
+    len = pj_ansi_snprintf(p, endp-p,
+			   "PUT,%d,%d,,%d,%d,%d,",
+			   payloadlen, frame_cnt,
+			   pj_ntohs(hdr->seq), pj_ntohl(hdr->ts), hdr->m);
+    if ((len < 0) || (len >= endp-p))
+	goto on_insuff_buffer;
+    p += len;
+
+    /* Print JB state */
+    if (trace_jb_print_state(stream, &p, endp-p))
+	goto on_insuff_buffer;
+
+    /* Print end of line */
+    if (endp-p < 2)
+	goto on_insuff_buffer;
+    *p++ = '\n';
+
+    /* Write and flush */
+    len = p - stream->trace_jb_buf;
+    pj_file_write(stream->trace_jb_fd, stream->trace_jb_buf, &len);
+    pj_file_flush(stream->trace_jb_fd);
+    return;
+
+on_insuff_buffer:
+    pj_assert(!"Trace buffer too small, check PJ_LOG_MAX_SIZE!");
+}
+
+#endif /* TRACE_JB */
+
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
 /*
@@ -300,7 +472,11 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 	/* Get frame from jitter buffer. */
 	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
 			        &frame_type, &bit_info);
-	
+
+#if TRACE_JB
+	trace_jb_get(stream, frame_type, frame_size);
+#endif
+
 	if (frame_type == PJMEDIA_JB_MISSING_FRAME) {
 	    
 	    /* Activate PLC */
@@ -553,6 +729,10 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	/* Get frame from jitter buffer. */
 	pjmedia_jbuf_get_frame2(stream->jb, channel->out_pkt, &frame_size,
 			        &frame_type, &bit_info);
+
+#if TRACE_JB
+	trace_jb_get(stream, frame_type, frame_size);
+#endif
 	
 	/* Unlock jitter buffer mutex. */
 	pj_mutex_unlock( stream->jb_mutex );
@@ -1568,6 +1748,11 @@ static void on_rx_rtp( void *data,
 	    if (discarded)
 		pkt_discarded = PJ_TRUE;
 	}
+
+#if TRACE_JB
+	trace_jb_put(stream, hdr, payloadlen, count);
+#endif
+
     }
     pj_mutex_unlock( stream->jb_mutex );
 
@@ -2078,6 +2263,33 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     send_keep_alive_packet(stream);
 #endif
 
+#if TRACE_JB
+    {
+	char trace_name[PJ_MAXPATH];
+	pj_ssize_t len;
+
+	pj_ansi_snprintf(trace_name, sizeof(trace_name), 
+			 TRACE_JB_PATH_PREFIX "%s.csv",
+			 stream->port.info.name.ptr);
+	status = pj_file_open(pool, trace_name, PJ_O_RDWR, &stream->trace_jb_fd);
+	if (status != PJ_SUCCESS) {
+	    stream->trace_jb_fd = TRACE_JB_INVALID_FD;
+	    PJ_LOG(3,(THIS_FILE, "Failed creating RTP trace file '%s'", 
+		      trace_name));
+	} else {
+	    stream->trace_jb_buf = (char*)pj_pool_alloc(pool, PJ_LOG_MAX_SIZE);
+
+	    /* Print column header */
+	    len = pj_ansi_snprintf(stream->trace_jb_buf, PJ_LOG_MAX_SIZE,
+				   "Time, Operation, Size, Frame Count, "
+				   "Frame type, RTP Seq, RTP TS, RTP M, "
+				   "JB size, JB burst level, JB prefetch\n");
+	    pj_file_write(stream->trace_jb_fd, stream->trace_jb_buf, &len);
+	    pj_file_flush(stream->trace_jb_fd);
+	}
+    }
+#endif
+
     /* Success! */
     *p_stream = stream;
 
@@ -2180,6 +2392,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     /* Destroy jitter buffer */
     if (stream->jb)
 	pjmedia_jbuf_destroy(stream->jb);
+
+#if TRACE_JB
+    if (TRACE_JB_OPENED(stream)) {
+	pj_file_close(stream->trace_jb_fd);
+	stream->trace_jb_fd = TRACE_JB_INVALID_FD;
+    }
+#endif
 
     return PJ_SUCCESS;
 }
