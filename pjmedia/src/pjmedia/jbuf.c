@@ -476,7 +476,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     jb->jb_max_prefetch  = max_count*4/5;
     jb->jb_max_count	 = max_count;
     jb->jb_min_shrink_gap= MIN_SHRINK_GAP_MSEC / ptime;
-    jb->jb_max_burst	 = MAX_BURST_MSEC / ptime;
+    jb->jb_max_burst	 = PJ_MAX(MAX_BURST_MSEC, max_count*3/4);
     jb->jb_last_discard_seq = 0;
 
     pj_math_stat_init(&jb->jb_delay);
