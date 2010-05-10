@@ -24,8 +24,8 @@
 /*
  * Overrideable parameters
  */
-#define REC_DEV_ID			PJMEDIA_AUD_DEFAULT_CAPTURE_DEV
-#define PLAY_DEV_ID			PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV
+#define REC_DEV_ID			systest_cap_dev_id
+#define PLAY_DEV_ID			systest_play_dev_id
 //#define REC_DEV_ID			5
 //#define PLAY_DEV_ID			5
 #define OVERRIDE_AUDDEV_REC_LAT		0
@@ -73,6 +73,10 @@ int	    systest_init(void);
 int	    systest_run(void);
 void	    systest_save_result(const char *filename);
 void	    systest_deinit(void);
+
+/* Device ID to test */
+extern int systest_cap_dev_id;
+extern int systest_play_dev_id;
 
 /* Test item is used to record the test result */
 typedef struct test_item_t

@@ -103,6 +103,10 @@ typedef struct systest_t
 static systest_t systest;
 static char textbuf[600];
 
+/* Device ID to test */
+int systest_cap_dev_id = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
+int systest_play_dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
+
 static void systest_perror(const char *title, pj_status_t status)
 {
     char errmsg[PJ_ERR_MSG_SIZE];
