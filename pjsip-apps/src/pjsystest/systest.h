@@ -70,6 +70,7 @@ extern "C" {
 
 /* API, to be called by main() */
 int	    systest_init(void);
+int	    systest_set_dev(int cap_dev, int play_dev);
 int	    systest_run(void);
 void	    systest_save_result(const char *filename);
 void	    systest_deinit(void);

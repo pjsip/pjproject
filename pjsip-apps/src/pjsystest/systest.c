@@ -1108,6 +1108,13 @@ on_return:
 }
 
 
+int systest_set_dev(int cap_dev, int play_dev)
+{
+    systest.rec_id = systest_cap_dev_id = cap_dev;
+    systest.play_id = systest_play_dev_id = play_dev;
+    return pjsua_set_snd_dev(cap_dev, play_dev);
+}
+
 static void systest_wizard(void)
 {
     PJ_LOG(3,(THIS_FILE, "Running test wizard"));
