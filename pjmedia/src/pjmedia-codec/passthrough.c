@@ -234,7 +234,7 @@ static pj_status_t pack_amr ( codec_private_t *codec_data,
 			      unsigned output_buf_len, 
 			      struct pjmedia_frame *output)
 {
-    enum {MAX_FRAMES_PER_PACKET = 8};
+    enum {MAX_FRAMES_PER_PACKET = PJMEDIA_MAX_FRAME_DURATION_MS / 20};
 
     pjmedia_frame frames[MAX_FRAMES_PER_PACKET];
     amr_settings_t* setting = (amr_settings_t*)codec_data->codec_setting;

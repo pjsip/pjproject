@@ -495,7 +495,7 @@ static void predecode_amr( ipp_private_t *codec_data,
 static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt, 
 			    pj_size_t *pkt_size, pj_size_t max_pkt_size)
 {
-    enum {MAX_FRAMES_PER_PACKET = 16};
+    enum {MAX_FRAMES_PER_PACKET = PJMEDIA_MAX_FRAME_DURATION_MS / 20};
 
     pjmedia_frame frames[MAX_FRAMES_PER_PACKET];
     unsigned nframes = 0;
