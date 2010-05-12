@@ -671,6 +671,17 @@ OBJEXT
 CXX
 CXXFLAGS
 ac_ct_CXX
+AR
+LD
+LDOUT
+RANLIB
+LIBEXT
+LIBEXT2
+CC_OUT
+CC_INC
+CC_DEF
+CC_OPTIMIZE
+CC_CFLAGS
 ac_pjdir
 ac_build_mak_vars
 CPP
@@ -1945,7 +1956,7 @@ test -n "$target_alias" &&
   program_prefix=${target_alias}-
 ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjmedia/include/pjmedia/config_auto.h pjmedia/include/pjmedia-codec/config_auto.h pjsip/include/pjsip/sip_autoconf.h"
 
-ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/os-auto.mak third_party/build/portaudio/os-auto.mak"
+ac_config_files="$ac_config_files build.mak build/os-auto.mak build/cc-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/os-auto.mak third_party/build/portaudio/os-auto.mak"
 
 
 
@@ -3245,6 +3256,33 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+if test "$AR" = ""; then AR="$(CROSS_COMPILE)ar rv"; fi
+
+if test "$LD" = ""; then LD="$CC"; fi
+
+if test "$LDOUT" = ""; then LDOUT="-o"; fi
+
+if test "$RANLIB" = ""; then RANLIB="$(CROSSCOMPILE)ranlib"; fi
+
+if test "$OBJEXT" = ""; then OBJEXT='o'; fi
+
+if test "$LIBEXT" = ""; then LIBEXT='a'; fi
+
+if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
+
+if test "$CC_OUT" = ""; then CC_OUT="-o"; fi
+
+if test "$CC_INC" = ""; then CC_INC="-I"; fi
+
+if test "$CC_DEF" = ""; then CC_DEF="-D"; fi
+
+if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
+
+if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
+
+
 
 
 
@@ -11002,6 +11040,11 @@ if test "$enable_sound" = "no"; then
   true;
 else
  case $target in
+  arm-apple-darwin*)
+	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox"
+	{ echo "$as_me:$LINENO: result: Checking sound device backend... AudioUnit" >&5
+echo "${ECHO_T}Checking sound device backend... AudioUnit" >&6; }
+	;;
   *darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
 	if test "`uname -r`" = "6.8"; then
@@ -12769,6 +12812,7 @@ do
     "pjsip/include/pjsip/sip_autoconf.h") CONFIG_HEADERS="$CONFIG_HEADERS pjsip/include/pjsip/sip_autoconf.h" ;;
     "build.mak") CONFIG_FILES="$CONFIG_FILES build.mak" ;;
     "build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES build/os-auto.mak" ;;
+    "build/cc-auto.mak") CONFIG_FILES="$CONFIG_FILES build/cc-auto.mak" ;;
     "pjlib/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjlib/build/os-auto.mak" ;;
     "pjlib-util/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjlib-util/build/os-auto.mak" ;;
     "pjmedia/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjmedia/build/os-auto.mak" ;;
@@ -12895,6 +12939,17 @@ OBJEXT!$OBJEXT$ac_delim
 CXX!$CXX$ac_delim
 CXXFLAGS!$CXXFLAGS$ac_delim
 ac_ct_CXX!$ac_ct_CXX$ac_delim
+AR!$AR$ac_delim
+LD!$LD$ac_delim
+LDOUT!$LDOUT$ac_delim
+RANLIB!$RANLIB$ac_delim
+LIBEXT!$LIBEXT$ac_delim
+LIBEXT2!$LIBEXT2$ac_delim
+CC_OUT!$CC_OUT$ac_delim
+CC_INC!$CC_INC$ac_delim
+CC_DEF!$CC_DEF$ac_delim
+CC_OPTIMIZE!$CC_OPTIMIZE$ac_delim
+CC_CFLAGS!$CC_CFLAGS$ac_delim
 ac_pjdir!$ac_pjdir$ac_delim
 ac_build_mak_vars!$ac_build_mak_vars$ac_delim
 CPP!$CPP$ac_delim
@@ -12922,15 +12977,9 @@ ac_no_ssl!$ac_no_ssl$ac_delim
 openssl_h_present!$openssl_h_present$ac_delim
 libssl_present!$libssl_present$ac_delim
 libcrypto_present!$libcrypto_present$ac_delim
-ac_cross_compile!$ac_cross_compile$ac_delim
-ac_linux_poll!$ac_linux_poll$ac_delim
-ac_host!$ac_host$ac_delim
-ac_main_obj!$ac_main_obj$ac_delim
-LIBOBJS!$LIBOBJS$ac_delim
-LTLIBOBJS!$LTLIBOBJS$ac_delim
 _ACEOF
 
-  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 92; then
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 97; then
     break
   elif $ac_last_try; then
     { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
@@ -12949,6 +12998,53 @@ fi
 
 cat >>$CONFIG_STATUS <<_ACEOF
 cat >"\$tmp/subs-1.sed" <<\CEOF$ac_eof
+/@[a-zA-Z_][a-zA-Z_0-9]*@/!b
+_ACEOF
+sed '
+s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g
+s/^/s,@/; s/!/@,|#_!!_#|/
+:n
+t n
+s/'"$ac_delim"'$/,g/; t
+s/$/\\/; p
+N; s/^.*\n//; s/[,\\&]/\\&/g; s/@/@|#_!!_#|/g; b n
+' >>$CONFIG_STATUS <conf$$subs.sed
+rm -f conf$$subs.sed
+cat >>$CONFIG_STATUS <<_ACEOF
+CEOF$ac_eof
+_ACEOF
+
+
+ac_delim='%!_!# '
+for ac_last_try in false false false false false :; do
+  cat >conf$$subs.sed <<_ACEOF
+ac_cross_compile!$ac_cross_compile$ac_delim
+ac_linux_poll!$ac_linux_poll$ac_delim
+ac_host!$ac_host$ac_delim
+ac_main_obj!$ac_main_obj$ac_delim
+LIBOBJS!$LIBOBJS$ac_delim
+LTLIBOBJS!$LTLIBOBJS$ac_delim
+_ACEOF
+
+  if test `sed -n "s/.*$ac_delim\$/X/p" conf$$subs.sed | grep -c X` = 6; then
+    break
+  elif $ac_last_try; then
+    { { echo "$as_me:$LINENO: error: could not make $CONFIG_STATUS" >&5
+echo "$as_me: error: could not make $CONFIG_STATUS" >&2;}
+   { (exit 1); exit 1; }; }
+  else
+    ac_delim="$ac_delim!$ac_delim _$ac_delim!! "
+  fi
+done
+
+ac_eof=`sed -n '/^CEOF[0-9]*$/s/CEOF/0/p' conf$$subs.sed`
+if test -n "$ac_eof"; then
+  ac_eof=`echo "$ac_eof" | sort -nru | sed 1q`
+  ac_eof=`expr $ac_eof + 1`
+fi
+
+cat >>$CONFIG_STATUS <<_ACEOF
+cat >"\$tmp/subs-2.sed" <<\CEOF$ac_eof
 /@[a-zA-Z_][a-zA-Z_0-9]*@/!b end
 _ACEOF
 sed '
@@ -13206,7 +13302,7 @@ s&@builddir@&$ac_builddir&;t t
 s&@abs_builddir@&$ac_abs_builddir&;t t
 s&@abs_top_builddir@&$ac_abs_top_builddir&;t t
 $ac_datarootdir_hack
-" $ac_file_inputs | sed -f "$tmp/subs-1.sed" >$tmp/out
+" $ac_file_inputs | sed -f "$tmp/subs-1.sed" | sed -f "$tmp/subs-2.sed" >$tmp/out
 
 test -z "$ac_datarootdir_hack$ac_datarootdir_seen" &&
   { ac_out=`sed -n '/\${datarootdir}/p' "$tmp/out"`; test -n "$ac_out"; } &&

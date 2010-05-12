@@ -1,0 +1,61 @@
+#!/bin/bash
+
+if test "$*" = "--help" -o "$*" = "-h"; then
+  echo "configure-iphone [SDK=name_path] [OPTIONS]"
+  echo ""
+  echo "SDK=name_path   Choose which SDK to use. Value can be SDK name (e.g."
+  echo "                iPhoneOS2.2.1.sdk) or the full path of the SDK"
+  echo "OPTIONS         Other options that will be passed directly to "
+  echo "                ./aconfigure script. Run ./aconfigure --help for"
+  echo "                more info."
+  echo ""
+  exit 0
+fi
+
+F="configure-iphone"
+
+# Set the main iPhone developer directory, if not set
+if test "x${DEVPATH}" = "x"; then
+  DEVPATH=/Developer/Platforms/iPhoneOS.platform/Developer
+fi
+
+# Make sure $DEVPATH directory exist
+if test ! -d $DEVPATH; then
+  echo "$F error: directory $DEVPATH does not exist. Please install iPhone development kit"
+  exit 1
+fi
+
+# Choose SDK version to use
+if test "x$SDK" = "x"; then
+  # If SDK is not set, use the latest one
+  for f in `ls $DEVPATH/SDKs/`; do echo $f | sed 's/\(.sdk\)//'; done | sort | tail -1 > tmpsdkname
+  SDK=`cat tmpsdkname`.sdk
+  rm -f tmpsdkname
+  echo "$F info: using ${SDK}"
+  SDKPATH=${DEVPATH}/SDKs/${SDK}
+elif test -d ${SDK}; then
+  # .. else if SDK is set and it points to a valid path, just use it
+  SDKPATH=${SDK}
+else
+  # .. else assume the SDK name is used.
+  SDKPATH=${DEVPATH}/SDKs/${SDK}
+fi
+
+# Test the SDK directory
+if test ! -d ${SDKPATH}/usr/include; then
+  echo "$F error: unable to find valid iPhone SDK in ${SDKPATH}"
+  exit 1
+fi
+
+# Settings to feed to configure script
+export CFLAGS="-O2 -arch armv6 -isysroot ${SDKPATH}"
+export LDFLAGS="-O2 -arch armv6 -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
+export AR="${DEVPATH}/usr/bin/libtool -static -o"
+export RANLIB="echo ranlib"
+# Use gcc -E as preprocessor instead of cpp, since cpp will find the
+# header files in standard /usr/include
+export CPP="${DEVPATH}/usr/bin/arm-apple-darwin9-gcc -E -isysroot ${SDKPATH}"
+
+# And finally invoke configure script itself
+./aconfigure --host=arm-apple-darwin9 --disable-floating-point $*
+
