@@ -178,7 +178,8 @@ static void usage(void)
     puts  ("SIP Account options:");
     puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-    puts  ("  --use-srtp=N        Use SRTP?  0:disabled, 1:optional, 2:mandatory (def:0)");
+    puts  ("  --use-srtp=N        Use SRTP?  0:disabled, 1:optional, 2:mandatory,");
+    puts  ("                      3:optional by duplicating media offer (def:0)");
     puts  ("  --srtp-secure=N     SRTP require secure SIP? 0:no, 1:tls, 1:sips (def:1)");
 #endif
     puts  ("  --registrar=url     Set the URL of registrar server");
@@ -1092,9 +1093,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
 	case OPT_USE_SRTP:
 	    app_config.cfg.use_srtp = my_atoi(pj_optarg);
-	    if (!pj_isdigit(*pj_optarg) || app_config.cfg.use_srtp > 2) {
+	    if (!pj_isdigit(*pj_optarg) || app_config.cfg.use_srtp > 3) {
 		PJ_LOG(1,(THIS_FILE, "Invalid value for --use-srtp option"));
 		return -1;
+	    }
+	    if ((int)app_config.cfg.use_srtp == 3) {
+		/* SRTP optional mode with duplicated media offer */
+		app_config.cfg.use_srtp = PJMEDIA_SRTP_OPTIONAL;
+		app_config.cfg.srtp_optional_dup_offer = PJ_TRUE;
+		cur_acc->srtp_optional_dup_offer = PJ_TRUE;
 	    }
 	    cur_acc->use_srtp = app_config.cfg.use_srtp;
 	    break;
@@ -1503,8 +1510,20 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* SRTP */
     if (acc_cfg->use_srtp) {
-	pj_ansi_sprintf(line, "--use-srtp %i\n",
-			(int)acc_cfg->use_srtp);
+	int use_srtp = (int)acc_cfg->use_srtp;
+	if (use_srtp == PJMEDIA_SRTP_OPTIONAL && 
+	    acc_cfg->srtp_optional_dup_offer)
+	{
+	    use_srtp = 3;
+	}
+	pj_ansi_sprintf(line, "--use-srtp %i\n", use_srtp);
+	pj_strcat2(result, line);
+    }
+    if (acc_cfg->srtp_secure_signaling != 
+	PJSUA_DEFAULT_SRTP_SECURE_SIGNALING) 
+    {
+	pj_ansi_sprintf(line, "--srtp-secure %d\n",
+			acc_cfg->srtp_secure_signaling);
 	pj_strcat2(result, line);
     }
 #endif
@@ -1736,8 +1755,13 @@ static int write_settings(const struct app_config *config,
     /* SRTP */
 #if PJMEDIA_HAS_SRTP
     if (app_config.cfg.use_srtp != PJSUA_DEFAULT_USE_SRTP) {
-	pj_ansi_sprintf(line, "--use-srtp %d\n",
-			app_config.cfg.use_srtp);
+	int use_srtp = (int)app_config.cfg.use_srtp;
+	if (use_srtp == PJMEDIA_SRTP_OPTIONAL && 
+	    app_config.cfg.srtp_optional_dup_offer)
+	{
+	    use_srtp = 3;
+	}
+	pj_ansi_sprintf(line, "--use-srtp %d\n", use_srtp);
 	pj_strcat2(&cfg, line);
     }
     if (app_config.cfg.srtp_secure_signaling != 

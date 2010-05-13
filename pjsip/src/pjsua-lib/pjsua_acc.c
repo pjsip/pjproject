@@ -751,6 +751,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     acc->cfg.use_srtp = cfg->use_srtp;
     acc->cfg.srtp_secure_signaling = cfg->srtp_secure_signaling;
+    acc->cfg.srtp_optional_dup_offer = cfg->srtp_optional_dup_offer;    
 #endif
 
     /* Global outbound proxy */

@@ -1369,6 +1369,46 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	return status;
     }
 
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /* Check if SRTP is in optional mode and configured to use duplicated
+     * media, i.e: secured and unsecured version, in the SDP offer.
+     */
+    if (!rem_sdp &&
+	pjsua_var.acc[call->acc_id].cfg.use_srtp == PJMEDIA_SRTP_OPTIONAL &&
+	pjsua_var.acc[call->acc_id].cfg.srtp_optional_dup_offer)
+    {
+	unsigned i;
+
+	for (i = 0; i < sdp->media_count; ++i) {
+	    pjmedia_sdp_media *m = sdp->media[i];
+
+	    /* Check if this media is unsecured but has SDP "crypto" 
+	     * attribute.
+	     */
+	    if (pj_stricmp2(&m->desc.transport, "RTP/AVP") == 0 &&
+		pjmedia_sdp_media_find_attr2(m, "crypto", NULL) != NULL)
+	    {
+		pjmedia_sdp_media *new_m;
+
+		/* Duplicate this media and apply secured transport */
+		new_m = pjmedia_sdp_media_clone(pool, m);
+		pj_strdup2(pool, &new_m->desc.transport, "RTP/SAVP");
+
+		/* Remove the "crypto" attribute in the unsecured media */
+		pjmedia_sdp_media_remove_all_attr(m, "crypto");
+
+		/* Insert the new media before the unsecured media */
+		if (sdp->media_count < PJMEDIA_MAX_SDP_MEDIA) {
+		    pj_array_insert(sdp->media, sizeof(new_m), 
+				    sdp->media_count, i, &new_m);
+		    ++sdp->media_count;
+		    ++i;
+		}
+	    }
+	}
+    }
+#endif
+
     /* Update currently advertised RTP source address */
     pj_memcpy(&call->med_rtp_addr, &tpinfo.sock_info.rtp_addr_name, 
 	      sizeof(pj_sockaddr));
