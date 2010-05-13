@@ -1,13 +1,14 @@
 #!/bin/bash
 
 if test "$*" = "--help" -o "$*" = "-h"; then
-  echo "configure-iphone [SDK=name_path] [OPTIONS]"
+  echo "configure-iphone [IPHONESDK=name_path] [OPTIONS]"
   echo ""
-  echo "SDK=name_path   Choose which SDK to use. Value can be SDK name (e.g."
-  echo "                iPhoneOS2.2.1.sdk) or the full path of the SDK"
-  echo "OPTIONS         Other options that will be passed directly to "
-  echo "                ./aconfigure script. Run ./aconfigure --help for"
-  echo "                more info."
+  echo "IPHONESDK=name_path   Choose which SDK to use. Value can be SDK name"
+  echo "                      (e.g. iPhoneOS2.2.1.sdk) or the full path of"
+  echo "                      the SDK"
+  echo "OPTIONS               Other options that will be passed directly to"
+  echo "                      ./aconfigure script. Run ./aconfigure --help"
+  echo "                      for more info."
   echo ""
   exit 0
 fi
@@ -26,19 +27,18 @@ if test ! -d $DEVPATH; then
 fi
 
 # Choose SDK version to use
-if test "x$SDK" = "x"; then
-  # If SDK is not set, use the latest one
+if test "$IPHONESDK" = ""; then
+  # If IPHONESDK is not set, use the latest one
   for f in `ls $DEVPATH/SDKs/`; do echo $f | sed 's/\(.sdk\)//'; done | sort | tail -1 > tmpsdkname
-  SDK=`cat tmpsdkname`.sdk
+  IPHONESDK=`cat tmpsdkname`.sdk
   rm -f tmpsdkname
-  echo "$F info: using ${SDK}"
-  SDKPATH=${DEVPATH}/SDKs/${SDK}
-elif test -d ${SDK}; then
-  # .. else if SDK is set and it points to a valid path, just use it
-  SDKPATH=${SDK}
+  SDKPATH=${DEVPATH}/SDKs/${IPHONESDK}
+elif test -d ${IPHONESDK}; then
+  # .. else if IPHONESDK is set and it points to a valid path, just use it
+  SDKPATH=${IPHONESDK}
 else
   # .. else assume the SDK name is used.
-  SDKPATH=${DEVPATH}/SDKs/${SDK}
+  SDKPATH=${DEVPATH}/SDKs/${IPHONESDK}
 fi
 
 # Test the SDK directory
@@ -47,15 +47,33 @@ if test ! -d ${SDKPATH}/usr/include; then
   exit 1
 fi
 
-# Settings to feed to configure script
-export CFLAGS="-O2 -arch armv6 -isysroot ${SDKPATH}"
-export LDFLAGS="-O2 -arch armv6 -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
+# Default CFLAGS if it's not specified
+if test "$CFLAGS" = ""; then
+  CFLAGS="-O2 -Wno-unused-label"
+fi
+
+# Default LDFLAGS if it's not specified
+if test "$LDFLAGS" = ""; then
+  LDFLAGS="-O2"
+fi
+
+# Settings to feed to configure script. Binaries should have the
+# full path as it's not normally in user's PATH
+export CC="${DEVPATH}/usr/bin/arm-apple-darwin9-gcc"
+export CXX="${DEVPATH}/usr/bin/arm-apple-darwin9-g++"
+export CFLAGS="${CFLAGS} -arch armv6 -isysroot ${SDKPATH}"
+export LDFLAGS="${LDFLAGS} -arch armv6 -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
 export AR="${DEVPATH}/usr/bin/libtool -static -o"
 export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the
-# header files in standard /usr/include
-export CPP="${DEVPATH}/usr/bin/arm-apple-darwin9-gcc -E -isysroot ${SDKPATH}"
+# header files in standard /usr/include instead of in isysroot
+export CPP="${CC} -E -isysroot ${SDKPATH}"
 
-# And finally invoke configure script itself
+# And finally invoke the configure script itself
 ./aconfigure --host=arm-apple-darwin9 --disable-floating-point $*
+
+if test "$?" = "0"; then
+  echo "Done configuring for `basename $SDKPATH`"
+  echo ""
+fi
 
