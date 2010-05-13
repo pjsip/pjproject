@@ -40,6 +40,7 @@ if test "$IPHONESDK" = ""; then
   IPHONESDK=`cat tmpsdkname`.sdk
   rm -f tmpsdkname
   SDKPATH=${DEVPATH}/SDKs/${IPHONESDK}
+  echo "$F: IPHONESDK is not specified, choosing ${IPHONESDK}"
 elif test -d ${IPHONESDK}; then
   # .. else if IPHONESDK is set and it points to a valid path, just use it
   SDKPATH=${IPHONESDK}
@@ -53,8 +54,6 @@ if test ! -d ${SDKPATH}/usr/include; then
   echo "$F error: unable to find valid iPhone SDK in ${SDKPATH}"
   exit 1
 fi
-
-echo "$F: IPHONESDK is not specified, choosing ${IPHONESDK}"
 
 # Default CFLAGS if it's not specified
 if test "$CFLAGS" = ""; then
@@ -98,8 +97,9 @@ if test "${CXX}" = ""; then
 fi
 
 # Other settings to feed to configure script. 
-export CFLAGS="${CFLAGS} -arch armv6 -isysroot ${SDKPATH}"
-export LDFLAGS="${LDFLAGS} -arch armv6 -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
+#ARCH="-arch armv6"
+export CFLAGS="${CFLAGS} ${ARCH} -isysroot ${SDKPATH}"
+export LDFLAGS="${LDFLAGS} ${ARCH} -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
 export AR="${DEVPATH}/usr/bin/libtool -static -o"
 export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the
@@ -108,12 +108,14 @@ export CPP="${CC} -E -isysroot ${SDKPATH}"
 
 # Print settings
 if test "1" = "1"; then
-  echo "$F: calling ./aconfigure with these settings:"
+  echo "$F: calling ./aconfigure with env vars:"
   echo " CC = ${CC}"
   echo " CXX = ${CXX}"
   echo " SDKPATH = ${SDKPATH}"
   echo " CFLAGS = ${CFLAGS}"
+  echo " LDFLAGS = ${LDFLAGS}"
   echo " AR = ${AR}"
+  echo " RANLIB = ${RANLIB}"
 fi
 
 # And finally invoke the configure script itself
