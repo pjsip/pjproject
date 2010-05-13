@@ -1,23 +1,30 @@
 #!/bin/bash
 
+F="configure-iphone"
+
 if test "$*" = "--help" -o "$*" = "-h"; then
-  echo "configure-iphone [IPHONESDK=name_path] [OPTIONS]"
+  echo "$F [OPTIONS]"
   echo ""
-  echo "IPHONESDK=name_path   Choose which SDK to use. Value can be SDK name"
-  echo "                      (e.g. iPhoneOS2.2.1.sdk) or the full path of"
-  echo "                      the SDK"
-  echo "OPTIONS               Other options that will be passed directly to"
-  echo "                      ./aconfigure script. Run ./aconfigure --help"
-  echo "                      for more info."
+  echo "where:"
+  echo "  OPTIONS    Other options that will be passed directly to"
+  echo "             ./aconfigure script. Run ./aconfigure --help"
+  echo "             for more info."
+  echo ""
+  echo "Environment variables:"
+  echo "  IPHONESDK  Optionally specify which SDK to use. Value is the full "
+  echo "             path of the SDK. By default, the latest SDK installed"
+  echo "             will be used."
+  echo "  CC         Optionally specify the path of the ARM cross compiler"
+  echo "             to use. By default, the compiler is deduced from the"
+  echo "             SDK."
   echo ""
   exit 0
 fi
 
-F="configure-iphone"
-
 # Set the main iPhone developer directory, if not set
 if test "x${DEVPATH}" = "x"; then
   DEVPATH=/Developer/Platforms/iPhoneOS.platform/Developer
+  echo "$F: DEVPATH is not specified, using ${DEVPATH}"
 fi
 
 # Make sure $DEVPATH directory exist
@@ -47,6 +54,8 @@ if test ! -d ${SDKPATH}/usr/include; then
   exit 1
 fi
 
+echo "$F: IPHONESDK is not specified, choosing ${IPHONESDK}"
+
 # Default CFLAGS if it's not specified
 if test "$CFLAGS" = ""; then
   CFLAGS="-O2 -Wno-unused-label"
@@ -57,10 +66,38 @@ if test "$LDFLAGS" = ""; then
   LDFLAGS="-O2"
 fi
 
-# Settings to feed to configure script. Binaries should have the
+# Determine which gcc for this SDK. Binaries should have the
 # full path as it's not normally in user's PATH
-export CC="${DEVPATH}/usr/bin/arm-apple-darwin9-gcc"
-export CXX="${DEVPATH}/usr/bin/arm-apple-darwin9-g++"
+
+if test "${CC}" = ""; then
+  for archpath in `ls -d ${SDKPATH}/usr/lib/gcc/arm-apple-darwin*`; do
+    archname=`basename ${archpath}`
+    for gccver in `ls ${archpath}`; do
+       gccpath="${DEVPATH}/usr/bin/${archname}-gcc-${gccver}"
+       if test -e ${gccpath}; then
+          export CC="${gccpath}"
+          break
+       fi
+    done
+    if test ! "${CC}" = ""; then
+       echo "$F: CC is not specified, choosing ${CC}"
+       break
+    fi
+  done
+fi
+
+if test "${CC}" = ""; then
+    echo "$F error: unable to find gcc for ${IPHONESDK}. If you think you have the right gcc, set the full path in CC environment variable."
+    exit 1
+fi
+
+# Set CXX if not set
+if test "${CXX}" = ""; then
+  export CXX=`echo ${CC} | sed 's/gcc/g++/'`
+  echo "$F: CXX is not specified, using ${CXX}"
+fi
+
+# Other settings to feed to configure script. 
 export CFLAGS="${CFLAGS} -arch armv6 -isysroot ${SDKPATH}"
 export LDFLAGS="${LDFLAGS} -arch armv6 -isysroot ${SDKPATH} -framework AudioToolbox -framework Foundation"
 export AR="${DEVPATH}/usr/bin/libtool -static -o"
@@ -68,6 +105,16 @@ export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the
 # header files in standard /usr/include instead of in isysroot
 export CPP="${CC} -E -isysroot ${SDKPATH}"
+
+# Print settings
+if test "1" = "1"; then
+  echo "$F: calling ./aconfigure with these settings:"
+  echo " CC = ${CC}"
+  echo " CXX = ${CXX}"
+  echo " SDKPATH = ${SDKPATH}"
+  echo " CFLAGS = ${CFLAGS}"
+  echo " AR = ${AR}"
+fi
 
 # And finally invoke the configure script itself
 ./aconfigure --host=arm-apple-darwin9 --disable-floating-point $*
