@@ -41,13 +41,13 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_LANG_C
 
-if test "$AR" = ""; then AR="$(CROSS_COMPILE)ar rv"; fi
+if test "$AR" = ""; then AR="${CROSS_COMPILE}ar rv"; fi
 AC_SUBST(AR)
 if test "$LD" = ""; then LD="$CC"; fi
 AC_SUBST(LD)
 if test "$LDOUT" = ""; then LDOUT="-o"; fi
 AC_SUBST(LDOUT)
-if test "$RANLIB" = ""; then RANLIB="$(CROSSCOMPILE)ranlib"; fi
+if test "$RANLIB" = ""; then RANLIB="${CROSS_COMPILE}ranlib"; fi
 AC_SUBST(RANLIB)
 if test "$OBJEXT" = ""; then OBJEXT='o'; fi
 AC_SUBST(OBJEXT)

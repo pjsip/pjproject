@@ -620,6 +620,17 @@ GREP
 CPP
 ac_build_mak_vars
 ac_pjdir
+CC_CFLAGS
+CC_OPTIMIZE
+CC_DEF
+CC_INC
+CC_OUT
+LIBEXT2
+LIBEXT
+RANLIB
+LDOUT
+LD
+AR
 ac_ct_CXX
 CXXFLAGS
 CXX
@@ -3326,13 +3337,13 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
-if test "$AR" = ""; then AR="$(CROSS_COMPILE)ar rv"; fi
+if test "$AR" = ""; then AR="${CROSS_COMPILE}ar rv"; fi
 
 if test "$LD" = ""; then LD="$CC"; fi
 
 if test "$LDOUT" = ""; then LDOUT="-o"; fi
 
-if test "$RANLIB" = ""; then RANLIB="$(CROSSCOMPILE)ranlib"; fi
+if test "$RANLIB" = ""; then RANLIB="${CROSS_COMPILE}ranlib"; fi
 
 if test "$OBJEXT" = ""; then OBJEXT='o'; fi
 
@@ -5413,8 +5424,8 @@ else
  case $target in
   arm-apple-darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox"
-	{ echo "$as_me:$LINENO: result: Checking sound device backend... AudioUnit" >&5
-echo "${ECHO_T}Checking sound device backend... AudioUnit" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking sound device backend... AudioUnit" >&5
+$as_echo "Checking sound device backend... AudioUnit" >&6; }
 	;;
   *darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
