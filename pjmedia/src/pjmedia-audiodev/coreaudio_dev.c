@@ -23,6 +23,13 @@
 
 #if PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
 
+#include "TargetConditionals.h"
+#if TARGET_OS_IPHONE
+    #define COREAUDIO_MAC 0
+#else
+    #define COREAUDIO_MAC 1
+#endif
+
 #include <AudioUnit/AudioUnit.h>
 #if !COREAUDIO_MAC
     #include <AudioToolbox/AudioServices.h>
@@ -201,7 +208,7 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
     AudioObjectPropertyAddress addr;
     AudioDeviceID *dev_ids;
     UInt32 buf_size, dev_size, size = sizeof(AudioDeviceID);
-    AudioBufferList *buf;
+    AudioBufferList *buf = NULL;
     OSStatus ostatus;
 #endif
 
