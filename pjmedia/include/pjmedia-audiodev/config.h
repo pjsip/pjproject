@@ -78,7 +78,7 @@ PJ_BEGIN_DECL
  * This setting controls whether coreaudio support should be included.
  */
 #ifndef PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
-#   define PJMEDIA_AUDIO_DEV_HAS_COREAUDIO	1
+#   define PJMEDIA_AUDIO_DEV_HAS_COREAUDIO	0
 #endif
 
 
