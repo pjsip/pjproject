@@ -2283,7 +2283,7 @@ test -n "$target_alias" &&
   program_prefix=${target_alias}-
 ac_config_headers="$ac_config_headers pjlib/include/pj/compat/os_auto.h pjlib/include/pj/compat/m_auto.h pjmedia/include/pjmedia/config_auto.h pjmedia/include/pjmedia-codec/config_auto.h pjsip/include/pjsip/sip_autoconf.h"
 
-ac_config_files="$ac_config_files build.mak build/os-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/os-auto.mak third_party/build/portaudio/os-auto.mak"
+ac_config_files="$ac_config_files build.mak build/os-auto.mak build/cc-auto.mak pjlib/build/os-auto.mak pjlib-util/build/os-auto.mak pjmedia/build/os-auto.mak pjsip/build/os-auto.mak third_party/build/os-auto.mak third_party/build/portaudio/os-auto.mak"
 
 
 
@@ -3324,6 +3324,33 @@ ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'
 ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $LIBS >&5'
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
+
+
+if test "$AR" = ""; then AR="$(CROSS_COMPILE)ar rv"; fi
+
+if test "$LD" = ""; then LD="$CC"; fi
+
+if test "$LDOUT" = ""; then LDOUT="-o"; fi
+
+if test "$RANLIB" = ""; then RANLIB="$(CROSSCOMPILE)ranlib"; fi
+
+if test "$OBJEXT" = ""; then OBJEXT='o'; fi
+
+if test "$LIBEXT" = ""; then LIBEXT='a'; fi
+
+if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
+
+if test "$CC_OUT" = ""; then CC_OUT="-o"; fi
+
+if test "$CC_INC" = ""; then CC_INC="-I"; fi
+
+if test "$CC_DEF" = ""; then CC_DEF="-D"; fi
+
+if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
+
+if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
+
+
 
 
 
@@ -5384,6 +5411,11 @@ if test "$enable_sound" = "no"; then
   true;
 else
  case $target in
+  arm-apple-darwin*)
+	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox"
+	{ echo "$as_me:$LINENO: result: Checking sound device backend... AudioUnit" >&5
+echo "${ECHO_T}Checking sound device backend... AudioUnit" >&6; }
+	;;
   *darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
 	if test "`uname -r`" = "6.8"; then
@@ -6850,6 +6882,7 @@ do
     "pjsip/include/pjsip/sip_autoconf.h") CONFIG_HEADERS="$CONFIG_HEADERS pjsip/include/pjsip/sip_autoconf.h" ;;
     "build.mak") CONFIG_FILES="$CONFIG_FILES build.mak" ;;
     "build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES build/os-auto.mak" ;;
+    "build/cc-auto.mak") CONFIG_FILES="$CONFIG_FILES build/cc-auto.mak" ;;
     "pjlib/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjlib/build/os-auto.mak" ;;
     "pjlib-util/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjlib-util/build/os-auto.mak" ;;
     "pjmedia/build/os-auto.mak") CONFIG_FILES="$CONFIG_FILES pjmedia/build/os-auto.mak" ;;

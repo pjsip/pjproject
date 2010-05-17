@@ -60,7 +60,8 @@ endif
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export PJDIR := @ac_pjdir@
-export APP_CC := $(CROSS_COMPILE)$(CC_NAME)
+export APP_CC := @CC@
+export APP_CXX := @CXX@
 export APP_CFLAGS := -DPJ_AUTOCONF=1\
 	@CFLAGS@\
 	-I$(PJDIR)/pjlib/include\
@@ -105,6 +106,7 @@ export APP_LIB_FILES = $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 # from within the source distribution
 export PJ_DIR := $(PJDIR)
 export PJ_CC := $(APP_CC)
+export PJ_CXX := $(APP_CXX)
 export PJ_CFLAGS := $(APP_CFLAGS)
 export PJ_CXXFLAGS := $(APP_CXXFLAGS)
 export PJ_LDFLAGS := $(APP_LDFLAGS)

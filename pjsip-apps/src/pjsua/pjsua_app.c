@@ -18,6 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjsua-lib/pjsua.h>
+#include "gui.h"
 
 
 #define THIS_FILE	"pjsua_app.c"
@@ -149,7 +150,8 @@ static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
 
-pj_bool_t app_restart;
+pj_bool_t 	app_restart;
+pj_log_func     *log_cb = NULL;
 
 /*****************************************************************************
  * Configuration manipulation
@@ -4494,6 +4496,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_nat_detect = &on_nat_detect;
     app_config.cfg.cb.on_mwi_info = &on_mwi_info;
     app_config.cfg.cb.on_transport_state = &on_transport_state;
+    app_config.log_cfg.cb = log_cb;
 
     /* Set sound device latency */
     if (app_config.capture_lat > 0)

@@ -13,6 +13,7 @@ AC_CONFIG_HEADER([pjlib/include/pj/compat/os_auto.h
 		 ])
 AC_CONFIG_FILES([build.mak 
 		 build/os-auto.mak 
+		 build/cc-auto.mak
 		 pjlib/build/os-auto.mak 
 		 pjlib-util/build/os-auto.mak 
 		 pjmedia/build/os-auto.mak
@@ -33,9 +34,39 @@ fi
 
 CXXFLAGS="$CFLAGS $CXXFLAGS"
 
+dnl #
+dnl # Configure tools
+dnl #
 AC_PROG_CC
 AC_PROG_CXX
 AC_LANG_C
+
+if test "$AR" = ""; then AR="$(CROSS_COMPILE)ar rv"; fi
+AC_SUBST(AR)
+if test "$LD" = ""; then LD="$CC"; fi
+AC_SUBST(LD)
+if test "$LDOUT" = ""; then LDOUT="-o"; fi
+AC_SUBST(LDOUT)
+if test "$RANLIB" = ""; then RANLIB="$(CROSSCOMPILE)ranlib"; fi
+AC_SUBST(RANLIB)
+if test "$OBJEXT" = ""; then OBJEXT='o'; fi
+AC_SUBST(OBJEXT)
+if test "$LIBEXT" = ""; then LIBEXT='a'; fi
+AC_SUBST(LIBEXT)
+if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
+AC_SUBST(LIBEXT2)
+if test "$CC_OUT" = ""; then CC_OUT="-o"; fi
+AC_SUBST(CC_OUT)
+if test "$CC_INC" = ""; then CC_INC="-I"; fi
+AC_SUBST(CC_INC)
+if test "$CC_DEF" = ""; then CC_DEF="-D"; fi
+AC_SUBST(CC_DEF)
+if test "$CC_OPTIMIZE" = ""; then CC_OPTIMIZE="-O2"; fi
+AC_SUBST(CC_OPTIMIZE)
+if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
+AC_SUBST(CC_CFLAGS)
+
+
 
 AC_SUBST(ac_pjdir)
 AC_SUBST(ac_build_mak_vars)
@@ -487,6 +518,10 @@ if test "$enable_sound" = "no"; then
   true;
 else
  case $target in
+  arm-apple-darwin*)
+	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox"
+	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
+	;;
   *darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreServices -framework AudioUnit -framework AudioToolbox"
 	if test "`uname -r`" = "6.8"; then
