@@ -75,6 +75,22 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
 
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
+
+    /* See if the error comes from Core Audio. */
+#if PJMEDIA_AUDIO_DEV_HAS_COREAUDIO
+    if (statcode >= PJMEDIA_AUDIODEV_COREAUDIO_ERRNO_START &&
+	statcode <= PJMEDIA_AUDIODEV_COREAUDIO_ERRNO_END)
+    {
+	int ca_err = PJMEDIA_AUDIODEV_COREAUDIO_ERRNO_START - statcode;
+
+	PJ_UNUSED_ARG(ca_err);
+	// TODO: create more helpful error messages
+	errstr.ptr = buf;
+	pj_strcpy2(&errstr, "Core audio error");
+	return errstr;
+    } else
+#endif
+
     /* See if the error comes from PortAudio. */
 #if PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO
     if (statcode >= PJMEDIA_AUDIODEV_PORTAUDIO_ERRNO_START &&

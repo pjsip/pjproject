@@ -201,7 +201,10 @@ typedef enum pjmedia_aud_dev_route
     PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER = 1,
 
     /** Route to earpiece */
-    PJMEDIA_AUD_DEV_ROUTE_EARPIECE = 2
+    PJMEDIA_AUD_DEV_ROUTE_EARPIECE = 2,
+
+    /** Route to paired Bluetooth device */
+    PJMEDIA_AUD_DEV_ROUTE_BLUETOOTH = 4
 
 } pjmedia_aud_dev_route;
 
