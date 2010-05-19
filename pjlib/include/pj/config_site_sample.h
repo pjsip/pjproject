@@ -171,7 +171,7 @@
     /* Disable safe module access, since we don't use multithreading */
     #define PJSIP_SAFE_MODULE			0
 
-    /* Increase allowable packet size, just in case */
+    /* Use large enough packet size  */
     #define PJSIP_MAX_PKT_LEN			2000
 
     /* Symbian has problem with too many large blocks */
@@ -333,7 +333,7 @@
      */
 
     /* Increase allowable packet size, just in case */
-    #define PJSIP_MAX_PKT_LEN			2000
+    //#define PJSIP_MAX_PKT_LEN			2000
 
     /*
      * PJSUA settings.
