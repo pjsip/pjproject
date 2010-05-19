@@ -3832,7 +3832,7 @@ _ACEOF
 { $as_echo "$as_me:${as_lineno-$LINENO}: checking memory alignment" >&5
 $as_echo_n "checking memory alignment... " >&6; }
 case $target in
-    ia64-* | x86_64-* )
+    sparc64-* | ia64-* | x86_64-* )
 	$as_echo "#define PJ_POOL_ALIGNMENT 8" >>confdefs.h
 
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: 8 bytes" >&5
