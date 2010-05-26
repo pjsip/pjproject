@@ -562,7 +562,9 @@ static pj_status_t parse_amr(ipp_private_t *codec_data, void *pkt,
 	return status;
 
     /* Check Change Mode Request. */
-    if ((setting->amr_nb && cmr <= 7) || (!setting->amr_nb && cmr <= 8)) {
+    if (((setting->amr_nb && cmr <= 7) || (!setting->amr_nb && cmr <= 8)) &&
+	s->enc_mode != cmr)
+    {
 	struct ipp_codec *ippc = &ipp_codec[codec_data->codec_idx];
 
 	s->enc_mode = cmr;
