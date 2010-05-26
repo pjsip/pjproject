@@ -479,7 +479,7 @@ PJ_DEF(pj_status_t) pj_sockaddr_parse2(int af, unsigned options,
 	    p_hostpart->slen = 0;
 	if (p_port)
 	    *p_port = 0;
-	if (*raf)
+	if (raf)
 	    *raf = PJ_AF_INET;
 	return PJ_SUCCESS;
     }
