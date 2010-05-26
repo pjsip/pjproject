@@ -815,6 +815,9 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 	PJ_TODO(CHECK_SDP_NEGOTIATION_WHEN_ASYMETRIC_MEDIA_IS_ALLOWED);
 
     } else {
+	/* Offer format priority based on answer format index/priority */
+	unsigned offer_fmt_prior[PJMEDIA_MAX_SDP_FMT];
+
 	/* Remove all format in the offer that has no matching answer */
 	for (i=0; i<offer->desc.fmt_count;) {
 	    unsigned pt;
@@ -907,6 +910,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 		--offer->desc.fmt_count;
 
 	    } else {
+		offer_fmt_prior[i] = j;
 		++i;
 	    }
 	}
@@ -916,40 +920,55 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 	    return PJMEDIA_SDPNEG_EANSNOMEDIA;
 	}
 
-	/* Arrange format in the offer so the order match the priority
-	 * in the answer
+	/* Post process:
+	 * - Resort offer formats so the order match to the answer.
+	 * - Remove answer formats that unmatches to the offer.
 	 */
-	for (i=0; i<answer->desc.fmt_count; ++i) {
+	
+	/* Resort offer formats */
+	for (i=0; i<offer->desc.fmt_count; ++i) {
 	    unsigned j;
-	    pj_str_t *fmt = &answer->desc.fmt[i];
-
-	    for (j=i; j<offer->desc.fmt_count; ++j) {
-		if (pj_strcmp(fmt, &offer->desc.fmt[j])==0) {
+	    for (j=i+1; j<offer->desc.fmt_count; ++j) {
+		if (offer_fmt_prior[i] > offer_fmt_prior[j]) {
+		    unsigned tmp = offer_fmt_prior[i];
+		    offer_fmt_prior[i] = offer_fmt_prior[j];
+		    offer_fmt_prior[j] = tmp;
 		    str_swap(&offer->desc.fmt[i], &offer->desc.fmt[j]);
-		    break;
 		}
 	    }
+	}
 
-	    /* If this answer format has no matching format, let's remove it
-	     * from the answer.
-	     */
-	    if (j >= offer->desc.fmt_count) {
-		pjmedia_sdp_attr *a;
+	/* Remove unmatched answer formats */
+	{
+	    unsigned del_cnt = 0;
+	    for (i=0; i<answer->desc.fmt_count;) {
+		/* The offer is ordered now, also the offer_fmt_prior */
+		if (i >= offer->desc.fmt_count || 
+		    offer_fmt_prior[i]-del_cnt != i)
+		{
+		    pj_str_t *fmt = &answer->desc.fmt[i];
+		    pjmedia_sdp_attr *a;
 
-		/* Remove rtpmap associated with this format */
-		a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", fmt);
-		if (a)
-		    pjmedia_sdp_media_remove_attr(answer, a);
+		    /* Remove rtpmap associated with this format */
+		    a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", fmt);
+		    if (a)
+			pjmedia_sdp_media_remove_attr(answer, a);
 
-		/* Remove fmtp associated with this format */
-		a = pjmedia_sdp_media_find_attr2(answer, "fmtp", fmt);
-		if (a)
-		    pjmedia_sdp_media_remove_attr(answer, a);
+		    /* Remove fmtp associated with this format */
+		    a = pjmedia_sdp_media_find_attr2(answer, "fmtp", fmt);
+		    if (a)
+			pjmedia_sdp_media_remove_attr(answer, a);
 
-		/* Remove this format from answer's array */
-		pj_array_erase(answer->desc.fmt, sizeof(answer->desc.fmt[0]),
-			       answer->desc.fmt_count, i);
-		--answer->desc.fmt_count;
+		    /* Remove this format from answer's array */
+		    pj_array_erase(answer->desc.fmt, 
+				   sizeof(answer->desc.fmt[0]),
+				   answer->desc.fmt_count, i);
+		    --answer->desc.fmt_count;
+
+		    ++del_cnt;
+		} else {
+		    ++i;
+		}
 	    }
 	}
     }
