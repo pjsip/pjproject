@@ -1480,9 +1480,6 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
     acc->reg_last_err = param->status;
     acc->reg_last_code = param->code;
 
-    if (pjsua_var.ua_cfg.cb.on_reg_state)
-	(*pjsua_var.ua_cfg.cb.on_reg_state)(acc->index);
-
     /* Check if we need to auto retry registration. Basically, registration
      * failure codes triggering auto-retry are those of temporal failures
      * considered to be recoverable in relatively short term.
@@ -1497,6 +1494,9 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
     {
 	schedule_reregistration(acc);
     }
+
+    if (pjsua_var.ua_cfg.cb.on_reg_state)
+	(*pjsua_var.ua_cfg.cb.on_reg_state)(acc->index);
 
     PJSUA_UNLOCK();
 }
@@ -2368,8 +2368,15 @@ static void auto_rereg_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 
     PJSUA_LOCK();
 
-    if (!acc->valid || !acc->auto_rereg.active)
+    /* Check if the reregistration timer is still valid, e.g: while waiting
+     * timeout timer application might have deleted the account or disabled
+     * the auto-reregistration.
+     */
+    if (!acc->valid || !acc->auto_rereg.active || 
+	acc->cfg.reg_retry_interval == 0)
+    {
 	goto on_return;
+    }
 
     /* Start re-registration */
     acc->auto_rereg.attempt_cnt++;
@@ -2390,7 +2397,12 @@ static void schedule_reregistration(pjsua_acc *acc)
 {
     pj_time_val delay;
 
-    pj_assert(acc && acc->valid && acc->cfg.reg_retry_interval);
+    pj_assert(acc);
+
+    /* Validate the account and re-registration feature status */
+    if (!acc->valid || acc->cfg.reg_retry_interval == 0) {
+	return;
+    }
 
     /* If configured, disconnect calls of this account after the first
      * reregistration attempt failed.
