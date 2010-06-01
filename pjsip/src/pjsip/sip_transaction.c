@@ -557,7 +557,10 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
 		   NULL))
     {
 	pj_mutex_unlock(mod_tsx_layer.mutex);
-	PJ_LOG(2,(THIS_FILE, "Unable to register transaction (key exists)"));
+	PJ_LOG(2,(THIS_FILE, 
+		  "Unable to register %.*s transaction (key exists)",
+		  (int)tsx->method.name.slen,
+		  tsx->method.name.ptr));
 	return PJ_EEXISTS;
     }
 
@@ -1273,6 +1276,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
      */
     status = pjsip_get_request_dest(tdata, &dst_info);
     if (status != PJ_SUCCESS) {
+	unlock_tsx(tsx, &lck);
 	tsx_destroy(tsx);
 	return status;
     }
@@ -1281,7 +1285,10 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
     /* Register transaction to hash table. */
     status = mod_tsx_layer_register_tsx(tsx);
     if (status != PJ_SUCCESS) {
+	/* The assertion is removed by #1090:
 	pj_assert(!"Bug in branch_param generator (i.e. not unique)");
+	*/
+	unlock_tsx(tsx, &lck);
 	tsx_destroy(tsx);
 	return status;
     }
