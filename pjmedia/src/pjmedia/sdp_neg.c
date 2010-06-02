@@ -779,6 +779,9 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 	 * Set our port to zero too in active SDP.
 	 */
 	offer->desc.port = 0;
+
+	/* Don't need to proceed */
+	return PJ_SUCCESS;
     }
 
 
