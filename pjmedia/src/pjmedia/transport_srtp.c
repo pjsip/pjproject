@@ -1054,9 +1054,13 @@ static pj_status_t parse_attr_crypto(pj_pool_t *pool,
 	return PJMEDIA_SDP_EINATTR;
     }
     tmp = pj_str(token);
-    crypto->key.ptr = (char*) pj_pool_zalloc(pool, MAX_KEY_LEN);
+    if (PJ_BASE64_TO_BASE256_LEN(tmp.slen) > MAX_KEY_LEN) {
+	PJ_LOG(4,(THIS_FILE, "Key too long"));
+	return PJMEDIA_SRTP_EINKEYLEN;
+    }
 
     /* Decode key */
+    crypto->key.ptr = (char*) pj_pool_zalloc(pool, MAX_KEY_LEN);
     itmp = MAX_KEY_LEN;
     status = pj_base64_decode(&tmp, (pj_uint8_t*)crypto->key.ptr, 
 			      &itmp);
