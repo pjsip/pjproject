@@ -169,7 +169,7 @@ void pjsua_im_process_pager(int call_id, const pj_str_t *from,
     contact_hdr = (pjsip_contact_hdr*)
 		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
 				     NULL);
-    if (contact_hdr) {
+    if (contact_hdr && contact_hdr->uri) {
 	contact.ptr = (char*) pj_pool_alloc(rdata->tp_info.pool, 
 				    	    PJSIP_MAX_URL_SIZE);
 	contact.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,

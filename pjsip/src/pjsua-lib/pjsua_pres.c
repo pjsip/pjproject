@@ -1610,7 +1610,7 @@ static void pjsua_evsub_on_tsx_state(pjsip_evsub *sub,
     contact_hdr = (pjsip_contact_hdr*)
 		  pjsip_msg_find_hdr(event->body.rx_msg.rdata->msg_info.msg,
 				     PJSIP_H_CONTACT, NULL);
-    if (!contact_hdr) {
+    if (!contact_hdr || !contact_hdr->uri) {
 	return;
     }
 

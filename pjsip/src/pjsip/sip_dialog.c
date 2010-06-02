@@ -432,8 +432,9 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
 		      pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
 				         pos);
 	if (contact_hdr) {
-	    if (!PJSIP_URI_SCHEME_IS_SIP(contact_hdr->uri) && 
-		!PJSIP_URI_SCHEME_IS_SIPS(contact_hdr->uri))
+	    if (!contact_hdr->uri ||
+		(!PJSIP_URI_SCHEME_IS_SIP(contact_hdr->uri) &&
+		 !PJSIP_URI_SCHEME_IS_SIPS(contact_hdr->uri)))
 	    {
 		pos = (pjsip_hdr*)contact_hdr->next;
 		if (pos == &rdata->msg_info.msg->hdr)
@@ -611,7 +612,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_fork( const pjsip_dialog *first_dlg,
     /* Find Contact header in the response */
     contact = (const pjsip_contact_hdr*)
 	      pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
-    if (contact == NULL)
+    if (contact == NULL || contact->uri == NULL)
 	return PJSIP_EMISSINGHDR;
 
     /* Create the dialog. */
@@ -1501,7 +1502,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_respond(  pjsip_dialog *dlg,
 }
 
 
-/* This function is called by user agent upon receiving incoming response
+/* This function is called by user agent upon receiving incoming request
  * message.
  */
 void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
@@ -1588,10 +1589,11 @@ void pjsip_dlg_on_rx_request( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	contact = (pjsip_contact_hdr*)
 		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
 				     NULL);
-	if (contact && (dlg->remote.contact==NULL ||
-			pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, 
-				      dlg->remote.contact->uri, 
-				      contact->uri)))
+	if (contact && contact->uri &&
+	    (dlg->remote.contact==NULL ||
+ 	     pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
+			   dlg->remote.contact->uri,
+			   contact->uri)))
 	{
 	    dlg->remote.contact = (pjsip_contact_hdr*) 
 	    			  pjsip_hdr_clone(dlg->pool, contact);
@@ -1793,10 +1795,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	contact = (pjsip_contact_hdr*)
 		  pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT, 
 				     NULL);
-	if (contact && (dlg->remote.contact==NULL ||
-			pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, 
-				      dlg->remote.contact->uri, 
-				      contact->uri)))
+	if (contact && contact->uri &&
+	    (dlg->remote.contact==NULL ||
+	     pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
+			   dlg->remote.contact->uri,
+			   contact->uri)))
 	{
 	    dlg->remote.contact = (pjsip_contact_hdr*) 
 	    			  pjsip_hdr_clone(dlg->pool, contact);
@@ -1843,10 +1846,11 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	contact = (pjsip_contact_hdr*) pjsip_msg_find_hdr(rdata->msg_info.msg,
 							  PJSIP_H_CONTACT, 
 				     			  NULL);
-	if (contact && (dlg->remote.contact==NULL ||
-			pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI, 
-				      dlg->remote.contact->uri, 
-				      contact->uri)))
+	if (contact && contact->uri &&
+	    (dlg->remote.contact==NULL ||
+	     pjsip_uri_cmp(PJSIP_URI_IN_REQ_URI,
+			   dlg->remote.contact->uri,
+			   contact->uri)))
 	{
 	    dlg->remote.contact = (pjsip_contact_hdr*) 
 	    			  pjsip_hdr_clone(dlg->pool, contact);

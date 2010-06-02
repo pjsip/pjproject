@@ -2237,9 +2237,12 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
 			pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_CONTACT,
 					   pos);
 	    if (h_contact) {
-		uri = (pjsip_uri*) pjsip_uri_get_uri(h_contact->uri);
-		if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
-		    !PJSIP_URI_SCHEME_IS_SIPS(uri))
+		if (h_contact->uri)
+		    uri = (pjsip_uri*) pjsip_uri_get_uri(h_contact->uri);
+		else
+		    uri = NULL;
+		if (!uri || (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
+		             !PJSIP_URI_SCHEME_IS_SIPS(uri)))
 		{
 		    pos = (pjsip_hdr*)h_contact->next;
 		    if (pos == &rdata->msg_info.msg->hdr)
