@@ -307,7 +307,7 @@ class RecvfromTransaction:
 		self.exclude = exclude
 		self.resp_code = resp_code
 		self.resp_hdr = resp_hdr
-		self.resp_body = resp_body
+		self.body = resp_body
 		self.expect = expect
 			
 
