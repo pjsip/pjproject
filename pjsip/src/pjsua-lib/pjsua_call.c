@@ -1322,6 +1322,31 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     return PJ_SUCCESS;
 }
 
+/*
+ * Check if call remote peer support the specified capability.
+ */
+PJ_DEF(pjsip_dialog_cap_status) pjsua_call_remote_has_cap(
+						    pjsua_call_id call_id,
+						    int htype,
+						    const pj_str_t *hname,
+						    const pj_str_t *token)
+{
+    pjsua_call *call;
+    pjsip_dialog *dlg;
+    pj_status_t status;
+    pjsip_dialog_cap_status cap_status;
+
+    status = acquire_call("pjsua_call_peer_has_cap()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	return PJSIP_DIALOG_CAP_UNKNOWN;
+
+    cap_status = pjsip_dlg_remote_has_cap(dlg, htype, hname, token);
+
+    pjsip_dlg_dec_lock(dlg);
+
+    return cap_status;
+}
+
 
 /*
  * Attach application specific data to the call.

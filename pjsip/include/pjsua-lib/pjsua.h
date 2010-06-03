@@ -2820,6 +2820,32 @@ PJ_DECL(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id);
 PJ_DECL(pj_status_t) pjsua_call_get_info(pjsua_call_id call_id,
 					 pjsua_call_info *info);
 
+/**
+ * Check if remote peer support the specified capability.
+ *
+ * @param call_id	Call identification.
+ * @param htype		The header type to be checked, which value may be:
+ *			- PJSIP_H_ACCEPT
+ *			- PJSIP_H_ALLOW
+ *			- PJSIP_H_SUPPORTED
+ * @param hname		If htype specifies PJSIP_H_OTHER, then the header
+ *			name must be supplied in this argument. Otherwise the 
+ *			value must be set to NULL.
+ * @param token		The capability token to check. For example, if \a 
+ *			htype is PJSIP_H_ALLOW, then \a token specifies the 
+ *			method names; if \a htype is PJSIP_H_SUPPORTED, then
+ *			\a token specifies the extension names such as
+ *			 "100rel".
+ *
+ * @return		PJSIP_DIALOG_CAP_SUPPORTED if the specified capability
+ *			is explicitly supported, see @pjsip_dialog_cap_status
+ *			for more info.
+ */
+PJ_DECL(pjsip_dialog_cap_status) pjsua_call_remote_has_cap(
+						    pjsua_call_id call_id,
+						    int htype,
+						    const pj_str_t *hname,
+						    const pj_str_t *token);
 
 /**
  * Attach application specific data to the call. Application can then
