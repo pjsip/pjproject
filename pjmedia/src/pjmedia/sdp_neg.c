@@ -1007,6 +1007,15 @@ static pj_status_t process_answer(pj_pool_t *pool,
     /* Now update each media line in the offer with the answer. */
     for (; omi<offer->media_count; ++omi) {
 	if (ami == answer->media_count) {
+	    /* The answer has less media than the offer */
+	    pjmedia_sdp_media *am;
+
+	    /* Generate matching-but-disabled-media for the answer */
+	    am = pjmedia_sdp_media_clone(pool, offer->media[omi]);
+	    am->desc.port = 0;
+	    answer->media[answer->media_count++] = am;
+	    ++ami;
+
 	    /* No answer media to be negotiated */
 	    offer->media[omi]->desc.port = 0;
 	    continue;
