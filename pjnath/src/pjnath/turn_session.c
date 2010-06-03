@@ -256,7 +256,8 @@ PJ_DEF(pj_status_t) pj_turn_session_create( const pj_stun_config *cfg,
 	name = "turn%p";
 
     /* Allocate and create TURN session */
-    pool = pj_pool_create(cfg->pf, name, 1000, 1000, NULL);
+    pool = pj_pool_create(cfg->pf, name, PJNATH_POOL_LEN_TURN_SESS,
+			  PJNATH_POOL_INC_TURN_SESS, NULL);
     sess = PJ_POOL_ZALLOC_T(pool, pj_turn_session);
     sess->pool = pool;
     sess->obj_name = pool->obj_name;

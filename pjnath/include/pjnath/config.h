@@ -467,6 +467,25 @@
 #   define PJNATH_POOL_INC_STUN_TDATA		    1000
 #endif
 
+/** TURN session initial pool size */
+#ifndef PJNATH_POOL_LEN_TURN_SESS
+#   define PJNATH_POOL_LEN_TURN_SESS		    1000
+#endif
+
+/** TURN session pool increment size */
+#ifndef PJNATH_POOL_INC_TURN_SESS
+#   define PJNATH_POOL_INC_TURN_SESS		    1000
+#endif
+
+/** TURN socket initial pool size */
+#ifndef PJNATH_POOL_LEN_TURN_SOCK
+#   define PJNATH_POOL_LEN_TURN_SOCK		    1000
+#endif
+
+/** TURN socket pool increment size */
+#ifndef PJNATH_POOL_INC_TURN_SOCK
+#   define PJNATH_POOL_INC_TURN_SOCK		    1000
+#endif
 
 /**
  * @}
