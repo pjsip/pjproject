@@ -1301,32 +1301,11 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	for (i=0; i<rem_sdp->media_count; ++i) {
 	    const pjmedia_sdp_media *rem_m = rem_sdp->media[i];
 	    pjmedia_sdp_media *m;
-	    const pjmedia_sdp_attr *a;
 
 	    if ((int)i == call->audio_idx)
 		continue;
 
-	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-	    pj_strdup(pool, &m->desc.media, &rem_m->desc.media);
-	    pj_strdup(pool, &m->desc.transport, &rem_m->desc.transport);
-	    m->desc.port = 0;
-
-	    /* Add one format, copy from the offer. And copy the corresponding
-	     * rtpmap and fmtp attributes too.
-	     */
-	    m->desc.fmt_count = 1;
-	    pj_strdup(pool, &m->desc.fmt[0], &rem_m->desc.fmt[0]);
-	    if ((a=pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
-					  "rtpmap", &m->desc.fmt[0])) != NULL)
-	    {
-		m->attr[m->attr_count++] = pjmedia_sdp_attr_clone(pool, a);
-	    }
-	    if ((a=pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
-					  "fmtp", &m->desc.fmt[0])) != NULL)
-	    {
-		m->attr[m->attr_count++] = pjmedia_sdp_attr_clone(pool, a);
-	    }
-
+	    m = pjmedia_sdp_media_clone_deactivate(pool, rem_m);
 	    if (i==sdp->media_count)
 		sdp->media[sdp->media_count++] = m;
 	    else {

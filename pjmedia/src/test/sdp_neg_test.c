@@ -96,7 +96,7 @@ static struct test
 	    "m=audio 49170 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"	/* <-- this is not necessary (port 0) */
 	    "m=video 53000 RTP/AVP 32\r\n"
 	    "a=rtpmap:32 MPV/90000\r\n"
 	  },
@@ -129,12 +129,13 @@ static struct test
 	    "m=audio 49170 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    //"a=rtpmap:31 H261/90000\r\n"	/* <-- this is not necessary */
+	    //"a=rtpmap:31 H261/90000\r\n"	/* <-- this is not necessary (port 0) */
 	    "m=video 53000 RTP/AVP 32\r\n"
 	    "a=rtpmap:32 MPV/90000\r\n"
 	    "m=audio 0 RTP/AVP 110\r\n"
-	    "a=rtpmap:110 telephone-events/8000\r\n"
-	    "a=sendonly\r\n"
+	    /* <-- the following attributes are not necessary (port 0) */
+	    //"a=rtpmap:110 telephone-events/8000\r\n"
+	    //"a=sendonly\r\n"
 	  }
 	}
     },
@@ -555,8 +556,10 @@ static struct test
 	    "m=audio 49170 RTP/AVP 0 8\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "a=rtpmap:8 PCMA/8000\r\n"
-	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    // By #1088, the formats won't be negotiated when the media has port 0.
+	    //"m=video 0 RTP/AVP 31\r\n"
+	    "m=video 0 RTP/AVP 31 32\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"  /* <-- this is not necessary (port 0) */
 	  },
 	  {
 	    LOCAL_OFFER,
@@ -589,7 +592,7 @@ static struct test
 	    "m=audio 51372 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"  /* <-- this is not necessary (port 0) */
 	  }
 	}
     },
@@ -665,7 +668,7 @@ static struct test
 	    "m=audio 49172 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"  /* <-- this is not necessary (port 0) */
 	  }
 	}
     },
@@ -816,7 +819,7 @@ static struct test
 	    "c=IN IP4 host.atlanta.example.com\r\n"
 	    "t=0 0\r\n"
 	    "m=audio 0 RTP/AVP 0\r\n"
-	    "a=rtpmap:0 PCMU/8000\r\n"
+	    //"a=rtpmap:0 PCMU/8000\r\n"	  /* <-- this is not necessary (port 0) */
 	    "m=audio 51372 RTP/AVP 97 101\r\n"
 	    "a=rtpmap:97 iLBC/8000\r\n"
 	    "a=rtpmap:101 telephone-event/8000\r\n"
@@ -870,7 +873,7 @@ static struct test
 	    "c=IN IP4 host.biloxi.example.com\r\n"
 	    "t=0 0\r\n"
 	    "m=audio 0 RTP/AVP 0\r\n"
-	    "a=rtpmap:0 PCMU/8000\r\n"
+	    //"a=rtpmap:0 PCMU/8000\r\n"      /* <-- this is not necessary (port 0) */
 	    "m=audio 49170 RTP/AVP 97 101\r\n"
 	    "a=rtpmap:97 iLBC/8000\r\n"
 	    "a=rtpmap:101 telephone-event/8000\r\n",
@@ -916,7 +919,7 @@ static struct test
 	    "m=audio 49170 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"    /* <-- this is not necessary (port 0) */
 	    "",
 	  }
 	}
@@ -962,7 +965,7 @@ static struct test
 	    "m=audio 3000 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"    /* <-- this is not necessary (port 0) */
 	    "",
 	  }
 	}
@@ -1052,9 +1055,9 @@ static struct test
 	    "m=audio 5200 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=audio 0 RTP/AVP 0\r\n"
-	    "a=rtpmap:0 PCMU/8000\r\n"
+	    //"a=rtpmap:0 PCMU/8000\r\n"      /* <-- this is not necessary (port 0) */
 	    "m=video 0 RTP/AVP 31\r\n"
-	    "a=rtpmap:31 H261/90000\r\n"
+	    //"a=rtpmap:31 H261/90000\r\n"    /* <-- this is not necessary (port 0) */
 	    "",
 	  }
 	}
@@ -1230,7 +1233,7 @@ static struct test
 	    "m=audio 7000 RTP/AVP 0\r\n"
 	    "a=rtpmap:0 PCMU/8000\r\n"
 	    "m=audio 0 RTP/AVP 0\r\n"
-	    "a=rtpmap:0 PCMU/8000\r\n"
+	    //"a=rtpmap:0 PCMU/8000\r\n"      /* <-- this is not necessary (port 0) */
 	    "m=video 5000 RTP/AVP 31\r\n"
 	    "a=rtpmap:31 H261/90000\r\n"
 	    "",

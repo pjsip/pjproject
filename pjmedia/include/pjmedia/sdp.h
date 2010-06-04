@@ -531,6 +531,18 @@ PJ_DECL(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
 						  pjmedia_sdp_media *m);
 
 
+/**
+ * Clone SDP media description and deactivate the new SDP media.
+ *
+ * @param rhs	    The SDP media to clone.
+ *
+ * @return	    New media descrption with deactivated indication.
+ */
+PJ_DECL(pjmedia_sdp_media*) pjmedia_sdp_media_clone_deactivate(
+						pj_pool_t *pool,
+						const pjmedia_sdp_media *rhs);
+
+
 /* **************************************************************************
  * SDP SESSION DESCRIPTION
  ****************************************************************************

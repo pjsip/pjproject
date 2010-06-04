@@ -183,6 +183,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_media_cmp( const pjmedia_sdp_media *sd1,
     if (pj_strcmp(&sd1->desc.transport, &sd2->desc.transport) != 0)
 	return PJMEDIA_SDP_ETPORTNOTEQUAL;
 
+    /* For zeroed port media, stop comparing here */
+    if (sd1->desc.port == 0)
+	return PJ_SUCCESS;
+
     /* Compare number of formats. */
     if (sd1->desc.fmt_count != sd2->desc.fmt_count)
 	return PJMEDIA_SDP_EFORMATNOTEQUAL;
