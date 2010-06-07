@@ -196,6 +196,7 @@ PJ_BEGIN_DECL
 enum pjmedia_rtp_pt
 {
     PJMEDIA_RTP_PT_PCMU = 0,	    /**< audio PCMU			    */
+    PJMEDIA_RTP_PT_G721 = 2,	    /**< audio G721 (old def for G726-32)   */
     PJMEDIA_RTP_PT_GSM  = 3,	    /**< audio GSM			    */
     PJMEDIA_RTP_PT_G723 = 4,	    /**< audio G723			    */
     PJMEDIA_RTP_PT_DVI4_8K = 5,	    /**< audio DVI4 8KHz		    */

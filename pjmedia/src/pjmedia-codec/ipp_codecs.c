@@ -289,6 +289,11 @@ ipp_codec[] =
 		    40000, 40000, 2, 0, 0,
 		    NULL, NULL, NULL
     },
+    /* Old definition of G726-32 */
+    {1, "G721",	    PJMEDIA_RTP_PT_G721,      &USC_G726_Fxns,	 8000, 1,  80, 
+		    32000, 32000, 2, 0, 0,
+		    NULL, NULL, NULL
+    },
 #   endif
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_G728
@@ -1498,7 +1503,8 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
 #if PJMEDIA_HAS_INTEL_IPP_CODEC_G726
     /* For G.726: amplify decoding result (USC G.726 encoder deamplified it) */
     if (pt == PJMEDIA_RTP_PT_G726_16 || pt == PJMEDIA_RTP_PT_G726_24 ||
-	pt == PJMEDIA_RTP_PT_G726_32 || pt == PJMEDIA_RTP_PT_G726_40)
+	pt == PJMEDIA_RTP_PT_G726_32 || pt == PJMEDIA_RTP_PT_G726_40 ||
+	pt == PJMEDIA_RTP_PT_G721)
     {
 	unsigned i;
 	pj_int16_t *s = (pj_int16_t*)output->buf;
