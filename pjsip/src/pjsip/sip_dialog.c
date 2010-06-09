@@ -1987,7 +1987,7 @@ PJ_DEF(pjsip_dialog_cap_status) pjsip_dlg_remote_has_cap(
     pjsip_dialog_cap_status cap_status = PJSIP_DIALOG_CAP_UNSUPPORTED;
     unsigned i;
 
-    PJ_ASSERT_RETURN(dlg && token, PJ_FALSE);
+    PJ_ASSERT_RETURN(dlg && token, PJSIP_DIALOG_CAP_UNKNOWN);
 
     pjsip_dlg_inc_lock(dlg);
 
