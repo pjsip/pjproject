@@ -364,6 +364,8 @@ CPjAudioEngine::~CPjAudioEngine()
     if (iVoIPDnlink)
 	iVoIPDnlink->Close();
 
+    delete enc_fmt_if;
+    delete dec_fmt_if;
     delete iVoIPDnlink;
     delete iVoIPUplink;
     delete iFactory;
@@ -385,6 +387,8 @@ TInt CPjAudioEngine::InitPlay()
 
     pj_assert(iVoIPDnlink);
 
+    delete dec_fmt_if;
+    dec_fmt_if = NULL;
     err = iVoIPDnlink->SetFormat(setting_.format, dec_fmt_if);
     if (err != KErrNone)
 	return err;
@@ -402,6 +406,8 @@ TInt CPjAudioEngine::InitRec()
     
     pj_assert(iVoIPUplink);
 
+    delete enc_fmt_if;
+    enc_fmt_if = NULL;
     err = iVoIPUplink->SetFormat(setting_.format, enc_fmt_if);
     if (err != KErrNone)
 	return err;
