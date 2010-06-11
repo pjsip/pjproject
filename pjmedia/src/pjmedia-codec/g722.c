@@ -133,6 +133,7 @@ static struct g722_codec_factory
     pj_pool_t		    *pool;
     pj_mutex_t		    *mutex;
     pjmedia_codec	     codec_list;
+    unsigned		     pcm_shift;
 } g722_codec_factory;
 
 
@@ -141,6 +142,8 @@ struct g722_data
 {
     g722_enc_t		 encoder;
     g722_dec_t		 decoder;
+    unsigned		 pcm_shift;
+    pj_int16_t		 pcm_clip_mask;
     pj_bool_t		 plc_enabled;
     pj_bool_t		 vad_enabled;
     pjmedia_silence_det	*vad;
@@ -167,6 +170,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_init( pjmedia_endpt *endpt )
     g722_codec_factory.base.op = &g722_factory_op;
     g722_codec_factory.base.factory_data = NULL;
     g722_codec_factory.endpt = endpt;
+    g722_codec_factory.pcm_shift = PJMEDIA_G722_DEFAULT_PCM_SHIFT;
 
     g722_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "g722", 1000, 
 						        1000);
@@ -239,6 +243,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_g722_deinit(void)
     TRACE_((THIS_FILE, "G722 codec factory shutdown"));
     return status;
 }
+
+
+/*
+ * Set level adjustment.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_g722_set_pcm_shift(unsigned val)
+{
+    g722_codec_factory.pcm_shift = val;
+    return PJ_SUCCESS;
+}
+
 
 /* 
  * Check if factory can allocate the specified codec. 
@@ -446,6 +461,9 @@ static pj_status_t g722_codec_open(pjmedia_codec *codec,
 
     g722_data->vad_enabled = (attr->setting.vad != 0);
     g722_data->plc_enabled = (attr->setting.plc != 0);
+    g722_data->pcm_shift = g722_codec_factory.pcm_shift;
+    g722_data->pcm_clip_mask = (pj_int16_t)(1<<g722_codec_factory.pcm_shift)-1;
+    g722_data->pcm_clip_mask <<= (16-g722_codec_factory.pcm_shift);
 
     TRACE_((THIS_FILE, "G722 codec opened: vad=%d, plc=%d",
 			g722_data->vad_enabled, g722_data->plc_enabled));
@@ -565,6 +583,17 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 	}
     }
 
+    /* Adjust input signal level from 16-bit to 14-bit */
+    if (g722_data->pcm_shift) {
+	pj_int16_t *p, *end;
+
+	p = (pj_int16_t*)input->buf;
+	end = p + input->size;
+	while (p < end) {
+	    *p++ >>= g722_data->pcm_shift;
+	}
+    }
+
     /* Encode to temporary buffer */
     output->size = output_buf_len;
     status = g722_enc_encode(&g722_data->encoder, (pj_int16_t*)input->buf, 
@@ -623,6 +652,25 @@ static pj_status_t g722_codec_decode(pjmedia_codec *codec,
     }
 
     pj_assert(output->size == SAMPLES_PER_FRAME);
+
+    /* Adjust input signal level from 14-bit to 16-bit */
+    if (g722_data->pcm_shift) {
+	pj_int16_t *p, *end;
+
+	p = (pj_int16_t*)output->buf;
+	end = p + output->size;
+	while (p < end) {
+#if PJMEDIA_G722_STOP_PCM_SHIFT_ON_CLIPPING
+	    /* If there is clipping, stop the PCM shifting */
+	    if (*p & g722_data->pcm_clip_mask) {
+		g722_data->pcm_shift = 0;
+		break;
+	    }
+#endif
+	    *p++ <<= g722_data->pcm_shift;
+	}
+    }
+
     output->size = SAMPLES_PER_FRAME * 2;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
     output->timestamp = input->timestamp;

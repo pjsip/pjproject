@@ -543,7 +543,7 @@ PJ_DEF(pj_status_t) g722_enc_encode( g722_enc_t *enc,
     PJ_ASSERT_RETURN(*out_size >= (nsamples >> 1), PJ_ETOOSMALL);
     
     for(i = 0; i < nsamples; i += 2) {
-	tx_qmf(enc, in[i]>>2, in[i+1]>>2, &xlow, &xhigh);
+	tx_qmf(enc, in[i], in[i+1], &xlow, &xhigh);
 
 	/* low band encoder */
 	ilow = block1l (xlow, enc->slow, enc->detlow) ;

@@ -98,6 +98,40 @@
 
 
 /**
+ * Default G.722 codec encoder and decoder level adjustment. The G.722
+ * specifies that it uses 14 bit PCM for input and output, while PJMEDIA
+ * normally uses 16 bit PCM, so the conversion is done by applying
+ * level adjustment. If the value is non-zero, then PCM input samples to
+ * the encoder will be shifted right by this value, and similarly PCM
+ * output samples from the decoder will be shifted left by this value.
+ *
+ * This can be changed at run-time after initialization by calling
+ * #pjmedia_codec_g722_set_pcm_shift().
+ *
+ * Default: 2.
+ */
+#ifndef PJMEDIA_G722_DEFAULT_PCM_SHIFT
+#   define PJMEDIA_G722_DEFAULT_PCM_SHIFT	    2
+#endif
+
+
+/**
+ * Specifies whether G.722 PCM shifting should be stopped when clipping
+ * detected in the decoder. Enabling this feature can be useful when
+ * talking to G.722 implementation that uses 16 bit PCM for G.722 input/
+ * output (for any reason it seems to work) and the PCM shifting causes
+ * audio clipping.
+ *
+ * See also #PJMEDIA_G722_DEFAULT_PCM_SHIFT.
+ *
+ * Default: enabled.
+ */
+#ifndef PJMEDIA_G722_STOP_PCM_SHIFT_ON_CLIPPING
+#   define PJMEDIA_G722_STOP_PCM_SHIFT_ON_CLIPPING  1
+#endif
+
+
+/**
  * Enable the features provided by Intel IPP libraries, for example
  * codecs such as G.729, G.723.1, G.726, G.728, G.722.1, and AMR.
  *

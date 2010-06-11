@@ -504,7 +504,6 @@ PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec,
     unsigned i;
     int ilowr, ylow, rlow, dlowt;
     int ihigh, rhigh, dhigh;
-    int pcm1, pcm2;
     pj_uint8_t *in_ = (pj_uint8_t*) in;
 
     PJ_ASSERT_RETURN(dec && in && in_size && out && nsamples, PJ_EINVAL);
@@ -529,9 +528,7 @@ PJ_DEF(pj_status_t) g722_dec_decode( g722_dec_t *dec,
 	dec->shigh = block4h (dec, dhigh) ;
 	/* rhigh <= output high band pcm */
 
-	rx_qmf(dec, rlow, rhigh, &pcm1, &pcm2);
-	out[i*2] = (pj_int16_t)(pcm1 << 2);
-	out[i*2+1] = (pj_int16_t)(pcm2 << 2);
+	rx_qmf(dec, rlow, rhigh, &out[i*2], &out[i*2+1]);
     }
 
     *nsamples = in_size << 1;
