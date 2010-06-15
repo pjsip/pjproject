@@ -420,6 +420,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	    rtpmap.param.slen = 1;
 
 	} else {
+	    rtpmap.param.ptr = NULL;
 	    rtpmap.param.slen = 0;
 	}
 
