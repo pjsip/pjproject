@@ -90,6 +90,12 @@ typedef struct pjsua_call
 
     char    last_text_buf_[128];    /**< Buffer for last_text.		    */
 
+    struct {
+	pj_timer_entry	 reinv_timer;/**< Reinvite retry timer.		    */
+	pjmedia_sdp_session *new_sdp;/**< The new SDP offer.		    */
+    } lock_codec;		     /**< Data for codec locking when answer
+					  contains multiple codecs.	    */
+
 } pjsua_call;
 
 
