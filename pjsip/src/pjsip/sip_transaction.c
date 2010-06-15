@@ -451,8 +451,12 @@ PJ_DEF(pj_status_t) pjsip_tsx_layer_init_module(pjsip_endpoint *endpt)
     t4_timer_val.msec = pjsip_cfg()->tsx.t4 % 1000;
     td_timer_val.sec  = pjsip_cfg()->tsx.td / 1000;
     td_timer_val.msec = pjsip_cfg()->tsx.td % 1000;
-    timeout_timer_val.sec  = (64 * pjsip_cfg()->tsx.t1) / 1000;
-    timeout_timer_val.msec = (64 * pjsip_cfg()->tsx.t1) % 1000;
+    /* Changed the initialization below to use td_timer_val instead, to enable
+     * customization to the timeout value.
+     */
+    //timeout_timer_val.sec  = (64 * pjsip_cfg()->tsx.t1) / 1000;
+    //timeout_timer_val.msec = (64 * pjsip_cfg()->tsx.t1) % 1000;
+    timeout_timer_val = td_timer_val;
 
     /* Initialize TLS ID for transaction lock. */
     status = pj_thread_local_alloc(&pjsip_tsx_lock_tls_id);
