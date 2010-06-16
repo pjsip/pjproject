@@ -458,6 +458,16 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
 	     */
 	    if (inv->state < PJSIP_INV_STATE_DISCONNECTED) {
 		inv_check_sdp_in_incoming_msg(inv, inv->invite_tsx, rdata);
+
+		/* Check if local offer got no SDP answer and INVITE session
+		 * is in CONFIRMED state.
+		 */
+		if (pjmedia_sdp_neg_get_state(inv->neg)==
+		    PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+		    inv->state==PJSIP_INV_STATE_CONFIRMED)
+		{
+		    pjmedia_sdp_neg_cancel_offer(inv->neg);
+		}
 	    }
 
 	    /* Now we can terminate the INVITE transaction */
@@ -3975,6 +3985,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    {
 		inv_check_sdp_in_incoming_msg(inv, tsx,
 					      e->body.tsx_state.src.rdata);
+
+		/* Check if local offer got no SDP answer */
+		if (pjmedia_sdp_neg_get_state(inv->neg)==
+		    PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+		{
+		    pjmedia_sdp_neg_cancel_offer(inv->neg);
+		}
 	    }
 
 	}
@@ -4012,6 +4029,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    /* Process SDP */
 	    inv_check_sdp_in_incoming_msg(inv, tsx, 
 					  e->body.tsx_state.src.rdata);
+
+	    /* Check if local offer got no SDP answer */
+	    if (pjmedia_sdp_neg_get_state(inv->neg)==
+		PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER)
+	    {
+		pjmedia_sdp_neg_cancel_offer(inv->neg);
+	    }
 
 	    /* Send ACK */
 	    inv_send_ack(inv, e);
