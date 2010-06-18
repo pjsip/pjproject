@@ -2769,6 +2769,14 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\cli.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjlib-util\cli_console.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\crc32.c"
 				>
 				<FileConfiguration
@@ -4711,6 +4719,18 @@
 			>
 			<File
 				RelativePath="..\include\pjlib-util\base64.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\cli.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\cli_console.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\cli_imp.h"
 				>
 			</File>
 			<File
