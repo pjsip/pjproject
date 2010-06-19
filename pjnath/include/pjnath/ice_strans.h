@@ -123,7 +123,12 @@ typedef enum pj_ice_strans_op
     PJ_ICE_STRANS_OP_INIT,
 
     /** Negotiation */
-    PJ_ICE_STRANS_OP_NEGOTIATION
+    PJ_ICE_STRANS_OP_NEGOTIATION,
+
+    /** This operatino is used to report failure in keep-alive operation.
+     *  Currently it is only used to report TURN Refresh failure.
+     */
+    PJ_ICE_STRANS_OP_KEEP_ALIVE
 
 } pj_ice_strans_op;
 
@@ -152,10 +157,10 @@ typedef struct pj_ice_strans_cb
 			  unsigned src_addr_len);
 
     /**
-     * Callback to report status.
+     * Callback to report status of various ICE operations.
      * 
      * @param ice_st	    The ICE stream transport.
-     * @param op	    The operation
+     * @param op	    The operation which status is being reported.
      * @param status	    Operation status.
      */
     void    (*on_ice_complete)(pj_ice_strans *ice_st, 

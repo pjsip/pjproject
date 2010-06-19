@@ -849,6 +849,19 @@ typedef struct pjsua_callback
      */
     pjsip_tp_state_callback on_transport_state;
 
+    /**
+     * This callback is called to report error in ICE media transport.
+     * Currently it is used to report TURN Refresh error.
+     *
+     * @param index	Transport index.
+     * @param op	Operation which trigger the failure.
+     * @param status	Error status.
+     * @param param	Additional info about the event. Currently this will
+     * 			always be set to NULL.
+     */
+    void (*on_ice_transport_error)(int index, pj_ice_strans_op op,
+				   pj_status_t status, void *param);
+
 } pjsua_callback;
 
 

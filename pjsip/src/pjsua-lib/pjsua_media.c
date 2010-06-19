@@ -862,6 +862,16 @@ static void on_ice_complete(pjmedia_transport *tp,
 	    }
 	}
 	break;
+    case PJ_ICE_STRANS_OP_KEEP_ALIVE:
+	if (result != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, result,
+		         "ICE keep alive failure for transport %d", id));
+	}
+	if (pjsua_var.ua_cfg.cb.on_ice_transport_error) {
+	    (*pjsua_var.ua_cfg.cb.on_ice_transport_error)(id, op, result,
+							  NULL);
+	}
+	break;
     }
 }
 

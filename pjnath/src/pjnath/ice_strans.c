@@ -152,6 +152,7 @@ typedef struct pj_ice_strans_comp
     pj_stun_sock	*stun_sock;	/**< STUN transport.		*/
     pj_turn_sock	*turn_sock;	/**< TURN relay transport.	*/
     pj_bool_t		 turn_log_off;	/**< TURN loggin off?		*/
+    unsigned		 turn_err_cnt;	/**< TURN disconnected count.	*/
 
     unsigned		 cand_cnt;	/**< # of candidates/aliaes.	*/
     pj_ice_sess_cand	 cand_list[PJ_ICE_ST_MAX_CAND];	/**< Cand array	*/
@@ -239,6 +240,104 @@ PJ_DEF(void) pj_ice_strans_cfg_copy( pj_pool_t *pool,
     pj_stun_auth_cred_dup(pool, &dst->turn.auth_cred,
 			  &src->turn.auth_cred);
 }
+
+
+/*
+ * Add or update TURN candidate.
+ */
+static pj_status_t add_update_turn(pj_ice_strans *ice_st,
+				   pj_ice_strans_comp *comp)
+{
+    pj_turn_sock_cb turn_sock_cb;
+    pj_ice_sess_cand *cand = NULL;
+    unsigned i;
+    pj_status_t status;
+
+    /* Find relayed candidate in the component */
+    for (i=0; i<comp->cand_cnt; ++i) {
+	if (comp->cand_list[i].type == PJ_ICE_CAND_TYPE_RELAYED) {
+	    cand = &comp->cand_list[i];
+	    break;
+	}
+    }
+
+    /* If candidate is found, invalidate it first */
+    if (cand) {
+	cand->status = PJ_EPENDING;
+
+	/* Also if this component's default candidate is set to relay,
+	 * move it temporarily to something else.
+	 */
+	if (comp->default_cand == cand - comp->cand_list) {
+	    /* Init to something */
+	    comp->default_cand = 0;
+	    /* Use srflx candidate as the default, if any */
+	    for (i=0; i<comp->cand_cnt; ++i) {
+		if (comp->cand_list[i].type == PJ_ICE_CAND_TYPE_SRFLX) {
+		    comp->default_cand = i;
+		    break;
+		}
+	    }
+	}
+    }
+
+    /* Init TURN socket */
+    pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
+    turn_sock_cb.on_rx_data = &turn_on_rx_data;
+    turn_sock_cb.on_state = &turn_on_state;
+
+    /* Override with component specific QoS settings, if any */
+    if (ice_st->cfg.comp[comp->comp_id-1].qos_type) {
+	ice_st->cfg.turn.cfg.qos_type =
+	    ice_st->cfg.comp[comp->comp_id-1].qos_type;
+    }
+    if (ice_st->cfg.comp[comp->comp_id-1].qos_params.flags) {
+	pj_memcpy(&ice_st->cfg.turn.cfg.qos_params,
+		  &ice_st->cfg.comp[comp->comp_id-1].qos_params,
+		  sizeof(ice_st->cfg.turn.cfg.qos_params));
+    }
+
+    /* Create the TURN transport */
+    status = pj_turn_sock_create(&ice_st->cfg.stun_cfg, ice_st->cfg.af,
+				 ice_st->cfg.turn.conn_type,
+				 &turn_sock_cb, &ice_st->cfg.turn.cfg,
+				 comp, &comp->turn_sock);
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+
+    /* Add pending job */
+    ///sess_add_ref(ice_st);
+
+    /* Start allocation */
+    status=pj_turn_sock_alloc(comp->turn_sock,
+			      &ice_st->cfg.turn.server,
+			      ice_st->cfg.turn.port,
+			      ice_st->cfg.resolver,
+			      &ice_st->cfg.turn.auth_cred,
+			      &ice_st->cfg.turn.alloc_param);
+    if (status != PJ_SUCCESS) {
+	///sess_dec_ref(ice_st);
+	return status;
+    }
+
+    /* Add relayed candidate with pending status if there's no existing one */
+    if (cand == NULL) {
+	cand = &comp->cand_list[comp->cand_cnt++];
+	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
+	cand->status = PJ_EPENDING;
+	cand->local_pref = RELAY_PREF;
+	cand->transport_id = TP_TURN;
+	cand->comp_id = (pj_uint8_t) comp->comp_id;
+    }
+
+    PJ_LOG(4,(ice_st->obj_name,
+		  "Comp %d: TURN relay candidate waiting for allocation",
+		  comp->comp_id));
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Create the component.
@@ -395,63 +494,7 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 
     /* Create TURN relay if configured. */
     if (ice_st->cfg.turn.server.slen) {
-	pj_turn_sock_cb turn_sock_cb;
-	pj_ice_sess_cand *cand;
-
-	/* Init TURN socket */
-	pj_bzero(&turn_sock_cb, sizeof(turn_sock_cb));
-	turn_sock_cb.on_rx_data = &turn_on_rx_data;
-	turn_sock_cb.on_state = &turn_on_state;
-
-	/* Override with component specific QoS settings, if any */
-	if (ice_st->cfg.comp[comp_id-1].qos_type) {
-	    ice_st->cfg.turn.cfg.qos_type = 
-		ice_st->cfg.comp[comp_id-1].qos_type;
-	}
-	if (ice_st->cfg.comp[comp_id-1].qos_params.flags) {
-	    pj_memcpy(&ice_st->cfg.turn.cfg.qos_params,
-		      &ice_st->cfg.comp[comp_id-1].qos_params,
-		      sizeof(ice_st->cfg.turn.cfg.qos_params));
-	}
-
-	/* Create the TURN transport */
-	status = pj_turn_sock_create(&ice_st->cfg.stun_cfg, ice_st->cfg.af,
-				     ice_st->cfg.turn.conn_type,
-				     &turn_sock_cb, &ice_st->cfg.turn.cfg, 
-				     comp, &comp->turn_sock);
-	if (status != PJ_SUCCESS) {
-	    return status;
-	}
-
-	/* Add pending job */
-	///sess_add_ref(ice_st);
-
-	/* Start allocation */
-	status=pj_turn_sock_alloc(comp->turn_sock,  
-				  &ice_st->cfg.turn.server,
-				  ice_st->cfg.turn.port,
-				  ice_st->cfg.resolver, 
-				  &ice_st->cfg.turn.auth_cred, 
-				  &ice_st->cfg.turn.alloc_param);
-	if (status != PJ_SUCCESS) {
-	    ///sess_dec_ref(ice_st);
-	    return status;
-	}
-
-	/* Add relayed candidate with pending status */
-	cand = &comp->cand_list[comp->cand_cnt++];
-	cand->type = PJ_ICE_CAND_TYPE_RELAYED;
-	cand->status = PJ_EPENDING;
-	cand->local_pref = RELAY_PREF;
-	cand->transport_id = TP_TURN;
-	cand->comp_id = (pj_uint8_t) comp_id;
-
-	PJ_LOG(4,(ice_st->obj_name, 
-		      "Comp %d: TURN relay candidate waiting for allocation",
-		      comp_id));
-
-	/* Set default candidate to relay */
-	comp->default_cand = cand - comp->cand_list;
+	add_update_turn(ice_st, comp);
     }
 
     return PJ_SUCCESS;
@@ -1581,6 +1624,8 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	pj_ice_sess_cand *cand = NULL;
 	unsigned i;
 
+	comp->turn_err_cnt = 0;
+
 	/* Get allocation info */
 	pj_turn_sock_get_info(turn_sock, &rel_info);
 
@@ -1607,6 +1652,9 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 			       &rel_info.relay_addr);
 	cand->status = PJ_SUCCESS;
 
+	/* Set default candidate to relay */
+	comp->default_cand = cand - comp->cand_list;
+
 	PJ_LOG(4,(comp->ice_st->obj_name, 
 		  "Comp %d: TURN allocation complete, relay address is %s",
 		  comp->comp_id, 
@@ -1618,6 +1666,8 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
     } else if (new_state >= PJ_TURN_STATE_DEALLOCATING) {
 	pj_turn_session_info info;
 
+	++comp->turn_err_cnt;
+
 	pj_turn_sock_get_info(turn_sock, &info);
 
 	/* Unregister ourself from the TURN relay */
@@ -1625,9 +1675,17 @@ static void turn_on_state(pj_turn_sock *turn_sock, pj_turn_state_t old_state,
 	comp->turn_sock = NULL;
 
 	/* Set session to fail if we're still initializing */
-	if (old_state < PJ_TURN_STATE_READY) {
+	if (comp->ice_st->state < PJ_ICE_STRANS_STATE_READY) {
 	    sess_fail(comp->ice_st, PJ_ICE_STRANS_OP_INIT,
-		      "TURN relay failed", info.last_status);
+		      "TURN allocation failed", info.last_status);
+	} else if (comp->turn_err_cnt > 1) {
+	    sess_fail(comp->ice_st, PJ_ICE_STRANS_OP_KEEP_ALIVE,
+		      "TURN refresh failed", info.last_status);
+	} else {
+	    PJ_PERROR(4,(comp->ice_st->obj_name, info.last_status,
+		      "Comp %d: TURN allocation failed, retrying",
+		      comp->comp_id));
+	    add_update_turn(comp->ice_st, comp);
 	}
     }
 

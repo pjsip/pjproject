@@ -2909,6 +2909,18 @@ static void on_transport_state(pjsip_transport *tp,
 }
 
 /*
+ * Notification on ICE error.
+ */
+static void on_ice_transport_error(int index, pj_ice_strans_op op,
+				   pj_status_t status, void *param)
+{
+    PJ_UNUSED_ARG(op);
+    PJ_UNUSED_ARG(param);
+    PJ_PERROR(1,(THIS_FILE, status,
+	         "ICE keep alive failure for transport %d", index));
+}
+
+/*
  * Print buddy list.
  */
 static void print_buddy_list(void)
@@ -4505,6 +4517,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_nat_detect = &on_nat_detect;
     app_config.cfg.cb.on_mwi_info = &on_mwi_info;
     app_config.cfg.cb.on_transport_state = &on_transport_state;
+    app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
     app_config.log_cfg.cb = log_cb;
 
     /* Set sound device latency */
