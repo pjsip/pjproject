@@ -1900,6 +1900,30 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * This macro specifies the default value for \a contact_rewrite_method
+ * field in pjsua_acc_config. I specifies  how Contact update will be
+ * done with the registration, if \a allow_contact_rewrite is enabled in
+ *  the account config.
+ *
+ * If set to 1, the Contact update will be done by sending unregistration
+ * to the currently registered Contact, while simultaneously sending new
+ * registration (with different Call-ID) for the updated Contact.
+ *
+ * If set to 2, the Contact update will be done in a single, current
+ * registration session, by removing the current binding (by setting its
+ * Contact's expires parameter to zero) and adding a new Contact binding,
+ * all done in a single request.
+ *
+ * Value 1 is the legacy behavior.
+ *
+ * Default value: 2
+ */
+#ifndef PJSUA_CONTACT_REWRITE_METHOD
+#   define PJSUA_CONTACT_REWRITE_METHOD		2
+#endif
+
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -2106,9 +2130,30 @@ typedef struct pjsua_acc_config
      * This will also update the public name of UDP transport if STUN is
      * configured. 
      *
+     * See also contact_rewrite_method field.
+     *
      * Default: 1 (yes)
      */
     pj_bool_t allow_contact_rewrite;
+
+    /**
+     * Specify how Contact update will be done with the registration, if
+     * \a allow_contact_rewrite is enabled.
+     *
+     * If set to 1, the Contact update will be done by sending unregistration
+     * to the currently registered Contact, while simultaneously sending new
+     * registration (with different Call-ID) for the updated Contact.
+     *
+     * If set to 2, the Contact update will be done in a single, current
+     * registration session, by removing the current binding (by setting its
+     * Contact's expires parameter to zero) and adding a new Contact binding,
+     * all done in a single request.
+     *
+     * Value 1 is the legacy behavior.
+     *
+     * Default value: PJSUA_CONTACT_REWRITE_METHOD (2)
+     */
+    int		     contact_rewrite_method;
 
     /**
      * Set the interval for periodic keep-alive transmission for this account.

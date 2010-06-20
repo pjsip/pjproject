@@ -178,6 +178,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->srtp_optional_dup_offer = pjsua_var.ua_cfg.srtp_optional_dup_offer;
 #endif
     cfg->reg_retry_interval = PJSUA_REG_RETRY_INTERVAL;
+    cfg->contact_rewrite_method = PJSUA_CONTACT_REWRITE_METHOD;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)

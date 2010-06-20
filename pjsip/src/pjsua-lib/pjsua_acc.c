@@ -1098,24 +1098,33 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     }
 
     PJ_LOG(3,(THIS_FILE, "IP address change detected for account %d "
-			 "(%.*s:%d --> %.*s:%d). Updating registration..",
+			 "(%.*s:%d --> %.*s:%d). Updating registration "
+			 "(using method %d)",
 			 acc->index,
 			 (int)uri->host.slen,
 			 uri->host.ptr,
 			 uri->port,
 			 (int)via_addr->slen,
 			 via_addr->ptr,
-			 rport));
+			 rport,
+			 acc->cfg.contact_rewrite_method));
 
-    /* Unregister current contact */
-    pjsua_acc_set_registration(acc->index, PJ_FALSE);
-    if (acc->regc != NULL) {
-	pjsip_regc_destroy(acc->regc);
-	acc->regc = NULL;
-	acc->contact.slen = 0;
+    pj_assert(acc->cfg.contact_rewrite_method == 1 ||
+	      acc->cfg.contact_rewrite_method == 2);
+
+    if (acc->cfg.contact_rewrite_method == 1) {
+	/* Unregister current contact */
+	pjsua_acc_set_registration(acc->index, PJ_FALSE);
+	if (acc->regc != NULL) {
+	    pjsip_regc_destroy(acc->regc);
+	    acc->regc = NULL;
+	    acc->contact.slen = 0;
+	}
     }
 
-    /* Update account's Contact header */
+    /*
+     * Build new Contact header
+     */
     {
 	char *tmp;
 	const char *beginquote, *endquote;
@@ -1151,11 +1160,16 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	    return PJ_FALSE;
 	}
 	pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
+
+	/* Always update, by http://trac.pjsip.org/repos/ticket/864. */
+	pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
+	tp->local_name.port = rport;
+
     }
 
-    /* Always update, by http://trac.pjsip.org/repos/ticket/864. */
-    pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
-    tp->local_name.port = rport;
+    if (acc->cfg.contact_rewrite_method == 2 && acc->regc != NULL) {
+	pjsip_regc_update_contact(acc->regc, 1, &acc->contact);
+    }
 
     /* Perform new registration */
     pjsua_acc_set_registration(acc->index, PJ_TRUE);
