@@ -147,6 +147,16 @@ PJ_DEF(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m)
 }
 
 
+/* Poll the master port clock */
+PJ_DEF(pj_bool_t) pjmedia_master_port_wait( pjmedia_master_port *m,
+					    pj_bool_t wait,
+					    pj_timestamp *ts)
+{
+    PJ_ASSERT_RETURN(m && m->clock, PJ_FALSE);
+
+    return pjmedia_clock_wait(m->clock, wait, ts);
+}
+
 /*
  * Callback to be called for each clock ticks.
  */

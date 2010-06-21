@@ -106,6 +106,26 @@ PJ_DECL(pj_status_t) pjmedia_master_port_stop(pjmedia_master_port *m);
 
 
 /**
+ * Poll the master port clock and execute the callback when the clock tick has
+ * elapsed. This operation is only valid if the master port is created with
+ * #PJMEDIA_CLOCK_NO_ASYNC flag.
+ *
+ * @param m		    The master port.
+ * @param wait		    If non-zero, then the function will block until
+ *			    a clock tick elapsed and callback has been called.
+ * @param ts		    Optional argument to receive the current 
+ *			    timestamp.
+ *
+ * @return		    Non-zero if clock tick has elapsed, or FALSE if
+ *			    the function returns before a clock tick has
+ *			    elapsed.
+ */
+PJ_DECL(pj_bool_t) pjmedia_master_port_wait(pjmedia_master_port *m,
+					    pj_bool_t wait,
+					    pj_timestamp *ts);
+
+
+/**
  * Change the upstream port. Note that application is responsible to destroy
  * current upstream port (the one that is going to be replaced with the
  * new port).
