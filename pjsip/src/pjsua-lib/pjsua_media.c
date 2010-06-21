@@ -855,10 +855,25 @@ static void on_ice_complete(pjmedia_transport *tp,
 		pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
 				&pjsua_var.calls[id].med_rtp_addr))
 	    {
+		pj_bool_t use_update;
+		const pj_str_t STR_UPDATE = { "UPDATE", 6 };
+		pjsip_dialog_cap_status support_update;
+		pjsip_dialog *dlg;
+
+		dlg = pjsua_var.calls[id].inv->dlg;
+		support_update = pjsip_dlg_remote_has_cap(dlg, PJSIP_H_ALLOW,
+							  NULL, &STR_UPDATE);
+		use_update = (support_update == PJSIP_DIALOG_CAP_SUPPORTED);
+
 		PJ_LOG(4,(THIS_FILE, 
 		          "ICE default transport address has changed for "
-			  "call %d, sending UPDATE", id));
-		pjsua_call_update(id, 0, NULL);
+			  "call %d, sending %s", id,
+			  (use_update ? "UPDATE" : "re-INVITE")));
+
+		if (use_update)
+		    pjsua_call_update(id, 0, NULL);
+		else
+		    pjsua_call_reinvite(id, 0, NULL);
 	    }
 	}
 	break;

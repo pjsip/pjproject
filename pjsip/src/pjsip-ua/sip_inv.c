@@ -2393,7 +2393,7 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     pj_status_t status = PJ_SUCCESS;
 
     /* Verify arguments. */
-    PJ_ASSERT_RETURN(inv && p_tdata && offer, PJ_EINVAL);
+    PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
 
     /* Dialog must have been established */
     PJ_ASSERT_RETURN(inv->dlg->state == PJSIP_DIALOG_STATE_ESTABLISHED,
@@ -2406,24 +2406,26 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     /* Lock dialog. */
     pjsip_dlg_inc_lock(inv->dlg);
 
-    /* Process offer */
-    if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
-	PJ_LOG(4,(inv->dlg->obj_name, 
-		  "Invalid SDP offer/answer state for UPDATE"));
-	status = PJ_EINVALIDOP;
-	goto on_error;
+    /* Process offer, if any */
+    if (offer) {
+	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
+	    PJ_LOG(4,(inv->dlg->obj_name,
+		      "Invalid SDP offer/answer state for UPDATE"));
+	    status = PJ_EINVALIDOP;
+	    goto on_error;
+	}
+
+	/* Notify negotiator about the new offer. This will fix the offer
+	 * with correct SDP origin.
+	 */
+	status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov, inv->neg,
+						    offer);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Retrieve the "fixed" offer from negotiator */
+	pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
     }
-
-    /* Notify negotiator about the new offer. This will fix the offer
-     * with correct SDP origin.
-     */
-    status = pjmedia_sdp_neg_modify_local_offer(inv->pool_prov, inv->neg,
-						offer);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* Retrieve the "fixed" offer from negotiator */
-    pjmedia_sdp_neg_get_neg_local(inv->neg, &offer);
 
     /* Update Contact if required */
     if (new_contact) {
@@ -2449,8 +2451,10 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 	    goto on_error;
 
     /* Attach SDP body */
-    sdp_copy = pjmedia_sdp_session_clone(tdata->pool, offer);
-    pjsip_create_sdp_body(tdata->pool, sdp_copy, &tdata->msg->body);
+    if (offer) {
+	sdp_copy = pjmedia_sdp_session_clone(tdata->pool, offer);
+	pjsip_create_sdp_body(tdata->pool, sdp_copy, &tdata->msg->body);
+    }
 
     /* Unlock dialog. */
     pjsip_dlg_dec_lock(inv->dlg);
@@ -2879,6 +2883,16 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
     /* Get/attach invite session's transaction data */
     else 
     {
+	/* Session-Timer needs to see any error responses, to determine
+	 * whether peer supports UPDATE with empty body.
+	 */
+	if (tsx->state == PJSIP_TSX_STATE_COMPLETED &&
+	    tsx->role == PJSIP_ROLE_UAC)
+	{
+	    status = handle_timer_response(inv, e->body.tsx_state.src.rdata,
+					   PJ_FALSE);
+	}
+
 	tsx_inv_data = (struct tsx_inv_data*)tsx->mod_data[mod_inv.mod.id];
 	if (tsx_inv_data == NULL) {
 	    tsx_inv_data=PJ_POOL_ZALLOC_T(tsx->pool, struct tsx_inv_data);

@@ -59,6 +59,7 @@ struct pjsip_timer
     pj_timer_entry		 timer;		/**< Timer entry	    */
     pj_bool_t			 use_update;	/**< Use UPDATE method to
 						     refresh the session    */
+    pj_bool_t		  	 with_sdp;	/**< SDP in UPDATE?	    */
     pjsip_role_e		 role;		/**< Role in last INVITE/
 						     UPDATE transaction.    */
 
@@ -321,7 +322,7 @@ static void add_timer_headers(pjsip_inv_session *inv, pjsip_tx_data *tdata,
  * the session if UA is the refresher, otherwise it is time to end 
  * the session.
  */
-void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
+static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 {
     pjsip_inv_session *inv = (pjsip_inv_session*) entry->user_data;
     pjsip_tx_data *tdata = NULL;
@@ -330,38 +331,55 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     pj_assert(inv);
 
+    inv->timer->timer.id = 0;
+
     PJ_UNUSED_ARG(timer_heap);
-
-    /* When there is a pending INVITE transaction, delay/reschedule this timer
-     * for five seconds to cover the case that pending INVITE fails and the
-     * previous session is still active. If the pending INVITE is successful, 
-     * timer state will be updated, i.e: restarted or stopped.
-     */
-    if (inv->invite_tsx != NULL) {
-	pj_time_val delay = {5};
-
-	inv->timer->timer.id = 1;
-	pjsip_endpt_schedule_timer(inv->dlg->endpt, &inv->timer->timer, &delay);
-	return;
-    }
 
     /* Lock dialog. */
     pjsip_dlg_inc_lock(inv->dlg);
 
     /* Check our role */
-    as_refresher = 
+    as_refresher =
 	(inv->timer->refresher == TR_UAC && inv->timer->role == PJSIP_ROLE_UAC) ||
 	(inv->timer->refresher == TR_UAS && inv->timer->role == PJSIP_ROLE_UAS);
 
     /* Do action based on role, refresher or refreshee */
     if (as_refresher) {
-
 	pj_time_val now;
+
+	/* As refresher, reshedule the refresh request on the following:
+	 *  - msut not send re-INVITE if another INVITE or SDP negotiation
+	 *    is in progress.
+	 *  - must not send UPDATE with SDP if SDP negotiation is in progress
+	 */
+	pjmedia_sdp_neg_state neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+	if ( (!inv->timer->use_update && (
+			inv->invite_tsx != NULL ||
+			neg_state != PJMEDIA_SDP_NEG_STATE_DONE)
+             )
+	     ||
+	     (inv->timer->use_update && inv->timer->with_sdp &&
+		     neg_state != PJMEDIA_SDP_NEG_STATE_DONE
+	     )
+	   )
+	{
+	    pj_time_val delay = {1, 0};
+
+	    inv->timer->timer.id = 1;
+	    pjsip_endpt_schedule_timer(inv->dlg->endpt, &inv->timer->timer,
+				       &delay);
+	    pjsip_dlg_dec_lock(inv->dlg);
+	    return;
+	}
 
 	/* Refresher, refresh the session */
 	if (inv->timer->use_update) {
-	    /* Create UPDATE request without offer */
-	    status = pjsip_inv_update(inv, NULL, NULL, &tdata);
+	    const pjmedia_sdp_session *offer = NULL;
+
+	    if (inv->timer->with_sdp) {
+		pjmedia_sdp_neg_get_active_local(inv->neg, &offer);
+	    }
+	    status = pjsip_inv_update(inv, NULL, offer, &tdata);
 	} else {
 	    /* Create re-INVITE without modifying session */
 	    pjsip_msg_body *body;
@@ -384,8 +402,8 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 	}
 
 	pj_gettimeofday(&now);
-	PJ_LOG(4, (inv->pool->obj_name, 
-		   "Refresh session after %ds (expiration period=%ds)",
+	PJ_LOG(4, (inv->pool->obj_name,
+		   "Refreshing session after %ds (expiration period=%ds)",
 		   (now.sec-inv->timer->last_refresh.sec),
 		   inv->timer->setting.sess_expires));
     } else {
@@ -414,29 +432,33 @@ void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     /* Print error message, if any */
     if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-
 	if (tdata)
 	    pjsip_tx_data_dec_ref(tdata);
 
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(2, (inv->pool->obj_name, "Session timer fails in %s session, "
-					"err code=%d (%s)",
-					(as_refresher? "refreshing" : 
-						       "terminating"),
-					status, errmsg));					
+	PJ_PERROR(2, (inv->pool->obj_name, status,
+		      "Error in %s session timer",
+		      (as_refresher? "refreshing" : "terminating")));
     }
 }
 
 /* Start Session Timers */
 static void start_timer(pjsip_inv_session *inv)
 {
+    const pj_str_t UPDATE = { "UPDATE", 6 };
     pjsip_timer *timer = inv->timer;
     pj_time_val delay = {0};
 
     pj_assert(inv->timer->active == PJ_TRUE);
 
     stop_timer(inv);
+
+    inv->timer->use_update =
+	    (pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL,
+				      &UPDATE) == PJSIP_DIALOG_CAP_SUPPORTED);
+    if (!inv->timer->use_update) {
+	/* INVITE always needs SDP */
+	inv->timer->with_sdp = PJ_TRUE;
+    }
 
     pj_timer_entry_init(&timer->timer,
 			1,		    /* id */
@@ -837,14 +859,30 @@ PJ_DEF(pj_status_t) pjsip_timer_process_resp(pjsip_inv_session *inv,
 	     */
 	    inv->timer->refresher = TR_UAC;
 
-	PJ_TODO(CHECK_IF_REMOTE_SUPPORT_UPDATE);
-
 	/* Remember our role in this transaction */
 	inv->timer->role = PJSIP_ROLE_UAC;
 
 	/* Finally, set active flag and start the Session Timers */
 	inv->timer->active = PJ_TRUE;
 	start_timer(inv);
+
+    } else if (pjsip_method_cmp(&rdata->msg_info.cseq->method,
+				&pjsip_update_method) == 0 &&
+	       msg->line.status.code >= 400 && msg->line.status.code < 600)
+    {
+	/* This is to handle error response to previous UPDATE that was
+	 * sent without SDP. In this case, retry sending UPDATE but
+	 * with SDP this time.
+	 * Note: the additional expressions are to check that the
+	 *       UPDATE was really the one sent by us, not by other
+	 *       call components (e.g. to change codec)
+	 */
+	if (inv->timer->timer.id == 0 && inv->timer->use_update &&
+	    inv->timer->with_sdp == PJ_FALSE)
+	{
+	    inv->timer->with_sdp = PJ_TRUE;
+	    timer_cb(NULL, &inv->timer->timer);
+	}
     }
 
     return PJ_SUCCESS;
