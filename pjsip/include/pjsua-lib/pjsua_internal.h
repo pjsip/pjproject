@@ -285,6 +285,9 @@ struct pjsua_data
     pj_status_t		 nat_status;	/**< Detection status.		*/
     pj_bool_t		 nat_in_progress; /**< Detection in progress	*/
 
+    /* List of outbound proxies: */
+    pjsip_route_hdr	 outbound_proxy;
+
     /* Account: */
     unsigned		 acc_cnt;	     /**< Number of accounts.	*/
     pjsua_acc_id	 default_acc;	     /**< Default account ID	*/

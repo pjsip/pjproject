@@ -1924,6 +1924,20 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * Bit value used in pjsua_acc_config.reg_use_proxy field to indicate that
+ * the global outbound proxy list should be added to the REGISTER request.
+ */
+#define PJSUA_REG_USE_OUTBOUND_PROXY		1
+
+
+/**
+ * Bit value used in pjsua_acc_config.reg_use_proxy field to indicate that
+ * the account proxy list should be added to the REGISTER request.
+ */
+#define PJSUA_REG_USE_ACC_PROXY			2
+
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -2223,6 +2237,18 @@ typedef struct pjsua_acc_config
      * Default: PJ_FALSE (disabled)
      */
     pj_bool_t	     drop_calls_on_reg_fail;
+
+    /**
+     * Specify how the registration uses the outbound and account proxy
+     * settings. This controls if and what Route headers will appear in
+     * the REGISTER request of this account. The value is bitmask combination
+     * of PJSUA_REG_USE_OUTBOUND_PROXY and PJSUA_REG_USE_ACC_PROXY bits.
+     * If the value is set to 0, the REGISTER request will not use any proxy
+     * (i.e. it will not have any Route headers).
+     *
+     * Default: 3 (PJSUA_REG_USE_OUTBOUND_PROXY | PJSUA_REG_USE_ACC_PROXY)
+     */
+    unsigned	     reg_use_proxy;
 
 } pjsua_acc_config;
 

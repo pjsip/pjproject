@@ -199,21 +199,15 @@ static pj_status_t initialize_acc(unsigned acc_id)
      */
     pj_list_init(&acc->route_set);
 
-    for (i=0; i<pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
-    	pj_str_t hname = { "Route", 5};
+    if (!pj_list_empty(&pjsua_var.outbound_proxy)) {
 	pjsip_route_hdr *r;
-	pj_str_t tmp;
 
-	pj_strdup_with_null(acc->pool, &tmp, 
-			    &pjsua_var.ua_cfg.outbound_proxy[i]);
-	r = (pjsip_route_hdr*)
-	    pjsip_parse_hdr(acc->pool, &hname, tmp.ptr, tmp.slen, NULL);
-	if (r == NULL) {
-	    pjsua_perror(THIS_FILE, "Invalid outbound proxy URI",
-			 PJSIP_EINVALIDURI);
-	    return PJSIP_EINVALIDURI;
+	r = pjsua_var.outbound_proxy.next;
+	while (r != &pjsua_var.outbound_proxy) {
+	    pj_list_push_back(&acc->route_set,
+			      pjsip_hdr_shallow_clone(acc->pool, r));
+	    r = r->next;
 	}
-	pj_list_push_back(&acc->route_set, r);
     }
 
     for (i=0; i<acc_cfg->proxy_cnt; ++i) {
@@ -602,24 +596,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 				      pjsua_var.ua_cfg.outbound_proxy_cnt);
     if (global_route_crc != acc->global_route_crc) {
 	pjsip_route_hdr *r;
-	unsigned i;
 
-	/* Validate the global route and save it to temporary var */
+	/* Copy from global outbound proxies */
 	pj_list_init(&global_route);
-	for (i=0; i < pjsua_var.ua_cfg.outbound_proxy_cnt; ++i) {
-    	    pj_str_t hname = { "Route", 5};
-	    pj_str_t tmp;
-
-	    pj_strdup_with_null(acc->pool, &tmp, 
-				&pjsua_var.ua_cfg.outbound_proxy[i]);
-	    r = (pjsip_route_hdr*)
-		pjsip_parse_hdr(acc->pool, &hname, tmp.ptr, tmp.slen, NULL);
-	    if (r == NULL) {
-		status = PJSIP_EINVALIDURI;
-		pjsua_perror(THIS_FILE, "Invalid outbound proxy URI", status);
-		goto on_return;
-	    }
-	    pj_list_push_back(&global_route, r);
+	r = pjsua_var.outbound_proxy.next;
+	while (r != &pjsua_var.outbound_proxy) {
+	    pj_list_push_back(&global_route,
+		              pjsip_hdr_shallow_clone(acc->pool, r));
+	    r = r->next;
 	}
     }
 
@@ -1610,8 +1594,36 @@ static pj_status_t pjsua_regc_init(int acc_id)
 
     /* Set route-set
      */
-    if (!pj_list_empty(&acc->route_set)) {
-	pjsip_regc_set_route_set( acc->regc, &acc->route_set );
+    if (acc->cfg.reg_use_proxy) {
+	pjsip_route_hdr route_set;
+	const pjsip_route_hdr *r;
+
+	pj_list_init(&route_set);
+
+	if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_OUTBOUND_PROXY) {
+	    r = pjsua_var.outbound_proxy.next;
+	    while (r != &pjsua_var.outbound_proxy) {
+		pj_list_push_back(&route_set, pjsip_hdr_shallow_clone(pool, r));
+		r = r->next;
+	    }
+	}
+
+	if (acc->cfg.reg_use_proxy & PJSUA_REG_USE_ACC_PROXY &&
+	    acc->cfg.proxy_cnt)
+	{
+	    int cnt = acc->cfg.proxy_cnt;
+	    pjsip_route_hdr *pos = route_set.prev;
+	    int i;
+
+	    r = acc->route_set.prev;
+	    for (i=0; i<cnt; ++i) {
+		pj_list_push_front(pos, pjsip_hdr_shallow_clone(pool, r));
+		r = r->prev;
+	    }
+	}
+
+	if (!pj_list_empty(&route_set))
+	    pjsip_regc_set_route_set( acc->regc, &route_set );
     }
 
     /* Add other request headers. */
