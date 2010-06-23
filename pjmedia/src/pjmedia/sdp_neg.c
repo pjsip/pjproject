@@ -1390,7 +1390,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_cancel_offer(pjmedia_sdp_neg *neg)
     PJ_ASSERT_RETURN(neg, PJ_EINVAL);
 
     /* Must be in LOCAL_OFFER state. */
-    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER,
+    PJ_ASSERT_RETURN(neg->state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER ||
+		     neg->state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER,
 		     PJMEDIA_SDPNEG_EINSTATE);
 
     /* Reset state to done */

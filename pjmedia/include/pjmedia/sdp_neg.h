@@ -622,9 +622,11 @@ PJ_DECL(pj_bool_t) pjmedia_sdp_neg_has_local_answer(pjmedia_sdp_neg *neg);
 
 
 /**
- * Cancel previously sent offer, and move negotiator state back to
- * previous stable state (PJMEDIA_SDP_NEG_STATE_DONE). The negotiator
- * must be in PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER state.
+ * Cancel any pending offer, whether the offer is initiated by local or
+ * remote, and move negotiator state back to previous stable state
+ * (PJMEDIA_SDP_NEG_STATE_DONE). The negotiator must be in
+ * PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER or PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER
+ * state.
  *
  * @param neg		The negotiator.
  *

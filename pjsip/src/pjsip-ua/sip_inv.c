@@ -2789,7 +2789,14 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 	if (neg_state != PJMEDIA_SDP_NEG_STATE_WAIT_NEGO ||
 	    (status=inv_negotiate_sdp(inv)) != PJ_SUCCESS)
 	{
-	    /* Negotiation has failed */
+	    /* Negotiation has failed. If negotiator is still
+	     * stuck at non-DONE state, cancel any ongoing offer.
+	     */
+	    neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+	    if (neg_state != PJMEDIA_SDP_NEG_STATE_DONE) {
+		pjmedia_sdp_neg_cancel_offer(inv->neg);
+	    }
+
 	    status = pjsip_dlg_create_response(inv->dlg, rdata, 
 					       PJSIP_SC_NOT_ACCEPTABLE_HERE,
 					       NULL, &tdata);
@@ -2901,11 +2908,9 @@ static void inv_handle_update_response( pjsip_inv_session *inv,
 	}
     }
 
-    /* Otherwise if we don't get successful response, cancel
-     * our negotiator.
-     */
-    if (status != PJ_SUCCESS &&
-	pjmedia_sdp_neg_get_state(inv->neg)==PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
+    /* Cancel the negotiation if we don't get successful negotiation by now */
+    if (pjmedia_sdp_neg_get_state(inv->neg) ==
+		PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER &&
 	tsx_inv_data && tsx_inv_data->sdp_done == PJ_FALSE) 
     {
 	pjmedia_sdp_neg_cancel_offer(inv->neg);
