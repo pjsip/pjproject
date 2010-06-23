@@ -1165,9 +1165,16 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 	goto BYPASS_SRTP;
 
     /* If the media is inactive, do nothing. */
+    /* No, we still need to process SRTP offer/answer even if the media is
+     * marked as inactive, because the transport is still alive in this
+     * case (e.g. for keep-alive). See:
+     *   http://trac.pjsip.org/repos/ticket/1079
+     */
+    /*
     if (pjmedia_sdp_media_find_attr(m_loc, &ID_INACTIVE, NULL) || 
 	(m_rem && pjmedia_sdp_media_find_attr(m_rem, &ID_INACTIVE, NULL)))
 	goto BYPASS_SRTP;
+    */
 
     /* Check remote media transport & set local media transport 
      * based on SRTP usage option.

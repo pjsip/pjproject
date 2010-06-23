@@ -1557,6 +1557,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	/* Call media direction */
 	call->media_dir = PJMEDIA_DIR_NONE;
 
+	/* Don't stop transport because we need to transmit keep-alives, and
+	 * also to prevent restarting ICE negotiation. See
+	 *  http://trac.pjsip.org/repos/ticket/1094
+	 */
+#if 0
 	/* Shutdown transport's session */
 	pjmedia_transport_media_stop(call->med_tp);
 	call->med_tp_st = PJSUA_MED_TP_IDLE;
@@ -1568,6 +1573,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    pjmedia_transport_close(call->med_tp);
 	    call->med_tp = call->med_orig;
 	}
+#endif
 
     } else {
 	pjmedia_transport_info tp_info;

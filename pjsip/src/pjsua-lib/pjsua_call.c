@@ -2184,7 +2184,12 @@ static void dump_media_session(const char *indent,
 	    rem_addr = rem_addr_buf;
 	}
 
-	if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)
+	if (call->media_dir == PJMEDIA_DIR_NONE) {
+	    /* To handle when the stream that is currently being paused
+	     * (http://trac.pjsip.org/repos/ticket/1079)
+	     */
+	    dir = "inactive";
+	} else if (info.stream_info[i].dir == PJMEDIA_DIR_ENCODING)
 	    dir = "sendonly";
 	else if (info.stream_info[i].dir == PJMEDIA_DIR_DECODING)
 	    dir = "recvonly";
