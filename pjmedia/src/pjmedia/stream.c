@@ -390,22 +390,28 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 
     /* Keep-alive packet is empty RTP */
     pj_status_t status;
-    void *rtphdr;
+    void *pkt;
     int pkt_len;
 
+    TRC_((stream->port.info.name.ptr,
+	  "Sending keep-alive (RTCP and empty RTP)"));
 
+    /* Send RTP */
     status = pjmedia_rtp_encode_rtp( &stream->enc->rtp,
 				     stream->enc->pt, 0,
 				     1,
 				     0,
-				     (const void**)&rtphdr,
+				     (const void**)&pkt,
 				     &pkt_len);
     pj_assert(status == PJ_SUCCESS);
 
-    pj_memcpy(stream->enc->out_pkt, rtphdr, pkt_len);
+    pj_memcpy(stream->enc->out_pkt, pkt, pkt_len);
     pjmedia_transport_send_rtp(stream->transport, stream->enc->out_pkt,
 			       pkt_len);
-    TRC_((stream->port.info.name.ptr, "Keep-alive sent (empty RTP)"));
+
+    /* Send RTCP */
+    pjmedia_rtcp_build_rtcp(&stream->rtcp, &pkt, &pkt_len);
+    pjmedia_transport_send_rtcp(stream->transport, pkt, len);
 
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
@@ -413,11 +419,18 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
     int pkt_len;
     const pj_str_t str_ka = PJMEDIA_STREAM_KA_USER_PKT;
 
+    TRC_((stream->port.info.name.ptr,
+	  "Sending keep-alive (custom RTP/RTCP packets)"));
+
+    /* Send to RTP port */
     pj_memcpy(stream->enc->out_pkt, str_ka.ptr, str_ka.slen);
     pkt_len = str_ka.slen;
     pjmedia_transport_send_rtp(stream->transport, stream->enc->out_pkt,
 			       pkt_len);
-    TRC_((stream->port.info.name.ptr, "Keep-alive sent"));
+
+    /* Send to RTCP port */
+    pjmedia_transport_send_rtcp(stream->transport, stream->enc->out_pkt,
+			        pkt_len);
 
 #else
     
