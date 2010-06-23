@@ -411,7 +411,7 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 
     /* Send RTCP */
     pjmedia_rtcp_build_rtcp(&stream->rtcp, &pkt, &pkt_len);
-    pjmedia_transport_send_rtcp(stream->transport, pkt, len);
+    pjmedia_transport_send_rtcp(stream->transport, pkt, pkt_len);
 
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
