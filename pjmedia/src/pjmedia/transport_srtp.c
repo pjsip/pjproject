@@ -312,6 +312,7 @@ static void pjmedia_srtp_deinit_lib(void)
     libsrtp_initialized = PJ_FALSE;
 }
 
+
 static int get_crypto_idx(const pj_str_t* crypto_name)
 {
     int i;
@@ -328,6 +329,24 @@ static int get_crypto_idx(const pj_str_t* crypto_name)
 
     return -1;
 }
+
+
+static int srtp_crypto_cmp(const pjmedia_srtp_crypto* c1,
+			   const pjmedia_srtp_crypto* c2)
+{
+    int r;
+
+    r = pj_strcmp(&c1->key, &c2->key);
+    if (r != 0)
+	return r;
+
+    r = pj_stricmp(&c1->name, &c2->name);
+    if (r != 0)
+	return r;
+
+    return (c1->flags != c2->flags);
+}
+
 
 PJ_DEF(void) pjmedia_srtp_setting_default(pjmedia_srtp_setting *opt)
 {
@@ -1490,9 +1509,20 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     srtp->probation_cnt = PROBATION_CNT_INIT;
 
     /* Got policy_local & policy_remote, let's initalize the SRTP */
-    status = pjmedia_transport_srtp_start(tp, &srtp->tx_policy_neg, &srtp->rx_policy_neg);
-    if (status != PJ_SUCCESS)
-	return status;
+
+    /* Ticket #1075: media_start() is called whenever media description
+     * gets updated, e.g: call hold, however we should restart SRTP only
+     * when the SRTP policy settings are updated.
+     */
+    if (srtp_crypto_cmp(&srtp->tx_policy_neg, &srtp->tx_policy) ||
+	srtp_crypto_cmp(&srtp->rx_policy_neg, &srtp->rx_policy))
+    {
+	status = pjmedia_transport_srtp_start(tp,
+					      &srtp->tx_policy_neg,
+					      &srtp->rx_policy_neg);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     goto PROPAGATE_MEDIA_START;
 
