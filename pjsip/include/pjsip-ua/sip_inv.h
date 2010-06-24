@@ -295,6 +295,16 @@ enum pjsip_inv_option
      */
     PJSIP_INV_SUPPORT_UPDATE	= 4,
 
+    /**
+     * Indicate support for ICE
+     */
+    PJSIP_INV_SUPPORT_ICE	= 8,
+
+    /**
+     * Require ICE support.
+     */
+    PJSIP_INV_REQUIRE_ICE	= 16,
+
     /** 
      * Require reliable provisional response extension. 
      */
@@ -309,7 +319,7 @@ enum pjsip_inv_option
      * Session timer extension will always be used even when peer doesn't
      * support/want session timer.
      */
-    PJSIP_INV_ALWAYS_USE_TIMER	= 128,
+    PJSIP_INV_ALWAYS_USE_TIMER	= 128
 
 };
 

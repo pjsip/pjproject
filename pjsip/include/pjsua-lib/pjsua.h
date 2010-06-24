@@ -306,6 +306,18 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 #endif
 
 /**
+ * Controls whether PJSUA-LIB should add ICE media feature tag
+ * parameter (the ";+sip.ice" parameter) to Contact header if ICE
+ * is enabled in the config.
+ *
+ * Default: 1
+ */
+#ifndef PJSUA_ADD_ICE_TAGS
+#   define PJSUA_ADD_ICE_TAGS		1
+#endif
+
+
+/**
  * Logging configuration, which can be (optionally) specified when calling
  * #pjsua_init(). Application must call #pjsua_logging_config_default() to
  * initialize this structure with the default values.

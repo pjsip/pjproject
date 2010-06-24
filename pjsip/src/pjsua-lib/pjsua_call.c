@@ -840,6 +840,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	options |= PJSIP_INV_REQUIRE_100REL;
     if (pjsua_var.acc[acc_id].cfg.require_timer)
 	options |= PJSIP_INV_REQUIRE_TIMER;
+    if (pjsua_var.media_cfg.enable_ice)
+	options |= PJSIP_INV_SUPPORT_ICE;
 
     status = pjsip_inv_verify_request2(rdata, &options, offer, answer, NULL,
 				       pjsua_var.endpt, &response);

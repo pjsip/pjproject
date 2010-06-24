@@ -237,6 +237,22 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
     }
 
+    /* If ICE is enabled, add "+sip.ice" media feature tag in account's
+     * contact params.
+     */
+#if PJSUA_ADD_ICE_TAGS
+    if (pjsua_var.media_cfg.enable_ice) {
+	unsigned new_len;
+	pj_str_t new_prm;
+
+	new_len = acc_cfg->contact_params.slen + 10;
+	new_prm.ptr = (char*)pj_pool_alloc(acc->pool, new_len);
+	pj_strcpy(&new_prm, &acc_cfg->contact_params);
+	pj_strcat2(&new_prm, ";+sip.ice");
+	acc_cfg->contact_params = new_prm;
+    }
+#endif
+
     status = pjsua_pres_init_acc(acc_id);
     if (status != PJ_SUCCESS)
 	return status;
