@@ -2121,28 +2121,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->rtp_rx_ts_len_per_frame = stream->port.info.samples_per_frame / 
 				       stream->codec_param.info.channel_cnt;
 
-    /* Init RTCP session: */
-
-    /* Special case for G.722 */
     if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
-	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
-			  8000, 
-			  160,
-			  info->ssrc);
 	stream->has_g722_mpeg_bug = PJ_TRUE;
 	/* RTP clock rate = 1/2 real clock rate */
 	stream->rtp_tx_ts_len_per_pkt >>= 1;
-    } else {
-	pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
-			  info->fmt.clock_rate, 
-			  stream->port.info.samples_per_frame, 
-			  info->ssrc);
     }
-#else
-    pjmedia_rtcp_init(&stream->rtcp, stream->port.info.name.ptr,
-		      info->fmt.clock_rate, 
-		      stream->port.info.samples_per_frame, 
-		      info->ssrc);
 #endif
 
     /* Init jitter buffer parameters: */
@@ -2197,6 +2180,29 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
+
+    /* Init RTCP session: */
+
+    {
+	pjmedia_rtcp_session_setting rtcp_setting;
+
+	pjmedia_rtcp_session_setting_default(&rtcp_setting);
+	rtcp_setting.name = stream->port.info.name.ptr;
+	rtcp_setting.ssrc = info->ssrc;
+	rtcp_setting.rtp_ts_base = pj_ntohl(stream->enc->rtp.out_hdr.ts);
+	rtcp_setting.clock_rate = info->fmt.clock_rate;
+	rtcp_setting.samples_per_frame = stream->port.info.samples_per_frame;
+
+#if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
+	/* Special case for G.722 */
+	if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
+	    rtcp_setting.clock_rate = 8000;
+	    rtcp_setting.samples_per_frame = 160;
+	}
+#endif
+
+	pjmedia_rtcp_init2(&stream->rtcp, &rtcp_setting);
+    }
 
     /* Only attach transport when stream is ready. */
     status = pjmedia_transport_attach(tp, stream, &info->rem_addr, 

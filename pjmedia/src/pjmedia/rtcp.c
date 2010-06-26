@@ -125,11 +125,42 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
 }
 
 
+/*
+ * Initialize RTCP session setting.
+ */
+PJ_DEF(void) pjmedia_rtcp_session_setting_default(
+				    pjmedia_rtcp_session_setting *settings)
+{
+    pj_bzero(&settings, sizeof(*settings));
+}
+
+
+/*
+ * Initialize RTCP session.
+ */
 PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess, 
 			       char *name,
 			       unsigned clock_rate,
 			       unsigned samples_per_frame,
 			       pj_uint32_t ssrc)
+{
+    pjmedia_rtcp_session_setting settings;
+
+    pjmedia_rtcp_session_setting_default(&settings);
+    settings.name = name;
+    settings.clock_rate = clock_rate;
+    settings.samples_per_frame = samples_per_frame;
+    settings.ssrc = ssrc;
+
+    pjmedia_rtcp_init2(sess, &settings);
+}
+
+
+/*
+ * Initialize RTCP session.
+ */
+PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
+				 const pjmedia_rtcp_session_setting *settings)
 {
     pjmedia_rtcp_sr_pkt *sr_pkt = &sess->rtcp_sr_pkt;
     pj_time_val now;
@@ -141,18 +172,18 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     sess->rtp_last_ts = (unsigned)-1;
 
     /* Name */
-    sess->name = name ? name : (char*)THIS_FILE,
+    sess->name = settings->name ? settings->name : (char*)THIS_FILE;
 
     /* Set clock rate */
-    sess->clock_rate = clock_rate;
-    sess->pkt_size = samples_per_frame;
+    sess->clock_rate = settings->clock_rate;
+    sess->pkt_size = settings->samples_per_frame;
 
     /* Init common RTCP SR header */
     sr_pkt->common.version = 2;
     sr_pkt->common.count = 1;
     sr_pkt->common.pt = RTCP_SR;
     sr_pkt->common.length = pj_htons(12);
-    sr_pkt->common.ssrc = pj_htonl(ssrc);
+    sr_pkt->common.ssrc = pj_htonl(settings->ssrc);
     
     /* Copy to RTCP RR header */
     pj_memcpy(&sess->rtcp_rr_pkt.common, &sr_pkt->common, 
@@ -166,6 +197,7 @@ PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess,
     sess->stat.start = now;
     pj_get_timestamp(&sess->ts_base);
     pj_get_timestamp_freq(&sess->ts_freq);
+    sess->rtp_ts_base = settings->rtp_ts_base;
 
     /* Initialize statistics states */
     pj_math_stat_init(&sess->stat.rtt);
@@ -571,6 +603,8 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
      * sent RTCP SR.
      */
     if (sess->stat.tx.pkt != pj_ntohl(sess->rtcp_sr_pkt.sr.sender_pcount)) {
+	pj_time_val ts_time;
+	pj_uint32_t rtp_ts;
 
 	/* So we should send RTCP SR */
 	*ret_p_pkt = (void*) &sess->rtcp_sr_pkt;
@@ -588,6 +622,14 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
 	/* Fill in NTP timestamp in SR. */
 	sr->ntp_sec = pj_htonl(ntp.hi);
 	sr->ntp_frac = pj_htonl(ntp.lo);
+
+	/* Fill in RTP timestamp (corresponds to NTP timestamp) in SR. */
+	ts_time.sec = ntp.hi - sess->tv_base.sec - JAN_1970;
+	ts_time.msec = (long)(ntp.lo * 1000.0 / 0xFFFFFFFF);
+	rtp_ts = sess->rtp_ts_base +
+		 (pj_uint32_t)(sess->clock_rate*ts_time.sec) +
+		 (pj_uint32_t)(sess->clock_rate*ts_time.msec/1000);
+	sr->rtp_ts = pj_htonl(rtp_ts);
 
 	TRACE_((sess->name, "TX RTCP SR: ntp_ts=%p", 
 			   ((ntp.hi & 0xFFFF) << 16) + ((ntp.lo & 0xFFFF0000) 
