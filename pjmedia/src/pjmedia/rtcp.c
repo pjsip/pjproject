@@ -131,7 +131,7 @@ PJ_DEF(pj_status_t) pjmedia_rtcp_get_ntp_time(const pjmedia_rtcp_session *sess,
 PJ_DEF(void) pjmedia_rtcp_session_setting_default(
 				    pjmedia_rtcp_session_setting *settings)
 {
-    pj_bzero(&settings, sizeof(*settings));
+    pj_bzero(settings, sizeof(*settings));
 }
 
 
