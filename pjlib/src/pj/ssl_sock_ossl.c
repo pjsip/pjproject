@@ -110,11 +110,11 @@ typedef struct write_data_t {
     pj_ioqueue_op_key_t	*app_key;
     pj_size_t 	 	 plain_data_len;
     pj_size_t 	 	 data_len;
+    unsigned		 flags;
     union {
 	char		 content[1];
 	const char	*ptr;
     } data;
-    unsigned		 flags;
 } write_data_t;
 
 /*
