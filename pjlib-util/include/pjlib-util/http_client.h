@@ -214,6 +214,10 @@ typedef struct pj_http_req_callback
      * as long as pj_http_req is not destroyed and application does
      * not start a new request.
      *
+     * If no longer required, application may choose to destroy 
+     * pj_http_req immediately by calling #pj_http_req_destroy() inside 
+     * the callback.
+     *
      * @param http_req	The http request.
      * @param status	The status of the request operation. PJ_SUCCESS
      *                  if the operation completed successfully
