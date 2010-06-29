@@ -28,7 +28,7 @@
 #include <pjlib-util/errno.h>
 #include <pjlib-util/scanner.h>
 
-#if 1
+#if 0
     /* Enable some tracing */
     #define THIS_FILE   "http_client.c"
     #define TRACE_(arg)	PJ_LOG(3,arg)
