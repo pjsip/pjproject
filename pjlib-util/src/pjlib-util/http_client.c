@@ -28,7 +28,7 @@
 #include <pjlib-util/errno.h>
 #include <pjlib-util/scanner.h>
 
-#if 0
+#if 1
     /* Enable some tracing */
     #define THIS_FILE   "http_client.c"
     #define TRACE_(arg)	PJ_LOG(3,arg)
@@ -327,9 +327,9 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
             hreq->response.size = 0;
 
 	    if (rem > 0 || hreq->response.content_length == 0)
-		http_on_data_read(asock, (rem == 0 ? NULL:
-		   	          (char *)data + size - rem),
-				  rem, PJ_SUCCESS, NULL);
+		return http_on_data_read(asock, (rem == 0 ? NULL:
+		   	                 (char *)data + size - rem),
+				         rem, PJ_SUCCESS, NULL);
         }
 
         return PJ_TRUE;
