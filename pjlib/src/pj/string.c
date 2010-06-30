@@ -69,8 +69,9 @@ PJ_DEF(char*) pj_stristr(const pj_str_t *str, const pj_str_t *substr)
 
 PJ_DEF(pj_str_t*) pj_strltrim( pj_str_t *str )
 {
+    char *end = str->ptr + str->slen; 
     register char *p = str->ptr;
-    while (pj_isspace(*p))
+    while (p < end && pj_isspace(*p))
 	++p;
     str->slen -= (p - str->ptr);
     str->ptr = p;
