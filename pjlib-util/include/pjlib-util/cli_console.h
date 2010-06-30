@@ -85,7 +85,7 @@ PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
  * Retrieve a cmdline from console stdin. Application should use this
  * instead of the standard gets() or fgets(), since unlike these functions,
  * this is able to end the blocking when pj_cli_quit() is called by other
- * session.
+ * session. This function requires a thread support.
  *
  * Note that this function would also remove the trailing newlines from the
  * input, if any.

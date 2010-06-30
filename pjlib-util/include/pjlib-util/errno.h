@@ -386,6 +386,49 @@
  */
 #define PJLIB_UTIL_EHTTPLOST	    (PJLIB_UTIL_ERRNO_START+155)/* 320155 */
 
+/************************************************************
+ * CLI ERROR
+ ***********************************************************/
+
+/**
+ * @hideinitializer
+ * End the current session. This is a special error code returned by
+ * pj_cli_exec() to indicate that "exit" or equivalent command has been
+ * called to end the current session.
+ */
+#define PJ_CLI_EEXIT        	    (PJLIB_UTIL_ERRNO_START+201)/* 320201 */
+/**
+ * @hideinitializer
+ * A required CLI argument is not specified.
+ */
+#define PJ_CLI_EMISSINGARG    	    (PJLIB_UTIL_ERRNO_START+202)/* 320202 */
+ /**
+ * @hideinitializer
+ * Too many CLI arguments.
+ */
+#define PJ_CLI_ETOOMANYARGS    	    (PJLIB_UTIL_ERRNO_START+203)/* 320203 */
+/**
+ * @hideinitializer
+ * Invalid CLI argument. Typically this is caused by extra characters
+ * specified in the command line which does not match any arguments.
+ */
+#define PJ_CLI_EINVARG        	    (PJLIB_UTIL_ERRNO_START+204)/* 320204 */
+/**
+ * @hideinitializer
+ * CLI command with the specified name already exist.
+ */
+#define PJ_CLI_EBADNAME        	    (PJLIB_UTIL_ERRNO_START+205)/* 320205 */
+/**
+ * @hideinitializer
+ * Invalid XML format for CLI command specification.
+ */
+#define PJ_CLI_EBADXML        	    (PJLIB_UTIL_ERRNO_START+206)/* 320206 */
+/**
+ * @hideinitializer
+ * Telnet connection lost.
+ */
+#define PJ_CLI_ETELNETLOST          (PJLIB_UTIL_ERRNO_START+211)/* 320211 */
+
 /**
  * @}
  */

@@ -2777,6 +2777,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjlib-util\cli_telnet.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjlib-util\crc32.c"
 				>
 				<FileConfiguration
@@ -4731,6 +4735,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjlib-util\cli_imp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjlib-util\cli_telnet.h"
 				>
 			</File>
 			<File

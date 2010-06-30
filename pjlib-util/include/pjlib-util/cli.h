@@ -37,59 +37,6 @@ PJ_BEGIN_DECL
  */
 
 /**
- * Maximum length of command buffer.
- */
-#ifndef PJ_CLI_MAX_CMDBUF
-#   define PJ_CLI_MAX_CMDBUF		120
-#endif
-
-/**
- * Maximum command arguments.
- */
-#ifndef PJ_CLI_MAX_ARGS
-#   define PJ_CLI_MAX_ARGS		8
-#endif
-
-/**
- * Maximum short name version (shortcuts) for a command.
- */
-#ifndef PJ_CLI_MAX_SHORTCUTS
-#   define PJ_CLI_MAX_SHORTCUTS		4
-#endif
-
-/*
- *  New error constants (note: to be placed in errno.h with new values)
- */
-/**
- * @hideinitializer
- * End the current session. This is a special error code returned by
- * pj_cli_exec() to indicate that "exit" or equivalent command has been
- * called to end the current session.
- */
-#define PJ_CLI_EEXIT        		-101
-/**
- * @hideinitializer
- * A required CLI argument is not specified.
- */
-#define PJ_CLI_EMISSINGARG    		-104
- /**
- * @hideinitializer
- * Too many CLI arguments.
- */
-#define PJ_CLI_ETOOMANYARGS    		-105
-/**
- * @hideinitializer
- * Invalid CLI argument. Typically this is caused by extra characters
- * specified in the command line which does not match any arguments.
- */
-#define PJ_CLI_EINVARG        		-106
-/**
- * @hideinitializer
- * CLI command with the specified name already exist.
- */
-#define PJ_CLI_EBADNAME        		-107
-
-/**
  * This opaque structure represents a CLI application. A CLI application is
  * the root placeholder of other CLI objects. In an application, one (and
  * normally only one) CLI application instance needs to be created.
@@ -145,16 +92,6 @@ typedef struct pj_cli_cfg
      * This field is mandatory.
      */
     pj_pool_factory *pf;
-
-    /**
-     * Specify whether only exact matching command will be executed. If
-     * PJ_FALSE, the framework will accept any unique abbreviations of
-     * the command. Please see the description of pj_cli_parse() function
-     * for more info.
-     *
-     * Default: PJ_FALSE
-     */
-    pj_bool_t exact_cmd;
 
 } pj_cli_cfg;
 
@@ -384,6 +321,20 @@ PJ_DECL(void) pj_cli_cfg_default(pj_cli_cfg *param);
 PJ_DECL(void) pj_cli_exec_info_default(pj_cli_exec_info *param);
 
 /**
+ * Write a log message to the CLI application. The CLI application
+ * will send the log message to all the registered front-ends.
+ *
+ * @param cli		The CLI application instance.
+ * @param level	        Verbosity level of this message message.
+ * @param buffer        The message itself.
+ * @param len 	        Length of this message.
+ */
+PJ_DECL(void) pj_cli_write_log(pj_cli_t *cli,
+                               int level,
+                               const char *buffer,
+                               int len);
+
+/**
  * Create a new CLI application instance.
  *
  * @param cfg		CLI application creation parameters.
@@ -497,15 +448,6 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
  * command itself, which will be matched against command  specifications
  * registered in the CLI application.
  *
- * By default, a command may be matched by any shorter abbreviations of the
- * command that uniquely identify the command. For example, suppose two
- * commands "help" and "hold" are currently the only commands registered in
- * the CLI application. In this case, specifying "he" and "hel" would also
- * match "help" command, and similarly "ho" and "hol" would also match "hold"
- * command, but specifying "h" only would yield an error as it would match
- * more than one commands. This matching behavior can be turned off by
- * setting \a pj_cli_cfg.exact_cmd to PJ_TRUE.
- *
  * Zero or more arguments follow the command name. Arguments are separated by
  * one or more whitespaces. Argument may be placed inside a pair of quotes,
  * double quotes, '{' and '}', or '[' and ']' pairs. This is useful when the
@@ -516,8 +458,8 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
  * '\' character).
  *
  * The cmdline may be followed by an extra newline (LF or CR-LF characters),
- * which simply will be ignored. However any more characters following this
- * newline will cause an error to be returned.
+ * which will be removed by the function. However any more characters
+ * following this newline will cause an error to be returned.
  *
  * @param sess		The CLI session.
  * @param cmdline	The command line string to be parsed.

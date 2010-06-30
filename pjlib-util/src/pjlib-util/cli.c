@@ -29,6 +29,11 @@
 #include <pjlib-util/scanner.h>
 #include <pjlib-util/xml.h>
 
+#define CMD_HASH_TABLE_SIZE 63	/* Hash table size */
+
+#define CLI_CMD_CHANGE_LOG  30000
+#define CLI_CMD_EXIT        30001
+
 #if 1
     /* Enable some tracing */
     #define THIS_FILE   "cli.c"
@@ -37,15 +42,13 @@
     #define TRACE_(arg)
 #endif
 
-#define CMD_HASH_TABLE_SIZE 63		/* Hash table size */
-
 struct pj_cli_t
 {
-    pj_pool_t	       *pool;          /* Pool to allocate memory from */
+    pj_pool_t	       *pool;           /* Pool to allocate memory from */
     pj_cli_cfg          cfg;            /* CLI configuration */
     pj_cli_cmd_spec     root;           /* Root of command tree structure */
     pj_cli_front_end    fe_head;        /* List of front-ends */
-    pj_hash_table_t    *hash;          /* Command hash table */
+    pj_hash_table_t    *hash;           /* Command hash table */
 
     pj_bool_t           is_quitting;
     pj_bool_t           is_restarting;
@@ -67,18 +70,67 @@ PJ_DEF(void) pj_cli_exec_info_default(pj_cli_exec_info *param)
     param->cmd_ret = PJ_SUCCESS;
 }
 
+PJ_DEF(void) pj_cli_write_log(pj_cli_t *cli,
+                              int level,
+                              const char *buffer,
+                              int len)
+{
+    struct pj_cli_front_end *fe;
+
+    pj_assert(cli);
+
+    fe = cli->fe_head.next;
+    while (fe != &cli->fe_head) {
+        if (fe->op && fe->op->on_write_log)
+            (*fe->op->on_write_log)(fe, level, buffer, len);
+        fe = fe->next;
+    }
+}
+
+/* Command handler */
+static pj_status_t cmd_handler(pj_cli_cmd_val *cval)
+{
+    unsigned level;
+
+    switch(cval->cmd->id) {
+    case CLI_CMD_CHANGE_LOG:
+        level = pj_strtoul(&cval->argv[1]);
+        if (!level && cval->argv[1].slen > 0 && (cval->argv[1].ptr[0] < '0' ||
+            cval->argv[1].ptr[0] > '9'))
+            return PJ_CLI_EINVARG;
+        cval->sess->log_level = level;
+        return PJ_SUCCESS;
+    case CLI_CMD_EXIT:
+        pj_cli_end_session(cval->sess);
+        return PJ_CLI_EEXIT;
+    default:
+        return PJ_SUCCESS;
+    }
+}
+
 PJ_DEF(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
                                   pj_cli_t **p_cli)
 {
     pj_pool_t *pool;
     pj_cli_t *cli;
+    unsigned i;
+    char* cmd_xmls[] = {
+     "<CMD name='log' id='30000' sc='' desc='Change log level'>"
+     "  <ARGS>"
+     "    <ARG name='level' type='int' desc='Log level'/>"
+     "  </ARGS>"
+     "</CMD>",
+     "<CMD name='exit' id='30001' sc='' desc='Exit session'>"
+     "</CMD>",
+    };
 
     PJ_ASSERT_RETURN(cfg && cfg->pf && p_cli, PJ_EINVAL);
 
-    pool = pj_pool_create(cfg->pf, "cli", 1024, 1024, NULL);
-    cli = PJ_POOL_ZALLOC_T(pool, struct pj_cli_t);
-    if (!cli)
+    pool = pj_pool_create(cfg->pf, "cli", PJ_CLI_POOL_SIZE, 
+                          PJ_CLI_POOL_INC, NULL);
+    if (!pool)
         return PJ_ENOMEM;
+    cli = PJ_POOL_ZALLOC_T(pool, struct pj_cli_t);
 
     pj_memcpy(&cli->cfg, cfg, sizeof(*cfg));
     cli->pool = pool;
@@ -88,6 +140,15 @@ PJ_DEF(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
 
     cli->root.sub_cmd = PJ_POOL_ZALLOC_T(pool, pj_cli_cmd_spec);
     pj_list_init(cli->root.sub_cmd);
+
+    /* Register some standard commands. */
+    for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
+        pj_str_t xml = pj_str(cmd_xmls[i]);
+
+        if (pj_cli_add_cmd_from_xml(cli, NULL, &xml, &cmd_handler, NULL) !=
+            PJ_SUCCESS)
+            TRACE_((THIS_FILE, "Failed to add command #%d", i));
+    }
 
     *p_cli = cli;
 
@@ -166,7 +227,7 @@ PJ_DEF(void) pj_cli_end_session(pj_cli_sess *sess)
 {
     pj_assert(sess);
 
-    if (sess->op->destroy)
+    if (sess->op && sess->op->destroy)
         (*sess->op->destroy)(sess);
 }
 
@@ -183,6 +244,8 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
                                             pj_cli_cmd_handler handler,
                                             pj_cli_cmd_spec *p_cmd)
 {
+    #define ERROR_(STATUS) \
+        do {status = STATUS; goto on_exit;} while(0)
     pj_pool_t *pool;
     pj_xml_node *root;
     pj_xml_attr *attr;
@@ -196,24 +259,19 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
 
     /* Parse the xml */
     pool = pj_pool_create(cli->cfg.pf, "xml", 1024, 1024, NULL);
+    if (!pool)
+        return PJ_ENOMEM;
     root = pj_xml_parse(pool, xml->ptr, xml->slen);
     if (!root) {
 	TRACE_((THIS_FILE, "Error: unable to parse XML"));
-	status = PJ_EINVAL;
-        goto on_exit;
+	ERROR_(PJ_CLI_EBADXML);
     }
 
-    if (pj_stricmp2(&root->name, "CMD")) {
-	status = PJ_EINVAL;
-        goto on_exit;
-    }
+    if (pj_stricmp2(&root->name, "CMD"))
+        ERROR_(PJ_EINVAL);
 
     /* Initialize the command spec */
     cmd = PJ_POOL_ZALLOC_T(cli->pool, struct pj_cli_cmd_spec);
-    if (!cmd) {
-        status = PJ_ENOMEM;
-        goto on_exit;
-    }
     
     /* Get the command attributes */
     attr = root->attr_head.next;
@@ -226,8 +284,7 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
                 pj_hash_get(cli->hash, attr->value.ptr, 
                             attr->value.slen, NULL))
             {
-                status = PJ_CLI_EBADNAME;
-                goto on_exit;
+                ERROR_(PJ_CLI_EBADNAME);
             }
 
             pj_strdup(cli->pool, &cmd->name, &attr->value);
@@ -266,8 +323,7 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
             }
             PJ_CATCH_ANY {
                 pj_scan_fini(&scanner);
-                status = PJ_GET_EXCEPTION();
-                goto on_exit;
+                ERROR_(PJ_GET_EXCEPTION());
             }
             PJ_END;
             
@@ -289,10 +345,8 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
                 if (!pj_stricmp2(&arg_node->name, "ARG")) {
                     pj_cli_arg_spec *arg;
 
-                    if (cmd->arg_cnt >= PJ_CLI_MAX_ARGS) {
-                        status = PJ_CLI_ETOOMANYARGS;
-                        goto on_exit;
-                    }
+                    if (cmd->arg_cnt >= PJ_CLI_MAX_ARGS)
+                        ERROR_(PJ_CLI_ETOOMANYARGS);
                     arg = &args[cmd->arg_cnt];
                     pj_bzero(arg, sizeof(*arg));
                     attr = arg_node->attr_head.next;
@@ -322,28 +376,20 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
 
     if (cmd->id == PJ_CLI_CMD_ID_GROUP) {
         /* Command group shouldn't have any shortcuts nor arguments */
-        if (!cmd->sc_cnt || !cmd->arg_cnt) {
-            status = PJ_EINVAL;
-            goto on_exit;
-        }
+        if (!cmd->sc_cnt || !cmd->arg_cnt)
+            ERROR_(PJ_EINVAL);
         cmd->sub_cmd = PJ_POOL_ALLOC_T(cli->pool, struct pj_cli_cmd_spec);
         pj_list_init(cmd->sub_cmd);
     }
 
-    if (!cmd->name.slen) {
-        status = PJ_CLI_EBADNAME;
-        goto on_exit;
-    }
+    if (!cmd->name.slen)
+        ERROR_(PJ_CLI_EBADNAME);
 
     if (cmd->arg_cnt) {
         unsigned i;
 
         cmd->arg = (pj_cli_arg_spec *)pj_pool_zalloc(cli->pool, cmd->arg_cnt *
                                                      sizeof(pj_cli_arg_spec));
-        if (!cmd->arg) {
-            status = PJ_ENOMEM;
-            goto on_exit;
-        }
         for (i = 0; i < cmd->arg_cnt; i++) {
             pj_strdup(cli->pool, &cmd->arg[i].name, &args[i].name);
             pj_strdup(cli->pool, &cmd->arg[i].desc, &args[i].desc);
@@ -356,14 +402,10 @@ PJ_DEF(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
 
         cmd->sc = (pj_str_t *)pj_pool_zalloc(cli->pool, cmd->sc_cnt *
                                              sizeof(pj_str_t));
-        if (!cmd->sc) {
-            status = PJ_ENOMEM;
-            goto on_exit;
-        }
         for (i = 0; i < cmd->sc_cnt; i++) {
             pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);
-            pj_hash_set(cli->pool, cli->hash, cmd->sc[i].ptr, 
-                        cmd->sc[i].slen, 0, cmd);
+            pj_hash_set(cli->pool, cli->hash, sc[i].ptr, 
+                        sc[i].slen, 0, cmd);
         }
     }
 
@@ -383,6 +425,7 @@ on_exit:
     pj_pool_release(pool);
 
     return status;
+#undef ERROR_
 }
 
 PJ_DEF(pj_status_t) pj_cli_parse(pj_cli_sess *sess,
@@ -405,6 +448,11 @@ PJ_DEF(pj_status_t) pj_cli_parse(pj_cli_sess *sess,
 
     /* Parse the command line. */
     len = pj_ansi_strlen(cmdline);
+    if (len > 0 && cmdline[len - 1] == '\n') {
+        cmdline[--len] = 0;
+        if (len > 0 && cmdline[len - 1] == '\r')
+            cmdline[--len] = 0;
+    }
     pj_scan_init(&scanner, cmdline, len, PJ_SCAN_AUTOSKIP_WS, 
                  &on_syntax_error);
     PJ_TRY {
@@ -440,9 +488,7 @@ PJ_DEF(pj_status_t) pj_cli_parse(pj_cli_sess *sess,
         }
         
         if (!pj_scan_is_eof(&scanner)) {
-            pj_scan_get_newline(&scanner);
-            if (!pj_scan_is_eof(&scanner))
-                PJ_THROW(PJ_CLI_EINVARG);
+            PJ_THROW(PJ_CLI_EINVARG);
         }
     }
     PJ_CATCH_ANY {
@@ -477,7 +523,6 @@ pj_status_t pj_cli_exec(pj_cli_sess *sess,
     if (!info)
         info = &einfo;
     status = pj_cli_parse(sess, cmdline, &val, info);
-
     if (status != PJ_SUCCESS)
         return status;
 

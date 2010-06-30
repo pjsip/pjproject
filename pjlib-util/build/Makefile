@@ -27,7 +27,7 @@ export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 #
 export PJLIB_UTIL_SRCDIR = ../src/pjlib-util
 export PJLIB_UTIL_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-		base64.o cli.o cli_console.o crc32.o errno.o dns.o \
+		base64.o cli.o cli_console.o cli_telnet.o crc32.o errno.o dns.o \
 		dns_dump.o dns_server.o getopt.o hmac_md5.o hmac_sha1.o \
 		http_client.o md5.o pcap.o resolver.o scanner.o sha1.o \
 		srv_resolver.o string.o stun_simple.o \

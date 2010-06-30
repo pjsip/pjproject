@@ -21,6 +21,7 @@
 #include <pjlib-util/cli_console.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
@@ -43,6 +44,16 @@ struct cli_console_fe
     } input;
 };
 
+static void cli_console_write_log(pj_cli_front_end *fe, int level,
+		                  const char *data, int len)
+{
+    struct cli_console_fe * cfe = (struct cli_console_fe *)fe;
+
+    if (cfe->sess->log_level > level)
+        printf("%.*s", len, data);
+}
+
+
 static void cli_console_quit(pj_cli_front_end *fe, pj_cli_sess *req)
 {
     struct cli_console_fe * cfe = (struct cli_console_fe *)fe;
@@ -64,6 +75,8 @@ static void cli_console_destroy(pj_cli_front_end *fe)
     pj_assert(cfe);
     cli_console_quit(fe, NULL);
 
+    if (cfe->input_thread)
+        pj_thread_destroy(cfe->input_thread);
     pj_sem_destroy(cfe->thread_sem);
     pj_sem_destroy(cfe->input.sem);
     pj_pool_release(cfe->pool);
@@ -89,11 +102,12 @@ PJ_DEF(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
     PJ_ASSERT_RETURN(cli && p_sess, PJ_EINVAL);
 
     pool = pj_pool_create(pj_cli_get_param(cli)->pf, "console_fe",
-                          256, 256, NULL);
+                          PJ_CLI_CONSOLE_POOL_SIZE, PJ_CLI_CONSOLE_POOL_INC,
+                          NULL);
+    if (!pool)
+        return PJ_ENOMEM;
     sess = PJ_POOL_ZALLOC_T(pool, pj_cli_sess);
     fe = PJ_POOL_ZALLOC_T(pool, struct cli_console_fe);
-    if (!sess || !fe)
-        return PJ_ENOMEM;
 
     if (!param) {
         pj_cli_console_cfg_default(&cfg);
@@ -101,9 +115,11 @@ PJ_DEF(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
     }
     sess->fe = &fe->base;
     sess->log_level = param->log_level;
+    sess->op = PJ_POOL_ZALLOC_T(pool, struct pj_cli_sess_op);
+    fe->base.op = PJ_POOL_ZALLOC_T(pool, struct pj_cli_front_end_op);
     fe->base.cli = cli;
     fe->base.type = PJ_CLI_CONSOLE_FRONT_END;
-    fe->base.op = PJ_POOL_ZALLOC_T(pool, struct pj_cli_front_end_op);
+    fe->base.op->on_write_log = &cli_console_write_log;
     fe->base.op->on_quit = &cli_console_quit;
     fe->base.op->on_destroy = &cli_console_destroy;
     fe->pool = pool;
@@ -127,7 +143,7 @@ static int readline_thread(void * p)
     while (!fe->thread_quit) {
         fgets(fe->input.buf, fe->input.maxlen, stdin);
         for (i = pj_ansi_strlen(fe->input.buf) - 1; i >= 0; i--) {
-            if (fe->input.buf[i] == '\n')
+            if (fe->input.buf[i] == '\n' || fe->input.buf[i] == '\r')
                 fe->input.buf[i] = 0;
             else
                 break;
@@ -136,7 +152,6 @@ static int readline_thread(void * p)
         /* Sleep until the next call of pj_cli_console_readline() */
         pj_sem_wait(fe->thread_sem);
     }
-    pj_sem_post(fe->input.sem);
     fe->input_thread = NULL;
 
     return 0;
@@ -154,17 +169,18 @@ PJ_DEF(pj_status_t) pj_cli_console_readline(pj_cli_sess *sess,
     fe->input.maxlen = maxlen;
 
     if (!fe->input_thread) {
-        if (pj_thread_create(fe->pool, NULL, &readline_thread, fe,
-                             0, 0, &fe->input_thread) != PJ_SUCCESS)
-        {
-            return PJ_EUNKNOWN;
-        }
+        pj_status_t status;
+
+        status = pj_thread_create(fe->pool, NULL, &readline_thread, fe,
+                                  0, 0, &fe->input_thread);
+        if (status != PJ_SUCCESS)
+            return status;
     } else {
         /* Wake up readline thread */
         pj_sem_post(fe->thread_sem);
     }
 
     pj_sem_wait(fe->input.sem);
-    
-    return (fe->thread_quit ? PJ_CLI_EEXIT : PJ_SUCCESS);
+
+    return (pj_cli_is_quitting(fe->base.cli)? PJ_CLI_EEXIT : PJ_SUCCESS);
 }

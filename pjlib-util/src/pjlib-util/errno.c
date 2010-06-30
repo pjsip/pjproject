@@ -95,6 +95,15 @@ static const struct
     PJ_BUILD_ERR( PJLIB_UTIL_EHTTPINCHDR,	"Incomplete response header received"),
     PJ_BUILD_ERR( PJLIB_UTIL_EHTTPINSBUF,	"Insufficient buffer"),
     PJ_BUILD_ERR( PJLIB_UTIL_EHTTPLOST,	        "Connection lost"),
+
+    /* CLI */
+    PJ_BUILD_ERR( PJ_CLI_EEXIT,	                "Exit current session"),
+    PJ_BUILD_ERR( PJ_CLI_EMISSINGARG,	        "Missing argument"),
+    PJ_BUILD_ERR( PJ_CLI_ETOOMANYARGS,	        "Too many arguments"),
+    PJ_BUILD_ERR( PJ_CLI_EINVARG,	        "Invalid argument"),
+    PJ_BUILD_ERR( PJ_CLI_EBADNAME,	        "Command name already exists"),
+    PJ_BUILD_ERR( PJ_CLI_EBADXML,	        "Invalid XML format"),
+    PJ_BUILD_ERR( PJ_CLI_ETELNETLOST,	        "Connection lost"),
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

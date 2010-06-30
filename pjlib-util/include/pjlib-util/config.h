@@ -266,6 +266,83 @@
 #   define PJ_HTTP_DEFAULT_TIMEOUT         (60000)
 #endif
 
+/* **************************************************************************
+ * CLI configuration
+ */
+
+/**
+ * Initial pool size for CLI.
+ * Default: 1024 bytes
+ */
+#ifndef PJ_CLI_POOL_SIZE
+#   define PJ_CLI_POOL_SIZE    1024
+#endif
+
+/**
+ * Pool increment size for CLI.
+ * Default: 512 bytes
+ */
+#ifndef PJ_CLI_POOL_INC
+#   define PJ_CLI_POOL_INC     512
+#endif
+
+/**
+ * Maximum length of command buffer.
+ * Default: 120
+ */
+#ifndef PJ_CLI_MAX_CMDBUF
+#   define PJ_CLI_MAX_CMDBUF		120
+#endif
+
+/**
+ * Maximum command arguments.
+ * Default: 8
+ */
+#ifndef PJ_CLI_MAX_ARGS
+#   define PJ_CLI_MAX_ARGS		8
+#endif
+
+/**
+ * Maximum short name version (shortcuts) for a command.
+ * Default: 4
+ */
+#ifndef PJ_CLI_MAX_SHORTCUTS
+#   define PJ_CLI_MAX_SHORTCUTS		4
+#endif
+
+/**
+ * Initial pool size for console CLI.
+ * Default: 256 bytes
+ */
+#ifndef PJ_CLI_CONSOLE_POOL_SIZE
+#   define PJ_CLI_CONSOLE_POOL_SIZE    256
+#endif
+
+/**
+ * Pool increment size for console CLI.
+ * Default: 256 bytes
+ */
+#ifndef PJ_CLI_CONSOLE_POOL_INC
+#   define PJ_CLI_CONSOLE_POOL_INC     256
+#endif
+
+/**
+ * Initial pool size for telnet CLI.
+ * Default: 1024 bytes
+ */
+#ifndef PJ_CLI_TELNET_POOL_SIZE
+#   define PJ_CLI_TELNET_POOL_SIZE 1024
+#endif
+
+/**
+ * Pool increment size for telnet CLI.
+ * Default: 512 bytes
+ */
+#ifndef PJ_CLI_TELNET_POOL_INC
+#   define PJ_CLI_TELNET_POOL_INC  512
+#endif
+
+
 /**
  * @}
  */

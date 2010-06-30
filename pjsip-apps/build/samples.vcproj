@@ -1598,6 +1598,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\clidemo.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\confbench.c"
 				>
 			</File>

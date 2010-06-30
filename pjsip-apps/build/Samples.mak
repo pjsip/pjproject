@@ -15,6 +15,7 @@ BINDIR := ../bin/samples/$(TARGET_NAME)
 
 SAMPLES := auddemo \
 	   aectest \
+	   clidemo \
 	   confsample \
 	   encdec \
 	   httpdemo \
