@@ -440,7 +440,7 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     pj_pool_t *pool;
     pj_sock_t sock = PJ_INVALID_SOCKET;
     pj_activesock_cb asock_cb;
-    pj_sockaddr addr;
+    pj_sockaddr_in addr;
     pj_status_t sstatus;
 
     PJ_ASSERT_RETURN(cli, PJ_EINVAL);
@@ -471,13 +471,6 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
         if (sstatus != PJ_SUCCESS)
             goto on_exit;
         fe->own_ioqueue = PJ_TRUE;
-
-        /* Create our own worker thread */
-        sstatus = pj_thread_create(pool, "worker_telnet_fe",
-                                   &poll_worker_thread, fe, 0, 0,
-                                   &fe->worker_thread);
-        if (sstatus != PJ_SUCCESS)
-            goto on_exit;
     }
 
     sstatus = pj_mutex_create_recursive(pool, "mutex_telnet_fe", &fe->mutex);
@@ -490,11 +483,23 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     if (sstatus != PJ_SUCCESS)
         goto on_exit;
 
-    pj_sockaddr_init(pj_AF_INET(), &addr, NULL, fe->cfg.port);
+    pj_sockaddr_in_init(&addr, NULL, fe->cfg.port);
 
     sstatus = pj_sock_bind(sock, &addr, sizeof(addr));
-    if (sstatus != PJ_SUCCESS)
+    if (sstatus == PJ_SUCCESS) {
+	pj_sockaddr_in addr;
+	int addr_len = sizeof(addr);
+
+	sstatus = pj_sock_getsockname(sock, &addr, &addr_len);
+	if (sstatus != PJ_SUCCESS)
+	    goto on_exit;
+        fe->cfg.port = pj_sockaddr_in_get_port(&addr);
+        PJ_LOG(3, (THIS_FILE, "CLI telnet daemon listening at port %d",
+               fe->cfg.port));
+    } else {
+        PJ_LOG(3, (THIS_FILE, "Failed binding the socket"));
         goto on_exit;
+    }
 
     sstatus = pj_sock_listen(sock, 4);
     if (sstatus != PJ_SUCCESS)
@@ -511,6 +516,15 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     sstatus = pj_activesock_start_accept(fe->asock, pool);
     if (sstatus != PJ_SUCCESS)
         goto on_exit;
+
+    if (fe->own_ioqueue) {
+        /* Create our own worker thread */
+        sstatus = pj_thread_create(pool, "worker_telnet_fe",
+                                   &poll_worker_thread, fe, 0, 0,
+                                   &fe->worker_thread);
+        if (sstatus != PJ_SUCCESS)
+            goto on_exit;
+    }
 
     pj_cli_register_front_end(cli, &fe->base);
 

@@ -29,6 +29,12 @@
 
 #define THIS_FILE	"clidemo.c"
 
+/* Set this to 1 if you want to let the system assign a port
+ * for the CLI telnet daemon.
+ * Default: 1
+ */
+#define USE_RANDOM_PORT 1
+
 struct cmd_xml_t {
     char * xml;
     pj_cli_cmd_handler handler;
@@ -127,8 +133,6 @@ int main()
     pj_caching_pool_init(&cp, NULL, 0);
     pjlib_util_init();
 
-    pj_log_set_log_func(&log_writer);
-
     /*
      * Create CLI app.
      */
@@ -157,6 +161,9 @@ int main()
      */
     pj_cli_telnet_cfg_default(&tcfg);
 //    tcfg.passwd = pj_str("pjsip");
+#if USE_RANDOM_PORT
+    tcfg.port = 0;
+#endif
     status = pj_cli_telnet_create(cli, &tcfg, NULL);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -195,6 +202,8 @@ pj_status_t app_main(pj_cli_t *cli)
     status = pj_cli_console_create(cli, NULL, &sess, NULL);
     if (status != PJ_SUCCESS)
 	return status;
+
+    pj_log_set_log_func(&log_writer);
 
     /*
      * Main loop.
