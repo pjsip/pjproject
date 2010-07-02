@@ -465,7 +465,14 @@ typedef enum pjsip_status_code
 
     PJSIP_SC_TSX_TIMEOUT = PJSIP_SC_REQUEST_TIMEOUT,
     /*PJSIP_SC_TSX_RESOLVE_ERROR = 702,*/
-    PJSIP_SC_TSX_TRANSPORT_ERROR = PJSIP_SC_SERVICE_UNAVAILABLE
+    PJSIP_SC_TSX_TRANSPORT_ERROR = PJSIP_SC_SERVICE_UNAVAILABLE,
+
+    /* This is not an actual status code, but rather a constant
+     * to force GCC to use 32bit to represent this enum, since
+     * we have a code in PJSUA-LIB that assigns an integer
+     * to this enum (see pjsua_acc_get_info() function).
+     */
+    PJSIP_SC__force_32bit = 0x7FFFFFFF
 
 } pjsip_status_code;
 
