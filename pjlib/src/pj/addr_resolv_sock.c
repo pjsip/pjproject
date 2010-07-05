@@ -63,6 +63,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 #if defined(PJ_SOCK_HAS_GETADDRINFO) && PJ_SOCK_HAS_GETADDRINFO!=0
     char nodecopy[PJ_MAX_HOSTNAME];
     struct addrinfo hint, *res, *orig_res;
+    pj_bool_t has_addr = PJ_FALSE;
     unsigned i;
     int rc;
 
@@ -73,28 +74,29 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
-    if (af == PJ_AF_UNSPEC) {
-	if (pj_inet_pton(PJ_AF_INET, nodename, 
-			 &ai[0].ai_addr.ipv4.sin_addr) == PJ_SUCCESS)
-	{
-	    af = PJ_AF_INET;
-	}
-	else if (pj_inet_pton(PJ_AF_INET6, nodename, 
-			      &ai[0].ai_addr.ipv6.sin6_addr) == PJ_SUCCESS)
-	{
-	    af = PJ_AF_INET6;
-	}
+    if ((af==PJ_AF_INET || af==PJ_AF_UNSPEC) &&
+	pj_inet_pton(PJ_AF_INET, nodename,
+		     &ai[0].ai_addr.ipv4.sin_addr) == PJ_SUCCESS)
+    {
+	af = PJ_AF_INET;
+	has_addr = PJ_TRUE;
+    } else if ((af==PJ_AF_INET6 || af==PJ_AF_UNSPEC) &&
+	       pj_inet_pton(PJ_AF_INET6, nodename,
+	                    &ai[0].ai_addr.ipv6.sin6_addr) == PJ_SUCCESS)
+    {
+	af = PJ_AF_INET6;
+	has_addr = PJ_TRUE;
+    }
 
-	if (af != PJ_AF_UNSPEC) {
-	    pj_str_t tmp;
+    if (has_addr) {
+	pj_str_t tmp;
 
-	    tmp.ptr = ai[0].ai_canonname;
-	    pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
-	    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
-	    *count = 1;
+	tmp.ptr = ai[0].ai_canonname;
+	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	*count = 1;
 
-	    return PJ_SUCCESS;
-	}
+	return PJ_SUCCESS;
     }
 
     /* Copy node name to null terminated string. */
@@ -145,33 +147,36 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     return PJ_SUCCESS;
 
 #else	/* PJ_SOCK_HAS_GETADDRINFO */
+    pj_bool_t has_addr = PJ_FALSE;
 
     PJ_ASSERT_RETURN(count && *count, PJ_EINVAL);
 
     /* Check if nodename is IP address */
     pj_bzero(&ai[0], sizeof(ai[0]));
-    if (af == PJ_AF_UNSPEC) {
-	if (pj_inet_pton(PJ_AF_INET, nodename, 
-			 &ai[0].ai_addr.ipv4.sin_addr) == PJ_SUCCESS)
-	{
-	    af = PJ_AF_INET;
-	}
-	else if (pj_inet_pton(PJ_AF_INET6, nodename, 
-			      &ai[0].ai_addr.ipv6.sin6_addr) == PJ_SUCCESS)
-	{
-	    af = PJ_AF_INET6;
-	}
+    if ((af==PJ_AF_INET || af==PJ_AF_UNSPEC) &&
+	pj_inet_pton(PJ_AF_INET, nodename,
+		     &ai[0].ai_addr.ipv4.sin_addr) == PJ_SUCCESS)
+    {
+	af = PJ_AF_INET;
+	has_addr = PJ_TRUE;
+    }
+    else if ((af==PJ_AF_INET6 || af==PJ_AF_UNSPEC) &&
+	     pj_inet_pton(PJ_AF_INET6, nodename,
+			  &ai[0].ai_addr.ipv6.sin6_addr) == PJ_SUCCESS)
+    {
+	af = PJ_AF_INET6;
+	has_addr = PJ_TRUE;
+    }
 
-	if (af != PJ_AF_UNSPEC) {
-	    pj_str_t tmp;
+    if (has_addr) {
+	pj_str_t tmp;
 
-	    tmp.ptr = ai[0].ai_canonname;
-	    pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
-	    ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
-	    *count = 1;
+	tmp.ptr = ai[0].ai_canonname;
+	pj_strncpy_with_null(&tmp, nodename, PJ_MAX_HOSTNAME);
+	ai[0].ai_addr.addr.sa_family = (pj_uint16_t)af;
+	*count = 1;
 
-	    return PJ_SUCCESS;
-	}
+	return PJ_SUCCESS;
     }
 
     if (af == PJ_AF_INET || af == PJ_AF_UNSPEC) {
