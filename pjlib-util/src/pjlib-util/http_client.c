@@ -881,8 +881,8 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
                      get_protocol(&hreq->hurl.protocol), 
                      STR_PREC(hreq->param.version));
         /* Header field "Host" */
-        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "Host: %.*s\n",
-                     STR_PREC(hreq->hurl.host));
+        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "Host: %.*s:%d\n",
+                     STR_PREC(hreq->hurl.host), hreq->hurl.port);
         if (!pj_strcmp2(&hreq->param.method, http_method_names[HTTP_PUT])) {
             char buf[16];
 
