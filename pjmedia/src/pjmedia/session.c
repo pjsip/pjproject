@@ -841,6 +841,18 @@ PJ_DEF(pj_status_t) pjmedia_session_get_stream_stat( pjmedia_session *session,
 }
 
 
+/**
+ * Reset session statistics.
+ */
+PJ_DEF(pj_status_t) pjmedia_session_reset_stream_stat( pjmedia_session *session,
+						       unsigned index)
+{
+    PJ_ASSERT_RETURN(session && index < session->stream_cnt, PJ_EINVAL);
+
+    return pjmedia_stream_reset_stat(session->stream[index]);
+}
+
+
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 /*
  * Get extended statistics

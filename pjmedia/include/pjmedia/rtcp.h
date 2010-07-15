@@ -297,6 +297,14 @@ PJ_DECL(void) pjmedia_rtcp_session_setting_default(
 
 
 /**
+ * Initialize bidirectional RTCP statistics.
+ *
+ * @param stat		    The bidirectional RTCP statistics.
+ */
+PJ_DECL(void) pjmedia_rtcp_init_stat(pjmedia_rtcp_stat *stat);
+
+
+/**
  * Initialize RTCP session.
  *
  * @param session	    The session

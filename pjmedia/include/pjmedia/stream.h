@@ -226,6 +226,17 @@ PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
 PJ_DECL(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
 					      pjmedia_rtcp_stat *stat);
 
+
+/**
+ * Reset the stream statistics.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_reset_stat(pjmedia_stream *stream);
+
+
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 /**
  * Get the stream extended report statistics (RTCP XR).

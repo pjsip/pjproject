@@ -282,6 +282,18 @@ PJ_DECL(pj_status_t) pjmedia_session_get_stream_stat(pjmedia_session *session,
 						     pjmedia_rtcp_stat *stat);
 
 
+/**
+ * Reset session statistics.
+ *
+ * @param session	The media session.
+ * @param index		Stream index.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_session_reset_stream_stat(pjmedia_session *session,
+						       unsigned index);
+
+
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 /**
  * Get extended session statistics. The extended statistic shows reports

@@ -136,6 +136,29 @@ PJ_DEF(void) pjmedia_rtcp_session_setting_default(
 
 
 /*
+ * Initialize bidirectional RTCP statistics.
+ *
+ */
+PJ_DEF(void) pjmedia_rtcp_init_stat(pjmedia_rtcp_stat *stat)
+{
+    pj_time_val now;
+
+    pj_assert(stat);
+
+    pj_bzero(stat, sizeof(pjmedia_rtcp_stat));
+
+    pj_math_stat_init(&stat->rtt);
+    pj_math_stat_init(&stat->rx.loss_period);
+    pj_math_stat_init(&stat->rx.jitter);
+    pj_math_stat_init(&stat->tx.loss_period);
+    pj_math_stat_init(&stat->tx.jitter);
+
+    pj_gettimeofday(&now);
+    stat->start = now;
+}
+
+
+/*
  * Initialize RTCP session.
  */
 PJ_DEF(void) pjmedia_rtcp_init(pjmedia_rtcp_session *sess, 
@@ -194,17 +217,12 @@ PJ_DEF(void) pjmedia_rtcp_init2( pjmedia_rtcp_session *sess,
     /* Get time and timestamp base and frequency */
     pj_gettimeofday(&now);
     sess->tv_base = now;
-    sess->stat.start = now;
     pj_get_timestamp(&sess->ts_base);
     pj_get_timestamp_freq(&sess->ts_freq);
     sess->rtp_ts_base = settings->rtp_ts_base;
 
     /* Initialize statistics states */
-    pj_math_stat_init(&sess->stat.rtt);
-    pj_math_stat_init(&sess->stat.rx.loss_period);
-    pj_math_stat_init(&sess->stat.rx.jitter);
-    pj_math_stat_init(&sess->stat.tx.loss_period);
-    pj_math_stat_init(&sess->stat.tx.jitter);
+    pjmedia_rtcp_init_stat(&sess->stat);
 
     /* RR will be initialized on receipt of the first RTP packet. */
 }
@@ -350,16 +368,18 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtp2(pjmedia_rtcp_session *sess,
 	    
 	    sess->jitter += d - ((sess->jitter + 8) >> 4);
 
-	    /* Get jitter in usec */
-	    if (d < 4294)
-		jitter = d * 1000000 / sess->clock_rate;
+	    /* Update jitter stat */
+	    jitter = sess->jitter >> 4;
+	    
+	    /* Convert jitter unit from samples to usec */
+	    if (jitter < 4294)
+		jitter = jitter * 1000000 / sess->clock_rate;
 	    else {
-		jitter = d * 1000 / sess->clock_rate;
+		jitter = jitter * 1000 / sess->clock_rate;
 		jitter *= 1000;
 	    }
-
-	    /* Update jitter stat */
 	    pj_math_stat_update(&sess->stat.rx.jitter, jitter);
+
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 	    pjmedia_rtcp_xr_rx_rtp(&sess->xr_session, seq, 

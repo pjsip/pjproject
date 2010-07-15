@@ -2484,6 +2484,20 @@ PJ_DEF(pj_status_t) pjmedia_stream_get_stat( const pjmedia_stream *stream,
     return PJ_SUCCESS;
 }
 
+
+/*
+ * Reset the stream statistics in the middle of a stream session.
+ */
+PJ_DEF(pj_status_t) pjmedia_stream_reset_stat(pjmedia_stream *stream)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    pjmedia_rtcp_init_stat(&stream->rtcp.stat);
+
+    return PJ_SUCCESS;
+}
+
+
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 /*
  * Get stream extended statistics.
