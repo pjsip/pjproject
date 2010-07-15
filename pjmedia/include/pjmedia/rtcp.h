@@ -214,6 +214,18 @@ struct pjmedia_rtcp_stat
 
     pj_uint32_t		     rtp_tx_last_ts; /**< Last TX RTP timestamp.    */
     pj_uint16_t		     rtp_tx_last_seq;/**< Last TX RTP sequence.	    */
+
+#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
+    pj_math_stat	     rx_ipdv;/**< Statistics of IP packet delay
+				          variation in receiving direction
+					  (in usec).			    */
+#endif
+
+#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
+    pj_math_stat	     rx_raw_jitter;/**< Statistic of raw jitter in
+						receiving direction 
+						(in usec).		    */
+#endif
 };
 
 

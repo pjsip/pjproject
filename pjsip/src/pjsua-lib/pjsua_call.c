@@ -2247,7 +2247,16 @@ static void dump_media_session(const char *indent,
 	       "%s        pkt loss=%d (%3.1f%%), discrd=%d (%3.1f%%), dup=%d (%2.1f%%), reord=%d (%3.1f%%)\n"
 	       "%s              (msec)    min     avg     max     last    dev\n"
 	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
+	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f"
+#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
+	       "\n"
+	       "%s        raw jitter : %7.3f %7.3f %7.3f %7.3f %7.3f"
+#endif
+#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
+	       "\n"
+	       "%s        IPDV       : %7.3f %7.3f %7.3f %7.3f %7.3f"
+#endif
+	       "%s",
 	       indent, info.stream_info[i].fmt.pt,
 	       last_update,
 	       indent,
@@ -2277,6 +2286,22 @@ static void dump_media_session(const char *indent,
 	       stat.rx.jitter.max / 1000.0,
 	       stat.rx.jitter.last / 1000.0,
 	       pj_math_stat_get_stddev(&stat.rx.jitter) / 1000.0,
+#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
+	       indent,
+	       stat.rx_raw_jitter.min / 1000.0,
+	       stat.rx_raw_jitter.mean / 1000.0,
+	       stat.rx_raw_jitter.max / 1000.0,
+	       stat.rx_raw_jitter.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rx_raw_jitter) / 1000.0,
+#endif
+#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
+	       indent,
+	       stat.rx_ipdv.min / 1000.0,
+	       stat.rx_ipdv.mean / 1000.0,
+	       stat.rx_ipdv.max / 1000.0,
+	       stat.rx_ipdv.last / 1000.0,
+	       pj_math_stat_get_stddev(&stat.rx_ipdv) / 1000.0,
+#endif
 	       ""
 	       );
 
