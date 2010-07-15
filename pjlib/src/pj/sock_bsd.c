@@ -450,7 +450,24 @@ PJ_DEF(const pj_str_t*) pj_gethostname(void)
 	    hostname.ptr[0] = '\0';
 	    hostname.slen = 0;
 	} else {
-	   hostname.slen = strlen(buf);
+            hostname.slen = strlen(buf);
+#if defined(PJ_GETHOSTNAME_APPEND_LOCAL_SUFFIX) && \
+    PJ_GETHOSTNAME_APPEND_LOCAL_SUFFIX!=0
+            {
+                const pj_str_t suffix = {".local", 6};
+
+                if (hostname.slen < suffix.slen ||
+                    pj_ansi_strnicmp(hostname.ptr + hostname.slen -
+                                     suffix.slen, suffix.ptr, suffix.slen))
+                {
+                    if (hostname.slen + suffix.slen + 1 < sizeof(buf))
+                        pj_strcat(&hostname, &suffix);
+                    else
+                        hostname.slen = 0;
+                    hostname.ptr[hostname.slen] = '\0';
+                }
+            }
+#endif
 	}
     }
     return &hostname;

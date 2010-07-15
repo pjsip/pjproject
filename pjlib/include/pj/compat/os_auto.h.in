@@ -169,6 +169,15 @@
 /* The type of atomic variable value: */
 #undef PJ_ATOMIC_VALUE_TYPE
 
+/* Append ".local" suffix to the system's hostname? */
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+#    include "TargetConditionals.h"
+#    if defined(__IPHONE_4_0) && \
+        __IPHONE_OS_VERSION_MIN_REQUIRED >= __IPHONE_4_0
+#	define PJ_GETHOSTNAME_APPEND_LOCAL_SUFFIX 1
+#    endif
+#endif
+
 /* If 1, use Read/Write mutex emulation for platforms that don't support it */
 #undef PJ_EMULATE_RWMUTEX
 
