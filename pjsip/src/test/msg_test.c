@@ -481,6 +481,7 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     pjsip_routing_hdr *routing;
     pjsip_via_hdr *via;
     pjsip_generic_string_hdr *generic;
+    pjsip_param *prm;
     pj_str_t str;
 
     msg = pjsip_msg_create(pool, PJSIP_REQUEST_MSG);
@@ -569,7 +570,10 @@ static pjsip_msg *create_msg0(pj_pool_t *pool)
     pjsip_msg_add_hdr(msg, (pjsip_hdr*)ctype);
     pj_strdup2(pool, &ctype->media.type, "text");
     pj_strdup2(pool, &ctype->media.subtype, "html");
-    pj_strdup2(pool, &ctype->media.param, ";charset=ISO-8859-4");
+    prm = PJ_POOL_ALLOC_T(pool, pjsip_param);
+    prm->name = pj_str("charset");
+    prm->value = pj_str("ISO-8859-4");
+    pj_list_push_back(&ctype->media.param, prm);
 
     /* "Route: <sip:bigbox3.site3.atlanta.com;lr>,\r\n" */
     routing = pjsip_route_hdr_create(pool);
@@ -1590,6 +1594,7 @@ static int hdr_test_content_length(pjsip_hdr *h)
 static int hdr_test_content_type(pjsip_hdr *h)
 {
     pjsip_ctype_hdr *hdr = (pjsip_ctype_hdr*)h;
+    const pjsip_param *prm;
 
     if (h->type != PJSIP_H_CONTENT_TYPE)
 	return -1910;
@@ -1603,10 +1608,25 @@ static int hdr_test_content_type(pjsip_hdr *h)
     /* Currently, if the media parameter contains escaped characters,
      * pjsip will print the parameter unescaped.
      */
-    PJ_TODO(FIX_PARAMETER_IN_MEDIA_TYPE);
+    prm = hdr->media.param.next;
+    if (prm == &hdr->media.param) return -1940;
+    if (pj_strcmp2(&prm->name, "p0")) return -1941;
+    if (pj_strcmp2(&prm->value, "a")) return -1942;
 
-    if (pj_strcmp2(&hdr->media.param, ";" GENERIC_PARAM_PARSED))
-	return -1940;
+    prm = prm->next;
+    if (prm == &hdr->media.param) return -1950;
+    if (pj_strcmp2(&prm->name, "p1")) { PJ_LOG(3,("", "%.*s", (int)prm->name.slen, prm->name.ptr)); return -1951; }
+    if (pj_strcmp2(&prm->value, "\"ab:;cd\"")) { PJ_LOG(3,("", "%.*s", (int)prm->value.slen, prm->value.ptr)); return -1952; }
+
+    prm = prm->next;
+    if (prm == &hdr->media.param) return -1960;
+    if (pj_strcmp2(&prm->name, "p2")) return -1961;
+    if (pj_strcmp2(&prm->value, "ab:cd")) return -1962;
+
+    prm = prm->next;
+    if (prm == &hdr->media.param) return -1970;
+    if (pj_strcmp2(&prm->name, "p3")) return -1971;
+    if (pj_strcmp2(&prm->value, "")) return -1972;
 
     return 0;
 }

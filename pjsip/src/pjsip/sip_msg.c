@@ -22,6 +22,7 @@
 #include <pjsip/print_util.h>
 #include <pjsip/sip_errno.h>
 #include <pj/ctype.h>
+#include <pj/guid.h>
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
@@ -145,7 +146,8 @@ const pjsip_hdr_name_info_t pjsip_hdr_names[] =
 pj_bool_t pjsip_use_compact_form = PJSIP_ENCODE_SHORT_HNAME;
 
 static pj_str_t status_phrase[710];
-static int print_media_type(char *buf, const pjsip_media_type *media);
+static int print_media_type(char *buf, unsigned len,
+			    const pjsip_media_type *media);
 
 static int init_status_phrase()
 {
@@ -489,14 +491,12 @@ PJ_DEF(pj_ssize_t) pjsip_msg_print( const pjsip_msg *msg,
 	    }
 
 	    /* Add Content-Type header. */
-	    if ( (end-p) < 24 + media->type.slen + media->subtype.slen + 
-			   media->param.slen) 
-	    {
+	    if ( (end-p) < 24 + media->type.slen + media->subtype.slen) {
 		return -1;
 	    }
 	    pj_memcpy(p, ctype_hdr.ptr, ctype_hdr.slen);
 	    p += ctype_hdr.slen;
-	    p += print_media_type(p, media);
+	    p += print_media_type(p, end-p, media);
 	    *p++ = '\r';
 	    *p++ = '\n';
 
@@ -602,6 +602,65 @@ PJ_DEF(const pj_str_t*) pjsip_get_status_text(int code)
 /*
  * Media type
  */
+/*
+ * Init media type.
+ */
+PJ_DEF(void) pjsip_media_type_init( pjsip_media_type *mt,
+				    pj_str_t *type,
+				    pj_str_t *subtype)
+{
+    pj_bzero(mt, sizeof(*mt));
+    pj_list_init(&mt->param);
+    if (type)
+	mt->type = *type;
+    if (subtype)
+	mt->subtype = *subtype;
+}
+
+PJ_DEF(void) pjsip_media_type_init2( pjsip_media_type *mt,
+				     char *type,
+				     char *subtype)
+{
+    pj_str_t s_type, s_subtype;
+
+    if (type) {
+	s_type = pj_str(type);
+    } else {
+	s_type.ptr = NULL;
+	s_type.slen = 0;
+    }
+
+    if (subtype) {
+	s_subtype = pj_str(subtype);
+    } else {
+	s_subtype.ptr = NULL;
+	s_subtype.slen = 0;
+    }
+
+    pjsip_media_type_init(mt, &s_type, &s_subtype);
+}
+
+/*
+ * Compare two media types.
+ */
+PJ_DEF(int) pjsip_media_type_cmp( const pjsip_media_type *mt1,
+				  const pjsip_media_type *mt2)
+{
+    int rc;
+
+    PJ_ASSERT_RETURN(mt1 && mt2, 1);
+
+    rc = pj_stricmp(&mt1->type, &mt2->type);
+    if (rc) return rc;
+
+    rc = pj_stricmp(&mt1->subtype, &mt2->subtype);
+    if (rc) return rc;
+
+    rc = pjsip_param_cmp(&mt1->param, &mt2->param, 0);
+
+    return rc;
+}
+
 PJ_DEF(void) pjsip_media_type_cp( pj_pool_t *pool,
 				  pjsip_media_type *dst,
 				  const pjsip_media_type *src)
@@ -609,7 +668,7 @@ PJ_DEF(void) pjsip_media_type_cp( pj_pool_t *pool,
     PJ_ASSERT_ON_FAIL(pool && dst && src, return);
     pj_strdup(pool, &dst->type,    &src->type);
     pj_strdup(pool, &dst->subtype, &src->subtype);
-    pj_strdup(pool, &dst->param,   &src->param);
+    pjsip_param_clone(pool, &dst->param, &src->param);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1263,6 +1322,7 @@ PJ_DEF(pjsip_ctype_hdr*) pjsip_ctype_hdr_init( pj_pool_t *pool,
 
     pj_bzero(mem, sizeof(pjsip_ctype_hdr));
     init_hdr(hdr, PJSIP_H_CONTENT_TYPE, &ctype_hdr_vptr);
+    pj_list_init(&hdr->media.param);
     return hdr;
 
 }
@@ -1273,9 +1333,12 @@ PJ_DEF(pjsip_ctype_hdr*) pjsip_ctype_hdr_create( pj_pool_t *pool )
     return pjsip_ctype_hdr_init(pool, mem);
 }
 
-static int print_media_type(char *buf, const pjsip_media_type *media)
+static int print_media_type(char *buf, unsigned len,
+			    const pjsip_media_type *media)
 {
     char *p = buf;
+    pj_ssize_t printed;
+    const pjsip_parser_const_t *pc;
 
     pj_memcpy(p, media->type.ptr, media->type.slen);
     p += media->type.slen;
@@ -1283,12 +1346,23 @@ static int print_media_type(char *buf, const pjsip_media_type *media)
     pj_memcpy(p, media->subtype.ptr, media->subtype.slen);
     p += media->subtype.slen;
 
-    if (media->param.slen) {
-	pj_memcpy(p, media->param.ptr, media->param.slen);
-	p += media->param.slen;
-    }
+    pc = pjsip_parser_const();
+    printed = pjsip_param_print_on(&media->param, p, buf+len-p,
+				   &pc->pjsip_TOKEN_SPEC,
+				   &pc->pjsip_TOKEN_SPEC, ';');
+    if (printed < 0)
+	return -1;
+
+    p += printed;
 
     return p-buf;
+}
+
+
+PJ_DEF(int) pjsip_media_type_print(char *buf, unsigned len,
+				   const pjsip_media_type *media)
+{
+    return print_media_type(buf, len, media);
 }
 
 static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr, 
@@ -1299,8 +1373,7 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
     const pj_str_t *hname = pjsip_use_compact_form? &hdr->sname : &hdr->name;
 
     if ((pj_ssize_t)size < hname->slen + 
-			   hdr->media.type.slen + hdr->media.subtype.slen + 
-			   hdr->media.param.slen + 8)
+			   hdr->media.type.slen + hdr->media.subtype.slen + 8)
     {
 	return -1;
     }
@@ -1310,7 +1383,7 @@ static int pjsip_ctype_hdr_print( pjsip_ctype_hdr *hdr,
     *p++ = ':';
     *p++ = ' ';
 
-    len = print_media_type(p, &hdr->media);
+    len = print_media_type(p, buf+size-p, &hdr->media);
     p += len;
 
     *p = '\0';
@@ -1323,7 +1396,7 @@ static pjsip_ctype_hdr* pjsip_ctype_hdr_clone( pj_pool_t *pool,
     pjsip_ctype_hdr *hdr = pjsip_ctype_hdr_create(pool);
     pj_strdup(pool, &hdr->media.type, &rhs->media.type);
     pj_strdup(pool, &hdr->media.subtype, &rhs->media.subtype);
-    pj_strdup(pool, &hdr->media.param, &rhs->media.param);
+    pjsip_param_clone(pool, &hdr->media.param, &rhs->media.param);
     return hdr;
 }
 
@@ -2078,12 +2151,8 @@ PJ_DEF(pj_status_t) pjsip_msg_body_copy( pj_pool_t *pool,
     PJ_ASSERT_RETURN( src_body->clone_data!=NULL, PJ_EINVAL );
 
     /* Duplicate content-type */
-    pj_strdup(pool, &dst_body->content_type.type, 
-		    &src_body->content_type.type);
-    pj_strdup(pool, &dst_body->content_type.subtype, 
-		    &src_body->content_type.subtype);
-    pj_strdup(pool, &dst_body->content_type.param,
-		    &src_body->content_type.param);
+    pjsip_media_type_cp(pool, &dst_body->content_type,
+		        &src_body->content_type);
 
     /* Duplicate data. */
     dst_body->data = (*src_body->clone_data)(pool, src_body->data, 
@@ -2129,7 +2198,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_msg_body_create( pj_pool_t *pool,
 
     pj_strdup(pool, &body->content_type.type, type);
     pj_strdup(pool, &body->content_type.subtype, subtype);
-    body->content_type.param.slen = 0;
+    pj_list_init(&body->content_type.param);
 
     body->data = pj_pool_alloc(pool, text->slen);
     pj_memcpy(body->data, text->ptr, text->slen);

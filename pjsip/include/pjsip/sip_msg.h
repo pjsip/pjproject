@@ -515,9 +515,43 @@ typedef struct pjsip_media_type
 {
     pj_str_t type;	    /**< Media type. */
     pj_str_t subtype;	    /**< Media subtype. */
-    pj_str_t param;	    /**< Media type parameters (concatenated). */
+    pjsip_param param;	    /**< Media type parameters */
 } pjsip_media_type;
 
+
+/**
+ * Initialize the media type with the specified type and subtype string.
+ *
+ * @param mt		The media type.
+ * @param type		Optionally specify the media type.
+ * @param subtype	Optionally specify the media subtype.
+ */
+PJ_DECL(void) pjsip_media_type_init(pjsip_media_type *mt,
+				    pj_str_t *type,
+				    pj_str_t *subtype);
+
+/**
+ * Initialize the media type with the specified type and subtype string.
+ *
+ * @param mt		The media type.
+ * @param type		Optionally specify the media type.
+ * @param subtype	Optionally specify the media subtype.
+ */
+PJ_DECL(void) pjsip_media_type_init2(pjsip_media_type *mt,
+				     char *type,
+				     char *subtype);
+
+/**
+ * Compare two media types.
+ *
+ * @param mt1		The first media type.
+ * @param mt2		The second media type.
+ *
+ * @return		Zero if both media types are equal, -1 if mt1 < mt2,
+ * 			1 if mt1 > mt2.
+ */
+PJ_DECL(int) pjsip_media_type_cmp(const pjsip_media_type *mt1,
+				  const pjsip_media_type *mt2);
 
 /**
  * Copy SIP media type to another.
@@ -529,6 +563,19 @@ typedef struct pjsip_media_type
 PJ_DECL(void) pjsip_media_type_cp(pj_pool_t *pool,
 				  pjsip_media_type *dst,
 				  const pjsip_media_type *src);
+
+/**
+ * Print media type to the specified buffer.
+ *
+ * @param buf		Destination buffer.
+ * @param len		Length of the buffer.
+ * @param mt		The media type to be printed.
+ *
+ * @return		The number of characters printed to the buffer, or -1
+ * 			if there's not enough space in the buffer.
+ */
+PJ_DECL(int) pjsip_media_type_print(char *buf, unsigned len,
+				    const pjsip_media_type *mt);
 
 /**
  * @}

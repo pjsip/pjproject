@@ -374,6 +374,7 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
 {
     pjsip_tx_data *tdata;
     pjsip_xfer *xfer;
+    pjsip_param *param;
     const pj_str_t reason = { "noresource", 10 };
     char *body;
     int bodylen;
@@ -422,13 +423,17 @@ PJ_DEF(pj_status_t) pjsip_xfer_notify( pjsip_evsub *sub,
 
     /* Create SIP message body. */
     msg_body = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_msg_body);
-    msg_body->content_type.type = STR_MESSAGE;
-    msg_body->content_type.subtype = STR_SIPFRAG;
-    msg_body->content_type.param = STR_SIPFRAG_VERSION;
+    pjsip_media_type_init(&msg_body->content_type, (pj_str_t*)&STR_MESSAGE,
+			  (pj_str_t*)&STR_SIPFRAG);
     msg_body->data = body;
     msg_body->len = bodylen;
     msg_body->print_body = &pjsip_print_text_body;
     msg_body->clone_data = &pjsip_clone_text_data;
+
+    param = PJ_POOL_ALLOC_T(tdata->pool, pjsip_param);
+    param->name = pj_str("version");
+    param->value = pj_str("2.0");
+    pj_list_push_back(&msg_body->content_type.param, param);
 
     /* Attach sipfrag body. */
     tdata->msg->body = msg_body;
