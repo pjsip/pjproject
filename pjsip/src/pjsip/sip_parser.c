@@ -20,6 +20,7 @@
 #include <pjsip/sip_parser.h>
 #include <pjsip/sip_uri.h>
 #include <pjsip/sip_msg.h>
+#include <pjsip/sip_multipart.h>
 #include <pjsip/sip_auth_parser.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_transport.h>        /* rdata structure */
@@ -33,6 +34,8 @@
 #include <pj/string.h>
 #include <pj/ctype.h>
 #include <pj/assert.h>
+
+#define THIS_FILE	    "sip_parser.c"
 
 #define ALNUM
 #define RESERVED	    ";/?:@&=+$,"
@@ -266,13 +269,6 @@ PJ_DEF(void) pjsip_concat_param_imp(pj_str_t *param, pj_pool_t *pool,
     
     param->ptr = new_param;
     param->slen = p - new_param;
-}
-
-/* Concatenate unrecognized params into single string. */
-static void concat_param( pj_str_t *param, pj_pool_t *pool, 
-			  const pj_str_t *pname, const pj_str_t *pvalue )
-{
-    pjsip_concat_param_imp(param, pool, pname, pvalue, ';');
 }
 
 /* Initialize static properties of the parser. */
@@ -1052,15 +1048,27 @@ parse_headers:
 	 * as body.
 	 */
 	if (ctype_hdr && scanner->curptr!=scanner->end) {
-	    pjsip_msg_body *body = PJ_POOL_ALLOC_T(pool, pjsip_msg_body);
-	    body->content_type.type = ctype_hdr->media.type;
-	    body->content_type.subtype = ctype_hdr->media.subtype;
-	    body->content_type.param = ctype_hdr->media.param;
+	    /* New: if Content-Type indicates that this is a multipart
+	     * message body, parse it.
+	     */
+	    const pj_str_t STR_MULTIPART = { "multipart", 9 };
+	    pjsip_msg_body *body;
 
-	    body->data = scanner->curptr;
-	    body->len = scanner->end - scanner->curptr;
-	    body->print_body = &pjsip_print_text_body;
-	    body->clone_data = &pjsip_clone_text_data;
+	    if (pj_stricmp(&ctype_hdr->media.type, &STR_MULTIPART)==0) {
+		body = pjsip_multipart_parse(pool, scanner->curptr,
+					     scanner->end - scanner->curptr,
+					     &ctype_hdr->media, 0);
+	    } else {
+		body = PJ_POOL_ALLOC_T(pool, pjsip_msg_body);
+		body->content_type.type = ctype_hdr->media.type;
+		body->content_type.subtype = ctype_hdr->media.subtype;
+		body->content_type.param = ctype_hdr->media.param;
+
+		body->data = scanner->curptr;
+		body->len = scanner->end - scanner->curptr;
+		body->print_body = &pjsip_print_text_body;
+		body->clone_data = &pjsip_clone_text_data;
+	    }
 
 	    msg->body = body;
 	}
@@ -1847,9 +1855,9 @@ static pjsip_hdr* parse_hdr_content_type( pjsip_parse_ctx *ctx )
 
     /* Parse media parameters */
     while (*scanner->curptr == ';') {
-	pj_str_t pname, pvalue;
-	int_parse_param(scanner, ctx->pool, &pname, &pvalue, 0);
-	concat_param(&hdr->media.param, ctx->pool, &pname, &pvalue);
+	pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
+	int_parse_param(scanner, ctx->pool, &param->name, &param->value, 0);
+	pj_list_push_back(&hdr->media.param, param);
     }
 
     parse_hdr_end(ctx->scanner);
@@ -2262,5 +2270,111 @@ PJ_DEF(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
     pj_scan_fini(&scanner);
 
     return hdr;
+}
+
+/* Parse multiple header lines */
+PJ_DEF(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
+				         pj_size_t size, pjsip_hdr *hlist,
+				         unsigned options)
+{
+    enum { STOP_ON_ERROR = 1 };
+    pj_scanner scanner;
+    pjsip_parse_ctx ctx;
+    pj_str_t hname;
+    PJ_USE_EXCEPTION;
+
+    pj_scan_init(&scanner, input, size, PJ_SCAN_AUTOSKIP_WS_HEADER,
+                 &on_syntax_error);
+
+    pj_bzero(&ctx, sizeof(ctx));
+    ctx.scanner = &scanner;
+    ctx.pool = pool;
+
+retry_parse:
+    PJ_TRY
+    {
+	/* Parse headers. */
+	do {
+	    pjsip_parse_hdr_func * handler;
+	    pjsip_hdr *hdr = NULL;
+
+	    /* Init hname just in case parsing fails.
+	     * Ref: PROTOS #2412
+	     */
+	    hname.slen = 0;
+
+	    /* Get hname. */
+	    pj_scan_get( &scanner, &pconst.pjsip_TOKEN_SPEC, &hname);
+	    if (pj_scan_get_char( &scanner ) != ':') {
+		PJ_THROW(PJSIP_SYN_ERR_EXCEPTION);
+	    }
+
+	    /* Find handler. */
+	    handler = find_handler(&hname);
+
+	    /* Call the handler if found.
+	     * If no handler is found, then treat the header as generic
+	     * hname/hvalue pair.
+	     */
+	    if (handler) {
+		hdr = (*handler)(&ctx);
+	    } else {
+		hdr = parse_hdr_generic_string(&ctx);
+		hdr->name = hdr->sname = hname;
+	    }
+
+	    /* Single parse of header line can produce multiple headers.
+	     * For example, if one Contact: header contains Contact list
+	     * separated by comma, then these Contacts will be split into
+	     * different Contact headers.
+	     * So here we must insert list instead of just insert one header.
+	     */
+	    if (hdr)
+		pj_list_insert_nodes_before(hlist, hdr);
+
+	    /* Parse until EOF or an empty line is found. */
+	} while (!pj_scan_is_eof(&scanner) && !IS_NEWLINE(*scanner.curptr));
+
+	/* If empty line is found, eat it. */
+	if (!pj_scan_is_eof(&scanner)) {
+	    if (IS_NEWLINE(*scanner.curptr)) {
+		pj_scan_get_newline(&scanner);
+	    }
+	}
+    }
+    PJ_CATCH_ANY
+    {
+	PJ_LOG(4,(THIS_FILE, "Error parsing header: '%.*s' line %d col %d",
+		  (int)hname.slen, hname.ptr, scanner.line,
+		  pj_scan_get_col(&scanner)));
+
+	/* Exception was thrown during parsing. */
+	if ((options & STOP_ON_ERROR) == STOP_ON_ERROR) {
+	    pj_scan_fini(&scanner);
+	    return PJSIP_EINVALIDHDR;
+	}
+
+	/* Skip until newline, and parse next header. */
+	if (!pj_scan_is_eof(&scanner)) {
+	    /* Skip until next line.
+	     * Watch for header continuation.
+	     */
+	    do {
+		pj_scan_skip_line(&scanner);
+	    } while (IS_SPACE(*scanner.curptr));
+	}
+
+	/* Restore flag. Flag may be set in int_parse_sip_url() */
+	scanner.skip_ws = PJ_SCAN_AUTOSKIP_WS_HEADER;
+
+	/* Continue parse next header, if any. */
+	if (!pj_scan_is_eof(&scanner) && !IS_NEWLINE(*scanner.curptr)) {
+	    goto retry_parse;
+	}
+
+    }
+    PJ_END;
+
+    return PJ_SUCCESS;
 }
 

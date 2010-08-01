@@ -1186,10 +1186,26 @@ struct pjsua_msg_data
     pj_str_t	content_type;
 
     /**
-     * Optional message body.
+     * Optional message body to be added to the message, only when the
+     * message doesn't have a body.
      */
     pj_str_t	msg_body;
 
+    /**
+     * Content type of the multipart body. If application wants to send
+     * multipart message bodies, it puts the parts in \a parts and set
+     * the content type in \a multipart_ctype. If the message already
+     * contains a body, the body will be added to the multipart bodies.
+     */
+    pjsip_media_type  multipart_ctype;
+
+    /**
+     * List of multipart parts. If application wants to send multipart
+     * message bodies, it puts the parts in \a parts and set the content
+     * type in \a multipart_ctype. If the message already contains a body,
+     * the body will be added to the multipart bodies.
+     */
+    pjsip_multipart_part multipart_parts;
 };
 
 

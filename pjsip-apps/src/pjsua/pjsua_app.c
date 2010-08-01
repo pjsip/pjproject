@@ -26,6 +26,7 @@
 
 //#define STEREO_DEMO
 //#define TRANSPORT_ADAPTER_SAMPLE
+//#define HAVE_MULTIPART_TEST
 
 /* Ringtones		    US	       UK  */
 #define RINGBACK_FREQ1	    440	    /* 400 */
@@ -2218,6 +2219,36 @@ static void ring_start(pjsua_call_id call_id)
     }
 }
 
+#ifdef HAVE_MULTIPART_TEST
+  /*
+   * Enable multipart in msg_data and add a dummy body into the
+   * multipart bodies.
+   */
+  static void add_multipart(pjsua_msg_data *msg_data)
+  {
+      static pjsip_multipart_part *alt_part;
+
+      if (!alt_part) {
+	  pj_str_t type, subtype, content;
+
+	  alt_part = pjsip_multipart_create_part(app_config.pool);
+
+	  type = pj_str("text");
+	  subtype = pj_str("plain");
+	  content = pj_str("Sample text body of a multipart bodies");
+	  alt_part->body = pjsip_msg_body_create(app_config.pool, &type,
+						 &subtype, &content);
+      }
+
+      msg_data->multipart_ctype.type = pj_str("multipart");
+      msg_data->multipart_ctype.subtype = pj_str("mixed");
+      pj_list_push_back(&msg_data->multipart_parts, alt_part);
+  }
+#  define TEST_MULTIPART(msg_data)	add_multipart(msg_data)
+#else
+#  define TEST_MULTIPART(msg_data)
+#endif
+
 /*
  * Find next call when current call is disconnected or when user
  * press ']'
@@ -3432,6 +3463,7 @@ void console_app_main(const pj_str_t *uri_to_call)
     char *uri;
     pj_str_t tmp;
     struct input_result result;
+    pjsua_msg_data msg_data;
     pjsua_call_info call_info;
     pjsua_acc_info acc_info;
 
@@ -3500,7 +3532,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 		tmp.slen = 0;
 	    }
 	    
-	    pjsua_call_make_call( current_acc, &tmp, 0, NULL, NULL, NULL);
+	    pjsua_msg_data_init(&msg_data);
+	    TEST_MULTIPART(&msg_data);
+	    pjsua_call_make_call( current_acc, &tmp, 0, NULL, &msg_data, NULL);
 	    break;
 
 	case 'M':
@@ -3638,7 +3672,6 @@ void console_app_main(const pj_str_t *uri_to_call)
 		pj_str_t hname = { "Contact", 7 };
 		pj_str_t hvalue;
 		pjsip_generic_string_hdr hcontact;
-		pjsua_msg_data msg_data;
 
 		if (!simple_input("Answer with code (100-699)", buf, sizeof(buf)))
 		    continue;
@@ -3886,7 +3919,6 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	    } else {
 		int call = current_call;
-		pjsua_msg_data msg_data;
 		pjsip_generic_string_hdr refer_sub;
 		pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
 		pj_str_t STR_FALSE = { "false", 5 };
@@ -3941,7 +3973,6 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    } else {
 		int call = current_call;
 		int dst_call;
-		pjsua_msg_data msg_data;
 		pjsip_generic_string_hdr refer_sub;
 		pj_str_t STR_REFER_SUB = { "Refer-Sub", 9 };
 		pj_str_t STR_FALSE = { "false", 5 };
@@ -4083,7 +4114,6 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 		digits = pj_str(buf);
 		for (i=0; i<digits.slen; ++i) {
-		    pjsua_msg_data msg_data;
 		    char body[80];
 
 		    pjsua_msg_data_init(&msg_data);

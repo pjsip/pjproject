@@ -645,7 +645,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjsua_call *call;
     int call_id = -1;
     int sip_err_code;
-    pjmedia_sdp_session *offer, *answer;
+    pjmedia_sdp_session *offer=NULL, *answer;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -765,13 +765,14 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Parse SDP from incoming request */
     if (rdata->msg_info.msg->body) {
-	status = pjmedia_sdp_parse(rdata->tp_info.pool, 
-				   (char*)rdata->msg_info.msg->body->data,
-				   rdata->msg_info.msg->body->len, &offer);
-	if (status == PJ_SUCCESS) {
-	    /* Validate */
-	    status = pjmedia_sdp_validate(offer);
-	}
+	pjsip_rdata_sdp_info *sdp_info;
+
+	sdp_info = pjsip_rdata_get_sdp_info(rdata);
+	offer = sdp_info->sdp;
+
+	status = sdp_info->sdp_err;
+	if (status==PJ_SUCCESS && sdp_info->sdp==NULL)
+	    status = PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
 
 	if (status != PJ_SUCCESS) {
 	    const pj_str_t reason = pj_str("Bad SDP");

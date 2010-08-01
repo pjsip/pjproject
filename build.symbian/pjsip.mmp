@@ -43,6 +43,7 @@ SOURCE	sip_dialog_wrap.cpp
 SOURCE	sip_endpoint_wrap.cpp
 SOURCE	sip_errno.c
 SOURCE	sip_msg.c
+SOURCE	sip_multipart.c
 SOURCE	sip_parser_wrap.cpp
 SOURCE	sip_resolve.c
 SOURCE	sip_tel_uri_wrap.cpp

@@ -382,6 +382,34 @@ struct pjsip_inv_session
 
 
 /**
+ * This structure represents SDP information in a pjsip_rx_data. Application
+ * retrieve this information by calling #pjsip_rdata_get_sdp_info(). This
+ * mechanism supports multipart message body.
+ */
+typedef struct pjsip_rdata_sdp_info
+{
+    /**
+     * Pointer and length of the text body in the incoming message. If
+     * the pointer is NULL, it means the message does not contain SDP
+     * body.
+     */
+    pj_str_t		 body;
+
+    /**
+     * This will contain non-zero if an invalid SDP body is found in the
+     * message.
+     */
+    pj_status_t		 sdp_err;
+
+    /**
+     * A parsed and validated SDP body.
+     */
+    pjmedia_sdp_session *sdp;
+
+} pjsip_rdata_sdp_info;
+
+
+/**
  * Initialize the invite usage module and register it to the endpoint. 
  * The callback argument contains pointer to functions to be called on 
  * occurences of events in invite sessions.
@@ -873,6 +901,21 @@ PJ_DECL(const char *) pjsip_inv_state_name(pjsip_inv_state state);
 PJ_DECL(pj_status_t) pjsip_create_sdp_body(pj_pool_t *pool,
 					   pjmedia_sdp_session *sdp,
 					   pjsip_msg_body **p_body);
+
+/**
+ * Retrieve SDP information from an incoming message. Application should
+ * prefer to use this function rather than parsing the SDP manually since
+ * this function supports multipart message body.
+ *
+ * This function will only parse the SDP once, the first time it is called
+ * on the same message. Subsequent call on the same message will just pick
+ * up the already parsed SDP from the message.
+ *
+ * @param rdata		The incoming message.
+ *
+ * @return		The SDP info.
+ */
+PJ_DECL(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata);
 
 
 PJ_END_DECL

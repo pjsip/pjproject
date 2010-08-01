@@ -23,6 +23,7 @@
 #include <pjsip/sip_module.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_event.h>
+#include <pjsip/sip_multipart.h>
 #include <pjsip/sip_transaction.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
@@ -745,6 +746,67 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uac( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
+{
+    pjsip_rdata_sdp_info *sdp_info;
+    pjsip_msg_body *body = rdata->msg_info.msg->body;
+    pjsip_ctype_hdr *ctype_hdr = rdata->msg_info.ctype;
+    pjsip_media_type app_sdp;
+
+    sdp_info = (pjsip_rdata_sdp_info*)
+	       rdata->endpt_info.mod_data[mod_inv.mod.id];
+    if (sdp_info)
+	return sdp_info;
+
+    sdp_info = PJ_POOL_ZALLOC_T(rdata->tp_info.pool,
+				pjsip_rdata_sdp_info);
+    PJ_ASSERT_RETURN(mod_inv.mod.id >= 0, sdp_info);
+    rdata->endpt_info.mod_data[mod_inv.mod.id] = sdp_info;
+
+    pjsip_media_type_init2(&app_sdp, "application", "sdp");
+
+    if (body && ctype_hdr &&
+	pj_stricmp(&ctype_hdr->media.type, &app_sdp.type)==0 &&
+	pj_stricmp(&ctype_hdr->media.subtype, &app_sdp.subtype)==0)
+    {
+	sdp_info->body.ptr = (char*)body->data;
+	sdp_info->body.slen = body->len;
+    } else if  (body && ctype_hdr &&
+	    	pj_stricmp2(&ctype_hdr->media.type, "multipart")==0 &&
+	    	(pj_stricmp2(&ctype_hdr->media.subtype, "mixed")==0 ||
+	    	 pj_stricmp2(&ctype_hdr->media.subtype, "alternative")==0))
+    {
+	pjsip_multipart_part *part;
+
+	part = pjsip_multipart_find_part(body, &app_sdp, NULL);
+	if (part) {
+	    sdp_info->body.ptr = (char*)part->body->data;
+	    sdp_info->body.slen = part->body->len;
+	}
+    }
+
+    if (sdp_info->body.ptr) {
+	pj_status_t status;
+	status = pjmedia_sdp_parse(rdata->tp_info.pool,
+				   sdp_info->body.ptr,
+				   sdp_info->body.slen,
+				   &sdp_info->sdp);
+	if (status == PJ_SUCCESS)
+	    status = pjmedia_sdp_validate(sdp_info->sdp);
+
+	if (status != PJ_SUCCESS) {
+	    sdp_info->sdp = NULL;
+	    PJ_PERROR(1,(THIS_FILE, status,
+			 "Error parsing/validating SDP body"));
+	}
+
+	sdp_info->sdp_err = status;
+    }
+
+    return sdp_info;
+}
+
+
 /*
  * Verify incoming INVITE request.
  */
@@ -765,6 +827,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     unsigned rem_option = 0;
     pj_status_t status = PJ_SUCCESS;
     pjsip_hdr res_hdr_list;
+    pjsip_rdata_sdp_info *sdp_info;
 
     /* Init return arguments. */
     if (p_tdata) *p_tdata = NULL;
@@ -821,17 +884,17 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     /* Check the request body, see if it's something that we support,
      * only when the body hasn't been parsed before.
      */
-    if (r_sdp==NULL && msg->body) {
-	pjsip_msg_body *body = msg->body;
-	pj_str_t str_application = {"application", 11};
-	pj_str_t str_sdp = { "sdp", 3 };
-	pjmedia_sdp_session *sdp;
+    if (r_sdp == NULL) {
+	sdp_info = pjsip_rdata_get_sdp_info(rdata);
+    } else {
+	sdp_info = NULL;
+    }
 
-	/* Check content type. */
-	if (pj_stricmp(&body->content_type.type, &str_application) != 0 ||
-	    pj_stricmp(&body->content_type.subtype, &str_sdp) != 0)
-	{
-	    /* Not "application/sdp" */
+    if (r_sdp==NULL && msg->body) {
+
+	/* Check if body really contains SDP. */
+	if (sdp_info->body.ptr == NULL) {
+	    /* Couldn't find "application/sdp" */
 	    code = PJSIP_SC_UNSUPPORTED_MEDIA_TYPE;
 	    status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
 
@@ -848,13 +911,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 	    goto on_return;
 	}
 
-	/* Parse and validate SDP */
-	status = pjmedia_sdp_parse(rdata->tp_info.pool, 
-				   (char*)body->data, body->len, &sdp);
-	if (status == PJ_SUCCESS)
-	    status = pjmedia_sdp_validate(sdp);
-
-	if (status != PJ_SUCCESS) {
+	if (sdp_info->sdp_err != PJ_SUCCESS) {
 	    /* Unparseable or invalid SDP */
 	    code = PJSIP_SC_BAD_REQUEST;
 
@@ -864,7 +921,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 
 		w = pjsip_warning_hdr_create_from_status(rdata->tp_info.pool,
 							 pjsip_endpt_name(endpt),
-							 status);
+							 sdp_info->sdp_err);
 		PJ_ASSERT_RETURN(w, PJ_ENOMEM);
 
 		pj_list_push_back(&res_hdr_list, w);
@@ -873,7 +930,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 	    goto on_return;
 	}
 
-	r_sdp = sdp;
+	r_sdp = sdp_info->sdp;
     }
 
     if (r_sdp) {
@@ -1163,7 +1220,7 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     pjsip_inv_session *inv;
     struct tsx_inv_data *tsx_inv_data;
     pjsip_msg *msg;
-    pjmedia_sdp_session *rem_sdp = NULL;
+    pjsip_rdata_sdp_info *sdp_info;
     pj_status_t status;
 
     /* Verify arguments. */
@@ -1211,26 +1268,17 @@ PJ_DEF(pj_status_t) pjsip_inv_create_uas( pjsip_dialog *dlg,
     /* Object name will use the same dialog pointer. */
     pj_ansi_snprintf(inv->obj_name, PJ_MAX_OBJ_NAME, "inv%p", dlg);
 
-    /* Parse SDP in message body, if present. */
-    if (msg->body) {
-	pjsip_msg_body *body = msg->body;
-
-	/* Parse and validate SDP */
-	status = pjmedia_sdp_parse(inv->pool, (char*)body->data, body->len,
-				   &rem_sdp);
-	if (status == PJ_SUCCESS)
-	    status = pjmedia_sdp_validate(rem_sdp);
-
-	if (status != PJ_SUCCESS) {
-	    pjsip_dlg_dec_lock(dlg);
-	    return status;
-	}
+    /* Process SDP in message body, if present. */
+    sdp_info = pjsip_rdata_get_sdp_info(rdata);
+    if (sdp_info->sdp_err) {
+	pjsip_dlg_dec_lock(dlg);
+	return sdp_info->sdp_err;
     }
 
     /* Create negotiator. */
-    if (rem_sdp) {
-	status = pjmedia_sdp_neg_create_w_remote_offer(inv->pool, 
-						       local_sdp, rem_sdp, 
+    if (sdp_info->sdp) {
+	status = pjmedia_sdp_neg_create_w_remote_offer(inv->pool, local_sdp,
+						       sdp_info->sdp,
 						       &inv->neg);
 						
     } else if (local_sdp) {
@@ -1374,8 +1422,8 @@ PJ_DEF(pj_status_t) pjsip_create_sdp_body( pj_pool_t *pool,
     body = PJ_POOL_ZALLOC_T(pool, pjsip_msg_body);
     PJ_ASSERT_RETURN(body != NULL, PJ_ENOMEM);
 
-    body->content_type.type = STR_APPLICATION;
-    body->content_type.subtype = STR_SDP;
+    pjsip_media_type_init(&body->content_type, (pj_str_t*)&STR_APPLICATION,
+			  (pj_str_t*)&STR_SDP);
     body->data = sdp;
     body->len = 0;
     body->clone_data = &clone_sdp;
@@ -1527,6 +1575,7 @@ static void swap_pool(pj_pool_t **p1, pj_pool_t **p2)
     *p2 = tmp;
 }
 
+
 /*
  * Initiate SDP negotiation in the SDP negotiator.
  */
@@ -1575,11 +1624,9 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 						  pjsip_rx_data *rdata)
 {
     struct tsx_inv_data *tsx_inv_data;
-    static const pj_str_t str_application = { "application", 11 };
-    static const pj_str_t str_sdp = { "sdp", 3 };
     pj_status_t status;
     pjsip_msg *msg;
-    pjmedia_sdp_session *rem_sdp;
+    pjsip_rdata_sdp_info *sdp_info;
 
     /* Check if SDP is present in the message. */
 
@@ -1589,9 +1636,8 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	return PJ_SUCCESS;
     }
 
-    if (pj_stricmp(&msg->body->content_type.type, &str_application) ||
-	pj_stricmp(&msg->body->content_type.subtype, &str_sdp))
-    {
+    sdp_info = pjsip_rdata_get_sdp_info(rdata);
+    if (sdp_info->body.ptr == NULL) {
 	/* Message body is not "application/sdp" */
 	return PJMEDIA_SDP_EINSDP;
     }
@@ -1660,21 +1706,15 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	}
     }
 
-    /* Parse the SDP body. */
-
-    status = pjmedia_sdp_parse(rdata->tp_info.pool, 
-			       (char*)msg->body->data,
-			       msg->body->len, &rem_sdp);
-    if (status == PJ_SUCCESS)
-	status = pjmedia_sdp_validate(rem_sdp);
-
-    if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	PJ_LOG(4,(THIS_FILE, "Error parsing SDP in %s: %s",
-		  pjsip_rx_data_get_info(rdata), errmsg));
+    /* Process the SDP body. */
+    if (sdp_info->sdp_err) {
+	PJ_PERROR(4,(THIS_FILE, sdp_info->sdp_err,
+		     "Error parsing SDP in %s",
+		     pjsip_rx_data_get_info(rdata)));
 	return PJMEDIA_SDP_EINSDP;
     }
+
+    pj_assert(sdp_info->sdp != NULL);
 
     /* The SDP can be an offer or answer, depending on negotiator's state */
 
@@ -1689,17 +1729,16 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	if (inv->neg == NULL) {
 	    status=pjmedia_sdp_neg_create_w_remote_offer(inv->pool, NULL,
-							 rem_sdp, &inv->neg);
+							 sdp_info->sdp,
+							 &inv->neg);
 	} else {
 	    status=pjmedia_sdp_neg_set_remote_offer(inv->pool_prov, inv->neg, 
-						    rem_sdp);
+						    sdp_info->sdp);
 	}
 
 	if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(THIS_FILE, "Error processing SDP offer in %s: %s",
-		      pjsip_rx_data_get_info(rdata), errmsg));
+	    PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP offer in %",
+		      pjsip_rx_data_get_info(rdata)));
 	    return PJMEDIA_SDP_EINSDP;
 	}
 
@@ -1707,7 +1746,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 
 	if (mod_inv.cb.on_rx_offer && inv->notify) {
 
-	    (*mod_inv.cb.on_rx_offer)(inv, rem_sdp);
+	    (*mod_inv.cb.on_rx_offer)(inv, sdp_info->sdp);
 
 	}
 
@@ -1724,13 +1763,11 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 		  pjsip_rx_data_get_info(rdata)));
 
 	status = pjmedia_sdp_neg_set_remote_answer(inv->pool_prov, inv->neg,
-						   rem_sdp);
+						   sdp_info->sdp);
 
 	if (status != PJ_SUCCESS) {
-	    char errmsg[PJ_ERR_MSG_SIZE];
-	    pj_strerror(status, errmsg, sizeof(errmsg));
-	    PJ_LOG(4,(THIS_FILE, "Error processing SDP answer in %s: %s",
-		      pjsip_rx_data_get_info(rdata), errmsg));
+	    PJ_PERROR(4,(THIS_FILE, status, "Error processing SDP answer in %s",
+		      pjsip_rx_data_get_info(rdata)));
 	    return PJMEDIA_SDP_EINSDP;
 	}
 
@@ -3855,6 +3892,7 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
 	    pjsip_tx_data *tdata;
 	    pj_status_t status;
+	    pjsip_rdata_sdp_info *sdp_info;
 	    pjsip_status_code st_code;
 
 	    /* Check if we have INVITE pending. */
@@ -3925,7 +3963,8 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    /* If the INVITE request has SDP body, send answer.
 	     * Otherwise generate offer from local active SDP.
 	     */
-	    if (rdata->msg_info.msg->body != NULL) {
+	    sdp_info = pjsip_rdata_get_sdp_info(rdata);
+	    if (sdp_info->sdp != NULL) {
 		status = process_answer(inv, 200, tdata, NULL);
 	    } else {
 		/* INVITE does not have SDP. 

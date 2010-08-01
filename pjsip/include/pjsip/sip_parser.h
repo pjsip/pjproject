@@ -276,7 +276,7 @@ PJ_DECL(pj_status_t) pjsip_find_msg(const char *buf,
  *			lines, and two when an error happen the value can
  *			pinpoint the location of the error in the buffer.
  *
- * @return		The instance of the header if parsing was successfull,
+ * @return		The instance of the header if parsing was successful,
  *			or otherwise a NULL pointer will be returned.
  */
 PJ_DECL(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
@@ -287,21 +287,25 @@ PJ_DECL(void*) pjsip_parse_hdr( pj_pool_t *pool, const pj_str_t *hname,
  * Parse header line(s). Multiple headers can be parsed by this function.
  * When there are multiple headers, the headers MUST be separated by either
  * a newline (as in SIP message) or ampersand mark (as in URI). This separator
- * however is optional for the last header.
+ * is optional for the last header.
  *
- * @param pool		the pool.
- * @param input		the input text to parse, which must be NULL terminated.
- * @param size		the text length.
- * @param hlist		the header list to store the parsed headers. 
+ * @param pool		The pool.
+ * @param input		The input text to parse, which must be NULL terminated.
+ * @param size		The text length.
+ * @param hlist		The header list to store the parsed headers.
  *			This list must have been initialized before calling 
  *			this function.
+ * @param options	Specify 1 here to make parsing stop when error is
+ * 			encountered when parsing the header. Otherwise the
+ * 			error is silently ignored and parsing resumes to the
+ * 			next line.
  * @return		zero if successfull, or -1 if error is encountered. 
  *			Upon error, the \a hlist argument MAY contain 
  *			successfully parsed headers.
  */
-PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool,
-					  char *input, pj_size_t size,
-					  pj_list *hlist );
+PJ_DECL(pj_status_t) pjsip_parse_headers( pj_pool_t *pool, char *input,
+				          pj_size_t size, pjsip_hdr *hlist,
+				          unsigned options);
 
 
 /**

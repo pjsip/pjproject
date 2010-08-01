@@ -301,6 +301,10 @@ int test_main(void)
     DO_TEST(msg_err_test());
 #endif
 
+#if INCLUDE_MULTIPART_TEST
+    DO_TEST(multipart_test());
+#endif
+
 #if INCLUDE_TXDATA_TEST
     DO_TEST(txdata_test());
 #endif

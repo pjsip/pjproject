@@ -21,7 +21,7 @@ def test_func(t):
 	if len(cfg.complete_msg) != 0:
 		req = dlg.update_fields(cfg.complete_msg)
 	else:
-		req = dlg.create_invite(cfg.sdp, cfg.extra_headers)
+		req = dlg.create_invite(cfg.sdp, cfg.extra_headers, cfg.body)
 	resp = dlg.send_request_wait(req, 10)
 	if resp=="":
 		raise TestError("Timed-out waiting for response")

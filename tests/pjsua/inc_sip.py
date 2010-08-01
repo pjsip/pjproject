@@ -107,7 +107,7 @@ class Dialog:
 		msg = msg.replace("$BRANCH", branch)
 		return msg
 
-	def create_req(self, method, sdp, branch="", extra_headers=""):
+	def create_req(self, method, sdp, branch="", extra_headers="", body=""):
 		if branch=="":
 			self.cseq = self.cseq + 1
 		msg = req_templ
@@ -119,10 +119,14 @@ class Dialog:
 		if sdp!="":
 			msg = msg.replace("$CONTENT_LENGTH", str(len(sdp)))
 			msg = msg + "Content-Type: application/sdp\r\n"
+			msg = msg + "\r\n"
+			msg = msg + sdp
+		elif body!="":
+			msg = msg.replace("$CONTENT_LENGTH", str(len(body)))
+			msg = msg + "\r\n"
+			msg = msg + body
 		else:
 			msg = msg.replace("$CONTENT_LENGTH", "0")
-		msg = msg + "\r\n"
-		msg = msg + sdp
 		return self.update_fields(msg)
 
 	def create_response(self, request, code, reason, to_tag=""):
@@ -138,9 +142,9 @@ class Dialog:
 				response = response + line + "\r\n"
 		return response
 
-	def create_invite(self, sdp, extra_headers=""):
+	def create_invite(self, sdp, extra_headers="", body=""):
 		self.inv_branch = str(random.random())
-		return self.create_req("INVITE", sdp, branch=self.inv_branch, extra_headers=extra_headers)
+		return self.create_req("INVITE", sdp, branch=self.inv_branch, extra_headers=extra_headers, body=body)
 
 	def create_ack(self, sdp="", extra_headers=""):
 		return self.create_req("ACK", sdp, extra_headers=extra_headers, branch=self.inv_branch)
@@ -252,10 +256,12 @@ class SendtoCfg:
 	resp_include = []
 	# List of RE patterns that must NOT exist in response
 	resp_exclude = []
+	# Full (non-SDP) body
+	body = ""
 	# Constructor
 	def __init__(self, name, pjsua_args, sdp, resp_code, 
 		     resp_inc=[], resp_exc=[], use_tcp=False,
-		     extra_headers="", complete_msg="",
+		     extra_headers="", body="", complete_msg="",
 		     enable_buffer = False):
 	 	self.complete_msg = complete_msg
 		self.sdp = sdp
@@ -264,6 +270,7 @@ class SendtoCfg:
 		self.resp_exclude = resp_exc
 		self.use_tcp = use_tcp
 		self.extra_headers = extra_headers
+		self.body = body
 		self.inst_param = cfg.InstanceParam("pjsua", pjsua_args)
 		self.inst_param.enable_buffer = enable_buffer 
 

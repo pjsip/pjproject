@@ -142,6 +142,8 @@ PJ_DEF(void) pjsua_msg_data_init(pjsua_msg_data *msg_data)
 {
     pj_bzero(msg_data, sizeof(*msg_data));
     pj_list_init(&msg_data->hdr_list);
+    pjsip_media_type_init(&msg_data->multipart_ctype, NULL, NULL);
+    pj_list_init(&msg_data->multipart_parts);
 }
 
 PJ_DEF(void) pjsua_transport_config_default(pjsua_transport_config *cfg)
@@ -2224,6 +2226,37 @@ void pjsua_process_msg_data(pjsip_tx_data *tdata,
 	body = pjsip_msg_body_create(tdata->pool, &ctype.type, &ctype.subtype,
 				     &msg_data->msg_body);
 	tdata->msg->body = body;
+    }
+
+    /* Multipart */
+    if (!pj_list_empty(&msg_data->multipart_parts) &&
+	msg_data->multipart_ctype.type.slen)
+    {
+	pjsip_msg_body *bodies;
+	pjsip_multipart_part *part;
+	pj_str_t *boundary = NULL;
+
+	bodies = pjsip_multipart_create(tdata->pool,
+				        &msg_data->multipart_ctype,
+				        boundary);
+	part = msg_data->multipart_parts.next;
+	while (part != &msg_data->multipart_parts) {
+	    pjsip_multipart_part *part_copy;
+
+	    part_copy = pjsip_multipart_clone_part(tdata->pool, part);
+	    pjsip_multipart_add_part(tdata->pool, bodies, part_copy);
+	    part = part->next;
+	}
+
+	if (tdata->msg->body) {
+	    part = pjsip_multipart_create_part(tdata->pool);
+	    part->body = tdata->msg->body;
+	    pjsip_multipart_add_part(tdata->pool, bodies, part);
+
+	    tdata->msg->body = NULL;
+	}
+
+	tdata->msg->body = bodies;
     }
 }
 
