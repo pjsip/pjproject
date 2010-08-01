@@ -108,6 +108,10 @@ SOURCE=..\src\pjsip\sip_msg.c
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\pjsip\sip_multipart.c
+# End Source File
+# Begin Source File
+
 SOURCE=..\src\pjsip\sip_parser.c
 # End Source File
 # Begin Source File
@@ -250,6 +254,10 @@ SOURCE=..\include\pjsip\print_util.h
 # Begin Source File
 
 SOURCE=..\include\pjsip\sip_msg.h
+# End Source File
+# Begin Source File
+
+SOURCE=..\include\pjsip\sip_multipart.h
 # End Source File
 # Begin Source File
 

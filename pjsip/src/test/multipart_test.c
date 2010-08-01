@@ -149,6 +149,8 @@ static pj_status_t verify1(pj_pool_t *pool, pjsip_msg_body *body)
     pjsip_multipart_part *part;
     int rc;
 
+    PJ_UNUSED_ARG(pool);
+
     /* Check content-type: "multipart/mixed;boundary=12345" */
     init_media_type(&mt, "multipart", "mixed", "12345");
     if (pjsip_media_type_cmp(&body->content_type, &mt) != 0)

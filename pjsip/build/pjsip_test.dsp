@@ -117,6 +117,10 @@ SOURCE="..\src\test\msg_test.c"
 # End Source File
 # Begin Source File
 
+SOURCE=..\src\test\multipart_test.c
+# End Source File
+# Begin Source File
+
 SOURCE="..\src\test\regc_test.c"
 # End Source File
 # Begin Source File

@@ -175,6 +175,8 @@ static void* multipart_clone_data(pj_pool_t *pool, const void *data,
     struct multipart_data *dst;
     const pjsip_multipart_part *src_part;
 
+    PJ_UNUSED_ARG(len);
+
     src = (const struct multipart_data*) data;
     dst = PJ_POOL_ALLOC_T(pool, struct multipart_data);
 
@@ -511,6 +513,7 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
     TRACE_((THIS_FILE, "Started parsing multipart body"));
 
     /* Get the boundary value in the ctype */
+    boundary.ptr = NULL;
     boundary.slen = 0;
     ctype_param = pjsip_param_find(&ctype->param, &STR_BOUNDARY);
     if (ctype_param) {
