@@ -30,10 +30,10 @@
 /*
  * Generic parameter manipulation.
  */
-PJ_DEF(pjsip_param*) pjsip_param_find(  pjsip_param *param_list,
+PJ_DEF(pjsip_param*) pjsip_param_find(  const pjsip_param *param_list,
 					const pj_str_t *name )
 {
-    pjsip_param *p = param_list->next;
+    pjsip_param *p = (pjsip_param*)param_list->next;
     while (p != param_list) {
 	if (pj_stricmp(&p->name, name)==0)
 	    return p;
@@ -42,16 +42,30 @@ PJ_DEF(pjsip_param*) pjsip_param_find(  pjsip_param *param_list,
     return NULL;
 }
 
-PJ_DEF(const pjsip_param*) pjsip_param_cfind( const pjsip_param *param_list,
-					      const pj_str_t *name )
+PJ_DEF(int) pjsip_param_cmp( const pjsip_param *param_list1,
+			     const pjsip_param *param_list2,
+			     pj_bool_t ig_nf)
 {
-    const pjsip_param *p = param_list->next;
-    while (p != param_list) {
-	if (pj_stricmp_alnum(&p->name, name)==0)
-	    return p;
-	p = p->next;
+    const pjsip_param *p1;
+
+    if ((ig_nf & 1)==0 && pj_list_size(param_list1)!=pj_list_size(param_list2))
+	return 1;
+
+    p1 = param_list1->next;
+    while (p1 != param_list1) {
+	const pjsip_param *p2;
+	p2 = pjsip_param_find(param_list2, &p1->name);
+	if (p2 ) {
+	    int rc = pj_stricmp(&p1->value, &p2->value);
+	    if (rc != 0)
+		return rc;
+	} else if ((ig_nf & 1)==0)
+	    return 1;
+
+	p1 = p1->next;
     }
-    return NULL;
+
+    return 0;
 }
 
 PJ_DEF(void) pjsip_param_clone( pj_pool_t *pool, pjsip_param *dst_list,
@@ -60,7 +74,7 @@ PJ_DEF(void) pjsip_param_clone( pj_pool_t *pool, pjsip_param *dst_list,
     const pjsip_param *p = src_list->next;
 
     pj_list_init(dst_list);
-    while (p != src_list) {
+    while (p && p != src_list) {
 	pjsip_param *new_param = PJ_POOL_ALLOC_T(pool, pjsip_param);
 	pj_strdup(pool, &new_param->name, &p->name);
 	pj_strdup(pool, &new_param->value, &p->value);
@@ -98,7 +112,7 @@ PJ_DEF(pj_ssize_t) pjsip_param_print_on( const pjsip_param *param_list,
     int printed;
 
     p = param_list->next;
-    if (p == param_list)
+    if (p == NULL || p == param_list)
 	return 0;
 
     startbuf = buf;
@@ -455,17 +469,8 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
     /* All other uri-parameters appearing in only one URI are ignored when 
      * comparing the URIs.
      */
-    p1 = url1->other_param.next;
-    while (p1 != &url1->other_param) {
-	const pjsip_param *p2;
-	p2 = pjsip_param_cfind(&url2->other_param, &p1->name);
-	if (p2 ) {
-	    if (pj_stricmp(&p1->value, &p2->value) != 0)
-		return PJSIP_ECMPOTHERPARAM;
-	}
-
-	p1 = p1->next;
-    }
+    if (pjsip_param_cmp(&url1->other_param, &url2->other_param, 1)!=0)
+	return PJSIP_ECMPOTHERPARAM;
 
     /* URI header components are never ignored. Any present header component
      * MUST be present in both URIs and match for the URIs to match. 
@@ -474,7 +479,7 @@ static pj_status_t pjsip_url_compare( pjsip_uri_context_e context,
     p1 = url1->header_param.next;
     while (p1 != &url1->header_param) {
 	const pjsip_param *p2;
-	p2 = pjsip_param_cfind(&url2->header_param, &p1->name);
+	p2 = pjsip_param_find(&url2->header_param, &p1->name);
 	if (p2) {
 	    /* It seems too much to compare two header params according to
 	     * the rule of each header. We'll just compare them string to

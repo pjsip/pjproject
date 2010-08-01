@@ -66,22 +66,33 @@ typedef struct pjsip_param
  *
  * @return		The parameter if found, or NULL.
  */
-PJ_DECL(pjsip_param*) pjsip_param_find( pjsip_param *param_list,
+PJ_DECL(pjsip_param*) pjsip_param_find( const pjsip_param *param_list,
 					const pj_str_t *name );
 
 
 /**
- * Find the specified parameter name in the list. The name will be compared
- * in case-insensitive comparison.
- *
- * @param param_list	List of parameters to find.
- * @param name		Parameter/header name to find.
- *
- * @return		The parameter if found, or NULL.
+ * Alias for pjsip_param_find()
  */
-PJ_DECL(const pjsip_param*) pjsip_param_cfind(const pjsip_param *param_list,
-					      const pj_str_t *name );
+PJ_INLINE(pjsip_param*) pjsip_param_cfind(const pjsip_param *param_list,
+					  const pj_str_t *name)
+{
+    return pjsip_param_find(param_list, name);
+}
 
+/**
+ * Compare two parameter lists.
+ *
+ * @param param_list1	First parameter list.
+ * @param param_list2	Second parameter list.
+ * @param ig_nf		If set to 1, do not compare parameters that only
+ * 			appear in one of the list.
+ *
+ * @return		Zero if the parameter list are equal, non-zero
+ * 			otherwise.
+ */
+PJ_DECL(int) pjsip_param_cmp(const pjsip_param *param_list1,
+			     const pjsip_param *param_list2,
+			     pj_bool_t ig_nf);
 
 /**
  * Duplicate the parameters.
