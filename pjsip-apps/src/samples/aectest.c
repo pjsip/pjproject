@@ -293,9 +293,9 @@ int main(int argc, char *argv[])
     pj_shutdown();
 
     if (interactive) {
-	char s[10];
+	char s[10], *dummy;
 	puts("ENTER to quit");
-	fgets(s, sizeof(s), stdin);
+	dummy = fgets(s, sizeof(s), stdin);
     }
 
     /* Done. */
