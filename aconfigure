@@ -3431,6 +3431,10 @@ ac_link='$CC -o conftest$ac_exeext $CFLAGS $CPPFLAGS $LDFLAGS conftest.$ac_ext $
 ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
+if test -z "$CROSS_COMPILE"; then
+    CROSS_COMPILE=`echo ${CC} | sed 's/gcc//'`
+fi
+
 if test "$AR" = ""; then AR="${CROSS_COMPILE}ar rv"; fi
 
 if test "$LD" = ""; then LD="$CC"; fi
@@ -3460,9 +3464,15 @@ if test "$CC_CFLAGS" = ""; then CC_CFLAGS="-Wall"; fi
 
 
 
-case $target in
+
+case $host in
     *mingw* | *cygw* | *win32* | *w32* )
-	ac_pjdir=`pwd -W`
+	if pwd -W 2&> /dev/null; then
+	   ac_pjdir=`pwd -W`
+	else
+	   # We're probably cross-compiling mingw on Linux
+	   ac_pjdir=`pwd`
+	fi
 	;;
     *)
 	ac_pjdir=`pwd`

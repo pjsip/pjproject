@@ -41,6 +41,13 @@ AC_PROG_CC
 AC_PROG_CXX
 AC_LANG_C
 
+dnl #
+dnl # Setup CROSS_COMPILE variable
+dnl #
+if test -z "$CROSS_COMPILE"; then 
+    CROSS_COMPILE=`echo ${CC} | sed 's/gcc//'`
+fi
+
 if test "$AR" = ""; then AR="${CROSS_COMPILE}ar rv"; fi
 AC_SUBST(AR)
 if test "$LD" = ""; then LD="$CC"; fi
@@ -70,9 +77,15 @@ AC_SUBST(CC_CFLAGS)
 
 AC_SUBST(ac_pjdir)
 AC_SUBST(ac_build_mak_vars)
-case $target in 
+
+case $host in 
     *mingw* | *cygw* | *win32* | *w32* )
-	ac_pjdir=`pwd -W`
+	if pwd -W 2&> /dev/null; then
+	   ac_pjdir=`pwd -W`
+	else
+	   # We're probably cross-compiling mingw on Linux
+	   ac_pjdir=`pwd`
+	fi
 	;;
     *)
 	ac_pjdir=`pwd`
