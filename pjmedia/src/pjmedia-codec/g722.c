@@ -588,7 +588,7 @@ static pj_status_t g722_codec_encode(pjmedia_codec *codec,
 	pj_int16_t *p, *end;
 
 	p = (pj_int16_t*)input->buf;
-	end = p + input->size;
+	end = p + input->size/2;
 	while (p < end) {
 	    *p++ >>= g722_data->pcm_shift;
 	}
