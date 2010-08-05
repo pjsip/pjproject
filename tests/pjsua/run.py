@@ -60,24 +60,29 @@ inc.ARGS = args
 # Get the pjsua executable name
 if G_EXE == "":
 	if sys.platform.find("win32")!=-1:
-	    e = "../../pjsip-apps/bin/pjsua_vc6d.exe"
-	    if os.access(e, os.F_OK):
-	    	st1 = os.stat(e)
-	    else:
-	    	st1 = None
-	    if st1 != None:
-		G_EXE = e
-	    e = "../../pjsip-apps/bin/pjsua_vc6.exe"
-	    if os.access(e, os.F_OK):
-	    	st2 = os.stat(e)
-	    else:
-	    	st2 = None
-	    if st2 != None and (st1==None or st2.st_mtime > st1.st_mtime):
-		G_EXE = e
-		st1 = st2
+	    EXE_DIR = "../../pjsip-apps/bin/"
+	    EXECUTABLES = [ "pjsua_vc6d.exe",
+			    "pjsua_vc6.exe",
+			    "pjsua-i386-Win32-vc8-Debug.exe",
+			    "pjsua-i386-Win32-vc8-Debug-Dynamic.exe",
+			    "pjsua-i386-Win32-vc8-Debug-Static.exe",
+			    "pjsua-i386-Win32-vc8-Release.exe",
+			    "pjsua-i386-Win32-vc8-Release-Dynamic.exe",
+			    "pjsua-i386-Win32-vc8-Release-Static.exe"
+			    ]
+	    e_ts = 0
+	    for e in EXECUTABLES:
+		e = EXE_DIR + e
+		if os.access(e, os.F_OK):
+		    st = os.stat(e)
+		    if e_ts==0 or e_ts<st.st_mtime:
+			G_EXE = e
+			e_ts = st.st_mtime
+
 	    if G_EXE=="":
 		print "Unable to find valid pjsua. Please build pjsip first"
 		sys.exit(1)
+		
 	    G_INUNIX = False
 	else:
 	    f = open("../../build.mak", "r")
