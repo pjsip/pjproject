@@ -203,7 +203,7 @@ static pj_bool_t ssl_on_accept_complete(pj_ssl_sock_t *ssock,
     PJ_UNUSED_ARG(src_addr_len);
 
     /* Duplicate parent test state to newly accepted test state */
-    st = pj_pool_zalloc(parent_st->pool, sizeof(struct test_state));
+    st = (struct test_state*)pj_pool_zalloc(parent_st->pool, sizeof(struct test_state));
     *st = *parent_st;
     pj_ssl_sock_set_user_data(newsock, st);
 
@@ -597,7 +597,7 @@ static int echo_test(pj_ssl_sock_proto srv_proto, pj_ssl_sock_proto cli_proto,
 	pj_srand((unsigned)now.sec);
 	state_cli.send_str_len = (pj_rand() % 5 + 1) * 1024 + pj_rand() % 1024;
     }
-    state_cli.send_str = pj_pool_alloc(pool, state_cli.send_str_len);
+    state_cli.send_str = (char*)pj_pool_alloc(pool, state_cli.send_str_len);
     {
 	unsigned i;
 	for (i = 0; i < state_cli.send_str_len; ++i)
@@ -1209,8 +1209,8 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
     }
 
     /* Allocate SSL socket pointers and test state */
-    ssock_cli = pj_pool_calloc(pool, clients, sizeof(pj_ssl_sock_t*));
-    state_cli = pj_pool_calloc(pool, clients, sizeof(struct test_state));
+    ssock_cli = (pj_ssl_sock_t**)pj_pool_calloc(pool, clients, sizeof(pj_ssl_sock_t*));
+    state_cli = (struct test_state*)pj_pool_calloc(pool, clients, sizeof(struct test_state));
 
     /* Get start timestamp */
     pj_gettimeofday(&start);
@@ -1222,7 +1222,7 @@ static int perf_test(unsigned clients, unsigned ms_handshake_timeout)
 	state_cli[i].pool = pool;
 	state_cli[i].check_echo = PJ_TRUE;
 	state_cli[i].send_str_len = (pj_rand() % 5 + 1) * 1024 + pj_rand() % 1024;
-	state_cli[i].send_str = pj_pool_alloc(pool, state_cli[i].send_str_len);
+	state_cli[i].send_str = (char*)pj_pool_alloc(pool, state_cli[i].send_str_len);
 	{
 	    unsigned j;
 	    for (j = 0; j < state_cli[i].send_str_len; ++j)
