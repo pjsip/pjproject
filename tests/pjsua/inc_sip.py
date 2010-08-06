@@ -166,9 +166,9 @@ class Dialog:
 		src_addr = None
 		while time.time() < endtime:
 			readset = select([self.sock], [], [], timeout)
-			if len(readset) < 1 or not self.sock in readset[0]:
-				if len(readset) < 1:
-					print "select() returns " + str(len(readset))
+			if len(readset[0]) < 1 or not self.sock in readset[0]:
+				if len(readset[0]) < 1:
+					print "select() timeout"
 				elif not self.sock in readset[0]:
 					print "select() alien socket"
 				else:
