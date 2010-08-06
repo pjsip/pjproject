@@ -646,13 +646,13 @@ static void PrintCodecMenu()
 	    "\n\n"
 	    "Codec Menu:\n"
 	    "  a    Enable all codecs\n"
-#if PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
+#if PJMEDIA_HAS_PASSTHROUGH_CODECS && PJMEDIA_HAS_PASSTHROUGH_CODEC_AMR
 	    "  d    Enable only AMR\n"
 #endif
-#if PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
+#if PJMEDIA_HAS_PASSTHROUGH_CODECS && PJMEDIA_HAS_PASSTHROUGH_CODEC_G729
 	    "  g    Enable only G.729\n"
 #endif
-#if PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
+#if PJMEDIA_HAS_PASSTHROUGH_CODECS && PJMEDIA_HAS_PASSTHROUGH_CODEC_ILBC
 	    "  j    Enable only iLBC\n"
 #endif
 	    "  m    Enable only Speex\n"
