@@ -13,14 +13,14 @@ c=IN IP4 127.0.0.1
 t=0 0
 m=audio 4000 RTP/AVP 0
 a=rtpmap:0 pcmu/8000
-m=audio 5000 RTP/SAVP 0
+m=audio 4000 RTP/SAVP 0
 a=crypto:1 aes_cm_128_hmac_sha1_80 inline:WnD7c1ksDGs+dIefCEo8omPg4uO8DYIinNGL5yxQ
 """
 
 pjsua_args = "--null-audio --auto-answer 200 --use-srtp 1 --srtp-secure 0"
 extra_headers = ""
 include = ["Content-Type: application/sdp",	# response must include SDP
-	   "m=audio 0 RTP/AVP[\\s\\S]+a=rtpmap:0[\\s\\S]+m=audio [1-9]+[0-9]* RTP/SAVP[\\s\\S]+a=crypto"
+	   "m=audio 0 RTP/AVP[\\s\\S]+m=audio [1-9]+[0-9]* RTP/SAVP[\\s\\S]+a=crypto"
 	   ]
 exclude = []
 

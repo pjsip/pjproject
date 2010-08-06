@@ -175,7 +175,7 @@ class Dialog:
 					print "select other error"
 				continue
 			try:
-				msg, src_addr = self.sock.recvfrom(2048)
+				msg, src_addr = self.sock.recvfrom(4096)
 			except:
 				print "recv() exception: ", sys.exc_info()[0]
 				continue
