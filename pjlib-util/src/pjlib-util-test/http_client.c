@@ -64,36 +64,50 @@ static int counter = 0;
 static int server_thread(void *p)
 {
     struct server_t *srv = (struct server_t*)p;
+    char *pkt = (char*)pj_pool_alloc(pool, srv->buf_size);
     pj_sock_t newsock;
 
     while (!thread_quit) {
-	char *pkt = (char*)pj_pool_alloc(pool, srv->buf_size);
 	pj_ssize_t pkt_len;
 	int rc;
         pj_fd_set_t rset;
-	pj_time_val timeout = {0, 100};
+	pj_time_val timeout = {0, 500};
 
-        rc = pj_sock_accept(srv->sock, &newsock, NULL, NULL);
-	if (rc != 0)
-	    continue;
+	while (!thread_quit) {
+	    PJ_FD_ZERO(&rset);
+	    PJ_FD_SET(srv->sock, &rset);
+	    rc = pj_sock_select(srv->sock+1, &rset, NULL, NULL, &timeout);
+	    if (rc != 1) {
+		continue;
+	    }
 
-	PJ_FD_ZERO(&rset);
-	PJ_FD_SET(newsock, &rset);
-	rc = pj_sock_select(newsock+1, &rset, NULL, NULL, &timeout);
-	if (rc != 1)
-	    continue;
+	    rc = pj_sock_accept(srv->sock, &newsock, NULL, NULL);
+	    if (rc == PJ_SUCCESS) {
+		break;
+	    }
+	}
 
-	pkt_len = srv->buf_size;
-        do {
-            rc = pj_sock_recv(newsock, pkt, &pkt_len, 0);
-            if (rc != 0) {
-                app_perror("Server error receiving packet", rc);
+	if (thread_quit)
+	    break;
+
+	while (!thread_quit) {
+            PJ_FD_ZERO(&rset);
+            PJ_FD_SET(newsock, &rset);
+            rc = pj_sock_select(newsock+1, &rset, NULL, NULL, &timeout);
+            if (rc != 1) {
+        	PJ_LOG(3,("http test", "client timeout"));
                 continue;
             }
-            rc = pj_sock_select(newsock+1, &rset, NULL, NULL, &timeout);
-            if (rc < 1)
+
+            pkt_len = srv->buf_size;
+            rc = pj_sock_recv(newsock, pkt, &pkt_len, 0);
+            if (rc == PJ_SUCCESS) {
                 break;
-        } while(1);
+            }
+        }
+
+	if (thread_quit)
+	    break;
 
 	/* Simulate network RTT */
 	pj_thread_sleep(50);
@@ -110,7 +124,11 @@ static int server_thread(void *p)
             }
             pj_ansi_sprintf(pkt + pj_ansi_strlen(pkt), "\r\n");
             pkt_len = pj_ansi_strlen(pkt);
-            pj_sock_send(newsock, pkt, &pkt_len, 0);
+            rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
+            if (rc != PJ_SUCCESS) {
+        	pj_sock_close(newsock);
+        	continue;
+            }
             while (send_size < srv->data_size) {
                 pkt_len = srv->data_size - send_size;
                 if (pkt_len > (signed)srv->buf_size)
@@ -119,7 +137,9 @@ static int server_thread(void *p)
                 pj_create_random_string(pkt, pkt_len);
                 pj_ansi_sprintf(pkt, "\nPacket: %d", ++ctr);
                 pkt[pj_ansi_strlen(pkt)] = '\n';
-	        pj_sock_send(newsock, pkt, &pkt_len, 0);
+		rc = pj_sock_send(newsock, pkt, &pkt_len, 0);
+		if (rc != PJ_SUCCESS)
+		    break;
             }
             pj_sock_close(newsock);
 	}
@@ -207,6 +227,10 @@ static void on_response(pj_http_req *hreq, const pj_http_resp *resp)
 #endif
 
     if (test_cancel) {
+	/* Need to delay closing the client socket here, otherwise the
+	 * server will get SIGPIPE when sending response.
+	 */
+	pj_thread_sleep(100);
         pj_http_req_cancel(hreq, PJ_TRUE);
         test_cancel = PJ_FALSE;
     }
@@ -355,6 +379,7 @@ int http_client_test1()
 
 #ifdef USE_LOCAL_SERVER
     thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
     pj_sock_close(g_server.sock);
 #endif
 
@@ -490,6 +515,7 @@ int http_client_test2()
 
 #ifdef USE_LOCAL_SERVER
     thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
     pj_sock_close(g_server.sock);
 #endif
 
@@ -592,6 +618,7 @@ int http_client_test_put1()
 
 #ifdef USE_LOCAL_SERVER
     thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
     pj_sock_close(g_server.sock);
 #endif
 
@@ -692,6 +719,7 @@ int http_client_test_put2()
 
 #ifdef USE_LOCAL_SERVER
     thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
     pj_sock_close(g_server.sock);
 #endif
 
@@ -782,6 +810,7 @@ int http_client_test_delete()
 
 #ifdef USE_LOCAL_SERVER
     thread_quit = PJ_TRUE;
+    pj_thread_join(g_server.thread);
     pj_sock_close(g_server.sock);
 #endif
 
