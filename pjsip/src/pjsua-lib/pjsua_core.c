@@ -1307,7 +1307,7 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	 */
 	/* First stage, get the maximum wait time */
 	max_wait = 100;
-	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 	    if (pjsua_var.acc[i].cfg.unpublish_max_wait_time_msec > max_wait)
@@ -1331,7 +1331,7 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	}
 
 	/* Third stage, forcefully destroy unfinished unpublications */
-	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	    if (pjsua_var.acc[i].publish_sess) {
 		pjsip_publishc_destroy(pjsua_var.acc[i].publish_sess);
 		pjsua_var.acc[i].publish_sess = NULL;
@@ -1361,7 +1361,7 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	/* Wait until all unregistrations are done (ticket #364) */
 	/* First stage, get the maximum wait time */
 	max_wait = 100;
-	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 	    if (pjsua_var.acc[i].cfg.unreg_timeout > max_wait)

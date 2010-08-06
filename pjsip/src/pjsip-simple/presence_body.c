@@ -126,7 +126,7 @@ PJ_DEF(pj_status_t) pjsip_pres_create_pidf( pj_pool_t *pool,
 				   "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ",
 				   pt.year, pt.mon+1, pt.day, 
 				   pt.hour, pt.min, pt.sec, pt.msec);
-	  if (tslen > 0 && tslen < sizeof(buf)) {
+	  if (tslen > 0 && tslen < (int)sizeof(buf)) {
 	      pj_str_t time = pj_str(buf);
 	      pjpidf_tuple_set_timestamp(pool, pidf_tuple, &time);
 	  }

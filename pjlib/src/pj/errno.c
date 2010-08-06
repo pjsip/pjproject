@@ -217,7 +217,7 @@ static void pj_perror_imp(int log_level, const char *sender,
 
     /* Build the title */
     len = pj_ansi_vsnprintf(titlebuf, sizeof(titlebuf), title_fmt, marker);
-    if (len < 0 || len >= sizeof(titlebuf))
+    if (len < 0 || len >= (int)sizeof(titlebuf))
 	pj_ansi_strcpy(titlebuf, "Error");
 
     /* Get the error */

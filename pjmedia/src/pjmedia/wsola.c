@@ -850,7 +850,7 @@ PJ_DEF(pj_status_t) pjmedia_wsola_save( pjmedia_wsola *wsola,
 	    /* Continue applying fade out to the extra samples */
 	    if (reg2_len == 0) {
 		wsola_fade_out(wsola, reg1 + reg1_len - count, count);
-	    } else if ((int)reg2_len >= count) {
+	    } else if (reg2_len >= count) {
 		wsola_fade_out(wsola, reg2 + reg2_len - count, count);
 	    } else {
 		unsigned tmp = count - reg2_len;

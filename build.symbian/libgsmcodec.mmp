@@ -64,6 +64,7 @@ SOURCE		gsm.c
 
 SYSTEMINCLUDE	..\pjmedia\include
 SYSTEMINCLUDE	..\pjlib\include 
+SYSTEMINCLUDE	..\third_party\build\gsm
 SYSTEMINCLUDE	..\third_party\gsm\inc
 
 SYSTEMINCLUDE	\epoc32\include

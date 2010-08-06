@@ -191,7 +191,7 @@ static void* multipart_clone_data(pj_pool_t *pool, const void *data,
 
 	src_hdr = src_part->hdr.next;
 	while (src_hdr != &src_part->hdr) {
-	    pjsip_hdr *dst_hdr = pjsip_hdr_clone(pool, src_hdr);
+	    pjsip_hdr *dst_hdr = (pjsip_hdr*)pjsip_hdr_clone(pool, src_hdr);
 	    pj_list_push_back(&dst_part->hdr, dst_hdr);
 	    src_hdr = src_hdr->next;
 	}
@@ -485,7 +485,7 @@ static pjsip_multipart_part *parse_multipart_part(pj_pool_t *pool,
 	part->body->data = start_body;
 	part->body->len = end - start_body;
     } else {
-	part->body->data = "";
+	part->body->data = (void*)"";
 	part->body->len = 0;
     }
     TRACE_((THIS_FILE, "Body parsed: \"%.*s\"", (int)part->body->len,
