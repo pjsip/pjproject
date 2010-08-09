@@ -574,7 +574,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_create_response( pjsip_endpoint *endpt,
      * to do this is to derive the tag from Via branch parameter (or to
      * use it directly).
      */
-    if (st_code > 100 && top_via) {
+    if (to_hdr->tag.slen==0 && st_code > 100 && top_via) {
 	to_hdr->tag = top_via->branch_param;
     }
 
