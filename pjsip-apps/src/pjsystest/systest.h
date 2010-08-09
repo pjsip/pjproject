@@ -91,7 +91,7 @@ typedef struct test_item_t
 #define SYSTEST_MAX_TEST    32
 extern unsigned	    test_item_count;
 extern test_item_t  test_items[SYSTEST_MAX_TEST];
-#define PATH_LENGTH	    128
+#define PATH_LENGTH	    PJ_MAXPATH
 extern char	    doc_path[PATH_LENGTH];
 extern char	    res_path[PATH_LENGTH];
 

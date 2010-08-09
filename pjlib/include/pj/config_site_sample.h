@@ -305,9 +305,6 @@
     /* Disable floating point support */
     #define PJ_HAS_FLOATING_POINT		0
 
-    /* Misc PJLIB setting */
-    #define PJ_MAXPATH				80
-
     /*
      * PJMEDIA settings
      */

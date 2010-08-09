@@ -25,7 +25,7 @@ extern pj_log_func *log_cb;
 #define DEBUGGER_PRINT	1
 /* Whether we should show pj log messages in the text area */
 #define SHOW_LOG	1
-#define PATH_LENGTH	128
+#define PATH_LENGTH	PJ_MAXPATH
 
 extern pj_bool_t app_restart;
 
