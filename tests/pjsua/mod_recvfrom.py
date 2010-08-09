@@ -20,6 +20,7 @@ def test_func(test):
 
 	last_cseq = 0
 	last_method = ""
+	last_call_id = ""
 	for t in cfg_file.recvfrom_cfg.transaction:
 		# Print transaction title
 		if t.title != "":
@@ -35,18 +36,20 @@ def test_func(test):
 			# Absorbs retransmissions
 			cseq = 0
 			method = last_method
-			while cseq <= last_cseq and method == last_method:
-				request, src_addr = dlg.wait_msg_from(10)
+			call_id = last_call_id
+			while cseq <= last_cseq and method == last_method and call_id == last_call_id:
+				request, src_addr = dlg.wait_msg_from(30)
 				if request==None or request=="":
 					raise TestError("Timeout waiting for request")
 				method = request.split(" ", 1)[0]
 				cseq_hval = sip.get_header(request, "CSeq")
 				cseq_hval = cseq_hval.split(" ")[0]
 				cseq = int(cseq_hval)
+				call_id = sip.get_header(request, "Call-ID")
 			last_cseq = cseq
 			last_method = method
 		else:
-			request, src_addr = dlg.wait_msg_from(10)
+			request, src_addr = dlg.wait_msg_from(30)
 			if request==None or request=="":
 				raise TestError("Timeout waiting for request")
 
