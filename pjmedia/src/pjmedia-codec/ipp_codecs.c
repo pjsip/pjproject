@@ -112,6 +112,7 @@ static struct ipp_factory {
     pjmedia_endpt	    *endpt;
     pj_pool_t		    *pool;
     pj_mutex_t		    *mutex;
+    unsigned		     g7221_pcm_shift;
 } ipp_factory;
 
 /* IPP codecs private data. */
@@ -133,6 +134,8 @@ typedef struct ipp_private {
     pjmedia_silence_det	*vad;		    /**< PJMEDIA VAD engine, NULL if 
 						 codec has internal VAD.    */
     pj_timestamp	 last_tx;	    /**< Timestamp of last transmit.*/
+
+    unsigned		 g7221_pcm_shift;   /**< G722.1 PCM level adjustment*/
 } ipp_private_t;
 
 
@@ -660,6 +663,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_init( pjmedia_endpt *endpt )
     ipp_factory.base.op = &ipp_factory_op;
     ipp_factory.base.factory_data = NULL;
     ipp_factory.endpt = endpt;
+    ipp_factory.g7221_pcm_shift = PJMEDIA_G7221_DEFAULT_PCM_SHIFT;
 
     ipp_factory.pool = pjmedia_endpt_create_pool(endpt, "IPP codecs", 4000, 4000);
     if (!ipp_factory.pool)
@@ -729,6 +733,35 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_deinit(void)
 
     return status;
 }
+
+/*
+ * Get current IPP codecs configuration settings.
+ */
+PJ_DEF(pj_status_t) pjmedia_codec_ipp_get_config(
+				pjmedia_codec_ipp_config *cfg)
+{
+    PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
+
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->g7221_pcm_shift = ipp_factory.g7221_pcm_shift;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Set IPP codecs configuration settings.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_ipp_set_config(
+				const pjmedia_codec_ipp_config *cfg)
+{
+    PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
+
+    ipp_factory.g7221_pcm_shift = cfg->g7221_pcm_shift;
+    
+    return PJ_SUCCESS;
+}
+
 
 /* 
  * Check if factory can allocate the specified codec. 
@@ -1208,6 +1241,14 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
     }
 #endif
 
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
+    if (ippc->pt >= PJMEDIA_RTP_PT_G722_1_16 && 
+	ippc->pt <= PJMEDIA_RTP_PT_G7221_RSV2)
+    {
+	codec_data->g7221_pcm_shift = ipp_factory.g7221_pcm_shift;
+    }
+#endif
+
     return PJ_SUCCESS;
 
 on_error:
@@ -1364,6 +1405,18 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 	}
 #endif
 
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
+	/* For G722.1: adjust the encoder input signal level */
+	if (pt >= PJMEDIA_RTP_PT_G722_1_16 && 
+	    pt <= PJMEDIA_RTP_PT_G7221_RSV2 &&
+	    codec_data->g7221_pcm_shift)
+	{
+	    unsigned i;
+	    for (i = 0; i < samples_per_frame; ++i)
+		pcm_in[i] >>= codec_data->g7221_pcm_shift;
+	}
+#endif
+
 	if (USC_NoError != ippc->fxns->Encode(codec_data->enc, &in, &out)) {
 	    break;
 	}
@@ -1511,6 +1564,20 @@ static pj_status_t ipp_codec_decode( pjmedia_codec *codec,
 
 	for (i = 0; i < samples_per_frame; ++i)
 	    s[i] <<= 2;
+    }
+#endif
+
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1
+    /* For G722.1: adjust the decoder output signal level */
+    if (pt >= PJMEDIA_RTP_PT_G722_1_16 && 
+	pt <= PJMEDIA_RTP_PT_G7221_RSV2 &&
+	codec_data->g7221_pcm_shift)
+    {
+	unsigned i;
+	pj_int16_t *s = (pj_int16_t*)output->buf;
+
+	for (i = 0; i < samples_per_frame; ++i)
+	    s[i] <<= codec_data->g7221_pcm_shift;
     }
 #endif
 
