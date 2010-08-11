@@ -129,6 +129,10 @@ PJ_DECL(pj_status_t) pjmedia_codec_g7221_set_mode(unsigned sample_rate,
  * be shifted right by this value, and similarly PCM output samples from
  * the decoder will be shifted left by this value.
  *
+ * \note
+ * This function is also applicable for G722.1 implementation with IPP
+ * back-end.
+ *
  * Default value is PJMEDIA_G7221_DEFAULT_PCM_SHIFT.
  *
  * @param val		The value

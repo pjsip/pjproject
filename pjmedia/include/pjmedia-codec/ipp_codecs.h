@@ -291,23 +291,6 @@
 
 PJ_BEGIN_DECL
 
-/** 
- * IPP codecs configuration settings.
- */
-typedef struct pjmedia_codec_ipp_config
-{
-    /**
-     * Specifies the G.722.1 codec encoder and decoder level adjustment. 
-     * If the value is non-zero, then PCM input samples to the encoder will 
-     * be shifted right by this value, and similarly PCM output samples from
-     * the decoder will be shifted left by this value.
-     *
-     * Default value is PJMEDIA_G7221_DEFAULT_PCM_SHIFT.
-     */
-    unsigned		 g7221_pcm_shift;
-
-} pjmedia_codec_ipp_config;
-
 
 /**
  * Initialize and register IPP codecs factory to pjmedia endpoint.
@@ -317,28 +300,6 @@ typedef struct pjmedia_codec_ipp_config
  * @return	    PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_codec_ipp_init( pjmedia_endpt *endpt );
-
-
-/**
- * Get current IPP codecs configuration settings.
- *
- * @param cfg	    The IPP codecs configuration settings buffer.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_ipp_get_config(
-				pjmedia_codec_ipp_config *cfg);
-
-
-/**
- * Set IPP codecs configuration settings.
- *
- * @param setting   The IPP codecs configuration settings to be applied.
- *
- * @return	    PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_ipp_set_config(
-				const pjmedia_codec_ipp_config *cfg);
 
 
 /**

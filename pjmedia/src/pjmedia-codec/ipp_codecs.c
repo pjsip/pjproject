@@ -644,6 +644,19 @@ static pj_status_t pack_g7221( ipp_private_t *codec_data, void *pkt,
     return PJ_SUCCESS;
 }
 
+
+#include <pjmedia-codec/g7221.h>
+
+
+PJ_DEF(pj_status_t) pjmedia_codec_g7221_set_pcm_shift(int val)
+{
+    PJ_ASSERT_RETURN(val >= 0, PJ_EINVAL);
+
+    ipp_factory.g7221_pcm_shift = val;
+    return PJ_SUCCESS;
+}
+
+
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G722_1 */
 
 /*
@@ -732,34 +745,6 @@ PJ_DEF(pj_status_t) pjmedia_codec_ipp_deinit(void)
     ipp_factory.pool = NULL;
 
     return status;
-}
-
-/*
- * Get current IPP codecs configuration settings.
- */
-PJ_DEF(pj_status_t) pjmedia_codec_ipp_get_config(
-				pjmedia_codec_ipp_config *cfg)
-{
-    PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
-
-    pj_bzero(cfg, sizeof(*cfg));
-    cfg->g7221_pcm_shift = ipp_factory.g7221_pcm_shift;
-
-    return PJ_SUCCESS;
-}
-
-
-/*
- * Set IPP codecs configuration settings.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_ipp_set_config(
-				const pjmedia_codec_ipp_config *cfg)
-{
-    PJ_ASSERT_RETURN(cfg, PJ_EINVAL);
-
-    ipp_factory.g7221_pcm_shift = cfg->g7221_pcm_shift;
-    
-    return PJ_SUCCESS;
 }
 
 
