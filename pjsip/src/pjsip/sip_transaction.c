@@ -1861,6 +1861,8 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 				   pjsip_transport_state state,
 				   const pjsip_transport_state_info *info)
 {
+    PJ_UNUSED_ARG(tp);
+
     if (state == PJSIP_TP_STATE_DISCONNECTED) {
 	pjsip_transaction *tsx;
 	struct tsx_lock_data lck;

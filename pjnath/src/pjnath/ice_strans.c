@@ -268,7 +268,7 @@ static pj_status_t add_update_turn(pj_ice_strans *ice_st,
 	/* Also if this component's default candidate is set to relay,
 	 * move it temporarily to something else.
 	 */
-	if (comp->default_cand == cand - comp->cand_list) {
+	if ((int)comp->default_cand == cand - comp->cand_list) {
 	    /* Init to something */
 	    comp->default_cand = 0;
 	    /* Use srflx candidate as the default, if any */

@@ -237,7 +237,7 @@ pj_status_t gui_init(gui_menu *menu)
     
     if (!RegisterClass(&wc) != 0) {
 	DWORD err = GetLastError();
-	return -1;
+	return PJ_RETURN_OS_ERROR(err);
     }
 
     /* Create the app. window */

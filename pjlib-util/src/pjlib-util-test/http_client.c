@@ -65,7 +65,7 @@ static int server_thread(void *p)
 {
     struct server_t *srv = (struct server_t*)p;
     char *pkt = (char*)pj_pool_alloc(pool, srv->buf_size);
-    pj_sock_t newsock;
+    pj_sock_t newsock = PJ_INVALID_SOCKET;
 
     while (!thread_quit) {
 	pj_ssize_t pkt_len;
