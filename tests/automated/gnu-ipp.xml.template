@@ -5,6 +5,7 @@
 		<FileWrite file="user.mak">
 		  <![CDATA[
 # Written by ccdash
+export CFLAGS += -Wno-unused-label -g
 ]]>			
 		</FileWrite>
 		<FileWrite file="pjlib/include/pj/config_site.h">
