@@ -2,6 +2,7 @@
 import os
 import sys
 import time
+import datetime
 import ccdash
 
 GROUP = "Continuous"
@@ -34,7 +35,7 @@ if __name__ == "__main__":
 
 		if rc==0:
 			# Nothing changed
-			print "No update, will check again in " + str(INTERVAL) + "s.."
+			print str(datetime.datetime.now()) + ": No update, will check again in " + str(INTERVAL) + "s.."
 			time.sleep(INTERVAL)
 			continue
 			
