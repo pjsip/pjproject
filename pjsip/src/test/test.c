@@ -371,8 +371,6 @@ int test_main(void)
 
 
 on_return:
-    error_here;
-
     flush_events(500);
 
     /* Dumping memory pool usage */
