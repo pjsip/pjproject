@@ -6,7 +6,7 @@ import datetime
 import ccdash
 
 GROUP = "Continuous"
-INTERVAL = 60
+INTERVAL = 300
 
 if __name__ == "__main__":
 	if len(sys.argv)<=1 or sys.argv[1]=="-h" or sys.argv[1]=="--h" or sys.argv[1]=="/h":
@@ -52,5 +52,6 @@ if __name__ == "__main__":
 				rc = thisrc
 
 		# Sleep even if something does change
+		print str(datetime.datetime.now()) + ": done, will check again in " + str(INTERVAL) + "s.."
 		time.sleep(INTERVAL)
 
