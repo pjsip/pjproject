@@ -5874,7 +5874,7 @@ $as_echo "$IPPROOT" >&6; }
     fi
 
     if test "x$with_ipp_arch" != "xno"; then
-	IPP_SUFFIX="em64t"
+	IPP_SUFFIX=$with_ipp_arch
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: IPP arch suffix is set to $IPP_SUFFIX" >&5
 $as_echo "IPP arch suffix is set to $IPP_SUFFIX" >&6; }
     else

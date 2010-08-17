@@ -769,7 +769,7 @@ if test "x$enable_ipp" != "xno"; then
     fi
 
     if test "x$with_ipp_arch" != "xno"; then
-	IPP_SUFFIX="em64t"
+	IPP_SUFFIX=$with_ipp_arch
 	AC_MSG_RESULT([IPP arch suffix is set to $IPP_SUFFIX])
     else
 	IPP_SUFFIX=""
