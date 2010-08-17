@@ -17,7 +17,7 @@ export CFLAGS += -Wno-unused-label -g
 ]]>			
 		</FileWrite>
 		<Configure cmd="./aconfigure" />
-		<Build cmd="make dep &amp;&amp; make distclean &amp;&amp; make" />
+		<Build cmd="make dep &amp;&amp; make clean &amp;&amp; make" />
 		<Test name="pjlib-test" wdir="pjlib/bin" cmd="./pjlib-test-$(SUFFIX)" />
 		<Test name="pjlib-util-test" wdir="pjlib-util/bin" cmd="./pjlib-util-test-$(SUFFIX)" />
 		<Test name="pjnath-test" wdir="pjnath/bin" cmd="./pjnath-test-$(SUFFIX)" />
