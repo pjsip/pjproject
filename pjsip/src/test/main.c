@@ -40,6 +40,7 @@ int main(int argc, char *argv[])
     char **opt_arg;
 
     PJ_UNUSED_ARG(argc);
+    error_here;
 
     /* Parse arguments. */
     opt_arg = argv+1;
