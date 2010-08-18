@@ -1027,7 +1027,10 @@ static pj_status_t ipp_codec_open( pjmedia_codec *codec,
 	    if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].name, "annexb")==0)
 	    {
 		if (pj_stricmp2(&attr->setting.enc_fmtp.param[i].val, "no")==0)
+		{
+		    attr->setting.vad = 0;
 		    codec_data->info->params.modes.vad = 0;
+		}
 		break;
 	    }
 	}
