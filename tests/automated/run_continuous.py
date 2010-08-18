@@ -5,13 +5,31 @@ import time
 import datetime
 import ccdash
 
-GROUP = "Continuous"
 INTERVAL = 300
+
+def run_scenarios(scenarios, group):
+	# Run each scenario
+	rc = 0
+	for scenario in scenarios:
+		argv = []
+		argv.append("ccdash.py")
+		argv.append("scenario")
+		argv.append(scenario)
+		argv.append("--group")
+		argv.append(group)
+		thisrc = ccdash.main(argv)
+		if rc==0 and thisrc:
+			rc = thisrc
+	return rc
+
 
 if __name__ == "__main__":
 	if len(sys.argv)<=1 or sys.argv[1]=="-h" or sys.argv[1]=="--h" or sys.argv[1]=="/h":
+		print "This will run both Continuous and Nightly tests"
+		print ""
 		print "Usage: run_continuous.py scenario1.xml [scenario2.xml ...]"
-		sys.exit(0)
+		print ""
+		sys.exit(1)
 
 	# Splice list
 	scenarios = sys.argv[1:]
@@ -21,6 +39,10 @@ if __name__ == "__main__":
 		if not os.path.exists(scenario):
 			print "Error: file " + scenario + " does not exist"
 			sys.exit(1)
+
+	# Current date
+	utc = time.gmtime(None)
+	day = utc.tm_mday
 
 	# Loop foreva
 	while True:
@@ -33,25 +55,27 @@ if __name__ == "__main__":
 		argv.append("../..")
 		rc = ccdash.main(argv)
 
-		if rc==0:
-			# Nothing changed
-			print str(datetime.datetime.now()) + ": No update, will check again in " + str(INTERVAL) + "s.."
-			time.sleep(INTERVAL)
-			continue
-			
-		# Run each scenario
-		for scenario in scenarios:
-			argv = []
-			argv.append("ccdash.py")
-			argv.append("scenario")
-			argv.append(scenario)
-			argv.append("--group")
-			argv.append(GROUP)
-			thisrc = ccdash.main(argv)
-			if rc==0 and thisrc:
-				rc = thisrc
+		utc = time.gmtime(None)
 
-		# Sleep even if something does change
-		print str(datetime.datetime.now()) + ": done, will check again in " + str(INTERVAL) + "s.."
-		time.sleep(INTERVAL)
+		if utc.tm_mday != day or rc != 0:
+				group = ""
+				if utc.tm_mday != day:
+					day = utc.tm_mday
+					group = "Nightly"
+				elif rc != 0:
+					group = "Continuous"
+				else:
+					group = "Experimental"
+				rc = run_scenarios(scenarios, group)
+				# Sleep even if something does change
+				print str(datetime.datetime.now()) + \
+					  ": done running " + group + \
+					  "tests, will check again in " + str(INTERVAL) + "s.."
+				time.sleep(INTERVAL)
+		else:
+			# Nothing changed
+			print str(datetime.datetime.now()) + \
+				  ": No update, will check again in " + str(INTERVAL) + "s.."
+			time.sleep(INTERVAL)
+			
 
