@@ -16,4 +16,4 @@ test_param = TestParam(
 		]
 		)
 
-pesq_threshold = 3.9
+pesq_threshold = 3.8
