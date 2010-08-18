@@ -284,10 +284,15 @@ Where OPTIONS:
                 return 1
         
 	if not build_type:
-	    print "Enter the build type (values: vs, gnu, s60) [vs]: ",
+	    defval = "vs"
+	    if "SHELL" in os.environ:
+		shell = os.environ["SHELL"]
+		if shell.find("sh") > -1:
+		    defval = "gnu"
+	    print "Enter the build type (values: vs, gnu, s60) [%s]: " % (defval),
 	    build_type = sys.stdin.readline().replace("\n", "").replace("\r", "")
 	    if not build_type:
-		   build_type = "vs"
+		   build_type = defval
 		
 
         tpl_file = args[len(args)-1]
