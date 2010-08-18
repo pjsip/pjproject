@@ -11,9 +11,9 @@ if (HAS_SND_DEV == 0):
 test_param = TestParam(
 		"PESQ defaults pjsua settings",
 		[
-			InstanceParam("UA1", ADD_PARAM + " --max-calls=1 --play-file wavs/input.16.wav"),
+			InstanceParam("UA1", ADD_PARAM + " --max-calls=1 --play-file wavs/input.16.wav --no-vad"),
 			InstanceParam("UA2", "--null-audio --max-calls=1 --rec-file  wavs/tmp.16.wav --clock-rate 16000 --auto-answer 200")
 		]
 		)
 
-pesq_threshold = None
+pesq_threshold = 3.9

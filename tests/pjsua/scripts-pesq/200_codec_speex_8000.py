@@ -11,9 +11,9 @@ if (HAS_SND_DEV == 0):
 test_param = TestParam(
 		"PESQ codec Speex NB",
 		[
-			InstanceParam("UA1", ADD_PARAM + " --max-calls=1 --add-codec speex/8000 --clock-rate 8000 --play-file wavs/input.8.wav"),
+			InstanceParam("UA1", ADD_PARAM + " --max-calls=1 --add-codec speex/8000 --clock-rate 8000 --play-file wavs/input.8.wav --no-vad"),
 			InstanceParam("UA2", "--null-audio --max-calls=1 --add-codec speex/8000 --clock-rate 8000 --rec-file  wavs/tmp.8.wav --auto-answer 200")
 		]
 		)
 
-pesq_threshold = 3.0
+pesq_threshold = 3.78
