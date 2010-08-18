@@ -165,10 +165,10 @@ class Dialog:
 		msg = ""
 		src_addr = None
 		while time.time() < endtime:
-			readset = select([self.sock], [], [], timeout)
+			readset = select([self.sock], [], [], 1)
 			if len(readset[0]) < 1 or not self.sock in readset[0]:
 				if len(readset[0]) < 1:
-					print "select() timeout"
+					print "select() timeout (will wait for " + str(int(endtime - time.time())) + "more secs)"
 				elif not self.sock in readset[0]:
 					print "select() alien socket"
 				else:
@@ -176,6 +176,7 @@ class Dialog:
 				continue
 			try:
 				msg, src_addr = self.sock.recvfrom(4096)
+				break
 			except:
 				print "recv() exception: ", sys.exc_info()[0]
 				continue
