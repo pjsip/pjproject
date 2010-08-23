@@ -63,7 +63,7 @@ if __name__ == "__main__":
 			if not os.path.exists(scenario):
 				print "Error: file " + scenario + " does not exist"
 				sys.exit(1)
-			scenario.append(scenario)
+			scenarios.append(scenario)
 			print "Scenario %s added" % (scenario)
 		i = i + 1
 
