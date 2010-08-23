@@ -97,6 +97,8 @@ if __name__ == "__main__":
 					group = "Continuous"
 				else:
 					group = "Experimental"
+				print "Will run %s after %f s.." % (group, DELAY)
+				time.sleep(DELAY)
 				rc = run_scenarios(scenarios, group)
 				# Sleep even if something does change
 				print str(datetime.datetime.now()) + \
