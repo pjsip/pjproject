@@ -89,7 +89,8 @@ static const char *desc =
 
 
 /* Prototype */
-static void print_stream_stat(pjmedia_stream *stream);
+static void print_stream_stat(pjmedia_stream *stream, 
+			      const pjmedia_codec_param *codec_param);
 
 /* Prototype for LIBSRTP utility in file datatypes.c */
 int hex_string_to_octet_string(char *raw, char *hex, int len);
@@ -273,6 +274,7 @@ int main(int argc, char *argv[])
 
     /* Default values */
     const pjmedia_codec_info *codec_info;
+    pjmedia_codec_param codec_param;
     pjmedia_dir dir = PJMEDIA_DIR_DECODING;
     pj_sockaddr_in remote_addr;
     pj_uint16_t local_port = 4000;
@@ -487,6 +489,13 @@ int main(int argc, char *argv[])
     if (status != PJ_SUCCESS)
 	goto on_exit;
 
+    /* Get codec default param for info */
+    status = pjmedia_codec_mgr_get_default_param(
+				    pjmedia_endpt_get_codec_mgr(med_endpt), 
+				    codec_info, 
+				    &codec_param);
+    /* Should be ok, as create_stream() above succeeded */
+    pj_assert(status == PJ_SUCCESS);
 
     /* Get the port interface of the stream */
     status = pjmedia_stream_get_port( stream, &stream_port);
@@ -622,7 +631,7 @@ int main(int argc, char *argv[])
 	}
 
 	if (tmp[0] == 's')
-	    print_stream_stat(stream);
+	    print_stream_stat(stream, &codec_param);
 	else if (tmp[0] == 'q')
 	    break;
 
@@ -723,7 +732,8 @@ static const char *good_number(char *buf, pj_int32_t val)
 /*
  * Print stream statistics
  */
-static void print_stream_stat(pjmedia_stream *stream)
+static void print_stream_stat(pjmedia_stream *stream,
+			      const pjmedia_codec_param *codec_param)
 {
     char duration[80], last_update[80];
     char bps[16], ipbps[16], packets[16], bytes[16], ipbytes[16];
@@ -752,10 +762,11 @@ static void print_stream_stat(pjmedia_stream *stream)
 	port->info.encoding_name.ptr,
 	port->info.clock_rate,
 	port->info.samples_per_frame * 1000 / port->info.clock_rate,
-	good_number(bps, port->info.bytes_per_frame * port->info.clock_rate /
-		    port->info.samples_per_frame),
-	good_number(ipbps, (port->info.bytes_per_frame+32) * 
-			    port->info.clock_rate / port->info.clock_rate));
+	good_number(bps, (codec_param->info.avg_bps+7)/8),
+	good_number(ipbps, ((codec_param->info.avg_bps+7)/8) + 
+			   (40 * 1000 /
+			    codec_param->setting.frm_per_pkt /
+			    codec_param->info.frm_ptime)));
 
     if (stat.rx.update_cnt == 0)
 	strcpy(last_update, "never");

@@ -2030,23 +2030,28 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 					  stream->codec_param.info.frm_ptime *
 					  stream->codec_param.setting.frm_per_pkt /
 					  1000;
-    stream->port.info.bytes_per_frame = stream->codec_param.info.max_bps * 
-					stream->codec_param.info.frm_ptime *
-					stream->codec_param.setting.frm_per_pkt /
-					8 / 1000;
-    if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime *
-	stream->codec_param.setting.frm_per_pkt) % 8000 != 0)
-    {
-	++stream->port.info.bytes_per_frame;
-    }
-
     stream->port.info.format.id = stream->codec_param.info.fmt_id;
     if (stream->codec_param.info.fmt_id == PJMEDIA_FORMAT_L16) {
+	/* Raw format */
+	stream->port.info.bytes_per_frame = stream->port.info.samples_per_frame *
+					    stream->port.info.bits_per_sample / 8;
+
 	stream->port.put_frame = &put_frame;
 	stream->port.get_frame = &get_frame;
     } else {
+	/* Encoded format */
+	stream->port.info.bytes_per_frame = stream->codec_param.info.max_bps * 
+					    stream->codec_param.info.frm_ptime *
+					    stream->codec_param.setting.frm_per_pkt /
+					    8 / 1000;
+	if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime *
+	    stream->codec_param.setting.frm_per_pkt) % 8000 != 0)
+	{
+	    ++stream->port.info.bytes_per_frame;
+	}
 	stream->port.info.format.bitrate = stream->codec_param.info.avg_bps;
 	stream->port.info.format.vad = (stream->codec_param.setting.vad != 0);
+
 	stream->port.put_frame = &put_frame;
 	stream->port.get_frame = &get_frame_ext;
     }

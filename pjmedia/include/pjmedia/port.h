@@ -218,7 +218,7 @@ typedef struct pjmedia_port_info
     unsigned	    channel_count;	/**< Number of channels.	    */
     unsigned	    bits_per_sample;	/**< Bits/sample		    */
     unsigned	    samples_per_frame;	/**< No of samples per frame.	    */
-    unsigned	    bytes_per_frame;	/**< No of samples per frame.	    */
+    unsigned	    bytes_per_frame;	/**< No of bytes per frame.	    */
 } pjmedia_port_info;
 
 
