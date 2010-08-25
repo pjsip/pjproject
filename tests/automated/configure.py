@@ -108,8 +108,8 @@ class S60SDK:
 
 		if sdk1 != sdk2:
 		    sys.stderr.write("Error: default SDK in device doesn't match EPOCROOT\n")
-		    sys.stderr.write("Default device SDK = " + sdk2 + "\n")
-		    sys.stderr.write("EPOCROOT SDK = " + sdk1 + "\n")
+		    sys.stderr.write("Default device SDK = '" + sdk2 + "'\n")
+		    sys.stderr.write("EPOCROOT SDK = '" + sdk1 + "'\n")
 		    sys.exit(1)
 
 		self.name = sdk2.replace("_", "-")
@@ -209,6 +209,12 @@ def replace_vars(text):
                         wdir = os.path.join(os.getcwd(), "../..")
                         wdir = os.path.normpath(wdir)
                         text = text.replace("$(PJDIR)", wdir)
+                elif text.find("$(NOP)") >= 0:
+			if platform.system().lower() == "windows" or platform.system().lower() == "microsoft":
+				cmd = "CMD /C echo Success"
+			else:
+				cmd = "echo Success"
+                        text = text.replace("$(NOP)", cmd)
                 else:
                         break
         return text

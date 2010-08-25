@@ -2,15 +2,14 @@
 <Scenario site="$(HOSTNAME)" url="http://my.cdash.org/submit.php?project=PJSIP" wdir="$(PJDIR)/tests/automated">
  
 	<Submit group="Experimental" build="Test-Preparation">
-		<Configure cmd="echo Success" />
-		<Build cmd="echo Success" />
+		<Configure cmd="$(NOP)" />
+		<Build cmd="$(NOP)" />
 
 		<!-- GNU Makefile based scenario 
 		     Requirement:
 		      - none
-
-		<Test name="Configuring GNU scenario" cmd="python configure.py -t gnu -o gnu.xml gnu.xml.template" />
 		  -->
+		<Test name="Configuring GNU scenario" cmd="python configure.py -t gnu -o gnu.xml gnu.xml.template" />
 
 		<!-- GNU Makefile with Intel IPP scenario.
 		     Requirements:
@@ -30,10 +29,9 @@
 
 		<!-- Symbian target.
 		     Requirement:
-		       - EPOCROOT
-
-		<Test name="Configuring Symbian scenario" cmd="python configure.py -t s60 -o symbian.xml symbian.xml.template" />
-		  -->
+		       - EPOCROOT (modify below)
+		-->
+		<Test name="Configuring Symbian scenario" cmd='CMD /C SET EPOCROOT=\S60\devices\S60_5th_Edition_SDK_v1.0&amp;&amp; devices -setdefault @S60_5th_Edition_SDK_v1.0:com.nokia.s60&amp;&amp; python configure.py -t s60 -s60target &quot;gcce urel&quot; -o symbian.xml symbian.xml.template' />
 
 	</Submit>
 	
