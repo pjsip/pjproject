@@ -7,28 +7,25 @@ import ccdash
 
 INTERVAL = 300
 DELAY = 0
+CMDLINE = ""
 
-def run_scenarios(scenarios, group):
-	# Run each scenario
-	rc = 0
-	for scenario in scenarios:
-		argv = []
-		argv.append("ccdash.py")
-		argv.append("scenario")
-		argv.append(scenario)
-		argv.append("--group")
-		argv.append(group)
-		thisrc = ccdash.main(argv)
-		if rc==0 and thisrc:
-			rc = thisrc
-	return rc
+def run_cmdline(group):
+	cmdline = CMDLINE + " --group " + group
+	return os.system(cmdline)
 
 
 def usage():
 	print """Periodically monitor working directory for Continuous and Nightly builds
 
 Usage:
-  run_continuous.py [options] scenario1.xml [scenario2.xml ...]
+  run_continuous.py [options] "cmdline"
+
+where:
+  cmdline is command to be executed to perform the test. Typically, this is
+  a script that calls configure.py and run_scenario.py for each scenario to
+  be performed. See perform_test.sh.sample and perform_test.bat.sample for
+  sample scripts. Note that the cmdline will be called with added group
+  argument (e.g. --group Nightly).
 
 options:
   These are options which will be processed by run_continuous.py:
@@ -46,8 +43,7 @@ if __name__ == "__main__":
 	if len(sys.argv)<=1 or sys.argv[1]=="-h" or sys.argv[1]=="--h" or sys.argv[1]=="--help" or sys.argv[1]=="/h":
 		usage()
 
-	# Splice list
-	scenarios = []
+	# Check args
 	i = 1
 	while i < len(sys.argv):
 		if sys.argv[i]=="--delay":
@@ -58,17 +54,14 @@ if __name__ == "__main__":
 			DELAY = float(sys.argv[i]) * 60
 			print "Delay is set to %f minute(s)" % (DELAY / 60)
 		else:
-			# Check if scenario exists
-			scenario = sys.argv[i]
-			if not os.path.exists(scenario):
-				print "Error: file " + scenario + " does not exist"
+			if CMDLINE:
+				print "Error: cmdline already specified"
 				sys.exit(1)
-			scenarios.append(scenario)
-			print "Scenario %s added" % (scenario)
+			CMDLINE = sys.argv[i]
 		i = i + 1
 
-	if len(scenarios) < 1:
-		print "Error: scenario is required"
+	if not CMDLINE:
+		print "Error: cmdline is needed"
 		sys.exit(1)
 
 	# Current date
@@ -99,7 +92,7 @@ if __name__ == "__main__":
 					group = "Experimental"
 				print "Will run %s after %f s.." % (group, DELAY)
 				time.sleep(DELAY)
-				rc = run_scenarios(scenarios, group)
+				rc = run_cmdline(group)
 				# Sleep even if something does change
 				print str(datetime.datetime.now()) + \
 					  ": done running " + group + \
