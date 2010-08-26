@@ -84,6 +84,10 @@ class VSVersion:
 #
 class S60SDK:
 	def __init__(self):
+		self.epocroot = ""
+		self.sdk = ""
+		self.device = ""
+
 		# Check that EPOCROOT is set
 		if not "EPOCROOT" in os.environ:
 		    sys.stderr.write("Error: EPOCROOT environment variable is not set\n")
@@ -93,7 +97,9 @@ class S60SDK:
 		if epocroot[-1] != "\\":
 		    epocroot = epocroot + "\\"
 		    os.environ["EPOCROOT"] = epocroot
-		sdk1 = epocroot.split("\\")[-2]
+		self.epocroot = epocroot
+		self.sdk = sdk1 = epocroot.split("\\")[-2]
+		self.device = "@" + self.sdk + ":com.nokia.s60"
 
 		# Check that correct device is set
 		proc = subprocess.Popen("devices", stdout=subprocess.PIPE,
@@ -123,8 +129,10 @@ def replace_vars(text):
         os_info = platform.system() + platform.release() + "-" + platform.machine()
 
 	# osinfo
+	s60sdk_var = None
 	if build_type == "s60":
-		os_info = S60SDK().name
+		s60sdk_var = S60SDK()
+		os_info = s60sdk_var.name
 	elif platform.system().lower() == "windows" or platform.system().lower() == "microsoft":
 		if platform.system().lower() == "microsoft":
 			os_info = platform.release() + "-" + platform.version() + "-" + platform.win32_ver()[2]
@@ -153,7 +161,7 @@ def replace_vars(text):
 	if build_type == "vs":
 		suffix = "i386-Win32-vc8-" + vs_target
 	elif build_type == "s60":
-		suffix = S60SDK().name + "-" + s60_target.replace(" ", "-")
+		suffix = s60sdk_var.name + "-" + s60_target.replace(" ", "-")
 	elif build_type == "gnu":
 		proc = subprocess.Popen("sh config.guess", cwd="../..",
 					shell=True, stdout=subprocess.PIPE)
@@ -182,6 +190,10 @@ def replace_vars(text):
                         text = text.replace("$(S60TARGET)", s60_target)
                 elif text.find("$(S60TARGETNAME)") >= 0:
                         text = text.replace("$(S60TARGETNAME)", s60_target.replace(" ", "-"))
+                elif text.find("$(S60DEVICE)") >= 0:
+                        text = text.replace("$(S60DEVICE)", s60sdk_var.device)
+                elif text.find("$(EPOCROOT)") >= 0:
+                        text = text.replace("$(EPOCROOT)", s60sdk_var.epocroot)
                 elif text.find("$(DISABLED)") >= 0:
                         text = text.replace("$(DISABLED)", "0")
                 elif text.find("$(IPPROOT)") >= 0:
