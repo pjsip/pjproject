@@ -1364,6 +1364,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
+    /* Workaround for deadlock problem in #1108 */
+    pj_mutex_unlock(resolver->mutex);
+
     /* Notify applications first, to allow application to modify the 
      * record before it is saved to the hash table.
      */
@@ -1381,6 +1384,9 @@ static void on_read_complete(pj_ioqueue_key_t *key,
 	    child_q = child_q->next;
 	}
     }
+
+    /* Workaround for deadlock problem in #1108 */
+    pj_mutex_lock(resolver->mutex);
 
     /* Save/update response cache. */
     update_res_cache(resolver, &q->key, status, PJ_TRUE, dns_pkt);
