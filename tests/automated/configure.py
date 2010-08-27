@@ -12,6 +12,8 @@ PYTHON = os.path.basename(sys.executable)
 build_type = ""
 vs_target = ""
 s60_target = ""
+no_test = False
+no_pjsua_test = False
 
 #
 # Get gcc version
@@ -123,7 +125,7 @@ class S60SDK:
 
 
 def replace_vars(text):
-	global vs_target, s60_target, build_type
+	global vs_target, s60_target, build_type, no_test, no_pjsua_test
 	suffix = ""
 
         os_info = platform.system() + platform.release() + "-" + platform.machine()
@@ -172,12 +174,15 @@ def replace_vars(text):
 
         while True:
                 if text.find("$(PJSUA-TESTS)") >= 0:
-			# Determine pjsua exe to use
-			exe = "../../pjsip-apps/bin/pjsua-" + suffix
-                        proc = subprocess.Popen(PYTHON + " runall.py --list-xml -e " + exe, 
-						cwd="../pjsua",
-                                                shell=True, stdout=subprocess.PIPE)
-                        content = proc.stdout.read()
+			if no_test==False and no_pjsua_test==False:
+				# Determine pjsua exe to use
+				exe = "../../pjsip-apps/bin/pjsua-" + suffix
+				proc = subprocess.Popen(PYTHON + " runall.py --list-xml -e " + exe, 
+							cwd="../pjsua",
+							shell=True, stdout=subprocess.PIPE)
+				content = proc.stdout.read()
+			else:
+				content = ""
                         text = text.replace("$(PJSUA-TESTS)", content)
                 elif text.find("$(GCC)") >= 0:
                         text = text.replace("$(GCC)", gcc_version("gcc"))
@@ -227,13 +232,19 @@ def replace_vars(text):
 			else:
 				cmd = "echo Success"
                         text = text.replace("$(NOP)", cmd)
+                elif text.find("$(NOTEST)") >= 0:
+			if no_test:
+				str = '"1"'
+			else:
+				str = '"0"'
+                        text = text.replace("$(NOTEST)", str)
                 else:
                         break
         return text
 
 
 def main(args):
-	global vs_target, s60_target, build_type
+	global vs_target, s60_target, build_type, no_test, no_pjsua_test
         output = sys.stdout
         usage = """Usage: configure.py [OPTIONS] scenario_template_file
 
@@ -255,6 +266,8 @@ Where OPTIONS:
 			names:
 			    - "gcce udeb"
 			    - "gcce urel"
+  -notest               Disable all tests in the scenario.
+  -nopjsuatest          Disable pjsua tests in the scenario.
 """
 
         args.pop(0)
@@ -294,6 +307,12 @@ Where OPTIONS:
 			if not ["vs", "gnu", "s60"].count(build_type):
 				sys.stderr.write("Error: invalid -t argument value\n")
 				sys.exit(1)
+		elif args[0]=='-notest' or args[0]=='-notests':
+			args.pop(0)
+			no_test = True
+		elif args[0]=='-nopjsuatest' or args[0]=='-nopjsuatests':
+			args.pop(0)
+			no_pjsua_test = True
 		else:
 			break
 

@@ -27,6 +27,14 @@
 		 -->
 		<Test name="Configuring iPhone scenario" cmd="python configure.py -t gnu -o iphone.xml iphone.xml.template" />
 
+		<!-- MSVC target.
+		     Requirements:
+		      - Build from VS successfully
+		      - VS paths are set
+
+		 -->
+		<Test name="Configuring Visual Studio for Win32" cmd="python configure.py -t vs -vstarget Release -o msvc-win32.xml -nopjsuatest msvc.xml.template" />
+
 		<!-- Symbian target.
 		     Requirement:
 		       - EPOCROOT (modify below)
