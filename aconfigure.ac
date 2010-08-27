@@ -533,7 +533,7 @@ if test "$enable_sound" = "no"; then
 else
  case $target in
   arm-apple-darwin*)
-	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox"
+	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork"
 	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
 	;;
   *darwin*)

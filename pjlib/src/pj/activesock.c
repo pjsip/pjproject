@@ -21,9 +21,15 @@
 #include <pj/compat/socket.h>
 #include <pj/assert.h>
 #include <pj/errno.h>
+#include <pj/log.h>
 #include <pj/pool.h>
 #include <pj/sock.h>
 #include <pj/string.h>
+
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+#   include <CFNetwork/CFNetwork.h>
+#endif
 
 #define PJ_ACTIVESOCK_MAX_LOOP	    50
 
@@ -71,7 +77,13 @@ struct pj_activesock_t
     unsigned		 async_count;
     unsigned		 max_loop;
     pj_activesock_cb	 cb;
-
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+    int			 bg_setting;
+    pj_sock_t		 sock;
+    CFReadStreamRef	 readStream;
+#endif
+    
     struct send_data	 send_data;
 
     struct read_op	*read_op;
@@ -105,6 +117,51 @@ PJ_DEF(void) pj_activesock_cfg_default(pj_activesock_cfg *cfg)
     cfg->whole_data = PJ_TRUE;
 }
 
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+static void activesock_destroy_iphone_os_stream(pj_activesock_t *asock)
+{
+    if (asock->readStream) {
+	CFReadStreamClose(asock->readStream);
+	CFRelease(asock->readStream);
+	asock->readStream = NULL;
+    }
+}
+
+static void activesock_create_iphone_os_stream(pj_activesock_t *asock)
+{
+    if (asock->bg_setting && asock->stream_oriented) {
+	activesock_destroy_iphone_os_stream(asock);
+
+	CFStreamCreatePairWithSocket(kCFAllocatorDefault, asock->sock,
+				     &asock->readStream, NULL);
+
+	if (!asock->readStream ||
+	    CFReadStreamSetProperty(asock->readStream,
+				    kCFStreamNetworkServiceType,
+				    kCFStreamNetworkServiceTypeVoIP)
+	    != TRUE ||
+	    CFReadStreamOpen(asock->readStream) != TRUE)
+	{
+	    PJ_LOG(2,("", "Failed to configure TCP transport for VoIP "
+		      "usage. Background mode will not be supported."));
+	    
+	    activesock_destroy_iphone_os_stream(asock);
+	}
+    }
+}
+
+
+PJ_DEF(void) pj_activesock_set_iphone_os_bg(pj_activesock_t *asock,
+					    int val)
+{
+    asock->bg_setting = val;
+    if (asock->bg_setting)
+	activesock_create_iphone_os_stream(asock);
+    else
+	activesock_destroy_iphone_os_stream(asock);
+}
+#endif
 
 PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
 					  pj_sock_t sock,
@@ -155,6 +212,13 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
     } else if (opt && opt->concurrency >= 0) {
 	pj_ioqueue_set_concurrency(asock->key, opt->concurrency);
     }
+
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+    asock->sock = sock;
+    pj_activesock_set_iphone_os_bg(asock,
+				   PJ_ACTIVESOCK_TCP_IPHONE_OS_BG);
+#endif
 
     *p_asock = asock;
     return PJ_SUCCESS;
@@ -215,6 +279,11 @@ PJ_DEF(pj_status_t) pj_activesock_close(pj_activesock_t *asock)
 {
     PJ_ASSERT_RETURN(asock, PJ_EINVAL);
     if (asock->key) {
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+	activesock_destroy_iphone_os_stream(asock);
+#endif	
+	
 	pj_ioqueue_unregister(asock->key);
 	asock->key = NULL;
     }
@@ -733,6 +802,10 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
 	    if (!ret)
 		return;
 
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+	    activesock_create_iphone_os_stream(asock);
+#endif
 	} else if (status==PJ_SUCCESS) {
 	    /* Application doesn't handle the new socket, we need to 
 	     * close it to avoid resource leak.
@@ -775,6 +848,12 @@ static void ioqueue_on_connect_complete(pj_ioqueue_key_t *key,
 	    /* We've been destroyed */
 	    return;
 	}
+	
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+	activesock_create_iphone_os_stream(asock);
+#endif
+	
     }
 }
 #endif	/* PJ_HAS_TCP */

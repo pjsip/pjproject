@@ -7,6 +7,7 @@
 //
 
 #import <pjlib.h>
+#import <pjsua.h>
 #import "ipjsuaAppDelegate.h"
 
 extern pj_log_func *log_cb;
@@ -18,14 +19,15 @@ extern pj_log_func *log_cb;
 @synthesize cfgView;
 
 /* Sleep interval duration */
-#define SLEEP_INTERVAL	0.5
+#define SLEEP_INTERVAL	    0.5
 /* Determine whether we should print the messages in the debugger
  * console as well
  */
-#define DEBUGGER_PRINT	1
+#define DEBUGGER_PRINT	    1
 /* Whether we should show pj log messages in the text area */
-#define SHOW_LOG	1
-#define PATH_LENGTH	PJ_MAXPATH
+#define SHOW_LOG	    1
+#define PATH_LENGTH	    PJ_MAXPATH
+#define KEEP_ALIVE_INTERVAL 600
 
 extern pj_bool_t app_restart;
 
@@ -34,13 +36,17 @@ char *argv[] = {"", "--config-file", argv_buf};
 
 ipjsuaAppDelegate	*app;
 
-bool			app_running;
-bool			thread_quit;
+bool			 app_running;
+bool			 thread_quit;
 NSMutableString		*mstr;
+pj_thread_desc		 a_thread_desc;
+pj_thread_t		*a_thread;
+pjsua_call_id		 ccall_id;
 
 pj_status_t app_init(int argc, char *argv[]);
 pj_status_t app_main(void);
 pj_status_t app_destroy(void);
+void keepAliveFunction(int timeout);
 
 void showMsg(const char *format, ...)
 {
@@ -50,7 +56,7 @@ void showMsg(const char *format, ...)
     va_start(arg, format);
     NSString *str = [[NSString alloc] initWithFormat:[NSString stringWithFormat:@"%s", format] arguments: arg];
 #if DEBUGGER_PRINT
-    NSLog(str);
+    NSLog(@"%@", str);
 #endif
     va_end(arg);
     
@@ -91,6 +97,62 @@ void showLog(int level, const char *data, int len)
 {
     showMsg("%s", data);
 }
+
+pj_bool_t showNotification(pjsua_call_id call_id)
+{
+#ifdef __IPHONE_4_0
+    ccall_id = call_id;
+
+    // Create a new notification
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    UILocalNotification* alert = [[[UILocalNotification alloc] init] autorelease];
+    if (alert)
+    {
+	alert.repeatInterval = 0;
+	alert.alertBody = @"Incoming call received...";
+	alert.alertAction = @"Answer";
+	
+	[[UIApplication sharedApplication] presentLocalNotificationNow:alert];
+    }
+    
+    [pool release];
+    
+    return PJ_FALSE;
+#else
+    return PJ_TRUE;
+#endif
+}
+
+- (void)answer_call {
+    if (!pj_thread_is_registered())
+    {
+	pj_thread_register("ipjsua", a_thread_desc, &a_thread);
+    }
+    pjsua_call_answer(ccall_id, 200, NULL, NULL);
+}
+
+#ifdef __IPHONE_4_0
+- (void)application:(UIApplication *)application didReceiveLocalNotification:(UILocalNotification *)notification {
+    [app performSelectorOnMainThread:@selector(answer_call) withObject:nil waitUntilDone:YES];
+}
+
+- (void)keepAlive {
+    if (!pj_thread_is_registered())
+    {
+	pj_thread_register("ipjsua", a_thread_desc, &a_thread);
+    }    
+    keepAliveFunction(KEEP_ALIVE_INTERVAL);
+}
+
+- (void)applicationDidEnterBackground:(UIApplication *)application
+{
+    [app performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
+    [application setKeepAliveTimeout:KEEP_ALIVE_INTERVAL handler: ^{
+	[app performSelectorOnMainThread:@selector(keepAlive) withObject:nil waitUntilDone:YES];
+    }];
+}
+
+#endif
 
 - (void)start_app {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];

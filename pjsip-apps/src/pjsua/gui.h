@@ -29,6 +29,7 @@ PJ_BEGIN_DECL
 
 void showMsg(const char *format, ...);
 char * getInput(char *s, int n, FILE *stream);
+pj_bool_t showNotification(pjsua_call_id call_id);
 
 #endif
 

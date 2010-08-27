@@ -37,6 +37,7 @@
 #include <pj/sock.h>
 #include <pj/compat/socket.h>
 #include <pj/sock_select.h>
+#include <pj/sock_qos.h>
 #include <pj/errno.h>
 
 /* Now that we have access to OS'es <sys/select>, lets check again that
@@ -122,6 +123,9 @@ struct pj_ioqueue_t
     pj_ioqueue_key_t	free_list;
 #endif
 };
+
+/* Proto */
+static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h);
 
 /* Include implementation for common abstraction after we declare
  * pj_ioqueue_key_t and pj_ioqueue_t.
@@ -617,6 +621,139 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
 	}
 	h = next;
     }
+}
+#endif
+
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h)
+{
+    enum flags {
+	HAS_PEER_ADDR = 1,
+	HAS_QOS = 2
+    };
+    pj_sock_t old_sock, new_sock = PJ_INVALID_SOCKET;
+    pj_sockaddr local_addr, rem_addr;
+    int val, addr_len;
+    pj_fd_set_t *fds[3];
+    unsigned i, fds_cnt, flags=0;
+    pj_qos_params qos_params;
+    unsigned msec;
+    pj_status_t status;
+
+    pj_lock_acquire(h->ioqueue->lock);
+
+    old_sock = h->fd;
+
+    /* Can only replace UDP socket */
+    pj_assert(h->fd_type == pj_SOCK_DGRAM());
+
+    PJ_LOG(4,(THIS_FILE, "Attempting to replace UDP socket %d", old_sock));
+
+    /* Investigate the old socket */
+    addr_len = sizeof(local_addr);
+    status = pj_sock_getsockname(old_sock, &local_addr, &addr_len);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+    
+    addr_len = sizeof(rem_addr);
+    status = pj_sock_getpeername(old_sock, &rem_addr, &addr_len);
+    if (status == PJ_SUCCESS)
+	flags |= HAS_PEER_ADDR;
+
+    status = pj_sock_get_qos_params(old_sock, &qos_params);
+    if (status == PJ_SUCCESS)
+	flags |= HAS_QOS;
+
+    /* We're done with the old socket, close it otherwise we'll get
+     * error in bind()
+     */
+    pj_sock_close(old_sock);
+
+    /* Prepare the new socket */
+    status = pj_sock_socket(local_addr.addr.sa_family, PJ_SOCK_DGRAM, 0,
+			    &new_sock);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* Even after the socket is closed, we'll still get "Address in use"
+     * errors, so force it with SO_REUSEADDR
+     */
+    val = 1;
+    status = pj_sock_setsockopt(new_sock, SOL_SOCKET, SO_REUSEADDR,
+				&val, sizeof(val));
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    /* The loop is silly, but what else can we do? */
+    addr_len = pj_sockaddr_get_len(&local_addr);
+    for (msec=20; ; msec<1000? msec=msec*2 : 1000) {
+	status = pj_sock_bind(new_sock, &local_addr, addr_len);
+	if (status != PJ_STATUS_FROM_OS(EADDRINUSE))
+	    break;
+	PJ_LOG(4,(THIS_FILE, "Address is still in use, retrying.."));
+	pj_thread_sleep(msec);
+    }
+
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    if (flags & HAS_QOS) {
+	status = pj_sock_set_qos_params(new_sock, &qos_params);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+
+    if (flags & HAS_PEER_ADDR) {
+	status = pj_sock_connect(new_sock, &rem_addr, addr_len);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+
+    /* Set socket to nonblocking. */
+    val = 1;
+#if defined(PJ_WIN32) && PJ_WIN32!=0 || \
+    defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0
+    if (ioctlsocket(new_sock, FIONBIO, &val)) {
+#else
+    if (ioctl(new_sock, FIONBIO, &val)) {
+#endif
+        status = pj_get_netos_error();
+	goto on_error;
+    }
+
+    /* Replace the occurrence of old socket with new socket in the
+     * fd sets.
+     */
+    fds_cnt = 0;
+    fds[fds_cnt++] = &h->ioqueue->rfdset;
+    fds[fds_cnt++] = &h->ioqueue->wfdset;
+#if PJ_HAS_TCP
+    fds[fds_cnt++] = &h->ioqueue->xfdset;
+#endif
+
+    for (i=0; i<fds_cnt; ++i) {
+	if (PJ_FD_ISSET(old_sock, fds[i])) {
+	    PJ_FD_CLR(old_sock, fds[i]);
+	    PJ_FD_SET(new_sock, fds[i]);
+	}
+    }
+
+    /* And finally replace the fd in the key */
+    h->fd = new_sock;
+
+    PJ_LOG(4,(THIS_FILE, "UDP has been replaced successfully!"));
+
+    pj_lock_release(h->ioqueue->lock);
+
+    return PJ_SUCCESS;
+
+on_error:
+    if (new_sock != PJ_INVALID_SOCKET)
+	pj_sock_close(new_sock);
+    PJ_PERROR(1,(THIS_FILE, status, "Error replacing socket"));
+    pj_lock_release(h->ioqueue->lock);
+    return status;
 }
 #endif
 

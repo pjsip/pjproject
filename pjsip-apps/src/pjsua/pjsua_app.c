@@ -158,6 +158,23 @@ pj_log_func     *log_cb = NULL;
  * Configuration manipulation
  */
 
+#if (defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0) || \
+    defined(__IPHONE_4_0)
+void keepAliveFunction(int timeout)
+{
+    int i;
+    for (i=0; i<(int)pjsua_acc_get_count(); ++i) {
+	if (!pjsua_acc_is_valid(i))
+	    continue;
+
+	if (app_config.acc_cfg[i].reg_timeout < timeout)
+	    app_config.acc_cfg[i].reg_timeout = timeout;
+	pjsua_acc_set_registration(i, PJ_TRUE);
+    }
+}
+#endif
+
 /* Show usage */
 static void usage(void)
 {
@@ -2456,12 +2473,17 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 
     pjsua_call_get_info(call_id, &call_info);
 
-    /* Start ringback */
-    ring_start(call_id);
-
     if (current_call==PJSUA_INVALID_ID)
 	current_call = call_id;
 
+#ifdef USE_GUI
+    if (!showNotification(call_id))
+	return;
+#endif
+
+    /* Start ringback */
+    ring_start(call_id);
+    
     if (app_config.auto_answer > 0) {
 	pjsua_call_answer(call_id, app_config.auto_answer, NULL, NULL);
     }
