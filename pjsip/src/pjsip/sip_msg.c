@@ -26,6 +26,7 @@
 #include <pj/string.h>
 #include <pj/pool.h>
 #include <pj/assert.h>
+#include <pjlib-util/string.h>
 
 PJ_DEF_DATA(const pjsip_method) pjsip_invite_method =
 	{ PJSIP_INVITE_METHOD, { "INVITE",6 }};
@@ -1524,7 +1525,8 @@ static int pjsip_fromto_hdr_print( pjsip_fromto_hdr *hdr,
 
     buf += printed;
 
-    copy_advance_pair(buf, ";tag=", 5, hdr->tag);
+    copy_advance_pair_escape(buf, ";tag=", 5, hdr->tag,
+			     pc->pjsip_TOKEN_SPEC);
 
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
 				   &pc->pjsip_TOKEN_SPEC,
@@ -2049,7 +2051,8 @@ static int pjsip_via_hdr_print( pjsip_via_hdr *hdr,
     }
 
     copy_advance_pair(buf, ";received=", 10, hdr->recvd_param);
-    copy_advance_pair(buf, ";branch=", 8, hdr->branch_param);
+    copy_advance_pair_escape(buf, ";branch=", 8, hdr->branch_param,
+			     pc->pjsip_TOKEN_SPEC);
     
     printed = pjsip_param_print_on(&hdr->other_param, buf, endbuf-buf, 
 				   &pc->pjsip_TOKEN_SPEC,
