@@ -432,9 +432,6 @@ static void timer_cb(pj_timer_heap_t *timer_heap, struct pj_timer_entry *entry)
 
     /* Print error message, if any */
     if (status != PJ_SUCCESS) {
-	if (tdata)
-	    pjsip_tx_data_dec_ref(tdata);
-
 	PJ_PERROR(2, (inv->pool->obj_name, status,
 		      "Error in %s session timer",
 		      (as_refresher? "refreshing" : "terminating")));
