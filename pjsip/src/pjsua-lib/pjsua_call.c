@@ -1130,13 +1130,26 @@ pj_status_t acquire_call(const char *title,
 				pjsua_call **p_call,
 				pjsip_dialog **p_dlg)
 {
-    enum { MAX_RETRY=50 };
     unsigned retry;
     pjsua_call *call = NULL;
     pj_bool_t has_pjsua_lock = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
+    pj_time_val time_start, timeout;
 
-    for (retry=0; retry<MAX_RETRY; ++retry) {
+    pj_gettimeofday(&time_start);
+    timeout.msec = PJSUA_ACQUIRE_CALL_TIMEOUT;
+    pj_time_val_normalize(&timeout);
+
+    for (retry=0; ; ++retry) {
+
+        if (retry % 10 == 9) {
+            pj_time_val dtime;
+
+            pj_gettimeofday(&dtime);
+            PJ_TIME_VAL_SUB(dtime, time_start);
+            if (!PJ_TIME_VAL_LT(dtime, timeout))
+                break;
+        }
 	
 	has_pjsua_lock = PJ_FALSE;
 

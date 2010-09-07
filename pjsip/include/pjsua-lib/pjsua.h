@@ -316,6 +316,15 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 #   define PJSUA_ADD_ICE_TAGS		1
 #endif
 
+/**
+ * Timeout value used to acquire mutex lock on a particular call.
+ *
+ * Default: 2000 ms
+ */
+#ifndef PJSUA_ACQUIRE_CALL_TIMEOUT
+#   define PJSUA_ACQUIRE_CALL_TIMEOUT 2000
+#endif
+
 
 /**
  * Logging configuration, which can be (optionally) specified when calling
