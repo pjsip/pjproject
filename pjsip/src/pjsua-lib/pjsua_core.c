@@ -109,6 +109,7 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
 #endif
     cfg->hangup_forked_call = PJ_TRUE;
 
+    cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
     pjsip_timer_setting_default(&cfg->timer_setting);
 }
 
@@ -171,7 +172,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->transport_id = PJSUA_INVALID_ID;
     cfg->allow_contact_rewrite = PJ_TRUE;
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
-    cfg->require_timer = pjsua_var.ua_cfg.require_timer;
+    cfg->use_timer = pjsua_var.ua_cfg.use_timer;
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");

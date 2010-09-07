@@ -737,7 +737,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.require_100rel = cfg->require_100rel;
 
     /* Session timer */
-    acc->cfg.require_timer = cfg->require_timer;
+    acc->cfg.use_timer = cfg->use_timer;
     acc->cfg.timer_setting = cfg->timer_setting;
 
     /* Transport and keep-alive */

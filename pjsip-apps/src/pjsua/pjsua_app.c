@@ -201,7 +201,7 @@ static void usage(void)
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     puts  ("  --use-srtp=N        Use SRTP?  0:disabled, 1:optional, 2:mandatory,");
     puts  ("                      3:optional by duplicating media offer (def:0)");
-    puts  ("  --srtp-secure=N     SRTP require secure SIP? 0:no, 1:tls, 1:sips (def:1)");
+    puts  ("  --srtp-secure=N     SRTP require secure SIP? 0:no, 1:tls, 2:sips (def:1)");
 #endif
     puts  ("  --registrar=url     Set the URL of registrar server");
     puts  ("  --id=url            Set the URL of local ID (used in From header)");
@@ -222,7 +222,8 @@ static void usage(void)
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --mwi               Subscribe to message summary/waiting indication");
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
-    puts  ("  --use-timer         Require SIP session timers");
+    puts  ("  --use-timer=N       Use SIP session timers? (default=1)");
+    puts  ("                      0:inactive, 1:optional, 2:mandatory, 3:always");
     printf("  --timer-se=N        Session timers expiration period, in secs (def:%d)\n",
 	    PJSIP_SESS_TIMER_DEF_SE);
     puts  ("  --timer-min-se=N    Session timers minimum expiration period, in secs (def:90)");
@@ -262,7 +263,7 @@ static void usage(void)
     puts  ("  --tls-verify-server Verify server's certificate (default=no)");
     puts  ("  --tls-verify-client Verify client's certificate (default=no)");
     puts  ("  --tls-neg-timeout   Specify TLS negotiation timeout (default=no)");
-    puts  ("  --tls-srv-name      Specify TLS server name for multi-hosting server (optional)");
+    puts  ("  --tls-srv-name      Specify TLS server name for multihosting server");
 
     puts  ("");
     puts  ("Media Options:");
@@ -653,7 +654,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "ipv6",	 0, 0, OPT_IPV6},
 #endif
 	{ "set-qos",	 0, 0, OPT_QOS},
-	{ "use-timer",  0, 0, OPT_TIMER},
+	{ "use-timer",  1, 0, OPT_TIMER},
 	{ "timer-se",   1, 0, OPT_TIMER_SE},
 	{ "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
 	{ NULL, 0, 0, 0}
@@ -881,8 +882,14 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_TIMER: /** session timer */
-	    cur_acc->require_timer = PJ_TRUE;
-	    cfg->cfg.require_timer = PJ_TRUE;
+	    lval = pj_strtoul(pj_cstr(&tmp, pj_optarg));
+	    if (lval < 0 || lval > 3) {
+		PJ_LOG(1,(THIS_FILE, 
+			  "Error: expecting integer value 0-3 for --use-timer"));
+		return PJ_EINVAL;
+	    }
+	    cur_acc->use_timer = lval;
+	    cfg->cfg.use_timer = lval;
 	    break;
 
 	case OPT_TIMER_SE: /** session timer session expiration */
@@ -1624,8 +1631,10 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     }
 
     /* Session Timer extension */
-    if (acc_cfg->require_timer) {
-	pj_strcat2(result, "--use-timer\n");
+    if (acc_cfg->use_timer) {
+	pj_ansi_sprintf(line, "--use-timer %d\n",
+			      acc_cfg->use_timer);
+	pj_strcat2(result, line);
     }
     if (acc_cfg->timer_setting.min_se != 90) {
 	pj_ansi_sprintf(line, "--timer-min-se %d\n",
@@ -2103,8 +2112,10 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, "--use-100rel\n");
     }
     /* Session Timer extension */
-    if (config->cfg.require_timer) {
-	pj_strcat2(&cfg, "--use-timer\n");
+    if (config->cfg.use_timer) {
+	pj_ansi_sprintf(line, "--use-timer %d\n",
+			      config->cfg.use_timer);
+	pj_strcat2(&cfg, line);
     }
     if (config->cfg.timer_setting.min_se != 90) {
 	pj_ansi_sprintf(line, "--timer-min-se %d\n",
