@@ -1799,14 +1799,12 @@ PJ_DEF(pj_status_t) pjsua_acc_get_info( pjsua_acc_id acc_id,
     else
 	info->online_status_text = pj_str("Offline");
 
-    if (acc->reg_last_err) {
-	info->status = (pjsip_status_code) acc->reg_last_err;
-	pj_strerror(acc->reg_last_err, info->buf_, sizeof(info->buf_));
-	info->status_text = pj_str(info->buf_);
-    } else if (acc->reg_last_code) {
+    if (acc->reg_last_code) {
 	if (info->has_registration) {
 	    info->status = (pjsip_status_code) acc->reg_last_code;
 	    info->status_text = *pjsip_get_status_text(acc->reg_last_code);
+            if (acc->reg_last_err)
+	        info->reg_last_err = acc->reg_last_err;
 	} else {
 	    info->status = (pjsip_status_code) 0;
 	    info->status_text = pj_str("not registered");

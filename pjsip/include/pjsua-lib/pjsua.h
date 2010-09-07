@@ -2341,6 +2341,14 @@ typedef struct pjsua_acc_info
     pjsip_status_code	status;
 
     /**
+     * Last registration error code. When the status field contains a SIP
+     * status code that indicates a registration failure, last registration
+     * error code contains the error code that causes the failure. In any
+     * other case, its value is zero.
+     */
+    pj_status_t	        reg_last_err;
+
+    /**
      * String describing the registration status.
      */
     pj_str_t		status_text;
