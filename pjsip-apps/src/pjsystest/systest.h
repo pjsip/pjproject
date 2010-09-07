@@ -47,21 +47,23 @@
 
 
 #if defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE
-    #define LOG_OUT_PATH		"\\PJSYSTEST.LOG"
+    #define LOG_OUT_PATH		"\\PJSYSTEST.TXT"
     #define RESULT_OUT_PATH		"\\PJSYSTEST_RESULT.TXT"
     #define WAV_PLAYBACK_PATH		"\\Program Files\\pjsystest\\input.8.wav"
     #define WAV_REC_OUT_PATH		"\\PJSYSTEST_TESTREC.WAV"
     #define WAV_TOCK8_PATH		"\\Program Files\\pjsystest\\tock8.WAV"
     #define WAV_LATENCY_OUT_PATH	"\\PJSYSTEST_LATREC.WAV"
     #define ALT_PATH1			""
+    #define AEC_REC_PATH		"\\PJSYSTEST_AECREC.WAV"
 #else
-    #define LOG_OUT_PATH		"PJSYSTEST.LOG"
+    #define LOG_OUT_PATH		"PJSYSTEST.TXT"
     #define RESULT_OUT_PATH		"PJSYSTEST_RESULT.TXT"
     #define WAV_PLAYBACK_PATH		"input.8.wav"
     #define WAV_REC_OUT_PATH		"PJSYSTEST_TESTREC.WAV"
     #define WAV_TOCK8_PATH		"tock8.wav"
     #define WAV_LATENCY_OUT_PATH	"PJSYSTEST_LATREC.WAV"
     #define ALT_PATH1			"../../tests/pjsua/wavs/"
+    #define AEC_REC_PATH		"PJSYSTEST_AECREC.WAV"
 #endif
 
 #ifdef __cplusplus

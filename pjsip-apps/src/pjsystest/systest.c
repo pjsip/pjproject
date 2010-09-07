@@ -38,6 +38,7 @@ static void systest_play_wav2(void);
 static void systest_rec_audio(void);
 static void systest_audio_test(void);
 static void systest_latency_test(void);
+static void systest_aec_test(void);
 static void exit_app(void);
 
 /* Menus */
@@ -50,13 +51,14 @@ static gui_menu menu_playwv2 = { "Play WAV File2", &systest_play_wav2 };
 static gui_menu menu_recaud  = { "Record Audio", &systest_rec_audio };
 static gui_menu menu_audtest = { "Device Test", &systest_audio_test };
 static gui_menu menu_calclat = { "Latency Test", &systest_latency_test };
+static gui_menu menu_sndaec = { "AEC/AES Test", &systest_aec_test };
 
 static gui_menu menu_listdev = { "View Devices", &systest_list_audio_devs };
 static gui_menu menu_getsets = { "View Settings", &systest_display_settings };
 
 static gui_menu menu_tests = { 
     "Tests", NULL, 
-    9, 
+    10, 
     {
 	&menu_wizard,
 	&menu_audtest, 
@@ -65,6 +67,7 @@ static gui_menu menu_tests = {
 	&menu_playwv2,
 	&menu_recaud,
 	&menu_calclat,
+	&menu_sndaec,
 	NULL, 
 	&menu_exit
     }
@@ -913,6 +916,142 @@ on_return:
 }
 
 
+static void systest_aec_test(void)
+{
+    const char *ref_wav_paths[] = { add_path(res_path, WAV_PLAYBACK_PATH),
+				    ALT_PATH1 WAV_PLAYBACK_PATH };
+    pjsua_player_id player_id = PJSUA_INVALID_ID;
+    pjsua_recorder_id writer_id = PJSUA_INVALID_ID;
+    enum gui_key key;
+    test_item_t *ti;
+    const char *title = "AEC/AES Test";
+    unsigned last_ec_tail = 0;
+    pj_status_t status;
+    pj_str_t tmp;
+
+    ti = systest_alloc_test_item(title);
+    if (!ti)
+	return;
+
+    key = gui_msgbox(title,
+		     "This test will try to find whether the AEC/AES "
+		     "works good on this system. Test will play a file "
+		     "while recording from mic. The recording will be "
+		     "played back later so you can check if echo is there. "
+		     "Press OK to start.",
+		     WITH_OKCANCEL);
+    if (key != KEY_OK) {
+	ti->skipped = PJ_TRUE;
+	return;
+    }
+
+    /* Save current EC tail */
+    status = pjsua_get_ec_tail(&last_ec_tail);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /* Set EC tail setting to default */
+    status = pjsua_set_ec(PJSUA_DEFAULT_EC_TAIL_LEN, 0);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    /*
+     * Create player and recorder
+     */
+    status = create_player(PJ_ARRAY_SIZE(ref_wav_paths), ref_wav_paths, 
+			   &player_id);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s",
+		     WAV_PLAYBACK_PATH));
+	goto on_return;
+    }
+
+    status = pjsua_recorder_create(pj_cstr(&tmp, AEC_REC_PATH), 0, 0, -1,
+			           0, &writer_id);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status, "Error writing WAV file %s",
+		     AEC_REC_PATH));
+	goto on_return;
+    }
+
+    /*
+     * Start playback and recording.
+     */
+    pjsua_conf_connect(pjsua_player_get_conf_port(player_id), 0);
+    pj_thread_sleep(100);
+    pjsua_conf_connect(0, pjsua_recorder_get_conf_port(writer_id));
+
+    /* Wait user signal */
+    gui_msgbox(title, "AEC/AES test is running. Press OK to stop this test.",
+	       WITH_OK);
+
+    /*
+     * Stop and close playback and recorder
+     */
+    pjsua_conf_disconnect(0, pjsua_recorder_get_conf_port(writer_id));
+    pjsua_conf_disconnect(pjsua_player_get_conf_port(player_id), 0);
+    pjsua_recorder_destroy(writer_id);
+    pjsua_player_destroy(player_id);
+    player_id = PJSUA_INVALID_ID;
+    writer_id = PJSUA_INVALID_ID;
+
+    /*
+     * Play the result.
+     */
+    status = pjsua_player_create(pj_cstr(&tmp, AEC_REC_PATH), 0, &player_id);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s", AEC_REC_PATH));
+	goto on_return;
+    }
+    pjsua_conf_connect(pjsua_player_get_conf_port(player_id), 0);
+
+    /* Wait user signal */
+    gui_msgbox(title, "We are now playing the captured audio from the mic. "
+		      "Check if echo (of the audio played back previously) is "
+		      "present in the audio. The recording is stored in " 
+		      AEC_REC_PATH " for offline analysis. "
+		      "Press OK to stop.",
+		      WITH_OK);
+
+    pjsua_conf_disconnect(pjsua_player_get_conf_port(player_id), 0);
+
+    key = gui_msgbox(title,
+		     "Did you notice any echo in the recording?",
+		     WITH_YESNO);
+
+
+on_return:
+    if (player_id != PJSUA_INVALID_ID)
+	pjsua_player_destroy(player_id);
+    if (writer_id != PJSUA_INVALID_ID)
+	pjsua_recorder_destroy(writer_id);
+
+    /* Wait until sound device closed before restoring back EC tail setting */
+    while (pjsua_snd_is_active())
+	pj_thread_sleep(10);
+    pjsua_set_ec(last_ec_tail, 0);
+
+
+    if (status != PJ_SUCCESS) {
+	systest_perror("Sorry we encountered an error: ", status);
+	ti->success = PJ_FALSE;
+	pj_strerror(status, ti->reason, sizeof(ti->reason));
+    } else if (key == KEY_YES) {
+	ti->success = PJ_FALSE;
+	if (!ti->success) {
+	    pj_ansi_strcpy(ti->reason, USER_ERROR);
+	}
+    } else {
+	char msg[200];
+
+	pj_ansi_snprintf(msg, sizeof(msg), "Test succeeded.\r\n");
+
+	ti->success = PJ_TRUE;
+	pj_ansi_strncpy(ti->reason, msg, sizeof(ti->reason));
+	ti->reason[sizeof(ti->reason)-1] = '\0';
+    }
+}
+
 
 /****************************************************************************
  * configurations
@@ -1084,6 +1223,7 @@ int systest_init(void)
     systest.rec_id = REC_DEV_ID;
     systest.play_id = PLAY_DEV_ID;
     systest.media_cfg.ec_tail_len = 0;
+    systest.media_cfg.snd_auto_close_time = 0;
 
 #if defined(OVERRIDE_AUDDEV_PLAY_LAT) && OVERRIDE_AUDDEV_PLAY_LAT!=0
     systest.media_cfg.snd_play_latency = OVERRIDE_AUDDEV_PLAY_LAT;
@@ -1136,6 +1276,7 @@ static void systest_wizard(void)
     systest_rec_audio();
     systest_audio_test();
     systest_latency_test();
+    systest_aec_test();
     gui_msgbox("Test wizard", "Test wizard complete.", WITH_OK);
 }
 
