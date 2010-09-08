@@ -16,7 +16,7 @@ a=rtpmap:101 telephone-event/8000
 a=fmtp:101 0-15
 """
 
-pjsua_args = "--null-audio --auto-answer 200 --use-timer --timer-min-se 90 --timer-se 1800"
+pjsua_args = "--null-audio --auto-answer 200 --use-timer 2 --timer-min-se 90 --timer-se 1800"
 extra_headers = "Require: timer\nSupported: timer\nSession-Expires: 1800\n"
 include = ["Session-Expires: .*;refresher=.*"]
 exclude = []

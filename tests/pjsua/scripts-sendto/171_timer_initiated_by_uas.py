@@ -25,7 +25,7 @@ a=fmtp:101 0-15
 #   to a duration lower than the value in the Min-SE header field in the
 #   request, if it is present.
    
-pjsua_args = "--null-audio --auto-answer 200 --use-timer --timer-min-se 90 --timer-se 1800"
+pjsua_args = "--null-audio --auto-answer 200 --use-timer 2 --timer-min-se 90 --timer-se 1800"
 extra_headers = "Supported: timer\n"
 include = ["Session-Expires: .*;refresher=.*"]
 exclude = []
