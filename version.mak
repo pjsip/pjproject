@@ -1,1 +1,1 @@
-export PJ_VERSION := 1.7-trunk
+export PJ_VERSION := 1.8
