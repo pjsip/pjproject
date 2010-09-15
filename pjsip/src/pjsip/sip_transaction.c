@@ -950,6 +950,18 @@ static pj_status_t unlock_tsx( pjsip_transaction *tsx,
 }
 
 
+/* Lock transaction for accessing the timeout timer only. */
+static void lock_timer(pjsip_transaction *tsx)
+{
+    pj_mutex_lock(tsx->mutex_b);
+}
+
+/* Unlock timer */
+static void unlock_timer(pjsip_transaction *tsx)
+{
+    pj_mutex_unlock(tsx->mutex_b);
+}
+
 /* Create and initialize basic transaction structure.
  * This function is called by both UAC and UAS creation.
  */
@@ -984,6 +996,13 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     
     status = pj_mutex_create_recursive(pool, tsx->obj_name, &tsx->mutex);
     if (status != PJ_SUCCESS) {
+	pjsip_endpt_release_pool(mod_tsx_layer.endpt, pool);
+	return status;
+    }
+
+    status = pj_mutex_create_simple(pool, tsx->obj_name, &tsx->mutex_b);
+    if (status != PJ_SUCCESS) {
+	pj_mutex_destroy(tsx->mutex);
 	pjsip_endpt_release_pool(mod_tsx_layer.endpt, pool);
 	return status;
     }
@@ -1041,6 +1060,7 @@ static pj_status_t tsx_destroy( pjsip_transaction *tsx )
 	lck = lck->prev;
     }
 
+    pj_mutex_destroy(tsx->mutex_b);
     pj_mutex_destroy(tsx->mutex);
 
     PJ_LOG(5,(tsx->obj_name, "Transaction destroyed!"));
@@ -1149,6 +1169,8 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 	}
 
+	lock_timer(tsx);
+
 	/* Cancel timeout timer. */
 	if (tsx->timeout_timer.id != 0) {
 	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
@@ -1159,6 +1181,7 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer,
 				    &timeout);
 
+	unlock_timer(tsx);
 
     } else if (state == PJSIP_TSX_STATE_DESTROYED) {
 
@@ -1557,7 +1580,6 @@ PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
 PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
 					   unsigned millisec)
 {
-    struct tsx_lock_data lck;
     pj_time_val timeout;
 
     PJ_ASSERT_RETURN(tsx != NULL, PJ_EINVAL);
@@ -1565,11 +1587,14 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
 		     tsx->method.id == PJSIP_INVITE_METHOD,
 		     PJ_EINVALIDOP);
 
-    lock_tsx(tsx, &lck);
+    /* Note: must not call lock_tsx() as that would introduce deadlock.
+     * See #1121.
+     */
+    lock_timer(tsx);
 
     /* Transaction must not have got final response */
     PJ_ASSERT_ON_FAIL(tsx->status_code < 200,
-		    { unlock_tsx(tsx, &lck); return PJ_EINVALIDOP; });
+		    { unlock_timer(tsx); return PJ_EINVALIDOP; });
 
     if (tsx->timeout_timer.id != 0) {
 	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
@@ -1585,7 +1610,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
 			       &timeout);
 
 
-    unlock_tsx(tsx, &lck);
+    unlock_timer(tsx);
 
     return PJ_SUCCESS;
 }
@@ -1804,12 +1829,16 @@ static void send_msg_callback( pjsip_send_state *send_state,
 
 	    /* And reset timeout timer */
 	    if (tsx->timeout_timer.id) {
+		lock_timer(tsx);
+
 		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
 		tsx->timeout_timer.id = TIMER_INACTIVE;
 
 		tsx->timeout_timer.id = TIMER_ACTIVE;
 		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 					    &timeout_timer_val);
+
+		unlock_timer(tsx);
 	    }
 
 	    /* Put again pending tdata */
@@ -2207,9 +2236,11 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 	/* Start Timer B (or called timer F for non-INVITE) for transaction 
 	 * timeout.
 	 */
+	lock_timer(tsx);
 	tsx->timeout_timer.id = TIMER_ACTIVE;
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 				    &timeout_timer_val);
+	unlock_timer(tsx);
 
 	/* Start Timer A (or timer E) for retransmission only if unreliable 
 	 * transport is being used.
@@ -2299,8 +2330,10 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	    }
 
 	    if (tsx->timeout_timer.id != 0) {
+		lock_timer(tsx);
 		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
 		tsx->timeout_timer.id = 0;
+		unlock_timer(tsx);
 	    }
 
 	} else {
@@ -2321,7 +2354,9 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 
 		/* Cancel timeout timer */
+		lock_timer(tsx);
 		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+		unlock_timer(tsx);
 
 	    } else {
 		if (!tsx->is_reliable) {
@@ -2572,9 +2607,11 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		    timeout.sec = timeout.msec = 0;
 		}
 
+		lock_timer(tsx);
 		tsx->timeout_timer.id = TIMER_ACTIVE;
 		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
                                             &timeout);
+		unlock_timer(tsx);
 
 		/* Set state to "Completed" */
 		tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
@@ -2602,6 +2639,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	     * For non-INVITE, start timer J with the value of 64*T1 for
 	     * non-reliable transports, and zero for reliable transports.
 	     */
+	    lock_timer(tsx);
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		/* Start timer H for INVITE */
 		tsx->timeout_timer.id = TIMER_ACTIVE;
@@ -2619,6 +2657,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
 					   &zero_time);
 	    }
+	    unlock_timer(tsx);
 
 	    /* For INVITE, if unreliable transport is used, retransmission 
 	     * timer G will be scheduled (retransmission).
@@ -2746,7 +2785,9 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
     } else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code,200)) {
 
 	/* Stop timeout timer B/F. */
+	lock_timer(tsx);
 	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
+	unlock_timer(tsx);
 
 	/* For INVITE, the state moves to Terminated state (because ACK is
 	 * handled in TU). For non-INVITE, state moves to Completed.
@@ -2770,9 +2811,11 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    } else {
 		timeout.sec = timeout.msec = 0;
 	    }
+	    lock_timer(tsx);
 	    tsx->timeout_timer.id = TIMER_ACTIVE;
 	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 					&timeout);
+	    unlock_timer(tsx);
 
 	    /* Cancel retransmission timer */
 	    if (tsx->retransmit_timer.id != 0) {
@@ -2864,8 +2907,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	}
 
 	/* Stop timer B. */
+	lock_timer(tsx);
 	tsx->timeout_timer.id = 0;
 	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
+	unlock_timer(tsx);
 
 	/* Generate and send ACK (for INVITE) */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
@@ -2912,8 +2957,10 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	} else {
 	    timeout.sec = timeout.msec = 0;
 	}
+	lock_timer(tsx);
 	tsx->timeout_timer.id = TIMER_ACTIVE;
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
+	unlock_timer(tsx);
 
     } else {
 	// Shouldn't happen because there's no timer for this state.
@@ -2971,6 +3018,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	    /* Reschedule timeout timer. */
+	    lock_timer(tsx);
 	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 	    tsx->timeout_timer.id = TIMER_ACTIVE;
 
@@ -2986,6 +3034,7 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    }
 	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
 					&timeout);
+	    unlock_timer(tsx);
 
 	    /* Move state to "Confirmed" */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_CONFIRMED, 

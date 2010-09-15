@@ -86,6 +86,9 @@ struct pjsip_transaction
     pjsip_module	       *tsx_user;	/**< Transaction user.	    */
     pjsip_endpoint	       *endpt;          /**< Endpoint instance.     */
     pj_mutex_t		       *mutex;          /**< Mutex for this tsx.    */
+    pj_mutex_t		       *mutex_b;	/**< Second mutex to avoid
+						     deadlock. It is used to
+						     protect timer.	    */
 
     /*
      * Transaction identification.
