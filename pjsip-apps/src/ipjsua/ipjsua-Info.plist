@@ -26,12 +26,14 @@
 	<true/>
 	<key>NSMainNibFile</key>
 	<string>MainWindow</string>
-	<key>UIInterfaceOrientation</key>
-	<string>UIInterfaceOrientationLandscapeRight</string>
+	<key>NSMainNibFile~ipad</key>
+	<string>MainWindow-iPad</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>
 		<string>voip</string>
 	</array>
+	<key>UIInterfaceOrientation</key>
+	<string>UIInterfaceOrientationLandscapeRight</string>
 </dict>
 </plist>
