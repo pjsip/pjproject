@@ -1545,8 +1545,10 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     
     /* Reset session info with only one media stream */
     sess_info.stream_cnt = 1;
-    if (si != &sess_info.stream_info[0])
+    if (si != &sess_info.stream_info[0]) {
 	pj_memcpy(&sess_info.stream_info[0], si, sizeof(pjmedia_stream_info));
+	si = &sess_info.stream_info[0];
+    }
 
     /* Check if no media is active */
     if (sess_info.stream_cnt == 0 || si->dir == PJMEDIA_DIR_NONE)
@@ -1637,6 +1639,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	si->rtp_ts = call->rtp_tx_ts;
 	si->rtp_seq = call->rtp_tx_seq;
 	si->rtp_seq_ts_set = call->rtp_tx_seq_ts_set;
+
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+	/* Enable/disable stream keep-alive and NAT hole punch. */
+	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;
+#endif
 
 	/* Create session based on session info. */
 	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,

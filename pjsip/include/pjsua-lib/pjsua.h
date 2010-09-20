@@ -2317,6 +2317,17 @@ typedef struct pjsua_acc_config
      */
     unsigned	     reg_use_proxy;
 
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+    /**
+     * Specify whether stream keep-alive and NAT hole punching with
+     * non-codec-VAD mechanism (see @ref PJMEDIA_STREAM_ENABLE_KA) is enabled
+     * for this account.
+     *
+     * Default: PJ_FALSE (disabled)
+     */
+    pj_bool_t	     use_stream_ka;
+#endif
+
 } pjsua_acc_config;
 
 

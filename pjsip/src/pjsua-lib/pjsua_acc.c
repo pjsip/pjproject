@@ -754,6 +754,10 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.srtp_optional_dup_offer = cfg->srtp_optional_dup_offer;    
 #endif
 
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && (PJMEDIA_STREAM_ENABLE_KA != 0)
+    acc->cfg.use_stream_ka = cfg->use_stream_ka;
+#endif
+
     /* Global outbound proxy */
     if (global_route_crc != acc->global_route_crc) {
 	unsigned i, rcnt;

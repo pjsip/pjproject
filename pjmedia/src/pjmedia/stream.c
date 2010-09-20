@@ -197,6 +197,9 @@ struct pjmedia_stream
 #endif
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
+						    codec-VAD mechanism is
+						    enabled?		    */
     pj_timestamp	     last_frm_ts_sent; /**< Timestamp of last sending
 					            packet		    */
 #endif
@@ -1123,6 +1126,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     /* If the interval since last sending packet is greater than
      * PJMEDIA_STREAM_KA_INTERVAL, send keep-alive packet.
      */
+    if (stream->use_ka)
     {
 	pj_uint32_t dtx_duration;
 
@@ -1973,6 +1977,10 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->last_dtmf = -1;
     stream->jb_last_frm = PJMEDIA_JB_NORMAL_FRAME;
 
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    stream->use_ka = info->use_ka;
+#endif
+
     /* Build random RTCP CNAME. CNAME has user@host format */
     stream->cname.ptr = p = (char*) pj_pool_alloc(pool, 20);
     pj_create_random_string(p, 5);
@@ -2284,7 +2292,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     /* NAT hole punching by sending KA packet via RTP transport. */
-    send_keep_alive_packet(stream);
+    if (stream->use_ka)
+	send_keep_alive_packet(stream);
 #endif
 
 #if TRACE_JB
