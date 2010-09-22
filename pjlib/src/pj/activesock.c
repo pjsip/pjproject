@@ -219,8 +219,7 @@ PJ_DEF(pj_status_t) pj_activesock_create( pj_pool_t *pool,
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
     asock->sock = sock;
-    pj_activesock_set_iphone_os_bg(asock,
-				   PJ_ACTIVESOCK_TCP_IPHONE_OS_BG);
+    asock->bg_setting = PJ_ACTIVESOCK_TCP_IPHONE_OS_BG;
 #endif
 
     *p_asock = asock;
