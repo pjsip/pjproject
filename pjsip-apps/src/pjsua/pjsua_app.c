@@ -295,8 +295,8 @@ static void usage(void)
     puts  ("  --playback-dev=id   Audio playback device ID (default=-1)");
     puts  ("  --capture-lat=N     Audio capture latency, in ms (default=100)");
     puts  ("  --playback-lat=N    Audio playback latency, in ms (default=100)");
-    puts  ("  --snd-auto-close=N  Auto close audio device when it is idle for N seconds.");
-    puts  ("                      Specify N=-1 (default) to disable this feature.");
+    puts  ("  --snd-auto-close=N  Auto close audio device when idle for N secs (default=1)");
+    puts  ("                      Specify N=-1 to disable this feature.");
     puts  ("                      Specify N=0 for instant close when unused.");
     puts  ("  --no-tones          Disable audible tones");
     puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
