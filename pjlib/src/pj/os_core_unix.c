@@ -213,6 +213,9 @@ PJ_DEF(void) pj_shutdown()
 	pj_thread_local_free(thread_tls_id);
 	thread_tls_id = -1;
     }
+
+    /* Ticket #1132: Assertion when (re)starting PJLIB on different thread */
+    pj_bzero(&main_thread, sizeof(main_thread));
 #endif
 
     /* Clear static variables */

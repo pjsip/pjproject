@@ -246,6 +246,9 @@ PJ_DEF(void) pj_shutdown()
     /* Clear static variables */
     pj_errno_clear_handlers();
 
+    /* Ticket #1132: Assertion when (re)starting PJLIB on different thread */
+    pj_bzero(main_thread, sizeof(main_thread));
+
     /* Shutdown Winsock */
     WSACleanup();
 }
