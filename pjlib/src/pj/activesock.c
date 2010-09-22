@@ -84,6 +84,9 @@ struct pj_activesock_t
     CFReadStreamRef	 readStream;
 #endif
     
+    unsigned		 err_counter;
+    pj_status_t		 last_err;
+
     struct send_data	 send_data;
 
     struct read_op	*read_op;
@@ -790,6 +793,19 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
     PJ_UNUSED_ARG(new_sock);
 
     do {
+	if (status == asock->last_err && status != PJ_SUCCESS) {
+	    asock->err_counter++;
+	    if (asock->err_counter >= PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR) {
+		PJ_LOG(3, ("", "Received %d consecutive errors: %d for the accept()"
+			       " operation, stopping further ioqueue accepts.",
+			       asock->err_counter, asock->last_err));
+		return;
+	    }
+	} else {
+	    asock->err_counter = 0;
+	    asock->last_err = status;
+	}
+
 	if (status==PJ_SUCCESS && asock->cb.on_accept_complete) {
 	    pj_bool_t ret;
 

@@ -507,6 +507,16 @@
 #endif
 
 /**
+ * Maximum consecutive identical error for accept() operation before
+ * activesock stops calling the next ioqueue accept.
+ *
+ * Default: 50
+ */
+#ifndef PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR
+#   define PJ_ACTIVESOCK_MAX_CONSECUTIVE_ACCEPT_ERROR 50
+#endif
+
+/**
  * Constants for declaring the maximum handles that can be supported by
  * a single IOQ framework. This constant might not be relevant to the 
  * underlying I/O queue impelementation, but still, developers should be 
