@@ -526,6 +526,23 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
     /* Get local fmtp for our decoder. */
     parse_fmtp(pool, local_m, si->fmt.pt, &si->param->setting.dec_fmtp);
 
+    /* Get the remote ptime for our encoder. */
+    attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
+				  "ptime", NULL);
+    if (attr) {
+	pj_str_t tmp_val = attr->value;
+	unsigned frm_per_pkt;
+ 
+	pj_strltrim(&tmp_val);
+
+	/* Round up ptime when the specified is not multiple of frm_ptime */
+	frm_per_pkt = (pj_strtoul(&tmp_val) + si->param->info.frm_ptime/2) /
+		      si->param->info.frm_ptime;
+	if (frm_per_pkt != 0) {
+            si->param->setting.frm_per_pkt = (pj_uint8_t)frm_per_pkt;
+        }
+    }
+
     /* Get remote maxptime for our encoder. */
     attr = pjmedia_sdp_attr_find2(rem_m->attr_count, rem_m->attr,
 				  "maxptime", NULL);
