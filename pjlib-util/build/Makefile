@@ -56,7 +56,7 @@ all: $(TARGETS)
 
 doc:
 	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if test ! "$(WWWDIR)" == ""; then \
+	@if [ -n "$(WWWDIR)" ]; then \
 		echo "Copying to $(WWWDIR)/pjlib-util/docs/html.." ; \
 		cp -a ../docs/html/* $(WWWDIR)/pjlib-util/docs/html/ ; \
 	fi

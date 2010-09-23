@@ -123,7 +123,7 @@ all: $(TARGETS)
 
 doc:
 	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if test ! "$(WWWDIR)" == ""; then \
+	@if [ -n "$(WWWDIR)" ]; then \
 		echo "Copying to $(WWWDIR)/pjmedia/docs/html.." ; \
 		rm -rf $(WWWDIR)/pjmedia/docs/html/* ; \
 		cp -a ../docs/html/* $(WWWDIR)/pjmedia/docs/html/ ; \

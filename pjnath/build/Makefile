@@ -79,7 +79,7 @@ all: $(TARGETS)
 
 doc:
 	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if test ! "$(WWWDIR)" == ""; then \
+	@if [ -n "$(WWWDIR)" ]; then \
 		echo "Copying to $(WWWDIR)/pjnath/docs/html.." ; \
 		cp -a ../docs/html/* $(WWWDIR)/pjnath/docs/html/ ; \
 	fi
