@@ -45,10 +45,24 @@ static FILE *f = NULL;
 
 static void on_response(pj_http_req *http_req, const pj_http_resp *resp)
 {
-	PJ_UNUSED_ARG(http_req);
+    unsigned i;
+
+    PJ_UNUSED_ARG(http_req);
     PJ_LOG(3,(THIS_FILE, "%.*s %d %.*s", (int)resp->version.slen, resp->version.ptr,
 				           resp->status_code,
 				           (int)resp->reason.slen, resp->reason.ptr));
+
+    for (i=0; i<resp->headers.count; ++i) {
+	const pj_http_header_elmt *h = &resp->headers.header[i];
+
+	if (!pj_stricmp2(&h->name, "Content-Length") ||
+	    !pj_stricmp2(&h->name, "Content-Type"))
+	{
+	    PJ_LOG(3,(THIS_FILE, "%.*s: %.*s",
+		      (int)h->name.slen, h->name.ptr,
+		      (int)h->value.slen, h->value.ptr));
+	}
+    }
 }
 
 static void on_send_data(pj_http_req *http_req, void **data, pj_size_t *size)

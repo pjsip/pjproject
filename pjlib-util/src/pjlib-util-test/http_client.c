@@ -237,49 +237,125 @@ static void on_response(pj_http_req *hreq, const pj_http_resp *resp)
 }
 
 
-pj_status_t parse_url(const char *url)
+pj_status_t parse_url(const char *url, pj_http_url *hurl)
 {
     pj_str_t surl;
-    pj_http_url hurl;
     pj_status_t status;
 
     pj_cstr(&surl, url);
-    status = pj_http_req_parse_url(&surl, &hurl);
+    status = pj_http_req_parse_url(&surl, hurl);
 #ifdef VERBOSE
     if (!status) {
         printf("URL: %s\nProtocol: %.*s\nHost: %.*s\nPort: %d\nPath: %.*s\n\n",
-               url, STR_PREC(hurl.protocol), STR_PREC(hurl.host), 
-               hurl.port, STR_PREC(hurl.path));
+               url, STR_PREC(hurl->protocol), STR_PREC(hurl->host),
+               hurl->port, STR_PREC(hurl->path));
     } else {
     }
 #endif
     return status;
 }
 
-int parse_url_test()
+static int parse_url_test()
 {
-    /* Simple URL without '/' in the end */
-    if (parse_url("http://www.google.com.sg") != PJ_SUCCESS)
-        return -11;
-    /* Simple URL with port number but without '/' in the end */
-    if (parse_url("http://www.example.com:8080") != PJ_SUCCESS)
-        return -13;
-    /* URL with path */
-    if (parse_url("http://127.0.0.1:280/Joomla/index.php?option=com_content&task=view&id=5&Itemid=6")
-        != PJ_SUCCESS)
-        return -15;
-    /* URL with port and path */
-    if (parse_url("http://teluu.com:81/about-us/") != PJ_SUCCESS)
-        return -17;
-    /* unsupported protocol */
-    if (parse_url("ftp://www.teluu.com") != PJ_ENOTSUP)
-        return -19;
-    /* invalid format */
-    if (parse_url("http:/teluu.com/about-us/") != PJLIB_UTIL_EHTTPINURL)
-        return -21;
-    /* invalid port number */
-    if (parse_url("http://teluu.com:xyz/") != PJLIB_UTIL_EHTTPINPORT)
-        return -23;
+    struct test_data
+    {
+	char *url;
+	pj_status_t result;
+	const char *username;
+	const char *passwd;
+	const char *host;
+	int port;
+	const char *path;
+    } test_data[] =
+    {
+	/* Simple URL without '/' in the end */
+        {"http://www.pjsip.org", PJ_SUCCESS, "", "", "www.pjsip.org", 80, "/"},
+
+        /* Simple URL with port number but without '/' in the end */
+        {"http://pjsip.org:8080", PJ_SUCCESS, "", "", "pjsip.org", 8080, "/"},
+
+        /* URL with path */
+        {"http://127.0.0.1:280/Joomla/index.php?option=com_content&task=view&id=5&Itemid=6",
+        	PJ_SUCCESS, "", "", "127.0.0.1", 280,
+        	"/Joomla/index.php?option=com_content&task=view&id=5&Itemid=6"},
+
+	/* URL with port and path */
+	{"http://pjsip.org:81/about-us/", PJ_SUCCESS, "", "", "pjsip.org", 81, "/about-us/"},
+
+	/* unsupported protocol */
+	{"ftp://www.pjsip.org", PJ_ENOTSUP, "", "", "", 80, ""},
+
+	/* invalid format */
+	{"http:/pjsip.org/about-us/", PJLIB_UTIL_EHTTPINURL, "", "", "", 80, ""},
+
+	/* invalid port number */
+	{"http://pjsip.org:xyz/", PJLIB_UTIL_EHTTPINPORT, "", "", "", 80, ""},
+
+	/* with username and password */
+	{"http://user:pass@pjsip.org", PJ_SUCCESS, "user", "pass", "pjsip.org", 80, "/"},
+
+	/* password only*/
+	{"http://:pass@pjsip.org", PJ_SUCCESS, "", "pass", "pjsip.org", 80, "/"},
+
+	/* user only*/
+	{"http://user:@pjsip.org", PJ_SUCCESS, "user", "", "pjsip.org", 80, "/"},
+
+	/* empty username and passwd*/
+	{"http://:@pjsip.org", PJ_SUCCESS, "", "", "pjsip.org", 80, "/"},
+
+	/* Invalid URL */
+	{"http://:", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http://@", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http:/", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http://", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http:///", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http://@/", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http://:::", PJ_EINVAL, "", "", "", 0, ""},
+    };
+    unsigned i;
+
+    for (i=0; i<PJ_ARRAY_SIZE(test_data); ++i) {
+	struct test_data *ptd;
+	pj_http_url hurl;
+	pj_status_t status;
+
+	ptd = &test_data[i];
+
+	PJ_LOG(3, (THIS_FILE, ".. %s", ptd->url));
+	status = parse_url(ptd->url, &hurl);
+
+	if (status != ptd->result) {
+	    PJ_LOG(3,(THIS_FILE, "%d", status));
+	    return -11;
+	}
+	if (status != PJ_SUCCESS)
+	    continue;
+	if (pj_strcmp2(&hurl.username, ptd->username))
+	    return -12;
+	if (pj_strcmp2(&hurl.passwd, ptd->passwd))
+	    return -13;
+	if (pj_strcmp2(&hurl.host, ptd->host))
+	    return -14;
+	if (hurl.port != ptd->port)
+	    return -15;
+	if (pj_strcmp2(&hurl.path, ptd->path))
+	    return -16;
+    }
 
     return 0;
 }

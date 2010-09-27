@@ -20,13 +20,17 @@
 #include <pjlib-util/http_client.h>
 #include <pj/activesock.h>
 #include <pj/assert.h>
+#include <pj/ctype.h>
 #include <pj/errno.h>
 #include <pj/except.h>
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/timer.h>
+#include <pjlib-util/base64.h>
 #include <pjlib-util/errno.h>
+#include <pjlib-util/md5.h>
 #include <pjlib-util/scanner.h>
+#include <pjlib-util/string.h>
 
 #if 0
     /* Enable some tracing */
@@ -39,7 +43,6 @@
 #define NUM_PROTOCOL            2
 #define HTTP_1_0                "1.0"
 #define HTTP_1_1                "1.1"
-#define HTTP_SEPARATOR          "://"
 #define CONTENT_LENGTH          "Content-Length"
 /* Buffer size for sending/receiving messages. */
 #define BUF_SIZE                2048
@@ -95,6 +98,13 @@ enum http_state
     ABORTING,
 };
 
+enum auth_state
+{
+    AUTH_NONE,		/* Not authenticating */
+    AUTH_RETRYING,	/* New request with auth has been submitted */
+    AUTH_DONE		/* Done retrying the request with auth. */
+};
+
 struct pj_http_req
 {
     pj_str_t                url;        /* Request URL */
@@ -109,6 +119,7 @@ struct pj_http_req
     pj_status_t             error;      /* Error status */
     pj_str_t                buffer;     /* Buffer to send/receive msgs */
     enum http_state         state;      /* State of the HTTP request */
+    enum auth_state	    auth_state; /* Authentication state */
     pj_timer_entry          timer_entry;/* Timer entry */
     pj_bool_t               resolved;   /* Whether URL's host is resolved */
     pj_http_resp            response;   /* HTTP response */
@@ -142,6 +153,11 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
                                        pj_http_resp *response,
                                        void *data, pj_size_t size,
                                        pj_size_t *remainder);
+/* Restart the request with authentication */
+static void restart_req_with_auth(pj_http_req *hreq);
+/* Parse authentication challenge */
+static pj_status_t parse_auth_chal(pj_pool_t *pool, pj_str_t *input,
+				   pj_http_auth_chal *chal);
 
 static pj_uint16_t get_http_default_port(const pj_str_t *protocol)
 {
@@ -318,8 +334,59 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
                 hreq->response.data = data;
                 hreq->response.size = size - rem;
             }
+
+            /* If code is 401 or 407, find and parse WWW-Authenticate or
+             * Proxy-Authenticate header
+             */
+            if (hreq->response.status_code == 401 ||
+        	hreq->response.status_code == 407)
+            {
+        	const pj_str_t STR_WWW_AUTH = { "WWW-Authenticate", 16 };
+        	const pj_str_t STR_PROXY_AUTH = { "Proxy-Authenticate", 18 };
+        	pj_http_resp *response = &hreq->response;
+        	pj_http_headers *hdrs = &response->headers;
+        	unsigned i;
+
+        	status = PJ_ENOTFOUND;
+        	for (i = 0; i < hdrs->count; i++) {
+        	    if (!pj_stricmp(&hdrs->header[i].name, &STR_WWW_AUTH) ||
+        		!pj_stricmp(&hdrs->header[i].name, &STR_PROXY_AUTH))
+        	    {
+        		status = parse_auth_chal(hreq->pool,
+        					 &hdrs->header[i].value,
+        					 &response->auth_chal);
+        		break;
+        	    }
+        	}
+
+                /* Check if we should perform authentication */
+                if (status == PJ_SUCCESS &&
+		    hreq->auth_state == AUTH_NONE &&
+		    hreq->response.auth_chal.scheme.slen &&
+		    hreq->param.auth_cred.username.slen &&
+		    (hreq->param.auth_cred.scheme.slen == 0 ||
+		     !pj_stricmp(&hreq->response.auth_chal.scheme,
+				 &hreq->param.auth_cred.scheme)) &&
+		    (hreq->param.auth_cred.realm.slen == 0 ||
+		     !pj_stricmp(&hreq->response.auth_chal.realm,
+				 &hreq->param.auth_cred.realm))
+		    )
+		    {
+		    /* Yes, authentication is required and we have been
+		     * configured with credential.
+		     */
+		    restart_req_with_auth(hreq);
+		    if (hreq->auth_state == AUTH_RETRYING) {
+			/* We'll be resending the request with auth. This
+			 * connection has been closed.
+			 */
+			return PJ_FALSE;
+		    }
+                }
+            }
+
             /* We already received the response header, call the 
-             * appropriate callback. 
+             * appropriate callback.
              */
             if (hreq->cb.on_response)
                 (*hreq->cb.on_response)(hreq, &hreq->response);
@@ -384,7 +451,7 @@ static pj_bool_t http_on_data_read(pj_activesock_t *asock,
         hreq->response.content_length) ||
         (status == PJ_EEOF && hreq->response.content_length == -1)) 
     {
-        /* Finish reading */
+	/* Finish reading */
         http_req_end_request(hreq);
         hreq->response.size = hreq->tcp_state.current_read_size;
 
@@ -433,6 +500,98 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     pj_http_req_cancel(hreq, PJ_TRUE);
 }
 
+/* Parse authentication challenge */
+static pj_status_t parse_auth_chal(pj_pool_t *pool, pj_str_t *input,
+				   pj_http_auth_chal *chal)
+{
+    pj_scanner scanner;
+    const pj_str_t REALM_STR 	=    { "realm", 5},
+    		NONCE_STR 	=    { "nonce", 5},
+    		ALGORITHM_STR 	=    { "algorithm", 9 },
+    		STALE_STR 	=    { "stale", 5},
+    		QOP_STR 	=    { "qop", 3},
+    		OPAQUE_STR 	=    { "opaque", 6};
+    pj_status_t status = PJ_SUCCESS;
+    PJ_USE_EXCEPTION ;
+
+    pj_scan_init(&scanner, input->ptr, input->slen, PJ_SCAN_AUTOSKIP_WS,
+		 &on_syntax_error);
+    PJ_TRY {
+	/* Get auth scheme */
+	if (*scanner.curptr == '"') {
+	    pj_scan_get_quote(&scanner, '"', '"', &chal->scheme);
+	    chal->scheme.ptr++;
+	    chal->scheme.slen -= 2;
+	} else {
+	    pj_scan_get_until_chr(&scanner, " \t\r\n", &chal->scheme);
+	}
+
+	/* Loop parsing all parameters */
+	for (;;) {
+	    const char *end_param = ", \t\r\n;";
+	    pj_str_t name, value;
+
+	    /* Get pair of parameter name and value */
+	    value.ptr = NULL;
+	    value.slen = 0;
+	    pj_scan_get_until_chr(&scanner, "=, \t\r\n", &name);
+	    if (*scanner.curptr == '=') {
+		pj_scan_get_char(&scanner);
+		if (!pj_scan_is_eof(&scanner)) {
+		    if (*scanner.curptr == '"' || *scanner.curptr == '\'') {
+			int quote_char = *scanner.curptr;
+			pj_scan_get_quote(&scanner, quote_char, quote_char,
+					  &value);
+			value.ptr++;
+			value.slen -= 2;
+		    } else if (!strchr(end_param, *scanner.curptr)) {
+			pj_scan_get_until_chr(&scanner, end_param, &value);
+		    }
+		}
+		value = pj_str_unescape(pool, &value);
+	    }
+
+	    if (!pj_stricmp(&name, &REALM_STR)) {
+		chal->realm = value;
+
+	    } else if (!pj_stricmp(&name, &NONCE_STR)) {
+		chal->nonce = value;
+
+	    } else if (!pj_stricmp(&name, &ALGORITHM_STR)) {
+		chal->algorithm = value;
+
+	    } else if (!pj_stricmp(&name, &OPAQUE_STR)) {
+		chal->opaque = value;
+
+	    } else if (!pj_stricmp(&name, &QOP_STR)) {
+		chal->qop = value;
+
+	    } else if (!pj_stricmp(&name, &STALE_STR)) {
+		chal->stale = value.slen &&
+			      (*value.ptr != '0') &&
+			      (*value.ptr != 'f') &&
+			      (*value.ptr != 'F');
+
+	    }
+
+	    /* Eat comma */
+	    if (!pj_scan_is_eof(&scanner) && *scanner.curptr == ',')
+		pj_scan_get_char(&scanner);
+	    else
+		break;
+	}
+
+    }
+    PJ_CATCH_ANY {
+	status = PJ_GET_EXCEPTION();
+	pj_bzero(chal, sizeof(*chal));
+	TRACE_((THIS_FILE, "Error: parsing of auth header failed"));
+    }
+    PJ_END;
+    pj_scan_fini(&scanner);
+    return status;
+}
+
 /* The same as #pj_http_headers_add_elmt() with char * as
  * its parameters.
  */
@@ -464,9 +623,10 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
 {
     pj_size_t i;
     char *cptr;
-    char *newdata;
+    char *end_status, *newdata;
     pj_scanner scanner;
     pj_str_t s;
+    const pj_str_t STR_CONTENT_LENGTH = { CONTENT_LENGTH, 14 };
     pj_status_t status;
 
     PJ_USE_EXCEPTION;
@@ -517,10 +677,13 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
     }
     PJ_END;
 
+    end_status = scanner.curptr;
+    pj_scan_fini(&scanner);
+
     /* Parse the response headers. */
-    size = i - 2 - (scanner.curptr - newdata);
+    size = i - 2 - (end_status - newdata);
     if (size > 0) {
-        status = http_headers_parse(scanner.curptr + 1, size, 
+        status = http_headers_parse(end_status + 1, size,
                                     &response->headers);
     } else {
         status = PJ_SUCCESS;
@@ -528,8 +691,8 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
 
     /* Find content-length header field. */
     for (i = 0; i < response->headers.count; i++) {
-        if (!pj_stricmp2(&response->headers.header[i].name, 
-                         CONTENT_LENGTH)) 
+        if (!pj_stricmp(&response->headers.header[i].name,
+                        &STR_CONTENT_LENGTH))
         {
             response->content_length = 
                 pj_strtoul(&response->headers.header[i].value);
@@ -544,8 +707,6 @@ static pj_status_t http_response_parse(pj_pool_t *pool,
             break;
         }
     }
-
-    pj_scan_fini(&scanner);
 
     return status;
 }
@@ -614,6 +775,7 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
 
     if (!len) return -1;
     
+    pj_bzero(hurl, sizeof(*hurl));
     pj_scan_init(&scanner, url->ptr, url->slen, 0, &on_syntax_error);
 
     PJ_TRY {
@@ -634,16 +796,28 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
             PJ_THROW(PJ_ENOTSUP); // unsupported protocol
         }
 
-        if (pj_scan_strcmp(&scanner, HTTP_SEPARATOR,
-                           pj_ansi_strlen(HTTP_SEPARATOR))) 
-        {
+        if (pj_scan_strcmp(&scanner, "://", 3)) {
             PJ_THROW(PJLIB_UTIL_EHTTPINURL); // no "://" after protocol name
         }
-        pj_scan_advance_n(&scanner, pj_ansi_strlen(HTTP_SEPARATOR), PJ_FALSE);
+        pj_scan_advance_n(&scanner, 3, PJ_FALSE);
+
+        if (pj_memchr(url->ptr, '@', url->slen)) {
+            /* Parse username and password */
+            pj_scan_get_until_chr(&scanner, ":@", &hurl->username);
+            if (*scanner.curptr == ':') {
+        	pj_scan_get_char(&scanner);
+        	pj_scan_get_until_chr(&scanner, "@", &hurl->passwd);
+            } else {
+        	hurl->passwd.slen = 0;
+            }
+            pj_scan_get_char(&scanner);
+        }
 
         /* Parse the host and port number (if any) */
         pj_scan_get_until_chr(&scanner, ":/", &s);
         pj_strassign(&hurl->host, &s);
+        if (hurl->host.slen==0)
+            PJ_THROW(PJ_EINVAL);
         if (pj_scan_is_eof(&scanner) || *scanner.curptr == '/') {
             /* No port number specified */
             /* Assume default http/https port number */
@@ -692,6 +866,7 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
 {
     pj_pool_t *own_pool;
     pj_http_req *hreq;
+    char *at_pos;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && url && timer && ioqueue && 
@@ -736,11 +911,54 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
     }
 
     /* Parse the URL */
-    if (!pj_strdup(hreq->pool, &hreq->url, url))
+    if (!pj_strdup_with_null(hreq->pool, &hreq->url, url)) {
+	pj_pool_release(hreq->pool);
         return PJ_ENOMEM;
+    }
     status = pj_http_req_parse_url(&hreq->url, &hreq->hurl);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_pool_release(hreq->pool);
         return status; // Invalid URL supplied
+    }
+
+    /* If URL contains username/password, move them to credential and
+     * remove them from the URL.
+     */
+    if ((at_pos=pj_strchr(&hreq->url, '@')) != NULL) {
+	pj_str_t tmp;
+	char *user_pos = pj_strchr(&hreq->url, '/');
+	int removed_len;
+
+	/* Save credential first, unescape the string */
+	tmp = pj_str_unescape(hreq->pool, &hreq->hurl.username);;
+	pj_strdup(hreq->pool, &hreq->param.auth_cred.username, &tmp);
+
+	tmp = pj_str_unescape(hreq->pool, &hreq->hurl.passwd);
+	pj_strdup(hreq->pool, &hreq->param.auth_cred.data, &tmp);
+
+	hreq->hurl.username.ptr = hreq->hurl.passwd.ptr = NULL;
+	hreq->hurl.username.slen = hreq->hurl.passwd.slen = 0;
+
+	/* Remove "username:password@" from the URL */
+	pj_assert(user_pos != 0 && user_pos < at_pos);
+	user_pos += 2;
+	removed_len = at_pos + 1 - user_pos;
+	pj_memmove(user_pos, at_pos+1, hreq->url.ptr+hreq->url.slen-at_pos-1);
+	hreq->url.slen -= removed_len;
+
+	/* Need to adjust hostname and path pointers due to memmove*/
+	if (hreq->hurl.host.ptr > user_pos &&
+	    hreq->hurl.host.ptr < user_pos + hreq->url.slen)
+	{
+	    hreq->hurl.host.ptr -= removed_len;
+	}
+	/* path may come from a string constant, don't shift it if so */
+	if (hreq->hurl.path.ptr > user_pos &&
+	    hreq->hurl.path.ptr < user_pos + hreq->url.slen)
+	{
+	    hreq->hurl.path.ptr -= removed_len;
+	}
+    }
 
     *http_req = hreq;
     return PJ_SUCCESS;
@@ -770,7 +988,10 @@ PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
      */
     PJ_ASSERT_RETURN(http_req->state == IDLE, PJ_EBUSY);
 
+    /* Reset few things to make sure restarting works */
     http_req->error = 0;
+    http_req->response.headers.count = 0;
+    pj_bzero(&http_req->tcp_state, sizeof(http_req->tcp_state));
 
     if (!http_req->resolved) {
         /* Resolve the Internet address of the host */
@@ -837,7 +1058,357 @@ on_return:
     return status;
 }
 
-#define STR_PREC(s) s.slen, s.ptr
+/* Respond to basic authentication challenge */
+static pj_status_t auth_respond_basic(pj_http_req *hreq)
+{
+    /* Basic authentication:
+     *      credentials       = "Basic" basic-credentials
+     *      basic-credentials = base64-user-pass
+     *      base64-user-pass  = <base64 [4] encoding of user-pass>
+     *      user-pass         = userid ":" password
+     *
+     * Sample:
+     *       Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==
+     */
+    pj_str_t user_pass;
+    pj_http_header_elmt *phdr;
+    int len;
+
+    /* Use send buffer to store userid ":" password */
+    user_pass.ptr = hreq->buffer.ptr;
+    pj_strcpy(&user_pass, &hreq->param.auth_cred.username);
+    pj_strcat2(&user_pass, ":");
+    pj_strcat(&user_pass, &hreq->param.auth_cred.data);
+
+    /* Create Authorization header */
+    phdr = &hreq->param.headers.header[hreq->param.headers.count++];
+    pj_bzero(phdr, sizeof(*phdr));
+    if (hreq->response.status_code == 401)
+	phdr->name = pj_str("Authorization");
+    else
+	phdr->name = pj_str("Proxy-Authorization");
+
+    len = PJ_BASE256_TO_BASE64_LEN(user_pass.slen) + 10;
+    phdr->value.ptr = (char*)pj_pool_alloc(hreq->pool, len);
+    phdr->value.slen = 0;
+
+    pj_strcpy2(&phdr->value, "Basic ");
+    len -= phdr->value.slen;
+    pj_base64_encode((pj_uint8_t*)user_pass.ptr, (int)user_pass.slen,
+		     phdr->value.ptr + phdr->value.slen, &len);
+    phdr->value.slen += len;
+
+    return PJ_SUCCESS;
+}
+
+/** Length of digest string. */
+#define MD5_STRLEN 32
+/* A macro just to get rid of type mismatch between char and unsigned char */
+#define MD5_APPEND(pms,buf,len)	pj_md5_update(pms, (const pj_uint8_t*)buf, len)
+
+/* Transform digest to string.
+ * output must be at least PJSIP_MD5STRLEN+1 bytes.
+ *
+ * NOTE: THE OUTPUT STRING IS NOT NULL TERMINATED!
+ */
+static void digest2str(const unsigned char digest[], char *output)
+{
+    int i;
+    for (i = 0; i<16; ++i) {
+	pj_val_to_hex_digit(digest[i], output);
+	output += 2;
+    }
+}
+
+static void auth_create_digest_response(pj_str_t *result,
+					const pj_http_auth_cred *cred,
+				        const pj_str_t *nonce,
+				        const pj_str_t *nc,
+				        const pj_str_t *cnonce,
+				        const pj_str_t *qop,
+				        const pj_str_t *uri,
+				        const pj_str_t *realm,
+				        const pj_str_t *method)
+{
+    char ha1[MD5_STRLEN];
+    char ha2[MD5_STRLEN];
+    unsigned char digest[16];
+    pj_md5_context pms;
+
+    pj_assert(result->slen >= MD5_STRLEN);
+
+    TRACE_((THIS_FILE, "Begin creating digest"));
+
+    if (cred->data_type == 0) {
+	/***
+	 *** ha1 = MD5(username ":" realm ":" password)
+	 ***/
+	pj_md5_init(&pms);
+	MD5_APPEND( &pms, cred->username.ptr, cred->username.slen);
+	MD5_APPEND( &pms, ":", 1);
+	MD5_APPEND( &pms, realm->ptr, realm->slen);
+	MD5_APPEND( &pms, ":", 1);
+	MD5_APPEND( &pms, cred->data.ptr, cred->data.slen);
+	pj_md5_final(&pms, digest);
+
+	digest2str(digest, ha1);
+
+    } else if (cred->data_type == 1) {
+	pj_assert(cred->data.slen == 32);
+	pj_memcpy( ha1, cred->data.ptr, cred->data.slen );
+    } else {
+	pj_assert(!"Invalid data_type");
+    }
+
+    TRACE_((THIS_FILE, "  ha1=%.32s", ha1));
+
+    /***
+     *** ha2 = MD5(method ":" req_uri)
+     ***/
+    pj_md5_init(&pms);
+    MD5_APPEND( &pms, method->ptr, method->slen);
+    MD5_APPEND( &pms, ":", 1);
+    MD5_APPEND( &pms, uri->ptr, uri->slen);
+    pj_md5_final(&pms, digest);
+    digest2str(digest, ha2);
+
+    TRACE_((THIS_FILE, "  ha2=%.32s", ha2));
+
+    /***
+     *** When qop is not used:
+     ***    response = MD5(ha1 ":" nonce ":" ha2)
+     ***
+     *** When qop=auth is used:
+     ***    response = MD5(ha1 ":" nonce ":" nc ":" cnonce ":" qop ":" ha2)
+     ***/
+    pj_md5_init(&pms);
+    MD5_APPEND( &pms, ha1, MD5_STRLEN);
+    MD5_APPEND( &pms, ":", 1);
+    MD5_APPEND( &pms, nonce->ptr, nonce->slen);
+    if (qop && qop->slen != 0) {
+	MD5_APPEND( &pms, ":", 1);
+	MD5_APPEND( &pms, nc->ptr, nc->slen);
+	MD5_APPEND( &pms, ":", 1);
+	MD5_APPEND( &pms, cnonce->ptr, cnonce->slen);
+	MD5_APPEND( &pms, ":", 1);
+	MD5_APPEND( &pms, qop->ptr, qop->slen);
+    }
+    MD5_APPEND( &pms, ":", 1);
+    MD5_APPEND( &pms, ha2, MD5_STRLEN);
+
+    /* This is the final response digest. */
+    pj_md5_final(&pms, digest);
+
+    /* Convert digest to string and store in chal->response. */
+    result->slen = MD5_STRLEN;
+    digest2str(digest, result->ptr);
+
+    TRACE_((THIS_FILE, "  digest=%.32s", result->ptr));
+    TRACE_((THIS_FILE, "Digest created"));
+}
+
+/* Find out if qop offer contains "auth" token */
+static pj_bool_t auth_has_qop( pj_pool_t *pool, const pj_str_t *qop_offer)
+{
+    pj_str_t qop;
+    char *p;
+
+    pj_strdup_with_null( pool, &qop, qop_offer);
+    p = qop.ptr;
+    while (*p) {
+	*p = (char)pj_tolower(*p);
+	++p;
+    }
+
+    p = qop.ptr;
+    while (*p) {
+	if (*p=='a' && *(p+1)=='u' && *(p+2)=='t' && *(p+3)=='h') {
+	    int e = *(p+4);
+	    if (e=='"' || e==',' || e==0)
+		return PJ_TRUE;
+	    else
+		p += 4;
+	} else {
+	    ++p;
+	}
+    }
+
+    return PJ_FALSE;
+}
+
+#define STR_PREC(s) (int)(s).slen, (s).ptr
+
+/* Respond to digest authentication */
+static pj_status_t auth_respond_digest(pj_http_req *hreq)
+{
+    const pj_http_auth_chal *chal = &hreq->response.auth_chal;
+    const pj_http_auth_cred *cred = &hreq->param.auth_cred;
+    pj_http_header_elmt *phdr;
+    char digest_response_buf[MD5_STRLEN];
+    int len;
+    pj_str_t digest_response;
+
+    /* Check algorithm is supported. We only support MD5 */
+    if (chal->algorithm.slen!=0 &&
+	pj_stricmp2(&chal->algorithm, "MD5"))
+    {
+	TRACE_((THIS_FILE, "Error: Unsupported digest algorithm \"%.*s\"",
+		  chal->algorithm.slen, chal->algorithm.ptr));
+	return PJ_ENOTSUP;
+    }
+
+    /* Add Authorization header */
+    phdr = &hreq->param.headers.header[hreq->param.headers.count++];
+    pj_bzero(phdr, sizeof(*phdr));
+    if (hreq->response.status_code == 401)
+	phdr->name = pj_str("Authorization");
+    else
+	phdr->name = pj_str("Proxy-Authorization");
+
+    /* Allocate space for the header */
+    len = 8 + /* Digest */
+	  16 + hreq->param.auth_cred.username.slen + /* username= */
+	  12 + chal->realm.slen + /* realm= */
+	  12 + chal->nonce.slen + /* nonce= */
+	  8 + hreq->hurl.path.slen + /* uri= */
+	  16 + /* algorithm=MD5 */
+	  16 + MD5_STRLEN + /* response= */
+	  12 + /* qop=auth */
+	  8 + /* nc=.. */
+	  30 + /* cnonce= */
+	  0;
+    phdr->value.ptr = (char*)pj_pool_alloc(hreq->pool, len);
+
+    /* Configure buffer to temporarily store the digest */
+    digest_response.ptr = digest_response_buf;
+    digest_response.slen = MD5_STRLEN;
+
+    if (chal->qop.slen == 0) {
+	const pj_str_t STR_MD5 = { "MD5", 3 };
+
+	/* Server doesn't require quality of protection. */
+	auth_create_digest_response(&digest_response, cred,
+				    &chal->nonce, NULL, NULL,  NULL,
+				    &hreq->hurl.path, &chal->realm,
+				    &hreq->param.method);
+
+	len = pj_ansi_snprintf(
+		phdr->value.ptr, len,
+		"Digest username=\"%.*s\", "
+		"realm=\"%.*s\", "
+		"nonce=\"%.*s\", "
+		"uri=\"%.*s\", "
+		"algorithm=%.*s, "
+		"response=\"%.*s\"",
+		STR_PREC(cred->username),
+		STR_PREC(chal->realm),
+		STR_PREC(chal->nonce),
+		STR_PREC(hreq->hurl.path),
+		STR_PREC(STR_MD5),
+		STR_PREC(digest_response));
+	if (len < 0)
+	    return PJ_ETOOSMALL;
+	phdr->value.slen = len;
+
+    } else if (auth_has_qop(hreq->pool, &chal->qop)) {
+	/* Server requires quality of protection.
+	 * We respond with selecting "qop=auth" protection.
+	 */
+	const pj_str_t STR_MD5 = { "MD5", 3 };
+	const pj_str_t qop = pj_str("auth");
+	const pj_str_t nc = pj_str("1");
+	const pj_str_t cnonce = pj_str("b39971");
+
+	auth_create_digest_response(&digest_response, cred,
+				    &chal->nonce, &nc, &cnonce, &qop,
+				    &hreq->hurl.path, &chal->realm,
+				    &hreq->param.method);
+	len = pj_ansi_snprintf(
+		phdr->value.ptr, len,
+		"Digest username=\"%.*s\", "
+		"realm=\"%.*s\", "
+		"nonce=\"%.*s\", "
+		"uri=\"%.*s\", "
+		"algorithm=%.*s, "
+		"response=\"%.*s\", "
+		"qop=%.*s, "
+		"nc=%.*s, "
+		"cnonce=\"%.*s\"",
+		STR_PREC(cred->username),
+		STR_PREC(chal->realm),
+		STR_PREC(chal->nonce),
+		STR_PREC(hreq->hurl.path),
+		STR_PREC(STR_MD5),
+		STR_PREC(digest_response),
+		STR_PREC(qop),
+		STR_PREC(nc),
+		STR_PREC(cnonce));
+	if (len < 0)
+	    return PJ_ETOOSMALL;
+	phdr->value.slen = len;
+
+    } else {
+	/* Server requires quality protection that we don't support. */
+	TRACE_((THIS_FILE, "Error: Unsupported qop offer %.*s",
+		chal->qop.slen, chal->qop.ptr));
+	return PJ_ENOTSUP;
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+static void restart_req_with_auth(pj_http_req *hreq)
+{
+    pj_http_auth_chal *chal = &hreq->response.auth_chal;
+    pj_http_auth_cred *cred = &hreq->param.auth_cred;
+    pj_status_t status;
+
+    if (hreq->param.headers.count >= PJ_HTTP_HEADER_SIZE) {
+	TRACE_((THIS_FILE, "Error: no place to put Authorization header"));
+	hreq->auth_state = AUTH_DONE;
+	return;
+    }
+
+    /* If credential specifies specific scheme, make sure they match */
+    if (cred->scheme.slen && pj_stricmp(&chal->scheme, &cred->scheme)) {
+	status = PJ_ENOTSUP;
+	TRACE_((THIS_FILE, "Error: auth schemes mismatch"));
+	goto on_error;
+    }
+
+    /* If credential specifies specific realm, make sure they match */
+    if (cred->realm.slen && pj_stricmp(&chal->realm, &cred->realm)) {
+	status = PJ_ENOTSUP;
+	TRACE_((THIS_FILE, "Error: auth realms mismatch"));
+	goto on_error;
+    }
+
+    if (!pj_stricmp2(&chal->scheme, "basic")) {
+	status = auth_respond_basic(hreq);
+    } else if (!pj_stricmp2(&chal->scheme, "digest")) {
+	status = auth_respond_digest(hreq);
+    } else {
+	TRACE_((THIS_FILE, "Error: unsupported HTTP auth scheme"));
+	status = PJ_ENOTSUP;
+    }
+
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    http_req_end_request(hreq);
+
+    status = pj_http_req_start(hreq);
+    if (status != PJ_SUCCESS)
+	goto on_error;
+
+    hreq->auth_state = AUTH_RETRYING;
+    return;
+
+on_error:
+    hreq->auth_state = AUTH_DONE;
+}
+
 
 /* snprintf() to a pj_str_t struct with an option to append the 
  * result at the back of the string.

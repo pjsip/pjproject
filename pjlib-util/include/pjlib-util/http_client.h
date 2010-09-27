@@ -49,19 +49,76 @@ typedef struct pj_http_req pj_http_req;
 #define PJ_HTTP_HEADER_SIZE 32
 
 /**
+ * HTTP header representation.
+ */
+typedef struct pj_http_header_elmt
+{
+    pj_str_t name;	/**< Header name */
+    pj_str_t value;	/**< Header value */
+} pj_http_header_elmt;
+
+/**
  * This structure describes http request/response headers.
  * Application should call #pj_http_headers_add_elmt() to
  * add a header field.
  */
 typedef struct pj_http_headers
 {
-    unsigned     count;                   /**< Number of header fields */
-    struct pj_http_header_elmt
-    {
-        pj_str_t name;
-        pj_str_t value;
-    } header[PJ_HTTP_HEADER_SIZE];        /**< Header elements/fields */
+    /**< Number of header fields */
+    unsigned     count;
+
+    /** Header elements/fields */
+    pj_http_header_elmt header[PJ_HTTP_HEADER_SIZE];
 } pj_http_headers;
+
+/**
+ * Structure to save HTTP authentication credential.
+ */
+typedef struct pj_http_auth_cred
+{
+    /**
+     * Specify specific authentication schemes to be responded. Valid values
+     * are "basic" and "digest". If this field is not set, any authentication
+     * schemes will be responded.
+     *
+     * Default is empty.
+     */
+    pj_str_t	scheme;
+
+    /**
+     * Specify specific authentication realm to be responded. If this field
+     * is set, only 401/407 response with matching realm will be responded.
+     * If this field is not set, any realms will be responded.
+     *
+     * Default is empty.
+     */
+    pj_str_t	realm;
+
+    /**
+     * Specify authentication username.
+     *
+     * Default is empty.
+     */
+    pj_str_t	username;
+
+    /**
+     * The type of password in \a data field. Currently only 0 is
+     * supported, meaning the \a data contains plain-text password.
+     *
+     * Default is 0.
+     */
+    unsigned	data_type;
+
+    /**
+     * Specify authentication password. The encoding of the password depends
+     * on the value of \a data_type field above.
+     *
+     * Default is empty.
+     */
+    pj_str_t	data;
+
+} pj_http_auth_cred;
+
 
 /**
  * Parameters that can be given during http request creation. Application
@@ -125,7 +182,28 @@ typedef struct pj_http_req_param
         pj_size_t  total_size;     /**< If total_size > 0, data */
                                    /**< will be provided later  */
     } reqdata;
+
+    /**
+     * Authentication credential needed to respond to 401/407 response.
+     */
+    pj_http_auth_cred	auth_cred;
+
 } pj_http_req_param;
+
+/**
+ * HTTP authentication challenge, parsed from WWW-Authenticate header.
+ */
+typedef struct pj_http_auth_chal
+{
+    pj_str_t	scheme;		/**< Auth scheme.		*/
+    pj_str_t	realm;		/**< Realm for the challenge.	*/
+    pj_str_t	domain;		/**< Domain.			*/
+    pj_str_t	nonce;		/**< Nonce challenge.		*/
+    pj_str_t	opaque;		/**< Opaque value.		*/
+    int		stale;		/**< Stale parameter.		*/
+    pj_str_t	algorithm;	/**< Algorithm parameter.	*/
+    pj_str_t	qop;		/**< Quality of protection.	*/
+} pj_http_auth_chal;
 
 /**
  * This structure describes HTTP response.
@@ -136,11 +214,10 @@ typedef struct pj_http_resp
     pj_uint16_t     status_code;    /**< Status code of the request */
     pj_str_t        reason;         /**< Reason phrase */
     pj_http_headers headers;        /**< Response headers */
-    /**
-     * The value of content-length header field. -1 if not
-     * specified.
-     */
-    pj_int32_t      content_length; 
+    pj_http_auth_chal auth_chal;    /**< Parsed WWW-Authenticate header, if
+				         any. */
+    pj_int32_t      content_length; /**< The value of content-length header
+					 field. -1 if not specified. */
     void            *data;          /**< Data received */
     pj_size_t       size;           /**< Data size */
 } pj_http_resp;
@@ -150,6 +227,8 @@ typedef struct pj_http_resp
  */
 typedef struct pj_http_url
 {
+    pj_str_t	username;	    /**< Username part */
+    pj_str_t	passwd;		    /**< Password part */
     pj_str_t    protocol;           /**< Protocol used */
     pj_str_t    host;               /**< Host name */
     pj_uint16_t port;               /**< Port number */
