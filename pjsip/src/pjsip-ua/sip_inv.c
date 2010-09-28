@@ -3729,8 +3729,21 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	     * error.
 	     */
 	    if (tsx->status_code/100 != 2) {
-		inv_set_cause(inv, tsx->status_code, &tsx->status_text);
-		inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+		if (tsx->role == PJSIP_ROLE_UAC) {
+		    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
+		    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
+		} else {
+		    pjsip_tx_data *bye;
+		    pj_status_t status;
+
+		    /* Send BYE */
+		    status = pjsip_dlg_create_request(inv->dlg,
+						      pjsip_get_bye_method(),
+						      -1, &bye);
+		    if (status == PJ_SUCCESS) {
+			pjsip_inv_send_msg(inv, bye);
+		    }
+		}
 	    }
 	    break;
 
