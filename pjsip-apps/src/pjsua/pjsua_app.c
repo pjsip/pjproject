@@ -919,7 +919,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_ID:   /* id */
-	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+	    if (pjsua_verify_url(pj_optarg) != 0) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: invalid SIP URL '%s' "
 			  "in local id argument", pj_optarg));
@@ -1037,7 +1037,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_ADD_BUDDY: /* Add to buddy list. */
-	    if (pjsua_verify_sip_url(pj_optarg) != 0) {
+	    if (pjsua_verify_url(pj_optarg) != 0) {
 		PJ_LOG(1,(THIS_FILE, 
 			  "Error: invalid URL '%s' in "
 			  "--add-buddy option", pj_optarg));
@@ -1421,7 +1421,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     if (pj_optind != argc) {
 	pj_str_t uri_arg;
 
-	if (pjsua_verify_sip_url(argv[pj_optind]) != PJ_SUCCESS) {
+	if (pjsua_verify_url(argv[pj_optind]) != PJ_SUCCESS) {
 	    PJ_LOG(1,(THIS_FILE, "Invalid SIP URI %s", argv[pj_optind]));
 	    return -1;
 	}
@@ -3276,7 +3276,7 @@ static void ui_input_url(const char *title, char *buf, int len,
     } else {
 	pj_status_t status;
 
-	if ((status=pjsua_verify_sip_url(buf)) != PJ_SUCCESS) {
+	if ((status=pjsua_verify_url(buf)) != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Invalid URL", status);
 	    return;
 	}
@@ -3811,8 +3811,8 @@ void console_app_main(const pj_str_t *uri_to_call)
 		if (!simple_input("Enter buddy's URI:", buf, sizeof(buf)))
 		    break;
 
-		if (pjsua_verify_sip_url(buf) != PJ_SUCCESS) {
-		    printf("Invalid SIP URI '%s'\n", buf);
+		if (pjsua_verify_url(buf) != PJ_SUCCESS) {
+		    printf("Invalid URI '%s'\n", buf);
 		    break;
 		}
 

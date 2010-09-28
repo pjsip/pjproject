@@ -96,6 +96,11 @@ PJ_BEGIN_DECL
  * SIP object is not initialized.
  */
 #define PJSIP_ENOTINITIALIZED	(PJSIP_ERRNO_START_PJSIP + 4)	/* 171004 */
+/**
+ * @hideinitializer
+ * Missing route set (for tel: URI)
+ */
+#define PJSIP_ENOROUTESET	(PJSIP_ERRNO_START_PJSIP + 5)	/* 171005 */
 
 
 /************************************************************

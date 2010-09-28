@@ -835,9 +835,12 @@ static pj_status_t get_dest_info(const pjsip_uri *target_uri,
 	dest_info->flag = 
 	    pjsip_transport_get_flag_from_type(dest_info->type);
     } else {
+	/* Should have never reached here; app should have configured route
+	 * set when sending to tel: URI
         pj_assert(!"Unsupported URI scheme!");
+	 */
 	PJ_TODO(SUPPORT_REQUEST_ADDR_RESOLUTION_FOR_TEL_URI);
-	return PJSIP_EINVALIDSCHEME;
+	return PJSIP_ENOROUTESET;
     }
 
     /* Handle IPv6 (http://trac.pjsip.org/repos/ticket/861) */

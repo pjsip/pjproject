@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
 
     /* If argument is specified, it's got to be a valid SIP URL */
     if (argc > 1) {
-	status = pjsua_verify_sip_url(argv[1]);
+	status = pjsua_verify_url(argv[1]);
 	if (status != PJ_SUCCESS) error_exit("Invalid URL in argv", status);
     }
 

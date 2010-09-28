@@ -733,7 +733,7 @@ static void HandleMainMenu(TKeyCode kc) {
 		break;
 	}
 
-	if (pjsua_verify_sip_url(SIP_DST_URI) == PJ_SUCCESS) {
+	if (pjsua_verify_url(SIP_DST_URI) == PJ_SUCCESS) {
 		pj_str_t dst = pj_str(SIP_DST_URI);
 		pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
 				     NULL, &g_call_id);

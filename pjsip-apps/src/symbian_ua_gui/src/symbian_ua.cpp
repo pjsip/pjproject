@@ -482,7 +482,7 @@ int symbian_ua_set_account(const char *domain, const char *username,
 
 int symbian_ua_makecall(const char* dest_url)
 {
-    if (pjsua_verify_sip_url(dest_url) == PJ_SUCCESS) {
+    if (pjsua_verify_url(dest_url) == PJ_SUCCESS) {
 	    pj_str_t dst = pj_str((char*)dest_url);
 	    pjsua_call_make_call(g_acc_id, &dst, 0, NULL,
 				 NULL, &g_call_id);

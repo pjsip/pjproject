@@ -119,7 +119,7 @@ static pj_status_t initialize_acc(unsigned acc_id)
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[acc_id].cfg;
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
     pjsip_name_addr *name_addr;
-    pjsip_sip_uri *sip_uri, *sip_reg_uri;
+    pjsip_sip_uri *sip_reg_uri;
     pj_status_t status;
     unsigned i;
 
@@ -136,18 +136,27 @@ static pj_status_t initialize_acc(unsigned acc_id)
     }
 
     /* Local URI MUST be a SIP or SIPS: */
-
     if (!PJSIP_URI_SCHEME_IS_SIP(name_addr) && 
 	!PJSIP_URI_SCHEME_IS_SIPS(name_addr)) 
     {
-	pjsua_perror(THIS_FILE, "Invalid local URI", 
-		     PJSIP_EINVALIDSCHEME);
-	return PJSIP_EINVALIDSCHEME;
+	acc->display = name_addr->display;
+	acc->user_part = name_addr->display;
+	acc->srv_domain = pj_str("");
+	acc->srv_port = 0;
+    } else {
+	pjsip_sip_uri *sip_uri;
+
+	/* Get the SIP URI object: */
+	sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(name_addr);
+
+	/* Save the user and domain part. These will be used when finding an
+	 * account for incoming requests.
+	 */
+	acc->display = name_addr->display;
+	acc->user_part = sip_uri->user;
+	acc->srv_domain = sip_uri->host;
+	acc->srv_port = 0;
     }
-
-
-    /* Get the SIP URI object: */
-    sip_uri = (pjsip_sip_uri*) pjsip_uri_get_uri(name_addr);
 
 
     /* Parse registrar URI, if any */
@@ -176,14 +185,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
     } else {
 	sip_reg_uri = NULL;
     }
-
-    /* Save the user and domain part. These will be used when finding an 
-     * account for incoming requests.
-     */
-    acc->display = name_addr->display;
-    acc->user_part = sip_uri->user;
-    acc->srv_domain = sip_uri->host;
-    acc->srv_port = 0;
 
     if (sip_reg_uri) {
 	acc->srv_port = sip_reg_uri->port;
@@ -2160,7 +2161,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 
 	/* For non-SIP scheme, route set should be configured */
 	if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
-	    return PJSIP_EINVALIDREQURI;
+	    return PJSIP_ENOROUTESET;
 
 	sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
     }

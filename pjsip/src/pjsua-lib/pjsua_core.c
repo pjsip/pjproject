@@ -2404,6 +2404,29 @@ PJ_DEF(pj_status_t) pjsua_get_nat_type(pj_stun_nat_type *type)
     return pjsua_var.nat_status;
 }
 
+/*
+ * Verify that valid url is given.
+ */
+PJ_DEF(pj_status_t) pjsua_verify_url(const char *c_url)
+{
+    pjsip_uri *p;
+    pj_pool_t *pool;
+    char *url;
+    int len = (c_url ? pj_ansi_strlen(c_url) : 0);
+
+    if (!len) return PJSIP_EINVALIDURI;
+
+    pool = pj_pool_create(&pjsua_var.cp.factory, "check%p", 1024, 0, NULL);
+    if (!pool) return PJ_ENOMEM;
+
+    url = (char*) pj_pool_alloc(pool, len+1);
+    pj_ansi_strcpy(url, c_url);
+
+    p = pjsip_parse_uri(pool, url, len, 0);
+
+    pj_pool_release(pool);
+    return p ? 0 : PJSIP_EINVALIDURI;
+}
 
 /*
  * Verify that valid SIP url is given.
@@ -2415,10 +2438,10 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     char *url;
     int len = (c_url ? pj_ansi_strlen(c_url) : 0);
 
-    if (!len) return -1;
+    if (!len) return PJSIP_EINVALIDURI;
 
     pool = pj_pool_create(&pjsua_var.cp.factory, "check%p", 1024, 0, NULL);
-    if (!pool) return -1;
+    if (!pool) return PJ_ENOMEM;
 
     url = (char*) pj_pool_alloc(pool, len+1);
     pj_ansi_strcpy(url, c_url);
@@ -2431,7 +2454,7 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
     }
 
     pj_pool_release(pool);
-    return p ? 0 : -1;
+    return p ? 0 : PJSIP_EINVALIDURI;
 }
 
 /*

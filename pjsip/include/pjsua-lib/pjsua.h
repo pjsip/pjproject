@@ -1540,13 +1540,29 @@ PJ_DECL(pj_status_t) pjsua_cancel_stun_resolution(void *token,
 
 /**
  * This is a utility function to verify that valid SIP url is given. If the
- * URL is valid, PJ_SUCCESS will be returned.
+ * URL is a valid SIP/SIPS scheme, PJ_SUCCESS will be returned.
  *
  * @param url		The URL, as NULL terminated string.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
+ *
+ * @see pjsua_verify_url()
  */
 PJ_DECL(pj_status_t) pjsua_verify_sip_url(const char *url);
+
+
+/**
+ * This is a utility function to verify that valid URI is given. Unlike
+ * pjsua_verify_sip_url(), this function will return PJ_SUCCESS if tel: URI
+ * is given.
+ *
+ * @param url		The URL, as NULL terminated string.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ *
+ * @see pjsua_verify_sip_url()
+ */
+PJ_DECL(pj_status_t) pjsua_verify_url(const char *url);
 
 
 /**
