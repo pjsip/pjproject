@@ -411,6 +411,16 @@ typedef struct pjsua_mwi_info
 
 
 /**
+ * Structure to be passed on registration callback.
+ */
+typedef struct pjsua_reg_info
+{
+    struct pjsip_regc_cbparam	*cbparam;   /**< Parameters returned by 
+						 registration callback.	*/
+} pjsua_reg_info;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL, 
  * although definitely application would want to implement some of
@@ -582,9 +592,19 @@ typedef struct pjsua_callback
      * Application may then query the account info to get the
      * registration details.
      *
-     * @param acc_id	    Account ID.
+     * @param acc_id	    The account ID.
      */
     void (*on_reg_state)(pjsua_acc_id acc_id);
+
+    /**
+     * Notify application when registration status has changed.
+     * Application may inspect the registration info to get the
+     * registration status details.
+     *
+     * @param acc_id	    The account ID.
+     * @param info	    The registration info.
+     */
+    void (*on_reg_state2)(pjsua_acc_id acc_id, pjsua_reg_info *info);
 
     /**
      * Notification when incoming SUBSCRIBE request is received. Application

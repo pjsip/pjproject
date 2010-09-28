@@ -1513,9 +1513,19 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	schedule_reregistration(acc);
     }
 
-    if (pjsua_var.ua_cfg.cb.on_reg_state)
-	(*pjsua_var.ua_cfg.cb.on_reg_state)(acc->index);
+    /* Call the registration status callback */
 
+    if (pjsua_var.ua_cfg.cb.on_reg_state) {
+	(*pjsua_var.ua_cfg.cb.on_reg_state)(acc->index);
+    }
+
+    if (pjsua_var.ua_cfg.cb.on_reg_state2) {
+	pjsua_reg_info reg_info;
+
+	reg_info.cbparam = param;
+	(*pjsua_var.ua_cfg.cb.on_reg_state2)(acc->index, &reg_info);
+    }
+    
     PJSUA_UNLOCK();
 }
 
