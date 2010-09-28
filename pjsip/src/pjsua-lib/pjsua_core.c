@@ -188,6 +188,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     cfg->use_stream_ka = (PJMEDIA_STREAM_ENABLE_KA != 0);
 #endif
+    pj_list_init(&cfg->reg_hdr_list);
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)

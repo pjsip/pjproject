@@ -2078,6 +2078,12 @@ typedef struct pjsua_acc_config
      */
     pj_str_t	    reg_uri;
 
+    /** 
+     * The optional custom SIP headers to be put in the registration
+     * request.
+     */
+    pjsip_hdr	    reg_hdr_list;
+
     /**
      * Subscribe to message waiting indication events (RFC 3842).
      *

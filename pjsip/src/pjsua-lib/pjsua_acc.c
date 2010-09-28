@@ -91,6 +91,17 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
 	pjsip_cred_dup(pool, &dst->cred_info[i], &src->cred_info[i]);
     }
 
+    pj_list_init(&dst->reg_hdr_list);
+    if (!pj_list_empty(&src->reg_hdr_list)) {
+	const pjsip_hdr *hdr;
+
+	hdr = src->reg_hdr_list.next;
+	while (hdr != &src->reg_hdr_list) {
+	    pj_list_push_back(&dst->reg_hdr_list, pjsip_hdr_clone(pool, hdr));
+	    hdr = hdr->next;
+	}
+    }
+
     dst->ka_interval = src->ka_interval;
     pj_strdup(pool, &dst->ka_data, &src->ka_data);
 }
@@ -1656,6 +1667,9 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	if (!pj_list_empty(&route_set))
 	    pjsip_regc_set_route_set( acc->regc, &route_set );
     }
+
+    /* Add custom request headers specified in the account config */
+    pjsip_regc_add_headers(acc->regc, &acc->cfg.reg_hdr_list);
 
     /* Add other request headers. */
     if (pjsua_var.ua_cfg.user_agent.slen) {
