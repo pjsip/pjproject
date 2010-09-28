@@ -180,6 +180,15 @@ PJ_DEF(pj_status_t) pjmedia_rtp_decode_rtp( pjmedia_rtp_session *ses,
     /* Find and set payload. */
     *payload = ((pj_uint8_t*)pkt) + offset;
     *payloadlen = pkt_len - offset;
+ 
+    /* Remove payload padding if any */
+    if ((*hdr)->p && *payloadlen > 0) {
+	pj_uint8_t pad_len;
+
+	pad_len = ((pj_uint8_t*)(*payload))[*payloadlen - 1];
+	if (pad_len <= *payloadlen)
+	    *payloadlen -= pad_len;
+    }
 
     return PJ_SUCCESS;
 }
