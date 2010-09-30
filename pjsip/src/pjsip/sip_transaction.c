@@ -1592,9 +1592,15 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
      */
     lock_timer(tsx);
 
-    /* Transaction must not have got final response */
-    PJ_ASSERT_ON_FAIL(tsx->status_code < 200,
-		    { unlock_timer(tsx); return PJ_EINVALIDOP; });
+    /* Transaction should normally not have final response, but as
+     * #1121 says there is a (tolerable) window of race condition
+     * where this might happen.
+     */
+    if (tsx->status_code >= 200 && tsx->timeout_timer.id != 0) {
+	/* Timeout is already set */
+	unlock_timer(tsx);
+	return PJ_EEXISTS;
+    }
 
     if (tsx->timeout_timer.id != 0) {
 	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
