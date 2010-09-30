@@ -522,6 +522,7 @@ PJ_DECL(pj_status_t) pjmedia_sdp_transport_cmp(const pj_str_t *t1,
 /**
  * Deactivate SDP media.
  *
+ * @param pool	    Memory pool to allocate memory from.
  * @param m	    The SDP media to deactivate.
  *
  * @return	    PJ_SUCCESS when SDP media successfully deactivated,
@@ -534,6 +535,7 @@ PJ_DECL(pj_status_t) pjmedia_sdp_media_deactivate(pj_pool_t *pool,
 /**
  * Clone SDP media description and deactivate the new SDP media.
  *
+ * @param pool	    Memory pool to allocate memory for the clone.
  * @param rhs	    The SDP media to clone.
  *
  * @return	    New media descrption with deactivated indication.
@@ -672,7 +674,7 @@ PJ_DECL(pj_status_t) pjmedia_sdp_session_cmp(const pjmedia_sdp_session *sd1,
  *
  * @return		PJ_SUCCESS or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_sdp_session_add_attr(pjmedia_sdp_session *m,
+PJ_DECL(pj_status_t) pjmedia_sdp_session_add_attr(pjmedia_sdp_session *s,
 						  pjmedia_sdp_attr *attr);
 
 

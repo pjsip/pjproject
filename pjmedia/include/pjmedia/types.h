@@ -458,7 +458,7 @@ pjmedia_frame_ext_get_subframe(const pjmedia_frame_ext *frm, unsigned n)
  *
  * @param frm		    The frame.
  * @param dst		    Destination buffer.
- * @param maxsize	    Maximum size to copy (i.e. the size of the
+ * @param maxlen	    Maximum size to copy (i.e. the size of the
  *			    destination buffer).
  *
  * @return		    Total size of payload copied.

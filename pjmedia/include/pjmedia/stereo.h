@@ -148,17 +148,17 @@ PJ_INLINE(pj_status_t) pjmedia_convert_channel_1ton(pj_int16_t multi[],
 
 
 /** 
- * Options for channel converter port. The @pjmedia_stereo_options is also
+ * Options for channel converter port. The #pjmedia_stereo_options is also
  * valid for this port options.
  */
-enum pjmedia_stereo_port_options
+typedef enum pjmedia_stereo_port_options
 {
     /**
      * Specifies whether this port should not destroy downstream port when 
      * this port is destroyed.
      */
     PJMEDIA_STEREO_DONT_DESTROY_DN  = 4
-};
+} pjmedia_stereo_port_options;
 
 
 /**

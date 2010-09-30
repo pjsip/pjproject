@@ -37,25 +37,37 @@
   
   @subsection The Media Port
   A media port (represented with pjmedia_port "class") provides a generic
-  and extensible framework for implementing media terminations. A media
+  and extensible framework for implementing media elements. Media element
+  itself could be a media source, sink, or processing element. A media
   port interface basically has the following properties:
   - media port information (pjmedia_port_info) to describe the
   media port properties (sampling rate, number of channels, etc.),
-  - pointer to function to acquire frames from the port (<tt>get_frame()
-  </tt> interface), which will be called by #pjmedia_port_get_frame()
-  public API, and
-  - pointer to function to store frames to the port (<tt>put_frame()</tt>
-  interface) which will be called by #pjmedia_port_put_frame() public
-  API.
+  - optional pointer to function to acquire frames from the port (the
+    <tt>get_frame() </tt> interface), which will be called by
+    #pjmedia_port_get_frame() public API, and
+  - optional pointer to function to store frames to the port (the
+    <tt>put_frame()</tt> interface) which will be called by
+    #pjmedia_port_put_frame() public API.
+
+  The <tt>get_frame()</tt> and <tt>put_frame()</tt> interface of course
+  would only need to be implemented if the media port emits and/or takes
+  media frames respectively.
   
-  Media ports are passive "objects". Applications (or other PJMEDIA 
-  components) must actively calls #pjmedia_port_get_frame() or 
-  #pjmedia_port_put_frame() from/to the media port in order to retrieve/
-  store media frames.
+  Media ports are passive "objects". By default, there is no worker thread
+  to run the media flow. Applications (or other PJMEDIA
+  components, as explained in @ref PJMEDIA_PORT_CLOCK) must actively call
+  #pjmedia_port_get_frame() or #pjmedia_port_put_frame() from/to the media
+  port in order to retrieve/store media frames.
   
   Some media ports (such as @ref PJMEDIA_CONF and @ref PJMEDIA_RESAMPLE_PORT)
-  may be interconnected with each other, while some
+  may be interconnected with (or encapsulate) other port, to perform the
+  combined task of the ports, while some
   others represent the ultimate source/sink termination for the media. 
+  Interconnection means the upstream media port will call <tt>get_frame()</tt>
+  and <tt>put_frame()</tt> to its downstream media port. For this to happen,
+  the media ports need to have the same format, where format is defined as
+  combination of sample format, clock rate, channel count, bits per sample,
+  and samples per frame for audio media.
 
 
   @subsection port_clock_ex1 Example: Manual Resampling

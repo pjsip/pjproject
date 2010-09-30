@@ -160,7 +160,7 @@ PJ_DECL(pj_status_t) pjmedia_ice_create(pjmedia_endpt *endpt,
 
 
 /**
- * The same as @pjmedia_ice_create with additional \a options param.
+ * The same as #pjmedia_ice_create() with additional \a options param.
  *
  * @param endpt		The media endpoint.
  * @param name		Optional name to identify this ICE media transport

@@ -79,7 +79,7 @@ typedef struct pjmedia_delay_buf pjmedia_delay_buf;
  *			    in ms, if this value is negative or less than 
  *			    one frame time, default maximum delay used is
  *			    400 ms.
- * @param option	    Option flags, must be zero for now.
+ * @param options	    Option flags, must be zero for now.
  * @param p_b		    Pointer to receive the delay buffer instance.
  *
  * @return		    PJ_SUCCESS if the delay buffer has been

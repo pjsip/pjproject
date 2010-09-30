@@ -130,7 +130,7 @@ struct pjmedia_stream_info
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		use_ka;	    /**< Stream keep-alive and NAT hole punch
-					 (see @ref PJMEDIA_STREAM_ENABLE_KA)
+					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
 #endif
 };

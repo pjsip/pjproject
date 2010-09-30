@@ -455,7 +455,7 @@ PJ_DECL(const char*) pjmedia_aud_dev_cap_name(pjmedia_aud_dev_cap cap,
  *
  * @param param		The structure.
  * @param cap		The audio capability which value is to be set.
- * @param value		Pointer to value. Please see the type of value to
+ * @param pval		Pointer to value. Please see the type of value to
  *			be supplied in the pjmedia_aud_dev_cap documentation.
  *
  * @return		PJ_SUCCESS on successful operation or the appropriate
@@ -473,7 +473,7 @@ PJ_DECL(pj_status_t) pjmedia_aud_param_set_cap(pjmedia_aud_param *param,
  *
  * @param param		The structure.
  * @param cap		The audio capability which value is to be retrieved.
- * @param value		Pointer to value. Please see the type of value to
+ * @param pval		Pointer to value. Please see the type of value to
  *			be supplied in the pjmedia_aud_dev_cap documentation.
  *
  * @return		PJ_SUCCESS on successful operation or the appropriate

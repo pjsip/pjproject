@@ -597,7 +597,7 @@ const pj_uint16_t pjmedia_codec_amrwb_bitrates[9] =
 
 
 /**
- * This structure describes AMR frame info, to be fitted into @pjmedia_frame 
+ * This structure describes AMR frame info, to be fitted into #pjmedia_frame
  * bit info.
  */
 #pragma pack(1)
@@ -712,9 +712,8 @@ PJ_INLINE(pj_int8_t) pjmedia_codec_amr_get_mode2(pj_bool_t amrnb,
  *   'setting' by setting/resetting field 'reorder'.
  * - align left the start bit (make the start_bit to be 0).
  *
- * @param amr_nb    Set PJ_TRUE for AMR-NB and PJ_FALSE for AMR-WB.
  * @param in	    Input frame.
- * @param setting   Settings, see @pjmedia_codec_amr_pack_setting.
+ * @param setting   Settings, see #pjmedia_codec_amr_pack_setting.
  * @param out	    Output frame.
  *
  * @return	    PJ_SUCCESS on success.
@@ -852,7 +851,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_predecode(
  *
  * @param frames    AMR frames to be packed.
  * @param nframes   Number of frames to be packed.
- * @param setting   Settings, see @pjmedia_codec_amr_pack_setting.
+ * @param setting   Settings, see #pjmedia_codec_amr_pack_setting.
  * @param pkt	    Payload.
  * @param pkt_size  Payload size, as input this specifies payload maximum size,
  *		    as output this specifies payload packed size.
@@ -1069,7 +1068,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
  * @param pkt	    Payload.
  * @param pkt_size  Payload size.
  * @param ts	    Base timestamp.
- * @param setting   Settings, see @pjmedia_codec_amr_pack_setting.
+ * @param setting   Settings, see #pjmedia_codec_amr_pack_setting.
  * @param frames    Frames parsed.
  * @param nframes   Number of frames parsed.
  * @param cmr	    Change Mode Request message for local encoder.

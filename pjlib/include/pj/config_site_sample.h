@@ -373,13 +373,12 @@
  * than native fdset_t and will trigger assertion on sock_select.c.
  */
 #   define PJ_IOQUEUE_MAX_HANDLES	32
+#   define PJ_CRC32_HAS_TABLES		0
 #   define PJSIP_MAX_TSX_COUNT		15
 #   define PJSIP_MAX_DIALOG_COUNT	15
 #   define PJSIP_UDP_SO_SNDBUF_SIZE	4000
 #   define PJSIP_UDP_SO_RCVBUF_SIZE	4000
-#   define PJMEDIA_HAS_LARGE_FILTER	0
-#   define PJMEDIA_HAS_SMALL_FILTER	0
-
+#   define PJMEDIA_HAS_ALAW_ULAW_TABLE	0
 
 #elif defined(PJ_CONFIG_MAXIMUM_SPEED)
 #   define PJ_SCANNER_USE_BITWISE	0

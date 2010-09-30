@@ -392,7 +392,6 @@ PJ_DECL(pj_status_t) pjmedia_rtcp_xr_update_info(
  * @param session   RTCP XR session.
  * @param r_session RTCP session.
  * @param gmin      Gmin value (defined in RFC 3611), set to 0 for default (16).
- * @param ptime	    Packet time.
  * @param frames_per_packet
 		    Number of frames per packet.
  */
@@ -418,7 +417,7 @@ void pjmedia_rtcp_xr_fini( pjmedia_rtcp_xr_session *session );
  * @param size	    Size of the incoming packet.
  */
 void pjmedia_rtcp_xr_rx_rtcp_xr( pjmedia_rtcp_xr_session *session,
-				 const void *rtcp_xr_pkt,
+				 const void *rtcp_pkt,
 				 pj_size_t size);
 
 /**

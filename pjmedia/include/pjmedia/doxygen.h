@@ -32,49 +32,119 @@
  */
 
 /**
- * @mainpage PJMEDIA and PJMEDIA-CODEC
+ * @mainpage PJMEDIA
  *
  * \n
- * @section intro_sec PJMEDIA
+ * @section intro2 Introduction to PJMEDIA
  *
- * PJMEDIA is a rather complete media stack, distributed under Open Source/GPL
- * terms, and featuring small footprint and good extensibility and portability.
+ * PJMEDIA is a fully featured media stack, distributed under Open Source/GPL
+ * terms, and featuring small footprint and good extensibility and excellent
+ * portability. Here are some brief overview of PJMEDIA benefits.
  *
- * Please click the <A HREF="modules.htm"><b>Table of Contents</b></A> link on top
- * of this page to get the complete features currently present in PJMEDIA.
+ * @subsection benefit Benefits
+ * @subsubsection full_feature Many Features
+ * PJMEDIA has many features, and rather than to list them all here, please
+ * see the <A HREF="modules.htm"><b>Modules</b></A> page for more info.
  *
- * Also please read the documentation about @ref PJMEDIA_PORT
- * which is a major concept that is used for implementing many objects in 
- * the library.
+ * Video is planned to arrive at version 2.
+ *
+ * @subsubsection portable Excellent Portability
+ * It's been ported to all desktop systems and many mobile platforms including
+ * Symbian, Windows Mobile, iPhone, and Android. Thanks to its zero thread
+ * design, users have been able to run PJMEDIA on deeply embedded platforms,
+ * even without operating systems (those typically found in DSP platforms).
+ * Except the echo suppressor, all other PJMEDIA components have fixed point
+ * implementation, which makes it ideal for embedded systems which lack FPU.
+ * PJMEDIA also has tiny footprint, as explained below
+ *
+ * @subsubsection footprint Tiny Footprint
+ * Lets not talk about less meaningful and potentially misleading term such as
+ * core footprint, and instead here is the footprint of all components
+ * typically used to build a full streaming media:
+ *
+ * \verbatim
+Category        Component       text    data    bss     dec     filename
+-------------------------------------------------------------------------------
+Core            Error subsystem 135     0       0       135     errno.o
+Core            Endpoint        4210    4       4       4218    endpoint.o
+Core            Port framework  652     0       0       652     port.o
+Core            Codec framework 6257    0       0       6257    codec.o
+Codec           Alaw/ulaw conv. 1060    16      0       1076    alaw_ulaw.o
+Codec           G.711           3298    128     96      3522    g711.o
+Codec           PLC             883     24      0       907     plc_common.o
+Codec           PLC             7130    0       0       7130    wsola.o
+Session         Stream          12222   0       1920    14142   stream.o
+Transport       RTCP            3732    0       0       3732    rtcp.o
+Transport       RTP             2568    0       0       2568    rtp.o
+Transport       UDP             6612    96      0       6708    transport_udp.o
+Transport       Jitter buffer   6473    0       0       6473    jbuf.o
+-------------------------------------------------------------------------------
+TOTAL                          55,232   268    2,020    57,520
+
+ \endverbatim
+ * The 56KB are for media streaming components, complete with codec, RTP, and
+ * RTCP. The footprint above was done for PJSIP version 1.8.2 on a Linux x86
+ * machine, using footprintopimization as explained in PJSIP FAQ. Numbers are
+ * in bytes.
+ *
+ * @subsubsection quality Good Quality
+ * PJMEDIA supports wideband, ultra-wideband, and beyond, as well as multiple
+ * audio channels. The jitter buffer has been proven to work on lower
+ * bandwidth links such as 3G, and to some extent, Edge and GPRS. We've grown
+ * our own algorithm to compensate for packet losses and clock drifts in audio
+ * transmission, as well as feature to use codec's built in PLC if available.
+ *
+ * @subsubsection hw Hardware Support
+ * PJMEDIA supports hardware, firmware, or other built-in feature that comes
+ * with the device. These are crucial for mobile devices to allow the best
+ * use of the very limited CPU and battery power of the device. Among other
+ * things, device's on-board codec and echo cancellation may be used if
+ * available.
+ *
+ * @subsubsection extensible Extensible
+ * Despite its tiny footprint, PJMEDIA uses a flexible port concept, which is
+ * adapted from filter based concept found in other media framework. It is not
+ * as flexible as those found in Direct Show or gstreamer (and that would be
+ * unnecessary since it serves different purpose), but it's flexible enough
+ * to allow components to be assembled one after another to achieve certain
+ * task, and easy creation of such components by application and interconnect
+ * them to the rest of the framework.
+ *
+ * @subsubsection doc (Fairly Okay) Documentation
+ * We understand that any documentation can always be improved, but we put
+ * a lot of efforts in creating and maintaining our documentation, because
+ * we know it matters.
  *
  * \n
- * @section pjmedia_codec_sec PJMEDIA-CODEC
+ * @subsection org1 Organization
  *
+ * At the top-most level, PJMEDIA library suite contains the following
+ * libraries.
+ *
+ * @subsubsection libpjmedia PJMEDIA
+ * This contains all main media components. Please see the
+ * <A HREF="modules.htm"><b>Modules</b></A> page for complete list of
+ * components that PJMEDIA provides.
+ *
+ * @subsubsection libpjmediacodec PJMEDIA Codec
  * PJMEDIA-CODEC is a static library containing various codec implementations,
  * wrapped into PJMEDIA codec framework. The static library is designed as
  * such so that only codecs that are explicitly initialized are linked with 
  * the application, therefore keeping the application size in control.
  *
- * Please see @ref pjmedia_codec_page on how to use the codec in 
- * PJMEDIA-CODEC.
+ * Please see @ref PJMEDIA_CODEC for more info.
+ *
+ * @subsubsection libpjmediaaudiodev PJMEDIA Audio Device
+ * PJMEDIA-Audiodev is audio device framework and abstraction library. Please
+ * see @ref audio_device_api for more info.
  *
  * \n
- * @section main_page_get_start_sec Getting Started
- *
- * For those who likes to just get start coding, the @ref getting_started_pjmedia
- * may be a good place to start.
- *
- * The @ref page_pjmedia_samples page describes some examples that are available
- * in the source tree.
- *
- *
- * \n
- * @section pjmedia_lic Copying and Acknowledgements
- *
- * PJMEDIA and PJMEDIA-CODEC contains various parts obtained from other
- * places, and each of these would have their own licensing terms.
- * Please see @ref lic_stuffs page for details.
- *
+ * @section pjmedia_concepts PJMEDIA Key Concepts
+ * Below are some key concepts in PJMEDIA:
+ *  - @ref PJMEDIA_PORT
+ *  - @ref PJMEDIA_PORT_CLOCK
+ *  - @ref PJMEDIA_TRANSPORT
+ *  - @ref PJMEDIA_SESSION
  */
 
 
