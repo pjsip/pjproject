@@ -68,6 +68,17 @@ PJ_BEGIN_DECL
  */
 typedef struct pjsip_cfg_t
 {
+    /** Global settings. */
+    struct {
+	/**
+	 * Specify port number should be allowed to appear in To and From
+	 * header. Note that RFC 3261 disallow this, see Table 1 in section
+	 * 19.1.1 of the RFC. Default is PJSIP_ALLOW_PORT_IN_FROMTO_HDR.
+	 */
+	pj_bool_t allow_port_in_fromto_hdr;
+
+    } endpt;
+
     /** Transaction layer settings. */
     struct {
 
@@ -359,6 +370,19 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_UNESCAPE_IN_PLACE	0
 #endif
 
+
+/**
+ * Specify port number should be allowed to appear in To and From
+ * header. Note that RFC 3261 disallow this, see Table 1 in section
+ * 19.1.1 of the RFC. This setting can also be altered at run-time
+ * via pjsip_cfg setting, see pjsip_cfg_t.allow_port_in_fromto_hdr
+ * field.
+ *
+ * Default: 0
+ */
+#ifndef PJSIP_ALLOW_PORT_IN_FROMTO_HDR
+#   define PJSIP_ALLOW_PORT_IN_FROMTO_HDR	0
+#endif
 
 /**
  * This macro controls maximum numbers of ioqueue events to be processed

@@ -23,6 +23,11 @@
 /* pjsip configuration instance, initialized with default values */
 pjsip_cfg_t pjsip_sip_cfg_var =
 {
+    /* Global settings */
+    {
+       PJSIP_ALLOW_PORT_IN_FROMTO_HDR
+    },
+
     /* Transaction settings */
     {
        PJSIP_MAX_TSX_COUNT,
