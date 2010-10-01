@@ -82,7 +82,7 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 
 /* Create SDP for call hold. */
 static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
-					   pjmedia_sdp_session **p_answer);
+					   pjmedia_sdp_session **p_sdp);
 
 /*
  * Callback called by event framework when the xfer subscription state
@@ -404,6 +404,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     /* Associate session with account */
     call->acc_id = acc_id;
+    call->call_hold_type = acc->cfg.call_hold_type;
 
     /* Create temporary pool */
     tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
@@ -758,6 +759,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * the call.
      */
     acc_id = call->acc_id = pjsua_acc_find_for_incoming(rdata);
+    call->call_hold_type = pjsua_var.acc[acc_id].cfg.call_hold_type;
 
     /* Get call's secure level */
     if (PJSIP_URI_SCHEME_IS_SIPS(rdata->msg_info.msg->line.req.uri))
@@ -3573,25 +3575,11 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 }
 
 
-/* Create SDP for call hold. */
-static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
-					   pjmedia_sdp_session **p_answer)
+/* Modify SDP for call hold. */
+static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
+					   pj_pool_t *pool,
+					   pjmedia_sdp_session *sdp)
 {
-    pj_status_t status;
-    pj_pool_t *pool;
-    pjmedia_sdp_session *sdp;
-
-    /* Use call's provisional pool */
-    pool = call->inv->pool_prov;
-
-    /* Create new offer */
-    status = pjsua_media_channel_create_sdp(call->index, pool, NULL, &sdp, 
-					    NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
-	return status;
-    }
-
     /* Call-hold is done by set the media direction to 'sendonly' 
      * (PJMEDIA_DIR_ENCODING), except when current media direction is 
      * 'inactive' (PJMEDIA_DIR_NONE).
@@ -3600,7 +3588,33 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
     /* http://trac.pjsip.org/repos/ticket/880 
        if (call->media_dir != PJMEDIA_DIR_ENCODING) {
      */
-    if (1) {
+    /* https://trac.pjsip.org/repos/ticket/1142:
+     *  configuration to use c=0.0.0.0 for call hold.
+     */
+    if (call->call_hold_type == PJSUA_CALL_HOLD_TYPE_RFC2543) {
+	pjmedia_sdp_conn *conn;
+	pjmedia_sdp_attr *attr;
+
+	/* Get SDP media connection line */
+	conn = sdp->media[0]->conn;
+	if (!conn)
+	    conn = sdp->conn;
+
+	/* Modify address */
+	conn->addr = pj_str("0.0.0.0");
+
+	/* Remove existing directions attributes */
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
+	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
+
+	/* Add inactive attribute */
+	attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+	pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+
+
+    } else {
 	pjmedia_sdp_attr *attr;
 
 	/* Remove existing directions attributes */
@@ -3620,9 +3634,35 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
 	}
     }
 
-    *p_answer = sdp;
+    return PJ_SUCCESS;
+}
 
-    return status;
+/* Create SDP for call hold. */
+static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
+					   pjmedia_sdp_session **p_sdp)
+{
+    pj_status_t status;
+    pj_pool_t *pool;
+    pjmedia_sdp_session *sdp;
+
+    /* Use call's provisional pool */
+    pool = call->inv->pool_prov;
+
+    /* Create new offer */
+    status = pjsua_media_channel_create_sdp(call->index, pool, NULL, &sdp,
+					    NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
+	return status;
+    }
+
+    status = modify_sdp_of_call_hold(call, pool, sdp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    *p_sdp = sdp;
+
+    return PJ_SUCCESS;
 }
 
 /*
@@ -3667,19 +3707,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
     /* Check if call is on-hold */
     if (call->local_hold) {
-        pjmedia_sdp_attr *attr;
-
-	/* Remove existing directions attributes */
-	pjmedia_sdp_media_remove_all_attr(answer->media[0], "sendrecv");
-	pjmedia_sdp_media_remove_all_attr(answer->media[0], "sendonly");
-	pjmedia_sdp_media_remove_all_attr(answer->media[0], "recvonly");
-	pjmedia_sdp_media_remove_all_attr(answer->media[0], "inactive");
-
-	/* Keep call on-hold by setting 'sendonly' attribute.
-	 * (See RFC 3264 Section 8.4 and RFC 4317 Section 3.1)
-	 */
-	attr = pjmedia_sdp_attr_create(call->inv->pool_prov, "sendonly", NULL);
-	pjmedia_sdp_media_add_attr(answer->media[0], attr);
+	modify_sdp_of_call_hold(call, call->inv->pool_prov, answer);
     }
 
     status = pjsip_inv_set_sdp_answer(call->inv, answer);

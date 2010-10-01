@@ -61,6 +61,7 @@ typedef struct pjsua_call
     pj_time_val		 dis_time;  /**< Disconnect time.		    */
     pjsua_acc_id	 acc_id;    /**< Account index being used.	    */
     int			 secure_level;/**< Signaling security level.	    */
+    pjsua_call_hold_type call_hold_type; /**< How to do call hold.	    */
     pj_bool_t		 local_hold;/**< Flag for call-hold by local.	    */
     pjsua_call_media_status media_st;/**< Media state.			    */
     pjmedia_dir		 media_dir; /**< Media direction.		    */

@@ -2041,6 +2041,45 @@ PJ_DECL(pj_status_t) pjsua_transport_close( pjsua_transport_id id,
 
 
 /**
+ * This enumeration specifies how we should offer call hold request to
+ * remote peer. The default value is set by compile time constant
+ * PJSUA_CALL_HOLD_TYPE_DEFAULT, and application may control the setting
+ * on per-account basis by manipulating \a call_hold_type field in
+ * #pjsua_acc_config.
+ */
+typedef enum pjsua_call_hold_type
+{
+    /**
+     * This will follow RFC 3264 recommendation to use a=sendonly,
+     * a=recvonly, and a=inactive attribute as means to signal call
+     * hold status. This is the correct value to use.
+     */
+    PJSUA_CALL_HOLD_TYPE_RFC3264,
+
+    /**
+     * This will use the old and deprecated method as specified in RFC 2543,
+     * and will offer c=0.0.0.0 in the SDP instead. Using this has many
+     * drawbacks such as inability to keep the media transport alive while
+     * the call is being put on hold, and should only be used if remote
+     * does not understand RFC 3264 style call hold offer.
+     */
+    PJSUA_CALL_HOLD_TYPE_RFC2543
+
+} pjsua_call_hold_type;
+
+
+/**
+ * Specify the default call hold type to be used in #pjsua_acc_config.
+ *
+ * Default is PJSUA_CALL_HOLD_TYPE_RFC3264, and there's no reason to change
+ * this except if you're communicating with an old/non-standard peer.
+ */
+#ifndef PJSUA_CALL_HOLD_TYPE_DEFAULT
+#   define PJSUA_CALL_HOLD_TYPE_DEFAULT		PJSUA_CALL_HOLD_TYPE_RFC3264
+#endif
+
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -2369,6 +2408,14 @@ typedef struct pjsua_acc_config
      */
     pj_bool_t	     use_stream_ka;
 #endif
+
+    /**
+     * Specify how to offer call hold to remote peer. Please see the
+     * documentation on #pjsua_call_hold_type for more info.
+     *
+     * Default: PJSUA_CALL_HOLD_TYPE_DEFAULT
+     */
+    pjsua_call_hold_type call_hold_type;
 
 } pjsua_acc_config;
 
