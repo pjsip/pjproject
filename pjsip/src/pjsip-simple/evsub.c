@@ -997,6 +997,19 @@ PJ_DEF(pj_status_t) pjsip_evsub_initiate( pjsip_evsub *sub,
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->expires));
 
+    /* Add Supported header (it's optional in RFC 3265, but some event package
+     * RFC may bring this requirement to SHOULD strength - e.g. RFC 5373)
+     */
+    {
+       const pjsip_hdr *hdr = pjsip_endpt_get_capability(sub->endpt,
+						         PJSIP_H_SUPPORTED,
+						         NULL);
+       if (hdr) {
+	   pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+			     pjsip_hdr_shallow_clone(tdata->pool, hdr));
+       }
+    }
+
     /* Add Accept header: */
     pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
 		       pjsip_hdr_shallow_clone(tdata->pool, sub->accept));
