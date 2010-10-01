@@ -303,6 +303,15 @@ static int parse_url_test()
 	/* empty username and passwd*/
 	{"http://:@pjsip.org", PJ_SUCCESS, "", "", "pjsip.org", 80, "/"},
 
+	/* '@' character in username and path */
+	{"http://user@pjsip.org/@", PJ_SUCCESS, "user", "", "pjsip.org", 80, "/@"},
+
+	/* '@' character in path */
+	{"http://pjsip.org/@", PJ_SUCCESS, "", "", "pjsip.org", 80, "/@"},
+
+	/* '@' character in path */
+	{"http://pjsip.org/one@", PJ_SUCCESS, "", "", "pjsip.org", 80, "/one@"},
+
 	/* Invalid URL */
 	{"http://:", PJ_EINVAL, "", "", "", 0, ""},
 
@@ -323,6 +332,9 @@ static int parse_url_test()
 
 	/* Invalid URL */
 	{"http://@/", PJ_EINVAL, "", "", "", 0, ""},
+
+	/* Invalid URL */
+	{"http:///@", PJ_EINVAL, "", "", "", 0, ""},
 
 	/* Invalid URL */
 	{"http://:::", PJ_EINVAL, "", "", "", 0, ""},

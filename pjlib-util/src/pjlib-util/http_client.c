@@ -766,6 +766,34 @@ PJ_DEF(void) pj_http_req_param_default(pj_http_req_param *param)
     pj_time_val_normalize(&param->timeout);
 }
 
+/* Get the location of '@' character to indicate the end of
+ * user:passwd part of an URI. If user:passwd part is not
+ * present, NULL will be returned.
+ */
+static char *get_url_at_pos(const char *str, long len)
+{
+    const char *end = str + len;
+    const char *p = str;
+
+    /* skip scheme: */
+    while (p!=end && *p!='/') ++p;
+    if (p!=end && *p=='/') ++p;
+    if (p!=end && *p=='/') ++p;
+    if (p==end) return NULL;
+
+    for (; p!=end; ++p) {
+	switch (*p) {
+	case '/':
+	    return NULL;
+	case '@':
+	    return (char*)p;
+	}
+    }
+
+    return NULL;
+}
+
+
 PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url, 
                                           pj_http_url *hurl)
 {
@@ -801,7 +829,7 @@ PJ_DEF(pj_status_t) pj_http_req_parse_url(const pj_str_t *url,
         }
         pj_scan_advance_n(&scanner, 3, PJ_FALSE);
 
-        if (pj_memchr(url->ptr, '@', url->slen)) {
+        if (get_url_at_pos(url->ptr, url->slen)) {
             /* Parse username and password */
             pj_scan_get_until_chr(&scanner, ":@", &hurl->username);
             if (*scanner.curptr == ':') {
@@ -924,7 +952,7 @@ PJ_DEF(pj_status_t) pj_http_req_create(pj_pool_t *pool,
     /* If URL contains username/password, move them to credential and
      * remove them from the URL.
      */
-    if ((at_pos=pj_strchr(&hreq->url, '@')) != NULL) {
+    if ((at_pos=get_url_at_pos(hreq->url.ptr, hreq->url.slen)) != NULL) {
 	pj_str_t tmp;
 	char *user_pos = pj_strchr(&hreq->url, '/');
 	int removed_len;
