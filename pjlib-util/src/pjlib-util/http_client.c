@@ -1304,6 +1304,7 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 	  12 + /* qop=auth */
 	  8 + /* nc=.. */
 	  30 + /* cnonce= */
+	  12 + chal->opaque.slen + /* opaque=".." */
 	  0;
     phdr->value.ptr = (char*)pj_pool_alloc(hreq->pool, len);
 
@@ -1374,6 +1375,12 @@ static pj_status_t auth_respond_digest(pj_http_req *hreq)
 	if (len < 0)
 	    return PJ_ETOOSMALL;
 	phdr->value.slen = len;
+
+	if (chal->opaque.slen) {
+	    pj_strcat2(&phdr->value, ", opaque=\"");
+	    pj_strcat(&phdr->value, &chal->opaque);
+	    pj_strcat2(&phdr->value, "\"");
+	}
 
     } else {
 	/* Server requires quality protection that we don't support. */
@@ -1474,13 +1481,13 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
         pj_strassign(&pkt, &hreq->buffer);
         pkt.slen = 0;
         /* Start-line */
-        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s %.*s %s/%.*s\n",
+        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s %.*s %s/%.*s\r\n",
                      STR_PREC(hreq->param.method), 
                      STR_PREC(hreq->hurl.path),
                      get_protocol(&hreq->hurl.protocol), 
                      STR_PREC(hreq->param.version));
         /* Header field "Host" */
-        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "Host: %.*s:%d\n",
+        str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "Host: %.*s:%d\r\n",
                      STR_PREC(hreq->hurl.host), hreq->hurl.port);
         if (!pj_strcmp2(&hreq->param.method, http_method_names[HTTP_PUT])) {
             char buf[16];
@@ -1489,13 +1496,13 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
             pj_utoa(hreq->param.reqdata.total_size ? 
                     hreq->param.reqdata.total_size: 
                     hreq->param.reqdata.size, buf);
-            str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%s: %s\n",
+            str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%s: %s\r\n",
                          CONTENT_LENGTH, buf);
         }
 
         /* Append user-specified headers */
         for (i = 0; i < hreq->param.headers.count; i++) {
-            str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s: %.*s\n",
+            str_snprintf(&pkt, BUF_SIZE, PJ_TRUE, "%.*s: %.*s\r\n",
                          STR_PREC(hreq->param.headers.header[i].name),
                          STR_PREC(hreq->param.headers.header[i].value));
         }
@@ -1504,7 +1511,7 @@ static pj_status_t http_req_start_sending(pj_http_req *hreq)
             goto on_return;
         }
 
-        pj_strcat2(&pkt, "\n");
+        pj_strcat2(&pkt, "\r\n");
         pkt.ptr[pkt.slen] = 0;
         TRACE_((THIS_FILE, "%s", pkt.ptr));
     } else {
