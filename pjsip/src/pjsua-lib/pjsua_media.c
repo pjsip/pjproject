@@ -1114,6 +1114,57 @@ PJ_DEF(pj_status_t) pjsua_media_transports_attach(pjsua_media_transport tp[],
 }
 
 
+static int find_audio_index(const pjmedia_sdp_session *sdp, 
+			    pj_bool_t prefer_srtp)
+{
+    unsigned i;
+    int audio_idx = -1;
+
+    for (i=0; i<sdp->media_count; ++i) {
+	const pjmedia_sdp_media *m = sdp->media[i];
+
+	/* Skip if media is not audio */
+	if (pj_stricmp2(&m->desc.media, "audio") != 0)
+	    continue;
+
+	/* Skip if media is disabled */
+	if (m->desc.port == 0)
+	    continue;
+
+	/* Skip if transport is not supported */
+	if (pj_stricmp2(&m->desc.transport, "RTP/AVP") != 0 &&
+	    pj_stricmp2(&m->desc.transport, "RTP/SAVP") != 0)
+	{
+	    continue;
+	}
+
+	if (audio_idx == -1) {
+	    audio_idx = i;
+	} else {
+	    /* We've found multiple candidates. This could happen
+	     * e.g. when remote is offering both RTP/SAVP and RTP/AVP,
+	     * or when remote for some reason offers two audio.
+	     */
+
+	    if (prefer_srtp &&
+		pj_stricmp2(&m->desc.transport, "RTP/SAVP")==0)
+	    {
+		/* Prefer RTP/SAVP when our media transport is SRTP */
+		audio_idx = i;
+		break;
+	    } else if (!prefer_srtp &&
+		       pj_stricmp2(&m->desc.transport, "RTP/AVP")==0)
+	    {
+		/* Prefer RTP/AVP when our media transport is NOT SRTP */
+		audio_idx = i;
+	    }
+	}
+    }
+
+    return audio_idx;
+}
+
+
 pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     pjsip_role_e role,
 				     int security_level,
@@ -1186,14 +1237,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 #endif
 
     /* Find out which media line in SDP that we support. If we are offerer,
-     * audio will be at index 0 in SDP. 
+     * audio will be initialized at index 0 in SDP. 
      */
-    if (rem_sdp == 0) {
+    if (rem_sdp == NULL) {
 	call->audio_idx = 0;
     } 
     /* Otherwise find out the candidate audio media line in SDP */
     else {
-	unsigned i;
 	pj_bool_t srtp_active;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1205,45 +1255,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	/* Media count must have been checked */
 	pj_assert(rem_sdp->media_count != 0);
 
-	for (i=0; i<rem_sdp->media_count; ++i) {
-	    const pjmedia_sdp_media *m = rem_sdp->media[i];
-
-	    /* Skip if media is not audio */
-	    if (pj_stricmp2(&m->desc.media, "audio") != 0)
-		continue;
-
-	    /* Skip if media is disabled */
-	    if (m->desc.port == 0)
-		continue;
-
-	    /* Skip if transport is not supported */
-	    if (pj_stricmp2(&m->desc.transport, "RTP/AVP") != 0 &&
-		pj_stricmp2(&m->desc.transport, "RTP/SAVP") != 0)
-	    {
-		continue;
-	    }
-
-	    if (call->audio_idx == -1) {
-		call->audio_idx = i;
-	    } else {
-		/* We've found multiple candidates. This could happen
-		 * e.g. when remote is offering both RTP/AVP and RTP/AVP,
-		 * or when remote for some reason offers two audio.
-		 */
-
-		if (srtp_active &&
-		    pj_stricmp2(&m->desc.transport, "RTP/SAVP")==0)
-		{
-		    /* Prefer RTP/SAVP when our media transport is SRTP */
-		    call->audio_idx = i;
-		} else if (!srtp_active &&
-		           pj_stricmp2(&m->desc.transport, "RTP/AVP")==0)
-		{
-		    /* Prefer RTP/AVP when our media transport is NOT SRTP */
-		    call->audio_idx = i;
-		}
-	    }
-	}
+	call->audio_idx = find_audio_index(rem_sdp, srtp_active);
     }
 
     /* Reject offer if we couldn't find a good m=audio line in offer */
@@ -1279,6 +1291,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     pjmedia_sdp_session *sdp;
     pjmedia_transport_info tpinfo;
     pjsua_call *call = &pjsua_var.calls[call_id];
+    pjmedia_sdp_neg_state sdp_neg_state = PJMEDIA_SDP_NEG_STATE_NULL;
     pj_status_t status;
 
     /* Return error if media transport has not been created yet
@@ -1303,6 +1316,10 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	    return status;
     }
 
+    /* Get SDP negotiator state */
+    if (call->inv && call->inv->neg)
+	sdp_neg_state = pjmedia_sdp_neg_get_state(call->inv->neg);
+
     /* Get media socket info */
     pjmedia_transport_info_init(&tpinfo);
     pjmedia_transport_get_info(call->med_tp, &tpinfo);
@@ -1315,22 +1332,33 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	return status;
     }
 
-    /* If we're answering and the selected media is not the first media
+    /* If we're answering or updating the session with a new offer,
+     * and the selected media is not the first media
      * in SDP, then fill in the unselected media with with zero port. 
      * Otherwise we'll crash in transport_encode_sdp() because the media
      * lines are not aligned between offer and answer.
      */
-    if (rem_sdp && call->audio_idx != 0) {
+    if (call->audio_idx != 0 && 
+	(rem_sdp || sdp_neg_state==PJMEDIA_SDP_NEG_STATE_DONE))
+    {
 	unsigned i;
+	const pjmedia_sdp_session *ref_sdp = rem_sdp;
 
-	for (i=0; i<rem_sdp->media_count; ++i) {
-	    const pjmedia_sdp_media *rem_m = rem_sdp->media[i];
+	if (!ref_sdp) {
+	    /* We are updating session with a new offer */
+	    status = pjmedia_sdp_neg_get_active_local(call->inv->neg,
+						      &ref_sdp);
+	    pj_assert(status == PJ_SUCCESS);
+	}
+
+	for (i=0; i<ref_sdp->media_count; ++i) {
+	    const pjmedia_sdp_media *ref_m = ref_sdp->media[i];
 	    pjmedia_sdp_media *m;
 
 	    if ((int)i == call->audio_idx)
 		continue;
 
-	    m = pjmedia_sdp_media_clone_deactivate(pool, rem_m);
+	    m = pjmedia_sdp_media_clone_deactivate(pool, ref_m);
 	    if (i==sdp->media_count)
 		sdp->media[sdp->media_count++] = m;
 	    else {
@@ -1392,21 +1420,34 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	    if (pj_stricmp2(&m->desc.transport, "RTP/AVP") == 0 &&
 		pjmedia_sdp_media_find_attr2(m, "crypto", NULL) != NULL)
 	    {
-		pjmedia_sdp_media *new_m;
+		if (i == (unsigned)call->audio_idx && 
+		    sdp_neg_state == PJMEDIA_SDP_NEG_STATE_DONE)
+		{
+		    /* This is a session update, and peer has chosen the
+		     * unsecured version, so let's make this unsecured too.
+		     */
+		    pjmedia_sdp_media_remove_all_attr(m, "crypto");
+		} else {
+		    /* This is new offer, duplicate media so we'll have
+		     * secured (with "RTP/SAVP" transport) and and unsecured
+		     * versions.
+		     */
+		    pjmedia_sdp_media *new_m;
 
-		/* Duplicate this media and apply secured transport */
-		new_m = pjmedia_sdp_media_clone(pool, m);
-		pj_strdup2(pool, &new_m->desc.transport, "RTP/SAVP");
+		    /* Duplicate this media and apply secured transport */
+		    new_m = pjmedia_sdp_media_clone(pool, m);
+		    pj_strdup2(pool, &new_m->desc.transport, "RTP/SAVP");
 
-		/* Remove the "crypto" attribute in the unsecured media */
-		pjmedia_sdp_media_remove_all_attr(m, "crypto");
+		    /* Remove the "crypto" attribute in the unsecured media */
+		    pjmedia_sdp_media_remove_all_attr(m, "crypto");
 
-		/* Insert the new media before the unsecured media */
-		if (sdp->media_count < PJMEDIA_MAX_SDP_MEDIA) {
-		    pj_array_insert(sdp->media, sizeof(new_m), 
-				    sdp->media_count, i, &new_m);
-		    ++sdp->media_count;
-		    ++i;
+		    /* Insert the new media before the unsecured media */
+		    if (sdp->media_count < PJMEDIA_MAX_SDP_MEDIA) {
+			pj_array_insert(sdp->media, sizeof(new_m), 
+					sdp->media_count, i, &new_m);
+			++sdp->media_count;
+			++i;
+		    }
 		}
 	    }
 	}
@@ -1538,6 +1579,9 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Update audio index from the negotiated SDP */
+    call->audio_idx = find_audio_index(local_sdp, PJ_TRUE);
+
     /* Find which session is audio */
     PJ_ASSERT_RETURN(call->audio_idx != -1, PJ_EBUG);
     PJ_ASSERT_RETURN(call->audio_idx < (int)sess_info.stream_cnt, PJ_EBUG);
@@ -1583,7 +1627,8 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	/* Start/restart media transport */
 	status = pjmedia_transport_media_start(call->med_tp, 
 					       call->inv->pool_prov,
-					       local_sdp, remote_sdp, 0);
+					       local_sdp, remote_sdp,
+					       call->audio_idx);
 	if (status != PJ_SUCCESS)
 	    return status;
 

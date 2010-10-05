@@ -3580,6 +3580,8 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
 					   pj_pool_t *pool,
 					   pjmedia_sdp_session *sdp)
 {
+    pjmedia_sdp_media *m;
+
     /* Call-hold is done by set the media direction to 'sendonly' 
      * (PJMEDIA_DIR_ENCODING), except when current media direction is 
      * 'inactive' (PJMEDIA_DIR_NONE).
@@ -3591,12 +3593,15 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
     /* https://trac.pjsip.org/repos/ticket/1142:
      *  configuration to use c=0.0.0.0 for call hold.
      */
+
+    m = sdp->media[call->audio_idx];
+
     if (call->call_hold_type == PJSUA_CALL_HOLD_TYPE_RFC2543) {
 	pjmedia_sdp_conn *conn;
 	pjmedia_sdp_attr *attr;
 
 	/* Get SDP media connection line */
-	conn = sdp->media[0]->conn;
+	conn = m->conn;
 	if (!conn)
 	    conn = sdp->conn;
 
@@ -3604,33 +3609,33 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
 	conn->addr = pj_str("0.0.0.0");
 
 	/* Remove existing directions attributes */
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
+	pjmedia_sdp_media_remove_all_attr(m, "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(m, "sendonly");
+	pjmedia_sdp_media_remove_all_attr(m, "recvonly");
+	pjmedia_sdp_media_remove_all_attr(m, "inactive");
 
 	/* Add inactive attribute */
 	attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
-	pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	pjmedia_sdp_media_add_attr(m, attr);
 
 
     } else {
 	pjmedia_sdp_attr *attr;
 
 	/* Remove existing directions attributes */
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendrecv");
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "sendonly");
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "recvonly");
-	pjmedia_sdp_media_remove_all_attr(sdp->media[0], "inactive");
+	pjmedia_sdp_media_remove_all_attr(m, "sendrecv");
+	pjmedia_sdp_media_remove_all_attr(m, "sendonly");
+	pjmedia_sdp_media_remove_all_attr(m, "recvonly");
+	pjmedia_sdp_media_remove_all_attr(m, "inactive");
 
 	if (call->media_dir & PJMEDIA_DIR_ENCODING) {
 	    /* Add sendonly attribute */
 	    attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
-	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	    pjmedia_sdp_media_add_attr(m, attr);
 	} else {
 	    /* Add inactive attribute */
 	    attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
-	    pjmedia_sdp_media_add_attr(sdp->media[0], attr);
+	    pjmedia_sdp_media_add_attr(m, attr);
 	}
     }
 
@@ -3672,7 +3677,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 				   const pjmedia_sdp_session *offer)
 {
     pjsua_call *call;
-    pjmedia_sdp_conn *conn;
+    pjmedia_sdp_conn *conn = NULL;
     pjmedia_sdp_session *answer;
     pj_status_t status;
 
@@ -3680,7 +3685,9 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    conn = offer->media[0]->conn;
+    if (call->audio_idx < (int)offer->media_count)
+	conn = offer->media[call->audio_idx]->conn;
+
     if (!conn)
 	conn = offer->conn;
 
