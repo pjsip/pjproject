@@ -1371,6 +1371,8 @@ static pj_status_t ca_stream_get_cap(pjmedia_aud_stream *s,
 	    *(pjmedia_aud_dev_route*)pval = PJMEDIA_AUD_DEV_ROUTE_DEFAULT;
 	}
 
+	CFRelease(route);
+
 	return PJ_SUCCESS;
     } else if (cap==PJMEDIA_AUD_DEV_CAP_EC) {
 	AudioComponentDescription desc;
