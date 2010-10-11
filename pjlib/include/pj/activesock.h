@@ -316,6 +316,18 @@ PJ_DECL(pj_status_t) pj_activesock_close(pj_activesock_t *asock);
  */
 PJ_DECL(void) pj_activesock_set_iphone_os_bg(pj_activesock_t *asock,
 					     int val);
+
+/**
+ * Enable/disable support for iPhone OS background mode. This setting
+ * will apply globally and will affect any active sockets created
+ * afterwards, if you want to change the setting for a particular
+ * active socket, use #pj_activesock_set_iphone_os_bg() instead.
+ * By default, this setting is enabled.
+ *
+ * @param val	    The value of global background mode setting.
+ *
+ */
+PJ_DECL(void) pj_activesock_enable_iphone_os_bg(pj_bool_t val);
 #endif
 
 /**
