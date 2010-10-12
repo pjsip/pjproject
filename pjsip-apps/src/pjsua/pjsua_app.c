@@ -2797,6 +2797,37 @@ static void on_buddy_state(pjsua_buddy_id buddy_id)
 }
 
 
+/*
+ * Subscription state has changed.
+ */
+static void on_buddy_evsub_state(pjsua_buddy_id buddy_id,
+				 pjsip_evsub *sub,
+				 pjsip_event *event)
+{
+    char event_info[80];
+
+    PJ_UNUSED_ARG(sub);
+
+    event_info[0] = '\0';
+
+    if (event->type == PJSIP_EVENT_TSX_STATE &&
+	    event->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+    {
+	pjsip_rx_data *rdata = event->body.tsx_state.src.rdata;
+	snprintf(event_info, sizeof(event_info),
+		 " (RX %s)",
+		 pjsip_rx_data_get_info(rdata));
+    }
+
+    PJ_LOG(4,(THIS_FILE,
+	      "Buddy %d: subscription state: %s (event: %s%s)",
+	      buddy_id, pjsip_evsub_get_state_name(sub),
+	      pjsip_event_str(event->type),
+	      event_info));
+
+}
+
+
 /**
  * Incoming IM message (i.e. MESSAGE request)!
  */
@@ -4602,6 +4633,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_reg_state = &on_reg_state;
     app_config.cfg.cb.on_incoming_subscribe = &on_incoming_subscribe;
     app_config.cfg.cb.on_buddy_state = &on_buddy_state;
+    app_config.cfg.cb.on_buddy_evsub_state = &on_buddy_evsub_state;
     app_config.cfg.cb.on_pager = &on_pager;
     app_config.cfg.cb.on_typing = &on_typing;
     app_config.cfg.cb.on_call_transfer_status = &on_call_transfer_status;

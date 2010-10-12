@@ -1557,7 +1557,11 @@ static void pjsua_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 	    buddy->term_reason.slen = 0;
 	}
 
-	/* Call callback */
+	/* Call callbacks */
+	if (pjsua_var.ua_cfg.cb.on_buddy_evsub_state)
+	    (*pjsua_var.ua_cfg.cb.on_buddy_evsub_state)(buddy->index, sub,
+							event);
+
 	if (pjsua_var.ua_cfg.cb.on_buddy_state)
 	    (*pjsua_var.ua_cfg.cb.on_buddy_state)(buddy->index);
 
@@ -1656,30 +1660,10 @@ static void pjsua_evsub_on_rx_notify(pjsip_evsub *sub,
 }
 
 
-/* Event subscription callback. */
-static pjsip_evsub_user pres_callback = 
-{
-    &pjsua_evsub_on_state,  
-    &pjsua_evsub_on_tsx_state,
-
-    NULL,   /* on_rx_refresh: don't care about SUBSCRIBE refresh, unless 
-	     * we want to authenticate 
-	     */
-
-    &pjsua_evsub_on_rx_notify,
-
-    NULL,   /* on_client_refresh: Use default behaviour, which is to 
-	     * refresh client subscription. */
-
-    NULL,   /* on_server_timeout: Use default behaviour, which is to send 
-	     * NOTIFY to terminate. 
-	     */
-};
-
-
 /* It does what it says.. */
 static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 {
+    pjsip_evsub_user pres_callback;
     pj_pool_t *tmp_pool = NULL;
     pjsua_buddy *buddy;
     int acc_id;
@@ -1687,6 +1671,12 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
     pj_str_t contact;
     pjsip_tx_data *tdata;
     pj_status_t status;
+
+    /* Event subscription callback. */
+    pj_bzero(&pres_callback, sizeof(pres_callback));
+    pres_callback.on_evsub_state = &pjsua_evsub_on_state;
+    pres_callback.on_tsx_state = &pjsua_evsub_on_tsx_state;
+    pres_callback.on_rx_notify = &pjsua_evsub_on_rx_notify;
 
     buddy = &pjsua_var.buddy[buddy_id];
     acc_id = pjsua_acc_find_for_outgoing(&buddy->uri);

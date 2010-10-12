@@ -687,6 +687,21 @@ typedef struct pjsua_callback
      */
     void (*on_buddy_state)(pjsua_buddy_id buddy_id);
 
+
+    /**
+     * Notify application when the state of client subscription session
+     * associated with a buddy has changed. Application may use this
+     * callback to retrieve more detailed information about the state
+     * changed event.
+     *
+     * @param buddy_id	    The buddy id.
+     * @param sub	    Event subscription session.
+     * @param event	    The event which triggers state change event.
+     */
+    void (*on_buddy_evsub_state)(pjsua_buddy_id buddy_id,
+				 pjsip_evsub *sub,
+				 pjsip_event *event);
+
     /**
      * Notify application on incoming pager (i.e. MESSAGE request).
      * Argument call_id will be -1 if MESSAGE request is not related to an
