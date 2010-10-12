@@ -16,12 +16,7 @@
 <!-- Free Software Foundation, Inc.,                                    -->
 <!-- 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             -->
 <!--                                                                    -->
-<!-- Late NOTIFY scenario:                       			-->
-<!--  - UAC sends SUBSCRIBE, we reply with 200				-->
-<!--  - we send NOTIFY, expect 200					-->
-<!--  - UAC sends SUBSCRIBE, we ignore					-->
-<!--  - we send NOTIFY							-->
-<!-- See http://trac.pjsip.org/repos/ticket/911                         -->
+<!-- See https://trac.pjsip.org/repos/ticket/1146                       -->
 <!--                                                                    -->
 
 <scenario name="SUBSCRIBE tests">
