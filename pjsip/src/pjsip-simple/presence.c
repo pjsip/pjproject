@@ -21,6 +21,7 @@
 #include <pjsip-simple/errno.h>
 #include <pjsip-simple/evsub_msg.h>
 #include <pjsip/sip_module.h>
+#include <pjsip/sip_multipart.h>
 #include <pjsip/sip_endpoint.h>
 #include <pjsip/sip_dialog.h>
 #include <pj/assert.h>
@@ -682,6 +683,7 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
 					   pj_str_t **p_st_text,
 					   pjsip_hdr *res_hdr)
 {
+    const pj_str_t STR_MULTIPART = { "multipart", 9 };
     pjsip_ctype_hdr *ctype_hdr;
     pj_status_t status;
 
@@ -707,7 +709,36 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
     }
 
     /* Parse content. */
+    if (pj_stricmp(&ctype_hdr->media.type, &STR_MULTIPART)==0) {
+	pjsip_multipart_part *mpart;
+	pjsip_media_type ctype;
 
+	pjsip_media_type_init(&ctype, (pj_str_t*)&STR_APPLICATION,
+			      (pj_str_t*)&STR_PIDF_XML);
+	mpart = pjsip_multipart_find_part(rdata->msg_info.msg->body,
+					  &ctype, NULL);
+	if (mpart) {
+	    status = pjsip_pres_parse_pidf2((char*)mpart->body->data,
+					    mpart->body->len, pres->tmp_pool,
+					    &pres->tmp_status);
+	}
+
+	if (mpart==NULL) {
+	    pjsip_media_type_init(&ctype, (pj_str_t*)&STR_APPLICATION,
+				  (pj_str_t*)&STR_XPIDF_XML);
+	    mpart = pjsip_multipart_find_part(rdata->msg_info.msg->body,
+					      &ctype, NULL);
+	    if (mpart) {
+		status = pjsip_pres_parse_xpidf2((char*)mpart->body->data,
+						 mpart->body->len,
+						 pres->tmp_pool,
+						 &pres->tmp_status);
+	    } else {
+		status = PJSIP_SIMPLE_EBADCONTENT;
+	    }
+	}
+    }
+    else
     if (pj_stricmp(&ctype_hdr->media.type, &STR_APPLICATION)==0 &&
 	pj_stricmp(&ctype_hdr->media.subtype, &STR_PIDF_XML)==0)
     {

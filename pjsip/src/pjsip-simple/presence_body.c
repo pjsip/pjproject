@@ -199,12 +199,19 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_pidf( pjsip_rx_data *rdata,
 					   pj_pool_t *pool,
 					   pjsip_pres_status *pres_status)
 {
+    return pjsip_pres_parse_pidf2((char*)rdata->msg_info.msg->body->data,
+				  rdata->msg_info.msg->body->len,
+				  pool, pres_status);
+}
+
+PJ_DEF(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
+					   pj_pool_t *pool,
+					   pjsip_pres_status *pres_status)
+{
     pjpidf_pres *pidf;
     pjpidf_tuple *pidf_tuple;
 
-    pidf = pjpidf_parse(rdata->tp_info.pool, 
-			(char*)rdata->msg_info.msg->body->data,
-			rdata->msg_info.msg->body->len);
+    pidf = pjpidf_parse(pool, body, body_len);
     if (pidf == NULL)
 	return PJSIP_SIMPLE_EBADPIDF;
 
@@ -251,11 +258,18 @@ PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
 					   pj_pool_t *pool,
 					   pjsip_pres_status *pres_status)
 {
+    return pjsip_pres_parse_xpidf2((char*)rdata->msg_info.msg->body->data,
+				   rdata->msg_info.msg->body->len,
+				   pool, pres_status);
+}
+
+PJ_DEF(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
+					    pj_pool_t *pool,
+					    pjsip_pres_status *pres_status)
+{
     pjxpidf_pres *xpidf;
 
-    xpidf = pjxpidf_parse(rdata->tp_info.pool, 
-			  (char*)rdata->msg_info.msg->body->data,
-			  rdata->msg_info.msg->body->len);
+    xpidf = pjxpidf_parse(pool, body, body_len);
     if (xpidf == NULL)
 	return PJSIP_SIMPLE_EBADXPIDF;
 

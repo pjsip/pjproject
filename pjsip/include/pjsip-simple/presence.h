@@ -328,11 +328,31 @@ PJ_DECL(pj_status_t) pjsip_pres_create_xpidf(pj_pool_t *pool,
  * @param status	The presence status to be initialized.
  *
  * @return		PJ_SUCCESS on success.
+ *
+ * @see pjsip_pres_parse_pidf2()
  */
 PJ_DECL(pj_status_t) pjsip_pres_parse_pidf(pjsip_rx_data *rdata,
 					   pj_pool_t *pool,
 					   pjsip_pres_status *status);
 
+/**
+ * This is a utility function to parse PIDF body into PJSIP presence status.
+ *
+ * @param body		Text body, with one extra space at the end to place
+ * 			NULL character temporarily during parsing.
+ * @param body_len	Length of the body, not including the NULL termination
+ * 			character.
+ * @param pool		Pool to allocate memory to copy the strings into
+ *			the presence status structure.
+ * @param status	The presence status to be initialized.
+ *
+ * @return		PJ_SUCCESS on success.
+ *
+ * @see pjsip_pres_parse_pidf()
+ */
+PJ_DECL(pj_status_t) pjsip_pres_parse_pidf2(char *body, unsigned body_len,
+					    pj_pool_t *pool,
+					    pjsip_pres_status *status);
 
 
 /**
@@ -344,10 +364,32 @@ PJ_DECL(pj_status_t) pjsip_pres_parse_pidf(pjsip_rx_data *rdata,
  * @param status	The presence status to be initialized.
  *
  * @return		PJ_SUCCESS on success.
+ *
+ * @see pjsip_pres_parse_xpidf2()
  */
 PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf(pjsip_rx_data *rdata,
 					   pj_pool_t *pool,
 					   pjsip_pres_status *status);
+
+
+/**
+ * This is a utility function to parse X-PIDF body into PJSIP presence status.
+ *
+ * @param body		Text body, with one extra space at the end to place
+ * 			NULL character temporarily during parsing.
+ * @param body_len	Length of the body, not including the NULL termination
+ * 			character.
+ * @param pool		Pool to allocate memory to copy the strings into
+ *			the presence status structure.
+ * @param status	The presence status to be initialized.
+ *
+ * @return		PJ_SUCCESS on success.
+ *
+ * @see pjsip_pres_parse_xpidf()
+ */
+PJ_DECL(pj_status_t) pjsip_pres_parse_xpidf2(char *body, unsigned body_len,
+					     pj_pool_t *pool,
+					     pjsip_pres_status *status);
 
 
 
