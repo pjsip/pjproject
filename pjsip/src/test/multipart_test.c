@@ -116,7 +116,7 @@ static int verify_part(pjsip_multipart_part *part,
 
 	init_media_type(&mt, h_content_type, h_content_subtype, boundary);
 
-	if (pjsip_media_type_cmp(&ctype_hdr->media, &mt) != 0)
+	if (pjsip_media_type_cmp(&ctype_hdr->media, &mt, 2) != 0)
 	    return -20;
 
     } else {
@@ -153,7 +153,7 @@ static pj_status_t verify1(pj_pool_t *pool, pjsip_msg_body *body)
 
     /* Check content-type: "multipart/mixed;boundary=12345" */
     init_media_type(&mt, "multipart", "mixed", "12345");
-    if (pjsip_media_type_cmp(&body->content_type, &mt) != 0)
+    if (pjsip_media_type_cmp(&body->content_type, &mt, 2) != 0)
 	return -200;
 
     /* First part:

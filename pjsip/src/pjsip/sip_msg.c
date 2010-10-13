@@ -645,7 +645,8 @@ PJ_DEF(void) pjsip_media_type_init2( pjsip_media_type *mt,
  * Compare two media types.
  */
 PJ_DEF(int) pjsip_media_type_cmp( const pjsip_media_type *mt1,
-				  const pjsip_media_type *mt2)
+				  const pjsip_media_type *mt2,
+				  pj_bool_t cmp_param)
 {
     int rc;
 
@@ -657,7 +658,9 @@ PJ_DEF(int) pjsip_media_type_cmp( const pjsip_media_type *mt1,
     rc = pj_stricmp(&mt1->subtype, &mt2->subtype);
     if (rc) return rc;
 
-    rc = pjsip_param_cmp(&mt1->param, &mt2->param, 0);
+    if (cmp_param) {
+	rc = pjsip_param_cmp(&mt1->param, &mt2->param, (cmp_param==1));
+    }
 
     return rc;
 }

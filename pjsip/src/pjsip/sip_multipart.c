@@ -396,8 +396,11 @@ pjsip_multipart_find_part( const pjsip_msg_body *mp,
 	part = m_data->part_head.next;
 
     while (part != &m_data->part_head) {
-	if (pjsip_media_type_cmp(&part->body->content_type, content_type)==0)
+	if (pjsip_media_type_cmp(&part->body->content_type,
+				 content_type, 0)==0)
+	{
 	    return part;
+	}
 	part = part->next;
     }
 

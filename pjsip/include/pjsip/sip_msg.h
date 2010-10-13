@@ -546,12 +546,18 @@ PJ_DECL(void) pjsip_media_type_init2(pjsip_media_type *mt,
  *
  * @param mt1		The first media type.
  * @param mt2		The second media type.
+ * @param cmp_param	Specify how to compare the media type parameters:
+ * 			 - 0: do not compare parameters
+ * 			 - 1: compare parameters but ignore parameters that
+ * 			      only appear in one of the media type.
+ * 			 - 2: compare the parameters.
  *
  * @return		Zero if both media types are equal, -1 if mt1 < mt2,
  * 			1 if mt1 > mt2.
  */
 PJ_DECL(int) pjsip_media_type_cmp(const pjsip_media_type *mt1,
-				  const pjsip_media_type *mt2);
+				  const pjsip_media_type *mt2,
+				  int cmp_param);
 
 /**
  * Copy SIP media type to another.
