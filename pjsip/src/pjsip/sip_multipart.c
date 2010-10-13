@@ -521,6 +521,11 @@ PJ_DEF(pjsip_msg_body*) pjsip_multipart_parse(pj_pool_t *pool,
     ctype_param = pjsip_param_find(&ctype->param, &STR_BOUNDARY);
     if (ctype_param) {
 	boundary = ctype_param->value;
+	if (boundary.slen>2 && *boundary.ptr=='"') {
+	    /* Remove quote */
+	    boundary.ptr++;
+	    boundary.slen -= 2;
+	}
 	TRACE_((THIS_FILE, "Boundary is specified: '%.*s'", (int)boundary.slen,
 		boundary.ptr));
     }

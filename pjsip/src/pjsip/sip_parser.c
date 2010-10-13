@@ -1856,8 +1856,7 @@ static pjsip_hdr* parse_hdr_content_type( pjsip_parse_ctx *ctx )
     /* Parse media parameters */
     while (*scanner->curptr == ';') {
 	pjsip_param *param = PJ_POOL_ALLOC_T(ctx->pool, pjsip_param);
-	int_parse_param(scanner, ctx->pool, &param->name, &param->value,
-			PJSIP_PARSE_REMOVE_QUOTE);
+	int_parse_param(scanner, ctx->pool, &param->name, &param->value, 0);
 	pj_list_push_back(&hdr->media.param, param);
     }
 
