@@ -17,6 +17,8 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "  CC         Optionally specify the path of the ARM cross compiler"
   echo "             to use. By default, the compiler is deduced from the"
   echo "             SDK."
+  echo "  ARCH       Optional flags to specify target architecture, e.g."
+  echo "                ARCH='-arch armv6'"
   echo ""
   exit 0
 fi
@@ -104,7 +106,7 @@ export AR="${DEVPATH}/usr/bin/libtool -static -o"
 export RANLIB="echo ranlib"
 # Use gcc -E as preprocessor instead of cpp, since cpp will find the
 # header files in standard /usr/include instead of in isysroot
-export CPP="${CC} -E -isysroot ${SDKPATH}"
+export CPP="${CC} ${ARCH} -E -isysroot ${SDKPATH}"
 
 # Print settings
 if test "1" = "1"; then
