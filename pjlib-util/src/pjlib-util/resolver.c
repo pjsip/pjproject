@@ -842,7 +842,7 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 					    pj_dns_a_record *rec)
 {
     enum { MAX_SEARCH = 20 };
-    pj_str_t hostname, alias = {NULL, 0};
+    pj_str_t hostname, alias = {NULL, 0}, *resname;
     unsigned bufstart = 0;
     unsigned bufleft = sizeof(rec->buf_);
     unsigned i, ansidx, search_cnt=0;
@@ -888,23 +888,25 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
     if (ansidx == pkt->hdr.anscount)
 	return PJLIB_UTIL_EDNSNOANSWERREC;
 
+    resname = &hostname;
+
     /* Keep following CNAME records. */
     while (pkt->ans[ansidx].type == PJ_DNS_TYPE_CNAME &&
 	   search_cnt++ < MAX_SEARCH)
     {
-	if (!alias.slen)
-	    alias = pkt->ans[ansidx].rdata.cname.name;
+	resname = &pkt->ans[ansidx].rdata.cname.name;
 
-	for (i=ansidx+1; i < pkt->hdr.anscount; ++i) {
-	    if (pj_stricmp(&pkt->ans[ansidx].rdata.cname.name,
-			   &pkt->ans[i].name)==0)
-	    {
+	if (!alias.slen)
+	    alias = *resname;
+
+	for (i=0; i < pkt->hdr.anscount; ++i) {
+	    if (pj_stricmp(resname, &pkt->ans[i].name)==0) {
 		break;
 	    }
 	}
 
 	if (i==pkt->hdr.anscount)
-	    return PJLIB_UTIL_EDNSINANSWER;
+	    return PJLIB_UTIL_EDNSNOANSWERREC;
 
 	ansidx = i;
     }
@@ -928,10 +930,15 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 	bufleft -= alias.slen;
     }
 
-    /* Retrieve the IP address. */
-    if (rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC) {
-	rec->addr[rec->addr_count++].s_addr =
-	    pkt->ans[i].rdata.a.ip_addr.s_addr;
+    /* Get the IP addresses. */
+    for (i=0; i < pkt->hdr.anscount; ++i) {
+	if (pkt->ans[i].type == PJ_DNS_TYPE_A &&
+	    pj_stricmp(&pkt->ans[i].name, resname)==0 &&
+	    rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC)
+	{
+	    rec->addr[rec->addr_count++].s_addr =
+		pkt->ans[i].rdata.a.ip_addr.s_addr;
+	}
     }
 
     if (rec->addr_count == 0)
