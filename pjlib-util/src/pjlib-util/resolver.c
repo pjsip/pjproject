@@ -841,10 +841,11 @@ PJ_DEF(pj_status_t) pj_dns_resolver_cancel_query(pj_dns_async_query *query,
 PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 					    pj_dns_a_record *rec)
 {
-    pj_str_t hostname, alias, *res_name;
+    enum { MAX_SEARCH = 20 };
+    pj_str_t hostname, alias = {NULL, 0};
     unsigned bufstart = 0;
     unsigned bufleft = sizeof(rec->buf_);
-    unsigned i, ansidx;
+    unsigned i, ansidx, search_cnt=0;
 
     PJ_ASSERT_RETURN(pkt && rec, PJ_EINVAL);
 
@@ -887,17 +888,32 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
     if (ansidx == pkt->hdr.anscount)
 	return PJLIB_UTIL_EDNSNOANSWERREC;
 
-    /* If hostname is a CNAME, get the alias. */
-    if (pkt->ans[ansidx].type == PJ_DNS_TYPE_CNAME) {
-	alias = pkt->ans[ansidx].rdata.cname.name;
-	res_name = &alias;
-    } else if (pkt->ans[ansidx].type == PJ_DNS_TYPE_A) {
-	alias.ptr = NULL;
-	alias.slen = 0;
-	res_name = &hostname;
-    } else {
-	return PJLIB_UTIL_EDNSINANSWER;
+    /* Keep following CNAME records. */
+    while (pkt->ans[ansidx].type == PJ_DNS_TYPE_CNAME &&
+	   search_cnt++ < MAX_SEARCH)
+    {
+	if (!alias.slen)
+	    alias = pkt->ans[ansidx].rdata.cname.name;
+
+	for (i=ansidx+1; i < pkt->hdr.anscount; ++i) {
+	    if (pj_stricmp(&pkt->ans[ansidx].rdata.cname.name,
+			   &pkt->ans[i].name)==0)
+	    {
+		break;
+	    }
+	}
+
+	if (i==pkt->hdr.anscount)
+	    return PJLIB_UTIL_EDNSINANSWER;
+
+	ansidx = i;
     }
+
+    if (search_cnt >= MAX_SEARCH)
+	return PJLIB_UTIL_EDNSINANSWER;
+
+    if (pkt->ans[ansidx].type != PJ_DNS_TYPE_A)
+	return PJLIB_UTIL_EDNSINANSWER;
 
     /* Copy alias to the record, if present. */
     if (alias.slen) {
@@ -912,18 +928,10 @@ PJ_DEF(pj_status_t) pj_dns_parse_a_response(const pj_dns_parsed_packet *pkt,
 	bufleft -= alias.slen;
     }
 
-    /* Now scan the answer for all type A RRs where the name matches
-     * hostname or alias.
-     */
-    for (i=0; i<pkt->hdr.anscount; ++i) {
-	if (pkt->ans[i].type == PJ_DNS_TYPE_A &&
-	    pj_stricmp(&pkt->ans[i].name, res_name)==0 &&
-	    rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC)
-	{
-	    rec->addr[rec->addr_count].s_addr = 
-		pkt->ans[i].rdata.a.ip_addr.s_addr;
-	    ++rec->addr_count;
-	}
+    /* Retrieve the IP address. */
+    if (rec->addr_count < PJ_DNS_MAX_IP_IN_A_REC) {
+	rec->addr[rec->addr_count++].s_addr =
+	    pkt->ans[i].rdata.a.ip_addr.s_addr;
     }
 
     if (rec->addr_count == 0)
