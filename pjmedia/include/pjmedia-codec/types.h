@@ -43,13 +43,20 @@
  */
 enum
 {
-    /* PJMEDIA_RTP_PT_TELEPHONE_EVENTS is declared in
-     * <pjmedia/config.h>
+    /* According to IANA specifications, dynamic payload types are to be in
+     * the range 96-127 (inclusive). This enum is structured to place the
+     * values of the payload types specified below into that range.
+     *
+     * PJMEDIA_RTP_PT_DYNAMIC is defined in <pjmedia/codec.h>. It is defined
+     * to be 96.
+     *
+     * PJMEDIA_RTP_PT_TELEPHONE_EVENTS is defined in <pjmedia/config.h>.
+     * The default value is 96.
      */
 #if PJMEDIA_RTP_PT_TELEPHONE_EVENTS
     PJMEDIA_RTP_PT_START = PJMEDIA_RTP_PT_TELEPHONE_EVENTS,
 #else
-    PJMEDIA_RTP_PT_START = 102,
+    PJMEDIA_RTP_PT_START = (PJMEDIA_RTP_PT_DYNAMIC-1),
 #endif
 
     PJMEDIA_RTP_PT_SPEEX_NB,			/**< Speex narrowband/8KHz  */
@@ -83,6 +90,10 @@ enum
     PJMEDIA_RTP_PT_G7221C_48,			/**< G722.1 Annex C (48Kbps)*/
     PJMEDIA_RTP_PT_G7221_RSV1,			/**< G722.1 reserve	    */
     PJMEDIA_RTP_PT_G7221_RSV2,			/**< G722.1 reserve	    */
+
+    /* Caution!
+     * Ensure the value of the last pt above is <= 127.
+     */
 };
 
 /**
