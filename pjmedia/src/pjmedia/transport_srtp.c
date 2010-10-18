@@ -480,8 +480,11 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     int		     cr_rx_idx = 0;
     int		     au_rx_idx = 0;
     int		     crypto_suites_cnt;
+    pj_status_t	     status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(tp && tx && rx, PJ_EINVAL);
+
+    pj_lock_acquire(srtp->mutex);
 
     if (srtp->session_inited) {
 	pjmedia_transport_srtp_stop(tp);
@@ -505,18 +508,24 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     /* Check whether the crypto-suite requested is supported */
     if (cr_tx_idx == -1 || cr_rx_idx == -1 || au_tx_idx == -1 || 
 	au_rx_idx == -1)
-	return PJMEDIA_SRTP_ENOTSUPCRYPTO;
+    {
+	status = PJMEDIA_SRTP_ENOTSUPCRYPTO;
+	goto on_return;
+    }
 
     /* If all options points to 'NULL' method, just bypass SRTP */
     if (cr_tx_idx == 0 && cr_rx_idx == 0 && au_tx_idx == 0 && au_rx_idx == 0) {
 	srtp->bypass_srtp = PJ_TRUE;
-	return PJ_SUCCESS;
+	goto on_return;
     }
 
     /* Check key length */
     if (tx->key.slen != (pj_ssize_t)crypto_suites[cr_tx_idx].cipher_key_len ||
         rx->key.slen != (pj_ssize_t)crypto_suites[cr_rx_idx].cipher_key_len)
-	return PJMEDIA_SRTP_EINKEYLEN;
+    {
+	status = PJMEDIA_SRTP_EINKEYLEN;
+	goto on_return;
+    }
 
     /* Init transmit direction */
     pj_bzero(&tx_, sizeof(srtp_policy_t));
@@ -542,7 +551,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     tx_.next		    = NULL;
     err = srtp_create(&srtp->srtp_tx_ctx, &tx_);
     if (err != err_status_ok) {
-	return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
+	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
+	goto on_return;
     }
     srtp->tx_policy = *tx;
     pj_strset(&srtp->tx_policy.key,  srtp->tx_key, tx->key.slen);
@@ -575,7 +585,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     err = srtp_create(&srtp->srtp_rx_ctx, &rx_);
     if (err != err_status_ok) {
 	srtp_dealloc(srtp->srtp_tx_ctx);
-	return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
+	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
+	goto on_return;
     }
     srtp->rx_policy = *rx;
     pj_strset(&srtp->rx_policy.key,  srtp->rx_key, rx->key.slen);
@@ -598,7 +609,9 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
 		  (au_rx_idx?"":" auth")));
     }
 
-    return PJ_SUCCESS;
+on_return:
+    pj_lock_release(srtp->mutex);
+    return status;
 }
 
 /*
@@ -611,8 +624,12 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
 
     PJ_ASSERT_RETURN(srtp, PJ_EINVAL);
 
-    if (!p_srtp->session_inited)
+    pj_lock_acquire(p_srtp->mutex);
+
+    if (!p_srtp->session_inited) {
+	pj_lock_release(p_srtp->mutex);
 	return PJ_SUCCESS;
+    }
 
     err = srtp_dealloc(p_srtp->srtp_rx_ctx);
     if (err != err_status_ok) {
@@ -628,6 +645,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
     }
 
     p_srtp->session_inited = PJ_FALSE;
+
+    pj_lock_release(p_srtp->mutex);
 
     return PJ_SUCCESS;
 }
@@ -687,18 +706,22 @@ static pj_status_t transport_attach(pjmedia_transport *tp,
     PJ_ASSERT_RETURN(tp && rem_addr && addr_len, PJ_EINVAL);
 
     /* Save the callbacks */
+    pj_lock_acquire(srtp->mutex);
     srtp->rtp_cb = rtp_cb;
     srtp->rtcp_cb = rtcp_cb;
     srtp->user_data = user_data;
+    pj_lock_release(srtp->mutex);
 
     /* Attach itself to transport */
     status = pjmedia_transport_attach(srtp->member_tp, srtp, rem_addr, 
 				      rem_rtcp, addr_len, &srtp_rtp_cb,
 				      &srtp_rtcp_cb);
     if (status != PJ_SUCCESS) {
+	pj_lock_acquire(srtp->mutex);
 	srtp->rtp_cb = NULL;
 	srtp->rtcp_cb = NULL;
 	srtp->user_data = NULL;
+	pj_lock_release(srtp->mutex);
 	return status;
     }
 
@@ -717,9 +740,11 @@ static void transport_detach(pjmedia_transport *tp, void *strm)
     }
 
     /* Clear up application infos from transport */
+    pj_lock_acquire(srtp->mutex);
     srtp->rtp_cb = NULL;
     srtp->rtcp_cb = NULL;
     srtp->user_data = NULL;
+    pj_lock_release(srtp->mutex);
 }
 
 static pj_status_t transport_send_rtp( pjmedia_transport *tp,
@@ -734,15 +759,16 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     if (srtp->bypass_srtp)
 	return pjmedia_transport_send_rtp(srtp->member_tp, pkt, size);
 
-    if (!srtp->session_inited)
-	return PJ_SUCCESS;
-
     if (size > sizeof(srtp->rtp_tx_buffer))
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtp_tx_buffer, pkt, size);
 
     pj_lock_acquire(srtp->mutex);
+    if (!srtp->session_inited) {
+	pj_lock_release(srtp->mutex);
+	return PJ_EINVALIDOP;
+    }
     err = srtp_protect(srtp->srtp_tx_ctx, srtp->rtp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);
 
@@ -778,15 +804,16 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 	                                    pkt, size);
     }
 
-    if (!srtp->session_inited)
-	return PJ_SUCCESS;
-
     if (size > sizeof(srtp->rtcp_tx_buffer))
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtcp_tx_buffer, pkt, size);
 
     pj_lock_acquire(srtp->mutex);
+    if (!srtp->session_inited) {
+	pj_lock_release(srtp->mutex);
+	return PJ_EINVALIDOP;
+    }
     err = srtp_protect_rtcp(srtp->srtp_tx_ctx, srtp->rtcp_tx_buffer, &len);
     pj_lock_release(srtp->mutex);
 
@@ -819,14 +846,14 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
 
     PJ_ASSERT_RETURN(tp, PJ_EINVAL);
 
-    pj_lock_acquire(srtp->mutex);
-
     if (srtp->setting.close_member_tp && srtp->member_tp) {
 	pjmedia_transport_close(srtp->member_tp);
     }
 
     status = pjmedia_transport_srtp_stop(tp);
 
+    /* In case mutex is being acquired by other thread */
+    pj_lock_acquire(srtp->mutex);
     pj_lock_release(srtp->mutex);
 
     pj_lock_destroy(srtp->mutex);
@@ -843,13 +870,15 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
     transport_srtp *srtp = (transport_srtp *) user_data;
     int len = size;
     err_status_t err;
+    void (*cb)(void*, void*, pj_ssize_t) = NULL;
+    void *cb_data = NULL;
 
     if (srtp->bypass_srtp) {
 	srtp->rtp_cb(srtp->user_data, pkt, size);
 	return;
     }
 
-    if (size < 0 || !srtp->session_inited) {
+    if (size < 0) {
 	return;
     }
 
@@ -861,8 +890,11 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 
     pj_lock_acquire(srtp->mutex);
 
+    if (!srtp->session_inited) {
+	pj_lock_release(srtp->mutex);
+	return;
+    }
     err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
-
     if (srtp->probation_cnt > 0 && 
 	(err == err_status_replay_old || err == err_status_replay_fail)) 
     {
@@ -884,15 +916,20 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 	}
     }
 
-    if (err == err_status_ok) {
-	srtp->rtp_cb(srtp->user_data, pkt, len);
-    } else {
+    if (err != err_status_ok) {
 	PJ_LOG(5,(srtp->pool->obj_name, 
 		  "Failed to unprotect SRTP, pkt size=%d, err=%s", 
 		  size, get_libsrtp_errstr(err)));
+    } else {
+	cb = srtp->rtp_cb;
+	cb_data = srtp->user_data;
     }
 
     pj_lock_release(srtp->mutex);
+
+    if (cb) {
+	(*cb)(cb_data, pkt, len);
+    }
 }
 
 /*
@@ -903,13 +940,15 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
     transport_srtp *srtp = (transport_srtp *) user_data;
     int len = size;
     err_status_t err;
+    void (*cb)(void*, void*, pj_ssize_t) = NULL;
+    void *cb_data = NULL;
 
     if (srtp->bypass_srtp) {
 	srtp->rtcp_cb(srtp->user_data, pkt, size);
 	return;
     }
 
-    if (size < 0 || !srtp->session_inited) {
+    if (size < 0) {
 	return;
     }
 
@@ -918,17 +957,25 @@ static void srtp_rtcp_cb( void *user_data, void *pkt, pj_ssize_t size)
 
     pj_lock_acquire(srtp->mutex);
 
+    if (!srtp->session_inited) {
+	pj_lock_release(srtp->mutex);
+	return;
+    }
     err = srtp_unprotect_rtcp(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
-
-    if (err == err_status_ok) {
-	srtp->rtcp_cb(srtp->user_data, pkt, len);
-    } else {
+    if (err != err_status_ok) {
 	PJ_LOG(5,(srtp->pool->obj_name, 
 		  "Failed to unprotect SRTCP, pkt size=%d, err=%s",
 		  size, get_libsrtp_errstr(err)));
+    } else {
+	cb = srtp->rtcp_cb;
+	cb_data = srtp->user_data;
     }
-    
+
     pj_lock_release(srtp->mutex);
+
+    if (cb) {
+	(*cb)(cb_data, pkt, len);
+    }
 }
 
 /* Generate crypto attribute, including crypto key.
@@ -1570,6 +1617,11 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_decrypt_pkt(pjmedia_transport *tp,
     PJ_ASSERT_ON_FAIL( (((long)pkt) & 0x03)==0, return PJ_EINVAL);
 
     pj_lock_acquire(srtp->mutex);
+
+    if (!srtp->session_inited) {
+	pj_lock_release(srtp->mutex);
+	return PJ_EINVALIDOP;
+    }
 
     if (is_rtp)
 	err = srtp_unprotect(srtp->srtp_rx_ctx, pkt, pkt_len);
