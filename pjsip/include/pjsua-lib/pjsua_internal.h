@@ -93,7 +93,8 @@ typedef struct pjsua_call
 
     struct {
 	pj_timer_entry	 reinv_timer;/**< Reinvite retry timer.		    */
-	pjmedia_sdp_session *new_sdp;/**< The new SDP offer.		    */
+	pj_uint32_t	 sdp_ver;    /**< SDP version of the bad answer     */
+	int		 retry_cnt;  /**< Retry count.			    */
     } lock_codec;		     /**< Data for codec locking when answer
 					  contains multiple codecs.	    */
 

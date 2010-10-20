@@ -29,6 +29,10 @@
  */
 #define LOCK_CODEC_RETRY_INTERVAL   200
 
+/*
+ * Max UPDATE/re-INVITE retry to lock codec
+ */
+#define LOCK_CODEC_MAX_RETRY	     5
 
 /* This callback receives notification from invite session when the
  * session state has changed.
@@ -2988,15 +2992,16 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     return PJ_SUCCESS;
 }
 
+/* Proto */
+static pj_status_t perform_lock_codec(pjsua_call *call);
 
-/* Timer callback to close sound device */
+/* Timer callback to send re-INVITE or UPDATE to lock codec */
 static void reinv_timer_cb(pj_timer_heap_t *th,
 			   pj_timer_entry *entry)
 {
     pjsua_call_id call_id = (pjsua_call_id)(pj_size_t)entry->user_data;
     pjsip_dialog *dlg;
     pjsua_call *call;
-    pjsip_tx_data *tdata;
     pj_status_t status;
 
     PJ_UNUSED_ARG(th);
@@ -3007,51 +3012,8 @@ static void reinv_timer_cb(pj_timer_heap_t *th,
     if (status != PJ_SUCCESS)
 	return;
 
-    /* Verify if another SDP negotiation is in progress, e.g: session timer
-     * or another re-INVITE.
-     */
-    if (call->inv==NULL || call->inv->neg==NULL ||
-	pjmedia_sdp_neg_get_state(call->inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE)
-    {
-	goto on_return;
-    }
+    status = perform_lock_codec(call);
 
-    /* Verify if another SDP negotiation has been completed by comparing
-     * the SDP version.
-     */
-    {
-	const pjmedia_sdp_session *sdp;
-
-	status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
-	if (status == PJ_SUCCESS &&
-	    sdp->origin.version > call->lock_codec.new_sdp->origin.version)
-	{
-	    goto on_return;
-	}
-    }
-
-    /* Create re-INVITE with the new offer */
-    status = pjsip_inv_reinvite(call->inv, NULL, call->lock_codec.new_sdp,
-				&tdata);
-    if (status == PJ_EINVALIDOP) {
-	/* Ups, let's reschedule again */
-	pj_time_val delay = {0, LOCK_CODEC_RETRY_INTERVAL};
-	call->lock_codec.reinv_timer.id = PJ_TRUE;
-	pjsip_endpt_schedule_timer(pjsua_var.endpt, 
-				   &call->lock_codec.reinv_timer, &delay);
-    } else if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Failed creating re-INVITE in lock codec",
-		     status);
-    }
-
-    /* Send the UPDATE/re-INVITE request */
-    status = pjsip_inv_send_msg(call->inv, tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Failed sending re-INVITE in lock codec",
-		     status);
-    }
-
-on_return:
     pjsip_dlg_dec_lock(dlg);
 }
 
@@ -3060,6 +3022,7 @@ on_return:
 static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
 				  const pj_str_t *fmt)
 {
+    const pj_str_t STR_TEL = {"telephone-event", 15};
     unsigned pt;
 
     pt = pj_strtoul(fmt);
@@ -3077,7 +3040,7 @@ static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
 	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "rtpmap", fmt);
 	if (a && pjmedia_sdp_attr_get_rtpmap(a, &rtpmap)==PJ_SUCCESS) {
 	    /* Check for telephone-event */
-	    if (pj_stricmp2(&rtpmap.enc_name, "telephone-event")==0)
+	    if (pj_stricmp(&rtpmap.enc_name, &STR_TEL)==0)
 		return PJ_TRUE;
 	} else {
 	    /* Invalid SDP, should not reach here */
@@ -3090,20 +3053,130 @@ static pj_bool_t is_non_av_fmt(const pjmedia_sdp_media *m,
 }
 
 
+/* Send re-INVITE or UPDATE with new SDP offer to select only one codec
+ * out of several codecs presented by callee in his answer.
+ */
+static pj_status_t perform_lock_codec(pjsua_call *call)
+{
+    const pj_str_t STR_UPDATE = {"UPDATE", 6};
+    const pjmedia_sdp_session *local_sdp = NULL, *new_sdp;
+    const pjmedia_sdp_media *rem_m;
+    pjmedia_sdp_media *m;
+    unsigned i, codec_cnt = 0;
+    pj_bool_t rem_can_update;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(call->lock_codec.reinv_timer.id==PJ_FALSE,
+		     PJ_EINVALIDOP);
+
+    /* Verify if another SDP negotiation is in progress, e.g: session timer
+     * or another re-INVITE.
+     */
+    if (call->inv==NULL || call->inv->neg==NULL ||
+	pjmedia_sdp_neg_get_state(call->inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE)
+    {
+	return PJ_SUCCESS;
+    }
+
+    /* Verify if another SDP negotiation has been completed by comparing
+     * the SDP version.
+     */
+    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &local_sdp);
+    if (status != PJ_SUCCESS)
+	return status;
+    if (local_sdp->origin.version > call->lock_codec.sdp_ver)
+	return PJMEDIA_SDP_EINVER;
+
+    PJ_LOG(3, (THIS_FILE, "Updating media session to use only one codec.."));
+
+    /* Update the new offer so it contains only a codec. Note that formats
+     * order in the offer should have been matched to the answer, so we can
+     * just directly update the offer without looking-up the answer.
+     */
+    new_sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, local_sdp);
+    rem_m = local_sdp->media[call->audio_idx];
+    m = new_sdp->media[call->audio_idx];
+    codec_cnt = 0;
+    i = 0;
+    while (i < m->desc.fmt_count) {
+	pjmedia_sdp_attr *a;
+	pj_str_t *fmt = &m->desc.fmt[i];
+
+	if (is_non_av_fmt(m, fmt) || (++codec_cnt == 1)) {
+	    ++i;
+	    continue;
+	}
+
+	/* Remove format */
+	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "rtpmap", fmt);
+	if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
+	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "fmtp", fmt);
+	if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
+	pj_array_erase(m->desc.fmt, sizeof(m->desc.fmt[0]),
+		       m->desc.fmt_count, i);
+	--m->desc.fmt_count;
+    }
+
+    /* Last check if SDP trully needs to be udpated. It is possible that OA
+     * negotiations have completed and SDP has changed but remote didn't
+     * increase it's SDP version.
+     */
+    if (rem_m->desc.fmt_count == m->desc.fmt_count ||
+	rem_m->desc.port == 0 || m->desc.port == 0)
+    {
+	return PJ_SUCCESS;
+    }
+
+    /* Send UPDATE or re-INVITE */
+    rem_can_update = pjsip_dlg_remote_has_cap(call->inv->dlg,
+					      PJSIP_H_ALLOW,
+					      NULL, &STR_UPDATE) ==
+						PJSIP_DIALOG_CAP_SUPPORTED;
+    if (rem_can_update) {
+	status = pjsip_inv_update(call->inv, NULL, new_sdp, &tdata);
+    } else {
+	status = pjsip_inv_reinvite(call->inv, NULL, new_sdp, &tdata);
+    }
+
+    if (status==PJ_EINVALIDOP &&
+	++call->lock_codec.retry_cnt <= LOCK_CODEC_MAX_RETRY)
+    {
+	/* Ups, let's reschedule again */
+	pj_time_val delay = {0, LOCK_CODEC_RETRY_INTERVAL};
+	pj_time_val_normalize(&delay);
+	call->lock_codec.reinv_timer.id = PJ_TRUE;
+	pjsip_endpt_schedule_timer(pjsua_var.endpt,
+				   &call->lock_codec.reinv_timer, &delay);
+	return status;
+    } else if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error creating UPDATE/re-INVITE to lock codec",
+		     status);
+	return status;
+    }
+
+    /* Send the UPDATE/re-INVITE request */
+    status = pjsip_inv_send_msg(call->inv, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error sending UPDATE/re-INVITE in lock codec",
+		     status);
+	return status;
+    }
+
+    return status;
+}
+
 /* Check if remote answerer has given us more than one codecs. If so,
  * create another offer with one codec only to lock down the codec.
  */
 static pj_status_t lock_codec(pjsua_call *call)
 {
-    const pj_str_t st_update = {"UPDATE", 6};
     pjsip_inv_session *inv = call->inv;
     const pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
     const pjmedia_sdp_media *rem_m;
-    pjmedia_sdp_session *new_sdp;
-    pjmedia_sdp_media *m;
-    pjsip_tx_data *tdata;
-    unsigned i, codec_cnt = 0;
+    unsigned codec_cnt=0, i;
+    pj_time_val delay = {0, 0};
     pj_status_t status;
 
     if (!pjmedia_sdp_neg_was_answer_remote(inv->neg))
@@ -3137,74 +3210,27 @@ static pj_status_t lock_codec(pjsua_call *call)
 	return PJ_SUCCESS;
     }
 
-    PJ_LOG(3, (THIS_FILE, "Got answer with multiple codecs, start "
+    PJ_LOG(3, (THIS_FILE, "Got answer with multiple codecs, scheduling "
 			  "updating media session to use only one codec.."));
 
-    /* Clone the offer */
-    new_sdp = pjmedia_sdp_session_clone(inv->pool_prov, local_sdp);
-    /* Note that the usage of pool_prov above is risky when locking codec
-     * delays the re-INVITE (using timer) and there are two SDP negotiations
-     * done before the re-INVITE.
-     */
+    call->lock_codec.sdp_ver = local_sdp->origin.version;
+    call->lock_codec.retry_cnt = 0;
 
-    /* Update the new offer so it contains only a codec. Note that formats
-     * order in the offer should have been matched to the answer, so we can
-     * just directly update the offer without looking-up the answer.
-     */
-    m = new_sdp->media[call->audio_idx];
-    codec_cnt = 0;
-    i = 0;
-    while (i < m->desc.fmt_count) {
-	pjmedia_sdp_attr *a;
-	pj_str_t *fmt = &m->desc.fmt[i];
-
-	if (is_non_av_fmt(m, fmt) || (++codec_cnt == 1)) {
-	    ++i;
-	    continue;
-	}
-
-	/* Remove format */
-	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "rtpmap", fmt);
-	if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
-	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "fmtp", fmt);
-	if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
-	pj_array_erase(m->desc.fmt, sizeof(m->desc.fmt[0]), 
-		       m->desc.fmt_count, i);
-	--m->desc.fmt_count;
+    /* Stop lock codec timer, if it is active */
+    if (call->lock_codec.reinv_timer.id) {
+	pjsip_endpt_cancel_timer(pjsua_var.endpt,
+				 &call->lock_codec.reinv_timer);
+	call->lock_codec.reinv_timer.id = PJ_FALSE;
     }
 
-    /* Send new SDP offer via UPDATE or re-INVITE */
-    if (pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL, &st_update)==
-	PJSIP_DIALOG_CAP_SUPPORTED)
-    {
-	/* Create UPDATE with the new offer */
-	status = pjsip_inv_update(inv, NULL, new_sdp, &tdata);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-    } else {
-	/* Create re-INVITE with the new offer */
-	status = pjsip_inv_reinvite(inv, NULL, new_sdp, &tdata);
-	if (status == PJ_EINVALIDOP) {
-	    /* Current INVITE transaction is pending, reschedule re-INVITE. */
-	    pj_time_val delay = {0, LOCK_CODEC_RETRY_INTERVAL};
-
-	    call->lock_codec.new_sdp = new_sdp;
-	    pj_timer_entry_init(&call->lock_codec.reinv_timer, PJ_TRUE,
-				(void*)(pj_size_t)call->index,
-				&reinv_timer_cb);
-	    pjsip_endpt_schedule_timer(pjsua_var.endpt, 
-				       &call->lock_codec.reinv_timer, &delay);
-	    return PJ_SUCCESS;
-
-	} else if (status != PJ_SUCCESS)
-	    return status;
-    }
-
-    /* Send the UPDATE/re-INVITE request */
-    status = pjsip_inv_send_msg(inv, tdata);
-    if (status != PJ_SUCCESS)
-	return status;
+    /* Can't send UPDATE or re-INVITE now, so just schedule it immediately.
+     * See: https://trac.pjsip.org/repos/ticket/1149
+     */
+    pj_timer_entry_init(&call->lock_codec.reinv_timer, PJ_TRUE,
+			(void*)(pj_size_t)call->index,
+			&reinv_timer_cb);
+    pjsip_endpt_schedule_timer(pjsua_var.endpt,
+			       &call->lock_codec.reinv_timer, &delay);
 
     return PJ_SUCCESS;
 }
@@ -3560,6 +3586,14 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL, &st_update)==
 	PJSIP_DIALOG_CAP_SUPPORTED)
     {
+	status = lock_codec(call);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Unable to lock codec", status);
+	}
+    } else if (inv->state == PJSIP_INV_STATE_CONFIRMED &&
+	       call->media_st == PJSUA_CALL_MEDIA_ACTIVE)
+    {
+	/* https://trac.pjsip.org/repos/ticket/1149 */
 	status = lock_codec(call);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to lock codec", status);
