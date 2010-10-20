@@ -302,13 +302,17 @@ PJ_DECL(pj_status_t) pj_activesock_create_udp(pj_pool_t *pool,
  */
 PJ_DECL(pj_status_t) pj_activesock_close(pj_activesock_t *asock);
 
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+#if (defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0) || \
+     defined(DOXYGEN)
 /**
  * Set iPhone OS background mode setting. Setting to 1 will enable TCP
  * active socket to receive incoming data when application is in the
  * background. Setting to 0 will disable it. Default value of this
  * setting is PJ_ACTIVESOCK_TCP_IPHONE_OS_BG.
+ *
+ * This API is only available if PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT
+ * is set to non-zero.
  *
  * @param asock	    The active socket.
  * @param val	    The value of background mode setting.
@@ -323,6 +327,9 @@ PJ_DECL(void) pj_activesock_set_iphone_os_bg(pj_activesock_t *asock,
  * afterwards, if you want to change the setting for a particular
  * active socket, use #pj_activesock_set_iphone_os_bg() instead.
  * By default, this setting is enabled.
+ *
+ * This API is only available if PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT
+ * is set to non-zero.
  *
  * @param val	    The value of global background mode setting.
  *
