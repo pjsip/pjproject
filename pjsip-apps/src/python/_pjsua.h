@@ -1666,7 +1666,7 @@ typedef struct
     PyObject	    *contact_params;
     PyObject	    *contact_uri_params;
     int		     require_100rel;
-    int		     require_timer;
+    int		     use_timer;
     unsigned	     timer_se;
     unsigned	     timer_min_se;
     int		     allow_contact_rewrite;
@@ -1744,7 +1744,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     Py_XDECREF(obj->contact_uri_params);
     obj->contact_uri_params = PyString_FromPJ(&cfg->contact_uri_params);
     obj->require_100rel = cfg->require_100rel;
-    obj->require_timer = cfg->require_timer;
+    obj->use_timer = cfg->use_timer;
     obj->timer_se = cfg->timer_setting.sess_expires;
     obj->timer_min_se = cfg->timer_setting.min_se;
     obj->allow_contact_rewrite = cfg->allow_contact_rewrite;
@@ -1794,7 +1794,7 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     cfg->contact_params = PyString_ToPJ(obj->contact_params);
     cfg->contact_uri_params = PyString_ToPJ(obj->contact_uri_params);
     cfg->require_100rel = obj->require_100rel;
-    cfg->require_timer = obj->require_timer;
+    cfg->use_timer = obj->use_timer;
     cfg->timer_setting.sess_expires = obj->timer_se;
     cfg->timer_setting.min_se = obj->timer_min_se;
     cfg->allow_contact_rewrite = obj->allow_contact_rewrite;
@@ -1947,9 +1947,10 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
 	"Require reliable provisional response."
     },
     {
-	"require_timer", T_INT,
-	offsetof(PyObj_pjsua_acc_config, require_timer), 0,
-	"Require session timer."
+	"use_timer", T_INT,
+	offsetof(PyObj_pjsua_acc_config, use_timer), 0,
+	"Use SIP session timers? (default=1)"
+	"0:inactive, 1:optional, 2:mandatory, 3:always"
     },
     {
 	"timer_se", T_INT,
