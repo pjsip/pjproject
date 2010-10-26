@@ -47,7 +47,9 @@ static int base256_char(char c)
     else if (c == '/')
 	return (63);
     else {
-	pj_assert(!"Should not happen as '=' should have been filtered");
+	/* It *may* happen on bad input, so this is not a good idea.
+	 * pj_assert(!"Should not happen as '=' should have been filtered");
+	 */
 	return INV;
     }
 }
@@ -124,8 +126,8 @@ PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
 {
     const char *buf = input->ptr;
     int len = input->slen;
-    int i, j;
-    int c1, c2, c3, c4;
+    int i, j, k;
+    int c[4];
 
     PJ_ASSERT_RETURN(input && out && out_len, PJ_EINVAL);
 
@@ -135,42 +137,28 @@ PJ_DEF(pj_status_t) pj_base64_decode(const pj_str_t *input,
     PJ_ASSERT_RETURN(*out_len >= PJ_BASE64_TO_BASE256_LEN(len), 
 		     PJ_ETOOSMALL);
 
-    for (i=0, j=0; i+3 < len; i+=4) {
-	c1 = base256_char(buf[i]);
-	c2 = base256_char(buf[i+1]);
-	c3 = base256_char(buf[i+2]);
-	c4 = base256_char(buf[i+3]);
+    for (i=0, j=0; i<len; ) {
+	/* Fill up c, silently ignoring invalid characters */
+	for (k=0; k<4 && i<len; ++k) {
+	    do {
+		c[k] = base256_char(buf[i++]);
+	    } while (c[k]==INV && i<len);
+	}
 
-	out[j++] = (pj_uint8_t)((c1<<2) | ((c2 & 0x30)>>4));
-	out[j++] = (pj_uint8_t)(((c2 & 0x0F)<<4) | ((c3 & 0x3C)>>2));
-	out[j++] = (pj_uint8_t)(((c3 & 0x03)<<6) | (c4 & 0x3F));
-    }
-
-    if (i < len) {
-	c1 = base256_char(buf[i]);
-
-	if (i+1 < len)
-	    c2 = base256_char(buf[i+1]);
-	else 
-	    c2 = (INV);
-
-	if (i+2 < len)
-	    c3 = base256_char(buf[i+2]);
-	else
-	    c3 = (INV);
-
-	c4 = (INV);
-
-	if (c2 != INV) {
-	    out[j++] = (pj_uint8_t)((c1<<2) | ((c2 & 0x30)>>4));
-	    if (c3 != INV) {
-		out[j++] = (pj_uint8_t)(((c2 & 0x0F)<<4) | ((c3 & 0x3C)>>2));
-		if (c4 != INV) {
-		    out[j++] = (pj_uint8_t)(((c3 & 0x03)<<6) | (c4 & 0x3F));
+	if (k<4) {
+	    if (k > 1) {
+		out[j++] = (pj_uint8_t)((c[0]<<2) | ((c[1] & 0x30)>>4));
+		if (k > 2) {
+		    out[j++] = (pj_uint8_t)
+			       (((c[1] & 0x0F)<<4) | ((c[2] & 0x3C)>>2));
 		}
 	    }
+	    break;
 	}
-	
+
+	out[j++] = (pj_uint8_t)((c[0]<<2) | ((c[1] & 0x30)>>4));
+	out[j++] = (pj_uint8_t)(((c[1] & 0x0F)<<4) | ((c[2] & 0x3C)>>2));
+	out[j++] = (pj_uint8_t)(((c[2] & 0x03)<<6) | (c[3] & 0x3F));
     }
 
     pj_assert(j < *out_len);
