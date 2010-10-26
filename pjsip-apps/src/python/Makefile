@@ -5,5 +5,8 @@ clean:
 	python setup.py clean
 	rm -rf ./build
 
-%:
+install:
 	python setup.py $@
+
+dep doc:
+
