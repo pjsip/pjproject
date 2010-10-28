@@ -26,6 +26,7 @@
  */
 
 #include <pjmedia-codec/config.h>
+#include <pjmedia/codec.h>
 
 /**
  * @defgroup pjmedia_codec_types PJMEDIA-CODEC Types and Constants
