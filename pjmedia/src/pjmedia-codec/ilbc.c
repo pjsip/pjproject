@@ -31,7 +31,7 @@
 #include <pj/string.h>
 #include <pj/os.h>
 
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     #include <AudioToolbox/AudioToolbox.h>
     #define iLBC_Enc_Inst_t AudioConverterRef
     #define iLBC_Dec_Inst_t AudioConverterRef
@@ -151,7 +151,7 @@ struct ilbc_codec
     unsigned		 dec_samples_per_frame;
     float		 dec_block[BLOCKL_MAX];
 
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     unsigned		 enc_total_packets;
     char		 *enc_buffer;
     unsigned		 enc_buffer_offset;
@@ -371,7 +371,7 @@ static pj_status_t ilbc_dealloc_codec( pjmedia_codec_factory *factory,
 
     ilbc_codec = (struct ilbc_codec*) codec;
 
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     if (ilbc_codec->enc) {
 	AudioConverterDispose(ilbc_codec->enc);
 	ilbc_codec->enc = NULL;
@@ -410,7 +410,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     pj_uint16_t dec_fmtp_mode = DEFAULT_MODE, 
 		enc_fmtp_mode = DEFAULT_MODE;
 
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     AudioStreamBasicDescription srcFormat, dstFormat;
     UInt32 size;
 
@@ -479,7 +479,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     attr->info.frm_ptime = dec_fmtp_mode;
 
     /* Create encoder */
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     dstFormat.mFramesPerPacket  = CLOCK_RATE * enc_fmtp_mode / 1000;
     dstFormat.mBytesPerPacket   = (enc_fmtp_mode == 20? 38 : 50);
 
@@ -498,7 +498,7 @@ static pj_status_t ilbc_codec_open(pjmedia_codec *codec,
     ilbc_codec->enc_ready = PJ_TRUE;
 
     /* Create decoder */
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     if (AudioConverterNew(&dstFormat, &srcFormat, &ilbc_codec->dec) != noErr)
 	return PJMEDIA_CODEC_EFAILED;
     ilbc_codec->dec_samples_per_frame = CLOCK_RATE * dec_fmtp_mode / 1000;
@@ -594,7 +594,7 @@ static pj_status_t  ilbc_codec_parse( pjmedia_codec *codec,
     return PJ_SUCCESS;
 }
 
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
 static OSStatus encodeDataProc (
     AudioConverterRef             inAudioConverter,
     UInt32                        *ioNumberDataPackets,
@@ -668,7 +668,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
     pj_int16_t *pcm_in;
     unsigned nsamples;
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     UInt32 npackets;
     OSStatus err;
     AudioBufferList theABL;
@@ -713,7 +713,7 @@ static pj_status_t ilbc_codec_encode(pjmedia_codec *codec,
 
     /* Encode */
     output->size = 0;
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     npackets = nsamples / ilbc_codec->enc_samples_per_frame;
 
     theABL.mNumberBuffers = 1;
@@ -764,7 +764,7 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 				     struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     UInt32 npackets;
     OSStatus err;
     AudioBufferList theABL;
@@ -782,7 +782,7 @@ static pj_status_t ilbc_codec_decode(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EFRMINLEN;
 
     /* Decode to temporary buffer */
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     npackets = input->size / ilbc_codec->dec_frame_size *
 	       ilbc_codec->dec_samples_per_frame;
 
@@ -827,7 +827,7 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 				      struct pjmedia_frame *output)
 {
     struct ilbc_codec *ilbc_codec = (struct ilbc_codec*)codec;
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     UInt32 npackets;
     OSStatus err;
     AudioBufferList theABL;
@@ -842,7 +842,7 @@ static pj_status_t  ilbc_codec_recover(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EPCMTOOSHORT;
 
     /* Decode to temporary buffer */
-#ifdef PJMEDIA_ILBC_CODEC_USE_COREAUDIO
+#if defined(PJMEDIA_ILBC_CODEC_USE_COREAUDIO)&& PJMEDIA_ILBC_CODEC_USE_COREAUDIO
     npackets = 1;
 
     theABL.mNumberBuffers = 1;
