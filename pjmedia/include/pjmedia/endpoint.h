@@ -43,6 +43,21 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * This enumeration describes various flags that can be set or retrieved in
+ * the media endpoint, by using pjmedia_endpt_set_flag() and
+ * pjmedia_endpt_get_flag() respectively.
+ */
+typedef enum pjmedia_endpt_flag
+{
+    /**
+     * This flag controls whether telephony-event should be offered in SDP.
+     * Value is boolean.
+     */
+    PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG
+
+} pjmedia_endpt_flag;
+
 
 /**
  * Create an instance of media endpoint.
@@ -73,7 +88,31 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create( pj_pool_factory *pf,
  */
 PJ_DECL(pj_status_t) pjmedia_endpt_destroy(pjmedia_endpt *endpt);
 
+/**
+ * Change the value of a flag.
+ *
+ * @param endpt		Media endpoint.
+ * @param flag		The flag.
+ * @param value		Pointer to the value to be set.
+ *
+ * @reurn		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_endpt_set_flag(pjmedia_endpt *endpt,
+					    pjmedia_endpt_flag flag,
+					    const void *value);
 
+/**
+ *  Retrieve the value of a flag.
+ *
+ *  @param endpt	Media endpoint.
+ *  @param flag		The flag.
+ *  @param value	Pointer to store the result.
+ *
+ *  @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_endpt_get_flag(pjmedia_endpt *endpt,
+					    pjmedia_endpt_flag flag,
+					    void *value);
 
 /**
  * Get the ioqueue instance of the media endpoint.

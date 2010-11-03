@@ -87,6 +87,9 @@ struct pjmedia_endpt
 
     /** To signal polling thread to quit. */
     pj_bool_t		  quit_flag;
+
+    /** Is telephone-event enable */
+    pj_bool_t		  has_telephone_event;
 };
 
 /**
@@ -120,6 +123,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     endpt->pf = pf;
     endpt->ioqueue = ioqueue;
     endpt->thread_cnt = worker_cnt;
+    endpt->has_telephone_event = PJ_TRUE;
 
     /* Sound */
     status = pjmedia_aud_subsys_init(pf);
@@ -221,6 +225,39 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pjmedia_endpt_set_flag( pjmedia_endpt *endpt,
+					    pjmedia_endpt_flag flag,
+					    const void *value)
+{
+    PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
+
+    switch (flag) {
+    case PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG:
+	endpt->has_telephone_event = *(pj_bool_t*)value;
+	break;
+    default:
+	return PJ_EINVAL;
+    }
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_endpt_get_flag( pjmedia_endpt *endpt,
+					    pjmedia_endpt_flag flag,
+					    void *value)
+{
+    PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
+
+    switch (flag) {
+    case PJMEDIA_ENDPT_HAS_TELEPHONE_EVENT_FLAG:
+	*(pj_bool_t*)value = endpt->has_telephone_event;
+	break;
+    default:
+	return PJ_EINVAL;
+    }
+
+    return PJ_SUCCESS;
+}
 
 /**
  * Get the ioqueue instance of the media endpoint.
@@ -489,25 +526,26 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
     PJMEDIA_RTP_PT_TELEPHONE_EVENTS != 0
-
     /*
      * Add support telephony event
      */
-    m->desc.fmt[m->desc.fmt_count++] = 
-	pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR);
+    if (endpt->has_telephone_event) {
+	m->desc.fmt[m->desc.fmt_count++] =
+	    pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR);
 
-    /* Add rtpmap. */
-    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    attr->name = pj_str("rtpmap");
-    attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR 
-			 " telephone-event/8000");
-    m->attr[m->attr_count++] = attr;
+	/* Add rtpmap. */
+	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	attr->name = pj_str("rtpmap");
+	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR
+			     " telephone-event/8000");
+	m->attr[m->attr_count++] = attr;
 
-    /* Add fmtp */
-    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    attr->name = pj_str("fmtp");
-    attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
-    m->attr[m->attr_count++] = attr;
+	/* Add fmtp */
+	attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+	attr->name = pj_str("fmtp");
+	attr->value = pj_str(PJMEDIA_RTP_PT_TELEPHONE_EVENTS_STR " 0-15");
+	m->attr[m->attr_count++] = attr;
+    }
 #endif
 
     /* Done */
