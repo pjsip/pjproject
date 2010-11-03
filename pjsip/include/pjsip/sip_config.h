@@ -77,6 +77,10 @@ typedef struct pjsip_cfg_t
 	 */
 	pj_bool_t allow_port_in_fromto_hdr;
 
+	/**
+	 * Disable rport in request.
+	 */
+	pj_bool_t disable_rport;
     } endpt;
 
     /** Transaction layer settings. */

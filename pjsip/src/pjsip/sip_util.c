@@ -245,7 +245,7 @@ static void init_request_throw( pjsip_endpoint *endpt,
 
     /* Add a blank Via header in the front of the message. */
     via = pjsip_via_hdr_create(tdata->pool);
-    via->rport_param = 0;
+    via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
     pjsip_msg_insert_first_hdr(msg, (pjsip_hdr*)via);
 
     /* Add header params as request headers */
@@ -1179,7 +1179,7 @@ static void stateless_send_transport_cb( void *token,
 
 	via->transport = pj_str(stateless_data->cur_transport->type_name);
 	via->sent_by = stateless_data->cur_transport->local_name;
-	via->rport_param = 0;
+	via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
 
 	pjsip_tx_data_invalidate_msg(tdata);
 
