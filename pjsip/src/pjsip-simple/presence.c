@@ -35,6 +35,12 @@
 #define THIS_FILE		    "presence.c"
 #define PRES_DEFAULT_EXPIRES	    PJSIP_PRES_DEFAULT_EXPIRES
 
+#if PJSIP_PRES_BAD_CONTENT_RESPONSE < 200 || \
+    PJSIP_PRES_BAD_CONTENT_RESPONSE > 699 || \
+    PJSIP_PRES_BAD_CONTENT_RESPONSE/100 == 3
+# error Invalid PJSIP_PRES_BAD_CONTENT_RESPONSE value
+#endif
+
 /*
  * Presence module (mod-presence)
  */
@@ -759,25 +765,35 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
 
     if (status != PJ_SUCCESS) {
 	/* Unsupported or bad Content-Type */
-	pjsip_accept_hdr *accept_hdr;
-	pjsip_warning_hdr *warn_hdr;
+	if (PJSIP_PRES_BAD_CONTENT_RESPONSE >= 300) {
+	    pjsip_accept_hdr *accept_hdr;
+	    pjsip_warning_hdr *warn_hdr;
 
-	*p_st_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+	    *p_st_code = PJSIP_PRES_BAD_CONTENT_RESPONSE;
 
-	/* Add Accept header */
-	accept_hdr = pjsip_accept_hdr_create(rdata->tp_info.pool);
-	accept_hdr->values[accept_hdr->count++] = STR_APP_PIDF_XML;
-	accept_hdr->values[accept_hdr->count++] = STR_APP_XPIDF_XML;
-	pj_list_push_back(res_hdr, accept_hdr);
+	    /* Add Accept header */
+	    accept_hdr = pjsip_accept_hdr_create(rdata->tp_info.pool);
+	    accept_hdr->values[accept_hdr->count++] = STR_APP_PIDF_XML;
+	    accept_hdr->values[accept_hdr->count++] = STR_APP_XPIDF_XML;
+	    pj_list_push_back(res_hdr, accept_hdr);
 
-	/* Add Warning header */
-	warn_hdr = pjsip_warning_hdr_create_from_status(
-				    rdata->tp_info.pool,
-				    pjsip_endpt_name(pres->dlg->endpt),
-				    status);
-	pj_list_push_back(res_hdr, warn_hdr);
+	    /* Add Warning header */
+	    warn_hdr = pjsip_warning_hdr_create_from_status(
+					rdata->tp_info.pool,
+					pjsip_endpt_name(pres->dlg->endpt),
+					status);
+	    pj_list_push_back(res_hdr, warn_hdr);
 
-	return status;
+	    return status;
+	} else {
+	    pj_assert(PJSIP_PRES_BAD_CONTENT_RESPONSE/100 == 2);
+	    PJ_PERROR(4,(THIS_FILE, status,
+			 "Ignoring presence error due to "
+		         "PJSIP_PRES_BAD_CONTENT_RESPONSE setting [%d]",
+		         PJSIP_PRES_BAD_CONTENT_RESPONSE));
+	    *p_st_code = PJSIP_PRES_BAD_CONTENT_RESPONSE;
+	    status = PJ_SUCCESS;
+	}
     }
 
     /* If application calls pres_get_status(), redirect the call to
