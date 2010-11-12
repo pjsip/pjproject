@@ -1020,6 +1020,9 @@ static void send_cb(int err, void *key)
 	    st->len = 0;
 	    return;
 	}
+    } else {
+        /* Buffer empty, reset the start position */
+        st->start = st->buf;
     }
 }
 
@@ -1058,25 +1061,16 @@ PJ_DEF(pj_status_t) pj_ssl_sock_send (pj_ssl_sock_t *ssock,
      * operations at any time.
      */
     
-    pj_size_t avail_len = st->max_len - st->len;
     pj_size_t needed_len = *size + sizeof(write_data_t) - 1;
     
     /* Align needed_len to be multiplication of 4 */
     needed_len = ((needed_len + 3) >> 2) << 2; 
 
-    /* Block until there is buffer slot available! */
-    while (needed_len >= avail_len) {
+    /* Block until there is buffer slot available and contiguous! */
+    while (st->start + st->len + needed_len > st->buf + st->max_len) {
 	pj_symbianos_poll(-1, -1);
-	avail_len = st->max_len - st->len;
     }
 
-    /* Ok, make sure the new data will not get wrapped */
-    if (st->start + st->len + needed_len > st->buf + st->max_len) {
-	/* Align buffer left */
-	pj_memmove(st->buf, st->start, st->len);
-	st->start = st->buf;
-    }
-    
     /* Push back the send data into the buffer */
     write_data_t *wdata = (write_data_t*)(st->start + st->len);
     
