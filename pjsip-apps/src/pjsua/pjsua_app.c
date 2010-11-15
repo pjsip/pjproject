@@ -4237,6 +4237,8 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	    } else if (result.uri_result) {
 		uri = result.uri_result;
+	    } else {
+		continue;
 	    }
 	    
 	    if (uri) {
