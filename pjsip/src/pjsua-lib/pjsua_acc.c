@@ -1066,7 +1066,7 @@ done:
 	acc->rfc5626_status = OUTBOUND_WANTED;
 	len = acc->contact.slen + acc->rfc5626_instprm.slen +
 	      acc->rfc5626_regprm.slen;
-	reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, reg_contact.slen);
+	reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, len);
 
 	pj_strcpy(&reg_contact, &acc->contact);
 	pj_strcat(&reg_contact, &acc->rfc5626_regprm);
