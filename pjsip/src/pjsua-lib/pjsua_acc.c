@@ -25,9 +25,10 @@
 
 enum
 {
-    OUTBOUND_NONE,
-    OUTBOUND_WANTED,
-    OUTBOUND_ACTIVE
+    OUTBOUND_UNKNOWN,	// status unknown
+    OUTBOUND_WANTED,	// initiated in registration
+    OUTBOUND_ACTIVE,	// got positive response from server
+    OUTBOUND_NA		// not wanted or got negative response from server
 };
 
 
@@ -1032,6 +1033,10 @@ static void update_regc_contact(pjsua_acc *acc)
     if (!acc_cfg->use_rfc5626)
 	goto done;
 
+    /* Check if outbound has been requested and rejected */
+    if (acc->rfc5626_status == OUTBOUND_NA)
+	goto done;
+
     if (pj_stristr(&acc->contact, &tcp_param)==NULL &&
 	pj_stristr(&acc->contact, &tls_param)==NULL)
     {
@@ -1050,7 +1055,7 @@ done:
 	 * is set to the same as acc->contact.
 	 */
 	acc->reg_contact = acc->contact;
-	acc->rfc5626_status = OUTBOUND_NONE;
+	acc->rfc5626_status = OUTBOUND_NA;
     } else {
 	/* Need to use outbound, append the contact with +sip.instance and
 	 * reg-id parameters.
@@ -1558,13 +1563,13 @@ static void update_rfc5626_status(pjsua_acc *acc, pjsip_rx_data *rdata)
     const pj_str_t STR_OUTBOUND = {"outbound", 8};
     unsigned i;
 
-    if (acc->rfc5626_status == OUTBOUND_NONE) {
+    if (acc->rfc5626_status == OUTBOUND_UNKNOWN) {
 	goto on_return;
     }
 
     hreq = rdata->msg_info.require;
     if (!hreq) {
-	acc->rfc5626_status = OUTBOUND_NONE;
+	acc->rfc5626_status = OUTBOUND_NA;
 	goto on_return;
     }
 
@@ -1576,9 +1581,12 @@ static void update_rfc5626_status(pjsua_acc *acc, pjsip_rx_data *rdata)
     }
 
     /* Server does not support outbound */
-    acc->rfc5626_status = OUTBOUND_NONE;
+    acc->rfc5626_status = OUTBOUND_NA;
 
 on_return:
+    if (acc->rfc5626_status != OUTBOUND_ACTIVE) {
+	acc->reg_contact = acc->contact;
+    }
     PJ_LOG(4,(THIS_FILE, "SIP outbound status for acc %d is %s",
 			 acc->index, (acc->rfc5626_status==OUTBOUND_ACTIVE?
 					 "active": "not active")));
