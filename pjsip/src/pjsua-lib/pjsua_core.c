@@ -183,6 +183,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 #endif
     cfg->reg_retry_interval = PJSUA_REG_RETRY_INTERVAL;
     cfg->contact_rewrite_method = PJSUA_CONTACT_REWRITE_METHOD;
+    cfg->use_rfc5626 = PJ_TRUE;
     cfg->reg_use_proxy = PJSUA_REG_USE_OUTBOUND_PROXY |
 			 PJSUA_REG_USE_ACC_PROXY;
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0

@@ -23,6 +23,13 @@
 
 #define THIS_FILE		"pjsua_acc.c"
 
+enum
+{
+    OUTBOUND_NONE,
+    OUTBOUND_WANTED,
+    OUTBOUND_ACTIVE
+};
+
 
 static void schedule_reregistration(pjsua_acc *acc);
 
@@ -79,6 +86,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->reg_uri, &src->reg_uri);
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
     pj_strdup_with_null(pool, &dst->pidf_tuple_id, &src->pidf_tuple_id);
+    pj_strdup_with_null(pool, &dst->rfc5626_instance_id, &src->rfc5626_instance_id);
+    pj_strdup_with_null(pool, &dst->rfc5626_reg_id, &src->rfc5626_reg_id);
 
     dst->proxy_cnt = src->proxy_cnt;
     for (i=0; i<src->proxy_cnt; ++i)
@@ -268,6 +277,55 @@ static pj_status_t initialize_acc(unsigned acc_id)
     status = pjsua_pres_init_acc(acc_id);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* If SIP outbound is enabled, generate instance and reg ID if they are
+     * not specified
+     */
+    if (acc_cfg->use_rfc5626) {
+	if (acc_cfg->rfc5626_instance_id.slen==0) {
+	    const pj_str_t *hostname;
+	    pj_uint32_t hval, pos;
+	    char instprm[] = ";+sip.instance=\"<urn:uuid:00000000-0000-0000-0000-0000CCDDEEFF>\"";
+
+	    hostname = pj_gethostname();
+	    pos = pj_ansi_strlen(instprm) - 10;
+	    hval = pj_hash_calc(0, hostname->ptr, hostname->slen);
+	    pj_val_to_hex_digit( ((char*)&hval)[0], instprm+pos+0);
+	    pj_val_to_hex_digit( ((char*)&hval)[1], instprm+pos+2);
+	    pj_val_to_hex_digit( ((char*)&hval)[2], instprm+pos+4);
+	    pj_val_to_hex_digit( ((char*)&hval)[3], instprm+pos+6);
+
+	    pj_strdup2(acc->pool, &acc->rfc5626_instprm, instprm);
+	} else {
+	    const char *prmname = ";+sip.instance=\"";
+	    unsigned len;
+
+	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_instance_id.slen + 1;
+	    acc->rfc5626_instprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
+	    pj_ansi_snprintf(acc->rfc5626_instprm.ptr, len+1,
+		             "%s%.*s\"",
+		             prmname,
+		             (int)acc_cfg->rfc5626_instance_id.slen,
+		             acc_cfg->rfc5626_instance_id.ptr);
+	    acc->rfc5626_instprm.slen = len;
+	}
+
+	if (acc_cfg->rfc5626_reg_id.slen==0) {
+	    acc->rfc5626_regprm = pj_str(";reg-id=1");
+	} else {
+	    const char *prmname = ";reg-id=";
+	    unsigned len;
+
+	    len = pj_ansi_strlen(prmname) + acc_cfg->rfc5626_reg_id.slen;
+	    acc->rfc5626_regprm.ptr = (char*)pj_pool_alloc(acc->pool, len+1);
+	    pj_ansi_snprintf(acc->rfc5626_regprm.ptr, len+1,
+		             "%s%.*s\"",
+		             prmname,
+		             (int)acc_cfg->rfc5626_reg_id.slen,
+		             acc_cfg->rfc5626_reg_id.ptr);
+	    acc->rfc5626_regprm.slen = len;
+	}
+    }
 
     /* Mark account as valid */
     pjsua_var.acc[acc_id].valid = PJ_TRUE;
@@ -899,6 +957,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	update_reg = PJ_TRUE;
     }
 
+    /* SIP outbound setting */
+    if (acc->cfg.use_rfc5626 != cfg->use_rfc5626 ||
+	pj_strcmp(&acc->cfg.rfc5626_instance_id, &cfg->rfc5626_instance_id) ||
+	pj_strcmp(&acc->cfg.rfc5626_reg_id, &cfg->rfc5626_reg_id))
+    {
+	update_reg = PJ_TRUE;
+    }
+
     /* Update registration */
     if (update_reg) {
 	/* If accounts has registration enabled, start registration */
@@ -955,6 +1021,62 @@ PJ_DEF(pj_status_t) pjsua_acc_set_online_status2( pjsua_acc_id acc_id,
     return PJ_SUCCESS;
 }
 
+/* Create reg_contact, mainly for SIP outbound */
+static void update_regc_contact(pjsua_acc *acc)
+{
+    pjsua_acc_config *acc_cfg = &acc->cfg;
+    pj_bool_t need_outbound = PJ_FALSE;
+    const pj_str_t tcp_param = pj_str(";transport=tcp");
+    const pj_str_t tls_param = pj_str(";transport=tls");
+
+    if (!acc_cfg->use_rfc5626)
+	goto done;
+
+    if (pj_stristr(&acc->contact, &tcp_param)==NULL &&
+	pj_stristr(&acc->contact, &tls_param)==NULL)
+    {
+	/* Currently we can only do SIP outbound for TCP
+	 * and TLS.
+	 */
+	goto done;
+    }
+
+    /* looks like we can use outbound */
+    need_outbound = PJ_TRUE;
+
+done:
+    if (!need_outbound) {
+	/* Outbound is not needed/wanted for the account. acc->reg_contact
+	 * is set to the same as acc->contact.
+	 */
+	acc->reg_contact = acc->contact;
+	acc->rfc5626_status = OUTBOUND_NONE;
+    } else {
+	/* Need to use outbound, append the contact with +sip.instance and
+	 * reg-id parameters.
+	 */
+	unsigned len;
+	pj_str_t reg_contact;
+
+	acc->rfc5626_status = OUTBOUND_WANTED;
+	len = acc->contact.slen + acc->rfc5626_instprm.slen +
+	      acc->rfc5626_regprm.slen;
+	reg_contact.ptr = (char*) pj_pool_alloc(acc->pool, reg_contact.slen);
+
+	pj_strcpy(&reg_contact, &acc->contact);
+	pj_strcat(&reg_contact, &acc->rfc5626_regprm);
+	pj_strcat(&reg_contact, &acc->rfc5626_instprm);
+
+	acc->reg_contact = reg_contact;
+
+	PJ_LOG(4,(THIS_FILE,
+		  "Contact for acc %d updated for SIP outbound: %.*s",
+		  acc->index,
+		  (int)acc->reg_contact.slen,
+		  acc->reg_contact.ptr));
+    }
+}
+
 /* Check if IP is private IP address */
 static pj_bool_t is_private_ip(const pj_str_t *addr)
 {
@@ -998,6 +1120,13 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     /* Only update if account is configured to auto-update */
     if (acc->cfg.allow_contact_rewrite == PJ_FALSE)
 	return PJ_FALSE;
+
+    /* If SIP outbound is active, no need to update */
+    if (acc->rfc5626_status == OUTBOUND_ACTIVE) {
+	PJ_LOG(4,(THIS_FILE, "Acc %d has SIP outbound active, no need to "
+			     "update registration Contact", acc->index));
+	return PJ_FALSE;
+    }
 
 #if 0
     // Always update
@@ -1142,6 +1271,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
      * Build new Contact header
      */
     {
+	const char *ob = ";ob";
 	char *tmp;
 	const char *beginquote, *endquote;
 	int len;
@@ -1156,7 +1286,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
 	tmp = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
 	len = pj_ansi_snprintf(tmp, PJSIP_MAX_URL_SIZE,
-			       "<sip:%.*s%s%s%.*s%s:%d;transport=%s%.*s>%.*s",
+			       "<sip:%.*s%s%s%.*s%s:%d;transport=%s%.*s%s>%.*s",
 			       (int)acc->user_part.slen,
 			       acc->user_part.ptr,
 			       (acc->user_part.slen? "@" : ""),
@@ -1168,6 +1298,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 			       tp->type_name,
 			       (int)acc->cfg.contact_uri_params.slen,
 			       acc->cfg.contact_uri_params.ptr,
+			       ob,
 			       (int)acc->cfg.contact_params.slen,
 			       acc->cfg.contact_params.ptr);
 	if (len < 1) {
@@ -1177,6 +1308,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	}
 	pj_strdup2_with_null(acc->pool, &acc->contact, tmp);
 
+	update_regc_contact(acc);
+
 	/* Always update, by http://trac.pjsip.org/repos/ticket/864. */
 	pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
 	tp->local_name.port = rport;
@@ -1184,7 +1317,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     }
 
     if (acc->cfg.contact_rewrite_method == 2 && acc->regc != NULL) {
-	pjsip_regc_update_contact(acc->regc, 1, &acc->contact);
+	pjsip_regc_update_contact(acc->regc, 1, &acc->reg_contact);
     }
 
     /* Perform new registration */
@@ -1418,6 +1551,39 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 }
 
 
+/* Update the status of SIP outbound registration request */
+static void update_rfc5626_status(pjsua_acc *acc, pjsip_rx_data *rdata)
+{
+    pjsip_require_hdr *hreq;
+    const pj_str_t STR_OUTBOUND = {"outbound", 8};
+    unsigned i;
+
+    if (acc->rfc5626_status == OUTBOUND_NONE) {
+	goto on_return;
+    }
+
+    hreq = rdata->msg_info.require;
+    if (!hreq) {
+	acc->rfc5626_status = OUTBOUND_NONE;
+	goto on_return;
+    }
+
+    for (i=0; i<hreq->count; ++i) {
+	if (pj_stricmp(&hreq->values[i], &STR_OUTBOUND)==0) {
+	    acc->rfc5626_status = OUTBOUND_ACTIVE;
+	    goto on_return;
+	}
+    }
+
+    /* Server does not support outbound */
+    acc->rfc5626_status = OUTBOUND_NONE;
+
+on_return:
+    PJ_LOG(4,(THIS_FILE, "SIP outbound status for acc %d is %s",
+			 acc->index, (acc->rfc5626_status==OUTBOUND_ACTIVE?
+					 "active": "not active")));
+}
+
 /*
  * This callback is called by pjsip_regc when outgoing register
  * request has completed.
@@ -1473,9 +1639,13 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	    PJ_LOG(3,(THIS_FILE, "%s: unregistration success",
 		      pjsua_var.acc[acc->index].cfg.id.ptr));
 	} else {
+	    /* Check and update SIP outbound status first, since the result
+	     * will determine if we should update re-registration
+	     */
+	    update_rfc5626_status(acc, param->rdata);
+
 	    /* Check NAT bound address */
 	    if (acc_check_nat_addr(acc, param)) {
-		/* Update address, don't notify application yet */
 		PJSUA_UNLOCK();
 		return;
 	    }
@@ -1595,13 +1765,14 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	}
 
 	pj_strdup_with_null(acc->pool, &acc->contact, &tmp_contact);
+	update_regc_contact(acc);
     }
 
     status = pjsip_regc_init( acc->regc,
 			      &acc->cfg.reg_uri, 
 			      &acc->cfg.id, 
 			      &acc->cfg.id,
-			      1, &acc->contact, 
+			      1, &acc->reg_contact,
 			      acc->cfg.reg_timeout);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, 
@@ -1682,6 +1853,22 @@ static pj_status_t pjsua_regc_init(int acc_id)
 	h = pjsip_generic_string_hdr_create(pool, &STR_USER_AGENT, 
 					    &pjsua_var.ua_cfg.user_agent);
 	pj_list_push_back(&hdr_list, (pjsip_hdr*)h);
+
+	pjsip_regc_add_headers(acc->regc, &hdr_list);
+    }
+
+    /* If SIP outbound is used, add "Supported: outbound, path header" */
+    if (acc->rfc5626_status == OUTBOUND_WANTED) {
+	pjsip_hdr hdr_list;
+	pjsip_supported_hdr *hsup;
+
+	pj_list_init(&hdr_list);
+	hsup = pjsip_supported_hdr_create(pool);
+	pj_list_push_back(&hdr_list, hsup);
+
+	hsup->count = 2;
+	hsup->values[0] = pj_str("outbound");
+	hsup->values[1] = pj_str("path");
 
 	pjsip_regc_add_headers(acc->regc, &hdr_list);
     }
@@ -2146,6 +2333,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     int local_port;
     const char *beginquote, *endquote;
     char transport_param[32];
+    const char *ob = ";ob";
 
     
     PJ_ASSERT_RETURN(pjsua_acc_is_valid(acc_id), PJ_EINVAL);
@@ -2231,7 +2419,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     /* Create the contact header */
     contact->ptr = (char*)pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>%.*s",
+				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s%s>%.*s",
 				     (int)acc->display.slen,
 				     acc->display.ptr,
 				     (acc->display.slen?" " : ""),
@@ -2247,6 +2435,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 				     transport_param,
 				     (int)acc->cfg.contact_uri_params.slen,
 				     acc->cfg.contact_uri_params.ptr,
+				     ob,
 				     (int)acc->cfg.contact_params.slen,
 				     acc->cfg.contact_params.ptr);
 

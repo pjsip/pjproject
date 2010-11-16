@@ -2333,6 +2333,41 @@ typedef struct pjsua_acc_config
     int		     contact_rewrite_method;
 
     /**
+     * Control the use of SIP outbound feature. SIP outbound is described in
+     * RFC 5626 to enable proxies or registrar to send inbound requests back
+     * to UA using the same connection initiated by the UA for its
+     * registration. This feature is highly useful in NAT-ed deployemtns,
+     * hence it is enabled by default.
+     *
+     * Note: currently SIP outbound can only be used with TCP and TLS
+     * transports. If UDP is used for the registration, the SIP outbound
+     * feature will be silently ignored for the account.
+     *
+     * Default: PJ_TRUE
+     */
+    unsigned	     use_rfc5626;
+
+    /**
+     * Specify SIP outbound (RFC 5626) instance ID to be used by this
+     * application. If empty, an instance ID will be generated based on
+     * the hostname of this agent. If application specifies this parameter, the
+     * value will look like "<urn:uuid:00000000-0000-1000-8000-AABBCCDDEEFF>"
+     * without the doublequote.
+     *
+     * Default: empty
+     */
+    pj_str_t	     rfc5626_instance_id;
+
+    /**
+     * Specify SIP outbound (RFC 5626) registration ID. The default value
+     * is empty, which would cause the library to automatically generate
+     * a suitable value.
+     *
+     * Default: empty
+     */
+    pj_str_t	     rfc5626_reg_id;
+
+    /**
      * Set the interval for periodic keep-alive transmission for this account.
      * If this value is zero, keep-alive will be disabled for this account.
      * The keep-alive transmission will be sent to the registrar's address,
