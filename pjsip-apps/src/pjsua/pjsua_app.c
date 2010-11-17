@@ -4817,11 +4817,41 @@ pj_status_t app_init(int argc, char *argv[])
 	pjsua_acc_id aid;
 	pjsip_transport_type_e type = PJSIP_TRANSPORT_UDP;
 
-	if (app_config.ipv6)
-	    type = PJSIP_TRANSPORT_UDP6;
-
 	status = pjsua_transport_create(type,
-					&app_config.udp_cfg, 
+					&app_config.udp_cfg,
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	//pjsua_acc_set_transport(aid, transport_id);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+
+	if (app_config.udp_cfg.port == 0) {
+	    pjsua_transport_info ti;
+	    pj_sockaddr_in *a;
+
+	    pjsua_transport_get_info(transport_id, &ti);
+	    a = (pj_sockaddr_in*)&ti.local_addr;
+
+	    tcp_cfg.port = pj_ntohs(a->sin_port);
+	}
+    }
+
+    /* Add UDP IPv6 transport unless it's disabled. */
+    if (!app_config.no_udp && app_config.ipv6) {
+	pjsua_acc_id aid;
+	pjsip_transport_type_e type = PJSIP_TRANSPORT_UDP6;
+	pjsua_transport_config udp_cfg;
+
+	udp_cfg = app_config.udp_cfg;
+	if (udp_cfg.port == 0)
+	    udp_cfg.port = 5060;
+	else
+	    udp_cfg.port += 10;
+	status = pjsua_transport_create(type,
+					&udp_cfg,
 					&transport_id);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
