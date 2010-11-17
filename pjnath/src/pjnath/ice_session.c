@@ -2894,8 +2894,13 @@ PJ_DEF(pj_status_t) pj_ice_sess_on_rx_pkt(pj_ice_sess *ice,
 	return PJ_EINVAL;
     }
 
+    /* Don't check fingerprint. We only need to distinguish STUN and non-STUN
+     * packets. We don't need to verify the STUN packet too rigorously, that
+     * will be done by the user.
+     */
     status = pj_stun_msg_check((const pj_uint8_t*)pkt, pkt_size, 
-    			       PJ_STUN_IS_DATAGRAM);
+    			       PJ_STUN_IS_DATAGRAM |
+    			         PJ_STUN_NO_FINGERPRINT_CHECK);
     if (status == PJ_SUCCESS) {
 	status = pj_stun_session_on_rx_pkt(comp->stun_sess, pkt, pkt_size,
 					   PJ_STUN_IS_DATAGRAM, msg_data,
