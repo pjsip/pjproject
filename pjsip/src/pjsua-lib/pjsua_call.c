@@ -3079,6 +3079,13 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
 	return PJ_SUCCESS;
     }
 
+    /* Don't do this if call is disconnecting! */
+    if (call->inv->state > PJSIP_INV_STATE_CONFIRMED ||
+	call->inv->cause >= 200)
+    {
+	return PJ_SUCCESS;
+    }
+
     /* Verify if another SDP negotiation has been completed by comparing
      * the SDP version.
      */
