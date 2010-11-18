@@ -227,6 +227,7 @@ static void usage(void)
     printf("  --timer-se=N        Session timers expiration period, in secs (def:%d)\n",
 	    PJSIP_SESS_TIMER_DEF_SE);
     puts  ("  --timer-min-se=N    Session timers minimum expiration period, in secs (def:90)");
+    puts  ("  --outb-rid=string   Set SIP outbound reg-id (default:1)");
     puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
     puts  ("                      symmetric NAT (default 1)");
     puts  ("  --next-cred         Add another credentials");
@@ -388,7 +389,7 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
     char line[200];
     int argc = 0;
     char **argv;
-    enum { MAX_ARGS = 64 };
+    enum { MAX_ARGS = 128 };
 
     /* Allocate MAX_ARGS+1 (argv needs to be terminated with NULL argument) */
     argv = pj_pool_calloc(pool, MAX_ARGS+1, sizeof(char*));
@@ -514,7 +515,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_BOUND_ADDR, OPT_CONTACT_PARAMS, OPT_CONTACT_URI_PARAMS,
 	   OPT_100REL, OPT_USE_IMS, OPT_REALM, OPT_USERNAME, OPT_PASSWORD,
 	   OPT_REG_RETRY_INTERVAL, OPT_REG_USE_PROXY,
-	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV,
+	   OPT_MWI, OPT_NAMESERVER, OPT_STUN_SRV, OPT_OUTB_RID,
 	   OPT_ADD_BUDDY, OPT_OFFER_X_MS_MSG, OPT_NO_PRESENCE,
 	   OPT_AUTO_ANSWER, OPT_AUTO_PLAY, OPT_AUTO_PLAY_HANGUP, OPT_AUTO_LOOP,
 	   OPT_AUTO_CONF, OPT_CLOCK_RATE, OPT_SND_CLOCK_RATE, OPT_STEREO,
@@ -657,6 +658,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "use-timer",  1, 0, OPT_TIMER},
 	{ "timer-se",   1, 0, OPT_TIMER_SE},
 	{ "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
+	{ "outb-rid",	1, 0, OPT_OUTB_RID},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -912,6 +914,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 		return PJ_EINVAL;
 	    }
 	    cfg->cfg.timer_setting.min_se = cur_acc->timer_setting.min_se;
+	    break;
+
+	case OPT_OUTB_RID: /* Outbound reg-id */
+	    cur_acc->rfc5626_reg_id = pj_str(pj_optarg);
 	    break;
 
 	case OPT_USE_IMS: /* Activate IMS settings */
