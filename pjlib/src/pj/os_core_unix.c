@@ -311,7 +311,8 @@ PJ_DEF(int) pj_thread_get_prio_min(pj_thread_t *thread)
     if (rc != 0)
 	return -1;
 
-#if defined _POSIX_PRIORITY_SCHEDULING
+#if defined _POSIX_PRIORITY_SCHEDULING || \
+    defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
     return sched_get_priority_min(policy);
 #elif defined __OpenBSD__
     /* Thread prio min/max are declared in OpenBSD private hdr */
@@ -336,7 +337,8 @@ PJ_DEF(int) pj_thread_get_prio_max(pj_thread_t *thread)
     if (rc != 0)
 	return -1;
 
-#if defined _POSIX_PRIORITY_SCHEDULING
+#if defined _POSIX_PRIORITY_SCHEDULING || \
+    defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
     return sched_get_priority_max(policy);
 #elif defined __OpenBSD__
     /* Thread prio min/max are declared in OpenBSD private hdr */
