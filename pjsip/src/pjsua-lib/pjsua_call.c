@@ -123,6 +123,7 @@ static void reset_call(pjsua_call_id id)
     call->rem_nat_type = PJ_STUN_NAT_TYPE_UNKNOWN;
     call->rem_srtp_use = PJMEDIA_SRTP_DISABLED;
     call->local_hold = PJ_FALSE;
+    pj_bzero(&call->lock_codec, sizeof(call->lock_codec));
 }
 
 
@@ -3060,7 +3061,7 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
 {
     const pj_str_t STR_UPDATE = {"UPDATE", 6};
     const pjmedia_sdp_session *local_sdp = NULL, *new_sdp;
-    const pjmedia_sdp_media *rem_m;
+    const pjmedia_sdp_media *ref_m;
     pjmedia_sdp_media *m;
     unsigned i, codec_cnt = 0;
     pj_bool_t rem_can_update;
@@ -3076,14 +3077,14 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
     if (call->inv==NULL || call->inv->neg==NULL ||
 	pjmedia_sdp_neg_get_state(call->inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE)
     {
-	return PJ_SUCCESS;
+	return PJMEDIA_SDPNEG_EINSTATE;
     }
 
     /* Don't do this if call is disconnecting! */
     if (call->inv->state > PJSIP_INV_STATE_CONFIRMED ||
 	call->inv->cause >= 200)
     {
-	return PJ_SUCCESS;
+	return PJ_EINVALIDOP;
     }
 
     /* Verify if another SDP negotiation has been completed by comparing
@@ -3095,6 +3096,14 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
     if (local_sdp->origin.version > call->lock_codec.sdp_ver)
 	return PJMEDIA_SDP_EINVER;
 
+    /* Verify if media is deactivated */
+    if (call->media_st == PJSUA_CALL_MEDIA_NONE ||
+        call->media_st == PJSUA_CALL_MEDIA_ERROR ||
+        call->media_dir == PJMEDIA_DIR_NONE)
+    {
+        return PJ_EINVALIDOP;
+    }
+
     PJ_LOG(3, (THIS_FILE, "Updating media session to use only one codec.."));
 
     /* Update the new offer so it contains only a codec. Note that formats
@@ -3102,8 +3111,9 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
      * just directly update the offer without looking-up the answer.
      */
     new_sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, local_sdp);
-    rem_m = local_sdp->media[call->audio_idx];
     m = new_sdp->media[call->audio_idx];
+    ref_m = local_sdp->media[call->audio_idx];
+    pj_assert(ref_m->desc.port);
     codec_cnt = 0;
     i = 0;
     while (i < m->desc.fmt_count) {
@@ -3125,15 +3135,12 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
 	--m->desc.fmt_count;
     }
 
-    /* Last check if SDP trully needs to be udpated. It is possible that OA
-     * negotiations have completed and SDP has changed but remote didn't
-     * increase it's SDP version.
+    /* Last check if SDP trully needs to be updated. It is possible that OA
+     * negotiations have completed and SDP has changed but we didn't
+     * increase the SDP version (should not happen!).
      */
-    if (rem_m->desc.fmt_count == m->desc.fmt_count ||
-	rem_m->desc.port == 0 || m->desc.port == 0)
-    {
+    if (ref_m->desc.fmt_count == m->desc.fmt_count)
 	return PJ_SUCCESS;
-    }
 
     /* Send UPDATE or re-INVITE */
     rem_can_update = pjsip_dlg_remote_has_cap(call->inv->dlg,
@@ -3179,20 +3186,48 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
 static pj_status_t lock_codec(pjsua_call *call)
 {
     pjsip_inv_session *inv = call->inv;
-    const pjmedia_sdp_session *local_sdp;
-    const pjmedia_sdp_session *remote_sdp;
-    const pjmedia_sdp_media *rem_m;
+    const pjmedia_sdp_session *local_sdp, *remote_sdp;
+    const pjmedia_sdp_media *rem_m, *loc_m;
     unsigned codec_cnt=0, i;
     pj_time_val delay = {0, 0};
+    const pj_str_t st_update = {"UPDATE", 6};
     pj_status_t status;
 
-    if (!pjmedia_sdp_neg_was_answer_remote(inv->neg))
-	return PJ_SUCCESS;
+    /* Stop lock codec timer, if it is active */
+    if (call->lock_codec.reinv_timer.id) {
+	pjsip_endpt_cancel_timer(pjsua_var.endpt,
+				 &call->lock_codec.reinv_timer);
+	call->lock_codec.reinv_timer.id = PJ_FALSE;
+    }
 
-    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &local_sdp);
+    /* Skip this if we are the answerer */
+    if (!inv->neg || !pjmedia_sdp_neg_was_answer_remote(inv->neg)) {
+        return PJ_SUCCESS;
+    }
+
+    /* Skip this if the media is inactive or error */
+    if (call->media_st == PJSUA_CALL_MEDIA_NONE ||
+        call->media_st == PJSUA_CALL_MEDIA_ERROR ||
+        call->media_dir == PJMEDIA_DIR_NONE)
+    {
+        return PJ_SUCCESS;
+    }
+
+    /* Delay this when the SDP negotiation done in call state EARLY and
+     * remote does not support UPDATE method.
+     */
+    if (inv->state == PJSIP_INV_STATE_EARLY && 
+	pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL, &st_update)!=
+	PJSIP_DIALOG_CAP_SUPPORTED)
+    {
+        call->lock_codec.pending = PJ_TRUE;
+        return PJ_SUCCESS;
+    }
+
+    status = pjmedia_sdp_neg_get_active_local(inv->neg, &local_sdp);
     if (status != PJ_SUCCESS)
 	return status;
-    status = pjmedia_sdp_neg_get_active_remote(call->inv->neg, &remote_sdp);
+    status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -3201,34 +3236,36 @@ static pj_status_t lock_codec(pjsua_call *call)
 		     PJ_EINVALIDOP);
 
     rem_m = remote_sdp->media[call->audio_idx];
+    loc_m = local_sdp->media[call->audio_idx];
 
-    /* Check if media is disabled or only one format in the answer. */
-    if (rem_m->desc.port==0 || rem_m->desc.fmt_count==1)
-	return PJ_SUCCESS;
+    /* Verify that media must be active. */
+    pj_assert(loc_m->desc.port && rem_m->desc.port);
 
     /* Count the formats in the answer. */
-    for (i=0; i<rem_m->desc.fmt_count && codec_cnt <= 1; ++i) {
-	if (!is_non_av_fmt(rem_m, &rem_m->desc.fmt[i]))
-	    ++codec_cnt;
+    if (rem_m->desc.fmt_count==1) {
+        codec_cnt = 1;
+    } else {
+        for (i=0; i<rem_m->desc.fmt_count && codec_cnt <= 1; ++i) {
+	    if (!is_non_av_fmt(rem_m, &rem_m->desc.fmt[i]))
+	        ++codec_cnt;
+        }
     }
-
     if (codec_cnt <= 1) {
 	/* Answer contains single codec. */
+        call->lock_codec.retry_cnt = 0;
 	return PJ_SUCCESS;
     }
+
+    /* Remote keeps answering with multiple codecs, let's just give up
+     * locking codec to avoid infinite retry loop.
+     */
+    if (++call->lock_codec.retry_cnt > LOCK_CODEC_MAX_RETRY)
+        return PJ_SUCCESS;
 
     PJ_LOG(3, (THIS_FILE, "Got answer with multiple codecs, scheduling "
 			  "updating media session to use only one codec.."));
 
     call->lock_codec.sdp_ver = local_sdp->origin.version;
-    call->lock_codec.retry_cnt = 0;
-
-    /* Stop lock codec timer, if it is active */
-    if (call->lock_codec.reinv_timer.id) {
-	pjsip_endpt_cancel_timer(pjsua_var.endpt,
-				 &call->lock_codec.reinv_timer);
-	call->lock_codec.reinv_timer.id = PJ_FALSE;
-    }
 
     /* Can't send UPDATE or re-INVITE now, so just schedule it immediately.
      * See: https://trac.pjsip.org/repos/ticket/1149
@@ -3276,15 +3313,17 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	case PJSIP_INV_STATE_CONFIRMED:
 	    pj_gettimeofday(&call->conn_time);
 
-	    /* Ticket #476, locking a codec in the media session. */
-	    {
+            /* See if lock codec was pended as media update was done in the
+             * EARLY state and remote does not support UPDATE.
+             */
+            if (call->lock_codec.pending) {
 		pj_status_t status;
 		status = lock_codec(call);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror(THIS_FILE, "Unable to lock codec", status);
-		}
+                }
+                call->lock_codec.pending = PJ_FALSE;
 	    }
-
 	    break;
 	case PJSIP_INV_STATE_DISCONNECTED:
 	    pj_gettimeofday(&call->dis_time);
@@ -3515,7 +3554,7 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     pjsua_call *call;
     const pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
-    const pj_str_t st_update = {"UPDATE", 6};
+    //const pj_str_t st_update = {"UPDATE", 6};
 
     PJSUA_LOCK();
 
@@ -3587,24 +3626,10 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	return;
     }
 
-    /* Ticket #476, handle the case of early media and remote support UPDATE */
-    if (inv->state == PJSIP_INV_STATE_EARLY && 
-	pjmedia_sdp_neg_was_answer_remote(inv->neg) &&
-	pjsip_dlg_remote_has_cap(inv->dlg, PJSIP_H_ALLOW, NULL, &st_update)==
-	PJSIP_DIALOG_CAP_SUPPORTED)
-    {
-	status = lock_codec(call);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to lock codec", status);
-	}
-    } else if (inv->state == PJSIP_INV_STATE_CONFIRMED &&
-	       call->media_st == PJSUA_CALL_MEDIA_ACTIVE)
-    {
-	/* https://trac.pjsip.org/repos/ticket/1149 */
-	status = lock_codec(call);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Unable to lock codec", status);
-	}
+    /* Ticket #476: make sure only one codec is specified in the answer. */
+    status = lock_codec(call);
+    if (status != PJ_SUCCESS) {
+        pjsua_perror(THIS_FILE, "Unable to lock codec", status);
     }
 
     /* Call application callback, if any */

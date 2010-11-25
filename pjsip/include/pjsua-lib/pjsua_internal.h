@@ -95,6 +95,7 @@ typedef struct pjsua_call
 	pj_timer_entry	 reinv_timer;/**< Reinvite retry timer.		    */
 	pj_uint32_t	 sdp_ver;    /**< SDP version of the bad answer     */
 	int		 retry_cnt;  /**< Retry count.			    */
+        pj_bool_t        pending;    /**< Pending until CONFIRMED state     */
     } lock_codec;		     /**< Data for codec locking when answer
 					  contains multiple codecs.	    */
 
