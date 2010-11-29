@@ -74,6 +74,7 @@ struct pjsip_publishc
     pjsip_endpoint		*endpt;
     pj_bool_t			 _delete_flag;
     int				 pending_tsx;
+    pj_bool_t			 in_callback;
     pj_mutex_t			*mutex;
 
     pjsip_publishc_opt		 opt;
@@ -204,7 +205,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_destroy(pjsip_publishc *pubc)
 {
     PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
 
-    if (pubc->pending_tsx) {
+    if (pubc->pending_tsx || pubc->in_callback) {
 	pubc->_delete_flag = 1;
 	pubc->cb = NULL;
     } else {
@@ -554,6 +555,9 @@ static void tsx_callback(void *token, pjsip_event *event)
     pj_assert(pubc->pending_tsx > 0);
     --pubc->pending_tsx;
 
+    /* Mark that we're in callback to prevent deletion (#1164) */
+    ++pubc->in_callback;
+
     /* If publication data has been deleted by user then remove publication 
      * data from transaction's callback, and don't call callback.
      */
@@ -696,6 +700,9 @@ static void tsx_callback(void *token, pjsip_event *event)
 	}
 	pj_mutex_unlock(pubc->mutex);
     }
+
+    /* No longer in callback. */
+    --pubc->in_callback;
 
     /* Delete the record if user destroy pubc during the callback. */
     if (pubc->_delete_flag && pubc->pending_tsx==0) {
