@@ -645,6 +645,8 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_stop(pjmedia_transport *srtp)
     }
 
     p_srtp->session_inited = PJ_FALSE;
+    pj_bzero(&p_srtp->rx_policy, sizeof(p_srtp->rx_policy));
+    pj_bzero(&p_srtp->tx_policy, sizeof(p_srtp->tx_policy));
 
     pj_lock_release(p_srtp->mutex);
 
@@ -1221,6 +1223,7 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     PJ_ASSERT_RETURN(tp && sdp_pool && sdp_local, PJ_EINVAL);
     
     srtp->offerer_side = sdp_remote == NULL;
+    srtp->bypass_srtp = PJ_FALSE;
 
     m_rem = sdp_remote ? sdp_remote->media[media_index] : NULL;
     m_loc = sdp_local->media[media_index];
@@ -1576,6 +1579,9 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 BYPASS_SRTP:
     srtp->bypass_srtp = PJ_TRUE;
     srtp->peer_use = PJMEDIA_SRTP_DISABLED;
+    if (srtp->session_inited) {
+	pjmedia_transport_srtp_stop(tp);
+    }
 
 PROPAGATE_MEDIA_START:
     return pjmedia_transport_media_start(srtp->member_tp, pool, 
