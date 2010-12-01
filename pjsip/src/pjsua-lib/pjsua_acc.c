@@ -86,8 +86,12 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->id, &src->id);
     pj_strdup_with_null(pool, &dst->reg_uri, &src->reg_uri);
     pj_strdup_with_null(pool, &dst->force_contact, &src->force_contact);
+    pj_strdup_with_null(pool, &dst->contact_params, &src->contact_params);
+    pj_strdup_with_null(pool, &dst->contact_uri_params,
+                        &src->contact_uri_params);
     pj_strdup_with_null(pool, &dst->pidf_tuple_id, &src->pidf_tuple_id);
-    pj_strdup_with_null(pool, &dst->rfc5626_instance_id, &src->rfc5626_instance_id);
+    pj_strdup_with_null(pool, &dst->rfc5626_instance_id,
+                        &src->rfc5626_instance_id);
     pj_strdup_with_null(pool, &dst->rfc5626_reg_id, &src->rfc5626_reg_id);
 
     dst->proxy_cnt = src->proxy_cnt;
@@ -111,6 +115,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
 	    hdr = hdr->next;
 	}
     }
+
+    pjsip_auth_clt_pref_dup(pool, &dst->auth_pref, &src->auth_pref);
 
     dst->ka_interval = src->ka_interval;
     pj_strdup(pool, &dst->ka_data, &src->ka_data);

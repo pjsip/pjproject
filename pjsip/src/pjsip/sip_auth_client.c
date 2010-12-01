@@ -110,6 +110,14 @@ on_return:
     return result;
 }
 
+PJ_DEF(void) pjsip_auth_clt_pref_dup( pj_pool_t *pool,
+				      pjsip_auth_clt_pref *dst,
+				      const pjsip_auth_clt_pref *src)
+{
+    pj_memcpy(dst, src, sizeof(pjsip_auth_clt_pref));
+    pj_strdup_with_null(pool, &dst->algorithm, &src->algorithm);
+}
+
 
 /* Transform digest to string.
  * output must be at least PJSIP_MD5STRLEN+1 bytes.

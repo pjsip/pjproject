@@ -206,6 +206,18 @@ typedef struct pjsip_auth_clt_pref
 
 
 /**
+ * Duplicate a client authentication preference setting.
+ *
+ * @param pool	    The memory pool.
+ * @param dst	    Destination client authentication preference.
+ * @param src	    Source client authentication preference.
+ */
+PJ_DECL(void) pjsip_auth_clt_pref_dup(pj_pool_t *pool,
+				      pjsip_auth_clt_pref *dst,
+				      const pjsip_auth_clt_pref *src);
+
+
+/**
  * This structure describes client authentication sessions. It keeps
  * all the information needed to authorize the client against all downstream 
  * servers.
