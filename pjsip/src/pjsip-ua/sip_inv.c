@@ -3942,6 +3942,22 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 		return;
 	    }
 
+	    /* Send 491 if we receive re-INVITE while another offer/answer
+	     * negotiation is in progress
+	     */
+	    if (pjmedia_sdp_neg_get_state(inv->neg) !=
+		    PJMEDIA_SDP_NEG_STATE_DONE)
+	    {
+		status = pjsip_dlg_create_response(inv->dlg, rdata,
+						   PJSIP_SC_REQUEST_PENDING,
+						   NULL, &tdata);
+		if (status != PJ_SUCCESS)
+		    return;
+		pjsip_timer_update_resp(inv, tdata);
+		status = pjsip_dlg_send_response(dlg, tsx, tdata);
+		return;
+	    }
+
 	    /* Process SDP in incoming message. */
 	    status = inv_check_sdp_in_incoming_msg(inv, tsx, rdata);
 
