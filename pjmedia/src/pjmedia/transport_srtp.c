@@ -348,6 +348,12 @@ static int srtp_crypto_cmp(const pjmedia_srtp_crypto* c1,
 }
 
 
+static pj_bool_t srtp_crypto_empty(const pjmedia_srtp_crypto* c)
+{
+    return (c->name.slen==0 || c->key.slen==0);
+}
+
+
 PJ_DEF(void) pjmedia_srtp_setting_default(pjmedia_srtp_setting *opt)
 {
     unsigned i;
@@ -1222,8 +1228,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
 
     PJ_ASSERT_RETURN(tp && sdp_pool && sdp_local, PJ_EINVAL);
     
+    pj_bzero(&srtp->rx_policy_neg, sizeof(srtp->rx_policy_neg));
+    pj_bzero(&srtp->tx_policy_neg, sizeof(srtp->tx_policy_neg));
+
     srtp->offerer_side = sdp_remote == NULL;
-    srtp->bypass_srtp = PJ_FALSE;
 
     m_rem = sdp_remote ? sdp_remote->media[media_index] : NULL;
     m_loc = sdp_local->media[media_index];
@@ -1435,7 +1443,10 @@ static pj_status_t transport_encode_sdp(pjmedia_transport *tp,
     goto PROPAGATE_MEDIA_CREATE;
 
 BYPASS_SRTP:
-    srtp->bypass_srtp = PJ_TRUE;
+    /* Do not update this flag here as actually the media session hasn't been
+     * updated.
+     */
+    //srtp->bypass_srtp = PJ_TRUE;
 
 PROPAGATE_MEDIA_CREATE:
     return pjmedia_transport_encode_sdp(srtp->member_tp, sdp_pool, 
@@ -1456,9 +1467,6 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
     unsigned i;
 
     PJ_ASSERT_RETURN(tp && pool && sdp_local && sdp_remote, PJ_EINVAL);
-
-    if (srtp->bypass_srtp)
-	goto BYPASS_SRTP;
 
     m_rem = sdp_remote->media[media_index];
     m_loc = sdp_local->media[media_index];
@@ -1555,6 +1563,13 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	/* At this point, we get valid rx_policy_neg & tx_policy_neg. */
     }
 
+    /* Make sure we have the SRTP policies */
+    if (srtp_crypto_empty(&srtp->tx_policy_neg) || 
+	srtp_crypto_empty(&srtp->rx_policy_neg))
+    {
+	goto BYPASS_SRTP;
+    }
+
     /* Reset probation counts */
     srtp->probation_cnt = PROBATION_CNT_INIT;
 
@@ -1573,6 +1588,8 @@ static pj_status_t transport_media_start(pjmedia_transport *tp,
 	if (status != PJ_SUCCESS)
 	    return status;
     }
+
+    srtp->bypass_srtp = PJ_FALSE;
 
     goto PROPAGATE_MEDIA_START;
 
