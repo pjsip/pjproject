@@ -33,6 +33,7 @@
 #include <pj/assert.h>
 #include <pj/os.h>
 #include <pj/log.h>
+#include <pj/rand.h>
 
 /* 
  * Note on offer/answer:
@@ -3916,15 +3917,32 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 	    /* Check if we have INVITE pending. */
 	    if (inv->invite_tsx && inv->invite_tsx!=tsx) {
+		int code;
 		pj_str_t reason;
 
 		reason = pj_str("Another INVITE transaction in progress");
 
+		if (inv->invite_tsx->role == PJSIP_ROLE_UAC)
+		    code = 491;
+		else
+		    code = 500;
+
 		/* Can not receive re-INVITE while another one is pending. */
-		status = pjsip_dlg_create_response( inv->dlg, rdata, 500, 
+		status = pjsip_dlg_create_response( inv->dlg, rdata, code,
 						    &reason, &tdata);
 		if (status != PJ_SUCCESS)
 		    return;
+
+		if (code == 500) {
+		    /* MUST include Retry-After header with random value
+		     * between 0-10.
+		     */
+		    pjsip_retry_after_hdr *ra_hdr;
+		    int val = (pj_rand() % 10);
+
+		    ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
+		    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
+		}
 
 		status = pjsip_dlg_send_response( inv->dlg, tsx, tdata);
 		
