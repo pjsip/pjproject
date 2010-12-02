@@ -1743,11 +1743,17 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	}
 
 	/* Inform application about remote offer. */
-
 	if (mod_inv.cb.on_rx_offer && inv->notify) {
 
 	    (*mod_inv.cb.on_rx_offer)(inv, sdp_info->sdp);
 
+	}
+
+	/* application must have supplied an answer at this point. */
+	if (pjmedia_sdp_neg_get_state(inv->neg) !=
+		PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
+	{
+	    return PJ_EINVALIDOP;
 	}
 
     } else if (pjmedia_sdp_neg_get_state(inv->neg) == 
