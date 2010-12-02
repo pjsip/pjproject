@@ -535,7 +535,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_default_param(
 {
     unsigned i;
     pjmedia_codec_id codec_id;
-    pj_pool_t *pool;
+    pj_pool_t *pool, *old_pool = NULL;
     struct pjmedia_codec_desc *codec_desc = NULL;
     pjmedia_codec_default_param *p;
 
@@ -560,10 +560,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_default_param(
 	return PJMEDIA_CODEC_EUNSUP;
     }
 
-    /* If codec param is previously set, release codec param pool */
+    /* If codec param is previously set, reset the codec param but release
+     * the codec param pool later after the new param is set (ticket #1171).
+     */
     if (codec_desc->param) {
 	pj_assert(codec_desc->param->pool);
-	pj_pool_release(codec_desc->param->pool);
+        old_pool = codec_desc->param->pool;
 	codec_desc->param = NULL;
     }
 
@@ -572,6 +574,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_default_param(
      */
     if (NULL == param) {
 	pj_mutex_unlock(mgr->mutex);
+        if (old_pool)
+	    pj_pool_release(old_pool);
 	return PJ_SUCCESS;
     }
 
@@ -590,14 +594,17 @@ PJ_DEF(pj_status_t) pjmedia_codec_mgr_set_default_param(
 	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].val, 
 		  &param->setting.dec_fmtp.param[i].val);
     }
-    for (i = 0; i < param->setting.dec_fmtp.cnt; ++i) {
-	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].name, 
-		  &param->setting.dec_fmtp.param[i].name);
-	pj_strdup(pool, &p->param->setting.dec_fmtp.param[i].val, 
-		  &param->setting.dec_fmtp.param[i].val);
+    for (i = 0; i < param->setting.enc_fmtp.cnt; ++i) {
+	pj_strdup(pool, &p->param->setting.enc_fmtp.param[i].name, 
+		  &param->setting.enc_fmtp.param[i].name);
+	pj_strdup(pool, &p->param->setting.enc_fmtp.param[i].val, 
+		  &param->setting.enc_fmtp.param[i].val);
     }
 
     pj_mutex_unlock(mgr->mutex);
+
+    if (old_pool)
+	pj_pool_release(old_pool);
 
     return PJ_SUCCESS;
 }
