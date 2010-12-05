@@ -767,7 +767,8 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
 {
     struct coreaudio_stream *strm = ((struct coreaudio_factory*)inClientData)->
 				    stream;
-    pj_assert(strm);
+    if (!strm)
+	return;
 
     PJ_LOG(3, (THIS_FILE, "Session interrupted! --- %s ---",
 	   inInterruption == kAudioSessionBeginInterruption ?
