@@ -82,6 +82,7 @@ export APP_LDLIBS := -lpjsua-$(TARGET_NAME)\
 	-lpjsip-simple-$(TARGET_NAME)\
 	-lpjsip-$(TARGET_NAME)\
 	-lpjmedia-codec-$(TARGET_NAME)\
+	-lpjmedia-videodev-$(TARGET_NAME)\
 	-lpjmedia-$(TARGET_NAME)\
 	-lpjmedia-audiodev-$(TARGET_NAME)\
 	-lpjnath-$(TARGET_NAME)\
@@ -95,6 +96,7 @@ export APP_LIB_FILES = $(PJ_DIR)/pjsip/lib/libpjsua-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-simple-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjsip/lib/libpjsip-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjmedia/lib/libpjmedia-codec-$(LIB_SUFFIX) \
+	$(PJ_DIR)/pjmedia/lib/libpjmedia-videodev-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjmedia/lib/libpjmedia-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjmedia/lib/libpjmedia-audiodev-$(LIB_SUFFIX) \
 	$(PJ_DIR)/pjnath/lib/libpjnath-$(LIB_SUFFIX) \

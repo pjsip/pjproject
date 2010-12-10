@@ -5844,6 +5844,7 @@ $as_echo_n "checking SDL availability..... " >&6; }
 			  ac_sdl_cflags=`sdl-config --cflags`
 			  ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			  ac_sdl_ldflags=`sdl-config --libs`
+			  LIBS="$LIBS $ac_sdl_ldflags"
 		   fi
 
 fi
@@ -6123,6 +6124,7 @@ if test "x$ac_cv_lib_avcore_avcore_version" = x""yes; then :
 
 fi
 
+		LIBS="$LIBS $ac_ffmpeg_ldflags"
 
 
 fi
@@ -6179,6 +6181,7 @@ $as_echo "$ac_cv_lib_v4l2_v4l2_open" >&6; }
 if test "x$ac_cv_lib_v4l2_v4l2_open" = x""yes; then :
   ac_v4l2_cflags="-DPJMEDIA_VIDEO_DEV_HAS_V4L2=1"
 			      ac_v4l2_ldflags="-lv4l2"
+			      LIBS="$LIBS -lv4l2"
 
 
 fi

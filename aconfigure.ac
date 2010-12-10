@@ -734,6 +734,7 @@ AC_ARG_ENABLE(sdl,
 			  ac_sdl_cflags=`sdl-config --cflags`
 			  ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			  ac_sdl_ldflags=`sdl-config --libs`
+			  LIBS="$LIBS $ac_sdl_ldflags"
 		   fi
 	      ])
 
@@ -788,6 +789,7 @@ AC_ARG_ENABLE(ffmpeg,
 			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcore"
 			     ]
 			     )
+		LIBS="$LIBS $ac_ffmpeg_ldflags"
 	      ]
 	      )
 
@@ -807,6 +809,7 @@ AC_ARG_ENABLE(v4l2,
 			     v4l2_open,
 			     [ac_v4l2_cflags="-DPJMEDIA_VIDEO_DEV_HAS_V4L2=1"
 			      ac_v4l2_ldflags="-lv4l2"
+			      LIBS="$LIBS -lv4l2"
 			     ]
 			     )
 	      ])
