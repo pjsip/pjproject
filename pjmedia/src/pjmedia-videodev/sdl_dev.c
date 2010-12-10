@@ -705,4 +705,8 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_stream *strm)
     return PJ_SUCCESS;
 }
 
+#ifdef _MSC_VER
+#   pragma comment( lib, "sdl.lib")
+#endif
+
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_SDL */

@@ -2765,6 +2765,10 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pjmedia-codec\ffmpeg_codecs.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-codec\g722.c"
 				>
 			</File>
@@ -3046,6 +3050,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjmedia-codec\ffmpeg_codecs.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjmedia-codec\g722.h"
 				>
 			</File>
@@ -3055,6 +3063,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia-codec\gsm.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia-codec\h263_packetizer.h"
 				>
 			</File>
 			<File
