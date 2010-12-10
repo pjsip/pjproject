@@ -60,7 +60,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
 	     lat_min = 10000,
 	     lat_max = 0;
 
-    samples_per_frame = wav->info.samples_per_frame;
+    samples_per_frame = PJMEDIA_PIA_SPF(&wav->info);
     frm.buf = pj_pool_alloc(pool, samples_per_frame * 2);
     frm.size = samples_per_frame * 2;
     len = pjmedia_wav_player_get_len(wav);
@@ -76,13 +76,13 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
 	read += samples_per_frame;
     }
 
-    if (read < 2 * wav->info.clock_rate) {
+    if (read < 2 * PJMEDIA_PIA_SRATE(&wav->info)) {
 	puts("Error: too short");
 	return -1;
     }
 
     start_pos = 0;
-    while (start_pos < len/2 - wav->info.clock_rate) {
+    while (start_pos < len/2 - PJMEDIA_PIA_SRATE(&wav->info)) {
 	int max_signal = 0;
 	unsigned max_signal_pos = start_pos;
 	unsigned max_echo_pos = 0;
@@ -90,7 +90,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
 	unsigned lat;
 
 	/* Get the largest signal in the next 0.7s */
-	for (i=start_pos; i<start_pos + wav->info.clock_rate * 700 / 1000; ++i) {
+	for (i=start_pos; i<start_pos + PJMEDIA_PIA_SRATE(&wav->info) * 700 / 1000; ++i) {
 	    if (abs(buf[i]) > max_signal) {
 		max_signal = abs(buf[i]);
 		max_signal_pos = i;
@@ -98,19 +98,19 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
 	}
 
 	/* Advance 10ms from max_signal_pos */
-	pos = max_signal_pos + 10 * wav->info.clock_rate / 1000;
+	pos = max_signal_pos + 10 * PJMEDIA_PIA_SRATE(&wav->info) / 1000;
 
 	/* Get the largest signal in the next 500ms */
 	max_signal = 0;
 	max_echo_pos = pos;
-	for (i=pos; i<pos+wav->info.clock_rate/2; ++i) {
+	for (i=pos; i<pos+PJMEDIA_PIA_SRATE(&wav->info)/2; ++i) {
 	    if (abs(buf[i]) > max_signal) {
 		max_signal = abs(buf[i]);
 		max_echo_pos = i;
 	    }
 	}
 
-	lat = (max_echo_pos - max_signal_pos) * 1000 / wav->info.clock_rate;
+	lat = (max_echo_pos - max_signal_pos) * 1000 / PJMEDIA_PIA_SRATE(&wav->info);
 	
 #if 0
 	printf("Latency = %u\n", lat);
@@ -124,7 +124,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav)
 	    lat_max = lat;
 
 	/* Advance next loop */
-	start_pos += wav->info.clock_rate;
+	start_pos += PJMEDIA_PIA_SRATE(&wav->info);
     }
 
     printf("Latency average = %u\n", lat_sum / lat_cnt);

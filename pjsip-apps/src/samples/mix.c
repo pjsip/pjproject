@@ -181,7 +181,7 @@ int main(int argc, char *argv[])
 					      &wav_input[i].port) );
 	len = pjmedia_wav_player_get_len(wav_input[i].port);
 	len = (pj_ssize_t)(len * 1.0 * clock_rate / 
-			    wav_input[i].port->info.clock_rate);
+			   PJMEDIA_PIA_SRATE(&wav_input[i].port->info));
 	if (len > (pj_ssize_t)longest)
 	    longest = len;
 
@@ -199,7 +199,7 @@ int main(int argc, char *argv[])
 	pjmedia_frame frame;
 
 	frame.buf = framebuf;
-	frame.size = cp->info.samples_per_frame * 2;
+	frame.size = PJMEDIA_PIA_SPF(&cp->info) * 2;
 	pj_assert(frame.size <= sizeof(framebuf));
 	
 	CHECK( pjmedia_port_get_frame(cp, &frame) );

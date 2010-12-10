@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2008-2010 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -24,7 +24,8 @@
  * @file port.h
  * @brief Port interface declaration
  */
-#include <pjmedia/types.h>
+#include <pjmedia/format.h>
+#include <pjmedia/frame.h>
 #include <pj/assert.h>
 #include <pj/os.h>
 
@@ -184,6 +185,13 @@ PJ_BEGIN_DECL
 
 
 /**
+ * Create 32bit port signature from ASCII characters.
+ */
+#define PJMEDIA_PORT_SIGNATURE(a,b,c,d)	    \
+	    (a<<24 | b<<16 | c<<8 | d)
+
+
+/**
  * Port operation setting.
  */
 typedef enum pjmedia_port_op
@@ -220,19 +228,133 @@ typedef struct pjmedia_port_info
 {
     pj_str_t	    name;		/**< Port name.			    */
     pj_uint32_t	    signature;		/**< Port signature.		    */
-    pjmedia_type    type;		/**< Media type.		    */
-    pj_bool_t	    has_info;		/**< Has info?			    */
-    pj_bool_t	    need_info;		/**< Need info on connect?	    */
-    unsigned	    pt;			/**< Payload type (can be dynamic). */
-    pjmedia_format  format;		/**< Format.			    */
-    pj_str_t	    encoding_name;	/**< Encoding name.		    */
-    unsigned	    clock_rate;		/**< Sampling rate.		    */
-    unsigned	    channel_count;	/**< Number of channels.	    */
-    unsigned	    bits_per_sample;	/**< Bits/sample		    */
-    unsigned	    samples_per_frame;	/**< No of samples per frame.	    */
-    unsigned	    bytes_per_frame;	/**< No of bytes per frame.	    */
+    pjmedia_dir     dir;                /**< Port direction.                */
+    pjmedia_format  fmt;                /**< Format.		            */
 } pjmedia_port_info;
 
+/**
+ * Utility to retrieve audio clock rate/sampling rate value from
+ * pjmedia_port_info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Audio clock rate.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_SRATE(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return pia->fmt.det.aud.clock_rate;
+}
+
+/**
+ * Utility to retrieve audio channel count value from pjmedia_port_info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Audio channel count.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_CCNT(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return pia->fmt.det.aud.channel_count;
+}
+
+/**
+ * Utility to retrieve audio bits per sample value from pjmedia_port_info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Number of bits per sample.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_BITS(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return pia->fmt.det.aud.bits_per_sample;
+}
+
+/**
+ * Utility to retrieve audio frame interval (ptime) value from
+ * pjmedia_port_info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Frame interval in msec.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_PTIME(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return pia->fmt.det.aud.frame_time_usec / 1000;
+}
+
+/**
+ * This is a utility routine to retrieve the audio samples_per_frame value
+ * from port info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Samples per frame value.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_SPF(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return PJMEDIA_AFD_SPF(&pia->fmt.det.aud);
+}
+
+/**
+ * This is a utility routine to retrieve the average bitrate value
+ * from port info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Bitrate, in bits per second.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_AVG_BPS(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return pia->fmt.det.aud.avg_bps;
+}
+
+/**
+ * This is a utility routine to retrieve the maximum bitrate value
+ * from port info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Bitrate, in bits per second.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_MAX_BPS(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return pia->fmt.det.aud.max_bps;
+}
+
+/**
+ * This is a utility routine to retrieve the average audio frame size value
+ * from pjmedia_port_info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Frame size in bytes.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_AVG_FSZ(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return PJMEDIA_AFD_AVG_FSZ(&pia->fmt.det.aud);
+}
+
+/**
+ * Utility to retrieve audio frame size from maximum bitrate from
+ * pjmedia_port_info.
+ *
+ * @param pia		Pointer to port info containing audio format.
+ * @return		Frame size in bytes.
+ */
+PJ_INLINE(unsigned) PJMEDIA_PIA_MAX_FSZ(const pjmedia_port_info *pia)
+{
+    pj_assert(pia->fmt.type==PJMEDIA_TYPE_AUDIO &&
+	      pia->fmt.detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO);
+    return PJMEDIA_AFD_MAX_FSZ(&pia->fmt.det.aud);
+}
 
 /**
  * Port interface.
@@ -254,7 +376,7 @@ typedef struct pjmedia_port
      * This should only be called by #pjmedia_port_put_frame().
      */
     pj_status_t (*put_frame)(struct pjmedia_port *this_port, 
-			     const pjmedia_frame *frame);
+			     pjmedia_frame *frame);
 
     /**
      * Source interface. 
@@ -276,6 +398,7 @@ typedef struct pjmedia_port
  * ports which deal with PCM audio.
  *
  * @param info		    The port info to be initialized.
+ * @param pool		    Pool to allocate memory from.
  * @param name		    Port name.
  * @param signature	    Port signature.
  * @param clock_rate	    Port's clock rate.
@@ -292,6 +415,24 @@ PJ_DECL(pj_status_t) pjmedia_port_info_init( pjmedia_port_info *info,
 					     unsigned channel_count,
 					     unsigned bits_per_sample,
 					     unsigned samples_per_frame);
+
+/**
+ * This is an auxiliary function to initialize port info for
+ * ports which deal with PCM audio.
+ *
+ * @param info		    The port info to be initialized.
+ * @param name		    Port name.
+ * @param signature	    Port signature.
+ * @param dir	            Port's direction.
+ * @param fmt	            Port's media format.
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_port_info_init2(pjmedia_port_info *info,
+					     const pj_str_t *name,
+					     unsigned signature,
+					     pjmedia_dir dir,
+					     const pjmedia_format *fmt);
 
 
 /**
@@ -314,7 +455,7 @@ PJ_DECL(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
-					     const pjmedia_frame *frame );
+					     pjmedia_frame *frame );
 
 
 /**

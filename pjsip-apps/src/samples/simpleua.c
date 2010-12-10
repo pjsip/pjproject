@@ -706,19 +706,19 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_snd_port_create_player( 
 		    inv->pool,				/* pool		    */
 		    -1,					/* sound dev id	    */
-		    media_port->info.clock_rate,	/* clock rate	    */
-		    media_port->info.channel_count,	/* channel count    */
-		    media_port->info.samples_per_frame, /* samples per frame*/
-		    media_port->info.bits_per_sample,   /* bits per sample  */
+		    PJMEDIA_PIA_SRATE(&media_port->info),/* clock rate	    */
+		    PJMEDIA_PIA_CCNT(&media_port->info),/* channel count    */
+		    PJMEDIA_PIA_SPF(&media_port->info), /* samples per frame*/
+		    PJMEDIA_PIA_BITS(&media_port->info),/* bits per sample  */
 		    0,					/* options	    */
 		    &g_snd_player);
     if (status != PJ_SUCCESS) {
 	app_perror( THIS_FILE, "Unable to create sound player", status);
 	PJ_LOG(3,(THIS_FILE, "%d %d %d %d",
-	    	    media_port->info.clock_rate,	/* clock rate	    */
-		    media_port->info.channel_count,	/* channel count    */
-		    media_port->info.samples_per_frame, /* samples per frame*/
-		    media_port->info.bits_per_sample    /* bits per sample  */
+		    PJMEDIA_PIA_SRATE(&media_port->info),/* clock rate	    */
+		    PJMEDIA_PIA_CCNT(&media_port->info),/* channel count    */
+		    PJMEDIA_PIA_SPF(&media_port->info), /* samples per frame*/
+		    PJMEDIA_PIA_BITS(&media_port->info) /* bits per sample  */
 	    ));
 	return;
     }
@@ -732,10 +732,10 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_snd_port_create_rec( 
 		    inv->pool,				/* pool		    */
 		    -1,					/* sound dev id	    */
-		    media_port->info.clock_rate,	/* clock rate	    */
-		    media_port->info.channel_count,	/* channel count    */
-		    media_port->info.samples_per_frame, /* samples per frame*/
-		    media_port->info.bits_per_sample,   /* bits per sample  */
+		    PJMEDIA_PIA_SRATE(&media_port->info),/* clock rate	    */
+		    PJMEDIA_PIA_CCNT(&media_port->info),/* channel count    */
+		    PJMEDIA_PIA_SPF(&media_port->info), /* samples per frame*/
+		    PJMEDIA_PIA_BITS(&media_port->info),/* bits per sample  */
 		    0,					/* options	    */
 		    &g_snd_rec);
     if (status != PJ_SUCCESS) {

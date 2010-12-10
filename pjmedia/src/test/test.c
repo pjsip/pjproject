@@ -56,6 +56,14 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
+#if HAS_VID_DEV_TEST
+    DO_TEST(vid_dev_test());
+#endif
+
+#if HAS_VID_CODEC_TEST
+    DO_TEST(vid_codec_test());
+#endif
+
 #if HAS_SDP_NEG_TEST
     DO_TEST(sdp_neg_test());
 #endif

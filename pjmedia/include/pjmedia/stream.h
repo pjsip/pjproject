@@ -32,6 +32,7 @@
 #include <pjmedia/port.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/transport.h>
+#include <pjmedia/vid_codec.h>
 #include <pj/sock.h>
 
 PJ_BEGIN_DECL
@@ -133,6 +134,9 @@ struct pjmedia_stream_info
 					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
 #endif
+
+    pjmedia_vid_codec_info       vid_codec_info;
+    pjmedia_vid_codec_param     *vid_codec_param;
 };
 
 

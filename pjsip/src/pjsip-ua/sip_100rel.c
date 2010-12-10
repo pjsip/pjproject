@@ -28,6 +28,7 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/rand.h>
+#include <pj/string.h>
 
 #define THIS_FILE	"sip_100rel.c"
 

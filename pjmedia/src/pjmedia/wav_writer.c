@@ -51,7 +51,7 @@ struct file_port
 };
 
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
-				  const pjmedia_frame *frame);
+				  pjmedia_frame *frame);
 static pj_status_t file_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
 static pj_status_t file_on_destroy(pjmedia_port *this_port);
@@ -198,7 +198,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
     fport->bufsize = buff_size;
 
     /* Check that buffer size is greater than bytes per frame */
-    pj_assert(fport->bufsize >= fport->base.info.bytes_per_frame);
+    pj_assert(fport->bufsize >= PJMEDIA_PIA_AVG_FSZ(&fport->base.info));
 
 
     /* Allocate buffer and set initial write position */
@@ -216,7 +216,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_writer_port_create( pj_pool_t *pool,
 	      "File writer '%.*s' created: samp.rate=%d, bufsize=%uKB",
 	      (int)fport->base.info.name.slen,
 	      fport->base.info.name.ptr,
-	      fport->base.info.clock_rate,
+	      PJMEDIA_PIA_SRATE(&fport->base.info),
 	      fport->bufsize / 1000));
 
 
@@ -308,7 +308,7 @@ static pj_status_t flush_buffer(struct file_port *fport)
  * to the file.
  */
 static pj_status_t file_put_frame(pjmedia_port *this_port, 
-				  const pjmedia_frame *frame)
+				  pjmedia_frame *frame)
 {
     struct file_port *fport = (struct file_port *)this_port;
     unsigned frame_size;

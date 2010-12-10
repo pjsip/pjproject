@@ -118,7 +118,12 @@ typedef void pjmedia_clock_callback(const pj_timestamp *ts,
 
 
 /**
- * Create media clock.
+ * Create media clock. This creates a media clock object that will run
+ * periodically at an interval that is calculated from the audio parameters.
+ * Once created, application must call #pjmedia_clock_start() to actually
+ * start the clock.
+ *
+ * @see pjmedia_clock_create2()
  *
  * @param pool		    Pool to allocate memory.
  * @param clock_rate	    Number of samples per second.
@@ -138,6 +143,32 @@ PJ_DECL(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 					   unsigned clock_rate,
 					   unsigned channel_count,
 					   unsigned samples_per_frame,
+					   unsigned options,
+					   pjmedia_clock_callback *cb,
+					   void *user_data,
+					   pjmedia_clock **p_clock);
+
+
+/**
+ * Create media clock. This creates a media clock object that will run
+ * periodically at the specified interval. Once created, application must
+ * call #pjmedia_clock_start() to actually start the clock.
+ *
+ * @param pool		    Pool to allocate memory.
+ * @param usec_interval	    The frame interval, in microseconds.
+ * @param clock_rate	    The media clock rate, to determine timestamp
+ * 			    increment for each call.
+ * @param options	    Bitmask of pjmedia_clock_options.
+ * @param cb		    Callback to be called for each clock tick.
+ * @param user_data	    User data, which will be passed to the callback.
+ * @param p_clock	    Pointer to receive the clock instance.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
+					   unsigned usec_interval,
+					   unsigned clock_rate,
 					   unsigned options,
 					   pjmedia_clock_callback *cb,
 					   void *user_data,

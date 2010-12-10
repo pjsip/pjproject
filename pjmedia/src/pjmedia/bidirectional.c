@@ -33,7 +33,7 @@ struct bidir_port
 
 
 static pj_status_t put_frame(pjmedia_port *this_port, 
-			     const pjmedia_frame *frame)
+			     pjmedia_frame *frame)
 {
     struct bidir_port *p = (struct bidir_port*)this_port;
     return pjmedia_port_put_frame(p->put_port, frame);
@@ -54,14 +54,16 @@ PJ_DEF(pj_status_t) pjmedia_bidirectional_port_create( pj_pool_t *pool,
 						       pjmedia_port **p_port )
 {
     struct bidir_port *port;
+    const pjmedia_audio_format_detail *gafd;
 
     port = PJ_POOL_ZALLOC_T(pool, struct bidir_port);
+    gafd = pjmedia_format_get_audio_format_detail(&get_port->info.fmt, 1);
 
     pjmedia_port_info_init(&port->base.info, &get_port->info.name, SIGNATURE,
-			   get_port->info.clock_rate,
-			   get_port->info.channel_count,
-			   get_port->info.bits_per_sample,
-			   get_port->info.samples_per_frame);
+			   gafd->clock_rate,
+			   gafd->channel_count,
+			   gafd->bits_per_sample,
+			   PJMEDIA_AFD_SPF(gafd));
 
     port->get_port = get_port;
     port->put_port = put_port;

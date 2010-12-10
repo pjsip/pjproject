@@ -29,7 +29,7 @@
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);
 static pj_status_t null_put_frame(pjmedia_port *this_port, 
-				  const pjmedia_frame *frame);
+				  pjmedia_frame *frame);
 static pj_status_t null_on_destroy(pjmedia_port *this_port);
 
 
@@ -67,7 +67,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
  * Put frame to file.
  */
 static pj_status_t null_put_frame(pjmedia_port *this_port, 
-				  const pjmedia_frame *frame)
+				  pjmedia_frame *frame)
 {
     PJ_UNUSED_ARG(this_port);
     PJ_UNUSED_ARG(frame);
@@ -82,10 +82,10 @@ static pj_status_t null_get_frame(pjmedia_port *this_port,
 				  pjmedia_frame *frame)
 {
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    frame->size = this_port->info.samples_per_frame * 2;
-    frame->timestamp.u32.lo += this_port->info.samples_per_frame;
+    frame->size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
+    frame->timestamp.u32.lo += PJMEDIA_PIA_SPF(&this_port->info);
     pjmedia_zero_samples((pj_int16_t*)frame->buf, 
-			 this_port->info.samples_per_frame);
+			  PJMEDIA_PIA_SPF(&this_port->info));
 
     return PJ_SUCCESS;
 }

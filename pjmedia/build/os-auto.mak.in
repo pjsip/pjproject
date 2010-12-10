@@ -1,7 +1,21 @@
 # @configure_input@
 
+# SDL flags
+SDL_CFLAGS = @ac_sdl_cflags@
+SDL_LDFLAGS = @ac_sdl_ldflags@
+
+# FFMPEG dlags
+FFMPEG_CFLAGS = @ac_ffmpeg_cflags@ 
+FFMPEG_LDFLAGS =  @ac_ffmpeg_ldflags@
+
+# Video4Linux2
+V4L2_CFLAGS = @ac_v4l2_cflags@
+V4L2_LDFLAGS = @ac_v4l2_ldflags@
+
 # PJMEDIA features exclusion
-export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@
+export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@ \
+		 $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS)
+export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS)
 
 # Define the desired sound device backend
 # Valid values are:

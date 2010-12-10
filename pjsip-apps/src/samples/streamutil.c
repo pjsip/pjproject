@@ -505,8 +505,7 @@ int main(int argc, char *argv[])
     if (play_file) {
 	unsigned wav_ptime;
 
-	wav_ptime = stream_port->info.samples_per_frame * 1000 /
-		    stream_port->info.clock_rate;
+	wav_ptime = PJMEDIA_PIA_PTIME(&stream_port->info);
 	status = pjmedia_wav_player_port_create(pool, play_file, wav_ptime,
 						0, -1, &play_file_port);
 	if (status != PJ_SUCCESS) {
@@ -532,10 +531,10 @@ int main(int argc, char *argv[])
     } else if (rec_file) {
 
 	status = pjmedia_wav_writer_port_create(pool, rec_file,
-					        stream_port->info.clock_rate,
-						stream_port->info.channel_count,
-						stream_port->info.samples_per_frame,
-						stream_port->info.bits_per_sample,
+					        PJMEDIA_PIA_SRATE(&stream_port->info),
+					        PJMEDIA_PIA_CCNT(&stream_port->info),
+					        PJMEDIA_PIA_SPF(&stream_port->info),
+					        PJMEDIA_PIA_BITS(&stream_port->info),
 						0, 0, &rec_file_port);
 	if (status != PJ_SUCCESS) {
 	    app_perror(THIS_FILE, "Unable to use file", status);
@@ -562,24 +561,24 @@ int main(int argc, char *argv[])
 	/* Create sound device port. */
 	if (dir == PJMEDIA_DIR_ENCODING_DECODING)
 	    status = pjmedia_snd_port_create(pool, -1, -1, 
-					stream_port->info.clock_rate,
-					stream_port->info.channel_count,
-					stream_port->info.samples_per_frame,
-					stream_port->info.bits_per_sample,
+					PJMEDIA_PIA_SRATE(&stream_port->info),
+					PJMEDIA_PIA_CCNT(&stream_port->info),
+					PJMEDIA_PIA_SPF(&stream_port->info),
+					PJMEDIA_PIA_BITS(&stream_port->info),
 					0, &snd_port);
 	else if (dir == PJMEDIA_DIR_ENCODING)
 	    status = pjmedia_snd_port_create_rec(pool, -1, 
-					stream_port->info.clock_rate,
-					stream_port->info.channel_count,
-					stream_port->info.samples_per_frame,
-					stream_port->info.bits_per_sample,
+					PJMEDIA_PIA_SRATE(&stream_port->info),
+					PJMEDIA_PIA_CCNT(&stream_port->info),
+					PJMEDIA_PIA_SPF(&stream_port->info),
+					PJMEDIA_PIA_BITS(&stream_port->info),
 					0, &snd_port);
 	else
 	    status = pjmedia_snd_port_create_player(pool, -1, 
-					stream_port->info.clock_rate,
-					stream_port->info.channel_count,
-					stream_port->info.samples_per_frame,
-					stream_port->info.bits_per_sample,
+					PJMEDIA_PIA_SRATE(&stream_port->info),
+					PJMEDIA_PIA_CCNT(&stream_port->info),
+					PJMEDIA_PIA_SPF(&stream_port->info),
+					PJMEDIA_PIA_BITS(&stream_port->info),
 					0, &snd_port);
 
 
@@ -757,11 +756,9 @@ static void print_stream_stat(pjmedia_stream *stream,
 	    now.msec);
 
 
-    printf(" Info: audio %.*s@%dHz, %dms/frame, %sB/s (%sB/s +IP hdr)\n",
-   	(int)port->info.encoding_name.slen,
-	port->info.encoding_name.ptr,
-	port->info.clock_rate,
-	port->info.samples_per_frame * 1000 / port->info.clock_rate,
+    printf(" Info: audio %dHz, %dms/frame, %sB/s (%sB/s +IP hdr)\n",
+	PJMEDIA_PIA_SRATE(&port->info),
+	PJMEDIA_PIA_PTIME(&port->info),
 	good_number(bps, (codec_param->info.avg_bps+7)/8),
 	good_number(ipbps, ((codec_param->info.avg_bps+7)/8) + 
 			   (40 * 1000 /

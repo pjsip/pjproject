@@ -26,6 +26,7 @@
  */
 
 #include <pjmedia-codec/l16.h>
+#include <pjmedia-codec/ffmpeg_codecs.h>
 #include <pjmedia-codec/gsm.h>
 #include <pjmedia-codec/speex.h>
 #include <pjmedia-codec/ilbc.h>

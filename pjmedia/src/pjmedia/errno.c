@@ -114,6 +114,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_EREMOTENODTMF,    "Remote does not support DTMF" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_EINDTMF,	    "Invalid DTMF digit" ),
     PJ_BUILD_ERR( PJMEDIA_RTP_EREMNORFC2833,"Remote does not support RFC 2833" ),
+    PJ_BUILD_ERR( PJMEDIA_EBADFMT,	    "Bad format"),
 
     /* RTP session errors. */
     PJ_BUILD_ERR( PJMEDIA_RTP_EINPKT,	    "Invalid RTP packet" ),
@@ -142,6 +143,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_EWAVEUNSUPP,	    "Unsupported WAVE file format" ),
     PJ_BUILD_ERR( PJMEDIA_EWAVETOOSHORT,    "WAVE file too short" ),
     PJ_BUILD_ERR( PJMEDIA_EFRMFILETOOBIG,   "Sound frame too large for file buffer"),
+    PJ_BUILD_ERR( PJMEDIA_EAVIUNSUPP,	    "Unsupported AVI file"),
 
     /* Sound device errors: */
     PJ_BUILD_ERR( PJMEDIA_ENOSNDREC,	    "No suitable sound capture device" ),
@@ -261,6 +263,23 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
     errstr.ptr = buf;
     errstr.slen = pj_ansi_snprintf(buf, bufsize, 
 				   "Unknown pjmedia error %d",
+				   statcode);
+
+    return errstr;
+}
+
+/*
+ * pjmedia_videodev_strerror()
+ */
+PJ_DEF(pj_str_t) pjmedia_videodev_strerror(pj_status_t statcode, 
+					   char *buf, pj_size_t bufsize )
+{
+    pj_str_t errstr;
+
+    /* Error not found. */
+    errstr.ptr = buf;
+    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
+				   "Unknown pjmedia-videodev error %d",
 				   statcode);
 
     return errstr;

@@ -139,10 +139,10 @@ int main(int argc, char *argv[])
     status = pjmedia_snd_port_create_player( 
 		 pool,				    /* pool		    */
 		 -1,				    /* use default dev.	    */
-		 file_port->info.clock_rate,	    /* clock rate.	    */
-		 file_port->info.channel_count,	    /* # of channels.	    */
-		 file_port->info.samples_per_frame, /* samples per frame.   */
-		 file_port->info.bits_per_sample,   /* bits per sample.	    */
+		 PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.	    */
+		 PJMEDIA_PIA_CCNT(&file_port->info),/* # of channels.	    */
+		 PJMEDIA_PIA_SPF(&file_port->info), /* samples per frame.   */
+		 PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.	    */
 		 0,				    /* options		    */
 		 &snd_port			    /* returned port	    */
 		 );

@@ -1968,9 +1968,10 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	    port0_info.listener_cnt==0 && port0_info.transmitter_cnt==0) 
 	{
 	    need_reopen = (peer_info.format.id != port0_info.format.id ||
-			   peer_info.format.bitrate != port0_info.format.bitrate ||
+			   peer_info.format.det.aud.avg_bps !=
+				   port0_info.format.det.aud.avg_bps ||
 			   peer_info.clock_rate != port0_info.clock_rate ||
-			   peer_info.channel_count != port0_info.channel_count);
+			   peer_info.channel_count!=port0_info.channel_count);
 	}
 
 	if (need_reopen) {
@@ -1985,7 +1986,8 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 					  peer_info.samples_per_frame,
 					  peer_info.bits_per_sample);
 		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		    pjsua_perror(THIS_FILE, "Error opening sound device",
+				 status);
 		    return status;
 		}
 
@@ -1997,14 +1999,17 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 
 		status = open_snd_dev(&param);
 		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		    pjsua_perror(THIS_FILE, "Error opening sound device",
+				 status);
 		    return status;
 		}
 	    } else {
 		/* Null-audio */
-		status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
+		status = pjsua_set_snd_dev(pjsua_var.cap_dev,
+					   pjsua_var.play_dev);
 		if (status != PJ_SUCCESS) {
-		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
+		    pjsua_perror(THIS_FILE, "Error opening sound device",
+				 status);
 		    return status;
 		}
 	    }
@@ -2141,7 +2146,7 @@ PJ_DEF(pj_status_t) pjsua_player_create( const pj_str_t *filename,
     status = pjmedia_wav_player_port_create(
 				    pool, path,
 				    pjsua_var.mconf_cfg.samples_per_frame *
-				    1000 / pjsua_var.media_cfg.channel_count / 
+				    1000 / pjsua_var.media_cfg.channel_count /
 				    pjsua_var.media_cfg.clock_rate, 
 				    options, 0, &port);
     if (status != PJ_SUCCESS) {
@@ -2705,7 +2710,7 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
      */
     if (!pjsua_var.is_mswitch &&
 	param->ext_fmt.id == PJMEDIA_FORMAT_PCM &&
-	conf_port->info.clock_rate != param->clock_rate)
+	PJMEDIA_PIA_SRATE(&conf_port->info) != param->clock_rate)
     {
 	pjmedia_port *resample_port;
 	unsigned resample_opt = 0;
@@ -2741,13 +2746,16 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
      * derived from the sound device setting, so update the setting.
      */
     if (pjsua_var.is_mswitch) {
-	pj_memcpy(&conf_port->info.format, &param->ext_fmt, 
-		  sizeof(conf_port->info.format));
-	conf_port->info.clock_rate = param->clock_rate;
-	conf_port->info.samples_per_frame = param->samples_per_frame;
-	conf_port->info.channel_count = param->channel_count;
-	conf_port->info.bits_per_sample = 16;
+	pj_memcpy(&conf_port->info.fmt, &param->ext_fmt,
+		  sizeof(conf_port->info.fmt));
+	conf_port->info.fmt.det.aud.clock_rate = param->clock_rate;
+	conf_port->info.fmt.det.aud.frame_time_usec = param->samples_per_frame*
+						      1000000 /
+						      param->clock_rate;
+	conf_port->info.fmt.det.aud.channel_count = param->channel_count;
+	conf_port->info.fmt.det.aud.bits_per_sample = 16;
     }
+
 
     /* Connect sound port to the bridge */
     status = pjmedia_snd_port_connect(pjsua_var.snd_port, 	 

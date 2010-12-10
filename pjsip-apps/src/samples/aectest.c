@@ -197,23 +197,23 @@ int main(int argc, char *argv[])
     }
 
     /* play and rec WAVs must have the same clock rate */
-    if (wav_play->info.clock_rate != wav_rec->info.clock_rate) {
+    if (PJMEDIA_PIA_SRATE(&wav_play->info) != PJMEDIA_PIA_SRATE(&wav_rec->info)) {
 	puts("Error: clock rate mismatch in the WAV files");
 	return 1;
     }
 
     /* .. and channel count */
-    if (wav_play->info.channel_count != wav_rec->info.channel_count) {
+    if (PJMEDIA_PIA_CCNT(&wav_play->info) != PJMEDIA_PIA_CCNT(&wav_rec->info)) {
 	puts("Error: clock rate mismatch in the WAV files");
 	return 1;
     }
 
     /* Create output wav */
     status = pjmedia_wav_writer_port_create(pool, argv[pj_optind+2],
-					    wav_play->info.clock_rate,
-					    wav_play->info.channel_count,
-					    wav_play->info.samples_per_frame,
-					    wav_play->info.bits_per_sample,
+					    PJMEDIA_PIA_SRATE(&wav_play->info),
+					    PJMEDIA_PIA_CCNT(&wav_play->info),
+					    PJMEDIA_PIA_SPF(&wav_play->info),
+					    PJMEDIA_PIA_BITS(&wav_play->info),
 					    0, 0, &wav_out);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Error opening output WAV file", status);
@@ -221,9 +221,9 @@ int main(int argc, char *argv[])
     }
 
     /* Create echo canceller */
-    status = pjmedia_echo_create2(pool, wav_play->info.clock_rate,
-				  wav_play->info.channel_count,
-				  wav_play->info.samples_per_frame,
+    status = pjmedia_echo_create2(pool, PJMEDIA_PIA_SRATE(&wav_play->info),
+				  PJMEDIA_PIA_CCNT(&wav_play->info),
+				  PJMEDIA_PIA_SPF(&wav_play->info),
 				  tail_ms, latency_ms,
 				  opt, &ec);
     if (status != PJ_SUCCESS) {
@@ -233,19 +233,19 @@ int main(int argc, char *argv[])
 
 
     /* Processing loop */
-    play_frame.buf = pj_pool_alloc(pool, wav_play->info.samples_per_frame<<1);
-    rec_frame.buf = pj_pool_alloc(pool, wav_play->info.samples_per_frame<<1);
+    play_frame.buf = pj_pool_alloc(pool, PJMEDIA_PIA_SPF(&wav_play->info)<<1);
+    rec_frame.buf = pj_pool_alloc(pool, PJMEDIA_PIA_SPF(&wav_play->info)<<1);
     pj_get_timestamp(&t0);
     for (i=0; i < repeat; ++i) {
 	for (;;) {
-	    play_frame.size = wav_play->info.samples_per_frame << 1;
+	    play_frame.size = PJMEDIA_PIA_SPF(&wav_play->info) << 1;
 	    status = pjmedia_port_get_frame(wav_play, &play_frame);
 	    if (status != PJ_SUCCESS)
 		break;
 
 	    status = pjmedia_echo_playback(ec, (short*)play_frame.buf);
 
-	    rec_frame.size = wav_play->info.samples_per_frame << 1;
+	    rec_frame.size = PJMEDIA_PIA_SPF(&wav_play->info) << 1;
 	    status = pjmedia_port_get_frame(wav_rec, &rec_frame);
 	    if (status != PJ_SUCCESS)
 		break;
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
     pj_get_timestamp(&t1);
 
     i = pjmedia_wav_writer_port_get_pos(wav_out) / sizeof(pj_int16_t) * 1000 / 
-	(wav_out->info.clock_rate * wav_out->info.channel_count);
+	 (PJMEDIA_PIA_SRATE(&wav_out->info) * PJMEDIA_PIA_CCNT(&wav_out->info));
     PJ_LOG(3,(THIS_FILE, "Processed %3d.%03ds audio",
 	      i / 1000, i % 1000));
     PJ_LOG(3,(THIS_FILE, "Completed in %u msec\n", pj_elapsed_msec(&t0, &t1)));

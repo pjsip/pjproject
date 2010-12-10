@@ -250,12 +250,12 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
     /* Extended formats */
     wdi->info.caps |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
     wdi->info.ext_fmt_cnt = 2;
-    wdi->info.ext_fmt[0].id = PJMEDIA_FORMAT_PCMU;
-    wdi->info.ext_fmt[0].bitrate = 64000;
-    wdi->info.ext_fmt[0].vad = 0;
-    wdi->info.ext_fmt[1].id = PJMEDIA_FORMAT_PCMA;
-    wdi->info.ext_fmt[1].bitrate = 64000;
-    wdi->info.ext_fmt[1].vad = 0;
+    pjmedia_format_init_audio(&wdi->info.ext_fmt[0],
+			      PJMEDIA_FORMAT_PCMU, 8000, 1, 8,
+			      20000, 64000, 64000);
+    pjmedia_format_init_audio(&wdi->info.ext_fmt[0],
+			      PJMEDIA_FORMAT_PCMA, 8000, 1, 8,
+			      20000, 64000, 64000);
 }
 
 /* API: init factory */

@@ -684,7 +684,7 @@ struct codec_port
 
 
 static pj_status_t codec_put_frame(struct pjmedia_port *this_port, 
-				   const pjmedia_frame *frame)
+				   pjmedia_frame *frame)
 {
     struct codec_port *cp = (struct codec_port*)this_port;
     pjmedia_frame out_frame;
@@ -1131,13 +1131,13 @@ static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port,
     pj_status_t status;
 
     while (pjmedia_circ_buf_get_len(wp->circbuf) <
-		wp->base.info.samples_per_frame * (CIRC_BUF_FRAME_CNT-1))
+		PJMEDIA_PIA_SPF(&wp->base.info) * (CIRC_BUF_FRAME_CNT-1))
     {
 	status = pjmedia_port_get_frame(wp->gen_port, frame);
 	pj_assert(status==PJ_SUCCESS);
 
 	status = pjmedia_circ_buf_write(wp->circbuf, (short*)frame->buf, 
-					wp->base.info.samples_per_frame);
+					PJMEDIA_PIA_SPF(&wp->base.info));
 	pj_assert(status==PJ_SUCCESS);
     }
     
@@ -1149,7 +1149,7 @@ static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port,
 	pjmedia_circ_buf_get_read_regions(wp->circbuf, &reg1, &reg1_len,
 					  &reg2, &reg2_len);
 
-	del_cnt = wp->base.info.samples_per_frame;
+	del_cnt = PJMEDIA_PIA_SPF(&wp->base.info);
 	status = pjmedia_wsola_discard(wp->wsola, reg1, reg1_len, reg2, 
 				       reg2_len, &del_cnt);
 	pj_assert(status==PJ_SUCCESS);
@@ -2010,7 +2010,7 @@ static pj_status_t delaybuf_get_frame(struct pjmedia_port *this_port,
 }
 
 static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port, 
-				      const pjmedia_frame *frame)
+				      pjmedia_frame *frame)
 {
     struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
     pj_status_t status;
@@ -2219,7 +2219,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     }
 
     /* Port may decide to use different ptime (e.g. iLBC) */
-    samples_per_frame = port->info.samples_per_frame;
+    samples_per_frame = PJMEDIA_PIA_SPF(&port->info);
 
     gen_port = create_gen_port(pool, clock_rate, 1, 
 			       samples_per_frame, 100);

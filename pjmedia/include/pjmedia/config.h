@@ -880,6 +880,93 @@
 #endif
 
 
+/*
+ * .... new stuffs ...
+ */
+
+/**
+ * Specify if FFMPEG is available. The value here will be used as the default
+ * value for other FFMPEG settings below.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_FFMPEG
+#   define PJMEDIA_HAS_FFMPEG				0
+#endif
+
+/**
+ * Specify if FFMPEG libavformat is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVFORMAT
+#   define PJMEDIA_HAS_LIBAVFORMAT			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavformat is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVCODEC
+#   define PJMEDIA_HAS_LIBAVCODEC			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavutil is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVUTIL
+#   define PJMEDIA_HAS_LIBAVUTIL			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libswscale is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBSWSCALE
+#   define PJMEDIA_HAS_LIBSWSCALE			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavdevice is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVDEVICE
+#   define PJMEDIA_HAS_LIBAVDEVICE			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavcore is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVCORE
+#   define PJMEDIA_HAS_LIBAVCORE			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Maximum video planes.
+ *
+ * Default: 4
+ */
+#ifndef PJMEDIA_MAX_VIDEO_PLANES
+#   define PJMEDIA_MAX_VIDEO_PLANES			4
+#endif
+
+/**
+ * Maximum number of video formats.
+ *
+ * Default: 32
+ */
+#ifndef PJMEDIA_MAX_VIDEO_FORMATS
+#   define PJMEDIA_MAX_VIDEO_FORMATS			32
+#endif
+
+
 /**
  * @}
  */

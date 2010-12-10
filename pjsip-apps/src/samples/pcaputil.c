@@ -87,7 +87,7 @@ static void err_exit(const char *title, pj_status_t status)
         pj_ssize_t pos = pjmedia_wav_writer_port_get_pos(app.wav);
         if (pos >= 0) {
             unsigned msec;
-            msec = pos / 2 * 1000 / app.wav->info.clock_rate;
+            msec = pos / 2 * 1000 / PJMEDIA_PIA_SRATE(&app.wav->info);
             printf("Written: %dm:%02ds.%03d\n",
                     msec / 1000 / 60,
                     (msec / 1000) % 60,

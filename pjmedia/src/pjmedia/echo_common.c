@@ -20,6 +20,7 @@
 
 #include <pjmedia/echo.h>
 #include <pjmedia/delaybuf.h>
+#include <pjmedia/frame.h>
 #include <pjmedia/errno.h>
 #include <pj/assert.h>
 #include <pj/list.h>

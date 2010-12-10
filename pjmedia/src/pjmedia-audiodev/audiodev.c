@@ -190,9 +190,11 @@ static pj_status_t get_cap_pointer(const pjmedia_aud_param *param,
     case PJMEDIA_AUD_DEV_CAP_EC_TAIL:
 	FIELD_INFO(ec_tail_ms);
 	break;
+    /* vad is no longer in "fmt" in 2.0.
     case PJMEDIA_AUD_DEV_CAP_VAD:
 	FIELD_INFO(ext_fmt.vad);
 	break;
+    */
     case PJMEDIA_AUD_DEV_CAP_CNG:
 	FIELD_INFO(cng_enabled);
 	break;

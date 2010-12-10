@@ -38,7 +38,8 @@ SAMPLES := auddemo \
 	   stereotest \
 	   streamutil \
 	   strerror \
-	   tonegen
+	   tonegen \
+	   vstreamutil
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)$(HOST_EXE))
 

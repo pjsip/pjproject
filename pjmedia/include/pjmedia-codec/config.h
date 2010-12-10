@@ -34,13 +34,13 @@
 
 #include <pjmedia/types.h>
 
-
 /*
  * Include config_auto.h if autoconf is used (PJ_AUTOCONF is set)
  */
 #if defined(PJ_AUTOCONF)
 #   include <pjmedia-codec/config_auto.h>
 #endif
+
 
 /**
  * Unless specified otherwise, L16 codec is included by default.
@@ -343,8 +343,20 @@
 	  to control which implementation to be used.
 #endif
 
+
+/**
+ * Specify if FFMPEG codecs are available.
+ *
+ * Default: PJMEDIA_HAS_LIBAVCODEC
+ */
+#ifndef PJMEDIA_HAS_FFMPEG_CODEC
+#   define PJMEDIA_HAS_FFMPEG_CODEC		PJMEDIA_HAS_LIBAVCODEC
+#endif
+
 /**
  * @}
  */
+
+
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_H__ */

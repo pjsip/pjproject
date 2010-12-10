@@ -39,6 +39,7 @@
 
 #include <pjmedia/codec.h>
 #include <pjmedia/sdp.h>
+#include <pjmedia/transport.h>
 
 
 PJ_BEGIN_DECL

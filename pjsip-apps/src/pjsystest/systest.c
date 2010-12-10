@@ -650,7 +650,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 {
     pjmedia_frame frm;
     short *buf;
-    unsigned i, samples_per_frame, read, len;
+    unsigned i, clock_rate, samples_per_frame, read, len;
     unsigned start_pos;
     pj_bool_t first;
     pj_status_t status;
@@ -660,7 +660,8 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
     *lat_min = 10000;
     *lat_max = 0;
 
-    samples_per_frame = wav->info.samples_per_frame;
+    samples_per_frame = PJMEDIA_PIA_SPF(&wav->info);
+    clock_rate = PJMEDIA_PIA_SRATE(&wav->info);
     frm.buf = pj_pool_alloc(pool, samples_per_frame * 2);
     frm.size = samples_per_frame * 2;
     len = pjmedia_wav_player_get_len(wav);
@@ -677,7 +678,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	read += samples_per_frame;
     }
 
-    if (read < 2 * wav->info.clock_rate) {
+    if (read < 2 * clock_rate) {
 	systest_perror("The WAV file is too short", PJ_SUCCESS);
 	return -1;
     }
@@ -685,12 +686,12 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
     /* Zero the first 500ms to remove loud click noises 
      * (keypad press, etc.)
      */
-    pjmedia_zero_samples(buf, wav->info.clock_rate / 2);
+    pjmedia_zero_samples(buf, clock_rate / 2);
 
     /* Loop to calculate latency */
     start_pos = 0;
     first = PJ_TRUE;
-    while (start_pos < len/2 - wav->info.clock_rate) {
+    while (start_pos < len/2 - clock_rate) {
 	int max_signal = 0;
 	unsigned max_signal_pos = start_pos;
 	unsigned max_echo_pos = 0;
@@ -698,7 +699,7 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	unsigned lat;
 
 	/* Get the largest signal in the next 0.7s */
-	for (i=start_pos; i<start_pos + wav->info.clock_rate * 700 / 1000; ++i) {
+	for (i=start_pos; i<start_pos + clock_rate * 700 / 1000; ++i) {
 	    if (abs(buf[i]) > max_signal) {
 		max_signal = abs(buf[i]);
 		max_signal_pos = i;
@@ -706,24 +707,24 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 	}
 
 	/* Advance 10ms from max_signal_pos */
-	pos = max_signal_pos + 10 * wav->info.clock_rate / 1000;
+	pos = max_signal_pos + 10 * clock_rate / 1000;
 
 	/* Get the largest signal in the next 800ms */
 	max_signal = 0;
 	max_echo_pos = pos;
-	for (i=pos; i<pos+wav->info.clock_rate * 8 / 10; ++i) {
+	for (i=pos; i<pos+clock_rate * 8 / 10; ++i) {
 	    if (abs(buf[i]) > max_signal) {
 		max_signal = abs(buf[i]);
 		max_echo_pos = i;
 	    }
 	}
 
-	lat = (max_echo_pos - max_signal_pos) * 1000 / wav->info.clock_rate;
+	lat = (max_echo_pos - max_signal_pos) * 1000 / clock_rate;
 
 #if 0
 	PJ_LOG(4,(THIS_FILE, "Signal at %dms, echo at %d ms, latency %d ms",
-		  max_signal_pos * 1000 / wav->info.clock_rate,
-		  max_echo_pos * 1000 / wav->info.clock_rate,
+		  max_signal_pos * 1000 / clock_rate,
+		  max_echo_pos * 1000 / clock_rate,
 		  lat));
 #endif
 
@@ -736,10 +737,10 @@ static int calculate_latency(pj_pool_t *pool, pjmedia_port *wav,
 
 	/* Advance next loop */
 	if (first) {
-	    start_pos = max_signal_pos + wav->info.clock_rate * 9 / 10;
+	    start_pos = max_signal_pos + clock_rate * 9 / 10;
 	    first = PJ_FALSE;
 	} else {
-	    start_pos += wav->info.clock_rate;
+	    start_pos += clock_rate;
 	}
     }
 

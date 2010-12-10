@@ -50,6 +50,7 @@ struct pjmedia_clock
 static int clock_thread(void *arg);
 
 #define MAX_JUMP_MSEC	500
+#define USEC_IN_SEC	(pj_uint64_t)1000000
 
 /*
  * Create media clock.
@@ -63,25 +64,38 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 					  void *user_data,
 					  pjmedia_clock **p_clock)
 {
+    return pjmedia_clock_create2(pool,
+			         (unsigned)(samples_per_frame * USEC_IN_SEC /
+					    channel_count / clock_rate),
+				 clock_rate, options, cb, user_data, p_clock);
+}
+
+PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
+				          unsigned usec_interval,
+				          unsigned clock_rate,
+				          unsigned options,
+				          pjmedia_clock_callback *cb,
+				          void *user_data,
+				          pjmedia_clock **p_clock)
+{
     pjmedia_clock *clock;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pool && clock_rate && samples_per_frame && p_clock,
+    PJ_ASSERT_RETURN(pool && usec_interval && clock_rate && p_clock,
 		     PJ_EINVAL);
 
     clock = PJ_POOL_ALLOC_T(pool, pjmedia_clock);
-
     
     status = pj_get_timestamp_freq(&clock->freq);
     if (status != PJ_SUCCESS)
 	return status;
 
-    clock->interval.u64 = samples_per_frame * clock->freq.u64 / 
-			  channel_count / clock_rate;
+    clock->interval.u64 = usec_interval * clock->freq.u64 / USEC_IN_SEC;
     clock->next_tick.u64 = 0;
     clock->timestamp.u64 = 0;
     clock->max_jump = MAX_JUMP_MSEC * clock->freq.u64 / 1000;
-    clock->timestamp_inc = samples_per_frame / channel_count;
+    clock->timestamp_inc = (unsigned)(usec_interval * clock_rate /
+				      USEC_IN_SEC);
     clock->options = options;
     clock->cb = cb;
     clock->user_data = user_data;
@@ -108,6 +122,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 
     return PJ_SUCCESS;
 }
+
 
 
 /*

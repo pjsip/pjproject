@@ -637,24 +637,25 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_get_ec_tail( pjmedia_snd_port *snd_port,
 PJ_DEF(pj_status_t) pjmedia_snd_port_connect( pjmedia_snd_port *snd_port,
 					      pjmedia_port *port)
 {
-    pjmedia_port_info *pinfo;
+    pjmedia_audio_format_detail *afd;
 
     PJ_ASSERT_RETURN(snd_port && port, PJ_EINVAL);
+
+    afd = pjmedia_format_get_audio_format_detail(&port->info.fmt, PJ_TRUE);
 
     /* Check that port has the same configuration as the sound device
      * port.
      */
-    pinfo = &port->info;
-    if (pinfo->clock_rate != snd_port->clock_rate)
+    if (afd->clock_rate != snd_port->clock_rate)
 	return PJMEDIA_ENCCLOCKRATE;
 
-    if (pinfo->samples_per_frame != snd_port->samples_per_frame)
+    if (PJMEDIA_AFD_SPF(afd) != snd_port->samples_per_frame)
 	return PJMEDIA_ENCSAMPLESPFRAME;
 
-    if (pinfo->channel_count != snd_port->channel_count)
+    if (afd->channel_count != snd_port->channel_count)
 	return PJMEDIA_ENCCHANNEL;
 
-    if (pinfo->bits_per_sample != snd_port->bits_per_sample)
+    if (afd->bits_per_sample != snd_port->bits_per_sample)
 	return PJMEDIA_ENCBITS;
 
     /* Port is okay. */

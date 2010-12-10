@@ -168,7 +168,10 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     pjmedia_wave_hdr wave_hdr;
     pj_ssize_t size_to_read, size_read;
     struct file_reader_port *fport;
+    pjmedia_audio_format_detail *ad;
     pj_off_t pos;
+    pj_str_t name;
+    unsigned samples_per_frame;
     pj_status_t status = PJ_SUCCESS;
 
 
@@ -331,17 +334,15 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     fport->options = options;
 
     /* Update port info. */
-    fport->base.info.channel_count = wave_hdr.fmt_hdr.nchan;
-    fport->base.info.clock_rate = wave_hdr.fmt_hdr.sample_rate;
-    fport->base.info.bits_per_sample = BITS_PER_SAMPLE;
-    fport->base.info.samples_per_frame = fport->base.info.clock_rate *
-					 wave_hdr.fmt_hdr.nchan *
-					 ptime / 1000;
-    fport->base.info.bytes_per_frame = 
-	fport->base.info.samples_per_frame * 
-	fport->base.info.bits_per_sample / 8;
-
-    pj_strdup2(pool, &fport->base.info.name, filename);
+    ad = pjmedia_format_get_audio_format_detail(&fport->base.info.fmt, 1);
+    pj_strdup2(pool, &name, filename);
+    samples_per_frame = ptime * wave_hdr.fmt_hdr.sample_rate *
+		        wave_hdr.fmt_hdr.nchan / 1000;
+    pjmedia_port_info_init(&fport->base.info, &name, SIGNATURE,
+			   wave_hdr.fmt_hdr.sample_rate,
+			   wave_hdr.fmt_hdr.nchan,
+			   BITS_PER_SAMPLE,
+			   samples_per_frame);
 
     /* If file is shorter than buffer size, adjust buffer size to file
      * size. Otherwise EOF callback will be called multiple times when
@@ -358,9 +359,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* samples_per_frame must be smaller than bufsize (because get_frame()
      * doesn't handle this case).
      */
-    if (fport->base.info.samples_per_frame * fport->bytes_per_sample >=
-	fport->bufsize)
-    {
+    if (samples_per_frame * fport->bytes_per_sample >= fport->bufsize) {
 	pj_file_close(fport->fd);
 	return PJ_EINVAL;
     }
@@ -394,8 +393,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
 	      "filesize=%luKB",
 	      (int)fport->base.info.name.slen,
 	      fport->base.info.name.ptr,
-	      fport->base.info.clock_rate,
-	      fport->base.info.channel_count,
+	      ad->clock_rate,
+	      ad->channel_count,
 	      fport->bufsize / 1000,
 	      (unsigned long)(fport->fsize / 1000)));
 
