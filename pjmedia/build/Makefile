@@ -86,7 +86,7 @@ export PJMEDIA_AUDIODEV_CFLAGS += $(_CFLAGS)
 # Defines for building PJMEDIA-VIDEODEV library
 #
 export PJMEDIA_VIDEODEV_SRCDIR = ../src/pjmedia-videodev
-export PJMEDIA_VIDEODEV_OBJS +=  videodev.o ffmpeg_dev.o sdl_dev.o colorbar_dev.o \
+export PJMEDIA_VIDEODEV_OBJS +=  videodev.o ffmpeg_dev.o colorbar_dev.o \
 				 v4l2_dev.o
 export PJMEDIA_VIDEODEV_CFLAGS += $(_CFLAGS)
 
@@ -119,7 +119,7 @@ export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \
 #
 export PJMEDIA_TEST_SRCDIR = ../src/test
 export PJMEDIA_TEST_OBJS += codec_vectors.o jbuf_test.o main.o mips_test.o \
-			    vid_dev_test.o vid_codec_test.o rtp_test.o test.o
+			    vid_codec_test.o rtp_test.o test.o
 export PJMEDIA_TEST_OBJS += sdp_neg_test.o 
 export PJMEDIA_TEST_CFLAGS += $(_CFLAGS)
 export PJMEDIA_TEST_LDFLAGS += $(_LDFLAGS)

@@ -52,6 +52,26 @@ PJ_BEGIN_DECL
 
 
 /**
+ * This setting controls whether QT support should be included.
+ *
+ * Default: 0 (or detected by configure)
+ */
+#ifndef PJMEDIA_VIDEO_DEV_HAS_QT
+#   define PJMEDIA_VIDEO_DEV_HAS_QT		0
+#endif
+
+
+/**
+ * This setting controls whether IOS support should be included.
+ *
+ * Default: 0 (or detected by configure)
+ */
+#ifndef PJMEDIA_VIDEO_DEV_HAS_IOS
+#   define PJMEDIA_VIDEO_DEV_HAS_IOS		0
+#endif
+
+
+/**
  * This setting controls whether Direct Show support should be included.
  *
  * Default: 0 (unfinished)

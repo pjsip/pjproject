@@ -24,6 +24,10 @@
 
 #if PJMEDIA_VIDEO_DEV_HAS_SDL
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+#   include <Foundation/NSAutoreleasePool.h>
+#endif
+
 #include <SDL.h>
 
 #define THIS_FILE		"sdl_dev.c"
@@ -323,25 +327,29 @@ static int create_sdl_thread(void * data)
     const pjmedia_video_format_info *vfi;
     pjmedia_video_format_detail *vfd;
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    NSAutoreleasePool *apool = [[NSAutoreleasePool alloc] init];
+#endif
+ 
     vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
                                         strm->param.fmt.id);
     if (!vfi || !sdl_info) {
         strm->status = PJMEDIA_EVID_BADFORMAT;
-        return strm->status;
+        goto on_return;
     }
 
     strm->vafp.size = strm->param.fmt.det.vid.size;
     strm->vafp.buffer = NULL;
     if (vfi->apply_fmt(vfi, &strm->vafp) != PJ_SUCCESS) {
         strm->status = PJMEDIA_EVID_BADFORMAT;
-        return strm->status;
+        goto on_return;
     }
 
     /* Initialize the SDL library */
     if (SDL_Init(SDL_INIT_VIDEO)) {
         PJ_LOG(4, (THIS_FILE, "Cannot initialize SDL"));
         strm->status = PJMEDIA_EVID_INIT;
-        return strm->status;
+        goto on_return;
     }
 
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
@@ -354,7 +362,7 @@ static int create_sdl_thread(void * data)
                                     0, SDL_RESIZABLE | SDL_SWSURFACE);
     if (strm->screen == NULL) {
         strm->status = PJMEDIA_EVID_SYSERR;
-        return strm->status;
+        goto on_return;
     }
     SDL_WM_SetCaption("pjmedia-SDL video", NULL);
 
@@ -368,7 +376,7 @@ static int create_sdl_thread(void * data)
             sdl_info->Amask);
         if (strm->surf == NULL) {
             strm->status = PJMEDIA_EVID_SYSERR;
-            return strm->status;
+            goto on_return;
         }
     } else if (vfi->color_model == PJMEDIA_COLOR_MODEL_YUV) {
         strm->overlay = SDL_CreateYUVOverlay(strm->rect.w, strm->rect.h,
@@ -376,7 +384,7 @@ static int create_sdl_thread(void * data)
             strm->screen);
         if (strm->overlay == NULL) {
             strm->status = PJMEDIA_EVID_SYSERR;
-            return strm->status;
+            goto on_return;
         }
     }
 
@@ -389,7 +397,7 @@ static int create_sdl_thread(void * data)
 
             switch(sevent.type) {
 		case SDL_USEREVENT:
-		    return 0;
+		    goto on_return;
                 case SDL_MOUSEBUTTONDOWN:
                     pevent.event_type = PJMEDIA_EVENT_MOUSEBUTTONDOWN;
                     if (strm->vid_cb.on_event_cb)
@@ -448,7 +456,7 @@ static int create_sdl_thread(void * data)
 
                         /* Destroy the stream */
                         sdl_stream_destroy(&strm->base);
-                        return 0;
+                        goto on_return;
                     }
 
                     /**
@@ -460,7 +468,7 @@ static int create_sdl_thread(void * data)
                     sdl_stream_stop(&strm->base);
                     SDL_Quit();
                     strm->screen = NULL;
-                    return 0;
+                    goto on_return;
                 default:
                     break;
             }
@@ -468,7 +476,12 @@ static int create_sdl_thread(void * data)
 
     }
 
-    return 0;
+on_return:
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    [apool release];
+#endif
+    
+    return strm->status;
 }
 
 /* API: create stream */
@@ -598,17 +611,22 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_stream *strm,
                                         const pjmedia_frame *frame)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
-
+    pj_status_t status = PJ_SUCCESS;
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    NSAutoreleasePool *apool = [[NSAutoreleasePool alloc] init];
+#endif
+  
     if (!stream->is_running) {
         stream->render_exited = PJ_TRUE;
-        return PJ_SUCCESS;
+        goto on_return;
     }
 
     if (stream->surf) {
         if (SDL_MUSTLOCK(stream->surf)) {
             if (SDL_LockSurface(stream->surf) < 0) {
                 PJ_LOG(3, (THIS_FILE, "Unable to lock SDL surface"));
-                return PJMEDIA_EVID_NOTREADY;
+                status = PJMEDIA_EVID_NOTREADY;
+		goto on_return;
             }
         }
 
@@ -624,7 +642,8 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_stream *strm,
 
         if (SDL_LockYUVOverlay(stream->overlay) < 0) {
             PJ_LOG(3, (THIS_FILE, "Unable to lock SDL overlay"));
-            return PJMEDIA_EVID_NOTREADY;
+	    status = PJMEDIA_EVID_NOTREADY;
+	    goto on_return;
         }
 
         for (i = 0, offset = 0; i < stream->overlay->planes; i++) {
@@ -638,7 +657,12 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_stream *strm,
         SDL_DisplayYUVOverlay(stream->overlay, &stream->rect);
     }
 
-    return PJ_SUCCESS;
+on_return:
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    [apool release];
+#endif
+    
+    return status;
 }
 
 /* API: Start stream. */

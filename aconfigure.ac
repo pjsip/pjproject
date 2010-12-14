@@ -581,6 +581,37 @@ else
  esac
 fi
 
+AC_SUBST(ac_pjmedia_video)
+if test "$enable_video" = "no"; then
+  true;
+else
+ case $target in
+  arm-apple-darwin*)
+	ac_pjmedia_video=iphone_os
+	AC_SUBST(ac_ios_cflags)
+	ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1"
+	LIBS="$LIBS -framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	AC_MSG_RESULT([Checking video device backend... AVFoundation])
+	;;
+  *darwin*)
+	ac_pjmedia_video=mac_os
+	AC_SUBST(ac_pjmedia_video_has_qt)
+	AC_SUBST(ac_qt_cflags)
+	SAVED_LIBS="$LIBS"
+	LIBS="-framework QTKit"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_qt=yes],[ac_pjmedia_video_has_qt=no])
+	LIBS="$SAVED_LIBS"
+	if test "$ac_pjmedia_video_has_qt" = "yes"; then
+	  ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
+	  LIBS="$LIBS -framework QTKit -framework Foundation -framework AppKit -framework QuartzCore"
+	  AC_MSG_RESULT([Checking if QTKit framework is available... yes])
+	else
+	  AC_MSG_RESULT([Checking if QTKit framework is available... no])
+	fi
+	;;
+ esac
+fi
+
 AC_ARG_ENABLE(ext_sound,
 	      AC_HELP_STRING([--enable-ext-sound],
 			     [PJMEDIA will not provide any sound device backend]),
