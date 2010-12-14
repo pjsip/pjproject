@@ -261,26 +261,39 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 				  pj_uint32_t *bit_info) 
 {
     if (framelist->size) {
+	pj_bool_t prev_discarded = PJ_FALSE;
 
 	/* Skip discarded frames */
 	while (framelist->frame_type[framelist->head] ==
 	       PJMEDIA_JB_DISCARDED_FRAME)
 	{
 	    jb_framelist_remove_head(framelist, 1);
+	    prev_discarded = PJ_TRUE;
 	}
 
 	/* Return the head frame if any */
 	if (framelist->size) {
-	    pj_memcpy(frame, 
-		      framelist->content + 
-		      framelist->head * framelist->frame_size,
-		      framelist->frame_size);
-	    *p_type = (pjmedia_jb_frame_type) 
-		      framelist->frame_type[framelist->head];
-	    if (size)
-		*size   = framelist->content_len[framelist->head];
-	    if (bit_info)
-		*bit_info = framelist->bit_info[framelist->head];
+	    if (prev_discarded) {
+		/* Ticket #1188: when previous frame(s) was discarded, return
+		 * 'missing' frame to trigger PLC to get smoother signal.
+		 */
+		*p_type = PJMEDIA_JB_MISSING_FRAME;
+		if (size)
+		    *size = 0;
+		if (bit_info)
+		    *bit_info = 0;
+	    } else {
+		pj_memcpy(frame, 
+			  framelist->content + 
+			  framelist->head * framelist->frame_size,
+			  framelist->frame_size);
+		*p_type = (pjmedia_jb_frame_type) 
+			  framelist->frame_type[framelist->head];
+		if (size)
+		    *size   = framelist->content_len[framelist->head];
+		if (bit_info)
+		    *bit_info = framelist->bit_info[framelist->head];
+	    }
 
 	    //pj_bzero(framelist->content + 
 	    //	 framelist->head * framelist->frame_size,

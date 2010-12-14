@@ -143,7 +143,7 @@ PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPGGPPPGGGPG PGGGGPPPGPPGPPPGGPGG
 %adaptive 0 0 10
 !burst	    4
 !discard    68 <- number of PUT - GET, JB does shrinking by discarding frames
-!lost	    0
+!lost	    68 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    4
 !delay	    8  <- should be less than or equal to twice of burst
 P PGPGPPGGPPPPGGPGGGPG PGGGGPPPGPPGPPPGGPGG P PGPGPPGGPPPPGGPGGGPG 
@@ -293,7 +293,7 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG
 %adaptive 0 0 10
 !burst	    1
 !discard    50 <- frames discarded for delay adaptation
-!lost	    0
+!lost	    50 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    0
 !delay	    25 <- average delay, JB is able to adapt the delay
 PPPPPPPPPPPPPPPPPPPP PPPPPPPPPPPPPPPPPPPP PPPPPPPPPP
@@ -347,7 +347,7 @@ PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPGGPPPGGGPG PGGGGPPPGPPGPPPGGPGG
 %fixed 10
 !burst	    1
 !discard    50 <- frames discarded for delay adaptation
-!lost	    0
+!lost	    50 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    0
 !delay	    20 <- average delay, twice of minimal prefetch
 PPPPPPPPPPPPPPPPPPPP PPPPPPPPPPPPPPPPPPPP PPPPPPPPPP
@@ -371,7 +371,7 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 %adaptive 0 0 40
 !burst	    10
 !discard    300 <- not so relevant for long period session with many delay adjustments needed (i.e: for first burst and periodic spikes)
-!lost	    0
+!lost	    300 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    60 <- delay adjustment effect, as there is actually no drift
 !delay	    20 <- twice of burst level average
 PPPPPPPPPPPPPPPPPPPP PPPPPPPPPPPPPPPPPPPP PPPPPPPPPP
