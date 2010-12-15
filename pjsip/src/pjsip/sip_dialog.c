@@ -1773,6 +1773,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 ||
 	(dlg->role==PJSIP_ROLE_UAC &&
 	 !dlg->uac_has_2xx &&
+	 res_code > 100 &&
 	 res_code/100 <= 2 &&
 	 pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
 	 pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag)))
