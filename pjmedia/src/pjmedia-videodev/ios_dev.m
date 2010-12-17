@@ -189,7 +189,8 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     strcpy(qdi->info.name, "iOS UIView");
     strcpy(qdi->info.driver, "iOS");	    
     qdi->info.dir = PJMEDIA_DIR_RENDER;
-    qdi->info.has_callback = PJ_FALSE;   
+    qdi->info.has_callback = PJ_FALSE;
+    qdi->info.caps = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
     
     if (NSClassFromString(@"AVCaptureSession")) {
 	qdi = &qf->dev_info[qf->dev_count++];
@@ -203,7 +204,7 @@ static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f)
     for (i = 0; i < qf->dev_count; i++) {
 	qdi = &qf->dev_info[i];
 	qdi->info.fmt_cnt = PJ_ARRAY_SIZE(ios_fmts);	    
-	qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+	qdi->info.caps |= PJMEDIA_VID_DEV_CAP_FORMAT;
 	qdi->info.fmt = (pjmedia_format*)
 			pj_pool_calloc(qf->pool, qdi->info.fmt_cnt,
 				       sizeof(pjmedia_format));
@@ -328,7 +329,8 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     /* Release the Quartz image */
     CGImageRelease(quartzImage);
     
-    [stream->imgView setImage:image];
+    [stream->imgView performSelectorOnMainThread:@selector(setImage:)
+		     withObject:image waitUntilDone:NO];
     
     [pool release];
 }    
@@ -452,7 +454,7 @@ static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
 	}
 	[strm->cap_session addOutput:strm->video_output];
 	
-	// Configure your output.
+	/* Configure the video output */
 	strm->vout_delegate = [VOutDelegate alloc];
 	strm->vout_delegate->stream = strm;
 	dispatch_queue_t queue = dispatch_queue_create("myQueue", NULL);
@@ -476,6 +478,9 @@ static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
     if (param->dir & PJMEDIA_DIR_RENDER) {
 	/* Get the main window */
 	UIWindow *window = [[UIApplication sharedApplication] keyWindow];
+	
+	if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW && param->window)
+	    window = param->window;
 	
 	pj_assert(window);
 	strm->imgView = [[UIImageView alloc] initWithFrame:[window bounds]];
