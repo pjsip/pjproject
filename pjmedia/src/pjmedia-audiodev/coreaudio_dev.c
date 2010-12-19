@@ -97,8 +97,8 @@ struct coreaudio_stream
     struct coreaudio_factory	*cf;
     struct stream_list		 list_entry;
 
-    pjmedia_aud_rec_cb   	 rec_cb;          /**< Capture callback.   */
-    pjmedia_aud_play_cb  	 play_cb;         /**< Playback callback.  */
+    pjmedia_aud_rec_cb   	 rec_cb;         /**< Capture callback.   */
+    pjmedia_aud_play_cb  	 play_cb;        /**< Playback callback.  */
     void                	*user_data;      /**< Application data.   */
 
     pj_timestamp	 	 play_timestamp;
@@ -297,7 +297,6 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 	PJ_LOG(4, (THIS_FILE,
 		   "Error: cannot initialize audio session services (%i)",
 		   ostatus));
-	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
     /* We want to be able to open playback and recording streams */
@@ -309,7 +308,6 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 	PJ_LOG(4, (THIS_FILE,
 		   "Error: cannot set the audio session category (%i)",
 		   ostatus));
-	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 
     /* Listen for audio routing change notifications */
@@ -320,7 +318,6 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 	PJ_LOG(4, (THIS_FILE,
 		   "Error: cannot listen for audio route change "
 		   "notifications (%i)", ostatus));
-	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
 #endif
 
@@ -917,7 +914,8 @@ static OSStatus output_renderer(void                       *inRefCon,
 	status = pj_thread_register("coreaudio", stream->play_thread_desc,
 				    &stream->play_thread);
 	stream->play_thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Player thread started, (%i frames)", inNumberFrames));
+	PJ_LOG(5,(THIS_FILE, "Player thread started, (%i frames)",
+		  inNumberFrames));
     }
 
 
@@ -1956,7 +1954,7 @@ static pj_status_t ca_stream_start(pjmedia_aud_stream *strm)
 
 #if !COREAUDIO_MAC
     if (should_activate)
-    AudioSessionSetActive(true);
+	AudioSessionSetActive(true);
 #endif
 
     PJ_LOG(4, (THIS_FILE, "core audio stream started"));
