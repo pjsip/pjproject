@@ -265,7 +265,7 @@ typedef struct pjmedia_vid_param
      * Video frame rate. This setting is mandatory if the video
      * direction includes input/capture direction
      */
-    pjmedia_ratio frame_rate;
+//    pjmedia_ratio frame_rate;
 
     /**
      * This flags specifies which of the optional settings are valid in this

@@ -262,8 +262,6 @@ static pj_status_t cbar_factory_default_param(pj_pool_t *pool,
     param->rend_id = PJMEDIA_VID_INVALID_DEV;
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    param->frame_rate.num = DEFAULT_FPS;
-    param->frame_rate.denum = 1;
     pj_memcpy(&param->fmt, &di->info.fmt[0], sizeof(param->fmt));
 
     return PJ_SUCCESS;

@@ -299,8 +299,6 @@ static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->fmt.type = PJMEDIA_TYPE_VIDEO;
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    param->frame_rate.num = DEFAULT_FPS;
-    param->frame_rate.denum = 1;
     pjmedia_format_init_video(&param->fmt, sdl_fmts[0].fmt_id,
 			      DEFAULT_WIDTH, DEFAULT_HEIGHT,
 			      DEFAULT_FPS, 1);

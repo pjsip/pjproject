@@ -91,7 +91,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 					     const pjmedia_vid_port_param *prm,
 					     pjmedia_vid_port **p_vid_port)
 {
-    enum { USEC_IN_SEC = 1000000 };
     pjmedia_vid_port *vp;
     pjmedia_vid_dev_index dev_id = PJMEDIA_VID_INVALID_DEV;
     pjmedia_vid_dev_info di;
@@ -101,7 +100,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
-    PJ_ASSERT_RETURN(prm->vidparam.frame_rate.num, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO,
 		     PJ_EINVAL);
 
@@ -109,6 +107,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     vfd = pjmedia_format_get_video_format_detail(&prm->vidparam.fmt, PJ_TRUE);
     if (!vfd)
 	return PJ_EINVAL;
+
+    PJ_ASSERT_RETURN(vfd->fps.num, PJ_EINVAL);
+
 
     /* Allocate videoport */
     vp = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_port);
@@ -157,9 +158,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
 	if (vp->dir & PJMEDIA_DIR_ENCODING) {
 	    status = pjmedia_clock_create2(pool,
-					   USEC_IN_SEC *
-					      prm->vidparam.frame_rate.denum /
-					      prm->vidparam.frame_rate.num,
+                                           PJMEDIA_PTIME(&vfd->fps),
 					   prm->vidparam.clock_rate,
 					   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
 					   &enc_clock_cb, vp, &vp->enc_clock);
@@ -169,9 +168,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
 	if (vp->dir & PJMEDIA_DIR_DECODING) {
 	    status = pjmedia_clock_create2(pool,
-					   USEC_IN_SEC *
-					      prm->vidparam.frame_rate.denum /
-					      prm->vidparam.frame_rate.num,
+                                           PJMEDIA_PTIME(&vfd->fps),
 					   prm->vidparam.clock_rate,
 					   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
 					   &dec_clock_cb, vp, &vp->dec_clock);

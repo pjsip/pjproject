@@ -468,6 +468,28 @@ PJ_INLINE(unsigned) PJMEDIA_FSZ(unsigned bps, unsigned usec_ptime)
 #endif
 }
 
+/**
+ * General utility routine to calculate ptime value from frame rate.
+ * Application should use this macro whenever possible due to possible
+ * overflow in the math calculation.
+ *
+ * @param frame_rate		Frame rate
+ *
+ * @return			The ptime value (in usec).
+ */
+PJ_INLINE(unsigned) PJMEDIA_PTIME(const pjmedia_ratio *frame_rate)
+{
+#if PJ_HAS_INT64
+    return ((unsigned)((pj_uint64_t)1000000 * \
+		       frame_rate->denum / frame_rate->num));
+#elif PJ_HAS_FLOATING_POINT
+    return ((unsigned)(1000000.0 * frame_rate->denum / \
+                       frame_rate->num));
+#else
+    return ((unsigned)((1000L * frame_rate->denum / \
+                       frame_rate->num) * 1000);
+#endif
+}
 
 /**
  * Utility to retrieve samples_per_frame value from

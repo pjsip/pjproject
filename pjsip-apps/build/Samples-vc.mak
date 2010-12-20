@@ -62,6 +62,7 @@ BINDIR = ..\bin\samples\$(TARGET)
 
 SAMPLES = $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\aectest.exe \
+	  $(BINDIR)\aviplay.exe \
 	  $(BINDIR)\confsample.exe \
 	  $(BINDIR)\confbench.exe \
 	  $(BINDIR)\encdec.exe \
