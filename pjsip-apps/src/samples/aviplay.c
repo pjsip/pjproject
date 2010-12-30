@@ -90,7 +90,7 @@ struct codec_fmt {
 typedef struct avi_port_t
 {
     pjmedia_vid_port   *vid_port;
-    pjmedia_aud_stream *aud_stream;
+    pjmedia_snd_port   *snd_port;
     pj_bool_t           is_running;
     pj_bool_t           is_quitting;
 } avi_port_t;
@@ -104,11 +104,6 @@ typedef struct codec_port_data_t
     
     pjmedia_converter   *conv;
 } codec_port_data_t;
-
-static pj_status_t avi_play_cb(void *user_data, pjmedia_frame *frame)
-{
-    return pjmedia_port_get_frame((pjmedia_port*)user_data, frame);
-}
 
 static pj_status_t avi_event_cb(pjmedia_vid_stream *stream,
 				void *user_data,
@@ -125,12 +120,14 @@ static pj_status_t avi_event_cb(pjmedia_vid_stream *stream,
     case PJMEDIA_EVENT_MOUSEBUTTONDOWN:
         if (ap->is_running) {
             pjmedia_vid_port_stop(ap->vid_port);
-            if (ap->aud_stream)
-                pjmedia_aud_stream_stop(ap->aud_stream);
+            if (ap->snd_port)
+                pjmedia_aud_stream_stop(
+                    pjmedia_snd_port_get_snd_stream(ap->snd_port));
         } else {
             pjmedia_vid_port_start(ap->vid_port);
-            if (ap->aud_stream)
-                pjmedia_aud_stream_start(ap->aud_stream);
+            if (ap->snd_port)
+                pjmedia_aud_stream_start(
+                    pjmedia_snd_port_get_snd_stream(ap->snd_port));
         }
         ap->is_running = !ap->is_running;
         break;
@@ -186,11 +183,9 @@ static int aviplay(pj_pool_t *pool, const char *fname)
 {
     pjmedia_vid_port *renderer=NULL;
     pjmedia_vid_port_param param;
-    pjmedia_aud_param aparam;
     const pjmedia_video_format_info *vfi;
     pjmedia_video_format_detail *vfd;
-    pjmedia_audio_format_detail *afd;
-    pjmedia_aud_stream *strm = NULL;
+    pjmedia_snd_port *snd_port = NULL;
     pj_status_t status;
     int rc = 0;
     pjmedia_avi_streams *avi_streams;
@@ -375,31 +370,25 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     aud_port = pjmedia_avi_stream_get_port(aud_stream);
     
     if (aud_port) {
-        status = pjmedia_aud_dev_default_param(
-                     PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV,
-		     &aparam);
+        /* Create sound player port. */
+        status = pjmedia_snd_port_create_player( 
+		 pool,				    /* pool		    */
+		 -1,				    /* use default dev.	    */
+		 PJMEDIA_PIA_SRATE(&aud_port->info),/* clock rate.	    */
+		 PJMEDIA_PIA_CCNT(&aud_port->info), /* # of channels.	    */
+		 PJMEDIA_PIA_SPF(&aud_port->info),  /* samples per frame.   */
+		 PJMEDIA_PIA_BITS(&aud_port->info), /* bits per sample.	    */
+		 0,				    /* options		    */
+		 &snd_port			    /* returned port	    */
+		 );
         if (status != PJ_SUCCESS) {
             rc = 310; goto on_return;
         }
 	
-        aparam.dir = PJMEDIA_DIR_PLAYBACK;
-        afd = pjmedia_format_get_audio_format_detail(&aud_port->info.fmt,
-                                                     PJ_TRUE);
-        aparam.clock_rate = afd->clock_rate;
-        aparam.channel_count = afd->channel_count;
-        aparam.bits_per_sample = afd->bits_per_sample;
-        aparam.samples_per_frame = afd->frame_time_usec * aparam.clock_rate *
-	                           aparam.channel_count / 1000000;
-	
-        status = pjmedia_aud_stream_create(&aparam, NULL, &avi_play_cb,
-                                           aud_port,
-                                           &strm);
-        if (status != PJ_SUCCESS) {
-            rc = 320; goto on_return;
-        }
-	
-        /* Start audio streaming.. */
-        status = pjmedia_aud_stream_start(strm);
+        /* Connect file port to the sound player.
+         * Stream playing will commence immediately.
+         */
+        status = pjmedia_snd_port_connect(snd_port, aud_port);
         if (status != PJ_SUCCESS) {
             rc = 330; goto on_return;
         }
@@ -410,10 +399,19 @@ static int aviplay(pj_pool_t *pool, const char *fname)
 	
         pj_bzero(&cb, sizeof(cb));
         cb.on_event_cb = avi_event_cb;
-        avi_port.aud_stream = strm;
+        avi_port.snd_port = snd_port;
         avi_port.vid_port = renderer;
         avi_port.is_running = PJ_TRUE;
         pjmedia_vid_port_set_cb(renderer, &cb, &avi_port);
+
+        if (snd_port) {
+            /* Synchronize video rendering and audio playback */
+            pjmedia_vid_port_set_clock_src(
+                renderer, PJMEDIA_DIR_RENDER,
+                pjmedia_snd_port_get_clock_src(
+                    snd_port, PJMEDIA_DIR_PLAYBACK));
+        }
+                                              
 	
         /* Start video streaming.. */
         status = pjmedia_vid_port_start(renderer);
@@ -427,12 +425,18 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     }
 
 on_return:
-    if (strm) {
-	pjmedia_aud_stream_stop(strm);
-	pjmedia_aud_stream_destroy(strm);
+    if (snd_port) {
+        pjmedia_snd_port_disconnect(snd_port);
+        /* Without this sleep, Windows/DirectSound will repeteadly
+         * play the last frame during destroy.
+         */
+        pj_thread_sleep(100);
+        pjmedia_snd_port_destroy(snd_port);
     }
     if (renderer)
         pjmedia_vid_port_destroy(renderer);
+    if (aud_port)
+        pjmedia_port_destroy(aud_port);
     if (vid_port)
         pjmedia_port_destroy(vid_port);
     if (codec) {

@@ -44,6 +44,9 @@ struct pjmedia_snd_port
     pjmedia_dir		 dir;
     pjmedia_port	*port;
 
+    pjmedia_clock_src    cap_clocksrc,
+                         play_clocksrc;
+
     unsigned		 clock_rate;
     unsigned		 channel_count;
     unsigned		 samples_per_frame;
@@ -68,6 +71,8 @@ static pj_status_t play_cb(void *user_data, pjmedia_frame *frame)
     pjmedia_port *port;
     const unsigned required_size = frame->size;
     pj_status_t status;
+
+    pjmedia_clock_src_update(&snd_port->play_clocksrc, &frame->timestamp);
 
     port = snd_port->port;
     if (port == NULL)
@@ -126,6 +131,8 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     pjmedia_snd_port *snd_port = (pjmedia_snd_port*) user_data;
     pjmedia_port *port;
 
+    pjmedia_clock_src_update(&snd_port->cap_clocksrc, &frame->timestamp);
+
     port = snd_port->port;
     if (port == NULL)
 	return PJ_SUCCESS;
@@ -136,6 +143,7 @@ static pj_status_t rec_cb(void *user_data, pjmedia_frame *frame)
     }
 
     pjmedia_port_put_frame(port, frame);
+
 
     return PJ_SUCCESS;
 }
@@ -417,6 +425,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
 {
     pjmedia_snd_port *snd_port;
     pj_status_t status;
+    unsigned ptime_usec;
 
     PJ_ASSERT_RETURN(pool && prm && p_port, PJ_EINVAL);
 
@@ -432,6 +441,13 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     snd_port->samples_per_frame = prm->samples_per_frame;
     snd_port->bits_per_sample = prm->bits_per_sample;
     pj_memcpy(&snd_port->aud_param, prm, sizeof(*prm));
+
+    ptime_usec = prm->samples_per_frame * 1000 / prm->channel_count /
+                 prm->clock_rate * 1000;
+    pjmedia_clock_src_init(&snd_port->cap_clocksrc, PJMEDIA_TYPE_AUDIO,
+                           snd_port->clock_rate, ptime_usec);
+    pjmedia_clock_src_init(&snd_port->play_clocksrc, PJMEDIA_TYPE_AUDIO,
+                           snd_port->clock_rate, ptime_usec);
     
     /* Start sound device immediately.
      * If there's no port connected, the sound callback will return
@@ -628,6 +644,18 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_get_ec_tail( pjmedia_snd_port *snd_port,
 	*p_length =  snd_port->ec_state ? snd_port->ec_tail_len : 0;
     }
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Get clock source.
+ */
+PJ_DEF(pjmedia_clock_src *)
+pjmedia_snd_port_get_clock_src( pjmedia_snd_port *snd_port,
+                                pjmedia_dir dir )
+{
+    return (dir == PJMEDIA_DIR_CAPTURE? &snd_port->cap_clocksrc:
+            &snd_port->play_clocksrc);
 }
 
 

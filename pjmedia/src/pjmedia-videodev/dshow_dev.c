@@ -40,6 +40,7 @@
 #pragma comment(lib, "Rpcrt4.lib")
 
 #define THIS_FILE		"dshow_dev.c"
+#define DEFAULT_CLOCK_RATE	90000
 #define DEFAULT_WIDTH		640
 #define DEFAULT_HEIGHT		480
 #define DEFAULT_FPS		25
@@ -393,8 +394,8 @@ static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
     }
 
     /* Set the device capabilities here */
-    param->clock_rate = 9000;
-    param->frame_rate.num = 14;
+    param->clock_rate = DEFAULT_CLOCK_RATE;
+    param->frame_rate.num = DEFAULT_FPS;
     param->frame_rate.denum = 1;
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
 

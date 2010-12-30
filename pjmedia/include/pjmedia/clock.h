@@ -79,6 +79,82 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * Media clock source.
+ */
+typedef struct pjmedia_clock_src
+{
+    pjmedia_type    media_type;     /**< Media type.                */
+    unsigned        clock_rate;     /**< Clock rate.                */
+    unsigned        ptime_usec;     /**< Frame interval (in usec).  */
+    /**
+     * The timestamp field holds an increasing value in samples and its
+     * value is expected to be increased by clock_rate samples per second.
+     */
+    pj_timestamp    timestamp;
+    /**
+     * Timestamp's last update. The last_update field contains a value in
+     * ticks, and it is expected to be increased by pj_get_timestamp_freq()
+     * ticks per second.
+     */
+    pj_timestamp    last_update;
+} pjmedia_clock_src;
+
+/**
+ * This is an auxiliary function to initialize the media clock source.
+ *
+ * @param clocksrc          The clock source to be initialized.
+ * @param media_type        The media type.
+ * @param clock_rate	    The clock rate.
+ * @param ptime_usec        Media frame interval (in usec).
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
+                                             pjmedia_type media_type,
+                                             unsigned clock_rate,
+                                             unsigned ptime_usec );
+
+/**
+ * This function updates the clock source's timestamp. Application should
+ * use this function instead of updating the timestamp directly since this
+ * function will also update the last_update field of the clock source.
+ *
+ * @param clocksrc          The clock source to be updated.
+ * @param timestamp         The new timestamp, can be NULL if the current
+ *                          timestamp does not change (in this case it
+ *                          will only update the last_update field).
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
+                                               const pj_timestamp *timestamp );
+
+/**
+ * This function gets the clock source's current timestamp. Application
+ * should use this function instead of accessing the timestamp directly
+ * since this function will calculate the predicted timestamp for current
+ * time, based on the values of timestamp, last_update, and clock_rate.
+ *
+ * @param clocksrc          The clock source.
+ * @param timestamp         Argument to receive the current timestamp
+ *
+ * @return		    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_clock_src_get_current_timestamp( const pjmedia_clock_src *clocksrc,
+                                         pj_timestamp *timestamp);
+
+/**
+ * This function gets the clock source's time in msec.
+ *
+ * @param clocksrc          The clock source.
+ *
+ * @return		    The clock source's time (in msec).
+ */
+PJ_DECL(pj_uint32_t)
+pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc );
+
 
 /**
  * Opaque declaration for media clock.

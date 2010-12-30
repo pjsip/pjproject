@@ -49,6 +49,18 @@ struct pjmedia_vid_port
     pjmedia_clock	*enc_clock,
 		        *dec_clock;
 
+    pjmedia_clock_src    cap_clocksrc,
+                         rend_clocksrc;
+
+    struct sync_clock_src_t
+    {
+        pjmedia_clock_src   *sync_clocksrc;
+        pj_int32_t           sync_delta;
+        unsigned             max_sync_ticks;
+        unsigned             nsync_frame;
+        unsigned             nsync_progress;
+    } cap_sync_clocksrc, rend_sync_clocksrc;
+
     pjmedia_frame	*enc_frm_buf,
 		        *dec_frm_buf;
 
@@ -98,6 +110,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pjmedia_vid_cb vid_cb;
     pj_bool_t need_frame_buf = PJ_FALSE;
     pj_status_t status;
+    unsigned ptime_usec;
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO,
@@ -138,6 +151,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
     pj_strdup2_with_null(pool, &vp->dev_name, di.name);
     vp->stream_role = di.has_callback ? ROLE_ACTIVE : ROLE_PASSIVE;
+
+    ptime_usec = PJMEDIA_PTIME(&vfd->fps);
+    pjmedia_clock_src_init(&vp->cap_clocksrc, PJMEDIA_TYPE_VIDEO,
+                           prm->vidparam.clock_rate, ptime_usec);
+    pjmedia_clock_src_init(&vp->rend_clocksrc, PJMEDIA_TYPE_VIDEO,
+                           prm->vidparam.clock_rate, ptime_usec);
+    vp->cap_sync_clocksrc.max_sync_ticks = 
+        PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION *
+        1000 / vp->cap_clocksrc.ptime_usec;
+    vp->rend_sync_clocksrc.max_sync_ticks = 
+        PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION *
+        1000 / vp->rend_clocksrc.ptime_usec;
 
     /* Create the video stream */
     pj_bzero(&vid_cb, sizeof(vid_cb));
@@ -265,6 +290,37 @@ pjmedia_vid_port_get_passive_port(pjmedia_vid_port *vp)
 {
     PJ_ASSERT_RETURN(vp && vp->role==ROLE_PASSIVE, NULL);
     return &vp->pasv_port->base;
+}
+
+
+
+PJ_DEF(pjmedia_clock_src *)
+pjmedia_vid_port_get_clock_src( pjmedia_vid_port *vid_port,
+                                pjmedia_dir dir )
+{
+    return (dir == PJMEDIA_DIR_CAPTURE? &vid_port->cap_clocksrc:
+            &vid_port->rend_clocksrc);
+}
+
+PJ_DECL(pj_status_t)
+pjmedia_vid_port_set_clock_src( pjmedia_vid_port *vid_port,
+                                pjmedia_dir dir,
+                                pjmedia_clock_src *clocksrc)
+{
+    pjmedia_clock_src *vclocksrc;
+    struct sync_clock_src_t *sync_src;
+
+    PJ_ASSERT_RETURN(vid_port && clocksrc, PJ_EINVAL);
+
+    vclocksrc = (dir == PJMEDIA_DIR_CAPTURE? &vid_port->cap_clocksrc:
+                 &vid_port->rend_clocksrc);
+    sync_src = (dir == PJMEDIA_DIR_CAPTURE? &vid_port->cap_sync_clocksrc:
+                &vid_port->rend_sync_clocksrc);
+    sync_src->sync_clocksrc = clocksrc;
+    sync_src->sync_delta = pjmedia_clock_src_get_time_msec(vclocksrc) -
+                           pjmedia_clock_src_get_time_msec(clocksrc);
+
+    return PJ_SUCCESS;
 }
 
 
@@ -437,6 +493,8 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
      */
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     pj_status_t status;
+    unsigned frame_ts = vp->rend_clocksrc.clock_rate / 1000 *
+                        vp->rend_clocksrc.ptime_usec / 1000;
 
     pj_assert(vp->role==ROLE_ACTIVE && vp->stream_role==ROLE_PASSIVE);
 
@@ -445,9 +503,104 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
     if (!vp->client_port)
 	return;
 
+    if (vp->rend_sync_clocksrc.sync_clocksrc) {
+        pjmedia_clock_src *src = vp->rend_sync_clocksrc.sync_clocksrc;
+        pj_int32_t diff;
+        unsigned nsync_frame;
+
+        /* Synchronization */
+        /* Calculate the time difference (in ms) with the sync source */
+        diff = pjmedia_clock_src_get_time_msec(&vp->rend_clocksrc) -
+               pjmedia_clock_src_get_time_msec(src) -
+               vp->rend_sync_clocksrc.sync_delta;
+
+        /* Check whether sync source made a large jump */
+        if (diff < 0 && -diff > PJMEDIA_CLOCK_SYNC_MAX_SYNC_MSEC) {
+            pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
+            vp->rend_sync_clocksrc.sync_delta = 
+                pjmedia_clock_src_get_time_msec(src) -
+                pjmedia_clock_src_get_time_msec(&vp->rend_clocksrc);
+            vp->rend_sync_clocksrc.nsync_frame = 0;
+            return;
+        }
+
+        /* Calculate the difference (in frames) with the sync source */
+        nsync_frame = abs(diff) * 1000 / vp->rend_clocksrc.ptime_usec;
+        if (nsync_frame == 0) {
+            /* Nothing to sync */
+            vp->rend_sync_clocksrc.nsync_frame = 0;
+        } else {
+            pj_int32_t init_sync_frame = nsync_frame;
+
+            /* Check whether it's a new sync or whether we need to reset
+             * the sync
+             */
+            if (vp->rend_sync_clocksrc.nsync_frame == 0 ||
+                (vp->rend_sync_clocksrc.nsync_frame > 0 &&
+                 nsync_frame > vp->rend_sync_clocksrc.nsync_frame))
+            {
+                vp->rend_sync_clocksrc.nsync_frame = nsync_frame;
+                vp->rend_sync_clocksrc.nsync_progress = 0;
+            } else {
+                init_sync_frame = vp->rend_sync_clocksrc.nsync_frame;
+            }
+
+            if (diff >= 0) {
+                unsigned skip_mod;
+
+                /* We are too fast */
+                if (vp->rend_sync_clocksrc.max_sync_ticks > 0) {
+                    skip_mod = init_sync_frame / 
+                               vp->rend_sync_clocksrc.max_sync_ticks + 2;
+                } else
+                    skip_mod = init_sync_frame + 2;
+
+                PJ_LOG(5, (THIS_FILE, "synchronization: early by %d ms",
+                           diff));
+                /* We'll play a frame every skip_mod-th tick instead of
+                 * a complete pause
+                 */
+                if (++vp->rend_sync_clocksrc.nsync_progress % skip_mod > 0) {
+                    pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
+                    return;
+                }
+            } else {
+                unsigned i, ndrop = init_sync_frame;
+
+                /* We are too late, drop the frame */
+                if (vp->rend_sync_clocksrc.max_sync_ticks > 0) {
+                    ndrop /= vp->rend_sync_clocksrc.max_sync_ticks;
+                    ndrop++;
+                }
+                PJ_LOG(5, (THIS_FILE, "synchronization: late, "
+                                      "dropping %d frame(s)", ndrop));
+
+                if (ndrop >= nsync_frame) {
+                    vp->rend_sync_clocksrc.nsync_frame = 0;
+                    ndrop = nsync_frame;
+                } else
+                    vp->rend_sync_clocksrc.nsync_progress += ndrop;
+                for (i = 0; i < ndrop; i++) {
+                    status = pjmedia_port_get_frame(vp->client_port,
+                                                    vp->dec_frm_buf);
+                    if (status != PJ_SUCCESS) {
+                        pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
+                        return;
+                    }
+                    pj_add_timestamp32(&vp->rend_clocksrc.timestamp,
+                                       frame_ts);
+                }
+            }
+        }
+    }
+
     status = pjmedia_port_get_frame(vp->client_port, vp->dec_frm_buf);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+        pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
 	return;
+    }
+    pj_add_timestamp32(&vp->rend_clocksrc.timestamp, frame_ts);
+    pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
 
     status = pjmedia_vid_stream_put_frame(vp->strm, vp->dec_frm_buf);
 }

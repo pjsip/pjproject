@@ -125,6 +125,32 @@ PJ_DECL(pjmedia_port*)
 pjmedia_vid_port_get_passive_port(pjmedia_vid_port *vid_port);
 
 /**
+ * Get a clock source from the video port.
+ *
+ * @param vid_port  The video port.
+ * @param dir       Video port's direction.
+ *
+ * @return	    The clock source.
+ */
+PJ_DECL(pjmedia_clock_src *)
+pjmedia_vid_port_get_clock_src( pjmedia_vid_port *vid_port,
+                                pjmedia_dir dir );
+
+/**
+ * Set a clock source for the video port.
+ *
+ * @param vid_port  The video port.
+ * @param dir       Video port's direction.
+ * @param clocksrc  The clock source.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_vid_port_set_clock_src( pjmedia_vid_port *vid_port,
+                                pjmedia_dir dir,
+                                pjmedia_clock_src *clocksrc );
+
+/**
  * Connect the video port to a downstream (slave) media port. This operation
  * is only valid for video ports created with active interface selected.
  * Connecting a passive video port may raise an assertion.

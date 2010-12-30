@@ -23,6 +23,84 @@
 #include <pj/lock.h>
 #include <pj/os.h>
 #include <pj/pool.h>
+#include <pj/string.h>
+#include <pj/compat/high_precision.h>
+
+/* API: Init clock source */
+PJ_DEF(pj_status_t) pjmedia_clock_src_init( pjmedia_clock_src *clocksrc,
+                                            pjmedia_type media_type,
+                                            unsigned clock_rate,
+                                            unsigned ptime_usec )
+{
+    PJ_ASSERT_RETURN(clocksrc, PJ_EINVAL);
+
+    clocksrc->media_type = media_type;
+    clocksrc->clock_rate = clock_rate;
+    clocksrc->ptime_usec = ptime_usec;
+    pj_set_timestamp32(&clocksrc->timestamp, 0, 0);
+    pj_get_timestamp(&clocksrc->last_update);
+
+    return PJ_SUCCESS;
+}
+
+/* API: Update clock source */
+PJ_DECL(pj_status_t) pjmedia_clock_src_update( pjmedia_clock_src *clocksrc,
+                                               const pj_timestamp *timestamp )
+{
+    PJ_ASSERT_RETURN(clocksrc, PJ_EINVAL);
+
+    if (timestamp)
+        pj_memcpy(&clocksrc->timestamp, timestamp, sizeof(pj_timestamp));
+    pj_get_timestamp(&clocksrc->last_update);
+
+    return PJ_SUCCESS;
+}
+
+/* API: Get clock source's current timestamp */
+PJ_DEF(pj_status_t)
+pjmedia_clock_src_get_current_timestamp( const pjmedia_clock_src *clocksrc,
+                                         pj_timestamp *timestamp)
+{
+    pj_timestamp now;
+    unsigned elapsed_ms;
+    
+    PJ_ASSERT_RETURN(clocksrc && timestamp, PJ_EINVAL);
+
+    pj_get_timestamp(&now);
+    elapsed_ms = pj_elapsed_msec(&clocksrc->last_update, &now);
+    pj_memcpy(timestamp, &clocksrc->timestamp, sizeof(pj_timestamp));
+    pj_add_timestamp32(timestamp, elapsed_ms * clocksrc->clock_rate / 1000);
+
+    return PJ_SUCCESS;
+}
+
+/* API: Get clock source's time (in ms) */
+PJ_DEF(pj_uint32_t)
+pjmedia_clock_src_get_time_msec( const pjmedia_clock_src *clocksrc )
+{
+    pj_timestamp ts;
+
+    pjmedia_clock_src_get_current_timestamp(clocksrc, &ts);
+
+#if PJ_HAS_INT64
+    if (ts.u64 > 0x3FFFFFFFFFFFFFUL)
+        return (pj_uint32_t)(ts.u64 / clocksrc->clock_rate * 1000);
+    else
+        return (pj_uint32_t)(ts.u64 * 1000 / clocksrc->clock_rate);
+#elif PJ_HAS_FLOATING_POINT
+    return (pj_uint32_t)((1.0 * ts.u32.hi * 0xFFFFFFFFUL + ts.u32.lo)
+                         * 1000.0 / clocksrc->clock_rate);
+#else
+    if (ts.u32.lo > 0x3FFFFFUL)
+        return (pj_uint32_t)(0xFFFFFFFFUL / clocksrc->clock_rate * ts.u32.hi 
+                             * 1000UL + ts.u32.lo / clocksrc->clock_rate *
+                             1000UL);
+    else
+        return (pj_uint32_t)(0xFFFFFFFFUL / clocksrc->clock_rate * ts.u32.hi 
+                             * 1000UL + ts.u32.lo * 1000UL /
+                             clocksrc->clock_rate);
+#endif
+}
 
 
 /*

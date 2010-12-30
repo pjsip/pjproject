@@ -75,6 +75,18 @@ PJ_DEF(pj_status_t) pjmedia_port_info_init2( pjmedia_port_info *info,
 }
 
 /**
+ * Get a clock source from the port.
+ */
+PJ_DEF(pjmedia_clock_src *) pjmedia_port_get_clock_src( pjmedia_port *port,
+                                                        pjmedia_dir dir )
+{
+    if (port && port->get_clock_src)
+	return port->get_clock_src(port, dir);
+    else
+	return NULL;
+}
+
+/**
  * Get a frame from the port (and subsequent downstream ports).
  */
 PJ_DEF(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,

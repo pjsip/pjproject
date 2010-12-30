@@ -49,8 +49,15 @@ enum pjmedia_avi_file_player_option
     PJMEDIA_AVI_FILE_NO_LOOP = 1
 };
 
+/**
+ * AVI stream data type.
+ */
 typedef pjmedia_port pjmedia_avi_stream;
 
+/**
+ * Opaque data type for AVI streams. AVI streams is a collection of
+ * zero or more AVI stream.
+ */
 typedef struct pjmedia_avi_streams pjmedia_avi_streams;
 
 /**
@@ -71,18 +78,49 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                                   unsigned flags,
                                   pjmedia_avi_streams **p_streams);
 
-PJ_DECL(pj_uint8_t)
+/**
+ * Get the number of AVI stream.
+ *
+ * @param streams	The AVI streams.
+ *
+ * @return		The number of AVI stream.
+ */
+PJ_DECL(unsigned)
 pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams);
 
+/**
+ * Return the idx-th stream of the AVI streams.
+ *
+ * @param streams	The AVI streams.
+ * @param idx	        The stream index.
+ *
+ * @return		The AVI stream or NULL if it does not exist.
+ */
 PJ_DECL(pjmedia_avi_stream *)
 pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
-                               pj_uint8_t idx);
+                               unsigned idx);
 
+/**
+ * Return an AVI stream with a certain media type from the AVI streams.
+ *
+ * @param streams	The AVI streams.
+ * @param start_idx     The starting index.
+ * @param media_type    The media type of the stream.
+ *
+ * @return		The AVI stream or NULL if it does not exist.
+ */
 PJ_DECL(pjmedia_avi_stream *)
 pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams *streams,
-                                        pj_uint8_t start_idx,
+                                        unsigned start_idx,
                                         pjmedia_type media_type);
 
+/**
+ * Return the media port of an AVI stream.
+ *
+ * @param stream	The AVI stream.
+ *
+ * @return		The media port.
+ */
 PJ_INLINE(pjmedia_port *)
 pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
 {
@@ -92,7 +130,7 @@ pjmedia_avi_stream_get_port(pjmedia_avi_stream *stream)
 /**
  * Get the data length, in bytes.
  *
- * @param port		The AVI stream.
+ * @param stream        The AVI stream.
  *
  * @return		The length of the data, in bytes. Upon error it will
  *			return negative value.
@@ -106,7 +144,7 @@ PJ_DECL(pj_ssize_t) pjmedia_avi_stream_get_len(pjmedia_avi_stream *stream);
  * will be called multiple times. Note that only one callback can be 
  * registered for each AVI stream.
  *
- * @param port		The AVI stream.
+ * @param stream	The AVI stream.
  * @param user_data	User data to be specified in the callback
  * @param cb		Callback to be called. If the callback returns non-
  *			PJ_SUCCESS, the playback will stop. Note that if

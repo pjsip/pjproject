@@ -24,6 +24,7 @@
  * @file port.h
  * @brief Port interface declaration
  */
+#include <pjmedia/clock.h>
 #include <pjmedia/format.h>
 #include <pjmedia/frame.h>
 #include <pj/assert.h>
@@ -372,6 +373,13 @@ typedef struct pjmedia_port
     } port_data;
 
     /**
+     * Get clock source.
+     * This should only be called by #pjmedia_port_get_clock_src().
+     */
+    pjmedia_clock_src* (*get_clock_src)(struct pjmedia_port *this_port,
+                                        pjmedia_dir dir);
+
+    /**
      * Sink interface. 
      * This should only be called by #pjmedia_port_put_frame().
      */
@@ -398,7 +406,6 @@ typedef struct pjmedia_port
  * ports which deal with PCM audio.
  *
  * @param info		    The port info to be initialized.
- * @param pool		    Pool to allocate memory from.
  * @param name		    Port name.
  * @param signature	    Port signature.
  * @param clock_rate	    Port's clock rate.
@@ -433,6 +440,19 @@ PJ_DECL(pj_status_t) pjmedia_port_info_init2(pjmedia_port_info *info,
 					     unsigned signature,
 					     pjmedia_dir dir,
 					     const pjmedia_format *fmt);
+
+
+/**
+ * Get a clock source from the port.
+ *
+ * @param port	    The media port.
+ * @param dir       Media port's direction.
+ *
+ * @return	    The clock source or NULL if clock source is not present
+ *                  in the port.
+ */
+PJ_DECL(pjmedia_clock_src *) pjmedia_port_get_clock_src( pjmedia_port *port,
+                                                         pjmedia_dir dir );
 
 
 /**

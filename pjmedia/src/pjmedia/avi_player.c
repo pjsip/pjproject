@@ -86,14 +86,14 @@
 
 struct pjmedia_avi_streams
 {
-    pj_uint8_t      num_streams;
+    unsigned        num_streams;
     pjmedia_port  **streams;
 };
 
 struct avi_reader_port
 {
     pjmedia_port     base;
-    pj_uint8_t       stream_id;
+    unsigned         stream_id;
     unsigned	     options;
     pj_uint16_t	     bits_per_sample;
     pj_bool_t	     eof;
@@ -171,7 +171,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
     pjmedia_avi_hdr avi_hdr;
     struct avi_reader_port *fport[PJMEDIA_AVI_MAX_NUM_STREAMS];
     pj_off_t pos;
-    pj_uint8_t i, nstr = 0;
+    unsigned i, nstr = 0;
     pj_status_t status = PJ_SUCCESS;
 
     /* Check arguments. */
@@ -467,7 +467,7 @@ on_error:
     return status;
 }
 
-PJ_DEF(pj_uint8_t)
+PJ_DEF(unsigned)
 pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams)
 {
     pj_assert(streams);
@@ -476,7 +476,7 @@ pjmedia_avi_streams_get_num_streams(pjmedia_avi_streams *streams)
 
 PJ_DEF(pjmedia_avi_stream *)
 pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
-                               pj_uint8_t idx)
+                               unsigned idx)
 {
     pj_assert(streams);
     return (idx >=0 && idx < streams->num_streams ?
@@ -485,10 +485,10 @@ pjmedia_avi_streams_get_stream(pjmedia_avi_streams *streams,
 
 PJ_DEF(pjmedia_avi_stream *)
 pjmedia_avi_streams_get_stream_by_media(pjmedia_avi_streams *streams,
-                                        pj_uint8_t start_idx,
+                                        unsigned start_idx,
                                         pjmedia_type media_type)
 {
-    pj_uint8_t i;
+    unsigned i;
 
     pj_assert(streams);
     for (i = start_idx; i < streams->num_streams; i++)
@@ -593,7 +593,7 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
     do {
         pjmedia_avi_subchunk ch = {0, 0};
         char *cid;
-        pj_uint8_t stream_id;
+        unsigned stream_id;
 
         /* We need to read data from the file past the chunk boundary */
         if (fport->size_left > 0 && fport->size_left < size_to_read) {

@@ -966,6 +966,32 @@
 #   define PJMEDIA_MAX_VIDEO_FORMATS			32
 #endif
 
+/**
+ * Specify the maximum time difference (in ms) for synchronization between
+ * two medias. If the synchronization media source is ahead of time
+ * greater than this duration, it is considered to make a very large jump
+ * and the synchronization will be reset.
+ *
+ * Default: 20000
+ */
+#ifndef PJMEDIA_CLOCK_SYNC_MAX_SYNC_MSEC
+#   define PJMEDIA_CLOCK_SYNC_MAX_SYNC_MSEC         20000
+#endif
+
+/**
+ * Specify the maximum duration (in ms) for resynchronization. When a media
+ * is late to another media it is supposed to be synchronized to, it is
+ * guaranteed to be synchronized again after this duration. While if the
+ * media is ahead/early by t ms, it is guaranteed to be synchronized after
+ * t + this duration. This timing only applies if there is no additional
+ * resynchronization required during the specified duration.
+ *
+ * Default: 2000
+ */
+#ifndef PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION
+#   define PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION 2000
+#endif
+
 
 /**
  * @}
