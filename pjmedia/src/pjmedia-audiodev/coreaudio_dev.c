@@ -36,13 +36,6 @@
     #include <AudioToolbox/AudioServices.h>
 
     #define AudioDeviceID unsigned
-
-    /* For iPhone 2.x and earlier */
-    #if __IPHONE_OS_VERSION_MIN_REQUIRED <= __IPHONE_2_2
-	#define kAudioUnitSubType_VoiceProcessingIO kAudioUnitSubType_RemoteIO
-	#define kAudioSessionProperty_OverrideCategoryEnableBluetoothInput -1
-    #endif
-
 #endif
 
 /* For Mac OS 10.5.x and earlier */
