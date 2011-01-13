@@ -417,6 +417,49 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 	 */
 	return PJMEDIA_EAUD_INIT;
     }
+    
+    if (dev_size > 1) {
+	AudioDeviceID dev_id = kAudioObjectUnknown;
+	unsigned idx = 0;
+	
+	/* Find default audio input device */
+	addr.mSelector = kAudioHardwarePropertyDefaultInputDevice;
+	addr.mScope = kAudioObjectPropertyScopeGlobal;
+	addr.mElement = kAudioObjectPropertyElementMaster;
+	size = sizeof(dev_id);
+	
+	ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
+					     &addr, 0, NULL,
+					     &size, (void *)&dev_id);
+	if (ostatus != noErr && dev_id != dev_ids[idx]) {
+	    AudioDeviceID temp_id = dev_ids[idx];
+	    
+	    for (i = idx + 1; i < dev_size; i++) {
+		if (dev_ids[i] == dev_id) {
+		    dev_ids[idx++] = dev_id;
+		    dev_ids[i] = temp_id;
+		    break;
+		}
+	    }
+	}
+
+	/* Find default audio output device */
+	addr.mSelector = kAudioHardwarePropertyDefaultOutputDevice;	
+	ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
+					     &addr, 0, NULL,
+					     &size, (void *)&dev_id);
+	if (ostatus != noErr && dev_id != dev_ids[idx]) {
+	    AudioDeviceID temp_id = dev_ids[idx];
+	    
+	    for (i = idx + 1; i < dev_size; i++) {
+		if (dev_ids[i] == dev_id) {
+		    dev_ids[idx] = dev_id;
+		    dev_ids[i] = temp_id;
+		    break;
+		}
+	    }
+	}
+    }
 
     /* Build the devices' info */
     cf->dev_info = (struct coreaudio_dev_info*)
@@ -649,6 +692,7 @@ static OSStatus resample_callback(void                       *inRefCon,
      */
     if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered())
     {
+	pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
 	status = pj_thread_register("ca_rec", strm->rec_thread_desc,
 				    &strm->rec_thread);
 	strm->rec_thread_initialized = 1;
@@ -789,6 +833,7 @@ static OSStatus input_callback(void                       *inRefCon,
      */
     if (strm->rec_thread_initialized == 0 || !pj_thread_is_registered())
     {
+	pj_bzero(strm->rec_thread_desc, sizeof(pj_thread_desc));
 	status = pj_thread_register("ca_rec", strm->rec_thread_desc,
 				    &strm->rec_thread);
 	strm->rec_thread_initialized = 1;
@@ -904,6 +949,7 @@ static OSStatus output_renderer(void                       *inRefCon,
      */
     if (stream->play_thread_initialized == 0 || !pj_thread_is_registered())
     {
+	pj_bzero(stream->play_thread_desc, sizeof(pj_thread_desc));
 	status = pj_thread_register("coreaudio", stream->play_thread_desc,
 				    &stream->play_thread);
 	stream->play_thread_initialized = 1;
