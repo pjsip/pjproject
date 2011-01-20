@@ -120,6 +120,7 @@ struct coreaudio_stream
 
     AudioConverterRef            resample;
     pj_int16_t			*resample_buf;
+    void			*resample_buf_ptr;
     unsigned		 	 resample_buf_count;
     unsigned		 	 resample_buf_size;
 };
@@ -655,14 +656,16 @@ OSStatus resampleProc(AudioConverterRef             inAudioConverter,
 {
     struct coreaudio_stream *strm = (struct coreaudio_stream*)inUserData;
 
-    pj_assert(*ioNumberDataPackets == strm->resample_buf_count);
+    if (*ioNumberDataPackets > strm->resample_buf_size)
+	*ioNumberDataPackets = strm->resample_buf_size;
 
     ioData->mNumberBuffers = 1;
     ioData->mBuffers[0].mNumberChannels = 1;
-    ioData->mBuffers[0].mData = strm->resample_buf;
-    ioData->mBuffers[0].mDataByteSize = strm->resample_buf_count *
+    ioData->mBuffers[0].mData = strm->resample_buf_ptr;
+    ioData->mBuffers[0].mDataByteSize = *ioNumberDataPackets *
 					strm->param.bits_per_sample >> 3;
-    return 0;
+
+    return noErr;
 }
 
 static OSStatus resample_callback(void                       *inRefCon,
@@ -679,7 +682,6 @@ static OSStatus resample_callback(void                       *inRefCon,
     AudioBufferList *buf = strm->audio_buf;
     pj_int16_t *input;
     UInt32 resampleSize;
-    UInt32 size;
 
     pj_assert(!strm->quit_flag);
 
@@ -717,74 +719,83 @@ static OSStatus resample_callback(void                       *inRefCon,
     }
     input = (pj_int16_t *)buf->mBuffers[0].mData;
 
-    /* Calculate how many frames we need to fill an entire packet */
-    resampleSize = strm->param.samples_per_frame *
-		   strm->param.bits_per_sample >> 3;
-    size = sizeof(resampleSize);
-    ostatus = AudioConverterGetProperty(
-	          strm->resample,
-		  kAudioConverterPropertyCalculateInputBufferSize,
-		  &size,
-		  &resampleSize);
-    if (ostatus != noErr) {
-	PJ_LOG(5, (THIS_FILE, "Core audio converter measure error %i",
-		   ostatus));
-	goto on_break;
-    }
-    resampleSize /= strm->param.bits_per_sample >> 3;
-
+    resampleSize = strm->resample_buf_size;
     nsamples = inNumberFrames * strm->param.channel_count +
 	       strm->resample_buf_count;
-    pj_assert(nsamples < strm->resample_buf_size);
 
     if (nsamples >= resampleSize) {
-	UInt32 resampleOutput = strm->param.samples_per_frame;
-	unsigned chunk_count = 0;
 	pjmedia_frame frame;
+	UInt32 resampleOutput = strm->param.samples_per_frame;
 	AudioBufferList ab;
 
 	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
+	frame.buf = (void*) strm->rec_buf;
 	frame.size = strm->param.samples_per_frame *
 		     strm->param.bits_per_sample >> 3;
 	frame.bit_info = 0;
+	
+	ab.mNumberBuffers = 1;
+	ab.mBuffers[0].mNumberChannels = 1;
+	ab.mBuffers[0].mData = strm->rec_buf;
+	ab.mBuffers[0].mDataByteSize = frame.size;
 
 	/* If buffer is not empty, combine the buffer with the just incoming
 	 * samples, then call put_frame.
 	 */
+	if (strm->resample_buf_count) {
+	    unsigned chunk_count = resampleSize - strm->resample_buf_count;
+	    pjmedia_copy_samples(strm->resample_buf + strm->resample_buf_count,
+				 input, chunk_count);
 
-	chunk_count = resampleSize - strm->resample_buf_count;
-	pjmedia_copy_samples(strm->resample_buf + strm->resample_buf_count,
-			     input, chunk_count);
-	strm->resample_buf_count += chunk_count;
+	    /* Do the resample */
 
-	frame.buf = (void*) strm->rec_buf;
-	frame.timestamp.u64 = strm->rec_timestamp.u64;
+	    strm->resample_buf_ptr = strm->resample_buf;
+	    ostatus = AudioConverterFillComplexBuffer(strm->resample,
+						      resampleProc,
+						      strm,
+						      &resampleOutput,
+						      &ab,
+						      NULL);
+	    if (ostatus != noErr) {
+		goto on_break;
+	    }
+	    frame.timestamp.u64 = strm->rec_timestamp.u64;
 
-	ab.mNumberBuffers = 1;
-	ab.mBuffers[0].mNumberChannels = 1;
-	ab.mBuffers[0].mDataByteSize = frame.size;
-	ab.mBuffers[0].mData = frame.buf;
+	    status = (*strm->rec_cb)(strm->user_data, &frame);
 
-	/* Do the resample */
-	ostatus = AudioConverterFillComplexBuffer(strm->resample,
-						  resampleProc,
-						  strm,
-						  &resampleOutput,
-						  &ab,
-						  NULL);
-	if (ostatus != noErr) {
-	    goto on_break;
+	    input = input + chunk_count;
+	    nsamples -= resampleSize;
+	    strm->resample_buf_count = 0;
+	    strm->rec_timestamp.u64 += strm->param.samples_per_frame /
+				       strm->param.channel_count;
 	}
-
-	status = (*strm->rec_cb)(strm->user_data, &frame);
-
-	input = input + chunk_count;
-	nsamples -= resampleSize;
-	strm->resample_buf_count = 0;
-	strm->rec_timestamp.u64 += strm->param.samples_per_frame /
-				   strm->param.channel_count;
-
-	pj_assert(nsamples < resampleSize);
+	
+	
+ 	/* Give all frames we have */
+ 	while (nsamples >= resampleSize && status == 0) {
+ 	    frame.timestamp.u64 = strm->rec_timestamp.u64;
+	    
+	    /* Do the resample */
+	    strm->resample_buf_ptr = input;
+	    ab.mBuffers[0].mDataByteSize = frame.size;
+	    resampleOutput = strm->param.samples_per_frame;
+	    ostatus = AudioConverterFillComplexBuffer(strm->resample,
+						      resampleProc,
+						      strm,
+						      &resampleOutput,
+						      &ab,
+						      NULL);
+	    if (ostatus != noErr) {
+		goto on_break;
+	    }	    
+	    
+ 	    status = (*strm->rec_cb)(strm->user_data, &frame);
+	    
+ 	    input = (pj_int16_t*) input + resampleSize;
+ 	    nsamples -= resampleSize;
+ 	    strm->rec_timestamp.u64 += strm->param.samples_per_frame /
+				       strm->param.channel_count;
+ 	}
 
 	/* Store the remaining samples into the buffer */
 	if (nsamples && status == 0) {
@@ -861,8 +872,7 @@ static OSStatus input_callback(void                       *inRefCon,
     /* Calculate number of samples we've got */
     nsamples = inNumberFrames * strm->param.channel_count +
 	       strm->rec_buf_count;
-    if (nsamples >= strm->param.samples_per_frame)
-     {
+    if (nsamples >= strm->param.samples_per_frame) {
 	pjmedia_frame frame;
 
 	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -1177,14 +1187,13 @@ static pj_status_t create_audio_resample(struct coreaudio_stream     *strm,
     if (ostatus != noErr) {
 	return PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(ostatus);
     }
-
+    
     /*
-     * Allocate the buffer required to hold the enough input data
-     * for two complete frames of audio.
+     * Allocate the buffer required to hold enough input data
      */
-    strm->resample_buf_size = (unsigned)(desc->mSampleRate *
-			      strm->param.samples_per_frame /
-			      strm->param.clock_rate * 2);
+    strm->resample_buf_size =  (unsigned)(desc->mSampleRate *
+					  strm->param.samples_per_frame /
+					  strm->param.clock_rate);
     strm->resample_buf = (pj_int16_t*)
 			 pj_pool_alloc(strm->pool,
 				       strm->resample_buf_size *
