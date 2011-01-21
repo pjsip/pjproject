@@ -118,7 +118,8 @@ static void udp_on_read_complete( pj_ioqueue_key_t *key,
 				  pj_ioqueue_op_key_t *op_key, 
 				  pj_ssize_t bytes_read)
 {
-    enum { MAX_IMMEDIATE_PACKET = 10 };
+    /* See https://trac.pjsip.org/repos/ticket/1197 */
+    enum { MAX_IMMEDIATE_PACKET = 50 };
     pjsip_rx_data_op_key *rdata_op_key = (pjsip_rx_data_op_key*) op_key;
     pjsip_rx_data *rdata = rdata_op_key->rdata;
     struct udp_transport *tp = (struct udp_transport*)rdata->tp_info.transport;
