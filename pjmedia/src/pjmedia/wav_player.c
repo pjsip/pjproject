@@ -107,9 +107,7 @@ static struct file_reader_port *create_file_port(pj_pool_t *pool)
  */
 static pj_status_t fill_buffer(struct file_reader_port *fport)
 {
-    pj_size_t data_left = fport->data_left;
-    pj_ssize_t bufsize = (fport->bufsize > data_left) ? data_left : fport->bufsize;
-    pj_ssize_t size_left = bufsize;
+    pj_ssize_t size_left = fport->bufsize;
     unsigned size_to_read;
     pj_ssize_t size;
     pj_status_t status;
@@ -121,8 +119,7 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
 	/* Calculate how many bytes to read in this run. */
 	size = size_to_read = size_left;
 	status = pj_file_read(fport->fd, 
-			      //&fport->buf[fport->bufsize-size_left], 
-			      &fport->buf[bufsize-size_left], 
+			      &fport->buf[fport->bufsize-size_left], 
 			      &size);
 	if (status != PJ_SUCCESS)
 	    return status;
@@ -131,6 +128,13 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
 	    return PJ_ECANCELLED;
 	}
 
+        if (size > (pj_ssize_t)fport->data_left) {
+            /* We passed the end of the data chunk,
+             * only count the portion read from the data chunk.
+             */
+            size = (pj_ssize_t)fport->data_left;
+        }
+
 	size_left -= size;
         fport->data_left -= size;
 	fport->fpos += size;
@@ -138,24 +142,20 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
 	/* If size is less than size_to_read, it indicates that we've
 	 * encountered EOF. Rewind the file.
 	 */
-        if (size < (pj_ssize_t)size_to_read || fport->data_left <= 0) {
+        if (size < (pj_ssize_t)size_to_read) {
             fport->eof = PJ_TRUE;
-            //fport->eofpos = fport->buf + fport->bufsize - size_left;
-            fport->eofpos = fport->buf + bufsize - size_left;
+            fport->eofpos = fport->buf + fport->bufsize - size_left;
 
             if (fport->options & PJMEDIA_FILE_NO_LOOP) {
                 /* Zero remaining buffer */
                 if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_PCM) {
-                    pj_bzero(fport->eofpos, size_left +
-                             (fport->bufsize - data_left));
+                    pj_bzero(fport->eofpos, size_left);
                 } else if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ULAW) {
                     int val = pjmedia_linear2ulaw(0);
-                    pj_memset(fport->eofpos, val, size_left +
-                              (fport->bufsize - data_left));
+                    pj_memset(fport->eofpos, val, size_left);
                 } else if (fport->fmt_tag == PJMEDIA_WAVE_FMT_TAG_ALAW) {
                     int val = pjmedia_linear2alaw(0);
-                    pj_memset(fport->eofpos, val, size_left +
-                              (fport->bufsize - data_left));
+                    pj_memset(fport->eofpos, val, size_left);
                 }
             }
 
@@ -331,16 +331,14 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_create( pj_pool_t *pool,
     /* Current file position now points to start of data */
     status = pj_file_getpos(fport->fd, &pos);
     fport->start_data = (unsigned)pos;
-	fport->data_len = wave_hdr.data_hdr.len;
-	fport->data_left = wave_hdr.data_hdr.len;
+    fport->data_len = wave_hdr.data_hdr.len;
+    fport->data_left = wave_hdr.data_hdr.len;
 
-    /* Validate length. This is unnecessary since we only play data chunks. */
-    /*
-    if (wave_hdr.data_hdr.len != fport->fsize - fport->start_data) {
+    /* Validate length. */
+    if (wave_hdr.data_hdr.len > fport->fsize - fport->start_data) {
 	pj_file_close(fport->fd);
 	return PJMEDIA_EWAVEUNSUPP;
     }
-    */
     if (wave_hdr.data_hdr.len < ptime * wave_hdr.fmt_hdr.sample_rate *
 				wave_hdr.fmt_hdr.nchan / 1000)
     {
