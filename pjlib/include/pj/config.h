@@ -801,6 +801,17 @@
 #endif
 
 
+/**
+ * Disable WSAECONNRESET error for UDP sockets on Win32 platforms. See
+ * https://trac.pjsip.org/repos/ticket/1197.
+ *
+ * Default: 1
+ */
+#ifndef PJ_SOCK_DISABLE_WSAECONNRESET
+#   define PJ_SOCK_DISABLE_WSAECONNRESET    1
+#endif
+
+
 /** @} */
 
 /********************************************************************

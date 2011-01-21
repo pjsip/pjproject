@@ -493,8 +493,34 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
 
     if (*sock == PJ_INVALID_SOCKET) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
-    else
-	return PJ_SUCCESS;
+    
+#if PJ_SOCK_DISABLE_WSAECONNRESET && \
+    (!defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0)
+
+#ifndef SIO_UDP_CONNRESET
+    #define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR,12)
+#endif
+
+    /* Disable WSAECONNRESET for UDP.
+     * See https://trac.pjsip.org/repos/ticket/1197
+     */
+    if (type==PJ_SOCK_DGRAM) {
+	DWORD dwBytesReturned = 0;
+	BOOL bNewBehavior = FALSE;
+	DWORD rc;
+
+	rc = WSAIoctl(*sock, SIO_UDP_CONNRESET,
+		      &bNewBehavior, sizeof(bNewBehavior),
+		      NULL, 0, &dwBytesReturned,
+		      NULL, NULL);
+
+	if (rc==SOCKET_ERROR) {
+	    // Ignored..
+	}
+    }
+#endif
+
+    return PJ_SUCCESS;
 }
 
 #else
