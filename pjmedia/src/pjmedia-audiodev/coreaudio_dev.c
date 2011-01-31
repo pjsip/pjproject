@@ -660,9 +660,10 @@ OSStatus resampleProc(AudioConverterRef             inAudioConverter,
 	*ioNumberDataPackets = strm->resample_buf_size;
 
     ioData->mNumberBuffers = 1;
-    ioData->mBuffers[0].mNumberChannels = 1;
+    ioData->mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
     ioData->mBuffers[0].mData = strm->resample_buf_ptr;
     ioData->mBuffers[0].mDataByteSize = *ioNumberDataPackets *
+					strm->streamFormat.mChannelsPerFrame *
 					strm->param.bits_per_sample >> 3;
 
     return noErr;
@@ -725,7 +726,8 @@ static OSStatus resample_callback(void                       *inRefCon,
 
     if (nsamples >= resampleSize) {
 	pjmedia_frame frame;
-	UInt32 resampleOutput = strm->param.samples_per_frame;
+	UInt32 resampleOutput = strm->param.samples_per_frame /
+				strm->streamFormat.mChannelsPerFrame;
 	AudioBufferList ab;
 
 	frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
@@ -735,7 +737,7 @@ static OSStatus resample_callback(void                       *inRefCon,
 	frame.bit_info = 0;
 	
 	ab.mNumberBuffers = 1;
-	ab.mBuffers[0].mNumberChannels = 1;
+	ab.mBuffers[0].mNumberChannels = strm->streamFormat.mChannelsPerFrame;
 	ab.mBuffers[0].mData = strm->rec_buf;
 	ab.mBuffers[0].mDataByteSize = frame.size;
 
@@ -778,7 +780,8 @@ static OSStatus resample_callback(void                       *inRefCon,
 	    /* Do the resample */
 	    strm->resample_buf_ptr = input;
 	    ab.mBuffers[0].mDataByteSize = frame.size;
-	    resampleOutput = strm->param.samples_per_frame;
+	    resampleOutput = strm->param.samples_per_frame /
+			     strm->streamFormat.mChannelsPerFrame;
 	    ostatus = AudioConverterFillComplexBuffer(strm->resample,
 						      resampleProc,
 						      strm,
