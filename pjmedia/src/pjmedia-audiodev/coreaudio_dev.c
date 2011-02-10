@@ -234,7 +234,7 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 #if COREAUDIO_MAC
     desc.componentSubType = kAudioUnitSubType_HALOutput;
 #else
-    desc.componentSubType = kAudioUnitSubType_VoiceProcessingIO;
+    desc.componentSubType = kAudioUnitSubType_RemoteIO;
 #endif
     desc.componentManufacturer = kAudioUnitManufacturer_Apple;
     desc.componentFlags = 0;
