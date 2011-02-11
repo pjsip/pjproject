@@ -890,6 +890,7 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
     else
 	uapres->remote[status] = '\0';
 
+    pjsip_evsub_add_header(sub, &acc->cfg.sub_hdr_list);
     pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, uapres);
 
     /* Add server subscription to the list: */

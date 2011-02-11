@@ -227,6 +227,7 @@ struct pjsip_evsub
     pjsip_event_hdr	 *event;	/**< Event description.		    */
     pjsip_expires_hdr	 *expires;	/**< Expires header		    */
     pjsip_accept_hdr	 *accept;	/**< Local Accept header.	    */
+    pjsip_hdr             sub_hdr_list; /**< User-defined header.           */
 
     pj_time_val		  refresh_time;	/**< Time to refresh.		    */
     pj_timer_entry	  timer;	/**< Internal timer.		    */
@@ -723,6 +724,7 @@ static pj_status_t evsub_create( pjsip_dialog *dlg,
     sub->expires = pjsip_expires_hdr_create(sub->pool, pkg->pkg_expires);
     sub->accept = (pjsip_accept_hdr*) 
     		  pjsip_hdr_clone(sub->pool, pkg->pkg_accept);
+    pj_list_init(&sub->sub_hdr_list);
 
     sub->timer.user_data = sub;
     sub->timer.cb = &on_timer;
@@ -1027,7 +1029,18 @@ PJ_DEF(pj_status_t) pjsip_evsub_initiate( pjsip_evsub *sub,
 		       pjsip_hdr_shallow_clone(tdata->pool, 
 					       mod_evsub.allow_events_hdr));
 
-   
+
+    /* Add custom headers */
+    {
+	const pjsip_hdr *hdr = sub->sub_hdr_list.next;
+	while (hdr != &sub->sub_hdr_list) {
+	    pjsip_msg_add_hdr( tdata->msg, (pjsip_hdr*)
+			       pjsip_hdr_shallow_clone(tdata->pool, hdr));
+	    hdr = hdr->next;
+	}
+    }
+
+
     *p_tdata = tdata;
 
 
@@ -1035,6 +1048,27 @@ on_return:
 
     pjsip_dlg_dec_lock(sub->dlg);
     return status;
+}
+
+
+/*
+ * Add custom headers.
+ */
+PJ_DEF(pj_status_t) pjsip_evsub_add_header( pjsip_evsub *sub,
+					    const pjsip_hdr *hdr_list )
+{
+    const pjsip_hdr *hdr;
+
+    PJ_ASSERT_RETURN(sub && hdr_list, PJ_EINVAL);
+
+    hdr = hdr_list->next;
+    while (hdr != hdr_list) {
+        pj_list_push_back(&sub->sub_hdr_list, (pjsip_hdr*)
+		          pjsip_hdr_clone(sub->pool, hdr));
+	hdr = hdr->next;
+    }
+
+    return PJ_SUCCESS;
 }
 
 

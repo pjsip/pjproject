@@ -356,6 +356,16 @@ PJ_DEF(pj_status_t) pjsip_pres_initiate( pjsip_evsub *sub,
 
 
 /*
+ * Add custom headers.
+ */
+PJ_DEF(pj_status_t) pjsip_pres_add_header( pjsip_evsub *sub,
+					   const pjsip_hdr *hdr_list )
+{
+    return pjsip_evsub_add_header( sub, hdr_list );
+}
+
+
+/*
  * Accept incoming subscription.
  */
 PJ_DEF(pj_status_t) pjsip_pres_accept( pjsip_evsub *sub,

@@ -380,6 +380,19 @@ PJ_DECL(pj_status_t) pjsip_evsub_initiate( pjsip_evsub *sub,
 
 
 /**
+ * Add a list of headers to the subscription instance. The list of headers
+ * will be added to outgoing presence subscription requests.
+ *
+ * @param sub		Subscription instance.
+ * @param hdr_list	List of headers to be added.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_evsub_add_header( pjsip_evsub *sub,
+					     const pjsip_hdr *hdr_list );
+
+
+/**
  * Accept the incoming subscription request by sending 2xx response to
  * incoming SUBSCRIBE request.
  *

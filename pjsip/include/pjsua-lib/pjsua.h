@@ -2138,6 +2138,12 @@ typedef struct pjsua_acc_config
      */
     pjsip_hdr	    reg_hdr_list;
 
+    /** 
+     * The optional custom SIP headers to be put in the presence
+     * subscription request.
+     */
+    pjsip_hdr	    sub_hdr_list;
+
     /**
      * Subscribe to message waiting indication events (RFC 3842).
      *
