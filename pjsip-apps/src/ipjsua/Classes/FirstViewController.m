@@ -56,6 +56,8 @@
 - (void)viewDidLoad {
     [super viewDidLoad];
     
+    [[UIApplication sharedApplication] beginReceivingRemoteControlEvents];
+    
     ipjsuaAppDelegate *appd = (ipjsuaAppDelegate *)[[UIApplication sharedApplication] delegate];
     appd.mainView = self;
     textField.delegate = self;
