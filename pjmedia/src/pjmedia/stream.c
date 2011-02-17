@@ -1714,7 +1714,8 @@ static void on_rx_rtp( void *data,
 		 * packets with valid RTP sequence and no wrapped timestamp.
 		 */
 		if (seq_st.diff == 1 && stream->rtp_rx_last_ts && 
-		    ts.u64 > stream->rtp_rx_last_ts)
+		    ts.u64 > stream->rtp_rx_last_ts && 
+		    stream->rtp_rx_last_cnt > 0)
 		{
 		    unsigned peer_frm_ts_diff;
 
