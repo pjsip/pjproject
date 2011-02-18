@@ -1718,19 +1718,26 @@ static void on_rx_rtp( void *data,
 		    stream->rtp_rx_last_cnt > 0)
 		{
 		    unsigned peer_frm_ts_diff;
+		    unsigned frm_ts_span;
 
+		    /* Calculate actual frame timestamp span */
+		    frm_ts_span = stream->port.info.samples_per_frame /
+				  stream->codec_param.setting.frm_per_pkt/
+				  stream->port.info.channel_count;
+
+		    /* Get remote frame timestamp span */
 		    peer_frm_ts_diff = 
 			((pj_uint32_t)ts.u64-stream->rtp_rx_last_ts) / 
 			stream->rtp_rx_last_cnt;
 
-		    /* Possibilities remote's samples per frame for G.722 
-		     * are only 160 and 320, this validation is needed
-		     * to avoid wrong decision because of silence frames.
+		    /* Possibilities remote's samples per frame for G.722
+		     * are only (frm_ts_span) and (frm_ts_span/2), this
+		     * validation is needed to avoid wrong decision because
+		     * of silence frames.
 		     */
 		    if (stream->codec_param.info.pt == PJMEDIA_RTP_PT_G722 &&
-			(peer_frm_ts_diff==stream->port.info.samples_per_frame
-			 || peer_frm_ts_diff == 
-				    stream->port.info.samples_per_frame >> 1))
+			(peer_frm_ts_diff == frm_ts_span || 
+			 peer_frm_ts_diff == (frm_ts_span>>1)))
 		    {
 			if (peer_frm_ts_diff < stream->rtp_rx_ts_len_per_frame)
 			    stream->rtp_rx_ts_len_per_frame = peer_frm_ts_diff;
@@ -1751,6 +1758,11 @@ static void on_rx_rtp( void *data,
 	    }
 
 	    ts_span = stream->rtp_rx_ts_len_per_frame;
+
+	    /* Adjust the timestamp of the parsed frames */
+	    for (i=0; i<count; ++i) {
+		frames[i].timestamp.u64 = ts.u64 + ts_span * i;
+	    }
 
 	} else {
 	    ts_span = stream->codec_param.info.frm_ptime * 
@@ -2140,8 +2152,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->rtp_rx_last_cnt = 0;
     stream->rtp_tx_ts_len_per_pkt = stream->enc_samples_per_pkt /
 				     stream->codec_param.info.channel_cnt;
-    stream->rtp_rx_ts_len_per_frame = stream->port.info.samples_per_frame / 
-				       stream->codec_param.info.channel_cnt;
+    stream->rtp_rx_ts_len_per_frame = stream->port.info.samples_per_frame /
+				      stream->codec_param.setting.frm_per_pkt /
+				      stream->codec_param.info.channel_cnt;
 
     if (info->fmt.pt == PJMEDIA_RTP_PT_G722) {
 	stream->has_g722_mpeg_bug = PJ_TRUE;
