@@ -134,9 +134,6 @@ struct pjmedia_stream_info
 					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
 #endif
-
-    pjmedia_vid_codec_info       vid_codec_info;
-    pjmedia_vid_codec_param     *vid_codec_param;
 };
 
 
@@ -364,6 +361,7 @@ pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 					    void *user_data, 
 					    int digit), 
 				 void *user_data);
+
 
 /**
  * @}
