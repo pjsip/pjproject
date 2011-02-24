@@ -28,11 +28,39 @@
 
 static pjmedia_vid_codec_mgr *def_vid_codec_mgr;
 
-/* Definition of default codecs parameters */
-struct pjmedia_vid_codec_default_param
+
+/*
+ * Codec manager maintains array of these structs for each supported
+ * codec.
+ */
+typedef struct pjmedia_vid_codec_desc
 {
-    pjmedia_vid_codec_param	*param;
+    pjmedia_vid_codec_info	     info;	/**< Codec info.	    */
+    pjmedia_codec_id	             id;        /**< Fully qualified name   */
+    pjmedia_codec_priority           prio;      /**< Priority.		    */
+    pjmedia_vid_codec_factory       *factory;	/**< The factory.	    */
+    pjmedia_vid_codec_param         *def_param; /**< Default codecs 
+					             parameters.	    */
+} pjmedia_vid_codec_desc;
+
+
+/* The declaration of video codec manager */
+struct pjmedia_vid_codec_mgr
+{
+    /** Codec manager mutex. */
+    pj_mutex_t			*mutex;
+
+    /** List of codec factories registered to codec manager. */
+    pjmedia_vid_codec_factory	 factory_list;
+
+    /** Number of supported codecs. */
+    unsigned			 codec_cnt;
+
+    /** Array of codec descriptor. */
+    pjmedia_vid_codec_desc	 codec_desc[PJMEDIA_CODEC_MGR_MAX_CODECS];
+
 };
+
 
 
 /* Sort codecs in codec manager based on priorities */
@@ -93,7 +121,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_destroy (pjmedia_vid_codec_mgr *mgr)
 
 PJ_DEF(pjmedia_vid_codec_mgr*) pjmedia_vid_codec_mgr_instance(void)
 {
-    pj_assert(def_vid_codec_mgr);
+    //pj_assert(def_vid_codec_mgr);
     return def_vid_codec_mgr;
 }
 
@@ -615,11 +643,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
 	pj_strdup(pool, &p->dec_fmtp.param[i].val, 
 		  &param->dec_fmtp.param[i].val);
     }
-    for (i = 0; i < param->dec_fmtp.cnt; ++i) {
-	pj_strdup(pool, &p->dec_fmtp.param[i].name, 
-		  &param->dec_fmtp.param[i].name);
-	pj_strdup(pool, &p->dec_fmtp.param[i].val, 
-		  &param->dec_fmtp.param[i].val);
+    for (i = 0; i < param->enc_fmtp.cnt; ++i) {
+	pj_strdup(pool, &p->enc_fmtp.param[i].name, 
+		  &param->enc_fmtp.param[i].name);
+	pj_strdup(pool, &p->enc_fmtp.param[i].val, 
+		  &param->enc_fmtp.param[i].val);
     }
 
     pj_mutex_unlock(mgr->mutex);

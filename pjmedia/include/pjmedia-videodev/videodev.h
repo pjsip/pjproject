@@ -78,8 +78,8 @@ enum
  * structure.
  *
  * Once video stream is running, application can also retrieve or set some
- * specific video capability, by using #pjmedia_vid_stream_get_cap() and
- * #pjmedia_vid_stream_set_cap() and specifying the desired capability. The
+ * specific video capability, by using #pjmedia_vid_dev_stream_get_cap() and
+ * #pjmedia_vid_dev_stream_set_cap() and specifying the desired capability. The
  * value of the capability is specified as pointer, and application needs to
  * supply the pointer with the correct value, according to the documentation
  * of each of the capability.
@@ -154,8 +154,8 @@ typedef struct pjmedia_vid_dev_info
 } pjmedia_vid_dev_info;
 
 
-/** Forward declaration for pjmedia_vid_stream */
-typedef struct pjmedia_vid_stream pjmedia_vid_stream;
+/** Forward declaration for pjmedia_vid_dev_stream */
+typedef struct pjmedia_vid_dev_stream pjmedia_vid_dev_stream;
 
 typedef enum pjmedia_event_type
 {
@@ -187,7 +187,7 @@ typedef struct pjmedia_vid_cb
     * @return              Returning non-PJ_SUCCESS will cause the video
     *                      stream to stop
     */
-    pj_status_t (*capture_cb)(pjmedia_vid_stream *stream,
+    pj_status_t (*capture_cb)(pjmedia_vid_dev_stream *stream,
 		              void *user_data,
                               pjmedia_frame *frame);
 
@@ -210,7 +210,7 @@ typedef struct pjmedia_vid_cb
     * @return              Returning non-PJ_SUCCESS will cause the video 
     *                      stream to stop
     */
-    pj_status_t (*render_cb)(pjmedia_vid_stream *stream,
+    pj_status_t (*render_cb)(pjmedia_vid_dev_stream *stream,
 			     void *user_data,
                              pjmedia_frame *frame);
 
@@ -226,7 +226,7 @@ typedef struct pjmedia_vid_cb
     *                      default event-handler (if any), otherwise the
     *                      video stream will ignore the particular event.
     */
-    pj_status_t (*on_event_cb)(pjmedia_vid_stream *stream,
+    pj_status_t (*on_event_cb)(pjmedia_vid_dev_stream *stream,
 			       void *user_data,
                                pjmedia_vid_event *event);
 
@@ -476,10 +476,11 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
  * @return              PJ_SUCCESS on successful operation or the appropriate
  *                      error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_create(const pjmedia_vid_param *param,
-                                               const pjmedia_vid_cb *cb,
-                                               void *user_data,
-                                               pjmedia_vid_stream **p_strm);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_create(
+					    const pjmedia_vid_param *param,
+					    const pjmedia_vid_cb *cb,
+					    void *user_data,
+					    pjmedia_vid_dev_stream **p_strm);
 
 /**
  * Get the running parameters for the specified video stream.
@@ -491,8 +492,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_create(const pjmedia_vid_param *param,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_get_param(pjmedia_vid_stream *strm,
-                                                  pjmedia_vid_param *param);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_get_param(
+					    pjmedia_vid_dev_stream *strm,
+                                            pjmedia_vid_param *param);
 
 /**
  * Get the value of a specific capability of the video stream.
@@ -507,9 +509,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_get_param(pjmedia_vid_stream *strm,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_get_cap(pjmedia_vid_stream *strm,
-                                                pjmedia_vid_dev_cap cap,
-                                                void *value);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_get_cap(
+					    pjmedia_vid_dev_stream *strm,
+					    pjmedia_vid_dev_cap cap,
+                                            void *value);
 
 /**
  * Set the value of a specific capability of the video stream.
@@ -522,9 +525,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_get_cap(pjmedia_vid_stream *strm,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_set_cap(pjmedia_vid_stream *strm,
-                                                pjmedia_vid_dev_cap cap,
-                                                const void *value);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_set_cap(
+					    pjmedia_vid_dev_stream *strm,
+					    pjmedia_vid_dev_cap cap,
+					    const void *value);
 
 /**
  * Start the stream.
@@ -534,14 +538,17 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_set_cap(pjmedia_vid_stream *strm,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *strm);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_start(
+					    pjmedia_vid_dev_stream *strm);
 
 /* Get/put frame API for passive stream */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_get_frame(pjmedia_vid_stream *strm,
-                                                  pjmedia_frame *frame);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_get_frame(
+					    pjmedia_vid_dev_stream *strm,
+                                            pjmedia_frame *frame);
 
-PJ_DECL(pj_status_t) pjmedia_vid_stream_put_frame(pjmedia_vid_stream *strm,
-                                                  const pjmedia_frame *frame);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_put_frame(
+					    pjmedia_vid_dev_stream *strm,
+                                            const pjmedia_frame *frame);
 
 /**
  * Stop the stream.
@@ -551,7 +558,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_put_frame(pjmedia_vid_stream *strm,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_stop(pjmedia_vid_stream *strm);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_stop(
+					    pjmedia_vid_dev_stream *strm);
 
 /**
  * Destroy the stream.
@@ -561,7 +569,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_stop(pjmedia_vid_stream *strm);
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_destroy(pjmedia_vid_stream *strm);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_destroy(
+					    pjmedia_vid_dev_stream *strm);
 
 
 /**

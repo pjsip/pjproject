@@ -108,7 +108,7 @@ PJ_DECL(void) pjmedia_vid_port_set_cb(pjmedia_vid_port *vid_port,
  *
  * @return		The video stream.
  */
-PJ_DECL(pjmedia_vid_stream*)
+PJ_DECL(pjmedia_vid_dev_stream*)
 pjmedia_vid_port_get_stream(pjmedia_vid_port *vid_port);
 
 /**

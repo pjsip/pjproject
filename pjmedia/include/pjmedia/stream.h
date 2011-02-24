@@ -143,6 +143,30 @@ struct pjmedia_stream_info
 typedef struct pjmedia_stream_info pjmedia_stream_info;
 
 
+/**
+ * This function will initialize the stream info based on information
+ * in both SDP session descriptors for the specified stream index. 
+ * The remaining information will be taken from default codec parameters. 
+ * If socket info array is specified, the socket will be copied to the 
+ * session info as well.
+ *
+ * @param si		Stream info structure to be initialized.
+ * @param pool		Pool to allocate memory.
+ * @param endpt		PJMEDIA endpoint instance.
+ * @param local		Local SDP session descriptor.
+ * @param remote	Remote SDP session descriptor.
+ * @param stream_idx	Media stream index in the session descriptor.
+ *
+ * @return		PJ_SUCCESS if stream info is successfully initialized.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_stream_info_from_sdp( pjmedia_stream_info *si,
+			      pj_pool_t *pool,
+			      pjmedia_endpt *endpt,
+			      const pjmedia_sdp_session *local,
+			      const pjmedia_sdp_session *remote,
+			      unsigned stream_idx);
+
 
 /**
  * Create a media stream based on the specified parameter. After the stream

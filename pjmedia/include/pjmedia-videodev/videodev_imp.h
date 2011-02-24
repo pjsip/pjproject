@@ -83,13 +83,13 @@ typedef struct pjmedia_vid_dev_factory_op
 
     /**
      * Open the video device and create video stream. See
-     * #pjmedia_vid_stream_create()
+     * #pjmedia_vid_dev_stream_create()
      */
     pj_status_t (*create_stream)(pjmedia_vid_dev_factory *f,
 				 const pjmedia_vid_param *param,
 				 const pjmedia_vid_cb *cb,
 				 void *user_data,
-				 pjmedia_vid_stream **p_vid_strm);
+				 pjmedia_vid_dev_stream **p_vid_strm);
 
 } pjmedia_vid_dev_factory_op;
 
@@ -113,62 +113,62 @@ struct pjmedia_vid_dev_factory
 /**
  * Video stream operations.
  */
-typedef struct pjmedia_vid_stream_op
+typedef struct pjmedia_vid_dev_stream_op
 {
     /**
-     * See #pjmedia_vid_stream_get_param()
+     * See #pjmedia_vid_dev_stream_get_param()
      */
-    pj_status_t (*get_param)(pjmedia_vid_stream *strm,
+    pj_status_t (*get_param)(pjmedia_vid_dev_stream *strm,
 			     pjmedia_vid_param *param);
 
     /**
-     * See #pjmedia_vid_stream_get_cap()
+     * See #pjmedia_vid_dev_stream_get_cap()
      */
-    pj_status_t (*get_cap)(pjmedia_vid_stream *strm,
+    pj_status_t (*get_cap)(pjmedia_vid_dev_stream *strm,
 			   pjmedia_vid_dev_cap cap,
 			   void *value);
 
     /**
-     * See #pjmedia_vid_stream_set_cap()
+     * See #pjmedia_vid_dev_stream_set_cap()
      */
-    pj_status_t (*set_cap)(pjmedia_vid_stream *strm,
+    pj_status_t (*set_cap)(pjmedia_vid_dev_stream *strm,
 			   pjmedia_vid_dev_cap cap,
 			   const void *value);
 
     /**
-     * See #pjmedia_vid_stream_start()
+     * See #pjmedia_vid_dev_stream_start()
      */
-    pj_status_t (*start)(pjmedia_vid_stream *strm);
+    pj_status_t (*start)(pjmedia_vid_dev_stream *strm);
 
     /**
-     * See #pjmedia_vid_stream_get_frame()
+     * See #pjmedia_vid_dev_stream_get_frame()
      */
-    pj_status_t (*get_frame)(pjmedia_vid_stream *strm,
+    pj_status_t (*get_frame)(pjmedia_vid_dev_stream *strm,
                              pjmedia_frame *frame);
 
     /**
-     * See #pjmedia_vid_stream_put_frame()
+     * See #pjmedia_vid_dev_stream_put_frame()
      */
-    pj_status_t (*put_frame)(pjmedia_vid_stream *strm,
+    pj_status_t (*put_frame)(pjmedia_vid_dev_stream *strm,
                              const pjmedia_frame *frame);
 
     /**
-     * See #pjmedia_vid_stream_stop().
+     * See #pjmedia_vid_dev_stream_stop().
      */
-    pj_status_t (*stop)(pjmedia_vid_stream *strm);
+    pj_status_t (*stop)(pjmedia_vid_dev_stream *strm);
 
     /**
-     * See #pjmedia_vid_stream_destroy().
+     * See #pjmedia_vid_dev_stream_destroy().
      */
-    pj_status_t (*destroy)(pjmedia_vid_stream *strm);
+    pj_status_t (*destroy)(pjmedia_vid_dev_stream *strm);
 
-} pjmedia_vid_stream_op;
+} pjmedia_vid_dev_stream_op;
 
 
 /**
  * This structure describes the video device stream.
  */
-struct pjmedia_vid_stream
+struct pjmedia_vid_dev_stream
 {
     /** Internal data to be initialized by video subsystem */
     struct {
@@ -177,7 +177,7 @@ struct pjmedia_vid_stream
     } sys;
 
     /** Operations */
-    pjmedia_vid_stream_op *op;
+    pjmedia_vid_dev_stream_op *op;
 };
 
 

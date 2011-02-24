@@ -52,13 +52,14 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/sdp.h>
 #include <pjmedia/sdp_neg.h>
-#include <pjmedia/session.h>
+//#include <pjmedia/session.h>
 #include <pjmedia/silencedet.h>
 #include <pjmedia/sound.h>
 #include <pjmedia/sound_port.h>
 #include <pjmedia/splitcomb.h>
 #include <pjmedia/stereo.h>
 #include <pjmedia/stream.h>
+#include <pjmedia/stream_common.h>
 #include <pjmedia/tonegen.h>
 #include <pjmedia/transport.h>
 #include <pjmedia/transport_adapter_sample.h>
@@ -68,6 +69,7 @@
 #include <pjmedia/transport_udp.h>
 #include <pjmedia/videoport.h>
 #include <pjmedia/vid_codec.h>
+#include <pjmedia/vid_stream.h>
 #include <pjmedia/wav_playlist.h>
 #include <pjmedia/wav_port.h>
 #include <pjmedia/wave.h>

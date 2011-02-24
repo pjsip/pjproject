@@ -979,6 +979,15 @@
 #endif
 
 /**
+ * Maximum video frame size.
+ * Default: 16kB
+ */
+#ifndef PJMEDIA_MAX_VIDEO_FRAME_SIZE			
+#  define PJMEDIA_MAX_VIDEO_FRAME_SIZE			(1<<14)
+#endif
+
+
+/**
  * Specify the maximum duration (in ms) for resynchronization. When a media
  * is late to another media it is supposed to be synchronized to, it is
  * guaranteed to be synchronized again after this duration. While if the

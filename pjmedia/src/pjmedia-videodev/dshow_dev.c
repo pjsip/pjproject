@@ -89,19 +89,19 @@ struct dshow_factory
 /* Video stream. */
 struct dshow_stream
 {
-    pjmedia_vid_stream	 base;		    /**< Base stream	       */
-    pjmedia_vid_param	 param;		    /**< Settings	       */
-    pj_pool_t           *pool;              /**< Memory pool.          */
+    pjmedia_vid_dev_stream   base;		    /**< Base stream	    */
+    pjmedia_vid_param	     param;		    /**< Settings	    */
+    pj_pool_t		    *pool;		    /**< Memory pool.	    */
 
-    pjmedia_vid_cb       vid_cb;            /**< Stream callback.     */
-    void                *user_data;         /**< Application data.     */
+    pjmedia_vid_cb	     vid_cb;		    /**< Stream callback.   */
+    void		    *user_data;		    /**< Application data.  */
 
-    pj_bool_t            quit_flag;
-    pj_bool_t		 rend_thread_exited;
-    pj_bool_t		 cap_thread_exited;
-    pj_bool_t		 cap_thread_initialized;
-    pj_thread_desc	 cap_thread_desc;
-    pj_thread_t		*cap_thread;
+    pj_bool_t		     quit_flag;
+    pj_bool_t		     rend_thread_exited;
+    pj_bool_t		     cap_thread_exited;
+    pj_bool_t		     cap_thread_initialized;
+    pj_thread_desc	     cap_thread_desc;
+    pj_thread_t		    *cap_thread;
 
     struct dshow_graph
     {
@@ -126,25 +126,26 @@ static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
                                                pjmedia_vid_dev_factory *f,
 					       unsigned index,
 					       pjmedia_vid_param *param);
-static pj_status_t dshow_factory_create_stream(pjmedia_vid_dev_factory *f,
-					       const pjmedia_vid_param *param,
-					       const pjmedia_vid_cb *cb,
-					       void *user_data,
-					       pjmedia_vid_stream **p_vid_strm);
+static pj_status_t dshow_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm);
 
-static pj_status_t dshow_stream_get_param(pjmedia_vid_stream *strm,
+static pj_status_t dshow_stream_get_param(pjmedia_vid_dev_stream *strm,
 					  pjmedia_vid_param *param);
-static pj_status_t dshow_stream_get_cap(pjmedia_vid_stream *strm,
+static pj_status_t dshow_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				        pjmedia_vid_dev_cap cap,
 				        void *value);
-static pj_status_t dshow_stream_set_cap(pjmedia_vid_stream *strm,
+static pj_status_t dshow_stream_set_cap(pjmedia_vid_dev_stream *strm,
 				        pjmedia_vid_dev_cap cap,
 				        const void *value);
-static pj_status_t dshow_stream_start(pjmedia_vid_stream *strm);
-static pj_status_t dshow_stream_put_frame(pjmedia_vid_stream *strm,
+static pj_status_t dshow_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t dshow_stream_put_frame(pjmedia_vid_dev_stream *strm,
                                           const pjmedia_frame *frame);
-static pj_status_t dshow_stream_stop(pjmedia_vid_stream *strm);
-static pj_status_t dshow_stream_destroy(pjmedia_vid_stream *strm);
+static pj_status_t dshow_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t dshow_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -157,7 +158,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &dshow_factory_create_stream
 };
 
-static pjmedia_vid_stream_op stream_op =
+static pjmedia_vid_dev_stream_op stream_op =
 {
     &dshow_stream_get_param,
     &dshow_stream_get_cap,
@@ -395,8 +396,8 @@ static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
 
     /* Set the device capabilities here */
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    param->frame_rate.num = DEFAULT_FPS;
-    param->frame_rate.denum = 1;
+    //param->frame_rate.num = DEFAULT_FPS;
+    //param->frame_rate.denum = 1;
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
 
     pjmedia_format_copy(&param->fmt, &di->info.fmt[0]);
@@ -438,7 +439,7 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 }
 
 /* API: Put frame from stream */
-static pj_status_t dshow_stream_put_frame(pjmedia_vid_stream *strm,
+static pj_status_t dshow_stream_put_frame(pjmedia_vid_dev_stream *strm,
                                           const pjmedia_frame *frame)
 {
     struct dshow_stream *stream = (struct dshow_stream*)strm;
@@ -697,11 +698,12 @@ on_error:
 }
 
 /* API: create stream */
-static pj_status_t dshow_factory_create_stream(pjmedia_vid_dev_factory *f,
-					       const pjmedia_vid_param *param,
-					       const pjmedia_vid_cb *cb,
-					       void *user_data,
-					       pjmedia_vid_stream **p_vid_strm)
+static pj_status_t dshow_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct dshow_factory *df = (struct dshow_factory*)f;
     pj_pool_t *pool;
@@ -752,12 +754,12 @@ static pj_status_t dshow_factory_create_stream(pjmedia_vid_dev_factory *f,
     return PJ_SUCCESS;
  
 on_error:
-    dshow_stream_destroy((pjmedia_vid_stream *)strm);
+    dshow_stream_destroy((pjmedia_vid_dev_stream *)strm);
     return PJ_EUNKNOWN;
 }
 
 /* API: Get stream info. */
-static pj_status_t dshow_stream_get_param(pjmedia_vid_stream *s,
+static pj_status_t dshow_stream_get_param(pjmedia_vid_dev_stream *s,
 					  pjmedia_vid_param *pi)
 {
     struct dshow_stream *strm = (struct dshow_stream*)s;
@@ -776,7 +778,7 @@ static pj_status_t dshow_stream_get_param(pjmedia_vid_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t dshow_stream_get_cap(pjmedia_vid_stream *s,
+static pj_status_t dshow_stream_get_cap(pjmedia_vid_dev_stream *s,
 				        pjmedia_vid_dev_cap cap,
 				        void *pval)
 {
@@ -796,7 +798,7 @@ static pj_status_t dshow_stream_get_cap(pjmedia_vid_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t dshow_stream_set_cap(pjmedia_vid_stream *s,
+static pj_status_t dshow_stream_set_cap(pjmedia_vid_dev_stream *s,
 				        pjmedia_vid_dev_cap cap,
 				        const void *pval)
 {
@@ -816,7 +818,7 @@ static pj_status_t dshow_stream_set_cap(pjmedia_vid_stream *s,
 }
 
 /* API: Start stream. */
-static pj_status_t dshow_stream_start(pjmedia_vid_stream *strm)
+static pj_status_t dshow_stream_start(pjmedia_vid_dev_stream *strm)
 {
     struct dshow_stream *stream = (struct dshow_stream*)strm;
     unsigned i;
@@ -842,7 +844,7 @@ static pj_status_t dshow_stream_start(pjmedia_vid_stream *strm)
 }
 
 /* API: Stop stream. */
-static pj_status_t dshow_stream_stop(pjmedia_vid_stream *strm)
+static pj_status_t dshow_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct dshow_stream *stream = (struct dshow_stream*)strm;
     unsigned i;
@@ -868,7 +870,7 @@ static pj_status_t dshow_stream_stop(pjmedia_vid_stream *strm)
 
 
 /* API: Destroy stream. */
-static pj_status_t dshow_stream_destroy(pjmedia_vid_stream *strm)
+static pj_status_t dshow_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     struct dshow_stream *stream = (struct dshow_stream*)strm;
     unsigned i;

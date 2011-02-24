@@ -67,7 +67,7 @@ typedef struct ffmpeg_factory
 
 typedef struct ffmpeg_stream
 {
-    pjmedia_vid_stream           base;
+    pjmedia_vid_dev_stream       base;
     ffmpeg_factory              *factory;
     pj_pool_t                   *pool;
     pjmedia_vid_param            param;
@@ -80,31 +80,32 @@ static pj_status_t ffmpeg_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f);
 static unsigned    ffmpeg_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t ffmpeg_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					      unsigned index,
-					      pjmedia_vid_dev_info *info);
+					       unsigned index,
+					       pjmedia_vid_dev_info *info);
 static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
                                                 pjmedia_vid_dev_factory *f,
 					        unsigned index,
 					        pjmedia_vid_param *param);
-static pj_status_t ffmpeg_factory_create_stream(pjmedia_vid_dev_factory *f,
-					       const pjmedia_vid_param *param,
-					       const pjmedia_vid_cb *cb,
-					       void *user_data,
-					       pjmedia_vid_stream **p_vid_strm);
+static pj_status_t ffmpeg_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm);
 
-static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_stream *strm,
-					  pjmedia_vid_param *param);
-static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_stream *strm,
-				        pjmedia_vid_dev_cap cap,
-				        void *value);
-static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_stream *strm,
-				        pjmedia_vid_dev_cap cap,
-				        const void *value);
-static pj_status_t ffmpeg_stream_start(pjmedia_vid_stream *strm);
-static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_stream *s,
+static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_dev_stream *strm,
+					   pjmedia_vid_param *param);
+static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_dev_stream *strm,
+				         pjmedia_vid_dev_cap cap,
+				         void *value);
+static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_dev_stream *strm,
+				         pjmedia_vid_dev_cap cap,
+				         const void *value);
+static pj_status_t ffmpeg_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_dev_stream *s,
                                            pjmedia_frame *frame);
-static pj_status_t ffmpeg_stream_stop(pjmedia_vid_stream *strm);
-static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_stream *strm);
+static pj_status_t ffmpeg_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -117,7 +118,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &ffmpeg_factory_create_stream
 };
 
-static pjmedia_vid_stream_op stream_op =
+static pjmedia_vid_dev_stream_op stream_op =
 {
     &ffmpeg_stream_get_param,
     &ffmpeg_stream_get_cap,
@@ -152,14 +153,14 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
                                        const pjmedia_vid_param *param)
 {
     AVFormatParameters fp;
-    pjmedia_video_format_detail *fmt_detail;
+    pjmedia_video_format_detail *vfd;
     int err;
 
     PJ_ASSERT_RETURN(ctx && ifmt && dev_name && param, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
                      PJ_EINVAL);
 
-    fmt_detail = (pjmedia_video_format_detail*)param->fmt.detail;
+    vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
 
     /* Init ffmpeg format context */
     *ctx = avformat_alloc_context();
@@ -167,11 +168,11 @@ static pj_status_t ffmpeg_capture_open(AVFormatContext **ctx,
     /* Init ffmpeg format param */
     pj_bzero(&fp, sizeof(fp));
     fp.prealloced_context = 1;
-    fp.width = fmt_detail->size.w;
-    fp.height = fmt_detail->size.h;
+    fp.width = vfd->size.w;
+    fp.height = vfd->size.h;
     fp.pix_fmt = PIX_FMT_BGR24;
-    fp.time_base.num = param->frame_rate.denum;
-    fp.time_base.den = param->frame_rate.num;
+    fp.time_base.num = vfd->fps.denum;
+    fp.time_base.den = vfd->fps.num;
 
     /* Open capture stream */
     err = av_open_input_stream(ctx, NULL, dev_name, ifmt, &fp);
@@ -288,8 +289,8 @@ static unsigned ffmpeg_factory_get_dev_count(pjmedia_vid_dev_factory *f)
 
 /* API: get device info */
 static pj_status_t ffmpeg_factory_get_dev_info(pjmedia_vid_dev_factory *f,
-					      unsigned index,
-					      pjmedia_vid_dev_info *info)
+					       unsigned index,
+					       pjmedia_vid_dev_info *info)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
 
@@ -308,9 +309,11 @@ static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
     ffmpeg_dev_info *info;
-    pjmedia_video_format_detail *fmt_detail;
 
     PJ_ASSERT_RETURN(index < ff->dev_count, PJMEDIA_EVID_INVDEV);
+
+    PJ_UNUSED_ARG(pool);
+
     info = &ff->dev_info[index];
 
     pj_bzero(param, sizeof(*param));
@@ -321,13 +324,9 @@ static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
 
     /* Set the device capabilities here */
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
-    pj_memcpy(&param->fmt, &info->base.fmt[0], sizeof(param->fmt));
     param->clock_rate = 90000;
-    pjmedia_format_init_video(pool, &param->fmt, 320, 240, 25, 1,
-                              0, 0);
-    fmt_detail = (pjmedia_video_format_detail*)param->fmt.detail;
-    param->frame_rate.num = fmt_detail->fps.num;
-    param->frame_rate.denum = fmt_detail->fps.denum;
+    pjmedia_format_init_video(&param->fmt, 0, 320, 240, 25, 1);
+    param->fmt.id = info->base.fmt[0].id;
 
     return PJ_SUCCESS;
 }
@@ -335,11 +334,12 @@ static pj_status_t ffmpeg_factory_default_param(pj_pool_t *pool,
 
 
 /* API: create stream */
-static pj_status_t ffmpeg_factory_create_stream(pjmedia_vid_dev_factory *f,
-					       const pjmedia_vid_param *param,
-					       const pjmedia_vid_cb *cb,
-					       void *user_data,
-					       pjmedia_vid_stream **p_vid_strm)
+static pj_status_t ffmpeg_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm)
 {
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
     pj_pool_t *pool;
@@ -348,8 +348,8 @@ static pj_status_t ffmpeg_factory_create_stream(pjmedia_vid_dev_factory *f,
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->dir == PJMEDIA_DIR_CAPTURE, PJ_EINVAL);
     PJ_ASSERT_RETURN((unsigned)param->cap_id < ff->dev_count, PJ_EINVAL);
-    PJ_ASSERT_RETURN(param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
-                     param->fmt.detail, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
+		     PJ_EINVAL);
 
     PJ_UNUSED_ARG(cb);
     PJ_UNUSED_ARG(user_data);
@@ -371,7 +371,7 @@ static pj_status_t ffmpeg_factory_create_stream(pjmedia_vid_dev_factory *f,
 }
 
 /* API: Get stream info. */
-static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_stream *s,
+static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_dev_stream *s,
 					   pjmedia_vid_param *pi)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
@@ -384,9 +384,9 @@ static pj_status_t ffmpeg_stream_get_param(pjmedia_vid_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_stream *s,
-				        pjmedia_vid_dev_cap cap,
-				        void *pval)
+static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_dev_stream *s,
+				         pjmedia_vid_dev_cap cap,
+				         void *pval)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 
@@ -398,9 +398,9 @@ static pj_status_t ffmpeg_stream_get_cap(pjmedia_vid_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_stream *s,
-				        pjmedia_vid_dev_cap cap,
-				        const void *pval)
+static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_dev_stream *s,
+				         pjmedia_vid_dev_cap cap,
+				         const void *pval)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 
@@ -413,7 +413,7 @@ static pj_status_t ffmpeg_stream_set_cap(pjmedia_vid_stream *s,
 
 
 /* API: Start stream. */
-static pj_status_t ffmpeg_stream_start(pjmedia_vid_stream *s)
+static pj_status_t ffmpeg_stream_start(pjmedia_vid_dev_stream *s)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
     ffmpeg_dev_info *info;
@@ -435,7 +435,7 @@ static pj_status_t ffmpeg_stream_start(pjmedia_vid_stream *s)
 
 
 /* API: Get frame from stream */
-static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_stream *s,
+static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_dev_stream *s,
                                            pjmedia_frame *frame)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
@@ -458,7 +458,7 @@ static pj_status_t ffmpeg_stream_get_frame(pjmedia_vid_stream *s,
 
 
 /* API: Stop stream. */
-static pj_status_t ffmpeg_stream_stop(pjmedia_vid_stream *s)
+static pj_status_t ffmpeg_stream_stop(pjmedia_vid_dev_stream *s)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 
@@ -472,7 +472,7 @@ static pj_status_t ffmpeg_stream_stop(pjmedia_vid_stream *s)
 
 
 /* API: Destroy stream. */
-static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_stream *s)
+static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_dev_stream *s)
 {
     ffmpeg_stream *strm = (ffmpeg_stream*)s;
 

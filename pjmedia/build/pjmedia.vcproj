@@ -4312,64 +4312,6 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjmedia\session.c"
-				>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Static|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Dynamic|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug-Dynamic|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release-Static|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-			</File>
-			<File
 				RelativePath="..\src\pjmedia\silencedet.c"
 				>
 				<FileConfiguration
@@ -4610,6 +4552,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\stream_common.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\tonegen.c"
 				>
 				<FileConfiguration
@@ -4743,6 +4689,10 @@
 			</File>
 			<File
 				RelativePath="..\src\pjmedia\vid_codec.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjmedia\vid_stream.c"
 				>
 			</File>
 			<File
@@ -5119,10 +5069,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\include\pjmedia\session.h"
-				>
-			</File>
-			<File
 				RelativePath="..\include\pjmedia\silencedet.h"
 				>
 			</File>
@@ -5144,6 +5090,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\stream.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\stream_common.h"
 				>
 			</File>
 			<File
@@ -5180,6 +5130,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\vid_codec.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\vid_stream.h"
 				>
 			</File>
 			<File

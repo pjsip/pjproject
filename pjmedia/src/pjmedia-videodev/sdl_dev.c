@@ -90,28 +90,28 @@ struct sdl_factory
 /* Video stream. */
 struct sdl_stream
 {
-    pjmedia_vid_stream	 base;		    /**< Base stream	       */
-    pjmedia_vid_param	 param;		    /**< Settings	       */
-    pj_pool_t           *pool;              /**< Memory pool.          */
+    pjmedia_vid_dev_stream	 base;		    /**< Base stream	    */
+    pjmedia_vid_param		 param;		    /**< Settings	    */
+    pj_pool_t			*pool;              /**< Memory pool.       */
 
-    pjmedia_vid_cb       vid_cb;            /**< Stream callback.      */
-    void                *user_data;         /**< Application data.     */
+    pjmedia_vid_cb		 vid_cb;            /**< Stream callback.   */
+    void			*user_data;         /**< Application data.  */
 
-    pj_thread_t         *sdl_thread;        /**< SDL thread.           */
-    pj_bool_t            is_quitting;
-    pj_bool_t            is_running;
-    pj_bool_t            render_exited;
-    pj_status_t          status;
+    pj_thread_t			*sdl_thread;        /**< SDL thread.        */
+    pj_bool_t			 is_quitting;
+    pj_bool_t			 is_running;
+    pj_bool_t			 render_exited;
+    pj_status_t			 status;
 
-    SDL_Rect             rect;              /**< Display rectangle.    */
-    SDL_Surface         *screen;            /**< Display screen.       */
-    SDL_Surface         *surf;              /**< RGB surface.          */
-    SDL_Overlay         *overlay;           /**< YUV overlay.          */
+    SDL_Rect			 rect;              /**< Display rectangle. */
+    SDL_Surface			*screen;            /**< Display screen.    */
+    SDL_Surface			*surf;              /**< RGB surface.       */
+    SDL_Overlay			*overlay;           /**< YUV overlay.       */
 
     /* For frame conversion */
-    pjmedia_converter       *conv;
-    pjmedia_conversion_param conv_param;
-    pjmedia_frame            conv_buf;
+    pjmedia_converter		*conv;
+    pjmedia_conversion_param	 conv_param;
+    pjmedia_frame		 conv_buf;
 
     pjmedia_video_apply_fmt_param vafp;
 };
@@ -128,25 +128,26 @@ static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
                                              pjmedia_vid_dev_factory *f,
 					     unsigned index,
 					     pjmedia_vid_param *param);
-static pj_status_t sdl_factory_create_stream(pjmedia_vid_dev_factory *f,
-					     const pjmedia_vid_param *param,
-					     const pjmedia_vid_cb *cb,
-					     void *user_data,
-					     pjmedia_vid_stream **p_vid_strm);
+static pj_status_t sdl_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm);
 
-static pj_status_t sdl_stream_get_param(pjmedia_vid_stream *strm,
+static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *strm,
 					pjmedia_vid_param *param);
-static pj_status_t sdl_stream_get_cap(pjmedia_vid_stream *strm,
+static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				      pjmedia_vid_dev_cap cap,
 				      void *value);
-static pj_status_t sdl_stream_set_cap(pjmedia_vid_stream *strm,
+static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *strm,
 				      pjmedia_vid_dev_cap cap,
 				      const void *value);
-static pj_status_t sdl_stream_put_frame(pjmedia_vid_stream *strm,
+static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
                                         const pjmedia_frame *frame);
-static pj_status_t sdl_stream_start(pjmedia_vid_stream *strm);
-static pj_status_t sdl_stream_stop(pjmedia_vid_stream *strm);
-static pj_status_t sdl_stream_destroy(pjmedia_vid_stream *strm);
+static pj_status_t sdl_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -159,7 +160,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &sdl_factory_create_stream
 };
 
-static pjmedia_vid_stream_op stream_op =
+static pjmedia_vid_dev_stream_op stream_op =
 {
     &sdl_stream_get_param,
     &sdl_stream_get_cap,
@@ -407,9 +408,9 @@ static int create_sdl_thread(void * data)
                             break;
                         }
                     if (strm->is_running)
-                        pjmedia_vid_stream_stop(&strm->base);
+                        pjmedia_vid_dev_stream_stop(&strm->base);
                     else
-                        pjmedia_vid_stream_start(&strm->base);
+                        pjmedia_vid_dev_stream_start(&strm->base);
                     break;
                 case SDL_VIDEORESIZE:
                     pevent.event_type = PJMEDIA_EVENT_WINDOW_RESIZE;
@@ -433,7 +434,8 @@ static int create_sdl_thread(void * data)
                     /**
                      * To process PJMEDIA_EVENT_WINDOW_CLOSE event,
                      * application should do this in the on_event_cb callback:
-                     * 1. stop further calls to #pjmedia_vid_stream_put_frame()
+                     * 1. stop further calls to 
+		     *    #pjmedia_vid_dev_stream_put_frame()
                      * 2. return PJ_SUCCESS
                      * Upon returning from the callback, SDL will destroy its
                      * own stream.
@@ -483,11 +485,12 @@ on_return:
 }
 
 /* API: create stream */
-static pj_status_t sdl_factory_create_stream(pjmedia_vid_dev_factory *f,
-					     const pjmedia_vid_param *param,
-					     const pjmedia_vid_cb *cb,
-					     void *user_data,
-					     pjmedia_vid_stream **p_vid_strm)
+static pj_status_t sdl_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct sdl_factory *sf = (struct sdl_factory*)f;
     pj_pool_t *pool;
@@ -548,7 +551,7 @@ on_error:
 }
 
 /* API: Get stream info. */
-static pj_status_t sdl_stream_get_param(pjmedia_vid_stream *s,
+static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
 					pjmedia_vid_param *pi)
 {
     struct sdl_stream *strm = (struct sdl_stream*)s;
@@ -567,7 +570,7 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t sdl_stream_get_cap(pjmedia_vid_stream *s,
+static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
 				      pjmedia_vid_dev_cap cap,
 				      void *pval)
 {
@@ -586,7 +589,7 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t sdl_stream_set_cap(pjmedia_vid_stream *s,
+static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 				      pjmedia_vid_dev_cap cap,
 				      const void *pval)
 {
@@ -605,7 +608,7 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_stream *s,
 }
 
 /* API: Put frame from stream */
-static pj_status_t sdl_stream_put_frame(pjmedia_vid_stream *strm,
+static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
                                         const pjmedia_frame *frame)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
@@ -664,7 +667,7 @@ on_return:
 }
 
 /* API: Start stream. */
-static pj_status_t sdl_stream_start(pjmedia_vid_stream *strm)
+static pj_status_t sdl_stream_start(pjmedia_vid_dev_stream *strm)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
 
@@ -677,7 +680,7 @@ static pj_status_t sdl_stream_start(pjmedia_vid_stream *strm)
 }
 
 /* API: Stop stream. */
-static pj_status_t sdl_stream_stop(pjmedia_vid_stream *strm)
+static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
     unsigned i;
@@ -694,7 +697,7 @@ static pj_status_t sdl_stream_stop(pjmedia_vid_stream *strm)
 
 
 /* API: Destroy stream. */
-static pj_status_t sdl_stream_destroy(pjmedia_vid_stream *strm)
+static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
     SDL_Event sevent;
