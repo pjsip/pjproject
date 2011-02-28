@@ -133,7 +133,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 
 	ovi.dwOSVersionInfoSize = sizeof(ovi);
 
-	if (GetVersionInfoEx(&ovi) == FALSE)
+	if (GetVersionEx(&ovi) == FALSE)
 	    goto get_sdk_info;
 
 	si.os_ver = (ovi.dwMajorVersion << 24) |
@@ -223,16 +223,16 @@ get_sdk_info:
     {
 	char tmp[PJ_SYS_INFO_BUFFER_SIZE];
 	char os_ver[20], sdk_ver[20];
-	int len;
+	int cnt;
 
-	len = pj_ansi_snprintf(tmp, sizeof(tmp),
+	cnt = pj_ansi_snprintf(tmp, sizeof(tmp),
 			       "%s%s/%s/%s%s",
 			       si.os_name.ptr,
 			       ver_info(si.os_ver, os_ver),
 			       si.machine.ptr,
 			       si.sdk_name.ptr,
 			       ver_info(si.sdk_ver, sdk_ver));
-	if (len > 0 && len < sizeof(tmp)) {
+	if (cnt > 0 && cnt < (int)sizeof(tmp)) {
 	    ALLOC_CP_STR(tmp, info);
 	}
     }
