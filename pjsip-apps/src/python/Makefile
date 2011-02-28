@@ -1,7 +1,7 @@
 all:
 	python setup.py build
 
-clean:
+clean distclean realclean:
 	python setup.py clean
 	rm -rf ./build
 
