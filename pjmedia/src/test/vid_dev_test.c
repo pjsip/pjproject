@@ -57,7 +57,7 @@ static int enum_devs(void)
     return PJ_SUCCESS;
 }
 
-static pj_status_t vid_event_cb(pjmedia_vid_stream *stream,
+static pj_status_t vid_event_cb(pjmedia_vid_dev_stream *stream,
 				void *user_data,
 				pjmedia_vid_event *event)
 {

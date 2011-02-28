@@ -85,6 +85,7 @@ struct codec_fmt {
                    PJ_TRUE , PJMEDIA_FORMAT_I420},
                   {PJMEDIA_FORMAT_H263 , "h263" ,
                    PJ_FALSE, 0},
+		  {PJMEDIA_FORMAT_XVID , "xvid"},
                  };
 
 typedef struct avi_port_t
@@ -105,7 +106,7 @@ typedef struct codec_port_data_t
     pjmedia_converter   *conv;
 } codec_port_data_t;
 
-static pj_status_t avi_event_cb(pjmedia_vid_stream *stream,
+static pj_status_t avi_event_cb(pjmedia_vid_dev_stream *stream,
 				void *user_data,
 				pjmedia_vid_event *event)
 {

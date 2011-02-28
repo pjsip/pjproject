@@ -205,6 +205,7 @@ typedef pj_status_t (*func_parse_fmtp)	(ffmpeg_private *ff);
 struct ffmpeg_codec_desc {
     /* Predefined info */
     pjmedia_vid_codec_info       info;
+    pjmedia_format_id		 base_fmt_id;
     func_packetize		 packetize;
     func_unpacketize		 unpacketize;
     func_parse_fmtp		 parse_fmtp;
@@ -245,15 +246,29 @@ static pj_status_t h263_parse_fmtp(ffmpeg_private *ff);
 ffmpeg_codec_desc codec_desc[] =
 {
     {
-	{PJMEDIA_FORMAT_H263,	{"H263",4},	PJMEDIA_RTP_PT_H263},
+	{PJMEDIA_FORMAT_H263P,	{"H263-1998",9},    PJMEDIA_RTP_PT_H263},
+	PJMEDIA_FORMAT_H263,
 	&h263_packetize, &h263_unpacketize, &h263_parse_fmtp,
 	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
     },
     {
-	{PJMEDIA_FORMAT_H261,	{"H261",4},	PJMEDIA_RTP_PT_H261},
+	{PJMEDIA_FORMAT_H263,	{"H263",4},	    PJMEDIA_RTP_PT_H263},
+	0,
+	&h263_packetize, &h263_unpacketize, &h263_parse_fmtp,
+	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
     },
     {
-	{PJMEDIA_FORMAT_MJPEG,	{"JPEG",4},	PJMEDIA_RTP_PT_JPEG},
+	{PJMEDIA_FORMAT_H261,	{"H261",4},	    PJMEDIA_RTP_PT_H261},
+    },
+    {
+	{PJMEDIA_FORMAT_MJPEG,	{"JPEG",4},	    PJMEDIA_RTP_PT_JPEG},
+    },
+    {
+	{PJMEDIA_FORMAT_MPEG4,	{"MP4V",4},	    PJMEDIA_RTP_PT_MPV},
+    },
+    {
+	{PJMEDIA_FORMAT_XVID,	{"XVID",4},	    PJMEDIA_RTP_PT_MPV},
+	PJMEDIA_FORMAT_MPEG4,
     },
 };
 
@@ -447,7 +462,7 @@ static pj_status_t h263_parse_fmtp(ffmpeg_private *ff)
 
 
 
-static const ffmpeg_codec_desc* find_codec_info(
+static const ffmpeg_codec_desc* find_codec_desc_by_info(
 			const pjmedia_vid_codec_info *info)
 {
     int i;
@@ -468,7 +483,7 @@ static const ffmpeg_codec_desc* find_codec_info(
 }
 
 
-static int find_codec_info_idx_by_fmt_id(pjmedia_format_id fmt_id)
+static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
 {
     int i;
     for (i=0; i<PJ_ARRAY_SIZE(codec_desc); ++i) {
@@ -489,6 +504,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
     pj_pool_t *pool;
     AVCodec *c;
     pj_status_t status;
+    unsigned i;
 
     if (ffmpeg_factory.pool != NULL) {
 	/* Already initialized. */
@@ -532,12 +548,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 	 * supported fps) are in the encoder.
          */
 
+	//PJ_LOG(3, (THIS_FILE, "%s", c->name));
 	status = CodecID_to_pjmedia_format_id(c->id, &fmt_id);
 	/* Skip if format ID is unknown */
 	if (status != PJ_SUCCESS)
 	    continue;
 
-	codec_info_idx = find_codec_info_idx_by_fmt_id(fmt_id);
+	codec_info_idx = find_codec_idx_by_fmt_id(fmt_id);
 	/* Skip if codec is unwanted by this wrapper (not listed in 
 	 * the codec info array)
 	 */
@@ -634,6 +651,59 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 	    desc->info.clock_rate = 90000;
     }
 
+    /* Init unassigned encoder/decoder description from base codec */
+    for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
+	ffmpeg_codec_desc *desc = &codec_desc[i];
+
+	if (desc->base_fmt_id && (!desc->dec || !desc->enc)) {
+	    ffmpeg_codec_desc *base_desc = NULL;
+	    int base_desc_idx;
+	    pjmedia_dir copied_dir = PJMEDIA_DIR_NONE;
+
+	    base_desc_idx = find_codec_idx_by_fmt_id(desc->base_fmt_id);
+	    if (base_desc_idx != -1)
+		base_desc = &codec_desc[base_desc_idx];
+	    if (!base_desc || !base_desc->enabled)
+		continue;
+
+	    /* Copy description from base codec */
+	    if (!desc->info.dec_fmt_id_cnt) {
+		desc->info.dec_fmt_id_cnt = base_desc->info.dec_fmt_id_cnt;
+		pj_memcpy(desc->info.dec_fmt_id, base_desc->info.dec_fmt_id, 
+			  sizeof(pjmedia_format_id)*desc->info.dec_fmt_id_cnt);
+	    }
+	    if (!desc->info.fps_cnt) {
+		desc->info.fps_cnt = base_desc->info.fps_cnt;
+		pj_memcpy(desc->info.fps, base_desc->info.fps, 
+			  sizeof(desc->info.fps[0])*desc->info.fps_cnt);
+	    }
+	    if (!desc->info.clock_rate) {
+		desc->info.clock_rate = base_desc->info.clock_rate;
+	    }
+	    if (!desc->dec && base_desc->dec) {
+		copied_dir |= PJMEDIA_DIR_DECODING;
+		desc->dec = base_desc->dec;
+	    }
+	    if (!desc->enc && base_desc->enc) {
+		copied_dir |= PJMEDIA_DIR_ENCODING;
+		desc->enc = base_desc->enc;
+	    }
+
+	    desc->info.dir |= copied_dir;
+	    desc->enabled = (desc->info.dir != PJMEDIA_DIR_NONE);
+
+	    if (copied_dir != PJMEDIA_DIR_NONE) {
+		const char *dir_name[] = {NULL, "encoder", "decoder", "codec"};
+		PJ_LOG(5, (THIS_FILE, "The %.*s %s is using base codec (%.*s)",
+			   desc->info.encoding_name.slen,
+			   desc->info.encoding_name.ptr,
+			   dir_name[copied_dir],
+			   base_desc->info.encoding_name.slen,
+			   base_desc->info.encoding_name.ptr));
+	    }
+        }
+    }
+
     /* Register codec factory to codec manager. */
     status = pjmedia_vid_codec_mgr_register_factory(mgr, 
 						    &ffmpeg_factory.base);
@@ -690,7 +760,7 @@ static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory==&ffmpeg_factory.base, PJ_EINVAL);
     PJ_ASSERT_RETURN(info, PJ_EINVAL);
 
-    desc = find_codec_info(info);
+    desc = find_codec_desc_by_info(info);
     if (!desc) {
         return PJMEDIA_CODEC_EUNSUP;
     }
@@ -710,7 +780,7 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory==&ffmpeg_factory.base, PJ_EINVAL);
     PJ_ASSERT_RETURN(info && attr, PJ_EINVAL);
 
-    desc = find_codec_info(info);
+    desc = find_codec_desc_by_info(info);
     if (!desc) {
         return PJMEDIA_CODEC_EUNSUP;
     }
@@ -741,16 +811,20 @@ static pj_status_t ffmpeg_enum_codecs( pjmedia_vid_codec_factory *factory,
 				       unsigned *count, 
 				       pjmedia_vid_codec_info codecs[])
 {
-    unsigned i;
+    unsigned i, max_cnt;
 
     PJ_ASSERT_RETURN(codecs && *count > 0, PJ_EINVAL);
     PJ_ASSERT_RETURN(factory == &ffmpeg_factory.base, PJ_EINVAL);
 
-    *count = PJ_MIN(*count, PJ_ARRAY_SIZE(codec_desc));
+    max_cnt = PJ_MIN(*count, PJ_ARRAY_SIZE(codec_desc));
+    *count = 0;
 
-    for (i=0; i<*count; ++i) {
-        pj_memcpy(&codecs[i], &codec_desc[i].info, 
-		  sizeof(pjmedia_vid_codec_info));
+    for (i=0; i<max_cnt; ++i) {
+	if (codec_desc[i].enabled) {
+	    pj_memcpy(&codecs[*count], &codec_desc[i].info, 
+		      sizeof(pjmedia_vid_codec_info));
+	    (*count)++;
+	}
     }
 
     return PJ_SUCCESS;
@@ -772,7 +846,7 @@ static pj_status_t ffmpeg_alloc_codec( pjmedia_vid_codec_factory *factory,
     PJ_ASSERT_RETURN(factory && info && p_codec, PJ_EINVAL);
     PJ_ASSERT_RETURN(factory == &ffmpeg_factory.base, PJ_EINVAL);
 
-    desc = find_codec_info(info);
+    desc = find_codec_desc_by_info(info);
     if (!desc) {
         return PJMEDIA_CODEC_EUNSUP;
     }
@@ -927,9 +1001,10 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
             codec = ff->dec;
 
             /* Decoding only attributes */
-	    // this setting will be automatically fetched from the bitstream.
-            //ctx->coded_width = ff->param.dec_fmt.det.vid.size.w;
-            //ctx->coded_height = ff->param.dec_fmt.det.vid.size.h;
+
+	    /* Width/height may be overriden by ffmpeg after first decoding. */
+            ctx->width = ctx->coded_width = ff->param.dec_fmt.det.vid.size.w;
+            ctx->height = ctx->coded_height = ff->param.dec_fmt.det.vid.size.h;
 
             /* For decoder, be more flexible */
             if (ff->param.dir!=PJMEDIA_DIR_ENCODING_DECODING || 
@@ -1198,7 +1273,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(ff->dec_ctx, PJ_EINVALIDOP);
 
     /* Validate output buffer size */
-    PJ_ASSERT_RETURN(ff->dec_vafp.framebytes <= output_buf_len, PJ_ETOOSMALL);
+    //PJ_ASSERT_RETURN(ff->dec_vafp.framebytes <= output_buf_len, PJ_ETOOSMALL);
 
     /* Init frame to receive the decoded data, the ffmpeg codec context will
      * automatically provide the decoded buffer (single buffer used for the
@@ -1310,8 +1385,8 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	}
 
 	/* Check provided buffer size after format changed */
-	if (vafp->framebytes > output_buf_len)
-	    return PJ_ETOOSMALL;
+	//if (vafp->framebytes > output_buf_len)
+	    //return PJ_ETOOSMALL;
 
 	/* Get the decoded data */
 	for (i = 0; i < ff->dec_vfi->plane_cnt; ++i) {

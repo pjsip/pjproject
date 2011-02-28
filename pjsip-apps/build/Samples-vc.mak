@@ -88,7 +88,7 @@ SAMPLES = $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\streamutil.exe \
 	  $(BINDIR)\strerror.exe \
 	  $(BINDIR)\tonegen.exe \
-	  $(BINDIR)\vstreamutil.exe
+	  $(BINDIR)\vid_streamutil.exe
 
 
 all: $(BINDIR) $(OBJDIR) $(SAMPLES)

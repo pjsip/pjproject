@@ -20,18 +20,21 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 			           pjmedia_frame *frame)
 {
     codec_port_data_t *port_data = (codec_port_data_t*)port->port_data.pdata;
-    pjmedia_vid_codec *codec = port_data->codec;
-    pjmedia_frame enc_frame;
     pj_status_t status;
 
-    enc_frame.buf = port_data->enc_buf;
-    enc_frame.size = port_data->enc_buf_size;
-
 #if !BYPASS_CODEC
-    status = codec->op->encode(codec, frame, enc_frame.size, &enc_frame);
-    if (status != PJ_SUCCESS) goto on_error;
-    status = codec->op->decode(codec, &enc_frame, frame->size, frame);
-    if (status != PJ_SUCCESS) goto on_error;
+    {
+	pjmedia_vid_codec *codec = port_data->codec;
+	pjmedia_frame enc_frame;
+
+	enc_frame.buf = port_data->enc_buf;
+	enc_frame.size = port_data->enc_buf_size;
+
+	status = codec->op->encode(codec, frame, enc_frame.size, &enc_frame);
+	if (status != PJ_SUCCESS) goto on_error;
+	status = codec->op->decode(codec, &enc_frame, frame->size, frame);
+	if (status != PJ_SUCCESS) goto on_error;
+    }
 #endif
 
     status = pjmedia_port_put_frame(port_data->dn_port, frame);
@@ -87,6 +90,7 @@ static int enum_codecs()
 static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
                               pjmedia_format_id raw_fmt_id)
 {
+    const pj_str_t port_name = {"codec", 5};
 
     pjmedia_vid_codec *codec=NULL;
     pjmedia_port codec_port;
@@ -162,6 +166,50 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
         }
     }
 
+    /* Prepare codec */
+    {
+        pj_str_t codec_id_st;
+        unsigned info_cnt = 1;
+        const pjmedia_vid_codec_info *codec_info;
+
+        /* Lookup codec */
+        pj_cstr(&codec_id_st, codec_id);
+        status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st, 
+                                                         &info_cnt, 
+                                                         &codec_info, NULL);
+        if (status != PJ_SUCCESS) {
+            rc = 245; goto on_return;
+        }
+        status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
+                                                         &codec_param);
+        if (status != PJ_SUCCESS) {
+            rc = 246; goto on_return;
+        }
+
+#if !BYPASS_CODEC
+
+        /* Open codec */
+        status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
+                                                   &codec);
+        if (status != PJ_SUCCESS) {
+	    rc = 250; goto on_return;
+        }
+
+        status = codec->op->init(codec, pool);
+        if (status != PJ_SUCCESS) {
+	    rc = 251; goto on_return;
+        }
+
+	codec_param.dec_fmt.id = raw_fmt_id;
+        status = codec->op->open(codec, &codec_param);
+        if (status != PJ_SUCCESS) {
+	    rc = 252; goto on_return;
+        }
+
+#endif /* !BYPASS_CODEC */
+    }
+
+
     pjmedia_vid_port_param_default(&vport_param);
 
     /* Create capture, set it to active (master) */
@@ -170,6 +218,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     if (status != PJ_SUCCESS) {
 	rc = 220; goto on_return;
     }
+    pjmedia_format_copy(&vport_param.vidparam.fmt, &codec_param.dec_fmt);
     vport_param.vidparam.fmt.id = raw_fmt_id;
     vport_param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
     vport_param.active = PJ_TRUE;
@@ -200,76 +249,24 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 	rc = 230; goto on_return;
     }
 
-    /* Prepare codec */
-    {
-        pj_str_t codec_id_st;
-        unsigned info_cnt = 1;
-        const pjmedia_vid_codec_info *codec_info;
-        pj_str_t port_name = {"codec", 5};
-        pj_uint8_t *enc_buf = NULL;
-        pj_size_t enc_buf_size = 0;
-
-
-        /* Lookup codec */
-        pj_cstr(&codec_id_st, codec_id);
-        status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, &codec_id_st, 
-                                                         &info_cnt, 
-                                                         &codec_info, NULL);
-        if (status != PJ_SUCCESS) {
-            rc = 245; goto on_return;
-        }
-        status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
-                                                         &codec_param);
-        if (status != PJ_SUCCESS) {
-            rc = 246; goto on_return;
-        }
-
-        pjmedia_format_copy(&codec_param.dec_fmt, &vport_param.vidparam.fmt);
-
-#if !BYPASS_CODEC
-
-        /* Open codec */
-        status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
-                                                   &codec);
-        if (status != PJ_SUCCESS) {
-	    rc = 250; goto on_return;
-        }
-
-        status = codec->op->init(codec, pool);
-        if (status != PJ_SUCCESS) {
-	    rc = 251; goto on_return;
-        }
-
-        status = codec->op->open(codec, &codec_param);
-        if (status != PJ_SUCCESS) {
-	    rc = 252; goto on_return;
-        }
-
-        /* Alloc encoding buffer */
-        enc_buf_size =  codec_param.dec_fmt.det.vid.size.w *
-                        codec_param.dec_fmt.det.vid.size.h * 4
-                        + 16; /*< padding, just in case */
-        enc_buf = pj_pool_alloc(pool,enc_buf_size);
-
-#endif /* !BYPASS_CODEC */
-
-        /* Init codec port */
-        pj_bzero(&codec_port, sizeof(codec_port));
-        status = pjmedia_port_info_init2(&codec_port.info, &port_name, 0x1234,
-                                         PJMEDIA_DIR_ENCODING, 
-                                         &codec_param.dec_fmt);
-        if (status != PJ_SUCCESS) {
-	    rc = 260; goto on_return;
-        }
-        codec_port_data.codec = codec;
-        codec_port_data.dn_port = pjmedia_vid_port_get_passive_port(renderer);
-        codec_port_data.enc_buf = enc_buf;
-        codec_port_data.enc_buf_size = enc_buf_size;
-
-        codec_port.put_frame = &codec_put_frame;
-        codec_port.port_data.pdata = &codec_port_data;
+    /* Init codec port */
+    pj_bzero(&codec_port, sizeof(codec_port));
+    status = pjmedia_port_info_init2(&codec_port.info, &port_name, 0x1234,
+                                     PJMEDIA_DIR_ENCODING, 
+                                     &codec_param.dec_fmt);
+    if (status != PJ_SUCCESS) {
+	rc = 260; goto on_return;
     }
 
+    codec_port_data.codec = codec;
+    codec_port_data.dn_port = pjmedia_vid_port_get_passive_port(renderer);
+    codec_port_data.enc_buf_size = codec_param.dec_fmt.det.vid.size.w *
+				   codec_param.dec_fmt.det.vid.size.h * 4;
+    codec_port_data.enc_buf = pj_pool_alloc(pool, 
+					    codec_port_data.enc_buf_size);
+
+    codec_port.put_frame = &codec_put_frame;
+    codec_port.port_data.pdata = &codec_port_data;
 
     /* Connect capture to codec port */
     status = pjmedia_vid_port_connect(capture,
@@ -279,15 +276,27 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 	rc = 270; goto on_return;
     }
 
-    PJ_LOG(3, (THIS_FILE, "  starting codec test:  %c%c%c%c<->%s %dx%d",
+#if BYPASS_CODEC
+    PJ_LOG(3, (THIS_FILE, "  starting loopback test: %c%c%c%c %dx%d",
+        ((raw_fmt_id & 0x000000FF) >> 0),
+        ((raw_fmt_id & 0x0000FF00) >> 8),
+        ((raw_fmt_id & 0x00FF0000) >> 16),
+        ((raw_fmt_id & 0xFF000000) >> 24),
+        codec_param.dec_fmt.det.vid.size.w,
+        codec_param.dec_fmt.det.vid.size.h
+        ));
+#else
+    PJ_LOG(3, (THIS_FILE, "  starting codec test: %c%c%c%c<->%.*s %dx%d",
         ((codec_param.dec_fmt.id & 0x000000FF) >> 0),
         ((codec_param.dec_fmt.id & 0x0000FF00) >> 8),
         ((codec_param.dec_fmt.id & 0x00FF0000) >> 16),
         ((codec_param.dec_fmt.id & 0xFF000000) >> 24),
-        codec_id, 
+	codec_info->encoding_name.slen,
+	codec_info->encoding_name.ptr,
         codec_param.dec_fmt.det.vid.size.w,
         codec_param.dec_fmt.det.vid.size.h
         ));
+#endif
 
     /* Start streaming.. */
     status = pjmedia_vid_port_start(renderer);
@@ -327,6 +336,10 @@ int vid_codec_test(void)
     pj_pool_t *pool;
     int rc = 0;
     pj_status_t status;
+    int orig_log_level;
+    
+    orig_log_level = pj_log_get_level();
+    pj_log_set_level(6);
 
     PJ_LOG(3, (THIS_FILE, "Performing video codec tests.."));
 
@@ -344,7 +357,7 @@ int vid_codec_test(void)
     if (rc != 0)
 	goto on_return;
 
-    rc = encode_decode_test(pool, "mjpeg", 0);
+    rc = encode_decode_test(pool, "h263", 0);
     if (rc != 0)
 	goto on_return;
 
@@ -352,6 +365,7 @@ on_return:
     pjmedia_codec_ffmpeg_deinit();
     pjmedia_vid_subsys_shutdown();
     pj_pool_release(pool);
+    pj_log_set_level(orig_log_level);
 
     return rc;
 }

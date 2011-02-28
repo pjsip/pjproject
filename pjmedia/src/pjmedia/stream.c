@@ -3034,7 +3034,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 	return PJMEDIA_SDP_EMISSINGCONN;
 
     /* Media type must be audio */
-    if (pj_stricmp(&local_m->desc.media, &ID_AUDIO) == 0)
+    if (pj_stricmp(&local_m->desc.media, &ID_AUDIO) != 0)
 	return PJMEDIA_EINVALIMEDIATYPE;
 
     /* Get codec manager. */

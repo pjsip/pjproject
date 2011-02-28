@@ -339,6 +339,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
             /* Check supported video formats here */
             if (avi_hdr.strl_hdr[i].flags & AVISF_VIDEO_PALCHANGES ||
                 (avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_MJPEG &&
+                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_XVID &&
                  avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_UYVY &&
                  avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_YUY2 &&
                  avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_IYUV &&

@@ -88,6 +88,7 @@ typedef struct pjmedia_vid_stream_info
 					 sin_family is zero, the RTP address
 					 will be calculated from RTP.	    */
     unsigned		tx_pt;	    /**< Outgoing codec paylaod type.	    */
+    unsigned		rx_pt;	    /**< Incoming codec paylaod type.	    */
     pj_uint32_t		ssrc;	    /**< RTP SSRC.			    */
     pj_uint32_t		rtp_ts;	    /**< Initial RTP timestamp.		    */
     pj_uint16_t		rtp_seq;    /**< Initial RTP sequence number.	    */
@@ -220,18 +221,6 @@ PJ_DECL(pjmedia_transport*) pjmedia_vid_stream_get_transport(
 
 
 /**
- * Start the video stream. This will start the appropriate channels
- * in the video stream, depending on the video direction that was set
- * when the stream was created.
- *
- * @param stream	The video stream.
- *
- * @return		PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
-
-
-/**
  * Get the stream statistics. See also #pjmedia_stream_get_stat_jbuf()
  *
  * @param stream	The video stream.
@@ -266,9 +255,30 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_get_stat_jbuf(
 					    pjmedia_jb_state *state);
 
 
-PJ_DECL(pj_status_t) pjmedia_vid_stream_get_param(
+/**
+ * Get the stream info.
+ *
+ * @param stream	The video stream.
+ * @param info		Video stream info.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_stream_get_info(
 					    const pjmedia_vid_stream *stream,
-					    pjmedia_rtcp_stat *stat);
+					    pjmedia_vid_stream_info *info);
+
+
+/**
+ * Start the video stream. This will start the appropriate channels
+ * in the video stream, depending on the video direction that was set
+ * when the stream was created.
+ *
+ * @param stream	The video stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
+
 
 /**
  * Pause the individual channel in the stream.

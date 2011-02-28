@@ -85,6 +85,18 @@ typedef struct pjmedia_vid_codec_param
 
 
 /**
+ * Duplicate video codec parameter.
+ *
+ * @param pool	    The pool.
+ * @param src	    The video codec parameter to be duplicated.
+ *
+ * @return	    Duplicated codec parameter.
+ */
+PJ_DECL(pjmedia_vid_codec_param*) pjmedia_vid_codec_param_clone(
+					pj_pool_t *pool, 
+					const pjmedia_vid_codec_param *src);
+
+/**
  * Enumeration of video codec events.
  */
 typedef enum pjmedia_vid_codec_event
@@ -516,6 +528,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs(
 					    pjmedia_vid_codec_info info[],
 					    unsigned *prio);
 
+
 /**
  * Get codec info for the specified static payload type.
  *
@@ -530,6 +543,23 @@ PJ_DECL(pj_status_t)
 pjmedia_vid_codec_mgr_get_codec_info( pjmedia_vid_codec_mgr *mgr,
 				      unsigned pt,
 				      const pjmedia_vid_codec_info **info);
+
+
+/**
+ * Get codec info for the specified format ID.
+ *
+ * @param mgr	    The codec manager instance. If NULL, the default codec
+ *		    manager instance will be used.
+ * @param fmt_id    Format ID. See #pjmedia_format_id
+ * @param info	    Pointer to receive codec info.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_vid_codec_mgr_get_codec_info2(pjmedia_vid_codec_mgr *mgr,
+				      pjmedia_format_id fmt_id,
+				      const pjmedia_vid_codec_info **info);
+
 
 /**
  * Convert codec info struct into a unique codec identifier.

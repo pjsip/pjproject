@@ -980,10 +980,10 @@
 
 /**
  * Maximum video frame size.
- * Default: 16kB
+ * Default: 128kB
  */
-#ifndef PJMEDIA_MAX_VIDEO_FRAME_SIZE			
-#  define PJMEDIA_MAX_VIDEO_FRAME_SIZE			(1<<14)
+#ifndef PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE
+#  define PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE	    (1<<17)
 #endif
 
 
