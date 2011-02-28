@@ -917,7 +917,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     /* Done! */
 
     PJ_LOG(3,(THIS_FILE, "pjsua version %s for %s initialized", 
-			 pj_get_version(), PJ_OS_NAME));
+			 pj_get_version(), pj_get_sys_info()->info.ptr));
 
     return PJ_SUCCESS;
 

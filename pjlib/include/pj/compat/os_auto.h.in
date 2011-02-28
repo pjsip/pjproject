@@ -48,6 +48,7 @@
 #undef PJ_HAS_CTYPE_H
 #undef PJ_HAS_ERRNO_H
 #undef PJ_HAS_FCNTL_H
+#undef PJ_HAS_LIMITS_H
 #undef PJ_HAS_LINUX_SOCKET_H
 #undef PJ_HAS_MALLOC_H
 #undef PJ_HAS_NETDB_H
@@ -73,6 +74,7 @@
 #undef PJ_HAS_SYS_TYPES_H
 #undef PJ_HAS_SYS_FILIO_H
 #undef PJ_HAS_SYS_SOCKIO_H
+#undef PJ_HAS_SYS_UTSNAME_H
 #undef PJ_HAS_TIME_H
 #undef PJ_HAS_UNISTD_H
 

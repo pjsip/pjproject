@@ -35,6 +35,100 @@ PJ_BEGIN_DECL
 
 /* **************************************************************************/
 /**
+ * @defgroup PJ_SYS_INFO System Information
+ * @ingroup PJ_OS
+ * @{
+ */
+
+/**
+ * These enumeration contains constants to indicate support of miscellaneous
+ * system features. These will go in "flags" field of #pj_sys_info structure.
+ */
+typedef enum pj_sys_info_flag
+{
+    /**
+     * Support for Apple iOS background feature.
+     */
+    PJ_SYS_HAS_IOS_BG = 1
+
+} pj_sys_info_flag;
+
+
+/**
+ * This structure contains information about the system. Use #pj_get_sys_info()
+ * to obtain the system information.
+ */
+typedef struct pj_sys_info
+{
+    /**
+     * Null terminated string containing processor information (e.g. "i386",
+     * "x86_64"). It may contain empty string if the value cannot be obtained.
+     */
+    pj_str_t	machine;
+
+    /**
+     * Null terminated string identifying the system operation (e.g. "Linux",
+     * "win32", "wince"). It may contain empty string if the value cannot be
+     * obtained.
+     */
+    pj_str_t	os_name;
+
+    /**
+     * A number containing the operating system version number. By convention,
+     * this field is divided into four bytes, where the highest order byte
+     * contains the most major version of the OS, the next less significant
+     * byte contains the less major version, and so on. How the OS version
+     * number is mapped into these four bytes would be specific for each OS.
+     * For example, Linux-2.6.32-28 would yield "os_ver" value of 0x0206201c,
+     * while for Windows 7 it will be 0x06010000 (because dwMajorVersion is
+     * 6 and dwMinorVersion is 1 for Windows 7).
+     *
+     * This field may contain zero if the OS version cannot be obtained.
+     */
+    pj_uint32_t	os_ver;
+
+    /**
+     * Null terminated string identifying the SDK name that is used to build
+     * the library (e.g. "glibc", "uclibc", "msvc", "wince"). It may contain
+     * empty string if the value cannot eb obtained.
+     */
+    pj_str_t	sdk_name;
+
+    /**
+     * A number containing the SDK version, using the numbering convention as
+     * the "os_ver" field. The value will be zero if the version cannot be
+     * obtained.
+     */
+    pj_uint32_t	sdk_ver;
+
+    /**
+     * A longer null terminated string identifying the underlying system with
+     * as much information as possible.
+     */
+    pj_str_t	info;
+
+    /**
+     * Other flags containing system specific information. The value is
+     * bitmask of #pj_sys_info_flag constants.
+     */
+    pj_uint32_t	flags;
+
+} pj_sys_info;
+
+
+/**
+ * Obtain the system information.
+ *
+ * @return	System information structure.
+ */
+PJ_DECL(const pj_sys_info*) pj_get_sys_info(void);
+
+/*
+ * @}
+ */
+
+/* **************************************************************************/
+/**
  * @defgroup PJ_THREAD Threads
  * @ingroup PJ_OS
  * @{

@@ -22,7 +22,14 @@
 #include <pj/ioqueue.h>
 
 static const char *id = "config.c";
-PJ_DEF_DATA(const char*) PJ_VERSION = "1.8.10-trunk";
+
+#define PJ_MAKE_VERSION1(a,b,c,d) 	#a "." #b "." #c d
+#define PJ_MAKE_VERSION2(a,b,c,d)	PJ_MAKE_VERSION1(a,b,c,d)
+
+PJ_DEF_DATA(const char*) PJ_VERSION = PJ_MAKE_VERSION2(PJ_VERSION_NUM_MAJOR,
+						       PJ_VERSION_NUM_MINOR,
+						       PJ_VERSION_NUM_REV,
+						       PJ_VERSION_NUM_EXTRA);
 
 /*
  * Get PJLIB version string.
