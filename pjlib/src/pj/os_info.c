@@ -88,6 +88,8 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     if (si_initialized)
 	return &si;
 
+    si.machine.ptr = si.os_name.ptr = si.sdk_name.ptr = si.info.ptr = "";
+
 #define ALLOC_CP_STR(str,field)	\
 	do { \
 	    len = pj_ansi_strlen(str); \
@@ -108,8 +110,12 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	char *tok;
 	int i, maxtok;
 
-	if (uname(&u) != 0)
+	/* Successful uname() returns zero on Linux and positive value
+	 * on OpenSolaris.
+	 */
+	if (uname(&u) == -1)
 	    goto get_sdk_info;
+
 	ALLOC_CP_STR(u.machine, machine);
 	ALLOC_CP_STR(u.sysname, os_name);
 
@@ -226,10 +232,12 @@ get_sdk_info:
 	int cnt;
 
 	cnt = pj_ansi_snprintf(tmp, sizeof(tmp),
-			       "%s%s/%s/%s%s",
+			       "%s%s%s%s%s%s%s",
 			       si.os_name.ptr,
 			       ver_info(si.os_ver, os_ver),
+			       (si.machine.slen ? "/" : ""),
 			       si.machine.ptr,
+			       (si.sdk_name.slen ? "/" : ""),
 			       si.sdk_name.ptr,
 			       ver_info(si.sdk_ver, sdk_ver));
 	if (cnt > 0 && cnt < (int)sizeof(tmp)) {

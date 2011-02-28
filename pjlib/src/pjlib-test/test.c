@@ -75,6 +75,10 @@ int test_inner(void)
     DO_TEST( exception_test() );
 #endif
 
+#if INCLUDE_OS_TEST
+    DO_TEST( os_test() );
+#endif
+
 #if INCLUDE_RAND_TEST
     DO_TEST( rand_test() );
 #endif

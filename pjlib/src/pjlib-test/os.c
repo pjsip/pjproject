@@ -17,4 +17,28 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include "test.h"
+#include <pj/log.h>
+#include <pj/os.h>
+
+#if INCLUDE_OS_TEST
+int os_test(void)
+{
+    const pj_sys_info *si;
+    int rc = 0;
+
+    si = pj_get_sys_info();
+    PJ_LOG(3,("", "   machine:  %s", si->machine.ptr));
+    PJ_LOG(3,("", "   os_name:  %s", si->os_name.ptr));
+    PJ_LOG(3,("", "   os_ver:   0x%x", si->os_ver));
+    PJ_LOG(3,("", "   sdk_name: %s", si->sdk_name.ptr));
+    PJ_LOG(3,("", "   sdk_ver:  0x%x", si->sdk_ver));
+    PJ_LOG(3,("", "   info:     %s", si->info.ptr));
+
+    return rc;
+}
+
+#else
 int dummy_os_var;
+#endif
+
