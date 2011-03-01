@@ -160,6 +160,7 @@ typedef struct pjmedia_vid_dev_stream pjmedia_vid_dev_stream;
 typedef enum pjmedia_event_type
 {
     PJMEDIA_EVENT_NONE,
+    PJMEDIA_EVENT_FMT_CHANGED,
     PJMEDIA_EVENT_MOUSEBUTTONDOWN,
     PJMEDIA_EVENT_WINDOW_RESIZE,
     PJMEDIA_EVENT_WINDOW_FULLSCREEN,
@@ -168,9 +169,15 @@ typedef enum pjmedia_event_type
 
 typedef struct pjmedia_vid_event
 {
-    pjmedia_event_type  event_type;
-    long	        lparam;
-    void	       *pparam;
+    pjmedia_event_type event_type;
+    union {
+        struct resize_event {
+            pjmedia_rect_size new_size;
+        } resize;
+        struct fmt_changed_event {
+            pjmedia_format new_format;
+        } fmt_change;
+    } event_desc;
 } pjmedia_vid_event;
 
 

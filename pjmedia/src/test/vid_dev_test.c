@@ -143,7 +143,70 @@ static int loopback_test(pj_pool_t *pool)
     }
 
     /* Sleep while the webcam is being displayed... */
-    for (i = 0; i < 50 && (!is_quitting); i++) {
+    for (i = 0; i < 15 && (!is_quitting); i++) {
+#if VID_DEV_TEST_MAC_OS
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+#endif
+        pj_thread_sleep(100);
+    }
+
+    /**
+     * Test the renderer's format capability if the device
+     * supports it.
+     */
+    if (pjmedia_vid_dev_stream_get_cap(pjmedia_vid_port_get_stream(renderer),
+                                       PJMEDIA_VID_DEV_CAP_FORMAT,
+                                       &param.vidparam.fmt) == PJ_SUCCESS)
+    {
+        status = pjmedia_vid_port_stop(capture);
+        if (status != PJ_SUCCESS) {
+            rc = 170; goto on_return;
+        }
+        status = pjmedia_vid_port_disconnect(capture);
+        if (status != PJ_SUCCESS) {
+            rc = 180; goto on_return;
+        }
+        pjmedia_vid_port_destroy(capture);
+
+        param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
+        param.active = PJ_TRUE;
+        pjmedia_format_init_video(&param.vidparam.fmt, param.vidparam.fmt.id,
+                                  640, 480,
+                                  vfd->fps.num, vfd->fps.denum);
+        vfd = pjmedia_format_get_video_format_detail(&param.vidparam.fmt,
+                                                     PJ_TRUE);
+        if (vfd == NULL) {
+            rc = 185; goto on_return;
+        }
+
+        status = pjmedia_vid_port_create(pool, &param, &capture);
+        if (status != PJ_SUCCESS) {
+            rc = 190; goto on_return;
+        }
+
+        status = pjmedia_vid_port_connect(
+                     capture,
+                     pjmedia_vid_port_get_passive_port(renderer),
+                     PJ_FALSE);
+        if (status != PJ_SUCCESS) {
+            rc = 200; goto on_return;
+        }
+
+        status = pjmedia_vid_dev_stream_set_cap(
+                     pjmedia_vid_port_get_stream(renderer),
+                     PJMEDIA_VID_DEV_CAP_FORMAT,
+                     &param.vidparam.fmt);
+        if (status != PJ_SUCCESS) {
+            rc = 205; goto on_return;
+        }
+
+        status = pjmedia_vid_port_start(capture);
+        if (status != PJ_SUCCESS) {
+            rc = 210; goto on_return;
+        }
+    }
+
+    for (i = 0; i < 35 && (!is_quitting); i++) {
 #if VID_DEV_TEST_MAC_OS
         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 #endif

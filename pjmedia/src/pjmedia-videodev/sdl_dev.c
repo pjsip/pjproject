@@ -391,12 +391,94 @@ static int create_sdl_thread(void * data)
         SDL_Event sevent;
         pjmedia_vid_event pevent;
 
+        /**
+         * The event polling must be placed in the same thread that
+         * call SDL_SetVideoMode(). Please consult the official doc of
+         * SDL_PumpEvents().
+         */
         while (SDL_WaitEvent(&sevent)) {
             pj_bzero(&pevent, sizeof(pevent));
 
             switch(sevent.type) {
 		case SDL_USEREVENT:
-		    goto on_return;
+                {
+                    pjmedia_format *fmt;
+
+                    if (sevent.user.code == PJMEDIA_EVENT_NONE)
+		        goto on_return;
+
+                    pj_assert(sevent.user.code == PJMEDIA_VID_DEV_CAP_FORMAT);
+
+                    fmt = (pjmedia_format *)sevent.user.data1;
+                    vfi = pjmedia_get_video_format_info(
+                              pjmedia_video_format_mgr_instance(),
+                              fmt->id);
+                    if (!vfi || !sdl_info) {
+                        strm->status = PJMEDIA_EVID_BADFORMAT;
+                        break;
+                    }
+
+                    vfd = pjmedia_format_get_video_format_detail(fmt, PJ_TRUE);
+                    strm->vafp.size = vfd->size;
+                    strm->vafp.buffer = NULL;
+                    if (vfi->apply_fmt(vfi, &strm->vafp) != PJ_SUCCESS) {
+                        strm->status = PJMEDIA_EVID_BADFORMAT;
+                        break;
+                    }
+
+                    strm->rect.w = (Uint16)vfd->size.w;
+                    strm->rect.h = (Uint16)vfd->size.h;
+
+                    /* Stop the stream */
+                    sdl_stream_stop((pjmedia_vid_dev_stream *)strm);
+
+                    /* Initialize the display, requesting a software surface */
+                    strm->screen = SDL_SetVideoMode(strm->rect.w,
+                                                    strm->rect.h, 0,
+                                                    SDL_RESIZABLE |
+                                                    SDL_SWSURFACE);
+                    if (strm->screen == NULL) {
+                        strm->status = PJMEDIA_EVID_SYSERR;
+                        break;
+                    }
+
+                    if (strm->surf)
+                        SDL_FreeSurface(strm->surf);
+                    if (strm->overlay)
+                        SDL_FreeYUVOverlay(strm->overlay);
+
+                    if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
+                        strm->surf = SDL_CreateRGBSurface(SDL_SWSURFACE,
+                                                          strm->rect.w,
+                                                          strm->rect.h,
+                                                          vfi->bpp,
+                                                          sdl_info->Rmask,
+                                                          sdl_info->Gmask,
+                                                          sdl_info->Bmask,
+                                                          sdl_info->Amask);
+                        if (strm->surf == NULL) {
+                            strm->status = PJMEDIA_EVID_SYSERR;
+                            break;
+                        }
+                    } else if (vfi->color_model == PJMEDIA_COLOR_MODEL_YUV) {
+                        strm->overlay = SDL_CreateYUVOverlay(
+                                            strm->rect.w,
+                                            strm->rect.h,
+                                            sdl_info->sdl_format,
+                                            strm->screen);
+                        if (strm->overlay == NULL) {
+                            strm->status = PJMEDIA_EVID_SYSERR;
+                            break;
+                        }
+                    }
+
+                    /* Restart the stream */
+                    sdl_stream_start((pjmedia_vid_dev_stream *)strm);
+
+                    strm->status = PJ_SUCCESS;
+                    break;
+                }
+
                 case SDL_MOUSEBUTTONDOWN:
                     pevent.event_type = PJMEDIA_EVENT_MOUSEBUTTONDOWN;
                     if (strm->vid_cb.on_event_cb)
@@ -412,23 +494,28 @@ static int create_sdl_thread(void * data)
                     else
                         pjmedia_vid_dev_stream_start(&strm->base);
                     break;
+
                 case SDL_VIDEORESIZE:
                     pevent.event_type = PJMEDIA_EVENT_WINDOW_RESIZE;
-                    if (strm->vid_cb.on_event_cb)
-                        if ((*strm->vid_cb.on_event_cb)(&strm->base,
-                                                       strm->user_data,
-                                                       &pevent) != PJ_SUCCESS)
-                        {
-                            /* Application wants us to ignore this event */
-                            break;
-                        }
-                    /* TODO: move this to OUTPUT_RESIZE cap
-                    strm->screen = SDL_SetVideoMode(sevent.resize.w,
-                                                    sevent.resize.h,
-                                                    0, SDL_RESIZABLE |
-                                                    SDL_SWSURFACE);
-                    */                  
+                    pevent.event_desc.resize.new_size.w = sevent.resize.w;
+                    pevent.event_desc.resize.new_size.h = sevent.resize.h;
+                    if (strm->vid_cb.on_event_cb) {
+                        /** 
+                         * To process PJMEDIA_EVENT_WINDOW_RESIZE event,
+                         * application should do this in the on_event_cb
+                         * callback:
+                         * 1. change the input frame size given to SDL
+                         *    to the new size.
+                         * 2. call pjmedia_vid_dev_stream_set_cap()
+                         *    using PJMEDIA_VID_DEV_CAP_FORMAT capability
+                         *    and the new format size
+                         */
+                        (*strm->vid_cb.on_event_cb)(&strm->base,
+                                                    strm->user_data,
+                                                    &pevent);
+                    }
                     break;
+
                 case SDL_QUIT:
                     pevent.event_type = PJMEDIA_EVENT_WINDOW_CLOSE;
                     /**
@@ -469,6 +556,7 @@ static int create_sdl_thread(void * data)
                     SDL_Quit();
                     strm->screen = NULL;
                     goto on_return;
+
                 default:
                     break;
             }
@@ -580,9 +668,11 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
-    if (cap==PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
+    if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
     {
 	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
+        return PJ_SUCCESS;
     } else {
 	return PJMEDIA_EVID_INVCAP;
     }
@@ -599,9 +689,47 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
-    if (cap==PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
-    {
+    if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
 	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
+        SDL_Event sevent;
+
+        strm->status = PJ_TRUE;
+        sevent.type = SDL_USEREVENT;
+        sevent.user.code = PJMEDIA_VID_DEV_CAP_FORMAT;
+        sevent.user.data1 = (void *)pval;
+        SDL_PushEvent(&sevent);
+
+        while (strm->status == PJ_TRUE)
+            pj_thread_sleep(10);
+
+        if (strm->status != PJ_SUCCESS) {
+            pj_status_t status = strm->status;
+
+            /**
+             * Failed to change the output format. Try to revert
+             * to its original format.
+             */
+            strm->status = PJ_TRUE;
+            sevent.user.data1 = &strm->param.fmt;
+            SDL_PushEvent(&sevent);
+
+            while (strm->status == PJ_TRUE)
+                pj_thread_sleep(10);
+            
+            if (strm->status != PJ_SUCCESS)
+                /**
+                 * This means that we failed to revert to our
+                 * original state!
+                 */
+                status = PJMEDIA_EVID_ERR;
+
+            strm->status = status;
+        } else if (strm->status == PJ_SUCCESS) {
+            pj_memcpy(&strm->param.fmt, pval, sizeof(strm->param.fmt));
+        }
+
+        return strm->status;
     }
 
     return PJMEDIA_EVID_INVCAP;
@@ -706,6 +834,7 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 
     if (!stream->is_quitting) {
         sevent.type = SDL_USEREVENT;
+        sevent.user.code = PJMEDIA_EVENT_NONE;
         SDL_PushEvent(&sevent);
         pj_thread_join(stream->sdl_thread);
     }

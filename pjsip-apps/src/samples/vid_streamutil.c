@@ -597,6 +597,7 @@ int main(int argc, char *argv[])
 
     if (play_file.file_name) {
 	pjmedia_video_format_detail *file_vfd;
+        pjmedia_clock_param *clock_param;
 
 	/* Create file player */
 	status = create_file_player(pool, play_file.file_name, &play_port);
@@ -668,8 +669,9 @@ int main(int argc, char *argv[])
 	}
 
 	/* Create player clock */
-	status = pjmedia_clock_create2(pool, PJMEDIA_PTIME(&file_vfd->fps),
-				       codec_info->clock_rate,
+        clock_param.usec_interval = PJMEDIA_PTIME(&file_vfd->fps);
+        clock_param.clock_rate = codec_info->clock_rate;
+	status = pjmedia_clock_create2(pool, &clock_param,
 				       PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
 				       &clock_cb, &play_file, &play_clock);
 	if (status != PJ_SUCCESS)

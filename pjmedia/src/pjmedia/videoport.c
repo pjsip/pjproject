@@ -18,6 +18,7 @@
  */
 #include <pjmedia/videoport.h>
 #include <pjmedia/clock.h>
+#include <pjmedia/vid_codec.h>
 #include <pj/log.h>
 #include <pj/pool.h>
 
@@ -63,6 +64,8 @@ struct pjmedia_vid_port
 
     pjmedia_frame	*enc_frm_buf,
 		        *dec_frm_buf;
+    pj_size_t            enc_frm_buf_size,
+                         dec_frm_buf_size;
 
     pj_mutex_t		*enc_frm_mutex,
 			*dec_frm_mutex;
@@ -182,9 +185,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	need_frame_buf = PJ_TRUE;
 
 	if (vp->dir & PJMEDIA_DIR_ENCODING) {
-	    status = pjmedia_clock_create2(pool,
-                                           PJMEDIA_PTIME(&vfd->fps),
-					   prm->vidparam.clock_rate,
+            pjmedia_clock_param param;
+            
+            param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
+            param.clock_rate = prm->vidparam.clock_rate;
+	    status = pjmedia_clock_create2(pool, &param,
 					   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
 					   &enc_clock_cb, vp, &vp->enc_clock);
 	    if (status != PJ_SUCCESS)
@@ -192,9 +197,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	}
 
 	if (vp->dir & PJMEDIA_DIR_DECODING) {
-	    status = pjmedia_clock_create2(pool,
-                                           PJMEDIA_PTIME(&vfd->fps),
-					   prm->vidparam.clock_rate,
+            pjmedia_clock_param param;
+            
+            param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
+            param.clock_rate = prm->vidparam.clock_rate;
+	    status = pjmedia_clock_create2(pool, &param,
 					   PJMEDIA_CLOCK_NO_HIGHEST_PRIO,
 					   &dec_clock_cb, vp, &vp->dec_clock);
 	    if (status != PJ_SUCCESS)
@@ -236,6 +243,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
 	if (vp->dir & PJMEDIA_DIR_ENCODING) {
 	    vp->enc_frm_buf = PJ_POOL_ZALLOC_T(pool, pjmedia_frame);
+            vp->enc_frm_buf_size = vafp.framebytes;
 	    vp->enc_frm_buf->buf = pj_pool_alloc(pool, vafp.framebytes);
 	    vp->enc_frm_buf->size = vafp.framebytes;
 	    vp->enc_frm_buf->type = PJMEDIA_FRAME_TYPE_NONE;
@@ -248,6 +256,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
 	if (vp->dir & PJMEDIA_DIR_DECODING) {
 	    vp->dec_frm_buf = PJ_POOL_ZALLOC_T(pool, pjmedia_frame);
+            vp->dec_frm_buf_size = vafp.framebytes;
 	    vp->dec_frm_buf->buf = pj_pool_alloc(pool, vafp.framebytes);
 	    vp->dec_frm_buf->size = vafp.framebytes;
 	    vp->dec_frm_buf->type = PJMEDIA_FRAME_TYPE_NONE;
@@ -462,6 +471,62 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
 }
 */
 
+static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
+                                     pjmedia_frame *frame)
+{
+    if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
+        const pjmedia_video_format_detail *vfd;
+        pjmedia_vid_event pevent;
+        pj_status_t status;
+
+        /* Retrieve the video format detail */
+        vfd = pjmedia_format_get_video_format_detail(
+                  &vp->client_port->info.fmt, PJ_TRUE);
+        if (!vfd)
+            return PJMEDIA_EVID_BADFORMAT;
+        pj_assert(vfd->fps.num);
+
+        status = pjmedia_vid_dev_stream_set_cap(
+                     vp->strm,
+                     PJMEDIA_VID_DEV_CAP_FORMAT,
+                     &vp->client_port->info.fmt);
+        if (status != PJ_SUCCESS) {
+            PJ_LOG(3, (THIS_FILE, "failure in changing the format of the "
+                                  "video device"));
+            PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
+                                  status != PJMEDIA_EVID_ERR ? "success" :
+                                  "failure"));
+            pjmedia_vid_port_stop(vp);
+            return status;
+        }
+
+        if (vp->stream_role == ROLE_PASSIVE) {
+            pjmedia_vid_param vid_param;
+            pjmedia_clock_param clock_param;
+
+            /**
+             * Initially, dec_frm_buf was allocated the biggest
+             * supported size, so we do not need to re-allocate
+             * the buffer here.
+             */
+            /* Adjust the clock */
+            pjmedia_vid_dev_stream_get_param(vp->strm, &vid_param);
+            clock_param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
+            clock_param.clock_rate = vid_param.clock_rate;
+            pjmedia_clock_modify(vp->dec_clock, &clock_param);
+        }
+
+        /* Notify application of the format change. */
+        pevent.event_type = PJMEDIA_EVENT_FMT_CHANGED;
+        pj_memcpy(&pevent.event_desc.fmt_change.new_format,
+                  &vp->client_port->info.fmt, sizeof(pjmedia_format));
+        if (vp->strm_cb.on_event_cb)
+            (*vp->strm_cb.on_event_cb)(vp->strm, vp->strm_cb_data, &pevent);
+    }
+
+    return PJ_SUCCESS;
+}
+
 static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
 {
     /* We are here because user wants us to be active but the stream is
@@ -477,6 +542,7 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
     if (!vp->client_port)
 	return;
 
+    vp->enc_frm_buf->size = vp->enc_frm_buf_size;
     status = pjmedia_vid_dev_stream_get_frame(vp->strm, vp->enc_frm_buf);
     if (status != PJ_SUCCESS)
 	return;
@@ -582,12 +648,18 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
                     vp->rend_sync_clocksrc.nsync_progress += ndrop;
 
                 for (i = 0; i < ndrop; i++) {
+                    vp->dec_frm_buf->size = vp->dec_frm_buf_size;
                     status = pjmedia_port_get_frame(vp->client_port,
                                                     vp->dec_frm_buf);
                     if (status != PJ_SUCCESS) {
                         pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
                         return;
                     }
+
+                    status = detect_fmt_change(vp, vp->dec_frm_buf);
+                    if (status != PJ_SUCCESS)
+                        return;
+
                     pj_add_timestamp32(&vp->rend_clocksrc.timestamp,
                                        frame_ts);
                 }
@@ -595,6 +667,7 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
         }
     }
 
+    vp->dec_frm_buf->size = vp->dec_frm_buf_size;
     status = pjmedia_port_get_frame(vp->client_port, vp->dec_frm_buf);
     if (status != PJ_SUCCESS) {
         pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
@@ -602,6 +675,10 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
     }
     pj_add_timestamp32(&vp->rend_clocksrc.timestamp, frame_ts);
     pjmedia_clock_src_update(&vp->rend_clocksrc, NULL);
+
+    status = detect_fmt_change(vp, vp->dec_frm_buf);
+    if (status != PJ_SUCCESS)
+        return;
 
     status = pjmedia_vid_dev_stream_put_frame(vp->strm, vp->dec_frm_buf);
 }
@@ -622,7 +699,7 @@ static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
 
     if (vp->role==ROLE_ACTIVE) {
-	if (vp->client_port)
+        if (vp->client_port)
 	    return pjmedia_port_put_frame(vp->client_port, frame);
     } else {
 	pj_mutex_lock(vp->enc_frm_mutex);
@@ -641,8 +718,15 @@ static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
 
     if (vp->role==ROLE_ACTIVE) {
-	if (vp->client_port)
-	    return pjmedia_port_get_frame(vp->client_port, frame);
+        if (vp->client_port) {
+            pj_status_t status;
+
+	    status = pjmedia_port_get_frame(vp->client_port, frame);
+            if (status != PJ_SUCCESS)
+                return status;
+
+            return detect_fmt_change(vp, frame);
+        }
     } else {
 	pj_mutex_lock(vp->dec_frm_mutex);
 	copy_frame(frame, vp->dec_frm_buf);

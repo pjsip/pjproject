@@ -169,7 +169,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vid_port,
 					      pj_bool_t destroy);
 
 /**
- * Connect the video port from its downstream (slave) media port, if any.
+ * Disconnect the video port from its downstream (slave) media port, if any.
  * This operation is only valid for video ports created with active interface
  * selected, and assertion may be triggered if this is invoked on a passive
  * video port.
