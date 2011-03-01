@@ -47,9 +47,17 @@
 #   include <windows.h>
 #endif
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+#   include "TargetConditionals.h"
+#endif
 
 #ifndef PJ_SYS_INFO_BUFFER_SIZE
 #   define PJ_SYS_INFO_BUFFER_SIZE	64
+#endif
+
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE
+    void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer);
 #endif
 
 static char *ver_info(pj_uint32_t ver, char *buf)
@@ -76,6 +84,31 @@ static char *ver_info(pj_uint32_t ver, char *buf)
     }
 
     return buf;
+}
+
+static pj_uint32_t parse_version(char *str)
+{
+    char *tok;
+    int i, maxtok;
+    pj_uint32_t version = 0;
+    
+    while (*str && !pj_isdigit(*str))
+	str++;
+
+    maxtok = 4;
+    for (tok = strtok(str, ".-"), i=0; tok && i<maxtok;
+	 ++i, tok=strtok(NULL, ".-"))
+    {
+	int n;
+
+	if (!pj_isdigit(*tok))
+	    break;
+	
+	n = atoi(tok);
+	version |= (n << ((3-i)*8));
+    }
+    
+    return version;
 }
 
 PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
@@ -105,10 +138,29 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
      * Machine and OS info.
      */
 #if defined(PJ_HAS_UNAME) && PJ_HAS_UNAME
+    #if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE
+    {
+	pj_str_t buf = {si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left, left};
+	pj_str_t machine = {"arm", 3};
+	pj_str_t sdk_name = {"iOS-SDK", 7};
+	char tmp[PJ_SYS_INFO_BUFFER_SIZE];
+	
+	pj_iphone_os_get_sys_info(&si, &buf);
+	left -= si.os_name.slen + 1;
+
+	si.os_ver = parse_version(si.machine.ptr);
+	
+	si.machine = machine;
+	si.sdk_name = sdk_name;
+
+#ifdef PJ_SDK_NAME
+	pj_memcpy(tmp, PJ_SDK_NAME, pj_ansi_strlen(PJ_SDK_NAME) + 1);
+	si.sdk_ver = parse_version(tmp);
+#endif
+    }
+    #else    
     {
 	struct utsname u;
-	char *tok;
-	int i, maxtok;
 
 	/* Successful uname() returns zero on Linux and positive value
 	 * on OpenSolaris.
@@ -118,21 +170,10 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 
 	ALLOC_CP_STR(u.machine, machine);
 	ALLOC_CP_STR(u.sysname, os_name);
-
-	maxtok = 4;
-	for (tok = strtok(u.release, ".-"), i=0;
-	     tok && i<maxtok;
-	     ++i, tok=strtok(NULL, ".-"))
-	{
-	    int n;
-
-	    if (!pj_isdigit(*tok))
-		break;
-
-	    n = atoi(tok);
-	    si.os_ver |= (n << ((3-i)*8));
-	}
+	
+	si.os_ver = parse_version(u.release);
     }
+    #endif
 #elif defined(_MSC_VER)
     {
 	OSVERSIONINFO ovi;

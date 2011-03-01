@@ -410,6 +410,11 @@ case $target in
 	;;
   *)
 	ac_os_objs="$ac_os_objs file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o"
+	case $target in
+	  arm-apple-darwin*)
+		ac_os_objs="$ac_os_objs os_info_iphone.o"
+		;;
+	esac
 	# UUID
 	if test "$ac_has_uuid_lib" = "1" -a "$ac_has_uuid_h" = "1"; then
 		ac_os_objs="$ac_os_objs guid_uuid.o"
@@ -535,7 +540,7 @@ if test "$enable_sound" = "no"; then
 else
  case $target in
   arm-apple-darwin*)
-	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork"
+	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit"
 	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
 	;;
   *darwin*)

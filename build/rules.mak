@@ -115,6 +115,11 @@ $(OBJDIR)/$(app).ko: $(OBJDIR)/$(app).o
 ../lib/$(app).ko: $(LIB) $(OBJDIR)/$(app).ko
 	cp $(OBJDIR)/$(app).ko ../lib
 
+$(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.m
+	$(CC) $($(APP)_CFLAGS) \
+		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
+		$(subst /,$(HOST_PSEP),$<) 
+
 $(OBJDIR)/%$(OBJEXT): $(SRCDIR)/%.c
 	$(CC) $($(APP)_CFLAGS) \
 		$(CC_OUT)$(subst /,$(HOST_PSEP),$@) \
