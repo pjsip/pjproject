@@ -280,7 +280,7 @@ static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
     PJ_UNUSED_ARG(pool);
 
     pj_bzero(param, sizeof(*param));
-    if (di->info.dir & PJMEDIA_DIR_CAPTURE_RENDER) {
+    if (di->info.dir == PJMEDIA_DIR_CAPTURE_RENDER) {
 	param->dir = PJMEDIA_DIR_CAPTURE_RENDER;
 	param->cap_id = index;
 	param->rend_id = index;
@@ -749,6 +749,9 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
         stream->render_exited = PJ_TRUE;
         goto on_return;
     }
+
+    if (frame->size==0 || frame->buf==NULL)
+	goto on_return;
 
     if (stream->surf) {
         if (SDL_MUSTLOCK(stream->surf)) {

@@ -1272,8 +1272,12 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     /* Check if decoder has been opened */
     PJ_ASSERT_RETURN(ff->dec_ctx, PJ_EINVALIDOP);
 
+    /* Reset output frame bit info */
+    output->bit_info = 0;
+
     /* Validate output buffer size */
-    //PJ_ASSERT_RETURN(ff->dec_vafp.framebytes <= output_buf_len, PJ_ETOOSMALL);
+    if (ff->dec_vafp.framebytes > output_buf_len)
+	return PJ_ETOOSMALL;
 
     /* Init frame to receive the decoded data, the ffmpeg codec context will
      * automatically provide the decoded buffer (single buffer used for the
@@ -1325,36 +1329,6 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	    ff->dec_ctx->coded_width != (int)vafp->size.w ||
 	    ff->dec_ctx->coded_height != (int)vafp->size.h)
 	{
-#if 0	    
-	    // it should not be the codec responsibility to do resizing
-	    pj_uint8_t *data[PJMEDIA_MAX_VIDEO_PLANES] = {0};
-	    unsigned i;
-	    int h;
-
-	    if (!ff->sws_ctx) {
-		pj_assert(sws_isSupportedInput(ff->dec_ctx->pix_fmt) > 0);
-		pj_assert(sws_isSupportedOutput(ff->expected_dec_fmt) > 0);
-		ff->sws_ctx = sws_getContext(ff->dec_ctx->coded_width,
-					     ff->dec_ctx->coded_height,
-					     ff->dec_ctx->pix_fmt,
-					     vafp->size.w, vafp->size.h,
-					     ff->expected_dec_fmt,
-					     SWS_BILINEAR | SWS_PRINT_INFO,
-					     NULL, NULL, NULL);
-		if (ff->sws_ctx == NULL) {
-		    return PJ_EUNKNOWN;
-		}
-	    }
-
-	    for (i = 0; i < ff->vfi->plane_cnt; ++i) {
-		data[i] = q;
-		q += vafp->plane_bytes[i];
-	    }
-	    h = sws_scale(ff->sws_ctx, avframe.data, avframe.linesize, 0, 
-			  ff->dec_ctx->coded_height, data, vafp->strides);
-	    pj_assert((int)vafp->size.h == h);
-#endif
-
 	    pjmedia_format_id new_fmt_id;
 	    pj_status_t status;
 
@@ -1382,11 +1356,11 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 
 	    /* Notify application via the bit_info field of pjmedia_frame */
 	    output->bit_info = PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
-	}
 
-	/* Check provided buffer size after format changed */
-	//if (vafp->framebytes > output_buf_len)
-	    //return PJ_ETOOSMALL;
+	    /* Check provided buffer size after format changed */
+	    if (vafp->framebytes > output_buf_len)
+		return PJ_ETOOSMALL;
+	}
 
 	/* Get the decoded data */
 	for (i = 0; i < ff->dec_vfi->plane_cnt; ++i) {

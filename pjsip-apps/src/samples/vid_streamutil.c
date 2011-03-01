@@ -88,9 +88,17 @@ static const char *desc =
 
 #define THIS_FILE	"vid_streamutil.c"
 
+
+/* If set, local renderer will be created to play original file */
 #define HAS_LOCAL_RENDERER_FOR_PLAY_FILE    1
-#define DEF_RENDERER_WIDTH		    0
-#define DEF_RENDERER_HEIGHT		    0
+
+
+/* Default width and height for the renderer, better be set to maximum
+ * acceptable size.
+ */
+#define DEF_RENDERER_WIDTH		    640
+#define DEF_RENDERER_HEIGHT		    480
+
 
 /* Prototype */
 static void print_stream_stat(pjmedia_vid_stream *stream,
@@ -597,7 +605,7 @@ int main(int argc, char *argv[])
 
     if (play_file.file_name) {
 	pjmedia_video_format_detail *file_vfd;
-        pjmedia_clock_param *clock_param;
+        pjmedia_clock_param clock_param;
 
 	/* Create file player */
 	status = create_file_player(pool, play_file.file_name, &play_port);
