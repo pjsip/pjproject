@@ -2741,8 +2741,6 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 
 
 static const pj_str_t ID_AUDIO = { "audio", 5};
-static const pj_str_t ID_VIDEO = { "video", 5};
-static const pj_str_t ID_APPLICATION = { "application", 11};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};

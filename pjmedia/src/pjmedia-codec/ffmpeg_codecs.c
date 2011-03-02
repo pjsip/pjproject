@@ -181,9 +181,6 @@ typedef struct ffmpeg_private {
     enum PixelFormat		     expected_dec_fmt;
 						/**< expected output format of 
 						     ffmpeg decoder	    */
-    struct SwsContext		    *sws_ctx;   /**< the format converter for 
-						     post decoding	    */
-
 } ffmpeg_private;
 
 
@@ -206,6 +203,8 @@ struct ffmpeg_codec_desc {
     /* Predefined info */
     pjmedia_vid_codec_info       info;
     pjmedia_format_id		 base_fmt_id;
+    pj_uint32_t			 avg_bps;
+    pj_uint32_t			 max_bps;
     func_packetize		 packetize;
     func_unpacketize		 unpacketize;
     func_parse_fmtp		 parse_fmtp;
@@ -247,13 +246,13 @@ ffmpeg_codec_desc codec_desc[] =
 {
     {
 	{PJMEDIA_FORMAT_H263P,	{"H263-1998",9},    PJMEDIA_RTP_PT_H263},
-	PJMEDIA_FORMAT_H263,
+	PJMEDIA_FORMAT_H263,	1000000,    2000000,
 	&h263_packetize, &h263_unpacketize, &h263_parse_fmtp,
 	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
     },
     {
 	{PJMEDIA_FORMAT_H263,	{"H263",4},	    PJMEDIA_RTP_PT_H263},
-	0,
+	0,			1000000,    2000000,
 	&h263_packetize, &h263_unpacketize, &h263_parse_fmtp,
 	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
     },
@@ -801,6 +800,10 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
     /* Decoding fmtp */
     attr->dec_fmtp = desc->dec_fmtp;
 
+    /* Bitrate */
+    attr->enc_fmt.det.vid.avg_bps = desc->avg_bps;
+    attr->enc_fmt.det.vid.max_bps = desc->max_bps;
+
     return PJ_SUCCESS;
 }
 
@@ -988,10 +991,11 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	    ctx->height = vfd->size.h;
             ctx->time_base.num = vfd->fps.denum;
             ctx->time_base.den = vfd->fps.num;
-            if (vfd->avg_bps)
+	    if (vfd->avg_bps) {
                 ctx->bit_rate = vfd->avg_bps;
-            if (vfd->max_bps)
-                ctx->rc_max_rate = vfd->max_bps;
+		if (vfd->max_bps)
+		    ctx->bit_rate_tolerance = vfd->max_bps - vfd->avg_bps;
+	    }
 
 	    /* For encoder, should be better to be strict to the standards */
             ctx->strict_std_compliance = FF_COMPLIANCE_STRICT;
@@ -1123,12 +1127,8 @@ static pj_status_t ffmpeg_codec_close( pjmedia_vid_codec *codec )
         avcodec_close(ff->dec_ctx);
         av_free(ff->dec_ctx);
     }
-    if (ff->sws_ctx) {
-	sws_freeContext(ff->sws_ctx);
-    }
     ff->enc_ctx = NULL;
     ff->dec_ctx = NULL;
-    ff->sws_ctx = NULL;
     pj_mutex_unlock(ff_mutex);
 
     return PJ_SUCCESS;
@@ -1408,7 +1408,6 @@ static pj_status_t  ffmpeg_codec_recover( pjmedia_vid_codec *codec,
 
 #ifdef _MSC_VER
 #   pragma comment( lib, "avcodec.lib")
-#   pragma comment( lib, "swscale.lib")
 #endif
 
 #endif	/* PJMEDIA_HAS_FFMPEG_CODEC */

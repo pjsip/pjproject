@@ -547,6 +547,42 @@ int main(int argc, char *argv[])
     /* On exit, dump current memory usage: */
     dump_pool_usage(THIS_FILE, &cp);
 
+    /* Destroy stream */
+    if (g_med_stream)
+	pjmedia_stream_destroy(g_med_stream);
+    if (g_med_vstream)
+	pjmedia_vid_stream_destroy(g_med_vstream);
+
+    /* Destroy audio ports */
+    if (g_snd_player)
+	pjmedia_snd_port_destroy(g_snd_player);
+    if (g_snd_rec)
+	pjmedia_snd_port_destroy(g_snd_rec);
+
+    /* Destroy video ports */
+    if (g_vid_capturer)
+	pjmedia_vid_port_destroy(g_vid_capturer);
+    if (g_vid_renderer)
+	pjmedia_vid_port_destroy(g_vid_renderer);
+
+    /* Destroy media transports */
+    for (i = 0; i < MAX_MEDIA_CNT; ++i) {
+	if (g_med_transport[i])
+	    pjmedia_transport_close(g_med_transport[i]);
+    }
+
+    /* Deinit ffmpeg codec */
+    pjmedia_codec_ffmpeg_deinit();
+
+    /* Deinit pjmedia endpoint */
+    if (g_med_endpt)
+	pjmedia_endpt_destroy(g_med_endpt);
+
+    /* Deinit pjsip endpoint */
+    if (g_endpt)
+	pjsip_endpt_destroy(g_endpt);
+
+    /* Release pool */
     pj_pool_release(pool);
 
     return 0;

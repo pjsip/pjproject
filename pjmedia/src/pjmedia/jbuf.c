@@ -263,7 +263,8 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 				  void *frame, pj_size_t *size,
 				  pjmedia_jb_frame_type *p_type,
 				  pj_uint32_t *bit_info,
-				  pj_uint32_t *ts) 
+				  pj_uint32_t *ts,
+				  int *seq) 
 {
     if (framelist->size) {
 
@@ -288,6 +289,8 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 		*bit_info = framelist->bit_info[framelist->head];
 	    if (ts)
 		*ts = framelist->ts[framelist->head];
+	    if (seq)
+		*seq = framelist->origin;
 
 	    //pj_bzero(framelist->content + 
 	    //	 framelist->head * framelist->frame_size,
@@ -313,19 +316,21 @@ static pj_bool_t jb_framelist_get(jb_framelist_t *framelist,
 
 
 static pj_bool_t jb_framelist_peek(jb_framelist_t *framelist,
-				   unsigned idx,
+				   unsigned offset,
 				   const void **frame,
 				   pj_size_t *size,
 				   pjmedia_jb_frame_type *type,
 				   pj_uint32_t *bit_info,
-				   pj_uint32_t *ts) 
+				   pj_uint32_t *ts,
+				   int *seq) 
 {
-    unsigned pos;
+    unsigned pos, idx;
 
-    if (idx >= jb_framelist_eff_size(framelist))
+    if (offset >= jb_framelist_eff_size(framelist))
 	return PJ_FALSE;
 
     pos = framelist->head;
+    idx = offset;
 
     /* Find actual peek position, note there may be discarded frames */
     while (1) {
@@ -350,6 +355,8 @@ static pj_bool_t jb_framelist_peek(jb_framelist_t *framelist,
 	*bit_info = framelist->bit_info[pos];
     if (ts)
 	*ts = framelist->ts[pos];
+    if (seq)
+	*seq = framelist->origin + offset;
 
     return PJ_TRUE;
 }
@@ -931,7 +938,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame( pjmedia_jbuf *jb,
 				     void *frame, 
 				     char *p_frame_type)
 {
-    pjmedia_jbuf_get_frame3(jb, frame, NULL, p_frame_type, NULL, NULL);
+    pjmedia_jbuf_get_frame3(jb, frame, NULL, p_frame_type, NULL,
+			    NULL, NULL);
 }
 
 /*
@@ -943,7 +951,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 				     char *p_frame_type,
 				     pj_uint32_t *bit_info)
 {
-    pjmedia_jbuf_get_frame3(jb, frame, size, p_frame_type, bit_info, NULL);
+    pjmedia_jbuf_get_frame3(jb, frame, size, p_frame_type, bit_info,
+			    NULL, NULL);
 }
 
 /*
@@ -954,7 +963,8 @@ PJ_DEF(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb,
 				     pj_size_t *size,
 				     char *p_frame_type,
 				     pj_uint32_t *bit_info,
-				     pj_uint32_t *ts)
+				     pj_uint32_t *ts,
+				     int *seq)
 {
     if (jb->jb_status == JB_STATUS_PREFETCHING) {
 
@@ -979,7 +989,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb,
 
 	/* Try to retrieve a frame from frame list */
 	res = jb_framelist_get(&jb->jb_framelist, frame, size, &ftype, 
-			       bit_info, ts);
+			       bit_info, ts, seq);
 	if (res) {
 	    /* We've successfully retrieved a frame from the frame list, but
 	     * the frame could be a blank frame!
@@ -1049,17 +1059,19 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_get_state( const pjmedia_jbuf *jb,
 
 
 PJ_DEF(void) pjmedia_jbuf_peek_frame( pjmedia_jbuf *jb,
-				      unsigned idx,
+				      unsigned offset,
 				      const void **frame, 
 				      pj_size_t *size, 
 				      char *p_frm_type,
 				      pj_uint32_t *bit_info,
-				      pj_uint32_t *ts)
+				      pj_uint32_t *ts,
+				      int *seq)
 {
     pjmedia_jb_frame_type ftype;
     pj_bool_t res;
 
-    res = jb_framelist_peek(&jb->jb_framelist, idx, frame, size, &ftype, bit_info, ts);
+    res = jb_framelist_peek(&jb->jb_framelist, offset, frame, size, &ftype,
+			    bit_info, ts, seq);
     if (!res)
 	*p_frm_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;
     else if (ftype == PJMEDIA_JB_NORMAL_FRAME)

@@ -447,6 +447,9 @@ static int create_sdl_thread(void * data)
                     if (strm->overlay)
                         SDL_FreeYUVOverlay(strm->overlay);
 
+		    /* Update SDL info for the new format */
+		    sdl_info = get_sdl_format_info(fmt->id);
+
                     if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
                         strm->surf = SDL_CreateRGBSurface(SDL_SWSURFACE,
                                                           strm->rect.w,

@@ -125,6 +125,16 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
     return PJ_SUCCESS;
 }
 
+/* 
+ * Register all codecs. 
+ */
+static void deinit_codecs()
+{
+#if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC != 0
+    pjmedia_codec_ffmpeg_deinit();
+#endif
+}
+
 static pj_status_t create_file_player( pj_pool_t *pool,
 				       const char *file_name,
 				       pjmedia_port **p_play_port)
@@ -615,13 +625,13 @@ int main(int argc, char *argv[])
 	/* Collect format info */
 	file_vfd = pjmedia_format_get_video_format_detail(&play_port->info.fmt,
 							  PJ_TRUE);
-	PJ_LOG(2, (THIS_FILE, "Reading video stream %dx%d %c%c%c%c @%.2dfps",
+	PJ_LOG(2, (THIS_FILE, "Reading video stream %dx%d %c%c%c%c @%.2ffps",
 		   file_vfd->size.w, file_vfd->size.h,
 		   ((play_port->info.fmt.id & 0x000000FF) >> 0),
 		   ((play_port->info.fmt.id & 0x0000FF00) >> 8),
 		   ((play_port->info.fmt.id & 0x00FF0000) >> 16),
 		   ((play_port->info.fmt.id & 0xFF000000) >> 24),
-		   file_vfd->fps.num/file_vfd->fps.denum));
+		   (1.0*file_vfd->fps.num/file_vfd->fps.denum)));
 
 	/* Allocate file read buffer */
 	play_file.read_buf_size = PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE;
@@ -657,6 +667,7 @@ int main(int argc, char *argv[])
 	    if (status != PJ_SUCCESS)
 		goto on_exit;
 
+	    codec_param2.dir = PJMEDIA_DIR_DECODING;
 	    status = play_decoder->op->open(play_decoder, &codec_param2);
 	    if (status != PJ_SUCCESS)
 		goto on_exit;
@@ -705,7 +716,8 @@ int main(int argc, char *argv[])
             if (status != PJ_SUCCESS)
 	        goto on_exit;
 
-            pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.dec_fmt);
+            pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.enc_fmt);
+	    vpp.vidparam.fmt.id = codec_param.dec_fmt.id;
             vpp.vidparam.dir = PJMEDIA_DIR_CAPTURE;
             
             status = pjmedia_vid_port_create(pool, &vpp, &capture);
@@ -835,13 +847,13 @@ int main(int argc, char *argv[])
 	       pj_ntohs(remote_addr.sin_port));
 
     if (dir & PJMEDIA_DIR_ENCODING)
-	PJ_LOG(2, (THIS_FILE, "Sending %dx%d %.*s @%.2dfps",
+	PJ_LOG(2, (THIS_FILE, "Sending %dx%d %.*s @%.2ffps",
 		   codec_param.enc_fmt.det.vid.size.w,
 		   codec_param.enc_fmt.det.vid.size.h,
 		   codec_info->encoding_name.slen,
 		   codec_info->encoding_name.ptr,
-		   codec_param.enc_fmt.det.vid.fps.num/
-		   codec_param.enc_fmt.det.vid.fps.denum));
+		   (1.0*codec_param.enc_fmt.det.vid.fps.num/
+		    codec_param.enc_fmt.det.vid.fps.denum)));
 
     for (;;) {
 	char tmp[10];
@@ -879,8 +891,10 @@ on_exit:
 	pjmedia_port_destroy(play_port);
 
     /* Destroy file decoder */
-    if (play_decoder)
+    if (play_decoder) {
 	play_decoder->op->close(play_decoder);
+	pjmedia_vid_codec_mgr_dealloc_codec(NULL, play_decoder);
+    }
 
     /* Destroy video devices */
     if (capture)
@@ -897,6 +911,9 @@ on_exit:
 	
 	pjmedia_transport_close(tp);
     }
+
+    /* Deinit codecs */
+    deinit_codecs();
 
     /* Shutdown video subsystem */
     pjmedia_vid_subsys_shutdown();

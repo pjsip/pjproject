@@ -68,7 +68,7 @@ typedef struct pjmedia_vid_channel
     pj_bool_t		    paused;	    /**< Paused?.		    */
     void		   *buf;	    /**< Output buffer.		    */
     unsigned		    buf_size;	    /**< Size of output buffer.	    */
-    unsigned                buf_len;    /**< Length of data in buffer.  */
+    unsigned                buf_len;	    /**< Length of data in buffer.  */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
 } pjmedia_vid_channel;
 
@@ -134,6 +134,8 @@ struct pjmedia_vid_stream
 #endif
 
     pjmedia_vid_codec	    *codec;	    /**< Codec instance being used. */
+    pj_uint32_t		     last_dec_ts;    /**< Last decoded timestamp.   */
+    int			     last_dec_seq;   /**< Last decoded sequence.    */
 };
 
 
@@ -840,6 +842,8 @@ static pj_status_t get_frame(pjmedia_port *port,
     pjmedia_vid_stream *stream = (pjmedia_vid_stream*) port->port_data.pdata;
     pjmedia_vid_channel *channel = stream->dec;
     pjmedia_frame frame_in;
+    pj_bool_t fps_changed = PJ_FALSE;
+    pjmedia_ratio new_fps = {0};
     pj_status_t status;
 
     /* Return no frame is channel is paused */
@@ -856,12 +860,14 @@ static pj_status_t get_frame(pjmedia_port *port,
 	char ptype;
 	pj_size_t psize, data_len;
 	pj_uint32_t ts, last_ts;
-	pj_bool_t got_frame;
+	int seq;
+	pj_bool_t got_frame, check_fps;
 	unsigned i;
 
 	channel->buf_len = 0;
 	last_ts = 0;
 	got_frame = PJ_FALSE;
+	check_fps = PJ_FALSE;
 
 	/* Lock jitter buffer mutex first */
 	pj_mutex_lock( stream->jb_mutex );
@@ -869,17 +875,21 @@ static pj_status_t get_frame(pjmedia_port *port,
 	for (i=0; ; ++i) {
 	    /* Get frame from jitter buffer. */
 	    pjmedia_jbuf_peek_frame(stream->jb, i, &p, &psize, &ptype,
-				    NULL, &ts);
+				    NULL, &ts, &seq);
 	    if (ptype == PJMEDIA_JB_NORMAL_FRAME) {
-		if (last_ts == 0)
+		if (last_ts == 0) {
 		    last_ts = ts;
+		    check_fps = stream->last_dec_ts &&
+				(seq - stream->last_dec_seq == 1) &&
+				(last_ts > stream->last_dec_ts);
+		}
 
 		if (ts != last_ts) {
 		    got_frame = PJ_TRUE;
 		    pjmedia_jbuf_remove_frame(stream->jb, i);
 		    break;
 		}
-		
+
 		data = (pj_uint8_t*)channel->buf + channel->buf_len;
 		data_len = channel->buf_size - channel->buf_len;
 		status = (*stream->codec->op->unpacketize)(stream->codec,
@@ -900,6 +910,28 @@ static pj_status_t get_frame(pjmedia_port *port,
 	    frame->size = 0;
 	    return PJ_SUCCESS;
 	}
+
+	/* Learn remote frame rate */
+	if (check_fps) {
+	    pj_uint32_t ts_diff;
+	    pjmedia_video_format_detail *vfd;
+
+	    ts_diff = last_ts - stream->last_dec_ts;
+	    vfd = pjmedia_format_get_video_format_detail(
+				    &channel->port.info.fmt, PJ_TRUE);
+	    if (ts_diff * vfd->fps.num !=
+		stream->info.codec_info.clock_rate * vfd->fps.denum)
+	    {
+		/* Frame rate changed */
+		fps_changed = PJ_TRUE;
+		new_fps.num = stream->info.codec_info.clock_rate;
+		new_fps.denum = ts_diff;
+	    }
+	}
+
+	/* Update last frame seq and timestamp */
+	stream->last_dec_seq = seq - 1;
+	stream->last_dec_ts = last_ts;
     }
 
     /* Decode */
@@ -923,10 +955,30 @@ static pj_status_t get_frame(pjmedia_port *port,
 	stream->codec->op->get_param(stream->codec, stream->info.codec_param);
 
 	/* Update decoding channel port info */
-	pjmedia_format_copy(&stream->dec->port.info.fmt,
+	pjmedia_format_copy(&channel->port.info.fmt,
 			    &stream->info.codec_param->dec_fmt);
     }
-    
+
+    if (fps_changed) {
+	pjmedia_video_format_detail *vfd;
+
+	/* Update decoding channel port info */
+	vfd = pjmedia_format_get_video_format_detail(
+				&channel->port.info.fmt, PJ_TRUE);
+	vfd->fps = new_fps;
+
+	/* Update stream info */
+	vfd = pjmedia_format_get_video_format_detail(
+				&stream->info.codec_param->dec_fmt, PJ_TRUE);
+	vfd->fps = new_fps;
+
+	/* Set bit_info */
+	frame->bit_info |= PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
+
+	PJ_LOG(4, (channel->port.info.name.ptr, "Frame rate changed to %.2ffps",
+		   (1.0 * new_fps.num / new_fps.denum)));
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -1133,15 +1185,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Get the frame size */
-    stream->frame_size = vfd_enc->max_bps * vfd_enc->fps.denum /
+    /* Estimate the maximum frame size */
+    stream->frame_size = vfd_enc->size.w * vfd_enc->size.h * 4;
+
+#if 0
+    stream->frame_size = vfd_enc->max_bps/8 * vfd_enc->fps.denum /
 			 vfd_enc->fps.num;
     
     /* As the maximum frame_size is not represented directly by maximum bps
      * (which includes intra and predicted frames), let's increase the
      * frame size value for safety.
      */
-    stream->frame_size <<= 2;
+    stream->frame_size <<= 4;
+#endif
 
     /* Validate the frame size */
     if (stream->frame_size == 0 || 
@@ -1561,9 +1617,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
 }
 
 
-static const pj_str_t ID_AUDIO = { "audio", 5};
 static const pj_str_t ID_VIDEO = { "video", 5};
-static const pj_str_t ID_APPLICATION = { "application", 11};
 static const pj_str_t ID_IN = { "IN", 2 };
 static const pj_str_t ID_IP4 = { "IP4", 3};
 static const pj_str_t ID_IP6 = { "IP6", 3};
@@ -1571,7 +1625,6 @@ static const pj_str_t ID_RTP_AVP = { "RTP/AVP", 7 };
 static const pj_str_t ID_RTP_SAVP = { "RTP/SAVP", 8 };
 //static const pj_str_t ID_SDP_NAME = { "pjmedia", 7 };
 static const pj_str_t ID_RTPMAP = { "rtpmap", 6 };
-static const pj_str_t ID_TELEPHONE_EVENT = { "telephone-event", 15 };
 
 static const pj_str_t STR_INACTIVE = { "inactive", 8 };
 static const pj_str_t STR_SENDRECV = { "sendrecv", 8 };
