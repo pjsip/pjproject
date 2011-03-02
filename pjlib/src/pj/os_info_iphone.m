@@ -17,6 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#ifdef TARGET_IPHONE_SIMULATOR == 0
+
 #include <pj/os.h>
 #include <pj/string.h>
 
@@ -45,3 +47,5 @@ void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer)
     ALLOC_CP_STR([device systemName], os_name);
     ALLOC_CP_STR([device systemVersion], machine);
 }
+
+#endif
