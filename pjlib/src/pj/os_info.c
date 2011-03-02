@@ -139,7 +139,7 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
      */
 #if defined(PJ_HAS_UNAME) && PJ_HAS_UNAME
     #if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE && \
-	TARGET_IPHONE_SIMULATOR == 0
+	(!defined TARGET_IPHONE_SIMULATOR || TARGET_IPHONE_SIMULATOR == 0)
     {
 	pj_str_t buf = {si_buffer + PJ_SYS_INFO_BUFFER_SIZE - left, left};
 	pj_str_t machine = {"arm", 3};

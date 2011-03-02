@@ -17,7 +17,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifdef TARGET_IPHONE_SIMULATOR == 0
+#include "TargetConditionals.h"
+
+#if !defined TARGET_IPHONE_SIMULATOR || TARGET_IPHONE_SIMULATOR == 0
 
 #include <pj/os.h>
 #include <pj/string.h>
