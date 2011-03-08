@@ -71,6 +71,7 @@ SYSTEMINCLUDE	\epoc32\include\libc
 
 LIBRARY		esock.lib insock.lib charconv.lib euser.lib estlib.lib 
 LIBRARY		securesocket.lib x509.lib crypto.lib x500.lib 
+LIBRARY		hal.lib efsrv.lib
  
 #ifdef WINSCW
 STATICLIBRARY   eexe.lib ecrt0.lib

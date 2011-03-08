@@ -45,6 +45,7 @@ LIBRARY			etext.lib gdi.lib egul.lib insock.lib
 LIBRARY			ecom.lib inetprotutil.lib http.lib esock.lib
 LIBRARY			charconv.lib estlib.lib 
 LIBRARY			securesocket.lib x509.lib crypto.lib x500.lib
+LIBRARY			hal.lib
 
 // Ordering static libs based on dependencies, most to least dependent,
 // this could be necessary for some SDKs, e.g: S60 3rd MR

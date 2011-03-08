@@ -59,6 +59,15 @@
 #if defined(PJ_DARWINOS) && PJ_DARWINOS != 0 && TARGET_OS_IPHONE
     void pj_iphone_os_get_sys_info(pj_sys_info *si, pj_str_t *si_buffer);
 #endif
+    
+#if defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+    PJ_BEGIN_DECL
+    unsigned pj_symbianos_get_model_info(char *buf, unsigned buf_size);
+    unsigned pj_symbianos_get_platform_info(char *buf, unsigned buf_size);
+    void pj_symbianos_get_sdk_info(pj_str_t *name, pj_uint32_t *ver);
+    PJ_END_DECL
+#endif
+
 
 static char *ver_info(pj_uint32_t ver, char *buf)
 {
@@ -218,6 +227,22 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
     #endif	/* PJ_WIN32_WINCE */
 	}
     }
+#elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+    {
+	pj_symbianos_get_model_info(si_buffer, sizeof(si_buffer));
+	ALLOC_CP_STR(si_buffer, machine);
+	
+	char *p = si_buffer + sizeof(si_buffer) - left;
+	unsigned plen;
+	plen = pj_symbianos_get_platform_info(p, left);
+	if (plen) {
+	    /* Output format will be "Series60vX.X" */
+	    si.os_name = pj_str("S60");
+	    si.os_ver  = parse_version(p+9);
+	} else {
+	    si.os_name = pj_str("Unknown");
+	}
+    }
 #endif
 
     /*
@@ -263,6 +288,8 @@ get_sdk_info:
     	         (((_MSC_VER % 100) / 10) << 16) |
     	         ((_MSC_VER % 10) << 8);
     si.sdk_name = pj_str("msvc");
+#elif defined(PJ_SYMBIAN) && PJ_SYMBIAN != 0
+    pj_symbianos_get_sdk_info(&si.sdk_name, &si.sdk_ver);
 #endif
 
     /*

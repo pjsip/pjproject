@@ -43,6 +43,8 @@ SOURCE		list.c
 SOURCE		lock.c
 SOURCE		string.c
 SOURCE		log.c
+SOURCE		os_info.c
+SOURCE		os_info_symbian.cpp
 SOURCE		os_time_common.c
 SOURCE		pool.c
 SOURCE		pool_buf.c
