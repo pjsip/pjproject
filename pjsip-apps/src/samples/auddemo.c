@@ -382,6 +382,7 @@ static void print_menu(void)
     puts("Audio demo menu:");
     puts("-------------------------------");
     puts("  l                        List devices");
+    puts("  R                        Refresh devices");
     puts("  i ID                     Show device info for device ID");
     puts("  t RID PID CR PTIM [CH]   Perform test on the device:");
     puts("                             RID:  record device ID (-1 for no)");
@@ -438,6 +439,11 @@ int main()
 	switch (line[0]) {
 	case 'l':
 	    list_devices();
+	    break;
+
+	case 'R':
+	    pjmedia_aud_dev_refresh();
+	    puts("Audio device list refreshed.");
 	    break;
 
 	case 'i':
