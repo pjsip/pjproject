@@ -48,6 +48,7 @@ struct pjmedia_snd_port
     unsigned		 channel_count;
     unsigned		 samples_per_frame;
     unsigned		 bits_per_sample;
+    unsigned		 options;
 
     /* software ec */
     pjmedia_echo_state	*ec_state;
@@ -277,7 +278,9 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     }
 
     /* Start sound stream. */
-    status = pjmedia_aud_stream_start(snd_port->aud_stream);
+    if (!(snd_port->options & PJMEDIA_SND_PORT_NO_AUTO_START)) {
+	status = pjmedia_aud_stream_start(snd_port->aud_stream);
+    }
     if (status != PJ_SUCCESS) {
 	pjmedia_aud_stream_destroy(snd_port->aud_stream);
 	snd_port->aud_stream = NULL;
@@ -324,22 +327,23 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
 					     unsigned options,
 					     pjmedia_snd_port **p_port)
 {
-    pjmedia_aud_param param;
+    pjmedia_snd_port_param param;
     pj_status_t status;
 
     PJ_UNUSED_ARG(options);
 
-    status = pjmedia_aud_dev_default_param(rec_id, &param);
+    status = pjmedia_aud_dev_default_param(rec_id, &param.base);
     if (status != PJ_SUCCESS)
 	return status;
 
-    param.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
-    param.rec_id = rec_id;
-    param.play_id = play_id;
-    param.clock_rate = clock_rate;
-    param.channel_count = channel_count;
-    param.samples_per_frame = samples_per_frame;
-    param.bits_per_sample = bits_per_sample;
+    param.base.dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
+    param.base.rec_id = rec_id;
+    param.base.play_id = play_id;
+    param.base.clock_rate = clock_rate;
+    param.base.channel_count = channel_count;
+    param.base.samples_per_frame = samples_per_frame;
+    param.base.bits_per_sample = bits_per_sample;
+    param.options = options;
 
     return pjmedia_snd_port_create2(pool, &param, p_port);
 }
@@ -356,21 +360,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
 						 unsigned options,
 						 pjmedia_snd_port **p_port)
 {
-    pjmedia_aud_param param;
+    pjmedia_snd_port_param param;
     pj_status_t status;
 
     PJ_UNUSED_ARG(options);
 
-    status = pjmedia_aud_dev_default_param(dev_id, &param);
+    status = pjmedia_aud_dev_default_param(dev_id, &param.base);
     if (status != PJ_SUCCESS)
 	return status;
 
-    param.dir = PJMEDIA_DIR_CAPTURE;
-    param.rec_id = dev_id;
-    param.clock_rate = clock_rate;
-    param.channel_count = channel_count;
-    param.samples_per_frame = samples_per_frame;
-    param.bits_per_sample = bits_per_sample;
+    param.base.dir = PJMEDIA_DIR_CAPTURE;
+    param.base.rec_id = dev_id;
+    param.base.clock_rate = clock_rate;
+    param.base.channel_count = channel_count;
+    param.base.samples_per_frame = samples_per_frame;
+    param.base.bits_per_sample = bits_per_sample;
+    param.options = options;
 
     return pjmedia_snd_port_create2(pool, &param, p_port);
 }
@@ -388,21 +393,22 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
 						    unsigned options,
 						    pjmedia_snd_port **p_port)
 {
-    pjmedia_aud_param param;
+    pjmedia_snd_port_param param;
     pj_status_t status;
 
     PJ_UNUSED_ARG(options);
 
-    status = pjmedia_aud_dev_default_param(dev_id, &param);
+    status = pjmedia_aud_dev_default_param(dev_id, &param.base);
     if (status != PJ_SUCCESS)
 	return status;
 
-    param.dir = PJMEDIA_DIR_PLAYBACK;
-    param.play_id = dev_id;
-    param.clock_rate = clock_rate;
-    param.channel_count = channel_count;
-    param.samples_per_frame = samples_per_frame;
-    param.bits_per_sample = bits_per_sample;
+    param.base.dir = PJMEDIA_DIR_PLAYBACK;
+    param.base.play_id = dev_id;
+    param.base.clock_rate = clock_rate;
+    param.base.channel_count = channel_count;
+    param.base.samples_per_frame = samples_per_frame;
+    param.base.bits_per_sample = bits_per_sample;
+    param.options = options;
 
     return pjmedia_snd_port_create2(pool, &param, p_port);
 }
@@ -412,7 +418,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
  * Create sound port.
  */
 PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
-					     const pjmedia_aud_param *prm,
+					     const pjmedia_snd_port_param *prm,
 					     pjmedia_snd_port **p_port)
 {
     pjmedia_snd_port *snd_port;
@@ -423,15 +429,16 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     snd_port = PJ_POOL_ZALLOC_T(pool, pjmedia_snd_port);
     PJ_ASSERT_RETURN(snd_port, PJ_ENOMEM);
 
-    snd_port->dir = prm->dir;
-    snd_port->rec_id = prm->rec_id;
-    snd_port->play_id = prm->play_id;
+    snd_port->dir = prm->base.dir;
+    snd_port->rec_id = prm->base.rec_id;
+    snd_port->play_id = prm->base.play_id;
     snd_port->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
-    snd_port->clock_rate = prm->clock_rate;
-    snd_port->channel_count = prm->channel_count;
-    snd_port->samples_per_frame = prm->samples_per_frame;
-    snd_port->bits_per_sample = prm->bits_per_sample;
-    pj_memcpy(&snd_port->aud_param, prm, sizeof(*prm));
+    snd_port->clock_rate = prm->base.clock_rate;
+    snd_port->channel_count = prm->base.channel_count;
+    snd_port->samples_per_frame = prm->base.samples_per_frame;
+    snd_port->bits_per_sample = prm->base.bits_per_sample;
+    pj_memcpy(&snd_port->aud_param, prm, sizeof(snd_port->aud_param));
+    snd_port->options = prm->options;
     
     /* Start sound device immediately.
      * If there's no port connected, the sound callback will return

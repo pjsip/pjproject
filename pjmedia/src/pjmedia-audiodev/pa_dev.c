@@ -106,6 +106,7 @@ struct pa_aud_stream
 /* Factory prototypes */
 static pj_status_t  pa_init(pjmedia_aud_dev_factory *f);
 static pj_status_t  pa_destroy(pjmedia_aud_dev_factory *f);
+static pj_status_t  pa_refresh(pjmedia_aud_dev_factory *f);
 static unsigned	    pa_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t  pa_get_dev_info(pjmedia_aud_dev_factory *f, 
 				    unsigned index,
@@ -141,7 +142,8 @@ static pjmedia_aud_dev_factory_op pa_op =
     &pa_get_dev_count,
     &pa_get_dev_info,
     &pa_default_param,
-    &pa_create_stream
+    &pa_create_stream,
+    &pa_refresh    
 };
 
 static pjmedia_aud_stream_op pa_strm_op = 
@@ -484,6 +486,14 @@ static pj_status_t pa_destroy(pjmedia_aud_dev_factory *f)
     pj_pool_release(pool);
     
     return err ? PJMEDIA_AUDIODEV_ERRNO_FROM_PORTAUDIO(err) : PJ_SUCCESS;
+}
+
+
+/* API: Refresh the device list. */
+static pj_status_t pa_refresh(pjmedia_aud_dev_factory *f)
+{
+    PJ_UNUSED_ARG(f);
+    return PJ_ENOTSUP;
 }
 
 

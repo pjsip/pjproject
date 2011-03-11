@@ -59,6 +59,7 @@ struct null_audio_stream
 /* Prototypes */
 static pj_status_t null_factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t null_factory_destroy(pjmedia_aud_dev_factory *f);
+static pj_status_t null_factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    null_factory_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t null_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 					     unsigned index,
@@ -93,7 +94,8 @@ static pjmedia_aud_dev_factory_op factory_op =
     &null_factory_get_dev_count,
     &null_factory_get_dev_info,
     &null_factory_default_param,
-    &null_factory_create_stream
+    &null_factory_create_stream,
+    &null_factory_refresh
 };
 
 static pjmedia_aud_stream_op stream_op =
@@ -163,6 +165,13 @@ static pj_status_t null_factory_destroy(pjmedia_aud_dev_factory *f)
     nf->pool = NULL;
     pj_pool_release(pool);
 
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t null_factory_refresh(pjmedia_aud_dev_factory *f)
+{
+    PJ_UNUSED_ARG(f);
     return PJ_SUCCESS;
 }
 

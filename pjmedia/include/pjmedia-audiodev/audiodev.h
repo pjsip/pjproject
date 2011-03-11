@@ -546,6 +546,20 @@ pjmedia_aud_unregister_factory(pjmedia_aud_dev_factory_create_func_ptr adf);
 
 
 /**
+ * Refresh the list of sound devices installed in the system. This function
+ * will only refresh the list of audio device so all active audio streams will
+ * be unaffected. After refreshing the device list, application MUST make sure
+ * to update all index references to audio devices (i.e. all variables of type
+ * pjmedia_aud_dev_index) before calling any function that accepts audio device
+ * index as its parameter.
+ *
+ * @return		PJ_SUCCESS on successful operation or the appropriate
+ *			error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_aud_dev_refresh(void);
+
+
+/**
  * Get the number of sound devices installed in the system.
  *
  * @return		The number of sound devices installed in the system.

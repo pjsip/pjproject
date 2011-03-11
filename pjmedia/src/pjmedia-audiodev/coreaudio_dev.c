@@ -178,7 +178,8 @@ static pjmedia_aud_dev_factory_op factory_op =
     &ca_factory_get_dev_count,
     &ca_factory_get_dev_info,
     &ca_factory_default_param,
-    &ca_factory_create_stream
+    &ca_factory_create_stream,
+    &ca_factory_refresh
 };
 
 static pjmedia_aud_stream_op stream_op =

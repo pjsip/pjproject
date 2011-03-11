@@ -57,6 +57,7 @@
  */
 static pj_status_t alsa_factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t alsa_factory_destroy(pjmedia_aud_dev_factory *f);
+static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    alsa_factory_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t alsa_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 					     unsigned index,
@@ -92,6 +93,7 @@ struct alsa_factory
     pjmedia_aud_dev_factory	 base;
     pj_pool_factory		*pf;
     pj_pool_t			*pool;
+    pj_pool_t			*base_pool;
 
     unsigned			 dev_cnt;
     pjmedia_aud_dev_info	 devs[MAX_DEVICES];
@@ -133,7 +135,8 @@ static pjmedia_aud_dev_factory_op alsa_factory_op =
     &alsa_factory_get_dev_count,
     &alsa_factory_get_dev_info,
     &alsa_factory_default_param,
-    &alsa_factory_create_stream
+    &alsa_factory_create_stream,
+    &alsa_factory_refresh
 };
 
 static pjmedia_aud_stream_op alsa_stream_op =
@@ -145,6 +148,20 @@ static pjmedia_aud_stream_op alsa_stream_op =
     &alsa_stream_stop,
     &alsa_stream_destroy
 };
+
+static void null_alsa_error_handler (const char *file,
+				int line,
+				const char *function,
+				int err,
+				const char *fmt,
+				...)
+{
+    PJ_UNUSED_ARG(file);
+    PJ_UNUSED_ARG(line);
+    PJ_UNUSED_ARG(function);
+    PJ_UNUSED_ARG(err);
+    PJ_UNUSED_ARG(fmt);
+}
 
 static void alsa_error_handler (const char *file,
 				int line,
@@ -174,10 +191,9 @@ static void alsa_error_handler (const char *file,
 }
 
 
-static pj_status_t add_dev (struct alsa_factory *af, int card, int device)
+static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
 {
     pjmedia_aud_dev_info *adi;
-    char dev_name[32];
     snd_pcm_t* pcm;
     int pb_result, ca_result;
 
@@ -186,8 +202,7 @@ static pj_status_t add_dev (struct alsa_factory *af, int card, int device)
 
     adi = &af->devs[af->dev_cnt];
 
-    TRACE_((THIS_FILE, "add_dev (%d, %d): Enter", card, device));
-    sprintf (dev_name, ALSA_DEVICE_NAME, card, device);
+    TRACE_((THIS_FILE, "add_dev (%s): Enter", dev_name));
 
     /* Try to open the device in playback mode */
     pb_result = snd_pcm_open (&pcm, dev_name, SND_PCM_STREAM_PLAYBACK, 0);
@@ -245,10 +260,10 @@ pjmedia_aud_dev_factory* pjmedia_alsa_factory(pj_pool_factory *pf)
     struct alsa_factory *af;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "alsa_aud", 256, 256, NULL);
+    pool = pj_pool_create(pf, "alsa_aud_base", 256, 256, NULL);
     af = PJ_POOL_ZALLOC_T(pool, struct alsa_factory);
     af->pf = pf;
-    af->pool = pool;
+    af->base_pool = pool;
     af->base.op = &alsa_factory_op;
 
     return &af->base;
@@ -258,23 +273,11 @@ pjmedia_aud_dev_factory* pjmedia_alsa_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t alsa_factory_init(pjmedia_aud_dev_factory *f)
 {
-    struct alsa_factory *af = (struct alsa_factory*)f;
-    int card, device;
+    pj_status_t status = alsa_factory_refresh(f);
+    if (PJ_SUCCESS != status)
+	return status;
 
-    TRACE_((THIS_FILE, "pjmedia_snd_init: Enumerate sound devices"));
-    /* Enumerate sound devices */
-    for (card=0; card<MAX_SOUND_CARDS; card++) {
-	for (device=0; device<MAX_SOUND_DEVICES_PER_CARD; device++) {
-	    add_dev(af, card, device);
-	}
-    }
-
-    /* Install error handler after enumeration, otherwise we'll get many
-     * error messages about invalid card/device ID.
-     */
-    snd_lib_error_set_handler (alsa_error_handler);
-
-    PJ_LOG(4,(THIS_FILE, "ALSA driver found %d devices", af->dev_cnt));
+    PJ_LOG(4,(THIS_FILE, "ALSA initialized"));
     return PJ_SUCCESS;
 }
 
@@ -284,14 +287,65 @@ static pj_status_t alsa_factory_destroy(pjmedia_aud_dev_factory *f)
 {
     struct alsa_factory *af = (struct alsa_factory*)f;
 
-    if (af->pool) {
-	pj_pool_t *pool = af->pool;
-	af->pool = NULL;
+    if (af->pool)
+	pj_pool_release(af->pool);
+
+    if (af->base_pool) {
+	pj_pool_t *pool = af->base_pool;
+	af->base_pool = NULL;
 	pj_pool_release(pool);
     }
 
     /* Restore handler */
     snd_lib_error_set_handler(NULL);
+
+    return PJ_SUCCESS;
+}
+
+
+/* API: refresh the device list */
+static pj_status_t alsa_factory_refresh(pjmedia_aud_dev_factory *f)
+{
+    struct alsa_factory *af = (struct alsa_factory*)f;
+    char **hints, **n;
+    int err;
+
+    TRACE_((THIS_FILE, "pjmedia_snd_init: Enumerate sound devices"));
+
+    if (af->pool != NULL) {
+	pj_pool_release(af->pool);
+	af->pool = NULL;
+    }
+
+    af->pool = pj_pool_create(af->pf, "alsa_aud", 256, 256, NULL);
+    af->dev_cnt = 0;
+
+    /* Enumerate sound devices */
+    err = snd_device_name_hint(-1, "pcm", (void***)&hints);
+    if (err != 0)
+	return PJMEDIA_EAUD_SYSERR;
+
+    /* Set a null error handler prior to enumeration to suppress errors */
+    snd_lib_error_set_handler(null_alsa_error_handler);
+
+    n = hints;
+    while (*n != NULL) {
+	char *name = snd_device_name_get_hint(*n, "NAME");
+	if (name != NULL && 0 != strcmp("null", name)) {
+	    add_dev(af, name);
+	    free(name);
+	}
+	n++;
+    }
+
+    /* Install error handler after enumeration, otherwise we'll get many
+     * error messages about invalid card/device ID.
+     */
+    snd_lib_error_set_handler(alsa_error_handler);
+
+    err = snd_device_name_free_hint((void**)hints);
+
+    PJ_LOG(4,(THIS_FILE, "ALSA driver found %d devices", af->dev_cnt));
 
     return PJ_SUCCESS;
 }

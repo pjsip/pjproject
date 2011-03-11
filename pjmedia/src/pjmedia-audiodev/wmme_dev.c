@@ -38,6 +38,16 @@
 #   pragma warning(pop)
 #endif
 
+#ifndef PJMEDIA_WMME_DEV_USE_MMDEVICE_API
+#   define PJMEDIAWMME_DEV_USE_MMDEVICE_API \
+	   (defined(_WIN32_WINNT) && (_WIN32_WINNT>=0x0600))
+#endif
+
+#if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
+#   define DRV_QUERYFUNCTIONINSTANCEID     (DRV_RESERVED + 17)
+#   define DRV_QUERYFUNCTIONINSTANCEIDSIZE (DRV_RESERVED + 18)
+#endif
+
 /* mingw lacks WAVE_FORMAT_ALAW/MULAW */
 #ifndef WAVE_FORMAT_ALAW
 #   define  WAVE_FORMAT_ALAW       0x0006
@@ -60,12 +70,14 @@ struct wmme_dev_info
 {
     pjmedia_aud_dev_info	 info;
     unsigned			 deviceId;
+    const wchar_t		*endpointId;
 };
 
 /* WMME factory */
 struct wmme_factory
 {
     pjmedia_aud_dev_factory	 base;
+    pj_pool_t			*base_pool;
     pj_pool_t			*pool;
     pj_pool_factory		*pf;
 
@@ -121,6 +133,7 @@ struct wmme_stream
 /* Prototypes */
 static pj_status_t factory_init(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f);
+static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f);
 static unsigned    factory_get_dev_count(pjmedia_aud_dev_factory *f);
 static pj_status_t factory_get_dev_info(pjmedia_aud_dev_factory *f, 
 					unsigned index,
@@ -156,7 +169,8 @@ static pjmedia_aud_dev_factory_op factory_op =
     &factory_get_dev_count,
     &factory_get_dev_info,
     &factory_default_param,
-    &factory_create_stream
+    &factory_create_stream,
+    &factory_refresh
 };
 
 static pjmedia_aud_stream_op stream_op = 
@@ -181,15 +195,123 @@ pjmedia_aud_dev_factory* pjmedia_wmme_factory(pj_pool_factory *pf)
     struct wmme_factory *f;
     pj_pool_t *pool;
 
-    pool = pj_pool_create(pf, "WMME", 1000, 1000, NULL);
+    pool = pj_pool_create(pf, "WMME base", 1000, 1000, NULL);
     f = PJ_POOL_ZALLOC_T(pool, struct wmme_factory);
     f->pf = pf;
-    f->pool = pool;
+    f->base_pool = pool;
     f->base.op = &factory_op;
 
     return &f->base;
 }
 
+/* Internal: Windows Vista and Windows 7 have their device
+ * names truncated when using the waveXXX api.  The names
+ * should be acquired from the MMDevice APIs
+ */
+#if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
+
+#define COBJMACROS
+#include <mmdeviceapi.h>
+#define INITGUID
+#include <Guiddef.h>
+#include <FunctionDiscoveryKeys_devpkey.h>
+
+DEFINE_GUID(CLSID_MMDeviceEnumerator, 0xBCDE0395, 0xE52F, 0x467C,
+	    0x8E, 0x3D, 0xC4, 0x57, 0x92, 0x91, 0x69, 0x2E);
+DEFINE_GUID(IID_IMMDeviceEnumerator, 0xA95664D2, 0x9614, 0x4F35,
+	    0xA7, 0x46, 0xDE, 0x8D, 0xB6, 0x36, 0x17, 0xE6);
+
+static void get_dev_names(pjmedia_aud_dev_factory *f)
+{
+    struct wmme_factory *wf = (struct wmme_factory*)f;
+    HRESULT              coinit = S_OK;
+    HRESULT              hr = S_OK;
+    IMMDeviceEnumerator *pEnumerator = NULL;
+    IMMDeviceCollection *pDevices = NULL;
+    UINT                 cDevices = 0;
+    UINT                 nDevice = 0;
+
+    coinit = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    if (coinit == RPC_E_CHANGED_MODE)
+	coinit = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (FAILED(coinit))
+	goto on_error;
+
+    hr = CoCreateInstance(&CLSID_MMDeviceEnumerator, NULL,
+			  CLSCTX_INPROC_SERVER, &IID_IMMDeviceEnumerator,
+			  (void**)&pEnumerator);
+    if (FAILED(hr))
+	goto on_error;
+    hr = IMMDeviceEnumerator_EnumAudioEndpoints(pEnumerator, eAll,
+						DEVICE_STATE_ACTIVE,
+						&pDevices);
+    if (FAILED(hr))
+	goto on_error;
+    hr = IMMDeviceCollection_GetCount(pDevices, &cDevices);
+    if (FAILED(hr))
+	goto on_error;
+
+    for (nDevice = 0; nDevice < cDevices; ++nDevice) {
+	IMMDevice      *pDevice = NULL;
+	IPropertyStore *pProps = NULL;
+	LPWSTR          pwszID = NULL;
+	PROPVARIANT     varName;
+	unsigned        i;
+
+	PropVariantInit(&varName);
+
+	hr = IMMDeviceCollection_Item(pDevices, nDevice, &pDevice);
+	if (FAILED(hr))
+	    goto cleanup;
+	hr = IMMDevice_GetId(pDevice, &pwszID);
+	if (FAILED(hr))
+	    goto cleanup;
+	hr = IMMDevice_OpenPropertyStore(pDevice, STGM_READ, &pProps);
+	if (FAILED(hr))
+	    goto cleanup;
+	hr = IPropertyStore_GetValue(pProps, &PKEY_Device_FriendlyName,
+				     &varName);
+	if (FAILED(hr))
+	    goto cleanup;
+
+	for (i = 0; i < wf->dev_count; ++i) {
+	    if (0 == wcscmp(wf->dev_info[i].endpointId, pwszID)) {
+		wcstombs(wf->dev_info[i].info.name, varName.pwszVal,
+			 sizeof(wf->dev_info[i].info.name));
+		break;
+	    }
+	}
+
+	PropVariantClear(&varName);
+
+    cleanup:
+	if (pProps)
+	    IPropertyStore_Release(pProps);
+	if (pwszID)
+	    CoTaskMemFree(pwszID);
+	if (pDevice)
+	    hr = IMMDevice_Release(pDevice);
+    }
+
+on_error:
+    if (pDevices)
+	hr = IMMDeviceCollection_Release(pDevices);
+
+    if (pEnumerator)
+	hr = IMMDeviceEnumerator_Release(pEnumerator);
+
+    if (SUCCEEDED(coinit))
+	CoUninitialize();
+}
+
+#else
+
+static void get_dev_names(pjmedia_aud_dev_factory *f)
+{
+    PJ_UNUSED_ARG(f);
+}
+
+#endif
 
 /* Internal: build device info from WAVEINCAPS/WAVEOUTCAPS */
 static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi, 
@@ -261,14 +383,31 @@ static void build_dev_info(UINT deviceId, struct wmme_dev_info *wdi,
 /* API: init factory */
 static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 {
+    pj_status_t ret = factory_refresh(f);
+    if (ret != PJ_SUCCESS)
+	return ret;
+
+    PJ_LOG(4, (THIS_FILE, "WMME initialized"));
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the device list */
+static pj_status_t factory_refresh(pjmedia_aud_dev_factory *f)
+{
     struct wmme_factory *wf = (struct wmme_factory*)f;
     unsigned c;
     int i;
     int inputDeviceCount, outputDeviceCount, devCount=0;
     pj_bool_t waveMapperAdded = PJ_FALSE;
 
+    if (wf->pool != NULL) {
+	pj_pool_release(wf->pool);
+	wf->pool = NULL;
+    }
+
     /* Enumerate sound devices */
     wf->dev_count = 0;
+    wf->pool = pj_pool_create(wf->pf, "WMME", 1000, 1000, NULL);
 
     inputDeviceCount = waveInGetNumDevs();
     devCount += inputDeviceCount;
@@ -314,6 +453,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 	    if (mr == MMSYSERR_NOERROR) {
 		build_dev_info(WAVE_MAPPER, &wf->dev_info[wf->dev_count], 
 			       &wic, &woc);
+		wf->dev_info[wf->dev_count].endpointId = L"";
 		++wf->dev_count;
 		waveMapperAdded = PJ_TRUE;
 	    }
@@ -327,6 +467,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 	    UINT uDeviceID = (UINT)((i==-1) ? WAVE_MAPPER : i);
 	    WAVEINCAPS wic;
 	    MMRESULT mr;
+	    DWORD cbEndpointId;
 
 	    pj_bzero(&wic, sizeof(WAVEINCAPS));
 
@@ -340,6 +481,27 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 
 	    build_dev_info(uDeviceID, &wf->dev_info[wf->dev_count], 
 			   &wic, NULL);
+
+#if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
+	    /* Try to get the endpoint id of the audio device */
+	    wf->dev_info[wf->dev_count].endpointId = L"";
+
+	    mr = waveInMessage((HWAVEIN)IntToPtr(uDeviceID),
+			       DRV_QUERYFUNCTIONINSTANCEIDSIZE,
+			       (DWORD_PTR)&cbEndpointId, (DWORD_PTR)NULL);
+	    if (mr == MMSYSERR_NOERROR) {
+		const wchar_t **epid = &wf->dev_info[wf->dev_count].endpointId;
+		*epid = (const wchar_t*) pj_pool_calloc(wf->pool,
+							cbEndpointId, 1);
+		mr = waveInMessage((HWAVEIN)IntToPtr(uDeviceID),
+				   DRV_QUERYFUNCTIONINSTANCEID,
+				   (DWORD_PTR)*epid,
+				   cbEndpointId);
+	    }
+#else
+	    PJ_UNUSED_ARG(cbEndpointId);
+#endif
+
 	    ++wf->dev_count;
 	}
     }
@@ -351,6 +513,7 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 	    UINT uDeviceID = (UINT)((i==-1) ? WAVE_MAPPER : i);
 	    WAVEOUTCAPS woc;
 	    MMRESULT mr;
+	    DWORD cbEndpointId;
 
 	    pj_bzero(&woc, sizeof(WAVEOUTCAPS));
 
@@ -364,11 +527,34 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 
 	    build_dev_info(uDeviceID, &wf->dev_info[wf->dev_count], 
 			   NULL, &woc);
+
+#if PJMEDIA_WMME_DEV_USE_MMDEVICE_API != 0
+	    /* Try to get the endpoint id of the audio device */
+	    wf->dev_info[wf->dev_count].endpointId = L"";
+
+	    mr = waveOutMessage((HWAVEOUT)IntToPtr(uDeviceID),
+				DRV_QUERYFUNCTIONINSTANCEIDSIZE,
+				(DWORD_PTR)&cbEndpointId, (DWORD_PTR)NULL);
+	    if (mr == MMSYSERR_NOERROR) {
+		const wchar_t **epid = &wf->dev_info[wf->dev_count].endpointId;
+		*epid = (const wchar_t*)pj_pool_calloc(wf->pool,
+						       cbEndpointId, 1);
+		mr = waveOutMessage((HWAVEOUT)IntToPtr(uDeviceID),
+				    DRV_QUERYFUNCTIONINSTANCEID,
+				    (DWORD_PTR)*epid, cbEndpointId);
+	    }
+#else
+	    PJ_UNUSED_ARG(cbEndpointId);
+#endif
+
 	    ++wf->dev_count;
 	}
     }
 
-    PJ_LOG(4, (THIS_FILE, "WMME initialized, found %d devices:", 
+    /* On Windows Vista and Windows 7 get the full device names */
+    get_dev_names(f);
+
+    PJ_LOG(4, (THIS_FILE, "WMME found %d devices:",
 	       wf->dev_count));
     for (c = 0; c < wf->dev_count; ++c) {
 	PJ_LOG(4, (THIS_FILE, " dev_id %d: %s  (in=%d, out=%d)", 
@@ -385,9 +571,10 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 static pj_status_t factory_destroy(pjmedia_aud_dev_factory *f)
 {
     struct wmme_factory *wf = (struct wmme_factory*)f;
-    pj_pool_t *pool = wf->pool;
+    pj_pool_t *pool = wf->base_pool;
 
-    wf->pool = NULL;
+    pj_pool_release(wf->pool);
+    wf->base_pool = NULL;
     pj_pool_release(pool);
 
     return PJ_SUCCESS;

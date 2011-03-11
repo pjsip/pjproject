@@ -63,6 +63,33 @@ PJ_BEGIN_DECL
  */
 
 /**
+ * Sound port options.
+ */
+enum pjmedia_snd_port_option
+{
+    /** 
+     * Don't start the audio device when creating a sound port.
+     */    
+    PJMEDIA_SND_PORT_NO_AUTO_START = 1
+};
+
+/**
+ * This structure specifies the parameters to create the sound port.
+ */
+typedef struct pjmedia_snd_port_param
+{
+    /**
+     * Base structure.
+     */
+    pjmedia_aud_param base;
+    
+    /**
+     * Sound port creation options.
+     */
+    unsigned options;
+} pjmedia_snd_port_param;
+
+/**
  * This opaque type describes sound device port connection.
  * Sound device port is not a media port, but it is used to connect media
  * port to the sound device.
@@ -86,7 +113,7 @@ typedef struct pjmedia_snd_port pjmedia_snd_port;
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Set the number of bits per sample. The normal 
  *			    value for this parameter is 16 bits per sample.
- * @param options	    Options flag, currently must be zero.
+ * @param options	    Options flag.
  * @param p_port	    Pointer to receive the sound device port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
@@ -116,7 +143,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Set the number of bits per sample. The normal 
  *			    value for this parameter is 16 bits per sample.
- * @param options	    Options flag, currently must be zero.
+ * @param options	    Options flag.
  * @param p_port	    Pointer to receive the sound device port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
@@ -145,7 +172,7 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_rec(pj_pool_t *pool,
  * @param samples_per_frame Number of samples per frame.
  * @param bits_per_sample   Set the number of bits per sample. The normal 
  *			    value for this parameter is 16 bits per sample.
- * @param options	    Options flag, currently must be zero.
+ * @param options	    Options flag.
  * @param p_port	    Pointer to receive the sound device port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
@@ -165,14 +192,14 @@ PJ_DECL(pj_status_t) pjmedia_snd_port_create_player(pj_pool_t *pool,
  * Create sound device port according to the specified parameters.
  *
  * @param pool		    Pool to allocate sound port structure.
- * @param prm		    Sound device settings.
+ * @param prm		    Sound port parameter.
  * @param p_port	    Pointer to receive the sound device port instance.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
 PJ_DECL(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
-					      const pjmedia_aud_param *prm,
+					      const pjmedia_snd_port_param *prm,
 					      pjmedia_snd_port **p_port);
 
 

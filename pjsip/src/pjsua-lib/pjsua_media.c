@@ -36,7 +36,7 @@
 static pj_uint16_t next_rtp_port;
 
 /* Open sound dev */
-static pj_status_t open_snd_dev(pjmedia_aud_param *param);
+static pj_status_t open_snd_dev(pjmedia_snd_port_param *param);
 /* Close existing sound device */
 static void close_snd_dev(void);
 /* Create audio device param */
@@ -1975,10 +1975,10 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 
 	if (need_reopen) {
 	    if (pjsua_var.cap_dev != NULL_SND_DEV_ID) {
-		pjmedia_aud_param param;
+		pjmedia_snd_port_param param;
 
 		/* Create parameter based on peer info */
-		status = create_aud_param(&param, pjsua_var.cap_dev, 
+		status = create_aud_param(&param.base, pjsua_var.cap_dev, 
 					  pjsua_var.play_dev,
 					  peer_info.clock_rate,
 					  peer_info.channel_count,
@@ -1991,10 +1991,11 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 
 		/* And peer format */
 		if (peer_info.format.id != PJMEDIA_FORMAT_PCM) {
-		    param.flags |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
-		    param.ext_fmt = peer_info.format;
+		    param.base.flags |= PJMEDIA_AUD_DEV_CAP_EXT_FORMAT;
+		    param.base.ext_fmt = peer_info.format;
 		}
 
+		param.options = 0;
 		status = open_snd_dev(&param);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror(THIS_FILE, "Error opening sound device", status);
@@ -2665,7 +2666,7 @@ static const char *get_fmt_name(pj_uint32_t id)
 }
 
 /* Open sound device with the setting. */
-static pj_status_t open_snd_dev(pjmedia_aud_param *param)
+static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 {
     pjmedia_port *conf_port;
     pj_status_t status;
@@ -2673,7 +2674,9 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
     PJ_ASSERT_RETURN(param, PJ_EINVAL);
 
     /* Check if NULL sound device is used */
-    if (NULL_SND_DEV_ID==param->rec_id || NULL_SND_DEV_ID==param->play_id) {
+    if (NULL_SND_DEV_ID==param->base.rec_id ||
+	NULL_SND_DEV_ID==param->base.play_id)
+    {
 	return pjsua_set_null_snd_dev();
     }
 
@@ -2686,13 +2689,13 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
 
 
     PJ_LOG(4,(THIS_FILE, "Opening sound device %s@%d/%d/%dms",
-	      get_fmt_name(param->ext_fmt.id),
-	      param->clock_rate, param->channel_count,
-	      param->samples_per_frame / param->channel_count * 1000 /
-	      param->clock_rate));
+	      get_fmt_name(param->base.ext_fmt.id),
+	      param->base.clock_rate, param->base.channel_count,
+	      param->base.samples_per_frame / param->base.channel_count *
+	      1000 / param->base.clock_rate));
 
     status = pjmedia_snd_port_create2( pjsua_var.snd_pool, 
-				       param,  &pjsua_var.snd_port);
+				       param, &pjsua_var.snd_port);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -2704,8 +2707,8 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
      * clock rate is different than the sound device's clock rate.
      */
     if (!pjsua_var.is_mswitch &&
-	param->ext_fmt.id == PJMEDIA_FORMAT_PCM &&
-	conf_port->info.clock_rate != param->clock_rate)
+	param->base.ext_fmt.id == PJMEDIA_FORMAT_PCM &&
+	conf_port->info.clock_rate != param->base.clock_rate)
     {
 	pjmedia_port *resample_port;
 	unsigned resample_opt = 0;
@@ -2721,7 +2724,7 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
 	
 	status = pjmedia_resample_port_create(pjsua_var.snd_pool, 
 					      conf_port,
-					      param->clock_rate,
+					      param->base.clock_rate,
 					      resample_opt, 
 					      &resample_port);
 	if (status != PJ_SUCCESS) {
@@ -2741,11 +2744,11 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
      * derived from the sound device setting, so update the setting.
      */
     if (pjsua_var.is_mswitch) {
-	pj_memcpy(&conf_port->info.format, &param->ext_fmt, 
+	pj_memcpy(&conf_port->info.format, &param->base.ext_fmt, 
 		  sizeof(conf_port->info.format));
-	conf_port->info.clock_rate = param->clock_rate;
-	conf_port->info.samples_per_frame = param->samples_per_frame;
-	conf_port->info.channel_count = param->channel_count;
+	conf_port->info.clock_rate = param->base.clock_rate;
+	conf_port->info.samples_per_frame = param->base.samples_per_frame;
+	conf_port->info.channel_count = param->base.channel_count;
 	conf_port->info.bits_per_sample = 16;
     }
 
@@ -2761,8 +2764,8 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
     }
 
     /* Save the device IDs */
-    pjsua_var.cap_dev = param->rec_id;
-    pjsua_var.play_dev = param->play_id;
+    pjsua_var.cap_dev = param->base.rec_id;
+    pjsua_var.play_dev = param->base.play_id;
 
     /* Update sound device name. */
     {
@@ -2777,14 +2780,14 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
 	    status = pjmedia_aud_dev_get_info(si.rec_id, &rec_info);
 
 	if (status==PJ_SUCCESS) {
-	    if (param->clock_rate != pjsua_var.media_cfg.clock_rate) {
+	    if (param->base.clock_rate != pjsua_var.media_cfg.clock_rate) {
 		char tmp_buf[128];
 		int tmp_buf_len = sizeof(tmp_buf);
 
 		tmp_buf_len = pj_ansi_snprintf(tmp_buf, sizeof(tmp_buf)-1, 
 					       "%s (%dKHz)",
 					       rec_info.name, 
-					       param->clock_rate/1000);
+					       param->base.clock_rate/1000);
 		pj_strset(&tmp, tmp_buf, tmp_buf_len);
 		pjmedia_conf_set_port0_name(pjsua_var.mconf, &tmp); 
 	    } else {
@@ -2883,20 +2886,21 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 
     /* Attempts to open the sound device with different clock rates */
     for (i=0; i<alt_cr_cnt; ++i) {
-	pjmedia_aud_param param;
+	pjmedia_snd_port_param param;
 	unsigned samples_per_frame;
 
 	/* Create the default audio param */
 	samples_per_frame = alt_cr[i] *
 			    pjsua_var.media_cfg.audio_frame_ptime *
 			    pjsua_var.media_cfg.channel_count / 1000;
-	status = create_aud_param(&param, capture_dev, playback_dev, 
+	status = create_aud_param(&param.base, capture_dev, playback_dev, 
 				  alt_cr[i], pjsua_var.media_cfg.channel_count,
 				  samples_per_frame, 16);
 	if (status != PJ_SUCCESS)
 	    return status;
 
 	/* Open! */
+	param.options = 0;
 	status = open_snd_dev(&param);
 	if (status == PJ_SUCCESS)
 	    break;

@@ -491,6 +491,25 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
     return PJ_SUCCESS;
 }
 
+/* API: Refresh the list of sound devices installed in the system. */
+PJ_DEF(pj_status_t) pjmedia_aud_dev_refresh(void)
+{
+    unsigned i;
+    
+    for (i=0; i<aud_subsys.drv_cnt; ++i) {
+	struct driver *drv = &aud_subsys.drv[i];
+	
+	if (drv->f && drv->f->op->refresh) {
+	    pj_status_t status = drv->f->op->refresh(drv->f);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4, (THIS_FILE, status, "Unable to refresh device "
+						 "list for %s", drv->name));
+	    }
+	}
+    }
+    return PJ_SUCCESS;
+}
+
 /* API: Get the number of sound devices installed in the system. */
 PJ_DEF(unsigned) pjmedia_aud_dev_count(void)
 {

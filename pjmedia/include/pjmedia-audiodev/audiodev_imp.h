@@ -92,6 +92,13 @@ typedef struct pjmedia_aud_dev_factory_op
 				 void *user_data,
 				 pjmedia_aud_stream **p_aud_strm);
 
+    /**
+     * Refresh the list of audio devices installed in the system.
+     *
+     * @param f		The audio device factory.
+     */
+    pj_status_t (*refresh)(pjmedia_aud_dev_factory *f);
+
 } pjmedia_aud_dev_factory_op;
 
 
