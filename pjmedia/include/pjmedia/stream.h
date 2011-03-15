@@ -88,7 +88,7 @@ typedef struct pjmedia_channel pjmedia_channel;
  * corresponds to one "m=" line in SDP session descriptor, and it has
  * its own RTP/RTCP socket pair.
  */
-struct pjmedia_stream_info
+typedef struct pjmedia_stream_info
 {
     pjmedia_type	type;	    /**< Media type (audio, video)	    */
     pjmedia_tp_proto	proto;	    /**< Transport protocol (RTP/AVP, etc.) */
@@ -134,13 +134,7 @@ struct pjmedia_stream_info
 					 (see #PJMEDIA_STREAM_ENABLE_KA)
 					 is enabled?			    */
 #endif
-};
-
-
-/**
- * @see pjmedia_stream_info.
- */
-typedef struct pjmedia_stream_info pjmedia_stream_info;
+} pjmedia_stream_info;
 
 
 /**
@@ -244,6 +238,17 @@ PJ_DECL(pjmedia_transport*) pjmedia_stream_get_transport(pjmedia_stream *st);
  */
 PJ_DECL(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream);
 
+
+/**
+ * Get the stream info.
+ *
+ * @param stream	The media stream.
+ * @param info		Stream info.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_stream_get_info( const pjmedia_stream *stream,
+					      pjmedia_stream_info *info);
 
 /**
  * Get the stream statistics. See also

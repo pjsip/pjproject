@@ -65,6 +65,13 @@
 #   define TRACE_JB_OPENED(s)		(s->trace_jb_fd != TRACE_JB_INVALID_FD)
 #endif
 
+#ifndef PJMEDIA_STREAM_SIZE
+#   define PJMEDIA_STREAM_SIZE	1000
+#endif
+
+#ifndef PJMEDIA_STREAM_INC
+#   define PJMEDIA_STREAM_INC	1000
+#endif
 
 
 /**
@@ -100,10 +107,12 @@ struct pjmedia_stream
 {
     pjmedia_endpt	    *endpt;	    /**< Media endpoint.	    */
     pjmedia_codec_mgr	    *codec_mgr;	    /**< Codec manager instance.    */
-
+    pjmedia_stream_info	     si;	    /**< Creation parameter.        */
     pjmedia_port	     port;	    /**< Port interface.	    */
     pjmedia_channel	    *enc;	    /**< Encoding channel.	    */
     pjmedia_channel	    *dec;	    /**< Decoding channel.	    */
+
+    pj_pool_t		    *own_pool;	    /**< Only created if not given  */
 
     pjmedia_dir		     dir;	    /**< Stream direction.	    */
     void		    *user_data;	    /**< User data.		    */
@@ -1943,15 +1952,26 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     pj_str_t name;
     unsigned jb_init, jb_max, jb_min_pre, jb_max_pre, len;
     pjmedia_audio_format_detail *afd;
+    pj_pool_t *own_pool = NULL;
     char *p;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(pool && info && p_stream, PJ_EINVAL);
+    PJ_ASSERT_RETURN(endpt && info && p_stream, PJ_EINVAL);
+
+    if (pool == NULL) {
+	own_pool = pjmedia_endpt_create_pool( endpt, "strm%p",
+					      PJMEDIA_STREAM_SIZE,
+					      PJMEDIA_STREAM_INC);
+	PJ_ASSERT_RETURN(own_pool != NULL, PJ_ENOMEM);
+	pool = own_pool;
+    }
 
     /* Allocate the media stream: */
 
     stream = PJ_POOL_ZALLOC_T(pool, pjmedia_stream);
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
+    stream->own_pool = own_pool;
+    pj_memcpy(&stream->si, info, sizeof(*info));
 
     /* Init stream/port name */
     name.ptr = (char*) pj_pool_alloc(pool, M);
@@ -2442,6 +2462,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     }
 #endif
 
+    if (stream->own_pool) {
+	pj_pool_t *pool = stream->own_pool;
+	stream->own_pool = NULL;
+	pj_pool_release(pool);
+    }
     return PJ_SUCCESS;
 }
 
@@ -2494,6 +2519,15 @@ PJ_DEF(pj_status_t) pjmedia_stream_start(pjmedia_stream *stream)
     return PJ_SUCCESS;
 }
 
+
+PJ_DEF(pj_status_t) pjmedia_stream_get_info( const pjmedia_stream *stream,
+					     pjmedia_stream_info *info)
+{
+    PJ_ASSERT_RETURN(stream && info, PJ_EINVAL);
+
+    pj_memcpy(info, &stream->si, sizeof(pjmedia_stream_info));
+    return PJ_SUCCESS;
+}
 
 /*
  * Get stream statistics.
