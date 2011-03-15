@@ -884,6 +884,18 @@
  * .... new stuffs ...
  */
 
+/*
+ * Video
+ */
+
+/**
+ * Top level option to disable video.
+ */
+#ifndef PJMEDIA_HAS_VIDEO
+#   define PJMEDIA_HAS_VIDEO				1
+#endif
+
+
 /**
  * Specify if FFMPEG is available. The value here will be used as the default
  * value for other FFMPEG settings below.
