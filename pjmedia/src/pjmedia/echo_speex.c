@@ -23,6 +23,9 @@
 #include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/pool.h>
+
+#if defined(PJMEDIA_HAS_SPEEX_AEC) && PJMEDIA_HAS_SPEEX_AEC != 0
+
 #include <speex/speex_echo.h>
 #include <speex/speex_preprocess.h>
 
@@ -185,3 +188,4 @@ PJ_DEF(pj_status_t) speex_aec_cancel_echo( void *state,
 
 }
 
+#endif

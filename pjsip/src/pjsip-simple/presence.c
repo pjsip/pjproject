@@ -701,7 +701,7 @@ static pj_status_t pres_process_rx_notify( pjsip_pres *pres,
 {
     const pj_str_t STR_MULTIPART = { "multipart", 9 };
     pjsip_ctype_hdr *ctype_hdr;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     *p_st_text = NULL;
 

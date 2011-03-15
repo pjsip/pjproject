@@ -952,6 +952,8 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_parse = pj_elapsed_usec(&zero, &var.parse_time);
     pj_highprec_mul(avg_parse, AVERAGE_URL_LEN);
     pj_highprec_div(avg_parse, var.parse_len);
+    if (avg_parse == 0)
+        avg_parse = 1;
     avg_parse = 1000000 / avg_parse;
 
     PJ_LOG(3,(THIS_FILE, 
@@ -969,6 +971,8 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_print = pj_elapsed_usec(&zero, &var.print_time);
     pj_highprec_mul(avg_print, AVERAGE_URL_LEN);
     pj_highprec_div(avg_print, var.parse_len);
+    if (avg_print == 0)
+        avg_print = 1;
     avg_print = 1000000 / avg_print;
 
     PJ_LOG(3,(THIS_FILE, 
@@ -986,6 +990,8 @@ static int uri_benchmark(unsigned *p_parse, unsigned *p_print, unsigned *p_cmp)
     avg_cmp = pj_elapsed_usec(&zero, &var.cmp_time);
     pj_highprec_mul(avg_cmp, AVERAGE_URL_LEN);
     pj_highprec_div(avg_cmp, var.cmp_len);
+    if (avg_cmp == 0)
+        avg_cmp = 1;
     avg_cmp = 1000000 / avg_cmp;
 
     PJ_LOG(3,(THIS_FILE, 
