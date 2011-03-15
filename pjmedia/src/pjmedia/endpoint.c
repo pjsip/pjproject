@@ -320,17 +320,78 @@ PJ_DEF(pj_pool_t*) pjmedia_endpt_create_pool( pjmedia_endpt *endpt,
     return pj_pool_create(endpt->pf, name, initial, increment, NULL);
 }
 
-
-static pj_status_t init_sdp_media_audio_format(pj_pool_t *pool,
-					       pjmedia_endpt *endpt,
-					       pjmedia_sdp_media *m)
+/* Common initialization for both audio and video SDP media line */
+static pj_status_t init_sdp_media(pjmedia_sdp_media *m,
+                                  pj_pool_t *pool,
+                                  const pj_str_t *media_type,
+				  const pjmedia_sock_info *sock_info)
 {
+    char tmp_addr[PJ_INET6_ADDRSTRLEN];
+    pjmedia_sdp_attr *attr;
+    const pj_sockaddr *addr;
+
+    pj_strdup(pool, &m->desc.media, media_type);
+
+    addr = &sock_info->rtp_addr_name;
+
+    /* Validate address family */
+    PJ_ASSERT_RETURN(addr->addr.sa_family == pj_AF_INET() ||
+                     addr->addr.sa_family == pj_AF_INET6(),
+                     PJ_EAFNOTSUP);
+
+    /* SDP connection line */
+    m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+    m->conn->net_type = STR_IN;
+    m->conn->addr_type = (addr->addr.sa_family==pj_AF_INET())? STR_IP4:STR_IP6;
+    pj_sockaddr_print(addr, tmp_addr, sizeof(tmp_addr), 0);
+    pj_strdup2(pool, &m->conn->addr, tmp_addr);
+
+    /* Port and transport in media description */
+    m->desc.port = pj_sockaddr_get_port(addr);
+    m->desc.port_count = 1;
+    pj_strdup (pool, &m->desc.transport, &STR_RTP_AVP);
+
+    /* Add "rtcp" attribute */
+#if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
+    if (sock_info->rtcp_addr_name.addr.sa_family != 0) {
+	attr = pjmedia_sdp_attr_create_rtcp(pool, &sock_info->rtcp_addr_name);
+	if (attr)
+	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
+    }
+#endif
+
+    /* Add sendrecv attribute. */
+    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
+    attr->name = STR_SENDRECV;
+    m->attr[m->attr_count++] = attr;
+
+    return PJ_SUCCESS;
+}
+
+/* Create m=audio SDP media line */
+PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
+                                                   pj_pool_t *pool,
+                                                   const pjmedia_sock_info *si,
+                                                   unsigned options,
+                                                   pjmedia_sdp_media **p_m)
+{
+    const pj_str_t STR_AUDIO = { "audio", 5 };
+    pjmedia_sdp_media *m;
     pjmedia_sdp_attr *attr;
     unsigned i;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(options);
 
     /* Check that there are not too many codecs */
     PJ_ASSERT_RETURN(endpt->codec_mgr.codec_cnt <= PJMEDIA_MAX_SDP_FMT,
 		     PJ_ETOOMANY);
+
+    /* Create and init basic SDP media */
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+    status = init_sdp_media(m, pool, &STR_AUDIO, si);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Add format, rtpmap, and fmtp (when applicable) for each codec */
     for (i=0; i<endpt->codec_mgr.codec_cnt; ++i) {
@@ -465,14 +526,19 @@ static pj_status_t init_sdp_media_audio_format(pj_pool_t *pool,
     }
 #endif
 
+    *p_m = m;
     return PJ_SUCCESS;
 }
 
-
-static pj_status_t init_sdp_media_video_format(pj_pool_t *pool,
-					       pjmedia_endpt *endpt,
-					       pjmedia_sdp_media *m)
+/* Create m=video SDP media line */
+PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
+                                                   pj_pool_t *pool,
+                                                   const pjmedia_sock_info *si,
+                                                   unsigned options,
+                                                   pjmedia_sdp_media **p_m)
 {
+    const pj_str_t STR_VIDEO = { "video", 5 };
+    pjmedia_sdp_media *m;
     pjmedia_vid_codec_info codec_info[PJMEDIA_VID_CODEC_MGR_MAX_CODECS];
     unsigned codec_prio[PJMEDIA_VID_CODEC_MGR_MAX_CODECS];
     pjmedia_sdp_attr *attr;
@@ -482,6 +548,12 @@ static pj_status_t init_sdp_media_video_format(pj_pool_t *pool,
     /* Make sure video codec manager is instantiated */
     if (!pjmedia_vid_codec_mgr_instance())
 	pjmedia_vid_codec_mgr_create(endpt->pool, NULL);
+
+    /* Create and init basic SDP media */
+    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+    status = init_sdp_media(m, pool, &STR_VIDEO, si);
+    if (status != PJ_SUCCESS)
+	return status;
 
     cnt = PJ_ARRAY_SIZE(codec_info);
     status = pjmedia_vid_codec_mgr_enum_codecs(NULL, &cnt, 
@@ -493,10 +565,11 @@ static pj_status_t init_sdp_media_video_format(pj_pool_t *pool,
 
     /* Add format, rtpmap, and fmtp (when applicable) for each codec */
     for (i=0; i<cnt; ++i) {
-
-	pjmedia_sdp_rtpmap rtpmap = {0};
+	pjmedia_sdp_rtpmap rtpmap;
 	pjmedia_vid_codec_param codec_param;
 	pj_str_t *fmt;
+
+	pj_bzero(&rtpmap, sizeof(rtpmap));
 
 	if (codec_prio[i] == PJMEDIA_CODEC_PRIO_DISABLED)
 	    break;
@@ -505,7 +578,8 @@ static pj_status_t init_sdp_media_video_format(pj_pool_t *pool,
 	    /* Too many codecs, perhaps it is better to tell application by
 	     * returning appropriate status code.
 	     */
-	    PJ_LOG(3, (THIS_FILE, "Too many video codecs"));
+	    PJ_PERROR(3,(THIS_FILE, PJ_ETOOMANY,
+			"Skipping some video codecs"));
 	    break;
 	}
 
@@ -587,86 +661,61 @@ static pj_status_t init_sdp_media_video_format(pj_pool_t *pool,
 	}
     }
 
+    *p_m = m;
     return PJ_SUCCESS;
 }
 
 
-static pj_status_t add_sdp_media(pjmedia_endpt *endpt,
-				 pj_pool_t *pool,
-				 pjmedia_type type,
-				 const pjmedia_sock_info *sock_info,
-				 pjmedia_sdp_session *sdp)
+/**
+ * Create a "blank" SDP session description. The SDP will contain basic SDP
+ * fields such as origin, time, and name, but without any media lines.
+ */
+PJ_DEF(pj_status_t) pjmedia_endpt_create_base_sdp( pjmedia_endpt *endpt,
+						   pj_pool_t *pool,
+						   const pj_str_t *sess_name,
+						   const pj_sockaddr *origin,
+						   pjmedia_sdp_session **p_sdp)
 {
-    pjmedia_sdp_media *m;
-    pjmedia_sdp_attr *attr;
-    pjmedia_sdp_conn conn;
-    const pj_sockaddr *addr;
-    pj_status_t status;
+    pj_time_val tv;
+    pjmedia_sdp_session *sdp;
 
-    addr = &sock_info->rtp_addr_name;
+    /* Sanity check arguments */
+    PJ_ASSERT_RETURN(endpt && pool && p_sdp, PJ_EINVAL);
 
-    /* Validate address family */
-    if (addr->addr.sa_family != pj_AF_INET() &&
-	addr->addr.sa_family != pj_AF_INET6())
-    {
-	pj_assert(!"Invalid address family");
-	return PJ_EAFNOTSUP;
-    }
+    sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
 
-    /* Validate media type */
-    if (type != PJMEDIA_TYPE_AUDIO && type != PJMEDIA_TYPE_VIDEO) {
-	pj_assert(!"Invalid mediay type");
-	return PJMEDIA_EINVALIMEDIATYPE;
-    }
+    pj_gettimeofday(&tv);
+    sdp->origin.user = pj_str("-");
+    sdp->origin.version = sdp->origin.id = tv.sec + 2208988800UL;
+    sdp->origin.net_type = STR_IN;
 
-    /* Allocate SDP media */
-    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+    if (origin->addr.sa_family == pj_AF_INET()) {
+ 	sdp->origin.addr_type = STR_IP4;
+ 	pj_strdup2(pool, &sdp->origin.addr,
+ 		   pj_inet_ntoa(origin->ipv4.sin_addr));
+    } else if (origin->addr.sa_family == pj_AF_INET6()) {
+ 	char tmp_addr[PJ_INET6_ADDRSTRLEN];
 
-    /* Connection data, if not the same to one in the session level */
-    {
-	char tmp_addr[PJ_INET6_ADDRSTRLEN];
-	pj_bzero(&conn, sizeof(conn));
-	conn.net_type = STR_IN;
-	conn.addr_type = (addr->addr.sa_family==pj_AF_INET())? STR_IP4:STR_IP6;
-	pj_sockaddr_print(addr, tmp_addr, sizeof(tmp_addr), 0);
-	pj_strset2(&conn.addr, tmp_addr);
+ 	sdp->origin.addr_type = STR_IP6;
+ 	pj_strdup2(pool, &sdp->origin.addr,
+ 		   pj_sockaddr_print(origin, tmp_addr, sizeof(tmp_addr), 0));
 
-	if (pjmedia_sdp_conn_cmp(&conn, sdp->conn, 0) != PJ_SUCCESS)
-	    m->conn = pjmedia_sdp_conn_clone(pool, &conn);
-    }
-
-    /* Port and transport in media description */
-    m->desc.port = pj_sockaddr_get_port(addr);
-    m->desc.port_count = 1;
-    pj_strdup (pool, &m->desc.transport, &STR_RTP_AVP);
-
-    /* Media formats and parameters */
-    if (type == PJMEDIA_TYPE_AUDIO) {
-	pj_strdup(pool, &m->desc.media, &STR_AUDIO);
-	status = init_sdp_media_audio_format(pool, endpt, m);
     } else {
-	pj_strdup(pool, &m->desc.media, &STR_VIDEO);
-	status = init_sdp_media_video_format(pool, endpt, m);
+ 	pj_assert(!"Invalid address family");
+ 	return PJ_EAFNOTSUP;
     }
-    if (status != PJ_SUCCESS)
-	return status;
 
-    /* Add "rtcp" attribute */
-#if defined(PJMEDIA_HAS_RTCP_IN_SDP) && PJMEDIA_HAS_RTCP_IN_SDP!=0
-    if (sock_info->rtcp_addr_name.addr.sa_family != 0) {
-	attr = pjmedia_sdp_attr_create_rtcp(pool, &sock_info->rtcp_addr_name);
-	if (attr)
-	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
-    }
-#endif
+    if (sess_name)
+	pj_strdup(pool, &sdp->name, sess_name);
+    else
+	sdp->name = STR_SDP_NAME;
 
-    /* Add sendrecv attribute. */
-    attr = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_attr);
-    attr->name = STR_SENDRECV;
-    m->attr[m->attr_count++] = attr;
+    /* SDP time and attributes. */
+    sdp->time.start = sdp->time.stop = 0;
+    sdp->attr_count = 0;
 
     /* Done */
-    sdp->media[sdp->media_count++] = m;
+    *p_sdp = sdp;
 
     return PJ_SUCCESS;
 }
@@ -681,70 +730,43 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 					      const pjmedia_sock_info sock_info[],
 					      pjmedia_sdp_session **p_sdp )
 {
-    pj_time_val tv;
-    unsigned i;
     const pj_sockaddr *addr0;
     pjmedia_sdp_session *sdp;
-    pjmedia_type media_types[] = {PJMEDIA_TYPE_AUDIO, PJMEDIA_TYPE_VIDEO};
+    pjmedia_sdp_media *m;
+    unsigned i;
+    pj_status_t status;
 
     /* Sanity check arguments */
     PJ_ASSERT_RETURN(endpt && pool && p_sdp && stream_cnt, PJ_EINVAL);
-    PJ_ASSERT_RETURN(stream_cnt <= PJ_ARRAY_SIZE(media_types), PJ_ETOOMANY);
-
-    /* Create and initialize basic SDP session */
-    sdp = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_session);
+    PJ_ASSERT_RETURN(stream_cnt < PJMEDIA_MAX_SDP_MEDIA, PJ_ETOOMANY);
 
     addr0 = &sock_info[0].rtp_addr_name;
 
-    pj_gettimeofday(&tv);
-    sdp->origin.user = pj_str("-");
-    sdp->origin.version = sdp->origin.id = tv.sec + 2208988800UL;
-    sdp->origin.net_type = STR_IN;
+    /* Create and initialize basic SDP session */
+    status = pjmedia_endpt_create_base_sdp(endpt, pool, NULL, addr0, &sdp);
+    if (status != PJ_SUCCESS)
+	return status;
 
-    if (addr0->addr.sa_family == pj_AF_INET()) {
-	sdp->origin.addr_type = STR_IP4;
-	pj_strdup2(pool, &sdp->origin.addr, 
-		   pj_inet_ntoa(addr0->ipv4.sin_addr));
-    } else if (addr0->addr.sa_family == pj_AF_INET6()) {
-	char tmp_addr[PJ_INET6_ADDRSTRLEN];
+    /* Audio is first, by convention */
+    status = pjmedia_endpt_create_audio_sdp(endpt, pool,
+                                            &sock_info[0], 0, &m);
+    if (status != PJ_SUCCESS)
+	return status;
+    sdp->media[sdp->media_count++] = m;
 
-	sdp->origin.addr_type = STR_IP6;
-	pj_strdup2(pool, &sdp->origin.addr, 
-		   pj_sockaddr_print(addr0, tmp_addr, sizeof(tmp_addr), 0));
-
-    } else {
-	pj_assert(!"Invalid address family");
-	return PJ_EAFNOTSUP;
-    }
-
-    sdp->name = STR_SDP_NAME;
-
-    /* SDP connection line in the session level. */
-    sdp->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
-    sdp->conn->net_type = sdp->origin.net_type;
-    sdp->conn->addr_type = sdp->origin.addr_type;
-    sdp->conn->addr = sdp->origin.addr;
-
-
-    /* SDP time and attributes. */
-    sdp->time.start = sdp->time.stop = 0;
-    sdp->attr_count = 0;
-
-    /* Add SDP media. */
-    for (i = 0; i < stream_cnt; ++i) {
-	pj_status_t status;
-
-	status = add_sdp_media(endpt, pool, media_types[i], 
-			       &sock_info[i], sdp);
+    /* The remaining stream, if any, are videos (by convention as well) */
+    for (i=1; i<stream_cnt; ++i) {
+	status = pjmedia_endpt_create_video_sdp(endpt, pool,
+	                                        &sock_info[i], 0, &m);
 	if (status != PJ_SUCCESS)
 	    return status;
+	sdp->media[sdp->media_count++] = m;
     }
 
     /* Done */
     *p_sdp = sdp;
 
     return PJ_SUCCESS;
-
 }
 
 
