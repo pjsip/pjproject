@@ -67,7 +67,6 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(PJMEDIA_PIA_BITS(&dn_port->info) == 16, PJMEDIA_ENCBITS);
 
     d_afd = pjmedia_format_get_audio_format_detail(&dn_port->info.fmt, 1);
-    r_afd = pjmedia_format_get_audio_format_detail(&rport->base.info.fmt, 1);
 
     /* Create and initialize port. */
     rport = PJ_POOL_ZALLOC_T(pool, struct resample_port);
@@ -80,6 +79,7 @@ PJ_DEF(pj_status_t) pjmedia_resample_port_create( pj_pool_t *pool,
     rport->dn_port = dn_port;
     rport->options = opt;
 
+    r_afd = pjmedia_format_get_audio_format_detail(&rport->base.info.fmt, 1);
 
     /* Create buffers. 
      * We need separate buffer for get_frame() and put_frame() since
