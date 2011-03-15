@@ -33,10 +33,10 @@ export _CFLAGS 	:= $(CC_CFLAGS) $(OS_CFLAGS) $(HOST_CFLAGS) $(M_CFLAGS) \
 		   $(SRTP_INC) 
 export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 		   $(HOST_CXXFLAGS) $(CXXFLAGS)
-export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_AUDIODEV_LIB)) \
-		   $(subst /,$(HOST_PSEP),$(PJMEDIA_VIDEODEV_LIB)) \
+export _LDFLAGS := $(subst /,$(HOST_PSEP),$(PJMEDIA_VIDEODEV_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJMEDIA_CODEC_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJMEDIA_LIB)) \
+		   $(subst /,$(HOST_PSEP),$(PJMEDIA_AUDIODEV_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJLIB_UTIL_LIB)) \
 		   $(subst /,$(HOST_PSEP),$(PJNATH_LIB)) \
@@ -63,9 +63,9 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			resample_port.o rtcp.o rtcp_xr.o rtp.o \
 			sdp.o sdp_cmp.o sdp_neg.o session.o silencedet.o \
 			sound_legacy.o sound_port.o stereo_port.o \
-			stream.o tonegen.o transport_adapter_sample.o \
+			stream_common.o stream.o tonegen.o transport_adapter_sample.o \
 			transport_ice.o transport_loop.o \
-			transport_srtp.o transport_udp.o vid_codec.o videoport.o \
+			transport_srtp.o transport_udp.o vid_codec.o videoport.o vid_stream.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			wsola.o
 
