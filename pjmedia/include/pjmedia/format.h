@@ -462,9 +462,9 @@ PJ_INLINE(unsigned) PJMEDIA_SPF(unsigned clock_rate, unsigned usec_ptime,
 PJ_INLINE(unsigned) PJMEDIA_FSZ(unsigned bps, unsigned usec_ptime)
 {
 #if PJ_HAS_INT64
-    return ((unsigned)(bps * usec_ptime / PJ_UINT64(8000000)));
+    return ((unsigned)((pj_uint64_t)bps * usec_ptime / PJ_UINT64(8000000)));
 #elif PJ_HAS_FLOATING_POINT
-    return ((unsigned)(bps * usec_ptime / 8000000.0));
+    return ((unsigned)(1.0 * bps * usec_ptime / 8000000.0));
 #else
     return ((unsigned)(bps / 8L * usec_ptime / 1000000));
 #endif
