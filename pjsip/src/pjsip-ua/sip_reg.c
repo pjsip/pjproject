@@ -391,15 +391,6 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t)
-pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
-				     pj_uint32_t delay )
-{
-    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
-    regc->delay_before_refresh = delay;
-    return PJ_SUCCESS;
-}
-
 PJ_DEF(pj_status_t) pjsip_regc_set_credentials( pjsip_regc *regc,
 						int count,
 						const pjsip_cred_info cred[] )
@@ -783,6 +774,56 @@ static void regc_refresh_timer_cb( pj_timer_heap_t *timer_heap,
     }
 }
 
+static void schedule_registration ( pjsip_regc *regc, pj_int32_t expiration )
+{
+    if (regc->auto_reg && expiration > 0) {
+        pj_time_val delay = { 0, 0};
+
+        delay.sec = expiration - regc->delay_before_refresh;
+        if (regc->expires != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED && 
+            delay.sec > (pj_int32_t)regc->expires) 
+        {
+            delay.sec = regc->expires;
+        }
+        if (delay.sec < DELAY_BEFORE_REFRESH) 
+            delay.sec = DELAY_BEFORE_REFRESH;
+        regc->timer.cb = &regc_refresh_timer_cb;
+        regc->timer.id = REFRESH_TIMER;
+        regc->timer.user_data = regc;
+        pjsip_endpt_schedule_timer( regc->endpt, &regc->timer, &delay);
+        pj_gettimeofday(&regc->last_reg);
+        regc->next_reg = regc->last_reg;
+        regc->next_reg.sec += delay.sec;
+    }
+}
+
+PJ_DEF(pj_status_t)
+pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
+				     pj_uint32_t delay )
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
+    if (delay > regc->expires)
+        return PJ_ETOOBIG;
+
+    if (regc->delay_before_refresh != delay)
+    {
+        regc->delay_before_refresh = delay;
+
+        if (regc->timer.id != 0) {
+            /* Cancel registration timer */
+            pjsip_endpt_cancel_timer(regc->endpt, &regc->timer);
+            regc->timer.id = 0;
+
+            /* Schedule next registration */
+            schedule_registration(regc, regc->expires);
+        }
+    }
+
+    return PJ_SUCCESS;
+}
+
+
 static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
 					        const pjsip_rx_data *rdata,
 						unsigned *contact_cnt,
@@ -1127,25 +1168,7 @@ handle_err:
 	    regc->current_op = REGC_IDLE;
 
 	    /* Schedule next registration */
-	    if (regc->auto_reg && expiration > 0) {
-		pj_time_val delay = { 0, 0};
-
-		delay.sec = expiration - regc->delay_before_refresh;
-		if (regc->expires != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED && 
-		    delay.sec > (pj_int32_t)regc->expires) 
-		{
-		    delay.sec = regc->expires;
-		}
-		if (delay.sec < DELAY_BEFORE_REFRESH) 
-		    delay.sec = DELAY_BEFORE_REFRESH;
-		regc->timer.cb = &regc_refresh_timer_cb;
-		regc->timer.id = REFRESH_TIMER;
-		regc->timer.user_data = regc;
-		pjsip_endpt_schedule_timer( regc->endpt, &regc->timer, &delay);
-		pj_gettimeofday(&regc->last_reg);
-		regc->next_reg = regc->last_reg;
-		regc->next_reg.sec += delay.sec;
-	    }
+            schedule_registration(regc, expiration);
 
 	} else {
 	    rdata = (event->body.tsx_state.type==PJSIP_EVENT_RX_MSG) ? 
