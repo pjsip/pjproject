@@ -1658,6 +1658,7 @@ typedef struct
     PyObject	    *force_contact;
     PyListObject    *proxy;
     unsigned	     reg_timeout;
+    unsigned	     reg_delay_before_refresh;
     PyListObject    *cred_info;
     int		     transport_id;
     int		     auth_initial_send;
@@ -1720,6 +1721,7 @@ static void PyObj_pjsua_acc_config_import(PyObj_pjsua_acc_config *obj,
     }
 
     obj->reg_timeout = cfg->reg_timeout;
+    obj->reg_delay_before_refresh = cfg->reg_delay_before_refresh;
 
     Py_XDECREF(obj->cred_info);
     obj->cred_info = (PyListObject *)PyList_New(0);
@@ -1776,6 +1778,7 @@ static void PyObj_pjsua_acc_config_export(pjsua_acc_config *cfg,
     }
 
     cfg->reg_timeout = obj->reg_timeout;
+    cfg->reg_delay_before_refresh = obj->reg_delay_before_refresh;
 
     cfg->cred_count = PyList_Size((PyObject*)obj->cred_info);
     if (cfg->cred_count > PJ_ARRAY_SIZE(cfg->cred_info))
@@ -1897,6 +1900,13 @@ static PyMemberDef PyObj_pjsua_acc_config_members[] =
         "Optional interval for registration, in seconds. "
         "If the value is zero, default interval will be used "
         "(PJSUA_REG_INTERVAL, 55 seconds). "
+    },
+    {
+        "reg_delay_before_refresh", T_INT, 
+	offsetof(PyObj_pjsua_acc_config, reg_delay_before_refresh), 0,
+        "Specify the number of seconds to refresh the client registration"
+        "before the registration expires."
+        "(PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH, 5 seconds). "
     },
     {
         "cred_info", T_OBJECT_EX,

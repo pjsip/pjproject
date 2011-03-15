@@ -2269,6 +2269,14 @@ typedef struct pjsua_acc_config
     unsigned	    reg_timeout;
 
     /**
+     * Specify the number of seconds to refresh the client registration
+     * before the registration expires.
+     *
+     * Default: PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH, 5 seconds
+     */
+    unsigned	    reg_delay_before_refresh;
+
+    /**
      * Specify the maximum time to wait for unregistration requests to
      * complete during library shutdown sequence.
      *

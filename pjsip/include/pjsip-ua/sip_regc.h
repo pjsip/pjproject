@@ -190,6 +190,20 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 				     const pj_str_t contact[],
 				     pj_uint32_t expires);
 
+/**
+ * Set the number of seconds to refresh the client registration before
+ * the registration expires.
+ *
+ * @param regc	    The registration structure.
+ * @param delay     The number of seconds to refresh the client
+ *                  registration before the registration expires.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
+				     pj_uint32_t delay );
+
 
 /**
  * Set authentication credentials to use by this registration.

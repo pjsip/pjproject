@@ -37,7 +37,7 @@
 
 
 #define REFRESH_TIMER		1
-#define DELAY_BEFORE_REFRESH	PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
+#define DELAY_BEFORE_REFRESH    PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH
 #define THIS_FILE		"sip_reg.c"
 
 /* Outgoing transaction timeout when server sends 100 but never replies
@@ -87,6 +87,7 @@ struct pjsip_regc
     pjsip_contact_hdr		 removed_contact_hdr_list;
     pjsip_expires_hdr		*expires_hdr;
     pj_uint32_t			 expires;
+    pj_uint32_t			 delay_before_refresh;
     pjsip_route_hdr		 route_set;
     pjsip_hdr			 hdr_list;
 
@@ -375,6 +376,7 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
 
     /* Set "Expires" header, if required. */
     set_expires( regc, expires);
+    regc->delay_before_refresh = DELAY_BEFORE_REFRESH;
 
     /* Set "Call-ID" header. */
     regc->cid_hdr = pjsip_cid_hdr_create(regc->pool);
@@ -386,6 +388,15 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     pjsip_method_set( &regc->cseq_hdr->method, PJSIP_REGISTER_METHOD);
 
     /* Done. */
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t)
+pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
+				     pj_uint32_t delay )
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    regc->delay_before_refresh = delay;
     return PJ_SUCCESS;
 }
 
@@ -1119,7 +1130,7 @@ handle_err:
 	    if (regc->auto_reg && expiration > 0) {
 		pj_time_val delay = { 0, 0};
 
-		delay.sec = expiration - DELAY_BEFORE_REFRESH;
+		delay.sec = expiration - regc->delay_before_refresh;
 		if (regc->expires != PJSIP_REGC_EXPIRATION_NOT_SPECIFIED && 
 		    delay.sec > (pj_int32_t)regc->expires) 
 		{

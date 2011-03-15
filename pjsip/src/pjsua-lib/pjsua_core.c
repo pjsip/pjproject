@@ -166,6 +166,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
+    cfg->reg_delay_before_refresh = PJSIP_REGISTER_CLIENT_DELAY_BEFORE_REFRESH;
     cfg->unreg_timeout = PJSUA_UNREG_TIMEOUT;
     pjsip_publishc_opt_default(&cfg->publish_opt);
     cfg->unpublish_max_wait_time_msec = PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC;
