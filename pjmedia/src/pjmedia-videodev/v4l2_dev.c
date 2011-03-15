@@ -90,7 +90,7 @@ typedef struct vid4lin_factory
 /* Video stream. */
 typedef struct vid4lin_stream
 {
-    pjmedia_vid_stream	 	 base;		/**< Base stream	*/
+    pjmedia_vid_dev_stream	 base;		/**< Base stream	*/
     pjmedia_vid_param	 	 param;		/**< Settings		*/
     pj_pool_t           	*pool;		/**< Memory pool.	*/
 
@@ -131,21 +131,21 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
 						 const pjmedia_vid_param *prm,
 					         const pjmedia_vid_cb *cb,
 					         void *user_data,
-					         pjmedia_vid_stream **p_strm);
+					         pjmedia_vid_dev_stream **p);
 
-static pj_status_t vid4lin_stream_get_param(pjmedia_vid_stream *strm,
+static pj_status_t vid4lin_stream_get_param(pjmedia_vid_dev_stream *strm,
 					    pjmedia_vid_param *param);
-static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_stream *strm,
+static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				          pjmedia_vid_dev_cap cap,
 				          void *value);
-static pj_status_t vid4lin_stream_set_cap(pjmedia_vid_stream *strm,
+static pj_status_t vid4lin_stream_set_cap(pjmedia_vid_dev_stream *strm,
 				          pjmedia_vid_dev_cap cap,
 				          const void *value);
-static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_stream *strm,
+static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_dev_stream *strm,
                                             pjmedia_frame *frame);
-static pj_status_t vid4lin_stream_start(pjmedia_vid_stream *strm);
-static pj_status_t vid4lin_stream_stop(pjmedia_vid_stream *strm);
-static pj_status_t vid4lin_stream_destroy(pjmedia_vid_stream *strm);
+static pj_status_t vid4lin_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t vid4lin_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t vid4lin_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -158,7 +158,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &vid4lin_factory_create_stream
 };
 
-static pjmedia_vid_stream_op stream_op =
+static pjmedia_vid_dev_stream_op stream_op =
 {
     &vid4lin_stream_get_param,
     &vid4lin_stream_get_cap,
@@ -389,8 +389,6 @@ static pj_status_t vid4lin_factory_default_param(pj_pool_t *pool,
     param->rend_id = PJMEDIA_VID_INVALID_DEV;
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    param->frame_rate.num = DEFAULT_FPS;
-    param->frame_rate.denum = 1;
     pjmedia_format_copy(&param->fmt, &cf->dev_info[index].info.fmt[0]);
 
     return PJ_SUCCESS;
@@ -515,10 +513,10 @@ static pj_status_t vid4lin_stream_init_read_write(vid4lin_stream *stream)
 
 /* API: create stream */
 static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
-					      const pjmedia_vid_param *param,
-					      const pjmedia_vid_cb *cb,
-					      void *user_data,
-					      pjmedia_vid_stream **p_vid_strm)
+				      const pjmedia_vid_param *param,
+				      const pjmedia_vid_cb *cb,
+				      void *user_data,
+				      pjmedia_vid_dev_stream **p_vid_strm)
 {
     vid4lin_factory *cf = (vid4lin_factory*)f;
     pj_pool_t *pool;
@@ -595,8 +593,8 @@ on_error:
 }
 
 /* API: Get stream info. */
-static pj_status_t vid4lin_stream_get_param(pjmedia_vid_stream *s,
-					 pjmedia_vid_param *pi)
+static pj_status_t vid4lin_stream_get_param(pjmedia_vid_dev_stream *s,
+					    pjmedia_vid_param *pi)
 {
     vid4lin_stream *strm = (vid4lin_stream*)s;
 
@@ -608,9 +606,9 @@ static pj_status_t vid4lin_stream_get_param(pjmedia_vid_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_stream *s,
-				       pjmedia_vid_dev_cap cap,
-				       void *pval)
+static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_dev_stream *s,
+                                          pjmedia_vid_dev_cap cap,
+                                          void *pval)
 {
     vid4lin_stream *strm = (vid4lin_stream*)s;
 
@@ -628,9 +626,9 @@ static pj_status_t vid4lin_stream_get_cap(pjmedia_vid_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t vid4lin_stream_set_cap(pjmedia_vid_stream *s,
-				       pjmedia_vid_dev_cap cap,
-				       const void *pval)
+static pj_status_t vid4lin_stream_set_cap(pjmedia_vid_dev_stream *s,
+                                          pjmedia_vid_dev_cap cap,
+                                          const void *pval)
 {
     vid4lin_stream *strm = (vid4lin_stream*)s;
 
@@ -692,7 +690,7 @@ on_return:
 }
 
 /* API: Get frame from stream */
-static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_stream *strm,
+static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_dev_stream *strm,
                                             pjmedia_frame *frame)
 {
     vid4lin_stream *stream = (vid4lin_stream*)strm;
@@ -706,7 +704,7 @@ static pj_status_t vid4lin_stream_get_frame(pjmedia_vid_stream *strm,
 }
 
 /* API: Start stream. */
-static pj_status_t vid4lin_stream_start(pjmedia_vid_stream *strm)
+static pj_status_t vid4lin_stream_start(pjmedia_vid_dev_stream *strm)
 {
     vid4lin_stream *stream = (vid4lin_stream*)strm;
     struct v4l2_buffer buf;
@@ -754,7 +752,7 @@ on_error:
 }
 
 /* API: Stop stream. */
-static pj_status_t vid4lin_stream_stop(pjmedia_vid_stream *strm)
+static pj_status_t vid4lin_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     vid4lin_stream *stream = (vid4lin_stream*)strm;
     enum v4l2_buf_type type;
@@ -775,7 +773,7 @@ static pj_status_t vid4lin_stream_stop(pjmedia_vid_stream *strm)
 
 
 /* API: Destroy stream. */
-static pj_status_t vid4lin_stream_destroy(pjmedia_vid_stream *strm)
+static pj_status_t vid4lin_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     vid4lin_stream *stream = (vid4lin_stream*)strm;
     unsigned i;
