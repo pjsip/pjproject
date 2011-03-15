@@ -184,6 +184,16 @@ PJ_DECL(pj_status_t) pjmedia_stream_destroy(pjmedia_stream *stream);
 
 
 /**
+ * Get the last frame type retreived from the jitter buffer.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		Jitter buffer frame type.
+ */
+PJ_DEF(char) pjmedia_stream_get_last_jb_frame_type(pjmedia_stream *stream);
+
+
+/**
  * Get the media port interface of the stream. The media port interface
  * declares put_frame() and get_frame() function, which is the only 
  * way for application to transmit and receive media frames from the

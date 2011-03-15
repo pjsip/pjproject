@@ -2459,6 +2459,14 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 }
 
 
+/*
+ * Get the last frame frame type retreived from the jitter buffer.
+ */
+PJ_DEF(char) pjmedia_stream_get_last_jb_frame_type(pjmedia_stream *stream)
+{
+    return stream->jb_last_frm;
+}
+
 
 /*
  * Get the port interface.
