@@ -364,7 +364,7 @@ static void deinit_driver(unsigned drv_idx)
 PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
 {
     unsigned i;
-    pj_status_t status = PJ_SUCCESS;
+    pj_status_t status;
 
     /* Allow init() to be called multiple times as long as there is matching
      * number of shutdown().
@@ -374,9 +374,10 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
     }
 
     /* Register error subsystem */
-    pj_register_strerror(PJMEDIA_AUDIODEV_ERRNO_START, 
-			 PJ_ERRNO_SPACE_SIZE, 
-			 &pjmedia_audiodev_strerror);
+    status = pj_register_strerror(PJMEDIA_AUDIODEV_ERRNO_START, 
+				  PJ_ERRNO_SPACE_SIZE, 
+				  &pjmedia_audiodev_strerror);
+    pj_assert(status == PJ_SUCCESS);
 
     /* Init */
     aud_subsys.pf = pf;

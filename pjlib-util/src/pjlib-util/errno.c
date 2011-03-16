@@ -19,6 +19,7 @@
  */
 #include <pjlib-util/errno.h>
 #include <pjlib-util/types.h>
+#include <pj/assert.h>
 #include <pj/string.h>
 
 
@@ -162,7 +163,12 @@ pj_str_t pjlib_util_strerror(pj_status_t statcode,
 
 PJ_DEF(pj_status_t) pjlib_util_init(void)
 {
-    return pj_register_strerror(PJLIB_UTIL_ERRNO_START, 
-				PJ_ERRNO_SPACE_SIZE, 
-				&pjlib_util_strerror);
+    pj_status_t status;
+    
+    status = pj_register_strerror(PJLIB_UTIL_ERRNO_START, 
+				  PJ_ERRNO_SPACE_SIZE, 
+				  &pjlib_util_strerror);
+    pj_assert(status == PJ_SUCCESS);
+
+    return PJ_SUCCESS;
 }

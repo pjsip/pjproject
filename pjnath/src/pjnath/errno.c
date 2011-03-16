@@ -19,6 +19,7 @@
  */
 #include <pjnath/errno.h>
 #include <pjnath/stun_msg.h>
+#include <pj/assert.h>
 #include <pj/log.h>
 #include <pj/string.h>
 
@@ -176,13 +177,14 @@ PJ_DEF(pj_status_t) pjnath_init(void)
 
     status = pj_register_strerror(PJNATH_ERRNO_START, 299, 
 				  &pjnath_strerror);
-    if (status != PJ_SUCCESS)
-	return status;
+    pj_assert(status == PJ_SUCCESS);
 
     status = pj_register_strerror(PJ_STATUS_FROM_STUN_CODE(300), 
 				  699 - 300, 
 				  &pjnath_strerror2);
-    return status;
+    pj_assert(status == PJ_SUCCESS);
+
+    return PJ_SUCCESS;
 }
 
 

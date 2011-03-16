@@ -117,9 +117,6 @@ void deinit_sip_parser(void);
 pj_status_t pjsip_tel_uri_subsys_init(void);
 
 
-/* Specifies whether error subsystem has been registered to pjlib. */
-static int error_subsys_initialized;
-
 /*
  * This is the global handler for memory allocation failure, for pools that
  * are created by the endpoint (by default, all pools ARE allocated by 
@@ -425,11 +422,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     pj_lock_t *lock = NULL;
 
 
-    if (!error_subsys_initialized) {
-	pj_register_strerror(PJSIP_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
-			     &pjsip_strerror);
-	error_subsys_initialized = 1;
-    }
+    status = pj_register_strerror(PJSIP_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
+				  &pjsip_strerror);
+    pj_assert(status == PJ_SUCCESS);
 
     PJ_LOG(5, (THIS_FILE, "Creating endpoint instance..."));
 

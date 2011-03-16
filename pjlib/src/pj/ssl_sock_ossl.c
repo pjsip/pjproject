@@ -267,7 +267,6 @@ static pj_str_t ssl_strerror(pj_status_t status,
 
 /* OpenSSL library initialization counter */
 static int openssl_init_count;
-static int openssl_reg_strerr;
 
 /* OpenSSL available ciphers */
 static pj_ssl_cipher openssl_ciphers[100];
@@ -280,21 +279,18 @@ static int sslsock_idx;
 /* Initialize OpenSSL */
 static pj_status_t init_openssl(void)
 {
+    pj_status_t status;
+
     if (openssl_init_count)
 	return PJ_SUCCESS;
 
     openssl_init_count = 1;
 
     /* Register error subsystem */
-    if (!openssl_reg_strerr) {
-	pj_status_t status;
-
-	openssl_reg_strerr = 1;
-	status = pj_register_strerror(PJ_SSL_ERRNO_START, 
-				      PJ_SSL_ERRNO_SPACE_SIZE, 
-				      &ssl_strerror);
-	pj_assert(status == PJ_SUCCESS);
-    }
+    status = pj_register_strerror(PJ_SSL_ERRNO_START, 
+				  PJ_SSL_ERRNO_SPACE_SIZE, 
+				  &ssl_strerror);
+    pj_assert(status == PJ_SUCCESS);
 
     /* Init OpenSSL lib */
     SSL_library_init();

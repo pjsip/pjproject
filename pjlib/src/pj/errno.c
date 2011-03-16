@@ -128,6 +128,14 @@ PJ_DEF(pj_status_t) pj_register_strerror( pj_status_t start,
 	if (IN_RANGE(start, err_msg_hnd[i].begin, err_msg_hnd[i].end) ||
 	    IN_RANGE(start+space-1, err_msg_hnd[i].begin, err_msg_hnd[i].end))
 	{
+	    if (err_msg_hnd[i].begin == start && 
+		err_msg_hnd[i].end == (start+space) &&
+		err_msg_hnd[i].strerror == f)
+	    {
+		/* The same range and handler has already been registered */
+		return PJ_SUCCESS;
+	    }
+
 	    return PJ_EEXISTS;
 	}
     }

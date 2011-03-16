@@ -287,8 +287,10 @@ PJ_DEF(pj_status_t) pjsip_evsub_init_module(pjsip_endpoint *endpt)
 	{ "NOTIFY", 6}
     };
 
-    pj_register_strerror(PJSIP_SIMPLE_ERRNO_START, PJ_ERRNO_SPACE_SIZE,
-			 &pjsipsimple_strerror);
+    status = pj_register_strerror(PJSIP_SIMPLE_ERRNO_START,
+				  PJ_ERRNO_SPACE_SIZE,
+				  &pjsipsimple_strerror);
+    pj_assert(status == PJ_SUCCESS);
 
     PJ_ASSERT_RETURN(endpt != NULL, PJ_EINVAL);
     PJ_ASSERT_RETURN(mod_evsub.mod.id == -1, PJ_EINVALIDOP);

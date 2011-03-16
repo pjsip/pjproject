@@ -168,8 +168,9 @@ int main(int argc, char *argv[])
 			   NULL		    /* callback on error    */
 			   );
 
-    pj_register_strerror(PJMEDIA_ERRNO_START, PJ_ERRNO_SPACE_SIZE, 
-			 &pjmedia_strerror);
+    status = pj_register_strerror(PJMEDIA_ERRNO_START, PJ_ERRNO_SPACE_SIZE, 
+				  &pjmedia_strerror);
+    pj_assert(status == PJ_SUCCESS);
 
     /* Wav */
     status = pjmedia_wav_player_port_create(  pool,	/* memory pool	    */
