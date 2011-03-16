@@ -3022,7 +3022,33 @@ typedef struct pjsua_call_info
 
 } pjsua_call_info;
 
+/**
+ * Flags to be given to various call APIs. More than one flags may be
+ * specified by bitmasking them.
+ */
+typedef enum pjsua_call_flag
+{
+    /**
+     * When the call is being put on hold, specify this flag to unhold it.
+     * This flag is only valid for #pjsua_call_reinvite() and
+     * #pjsua_call_update(). Note: for compatibility reason, this flag
+     * must have value of 1 because previously the unhold option is
+     * specified as boolean value.
+     */
+    PJSUA_CALL_UNHOLD = 1,
 
+    /**
+     * Update the local invite session's contact with the contact URI from
+     * the account. This flag is only valid for #pjsua_call_reinvite() and
+     * #pjsua_call_update(). This flag is useful in IP address change
+     * situation, after the local account's Contact has been updated
+     * (typically with re-registration) use this flag to update the invite
+     * session with the new Contact and to inform this new Contact to the
+     * remote peer with the outgoing re-INVITE or UPDATE
+     */
+    PJSUA_CALL_UPDATE_CONTACT = 2
+
+} pjsua_call_flag;
 
 /**
  * Get maximum number of calls configured in pjsua.
@@ -3312,22 +3338,23 @@ PJ_DECL(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
  * the media state of the call has changed.
  *
  * @param call_id	Call identification.
- * @param unhold	If this argument is non-zero and the call is locally
- *			held, this will release the local hold.
+ * @param options	Bitmask of pjsua_call_flag constants. Note that
+ * 			for compatibility, specifying PJ_TRUE here is
+ * 			equal to specifying PJSUA_CALL_UNHOLD flag.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
-					 pj_bool_t unhold,
+					 unsigned options,
 					 const pjsua_msg_data *msg_data);
 
 /**
  * Send UPDATE request.
  *
  * @param call_id	Call identification.
- * @param options	Must be zero for now.
+ * @param options	Bitmask of pjsua_call_flag constants.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *
