@@ -36,6 +36,18 @@
     #include <AudioToolbox/AudioServices.h>
 
     #define AudioDeviceID unsigned
+
+    /**
+     * As in iOS SDK 4 or later, audio route change property listener is
+     * no longer necessary. Just make surethat your application can receive
+     * remote control events by adding the code:
+     *     [[UIApplication sharedApplication] 
+     *      beginReceivingRemoteControlEvents];
+     * Otherwise audio route change (such as headset plug/unplug) will not be
+     * processed while your application is in the background mode.
+     */
+    #define USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER 0
+
 #endif
 
 /* For Mac OS 10.5.x and earlier */
@@ -223,7 +235,6 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 #if !COREAUDIO_MAC
     unsigned i;
     OSStatus ostatus;
-    UInt32 audioCategory;
 #endif
 
     pj_list_init(&cf->streams);
@@ -296,18 +307,8 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 		   ostatus));
     }
 
-    /* We want to be able to open playback and recording streams */
-    audioCategory = kAudioSessionCategory_PlayAndRecord;
-    ostatus = AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
-				      sizeof(audioCategory),
-				      &audioCategory);
-    if (ostatus != kAudioSessionNoError) {
-	PJ_LOG(4, (THIS_FILE,
-		   "Warning: cannot set the audio session category (%i)",
-		   ostatus));
-    }
-
-    /* Listen for audio routing change notifications */
+    /* Listen for audio routing change notifications. */
+#if USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
     ostatus = AudioSessionAddPropertyListener(
 	          kAudioSessionProperty_AudioRouteChange,
 		  propListener, cf);
@@ -316,7 +317,8 @@ static pj_status_t ca_factory_init(pjmedia_aud_dev_factory *f)
 		   "Warning: cannot listen for audio route change "
 		   "notifications (%i)", ostatus));
     }
-    
+#endif
+
     cf_instance = cf;
 #endif
 
@@ -336,8 +338,10 @@ static pj_status_t ca_factory_destroy(pjmedia_aud_dev_factory *f)
     pj_assert(pj_list_empty(&cf->streams));
 
 #if !COREAUDIO_MAC
+#if USE_AUDIO_ROUTE_CHANGE_PROP_LISTENER != 0
     AudioSessionRemovePropertyListenerWithUserData(
         kAudioSessionProperty_AudioRouteChange, propListener, cf);
+#endif
 #endif
     
     if (cf->pool) {
@@ -1088,15 +1092,6 @@ static void propListener(void 			*inClientData,
 	if (it->stream->interrupted)
 	    continue;
 
-	/* This does not seem necessary anymore. Just make sure	
-	 * that your application can receive remote control
-	 * events by adding the code:
-	 *     [[UIApplication sharedApplication] 
-	 *      beginReceivingRemoteControlEvents];
-	 * Otherwise audio route change (such as headset plug/unplug)
-	 * will not be processed while your application is in the 
-	 * background mode.
-	 */
 	/*
 	status = ca_stream_stop((pjmedia_aud_stream *)it->stream);
 	status = ca_stream_start((pjmedia_aud_stream *)it->stream);
@@ -1130,6 +1125,9 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
 	if (inInterruption == kAudioSessionEndInterruption &&
 	    it->stream->interrupted == PJ_TRUE)
 	{
+	    UInt32 audioCategory;
+	    OSStatus ostatus;
+
 	    /* Make sure that your application can receive remote control
 	     * events by adding the code:
 	     *     [[UIApplication sharedApplication] 
@@ -1137,6 +1135,18 @@ static void interruptionListener(void *inClientData, UInt32 inInterruption)
 	     * Otherwise audio unit will fail to restart while your
 	     * application is in the background mode.
 	     */
+	    /* Make sure we set the correct audio category before restarting */
+	    audioCategory = kAudioSessionCategory_PlayAndRecord;
+	    ostatus = AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
+					      sizeof(audioCategory),
+					      &audioCategory);
+	    if (ostatus != kAudioSessionNoError) {
+		PJ_LOG(4, (THIS_FILE,
+			   "Warning: cannot set the audio session category (%i)",
+			   ostatus));
+	    }
+	    
+	    /* Restart the stream */
 	    status = ca_stream_start((pjmedia_aud_stream*)it->stream);
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(3, (THIS_FILE,
@@ -1201,7 +1211,19 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 				     AudioUnit *io_unit)
 {
     OSStatus ostatus;
-
+#if !COREAUDIO_MAC
+    UInt32 audioCategory = kAudioSessionCategory_PlayAndRecord;
+    /* We want to be able to open playback and recording streams */
+    ostatus = AudioSessionSetProperty(kAudioSessionProperty_AudioCategory,
+				      sizeof(audioCategory),
+				      &audioCategory);
+    if (ostatus != kAudioSessionNoError) {
+	PJ_LOG(4, (THIS_FILE,
+		   "Warning: cannot set the audio session category (%i)",
+		   ostatus));
+    }    
+#endif
+    
     /* Create an audio unit to interface with the device */
     ostatus = AudioComponentInstanceNew(io_comp, io_unit);
     if (ostatus != noErr) {
@@ -1433,6 +1455,7 @@ static pj_status_t create_audio_unit(AudioComponent io_comp,
 	strm->audio_buf->mNumberBuffers = 1;
 	strm->audio_buf->mBuffers[0].mNumberChannels =
 		strm->streamFormat.mChannelsPerFrame;
+	
 #endif
 
 	/* Allocate recording buffer */
