@@ -197,6 +197,7 @@ PJ_EXPORT_SYMBOL(pj_sem_destroy)
 PJ_EXPORT_SYMBOL(pj_gettimeofday)
 PJ_EXPORT_SYMBOL(pj_time_decode)
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
+PJ_EXPORT_SYMBOL(pj_gettickcount)
 PJ_EXPORT_SYMBOL(pj_get_timestamp)
 PJ_EXPORT_SYMBOL(pj_get_timestamp_freq)
 PJ_EXPORT_SYMBOL(pj_elapsed_time)

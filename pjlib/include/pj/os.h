@@ -1169,6 +1169,15 @@ PJ_DECL(pj_color_t) pj_term_get_color(void);
 #if defined(PJ_HAS_HIGH_RES_TIMER) && PJ_HAS_HIGH_RES_TIMER != 0
 
 /**
+ * Get monotonic time since some unspecified starting point.
+ *
+ * @param tv	Variable to store the result.
+ *
+ * @return PJ_SUCCESS if successful.
+ */
+PJ_DECL(pj_status_t) pj_gettickcount(pj_time_val *tv);
+
+/**
  * Acquire high resolution timer value. The time value are stored
  * in cycles.
  *

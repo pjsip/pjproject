@@ -465,7 +465,7 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
     /* Prevent same entry from being scheduled more than once */
     PJ_ASSERT_RETURN(entry->_timer_id < 1, PJ_EINVALIDOP);
 
-    pj_gettimeofday(&expires);
+    pj_gettickcount(&expires);
     PJ_TIME_VAL_ADD(expires, *delay);
     
     lock_timer_heap(ht);
@@ -503,7 +503,7 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
     }
 
     count = 0;
-    pj_gettimeofday(&now);
+    pj_gettickcount(&now);
 
     lock_timer_heap(ht);
     while ( ht->cur_size && 

@@ -619,7 +619,7 @@ static void decrement_counter(pj_ioqueue_key_t *key)
 	pj_lock_acquire(key->ioqueue->lock);
 
 	pj_assert(key->closing == 1);
-	pj_gettimeofday(&key->free_time);
+	pj_gettickcount(&key->free_time);
 	key->free_time.msec += PJ_IOQUEUE_KEY_FREE_DELAY;
 	pj_time_val_normalize(&key->free_time);
 
@@ -874,7 +874,7 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
 	pj_time_val now;
 	pj_ioqueue_key_t *key;
 
-	pj_gettimeofday(&now);
+	pj_gettickcount(&now);
 	
 	/* Move closing keys to free list when they've finished the closing
 	 * idle time.

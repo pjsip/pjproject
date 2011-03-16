@@ -24,6 +24,16 @@
 #include <stdlib.h>
 #include <ctype.h>
 
+#if defined(PJ_HAS_UNISTD_H) && PJ_HAS_UNISTD_H != 0
+#   include <unistd.h>
+
+#   if defined(_POSIX_TIMERS) && _POSIX_TIMERS > 0 && \
+       defined(_POSIX_MONOTONIC_CLOCK)
+#       define USE_POSIX_TIMERS 1
+#   endif
+
+#endif
+
 #if defined(PJ_HAS_PENTIUM) && PJ_HAS_PENTIUM!=0 && \
     defined(PJ_TIMESTAMP_USE_RDTSC) && PJ_TIMESTAMP_USE_RDTSC!=0 && \
     defined(PJ_M_I386) && PJ_M_I386!=0 && \
@@ -110,6 +120,73 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
     return 0;
 }
 
+#elif defined(PJ_DARWINOS) && PJ_DARWINOS != 0
+#include <mach/mach.h>
+#include <mach/clock.h>
+#include <errno.h>
+
+#define NSEC_PER_SEC	1000000000
+
+PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
+{
+    mach_timespec_t tp;
+    int ret;
+    clock_serv_t serv;
+
+    ret = host_get_clock_service(mach_host_self(), SYSTEM_CLOCK, &serv);
+    if (ret != KERN_SUCCESS) {
+	return PJ_RETURN_OS_ERROR(EINVAL);
+    }
+
+    ret = clock_get_time(serv, &tp);
+    if (ret != KERN_SUCCESS) {
+	return PJ_RETURN_OS_ERROR(EINVAL);
+    }
+
+    ts->u64 = tp.tv_sec;
+    ts->u64 *= NSEC_PER_SEC;
+    ts->u64 += tp.tv_nsec;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
+{
+    freq->u32.hi = 0;
+    freq->u32.lo = NSEC_PER_SEC;
+
+    return PJ_SUCCESS;
+}
+
+#elif defined(USE_POSIX_TIMERS) && USE_POSIX_TIMERS != 0
+#include <sys/time.h>
+#include <errno.h>
+
+#define NSEC_PER_SEC	1000000000
+
+PJ_DEF(pj_status_t) pj_get_timestamp(pj_timestamp *ts)
+{
+    struct timespec tp;
+
+    if (clock_gettime(CLOCK_MONOTONIC, &tp) != 0) {
+	return PJ_RETURN_OS_ERROR(pj_get_native_os_error());
+    }
+
+    ts->u64 = tp.tv_sec;
+    ts->u64 *= NSEC_PER_SEC;
+    ts->u64 += tp.tv_nsec;
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
+{
+    freq->u32.hi = 0;
+    freq->u32.lo = NSEC_PER_SEC;
+
+    return PJ_SUCCESS;
+}
+
 #else
 #include <sys/time.h>
 #include <errno.h>
@@ -140,4 +217,3 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 }
 
 #endif
-

@@ -188,5 +188,19 @@ PJ_DEF(pj_uint32_t) pj_elapsed_cycle( const pj_timestamp *start,
     return stop->u32.lo - start->u32.lo;
 }
 
+PJ_DEF(pj_status_t) pj_gettickcount(pj_time_val *tv)
+{
+    pj_timestamp ts, start;
+    pj_status_t status;
+
+    if ((status = pj_get_timestamp(&ts)) != PJ_SUCCESS)
+        return status;
+
+    pj_set_timestamp32(&start, 0, 0);
+    *tv = pj_elapsed_time(&start, &ts);
+
+    return PJ_SUCCESS;
+}
+
 #endif  /* PJ_HAS_HIGH_RES_TIMER */
 
