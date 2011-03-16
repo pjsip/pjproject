@@ -3030,10 +3030,9 @@ typedef enum pjsua_call_flag
 {
     /**
      * When the call is being put on hold, specify this flag to unhold it.
-     * This flag is only valid for #pjsua_call_reinvite() and
-     * #pjsua_call_update(). Note: for compatibility reason, this flag
-     * must have value of 1 because previously the unhold option is
-     * specified as boolean value.
+     * This flag is only valid for #pjsua_call_reinvite(). Note: for
+     * compatibility reason, this flag must have value of 1 because
+     * previously the unhold option is specified as boolean value.
      */
     PJSUA_CALL_UNHOLD = 1,
 
