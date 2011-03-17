@@ -65,6 +65,7 @@ static dshow_fmt_info dshow_fmts[] =
     {PJMEDIA_FORMAT_YUY2, &MEDIASUBTYPE_YUY2} ,
     {PJMEDIA_FORMAT_RGB24, &MEDIASUBTYPE_RGB24} ,
     {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32} ,
+    //{PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV} ,
 };
 
 /* dshow_ device info */
@@ -112,6 +113,9 @@ struct dshow_stream
         IBaseFilter         *rend_filter;
         AM_MEDIA_TYPE       *mediatype;
     } dgraph[2];
+
+    pj_timestamp	     cap_ts;
+    unsigned		     cap_ts_inc;
 };
 
 
@@ -286,10 +290,10 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 
     ddi = &df->dev_info[df->dev_count++];
     pj_bzero(ddi, sizeof(*ddi));
-    strncpy(ddi->info.name,  "Video Mixing Renderer",
-            sizeof(ddi->info.name));
+    pj_ansi_strncpy(ddi->info.name,  "Video Mixing Renderer",
+                    sizeof(ddi->info.name));
     ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
-    strncpy(ddi->info.driver, "dshow", sizeof(ddi->info.driver));
+    pj_ansi_strncpy(ddi->info.driver, "dshow", sizeof(ddi->info.driver));
     ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
     ddi->info.dir = PJMEDIA_DIR_RENDER;
     ddi->info.has_callback = PJ_FALSE;
@@ -409,7 +413,7 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 {
     struct dshow_stream *strm = (struct dshow_stream*)user_data;
     unsigned char *buffer;
-    pjmedia_frame frame;
+    pjmedia_frame frame = {0};
 
     if (strm->quit_flag) {
         strm->cap_thread_exited = PJ_TRUE;
@@ -434,6 +438,8 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
     IMediaSample_GetPointer(pMediaSample, (BYTE **)&frame.buf);
     frame.size = IMediaSample_GetActualDataLength(pMediaSample);
     frame.bit_info = 0;
+    frame.timestamp = strm->cap_ts;
+    strm->cap_ts.u64 += strm->cap_ts_inc;
     if (strm->vid_cb.capture_cb)
         (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
 }
@@ -453,7 +459,7 @@ static pj_status_t dshow_stream_put_frame(pjmedia_vid_dev_stream *strm,
     for (i = 0; i < 2; i++) {
         if (stream->dgraph[i].csource_filter) {
             HRESULT hr = SourceFilter_Deliver(stream->dgraph[i].csource_filter,
-                frame->buf, frame->size);
+					      frame->buf, frame->size);
 
             if (FAILED(hr)) {
                 return hr;
@@ -726,10 +732,15 @@ static pj_status_t dshow_factory_create_stream(
 
     /* Create capture stream here */
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
+	const pjmedia_video_format_detail *vfd;
+
         status = create_filter_graph(PJMEDIA_DIR_CAPTURE, param->cap_id,
                                      df, strm, &strm->dgraph[ngraph++]);
         if (status != PJ_SUCCESS)
             goto on_error;
+	
+	vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
+	strm->cap_ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
     }
 
     /* Create render stream here */

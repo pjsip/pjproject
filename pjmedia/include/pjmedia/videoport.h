@@ -56,6 +56,8 @@ typedef struct pjmedia_vid_port_param
      * port by calling pjmedia_vid_port_get_passive_port(), and subsequently
      * calls pjmedia_port_put_frame() or pjmedia_port_get_frame() to that
      * media port.
+     *
+     * Default: PJ_TRUE
      */
     pj_bool_t		active;
 
@@ -68,7 +70,8 @@ typedef struct pjmedia_vid_port pjmedia_vid_port;
 
 /**
  * Initialize the parameter with the default values. Note that this typically
- * would only fill the structure to zeroes.
+ * would only fill the structure to zeroes unless they have different default
+ * values.
  *
  * @param prm	The parameter.
  */

@@ -92,6 +92,9 @@ struct ios_stream
     
     UIImageView		*imgView;
     void		*buf;
+    
+    pj_timestamp	 frame_ts;
+    unsigned		 ts_inc;
 };
 
 
@@ -355,9 +358,13 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     frame.buf = CVPixelBufferGetBaseAddress(imageBuffer);
     frame.size = stream->frame_size;
     frame.bit_info = 0;
+    frame.timestamp.u64 = stream->frame_ts.u64;
+    
     if (stream->vid_cb.capture_cb)
         (*stream->vid_cb.capture_cb)(&stream->base, stream->user_data, &frame);
 
+    stream->frame_ts.u64 += stream->ts_inc;
+    
     /* Unlock the pixel buffer */
     CVPixelBufferUnlockBaseAddress(imageBuffer,0);
 }
@@ -385,7 +392,7 @@ static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
     struct ios_factory *qf = (struct ios_factory*)f;
     pj_pool_t *pool;
     struct ios_stream *strm;
-    pjmedia_video_format_detail *vfd;
+    const pjmedia_video_format_detail *vfd;
     const pjmedia_video_format_info *vfi;
     pj_status_t status = PJ_SUCCESS;
     ios_fmt_info *ifi = get_ios_format_info(param->fmt.id);
@@ -418,6 +425,7 @@ static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
     strm->bpp = vfi->bpp;
     strm->bytes_per_row = strm->size.w * strm->bpp / 8;
     strm->frame_size = strm->bytes_per_row * strm->size.h;
+    strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
 
     /* Create capture stream here */
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
