@@ -58,6 +58,7 @@ typedef struct pjmedia_vid_codec_info
 					     zero (support any frame-rate)  */
     pjmedia_ratio       fps[PJMEDIA_VID_CODEC_MAX_FPS_CNT];
                                         /**< Supported frame-rates	    */
+    pj_bool_t		has_rtp_pack;	/**< Support RTP packetization      */
 } pjmedia_vid_codec_info;
 
 

@@ -245,7 +245,7 @@ static pj_status_t h263_parse_fmtp(ffmpeg_private *ff);
 ffmpeg_codec_desc codec_desc[] =
 {
     {
-	{PJMEDIA_FORMAT_H263P,	{"H263-1998",9},    PJMEDIA_RTP_PT_H263},
+	{PJMEDIA_FORMAT_H263P,	{"H263-1998",9},    PJMEDIA_RTP_PT_H263P},
 	PJMEDIA_FORMAT_H263,	1000000,    2000000,
 	&h263_packetize, &h263_unpacketize, &h263_parse_fmtp,
 	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
@@ -257,16 +257,19 @@ ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
     },
     {
+	{PJMEDIA_FORMAT_H264,	{"H264",4},	    PJMEDIA_RTP_PT_H264},
+    },
+    {
 	{PJMEDIA_FORMAT_H261,	{"H261",4},	    PJMEDIA_RTP_PT_H261},
     },
     {
 	{PJMEDIA_FORMAT_MJPEG,	{"JPEG",4},	    PJMEDIA_RTP_PT_JPEG},
     },
     {
-	{PJMEDIA_FORMAT_MPEG4,	{"MP4V",4},	    PJMEDIA_RTP_PT_MPV},
+	{PJMEDIA_FORMAT_MPEG4,	{"MP4V",4}},
     },
     {
-	{PJMEDIA_FORMAT_XVID,	{"XVID",4},	    PJMEDIA_RTP_PT_MPV},
+	{PJMEDIA_FORMAT_XVID,	{"XVID",4}},
 	PJMEDIA_FORMAT_MPEG4,
     },
 };
@@ -451,7 +454,7 @@ static pj_status_t h263_parse_fmtp(ffmpeg_private *ff)
 
 		PJ_TODO(NOTIFY_APP_ABOUT_THIS_NEW_ENCODING_FORMAT);
 	    } else {
-		return PJ_EUNKNOWN;
+		return PJMEDIA_EBADFMT;
 	    }
 	}
     }
@@ -531,6 +534,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 
     avcodec_init();
     avcodec_register_all();
+    av_log_set_level(AV_LOG_ERROR);
 
     /* Enum FFMPEG codecs */
     for (c=av_codec_next(NULL); c; c=av_codec_next(c)) 
@@ -648,6 +652,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 	/* Normalize default value of clock rate */
 	if (desc->info.clock_rate == 0)
 	    desc->info.clock_rate = 90000;
+
+	/* Set RTP packetization support flag in the codec info */
+	desc->info.has_rtp_pack = (desc->packetize != NULL) &&
+				  (desc->unpacketize != NULL);
     }
 
     /* Init unassigned encoder/decoder description from base codec */
@@ -993,8 +1001,17 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
             ctx->time_base.den = vfd->fps.num;
 	    if (vfd->avg_bps) {
                 ctx->bit_rate = vfd->avg_bps;
-		if (vfd->max_bps)
+		if (vfd->max_bps > vfd->avg_bps)
 		    ctx->bit_rate_tolerance = vfd->max_bps - vfd->avg_bps;
+	    }
+
+	    /* Libx264 experimental setting (it rejects ffmpeg defaults) */
+	    if (ff->param.enc_fmt.id == PJMEDIA_FORMAT_H264) {
+		ctx->me_range = 16;
+		ctx->max_qdiff = 4;
+		ctx->qmin = 10;
+		ctx->qmax = 51;
+		ctx->qcompress = 0.6f;
 	    }
 
 	    /* For encoder, should be better to be strict to the standards */
@@ -1026,7 +1043,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
         pj_mutex_unlock(ff_mutex);
         if (err < 0) {
             print_ffmpeg_err(err);
-            return PJ_EUNKNOWN;
+            return PJMEDIA_CODEC_EFAILED;
         }
 
         if (dir & PJMEDIA_DIR_ENCODING)
@@ -1218,6 +1235,7 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(ff->enc_ctx, PJ_EINVALIDOP);
 
     avcodec_get_frame_defaults(&avframe);
+    avframe.pts = input->timestamp.u64;
     
     for (i = 0; i < ff->enc_vfi->plane_cnt; ++i) {
         avframe.data[i] = p;
@@ -1248,7 +1266,7 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
 
     if (err < 0) {
         print_ffmpeg_err(err);
-        return PJ_EUNKNOWN;
+        return PJMEDIA_CODEC_EFAILED;
     } else {
         output->size = err;
     }
@@ -1300,6 +1318,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     pj_bzero(avpacket.data+avpacket.size, FF_INPUT_BUFFER_PADDING_SIZE);
 
     output->bit_info = 0;
+    output->timestamp = input->timestamp;
 
 #if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72
     avpacket.flags = AV_PKT_FLAG_KEY;
@@ -1315,8 +1334,10 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
                                &got_picture, avpacket.data, avpacket.size);
 #endif
     if (err < 0) {
+	output->type = PJMEDIA_FRAME_TYPE_NONE;
+	output->size = 0;
         print_ffmpeg_err(err);
-        return PJ_EUNKNOWN;
+        return PJMEDIA_CODEC_EFAILED;
     } else if (got_picture) {
         pjmedia_video_apply_fmt_param *vafp = &ff->dec_vafp;
         pj_uint8_t *q = (pj_uint8_t*)output->buf;
@@ -1346,7 +1367,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	    /* Re-init format info and apply-param of decoder */
 	    ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param.dec_fmt.id);
 	    if (!ff->dec_vfi)
-		return PJ_EUNKNOWN;
+		return PJ_ENOTSUP;
 	    pj_bzero(&ff->dec_vafp, sizeof(ff->dec_vafp));
 	    ff->dec_vafp.size = ff->param.dec_fmt.det.vid.size;
 	    ff->dec_vafp.buffer = NULL;
@@ -1384,11 +1405,13 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	    }
 	}
 
+	output->type = PJMEDIA_FRAME_TYPE_VIDEO;
         output->size = vafp->framebytes;
     } else {
-        return PJ_EUNKNOWN;
+	output->type = PJMEDIA_FRAME_TYPE_NONE;
+	output->size = 0;
     }
-
+    
     return PJ_SUCCESS;
 }
 

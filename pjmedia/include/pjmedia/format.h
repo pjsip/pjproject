@@ -182,6 +182,7 @@ typedef enum pjmedia_format_id
     PJMEDIA_FORMAT_H261     = PJMEDIA_FORMAT_PACK('H', '2', '6', '1'),
     PJMEDIA_FORMAT_H263     = PJMEDIA_FORMAT_PACK('H', '2', '6', '3'),
     PJMEDIA_FORMAT_H263P    = PJMEDIA_FORMAT_PACK('P', '2', '6', '3'),
+    PJMEDIA_FORMAT_H264     = PJMEDIA_FORMAT_PACK('H', '2', '6', '4'),
 
     PJMEDIA_FORMAT_MJPEG    = PJMEDIA_FORMAT_PACK('M', 'J', 'P', 'G'),
     PJMEDIA_FORMAT_MPEG1VIDEO = PJMEDIA_FORMAT_PACK('M', 'P', '1', 'V'),
@@ -442,12 +443,29 @@ PJ_INLINE(unsigned) PJMEDIA_SPF(unsigned clock_rate, unsigned usec_ptime,
     return ((unsigned)((pj_uint64_t)usec_ptime * \
 		       clock_rate / channel_count / 1000000));
 #elif PJ_HAS_FLOATING_POINT
-    return ((unsigned)(usec_ptime * clock_rate / channel_count / 1000000.0));
+    return ((unsigned)(1.0*usec_ptime * clock_rate / channel_count / 1000000));
 #else
     return ((unsigned)(usec_ptime / 1000L * clock_rate / \
 		       channel_count / 1000));
 #endif
 }
+
+/**
+ * Variant of #PJMEDIA_SPF() which takes frame rate instead of ptime.
+ */
+PJ_INLINE(unsigned) PJMEDIA_SPF2(unsigned clock_rate, const pjmedia_ratio *fr,
+				 unsigned channel_count)
+{
+#if PJ_HAS_INT64
+    return ((unsigned)((pj_uint64_t)clock_rate * fr->num \
+		       / fr->denum / channel_count));
+#elif PJ_HAS_FLOATING_POINT
+    return ((unsigned)(1.0 * clock_rate * fr->num /fr->denum /channel_count));
+#else
+    return ((unsigned)(1L * clock_rate * fr->num / fr->denum / channel_count));
+#endif
+}
+
 
 /**
  * Utility routine to calculate frame size (in bytes) from bitrate and frame

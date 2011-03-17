@@ -545,6 +545,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
     unsigned cnt, i;
     pj_status_t status;
 
+    PJ_UNUSED_ARG(options);
+
     /* Make sure video codec manager is instantiated */
     if (!pjmedia_vid_codec_mgr_instance())
 	pjmedia_vid_codec_mgr_create(endpt->pool, NULL);
@@ -583,9 +585,10 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	    break;
 	}
 
-	/* Payload type */
-	if (codec_info[i].pt == 255) {
-	    PJ_TODO(ALLOCATE_DYNAMIC_PAYLOAD_TYPE);
+	/* Must support RTP packetization and bidirectional */
+	if (!codec_info[i].has_rtp_pack ||
+	    codec_info[i].dir != PJMEDIA_DIR_ENCODING_DECODING)
+	{
 	    continue;
 	}
 

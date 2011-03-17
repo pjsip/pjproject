@@ -54,6 +54,13 @@
 #   define TRACE_JB_OPENED(s)		(s->trace_jb_fd != TRACE_JB_INVALID_FD)
 #endif
 
+#ifndef PJMEDIA_VSTREAM_SIZE
+#   define PJMEDIA_VSTREAM_SIZE	1000
+#endif
+
+#ifndef PJMEDIA_VSTREAM_INC
+#   define PJMEDIA_VSTREAM_INC	1000
+#endif
 
 
 /**
@@ -82,6 +89,7 @@ typedef struct pjmedia_vid_channel
  */
 struct pjmedia_vid_stream
 {
+    pj_pool_t		    *own_pool;      /**< Internal pool.		    */
     pjmedia_endpt	    *endpt;	    /**< Media endpoint.	    */
     pjmedia_vid_codec_mgr   *codec_mgr;	    /**< Codec manager.		    */
     pjmedia_vid_stream_info  info;	    /**< Stream info.		    */
@@ -765,7 +773,8 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 
     while (processed < frame_out.size) {
-        pj_uint8_t *payload, *rtp_pkt;
+        pj_uint8_t *payload;
+        pj_uint8_t *rtp_pkt;
         pj_size_t payload_len;
 
         /* Generate RTP payload */
@@ -774,7 +783,8 @@ static pj_status_t put_frame(pjmedia_port *port,
                                            (pj_uint8_t*)frame_out.buf,
                                            frame_out.size,
                                            &processed,
-                                           &payload, &payload_len);
+                                           (const pj_uint8_t**)&payload,
+                                           &payload_len);
         if (status != PJ_SUCCESS) {
             LOGERR_((channel->port.info.name.ptr, 
 	            "Codec pack() error", status));
@@ -842,8 +852,8 @@ static pj_status_t get_frame(pjmedia_port *port,
     pjmedia_vid_stream *stream = (pjmedia_vid_stream*) port->port_data.pdata;
     pjmedia_vid_channel *channel = stream->dec;
     pjmedia_frame frame_in;
-    pj_bool_t fps_changed = PJ_FALSE;
-    pjmedia_ratio new_fps = {0};
+    pj_uint32_t last_ts = 0;
+    int frm_first_seq = 0, frm_last_seq = 0;
     pj_status_t status;
 
     /* Return no frame is channel is paused */
@@ -859,29 +869,25 @@ static pj_status_t get_frame(pjmedia_port *port,
 	pj_uint8_t *p, *data;
 	char ptype;
 	pj_size_t psize, data_len;
-	pj_uint32_t ts, last_ts;
+	pj_uint32_t ts;
 	int seq;
-	pj_bool_t got_frame, check_fps;
+	pj_bool_t got_frame;
 	unsigned i;
 
 	channel->buf_len = 0;
-	last_ts = 0;
 	got_frame = PJ_FALSE;
-	check_fps = PJ_FALSE;
 
 	/* Lock jitter buffer mutex first */
 	pj_mutex_lock( stream->jb_mutex );
 
 	for (i=0; ; ++i) {
 	    /* Get frame from jitter buffer. */
-	    pjmedia_jbuf_peek_frame(stream->jb, i, &p, &psize, &ptype,
-				    NULL, &ts, &seq);
+	    pjmedia_jbuf_peek_frame(stream->jb, i, (const void**)&p,
+	                            &psize, &ptype, NULL, &ts, &seq);
 	    if (ptype == PJMEDIA_JB_NORMAL_FRAME) {
 		if (last_ts == 0) {
 		    last_ts = ts;
-		    check_fps = stream->last_dec_ts &&
-				(seq - stream->last_dec_seq == 1) &&
-				(last_ts > stream->last_dec_ts);
+		    frm_first_seq = seq;
 		}
 
 		if (ts != last_ts) {
@@ -896,6 +902,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 							   p, psize,
 							   data, &data_len);
 		channel->buf_len += data_len;
+		frm_last_seq = seq;
 	    } else if (ptype == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
 		/* No more packet in the jitter buffer */
 		break;
@@ -910,28 +917,6 @@ static pj_status_t get_frame(pjmedia_port *port,
 	    frame->size = 0;
 	    return PJ_SUCCESS;
 	}
-
-	/* Learn remote frame rate */
-	if (check_fps) {
-	    pj_uint32_t ts_diff;
-	    pjmedia_video_format_detail *vfd;
-
-	    ts_diff = last_ts - stream->last_dec_ts;
-	    vfd = pjmedia_format_get_video_format_detail(
-				    &channel->port.info.fmt, PJ_TRUE);
-	    if (ts_diff * vfd->fps.num !=
-		stream->info.codec_info.clock_rate * vfd->fps.denum)
-	    {
-		/* Frame rate changed */
-		fps_changed = PJ_TRUE;
-		new_fps.num = stream->info.codec_info.clock_rate;
-		new_fps.denum = ts_diff;
-	    }
-	}
-
-	/* Update last frame seq and timestamp */
-	stream->last_dec_seq = seq - 1;
-	stream->last_dec_ts = last_ts;
     }
 
     /* Decode */
@@ -939,6 +924,7 @@ static pj_status_t get_frame(pjmedia_port *port,
     frame_in.size = channel->buf_len;
     frame_in.bit_info = 0;
     frame_in.type = PJMEDIA_FRAME_TYPE_VIDEO;
+    frame_in.timestamp.u64 = last_ts;
 
     status = stream->codec->op->decode(stream->codec, &frame_in,
 				       frame->size, frame);
@@ -959,25 +945,58 @@ static pj_status_t get_frame(pjmedia_port *port,
 			    &stream->info.codec_param->dec_fmt);
     }
 
-    if (fps_changed) {
-	pjmedia_video_format_detail *vfd;
+    /* Learn remote frame rate after successful decoding */
+    if (0 && frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
+    {
+	/* Only check remote frame rate when timestamp is not wrapping and
+	 * sequence is increased by 1.
+	 */
+	if (last_ts > stream->last_dec_ts &&
+	    frm_first_seq - stream->last_dec_seq == 1)
+	{
+	    pj_uint32_t ts_diff;
+	    pjmedia_video_format_detail *vfd;
 
-	/* Update decoding channel port info */
-	vfd = pjmedia_format_get_video_format_detail(
-				&channel->port.info.fmt, PJ_TRUE);
-	vfd->fps = new_fps;
+	    ts_diff = last_ts - stream->last_dec_ts;
+	    vfd = pjmedia_format_get_video_format_detail(
+				    &channel->port.info.fmt, PJ_TRUE);
+	    if ((int)(stream->info.codec_info.clock_rate / ts_diff) !=
+		vfd->fps.num / vfd->fps.denum)
+	    {
+		/* Frame rate changed, update decoding port info */
+		vfd->fps.num = stream->info.codec_info.clock_rate;
+		vfd->fps.denum = ts_diff;
 
-	/* Update stream info */
-	vfd = pjmedia_format_get_video_format_detail(
-				&stream->info.codec_param->dec_fmt, PJ_TRUE);
-	vfd->fps = new_fps;
+		/* Update stream info */
+		stream->info.codec_param->dec_fmt.det.vid.fps = vfd->fps;
 
-	/* Set bit_info */
-	frame->bit_info |= PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
+		/* Set bit_info */
+		frame->bit_info |= PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
 
-	PJ_LOG(4, (channel->port.info.name.ptr, "Frame rate changed to %.2ffps",
-		   (1.0 * new_fps.num / new_fps.denum)));
+		PJ_LOG(5, (channel->port.info.name.ptr, "Frame rate changed to %.2ffps",
+			   (1.0 * vfd->fps.num / vfd->fps.denum)));
+	    }
+	}
+
+	/* Update last frame seq and timestamp */
+	stream->last_dec_seq = frm_last_seq;
+	stream->last_dec_ts = last_ts;
     }
+
+#if PJ_LOG_MAX_LEVEL >= 5
+    if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
+	pjmedia_port_info *pi = &channel->port.info;
+
+	PJ_LOG(5, (channel->port.info.name.ptr,
+		   "Decoding format changed to %dx%d %c%c%c%c %.2ffps",
+		   pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
+		   ((pi->fmt.id & 0x000000FF) >> 0),
+		   ((pi->fmt.id & 0x0000FF00) >> 8),
+		   ((pi->fmt.id & 0x00FF0000) >> 16),
+		   ((pi->fmt.id & 0xFF000000) >> 24),
+		   (1.0*pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum)));
+    }
+#endif
 
     return PJ_SUCCESS;
 }
@@ -1000,6 +1019,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     pj_str_t name;
     const char *type_name;
     pjmedia_format *fmt;
+    pjmedia_port_info *pi;
     
     pj_assert(info->type == PJMEDIA_TYPE_VIDEO);
     pj_assert(dir == PJMEDIA_DIR_DECODING || dir == PJMEDIA_DIR_ENCODING);
@@ -1016,9 +1036,9 @@ static pj_status_t create_channel( pj_pool_t *pool,
 	type_name = "vstenc";
 	fmt = &info->codec_param->enc_fmt;
     }
-
     name.ptr = (char*) pj_pool_alloc(pool, M);
     name.slen = pj_ansi_snprintf(name.ptr, M, "%s%p", type_name, stream);
+    pi = &channel->port.info;
 
     /* Init channel info. */
     channel->stream = stream;
@@ -1058,17 +1078,30 @@ static pj_status_t create_channel( pj_pool_t *pool,
 	return status;
 
     /* Init port. */
-    pjmedia_port_info_init2(&channel->port.info, &name,
+    pjmedia_port_info_init2(pi, &name,
 			    PJMEDIA_PORT_SIGNATURE('V', 'C', 'H', 'N'),
 			    dir, fmt);
     if (dir == PJMEDIA_DIR_DECODING) {
 	channel->port.get_frame = &get_frame;
     } else {
+	pi->fmt.id = info->codec_param->dec_fmt.id;
 	channel->port.put_frame = &put_frame;
     }
 
     /* Init port. */
     channel->port.port_data.pdata = stream;
+
+    PJ_LOG(5, (name.ptr, "%s channel created %dx%d %c%c%c%c%s%.*s %.2ffps",
+	       (dir==PJMEDIA_DIR_ENCODING?"Encoding":"Decoding"),
+	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
+	       ((pi->fmt.id & 0x000000FF) >> 0),
+	       ((pi->fmt.id & 0x0000FF00) >> 8),
+	       ((pi->fmt.id & 0x00FF0000) >> 16),
+	       ((pi->fmt.id & 0xFF000000) >> 24),
+	       (dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
+	       info->codec_info.encoding_name.slen,
+	       info->codec_info.encoding_name.ptr,
+	       (1.0*pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum)));
 
     /* Done. */
     *p_channel = channel;
@@ -1082,12 +1115,13 @@ static pj_status_t create_channel( pj_pool_t *pool,
 PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 					pjmedia_endpt *endpt,
 					pj_pool_t *pool,
-					const pjmedia_vid_stream_info *info,
+					pjmedia_vid_stream_info *info,
 					pjmedia_transport *tp,
 					void *user_data,
 					pjmedia_vid_stream **p_stream)
 {
     enum { M = 32 };
+    pj_pool_t *own_pool = NULL;
     pjmedia_vid_stream *stream;
     unsigned jb_init, jb_max, jb_min_pre, jb_max_pre, len;
     int frm_ptime, chunks_per_frm;
@@ -1095,12 +1129,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     char *p;
     pj_status_t status;
 
+    if (!pool) {
+	own_pool = pjmedia_endpt_create_pool( endpt, "vstrm%p",
+	                                      PJMEDIA_VSTREAM_SIZE,
+	                                      PJMEDIA_VSTREAM_INC);
+	PJ_ASSERT_RETURN(own_pool != NULL, PJ_ENOMEM);
+	pool = own_pool;
+    }
+
     /* Allocate stream */
     stream = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_stream);
     PJ_ASSERT_RETURN(stream != NULL, PJ_ENOMEM);
-
-    /* Copy stream info */
-    pj_memcpy(&stream->info, info, sizeof(*info));
+    stream->own_pool = own_pool;
 
     /* Get codec manager */
     stream->codec_mgr = pjmedia_vid_codec_mgr_instance();
@@ -1120,11 +1160,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
 
     /* Get codec param: */
-    if (info->codec_param) {
-	stream->info.codec_param = pjmedia_vid_codec_param_clone(
-							pool,
-							info->codec_param);
-    } else {
+    if (!info->codec_param) {
 	pjmedia_vid_codec_param def_param;
 
 	status = pjmedia_vid_codec_mgr_get_default_param(stream->codec_mgr, 
@@ -1132,15 +1168,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 						         &def_param);
 	if (status != PJ_SUCCESS)
 	    return status;
-	stream->info.codec_param = pjmedia_vid_codec_param_clone(
-							pool,
-							&def_param);
-	pj_assert(stream->info.codec_param);
+
+	info->codec_param = pjmedia_vid_codec_param_clone(pool, &def_param);
+	pj_assert(info->codec_param);
     }
 
     vfd_enc = pjmedia_format_get_video_format_detail(
-					&stream->info.codec_param->enc_fmt,
-					PJ_TRUE);
+					&info->codec_param->enc_fmt, PJ_TRUE);
 
     /* Init stream: */
     stream->endpt = endpt;
@@ -1173,15 +1207,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 	return status;
 
     /* Init codec param */
-    stream->info.codec_param->dir = info->dir;
-    stream->info.codec_param->enc_mtu = PJMEDIA_MAX_MTU - 
-					sizeof(pjmedia_rtp_hdr);
+    info->codec_param->dir = info->dir;
+    info->codec_param->enc_mtu = PJMEDIA_MAX_MTU - sizeof(pjmedia_rtp_hdr);
 
     /* Init and open the codec. */
     status = stream->codec->op->init(stream->codec, pool);
     if (status != PJ_SUCCESS)
 	return status;
-    status = stream->codec->op->open(stream->codec, stream->info.codec_param);
+    status = stream->codec->op->open(stream->codec, info->codec_param);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1330,10 +1363,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     }
 #endif
 
+    /* Save the stream info */
+    pj_memcpy(&stream->info, info, sizeof(*info));
+    stream->info.codec_param = pjmedia_vid_codec_param_clone(
+						pool, info->codec_param);
+
     /* Success! */
     *p_stream = stream;
 
-    PJ_LOG(5,(THIS_FILE, "Stream %s created", stream->name.ptr));
+    PJ_LOG(5,(THIS_FILE, "Video stream %s created", stream->name.ptr));
 
     return PJ_SUCCESS;
 }
@@ -1434,9 +1472,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     }
 #endif
 
+    if (stream->own_pool) {
+	pj_pool_t *pool = stream->own_pool;
+	stream->own_pool = NULL;
+	pj_pool_release(pool);
+    }
+
     return PJ_SUCCESS;
 }
-
 
 
 /*

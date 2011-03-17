@@ -159,13 +159,19 @@ typedef struct pjmedia_vid_stream pjmedia_vid_stream;
  * no media frames transmitted or received by the stream.
  *
  * @param endpt		Media endpoint.
- * @param pool		Pool to allocate memory for the stream. A large
- *			number of memory may be needed because jitter
+ * @param pool		Optional pool to allocate memory for the stream. If
+ * 			this is not specified, one will be created internally.
+ * 			A large number of memory may be needed because jitter
  *			buffer needs to preallocate some storage.
- * @param info		Stream information.
- * @param tp		Stream transport instance used to transmit 
- *			and receive RTP/RTCP packets to/from the underlying 
- *			transport. 
+ * @param info		Stream information to create the stream. Upon return,
+ * 			this info will be updated with the information from
+ * 			the instantiated codec. Note that if the "pool"
+ * 			argument is NULL, some fields in this "info" parameter
+ * 			will be allocated from the internal pool of the
+ * 			stream, which means that they will only remain valid
+ * 			as long as the stream is not destroyed.
+ * @param tp		Media transport instance used to transmit and receive
+ * 			RTP/RTCP packets to/from the underlying network.
  * @param user_data	Arbitrary user data (for future callback feature).
  * @param p_stream	Pointer to receive the video stream.
  *
@@ -174,7 +180,7 @@ typedef struct pjmedia_vid_stream pjmedia_vid_stream;
 PJ_DECL(pj_status_t) pjmedia_vid_stream_create(
 					pjmedia_endpt *endpt,
 					pj_pool_t *pool,
-					const pjmedia_vid_stream_info *info,
+					pjmedia_vid_stream_info *info,
 					pjmedia_transport *tp,
 					void *user_data,
 					pjmedia_vid_stream **p_stream);
