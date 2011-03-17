@@ -160,6 +160,7 @@ PJ_DEF(pj_status_t) pj_get_timestamp_freq(pj_timestamp *freq)
 
 #elif defined(USE_POSIX_TIMERS) && USE_POSIX_TIMERS != 0
 #include <sys/time.h>
+#include <time.h>
 #include <errno.h>
 
 #define NSEC_PER_SEC	1000000000
