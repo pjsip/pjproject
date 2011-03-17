@@ -483,6 +483,9 @@ struct pjmedia_transport
 
     /** Transport's "virtual" function table. */
     pjmedia_transport_op    *op;
+
+    /** Application/user data */
+    void		    *user_data;
 };
 
 /**

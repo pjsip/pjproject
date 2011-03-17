@@ -43,12 +43,65 @@ typedef enum pjsua_med_tp_st
 
 } pjsua_med_tp_st;
 
+/** Forward decl of pjsua call */
+typedef struct pjsua_call pjsua_call;
+
+/**
+ * Call's media stream.
+ */
+typedef struct pjsua_call_media
+{
+    pjsua_call		*call;	    /**< Parent call.			    */
+    pjmedia_type	 type;	    /**< Media type.			    */
+    unsigned		 idx;       /**< This media index in parent call.   */
+    pjsua_call_media_status state;  /**< Media state.			    */
+    pjmedia_dir		 dir;       /**< Media direction.		    */
+
+    /** The stream */
+    union {
+	/** Audio stream */
+	struct {
+	    pjmedia_stream *stream;    /**< The media session.		    */
+	    int		    conf_slot; /**< Slot # in conference bridge.    */
+	} a;
+
+	/** Video stream */
+	struct {
+	} v;
+
+    } strm;
+
+    pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
+    pj_uint32_t		 rtp_tx_ts; /**< Initial RTP timestamp for sender.  */
+    pj_uint16_t		 rtp_tx_seq;/**< Initial RTP sequence for sender.   */
+    pj_uint8_t		 rtp_tx_seq_ts_set;
+				    /**< Bitmask flags if initial RTP sequence
+				         and/or timestamp for sender are set.
+					 bit 0/LSB : sequence flag
+					 bit 1     : timestamp flag 	    */
+
+    pjmedia_transport	*tp;        /**< Current media transport (can be 0) */
+    pj_status_t		 tp_ready;  /**< Media transport status.	    */
+    pjmedia_transport	*tp_orig;   /**< Original media transport	    */
+    pj_bool_t		 tp_auto_del; /**< May delete media transport   */
+    pjsua_med_tp_st	 tp_st;     /**< Media transport state		    */
+    pj_sockaddr		 rtp_addr;  /**< Current RTP source address
+					    (used to update ICE default
+					    address)			    */
+    pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
+} pjsua_call_media;
+
+/**
+ * Maximum number of SDP "m=" lines to be supported.
+ */
+#define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
+
 /** 
  * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
  * by accessing dlg->mod_data[pjsua.mod.id].
  */
-typedef struct pjsua_call
+struct pjsua_call
 {
     unsigned		 index;	    /**< Index in pjsua array.		    */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
@@ -63,31 +116,14 @@ typedef struct pjsua_call
     int			 secure_level;/**< Signaling security level.	    */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.	    */
     pj_bool_t		 local_hold;/**< Flag for call-hold by local.	    */
-    pjsua_call_media_status media_st;/**< Media state.			    */
-    pjmedia_dir		 media_dir; /**< Media direction.		    */
-    pjmedia_session	*session;   /**< The media session.		    */
-    int			 audio_idx; /**< Index of m=audio in SDP.	    */
-    pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
-    pj_uint32_t		 rtp_tx_ts; /**< Initial RTP timestamp for sender.  */
-    pj_uint16_t		 rtp_tx_seq;/**< Initial RTP sequence for sender.   */
-    pj_uint8_t		 rtp_tx_seq_ts_set;
-				    /**< Bitmask flags if initial RTP sequence
-				         and/or timestamp for sender are set.
-					 bit 0/LSB : sequence flag 
-					 bit 1     : timestamp flag 	    */
-    int			 conf_slot; /**< Slot # in conference bridge.	    */
+
+    unsigned		 med_cnt;   /**< Number of media in SDP.	    */
+    pjsua_call_media     media[PJSUA_MAX_CALL_MEDIA]; /**< Array of media   */
+    unsigned		 audio_idx; /**< Selected audio media.		    */
+
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
-    pjmedia_transport	*med_tp;    /**< Current media transport.	    */
-    pj_status_t		 med_tp_ready;/**< Media transport status.	    */
-    pjmedia_transport	*med_orig;  /**< Original media transport	    */
-    pj_bool_t		 med_tp_auto_del; /**< May delete media transport   */
-    pjsua_med_tp_st	 med_tp_st; /**< Media transport state		    */
-    pj_sockaddr		 med_rtp_addr; /**< Current RTP source address
-					    (used to update ICE default
-					    address)			    */
     pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
-    pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
     char    last_text_buf_[128];    /**< Buffer for last_text.		    */
 
@@ -99,7 +135,7 @@ typedef struct pjsua_call
     } lock_codec;		     /**< Data for codec locking when answer
 					  contains multiple codecs.	    */
 
-} pjsua_call;
+};
 
 
 /**
@@ -270,6 +306,7 @@ struct pjsua_data
     pj_caching_pool	 cp;	    /**< Global pool factory.		*/
     pj_pool_t		*pool;	    /**< pjsua's private pool.		*/
     pj_mutex_t		*mutex;	    /**< Mutex protection for this data	*/
+    pjsua_state		 state;	    /**< Library state.			*/
 
     /* Logging: */
     pjsua_logging_config log_cfg;   /**< Current logging config.	*/
@@ -401,6 +438,9 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 #define PJSUA_TRY_LOCK()    PJ_SUCCESS
 #define PJSUA_UNLOCK()
 #endif
+
+/* Core */
+void pjsua_set_state(pjsua_state new_state);
 
 /******
  * STUN resolution

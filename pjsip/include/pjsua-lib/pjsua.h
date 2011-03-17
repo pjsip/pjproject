@@ -250,6 +250,9 @@ PJ_BEGIN_DECL
 /** Constant to identify invalid ID for all sorts of IDs. */
 #define PJSUA_INVALID_ID	    (-1)
 
+/** Disabled features temporarily for media reorganization */
+#define DISABLED_FOR_TICKET_1185	0
+
 /** Call identification */
 typedef int pjsua_call_id;
 
@@ -282,8 +285,6 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 #   define PJSUA_ACC_MAX_PROXIES    8
 #endif
 
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-
 /**
  * Default value of SRTP mode usage. Valid values are PJMEDIA_SRTP_DISABLED, 
  * PJMEDIA_SRTP_OPTIONAL, and PJMEDIA_SRTP_MANDATORY.
@@ -301,8 +302,6 @@ typedef struct pjsua_msg_data pjsua_msg_data;
  */
 #ifndef PJSUA_DEFAULT_SRTP_SECURE_SIGNALING
     #define PJSUA_DEFAULT_SRTP_SECURE_SIGNALING 1
-#endif
-
 #endif
 
 /**
@@ -324,6 +323,44 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 #ifndef PJSUA_ACQUIRE_CALL_TIMEOUT
 #   define PJSUA_ACQUIRE_CALL_TIMEOUT 2000
 #endif
+
+
+/**
+ * This enumeration represents pjsua state.
+ */
+typedef enum pjsua_state
+{
+    /**
+     * The library has not been initialized.
+     */
+    PJSUA_STATE_NULL,
+
+    /**
+     * After pjsua_create() is called but before pjsua_init() is called.
+     */
+    PJSUA_STATE_CREATED,
+
+    /**
+     * After pjsua_init() is called but before pjsua_start() is called.
+     */
+    PJSUA_STATE_INIT,
+
+    /**
+     * After pjsua_start() is called but before everything is running.
+     */
+    PJSUA_STATE_STARTING,
+
+    /**
+     * After pjsua_start() is called and before pjsua_destroy() is called.
+     */
+    PJSUA_STATE_RUNNING,
+
+    /**
+     * After pjsua_destroy() is called but before the function returns.
+     */
+    PJSUA_STATE_CLOSING
+
+} pjsua_state;
 
 
 /**
@@ -483,7 +520,7 @@ typedef struct pjsua_callback
      * media port then will be added to the conference bridge instead.
      *
      * @param call_id	    Call identification.
-     * @param sess	    Media session for the call.
+     * @param strm	    Media stream.
      * @param stream_idx    Stream index in the media session.
      * @param p_port	    On input, it specifies the media port of the
      *			    stream. Application may modify this pointer to
@@ -491,7 +528,7 @@ typedef struct pjsua_callback
      *			    to the conference bridge.
      */
     void (*on_stream_created)(pjsua_call_id call_id, 
-			      pjmedia_session *sess,
+			      pjmedia_stream *strm,
                               unsigned stream_idx, 
 			      pjmedia_port **p_port);
 
@@ -500,11 +537,11 @@ typedef struct pjsua_callback
      * conference bridge and about to be destroyed.
      *
      * @param call_id	    Call identification.
-     * @param sess	    Media session for the call.
+     * @param strm	    Media stream.
      * @param stream_idx    Stream index in the media session.
      */
     void (*on_stream_destroyed)(pjsua_call_id call_id,
-                                pjmedia_session *sess, 
+                                pjmedia_stream *strm,
 				unsigned stream_idx);
 
     /**
@@ -1154,7 +1191,6 @@ typedef struct pjsua_config
      */
     pj_str_t	    user_agent;
 
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /**
      * Specify default value of secure media transport usage. 
      * Valid values are PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, and
@@ -1184,15 +1220,14 @@ typedef struct pjsua_config
     int		     srtp_secure_signaling;
 
     /**
-     * Specify whether SRTP in PJMEDIA_SRTP_OPTIONAL mode should compose 
+     * Specify whether SRTP in PJMEDIA_SRTP_OPTIONAL mode should compose
      * duplicated media in SDP offer, i.e: unsecured and secured version.
-     * Otherwise, the SDP media will be composed as unsecured media but 
+     * Otherwise, the SDP media will be composed as unsecured media but
      * with SDP "crypto" attribute.
      *
      * Default: PJ_FALSE
      */
     pj_bool_t	     srtp_optional_dup_offer;
-#endif
 
     /**
      * Disconnect other call legs when more than one 2xx responses for 
@@ -1350,6 +1385,14 @@ PJ_DECL(pj_status_t) pjsua_start(void);
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_destroy(void);
+
+
+/**
+ * Retrieve pjsua state.
+ *
+ * @return 	pjsua state.
+ */
+PJ_DECL(pjsua_state) pjsua_get_state(void);
 
 
 /**
@@ -2093,7 +2136,6 @@ typedef enum pjsua_call_hold_type
 #   define PJSUA_CALL_HOLD_TYPE_DEFAULT		PJSUA_CALL_HOLD_TYPE_RFC3264
 #endif
 
-
 /**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
@@ -2384,7 +2426,29 @@ typedef struct pjsua_acc_config
      */
     pj_str_t	     ka_data;
 
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    /**
+     * Maximum number of simultaneous active audio streams to be allowed
+     * for calls on this account. Setting this to zero will disable audio
+     * in calls on this account.
+     *
+     * Default: 1
+     */
+    unsigned         max_audio_cnt;
+
+    /**
+     * Maximum number of simultaneous active video streams to be allowed
+     * for calls on this account. Setting this to zero will disable video
+     * in calls on this account.
+     *
+     * Default: 0
+     */
+    unsigned         max_video_cnt;
+
+    /**
+     * Media transport config.
+     */
+    pjsua_transport_config rtp_cfg;
+
     /**
      * Specify whether secure media transport should be used for this account.
      * Valid values are PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, and
@@ -2408,15 +2472,14 @@ typedef struct pjsua_acc_config
     int		     srtp_secure_signaling;
 
     /**
-     * Specify whether SRTP in PJMEDIA_SRTP_OPTIONAL mode should compose 
+     * Specify whether SRTP in PJMEDIA_SRTP_OPTIONAL mode should compose
      * duplicated media in SDP offer, i.e: unsecured and secured version.
-     * Otherwise, the SDP media will be composed as unsecured media but 
+     * Otherwise, the SDP media will be composed as unsecured media but
      * with SDP "crypto" attribute.
      *
      * Default: PJ_FALSE
      */
     pj_bool_t	     srtp_optional_dup_offer;
-#endif
 
     /**
      * Specify interval of auto registration retry upon registration failure
@@ -2920,19 +2983,29 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
  */
 typedef enum pjsua_call_media_status
 {
-    /** Call currently has no media */
+    /**
+     * Call currently has no media, or the media is not used.
+     */
     PJSUA_CALL_MEDIA_NONE,
 
-    /** The media is active */
+    /**
+     * The media is active
+     */
     PJSUA_CALL_MEDIA_ACTIVE,
 
-    /** The media is currently put on hold by local endpoint */
+    /**
+     * The media is currently put on hold by local endpoint
+     */
     PJSUA_CALL_MEDIA_LOCAL_HOLD,
 
-    /** The media is currently put on hold by remote endpoint */
+    /**
+     * The media is currently put on hold by remote endpoint
+     */
     PJSUA_CALL_MEDIA_REMOTE_HOLD,
 
-    /** The media has reported error (e.g. ICE negotiation) */
+    /**
+     * The media has reported error (e.g. ICE negotiation)
+     */
     PJSUA_CALL_MEDIA_ERROR
 
 } pjsua_call_media_status;
@@ -2982,11 +3055,31 @@ typedef struct pjsua_call_info
     /** Call media status. */
     pjsua_call_media_status media_status;
 
-    /** Media direction */
+    /** Number of active audio streams in this call */
+    unsigned		audio_cnt;
+
+    /** Media direction of the first audio stream. */
     pjmedia_dir		media_dir;
 
-    /** The conference port number for the call */
+    /** The conference port number for the first audio stream. */
     pjsua_conf_port_id	conf_slot;
+
+    /** Array of audio media stream information */
+    struct
+    {
+	/** Media index in SDP. */
+	unsigned		index;
+
+	/** Call media status. */
+	pjsua_call_media_status media_status;
+
+	/** Media direction. */
+	pjmedia_dir		media_dir;
+
+	/** The conference port number for the call. */
+	pjsua_conf_port_id	conf_slot;
+
+    } audio[4];
 
     /** Up-to-date call connected duration (zero when call is not 
      *  established)
@@ -3082,6 +3175,7 @@ PJ_DECL(pj_bool_t) pjsua_call_is_active(pjsua_call_id call_id);
 PJ_DECL(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id);
 
 
+#if DISABLED_FOR_TICKET_1185
 /**
  * Retrieve the media session associated with this call. Note that the media
  * session may not be available depending on the current call's media status
@@ -3095,7 +3189,6 @@ PJ_DECL(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id);
  */
 PJ_DECL(pjmedia_session*) pjsua_call_get_media_session(pjsua_call_id call_id);
 
-
 /**
  * Retrieve the media transport instance that is used for this call. 
  * Application may use the media transport to query more detailed information
@@ -3106,7 +3199,7 @@ PJ_DECL(pjmedia_session*) pjsua_call_get_media_session(pjsua_call_id call_id);
  * @return		Call media transport.
  */
 PJ_DECL(pjmedia_transport*) pjsua_call_get_media_transport(pjsua_call_id cid);
-
+#endif /* DISABLED_FOR_TICKET_1185 */
 
 /**
  * Get the conference port identification associated with the call.
@@ -4882,9 +4975,7 @@ PJ_DECL(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
 PJ_DECL(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
 					    const pjmedia_codec_param *param);
 
-
-
-
+#if DISABLED_FOR_TICKET_1185
 /**
  * Create UDP media transports for all the calls. This function creates
  * one UDP media transport for each call.
@@ -4916,6 +5007,7 @@ PJ_DECL(pj_status_t)
 pjsua_media_transports_attach( pjsua_media_transport tp[],
 			       unsigned count,
 			       pj_bool_t auto_delete);
+#endif
 
 
 /**

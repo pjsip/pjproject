@@ -103,10 +103,8 @@ PJ_DEF(void) pjsua_config_default(pjsua_config *cfg)
     cfg->stun_ignore_failure = PJ_TRUE;
     cfg->force_lr = PJ_TRUE;
     cfg->enable_unsolicited_mwi = PJ_TRUE;
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     cfg->use_srtp = PJSUA_DEFAULT_USE_SRTP;
     cfg->srtp_secure_signaling = PJSUA_DEFAULT_SRTP_SECURE_SIGNALING;
-#endif
     cfg->hangup_forked_call = PJ_TRUE;
 
     cfg->use_timer = PJSUA_SIP_TIMER_OPTIONAL;
@@ -176,11 +174,11 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    cfg->max_audio_cnt = 1;
+    pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;
     cfg->srtp_optional_dup_offer = pjsua_var.ua_cfg.srtp_optional_dup_offer;
-#endif
     cfg->reg_retry_interval = PJSUA_REG_RETRY_INTERVAL;
     cfg->contact_rewrite_method = PJSUA_CONTACT_REWRITE_METHOD;
     cfg->use_rfc5626 = PJ_TRUE;
@@ -222,7 +220,6 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
 }
-
 
 /*****************************************************************************
  * This is a very simple PJSIP module, whose sole purpose is to display
@@ -378,6 +375,7 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
     }
 
     /* Get media socket info, make sure transport is ready */
+#if DISABLED_FOR_TICKET_1185
     if (pjsua_var.calls[0].med_tp) {
 	pjmedia_transport_info_init(&tpinfo);
 	pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &tpinfo);
@@ -389,8 +387,9 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 	    pjsip_create_sdp_body(tdata->pool, sdp, &tdata->msg->body);
 	}
     }
+#endif
 
-    /* Send response statelessly */
+    /* Send response */
     pjsip_get_response_addr(tdata->pool, rdata, &res_addr);
     status = pjsip_endpt_send_response(pjsua_var.endpt, &res_addr, tdata, NULL, NULL);
     if (status != PJ_SUCCESS)
@@ -659,6 +658,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 				&pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    pjsua_set_state(PJSUA_STATE_CREATED);
 
     return PJ_SUCCESS;
 }
@@ -917,6 +917,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 
     PJ_LOG(3,(THIS_FILE, "pjsua version %s for %s initialized", 
 			 pj_get_version(), PJ_OS_NAME));
+
+    pjsua_set_state(PJSUA_STATE_INIT);
 
     return PJ_SUCCESS;
 
@@ -1275,6 +1277,12 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 {
     int i;  /* Must be signed */
 
+    if (pjsua_var.state > PJSUA_STATE_NULL &&
+	pjsua_var.state < PJSUA_STATE_CLOSING)
+    {
+	pjsua_set_state(PJSUA_STATE_CLOSING);
+    }
+
     /* Signal threads to quit: */
     pjsua_var.thread_quit_flag = 1;
 
@@ -1452,10 +1460,34 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));
 
+    pjsua_set_state(PJSUA_STATE_NULL);
+
     /* Done. */
     return PJ_SUCCESS;
 }
 
+void pjsua_set_state(pjsua_state new_state)
+{
+    const char *state_name[] = {
+        "NULL",
+        "CREATED",
+        "INIT",
+        "STARTING",
+        "RUNNING",
+        "CLOSING"
+    };
+    pjsua_state old_state = pjsua_var.state;
+
+    pjsua_var.state = new_state;
+    PJ_LOG(4,(THIS_FILE, "PJSUA state changed: %s --> %s",
+	      state_name[old_state], state_name[new_state]));
+}
+
+/* Get state */
+PJ_DEF(pjsua_state) pjsua_get_state(void)
+{
+    return pjsua_var.state;
+}
 
 /**
  * Application is recommended to call this function after all initialization
@@ -1468,6 +1500,8 @@ PJ_DEF(pj_status_t) pjsua_start(void)
 {
     pj_status_t status;
 
+    pjsua_set_state(PJSUA_STATE_STARTING);
+
     status = pjsua_call_subsys_start();
     if (status != PJ_SUCCESS)
 	return status;
@@ -1479,6 +1513,8 @@ PJ_DEF(pj_status_t) pjsua_start(void)
     status = pjsua_pres_start();
     if (status != PJ_SUCCESS)
 	return status;
+
+    pjsua_set_state(PJSUA_STATE_RUNNING);
 
     return PJ_SUCCESS;
 }
@@ -2563,6 +2599,7 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     pjmedia_endpt_dump(pjsua_get_pjmedia_endpt());
 
     PJ_LOG(3,(THIS_FILE, "Dumping media transports:"));
+#if DISABLED_FOR_TICKET_1185
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];
 	pjmedia_transport_info tpinfo;
@@ -2579,6 +2616,7 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 		  pj_sockaddr_print(&tpinfo.sock_info.rtp_addr_name, addr_buf,
 				    sizeof(addr_buf), 3)));
     }
+#endif
 
     pjsip_tsx_layer_dump(detail);
     pjsip_ua_dump(detail);

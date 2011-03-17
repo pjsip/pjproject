@@ -58,12 +58,43 @@ endif
 # Additional flags
 @ac_build_mak_vars@
 
+#
+# Video
+# Note: there are duplicated macros in pjmedia/os-auto.mak.in (and that's not
+#       good!
+
+# SDL flags
+SDL_CFLAGS = @ac_sdl_cflags@
+SDL_LDFLAGS = @ac_sdl_ldflags@
+
+# FFMPEG dlags
+FFMPEG_CFLAGS = @ac_ffmpeg_cflags@ 
+FFMPEG_LDFLAGS =  @ac_ffmpeg_ldflags@
+
+# Video4Linux2
+V4L2_CFLAGS = @ac_v4l2_cflags@
+V4L2_LDFLAGS = @ac_v4l2_ldflags@
+
+# QT
+AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
+QT_CFLAGS = @ac_qt_cflags@
+
+# iOS
+IOS_CFLAGS = @ac_ios_cflags@
+
+# PJMEDIA features exclusion
+PJ_VIDEO_CFLAGS += $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
+		   $(IOS_CFLAGS)
+PJ_VIDEO_LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS)
+
+
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
 export PJDIR := @ac_pjdir@
 export APP_CC := @CC@
 export APP_CXX := @CXX@
 export APP_CFLAGS := -DPJ_AUTOCONF=1\
 	@CFLAGS@\
+	$(PJ_VIDEO_CFLAGS) \
 	-I$(PJDIR)/pjlib/include\
 	-I$(PJDIR)/pjlib-util/include\
 	-I$(PJDIR)/pjnath/include\
@@ -76,6 +107,7 @@ export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/pjmedia/lib\
 	-L$(PJDIR)/pjsip/lib\
 	-L$(PJDIR)/third_party/lib\
+	$(PJ_VIDEO_LDFLAGS) \
 	@LDFLAGS@
 export APP_LDLIBS := -lpjsua-$(TARGET_NAME)\
 	-lpjsip-ua-$(TARGET_NAME)\

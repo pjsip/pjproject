@@ -267,7 +267,7 @@ static void usage(void)
     puts  ("  --tls-srv-name      Specify TLS server name for multihosting server");
 
     puts  ("");
-    puts  ("Media Options:");
+    puts  ("Audio Options:");
     puts  ("  --add-codec=name    Manually add codec (default is to enable all)");
     puts  ("  --dis-codec=name    Disable codec (can be specified multiple times)");
     puts  ("  --clock-rate=N      Override conference bridge clock rate");
@@ -301,6 +301,11 @@ static void usage(void)
     puts  ("                      Specify N=0 for instant close when unused.");
     puts  ("  --no-tones          Disable audible tones");
     puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
+    puts  ("  --extra-audio       Add one more audio stream");
+
+    puts  ("");
+    puts  ("Video Options:");
+    puts  ("  --video             Enable video");
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -540,7 +545,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 #endif
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
 	   OPT_NO_FORCE_LR,
-	   OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE
+	   OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
+	   OPT_VIDEO, OPT_EXTRA_AUDIO
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -659,6 +665,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "timer-se",   1, 0, OPT_TIMER_SE},
 	{ "timer-min-se", 1, 0, OPT_TIMER_MIN_SE},
 	{ "outb-rid",	1, 0, OPT_OUTB_RID},
+	{ "video",	0, 0, OPT_VIDEO},
+	{ "extra-audio",0, 0, OPT_EXTRA_AUDIO},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1416,6 +1424,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.qos_params.flags = PJ_QOS_PARAM_HAS_DSCP;
 	    cfg->udp_cfg.qos_params.dscp_val = 0x18;
 	    break;
+	case OPT_VIDEO:
+	    ++cur_acc->max_video_cnt;
+	    break;
+	case OPT_EXTRA_AUDIO:
+	    ++cur_acc->max_audio_cnt;
+	    break;
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -1660,6 +1674,14 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     /* MWI */
     if (acc_cfg->mwi_enabled)
 	pj_strcat2(result, "--mwi\n");
+
+    /* Video & extra audio */
+    for (i=0; i<acc_cfg->max_video_cnt; ++i) {
+	pj_strcat2(result, "--video\n");
+    }
+    for (i=1; i<acc_cfg->max_audio_cnt; ++i) {
+	pj_strcat2(result, "--extra-audio\n");
+    }
 }
 
 
@@ -3891,6 +3913,8 @@ void console_app_main(const pj_str_t *uri_to_call)
 		acc_cfg.cred_info[0].data_type = 0;
 		acc_cfg.cred_info[0].data = pj_str(passwd);
 
+		acc_cfg.rtp_cfg = app_config.rtp_cfg;
+
 		status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
 		if (status != PJ_SUCCESS) {
 		    pjsua_perror(THIS_FILE, "Error adding new account", status);
@@ -4928,6 +4952,7 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Add accounts */
     for (i=0; i<app_config.acc_cnt; ++i) {
+	app_config.acc_cfg[i].rtp_cfg = app_config.rtp_cfg;
 	status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -4959,8 +4984,10 @@ pj_status_t app_init(int argc, char *argv[])
 #else
     if (app_config.ipv6)
 	status = create_ipv6_media_transports();
+  #if DISABLED_FOR_TICKET_1185
     else
 	status = pjsua_media_transports_create(&app_config.rtp_cfg);
+  #endif
 #endif
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -5295,6 +5322,10 @@ static pj_status_t create_ipv6_media_transports(void)
 	}
     }
 
+#if DISABLED_FOR_TICKET_1185
     return pjsua_media_transports_attach(tp, i, PJ_TRUE);
+#else
+    return PJ_ENOTSUP;
+#endif
 }
 
