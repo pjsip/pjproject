@@ -77,7 +77,7 @@ if test "${CC}" = ""; then
        gccpath="${DEVPATH}/usr/bin/${archname}-gcc-${gccver}"
        if test -e ${gccpath}; then
           export CC="${gccpath}"
-          break
+#          break
        fi
     done
     if test ! "${CC}" = ""; then
