@@ -58,7 +58,7 @@ typedef struct pjsua_call_media
     pjmedia_dir		 dir;       /**< Media direction.		    */
 
     /** The stream */
-    union {
+    struct {
 	/** Audio stream */
 	struct {
 	    pjmedia_stream *stream;    /**< The audio stream.		    */
