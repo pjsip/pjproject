@@ -1243,7 +1243,7 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
         p += ff->enc_vafp.plane_bytes[i];
     }
 
-#ifdef _MSC_VER
+#if 0 && defined(_MSC_VER)
     /* Align stack for MSVC environment to avoid 'random' crash, as advised in
      * http://ffmpeg.arrozcru.org/forum/viewtopic.php?f=1&t=549
      */
@@ -1258,7 +1258,7 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
         _asm { mov esp, ebx }\
      }
 #else
-#   define VHALIGNCALL16(x)
+#   define VHALIGNCALL16(x)	x
 #endif
 
     VHALIGNCALL16(err = avcodec_encode_video(ff->enc_ctx, out_buf, 
