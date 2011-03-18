@@ -61,12 +61,17 @@ typedef struct pjsua_call_media
     union {
 	/** Audio stream */
 	struct {
-	    pjmedia_stream *stream;    /**< The media session.		    */
+	    pjmedia_stream *stream;    /**< The audio stream.		    */
 	    int		    conf_slot; /**< Slot # in conference bridge.    */
 	} a;
 
 	/** Video stream */
 	struct {
+	    pjmedia_vid_stream  *stream;    /**< The video stream.	    */
+	    pjmedia_vid_port	*capturer;  /**< Video capturer.	    */
+	    pjmedia_vid_port	*renderer;  /**< Video renderer.	    */
+	    pjmedia_converter	*conv_enc;  /**< Converter for encoding dir.*/
+	    pjmedia_converter	*conv_dec;  /**< Converter for decoding dir.*/
 	} v;
 
     } strm;
@@ -119,7 +124,7 @@ struct pjsua_call
 
     unsigned		 med_cnt;   /**< Number of media in SDP.	    */
     pjsua_call_media     media[PJSUA_MAX_CALL_MEDIA]; /**< Array of media   */
-    unsigned		 audio_idx; /**< Selected audio media.		    */
+    int			 audio_idx; /**< First active audio media.	    */
 
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */

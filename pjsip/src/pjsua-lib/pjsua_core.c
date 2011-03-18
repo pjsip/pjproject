@@ -1445,6 +1445,8 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	pjsua_var.pool = NULL;
 	pj_caching_pool_destroy(&pjsua_var.cp);
 
+	pjsua_set_state(PJSUA_STATE_NULL);
+
 	PJ_LOG(4,(THIS_FILE, "PJSUA destroyed..."));
 
 	/* End logging */
@@ -1459,8 +1461,6 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
     /* Clear pjsua_var */
     pj_bzero(&pjsua_var, sizeof(pjsua_var));
-
-    pjsua_set_state(PJSUA_STATE_NULL);
 
     /* Done. */
     return PJ_SUCCESS;

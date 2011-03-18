@@ -1324,27 +1324,36 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     }
     
     /* Build array of media status and dir */
-    info->audio_cnt = 0;
+    info->media_cnt = 0;
     for (mi=0; mi < call->med_cnt &&
-	       info->audio_cnt < PJ_ARRAY_SIZE(info->audio); ++mi)
+	       info->media_cnt < PJ_ARRAY_SIZE(info->media); ++mi)
     {
 	pjsua_call_media *call_med = &call->media[mi];
-	if (call_med->type != PJMEDIA_TYPE_AUDIO)
+
+	info->media[info->media_cnt].index = mi;
+	info->media[info->media_cnt].status = call_med->state;
+	info->media[info->media_cnt].dir = call_med->dir;
+	info->media[info->media_cnt].type = call_med->type;
+
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    info->media[info->media_cnt].stream.audio.conf_slot = 
+						call_med->strm.a.conf_slot;
+	} else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	    info->media[info->media_cnt].stream.video.capturer =
+						call_med->strm.v.capturer;
+	    info->media[info->media_cnt].stream.video.renderer =
+						call_med->strm.v.renderer;
+	} else {
 	    continue;
-	info->audio[info->audio_cnt].index = mi;
-	info->audio[info->audio_cnt].media_status = call_med->state;
-	info->audio[info->audio_cnt].media_dir = call_med->dir;
-	info->audio[info->audio_cnt].conf_slot = call_med->strm.a.conf_slot;
-	++info->audio_cnt;
+	}
+	++info->media_cnt;
     }
 
-    if (info->audio_cnt) {
-	info->media_status = info->audio[0].media_status;
-	info->media_dir = info->audio[0].media_dir;
+    if (call->audio_idx != -1) {
+	info->media_status = call->media[call->audio_idx].state;
+	info->media_dir = call->media[call->audio_idx].dir;
+	info->conf_slot = call->media[call->audio_idx].strm.a.conf_slot;
     }
-
-    /* conference slot number */
-    info->conf_slot = call->media[call->audio_idx].strm.a.conf_slot;
 
     /* calculate duration */
     if (info->state >= PJSIP_INV_STATE_DISCONNECTED) {
@@ -2191,6 +2200,180 @@ const char *good_number(char *buf, pj_int32_t val)
     return buf;
 }
 
+static unsigned dump_media_stat(const char *indent, 
+				char *buf, unsigned maxlen,
+				const pjmedia_rtcp_stat *stat,
+				const char *rx_info, const char *tx_info)
+{
+    char last_update[64];
+    char packets[32], bytes[32], ipbytes[32], avg_bps[32], avg_ipbps[32];
+    pj_time_val media_duration, now;
+    char *p = buf, *end = buf+maxlen;
+    int len;
+
+    if (stat->rx.update_cnt == 0)
+	strcpy(last_update, "never");
+    else {
+	pj_gettimeofday(&now);
+	PJ_TIME_VAL_SUB(now, stat->rx.update);
+	sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+		now.sec / 3600,
+		(now.sec % 3600) / 60,
+		now.sec % 60,
+		now.msec);
+    }
+
+    pj_gettimeofday(&media_duration);
+    PJ_TIME_VAL_SUB(media_duration, stat->start);
+    if (PJ_TIME_VAL_MSEC(media_duration) == 0)
+	media_duration.msec = 1;
+
+    len = pj_ansi_snprintf(p, end-p,
+	   "%s     RX %s last update:%s\n"
+	   "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
+	   "%s        pkt loss=%d (%3.1f%%), discrd=%d (%3.1f%%), dup=%d (%2.1f%%), reord=%d (%3.1f%%)\n"
+	   "%s              (msec)    min     avg     max     last    dev\n"
+	   "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+	   "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
+	   "%s        raw jitter : %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+#endif
+#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
+	   "%s        IPDV       : %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+#endif
+	   "%s",
+	   indent,
+	   rx_info? rx_info : "",
+	   last_update,
+
+	   indent,
+	   good_number(packets, stat->rx.pkt),
+	   good_number(bytes, stat->rx.bytes),
+	   good_number(ipbytes, stat->rx.bytes + stat->rx.pkt * 40),
+	   good_number(avg_bps, (pj_int32_t)((pj_int64_t)stat->rx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
+	   good_number(avg_ipbps, (pj_int32_t)(((pj_int64_t)stat->rx.bytes + stat->rx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
+	   indent,
+	   stat->rx.loss,
+	   (stat->rx.loss? stat->rx.loss * 100.0 / (stat->rx.pkt + stat->rx.loss) : 0),
+	   stat->rx.discard, 
+	   (stat->rx.discard? stat->rx.discard * 100.0 / (stat->rx.pkt + stat->rx.loss) : 0),
+	   stat->rx.dup, 
+	   (stat->rx.dup? stat->rx.dup * 100.0 / (stat->rx.pkt + stat->rx.loss) : 0),
+	   stat->rx.reorder, 
+	   (stat->rx.reorder? stat->rx.reorder * 100.0 / (stat->rx.pkt + stat->rx.loss) : 0),
+	   indent, indent,
+	   stat->rx.loss_period.min / 1000.0, 
+	   stat->rx.loss_period.mean / 1000.0, 
+	   stat->rx.loss_period.max / 1000.0,
+	   stat->rx.loss_period.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->rx.loss_period) / 1000.0,
+	   indent,
+	   stat->rx.jitter.min / 1000.0,
+	   stat->rx.jitter.mean / 1000.0,
+	   stat->rx.jitter.max / 1000.0,
+	   stat->rx.jitter.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->rx.jitter) / 1000.0,
+#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
+	   indent,
+	   stat->rx_raw_jitter.min / 1000.0,
+	   stat->rx_raw_jitter.mean / 1000.0,
+	   stat->rx_raw_jitter.max / 1000.0,
+	   stat->rx_raw_jitter.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->rx_raw_jitter) / 1000.0,
+#endif
+#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
+	   indent,
+	   stat->rx_ipdv.min / 1000.0,
+	   stat->rx_ipdv.mean / 1000.0,
+	   stat->rx_ipdv.max / 1000.0,
+	   stat->rx_ipdv.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->rx_ipdv) / 1000.0,
+#endif
+	   ""
+	   );
+
+    if (len < 1 || len > end-p) {
+	*p = '\0';
+	return (p-buf);
+    }
+    p += len;
+
+    if (stat->tx.update_cnt == 0)
+	strcpy(last_update, "never");
+    else {
+	pj_gettimeofday(&now);
+	PJ_TIME_VAL_SUB(now, stat->tx.update);
+	sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
+		now.sec / 3600,
+		(now.sec % 3600) / 60,
+		now.sec % 60,
+		now.msec);
+    }
+
+    len = pj_ansi_snprintf(p, end-p,
+	   "%s     TX %s last update:%s\n"
+	   "%s        total %spkt %sB (%sB +IP hdr) @avg %sbps/%sbps\n"
+	   "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
+	   "%s              (msec)    min     avg     max     last    dev \n"
+	   "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
+	   "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f\n",
+	   indent,
+	   tx_info,
+	   last_update,
+
+	   indent,
+	   good_number(packets, stat->tx.pkt),
+	   good_number(bytes, stat->tx.bytes),
+	   good_number(ipbytes, stat->tx.bytes + stat->tx.pkt * 40),
+	   good_number(avg_bps, (pj_int32_t)((pj_int64_t)stat->tx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
+	   good_number(avg_ipbps, (pj_int32_t)(((pj_int64_t)stat->tx.bytes + stat->tx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
+
+	   indent,
+	   stat->tx.loss,
+	   (stat->tx.loss? stat->tx.loss * 100.0 / (stat->tx.pkt + stat->tx.loss) : 0),
+	   stat->tx.dup, 
+	   (stat->tx.dup? stat->tx.dup * 100.0 / (stat->tx.pkt + stat->tx.loss) : 0),
+	   stat->tx.reorder, 
+	   (stat->tx.reorder? stat->tx.reorder * 100.0 / (stat->tx.pkt + stat->tx.loss) : 0),
+
+	   indent, indent,
+	   stat->tx.loss_period.min / 1000.0, 
+	   stat->tx.loss_period.mean / 1000.0, 
+	   stat->tx.loss_period.max / 1000.0,
+	   stat->tx.loss_period.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->tx.loss_period) / 1000.0,
+	   indent,
+	   stat->tx.jitter.min / 1000.0,
+	   stat->tx.jitter.mean / 1000.0,
+	   stat->tx.jitter.max / 1000.0,
+	   stat->tx.jitter.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->tx.jitter) / 1000.0
+	   );
+
+    if (len < 1 || len > end-p) {
+	*p = '\0';
+	return (p-buf);
+    }
+    p += len;
+
+    len = pj_ansi_snprintf(p, end-p,
+	   "%s     RTT msec      : %7.3f %7.3f %7.3f %7.3f %7.3f\n",
+	   indent,
+	   stat->rtt.min / 1000.0,
+	   stat->rtt.mean / 1000.0,
+	   stat->rtt.max / 1000.0,
+	   stat->rtt.last / 1000.0,
+	   pj_math_stat_get_stddev(&stat->rtt) / 1000.0
+	   );
+    if (len < 1 || len > end-p) {
+	*p = '\0';
+	return (p-buf);
+    }
+    p += len;
+
+    return (p-buf);
+}
+
 
 /* Dump media session */
 static void dump_media_session(const char *indent, 
@@ -2203,37 +2386,38 @@ static void dump_media_session(const char *indent,
 
     for (i=0; i<call->med_cnt; ++i) {
 	pjsua_call_media *call_med = &call->media[i];
-	pjmedia_stream_info info;
-	pjmedia_stream *stream = call_med->strm.a.stream;
-	pjmedia_transport_info tp_info;
 	pjmedia_rtcp_stat stat;
+	pj_bool_t has_stat;
+	pjmedia_transport_info tp_info;
 	char rem_addr_buf[80];
+	char codec_info[32] = {'0'};
+	char rx_info[80] = {'\0'};
+	char tx_info[80] = {'\0'};
 	const char *rem_addr;
-	const char *dir;
-	char last_update[64];
-	char packets[32], bytes[32], ipbytes[32], avg_bps[32], avg_ipbps[32];
-	pj_time_val media_duration, now;
+	const char *dir_str;
+	const char *media_type_str;
+
+	switch (call_med->type) {
+	case PJMEDIA_TYPE_AUDIO:
+	    media_type_str = "audio";
+	    break;
+	case PJMEDIA_TYPE_VIDEO:
+	    media_type_str = "video";
+	    break;
+	case PJMEDIA_TYPE_APPLICATION:
+	    media_type_str = "application";
+	    break;
+	default:
+	    media_type_str = "unknown";
+	    break;
+	}
 
 	/* Check if the stream is deactivated */
-	if (call_med->tp == NULL || stream == NULL) {
-	    const char *media_type_str;
-
-	    switch (call_med->type) {
-	    case PJMEDIA_TYPE_AUDIO:
-		media_type_str = "audio";
-		break;
-	    case PJMEDIA_TYPE_VIDEO:
-		media_type_str = "video";
-		break;
-	    case PJMEDIA_TYPE_APPLICATION:
-		media_type_str = "application";
-		break;
-	    default:
-		media_type_str = "unknown";
-		break;
-	    }
+	if (call_med->tp == NULL ||
+	    (!call_med->strm.a.stream && !call_med->strm.v.stream))
+	{
 	    len = pj_ansi_snprintf(p, end-p,
-		      "%s  #%d m=%s deactivated\n",
+		      "%s #%d %s deactivated\n",
 		      indent, i, media_type_str);
 	    if (len < 1 || len > end-p) {
 		*p = '\0';
@@ -2246,9 +2430,6 @@ static void dump_media_session(const char *indent,
 
 	pjmedia_transport_info_init(&tp_info);
 	pjmedia_transport_get_info(call_med->tp, &tp_info);
-
-	pjmedia_stream_get_info(stream, &info);
-	pjmedia_stream_get_stat(stream, &stat);
 
 	// rem_addr will contain actual address of RTP originator, instead of
 	// remote RTP address specified by stream which is fetched from the SDP.
@@ -2267,210 +2448,88 @@ static void dump_media_session(const char *indent,
 	    /* To handle when the stream that is currently being paused
 	     * (http://trac.pjsip.org/repos/ticket/1079)
 	     */
-	    dir = "inactive";
-	} else if (info.dir == PJMEDIA_DIR_ENCODING)
-	    dir = "sendonly";
-	else if (info.dir == PJMEDIA_DIR_DECODING)
-	    dir = "recvonly";
-	else if (info.dir == PJMEDIA_DIR_ENCODING_DECODING)
-	    dir = "sendrecv";
+	    dir_str = "inactive";
+	} else if (call_med->dir == PJMEDIA_DIR_ENCODING)
+	    dir_str = "sendonly";
+	else if (call_med->dir == PJMEDIA_DIR_DECODING)
+	    dir_str = "recvonly";
+	else if (call_med->dir == PJMEDIA_DIR_ENCODING_DECODING)
+	    dir_str = "sendrecv";
 	else
-	    dir = "inactive";
+	    dir_str = "inactive";
 
-	
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    pjmedia_stream *stream = call_med->strm.a.stream;
+	    pjmedia_stream_info info;
+
+	    pjmedia_stream_get_stat(stream, &stat);
+	    has_stat = PJ_TRUE;
+
+	    pjmedia_stream_get_info(stream, &info);
+	    pj_ansi_snprintf(codec_info, sizeof(codec_info), " %.*s @%dkHz",
+			     info.fmt.encoding_name.slen,
+			     info.fmt.encoding_name.ptr,
+			     info.fmt.clock_rate / 1000);
+	    pj_ansi_snprintf(rx_info, sizeof(rx_info), "pt=%d,",
+			     info.fmt.pt);
+	    pj_ansi_snprintf(tx_info, sizeof(tx_info), "pt=%d, ptime=%d,",
+			     info.tx_pt,
+			     info.param->setting.frm_per_pkt*
+			     info.param->info.frm_ptime);
+	} else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	    pjmedia_vid_stream *stream = call_med->strm.v.stream;
+	    pjmedia_vid_stream_info info;
+
+	    pjmedia_vid_stream_get_stat(stream, &stat);
+	    has_stat = PJ_TRUE;
+
+	    pjmedia_vid_stream_get_info(stream, &info);
+	    pj_ansi_snprintf(codec_info, sizeof(codec_info), " %.*s",
+			     info.codec_info.encoding_name.slen,
+			     info.codec_info.encoding_name.ptr);
+	    if (call_med->dir & PJMEDIA_DIR_DECODING) {
+		pjmedia_video_format_detail *vfd;
+		vfd = pjmedia_format_get_video_format_detail(
+					&info.codec_param->dec_fmt, PJ_TRUE);
+		pj_ansi_snprintf(rx_info, sizeof(rx_info),
+				 "pt=%d, size=%dx%d, fps=%.2f,",
+				 info.rx_pt,
+				 vfd->size.w, vfd->size.h,
+				 vfd->fps.num*1.0/vfd->fps.denum);
+	    }
+	    if (call_med->dir & PJMEDIA_DIR_ENCODING) {
+		pjmedia_video_format_detail *vfd;
+		vfd = pjmedia_format_get_video_format_detail(
+					&info.codec_param->enc_fmt, PJ_TRUE);
+		pj_ansi_snprintf(tx_info, sizeof(tx_info),
+				 "pt=%d, size=%dx%d, fps=%.2f,",
+				 info.tx_pt,
+				 vfd->size.w, vfd->size.h,
+				 vfd->fps.num*1.0/vfd->fps.denum);
+	    }
+	} else {
+	    has_stat = PJ_FALSE;
+	}
+
 	len = pj_ansi_snprintf(p, end-p,
-		  "%s  #%d %.*s @%dKHz, %s, peer=%s",
-		  indent, i,
-		  (int)info.fmt.encoding_name.slen,
-		  info.fmt.encoding_name.ptr,
-		  info.fmt.clock_rate / 1000,
-		  dir,
+		  "%s  #%d %s%s, %s, peer=%s\n",
+		  indent,
+		  call_med->idx,
+		  media_type_str,
+		  codec_info,
+		  dir_str,
 		  rem_addr);
 	if (len < 1 || len > end-p) {
 	    *p = '\0';
 	    return;
 	}
-
 	p += len;
-	*p++ = '\n';
-	*p = '\0';
 
-	if (stat.rx.update_cnt == 0)
-	    strcpy(last_update, "never");
-	else {
-	    pj_gettimeofday(&now);
-	    PJ_TIME_VAL_SUB(now, stat.rx.update);
-	    sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
-		    now.sec / 3600,
-		    (now.sec % 3600) / 60,
-		    now.sec % 60,
-		    now.msec);
+	if (has_stat) {
+	    len = dump_media_stat(indent, p, end-p, &stat,
+				  rx_info, tx_info);
+	    p += len;
 	}
-
-	pj_gettimeofday(&media_duration);
-	PJ_TIME_VAL_SUB(media_duration, stat.start);
-	if (PJ_TIME_VAL_MSEC(media_duration) == 0)
-	    media_duration.msec = 1;
-
-	/* protect against division by zero */
-	if (stat.rx.pkt == 0)
-	    stat.rx.pkt = 1;
-	if (stat.tx.pkt == 0)
-	    stat.tx.pkt = 1;
-
-	len = pj_ansi_snprintf(p, end-p,
-	       "%s     RX pt=%d, stat last update: %s\n"
-	       "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
-	       "%s        pkt loss=%d (%3.1f%%), discrd=%d (%3.1f%%), dup=%d (%2.1f%%), reord=%d (%3.1f%%)\n"
-	       "%s              (msec)    min     avg     max     last    dev\n"
-	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f"
-#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
-	       "\n"
-	       "%s        raw jitter : %7.3f %7.3f %7.3f %7.3f %7.3f"
-#endif
-#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
-	       "\n"
-	       "%s        IPDV       : %7.3f %7.3f %7.3f %7.3f %7.3f"
-#endif
-	       "%s",
-	       indent, info.fmt.pt,
-	       last_update,
-	       indent,
-	       good_number(packets, stat.rx.pkt),
-	       good_number(bytes, stat.rx.bytes),
-	       good_number(ipbytes, stat.rx.bytes + stat.rx.pkt * 40),
-	       good_number(avg_bps, (pj_int32_t)((pj_int64_t)stat.rx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
-	       good_number(avg_ipbps, (pj_int32_t)(((pj_int64_t)stat.rx.bytes + stat.rx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
-	       indent,
-	       stat.rx.loss,
-	       stat.rx.loss * 100.0 / (stat.rx.pkt + stat.rx.loss),
-	       stat.rx.discard, 
-	       stat.rx.discard * 100.0 / (stat.rx.pkt + stat.rx.loss),
-	       stat.rx.dup, 
-	       stat.rx.dup * 100.0 / (stat.rx.pkt + stat.rx.loss),
-	       stat.rx.reorder, 
-	       stat.rx.reorder * 100.0 / (stat.rx.pkt + stat.rx.loss),
-	       indent, indent,
-	       stat.rx.loss_period.min / 1000.0, 
-	       stat.rx.loss_period.mean / 1000.0, 
-	       stat.rx.loss_period.max / 1000.0,
-	       stat.rx.loss_period.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.rx.loss_period) / 1000.0,
-	       indent,
-	       stat.rx.jitter.min / 1000.0,
-	       stat.rx.jitter.mean / 1000.0,
-	       stat.rx.jitter.max / 1000.0,
-	       stat.rx.jitter.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.rx.jitter) / 1000.0,
-#if defined(PJMEDIA_RTCP_STAT_HAS_RAW_JITTER) && PJMEDIA_RTCP_STAT_HAS_RAW_JITTER!=0
-	       indent,
-	       stat.rx_raw_jitter.min / 1000.0,
-	       stat.rx_raw_jitter.mean / 1000.0,
-	       stat.rx_raw_jitter.max / 1000.0,
-	       stat.rx_raw_jitter.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.rx_raw_jitter) / 1000.0,
-#endif
-#if defined(PJMEDIA_RTCP_STAT_HAS_IPDV) && PJMEDIA_RTCP_STAT_HAS_IPDV!=0
-	       indent,
-	       stat.rx_ipdv.min / 1000.0,
-	       stat.rx_ipdv.mean / 1000.0,
-	       stat.rx_ipdv.max / 1000.0,
-	       stat.rx_ipdv.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.rx_ipdv) / 1000.0,
-#endif
-	       ""
-	       );
-
-	if (len < 1 || len > end-p) {
-	    *p = '\0';
-	    return;
-	}
-
-	p += len;
-	*p++ = '\n';
-	*p = '\0';
-	
-	if (stat.tx.update_cnt == 0)
-	    strcpy(last_update, "never");
-	else {
-	    pj_gettimeofday(&now);
-	    PJ_TIME_VAL_SUB(now, stat.tx.update);
-	    sprintf(last_update, "%02ldh:%02ldm:%02ld.%03lds ago",
-		    now.sec / 3600,
-		    (now.sec % 3600) / 60,
-		    now.sec % 60,
-		    now.msec);
-	}
-
-	len = pj_ansi_snprintf(p, end-p,
-	       "%s     TX pt=%d, ptime=%dms, stat last update: %s\n"
-	       "%s        total %spkt %sB (%sB +IP hdr) @avg %sbps/%sbps\n"
-	       "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
-	       "%s              (msec)    min     avg     max     last    dev \n"
-	       "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
-	       "%s        jitter     : %7.3f %7.3f %7.3f %7.3f %7.3f%s",
-	       indent,
-	       info.tx_pt,
-	       info.param->info.frm_ptime * info.param->setting.frm_per_pkt,
-	       last_update,
-
-	       indent,
-	       good_number(packets, stat.tx.pkt),
-	       good_number(bytes, stat.tx.bytes),
-	       good_number(ipbytes, stat.tx.bytes + stat.tx.pkt * 40),
-	       good_number(avg_bps, (pj_int32_t)((pj_int64_t)stat.tx.bytes * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
-	       good_number(avg_ipbps, (pj_int32_t)(((pj_int64_t)stat.tx.bytes + stat.tx.pkt * 40) * 8 * 1000 / PJ_TIME_VAL_MSEC(media_duration))),
-
-	       indent,
-	       stat.tx.loss,
-	       stat.tx.loss * 100.0 / (stat.tx.pkt + stat.tx.loss),
-	       stat.tx.dup, 
-	       stat.tx.dup * 100.0 / (stat.tx.pkt + stat.tx.loss),
-	       stat.tx.reorder, 
-	       stat.tx.reorder * 100.0 / (stat.tx.pkt + stat.tx.loss),
-
-	       indent, indent,
-	       stat.tx.loss_period.min / 1000.0, 
-	       stat.tx.loss_period.mean / 1000.0, 
-	       stat.tx.loss_period.max / 1000.0,
-	       stat.tx.loss_period.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.tx.loss_period) / 1000.0,
-	       indent,
-	       stat.tx.jitter.min / 1000.0,
-	       stat.tx.jitter.mean / 1000.0,
-	       stat.tx.jitter.max / 1000.0,
-	       stat.tx.jitter.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.tx.jitter) / 1000.0,
-	       ""
-	       );
-
-	if (len < 1 || len > end-p) {
-	    *p = '\0';
-	    return;
-	}
-
-	p += len;
-	*p++ = '\n';
-	*p = '\0';
-
-	len = pj_ansi_snprintf(p, end-p,
-	       "%s     RTT msec      : %7.3f %7.3f %7.3f %7.3f %7.3f",
-	       indent,
-	       stat.rtt.min / 1000.0,
-	       stat.rtt.mean / 1000.0,
-	       stat.rtt.max / 1000.0,
-	       stat.rtt.last / 1000.0,
-	       pj_math_stat_get_stddev(&stat.rtt) / 1000.0
-	       );
-	if (len < 1 || len > end-p) {
-	    *p = '\0';
-	    return;
-	}
-
-	p += len;
-	*p++ = '\n';
-	*p = '\0';
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 #   define SAMPLES_TO_USEC(usec, samples, clock_rate) \

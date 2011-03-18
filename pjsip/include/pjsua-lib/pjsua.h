@@ -3052,11 +3052,8 @@ typedef struct pjsua_call_info
     /** The reason phrase describing the status. */
     pj_str_t		last_status_text;
 
-    /** Call media status. */
+    /** Media status of the first audio stream. */
     pjsua_call_media_status media_status;
-
-    /** Number of active audio streams in this call */
-    unsigned		audio_cnt;
 
     /** Media direction of the first audio stream. */
     pjmedia_dir		media_dir;
@@ -3064,22 +3061,40 @@ typedef struct pjsua_call_info
     /** The conference port number for the first audio stream. */
     pjsua_conf_port_id	conf_slot;
 
-    /** Array of audio media stream information */
+    /** Number of media streams in this call */
+    unsigned		media_cnt;
+
+    /** Array of media stream information */
     struct
     {
 	/** Media index in SDP. */
 	unsigned		index;
 
-	/** Call media status. */
-	pjsua_call_media_status media_status;
+	/** Media type. */
+	pjmedia_type		type;
 
 	/** Media direction. */
-	pjmedia_dir		media_dir;
+	pjmedia_dir		dir;
 
-	/** The conference port number for the call. */
-	pjsua_conf_port_id	conf_slot;
+	/** Call media status. */
+	pjsua_call_media_status status;
 
-    } audio[4];
+	/** The specific media stream info. */
+	union {
+	    /** Audio stream */
+	    struct {
+		pjsua_conf_port_id   conf_slot; /**< The conference port
+						     number for the call.   */
+	    } audio;
+
+	    /** Video stream */
+	    struct {
+		pjmedia_vid_port    *capturer;  /**< Video capturer.	    */
+		pjmedia_vid_port    *renderer;  /**< Video renderer.	    */
+	    } video;
+	} stream;
+
+    } media[PJMEDIA_MAX_SDP_MEDIA];
 
     /** Up-to-date call connected duration (zero when call is not 
      *  established)
