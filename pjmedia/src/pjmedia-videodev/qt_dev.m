@@ -72,15 +72,15 @@ struct qt_factory
 /* Video stream. */
 struct qt_stream
 {
-    pjmedia_vid_stream	 base;		    /**< Base stream	       */
-    pjmedia_vid_param	 param;		    /**< Settings	       */
-    pj_pool_t           *pool;              /**< Memory pool.          */
+    pjmedia_vid_dev_stream  base;	    /**< Base stream	       */
+    pjmedia_vid_param	    param;	    /**< Settings	       */
+    pj_pool_t		   *pool;           /**< Memory pool.          */
 
-    pj_timestamp	 cap_frame_ts;	    /**< Captured frame tstamp */
-    unsigned		 cap_ts_inc;	    /**< Increment	       */
+    pj_timestamp	    cap_frame_ts;   /**< Captured frame tstamp */
+    unsigned		    cap_ts_inc;	    /**< Increment	       */
     
-    pjmedia_vid_cb       vid_cb;            /**< Stream callback.      */
-    void                *user_data;         /**< Application data.     */
+    pjmedia_vid_cb	    vid_cb;         /**< Stream callback.      */
+    void		   *user_data;      /**< Application data.     */
 
     QTCaptureSession			*cap_session;
     QTCaptureDeviceInput		*dev_input;
@@ -100,23 +100,24 @@ static pj_status_t qt_factory_default_param(pj_pool_t *pool,
 					    pjmedia_vid_dev_factory *f,
 					    unsigned index,
 					    pjmedia_vid_param *param);
-static pj_status_t qt_factory_create_stream(pjmedia_vid_dev_factory *f,
-					    const pjmedia_vid_param *param,
-					    const pjmedia_vid_cb *cb,
-					    void *user_data,
-					    pjmedia_vid_stream **p_vid_strm);
+static pj_status_t qt_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm);
 
-static pj_status_t qt_stream_get_param(pjmedia_vid_stream *strm,
+static pj_status_t qt_stream_get_param(pjmedia_vid_dev_stream *strm,
 				       pjmedia_vid_param *param);
-static pj_status_t qt_stream_get_cap(pjmedia_vid_stream *strm,
+static pj_status_t qt_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				     pjmedia_vid_dev_cap cap,
 				     void *value);
-static pj_status_t qt_stream_set_cap(pjmedia_vid_stream *strm,
+static pj_status_t qt_stream_set_cap(pjmedia_vid_dev_stream *strm,
 				     pjmedia_vid_dev_cap cap,
 				     const void *value);
-static pj_status_t qt_stream_start(pjmedia_vid_stream *strm);
-static pj_status_t qt_stream_stop(pjmedia_vid_stream *strm);
-static pj_status_t qt_stream_destroy(pjmedia_vid_stream *strm);
+static pj_status_t qt_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t qt_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t qt_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -129,7 +130,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &qt_factory_create_stream
 };
 
-static pjmedia_vid_stream_op stream_op =
+static pjmedia_vid_dev_stream_op stream_op =
 {
     &qt_stream_get_param,
     &qt_stream_get_cap,
@@ -301,8 +302,6 @@ static pj_status_t qt_factory_default_param(pj_pool_t *pool,
     param->rend_id = PJMEDIA_VID_INVALID_DEV;
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    param->frame_rate.num = DEFAULT_FPS;
-    param->frame_rate.denum = 1;
     pj_memcpy(&param->fmt, &di->info.fmt[0], sizeof(param->fmt));
 
     return PJ_SUCCESS;
@@ -347,11 +346,12 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
 }
 
 /* API: create stream */
-static pj_status_t qt_factory_create_stream(pjmedia_vid_dev_factory *f,
-					    const pjmedia_vid_param *param,
-					    const pjmedia_vid_cb *cb,
-					    void *user_data,
-					    pjmedia_vid_stream **p_vid_strm)
+static pj_status_t qt_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct qt_factory *qf = (struct qt_factory*)f;
     pj_pool_t *pool;
@@ -444,7 +444,7 @@ static pj_status_t qt_factory_create_stream(pjmedia_vid_dev_factory *f,
 					  kCVPixelBufferHeightKey, nil]];
 
 	pj_assert(vfd->fps.num);
-	strm->cap_ts_inc = PJMEDIA_SPF2(&strm->param.clock_rate, &vfd->fps, 1);
+	strm->cap_ts_inc = PJMEDIA_SPF2(strm->param.clock_rate, &vfd->fps, 1);
 	
 	[strm->video_output setMinimumVideoFrameInterval:
 			    (1.0f * vfd->fps.denum / (double)vfd->fps.num)];
@@ -469,13 +469,13 @@ static pj_status_t qt_factory_create_stream(pjmedia_vid_dev_factory *f,
     return PJ_SUCCESS;
     
 on_error:
-    qt_stream_destroy((pjmedia_vid_stream *)strm);
+    qt_stream_destroy((pjmedia_vid_dev_stream *)strm);
     
     return status;
 }
 
 /* API: Get stream info. */
-static pj_status_t qt_stream_get_param(pjmedia_vid_stream *s,
+static pj_status_t qt_stream_get_param(pjmedia_vid_dev_stream *s,
 				       pjmedia_vid_param *pi)
 {
     struct qt_stream *strm = (struct qt_stream*)s;
@@ -494,7 +494,7 @@ static pj_status_t qt_stream_get_param(pjmedia_vid_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t qt_stream_get_cap(pjmedia_vid_stream *s,
+static pj_status_t qt_stream_get_cap(pjmedia_vid_dev_stream *s,
 				     pjmedia_vid_dev_cap cap,
 				     void *pval)
 {
@@ -514,7 +514,7 @@ static pj_status_t qt_stream_get_cap(pjmedia_vid_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t qt_stream_set_cap(pjmedia_vid_stream *s,
+static pj_status_t qt_stream_set_cap(pjmedia_vid_dev_stream *s,
 				     pjmedia_vid_dev_cap cap,
 				     const void *pval)
 {
@@ -533,7 +533,7 @@ static pj_status_t qt_stream_set_cap(pjmedia_vid_stream *s,
 }
 
 /* API: Start stream. */
-static pj_status_t qt_stream_start(pjmedia_vid_stream *strm)
+static pj_status_t qt_stream_start(pjmedia_vid_dev_stream *strm)
 {
     struct qt_stream *stream = (struct qt_stream*)strm;
 
@@ -552,7 +552,7 @@ static pj_status_t qt_stream_start(pjmedia_vid_stream *strm)
 }
 
 /* API: Stop stream. */
-static pj_status_t qt_stream_stop(pjmedia_vid_stream *strm)
+static pj_status_t qt_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct qt_stream *stream = (struct qt_stream*)strm;
 
@@ -568,7 +568,7 @@ static pj_status_t qt_stream_stop(pjmedia_vid_stream *strm)
 
 
 /* API: Destroy stream. */
-static pj_status_t qt_stream_destroy(pjmedia_vid_stream *strm)
+static pj_status_t qt_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     struct qt_stream *stream = (struct qt_stream*)strm;
 

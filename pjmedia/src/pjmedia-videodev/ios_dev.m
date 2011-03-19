@@ -73,17 +73,17 @@ struct ios_factory
 /* Video stream. */
 struct ios_stream
 {
-    pjmedia_vid_stream	 base;		    /**< Base stream	       */
-    pjmedia_vid_param	 param;		    /**< Settings	       */
-    pj_pool_t           *pool;              /**< Memory pool.          */
+    pjmedia_vid_dev_stream  base;		/**< Base stream       */
+    pjmedia_vid_param	    param;		/**< Settings	       */
+    pj_pool_t		   *pool;		/**< Memory pool       */
 
-    pjmedia_vid_cb       vid_cb;            /**< Stream callback.      */
-    void                *user_data;         /**< Application data.     */
+    pjmedia_vid_cb	    vid_cb;		/**< Stream callback   */
+    void		   *user_data;          /**< Application data  */
 
-    pjmedia_rect_size	 size;
-    pj_uint8_t		 bpp;
-    unsigned		 bytes_per_row;
-    unsigned		 frame_size;
+    pjmedia_rect_size	    size;
+    pj_uint8_t		    bpp;
+    unsigned		    bytes_per_row;
+    unsigned		    frame_size;
     
     AVCaptureSession		*cap_session;
     AVCaptureDeviceInput	*dev_input;
@@ -109,25 +109,26 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
 					     pjmedia_vid_dev_factory *f,
 					     unsigned index,
 					     pjmedia_vid_param *param);
-static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
-					     const pjmedia_vid_param *param,
-					     const pjmedia_vid_cb *cb,
-					     void *user_data,
-					     pjmedia_vid_stream **p_vid_strm);
+static pj_status_t ios_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm);
 
-static pj_status_t ios_stream_get_param(pjmedia_vid_stream *strm,
+static pj_status_t ios_stream_get_param(pjmedia_vid_dev_stream *strm,
 				        pjmedia_vid_param *param);
-static pj_status_t ios_stream_get_cap(pjmedia_vid_stream *strm,
+static pj_status_t ios_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				      pjmedia_vid_dev_cap cap,
 				      void *value);
-static pj_status_t ios_stream_set_cap(pjmedia_vid_stream *strm,
+static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *strm,
 				      pjmedia_vid_dev_cap cap,
 				      const void *value);
-static pj_status_t ios_stream_start(pjmedia_vid_stream *strm);
-static pj_status_t ios_stream_put_frame(pjmedia_vid_stream *strm,
+static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm);
+static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
 					const pjmedia_frame *frame);
-static pj_status_t ios_stream_stop(pjmedia_vid_stream *strm);
-static pj_status_t ios_stream_destroy(pjmedia_vid_stream *strm);
+static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm);
+static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -140,7 +141,7 @@ static pjmedia_vid_dev_factory_op factory_op =
     &ios_factory_create_stream
 };
 
-static pjmedia_vid_stream_op stream_op =
+static pjmedia_vid_dev_stream_op stream_op =
 {
     &ios_stream_get_param,
     &ios_stream_get_cap,
@@ -293,8 +294,6 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    param->frame_rate.num = DEFAULT_FPS;
-    param->frame_rate.denum = 1;
     pj_memcpy(&param->fmt, &di->info.fmt[0], sizeof(param->fmt));
 
     return PJ_SUCCESS;
@@ -383,11 +382,12 @@ static ios_fmt_info* get_ios_format_info(pjmedia_format_id id)
 }
 
 /* API: create stream */
-static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
-					     const pjmedia_vid_param *param,
-					     const pjmedia_vid_cb *cb,
-					     void *user_data,
-					     pjmedia_vid_stream **p_vid_strm)
+static pj_status_t ios_factory_create_stream(
+					pjmedia_vid_dev_factory *f,
+					const pjmedia_vid_param *param,
+					const pjmedia_vid_cb *cb,
+					void *user_data,
+					pjmedia_vid_dev_stream **p_vid_strm)
 {
     struct ios_factory *qf = (struct ios_factory*)f;
     pj_pool_t *pool;
@@ -488,7 +488,7 @@ static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
 	UIWindow *window = [[UIApplication sharedApplication] keyWindow];
 	
 	if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW && param->window)
-	    window = param->window;
+	    window = (UIWindow *)param->window;
 	
 	pj_assert(window);
 	strm->imgView = [[UIImageView alloc] initWithFrame:[window bounds]];
@@ -521,13 +521,13 @@ static pj_status_t ios_factory_create_stream(pjmedia_vid_dev_factory *f,
     return PJ_SUCCESS;
     
 on_error:
-    ios_stream_destroy((pjmedia_vid_stream *)strm);
+    ios_stream_destroy((pjmedia_vid_dev_stream *)strm);
     
     return status;
 }
 
 /* API: Get stream info. */
-static pj_status_t ios_stream_get_param(pjmedia_vid_stream *s,
+static pj_status_t ios_stream_get_param(pjmedia_vid_dev_stream *s,
 				        pjmedia_vid_param *pi)
 {
     struct ios_stream *strm = (struct ios_stream*)s;
@@ -546,7 +546,7 @@ static pj_status_t ios_stream_get_param(pjmedia_vid_stream *s,
 }
 
 /* API: get capability */
-static pj_status_t ios_stream_get_cap(pjmedia_vid_stream *s,
+static pj_status_t ios_stream_get_cap(pjmedia_vid_dev_stream *s,
 				      pjmedia_vid_dev_cap cap,
 				      void *pval)
 {
@@ -566,7 +566,7 @@ static pj_status_t ios_stream_get_cap(pjmedia_vid_stream *s,
 }
 
 /* API: set capability */
-static pj_status_t ios_stream_set_cap(pjmedia_vid_stream *s,
+static pj_status_t ios_stream_set_cap(pjmedia_vid_dev_stream *s,
 				      pjmedia_vid_dev_cap cap,
 				      const void *pval)
 {
@@ -585,7 +585,7 @@ static pj_status_t ios_stream_set_cap(pjmedia_vid_stream *s,
 }
 
 /* API: Start stream. */
-static pj_status_t ios_stream_start(pjmedia_vid_stream *strm)
+static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
 
@@ -605,7 +605,7 @@ static pj_status_t ios_stream_start(pjmedia_vid_stream *strm)
 
 
 /* API: Put frame from stream */
-static pj_status_t ios_stream_put_frame(pjmedia_vid_stream *strm,
+static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
 					const pjmedia_frame *frame)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
@@ -624,7 +624,7 @@ static pj_status_t ios_stream_put_frame(pjmedia_vid_stream *strm,
 }
 
 /* API: Stop stream. */
-static pj_status_t ios_stream_stop(pjmedia_vid_stream *strm)
+static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
 
@@ -640,7 +640,7 @@ static pj_status_t ios_stream_stop(pjmedia_vid_stream *strm)
 
 
 /* API: Destroy stream. */
-static pj_status_t ios_stream_destroy(pjmedia_vid_stream *strm)
+static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     struct ios_stream *stream = (struct ios_stream*)strm;
 
