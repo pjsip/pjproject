@@ -252,9 +252,6 @@ ffmpeg_codec_desc codec_desc[] =
     },
     {
 	{PJMEDIA_FORMAT_H263,	{"H263",4},	    PJMEDIA_RTP_PT_H263},
-	0,			1000000,    2000000,
-	&h263_packetize, &h263_unpacketize, &h263_parse_fmtp,
-	{2, { {{"CIF",3}, {"2",1}}, {{"QCIF",4}, {"1",1}}, } },
     },
     {
 	{PJMEDIA_FORMAT_H264,	{"H264",4},	    PJMEDIA_RTP_PT_H264},
@@ -1229,7 +1226,12 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
     pj_uint8_t *out_buf = (pj_uint8_t*)output->buf;
     int out_buf_len = output_buf_len;
     int err;
-    unsigned i;
+
+    /* For some reasons (e.g: SSE/MMX usage), the avcodec_encode_video() must
+     * have stack aligned to 16 bytes. Let's try to be safe by preparing the
+     * 16-bytes aligned stack here, in case it's not managed by the ffmpeg.
+     */
+    PJ_ALIGN_DATA(pj_uint32_t i[4], 16);
 
     /* Check if encoder has been opened */
     PJ_ASSERT_RETURN(ff->enc_ctx, PJ_EINVALIDOP);
@@ -1237,33 +1239,13 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
     avcodec_get_frame_defaults(&avframe);
     avframe.pts = input->timestamp.u64;
     
-    for (i = 0; i < ff->enc_vfi->plane_cnt; ++i) {
-        avframe.data[i] = p;
-        avframe.linesize[i] = ff->enc_vafp.strides[i];
-        p += ff->enc_vafp.plane_bytes[i];
+    for (i[0] = 0; i[0] < ff->enc_vfi->plane_cnt; ++i[0]) {
+        avframe.data[i[0]] = p;
+        avframe.linesize[i[0]] = ff->enc_vafp.strides[i[0]];
+        p += ff->enc_vafp.plane_bytes[i[0]];
     }
 
-#if 0 && defined(_MSC_VER)
-    /* Align stack for MSVC environment to avoid 'random' crash, as advised in
-     * http://ffmpeg.arrozcru.org/forum/viewtopic.php?f=1&t=549
-     */
-#   define VHALIGNCALL16(x) \
-    {\
-        _asm { mov ebx, esp }\
-        _asm { and esp, 0xfffffff0 }\
-        _asm { sub esp, 12 }\
-        _asm { push ebx }\
-        x;\
-        _asm { pop ebx }\
-        _asm { mov esp, ebx }\
-     }
-#else
-#   define VHALIGNCALL16(x)	x
-#endif
-
-    VHALIGNCALL16(err = avcodec_encode_video(ff->enc_ctx, out_buf, 
-                                             out_buf_len, &avframe));
-
+    err = avcodec_encode_video(ff->enc_ctx, out_buf, out_buf_len, &avframe);
     if (err < 0) {
         print_ffmpeg_err(err);
         return PJMEDIA_CODEC_EFAILED;
