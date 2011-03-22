@@ -610,7 +610,7 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
                                                             &icount, &isize);
 
                     for (i = 0; i < icount; i++) {
-                        RPC_STATUS rpcstatus;
+                        RPC_STATUS rpcstatus, rpcstatus2;
 
                         hr = IAMStreamConfig_GetStreamCaps(streamcaps, i,
                                                            &mediatype,
@@ -618,14 +618,18 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
                         if (FAILED (hr))
                             continue;
 
-                        if (UuidCompare(&mediatype->subtype,
-                                        (UUID *)dshow_format,
-                                        &rpcstatus) == 0 &&
-                            rpcstatus == RPC_S_OK)
+                        if (UuidCompare(&mediatype->subtype, 
+					(UUID*)dshow_format,
+					&rpcstatus) == 0 && 
+			    rpcstatus == RPC_S_OK &&
+			    UuidCompare(&mediatype->formattype,
+					(UUID*)&FORMAT_VideoInfo,
+					&rpcstatus2) == 0 &&
+			    rpcstatus2 == RPC_S_OK)
                         {
                             srcpin = pPin;
                             graph->mediatype = mediatype;
-                            break;
+			    break;
                         }
                     }
                     IAMStreamConfig_Release(streamcaps);
@@ -673,8 +677,8 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
     video_info->bmiHeader.biHeight = vfd->size.h;
     if (vfd->fps.num != 0)
         video_info->AvgTimePerFrame = (LONGLONG) (10000000 * 
-                                      vfd->fps.denum /
-                                      (double)vfd->fps.num);
+						  (double)vfd->fps.denum /
+						  vfd->fps.num);
     video_info->bmiHeader.biSizeImage = DIBSIZE(video_info->bmiHeader);
     mediatype->lSampleSize = DIBSIZE(video_info->bmiHeader);
     if (graph->csource_filter)

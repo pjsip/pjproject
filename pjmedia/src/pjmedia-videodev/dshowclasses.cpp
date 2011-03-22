@@ -16,12 +16,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#undef _DEBUG
-#undef DEBUG
+
+#include <pjmedia-videodev/config.h>
+
+#if PJMEDIA_VIDEO_DEV_HAS_DSHOW
 
 #include <streams.h>
 
-#pragma comment(lib, "Strmbase.lib")
+#if PJ_DEBUG
+#   pragma comment(lib, "Strmbasd.lib")
+#else
+#   pragma comment(lib, "Strmbase.lib")
+#endif
 
 typedef void (*input_callback)(void *user_data, IMediaSample *pMediaSample);
 
@@ -207,3 +213,5 @@ extern "C" void SourceFilter_SetBufferSize(SourceFilter *src,
 {
     ((OutputPin *)src->GetPin(0))->bufSize = size;
 }
+
+#endif	/* PJMEDIA_VIDEO_DEV_HAS_DSHOW */
