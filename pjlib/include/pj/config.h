@@ -44,6 +44,10 @@
 #  error "Unknown compiler."
 #endif
 
+/* PJ_ALIGN_DATA is compiler specific directive to align data address */
+#ifndef PJ_ALIGN_DATA
+#  error "PJ_ALIGN_DATA is not defined!"
+#endif
 
 /********************************************************************
  * Include target OS specific configuration.
