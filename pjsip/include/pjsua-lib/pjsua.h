@@ -4934,6 +4934,98 @@ PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
 
 
 /*****************************************************************************
+ * Video devices.
+ */
+
+/**
+ * Enum all video devices installed in the system.
+ *
+ * @param info		Array of info to be initialized.
+ * @param count		On input, specifies max elements in the array.
+ *			On return, it contains actual number of elements
+ *			that have been initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
+					 unsigned *count);
+
+
+/**
+ * Get currently active video devices. If video devices has not been created
+ * (for example when pjsua_start() is not called), it is possible that
+ * the function returns PJ_SUCCESS with -1 as device IDs.
+ *
+ * @param capture_dev   On return it will be filled with device ID of the 
+ *			capture device.
+ * @param render_dev	On return it will be filled with device ID of the 
+ *			device ID of the render device.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_get_dev(int *capture_dev, int *render_dev);
+
+
+/**
+ * Select video device for the next video sessions.
+ *
+ * @param capture_dev   Device ID of the capture device.
+ * @param render_dev	Device ID of the render device.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_set_dev(int capture_dev, int render_dev);
+
+
+/**
+ * Configure video device setting to the video device being used. If video 
+ * device is currently active, the function will forward the setting to the
+ * video device instance to be applied immediately, if it supports it. 
+ *
+ * The setting will be saved for future opening of the video device, if the 
+ * "keep" argument is set to non-zero. If the video device is currently
+ * inactive, and the "keep" argument is false, this function will return
+ * error.
+ * 
+ * Note that in case the setting is kept for future use, it will be applied
+ * to any devices, even when application has changed the video device to be
+ * used.
+ *
+ * See also #pjmedia_vid_dev_stream_set_cap() for more information about
+ * setting an video device capability.
+ *
+ * @param cap		The video device setting to change.
+ * @param pval		Pointer to value. Please see #pjmedia_vid_dev_cap
+ *			documentation about the type of value to be 
+ *			supplied for each setting.
+ * @param keep		Specify whether the setting is to be kept for future
+ *			use.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_set_setting(pjmedia_vid_dev_cap cap,
+					   const void *pval,
+					   pj_bool_t keep);
+
+/**
+ * Retrieve a video device setting. If video device is currently active,
+ * the function will forward the request to the video device. If video device
+ * is currently inactive, and if application had previously set the setting
+ * and mark the setting as kept, then that setting will be returned.
+ * Otherwise, this function will return error.
+ *
+ * @param cap		The video device setting to retrieve.
+ * @param pval		Pointer to receive the value. 
+ *			Please see #pjmedia_vid_dev_cap documentation about
+ *			the type of value to be supplied for each setting.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_get_setting(pjmedia_vid_dev_cap cap,
+					   void *pval);
+
+
+/*****************************************************************************
  * Codecs.
  */
 
@@ -4989,6 +5081,66 @@ PJ_DECL(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
  */
 PJ_DECL(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
 					    const pjmedia_codec_param *param);
+
+/*****************************************************************************
+ * Video codecs.
+ */
+
+/**
+ * Enum all supported video codecs in the system.
+ *
+ * @param id		Array of ID to be initialized.
+ * @param count		On input, specifies max elements in the array.
+ *			On return, it contains actual number of elements
+ *			that have been initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
+					    unsigned *count );
+
+
+/**
+ * Change video codec priority.
+ *
+ * @param codec_id	Codec ID, which is a string that uniquely identify
+ *			the codec (such as "H263/90000"). Please see pjsua
+ *			manual or pjmedia codec reference for details.
+ * @param priority	Codec priority, 0-255, where zero means to disable
+ *			the codec.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_codec_set_priority( const pj_str_t *codec_id,
+						   pj_uint8_t priority );
+
+
+/**
+ * Get video codec parameters.
+ *
+ * @param codec_id	Codec ID.
+ * @param param		Structure to receive video codec parameters.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_codec_get_param(
+					const pj_str_t *codec_id,
+					pjmedia_vid_codec_param *param);
+
+
+/**
+ * Set video codec parameters.
+ *
+ * @param codec_id	Codec ID.
+ * @param param		Codec parameter to set. Set to NULL to reset
+ *			codec parameter to library default settings.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_codec_set_param( 
+					const pj_str_t *codec_id,
+					const pjmedia_vid_codec_param *param);
+
 
 #if DISABLED_FOR_TICKET_1185
 /**

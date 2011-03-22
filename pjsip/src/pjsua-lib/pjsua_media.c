@@ -58,6 +58,11 @@ static void pjsua_media_config_dup(pj_pool_t *pool,
     pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred, &src->turn_auth_cred);
 }
 
+
+PJ_DECL(pj_status_t)
+pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr,
+				  pj_pool_t *pool);
+
 /**
  * Init media subsystems.
  */
@@ -309,6 +314,15 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     status = pjmedia_codec_ffmpeg_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing ffmpeg library",
+		     status);
+	return status;
+    }
+#endif
+
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_LIBSWSCALE && PJMEDIA_HAS_LIBAVUTIL
+    status = pjmedia_libswscale_converter_init(NULL, pjsua_var.pool);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing libswscale converter",
 		     status);
 	return status;
     }
@@ -1836,7 +1850,10 @@ static void stop_media_session(pjsua_call_id call_id)
 		pjmedia_stream_destroy(strm);
 		call_med->strm.a.stream = NULL;
 	    }
-	} else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	}
+
+#if PJMEDIA_HAS_VIDEO
+	else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
 	    pjmedia_vid_stream *strm = call_med->strm.v.stream;
 
 	    if (strm) {
@@ -1872,6 +1889,7 @@ static void stop_media_session(pjsua_call_id call_id)
 		call_med->strm.v.stream = NULL;
 	    }
 	}
+#endif
 
 	PJ_LOG(4,(THIS_FILE, "Media session call%02d:%d is destroyed",
 			     call_id, mi));
@@ -2133,6 +2151,9 @@ static pj_status_t audio_channel_update(pjsua_call_media *call_med,
     return PJ_SUCCESS;
 }
 
+
+#if PJMEDIA_HAS_VIDEO
+
 static pj_status_t video_channel_update(pjsua_call_media *call_med,
                                         pj_pool_t *tmp_pool,
 				        const pjmedia_sdp_session *local_sdp,
@@ -2211,6 +2232,34 @@ static pj_status_t video_channel_update(pjsua_call_media *call_med,
 	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;
 #endif
 
+	/* Try to get shared format ID between the capture device and 
+	 * the encoder to avoid format conversion in the capture device.
+	 */
+	if (si->dir & PJMEDIA_DIR_ENCODING) {
+	    pjmedia_vid_dev_info dev_info;
+	    pjmedia_vid_codec_info *codec_info = &si->codec_info;
+	    unsigned i, j;
+
+	    status = pjmedia_vid_dev_get_info(pjsua_var.vcap_dev, &dev_info);
+	    if (status != PJ_SUCCESS)
+		return status;
+
+	    /* Find matched format ID */
+	    for (i = 0; i < codec_info->dec_fmt_id_cnt; ++i) {
+		for (j = 0; j < dev_info.fmt_cnt; ++j) {
+		    if (codec_info->dec_fmt_id[i] == 
+			(pjmedia_format_id)dev_info.fmt[j].id)
+		    {
+			/* Apply the matched format ID to the codec */
+			si->codec_param->dec_fmt.id = codec_info->dec_fmt_id[i];
+			/* Force outer loop to break */
+			i = codec_info->dec_fmt_id_cnt;
+			break;
+		    }
+		}
+	    }
+	}
+
 	/* Create session based on session info. */
 	status = pjmedia_vid_stream_create(pjsua_var.med_endpt, NULL, si,
 					   call_med->tp, NULL,
@@ -2234,7 +2283,7 @@ static pj_status_t video_channel_update(pjsua_call_media *call_med,
 		return status;
 
 	    status = pjmedia_vid_dev_default_param(
-				tmp_pool, PJMEDIA_VID_DEFAULT_RENDER_DEV,
+				tmp_pool, pjsua_var.vrdr_dev,
 				&vport_param.vidparam);
 	    if (status != PJ_SUCCESS)
 		return status;
@@ -2274,14 +2323,13 @@ static pj_status_t video_channel_update(pjsua_call_media *call_med,
 		return status;
 
 	    status = pjmedia_vid_dev_default_param(
-				tmp_pool, PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+				tmp_pool, pjsua_var.vcap_dev,
 				&vport_param.vidparam);
 	    if (status != PJ_SUCCESS)
 		return status;
 
 	    pjmedia_format_copy(&vport_param.vidparam.fmt,
 				&media_port->info.fmt);
-
 	    vport_param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
 	    vport_param.active = PJ_TRUE;
 
@@ -2352,6 +2400,8 @@ static pj_status_t video_channel_update(pjsua_call_media *call_med,
     return PJ_SUCCESS;
 }
 
+#endif
+
 
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
@@ -2394,10 +2444,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call->audio_idx = mi;
 	    }
 	    break;
+#if PJMEDIA_HAS_VIDEO
 	case PJMEDIA_TYPE_VIDEO:
 	    status = video_channel_update(call_med, tmp_pool,
 	                                  local_sdp, remote_sdp);
 	    break;
+#endif
 	default:
 	    break;
 	}
@@ -3771,7 +3823,7 @@ PJ_DEF(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
 	return status;
 
     if (count != 1)
-	return PJ_ENOTFOUND;
+	return (count > 1? PJ_ETOOMANY : PJ_ENOTFOUND);
 
     status = pjmedia_codec_mgr_get_default_param( codec_mgr, info, param);
     return status;
@@ -3808,3 +3860,213 @@ PJ_DEF(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
     status = pjmedia_codec_mgr_set_default_param(codec_mgr, info[0], param);
     return status;
 }
+
+
+#if PJMEDIA_HAS_VIDEO
+
+/*****************************************************************************
+ * Video codecs.
+ */
+
+/*
+ * Enum all supported video codecs in the system.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
+					   unsigned *p_count )
+{
+    pjmedia_vid_codec_info info[32];
+    unsigned i, j, count, prio[32];
+    pj_status_t status;
+
+    count = PJ_ARRAY_SIZE(info);
+    status = pjmedia_vid_codec_mgr_enum_codecs(NULL, &count, info, prio);
+    if (status != PJ_SUCCESS) {
+	*p_count = 0;
+	return status;
+    }
+
+    for (i=0, j=0; i<count && j<*p_count; ++i) {
+	if (info[i].has_rtp_pack) {
+	    pjmedia_vid_codec_info_to_id(&info[i], id[j].buf_, sizeof(id[j].buf_));
+	    id[j].codec_id = pj_str(id[j].buf_);
+	    id[j].priority = (pj_uint8_t) prio[i];
+	    ++j;
+	}
+    }
+
+    *p_count = j;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Change video codec priority.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_codec_set_priority( const pj_str_t *codec_id,
+						  pj_uint8_t priority )
+{
+    const pj_str_t all = { NULL, 0 };
+
+    if (codec_id->slen==1 && *codec_id->ptr=='*')
+	codec_id = &all;
+
+    return pjmedia_vid_codec_mgr_set_codec_priority(NULL, codec_id,
+						    priority);
+}
+
+
+/*
+ * Get video codec parameters.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_codec_get_param(
+					const pj_str_t *codec_id,
+					pjmedia_vid_codec_param *param)
+{
+    const pj_str_t all = { NULL, 0 };
+    const pjmedia_vid_codec_info *info;
+    unsigned count = 1;
+    pj_status_t status;
+
+    if (codec_id->slen==1 && *codec_id->ptr=='*')
+	codec_id = &all;
+
+    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, codec_id,
+						     &count, &info, NULL);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (count != 1)
+	return (count > 1? PJ_ETOOMANY : PJ_ENOTFOUND);
+
+    status = pjmedia_vid_codec_mgr_get_default_param(NULL, info, param);
+    return status;
+}
+
+
+/*
+ * Set video codec parameters.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_codec_set_param( 
+					const pj_str_t *codec_id,
+					const pjmedia_vid_codec_param *param)
+{
+    const pjmedia_vid_codec_info *info[2];
+    unsigned count = 2;
+    pj_status_t status;
+
+    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, codec_id,
+						     &count, info, NULL);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Codec ID should be specific */
+    if (count > 1) {
+	pj_assert(!"Codec ID is not specific");
+	return PJ_ETOOMANY;
+    }
+
+    status = pjmedia_vid_codec_mgr_set_default_param(NULL, pjsua_var.pool,
+						     info[0], param);
+    return status;
+}
+
+
+/*****************************************************************************
+ * Video devices.
+ */
+
+/*
+ * Enum all video devices installed in the system.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
+					unsigned *count)
+{
+    unsigned i, dev_count;
+
+    dev_count = pjmedia_vid_dev_count();
+    
+    if (dev_count > *count) dev_count = *count;
+
+    for (i=0; i<dev_count; ++i) {
+	pj_status_t status;
+
+	status = pjmedia_vid_dev_get_info(i, &info[i]);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    *count = dev_count;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Get currently active video devices.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_get_dev(int *capture_dev, int *render_dev)
+{
+    if (capture_dev)
+	*capture_dev = pjsua_var.vcap_dev;
+    if (render_dev)
+	*render_dev = pjsua_var.vrdr_dev;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Select video device for the next video sessions.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_set_dev(int capture_dev, int render_dev)
+{
+    pjmedia_vid_dev_info info;
+    pj_status_t status;
+
+    if (capture_dev < 0)
+	capture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    if (render_dev < 0)
+	render_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+
+    status = pjmedia_vid_dev_get_info(capture_dev, &info);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjmedia_vid_dev_get_info(render_dev, &info);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pjsua_var.vcap_dev = capture_dev;
+    pjsua_var.vrdr_dev = render_dev;
+
+    return PJ_SUCCESS;
+}
+
+
+/*
+ * Configure video device setting to the video device being used.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_set_setting(pjmedia_vid_dev_cap cap,
+					   const void *pval,
+					   pj_bool_t keep)
+{
+    PJ_UNUSED_ARG(cap);
+    PJ_UNUSED_ARG(pval);
+    PJ_UNUSED_ARG(keep);
+    return PJ_ENOTSUP;
+}
+
+
+/*
+ * Retrieve a video device setting.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_get_setting(pjmedia_aud_dev_cap cap,
+					   void *pval)
+{
+    PJ_UNUSED_ARG(cap);
+    PJ_UNUSED_ARG(pval);
+    return PJ_ENOTSUP;
+}
+
+#endif /* PJMEDIA_HAS_VIDEO */

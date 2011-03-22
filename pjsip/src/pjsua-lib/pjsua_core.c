@@ -634,6 +634,10 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     pjsua_var.cap_dev = PJMEDIA_AUD_DEFAULT_CAPTURE_DEV;
     pjsua_var.play_dev = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
 
+    /* Set default video device ID */
+    pjsua_var.vcap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    pjsua_var.vrdr_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+
     /* Init caching pool. */
     pj_caching_pool_init(&pjsua_var.cp, NULL, 0);
 

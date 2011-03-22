@@ -383,6 +383,10 @@ struct pjsua_data
     pjmedia_port	*null_port; /**< Null port.			*/
 
 
+    /* Video device */
+    pjmedia_vid_dev_index vcap_dev;  /**< Capture device ID.		*/
+    pjmedia_vid_dev_index vrdr_dev;  /**< Playback device ID.		*/
+
     /* File players: */
     unsigned		 player_cnt;/**< Number of file players.	*/
     pjsua_file_data	 player[PJSUA_MAX_PLAYERS];/**< Array of players.*/
