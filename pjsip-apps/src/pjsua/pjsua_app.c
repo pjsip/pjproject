@@ -124,6 +124,7 @@ static struct app_config
     int			    ring_cnt;
     pjmedia_port	   *ring_port;
 
+    int			    vcapture_dev, vrender_dev;
 } app_config;
 
 
@@ -303,9 +304,13 @@ static void usage(void)
     puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
 
+#if PJMEDIA_HAS_VIDEO
     puts  ("");
     puts  ("Video Options:");
     puts  ("  --video             Enable video");
+    puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
+    puts  ("  --vrender-dev=id    Video render device ID (default=-1)");
+#endif
 
     puts  ("");
     puts  ("Media Transport Options:");
@@ -380,6 +385,9 @@ static void default_config(struct app_config *cfg)
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->buddy_cfg); ++i)
 	pjsua_buddy_config_default(&cfg->buddy_cfg[i]);
+
+    cfg->vcapture_dev = PJSUA_INVALID_ID;
+    cfg->vrender_dev = PJSUA_INVALID_ID;
 }
 
 
@@ -546,7 +554,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
 	   OPT_NO_FORCE_LR,
 	   OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
-	   OPT_VIDEO, OPT_EXTRA_AUDIO
+	   OPT_VIDEO, OPT_EXTRA_AUDIO,
+	   OPT_VCAPTURE_DEV, OPT_VRENDER_DEV,
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -667,6 +676,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "outb-rid",	1, 0, OPT_OUTB_RID},
 	{ "video",	0, 0, OPT_VIDEO},
 	{ "extra-audio",0, 0, OPT_EXTRA_AUDIO},
+	{ "vcapture-dev", 1, 0, OPT_VCAPTURE_DEV},
+	{ "vrender-dev",  1, 0, OPT_VRENDER_DEV},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1430,6 +1441,15 @@ static pj_status_t parse_args(int argc, char *argv[],
 	case OPT_EXTRA_AUDIO:
 	    ++cur_acc->max_audio_cnt;
 	    break;
+
+	case OPT_VCAPTURE_DEV:
+	    cfg->vcapture_dev = atoi(pj_optarg);
+	    break;
+
+	case OPT_VRENDER_DEV:
+	    cfg->vrender_dev = atoi(pj_optarg);
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -2006,6 +2026,14 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+    if (config->vcapture_dev != PJSUA_INVALID_ID) {
+	pj_ansi_sprintf(line, "--vcapture-dev %d\n", config->vcapture_dev);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->vrender_dev != PJSUA_INVALID_ID) {
+	pj_ansi_sprintf(line, "--vrender-dev %d\n", config->vrender_dev);
+	pj_strcat2(&cfg, line);
+    }
 
     /* ptime */
     if (config->media_cfg.ptime) {
@@ -3214,7 +3242,7 @@ static void keystroke_help(void)
     puts("|  *  Send DTMF with INFO      | cc  Connect port         | dd  Dump detailed |");
     puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
-    puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |  f  Save config   |");
+    puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
     puts("+------------------------------+--------------------------+-------------------+");
     puts("|  q  QUIT   L  ReLoad   sleep MS   echo [0|1|txt]     n: detect NAT type     |");
     puts("+=============================================================================+");
@@ -3502,17 +3530,26 @@ static void manage_codec_prio(void)
     int new_prio;
     pj_status_t status;
 
-    printf("List of codecs:\n");
-
+    printf("List of audio codecs:\n");
     pjsua_enum_codecs(c, &count);
     for (i=0; i<count; ++i) {
 	printf("  %d\t%.*s\n", c[i].priority, (int)c[i].codec_id.slen,
 			       c[i].codec_id.ptr);
     }
 
+#if PJMEDIA_HAS_VIDEO
     puts("");
-    puts("Enter codec id and its new priority "
-	 "(e.g. \"speex/16000 200\"), empty to cancel:");
+    printf("List of video codecs:\n");
+    pjsua_vid_enum_codecs(c, &count);
+    for (i=0; i<count; ++i) {
+	printf("  %d\t%.*s\n", c[i].priority, (int)c[i].codec_id.slen,
+			       c[i].codec_id.ptr);
+    }
+#endif
+
+    puts("");
+    puts("Enter codec id and its new priority (e.g. \"speex/16000 200\", ""\"H263 200\"),");
+    puts("or empty to cancel.");
 
     printf("Codec name (\"*\" for all) and priority: ");
     if (fgets(input, sizeof(input), stdin) == NULL)
@@ -3538,6 +3575,12 @@ static void manage_codec_prio(void)
 
     status = pjsua_codec_set_priority(pj_cstr(&id, codec), 
 				      (pj_uint8_t)new_prio);
+#if PJMEDIA_HAS_VIDEO
+    if (status != PJ_SUCCESS) {
+	status = pjsua_vid_codec_set_priority(pj_cstr(&id, codec), 
+					      (pj_uint8_t)new_prio);
+    }
+#endif
     if (status != PJ_SUCCESS)
 	pjsua_perror(THIS_FILE, "Error setting codec priority", status);
 }
@@ -4969,12 +5012,19 @@ pj_status_t app_init(int argc, char *argv[])
     /* Optionally disable some codec */
     for (i=0; i<app_config.codec_dis_cnt; ++i) {
 	pjsua_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
+#if PJMEDIA_HAS_VIDEO
+	pjsua_vid_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
+#endif
     }
 
     /* Optionally set codec orders */
     for (i=0; i<app_config.codec_cnt; ++i) {
 	pjsua_codec_set_priority(&app_config.codec_arg[i],
 				 (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
+#if PJMEDIA_HAS_VIDEO
+	pjsua_vid_codec_set_priority(&app_config.codec_arg[i],
+				     (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
+#endif
     }
 
     /* Add RTP transports */
@@ -5009,6 +5059,17 @@ pj_status_t app_init(int argc, char *argv[])
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
+
+#if PJMEDIA_HAS_VIDEO
+    if (app_config.vcapture_dev != PJSUA_INVALID_ID ||
+        app_config.vrender_dev  != PJSUA_INVALID_ID) 
+    {
+	status = pjsua_vid_set_dev(app_config.vcapture_dev, 
+				   app_config.vrender_dev);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+#endif
 
     return PJ_SUCCESS;
 
