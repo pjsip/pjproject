@@ -4577,6 +4577,59 @@ on_exit:
     ;
 }
 
+/*
+ * A simple registrar, invoked by default_mod_on_rx_request()
+ */
+static void simple_registrar(pjsip_rx_data *rdata)
+{
+    pjsip_tx_data *tdata;
+    const pjsip_expires_hdr *exp;
+    const pjsip_hdr *h;
+    unsigned cnt = 0;
+    pjsip_generic_string_hdr *srv;
+    pj_status_t status;
+
+    status = pjsip_endpt_create_response(pjsua_get_pjsip_endpt(),
+				 rdata, 200, NULL, &tdata);
+    if (status != PJ_SUCCESS)
+    return;
+
+    exp = pjsip_msg_find_hdr(rdata->msg_info.msg, PJSIP_H_EXPIRES, NULL);
+
+    h = rdata->msg_info.msg->hdr.next;
+    while (h != &rdata->msg_info.msg->hdr) {
+    if (h->type == PJSIP_H_CONTACT) {
+    const pjsip_contact_hdr *c = (const pjsip_contact_hdr*)h;
+    int e = c->expires;
+
+    if (e < 0) {
+	if (exp)
+	    e = exp->ivalue;
+	else
+	    e = 3600;
+    }
+
+    if (e > 0) {
+	pjsip_contact_hdr *nc = pjsip_hdr_clone(tdata->pool, h);
+	nc->expires = e;
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)nc);
+	++cnt;
+    }
+    }
+    h = h->next;
+    }
+
+    srv = pjsip_generic_string_hdr_create(tdata->pool, NULL, NULL);
+    srv->name = pj_str("Server");
+    srv->hvalue = pj_str("pjsua simple registrar");
+    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)srv);
+
+    pjsip_endpt_send_response2(pjsua_get_pjsip_endpt(),
+		       rdata, tdata, NULL, NULL);
+}
+
+
+
 /*****************************************************************************
  * A simple module to handle otherwise unhandled request. We will register
  * this with the lowest priority.
@@ -4590,9 +4643,17 @@ static pj_bool_t default_mod_on_rx_request(pjsip_rx_data *rdata)
     pj_status_t status;
 
     /* Don't respond to ACK! */
-    if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method, 
+    if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
 			 &pjsip_ack_method) == 0)
 	return PJ_TRUE;
+
+    /* Simple registrar */
+    if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method,
+                         &pjsip_register_method) == 0)
+    {
+	simple_registrar(rdata);
+	return PJ_TRUE;
+    }
 
     /* Create basic response. */
     if (pjsip_method_cmp(&rdata->msg_info.msg->line.req.method, 
