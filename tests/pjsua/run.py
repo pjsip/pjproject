@@ -186,8 +186,12 @@ def handle_error(errmsg, t, close_processes = True):
 	if (close_processes):
 		time.sleep(1)
 		for p in t.process:
-			p.send("q")
-			p.send("q")
+			# Protect against 'Broken pipe' exception
+			try:
+				p.send("q")
+				p.send("q")
+			except:
+				pass
 			is_err = False
 			try:
 				ret = p.expect(const.DESTROYED, False)
