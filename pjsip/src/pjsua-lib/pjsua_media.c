@@ -4047,9 +4047,9 @@ PJ_DEF(pj_status_t) pjsua_vid_set_dev(int capture_dev, int render_dev)
 /*
  * Configure video device setting to the video device being used.
  */
-PJ_DECL(pj_status_t) pjsua_vid_set_setting(pjmedia_vid_dev_cap cap,
-					   const void *pval,
-					   pj_bool_t keep)
+PJ_DEF(pj_status_t) pjsua_vid_set_setting(pjmedia_vid_dev_cap cap,
+					  const void *pval,
+					  pj_bool_t keep)
 {
     PJ_UNUSED_ARG(cap);
     PJ_UNUSED_ARG(pval);
@@ -4061,8 +4061,8 @@ PJ_DECL(pj_status_t) pjsua_vid_set_setting(pjmedia_vid_dev_cap cap,
 /*
  * Retrieve a video device setting.
  */
-PJ_DECL(pj_status_t) pjsua_vid_get_setting(pjmedia_aud_dev_cap cap,
-					   void *pval)
+PJ_DEF(pj_status_t) pjsua_vid_get_setting(pjmedia_vid_dev_cap cap,
+					  void *pval)
 {
     PJ_UNUSED_ARG(cap);
     PJ_UNUSED_ARG(pval);
