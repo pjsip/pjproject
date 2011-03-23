@@ -117,6 +117,17 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
 	}
     }
 
+    pj_list_init(&dst->sub_hdr_list);
+    if (!pj_list_empty(&src->sub_hdr_list)) {
+	const pjsip_hdr *hdr;
+
+	hdr = src->sub_hdr_list.next;
+	while (hdr != &src->sub_hdr_list) {
+	    pj_list_push_back(&dst->sub_hdr_list, pjsip_hdr_clone(pool, hdr));
+	    hdr = hdr->next;
+	}
+    }
+
     pjsip_auth_clt_pref_dup(pool, &dst->auth_pref, &src->auth_pref);
 
     dst->ka_interval = src->ka_interval;
