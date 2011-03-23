@@ -1060,9 +1060,8 @@ parse_headers:
 					     &ctype_hdr->media, 0);
 	    } else {
 		body = PJ_POOL_ALLOC_T(pool, pjsip_msg_body);
-		body->content_type.type = ctype_hdr->media.type;
-		body->content_type.subtype = ctype_hdr->media.subtype;
-		body->content_type.param = ctype_hdr->media.param;
+		pjsip_media_type_cp(pool, &body->content_type,
+		                    &ctype_hdr->media);
 
 		body->data = scanner->curptr;
 		body->len = scanner->end - scanner->curptr;
