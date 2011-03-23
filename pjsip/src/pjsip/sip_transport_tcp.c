@@ -544,6 +544,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_activesock_cfg asock_cfg;
     pj_activesock_cb tcp_callback;
     const pj_str_t ka_pkt = PJSIP_TCP_KEEP_ALIVE_DATA;
+    pj_int32_t val = 1;
     pj_status_t status;
     
 
@@ -631,6 +632,10 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->ka_timer.cb = &tcp_keep_alive_timer;
     pj_ioqueue_op_key_init(&tcp->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tcp->base.pool, &tcp->ka_pkt, &ka_pkt);
+    
+    /* Prevent SIGPIPE */
+    pj_sock_setsockopt(tcp->sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+		       &val, sizeof(val));
 
     /* Done setting up basic transport. */
     *p_tcp = tcp;

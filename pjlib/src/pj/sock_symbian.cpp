@@ -53,6 +53,7 @@ const pj_uint16_t PJ_SOL_IP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_TCP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_UDP	= 0xFFFF;
 const pj_uint16_t PJ_SOL_IPV6	= 0xFFFF;
+const pj_uint16_t PJ_SO_NOSIGPIPE = 0xFFFF;
 
 /* TOS */
 const pj_uint16_t PJ_IP_TOS		= 0;

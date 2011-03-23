@@ -1229,6 +1229,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     pj_ioqueue_t *ioqueue;
     pj_ioqueue_callback tls_callback;
     int rc;
+    pj_int32_t val = 1;
     pj_status_t status;
     
 
@@ -1331,6 +1332,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
     /* Initialize keep-alive timer */
     tls->ka_timer.user_data = (void*) tls;
     tls->ka_timer.cb = &tls_keep_alive_timer;
+
+    /* Prevent SIGPIPE */
+    pj_sock_setsockopt(tcp->sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+		       &val, sizeof(val));
 
 
     /* Done setting up basic transport. */

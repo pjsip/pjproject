@@ -135,6 +135,11 @@ const pj_uint16_t PJ_SO_RCVBUF  = SO_RCVBUF;
 const pj_uint16_t PJ_SO_SNDBUF  = SO_SNDBUF;
 const pj_uint16_t PJ_TCP_NODELAY= TCP_NODELAY;
 const pj_uint16_t PJ_SO_REUSEADDR= SO_REUSEADDR;
+#ifdef SO_NOSIGPIPE
+const pj_uint16_t PJ_SO_NOSIGPIPE = SO_NOSIGPIPE;
+#else
+const pj_uint16_t PJ_SO_NOSIGPIPE = 0xFFFF;
+#endif
 #if defined(SO_PRIORITY)
 const pj_uint16_t PJ_SO_PRIORITY = SO_PRIORITY;
 #else

@@ -527,6 +527,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
 {
     struct tls_transport *tls;
     const pj_str_t ka_pkt = PJSIP_TLS_KEEP_ALIVE_DATA;
+    pj_int32_t val = 1;
     pj_status_t status;
     
 
@@ -616,6 +617,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
     pj_ioqueue_op_key_init(&tls->ka_op_key.key, sizeof(pj_ioqueue_op_key_t));
     pj_strdup(tls->base.pool, &tls->ka_pkt, &ka_pkt);
 
+    /* Prevent SIGPIPE */
+    pj_sock_setsockopt(tcp->sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+		       &val, sizeof(val));
+    
     /* Done setting up basic transport. */
     *p_tls = tls;
 

@@ -297,6 +297,9 @@ extern const pj_uint16_t PJ_TCP_NODELAY;
  *  @see pj_SO_REUSEADDR */
 extern const pj_uint16_t PJ_SO_REUSEADDR;
 
+/** Do not generate SIGPIPE. @see pj_SO_NOSIGPIPE */
+extern const pj_uint16_t PJ_SO_NOSIGPIPE;
+
 /** Set the protocol-defined priority for all packets to be sent on socket.
  */
 extern const pj_uint16_t PJ_SO_PRIORITY;
@@ -333,6 +336,9 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
     /** Get #PJ_SO_REUSEADDR constant */
     PJ_DECL(pj_uint16_t) pj_SO_REUSEADDR(void);
 
+    /** Get #PJ_SO_NOSIGPIPE constant */
+    PJ_DECL(pj_uint16_t) pj_SO_NOSIGPIPE(void);
+
     /** Get #PJ_SO_PRIORITY constant */
     PJ_DECL(pj_uint16_t) pj_SO_PRIORITY(void);
 
@@ -365,6 +371,9 @@ extern const pj_uint16_t PJ_IP_DROP_MEMBERSHIP;
 
     /** Get #PJ_SO_REUSEADDR constant */
 #   define pj_SO_REUSEADDR() PJ_SO_REUSEADDR
+
+    /** Get #PJ_SO_NOSIGPIPE constant */
+#   define pj_SO_NOSIGPIPE() PJ_SO_NOSIGPIPE
 
     /** Get #PJ_SO_PRIORITY constant */
 #   define pj_SO_PRIORITY() PJ_SO_PRIORITY

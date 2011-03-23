@@ -1137,6 +1137,11 @@ PJ_DEF(pj_uint16_t) pj_SO_REUSEADDR(void)
     return PJ_SO_REUSEADDR;
 }
 
+PJ_DEF(pj_uint16_t) pj_SO_NOSIGPIPE(void)
+{
+    return PJ_SO_NOSIGPIPE;
+}
+
 PJ_DEF(pj_uint16_t) pj_SO_PRIORITY(void)
 {
     return PJ_SO_PRIORITY;

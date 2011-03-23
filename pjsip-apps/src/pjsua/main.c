@@ -66,16 +66,28 @@ static void setup_signal_handler(void)
     SetConsoleCtrlHandler(&CtrlHandler, TRUE);
 }
 
+static void setup_socket_signal()
+{
+}
+
 #else
+#include <signal.h>
 
 static void setup_signal_handler(void)
 {
+}
+
+static void setup_socket_signal()
+{
+    signal(SIGPIPE, SIG_IGN);
 }
 
 #endif
 
 int main(int argc, char *argv[])
 {
+    setup_socket_signal();
+
     do {
 	app_restart = PJ_FALSE;
 
