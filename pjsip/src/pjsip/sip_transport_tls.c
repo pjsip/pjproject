@@ -618,7 +618,7 @@ static pj_status_t tls_create( struct tls_listener *listener,
     pj_strdup(tls->base.pool, &tls->ka_pkt, &ka_pkt);
 
     /* Prevent SIGPIPE */
-    pj_sock_setsockopt(tcp->sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+    pj_sock_setsockopt(tls->sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
 		       &val, sizeof(val));
     
     /* Done setting up basic transport. */
