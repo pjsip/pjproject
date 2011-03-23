@@ -549,9 +549,13 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     if (*sock == PJ_INVALID_SOCKET)
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
+	pj_int32_t val = 1;
+	if (type == pj_SOCK_STREAM()) {
+	    pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+			       &val, sizeof(val));
+	}
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
     PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-	pj_int32_t val = 1;
 	if (type == pj_SOCK_DGRAM()) {
 	    pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), SO_NOSIGPIPE, 
 			       &val, sizeof(val));
