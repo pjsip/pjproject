@@ -166,9 +166,7 @@ endif
 ifeq ($(AC_PJMEDIA_VIDEO),mac_os)
 # Mac OS specific, use obj-c
 export PJMEDIA_VIDEODEV_OBJS += sdl_dev_m.o
-export PJMEDIA_TEST_OBJS += vid_dev_test_m.o
 else
 # Other platforms, compile .c
 export PJMEDIA_VIDEODEV_OBJS += sdl_dev.o
-export PJMEDIA_TEST_OBJS += vid_dev_test.o
 endif

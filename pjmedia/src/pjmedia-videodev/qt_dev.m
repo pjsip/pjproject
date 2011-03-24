@@ -548,6 +548,8 @@ static pj_status_t qt_stream_start(pjmedia_vid_dev_stream *strm)
 	    return PJ_EUNKNOWN;
     }
     
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    
     return PJ_SUCCESS;
 }
 

@@ -23,18 +23,6 @@
 #include <pjmedia/vid_codec.h>
 #include <pjmedia_videodev.h>
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-#    include "TargetConditionals.h"
-#    if !TARGET_OS_IPHONE
-#	define VID_DEV_TEST_MAC_OS 1
-#    endif
-#endif
-
-#if VID_DEV_TEST_MAC_OS
-#   include <Foundation/NSAutoreleasePool.h>
-#   include <AppKit/NSApplication.h>
-#endif
-
 #define THIS_FILE "vid_dev_test.c"
 
 static pj_bool_t is_quitting = PJ_FALSE;
@@ -143,10 +131,7 @@ static int loopback_test(pj_pool_t *pool)
     }
 
     /* Sleep while the webcam is being displayed... */
-    for (i = 0; i < 15 && (!is_quitting); i++) {
-#if VID_DEV_TEST_MAC_OS
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-#endif
+    for (i = 0; i < 25 && (!is_quitting); i++) {
         pj_thread_sleep(100);
     }
 
@@ -207,9 +192,6 @@ static int loopback_test(pj_pool_t *pool)
     }
 
     for (i = 0; i < 35 && (!is_quitting); i++) {
-#if VID_DEV_TEST_MAC_OS
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-#endif
         pj_thread_sleep(100);
     }
 
@@ -228,12 +210,6 @@ int vid_dev_test(void)
     pj_pool_t *pool;
     int rc = 0;
     pj_status_t status;
-
-#if VID_DEV_TEST_MAC_OS
-    NSAutoreleasePool *apool = [[NSAutoreleasePool alloc] init];
-    
-    [NSApplication sharedApplication];
-#endif
     
     PJ_LOG(3, (THIS_FILE, "Video device tests.."));
 
@@ -254,10 +230,6 @@ int vid_dev_test(void)
 on_return:
     pjmedia_vid_subsys_shutdown();
     pj_pool_release(pool);
-
-#if VID_DEV_TEST_MAC_OS
-    [apool release];
-#endif
     
     return rc;
 }
