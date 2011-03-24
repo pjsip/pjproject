@@ -20,6 +20,7 @@
 #include <pjmedia.h>
 #include <pjmedia/converter.h>
 #include <pjmedia-codec.h>
+#include <pjmedia_videodev.h>
 #include <pjlib-util.h>
 #include <pjlib.h>
 #include <stdio.h>

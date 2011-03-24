@@ -14,6 +14,7 @@ OBJDIR := ./output/samples-$(TARGET_NAME)
 BINDIR := ../bin/samples/$(TARGET_NAME)
 
 SAMPLES := auddemo \
+	   aviplay \
 	   aectest \
 	   aviplay \
 	   confsample \
