@@ -23,22 +23,49 @@
 #include <pjmedia/vid_codec.h>
 #include <pjmedia_videodev.h>
 
-#define THIS_FILE "vid_dev_test.c"
+#define THIS_FILE 	"vid_dev_test.c"
+#define LOOP_DURATION	10
 
 static pj_bool_t is_quitting = PJ_FALSE;
+
+static const char *vid_dir_name(pjmedia_dir dir)
+{
+    switch (dir) {
+    case PJMEDIA_DIR_CAPTURE:
+	return "capture";
+    case PJMEDIA_DIR_RENDER:
+	return "render";
+    case PJMEDIA_DIR_CAPTURE_RENDER:
+	return "capture & render";
+    default:
+	return "unknown";
+    }
+}
 
 static int enum_devs(void)
 {
     unsigned i, dev_cnt;
     pj_status_t status;
 
-    PJ_LOG(3, (THIS_FILE, "  device enums"));
+    PJ_LOG(3, (THIS_FILE, " Enum video devices:"));
     dev_cnt = pjmedia_vid_dev_count();
     for (i = 0; i < dev_cnt; ++i) {
-        pjmedia_vid_dev_info info;
-        status = pjmedia_vid_dev_get_info(i, &info);
+        pjmedia_vid_dev_info di;
+        status = pjmedia_vid_dev_get_info(i, &di);
         if (status == PJ_SUCCESS) {
-            PJ_LOG(3, (THIS_FILE, "%3d: %s - %s", i, info.driver, info.name));
+            unsigned j;
+
+            PJ_LOG(3, (THIS_FILE, " %3d: %s (%s) - %s", i, di.name, di.driver,
+        	       vid_dir_name(di.dir)));
+
+            PJ_LOG(3,(THIS_FILE, "      Supported formats:"));
+            for (j=0; j<di.fmt_cnt; ++j) {
+        	const pjmedia_video_format_info *vfi;
+
+        	vfi = pjmedia_get_video_format_info(NULL, di.fmt[j].id);
+        	PJ_LOG(3,(THIS_FILE, "       %s",
+        		  (vfi ? vfi->name : "unknown")));
+            }
         }
     }
 
@@ -59,27 +86,45 @@ static pj_status_t vid_event_cb(pjmedia_vid_dev_stream *stream,
     return -1;
 }
 
-static int loopback_test(pj_pool_t *pool)
+static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
+                                   const pjmedia_format *fmt)
 {
+    pj_pool_t *pool;
     pjmedia_vid_port *capture=NULL, *renderer=NULL;
+    pjmedia_vid_dev_info cdi, rdi;
     pjmedia_vid_port_param param;
     pjmedia_video_format_detail *vfd;
     pjmedia_vid_cb cb;
     pj_status_t status;
     int rc = 0, i;
 
-    PJ_LOG(3, (THIS_FILE, "  loopback test"));
+    pool = pj_pool_create(mem, "vidloop", 1000, 1000, NULL);
+
+    status = pjmedia_vid_dev_get_info(cap_dev_id, &cdi);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    status = pjmedia_vid_dev_get_info(rend_dev_id, &rdi);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    PJ_LOG(3,(THIS_FILE,
+	      "  %s (%s) ===> %s (%s)\t%s\t%dx%d\t@%d:%d fps",
+	      cdi.name, cdi.driver, rdi.name, rdi.driver,
+	      pjmedia_get_video_format_info(NULL, fmt->id)->name,
+	      fmt->det.vid.size.w, fmt->det.vid.size.h,
+	      fmt->det.vid.fps.num, fmt->det.vid.fps.denum));
 
     pjmedia_vid_port_param_default(&param);
 
     /* Create capture, set it to active (master) */
-    status = pjmedia_vid_dev_default_param(pool,
-                                           PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+    status = pjmedia_vid_dev_default_param(pool, cap_dev_id,
 					   &param.vidparam);
     if (status != PJ_SUCCESS) {
 	rc = 100; goto on_return;
     }
     param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
+    param.vidparam.fmt = *fmt;
     param.active = PJ_TRUE;
 
     if (param.vidparam.fmt.detail_type != PJMEDIA_FORMAT_DETAIL_VIDEO) {
@@ -97,9 +142,16 @@ static int loopback_test(pj_pool_t *pool)
     }
 
     /* Create renderer, set it to passive (slave)  */
+    status = pjmedia_vid_dev_default_param(pool, rend_dev_id,
+					   &param.vidparam);
+    if (status != PJ_SUCCESS) {
+	rc = 120; goto on_return;
+    }
+
     param.active = PJ_FALSE;
     param.vidparam.dir = PJMEDIA_DIR_RENDER;
-    param.vidparam.rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+    param.vidparam.rend_id = rend_dev_id;
+    param.vidparam.fmt = *fmt;
     param.vidparam.disp_size = vfd->size;
 
     status = pjmedia_vid_port_create(pool, &param, &renderer);
@@ -107,6 +159,7 @@ static int loopback_test(pj_pool_t *pool)
 	rc = 130; goto on_return;
     }
 
+    /* Set event handler */
     pj_bzero(&cb, sizeof(cb));
     cb.on_event_cb = vid_event_cb;
     pjmedia_vid_port_set_cb(renderer, &cb, NULL);
@@ -131,90 +184,102 @@ static int loopback_test(pj_pool_t *pool)
     }
 
     /* Sleep while the webcam is being displayed... */
-    for (i = 0; i < 25 && (!is_quitting); i++) {
-        pj_thread_sleep(100);
-    }
-
-    /**
-     * Test the renderer's format capability if the device
-     * supports it.
-     */
-    if (pjmedia_vid_dev_stream_get_cap(pjmedia_vid_port_get_stream(renderer),
-                                       PJMEDIA_VID_DEV_CAP_FORMAT,
-                                       &param.vidparam.fmt) == PJ_SUCCESS)
-    {
-        status = pjmedia_vid_port_stop(capture);
-        if (status != PJ_SUCCESS) {
-            rc = 170; goto on_return;
-        }
-        status = pjmedia_vid_port_disconnect(capture);
-        if (status != PJ_SUCCESS) {
-            rc = 180; goto on_return;
-        }
-        pjmedia_vid_port_destroy(capture);
-
-        param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
-        param.active = PJ_TRUE;
-        pjmedia_format_init_video(&param.vidparam.fmt, param.vidparam.fmt.id,
-                                  640, 480,
-                                  vfd->fps.num, vfd->fps.denum);
-        vfd = pjmedia_format_get_video_format_detail(&param.vidparam.fmt,
-                                                     PJ_TRUE);
-        if (vfd == NULL) {
-            rc = 185; goto on_return;
-        }
-
-        status = pjmedia_vid_port_create(pool, &param, &capture);
-        if (status != PJ_SUCCESS) {
-            rc = 190; goto on_return;
-        }
-
-        status = pjmedia_vid_port_connect(
-                     capture,
-                     pjmedia_vid_port_get_passive_port(renderer),
-                     PJ_FALSE);
-        if (status != PJ_SUCCESS) {
-            rc = 200; goto on_return;
-        }
-
-        status = pjmedia_vid_dev_stream_set_cap(
-                     pjmedia_vid_port_get_stream(renderer),
-                     PJMEDIA_VID_DEV_CAP_FORMAT,
-                     &param.vidparam.fmt);
-        if (status != PJ_SUCCESS) {
-            rc = 205; goto on_return;
-        }
-
-        status = pjmedia_vid_port_start(capture);
-        if (status != PJ_SUCCESS) {
-            rc = 210; goto on_return;
-        }
-    }
-
-    for (i = 0; i < 35 && (!is_quitting); i++) {
+    for (i = 0; i < LOOP_DURATION*10 && (!is_quitting); i++) {
+#if VID_DEV_TEST_MAC_OS
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+#endif
         pj_thread_sleep(100);
     }
 
 on_return:
-    PJ_PERROR(3, (THIS_FILE, status, "  error"));
+    if (status != PJ_SUCCESS)
+	PJ_PERROR(3, (THIS_FILE, status, "   error"));
+
     if (capture)
 	pjmedia_vid_port_destroy(capture);
     if (renderer)
 	pjmedia_vid_port_destroy(renderer);
 
+    pj_pool_release(pool);
     return rc;
+}
+
+static int loopback_test(void)
+{
+    unsigned count, i;
+    pjmedia_format_id test_fmts[] = {
+        PJMEDIA_FORMAT_YUY2
+    };
+    pjmedia_rect_size test_sizes[] = {
+	{176,144},	/* QCIF */
+	{352,288},	/* CIF */
+	{704,576}	/* 4CIF */
+    };
+    pjmedia_ratio test_fpses[] = {
+	{25, 1},
+	{30, 1},
+    };
+    pj_status_t status;
+
+    PJ_LOG(3, (THIS_FILE, " Loopback tests (prepare you webcams):"));
+
+    count = pjmedia_vid_dev_count();
+    for (i=0; i<count; ++i) {
+	pjmedia_vid_dev_info cdi;
+	unsigned j;
+
+	status = pjmedia_vid_dev_get_info(i, &cdi);
+	if (status != PJ_SUCCESS)
+	    return -300;
+
+	/* Only interested with capture device */
+	if ((cdi.dir & PJMEDIA_DIR_CAPTURE) == 0)
+	    continue;
+
+	for (j=i+1; j<count; ++j) {
+	    pjmedia_vid_dev_info rdi;
+	    unsigned k;
+
+	    status = pjmedia_vid_dev_get_info(j, &rdi);
+	    if (status != PJ_SUCCESS)
+		return -310;
+
+	    /* Only interested with render device */
+	    if ((rdi.dir & PJMEDIA_DIR_RENDER) == 0)
+		continue;
+
+	    /* Test with the format, size, and fps combinations */
+	    for (k=0; k<PJ_ARRAY_SIZE(test_fmts); ++k) {
+		unsigned l;
+
+		for (l=0; l<PJ_ARRAY_SIZE(test_sizes); ++l) {
+		    unsigned m;
+
+		    for (m=0; m<PJ_ARRAY_SIZE(test_fpses); ++m) {
+			pjmedia_format fmt;
+
+			pjmedia_format_init_video(&fmt, test_fmts[k],
+			                          test_sizes[l].w,
+			                          test_sizes[l].h,
+			                          test_fpses[m].num,
+			                          test_fpses[m].denum);
+
+			capture_render_loopback(i, j, &fmt);
+		    }
+		}
+	    } /* k */
+
+	}
+    }
+
+    return 0;
 }
 
 int vid_dev_test(void)
 {
-    pj_pool_t *pool;
     int rc = 0;
     pj_status_t status;
     
-    PJ_LOG(3, (THIS_FILE, "Video device tests.."));
-
-    pool = pj_pool_create(mem, "Viddev test", 256, 256, 0);
-
     status = pjmedia_vid_subsys_init(mem);
     if (status != PJ_SUCCESS)
         return -10;
@@ -223,13 +288,12 @@ int vid_dev_test(void)
     if (rc != 0)
 	goto on_return;
 
-    rc = loopback_test(pool);
+    rc = loopback_test();
     if (rc != 0)
 	goto on_return;
 
 on_return:
     pjmedia_vid_subsys_shutdown();
-    pj_pool_release(pool);
     
     return rc;
 }
