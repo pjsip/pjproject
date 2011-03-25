@@ -59,10 +59,6 @@ static void pjsua_media_config_dup(pj_pool_t *pool,
 }
 
 
-PJ_DECL(pj_status_t)
-pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr,
-				  pj_pool_t *pool);
-
 /**
  * Init media subsystems.
  */
@@ -314,15 +310,6 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     status = pjmedia_codec_ffmpeg_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing ffmpeg library",
-		     status);
-	return status;
-    }
-#endif
-
-#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_LIBSWSCALE && PJMEDIA_HAS_LIBAVUTIL
-    status = pjmedia_libswscale_converter_init(NULL, pjsua_var.pool);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing libswscale converter",
 		     status);
 	return status;
     }

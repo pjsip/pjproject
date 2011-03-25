@@ -58,10 +58,6 @@
 /* For logging purpose. */
 #define THIS_FILE   "aviplay.c"
 
-pj_status_t
-pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr,
-				  pj_pool_t *pool);
-
 static const char *desc = 
 " FILE		    						    \n"
 "		    						    \n"
@@ -328,8 +324,6 @@ static int aviplay(pj_pool_t *pool, const char *fname)
             /* Check whether we need to convert the decoded frame */
             if (codecp->need_conversion) {
                 pjmedia_conversion_param conv_param;
-		
-                status = pjmedia_libswscale_converter_init(NULL, pool);
 		
                 pjmedia_format_copy(&conv_param.src, &param.vidparam.fmt);
                 pjmedia_format_copy(&conv_param.dst, &param.vidparam.fmt);
