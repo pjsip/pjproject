@@ -111,7 +111,7 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
 					     pjmedia_vid_param *param);
 static pj_status_t ios_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					const pjmedia_vid_param *param,
+					pjmedia_vid_param *param,
 					const pjmedia_vid_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm);
@@ -384,7 +384,7 @@ static ios_fmt_info* get_ios_format_info(pjmedia_format_id id)
 /* API: create stream */
 static pj_status_t ios_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					const pjmedia_vid_param *param,
+					pjmedia_vid_param *param,
 					const pjmedia_vid_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)

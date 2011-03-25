@@ -109,14 +109,27 @@ PJ_DEF(void) pjmedia_vid_port_param_default(pjmedia_vid_port_param *prm)
     prm->active = PJ_TRUE;
 }
 
+static const char *vid_dir_name(pjmedia_dir dir)
+{
+    switch (dir) {
+    case PJMEDIA_DIR_CAPTURE:
+	return "capture";
+    case PJMEDIA_DIR_RENDER:
+	return "render";
+    case PJMEDIA_DIR_CAPTURE_RENDER:
+	return "capture and render";
+    default:
+	return "??";
+    }
+}
+
 PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 					     const pjmedia_vid_port_param *prm,
 					     pjmedia_vid_port **p_vid_port)
 {
     pjmedia_vid_port *vp;
-    pjmedia_vid_dev_index dev_id = PJMEDIA_VID_INVALID_DEV;
-    pjmedia_vid_dev_info di;
     const pjmedia_video_format_detail *vfd;
+    char cap_dev_name[64], rend_dev_name[64];
     pjmedia_vid_cb vid_cb;
     pj_bool_t need_frame_buf = PJ_FALSE;
     pj_status_t status;
@@ -124,7 +137,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pjmedia_vid_param vparam;
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
-    PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO,
+    PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO &&
+                     prm->vidparam.dir != PJMEDIA_DIR_NONE,
 		     PJ_EINVAL);
 
     /* Retrieve the video format detail */
@@ -134,35 +148,26 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(vfd->fps.num, PJ_EINVAL);
 
-
     /* Allocate videoport */
     vp = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_port);
     vp->role = prm->active ? ROLE_ACTIVE : ROLE_PASSIVE;
     vp->dir = prm->vidparam.dir;
     vp->cap_size = vfd->size;
 
-    /* Determine the device id to get the video device info */
-    if ((vp->dir & PJMEDIA_DIR_CAPTURE) &&
-        prm->vidparam.cap_id != PJMEDIA_VID_INVALID_DEV)
-    {
-	dev_id = prm->vidparam.cap_id;
-    } else if ((vp->dir & PJMEDIA_DIR_RENDER) &&
-               prm->vidparam.rend_id != PJMEDIA_VID_INVALID_DEV)
-    {
-	dev_id = prm->vidparam.rend_id;
-    } else
-	return PJ_EINVAL;
-
-    /* Get device info */
-    status = pjmedia_vid_dev_get_info(dev_id, &di);
-    if (status != PJ_SUCCESS)
-	return status;
-
     vparam = prm->vidparam;
+    cap_dev_name[0] = rend_dev_name[0] = '\0';
 
-    /* Check if we need converter */
     if (vp->dir & PJMEDIA_DIR_CAPTURE) {
+	pjmedia_vid_dev_info di;
 	unsigned i;
+
+	/* Get device info */
+	status = pjmedia_vid_dev_get_info(prm->vidparam.cap_id, &di);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	pj_ansi_snprintf(cap_dev_name, sizeof(cap_dev_name), "%s [%s]",
+	                 di.name, di.driver);
 
 	for (i = 0; i < di.fmt_cnt; ++i) {
 	    if (prm->vidparam.fmt.id == di.fmt[i].id)
@@ -170,46 +175,55 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	}
 
 	if (i == di.fmt_cnt) {
-	    /* Yes, we need converter */
-	    pjmedia_conversion_param conv_param;
-	    const pjmedia_video_format_info *vfi;
-	    pjmedia_video_apply_fmt_param vafp;
-
-	    pjmedia_format_copy(&conv_param.src, &prm->vidparam.fmt);
-	    pjmedia_format_copy(&conv_param.dst, &prm->vidparam.fmt);
-	    for (i = 0; i < di.fmt_cnt; ++i) {
-		conv_param.src.id = di.fmt[i].id;
-		status = pjmedia_converter_create(NULL, pool, &conv_param, 
-						  &vp->cap_conv);
-		if (status == PJ_SUCCESS)
-		    break;
-	    }
-	    if (status != PJ_SUCCESS)
-		return status;
-
-	    /* Update format ID for the capture device */
-	    vparam.fmt.id = conv_param.src.id;
-
-	    /* Allocate buffer for conversion */
-	    vfi = pjmedia_get_video_format_info(NULL, conv_param.dst.id);
-	    if (!vfi)
-		return PJMEDIA_EBADFMT;
-
-	    pj_bzero(&vafp, sizeof(vafp));
-	    vafp.size = vfd->size;
-	    status = vfi->apply_fmt(vfi, &vafp);
-	    if (status != PJ_SUCCESS)
-		return PJMEDIA_EBADFMT;
-
-	    vp->cap_conv_buf = pj_pool_alloc(pool, vafp.framebytes);
-	    vp->cap_conv_buf_size = vafp.framebytes;
+	    /* The device has no no matching format. Pick one from
+	     * the supported formats, and later use converter to
+	     * convert it to the required format.
+	     */
+	    pj_assert(di.fmt_cnt != 0);
+	    vparam.fmt.id = di.fmt[0].id;
 	}
+
+	pj_strdup2_with_null(pool, &vp->dev_name, di.name);
+	vp->stream_role = di.has_callback ? ROLE_ACTIVE : ROLE_PASSIVE;
     }
 
-    PJ_LOG(4,(THIS_FILE, "Opening %s..", di.name));
+    if (vp->dir & PJMEDIA_DIR_RENDER) {
+	pjmedia_vid_dev_info di;
+	unsigned i;
 
-    pj_strdup2_with_null(pool, &vp->dev_name, di.name);
-    vp->stream_role = di.has_callback ? ROLE_ACTIVE : ROLE_PASSIVE;
+	/* Get device info */
+	status = pjmedia_vid_dev_get_info(prm->vidparam.rend_id, &di);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	pj_ansi_snprintf(rend_dev_name, sizeof(rend_dev_name), "and %s [%s]",
+	                 di.name, di.driver);
+
+	for (i = 0; i < di.fmt_cnt; ++i) {
+	    if (prm->vidparam.fmt.id == di.fmt[i].id)
+		break;
+	}
+
+	if (i == di.fmt_cnt) {
+	    /* The device has no no matching format. Pick one from
+	     * the supported formats, and later use converter to
+	     * convert it to the required format.
+	     */
+	    pj_assert(di.fmt_cnt != 0);
+	    vparam.fmt.id = di.fmt[0].id;
+	}
+
+	pj_strdup2_with_null(pool, &vp->dev_name, di.name);
+	vp->stream_role = di.has_callback ? ROLE_ACTIVE : ROLE_PASSIVE;
+    }
+
+    PJ_LOG(4,(THIS_FILE,
+	      "Opening device %s%s for %s: format=%s, size=%dx%d @%d:%d fps",
+	      cap_dev_name, rend_dev_name,
+	      vid_dir_name(prm->vidparam.dir),
+	      pjmedia_get_video_format_info(NULL, vparam.fmt.id)->name,
+	      vfd->size.w, vfd->size.h,
+	      vfd->fps.num, vfd->fps.denum));
 
     ptime_usec = PJMEDIA_PTIME(&vfd->fps);
     pjmedia_clock_src_init(&vp->cap_clocksrc, PJMEDIA_TYPE_VIDEO,
@@ -233,6 +247,59 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 				           &vp->strm);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    PJ_LOG(4,(THIS_FILE,
+	      "Device %s%s opened: format=%s, size=%dx%d @%d:%d fps",
+	      cap_dev_name, rend_dev_name,
+	      pjmedia_get_video_format_info(NULL, vparam.fmt.id)->name,
+	      vparam.fmt.det.vid.size.w, vparam.fmt.det.vid.size.h,
+	      vparam.fmt.det.vid.fps.num, vparam.fmt.det.vid.fps.denum));
+
+    /* Instantiate converter if necessary */
+    if (vparam.fmt.id != prm->vidparam.fmt.id ||
+	vparam.fmt.det.vid.size.w != prm->vidparam.fmt.det.vid.size.w ||
+	vparam.fmt.det.vid.size.h != prm->vidparam.fmt.det.vid.size.h /*||
+	vparam.fmt.det.vid.fps.num != prm->vidparam.fmt.det.vid.fps.num ||
+	vparam.fmt.det.vid.fps.denum != prm->vidparam.fmt.det.vid.fps.denum*/)
+    {
+	/* Yes, we need converter */
+	pjmedia_conversion_param conv_param;
+	const pjmedia_video_format_info *vfi;
+	pjmedia_video_apply_fmt_param vafp;
+
+	if (vp->dir & PJMEDIA_DIR_CAPTURE) {
+	    pjmedia_format_copy(&conv_param.src, &vparam.fmt);
+	    pjmedia_format_copy(&conv_param.dst, &prm->vidparam.fmt);
+
+	    status = pjmedia_converter_create(NULL, pool, &conv_param,
+					      &vp->cap_conv);
+	} else {
+	    pjmedia_format_copy(&conv_param.src, &prm->vidparam.fmt);
+	    pjmedia_format_copy(&conv_param.dst, &vparam.fmt);
+
+	    status = pjmedia_converter_create(NULL, pool, &conv_param,
+					      &vp->cap_conv);
+	}
+
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(THIS_FILE, status, "Error creating converter"));
+	    goto on_error;
+	}
+
+	/* Allocate buffer for conversion */
+	vfi = pjmedia_get_video_format_info(NULL, prm->vidparam.fmt.id);
+	if (!vfi)
+	    return PJMEDIA_EBADFMT;
+
+	pj_bzero(&vafp, sizeof(vafp));
+	vafp.size = prm->vidparam.fmt.det.vid.size;
+	status = vfi->apply_fmt(vfi, &vafp);
+	if (status != PJ_SUCCESS)
+	    return PJMEDIA_EBADFMT;
+
+	vp->cap_conv_buf = pj_pool_alloc(pool, vafp.framebytes);
+	vp->cap_conv_buf_size = vafp.framebytes;
+    }
 
     if (vp->role==ROLE_ACTIVE && vp->stream_role==ROLE_PASSIVE) {
 	/* Active role is wanted, but our device is passive, so create
@@ -292,7 +359,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	}
 
 	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = vfd->size;
+	vafp.size = vparam.fmt.det.vid.size;
 	status = vfi->apply_fmt(vfi, &vafp);
 	if (status != PJ_SUCCESS)
 	    goto on_error;

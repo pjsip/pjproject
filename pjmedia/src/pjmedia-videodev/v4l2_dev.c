@@ -128,7 +128,7 @@ static pj_status_t vid4lin_factory_default_param(pj_pool_t *pool,
 					         unsigned index,
 					         pjmedia_vid_param *param);
 static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
-						 const pjmedia_vid_param *prm,
+						 pjmedia_vid_param *prm,
 					         const pjmedia_vid_cb *cb,
 					         void *user_data,
 					         pjmedia_vid_dev_stream **p);
@@ -411,7 +411,7 @@ static pj_status_t vid4lin_stream_init_fmt(vid4lin_stream *stream,
 					const pjmedia_vid_param *param,
 					pj_uint32_t pix_fmt)
 {
-    const pjmedia_video_format_detail *vfd;
+    pjmedia_video_format_detail *vfd;
     struct v4l2_format v4l2_fmt;
     pj_status_t status;
 
@@ -437,8 +437,9 @@ static pj_status_t vid4lin_stream_init_fmt(vid4lin_stream *stream,
     if ((v4l2_fmt.fmt.pix.width != vfd->size.w) ||
 	(v4l2_fmt.fmt.pix.height != vfd->size.h))
     {
-	status = PJMEDIA_EVID_BADSIZE;
-	return status;
+	/* Size has changed */
+	vfd->size.w = v4l2_fmt.fmt.pix.width;
+	vfd->size.h = v4l2_fmt.fmt.pix.height;
     }
 
     return PJ_SUCCESS;
@@ -513,7 +514,7 @@ static pj_status_t vid4lin_stream_init_read_write(vid4lin_stream *stream)
 
 /* API: create stream */
 static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
-				      const pjmedia_vid_param *param,
+				      pjmedia_vid_param *param,
 				      const pjmedia_vid_cb *cb,
 				      void *user_data,
 				      pjmedia_vid_dev_stream **p_vid_strm)
@@ -524,7 +525,9 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
     vid4lin_dev_info *vdi;
     const vid4lin_fmt_map *fmt_map;
     const pjmedia_video_format_info *fmt_info;
+    pjmedia_video_format_detail *vfd;
     pj_status_t status = PJ_SUCCESS;
+
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -538,6 +541,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
         return PJMEDIA_EVID_BADFORMAT;
 
     vdi = &cf->dev_info[param->cap_id];
+    vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
 
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(cf->pf, vdi->info.name, 512, 512, NULL);
@@ -551,9 +555,6 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
     stream->name[sizeof(stream->name)-1] = '\0';
     stream->user_data = user_data;
     stream->fd = INVALID_FD;
-
-    PJ_LOG(4,(THIS_FILE, "Opening video4linux2 device %s: format=%s..",
-	      stream->name, fmt_info->name));
 
     stream->fd = v4l2_open(vdi->dev_name, O_RDWR | O_NONBLOCK, 0);
     if (stream->fd < 0)

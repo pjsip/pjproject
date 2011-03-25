@@ -609,13 +609,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
 
 /* API: Open video stream object using the specified parameters. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_create(
-					const pjmedia_vid_param *prm,
+					pjmedia_vid_param *prm,
 					const pjmedia_vid_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)
 {
     pjmedia_vid_dev_factory *cap_f=NULL, *rend_f=NULL, *f=NULL;
-    pjmedia_vid_param param;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(prm && prm->dir && p_vid_strm, PJ_EINVAL);
@@ -625,48 +624,45 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_create(
 		     prm->dir==PJMEDIA_DIR_CAPTURE_RENDER,
 		     PJ_EINVAL);
 
-    /* Must make copy of param because we're changing device ID */
-    pj_memcpy(&param, prm, sizeof(param));
-
     /* Normalize cap_id */
-    if (param.dir & PJMEDIA_DIR_CAPTURE) {
+    if (prm->dir & PJMEDIA_DIR_CAPTURE) {
 	unsigned index;
 
-	if (param.cap_id < 0)
-	    param.cap_id = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+	if (prm->cap_id < 0)
+	    prm->cap_id = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
 
-	status = lookup_dev(param.cap_id, &cap_f, &index);
+	status = lookup_dev(prm->cap_id, &cap_f, &index);
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	param.cap_id = index;
+	prm->cap_id = index;
 	f = cap_f;
     }
 
     /* Normalize rend_id */
-    if (param.dir & PJMEDIA_DIR_RENDER) {
+    if (prm->dir & PJMEDIA_DIR_RENDER) {
 	unsigned index;
 
-	if (param.rend_id < 0)
-	    param.rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+	if (prm->rend_id < 0)
+	    prm->rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
 
-	status = lookup_dev(param.rend_id, &rend_f, &index);
+	status = lookup_dev(prm->rend_id, &rend_f, &index);
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	param.rend_id = index;
+	prm->rend_id = index;
 	f = rend_f;
     }
 
     PJ_ASSERT_RETURN(f != NULL, PJ_EBUG);
 
     /* For now, cap_id and rend_id must belong to the same factory */
-    PJ_ASSERT_RETURN((param.dir != PJMEDIA_DIR_CAPTURE_RENDER) || 
+    PJ_ASSERT_RETURN((prm->dir != PJMEDIA_DIR_CAPTURE_RENDER) ||
 		     (cap_f == rend_f),
 		     PJMEDIA_EVID_INVDEV);
 
     /* Create the stream */
-    status = f->op->create_stream(f, &param, cb,
+    status = f->op->create_stream(f, prm, cb,
 				  user_data, p_vid_strm);
     if (status != PJ_SUCCESS)
 	return status;

@@ -471,7 +471,16 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
 
 
 /**
- * Open video stream object using the specified parameters.
+ * Open video stream object using the specified parameters. If stream is
+ * created successfully, this function will return PJ_SUCCESS and the
+ * stream pointer will be returned in the p_strm argument.
+ *
+ * The opened stream may have been opened with different size and fps
+ * than the requested values in the \a param argument. Application should
+ * check the actual size and fps that the stream was opened with by inspecting
+ * the values in the \a param argument and see if they have changed. Also
+ * if the device ID in the \a param specifies default device, it may be
+ * replaced with the actual device ID upon return.
  *
  * @param param         Sound device parameters to be used for the stream.
  * @param cb            Pointer to structure containing video stream
@@ -484,7 +493,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
  *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_create(
-					    const pjmedia_vid_param *param,
+					    pjmedia_vid_param *param,
 					    const pjmedia_vid_cb *cb,
 					    void *user_data,
 					    pjmedia_vid_dev_stream **p_strm);

@@ -86,7 +86,7 @@ typedef struct pjmedia_vid_dev_factory_op
      * #pjmedia_vid_dev_stream_create()
      */
     pj_status_t (*create_stream)(pjmedia_vid_dev_factory *f,
-				 const pjmedia_vid_param *param,
+				 pjmedia_vid_param *param,
 				 const pjmedia_vid_cb *cb,
 				 void *user_data,
 				 pjmedia_vid_dev_stream **p_vid_strm);
