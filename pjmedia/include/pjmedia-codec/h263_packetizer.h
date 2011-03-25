@@ -72,8 +72,13 @@ PJ_INLINE(pj_status_t) pjmedia_h263_packetize(pj_uint8_t *buf,
         /* Not started in synchronization point, we will use two octets
          * preceeding the bitstream for payload header!
          */
-        pj_assert(*pos>=2);
-        p -= 2;
+
+	if (*pos < 2) {
+	    /* Invalid H263 bitstream, it's not started with PSC */
+	    return PJ_EINVAL;
+	}
+
+	p -= 2;
         *p = 0;
     }
     *(p+1) = 0;
