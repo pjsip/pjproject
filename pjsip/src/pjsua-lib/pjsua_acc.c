@@ -905,7 +905,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	    pjsip_cred_info ci;
 
 	    /* Find if this credential is already listed */
-	    for (j = i; j < acc->cfg.cred_count; ++i) {
+	    for (j = i; j < acc->cfg.cred_count; ++j) {
 		if (pjsip_cred_info_cmp(&acc->cfg.cred_info[j], 
 					&cfg->cred_info[i]) == 0)
 		{
