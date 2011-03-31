@@ -312,11 +312,29 @@ void ioqueue_dispatch_write_event(pj_ioqueue_t *ioqueue, pj_ioqueue_key_t *h)
 	     */
 	    //write_op->op = 0;
         } else if (write_op->op == PJ_IOQUEUE_OP_SEND_TO) {
-            send_rc = pj_sock_sendto(h->fd, 
-                                     write_op->buf+write_op->written,
-                                     &sent, write_op->flags,
-                                     &write_op->rmt_addr, 
-                                     write_op->rmt_addrlen);
+	    int retry;
+	    for (retry=0; retry<2; ++retry) {
+		send_rc = pj_sock_sendto(h->fd, 
+					 write_op->buf+write_op->written,
+					 &sent, write_op->flags,
+					 &write_op->rmt_addr, 
+					 write_op->rmt_addrlen);
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+		/* Special treatment for dead UDP sockets here, see ticket #1107 */
+		if (send_rc==PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(h) &&
+		    h->fd_type==pj_SOCK_DGRAM())
+		{
+		    PJ_PERROR(4,(THIS_FILE, send_rc,
+				 "Send error for socket %d, retrying",
+				 h->fd));
+		    replace_udp_sock(h);
+		    continue;
+		}
+#endif
+		break;
+	    }
+
 	    /* Can't do this. We only clear "op" after we're finished sending
 	     * the whole buffer.
 	     */
@@ -917,12 +935,17 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
 {
     struct write_operation *write_op;
     unsigned retry;
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+    pj_bool_t restart_retry = PJ_FALSE;
+#endif
     pj_status_t status;
     pj_ssize_t sent;
 
     PJ_ASSERT_RETURN(key && op_key && data && length, PJ_EINVAL);
     PJ_CHECK_STACK();
 
+retry_on_restart:
     /* Check if key is closing. */
     if (IS_CLOSING(key))
 	return PJ_ECANCELLED;
@@ -959,6 +982,21 @@ PJ_DEF(pj_status_t) pj_ioqueue_sendto( pj_ioqueue_key_t *key,
              * the error to caller.
              */
             if (status != PJ_STATUS_FROM_OS(PJ_BLOCKING_ERROR_VAL)) {
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+		/* Special treatment for dead UDP sockets here, see ticket #1107 */
+		if (status==PJ_STATUS_FROM_OS(EPIPE) && !IS_CLOSING(key) &&
+		    key->fd_type==pj_SOCK_DGRAM() && !restart_retry)
+		{
+		    PJ_PERROR(4,(THIS_FILE, status,
+				 "Send error for socket %d, retrying",
+				 key->fd));
+		    replace_udp_sock(key);
+		    restart_retry = PJ_TRUE;
+		    goto retry_on_restart;
+		}
+#endif
+
                 return status;
             }
 	    status = status;

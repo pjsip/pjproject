@@ -125,7 +125,10 @@ struct pj_ioqueue_t
 };
 
 /* Proto */
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
 static pj_status_t replace_udp_sock(pj_ioqueue_key_t *h);
+#endif
 
 /* Include implementation for common abstraction after we declare
  * pj_ioqueue_key_t and pj_ioqueue_t.
