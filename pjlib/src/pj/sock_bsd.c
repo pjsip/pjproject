@@ -551,7 +551,7 @@ PJ_DEF(pj_status_t) pj_sock_socket(int af,
     else {
 	pj_int32_t val = 1;
 	if (type == pj_SOCK_STREAM()) {
-	    pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
+	    pj_sock_setsockopt(*sock, pj_SOL_SOCKET(), pj_SO_NOSIGPIPE(),
 			       &val, sizeof(val));
 	}
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
