@@ -52,7 +52,7 @@ static const char *state_str[] =
     "STATE_DONE",
 };
 
-#define GET_FMTP_IVAL(ival, fmtp, param, default_val) \
+#define GET_FMTP_IVAL_BASE(ival, base, fmtp, param, default_val) \
     do { \
 	pj_str_t s; \
 	char *p; \
@@ -63,8 +63,12 @@ static const char *state_str[] =
 	} \
 	pj_strset(&s, p + param.slen, fmtp.fmt_param.slen - \
 		  (p - fmtp.fmt_param.ptr) - param.slen); \
-	ival = pj_strtoul(&s); \
+	ival = pj_strtoul2(&s, NULL, base); \
     } while (0)
+
+#define GET_FMTP_IVAL(ival, fmtp, param, default_val) \
+	GET_FMTP_IVAL_BASE(ival, 10, fmtp, param, default_val)
+
 
 /*
  * Get string representation of negotiator state.
@@ -678,6 +682,49 @@ static pj_bool_t match_amr( const pjmedia_sdp_media *offer,
 }
 
 
+/* Matching H.264 between offer and answer. */
+static pj_bool_t match_h264( const pjmedia_sdp_media *offer,
+			     unsigned o_fmt_idx,
+			     const pjmedia_sdp_media *answer,
+			     unsigned a_fmt_idx)
+{
+    const pjmedia_sdp_attr *attr_ans;
+    const pjmedia_sdp_attr *attr_ofr;
+    pjmedia_sdp_fmtp fmtp;
+    pj_uint32_t profile1, profile2;
+    unsigned pack_mode1, pack_mode2;
+    const pj_str_t STR_PROFILE   = {"profile-level-id=", 17};
+    const pj_str_t STR_PACK_MODE = {"packetization-mode=", 19};
+
+    /* Parse offer */
+    attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp", 
+					    &offer->desc.fmt[o_fmt_idx]);
+    if (!attr_ofr)
+	return PJ_FALSE;
+
+    if (pjmedia_sdp_attr_get_fmtp(attr_ofr, &fmtp) != PJ_SUCCESS)
+	return PJ_FALSE;
+
+    GET_FMTP_IVAL_BASE(profile1, 16, fmtp, STR_PROFILE, 0x42000A);
+    GET_FMTP_IVAL(pack_mode1, fmtp, STR_PACK_MODE, 0);
+
+    /* Parse answer */
+    attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
+					    &answer->desc.fmt[a_fmt_idx]);
+    if (!attr_ans)
+	return PJ_FALSE;
+
+    if (pjmedia_sdp_attr_get_fmtp(attr_ans, &fmtp) != PJ_SUCCESS)
+	return PJ_FALSE;
+
+    GET_FMTP_IVAL_BASE(profile2, 16, fmtp, STR_PROFILE, 0x42000A);
+    GET_FMTP_IVAL(pack_mode2, fmtp, STR_PACK_MODE, 0);
+
+    /* Compare bitrate in answer and offer. */
+    return ((profile1 == profile2) && (pack_mode1 == pack_mode2));
+}
+
+
 /* Toggle AMR octet-align setting in the fmtp.
  */
 static pj_status_t amr_toggle_octet_align(pj_pool_t *pool,
@@ -876,7 +923,8 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			     (ar.param.slen==1 && *ar.param.ptr=='1')))
 			{
 			    /* Further check for G7221, negotiate bitrate. */
-			    if (pj_stricmp2(&or_.enc_name, "G7221") == 0) {
+			    if (pj_stricmp2(&or_.enc_name, "G7221") == 0)
+			    {
 				if (match_g7221(offer, i, answer, j))
 				    break;
 			    } else
@@ -886,6 +934,12 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 			    {
 				if (match_amr(offer, i, answer, j, PJ_FALSE, 
 					      NULL))
+				    break;
+			    } else
+			    /* Further check for H264, negotiate fmtp. */
+			    if (pj_stricmp2(&or_.enc_name, "H264") == 0)
+			    {
+				if (match_h264(offer, i, answer, j))
 				    break;
 			    } else {
 				/* Match! */
@@ -1199,6 +1253,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
 						   preanswer, a_med_idx,
 						   PJ_TRUE, &pt_amr_need_adapt))
 					continue;
+				} else
+				if (pj_stricmp2(&or_.enc_name, "H264") == 0 &&
+				    !match_h264(master, i, slave, j))
+				{
+				    continue;
 				}
 				found_matching_codec = 1;
 			    } else {

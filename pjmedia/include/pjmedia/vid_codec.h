@@ -223,7 +223,9 @@ typedef struct pjmedia_vid_codec_op
      * picture boundary detection by itself, e.g: for RTP delivery, payloads
      * belong to the same picture will share the same RTP timestamp and also
      * there is marker bit in the RTP header that is usually reserved for
-     * end-of-picture flag.
+     * end-of-picture flag. Also note that in case of noticing packet lost,
+     * application should keep calling this function with payload pointer
+     * set to NULL, as the packetizer need to update its internal state.
      *
      * @param codec	The codec instance
      * @param pkt	The input packet.
@@ -241,7 +243,8 @@ typedef struct pjmedia_vid_codec_op
                                const pj_uint8_t *payload,
                                pj_size_t   payload_len,
                                pj_uint8_t *bits,
-                               pj_size_t  *bits_len);
+                               pj_size_t   bits_len,
+			       unsigned	  *bits_pos);
 
     /** 
      * Instruct the codec to encode the specified input frame. The input

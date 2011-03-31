@@ -1,6 +1,6 @@
 /* $Id$ */
 /* 
- * Copyright (C) 2008-2009 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,50 +16,62 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_H263_PACKETIZER_H__
-#define __PJMEDIA_H263_PACKETIZER_H__
-
+#ifndef __PJMEDIA_H264_PACKETIZER_H__
+#define __PJMEDIA_H264_PACKETIZER_H__
 
 /**
- * @file h263_packetizer.h
- * @brief Packetizes/unpacketizes H.263 bitstream into RTP payload.
+ * @file h264_packetizer.h
+ * @brief Packetizes H.264 bitstream into RTP payload and vice versa.
  */
 
-#include <pj/pool.h>
 #include <pj/types.h>
 
 PJ_BEGIN_DECL
 
-
 /**
- * Opaque declaration for H.263 packetizer.
+ * Opaque declaration for H.264 packetizer.
  */
-typedef struct pjmedia_h263_packetizer pjmedia_h263_packetizer;
+typedef struct pjmedia_h264_packetizer pjmedia_h264_packetizer;
 
 
 /**
- * Enumeration of H.263 packetization modes.
+ * Enumeration of H.264 packetization modes.
  */
 typedef enum
 {
     /**
-     * H.263 RTP packetization using RFC 4629.
+     * Single NAL unit packetization mode will only generate payloads
+     * containing a complete single NAL unit packet. As H.264 NAL unit
+     * size can be very large, this mode is usually not applicable for
+     * network environments with MTU size limitation.
      */
-    PJMEDIA_H263_PACKETIZER_MODE_RFC4629,
+    PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL,
+    
+    /**
+     * Non-interleaved packetization mode will generate payloads with the
+     * following possible formats:
+     * - single NAL unit packets,
+     * - NAL units aggregation STAP-A packets,
+     * - fragmented NAL unit FU-A packets.
+     */
+    PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED,
 
     /**
-     * H.263 RTP packetization using legacy RFC 2190.
-     * This is currently not supported.
+     * Interleaved packetization mode will generate payloads with the
+     * following possible formats:
+     * - single NAL unit packets,
+     * - NAL units aggregation STAP-A & STAP-B packets,
+     * - fragmented NAL unit FU-A & FU-B packets.
+     * This packetization mode is currently unsupported.
      */
-    PJMEDIA_H263_PACKETIZER_MODE_RFC2190,
-
-} pjmedia_h263_packetizer_mode;
+    PJMEDIA_H264_PACKETIZER_MODE_INTERLEAVED,
+} pjmedia_h264_packetizer_mode;
 
 
 /**
- * H.263 packetizer configuration.
+ * H.264 packetizer setting.
  */
-typedef struct pjmedia_h263_packetizer_cfg
+typedef struct pjmedia_h264_packetizer_cfg
 {
     /**
      * Maximum payload length.
@@ -69,15 +81,15 @@ typedef struct pjmedia_h263_packetizer_cfg
 
     /**
      * Packetization mode.
-     * Default: PJMEDIA_H263_PACKETIZER_MODE_RFC4629
+     * Default: PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED
      */
-    pjmedia_h263_packetizer_mode mode;
-
-} pjmedia_h263_packetizer_cfg;
+    pjmedia_h264_packetizer_mode mode;
+}
+pjmedia_h264_packetizer_cfg;
 
 
 /**
- * Create H.263 packetizer.
+ * Create H.264 packetizer.
  *
  * @param pool		The memory pool.
  * @param cfg		Packetizer settings, if NULL, default setting
@@ -86,14 +98,14 @@ typedef struct pjmedia_h263_packetizer_cfg
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h263_packetizer_create(
+PJ_DECL(pj_status_t) pjmedia_h264_packetizer_create(
 				    pj_pool_t *pool,
-				    const pjmedia_h263_packetizer_cfg *cfg,
-				    pjmedia_h263_packetizer **p_pktz);
+				    const pjmedia_h264_packetizer_cfg *cfg,
+				    pjmedia_h264_packetizer **p_pktz);
 
 
 /**
- * Generate an RTP payload from a H.263 picture bitstream. Note that this
+ * Generate an RTP payload from a H.264 picture bitstream. Note that this
  * function will apply in-place processing, so the bitstream may be modified
  * during the packetization.
  *
@@ -106,7 +118,7 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetizer_create(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
+PJ_DECL(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
 					    pj_uint8_t *bits,
                                             pj_size_t bits_len,
                                             unsigned *bits_pos,
@@ -115,7 +127,7 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
 
 
 /**
- * Append an RTP payload to an H.263 picture bitstream. Note that in case of
+ * Append an RTP payload to an H.264 picture bitstream. Note that in case of
  * noticing packet lost, application should keep calling this function with
  * payload pointer set to NULL, as the packetizer need to update its internal
  * state.
@@ -132,15 +144,14 @@ PJ_DECL(pj_status_t) pjmedia_h263_packetize(pjmedia_h263_packetizer *pktz,
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_h263_unpacketize(pjmedia_h263_packetizer *pktz,
+PJ_DECL(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 					      const pj_uint8_t *payload,
-                                              pj_size_t payload_len,
+                                              pj_size_t   payload_len,
                                               pj_uint8_t *bits,
-                                              pj_size_t bits_size,
-					      unsigned *bits_pos);
+                                              pj_size_t   bits_len,
+					      unsigned   *bits_pos);
 
 
 PJ_END_DECL
 
-
-#endif	/* __PJMEDIA_H263_PACKETIZER_H__ */
+#endif	/* __PJMEDIA_H264_PACKETIZER_H__ */

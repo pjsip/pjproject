@@ -768,6 +768,10 @@ static pj_status_t put_frame(pjmedia_port *port,
     if (status != PJ_SUCCESS) {
         LOGERR_((channel->port.info.name.ptr, 
 	        "Codec encode() error", status));
+
+	/* Update RTP timestamp */
+	pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 1, 0,
+			       rtp_ts_len, &rtphdr, &rtphdrlen);
         return status;
     }
 
@@ -788,6 +792,10 @@ static pj_status_t put_frame(pjmedia_port *port,
         if (status != PJ_SUCCESS) {
             LOGERR_((channel->port.info.name.ptr, 
 	            "Codec pack() error", status));
+
+	    /* Update RTP timestamp */
+	    pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 1, 0,
+				   rtp_ts_len, &rtphdr, &rtphdrlen);
             return status;
         }
 
@@ -866,13 +874,8 @@ static pj_status_t get_frame(pjmedia_port *port,
      * timestamp are collected (a complete frame unpacketized).
      */
     {
-	pj_uint8_t *p, *data;
-	char ptype;
-	pj_size_t psize, data_len;
-	pj_uint32_t ts;
-	int seq;
 	pj_bool_t got_frame;
-	unsigned i;
+	unsigned cnt;
 
 	channel->buf_len = 0;
 	got_frame = PJ_FALSE;
@@ -880,33 +883,67 @@ static pj_status_t get_frame(pjmedia_port *port,
 	/* Lock jitter buffer mutex first */
 	pj_mutex_lock( stream->jb_mutex );
 
-	for (i=0; ; ++i) {
-	    /* Get frame from jitter buffer. */
-	    pjmedia_jbuf_peek_frame(stream->jb, i, (const void**)&p,
-	                            &psize, &ptype, NULL, &ts, &seq);
+	/* Check if we got a decodable frame */
+	for (cnt=0; ; ++cnt) {
+	    char ptype;
+	    pj_uint32_t ts;
+	    int seq;
+
+	    /* Peek frame from jitter buffer. */
+	    pjmedia_jbuf_peek_frame(stream->jb, cnt, NULL, NULL,
+				    &ptype, NULL, &ts, &seq);
 	    if (ptype == PJMEDIA_JB_NORMAL_FRAME) {
 		if (last_ts == 0) {
 		    last_ts = ts;
 		    frm_first_seq = seq;
 		}
-
 		if (ts != last_ts) {
 		    got_frame = PJ_TRUE;
-		    pjmedia_jbuf_remove_frame(stream->jb, i);
 		    break;
 		}
-
-		data = (pj_uint8_t*)channel->buf + channel->buf_len;
-		data_len = channel->buf_size - channel->buf_len;
-		status = (*stream->codec->op->unpacketize)(stream->codec,
-							   p, psize,
-							   data, &data_len);
-		channel->buf_len += data_len;
 		frm_last_seq = seq;
 	    } else if (ptype == PJMEDIA_JB_ZERO_EMPTY_FRAME) {
 		/* No more packet in the jitter buffer */
 		break;
 	    }
+	}
+
+	if (got_frame) {
+	    unsigned i;
+
+	    /* Generate frame bitstream from the payload */
+	    channel->buf_len = 0;
+	    for (i = 0; i < cnt; ++i) {
+		const pj_uint8_t *p;
+		pj_size_t psize;
+		char ptype;
+
+		/* We use jbuf_peek_frame() as it will returns the pointer of
+		 * the payload (no buffer and memcpy needed), just as we need.
+		 */
+		pjmedia_jbuf_peek_frame(stream->jb, i, &p,
+					&psize, &ptype, NULL, NULL, NULL);
+
+		if (ptype != PJMEDIA_JB_NORMAL_FRAME) {
+		    /* Packet lost, must set payload to NULL and keep going */
+		    p = NULL;
+		    psize = 0;
+		}
+
+		status = (*stream->codec->op->unpacketize)(
+						stream->codec,
+						p, psize,
+						(pj_uint8_t*)channel->buf,
+						channel->buf_size,
+						&channel->buf_len);
+		if (status != PJ_SUCCESS) {
+		    LOGERR_((channel->port.info.name.ptr, 
+			    "Codec unpack() error", status));
+		    /* Just ignore this unpack error */
+		}
+	    }
+
+	    pjmedia_jbuf_remove_frame(stream->jb, cnt);
 	}
 
 	/* Unlock jitter buffer mutex. */

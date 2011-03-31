@@ -66,7 +66,8 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			sound_legacy.o sound_port.o stereo_port.o \
 			stream_common.o stream.o tonegen.o transport_adapter_sample.o \
 			transport_ice.o transport_loop.o \
-			transport_srtp.o transport_udp.o vid_codec.o videoport.o vid_stream.o \
+			transport_srtp.o transport_udp.o vid_codec.o vid_codec_util.o \
+			videoport.o vid_stream.o \
 			wav_player.o wav_playlist.o wav_writer.o wave.o \
 			wsola.o
 
@@ -109,6 +110,7 @@ export PJSDP_CFLAGS += $(_CFLAGS)
 #
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
 export PJMEDIA_CODEC_OBJS += ffmpeg_codecs.o \
+			h263_packetizer.o h264_packetizer.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			ipp_codecs.o $(CODEC_OBJS)
 export PJMEDIA_CODEC_CFLAGS += $(_CFLAGS) $(GSM_CFLAGS) $(SPEEX_CFLAGS) \

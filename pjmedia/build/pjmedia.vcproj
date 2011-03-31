@@ -4692,6 +4692,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\vid_codec_util.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\vid_stream.c"
 				>
 			</File>
@@ -5130,6 +5134,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\vid_codec.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\vid_codec_util.h"
 				>
 			</File>
 			<File

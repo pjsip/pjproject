@@ -2835,6 +2835,14 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-codec\h263_packetizer.c"
+				>
+			</File>
+			<File
+				RelativePath="..\src\pjmedia-codec\h264_packetizer.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-codec\ilbc.c"
 				>
 				<FileConfiguration
@@ -3067,6 +3075,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia-codec\h263_packetizer.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia-codec\h264_packetizer.h"
 				>
 			</File>
 			<File

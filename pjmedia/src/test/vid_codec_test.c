@@ -6,7 +6,8 @@
 
 #define THIS_FILE "vid_codec.c"
 
-#define BYPASS_CODEC 0
+#define BYPASS_CODEC	    0
+#define BYPASS_PACKETIZER   0
 
 typedef struct codec_port_data_t
 {
@@ -14,6 +15,8 @@ typedef struct codec_port_data_t
     pjmedia_port        *dn_port;
     pj_uint8_t          *enc_buf;
     pj_size_t            enc_buf_size;
+    pj_uint8_t          *pack_buf;
+    pj_size_t            pack_buf_size;
 } codec_port_data_t;
 
 static pj_status_t codec_put_frame(pjmedia_port *port,
@@ -32,6 +35,46 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 
 	status = codec->op->encode(codec, frame, enc_frame.size, &enc_frame);
 	if (status != PJ_SUCCESS) goto on_error;
+
+#if !BYPASS_PACKETIZER
+	if (enc_frame.size) {
+	    unsigned pos = 0, i = 0;
+	    pj_bool_t packetized = PJ_FALSE;
+	    unsigned unpack_pos = 0;
+	    
+	    while (pos < enc_frame.size) {
+		pj_uint8_t *payload;
+		pj_size_t payload_len;
+
+		status = codec->op->packetize(codec, 
+					      (pj_uint8_t*)enc_frame.buf,
+					      enc_frame.size, &pos,
+					      &payload, &payload_len);
+		if (status == PJ_ENOTSUP)
+		    break;
+		if (status != PJ_SUCCESS)
+		    goto on_error;
+
+		status = codec->op->unpacketize(codec, payload, payload_len,
+						port_data->pack_buf,
+						port_data->pack_buf_size,
+						&unpack_pos);
+		if (status != PJ_SUCCESS)
+		    goto on_error;
+
+		// what happen if the bitstream is broken?
+		//if (i++ != 1) unpack_pos -= 10;
+
+		packetized = PJ_TRUE;
+	    }
+
+	    if (packetized) {
+		enc_frame.buf  = port_data->pack_buf;
+		enc_frame.size = unpack_pos;
+	    }
+	}
+#endif
+
 	status = codec->op->decode(codec, &enc_frame, frame->size, frame);
 	if (status != PJ_SUCCESS) goto on_error;
     }
@@ -77,7 +120,7 @@ static int enum_codecs()
         return 100;
 
     for (i = 0; i < cnt; ++i) {
-        PJ_LOG(3, (THIS_FILE, "  %16.*s %c%c %s",
+        PJ_LOG(3, (THIS_FILE, "  %-16.*s %c%c %s",
                    info[i].encoding_name.slen, info[i].encoding_name.ptr,
                    (info[i].dir & PJMEDIA_DIR_ENCODING? 'E' : ' '),
                    (info[i].dir & PJMEDIA_DIR_DECODING? 'D' : ' '),
@@ -122,6 +165,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
         }
     }
 
+
     /* Lookup colorbar source */
     status = pjmedia_vid_dev_lookup("Colorbar", "Colorbar generator", &cap_idx);
     if (status != PJ_SUCCESS) {
@@ -134,6 +178,11 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 	rc = 207; goto on_return;
     }
 
+    raw_fmt_id = codec_info->dec_fmt_id[0];
+    cap_idx = 0; /* Use dshow capture */
+
+#if 0
+    // Now, the video port can do automatic conversion.
     /* Raw format ID "not specified", lets find common format among the codec
      * and the video devices
      */
@@ -165,6 +214,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
             goto on_return;
         }
     }
+#endif
 
     /* Prepare codec */
     {
@@ -264,6 +314,9 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 				   codec_param.dec_fmt.det.vid.size.h * 4;
     codec_port_data.enc_buf = pj_pool_alloc(pool, 
 					    codec_port_data.enc_buf_size);
+    codec_port_data.pack_buf_size = codec_port_data.enc_buf_size;
+    codec_port_data.pack_buf = pj_pool_alloc(pool, 
+					     codec_port_data.pack_buf_size);
 
     codec_port.put_frame = &codec_put_frame;
     codec_port.port_data.pdata = &codec_port_data;
