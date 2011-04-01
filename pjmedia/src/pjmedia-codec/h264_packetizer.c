@@ -367,6 +367,10 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 	return PJ_EINVAL;
     }
 
+    /* Reset last sync point for every new picture bitstream */
+    if (*bits_pos == 0)
+	pktz->unpack_last_sync_pos = 0;
+
     nal_type = *payload & 0x1F;
     if (nal_type >= NAL_TYPE_SINGLE_NAL_MIN &&
 	nal_type <= NAL_TYPE_SINGLE_NAL_MAX)

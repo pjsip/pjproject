@@ -295,8 +295,6 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	ctx->qmin = 10;
 	ctx->qmax = 51;
 	ctx->qcompress = 0.6f;
-
-	ctx->flags |= CODEC_FLAG_LOW_DELAY;
     }
 
     return PJ_SUCCESS;
@@ -920,6 +918,11 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	ctx->strict_std_compliance = FF_COMPLIANCE_STRICT;
         ctx->workaround_bugs = FF_BUG_AUTODETECT;
         ctx->opaque = ff;
+
+	/* Set no delay, note that this may cause some codec functionals
+	 * not working (e.g: rate control).
+	 */
+	ctx->rc_lookahead = 0;
 
 	/* Open ffmpeg codec */
         pj_mutex_lock(ff_mutex);
