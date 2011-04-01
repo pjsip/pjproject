@@ -187,7 +187,7 @@ PJ_DEF(pj_status_t) pjmedia_h263_unpacketize (pjmedia_h263_packetizer *pktz,
     }
 
     /* Reset last sync point for every new picture bitstream */
-    if (*bits_pos == 0)
+    if (*pos == 0)
 	pktz->unpack_last_sync_pos = 0;
 
     /* Get payload header info */
