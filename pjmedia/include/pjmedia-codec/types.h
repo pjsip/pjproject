@@ -107,6 +107,10 @@ enum pjmedia_video_pt
      PJMEDIA_RTP_PT_VID_START = (PJMEDIA_RTP_PT_DYNAMIC-1),
      PJMEDIA_RTP_PT_H263P,
      PJMEDIA_RTP_PT_H264,
+     PJMEDIA_RTP_PT_H264_RSV1,
+     PJMEDIA_RTP_PT_H264_RSV2,
+     PJMEDIA_RTP_PT_H264_RSV3,
+     PJMEDIA_RTP_PT_H264_RSV4,
 
      /* Caution!
       * Ensure the value of the last pt above is <= 127.

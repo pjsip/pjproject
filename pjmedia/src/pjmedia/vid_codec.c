@@ -306,7 +306,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs(
 
 
 /*
- * Get codec info for static payload type.
+ * Get codec info for the specified payload type.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_codec_info(
                                     pjmedia_vid_codec_mgr *mgr,
@@ -315,7 +315,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_codec_info(
 {
     unsigned i;
 
-    PJ_ASSERT_RETURN(p_info && pt>=0 && pt < 96, PJ_EINVAL);
+    PJ_ASSERT_RETURN(p_info, PJ_EINVAL);
 
     if (!mgr) mgr = def_vid_codec_mgr;
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
@@ -368,7 +368,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_codec_info2(
 
 /*
  * Convert codec info struct into a unique codec identifier.
- * A codec identifier looks something like "L16/44100/2".
+ * A codec identifier looks something like "H263/34".
  */
 PJ_DEF(char*) pjmedia_vid_codec_info_to_id(
                                         const pjmedia_vid_codec_info *info,
@@ -381,7 +381,7 @@ PJ_DEF(char*) pjmedia_vid_codec_info_to_id(
     len = pj_ansi_snprintf(id, max_len, "%.*s/%u",
 			   (int)info->encoding_name.slen,
 			   info->encoding_name.ptr,
-			   info->clock_rate);
+			   info->pt);
 
     if (len < 1 || len >= (int)max_len) {
 	id[0] = '\0';

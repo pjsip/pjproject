@@ -3757,6 +3757,8 @@ PJ_DEF(pj_status_t) pjsua_enum_codecs( pjsua_codec_info id[],
     if (count > *p_count) count = *p_count;
 
     for (i=0; i<count; ++i) {
+	pj_bzero(&id[i], sizeof(pjsua_codec_info));
+
 	pjmedia_codec_info_to_id(&info[i], id[i].buf_, sizeof(id[i].buf_));
 	id[i].codec_id = pj_str(id[i].buf_);
 	id[i].priority = (pj_uint8_t) prio[i];
@@ -3874,9 +3876,18 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
 
     for (i=0, j=0; i<count && j<*p_count; ++i) {
 	if (info[i].has_rtp_pack) {
+	    pj_bzero(&id[j], sizeof(pjsua_codec_info));
+
 	    pjmedia_vid_codec_info_to_id(&info[i], id[j].buf_, sizeof(id[j].buf_));
 	    id[j].codec_id = pj_str(id[j].buf_);
 	    id[j].priority = (pj_uint8_t) prio[i];
+	    
+	    if (id[j].codec_id.slen < sizeof(id[j].buf_)) {
+		id[j].desc.ptr = id[j].codec_id.ptr + id[j].codec_id.slen + 1;
+		pj_strncpy(&id[j].desc, &info[i].encoding_desc,
+			   sizeof(id[j].buf_) - id[j].codec_id.slen - 1);
+	    }
+
 	    ++j;
 	}
     }

@@ -2947,7 +2947,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 				   &si->param->setting.enc_fmtp);
 
     /* Get local fmtp for our decoder. */
-    pjmedia_stream_info_parse_fmtp(pool, local_m, si->fmt.pt, 
+    pjmedia_stream_info_parse_fmtp(pool, local_m, si->fmt.pt,
 				   &si->param->setting.dec_fmtp);
 
     /* Get the remote ptime for our encoder. */

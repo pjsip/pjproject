@@ -175,10 +175,19 @@ typedef struct ffmpeg_private
 		      pj_size_t payload_len, pj_uint8_t *bits, \
 		      pj_size_t bits_len, unsigned *bits_pos)
 
+#define FUNC_FMT_MATCH(name) \
+    pj_status_t(name)(pj_pool_t *pool, \
+		      pjmedia_sdp_media *offer, unsigned o_fmt_idx, \
+		      pjmedia_sdp_media *answer, unsigned a_fmt_idx, \
+		      unsigned option)
+
+
+/* Type definition of codec specific functions */
 typedef FUNC_PACKETIZE(*func_packetize);
 typedef FUNC_UNPACKETIZE(*func_unpacketize);
 typedef pj_status_t (*func_preopen)	(ffmpeg_private *ff);
 typedef pj_status_t (*func_postopen)	(ffmpeg_private *ff);
+typedef FUNC_FMT_MATCH(*func_sdp_fmt_match);
 
 
 /* FFMPEG codec info */
@@ -186,13 +195,19 @@ struct ffmpeg_codec_desc
 {
     /* Predefined info */
     pjmedia_vid_codec_info       info;
-    pjmedia_format_id		 base_fmt_id;
+    pjmedia_format_id		 base_fmt_id;	/**< Some codecs may be exactly
+						     same or compatible with
+						     another codec, base format
+						     will tell the initializer
+						     to copy this codec desc
+						     from its base format   */
     pj_uint32_t			 avg_bps;
     pj_uint32_t			 max_bps;
     func_packetize		 packetize;
     func_unpacketize		 unpacketize;
     func_preopen		 preopen;
     func_preopen		 postopen;
+    func_sdp_fmt_match		 sdp_fmt_match;
     pjmedia_codec_fmtp		 dec_fmtp;
 
     /* Init time defined info */
@@ -216,34 +231,45 @@ static FUNC_UNPACKETIZE(h263_unpacketize);
 ffmpeg_codec_desc codec_desc[] =
 {
     {
-	{PJMEDIA_FORMAT_H264,	{"H264",4},	    PJMEDIA_RTP_PT_H264},
-	0,	500000,    1000000,
+	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
+	 {"Constrained Baseline (level=30, pack=1)", 39}},
+	0,	128000,    1000000,
 	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
+	&pjmedia_vid_codec_h264_match_sdp,
 	/* Leading space for better compatibility (strange indeed!) */
-	{2, { {{" profile-level-id",17},    {"42e01e",6}}, 
+	{2, { {{"profile-level-id",16},    {"42e01e",6}}, 
 	      {{" packetization-mode",19},  {"1",1}}, } },
     },
     {
-	{PJMEDIA_FORMAT_H263P,	{"H263-1998",9},    PJMEDIA_RTP_PT_H263P},
+	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264_RSV1, {"H264",4},
+	 {"Baseline (level=30, pack=1)", 27}},
+	PJMEDIA_FORMAT_H264,	128000,    1000000,
+	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
+	&pjmedia_vid_codec_h264_match_sdp,
+	{2, { {{"profile-level-id",16},    {"42001e",6}}, 
+	      {{" packetization-mode",19},  {"1",1}}, } },
+    },
+    {
+	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
 	PJMEDIA_FORMAT_H263,	1000000,    2000000,
-	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL,
+	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
     {
-	{PJMEDIA_FORMAT_H263,	{"H263",4},	    PJMEDIA_RTP_PT_H263},
+	{PJMEDIA_FORMAT_H263,	PJMEDIA_RTP_PT_H263,	{"H263",4}},
     },
     {
-	{PJMEDIA_FORMAT_H261,	{"H261",4},	    PJMEDIA_RTP_PT_H261},
+	{PJMEDIA_FORMAT_H261,	PJMEDIA_RTP_PT_H261,	{"H261",4}},
     },
     {
-	{PJMEDIA_FORMAT_MJPEG,	{"JPEG",4},	    PJMEDIA_RTP_PT_JPEG},
+	{PJMEDIA_FORMAT_MJPEG,	PJMEDIA_RTP_PT_JPEG,	{"JPEG",4}},
     },
     {
-	{PJMEDIA_FORMAT_MPEG4,	{"MP4V",4}},
+	{PJMEDIA_FORMAT_MPEG4,	0,			{"MP4V",4}},
     },
     {
-	{PJMEDIA_FORMAT_XVID,	{"XVID",4}},
+	{PJMEDIA_FORMAT_XVID,	0,			{"XVID",4}},
 	PJMEDIA_FORMAT_MPEG4,
     },
 };
@@ -265,9 +291,21 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
     data = PJ_POOL_ZALLOC_T(ff->pool, h264_data);
     ff->data = data;
 
+    /* Parse remote fmtp */
+    status = pjmedia_vid_codec_h264_parse_fmtp(&ff->param.enc_fmtp,
+					       &data->fmtp);
+    if (status != PJ_SUCCESS)
+	return status;
+
     /* Create packetizer */
     pktz_cfg.mtu = ff->param.enc_mtu;
-    pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
+    if (data->fmtp.packetization_mode == 0)
+	pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL;
+    else if (data->fmtp.packetization_mode == 1)
+	pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
+    else
+	return PJ_ENOTSUP;
+
     status = pjmedia_h264_packetizer_create(ff->pool, &pktz_cfg, &data->pktz);
     if (status != PJ_SUCCESS)
 	return status;
@@ -275,19 +313,35 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
     if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
 	AVCodecContext *ctx = ff->enc_ctx;
 
-	status = pjmedia_vid_codec_parse_h264_fmtp(&ff->param.enc_fmtp,
-						   &data->fmtp);
-	if (status != PJ_SUCCESS)
-	    return status;
-
+	/* Apply profile. Note that, for x264 backend, ffmpeg doesn't seem to
+	 * use this profile param field, so let's try to apply it "manually".
+	 */
 	ctx->profile  = data->fmtp.profile_idc;
+	if (ctx->profile == FF_PROFILE_H264_BASELINE) {
+	    /* Baseline profile settings (the most used profile in
+	     * conversational/real-time communications).
+	     */
+	    ctx->coder_type = FF_CODER_TYPE_VLC;
+	    ctx->max_b_frames = 0;
+	    ctx->flags2 &= ~(CODEC_FLAG2_WPRED | CODEC_FLAG2_8X8DCT);
+	    ctx->weighted_p_pred = 0;
+	} else if (ctx->profile == FF_PROFILE_H264_MAIN) {
+	    ctx->flags2 &= ~CODEC_FLAG2_8X8DCT;
+	}
+
+	/* Apply profile constraint bits. */
+	// The x264 doesn't seem to support non-constrained (baseline) profile
+	// so this shouldn't be a problem (for now).
+	//PJ_TODO(set_h264_constraint_bits_properly_in_ffmpeg);
 	if (data->fmtp.profile_iop) {
 #if defined(FF_PROFILE_H264_CONSTRAINED)
 	    ctx->profile |= FF_PROFILE_H264_CONSTRAINED;
 #endif
 	}
+
+	/* Apply profile level. */
+	PJ_TODO(apply_h264_profile_level_in_pjmedia_vid_codec_param);
 	ctx->level    = data->fmtp.level;
-	PJ_TODO(set_h264_constrain_bits_properly_in_ffmpeg);
 
 	/* Libx264 rejects the "broken" ffmpeg defaults, so just change some */
 	ctx->me_range = 16;
@@ -382,7 +436,7 @@ static const ffmpeg_codec_desc* find_codec_desc_by_info(
 	if (desc->enabled &&
 	    (desc->info.fmt_id == info->fmt_id) &&
             ((desc->info.dir & info->dir) == info->dir) &&
-            pj_stricmp(&desc->info.encoding_name, &info->encoding_name)==0)
+	    (desc->info.pt == info->pt))
         {
             return desc;
         }
@@ -565,10 +619,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 				  (desc->unpacketize != NULL);
     }
 
-    /* Init unassigned encoder/decoder description from base codec */
+    /* Review all codecs for applying base format, registering format match for
+     * SDP negotiation, etc.
+     */
     for (i = 0; i < PJ_ARRAY_SIZE(codec_desc); ++i) {
 	ffmpeg_codec_desc *desc = &codec_desc[i];
 
+	/* Init encoder/decoder description from base format */
 	if (desc->base_fmt_id && (!desc->dec || !desc->enc)) {
 	    ffmpeg_codec_desc *base_desc = NULL;
 	    int base_desc_idx;
@@ -605,6 +662,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 
 	    desc->info.dir |= copied_dir;
 	    desc->enabled = (desc->info.dir != PJMEDIA_DIR_NONE);
+	    desc->info.has_rtp_pack = (desc->packetize != NULL) &&
+				      (desc->unpacketize != NULL);
 
 	    if (copied_dir != PJMEDIA_DIR_NONE) {
 		const char *dir_name[] = {NULL, "encoder", "decoder", "codec"};
@@ -616,6 +675,14 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 			   base_desc->info.encoding_name.ptr));
 	    }
         }
+
+	/* Registering format match for SDP negotiation */
+	if (desc->sdp_fmt_match) {
+	    status = pjmedia_sdp_neg_register_fmt_match_cb(
+						&desc->info.encoding_name,
+						desc->sdp_fmt_match);
+	    pj_assert(status == PJ_SUCCESS);
+	}
     }
 
     /* Register codec factory to codec manager. */

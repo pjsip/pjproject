@@ -21,6 +21,7 @@
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
+#include <pjmedia/sdp_neg.h>
 #include <pjmedia/stream_common.h>
 #include <pj/array.h>
 #include <pj/assert.h>
@@ -1721,78 +1722,42 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
 					      const pjmedia_sdp_media *local_m,
 					      const pjmedia_sdp_media *rem_m)
 {
-    const pjmedia_sdp_attr *attr;
-    pjmedia_sdp_rtpmap *rtpmap;
-    unsigned i, pt = 0;
+    unsigned pt = 0;
+    const pjmedia_vid_codec_info *p_info;
     pj_status_t status;
 
-    /* Get codec info.
-     * For static payload types, get the info from codec manager.
-     * For dynamic payload types, MUST get the rtpmap.
-     */
     pt = pj_strtoul(&local_m->desc.fmt[0]);
+
+    /* Get codec info. */
+    status = pjmedia_vid_codec_mgr_get_codec_info(mgr, pt, &p_info);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    si->codec_info = *p_info;
+
+    /* Get payload type for receiving direction */
     si->rx_pt = pt;
+
+    /* Get payload type for transmitting direction */
     if (pt < 96) {
-	const pjmedia_vid_codec_info *p_info;
-
-	status = pjmedia_vid_codec_mgr_get_codec_info(mgr, pt, &p_info);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	si->codec_info = *p_info;
-
 	/* For static payload type, pt's are symetric */
 	si->tx_pt = pt;
 
     } else {
-	unsigned info_cnt = 1;
-	const pjmedia_vid_codec_info *p_info;
-
-	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
-					   &local_m->desc.fmt[0]);
-	if (attr == NULL)
-	    return PJMEDIA_EMISSINGRTPMAP;
-
-	status = pjmedia_sdp_attr_to_rtpmap(pool, attr, &rtpmap);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	/* Get codec info from codec id */
-        status = pjmedia_vid_codec_mgr_find_codecs_by_id(
-					    mgr, &rtpmap->enc_name,
-					    &info_cnt, &p_info, NULL);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	si->codec_info = *p_info;
+	unsigned i;
 
 	/* Determine payload type for outgoing channel, by finding
 	 * dynamic payload type in remote SDP that matches the answer.
 	 */
 	si->tx_pt = 0xFFFF;
 	for (i=0; i<rem_m->desc.fmt_count; ++i) {
-	    unsigned rpt;
-	    pjmedia_sdp_attr *r_attr;
-	    pjmedia_sdp_rtpmap r_rtpmap;
-
-	    rpt = pj_strtoul(&rem_m->desc.fmt[i]);
-	    if (rpt < 96)
-		continue;
-
-	    r_attr = pjmedia_sdp_media_find_attr(rem_m, &ID_RTPMAP,
-						 &rem_m->desc.fmt[i]);
-	    if (!r_attr)
-		continue;
-
-	    if (pjmedia_sdp_attr_get_rtpmap(r_attr, &r_rtpmap) != PJ_SUCCESS)
-		continue;
-
-	    if (!pj_stricmp(&rtpmap->enc_name, &r_rtpmap.enc_name) &&
-		rtpmap->clock_rate == r_rtpmap.clock_rate)
+	    if (pjmedia_sdp_neg_fmt_match(NULL,
+					  (pjmedia_sdp_media*)local_m, 0,
+					  (pjmedia_sdp_media*)rem_m, i, 0) ==
+		PJ_SUCCESS)
 	    {
 		/* Found matched codec. */
-		si->tx_pt = rpt;
-
+		si->tx_pt = pj_strtoul(&rem_m->desc.fmt[i]);
 		break;
 	    }
 	}

@@ -32,10 +32,12 @@
 PJ_BEGIN_DECL
 
 /**
- * This is internal function for parsing SDP format parameter of specific format
- * or payload type, used by stream in generating stream info from SDP.
+ * This is internal function for parsing SDP format parameter of specific
+ * format or payload type, used by stream in generating stream info from SDP.
  *
- * @param pool		Pool to allocate memory.
+ * @param pool		Pool to allocate memory, if pool is NULL, the fmtp
+ *			string pointers will point to the original string in
+ *			the SDP media descriptor.
  * @param m		The SDP media containing the format parameter to
  *			be parsed.
  * @param pt		The format or payload type.

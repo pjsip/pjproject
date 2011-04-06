@@ -19,7 +19,9 @@
  */
 #include <pjmedia/vid_codec_util.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/stream_common.h>
 #include <pjlib-util/base64.h>
+#include <pj/ctype.h>
 #include <pj/math.h>
 
 #define THIS_FILE   "vid_codec_util.c"
@@ -258,7 +260,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 
 
 /* H264 fmtp parser */
-PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h264_fmtp(
+PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 				    const pjmedia_codec_fmtp *fmtp,
 				    pjmedia_vid_codec_h264_fmtp *h264_fmtp)
 {
@@ -288,25 +290,28 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h264_fmtp(
 
 	    h264_fmtp->profile_idc = (pj_uint8_t)((tmp >> 16) & 0xFF);
 	    h264_fmtp->profile_iop = (pj_uint8_t)((tmp >> 8) & 0xFF);
-	    h264_fmtp->profile_idc = (pj_uint8_t)(tmp & 0xFF);
+	    h264_fmtp->level = (pj_uint8_t)(tmp & 0xFF);
 	} else if (pj_stricmp(&fmtp->param[i].name, &PACKETIZATION_MODE)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp) h264_fmtp->max_br = tmp;
+	    if (tmp >= 0 && tmp <= 2) 
+		h264_fmtp->packetization_mode = (pj_uint8_t)tmp;
+	    else
+		return PJMEDIA_SDP_EINFMTP;
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_MBPS)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp) h264_fmtp->max_mbps = tmp;
+	    h264_fmtp->max_mbps = tmp;
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_FS)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp) h264_fmtp->max_fs = tmp;
+	    h264_fmtp->max_fs = tmp;
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_CPB)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp) h264_fmtp->max_cpb = tmp;
+	    h264_fmtp->max_cpb = tmp;
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_DPB)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp) h264_fmtp->max_dpb = tmp;
+	    h264_fmtp->max_dpb = tmp;
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_BR)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    if (tmp) h264_fmtp->max_br = tmp;
+	    h264_fmtp->max_br = tmp;
 	} else if (pj_stricmp(&fmtp->param[i].name, &SPROP_PARAMETER_SETS)==0)
 	{
 	    pj_str_t sps_st;
@@ -347,6 +352,107 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h264_fmtp(
 		pj_memcpy(nal, start_code, PJ_ARRAY_SIZE(start_code));
 		h264_fmtp->sprop_param_sets_len += tmp_len;
 	    }
+	}
+    }
+
+    /* When profile-level-id is not specified, use default value "42000A" */
+    if (h264_fmtp->profile_idc == 0) {
+	h264_fmtp->profile_idc = 0x42;
+	h264_fmtp->profile_iop = 0x00;
+	h264_fmtp->level = 0x0A;
+    }
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
+						     pjmedia_sdp_media *offer,
+						     unsigned o_fmt_idx,
+						     pjmedia_sdp_media *answer,
+						     unsigned a_fmt_idx,
+						     unsigned option)
+{
+    const pj_str_t PROFILE_LEVEL_ID	= {"profile-level-id", 16};
+    const pj_str_t PACKETIZATION_MODE	= {"packetization-mode", 18};
+    pjmedia_codec_fmtp o_fmtp_raw, a_fmtp_raw;
+    pjmedia_vid_codec_h264_fmtp o_fmtp, a_fmtp;
+    pj_status_t status;
+
+    PJ_UNUSED_ARG(pool);
+
+    /* Parse offer */
+    status = pjmedia_stream_info_parse_fmtp(
+				    NULL, offer, 
+				    pj_strtoul(&offer->desc.fmt[o_fmt_idx]),
+				    &o_fmtp_raw);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjmedia_vid_codec_h264_parse_fmtp(&o_fmtp_raw, &o_fmtp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Parse answer */
+    status = pjmedia_stream_info_parse_fmtp(
+				    NULL, answer, 
+				    pj_strtoul(&answer->desc.fmt[a_fmt_idx]),
+				    &a_fmtp_raw);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pjmedia_vid_codec_h264_parse_fmtp(&a_fmtp_raw, &a_fmtp);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    if (option & PJMEDIA_SDP_NEG_FMT_MATCH_ALLOW_MODIFY_ANSWER) {
+	unsigned i;
+
+	/* Flexible negotiation, if the answer has higher capability than
+	 * the offer, adjust the answer capability to be match to the offer.
+	 */
+	if (a_fmtp.profile_idc >= o_fmtp.profile_idc)
+	    a_fmtp.profile_idc = o_fmtp.profile_idc;
+	if (a_fmtp.profile_iop != o_fmtp.profile_iop)
+	    a_fmtp.profile_iop = o_fmtp.profile_iop;
+	if (a_fmtp.level >= o_fmtp.level)
+	    a_fmtp.level = o_fmtp.level;
+	if (a_fmtp.packetization_mode >= o_fmtp.packetization_mode)
+	    a_fmtp.packetization_mode = o_fmtp.packetization_mode;
+
+	/* Match them now */
+	if (a_fmtp.profile_idc != o_fmtp.profile_idc ||
+	    a_fmtp.profile_iop != o_fmtp.profile_iop ||
+	    a_fmtp.level != o_fmtp.level ||
+	    a_fmtp.packetization_mode != o_fmtp.packetization_mode)
+	{
+	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
+	}
+
+	/* Update the answer */
+	for (i = 0; i < a_fmtp_raw.cnt; ++i) {
+	    if (pj_stricmp(&a_fmtp_raw.param[i].name, &PROFILE_LEVEL_ID) == 0)
+	    {
+		char *p = a_fmtp_raw.param[i].val.ptr;
+		pj_val_to_hex_digit(a_fmtp.profile_idc, p);
+		p += 2;
+		pj_val_to_hex_digit(a_fmtp.profile_iop, p);
+		p += 2;
+		pj_val_to_hex_digit(a_fmtp.level, p);
+	    }
+	    else if (pj_stricmp(&a_fmtp_raw.param[i].name, &PACKETIZATION_MODE) == 0)
+	    {
+		char *p = a_fmtp_raw.param[i].val.ptr;
+		*p = '0' + a_fmtp.packetization_mode;
+	    }
+	}
+    } else {
+	/* Strict negotiation */
+	if (a_fmtp.profile_idc != o_fmtp.profile_idc ||
+	    a_fmtp.profile_iop != o_fmtp.profile_iop ||
+	    a_fmtp.level != o_fmtp.level ||
+	    a_fmtp.packetization_mode != o_fmtp.packetization_mode)
+	{
+	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
 	}
     }
 

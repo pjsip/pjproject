@@ -86,8 +86,12 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
 
 	/* Store token */
 	if (end > start) {
-	    token = (char*)pj_pool_alloc(pool, end - start);
-	    pj_ansi_strncpy(token, start, end - start);
+	    if (pool) {
+		token = (char*)pj_pool_alloc(pool, end - start);
+		pj_ansi_strncpy(token, start, end - start);
+	    } else {
+		token = start;
+	    }
 	    if (*p == '=')
 		/* Got param name */
 		pj_strset(&fmtp->param[fmtp->cnt].name, token, end - start);

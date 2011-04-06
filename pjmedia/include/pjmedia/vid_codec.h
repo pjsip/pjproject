@@ -44,9 +44,9 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_vid_codec_info
 {
     pjmedia_format_id   fmt_id;         /**< Encoded format ID              */
+    unsigned            pt;             /**< Payload type		    */
     pj_str_t	        encoding_name;  /**< Encoding name                  */
-    unsigned            pt;             /**< Payload type (may be 255 for
-                                             dynamic payload type)          */
+    pj_str_t	        encoding_desc;	/**< Encoding desc		    */
     unsigned            clock_rate;     /**< Clock rate			    */
     pjmedia_dir         dir;            /**< Direction                      */
     unsigned            dec_fmt_id_cnt; /**< # of supported encoding source 
@@ -534,11 +534,12 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs(
 
 
 /**
- * Get codec info for the specified static payload type.
+ * Get codec info for the specified payload type. The payload type must be
+ * static or locally defined in #pjmedia_video_pt.
  *
  * @param mgr	    The codec manager instance. If NULL, the default codec
  *		    manager instance will be used.
- * @param pt	    Static payload type/number.
+ * @param pt	    The payload type/number.
  * @param info	    Pointer to receive codec info.
  *
  * @return	    PJ_SUCCESS on success.

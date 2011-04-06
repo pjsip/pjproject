@@ -27,7 +27,7 @@
  */
 
 #include <pjmedia/vid_codec.h>
-
+#include <pjmedia/sdp_neg.h>
 
 PJ_BEGIN_DECL
 
@@ -107,11 +107,36 @@ typedef struct pjmedia_vid_codec_h264_fmtp
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_parse_h264_fmtp(
+PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 				const pjmedia_codec_fmtp *fmtp,
 				pjmedia_vid_codec_h264_fmtp *h264_fmtp);
 
 
+/**
+ * Match H.264 format in the SDP media offer and answer. This will compare
+ * H.264 identifier parameters in SDP fmtp, i.e: "profile-level-id" and
+ * "packetization-mode" fields. For better interoperability, when the option
+ * #PJMEDIA_SDP_NEG_FMT_MATCH_ALLOW_MODIFY_ANSWER is set, this function
+ * may update the answer so the parameters in the answer match to ones
+ * in the offer.
+ *
+ * @param pool		The memory pool.
+ * @param offer		The SDP media offer.
+ * @param o_fmt_idx	Index of the H.264 format in the SDP media offer.
+ * @param answer	The SDP media answer.
+ * @param a_fmt_idx	Index of the H.264 format in the SDP media answer.
+ * @param option	The format matching option, see
+ *			#pjmedia_sdp_neg_fmt_match_flag.
+ *
+ * @return		PJ_SUCCESS when the formats in offer and answer match.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_match_sdp(
+						pj_pool_t *pool,
+						pjmedia_sdp_media *offer,
+						unsigned o_fmt_idx,
+						pjmedia_sdp_media *answer,
+						unsigned a_fmt_idx,
+						unsigned option);
 
 
 PJ_END_DECL

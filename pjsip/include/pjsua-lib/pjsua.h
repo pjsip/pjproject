@@ -4379,9 +4379,14 @@ typedef struct pjsua_codec_info
     pj_uint8_t		priority;
 
     /**
+     * Codec description.
+     */
+    pj_str_t		desc;
+
+    /**
      * Internal buffer.
      */
-    char		buf_[32];
+    char		buf_[64];
 
 } pjsua_codec_info;
 

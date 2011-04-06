@@ -70,6 +70,32 @@ static const char *state_str[] =
 	GET_FMTP_IVAL_BASE(ival, 10, fmtp, param, default_val)
 
 
+/* Definition of customized SDP format negotiation callback */
+struct fmt_match_cb_t
+{
+    pj_str_t			    fmt_name;
+    pjmedia_sdp_neg_fmt_match_cb    cb;
+};
+
+/* Number of registered customized SDP format negotiation callbacks */
+static unsigned fmt_match_cb_cnt;
+
+/* The registered customized SDP format negotiation callbacks */
+static struct fmt_match_cb_t 
+	      fmt_match_cb[PJMEDIA_SDP_NEG_MAX_CUSTOM_FMT_NEG_CB];
+
+/* Redefining a very long identifier name, just for convenience */
+#define ALLOW_MODIFY_ANSWER PJMEDIA_SDP_NEG_FMT_MATCH_ALLOW_MODIFY_ANSWER
+
+static pj_status_t custom_fmt_match( pj_pool_t *pool,
+				   const pj_str_t *fmt_name,
+				   pjmedia_sdp_media *offer,
+				   unsigned o_fmt_idx,
+				   pjmedia_sdp_media *answer,
+				   unsigned a_fmt_idx,
+				   unsigned option);
+
+
 /*
  * Get string representation of negotiator state.
  */
@@ -682,49 +708,6 @@ static pj_bool_t match_amr( const pjmedia_sdp_media *offer,
 }
 
 
-/* Matching H.264 between offer and answer. */
-static pj_bool_t match_h264( const pjmedia_sdp_media *offer,
-			     unsigned o_fmt_idx,
-			     const pjmedia_sdp_media *answer,
-			     unsigned a_fmt_idx)
-{
-    const pjmedia_sdp_attr *attr_ans;
-    const pjmedia_sdp_attr *attr_ofr;
-    pjmedia_sdp_fmtp fmtp;
-    pj_uint32_t profile1, profile2;
-    unsigned pack_mode1, pack_mode2;
-    const pj_str_t STR_PROFILE   = {"profile-level-id=", 17};
-    const pj_str_t STR_PACK_MODE = {"packetization-mode=", 19};
-
-    /* Parse offer */
-    attr_ofr = pjmedia_sdp_media_find_attr2(offer, "fmtp", 
-					    &offer->desc.fmt[o_fmt_idx]);
-    if (!attr_ofr)
-	return PJ_FALSE;
-
-    if (pjmedia_sdp_attr_get_fmtp(attr_ofr, &fmtp) != PJ_SUCCESS)
-	return PJ_FALSE;
-
-    GET_FMTP_IVAL_BASE(profile1, 16, fmtp, STR_PROFILE, 0x42000A);
-    GET_FMTP_IVAL(pack_mode1, fmtp, STR_PACK_MODE, 0);
-
-    /* Parse answer */
-    attr_ans = pjmedia_sdp_media_find_attr2(answer, "fmtp", 
-					    &answer->desc.fmt[a_fmt_idx]);
-    if (!attr_ans)
-	return PJ_FALSE;
-
-    if (pjmedia_sdp_attr_get_fmtp(attr_ans, &fmtp) != PJ_SUCCESS)
-	return PJ_FALSE;
-
-    GET_FMTP_IVAL_BASE(profile2, 16, fmtp, STR_PROFILE, 0x42000A);
-    GET_FMTP_IVAL(pack_mode2, fmtp, STR_PACK_MODE, 0);
-
-    /* Compare bitrate in answer and offer. */
-    return ((profile1 == profile2) && (pack_mode1 == pack_mode2));
-}
-
-
 /* Toggle AMR octet-align setting in the fmtp.
  */
 static pj_status_t amr_toggle_octet_align(pj_pool_t *pool,
@@ -928,6 +911,7 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 				if (match_g7221(offer, i, answer, j))
 				    break;
 			    } else
+
 			    /* Further check for AMR, negotiate fmtp. */
 			    if (pj_stricmp2(&or_.enc_name, "AMR") == 0 ||
 				pj_stricmp2(&or_.enc_name, "AMR-WB") == 0) 
@@ -936,12 +920,12 @@ static pj_status_t process_m_answer( pj_pool_t *pool,
 					      NULL))
 				    break;
 			    } else
-			    /* Further check for H264, negotiate fmtp. */
-			    if (pj_stricmp2(&or_.enc_name, "H264") == 0)
+			    
+			    /* Call custom format matching callbacks */
+			    if (custom_fmt_match(pool, &or_.enc_name,
+						 offer, i, answer, j, 0) ==
+				PJ_SUCCESS)
 			    {
-				if (match_h264(offer, i, answer, j))
-				    break;
-			    } else {
 				/* Match! */
 				break;
 			    }
@@ -1235,12 +1219,31 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			{
 			    /* Match! */
 			    if (is_codec) {
+				pjmedia_sdp_media *o, *a;
+				unsigned o_fmt_idx, a_fmt_idx;
+
+				o = (pjmedia_sdp_media*)offer;
+				a = (pjmedia_sdp_media*)preanswer;
+				o_fmt_idx = prefer_remote_codec_order? i:j;
+				a_fmt_idx = prefer_remote_codec_order? j:i;
+
+				/* Call custom format matching callbacks */
+				if (custom_fmt_match(pool, &or_.enc_name,
+						     o, o_fmt_idx,
+						     a, a_fmt_idx,
+						     ALLOW_MODIFY_ANSWER) !=
+				    PJ_SUCCESS)
+				{
+				    continue;
+				} else
+
 				/* Further check for G7221, negotiate bitrate */
 				if (pj_stricmp2(&or_.enc_name, "G7221") == 0 &&
 				    !match_g7221(master, i, slave, j))
 				{
 				    continue;
-				} else 
+				} else
+
 				/* Further check for AMR, negotiate fmtp */
 				if (pj_stricmp2(&or_.enc_name, "AMR")==0 ||
 				    pj_stricmp2(&or_.enc_name, "AMR-WB")==0) 
@@ -1253,12 +1256,8 @@ static pj_status_t match_offer(pj_pool_t *pool,
 						   preanswer, a_med_idx,
 						   PJ_TRUE, &pt_amr_need_adapt))
 					continue;
-				} else
-				if (pj_stricmp2(&or_.enc_name, "H264") == 0 &&
-				    !match_h264(master, i, slave, j))
-				{
-				    continue;
 				}
+
 				found_matching_codec = 1;
 			    } else {
 				found_matching_telephone_event = 1;
@@ -1530,5 +1529,136 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
     neg->has_remote_answer = PJ_FALSE;
 
     return status;
+}
+
+
+static pj_status_t custom_fmt_match(pj_pool_t *pool,
+				    const pj_str_t *fmt_name,
+				    pjmedia_sdp_media *offer,
+				    unsigned o_fmt_idx,
+				    pjmedia_sdp_media *answer,
+				    unsigned a_fmt_idx,
+				    unsigned option)
+{
+    unsigned i;
+
+    for (i = 0; i < fmt_match_cb_cnt; ++i) {
+	if (pj_stricmp(fmt_name, &fmt_match_cb[i].fmt_name) == 0) {
+	    pj_assert(fmt_match_cb[i].cb);
+	    return (*fmt_match_cb[i].cb)(pool, offer, o_fmt_idx,
+					 answer, a_fmt_idx,
+					 option);
+	}
+    }
+
+    /* Not customized format matching found, should be matched */
+    return PJ_SUCCESS;
+}
+
+/* Register customized SDP format negotiation callback function. */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
+					const pj_str_t *fmt_name,
+					pjmedia_sdp_neg_fmt_match_cb cb)
+{
+    struct fmt_match_cb_t *f = NULL;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(fmt_name, PJ_EINVAL);
+
+    /* Check if the callback for the format name has been registered */
+    for (i = 0; i < fmt_match_cb_cnt; ++i) {
+	if (pj_stricmp(fmt_name, &fmt_match_cb[i].fmt_name) == 0)
+	    break;
+    }
+
+    /* Unregistration */
+    
+    if (cb == NULL) {
+	if (i == fmt_match_cb_cnt)
+	    return PJ_ENOTFOUND;
+
+	pj_array_erase(fmt_match_cb, sizeof(fmt_match_cb[0]),
+		       fmt_match_cb_cnt, i);
+	fmt_match_cb_cnt--;
+
+	return PJ_SUCCESS;
+    }
+
+    /* Registration */
+
+    if (i < fmt_match_cb_cnt) {
+	/* The same format name has been registered before */
+	if (cb != fmt_match_cb[i].cb)
+	    return PJ_EEXISTS;
+	else
+	    return PJ_SUCCESS;
+    }
+
+    if (fmt_match_cb_cnt >= PJ_ARRAY_SIZE(fmt_match_cb))
+	return PJ_ETOOMANY;
+
+    f = &fmt_match_cb[fmt_match_cb_cnt++];
+    f->fmt_name = *fmt_name;
+    f->cb = cb;
+
+    return PJ_SUCCESS;
+}
+
+
+/* Match format in the SDP media offer and answer. */
+PJ_DEF(pj_bool_t) pjmedia_sdp_neg_fmt_match( pj_pool_t *pool,
+					     pjmedia_sdp_media *offer,
+					     unsigned o_fmt_idx,
+					     pjmedia_sdp_media *answer,
+					     unsigned a_fmt_idx,
+					     unsigned option)
+{
+    const pjmedia_sdp_attr *attr;
+    pjmedia_sdp_rtpmap o_rtpmap, a_rtpmap;
+
+    /* Get the format rtpmap from the offer. */
+    attr = pjmedia_sdp_media_find_attr2(offer, "rtpmap", 
+					&offer->desc.fmt[o_fmt_idx]);
+    if (!attr) {
+	pj_assert(!"Bug! Offer haven't been validated");
+	return PJ_EBUG;
+    }
+    pjmedia_sdp_attr_get_rtpmap(attr, &o_rtpmap);
+
+    /* Get the format rtpmap from the answer. */
+    attr = pjmedia_sdp_media_find_attr2(answer, "rtpmap", 
+					&answer->desc.fmt[a_fmt_idx]);
+    if (!attr) {
+	pj_assert(!"Bug! Answer haven't been validated");
+	return PJ_EBUG;
+    }
+    pjmedia_sdp_attr_get_rtpmap(attr, &a_rtpmap);
+
+    if (pj_stricmp(&o_rtpmap.enc_name, &a_rtpmap.enc_name) != 0 ||
+	o_rtpmap.clock_rate != a_rtpmap.clock_rate)
+    {
+	return PJMEDIA_SDP_EFORMATNOTEQUAL;
+    }
+
+    /* Further check for G7221, negotiate bitrate. */
+    if (pj_stricmp2(&o_rtpmap.enc_name, "G7221") == 0) {
+	if (match_g7221(offer, o_fmt_idx, answer, a_fmt_idx))
+	    return PJ_SUCCESS;
+	else
+	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
+    } else
+    /* Further check for AMR, negotiate fmtp. */
+    if (pj_stricmp2(&o_rtpmap.enc_name, "AMR") == 0 ||
+	pj_stricmp2(&o_rtpmap.enc_name, "AMR-WB") == 0) 
+    {
+	if (match_amr(offer, o_fmt_idx, answer, a_fmt_idx, PJ_FALSE, NULL))
+	    return PJ_SUCCESS;
+	else
+	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
+    }
+    PJ_TODO(replace_hardcoded_fmt_match_in_sdp_neg_with_custom_fmt_match_cb);
+    
+    return custom_fmt_match(pool, &o_rtpmap.enc_name,
+			    offer, o_fmt_idx, answer, a_fmt_idx, option);
 }
 

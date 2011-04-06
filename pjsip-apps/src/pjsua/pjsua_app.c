@@ -3542,8 +3542,12 @@ static void manage_codec_prio(void)
     printf("List of video codecs:\n");
     pjsua_vid_enum_codecs(c, &count);
     for (i=0; i<count; ++i) {
-	printf("  %d\t%.*s\n", c[i].priority, (int)c[i].codec_id.slen,
-			       c[i].codec_id.ptr);
+	printf("  %d\t%.*s%s%.*s\n", c[i].priority,
+				     (int)c[i].codec_id.slen,
+				     c[i].codec_id.ptr,
+				     c[i].desc.slen? " - ":"",
+				     (int)c[i].desc.slen,
+				     c[i].desc.ptr);
     }
 #endif
 

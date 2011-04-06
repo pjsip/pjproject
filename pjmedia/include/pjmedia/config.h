@@ -602,6 +602,15 @@
 
 
 /**
+ * This specifies the maximum number of the customized SDP format
+ * negotiation callbacks.
+ */
+#ifndef PJMEDIA_SDP_NEG_MAX_CUSTOM_FMT_NEG_CB
+#   define PJMEDIA_SDP_NEG_MAX_CUSTOM_FMT_NEG_CB	8
+#endif
+
+
+/**
  * Support for sending and decoding RTCP port in SDP (RFC 3605).
  * Default is equal to PJMEDIA_ADVERTISE_RTCP setting.
  */
