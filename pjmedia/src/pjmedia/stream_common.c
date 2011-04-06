@@ -17,6 +17,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pjmedia/stream_common.h>
+#include <pj/log.h>
+
+#define THIS_FILE	"stream_common.c"
 
 /*
  * Parse fmtp for specified format/payload type.
@@ -55,6 +58,13 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_parse_fmtp( pj_pool_t *pool,
     /* Parse */
     while (p < p_end) {
 	char *token, *start, *end;
+
+	if (fmtp->cnt >= PJMEDIA_CODEC_MAX_FMTP_CNT) {
+	    PJ_LOG(4,(THIS_FILE,
+		      "Warning: fmtp parameter count exceeds "
+		      "PJMEDIA_CODEC_MAX_FMTP_CNT"));
+	    return PJ_SUCCESS;
+	}
 
 	/* Skip whitespaces */
 	while (p < p_end && (*p == ' ' || *p == '\t')) ++p;

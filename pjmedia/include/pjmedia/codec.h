@@ -240,8 +240,6 @@ typedef struct pjmedia_codec_info
     unsigned	    channel_cnt;    /**< Channel count.			*/
 } pjmedia_codec_info;
 
-#define PJMEDIA_CODEC_MAX_FMTP_CNT  8
-
 /** 
  * Structure of codec specific parameters which contains name=value pairs.
  * The codec specific parameters are to be used with SDP according to 

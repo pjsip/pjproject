@@ -568,6 +568,16 @@
 
 
 /**
+ * Maximum number of parameters in SDP fmtp attribute.
+ *
+ * Default: 16
+ */
+#ifndef PJMEDIA_CODEC_MAX_FMTP_CNT
+#   define PJMEDIA_CODEC_MAX_FMTP_CNT		16
+#endif
+
+
+/**
  * This specifies the behavior of the SDP negotiator when responding to an
  * offer, whether it should rather use the codec preference as set by
  * remote, or should it rather use the codec preference as specified by
