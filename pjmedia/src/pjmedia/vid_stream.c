@@ -1870,7 +1870,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
     if (rem_conn == NULL)
 	return PJMEDIA_SDP_EMISSINGCONN;
 
-    /* Media type must be audio */
+    /* Media type must be video */
     if (pj_stricmp(&local_m->desc.media, &ID_VIDEO) != 0)
 	return PJMEDIA_EINVALIMEDIATYPE;
 

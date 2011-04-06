@@ -268,18 +268,11 @@ pjmedia_sdp_rtpmap_to_attr( pj_pool_t *pool,
 /**
  * This structure describes SDP \a fmtp attribute.
  */
-struct pjmedia_sdp_fmtp
+typedef struct pjmedia_sdp_fmtp
 {
     pj_str_t		fmt;	    /**< Format type.		    */
     pj_str_t		fmt_param;  /**< Format specific parameter. */
-};
-
-
-/**
- * @see pjmedia_sdp_fmtp
- */
-typedef struct pjmedia_sdp_fmtp pjmedia_sdp_fmtp;
-
+} pjmedia_sdp_fmtp;
 
 
 /**
