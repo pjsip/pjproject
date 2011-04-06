@@ -351,6 +351,18 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	ctx->qcompress = 0.6f;
     }
 
+    if (ff->param.dir & PJMEDIA_DIR_DECODING) {
+	AVCodecContext *ctx = ff->dec_ctx;
+
+	/* Apply the "sprop-parameter-sets" fmtp from remote SDP to
+	 * extradata of ffmpeg codec context.
+	 */
+	if (data->fmtp.sprop_param_sets_len) {
+	    ctx->extradata_size = data->fmtp.sprop_param_sets_len;
+	    ctx->extradata = data->fmtp.sprop_param_sets;
+	}
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -358,11 +370,6 @@ static pj_status_t h264_postopen(ffmpeg_private *ff)
 {
     h264_data *data = (h264_data*)ff->data;
     PJ_UNUSED_ARG(data);
-
-    // Where to apply the "sprop-parameter-sets" fmtp from remote SDP?
-    // Through decoder decode() or decoder context extradata?
-    PJ_TODO(apply_h264_fmtp_sprop_parameter_sets_from_remote_sdp);
-
     return PJ_SUCCESS;
 }
 
