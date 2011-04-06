@@ -19,6 +19,10 @@
  */
 #include "test.h"
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+#   include <CoreFoundation/CFRunLoop.h>
+#endif
+
 #define THIS_FILE   "test.c"
 
 #define DO_TEST(test)	do { \
@@ -32,7 +36,10 @@
 
 
 pj_pool_factory *mem;
-
+pj_bool_t is_quit = PJ_FALSE;
+pj_thread_t *thread;
+pj_caching_pool caching_pool;
+pj_pool_t *pool;
 
 void app_perror(pj_status_t status, const char *msg)
 {
@@ -43,33 +50,18 @@ void app_perror(pj_status_t status, const char *msg)
     PJ_LOG(3,(THIS_FILE, "%s: %s", msg, errbuf));
 }
 
-int test_main(void)
+static int test_func(void *data)
 {
     int rc = 0;
-    pj_caching_pool caching_pool;
-    pj_pool_t *pool;
-
-    pj_init();
-    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
-    pool = pj_pool_create(&caching_pool.factory, "test", 1000, 512, NULL);
     
-    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
-    pj_log_set_level(3);
-
-    mem = &caching_pool.factory;
-
-    pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
-    pjmedia_converter_mgr_create(pool, NULL);
-    pjmedia_vid_codec_mgr_create(pool, NULL);
-
 #if HAS_VID_DEV_TEST
     DO_TEST(vid_dev_test());
 #endif
-
+    
 #if HAS_VID_CODEC_TEST
     DO_TEST(vid_codec_test());
 #endif
-
+    
 #if HAS_SDP_NEG_TEST
     DO_TEST(sdp_neg_test());
 #endif
@@ -85,15 +77,50 @@ int test_main(void)
 #if HAS_CODEC_VECTOR_TEST
     DO_TEST(codec_test_vectors());
 #endif
-
+    
     PJ_LOG(3,(THIS_FILE," "));
-
+    
 on_return:
     if (rc != 0) {
 	PJ_LOG(3,(THIS_FILE,"Test completed with error(s)!"));
     } else {
 	PJ_LOG(3,(THIS_FILE,"Looks like everything is okay!"));
     }
+    
+    is_quit = PJ_TRUE;
+    return rc;
+}
+
+int test_main(void)
+{
+    int rc = 0;
+
+    pj_init();
+    pj_caching_pool_init(&caching_pool, &pj_pool_factory_default_policy, 0);
+    pool = pj_pool_create(&caching_pool.factory, "test", 1000, 512, NULL);
+    
+    pj_log_set_decor(PJ_LOG_HAS_NEWLINE);
+    pj_log_set_level(3);
+
+    mem = &caching_pool.factory;
+
+    pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
+    pjmedia_converter_mgr_create(pool, NULL);
+    pjmedia_vid_codec_mgr_create(pool, NULL);
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    {
+	if (pj_thread_create(pool, "test_func", test_func, NULL, 0, 0,
+			     &thread) == PJ_SUCCESS) {
+	    while (!is_quit) {
+		CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+	    }
+	}
+	return 0;
+    }
+#else
+    rc = test_func(NULL);
+#endif
 
     pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr_instance());
     pjmedia_converter_mgr_destroy(pjmedia_converter_mgr_instance());

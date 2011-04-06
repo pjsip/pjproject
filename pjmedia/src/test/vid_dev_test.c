@@ -185,9 +185,6 @@ static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
 
     /* Sleep while the webcam is being displayed... */
     for (i = 0; i < LOOP_DURATION*10 && (!is_quitting); i++) {
-#if VID_DEV_TEST_MAC_OS
-        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-#endif
         pj_thread_sleep(100);
     }
 

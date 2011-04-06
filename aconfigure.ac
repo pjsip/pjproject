@@ -603,7 +603,7 @@ else
 	LIBS="$SAVED_LIBS"
 	if test "$ac_pjmedia_video_has_qt" = "yes"; then
 	  ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
-	  LIBS="$LIBS -framework QTKit -framework Foundation -framework AppKit -framework QuartzCore"
+	  LIBS="$LIBS -framework QTKit -framework Foundation -framework AppKit -framework QuartzCore -framework OpenGL"
 	  AC_MSG_RESULT([Checking if QTKit framework is available... yes])
 	else
 	  AC_MSG_RESULT([Checking if QTKit framework is available... no])

@@ -25,10 +25,14 @@
 #if PJMEDIA_VIDEO_DEV_HAS_SDL
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-#   include <Foundation/NSAutoreleasePool.h>
+#   include <Foundation/Foundation.h>
 #endif
 
 #include <SDL.h>
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+#   include "SDL_opengl.h"
+#   define OPENGL_DEV_IDX 1
+#endif
 
 #define THIS_FILE		"sdl_dev.c"
 #define DEFAULT_CLOCK_RATE	90000
@@ -87,6 +91,19 @@ struct sdl_factory
     struct sdl_dev_info	        *dev_info;
 };
 
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+@interface SDLDelegate: NSObject
+{
+    @public
+    struct sdl_stream	    *strm;
+}
+
+- (int)sdl_thread;
+- (int)handle_event;
+- (pj_status_t)put_frame;
+@end
+#endif
+
 /* Video stream. */
 struct sdl_stream
 {
@@ -107,6 +124,14 @@ struct sdl_stream
     SDL_Surface			*screen;            /**< Display screen.    */
     SDL_Surface			*surf;              /**< RGB surface.       */
     SDL_Overlay			*overlay;           /**< YUV overlay.       */
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    GLuint			 texture;
+#endif
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    NSAutoreleasePool		*apool;
+    SDLDelegate			*delegate;
+    const pjmedia_frame		*frame;
+#endif
 
     /* For frame conversion */
     pjmedia_converter		*conv;
@@ -202,9 +227,12 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     unsigned i;
 
     sf->dev_count = 1;
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    sf->dev_count++;
+#endif
     sf->dev_info = (struct sdl_dev_info*)
- 		   pj_pool_calloc(sf->pool, sf->dev_count,
- 				  sizeof(struct sdl_dev_info));
+		   pj_pool_calloc(sf->pool, sf->dev_count,
+				  sizeof(struct sdl_dev_info));
 
     ddi = &sf->dev_info[0];
     pj_bzero(ddi, sizeof(*ddi));
@@ -215,18 +243,42 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     ddi->info.dir = PJMEDIA_DIR_RENDER;
     ddi->info.has_callback = PJ_FALSE;
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |
-                     PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
+		     PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
 
     ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
     ddi->info.fmt = (pjmedia_format*)
- 		    pj_pool_calloc(sf->pool, ddi->info.fmt_cnt,
- 				   sizeof(pjmedia_format));
+		    pj_pool_calloc(sf->pool, ddi->info.fmt_cnt,
+				   sizeof(pjmedia_format));
     for (i = 0; i < ddi->info.fmt_cnt; i++) {
         pjmedia_format *fmt = &ddi->info.fmt[i];
         pjmedia_format_init_video(fmt, sdl_fmts[i].fmt_id,
 				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
 				  DEFAULT_FPS, 1);
     }
+
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    ddi = &sf->dev_info[OPENGL_DEV_IDX];
+    pj_bzero(ddi, sizeof(*ddi));
+    strncpy(ddi->info.name, "SDL openGL renderer", sizeof(ddi->info.name));
+    ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
+    strncpy(ddi->info.driver, "SDL", sizeof(ddi->info.driver));
+    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+    ddi->info.dir = PJMEDIA_DIR_RENDER;
+    ddi->info.has_callback = PJ_FALSE;
+    ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
+    
+    ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
+    ddi->info.fmt_cnt = 1;
+    ddi->info.fmt = (pjmedia_format*)
+    pj_pool_calloc(sf->pool, ddi->info.fmt_cnt,
+		   sizeof(pjmedia_format));
+    for (i = 0; i < ddi->info.fmt_cnt; i++) {
+        pjmedia_format *fmt = &ddi->info.fmt[i];
+        pjmedia_format_init_video(fmt, sdl_fmts[i].fmt_id,
+				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
+				  DEFAULT_FPS, 1);
+    }    
+#endif
 
     PJ_LOG(4, (THIS_FILE, "SDL initialized"));
 
@@ -319,17 +371,19 @@ static sdl_fmt_info* get_sdl_format_info(pjmedia_format_id id)
     return NULL;
 }
 
-static int create_sdl_thread(void * data)
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+@implementation SDLDelegate
+- (int)sdl_thread
+{
+#else
+static int sdlthread(void * data)
 {
     struct sdl_stream *strm = (struct sdl_stream*)data;
+#endif
     sdl_fmt_info *sdl_info = get_sdl_format_info(strm->param.fmt.id);
     const pjmedia_video_format_info *vfi;
     pjmedia_video_format_detail *vfd;
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    NSAutoreleasePool *apool = [[NSAutoreleasePool alloc] init];
-#endif
- 
     vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
                                         strm->param.fmt.id);
     if (!vfi || !sdl_info) {
@@ -356,38 +410,106 @@ static int create_sdl_thread(void * data)
     strm->rect.w = (Uint16)vfd->size.w;
     strm->rect.h = (Uint16)vfd->size.h;
 
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    if (strm->param.rend_id == OPENGL_DEV_IDX) {
+	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER,1);
+    }
+#endif
+
     /* Initialize the display, requesting a software surface */
-    strm->screen = SDL_SetVideoMode(strm->rect.w, strm->rect.h,
-                                    0, SDL_RESIZABLE | SDL_SWSURFACE);
+    strm->screen = SDL_SetVideoMode(strm->rect.w, strm->rect.h, 0, (
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+                                    strm->param.rend_id == OPENGL_DEV_IDX?
+				    SDL_OPENGL:
+#endif
+				    SDL_RESIZABLE | SDL_SWSURFACE));
     if (strm->screen == NULL) {
         strm->status = PJMEDIA_EVID_SYSERR;
         goto on_return;
     }
     SDL_WM_SetCaption("pjmedia-SDL video", NULL);
 
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    if (strm->param.rend_id == OPENGL_DEV_IDX) {
+	glDisable(GL_DEPTH_TEST);
+	glDisable(GL_CULL_FACE);
+	glEnable(GL_TEXTURE_2D);
+	
+	glViewport(0, 0, strm->rect.w, strm->rect.h);
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	
+	glOrtho(0.0, (GLdouble)strm->rect.w, (GLdouble)strm->rect.h,
+		0.0, 0.0, 1.0);
+	
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity();
+	
+	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
+	glGenTextures(1, &strm->texture);
+    } else
+#endif
     if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
         strm->surf = SDL_CreateRGBSurface(SDL_SWSURFACE,
-            strm->rect.w, strm->rect.h,
-            vfi->bpp,
-            sdl_info->Rmask,
-            sdl_info->Gmask,
-            sdl_info->Bmask,
-            sdl_info->Amask);
+					  strm->rect.w, strm->rect.h,
+					  vfi->bpp,
+					  sdl_info->Rmask,
+					  sdl_info->Gmask,
+					  sdl_info->Bmask,
+					  sdl_info->Amask);
         if (strm->surf == NULL) {
             strm->status = PJMEDIA_EVID_SYSERR;
             goto on_return;
         }
     } else if (vfi->color_model == PJMEDIA_COLOR_MODEL_YUV) {
         strm->overlay = SDL_CreateYUVOverlay(strm->rect.w, strm->rect.h,
-            sdl_info->sdl_format,
-            strm->screen);
+					     sdl_info->sdl_format,
+					     strm->screen);
         if (strm->overlay == NULL) {
             strm->status = PJMEDIA_EVID_SYSERR;
             goto on_return;
         }
     }
 
-    while(!strm->is_quitting) {
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+on_return:
+    if (strm->status != PJ_SUCCESS) {
+	if (strm->surf) {
+	    SDL_FreeSurface(strm->surf);
+	    strm->surf = NULL;
+	}
+	
+	if (strm->overlay) {
+	    SDL_FreeYUVOverlay(strm->overlay);
+	    strm->overlay = NULL;
+	}
+    #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+	if (strm->texture) {
+	    glDeleteTextures(1, &strm->texture);
+	    strm->texture = 0;
+	}
+    #endif
+	
+	SDL_Quit();
+	strm->screen = NULL;
+    }
+    
+    return strm->status;
+}
+
+- (int)handle_event
+{
+    sdl_fmt_info *sdl_info = get_sdl_format_info(strm->param.fmt.id);
+    const pjmedia_video_format_info *vfi;
+    pjmedia_video_format_detail *vfd;
+    
+    vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
+					strm->param.fmt.id);
+    vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
+#else
+    while(!strm->is_quitting) 
+#endif
+    {
         SDL_Event sevent;
         pjmedia_vid_event pevent;
 
@@ -396,7 +518,7 @@ static int create_sdl_thread(void * data)
          * call SDL_SetVideoMode(). Please consult the official doc of
          * SDL_PumpEvents().
          */
-        while (SDL_WaitEvent(&sevent)) {
+        while (SDL_PollEvent(&sevent)) {
             pj_bzero(&pevent, sizeof(pevent));
 
             switch(sevent.type) {
@@ -404,15 +526,18 @@ static int create_sdl_thread(void * data)
                 {
                     pjmedia_format *fmt;
 
-                    if (sevent.user.code == PJMEDIA_EVENT_NONE)
+                    if (sevent.user.code == PJMEDIA_EVENT_NONE) {
+			strm->is_quitting = PJ_TRUE;
 		        goto on_return;
+		    }
 
                     pj_assert(sevent.user.code == PJMEDIA_VID_DEV_CAP_FORMAT);
 
-                    fmt = (pjmedia_format *)sevent.user.data1;
+                    PJ_TODO(FIX_THIS_FOR_OPENGL);
+		    fmt = (pjmedia_format *)sevent.user.data1;
                     vfi = pjmedia_get_video_format_info(
-                              pjmedia_video_format_mgr_instance(),
-                              fmt->id);
+			      pjmedia_video_format_mgr_instance(),
+			      fmt->id);
                     if (!vfi || !sdl_info) {
                         strm->status = PJMEDIA_EVID_BADFORMAT;
                         break;
@@ -465,10 +590,10 @@ static int create_sdl_thread(void * data)
                         }
                     } else if (vfi->color_model == PJMEDIA_COLOR_MODEL_YUV) {
                         strm->overlay = SDL_CreateYUVOverlay(
-                                            strm->rect.w,
-                                            strm->rect.h,
-                                            sdl_info->sdl_format,
-                                            strm->screen);
+					    strm->rect.w,
+					    strm->rect.h,
+					    sdl_info->sdl_format,
+					    strm->screen);
                         if (strm->overlay == NULL) {
                             strm->status = PJMEDIA_EVID_SYSERR;
                             break;
@@ -486,8 +611,8 @@ static int create_sdl_thread(void * data)
                     pevent.event_type = PJMEDIA_EVENT_MOUSEBUTTONDOWN;
                     if (strm->vid_cb.on_event_cb)
                         if ((*strm->vid_cb.on_event_cb)(&strm->base,
-                                                       strm->user_data,
-                                                       &pevent) != PJ_SUCCESS)
+							strm->user_data,
+							&pevent) != PJ_SUCCESS)
                         {
                             /* Application wants us to ignore this event */
                             break;
@@ -536,8 +661,8 @@ static int create_sdl_thread(void * data)
                     if (strm->vid_cb.on_event_cb) {
                         strm->is_quitting = PJ_TRUE;
                         if ((*strm->vid_cb.on_event_cb)(&strm->base,
-                                                       strm->user_data,
-                                                       &pevent) != PJ_SUCCESS)
+							strm->user_data,
+							&pevent) != PJ_SUCCESS)
                         {
                             /* Application wants us to ignore this event */
                             strm->is_quitting = PJ_FALSE;
@@ -556,24 +681,149 @@ static int create_sdl_thread(void * data)
                      * the application.
                      */
                     sdl_stream_stop(&strm->base);
-                    SDL_Quit();
-                    strm->screen = NULL;
                     goto on_return;
 
                 default:
                     break;
             }
-        }
-
+	}
     }
 
-on_return:
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    [apool release];
+    return 0;
 #endif
-    
+on_return:
+    if (strm->surf) {
+	SDL_FreeSurface(strm->surf);
+	strm->surf = NULL;
+    }
+
+    if (strm->overlay) {
+	SDL_FreeYUVOverlay(strm->overlay);
+	strm->overlay = NULL;
+    }
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    if (strm->texture) {
+	glDeleteTextures(1, &strm->texture);
+	strm->texture = 0;
+    }
+#endif
+
+    SDL_Quit();
+    strm->screen = NULL;
+
     return strm->status;
 }
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+- (pj_status_t)put_frame
+{
+    const pjmedia_frame *frame = strm->frame;
+#else    
+/* API: Put frame from stream */
+static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
+					const pjmedia_frame *frame)
+{
+#endif
+    struct sdl_stream *stream = (struct sdl_stream*)strm;
+    pj_status_t status = PJ_SUCCESS;
+
+    if (!stream->is_running) {
+	stream->render_exited = PJ_TRUE;
+	goto on_return;
+    }
+
+    if (frame->size==0 || frame->buf==NULL)
+	goto on_return;
+
+    if (stream->surf) {
+	if (SDL_MUSTLOCK(stream->surf)) {
+	    if (SDL_LockSurface(stream->surf) < 0) {
+		PJ_LOG(3, (THIS_FILE, "Unable to lock SDL surface"));
+		status = PJMEDIA_EVID_NOTREADY;
+		goto on_return;
+	    }
+	}
+	
+	pj_memcpy(stream->surf->pixels, frame->buf, frame->size);
+	
+	if (SDL_MUSTLOCK(stream->surf)) {
+	    SDL_UnlockSurface(stream->surf);
+	}
+	SDL_BlitSurface(stream->surf, NULL, stream->screen, NULL);
+	SDL_UpdateRect(stream->screen, 0, 0, 0, 0);
+    } else if (stream->overlay) {
+	int i, sz, offset;
+	
+	if (SDL_LockYUVOverlay(stream->overlay) < 0) {
+	    PJ_LOG(3, (THIS_FILE, "Unable to lock SDL overlay"));
+	    status = PJMEDIA_EVID_NOTREADY;
+	    goto on_return;
+	}
+	
+	for (i = 0, offset = 0; i < stream->overlay->planes; i++) {
+	    sz = stream->vafp.plane_bytes[i];
+	    pj_memcpy(stream->overlay->pixels[i],
+		      (char *)frame->buf + offset, sz);
+	    offset += sz;
+	}
+	
+	SDL_UnlockYUVOverlay(stream->overlay);
+	SDL_DisplayYUVOverlay(stream->overlay, &stream->rect);
+    }
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+     else if (stream->param.rend_id == OPENGL_DEV_IDX) {
+	if (frame && stream->texture) {
+	    glBindTexture(GL_TEXTURE_2D, stream->texture);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, 
+			    GL_NEAREST);
+	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+			    GL_NEAREST);
+	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+			 stream->rect.w, stream->rect.h, 0,
+			 GL_RGBA, GL_UNSIGNED_BYTE, frame->buf);
+	    glBegin(GL_TRIANGLE_STRIP);
+	    glTexCoord2f(0, 0); glVertex2i(0, 0);
+	    glTexCoord2f(1, 0); glVertex2i(stream->rect.w, 0);
+	    glTexCoord2f(0, 1); glVertex2i(0, stream->rect.h);
+	    glTexCoord2f(1, 1);
+	    glVertex2i(stream->rect.w, stream->rect.h);
+	    glEnd();
+	    SDL_GL_SwapBuffers();
+	}
+    }
+#endif
+
+on_return:
+    return status;
+}
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+@end
+
+static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
+					const pjmedia_frame *frame)
+{
+    struct sdl_stream *stream = (struct sdl_stream*)strm;
+    stream->frame = frame;    
+    [stream->delegate performSelectorOnMainThread:@selector(put_frame) 
+			  withObject:nil waitUntilDone:YES];
+
+    return PJ_SUCCESS;
+}
+    
+static int sdlthread(void * data)
+{
+    struct sdl_stream *strm = (struct sdl_stream*)data;
+    
+    while(!strm->is_quitting) {
+	[strm->delegate performSelectorOnMainThread:@selector(handle_event)
+			withObject:nil waitUntilDone:YES];
+    }
+    
+    return 0;
+}
+    
+#endif
 
 /* API: create stream */
 static pj_status_t sdl_factory_create_stream(
@@ -604,30 +854,50 @@ static pj_status_t sdl_factory_create_stream(
 
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {
-        strm->status = PJ_SUCCESS;
-        status = pj_thread_create(pool, "sdl_thread", create_sdl_thread,
-                                  strm, 0, 0, &strm->sdl_thread);
-        if (status != PJ_SUCCESS) {
-            goto on_error;
-        }
-        while (strm->status == PJ_SUCCESS && !strm->surf && !strm->overlay)
-            pj_thread_sleep(10);
-        if ((status = strm->status) != PJ_SUCCESS) {
-            goto on_error;
-        }
+	strm->status = PJ_SUCCESS;
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+	pj_assert(![NSThread isMainThread]);
+	strm->apool = [[NSAutoreleasePool alloc] init];
+	strm->delegate = [[SDLDelegate alloc]init];
+	strm->delegate->strm = strm;
+	[strm->delegate performSelectorOnMainThread:@selector(sdl_thread)
+			withObject:nil waitUntilDone:YES];
+	if ((status = strm->status) != PJ_SUCCESS) {
+	    goto on_error;
+	}
+#endif
+	status = pj_thread_create(pool, "sdl_thread", sdlthread,
+				  strm, 0, 0, &strm->sdl_thread);
 
-        pjmedia_format_copy(&strm->conv_param.src, &param->fmt);
-        pjmedia_format_copy(&strm->conv_param.dst, &param->fmt);
+	if (status != PJ_SUCCESS) {
+	    goto on_error;
+	}
 
-        status = pjmedia_converter_create(NULL, pool, &strm->conv_param,
-                                          &strm->conv);
+	while(strm->status == PJ_SUCCESS && !strm->surf && !strm->overlay
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+	      && !strm->texture
+#endif
+	      )
+	{
+	    pj_thread_sleep(10);
+	}
+	if ((status = strm->status) != PJ_SUCCESS) {
+	    goto on_error;
+	}
+
+	pjmedia_format_copy(&strm->conv_param.src, &param->fmt);
+	pjmedia_format_copy(&strm->conv_param.dst, &param->fmt);
+	/*
+	status = pjmedia_converter_create(NULL, pool, &strm->conv_param,
+					  &strm->conv);
+	 */
     }
 
     /* Apply the remaining settings */
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
 	sdl_stream_set_cap(&strm->base,
-		            PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-                            &param->window);
+			   PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
+			   &param->window);
     }
 
     /* Done */
@@ -651,12 +921,13 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
 
-/*    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-                            &pi->fmt.info_size) == PJ_SUCCESS)
+    /*
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
+			   &pi->fmt.info_size) == PJ_SUCCESS)
     {
-        pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
     }
-*/
+    */
     return PJ_SUCCESS;
 }
 
@@ -675,7 +946,7 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
     {
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
-        return PJ_SUCCESS;
+	return PJ_SUCCESS;
     } else {
 	return PJMEDIA_EVID_INVCAP;
     }
@@ -695,109 +966,48 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
-        SDL_Event sevent;
-
-        strm->status = PJ_TRUE;
-        sevent.type = SDL_USEREVENT;
-        sevent.user.code = PJMEDIA_VID_DEV_CAP_FORMAT;
-        sevent.user.data1 = (void *)pval;
-        SDL_PushEvent(&sevent);
-
-        while (strm->status == PJ_TRUE)
-            pj_thread_sleep(10);
-
-        if (strm->status != PJ_SUCCESS) {
-            pj_status_t status = strm->status;
-
-            /**
-             * Failed to change the output format. Try to revert
-             * to its original format.
-             */
-            strm->status = PJ_TRUE;
-            sevent.user.data1 = &strm->param.fmt;
-            SDL_PushEvent(&sevent);
-
-            while (strm->status == PJ_TRUE)
-                pj_thread_sleep(10);
-            
-            if (strm->status != PJ_SUCCESS)
-                /**
-                 * This means that we failed to revert to our
-                 * original state!
-                 */
-                status = PJMEDIA_EVID_ERR;
-
-            strm->status = status;
-        } else if (strm->status == PJ_SUCCESS) {
-            pj_memcpy(&strm->param.fmt, pval, sizeof(strm->param.fmt));
-        }
-
-        return strm->status;
+	SDL_Event sevent;
+	
+	strm->status = PJ_TRUE;
+	sevent.type = SDL_USEREVENT;
+	sevent.user.code = PJMEDIA_VID_DEV_CAP_FORMAT;
+	sevent.user.data1 = (void *)pval;
+	SDL_PushEvent(&sevent);
+	
+	while (strm->status == PJ_TRUE)
+	    pj_thread_sleep(10);
+	
+	if (strm->status != PJ_SUCCESS) {
+	    pj_status_t status = strm->status;
+	    
+	    /**
+	     * Failed to change the output format. Try to revert
+	     * to its original format.
+	     */
+	    strm->status = PJ_TRUE;
+	    sevent.user.data1 = &strm->param.fmt;
+	    SDL_PushEvent(&sevent);
+	    
+	    while (strm->status == PJ_TRUE)
+		pj_thread_sleep(10);
+	    
+	    if (strm->status != PJ_SUCCESS) {
+		/**
+		 * This means that we failed to revert to our
+		 * original state!
+		 */
+		status = PJMEDIA_EVID_ERR;
+	    }
+	    
+	    strm->status = status;
+	} else if (strm->status == PJ_SUCCESS) {
+	    pj_memcpy(&strm->param.fmt, pval, sizeof(strm->param.fmt));
+	}
+	
+	return strm->status;
     }
 
     return PJMEDIA_EVID_INVCAP;
-}
-
-/* API: Put frame from stream */
-static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
-                                        const pjmedia_frame *frame)
-{
-    struct sdl_stream *stream = (struct sdl_stream*)strm;
-    pj_status_t status = PJ_SUCCESS;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    NSAutoreleasePool *apool = [[NSAutoreleasePool alloc] init];
-#endif
-  
-    if (!stream->is_running) {
-        stream->render_exited = PJ_TRUE;
-        goto on_return;
-    }
-
-    if (frame->size==0 || frame->buf==NULL)
-	goto on_return;
-
-    if (stream->surf) {
-        if (SDL_MUSTLOCK(stream->surf)) {
-            if (SDL_LockSurface(stream->surf) < 0) {
-                PJ_LOG(3, (THIS_FILE, "Unable to lock SDL surface"));
-                status = PJMEDIA_EVID_NOTREADY;
-		goto on_return;
-            }
-        }
-
-        pj_memcpy(stream->surf->pixels, frame->buf, frame->size);
-
-        if (SDL_MUSTLOCK(stream->surf)) {
-            SDL_UnlockSurface(stream->surf);
-        }
-        SDL_BlitSurface(stream->surf, NULL, stream->screen, NULL);
-        SDL_UpdateRect(stream->screen, 0, 0, 0, 0);
-    } else if (stream->overlay) {
-        int i, sz, offset;
-
-        if (SDL_LockYUVOverlay(stream->overlay) < 0) {
-            PJ_LOG(3, (THIS_FILE, "Unable to lock SDL overlay"));
-	    status = PJMEDIA_EVID_NOTREADY;
-	    goto on_return;
-        }
-
-        for (i = 0, offset = 0; i < stream->overlay->planes; i++) {
-            sz = stream->vafp.plane_bytes[i];
-            pj_memcpy(stream->overlay->pixels[i],
-                      (char *)frame->buf + offset, sz);
-            offset += sz;
-        }
-
-        SDL_UnlockYUVOverlay(stream->overlay);
-        SDL_DisplayYUVOverlay(stream->overlay, &stream->rect);
-    }
-
-on_return:
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    [apool release];
-#endif
-    
-    return status;
 }
 
 /* API: Start stream. */
@@ -838,35 +1048,33 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-    if (!stream->is_quitting) {
-        sevent.type = SDL_USEREVENT;
-        sevent.user.code = PJMEDIA_EVENT_NONE;
-        SDL_PushEvent(&sevent);
-        pj_thread_join(stream->sdl_thread);
-    }
-
     sdl_stream_stop(strm);
 
-    if (stream->surf) {
-        SDL_FreeSurface(stream->surf);
-        stream->surf = NULL;
+    if (!stream->is_quitting) {
+	sevent.type = SDL_USEREVENT;
+	sevent.user.code = PJMEDIA_EVENT_NONE;
+	SDL_PushEvent(&sevent);
+	if (stream->sdl_thread)
+	    pj_thread_join(stream->sdl_thread);
     }
 
-    if (stream->overlay) {
-        SDL_FreeYUVOverlay(stream->overlay);
-        stream->overlay = NULL;
-    }
-
-    SDL_Quit();
-    stream->screen = NULL;
-
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    if (stream->delegate)
+	[stream->delegate release];
+    if (stream->apool)
+	[stream->apool release];
+#endif
     pj_pool_release(stream->pool);
+    
 
     return PJ_SUCCESS;
 }
 
 #ifdef _MSC_VER
 #   pragma comment( lib, "sdl.lib")
+#   if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+#	pragma comment(lib, "OpenGL32.lib")
+#   endif
 #endif
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_SDL */
