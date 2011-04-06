@@ -922,7 +922,9 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	/* Set no delay, note that this may cause some codec functionals
 	 * not working (e.g: rate control).
 	 */
+#if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 113
 	ctx->rc_lookahead = 0;
+#endif
 
 	/* Open ffmpeg codec */
         pj_mutex_lock(ff_mutex);
