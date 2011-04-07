@@ -217,6 +217,10 @@ struct ffmpeg_codec_desc
 };
 
 
+/* H264 constants */
+#define PROFILE_H264_BASELINE		66
+#define PROFILE_H264_MAIN		77
+
 /* Codec specific functions */
 static pj_status_t h264_preopen(ffmpeg_private *ff);
 static pj_status_t h264_postopen(ffmpeg_private *ff);
@@ -317,7 +321,7 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	 * use this profile param field, so let's try to apply it "manually".
 	 */
 	ctx->profile  = data->fmtp.profile_idc;
-	if (ctx->profile == FF_PROFILE_H264_BASELINE) {
+	if (ctx->profile == PROFILE_H264_BASELINE) {
 	    /* Baseline profile settings (the most used profile in
 	     * conversational/real-time communications).
 	     */
@@ -325,7 +329,7 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	    ctx->max_b_frames = 0;
 	    ctx->flags2 &= ~(CODEC_FLAG2_WPRED | CODEC_FLAG2_8X8DCT);
 	    ctx->weighted_p_pred = 0;
-	} else if (ctx->profile == FF_PROFILE_H264_MAIN) {
+	} else if (ctx->profile == PROFILE_H264_MAIN) {
 	    ctx->flags2 &= ~CODEC_FLAG2_8X8DCT;
 	}
 
