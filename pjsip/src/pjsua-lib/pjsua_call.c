@@ -3850,19 +3850,13 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 				   const pjmedia_sdp_session *offer)
 {
     pjsua_call *call;
-    pjmedia_sdp_conn *conn = NULL;
     pjmedia_sdp_session *answer;
+    unsigned i;
     pj_status_t status;
 
     PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
-
-    if (call->audio_idx < (int)offer->media_count)
-	conn = offer->media[call->audio_idx]->conn;
-
-    if (!conn)
-	conn = offer->conn;
 
     /* Supply candidate answer */
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
@@ -3877,12 +3871,36 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	return;
     }
 
+    /* Validate media count in the generated answer */
+    pj_assert(answer->media_count == offer->media_count);
+
     /* Check if offer's conn address is zero */
-    if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
-	pj_strcmp2(&conn->addr, "0")==0)
-    {
-	/* Modify address */
-	answer->conn->addr = pj_str("0.0.0.0");
+    for (i = 0; i < answer->media_count; ++i) {
+	pjmedia_sdp_conn *conn;
+
+	conn = offer->media[i]->conn;
+	if (!conn)
+	    conn = offer->conn;
+
+	if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+	    pj_strcmp2(&conn->addr, "0")==0)
+	{
+	    pjmedia_sdp_conn *a_conn = answer->media[i]->conn;
+
+	    /* Modify answer address */
+	    if (a_conn) {
+		a_conn->addr = pj_str("0.0.0.0");
+	    } else if (answer->conn == NULL ||
+		       pj_strcmp2(&answer->conn->addr, "0.0.0.0") != 0)
+	    {
+		a_conn = PJ_POOL_ZALLOC_T(call->inv->pool_prov,
+					  pjmedia_sdp_conn);
+		a_conn->net_type = pj_str("IN");
+		a_conn->addr_type = pj_str("IP4");
+		a_conn->addr = pj_str("0.0.0.0");
+		answer->media[i]->conn = a_conn;
+	    }
+	}
     }
 
     /* Check if call is on-hold */
