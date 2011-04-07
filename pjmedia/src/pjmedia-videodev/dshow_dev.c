@@ -38,6 +38,7 @@
 
 #pragma comment(lib, "Strmiids.lib")
 #pragma comment(lib, "Rpcrt4.lib")
+#pragma comment(lib, "Quartz.lib")
 
 #define THIS_FILE		"dshow_dev.c"
 #define DEFAULT_CLOCK_RATE	90000
@@ -701,8 +702,14 @@ on_error:
         IPin_Release(sinkpin);
     if (vi)
         CoTaskMemFree(vi);
-    if (FAILED(hr))
-        return hr;
+    if (FAILED(hr)) {
+	char msg[80];
+	if (AMGetErrorText(hr, msg, sizeof(msg))) {
+	    PJ_LOG(4,(THIS_FILE, "Error creating filter graph: %s (hr=0x%x)", 
+		      msg, hr));
+	}
+        return PJ_EUNKNOWN;
+    }
 
     return PJ_SUCCESS;
 }
@@ -770,7 +777,7 @@ static pj_status_t dshow_factory_create_stream(
  
 on_error:
     dshow_stream_destroy((pjmedia_vid_dev_stream *)strm);
-    return PJ_EUNKNOWN;
+    return status;
 }
 
 /* API: Get stream info. */
@@ -849,7 +856,11 @@ static pj_status_t dshow_stream_start(pjmedia_vid_dev_stream *strm)
             continue;
         hr = IMediaFilter_Run(stream->dgraph[i].media_filter, 0);
         if (FAILED(hr)) {
-            return hr;
+	    char msg[80];
+	    if (AMGetErrorText(hr, msg, sizeof(msg))) {
+		PJ_LOG(4,(THIS_FILE, "Error starting media: %s", msg));
+	    }
+            return PJ_EUNKNOWN;
         }
     }
 
