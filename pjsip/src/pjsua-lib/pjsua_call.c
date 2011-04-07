@@ -2467,7 +2467,7 @@ static void dump_media_session(const char *indent,
 
 	    pjmedia_stream_get_info(stream, &info);
 	    pj_ansi_snprintf(codec_info, sizeof(codec_info), " %.*s @%dkHz",
-			     info.fmt.encoding_name.slen,
+			     (int)info.fmt.encoding_name.slen,
 			     info.fmt.encoding_name.ptr,
 			     info.fmt.clock_rate / 1000);
 	    pj_ansi_snprintf(rx_info, sizeof(rx_info), "pt=%d,",
@@ -2485,7 +2485,7 @@ static void dump_media_session(const char *indent,
 
 	    pjmedia_vid_stream_get_info(stream, &info);
 	    pj_ansi_snprintf(codec_info, sizeof(codec_info), " %.*s",
-			     info.codec_info.encoding_name.slen,
+	                     (int)info.codec_info.encoding_name.slen,
 			     info.codec_info.encoding_name.ptr);
 	    if (call_med->dir & PJMEDIA_DIR_DECODING) {
 		pjmedia_video_format_detail *vfd;
@@ -3751,7 +3751,7 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
 					   pj_pool_t *pool,
 					   pjmedia_sdp_session *sdp)
 {
-    pjmedia_sdp_media *m;
+    unsigned mi;
 
     /* Call-hold is done by set the media direction to 'sendonly' 
      * (PJMEDIA_DIR_ENCODING), except when current media direction is 
@@ -3765,48 +3765,50 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
      *  configuration to use c=0.0.0.0 for call hold.
      */
 
-    m = sdp->media[call->audio_idx];
+    for (mi=0; mi<sdp->media_count; ++mi) {
+	pjmedia_sdp_media *m = sdp->media[mi];
 
-    if (call->call_hold_type == PJSUA_CALL_HOLD_TYPE_RFC2543) {
-	pjmedia_sdp_conn *conn;
-	pjmedia_sdp_attr *attr;
+	if (call->call_hold_type == PJSUA_CALL_HOLD_TYPE_RFC2543) {
+	    pjmedia_sdp_conn *conn;
+	    pjmedia_sdp_attr *attr;
 
-	/* Get SDP media connection line */
-	conn = m->conn;
-	if (!conn)
-	    conn = sdp->conn;
+	    /* Get SDP media connection line */
+	    conn = m->conn;
+	    if (!conn)
+		conn = sdp->conn;
 
-	/* Modify address */
-	conn->addr = pj_str("0.0.0.0");
+	    /* Modify address */
+	    conn->addr = pj_str("0.0.0.0");
 
-	/* Remove existing directions attributes */
-	pjmedia_sdp_media_remove_all_attr(m, "sendrecv");
-	pjmedia_sdp_media_remove_all_attr(m, "sendonly");
-	pjmedia_sdp_media_remove_all_attr(m, "recvonly");
-	pjmedia_sdp_media_remove_all_attr(m, "inactive");
+	    /* Remove existing directions attributes */
+	    pjmedia_sdp_media_remove_all_attr(m, "sendrecv");
+	    pjmedia_sdp_media_remove_all_attr(m, "sendonly");
+	    pjmedia_sdp_media_remove_all_attr(m, "recvonly");
+	    pjmedia_sdp_media_remove_all_attr(m, "inactive");
 
-	/* Add inactive attribute */
-	attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
-	pjmedia_sdp_media_add_attr(m, attr);
-
-
-    } else {
-	pjmedia_sdp_attr *attr;
-
-	/* Remove existing directions attributes */
-	pjmedia_sdp_media_remove_all_attr(m, "sendrecv");
-	pjmedia_sdp_media_remove_all_attr(m, "sendonly");
-	pjmedia_sdp_media_remove_all_attr(m, "recvonly");
-	pjmedia_sdp_media_remove_all_attr(m, "inactive");
-
-	if (call->media[call->audio_idx].dir & PJMEDIA_DIR_ENCODING) {
-	    /* Add sendonly attribute */
-	    attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
-	    pjmedia_sdp_media_add_attr(m, attr);
-	} else {
 	    /* Add inactive attribute */
 	    attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
 	    pjmedia_sdp_media_add_attr(m, attr);
+
+
+	} else {
+	    pjmedia_sdp_attr *attr;
+
+	    /* Remove existing directions attributes */
+	    pjmedia_sdp_media_remove_all_attr(m, "sendrecv");
+	    pjmedia_sdp_media_remove_all_attr(m, "sendonly");
+	    pjmedia_sdp_media_remove_all_attr(m, "recvonly");
+	    pjmedia_sdp_media_remove_all_attr(m, "inactive");
+
+	    if (call->media[mi].dir & PJMEDIA_DIR_ENCODING) {
+		/* Add sendonly attribute */
+		attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
+		pjmedia_sdp_media_add_attr(m, attr);
+	    } else {
+		/* Add inactive attribute */
+		attr = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+		pjmedia_sdp_media_add_attr(m, attr);
+	    }
 	}
     }
 
