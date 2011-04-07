@@ -486,6 +486,8 @@ static dshow_fmt_info* get_dshow_format_info(pjmedia_format_id id)
 
 static pj_status_t create_filter_graph(pjmedia_dir dir,
                                        unsigned id,
+                                       pj_bool_t use_def_size,
+                                       pj_bool_t use_def_fps,
                                        struct dshow_factory *df,
                                        struct dshow_stream *strm,
                                        struct dshow_graph *graph)
@@ -674,9 +676,11 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
         goto on_error;
     }
     video_info = (VIDEOINFOHEADER *) mediatype->pbFormat;
-    video_info->bmiHeader.biWidth = vfd->size.w;
-    video_info->bmiHeader.biHeight = vfd->size.h;
-    if (vfd->fps.num != 0)
+    if (!use_def_size) {
+        video_info->bmiHeader.biWidth = vfd->size.w;
+        video_info->bmiHeader.biHeight = vfd->size.h;
+    }
+    if (!use_def_fps && vfd->fps.num != 0)
         video_info->AvgTimePerFrame = (LONGLONG) (10000000 * 
 						  (double)vfd->fps.denum /
 						  vfd->fps.num);
@@ -694,6 +698,13 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
 
     hr = IFilterGraph_ConnectDirect(graph->filter_graph, srcpin, sinkpin,
                                     mediatype);
+    if (SUCCEEDED(hr)) {
+        pjmedia_format_init_video(&strm->param.fmt, strm->param.fmt.id,
+                                  video_info->bmiHeader.biWidth,
+                                  video_info->bmiHeader.biHeight,
+                                  10000000,
+                                  (unsigned)video_info->AvgTimePerFrame);
+    }
 
 on_error:
     if (srcpin)
@@ -712,6 +723,30 @@ on_error:
     }
 
     return PJ_SUCCESS;
+}
+
+static void destroy_filter_graph(struct dshow_stream * stream)
+{
+    unsigned i;
+
+    for (i = 0; i < 2; i++) {
+        if (stream->dgraph[i].source_filter) {
+            IBaseFilter_Release(stream->dgraph[i].source_filter);
+            stream->dgraph[i].source_filter = NULL;
+        }
+        if (stream->dgraph[i].rend_filter) {
+            IBaseFilter_Release(stream->dgraph[i].rend_filter);
+            stream->dgraph[i].rend_filter = NULL;
+        }
+        if (stream->dgraph[i].media_filter) {
+            IMediaFilter_Release(stream->dgraph[i].media_filter);
+            stream->dgraph[i].media_filter = NULL;
+        }
+        if (stream->dgraph[i].filter_graph) {
+            IFilterGraph_Release(stream->dgraph[i].filter_graph);
+            stream->dgraph[i].filter_graph = NULL;
+        }
+    }
 }
 
 /* API: create stream */
@@ -746,9 +781,32 @@ static pj_status_t dshow_factory_create_stream(
 	const pjmedia_video_format_detail *vfd;
 
         status = create_filter_graph(PJMEDIA_DIR_CAPTURE, param->cap_id,
-                                     df, strm, &strm->dgraph[ngraph++]);
-        if (status != PJ_SUCCESS)
-            goto on_error;
+                                     PJ_FALSE, PJ_FALSE, df, strm,
+                                     &strm->dgraph[ngraph++]);
+        if (status != PJ_SUCCESS) {
+            destroy_filter_graph(strm);
+            /* Try to use default fps */
+            PJ_LOG(4,(THIS_FILE, "Trying to open dshow dev with default fps"));
+            status = create_filter_graph(PJMEDIA_DIR_CAPTURE, param->cap_id,
+                                         PJ_FALSE, PJ_TRUE, df, strm,
+                                         &strm->dgraph[ngraph]);
+
+            if (status != PJ_SUCCESS) {
+                /* Still failed, now try to use default fps and size */
+                destroy_filter_graph(strm);
+                /* Try to use default fps */
+                PJ_LOG(4,(THIS_FILE, "Trying to open dshow dev with default "
+                                     "size & fps"));
+                status = create_filter_graph(PJMEDIA_DIR_CAPTURE,
+                                             param->cap_id,
+                                             PJ_TRUE, PJ_TRUE, df, strm,
+                                             &strm->dgraph[ngraph]);
+            }
+
+            if (status != PJ_SUCCESS)
+                goto on_error;
+            pj_memcpy(param, &strm->param, sizeof(*param));
+        }
 	
 	vfd = pjmedia_format_get_video_format_detail(&param->fmt, PJ_TRUE);
 	strm->cap_ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
@@ -757,7 +815,8 @@ static pj_status_t dshow_factory_create_stream(
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {
         status = create_filter_graph(PJMEDIA_DIR_RENDER, param->rend_id,
-                                     df, strm, &strm->dgraph[ngraph++]);
+                                     PJ_FALSE, PJ_FALSE, df, strm,
+                                     &strm->dgraph[ngraph++]);
         if (status != PJ_SUCCESS)
             goto on_error;
     }
@@ -894,35 +953,15 @@ static pj_status_t dshow_stream_stop(pjmedia_vid_dev_stream *strm)
     return PJ_SUCCESS;
 }
 
-
 /* API: Destroy stream. */
 static pj_status_t dshow_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     struct dshow_stream *stream = (struct dshow_stream*)strm;
-    unsigned i;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     dshow_stream_stop(strm);
-
-    for (i = 0; i < 2; i++) {
-        if (stream->dgraph[i].source_filter) {
-            IBaseFilter_Release(stream->dgraph[i].source_filter);
-            stream->dgraph[i].source_filter = NULL;
-        }
-        if (stream->dgraph[i].rend_filter) {
-            IBaseFilter_Release(stream->dgraph[i].rend_filter);
-            stream->dgraph[i].rend_filter = NULL;
-        }
-        if (stream->dgraph[i].media_filter) {
-            IMediaFilter_Release(stream->dgraph[i].media_filter);
-            stream->dgraph[i].media_filter = NULL;
-        }
-        if (stream->dgraph[i].filter_graph) {
-            IFilterGraph_Release(stream->dgraph[i].filter_graph);
-            stream->dgraph[i].filter_graph = NULL;
-        }
-    }
+    destroy_filter_graph(stream);
 
     pj_pool_release(stream->pool);
 
