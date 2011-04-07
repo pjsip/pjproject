@@ -585,6 +585,10 @@ static pj_bool_t mod_ua_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_FALSE;
     }
 
+    /* Incoming REGISTER may have tags in it */
+    if (rdata->msg_info.msg->line.req.method.id == PJSIP_REGISTER_METHOD)
+	return PJ_FALSE;
+
 retry_on_deadlock:
 
     /* Lock user agent before looking up the dialog hash table. */
