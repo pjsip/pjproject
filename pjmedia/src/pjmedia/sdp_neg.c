@@ -261,6 +261,31 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_get_neg_local( pjmedia_sdp_neg *neg,
     return PJ_SUCCESS;
 }
 
+static pjmedia_sdp_media *sdp_media_clone_deactivate(
+				    pj_pool_t *pool,
+                                    const pjmedia_sdp_media *rem_med,
+                                    const pjmedia_sdp_media *local_med,
+                                    const pjmedia_sdp_session *local_sess)
+{
+    pjmedia_sdp_media *res;
+
+    res = pjmedia_sdp_media_clone_deactivate(pool, rem_med);
+    if (!res)
+	return NULL;
+
+    if (!res->conn && (!local_sess || !local_sess->conn)) {
+	if (local_med && local_med->conn)
+	    res->conn = pjmedia_sdp_conn_clone(pool, local_med->conn);
+	else {
+	    res->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+	    res->conn->net_type = pj_str("IN");
+	    res->conn->addr_type = pj_str("IP4");
+	    res->conn->addr = pj_str("127.0.0.1");
+	}
+    }
+
+    return res;
+}
 
 /*
  * Modify local SDP and wait for remote answer.
@@ -341,7 +366,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_modify_local_offer( pj_pool_t *pool,
 	if (!found) {
 	    pjmedia_sdp_media *m;
 
-	    m = pjmedia_sdp_media_clone_deactivate(pool, om);
+	    m = sdp_media_clone_deactivate(pool, om, om, local);
 
 	    pj_array_insert(new_offer->media, sizeof(new_offer->media[0]),
 			    new_offer->media_count++, oi, &m);
@@ -1054,7 +1079,8 @@ static pj_status_t process_answer(pj_pool_t *pool,
 	    pjmedia_sdp_media *am;
 
 	    /* Generate matching-but-disabled-media for the answer */
-	    am = pjmedia_sdp_media_clone_deactivate(pool, offer->media[omi]);
+	    am = sdp_media_clone_deactivate(pool, offer->media[omi],
+	                                    offer->media[omi], offer);
 	    answer->media[answer->media_count++] = am;
 	    ++ami;
 
@@ -1116,7 +1142,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 
     /* If offer has zero port, just clone the offer */
     if (offer->desc.port == 0) {
-	answer = pjmedia_sdp_media_clone_deactivate(pool, offer);
+	answer = sdp_media_clone_deactivate(pool, offer, preanswer, NULL);
 	*p_answer = answer;
 	return PJ_SUCCESS;
     }
@@ -1429,7 +1455,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 	     * ignore anything in the media once it sees that the port
 	     * number is zero.
 	     */
-	    am = pjmedia_sdp_media_clone_deactivate(pool, om);
+	    am = sdp_media_clone_deactivate(pool, om, om, answer);
 	} else {
 	    /* The answer is in am */
 	    pj_assert(am != NULL);
