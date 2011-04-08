@@ -135,6 +135,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pj_status_t status;
     unsigned ptime_usec;
     pjmedia_vid_param vparam;
+    pjmedia_conversion_param conv_param;
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -263,7 +264,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	vparam.fmt.det.vid.fps.denum != prm->vidparam.fmt.det.vid.fps.denum*/)
     {
 	/* Yes, we need converter */
-	pjmedia_conversion_param conv_param;
 	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
 
@@ -287,12 +287,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	}
 
 	/* Allocate buffer for conversion */
-	vfi = pjmedia_get_video_format_info(NULL, prm->vidparam.fmt.id);
+	vfi = pjmedia_get_video_format_info(NULL, conv_param.dst.id);
 	if (!vfi)
 	    return PJMEDIA_EBADFMT;
 
 	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = prm->vidparam.fmt.det.vid.size;
+	vafp.size = conv_param.dst.det.vid.size;
 	status = vfi->apply_fmt(vfi, &vafp);
 	if (status != PJ_SUCCESS)
 	    return PJMEDIA_EBADFMT;
@@ -352,23 +352,31 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
 
-	vfi = pjmedia_get_video_format_info(NULL, vparam.fmt.id);
+	vfi = pjmedia_get_video_format_info(NULL, vp->cap_conv?
+					    conv_param.src.id:
+					    vparam.fmt.id);
 	if (!vfi) {
 	    status = PJ_ENOTFOUND;
 	    goto on_error;
 	}
 
 	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = vparam.fmt.det.vid.size;
+	vafp.size = (vp->cap_conv? conv_param.src.det.vid.size:
+		     vparam.fmt.det.vid.size);
 	status = vfi->apply_fmt(vfi, &vafp);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
 	if (vp->dir & PJMEDIA_DIR_ENCODING) {
 	    vp->enc_frm_buf = PJ_POOL_ZALLOC_T(pool, pjmedia_frame);
-            vp->enc_frm_buf_size = vafp.framebytes;
-	    vp->enc_frm_buf->buf = pj_pool_alloc(pool, vafp.framebytes);
-	    vp->enc_frm_buf->size = vafp.framebytes;
+	    if (vp->stream_role == ROLE_ACTIVE && vp->cap_conv) {
+		vp->enc_frm_buf_size = vp->cap_conv_buf_size;
+		vp->enc_frm_buf->buf = vp->cap_conv_buf;
+	    } else {
+		vp->enc_frm_buf_size = vafp.framebytes;
+		vp->enc_frm_buf->buf = pj_pool_alloc(pool, vafp.framebytes);
+	    }
+	    vp->enc_frm_buf->size = vp->enc_frm_buf_size;
 	    vp->enc_frm_buf->type = PJMEDIA_FRAME_TYPE_NONE;
 
 	    status = pj_mutex_create_simple(pool, vp->dev_name.ptr,
@@ -673,7 +681,6 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
 
     //save_rgb_frame(vp->cap_size.w, vp->cap_size.h, vp->enc_frm_buf);
 
-    frame = *vp->enc_frm_buf;
     if (vp->cap_conv) {
 	frame.buf  = vp->cap_conv_buf;
 	frame.size = vp->cap_conv_buf_size;
@@ -683,7 +690,9 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
 	    return;
     }
 
-    status = pjmedia_port_put_frame(vp->client_port, &frame);
+    status = pjmedia_port_put_frame(vp->client_port, (vp->cap_conv?
+						      &frame:
+						      vp->enc_frm_buf));
 }
 
 static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
@@ -693,6 +702,7 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
      */
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     pj_status_t status;
+    pjmedia_frame frame;
     unsigned frame_ts = vp->rend_clocksrc.clock_rate / 1000 *
                         vp->rend_clocksrc.ptime_usec / 1000;
 
@@ -814,16 +824,18 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
     if (status != PJ_SUCCESS)
         return;
 
-    status = pjmedia_vid_dev_stream_put_frame(vp->strm, vp->dec_frm_buf);
-}
+    if (vp->cap_conv) {
+	frame.buf  = vp->cap_conv_buf;
+	frame.size = vp->cap_conv_buf_size;
+	status = pjmedia_converter_convert(vp->cap_conv,
+					   vp->dec_frm_buf, &frame);
+	if (status != PJ_SUCCESS)
+	    return;
+    }
 
-static void copy_frame(pjmedia_frame *dst, const pjmedia_frame *src)
-{
-    PJ_ASSERT_ON_FAIL(dst->size >= src->size, return);
-
-    pj_memcpy(dst, src, sizeof(*src));
-    pj_memcpy(dst->buf, src->buf, src->size);
-    dst->size = src->size;
+    status = pjmedia_vid_dev_stream_put_frame(vp->strm, (vp->cap_conv?
+							 &frame:
+							 vp->dec_frm_buf));
 }
 
 static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
@@ -833,7 +845,6 @@ static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     pjmedia_frame frame_;
 
-    frame_ = *frame;
     if (vp->cap_conv) {
 	pj_status_t status;
 
@@ -843,18 +854,21 @@ static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
 					   frame, &frame_);
 	if (status != PJ_SUCCESS)
 	    return status;
+	frame = &frame_;
     }
 
     if (vp->role==ROLE_ACTIVE) {
         if (vp->client_port)
-	    return pjmedia_port_put_frame(vp->client_port, &frame_);
+	    return pjmedia_port_put_frame(vp->client_port, frame);
     } else {
-	pj_mutex_lock(vp->enc_frm_mutex);
-	copy_frame(vp->enc_frm_buf, &frame_);
-	pj_mutex_unlock(vp->enc_frm_mutex);
+	if (!vp->cap_conv) {
+	    pj_mutex_lock(vp->enc_frm_mutex);
+	    pjmedia_frame_copy(vp->enc_frm_buf, frame);
+	    pj_mutex_unlock(vp->enc_frm_mutex);
+	}
     }
     if (vp->strm_cb.capture_cb)
-        return (*vp->strm_cb.capture_cb)(stream, vp->strm_cb_data, &frame_);
+        return (*vp->strm_cb.capture_cb)(stream, vp->strm_cb_data, frame);
     return PJ_SUCCESS;
 }
 
@@ -876,7 +890,7 @@ static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
         }
     } else {
 	pj_mutex_lock(vp->dec_frm_mutex);
-	copy_frame(frame, vp->dec_frm_buf);
+	pjmedia_frame_copy(frame, vp->dec_frm_buf);
 	pj_mutex_unlock(vp->dec_frm_mutex);
     }
     if (vp->strm_cb.render_cb)
@@ -900,12 +914,25 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
 {
     struct vid_pasv_port *vpp = (struct vid_pasv_port*)this_port;
     pjmedia_vid_port *vp = vpp->vp;
+    pjmedia_frame frame_;
+    
+    if (vp->cap_conv) {
+	pj_status_t status;
+	
+	frame_.buf  = vp->cap_conv_buf;
+	frame_.size = vp->cap_conv_buf_size;
+	status = pjmedia_converter_convert(vp->cap_conv,
+					   frame, &frame_);
+	if (status != PJ_SUCCESS)
+	    return status;
+	frame = &frame_;
+    }    
 
     if (vp->stream_role==ROLE_PASSIVE) {
 	return pjmedia_vid_dev_stream_put_frame(vp->strm, frame);
     } else {
 	pj_mutex_lock(vp->dec_frm_mutex);
-	copy_frame(vp->dec_frm_buf, frame);
+	pjmedia_frame_copy(vp->dec_frm_buf, frame);
 	pj_mutex_unlock(vp->dec_frm_mutex);
     }
 
@@ -917,26 +944,27 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
 {
     struct vid_pasv_port *vpp = (struct vid_pasv_port*)this_port;
     pjmedia_vid_port *vp = vpp->vp;
+    pj_status_t status;
 
     if (vp->stream_role==ROLE_PASSIVE) {
-	if (vp->cap_conv) {
-	    pj_status_t status;
-
+	if (vp->cap_conv)
 	    vp->enc_frm_buf->size = vp->enc_frm_buf_size;
-	    status = pjmedia_vid_dev_stream_get_frame(vp->strm, vp->enc_frm_buf);
-	    if (status != PJ_SUCCESS)
-		return status;
+	status = pjmedia_vid_dev_stream_get_frame(vp->strm,
+						  (vp->cap_conv?
+						   vp->enc_frm_buf:
+						   frame));
+	if (status != PJ_SUCCESS)
+	    return status;
 
+	if (vp->cap_conv) {
 	    status = pjmedia_converter_convert(vp->cap_conv,
 					       vp->enc_frm_buf, frame);
 	    if (status != PJ_SUCCESS)
 		return status;
-	} else {
-	    return pjmedia_vid_dev_stream_get_frame(vp->strm, frame);
-	}
+	}	
     } else {
 	pj_mutex_lock(vp->enc_frm_mutex);
-	copy_frame(frame, vp->enc_frm_buf);
+	pjmedia_frame_copy(frame, vp->enc_frm_buf);
 	pj_mutex_unlock(vp->enc_frm_mutex);
     }
 

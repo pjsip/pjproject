@@ -105,13 +105,29 @@ typedef struct pjmedia_frame_ext_subframe {
 
 #pragma pack()
 
+/**
+ * Copy one frame to another. If the destination frame's size is smaller than
+ * the source frame's, the destination buffer will be truncated.
+ *
+ * @param src		    Source frame.
+ * @param dst		    Destination frame.
+ */
+PJ_INLINE(void) pjmedia_frame_copy(pjmedia_frame *dst,
+				   const pjmedia_frame *src)
+{
+    dst->type = src->type;
+    dst->timestamp = src->timestamp;
+    dst->bit_info = src->bit_info;
+    dst->size = (dst->size < src->size? dst->size: src->size);
+    pj_memcpy(dst->buf, src->buf, dst->size);
+}
 
 /**
  * Append one subframe to #pjmedia_frame_ext.
  *
  * @param frm		    The #pjmedia_frame_ext.
  * @param src		    Subframe data.
- * @param bitlen	    Lenght of subframe, in bits.
+ * @param bitlen	    Length of subframe, in bits.
  * @param samples_cnt	    Number of audio samples in subframe.
  */
 PJ_INLINE(void) pjmedia_frame_ext_append_subframe(pjmedia_frame_ext *frm,

@@ -733,7 +733,8 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 	goto on_return;
     }
 
-    if (frame->size==0 || frame->buf==NULL)
+    if (frame->size==0 || frame->buf==NULL ||
+	frame->size < stream->vafp.framebytes)
 	goto on_return;
 
     if (stream->surf) {
@@ -745,7 +746,8 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 	    }
 	}
 	
-	pj_memcpy(stream->surf->pixels, frame->buf, frame->size);
+	pj_memcpy(stream->surf->pixels, frame->buf,
+		  stream->vafp.framebytes);
 	
 	if (SDL_MUSTLOCK(stream->surf)) {
 	    SDL_UnlockSurface(stream->surf);
