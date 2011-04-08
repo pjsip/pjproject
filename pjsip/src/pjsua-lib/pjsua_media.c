@@ -1266,12 +1266,15 @@ static void sort_media(const pjmedia_sdp_session *sdp,
     /* Score each media */
     for (i=0; i<sdp->media_count && count<PJSUA_MAX_CALL_MEDIA; ++i) {
 	const pjmedia_sdp_media *m = sdp->media[i];
+	const pjmedia_sdp_conn *c;
 
 	/* Skip different media */
 	if (pj_stricmp(&m->desc.media, type) != 0) {
 	    score[count++] = -22000;
 	    continue;
 	}
+
+	c = m->conn? m->conn : sdp->conn;
 
 	/* Supported transports */
 	if (pj_stricmp2(&m->desc.transport, "RTP/SAVP")==0) {
@@ -1305,8 +1308,12 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 	    score[i] -= 10;
 
 	/* Is media inactive? */
-	if (pjmedia_sdp_media_find_attr2(m, "inactive", NULL))
-	    score[i] -= 10;
+	if (pjmedia_sdp_media_find_attr2(m, "inactive", NULL) ||
+	    pj_strcmp2(&c->addr, "0.0.0.0") == 0)
+	{
+	    //score[i] -= 10;
+	    score[i] -= 1;
+	}
 
 	++count;
     }
@@ -2300,7 +2307,7 @@ static pj_status_t video_channel_update(pjsua_call_media *call_med,
 	}
 
 	/* Setup encoding direction */
-	if (si->dir & PJMEDIA_DIR_ENCODING) {
+	if (si->dir & PJMEDIA_DIR_ENCODING && !call->local_hold) {
 	    pjmedia_vid_port_param vport_param;
 
 	    status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
