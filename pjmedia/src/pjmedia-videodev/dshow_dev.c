@@ -698,7 +698,7 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
 
     hr = IFilterGraph_ConnectDirect(graph->filter_graph, srcpin, sinkpin,
                                     mediatype);
-    if (SUCCEEDED(hr)) {
+    if (SUCCEEDED(hr) && (use_def_size || use_def_fps)) {
         pjmedia_format_init_video(&strm->param.fmt, strm->param.fmt.id,
                                   video_info->bmiHeader.biWidth,
                                   video_info->bmiHeader.biHeight,
