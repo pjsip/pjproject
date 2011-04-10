@@ -118,17 +118,6 @@ struct pjmedia_vid_stream
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
     unsigned		     frame_ts_len;  /**< Frame length in timestamp. */
 
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-    pj_uint32_t		     rtcp_xr_last_tx;  /**< RTCP XR tx time 
-					            in timestamp.           */
-    pj_uint32_t		     rtcp_xr_interval; /**< Interval, in timestamp. */
-    pj_sockaddr		     rtcp_xr_dest;     /**< Additional remote RTCP XR 
-						    dest. If sin_family is 
-						    zero, it will be ignored*/
-    unsigned		     rtcp_xr_dest_len; /**< Length of RTCP XR dest
-					            address		    */
-#endif
-
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
 						    codec-VAD mechanism is
@@ -402,55 +391,6 @@ static void check_tx_rtcp(pjmedia_vid_stream *stream, pj_uint32_t timestamp)
 
 	stream->rtcp_last_tx = timestamp;
     }
-
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-    if (stream->rtcp.xr_enabled) {
-
-	if (stream->rtcp_xr_last_tx == 0) {
-    	
-	    stream->rtcp_xr_last_tx = timestamp;
-
-	} else if (timestamp - stream->rtcp_xr_last_tx >= 
-		   stream->rtcp_xr_interval)
-	{
-	    int i;
-	    pjmedia_jb_state jb_state;
-	    void *rtcp_pkt;
-	    int len;
-
-	    /* Update RTCP XR with current JB states */
-	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
-    	    
-	    i = jb_state.avg_delay;
-	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-					PJMEDIA_RTCP_XR_INFO_JB_NOM,
-					i);
-
-	    i = jb_state.max_delay;
-	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-					PJMEDIA_RTCP_XR_INFO_JB_MAX,
-					i);
-
-	    /* Build RTCP XR packet */
-	    pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
-				       &rtcp_pkt, &len);
-
-	    /* Send the RTCP XR to remote address */
-	    pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
-
-	    /* Send the RTCP XR to third-party destination if specified */
-	    if (stream->rtcp_xr_dest_len) {
-		pjmedia_transport_send_rtcp2(stream->transport, 
-					     &stream->rtcp_xr_dest,
-					     stream->rtcp_xr_dest_len, 
-					     rtcp_pkt, len);
-	    }
-
-	    /* Update last tx RTCP XR */
-	    stream->rtcp_xr_last_tx = timestamp;
-	}
-    }
-#endif
 }
 
 /* Build RTCP SDES packet */
@@ -772,7 +712,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 	/* Update RTP timestamp */
 	pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 1, 0,
-			       rtp_ts_len, &rtphdr, &rtphdrlen);
+			       rtp_ts_len,  (const void**)&rtphdr, &rtphdrlen);
         return status;
     }
 
@@ -796,7 +736,8 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 	    /* Update RTP timestamp */
 	    pjmedia_rtp_encode_rtp(&channel->rtp, channel->pt, 1, 0,
-				   rtp_ts_len, &rtphdr, &rtphdrlen);
+				   rtp_ts_len,  (const void**)&rtphdr,
+				   &rtphdrlen);
             return status;
         }
 
@@ -922,7 +863,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 		/* We use jbuf_peek_frame() as it will returns the pointer of
 		 * the payload (no buffer and memcpy needed), just as we need.
 		 */
-		pjmedia_jbuf_peek_frame(stream->jb, i, &p,
+		pjmedia_jbuf_peek_frame(stream->jb, i, (const void**)&p,
 					&psize, &ptype, NULL, NULL, NULL);
 
 		if (ptype != PJMEDIA_JB_NORMAL_FRAME) {
@@ -1423,44 +1364,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
     unsigned len;
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-    /* Send RTCP XR on stream destroy */
-    if (stream->rtcp.xr_enabled) {
-	int i;
-	pjmedia_jb_state jb_state;
-	void *rtcp_pkt;
-	int len;
-
-	/* Update RTCP XR with current JB states */
-	pjmedia_jbuf_get_state(stream->jb, &jb_state);
-    	    
-	i = jb_state.avg_delay;
-	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-				    PJMEDIA_RTCP_XR_INFO_JB_NOM,
-				    i);
-
-	i = jb_state.max_delay;
-	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-				    PJMEDIA_RTCP_XR_INFO_JB_MAX,
-				    i);
-
-	/* Build RTCP XR packet */
-	pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
-				   &rtcp_pkt, &len);
-
-	/* Send the RTCP XR to remote address */
-	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
-	
-	/* Send the RTCP XR to third-party destination if specified */
-	if (stream->rtcp_xr_dest_len) {
-	    pjmedia_transport_send_rtcp2(stream->transport, 
-					 &stream->rtcp_xr_dest,
-					 stream->rtcp_xr_dest_len, 
-					 rtcp_pkt, len);
-	}
-    }
-#endif
-
     /* Send RTCP BYE */
     if (stream->enc && stream->transport) {
 	len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->buf,
@@ -1575,25 +1478,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_reset_stat(pjmedia_vid_stream *stream)
     return PJ_SUCCESS;
 }
 
-
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-/*
- * Get stream extended statistics.
- */
-PJ_DEF(pj_status_t) pjmedia_stream_get_stat_xr(
-					    const pjmedia_vid_stream *stream,
-					    pjmedia_rtcp_xr_stat *stat)
-{
-    PJ_ASSERT_RETURN(stream && stat, PJ_EINVAL);
-
-    if (stream->rtcp.xr_enabled) {
-	pj_memcpy(stat, &stream->rtcp.xr_session.stat,
-		  sizeof(pjmedia_rtcp_xr_stat));
-	return PJ_SUCCESS;
-    }
-    return PJ_ENOTFOUND;
-}
-#endif
 
 /*
  * Get jitter buffer state.
@@ -1843,11 +1727,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
     /* Reset: */
 
     pj_bzero(si, sizeof(*si));
-
-#if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
-    /* Set default RTCP XR enabled/disabled */
-    si->rtcp_xr_enabled = PJ_TRUE;
-#endif
 
     /* Media type: */
     si->type = PJMEDIA_TYPE_VIDEO;
