@@ -202,11 +202,6 @@ static pj_status_t create_stream( pj_pool_t *pool,
     if (codec_param)
         info.codec_param = codec_param;
     
-#if PJMEDIA_HAS_RTCP_XR && PJMEDIA_STREAM_ENABLE_XR
-    /* Set default RTCP XR enabled/disabled */
-    info.rtcp_xr_enabled = PJ_TRUE;
-#endif
-
     /* Copy remote address */
     pj_memcpy(&info.rem_addr, rem_addr, sizeof(pj_sockaddr_in));
 

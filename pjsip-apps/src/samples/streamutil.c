@@ -897,14 +897,14 @@ static void print_stream_stat(pjmedia_stream *stream,
 	    unsigned jmin, jmax, jmean, jdev;
 
 	    SAMPLES_TO_USEC(jmin, xr_stat.rx.stat_sum.jitter.min, 
-			    port->info.clock_rate);
+			    port->info.fmt.det.aud.clock_rate);
 	    SAMPLES_TO_USEC(jmax, xr_stat.rx.stat_sum.jitter.max, 
-			    port->info.clock_rate);
+			    port->info.fmt.det.aud.clock_rate);
 	    SAMPLES_TO_USEC(jmean, xr_stat.rx.stat_sum.jitter.mean, 
-			    port->info.clock_rate);
+			    port->info.fmt.det.aud.clock_rate);
 	    SAMPLES_TO_USEC(jdev, 
 			   pj_math_stat_get_stddev(&xr_stat.rx.stat_sum.jitter),
-			   port->info.clock_rate);
+			   port->info.fmt.det.aud.clock_rate);
 	    sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
 		    jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
 	} else
@@ -960,14 +960,14 @@ static void print_stream_stat(pjmedia_stream *stream,
 	    unsigned jmin, jmax, jmean, jdev;
 
 	    SAMPLES_TO_USEC(jmin, xr_stat.tx.stat_sum.jitter.min, 
-			    port->info.clock_rate);
+			    port->info.fmt.det.aud.clock_rate);
 	    SAMPLES_TO_USEC(jmax, xr_stat.tx.stat_sum.jitter.max, 
-			    port->info.clock_rate);
+			    port->info.fmt.det.aud.clock_rate);
 	    SAMPLES_TO_USEC(jmean, xr_stat.tx.stat_sum.jitter.mean, 
-			    port->info.clock_rate);
+			    port->info.fmt.det.aud.clock_rate);
 	    SAMPLES_TO_USEC(jdev, 
 			   pj_math_stat_get_stddev(&xr_stat.tx.stat_sum.jitter),
-			   port->info.clock_rate);
+			   port->info.fmt.det.aud.clock_rate);
 	    sprintf(jitter, "%7.3f %7.3f %7.3f %7.3f", 
 		    jmin/1000.0, jmean/1000.0, jmax/1000.0, jdev/1000.0);
 	} else
