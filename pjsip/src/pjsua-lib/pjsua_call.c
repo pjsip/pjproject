@@ -2553,7 +2553,9 @@ static void dump_media_session(const char *indent,
 	p += len; *p++ = '\n'; *p = '\0'
 
 
-	do {
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    pjmedia_stream_info info;
+	    char last_update[64];
 	    char loss[16], dup[16];
 	    char jitter[80];
 	    char toh[80];
@@ -2562,14 +2564,22 @@ static void dump_media_session(const char *indent,
 	    char r_factor[16], ext_r_factor[16], mos_lq[16], mos_cq[16];
 	    pjmedia_rtcp_xr_stat xr_stat;
 	    unsigned clock_rate;
+	    pj_time_val now;
 
-	    if (pjmedia_session_get_stream_stat_xr(session, i, &xr_stat) != 
-		PJ_SUCCESS)
+	    if (pjmedia_stream_get_stat_xr(call_med->strm.a.stream,
+	                                   &xr_stat) != PJ_SUCCESS)
 	    {
-		break;
+		continue;
+	    }
+
+	    if (pjmedia_stream_get_info(call_med->strm.a.stream, &info)
+		    != PJ_SUCCESS)
+	    {
+		continue;
 	    }
 
 	    clock_rate = info.fmt.clock_rate;
+	    pj_gettimeofday(&now);
 
 	    len = pj_ansi_snprintf(p, end-p, "\n%s  Extended reports:", indent);
 	    VALIDATE_PRINT_BUF();
@@ -2929,7 +2939,7 @@ static void dump_media_session(const char *indent,
 		    pj_math_stat_get_stddev(&xr_stat.rtt) / 1000.0
 		   );
 	    VALIDATE_PRINT_BUF();
-	} while(0);
+	} /* if audio */;
 #endif
 
     }
