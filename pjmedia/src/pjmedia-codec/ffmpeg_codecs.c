@@ -260,6 +260,15 @@ ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
+/*
+    {
+	{PJMEDIA_FORMAT_H263, PJMEDIA_RTP_PT_H263, {"H263",4}},
+	PJMEDIA_FORMAT_H263,	1000000,    2000000,
+	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
+	{2, { {{"CIF",3},   {"1",1}}, 
+	      {{"QCIF",4},  {"1",1}}, } },
+    },
+*/
     {
 	{PJMEDIA_FORMAT_H263,	PJMEDIA_RTP_PT_H263,	{"H263",4}},
     },
@@ -350,9 +359,11 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	/* Libx264 rejects the "broken" ffmpeg defaults, so just change some */
 	ctx->me_range = 16;
 	ctx->max_qdiff = 4;
-	ctx->qmin = 10;
-	ctx->qmax = 51;
+	ctx->qmin = 20;
+	ctx->qmax = 32;
 	ctx->qcompress = 0.6f;
+
+	ctx->rtp_payload_size = ff->param.enc_mtu;
     }
 
     if (ff->param.dir & PJMEDIA_DIR_DECODING) {
@@ -788,7 +799,8 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
 
     /* Decoded format */
     pjmedia_format_init_video(&attr->dec_fmt, desc->info.dec_fmt_id[0],
-                              352, 288, 30000, 1001);
+                              //352, 288, 30000, 1001);
+                              720, 576, 30000, 1001);
 
     /* Decoding fmtp */
     attr->dec_fmtp = desc->dec_fmtp;
@@ -1248,10 +1260,14 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
     PJ_ASSERT_RETURN(ff->enc_ctx, PJ_EINVALIDOP);
 
     avcodec_get_frame_defaults(&avframe);
+
+    // Let ffmpeg manage the timestamps
+    /*
     src_timebase.num = 1;
     src_timebase.den = ff->desc->info.clock_rate;
     avframe.pts = av_rescale_q(input->timestamp.u64, src_timebase,
 			       ff->enc_ctx->time_base);
+    */
     
     for (i[0] = 0; i[0] < ff->enc_vfi->plane_cnt; ++i[0]) {
         avframe.data[i[0]] = p;
