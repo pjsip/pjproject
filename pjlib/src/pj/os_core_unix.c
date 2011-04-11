@@ -1350,7 +1350,6 @@ PJ_DEF(pj_status_t) pj_mutex_destroy(pj_mutex_t *mutex)
     if (status == 0)
 	return PJ_SUCCESS;
     else {
-	pj_assert(!"Error destroying pthread_mutex");
 	return PJ_RETURN_OS_ERROR(status);
     }
 #else
