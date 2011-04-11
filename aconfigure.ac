@@ -918,16 +918,38 @@ if test "x$enable_ipp" != "xno"; then
 	SAVED_LIBS="$LIBS"
 
 	IPP_CFLAGS="-I$IPPROOT/include"
-	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippsr${IPP_SUFFIX} -lippcore${IPP_SUFFIX}"
+	IPP_LIBS="-lippsc${IPP_SUFFIX} -lipps${IPP_SUFFIX} -lippcore${IPP_SUFFIX}"
 
+#
 	# Some differences between Mac OS X and Linux
 	case $target in 
 	    *darwin* )
 		IPP_LDFLAGS="-L$IPPROOT/Libraries -L$IPPROOT/lib"
 		;;
 	    *)
-		IPP_LDFLAGS="-L$IPPROOT/sharedlib"
-		IPP_LIBS="$IPP_LIBS -lguide"
+	    	# Find out where the libraries live.
+		IPP7_ARCH=""
+		if test -d $IPPROOT/lib/intel64; then
+		   IPP7_ARCH="intel64"
+		elif test -d $IPPROOT/lib/ia32; then
+		   IPP7_ARCH="ia32"
+		elif test -d $IPPROOT/lib/mic; then
+		   IPP7_ARCH="mic"
+		fi
+
+		if test -z "$IPP7_ARCH"; then
+		   # IPP6 (and possibly below)
+		   IPP_LDFLAGS="-L$IPPROOT/sharedlib"
+		   IPP_LIBS="$IPP_LIBS  -lippsr${IPP_SUFFIX} -lguide"
+		else
+		   # IPP7
+		   if ! test -d $IPPROOT/../compiler; then
+			AC_MSG_ERROR([Cannot find $IPPROOT/../compiler directory. Please set IPPROOT variable correctly])
+		   fi
+		   IPP_CFLAGS="$IPP_CFLAGS"
+		   IPP_LDFLAGS="-L$IPPROOT/lib/intel64 -L$IPPROOT/../compiler/lib/$IPP7_ARCH"
+		   IPP_LIBS="$IPP_LIBS -liomp5"
+		fi
 		;;
 	esac
 
