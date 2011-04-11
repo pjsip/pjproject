@@ -181,6 +181,30 @@ PJ_DECL(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
 					 unsigned options,
 					 pjmedia_transport **p_tp);
 
+/**
+ * The same as #pjmedia_ice_create2() with additional \a user_data param.
+ *
+ * @param endpt		The media endpoint.
+ * @param name		Optional name to identify this ICE media transport
+ *			for logging purposes.
+ * @param comp_cnt	Number of components to be created.
+ * @param cfg		Pointer to configuration settings.
+ * @param cb		Optional structure containing ICE specific callbacks.
+ * @param options	Options, see #pjmedia_transport_ice_options.
+ * @param user_data	User data to be attached to the transport.
+ * @param p_tp		Pointer to receive the media transport instance.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
+					 const char *name,
+					 unsigned comp_cnt,
+					 const pj_ice_strans_cfg *cfg,
+					 const pjmedia_ice_cb *cb,
+					 unsigned options,
+					 void *user_data,
+					 pjmedia_transport **p_tp);
+
 PJ_END_DECL
 
 
