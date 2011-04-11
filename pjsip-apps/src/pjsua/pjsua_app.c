@@ -137,7 +137,13 @@ static const char      *stdout_refresh_text = "STDOUT_REFRESH";
 static pj_bool_t	stdout_refresh_quit = PJ_FALSE;
 static pj_str_t		uri_arg;
 
-static char some_buf[1024 * 3];
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+#   define SOME_BUF_SIZE	(1024 * 10)
+#else
+#   define SOME_BUF_SIZE	(1024 * 3)
+#endif
+
+static char some_buf[SOME_BUF_SIZE];
 
 #ifdef STEREO_DEMO
 static void stereo_demo();
@@ -195,6 +201,7 @@ static void usage(void)
     puts  ("  --color             Use colorful logging (default yes on Win32)");
     puts  ("  --no-color          Disable colorful logging");
     puts  ("  --light-bg          Use dark colors for light background (default is dark bg)");
+    puts  ("  --no-stderr         Disable stderr");
 
     puts  ("");
     puts  ("SIP Account options:");
@@ -521,7 +528,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     int c;
     int option_index;
     enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
-	   OPT_LOG_APPEND, OPT_COLOR, OPT_NO_COLOR, OPT_LIGHT_BG,
+	   OPT_LOG_APPEND, OPT_COLOR, OPT_NO_COLOR, OPT_LIGHT_BG, OPT_NO_STDERR,
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
 	   OPT_LOCAL_PORT, OPT_IP_ADDR, OPT_PROXY, OPT_OUTBOUND_PROXY, 
 	   OPT_REGISTRAR, OPT_REG_TIMEOUT, OPT_PUBLISH, OPT_ID, OPT_CONTACT,
@@ -566,6 +573,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "color",	0, 0, OPT_COLOR},
 	{ "no-color",	0, 0, OPT_NO_COLOR},
 	{ "light-bg",		0, 0, OPT_LIGHT_BG},
+	{ "no-stderr",  0, 0, OPT_NO_STDERR},
 	{ "help",	0, 0, OPT_HELP},
 	{ "version",	0, 0, OPT_VERSION},
 	{ "clock-rate",	1, 0, OPT_CLOCK_RATE},
@@ -768,6 +776,10 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    pj_log_set_color(4, 0);
 	    pj_log_set_color(5, 0);
 	    pj_log_set_color(77, 0);
+	    break;
+
+	case OPT_NO_STDERR:
+	    freopen("/dev/null", "w", stderr);
 	    break;
 
 	case OPT_HELP:
