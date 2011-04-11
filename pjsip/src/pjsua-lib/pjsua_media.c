@@ -1720,6 +1720,13 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	    if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
 	    return status;
 	}
+
+	/* Copy c= line of the first media to session level,
+	 * if there's none.
+	 */
+	if (sdp->conn == NULL) {
+	    sdp->conn = pjmedia_sdp_conn_clone(pool, m->conn);
+	}
     }
 
     /* Add NAT info in the SDP */
