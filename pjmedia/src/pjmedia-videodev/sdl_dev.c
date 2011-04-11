@@ -126,6 +126,8 @@ struct sdl_stream
     SDL_Overlay			*overlay;           /**< YUV overlay.       */
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     GLuint			 texture;
+    void			*tex_buf;
+    pj_size_t			 tex_buf_size;
 #endif
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
     NSAutoreleasePool		*apool;
@@ -173,6 +175,7 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 static pj_status_t sdl_stream_start(pjmedia_vid_dev_stream *strm);
 static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm);
+static void draw_gl(struct sdl_stream *stream, void *tex_buf);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -447,6 +450,13 @@ static int sdlthread(void * data)
 	
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glGenTextures(1, &strm->texture);
+
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+	if (strm->vafp.framebytes > strm->tex_buf_size) {
+	    strm->tex_buf_size = strm->vafp.framebytes;
+	    strm->tex_buf = pj_pool_alloc(strm->pool, strm->vafp.framebytes);
+	}
+#endif
     } else
 #endif
     if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
@@ -513,6 +523,13 @@ on_return:
         SDL_Event sevent;
         pjmedia_vid_event pevent;
 
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+#if defined(PJ_WIN32) && PJ_WIN32 != 0	
+	if (strm->param.rend_id == OPENGL_DEV_IDX) {
+	    draw_gl(strm, strm->tex_buf);
+	}
+#endif
+#endif
         /**
          * The event polling must be placed in the same thread that
          * call SDL_SetVideoMode(). Please consult the official doc of
@@ -715,6 +732,25 @@ on_return:
     return strm->status;
 }
 
+static void draw_gl(struct sdl_stream *stream, void *tex_buf)
+{
+    if (stream->texture) {
+	glBindTexture(GL_TEXTURE_2D, stream->texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+		     stream->rect.w, stream->rect.h, 0,
+		     GL_RGBA, GL_UNSIGNED_BYTE, tex_buf);
+	glBegin(GL_TRIANGLE_STRIP);
+	glTexCoord2f(0, 0); glVertex2i(0, 0);
+	glTexCoord2f(1, 0); glVertex2i(stream->rect.w, 0);
+	glTexCoord2f(0, 1); glVertex2i(0, stream->rect.h);
+	glTexCoord2f(1, 1); glVertex2i(stream->rect.w, stream->rect.h);
+	glEnd();
+	SDL_GL_SwapBuffers();
+    }
+}
+
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 - (pj_status_t)put_frame
 {
@@ -774,25 +810,13 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 	SDL_DisplayYUVOverlay(stream->overlay, &stream->rect);
     }
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-     else if (stream->param.rend_id == OPENGL_DEV_IDX) {
-	if (frame && stream->texture) {
-	    glBindTexture(GL_TEXTURE_2D, stream->texture);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, 
-			    GL_NEAREST);
-	    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-			    GL_NEAREST);
-	    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-			 stream->rect.w, stream->rect.h, 0,
-			 GL_RGBA, GL_UNSIGNED_BYTE, frame->buf);
-	    glBegin(GL_TRIANGLE_STRIP);
-	    glTexCoord2f(0, 0); glVertex2i(0, 0);
-	    glTexCoord2f(1, 0); glVertex2i(stream->rect.w, 0);
-	    glTexCoord2f(0, 1); glVertex2i(0, stream->rect.h);
-	    glTexCoord2f(1, 1);
-	    glVertex2i(stream->rect.w, stream->rect.h);
-	    glEnd();
-	    SDL_GL_SwapBuffers();
-	}
+    else if (stream->param.rend_id == OPENGL_DEV_IDX) {
+#if defined(PJ_WIN32) && PJ_WIN32 != 0
+	pj_assert(frame->size == stream->vafp.framebytes);
+	pj_memcpy(stream->tex_buf, frame->buf, frame->size);
+#else
+	draw_gl(stream, frame->buf);
+#endif
     }
 #endif
 
