@@ -1261,7 +1261,8 @@ static void sort_media(const pjmedia_sdp_session *sdp,
     pj_assert(*p_count >= PJSUA_MAX_CALL_MEDIA);
 
     *p_count = 0;
-    pj_bzero(score, sizeof(score));
+    for (i=0; i<PJSUA_MAX_CALL_MEDIA; ++i)
+	score[i] = 1;
 
     /* Score each media */
     for (i=0; i<sdp->media_count && count<PJSUA_MAX_CALL_MEDIA; ++i) {
