@@ -26,6 +26,14 @@
 
 #define THIS_FILE   "vid_codec_util.c"
 
+/* If this is set to non-zero, H.264 custom negotiation will require
+ * "profile-level-id" and "packetization-mode" to be exact match to
+ * get a successful negotiation. Note that flexible answer (updating
+ * SDP answer to match remote offer) is always active regardless the
+ * value of this macro.
+ */
+#define H264_STRICT_SDP_NEGO	    0
+
 
 /* ITU resolution definition */
 struct mpi_resolution_t
@@ -420,6 +428,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 	    a_fmtp.packetization_mode = o_fmtp.packetization_mode;
 
 	/* Match them now */
+#if H264_STRICT_SDP_NEGO
 	if (a_fmtp.profile_idc != o_fmtp.profile_idc ||
 	    a_fmtp.profile_iop != o_fmtp.profile_iop ||
 	    a_fmtp.level != o_fmtp.level ||
@@ -427,6 +436,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 	{
 	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
 	}
+#else
+	if (a_fmtp.profile_idc != o_fmtp.profile_idc)
+	{
+	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
+	}
+#endif
 
 	/* Update the answer */
 	for (i = 0; i < a_fmtp_raw.cnt; ++i) {
@@ -446,6 +461,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 	    }
 	}
     } else {
+#if H264_STRICT_SDP_NEGO
 	/* Strict negotiation */
 	if (a_fmtp.profile_idc != o_fmtp.profile_idc ||
 	    a_fmtp.profile_iop != o_fmtp.profile_iop ||
@@ -453,6 +469,149 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 	    a_fmtp.packetization_mode != o_fmtp.packetization_mode)
 	{
 	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
+	}
+#else
+	/* Permissive negotiation */
+	if (a_fmtp.profile_idc != o_fmtp.profile_idc)
+	{
+	    return PJMEDIA_SDP_EFORMATNOTEQUAL;
+	}
+#endif
+    }
+
+    return PJ_SUCCESS;
+}
+
+
+/* Declaration of H.264 level info */
+typedef struct h264_level_info_t
+{
+    unsigned id;	    /* Level id.			*/
+    unsigned max_mbps;	    /* Max macroblocks per second.	*/
+    unsigned max_mb;	    /* Max macroblocks.			*/
+    unsigned bitrate;	    /* Max bitrate (kbps).		*/
+    unsigned def_w;	    /* Default width.			*/
+    unsigned def_h;	    /* Default height.			*/
+    unsigned def_fps;	    /* Default fps.			*/
+} h264_level_info_t;
+
+
+/* Get H.264 level info from specified level ID */
+static pj_status_t get_h264_level_info(unsigned id, h264_level_info_t *level)
+{
+    unsigned i;
+    const h264_level_info_t level_info[] =
+    {
+	{ 10,   1485,    99,     64,  176,  144, 15 },
+	{ 9,    1485,    99,    128,  176,  144, 15 }, /*< level 1b */
+	{ 11,   3000,   396,    192,  320,  240, 10 },
+	{ 12,   6000,   396,    384,  352,  288, 15 },
+	{ 13,  11880,   396,    768,  352,  288, 15 },
+	{ 20,  11880,   396,   2000,  352,  288, 30 },
+	{ 21,  19800,   792,   4000,  352,  288, 30 },
+	{ 22,  20250,  1620,   4000,  352,  288, 30 },
+	{ 30,  40500,  1620,  10000,  720,  480, 30 },
+	{ 31, 108000,  3600,  14000, 1280,  720, 30 },
+	{ 32, 216000,  5120,  20000, 1280,  720, 30 },
+	{ 40, 245760,  8192,  20000, 1920, 1080, 30 },
+	{ 41, 245760,  8192,  50000, 1920, 1080, 30 },
+	{ 42, 522240,  8704,  50000, 1920, 1080, 30 },
+	{ 50, 589824, 22080, 135000, 1920, 1080, 30 },
+	{ 51, 983040, 36864, 240000, 1920, 1080, 30 },
+    };
+
+    for (i = 0; i < PJ_ARRAY_SIZE(level_info); ++i) {
+	if (level_info[i].id == id) {
+	    *level = level_info[i];
+	    return PJ_SUCCESS;
+	}
+    }
+    return PJ_ENOTFOUND;
+}
+
+
+#define CALC_H264_MB_NUM(size) (((size.w+15)/16)*((size.h+15)/16))
+#define CALC_H264_MBPS(size,fps) CALC_H264_MB_NUM(size)*fps.num/fps.denum
+
+
+PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
+				pjmedia_vid_codec_param *param)
+{
+    const unsigned default_fps = 30;
+
+    if (param->dir & PJMEDIA_DIR_ENCODING) {
+	pjmedia_vid_codec_h264_fmtp fmtp;
+	pjmedia_video_format_detail *vfd;
+	h264_level_info_t level_info;
+	pj_status_t status;
+
+	/* Get remote param */
+	status = pjmedia_vid_codec_h264_parse_fmtp(&param->enc_fmtp,
+						   &fmtp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	status = get_h264_level_info(fmtp.level, &level_info);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Size and fps for encoding direction must conform to H.264 level
+	 * specified by remote SDP fmtp.
+	 */
+	vfd = pjmedia_format_get_video_format_detail(&param->enc_fmt,
+						     PJ_TRUE);
+	if (vfd->size.w && vfd->size.h) {
+	    unsigned mb, mbps;
+	    
+	    if (vfd->fps.num == 0 || vfd->fps.denum == 0) {
+		vfd->fps.num = default_fps;
+		vfd->fps.denum = 1;
+	    }
+	    mb = CALC_H264_MB_NUM(vfd->size);
+	    mbps = CALC_H264_MBPS(vfd->size, vfd->fps);
+	    if (mb > level_info.max_mb || mbps > level_info.max_mbps) {
+		vfd->size.w = level_info.def_w;
+		vfd->size.h = level_info.def_h;
+		vfd->fps.num = level_info.def_fps;
+		vfd->fps.denum = 1;
+	    }
+	} else {
+	    vfd->size.w = level_info.def_w;
+	    vfd->size.h = level_info.def_h;
+	    vfd->fps.num = level_info.def_fps;
+	    vfd->fps.denum = 1;
+	}
+    }
+
+    if (param->dir & PJMEDIA_DIR_DECODING) {
+	/* Here we just want to find the highest resolution possible from the
+	 * fmtp and set it as the decoder param.
+	 */
+	pjmedia_vid_codec_h264_fmtp fmtp;
+	pjmedia_video_format_detail *vfd;
+	h264_level_info_t level_info;
+	pj_status_t status;
+	
+	status = pjmedia_vid_codec_h264_parse_fmtp(&param->dec_fmtp,
+						   &fmtp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	status = get_h264_level_info(fmtp.level, &level_info);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	vfd = pjmedia_format_get_video_format_detail(&param->dec_fmt,
+						     PJ_TRUE);
+
+	if (vfd->size.w * vfd->size.h < level_info.def_w * level_info.def_h) {
+	    vfd->size.w = level_info.def_w;
+	    vfd->size.h = level_info.def_h;
+	}
+
+	if (vfd->fps.num == 0 || vfd->fps.denum == 0) {
+	    vfd->fps.num = default_fps;
+	    vfd->fps.denum = 1;
 	}
     }
 

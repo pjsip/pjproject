@@ -139,6 +139,19 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_match_sdp(
 						unsigned option);
 
 
+/**
+ * Parse and apply the encoding and decoding SDP fmtp of H.264 in the
+ * specified codec parameter. This will validate size and fps to conform
+ * to H.264 level specified in SDP fmtp "profile-level-id".
+ *
+ * @param param		The codec parameter.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
+				pjmedia_vid_codec_param *param);
+
+
 PJ_END_DECL
 
 

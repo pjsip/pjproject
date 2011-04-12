@@ -260,7 +260,6 @@ ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
-/*
     {
 	{PJMEDIA_FORMAT_H263, PJMEDIA_RTP_PT_H263, {"H263",4}},
 	PJMEDIA_FORMAT_H263,	1000000,    2000000,
@@ -268,7 +267,6 @@ ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
-*/
     {
 	{PJMEDIA_FORMAT_H263,	PJMEDIA_RTP_PT_H263,	{"H263",4}},
     },
@@ -312,14 +310,31 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 
     /* Create packetizer */
     pktz_cfg.mtu = ff->param.enc_mtu;
+#if 0
     if (data->fmtp.packetization_mode == 0)
 	pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL;
     else if (data->fmtp.packetization_mode == 1)
 	pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
     else
 	return PJ_ENOTSUP;
+#else
+    if (data->fmtp.packetization_mode!=
+				PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL &&
+	data->fmtp.packetization_mode!=
+				PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED)
+    {
+	return PJ_ENOTSUP;
+    }
+    /* Better always send in single NAL mode for better compatibility */
+    pktz_cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_SINGLE_NAL;
+#endif
 
     status = pjmedia_h264_packetizer_create(ff->pool, &pktz_cfg, &data->pktz);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Apply SDP fmtp to format in codec param */
+    status = pjmedia_vid_codec_h264_apply_fmtp(&ff->param);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -353,7 +368,6 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	}
 
 	/* Apply profile level. */
-	PJ_TODO(apply_h264_profile_level_in_pjmedia_vid_codec_param);
 	ctx->level    = data->fmtp.level;
 
 	/* Libx264 rejects the "broken" ffmpeg defaults, so just change some */
@@ -1245,7 +1259,7 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
     pj_uint8_t *out_buf = (pj_uint8_t*)output->buf;
     int out_buf_len = output_buf_len;
     int err;
-    AVRational src_timebase;
+    //AVRational src_timebase;
     /* For some reasons (e.g: SSE/MMX usage), the avcodec_encode_video() must
      * have stack aligned to 16 bytes. Let's try to be safe by preparing the
      * 16-bytes aligned stack here, in case it's not managed by the ffmpeg.
