@@ -516,7 +516,7 @@ static int sdlthread(void * data)
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 on_return:
     if (strm->status != PJ_SUCCESS) {
-	destory_sdl(strm);	
+	destroy_sdl(strm);	
 	SDL_Quit();
 	strm->screen = NULL;
     }
@@ -526,7 +526,6 @@ on_return:
 
 - (int)handle_event
 {
-    sdl_fmt_info *sdl_info = get_sdl_format_info(strm->param.fmt.id);
     const pjmedia_video_format_info *vfi;
     pjmedia_video_format_detail *vfd;
     
