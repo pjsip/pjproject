@@ -2525,6 +2525,53 @@ static void dump_media_session(const char *indent,
 	}
 	p += len;
 
+	/* Get and ICE SRTP status */
+	if (call_med->tp) {
+	    pjmedia_transport_info tp_info;
+
+	    pjmedia_transport_info_init(&tp_info);
+	    pjmedia_transport_get_info(call_med->tp, &tp_info);
+	    if (tp_info.specific_info_cnt > 0) {
+		unsigned j;
+		for (j = 0; j < tp_info.specific_info_cnt; ++j) {
+		    if (tp_info.spc_info[j].type == PJMEDIA_TRANSPORT_TYPE_SRTP)
+		    {
+			pjmedia_srtp_info *srtp_info =
+				    (pjmedia_srtp_info*) tp_info.spc_info[j].buffer;
+
+			len = pj_ansi_snprintf(p, end-p,
+					       "   %s  SRTP status: %s Crypto-suite: %s",
+					       indent,
+					       (srtp_info->active?"Active":"Not active"),
+					       srtp_info->tx_policy.name.ptr);
+			if (len > 0 && len < end-p) {
+			    p += len;
+			    *p++ = '\n';
+			    *p = '\0';
+			}
+		    } else if (tp_info.spc_info[j].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
+			const pjmedia_ice_transport_info *ii;
+
+			ii = (const pjmedia_ice_transport_info*)
+			     tp_info.spc_info[j].buffer;
+
+			len = pj_ansi_snprintf(p, end-p,
+					       "   %s  ICE role: %s, state: %s, comp_cnt: %u",
+					       indent,
+					       pj_ice_sess_role_name(ii->role),
+					       pj_ice_strans_state_name(ii->sess_state),
+					       ii->comp_cnt);
+			if (len > 0 && len < end-p) {
+			    p += len;
+			    *p++ = '\n';
+			    *p = '\0';
+			}
+		    }
+		}
+	    }
+	}
+
+
 	if (has_stat) {
 	    len = dump_media_stat(indent, p, end-p, &stat,
 				  rx_info, tx_info);
@@ -2992,7 +3039,6 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     char *p, *end;
     pj_status_t status;
     int len;
-    pjmedia_transport_info tp_info;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
@@ -3050,50 +3096,6 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
 	*p++ = '\n';
 	*p = '\0';
     }
-
-    /* Get and ICE SRTP status */
-#if DISABLED_FOR_TICKET_1185
-    pjmedia_transport_info_init(&tp_info);
-    pjmedia_transport_get_info(call->tp, &tp_info);
-    if (tp_info.specific_info_cnt > 0) {
-	unsigned i;
-	for (i = 0; i < tp_info.specific_info_cnt; ++i) {
-	    if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
-	    {
-		pjmedia_srtp_info *srtp_info = 
-			    (pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
-
-		len = pj_ansi_snprintf(p, end-p, 
-				       "%s  SRTP status: %s Crypto-suite: %s",
-				       indent,
-				       (srtp_info->active?"Active":"Not active"),
-				       srtp_info->tx_policy.name.ptr);
-		if (len > 0 && len < end-p) {
-		    p += len;
-		    *p++ = '\n';
-		    *p = '\0';
-		}
-	    } else if (tp_info.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
-		const pjmedia_ice_transport_info *ii;
-
-		ii = (const pjmedia_ice_transport_info*) 
-		     tp_info.spc_info[i].buffer;
-
-		len = pj_ansi_snprintf(p, end-p, 
-				       "%s  ICE role: %s, state: %s, comp_cnt: %u",
-				       indent,
-				       pj_ice_sess_role_name(ii->role),
-				       pj_ice_strans_state_name(ii->sess_state),
-				       ii->comp_cnt);
-		if (len > 0 && len < end-p) {
-		    p += len;
-		    *p++ = '\n';
-		    *p = '\0';
-		}
-	    }
-	}
-    }
-#endif	/* DISABLED_FOR_TICKET_1185 */
 
     /* Dump session statistics */
     if (with_media && pjsua_call_has_media(call_id))
