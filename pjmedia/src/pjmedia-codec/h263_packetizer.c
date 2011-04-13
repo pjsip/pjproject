@@ -43,7 +43,7 @@ struct pjmedia_h263_packetizer {
 static pj_uint8_t* find_sync_point(pj_uint8_t *data,
 				   pj_size_t data_len)
 {
-    pj_uint8_t *p = data, *end = data+data_len;
+    pj_uint8_t *p = data, *end = data+data_len-1;
 
     while (p < end && *p && *(p+1))
         ++p;
@@ -62,12 +62,12 @@ static pj_uint8_t* find_sync_point(pj_uint8_t *data,
 static pj_uint8_t* find_sync_point_rev(pj_uint8_t *data,
                                        pj_size_t data_len)
 {
-    pj_uint8_t *p = data+data_len-1;
+    pj_uint8_t *p = data+data_len-2;
 
-    while (p > data && *p && *(p+1))
+    while (p >= data && *p && *(p+1))
         --p;
 
-    if (p == data)
+    if (p < data)
         return (data + data_len);
         
     return p;
