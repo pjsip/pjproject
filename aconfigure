@@ -729,6 +729,7 @@ enable_ilbc_codec
 enable_libsamplerate
 enable_sdl
 enable_ffmpeg
+with_ffmpeg
 enable_v4l2
 enable_ipp
 with_ipp
@@ -1409,6 +1410,7 @@ Optional Packages:
                           set, make sure that PortAudio is accessible to use
                           (hint: use CFLAGS and LDFLAGS env var to set the
                           include/lib paths)
+  --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -5921,6 +5923,15 @@ else
 
 
 
+		FFMPEG_PREFIX=""
+    		if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
+			FFMPEG_PREFIX=$with_ffmpeg
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using ffmpeg prefix... $FFMPEG_PREFIX" >&5
+$as_echo "Using ffmpeg prefix... $FFMPEG_PREFIX" >&6; }
+			LIBS="-L$FFMPEG_PREFIX/lib $LIBS"
+			CFLAGS="-I$FFMPEG_PREFIX/include $CFLAGS"
+		fi
+
 		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for avdevice_version in -lavdevice" >&5
 $as_echo_n "checking for avdevice_version in -lavdevice... " >&6; }
 if test "${ac_cv_lib_avdevice_avdevice_version+set}" = set; then :
@@ -6183,6 +6194,17 @@ fi
 
 
 fi
+
+
+
+# Check whether --with-ffmpeg was given.
+if test "${with_ffmpeg+set}" = set; then :
+  withval=$with_ffmpeg;
+else
+  with_ffmpeg=no
+
+fi
+
 
 
 # Check whether --enable-v4l2 was given.
