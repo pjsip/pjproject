@@ -1885,16 +1885,17 @@ static pj_status_t create_channel( pj_pool_t *pool,
     
     /* Allocate buffer for outgoing packet. */
 
-    if (param->type == PJMEDIA_TYPE_VIDEO) {
-        channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) + 
-                                stream->frame_size;
-    } else if (param->type == PJMEDIA_TYPE_AUDIO) {
+    if (param->type == PJMEDIA_TYPE_AUDIO) {
         channel->out_pkt_size = sizeof(pjmedia_rtp_hdr) + 
 			        stream->codec_param.info.max_bps * 
 			        PJMEDIA_MAX_FRAME_DURATION_MS / 
 			        8 / 1000;
-        if (channel->out_pkt_size > PJMEDIA_MAX_MTU)
-	    channel->out_pkt_size = PJMEDIA_MAX_MTU;
+        if (channel->out_pkt_size > PJMEDIA_MAX_MTU -
+				    PJMEDIA_STREAM_RESV_PAYLOAD_LEN)
+	{
+	    channel->out_pkt_size = PJMEDIA_MAX_MTU -
+				    PJMEDIA_STREAM_RESV_PAYLOAD_LEN;
+	}
     } else {
         return PJ_ENOTSUP;
     }
