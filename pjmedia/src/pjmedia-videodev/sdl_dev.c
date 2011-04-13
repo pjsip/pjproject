@@ -175,7 +175,10 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 static pj_status_t sdl_stream_start(pjmedia_vid_dev_stream *strm);
 static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm);
+
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 static void draw_gl(struct sdl_stream *stream, void *tex_buf);
+#endif
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -732,6 +735,7 @@ on_return:
     return strm->status;
 }
 
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 static void draw_gl(struct sdl_stream *stream, void *tex_buf)
 {
     if (stream->texture) {
@@ -750,6 +754,7 @@ static void draw_gl(struct sdl_stream *stream, void *tex_buf)
 	SDL_GL_SwapBuffers();
     }
 }
+#endif
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 - (pj_status_t)put_frame
