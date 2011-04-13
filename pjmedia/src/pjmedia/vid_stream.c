@@ -1187,7 +1187,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     /* Init codec param */
     info->codec_param->dir = info->dir;
-    info->codec_param->enc_mtu = PJMEDIA_MAX_MTU - sizeof(pjmedia_rtp_hdr);
+    info->codec_param->enc_mtu = PJMEDIA_MAX_MTU - sizeof(pjmedia_rtp_hdr) - 
+				 PJMEDIA_STREAM_RESV_PAYLOAD_LEN;
 
     /* Init and open the codec. */
     status = stream->codec->op->init(stream->codec, pool);

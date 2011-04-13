@@ -515,6 +515,15 @@
 #endif
 
 /**
+ * Reserve some space for application extra data, e.g: SRTP auth tag,
+ * in RTP payload, so the total payload length will not exceed the MTU.
+ */
+#ifndef PJMEDIA_STREAM_RESV_PAYLOAD_LEN
+#   define PJMEDIA_STREAM_RESV_PAYLOAD_LEN	20
+#endif
+
+
+/**
  * Specify the maximum duration of silence period in the codec, in msec. 
  * This is useful for example to keep NAT binding open in the firewall
  * and to prevent server from disconnecting the call because no 
