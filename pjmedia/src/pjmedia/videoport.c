@@ -37,6 +37,7 @@ enum role
 
 struct pjmedia_vid_port
 {
+    pj_pool_t		*pool;
     pj_str_t		 dev_name;
     pjmedia_dir		 dir;
     pjmedia_rect_size	 cap_size;
@@ -49,9 +50,10 @@ struct pjmedia_vid_port
     pjmedia_port	*client_port;
     pj_bool_t		 destroy_client_port;
 
-    pjmedia_converter	*cap_conv;
-    void		*cap_conv_buf;
-    pj_size_t		 cap_conv_buf_size;
+    pjmedia_converter	    *cap_conv;
+    void		    *cap_conv_buf;
+    pj_size_t		     cap_conv_buf_size;
+    pjmedia_conversion_param cap_conv_param;
 
     pjmedia_clock	*enc_clock,
 		        *dec_clock;
@@ -135,7 +137,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pj_status_t status;
     unsigned ptime_usec;
     pjmedia_vid_param vparam;
-    pjmedia_conversion_param conv_param;
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -151,6 +152,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
     /* Allocate videoport */
     vp = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_port);
+    vp->pool = pool;
     vp->role = prm->active ? ROLE_ACTIVE : ROLE_PASSIVE;
     vp->dir = prm->vidparam.dir;
     vp->cap_size = vfd->size;
@@ -256,6 +258,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	      vparam.fmt.det.vid.size.w, vparam.fmt.det.vid.size.h,
 	      vparam.fmt.det.vid.fps.num, vparam.fmt.det.vid.fps.denum));
 
+    if (vp->dir & PJMEDIA_DIR_CAPTURE) {
+	pjmedia_format_copy(&vp->cap_conv_param.src, &vparam.fmt);
+	pjmedia_format_copy(&vp->cap_conv_param.dst, &prm->vidparam.fmt);
+    } else {
+	pjmedia_format_copy(&vp->cap_conv_param.src, &prm->vidparam.fmt);
+	pjmedia_format_copy(&vp->cap_conv_param.dst, &vparam.fmt);
+    }
+
     /* Instantiate converter if necessary */
     if (vparam.fmt.id != prm->vidparam.fmt.id ||
 	vparam.fmt.det.vid.size.w != prm->vidparam.fmt.det.vid.size.w ||
@@ -267,32 +277,20 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
 
-	if (vp->dir & PJMEDIA_DIR_CAPTURE) {
-	    pjmedia_format_copy(&conv_param.src, &vparam.fmt);
-	    pjmedia_format_copy(&conv_param.dst, &prm->vidparam.fmt);
-
-	    status = pjmedia_converter_create(NULL, pool, &conv_param,
-					      &vp->cap_conv);
-	} else {
-	    pjmedia_format_copy(&conv_param.src, &prm->vidparam.fmt);
-	    pjmedia_format_copy(&conv_param.dst, &vparam.fmt);
-
-	    status = pjmedia_converter_create(NULL, pool, &conv_param,
-					      &vp->cap_conv);
-	}
-
+	status = pjmedia_converter_create(NULL, pool, &vp->cap_conv_param,
+					  &vp->cap_conv);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, status, "Error creating converter"));
 	    goto on_error;
 	}
 
 	/* Allocate buffer for conversion */
-	vfi = pjmedia_get_video_format_info(NULL, conv_param.dst.id);
+	vfi = pjmedia_get_video_format_info(NULL, vp->cap_conv_param.dst.id);
 	if (!vfi)
 	    return PJMEDIA_EBADFMT;
 
 	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = conv_param.dst.det.vid.size;
+	vafp.size = vp->cap_conv_param.dst.det.vid.size;
 	status = vfi->apply_fmt(vfi, &vafp);
 	if (status != PJ_SUCCESS)
 	    return PJMEDIA_EBADFMT;
@@ -353,7 +351,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	pjmedia_video_apply_fmt_param vafp;
 
 	vfi = pjmedia_get_video_format_info(NULL, vp->cap_conv?
-					    conv_param.src.id:
+					    vp->cap_conv_param.src.id:
 					    vparam.fmt.id);
 	if (!vfi) {
 	    status = PJ_ENOTFOUND;
@@ -361,7 +359,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	}
 
 	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = (vp->cap_conv? conv_param.src.det.vid.size:
+	vafp.size = (vp->cap_conv? vp->cap_conv_param.src.det.vid.size:
 		     vparam.fmt.det.vid.size);
 	status = vfi->apply_fmt(vfi, &vafp);
 	if (status != PJ_SUCCESS)
@@ -610,12 +608,33 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
         pjmedia_vid_event pevent;
         pj_status_t status;
 
+	pjmedia_vid_port_stop(vp);
+
         /* Retrieve the video format detail */
         vfd = pjmedia_format_get_video_format_detail(
                   &vp->client_port->info.fmt, PJ_TRUE);
         if (!vfd)
             return PJMEDIA_EVID_BADFORMAT;
         pj_assert(vfd->fps.num);
+
+	if (vp->cap_conv) {
+	    /* Change the destination format to the new format */
+	    pjmedia_format_copy(&vp->cap_conv_param.src,
+				&vp->client_port->info.fmt);
+	    /* Only copy the size here */
+	    vp->cap_conv_param.dst.det.vid.size =
+		vp->client_port->info.fmt.det.vid.size,
+
+	    /* Recreate converter */
+	    pjmedia_converter_destroy(vp->cap_conv);
+	    status = pjmedia_converter_create(NULL, vp->pool,
+					      &vp->cap_conv_param,
+					      &vp->cap_conv);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(THIS_FILE, status, "Error recreating converter"));
+		return status;
+	    }
+	}
 
         status = pjmedia_vid_dev_stream_set_cap(
                      vp->strm,
@@ -627,7 +646,6 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
             PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
                                   status != PJMEDIA_EVID_ERR ? "success" :
                                   "failure"));
-            pjmedia_vid_port_stop(vp);
             return status;
         }
 
@@ -649,10 +667,12 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
 
         /* Notify application of the format change. */
         pevent.event_type = PJMEDIA_EVENT_FMT_CHANGED;
-        pj_memcpy(&pevent.event_desc.fmt_change.new_format,
-                  &vp->client_port->info.fmt, sizeof(pjmedia_format));
+	pjmedia_format_copy(&pevent.event_desc.fmt_change.new_format,
+			    &vp->client_port->info.fmt);
         if (vp->strm_cb.on_event_cb)
             (*vp->strm_cb.on_event_cb)(vp->strm, vp->strm_cb_data, &pevent);
+
+	pjmedia_vid_port_start(vp);
     }
 
     return PJ_SUCCESS;
