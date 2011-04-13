@@ -45,7 +45,7 @@ static pj_uint8_t* find_sync_point(pj_uint8_t *data,
 {
     pj_uint8_t *p = data, *end = data+data_len-1;
 
-    while (p < end && *p && *(p+1))
+    while (p < end && (*p || *(p+1)))
         ++p;
 
     if (p == end)
@@ -64,7 +64,7 @@ static pj_uint8_t* find_sync_point_rev(pj_uint8_t *data,
 {
     pj_uint8_t *p = data+data_len-2;
 
-    while (p >= data && *p && *(p+1))
+    while (p >= data && (*p || *(p+1)))
         --p;
 
     if (p < data)
