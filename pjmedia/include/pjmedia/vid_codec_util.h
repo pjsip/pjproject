@@ -41,7 +41,7 @@ typedef struct pjmedia_vid_codec_h263_fmtp
     struct mpi {
 	pjmedia_rect_size   size;   /**< Picture size/resolution	    */
 	unsigned	    val;    /**< MPI value			    */
-    } mpi[8];			    /**< Minimum Picture Interval parameter */
+    } mpi[32];			    /**< Minimum Picture Interval parameter */
 
 } pjmedia_vid_codec_h263_fmtp;
 
