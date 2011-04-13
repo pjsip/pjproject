@@ -942,9 +942,9 @@ static void print_ffmpeg_err(int err)
 #if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72
     char errbuf[512];
     if (av_strerror(err, errbuf, sizeof(errbuf)) >= 0)
-        PJ_LOG(1, (THIS_FILE, "ffmpeg err %d: %s", err, errbuf));
+        PJ_LOG(5, (THIS_FILE, "ffmpeg err %d: %s", err, errbuf));
 #else
-    PJ_LOG(1, (THIS_FILE, "ffmpeg err %d", err));
+    PJ_LOG(5, (THIS_FILE, "ffmpeg err %d", err));
 #endif
 
 }
@@ -1373,8 +1373,8 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	 * to the configured param.
 	 */
 	if (ff->dec_ctx->pix_fmt != ff->expected_dec_fmt ||
-	    ff->dec_ctx->coded_width != (int)vafp->size.w ||
-	    ff->dec_ctx->coded_height != (int)vafp->size.h)
+	    ff->dec_ctx->width != (int)vafp->size.w ||
+	    ff->dec_ctx->height != (int)vafp->size.h)
 	{
 	    pjmedia_format_id new_fmt_id;
 	    pj_status_t status;
@@ -1387,8 +1387,8 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 
 	    /* Update decoder format in param */
     	    ff->param.dec_fmt.id = new_fmt_id;
-	    ff->param.dec_fmt.det.vid.size.w = ff->dec_ctx->coded_width;
-	    ff->param.dec_fmt.det.vid.size.h = ff->dec_ctx->coded_height;
+	    ff->param.dec_fmt.det.vid.size.w = ff->dec_ctx->width;
+	    ff->param.dec_fmt.det.vid.size.h = ff->dec_ctx->height;
 
 	    /* Re-init format info and apply-param of decoder */
 	    ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param.dec_fmt.id);
@@ -1403,11 +1403,11 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 
 	    /* Notify application via the bit_info field of pjmedia_frame */
 	    output->bit_info = PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
-
-	    /* Check provided buffer size after format changed */
-	    if (vafp->framebytes > output_buf_len)
-		return PJ_ETOOSMALL;
 	}
+
+	/* Check provided buffer size after format changed */
+	if (vafp->framebytes > output_buf_len)
+	    return PJ_ETOOSMALL;
 
 	/* Get the decoded data */
 	for (i = 0; i < ff->dec_vfi->plane_cnt; ++i) {
