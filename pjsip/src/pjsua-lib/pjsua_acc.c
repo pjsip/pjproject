@@ -751,9 +751,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     /* Account ID. */
     if (id_name_addr && id_sip_uri) {
 	pj_strdup_with_null(acc->pool, &acc->cfg.id, &cfg->id);
-	acc->display = id_name_addr->display;
-	acc->user_part = id_sip_uri->user;
-	acc->srv_domain = id_sip_uri->host;
+	pj_strdup_with_null(acc->pool, &acc->display, &id_name_addr->display);
+	pj_strdup_with_null(acc->pool, &acc->user_part, &id_sip_uri->user);
+	pj_strdup_with_null(acc->pool, &acc->srv_domain, &id_sip_uri->host);
 	acc->srv_port = 0;
 	update_reg = PJ_TRUE;
     }
