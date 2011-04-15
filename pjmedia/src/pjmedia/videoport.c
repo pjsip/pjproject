@@ -639,7 +639,7 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
         status = pjmedia_vid_dev_stream_set_cap(
                      vp->strm,
                      PJMEDIA_VID_DEV_CAP_FORMAT,
-                     &vp->client_port->info.fmt);
+                     &vp->cap_conv_param.dst);
         if (status != PJ_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "failure in changing the format of the "
                                   "video device"));
