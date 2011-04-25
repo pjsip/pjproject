@@ -1154,6 +1154,9 @@ handle_err:
 	unsigned contact_cnt = 0;
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 
+	/* Mark operation as complete */
+	regc->current_op = REGC_IDLE;
+
 	if (tsx->status_code/100 == 2) {
 
 	    rdata = event->body.tsx_state.src.rdata;
@@ -1163,9 +1166,6 @@ handle_err:
 						       &contact_cnt,
 						       PJSIP_REGC_MAX_CONTACT,
 						       contact);
-
-	    /* Mark operation as complete */
-	    regc->current_op = REGC_IDLE;
 
 	    /* Schedule next registration */
             schedule_registration(regc, expiration);
