@@ -981,7 +981,7 @@ static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
     }
 
     /* transport */
-    pj_scan_get_until_ch(scanner, ' ', &med->desc.transport);
+    pj_scan_get_until_chr(scanner, " \t\r\n", &med->desc.transport);
 
     /* format list */
     med->desc.fmt_count = 0;
