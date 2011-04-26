@@ -185,7 +185,7 @@ static int init()
 }
 
 
-static int shutdown()
+static int client_shutdown()
 {
     unsigned i;
 
@@ -625,7 +625,7 @@ int main(int argc, char *argv[])
     console_main();
 
 on_return:
-    shutdown();
+    client_shutdown();
     return status ? 1 : 0;
 }
 

@@ -24,6 +24,10 @@
 #include <pj/ip_helper.h>
 #include <pj/compat/socket.h>
 
+#if defined(PJ_GETADDRINFO_USE_CFHOST) && PJ_GETADDRINFO_USE_CFHOST!=0
+#   include <CoreFoundation/CFString.h>
+#   include <CFNetwork/CFHost.h>
+#endif
 
 PJ_DEF(pj_status_t) pj_gethostbyname(const pj_str_t *hostname, pj_hostent *phe)
 {
@@ -62,10 +66,16 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 {
 #if defined(PJ_SOCK_HAS_GETADDRINFO) && PJ_SOCK_HAS_GETADDRINFO!=0
     char nodecopy[PJ_MAX_HOSTNAME];
-    struct addrinfo hint, *res, *orig_res;
     pj_bool_t has_addr = PJ_FALSE;
     unsigned i;
+#if defined(PJ_GETADDRINFO_USE_CFHOST) && PJ_GETADDRINFO_USE_CFHOST!=0
+    CFStringRef hostname;
+    CFHostRef hostRef;
+    pj_status_t status = PJ_SUCCESS;
+#else
     int rc;
+    struct addrinfo hint, *res, *orig_res;
+#endif
 
     PJ_ASSERT_RETURN(nodename && count && *count && ai, PJ_EINVAL);
     PJ_ASSERT_RETURN(nodename->ptr && nodename->slen, PJ_EINVAL);
@@ -105,6 +115,53 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
     pj_memcpy(nodecopy, nodename->ptr, nodename->slen);
     nodecopy[nodename->slen] = '\0';
 
+#if defined(PJ_GETADDRINFO_USE_CFHOST) && PJ_GETADDRINFO_USE_CFHOST!=0
+    hostname =  CFStringCreateWithCStringNoCopy(kCFAllocatorDefault, nodecopy,
+						kCFStringEncodingASCII,
+						kCFAllocatorNull);
+    hostRef = CFHostCreateWithName(kCFAllocatorDefault, hostname);
+    if (CFHostStartInfoResolution(hostRef, kCFHostAddresses, nil)) {
+	CFArrayRef addrRef = CFHostGetAddressing(hostRef, nil);
+	i = 0;
+	if (addrRef != nil) {
+	    CFIndex idx, naddr;
+	    
+	    naddr = CFArrayGetCount(addrRef);
+	    for (idx = 0; idx < naddr && i < *count; idx++) {
+		struct sockaddr *addr;
+		
+		addr = (struct sockaddr *)
+		       CFDataGetBytePtr(CFArrayGetValueAtIndex(addrRef, idx));
+		/* This should not happen. */
+		pj_assert(addr);
+		
+		/* Ignore unwanted address families */
+		if (af!=PJ_AF_UNSPEC && addr->sa_family != af)
+		    continue;
+
+		/* Store canonical name */
+		pj_ansi_strcpy(ai[i].ai_canonname, nodecopy);
+		
+		/* Store address */
+		PJ_ASSERT_ON_FAIL(sizeof(*addr) <= sizeof(pj_sockaddr),
+				  continue);
+		pj_memcpy(&ai[i].ai_addr, addr, sizeof(*addr));
+		PJ_SOCKADDR_RESET_LEN(&ai[i].ai_addr);
+		
+		i++;
+	    }
+	}
+	
+	*count = i;
+    } else {
+	status = PJ_ERESOLVE;
+    }
+    
+    CFRelease(hostRef);
+    CFRelease(hostname);
+    
+    return status;
+#else
     /* Call getaddrinfo() */
     pj_bzero(&hint, sizeof(hint));
     hint.ai_family = af;
@@ -145,6 +202,7 @@ PJ_DEF(pj_status_t) pj_getaddrinfo(int af, const pj_str_t *nodename,
 
     /* Done */
     return PJ_SUCCESS;
+#endif
 
 #else	/* PJ_SOCK_HAS_GETADDRINFO */
     pj_bool_t has_addr = PJ_FALSE;
