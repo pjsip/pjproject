@@ -1154,9 +1154,6 @@ handle_err:
 	unsigned contact_cnt = 0;
 	pjsip_contact_hdr *contact[PJSIP_REGC_MAX_CONTACT];
 
-	/* Mark operation as complete */
-	regc->current_op = REGC_IDLE;
-
 	if (tsx->status_code/100 == 2) {
 
 	    rdata = event->body.tsx_state.src.rdata;
@@ -1178,6 +1175,9 @@ handle_err:
 	/* Update registration */
 	if (expiration==NOEXP) expiration=-1;
 	regc->expires = expiration;
+
+	/* Mark operation as complete */
+	regc->current_op = REGC_IDLE;
 
 	/* Call callback. */
 	/* Should be safe to release the lock temporarily.
