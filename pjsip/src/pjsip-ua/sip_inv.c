@@ -2296,6 +2296,9 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
 		  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
 	    via->branch_param.slen = 0;
 
+	    /* Reset message destination info (see #1248). */
+	    pj_bzero(&tdata->dest_info, sizeof(tdata->dest_info));
+
 	    /* Must invalidate the message! */
 	    pjsip_tx_data_invalidate_msg(tdata);
 
