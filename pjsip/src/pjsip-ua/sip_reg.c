@@ -991,7 +991,7 @@ static pj_int32_t calculate_response_expiration(const pjsip_regc *regc,
     return expiration;
 }
 
-static void tsx_callback(void *token, pjsip_event *event)
+static void regc_tsx_callback(void *token, pjsip_event *event)
 {
     pj_status_t status;
     pjsip_regc *regc = (pjsip_regc*) token;
@@ -1251,11 +1251,22 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
      */
     pjsip_tx_data_add_ref(tdata);
 
+    /* Need to unlock the regc temporarily while sending the message to
+     * prevent deadlock (https://trac.pjsip.org/repos/ticket/1247).
+     * It should be safe to do this since the regc's refcount has been
+     * incremented.
+     */
+    pj_lock_release(regc->lock);
+
+    /* Now send the message */
     status = pjsip_endpt_send_request(regc->endpt, tdata, REGC_TSX_TIMEOUT,
-				      regc, &tsx_callback);
+				      regc, &regc_tsx_callback);
     if (status!=PJ_SUCCESS) {
 	PJ_LOG(4,(THIS_FILE, "Error sending request, status=%d", status));
     }
+
+    /* Reacquire the lock */
+    pj_lock_acquire(regc->lock);
 
     /* Get last transport used and add reference to it */
     if (tdata->tp_info.transport != regc->last_transport) {
