@@ -174,6 +174,8 @@ static const pj_str_t STR_ICE_PWD	= { "ice-pwd", 7 };
 static const pj_str_t STR_IP4		= { "IP4", 3 };
 static const pj_str_t STR_IP6		= { "IP6", 3 };
 static const pj_str_t STR_RTCP		= { "rtcp", 4 };
+static const pj_str_t STR_BANDW_RR	= { "RR", 2 };
+static const pj_str_t STR_BANDW_RS	= { "RS", 2 };
 
 enum {
     COMP_RTP = 1,
@@ -601,6 +603,20 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	attr = pjmedia_sdp_attr_find(m->attr_count, m->attr, &STR_RTCP, NULL);
 	if (attr)
 	    pjmedia_sdp_attr_remove(&m->attr_count, m->attr, attr);
+        /* If RTCP is not in use, we MUST send b=RS:0 and b=RR:0. */
+        pj_assert(m->bandw_count + 2 <= PJ_ARRAY_SIZE(m->bandw));
+        if (m->bandw_count + 2 <= PJ_ARRAY_SIZE(m->bandw)) {
+            m->bandw[m->bandw_count] = PJ_POOL_ZALLOC_T(sdp_pool,
+                                                        pjmedia_sdp_bandw);
+            pj_memcpy(&m->bandw[m->bandw_count]->modifier, &STR_BANDW_RS,
+                      sizeof(pj_str_t));
+            m->bandw_count++;
+            m->bandw[m->bandw_count] = PJ_POOL_ZALLOC_T(sdp_pool,
+                                                        pjmedia_sdp_bandw);
+            pj_memcpy(&m->bandw[m->bandw_count]->modifier, &STR_BANDW_RR,
+                      sizeof(pj_str_t));
+            m->bandw_count++;
+        }
     }
     
 

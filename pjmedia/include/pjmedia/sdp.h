@@ -50,6 +50,14 @@ PJ_BEGIN_DECL
 #endif
 
 /**
+ * The PJMEDIA_MAX_SDP_BANDW macro defines maximum bandwidth information
+ * lines in a media line.
+ */
+#ifndef PJMEDIA_MAX_SDP_BANDW
+#   define PJMEDIA_MAX_SDP_BANDW	4
+#endif
+
+/**
  * The PJMEDIA_MAX_SDP_ATTR macro defines maximum SDP attributes in media and
  * session descriptor.
  */
@@ -368,6 +376,34 @@ PJ_DECL(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone(pj_pool_t *pool,
 
 
 /* **************************************************************************
+ * SDP BANDWIDTH INFO
+ ****************************************************************************
+ */
+
+/**
+ * This structure describes SDP bandwidth info ("b=" line). 
+ */
+typedef struct pjmedia_sdp_bandw
+{
+    pj_str_t	modifier;	/**< Bandwidth modifier.		*/
+    pj_uint32_t	value;	        /**< Bandwidth value.	                */
+} pjmedia_sdp_bandw;
+
+
+/** 
+ * Clone bandwidth info. 
+ * 
+ * @param pool	    Pool to allocate memory for the new bandwidth info.
+ * @param rhs	    The bandwidth into to clone.
+ *
+ * @return	    The new bandwidth info.
+ */
+PJ_DECL(pjmedia_sdp_bandw*)
+pjmedia_sdp_bandw_clone(pj_pool_t *pool, const pjmedia_sdp_bandw *rhs);
+
+
+
+/* **************************************************************************
  * SDP MEDIA INFO/LINE
  ****************************************************************************
  */
@@ -387,12 +423,14 @@ struct pjmedia_sdp_media
 	unsigned    port_count;		/**< Port count, used only when >2  */
 	pj_str_t    transport;		/**< Transport ("RTP/AVP")	    */
 	unsigned    fmt_count;		/**< Number of formats.		    */
-	pj_str_t    fmt[PJMEDIA_MAX_SDP_FMT];	/**< Media formats.	    */
+	pj_str_t    fmt[PJMEDIA_MAX_SDP_FMT];       /**< Media formats.	    */
     } desc;
 
-    pjmedia_sdp_conn *conn;		/**< Optional connection info.	    */
-    unsigned	     attr_count;	/**< Number of attributes.	    */
-    pjmedia_sdp_attr*attr[PJMEDIA_MAX_SDP_ATTR];  /**< Attributes.	    */
+    pjmedia_sdp_conn   *conn;		/**< Optional connection info.	    */
+    unsigned	        bandw_count;	/**< Number of bandwidth info.	    */
+    pjmedia_sdp_bandw  *bandw[PJMEDIA_MAX_SDP_BANDW]; /**< Bandwidth info.  */
+    unsigned	        attr_count;	/**< Number of attributes.	    */
+    pjmedia_sdp_attr   *attr[PJMEDIA_MAX_SDP_ATTR];   /**< Attributes.	    */
 
 };
 

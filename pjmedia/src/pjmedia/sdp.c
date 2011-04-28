@@ -544,6 +544,39 @@ PJ_DEF(pjmedia_sdp_conn*) pjmedia_sdp_conn_clone (pj_pool_t *pool,
     return c;
 }
 
+PJ_DEF(pjmedia_sdp_bandw*)
+pjmedia_sdp_bandw_clone (pj_pool_t *pool, 
+			 const pjmedia_sdp_bandw *rhs)
+{
+    pjmedia_sdp_bandw *b = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_bandw);
+    if (!b) return NULL;
+
+    if (!pj_strdup (pool, &b->modifier, &rhs->modifier)) return NULL;
+    b->value = rhs->value;
+
+    return b;
+}
+
+static pj_ssize_t print_bandw(const pjmedia_sdp_bandw *bandw,
+			      char *buf, pj_size_t len)
+{
+    char *p = buf;
+
+    if ((int)len < bandw->modifier.slen + 10 + 5)
+	return -1;
+
+    *p++ = 'b';
+    *p++ = '=';
+    pj_memcpy(p, bandw->modifier.ptr, bandw->modifier.slen);
+    p += bandw->modifier.slen;
+    *p++ = ':';
+    p += pj_utoa(bandw->value, p);
+
+    *p++ = '\r';
+    *p++ = '\n';
+    return p-buf;
+}
+
 static pj_ssize_t print_attr(const pjmedia_sdp_attr *attr, 
 			     char *buf, pj_size_t len)
 {
@@ -611,6 +644,15 @@ static int print_media_desc( pjmedia_sdp_media *m, char *buf, int len)
 	}
 	p += printed;
     }
+    
+    /* print optional bandwidth info. */
+    for (i=0; i<m->bandw_count; ++i) {
+	printed = print_bandw(m->bandw[i], p, end-p);
+	if (printed < 0) {
+	    return -1;
+	}
+	p += printed;
+    }
 
     /* print attributes. */
     for (i=0; i<m->attr_count; ++i) {
@@ -645,6 +687,12 @@ PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone(
 	PJ_ASSERT_RETURN(m->conn != NULL, NULL);
     } else {
 	m->conn = NULL;
+    }
+
+    m->bandw_count = rhs->bandw_count;
+    for (i=0; i < rhs->bandw_count; ++i) {
+	m->bandw[i] = pjmedia_sdp_bandw_clone (pool, rhs->bandw[i]);
+	PJ_ASSERT_RETURN(m->bandw[i] != NULL, NULL);
     }
 
     m->attr_count = rhs->attr_count;
@@ -1465,6 +1513,12 @@ PJ_DEF(pjmedia_sdp_media*) pjmedia_sdp_media_clone_deactivate(
     if (rhs->conn) {
 	m->conn = pjmedia_sdp_conn_clone (pool, rhs->conn);
 	PJ_ASSERT_RETURN(m->conn != NULL, NULL);
+    }
+
+    m->bandw_count = rhs->bandw_count;
+    for (i=0; i < rhs->bandw_count; ++i) {
+	m->bandw[i] = pjmedia_sdp_bandw_clone (pool, rhs->bandw[i]);
+	PJ_ASSERT_RETURN(m->bandw[i] != NULL, NULL);
     }
 
     /* And deactivate it */
