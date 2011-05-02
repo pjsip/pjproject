@@ -533,7 +533,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 
 		/* Generate zero frame. */
 		pjmedia_zero_samples(sc->put_buf, 
-				     this_port->info.samples_per_frame);
+				     port->info.samples_per_frame);
 
 		/* Put frame to delay buffer */
 		pjmedia_delay_buf_put(rport->buf[DIR_DOWNSTREAM].dbuf,
