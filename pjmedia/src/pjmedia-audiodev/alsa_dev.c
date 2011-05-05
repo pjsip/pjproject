@@ -1,6 +1,6 @@
 /* $Id$ */
 /*
- * Copyright (C) 2009-2010 Teluu Inc. (http://www.teluu.com)
+ * Copyright (C) 2009-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2007-2009 Keystream AB and Konftel AB, All rights reserved.
  *                         Author: <dan.aberg@keystream.se>
  *
