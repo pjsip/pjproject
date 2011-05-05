@@ -1123,16 +1123,16 @@ PJ_BEGIN_DECL
 #define PJ_VERSION_NUM_MAJOR	1
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	8
+#define PJ_VERSION_NUM_MINOR	10
 
 /** PJLIB version revision number. */
-#define PJ_VERSION_NUM_REV	10
+#define PJ_VERSION_NUM_REV	0
 
 /**
  * Extra suffix for the version (e.g. "-trunk"), or empty for
  * web release version.
  */
-#define PJ_VERSION_NUM_EXTRA	"-trunk"
+#define PJ_VERSION_NUM_EXTRA	""
 
 /**
  * PJLIB version number consists of three bytes with the following format:
