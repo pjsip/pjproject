@@ -20,6 +20,8 @@
 #ifndef __PJ_CONFIG_H__
 #define __PJ_CONFIG_H__
 
+#error "For PJSIP version 1.x, please switch your svn repository URL to https://svn.pjsip.org/repos/pjproject/branches/1.x"
+
 /**
  * @file config.h
  * @brief PJLIB Main configuration settings.
