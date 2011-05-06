@@ -488,11 +488,13 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_shutdown(void)
     }
     --aud_subsys.init_count;
 
-    for (i=0; i<aud_subsys.drv_cnt; ++i) {
-	deinit_driver(i);
-    }
+    if (aud_subsys.init_count == 0) {
+	for (i=0; i<aud_subsys.drv_cnt; ++i) {
+	    deinit_driver(i);
+	}
 
-    aud_subsys.pf = NULL;
+	aud_subsys.pf = NULL;
+    }
     return PJ_SUCCESS;
 }
 
