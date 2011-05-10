@@ -9,10 +9,19 @@
 #define BYPASS_CODEC	    0
 #define BYPASS_PACKETIZER   0
 
+/* 
+ * Capture device setting: 
+ *   -1 = colorbar, 
+ *   -2 = any non-colorbar capture device (first found)
+ *    x = specified capture device id
+ */
+#define CAPTURE_DEV	    -1
+
+
 typedef struct codec_port_data_t
 {
     pjmedia_vid_codec   *codec;
-    pjmedia_port        *dn_port;
+    pjmedia_vid_port    *rdr_port;
     pj_uint8_t          *enc_buf;
     pj_size_t            enc_buf_size;
     pj_uint8_t          *pack_buf;
@@ -77,10 +86,26 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 
 	status = codec->op->decode(codec, &enc_frame, frame->size, frame);
 	if (status != PJ_SUCCESS) goto on_error;
+
+	/* Detect format change */
+	if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
+	    pjmedia_vid_codec_param codec_param;
+
+	    status = codec->op->get_param(codec, &codec_param);
+	    if (status != PJ_SUCCESS) goto on_error;
+
+	    status = pjmedia_vid_dev_stream_set_cap(
+			    pjmedia_vid_port_get_stream(port_data->rdr_port),
+			    PJMEDIA_VID_DEV_CAP_FORMAT,
+			    &codec_param.dec_fmt);
+	    if (status != PJ_SUCCESS) goto on_error;
+	}
     }
 #endif
 
-    status = pjmedia_port_put_frame(port_data->dn_port, frame);
+    status = pjmedia_port_put_frame(
+			pjmedia_vid_port_get_passive_port(port_data->rdr_port),
+			frame);
     if (status != PJ_SUCCESS) goto on_error;
 
     return PJ_SUCCESS;
@@ -130,8 +155,7 @@ static int enum_codecs()
     return PJ_SUCCESS;
 }
 
-static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
-                              pjmedia_format_id raw_fmt_id)
+static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
 {
     const pj_str_t port_name = {"codec", 5};
 
@@ -166,55 +190,47 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     }
 
 
+#if CAPTURE_DEV == -1
     /* Lookup colorbar source */
     status = pjmedia_vid_dev_lookup("Colorbar", "Colorbar generator", &cap_idx);
     if (status != PJ_SUCCESS) {
 	rc = 206; goto on_return;
     }
+#elif CAPTURE_DEV == -2
+    /* Lookup any first non-colorbar source */
+    {
+	unsigned i, cnt;
+	pjmedia_vid_dev_info info;
+
+	cap_idx = -1;
+	cnt = pjmedia_vid_dev_count();
+	for (i = 0; i < cnt; ++i) {
+	    status = pjmedia_vid_dev_get_info(i, &info);
+	    if (status != PJ_SUCCESS) {
+		rc = 206; goto on_return;
+	    }
+	    if (info.dir & PJMEDIA_DIR_CAPTURE && 
+		pj_ansi_stricmp(info.driver, "Colorbar"))
+	    {
+		cap_idx = i;
+		break;
+	    }
+	}
+
+	if (cap_idx == -1) {
+	    status = PJ_ENOTFOUND;
+	    rc = 206; goto on_return;
+	}
+    }
+#else
+    cap_idx = CAPTURE_DEV;
+#endif
 
     /* Lookup SDL renderer */
     status = pjmedia_vid_dev_lookup("SDL", "SDL renderer", &rdr_idx);
     if (status != PJ_SUCCESS) {
 	rc = 207; goto on_return;
     }
-
-    raw_fmt_id = codec_info->dec_fmt_id[0];
-    cap_idx = 0; /* Use dshow capture */
-
-#if 0
-    // Now, the video port can do automatic conversion.
-    /* Raw format ID "not specified", lets find common format among the codec
-     * and the video devices
-     */
-    if (raw_fmt_id == 0) {
-        pjmedia_vid_dev_info cap_info, rdr_info;
-        unsigned i, j, k;
-
-        pjmedia_vid_dev_get_info(cap_idx, &cap_info);
-        pjmedia_vid_dev_get_info(rdr_idx, &rdr_info);
-
-        for (i=0; i<codec_info->dec_fmt_id_cnt && !raw_fmt_id; ++i) {
-            for (j=0; j<cap_info.fmt_cnt && !raw_fmt_id; ++j) {
-                if (codec_info->dec_fmt_id[i]==(int)cap_info.fmt[j].id) {
-                    for (k=0; k<rdr_info.fmt_cnt && !raw_fmt_id; ++k) {
-                        if (codec_info->dec_fmt_id[i]==(int)rdr_info.fmt[k].id)
-                        {
-                            raw_fmt_id = codec_info->dec_fmt_id[i];
-                        }
-                    }
-                }
-            }
-        }
-
-        if (raw_fmt_id == 0) {
-            PJ_LOG(3, (THIS_FILE, "  No common format ID among the codec "
-                       "and the video devices"));
-            status = PJ_ENOTFOUND;
-            rc = 210;
-            goto on_return;
-        }
-    }
-#endif
 
     /* Prepare codec */
     {
@@ -250,11 +266,15 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 	    rc = 251; goto on_return;
         }
 
-	codec_param.dec_fmt.id = raw_fmt_id;
         status = codec->op->open(codec, &codec_param);
         if (status != PJ_SUCCESS) {
 	    rc = 252; goto on_return;
         }
+
+	/* After opened, codec will update the param, let's sync encoder & 
+	 * decoder format detail.
+	 */
+	codec_param.dec_fmt.det = codec_param.enc_fmt.det;
 
 #endif /* !BYPASS_CODEC */
     }
@@ -269,7 +289,6 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 	rc = 220; goto on_return;
     }
     pjmedia_format_copy(&vport_param.vidparam.fmt, &codec_param.dec_fmt);
-    vport_param.vidparam.fmt.id = raw_fmt_id;
     vport_param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
     vport_param.active = PJ_TRUE;
 
@@ -309,7 +328,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
     }
 
     codec_port_data.codec = codec;
-    codec_port_data.dn_port = pjmedia_vid_port_get_passive_port(renderer);
+    codec_port_data.rdr_port = renderer;
     codec_port_data.enc_buf_size = codec_param.dec_fmt.det.vid.size.w *
 				   codec_param.dec_fmt.det.vid.size.h * 4;
     codec_port_data.enc_buf = pj_pool_alloc(pool, 
@@ -331,10 +350,10 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 
 #if BYPASS_CODEC
     PJ_LOG(3, (THIS_FILE, "  starting loopback test: %c%c%c%c %dx%d",
-        ((raw_fmt_id & 0x000000FF) >> 0),
-        ((raw_fmt_id & 0x0000FF00) >> 8),
-        ((raw_fmt_id & 0x00FF0000) >> 16),
-        ((raw_fmt_id & 0xFF000000) >> 24),
+        ((codec_param.dec_fmt.id & 0x000000FF) >> 0),
+        ((codec_param.dec_fmt.id & 0x0000FF00) >> 8),
+        ((codec_param.dec_fmt.id & 0x00FF0000) >> 16),
+        ((codec_param.dec_fmt.id & 0xFF000000) >> 24),
         codec_param.dec_fmt.det.vid.size.w,
         codec_param.dec_fmt.det.vid.size.h
         ));
@@ -410,7 +429,7 @@ int vid_codec_test(void)
     if (rc != 0)
 	goto on_return;
 
-    rc = encode_decode_test(pool, "h263", 0);
+    rc = encode_decode_test(pool, "h263-1998");
     if (rc != 0)
 	goto on_return;
 
