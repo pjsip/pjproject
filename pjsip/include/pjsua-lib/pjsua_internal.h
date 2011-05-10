@@ -39,7 +39,10 @@ typedef enum pjsua_med_tp_st
     PJSUA_MED_TP_INIT,
 
     /** Running (media_start() has been called) */
-    PJSUA_MED_TP_RUNNING
+    PJSUA_MED_TP_RUNNING,
+
+    /** Disabled (transport is initialized, but media is being disabled) */
+    PJSUA_MED_TP_DISABLED
 
 } pjsua_med_tp_st;
 
