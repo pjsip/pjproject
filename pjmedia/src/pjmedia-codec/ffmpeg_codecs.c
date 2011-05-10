@@ -1320,6 +1320,8 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     output->bit_info = 0;
 
     /* Validate output buffer size */
+    // Do this validation later after getting decoding result, where the real
+    // decoded size will be assured.
     if (ff->dec_vafp.framebytes > output_buf_len)
 	return PJ_ETOOSMALL;
 
@@ -1405,7 +1407,7 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	    output->bit_info = PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
 	}
 
-	/* Check provided buffer size after format changed */
+	/* Check provided buffer size */
 	if (vafp->framebytes > output_buf_len)
 	    return PJ_ETOOSMALL;
 
