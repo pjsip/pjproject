@@ -1322,8 +1322,8 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     /* Validate output buffer size */
     // Do this validation later after getting decoding result, where the real
     // decoded size will be assured.
-    if (ff->dec_vafp.framebytes > output_buf_len)
-	return PJ_ETOOSMALL;
+    //if (ff->dec_vafp.framebytes > output_buf_len)
+	//return PJ_ETOOSMALL;
 
     /* Init frame to receive the decoded data, the ffmpeg codec context will
      * automatically provide the decoded buffer (single buffer used for the
