@@ -295,7 +295,7 @@ static pjsip_hdr* parse_hdr_sub_state( pjsip_parse_ctx *ctx )
  */
 PJ_DEF(void) pjsip_evsub_init_parser(void)
 {
-    pjsip_register_hdr_parser( "Event", NULL, 
+    pjsip_register_hdr_parser( "Event", "o",
 			       &parse_hdr_event);
 
     pjsip_register_hdr_parser( "Subscription-State", NULL, 
