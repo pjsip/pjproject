@@ -64,6 +64,19 @@ PJ_BEGIN_DECL
 typedef struct pjmedia_delay_buf pjmedia_delay_buf;
 
 /**
+ * Delay buffer options.
+ */
+typedef enum pjmedia_delay_buf_flag
+{
+    /**
+     * Use simple FIFO mechanism for the delay buffer, i.e.
+     * without WSOLA for expanding and shrinking audio samples.
+     */
+    PJMEDIA_DELAY_BUF_SIMPLE_FIFO = 1
+
+} pjmedia_delay_buf_flag;
+
+/**
  * Create the delay buffer. Once the delay buffer is created, it will
  * enter learning state unless the delay argument is specified, which
  * in this case it will directly enter the running state.
@@ -79,7 +92,12 @@ typedef struct pjmedia_delay_buf pjmedia_delay_buf;
  *			    in ms, if this value is negative or less than 
  *			    one frame time, default maximum delay used is
  *			    400 ms.
- * @param options	    Option flags, must be zero for now.
+ * @param options	    Options. If PJMEDIA_DELAY_BUF_SIMPLE_FIFO is
+ *                          specified, then a simple FIFO mechanism
+ *			    will be used instead of the adaptive
+ *                          implementation (which uses WSOLA to expand
+ *                          or shrink audio samples).
+ *			    See #pjmedia_delay_buf_flag for other options.
  * @param p_b		    Pointer to receive the delay buffer instance.
  *
  * @return		    PJ_SUCCESS if the delay buffer has been

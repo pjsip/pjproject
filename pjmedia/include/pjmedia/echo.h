@@ -88,7 +88,15 @@ typedef enum pjmedia_echo_flag
      * for the echo canceller, but application will guarantee that echo
      * canceller will not be called by different threads at the same time.
      */
-    PJMEDIA_ECHO_NO_LOCK = 16
+    PJMEDIA_ECHO_NO_LOCK = 16,
+
+    /**
+     * If PJMEDIA_ECHO_USE_SIMPLE_FIFO flag is specified, the delay buffer
+     * created for the echo canceller will use simple FIFO mechanism, i.e.
+     * without using WSOLA to expand and shrink audio samples.
+     */
+    PJMEDIA_ECHO_USE_SIMPLE_FIFO = 32
+
 
 } pjmedia_echo_flag;
 
