@@ -329,8 +329,8 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 = Fixed mode prefetch 5, with random burst
 %fixed 5
 !burst	    3
-!discard    0
-!lost	    0
+!discard    4 <- (see above test scenario)
+!lost	    4 <- (see above test scenario)
 !empty	    5
 !delay	    5
 PGPGPPGGPPPPGGPGGGPG PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPPPGGPGGGPG 
