@@ -119,6 +119,7 @@ struct pjmedia_jbuf
 					     operation), the value may be
 					     continuously updated based on
 					     current frame burst level.	    */
+    pj_bool_t	    jb_prefetching;	/**< flag if jbuf is prefetching.   */
     int		    jb_status;		/**< status is 'init' until the	first 
 					     'put' operation		    */
     int		    jb_init_cycle_cnt;	/**< status is 'init' until the	first 
@@ -140,7 +141,6 @@ struct pjmedia_jbuf
 
 #define JB_STATUS_INITIALIZING	0
 #define JB_STATUS_PROCESSING	1
-#define JB_STATUS_PREFETCHING	2
 
 
 
@@ -550,6 +550,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
     jb->jb_status	 = JB_STATUS_INITIALIZING;
     jb->jb_init_cycle_cnt= 0;
     jb->jb_max_hist_level= 0;
+    jb->jb_prefetching   = (jb->jb_prefetch != 0);
 
     jb_framelist_reset(&jb->jb_framelist);
 
@@ -860,11 +861,11 @@ PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb,
 	*discarded = (status != PJ_SUCCESS);
 
     if (status == PJ_SUCCESS) {
-	if (jb->jb_status == JB_STATUS_PREFETCHING) {
+	if (jb->jb_prefetching) {
 	    TRACE__((jb->jb_name.ptr, "PUT prefetch_cnt=%d/%d", 
 		     new_size, jb->jb_prefetch));
 	    if (new_size >= jb->jb_prefetch)
-		jb->jb_status = JB_STATUS_PROCESSING;
+		jb->jb_prefetching = PJ_FALSE;
 	}
 	jb->jb_level += (new_size > cur_size ? new_size-cur_size : 1);
 	jbuf_update(jb, JB_OP_PUT);
@@ -891,7 +892,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 				     char *p_frame_type,
 				     pj_uint32_t *bit_info)
 {
-    if (jb->jb_status == JB_STATUS_PREFETCHING) {
+    if (jb->jb_prefetching) {
 
 	/* Can't return frame because jitter buffer is filling up
 	 * minimum prefetch.
@@ -938,7 +939,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 	} else {
 	    /* Jitter buffer is empty */
 	    if (jb->jb_prefetch)
-		jb->jb_status = JB_STATUS_PREFETCHING;
+		jb->jb_prefetching = PJ_TRUE;
 
 	    //pj_bzero(frame, jb->jb_frame_size);
 	    *p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;

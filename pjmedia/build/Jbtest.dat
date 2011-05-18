@@ -316,8 +316,8 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 = Fixed mode prefetch 5, with two empty events
 %fixed 5
 !burst	    1
-!discard    0
-!lost	    0
+!discard    4  <- the burst level is about 1, but prefetching will cause delay by 5 frames prefetching, delay adjustment may take place later on
+!lost	    4  <- progressive discard drops frames as if they were lost
 !empty	    10
 !delay	    5
 G
