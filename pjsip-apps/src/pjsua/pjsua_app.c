@@ -880,8 +880,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_100REL: /** 100rel */
-	    cur_acc->require_100rel = PJ_TRUE;
-	    cfg->cfg.require_100rel = PJ_TRUE;
+	    cur_acc->require_100rel = PJSUA_100REL_MANDATORY;
+	    cfg->cfg.require_100rel = PJSUA_100REL_MANDATORY;
 	    break;
 
 	case OPT_TIMER: /** session timer */

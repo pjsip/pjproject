@@ -954,6 +954,34 @@ typedef enum pjsua_sip_timer_use
 
 
 /**
+ * This constants controls the use of 100rel extension.
+ */
+typedef enum pjsua_100rel_use
+{
+    /**
+     * Not used. For UAC, support for 100rel will be indicated in Supported
+     * header so that peer can opt to use it if it wants to. As UAS, this
+     * option will NOT cause 100rel to be used even if UAC indicates that
+     * it supports this feature.
+     */
+    PJSUA_100REL_NOT_USED,
+
+    /**
+     * Mandatory. UAC will place 100rel in Require header, and UAS will
+     * reject incoming calls unless it has 100rel in Supported header.
+     */
+    PJSUA_100REL_MANDATORY,
+
+    /**
+     * Optional. Similar to PJSUA_100REL_NOT_USED, except that as UAS, this
+     * option will cause 100rel to be used if UAC indicates that it supports it.
+     */
+    PJSUA_100REL_OPTIONAL
+
+} pjsua_100rel_use;
+
+
+/**
  * This structure describes the settings to control the API and
  * user agent behavior, and can be specified when calling #pjsua_init().
  * Before setting the values, application must call #pjsua_config_default()
@@ -1089,13 +1117,13 @@ typedef struct pjsua_config
     int		    nat_type_in_sdp;
 
     /**
-     * Specify whether support for reliable provisional response (100rel and
-     * PRACK) should be required by default. Note that this setting can be
+     * Specify how the support for reliable provisional response (100rel/
+     * PRACK) should be used by default. Note that this setting can be
      * further customized in account configuration (#pjsua_acc_config).
      *
-     * Default: PJ_FALSE
+     * Default: PJSUA_100REL_NOT_USED
      */
-    pj_bool_t	    require_100rel;
+    pjsua_100rel_use require_100rel;
 
     /**
      * Specify the usage of Session Timers for all sessions. See the
@@ -2222,12 +2250,14 @@ typedef struct pjsua_acc_config
     pj_str_t	    contact_uri_params;
 
     /**
-     * Specify whether support for reliable provisional response (100rel and
-     * PRACK) should be required for all sessions of this account.
+     * Specify how support for reliable provisional response (100rel/
+     * PRACK) should be used for all sessions in this account. See the
+     * documentation of pjsua_100rel_use enumeration for more info.
      *
-     * Default: PJ_FALSE
+     * Default: The default value is taken from the value of
+     *          require_100rel in pjsua_config.
      */
-    pj_bool_t	    require_100rel;
+    pjsua_100rel_use require_100rel;
 
     /**
      * Specify the usage of Session Timers for all sessions. See the

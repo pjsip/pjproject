@@ -499,7 +499,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
     /* Create the INVITE session: */
     options |= PJSIP_INV_SUPPORT_100REL;
-    if (acc->cfg.require_100rel)
+    if (acc->cfg.require_100rel == PJSUA_100REL_MANDATORY)
 	options |= PJSIP_INV_REQUIRE_100REL;
     if (acc->cfg.use_timer != PJSUA_SIP_TIMER_INACTIVE) {
 	options |= PJSIP_INV_SUPPORT_TIMER;
@@ -848,7 +848,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
-    if (pjsua_var.acc[acc_id].cfg.require_100rel)
+    if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
 	options |= PJSIP_INV_REQUIRE_100REL;
     if (pjsua_var.media_cfg.enable_ice)
 	options |= PJSIP_INV_SUPPORT_ICE;
@@ -929,6 +929,19 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	(options & PJSIP_INV_REQUIRE_TIMER) == 0)
     {
 	options &= ~(PJSIP_INV_SUPPORT_TIMER);
+    }
+
+    /* If 100rel is optional and UAC supports it, use it. */
+    if ((options & PJSIP_INV_REQUIRE_100REL)==0 &&
+	pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_OPTIONAL)
+    {
+	const pj_str_t token = { "100rel", 6};
+	pjsip_dialog_cap_status cap_status;
+
+	cap_status = pjsip_dlg_remote_has_cap(dlg, PJSIP_H_SUPPORTED, NULL,
+	                                      &token);
+	if (cap_status == PJSIP_DIALOG_CAP_SUPPORTED)
+	    options |= PJSIP_INV_REQUIRE_100REL;
     }
 
     /* Create invite session: */
