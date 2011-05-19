@@ -143,6 +143,7 @@ struct pjmedia_stream
     pj_uint32_t		     rtcp_last_tx;  /**< RTCP tx time in timestamp  */
     pj_uint32_t		     rtcp_interval; /**< Interval, in timestamp.    */
     pj_bool_t		     initial_rr;    /**< Initial RTCP RR sent	    */
+    pj_bool_t                rtcp_sdes_bye_disabled;/**< Send RTCP SDES/BYE?*/
 
     /* RFC 2833 DTMF transmission queue: */
     int			     tx_event_pt;   /**< Outgoing pt for dtmf.	    */
@@ -1826,19 +1827,24 @@ on_return:
 
 	/* Build RR or SR */
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
-	pkt = (pj_uint8_t*) stream->enc->out_pkt;
-	pj_memcpy(pkt, sr_rr_pkt, len);
-	pkt += len;
 
-	/* Append SDES */
-	len = create_rtcp_sdes(stream, (pj_uint8_t*)pkt, 
-			       stream->enc->out_pkt_size - len);
-	if (len > 0) {
-	    pkt += len;
-	    len = ((pj_uint8_t*)pkt) - ((pj_uint8_t*)stream->enc->out_pkt);
-	    pjmedia_transport_send_rtcp(stream->transport, 
-					stream->enc->out_pkt, len);
-	}
+        if (!stream->rtcp_sdes_bye_disabled) {
+            pkt = (pj_uint8_t*) stream->enc->out_pkt;
+            pj_memcpy(pkt, sr_rr_pkt, len);
+            pkt += len;
+
+            /* Append SDES */
+            len = create_rtcp_sdes(stream, (pj_uint8_t*)pkt, 
+                                   stream->enc->out_pkt_size - len);
+            if (len > 0) {
+                pkt += len;
+                len = ((pj_uint8_t*)pkt) - ((pj_uint8_t*)stream->enc->out_pkt);
+                pjmedia_transport_send_rtcp(stream->transport, 
+                                            stream->enc->out_pkt, len);
+            }
+        } else {
+            pjmedia_transport_send_rtcp(stream->transport, ss_rr_pkt, len);
+        }
 
 	stream->initial_rr = PJ_TRUE;
     }
@@ -1954,7 +1960,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     enum { M = 32 };
     pjmedia_stream *stream;
     pj_str_t name;
-    unsigned jb_init, jb_max, jb_min_pre, jb_max_pre, len;
+    unsigned jb_init, jb_max, jb_min_pre, jb_max_pre;
     char *p;
     pj_status_t status;
 
@@ -1992,6 +1998,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->user_data = user_data;
     stream->rtcp_interval = (PJMEDIA_RTCP_INTERVAL-500 + (pj_rand()%1000)) *
 			    info->fmt.clock_rate / 1000;
+    stream->rtcp_sdes_bye_disabled = info->rtcp_sdes_bye_disabled;
 
     stream->tx_event_pt = info->tx_event_pt ? info->tx_event_pt : -1;
     stream->rx_event_pt = info->rx_event_pt ? info->rx_event_pt : -1;
@@ -2305,11 +2312,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 #endif
 
     /* Send RTCP SDES */
-    len = create_rtcp_sdes(stream, (pj_uint8_t*)stream->enc->out_pkt, 
-			   stream->enc->out_pkt_size);
-    if (len != 0) {
-	pjmedia_transport_send_rtcp(stream->transport, 
-				    stream->enc->out_pkt, len);
+    if (!stream->rtcp_sdes_bye_disabled) {
+        pjmedia_stream_send_rtcp_sdes(stream);
     }
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
@@ -2364,7 +2368,6 @@ err_cleanup:
  */
 PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 {
-    unsigned len;
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
@@ -2406,13 +2409,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 #endif
 
     /* Send RTCP BYE */
-    if (stream->enc && stream->transport) {
-	len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt,
-			      stream->enc->out_pkt_size);
-	if (len != 0) {
-	    pjmedia_transport_send_rtcp(stream->transport, 
-					stream->enc->out_pkt, len);
-	}
+    if (!stream->rtcp_sdes_bye_disabled) {
+        pjmedia_stream_send_rtcp_bye(stream);
     }
 
     /* Detach from transport 
@@ -2760,3 +2758,44 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
     return PJ_SUCCESS;
 }
 
+/*
+ * Send RTCP SDES.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_send_rtcp_sdes( pjmedia_stream *stream )
+{
+    unsigned len;
+
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    len = create_rtcp_sdes(stream, (pj_uint8_t*)stream->enc->out_pkt,
+                           stream->enc->out_pkt_size);
+    if (len != 0) {
+        return pjmedia_transport_send_rtcp(stream->transport, 
+                                           stream->enc->out_pkt, len);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Send RTCP BYE.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_stream_send_rtcp_bye( pjmedia_stream *stream )
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    if (stream->enc && stream->transport) {
+        unsigned len;
+
+        len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt,
+                              stream->enc->out_pkt_size);
+        if (len != 0) {
+            return pjmedia_transport_send_rtcp(stream->transport, 
+                                               stream->enc->out_pkt, len);
+        }
+    }
+
+    return PJ_SUCCESS;
+}

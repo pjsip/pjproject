@@ -813,6 +813,40 @@ PJ_DEF(pj_status_t) pjmedia_session_resume_stream( pjmedia_session *session,
 }
 
 /**
+ * Send RTCP SDES for the session.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_session_send_rtcp_sdes( const pjmedia_session *session )
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(session, PJ_EINVAL);
+
+    for (i=0; i<session->stream_cnt; ++i) {
+	pjmedia_stream_send_rtcp_sdes(session->stream[i]);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/**
+ * Send RTCP BYE for the session.
+ */
+PJ_DEF(pj_status_t) 
+pjmedia_session_send_rtcp_bye( const pjmedia_session *session )
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(session, PJ_EINVAL);
+
+    for (i=0; i<session->stream_cnt; ++i) {
+	pjmedia_stream_send_rtcp_bye(session->stream[i]);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/**
  * Enumerate media stream in the session.
  */
 PJ_DEF(pj_status_t) pjmedia_session_enum_streams(const pjmedia_session *session,
