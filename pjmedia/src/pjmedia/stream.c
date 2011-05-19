@@ -1843,7 +1843,7 @@ on_return:
                                             stream->enc->out_pkt, len);
             }
         } else {
-            pjmedia_transport_send_rtcp(stream->transport, ss_rr_pkt, len);
+            pjmedia_transport_send_rtcp(stream->transport, sr_rr_pkt, len);
         }
 
 	stream->initial_rr = PJ_TRUE;
