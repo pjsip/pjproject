@@ -3174,11 +3174,9 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
 {
     const pj_str_t STR_UPDATE = {"UPDATE", 6};
     const pjmedia_sdp_session *local_sdp = NULL, *new_sdp;
-    const pjmedia_sdp_media *ref_m;
-    pjmedia_sdp_media *m;
-    pjsua_call_media *call_med = &call->media[call->audio_idx];
-    unsigned i, codec_cnt = 0;
+    unsigned i;
     pj_bool_t rem_can_update;
+    pj_bool_t need_lock_codec = PJ_FALSE;
     pjsip_tx_data *tdata;
     pj_status_t status;
 
@@ -3210,14 +3208,6 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
     if (local_sdp->origin.version > call->lock_codec.sdp_ver)
 	return PJMEDIA_SDP_EINVER;
 
-    /* Verify if media is deactivated */
-    if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
-	call_med->state == PJSUA_CALL_MEDIA_ERROR ||
-	call_med->dir == PJMEDIA_DIR_NONE)
-    {
-        return PJ_EINVALIDOP;
-    }
-
     PJ_LOG(3, (THIS_FILE, "Updating media session to use only one codec.."));
 
     /* Update the new offer so it contains only a codec. Note that formats
@@ -3225,35 +3215,54 @@ static pj_status_t perform_lock_codec(pjsua_call *call)
      * just directly update the offer without looking-up the answer.
      */
     new_sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, local_sdp);
-    m = new_sdp->media[call->audio_idx];
-    ref_m = local_sdp->media[call->audio_idx];
-    pj_assert(ref_m->desc.port);
-    codec_cnt = 0;
-    i = 0;
-    while (i < m->desc.fmt_count) {
-	pjmedia_sdp_attr *a;
-	pj_str_t *fmt = &m->desc.fmt[i];
 
-	if (is_non_av_fmt(m, fmt) || (++codec_cnt == 1)) {
-	    ++i;
+    for (i = 0; i < call->med_cnt; ++i) {
+	unsigned j = 0, codec_cnt = 0;
+	const pjmedia_sdp_media *ref_m;
+	pjmedia_sdp_media *m;
+	pjsua_call_media *call_med = &call->media[i];
+
+	/* Verify if media is deactivated */
+	if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
+	    call_med->state == PJSUA_CALL_MEDIA_ERROR ||
+	    call_med->dir == PJMEDIA_DIR_NONE)
+	{
 	    continue;
 	}
 
-	/* Remove format */
-	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "rtpmap", fmt);
-	if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
-	a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "fmtp", fmt);
-	if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
-	pj_array_erase(m->desc.fmt, sizeof(m->desc.fmt[0]),
-		       m->desc.fmt_count, i);
-	--m->desc.fmt_count;
+	ref_m = local_sdp->media[i];
+	m = new_sdp->media[i];
+
+	/* Verify that media must be active. */
+	pj_assert(ref_m->desc.port);
+
+	while (j < m->desc.fmt_count) {
+	    pjmedia_sdp_attr *a;
+	    pj_str_t *fmt = &m->desc.fmt[j];
+
+	    if (is_non_av_fmt(m, fmt) || (++codec_cnt == 1)) {
+		++j;
+		continue;
+	    }
+
+	    /* Remove format */
+	    a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "rtpmap", fmt);
+	    if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
+	    a = pjmedia_sdp_attr_find2(m->attr_count, m->attr, "fmtp", fmt);
+	    if (a) pjmedia_sdp_attr_remove(&m->attr_count, m->attr, a);
+	    pj_array_erase(m->desc.fmt, sizeof(m->desc.fmt[0]),
+			   m->desc.fmt_count, j);
+	    --m->desc.fmt_count;
+	}
+	
+	need_lock_codec |= (ref_m->desc.fmt_count > m->desc.fmt_count);
     }
 
     /* Last check if SDP trully needs to be updated. It is possible that OA
      * negotiations have completed and SDP has changed but we didn't
      * increase the SDP version (should not happen!).
      */
-    if (ref_m->desc.fmt_count == m->desc.fmt_count)
+    if (!need_lock_codec)
 	return PJ_SUCCESS;
 
     /* Send UPDATE or re-INVITE */
@@ -3301,11 +3310,10 @@ static pj_status_t lock_codec(pjsua_call *call)
 {
     pjsip_inv_session *inv = call->inv;
     const pjmedia_sdp_session *local_sdp, *remote_sdp;
-    const pjmedia_sdp_media *rem_m, *loc_m;
-    unsigned codec_cnt=0, i;
-    pjsua_call_media *call_med = &call->media[call->audio_idx];
     pj_time_val delay = {0, 0};
     const pj_str_t st_update = {"UPDATE", 6};
+    unsigned i;
+    pj_bool_t has_mult_fmt = PJ_FALSE;
     pj_status_t status;
 
     /* Stop lock codec timer, if it is active */
@@ -3317,14 +3325,6 @@ static pj_status_t lock_codec(pjsua_call *call)
 
     /* Skip this if we are the answerer */
     if (!inv->neg || !pjmedia_sdp_neg_was_answer_remote(inv->neg)) {
-        return PJ_SUCCESS;
-    }
-
-    /* Skip this if the media is inactive or error */
-    if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
-	call_med->state == PJSUA_CALL_MEDIA_ERROR ||
-	call_med->dir == PJMEDIA_DIR_NONE)
-    {
         return PJ_SUCCESS;
     }
 
@@ -3346,28 +3346,50 @@ static pj_status_t lock_codec(pjsua_call *call)
     if (status != PJ_SUCCESS)
 	return status;
 
-    PJ_ASSERT_RETURN(call->audio_idx>=0 &&
-		     call->audio_idx < (int)remote_sdp->media_count,
-		     PJ_EINVALIDOP);
+    /* Find multiple codecs answer in all media */
+    for (i = 0; i < call->med_cnt; ++i) {
+	pjsua_call_media *call_med = &call->media[i];
+	const pjmedia_sdp_media *rem_m, *loc_m;
+	unsigned codec_cnt = 0;
 
-    rem_m = remote_sdp->media[call->audio_idx];
-    loc_m = local_sdp->media[call->audio_idx];
+	/* Skip this if the media is inactive or error */
+	if (call_med->state == PJSUA_CALL_MEDIA_NONE ||
+	    call_med->state == PJSUA_CALL_MEDIA_ERROR ||
+	    call_med->dir == PJMEDIA_DIR_NONE)
+	{
+	    continue;
+	}
 
-    /* Verify that media must be active. */
-    pj_assert(loc_m->desc.port && rem_m->desc.port);
+	/* Remote may answer with less media lines. */
+	if (i >= remote_sdp->media_count)
+	    continue;
 
-    /* Count the formats in the answer. */
-    if (rem_m->desc.fmt_count==1) {
-        codec_cnt = 1;
-    } else {
-        for (i=0; i<rem_m->desc.fmt_count && codec_cnt <= 1; ++i) {
-	    if (!is_non_av_fmt(rem_m, &rem_m->desc.fmt[i]))
-	        ++codec_cnt;
-        }
+	rem_m = remote_sdp->media[i];
+	loc_m = local_sdp->media[i];
+
+	/* Verify that media must be active. */
+	pj_assert(loc_m->desc.port && rem_m->desc.port);
+
+	/* Count the formats in the answer. */
+	if (rem_m->desc.fmt_count==1) {
+	    codec_cnt = 1;
+	} else {
+	    unsigned j;
+	    for (j=0; j<rem_m->desc.fmt_count && codec_cnt <= 1; ++j) {
+		if (!is_non_av_fmt(rem_m, &rem_m->desc.fmt[j]))
+		    ++codec_cnt;
+	    }
+	}
+
+	if (codec_cnt > 1) {
+	    has_mult_fmt = PJ_TRUE;
+	    break;
+	}
     }
-    if (codec_cnt <= 1) {
-	/* Answer contains single codec. */
-        call->lock_codec.retry_cnt = 0;
+
+    /* Each media in the answer already contains single codec. */
+    if (!has_mult_fmt) {
+	call->lock_codec.retry_cnt = 0;
 	return PJ_SUCCESS;
     }
 
