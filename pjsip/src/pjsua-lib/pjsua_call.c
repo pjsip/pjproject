@@ -3778,12 +3778,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
-    if (call->audio_idx < (int)offer->media_count)
-	conn = offer->media[call->audio_idx]->conn;
-
-    if (!conn)
-	conn = offer->conn;
-
     /* Supply candidate answer */
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 	      call->index));
@@ -3796,6 +3790,12 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	PJSUA_UNLOCK();
 	return;
     }
+
+    if (call->audio_idx >= 0 && call->audio_idx < (int)offer->media_count)
+	conn = offer->media[call->audio_idx]->conn;
+
+    if (!conn)
+	conn = offer->conn;
 
     /* Check if offer's conn address is zero */
     if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
