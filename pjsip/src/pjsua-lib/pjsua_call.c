@@ -1172,6 +1172,7 @@ pj_status_t acquire_call(const char *title,
     pj_time_val time_start, timeout;
 
     pj_gettimeofday(&time_start);
+    timeout.sec = 0;
     timeout.msec = PJSUA_ACQUIRE_CALL_TIMEOUT;
     pj_time_val_normalize(&timeout);
 
