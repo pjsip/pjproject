@@ -128,6 +128,12 @@ PJ_DEF(pj_uint8_t) pjmedia_linear2alaw(
 	} else {
 		mask = 0x55;		/* sign bit = 0 */
 		pcm_val = -pcm_val - 8;
+
+		/* https://trac.pjsip.org/repos/ticket/1301 
+		 * Thank you K Johnson - Zetron - 27 May 2011
+		 */
+		if (pcm_val < 0)
+		    pcm_val = 0;
 	}
 
 	/* Convert the scaled magnitude to segment number. */
