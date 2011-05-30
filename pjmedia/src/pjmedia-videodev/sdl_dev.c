@@ -32,6 +32,8 @@
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #   include "SDL_opengl.h"
 #   define OPENGL_DEV_IDX 1
+#else
+#   define OPENGL_DEV_IDX -999
 #endif
 
 #define THIS_FILE		"sdl_dev.c"
@@ -54,16 +56,23 @@ typedef struct sdl_fmt_info
 static sdl_fmt_info sdl_fmts[] =
 {
 #if PJ_IS_BIG_ENDIAN
-    {PJMEDIA_FORMAT_RGBA,  0, 0xFF000000, 0xFF0000, 0xFF00, 0xFF} ,
-    {PJMEDIA_FORMAT_RGB24, 0, 0xFF0000, 0xFF00, 0xFF, 0} ,
-    {PJMEDIA_FORMAT_BGRA,  0, 0xFF00, 0xFF0000, 0xFF000000, 0xFF} ,
+    {PJMEDIA_FORMAT_RGBA,  SDL_PIXELFORMAT_RGBA8888,
+     0xFF000000, 0xFF0000, 0xFF00, 0xFF} ,
+    {PJMEDIA_FORMAT_RGB24, SDL_PIXELFORMAT_RGB24,
+     0xFF0000, 0xFF00, 0xFF, 0} ,
+    {PJMEDIA_FORMAT_BGRA,  SDL_PIXELFORMAT_BGRA8888,
+     0xFF00, 0xFF0000, 0xFF000000, 0xFF} ,
 #else
-    {PJMEDIA_FORMAT_RGBA,  0, 0xFF, 0xFF00, 0xFF0000, 0xFF000000} ,
-    {PJMEDIA_FORMAT_RGB24, 0, 0xFF, 0xFF00, 0xFF0000, 0} ,
-    {PJMEDIA_FORMAT_BGRA,  0, 0xFF0000, 0xFF00, 0xFF, 0xFF000000} ,
+    {PJMEDIA_FORMAT_RGBA,  SDL_PIXELFORMAT_ABGR8888,
+     0xFF, 0xFF00, 0xFF0000, 0xFF000000} ,
+    {PJMEDIA_FORMAT_RGB24, SDL_PIXELFORMAT_BGR24,
+     0xFF, 0xFF00, 0xFF0000, 0} ,
+    {PJMEDIA_FORMAT_BGRA,  SDL_PIXELFORMAT_ARGB8888,
+     0xFF0000, 0xFF00, 0xFF, 0xFF000000} ,
 #endif
 
-    {PJMEDIA_FORMAT_DIB  , 0, 0xFF0000, 0xFF00, 0xFF, 0} ,
+    {PJMEDIA_FORMAT_DIB  , SDL_PIXELFORMAT_RGB24,
+     0xFF0000, 0xFF00, 0xFF, 0} ,
 
     {PJMEDIA_FORMAT_YUY2, SDL_YUY2_OVERLAY, 0, 0, 0, 0} ,
     {PJMEDIA_FORMAT_UYVY, SDL_UYVY_OVERLAY, 0, 0, 0, 0} ,
@@ -73,6 +82,23 @@ static sdl_fmt_info sdl_fmts[] =
     {PJMEDIA_FORMAT_I420JPEG, SDL_IYUV_OVERLAY, 0, 0, 0, 0} ,
     {PJMEDIA_FORMAT_I422JPEG, SDL_YV12_OVERLAY, 0, 0, 0, 0} ,
 };
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+@interface SDLDelegate: NSObject
+{
+    @public
+    struct sdl_stream	    *strm;
+}
+
+- (void)sdl_init;
+- (void)sdl_quit;
+- (void)detect_new_fmt;
+- (int)sdl_create;
+- (void)sdl_destroy;
+- (int)handle_event;
+- (pj_status_t)put_frame;
+@end
+#endif
 
 /* sdl_ device info */
 struct sdl_dev_info
@@ -89,20 +115,11 @@ struct sdl_factory
 
     unsigned			 dev_count;
     struct sdl_dev_info	        *dev_info;
-};
-
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-@interface SDLDelegate: NSObject
-{
-    @public
-    struct sdl_stream	    *strm;
-}
-
-- (int)sdl_thread;
-- (int)handle_event;
-- (pj_status_t)put_frame;
-@end
+    NSAutoreleasePool		*apool;
+    SDLDelegate			*delegate;
 #endif
+};
 
 /* Video stream. */
 struct sdl_stream
@@ -119,12 +136,22 @@ struct sdl_stream
     pj_bool_t			 is_running;
     pj_bool_t			 render_exited;
     pj_status_t			 status;
+    pjmedia_format              *new_fmt;
 
+#if SDL_VERSION_ATLEAST(1,3,0)
+    SDL_Window                  *window;            /**< Display window.    */
+    SDL_Renderer                *renderer;          /**< Display renderer.  */
+    SDL_Texture                 *scr_tex;           /**< Screen texture.    */
+    int                          pitch;             /**< Pitch value.       */
+#endif
     SDL_Rect			 rect;              /**< Display rectangle. */
     SDL_Surface			*screen;            /**< Display screen.    */
     SDL_Surface			*surf;              /**< RGB surface.       */
     SDL_Overlay			*overlay;           /**< YUV overlay.       */
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+#if SDL_VERSION_ATLEAST(1,3,0)
+    SDL_GLContext               *gl_context;
+#endif
     GLuint			 texture;
     void			*tex_buf;
     pj_size_t			 tex_buf_size;
@@ -230,7 +257,20 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
 {
     struct sdl_factory *sf = (struct sdl_factory*)f;
     struct sdl_dev_info *ddi;
-    unsigned i;
+    unsigned i, j;
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    sf->apool = [[NSAutoreleasePool alloc] init];
+    sf->delegate = [[SDLDelegate alloc] init];
+    [sf->delegate performSelectorOnMainThread:@selector(sdl_init) 
+	          withObject:nil waitUntilDone:YES];
+#else
+    /* Initialize the SDL library */
+    if (SDL_Init(SDL_INIT_VIDEO)) {
+        PJ_LOG(4, (THIS_FILE, "Cannot initialize SDL"));
+        return PJMEDIA_EVID_INIT;
+    }
+#endif
 
     sf->dev_count = 1;
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
@@ -244,47 +284,38 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     pj_bzero(ddi, sizeof(*ddi));
     strncpy(ddi->info.name, "SDL renderer", sizeof(ddi->info.name));
     ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
-    strncpy(ddi->info.driver, "SDL", sizeof(ddi->info.driver));
-    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
-    ddi->info.dir = PJMEDIA_DIR_RENDER;
-    ddi->info.has_callback = PJ_FALSE;
-    ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |
-		     PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
-
     ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
-    ddi->info.fmt = (pjmedia_format*)
-		    pj_pool_calloc(sf->pool, ddi->info.fmt_cnt,
-				   sizeof(pjmedia_format));
-    for (i = 0; i < ddi->info.fmt_cnt; i++) {
-        pjmedia_format *fmt = &ddi->info.fmt[i];
-        pjmedia_format_init_video(fmt, sdl_fmts[i].fmt_id,
-				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
-				  DEFAULT_FPS, 1);
-    }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     ddi = &sf->dev_info[OPENGL_DEV_IDX];
     pj_bzero(ddi, sizeof(*ddi));
     strncpy(ddi->info.name, "SDL openGL renderer", sizeof(ddi->info.name));
     ddi->info.name[sizeof(ddi->info.name)-1] = '\0';
-    strncpy(ddi->info.driver, "SDL", sizeof(ddi->info.driver));
-    ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
-    ddi->info.dir = PJMEDIA_DIR_RENDER;
-    ddi->info.has_callback = PJ_FALSE;
-    ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-    
-    ddi->info.fmt_cnt = PJ_ARRAY_SIZE(sdl_fmts);
     ddi->info.fmt_cnt = 1;
-    ddi->info.fmt = (pjmedia_format*)
-    pj_pool_calloc(sf->pool, ddi->info.fmt_cnt,
-		   sizeof(pjmedia_format));
-    for (i = 0; i < ddi->info.fmt_cnt; i++) {
-        pjmedia_format *fmt = &ddi->info.fmt[i];
-        pjmedia_format_init_video(fmt, sdl_fmts[i].fmt_id,
-				  DEFAULT_WIDTH, DEFAULT_HEIGHT,
-				  DEFAULT_FPS, 1);
-    }    
 #endif
+
+    for (i = 0; i < sf->dev_count; i++) {
+        ddi = &sf->dev_info[i];
+        strncpy(ddi->info.driver, "SDL", sizeof(ddi->info.driver));
+        ddi->info.driver[sizeof(ddi->info.driver)-1] = '\0';
+        ddi->info.dir = PJMEDIA_DIR_RENDER;
+        ddi->info.has_callback = PJ_FALSE;
+        ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |
+                         PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
+#if SDL_VERSION_ATLEAST(1,3,0)
+        ddi->info.caps |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+#endif
+
+        ddi->info.fmt = (pjmedia_format*)
+                        pj_pool_calloc(sf->pool, ddi->info.fmt_cnt,
+                                       sizeof(pjmedia_format));
+        for (j = 0; j < ddi->info.fmt_cnt; j++) {
+            pjmedia_format *fmt = &ddi->info.fmt[j];
+            pjmedia_format_init_video(fmt, sdl_fmts[j].fmt_id,
+                                      DEFAULT_WIDTH, DEFAULT_HEIGHT,
+                                      DEFAULT_FPS, 1);
+        }
+    }
 
     PJ_LOG(4, (THIS_FILE, "SDL initialized"));
 
@@ -299,6 +330,15 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f)
 
     sf->pool = NULL;
     pj_pool_release(pool);
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    [sf->delegate performSelectorOnMainThread:@selector(sdl_quit) 
+                  withObject:nil waitUntilDone:YES];
+    [sf->delegate release];
+    [sf->apool release];
+#else
+    SDL_Quit();
+#endif
 
     return PJ_SUCCESS;
 }
@@ -377,7 +417,7 @@ static sdl_fmt_info* get_sdl_format_info(pjmedia_format_id id)
     return NULL;
 }
 
-static void destroy_sdl(struct sdl_stream *strm)
+static void destroy_sdl(struct sdl_stream *strm, pj_bool_t destroy_win)
 {
     if (strm->surf) {
 	SDL_FreeSurface(strm->surf);
@@ -392,6 +432,32 @@ static void destroy_sdl(struct sdl_stream *strm)
 	glDeleteTextures(1, &strm->texture);
 	strm->texture = 0;
     }
+#endif
+#if SDL_VERSION_ATLEAST(1,3,0)
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    if (strm->gl_context) {
+        SDL_GL_DeleteContext(strm->gl_context);
+        strm->gl_context = NULL;
+    }
+#endif
+    if (strm->scr_tex) {
+        SDL_DestroyTexture(strm->scr_tex);
+        strm->scr_tex = NULL;
+    }
+    if (strm->renderer) {
+        SDL_DestroyRenderer(strm->renderer);
+        strm->renderer = NULL;
+    }
+#ifndef __IPHONEOS__
+    if (destroy_win) {
+        if (strm->window &&
+            !(strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW))
+        {
+            SDL_DestroyWindow(strm->window);
+        }
+        strm->window = NULL;
+    }
+#endif
 #endif
 }
 
@@ -416,11 +482,58 @@ static pj_status_t init_sdl(struct sdl_stream *strm, pjmedia_format *fmt)
     strm->rect.w = (Uint16)vfd->size.w;
     strm->rect.h = (Uint16)vfd->size.h;
 
+    destroy_sdl(strm, PJ_FALSE);
+
+#if SDL_VERSION_ATLEAST(1,3,0)
+    if (!strm->window) {
+        Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+
+        if (strm->param.rend_id == OPENGL_DEV_IDX)
+            flags |= SDL_WINDOW_OPENGL;
+
+        if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
+            /* Use the window supplied by the application. */
+            strm->window = SDL_CreateWindowFrom(strm->param.window);
+        } else {
+            /* Create the window where we will draw. */
+            strm->window = SDL_CreateWindow("pjmedia-SDL video",
+                                            SDL_WINDOWPOS_CENTERED,
+                                            SDL_WINDOWPOS_CENTERED,
+                                            strm->rect.w, strm->rect.h,
+                                            flags);
+        }
+        if (!strm->window)
+            return PJMEDIA_EVID_SYSERR;
+    }
+
+    SDL_SetWindowSize(strm->window, strm->rect.w, strm->rect.h);
+
+    /**
+      * We must call SDL_CreateRenderer in order for draw calls to
+      * affect this window.
+      */
+    strm->renderer = SDL_CreateRenderer(strm->window, -1, 0);
+    if (!strm->renderer)
+        return PJMEDIA_EVID_SYSERR;
+
+#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
+    if (strm->param.rend_id == OPENGL_DEV_IDX) {
+        strm->gl_context = SDL_GL_CreateContext(strm->window);
+        if (!strm->gl_context)
+            return PJMEDIA_EVID_SYSERR;
+        SDL_GL_MakeCurrent(strm->window, strm->gl_context);
+    }
+#endif
+
+    strm->screen = SDL_GetWindowSurface(strm->window);
+
+#else
+
     /* Initialize the display */
     strm->screen = SDL_SetVideoMode(strm->rect.w, strm->rect.h, 0, (
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
                                     strm->param.rend_id == OPENGL_DEV_IDX?
-				    SDL_OPENGL:
+				    SDL_OPENGL | SDL_RESIZABLE:
 #endif
 				    SDL_RESIZABLE | SDL_SWSURFACE));
     if (strm->screen == NULL)
@@ -428,7 +541,7 @@ static pj_status_t init_sdl(struct sdl_stream *strm, pjmedia_format *fmt)
 
     SDL_WM_SetCaption("pjmedia-SDL video", NULL);
 
-    destroy_sdl(strm);
+#endif
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->param.rend_id == OPENGL_DEV_IDX) {
@@ -452,6 +565,9 @@ static pj_status_t init_sdl(struct sdl_stream *strm, pjmedia_format *fmt)
 	glTexEnvf(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_DECAL);
 	glGenTextures(1, &strm->texture);
 
+        if (!strm->texture)
+            return PJMEDIA_EVID_SYSERR;
+
 #if defined(PJ_WIN32) && PJ_WIN32 != 0
 	/**
 	 * On Win32 platform, the OpenGL drawing must be in the same
@@ -465,6 +581,17 @@ static pj_status_t init_sdl(struct sdl_stream *strm, pjmedia_format *fmt)
 #endif
     } else
 #endif
+#if SDL_VERSION_ATLEAST(1,3,0)
+    {    
+        strm->scr_tex = SDL_CreateTexture(strm->renderer, sdl_info->sdl_format,
+                                          SDL_TEXTUREACCESS_STREAMING,
+                                          strm->rect.w, strm->rect.h);
+        if (strm->scr_tex == NULL)
+            return PJMEDIA_EVID_SYSERR;
+    
+        strm->pitch = strm->rect.w * SDL_BYTESPERPIXEL(sdl_info->sdl_format);
+    }
+#else
     if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
         strm->surf = SDL_CreateRGBSurface(SDL_SWSURFACE,
 					  strm->rect.w, strm->rect.h,
@@ -482,26 +609,55 @@ static pj_status_t init_sdl(struct sdl_stream *strm, pjmedia_format *fmt)
         if (strm->overlay == NULL)
             return PJMEDIA_EVID_SYSERR;
     }
+#endif
 
     return PJ_SUCCESS;
 }
 
+static void detect_fmt_change(struct sdl_stream *strm)
+{
+    if (strm->new_fmt) {
+        /* Stop the stream */
+        sdl_stream_stop((pjmedia_vid_dev_stream *)strm);
+        
+        /* Re-initialize SDL */
+        strm->status = init_sdl(strm, strm->new_fmt);
+        
+        if (strm->status == PJ_SUCCESS) {
+            pjmedia_format_copy(&strm->param.fmt, strm->new_fmt);
+            /* Restart the stream */
+            sdl_stream_start((pjmedia_vid_dev_stream *)strm);
+        }
+        strm->new_fmt = NULL;
+    }
+}
+
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 @implementation SDLDelegate
-- (int)sdl_thread
+- (void)sdl_init
+{
+    if (SDL_Init(SDL_INIT_VIDEO)) {
+        PJ_LOG(4, (THIS_FILE, "Cannot initialize SDL"));
+    }
+}
+
+- (void)sdl_quit
+{
+    SDL_Quit();
+}
+
+- (void)detect_new_fmt
+{
+    detect_fmt_change(strm);
+}
+
+- (int)sdl_create
 {
 #else
 static int sdlthread(void * data)
 {
     struct sdl_stream *strm = (struct sdl_stream*)data;
 #endif
-
-    /* Initialize the SDL library */
-    if (SDL_Init(SDL_INIT_VIDEO)) {
-        PJ_LOG(4, (THIS_FILE, "Cannot initialize SDL"));
-        strm->status = PJMEDIA_EVID_INIT;
-        goto on_return;
-    }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->param.rend_id == OPENGL_DEV_IDX) {
@@ -516,13 +672,17 @@ static int sdlthread(void * data)
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 on_return:
     if (strm->status != PJ_SUCCESS) {
-	destroy_sdl(strm);	
-	SDL_Quit();
+	destroy_sdl(strm, PJ_TRUE);
 	strm->screen = NULL;
     }
     
     return strm->status;
 }
+
+- (void)sdl_destroy
+{
+    destroy_sdl(strm, PJ_TRUE);
+}    
 
 - (int)handle_event
 {
@@ -546,6 +706,9 @@ on_return:
 	}
 #endif
 #endif
+
+        detect_fmt_change(strm);
+        
         /**
          * The event polling must be placed in the same thread that
          * call SDL_SetVideoMode(). Please consult the official doc of
@@ -555,34 +718,6 @@ on_return:
             pj_bzero(&pevent, sizeof(pevent));
 
             switch(sevent.type) {
-		case SDL_USEREVENT:
-                {
-                    pjmedia_format *fmt;
-
-                    if (sevent.user.code == PJMEDIA_EVENT_NONE) {
-			strm->is_quitting = PJ_TRUE;
-		        goto on_return;
-		    }
-
-                    pj_assert(sevent.user.code == PJMEDIA_VID_DEV_CAP_FORMAT);
-
-		    fmt = (pjmedia_format *)sevent.user.data1;
-
-		    /* Stop the stream */
-                    sdl_stream_stop((pjmedia_vid_dev_stream *)strm);
-
-		    /* Re-initialize SDL */
-		    strm->status = init_sdl(strm, fmt);
-
-		    if (strm->status == PJ_SUCCESS) {
-			pjmedia_format_copy(&strm->param.fmt, fmt); 
-			/* Restart the stream */
-			sdl_stream_start((pjmedia_vid_dev_stream *)strm);
-		    }
-
-                    break;
-                }
-
                 case SDL_MOUSEBUTTONDOWN:
                     pevent.event_type = PJMEDIA_EVENT_MOUSEBUTTONDOWN;
                     if (strm->vid_cb.on_event_cb)
@@ -669,8 +804,7 @@ on_return:
     return 0;
 #endif
 on_return:
-    destroy_sdl(strm);
-    SDL_Quit();
+    destroy_sdl(strm, PJ_TRUE);
     strm->screen = NULL;
 
     return strm->status;
@@ -692,7 +826,11 @@ static void draw_gl(struct sdl_stream *stream, void *tex_buf)
 	glTexCoord2f(0, 1); glVertex2i(0, stream->rect.h);
 	glTexCoord2f(1, 1); glVertex2i(stream->rect.w, stream->rect.h);
 	glEnd();
+#if SDL_VERSION_ATLEAST(1,3,0)
+        SDL_GL_SwapWindow(stream->window);
+#else
 	SDL_GL_SwapBuffers();
+#endif
     }
 }
 #endif
@@ -735,7 +873,11 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 	    SDL_UnlockSurface(stream->surf);
 	}
 	SDL_BlitSurface(stream->surf, NULL, stream->screen, NULL);
-	SDL_UpdateRect(stream->screen, 0, 0, 0, 0);
+#if SDL_VERSION_ATLEAST(1,3,0)
+        SDL_UpdateWindowSurface(stream->window);
+#else
+        SDL_UpdateRect(stream->screen, 0, 0, 0, 0);
+#endif
     } else if (stream->overlay) {
 	int i, sz, offset;
 	
@@ -755,6 +897,14 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 	SDL_UnlockYUVOverlay(stream->overlay);
 	SDL_DisplayYUVOverlay(stream->overlay, &stream->rect);
     }
+#if SDL_VERSION_ATLEAST(1,3,0)
+    else if (stream->scr_tex) {
+        SDL_UpdateTexture(stream->scr_tex, NULL, frame->buf, stream->pitch);
+        SDL_RenderClear(stream->renderer);
+        SDL_RenderCopy(stream->renderer, stream->scr_tex, NULL, NULL);
+        SDL_RenderPresent(stream->renderer);
+    }
+#endif
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     else if (stream->param.rend_id == OPENGL_DEV_IDX) {
 #if defined(PJ_WIN32) && PJ_WIN32 != 0
@@ -777,7 +927,7 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
     struct sdl_stream *stream = (struct sdl_stream*)strm;
     stream->frame = frame;    
     [stream->delegate performSelectorOnMainThread:@selector(put_frame) 
-			  withObject:nil waitUntilDone:YES];
+	              withObject:nil waitUntilDone:YES];
 
     return PJ_SUCCESS;
 }
@@ -827,12 +977,11 @@ static pj_status_t sdl_factory_create_stream(
     if (param->dir & PJMEDIA_DIR_RENDER) {
 	strm->status = PJ_SUCCESS;
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-	pj_assert(![NSThread isMainThread]);
 	strm->apool = [[NSAutoreleasePool alloc] init];
 	strm->delegate = [[SDLDelegate alloc]init];
 	strm->delegate->strm = strm;
-	/* On Mac OS X, we need to call SDL functions in the main thread */
-	[strm->delegate performSelectorOnMainThread:@selector(sdl_thread)
+	/* On Darwin OS, we need to call SDL functions in the main thread */
+	[strm->delegate performSelectorOnMainThread:@selector(sdl_create)
 			withObject:nil waitUntilDone:YES];
 	if ((status = strm->status) != PJ_SUCCESS) {
 	    goto on_error;
@@ -846,6 +995,9 @@ static pj_status_t sdl_factory_create_stream(
 	}
 
 	while(strm->status == PJ_SUCCESS && !strm->surf && !strm->overlay
+#if SDL_VERSION_ATLEAST(1,3,0)
+              && !strm->scr_tex
+#endif
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 	      && !strm->texture
 #endif
@@ -938,15 +1090,12 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
-	SDL_Event sevent;
-	
-	strm->status = PJ_TRUE;
-	sevent.type = SDL_USEREVENT;
-	sevent.user.code = PJMEDIA_VID_DEV_CAP_FORMAT;
-	sevent.user.data1 = (void *)pval;
-	SDL_PushEvent(&sevent);
-	
-	while (strm->status == PJ_TRUE)
+        strm->new_fmt = (pjmedia_format *)pval;
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+        [strm->delegate performSelectorOnMainThread:@selector(detect_new_fmt)
+                        withObject:nil waitUntilDone:YES];
+#endif
+	while (strm->new_fmt)
 	    pj_thread_sleep(10);
 	
 	if (strm->status != PJ_SUCCESS) {
@@ -956,11 +1105,12 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 	     * Failed to change the output format. Try to revert
 	     * to its original format.
 	     */
-	    strm->status = PJ_TRUE;
-	    sevent.user.data1 = &strm->param.fmt;
-	    SDL_PushEvent(&sevent);
-	    
-	    while (strm->status == PJ_TRUE)
+            strm->new_fmt = &strm->param.fmt;
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+            [strm->delegate performSelectorOnMainThread:@selector(detect_new_fmt)
+                            withObject:nil waitUntilDone:YES];
+#endif
+	    while (strm->new_fmt)
 		pj_thread_sleep(10);
 	    
 	    if (strm->status != PJ_SUCCESS) {
@@ -1003,7 +1153,10 @@ static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm)
 
     /* Wait for renderer put_frame() to finish */
     stream->is_running = PJ_FALSE;
-    for (i=0; !stream->render_exited && i<100; ++i)
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    if (![NSThread isMainThread])
+#endif
+    for (i=0; !stream->render_exited && i<50; ++i)
 	pj_thread_sleep(10);
 
     return PJ_SUCCESS;
@@ -1014,25 +1167,28 @@ static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm)
 static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
-    SDL_Event sevent;
 
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     sdl_stream_stop(strm);
 
     if (!stream->is_quitting) {
-	sevent.type = SDL_USEREVENT;
-	sevent.user.code = PJMEDIA_EVENT_NONE;
-	SDL_PushEvent(&sevent);
+        stream->is_quitting = PJ_TRUE;
 	if (stream->sdl_thread)
 	    pj_thread_join(stream->sdl_thread);
     }
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (stream->delegate)
+    if (stream->delegate) {
+        [stream->delegate performSelectorOnMainThread:@selector(sdl_destroy)
+                          withObject:nil waitUntilDone:YES];
 	[stream->delegate release];
-    if (stream->apool)
+        stream->delegate = NULL;
+    }
+    if (stream->apool) {
 	[stream->apool release];
+        stream->apool = NULL;
+    }
 #endif
     pj_pool_release(stream->pool);
     
