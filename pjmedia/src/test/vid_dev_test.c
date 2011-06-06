@@ -82,8 +82,7 @@ static pj_status_t vid_event_cb(pjmedia_vid_dev_stream *stream,
     if (event->event_type == PJMEDIA_EVENT_WINDOW_CLOSE)
         is_quitting = PJ_TRUE;
 
-    /* We will handle the event on our own, so return non-PJ_SUCCESS here */
-    return -1;
+    return PJ_SUCCESS;
 }
 
 static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
