@@ -391,29 +391,15 @@ static pj_status_t sdl_factory_default_param(pj_pool_t *pool,
     PJ_UNUSED_ARG(pool);
 
     pj_bzero(param, sizeof(*param));
-    if (di->info.dir == PJMEDIA_DIR_CAPTURE_RENDER) {
-	param->dir = PJMEDIA_DIR_CAPTURE_RENDER;
-	param->cap_id = index;
-	param->rend_id = index;
-    } else if (di->info.dir & PJMEDIA_DIR_CAPTURE) {
-	param->dir = PJMEDIA_DIR_CAPTURE;
-	param->cap_id = index;
-	param->rend_id = PJMEDIA_VID_INVALID_DEV;
-    } else if (di->info.dir & PJMEDIA_DIR_RENDER) {
-	param->dir = PJMEDIA_DIR_RENDER;
-	param->rend_id = index;
-	param->cap_id = PJMEDIA_VID_INVALID_DEV;
-    } else {
-	return PJMEDIA_EVID_INVDEV;
-    }
+    param->dir = PJMEDIA_DIR_RENDER;
+    param->rend_id = index;
+    param->cap_id = PJMEDIA_VID_INVALID_DEV;
 
     /* Set the device capabilities here */
     param->flags = PJMEDIA_VID_DEV_CAP_FORMAT;
     param->fmt.type = PJMEDIA_TYPE_VIDEO;
     param->clock_rate = DEFAULT_CLOCK_RATE;
-    pjmedia_format_init_video(&param->fmt, sdl_fmts[0].fmt_id,
-			      DEFAULT_WIDTH, DEFAULT_HEIGHT,
-			      DEFAULT_FPS, 1);
+    pj_memcpy(&param->fmt, &di->info.fmt[0], sizeof(param->fmt));
 
     return PJ_SUCCESS;
 }
@@ -1017,6 +1003,8 @@ static pj_status_t sdl_factory_create_stream(
     struct sdl_stream *strm;
     pj_status_t status;
 
+    PJ_ASSERT_RETURN(param->dir == PJMEDIA_DIR_RENDER, PJ_EINVAL);
+
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(sf->pf, "sdl-dev", 1000, 1000, NULL);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
@@ -1026,10 +1014,6 @@ static pj_status_t sdl_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
-
-    /* Create capture stream here */
-    if (param->dir & PJMEDIA_DIR_CAPTURE) {
-    }
 
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {

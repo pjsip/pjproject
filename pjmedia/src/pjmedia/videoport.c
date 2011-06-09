@@ -140,7 +140,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && prm && p_vid_port, PJ_EINVAL);
     PJ_ASSERT_RETURN(prm->vidparam.fmt.type == PJMEDIA_TYPE_VIDEO &&
-                     prm->vidparam.dir != PJMEDIA_DIR_NONE,
+                     prm->vidparam.dir != PJMEDIA_DIR_NONE &&
+                     prm->vidparam.dir != PJMEDIA_DIR_CAPTURE_RENDER,
 		     PJ_EINVAL);
 
     /* Retrieve the video format detail */

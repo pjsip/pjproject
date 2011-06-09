@@ -531,7 +531,8 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
+		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->dir == PJMEDIA_DIR_CAPTURE,
 		     PJ_EINVAL);
     PJ_ASSERT_RETURN(param->cap_id >= 0 && param->cap_id < cf->dev_count,
 		     PJMEDIA_EVID_INVDEV);

@@ -378,7 +378,8 @@ static pj_status_t cbar_factory_create_stream(
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
+		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->dir == PJMEDIA_DIR_CAPTURE,
 		     PJ_EINVAL);
 
     pj_bzero(&vafp, sizeof(vafp));
