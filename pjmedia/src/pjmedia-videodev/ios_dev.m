@@ -276,11 +276,7 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     PJ_UNUSED_ARG(pool);
 
     pj_bzero(param, sizeof(*param));
-    if (di->info.dir & PJMEDIA_DIR_CAPTURE_RENDER) {
-	param->dir = PJMEDIA_DIR_CAPTURE_RENDER;
-	param->cap_id = index;
-	param->rend_id = index;
-    } else if (di->info.dir & PJMEDIA_DIR_CAPTURE) {
+    if (di->info.dir & PJMEDIA_DIR_CAPTURE) {
 	param->dir = PJMEDIA_DIR_CAPTURE;
 	param->cap_id = index;
 	param->rend_id = PJMEDIA_VID_INVALID_DEV;
@@ -400,7 +396,9 @@ static pj_status_t ios_factory_create_stream(
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
+		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     (param->dir == PJMEDIA_DIR_CAPTURE ||
+                     param->dir == PJMEDIA_DIR_RENDER),
 		     PJ_EINVAL);
 
     if (!(ifi = get_ios_format_info(param->fmt.id)))
@@ -427,8 +425,8 @@ static pj_status_t ios_factory_create_stream(
     strm->frame_size = strm->bytes_per_row * strm->size.h;
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
 
-    /* Create capture stream here */
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
+        /* Create capture stream here */
 	strm->cap_session = [[AVCaptureSession alloc] init];
 	if (!strm->cap_session) {
 	    status = PJ_ENOMEM;
@@ -480,10 +478,8 @@ static pj_status_t ios_factory_create_stream(
 			  kCVPixelBufferHeightKey, nil];
 	strm->video_output.minFrameDuration = CMTimeMake(vfd->fps.denum,
 							 vfd->fps.num);	
-    }
-
-    /* Create renderer stream here */
-    if (param->dir & PJMEDIA_DIR_RENDER) {
+    } else if (param->dir & PJMEDIA_DIR_RENDER) {
+        /* Create renderer stream here */
 	/* Get the main window */
 	UIWindow *window = [[UIApplication sharedApplication] keyWindow];
 	

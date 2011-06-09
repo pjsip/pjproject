@@ -382,7 +382,8 @@ static pj_status_t qt_factory_create_stream(
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
-		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO,
+		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
+                     param->dir == PJMEDIA_DIR_RENDER,
 		     PJ_EINVAL);
 
     vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);
@@ -399,11 +400,7 @@ static pj_status_t qt_factory_create_stream(
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
     strm->apool = [[NSAutoreleasePool alloc]init];
-    
-    /* Create player stream here */
-    if (param->dir & PJMEDIA_DIR_PLAYBACK) {
-    }
-    
+
     /* Create capture stream here */
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
 	const pjmedia_video_format_detail *vfd;
