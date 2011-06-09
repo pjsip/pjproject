@@ -357,42 +357,43 @@ PJ_DECL(pj_status_t) pjmedia_vid_param_get_cap(const pjmedia_vid_param *param,
                                                void *pval);
 
 /**
- * Initialize the video subsystem. This will register all supported video
- * device factories to the video subsystem. This function may be called
- * more than once, but each call to this function must have the
- * corresponding #pjmedia_vid_subsys_shutdown() call.
+ * Initialize the video device subsystem. This will register all supported
+ * video device factories to the video device subsystem. This function may be
+ * called more than once, but each call to this function must have the
+ * corresponding #pjmedia_vid_dev_subsys_shutdown() call.
  *
  * @param pf        The pool factory.
  *
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_subsys_init(pj_pool_factory *pf);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf);
 
 
 /**
- * Get the pool factory registered to the video subsystem.
+ * Get the pool factory registered to the video device subsystem.
  *
  * @return          The pool factory.
  */
-PJ_DECL(pj_pool_factory*) pjmedia_vid_subsys_get_pool_factory(void);
+PJ_DECL(pj_pool_factory*) pjmedia_vid_dev_subsys_get_pool_factory(void);
 
 
 /**
- * Shutdown the video subsystem. This will destroy all video device factories
- * registered in the video subsystem. Note that currently opened video streams
- * may or may not be closed, depending on the implementation of the video
- * device factories.
+ * Shutdown the video device subsystem. This will destroy all video device
+ * factories registered in the video device subsystem. Note that currently
+ * opened video streams may or may not be closed, depending on the
+ * implementation of the video device factories.
  *
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_subsys_shutdown(void);
+PJ_DECL(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void);
 
 
 /**
- * Register a supported video device factory to the video subsystem. This
- * function can only be called after calling #pjmedia_vid_subsys_init().
+ * Register a supported video device factory to the video device subsystem.
+ * This function can only be called after calling
+ * #pjmedia_vid_dev_subsys_init().
  *
  * @param vdf       The video device factory.
  *
@@ -404,8 +405,8 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr vdf);
 
 
 /**
- * Unregister an video device factory from the video subsystem. This
- * function can only be called after calling #pjmedia_vid_subsys_init().
+ * Unregister a video device factory from the video device subsystem. This
+ * function can only be called after calling #pjmedia_vid_dev_subsys_init().
  * Devices from this factory will be unlisted. If a device from this factory
  * is currently in use, then the behavior is undefined.
  *

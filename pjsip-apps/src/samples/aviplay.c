@@ -480,7 +480,7 @@ int main(int argc, char *argv[])
     pjmedia_converter_mgr_create(pool, NULL);
     pjmedia_vid_codec_mgr_create(pool, NULL);
     
-    status = pjmedia_vid_subsys_init(&cp.factory);
+    status = pjmedia_vid_dev_subsys_init(&cp.factory);
     if (status != PJ_SUCCESS)
         goto on_return;
     
@@ -507,7 +507,7 @@ int main(int argc, char *argv[])
 on_return:    
     pjmedia_codec_ffmpeg_deinit();
     pjmedia_aud_subsys_shutdown();
-    pjmedia_vid_subsys_shutdown();
+    pjmedia_vid_dev_subsys_shutdown();
     
     pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr_instance());
     pjmedia_converter_mgr_destroy(pjmedia_converter_mgr_instance());

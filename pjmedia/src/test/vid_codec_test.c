@@ -417,7 +417,7 @@ int vid_codec_test(void)
 
     pool = pj_pool_create(mem, "Vid codec test", 256, 256, 0);
 
-    status = pjmedia_vid_subsys_init(mem);
+    status = pjmedia_vid_dev_subsys_init(mem);
     if (status != PJ_SUCCESS)
         return -10;
 
@@ -435,7 +435,7 @@ int vid_codec_test(void)
 
 on_return:
     pjmedia_codec_ffmpeg_deinit();
-    pjmedia_vid_subsys_shutdown();
+    pjmedia_vid_dev_subsys_shutdown();
     pj_pool_release(pool);
     pj_log_set_level(orig_log_level);
 

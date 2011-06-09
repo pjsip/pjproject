@@ -565,7 +565,7 @@ int main(int argc, char *argv[])
     pjmedia_vid_codec_mgr_create(pool, NULL);
 
     /* Init video subsystem */
-    pjmedia_vid_subsys_init(&cp.factory);
+    pjmedia_vid_dev_subsys_init(&cp.factory);
 
     /* Register all supported codecs */
     status = init_codecs(&cp.factory);
@@ -911,7 +911,7 @@ on_exit:
     deinit_codecs();
 
     /* Shutdown video subsystem */
-    pjmedia_vid_subsys_shutdown();
+    pjmedia_vid_dev_subsys_shutdown();
 
     /* Release application pool */
     pj_pool_release( pool );

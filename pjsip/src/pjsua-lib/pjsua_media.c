@@ -297,7 +297,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	return status;
     }
 
-    status = pjmedia_vid_subsys_init(&pjsua_var.cp.factory);
+    status = pjmedia_vid_dev_subsys_init(&pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating PJMEDIA video subsystem",
 		     status);
@@ -540,7 +540,7 @@ pj_status_t pjsua_media_subsys_destroy(void)
 
 	/* Videodev */
 #	if PJMEDIA_HAS_VIDEO
-	    pjmedia_vid_subsys_shutdown();
+	    pjmedia_vid_dev_subsys_shutdown();
 #	endif
 
 	/* ffmpeg */

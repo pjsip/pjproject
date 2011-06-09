@@ -382,7 +382,7 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
     status = pjmedia_vid_codec_mgr_create(pool, NULL);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-    status = pjmedia_vid_subsys_init(&cp.factory);
+    status = pjmedia_vid_dev_subsys_init(&cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
 #  if PJMEDIA_HAS_FFMPEG_CODEC

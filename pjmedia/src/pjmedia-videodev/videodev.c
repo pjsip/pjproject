@@ -104,7 +104,7 @@ struct driver
     int			     rend_dev_idx;  /* Default render device	    */
 };
 
-/* The video subsystem */
+/* The video device subsystem */
 static struct vid_subsys
 {
     unsigned	     init_count;	/* How many times init() is called  */
@@ -308,8 +308,8 @@ static void deinit_driver(unsigned drv_idx)
     drv->rend_dev_idx = drv->cap_dev_idx = -1;
 }
 
-/* API: Initialize the video subsystem. */
-PJ_DEF(pj_status_t) pjmedia_vid_subsys_init(pj_pool_factory *pf)
+/* API: Initialize the video device subsystem. */
+PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
 {
     unsigned i;
     pj_status_t status = PJ_SUCCESS;
@@ -366,7 +366,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_subsys_init(pj_pool_factory *pf)
     return vid_subsys.dev_cnt ? PJ_SUCCESS : status;
 }
 
-/* API: register an video device factory to the video subsystem. */
+/* API: register a video device factory to the video device subsystem. */
 PJ_DEF(pj_status_t)
 pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
 {
@@ -386,7 +386,7 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
     return status;
 }
 
-/* API: unregister an video device factory from the video subsystem. */
+/* API: unregister a video device factory from the video device subsystem. */
 PJ_DEF(pj_status_t)
 pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
 {
@@ -413,14 +413,14 @@ pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
     return PJMEDIA_EVID_ERR;
 }
 
-/* API: get the pool factory registered to the video subsystem. */
-PJ_DEF(pj_pool_factory*) pjmedia_vid_subsys_get_pool_factory(void)
+/* API: get the pool factory registered to the video device subsystem. */
+PJ_DEF(pj_pool_factory*) pjmedia_vid_dev_subsys_get_pool_factory(void)
 {
     return vid_subsys.pf;
 }
 
-/* API: Shutdown the video subsystem. */
-PJ_DEF(pj_status_t) pjmedia_vid_subsys_shutdown(void)
+/* API: Shutdown the video device subsystem. */
+PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void)
 {
     unsigned i;
 
@@ -432,11 +432,13 @@ PJ_DEF(pj_status_t) pjmedia_vid_subsys_shutdown(void)
     }
     --vid_subsys.init_count;
 
-    for (i=0; i<vid_subsys.drv_cnt; ++i) {
-	deinit_driver(i);
-    }
+    if (vid_subsys.init_count == 0) {
+        for (i=0; i<vid_subsys.drv_cnt; ++i) {
+	    deinit_driver(i);
+        }
 
-    vid_subsys.pf = NULL;
+        vid_subsys.pf = NULL;
+    }
     return PJ_SUCCESS;
 }
 
