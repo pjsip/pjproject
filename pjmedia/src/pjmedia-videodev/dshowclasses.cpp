@@ -21,6 +21,7 @@
 
 #if PJMEDIA_VIDEO_DEV_HAS_DSHOW
 
+#include <assert.h>
 #include <streams.h>
 
 #if PJ_DEBUG
@@ -62,6 +63,7 @@ public:
     virtual HRESULT DecideBufferSize(IMemAllocator *pAlloc, 
                                      ALLOCATOR_PROPERTIES *ppropInputRequest);
 
+    CMediaType mediaType;
     long bufSize;
 };
 
@@ -111,6 +113,8 @@ HRESULT OutputPin::Push(void *buf, long size)
 {
     HRESULT hr;
     IMediaSample *pSample;
+    VIDEOINFOHEADER *vi;
+    AM_MEDIA_TYPE *pmt;
     BYTE *dst_buf;
 
     /**
@@ -123,8 +127,31 @@ HRESULT OutputPin::Push(void *buf, long size)
     if (FAILED(hr))
         goto on_error;
 
+    pSample->GetMediaType(&pmt);
+    if (pmt) {
+        mediaType.Set(*pmt);
+        bufSize = pmt->lSampleSize;
+    }
+
     pSample->GetPointer(&dst_buf);
-    memcpy(dst_buf, buf, size);
+    vi = (VIDEOINFOHEADER *)mediaType.pbFormat;
+    if (vi->rcSource.right == vi->bmiHeader.biWidth) {
+        assert(pSample->GetSize() >= size);
+        memcpy(dst_buf, buf, size);
+    } else {
+        unsigned i, bpp;
+        unsigned dststride, srcstride;
+        BYTE *src_buf = (BYTE *)buf;
+
+        bpp = size / abs(vi->bmiHeader.biHeight) / vi->rcSource.right;
+        dststride = vi->bmiHeader.biWidth * bpp;
+        srcstride = vi->rcSource.right * bpp;
+        for (i = abs(vi->bmiHeader.biHeight); i > 0; i--) {
+            memcpy(dst_buf, src_buf, srcstride);
+            dst_buf += dststride;
+            src_buf += srcstride;
+        }
+    }
     pSample->SetActualDataLength(size);
 
     hr = Deliver(pSample);
@@ -208,10 +235,11 @@ extern "C" HRESULT SourceFilter_Deliver(SourceFilter *src,
     return ((OutputPin *)src->GetPin(0))->Push(buf, size);
 }
 
-extern "C" void SourceFilter_SetBufferSize(SourceFilter *src,
-                                           long size)
+extern "C" void SourceFilter_SetMediaType(SourceFilter *src,
+                                          AM_MEDIA_TYPE *pmt)
 {
-    ((OutputPin *)src->GetPin(0))->bufSize = size;
+    ((OutputPin *)src->GetPin(0))->mediaType.Set(*pmt);
+    ((OutputPin *)src->GetPin(0))->bufSize = pmt->lSampleSize;
 }
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

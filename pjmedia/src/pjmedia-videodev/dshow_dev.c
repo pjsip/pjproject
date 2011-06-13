@@ -53,7 +53,7 @@ IBaseFilter* NullRenderer_Create(input_callback input_cb,
 typedef struct SourceFilter SourceFilter;
 IBaseFilter* SourceFilter_Create(SourceFilter **pSrc);
 HRESULT SourceFilter_Deliver(SourceFilter *src, void *buf, long size);
-void SourceFilter_SetBufferSize(SourceFilter *src, long size);
+void SourceFilter_SetMediaType(SourceFilter *src, AM_MEDIA_TYPE *pmt);
 
 typedef struct dshow_fmt_info
 {
@@ -65,8 +65,8 @@ static dshow_fmt_info dshow_fmts[] =
 {
     {PJMEDIA_FORMAT_YUY2, &MEDIASUBTYPE_YUY2} ,
     {PJMEDIA_FORMAT_RGB24, &MEDIASUBTYPE_RGB24} ,
-//    {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32} ,
-    //{PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV} ,
+    {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32} ,
+    {PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV} ,
 };
 
 /* dshow_ device info */
@@ -674,8 +674,8 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
     video_info->bmiHeader.biSizeImage = DIBSIZE(video_info->bmiHeader);
     mediatype->lSampleSize = DIBSIZE(video_info->bmiHeader);
     if (graph->csource_filter)
-        SourceFilter_SetBufferSize(graph->csource_filter,
-                                   mediatype->lSampleSize);
+        SourceFilter_SetMediaType(graph->csource_filter,
+                                  mediatype);
 
     hr = IFilterGraph_AddFilter(graph->filter_graph,
                                 (IBaseFilter *)graph->rend_filter,
