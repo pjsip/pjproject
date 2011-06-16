@@ -2181,14 +2181,15 @@ PJ_DEF(void) pjsua_call_hangup_all(void)
 {
     unsigned i;
 
-    PJSUA_LOCK();
+    // This may deadlock, see https://trac.pjsip.org/repos/ticket/1305
+    //PJSUA_LOCK();
 
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	if (pjsua_var.calls[i].inv)
 	    pjsua_call_hangup(i, 0, NULL, NULL);
     }
 
-    PJSUA_UNLOCK();
+    //PJSUA_UNLOCK();
 }
 
 
