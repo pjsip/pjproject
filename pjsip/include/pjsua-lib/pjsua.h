@@ -421,6 +421,22 @@ typedef struct pjsua_reg_info
 
 
 /**
+ * This enumeration specifies the options for custom media transport creation.
+ */
+typedef enum pjsua_create_media_transport_flag
+{
+   /**
+    * This flag indicates that the media transport must also close its
+    * "member" or "child" transport when pjmedia_transport_close() is
+    * called. If this flag is not specified, then the media transport
+    * must not call pjmedia_transport_close() of its member transport.
+    */
+   PJSUA_MED_TP_CLOSE_MEMBER = 1
+
+} pjsua_create_media_transport_flag;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL, 
  * although definitely application would want to implement some of
@@ -917,6 +933,32 @@ typedef struct pjsua_callback
      */
     void (*on_ice_transport_error)(int index, pj_ice_strans_op op,
 				   pj_status_t status, void *param);
+
+    /**
+     * This callback can be used by application to implement custom media
+     * transport adapter for the call, or to replace the media transport
+     * with something completely new altogether.
+     *
+     * This callback is called when a new call is created. The library has
+     * created a media transport for the call, and it is provided as the
+     * \a base_tp argument of this callback. Upon returning, the callback
+     * must return an instance of media transport to be used by the call.
+     *
+     * @param call_id       Call ID
+     * @param media_idx     The media index in the SDP for which this media
+     *                      transport will be used.
+     * @param base_tp       The media transport which otherwise will be
+     *                      used by the call has this callback not been
+     *                      implemented.
+     * @param flags         Bitmask from pjsua_create_media_transport_flag.
+     *
+     * @return              The callback must return an instance of media
+     *                      transport to be used by the call.
+     */
+    pjmedia_transport* (*on_create_media_transport)(pjsua_call_id call_id,
+                                                    unsigned media_idx,
+                                                    pjmedia_transport *base_tp,
+                                                    unsigned flags);
 
 } pjsua_callback;
 

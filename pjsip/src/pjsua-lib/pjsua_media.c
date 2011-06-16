@@ -1174,6 +1174,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
     pj_status_t status;
+    pj_bool_t use_custom_med_tp = PJ_FALSE;
+    unsigned custom_med_tp_flags = 0;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
@@ -1192,11 +1194,17 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	return PJ_EBUSY;
     }
 
+    if (!call->med_orig &&
+        pjsua_var.ua_cfg.cb.on_create_media_transport)
+    {
+        use_custom_med_tp = PJ_TRUE;
+    }
+
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* This function may be called when SRTP transport already exists 
      * (e.g: in re-invite, update), don't need to destroy/re-create.
      */
-    if (!call->med_orig || call->med_tp == call->med_orig) {
+    if (!call->med_orig) {
 
 	/* Check if SRTP requires secure signaling */
 	if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
@@ -1210,6 +1218,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	/* Always create SRTP adapter */
 	pjmedia_srtp_setting_default(&srtp_opt);
 	srtp_opt.close_member_tp = PJ_FALSE;
+        if (use_custom_med_tp)
+            custom_med_tp_flags |= PJSUA_MED_TP_CLOSE_MEMBER;
 	/* If media session has been ever established, let's use remote's 
 	 * preference in SRTP usage policy, especially when it is stricter.
 	 */
@@ -1267,6 +1277,18 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     PJ_LOG(4,(THIS_FILE, "Media index %d selected for call %d",
 	      call->audio_idx, call->index));
+
+    if (use_custom_med_tp) {
+        /* Use custom media transport returned by the application */
+        call->med_tp = (*pjsua_var.ua_cfg.cb.on_create_media_transport)(
+                           call_id, call->audio_idx, call->med_tp,
+                           custom_med_tp_flags);
+        if (!call->med_tp) {
+	    if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+	    pjsua_media_channel_deinit(call_id);
+	    return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+        }
+    }
 
     /* Create the media transport */
     status = pjmedia_transport_media_create(call->med_tp, tmp_pool, 0,
@@ -1543,6 +1565,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     if (call->med_orig && call->med_tp && call->med_tp != call->med_orig) {
 	pjmedia_transport_close(call->med_tp);
 	call->med_tp = call->med_orig;
+        call->med_orig = NULL;
     }
 
     check_snd_dev_idle();
