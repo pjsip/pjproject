@@ -635,6 +635,8 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
 		PJ_PERROR(4,(THIS_FILE, status, "Error recreating converter"));
 		return status;
 	    }
+	} else {
+	    vp->cap_conv_param.dst = vp->client_port->info.fmt;
 	}
 
         status = pjmedia_vid_dev_stream_set_cap(
