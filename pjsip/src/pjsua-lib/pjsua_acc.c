@@ -1635,10 +1635,12 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     pjsua_acc *acc = (pjsua_acc*) param->token;
 
-    if (param->regc != acc->regc)
-	return;
-
     PJSUA_LOCK();
+
+    if (param->regc != acc->regc) {
+	PJSUA_UNLOCK();
+	return;
+    }
 
     /*
      * Print registration status.
