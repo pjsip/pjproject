@@ -25,10 +25,15 @@
 static const char *USAGE =
 "pcaputil [options] INPUT OUTPUT\n"
 "\n"
-"  Convert captured RTP packets in PCAP file to WAV or stream it\n"
-"  to remote destination.\n"
+"  Convert captured RTP packets in PCAP file to WAV file or play it\n"
+"  to audio device.\n"
 "\n"
-"INPUT is the PCAP file name/path\n"
+"  INPUT  is the PCAP file name/path.\n"
+"  OUTPUT is the WAV file name/path to store the output, or set to \"-\",\n"
+"         to play the output to audio device. The program will decode\n"
+"         the RTP contents using codec that is available in PJMEDIA,\n"
+"         and optionally decrypt the content using the SRTP crypto and\n"
+"         keys below.\n"
 "\n"
 "Options to filter packets from PCAP file:\n"
 "(you can always select the relevant packets from Wireshark of course!)\n"
@@ -37,25 +42,27 @@ static const char *USAGE =
 "  --src-port=port        Only include packets from this source port number\n"
 "  --dst-port=port        Only include packets destined to this port number\n"
 "\n"
-"Options for saving to WAV file:\n"
+"Options for RTP packet processing:\n"
 ""
-"  OUTPUT is WAV file:    Set output to WAV file. The program will decode the\n"
-"                         RTP contents to the specified WAV file using codec\n"
-"                         that is available in PJMEDIA, and optionally decrypt\n"
-"                         the content using the SRTP crypto and keys below.\n"
+"  --codec=codec_id	  The codec ID formatted \"name/clock-rate/channel-count\"\n"
+"                         must be specified for codec with dynamic PT,\n"
+"                         e.g: \"Speex/8000\"\n"
 "  --srtp-crypto=TAG, -c  Set crypto to be used to decrypt SRTP packets. Valid\n"
 "                         tags are: \n"
 "                           AES_CM_128_HMAC_SHA1_80 \n"
 "                           AES_CM_128_HMAC_SHA1_32\n"
 "  --srtp-key=KEY, -k     Set the base64 key to decrypt SRTP packets.\n"
 "\n"
+"Options for playing to audio device:\n"
+""
+"  --play-dev-id=dev_id   Audio device ID for playback.\n"
+"\n"
 "  Example:\n"
 "    pcaputil file.pcap output.wav\n"
 "    pcaputil -c AES_CM_128_HMAC_SHA1_80 \\\n"
-"              -k VLDONbsbGl2Puqy+0PV7w/uGfpSPKFevDpxGsxN3 \\\n"
-"              file.pcap output.wav\n"
+"             -k VLDONbsbGl2Puqy+0PV7w/uGfpSPKFevDpxGsxN3 \\\n"
+"             file.pcap output.wav\n"
 "\n"
-"Remote streaming is not supported yet."
 ;
 
 static struct app
@@ -66,22 +73,16 @@ static struct app
     pj_pcap_file	*pcap;
     pjmedia_port	*wav;
     pjmedia_codec	*codec;
+    pjmedia_aud_stream  *aud_strm;
     unsigned		 pt;
     pjmedia_transport	*srtp;
     pjmedia_rtp_session	 rtp_sess;
     pj_bool_t		 rtp_sess_init;
 } app;
 
-static void err_exit(const char *title, pj_status_t status)
-{
-    if (status != PJ_SUCCESS) {
-	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_strerror(status, errmsg, sizeof(errmsg));
-	printf("Error: %s: %s\n", title, errmsg);
-    } else {
-	printf("Error: %s\n", title);
-    }
 
+static void cleanup()
+{
     if (app.srtp) pjmedia_transport_close(app.srtp);
     if (app.wav) {
         pj_ssize_t pos = pjmedia_wav_writer_port_get_pos(app.wav);
@@ -102,11 +103,26 @@ static void err_exit(const char *title, pj_status_t status)
 	cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 	pjmedia_codec_mgr_dealloc_codec(cmgr, app.codec);
     }
+    if (app.aud_strm) {
+	pjmedia_aud_stream_stop(app.aud_strm);
+	pjmedia_aud_stream_destroy(app.aud_strm);
+    }
     if (app.mept) pjmedia_endpt_destroy(app.mept);
     if (app.pool) pj_pool_release(app.pool);
     pj_caching_pool_destroy(&app.cp);
     pj_shutdown();
+}
 
+static void err_exit(const char *title, pj_status_t status)
+{
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	printf("Error: %s: %s\n", title, errmsg);
+    } else {
+	printf("Error: %s\n", title);
+    }
+    cleanup();
     exit(1);
 }
 
@@ -212,9 +228,45 @@ static void read_rtp(pj_uint8_t *buf, pj_size_t bufsize,
     }
 }
 
-static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
+pjmedia_frame play_frm;
+static pj_bool_t play_frm_copied, play_frm_ready;
+
+static pj_status_t wait_play(pjmedia_frame *f)
+{
+    play_frm_copied = PJ_FALSE;
+    play_frm = *f;
+    play_frm_ready = PJ_TRUE;
+    while (!play_frm_copied) {
+	pj_thread_sleep(1);
+    }
+    play_frm_ready = PJ_FALSE;
+
+    return PJ_SUCCESS;
+}
+
+static pj_status_t play_cb(void *user_data, pjmedia_frame *f)
+{
+    PJ_UNUSED_ARG(user_data);
+
+    if (!play_frm_ready) {
+	PJ_LOG(3, ("play_cb()", "Warning! Play frame not ready")); 
+	return PJ_SUCCESS;
+    }
+
+    pj_memcpy(f->buf, play_frm.buf, play_frm.size);
+    f->size = play_frm.size;
+
+    play_frm_copied = PJ_TRUE;
+    return PJ_SUCCESS;
+}
+
+static void pcap2wav(const pj_str_t *codec,
+		     const pj_str_t *wav_filename,
+		     pjmedia_aud_dev_index dev_id,
+		     const pj_str_t *srtp_crypto,
 		     const pj_str_t *srtp_key)
 {
+    const pj_str_t WAV = {".wav", 4};
     struct pkt
     {
 	pj_uint8_t	 buffer[320];
@@ -253,6 +305,10 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
     T( pjmedia_codec_l16_init(app.mept, 0) );
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
+#if PJMEDIA_HAS_INTEL_IPP
+    T( pjmedia_codec_ipp_init(app.mept) );
+#endif
+
     /* Create SRTP transport is needed */
 #if PJMEDIA_HAS_SRTP
     if (srtp_crypto->slen) {
@@ -277,7 +333,18 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 
     /* Get codec info and param for the specified payload type */
     app.pt = pkt0.rtp->pt;
-    T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt0.rtp->pt, &ci) );
+    if (app.pt >=0 && app.pt < 96) {
+	T( pjmedia_codec_mgr_get_codec_info(cmgr, pkt0.rtp->pt, &ci) );
+    } else {
+	unsigned cnt = 2;
+	const pjmedia_codec_info *info[2];
+	T( pjmedia_codec_mgr_find_codecs_by_id(cmgr, codec, &cnt, 
+					       info, NULL) );
+	if (cnt != 1)
+	    err_exit("Codec ID must be specified and unique!", 0);
+
+	ci = info[0];
+    }
     T( pjmedia_codec_mgr_get_default_param(cmgr, ci, &param) );
 
     /* Alloc and init codec */
@@ -285,13 +352,30 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
     T( app.codec->op->init(app.codec, app.pool) );
     T( app.codec->op->open(app.codec, &param) );
 
-    /* Open WAV file */
+    /* Init audio device or WAV file */
     samples_per_frame = ci->clock_rate * param.info.frm_ptime / 1000;
-    T( pjmedia_wav_writer_port_create(app.pool, wav_filename,
-				      ci->clock_rate, ci->channel_cnt,
-				      samples_per_frame,
-				      param.info.pcm_bits_per_sample, 0, 0,
-				      &app.wav) );
+    if (pj_strcmp2(wav_filename, "-") == 0) {
+	pjmedia_aud_param aud_param;
+
+	/* Open audio device */
+	T( pjmedia_aud_dev_default_param(dev_id, &aud_param) );
+	aud_param.dir = PJMEDIA_DIR_PLAYBACK;
+	aud_param.channel_count = ci->channel_cnt;
+	aud_param.clock_rate = ci->clock_rate;
+	aud_param.samples_per_frame = samples_per_frame;
+	T( pjmedia_aud_stream_create(&aud_param, NULL, &play_cb, 
+				     NULL, &app.aud_strm) );
+	T( pjmedia_aud_stream_start(app.aud_strm) );
+    } else if (pj_stristr(wav_filename, &WAV)) {
+	/* Open WAV file */
+	T( pjmedia_wav_writer_port_create(app.pool, wav_filename->ptr,
+					  ci->clock_rate, ci->channel_cnt,
+					  samples_per_frame,
+					  param.info.pcm_bits_per_sample, 0, 0,
+					  &app.wav) );
+    } else {
+	err_exit("invalid output file", PJ_EINVAL);
+    }
 
     /* Loop reading PCAP and writing WAV file */
     for (;;) {
@@ -320,7 +404,12 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 
 	    T( app.codec->op->decode(app.codec, &frames[i], pcm_frame.size, 
 				     &pcm_frame) );
-	    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
+	    if (app.wav) {
+		T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
+	    }
+	    if (app.aud_strm) {
+		T( wait_play(&pcm_frame) );
+	    }
 	    samples_cnt += samples_per_frame;
 	}
 
@@ -343,7 +432,12 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 		pj_bzero(pcm_frame.buf, pcm_frame.size);
 	    }
 
-	    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
+	    if (app.wav) {
+		T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
+	    }
+	    if (app.aud_strm) {
+		T( wait_play(&pcm_frame) );
+	    }
 	    ts_gap -= samples_per_frame;
 	}
 	
@@ -357,11 +451,15 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 
 int main(int argc, char *argv[])
 {
-    pj_str_t input, output, wav, srtp_crypto, srtp_key;
+    pj_str_t input, output, srtp_crypto, srtp_key, codec;
+    pjmedia_aud_dev_index dev_id = PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV;
     pj_pcap_filter filter;
     pj_status_t status;
 
-    enum { OPT_SRC_IP = 1, OPT_DST_IP, OPT_SRC_PORT, OPT_DST_PORT };
+    enum { 
+	OPT_SRC_IP = 1, OPT_DST_IP, OPT_SRC_PORT, OPT_DST_PORT,
+	OPT_CODEC, OPT_PLAY_DEV_ID
+    };
     struct pj_getopt_option long_options[] = {
 	{ "srtp-crypto",    1, 0, 'c' },
 	{ "srtp-key",	    1, 0, 'k' },
@@ -369,6 +467,8 @@ int main(int argc, char *argv[])
 	{ "dst-ip",	    1, 0, OPT_DST_IP },
 	{ "src-port",	    1, 0, OPT_SRC_PORT },
 	{ "dst-port",	    1, 0, OPT_DST_PORT },
+	{ "codec",	    1, 0, OPT_CODEC },
+	{ "play-dev-id",    1, 0, OPT_PLAY_DEV_ID },
 	{ NULL, 0, 0, 0}
     };
     int c;
@@ -376,6 +476,7 @@ int main(int argc, char *argv[])
     char key_bin[32];
 
     srtp_crypto.slen = srtp_key.slen = 0;
+    codec.slen = 0;
 
     pj_pcap_filter_default(&filter);
     filter.link = PJ_PCAP_LINK_TYPE_ETH;
@@ -420,6 +521,12 @@ int main(int argc, char *argv[])
 	case OPT_DST_PORT:
 	    filter.dst_port = pj_htons((pj_uint16_t)atoi(pj_optarg));
 	    break;
+	case OPT_CODEC:
+	    codec = pj_str(pj_optarg);
+	    break;
+	case OPT_PLAY_DEV_ID:
+	    dev_id = atoi(pj_optarg);
+	    break;
 	default:
 	    puts("Error: invalid option");
 	    return 1;
@@ -439,7 +546,6 @@ int main(int argc, char *argv[])
 
     input = pj_str(argv[pj_optind]);
     output = pj_str(argv[pj_optind+1]);
-    wav = pj_str(".wav");
     
     T( pj_init() );
 
@@ -452,16 +558,9 @@ int main(int argc, char *argv[])
     T( pj_pcap_open(app.pool, input.ptr, &app.pcap) );
     T( pj_pcap_set_filter(app.pcap, &filter) );
 
-    if (pj_stristr(&output, &wav)) {
-	pcap2wav(output.ptr, &srtp_crypto, &srtp_key);
-    } else {
-	err_exit("invalid output file", PJ_EINVAL);
-    }
+    pcap2wav(&codec, &output, dev_id, &srtp_crypto, &srtp_key);
 
-    pjmedia_endpt_destroy(app.mept);
-    pj_pool_release(app.pool);
-    pj_caching_pool_destroy(&app.cp);
-    pj_shutdown();
+    cleanup();
     return 0;
 }
 
