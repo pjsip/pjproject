@@ -111,6 +111,19 @@ typedef enum pjmedia_vid_dev_cap
     PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE = 8,
 
     /**
+     * Support for setting the video window's position.
+     * Value is pjmedia_coord specifying the window's new coordinate.
+     */
+    PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION = 16,
+
+    /**
+     * Support for setting the video output's visibility.
+     * The value of this capability is a pj_bool_t containing boolean
+     * PJ_TRUE or PJ_FALSE.
+     */
+    PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE = 32,
+
+    /**
      * End of capability
      */
     PJMEDIA_VID_DEV_CAP_MAX = 16384
@@ -297,6 +310,18 @@ typedef struct pjmedia_vid_param
      * if PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE is set in the flags.
      */
     pjmedia_rect_size disp_size;
+
+    /**
+     * Video window position. This setting is optional, and will only be used
+     * if PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION is set in the flags.
+     */
+    pjmedia_coord window_pos;
+
+    /**
+     * Video window's visibility. This setting is optional, and will only be
+     * used if PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE is set in the flags.
+     */
+    pj_bool_t window_hide;
 
 } pjmedia_vid_param;
 

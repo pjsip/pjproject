@@ -1050,20 +1050,18 @@ static pj_status_t sdl_factory_create_stream(
 	if ((status = strm->status) != PJ_SUCCESS) {
 	    goto on_error;
 	}
-
-	pjmedia_format_copy(&strm->conv_param.src, &param->fmt);
-	pjmedia_format_copy(&strm->conv_param.dst, &param->fmt);
-	/*
-	status = pjmedia_converter_create(NULL, pool, &strm->conv_param,
-					  &strm->conv);
-	 */
     }
 
     /* Apply the remaining settings */
-    if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
+    if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
 	sdl_stream_set_cap(&strm->base,
-			   PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-			   &param->window);
+			   PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION,
+			   &param->window_pos);
+    }
+    if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
+	sdl_stream_set_cap(&strm->base,
+			   PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
+			   &param->window_hide);
     }
 
     /* Done */
@@ -1110,8 +1108,11 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
 
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
     {
+        pval = strm->window;
 	return PJ_SUCCESS;
-    } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
+        SDL_GetWindowPosition(strm->window, &((pjmedia_coord *)pval)->x,
+                              &((pjmedia_coord *)pval)->y);
 	return PJ_SUCCESS;
     } else {
 	return PJMEDIA_EVID_INVCAP;
@@ -1129,7 +1130,15 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
-    if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
+    if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
+        SDL_SetWindowPosition(strm->window, ((pjmedia_coord *)pval)->x,
+                              ((pjmedia_coord *)pval)->y);
+	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
+        if (*(pj_bool_t *)pval)
+            SDL_HideWindow(strm->window);
+        else
+            SDL_ShowWindow(strm->window);
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
         strm->new_fmt = (pjmedia_format *)pval;
