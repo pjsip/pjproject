@@ -42,6 +42,7 @@
 
 #define THIS_FILE   "ipp_codecs.c"
 
+
 /* Prototypes for IPP codecs factory */
 static pj_status_t ipp_test_alloc( pjmedia_codec_factory *factory, 
 				   const pjmedia_codec_info *id );
@@ -237,9 +238,8 @@ static struct ipp_codec {
 ipp_codec[] = 
 {
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
-    /* AMR-NB SID seems to produce noise, so let's just disable its VAD. */
     {1, "AMR",	    PJMEDIA_RTP_PT_AMR,       &USC_GSMAMR_Fxns,  8000, 1, 160, 
-		    7400, 12200, 2, 0, 1, 
+		    7400, 12200, 2, 1, 1, 
 		    &predecode_amr, &parse_amr, &pack_amr,
 		    {1, {{{"octet-align", 11}, {"1", 1}}} }
     },
@@ -487,9 +487,7 @@ static void predecode_amr( ipp_private_t *codec_data,
     } else if (frame.size == 5) {
 	/* SID */
 	if (info->good_quality) {
-	    pj_bool_t STI;
-	    STI = (((pj_uint8_t*)frame.buf)[35 >> 3] & 0x10) != 0;
-	    usc_frame->frametype = STI? 2 : 1;
+	    usc_frame->frametype = info->STI? 2 : 1;
 	} else {
 	    usc_frame->frametype = setting->amr_nb ? 6 : 7;
 	}
@@ -533,6 +531,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 	info->frame_type = (pj_uint8_t)(info_ & 0x0F);
 	info->good_quality = (pj_uint8_t)((info_ & 0x80) == 0);
 	info->mode = (pj_int8_t) ((info_ >> 8) & 0x0F);
+	info->STI = (pj_uint8_t)((info_ >> 5) & 1);
 
 	frames[nframes].buf = r + 2;
 	frames[nframes].size = info->frame_type <= SID_FT ?
@@ -1418,6 +1417,7 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 
 	    /* Two octets for AMR frame info, 0=LSB:
 	     * bit 0-3	: frame type
+	     * bit 5	: STI flag
 	     * bit 6	: last frame flag
 	     * bit 7	: quality flag
 	     * bit 8-11	: mode
@@ -1441,6 +1441,9 @@ static pj_status_t ipp_codec_encode( pjmedia_codec *codec,
 		/* Quality */
 		if (out.frametype == 6 || out.frametype == 7)
 		    *info |= 0x80;
+		/* STI */
+		if (out.frametype != 1)
+		    *info |= 0x20;
 	    } else {
 		/* Untransmited */
 		*info = 15;

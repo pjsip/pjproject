@@ -567,7 +567,7 @@ const pj_int16_t* const pjmedia_codec_amrwb_ordermaps[9] =
  * Constant of AMR-NB frame lengths in bytes.
  */
 const pj_uint8_t  pjmedia_codec_amrnb_framelen[16] = 
-    {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 5};
+    {12, 13, 15, 17, 19, 20, 26, 31, 5, 0, 0, 0, 0, 0, 0, 0};
 /**
  * Constant of AMR-NB frame lengths in bits.
  */
@@ -583,7 +583,7 @@ const pj_uint16_t pjmedia_codec_amrnb_bitrates[8] =
  * Constant of AMR-WB frame lengths in bytes.
  */
 const pj_uint8_t  pjmedia_codec_amrwb_framelen[16] = 
-    {17, 23, 32, 37, 40, 46, 50, 58, 60, 5, 0, 0, 0, 0, 0, 5};
+    {17, 23, 32, 37, 40, 46, 50, 58, 60, 5, 0, 0, 0, 0, 0, 0};
 /**
  * Constant of AMR-WB frame lengths in bits.
  */
@@ -606,6 +606,7 @@ typedef struct pjmedia_codec_amr_bit_info {
     pj_int8_t  mode;		/**< AMR mode.				*/
     pj_uint8_t start_bit;	/**< Frame start bit.			*/
     pj_uint8_t good_quality:1;	/**< Flag if frame is good/degraded.	*/
+    pj_uint8_t STI:1;		/**< STI mode (first/update).		*/
 } pjmedia_codec_amr_bit_info;
 #pragma pack()
 
@@ -1020,9 +1021,7 @@ PJ_INLINE (pj_status_t) pjmedia_codec_amr_pack(
 	} else if (info->frame_type == SID_FT) {
 
 	    /* SID */
-	    pj_uint8_t STI = 0;
-
-	    amr_bits[35] = (pj_uint8_t)(STI & 1);
+	    amr_bits[35] |= info->STI;
 
 	    if (setting->amr_nb) {
 		amr_bits[36] = (pj_uint8_t)((info->mode >> 2) & 1);
@@ -1163,6 +1162,7 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
 	info->mode = (pj_int8_t)((FT < SID_FT)? FT : -1);
 	info->good_quality = (pj_uint8_t)(Q == 1);
 	info->start_bit = 0;
+	info->STI = 0;
 	frames[cnt].timestamp = ts_;
 	frames[cnt].type = PJMEDIA_FRAME_TYPE_AUDIO;
 
@@ -1185,6 +1185,13 @@ PJ_INLINE(pj_status_t) pjmedia_codec_amr_parse(
 
 	frames[cnt].buf = r;
 	info->start_bit = r_bitptr;
+
+	if (FT == SID_FT) {
+	    unsigned sti_bitptr;
+	    sti_bitptr = r_bitptr + 35;
+	    info->STI = (pj_uint8_t)
+			(r[sti_bitptr >> 3] >> (7 - (sti_bitptr % 8))) & 1;
+	}
 
 	if (setting->octet_aligned) {
 	    r += framelen_tbl[FT];
