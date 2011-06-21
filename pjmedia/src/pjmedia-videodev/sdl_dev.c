@@ -185,6 +185,7 @@ struct sdl_stream
 /* Prototypes */
 static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t sdl_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    sdl_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t sdl_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 					    unsigned index,
@@ -226,7 +227,8 @@ static pjmedia_vid_dev_factory_op factory_op =
     &sdl_factory_get_dev_count,
     &sdl_factory_get_dev_info,
     &sdl_factory_default_param,
-    &sdl_factory_create_stream
+    &sdl_factory_create_stream,
+    &sdl_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
@@ -353,6 +355,13 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f)
 #endif
 #endif
 
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t sdl_factory_refresh(pjmedia_vid_dev_factory *f)
+{
+    PJ_UNUSED_ARG(f);
     return PJ_SUCCESS;
 }
 

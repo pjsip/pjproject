@@ -210,23 +210,27 @@ PJ_DEF(pj_status_t) pjmedia_vid_param_get_cap( const pjmedia_vid_param *param,
 }
 
 /* Internal: init driver */
-static pj_status_t init_driver(unsigned drv_idx)
+static pj_status_t init_driver(unsigned drv_idx, pj_bool_t refresh)
 {
     struct driver *drv = &vid_subsys.drv[drv_idx];
     pjmedia_vid_dev_factory *f;
     unsigned i, dev_cnt;
     pj_status_t status;
 
-    /* Create the factory */
-    f = (*drv->create)(vid_subsys.pf);
-    if (!f)
-	return PJ_EUNKNOWN;
+    if (!refresh) {
+        /* Create the factory */
+        f = (*drv->create)(vid_subsys.pf);
+        if (!f)
+            return PJ_EUNKNOWN;
 
-    /* Call factory->init() */
-    status = f->op->init(f);
-    if (status != PJ_SUCCESS) {
-	f->op->destroy(f);
-	return status;
+        /* Call factory->init() */
+        status = f->op->init(f);
+        if (status != PJ_SUCCESS) {
+            f->op->destroy(f);
+            return status;
+        }
+    } else {
+	f = drv->f;
     }
 
     /* Get number of devices */
@@ -356,7 +360,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
 
     /* Initialize each factory and build the device ID list */
     for (i=0; i<vid_subsys.drv_cnt; ++i) {
-	status = init_driver(i);
+	status = init_driver(i, PJ_FALSE);
 	if (status != PJ_SUCCESS) {
 	    deinit_driver(i);
 	    continue;
@@ -376,7 +380,7 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
 	return PJMEDIA_EVID_INIT;
 
     vid_subsys.drv[vid_subsys.drv_cnt].create = adf;
-    status = init_driver(vid_subsys.drv_cnt);
+    status = init_driver(vid_subsys.drv_cnt, PJ_FALSE);
     if (status == PJ_SUCCESS) {
 	vid_subsys.drv_cnt++;
     } else {
@@ -438,6 +442,27 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_shutdown(void)
         }
 
         vid_subsys.pf = NULL;
+    }
+    return PJ_SUCCESS;
+}
+
+/* API: Refresh the list of video devices installed in the system. */
+PJ_DEF(pj_status_t) pjmedia_vid_dev_refresh(void)
+{
+    unsigned i;
+    
+    vid_subsys.dev_cnt = 0;
+    for (i=0; i<vid_subsys.drv_cnt; ++i) {
+	struct driver *drv = &vid_subsys.drv[i];
+	
+	if (drv->f && drv->f->op->refresh) {
+	    pj_status_t status = drv->f->op->refresh(drv->f);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4, (THIS_FILE, status, "Unable to refresh device "
+						 "list for %s", drv->name));
+	    }
+	}
+	init_driver(i, PJ_TRUE);
     }
     return PJ_SUCCESS;
 }

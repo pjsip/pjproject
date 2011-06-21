@@ -91,6 +91,13 @@ typedef struct pjmedia_vid_dev_factory_op
 				 void *user_data,
 				 pjmedia_vid_dev_stream **p_vid_strm);
 
+    /**
+     * Refresh the list of video devices installed in the system.
+     *
+     * @param f		The video device factory.
+     */
+    pj_status_t (*refresh)(pjmedia_vid_dev_factory *f);
+
 } pjmedia_vid_dev_factory_op;
 
 

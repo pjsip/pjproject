@@ -81,6 +81,7 @@ typedef struct vid4lin_factory
 {
     pjmedia_vid_dev_factory	 base;
     pj_pool_t			*pool;
+    pj_pool_t			*dev_pool;
     pj_pool_factory		*pf;
 
     unsigned			 dev_count;
@@ -119,6 +120,7 @@ static vid4lin_fmt_map v4l2_fmt_maps[] =
 /* Prototypes */
 static pj_status_t vid4lin_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t vid4lin_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t vid4lin_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    vid4lin_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t vid4lin_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 					        unsigned index,
@@ -155,7 +157,8 @@ static pjmedia_vid_dev_factory_op factory_op =
     &vid4lin_factory_get_dev_count,
     &vid4lin_factory_get_dev_info,
     &vid4lin_factory_default_param,
-    &vid4lin_factory_create_stream
+    &vid4lin_factory_create_stream,
+    &vid4lin_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
@@ -212,14 +215,20 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
     unsigned i, old_count;
     pj_status_t status;
 
+    if (f->dev_pool) {
+        pj_pool_release(f->dev_pool);
+        f->dev_pool = NULL;
+    }
+
     pj_bzero(vdi, sizeof(vdi));
     old_count = f->dev_count;
     f->dev_count = 0;
+    f->dev_pool = pj_pool_create(f->pf, DRIVER_NAME, 500, 500, NULL);
 
     for (i=0; i<V4L2_MAX_DEVS && f->dev_count < V4L2_MAX_DEVS; ++i) {
 	int fd;
 	vid4lin_dev_info *pdi;
-	pj_pool_t *pool = f->pool;
+	pj_pool_t *pool = f->dev_pool;
 	pj_uint32_t fmt_cap[8];
 	int j, fmt_cnt=0;
 
@@ -312,7 +321,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 
     if (f->dev_count > old_count || f->dev_info == NULL) {
 	f->dev_info = (vid4lin_dev_info*)
-		      pj_pool_calloc(f->pool,
+		      pj_pool_calloc(f->dev_pool,
 				     f->dev_count,
 				     sizeof(vid4lin_dev_info));
     }
@@ -325,17 +334,7 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
 /* API: init factory */
 static pj_status_t vid4lin_factory_init(pjmedia_vid_dev_factory *f)
 {
-    vid4lin_factory *cf = (vid4lin_factory*)f;
-    pj_status_t status;
-
-    status = v4l2_scan_devs(cf);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    PJ_LOG(4, (THIS_FILE, "Video4Linux2 initialized with %d devices",
-	       cf->dev_count));
-
-    return PJ_SUCCESS;
+    return vid4lin_factory_refresh(f);
 }
 
 /* API: destroy factory */
@@ -344,10 +343,28 @@ static pj_status_t vid4lin_factory_destroy(pjmedia_vid_dev_factory *f)
     vid4lin_factory *cf = (vid4lin_factory*)f;
     pj_pool_t *pool = cf->pool;
 
+    if (cf->dev_pool)
+        pj_pool_release(cf->dev_pool);
     if (cf->pool) {
 	cf->pool = NULL;
 	pj_pool_release(pool);
     }
+
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t vid4lin_factory_refresh(pjmedia_vid_dev_factory *f)
+{
+    vid4lin_factory *cf = (vid4lin_factory*)f;
+    pj_status_t status;
+
+    status = v4l2_scan_devs(cf);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    PJ_LOG(4, (THIS_FILE, "Video4Linux2 has %d devices",
+	       cf->dev_count));
 
     return PJ_SUCCESS;
 }

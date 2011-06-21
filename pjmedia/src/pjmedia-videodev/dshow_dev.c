@@ -82,6 +82,7 @@ struct dshow_factory
 {
     pjmedia_vid_dev_factory	 base;
     pj_pool_t			*pool;
+    pj_pool_t			*dev_pool;
     pj_pool_factory		*pf;
 
     unsigned			 dev_count;
@@ -123,6 +124,7 @@ struct dshow_stream
 /* Prototypes */
 static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t dshow_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    dshow_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t dshow_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 					      unsigned index,
@@ -160,7 +162,8 @@ static pjmedia_vid_dev_factory_op factory_op =
     &dshow_factory_get_dev_count,
     &dshow_factory_get_dev_info,
     &dshow_factory_default_param,
-    &dshow_factory_create_stream
+    &dshow_factory_create_stream,
+    &dshow_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
@@ -199,6 +202,31 @@ pjmedia_vid_dev_factory* pjmedia_dshow_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 {
+    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+
+    return dshow_factory_refresh(f);
+}
+
+/* API: destroy factory */
+static pj_status_t dshow_factory_destroy(pjmedia_vid_dev_factory *f)
+{
+    struct dshow_factory *df = (struct dshow_factory*)f;
+    pj_pool_t *pool = df->pool;
+
+    df->pool = NULL;
+    if (df->dev_pool)
+        pj_pool_release(df->dev_pool);
+    if (pool)
+        pj_pool_release(pool);
+
+    CoUninitialize();
+
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
+{
     struct dshow_factory *df = (struct dshow_factory*)f;
     struct dshow_dev_info *ddi;
     int dev_count = 0;
@@ -209,9 +237,13 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
     HRESULT hr;
     ULONG fetched;
 
-    df->dev_count = 0;
+    if (df->dev_pool) {
+        pj_pool_release(df->dev_pool);
+        df->dev_pool = NULL;
+    }
 
-    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    df->dev_count = 0;
+    df->dev_pool = pj_pool_create(df->pf, "dshow video", 500, 500, NULL);
 
     hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL,
                           CLSCTX_INPROC_SERVER, &IID_ICreateDevEnum,
@@ -233,7 +265,7 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
     /* Add renderer device */
     dev_count += 1;
     df->dev_info = (struct dshow_dev_info*)
- 		   pj_pool_calloc(df->pool, dev_count,
+ 		   pj_pool_calloc(df->dev_pool, dev_count,
  				  sizeof(struct dshow_dev_info));
 
     if (dev_count > 1) {
@@ -304,7 +336,7 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
         ddi = &df->dev_info[c];
         ddi->info.fmt_cnt = sizeof(dshow_fmts)/sizeof(dshow_fmts[0]);
         ddi->info.fmt = (pjmedia_format*)
-                        pj_pool_calloc(df->pool, ddi->info.fmt_cnt,
+                        pj_pool_calloc(df->dev_pool, ddi->info.fmt_cnt,
                                        sizeof(pjmedia_format));
 
         for (i = 0; i < ddi->info.fmt_cnt; i++) {
@@ -321,7 +353,7 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 //    TODO:
 //    ddi->info.caps = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
 
-    PJ_LOG(4, (THIS_FILE, "DShow initialized, found %d devices:", 
+    PJ_LOG(4, (THIS_FILE, "DShow has %d devices:", 
 	       df->dev_count));
     for (c = 0; c < df->dev_count; ++c) {
 	PJ_LOG(4, (THIS_FILE, " dev_id %d: %s (%s)", 
@@ -330,20 +362,6 @@ static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 	       df->dev_info[c].info.dir & PJMEDIA_DIR_CAPTURE ?
                "capture" : "render"));
     }
-
-    return PJ_SUCCESS;
-}
-
-/* API: destroy factory */
-static pj_status_t dshow_factory_destroy(pjmedia_vid_dev_factory *f)
-{
-    struct dshow_factory *df = (struct dshow_factory*)f;
-    pj_pool_t *pool = df->pool;
-
-    df->pool = NULL;
-    pj_pool_release(pool);
-
-    CoUninitialize();
 
     return PJ_SUCCESS;
 }

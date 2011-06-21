@@ -445,6 +445,20 @@ pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr vdf);
 
 
 /**
+ * Refresh the list of video devices installed in the system. This function
+ * will only refresh the list of videoo device so all active video streams will
+ * be unaffected. After refreshing the device list, application MUST make sure
+ * to update all index references to video devices (i.e. all variables of type
+ * pjmedia_vid_dev_index) before calling any function that accepts video device
+ * index as its parameter.
+ *
+ * @return		PJ_SUCCESS on successful operation or the appropriate
+ *			error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_dev_refresh(void);
+
+
+/**
  * Get the number of video devices installed in the system.
  *
  * @return          The number of video devices installed in the system.

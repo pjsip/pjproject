@@ -60,6 +60,7 @@ typedef struct ffmpeg_factory
     pjmedia_vid_dev_factory	 base;
     pj_pool_factory		*pf;
     pj_pool_t                   *pool;
+    pj_pool_t                   *dev_pool;
     unsigned                     dev_count;
     ffmpeg_dev_info              dev_info[MAX_DEV_CNT];
 } ffmpeg_factory;
@@ -78,6 +79,7 @@ typedef struct ffmpeg_stream
 /* Prototypes */
 static pj_status_t ffmpeg_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    ffmpeg_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t ffmpeg_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 					       unsigned index,
@@ -115,7 +117,8 @@ static pjmedia_vid_dev_factory_op factory_op =
     &ffmpeg_factory_get_dev_count,
     &ffmpeg_factory_get_dev_info,
     &ffmpeg_factory_default_param,
-    &ffmpeg_factory_create_stream
+    &ffmpeg_factory_create_stream,
+    &ffmpeg_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
@@ -219,6 +222,28 @@ pjmedia_vid_dev_factory* pjmedia_ffmpeg_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t ffmpeg_factory_init(pjmedia_vid_dev_factory *f)
 {
+    return ffmpeg_factory_refresh(f);
+}
+
+/* API: destroy factory */
+static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f)
+{
+    ffmpeg_factory *ff = (ffmpeg_factory*)f;
+    pj_pool_t *pool = ff->pool;
+
+    ff->dev_count = 0;
+    ff->pool = NULL;
+    if (ff->dev_pool)
+        pj_pool_release(ff->dev_pool);
+    if (pool)
+        pj_pool_release(pool);
+
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t ffmpeg_factory_refresh(pjmedia_vid_dev_factory *f)
+{
     ffmpeg_factory *ff = (ffmpeg_factory*)f;
     AVInputFormat *p;
     ffmpeg_dev_info *info;
@@ -226,8 +251,15 @@ static pj_status_t ffmpeg_factory_init(pjmedia_vid_dev_factory *f)
     av_log_set_callback(&print_ffmpeg_log);
     av_log_set_level(AV_LOG_DEBUG);
 
+    if (ff->dev_pool) {
+        pj_pool_release(ff->dev_pool);
+        ff->dev_pool = NULL;
+    }
+
     /* TODO: this should enumerate devices, now it enumerates host APIs */
     ff->dev_count = 0;
+    ff->dev_pool = pj_pool_create(ff->pf, "ffmpeg_cap_dev", 500, 500, NULL);
+
     p = av_iformat_next(NULL);
     while (p) {
         if (p->flags & AVFMT_NOFILE) {
@@ -254,7 +286,7 @@ static pj_status_t ffmpeg_factory_init(pjmedia_vid_dev_factory *f)
             info->base.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
             info->base.fmt_cnt = 1;
             info->base.fmt = (pjmedia_format*)
- 		             pj_pool_calloc(ff->pool, info->base.fmt_cnt,
+ 		             pj_pool_calloc(ff->dev_pool, info->base.fmt_cnt,
  				            sizeof(pjmedia_format));
             for (i = 0; i < info->base.fmt_cnt; ++i) {
                 pjmedia_format *fmt = &info->base.fmt[i];
@@ -266,16 +298,6 @@ static pj_status_t ffmpeg_factory_init(pjmedia_vid_dev_factory *f)
         }
         p = av_iformat_next(p);
     }
-
-    return PJ_SUCCESS;
-}
-
-/* API: destroy factory */
-static pj_status_t ffmpeg_factory_destroy(pjmedia_vid_dev_factory *f)
-{
-    ffmpeg_factory *ff = (ffmpeg_factory*)f;
-
-    ff->dev_count = 0;
 
     return PJ_SUCCESS;
 }
