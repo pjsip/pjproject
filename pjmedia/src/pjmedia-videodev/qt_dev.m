@@ -58,6 +58,7 @@ struct qt_factory
 {
     pjmedia_vid_dev_factory	 base;
     pj_pool_t			*pool;
+    pj_pool_t			*dev_pool;
     pj_pool_factory		*pf;
 
     unsigned			 dev_count;
@@ -100,6 +101,7 @@ struct qt_stream
 /* Prototypes */
 static pj_status_t qt_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t qt_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    qt_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t qt_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 					   unsigned index,
@@ -135,7 +137,8 @@ static pjmedia_vid_dev_factory_op factory_op =
     &qt_factory_get_dev_count,
     &qt_factory_get_dev_info,
     &qt_factory_default_param,
-    &qt_factory_create_stream
+    &qt_factory_create_stream,
+    &qt_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
@@ -175,12 +178,38 @@ pjmedia_vid_dev_factory* pjmedia_qt_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t qt_factory_init(pjmedia_vid_dev_factory *f)
 {
+    return qt_factory_refresh(f);
+}
+
+/* API: destroy factory */
+static pj_status_t qt_factory_destroy(pjmedia_vid_dev_factory *f)
+{
+    struct qt_factory *qf = (struct qt_factory*)f;
+    pj_pool_t *pool = qf->pool;
+
+    if (qf->dev_pool)
+        pj_pool_release(qf->dev_pool);
+    qf->pool = NULL;
+    if (pool)
+        pj_pool_release(pool);
+
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
+{
     struct qt_factory *qf = (struct qt_factory*)f;
     struct qt_dev_info *qdi;
     unsigned i, dev_count = 0;
     NSAutoreleasePool *apool = [[NSAutoreleasePool alloc]init];
     NSArray *dev_array;
-
+    
+    if (qf->dev_pool) {
+        pj_pool_release(qf->dev_pool);
+        qf->dev_pool = NULL;
+    }
+    
     dev_array = [QTCaptureDevice inputDevices];
     for (i = 0; i < [dev_array count]; i++) {
 	QTCaptureDevice *dev = [dev_array objectAtIndex:i];
@@ -193,9 +222,11 @@ static pj_status_t qt_factory_init(pjmedia_vid_dev_factory *f)
     
     /* Initialize input and output devices here */
     qf->dev_count = 0;
+    qf->dev_pool = pj_pool_create(qf->pf, "qt video", 500, 500, NULL);
+    
     qf->dev_info = (struct qt_dev_info*)
-		   pj_pool_calloc(qf->pool, dev_count,
-				  sizeof(struct qt_dev_info));
+    pj_pool_calloc(qf->dev_pool, dev_count,
+                   sizeof(struct qt_dev_info));
     for (i = 0; i < [dev_array count]; i++) {
 	QTCaptureDevice *dev = [dev_array objectAtIndex:i];
 	if ([dev hasMediaType:QTMediaTypeVideo] ||
@@ -206,16 +237,16 @@ static pj_status_t qt_factory_init(pjmedia_vid_dev_factory *f)
 	    qdi = &qf->dev_info[qf->dev_count++];
 	    pj_bzero(qdi, sizeof(*qdi));
 	    [[dev localizedDisplayName] getCString:qdi->info.name
-					maxLength:sizeof(qdi->info.name)
-					encoding:
-					[NSString defaultCStringEncoding]];
+                                        maxLength:sizeof(qdi->info.name)
+                                        encoding:
+                                        [NSString defaultCStringEncoding]];
 	    [[dev uniqueID] getCString:qdi->dev_id
-			    maxLength:sizeof(qdi->dev_id)
-			    encoding:[NSString defaultCStringEncoding]];
+                            maxLength:sizeof(qdi->dev_id)
+                            encoding:[NSString defaultCStringEncoding]];
 	    strcpy(qdi->info.driver, "QT");	    
 	    qdi->info.dir = PJMEDIA_DIR_CAPTURE;
 	    qdi->info.has_callback = PJ_TRUE;
-
+            
 	    qdi->info.fmt_cnt = 0;
 	    for (k = 0; k < [[dev formatDescriptions] count]; k++) {
 		QTFormatDescription *desc = [[dev formatDescriptions]
@@ -230,8 +261,8 @@ static pj_status_t qt_factory_init(pjmedia_vid_dev_factory *f)
 	    
 	    qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
 	    qdi->info.fmt = (pjmedia_format*)
-			    pj_pool_calloc(qf->pool, qdi->info.fmt_cnt,
-					   sizeof(pjmedia_format));
+            pj_pool_calloc(qf->dev_pool, qdi->info.fmt_cnt,
+                           sizeof(pjmedia_format));
 	    for (j = k = 0; k < [[dev formatDescriptions] count]; k++) {
 		unsigned l;
 		QTFormatDescription *desc = [[dev formatDescriptions]
@@ -248,28 +279,16 @@ static pj_status_t qt_factory_init(pjmedia_vid_dev_factory *f)
 		    }
 		}
 	    }
-
+            
 	    PJ_LOG(4, (THIS_FILE, " dev_id %d: %s", i, qdi->info.name));    
 	}
     }
-
+    
     [apool release];
     
-    PJ_LOG(4, (THIS_FILE, "qt video initialized with %d devices",
+    PJ_LOG(4, (THIS_FILE, "qt video has %d devices",
 	       qf->dev_count));
     
-    return PJ_SUCCESS;
-}
-
-/* API: destroy factory */
-static pj_status_t qt_factory_destroy(pjmedia_vid_dev_factory *f)
-{
-    struct qt_factory *qf = (struct qt_factory*)f;
-    pj_pool_t *pool = qf->pool;
-
-    qf->pool = NULL;
-    pj_pool_release(pool);
-
     return PJ_SUCCESS;
 }
 
@@ -383,7 +402,7 @@ static pj_status_t qt_factory_create_stream(
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
 		     param->fmt.detail_type == PJMEDIA_FORMAT_DETAIL_VIDEO &&
-                     param->dir == PJMEDIA_DIR_RENDER,
+                     param->dir == PJMEDIA_DIR_CAPTURE,
 		     PJ_EINVAL);
 
     vfi = pjmedia_get_video_format_info(NULL, param->fmt.id);

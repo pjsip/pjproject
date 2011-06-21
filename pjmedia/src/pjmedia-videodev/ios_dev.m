@@ -101,6 +101,7 @@ struct ios_stream
 /* Prototypes */
 static pj_status_t ios_factory_init(pjmedia_vid_dev_factory *f);
 static pj_status_t ios_factory_destroy(pjmedia_vid_dev_factory *f);
+static pj_status_t ios_factory_refresh(pjmedia_vid_dev_factory *f);
 static unsigned    ios_factory_get_dev_count(pjmedia_vid_dev_factory *f);
 static pj_status_t ios_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 					    unsigned index,
@@ -138,7 +139,8 @@ static pjmedia_vid_dev_factory_op factory_op =
     &ios_factory_get_dev_count,
     &ios_factory_get_dev_info,
     &ios_factory_default_param,
-    &ios_factory_create_stream
+    &ios_factory_create_stream,
+    &ios_factory_refresh
 };
 
 static pjmedia_vid_dev_stream_op stream_op =
@@ -238,6 +240,13 @@ static pj_status_t ios_factory_destroy(pjmedia_vid_dev_factory *f)
     qf->pool = NULL;
     pj_pool_release(pool);
 
+    return PJ_SUCCESS;
+}
+
+/* API: refresh the list of devices */
+static pj_status_t ios_factory_refresh(pjmedia_vid_dev_factory *f)
+{
+    PJ_UNUSED_ARG(f);
     return PJ_SUCCESS;
 }
 
