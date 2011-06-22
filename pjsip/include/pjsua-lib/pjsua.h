@@ -604,6 +604,18 @@ typedef struct pjsua_callback
 
 
     /**
+     * Notify application when registration or unregistration has been
+     * initiated. Note that this only notifies the initial registration
+     * and unregistration. Once registration session is active, subsequent
+     * refresh will not cause this callback to be called.
+     *
+     * @param acc_id	    The account ID.
+     * @param renew	    Non-zero for registration and zero for
+     * 			    unregistration.
+     */
+    void (*on_reg_started)(pjsua_acc_id acc_id, pj_bool_t renew);
+    
+    /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
      * registration details.
@@ -2552,6 +2564,16 @@ typedef struct pjsua_acc_config
      * Default: PJSUA_CALL_HOLD_TYPE_DEFAULT
      */
     pjsua_call_hold_type call_hold_type;
+    
+    
+    /**
+     * Specify whether the account should register as soon as it is
+     * added to the UA. Application can set this to PJ_FALSE and control
+     * the registration manually with pjsua_acc_set_registration().
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t         register_on_acc_add;
 
 } pjsua_acc_config;
 
