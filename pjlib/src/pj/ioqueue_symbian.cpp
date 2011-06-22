@@ -340,6 +340,7 @@ CPjSocket *CIoqueueCallback::HandleAcceptCompletion()
 //
 void CIoqueueCallback::RunL()
 {
+    pj_ioqueue_t *ioq = ioqueue_;
     Type cur_type = type_;
 
     type_ = TYPE_NONE;
@@ -399,7 +400,7 @@ void CIoqueueCallback::RunL()
 	}
     }
 
-    ioqueue_->eventCount++;
+    ioq->eventCount++;
 }
 
 //
