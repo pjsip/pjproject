@@ -3439,7 +3439,7 @@ if test "$AR" = ""; then AR="${CROSS_COMPILE}ar rv"; fi
 
 if test "$LD" = ""; then LD="$CC"; fi
 
-if test "$LDOUT" = ""; then LDOUT="-o"; fi
+if test "$LDOUT" = ""; then LDOUT="-o "; fi
 
 if test "$RANLIB" = ""; then RANLIB="${CROSS_COMPILE}ranlib"; fi
 
@@ -3449,7 +3449,7 @@ if test "$LIBEXT" = ""; then LIBEXT='a'; fi
 
 if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
 
-if test "$CC_OUT" = ""; then CC_OUT="-o"; fi
+if test "$CC_OUT" = ""; then CC_OUT="-o "; fi
 
 if test "$CC_INC" = ""; then CC_INC="-I"; fi
 

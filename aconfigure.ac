@@ -52,7 +52,7 @@ if test "$AR" = ""; then AR="${CROSS_COMPILE}ar rv"; fi
 AC_SUBST(AR)
 if test "$LD" = ""; then LD="$CC"; fi
 AC_SUBST(LD)
-if test "$LDOUT" = ""; then LDOUT="-o"; fi
+if test "$LDOUT" = ""; then LDOUT="-o "; fi
 AC_SUBST(LDOUT)
 if test "$RANLIB" = ""; then RANLIB="${CROSS_COMPILE}ranlib"; fi
 AC_SUBST(RANLIB)
@@ -62,7 +62,7 @@ if test "$LIBEXT" = ""; then LIBEXT='a'; fi
 AC_SUBST(LIBEXT)
 if test "$LIBEXT2" = ""; then LIBEXT2=""; fi
 AC_SUBST(LIBEXT2)
-if test "$CC_OUT" = ""; then CC_OUT="-o"; fi
+if test "$CC_OUT" = ""; then CC_OUT="-o "; fi
 AC_SUBST(CC_OUT)
 if test "$CC_INC" = ""; then CC_INC="-I"; fi
 AC_SUBST(CC_INC)
