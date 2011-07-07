@@ -135,7 +135,7 @@ PJ_DEF(const char*) pjmedia_vid_dev_cap_name(pjmedia_vid_dev_cap cap,
 	    break;
     }
 
-    if (i==32) {
+    if (i==PJ_ARRAY_SIZE(cap_infos)) {
 	*p_desc = "??";
 	return "??";
     }
