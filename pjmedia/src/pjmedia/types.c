@@ -17,8 +17,31 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-#include <pjmedia/frame.h>
-#include <pjmedia/port.h>
 #include <pjmedia/types.h>
-#include <pj/pool.h>
+#include <pj/assert.h>
 
+/**
+ * Utility function to return the string name for a pjmedia_type.
+ *
+ * @param t		The media type.
+ *
+ * @return		String.
+ */
+PJ_DEF(const char*) pjmedia_type_name(pjmedia_type t)
+{
+    const char *type_names[] = {
+	"none",
+	"audio",
+	"video",
+	"application",
+	"unknown"
+    };
+
+    pj_assert(t < PJ_ARRAY_SIZE(type_names));
+    pj_assert(PJMEDIA_TYPE_UNKNOWN == 4);
+
+    if (t < PJ_ARRAY_SIZE(type_names))
+	return type_names[t];
+    else
+	return "??";
+}

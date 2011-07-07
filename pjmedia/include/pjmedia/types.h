@@ -49,7 +49,7 @@
  */
 
 /**
- * Top most media type.
+ * Top most media type. See also #pjmedia_type_name().
  */
 typedef enum pjmedia_type
 {
@@ -192,6 +192,14 @@ typedef struct pjmedia_rect
 } pjmedia_rect;
 
 
+/**
+ * Utility function to return the string name for a pjmedia_type.
+ *
+ * @param t		The media type.
+ *
+ * @return		String.
+ */
+PJ_DECL(const char*) pjmedia_type_name(pjmedia_type t);
 
 /**
  * @}
