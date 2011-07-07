@@ -303,6 +303,22 @@ typedef struct pjsua_stun_resolve
     pj_stun_sock	*stun_sock; /**< Testing STUN sock  */
 } pjsua_stun_resolve;
 
+typedef enum pjsua_vid_win_type
+{
+    PJSUA_WND_TYPE_NONE,
+    PJSUA_WND_TYPE_PREVIEW,
+    PJSUA_WND_TYPE_STREAM
+} pjsua_vid_win_type;
+
+typedef struct pjsua_vid_win
+{
+    pjsua_vid_win_type		 type;		/**< Type.		*/
+    pj_pool_t			*pool;		/**< Own pool.		*/
+    pjsua_call_id	 	 call_id;	/**< Owner call or -1	*/
+    pjmedia_vid_port		*vp_cap;	/**< Capture vidport.	*/
+    pjmedia_vid_port		*vp_rend;	/**< Renderer vidport	*/
+    pjmedia_vid_dev_index	 preview_cap_id;/* Capture dev id	*/
+} pjsua_vid_win;
 
 /**
  * Global pjsua application data.
@@ -397,6 +413,11 @@ struct pjsua_data
     /* File recorders: */
     unsigned		 rec_cnt;   /**< Number of file recorders.	*/
     pjsua_file_data	 recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
+
+    /* Video windows */
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_win	 win[PJSUA_MAX_VID_WINS]; /**< Array of windows	*/
+#endif
 };
 
 
@@ -630,6 +651,27 @@ const char *good_number(char *buf, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,
                 char *buf, pj_size_t size);
+
+/*
+ * Video
+ */
+pj_status_t pjsua_vid_subsys_init(void);
+pj_status_t pjsua_vid_subsys_start(void);
+pj_status_t pjsua_vid_subsys_destroy(void);
+
+PJ_INLINE(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_win *w = &pjsua_var.win[wid];
+    pj_pool_t *pool = w->pool;
+
+    pj_bzero(w, sizeof(*w));
+    if (pool) pj_pool_reset(pool);
+    w->call_id = PJSUA_INVALID_ID;
+    w->pool = pool;
+    w->preview_cap_id = PJMEDIA_VID_INVALID_DEV;
+#endif
+}
 
 
 PJ_END_DECL

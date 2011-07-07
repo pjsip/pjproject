@@ -324,6 +324,12 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 #   define PJSUA_ACQUIRE_CALL_TIMEOUT 2000
 #endif
 
+/**
+ * Is video enabled.
+ */
+#ifndef PJSUA_HAS_VIDEO
+#   define PJSUA_HAS_VIDEO		PJMEDIA_HAS_VIDEO
+#endif
 
 /**
  * This enumeration represents pjsua state.
@@ -2438,11 +2444,58 @@ typedef struct pjsua_acc_config
     /**
      * Maximum number of simultaneous active video streams to be allowed
      * for calls on this account. Setting this to zero will disable video
-     * in calls on this account.
+     * in calls on this account, regardless of other video settings.
      *
-     * Default: 0
+     * Default: 1
      */
     unsigned         max_video_cnt;
+
+    /**
+     * Specify whether incoming video should be shown to screen by default.
+     * This applies to incoming call (INVITE), incoming re-INVITE, and
+     * incoming UPDATE requests.
+     *
+     * Regardless of this setting, application can detect incoming video
+     * by implementing \a on_call_media_state() callback and enumerating
+     * the media stream(s) with #pjsua_call_get_info(). Once incoming
+     * video is recognised, application may retrieve the window associated
+     * with the incoming video and show or hide it with
+     * #pjsua_vid_win_set_show().
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        vid_in_auto_show;
+
+    /**
+     * Specify whether outgoing video should be activated by default when
+     * making outgoing calls and/or when incoming video is detected. This
+     * applies to incoming and outgoing calls, incoming re-INVITE, and
+     * incoming UPDATE. If the setting is non-zero, outgoing video
+     * transmission will be started as soon as response to these requests
+     * is sent (or received).
+     *
+     * Regardless of the value of this setting, application can start and
+     * stop outgoing video transmission with #pjsua_call_set_vid_out().
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t        vid_out_auto_transmit;
+
+    /**
+     * Specify the default capture device to be used by this account. If
+     * \a vid_out_auto_transmit is enabled, this device will be used for
+     * capturing video.
+     *
+     * Default: PJMEDIA_VID_DEFAULT_CAPTURE_DEV
+     */
+    pjmedia_vid_dev_index vid_cap_dev;
+
+    /**
+     * Specify the default rendering device to be used by this account.
+     *
+     * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
+     */
+    pjmedia_vid_dev_index vid_rend_dev;
 
     /**
      * Media transport config.
@@ -2975,6 +3028,17 @@ PJ_DECL(pj_status_t) pjsua_acc_set_transport(pjsua_acc_id acc_id,
 #   define PJSUA_MAX_CALLS	    32
 #endif
 
+/**
+ * Maximum active video windows
+ */
+#ifndef PJSUA_MAX_VID_WINS
+#   define PJSUA_MAX_VID_WINS	    16
+#endif
+
+/**
+ * Video window ID.
+ */
+typedef int pjsua_vid_win_id;
 
 
 /**
@@ -3083,15 +3147,24 @@ typedef struct pjsua_call_info
 	union {
 	    /** Audio stream */
 	    struct {
-		pjsua_conf_port_id   conf_slot; /**< The conference port
-						     number for the call.   */
-	    } audio;
+		/** The conference port number for the call.  */
+		pjsua_conf_port_id   conf_slot;
+	    } aud;
 
 	    /** Video stream */
 	    struct {
-		pjmedia_vid_port    *capturer;  /**< Video capturer.	    */
-		pjmedia_vid_port    *renderer;  /**< Video renderer.	    */
-	    } video;
+		/**
+		 * The window id for incoming video, if any, or
+		 * PJSUA_INVALID_ID.
+		 */
+		pjsua_vid_win_id     win_in;
+
+		/** The video capture device for outgoing transmission,
+		 *  if any, or PJMEDIA_VID_INVALID_DEV
+		 */
+		pjmedia_vid_dev_index	cap_dev;
+
+	    } vid;
 	} stream;
 
     } media[PJMEDIA_MAX_SDP_MEDIA];
@@ -3116,6 +3189,39 @@ typedef struct pjsua_call_info
 
 } pjsua_call_info;
 
+
+/**
+ * Media stream info.
+ */
+typedef struct pjsua_stream_info
+{
+    /** Media type of this stream. */
+    pjmedia_type type;
+
+    /** Stream info (union). */
+    union {
+	/** Audio stream info */
+	pjmedia_stream_info	aud;
+
+	/** Video stream info */
+	pjmedia_vid_stream_info	vid;
+    } info;
+
+} pjsua_stream_info;
+
+
+/**
+ * Media stream statistic.
+ */
+typedef struct pjsua_stream_stat
+{
+    /** RTCP statistic. */
+    pjmedia_rtcp_stat	rtcp;
+
+    /** Jitter buffer statistic. */
+    pjmedia_jb_state	jbuf;
+
+} pjsua_stream_stat;
 
 
 /**
@@ -3190,38 +3296,12 @@ PJ_DECL(pj_bool_t) pjsua_call_is_active(pjsua_call_id call_id);
 PJ_DECL(pj_bool_t) pjsua_call_has_media(pjsua_call_id call_id);
 
 
-#if DISABLED_FOR_TICKET_1185
-/**
- * Retrieve the media session associated with this call. Note that the media
- * session may not be available depending on the current call's media status
- * (the pjsua_call_media_status information in pjsua_call_info). Application
- * may use the media session to retrieve more detailed information about the
- * call's media.
- *
- * @param call_id	Call identification.
- *
- * @return		Call media session.
- */
-PJ_DECL(pjmedia_session*) pjsua_call_get_media_session(pjsua_call_id call_id);
-
-/**
- * Retrieve the media transport instance that is used for this call. 
- * Application may use the media transport to query more detailed information
- * about the media transport.
- *
- * @param cid		Call identification (the call_id).
- *
- * @return		Call media transport.
- */
-PJ_DECL(pjmedia_transport*) pjsua_call_get_media_transport(pjsua_call_id cid);
-#endif /* DISABLED_FOR_TICKET_1185 */
-
 /**
  * Get the conference port identification associated with the call.
  *
  * @param call_id	Call identification.
  *
- * @return		Conference port ID, or PJSUA_INVALID_ID when the 
+ * @return		Conference port ID, or PJSUA_INVALID_ID when the
  *			media has not been established or is not active.
  */
 PJ_DECL(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id);
@@ -3570,6 +3650,97 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 				     char *buffer, 
 				     unsigned maxlen,
 				     const char *indent);
+
+/**
+ * Get the media stream index of the default video stream in the call.
+ * Typically this will just retrieve the stream index of the first
+ * activated video stream in the call.
+ *
+ * @param call_id	Call identification.
+ *
+ * @return		The media stream index or -1 if no video stream
+ * 			is present in the call.
+ */
+PJ_DECL(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id);
+
+/**
+ * Start, stop, and/or manipulate video transmission for the specified
+ * call. This would trigger a re-INVITE or UPDATE to be sent for the
+ * call. This function may add, remove, or modify existing video media
+ * stream, depending on the media index specified (the \a med_idx argument).
+ *
+ * To add a new or edit existing video stream (for transmission), specify
+ * a valid video capture device ID or PJMEDIA_VID_DEFAULT_CAPTURE_DEV in
+ * the \a cap_dev argument. If \a med_idx is set to default stream (-1),
+ * then the function will modify existing video stream if one exists, or
+ * add a new one if it doesn't. If \a med_idx is set to a specific stream
+ * index, the function will modify that video stream. Otherwise if \a med_idx
+ * is set to value larger than the current media count, a new video stream
+ * will be added to the call.
+ *
+ * To remove an existing video stream, specify PJMEDIA_VID_INVALID_DEV in
+ * \a cap_dev argument. If \a med_idx is set to default stream (-1), this
+ * will remove the default/first video stream in the call, otherwise
+ * application can put a specific value to request removal of that particular
+ * video stream.
+ *
+ * @param call_id	Call identification.
+ * @param med_idx	The media stream index. Currently the value MUST
+ * 			be -1 to denote the default video stream in the
+ * 			call.
+ * @param cap_dev	To add or modify existing video media stream,
+ * 			specify PJMEDIA_VID_DEFAULT_CAPTURE_DEV to use
+ * 			the default capture device as configured in the
+ * 			account, or specify a specific capture device ID.
+ * 			To disable an existing video stream, specify
+ * 			PJMEDIA_VID_INVALID_DEV for this parameter.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pjsua_call_set_vid_out(pjsua_call_id call_id,
+                                            int med_idx,
+                                            pjmedia_vid_dev_index cap_dev);
+
+/**
+ * Get media stream info for the specified media index.
+ *
+ * @param call_id	The call identification.
+ * @param med_idx	Media stream index.
+ * @param psi		To be filled with the stream info.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_stream_info(pjsua_call_id call_id,
+                                                unsigned med_idx,
+                                                pjsua_stream_info *psi);
+
+/**
+ *  Get media stream statistic for the specified media index.
+ *
+ * @param call_id	The call identification.
+ * @param med_idx	Media stream index.
+ * @param psi		To be filled with the stream statistic.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_stream_stat(pjsua_call_id call_id,
+                                                unsigned med_idx,
+                                                pjsua_stream_stat *stat);
+
+/**
+ * Get media transport info for the specified media index.
+ *
+ * @param call_id	The call identification.
+ * @param med_idx	Media stream index.
+ * @param t		To be filled with the transport info.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pjsua_call_get_transport_info(pjsua_call_id call_id,
+                                                   unsigned med_idx,
+                                                   pjmedia_transport_info *t);
+
+
 
 /**
  * @}
@@ -4447,8 +4618,6 @@ typedef struct pjsua_media_transport
 } pjsua_media_transport;
 
 
-
-
 /**
  * Get maxinum number of conference ports.
  *
@@ -4939,98 +5108,6 @@ PJ_DECL(pj_status_t) pjsua_snd_get_setting(pjmedia_aud_dev_cap cap,
 
 
 /*****************************************************************************
- * Video devices.
- */
-
-/**
- * Enum all video devices installed in the system.
- *
- * @param info		Array of info to be initialized.
- * @param count		On input, specifies max elements in the array.
- *			On return, it contains actual number of elements
- *			that have been initialized.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
-					 unsigned *count);
-
-
-/**
- * Get currently active video devices. If video devices has not been created
- * (for example when pjsua_start() is not called), it is possible that
- * the function returns PJ_SUCCESS with -1 as device IDs.
- *
- * @param capture_dev   On return it will be filled with device ID of the 
- *			capture device.
- * @param render_dev	On return it will be filled with device ID of the 
- *			device ID of the render device.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_vid_get_dev(int *capture_dev, int *render_dev);
-
-
-/**
- * Select video device for the next video sessions.
- *
- * @param capture_dev   Device ID of the capture device.
- * @param render_dev	Device ID of the render device.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_vid_set_dev(int capture_dev, int render_dev);
-
-
-/**
- * Configure video device setting to the video device being used. If video 
- * device is currently active, the function will forward the setting to the
- * video device instance to be applied immediately, if it supports it. 
- *
- * The setting will be saved for future opening of the video device, if the 
- * "keep" argument is set to non-zero. If the video device is currently
- * inactive, and the "keep" argument is false, this function will return
- * error.
- * 
- * Note that in case the setting is kept for future use, it will be applied
- * to any devices, even when application has changed the video device to be
- * used.
- *
- * See also #pjmedia_vid_dev_stream_set_cap() for more information about
- * setting an video device capability.
- *
- * @param cap		The video device setting to change.
- * @param pval		Pointer to value. Please see #pjmedia_vid_dev_cap
- *			documentation about the type of value to be 
- *			supplied for each setting.
- * @param keep		Specify whether the setting is to be kept for future
- *			use.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_vid_set_setting(pjmedia_vid_dev_cap cap,
-					   const void *pval,
-					   pj_bool_t keep);
-
-/**
- * Retrieve a video device setting. If video device is currently active,
- * the function will forward the request to the video device. If video device
- * is currently inactive, and if application had previously set the setting
- * and mark the setting as kept, then that setting will be returned.
- * Otherwise, this function will return error.
- *
- * @param cap		The video device setting to retrieve.
- * @param pval		Pointer to receive the value. 
- *			Please see #pjmedia_vid_dev_cap documentation about
- *			the type of value to be supplied for each setting.
- *
- * @return		PJ_SUCCESS on success or the appropriate error code.
- */
-PJ_DECL(pj_status_t) pjsua_vid_get_setting(pjmedia_vid_dev_cap cap,
-					   void *pval);
-
-
-/*****************************************************************************
  * Codecs.
  */
 
@@ -5087,8 +5164,225 @@ PJ_DECL(pj_status_t) pjsua_codec_get_param( const pj_str_t *codec_id,
 PJ_DECL(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
 					    const pjmedia_codec_param *param);
 
+
+#if DISABLED_FOR_TICKET_1185
+/**
+ * Create UDP media transports for all the calls. This function creates
+ * one UDP media transport for each call.
+ *
+ * @param cfg		Media transport configuration. The "port" field in the
+ *			configuration is used as the start port to bind the
+ *			sockets.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjsua_media_transports_create(const pjsua_transport_config *cfg);
+
+
+/**
+ * Register custom media transports to be used by calls. There must
+ * enough media transports for all calls.
+ *
+ * @param tp		The media transport array.
+ * @param count		Number of elements in the array. This number MUST
+ *			match the number of maximum calls configured when
+ *			pjsua is created.
+ * @param auto_delete	Flag to indicate whether the transports should be
+ *			destroyed when pjsua is shutdown.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t)
+pjsua_media_transports_attach( pjsua_media_transport tp[],
+			       unsigned count,
+			       pj_bool_t auto_delete);
+#endif
+
+
+/* end of MEDIA API */
+/**
+ * @}
+ */
+
+
 /*****************************************************************************
- * Video codecs.
+ * VIDEO API
+ */
+
+
+/**
+ * @defgroup PJSUA_LIB_VIDEO PJSUA-API Video
+ * @ingroup PJSUA_LIB
+ * @brief Video support
+ * @{
+ */
+
+/*
+ * Video devices API
+ */
+
+/**
+ * Get the number of video devices installed in the system.
+ *
+ * @return		The number of devices.
+ */
+PJ_DECL(unsigned) pjsua_vid_dev_count(void);
+
+/**
+ * Retrieve the video device info for the specified device index.
+ *
+ * @param id		The device index.
+ * @param vdi		Device info to be initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_dev_get_info(pjmedia_vid_dev_index id,
+                                            pjmedia_vid_dev_info *vdi);
+
+/**
+ * Enum all video devices installed in the system.
+ *
+ * @param info		Array of info to be initialized.
+ * @param count		On input, specifies max elements in the array.
+ *			On return, it contains actual number of elements
+ *			that have been initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
+					 unsigned *count);
+
+
+/*
+ * Video preview API
+ */
+
+/**
+ * Parameters for starting video preview with pjsua_vid_preview_start().
+ * Application should initialize this structure with
+ * pjsua_vid_preview_param_default().
+ */
+typedef struct pjsua_vid_preview_param
+{
+    /**
+     * Device ID for the video renderer to be used for rendering the
+     * capture stream for preview.
+     */
+    pjmedia_vid_dev_index	rend_id;
+} pjsua_vid_preview_param;
+
+
+/**
+ * Start video preview window for the specified capture device.
+ *
+ * @param id		The capture device ID where its preview will be
+ * 			started.
+ * @param prm		Optional video preview parameters. Specify NULL
+ * 			to use default values.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
+                                             pjsua_vid_preview_param *prm);
+
+/**
+ * Get the preview window handle associated with the capture device, if any.
+ *
+ * @param id		The capture device ID.
+ *
+ * @return		The window ID of the preview window for the
+ * 			specified capture device ID, or NULL if preview
+ * 			does not exist.
+ */
+PJ_DECL(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id);
+
+/**
+ * Stop video preview.
+ *
+ * @param id		The capture device ID.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id);
+
+
+/*
+ * Video window manipulation API.
+ */
+
+/**
+ * This structure describes video window info.
+ */
+typedef struct pjsua_vid_win_info
+{
+    /**
+     * Window show status. The window is hidden if false.
+     */
+    pj_bool_t	show;
+
+    /**
+     * Window position.
+     */
+    pjmedia_coord pos;
+
+    /**
+     * Window size.
+     */
+    pjmedia_rect_size size;
+
+} pjsua_vid_win_info;
+
+
+/**
+ * Get window info.
+ *
+ * @param wid		The video window ID.
+ * @param wi		The video window info to be initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_get_info(pjsua_vid_win_id wid,
+                                            pjsua_vid_win_info *wi);
+
+/**
+ * Show or hide window.
+ *
+ * @param wid		The video window ID.
+ * @param show		Set to PJ_TRUE to show the window, PJ_FALSE to
+ * 			hide the window.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_set_show(pjsua_vid_win_id wid,
+                                            pj_bool_t show);
+
+/**
+ * Set video window position.
+ *
+ * @param wid		The video window ID.
+ * @param pos		The window position.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_set_pos(pjsua_vid_win_id wid,
+                                           const pjmedia_coord *pos);
+
+/**
+ * Resize window.
+ *
+ * @param wid		The video window ID.
+ * @param size		The new window size.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_set_size(pjsua_vid_win_id wid,
+                                            const pjmedia_rect_size *size);
+
+
+
+/*
+ * Video codecs API
  */
 
 /**
@@ -5147,45 +5441,11 @@ PJ_DECL(pj_status_t) pjsua_vid_codec_set_param(
 					const pjmedia_vid_codec_param *param);
 
 
-#if DISABLED_FOR_TICKET_1185
-/**
- * Create UDP media transports for all the calls. This function creates
- * one UDP media transport for each call.
- *
- * @param cfg		Media transport configuration. The "port" field in the
- *			configuration is used as the start port to bind the
- *			sockets.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) 
-pjsua_media_transports_create(const pjsua_transport_config *cfg);
 
-
-/**
- * Register custom media transports to be used by calls. There must
- * enough media transports for all calls.
- *
- * @param tp		The media transport array.
- * @param count		Number of elements in the array. This number MUST
- *			match the number of maximum calls configured when
- *			pjsua is created.
- * @param auto_delete	Flag to indicate whether the transports should be
- *			destroyed when pjsua is shutdown.
- *
- * @return		PJ_SUCCESS on success, or the appropriate error code.
- */
-PJ_DECL(pj_status_t) 
-pjsua_media_transports_attach( pjsua_media_transport tp[],
-			       unsigned count,
-			       pj_bool_t auto_delete);
-#endif
-
-
+/* end of VIDEO API */
 /**
  * @}
  */
-
 
 
 /**

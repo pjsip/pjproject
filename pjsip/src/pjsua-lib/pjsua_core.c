@@ -67,6 +67,10 @@ static void init_data()
     pj_list_init(&pjsua_var.outbound_proxy);
 
     pjsua_config_default(&pjsua_var.ua_cfg);
+
+    for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
+	pjsua_vid_win_reset(i);
+    }
 }
 
 
@@ -175,6 +179,8 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
     cfg->max_audio_cnt = 1;
+    cfg->vid_cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;

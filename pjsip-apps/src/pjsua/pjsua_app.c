@@ -311,7 +311,7 @@ static void usage(void)
     puts  ("  --jb-max-size       Specify jitter buffer maximum size, in frames (default=-1)");
     puts  ("  --extra-audio       Add one more audio stream");
 
-#if PJMEDIA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO
     puts  ("");
     puts  ("Video Options:");
     puts  ("  --video             Enable video");
@@ -2645,45 +2645,60 @@ static void on_call_tsx_state(pjsua_call_id call_id,
     }
 }
 
-
-/*
- * Callback on media state changed event.
- * The action may connect the call to sound device, to file, or
- * to loop the call.
- */
-static void on_call_media_state(pjsua_call_id call_id)
+/* General processing for media state. "mi" is the media index */
+static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
+                                         pj_bool_t *has_error)
 {
-    pjsua_call_info call_info;
+    const char *status_name[] = {
+        "None",
+        "Active",
+        "Local hold",
+        "Remote hold",
+        "Error"
+    };
 
-    pjsua_call_get_info(call_id, &call_info);
+    pj_assert(ci->media[mi].status <= PJ_ARRAY_SIZE(status_name));
+    pj_assert(PJSUA_CALL_MEDIA_ERROR == 4);
 
+    PJ_LOG(4,(THIS_FILE, "Call %d media %d [type=%s], status is %s",
+	      ci->id, mi, pjmedia_type_name(ci->media[mi].type),
+	      status_name[ci->media[mi].status]));
+}
+
+/* Process audio media state. "mi" is the media index. */
+static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
+                                pj_bool_t *has_error)
+{
     /* Stop ringback */
-    ring_stop(call_id);
+    ring_stop(ci->id);
 
     /* Connect ports appropriately when media status is ACTIVE or REMOTE HOLD,
      * otherwise we should NOT connect the ports.
      */
-    if (call_info.media_status == PJSUA_CALL_MEDIA_ACTIVE ||
-	call_info.media_status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
+    if (ci->media[mi].status == PJSUA_CALL_MEDIA_ACTIVE ||
+	ci->media[mi].status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
     {
 	pj_bool_t connect_sound = PJ_TRUE;
+	pjsua_conf_port_id call_conf_slot;
+
+	call_conf_slot = ci->media[mi].stream.aud.conf_slot;
 
 	/* Loopback sound, if desired */
 	if (app_config.auto_loop) {
-	    pjsua_conf_connect(call_info.conf_slot, call_info.conf_slot);
+	    pjsua_conf_connect(call_conf_slot, call_conf_slot);
 	    connect_sound = PJ_FALSE;
 	}
 
 	/* Automatically record conversation, if desired */
 	if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
-	    pjsua_conf_connect(call_info.conf_slot, app_config.rec_port);
+	    pjsua_conf_connect(call_conf_slot, app_config.rec_port);
 	}
 
 	/* Stream a file, if desired */
 	if ((app_config.auto_play || app_config.auto_play_hangup) && 
 	    app_config.wav_port != PJSUA_INVALID_ID)
 	{
-	    pjsua_conf_connect(app_config.wav_port, call_info.conf_slot);
+	    pjsua_conf_connect(app_config.wav_port, call_conf_slot);
 	    connect_sound = PJ_FALSE;
 	}
 
@@ -2699,16 +2714,16 @@ static void on_call_media_state(pjsua_call_id call_id)
 	    pjsua_enum_calls(call_ids, &call_cnt);
 
 	    for (i=0; i<call_cnt; ++i) {
-		if (call_ids[i] == call_id)
+		if (call_ids[i] == ci->id)
 		    continue;
 		
 		if (!pjsua_call_has_media(call_ids[i]))
 		    continue;
 
-		pjsua_conf_connect(call_info.conf_slot,
+		pjsua_conf_connect(call_conf_slot,
 				   pjsua_call_get_conf_port(call_ids[i]));
 		pjsua_conf_connect(pjsua_call_get_conf_port(call_ids[i]),
-				   call_info.conf_slot);
+		                   call_conf_slot);
 
 		/* Automatically record conversation, if desired */
 		if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
@@ -2724,52 +2739,53 @@ static void on_call_media_state(pjsua_call_id call_id)
 
 	/* Otherwise connect to sound device */
 	if (connect_sound) {
-	    pjsua_conf_connect(call_info.conf_slot, 0);
-	    pjsua_conf_connect(0, call_info.conf_slot);
+	    pjsua_conf_connect(call_conf_slot, 0);
+	    pjsua_conf_connect(0, call_conf_slot);
 
 	    /* Automatically record conversation, if desired */
 	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
-		pjsua_conf_connect(call_info.conf_slot, app_config.rec_port);
+		pjsua_conf_connect(call_conf_slot, app_config.rec_port);
 		pjsua_conf_connect(0, app_config.rec_port);
 	    }
 	}
     }
+}
 
-    /* Handle media status */
-    switch (call_info.media_status) {
-    case PJSUA_CALL_MEDIA_ACTIVE:
-	PJ_LOG(3,(THIS_FILE, "Media for call %d is active", call_id));
-	break;
+/* Process video media state. "mi" is the media index. */
+static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
+                                pj_bool_t *has_error)
+{
+}
 
-    case PJSUA_CALL_MEDIA_LOCAL_HOLD:
-	PJ_LOG(3,(THIS_FILE, "Media for call %d is suspended (hold) by local",
-		  call_id));
-	break;
+/*
+ * Callback on media state changed event.
+ * The action may connect the call to sound device, to file, or
+ * to loop the call.
+ */
+static void on_call_media_state(pjsua_call_id call_id)
+{
+    pjsua_call_info call_info;
+    unsigned mi;
+    pj_bool_t has_error = PJ_FALSE;
 
-    case PJSUA_CALL_MEDIA_REMOTE_HOLD:
-	PJ_LOG(3,(THIS_FILE, 
-		  "Media for call %d is suspended (hold) by remote",
-		  call_id));
-	break;
+    pjsua_call_get_info(call_id, &call_info);
 
-    case PJSUA_CALL_MEDIA_ERROR:
-	PJ_LOG(3,(THIS_FILE,
-		  "Media has reported error, disconnecting call"));
-	{
-	    pj_str_t reason = pj_str("ICE negotiation failed");
-	    pjsua_call_hangup(call_id, 500, &reason, NULL);
+    for (mi=0; mi<call_info.media_cnt; ++mi) {
+	on_call_generic_media_state(&call_info, mi, &has_error);
+
+	switch (call_info.media[mi].type) {
+	case PJMEDIA_TYPE_AUDIO:
+	    on_call_audio_state(&call_info, mi, &has_error);
+	    break;
+	case PJMEDIA_TYPE_VIDEO:
+	    on_call_video_state(&call_info, mi, &has_error);
+	    break;
 	}
-	break;
+    }
 
-    case PJSUA_CALL_MEDIA_NONE:
-	PJ_LOG(3,(THIS_FILE, 
-		  "Media for call %d is inactive",
-		  call_id));
-	break;
-
-    default:
-	pj_assert(!"Unhandled media status");
-	break;
+    if (has_error) {
+	pj_str_t reason = pj_str("Media failed");
+	pjsua_call_hangup(call_id, 500, &reason, NULL);
     }
 }
 
@@ -3255,7 +3271,11 @@ static void keystroke_help(void)
     puts("| dq  Dump curr. call quality  | cd  Disconnect port      | dc  Dump config   |");
     puts("|                              |  V  Adjust audio Volume  |  f  Save config   |");
     puts("|  S  Send arbitrary REQUEST   | Cp  Codec priorities     |                   |");
-    puts("+------------------------------+--------------------------+-------------------+");
+    puts("+-----------------------------------------------------------------------------+");
+#if PJSUA_HAS_VIDEO
+    puts("| Video: \"vid help\" for more info                                             |");
+    puts("+-----------------------------------------------------------------------------+");
+#endif
     puts("|  q  QUIT   L  ReLoad   sleep MS   echo [0|1|txt]     n: detect NAT type     |");
     puts("+=============================================================================+");
 
@@ -3271,6 +3291,28 @@ static void keystroke_help(void)
     }
 }
 
+/* Help screen for video */
+static void vid_show_help(void)
+{
+#if PJSUA_HAS_VIDEO
+    puts("+=============================================================================+");
+    puts("|                            Video commands:                                  |");
+    puts("|                                                                             |");
+    puts("| vid help                  Show this help screen                             |");
+    puts("| vid call rx on|off        Enable/disable incoming video for current call    |");
+    puts("| vid call tx on|off        Enable/disable video tx for current call          |");
+    puts("| vid dev list              List all video devices                            |");
+    puts("| vid dev refresh           Refresh video device list                         |");
+    puts("| vid dev prev on|off ID    Enable/disable preview for specified device ID    |");
+    puts("| vid codec list            List video codecs                                 |");
+    puts("| vid codec prio PT PRIO    Set codec with pt PT priority to PRIO             |");
+    puts("| vid win list              List all active video windows                     |");
+    puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
+    puts("| vid win move ID X Y       Move window ID to position X,Y                    |");
+    puts("| vid win resize ID w h     Resize window ID to the specified width, height   |");
+    puts("+=============================================================================+");
+#endif
+}
 
 /*
  * Input simple string
@@ -3549,7 +3591,7 @@ static void manage_codec_prio(void)
 			       c[i].codec_id.ptr);
     }
 
-#if PJMEDIA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO
     puts("");
     printf("List of video codecs:\n");
     pjsua_vid_enum_codecs(c, &count);
@@ -3591,7 +3633,7 @@ static void manage_codec_prio(void)
 
     status = pjsua_codec_set_priority(pj_cstr(&id, codec), 
 				      (pj_uint8_t)new_prio);
-#if PJMEDIA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO
     if (status != PJ_SUCCESS) {
 	status = pjsua_vid_codec_set_priority(pj_cstr(&id, codec), 
 					      (pj_uint8_t)new_prio);
@@ -3600,6 +3642,210 @@ static void manage_codec_prio(void)
     if (status != PJ_SUCCESS)
 	pjsua_perror(THIS_FILE, "Error setting codec priority", status);
 }
+
+
+#if PJSUA_HAS_VIDEO
+static void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi,
+                          const char *title)
+{
+    char capnames[120];
+    char formats[120];
+    const char *dirname;
+    unsigned i;
+
+    if (vdi->dir == PJMEDIA_DIR_CAPTURE_RENDER) {
+	dirname = "capture, render";
+    } else if (vdi->dir == PJMEDIA_DIR_CAPTURE) {
+	dirname = "capture";
+    } else {
+	dirname = "render";
+    }
+
+
+    capnames[0] = '\0';
+    for (i=0; i<sizeof(int)*8 && (1 << i) < PJMEDIA_VID_DEV_CAP_MAX; ++i) {
+	if (vdi->caps & (1 << i)) {
+	    const char *capname = pjmedia_vid_dev_cap_name(1 << i, NULL);
+	    if (capname) {
+		if (*capnames)
+		    strcat(capnames, ", ");
+		strncat(capnames, capname,
+		        sizeof(capnames)-strlen(capnames)-1);
+	    }
+	}
+    }
+
+    formats[0] = '\0';
+    for (i=0; i<vdi->fmt_cnt; ++i) {
+	const pjmedia_video_format_info *vfi =
+		pjmedia_get_video_format_info(NULL, vdi->fmt[i].id);
+	if (vfi) {
+	    if (*formats)
+		strcat(formats, ", ");
+	    strncat(formats, vfi->name, sizeof(formats)-strlen(formats)-1);
+	}
+    }
+
+    PJ_LOG(3,(THIS_FILE, "%3d %s [%s][%s] %s", id, vdi->name, vdi->driver,
+	      dirname, title));
+    PJ_LOG(3,(THIS_FILE, "    Supported capabilities: %s", capnames));
+    PJ_LOG(3,(THIS_FILE, "    Supported formats: %s", formats));
+}
+
+static void vid_list_devs(void)
+{
+    unsigned i, count;
+    pjmedia_vid_dev_info vdi;
+    pj_status_t status;
+
+    PJ_LOG(3,(THIS_FILE, "Video device list:"));
+    count = pjsua_vid_dev_count();
+    if (count == 0) {
+	PJ_LOG(3,(THIS_FILE, " - no device detected -"));
+	return;
+    } else {
+	PJ_LOG(3,(THIS_FILE, "%d device(s) detected:", count));
+    }
+
+    status = pjsua_vid_dev_get_info(PJMEDIA_VID_DEFAULT_RENDER_DEV, &vdi);
+    if (status == PJ_SUCCESS)
+	vid_print_dev(PJMEDIA_VID_DEFAULT_RENDER_DEV, &vdi,
+	              "(default renderer device)");
+
+    status = pjsua_vid_dev_get_info(PJMEDIA_VID_DEFAULT_CAPTURE_DEV, &vdi);
+    if (status == PJ_SUCCESS)
+	vid_print_dev(PJMEDIA_VID_DEFAULT_CAPTURE_DEV, &vdi,
+	              "(default capture device)");
+
+    for (i=0; i<count; ++i) {
+	status = pjsua_vid_dev_get_info(i, &vdi);
+	if (status == PJ_SUCCESS)
+	    vid_print_dev(i, &vdi, "");
+    }
+}
+
+static void vid_handle_menu(char *menuin)
+{
+    char *argv[8];
+    int argc = 0;
+
+    /* Tokenize */
+    argv[argc] = strtok(menuin, " \t\r\n");
+    while (argv[argc] && *argv[argc]) {
+	argc++;
+	argv[argc] = strtok(NULL, " \t\r\n");
+    }
+
+    if (strcmp(argv[1], "help")==0 || argc == 1) {
+	vid_show_help();
+    } else if (strcmp(argv[1], "call")==0) {
+	pj_bool_t tx = (strcmp(argv[2], "tx") == 0);
+	pj_bool_t on = (strcmp(argv[3], "on") == 0);
+
+	PJ_TODO(vid_enable_disable_video_on_call);
+	PJ_LOG(1,(THIS_FILE, "Not implemented"));
+    } else if (strcmp(argv[1], "dev")==0) {
+	if (strcmp(argv[2], "list")==0) {
+	    vid_list_devs();
+	} else if (strcmp(argv[2], "refresh")==0) {
+	    pjmedia_vid_dev_refresh();
+	} else if (strcmp(argv[2], "prev")==0) {
+	    if (argc != 5) {
+		goto on_error;
+	    } else {
+		pj_bool_t on = (strcmp(argv[3], "on") == 0);
+		int dev_id = atoi(argv[4]);
+		if (on) {
+		    pjsua_vid_preview_start(dev_id, NULL);
+		} else {
+		    pjsua_vid_preview_stop(dev_id);
+		}
+	    }
+	} else
+	    goto on_error;
+    } else if (strcmp(argv[1], "win")==0) {
+	if (argc==3 && strcmp(argv[2], "list")==0) {
+	    PJ_LOG(1,(THIS_FILE, "Not implemented"));
+	    PJ_TODO(vid_list_window);
+	} else if (argc==4 && (strcmp(argv[2], "show")==0 ||
+			       strcmp(argv[2], "hide")==0))
+	{
+	    pj_bool_t show = (strcmp(argv[2], "show")==0);
+	    pjsua_vid_win_id wid = atoi(argv[3]);
+
+	    pjsua_vid_win_set_show(wid, show);
+
+	} else if (argc==6 && strcmp(argv[2], "move")==0) {
+	    pjsua_vid_win_id wid = atoi(argv[3]);
+	    pjmedia_coord pos;
+
+	    pos.x = atoi(argv[4]);
+	    pos.y = atoi(argv[4]);
+	    pjsua_vid_win_set_pos(wid, &pos);
+
+	} else if (argc==6 && strcmp(argv[2], "resize")==0) {
+	    pjsua_vid_win_id wid = atoi(argv[3]);
+	    pjmedia_rect_size size;
+
+	    size.w = atoi(argv[4]);
+	    size.h = atoi(argv[4]);
+	    pjsua_vid_win_set_size(wid, &size);
+	} else
+	    goto on_error;
+    } else if (strcmp(argv[1], "codec")==0) {
+	pjmedia_vid_codec_info ci[PJMEDIA_CODEC_MGR_MAX_CODECS];
+	unsigned prio[PJMEDIA_CODEC_MGR_MAX_CODECS];
+	unsigned count = PJMEDIA_CODEC_MGR_MAX_CODECS;
+	pj_status_t status;
+
+	if (argc==3 && strcmp(argv[2], "list")==0) {
+	    status = pjmedia_vid_codec_mgr_enum_codecs(NULL, &count, ci, prio);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(THIS_FILE, status, "Error enumerating codecs"));
+	    } else {
+		unsigned i;
+		PJ_LOG(3,(THIS_FILE, "Found %d video codecs:", count));
+		PJ_LOG(3,(THIS_FILE, " PT  Prio  Name"));
+		PJ_LOG(3,(THIS_FILE, "-------------------------"));
+		for (i=0; i<count; ++i) {
+		    PJ_LOG(3,(THIS_FILE, "% 3d % 3d  %.*s", ci[i].pt, prio[i],
+			      (int)ci[i].encoding_name.slen,
+			      ci[i].encoding_name.ptr));
+		}
+	    }
+	} else if (argc==5 && strcmp(argv[2], "prio")==0) {
+	    int pt = atoi(argv[3]);
+	    int prio = atoi(argv[4]);
+	    const pjmedia_vid_codec_info *pci;
+
+	    status = pjmedia_vid_codec_mgr_get_codec_info(NULL, pt, &pci);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(THIS_FILE, status, "Unable to find codec"));
+	    } else {
+		char codec_id[40];
+		if (pjmedia_vid_codec_info_to_id(pci, codec_id,
+		                                 sizeof(codec_id)) == NULL)
+		{
+		    PJ_PERROR(1,(THIS_FILE, status, "Unable to get codec id"));
+		} else {
+		    pj_str_t cid = pj_str(codec_id);
+		    status = pjsua_vid_codec_set_priority(&cid,
+		                                          (pj_uint8_t)prio);
+		}
+	    }
+
+	} else
+	    goto on_error;
+    } else
+	goto on_error;
+
+    return;
+
+on_error:
+    PJ_LOG(1,(THIS_FILE, "Invalid command, use 'vid help'"));
+}
+
+#endif /* PJSUA_HAS_VIDEO */
 
 
 /*
@@ -4031,11 +4277,17 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    break;
 
 	case 'v':
-	    /*
-	     * Send re-INVITE (to release hold, etc).
-	     */
+#if PJSUA_HAS_VIDEO
+	    if (menuin[1]=='i' && menuin[2]=='d' && menuin[3]==' ') {
+
+		vid_handle_menu(menuin);
+
+	    } else
+#endif
 	    if (current_call != -1) {
-		
+		/*
+		 * re-INVITE
+		 */
 		pjsua_call_reinvite(current_call, PJ_TRUE, NULL);
 
 	    } else {
@@ -5089,7 +5341,7 @@ pj_status_t app_init(int argc, char *argv[])
     /* Optionally disable some codec */
     for (i=0; i<app_config.codec_dis_cnt; ++i) {
 	pjsua_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
-#if PJMEDIA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO
 	pjsua_vid_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
 #endif
     }
@@ -5098,7 +5350,7 @@ pj_status_t app_init(int argc, char *argv[])
     for (i=0; i<app_config.codec_cnt; ++i) {
 	pjsua_codec_set_priority(&app_config.codec_arg[i],
 				 (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
-#if PJMEDIA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO
 	pjsua_vid_codec_set_priority(&app_config.codec_arg[i],
 				     (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
 #endif
@@ -5137,12 +5389,13 @@ pj_status_t app_init(int argc, char *argv[])
 	    goto on_error;
     }
 
-#if PJMEDIA_HAS_VIDEO
+#if PJSUA_HAS_VIDEO
     if (app_config.vcapture_dev != PJSUA_INVALID_ID ||
         app_config.vrender_dev  != PJSUA_INVALID_ID) 
     {
-	status = pjsua_vid_set_dev(app_config.vcapture_dev, 
-				   app_config.vrender_dev);
+	//status = pjsua_vid_set_dev(app_config.vcapture_dev,
+	//			   app_config.vrender_dev);
+	PJ_TODO(vid_implement_pjsua_vid_set_dev);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
