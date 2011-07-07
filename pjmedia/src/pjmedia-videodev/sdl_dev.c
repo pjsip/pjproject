@@ -1115,6 +1115,7 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
+#if SDL_VERSION_ATLEAST(1,3,0)
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
     {
         pval = strm->window;
@@ -1123,9 +1124,10 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
         SDL_GetWindowPosition(strm->window, &((pjmedia_coord *)pval)->x,
                               &((pjmedia_coord *)pval)->y);
 	return PJ_SUCCESS;
-    } else {
-	return PJMEDIA_EVID_INVCAP;
     }
+#endif
+
+    return PJMEDIA_EVID_INVCAP;
 }
 
 /* API: set capability */
@@ -1139,6 +1141,7 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
+#if SDL_VERSION_ATLEAST(1,3,0)
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         SDL_SetWindowPosition(strm->window, ((pjmedia_coord *)pval)->x,
                               ((pjmedia_coord *)pval)->y);
@@ -1149,7 +1152,9 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
         else
             SDL_ShowWindow(strm->window);
 	return PJ_SUCCESS;
-    } else if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
+    } else
+#endif
+    if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
         strm->new_fmt = (pjmedia_format *)pval;
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
         [strm->delegate performSelectorOnMainThread:@selector(detect_new_fmt)
