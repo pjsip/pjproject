@@ -2175,6 +2175,10 @@ static void pres_timer_cb(pj_timer_heap_t *th,
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	pjsua_acc *acc = &pjsua_var.acc[i];
 
+	/* Acc may not be ready yet, otherwise assertion will happen */
+	if (!pjsua_acc_is_valid(i))
+	    continue;
+
 	/* Retry PUBLISH */
 	if (acc->cfg.publish_enabled && acc->publish_sess==NULL)
 	    pjsua_pres_init_publish_acc(acc->index);
