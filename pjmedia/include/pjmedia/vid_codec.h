@@ -530,7 +530,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs(
                                             pjmedia_vid_codec_mgr *mgr, 
 					    unsigned *count, 
 					    pjmedia_vid_codec_info info[],
-					    unsigned prio[]);
+					    unsigned *prio);
 
 
 /**
