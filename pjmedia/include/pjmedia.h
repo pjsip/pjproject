@@ -67,7 +67,7 @@
 #include <pjmedia/transport_loop.h>
 #include <pjmedia/transport_srtp.h>
 #include <pjmedia/transport_udp.h>
-#include <pjmedia/videoport.h>
+#include <pjmedia/vid_port.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/vid_stream.h>
 #include <pjmedia/wav_playlist.h>
