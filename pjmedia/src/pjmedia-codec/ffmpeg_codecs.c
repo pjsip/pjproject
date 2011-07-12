@@ -1445,6 +1445,16 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 
 	output->type = PJMEDIA_FRAME_TYPE_VIDEO;
         output->size = vafp->framebytes;
+
+        /* Check if we got key frame */
+        if (avframe.key_frame && pjmedia_event_publisher_has_sub(&codec->epub))
+        {
+            pjmedia_event event;
+
+            pjmedia_event_init(&event, PJMEDIA_EVENT_KEY_FRAME_FOUND,
+                               &output->timestamp, &codec->epub);
+            pjmedia_event_publish(&codec->epub, &event);
+        }
     } else {
 	output->type = PJMEDIA_FRAME_TYPE_NONE;
 	output->size = 0;
