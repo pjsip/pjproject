@@ -540,7 +540,10 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 	pjmedia_format_id fmt_id;
 	int codec_info_idx;
         
-        if (c->type != CODEC_TYPE_VIDEO)
+#if LIBAVCODEC_VERSION_MAJOR <= 52
+#   define AVMEDIA_TYPE_VIDEO	CODEC_TYPE_VIDEO
+#endif
+        if (c->type != AVMEDIA_TYPE_VIDEO)
             continue;
 
         /* Video encoder and decoder are usually implemented in separate
@@ -940,7 +943,8 @@ static pj_status_t ffmpeg_codec_init( pjmedia_vid_codec *codec,
 
 static void print_ffmpeg_err(int err)
 {
-#if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72
+#if LIBAVCODEC_VERSION_MAJOR > 52 || \
+    (LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72)
     char errbuf[512];
     if (av_strerror(err, errbuf, sizeof(errbuf)) >= 0)
         PJ_LOG(5, (THIS_FILE, "ffmpeg err %d: %s", err, errbuf));
@@ -1027,7 +1031,8 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	/* Set no delay, note that this may cause some codec functionals
 	 * not working (e.g: rate control).
 	 */
-#if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 113
+#if LIBAVCODEC_VERSION_MAJOR > 52 || \
+    (LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 113)
 	ctx->rc_lookahead = 0;
 #endif
 
@@ -1349,13 +1354,15 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     output->bit_info = 0;
     output->timestamp = input->timestamp;
 
-#if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72
+#if LIBAVCODEC_VERSION_MAJOR > 52 || \
+    (LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72)
     //avpacket.flags = AV_PKT_FLAG_KEY;
 #else
     avpacket.flags = 0;
 #endif
 
-#if LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72
+#if LIBAVCODEC_VERSION_MAJOR > 52 || \
+    (LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 72)
     err = avcodec_decode_video2(ff->dec_ctx, &avframe, 
                                 &got_picture, &avpacket);
 #else
