@@ -103,19 +103,16 @@ typedef struct codec_port_data_t
     pjmedia_converter   *conv;
 } codec_port_data_t;
 
-static pj_status_t avi_event_cb(pjmedia_vid_dev_stream *stream,
-				void *user_data,
-				pjmedia_vid_event *event)
+static pj_status_t avi_event_cb(pjmedia_event_subscription *esub,
+				pjmedia_event *event)
 {
-    avi_port_t *ap = (avi_port_t *)user_data;
+    avi_port_t *ap = (avi_port_t *)esub->user_data;
     
-    PJ_UNUSED_ARG(stream);
-    
-    switch (event->event_type) {
-    case PJMEDIA_EVENT_WINDOW_CLOSE:
+    switch (event->type) {
+    case PJMEDIA_EVENT_WND_CLOSED:
         ap->is_quitting = PJ_TRUE;
         break;
-    case PJMEDIA_EVENT_MOUSEBUTTONDOWN:
+    case PJMEDIA_EVENT_MOUSE_BTN_DOWN:
         if (ap->is_running) {
             pjmedia_vid_port_stop(ap->vid_port);
             if (ap->snd_port)
@@ -190,6 +187,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     pjmedia_avi_stream *vid_stream, *aud_stream;
     pjmedia_port *vid_port = NULL, *aud_port = NULL;
     pjmedia_vid_codec *codec=NULL;
+    pjmedia_event_subscription esub;
     avi_port_t avi_port;
     
     pj_bzero(&avi_port, sizeof(avi_port));
@@ -394,11 +392,16 @@ static int aviplay(pj_pool_t *pool, const char *fname)
         pjmedia_vid_cb cb;
 	
         pj_bzero(&cb, sizeof(cb));
-        cb.on_event_cb = avi_event_cb;
         avi_port.snd_port = snd_port;
         avi_port.vid_port = renderer;
         avi_port.is_running = PJ_TRUE;
         pjmedia_vid_port_set_cb(renderer, &cb, &avi_port);
+
+        /* subscribe events */
+        pjmedia_event_subscription_init(&esub, &avi_event_cb, &avi_port);
+        pjmedia_event_subscribe(
+        	pjmedia_vid_port_get_event_publisher(renderer),
+        	&esub);
 
         if (snd_port) {
             /* Synchronize video rendering and audio playback */

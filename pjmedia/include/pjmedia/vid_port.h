@@ -105,6 +105,16 @@ PJ_DECL(void) pjmedia_vid_port_set_cb(pjmedia_vid_port *vid_port,
                                       void *user_data);
 
 /**
+ * Get the event publisher instance of the video port.
+ *
+ * @param vid_port	The video port.
+ *
+ * @return		The event publisher of the video port.
+ */
+PJ_DECL(pjmedia_event_publisher*)
+pjmedia_vid_port_get_event_publisher(pjmedia_vid_port *vid_port);
+
+/**
  * Return the underlying video stream of the video port.
  *
  * @param vid_port	The video port.

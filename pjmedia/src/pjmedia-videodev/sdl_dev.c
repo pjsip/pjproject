@@ -147,6 +147,7 @@ struct sdl_stream
     pj_status_t			 status;
     pjmedia_format              *new_fmt;
     pjmedia_rect_size           *new_disp_size;
+    pj_timestamp		 last_ts;
 
 #if SDL_VERSION_ATLEAST(1,3,0)
     SDL_Window                  *window;            /**< Display window.    */
@@ -683,6 +684,8 @@ static void detect_fmt_change(struct sdl_stream *strm)
 static int sdlthread(void * data)
 {
     struct sdl_stream *strm = (struct sdl_stream*)data;
+    pj_bool_t notify_wnd_closed_event = PJ_FALSE;
+    pj_status_t saved_stream_status;
 #endif
 
 #if !(SDL_VERSION_ATLEAST(1,3,0))
@@ -733,7 +736,7 @@ on_return:
 #endif
     {
         SDL_Event sevent;
-        pjmedia_vid_event pevent;
+        pjmedia_event pevent;
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #if defined(PJ_WIN32) && PJ_WIN32 != 0	
@@ -751,100 +754,67 @@ on_return:
          * SDL_PumpEvents().
          */
         while (SDL_PollEvent(&sevent)) {
-            pj_bzero(&pevent, sizeof(pevent));
+            pjmedia_event_init(&pevent, PJMEDIA_EVENT_NONE, &strm->last_ts,
+                               &strm->base.epub);
 
             switch(sevent.type) {
                 case SDL_MOUSEBUTTONDOWN:
-                    pevent.event_type = PJMEDIA_EVENT_MOUSEBUTTONDOWN;
+                    pevent.type = PJMEDIA_EVENT_MOUSE_BTN_DOWN;
                     break;
 #if SDL_VERSION_ATLEAST(1,3,0)
                 case SDL_WINDOWEVENT:
                     switch (sevent.window.event) {
                         case SDL_WINDOWEVENT_RESIZED:
-                            pevent.event_type = PJMEDIA_EVENT_WINDOW_RESIZE;
-                            pevent.event_desc.resize.new_size.w =
+                            pevent.type = PJMEDIA_EVENT_WND_RESIZED;
+                            pevent.data.wnd_resized.new_size.w =
                                 sevent.window.data1;
-                            pevent.event_desc.resize.new_size.h =
+                            pevent.data.wnd_resized.new_size.h =
                                 sevent.window.data2;
                             break;
                     }
                     break;
 #else
                 case SDL_VIDEORESIZE:
-                    pevent.event_type = PJMEDIA_EVENT_WINDOW_RESIZE;
-                    pevent.event_desc.resize.new_size.w = sevent.resize.w;
-                    pevent.event_desc.resize.new_size.h = sevent.resize.h;
+                    pevent.type = PJMEDIA_EVENT_WND_RESIZED;
+                    pevent.data.wnd_resized.new_size.w = sevent.resize.w;
+                    pevent.data.wnd_resized.new_size.h = sevent.resize.h;
                     break;
                 case SDL_QUIT:
-                    pevent.event_type = PJMEDIA_EVENT_WINDOW_CLOSE;
+                    pevent.type = PJMEDIA_EVENT_WND_CLOSING;
+                    break;
 #endif
             }
 
-            switch (pevent.event_type) {
-                case PJMEDIA_EVENT_MOUSEBUTTONDOWN:
-                    if (strm->vid_cb.on_event_cb)
-                        if ((*strm->vid_cb.on_event_cb)(&strm->base,
-							strm->user_data,
-							&pevent) != PJ_SUCCESS)
-                        {
-                            /* Application wants us to ignore this event */
-                            break;
-                        }
-                    break;
+            if (pevent.type != PJMEDIA_EVENT_NONE) {
+        	pj_status_t status;
 
-                case PJMEDIA_EVENT_WINDOW_RESIZE:
-                    if (strm->vid_cb.on_event_cb) {
-                        if ((*strm->vid_cb.on_event_cb)(&strm->base,
-                                                        strm->user_data,
-                                                        &pevent) != PJ_SUCCESS)
-                        {
-                            break;
-                        }
-                    }
-                    strm->new_disp_size = &pevent.event_desc.resize.new_size;
+        	status = pjmedia_event_publish(&strm->base.epub, &pevent);
+
+		switch (pevent.type) {
+		case PJMEDIA_EVENT_WND_RESIZED:
+                    strm->new_disp_size = &pevent.data.wnd_resized.new_size;
                     detect_fmt_change(strm);
-                    break;
+		    break;
 
-                case PJMEDIA_EVENT_WINDOW_CLOSE:
-                    /**
-                     * To process PJMEDIA_EVENT_WINDOW_CLOSE event,
-                     * application should do this in the on_event_cb callback:
-                     * 1. stop further calls to 
-		     *    #pjmedia_vid_dev_stream_put_frame()
-                     * 2. return PJ_SUCCESS
-                     * Upon returning from the callback, SDL will destroy its
-                     * own stream.
-                     *
-                     * Returning non-PJ_SUCCESS will cause SDL to ignore
-                     * the event
-                     */
-                    if (strm->vid_cb.on_event_cb) {
-                        strm->is_quitting = PJ_TRUE;
-                        if ((*strm->vid_cb.on_event_cb)(&strm->base,
-							strm->user_data,
-							&pevent) != PJ_SUCCESS)
-                        {
-                            /* Application wants us to ignore this event */
-                            strm->is_quitting = PJ_FALSE;
-                            break;
-                        }
+		case PJMEDIA_EVENT_WND_CLOSING:
+		    if (pevent.data.wnd_closing.cancel) {
+			/* Cancel the closing operation */
+			break;
+		    }
 
-                        /* Destroy the stream */
-                        sdl_stream_destroy(&strm->base);
-                        goto on_return;
-                    }
+		    /* Proceed to cleanup SDL. App must still call
+		     * pjmedia_dev_stream_destroy() when getting WND_CLOSED
+		     * event
+		     */
+		    strm->is_quitting = PJ_TRUE;
+		    notify_wnd_closed_event = PJ_TRUE;
+		    sdl_stream_stop(&strm->base);
+		    goto on_return;
 
-                    /**
-                     * Default event-handler when there is no user-specified
-                     * callback: close the renderer window. We cannot destroy
-                     * the stream here since there is no callback to notify
-                     * the application.
-                     */
-                    sdl_stream_stop(&strm->base);
-                    goto on_return;
-
-                default:
-                    break;
+		default:
+		    /* Just to prevent gcc warning about unused enums */
+		    break;
+		}
             }
 	}
     }
@@ -858,8 +828,26 @@ on_return:
     SDL_Quit();
 #endif
     strm->screen = NULL;
+    saved_stream_status = strm->status;
 
-    return strm->status;
+    if (notify_wnd_closed_event) {
+	pjmedia_event pevent;
+
+	pjmedia_event_init(&pevent, PJMEDIA_EVENT_WND_CLOSED, &strm->last_ts,
+	                   &strm->base.epub);
+	pjmedia_event_publish(&strm->base.epub, &pevent);
+    }
+
+    /*
+     * Note: don't access the stream after this point, it  might have
+     * been destroyed
+     */
+
+    return saved_stream_status;
+}
+
+static void hello_world()
+{
 }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
@@ -900,6 +888,8 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 #endif
     struct sdl_stream *stream = (struct sdl_stream*)strm;
     pj_status_t status = PJ_SUCCESS;
+
+    stream->last_ts.u64 = frame->timestamp.u64;
 
     if (!stream->is_running) {
 	stream->render_exited = PJ_TRUE;
@@ -1023,6 +1013,7 @@ static pj_status_t sdl_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
+    pjmedia_event_publisher_init(&strm->base.epub);
 
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {

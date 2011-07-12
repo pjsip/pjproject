@@ -185,6 +185,9 @@ struct pjmedia_vid_dev_stream
 
     /** Operations */
     pjmedia_vid_dev_stream_op *op;
+
+    /** Event producer */
+    pjmedia_event_publisher	epub;
 };
 
 

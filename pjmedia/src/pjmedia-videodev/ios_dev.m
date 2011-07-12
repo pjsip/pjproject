@@ -426,6 +426,7 @@ static pj_status_t ios_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
+    pjmedia_event_publisher_init(&strm->base.epub);
 
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
     pj_memcpy(&strm->size, &vfd->size, sizeof(vfd->size));

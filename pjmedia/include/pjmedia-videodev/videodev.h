@@ -25,6 +25,7 @@
  */
 #include <pjmedia-videodev/config.h>
 #include <pjmedia-videodev/errno.h>
+#include <pjmedia/event.h>
 #include <pjmedia/frame.h>
 #include <pjmedia/format.h>
 #include <pj/pool.h>
@@ -170,30 +171,6 @@ typedef struct pjmedia_vid_dev_info
 /** Forward declaration for pjmedia_vid_dev_stream */
 typedef struct pjmedia_vid_dev_stream pjmedia_vid_dev_stream;
 
-typedef enum pjmedia_event_type
-{
-    PJMEDIA_EVENT_NONE,
-    PJMEDIA_EVENT_FMT_CHANGED,
-    PJMEDIA_EVENT_MOUSEBUTTONDOWN,
-    PJMEDIA_EVENT_WINDOW_RESIZE,
-    PJMEDIA_EVENT_WINDOW_FULLSCREEN,
-    PJMEDIA_EVENT_WINDOW_CLOSE,
-} pjmedia_event_type;
-
-typedef struct pjmedia_vid_event
-{
-    pjmedia_event_type event_type;
-    union {
-        struct resize_event {
-            pjmedia_rect_size new_size;
-        } resize;
-        struct fmt_changed_event {
-            pjmedia_format new_format;
-        } fmt_change;
-    } event_desc;
-} pjmedia_vid_event;
-
-
 typedef struct pjmedia_vid_cb
 {
     /**
@@ -233,22 +210,6 @@ typedef struct pjmedia_vid_cb
     pj_status_t (*render_cb)(pjmedia_vid_dev_stream *stream,
 			     void *user_data,
                              pjmedia_frame *frame);
-
-    /**
-    * This callback is called by the stream to report the occurence of an
-    * event to the application.
-    *
-    * @param stream	   The video stream.
-    * @param user_data     User data associated with the stream.
-    * @param event	   The event.
-    *
-    * @return              Return PJ_SUCCESS will invoke the video stream's
-    *                      default event-handler (if any), otherwise the
-    *                      video stream will ignore the particular event.
-    */
-    pj_status_t (*on_event_cb)(pjmedia_vid_dev_stream *stream,
-			       void *user_data,
-                               pjmedia_vid_event *event);
 
 } pjmedia_vid_cb;
 
@@ -596,6 +557,18 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_set_cap(
  */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_start(
 					    pjmedia_vid_dev_stream *strm);
+
+/**
+ * Get the event publisher object for the video stream. Caller typically use
+ * the returned object to subscribe or unsubscribe events from the video
+ * stream.
+ *
+ * @param strm      The video stream.
+ *
+ * @return          The event publisher object.
+ */
+PJ_DECL(pjmedia_event_publisher*)
+pjmedia_vid_dev_stream_get_event_publisher(pjmedia_vid_dev_stream *strm);
 
 /* Get/put frame API for passive stream */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_get_frame(

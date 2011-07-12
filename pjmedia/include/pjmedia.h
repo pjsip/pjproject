@@ -37,6 +37,7 @@
 #include <pjmedia/echo_port.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 #include <pjmedia/frame.h>
 #include <pjmedia/format.h>
 #include <pjmedia/g711.h>

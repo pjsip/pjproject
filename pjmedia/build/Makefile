@@ -57,7 +57,7 @@ export PJMEDIA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			conf_switch.o converter.o  converter_libswscale.o \
 			delaybuf.o echo_common.o \
 			echo_port.o echo_suppress.o endpoint.o errno.o \
-			format.o ffmpeg_util.o \
+			event.o format.o ffmpeg_util.o \
 			g711.o jbuf.o master_port.o mem_capture.o mem_player.o \
 			null_port.o plc_common.o port.o splitcomb.o \
 			resample_resample.o resample_libsamplerate.o \

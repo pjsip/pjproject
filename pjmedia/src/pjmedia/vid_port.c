@@ -20,6 +20,7 @@
 #include <pjmedia/clock.h>
 #include <pjmedia/converter.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 #include <pjmedia/vid_codec.h>
 #include <pj/log.h>
 #include <pj/pool.h>
@@ -55,8 +56,10 @@ struct pjmedia_vid_port
     pj_size_t		     conv_buf_size;
     pjmedia_conversion_param conv_param;
 
-    pjmedia_clock           *clock;
+    pjmedia_event_publisher  epub;
+    pjmedia_event_subscription esub_dev;
 
+    pjmedia_clock           *clock;
     pjmedia_clock_src        clocksrc;
 
     struct sync_clock_src_t
@@ -85,9 +88,8 @@ static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
 static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
 				       void *user_data,
 				       pjmedia_frame *frame);
-static pj_status_t vidstream_event_cb(pjmedia_vid_dev_stream *stream,
-			              void *user_data,
-                                      pjmedia_vid_event *event);
+static pj_status_t vidstream_event_cb(pjmedia_event_subscription *esub,
+			              pjmedia_event *event);
 
 static void enc_clock_cb(const pj_timestamp *ts, void *user_data);
 static void dec_clock_cb(const pj_timestamp *ts, void *user_data);
@@ -151,6 +153,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     vp->role = prm->active ? ROLE_ACTIVE : ROLE_PASSIVE;
     vp->dir = prm->vidparam.dir;
 //    vp->cap_size = vfd->size;
+    pjmedia_event_publisher_init(&vp->epub);
 
     vparam = prm->vidparam;
     dev_name[0] = '\0';
@@ -202,7 +205,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pj_bzero(&vid_cb, sizeof(vid_cb));
     vid_cb.capture_cb = &vidstream_cap_cb;
     vid_cb.render_cb = &vidstream_render_cb;
-    vid_cb.on_event_cb = &vidstream_event_cb;
 
     status = pjmedia_vid_dev_stream_create(&vparam, &vid_cb, vp,
 				           &vp->strm);
@@ -215,6 +217,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	      pjmedia_get_video_format_info(NULL, vparam.fmt.id)->name,
 	      vparam.fmt.det.vid.size.w, vparam.fmt.det.vid.size.h,
 	      vparam.fmt.det.vid.fps.num, vparam.fmt.det.vid.fps.denum));
+
+    /* Subscribe to device's events */
+    pjmedia_event_subscription_init(&vp->esub_dev, vidstream_event_cb, vp);
+    pjmedia_event_subscribe(
+	    pjmedia_vid_dev_stream_get_event_publisher(vp->strm),
+	    &vp->esub_dev);
 
     if (vp->dir & PJMEDIA_DIR_CAPTURE) {
 	pjmedia_format_copy(&vp->conv_param.src, &vparam.fmt);
@@ -336,6 +344,13 @@ PJ_DEF(void) pjmedia_vid_port_set_cb(pjmedia_vid_port *vid_port,
     pj_assert(vid_port && cb);
     pj_memcpy(&vid_port->strm_cb, cb, sizeof(*cb));
     vid_port->strm_cb_data = user_data;
+}
+
+PJ_DEF(pjmedia_event_publisher*)
+pjmedia_vid_port_get_event_publisher(pjmedia_vid_port *vid_port)
+{
+    PJ_ASSERT_RETURN(vid_port, NULL);
+    return &vid_port->epub;
 }
 
 PJ_DEF(pjmedia_vid_dev_stream*)
@@ -497,15 +512,13 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
 }
 */
 
-static pj_status_t vidstream_event_cb(pjmedia_vid_dev_stream *stream,
-				      void *user_data,
-				      pjmedia_vid_event *event)
+static pj_status_t vidstream_event_cb(pjmedia_event_subscription *esub,
+				      pjmedia_event *event)
 {
-    pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
+    pjmedia_vid_port *vp = (pjmedia_vid_port*)esub->user_data;
     
-    if (vp->strm_cb.on_event_cb)
-        return (*vp->strm_cb.on_event_cb)(stream, vp->strm_cb_data, event);
-    return PJ_SUCCESS;
+    /* Just republish the event to our client */
+    return pjmedia_event_publish(&vp->epub, event);
 }
 
 static pj_status_t convert_frame(pjmedia_vid_port *vp,
@@ -529,7 +542,7 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
 {
     if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
         const pjmedia_video_format_detail *vfd;
-        pjmedia_vid_event pevent;
+        pjmedia_event pevent;
         pj_status_t status;
 
 	pjmedia_vid_port_stop(vp);
@@ -592,11 +605,10 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
         }
 
         /* Notify application of the format change. */
-        pevent.event_type = PJMEDIA_EVENT_FMT_CHANGED;
-	pjmedia_format_copy(&pevent.event_desc.fmt_change.new_format,
+        pjmedia_event_init(&pevent, PJMEDIA_EVENT_FMT_CHANGED, NULL, &vp->epub);
+	pjmedia_format_copy(&pevent.data.fmt_changed.new_fmt,
 			    &vp->client_port->info.fmt);
-        if (vp->strm_cb.on_event_cb)
-            (*vp->strm_cb.on_event_cb)(vp->strm, vp->strm_cb_data, &pevent);
+	pjmedia_event_publish(&vp->epub, &pevent);
 
 	pjmedia_vid_port_start(vp);
     }
