@@ -727,6 +727,8 @@ on_return:
 {
     const pjmedia_video_format_info *vfi;
     pjmedia_video_format_detail *vfd;
+    pj_bool_t notify_wnd_closed_event = PJ_FALSE;
+    pj_status_t saved_stream_status;
     
     vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
 					strm->param.fmt.id);
@@ -844,10 +846,6 @@ on_return:
      */
 
     return saved_stream_status;
-}
-
-static void hello_world()
-{
 }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
