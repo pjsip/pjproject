@@ -1083,13 +1083,27 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
 
-    /*
     if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW,
-			   &pi->fmt.info_size) == PJ_SUCCESS)
+			   &pi->window) == PJ_SUCCESS)
     {
 	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
     }
-    */
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION,
+			   &pi->window_pos) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION;
+    }
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE,
+			   &pi->disp_size) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
+    }
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
+			   &pi->window_hide) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -1107,11 +1121,19 @@ static pj_status_t sdl_stream_get_cap(pjmedia_vid_dev_stream *s,
 #if SDL_VERSION_ATLEAST(1,3,0)
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW)
     {
-        pval = strm->window;
+        *((void **)pval) = strm->window;
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
         SDL_GetWindowPosition(strm->window, &((pjmedia_coord *)pval)->x,
                               &((pjmedia_coord *)pval)->y);
+	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
+        SDL_GetWindowSize(strm->window, (int *)&((pjmedia_rect_size *)pval)->w,
+                          (int *)&((pjmedia_rect_size *)pval)->h);
+	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+	*((pj_bool_t *)pval) = (flag | SDL_WINDOW_HIDDEN)? PJ_TRUE: PJ_FALSE;
 	return PJ_SUCCESS;
     }
 #endif
