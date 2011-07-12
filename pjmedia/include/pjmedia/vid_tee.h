@@ -41,7 +41,9 @@
  * The video tee is a unidirectional port, i.e: data flows from source port
  * to destination ports only. Also, the video source port MUST actively call
  * pjmedia_port_put_frame() to the video tee and the video destination ports
- * MUST NEVER call pjmedia_port_get_frame() to the video tee.
+ * MUST NEVER call pjmedia_port_get_frame() to the video tee. Please note that
+ * there is no specific order of which destination port will receive a frame
+ * from the video tee.
  *
  * The video tee is not thread-safe, so it is application responsibility
  * to synchronize video tee operations, e.g: make sure the source port is
@@ -86,7 +88,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_create(pj_pool_t *pool,
 					    pjmedia_port **p_vid_tee);
 
 /**
- * Add a destination media port to the video tee.
+ * Add a destination media port to the video tee. For this function, the
+ * destination port's media format must match the source format.
  *
  * @param vid_tee	    The video tee.
  * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
@@ -98,6 +101,23 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_create(pj_pool_t *pool,
 PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
 						  unsigned option,
 						  pjmedia_port *port);
+
+
+/**
+ * Add a destination media port to the video tee. This function will also
+ * create a converter if the destination port's media format does not match
+ * the source format.
+ *
+ * @param vid_tee	    The video tee.
+ * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
+ * @param port		    The destination media port.
+ *
+ * @return		    PJ_SUCCESS on success, or the appropriate error
+ *			    code.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
+                                                   unsigned option,
+						   pjmedia_port *port);
 
 
 /**
