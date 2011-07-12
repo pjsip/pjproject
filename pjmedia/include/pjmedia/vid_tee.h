@@ -45,7 +45,7 @@
  *
  * The video tee is not thread-safe, so it is application responsibility
  * to synchronize video tee operations, e.g: make sure the source port is
- * paused during adding or removing a destination channel.
+ * paused during adding or removing a destination port.
  */
 
 PJ_BEGIN_DECL
@@ -59,6 +59,8 @@ typedef enum pjmedia_vid_tee_flag
     /**
      * Tell the video tee that the destination port will do in-place
      * processing, so the delivered data may be modified by this port.
+     * If this flag is used, buffer will be copied before being given to
+     * the destination port.
      */
     PJMEDIA_VID_TEE_DST_DO_IN_PLACE_PROC    = 4,
 
@@ -66,34 +68,36 @@ typedef enum pjmedia_vid_tee_flag
 
 
 /**
- * Create a video tee port with the specified source media port.
+ * Create a video tee port with the specified source media port. Application
+ * should destroy the tee with pjmedia_port_destroy() as usual. Note that
+ * destroying the tee does not destroy its destination ports.
  *
  * @param pool		    The pool.
- * @param src		    The source media port.
- * @param max_ch_cnt	    The maximum channel count.
+ * @param fmt		    The source media port's format.
+ * @param max_dst_cnt	    The maximum number of destination ports supported.
  * @param p_vid_tee	    Pointer to receive the video tee port.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate
  *			    error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_tee_create(pj_pool_t *pool,
-					    pjmedia_format *fmt,
-					    unsigned max_ch_cnt,
+					    const pjmedia_format *fmt,
+					    unsigned max_dst_cnt,
 					    pjmedia_port **p_vid_tee);
 
 /**
  * Add a destination media port to the video tee.
  *
  * @param vid_tee	    The video tee.
- * @param ch_option	    Channel option, see @pjmedia_vid_tee_flag.
+ * @param option	    Video tee option, see @pjmedia_vid_tee_flag.
  * @param port		    The destination media port.
  *
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_tee_add_channel(pjmedia_port *vid_tee,
-						 unsigned option,
-						 pjmedia_port *port);
+PJ_DECL(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
+						  unsigned option,
+						  pjmedia_port *port);
 
 
 /**
@@ -105,8 +109,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_add_channel(pjmedia_port *vid_tee,
  * @return		    PJ_SUCCESS on success, or the appropriate error
  *			    code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_channel(pjmedia_port *vid_tee,
-						    pjmedia_port *port);
+PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
+						     pjmedia_port *port);
 
 
 PJ_END_DECL

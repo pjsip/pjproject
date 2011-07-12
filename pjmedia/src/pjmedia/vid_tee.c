@@ -25,11 +25,11 @@
 #define TEE_PORT_SIGN	PJMEDIA_PORT_SIGNATURE('V', 'T', 'E', 'E')
 
 
-typedef struct vid_tee_channel
+typedef struct vid_tee_dst_port
 {
     pjmedia_port	*dst;
     unsigned		 option;
-} vid_tee_channel;
+} vid_tee_dst_port;
 
 
 typedef struct vid_tee_port
@@ -37,9 +37,9 @@ typedef struct vid_tee_port
     pjmedia_port	 base;
     void		*buf;
     pj_size_t		 buf_size;
-    unsigned		 channel_maxcnt;
-    unsigned		 channel_cnt;
-    vid_tee_channel	*channels;
+    unsigned		 dst_port_maxcnt;
+    unsigned		 dst_port_cnt;
+    vid_tee_dst_port	*dst_ports;
 } vid_tee_port;
 
 
@@ -51,8 +51,8 @@ static pj_status_t tee_destroy(pjmedia_port *port);
  * Create a video tee port with the specified source media port.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
-					    pjmedia_format *fmt,
-					    unsigned max_ch_cnt,
+					    const pjmedia_format *fmt,
+					    unsigned max_dst_cnt,
 					    pjmedia_port **p_vid_tee)
 {
     vid_tee_port *tee;
@@ -68,9 +68,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
     tee = PJ_POOL_ZALLOC_T(pool, vid_tee_port);
 
     /* Initialize video tee structure */
-    tee->channel_maxcnt = max_ch_cnt;
-    tee->channels = (vid_tee_channel*)pj_pool_calloc(pool, max_ch_cnt,
-						     sizeof(vid_tee_channel));
+    tee->dst_port_maxcnt = max_dst_cnt;
+    tee->dst_ports = (vid_tee_dst_port*)
+                     pj_pool_calloc(pool, max_dst_cnt,
+                                    sizeof(vid_tee_dst_port));
 
     /* Initialize video tee buffer, its size is one frame */
     vfi = pjmedia_get_video_format_info(NULL, fmt->id);
@@ -109,7 +110,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
 /*
  * Add a destination media port to the video tee.
  */
-PJ_DEF(pj_status_t) pjmedia_vid_tee_add_channel( pjmedia_port *vid_tee,
+PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port(pjmedia_port *vid_tee,
 						 unsigned option,
 						 pjmedia_port *port)
 {
@@ -119,7 +120,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_channel( pjmedia_port *vid_tee,
     PJ_ASSERT_RETURN(vid_tee && vid_tee->info.signature==TEE_PORT_SIGN,
 		     PJ_EINVAL);
 
-    if (tee->channel_cnt >= tee->channel_maxcnt)
+    if (tee->dst_port_cnt >= tee->dst_port_maxcnt)
 	return PJ_ETOOMANY;
 
     if (vid_tee->info.fmt.id != port->info.fmt.id)
@@ -132,9 +133,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_channel( pjmedia_port *vid_tee,
 	return PJMEDIA_EBADFMT;
     }
 
-    tee->channels[tee->channel_cnt].dst = port;
-    tee->channels[tee->channel_cnt].option = option;
-    ++tee->channel_cnt;
+    tee->dst_ports[tee->dst_port_cnt].dst = port;
+    tee->dst_ports[tee->dst_port_cnt].option = option;
+    ++tee->dst_port_cnt;
 
     return PJ_SUCCESS;
 }
@@ -143,8 +144,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_channel( pjmedia_port *vid_tee,
 /*
  * Remove a destination media port from the video tee.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_channel(pjmedia_port *vid_tee,
-						    pjmedia_port *port)
+PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
+						     pjmedia_port *port)
 {
     vid_tee_port *tee = (vid_tee_port*)vid_tee;
     unsigned i;
@@ -152,11 +153,11 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_channel(pjmedia_port *vid_tee,
     PJ_ASSERT_RETURN(vid_tee && vid_tee->info.signature==TEE_PORT_SIGN,
 		     PJ_EINVAL);
 
-    for (i = 0; i < tee->channel_cnt; ++i) {
-	if (tee->channels[i].dst == port) {
-	    pj_array_erase(tee->channels, sizeof(tee->channels[0]),
-			   tee->channel_cnt, i);
-	    --tee->channel_cnt;
+    for (i = 0; i < tee->dst_port_cnt; ++i) {
+	if (tee->dst_ports[i].dst == port) {
+	    pj_array_erase(tee->dst_ports, sizeof(tee->dst_ports[0]),
+			   tee->dst_port_cnt, i);
+	    --tee->dst_port_cnt;
 	    return PJ_SUCCESS;
 	}
     }
@@ -170,13 +171,13 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
     vid_tee_port *tee = (vid_tee_port*)port;
     unsigned i;
 
-    for (i = 0; i < tee->channel_cnt; ++i) {
+    for (i = 0; i < tee->dst_port_cnt; ++i) {
 	pjmedia_frame frame_ = *frame;
 
-	/* For channels that do in-place processing, we need to duplicate
+	/* For dst_ports that do in-place processing, we need to duplicate
 	 * the data source first.
 	 */
-	if (tee->channels[i].option & PJMEDIA_VID_TEE_DST_DO_IN_PLACE_PROC) {
+	if (tee->dst_ports[i].option & PJMEDIA_VID_TEE_DST_DO_IN_PLACE_PROC) {
 	    PJ_ASSERT_RETURN(tee->buf_size <= frame->size, PJ_ETOOBIG);
 	    frame_.buf = tee->buf;
 	    frame_.size = frame->size;
@@ -184,7 +185,7 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
 	}
 
 	/* Deliver the data */
-	pjmedia_port_put_frame(tee->channels[i].dst, &frame_);
+	pjmedia_port_put_frame(tee->dst_ports[i].dst, &frame_);
     }
 
     return PJ_SUCCESS;
