@@ -271,6 +271,9 @@ PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
 
     for (i = 0; i < tee->dst_port_cnt; ++i) {
 	if (tee->dst_ports[i].dst == port) {
+            if (tee->tee_conv[i].conv)
+                pjmedia_converter_destroy(tee->tee_conv[i].conv);
+            
 	    pj_array_erase(tee->dst_ports, sizeof(tee->dst_ports[0]),
 			   tee->dst_port_cnt, i);
             pj_array_erase(tee->tee_conv, sizeof(tee->tee_conv[0]),
