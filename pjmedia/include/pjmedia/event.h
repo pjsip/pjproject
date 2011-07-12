@@ -102,9 +102,10 @@ typedef struct pjmedia_event_publisher pjmedia_event_publisher;
  */
 typedef struct pjmedia_event_fmt_changed_data
 {
-    /**
-     * The new media format.
-     */
+    /** The media flow direction */
+    pjmedia_dir		dir;
+
+    /** The new media format. */
     pjmedia_format	new_fmt;
 } pjmedia_event_fmt_changed_data;
 
@@ -336,6 +337,16 @@ PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_publisher *epub,
  */
 PJ_DECL(pj_status_t) pjmedia_event_unsubscribe(pjmedia_event_publisher *epub,
                                                pjmedia_event_subscription *esub);
+
+/**
+ * Check if the specified publisher has subscribers.
+ *
+ * @param epub		The event publisher.
+ *
+ * @return		PJ_TRUE if the publisher has at least one subscriber.
+ */
+PJ_DECL(pj_bool_t)
+pjmedia_event_publisher_has_sub(pjmedia_event_publisher *epub);
 
 /**
  * Publish the specified event to all subscribers of the specified event

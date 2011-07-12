@@ -18,6 +18,7 @@
  */
 #include <pjmedia/vid_stream.h>
 #include <pjmedia/errno.h>
+#include <pjmedia/event.h>
 #include <pjmedia/rtp.h>
 #include <pjmedia/rtcp.h>
 #include <pjmedia/jbuf.h>
@@ -134,6 +135,9 @@ struct pjmedia_vid_stream
     pjmedia_vid_codec	    *codec;	    /**< Codec instance being used. */
     pj_uint32_t		     last_dec_ts;    /**< Last decoded timestamp.   */
     int			     last_dec_seq;   /**< Last decoded sequence.    */
+
+    pjmedia_event_subscription esub_codec;   /**< To subscribe codec events */
+    pjmedia_event_publisher    epub;	     /**< To publish events	    */
 };
 
 
@@ -300,6 +304,64 @@ on_insuff_buffer:
 
 #endif /* TRACE_JB */
 
+static void dump_port_info(const pjmedia_vid_channel *chan,
+                           const char *event_name)
+{
+    const pjmedia_port_info *pi = &chan->port.info;
+
+    PJ_LOG(5, (pi->name.ptr,
+	       " %s format %s: %dx%d %c%c%c%c%s %d/%d(~%d)fps",
+	       (chan->dir==PJMEDIA_DIR_DECODING? "Decoding":"Encoding"),
+	       event_name,
+	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
+	       ((pi->fmt.id & 0x000000FF) >> 0),
+	       ((pi->fmt.id & 0x0000FF00) >> 8),
+	       ((pi->fmt.id & 0x00FF0000) >> 16),
+	       ((pi->fmt.id & 0xFF000000) >> 24),
+	       (chan->dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
+	       pi->fmt.det.vid.fps.num, pi->fmt.det.vid.fps.denum,
+	       pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum));
+}
+
+/*
+ * Handle events from stream components.
+ */
+static pj_status_t stream_event_cb(pjmedia_event_subscription *esub,
+                                   pjmedia_event *event)
+{
+    pjmedia_vid_stream *stream = (pjmedia_vid_stream*)esub->user_data;
+
+    if (esub == &stream->esub_codec) {
+	/* This is codec event */
+	switch (event->type) {
+	case PJMEDIA_EVENT_FMT_CHANGED:
+	    /* Update param from codec */
+	    stream->codec->op->get_param(stream->codec, stream->info.codec_param);
+
+	    /* Update decoding channel port info */
+	    pjmedia_format_copy(&stream->dec->port.info.fmt,
+				&stream->info.codec_param->dec_fmt);
+
+	    /* we process the event */
+	    ++event->proc_cnt;
+
+	    dump_port_info(event->data.fmt_changed.dir==PJMEDIA_DIR_DECODING ?
+			    stream->dec : stream->enc,
+			  "changed");
+	    break;
+	default:
+	    break;
+	}
+    }
+
+    return pjmedia_event_publish(&stream->epub, event);
+}
+
+static pjmedia_event_publisher *port_get_epub(pjmedia_port *port)
+{
+    pjmedia_vid_stream *stream = (pjmedia_vid_stream*) port->port_data.pdata;
+    return &stream->epub;
+}
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
 /*
@@ -795,7 +857,6 @@ static pj_status_t put_frame(pjmedia_port *port,
     return PJ_SUCCESS;
 }
 
-
 static pj_status_t get_frame(pjmedia_port *port,
                              pjmedia_frame *frame)
 {
@@ -914,16 +975,6 @@ static pj_status_t get_frame(pjmedia_port *port,
 	frame->size = 0;
     }
 
-    /* Check if the decoder format is changed */
-    if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
-	/* Update param from codec */
-	stream->codec->op->get_param(stream->codec, stream->info.codec_param);
-
-	/* Update decoding channel port info */
-	pjmedia_format_copy(&channel->port.info.fmt,
-			    &stream->info.codec_param->dec_fmt);
-    }
-
     /* Learn remote frame rate after successful decoding */
     if (0 && frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
     {
@@ -949,11 +1000,25 @@ static pj_status_t get_frame(pjmedia_port *port,
 		/* Update stream info */
 		stream->info.codec_param->dec_fmt.det.vid.fps = vfd->fps;
 
-		/* Set bit_info */
-		frame->bit_info |= PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
+		PJ_LOG(5, (channel->port.info.name.ptr,
+			   "Frame rate changed to %d/%d(~%d)fps",
+			   vfd->fps.num, vfd->fps.denum,
+			   vfd->fps.num / vfd->fps.denum));
 
-		PJ_LOG(5, (channel->port.info.name.ptr, "Frame rate changed to %.2ffps",
-			   (1.0 * vfd->fps.num / vfd->fps.denum)));
+		/* Publish PJMEDIA_EVENT_FMT_CHANGED event */
+		if (pjmedia_event_publisher_has_sub(&stream->epub)) {
+		    pjmedia_event event;
+
+		    dump_port_info(stream->dec, "changed");
+
+		    pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
+		                       &frame_in.timestamp, &stream->epub);
+		    event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
+		    pj_memcpy(&event.data.fmt_changed.new_fmt,
+		              &stream->info.codec_param->dec_fmt,
+		              sizeof(pjmedia_format));
+		    pjmedia_event_publish(&stream->epub, &event);
+		}
 	    }
 	}
 
@@ -961,21 +1026,6 @@ static pj_status_t get_frame(pjmedia_port *port,
 	stream->last_dec_seq = frm_last_seq;
 	stream->last_dec_ts = last_ts;
     }
-
-#if PJ_LOG_MAX_LEVEL >= 5
-    if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
-	pjmedia_port_info *pi = &channel->port.info;
-
-	PJ_LOG(5, (channel->port.info.name.ptr,
-		   "Decoding format changed to %dx%d %c%c%c%c %.2ffps",
-		   pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
-		   ((pi->fmt.id & 0x000000FF) >> 0),
-		   ((pi->fmt.id & 0x0000FF00) >> 8),
-		   ((pi->fmt.id & 0x00FF0000) >> 16),
-		   ((pi->fmt.id & 0xFF000000) >> 24),
-		   (1.0*pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum)));
-    }
-#endif
 
     return PJ_SUCCESS;
 }
@@ -1069,8 +1119,10 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Init port. */
     channel->port.port_data.pdata = stream;
+    channel->port.get_event_pub = &port_get_epub;
 
-    PJ_LOG(5, (name.ptr, "%s channel created %dx%d %c%c%c%c%s%.*s %.2ffps",
+    PJ_LOG(5, (name.ptr,
+	       "%s channel created %dx%d %c%c%c%c%s%.*s %d/%d(~%d)fps",
 	       (dir==PJMEDIA_DIR_ENCODING?"Encoding":"Decoding"),
 	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
 	       ((pi->fmt.id & 0x000000FF) >> 0),
@@ -1080,7 +1132,8 @@ static pj_status_t create_channel( pj_pool_t *pool,
 	       (dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
 	       info->codec_info.encoding_name.slen,
 	       info->codec_info.encoding_name.ptr,
-	       (1.0*pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum)));
+	       pi->fmt.det.vid.fps.num, pi->fmt.det.vid.fps.denum,
+	       pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum));
 
     /* Done. */
     *p_channel = channel;
@@ -1197,6 +1250,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     status = stream->codec->op->open(stream->codec, info->codec_param);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Init event publisher and subscribe to codec events */
+    pjmedia_event_publisher_init(&stream->epub);
+    pjmedia_event_subscription_init(&stream->esub_codec, &stream_event_cb,
+                                    stream);
+    pjmedia_event_subscribe(&stream->codec->epub, &stream->esub_codec);
 
     /* Estimate the maximum frame size */
     stream->frame_size = vfd_enc->size.w * vfd_enc->size.h * 4;

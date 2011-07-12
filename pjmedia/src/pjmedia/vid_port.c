@@ -56,8 +56,9 @@ struct pjmedia_vid_port
     pj_size_t		     conv_buf_size;
     pjmedia_conversion_param conv_param;
 
-    pjmedia_event_publisher  epub;
+    pjmedia_event_publisher    epub;
     pjmedia_event_subscription esub_dev;
+    pjmedia_event_subscription esub_client_port;
 
     pjmedia_clock           *clock;
     pjmedia_clock_src        clocksrc;
@@ -90,6 +91,8 @@ static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
 				       pjmedia_frame *frame);
 static pj_status_t vidstream_event_cb(pjmedia_event_subscription *esub,
 			              pjmedia_event *event);
+static pj_status_t client_port_event_cb(pjmedia_event_subscription *esub,
+                                        pjmedia_event *event);
 
 static void enc_clock_cb(const pj_timestamp *ts, void *user_data);
 static void dec_clock_cb(const pj_timestamp *ts, void *user_data);
@@ -397,9 +400,20 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vp,
 					      pjmedia_port *port,
 					      pj_bool_t destroy)
 {
+    pjmedia_event_publisher *epub;
+
     PJ_ASSERT_RETURN(vp && vp->role==ROLE_ACTIVE, PJ_EINVAL);
     vp->destroy_client_port = destroy;
     vp->client_port = port;
+
+    /* Subscribe to client port's events */
+    epub = pjmedia_port_get_event_publisher(port);
+    if (epub) {
+	pjmedia_event_subscription_init(&vp->esub_client_port,
+	                                &client_port_event_cb,
+	                                vp);
+	pjmedia_event_subscribe(epub, &vp->esub_client_port);
+    }
     return PJ_SUCCESS;
 }
 
@@ -407,7 +421,18 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vp,
 PJ_DEF(pj_status_t) pjmedia_vid_port_disconnect(pjmedia_vid_port *vp)
 {
     PJ_ASSERT_RETURN(vp && vp->role==ROLE_ACTIVE, PJ_EINVAL);
-    vp->client_port = NULL;
+
+    if (vp->client_port) {
+	pjmedia_event_publisher *epub;
+
+	/* Unsubscribe event */
+	epub = pjmedia_port_get_event_publisher(vp->client_port);
+	if (epub && vp->esub_client_port.user_data) {
+	    pjmedia_event_unsubscribe(epub, &vp->esub_client_port);
+	    pj_bzero(&vp->esub_client_port, sizeof(vp->esub_client_port));
+	}
+	vp->client_port = NULL;
+    }
     return PJ_SUCCESS;
 }
 
@@ -512,6 +537,7 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
 }
 */
 
+/* Handle event from vidstream */
 static pj_status_t vidstream_event_cb(pjmedia_event_subscription *esub,
 				      pjmedia_event *event)
 {
@@ -537,13 +563,16 @@ static pj_status_t convert_frame(pjmedia_vid_port *vp,
     return status;
 }
 
-static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
-                                     pjmedia_frame *frame)
+static pj_status_t client_port_event_cb(pjmedia_event_subscription *esub,
+                                        pjmedia_event *event)
 {
-    if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
+    pjmedia_vid_port *vp = (pjmedia_vid_port*)esub->user_data;
+
+    if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
         const pjmedia_video_format_detail *vfd;
-        pjmedia_event pevent;
         pj_status_t status;
+
+        ++event->proc_cnt;
 
 	pjmedia_vid_port_stop(vp);
 
@@ -604,16 +633,11 @@ static pj_status_t detect_fmt_change(pjmedia_vid_port *vp,
             pjmedia_clock_modify(vp->clock, &clock_param);
         }
 
-        /* Notify application of the format change. */
-        pjmedia_event_init(&pevent, PJMEDIA_EVENT_FMT_CHANGED, NULL, &vp->epub);
-	pjmedia_format_copy(&pevent.data.fmt_changed.new_fmt,
-			    &vp->client_port->info.fmt);
-	pjmedia_event_publish(&vp->epub, &pevent);
-
 	pjmedia_vid_port_start(vp);
     }
 
-    return PJ_SUCCESS;
+    /* Republish the event */
+    return pjmedia_event_publish(&vp->epub, event);
 }
 
 static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
@@ -751,10 +775,6 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
                         return;
                     }
 
-                    status = detect_fmt_change(vp, vp->frm_buf);
-                    if (status != PJ_SUCCESS)
-                        return;
-
                     pj_add_timestamp32(&vp->clocksrc.timestamp,
                                        frame_ts);
                 }
@@ -770,10 +790,6 @@ static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
     }
     pj_add_timestamp32(&vp->clocksrc.timestamp, frame_ts);
     pjmedia_clock_src_update(&vp->clocksrc, NULL);
-
-    status = detect_fmt_change(vp, vp->frm_buf);
-    if (status != PJ_SUCCESS)
-        return;
 
     if (convert_frame(vp, vp->frm_buf, &frame) != PJ_SUCCESS)
         return;
@@ -820,13 +836,7 @@ static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
     
     if (vp->role==ROLE_ACTIVE) {
         if (vp->client_port) {
-            pj_status_t status;
-
-	    status = pjmedia_port_get_frame(vp->client_port, frame);
-            if (status != PJ_SUCCESS)
-                return status;
-
-            return detect_fmt_change(vp, frame);
+	    return pjmedia_port_get_frame(vp->client_port, frame);
         }
     } else {
 	pj_mutex_lock(vp->frm_mutex);

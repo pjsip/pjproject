@@ -66,6 +66,14 @@ struct pjmedia_vid_codec_mgr
 /* Sort codecs in codec manager based on priorities */
 static void sort_codecs(pjmedia_vid_codec_mgr *mgr);
 
+/*
+ * Initialize pjmedia_vid_codec structure with default values.
+ */
+PJ_DEF(void) pjmedia_vid_codec_init(pjmedia_vid_codec *codec)
+{
+    pj_bzero(codec, sizeof(*codec));
+    pj_list_init(&codec->epub);
+}
 
 /*
  * Duplicate video codec parameter.

@@ -57,6 +57,14 @@ PJ_DEF(void) pjmedia_event_subscription_init( pjmedia_event_subscription *esub,
     esub->user_data = user_data;
 }
 
+PJ_DEF(pj_bool_t)
+pjmedia_event_publisher_has_sub(pjmedia_event_publisher *epub)
+{
+    PJ_ASSERT_RETURN(epub, PJ_FALSE);
+    return epub->subscription_list.next &&
+	    (!pj_list_empty(&epub->subscription_list));
+}
+
 PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_publisher *epub,
                                              pjmedia_event_subscription *esub)
 {
@@ -87,6 +95,9 @@ PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_publisher *epub,
 		       event->type, epub));
 
     esub = epub->subscription_list.next;
+    if (!esub)
+	return err;
+
     while (esub != &epub->subscription_list) {
 	pjmedia_event_subscription *next;
 	pj_status_t status;

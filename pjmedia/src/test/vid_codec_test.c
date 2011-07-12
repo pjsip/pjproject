@@ -28,6 +28,33 @@ typedef struct codec_port_data_t
     pj_size_t            pack_buf_size;
 } codec_port_data_t;
 
+static pj_status_t codec_on_event(pjmedia_event_subscription *esub,
+                                  pjmedia_event *event)
+{
+    codec_port_data_t *port_data = (codec_port_data_t*)esub->user_data;
+
+    if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
+	pjmedia_vid_codec *codec = port_data->codec;
+	pjmedia_vid_codec_param codec_param;
+	pj_status_t status;
+
+	++event->proc_cnt;
+
+	status = codec->op->get_param(codec, &codec_param);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	status = pjmedia_vid_dev_stream_set_cap(
+			pjmedia_vid_port_get_stream(port_data->rdr_port),
+			PJMEDIA_VID_DEV_CAP_FORMAT,
+			&codec_param.dec_fmt);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    return PJ_SUCCESS;
+}
+
 static pj_status_t codec_put_frame(pjmedia_port *port,
 			           pjmedia_frame *frame)
 {
@@ -47,7 +74,7 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 
 #if !BYPASS_PACKETIZER
 	if (enc_frame.size) {
-	    unsigned pos = 0, i = 0;
+	    unsigned pos = 0;
 	    pj_bool_t packetized = PJ_FALSE;
 	    unsigned unpack_pos = 0;
 	    
@@ -58,7 +85,8 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 		status = codec->op->packetize(codec, 
 					      (pj_uint8_t*)enc_frame.buf,
 					      enc_frame.size, &pos,
-					      &payload, &payload_len);
+					      (const pj_uint8_t**)&payload,
+					      &payload_len);
 		if (status == PJ_ENOTSUP)
 		    break;
 		if (status != PJ_SUCCESS)
@@ -86,20 +114,6 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 
 	status = codec->op->decode(codec, &enc_frame, frame->size, frame);
 	if (status != PJ_SUCCESS) goto on_error;
-
-	/* Detect format change */
-	if (frame->bit_info & PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED) {
-	    pjmedia_vid_codec_param codec_param;
-
-	    status = codec->op->get_param(codec, &codec_param);
-	    if (status != PJ_SUCCESS) goto on_error;
-
-	    status = pjmedia_vid_dev_stream_set_cap(
-			    pjmedia_vid_port_get_stream(port_data->rdr_port),
-			    PJMEDIA_VID_DEV_CAP_FORMAT,
-			    &codec_param.dec_fmt);
-	    if (status != PJ_SUCCESS) goto on_error;
-	}
     }
 #endif
 
@@ -169,6 +183,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
     pjmedia_vid_port *capture=NULL, *renderer=NULL;
     pjmedia_vid_port_param vport_param;
     pjmedia_video_format_detail *vfd;
+    pjmedia_event_subscription esub;
     pj_status_t status;
     int rc = 0;
 
@@ -276,9 +291,12 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
 	 */
 	codec_param.dec_fmt.det = codec_param.enc_fmt.det;
 
+	/* Subscribe to codec events */
+	pjmedia_event_subscription_init(&esub, &codec_on_event,
+	                                &codec_port_data);
+	pjmedia_event_subscribe(&codec->epub, &esub);
 #endif /* !BYPASS_CODEC */
     }
-
 
     pjmedia_vid_port_param_default(&vport_param);
 

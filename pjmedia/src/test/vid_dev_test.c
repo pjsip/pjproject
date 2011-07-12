@@ -89,7 +89,6 @@ static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
     pjmedia_vid_dev_info cdi, rdi;
     pjmedia_vid_port_param param;
     pjmedia_video_format_detail *vfd;
-    pjmedia_vid_cb cb;
     pjmedia_event_subscription esub;
     pj_status_t status;
     int rc = 0, i;

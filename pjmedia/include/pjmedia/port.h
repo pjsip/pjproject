@@ -25,6 +25,7 @@
  * @brief Port interface declaration
  */
 #include <pjmedia/clock.h>
+#include <pjmedia/event.h>
 #include <pjmedia/format.h>
 #include <pjmedia/frame.h>
 #include <pj/assert.h>
@@ -398,6 +399,11 @@ typedef struct pjmedia_port
      */
     pj_status_t (*on_destroy)(struct pjmedia_port *this_port);
 
+    /**
+     * Get event publisher for this media port, if any.
+     */
+    pjmedia_event_publisher *(*get_event_pub)(struct pjmedia_port *this_port);
+
 } pjmedia_port;
 
 
@@ -477,6 +483,16 @@ PJ_DECL(pj_status_t) pjmedia_port_get_frame( pjmedia_port *port,
 PJ_DECL(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 					     pjmedia_frame *frame );
 
+/**
+ * Get the event publisher for the media port, if any.
+ *
+ * @param port	    The media port.
+ *
+ * @return	    The event publisher, or NULL if the port does not publish
+ * 		    events.
+ */
+PJ_DECL(pjmedia_event_publisher*)
+pjmedia_port_get_event_publisher(pjmedia_port *port);
 
 /**
  * Destroy port (and subsequent downstream ports)

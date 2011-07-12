@@ -27,6 +27,7 @@
  */
 
 #include <pjmedia/codec.h>
+#include <pjmedia/event.h>
 #include <pjmedia/format.h>
 #include <pjmedia/types.h>
 #include <pj/list.h>
@@ -96,23 +97,6 @@ typedef struct pjmedia_vid_codec_param
 PJ_DECL(pjmedia_vid_codec_param*) pjmedia_vid_codec_param_clone(
 					pj_pool_t *pool, 
 					const pjmedia_vid_codec_param *src);
-
-/**
- * Enumeration of video codec events.
- */
-typedef enum pjmedia_vid_codec_event
-{
-    /**
-     * Format changed event. The decoder output format is not really
-     * configurable, so that the output format setting configured in the
-     * initialization may be changed. Application can catch this event
-     * by checking the bit_info field of the pjmedia_frame of the decoder
-     * output frame.
-     */
-    PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED = 1,
-
-} pjmedia_vid_codec_event;
-
 
 /**
  * Forward declaration for video codec.
@@ -268,8 +252,8 @@ typedef struct pjmedia_vid_codec_op
      * frame MUST contain exactly one picture. Note that the decoded picture
      * format may different to the current setting, e.g: the format specified
      * in the #pjmedia_vid_codec_param when opening the codec, in this case the
-     * PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED flag will be set in the bit_info
-     * field of the output frame and application can query the new format
+     * PJMEDIA_EVENT_FMT_CHANGED event will be emitted by the codec. The codec
+     * parameter will also be updated, and application can query the format by
      * using #get_param().
      *
      * @param codec	The codec instance.
@@ -309,7 +293,9 @@ typedef struct pjmedia_vid_codec_factory pjmedia_vid_codec_factory;
 
 
 /**
- * This structure describes a video codec instance. 
+ * This structure describes a video codec instance. Codec implementers
+ * should use #pjmedia_vid_codec_init() to initialize this structure with
+ * default values.
  */
 struct pjmedia_vid_codec
 {
@@ -324,6 +310,9 @@ struct pjmedia_vid_codec
 
     /** Operations to codec. */
     pjmedia_vid_codec_op	*op;
+
+    /** Event publisher object */
+    pjmedia_event_publisher	 epub;
 };
 
 
@@ -437,6 +426,12 @@ typedef struct pjmedia_vid_codec_mgr pjmedia_vid_codec_mgr;
 #define PJMEDIA_VID_CODEC_MGR_MAX_CODECS	    32
 
 
+/**
+ * Initialize pjmedia_vid_codec structure with default values.
+ *
+ * @param codec	    The codec to be initialized.
+ */
+PJ_DECL(void) pjmedia_vid_codec_init(pjmedia_vid_codec *codec);
 
 /**
  * Initialize codec manager. If there is no the default video codec manager,

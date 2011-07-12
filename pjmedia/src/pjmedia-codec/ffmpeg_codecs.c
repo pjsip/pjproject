@@ -878,11 +878,12 @@ static pj_status_t ffmpeg_alloc_codec( pjmedia_vid_codec_factory *factory,
 
     /* Create pool for codec instance */
     pool = pj_pool_create(ffmpeg_factory.pf, "ffmpeg codec", 512, 512, NULL);
-    codec = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_codec);
+    codec = PJ_POOL_ALLOC_T(pool, pjmedia_vid_codec);
     if (!codec) {
         status = PJ_ENOMEM;
         goto on_error;
     }
+    pjmedia_vid_codec_init(codec);
     codec->op = &ffmpeg_op;
     codec->factory = factory;
     ff = PJ_POOL_ZALLOC_T(pool, ffmpeg_private);
@@ -1403,8 +1404,17 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	    if (status != PJ_SUCCESS)
 		return status;
 
-	    /* Notify application via the bit_info field of pjmedia_frame */
-	    output->bit_info = PJMEDIA_VID_CODEC_EVENT_FMT_CHANGED;
+	    /* Broadcast event */
+	    if (pjmedia_event_publisher_has_sub(&codec->epub)) {
+		pjmedia_event event;
+
+		pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
+				   &input->timestamp, &codec->epub);
+		event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
+		pj_memcpy(&event.data.fmt_changed.new_fmt, &ff->param.dec_fmt,
+			  sizeof(ff->param.dec_fmt));
+		pjmedia_event_publish(&codec->epub, &event);
+	    }
 	}
 
 	/* Check provided buffer size */
