@@ -570,7 +570,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_get_info(pjmedia_vid_dev_index id,
     if (status != PJ_SUCCESS)
 	return status;
 
-    return f->op->get_dev_info(f, index, info);
+    status = f->op->get_dev_info(f, index, info);
+
+    /* Make sure device ID is the real ID (not PJMEDIA_VID_DEFAULT_*_DEV) */
+    info->id = index;
+
+    return status;
 }
 
 /* API: find device */

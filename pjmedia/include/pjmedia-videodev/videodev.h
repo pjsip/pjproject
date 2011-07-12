@@ -136,6 +136,9 @@ typedef enum pjmedia_vid_dev_cap
  */
 typedef struct pjmedia_vid_dev_info
 {
+    /** The device ID */
+    pjmedia_vid_dev_index id;
+
     /** The device name */
     char name[64];
 
