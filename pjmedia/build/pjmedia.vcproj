@@ -3476,6 +3476,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia\event.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia\ffmpeg_util.c"
 				>
 			</File>
@@ -5014,6 +5018,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia\errno.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia\event.h"
 				>
 			</File>
 			<File
