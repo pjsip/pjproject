@@ -49,6 +49,7 @@ typedef enum pjsua_med_tp_st
 /** Forward decl of pjsua call */
 typedef struct pjsua_call pjsua_call;
 
+
 /**
  * Call's media stream.
  */
@@ -71,10 +72,8 @@ typedef struct pjsua_call_media
 	/** Video stream */
 	struct {
 	    pjmedia_vid_stream  *stream;    /**< The video stream.	    */
-	    pjmedia_vid_port	*capturer;  /**< Video capturer.	    */
-	    pjmedia_vid_port	*renderer;  /**< Video renderer.	    */
-	    pjmedia_converter	*conv_enc;  /**< Converter for encoding dir.*/
-	    pjmedia_converter	*conv_dec;  /**< Converter for decoding dir.*/
+	    pjsua_vid_win_id	 cap_win_id;/**< The video capture window   */
+	    pjsua_vid_win_id	 rdr_win_id;/**< The video render window    */
 	} v;
 
     } strm;
@@ -314,9 +313,10 @@ typedef struct pjsua_vid_win
 {
     pjsua_vid_win_type		 type;		/**< Type.		*/
     pj_pool_t			*pool;		/**< Own pool.		*/
-    pjsua_call_id	 	 call_id;	/**< Owner call or -1	*/
+    unsigned	 		 ref_cnt;	/**< Reference counter.	*/
     pjmedia_vid_port		*vp_cap;	/**< Capture vidport.	*/
     pjmedia_vid_port		*vp_rend;	/**< Renderer vidport	*/
+    pjmedia_port		*tee;		/**< Video tee		*/
     pjmedia_vid_dev_index	 preview_cap_id;/* Capture dev id	*/
 } pjsua_vid_win;
 
@@ -667,7 +667,7 @@ PJ_INLINE(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
 
     pj_bzero(w, sizeof(*w));
     if (pool) pj_pool_reset(pool);
-    w->call_id = PJSUA_INVALID_ID;
+    w->ref_cnt = 0;
     w->pool = pool;
     w->preview_cap_id = PJMEDIA_VID_INVALID_DEV;
 #endif

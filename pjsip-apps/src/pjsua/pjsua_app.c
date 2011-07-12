@@ -1449,6 +1449,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 	case OPT_VIDEO:
 	    ++cur_acc->max_video_cnt;
+	    cur_acc->vid_in_auto_show = PJ_TRUE;
+	    cur_acc->vid_out_auto_transmit = PJ_TRUE;
+	    PJ_TODO(implement_pjsua_option_for_vid_auto_show_transmit);
 	    break;
 	case OPT_EXTRA_AUDIO:
 	    ++cur_acc->max_audio_cnt;
@@ -1456,10 +1459,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_VCAPTURE_DEV:
 	    cfg->vcapture_dev = atoi(pj_optarg);
+	    cur_acc->vid_cap_dev = cfg->vcapture_dev;
 	    break;
 
 	case OPT_VRENDER_DEV:
 	    cfg->vrender_dev = atoi(pj_optarg);
+	    cur_acc->vid_rend_dev = cfg->vrender_dev;
 	    break;
 
 	default:

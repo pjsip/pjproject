@@ -110,6 +110,8 @@ static void reset_call(pjsua_call_id id)
 	pjsua_call_media *call_med = &call->media[i];
 	call_med->ssrc = pj_rand();
 	call_med->strm.a.conf_slot = PJSUA_INVALID_ID;
+	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
+	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
 	call_med->call = call;
 	call_med->idx = i;
 	call_med->tp_auto_del = PJ_TRUE;
@@ -1316,10 +1318,16 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 	    info->media[info->media_cnt].stream.aud.conf_slot =
 						call_med->strm.a.conf_slot;
 	} else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
-	    PJ_TODO(vid_fill_in_call_info);
-	    info->media[info->media_cnt].stream.vid.win_in = PJSUA_INVALID_ID;
-	    info->media[info->media_cnt].stream.vid.cap_dev =
-		    PJMEDIA_VID_INVALID_DEV;
+	    pjmedia_vid_dev_index cap_dev = PJMEDIA_VID_INVALID_DEV;
+
+	    info->media[info->media_cnt].stream.vid.win_in = 
+						call_med->strm.v.rdr_win_id;
+
+	    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
+		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
+		cap_dev = w->preview_cap_id;
+	    }
+	    info->media[info->media_cnt].stream.vid.cap_dev = cap_dev;
 	} else {
 	    continue;
 	}
