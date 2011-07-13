@@ -406,7 +406,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
         if (snd_port) {
             /* Synchronize video rendering and audio playback */
             pjmedia_vid_port_set_clock_src(
-                renderer, PJMEDIA_DIR_RENDER,
+                renderer,
                 pjmedia_snd_port_get_clock_src(
                     snd_port, PJMEDIA_DIR_PLAYBACK));
         }
