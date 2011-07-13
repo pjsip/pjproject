@@ -572,7 +572,8 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	    pjmedia_vid_codec_info *codec_info = &si->codec_info;
 	    unsigned i, j;
 
-	    status = pjmedia_vid_dev_get_info(acc->cfg.vid_cap_dev, &dev_info);
+	    status = pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev,
+					      &dev_info);
 	    if (status != PJ_SUCCESS)
 		return status;
 
@@ -739,7 +740,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	PJ_LOG(4,(THIS_FILE,"Media updates%s", info));
     }
 
-    if (acc->cfg.vid_out_auto_transmit) {
+    if (!acc->cfg.vid_out_auto_transmit) {
 	status = pjmedia_vid_stream_pause(call_med->strm.v.stream,
 					  PJMEDIA_DIR_ENCODING);
 	if (status != PJ_SUCCESS)
@@ -1112,7 +1113,6 @@ static pj_status_t call_add_video(pjsua_call *call,
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *sdp_m;
     pjmedia_transport_info tpinfo;
-    pjmedia_vid_dev_info vinfo;
     unsigned active_cnt;
     pj_status_t status;
 
@@ -1123,16 +1123,6 @@ static pj_status_t call_add_video(pjsua_call *call,
     call_get_vid_strm_info(call, NULL, NULL, &active_cnt, NULL);
     if (active_cnt == acc_cfg->max_video_cnt)
 	return PJ_ETOOMANY;
-
-    /* Verify the capture device */
-    status = pjmedia_vid_dev_get_info(cap_dev, &vinfo);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    if (vinfo.dir != PJMEDIA_DIR_CAPTURE)
-	return PJ_EINVAL;
-
-    cap_dev = vinfo.id;
 
     /* Get active local SDP */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
@@ -1193,9 +1183,10 @@ on_error:
 }
 
 
-/* Remove a video stream from a call */
-static pj_status_t call_remove_video(pjsua_call *call,
-				     int med_idx)
+/* Modify a video stream from a call, i.e: enable/disable */
+static pj_status_t call_modify_video(pjsua_call *call,
+				     int med_idx,
+				     pj_bool_t enable)
 {
     pjsua_call_media *call_med;
     pjmedia_sdp_session *sdp;
@@ -1218,14 +1209,10 @@ static pj_status_t call_remove_video(pjsua_call *call,
     if (call_med->type != PJMEDIA_TYPE_VIDEO)
 	return PJ_EINVAL;
 
-    /* Verify if the stream already disabled */
-    if (call_med->dir != PJMEDIA_DIR_NONE)
+    /* Verify if the stream already enabled/disabled */
+    if (( enable && call_med->dir != PJMEDIA_DIR_NONE) ||
+	(!enable && call_med->dir == PJMEDIA_DIR_NONE))
 	return PJ_SUCCESS;
-
-    /* Mark media transport to disabled */
-    // Don't close this here, as SDP negotiation has not been
-    // done and stream may be still active.
-    call_med->tp_st = PJSUA_MED_TP_DISABLED;
 
     /* Get active local SDP */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
@@ -1233,7 +1220,62 @@ static pj_status_t call_remove_video(pjsua_call *call,
 	return status;
 
     pj_assert(med_idx < (int)sdp->media_count);
-    sdp->media[med_idx]->desc.port = 0;
+
+    if (enable) {
+	pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
+	pj_pool_t *pool = call->inv->pool_prov;
+	pjmedia_sdp_media *sdp_m;
+	pjmedia_transport_info tpinfo;
+
+	status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
+				       &acc_cfg->rtp_cfg, call->secure_level,
+				       NULL);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Init transport media */
+	status = pjmedia_transport_media_create(call_med->tp, pool, 0,
+						NULL, call_med->idx);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	call_med->tp_st = PJSUA_MED_TP_INIT;
+
+	/* Get transport address info */
+	pjmedia_transport_info_init(&tpinfo);
+	pjmedia_transport_get_info(call_med->tp, &tpinfo);
+
+	/* Create SDP media line */
+	status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
+						&tpinfo.sock_info, 0, &sdp_m);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	sdp->media[med_idx] = sdp_m;
+
+	/* Update SDP media line by media transport */
+	status = pjmedia_transport_encode_sdp(call_med->tp, pool,
+					      sdp, NULL, call_med->idx);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+on_error:
+	if (status != PJ_SUCCESS) {
+	    if (call_med->tp) {
+		pjmedia_transport_close(call_med->tp);
+		call_med->tp = call_med->tp_orig = NULL;
+	    }
+	    return status;
+	}
+    } else {
+	/* Mark media transport to disabled */
+	// Don't close this here, as SDP negotiation has not been
+	// done and stream may be still active.
+	call_med->tp_st = PJSUA_MED_TP_DISABLED;
+
+	/* Disable the stream in SDP by setting port to 0 */
+	sdp->media[med_idx]->desc.port = 0;
+    }
 
     status = call_reoffer_sdp(call->index, sdp);
     if (status != PJ_SUCCESS)
@@ -1243,10 +1285,10 @@ static pj_status_t call_remove_video(pjsua_call *call,
 }
 
 
-/* Modify a video stream in a call */
-static pj_status_t call_modify_video(pjsua_call *call,
-				     int med_idx,
-				     pjmedia_vid_dev_index cap_dev)
+/* Change capture device of a video stream in a call */
+static pj_status_t call_change_cap_dev(pjsua_call *call,
+				       int med_idx,
+				       pjmedia_vid_dev_index cap_dev)
 {
     pjsua_call_media *call_med;
     pjmedia_vid_dev_info info;
@@ -1274,13 +1316,8 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
     /* Verify the capture device */
     status = pjmedia_vid_dev_get_info(cap_dev, &info);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    if (info.dir != PJMEDIA_DIR_CAPTURE)
+    if (status != PJ_SUCCESS || info.dir != PJMEDIA_DIR_CAPTURE)
 	return PJ_EINVAL;
-
-    cap_dev = info.id;
 
     /* The specified capture device is being used already */
     if (call_med->strm.v.cap_dev == cap_dev)
@@ -1400,8 +1437,8 @@ static pj_status_t call_start_tx_video(pjsua_call *call,
 	return PJ_EINVAL;
     }
 
-    /* Apply the new capture device */
-    status = call_modify_video(call, med_idx, cap_dev);
+    /* Apply the capture device, it may be changed! */
+    status = call_change_cap_dev(call, med_idx, cap_dev);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1478,22 +1515,37 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 	param_.cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     }
 
-    /* Get real capture ID, if set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV */
+    /* If set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV, replace it with
+     * account default video capture device.
+     */
     if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
-	pjmedia_vid_dev_info info;
-	pjmedia_vid_dev_get_info(param_.cap_dev, &info);
-	param_.cap_dev = info.id;
+	pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
+	param_.cap_dev = acc_cfg->vid_cap_dev;
+	
+	/* If the account default video capture device is
+	 * PJMEDIA_VID_DEFAULT_CAPTURE_DEV, replace it with
+	 * global default video capture device.
+	 */
+	if (param_.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
+	    pjmedia_vid_dev_info info;
+	    pjmedia_vid_dev_get_info(param_.cap_dev, &info);
+	    pj_assert(info.dir == PJMEDIA_DIR_CAPTURE);
+	    param_.cap_dev = info.id;
+	}
     }
 
     switch (op) {
     case PJSUA_CALL_VID_STRM_ADD:
 	status = call_add_video(call, param_.cap_dev);
 	break;
-    case PJSUA_CALL_VID_STRM_REMOVE:
-	status = call_remove_video(call, param_.med_idx);
+    case PJSUA_CALL_VID_STRM_ENABLE:
+	status = call_modify_video(call, param_.med_idx, PJ_TRUE);
 	break;
-    case PJSUA_CALL_VID_STRM_MODIFY:
-	status = call_modify_video(call, param_.med_idx, param_.cap_dev);
+    case PJSUA_CALL_VID_STRM_DISABLE:
+	status = call_modify_video(call, param_.med_idx, PJ_FALSE);
+	break;
+    case PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV:
+	status = call_change_cap_dev(call, param_.med_idx, param_.cap_dev);
 	break;
     case PJSUA_CALL_VID_STRM_START_TRANSMIT:
 	status = call_start_tx_video(call, param_.med_idx, param_.cap_dev);

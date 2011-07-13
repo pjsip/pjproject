@@ -381,14 +381,19 @@ typedef enum pjsua_call_vid_strm_op
     PJSUA_CALL_VID_STRM_ADD,
 
     /**
-     * Remove an existing video stream.
+     * Disable/remove an existing video stream.
      */
-    PJSUA_CALL_VID_STRM_REMOVE,
+    PJSUA_CALL_VID_STRM_DISABLE,
 
     /**
-     * Modify an existing video stream, such as changing the capture device.
+     * Enable video stream.
      */
-    PJSUA_CALL_VID_STRM_MODIFY,
+    PJSUA_CALL_VID_STRM_ENABLE,
+
+    /**
+     * Changing capture device of a video stream.
+     */
+    PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV,
 
     /**
      * Start transmitting video stream.
@@ -424,7 +429,7 @@ typedef struct pjsua_call_vid_strm_op_param
      * device as configured in the account.
      *
      * This field is valid for the following video stream operations:
-     * PJSUA_CALL_VID_STRM_ADD, PJSUA_CALL_VID_STRM_MODIFY, and
+     * PJSUA_CALL_VID_STRM_ADD, PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV, and
      * PJSUA_CALL_VID_STRM_START_TRANSMIT.
      */
     pjmedia_vid_dev_index cap_dev;
