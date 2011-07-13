@@ -574,6 +574,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_get_info(pjmedia_vid_dev_index id,
 
     /* Make sure device ID is the real ID (not PJMEDIA_VID_DEFAULT_*_DEV) */
     info->id = index;
+    make_global_index(f->sys.drv_idx, &info->id);
 
     return status;
 }
