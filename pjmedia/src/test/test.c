@@ -53,7 +53,11 @@ void app_perror(pj_status_t status, const char *msg)
 static int test_func(void *data)
 {
     int rc = 0;
-    
+
+#if HAS_VID_PORT_TEST
+    DO_TEST(vid_port_test());
+#endif
+
 #if HAS_VID_DEV_TEST
     DO_TEST(vid_dev_test());
 #endif
