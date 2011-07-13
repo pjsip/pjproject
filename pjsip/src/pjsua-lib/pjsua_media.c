@@ -1313,11 +1313,11 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 }
 
 /* Initialize the media line */
-static pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
-                                         pjmedia_type type,
-					 const pjsua_transport_config *tcfg,
-					 int security_level,
-					 int *sip_err_code)
+pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
+                                  pjmedia_type type,
+				  const pjsua_transport_config *tcfg,
+				  int security_level,
+				  int *sip_err_code)
 {
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
     pj_status_t status;
@@ -1342,6 +1342,22 @@ static pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	}
 	
 	call_med->tp_st = PJSUA_MED_TP_IDLE;
+
+	/* While in initial call, set default video devices */
+	if (type == PJMEDIA_TYPE_VIDEO) {
+	    call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
+	    call_med->strm.v.cap_dev = acc->cfg.vid_cap_dev;
+	    if (call_med->strm.v.rdr_dev == PJMEDIA_VID_DEFAULT_RENDER_DEV) {
+		pjmedia_vid_dev_info info;
+		pjmedia_vid_dev_get_info(call_med->strm.v.rdr_dev, &info);
+		call_med->strm.v.rdr_dev = info.id;
+	    }
+	    if (call_med->strm.v.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
+		pjmedia_vid_dev_info info;
+		pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
+		call_med->strm.v.cap_dev = info.id;
+	    }
+	}
     } else if (call_med->tp_st == PJSUA_MED_TP_DISABLED) {
 	/* Media is being reenabled. */
 	call_med->tp_st = PJSUA_MED_TP_INIT;

@@ -74,6 +74,8 @@ typedef struct pjsua_call_media
 	    pjmedia_vid_stream  *stream;    /**< The video stream.	    */
 	    pjsua_vid_win_id	 cap_win_id;/**< The video capture window   */
 	    pjsua_vid_win_id	 rdr_win_id;/**< The video render window    */
+	    pjmedia_vid_dev_index cap_dev;  /**< The video capture device   */
+	    pjmedia_vid_dev_index rdr_dev;  /**< The video-in render device */
 	} v;
 
     } strm;

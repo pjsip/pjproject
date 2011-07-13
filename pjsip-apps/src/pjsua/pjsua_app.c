@@ -1451,7 +1451,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    ++cur_acc->max_video_cnt;
 	    cur_acc->vid_in_auto_show = PJ_TRUE;
 	    cur_acc->vid_out_auto_transmit = PJ_TRUE;
-	    PJ_TODO(implement_pjsua_option_for_vid_auto_show_transmit);
+	    PJ_TODO(implement_pjsua_option_for_vid_auto_show_and_transmit);
 	    break;
 	case OPT_EXTRA_AUDIO:
 	    ++cur_acc->max_audio_cnt;
@@ -3315,6 +3315,8 @@ static void vid_show_help(void)
     puts("| vid help                  Show this help screen                             |");
     puts("| vid call rx on|off        Enable/disable incoming video for current call    |");
     puts("| vid call tx on|off        Enable/disable video tx for current call          |");
+    puts("| vid call add              Add video stream for current call                 |");
+    puts("| vid call remove [idx]     Remove video stream #idx for current call         |");
     puts("| vid dev list              List all video devices                            |");
     puts("| vid dev refresh           Refresh video device list                         |");
     puts("| vid dev prev on|off ID    Enable/disable preview for specified device ID    |");
@@ -3753,9 +3755,19 @@ static void vid_handle_menu(char *menuin)
     if (strcmp(argv[1], "help")==0 || argc == 1) {
 	vid_show_help();
     } else if (strcmp(argv[1], "call")==0) {
+	pjsua_call_vid_strm_op_param param;
 	pj_bool_t tx = (strcmp(argv[2], "tx") == 0);
-	pj_bool_t on = (strcmp(argv[3], "on") == 0);
+	if (tx) {
+	    pj_bool_t on = (strcmp(argv[3], "on") == 0);
+	}
 
+	if (strcmp(argv[2], "add")==0) {
+	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_ADD, NULL);
+	}
+	if (strcmp(argv[2], "remove")==0) {
+	    param.med_idx = argc >= 4? atoi(argv[3]) : -1;
+	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_REMOVE, &param);
+	}
 	PJ_TODO(vid_enable_disable_video_on_call);
 	PJ_LOG(1,(THIS_FILE, "Not implemented"));
     } else if (strcmp(argv[1], "dev")==0) {

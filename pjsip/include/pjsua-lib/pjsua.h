@@ -370,6 +370,69 @@ typedef enum pjsua_state
 
 
 /**
+ * This enumeration represents video stream operation on a call.
+ * See also #pjsua_call_vid_strm_op_param for further info.
+ */
+typedef enum pjsua_call_vid_strm_op
+{
+    /**
+     * Add a new video stream.
+     */
+    PJSUA_CALL_VID_STRM_ADD,
+
+    /**
+     * Remove an existing video stream.
+     */
+    PJSUA_CALL_VID_STRM_REMOVE,
+
+    /**
+     * Modify an existing video stream, such as changing the capture device.
+     */
+    PJSUA_CALL_VID_STRM_MODIFY,
+
+    /**
+     * Start transmitting video stream.
+     */
+    PJSUA_CALL_VID_STRM_START_TRANSMIT,
+
+    /**
+     * Stop transmitting video stream.
+     */
+    PJSUA_CALL_VID_STRM_STOP_TRANSMIT,
+
+} pjsua_call_vid_strm_op;
+
+
+/**
+ * Parameters for video stream operation on a call.
+ */
+typedef struct pjsua_call_vid_strm_op_param
+{
+    /**
+     * Specify the media stream index. This can be set to -1 to denote
+     * the default video stream in the call, which is the first active
+     * video stream or any first video stream if none is active.
+     *
+     * This field is valid for all video stream operations, except
+     * PJSUA_CALL_VID_STRM_ADD.
+     */
+    int med_idx;
+ 
+    /**
+     * Specify the video capture device ID. This can be set to
+     * PJMEDIA_VID_DEFAULT_CAPTURE_DEV to specify the default capture
+     * device as configured in the account.
+     *
+     * This field is valid for the following video stream operations:
+     * PJSUA_CALL_VID_STRM_ADD, PJSUA_CALL_VID_STRM_MODIFY, and
+     * PJSUA_CALL_VID_STRM_START_TRANSMIT.
+     */
+    pjmedia_vid_dev_index cap_dev;
+
+} pjsua_call_vid_strm_op_param;
+
+
+/**
  * Logging configuration, which can be (optionally) specified when calling
  * #pjsua_init(). Application must call #pjsua_logging_config_default() to
  * initialize this structure with the default values.
@@ -3680,43 +3743,24 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
  */
 PJ_DECL(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id);
 
+
 /**
- * Start, stop, and/or manipulate video transmission for the specified
- * call. This would trigger a re-INVITE or UPDATE to be sent for the
- * call. This function may add, remove, or modify existing video media
- * stream, depending on the media index specified (the \a med_idx argument).
- *
- * To add a new or edit existing video stream (for transmission), specify
- * a valid video capture device ID or PJMEDIA_VID_DEFAULT_CAPTURE_DEV in
- * the \a cap_dev argument. If \a med_idx is set to default stream (-1),
- * then the function will modify existing video stream if one exists, or
- * add a new one if it doesn't. If \a med_idx is set to a specific stream
- * index, the function will modify that video stream. Otherwise if \a med_idx
- * is set to value larger than the current media count, a new video stream
- * will be added to the call.
- *
- * To remove an existing video stream, specify PJMEDIA_VID_INVALID_DEV in
- * \a cap_dev argument. If \a med_idx is set to default stream (-1), this
- * will remove the default/first video stream in the call, otherwise
- * application can put a specific value to request removal of that particular
- * video stream.
+ * Add, remove, modify, and/or manipulate video media stream for the
+ * specified call. This may trigger a re-INVITE or UPDATE to be sent
+ * for the call.
  *
  * @param call_id	Call identification.
- * @param med_idx	The media stream index. Currently the value MUST
- * 			be -1 to denote the default video stream in the
- * 			call.
- * @param cap_dev	To add or modify existing video media stream,
- * 			specify PJMEDIA_VID_DEFAULT_CAPTURE_DEV to use
- * 			the default capture device as configured in the
- * 			account, or specify a specific capture device ID.
- * 			To disable an existing video stream, specify
- * 			PJMEDIA_VID_INVALID_DEV for this parameter.
+ * @param op		The video stream operation to be performed,
+ *			possible values are #pjsua_call_vid_strm_op.
+ * @param param		The parameters for the video stream operation.
  *
  * @return		PJ_SUCCESS on success or the appropriate error.
  */
-PJ_DECL(pj_status_t) pjsua_call_set_vid_out(pjsua_call_id call_id,
-                                            int med_idx,
-                                            pjmedia_vid_dev_index cap_dev);
+PJ_DECL(pj_status_t) pjsua_call_set_vid_strm (
+				pjsua_call_id call_id,
+				pjsua_call_vid_strm_op op,
+				const pjsua_call_vid_strm_op_param *param);
+
 
 /**
  * Get media stream info for the specified media index.
