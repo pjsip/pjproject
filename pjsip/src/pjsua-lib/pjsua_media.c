@@ -376,8 +376,11 @@ static void check_snd_dev_idle()
     /* Activate sound device auto-close timer if sound device is idle.
      * It is idle when there is no port connection in the bridge and
      * there is no active call.
+     *
+     * Note: this block is now valid if no snd dev is used because of #1299
      */
-    if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL) &&
+    if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL ||
+	    pjsua_var.no_snd) &&
 	pjsua_var.snd_idle_timer.id == PJ_FALSE &&
 	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0 &&
 	call_cnt == 0 &&
@@ -2421,6 +2424,14 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 		    return status;
 		}
 	    }
+	} else if (pjsua_var.no_snd) {
+	    if (!pjsua_var.snd_is_on) {
+		pjsua_var.snd_is_on = PJ_TRUE;
+	    	/* Notify app */
+	    	if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
+	    	    (*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(1);
+	    	}
+	    }
 	}
 
     } else {
@@ -2437,8 +2448,13 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 		pjsua_perror(THIS_FILE, "Error opening sound device", status);
 		return status;
 	    }
+	} else if (pjsua_var.no_snd && !pjsua_var.snd_is_on) {
+	    pjsua_var.snd_is_on = PJ_TRUE;
+	    /* Notify app */
+	    if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
+		(*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(1);
+	    }
 	}
-
     }
 
     return pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 0);
@@ -3093,6 +3109,11 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
     /* Close existing sound port */
     close_snd_dev();
 
+    /* Notify app */
+    if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
+	(*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(1);
+    }
+
     /* Create memory pool for sound device. */
     pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
     PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
@@ -3229,6 +3250,11 @@ static pj_status_t open_snd_dev(pjmedia_aud_param *param)
 /* Close existing sound device */
 static void close_snd_dev(void)
 {
+    /* Notify app */
+    if (pjsua_var.snd_is_on && pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
+	(*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(0);
+    }
+
     /* Close sound device */
     if (pjsua_var.snd_port) {
 	pjmedia_aud_dev_info cap_info, play_info;
@@ -3262,6 +3288,7 @@ static void close_snd_dev(void)
     if (pjsua_var.snd_pool) 
 	pj_pool_release(pjsua_var.snd_pool);
     pjsua_var.snd_pool = NULL;
+    pjsua_var.snd_is_on = PJ_FALSE;
 }
 
 
@@ -3324,6 +3351,7 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     }
 
     pjsua_var.no_snd = PJ_FALSE;
+    pjsua_var.snd_is_on = PJ_TRUE;
 
     return PJ_SUCCESS;
 }
@@ -3359,6 +3387,11 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     /* Close existing sound device */
     close_snd_dev();
 
+    /* Notify app */
+    if (pjsua_var.ua_cfg.cb.on_snd_dev_operation) {
+	(*pjsua_var.ua_cfg.cb.on_snd_dev_operation)(1);
+    }
+
     /* Create memory pool for sound device. */
     pjsua_var.snd_pool = pjsua_pool_create("pjsua_snd", 4000, 4000);
     PJ_ASSERT_RETURN(pjsua_var.snd_pool, PJ_ENOMEM);
@@ -3388,6 +3421,7 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     pjsua_var.play_dev = NULL_SND_DEV_ID;
 
     pjsua_var.no_snd = PJ_FALSE;
+    pjsua_var.snd_is_on = PJ_TRUE;
 
     return PJ_SUCCESS;
 }

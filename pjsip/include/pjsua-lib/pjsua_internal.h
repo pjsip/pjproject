@@ -400,7 +400,7 @@ struct pjsua_data
     pj_timer_entry	 snd_idle_timer;/**< Sound device idle timer.	*/
     pjmedia_master_port	*null_snd;  /**< Master port for null sound.	*/
     pjmedia_port	*null_port; /**< Null port.			*/
-
+    pj_bool_t		 snd_is_on; /**< Media flow is currently active */
 
     /* Video device */
     pjmedia_vid_dev_index vcap_dev;  /**< Capture device ID.		*/

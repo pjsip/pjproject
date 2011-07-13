@@ -961,6 +961,23 @@ typedef struct pjsua_callback
     void (*on_ice_transport_error)(int index, pj_ice_strans_op op,
 				   pj_status_t status, void *param);
 
+    /**
+     * Callback when the sound device is about to be opened or closed.
+     * This callback will be called even when null sound device or no
+     * sound device is configured by the application (i.e. the
+     * #pjsua_set_null_snd_dev() and #pjsua_set_no_snd_dev() APIs).
+     * This API is mostly useful when the application wants to manage
+     * the sound device by itself (i.e. with #pjsua_set_no_snd_dev()),
+     * to get notified when it should open or close the sound device.
+     *
+     * @param operation	The value will be set to 0 to signal that sound
+     * 			device is about to be closed, and 1 to be opened.
+     *
+     * @return		The callback must return PJ_SUCCESS at the moment.
+     */
+    pj_status_t (*on_snd_dev_operation)(int operation);
+
+
 } pjsua_callback;
 
 

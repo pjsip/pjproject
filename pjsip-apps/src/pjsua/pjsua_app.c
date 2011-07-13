@@ -3134,6 +3134,15 @@ static void on_ice_transport_error(int index, pj_ice_strans_op op,
 }
 
 /*
+ * Notification on sound device operation.
+ */
+static pj_status_t on_snd_dev_operation(int operation)
+{
+    PJ_LOG(3,(THIS_FILE, "Turning sound device %s", (operation? "ON":"OFF")));
+    return PJ_SUCCESS;
+}
+
+/*
  * Print buddy list.
  */
 static void print_buddy_list(void)
@@ -5051,6 +5060,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_mwi_info = &on_mwi_info;
     app_config.cfg.cb.on_transport_state = &on_transport_state;
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
+    app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
     app_config.log_cfg.cb = log_cb;
 
     /* Set sound device latency */
