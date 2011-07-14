@@ -24,7 +24,7 @@
 #include <pj/string.h>
 
 
-#define SIGNATURE   PJMEDIA_PORT_SIGNATURE('N', 'U', 'L', 'L')
+#define SIGNATURE   PJMEDIA_SIG_PORT_NULL
 
 static pj_status_t null_get_frame(pjmedia_port *this_port, 
 				  pjmedia_frame *frame);

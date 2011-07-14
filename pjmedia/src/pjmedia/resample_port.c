@@ -25,7 +25,7 @@
 
 
 #define BYTES_PER_SAMPLE	2
-#define SIGNATURE		PJMEDIA_PORT_SIGNATURE('R','S','M','P')
+#define SIGNATURE		PJMEDIA_SIG_PORT_RESAMPLE
 
 
 struct resample_port

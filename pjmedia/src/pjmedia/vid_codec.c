@@ -69,10 +69,11 @@ static void sort_codecs(pjmedia_vid_codec_mgr *mgr);
 /*
  * Initialize pjmedia_vid_codec structure with default values.
  */
-PJ_DEF(void) pjmedia_vid_codec_init(pjmedia_vid_codec *codec)
+PJ_DEF(void) pjmedia_vid_codec_init(pjmedia_vid_codec *codec,
+                                    pjmedia_obj_sig sig)
 {
     pj_bzero(codec, sizeof(*codec));
-    pj_list_init(&codec->epub);
+    pjmedia_event_publisher_init(&codec->epub, sig);
 }
 
 /*

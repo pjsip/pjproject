@@ -334,7 +334,7 @@ static void generate_tone(struct gen_state *state,
 
 /****************************************************************************/
 
-#define SIGNATURE   PJMEDIA_PORT_SIGNATURE('t', 'n', 'g', 'n')
+#define SIGNATURE   PJMEDIA_SIG_PORT_TONEGEN
 #define THIS_FILE   "tonegen.c"
 
 #if 0

@@ -26,7 +26,7 @@
 
 
 #define THIS_FILE   "ec_port.c"
-#define SIGNATURE   PJMEDIA_PORT_SIGNATURE('E', 'C', 'H', 'O')
+#define SIGNATURE   PJMEDIA_SIG_PORT_ECHO
 #define BUF_COUNT   32
 
 struct ec

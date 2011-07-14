@@ -430,8 +430,10 @@ typedef struct pjmedia_vid_codec_mgr pjmedia_vid_codec_mgr;
  * Initialize pjmedia_vid_codec structure with default values.
  *
  * @param codec	    The codec to be initialized.
+ * @param sig	    Codec's object signature (see signatures.h)
  */
-PJ_DECL(void) pjmedia_vid_codec_init(pjmedia_vid_codec *codec);
+PJ_DECL(void) pjmedia_vid_codec_init(pjmedia_vid_codec *codec,
+                                     pjmedia_obj_sig sig);
 
 /**
  * Initialize codec manager. If there is no the default video codec manager,

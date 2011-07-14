@@ -25,7 +25,7 @@
 
 #define THIS_FILE	    "mem_player.c"
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('M', 'P', 'l', 'y')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_MEM_PLAYER
 #define BYTES_PER_SAMPLE    2
 
 struct mem_player

@@ -32,7 +32,7 @@
 
 #define THIS_FILE	    "wav_playlist.c"
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('P', 'l', 's', 't')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_WAV_PLAYLIST
 #define BYTES_PER_SAMPLE    2
 
 

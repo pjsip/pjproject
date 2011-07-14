@@ -25,8 +25,8 @@
 #include <pj/pool.h>
 
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'b')
-#define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'P')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_SPLIT_COMB
+#define SIGNATURE_PORT	    PJMEDIA_SIG_PORT_SPLIT_COMB_P
 #define THIS_FILE	    "splitcomb.c"
 #define TMP_SAMP_TYPE	    pj_int16_t
 

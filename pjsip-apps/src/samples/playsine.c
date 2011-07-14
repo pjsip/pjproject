@@ -138,7 +138,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     /* Fill in port info. */
     name = pj_str("sine generator");
     pjmedia_port_info_init(&port->info, &name,
-			   PJMEDIA_PORT_SIGNATURE('s', 'i', 'n', 'e'),
+                           PJMEDIA_SIG_CLASS_PORT_AUD('s', 'i'),
 			   sampling_rate,
 			   channel_count,
 			   16, sampling_rate * 20 / 1000 * channel_count);

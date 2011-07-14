@@ -30,7 +30,7 @@
 
 
 #define THIS_FILE	    "wav_writer.c"
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'W', 'R', 'T')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_WAV_WRITER
 
 
 struct file_port

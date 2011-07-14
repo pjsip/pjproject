@@ -24,6 +24,7 @@
  * @brief Event framework
  */
 #include <pjmedia/format.h>
+#include <pjmedia/signatures.h>
 #include <pj/list.h>
 
 PJ_BEGIN_DECL
@@ -184,6 +185,12 @@ typedef struct pjmedia_event
     unsigned				 proc_cnt;
 
     /**
+     * The object signature of the event publisher. Application may use
+     * this to check which publisher published the event.
+     */
+    pjmedia_obj_sig			 epub_sig;
+
+    /**
      * Pointer information about the source of this event. This field
      * is provided mainly so that the event subscribers can compare it
      * against the publisher that it subscribed the events from initially,
@@ -268,6 +275,9 @@ struct pjmedia_event_subscription
  */
 struct pjmedia_event_publisher
 {
+    /** The object signature of the publisher */
+    pjmedia_obj_sig		sig;
+
     /** List of subscriptions for this event publisher */
     pjmedia_event_subscription	subscription_list;
 };
@@ -290,8 +300,10 @@ PJ_DECL(void) pjmedia_event_init(pjmedia_event *event,
  * Initialize an event publisher structure.
  *
  * @param epub		The event publisher.
+ * @param sig		The object signature of the publisher.
  */
-PJ_DECL(void) pjmedia_event_publisher_init(pjmedia_event_publisher *epub);
+PJ_DECL(void) pjmedia_event_publisher_init(pjmedia_event_publisher *epub,
+                                           pjmedia_obj_sig sig);
 
 /**
  * Initialize subscription data.

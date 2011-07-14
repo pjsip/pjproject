@@ -42,6 +42,7 @@
 #define ERRLEVEL			1
 #define LOGERR_(expr)			stream_perror expr
 #define TRC_(expr)			PJ_LOG(5,expr)
+#define SIGNATURE			PJMEDIA_SIG_PORT_VID_STREAM
 
 /* Tracing jitter buffer operations in a stream session to a CSV file.
  * The trace will contain JB operation timestamp, frame info, RTP info, and
@@ -1107,9 +1108,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
 	return status;
 
     /* Init port. */
-    pjmedia_port_info_init2(pi, &name,
-			    PJMEDIA_PORT_SIGNATURE('V', 'C', 'H', 'N'),
-			    dir, fmt);
+    pjmedia_port_info_init2(pi, &name, SIGNATURE, dir, fmt);
     if (dir == PJMEDIA_DIR_DECODING) {
 	channel->port.get_frame = &get_frame;
     } else {
@@ -1252,7 +1251,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 	return status;
 
     /* Init event publisher and subscribe to codec events */
-    pjmedia_event_publisher_init(&stream->epub);
+    pjmedia_event_publisher_init(&stream->epub, SIGNATURE);
     pjmedia_event_subscription_init(&stream->esub_codec, &stream_event_cb,
                                     stream);
     pjmedia_event_subscribe(&stream->codec->epub, &stream->esub_codec);

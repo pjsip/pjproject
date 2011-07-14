@@ -32,7 +32,7 @@
 #define THIS_FILE   "wav_player.c"
 
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'P', 'l', 'y')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_WAV_PLAYER
 #define BITS_PER_SAMPLE	    16
 
 #if 1

@@ -28,6 +28,7 @@
 #include <pjmedia/event.h>
 #include <pjmedia/format.h>
 #include <pjmedia/frame.h>
+#include <pjmedia/signatures.h>
 #include <pj/assert.h>
 #include <pj/os.h>
 
@@ -189,8 +190,7 @@ PJ_BEGIN_DECL
 /**
  * Create 32bit port signature from ASCII characters.
  */
-#define PJMEDIA_PORT_SIGNATURE(a,b,c,d)	    \
-	    (a<<24 | b<<16 | c<<8 | d)
+#define PJMEDIA_PORT_SIG(a,b,c,d)	    	PJMEDIA_OBJ_SIG(a,b,c,d)
 
 
 /**

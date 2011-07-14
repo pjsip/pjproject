@@ -40,12 +40,16 @@ PJ_DEF(void) pjmedia_event_init( pjmedia_event *event,
     if (ts)
 	event->timestamp.u64 = ts->u64;
     event->epub = epub;
+    if (epub)
+	event->epub_sig = epub->sig;
 }
 
-PJ_DEF(void) pjmedia_event_publisher_init(pjmedia_event_publisher *epub)
+PJ_DEF(void) pjmedia_event_publisher_init(pjmedia_event_publisher *epub,
+                                          pjmedia_obj_sig sig)
 {
     pj_bzero(epub, sizeof(*epub));
     pj_list_init(&epub->subscription_list);
+    epub->sig = sig;
 }
 
 PJ_DEF(void) pjmedia_event_subscription_init( pjmedia_event_subscription *esub,

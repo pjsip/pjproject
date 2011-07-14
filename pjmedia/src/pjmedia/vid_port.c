@@ -25,6 +25,7 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
+#define SIGNATURE	PJMEDIA_SIG_VID_PORT
 #define THIS_FILE	"vid_port.c"
 
 typedef struct vid_pasv_port vid_pasv_port;
@@ -201,7 +202,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     vp->role = prm->active ? ROLE_ACTIVE : ROLE_PASSIVE;
     vp->dir = prm->vidparam.dir;
 //    vp->cap_size = vfd->size;
-    pjmedia_event_publisher_init(&vp->epub);
+    pjmedia_event_publisher_init(&vp->epub, SIGNATURE);
 
     vparam = prm->vidparam;
     dev_name[0] = '\0';
@@ -311,7 +312,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	pp->base.get_frame = &vid_pasv_port_get_frame;
 	pp->base.put_frame = &vid_pasv_port_put_frame;
 	pjmedia_port_info_init2(&pp->base.info, &vp->dev_name,
-				PJMEDIA_PORT_SIGNATURE('v', 'i', 'd', 'p'),
+	                        PJMEDIA_SIG_VID_PORT,
 			        prm->vidparam.dir, &prm->vidparam.fmt);
 
 	if (vp->stream_role == ROLE_ACTIVE) {

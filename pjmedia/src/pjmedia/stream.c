@@ -1982,7 +1982,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
      * once we have more info about the codec.
      */
     pjmedia_port_info_init(&stream->port.info, &name,
-			   PJMEDIA_PORT_SIGNATURE('S', 'T', 'R', 'M'),
+                           PJMEDIA_SIG_PORT_STREAM,
 			   info->fmt.clock_rate, info->fmt.channel_cnt,
 			   16, 80);
     afd = pjmedia_format_get_audio_format_detail(&stream->port.info.fmt, 1);

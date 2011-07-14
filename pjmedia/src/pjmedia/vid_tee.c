@@ -24,7 +24,7 @@
 #include <pj/pool.h>
 
 #define TEE_PORT_NAME	"vid_tee"
-#define TEE_PORT_SIGN	PJMEDIA_PORT_SIGNATURE('V', 'T', 'E', 'E')
+#define TEE_PORT_SIGN	PJMEDIA_SIG_PORT_VID_TEE
 #define MAX_DST_PORT_COUNT 20
 
 

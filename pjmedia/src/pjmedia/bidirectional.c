@@ -22,7 +22,7 @@
 
 
 #define THIS_FILE   "bidirectional.c"
-#define SIGNATURE   PJMEDIA_PORT_SIGNATURE('B', 'D', 'I', 'R')
+#define SIGNATURE   PJMEDIA_SIG_PORT_BIDIR
 
 struct bidir_port
 {

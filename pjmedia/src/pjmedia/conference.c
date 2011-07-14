@@ -64,7 +64,7 @@ static FILE *fhnd_rec;
 #define BYTES_PER_SAMPLE    2
 
 #define SIGNATURE	    PJMEDIA_CONF_BRIDGE_SIGNATURE
-#define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'P')
+#define SIGNATURE_PORT	    PJMEDIA_SIG_PORT_CONF_PASV
 /* Normal level is hardcodec to 128 in all over places */
 #define NORMAL_LEVEL	    128
 #define SLOT_TYPE	    unsigned

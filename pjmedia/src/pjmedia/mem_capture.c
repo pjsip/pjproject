@@ -25,7 +25,7 @@
 
 #define THIS_FILE	    "mem_capture.c"
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('M', 'R', 'e', 'c')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_MEM_CAPTURE
 #define BYTES_PER_SAMPLE    2
 
 struct mem_rec

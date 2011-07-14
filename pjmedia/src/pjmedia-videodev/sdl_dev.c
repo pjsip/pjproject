@@ -1011,7 +1011,7 @@ static pj_status_t sdl_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
-    pjmedia_event_publisher_init(&strm->base.epub);
+    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_SDL);
 
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {

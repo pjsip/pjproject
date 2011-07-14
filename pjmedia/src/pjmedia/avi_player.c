@@ -43,7 +43,7 @@
 
 #define COMPARE_TAG(doc_tag, tag) (doc_tag == *((pj_uint32_t *)avi_tags[tag]))
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('A', 'V', 'I', 'P')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_VID_AVI_PLAYER
 
 #if 0
 #   define TRACE_(x)	PJ_LOG(4,x)

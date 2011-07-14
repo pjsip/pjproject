@@ -24,7 +24,7 @@
 #include <pj/string.h>
 
 
-#define SIGNATURE		PJMEDIA_PORT_SIGNATURE('S','T','R','O')
+#define SIGNATURE		PJMEDIA_SIG_PORT_STEREO
 
 
 struct stereo_port
