@@ -1588,5 +1588,28 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 }
 
 
+/*
+ * Get the media stream index of the default video stream in the call.
+ */
+PJ_DEF(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id)
+{
+    pjsua_call *call;
+    int first_active, first_inactive;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    PJSUA_LOCK();
+    call = &pjsua_var.calls[call_id];
+    call_get_vid_strm_info(call, &first_active, &first_inactive, NULL, NULL);
+    PJSUA_UNLOCK();
+
+    if (first_active == -1)
+	return first_inactive;
+
+    return first_active;
+}
+
+
 #endif /* PJSUA_HAS_VIDEO */
 
