@@ -17,12 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia_videodev.h>
 #include <pjsua-lib/pjsua.h>
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-#   include <CoreFoundation/CFRunLoop.h>
-#endif
 
 #define THIS_FILE	"main.c"
 
@@ -31,7 +27,6 @@
  * These are defined in pjsua_app.c.
  */
 extern pj_bool_t app_restart;
-pj_bool_t is_quit = PJ_FALSE;
 pj_status_t app_init(int argc, char *argv[]);
 pj_status_t app_main(void);
 pj_status_t app_destroy(void);
@@ -80,29 +75,7 @@ static void setup_signal_handler(void)
 
 #endif
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-static int main_func(void *data);
-int argc;
-char **argv;
-
-int main(int argcm, char *argvm[])
-{ 
-    pthread_t thread;
-
-    argc = argcm;
-    argv = (char **)argvm;
-    if (pthread_create(&thread, NULL, &main_func, NULL) == 0) {
-	while (!is_quit) {
-	    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
-	}
-    }
-
-    return 0;
-}
-static int main_func(void *data)
-#else
-int main(int argc, char *argv[])
-#endif
+static int main_func(int argc, char *argv[])
 {
     do {
 	app_restart = PJ_FALSE;
@@ -119,7 +92,10 @@ int main(int argc, char *argv[])
 	app_destroy();
     } while (app_restart);
 
-    is_quit = PJ_TRUE;
     return 0;
 }
 
+int main(int argc, char *argv[])
+{
+    return pj_run_app(&main_func, argc, argv, 0);
+}

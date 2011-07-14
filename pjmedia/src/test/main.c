@@ -17,8 +17,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
+#include <pj/os.h>
+
 #include "test.h"
-#include <pjmedia_videodev.h>
 
  
 /* Any tests that want to build a linked executable for RTEMS must include
@@ -30,8 +31,7 @@
 #   include "../../../pjlib/include/rtems-network-config.h"
 #endif
 
-
-int main(int argc, char *argv[])
+static int main_func(int argc, char *argv[])
 {
     int rc;
     char s[10];
@@ -47,4 +47,7 @@ int main(int argc, char *argv[])
     return rc;
 }
 
-
+int main(int argc, char *argv[])
+{
+    return pj_run_app(&main_func, argc, argv, 0);
+}

@@ -20,7 +20,6 @@
 #include <pjmedia.h>
 #include <pjmedia/converter.h>
 #include <pjmedia-codec.h>
-#include <pjmedia_videodev.h>
 #include <pjlib-util.h>
 #include <pjlib.h>
 #include <stdio.h>
@@ -447,10 +446,7 @@ on_return:
 }
 
 
-/*
- * main()
- */
-int main(int argc, char *argv[])
+static int main_func(int argc, char *argv[])
 {
     pj_caching_pool cp;
     pj_pool_t *pool;
@@ -527,4 +523,9 @@ on_return:
 
     /* Done. */
     return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    return pj_run_app(&main_func, argc, argv, 0);
 }

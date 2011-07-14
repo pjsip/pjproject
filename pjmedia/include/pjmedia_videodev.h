@@ -27,10 +27,4 @@
 #include <pjmedia-videodev/videodev.h>
 #include <pjmedia-videodev/videodev_imp.h>
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-#   if PJMEDIA_VIDEO_DEV_HAS_SDL
-#	include <SDL.h>
-#endif
-#endif
-
 #endif	/* __PJMEDIA_VIDEODEV_H__ */
