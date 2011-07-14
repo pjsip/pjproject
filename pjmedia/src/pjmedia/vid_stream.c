@@ -309,16 +309,14 @@ static void dump_port_info(const pjmedia_vid_channel *chan,
                            const char *event_name)
 {
     const pjmedia_port_info *pi = &chan->port.info;
+    char fourcc_name[5];
 
     PJ_LOG(5, (pi->name.ptr,
-	       " %s format %s: %dx%d %c%c%c%c%s %d/%d(~%d)fps",
+	       " %s format %s: %dx%d %s%s %d/%d(~%d)fps",
 	       (chan->dir==PJMEDIA_DIR_DECODING? "Decoding":"Encoding"),
 	       event_name,
 	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
-	       ((pi->fmt.id & 0x000000FF) >> 0),
-	       ((pi->fmt.id & 0x0000FF00) >> 8),
-	       ((pi->fmt.id & 0x00FF0000) >> 16),
-	       ((pi->fmt.id & 0xFF000000) >> 24),
+	       pjmedia_fourcc_name(pi->fmt.id, fourcc_name),
 	       (chan->dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
 	       pi->fmt.det.vid.fps.num, pi->fmt.det.vid.fps.denum,
 	       pi->fmt.det.vid.fps.num/pi->fmt.det.vid.fps.denum));
@@ -1049,6 +1047,7 @@ static pj_status_t create_channel( pj_pool_t *pool,
     pj_str_t name;
     const char *type_name;
     pjmedia_format *fmt;
+    char fourcc_name[5];
     pjmedia_port_info *pi;
     
     pj_assert(info->type == PJMEDIA_TYPE_VIDEO);
@@ -1121,13 +1120,10 @@ static pj_status_t create_channel( pj_pool_t *pool,
     channel->port.get_event_pub = &port_get_epub;
 
     PJ_LOG(5, (name.ptr,
-	       "%s channel created %dx%d %c%c%c%c%s%.*s %d/%d(~%d)fps",
+	       "%s channel created %dx%d %s%s%.*s %d/%d(~%d)fps",
 	       (dir==PJMEDIA_DIR_ENCODING?"Encoding":"Decoding"),
 	       pi->fmt.det.vid.size.w, pi->fmt.det.vid.size.h,
-	       ((pi->fmt.id & 0x000000FF) >> 0),
-	       ((pi->fmt.id & 0x0000FF00) >> 8),
-	       ((pi->fmt.id & 0x00FF0000) >> 16),
-	       ((pi->fmt.id & 0xFF000000) >> 24),
+	       pjmedia_fourcc_name(pi->fmt.id, fourcc_name),
 	       (dir==PJMEDIA_DIR_ENCODING?"->":"<-"),
 	       info->codec_info.encoding_name.slen,
 	       info->codec_info.encoding_name.ptr,

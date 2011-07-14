@@ -40,7 +40,7 @@ PJ_BEGIN_DECL
  * This macro is used for building the constants in pjmedia_format_id
  * enumeration.
  */
-#define PJMEDIA_FORMAT_PACK(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
+#define PJMEDIA_FORMAT_PACK(C1, C2, C3, C4) PJMEDIA_FOURCC(C1, C2, C3, C4)
 
 /**
  * This enumeration uniquely identify audio sample and/or video pixel formats.

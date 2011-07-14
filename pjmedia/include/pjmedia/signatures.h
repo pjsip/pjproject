@@ -104,20 +104,15 @@ typedef pj_uint32_t pjmedia_obj_sig;
  *
  * @return		The string.
  */
-PJ_INLINE(const char*) pjmedia_sig_to_str(pjmedia_obj_sig sig, char buf[])
+PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
 {
-    buf[0] = (char)((sig >> 24) & 0xFF);
-    buf[1] = (char)((sig >> 16) & 0xFF);
-    buf[2] = (char)((sig >>  8) & 0xFF);
-    buf[3] = (char)((sig >>  0) & 0xFF);
-    buf[4] = '\0';
-    return buf;
+    return pjmedia_fourcc_name(sig, buf);
 }
 
 /**
  * Macro to generate signature from four ASCII letters.
  */
-#define PJMEDIA_SIGNATURE(a,b,c,d)	(a<<24 | b<<16 | c<<8 | d)
+#define PJMEDIA_SIGNATURE(a,b,c,d)	PJMEDIA_FOURCC(a,b,c,d)
 
 /*************************************************************************
  * Codec signature ('Cxxx'). Please keep the constant names sorted.

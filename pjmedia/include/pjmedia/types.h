@@ -191,6 +191,11 @@ typedef struct pjmedia_rect
     pjmedia_rect_size	size;	/**< The size.		*/
 } pjmedia_rect;
 
+/**
+ * Macro for packing format from a four character code, similar to FOURCC.
+ */
+#define PJMEDIA_FOURCC(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )
+
 
 /**
  * Utility function to return the string name for a pjmedia_type.
@@ -200,6 +205,26 @@ typedef struct pjmedia_rect
  * @return		String.
  */
 PJ_DECL(const char*) pjmedia_type_name(pjmedia_type t);
+
+/**
+ * A utility function to convert fourcc type of value to four letters string.
+ *
+ * @param sig		The fourcc value.
+ * @param buf		Buffer to store the string, which MUST be at least
+ * 			five bytes long.
+ *
+ * @return		The string.
+ */
+PJ_INLINE(const char*) pjmedia_fourcc_name(pj_uint32_t sig, char buf[])
+{
+    buf[3] = (char)((sig >> 24) & 0xFF);
+    buf[2] = (char)((sig >> 16) & 0xFF);
+    buf[1] = (char)((sig >>  8) & 0xFF);
+    buf[0] = (char)((sig >>  0) & 0xFF);
+    buf[4] = '\0';
+    return buf;
+}
+
 
 /**
  * @}
