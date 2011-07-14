@@ -3316,8 +3316,8 @@ static void vid_show_help(void)
     puts("| vid call rx on|off        Enable/disable incoming video for current call    |");
     puts("| vid call tx on|off        Enable/disable video tx for current call          |");
     puts("| vid call add              Add video stream for current call                 |");
-    puts("| vid call remove N         Remove video stream #N for current call           |");
-    puts("| vid call modify N CAP     Modify capture dev of video stream #N             |");
+    puts("| vid call enable/disable N Enable/disable stream #N for current call         |");
+    puts("| vid call set-cap N ID     Set capture dev ID for stream #N for current call |");
     puts("| vid dev list              List all video devices                            |");
     puts("| vid dev refresh           Refresh video device list                         |");
     puts("| vid dev prev on|off ID    Enable/disable preview for specified device ID    |");
@@ -3758,32 +3758,35 @@ static void vid_handle_menu(char *menuin)
     } else if (strcmp(argv[1], "call")==0) {
 	pjsua_call_vid_strm_op_param param;
 
-	if (strcmp(argv[2], "rx")==0) {
+	if (argc == 4 && strcmp(argv[2], "rx")==0) {
 	    pj_bool_t on = (strcmp(argv[3], "on") == 0);
 	    PJ_TODO(vid_enable_disable_video_RX_on_call);
 	    PJ_LOG(1,(THIS_FILE, "Not implemented"));
 	}
-	else if (strcmp(argv[2], "tx")==0) {
+	else if (argc == 4 && strcmp(argv[2], "tx")==0) {
 	    pj_bool_t on = (strcmp(argv[3], "on") == 0);
 	    pjsua_call_vid_strm_op op = on? PJSUA_CALL_VID_STRM_START_TRANSMIT :
 					    PJSUA_CALL_VID_STRM_STOP_TRANSMIT;
 	    pjsua_call_set_vid_strm(current_call, op, NULL);
 	}
-	else if (strcmp(argv[2], "add")==0) {
+	else if (argc == 3 && strcmp(argv[2], "add")==0) {
 	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_ADD, NULL);
 	}
-	else if (strcmp(argv[2], "disable")==0 || strcmp(argv[2], "enable")==0) {
+	else if (argc == 4 && 
+		 (strcmp(argv[2], "disable")==0 || strcmp(argv[2], "enable")==0))
+	{
 	    pj_bool_t enable = (strcmp(argv[2], "enable") == 0);
 	    pjsua_call_vid_strm_op op = enable? PJSUA_CALL_VID_STRM_ENABLE :
 						PJSUA_CALL_VID_STRM_DISABLE;
 	    param.med_idx = argc >= 4? atoi(argv[3]) : -1;
 	    pjsua_call_set_vid_strm(current_call, op, &param);
 	}
-	else if (strcmp(argv[2], "set-cap-dev")==0) {
+	else if (argc == 5 && strcmp(argv[2], "set-cap")==0) {
 	    param.med_idx = argc >= 4? atoi(argv[3]) : -1;
 	    param.cap_dev = argc >= 5? atoi(argv[4]) : PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
 	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV, &param);
-	}
+	} else
+	    goto on_error;
     } else if (strcmp(argv[1], "dev")==0) {
 	if (strcmp(argv[2], "list")==0) {
 	    vid_list_devs();

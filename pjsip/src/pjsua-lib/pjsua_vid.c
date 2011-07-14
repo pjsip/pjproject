@@ -334,13 +334,14 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	    /* Show window if requested */
 	    if (show) {
 		pjmedia_vid_dev_stream *rdr;
+		pj_bool_t hide = PJ_FALSE;
 		
 		rdr = pjmedia_vid_port_get_stream(pjsua_var.win[wid].vp_rend);
 		pj_assert(rdr);
 		status = pjmedia_vid_dev_stream_set_cap(
 					rdr,
 					PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
-					&show);
+					&hide);
 	    }
 
 	    /* Done */
@@ -925,6 +926,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
 {
     pjsua_vid_win *w;
     pjmedia_vid_dev_stream *s;
+    pj_bool_t hide;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(wid >= 0 && wid < PJSUA_MAX_VID_WINS, PJ_EINVAL);
@@ -942,8 +944,9 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
 	return PJ_EINVAL;
     }
 
+    hide = !show;
     status = pjmedia_vid_dev_stream_set_cap(s,
-			    PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE, &show);
+			    PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE, &hide);
 
     PJSUA_UNLOCK();
 
@@ -1238,8 +1241,6 @@ static pj_status_t call_modify_video(pjsua_call *call,
 						NULL, call_med->idx);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
-
-	call_med->tp_st = PJSUA_MED_TP_INIT;
 
 	/* Get transport address info */
 	pjmedia_transport_info_init(&tpinfo);
