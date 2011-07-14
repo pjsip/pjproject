@@ -48,42 +48,37 @@ typedef enum pjmedia_event_type
     /**
      * Media format has changed event.
      */
-    PJMEDIA_EVENT_FMT_CHANGED,
+    PJMEDIA_EVENT_FMT_CHANGED	= PJMEDIA_FOURCC('F', 'M', 'C', 'H'),
 
     /**
      * Video window is being closed.
      */
-    PJMEDIA_EVENT_WND_CLOSING,
+    PJMEDIA_EVENT_WND_CLOSING	= PJMEDIA_FOURCC('W', 'N', 'C', 'L'),
 
     /**
      * Video window has been closed event.
      */
-    PJMEDIA_EVENT_WND_CLOSED,
+    PJMEDIA_EVENT_WND_CLOSED	= PJMEDIA_FOURCC('W', 'N', 'C', 'O'),
 
     /**
      * Video window has been resized event.
      */
-    PJMEDIA_EVENT_WND_RESIZED,
+    PJMEDIA_EVENT_WND_RESIZED	= PJMEDIA_FOURCC('W', 'N', 'R', 'Z'),
 
     /**
      * Mouse button has been pressed event.
      */
-    PJMEDIA_EVENT_MOUSE_BTN_DOWN,
+    PJMEDIA_EVENT_MOUSE_BTN_DOWN = PJMEDIA_FOURCC('M', 'S', 'D', 'N'),
 
     /**
      * Video key frame has just been decoded event.
      */
-    PJMEDIA_EVENT_KEY_FRAME_FOUND,
+    PJMEDIA_EVENT_KEY_FRAME_FOUND = PJMEDIA_FOURCC('I', 'F', 'R', 'F'),
 
     /**
      * Video decoding error due to missing key frame event.
      */
-    PJMEDIA_EVENT_KEY_FRAME_MISSING,
-
-    /**
-     * Start of user event.
-     */
-    PJMEDIA_EVENT_USER = 100
+    PJMEDIA_EVENT_KEY_FRAME_MISSING = PJMEDIA_FOURCC('I', 'F', 'R', 'M')
 
 } pjmedia_event_type;
 

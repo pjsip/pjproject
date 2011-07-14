@@ -91,12 +91,15 @@ PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_publisher *epub,
                                            pjmedia_event *event)
 {
     pjmedia_event_subscription *esub;
+    char event_name[5];
+    char epub_name[5];
     pj_status_t err = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(epub && event, PJ_EINVAL);
 
-    TRACE_((THIS_FILE, "Event %d is published by publisher %x",
-		       event->type, epub));
+    TRACE_((THIS_FILE, "Event %s is published by publisher %s",
+		       pjmedia_fourcc_name(event->type, event_name),
+		       pjmedia_fourcc_name(epub->sig, epub_name)));
 
     esub = epub->subscription_list.next;
     if (!esub)
