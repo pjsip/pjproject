@@ -3808,30 +3808,40 @@ static void vid_handle_menu(char *menuin)
 	    goto on_error;
     } else if (strcmp(argv[1], "win")==0) {
 	if (argc==3 && strcmp(argv[2], "list")==0) {
-	    PJ_LOG(1,(THIS_FILE, "Not implemented"));
-	    PJ_TODO(vid_list_window);
+	    pjsua_vid_win_id wids[PJSUA_MAX_VID_WINS];
+	    unsigned i, cnt = PJ_ARRAY_SIZE(wids);
+
+	    pjsua_vid_enum_wins(wids, &cnt);
+
+	    PJ_LOG(3,(THIS_FILE, "Found %d video windows:", cnt));
+	    PJ_LOG(3,(THIS_FILE, "WID show    pos       size"));
+	    PJ_LOG(3,(THIS_FILE, "------------------------------"));
+	    for (i = 0; i < cnt; ++i) {
+		pjsua_vid_win_info wi;
+		pjsua_vid_win_get_info(wids[i], &wi);
+		PJ_LOG(3,(THIS_FILE, "%3d   %c  (%d,%d)  %dx%d",
+			  wids[i], (wi.show?'Y':'N'), wi.pos.x, wi.pos.y,
+			  wi.size.w, wi.size.h));
+	    }
 	} else if (argc==4 && (strcmp(argv[2], "show")==0 ||
 			       strcmp(argv[2], "hide")==0))
 	{
 	    pj_bool_t show = (strcmp(argv[2], "show")==0);
 	    pjsua_vid_win_id wid = atoi(argv[3]);
-
 	    pjsua_vid_win_set_show(wid, show);
-
 	} else if (argc==6 && strcmp(argv[2], "move")==0) {
 	    pjsua_vid_win_id wid = atoi(argv[3]);
 	    pjmedia_coord pos;
 
 	    pos.x = atoi(argv[4]);
-	    pos.y = atoi(argv[4]);
+	    pos.y = atoi(argv[5]);
 	    pjsua_vid_win_set_pos(wid, &pos);
-
 	} else if (argc==6 && strcmp(argv[2], "resize")==0) {
 	    pjsua_vid_win_id wid = atoi(argv[3]);
 	    pjmedia_rect_size size;
 
 	    size.w = atoi(argv[4]);
-	    size.h = atoi(argv[4]);
+	    size.h = atoi(argv[5]);
 	    pjsua_vid_win_set_size(wid, &size);
 	} else
 	    goto on_error;

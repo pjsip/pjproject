@@ -877,6 +877,29 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id)
  * Window
  */
 
+
+/*
+ * Enumerates all video windows.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_enum_wins( pjsua_vid_win_id wids[],
+					 unsigned *count)
+{
+    unsigned i, cnt;
+
+    cnt = 0;
+
+    for (i=0; i<PJSUA_MAX_VID_WINS && cnt <*count; ++i) {
+	pjsua_vid_win *w = &pjsua_var.win[i];
+	if (w->type != PJSUA_WND_TYPE_NONE)
+	    wids[cnt++] = i;
+    }
+
+    *count = cnt;
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Get window info.
  */
@@ -979,7 +1002,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_pos( pjsua_vid_win_id wid,
     }
 
     status = pjmedia_vid_dev_stream_set_cap(s,
-			    PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION, &pos);
+			    PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION, pos);
 
     PJSUA_UNLOCK();
 
@@ -1012,7 +1035,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_size( pjsua_vid_win_id wid,
     }
 
     status = pjmedia_vid_dev_stream_set_cap(s,
-			    PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE, &size);
+			    PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE, size);
 
     PJSUA_UNLOCK();
 

@@ -5401,6 +5401,20 @@ typedef struct pjsua_vid_win_info
 
 
 /**
+ * Enumerates all video windows.
+ *
+ * @param id		Array of window ID to be initialized.
+ * @param count		On input, specifies max elements in the array.
+ *			On return, it contains actual number of elements
+ *			that have been initialized.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_enum_wins(pjsua_vid_win_id wids[],
+					 unsigned *count);
+
+
+/**
  * Get window info.
  *
  * @param wid		The video window ID.
