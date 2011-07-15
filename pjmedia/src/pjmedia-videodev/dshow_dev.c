@@ -677,7 +677,7 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
     }
 
     if (!srcpin || !sinkpin || !mediatype) {
-        hr = S_FALSE;
+        hr = VFW_E_TYPE_NOT_ACCEPTED;
         goto on_error;
     }
     video_info = (VIDEOINFOHEADER *) mediatype->pbFormat;
