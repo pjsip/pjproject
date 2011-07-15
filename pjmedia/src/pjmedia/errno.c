@@ -268,20 +268,3 @@ PJ_DEF(pj_str_t) pjmedia_strerror( pj_status_t statcode,
     return errstr;
 }
 
-/*
- * pjmedia_videodev_strerror()
- */
-PJ_DEF(pj_str_t) pjmedia_videodev_strerror(pj_status_t statcode, 
-					   char *buf, pj_size_t bufsize )
-{
-    pj_str_t errstr;
-
-    /* Error not found. */
-    errstr.ptr = buf;
-    errstr.slen = pj_ansi_snprintf(buf, bufsize, 
-				   "Unknown pjmedia-videodev error %d",
-				   statcode);
-
-    return errstr;
-}
-
