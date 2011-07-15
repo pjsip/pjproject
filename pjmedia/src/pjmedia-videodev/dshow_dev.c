@@ -778,7 +778,7 @@ static pj_status_t dshow_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
-    pjmedia_event_publisher_init(&strm->base.epub);
+    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_DSHOW);
 
     if (param->dir & PJMEDIA_DIR_CAPTURE) {
 	const pjmedia_video_format_detail *vfd;

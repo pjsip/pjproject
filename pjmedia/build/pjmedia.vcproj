@@ -5089,6 +5089,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\include\pjmedia\signatures.h"
+				>
+			</File>
+			<File
 				RelativePath="..\include\pjmedia\silencedet.h"
 				>
 			</File>
