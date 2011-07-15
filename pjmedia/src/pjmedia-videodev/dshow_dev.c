@@ -227,6 +227,120 @@ static pj_status_t dshow_factory_destroy(pjmedia_vid_dev_factory *f)
     return PJ_SUCCESS;
 }
 
+static HRESULT get_cap_device(struct dshow_factory *df,
+			      unsigned id,
+			      IBaseFilter **filter)
+{
+    IBindCtx *pbc;
+    HRESULT hr;
+
+    hr = CreateBindCtx(0, &pbc);
+    if (SUCCEEDED (hr)) {
+	IMoniker *moniker;
+	DWORD pchEaten;
+
+	hr = MkParseDisplayName(pbc, df->dev_info[id].display_name,
+				&pchEaten, &moniker);
+	if (SUCCEEDED(hr)) {
+	    hr = IMoniker_BindToObject(moniker, pbc, NULL,
+				       &IID_IBaseFilter,
+				       (LPVOID *)filter);
+	    IMoniker_Release(moniker);
+	}
+	IBindCtx_Release(pbc);
+    }
+
+    return hr;
+}
+
+static void enum_dev_cap(IBaseFilter *filter,
+			 pjmedia_dir dir,
+			 const GUID *dshow_format,
+			 AM_MEDIA_TYPE **pMediatype,
+			 IPin **pSrcpin,
+			 pj_bool_t *sup_fmt)
+{
+    IEnumPins *pEnum;
+    AM_MEDIA_TYPE *mediatype = NULL;
+    HRESULT hr;
+
+    if (pSrcpin)
+	*pSrcpin = NULL;
+    hr = IBaseFilter_EnumPins(filter, &pEnum);
+    if (SUCCEEDED(hr)) {
+        /* Loop through all the pins. */
+	IPin *pPin = NULL;
+
+        while (IEnumPins_Next(pEnum, 1, &pPin, NULL) == S_OK) {
+            PIN_DIRECTION pindirtmp;
+
+            hr = IPin_QueryDirection(pPin, &pindirtmp);
+            if (hr != S_OK || pindirtmp != PINDIR_OUTPUT) {
+                if (SUCCEEDED(hr))
+                    IPin_Release(pPin);
+                continue;
+            }
+
+            if (dir == PJMEDIA_DIR_CAPTURE) {
+                IAMStreamConfig *streamcaps;
+
+                hr = IPin_QueryInterface(pPin, &IID_IAMStreamConfig,
+                                         (LPVOID *)&streamcaps);
+                if (SUCCEEDED(hr)) {
+                    VIDEO_STREAM_CONFIG_CAPS vscc;
+                    int i, isize, icount;
+
+                    IAMStreamConfig_GetNumberOfCapabilities(streamcaps,
+                                                            &icount, &isize);
+
+                    for (i = 0; i < icount; i++) {
+			unsigned j, nformat;
+                        RPC_STATUS rpcstatus, rpcstatus2;
+
+                        hr = IAMStreamConfig_GetStreamCaps(streamcaps, i,
+                                                           &mediatype,
+                                                           (BYTE *)&vscc);
+                        if (FAILED (hr))
+                            continue;
+
+			nformat = (dshow_format? 1:
+				   sizeof(dshow_fmts)/sizeof(dshow_fmts[0]));
+			for (j = 0; j < nformat; j++) {
+			    if (!dshow_format || j > 0)
+				dshow_format = dshow_fmts[j].dshow_format;
+			    if (UuidCompare(&mediatype->subtype, 
+					    (UUID*)dshow_format,
+					    &rpcstatus) == 0 && 
+				rpcstatus == RPC_S_OK &&
+				UuidCompare(&mediatype->formattype,
+					    (UUID*)&FORMAT_VideoInfo,
+					    &rpcstatus2) == 0 &&
+				rpcstatus2 == RPC_S_OK)
+			    {
+				if (sup_fmt)
+				    sup_fmt[j] = PJ_TRUE;
+				if (pSrcpin) {
+				    *pSrcpin = pPin;
+				    *pMediatype = mediatype;
+				}
+			    }
+			}
+			if (pSrcpin && *pSrcpin)
+			    break;
+                    }
+                    IAMStreamConfig_Release(streamcaps);
+                }
+            } else {
+                *pSrcpin = pPin;
+            }
+            if (pSrcpin && *pSrcpin)
+                break;
+            IPin_Release(pPin);
+	}
+        IEnumPins_Release(pEnum);
+    }
+}
+
 /* API: refresh the list of devices */
 static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 {
@@ -286,6 +400,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
                                        &var_name, NULL);
                 if (SUCCEEDED(hr) && var_name.bstrVal) {
                     WCHAR *wszDisplayName = NULL;
+		    IBaseFilter *filter;
 
                     ddi = &df->dev_info[df->dev_count++];
                     pj_bzero(ddi, sizeof(*ddi));
@@ -310,8 +425,35 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 
                     /* Set the device capabilities here */
                     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-                    // TODO: Query the default width, height, fps, and
-                    // supported formats
+
+		    hr = get_cap_device(df, df->dev_count-1, &filter);
+		    if (SUCCEEDED(hr)) {
+			unsigned j;
+			pj_bool_t sup_fmt[sizeof(dshow_fmts)/sizeof(dshow_fmts[0])];
+
+			pj_bzero(sup_fmt, sizeof(sup_fmt));
+			enum_dev_cap(filter, ddi->info.dir, NULL, NULL, NULL, sup_fmt);
+
+			ddi->info.fmt_cnt = 0;
+			ddi->info.fmt = (pjmedia_format*)
+					pj_pool_calloc(df->dev_pool,
+						       sizeof(dshow_fmts)/
+						       sizeof(dshow_fmts[0]),
+						       sizeof(pjmedia_format));
+
+			for (j = 0;
+			     j < sizeof(dshow_fmts)/sizeof(dshow_fmts[0]);
+			     j++)
+			{
+			    if (!sup_fmt[j])
+				continue;
+			    pjmedia_format_init_video(
+				&ddi->info.fmt[ddi->info.fmt_cnt++],
+				dshow_fmts[j].pjmedia_format, 
+				DEFAULT_WIDTH, DEFAULT_HEIGHT, 
+				DEFAULT_FPS, 1);
+			}
+		    }
                 }
                 VariantClear(&var_name);
 
@@ -335,31 +477,15 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
     ddi->info.dir = PJMEDIA_DIR_RENDER;
     ddi->info.has_callback = PJ_FALSE;
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-
-    for (c = 0; c < df->dev_count; c++) {
-	unsigned i;
-
-        ddi = &df->dev_info[c];
-        ddi->info.fmt_cnt = sizeof(dshow_fmts)/sizeof(dshow_fmts[0]);
-        ddi->info.fmt = (pjmedia_format*)
-                        pj_pool_calloc(df->dev_pool, ddi->info.fmt_cnt,
-                                       sizeof(pjmedia_format));
-
-        for (i = 0; i < ddi->info.fmt_cnt; i++) {
-            pjmedia_format *fmt = &ddi->info.fmt[i];
-
-            if (ddi->info.dir == PJMEDIA_DIR_RENDER && i > 0)
-                break;
-            pjmedia_format_init_video(fmt, dshow_fmts[i].pjmedia_format, 
-				      DEFAULT_WIDTH, DEFAULT_HEIGHT, 
-				      DEFAULT_FPS, 1);
-        }
-    }
-#endif
-
-
 //    TODO:
-//    ddi->info.caps = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+//    ddi->info.caps |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+
+    ddi->info.fmt_cnt = 1;
+    ddi->info.fmt = PJ_POOL_ZALLOC_T(df->dev_pool, pjmedia_format);
+    pjmedia_format_init_video(&ddi->info.fmt[0], dshow_fmts[0].pjmedia_format, 
+			      DEFAULT_WIDTH, DEFAULT_HEIGHT, 
+			      DEFAULT_FPS, 1);
+#endif
 
     PJ_LOG(4, (THIS_FILE, "DShow has %d devices:", 
 	       df->dev_count));
@@ -532,25 +658,8 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
     }
 
     if (dir == PJMEDIA_DIR_CAPTURE) {
-        IBindCtx *pbc;
-
-        hr = CreateBindCtx(0, &pbc);
-        if (SUCCEEDED (hr)) {
-            IMoniker *moniker;
-            DWORD pchEaten;
-
-            hr = MkParseDisplayName(pbc, 
-                                    df->dev_info[id].display_name,
-                                    &pchEaten, &moniker);
-            if (SUCCEEDED(hr)) {
-                hr = IMoniker_BindToObject(moniker, pbc, NULL,
-                                           &IID_IBaseFilter,
-                                           (LPVOID *)&graph->source_filter);
-                IMoniker_Release(moniker);
-            }
-            IBindCtx_Release(pbc);
-        }
-        if (FAILED(hr)) {
+	hr = get_cap_device(df, id, &graph->source_filter);
+	if (FAILED(hr)) {
             goto on_error;
         }
     } else {
@@ -594,94 +703,37 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
 
     vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
 
-    IBaseFilter_EnumPins(graph->source_filter, &pEnum);
-    if (SUCCEEDED(hr)) {
-        // Loop through all the pins
-	IPin *pPin = NULL;
+    enum_dev_cap(graph->source_filter, dir,
+		 get_dshow_format_info(strm->param.fmt.id)->dshow_format,
+		 &mediatype, &srcpin, NULL);
+    graph->mediatype = mediatype;
 
-        while (IEnumPins_Next(pEnum, 1, &pPin, NULL) == S_OK) {
-            PIN_DIRECTION pindirtmp;
-            const GUID *dshow_format;
-                
-            dshow_format = get_dshow_format_info(strm->param.fmt.id)->
-                                                 dshow_format;
+    if (srcpin && dir == PJMEDIA_DIR_RENDER) {
+	mediatype = graph->mediatype = &mtype;
 
-            hr = IPin_QueryDirection(pPin, &pindirtmp);
-            if (hr != S_OK || pindirtmp != PINDIR_OUTPUT) {
-                if (SUCCEEDED(hr))
-                    IPin_Release(pPin);
-                continue;
-            }
+	memset (mediatype, 0, sizeof(AM_MEDIA_TYPE));
+	mediatype->majortype = MEDIATYPE_Video;
+	mediatype->subtype = *(get_dshow_format_info(strm->param.fmt.id)->
+			       dshow_format);
+	mediatype->bFixedSizeSamples = TRUE;
+	mediatype->bTemporalCompression = FALSE;
 
-            if (dir == PJMEDIA_DIR_CAPTURE) {
-                IAMStreamConfig *streamcaps;
+	vi = (VIDEOINFOHEADER *)
+	    CoTaskMemAlloc(sizeof(VIDEOINFOHEADER));
+	memset (vi, 0, sizeof(VIDEOINFOHEADER));
+	mediatype->formattype = FORMAT_VideoInfo;
+	mediatype->cbFormat = sizeof(VIDEOINFOHEADER);
+	mediatype->pbFormat = (BYTE *)vi;
 
-                hr = IPin_QueryInterface(pPin, &IID_IAMStreamConfig,
-                                         (LPVOID *)&streamcaps);
-                if (SUCCEEDED(hr)) {
-                    VIDEO_STREAM_CONFIG_CAPS vscc;
-                    int i, isize, icount;
+	vi->rcSource.bottom = vfd->size.h;
+	vi->rcSource.right = vfd->size.w;
+	vi->rcTarget.bottom = vfd->size.h;
+	vi->rcTarget.right = vfd->size.w;
 
-                    IAMStreamConfig_GetNumberOfCapabilities(streamcaps,
-                                                            &icount, &isize);
-
-                    for (i = 0; i < icount; i++) {
-                        RPC_STATUS rpcstatus, rpcstatus2;
-
-                        hr = IAMStreamConfig_GetStreamCaps(streamcaps, i,
-                                                           &mediatype,
-                                                           (BYTE *)&vscc);
-                        if (FAILED (hr))
-                            continue;
-
-                        if (UuidCompare(&mediatype->subtype, 
-					(UUID*)dshow_format,
-					&rpcstatus) == 0 && 
-			    rpcstatus == RPC_S_OK &&
-			    UuidCompare(&mediatype->formattype,
-					(UUID*)&FORMAT_VideoInfo,
-					&rpcstatus2) == 0 &&
-			    rpcstatus2 == RPC_S_OK)
-                        {
-                            srcpin = pPin;
-                            graph->mediatype = mediatype;
-			    break;
-                        }
-                    }
-                    IAMStreamConfig_Release(streamcaps);
-                }
-            } else {
-                srcpin = pPin;
-                mediatype = graph->mediatype = &mtype;
-
-                memset (mediatype, 0, sizeof(AM_MEDIA_TYPE));
-                mediatype->majortype = MEDIATYPE_Video;
-                mediatype->subtype = *dshow_format;
-                mediatype->bFixedSizeSamples = TRUE;
-                mediatype->bTemporalCompression = FALSE;
-
-                vi = (VIDEOINFOHEADER *)
-                     CoTaskMemAlloc(sizeof(VIDEOINFOHEADER));
-                memset (vi, 0, sizeof(VIDEOINFOHEADER));
-                mediatype->formattype = FORMAT_VideoInfo;
-                mediatype->cbFormat = sizeof(VIDEOINFOHEADER);
-                mediatype->pbFormat = (BYTE *)vi;
-
-                vi->rcSource.bottom = vfd->size.h;
-                vi->rcSource.right = vfd->size.w;
-                vi->rcTarget.bottom = vfd->size.h;
-                vi->rcTarget.right = vfd->size.w;
-
-                vi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-                vi->bmiHeader.biPlanes = 1;
-                vi->bmiHeader.biBitCount = vfi->bpp;
-                vi->bmiHeader.biCompression = strm->param.fmt.id;
-            }
-            if (srcpin)
-                break;
-            IPin_Release(pPin);
-	}
-        IEnumPins_Release(pEnum);
+	vi->bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+	vi->bmiHeader.biPlanes = 1;
+	vi->bmiHeader.biBitCount = vfi->bpp;
+	vi->bmiHeader.biCompression = strm->param.fmt.id;
     }
 
     if (!srcpin || !sinkpin || !mediatype) {
