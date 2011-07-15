@@ -70,7 +70,8 @@ typedef struct pjmedia_audio_codec_config
  *
  * @param cfg		The codec config to be initialized.
  */
-PJ_DECL(void) pjmedia_audio_codec_config_default(pjmedia_audio_codec_config *cfg);
+PJ_DECL(void)
+pjmedia_audio_codec_config_default(pjmedia_audio_codec_config *cfg);
 
 /**
  * Register all known audio codecs implemented in PJMEDA-CODEC library to the

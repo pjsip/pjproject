@@ -554,8 +554,6 @@ typedef struct pjmedia_codec_factory_op
 
     /**
      * This callback will be called to deinitialize and destroy this factory.
-     *
-     * @param factory	The codec factory.
      */
     pj_status_t (*destroy)(void);
 
