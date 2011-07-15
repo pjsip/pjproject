@@ -381,17 +381,17 @@ typedef enum pjsua_call_vid_strm_op
     PJSUA_CALL_VID_STRM_ADD,
 
     /**
-     * Disable/remove an existing video stream.
+     * Remove/disable an existing video stream.
      */
-    PJSUA_CALL_VID_STRM_DISABLE,
+    PJSUA_CALL_VID_STRM_REMOVE,
 
     /**
-     * Enable video stream.
+     * Change direction of a video stream.
      */
-    PJSUA_CALL_VID_STRM_ENABLE,
+    PJSUA_CALL_VID_STRM_CHANGE_DIR,
 
     /**
-     * Changing capture device of a video stream.
+     * Change capture device of a video stream.
      */
     PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV,
 
@@ -420,8 +420,21 @@ typedef struct pjsua_call_vid_strm_op_param
      *
      * This field is valid for all video stream operations, except
      * PJSUA_CALL_VID_STRM_ADD.
+     *
+     * Default: -1 (first active video stream, or any first video stream
+     *              if none is active)
      */
     int med_idx;
+ 
+    /**
+     * Specify the media stream direction.
+     *
+     * This field is valid for the following video stream operations:
+     * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_DIR.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
+     */
+    pjmedia_dir dir;
  
     /**
      * Specify the video capture device ID. This can be set to
@@ -429,8 +442,9 @@ typedef struct pjsua_call_vid_strm_op_param
      * device as configured in the account.
      *
      * This field is valid for the following video stream operations:
-     * PJSUA_CALL_VID_STRM_ADD, PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV, and
-     * PJSUA_CALL_VID_STRM_START_TRANSMIT.
+     * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV.
+     *
+     * Default: capture device configured in account.
      */
     pjmedia_vid_dev_index cap_dev;
 
@@ -3772,7 +3786,9 @@ PJ_DECL(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id);
  * @param call_id	Call identification.
  * @param op		The video stream operation to be performed,
  *			possible values are #pjsua_call_vid_strm_op.
- * @param param		The parameters for the video stream operation.
+ * @param param		The parameters for the video stream operation,
+ *			or NULL for the default parameter values
+ *			(see #pjsua_call_vid_strm_op_param).
  *
  * @return		PJ_SUCCESS on success or the appropriate error.
  */

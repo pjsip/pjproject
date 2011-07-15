@@ -776,7 +776,9 @@ void stop_video_stream(pjsua_call_media *call_med)
     pjmedia_event_unsubscribe(&call_med->esub_rend);
     pjmedia_event_unsubscribe(&call_med->esub_cap);
 
-    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
+    if (call_med->dir & PJMEDIA_DIR_ENCODING &&
+	call_med->strm.v.cap_win_id != PJSUA_INVALID_ID)
+    {
 	pjmedia_port *media_port;
 	pjsua_vid_win *w =
 		    &pjsua_var.win[call_med->strm.v.cap_win_id];
@@ -793,7 +795,9 @@ void stop_video_stream(pjsua_call_media *call_med)
 	dec_vid_win(call_med->strm.v.cap_win_id);
     }
 
-    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
+    if (call_med->dir & PJMEDIA_DIR_DECODING &&
+	call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID)
+    {
 	dec_vid_win(call_med->strm.v.rdr_win_id);
     }
 
@@ -1136,7 +1140,8 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
 
 /* Add a new video stream into a call */
 static pj_status_t call_add_video(pjsua_call *call,
-				  pjmedia_vid_dev_index cap_dev)
+				  pjmedia_vid_dev_index cap_dev,
+				  pjmedia_dir dir)
 {
     pj_pool_t *pool = call->inv->pool_prov;
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
@@ -1192,6 +1197,23 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     sdp->media[sdp->media_count++] = sdp_m;
 
+    /* Update media direction, if it is not 'sendrecv' */
+    if (dir != PJMEDIA_DIR_ENCODING_DECODING) {
+	pjmedia_sdp_attr *a;
+
+	/* Remove sendrecv direction attribute, if any */
+	pjmedia_sdp_media_remove_all_attr(sdp_m, "sendrecv");
+
+	if (dir == PJMEDIA_DIR_ENCODING)
+	    a = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
+	else if (dir == PJMEDIA_DIR_DECODING)
+	    a = pjmedia_sdp_attr_create(pool, "recvonly", NULL);
+	else
+	    a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+
+	pjmedia_sdp_media_add_attr(sdp_m, a);
+    }
+
     /* Update SDP media line by media transport */
     status = pjmedia_transport_encode_sdp(call_med->tp, pool,
 					  sdp, NULL, call_med->idx);
@@ -1214,10 +1236,13 @@ on_error:
 }
 
 
-/* Modify a video stream from a call, i.e: enable/disable */
+/* Modify a video stream from a call, i.e: update direction,
+ * remove/disable.
+ */
 static pj_status_t call_modify_video(pjsua_call *call,
 				     int med_idx,
-				     pj_bool_t enable)
+				     pjmedia_dir dir,
+				     pj_bool_t remove)
 {
     pjsua_call_media *call_med;
     pjmedia_sdp_session *sdp;
@@ -1240,10 +1265,13 @@ static pj_status_t call_modify_video(pjsua_call *call,
     if (call_med->type != PJMEDIA_TYPE_VIDEO)
 	return PJ_EINVAL;
 
-    /* Verify if the stream already enabled/disabled */
-    if (( enable && call_med->dir != PJMEDIA_DIR_NONE) ||
-	(!enable && call_med->dir == PJMEDIA_DIR_NONE))
+    /* Verify if the stream dir is not changed */
+    if ((!remove && call_med->dir == dir) ||
+	( remove && (call_med->tp_st == PJSUA_MED_TP_DISABLED ||
+		     call_med->tp == NULL)))
+    {
 	return PJ_SUCCESS;
+    }
 
     /* Get active local SDP */
     status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
@@ -1252,11 +1280,10 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
     pj_assert(med_idx < (int)sdp->media_count);
 
-    if (enable) {
+    if (!remove) {
 	pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
 	pj_pool_t *pool = call->inv->pool_prov;
 	pjmedia_sdp_media *sdp_m;
-	pjmedia_transport_info tpinfo;
 
 	status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
 				       &acc_cfg->rtp_cfg, call->secure_level,
@@ -1265,20 +1292,50 @@ static pj_status_t call_modify_video(pjsua_call *call,
 	    goto on_error;
 
 	/* Init transport media */
-	status = pjmedia_transport_media_create(call_med->tp, pool, 0,
-						NULL, call_med->idx);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+	if (call_med->tp && call_med->tp_st == PJSUA_MED_TP_IDLE) {
+	    status = pjmedia_transport_media_create(call_med->tp, pool, 0,
+						    NULL, call_med->idx);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+	}
 
-	/* Get transport address info */
-	pjmedia_transport_info_init(&tpinfo);
-	pjmedia_transport_get_info(call_med->tp, &tpinfo);
+	sdp_m = sdp->media[med_idx];
 
-	/* Create SDP media line */
-	status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
-						&tpinfo.sock_info, 0, &sdp_m);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+	/* Create new SDP media line if the stream is disabled */
+	if (sdp->media[med_idx]->desc.port == 0) {
+	    pjmedia_transport_info tpinfo;
+
+	    /* Get transport address info */
+	    pjmedia_transport_info_init(&tpinfo);
+	    pjmedia_transport_get_info(call_med->tp, &tpinfo);
+
+	    status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
+						    &tpinfo.sock_info, 0, &sdp_m);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+	}
+
+	{
+	    pjmedia_sdp_attr *a;
+
+	    /* Remove any direction attributes */
+	    pjmedia_sdp_media_remove_all_attr(sdp_m, "sendrecv");
+	    pjmedia_sdp_media_remove_all_attr(sdp_m, "sendonly");
+	    pjmedia_sdp_media_remove_all_attr(sdp_m, "recvonly");
+	    pjmedia_sdp_media_remove_all_attr(sdp_m, "inactive");
+
+	    /* Update media direction */
+	    if (dir == PJMEDIA_DIR_ENCODING_DECODING)
+		a = pjmedia_sdp_attr_create(pool, "sendrecv", NULL);
+	    else if (dir == PJMEDIA_DIR_ENCODING)
+		a = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
+	    else if (dir == PJMEDIA_DIR_DECODING)
+		a = pjmedia_sdp_attr_create(pool, "recvonly", NULL);
+	    else
+		a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+
+	    pjmedia_sdp_media_add_attr(sdp_m, a);
+	}
 
 	sdp->media[med_idx] = sdp_m;
 
@@ -1290,20 +1347,21 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
 on_error:
 	if (status != PJ_SUCCESS) {
-	    if (call_med->tp) {
-		pjmedia_transport_close(call_med->tp);
-		call_med->tp = call_med->tp_orig = NULL;
-	    }
 	    return status;
 	}
+    
     } else {
+
+	pj_pool_t *pool = call->inv->pool_prov;
+
 	/* Mark media transport to disabled */
 	// Don't close this here, as SDP negotiation has not been
 	// done and stream may be still active.
 	call_med->tp_st = PJSUA_MED_TP_DISABLED;
 
-	/* Disable the stream in SDP by setting port to 0 */
-	sdp->media[med_idx]->desc.port = 0;
+	/* Deactivate the stream */
+	pjmedia_sdp_media_deactivate(pool, sdp->media[med_idx]);
+
     }
 
     status = call_reoffer_sdp(call->index, sdp);
@@ -1444,10 +1502,10 @@ on_error:
 }
 
 
-/* Start transmitting video stream in a call */
-static pj_status_t call_start_tx_video(pjsua_call *call,
-				       int med_idx,
-				       pjmedia_vid_dev_index cap_dev)
+/* Start/stop transmitting video stream in a call */
+static pj_status_t call_set_tx_video(pjsua_call *call,
+				     int med_idx,
+				     pj_bool_t enable)
 {
     pjsua_call_media *call_med;
     pj_status_t status;
@@ -1467,60 +1525,22 @@ static pj_status_t call_start_tx_video(pjsua_call *call,
 
     /* Verify if the stream is transmitting video */
     if (call_med->type != PJMEDIA_TYPE_VIDEO || 
-	(call_med->dir & PJMEDIA_DIR_ENCODING) == 0)
+	(enable && (call_med->dir & PJMEDIA_DIR_ENCODING) == 0))
     {
 	return PJ_EINVAL;
     }
 
-    /* Apply the capture device, it may be changed! */
-    status = call_change_cap_dev(call, med_idx, cap_dev);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Start stream in encoding direction */
-    status = pjmedia_vid_stream_resume(call_med->strm.v.stream,
-				       PJMEDIA_DIR_ENCODING);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    return PJ_SUCCESS;
-}
-
-
-/* Stop transmitting video stream in a call */
-static pj_status_t call_stop_tx_video(pjsua_call *call,
-				      int med_idx)
-{
-    pjsua_call_media *call_med;
-    pj_status_t status;
-
-    /* Verify and normalize media index */
-    if (med_idx == -1) {
-	int first_active;
-	
-	call_get_vid_strm_info(call, &first_active, NULL, NULL, NULL);
-	if (first_active == -1)
-	    return PJ_ENOTFOUND;
-
-	med_idx = first_active;
+    if (enable) {
+	/* Start stream in encoding direction */
+	status = pjmedia_vid_stream_resume(call_med->strm.v.stream,
+					   PJMEDIA_DIR_ENCODING);
+    } else {
+	/* Pause stream in encoding direction */
+	status = pjmedia_vid_stream_pause( call_med->strm.v.stream,
+					   PJMEDIA_DIR_ENCODING);
     }
 
-    call_med = &call->media[med_idx];
-
-    /* Verify if the stream is transmitting video */
-    if (call_med->type != PJMEDIA_TYPE_VIDEO || 
-	(call_med->dir & PJMEDIA_DIR_ENCODING) == 0)
-    {
-	return PJ_EINVAL;
-    }
-
-    /* Pause stream in encoding direction */
-    status = pjmedia_vid_stream_pause( call_med->strm.v.stream,
-				       PJMEDIA_DIR_ENCODING);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    return PJ_SUCCESS;
+    return status;
 }
 
 
@@ -1548,6 +1568,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
     } else {
 	param_.med_idx = -1;
 	param_.cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+	param_.dir = PJMEDIA_DIR_ENCODING_DECODING;
     }
 
     /* If set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV, replace it with
@@ -1571,22 +1592,23 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 
     switch (op) {
     case PJSUA_CALL_VID_STRM_ADD:
-	status = call_add_video(call, param_.cap_dev);
+	status = call_add_video(call, param_.cap_dev, param_.dir);
 	break;
-    case PJSUA_CALL_VID_STRM_ENABLE:
-	status = call_modify_video(call, param_.med_idx, PJ_TRUE);
+    case PJSUA_CALL_VID_STRM_REMOVE:
+	status = call_modify_video(call, param_.med_idx, PJMEDIA_DIR_NONE,
+				   PJ_TRUE);
 	break;
-    case PJSUA_CALL_VID_STRM_DISABLE:
-	status = call_modify_video(call, param_.med_idx, PJ_FALSE);
+    case PJSUA_CALL_VID_STRM_CHANGE_DIR:
+	status = call_modify_video(call, param_.med_idx, param_.dir, PJ_FALSE);
 	break;
     case PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV:
 	status = call_change_cap_dev(call, param_.med_idx, param_.cap_dev);
 	break;
     case PJSUA_CALL_VID_STRM_START_TRANSMIT:
-	status = call_start_tx_video(call, param_.med_idx, param_.cap_dev);
+	status = call_set_tx_video(call, param_.med_idx, PJ_TRUE);
 	break;
     case PJSUA_CALL_VID_STRM_STOP_TRANSMIT:
-	status = call_stop_tx_video(call, param_.med_idx);
+	status = call_set_tx_video(call, param_.med_idx, PJ_FALSE);
 	break;
     default:
 	status = PJ_EINVALIDOP;
