@@ -66,6 +66,7 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 {
     pj_str_t codec_id = {NULL, 0};
     unsigned opt;
+    pjmedia_audio_codec_config codec_cfg;
     pj_status_t status;
 
     /* To suppress warning about unused var when all codecs are disabled */
@@ -112,86 +113,13 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	return status;
     }
 
-    /* Register all codecs */
-
-#if PJMEDIA_HAS_SPEEX_CODEC
-    /* Register speex. */
-    status = pjmedia_codec_speex_init(pjsua_var.med_endpt,  
-				      0, 
-				      pjsua_var.media_cfg.quality,  
-				      -1);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing Speex codec",
-		     status);
-	return status;
-    }
-
-    /* Set speex/16000 to higher priority*/
-    codec_id = pj_str("speex/16000");
-    pjmedia_codec_mgr_set_codec_priority( 
-	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
-	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+2);
-
-    /* Set speex/8000 to next higher priority*/
-    codec_id = pj_str("speex/8000");
-    pjmedia_codec_mgr_set_codec_priority( 
-	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
-	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+1);
-
-
-
-#endif /* PJMEDIA_HAS_SPEEX_CODEC */
-
-#if PJMEDIA_HAS_ILBC_CODEC
-    /* Register iLBC. */
-    status = pjmedia_codec_ilbc_init( pjsua_var.med_endpt, 
-				      pjsua_var.media_cfg.ilbc_mode);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing iLBC codec",
-		     status);
-	return status;
-    }
-#endif /* PJMEDIA_HAS_ILBC_CODEC */
-
-#if PJMEDIA_HAS_GSM_CODEC
-    /* Register GSM */
-    status = pjmedia_codec_gsm_init(pjsua_var.med_endpt);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing GSM codec",
-		     status);
-	return status;
-    }
-#endif /* PJMEDIA_HAS_GSM_CODEC */
-
-#if PJMEDIA_HAS_G711_CODEC
-    /* Register PCMA and PCMU */
-    status = pjmedia_codec_g711_init(pjsua_var.med_endpt);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing G711 codec",
-		     status);
-	return status;
-    }
-#endif	/* PJMEDIA_HAS_G711_CODEC */
-
-#if PJMEDIA_HAS_G722_CODEC
-    status = pjmedia_codec_g722_init( pjsua_var.med_endpt );
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing G722 codec",
-		     status);
-	return status;
-    }
-#endif  /* PJMEDIA_HAS_G722_CODEC */
-
-#if PJMEDIA_HAS_INTEL_IPP
-    /* Register IPP codecs */
-    status = pjmedia_codec_ipp_init(pjsua_var.med_endpt);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing IPP codecs",
-		     status);
-	return status;
-    }
-
-#endif /* PJMEDIA_HAS_INTEL_IPP */
+    /*
+     * Register all codecs
+     */
+    pjmedia_audio_codec_config_default(&codec_cfg);
+    codec_cfg.speex.quality = pjsua_var.media_cfg.quality;
+    codec_cfg.speex.complexity = -1;
+    codec_cfg.ilbc.mode = pjsua_var.media_cfg.ilbc_mode;
 
 #if PJMEDIA_HAS_PASSTHROUGH_CODECS
     /* Register passthrough codecs */
@@ -199,7 +127,6 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	unsigned aud_idx;
 	unsigned ext_fmt_cnt = 0;
 	pjmedia_format ext_fmts[32];
-	pjmedia_codec_passthrough_setting setting;
 
 	/* List extended formats supported by audio devices */
 	for (aud_idx = 0; aud_idx < pjmedia_aud_dev_count(); ++aud_idx) {
@@ -236,44 +163,37 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 	}
 
 	/* Init the passthrough codec with supported formats only */
-	setting.fmt_cnt = ext_fmt_cnt;
-	setting.fmts = ext_fmts;
-	setting.ilbc_mode = cfg->ilbc_mode;
-	status = pjmedia_codec_passthrough_init2(pjsua_var.med_endpt, &setting);
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error initializing passthrough codecs",
-			 status);
-	    return status;
-	}
+	codec_cfg.passthrough.setting.fmt_cnt = ext_fmt_cnt;
+	codec_cfg.passthrough.setting.fmts = ext_fmts;
+	codec_cfg.passthrough.setting.ilbc_mode = cfg->ilbc_mode;
     }
 #endif /* PJMEDIA_HAS_PASSTHROUGH_CODECS */
 
-#if PJMEDIA_HAS_G7221_CODEC
-    /* Register G722.1 codecs */
-    status = pjmedia_codec_g7221_init(pjsua_var.med_endpt);
+    /* Register all codecs */
+    status = pjmedia_codec_register_audio_codecs(pjsua_var.med_endpt,
+                                                 &codec_cfg);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing G722.1 codec",
-		     status);
+	PJ_PERROR(1,(THIS_FILE, status, "Error registering codecs"));
 	return status;
     }
-#endif /* PJMEDIA_HAS_G7221_CODEC */
 
-#if PJMEDIA_HAS_L16_CODEC
-    /* Register L16 family codecs, but disable all */
-    status = pjmedia_codec_l16_init(pjsua_var.med_endpt, 0);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing L16 codecs",
-		     status);
-	return status;
-    }
+    /* Set speex/16000 to higher priority*/
+    codec_id = pj_str("speex/16000");
+    pjmedia_codec_mgr_set_codec_priority(
+	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+2);
+
+    /* Set speex/8000 to next higher priority*/
+    codec_id = pj_str("speex/8000");
+    pjmedia_codec_mgr_set_codec_priority(
+	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
+	&codec_id, PJMEDIA_CODEC_PRIO_NORMAL+1);
 
     /* Disable ALL L16 codecs */
     codec_id = pj_str("L16");
     pjmedia_codec_mgr_set_codec_priority( 
 	pjmedia_endpt_get_codec_mgr(pjsua_var.med_endpt),
 	&codec_id, PJMEDIA_CODEC_PRIO_DISABLED);
-
-#endif	/* PJMEDIA_HAS_L16_CODEC */
 
 
     /* Save additional conference bridge parameters for future
@@ -518,38 +438,6 @@ pj_status_t pjsua_media_subsys_destroy(void)
 #	if PJMEDIA_HAS_VIDEO
 	    pjsua_vid_subsys_destroy();
 #	endif
-	/* Shutdown all codecs: */
-#	if PJMEDIA_HAS_SPEEX_CODEC
-	    pjmedia_codec_speex_deinit();
-#	endif /* PJMEDIA_HAS_SPEEX_CODEC */
-
-#	if PJMEDIA_HAS_GSM_CODEC
-	    pjmedia_codec_gsm_deinit();
-#	endif /* PJMEDIA_HAS_GSM_CODEC */
-
-#	if PJMEDIA_HAS_G711_CODEC
-	    pjmedia_codec_g711_deinit();
-#	endif	/* PJMEDIA_HAS_G711_CODEC */
-
-#	if PJMEDIA_HAS_G722_CODEC
-	    pjmedia_codec_g722_deinit();
-#	endif	/* PJMEDIA_HAS_G722_CODEC */
-
-#	if PJMEDIA_HAS_INTEL_IPP
-	    pjmedia_codec_ipp_deinit();
-#	endif	/* PJMEDIA_HAS_INTEL_IPP */
-
-#	if PJMEDIA_HAS_PASSTHROUGH_CODECS
-	    pjmedia_codec_passthrough_deinit();
-#	endif /* PJMEDIA_HAS_PASSTHROUGH_CODECS */
-
-#	if PJMEDIA_HAS_G7221_CODEC
-	    pjmedia_codec_g7221_deinit();
-#	endif /* PJMEDIA_HAS_G7221_CODEC */
-
-#	if PJMEDIA_HAS_L16_CODEC
-	    pjmedia_codec_l16_deinit();
-#	endif	/* PJMEDIA_HAS_L16_CODEC */
 
 	pjmedia_endpt_destroy(pjsua_var.med_endpt);
 	pjsua_var.med_endpt = NULL;

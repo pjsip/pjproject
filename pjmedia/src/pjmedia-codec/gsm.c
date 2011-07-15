@@ -117,7 +117,8 @@ static pjmedia_codec_factory_op gsm_factory_op =
     &gsm_default_attr,
     &gsm_enum_codecs,
     &gsm_alloc_codec,
-    &gsm_dealloc_codec
+    &gsm_dealloc_codec,
+    &pjmedia_codec_gsm_deinit
 };
 
 /* GSM factory */

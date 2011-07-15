@@ -928,18 +928,7 @@ static pj_status_t init_media()
 
 
     /* Must register all codecs to be supported */
-#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
-    pjmedia_codec_g711_init(app.med_endpt);
-#endif
-#if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC!=0
-    pjmedia_codec_gsm_init(app.med_endpt);
-#endif
-#if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
-    pjmedia_codec_speex_init(app.med_endpt, PJMEDIA_SPEEX_NO_UWB, 3, 3);
-#endif
-#if defined(PJMEDIA_HAS_G722_CODEC) && PJMEDIA_HAS_G722_CODEC!=0
-    pjmedia_codec_g722_init(app.med_endpt);
-#endif
+    pjmedia_codec_register_audio_codecs(app.med_endpt, NULL);
 
     /* Init dummy socket addresses */
     app.skinfo_cnt = 0;

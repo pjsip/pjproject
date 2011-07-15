@@ -113,7 +113,8 @@ static pjmedia_codec_factory_op ilbc_factory_op =
     &ilbc_default_attr,
     &ilbc_enum_codecs,
     &ilbc_alloc_codec,
-    &ilbc_dealloc_codec
+    &ilbc_dealloc_codec,
+    &pjmedia_codec_ilbc_deinit
 };
 
 /* iLBC factory */

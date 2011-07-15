@@ -238,21 +238,7 @@ int main(int argc, char *argv[])
     CHECK( pjmedia_endpt_create(&cp.factory, NULL, 1, &mept) );
 
     /* Register all codecs */
-#if PJMEDIA_HAS_G711_CODEC
-    CHECK( pjmedia_codec_g711_init(mept) );
-#endif
-#if PJMEDIA_HAS_GSM_CODEC
-    CHECK( pjmedia_codec_gsm_init(mept) );
-#endif
-#if PJMEDIA_HAS_ILBC_CODEC
-    CHECK( pjmedia_codec_ilbc_init(mept, 30) );
-#endif
-#if PJMEDIA_HAS_SPEEX_CODEC
-    CHECK( pjmedia_codec_speex_init(mept, 0, 5, 5) );
-#endif
-#if PJMEDIA_HAS_G722_CODEC
-    CHECK( pjmedia_codec_g722_init(mept) );
-#endif
+    CHECK( pjmedia_codec_register_audio_codecs(mept, NULL) );
 
     pj_gettimeofday(&t0);
     status = enc_dec_test(argv[1], argv[2], argv[3]);

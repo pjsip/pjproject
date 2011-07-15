@@ -228,29 +228,7 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
     pj_status_t status;
 
     /* Initialize all codecs */
-#if PJMEDIA_HAS_SPEEX_CODEC
-    T( pjmedia_codec_speex_init(app.mept, 0, 10, 10) );
-#endif /* PJMEDIA_HAS_SPEEX_CODEC */
-
-#if PJMEDIA_HAS_ILBC_CODEC
-    T( pjmedia_codec_ilbc_init(app.mept, 30) );
-#endif /* PJMEDIA_HAS_ILBC_CODEC */
-
-#if PJMEDIA_HAS_GSM_CODEC
-    T( pjmedia_codec_gsm_init(app.mept) );
-#endif /* PJMEDIA_HAS_GSM_CODEC */
-
-#if PJMEDIA_HAS_G711_CODEC
-    T( pjmedia_codec_g711_init(app.mept) );
-#endif	/* PJMEDIA_HAS_G711_CODEC */
-
-#if PJMEDIA_HAS_G722_CODEC
-    T( pjmedia_codec_g722_init(app.mept) );
-#endif	/* PJMEDIA_HAS_G722_CODEC */
-
-#if PJMEDIA_HAS_L16_CODEC
-    T( pjmedia_codec_l16_init(app.mept, 0) );
-#endif	/* PJMEDIA_HAS_L16_CODEC */
+    T( pjmedia_codec_register_audio_codecs(app.mept, NULL) );
 
     /* Create SRTP transport is needed */
 #if PJMEDIA_HAS_SRTP

@@ -472,31 +472,7 @@ static pj_status_t test_init(void)
     }
 
     /* Register codecs */
-#if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
-    pjmedia_codec_gsm_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
-    pjmedia_codec_g711_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
-    pjmedia_codec_speex_init(g_app.endpt, 0, PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY,
-			     PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY);
-#endif
-#if defined(PJMEDIA_HAS_G722_CODEC) && (PJMEDIA_HAS_G722_CODEC != 0)
-    pjmedia_codec_g722_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_ILBC_CODEC) && PJMEDIA_HAS_ILBC_CODEC != 0
-    /* Init ILBC with mode=20 to make the losts occur at the same
-     * places as other codecs.
-     */
-    pjmedia_codec_ilbc_init(g_app.endpt, 20);
-#endif
-#if defined(PJMEDIA_HAS_INTEL_IPP) && PJMEDIA_HAS_INTEL_IPP != 0
-    pjmedia_codec_ipp_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC != 0
-    pjmedia_codec_l16_init(g_app.endpt, 0);
-#endif
+    pjmedia_codec_register_audio_codecs(g_app.endpt, NULL);
 
     /* Create the loop transport */
     status = pjmedia_transport_loop_create(g_app.endpt, &g_app.loop);

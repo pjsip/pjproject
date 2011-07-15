@@ -552,6 +552,13 @@ typedef struct pjmedia_codec_factory_op
     pj_status_t (*dealloc_codec)(pjmedia_codec_factory *factory, 
 				 pjmedia_codec *codec );
 
+    /**
+     * This callback will be called to deinitialize and destroy this factory.
+     *
+     * @param factory	The codec factory.
+     */
+    pj_status_t (*destroy)(void);
+
 } pjmedia_codec_factory_op;
 
 
@@ -723,10 +730,11 @@ pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 /**
  * Unregister codec factory from the codec manager. This will also
  * remove all the codecs registered by the codec factory from the
- * codec manager's list of supported codecs.
+ * codec manager's list of supported codecs. This function should
+ * only be called by the codec implementers and not by application.
  *
- * @param mgr	    The codec manager instance. Application can get the
- *		    instance by calling #pjmedia_endpt_get_codec_mgr().
+ * @param mgr	    The codec manager instance, use
+ * 			#pjmedia_endpt_get_codec_mgr().
  * @param factory   The codec factory to be unregistered.
  *
  * @return	    PJ_SUCCESS on success.

@@ -112,7 +112,8 @@ static pjmedia_codec_factory_op l16_factory_op =
     &l16_default_attr,
     &l16_enum_codecs,
     &l16_alloc_codec,
-    &l16_dealloc_codec
+    &l16_dealloc_codec,
+    &pjmedia_codec_l16_deinit
 };
 
 /* L16 factory private data */
