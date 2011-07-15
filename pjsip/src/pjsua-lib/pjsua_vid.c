@@ -746,7 +746,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	PJ_LOG(4,(THIS_FILE,"Media updates%s", info));
     }
 
-    if (!acc->cfg.vid_out_auto_transmit) {
+    if (!acc->cfg.vid_out_auto_transmit && call_med->strm.v.stream) {
 	status = pjmedia_vid_stream_pause(call_med->strm.v.stream,
 					  PJMEDIA_DIR_ENCODING);
 	if (status != PJ_SUCCESS)
