@@ -1426,8 +1426,10 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
     PJ_UNUSED_ARG(security_level);
 #endif
 
-    pjmedia_event_subscription_init(&call_med->esub, &call_media_on_event,
+    pjmedia_event_subscription_init(&call_med->esub_rend, &call_media_on_event,
                                     call_med);
+    pjmedia_event_subscription_init(&call_med->esub_cap, &call_media_on_event,
+                                        call_med);
 
     return PJ_SUCCESS;
 

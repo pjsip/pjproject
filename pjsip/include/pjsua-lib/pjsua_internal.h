@@ -99,7 +99,8 @@ typedef struct pjsua_call_media
 					    address)			    */
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
-    pjmedia_event_subscription esub;/**< To subscribe to media events.	    */
+    pjmedia_event_subscription esub_rend;/**< Subscribe renderer events.     */
+    pjmedia_event_subscription esub_cap;/**< Subscribe capture events.      */
 } pjsua_call_media;
 
 /**

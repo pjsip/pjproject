@@ -631,12 +631,12 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	    if (status != PJ_SUCCESS)
 		return status;
 
+	    w = &pjsua_var.win[wid];
+
 	    /* Register to video events */
 	    pjmedia_event_subscribe(
 		    pjmedia_vid_port_get_event_publisher(w->vp_rend),
-		    &call_med->esub);
-
-	    w = &pjsua_var.win[wid];
+		    &call_med->esub_rend);
 	    
 	    /* Connect renderer to stream */
 	    status = pjmedia_vid_port_connect(w->vp_rend, media_port,
@@ -679,6 +679,10 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 		return status;
 
 	    w = &pjsua_var.win[wid];
+
+	    pjmedia_event_subscribe(
+		    pjmedia_vid_port_get_event_publisher(w->vp_cap),
+		    &call_med->esub_cap);
 	    
 	    /* Connect stream to capturer (via video window tee) */
 	    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, media_port);
@@ -767,6 +771,10 @@ void stop_video_stream(pjsua_call_media *call_med)
 
     if (!strm)
 	return;
+
+    /* Unsubscribe events */
+    pjmedia_event_unsubscribe(&call_med->esub_rend);
+    pjmedia_event_unsubscribe(&call_med->esub_cap);
 
     if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
 	pjmedia_port *media_port;
@@ -1354,6 +1362,8 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 					 PJMEDIA_DIR_ENCODING, &media_port);
     if (status != PJ_SUCCESS)
 	return status;
+
+    pjmedia_event_unsubscribe(&call_med->esub_cap);
     
     /* = Detach stream port from the old capture device = */
     status = pjmedia_vid_port_disconnect(w->vp_cap);
@@ -1391,6 +1401,10 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     status = pjmedia_vid_port_connect(new_w->vp_cap, new_w->tee, PJ_FALSE);
     if (status != PJ_SUCCESS)
 	return status;
+
+    pjmedia_event_subscribe(
+	    pjmedia_vid_port_get_event_publisher(w->vp_rend),
+	    &call_med->esub_cap);
 
     /* Start renderer */
     status = pjmedia_vid_port_start(new_w->vp_rend);
