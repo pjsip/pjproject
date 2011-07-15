@@ -631,6 +631,11 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	    if (status != PJ_SUCCESS)
 		return status;
 
+	    /* Register to video events */
+	    pjmedia_event_subscribe(
+		    pjmedia_vid_port_get_event_publisher(w->vp_rend),
+		    &call_med->esub);
+
 	    w = &pjsua_var.win[wid];
 	    
 	    /* Connect renderer to stream */
@@ -1120,14 +1125,6 @@ static pj_status_t call_reoffer_sdp(pjsua_call_id call_id,
 
     return PJ_SUCCESS;
 }
-
-
-pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
-                                  pjmedia_type type,
-				  const pjsua_transport_config *tcfg,
-				  int security_level,
-				  int *sip_err_code);
-
 
 /* Add a new video stream into a call */
 static pj_status_t call_add_video(pjsua_call *call,

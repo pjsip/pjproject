@@ -1045,6 +1045,21 @@ typedef struct pjsua_callback
      */
     pj_status_t (*on_snd_dev_operation)(int operation);
 
+    /**
+     * Notification about media events such as video notifications. This
+     * callback will most likely be called from media threads, thus
+     * application must not perform heavy processing in this callback.
+     * Especially, application must not destroy the call or media in this
+     * callback. If application needs to perform more complex tasks to
+     * handle the event, it should post the task to another thread.
+     *
+     * @param call_id	The call id.
+     * @param med_idx	The media stream index.
+     * @param event 	The media event.
+     */
+    void (*on_call_media_event)(pjsua_call_id call_id,
+				unsigned med_idx,
+				pjmedia_event *event);
 
 } pjsua_callback;
 

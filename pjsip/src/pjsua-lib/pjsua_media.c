@@ -1312,6 +1312,22 @@ static void sort_media(const pjmedia_sdp_session *sdp,
     }
 }
 
+/* Callback to receive media events */
+static pj_status_t call_media_on_event(pjmedia_event_subscription *esub,
+                                       pjmedia_event *event)
+{
+    pjsua_call_media *call_med = (pjsua_call_media*)esub->user_data;
+    pjsua_call *call = call_med->call;
+
+    if (pjsua_var.ua_cfg.cb.on_call_media_event && call) {
+	++event->proc_cnt;
+	(*pjsua_var.ua_cfg.cb.on_call_media_event)(call->index,
+						   call_med->idx, event);
+    }
+
+    return PJ_SUCCESS;
+}
+
 /* Initialize the media line */
 pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pjmedia_type type,
@@ -1409,6 +1425,9 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
     call->tp_orig = call->tp;
     PJ_UNUSED_ARG(security_level);
 #endif
+
+    pjmedia_event_subscription_init(&call_med->esub, &call_media_on_event,
+                                    call_med);
 
     return PJ_SUCCESS;
 
@@ -2168,12 +2187,6 @@ static pj_status_t audio_channel_update(pjsua_call_media *call_med,
 
     return PJ_SUCCESS;
 }
-
-
-pj_status_t video_channel_update(pjsua_call_media *call_med,
-                                 pj_pool_t *tmp_pool,
-			         const pjmedia_sdp_session *local_sdp,
-			         const pjmedia_sdp_session *remote_sdp);
 
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,

@@ -3142,6 +3142,16 @@ static pj_status_t on_snd_dev_operation(int operation)
     return PJ_SUCCESS;
 }
 
+/* Callback on media events */
+static void on_call_media_event(pjsua_call_id call_id,
+                                unsigned med_idx,
+                                pjmedia_event *event)
+{
+    char event_name[5];
+    PJ_LOG(4,(THIS_FILE, "Event %s",
+	      pjmedia_fourcc_name(event->type, event_name)));
+}
+
 /*
  * Print buddy list.
  */
@@ -5100,6 +5110,7 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_transport_state = &on_transport_state;
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
     app_config.cfg.cb.on_snd_dev_operation = &on_snd_dev_operation;
+    app_config.cfg.cb.on_call_media_event = &on_call_media_event;
     app_config.log_cfg.cb = log_cb;
 
     /* Set sound device latency */

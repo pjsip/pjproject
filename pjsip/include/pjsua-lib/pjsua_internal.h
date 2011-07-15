@@ -98,6 +98,8 @@ typedef struct pjsua_call_media
 					    (used to update ICE default
 					    address)			    */
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
+
+    pjmedia_event_subscription esub;/**< To subscribe to media events.	    */
 } pjsua_call_media;
 
 /**
@@ -512,6 +514,16 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
+
+pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
+                                  pjmedia_type type,
+				  const pjsua_transport_config *tcfg,
+				  int security_level,
+				  int *sip_err_code);
+pj_status_t video_channel_update(pjsua_call_media *call_med,
+                                 pj_pool_t *tmp_pool,
+			         const pjmedia_sdp_session *local_sdp,
+			         const pjmedia_sdp_session *remote_sdp);
 
 
 /**
