@@ -525,6 +525,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
                                  pj_pool_t *tmp_pool,
 			         const pjmedia_sdp_session *local_sdp,
 			         const pjmedia_sdp_session *remote_sdp);
+void stop_video_stream(pjsua_call_media *call_med);
 
 
 /**
