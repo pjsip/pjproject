@@ -46,7 +46,7 @@ static int capture_render_loopback(pj_bool_t active,
     pjmedia_vid_dev_info cdi, rdi;
     pjmedia_vid_port_param param;
     pjmedia_video_format_detail *vfd;
-    pjmedia_vid_cb cb;
+    pjmedia_vid_dev_cb cb;
     pjmedia_event_subscription esub;
     pj_status_t status;
     int rc = 0, i;
@@ -178,7 +178,7 @@ static int vidport_test(void)
     int cap_id, rend_id;
     pjmedia_format_id test_fmts[] = {
         PJMEDIA_FORMAT_RGBA,
-        PJMEDIA_FORMAT_UYVY
+        PJMEDIA_FORMAT_I420
     };
     pj_status_t status;
 

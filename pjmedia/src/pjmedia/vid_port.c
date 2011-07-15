@@ -44,7 +44,7 @@ struct pjmedia_vid_port
     pjmedia_dir              dir;
 //    pjmedia_rect_size        cap_size;
     pjmedia_vid_dev_stream  *strm;
-    pjmedia_vid_cb           strm_cb;
+    pjmedia_vid_dev_cb       strm_cb;
     void                    *strm_cb_data;
     enum role                role,
                              stream_role;
@@ -175,11 +175,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pjmedia_vid_port *vp;
     const pjmedia_video_format_detail *vfd;
     char dev_name[64];
-    pjmedia_vid_cb vid_cb;
+    pjmedia_vid_dev_cb vid_cb;
     pj_bool_t need_frame_buf = PJ_FALSE;
     pj_status_t status;
     unsigned ptime_usec;
-    pjmedia_vid_param vparam;
+    pjmedia_vid_dev_param vparam;
     pjmedia_vid_dev_info di;
     unsigned i;
 
@@ -358,7 +358,7 @@ on_error:
 }
 
 PJ_DEF(void) pjmedia_vid_port_set_cb(pjmedia_vid_port *vid_port,
-				     const pjmedia_vid_cb *cb,
+				     const pjmedia_vid_dev_cb *cb,
                                      void *user_data)
 {
     pj_assert(vid_port && cb);
@@ -606,7 +606,7 @@ static pj_status_t client_port_event_cb(pjmedia_event_subscription *esub,
         }
         
         if (vp->stream_role == ROLE_PASSIVE) {
-            pjmedia_vid_param vid_param;
+            pjmedia_vid_dev_param vid_param;
             pjmedia_clock_param clock_param;
             
             /**

@@ -44,7 +44,7 @@ typedef struct pjmedia_vid_port_param
     /**
      * Video stream parameter.
      */
-    pjmedia_vid_param	vidparam;
+    pjmedia_vid_dev_param	vidparam;
 
     /**
      * Specify whether the video port should use active or passive interface.
@@ -101,7 +101,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_port_create(pj_pool_t *pool,
  *                      callbacks.
  */
 PJ_DECL(void) pjmedia_vid_port_set_cb(pjmedia_vid_port *vid_port,
-				      const pjmedia_vid_cb *cb,
+				      const pjmedia_vid_dev_cb *cb,
                                       void *user_data);
 
 /**

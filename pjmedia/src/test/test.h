@@ -40,6 +40,7 @@ int mips_test(void);
 int codec_test_vectors(void);
 int vid_codec_test(void);
 int vid_dev_test(void);
+int vid_port_test(void);
 
 extern pj_pool_factory *mem;
 void app_perror(pj_status_t status, const char *title);

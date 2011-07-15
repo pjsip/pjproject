@@ -79,15 +79,15 @@ typedef struct pjmedia_vid_dev_factory_op
     pj_status_t (*default_param)(pj_pool_t *pool,
                                  pjmedia_vid_dev_factory *f,
 				 unsigned index,
-				 pjmedia_vid_param *param);
+				 pjmedia_vid_dev_param *param);
 
     /**
      * Open the video device and create video stream. See
      * #pjmedia_vid_dev_stream_create()
      */
     pj_status_t (*create_stream)(pjmedia_vid_dev_factory *f,
-				 pjmedia_vid_param *param,
-				 const pjmedia_vid_cb *cb,
+				 pjmedia_vid_dev_param *param,
+				 const pjmedia_vid_dev_cb *cb,
 				 void *user_data,
 				 pjmedia_vid_dev_stream **p_vid_strm);
 
@@ -126,7 +126,7 @@ typedef struct pjmedia_vid_dev_stream_op
      * See #pjmedia_vid_dev_stream_get_param()
      */
     pj_status_t (*get_param)(pjmedia_vid_dev_stream *strm,
-			     pjmedia_vid_param *param);
+			     pjmedia_vid_dev_param *param);
 
     /**
      * See #pjmedia_vid_dev_stream_get_cap()

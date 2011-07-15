@@ -144,7 +144,7 @@ PJ_DEF(const char*) pjmedia_vid_dev_cap_name(pjmedia_vid_dev_cap cap,
     return cap_infos[i].name;
 }
 
-static pj_status_t get_cap_pointer(const pjmedia_vid_param *param,
+static pj_status_t get_cap_pointer(const pjmedia_vid_dev_param *param,
 				   pjmedia_vid_dev_cap cap,
 				   void **ptr,
 				   unsigned *size)
@@ -181,9 +181,10 @@ static pj_status_t get_cap_pointer(const pjmedia_vid_param *param,
 }
 
 /* API: set cap value to param */
-PJ_DEF(pj_status_t) pjmedia_vid_param_set_cap( pjmedia_vid_param *param,
-					       pjmedia_vid_dev_cap cap,
-					       const void *pval)
+PJ_DEF(pj_status_t)
+pjmedia_vid_dev_param_set_cap( pjmedia_vid_dev_param *param,
+			       pjmedia_vid_dev_cap cap,
+			       const void *pval)
 {
     void *cap_ptr;
     unsigned cap_size;
@@ -200,9 +201,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_param_set_cap( pjmedia_vid_param *param,
 }
 
 /* API: get cap value from param */
-PJ_DEF(pj_status_t) pjmedia_vid_param_get_cap( const pjmedia_vid_param *param,
-					       pjmedia_vid_dev_cap cap,
-					       void *pval)
+PJ_DEF(pj_status_t)
+pjmedia_vid_dev_param_get_cap( const pjmedia_vid_dev_param *param,
+			       pjmedia_vid_dev_cap cap,
+			       void *pval)
 {
     void *cap_ptr;
     unsigned cap_size;
@@ -631,7 +633,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_lookup( const char *drv_name,
  */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
                                                   pjmedia_vid_dev_index id,
-						  pjmedia_vid_param *param)
+						  pjmedia_vid_dev_param *param)
 {
     pjmedia_vid_dev_factory *f;
     unsigned index;
@@ -660,8 +662,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
 
 /* API: Open video stream object using the specified parameters. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_create(
-					pjmedia_vid_param *prm,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *prm,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)
 {
@@ -726,7 +728,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_create(
 /* API: Get the running parameters for the specified video stream. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_get_param(
 					    pjmedia_vid_dev_stream *strm,
-					    pjmedia_vid_param *param)
+					    pjmedia_vid_dev_param *param)
 {
     pj_status_t status;
 

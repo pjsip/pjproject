@@ -81,10 +81,10 @@ static struct cbar_fmt_info cbar_fmts[] =
 struct cbar_stream
 {
     pjmedia_vid_dev_stream	     base;	    /**< Base stream	    */
-    pjmedia_vid_param		     param;	    /**< Settings	    */
+    pjmedia_vid_dev_param	     param;	    /**< Settings	    */
     pj_pool_t			    *pool;          /**< Memory pool.       */
 
-    pjmedia_vid_cb		     vid_cb;	    /**< Stream callback.   */
+    pjmedia_vid_dev_cb		     vid_cb;	    /**< Stream callback.   */
     void			    *user_data;	    /**< Application data.  */
 
     const struct cbar_fmt_info      *cbfi;
@@ -107,16 +107,16 @@ static pj_status_t cbar_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 static pj_status_t cbar_factory_default_param(pj_pool_t *pool,
                                               pjmedia_vid_dev_factory *f,
 					      unsigned index,
-					      pjmedia_vid_param *param);
+					      pjmedia_vid_dev_param *param);
 static pj_status_t cbar_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_param *param,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *param,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t cbar_stream_get_param(pjmedia_vid_dev_stream *strm,
-					 pjmedia_vid_param *param);
+					 pjmedia_vid_dev_param *param);
 static pj_status_t cbar_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				       pjmedia_vid_dev_cap cap,
 				       void *value);
@@ -199,9 +199,6 @@ static pj_status_t cbar_factory_init(pjmedia_vid_dev_factory *f)
 
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
     ddi->info.fmt_cnt = sizeof(cbar_fmts)/sizeof(cbar_fmts[0]);
-    ddi->info.fmt = (pjmedia_format*)
- 		    pj_pool_calloc(cf->pool, ddi->info.fmt_cnt,
- 				   sizeof(pjmedia_format));
     for (i = 0; i < ddi->info.fmt_cnt; i++) {
         pjmedia_format *fmt = &ddi->info.fmt[i];
         pjmedia_format_init_video(fmt, cbar_fmts[i].fmt_id,
@@ -262,7 +259,7 @@ static pj_status_t cbar_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 static pj_status_t cbar_factory_default_param(pj_pool_t *pool,
                                               pjmedia_vid_dev_factory *f,
 					      unsigned index,
-					      pjmedia_vid_param *param)
+					      pjmedia_vid_dev_param *param)
 {
     struct cbar_factory *cf = (struct cbar_factory*)f;
     struct cbar_dev_info *di = &cf->dev_info[index];
@@ -371,8 +368,8 @@ static void fill_first_line(pj_uint8_t *first_lines[],
 /* API: create stream */
 static pj_status_t cbar_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_param *param,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *param,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)
 {
@@ -441,7 +438,7 @@ static pj_status_t cbar_factory_create_stream(
 
 /* API: Get stream info. */
 static pj_status_t cbar_stream_get_param(pjmedia_vid_dev_stream *s,
-					 pjmedia_vid_param *pi)
+					 pjmedia_vid_dev_param *pi)
 {
     struct cbar_stream *strm = (struct cbar_stream*)s;
 

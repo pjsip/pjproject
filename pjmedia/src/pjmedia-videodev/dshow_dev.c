@@ -96,10 +96,10 @@ struct dshow_factory
 struct dshow_stream
 {
     pjmedia_vid_dev_stream   base;		    /**< Base stream	    */
-    pjmedia_vid_param	     param;		    /**< Settings	    */
+    pjmedia_vid_dev_param    param;		    /**< Settings	    */
     pj_pool_t		    *pool;		    /**< Memory pool.	    */
 
-    pjmedia_vid_cb	     vid_cb;		    /**< Stream callback.   */
+    pjmedia_vid_dev_cb	     vid_cb;		    /**< Stream callback.   */
     void		    *user_data;		    /**< Application data.  */
 
     pj_bool_t		     quit_flag;
@@ -135,16 +135,16 @@ static pj_status_t dshow_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
                                                pjmedia_vid_dev_factory *f,
 					       unsigned index,
-					       pjmedia_vid_param *param);
+					       pjmedia_vid_dev_param *param);
 static pj_status_t dshow_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_param *param,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *param,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t dshow_stream_get_param(pjmedia_vid_dev_stream *strm,
-					  pjmedia_vid_param *param);
+					  pjmedia_vid_dev_param *param);
 static pj_status_t dshow_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				        pjmedia_vid_dev_cap cap,
 				        void *value);
@@ -435,12 +435,6 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 			enum_dev_cap(filter, ddi->info.dir, NULL, NULL, NULL, sup_fmt);
 
 			ddi->info.fmt_cnt = 0;
-			ddi->info.fmt = (pjmedia_format*)
-					pj_pool_calloc(df->dev_pool,
-						       sizeof(dshow_fmts)/
-						       sizeof(dshow_fmts[0]),
-						       sizeof(pjmedia_format));
-
 			for (j = 0;
 			     j < sizeof(dshow_fmts)/sizeof(dshow_fmts[0]);
 			     j++)
@@ -481,7 +475,6 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 //    ddi->info.caps |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
 
     ddi->info.fmt_cnt = 1;
-    ddi->info.fmt = PJ_POOL_ZALLOC_T(df->dev_pool, pjmedia_format);
     pjmedia_format_init_video(&ddi->info.fmt[0], dshow_fmts[0].pjmedia_format, 
 			      DEFAULT_WIDTH, DEFAULT_HEIGHT, 
 			      DEFAULT_FPS, 1);
@@ -525,7 +518,7 @@ static pj_status_t dshow_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
                                                pjmedia_vid_dev_factory *f,
 					       unsigned index,
-					       pjmedia_vid_param *param)
+					       pjmedia_vid_dev_param *param)
 {
     struct dshow_factory *df = (struct dshow_factory*)f;
     struct dshow_dev_info *di = &df->dev_info[index];
@@ -813,8 +806,8 @@ static void destroy_filter_graph(struct dshow_stream * stream)
 /* API: create stream */
 static pj_status_t dshow_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_param *param,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *param,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)
 {
@@ -903,7 +896,7 @@ on_error:
 
 /* API: Get stream info. */
 static pj_status_t dshow_stream_get_param(pjmedia_vid_dev_stream *s,
-					  pjmedia_vid_param *pi)
+					  pjmedia_vid_dev_param *pi)
 {
     struct dshow_stream *strm = (struct dshow_stream*)s;
 

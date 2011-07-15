@@ -925,7 +925,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 {
     pjsua_vid_win *w;
     pjmedia_vid_dev_stream *s;
-    pjmedia_vid_param vparam;
+    pjmedia_vid_dev_param vparam;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(wid >= 0 && wid < PJSUA_MAX_VID_WINS && wi, PJ_EINVAL);

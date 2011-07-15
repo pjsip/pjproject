@@ -388,7 +388,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     }
     
     if (vid_port) {
-        pjmedia_vid_cb cb;
+        pjmedia_vid_dev_cb cb;
 	
         pj_bzero(&cb, sizeof(cb));
         avi_port.snd_port = snd_port;

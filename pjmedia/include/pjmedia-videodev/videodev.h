@@ -75,7 +75,7 @@ enum
  * Applications get these capabilities in the #pjmedia_vid_dev_info structure.
  *
  * Application can also set the specific features/capabilities when opening
- * the video stream by setting the \a flags member of #pjmedia_vid_param
+ * the video stream by setting the \a flags member of #pjmedia_vid_dev_param
  * structure.
  *
  * Once video stream is running, application can also retrieve or set some
@@ -166,7 +166,7 @@ typedef struct pjmedia_vid_dev_info
      * value is unknown or should be ignored. When these value are not set
      * to zero, it indicates that the exact format combination is being used. 
      */
-    pjmedia_format *fmt;
+    pjmedia_format fmt[PJMEDIA_VID_DEV_INFO_FMT_CNT];
 
 } pjmedia_vid_dev_info;
 
@@ -174,7 +174,7 @@ typedef struct pjmedia_vid_dev_info
 /** Forward declaration for pjmedia_vid_dev_stream */
 typedef struct pjmedia_vid_dev_stream pjmedia_vid_dev_stream;
 
-typedef struct pjmedia_vid_cb
+typedef struct pjmedia_vid_dev_cb
 {
     /**
     * This callback is called by capturer stream when it has captured the
@@ -214,13 +214,13 @@ typedef struct pjmedia_vid_cb
 			     void *user_data,
                              pjmedia_frame *frame);
 
-} pjmedia_vid_cb;
+} pjmedia_vid_dev_cb;
 
 
 /**
  * This structure specifies the parameters to open the video stream.
  */
-typedef struct pjmedia_vid_param
+typedef struct pjmedia_vid_dev_param
 {
     /**
      * The video direction. This setting is mandatory.
@@ -287,7 +287,7 @@ typedef struct pjmedia_vid_param
      */
     pj_bool_t window_hide;
 
-} pjmedia_vid_param;
+} pjmedia_vid_dev_param;
 
 
 /** Forward declaration for video device factory */
@@ -312,7 +312,7 @@ PJ_DECL(const char*) pjmedia_vid_dev_cap_name(pjmedia_vid_dev_cap cap,
 
 
 /**
- * Set a capability field value in #pjmedia_vid_param structure. This will
+ * Set a capability field value in #pjmedia_vid_dev_param structure. This will
  * also set the flags field for the specified capability in the structure.
  *
  * @param param     The structure.
@@ -323,13 +323,14 @@ PJ_DECL(const char*) pjmedia_vid_dev_cap_name(pjmedia_vid_dev_cap cap,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_param_set_cap(pjmedia_vid_param *param,
-                                               pjmedia_vid_dev_cap cap,
-                                               const void *pval);
+PJ_DECL(pj_status_t)
+pjmedia_vid_dev_param_set_cap(pjmedia_vid_dev_param *param,
+                              pjmedia_vid_dev_cap cap,
+                              const void *pval);
 
 
 /**
- * Get a capability field value from #pjmedia_vid_param structure. This
+ * Get a capability field value from #pjmedia_vid_dev_param structure. This
  * function will return PJMEDIA_EVID_INVCAP error if the flag for that
  * capability is not set in the flags field in the structure.
  *
@@ -341,9 +342,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_param_set_cap(pjmedia_vid_param *param,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_param_get_cap(const pjmedia_vid_param *param,
-                                               pjmedia_vid_dev_cap cap,
-                                               void *pval);
+PJ_DECL(pj_status_t)
+pjmedia_vid_dev_param_get_cap(const pjmedia_vid_dev_param *param,
+                              pjmedia_vid_dev_cap cap,
+                              void *pval);
 
 /**
  * Initialize the video device subsystem. This will register all supported
@@ -469,9 +471,10 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_lookup(const char *drv_name,
  * @return          PJ_SUCCESS on successful operation or the appropriate
  *                  error code.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
-                                                   pjmedia_vid_dev_index id,
-                                                   pjmedia_vid_param *param);
+PJ_DECL(pj_status_t)
+pjmedia_vid_dev_default_param(pj_pool_t *pool,
+                              pjmedia_vid_dev_index id,
+                              pjmedia_vid_dev_param *param);
 
 
 /**
@@ -497,8 +500,8 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
  *                      error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_create(
-					    pjmedia_vid_param *param,
-					    const pjmedia_vid_cb *cb,
+					    pjmedia_vid_dev_param *param,
+					    const pjmedia_vid_dev_cb *cb,
 					    void *user_data,
 					    pjmedia_vid_dev_stream **p_strm);
 
@@ -514,7 +517,7 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_create(
  */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_get_param(
 					    pjmedia_vid_dev_stream *strm,
-                                            pjmedia_vid_param *param);
+                                            pjmedia_vid_dev_param *param);
 
 /**
  * Get the value of a specific capability of the video stream.
