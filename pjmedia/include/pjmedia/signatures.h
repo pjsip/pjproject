@@ -187,6 +187,8 @@ PJ_INLINE(const char*) pjmedia_sig_name(pjmedia_obj_sig sig, char buf[])
 #define PJMEDIA_SIG_VID_DEV_SDL		PJMEDIA_SIG_CLASS_VID_DEV('S','D')
 #define PJMEDIA_SIG_VID_DEV_V4L2	PJMEDIA_SIG_CLASS_VID_DEV('V','2')
 #define PJMEDIA_SIG_VID_DEV_DSHOW	PJMEDIA_SIG_CLASS_VID_DEV('D','S')
+#define PJMEDIA_SIG_VID_DEV_QT		PJMEDIA_SIG_CLASS_VID_DEV('Q','T')
+#define PJMEDIA_SIG_VID_DEV_IOS		PJMEDIA_SIG_CLASS_VID_DEV('I','P')
 
 
 /*********************************************************************
