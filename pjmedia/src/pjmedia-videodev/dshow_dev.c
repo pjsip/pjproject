@@ -46,6 +46,9 @@
 #define DEFAULT_HEIGHT		480
 #define DEFAULT_FPS		25
 
+/* Temporarily disable DirectShow renderer (VMR) */
+#define HAS_VMR			0
+
 typedef void (*input_callback)(void *user_data, IMediaSample *pMediaSample);
 typedef struct NullRenderer NullRenderer;
 IBaseFilter* NullRenderer_Create(input_callback input_cb,
@@ -230,7 +233,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
     struct dshow_factory *df = (struct dshow_factory*)f;
     struct dshow_dev_info *ddi;
     int dev_count = 0;
-    unsigned c, i;
+    unsigned c;
     ICreateDevEnum *dev_enum = NULL;
     IEnumMoniker *enum_cat = NULL;
     IMoniker *moniker = NULL;
@@ -321,6 +324,7 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
         ICreateDevEnum_Release(dev_enum);
     }
 
+#if HAS_VMR
     ddi = &df->dev_info[df->dev_count++];
     pj_bzero(ddi, sizeof(*ddi));
     pj_ansi_strncpy(ddi->info.name,  "Video Mixing Renderer",
@@ -333,6 +337,8 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
     ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
 
     for (c = 0; c < df->dev_count; c++) {
+	unsigned i;
+
         ddi = &df->dev_info[c];
         ddi->info.fmt_cnt = sizeof(dshow_fmts)/sizeof(dshow_fmts[0]);
         ddi->info.fmt = (pjmedia_format*)
@@ -349,6 +355,8 @@ static pj_status_t dshow_factory_refresh(pjmedia_vid_dev_factory *f)
 				      DEFAULT_FPS, 1);
         }
     }
+#endif
+
 
 //    TODO:
 //    ddi->info.caps = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
