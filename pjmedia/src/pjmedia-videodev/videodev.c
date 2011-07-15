@@ -514,7 +514,7 @@ static pj_status_t lookup_dev(pjmedia_vid_dev_index id,
     if (id < 0) {
 	unsigned i;
 
-	if (id == PJMEDIA_VID_INVALID_DEV)
+	if (id <= PJMEDIA_VID_INVALID_DEV)
 	    return PJMEDIA_EVID_INVDEV;
 
 	for (i=0; i<vid_subsys.drv_cnt; ++i) {
@@ -563,8 +563,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_get_info(pjmedia_vid_dev_index id,
     unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(info && id!=PJMEDIA_VID_INVALID_DEV, PJ_EINVAL);
+    PJ_ASSERT_RETURN(info, PJ_EINVAL);
     PJ_ASSERT_RETURN(vid_subsys.pf, PJMEDIA_EVID_INIT);
+
+    if (id <= PJMEDIA_VID_INVALID_DEV)
+	return PJMEDIA_EVID_INVDEV;
 
     status = lookup_dev(id, &f, &index);
     if (status != PJ_SUCCESS)
@@ -634,8 +637,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_default_param(pj_pool_t *pool,
     unsigned index;
     pj_status_t status;
 
-    PJ_ASSERT_RETURN(param && id!=PJMEDIA_VID_INVALID_DEV, PJ_EINVAL);
+    PJ_ASSERT_RETURN(param, PJ_EINVAL);
     PJ_ASSERT_RETURN(vid_subsys.pf, PJMEDIA_EVID_INIT);
+
+    if (id <= PJMEDIA_VID_INVALID_DEV)
+	return PJMEDIA_EVID_INVDEV;
 
     status = lookup_dev(id, &f, &index);
     if (status != PJ_SUCCESS)
