@@ -76,13 +76,13 @@ struct qt_factory
 struct qt_stream
 {
     pjmedia_vid_dev_stream  base;	    /**< Base stream	       */
-    pjmedia_vid_param	    param;	    /**< Settings	       */
+    pjmedia_vid_dev_param   param;	    /**< Settings	       */
     pj_pool_t		   *pool;           /**< Memory pool.          */
 
     pj_timestamp	    cap_frame_ts;   /**< Captured frame tstamp */
     unsigned		    cap_ts_inc;	    /**< Increment	       */
     
-    pjmedia_vid_cb	    vid_cb;         /**< Stream callback.      */
+    pjmedia_vid_dev_cb	    vid_cb;         /**< Stream callback.      */
     void		   *user_data;      /**< Application data.     */
 
     pj_bool_t		    cap_thread_exited;
@@ -109,16 +109,16 @@ static pj_status_t qt_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 static pj_status_t qt_factory_default_param(pj_pool_t *pool,
 					    pjmedia_vid_dev_factory *f,
 					    unsigned index,
-					    pjmedia_vid_param *param);
+					    pjmedia_vid_dev_param *param);
 static pj_status_t qt_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_param *param,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *param,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm);
 
 static pj_status_t qt_stream_get_param(pjmedia_vid_dev_stream *strm,
-				       pjmedia_vid_param *param);
+				       pjmedia_vid_dev_param *param);
 static pj_status_t qt_stream_get_cap(pjmedia_vid_dev_stream *strm,
 				     pjmedia_vid_dev_cap cap,
 				     void *value);
@@ -232,7 +232,7 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
 	if ([dev hasMediaType:QTMediaTypeVideo] ||
 	    [dev hasMediaType:QTMediaTypeMuxed])
 	{
-	    unsigned j, k;
+	    unsigned k;
 	    
 	    qdi = &qf->dev_info[qf->dev_count++];
 	    pj_bzero(qdi, sizeof(*qdi));
@@ -248,28 +248,15 @@ static pj_status_t qt_factory_refresh(pjmedia_vid_dev_factory *f)
 	    qdi->info.has_callback = PJ_TRUE;
             
 	    qdi->info.fmt_cnt = 0;
-	    for (k = 0; k < [[dev formatDescriptions] count]; k++) {
-		QTFormatDescription *desc = [[dev formatDescriptions]
-					     objectAtIndex:k];
-		for (j = 0; j < PJ_ARRAY_SIZE(qt_fmts); j++) {
-		    if ([desc formatType] == qt_fmts[j].qt_format) {
-			qdi->info.fmt_cnt++;
-			break;
-		    }
-		}
-	    }
-	    
 	    qdi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
-	    qdi->info.fmt = (pjmedia_format*)
-            pj_pool_calloc(qf->dev_pool, qdi->info.fmt_cnt,
-                           sizeof(pjmedia_format));
-	    for (j = k = 0; k < [[dev formatDescriptions] count]; k++) {
+	    for (k = 0; k < [[dev formatDescriptions] count]; k++) {
 		unsigned l;
 		QTFormatDescription *desc = [[dev formatDescriptions]
 					     objectAtIndex:k];
 		for (l = 0; l < PJ_ARRAY_SIZE(qt_fmts); l++) {
-		    if ([desc formatType] == qt_fmts[j].qt_format) {
-			pjmedia_format *fmt = &qdi->info.fmt[j++];
+		    if ([desc formatType] == qt_fmts[l].qt_format) {
+			pjmedia_format *fmt = 
+                            &qdi->info.fmt[qdi->info.fmt_cnt++];
 			pjmedia_format_init_video(fmt,
 						  qt_fmts[l].pjmedia_format,
 						  DEFAULT_WIDTH,
@@ -317,7 +304,7 @@ static pj_status_t qt_factory_get_dev_info(pjmedia_vid_dev_factory *f,
 static pj_status_t qt_factory_default_param(pj_pool_t *pool,
 					    pjmedia_vid_dev_factory *f,
 					    unsigned index,
-					    pjmedia_vid_param *param)
+					    pjmedia_vid_dev_param *param)
 {
     struct qt_factory *qf = (struct qt_factory*)f;
     struct qt_dev_info *di = &qf->dev_info[index];
@@ -386,8 +373,8 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
 /* API: create stream */
 static pj_status_t qt_factory_create_stream(
 					pjmedia_vid_dev_factory *f,
-					pjmedia_vid_param *param,
-					const pjmedia_vid_cb *cb,
+					pjmedia_vid_dev_param *param,
+					const pjmedia_vid_dev_cb *cb,
 					void *user_data,
 					pjmedia_vid_dev_stream **p_vid_strm)
 {
@@ -518,7 +505,7 @@ on_error:
 
 /* API: Get stream info. */
 static pj_status_t qt_stream_get_param(pjmedia_vid_dev_stream *s,
-				       pjmedia_vid_param *pi)
+				       pjmedia_vid_dev_param *pi)
 {
     struct qt_stream *strm = (struct qt_stream*)s;
 
