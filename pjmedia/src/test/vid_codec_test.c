@@ -40,7 +40,7 @@ static pj_status_t codec_on_event(pjmedia_event_subscription *esub,
 
 	++event->proc_cnt;
 
-	status = codec->op->get_param(codec, &codec_param);
+	status = pjmedia_vid_codec_get_param(codec, &codec_param);
 	if (status != PJ_SUCCESS)
 	    return status;
 
@@ -69,7 +69,8 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 	enc_frame.buf = port_data->enc_buf;
 	enc_frame.size = port_data->enc_buf_size;
 
-	status = codec->op->encode(codec, frame, enc_frame.size, &enc_frame);
+	status = pjmedia_vid_codec_encode(codec, frame, enc_frame.size,
+					  &enc_frame);
 	if (status != PJ_SUCCESS) goto on_error;
 
 #if !BYPASS_PACKETIZER
@@ -82,17 +83,19 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 		pj_uint8_t *payload;
 		pj_size_t payload_len;
 
-		status = codec->op->packetize(codec, 
-					      (pj_uint8_t*)enc_frame.buf,
-					      enc_frame.size, &pos,
-					      (const pj_uint8_t**)&payload,
-					      &payload_len);
+		status = pjmedia_vid_codec_packetize(
+						codec, 
+						(pj_uint8_t*)enc_frame.buf,
+						enc_frame.size, &pos,
+						(const pj_uint8_t**)&payload,
+						&payload_len);
 		if (status == PJ_ENOTSUP)
 		    break;
 		if (status != PJ_SUCCESS)
 		    goto on_error;
 
-		status = codec->op->unpacketize(codec, payload, payload_len,
+		status = pjmedia_vid_codec_unpacketize(
+						codec, payload, payload_len,
 						port_data->pack_buf,
 						port_data->pack_buf_size,
 						&unpack_pos);
@@ -112,7 +115,8 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
 	}
 #endif
 
-	status = codec->op->decode(codec, &enc_frame, frame->size, frame);
+	status = pjmedia_vid_codec_decode(codec, &enc_frame,
+					  frame->size, frame);
 	if (status != PJ_SUCCESS) goto on_error;
     }
 #endif
@@ -276,12 +280,12 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
 	    rc = 250; goto on_return;
         }
 
-        status = codec->op->init(codec, pool);
+        status = pjmedia_vid_codec_init(codec, pool);
         if (status != PJ_SUCCESS) {
 	    rc = 251; goto on_return;
         }
 
-        status = codec->op->open(codec, &codec_param);
+        status = pjmedia_vid_codec_open(codec, &codec_param);
         if (status != PJ_SUCCESS) {
 	    rc = 252; goto on_return;
         }
@@ -414,7 +418,7 @@ on_return:
 	pjmedia_vid_port_destroy(renderer);
     }
     if (codec) {
-        codec->op->close(codec);
+        pjmedia_vid_codec_close(codec);
         pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
     }
 

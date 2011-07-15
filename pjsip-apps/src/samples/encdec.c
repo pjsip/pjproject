@@ -137,8 +137,8 @@ static pj_status_t enc_dec_test(const char *codec_id,
 
     /* Alloc codec */
     CHECK( pjmedia_codec_mgr_alloc_codec(cm, pci, &codec) );
-    CHECK( codec->op->init(codec, pool) );
-    CHECK( codec->op->open(codec, &param) );
+    CHECK( pjmedia_codec_init(codec, pool) );
+    CHECK( pjmedia_codec_open(codec, &param) );
     
     for (;;) {
 	pjmedia_frame frm_pcm, frm_bit, out_frm, frames[4];
@@ -162,7 +162,8 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	/* Encode */
 	frm_bit.buf = bitstream;
 	frm_bit.size = sizeof(bitstream);
-	CHECK(codec->op->encode(codec, &frm_pcm, sizeof(bitstream), &frm_bit));
+	CHECK(pjmedia_codec_encode(codec, &frm_pcm, sizeof(bitstream), 
+	                           &frm_bit));
 
 	/* On DTX, write zero frame to wavout to maintain duration */
 	if (frm_bit.size == 0 || frm_bit.type != PJMEDIA_FRAME_TYPE_AUDIO) {
@@ -180,8 +181,8 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	 */
 	ts.u64 = 0;
 	cnt = PJ_ARRAY_SIZE(frames);
-	CHECK( codec->op->parse(codec, bitstream, frm_bit.size, &ts, &cnt, 
-			        frames) );
+	CHECK( pjmedia_codec_parse(codec, bitstream, frm_bit.size, &ts, &cnt, 
+			           frames) );
 	CHECK( (cnt==1 ? PJ_SUCCESS : -1) );
 
 	/* Decode or simulate packet loss */
@@ -190,11 +191,11 @@ static pj_status_t enc_dec_test(const char *codec_id,
 	
 	if ((pj_rand() % 100) < (int)lost_pct) {
 	    /* Simulate loss */
-	    CHECK( codec->op->recover(codec, sizeof(pcmbuf), &out_frm) );
+	    CHECK( pjmedia_codec_recover(codec, sizeof(pcmbuf), &out_frm) );
 	    TRACE_((THIS_FILE, "%d.%03d Packet lost", T));
 	} else {
 	    /* Decode */
-	    CHECK( codec->op->decode(codec, &frames[0], sizeof(pcmbuf), 
+	    CHECK( pjmedia_codec_decode(codec, &frames[0], sizeof(pcmbuf), 
 				     &out_frm) );
 	}
 
@@ -210,7 +211,7 @@ static pj_status_t enc_dec_test(const char *codec_id,
     pjmedia_port_destroy(wavin);
 
     /* Close codec */
-    codec->op->close(codec);
+    pjmedia_codec_close(codec);
     pjmedia_codec_mgr_dealloc_codec(cm, codec);
 
     /* Release pool */

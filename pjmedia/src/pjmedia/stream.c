@@ -515,9 +515,9 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 		frame_out.buf = p_out_samp + samples_count;
 		frame_out.size = frame->size - samples_count*2;
-		status = (*stream->codec->op->recover)(stream->codec,
-						       frame_out.size,
-						       &frame_out);
+		status = pjmedia_codec_recover(stream->codec,
+					       frame_out.size,
+					       &frame_out);
 
 		++stream->plc_cnt;
 
@@ -564,9 +564,9 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		    do {
 			frame_out.buf = p_out_samp + samples_count;
 			frame_out.size = frame->size - samples_count*2;
-			status = (*stream->codec->op->recover)(stream->codec,
-							       frame_out.size,
-							       &frame_out);
+			status = pjmedia_codec_recover(stream->codec,
+						       frame_out.size,
+						       &frame_out);
 			if (status != PJ_SUCCESS)
 			    break;
 
@@ -619,9 +619,9 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 		do {
 		    frame_out.buf = p_out_samp + samples_count;
 		    frame_out.size = frame->size - samples_count*2;
-		    status = (*stream->codec->op->recover)(stream->codec,
-							   frame_out.size,
-							   &frame_out);
+		    status = pjmedia_codec_recover(stream->codec,
+						   frame_out.size,
+						   &frame_out);
 		    if (status != PJ_SUCCESS)
 			break;
 		    samples_count += samples_per_frame;
@@ -670,8 +670,8 @@ static pj_status_t get_frame( pjmedia_port *port, pjmedia_frame *frame)
 
 	    frame_out.buf = p_out_samp + samples_count;
 	    frame_out.size = frame->size - samples_count*BYTES_PER_SAMPLE;
-	    status = stream->codec->op->decode( stream->codec, &frame_in,
-						frame_out.size, &frame_out);
+	    status = pjmedia_codec_decode( stream->codec, &frame_in,
+					   frame_out.size, &frame_out);
 	    if (status != 0) {
 		LOGERR_((port->info.name.ptr, "codec decode() error", 
 			 status));
@@ -774,8 +774,8 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	    frame_in.bit_info = bit_info;
 	    frame_in.type = PJMEDIA_FRAME_TYPE_AUDIO;
 
-	    status = stream->codec->op->decode( stream->codec, &frame_in,
-						0, frame);
+	    status = pjmedia_codec_decode( stream->codec, &frame_in,
+					   0, frame);
 	    if (status != PJ_SUCCESS) {
 		LOGERR_((port->info.name.ptr, "codec decode() error", 
 			 status));
@@ -801,8 +801,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
 	    /* Try to generate frame by invoking PLC (when any) */
 	    status = PJ_SUCCESS;
 	    if (stream->codec->op->recover) {
-		status = (*stream->codec->op->recover)(stream->codec,
-						       0, frame);
+		status = pjmedia_codec_recover(stream->codec, 0, frame);
 	    }
 	    
 	    /* No PLC or PLC failed */
@@ -1248,10 +1247,10 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	silence_frame.timestamp.u32.lo = pj_ntohl(stream->enc->rtp.out_hdr.ts);
 	
 	/* Encode! */
-	status = stream->codec->op->encode( stream->codec, &silence_frame,
-					    channel->out_pkt_size - 
-					    sizeof(pjmedia_rtp_hdr),
-					    &frame_out);
+	status = pjmedia_codec_encode( stream->codec, &silence_frame,
+				       channel->out_pkt_size - 
+				       sizeof(pjmedia_rtp_hdr),
+				       &frame_out);
 	if (status != PJ_SUCCESS) {
 	    LOGERR_((stream->port.info.name.ptr, 
 		    "Codec encode() error", status));
@@ -1272,10 +1271,10 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	       (frame->type == PJMEDIA_FRAME_TYPE_EXTENDED))
     {
 	/* Encode! */
-	status = stream->codec->op->encode( stream->codec, frame, 
-					    channel->out_pkt_size - 
-					    sizeof(pjmedia_rtp_hdr),
-					    &frame_out);
+	status = pjmedia_codec_encode( stream->codec, frame, 
+				       channel->out_pkt_size - 
+				       sizeof(pjmedia_rtp_hdr),
+				       &frame_out);
 	if (status != PJ_SUCCESS) {
 	    LOGERR_((stream->port.info.name.ptr, 
 		    "Codec encode() error", status));
@@ -1425,7 +1424,7 @@ static pj_status_t put_frame( pjmedia_port *port,
 	  PJMEDIA_STREAM_VAD_SUSPEND_MSEC / 1000)
     {
 	stream->codec_param.setting.vad = stream->vad_enabled;
-	stream->codec->op->modify(stream->codec, &stream->codec_param);
+	pjmedia_codec_modify(stream->codec, &stream->codec_param);
 	PJ_LOG(4,(stream->port.info.name.ptr,"VAD re-enabled"));
     }
 
@@ -1691,12 +1690,8 @@ static void on_rx_rtp( void *data,
 	ts.u64 = pj_ntohl(hdr->ts);
 
 	/* Parse the payload. */
-	status = (*stream->codec->op->parse)(stream->codec,
-					     (void*)payload,
-					     payloadlen,
-					     &ts,
-					     &count,
-					     frames);
+	status = pjmedia_codec_parse(stream->codec, (void*)payload,
+				     payloadlen, &ts, &count, frames);
 	if (status != PJ_SUCCESS) {
 	    LOGERR_((stream->port.info.name.ptr, 
 		     "Codec parse() error", 
@@ -2058,7 +2053,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	stream->codec_param.setting.frm_per_pkt = 1;
 
     /* Open the codec. */
-    status = stream->codec->op->open(stream->codec, &stream->codec_param);
+    status = pjmedia_codec_open(stream->codec, &stream->codec_param);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -2137,7 +2132,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (PJMEDIA_STREAM_VAD_SUSPEND_MSEC > 0 && stream->vad_enabled) {
 	stream->codec_param.setting.vad = 0;
 	stream->ts_vad_disabled = 0;
-	stream->codec->op->modify(stream->codec, &stream->codec_param);
+	pjmedia_codec_modify(stream->codec, &stream->codec_param);
 	PJ_LOG(4,(stream->port.info.name.ptr,"VAD temporarily disabled"));
     }
 
@@ -2440,7 +2435,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
     /* Free codec. */
 
     if (stream->codec) {
-	stream->codec->op->close(stream->codec);
+	pjmedia_codec_close(stream->codec);
 	pjmedia_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
 	stream->codec = NULL;
     }

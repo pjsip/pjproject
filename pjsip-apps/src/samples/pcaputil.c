@@ -98,7 +98,7 @@ static void err_exit(const char *title, pj_status_t status)
     if (app.pcap) pj_pcap_close(app.pcap);
     if (app.codec) {
 	pjmedia_codec_mgr *cmgr;
-	app.codec->op->close(app.codec);
+	pjmedia_codec_close(app.codec);
 	cmgr = pjmedia_endpt_get_codec_mgr(app.mept);
 	pjmedia_codec_mgr_dealloc_codec(cmgr, app.codec);
     }
@@ -259,8 +259,8 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 
     /* Alloc and init codec */
     T( pjmedia_codec_mgr_alloc_codec(cmgr, ci, &app.codec) );
-    T( app.codec->op->init(app.codec, app.pool) );
-    T( app.codec->op->open(app.codec, &param) );
+    T( pjmedia_codec_init(app.codec, app.pool) );
+    T( pjmedia_codec_open(app.codec, &param) );
 
     /* Open WAV file */
     samples_per_frame = ci->clock_rate * param.info.frm_ptime / 1000;
@@ -284,7 +284,7 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	/* Parse first packet */
 	ts.u64 = 0;
 	frame_cnt = PJ_ARRAY_SIZE(frames);
-	T( app.codec->op->parse(app.codec, pkt0.payload, pkt0.payload_len, 
+	T( pjmedia_codec_parse(app.codec, pkt0.payload, pkt0.payload_len, 
 				&ts, &frame_cnt, frames) );
 
 	/* Decode and write to WAV file */
@@ -295,7 +295,7 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	    pcm_frame.buf = pcm;
 	    pcm_frame.size = samples_per_frame * 2;
 
-	    T( app.codec->op->decode(app.codec, &frames[i], pcm_frame.size, 
+	    T( pjmedia_codec_decode(app.codec, &frames[i], pcm_frame.size, 
 				     &pcm_frame) );
 	    T( pjmedia_port_put_frame(app.wav, &pcm_frame) );
 	    samples_cnt += samples_per_frame;
@@ -314,8 +314,8 @@ static void pcap2wav(const char *wav_filename, const pj_str_t *srtp_crypto,
 	    pcm_frame.size = samples_per_frame * 2;
 
 	    if (app.codec->op->recover) {
-		T( app.codec->op->recover(app.codec, pcm_frame.size, 
-					  &pcm_frame) );
+		T( pjmedia_codec_recover(app.codec, pcm_frame.size, 
+					 &pcm_frame) );
 	    } else {
 		pj_bzero(pcm_frame.buf, pcm_frame.size);
 	    }

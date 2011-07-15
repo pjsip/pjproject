@@ -886,7 +886,7 @@ static pj_status_t ffmpeg_alloc_codec( pjmedia_vid_codec_factory *factory,
         status = PJ_ENOMEM;
         goto on_error;
     }
-    pjmedia_vid_codec_init(codec, PJMEDIA_SIG_VID_CODEC_FFMPEG);
+    pjmedia_vid_codec_reset(codec, PJMEDIA_SIG_VID_CODEC_FFMPEG);
     codec->op = &ffmpeg_op;
     codec->factory = factory;
     ff = PJ_POOL_ZALLOC_T(pool, ffmpeg_private);

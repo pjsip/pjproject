@@ -150,7 +150,7 @@ static pj_status_t codec_get_frame(pjmedia_port *port,
         status = pjmedia_port_get_frame(port_data->src_port, frame);
         if (status != PJ_SUCCESS) goto on_error;
 	
-        status = codec->op->decode(codec, frame, frame->size, &enc_frame);
+        status = pjmedia_vid_codec_decode(codec, frame, frame->size, &enc_frame);
         if (status != PJ_SUCCESS) goto on_error;
 	
         frame->size = frame_size;
@@ -163,7 +163,7 @@ static pj_status_t codec_get_frame(pjmedia_port *port,
     status = pjmedia_port_get_frame(port_data->src_port, &enc_frame);
     if (status != PJ_SUCCESS) goto on_error;
     
-    status = codec->op->decode(codec, &enc_frame, frame->size, frame);
+    status = pjmedia_vid_codec_decode(codec, &enc_frame, frame->size, frame);
     if (status != PJ_SUCCESS) goto on_error;
     
     return PJ_SUCCESS;
@@ -282,14 +282,14 @@ static int aviplay(pj_pool_t *pool, const char *fname)
                 rc = 250; goto on_return;
             }
 	    
-            status = codec->op->init(codec, pool);
+            status = pjmedia_vid_codec_init(codec, pool);
             if (status != PJ_SUCCESS) {
                 rc = 251; goto on_return;
             }
 	    
             pjmedia_format_copy(&codec_param.dec_fmt, &param.vidparam.fmt);
 	    
-            status = codec->op->open(codec, &codec_param);
+            status = pjmedia_vid_codec_open(codec, &codec_param);
             if (status != PJ_SUCCESS) {
                 rc = 252; goto on_return;
             }
@@ -438,7 +438,7 @@ on_return:
     if (vid_port)
         pjmedia_port_destroy(vid_port);
     if (codec) {
-        codec->op->close(codec);
+        pjmedia_vid_codec_close(codec);
         pjmedia_vid_codec_mgr_dealloc_codec(NULL, codec);
     }
     

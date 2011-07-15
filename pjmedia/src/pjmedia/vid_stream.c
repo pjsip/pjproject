@@ -335,7 +335,7 @@ static pj_status_t stream_event_cb(pjmedia_event_subscription *esub,
 	switch (event->type) {
 	case PJMEDIA_EVENT_FMT_CHANGED:
 	    /* Update param from codec */
-	    stream->codec->op->get_param(stream->codec, stream->info.codec_param);
+	    pjmedia_vid_codec_get_param(stream->codec, stream->info.codec_param);
 
 	    /* Update decoding channel port info */
 	    pjmedia_format_copy(&stream->dec->port.info.fmt,
@@ -763,10 +763,10 @@ static pj_status_t put_frame(pjmedia_port *port,
     frame_out.size = 0;
 
     /* Encode! */
-    status = (*stream->codec->op->encode)(stream->codec, frame, 
-				          channel->buf_size - 
-				          sizeof(pjmedia_rtp_hdr),
-				          &frame_out);
+    status = pjmedia_vid_codec_encode(stream->codec, frame, 
+				      channel->buf_size - 
+				      sizeof(pjmedia_rtp_hdr),
+				      &frame_out);
     if (status != PJ_SUCCESS) {
         LOGERR_((channel->port.info.name.ptr, 
 	        "Codec encode() error", status));
@@ -784,13 +784,12 @@ static pj_status_t put_frame(pjmedia_port *port,
         pj_size_t payload_len;
 
         /* Generate RTP payload */
-        status = (*stream->codec->op->packetize)(
-                                           stream->codec,
-                                           (pj_uint8_t*)frame_out.buf,
-                                           frame_out.size,
-                                           &processed,
-                                           (const pj_uint8_t**)&payload,
-                                           &payload_len);
+        status = pjmedia_vid_codec_packetize(stream->codec,
+                                             (pj_uint8_t*)frame_out.buf,
+                                             frame_out.size,
+                                             &processed,
+                                             (const pj_uint8_t**)&payload,
+                                             &payload_len);
         if (status != PJ_SUCCESS) {
             LOGERR_((channel->port.info.name.ptr, 
 	            "Codec pack() error", status));
@@ -932,7 +931,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 		    psize = 0;
 		}
 
-		status = (*stream->codec->op->unpacketize)(
+		status = pjmedia_vid_codec_unpacketize(
 						stream->codec,
 						p, psize,
 						(pj_uint8_t*)channel->buf,
@@ -965,8 +964,8 @@ static pj_status_t get_frame(pjmedia_port *port,
     frame_in.type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame_in.timestamp.u64 = last_ts;
 
-    status = stream->codec->op->decode(stream->codec, &frame_in,
-				       frame->size, frame);
+    status = pjmedia_vid_codec_decode(stream->codec, &frame_in,
+				      frame->size, frame);
     if (status != PJ_SUCCESS) {
 	LOGERR_((port->info.name.ptr, "codec decode() error", 
 		 status));
@@ -1239,10 +1238,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 				 PJMEDIA_STREAM_RESV_PAYLOAD_LEN;
 
     /* Init and open the codec. */
-    status = stream->codec->op->init(stream->codec, pool);
+    status = pjmedia_vid_codec_init(stream->codec, pool);
     if (status != PJ_SUCCESS)
 	return status;
-    status = stream->codec->op->open(stream->codec, info->codec_param);
+    status = pjmedia_vid_codec_open(stream->codec, info->codec_param);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1445,7 +1444,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 
     /* Free codec. */
     if (stream->codec) {
-	stream->codec->op->close(stream->codec);
+	pjmedia_vid_codec_close(stream->codec);
 	pjmedia_vid_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
 	stream->codec = NULL;
     }
