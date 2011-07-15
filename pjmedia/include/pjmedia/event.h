@@ -260,6 +260,9 @@ struct pjmedia_event_subscription
 
     /** User data for this subscription */
     void		*user_data;
+
+    /** Current publisher it is subscribed to */
+    pjmedia_event_publisher *subscribe_to;
 };
 
 /**
@@ -334,16 +337,17 @@ PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_publisher *epub,
                                              pjmedia_event_subscription *esub);
 
 /**
- * Unsubscribe from the specified publisher.
+ * Unsubscribe the specified subscription object from publisher it is
+ * currently subscribed to. If the subscription object is not currently
+ * subscribed to anything, the function will do nothing.
  *
- * @param epub		The event publisher.
  * @param esub		The event subscription object, which must be the same
  * 			object that was given to #pjmedia_event_subscribe().
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_event_unsubscribe(pjmedia_event_publisher *epub,
-                                               pjmedia_event_subscription *esub);
+PJ_DECL(pj_status_t)
+pjmedia_event_unsubscribe(pjmedia_event_subscription *esub);
 
 /**
  * Check if the specified publisher has subscribers.

@@ -438,14 +438,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_disconnect(pjmedia_vid_port *vp)
     PJ_ASSERT_RETURN(vp && vp->role==ROLE_ACTIVE, PJ_EINVAL);
 
     if (vp->client_port) {
-	pjmedia_event_publisher *epub;
-
-	/* Unsubscribe event */
-	epub = pjmedia_port_get_event_publisher(vp->client_port);
-	if (epub && vp->esub_client_port.user_data) {
-	    pjmedia_event_unsubscribe(epub, &vp->esub_client_port);
-	    pj_bzero(&vp->esub_client_port, sizeof(vp->esub_client_port));
-	}
+	pjmedia_event_unsubscribe(&vp->esub_client_port);
 	vp->client_port = NULL;
     }
     return PJ_SUCCESS;

@@ -73,17 +73,24 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_publisher *epub,
                                              pjmedia_event_subscription *esub)
 {
     PJ_ASSERT_RETURN(epub && esub && esub->cb, PJ_EINVAL);
+    /* Must not currently subscribe to anything */
+    PJ_ASSERT_RETURN(esub->subscribe_to == NULL, PJ_EINVALIDOP);
+
     pj_list_push_back(&epub->subscription_list, esub);
+    esub->subscribe_to = epub;
     return PJ_SUCCESS;
 }
 
-PJ_DEF(pj_status_t) pjmedia_event_unsubscribe( pjmedia_event_publisher *epub,
-                                               pjmedia_event_subscription *esub)
+PJ_DEF(pj_status_t) pjmedia_event_unsubscribe(pjmedia_event_subscription *esub)
 {
-    PJ_ASSERT_RETURN(epub && esub, PJ_EINVAL);
-    PJ_ASSERT_RETURN(pj_list_find_node(&epub->subscription_list, esub)==esub,
-                     PJ_ENOTFOUND);
-    pj_list_erase(esub);
+    PJ_ASSERT_RETURN(esub, PJ_EINVAL);
+    if (esub->subscribe_to) {
+	PJ_ASSERT_RETURN(
+	    pj_list_find_node(&esub->subscribe_to->subscription_list,
+	                      esub)==esub, PJ_ENOTFOUND);
+	pj_list_erase(esub);
+	esub->subscribe_to = NULL;
+    }
     return PJ_SUCCESS;
 }
 
