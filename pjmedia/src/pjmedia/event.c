@@ -25,7 +25,7 @@
 #define THIS_FILE	"event.c"
 
 #if 1
-#   define TRACE_(x)	PJ_LOG(4,x)
+#   define TRACE_(x)	PJ_LOG(6,x)
 #else
 #   define TRACE_(x)
 #endif
