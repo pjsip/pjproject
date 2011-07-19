@@ -4,6 +4,7 @@
 export TEST_OBJS = main.o
 
 include ../../build.mak
+include ../../version.mak
 include $(PJDIR)/build/common.mak
 
 RULES_MAK := $(PJDIR)/build/rules.mak
@@ -110,10 +111,14 @@ TARGETS := pjsip pjsip-ua pjsip-simple pjsua-lib pjsip-test
 all: $(TARGETS)
 
 doc:
-	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if [ -n "$(WWWDIR)" ]; then \
-		echo "Copying to $(WWWDIR)/pjsip/docs/html.." ; \
-		cp -a ../docs/html/* $(WWWDIR)/pjsip/docs/html/ ; \
+	cd .. && rm -rf docs/$(PJ_VERSION) && doxygen docs/doxygen.cfg
+	@if [ -n "$(WWWDIR)" ] && ! [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjsip/docs/html" ] ; then \
+		echo "Creating docs/$(PJ_VERSION)/pjsip/docs/html" ; \
+		mkdir -p $(WWWDIR)/docs/$(PJ_VERSION)/pjsip/docs/html ; \
+	fi 
+	@if [ -n "$(WWWDIR)" ] && [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjsip/docs/html" ] ; then \
+		echo "Copying docs/$(PJ_VERSION) to $(WWWDIR)/docs/$(PJ_VERSION)/pjsip/docs/html.." ; \
+		cp -v -a ../docs/$(PJ_VERSION)/html/* $(WWWDIR)/docs/$(PJ_VERSION)/pjsip/docs/html/ ; \
 	fi
 
 dep: depend

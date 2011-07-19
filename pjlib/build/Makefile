@@ -1,4 +1,5 @@
 include ../../build.mak
+include ../../version.mak
 include $(PJDIR)/build/common.mak
 
 RULES_MAK := $(PJDIR)/build/rules.mak
@@ -57,12 +58,15 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 all: $(TARGETS)
 
 doc:
-	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if [ -n "$(WWWDIR)" ]; then \
-		echo "Copying to $(WWWDIR)/pjlib/docs/html.." ; \
-		cp -a ../docs/html/* $(WWWDIR)/pjlib/docs/html/ ; \
+	cd .. && rm -rf docs/$(PJ_VERSION) && doxygen docs/doxygen.cfg
+	@if [ -n "$(WWWDIR)" ] && ! [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjlib/docs/html" ] ; then \
+		echo "Creating docs/$(PJ_VERSION)/pjlib/docs/html" ; \
+		mkdir -p $(WWWDIR)/docs/$(PJ_VERSION)/pjlib/docs/html ; \
+	fi 
+	@if [ -n "$(WWWDIR)" ] && [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjlib/docs/html" ] ; then \
+		echo "Copying docs/$(PJ_VERSION) to $(WWWDIR)/docs/$(PJ_VERSION)/pjlib/docs/html.." ; \
+		cp -v -a ../docs/$(PJ_VERSION)/html/* $(WWWDIR)/docs/$(PJ_VERSION)/pjlib/docs/html/ ; \
 	fi
-
 print:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB app=pjlib print_lib
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test print_bin

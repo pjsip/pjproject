@@ -1,4 +1,5 @@
 include ../../build.mak
+include ../../version.mak
 
 THIRD_PARTY:=$(PJDIR)/third_party
 
@@ -141,11 +142,14 @@ TARGETS := pjmedia pjmedia-videodev pjmedia-audiodev pjmedia-codec pjsdp pjmedia
 all: $(TARGETS)
 
 doc:
-	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if [ -n "$(WWWDIR)" ]; then \
-		echo "Copying to $(WWWDIR)/pjmedia/docs/html.." ; \
-		rm -rf $(WWWDIR)/pjmedia/docs/html/* ; \
-		cp -a ../docs/html/* $(WWWDIR)/pjmedia/docs/html/ ; \
+	cd .. && rm -rf docs/$(PJ_VERSION) && doxygen docs/doxygen.cfg
+	@if [ -n "$(WWWDIR)" ] && ! [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html" ] ; then \
+		echo "Creating docs/$(PJ_VERSION)/pjmedia/docs/html" ; \
+		mkdir -p $(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html ; \
+	fi 
+	@if [ -n "$(WWWDIR)" ] && [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html" ] ; then \
+		echo "Copying docs/$(PJ_VERSION) to $(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html.." ; \
+		cp -v -a ../docs/$(PJ_VERSION)/html/* $(WWWDIR)/docs/$(PJ_VERSION)/pjmedia/docs/html/ ; \
 	fi
 
 dep: depend
