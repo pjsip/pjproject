@@ -37,7 +37,9 @@
 #include <pj/os.h>
 #include <pj/unicode.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_FFMPEG
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_FFMPEG) && PJMEDIA_VIDEO_DEV_HAS_FFMPEG != 0
+
 
 #define THIS_FILE		"ffmpeg.c"
 
@@ -510,5 +512,6 @@ static pj_status_t ffmpeg_stream_destroy(pjmedia_vid_dev_stream *s)
 #   pragma comment( lib, "avformat.lib")
 #   pragma comment( lib, "avutil.lib")
 #endif
+
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_FFMPEG */

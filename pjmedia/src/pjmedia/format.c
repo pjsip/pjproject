@@ -23,6 +23,52 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+
+PJ_DEF(void) pjmedia_format_init_audio( pjmedia_format *fmt,
+				        pj_uint32_t fmt_id,
+					unsigned clock_rate,
+					unsigned channel_count,
+					unsigned bits_per_sample,
+					unsigned frame_time_usec,
+					pj_uint32_t avg_bps,
+					pj_uint32_t max_bps)
+{
+    fmt->id = fmt_id;
+    fmt->type = PJMEDIA_TYPE_AUDIO;
+    fmt->detail_type = PJMEDIA_FORMAT_DETAIL_AUDIO;
+
+    fmt->det.aud.clock_rate = clock_rate;
+    fmt->det.aud.channel_count = channel_count;
+    fmt->det.aud.bits_per_sample = bits_per_sample;
+    fmt->det.aud.frame_time_usec = frame_time_usec;
+    fmt->det.aud.avg_bps = avg_bps;
+    fmt->det.aud.max_bps = max_bps;
+}
+
+
+PJ_DEF(pjmedia_audio_format_detail*)
+pjmedia_format_get_audio_format_detail(const pjmedia_format *fmt,
+				       pj_bool_t assert_valid)
+{
+    if (fmt->detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO) {
+	return (pjmedia_audio_format_detail*) &fmt->det.aud;
+    } else {
+	pj_assert(!assert_valid || !"Invalid audio format detail");
+	return NULL;
+    }
+}
+
+
+PJ_DEF(pjmedia_format*) pjmedia_format_copy(pjmedia_format *dst,
+					    const pjmedia_format *src)
+{
+    return (pjmedia_format*)pj_memcpy(dst, src, sizeof(*src));
+}
+
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 static pj_status_t apply_packed_fmt(const pjmedia_video_format_info *fi,
 	                            pjmedia_video_apply_fmt_param *aparam);
 
@@ -55,28 +101,6 @@ static pjmedia_video_format_info built_in_vid_fmt_info[] =
     {PJMEDIA_FORMAT_I420JPEG, "I420JPG", PJMEDIA_COLOR_MODEL_YUV, 12, 3, &apply_planar_420},
     {PJMEDIA_FORMAT_I422JPEG, "I422JPG", PJMEDIA_COLOR_MODEL_YUV, 16, 3, &apply_planar_422},
 };
-
-
-PJ_DEF(void) pjmedia_format_init_audio( pjmedia_format *fmt,
-				        pj_uint32_t fmt_id,
-					unsigned clock_rate,
-					unsigned channel_count,
-					unsigned bits_per_sample,
-					unsigned frame_time_usec,
-					pj_uint32_t avg_bps,
-					pj_uint32_t max_bps)
-{
-    fmt->id = fmt_id;
-    fmt->type = PJMEDIA_TYPE_AUDIO;
-    fmt->detail_type = PJMEDIA_FORMAT_DETAIL_AUDIO;
-
-    fmt->det.aud.clock_rate = clock_rate;
-    fmt->det.aud.channel_count = channel_count;
-    fmt->det.aud.bits_per_sample = bits_per_sample;
-    fmt->det.aud.frame_time_usec = frame_time_usec;
-    fmt->det.aud.avg_bps = avg_bps;
-    fmt->det.aud.max_bps = max_bps;
-}
 
 PJ_DEF(void) pjmedia_format_init_video( pjmedia_format *fmt,
 					pj_uint32_t fmt_id,
@@ -112,18 +136,6 @@ PJ_DEF(void) pjmedia_format_init_video( pjmedia_format *fmt,
     }
 }
 
-PJ_DEF(pjmedia_audio_format_detail*)
-pjmedia_format_get_audio_format_detail(const pjmedia_format *fmt,
-				       pj_bool_t assert_valid)
-{
-    if (fmt->detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO) {
-	return (pjmedia_audio_format_detail*) &fmt->det.aud;
-    } else {
-	pj_assert(!assert_valid || !"Invalid audio format detail");
-	return NULL;
-    }
-}
-
 PJ_DEF(pjmedia_video_format_detail*)
 pjmedia_format_get_video_format_detail(const pjmedia_format *fmt,
 				       pj_bool_t assert_valid)
@@ -134,12 +146,6 @@ pjmedia_format_get_video_format_detail(const pjmedia_format *fmt,
 	pj_assert(!assert_valid || !"Invalid video format detail");
 	return NULL;
     }
-}
-
-PJ_DEF(pjmedia_format*) pjmedia_format_copy(pjmedia_format *dst,
-					    const pjmedia_format *src)
-{
-    return (pjmedia_format*)pj_memcpy(dst, src, sizeof(*src));
 }
 
 
@@ -364,3 +370,4 @@ PJ_DEF(void) pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr *mgr)
 	video_format_mgr_instance = NULL;
 }
 
+#endif /* PJMEDIA_HAS_VIDEO */

@@ -31,9 +31,11 @@
 
 
 /*
- * Only build this file if PJMEDIA_HAS_FFMPEG_CODEC != 0
+ * Only build this file if PJMEDIA_HAS_FFMPEG_CODEC != 0 and 
+ * PJMEDIA_HAS_VIDEO != 0
  */
-#if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC != 0
+#if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC != 0 && \
+    defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 #define THIS_FILE   "ffmpeg_codecs.c"
 

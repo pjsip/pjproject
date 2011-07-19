@@ -22,7 +22,9 @@
 #include <pj/os.h>
 #include <pj/unicode.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_DSHOW
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
+
 
 #ifdef _MSC_VER
 #   pragma warning(push, 3)

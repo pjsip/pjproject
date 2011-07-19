@@ -22,6 +22,10 @@
 #include <pj/errno.h>
 #include <pj/string.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE	"h263_packetizer.c"
 
 
@@ -285,3 +289,6 @@ PJ_DEF(pj_status_t) pjmedia_h263_unpacketize (pjmedia_h263_packetizer *pktz,
 
     return PJ_SUCCESS;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

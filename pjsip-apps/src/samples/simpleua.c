@@ -103,7 +103,7 @@ static pjsip_inv_session    *g_inv;	    /* Current invite session.	*/
 static pjmedia_stream       *g_med_stream;  /* Call's audio stream.	*/
 static pjmedia_snd_port	    *g_snd_port;    /* Sound device.		*/
 
-#if PJMEDIA_HAS_VIDEO
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 static pjmedia_vid_stream   *g_med_vstream; /* Call's video stream.	*/
 static pjmedia_vid_port	    *g_vid_capturer;/* Call's video capturer.	*/
 static pjmedia_vid_port	    *g_vid_renderer;/* Call's video renderer.	*/
@@ -373,8 +373,8 @@ int main(int argc, char *argv[])
 #endif
 
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     /* Init video subsystem */
-#if PJMEDIA_HAS_VIDEO
     pool = pjmedia_endpt_create_pool(g_med_endpt, "Video subsystem", 512, 512);
     status = pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -385,7 +385,7 @@ int main(int argc, char *argv[])
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
-#  if PJMEDIA_HAS_FFMPEG_CODEC
+#  if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC!=0
     /* Init ffmpeg video codecs */
     status = pjmedia_codec_ffmpeg_init(NULL, &cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
@@ -557,8 +557,8 @@ int main(int argc, char *argv[])
     if (g_snd_port)
 	pjmedia_snd_port_destroy(g_snd_port);
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     /* Destroy video ports */
-#if PJMEDIA_HAS_VIDEO
     if (g_vid_capturer)
 	pjmedia_vid_port_destroy(g_vid_capturer);
     if (g_vid_renderer)
@@ -568,9 +568,15 @@ int main(int argc, char *argv[])
     /* Destroy streams */
     if (g_med_stream)
 	pjmedia_stream_destroy(g_med_stream);
-#if PJMEDIA_HAS_VIDEO
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     if (g_med_vstream)
 	pjmedia_vid_stream_destroy(g_med_vstream);
+
+    /* Deinit ffmpeg codec */
+#   if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC!=0
+    pjmedia_codec_ffmpeg_deinit();
+#   endif
+
 #endif
 
     /* Destroy media transports */
@@ -578,11 +584,6 @@ int main(int argc, char *argv[])
 	if (g_med_transport[i])
 	    pjmedia_transport_close(g_med_transport[i]);
     }
-
-    /* Deinit ffmpeg codec */
-#if PJMEDIA_HAS_FFMPEG_CODEC
-    pjmedia_codec_ffmpeg_deinit();
-#endif
 
     /* Deinit pjmedia endpoint */
     if (g_med_endpt)
@@ -885,7 +886,7 @@ static void call_on_media_update( pjsip_inv_session *inv,
      * which is video stream. With this media port interface, we can attach
      * the port directly to a renderer/capture video device.
      */
-#if PJMEDIA_HAS_VIDEO
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     if (local_sdp->media_count > 1) {
 	pjmedia_vid_stream_info vstream_info;
 	pjmedia_vid_port_param vport_param;

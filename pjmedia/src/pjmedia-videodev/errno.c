@@ -25,6 +25,10 @@
  * Message must be limited to 64 chars!
  */
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #if defined(PJ_HAS_ERROR_STRING) && (PJ_HAS_ERROR_STRING != 0)
 
 static const struct
@@ -110,3 +114,6 @@ PJ_DEF(pj_str_t) pjmedia_videodev_strerror(pj_status_t statcode,
 
     return errstr;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

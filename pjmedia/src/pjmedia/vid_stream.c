@@ -38,6 +38,9 @@
 #include <pj/string.h>	    /* memcpy() */
 
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE			"vid_stream.c"
 #define ERRLEVEL			1
 #define LOGERR_(expr)			stream_perror expr
@@ -1938,3 +1941,4 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
     return status;
 }
 
+#endif /* PJMEDIA_HAS_VIDEO */

@@ -312,6 +312,8 @@ static void dump_media_session(const char *indent,
 			     info.tx_pt,
 			     info.param->setting.frm_per_pkt*
 			     info.param->info.frm_ptime);
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	} else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
 	    pjmedia_vid_stream *stream = call_med->strm.v.stream;
 	    pjmedia_vid_stream_info info;
@@ -343,6 +345,8 @@ static void dump_media_session(const char *indent,
 				 vfd->size.w, vfd->size.h,
 				 vfd->fps.num*1.0/vfd->fps.denum);
 	    }
+#endif /* PJMEDIA_HAS_VIDEO */
+
 	} else {
 	    has_stat = PJ_FALSE;
 	}

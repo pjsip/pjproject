@@ -24,6 +24,10 @@
 #include <pj/log.h>
 #include <pj/string.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE   "vid_codec.c"
 
 static pjmedia_vid_codec_mgr *def_vid_codec_mgr;
@@ -729,3 +733,5 @@ pjmedia_vid_codec_mgr_dealloc_codec(pjmedia_vid_codec_mgr *mgr,
     return (*codec->factory->op->dealloc_codec)(codec->factory, codec);
 }
 
+
+#endif /* PJMEDIA_HAS_VIDEO */

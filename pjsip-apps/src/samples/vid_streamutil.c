@@ -35,6 +35,10 @@
 #include <pjmedia-codec.h>
 #include <pjmedia/transport_srtp.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #include <stdlib.h>	/* atoi() */
 #include <stdio.h>
 
@@ -927,3 +931,16 @@ on_exit:
 
     return (status == PJ_SUCCESS) ? 0 : 1;
 }
+
+
+#else
+
+int main(int argc, char *argv[])
+{
+    PJ_UNUSED_ARG(argc);
+    PJ_UNUSED_ARG(argv);
+    puts("Error: this sample requires video capability (PJMEDIA_HAS_VIDEO == 1)");
+    return -1;
+}
+
+#endif /* PJMEDIA_HAS_VIDEO */

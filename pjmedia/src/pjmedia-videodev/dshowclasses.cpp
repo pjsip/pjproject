@@ -19,7 +19,9 @@
 
 #include <pjmedia-videodev/config.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_DSHOW
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
+
 
 #include <assert.h>
 #include <streams.h>
@@ -241,5 +243,6 @@ extern "C" void SourceFilter_SetMediaType(SourceFilter *src,
     ((OutputPin *)src->GetPin(0))->mediaType.Set(*pmt);
     ((OutputPin *)src->GetPin(0))->bufSize = pmt->lSampleSize;
 }
+
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

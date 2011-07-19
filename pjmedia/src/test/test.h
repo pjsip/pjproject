@@ -23,9 +23,9 @@
 #include <pjmedia.h>
 #include <pjlib.h>
 
-#define HAS_VID_DEV_TEST	1
-#define HAS_VID_PORT_TEST	0
-#define HAS_VID_CODEC_TEST	1
+#define HAS_VID_DEV_TEST	PJMEDIA_HAS_VIDEO
+#define HAS_VID_PORT_TEST	PJMEDIA_HAS_VIDEO
+#define HAS_VID_CODEC_TEST	PJMEDIA_HAS_VIDEO
 #define HAS_SDP_NEG_TEST	1
 #define HAS_JBUF_TEST		1
 #define HAS_MIPS_TEST		1

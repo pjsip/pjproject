@@ -25,6 +25,10 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define SIGNATURE	PJMEDIA_SIG_VID_PORT
 #define THIS_FILE	"vid_port.c"
 
@@ -946,3 +950,6 @@ static pj_status_t vid_pasv_port_get_frame(struct pjmedia_port *this_port,
 
     return status;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

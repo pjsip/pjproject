@@ -1465,10 +1465,12 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_info( pjsua_call_id call_id,
 	status = pjmedia_stream_get_info(call_med->strm.a.stream,
 					 &psi->info.aud);
 	break;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     case PJMEDIA_TYPE_VIDEO:
 	status = pjmedia_vid_stream_get_info(call_med->strm.v.stream,
 					     &psi->info.vid);
 	break;
+#endif
     default:
 	status = PJMEDIA_EINVALIMEDIATYPE;
 	break;
@@ -1512,6 +1514,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 	    status = pjmedia_stream_get_stat_jbuf(call_med->strm.a.stream,
 						  &stat->jbuf);
 	break;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     case PJMEDIA_TYPE_VIDEO:
 	status = pjmedia_vid_stream_get_stat(call_med->strm.v.stream,
 					     &stat->rtcp);
@@ -1519,6 +1522,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 	    status = pjmedia_vid_stream_get_stat_jbuf(call_med->strm.v.stream,
 						  &stat->jbuf);
 	break;
+#endif
     default:
 	status = PJMEDIA_EINVALIMEDIATYPE;
 	break;

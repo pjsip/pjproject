@@ -23,6 +23,10 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE   "videodev.c"
 
 #define DEFINE_CAP(name, info)	{name, info}
@@ -804,3 +808,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_destroy(
 {
     return strm->op->destroy(strm);
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

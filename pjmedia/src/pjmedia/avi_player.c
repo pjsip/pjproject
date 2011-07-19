@@ -32,6 +32,9 @@
 #include <pj/string.h>
 
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE   "avi_player.c"
 
 #define AVIF_MUSTUSEINDEX       0x00000020
@@ -709,3 +712,6 @@ static pj_status_t avi_on_destroy(pjmedia_port *this_port)
         pj_file_close(fport->fd);
     return PJ_SUCCESS;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

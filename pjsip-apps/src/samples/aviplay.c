@@ -54,6 +54,9 @@
  */
 
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 /* For logging purpose. */
 #define THIS_FILE   "aviplay.c"
 
@@ -529,3 +532,15 @@ int main(int argc, char *argv[])
 {
     return pj_run_app(&main_func, argc, argv, 0);
 }
+
+#else
+
+int main(int argc, char *argv[])
+{
+    PJ_UNUSED_ARG(argc);
+    PJ_UNUSED_ARG(argv);
+    puts("Error: this sample requires video capability (PJMEDIA_HAS_VIDEO == 1)");
+    return -1;
+}
+
+#endif /* PJMEDIA_HAS_VIDEO */

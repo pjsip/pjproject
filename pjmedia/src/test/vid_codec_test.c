@@ -4,6 +4,10 @@
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/port.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE "vid_codec.c"
 
 #define BYPASS_CODEC	    0
@@ -465,3 +469,4 @@ on_return:
 }
 
 
+#endif /* PJMEDIA_HAS_VIDEO */

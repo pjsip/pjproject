@@ -1247,6 +1247,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	
 	call_med->tp_st = PJSUA_MED_TP_IDLE;
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	/* While in initial call, set default video devices */
 	if (type == PJMEDIA_TYPE_VIDEO) {
 	    call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
@@ -1262,6 +1263,8 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 		call_med->strm.v.cap_dev = info.id;
 	    }
 	}
+#endif
+
     } else if (call_med->tp_st == PJSUA_MED_TP_DISABLED) {
 	/* Media is being reenabled. */
 	call_med->tp_st = PJSUA_MED_TP_INIT;
@@ -1650,10 +1653,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	    status = pjmedia_endpt_create_audio_sdp(pjsua_var.med_endpt, pool,
                                                     &tpinfo.sock_info, 0, &m);
 	    break;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	case PJMEDIA_TYPE_VIDEO:
 	    status = pjmedia_endpt_create_video_sdp(pjsua_var.med_endpt, pool,
 	                                            &tpinfo.sock_info, 0, &m);
 	    break;
+#endif
 	default:
 	    pj_assert(!"Invalid call_med media type");
 	    return PJ_EBUG;
@@ -2124,7 +2129,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		call->audio_idx = mi;
 	    }
 	    break;
-#if PJMEDIA_HAS_VIDEO
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	case PJMEDIA_TYPE_VIDEO:
 	    status = video_channel_update(call_med, tmp_pool,
 	                                  local_sdp, remote_sdp);

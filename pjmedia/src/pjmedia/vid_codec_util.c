@@ -24,6 +24,10 @@
 #include <pj/ctype.h>
 #include <pj/math.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE   "vid_codec_util.c"
 
 /* If this is set to non-zero, H.264 custom negotiation will require
@@ -617,3 +621,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 
     return PJ_SUCCESS;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

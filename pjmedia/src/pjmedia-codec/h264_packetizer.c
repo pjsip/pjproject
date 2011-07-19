@@ -24,6 +24,10 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define THIS_FILE		"h264_packetizer.c"
 
 #define DBG_PACKETIZE		0
@@ -528,3 +532,6 @@ PJ_DEF(pj_status_t) pjmedia_h264_unpacketize(pjmedia_h264_packetizer *pktz,
 
     return PJ_SUCCESS;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

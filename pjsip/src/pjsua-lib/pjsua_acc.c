@@ -382,6 +382,13 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     /* Must have a transport */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[0].data.ptr != NULL, PJ_EINVALIDOP);
 
+    /* Verify media count */
+#if !defined(PJMEDIA_HAS_VIDEO) || (PJMEDIA_HAS_VIDEO == 0)
+    PJ_ASSERT_RETURN(cfg->max_video_cnt == 0, PJ_EINVAL);
+#endif
+    PJ_ASSERT_RETURN(cfg->max_audio_cnt + cfg->max_video_cnt <= 
+		     PJSUA_MAX_CALL_MEDIA, PJ_ETOOMANY);
+
     PJSUA_LOCK();
 
     /* Find empty account id. */
@@ -640,6 +647,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
 		     PJ_EINVAL);
+
+    /* Verify media count */
+#if !defined(PJMEDIA_HAS_VIDEO) || (PJMEDIA_HAS_VIDEO == 0)
+    PJ_ASSERT_RETURN(cfg->max_video_cnt == 0, PJ_EINVAL);
+#endif
+    PJ_ASSERT_RETURN(cfg->max_audio_cnt + cfg->max_video_cnt <= 
+		     PJSUA_MAX_CALL_MEDIA, PJ_ETOOMANY);
+
 
     PJSUA_LOCK();
 

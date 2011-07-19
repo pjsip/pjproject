@@ -523,6 +523,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
     return PJ_SUCCESS;
 }
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
 /* Create m=video SDP media line */
 PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
                                                    pj_pool_t *pool,
@@ -530,6 +533,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
                                                    unsigned options,
                                                    pjmedia_sdp_media **p_m)
 {
+
+
     const pj_str_t STR_VIDEO = { "video", 5 };
     pjmedia_sdp_media *m;
     pjmedia_vid_codec_info codec_info[PJMEDIA_VID_CODEC_MGR_MAX_CODECS];
@@ -661,6 +666,8 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
     return PJ_SUCCESS;
 }
 
+#endif /* PJMEDIA_HAS_VIDEO */
+
 
 /**
  * Create a "blank" SDP session description. The SDP will contain basic SDP
@@ -729,7 +736,6 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
     const pj_sockaddr *addr0;
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *m;
-    unsigned i;
     pj_status_t status;
 
     /* Sanity check arguments */
@@ -750,14 +756,20 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_sdp( pjmedia_endpt *endpt,
 	return status;
     sdp->media[sdp->media_count++] = m;
 
-    /* The remaining stream, if any, are videos (by convention as well) */
-    for (i=1; i<stream_cnt; ++i) {
-	status = pjmedia_endpt_create_video_sdp(endpt, pool,
-	                                        &sock_info[i], 0, &m);
-	if (status != PJ_SUCCESS)
-	    return status;
-	sdp->media[sdp->media_count++] = m;
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    {
+	unsigned i;
+
+	/* The remaining stream, if any, are videos (by convention as well) */
+	for (i=1; i<stream_cnt; ++i) {
+	    status = pjmedia_endpt_create_video_sdp(endpt, pool,
+						    &sock_info[i], 0, &m);
+	    if (status != PJ_SUCCESS)
+		return status;
+	    sdp->media[sdp->media_count++] = m;
+	}
     }
+#endif
 
     /* Done */
     *p_sdp = sdp;

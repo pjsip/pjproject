@@ -22,7 +22,9 @@
 #include <pj/log.h>
 #include <pj/os.h>
 
-#if PJMEDIA_VIDEO_DEV_HAS_SDL
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_SDL) && PJMEDIA_VIDEO_DEV_HAS_SDL != 0
+
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 #   include <Foundation/Foundation.h>
@@ -1287,5 +1289,6 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 #	pragma comment(lib, "OpenGL32.lib")
 #   endif
 #endif
+
 
 #endif	/* PJMEDIA_VIDEO_DEV_HAS_SDL */

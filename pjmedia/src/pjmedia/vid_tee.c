@@ -23,6 +23,10 @@
 #include <pj/log.h>
 #include <pj/pool.h>
 
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+
+
 #define TEE_PORT_NAME	"vid_tee"
 #define TEE_PORT_SIGN	PJMEDIA_SIG_PORT_VID_TEE
 #define MAX_DST_PORT_COUNT 20
@@ -382,3 +386,6 @@ static pj_status_t tee_destroy(pjmedia_port *port)
 
     return PJ_SUCCESS;
 }
+
+
+#endif /* PJMEDIA_HAS_VIDEO */

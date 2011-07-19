@@ -58,9 +58,11 @@ int test_main(void)
 
     mem = &caching_pool.factory;
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
     pjmedia_converter_mgr_create(pool, NULL);
     pjmedia_vid_codec_mgr_create(pool, NULL);
+#endif
 
 #if HAS_VID_PORT_TEST
     DO_TEST(vid_port_test());
@@ -99,10 +101,12 @@ on_return:
 	PJ_LOG(3,(THIS_FILE,"Looks like everything is okay!"));
     }
 
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr_instance());
     pjmedia_converter_mgr_destroy(pjmedia_converter_mgr_instance());
     pjmedia_vid_codec_mgr_destroy(pjmedia_vid_codec_mgr_instance());
-    
+#endif
+
     pj_pool_release(pool);
     pj_caching_pool_destroy(&caching_pool);
 
