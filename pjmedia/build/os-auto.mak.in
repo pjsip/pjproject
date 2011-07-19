@@ -163,7 +163,7 @@ endif
 #
 # Determine whether we should compile the obj-c version of a particular source code
 #
-ifeq ($(AC_PJMEDIA_VIDEO),$(filter $(AC_PJMEDIA_VIDEO),mac_os iphone_os))
+ifneq (,$(filter $(AC_PJMEDIA_VIDEO),mac_os iphone_os))
 # Mac and iPhone OS specific, use obj-c
 export PJMEDIA_VIDEODEV_OBJS += sdl_dev_m.o
 else
