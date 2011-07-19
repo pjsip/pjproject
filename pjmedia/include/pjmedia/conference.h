@@ -46,14 +46,12 @@ PJ_BEGIN_DECL
 /**
  * The conference bridge signature in pjmedia_port_info.
  */
-#define PJMEDIA_CONF_BRIDGE_SIGNATURE	\
-		    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'F')
+#define PJMEDIA_CONF_BRIDGE_SIGNATURE	PJMEDIA_SIG_PORT_CONF
 
 /**
  * The audio switchboard signature in pjmedia_port_info.
  */
-#define PJMEDIA_CONF_SWITCH_SIGNATURE	\
-		    PJMEDIA_PORT_SIGNATURE('A', 'S', 'W', 'I')
+#define PJMEDIA_CONF_SWITCH_SIGNATURE	PJMEDIA_SIG_PORT_CONF_SWITCH
 
 
 /**

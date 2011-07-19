@@ -1,7 +1,35 @@
 # @configure_input@
 
+# Define the desired video device backend
+# Valid values are:
+#   - mac_os
+#   - iphone_os
+AC_PJMEDIA_VIDEO = @ac_pjmedia_video@
+
+# SDL flags
+SDL_CFLAGS = @ac_sdl_cflags@
+SDL_LDFLAGS = @ac_sdl_ldflags@
+
+# FFMPEG dlags
+FFMPEG_CFLAGS = @ac_ffmpeg_cflags@ 
+FFMPEG_LDFLAGS =  @ac_ffmpeg_ldflags@
+
+# Video4Linux2
+V4L2_CFLAGS = @ac_v4l2_cflags@
+V4L2_LDFLAGS = @ac_v4l2_ldflags@
+
+# QT
+AC_PJMEDIA_VIDEO_HAS_QT = @ac_pjmedia_video_has_qt@
+QT_CFLAGS = @ac_qt_cflags@
+
+# iOS
+IOS_CFLAGS = @ac_ios_cflags@
+
 # PJMEDIA features exclusion
-export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@
+export CFLAGS += @ac_no_small_filter@ @ac_no_large_filter@ @ac_no_speex_aec@ \
+		 $(SDL_CFLAGS) $(FFMPEG_CFLAGS) $(V4L2_CFLAGS) $(QT_CFLAGS) \
+		 $(IOS_CFLAGS)
+export LDFLAGS += $(SDL_LDFLAGS) $(FFMPEG_LDFLAGS) $(V4L2_LDFLAGS)
 
 # Define the desired sound device backend
 # Valid values are:
@@ -118,4 +146,27 @@ ifeq ($(AC_PJMEDIA_SND),external)
 export CFLAGS += -DPJMEDIA_AUDIO_DEV_HAS_PORTAUDIO=0 -DPJMEDIA_AUDIO_DEV_HAS_WMME=0
 endif
 
+#
+# QT video device
+#
+ifeq ($(AC_PJMEDIA_VIDEO_HAS_QT),yes)
+export PJMEDIA_VIDEODEV_OBJS += qt_dev.o
+endif
 
+#
+# iOS video device
+#
+ifeq ($(AC_PJMEDIA_VIDEO),iphone_os)
+export PJMEDIA_VIDEODEV_OBJS += ios_dev.o
+endif
+
+#
+# Determine whether we should compile the obj-c version of a particular source code
+#
+ifeq ($(AC_PJMEDIA_VIDEO),$(filter $(AC_PJMEDIA_VIDEO),mac_os iphone_os))
+# Mac and iPhone OS specific, use obj-c
+export PJMEDIA_VIDEODEV_OBJS += sdl_dev_m.o
+else
+# Other platforms, compile .c
+export PJMEDIA_VIDEODEV_OBJS += sdl_dev.o
+endif

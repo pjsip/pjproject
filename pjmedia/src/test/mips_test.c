@@ -684,7 +684,7 @@ struct codec_port
 
 
 static pj_status_t codec_put_frame(struct pjmedia_port *this_port, 
-				   const pjmedia_frame *frame)
+				   pjmedia_frame *frame)
 {
     struct codec_port *cp = (struct codec_port*)this_port;
     pjmedia_frame out_frame;
@@ -692,8 +692,8 @@ static pj_status_t codec_put_frame(struct pjmedia_port *this_port,
 
     out_frame.buf = cp->pkt;
     out_frame.size = sizeof(cp->pkt);
-    status = cp->codec->op->encode(cp->codec, frame, sizeof(cp->pkt),
-				   &out_frame);
+    status = pjmedia_codec_encode(cp->codec, frame, sizeof(cp->pkt),
+				  &out_frame);
     pj_assert(status == PJ_SUCCESS);
 
     if (out_frame.size != 0) {
@@ -701,16 +701,16 @@ static pj_status_t codec_put_frame(struct pjmedia_port *this_port,
 	unsigned frame_cnt = PJ_ARRAY_SIZE(parsed_frm);
 	unsigned i;
 
-	status = cp->codec->op->parse(cp->codec, out_frame.buf, 
-				      out_frame.size, &out_frame.timestamp,
-				      &frame_cnt, parsed_frm);
+	status = pjmedia_codec_parse(cp->codec, out_frame.buf, 
+				     out_frame.size, &out_frame.timestamp,
+				     &frame_cnt, parsed_frm);
 	pj_assert(status == PJ_SUCCESS);
 	
 	for (i=0; i<frame_cnt; ++i) {
 	    pcm_frm.buf = cp->pcm;
 	    pcm_frm.size = sizeof(cp->pkt);
-	    status = cp->codec->op->decode(cp->codec, &parsed_frm[i], 
-					   sizeof(cp->pcm), &pcm_frm);
+	    status = pjmedia_codec_decode(cp->codec, &parsed_frm[i], 
+					  sizeof(cp->pcm), &pcm_frm);
 	    pj_assert(status == PJ_SUCCESS);
 	}
     }
@@ -722,7 +722,7 @@ static pj_status_t codec_on_destroy(struct pjmedia_port *this_port)
 {
     struct codec_port *cp = (struct codec_port*)this_port;
 
-    cp->codec->op->close(cp->codec);
+    pjmedia_codec_close(cp->codec);
     pjmedia_codec_mgr_dealloc_codec(pjmedia_endpt_get_codec_mgr(cp->endpt),
 				    cp->codec);
     cp->codec_deinit();
@@ -782,11 +782,11 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return NULL;
 
-    status = (*cp->codec->op->init)(cp->codec, pool);
+    status = pjmedia_codec_init(cp->codec, pool);
     if (status != PJ_SUCCESS)
 	return NULL;
 
-    status = cp->codec->op->open(cp->codec, &codec_param);
+    status = pjmedia_codec_open(cp->codec, &codec_param);
     if (status != PJ_SUCCESS)
 	return NULL;
 
@@ -1131,13 +1131,13 @@ static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port,
     pj_status_t status;
 
     while (pjmedia_circ_buf_get_len(wp->circbuf) <
-		wp->base.info.samples_per_frame * (CIRC_BUF_FRAME_CNT-1))
+		PJMEDIA_PIA_SPF(&wp->base.info) * (CIRC_BUF_FRAME_CNT-1))
     {
 	status = pjmedia_port_get_frame(wp->gen_port, frame);
 	pj_assert(status==PJ_SUCCESS);
 
 	status = pjmedia_circ_buf_write(wp->circbuf, (short*)frame->buf, 
-					wp->base.info.samples_per_frame);
+					PJMEDIA_PIA_SPF(&wp->base.info));
 	pj_assert(status==PJ_SUCCESS);
     }
     
@@ -1149,7 +1149,7 @@ static pj_status_t wsola_discard_get_frame(struct pjmedia_port *this_port,
 	pjmedia_circ_buf_get_read_regions(wp->circbuf, &reg1, &reg1_len,
 					  &reg2, &reg2_len);
 
-	del_cnt = wp->base.info.samples_per_frame;
+	del_cnt = PJMEDIA_PIA_SPF(&wp->base.info);
 	status = pjmedia_wsola_discard(wp->wsola, reg1, reg1_len, reg2, 
 				       reg2_len, &del_cnt);
 	pj_assert(status==PJ_SUCCESS);
@@ -2010,7 +2010,7 @@ static pj_status_t delaybuf_get_frame(struct pjmedia_port *this_port,
 }
 
 static pj_status_t delaybuf_put_frame(struct pjmedia_port *this_port, 
-				      const pjmedia_frame *frame)
+				      pjmedia_frame *frame)
 {
     struct delaybuf_port *dp = (struct delaybuf_port*)this_port;
     pj_status_t status;
@@ -2219,7 +2219,7 @@ static pj_timestamp run_entry(unsigned clock_rate, struct test_entry *e)
     }
 
     /* Port may decide to use different ptime (e.g. iLBC) */
-    samples_per_frame = port->info.samples_per_frame;
+    samples_per_frame = PJMEDIA_PIA_SPF(&port->info);
 
     gen_port = create_gen_port(pool, clock_rate, 1, 
 			       samples_per_frame, 100);

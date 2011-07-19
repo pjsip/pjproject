@@ -21,8 +21,8 @@
 #define __PJMEDIA_AUDIODEV_CONFIG_H__
 
 /**
- * @file audiodev.h
- * @brief Audio device API.
+ * @file config.h
+ * @brief Audio config.
  */
 #include <pjmedia/types.h>
 #include <pj/pool.h>

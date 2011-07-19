@@ -189,11 +189,11 @@ int main(int argc, char *argv[])
 	status = pjmedia_snd_port_create_player( 
 		     pool,				/* pool		      */
 		     dev_id,				/* device id.	      */
-		     file_port->info.clock_rate,	/* clock rate.	      */
+		     PJMEDIA_PIA_SRATE(&file_port->info),/* clock rate.	      */
 		     snd_ch_cnt,			/* # of channels.     */
 		     snd_ch_cnt * PTIME *		/* samples per frame. */
-		     file_port->info.clock_rate / 1000,
-		     file_port->info.bits_per_sample,   /* bits per sample.   */
+		     PJMEDIA_PIA_SRATE(&file_port->info) / 1000,
+		     PJMEDIA_PIA_BITS(&file_port->info),/* bits per sample.   */
 		     0,					/* options	      */
 		     &snd_port				/* returned port      */
 		     );
@@ -202,7 +202,7 @@ int main(int argc, char *argv[])
 	    return 1;
 	}
 
-	if (snd_ch_cnt != file_port->info.channel_count) {
+	if (snd_ch_cnt != PJMEDIA_PIA_CCNT(&file_port->info)) {
 	    status = pjmedia_stereo_port_create( pool,
 						 file_port,
 						 snd_ch_cnt,
@@ -289,9 +289,9 @@ int main(int argc, char *argv[])
     pj_thread_sleep(100);
 
     printf("Mode = %s\n", (mode == MODE_PLAY? "playing" : "recording") );
-    printf("File  port channel count = %d\n", file_port->info.channel_count);
+    printf("File  port channel count = %d\n", PJMEDIA_PIA_CCNT(&file_port->info));
     printf("Sound port channel count = %d\n", 
-	   pjmedia_snd_port_get_port(snd_port)->info.channel_count);
+	    PJMEDIA_PIA_CCNT(&pjmedia_snd_port_get_port(snd_port)->info));
     puts("");
     puts("Press <ENTER> to stop and quit");
 

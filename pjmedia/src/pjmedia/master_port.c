@@ -56,38 +56,41 @@ PJ_DEF(pj_status_t) pjmedia_master_port_create( pj_pool_t *pool,
     unsigned channel_count;
     unsigned samples_per_frame;
     unsigned bytes_per_frame;
+    pjmedia_audio_format_detail *u_afd, *d_afd;
     pj_status_t status;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(pool && u_port && d_port && p_m, PJ_EINVAL);
 
+    u_afd = pjmedia_format_get_audio_format_detail(&u_port->info.fmt, PJ_TRUE);
+    d_afd = pjmedia_format_get_audio_format_detail(&d_port->info.fmt, PJ_TRUE);
 
     /* Both ports MUST have equal clock rate */
-    PJ_ASSERT_RETURN(u_port->info.clock_rate == d_port->info.clock_rate,
+    PJ_ASSERT_RETURN(u_afd->clock_rate == d_afd->clock_rate,
 		     PJMEDIA_ENCCLOCKRATE);
 
     /* Both ports MUST have equal samples per frame */
-    PJ_ASSERT_RETURN(u_port->info.samples_per_frame==
-		     d_port->info.samples_per_frame,
+    PJ_ASSERT_RETURN(PJMEDIA_PIA_SPF(&u_port->info)==
+			PJMEDIA_PIA_SPF(&d_port->info),
 		     PJMEDIA_ENCSAMPLESPFRAME);
 
     /* Both ports MUST have equal channel count */
-    PJ_ASSERT_RETURN(u_port->info.channel_count == d_port->info.channel_count,
+    PJ_ASSERT_RETURN(u_afd->channel_count == d_afd->channel_count,
 		     PJMEDIA_ENCCHANNEL);
 
 
     /* Get clock_rate and samples_per_frame from one of the port. */
-    clock_rate = u_port->info.clock_rate;
-    samples_per_frame = u_port->info.samples_per_frame;
-    channel_count = u_port->info.channel_count;
+    clock_rate = u_afd->clock_rate;
+    samples_per_frame = PJMEDIA_PIA_SPF(&u_port->info);
+    channel_count = u_afd->channel_count;
 
 
     /* Get the bytes_per_frame value, to determine the size of the
      * buffer. We take the larger size of the two ports.
      */
-    bytes_per_frame = u_port->info.bytes_per_frame;
-    if (d_port->info.bytes_per_frame > bytes_per_frame)
-	bytes_per_frame = d_port->info.bytes_per_frame;
+    bytes_per_frame = PJMEDIA_AFD_AVG_FSZ(u_afd);
+    if (PJMEDIA_AFD_AVG_FSZ(d_afd) > bytes_per_frame)
+	bytes_per_frame = PJMEDIA_AFD_AVG_FSZ(d_afd);
 
 
     /* Create the master port instance */
@@ -207,13 +210,16 @@ PJ_DEF(pj_status_t) pjmedia_master_port_set_uport(pjmedia_master_port *m,
 {
     PJ_ASSERT_RETURN(m && port, PJ_EINVAL);
 
+    /* Only supports audio for now */
+    PJ_ASSERT_RETURN(port->info.fmt.type==PJMEDIA_TYPE_AUDIO, PJ_ENOTSUP);
+
     /* If we have downstream port, make sure they have matching samples per
      * frame.
      */
     if (m->d_port) {
 	PJ_ASSERT_RETURN(
-	    port->info.clock_rate/port->info.samples_per_frame==
-	    m->d_port->info.clock_rate/m->d_port->info.samples_per_frame,
+	    PJMEDIA_PIA_PTIME(&port->info) ==
+		PJMEDIA_PIA_PTIME(&m->d_port->info),
 	    PJMEDIA_ENCSAMPLESPFRAME
 	);
     }
@@ -246,13 +252,16 @@ PJ_DEF(pj_status_t) pjmedia_master_port_set_dport(pjmedia_master_port *m,
 {
     PJ_ASSERT_RETURN(m && port, PJ_EINVAL);
 
+    /* Only supports audio for now */
+    PJ_ASSERT_RETURN(port->info.fmt.type==PJMEDIA_TYPE_AUDIO, PJ_ENOTSUP);
+
     /* If we have upstream port, make sure they have matching samples per
      * frame.
      */
     if (m->u_port) {
 	PJ_ASSERT_RETURN(
-	    port->info.clock_rate/port->info.samples_per_frame==
-	    m->u_port->info.clock_rate/m->u_port->info.samples_per_frame,
+	    PJMEDIA_PIA_PTIME(&port->info) ==
+		    PJMEDIA_PIA_PTIME(&m->u_port->info),
 	    PJMEDIA_ENCSAMPLESPFRAME
 	);
     }

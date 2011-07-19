@@ -147,7 +147,7 @@ static pj_status_t sine_get_frame( pjmedia_port *port,
     unsigned i, count, left, right;
 
     /* Get number of samples */
-    count = frame->size / 2 / port->info.channel_count;
+    count = frame->size / 2 / PJMEDIA_PIA_CCNT(&port->info);
 
     left = 0;
     right = 0;
@@ -156,7 +156,7 @@ static pj_status_t sine_get_frame( pjmedia_port *port,
 	*samples++ = sine->samples[left];
 	++left;
 
-	if (port->info.channel_count == 2) {
+	if (PJMEDIA_PIA_CCNT(&port->info) == 2) {
 	    *samples++ = sine->samples[right];
 	    right += 2; /* higher pitch so we can distinguish left and right. */
 	    if (right >= count)
@@ -187,6 +187,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     pjmedia_port *port;
     unsigned i;
     unsigned count;
+    pj_str_t port_name;
     port_data *sine;
 
     PJ_ASSERT_RETURN(pool && channel_count > 0 && channel_count <= 2, 
@@ -196,17 +197,10 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
 
     /* Fill in port info. */
-    port->info.bits_per_sample = 16;
-    port->info.channel_count = channel_count;
-    port->info.encoding_name = pj_str("pcm");
-    port->info.has_info = 1;
-    port->info.name = pj_str("sine generator");
-    port->info.need_info = 0;
-    port->info.pt = 0xFF;
-    port->info.clock_rate = sampling_rate;
-    port->info.samples_per_frame = sampling_rate * SINE_PTIME / 1000 * channel_count;
-    port->info.bytes_per_frame = port->info.samples_per_frame * 2;
-    port->info.type = PJMEDIA_TYPE_AUDIO;
+    port_name = pj_str("sine generator");
+    pjmedia_port_info_init(&port->info, &port_name,
+			   12345, sampling_rate, channel_count, 16, 
+			   sampling_rate * SINE_PTIME / 1000 * channel_count);
     
     /* Set the function to feed frame */
     port->get_frame = &sine_get_frame;
@@ -215,7 +209,7 @@ static pj_status_t create_sine_port(pj_pool_t *pool,
     port->port_data.pdata = sine = pj_pool_zalloc(pool, sizeof(port_data));
 
     /* Create samples */
-    count = port->info.samples_per_frame / channel_count;
+    count = PJMEDIA_PIA_SPF(&port->info) / channel_count;
     sine->samples = pj_pool_alloc(pool, count * sizeof(pj_int16_t));
     PJ_ASSERT_RETURN(sine->samples != NULL, PJ_ENOMEM);
 

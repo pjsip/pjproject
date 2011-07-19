@@ -26,7 +26,6 @@
 #include <pjmedia/silencedet.h>
 #include <pjmedia/sound_port.h>
 #include <pjmedia/stereo.h>
-#include <pjmedia/stream.h>
 #include <pj/array.h>
 #include <pj/assert.h>
 #include <pj/log.h>
@@ -65,7 +64,7 @@ static FILE *fhnd_rec;
 #define BYTES_PER_SAMPLE    2
 
 #define SIGNATURE	    PJMEDIA_CONF_BRIDGE_SIGNATURE
-#define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('C', 'O', 'N', 'P')
+#define SIGNATURE_PORT	    PJMEDIA_SIG_PORT_CONF_PASV
 /* Normal level is hardcodec to 128 in all over places */
 #define NORMAL_LEVEL	    128
 #define SLOT_TYPE	    unsigned
@@ -241,7 +240,7 @@ struct pjmedia_conf
 
 /* Prototypes */
 static pj_status_t put_frame(pjmedia_port *this_port, 
-			     const pjmedia_frame *frame);
+			     pjmedia_frame *frame);
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
 static pj_status_t get_frame_pasv(pjmedia_port *this_port, 
@@ -285,10 +284,13 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
 
     /* Save some port's infos, for convenience. */
     if (port) {
+	pjmedia_audio_format_detail *afd;
+
+	afd = pjmedia_format_get_audio_format_detail(&port->info.fmt, 1);
 	conf_port->port = port;
-	conf_port->clock_rate = port->info.clock_rate;
-	conf_port->samples_per_frame = port->info.samples_per_frame;
-	conf_port->channel_count = port->info.channel_count;
+	conf_port->clock_rate = afd->clock_rate;
+	conf_port->samples_per_frame = PJMEDIA_AFD_SPF(afd);
+	conf_port->channel_count = afd->channel_count;
     } else {
 	conf_port->port = NULL;
 	conf_port->clock_rate = conf->clock_rate;
@@ -750,8 +752,9 @@ PJ_DEF(pj_status_t) pjmedia_conf_add_port( pjmedia_conf *conf,
      * - same between port & conference bridge.
      * - monochannel on port or conference bridge.
      */
-    if (strm_port->info.channel_count != conf->channel_count && 
-	(strm_port->info.channel_count != 1 && conf->channel_count != 1)) 
+    if (PJMEDIA_PIA_CCNT(&strm_port->info) != conf->channel_count &&
+	(PJMEDIA_PIA_CCNT(&strm_port->info) != 1 &&
+	 conf->channel_count != 1))
     {
 	pj_assert(!"Number of channels mismatch");
 	return PJMEDIA_ENCCHANNEL;
@@ -2050,7 +2053,7 @@ static pj_status_t get_frame_pasv(pjmedia_port *this_port,
  * Recorder (or passive port) callback.
  */
 static pj_status_t put_frame(pjmedia_port *this_port, 
-			     const pjmedia_frame *frame)
+			     pjmedia_frame *frame)
 {
     pjmedia_conf *conf = (pjmedia_conf*) this_port->port_data.pdata;
     struct conf_port *port = conf->ports[this_port->port_data.ldata];

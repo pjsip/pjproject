@@ -391,7 +391,11 @@ PJ_BEGIN_DECL
  * Remote does not support RFC 2833
  */
 #define PJMEDIA_RTP_EREMNORFC2833   (PJMEDIA_ERRNO_START+107)    /* 220107 */
-
+/**
+ * @hideinitializer
+ * Invalid or bad format
+ */
+#define PJMEDIA_EBADFMT             (PJMEDIA_ERRNO_START+108)    /* 220108 */
 
 
 /************************************************************
@@ -517,6 +521,11 @@ PJ_BEGIN_DECL
  * Sound frame is too large for file buffer.
  */
 #define PJMEDIA_EFRMFILETOOBIG	    (PJMEDIA_ERRNO_START+183)    /* 220183 */
+/**
+ * @hideinitializer
+ * Unsupported AVI file.
+ */
+#define PJMEDIA_EAVIUNSUPP	    (PJMEDIA_ERRNO_START+191)    /* 220191 */
 
 
 /************************************************************

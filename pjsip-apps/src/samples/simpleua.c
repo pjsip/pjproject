@@ -67,11 +67,19 @@
 
 
 /* Settings */
-#define AF	    pj_AF_INET()     /* Change to pj_AF_INET6() for IPv6.
+#define AF		pj_AF_INET() /* Change to pj_AF_INET6() for IPv6.
 				      * PJ_HAS_IPV6 must be enabled and
 				      * your system must support IPv6.  */
-#define SIP_PORT    5060	     /* Listening SIP port		*/
-#define RTP_PORT    4000	     /* RTP port			*/
+#if 0
+#define SIP_PORT	5080	     /* Listening SIP port		*/
+#define RTP_PORT	5000	     /* RTP port			*/
+#else
+#define SIP_PORT	5060	     /* Listening SIP port		*/
+#define RTP_PORT	4000	     /* RTP port			*/
+#endif
+
+#define MAX_MEDIA_CNT	2	     /* Media count, set to 1 for audio
+				      * only or 2 for audio and video	*/
 
 /*
  * Static variables.
@@ -82,15 +90,24 @@ static pjsip_endpoint	    *g_endpt;	    /* SIP endpoint.		*/
 static pj_caching_pool	     cp;	    /* Global pool factory.	*/
 
 static pjmedia_endpt	    *g_med_endpt;   /* Media endpoint.		*/
-static pjmedia_transport_info g_med_tpinfo; /* Socket info for media	*/
-static pjmedia_transport    *g_med_transport;/* Media stream transport	*/
+
+static pjmedia_transport_info g_med_tpinfo[MAX_MEDIA_CNT]; 
+					    /* Socket info for media	*/
+static pjmedia_transport    *g_med_transport[MAX_MEDIA_CNT];
+					    /* Media stream transport	*/
+static pjmedia_sock_info     g_sock_info[MAX_MEDIA_CNT];  
+					    /* Socket info array	*/
 
 /* Call variables: */
 static pjsip_inv_session    *g_inv;	    /* Current invite session.	*/
-static pjmedia_session	    *g_med_session; /* Call's media session.	*/
-static pjmedia_snd_port	    *g_snd_player;  /* Call's sound player	*/
-static pjmedia_snd_port	    *g_snd_rec;	    /* Call's sound recorder.	*/
+static pjmedia_stream       *g_med_stream;  /* Call's audio stream.	*/
+static pjmedia_snd_port	    *g_snd_port;    /* Sound device.		*/
 
+#if PJMEDIA_HAS_VIDEO
+static pjmedia_vid_stream   *g_med_vstream; /* Call's video stream.	*/
+static pjmedia_vid_port	    *g_vid_capturer;/* Call's video capturer.	*/
+static pjmedia_vid_port	    *g_vid_renderer;/* Call's video renderer.	*/
+#endif	/* PJMEDIA_HAS_VIDEO */
 
 /*
  * Prototypes:
@@ -136,6 +153,68 @@ static pjsip_module mod_simpleua =
 };
 
 
+/* Notification on incoming messages */
+static pj_bool_t logging_on_rx_msg(pjsip_rx_data *rdata)
+{
+    PJ_LOG(4,(THIS_FILE, "RX %d bytes %s from %s %s:%d:\n"
+			 "%.*s\n"
+			 "--end msg--",
+			 rdata->msg_info.len,
+			 pjsip_rx_data_get_info(rdata),
+			 rdata->tp_info.transport->type_name,
+			 rdata->pkt_info.src_name,
+			 rdata->pkt_info.src_port,
+			 (int)rdata->msg_info.len,
+			 rdata->msg_info.msg_buf));
+    
+    /* Always return false, otherwise messages will not get processed! */
+    return PJ_FALSE;
+}
+
+/* Notification on outgoing messages */
+static pj_status_t logging_on_tx_msg(pjsip_tx_data *tdata)
+{
+    
+    /* Important note:
+     *	tp_info field is only valid after outgoing messages has passed
+     *	transport layer. So don't try to access tp_info when the module
+     *	has lower priority than transport layer.
+     */
+
+    PJ_LOG(4,(THIS_FILE, "TX %d bytes %s to %s %s:%d:\n"
+			 "%.*s\n"
+			 "--end msg--",
+			 (tdata->buf.cur - tdata->buf.start),
+			 pjsip_tx_data_get_info(tdata),
+			 tdata->tp_info.transport->type_name,
+			 tdata->tp_info.dst_name,
+			 tdata->tp_info.dst_port,
+			 (int)(tdata->buf.cur - tdata->buf.start),
+			 tdata->buf.start));
+
+    /* Always return success, otherwise message will not get sent! */
+    return PJ_SUCCESS;
+}
+
+/* The module instance. */
+static pjsip_module msg_logger = 
+{
+    NULL, NULL,				/* prev, next.		*/
+    { "mod-msg-log", 13 },		/* Name.		*/
+    -1,					/* Id			*/
+    PJSIP_MOD_PRIORITY_TRANSPORT_LAYER-1,/* Priority	        */
+    NULL,				/* load()		*/
+    NULL,				/* start()		*/
+    NULL,				/* stop()		*/
+    NULL,				/* unload()		*/
+    &logging_on_rx_msg,			/* on_rx_request()	*/
+    &logging_on_rx_msg,			/* on_rx_response()	*/
+    &logging_on_tx_msg,			/* on_tx_request.	*/
+    &logging_on_tx_msg,			/* on_tx_response()	*/
+    NULL,				/* on_tsx_state()	*/
+
+};
+
 
 /*
  * main()
@@ -145,12 +224,15 @@ static pjsip_module mod_simpleua =
  */
 int main(int argc, char *argv[])
 {
+    pj_pool_t *pool;
     pj_status_t status;
+    unsigned i;
 
     /* Must init PJLIB first: */
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
+    pj_log_set_level(5);
 
     /* Then init PJLIB-UTIL: */
     status = pjlib_util_init();
@@ -262,6 +344,12 @@ int main(int argc, char *argv[])
     status = pjsip_endpt_register_module( g_endpt, &mod_simpleua);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
+    /*
+     * Register message logger module.
+     */
+    status = pjsip_endpt_register_module( g_endpt, &msg_logger);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
 
     /* 
      * Initialize media endpoint.
@@ -284,27 +372,52 @@ int main(int argc, char *argv[])
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 #endif
 
+
+    /* Init video subsystem */
+#if PJMEDIA_HAS_VIDEO
+    pool = pjmedia_endpt_create_pool(g_med_endpt, "Video subsystem", 512, 512);
+    status = pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+    status = pjmedia_converter_mgr_create(pool, NULL);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+    status = pjmedia_vid_codec_mgr_create(pool, NULL);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+    status = pjmedia_vid_dev_subsys_init(&cp.factory);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+
+#  if PJMEDIA_HAS_FFMPEG_CODEC
+    /* Init ffmpeg video codecs */
+    status = pjmedia_codec_ffmpeg_init(NULL, &cp.factory);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
+#  endif  /* PJMEDIA_HAS_FFMPEG_CODEC */
+
+#endif	/* PJMEDIA_HAS_VIDEO */
     
     /* 
      * Create media transport used to send/receive RTP/RTCP socket.
      * One media transport is needed for each call. Application may
      * opt to re-use the same media transport for subsequent calls.
      */
-    status = pjmedia_transport_udp_create3(g_med_endpt, AF, NULL, NULL, 
-				           RTP_PORT, 0, &g_med_transport);
-    if (status != PJ_SUCCESS) {
-	app_perror(THIS_FILE, "Unable to create media transport", status);
-	return 1;
+    for (i = 0; i < PJ_ARRAY_SIZE(g_med_transport); ++i) {
+	status = pjmedia_transport_udp_create3(g_med_endpt, AF, NULL, NULL, 
+					       RTP_PORT + i*2, 0, 
+					       &g_med_transport[i]);
+	if (status != PJ_SUCCESS) {
+	    app_perror(THIS_FILE, "Unable to create media transport", status);
+	    return 1;
+	}
+
+	/* 
+	 * Get socket info (address, port) of the media transport. We will
+	 * need this info to create SDP (i.e. the address and port info in
+	 * the SDP).
+	 */
+	pjmedia_transport_info_init(&g_med_tpinfo[i]);
+	pjmedia_transport_get_info(g_med_transport[i], &g_med_tpinfo[i]);
+
+	pj_memcpy(&g_sock_info[i], &g_med_tpinfo[i].sock_info,
+		  sizeof(pjmedia_sock_info));
     }
-
-    /* 
-     * Get socket info (address, port) of the media transport. We will
-     * need this info to create SDP (i.e. the address and port info in
-     * the SDP).
-     */
-    pjmedia_transport_info_init(&g_med_tpinfo);
-    pjmedia_transport_get_info(g_med_transport, &g_med_tpinfo);
-
 
     /*
      * If URL is specified, then make call immediately.
@@ -360,15 +473,12 @@ int main(int argc, char *argv[])
 
 
 	/* Get the SDP body to be put in the outgoing INVITE, by asking
-	 * media endpoint to create one for us. The SDP will contain all
-	 * codecs that have been registered to it (in this case, only
-	 * PCMA and PCMU), plus telephony event.
+	 * media endpoint to create one for us.
 	 */
 	status = pjmedia_endpt_create_sdp( g_med_endpt,	    /* the media endpt	*/
 					   dlg->pool,	    /* pool.		*/
-					   1,		    /* # of streams	*/
-					   &g_med_tpinfo.sock_info,   
-							    /* RTP sock info	*/
+					   MAX_MEDIA_CNT,   /* # of streams	*/
+					   g_sock_info,     /* RTP sock info	*/
 					   &local_sdp);	    /* the SDP result	*/
 	PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
@@ -439,6 +549,51 @@ int main(int argc, char *argv[])
 
     /* On exit, dump current memory usage: */
     dump_pool_usage(THIS_FILE, &cp);
+
+    /* Destroy audio ports. Destroy the audio port first
+     * before the stream since the audio port has threads
+     * that get/put frames to the stream.
+     */
+    if (g_snd_port)
+	pjmedia_snd_port_destroy(g_snd_port);
+
+    /* Destroy video ports */
+#if PJMEDIA_HAS_VIDEO
+    if (g_vid_capturer)
+	pjmedia_vid_port_destroy(g_vid_capturer);
+    if (g_vid_renderer)
+	pjmedia_vid_port_destroy(g_vid_renderer);
+#endif
+
+    /* Destroy streams */
+    if (g_med_stream)
+	pjmedia_stream_destroy(g_med_stream);
+#if PJMEDIA_HAS_VIDEO
+    if (g_med_vstream)
+	pjmedia_vid_stream_destroy(g_med_vstream);
+#endif
+
+    /* Destroy media transports */
+    for (i = 0; i < MAX_MEDIA_CNT; ++i) {
+	if (g_med_transport[i])
+	    pjmedia_transport_close(g_med_transport[i]);
+    }
+
+    /* Deinit ffmpeg codec */
+#if PJMEDIA_HAS_FFMPEG_CODEC
+    pjmedia_codec_ffmpeg_deinit();
+#endif
+
+    /* Deinit pjmedia endpoint */
+    if (g_med_endpt)
+	pjmedia_endpt_destroy(g_med_endpt);
+
+    /* Deinit pjsip endpoint */
+    if (g_endpt)
+	pjsip_endpt_destroy(g_endpt);
+
+    /* Release pool */
+    pj_pool_release(pool);
 
     return 0;
 }
@@ -574,9 +729,8 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
      * Get media capability from media endpoint: 
      */
 
-    status = pjmedia_endpt_create_sdp( g_med_endpt, rdata->tp_info.pool, 1,
-				       &g_med_tpinfo.sock_info, 
-				       &local_sdp);
+    status = pjmedia_endpt_create_sdp( g_med_endpt, rdata->tp_info.pool,
+				       MAX_MEDIA_CNT, g_sock_info, &local_sdp);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, PJ_TRUE);
 
 
@@ -639,7 +793,7 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
 static void call_on_media_update( pjsip_inv_session *inv,
 				  pj_status_t status)
 {
-    pjmedia_session_info sess_info;
+    pjmedia_stream_info stream_info;
     const pjmedia_sdp_session *local_sdp;
     const pjmedia_sdp_session *remote_sdp;
     pjmedia_port *media_port;
@@ -662,88 +816,211 @@ static void call_on_media_update( pjsip_inv_session *inv,
     status = pjmedia_sdp_neg_get_active_remote(inv->neg, &remote_sdp);
 
 
-    /* Create session info based on the two SDPs. 
-     * We only support one stream per session for now.
-     */
-    status = pjmedia_session_info_from_sdp(inv->dlg->pool, g_med_endpt, 
-					   1, &sess_info, 
-					   local_sdp, remote_sdp);
+    /* Create stream info based on the media audio SDP. */
+    status = pjmedia_stream_info_from_sdp(&stream_info, inv->dlg->pool,
+					  g_med_endpt,
+					  local_sdp, remote_sdp, 0);
     if (status != PJ_SUCCESS) {
-	app_perror( THIS_FILE, "Unable to create media session", status);
+	app_perror(THIS_FILE,"Unable to create audio stream info",status);
 	return;
     }
 
-    /* If required, we can also change some settings in the session info,
+    /* If required, we can also change some settings in the stream info,
      * (such as jitter buffer settings, codec settings, etc) before we
-     * create the session.
+     * create the stream.
      */
 
-    /* Create new media session, passing the two SDPs, and also the
+    /* Create new audio media stream, passing the stream info, and also the
      * media socket that we created earlier.
-     * The media session is active immediately.
      */
-    status = pjmedia_session_create( g_med_endpt, &sess_info,
-				     &g_med_transport, NULL, &g_med_session );
+    status = pjmedia_stream_create(g_med_endpt, inv->dlg->pool, &stream_info,
+				   g_med_transport[0], NULL, &g_med_stream);
     if (status != PJ_SUCCESS) {
-	app_perror( THIS_FILE, "Unable to create media session", status);
+	app_perror( THIS_FILE, "Unable to create audio stream", status);
 	return;
     }
 
+    /* Start the audio stream */
+    status = pjmedia_stream_start(g_med_stream);
+    if (status != PJ_SUCCESS) {
+	app_perror( THIS_FILE, "Unable to start audio stream", status);
+	return;
+    }
 
-    /* Get the media port interface of the first stream in the session. 
+    /* Get the media port interface of the audio stream. 
      * Media port interface is basicly a struct containing get_frame() and
      * put_frame() function. With this media port interface, we can attach
      * the port interface to conference bridge, or directly to a sound
      * player/recorder device.
      */
-    pjmedia_session_get_port(g_med_session, 0, &media_port);
+    pjmedia_stream_get_port(g_med_stream, &media_port);
 
+    /* Create sound port */
+    pjmedia_snd_port_create(inv->pool,
+                            PJMEDIA_AUD_DEFAULT_CAPTURE_DEV,
+                            PJMEDIA_AUD_DEFAULT_PLAYBACK_DEV,
+                            PJMEDIA_PIA_SRATE(&media_port->info),/* clock rate	    */
+                            PJMEDIA_PIA_CCNT(&media_port->info),/* channel count    */
+                            PJMEDIA_PIA_SPF(&media_port->info), /* samples per frame*/
+                            PJMEDIA_PIA_BITS(&media_port->info),/* bits per sample  */
+                            0,
+                            &g_snd_port);
 
-
-    /* Create a sound Player device and connect the media port to the
-     * sound device.
-     */
-    status = pjmedia_snd_port_create_player( 
-		    inv->pool,				/* pool		    */
-		    -1,					/* sound dev id	    */
-		    media_port->info.clock_rate,	/* clock rate	    */
-		    media_port->info.channel_count,	/* channel count    */
-		    media_port->info.samples_per_frame, /* samples per frame*/
-		    media_port->info.bits_per_sample,   /* bits per sample  */
-		    0,					/* options	    */
-		    &g_snd_player);
     if (status != PJ_SUCCESS) {
-	app_perror( THIS_FILE, "Unable to create sound player", status);
+	app_perror( THIS_FILE, "Unable to create sound port", status);
 	PJ_LOG(3,(THIS_FILE, "%d %d %d %d",
-	    	    media_port->info.clock_rate,	/* clock rate	    */
-		    media_port->info.channel_count,	/* channel count    */
-		    media_port->info.samples_per_frame, /* samples per frame*/
-		    media_port->info.bits_per_sample    /* bits per sample  */
+		    PJMEDIA_PIA_SRATE(&media_port->info),/* clock rate	    */
+		    PJMEDIA_PIA_CCNT(&media_port->info),/* channel count    */
+		    PJMEDIA_PIA_SPF(&media_port->info), /* samples per frame*/
+		    PJMEDIA_PIA_BITS(&media_port->info) /* bits per sample  */
 	    ));
 	return;
     }
 
-    status = pjmedia_snd_port_connect(g_snd_player, media_port);
+    status = pjmedia_snd_port_connect(g_snd_port, media_port);
 
 
-    /* Create a sound recorder device and connect the media port to the
-     * sound device.
+    /* Get the media port interface of the second stream in the session,
+     * which is video stream. With this media port interface, we can attach
+     * the port directly to a renderer/capture video device.
      */
-    status = pjmedia_snd_port_create_rec( 
-		    inv->pool,				/* pool		    */
-		    -1,					/* sound dev id	    */
-		    media_port->info.clock_rate,	/* clock rate	    */
-		    media_port->info.channel_count,	/* channel count    */
-		    media_port->info.samples_per_frame, /* samples per frame*/
-		    media_port->info.bits_per_sample,   /* bits per sample  */
-		    0,					/* options	    */
-		    &g_snd_rec);
-    if (status != PJ_SUCCESS) {
-	app_perror( THIS_FILE, "Unable to create sound recorder", status);
-	return;
-    }
+#if PJMEDIA_HAS_VIDEO
+    if (local_sdp->media_count > 1) {
+	pjmedia_vid_stream_info vstream_info;
+	pjmedia_vid_port_param vport_param;
 
-    status = pjmedia_snd_port_connect(g_snd_rec, media_port);
+	pjmedia_vid_port_param_default(&vport_param);
+
+	/* Create stream info based on the media video SDP. */
+	status = pjmedia_vid_stream_info_from_sdp(&vstream_info,
+						  inv->dlg->pool, g_med_endpt,
+						  local_sdp, remote_sdp, 1);
+	if (status != PJ_SUCCESS) {
+	    app_perror(THIS_FILE,"Unable to create video stream info",status);
+	    return;
+	}
+
+	/* If required, we can also change some settings in the stream info,
+	 * (such as jitter buffer settings, codec settings, etc) before we
+	 * create the video stream.
+	 */
+
+	/* Create new video media stream, passing the stream info, and also the
+	 * media socket that we created earlier.
+	 */
+	status = pjmedia_vid_stream_create(g_med_endpt, NULL, &vstream_info,
+	                                   g_med_transport[1], NULL,
+	                                   &g_med_vstream);
+	if (status != PJ_SUCCESS) {
+	    app_perror( THIS_FILE, "Unable to create video stream", status);
+	    return;
+	}
+
+	/* Start the video stream */
+	status = pjmedia_vid_stream_start(g_med_vstream);
+	if (status != PJ_SUCCESS) {
+	    app_perror( THIS_FILE, "Unable to start video stream", status);
+	    return;
+	}
+
+	if (vstream_info.dir & PJMEDIA_DIR_DECODING) {
+	    status = pjmedia_vid_dev_default_param(
+				inv->pool, PJMEDIA_VID_DEFAULT_RENDER_DEV,
+				&vport_param.vidparam);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to get default param of video "
+			   "renderer device", status);
+		return;
+	    }
+
+	    /* Get video stream port for decoding direction */
+	    pjmedia_vid_stream_get_port(g_med_vstream, PJMEDIA_DIR_DECODING,
+					&media_port);
+
+	    /* Set format */
+	    pjmedia_format_copy(&vport_param.vidparam.fmt,
+				&media_port->info.fmt);
+	    vport_param.vidparam.dir = PJMEDIA_DIR_RENDER;
+	    vport_param.active = PJ_TRUE;
+
+	    /* Create renderer */
+	    status = pjmedia_vid_port_create(inv->pool, &vport_param, 
+					     &g_vid_renderer);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to create video renderer device",
+			   status);
+		return;
+	    }
+
+	    /* Connect renderer to media_port */
+	    status = pjmedia_vid_port_connect(g_vid_renderer, media_port, 
+					      PJ_FALSE);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to connect renderer to stream",
+			   status);
+		return;
+	    }
+	}
+
+	/* Create capturer */
+	if (vstream_info.dir & PJMEDIA_DIR_ENCODING) {
+	    status = pjmedia_vid_dev_default_param(
+				inv->pool, PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+				&vport_param.vidparam);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to get default param of video "
+			   "capture device", status);
+		return;
+	    }
+
+	    /* Get video stream port for decoding direction */
+	    pjmedia_vid_stream_get_port(g_med_vstream, PJMEDIA_DIR_ENCODING,
+					&media_port);
+
+	    /* Get capturer format from stream info */
+	    pjmedia_format_copy(&vport_param.vidparam.fmt, 
+	                        &media_port->info.fmt);
+	    vport_param.vidparam.dir = PJMEDIA_DIR_CAPTURE;
+	    vport_param.active = PJ_TRUE;
+
+	    /* Create capturer */
+	    status = pjmedia_vid_port_create(inv->pool, &vport_param, 
+					     &g_vid_capturer);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to create video capture device",
+			   status);
+		return;
+	    }
+
+	    /* Connect capturer to media_port */
+	    status = pjmedia_vid_port_connect(g_vid_capturer, media_port, 
+					      PJ_FALSE);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to connect capturer to stream",
+			   status);
+		return;
+	    }
+	}
+
+	/* Start streaming */
+	if (g_vid_renderer) {
+	    status = pjmedia_vid_port_start(g_vid_renderer);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to start video renderer",
+			   status);
+		return;
+	    }
+	}
+	if (g_vid_capturer) {
+	    status = pjmedia_vid_port_start(g_vid_capturer);
+	    if (status != PJ_SUCCESS) {
+		app_perror(THIS_FILE, "Unable to start video capturer",
+			   status);
+		return;
+	    }
+	}
+    }
+#endif	/* PJMEDIA_HAS_VIDEO */
 
     /* Done with media. */
 }

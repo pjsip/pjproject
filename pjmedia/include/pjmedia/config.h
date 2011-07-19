@@ -515,6 +515,15 @@
 #endif
 
 /**
+ * Reserve some space for application extra data, e.g: SRTP auth tag,
+ * in RTP payload, so the total payload length will not exceed the MTU.
+ */
+#ifndef PJMEDIA_STREAM_RESV_PAYLOAD_LEN
+#   define PJMEDIA_STREAM_RESV_PAYLOAD_LEN	20
+#endif
+
+
+/**
  * Specify the maximum duration of silence period in the codec, in msec. 
  * This is useful for example to keep NAT binding open in the firewall
  * and to prevent server from disconnecting the call because no 
@@ -568,6 +577,16 @@
 
 
 /**
+ * Maximum number of parameters in SDP fmtp attribute.
+ *
+ * Default: 16
+ */
+#ifndef PJMEDIA_CODEC_MAX_FMTP_CNT
+#   define PJMEDIA_CODEC_MAX_FMTP_CNT		16
+#endif
+
+
+/**
  * This specifies the behavior of the SDP negotiator when responding to an
  * offer, whether it should rather use the codec preference as set by
  * remote, or should it rather use the codec preference as specified by
@@ -588,6 +607,15 @@
  */
 #ifndef PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER
 #   define PJMEDIA_SDP_NEG_PREFER_REMOTE_CODEC_ORDER	1
+#endif
+
+
+/**
+ * This specifies the maximum number of the customized SDP format
+ * negotiation callbacks.
+ */
+#ifndef PJMEDIA_SDP_NEG_MAX_CUSTOM_FMT_NEG_CB
+#   define PJMEDIA_SDP_NEG_MAX_CUSTOM_FMT_NEG_CB	8
 #endif
 
 
@@ -877,6 +905,140 @@
  */
 #ifndef PJMEDIA_STREAM_KA_INTERVAL
 #	define PJMEDIA_STREAM_KA_INTERVAL	    5
+#endif
+
+
+/*
+ * .... new stuffs ...
+ */
+
+/*
+ * Video
+ */
+
+/**
+ * Top level option to disable video.
+ */
+#ifndef PJMEDIA_HAS_VIDEO
+#   define PJMEDIA_HAS_VIDEO				1
+#endif
+
+
+/**
+ * Specify if FFMPEG is available. The value here will be used as the default
+ * value for other FFMPEG settings below.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_FFMPEG
+#   define PJMEDIA_HAS_FFMPEG				0
+#endif
+
+/**
+ * Specify if FFMPEG libavformat is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVFORMAT
+#   define PJMEDIA_HAS_LIBAVFORMAT			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavformat is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVCODEC
+#   define PJMEDIA_HAS_LIBAVCODEC			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavutil is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVUTIL
+#   define PJMEDIA_HAS_LIBAVUTIL			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libswscale is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBSWSCALE
+#   define PJMEDIA_HAS_LIBSWSCALE			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavdevice is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVDEVICE
+#   define PJMEDIA_HAS_LIBAVDEVICE			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Specify if FFMPEG libavcore is available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG (or detected by configure)
+ */
+#ifndef PJMEDIA_HAS_LIBAVCORE
+#   define PJMEDIA_HAS_LIBAVCORE			PJMEDIA_HAS_FFMPEG
+#endif
+
+/**
+ * Maximum video planes.
+ *
+ * Default: 4
+ */
+#ifndef PJMEDIA_MAX_VIDEO_PLANES
+#   define PJMEDIA_MAX_VIDEO_PLANES			4
+#endif
+
+/**
+ * Maximum number of video formats.
+ *
+ * Default: 32
+ */
+#ifndef PJMEDIA_MAX_VIDEO_FORMATS
+#   define PJMEDIA_MAX_VIDEO_FORMATS			32
+#endif
+
+/**
+ * Specify the maximum time difference (in ms) for synchronization between
+ * two medias. If the synchronization media source is ahead of time
+ * greater than this duration, it is considered to make a very large jump
+ * and the synchronization will be reset.
+ *
+ * Default: 20000
+ */
+#ifndef PJMEDIA_CLOCK_SYNC_MAX_SYNC_MSEC
+#   define PJMEDIA_CLOCK_SYNC_MAX_SYNC_MSEC         20000
+#endif
+
+/**
+ * Maximum video frame size.
+ * Default: 128kB
+ */
+#ifndef PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE
+#  define PJMEDIA_MAX_VIDEO_ENC_FRAME_SIZE	    (1<<17)
+#endif
+
+
+/**
+ * Specify the maximum duration (in ms) for resynchronization. When a media
+ * is late to another media it is supposed to be synchronized to, it is
+ * guaranteed to be synchronized again after this duration. While if the
+ * media is ahead/early by t ms, it is guaranteed to be synchronized after
+ * t + this duration. This timing only applies if there is no additional
+ * resynchronization required during the specified duration.
+ *
+ * Default: 2000
+ */
+#ifndef PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION
+#   define PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION 2000
 #endif
 
 

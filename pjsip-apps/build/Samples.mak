@@ -14,7 +14,9 @@ OBJDIR := ./output/samples-$(TARGET_NAME)
 BINDIR := ../bin/samples/$(TARGET_NAME)
 
 SAMPLES := auddemo \
+	   aviplay \
 	   aectest \
+	   aviplay \
 	   confsample \
 	   encdec \
 	   httpdemo \
@@ -38,7 +40,8 @@ SAMPLES := auddemo \
 	   stereotest \
 	   streamutil \
 	   strerror \
-	   tonegen
+	   tonegen \
+	   vid_streamutil
 
 EXES := $(foreach file, $(SAMPLES), $(BINDIR)/$(file)$(HOST_EXE))
 

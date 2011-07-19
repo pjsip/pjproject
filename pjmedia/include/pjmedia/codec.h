@@ -27,6 +27,7 @@
  */
 
 #include <pjmedia/port.h>
+#include <pj/errno.h>
 #include <pj/list.h>
 #include <pj/pool.h>
 
@@ -240,8 +241,6 @@ typedef struct pjmedia_codec_info
     unsigned	    channel_cnt;    /**< Channel count.			*/
 } pjmedia_codec_info;
 
-#define PJMEDIA_CODEC_MAX_FMTP_CNT  8
-
 /** 
  * Structure of codec specific parameters which contains name=value pairs.
  * The codec specific parameters are to be used with SDP according to 
@@ -325,6 +324,9 @@ typedef struct pjmedia_codec_op
     /** 
      * Initialize codec using the specified attribute.
      *
+     * Application should call #pjmedia_codec_init() instead of 
+     * calling this function directly.
+     *
      * @param codec	The codec instance.
      * @param pool	Pool to use when the codec needs to allocate
      *			some memory.
@@ -340,6 +342,9 @@ typedef struct pjmedia_codec_op
      * and fills in the unspecified values (such as enc_ptime, when
      * encoder ptime is different than decoder ptime).
      *
+     * Application should call #pjmedia_codec_open() instead of 
+     * calling this function directly.
+     *
      * @param codec	The codec instance.
      * @param param	Codec initialization parameter.
      *
@@ -351,6 +356,9 @@ typedef struct pjmedia_codec_op
     /** 
      * Close and shutdown codec, releasing all resources allocated by
      * this codec, if any.
+     *
+     * Application should call #pjmedia_codec_close() instead of 
+     * calling this function directly.
      *
      * @param codec	The codec instance.
      *
@@ -367,6 +375,9 @@ typedef struct pjmedia_codec_op
      * Application can expect changing trivial codec settings such as
      * changing VAD setting to succeed.
      *
+     * Application should call #pjmedia_codec_modify() instead of 
+     * calling this function directly.
+     *
      * @param codec	The codec instance.
      * @param param	The new codec parameter.
      *
@@ -380,6 +391,9 @@ typedef struct pjmedia_codec_op
      * split the packet into individual base frames. Each output frames will
      * have ptime that is equal to basic frame ptime (i.e. the value of
      * info.frm_ptime in #pjmedia_codec_param).
+     *
+     * Application should call #pjmedia_codec_parse() instead of 
+     * calling this function directly.
      *
      * @param codec	The codec instance
      * @param pkt	The input packet.
@@ -405,6 +419,9 @@ typedef struct pjmedia_codec_op
      * PCM samples MUST have ptime that is multiplication of base frame
      * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
      *
+     * Application should call #pjmedia_codec_encode() instead of 
+     * calling this function directly.
+     *
      * @param codec	The codec instance.
      * @param input	The input frame.
      * @param out_size	The length of buffer in the output frame.
@@ -424,6 +441,9 @@ typedef struct pjmedia_codec_op
      * Application can achieve this by parsing the packet into base
      * frames before decoding each frame.
      *
+     * Application should call #pjmedia_codec_decode() instead of 
+     * calling this function directly.
+     *
      * @param codec	The codec instance.
      * @param input	The input frame.
      * @param out_size	The length of buffer in the output frame.
@@ -438,6 +458,9 @@ typedef struct pjmedia_codec_op
 
     /**
      * Instruct the codec to recover a missing frame.
+     *
+     * Application should call #pjmedia_codec_recover() instead of 
+     * calling this function directly.
      *
      * @param codec	The codec instance.
      * @param out_size	The length of buffer in the output frame.
@@ -553,6 +576,11 @@ typedef struct pjmedia_codec_factory_op
      */
     pj_status_t (*dealloc_codec)(pjmedia_codec_factory *factory, 
 				 pjmedia_codec *codec );
+
+    /**
+     * This callback will be called to deinitialize and destroy this factory.
+     */
+    pj_status_t (*destroy)(void);
 
 } pjmedia_codec_factory_op;
 
@@ -725,10 +753,11 @@ pjmedia_codec_mgr_register_factory( pjmedia_codec_mgr *mgr,
 /**
  * Unregister codec factory from the codec manager. This will also
  * remove all the codecs registered by the codec factory from the
- * codec manager's list of supported codecs.
+ * codec manager's list of supported codecs. This function should
+ * only be called by the codec implementers and not by application.
  *
- * @param mgr	    The codec manager instance. Application can get the
- *		    instance by calling #pjmedia_endpt_get_codec_mgr().
+ * @param mgr	    The codec manager instance, use
+ * 			#pjmedia_endpt_get_codec_mgr().
  * @param factory   The codec factory to be unregistered.
  *
  * @return	    PJ_SUCCESS on success.
@@ -908,6 +937,169 @@ PJ_DECL(pj_status_t) pjmedia_codec_mgr_dealloc_codec(pjmedia_codec_mgr *mgr,
 
 
 
+/** 
+ * Initialize codec using the specified attribute.
+ *
+ * @param codec	    The codec instance.
+ * @param pool	    Pool to use when the codec needs to allocate some memory.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_init( pjmedia_codec *codec, 
+					   pj_pool_t *pool )
+{
+    return (*codec->op->init)(codec, pool);
+}
+
+
+/** 
+ * Open the codec and initialize with the specified parameter.
+ * Upon successful initialization, the codec may modify the parameter
+ * and fills in the unspecified values (such as enc_ptime, when
+ * encoder ptime is different than decoder ptime).
+ *
+ * @param codec	    The codec instance.
+ * @param param	    Codec initialization parameter.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_open( pjmedia_codec *codec, 
+					   pjmedia_codec_param *param )
+{
+    return (*codec->op->open)(codec, param);
+}
+
+
+/** 
+ * Close and shutdown codec, releasing all resources allocated by
+ * this codec, if any.
+ *
+ * @param codec	    The codec instance.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_close( pjmedia_codec *codec )
+{
+    return (*codec->op->close)(codec);
+}
+
+
+/** 
+ * Modify the codec parameter after the codec is open. 
+ * Note that not all codec parameters can be modified during run-time. 
+ * When the parameter cannot be changed, this function will return 
+ * non-PJ_SUCCESS, and the original parameters will not be changed.
+ *
+ * Application can expect changing trivial codec settings such as
+ * changing VAD setting to succeed.
+ *
+ * @param codec	    The codec instance.
+ * @param param	    The new codec parameter.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_modify(pjmedia_codec *codec, 
+					    const pjmedia_codec_param *param)
+{
+    return (*codec->op->modify)(codec, param);
+}
+
+
+/**
+ * Instruct the codec to inspect the specified payload/packet and
+ * split the packet into individual base frames. Each output frames will
+ * have ptime that is equal to basic frame ptime (i.e. the value of
+ * info.frm_ptime in #pjmedia_codec_param).
+ *
+ * @param codec	    The codec instance
+ * @param pkt	    The input packet.
+ * @param pkt_size  Size of the packet.
+ * @param timestamp The timestamp of the first sample in the packet.
+ * @param frame_cnt On input, specifies the maximum number of frames
+ *		    in the array. On output, the codec must fill
+ *		    with number of frames detected in the packet.
+ * @param frames    On output, specifies the frames that have been
+ *		    detected in the packet.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_parse( pjmedia_codec *codec,
+					    void *pkt,
+					    pj_size_t pkt_size,
+					    const pj_timestamp *timestamp,
+					    unsigned *frame_cnt,
+					    pjmedia_frame frames[] )
+{
+    return (*codec->op->parse)(codec, pkt, pkt_size, timestamp,
+			       frame_cnt, frames);
+}
+
+
+/** 
+ * Instruct the codec to encode the specified input frame. The input
+ * PCM samples MUST have ptime that is multiplication of base frame
+ * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+ *
+ * @param codec		The codec instance.
+ * @param input		The input frame.
+ * @param out_size	The length of buffer in the output frame.
+ * @param output	The output frame.
+ *
+ * @return		PJ_SUCCESS on success;
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_encode( 
+					pjmedia_codec *codec, 
+					const struct pjmedia_frame *input,
+					unsigned out_size, 
+					struct pjmedia_frame *output )
+{
+    return (*codec->op->encode)(codec, input, out_size, output);
+}
+
+
+/** 
+ * Instruct the codec to decode the specified input frame. The input
+ * frame MUST have ptime that is exactly equal to base frame
+ * ptime (i.e. the value of info.frm_ptime in #pjmedia_codec_param).
+ * Application can achieve this by parsing the packet into base
+ * frames before decoding each frame.
+ *
+ * @param codec		The codec instance.
+ * @param input		The input frame.
+ * @param out_size	The length of buffer in the output frame.
+ * @param output	The output frame.
+ *
+ * @return		PJ_SUCCESS on success;
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_decode( 
+					pjmedia_codec *codec, 
+					const struct pjmedia_frame *input,
+					unsigned out_size, 
+					struct pjmedia_frame *output )
+{
+    return (*codec->op->decode)(codec, input, out_size, output);
+}
+
+
+/**
+ * Instruct the codec to recover a missing frame.
+ *
+ * @param codec		The codec instance.
+ * @param out_size	The length of buffer in the output frame.
+ * @param output	The output frame where generated signal
+ *			will be placed.
+ *
+ * @return		PJ_SUCCESS on success;
+ */
+PJ_INLINE(pj_status_t) pjmedia_codec_recover( pjmedia_codec *codec,
+					      unsigned out_size,
+					      struct pjmedia_frame *output )
+{
+    if (codec->op && codec->op->recover)
+	return (*codec->op->recover)(codec, out_size, output);
+    else
+	return PJ_ENOTSUP;
+}
 
 
 /**

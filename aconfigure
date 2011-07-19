@@ -600,6 +600,13 @@ libcrypto_present
 libssl_present
 openssl_h_present
 ac_no_ssl
+ac_v4l2_ldflags
+ac_v4l2_cflags
+ac_ffmpeg_ldflags
+ac_ffmpeg_cflags
+ac_has_ffmpeg
+ac_sdl_ldflags
+ac_sdl_cflags
 ac_no_ilbc_codec
 ac_no_speex_codec
 ac_no_g7221_codec
@@ -610,6 +617,10 @@ ac_no_g711_codec
 ac_no_speex_aec
 ac_no_large_filter
 ac_no_small_filter
+ac_qt_cflags
+ac_pjmedia_video_has_qt
+ac_ios_cflags
+ac_pjmedia_video
 ac_pa_use_oss
 ac_pa_use_alsa
 ac_pa_cflags
@@ -716,6 +727,10 @@ enable_g7221_codec
 enable_speex_codec
 enable_ilbc_codec
 enable_libsamplerate
+enable_sdl
+enable_ffmpeg
+with_ffmpeg
+enable_v4l2
 enable_ipp
 with_ipp
 with_ipp_samples
@@ -1354,7 +1369,6 @@ Optional Features:
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-oss           Disable OSS audio (default: not disabled)
-
   --enable-ext-sound      PJMEDIA will not provide any sound device backend
   --disable-small-filter  Exclude small filter in resampling
   --disable-large-filter  Exclude large filter in resampling
@@ -1368,6 +1382,9 @@ Optional Features:
   --disable-ilbc-codec    Exclude iLBC codec in the build
   --enable-libsamplerate  Link with libsamplerate when available. Note that
                           PJMEDIA_RESAMPLE_IMP must also be configured
+  --disable-sdl           Disable SDL (default: not disabled)
+  --disable-ffmpeg        Disable ffmpeg (default: not disabled)
+  --disable-v4l2          Disable Video4Linux2 (default: not disabled)
   --enable-ipp            Enable Intel IPP support. Specify the Intel IPP
                           package and samples location using IPPROOT and
                           IPPSAMPLES env var or with --with-ipp and
@@ -1393,6 +1410,7 @@ Optional Packages:
                           set, make sure that PortAudio is accessible to use
                           (hint: use CFLAGS and LDFLAGS env var to set the
                           include/lib paths)
+  --with-ffmpeg=DIR       Specify alternate FFMPEG prefix
   --with-ipp=DIR          Specify the Intel IPP location
   --with-ipp-samples=DIR  Specify the Intel IPP samples location
   --with-ipp-arch=ARCH    Specify the Intel IPP ARCH suffix, e.g. "64" or
@@ -5337,6 +5355,9 @@ case $target in
   *mingw* | *cygw* | *win32* | *w32* )
 	ac_os_objs="$ac_os_objs file_access_win32.o file_io_win32.o os_core_win32.o os_error_win32.o os_time_win32.o os_timestamp_win32.o guid_win32.o"
 	;;
+  *darwin*)
+	ac_os_objs="$ac_os_objs os_core_darwin.o"
+	;;
   *)
 	ac_os_objs="$ac_os_objs file_access_unistd.o file_io_ansi.o os_core_unix.o os_error_unix.o os_time_unix.o os_timestamp_posix.o"
 	case $target in
@@ -5612,6 +5633,57 @@ fi
  esac
 fi
 
+
+if test "$enable_video" = "no"; then
+  true;
+else
+ case $target in
+  arm-apple-darwin*)
+	ac_pjmedia_video=iphone_os
+
+	ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1"
+	LIBS="$LIBS -framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking video device backend... AVFoundation" >&5
+$as_echo "Checking video device backend... AVFoundation" >&6; }
+	;;
+  *darwin*)
+	ac_pjmedia_video=mac_os
+
+
+	SAVED_LIBS="$LIBS"
+	LIBS="-framework QTKit"
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_pjmedia_video_has_qt=yes
+else
+  ac_pjmedia_video_has_qt=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+	LIBS="$SAVED_LIBS"
+	if test "$ac_pjmedia_video_has_qt" = "yes"; then
+	  ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
+	  LIBS="$LIBS -framework QTKit -framework Foundation -framework AppKit -framework QuartzCore -framework OpenGL"
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... yes" >&5
+$as_echo "Checking if QTKit framework is available... yes" >&6; }
+	else
+	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... no" >&5
+$as_echo "Checking if QTKit framework is available... no" >&6; }
+	fi
+	;;
+ esac
+fi
+
 # Check whether --enable-ext_sound was given.
 if test "${enable_ext_sound+set}" = set; then :
   enableval=$enable_ext_sound; if test "$enable_ext_sound" = "yes"; then
@@ -5832,6 +5904,390 @@ $as_echo "Skipping libsamplerate detection" >&6; }
 
 fi
 
+
+# Check whether --enable-sdl was given.
+if test "${enable_sdl+set}" = set; then :
+  enableval=$enable_sdl;
+		if test "$enable_sdl" = "no"; then
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if SDL is disabled... yes" >&5
+$as_echo "Checking if SDL is disabled... yes" >&6; }
+		fi
+
+else
+
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: checking SDL availability.." >&5
+$as_echo_n "checking SDL availability..... " >&6; }
+		  if sdl-config --version; then
+
+
+			  ac_sdl_cflags=`sdl-config --cflags`
+			  ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
+			  ac_sdl_ldflags=`sdl-config --libs`
+			  LIBS="$LIBS $ac_sdl_ldflags"
+		   fi
+
+fi
+
+
+
+# Check whether --enable-ffmpeg was given.
+if test "${enable_ffmpeg+set}" = set; then :
+  enableval=$enable_ffmpeg;
+	        ac_has_ffmpeg=0
+
+		if test "$enable_ffmpeg" = "no"; then
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if ffmpeg is disabled... yes" >&5
+$as_echo "Checking if ffmpeg is disabled... yes" >&6; }
+		fi
+
+else
+
+
+
+
+		FFMPEG_PREFIX=""
+    		if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
+			FFMPEG_PREFIX=$with_ffmpeg
+			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using ffmpeg prefix... $FFMPEG_PREFIX" >&5
+$as_echo "Using ffmpeg prefix... $FFMPEG_PREFIX" >&6; }
+			LIBS="-L$FFMPEG_PREFIX/lib $LIBS"
+			LDFLAGS="-L$FFMPEG_PREFIX/lib $LDFLAGS"
+			CFLAGS="-I$FFMPEG_PREFIX/include $CFLAGS"
+		fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for avdevice_version in -lavdevice" >&5
+$as_echo_n "checking for avdevice_version in -lavdevice... " >&6; }
+if test "${ac_cv_lib_avdevice_avdevice_version+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lavdevice  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char avdevice_version ();
+int
+main ()
+{
+return avdevice_version ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_avdevice_avdevice_version=yes
+else
+  ac_cv_lib_avdevice_avdevice_version=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_avdevice_avdevice_version" >&5
+$as_echo "$ac_cv_lib_avdevice_avdevice_version" >&6; }
+if test "x$ac_cv_lib_avdevice_avdevice_version" = x""yes; then :
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
+			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavdevice"
+
+
+fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for av_register_all in -lavformat" >&5
+$as_echo_n "checking for av_register_all in -lavformat... " >&6; }
+if test "${ac_cv_lib_avformat_av_register_all+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lavformat  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char av_register_all ();
+int
+main ()
+{
+return av_register_all ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_avformat_av_register_all=yes
+else
+  ac_cv_lib_avformat_av_register_all=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_avformat_av_register_all" >&5
+$as_echo "$ac_cv_lib_avformat_av_register_all" >&6; }
+if test "x$ac_cv_lib_avformat_av_register_all" = x""yes; then :
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
+			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavformat"
+
+
+fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for avcodec_init in -lavcodec" >&5
+$as_echo_n "checking for avcodec_init in -lavcodec... " >&6; }
+if test "${ac_cv_lib_avcodec_avcodec_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lavcodec  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char avcodec_init ();
+int
+main ()
+{
+return avcodec_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_avcodec_avcodec_init=yes
+else
+  ac_cv_lib_avcodec_avcodec_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_avcodec_avcodec_init" >&5
+$as_echo "$ac_cv_lib_avcodec_avcodec_init" >&6; }
+if test "x$ac_cv_lib_avcodec_avcodec_init" = x""yes; then :
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
+			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcodec"
+
+
+fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for sws_scale in -lswscale" >&5
+$as_echo_n "checking for sws_scale in -lswscale... " >&6; }
+if test "${ac_cv_lib_swscale_sws_scale+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lswscale  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char sws_scale ();
+int
+main ()
+{
+return sws_scale ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_swscale_sws_scale=yes
+else
+  ac_cv_lib_swscale_sws_scale=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_swscale_sws_scale" >&5
+$as_echo "$ac_cv_lib_swscale_sws_scale" >&6; }
+if test "x$ac_cv_lib_swscale_sws_scale" = x""yes; then :
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
+			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
+
+
+fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for av_malloc in -lavutil" >&5
+$as_echo_n "checking for av_malloc in -lavutil... " >&6; }
+if test "${ac_cv_lib_avutil_av_malloc+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lavutil  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char av_malloc ();
+int
+main ()
+{
+return av_malloc ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_avutil_av_malloc=yes
+else
+  ac_cv_lib_avutil_av_malloc=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_avutil_av_malloc" >&5
+$as_echo "$ac_cv_lib_avutil_av_malloc" >&6; }
+if test "x$ac_cv_lib_avutil_av_malloc" = x""yes; then :
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
+			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavutil"
+
+
+fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for avcore_version in -lavcore" >&5
+$as_echo_n "checking for avcore_version in -lavcore... " >&6; }
+if test "${ac_cv_lib_avcore_avcore_version+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lavcore  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char avcore_version ();
+int
+main ()
+{
+return avcore_version ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_avcore_avcore_version=yes
+else
+  ac_cv_lib_avcore_avcore_version=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_avcore_avcore_version" >&5
+$as_echo "$ac_cv_lib_avcore_avcore_version" >&6; }
+if test "x$ac_cv_lib_avcore_avcore_version" = x""yes; then :
+  ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
+			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcore"
+
+
+fi
+
+		LIBS="$LIBS $ac_ffmpeg_ldflags"
+
+
+fi
+
+
+
+# Check whether --with-ffmpeg was given.
+if test "${with_ffmpeg+set}" = set; then :
+  withval=$with_ffmpeg;
+else
+  with_ffmpeg=no
+
+fi
+
+
+
+# Check whether --enable-v4l2 was given.
+if test "${enable_v4l2+set}" = set; then :
+  enableval=$enable_v4l2;
+		if test "$enable_v4l2" = "no"; then
+		  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if V4L2 is disabled... yes" >&5
+$as_echo "Checking if V4L2 is disabled... yes" >&6; }
+		fi
+
+else
+
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for v4l2_open in -lv4l2" >&5
+$as_echo_n "checking for v4l2_open in -lv4l2... " >&6; }
+if test "${ac_cv_lib_v4l2_v4l2_open+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lv4l2  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char v4l2_open ();
+int
+main ()
+{
+return v4l2_open ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_v4l2_v4l2_open=yes
+else
+  ac_cv_lib_v4l2_v4l2_open=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_v4l2_v4l2_open" >&5
+$as_echo "$ac_cv_lib_v4l2_v4l2_open" >&6; }
+if test "x$ac_cv_lib_v4l2_v4l2_open" = x""yes; then :
+  ac_v4l2_cflags="-DPJMEDIA_VIDEO_DEV_HAS_V4L2=1"
+			      ac_v4l2_ldflags="-lv4l2"
+			      LIBS="$LIBS -lv4l2"
+
+
+fi
+
+
+fi
 
 
 # Check whether --enable-ipp was given.

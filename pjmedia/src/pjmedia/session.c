@@ -140,7 +140,7 @@ static void parse_fmtp( pj_pool_t *pool,
     }
 }
 
-
+#if 0	// Moved to stream.c
 /*
  * Create stream info from SDP media line.
  */
@@ -604,7 +604,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_info_from_sdp(
 
     return PJ_SUCCESS;
 }
-
+#endif
 
 /*
  * Initialize session info from SDP session descriptors.

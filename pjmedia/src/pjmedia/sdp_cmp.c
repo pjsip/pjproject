@@ -295,3 +295,10 @@ PJ_DEF(pj_status_t) pjmedia_sdp_session_cmp( const pjmedia_sdp_session *sd1,
 }
 
 
+PJ_DEF(pj_status_t) pjmedia_sdp_conn_cmp(const pjmedia_sdp_conn *conn1, 
+					 const pjmedia_sdp_conn *conn2,
+					 unsigned option)
+{
+    PJ_UNUSED_ARG(option);
+    return compare_conn(conn1, conn2);
+}

@@ -1036,3 +1036,12 @@ PJ_DEF(pj_status_t) pj_thread_get_stack_info(pj_thread_t *thread,
 }
 
 #endif	/* PJ_OS_HAS_CHECK_STACK */
+
+/*
+ * pj_run_app()
+ */
+PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
+                       unsigned flags)
+{
+    return (*main_func)(argc, argv);
+}

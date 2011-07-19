@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    if (file_port->info.samples_per_frame > NSAMPLES) {
+    if (PJMEDIA_PIA_SPF(&file_port->info) > NSAMPLES) {
 	app_perror(THIS_FILE, "WAV clock rate is too big", PJ_EINVAL);
 	return 1;
     }
@@ -145,11 +145,11 @@ int main(int argc, char *argv[])
 	pjmedia_port_get_frame(file_port, &frm);
 
 	level32 = pjmedia_calc_avg_signal(framebuf, 
-					  file_port->info.samples_per_frame);
+					  PJMEDIA_PIA_SPF(&file_port->info));
 	level = pjmedia_linear2ulaw(level32) ^ 0xFF;
 
-	ms = i * 1000 * file_port->info.samples_per_frame /
-			file_port->info.clock_rate;
+	ms = i * 1000 * PJMEDIA_PIA_SPF(&file_port->info) /
+		PJMEDIA_PIA_SRATE(&file_port->info);
 	printf("%03d.%03d\t%7d\t%7d\n", 
 	        ms/1000, ms%1000, level, level32);
     }

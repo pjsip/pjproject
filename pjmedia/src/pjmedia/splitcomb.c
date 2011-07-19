@@ -25,8 +25,8 @@
 #include <pj/pool.h>
 
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'b')
-#define SIGNATURE_PORT	    PJMEDIA_PORT_SIGNATURE('S', 'p', 'C', 'P')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_SPLIT_COMB
+#define SIGNATURE_PORT	    PJMEDIA_SIG_PORT_SPLIT_COMB_P
 #define THIS_FILE	    "splitcomb.c"
 #define TMP_SAMP_TYPE	    pj_int16_t
 
@@ -189,13 +189,13 @@ struct reverse_port
  * Prototypes.
  */
 static pj_status_t put_frame(pjmedia_port *this_port, 
-			     const pjmedia_frame *frame);
+			     pjmedia_frame *frame);
 static pj_status_t get_frame(pjmedia_port *this_port, 
 			     pjmedia_frame *frame);
 static pj_status_t on_destroy(pjmedia_port *this_port);
 
 static pj_status_t rport_put_frame(pjmedia_port *this_port, 
-				   const pjmedia_frame *frame);
+				   pjmedia_frame *frame);
 static pj_status_t rport_get_frame(pjmedia_port *this_port, 
 				   pjmedia_frame *frame);
 static pj_status_t rport_on_destroy(pjmedia_port *this_port);
@@ -284,7 +284,7 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_set_channel( pjmedia_port *splitcomb,
     PJ_ASSERT_RETURN(sc->base.info.signature == SIGNATURE, PJ_EINVAL);
 
     /* Check the channel number */
-    PJ_ASSERT_RETURN(ch_num < sc->base.info.channel_count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ch_num < PJMEDIA_PIA_CCNT(&sc->base.info), PJ_EINVAL);
 
     /* options is unused for now */
     PJ_UNUSED_ARG(options);
@@ -308,7 +308,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     const pj_str_t name = pj_str("scomb-rev");
     struct splitcomb *sc = (struct splitcomb*) splitcomb;
     struct reverse_port *rport;
-    unsigned buf_cnt, ptime;
+    unsigned buf_cnt;
+    const pjmedia_audio_format_detail *sc_afd, *p_afd;
     pjmedia_port *port;
     pj_status_t status;
 
@@ -319,10 +320,12 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     PJ_ASSERT_RETURN(sc->base.info.signature == SIGNATURE, PJ_EINVAL);
 
     /* Check the channel number */
-    PJ_ASSERT_RETURN(ch_num < sc->base.info.channel_count, PJ_EINVAL);
+    PJ_ASSERT_RETURN(ch_num < PJMEDIA_PIA_CCNT(&sc->base.info), PJ_EINVAL);
 
     /* options is unused for now */
     PJ_UNUSED_ARG(options);
+
+    sc_afd = pjmedia_format_get_audio_format_detail(&splitcomb->info.fmt, 1);
 
     /* Create the port */
     rport = PJ_POOL_ZALLOC_T(pool, struct reverse_port);
@@ -332,10 +335,12 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     /* Initialize port info... */
     port = &rport->base;
     pjmedia_port_info_init(&port->info, &name, SIGNATURE_PORT, 
-			   splitcomb->info.clock_rate, 1, 
-			   splitcomb->info.bits_per_sample, 
-			   splitcomb->info.samples_per_frame / 
-				   splitcomb->info.channel_count);
+			   sc_afd->clock_rate, 1,
+			   sc_afd->bits_per_sample,
+			   PJMEDIA_PIA_SPF(&splitcomb->info) /
+				   sc_afd->channel_count);
+
+    p_afd = pjmedia_format_get_audio_format_detail(&port->info.fmt, 1);
 
     /* ... and the callbacks */
     port->put_frame = &rport_put_frame;
@@ -347,30 +352,27 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
     if (buf_cnt == 0)
 	buf_cnt = MAX_BUF_CNT;
 
-    ptime = port->info.samples_per_frame * 1000 / port->info.clock_rate /
-	    port->info.channel_count;
-
     rport->max_burst = MAX_BURST;
     rport->max_null_frames = MAX_NULL_FRAMES;
 
     /* Create downstream/put buffers */
     status = pjmedia_delay_buf_create(pool, "scombdb-dn",
-				      port->info.clock_rate,
-				      port->info.samples_per_frame,
-				      port->info.channel_count,
-				      buf_cnt * ptime, 0,
-				      &rport->buf[DIR_DOWNSTREAM].dbuf);
+				      p_afd->clock_rate,
+				      PJMEDIA_PIA_SPF(&port->info),
+				      p_afd->channel_count,
+				      buf_cnt * p_afd->frame_time_usec / 1000,
+				      0, &rport->buf[DIR_DOWNSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
 	return status;
     }
 
     /* Create upstream/get buffers */
     status = pjmedia_delay_buf_create(pool, "scombdb-up",
-				      port->info.clock_rate,
-				      port->info.samples_per_frame,
-				      port->info.channel_count,
-				      buf_cnt * ptime, 0,
-				      &rport->buf[DIR_UPSTREAM].dbuf);
+				      p_afd->clock_rate,
+				      PJMEDIA_PIA_SPF(&port->info),
+				      p_afd->channel_count,
+				      buf_cnt * p_afd->frame_time_usec / 1000,
+				      0, &rport->buf[DIR_UPSTREAM].dbuf);
     if (status != PJ_SUCCESS) {
 	pjmedia_delay_buf_destroy(rport->buf[DIR_DOWNSTREAM].dbuf);
 	return status;
@@ -378,7 +380,8 @@ PJ_DEF(pj_status_t) pjmedia_splitcomb_create_rev_channel( pj_pool_t *pool,
 
     /* And temporary upstream/get buffer */
     rport->tmp_up_buf = (pj_int16_t*)
-	                pj_pool_alloc(pool, port->info.bytes_per_frame);
+	                pj_pool_alloc(pool,
+				      PJMEDIA_PIA_AVG_FSZ(&port->info));
 
     /* Save port in the splitcomb */
     sc->port_desc[ch_num].port = &rport->base;
@@ -436,7 +439,7 @@ static void op_update(struct reverse_port *rport, int dir, int op)
     rport->buf[dir].level += op;
 
     if (op == OP_PUT) {
-	rport->buf[dir].ts.u64 += rport->base.info.samples_per_frame;
+	rport->buf[dir].ts.u64 += PJMEDIA_PIA_SPF(&rport->base.info);
     }
 
     if (rport->buf[dir].paused) {
@@ -484,14 +487,14 @@ static void op_update(struct reverse_port *rport, int dir, int op)
  * it to the appropriate port.
  */
 static pj_status_t put_frame(pjmedia_port *this_port, 
-			     const pjmedia_frame *frame)
+			     pjmedia_frame *frame)
 {
     struct splitcomb *sc = (struct splitcomb*) this_port;
     unsigned ch;
 
     /* Handle null frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_NONE) {
-	for (ch=0; ch < this_port->info.channel_count; ++ch) {
+	for (ch=0; ch < PJMEDIA_PIA_CCNT(&this_port->info); ++ch) {
 	    pjmedia_port *port = sc->port_desc[ch].port;
 
 	    if (!port) continue;
@@ -533,7 +536,7 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 
 		/* Generate zero frame. */
 		pjmedia_zero_samples(sc->put_buf, 
-				     port->info.samples_per_frame);
+				     PJMEDIA_PIA_SPF(&this_port->info));
 
 		/* Put frame to delay buffer */
 		pjmedia_delay_buf_put(rport->buf[DIR_DOWNSTREAM].dbuf,
@@ -547,13 +550,13 @@ static pj_status_t put_frame(pjmedia_port *this_port,
     /* Not sure how we would handle partial frame, so better reject
      * it for now.
      */
-    PJ_ASSERT_RETURN(frame->size == this_port->info.bytes_per_frame,
+    PJ_ASSERT_RETURN(frame->size == PJMEDIA_PIA_AVG_FSZ(&this_port->info),
 		     PJ_EINVAL);
 
     /* 
      * Write mono frame into each channels 
      */
-    for (ch=0; ch < this_port->info.channel_count; ++ch) {
+    for (ch=0; ch < PJMEDIA_PIA_CCNT(&this_port->info); ++ch) {
 	pjmedia_port *port = sc->port_desc[ch].port;
 
 	if (!port)
@@ -561,17 +564,17 @@ static pj_status_t put_frame(pjmedia_port *this_port,
 
 	/* Extract the mono frame to temporary buffer */
 	extract_mono_frame((const pj_int16_t*)frame->buf, sc->put_buf, ch, 
-			   this_port->info.channel_count, 
+			   PJMEDIA_PIA_CCNT(&this_port->info),
 			   frame->size * 8 / 
-			     this_port->info.bits_per_sample /
-			     this_port->info.channel_count);
+			     PJMEDIA_PIA_BITS(&this_port->info) /
+			     PJMEDIA_PIA_CCNT(&this_port->info));
 
 	if (!sc->port_desc[ch].reversed) {
 	    /* Write to normal port */
 	    pjmedia_frame mono_frame;
 
 	    mono_frame.buf = sc->put_buf;
-	    mono_frame.size = frame->size / this_port->info.channel_count;
+	    mono_frame.size = frame->size / PJMEDIA_PIA_CCNT(&this_port->info);
 	    mono_frame.type = frame->type;
 	    mono_frame.timestamp.u64 = frame->timestamp.u64;
 
@@ -612,20 +615,20 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     pj_bool_t has_frame = PJ_FALSE;
 
     /* Read frame from each port */
-    for (ch=0; ch < this_port->info.channel_count; ++ch) {
+    for (ch=0; ch < PJMEDIA_PIA_CCNT(&this_port->info); ++ch) {
 	pjmedia_port *port = sc->port_desc[ch].port;
 	pjmedia_frame mono_frame;
 	pj_status_t status;
 
 	if (!port) {
 	    pjmedia_zero_samples(sc->get_buf, 
-				 this_port->info.samples_per_frame /
-				    this_port->info.channel_count);
+				 PJMEDIA_PIA_SPF(&this_port->info) /
+				  PJMEDIA_PIA_CCNT(&this_port->info));
 
 	} else if (sc->port_desc[ch].reversed == PJ_FALSE) {
 	    /* Read from normal port */
 	    mono_frame.buf = sc->get_buf;
-	    mono_frame.size = port->info.bytes_per_frame;
+	    mono_frame.size = PJMEDIA_PIA_AVG_FSZ(&port->info);
 	    mono_frame.timestamp.u64 = frame->timestamp.u64;
 
 	    status = pjmedia_port_get_frame(port, &mono_frame);
@@ -633,7 +636,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 		mono_frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
 	    {
 		pjmedia_zero_samples(sc->get_buf, 
-				     port->info.samples_per_frame);
+				     PJMEDIA_PIA_SPF(&port->info));
 	    }
 
 	    frame->timestamp.u64 = mono_frame.timestamp.u64;
@@ -651,7 +654,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	    } else {
 		pjmedia_zero_samples(sc->get_buf, 
-				     port->info.samples_per_frame);
+				     PJMEDIA_PIA_SPF(&port->info));
 	    }
 
 	    frame->timestamp.u64 = rport->buf[DIR_UPSTREAM].ts.u64;
@@ -660,9 +663,9 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	/* Combine the mono frame into multichannel frame */
 	store_mono_frame(sc->get_buf, 
 			 (pj_int16_t*)frame->buf, ch,
-			 this_port->info.channel_count,
-			 this_port->info.samples_per_frame /
-			 this_port->info.channel_count);
+			 PJMEDIA_PIA_CCNT(&this_port->info),
+			 PJMEDIA_PIA_SPF(&this_port->info) /
+			  PJMEDIA_PIA_CCNT(&this_port->info));
 
 	has_frame = PJ_TRUE;
     }
@@ -670,7 +673,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     /* Return NO_FRAME is we don't get any frames from downstream ports */
     if (has_frame) {
 	frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-	frame->size = this_port->info.bytes_per_frame;
+	frame->size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
     } else
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 
@@ -694,11 +697,11 @@ static pj_status_t on_destroy(pjmedia_port *this_port)
  * will be picked up by get_frame() above.
  */
 static pj_status_t rport_put_frame(pjmedia_port *this_port, 
-				   const pjmedia_frame *frame)
+				   pjmedia_frame *frame)
 {
     struct reverse_port *rport = (struct reverse_port*) this_port;
 
-    pj_assert(frame->size <= rport->base.info.bytes_per_frame);
+    pj_assert(frame->size <= PJMEDIA_PIA_AVG_FSZ(&rport->base.info));
 
     /* Handle NULL frame */
     if (frame->type != PJMEDIA_FRAME_TYPE_AUDIO) {
@@ -730,7 +733,7 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
 
 	/* Generate zero frame. */
 	pjmedia_zero_samples(rport->tmp_up_buf, 
-			     this_port->info.samples_per_frame);
+			     PJMEDIA_PIA_SPF(&this_port->info));
 
 	/* Put frame to delay buffer */
 	return pjmedia_delay_buf_put(rport->buf[DIR_UPSTREAM].dbuf, 
@@ -738,7 +741,7 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
     }
 
     /* Not sure how to handle partial frame, so better reject for now */
-    PJ_ASSERT_RETURN(frame->size == this_port->info.bytes_per_frame,
+    PJ_ASSERT_RETURN(frame->size == PJMEDIA_PIA_AVG_FSZ(&this_port->info),
 		     PJ_EINVAL);
 
     /* Reset NULL frame counter */
@@ -755,7 +758,7 @@ static pj_status_t rport_put_frame(pjmedia_port *this_port,
      * modifies the frame content.
      */
     pjmedia_copy_samples(rport->tmp_up_buf, (const pj_int16_t*)frame->buf,
-		         this_port->info.samples_per_frame);
+		         PJMEDIA_PIA_SPF(&this_port->info));
 
     /* Put frame to delay buffer */
     return pjmedia_delay_buf_put(rport->buf[DIR_UPSTREAM].dbuf, 
@@ -783,7 +786,7 @@ static pj_status_t rport_get_frame(pjmedia_port *this_port,
     }
 
     /* Get frame from delay buffer */
-    frame->size = this_port->info.bytes_per_frame;
+    frame->size = PJMEDIA_PIA_AVG_FSZ(&this_port->info);
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame->timestamp.u64 = rport->buf[DIR_DOWNSTREAM].ts.u64;
 

@@ -39,16 +39,81 @@ typedef enum pjsua_med_tp_st
     PJSUA_MED_TP_INIT,
 
     /** Running (media_start() has been called) */
-    PJSUA_MED_TP_RUNNING
+    PJSUA_MED_TP_RUNNING,
+
+    /** Disabled (transport is initialized, but media is being disabled) */
+    PJSUA_MED_TP_DISABLED
 
 } pjsua_med_tp_st;
+
+/** Forward decl of pjsua call */
+typedef struct pjsua_call pjsua_call;
+
+
+/**
+ * Call's media stream.
+ */
+typedef struct pjsua_call_media
+{
+    pjsua_call		*call;	    /**< Parent call.			    */
+    pjmedia_type	 type;	    /**< Media type.			    */
+    unsigned		 idx;       /**< This media index in parent call.   */
+    pjsua_call_media_status state;  /**< Media state.			    */
+    pjmedia_dir		 dir;       /**< Media direction.		    */
+
+    /** The stream */
+    struct {
+	/** Audio stream */
+	struct {
+	    pjmedia_stream *stream;    /**< The audio stream.		    */
+	    int		    conf_slot; /**< Slot # in conference bridge.    */
+	} a;
+
+	/** Video stream */
+	struct {
+	    pjmedia_vid_stream  *stream;    /**< The video stream.	    */
+	    pjsua_vid_win_id	 cap_win_id;/**< The video capture window   */
+	    pjsua_vid_win_id	 rdr_win_id;/**< The video render window    */
+	    pjmedia_vid_dev_index cap_dev;  /**< The video capture device   */
+	    pjmedia_vid_dev_index rdr_dev;  /**< The video-in render device */
+	} v;
+
+    } strm;
+
+    pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
+    pj_uint32_t		 rtp_tx_ts; /**< Initial RTP timestamp for sender.  */
+    pj_uint16_t		 rtp_tx_seq;/**< Initial RTP sequence for sender.   */
+    pj_uint8_t		 rtp_tx_seq_ts_set;
+				    /**< Bitmask flags if initial RTP sequence
+				         and/or timestamp for sender are set.
+					 bit 0/LSB : sequence flag
+					 bit 1     : timestamp flag 	    */
+
+    pjmedia_transport	*tp;        /**< Current media transport (can be 0) */
+    pj_status_t		 tp_ready;  /**< Media transport status.	    */
+    pjmedia_transport	*tp_orig;   /**< Original media transport	    */
+    pj_bool_t		 tp_auto_del; /**< May delete media transport   */
+    pjsua_med_tp_st	 tp_st;     /**< Media transport state		    */
+    pj_sockaddr		 rtp_addr;  /**< Current RTP source address
+					    (used to update ICE default
+					    address)			    */
+    pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
+
+    pjmedia_event_subscription esub_rend;/**< Subscribe renderer events.     */
+    pjmedia_event_subscription esub_cap;/**< Subscribe capture events.      */
+} pjsua_call_media;
+
+/**
+ * Maximum number of SDP "m=" lines to be supported.
+ */
+#define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
 
 /** 
  * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
  * by accessing dlg->mod_data[pjsua.mod.id].
  */
-typedef struct pjsua_call
+struct pjsua_call
 {
     unsigned		 index;	    /**< Index in pjsua array.		    */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
@@ -63,31 +128,14 @@ typedef struct pjsua_call
     int			 secure_level;/**< Signaling security level.	    */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.	    */
     pj_bool_t		 local_hold;/**< Flag for call-hold by local.	    */
-    pjsua_call_media_status media_st;/**< Media state.			    */
-    pjmedia_dir		 media_dir; /**< Media direction.		    */
-    pjmedia_session	*session;   /**< The media session.		    */
-    int			 audio_idx; /**< Index of m=audio in SDP.	    */
-    pj_uint32_t		 ssrc;	    /**< RTP SSRC			    */
-    pj_uint32_t		 rtp_tx_ts; /**< Initial RTP timestamp for sender.  */
-    pj_uint16_t		 rtp_tx_seq;/**< Initial RTP sequence for sender.   */
-    pj_uint8_t		 rtp_tx_seq_ts_set;
-				    /**< Bitmask flags if initial RTP sequence
-				         and/or timestamp for sender are set.
-					 bit 0/LSB : sequence flag 
-					 bit 1     : timestamp flag 	    */
-    int			 conf_slot; /**< Slot # in conference bridge.	    */
+
+    unsigned		 med_cnt;   /**< Number of media in SDP.	    */
+    pjsua_call_media     media[PJSUA_MAX_CALL_MEDIA]; /**< Array of media   */
+    int			 audio_idx; /**< First active audio media.	    */
+
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
-    pjmedia_transport	*med_tp;    /**< Current media transport.	    */
-    pj_status_t		 med_tp_ready;/**< Media transport status.	    */
-    pjmedia_transport	*med_orig;  /**< Original media transport	    */
-    pj_bool_t		 med_tp_auto_del; /**< May delete media transport   */
-    pjsua_med_tp_st	 med_tp_st; /**< Media transport state		    */
-    pj_sockaddr		 med_rtp_addr; /**< Current RTP source address
-					    (used to update ICE default
-					    address)			    */
     pj_stun_nat_type	 rem_nat_type; /**< NAT type of remote endpoint.    */
-    pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
     char    last_text_buf_[128];    /**< Buffer for last_text.		    */
 
@@ -99,7 +147,7 @@ typedef struct pjsua_call
     } lock_codec;		     /**< Data for codec locking when answer
 					  contains multiple codecs.	    */
 
-} pjsua_call;
+};
 
 
 /**
@@ -259,6 +307,23 @@ typedef struct pjsua_stun_resolve
     pj_stun_sock	*stun_sock; /**< Testing STUN sock  */
 } pjsua_stun_resolve;
 
+typedef enum pjsua_vid_win_type
+{
+    PJSUA_WND_TYPE_NONE,
+    PJSUA_WND_TYPE_PREVIEW,
+    PJSUA_WND_TYPE_STREAM
+} pjsua_vid_win_type;
+
+typedef struct pjsua_vid_win
+{
+    pjsua_vid_win_type		 type;		/**< Type.		*/
+    pj_pool_t			*pool;		/**< Own pool.		*/
+    unsigned	 		 ref_cnt;	/**< Reference counter.	*/
+    pjmedia_vid_port		*vp_cap;	/**< Capture vidport.	*/
+    pjmedia_vid_port		*vp_rend;	/**< Renderer vidport	*/
+    pjmedia_port		*tee;		/**< Video tee		*/
+    pjmedia_vid_dev_index	 preview_cap_id;/* Capture dev id	*/
+} pjsua_vid_win;
 
 /**
  * Global pjsua application data.
@@ -270,6 +335,7 @@ struct pjsua_data
     pj_caching_pool	 cp;	    /**< Global pool factory.		*/
     pj_pool_t		*pool;	    /**< pjsua's private pool.		*/
     pj_mutex_t		*mutex;	    /**< Mutex protection for this data	*/
+    pjsua_state		 state;	    /**< Library state.			*/
 
     /* Logging: */
     pjsua_logging_config log_cfg;   /**< Current logging config.	*/
@@ -339,7 +405,11 @@ struct pjsua_data
     pj_timer_entry	 snd_idle_timer;/**< Sound device idle timer.	*/
     pjmedia_master_port	*null_snd;  /**< Master port for null sound.	*/
     pjmedia_port	*null_port; /**< Null port.			*/
+    pj_bool_t		 snd_is_on; /**< Media flow is currently active */
 
+    /* Video device */
+    pjmedia_vid_dev_index vcap_dev;  /**< Capture device ID.		*/
+    pjmedia_vid_dev_index vrdr_dev;  /**< Playback device ID.		*/
 
     /* File players: */
     unsigned		 player_cnt;/**< Number of file players.	*/
@@ -348,6 +418,11 @@ struct pjsua_data
     /* File recorders: */
     unsigned		 rec_cnt;   /**< Number of file recorders.	*/
     pjsua_file_data	 recorder[PJSUA_MAX_RECORDERS];/**< Array of recs.*/
+
+    /* Video windows */
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_win	 win[PJSUA_MAX_VID_WINS]; /**< Array of windows	*/
+#endif
 };
 
 
@@ -402,6 +477,9 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 #define PJSUA_UNLOCK()
 #endif
 
+/* Core */
+void pjsua_set_state(pjsua_state new_state);
+
 /******
  * STUN resolution
  */
@@ -437,6 +515,17 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp);
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id);
+
+pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
+                                  pjmedia_type type,
+				  const pjsua_transport_config *tcfg,
+				  int security_level,
+				  int *sip_err_code);
+pj_status_t video_channel_update(pjsua_call_media *call_med,
+                                 pj_pool_t *tmp_pool,
+			         const pjmedia_sdp_session *local_sdp,
+			         const pjmedia_sdp_session *remote_sdp);
+void stop_video_stream(pjsua_call_media *call_med);
 
 
 /**
@@ -578,6 +667,27 @@ const char *good_number(char *buf, pj_int32_t val);
 void print_call(const char *title,
                 int call_id,
                 char *buf, pj_size_t size);
+
+/*
+ * Video
+ */
+pj_status_t pjsua_vid_subsys_init(void);
+pj_status_t pjsua_vid_subsys_start(void);
+pj_status_t pjsua_vid_subsys_destroy(void);
+
+PJ_INLINE(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
+{
+#if PJSUA_HAS_VIDEO
+    pjsua_vid_win *w = &pjsua_var.win[wid];
+    pj_pool_t *pool = w->pool;
+
+    pj_bzero(w, sizeof(*w));
+    if (pool) pj_pool_reset(pool);
+    w->ref_cnt = 0;
+    w->pool = pool;
+    w->preview_cap_id = PJMEDIA_VID_INVALID_DEV;
+#endif
+}
 
 
 PJ_END_DECL

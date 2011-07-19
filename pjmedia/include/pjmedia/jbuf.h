@@ -68,7 +68,7 @@ typedef enum pjmedia_jb_frame_type pjmedia_jb_frame_type;
 /**
  * This structure describes jitter buffer state.
  */
-struct pjmedia_jb_state
+typedef struct pjmedia_jb_state
 {
     /* Setting */
     unsigned	frame_size;	    /**< Individual frame size, in bytes.   */
@@ -89,13 +89,7 @@ struct pjmedia_jb_state
     unsigned	lost;		    /**< Number of lost frames.		    */
     unsigned	discard;	    /**< Number of discarded frames.	    */
     unsigned	empty;		    /**< Number of empty on GET events.	    */
-};
-
-
-/**
- * @see pjmedia_jb_state
- */
-typedef struct pjmedia_jb_state pjmedia_jb_state;
+} pjmedia_jb_state;
 
 
 /**
@@ -180,6 +174,19 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
 
 
 /**
+ * Enable/disable the jitter buffer drift detection and handling mechanism.
+ * The default behavior is enabled.
+ *
+ * @param jb		The jitter buffer
+ * @param enable	Set to PJ_TRUE to enable or PJ_FALSE to disable.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_enable_discard(pjmedia_jbuf *jb,
+						 pj_bool_t enable);
+
+
+/**
  * Destroy jitter buffer instance.
  *
  * @param jb		The jitter buffer.
@@ -244,6 +251,32 @@ PJ_DECL(void) pjmedia_jbuf_put_frame2( pjmedia_jbuf *jb,
 				       pj_bool_t *discarded);
 
 /**
+ * Put a frame to the jitter buffer. If the frame can be accepted (based
+ * on the sequence number), the jitter buffer will copy the frame and put
+ * it in the appropriate position in the buffer.
+ *
+ * Application MUST manage it's own synchronization when multiple threads
+ * are accessing the jitter buffer at the same time.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame		Pointer to frame buffer to be stored in the jitter
+ *			buffer.
+ * @param size		The frame size.
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
+ * @param frame_seq	The frame sequence number.
+ * @param frame_ts	The frame timestamp.
+ * @param discarded	Flag whether the frame is discarded by jitter buffer.
+ */
+PJ_DECL(void) pjmedia_jbuf_put_frame3( pjmedia_jbuf *jb, 
+				       const void *frame, 
+				       pj_size_t size, 
+				       pj_uint32_t bit_info,
+				       int frame_seq,
+				       pj_uint32_t frame_ts,
+				       pj_bool_t *discarded);
+/**
  * Get a frame from the jitter buffer. The jitter buffer will return the
  * oldest frame from it's buffer, when it is available.
  *
@@ -291,6 +324,70 @@ PJ_DECL(void) pjmedia_jbuf_get_frame2(pjmedia_jbuf *jb,
 				      pj_size_t *size, 
 				      char *p_frm_type,
 				      pj_uint32_t *bit_info);
+
+
+/**
+ * Get a frame from the jitter buffer. The jitter buffer will return the
+ * oldest frame from it's buffer, when it is available.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame		Buffer to receive the payload from the jitter buffer.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param size		Pointer to receive frame size.
+ * @param p_frm_type	Pointer to receive frame type.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
+ * @param ts		Frame timestamp.
+ * @param seq		Frame sequence number.
+ */
+PJ_DECL(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb, 
+				      void *frame, 
+				      pj_size_t *size, 
+				      char *p_frm_type,
+				      pj_uint32_t *bit_info,
+				      pj_uint32_t *ts,
+				      int *seq);
+
+
+/**
+ * Peek a frame from the jitter buffer. The jitter buffer state will not be
+ * modified.
+ *
+ * @param jb		The jitter buffer.
+ * @param offset	Offset from the oldest frame to be peeked.
+ * @param frame		Buffer to receive the payload from the jitter buffer.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param size		Pointer to receive frame size.
+ * @param p_frm_type	Pointer to receive frame type.
+ *			@see pjmedia_jbuf_get_frame().    
+ * @param bit_info	Bit precise info of the frame, e.g: a frame may not 
+ *			exactly start and end at the octet boundary, so this
+ *			field may be used for specifying start & end bit offset.
+ * @param ts		Frame timestamp.
+ * @param seq		Frame sequence number.
+ */
+PJ_DECL(void) pjmedia_jbuf_peek_frame(pjmedia_jbuf *jb,
+				      unsigned offset,
+				      const void **frame, 
+				      pj_size_t *size, 
+				      char *p_frm_type,
+				      pj_uint32_t *bit_info,
+				      pj_uint32_t *ts,
+				      int *seq);
+
+
+/**
+ * Remove frames from the jitter buffer.
+ *
+ * @param jb		The jitter buffer.
+ * @param frame_cnt	Number of frames to be removed.
+ *
+ * @return		The number of frame successfully removed.
+ */
+PJ_DECL(unsigned) pjmedia_jbuf_remove_frame(pjmedia_jbuf *jb, 
+					    unsigned frame_cnt);
 
 
 /**

@@ -130,7 +130,8 @@ PJ_DEF(void) pjsua_acc_config_dup( pj_pool_t *pool,
 
     pjsip_auth_clt_pref_dup(pool, &dst->auth_pref, &src->auth_pref);
 
-    dst->ka_interval = src->ka_interval;
+    pjsua_transport_config_dup(pool, &dst->rtp_cfg, &src->rtp_cfg);
+
     pj_strdup(pool, &dst->ka_data, &src->ka_data);
 }
 

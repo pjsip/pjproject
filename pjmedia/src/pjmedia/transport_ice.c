@@ -206,6 +206,22 @@ PJ_DEF(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
 					unsigned options,
 	    			        pjmedia_transport **p_tp)
 {
+    return pjmedia_ice_create3(endpt, name, comp_cnt, cfg, cb,
+                               options, NULL, p_tp);
+}
+
+/*
+ * Create ICE media transport.
+ */
+PJ_DEF(pj_status_t) pjmedia_ice_create3(pjmedia_endpt *endpt,
+				        const char *name,
+				        unsigned comp_cnt,
+				        const pj_ice_strans_cfg *cfg,
+				        const pjmedia_ice_cb *cb,
+					unsigned options,
+					void *user_data,
+	    			        pjmedia_transport **p_tp)
+{
     pj_pool_t *pool;
     pj_ice_strans_cb ice_st_cb;
     struct transport_ice *tp_ice;
@@ -223,6 +239,7 @@ PJ_DEF(pj_status_t) pjmedia_ice_create2(pjmedia_endpt *endpt,
     pj_ansi_strcpy(tp_ice->base.name, pool->obj_name);
     tp_ice->base.op = &transport_ice_op;
     tp_ice->base.type = PJMEDIA_TRANSPORT_TYPE_ICE;
+    tp_ice->base.user_data = user_data;
     tp_ice->initial_sdp = PJ_TRUE;
     tp_ice->oa_role = ROLE_NONE;
     tp_ice->use_ice = PJ_FALSE;

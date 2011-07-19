@@ -1819,3 +1819,11 @@ PJ_DEF(pj_color_t) pj_term_get_color(void)
 
 #endif	/* PJ_TERM_HAS_COLOR */
 
+/*
+ * pj_run_app()
+ */
+PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
+                       unsigned flags)
+{
+    return (*main_func)(argc, argv);
+}

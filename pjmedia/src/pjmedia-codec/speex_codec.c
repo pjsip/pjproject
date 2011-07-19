@@ -99,7 +99,8 @@ static pjmedia_codec_factory_op spx_factory_op =
     &spx_default_attr,
     &spx_enum_codecs,
     &spx_alloc_codec,
-    &spx_dealloc_codec
+    &spx_dealloc_codec,
+    &pjmedia_codec_speex_deinit
 };
 
 /* Index to Speex parameter. */

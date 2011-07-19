@@ -472,31 +472,7 @@ static pj_status_t test_init(void)
     }
 
     /* Register codecs */
-#if defined(PJMEDIA_HAS_GSM_CODEC) && PJMEDIA_HAS_GSM_CODEC != 0
-    pjmedia_codec_gsm_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_G711_CODEC) && PJMEDIA_HAS_G711_CODEC!=0
-    pjmedia_codec_g711_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_SPEEX_CODEC) && PJMEDIA_HAS_SPEEX_CODEC!=0
-    pjmedia_codec_speex_init(g_app.endpt, 0, PJMEDIA_CODEC_SPEEX_DEFAULT_QUALITY,
-			     PJMEDIA_CODEC_SPEEX_DEFAULT_COMPLEXITY);
-#endif
-#if defined(PJMEDIA_HAS_G722_CODEC) && (PJMEDIA_HAS_G722_CODEC != 0)
-    pjmedia_codec_g722_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_ILBC_CODEC) && PJMEDIA_HAS_ILBC_CODEC != 0
-    /* Init ILBC with mode=20 to make the losts occur at the same
-     * places as other codecs.
-     */
-    pjmedia_codec_ilbc_init(g_app.endpt, 20);
-#endif
-#if defined(PJMEDIA_HAS_INTEL_IPP) && PJMEDIA_HAS_INTEL_IPP != 0
-    pjmedia_codec_ipp_init(g_app.endpt);
-#endif
-#if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC != 0
-    pjmedia_codec_l16_init(g_app.endpt, 0);
-#endif
+    pjmedia_codec_register_audio_codecs(g_app.endpt, NULL);
 
     /* Create the loop transport */
     status = pjmedia_transport_loop_create(g_app.endpt, &g_app.loop);
@@ -530,8 +506,8 @@ static pj_status_t test_init(void)
     }
 
     /* Make sure stream and WAV parameters match */
-    if (g_app.tx_wav->info.clock_rate != g_app.tx->port->info.clock_rate ||
-	g_app.tx_wav->info.channel_count != g_app.tx->port->info.channel_count)
+    if (PJMEDIA_PIA_SRATE(&g_app.tx_wav->info) != PJMEDIA_PIA_SRATE(&g_app.tx->port->info) ||
+	PJMEDIA_PIA_CCNT(&g_app.tx_wav->info) != PJMEDIA_PIA_CCNT(&g_app.tx->port->info))
     {
 	jbsim_perror("Error: Input WAV file has different clock rate "
 		     "or number of channels than the codec", PJ_SUCCESS);
@@ -554,10 +530,10 @@ static pj_status_t test_init(void)
     /* Create receiver WAV */
     status = pjmedia_wav_writer_port_create(g_app.pool, 
 					    g_app.cfg.rx_wav_out,
-					    g_app.rx->port->info.clock_rate,
-					    g_app.rx->port->info.channel_count,
-					    g_app.rx->port->info.samples_per_frame,
-					    g_app.rx->port->info.bits_per_sample,
+					    PJMEDIA_PIA_SRATE(&g_app.rx->port->info),
+					    PJMEDIA_PIA_CCNT(&g_app.rx->port->info),
+					    PJMEDIA_PIA_SPF(&g_app.rx->port->info),
+					    PJMEDIA_PIA_BITS(&g_app.rx->port->info),
 					    0,
 					    0,
 					    &g_app.rx_wav);
@@ -570,8 +546,8 @@ static pj_status_t test_init(void)
     /* Frame buffer */
     g_app.framebuf = (pj_int16_t*)
 		     pj_pool_alloc(g_app.pool,
-				   MAX(g_app.rx->port->info.samples_per_frame,
-				       g_app.tx->port->info.samples_per_frame) * sizeof(pj_int16_t));
+				   MAX(PJMEDIA_PIA_SPF(&g_app.rx->port->info),
+				       PJMEDIA_PIA_SPF(&g_app.tx->port->info)) * sizeof(pj_int16_t));
 
 
     /* Set the receiver in the loop transport */
@@ -594,15 +570,15 @@ static void run_one_frame(pjmedia_port *src, pjmedia_port *dst,
     pj_bzero(&frame, sizeof(frame));
     frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
     frame.buf = g_app.framebuf;
-    frame.size = dst->info.samples_per_frame * 2;
+    frame.size = PJMEDIA_PIA_SPF(&dst->info) * 2;
     
     status = pjmedia_port_get_frame(src, &frame);
     pj_assert(status == PJ_SUCCESS);
 
     if (status!= PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO) {
 	frame.buf = g_app.framebuf;
-	pjmedia_zero_samples(g_app.framebuf, src->info.samples_per_frame);
-	frame.size = src->info.samples_per_frame * 2;
+	pjmedia_zero_samples(g_app.framebuf, PJMEDIA_PIA_SPF(&src->info));
+	frame.size = PJMEDIA_PIA_SPF(&src->info) * 2;
 	if (has_frame)
 	    *has_frame = PJ_FALSE;
     } else {
@@ -628,8 +604,8 @@ static void tx_tick(const pj_time_val *t)
     long pkt_interval; 
 
     /* packet interval, without jitter */
-    pkt_interval = port->info.samples_per_frame * 1000 /
-		   port->info.clock_rate;
+    pkt_interval = PJMEDIA_PIA_SPF(&port->info) * 1000 /
+		   PJMEDIA_PIA_SRATE(&port->info);
 
     while (PJ_TIME_VAL_GTE(*t, strm->state.tx.next_schedule)) {
 	struct log_entry entry;
@@ -777,8 +753,8 @@ static void rx_tick(const pj_time_val *t)
     pjmedia_port *port = g_app.rx->port;
     long pkt_interval;
 
-    pkt_interval = port->info.samples_per_frame * 1000 /
-		   port->info.clock_rate *
+    pkt_interval = PJMEDIA_PIA_SPF(&port->info) * 1000 /
+		   PJMEDIA_PIA_SRATE(&port->info) *
 		   g_app.cfg.rx_snd_burst;
 
     if (PJ_TIME_VAL_GTE(*t, strm->state.rx.next_schedule)) {

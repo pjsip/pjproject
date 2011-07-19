@@ -32,7 +32,7 @@
 
 #define THIS_FILE	    "wav_playlist.c"
 
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('P', 'l', 's', 't')
+#define SIGNATURE	    PJMEDIA_SIG_PORT_WAV_PLAYLIST
 #define BYTES_PER_SAMPLE    2
 
 
@@ -236,6 +236,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 						pjmedia_port **p_port)
 {
     struct playlist_port *fport;
+    pjmedia_audio_format_detail *afd;
     pj_off_t pos;
     pj_status_t status;
     int index;
@@ -279,6 +280,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
     if (!fport) {
 	return PJ_ENOMEM;
     }
+
+    afd = pjmedia_format_get_audio_format_detail(&fport->base.info.fmt, 1);
 
     /* start with the first file. */
     fport->current_file = 0;
@@ -466,15 +469,13 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	 * that the WAV file has the same attributes as previous files. 
 	 */
 	if (!has_wave_info) {
-	    fport->base.info.channel_count = wavehdr.fmt_hdr.nchan;
-	    fport->base.info.clock_rate = wavehdr.fmt_hdr.sample_rate;
-	    fport->base.info.bits_per_sample = wavehdr.fmt_hdr.bits_per_sample;
-	    fport->base.info.samples_per_frame = fport->base.info.clock_rate *
-						 wavehdr.fmt_hdr.nchan *
-						 ptime / 1000;
-	    fport->base.info.bytes_per_frame =
-		fport->base.info.samples_per_frame *
-		fport->base.info.bits_per_sample / 8;
+	    afd->channel_count = wavehdr.fmt_hdr.nchan;
+	    afd->clock_rate = wavehdr.fmt_hdr.sample_rate;
+	    afd->bits_per_sample = wavehdr.fmt_hdr.bits_per_sample;
+	    afd->frame_time_usec = ptime * 1000;
+	    afd->avg_bps = afd->max_bps = afd->clock_rate *
+					  afd->channel_count *
+					  afd->bits_per_sample / 8;
 
 	    has_wave_info = PJ_TRUE;
 
@@ -483,9 +484,9 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	    /* Check that this file has the same characteristics as the other
 	     * files.
 	     */
-	    if (wavehdr.fmt_hdr.nchan != fport->base.info.channel_count ||
-		wavehdr.fmt_hdr.sample_rate != fport->base.info.clock_rate ||
-		wavehdr.fmt_hdr.bits_per_sample != fport->base.info.bits_per_sample)
+	    if (wavehdr.fmt_hdr.nchan != afd->channel_count ||
+		wavehdr.fmt_hdr.sample_rate != afd->clock_rate ||
+		wavehdr.fmt_hdr.bits_per_sample != afd->bits_per_sample)
 	    {
 		/* This file has different characteristics than the other 
 		 * files. 
@@ -519,8 +520,8 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	     "WAV playlist '%.*s' created: samp.rate=%d, ch=%d, bufsize=%uKB",
 	     (int)port_label->slen,
 	     port_label->ptr,
-	     fport->base.info.clock_rate,
-	     fport->base.info.channel_count,
+	     afd->clock_rate,
+	     afd->channel_count,
 	     fport->bufsize / 1000));
     
     return PJ_SUCCESS;

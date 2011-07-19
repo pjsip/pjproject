@@ -73,13 +73,13 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
     codec_param.info.avg_bps = bitrate;
     codec_param.setting.vad = 0;
 
-    status = codec->op->init(codec, pool);
+    status = pjmedia_codec_init(codec, pool);
     if (status != PJ_SUCCESS) {
 	rc = -60;
 	goto on_return;
     }
 
-    status = codec->op->open(codec, &codec_param);
+    status = pjmedia_codec_open(codec, &codec_param);
     if (status != PJ_SUCCESS) {
 	rc = -70;
 	goto on_return;
@@ -117,7 +117,7 @@ static int codec_test_encode(pjmedia_codec_mgr *mgr,
 	    break;
 
 	out_frame.size = samples_per_frame;
-	status = codec->op->encode(codec, &in_frame, samples_per_frame,
+	status = pjmedia_codec_encode(codec, &in_frame, samples_per_frame,
 				   &out_frame);
 	if (status != PJ_SUCCESS) {
 	    rc = -95;
@@ -188,7 +188,7 @@ on_return:
 	fclose(fref);
 
     if (codec) {
-	codec->op->close(codec);
+	pjmedia_codec_close(codec);
 	pjmedia_codec_mgr_dealloc_codec(mgr, codec);
     }
 
@@ -326,13 +326,13 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
     codec_param.info.avg_bps = bitrate;
     codec_param.setting.vad = 0;
 
-    status = codec->op->init(codec, pool);
+    status = pjmedia_codec_init(codec, pool);
     if (status != PJ_SUCCESS) {
 	rc = -60;
 	goto on_return;
     }
 
-    status = codec->op->open(codec, &codec_param);
+    status = pjmedia_codec_open(codec, &codec_param);
     if (status != PJ_SUCCESS) {
 	rc = -70;
 	goto on_return;
@@ -387,8 +387,8 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 
 	if (has_frame) {
 	    count = 2;
-	    if (codec->op->parse(codec, pkt, encoded_len, &ts, 
-				 &count, in_frame) != PJ_SUCCESS) 
+	    if (pjmedia_codec_parse(codec, pkt, encoded_len, &ts, 
+				    &count, in_frame) != PJ_SUCCESS) 
 	    {
 		rc = -100;
 		goto on_return;
@@ -399,15 +399,15 @@ static int codec_test_decode(pjmedia_codec_mgr *mgr,
 		goto on_return;
 	    }
 
-	    if (codec->op->decode(codec, &in_frame[0], samples_per_frame*2, 
-				  &out_frame) != PJ_SUCCESS) 
+	    if (pjmedia_codec_decode(codec, &in_frame[0], samples_per_frame*2,
+				     &out_frame) != PJ_SUCCESS) 
 	    {
 		rc = -120;
 		goto on_return;
 	    }
 	} else {
-	    if (codec->op->recover(codec, samples_per_frame*2, 
-				   &out_frame) != PJ_SUCCESS)
+	    if (pjmedia_codec_recover(codec, samples_per_frame*2, 
+				      &out_frame) != PJ_SUCCESS)
 	    {
 		rc = -125;
 		goto on_return;
@@ -483,7 +483,7 @@ on_return:
 	fclose(input);
 
     if (codec) {
-	codec->op->close(codec);
+	pjmedia_codec_close(codec);
 	pjmedia_codec_mgr_dealloc_codec(mgr, codec);
     }
 

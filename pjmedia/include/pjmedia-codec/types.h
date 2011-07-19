@@ -38,11 +38,11 @@
 
 
 /**
- * These are the dynamic payload types that are used by codecs in
+ * These are the dynamic payload types that are used by audio codecs in
  * this library. Also see the header file <pjmedia/codec.h> for list
  * of static payload types.
  */
-enum
+enum pjmedia_audio_pt
 {
     /* According to IANA specifications, dynamic payload types are to be in
      * the range 96-127 (inclusive). This enum is structured to place the
@@ -96,6 +96,27 @@ enum
      * Ensure the value of the last pt above is <= 127.
      */
 };
+
+/**
+ * These are the dynamic payload types that are used by video codecs in
+ * this library.
+ */
+enum pjmedia_video_pt
+{
+     /* Video payload types */
+     PJMEDIA_RTP_PT_VID_START = (PJMEDIA_RTP_PT_DYNAMIC-1),
+     PJMEDIA_RTP_PT_H263P,
+     PJMEDIA_RTP_PT_H264,
+     PJMEDIA_RTP_PT_H264_RSV1,
+     PJMEDIA_RTP_PT_H264_RSV2,
+     PJMEDIA_RTP_PT_H264_RSV3,
+     PJMEDIA_RTP_PT_H264_RSV4,
+
+     /* Caution!
+      * Ensure the value of the last pt above is <= 127.
+      */
+};
+
 
 /**
  * @}

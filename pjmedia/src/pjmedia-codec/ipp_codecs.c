@@ -103,7 +103,8 @@ static pjmedia_codec_factory_op ipp_factory_op =
     &ipp_default_attr,
     &ipp_enum_codecs,
     &ipp_alloc_codec,
-    &ipp_dealloc_codec
+    &ipp_dealloc_codec,
+    &pjmedia_codec_ipp_deinit
 };
 
 /* IPP codecs factory */

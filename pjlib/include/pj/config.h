@@ -20,7 +20,6 @@
 #ifndef __PJ_CONFIG_H__
 #define __PJ_CONFIG_H__
 
-#error "For PJSIP version 1.x, please switch your svn repository URL to https://svn.pjsip.org/repos/pjproject/branches/1.x"
 
 /**
  * @file config.h
@@ -46,6 +45,10 @@
 #  error "Unknown compiler."
 #endif
 
+/* PJ_ALIGN_DATA is compiler specific directive to align data address */
+#ifndef PJ_ALIGN_DATA
+#  error "PJ_ALIGN_DATA is not defined!"
+#endif
 
 /********************************************************************
  * Include target OS specific configuration.
@@ -1122,10 +1125,10 @@
 PJ_BEGIN_DECL
 
 /** PJLIB version major number. */
-#define PJ_VERSION_NUM_MAJOR	1
+#define PJ_VERSION_NUM_MAJOR	2
 
 /** PJLIB version minor number. */
-#define PJ_VERSION_NUM_MINOR	10
+#define PJ_VERSION_NUM_MINOR	0
 
 /** PJLIB version revision number. */
 #define PJ_VERSION_NUM_REV	0
@@ -1134,7 +1137,7 @@ PJ_BEGIN_DECL
  * Extra suffix for the version (e.g. "-trunk"), or empty for
  * web release version.
  */
-#define PJ_VERSION_NUM_EXTRA	"-svn"
+#define PJ_VERSION_NUM_EXTRA	"-pre-alpha-svn"
 
 /**
  * PJLIB version number consists of three bytes with the following format:

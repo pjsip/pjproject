@@ -26,6 +26,8 @@
  */
 #include <pjmedia-audiodev/config.h>
 #include <pjmedia-audiodev/errno.h>
+#include <pjmedia/format.h>
+#include <pjmedia/frame.h>
 #include <pjmedia/types.h>
 #include <pj/pool.h>
 

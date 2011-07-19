@@ -115,7 +115,8 @@ static pjmedia_codec_factory_op codec_factory_op =
     &default_attr,
     &enum_codecs,
     &alloc_codec,
-    &dealloc_codec
+    &dealloc_codec,
+    &pjmedia_codec_g7221_deinit
 };
 
 

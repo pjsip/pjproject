@@ -334,7 +334,7 @@ static void generate_tone(struct gen_state *state,
 
 /****************************************************************************/
 
-#define SIGNATURE   PJMEDIA_PORT_SIGNATURE('t', 'n', 'g', 'n')
+#define SIGNATURE   PJMEDIA_SIG_PORT_TONEGEN
 #define THIS_FILE   "tonegen.c"
 
 #if 0
@@ -558,7 +558,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 {
     struct tonegen *tonegen = (struct tonegen*) port;
     short *dst, *end;
-    unsigned clock_rate = tonegen->base.info.clock_rate;
+    unsigned clock_rate = PJMEDIA_PIA_SRATE(&tonegen->base.info);
 
     PJ_ASSERT_RETURN(port->info.signature == SIGNATURE, PJ_EINVAL);
 
@@ -622,7 +622,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
     }
     
     dst = (short*) frame->buf;
-    end = dst + port->info.samples_per_frame;
+    end = dst + PJMEDIA_PIA_SPF(&port->info);
 
     while (dst < end) {
 	pjmedia_tone_desc *dig = &tonegen->digits[tonegen->cur_digit];
@@ -636,7 +636,8 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	if (tonegen->dig_samples == 0 && 
 	    (tonegen->count!=1 || !(dig->flags & PJMEDIA_TONE_INITIALIZED)))
 	{
-	    init_generate_tone(&tonegen->state, port->info.clock_rate,
+	    init_generate_tone(&tonegen->state,
+		               PJMEDIA_PIA_SRATE(&port->info),
 			       dig->freq1, dig->freq2, dig->volume);
 	    dig->flags |= PJMEDIA_TONE_INITIALIZED;
 	    if (tonegen->cur_digit > 0) {
@@ -651,7 +652,8 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	    cnt = on_samp - tonegen->dig_samples;
 	    if (cnt > required)
 		cnt = required;
-	    generate_tone(&tonegen->state, port->info.channel_count,
+	    generate_tone(&tonegen->state,
+			  PJMEDIA_PIA_CCNT(&port->info),
 			  cnt, dst);
 
 	    dst += cnt;
@@ -729,7 +731,7 @@ static pj_status_t tonegen_get_frame(pjmedia_port *port,
 	pjmedia_zero_samples(dst, end-dst);
 
     frame->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    frame->size = port->info.bytes_per_frame;
+    frame->size = PJMEDIA_PIA_AVG_FSZ(&port->info);
 
     TRACE_((THIS_FILE, "tonegen_get_frame(): frame created, level=%u",
 	    pjmedia_calc_avg_signal((pj_int16_t*)frame->buf, frame->size/2)));

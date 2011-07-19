@@ -23,6 +23,9 @@
 #include <pjmedia.h>
 #include <pjlib.h>
 
+#define HAS_VID_DEV_TEST	1
+#define HAS_VID_PORT_TEST	0
+#define HAS_VID_CODEC_TEST	1
 #define HAS_SDP_NEG_TEST	1
 #define HAS_JBUF_TEST		1
 #define HAS_MIPS_TEST		1
@@ -35,6 +38,9 @@ int jbuf_main(void);
 int sdp_neg_test(void);
 int mips_test(void);
 int codec_test_vectors(void);
+int vid_codec_test(void);
+int vid_dev_test(void);
+int vid_port_test(void);
 
 extern pj_pool_factory *mem;
 void app_perror(pj_status_t status, const char *title);

@@ -663,6 +663,95 @@ PJ_DECL(pj_status_t) pjmedia_sdp_neg_negotiate( pj_pool_t *pool,
 						pj_bool_t allow_asym);
 
 
+/**
+ * Enumeration of customized SDP format matching option flags. See
+ * #pjmedia_sdp_neg_register_fmt_match_cb() for more info.
+ */
+typedef enum pjmedia_sdp_neg_fmt_match_flag
+{
+    /**
+     * In generating answer, the SDP fmtp in the answer candidate may need
+     * to be modified by the customized SDP format matching callback to
+     * achieve flexible SDP negotiation, e.g: AMR fmtp 'octet-align' field
+     * can be adjusted with the offer when the codec implementation support
+     * both packetization modes octet-aligned and bandwidth-efficient.
+     */
+    PJMEDIA_SDP_NEG_FMT_MATCH_ALLOW_MODIFY_ANSWER = 1,
+
+} pjmedia_sdp_neg_fmt_match_flag;
+
+
+/**
+ * The declaration of customized SDP format matching callback. See
+ * #pjmedia_sdp_neg_register_fmt_match_cb() for more info.
+ *
+ * @param pool		The memory pool.
+ * @param offer		The SDP media offer.
+ * @param o_fmt_idx	Index of the format in the SDP media offer.
+ * @param answer	The SDP media answer.
+ * @param a_fmt_idx	Index of the format in the SDP media answer.
+ * @param option	The format matching option, see
+ *			#pjmedia_sdp_neg_fmt_match_flag.
+ *
+ * @return		PJ_SUCCESS when the formats in offer and answer match.
+ */
+typedef pj_status_t (*pjmedia_sdp_neg_fmt_match_cb)(pj_pool_t *pool,
+						    pjmedia_sdp_media *offer,
+						    unsigned o_fmt_idx,
+						    pjmedia_sdp_media *answer,
+						    unsigned a_fmt_idx,
+						    unsigned option);
+
+
+/**
+ * Register customized SDP format matching callback function for the specified
+ * format. The customized SDP format matching is needed when the format
+ * identification in a media stream session cannot be simply determined by
+ * encoding name and clock rate, but also involves one or more format specific
+ * parameters, which are specified in SDP fmtp attribute. For example,
+ * an H.264 video stream is also identified by profile, level, and
+ * packetization-mode parameters. As those parameters are format specifics,
+ * the negotiation must be done by the format or codec implementation.
+ *
+ * To unregister the callback of specific format, just call this function with
+ * parameter #cb set to NULL.
+ *
+ * @param fmt_name	The format name, e.g: "H.264", "AMR", "G7221". Note
+ *			that the string buffer must remain valid until the
+ *			callback is unregistered.
+ * @param cb		The customized SDP format negotiation callback or
+ *			NULL to unregister the specified format callback.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_register_fmt_match_cb(
+					const pj_str_t *fmt_name,
+					pjmedia_sdp_neg_fmt_match_cb cb);
+
+
+/**
+ * Match format in the SDP media offer and answer. The matching mechanism
+ * will be done by comparing the encoding name and clock rate, and if the
+ * custom format matching callback for the specified format is registered,
+ * see #pjmedia_sdp_neg_register_fmt_match_cb(), it will be called for more
+ * detail verification, e.g: format parameters specified in SDP fmtp.
+ *
+ * @param pool		The memory pool.
+ * @param offer		The SDP media offer.
+ * @param o_fmt_idx	Index of the format in the SDP media offer.
+ * @param answer	The SDP media answer.
+ * @param a_fmt_idx	Index of the format in the SDP media answer.
+ * @param option	The format matching option, see
+ *			#pjmedia_sdp_neg_fmt_match_flag.
+ *
+ * @return		PJ_SUCCESS when the formats in offer and answer match.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_neg_fmt_match( pj_pool_t *pool,
+					        pjmedia_sdp_media *offer,
+					        unsigned o_fmt_idx,
+					        pjmedia_sdp_media *answer,
+					        unsigned a_fmt_idx,
+					        unsigned option);
 
 
 PJ_END_DECL
