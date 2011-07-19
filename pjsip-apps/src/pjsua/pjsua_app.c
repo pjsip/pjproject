@@ -2653,7 +2653,7 @@ static void on_call_tsx_state(pjsua_call_id call_id,
 
 /* General processing for media state. "mi" is the media index */
 static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
-                                         pj_bool_t *has_error)
+                                        pj_bool_t *has_error)
 {
     const char *status_name[] = {
         "None",
@@ -2662,6 +2662,8 @@ static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
         "Remote hold",
         "Error"
     };
+
+    PJ_UNUSED_ARG(has_error);
 
     pj_assert(ci->media[mi].status <= PJ_ARRAY_SIZE(status_name));
     pj_assert(PJSUA_CALL_MEDIA_ERROR == 4);
@@ -2675,6 +2677,8 @@ static void on_call_generic_media_state(pjsua_call_info *ci, unsigned mi,
 static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
                                 pj_bool_t *has_error)
 {
+    PJ_UNUSED_ARG(has_error);
+
     /* Stop ringback */
     ring_stop(ci->id);
 
@@ -2761,6 +2765,9 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
                                 pj_bool_t *has_error)
 {
+    PJ_UNUSED_ARG(ci);
+    PJ_UNUSED_ARG(mi);
+    PJ_UNUSED_ARG(has_error);
 }
 
 /*
@@ -3149,6 +3156,8 @@ static void on_call_media_event(pjsua_call_id call_id,
                                 pjmedia_event *event)
 {
     char event_name[5];
+    PJ_UNUSED_ARG(call_id);
+    PJ_UNUSED_ARG(med_idx);
     PJ_LOG(4,(THIS_FILE, "Event %s",
 	      pjmedia_fourcc_name(event->type, event_name)));
 }

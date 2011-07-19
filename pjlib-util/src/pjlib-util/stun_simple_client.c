@@ -44,7 +44,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 {
     unsigned srv_cnt;
     pj_sockaddr_in srv_addr[2];
-    int i, j, send_cnt = 0;
+    int i, send_cnt = 0;
     pj_pool_t *pool;
     struct query_rec {
 	struct {
@@ -123,6 +123,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 
 	/* Send messages to servers that has not given us response. */
 	for (i=0; i<sock_cnt && status==PJ_SUCCESS; ++i) {
+	    unsigned j;
 	    for (j=0; j<srv_cnt && status==PJ_SUCCESS; ++j) {
 		pjstun_msg_hdr *msg_hdr = (pjstun_msg_hdr*) out_msg;
                 pj_ssize_t sent_len;

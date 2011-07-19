@@ -31,6 +31,8 @@ static pj_bool_t is_quitting = PJ_FALSE;
 static pj_status_t vid_event_cb(pjmedia_event_subscription *esub,
 				pjmedia_event *event)
 {
+    PJ_UNUSED_ARG(esub);
+
     if (event->type == PJMEDIA_EVENT_WND_CLOSED)
         is_quitting = PJ_TRUE;
 
@@ -46,7 +48,6 @@ static int capture_render_loopback(pj_bool_t active,
     pjmedia_vid_dev_info cdi, rdi;
     pjmedia_vid_port_param param;
     pjmedia_video_format_detail *vfd;
-    pjmedia_vid_dev_cb cb;
     pjmedia_event_subscription esub;
     pj_status_t status;
     int rc = 0, i;
@@ -180,7 +181,6 @@ static int vidport_test(void)
         PJMEDIA_FORMAT_RGBA,
         PJMEDIA_FORMAT_I420
     };
-    pj_status_t status;
 
     PJ_LOG(3, (THIS_FILE, " Video port tests:"));
 

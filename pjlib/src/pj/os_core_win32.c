@@ -1428,5 +1428,6 @@ PJ_DEF(pj_color_t) pj_term_get_color(void)
 PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
                        unsigned flags)
 {
+    PJ_UNUSED_ARG(flags);
     return (*main_func)(argc, argv);
 }

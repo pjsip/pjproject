@@ -48,8 +48,8 @@ typedef struct pjmedia_audio_codec_config
     /** Speex codec settings. See #pjmedia_codec_speex_init() for more info */
     struct {
 	unsigned	option;		/**< Bitmask of options.	*/
-	unsigned	quality;	/**< Codec quality.		*/
-	unsigned	complexity;	/**< Codec complexity.		*/
+	int		quality;	/**< Codec quality.		*/
+	int		complexity;	/**< Codec complexity.		*/
     } speex;
 
     /** iLBC settings */

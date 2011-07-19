@@ -1324,8 +1324,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 						call_med->strm.v.rdr_win_id;
 
 	    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
-		pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
-		cap_dev = w->preview_cap_id;
+		cap_dev = call_med->strm.v.cap_dev;
 	    }
 	    info->media[info->media_cnt].stream.vid.cap_dev = cap_dev;
 	} else {

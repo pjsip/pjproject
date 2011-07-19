@@ -315,8 +315,6 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
 {
     pjsip_tx_data *tdata;
     pjsip_response_addr res_addr;
-    pjmedia_transport_info tpinfo;
-    pjmedia_sdp_session *sdp;
     const pjsip_hdr *cap_hdr;
     pj_status_t status;
 
@@ -385,6 +383,9 @@ static pj_bool_t options_on_rx_request(pjsip_rx_data *rdata)
     /* Get media socket info, make sure transport is ready */
 #if DISABLED_FOR_TICKET_1185
     if (pjsua_var.calls[0].med_tp) {
+	pjmedia_transport_info tpinfo;
+	pjmedia_sdp_session *sdp;
+
 	pjmedia_transport_info_init(&tpinfo);
 	pjmedia_transport_get_info(pjsua_var.calls[0].med_tp, &tpinfo);
 
@@ -2620,6 +2621,8 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     pjmedia_endpt_dump(pjsua_get_pjmedia_endpt());
 
     PJ_LOG(3,(THIS_FILE, "Dumping media transports:"));
+    // Suppress compile warning caused by unreferenced var.
+    PJ_UNUSED_ARG(i);
 #if DISABLED_FOR_TICKET_1185
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];

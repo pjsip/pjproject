@@ -224,7 +224,7 @@ static pjsip_module msg_logger =
  */
 int main(int argc, char *argv[])
 {
-    pj_pool_t *pool;
+    pj_pool_t *pool = NULL;
     pj_status_t status;
     unsigned i;
 
@@ -593,7 +593,8 @@ int main(int argc, char *argv[])
 	pjsip_endpt_destroy(g_endpt);
 
     /* Release pool */
-    pj_pool_release(pool);
+    if (pool)
+	pj_pool_release(pool);
 
     return 0;
 }

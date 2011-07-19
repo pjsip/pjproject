@@ -686,6 +686,8 @@ PJ_INLINE(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
     w->ref_cnt = 0;
     w->pool = pool;
     w->preview_cap_id = PJMEDIA_VID_INVALID_DEV;
+#else
+    PJ_UNUSED_ARG(wid);
 #endif
 }
 

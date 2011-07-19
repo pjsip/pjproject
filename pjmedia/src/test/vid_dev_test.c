@@ -75,6 +75,8 @@ static int enum_devs(void)
 static pj_status_t vid_event_cb(pjmedia_event_subscription *esub,
 				pjmedia_event *event)
 {
+    PJ_UNUSED_ARG(esub);
+
     if (event->type == PJMEDIA_EVENT_WND_CLOSED)
         is_quitting = PJ_TRUE;
 

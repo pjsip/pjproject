@@ -107,6 +107,9 @@ PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_publisher *epub,
     TRACE_((THIS_FILE, "Event %s is published by publisher %s",
 		       pjmedia_fourcc_name(event->type, event_name),
 		       pjmedia_fourcc_name(epub->sig, epub_name)));
+    /* Suppress compiler warning if trace is disabled */
+    PJ_UNUSED_ARG(event_name);
+    PJ_UNUSED_ARG(epub_name);
 
     esub = epub->subscription_list.next;
     if (!esub)
