@@ -502,6 +502,7 @@ static pj_status_t app_startup()
     /* Add account for the transport */
     pjsua_acc_add_local(tid, PJ_TRUE, &g_acc_id);
 
+#if DISABLED_FOR_TICKET_1185
     /* Create media transports */
     pjsua_transport_config mtcfg;
     pjsua_transport_config_default(&mtcfg);
@@ -513,6 +514,7 @@ static pj_status_t app_startup()
     	pjsua_destroy();
     	return status;
     }
+#endif
     
     /* Initialization is done, now start pjsua */
     status = pjsua_start();

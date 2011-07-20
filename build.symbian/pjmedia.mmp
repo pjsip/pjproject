@@ -45,12 +45,14 @@ SOURCE		clock_thread.c
 SOURCE		codec.c
 SOURCE		conference.c
 SOURCE		conf_switch.c
+SOURCE		delaybuf.c
 SOURCE		echo_common.c
 SOURCE		echo_port.c
 SOURCE		echo_suppress.c
 SOURCE		endpoint.c
 SOURCE		errno.c
-SOURCE		delaybuf.c
+SOURCE		event.c
+SOURCE		format.c
 SOURCE		g711.c
 SOURCE		jbuf.c
 SOURCE		master_port.c
@@ -65,22 +67,31 @@ SOURCE		rtcp.c
 SOURCE		rtcp_xr.c
 SOURCE		rtp.c
 //SDP files are in pjsdp.mmp: sdp.c, sdp_cmp.c, sdp_neg.c
-SOURCE		session.c
+//SOURCE		session.c		// deprecated
 SOURCE		silencedet.c
 SOURCE		sound_port.c
 SOURCE		splitcomb.c
 SOURCE		stereo_port.c
 SOURCE		stream.c
+SOURCE		stream_common.c
 SOURCE		tonegen.c
 SOURCE		transport_adapter_sample.c
 SOURCE		transport_ice.c
 SOURCE		transport_udp.c
 SOURCE		transport_srtp.c
+SOURCE		types.c
 SOURCE		wav_player.c
 SOURCE		wav_playlist.c
 SOURCE		wav_writer.c
 SOURCE		wave.c
 SOURCE		wsola.c
+
+//
+// pjmedia-codec common files
+//
+SOURCEPATH	..\pjmedia\src\pjmedia-codec
+SOURCE		audio_codecs.c
+
 
 //
 // Symbian specific

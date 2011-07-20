@@ -917,10 +917,12 @@
  */
 
 /**
- * Top level option to disable video.
+ * Top level option to enable/disable video features.
+ *
+ * Default: 0 (disabled)
  */
 #ifndef PJMEDIA_HAS_VIDEO
-#   define PJMEDIA_HAS_VIDEO				1
+#   define PJMEDIA_HAS_VIDEO				0
 #endif
 
 
