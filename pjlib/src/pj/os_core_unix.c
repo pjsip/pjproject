@@ -1819,6 +1819,7 @@ PJ_DEF(pj_color_t) pj_term_get_color(void)
 
 #endif	/* PJ_TERM_HAS_COLOR */
 
+#if !defined(PJ_DARWINOS) || PJ_DARWINOS == 0
 /*
  * pj_run_app()
  */
@@ -1827,3 +1828,4 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
 {
     return (*main_func)(argc, argv);
 }
+#endif

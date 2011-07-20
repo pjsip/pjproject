@@ -17,6 +17,18 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include <pj/os.h>
+#include "TargetConditionals.h"
+
+#if TARGET_OS_IPHONE
+
+PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
+                       unsigned flags)
+{
+    return (*main_func)(argc, argv);
+}
+
+#else
+
 #include <pthread.h>
 #include <AppKit/AppKit.h>
 #include <CoreFoundation/CFRunLoop.h>
@@ -84,3 +96,5 @@ PJ_DEF(int) pj_run_app(pj_main_func_ptr main_func, int argc, char *argv[],
     
     return param.retval;
 }
+
+#endif
