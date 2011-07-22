@@ -46,6 +46,44 @@ PJ_BEGIN_DECL
 typedef pj_int32_t pjmedia_vid_dev_index;
 
 /**
+ * Enumeration of window handle type.
+ */
+typedef enum pjmedia_vid_dev_hwnd_type
+{
+    /**
+     * Type none.
+     */
+    PJMEDIA_VID_DEV_HWND_TYPE_NONE,
+
+    /**
+     * Native window handle on Windows.
+     */
+    PJMEDIA_VID_DEV_HWND_TYPE_WINDOWS
+
+} pjmedia_vid_dev_hwnd_type;
+
+/**
+ * Type for window handle.
+ */
+typedef struct pjmedia_vid_dev_hwnd
+{
+    /**
+     * The window handle type.
+     */
+    pjmedia_vid_dev_hwnd_type type;
+
+    /**
+     * The window handle.
+     */
+    union
+    {
+	void	    *ptr;	/**< Pointer value	*/
+	int	     fd;	/**< Descriptor	value	*/
+    } hwnd;
+
+} pjmedia_vid_dev_hwnd;
+
+/**
  * Device index constants.
  */
 enum
@@ -267,7 +305,7 @@ typedef struct pjmedia_vid_dev_param
      * and will only be used if PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW is set in 
      * the flags.
      */
-    void *window;
+    pjmedia_vid_dev_hwnd window;
 
     /**
      * Video display size. This setting is optional, and will only be used 

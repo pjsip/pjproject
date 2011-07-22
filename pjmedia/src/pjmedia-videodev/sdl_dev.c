@@ -510,7 +510,7 @@ static pj_status_t init_sdl(struct sdl_stream *strm, pjmedia_format *fmt)
 
         if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
             /* Use the window supplied by the application. */
-            strm->window = SDL_CreateWindowFrom(strm->param.window);
+	    strm->window = SDL_CreateWindowFrom(strm->param.window.hwnd.ptr);
         } else {
             /* Create the window where we will draw. */
             strm->window = SDL_CreateWindow("pjmedia-SDL video",

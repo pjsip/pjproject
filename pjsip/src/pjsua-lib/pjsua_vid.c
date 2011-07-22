@@ -949,6 +949,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 	return status;
     }
 
+    wi->hwnd = vparam.window;
     wi->show = !vparam.window_hide;
     wi->pos  = vparam.window_pos;
     wi->size = vparam.disp_size;

@@ -5456,6 +5456,11 @@ PJ_DECL(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id);
 typedef struct pjsua_vid_win_info
 {
     /**
+     * Native window handle.
+     */
+    pjmedia_vid_dev_hwnd hwnd;
+
+    /**
      * Window show status. The window is hidden if false.
      */
     pj_bool_t	show;
