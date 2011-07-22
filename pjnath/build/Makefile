@@ -3,6 +3,7 @@
 export PJNATH_TEST_OBJS = main.o
 
 include ../../build.mak
+include ../../version.mak
 include $(PJDIR)/build/common.mak
 
 RULES_MAK := $(PJDIR)/build/rules.mak
@@ -78,10 +79,14 @@ TARGETS := pjnath pjnath-test pjturn-client pjturn-srv
 all: $(TARGETS)
 
 doc:
-	cd .. && rm -rf docs/html docs/latex && doxygen docs/doxygen.cfg
-	@if [ -n "$(WWWDIR)" ]; then \
-		echo "Copying to $(WWWDIR)/pjnath/docs/html.." ; \
-		cp -a ../docs/html/* $(WWWDIR)/pjnath/docs/html/ ; \
+	cd .. && rm -rf docs/$(PJ_VERSION) && doxygen docs/doxygen.cfg
+	@if [ -n "$(WWWDIR)" ] && ! [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjnath/docs/html" ] ; then \
+		echo "Creating docs/$(PJ_VERSION)/pjnath/docs/html" ; \
+		mkdir -p $(WWWDIR)/docs/$(PJ_VERSION)/pjnath/docs/html ; \
+	fi 
+	@if [ -n "$(WWWDIR)" ] && [ -d "$(WWWDIR)/docs/$(PJ_VERSION)/pjnath/docs/html" ] ; then \
+		echo "Copying docs/$(PJ_VERSION) to $(WWWDIR)/docs/$(PJ_VERSION)/pjnath/docs/html.." ; \
+		cp -v -a ../docs/$(PJ_VERSION)/html/* $(WWWDIR)/docs/$(PJ_VERSION)/pjnath/docs/html/ ; \
 	fi
 
 dep: depend

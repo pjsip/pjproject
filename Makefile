@@ -1,6 +1,7 @@
 include build.mak
 include build/host-$(HOST_NAME).mak
 -include user.mak
+include version.mak
 
 DIRS = pjlib/build pjlib-util/build pjnath/build third_party/build pjmedia/build pjsip/build pjsip-apps/build $(EXTRA_DIRS)
 
@@ -23,7 +24,7 @@ doc:
 		exit 1; \
 	fi
 	for dir in $(DIRS); do \
-		if $(MAKE) $(MAKE_FLAGS) -C $$dir/build $@; then \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
 		    true; \
 		else \
 		    exit 1; \
@@ -92,7 +93,6 @@ pjsua-test:
 	cd tests/pjsua && python runall.py
 
 prefix = $(ac_prefix)
-include version.mak
 
 install:
 	mkdir -p $(DESTDIR)$(prefix)/lib
