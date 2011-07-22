@@ -77,9 +77,21 @@ typedef struct pjmedia_vid_dev_hwnd
      */
     union
     {
-	void	    *ptr;	/**< Pointer value	*/
-	int	     fd;	/**< Descriptor	value	*/
-    } hwnd;
+	struct {
+	    void    *hwnd;	/**< HWND     	*/
+	} win;
+	struct {
+	    void    *window;    /**< Window	*/
+	    void    *display;   /**< Display	*/
+	} x11;
+	struct {
+	    void    *window;    /**< Window	*/
+	} cocoa;
+	struct {
+	    void    *window;    /**< Window	*/
+	} ios;
+	void 	    *window;
+    } info;
 
 } pjmedia_vid_dev_hwnd;
 
