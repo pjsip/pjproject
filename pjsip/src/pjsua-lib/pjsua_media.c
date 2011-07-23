@@ -1313,7 +1313,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	call_med->tp = srtp;
     }
 #else
-    call->tp_orig = call->tp;
+    call_med->tp_orig = call_med->tp;
     PJ_UNUSED_ARG(security_level);
 #endif
 

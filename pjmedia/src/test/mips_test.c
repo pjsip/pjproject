@@ -1726,6 +1726,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return NULL;
 
+#if PJMEDIA_HAS_SRTP
     if (srtp_enabled) {
 	pjmedia_srtp_setting opt;
 	pjmedia_srtp_crypto crypto;
@@ -1758,6 +1759,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
 
 	sp->transport = srtp;
     }
+#endif
 
     /* Create stream */
     status = pjmedia_stream_create(sp->endpt, pool, &si, sp->transport, NULL, 
