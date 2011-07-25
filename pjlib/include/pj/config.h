@@ -25,6 +25,8 @@
  * @brief PJLIB Main configuration settings.
  */
 
+#error Development on this svn branch has been moved to trunk, please update your local copy with 'svn switch http://svn.pjsip.org/repos/pjproject/trunk'
+
 /********************************************************************
  * Include compiler specific configuration.
  */
