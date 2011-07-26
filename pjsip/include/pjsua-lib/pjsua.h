@@ -370,88 +370,6 @@ typedef enum pjsua_state
 
 
 /**
- * This enumeration represents video stream operation on a call.
- * See also #pjsua_call_vid_strm_op_param for further info.
- */
-typedef enum pjsua_call_vid_strm_op
-{
-    /**
-     * Add a new video stream.
-     */
-    PJSUA_CALL_VID_STRM_ADD,
-
-    /**
-     * Remove/disable an existing video stream.
-     */
-    PJSUA_CALL_VID_STRM_REMOVE,
-
-    /**
-     * Change direction of a video stream.
-     */
-    PJSUA_CALL_VID_STRM_CHANGE_DIR,
-
-    /**
-     * Change capture device of a video stream.
-     */
-    PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV,
-
-    /**
-     * Start transmitting video stream.
-     */
-    PJSUA_CALL_VID_STRM_START_TRANSMIT,
-
-    /**
-     * Stop transmitting video stream.
-     */
-    PJSUA_CALL_VID_STRM_STOP_TRANSMIT,
-
-} pjsua_call_vid_strm_op;
-
-
-/**
- * Parameters for video stream operation on a call.
- */
-typedef struct pjsua_call_vid_strm_op_param
-{
-    /**
-     * Specify the media stream index. This can be set to -1 to denote
-     * the default video stream in the call, which is the first active
-     * video stream or any first video stream if none is active.
-     *
-     * This field is valid for all video stream operations, except
-     * PJSUA_CALL_VID_STRM_ADD.
-     *
-     * Default: -1 (first active video stream, or any first video stream
-     *              if none is active)
-     */
-    int med_idx;
- 
-    /**
-     * Specify the media stream direction.
-     *
-     * This field is valid for the following video stream operations:
-     * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_DIR.
-     *
-     * Default: PJMEDIA_DIR_ENCODING_DECODING
-     */
-    pjmedia_dir dir;
- 
-    /**
-     * Specify the video capture device ID. This can be set to
-     * PJMEDIA_VID_DEFAULT_CAPTURE_DEV to specify the default capture
-     * device as configured in the account.
-     *
-     * This field is valid for the following video stream operations:
-     * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV.
-     *
-     * Default: capture device configured in account.
-     */
-    pjmedia_vid_dev_index cap_dev;
-
-} pjsua_call_vid_strm_op_param;
-
-
-/**
  * Logging configuration, which can be (optionally) specified when calling
  * #pjsua_init(). Application must call #pjsua_logging_config_default() to
  * initialize this structure with the default values.
@@ -494,7 +412,7 @@ typedef struct pjsua_logging_config
     unsigned	log_file_flags;
 
     /**
-     * Optional callback function to be called to write log to 
+     * Optional callback function to be called to write log to
      * application specific device. This function will be called for
      * log messages on input verbosity level.
      */
@@ -540,14 +458,14 @@ typedef struct pjsua_mwi_info
  */
 typedef struct pjsua_reg_info
 {
-    struct pjsip_regc_cbparam	*cbparam;   /**< Parameters returned by 
+    struct pjsip_regc_cbparam	*cbparam;   /**< Parameters returned by
 						 registration callback.	*/
 } pjsua_reg_info;
 
 
 /**
  * This structure describes application callback to receive various event
- * notification from PJSUA-API. All of these callbacks are OPTIONAL, 
+ * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
  * the important callbacks (such as \a on_incoming_call).
  */
@@ -577,15 +495,15 @@ typedef struct pjsua_callback
     /**
      * This is a general notification callback which is called whenever
      * a transaction within the call has changed state. Application can
-     * implement this callback for example to monitor the state of 
-     * outgoing requests, or to answer unhandled incoming requests 
+     * implement this callback for example to monitor the state of
+     * outgoing requests, or to answer unhandled incoming requests
      * (such as INFO) with a final response.
      *
      * @param call_id	Call identification.
      * @param tsx	The transaction which has changed state.
      * @param e		Transaction event that caused the state change.
      */
-    void (*on_call_tsx_state)(pjsua_call_id call_id, 
+    void (*on_call_tsx_state)(pjsua_call_id call_id,
 			      pjsip_transaction *tsx,
 			      pjsip_event *e);
 
@@ -600,8 +518,8 @@ typedef struct pjsua_callback
      */
     void (*on_call_media_state)(pjsua_call_id call_id);
 
- 
-    /** 
+
+    /**
      * Notify application when media session is created and before it is
      * registered to the conference bridge. Application may return different
      * media port if it has added media processing port to the stream. This
@@ -615,12 +533,12 @@ typedef struct pjsua_callback
      *			    point to different media port to be registered
      *			    to the conference bridge.
      */
-    void (*on_stream_created)(pjsua_call_id call_id, 
+    void (*on_stream_created)(pjsua_call_id call_id,
 			      pjmedia_stream *strm,
-                              unsigned stream_idx, 
+                              unsigned stream_idx,
 			      pjmedia_port **p_port);
 
-    /** 
+    /**
      * Notify application when media session has been unregistered from the
      * conference bridge and about to be destroyed.
      *
@@ -2603,7 +2521,7 @@ typedef struct pjsua_acc_config
      * is sent (or received).
      *
      * Regardless of the value of this setting, application can start and
-     * stop outgoing video transmission with #pjsua_call_set_vid_out().
+     * stop outgoing video transmission with #pjsua_call_set_vid_strm().
      *
      * Default: PJ_FALSE
      */
@@ -3377,6 +3295,101 @@ typedef struct pjsua_stream_stat
     pjmedia_jb_state	jbuf;
 
 } pjsua_stream_stat;
+
+/**
+ * This enumeration represents video stream operation on a call.
+ * See also #pjsua_call_vid_strm_op_param for further info.
+ */
+typedef enum pjsua_call_vid_strm_op
+{
+    /**
+     * Add a new video stream. This will add a new m=video line to
+     * the media, regardless of whether existing video is/are present
+     * or not.  This will cause re-INVITE or UPDATE to be sent to remote
+     * party. The number of maximum active video streams in a call is
+     * still limited by \a max_video_cnt setting in pjsua_acc_config.
+     */
+    PJSUA_CALL_VID_STRM_ADD,
+
+    /**
+     * Remove/disable an existing video stream. This will
+     * cause re-INVITE or UPDATE to be sent to remote party.
+     */
+    PJSUA_CALL_VID_STRM_REMOVE,
+
+    /**
+     * Change direction of a video stream. This operation can be used
+     * to activate or deactivate an existing video media. This will
+     * cause re-INVITE or UPDATE to be sent to remote party.
+     */
+    PJSUA_CALL_VID_STRM_CHANGE_DIR,
+
+    /**
+     * Change capture device of a video stream.  This will not send
+     * re-INVITE or UPDATE to remote party.
+     */
+    PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV,
+
+    /**
+     * Start transmitting video stream. This will cause previously
+     * stopped stream to start transmitting again. Note that no
+     * re-INVITE/UPDATE is to be transmitted to remote since this
+     * operation only operates on local stream.
+     */
+    PJSUA_CALL_VID_STRM_START_TRANSMIT,
+
+    /**
+     * Stop transmitting video stream. This will cause the stream to
+     * be paused in TX direction, causing it to stop sending any video
+     * packets. No re-INVITE/UPDATE is to be transmitted to remote
+     * with this operation.
+     */
+    PJSUA_CALL_VID_STRM_STOP_TRANSMIT,
+
+} pjsua_call_vid_strm_op;
+
+
+/**
+ * Parameters for video stream operation on a call.
+ */
+typedef struct pjsua_call_vid_strm_op_param
+{
+    /**
+     * Specify the media stream index. This can be set to -1 to denote
+     * the default video stream in the call, which is the first active
+     * video stream or any first video stream if none is active.
+     *
+     * This field is valid for all video stream operations, except
+     * PJSUA_CALL_VID_STRM_ADD.
+     *
+     * Default: -1 (first active video stream, or any first video stream
+     *              if none is active)
+     */
+    int med_idx;
+
+    /**
+     * Specify the media stream direction.
+     *
+     * This field is valid for the following video stream operations:
+     * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_DIR.
+     *
+     * Default: PJMEDIA_DIR_ENCODING_DECODING
+     */
+    pjmedia_dir dir;
+
+    /**
+     * Specify the video capture device ID. This can be set to
+     * PJMEDIA_VID_DEFAULT_CAPTURE_DEV to specify the default capture
+     * device as configured in the account.
+     *
+     * This field is valid for the following video stream operations:
+     * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV.
+     *
+     * Default: capture device configured in account.
+     */
+    pjmedia_vid_dev_index cap_dev;
+
+} pjsua_call_vid_strm_op_param;
 
 
 /**
