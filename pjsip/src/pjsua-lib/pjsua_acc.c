@@ -1028,6 +1028,16 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	}
     }
 
+    /* Max number of audio and video stream in a call */
+    acc->cfg.max_audio_cnt = cfg->max_audio_cnt;
+    acc->cfg.max_video_cnt = cfg->max_video_cnt;
+
+    /* Video settings */
+    acc->cfg.vid_in_auto_show = cfg->vid_in_auto_show;
+    acc->cfg.vid_out_auto_transmit = cfg->vid_out_auto_transmit;
+    acc->cfg.vid_cap_dev = cfg->vid_cap_dev;
+    acc->cfg.vid_rend_dev = cfg->vid_rend_dev;
+
 on_return:
     PJSUA_UNLOCK();
     return status;
