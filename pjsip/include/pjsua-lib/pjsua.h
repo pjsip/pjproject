@@ -5456,6 +5456,11 @@ PJ_DECL(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id);
 typedef struct pjsua_vid_win_info
 {
     /**
+     * Renderer device ID.
+     */
+    pjmedia_vid_dev_index rdr_dev;
+
+    /**
      * Native window handle.
      */
     pjmedia_vid_dev_hwnd hwnd;
