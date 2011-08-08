@@ -27,15 +27,18 @@
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
 #   include "TargetConditionals.h"
 #   include <Foundation/Foundation.h>
-#endif /* PJ_DARWINOS */
+#   define SDL_USE_ONE_THREAD_PER_DISPLAY 1
+#elif defined(PJ_WIN32) && PJ_WIN32 != 0 
+#   define SDL_USE_ONE_THREAD_PER_DISPLAY 1
+#else
+#   define SDL_USE_ONE_THREAD_PER_DISPLAY 0
+#endif
 
 #include <SDL.h>
 #include <SDL_syswm.h>
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #   include "SDL_opengl.h"
 #   define OPENGL_DEV_IDX 1
-#else /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-#   define OPENGL_DEV_IDX -999
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
 #define THIS_FILE		"sdl_dev.c"
@@ -99,6 +102,9 @@ static sdl_fmt_info sdl_fmts[] =
 {
     @public
     struct sdl_stream	    *strm;
+    struct sdl_factory	    *sf;
+    pjmedia_event_type       ev_type;
+    pj_status_t              status;
 }
 
 - (void)sdl_init;
@@ -117,6 +123,13 @@ struct sdl_dev_info
     pjmedia_vid_dev_info	 info;
 };
 
+/* Linked list of streams */
+struct stream_list
+{
+    PJ_DECL_LIST_MEMBER(struct stream_list);
+    struct sdl_stream	*stream;
+};
+
 /* sdl_ factory */
 struct sdl_factory
 {
@@ -126,10 +139,13 @@ struct sdl_factory
 
     unsigned			 dev_count;
     struct sdl_dev_info	        *dev_info;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    NSAutoreleasePool		*apool;
-    SDLDelegate			*delegate;
-#endif /* PJ_DARWINOS */
+
+    pj_thread_t			*sdl_thread;        /**< SDL thread.        */
+    pj_status_t                  status;
+    pj_sem_t                    *sem;
+    pj_mutex_t			*mutex;
+    struct stream_list		 streams;
+    pj_bool_t                    is_quitting;
 };
 
 /* Video stream. */
@@ -143,13 +159,19 @@ struct sdl_stream
     void			*user_data;         /**< Application data.  */
 
     pj_thread_t			*sdl_thread;        /**< SDL thread.        */
+    pj_bool_t                    is_initialized;
     pj_bool_t			 is_quitting;
+    pj_bool_t			 is_destroyed;
     pj_bool_t			 is_running;
     pj_bool_t			 render_exited;
     pj_status_t			 status;
     pjmedia_format              *new_fmt;
     pjmedia_rect_size           *new_disp_size;
     pj_timestamp		 last_ts;
+    pjmedia_frame                frame;
+    pj_size_t			 frame_buf_size;
+    struct stream_list		 list_entry;
+    struct sdl_factory          *sf;
 
 #if SDL_VERSION_ATLEAST(1,3,0)
     SDL_Window                  *window;            /**< Display window.    */
@@ -168,23 +190,15 @@ struct sdl_stream
 #   endif /* SDL_VERSION_ATLEAST(1,3,0) */ 
     GLuint			 texture;
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-    void			*tex_buf;
-    pj_size_t			 tex_buf_size;
-
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    NSAutoreleasePool		*apool;
-    SDLDelegate			*delegate;
-    const pjmedia_frame		*frame;
-#endif /* PJ_DARWINOS */
-
-    /* For frame conversion */
-    pjmedia_converter		*conv;
-    pjmedia_conversion_param	 conv_param;
-    pjmedia_frame		 conv_buf;
 
     pjmedia_video_apply_fmt_param vafp;
 };
 
+struct sdl_dev_t
+{
+    struct sdl_factory *sf;
+    struct sdl_stream  *strm;
+};
 
 /* Prototypes */
 static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f);
@@ -218,6 +232,8 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 static pj_status_t sdl_stream_start(pjmedia_vid_dev_stream *strm);
 static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm);
 static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm);
+
+static int sdl_thread(void * data);
 
 /* Operations */
 static pjmedia_vid_dev_factory_op factory_op =
@@ -264,28 +280,40 @@ pjmedia_vid_dev_factory* pjmedia_sdl_factory(pj_pool_factory *pf)
     return &f->base;
 }
 
-
 /* API: init factory */
 static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
 {
     struct sdl_factory *sf = (struct sdl_factory*)f;
     struct sdl_dev_info *ddi;
     unsigned i, j;
+    struct sdl_dev_t sdl_dev;
+    pj_status_t status;
     SDL_version version;
-    SDL_VERSION(&version);
 
-#if SDL_VERSION_ATLEAST(1,3,0)
-#   if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    sf->apool = [[NSAutoreleasePool alloc] init];
-    sf->delegate = [[SDLDelegate alloc] init];
-    [sf->delegate performSelectorOnMainThread:@selector(sdl_init) 
-	          withObject:nil waitUntilDone:YES];
-#   else /* PJ_DARWINOS */
-    /* Initialize the SDL library */
-    if (SDL_Init(SDL_INIT_VIDEO))
+    pj_list_init(&sf->streams);
+    status = pj_mutex_create_recursive(sf->pool, "sdl_factory",
+				       &sf->mutex);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_sem_create(sf->pool, NULL, 0, 1, &sf->sem);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    sf->status = PJ_EUNKNOWN;
+    sdl_dev.sf = sf;
+    sdl_dev.strm = NULL;
+    status = pj_thread_create(sf->pool, "sdl_thread", sdl_thread,
+			      &sdl_dev, 0, 0, &sf->sdl_thread);
+    if (status != PJ_SUCCESS) {
         return PJMEDIA_EVID_INIT;
-#   endif /* PJ_DARWINOS */
-#endif /* SDL_VERSION_ATLEAST(1,3,0) */
+    }
+
+    while (sf->status == PJ_EUNKNOWN)
+        pj_thread_sleep(10);
+
+    if (sf->status != PJ_SUCCESS)
+        return sf->status;
 
     sf->dev_count = 1;
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
@@ -329,6 +357,7 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
         }
     }
 
+    SDL_VERSION(&version);
     PJ_LOG(4, (THIS_FILE, "SDL %d.%d initialized",
 			  version.major, version.minor));
 
@@ -341,19 +370,26 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f)
     struct sdl_factory *sf = (struct sdl_factory*)f;
     pj_pool_t *pool = sf->pool;
 
+    pj_assert(pj_list_empty(&sf->streams));
+
+    sf->is_quitting = PJ_TRUE;
+    if (sf->sdl_thread) {
+        pj_sem_post(sf->sem);
+        pj_thread_join(sf->sdl_thread);
+    }
+
+    if (sf->mutex) {
+	pj_mutex_destroy(sf->mutex);
+	sf->mutex = NULL;
+    }
+
+    if (sf->sem) {
+        pj_sem_destroy(sf->sem);
+        sf->sem = NULL;
+    }
+
     sf->pool = NULL;
     pj_pool_release(pool);
-
-#if SDL_VERSION_ATLEAST(1,3,0)
-#   if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    [sf->delegate performSelectorOnMainThread:@selector(sdl_quit) 
-                  withObject:nil waitUntilDone:YES];
-    [sf->delegate release];
-    [sf->apool release];
-#   else /* PJ_DARWINOS */
-    SDL_Quit();
-#   endif /* PJ_DARWINOS */
-#endif /* SDL_VERSION_ATLEAST(1,3,0) */
 
     return PJ_SUCCESS;
 }
@@ -506,8 +542,10 @@ static pj_status_t sdl_create_view(struct sdl_stream *strm,
     if (!strm->window) {
         Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
 
+#   if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
             flags |= SDL_WINDOW_OPENGL;
+#   endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
         if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW) {
             /* Use the window supplied by the application. */
@@ -587,18 +625,6 @@ static pj_status_t sdl_create_view(struct sdl_stream *strm,
 
         if (!strm->texture)
             return PJMEDIA_EVID_SYSERR;
-
-#   if !defined(PJ_DARWINOS) || PJ_DARWINOS == 0
-	/**
-	 * OpenGL drawing must be in the same
-	 * thread that calls SDL_SetVideoMode(), hence we need a buffer
-	 * for the frame from sdl_stream_put_frame()
-	 */
-	if (strm->vafp.framebytes > strm->tex_buf_size) {
-	    strm->tex_buf_size = strm->vafp.framebytes;
-	    strm->tex_buf = pj_pool_alloc(strm->pool, strm->vafp.framebytes);
-	}
-#   endif /* PJ_DARWINOS */
     } else
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 #if SDL_VERSION_ATLEAST(1,3,0)
@@ -610,13 +636,6 @@ static pj_status_t sdl_create_view(struct sdl_stream *strm,
             return PJMEDIA_EVID_SYSERR;
     
         strm->pitch = strm->rect.w * SDL_BYTESPERPIXEL(sdl_info->sdl_format);
-
-#   if !defined(PJ_DARWINOS) || PJ_DARWINOS == 0
-	if (strm->vafp.framebytes > strm->tex_buf_size) {
-	    strm->tex_buf_size = strm->vafp.framebytes;
-	    strm->tex_buf = pj_pool_alloc(strm->pool, strm->vafp.framebytes);
-	}
-#   endif /* !PJ_DARWINOS */
     }
 #else /* SDL_VERSION_ATLEAST(1,3,0) */
     if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB) {
@@ -638,15 +657,22 @@ static pj_status_t sdl_create_view(struct sdl_stream *strm,
     }
 #endif /* SDL_VERSION_ATLEAST(1,3,0) */
 
+    if (strm->vafp.framebytes > strm->frame_buf_size) {
+        strm->frame_buf_size = strm->vafp.framebytes;
+        strm->frame.buf = pj_pool_alloc(strm->pool, strm->vafp.framebytes);
+    }
+
     return PJ_SUCCESS;
 }
 
 static pj_status_t sdl_create(struct sdl_stream *strm)
 {
+    strm->is_initialized = PJ_TRUE;
+
 #if !(SDL_VERSION_ATLEAST(1,3,0))
     if (SDL_Init(SDL_INIT_VIDEO)) {
         strm->status = PJMEDIA_EVID_INIT;
-        goto on_return;
+        return strm->status;
     }
 #endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
 
@@ -657,27 +683,13 @@ static pj_status_t sdl_create(struct sdl_stream *strm)
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
     strm->status = sdl_create_view(strm, &strm->param.fmt);
-    if (strm->status != PJ_SUCCESS)
-	goto on_return;
-
-on_return:
-    if (strm->status != PJ_SUCCESS) {
-	sdl_destroy(strm, PJ_TRUE);
-#if !(SDL_VERSION_ATLEAST(1,3,0))
-        SDL_Quit();
-#endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
-	strm->screen = NULL;
-    }
-    
     return strm->status;
 }
 
 static void detect_fmt_change(struct sdl_stream *strm)
 {
+    strm->status = PJ_SUCCESS;
     if (strm->new_fmt || strm->new_disp_size) {
-        /* Stop the stream */
-        sdl_stream_stop((pjmedia_vid_dev_stream *)strm);
-
         if (strm->new_disp_size)
             pj_memcpy(&strm->param.disp_size, strm->new_disp_size,
                       sizeof(strm->param.disp_size));
@@ -689,227 +701,23 @@ static void detect_fmt_change(struct sdl_stream *strm)
         if (strm->status == PJ_SUCCESS) {
             if (strm->new_fmt)
                 pjmedia_format_copy(&strm->param.fmt, strm->new_fmt);
-            /* Restart the stream */
-            sdl_stream_start((pjmedia_vid_dev_stream *)strm);
         }
         strm->new_fmt = NULL;
         strm->new_disp_size = NULL;
     }
 }
 
-#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-static void draw_gl(struct sdl_stream *stream, void *tex_buf)
-{
-    if (stream->texture) {
-	glBindTexture(GL_TEXTURE_2D, stream->texture);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
-		     stream->rect.w, stream->rect.h, 0,
-		     GL_RGBA, GL_UNSIGNED_BYTE, tex_buf);
-	glBegin(GL_TRIANGLE_STRIP);
-	glTexCoord2f(0, 0); glVertex2i(0, 0);
-	glTexCoord2f(1, 0); glVertex2i(stream->param.disp_size.w, 0);
-	glTexCoord2f(0, 1); glVertex2i(0, stream->param.disp_size.h);
-	glTexCoord2f(1, 1);
-        glVertex2i(stream->param.disp_size.w, stream->param.disp_size.h);
-	glEnd();
-#   if SDL_VERSION_ATLEAST(1,3,0)
-        SDL_GL_SwapWindow(stream->window);
-#   else /* SDL_VERSION_ATLEAST(1,3,0) */
-	SDL_GL_SwapBuffers();
-#   endif /* SDL_VERSION_ATLEAST(1,3,0) */
-    }
-}
-#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-
-static void draw_texture(struct sdl_stream *stream, void *tex_buf)
-{
-#if SDL_VERSION_ATLEAST(1,3,0)
-    SDL_UpdateTexture(stream->scr_tex, NULL, tex_buf, stream->pitch);
-    SDL_RenderClear(stream->renderer);
-    SDL_RenderCopy(stream->renderer, stream->scr_tex, NULL, NULL);
-    SDL_RenderPresent(stream->renderer);
-#else /* SDL_VERSION_ATLEAST(1,3,0) */
-    PJ_UNUSED_ARG(stream);
-    PJ_UNUSED_ARG(tex_buf);
-#endif /* SDL_VERSION_ATLEAST(1,3,0) */
-}
-
-static void handle_event(struct sdl_stream *strm)
-{
-    const pjmedia_video_format_info *vfi;
-    pjmedia_video_format_detail *vfd;
-    pj_bool_t notify_wnd_closed_event = PJ_FALSE;
-    SDL_Event sevent;
-    pjmedia_event pevent;
-    
-    vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
-					strm->param.fmt.id);
-    vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt, PJ_TRUE);
-
-    if (strm->tex_buf) {
-#if SDL_VERSION_ATLEAST(1,3,0)
-	if (strm->scr_tex) {
-	    draw_texture(strm, strm->tex_buf);
-	}
-#else /* SDL_VERSION_ATLEAST(1,3,0) */
-	if (0) { }
-#endif /* SDL_VERSION_ATLEAST(1,3,0) */
-#if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-	else if (strm->param.rend_id == OPENGL_DEV_IDX) {
-	    draw_gl(strm, strm->tex_buf);
-	}
-#endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
-    }
-
-    detect_fmt_change(strm);
-
-    /**
-     * The event polling must be placed in the same thread that
-     * call SDL_SetVideoMode(). Please consult the official doc of
-     * SDL_PumpEvents().
-     */
-    while (SDL_PollEvent(&sevent)) {
-	pjmedia_event_init(&pevent, PJMEDIA_EVENT_NONE, &strm->last_ts,
-			   &strm->base.epub);
-
-	switch(sevent.type) {
-	    case SDL_MOUSEBUTTONDOWN:
-		pevent.type = PJMEDIA_EVENT_MOUSE_BTN_DOWN;
-		break;
-#if SDL_VERSION_ATLEAST(1,3,0)
-	    case SDL_WINDOWEVENT:
-		switch (sevent.window.event) {
-		    case SDL_WINDOWEVENT_RESIZED:
-			pevent.type = PJMEDIA_EVENT_WND_RESIZED;
-			pevent.data.wnd_resized.new_size.w =
-			    sevent.window.data1;
-			pevent.data.wnd_resized.new_size.h =
-			    sevent.window.data2;
-			break;
-		}
-		break;
-#else /* SDL_VERSION_ATLEAST(1,3,0) */
-	    case SDL_VIDEORESIZE:
-		pevent.type = PJMEDIA_EVENT_WND_RESIZED;
-		pevent.data.wnd_resized.new_size.w = sevent.resize.w;
-		pevent.data.wnd_resized.new_size.h = sevent.resize.h;
-		break;
-	    case SDL_QUIT:
-		pevent.type = PJMEDIA_EVENT_WND_CLOSING;
-		break;
-#endif /* SDL_VERSION_ATLEAST(1,3,0) */
-	}
-
-	if (pevent.type != PJMEDIA_EVENT_NONE) {
-	    pj_status_t status;
-
-	    status = pjmedia_event_publish(&strm->base.epub, &pevent);
-
-	    switch (pevent.type) {
-	    case PJMEDIA_EVENT_WND_RESIZED:
-		strm->new_disp_size = &pevent.data.wnd_resized.new_size;
-		detect_fmt_change(strm);
-		break;
-
-	    case PJMEDIA_EVENT_WND_CLOSING:
-		if (pevent.data.wnd_closing.cancel) {
-		    /* Cancel the closing operation */
-		    break;
-		}
-
-		/* Proceed to cleanup SDL. App must still call
-		 * pjmedia_dev_stream_destroy() when getting WND_CLOSED
-		 * event
-		 */
-		strm->is_quitting = PJ_TRUE;
-		notify_wnd_closed_event = PJ_TRUE;
-		sdl_stream_stop(&strm->base);
-		goto on_return;
-
-	    default:
-		/* Just to prevent gcc warning about unused enums */
-		break;
-	    }
-	}
-    }
-
-    return;
-
-on_return:
-    sdl_destroy(strm, PJ_TRUE);
-#if !(SDL_VERSION_ATLEAST(1,3,0))
-    SDL_Quit();
-#endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
-    strm->screen = NULL;
-
-    if (notify_wnd_closed_event) {
-	pjmedia_event pevent;
-
-	pjmedia_event_init(&pevent, PJMEDIA_EVENT_WND_CLOSED, &strm->last_ts,
-	                   &strm->base.epub);
-	pjmedia_event_publish(&strm->base.epub, &pevent);
-    }
-
-    /*
-     * Note: don't access the stream after this point, it  might have
-     * been destroyed
-     */
-}
-
-static int sdl_thread(void * data)
-{
-    struct sdl_stream *strm = (struct sdl_stream*)data;
-
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    while(!strm->is_quitting) {
-	[strm->delegate performSelectorOnMainThread:@selector(handle_event)
-			withObject:nil waitUntilDone:YES];
-    }
-    [strm->delegate performSelectorOnMainThread:@selector(sdl_destroy)
-                    withObject:nil waitUntilDone:YES];
-#   if !(SDL_VERSION_ATLEAST(1,3,0))
-    [strm->delegate performSelectorOnMainThread:@selector(sdl_quit)
-                    withObject:nil waitUntilDone:YES];
-#   endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
-#else /* PJ_DARWINOS */
-    sdl_create(strm);
-    while(!strm->is_quitting) {
-	handle_event(strm);
-    }
-    sdl_destroy(strm, PJ_TRUE);
-#   if !(SDL_VERSION_ATLEAST(1,3,0))
-    SDL_Quit();
-#   endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
-#endif /* PJ_DARWINOS */
-    strm->screen = NULL;
-
-    return 0;
-}
-
 static pj_status_t put_frame(struct sdl_stream *stream,
 			     const pjmedia_frame *frame)
 {
-    pj_status_t status = PJ_SUCCESS;
-
-    stream->last_ts.u64 = frame->timestamp.u64;
-
-    if (!stream->is_running) {
-	stream->render_exited = PJ_TRUE;
-	goto on_return;
-    }
-
-    if (frame->size==0 || frame->buf==NULL ||
-	frame->size < stream->vafp.framebytes)
-	goto on_return;
+    if (!stream->is_running)
+        return PJ_SUCCESS;
 
     if (stream->surf) {
 	if (SDL_MUSTLOCK(stream->surf)) {
 	    if (SDL_LockSurface(stream->surf) < 0) {
 		PJ_LOG(3, (THIS_FILE, "Unable to lock SDL surface"));
-		status = PJMEDIA_EVID_NOTREADY;
-		goto on_return;
+		return PJMEDIA_EVID_NOTREADY;
 	    }
 	}
 	
@@ -919,19 +727,17 @@ static pj_status_t put_frame(struct sdl_stream *stream,
 	if (SDL_MUSTLOCK(stream->surf)) {
 	    SDL_UnlockSurface(stream->surf);
 	}
-	SDL_BlitSurface(stream->surf, NULL, stream->screen, &stream->dstrect);
 #if SDL_VERSION_ATLEAST(1,3,0)
         SDL_UpdateWindowSurface(stream->window);
 #else /* SDL_VERSION_ATLEAST(1,3,0) */
-        SDL_UpdateRect(stream->screen, 0, 0, 0, 0);
+	SDL_BlitSurface(stream->surf, NULL, stream->screen, &stream->dstrect);
 #endif /* SDL_VERSION_ATLEAST(1,3,0) */
     } else if (stream->overlay) {
 	int i, sz, offset;
 	
 	if (SDL_LockYUVOverlay(stream->overlay) < 0) {
 	    PJ_LOG(3, (THIS_FILE, "Unable to lock SDL overlay"));
-	    status = PJMEDIA_EVID_NOTREADY;
-	    goto on_return;
+	    return PJMEDIA_EVID_NOTREADY;
 	}
 	
 	for (i = 0, offset = 0; i < stream->overlay->planes; i++) {
@@ -946,24 +752,305 @@ static pj_status_t put_frame(struct sdl_stream *stream,
     }
 #if SDL_VERSION_ATLEAST(1,3,0)
     else if (stream->scr_tex) {
-	if (stream->tex_buf)
-	    pj_memcpy(stream->tex_buf, frame->buf, stream->vafp.framebytes);
-	else
-	    draw_texture(stream, frame->buf);
+        SDL_UpdateTexture(stream->scr_tex, NULL, frame->buf, stream->pitch);
+        SDL_RenderClear(stream->renderer);
+        SDL_RenderCopy(stream->renderer, stream->scr_tex, NULL, NULL);
+        SDL_RenderPresent(stream->renderer);
     }
 #endif /* SDL_VERSION_ATLEAST(1,3,0) */
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
-    else if (stream->param.rend_id == OPENGL_DEV_IDX) {
-	if (stream->tex_buf)
-	    pj_memcpy(stream->tex_buf, frame->buf, stream->vafp.framebytes);
-	else
-	    draw_gl(stream, frame->buf);
+    else if (stream->param.rend_id == OPENGL_DEV_IDX && stream->texture) {
+	glBindTexture(GL_TEXTURE_2D, stream->texture);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,
+		     stream->rect.w, stream->rect.h, 0,
+		     GL_RGBA, GL_UNSIGNED_BYTE, frame->buf);
+	glBegin(GL_TRIANGLE_STRIP);
+	glTexCoord2f(0, 0); glVertex2i(0, 0);
+	glTexCoord2f(1, 0); glVertex2i(stream->param.disp_size.w, 0);
+	glTexCoord2f(0, 1); glVertex2i(0, stream->param.disp_size.h);
+	glTexCoord2f(1, 1);
+        glVertex2i(stream->param.disp_size.w, stream->param.disp_size.h);
+	glEnd();
+#   if SDL_VERSION_ATLEAST(1,3,0)
+        SDL_GL_SwapWindow(stream->window);
+#   else /* SDL_VERSION_ATLEAST(1,3,0) */
+	SDL_GL_SwapBuffers();
+#   endif /* SDL_VERSION_ATLEAST(1,3,0) */
     }
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
-on_return:
-    stream->status = status;
-    return status;
+    return PJ_SUCCESS;
+}
+
+static struct sdl_stream* find_stream(struct sdl_factory *sf,
+                                      Uint32 windowID,
+                                      pjmedia_event *pevent)
+{
+    struct stream_list *it, *itBegin;
+    struct sdl_stream *strm = NULL;
+
+    itBegin = &sf->streams;
+    for (it = itBegin->next; it != itBegin; it = it->next) {
+#if SDL_VERSION_ATLEAST(1,3,0)
+        if (SDL_GetWindowID(it->stream->window) == windowID)
+#else /* SDL_VERSION_ATLEAST(1,3,0) */
+        PJ_UNUSED_ARG(windowID);
+#endif /* SDL_VERSION_ATLEAST(1,3,0) */
+        {
+            strm = it->stream;
+            break;
+        }
+    }
+ 
+    if (strm)
+        pjmedia_event_init(pevent, PJMEDIA_EVENT_NONE, &strm->last_ts,
+		           &strm->base.epub);
+
+    return strm;
+}
+
+static int poll_event(struct sdl_factory *sf, pjmedia_event *pevent,
+                      struct sdl_stream **strm)
+{
+    int retval;
+    SDL_Event sevent;
+
+    retval = SDL_PollEvent(&sevent);
+    if (retval) {
+#if !(SDL_VERSION_ATLEAST(1,3,0))
+        *strm = find_stream(sf, 0, pevent);
+        pj_assert(strm);
+#endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
+
+	switch(sevent.type) {
+	    case SDL_MOUSEBUTTONDOWN:
+#if SDL_VERSION_ATLEAST(1,3,0)
+                *strm = find_stream(sf, sevent.button.windowID, pevent);
+#endif /* SDL_VERSION_ATLEAST(1,3,0) */
+		pevent->type = PJMEDIA_EVENT_MOUSE_BTN_DOWN;
+		break;
+#if SDL_VERSION_ATLEAST(1,3,0)
+	    case SDL_WINDOWEVENT:
+                *strm = find_stream(sf, sevent.window.windowID, pevent);
+		switch (sevent.window.event) {
+		    case SDL_WINDOWEVENT_RESIZED:
+			pevent->type = PJMEDIA_EVENT_WND_RESIZED;
+			pevent->data.wnd_resized.new_size.w =
+			    sevent.window.data1;
+			pevent->data.wnd_resized.new_size.h =
+			    sevent.window.data2;
+			break;
+                    case SDL_WINDOWEVENT_CLOSE:
+                        pevent->type = PJMEDIA_EVENT_WND_CLOSING;
+                        break;
+		}
+		break;
+#else /* SDL_VERSION_ATLEAST(1,3,0) */
+	    case SDL_VIDEORESIZE:
+		pevent->type = PJMEDIA_EVENT_WND_RESIZED;
+		pevent->data.wnd_resized.new_size.w = sevent.resize.w;
+		pevent->data.wnd_resized.new_size.h = sevent.resize.h;
+		break;
+	    case SDL_QUIT:
+		pevent->type = PJMEDIA_EVENT_WND_CLOSING;
+		break;
+#endif /* SDL_VERSION_ATLEAST(1,3,0) */
+	}
+    }
+
+    return retval;
+}
+
+static struct sdl_stream* handle_event(struct sdl_factory *sf,
+                                       struct sdl_stream *rcv_strm,
+                                       pjmedia_event_type *ev_type)
+{
+    struct sdl_stream *strm = NULL;
+    pjmedia_event pevent;
+
+    *ev_type = PJMEDIA_EVENT_NONE;
+    while (poll_event(sf, &pevent, &strm)) {
+        *ev_type = pevent.type;
+	if (pevent.type != PJMEDIA_EVENT_NONE && strm &&
+            (!rcv_strm || rcv_strm == strm))
+        {
+	    pjmedia_event_publish(&strm->base.epub, &pevent);
+
+	    switch (pevent.type) {
+	    case PJMEDIA_EVENT_WND_RESIZED:
+		strm->new_disp_size = &pevent.data.wnd_resized.new_size;
+                strm->status = PJ_SUCCESS;
+		detect_fmt_change(strm);
+                if (strm->status != PJ_SUCCESS)
+                    return strm;
+		break;
+
+	    case PJMEDIA_EVENT_WND_CLOSING:
+		if (pevent.data.wnd_closing.cancel) {
+		    /* Cancel the closing operation */
+		    break;
+		}
+
+		/* Proceed to cleanup SDL. App must still call
+		 * pjmedia_dev_stream_destroy() when getting WND_CLOSED
+		 * event
+		 */
+		strm->is_quitting = PJ_TRUE;
+		sdl_stream_stop(&strm->base);
+
+                return strm;
+	    default:
+		/* Just to prevent gcc warning about unused enums */
+		break;
+	    }
+	}
+    }
+
+    return strm;
+}
+
+static int sdl_thread(void * data)
+{
+    struct sdl_dev_t *sdl_dev = (struct sdl_dev_t *)data;
+    struct sdl_factory *sf = sdl_dev->sf;
+    struct sdl_stream *strm = sdl_dev->strm;
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    NSAutoreleasePool *apool = [[NSAutoreleasePool alloc] init];
+    SDLDelegate *delegate = [[SDLDelegate alloc] init];
+#endif /* PJ_DARWINOS */
+
+#if SDL_VERSION_ATLEAST(1,3,0)
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    [delegate performSelectorOnMainThread:@selector(sdl_init) 
+	      withObject:nil waitUntilDone:YES];
+    if (delegate->status != PJ_SUCCESS)
+        goto on_error;
+#   else /* PJ_DARWINOS */
+    /* Initialize the SDL library */
+    if (SDL_Init(SDL_INIT_VIDEO)) {
+        sf->status = PJMEDIA_EVID_INIT;
+        goto on_error;
+    }
+#   endif /* PJ_DARWINOS */
+#endif /* SDL_VERSION_ATLEAST(1,3,0) */
+    sf->status = PJ_SUCCESS;
+
+    while (!sf->is_quitting) {
+        struct stream_list *it, *itBegin;
+        pjmedia_event_type ev_type;
+        struct sdl_stream *ev_stream;
+
+        pj_mutex_lock(sf->mutex);
+
+        if (!strm && pj_list_empty(&sf->streams)) {
+            /* Wait until there is any stream. */
+            pj_mutex_unlock(sf->mutex);
+            pj_sem_wait(sf->sem);
+            pj_mutex_lock(sf->mutex);
+        }
+
+        itBegin = &sf->streams;
+        for (it = itBegin->next; it != itBegin; it = it->next) {
+            if ((strm && it->stream != strm) || it->stream->is_quitting)
+                continue;
+
+            if (!it->stream->is_initialized) {
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+                delegate->strm = it->stream;
+                [delegate performSelectorOnMainThread:@selector(sdl_create)
+                          withObject:nil waitUntilDone:YES];
+#else /* PJ_DARWINOS */
+                sdl_create(it->stream);
+#endif /* PJ_DARWINOS */
+            }
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+            delegate->strm = it->stream;
+            [delegate performSelectorOnMainThread:@selector(detect_fmt_change)
+                      withObject:nil waitUntilDone:YES];
+            [delegate performSelectorOnMainThread:@selector(put_frame)
+                      withObject:nil waitUntilDone:YES];
+#else /* PJ_DARWINOS */
+            detect_fmt_change(it->stream);
+            put_frame(it->stream, &it->stream->frame);
+#endif /* PJ_DARWINOS */
+        }
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+        delegate->sf = sf;
+        delegate->strm = strm;
+        [delegate performSelectorOnMainThread:@selector(handle_event)
+                  withObject:nil waitUntilDone:YES];
+        ev_stream = delegate->strm;
+        ev_type = delegate->ev_type;
+#else /* PJ_DARWINOS */
+        ev_stream = handle_event(sf, strm, &ev_type);
+#endif /* PJ_DARWINOS */
+
+        itBegin = &sf->streams;
+        for (it = itBegin->next; it != itBegin; it = it->next) {
+            if ((strm && it->stream != strm) || !it->stream->is_quitting ||
+                it->stream->is_destroyed)
+                continue;
+
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+            delegate->strm = it->stream;
+            [delegate performSelectorOnMainThread:@selector(sdl_destroy)
+                      withObject:nil waitUntilDone:YES];
+#   if !(SDL_VERSION_ATLEAST(1,3,0))
+            [delegate performSelectorOnMainThread:@selector(sdl_quit)
+                      withObject:nil waitUntilDone:YES];
+#   endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
+#else /* PJ_DARWINOS */
+            sdl_destroy(it->stream, PJ_TRUE);
+#   if !(SDL_VERSION_ATLEAST(1,3,0))
+            SDL_Quit();
+#   endif /* !(SDL_VERSION_ATLEAST(1,3,0)) */
+#endif /* PJ_DARWINOS */
+            it->stream->screen = NULL;
+            it->stream->is_destroyed = PJ_TRUE;
+
+            if (ev_type == PJMEDIA_EVENT_WND_CLOSING &&
+                it->stream == ev_stream)
+            {
+                pjmedia_event p_event;
+
+                pjmedia_event_init(&p_event, PJMEDIA_EVENT_WND_CLOSED,
+                                   &it->stream->last_ts,
+                                   &it->stream->base.epub);
+                pjmedia_event_publish(&it->stream->base.epub, &p_event);
+
+                /*
+                 * Note: don't access the stream after this point, it
+                 * might have been destroyed
+                 */
+            }
+
+            if (strm) {
+                pj_mutex_unlock(sf->mutex);
+                return 0;
+            }
+        }
+
+        pj_mutex_unlock(sf->mutex);
+    }
+
+on_error:
+#if SDL_VERSION_ATLEAST(1,3,0)
+#   if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+    [delegate performSelectorOnMainThread:@selector(sdl_quit) 
+              withObject:nil waitUntilDone:YES];
+    [delegate release];
+    [apool release];
+#   else /* PJ_DARWINOS */
+    SDL_Quit();
+#   endif /* PJ_DARWINOS */
+#endif /* SDL_VERSION_ATLEAST(1,3,0) */
+
+    return 0;
 }
 
 /* API: Put frame from stream */
@@ -972,15 +1059,20 @@ static pj_status_t sdl_stream_put_frame(pjmedia_vid_dev_stream *strm,
 {
     struct sdl_stream *stream = (struct sdl_stream*)strm;
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    stream->frame = frame;    
-    [stream->delegate performSelectorOnMainThread:@selector(put_frame) 
-	              withObject:nil waitUntilDone:YES];
+    stream->last_ts.u64 = frame->timestamp.u64;
 
-    return stream->status;
-#else /* PJ_DARWINOS */
-    return put_frame(stream, frame);
-#endif /* PJ_DARWINOS */
+    if (!stream->is_running) {
+	stream->render_exited = PJ_TRUE;
+	return PJ_SUCCESS;
+    }
+
+    if (frame->size==0 || frame->buf==NULL ||
+	frame->size < stream->vafp.framebytes)
+	return PJ_SUCCESS;
+
+    pj_memcpy(stream->frame.buf, frame->buf, stream->vafp.framebytes);
+
+    return PJ_SUCCESS;
 }
 
 /* API: create stream */
@@ -998,6 +1090,16 @@ static pj_status_t sdl_factory_create_stream(
 
     PJ_ASSERT_RETURN(param->dir == PJMEDIA_DIR_RENDER, PJ_EINVAL);
 
+#if !SDL_VERSION_ATLEAST(1,3,0)
+    /* Prior to 1.3, SDL does not support multiple renderers. */
+    pj_mutex_lock(sf->mutex);
+    if (!pj_list_empty(&sf->streams) {
+        pj_mutex_unlock(sf->mutex);
+        return PJMEDIA_EVID_NOTREADY;
+    }
+    pj_mutex_unlock(sf->mutex);
+#endif
+
     /* Create and Initialize stream descriptor */
     pool = pj_pool_create(sf->pf, "sdl-dev", 1000, 1000, NULL);
     PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
@@ -1005,30 +1107,35 @@ static pj_status_t sdl_factory_create_stream(
     strm = PJ_POOL_ZALLOC_T(pool, struct sdl_stream);
     pj_memcpy(&strm->param, param, sizeof(*param));
     strm->pool = pool;
+    strm->sf = sf;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
     pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_SDL);
+    pj_list_init(&strm->list_entry);
+    strm->list_entry.stream = strm;
 
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {
-	strm->status = PJ_SUCCESS;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-	strm->apool = [[NSAutoreleasePool alloc] init];
-	strm->delegate = [[SDLDelegate alloc]init];
-	strm->delegate->strm = strm;
-	/* On Darwin OS, we need to call SDL functions in the main thread */
-	[strm->delegate performSelectorOnMainThread:@selector(sdl_create)
-			withObject:nil waitUntilDone:YES];
-	if ((status = strm->status) != PJ_SUCCESS) {
-	    goto on_error;
-	}
-#endif /* PJ_DARWINOS */
-	status = pj_thread_create(pool, "sdl_thread", sdl_thread,
-				  strm, 0, 0, &strm->sdl_thread);
+        struct sdl_dev_t sdl_dev;
 
+	strm->status = PJ_SUCCESS;
+        sdl_dev.sf = strm->sf;
+        sdl_dev.strm = strm;
+        pj_mutex_lock(strm->sf->mutex);
+#if !SDL_USE_ONE_THREAD_PER_DISPLAY
+        if (pj_list_empty(&strm->sf->streams))
+            pj_sem_post(strm->sf->sem);
+#endif /* !SDL_USE_ONE_THREAD_PER_DISPLAY */
+        pj_list_insert_after(&strm->sf->streams, &strm->list_entry);
+        pj_mutex_unlock(strm->sf->mutex);
+
+#if SDL_USE_ONE_THREAD_PER_DISPLAY
+        status = pj_thread_create(pool, "sdl_thread", sdl_thread,
+				  &sdl_dev, 0, 0, &strm->sdl_thread);
 	if (status != PJ_SUCCESS) {
 	    goto on_error;
 	}
+#endif /* SDL_USE_ONE_THREAD_PER_DISPLAY */
 
 	while(strm->status == PJ_SUCCESS && !strm->surf && !strm->overlay
 #if SDL_VERSION_ATLEAST(1,3,0)
@@ -1190,11 +1297,6 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 #endif /* SDL_VERSION_ATLEAST(1,3,0) */
     if (cap == PJMEDIA_VID_DEV_CAP_FORMAT) {
         strm->new_fmt = (pjmedia_format *)pval;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-        [strm->delegate performSelectorOnMainThread:
-			@selector(detect_fmt_change)
-                        withObject:nil waitUntilDone:YES];
-#endif /* PJ_DARWINOS */
 	while (strm->new_fmt)
 	    pj_thread_sleep(10);
 	
@@ -1206,11 +1308,6 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 	     * to its original format.
 	     */
             strm->new_fmt = &strm->param.fmt;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-            [strm->delegate performSelectorOnMainThread:
-                            @selector(detect_fmt_change)
-                            withObject:nil waitUntilDone:YES];
-#endif /* PJ_DARWINOS */
 	    while (strm->new_fmt)
 		pj_thread_sleep(10);
 	    
@@ -1228,11 +1325,6 @@ static pj_status_t sdl_stream_set_cap(pjmedia_vid_dev_stream *s,
 	return strm->status;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE) {
         strm->new_disp_size = (pjmedia_rect_size *)pval;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-        [strm->delegate performSelectorOnMainThread:
-                        @selector(detect_fmt_change)
-                        withObject:nil waitUntilDone:YES];
-#endif /* PJ_DARWINOS */
 	while (strm->new_disp_size)
 	    pj_thread_sleep(10);
 	
@@ -1265,9 +1357,6 @@ static pj_status_t sdl_stream_stop(pjmedia_vid_dev_stream *strm)
 
     /* Wait for renderer put_frame() to finish */
     stream->is_running = PJ_FALSE;
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (![NSThread isMainThread])
-#endif /* PJ_DARWINOS */
     for (i=0; !stream->render_exited && i<50; ++i)
 	pj_thread_sleep(10);
 
@@ -1288,20 +1377,17 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
         stream->is_quitting = PJ_TRUE;
 	if (stream->sdl_thread)
 	    pj_thread_join(stream->sdl_thread);
+        while (!stream->is_destroyed) {
+            pj_thread_sleep(10);
+        }
     }
 
-#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
-    if (stream->delegate) {
-	[stream->delegate release];
-        stream->delegate = NULL;
-    }
-    if (stream->apool) {
-	[stream->apool release];
-        stream->apool = NULL;
-    }
-#endif /* PJ_DARWINOS */
+    pj_mutex_lock(stream->sf->mutex);
+    if (!pj_list_empty(&stream->list_entry))
+	pj_list_erase(&stream->list_entry);
+    pj_mutex_unlock(stream->sf->mutex);
+
     pj_pool_release(stream->pool);
-    
 
     return PJ_SUCCESS;
 }
@@ -1312,7 +1398,9 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 {
     if (SDL_Init(SDL_INIT_VIDEO)) {
         PJ_LOG(4, (THIS_FILE, "Cannot initialize SDL"));
+        status = PJMEDIA_EVID_INIT;
     }
+    status = PJ_SUCCESS;
 }
 
 - (void)sdl_quit
@@ -1337,12 +1425,12 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 
 - (void)handle_event
 {
-    handle_event(strm);
+    strm = handle_event(sf, strm, &ev_type);
 }
 
 - (void)put_frame
 {
-    put_frame(strm, strm->frame);
+    put_frame(strm, &strm->frame);
 }
 
 @end
