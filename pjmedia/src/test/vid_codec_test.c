@@ -447,9 +447,11 @@ int vid_codec_test(void)
     if (status != PJ_SUCCESS)
         return -10;
 
+#if PJMEDIA_HAS_FFMPEG_CODEC
     status = pjmedia_codec_ffmpeg_init(NULL, mem);
     if (status != PJ_SUCCESS)
         return -20;
+#endif
 
     rc = enum_codecs();
     if (rc != 0)
@@ -460,7 +462,9 @@ int vid_codec_test(void)
 	goto on_return;
 
 on_return:
+#if PJMEDIA_HAS_FFMPEG_CODEC
     pjmedia_codec_ffmpeg_deinit();
+#endif
     pjmedia_vid_dev_subsys_shutdown();
     pj_pool_release(pool);
     pj_log_set_level(orig_log_level);
