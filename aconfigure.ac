@@ -828,19 +828,25 @@ AC_ARG_ENABLE(ffmpeg,
 			     av_register_all,
 			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
 			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavformat"
-			     ]
+			     ],
+			     [],
+			     [-lavcodec -lavutil]
 			     )
 		AC_CHECK_LIB(avcodec,
 			     avcodec_init,
 			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
 			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcodec"
-			     ]
+			     ],
+			     [],
+			     [-lavutil]
 			     )
 		AC_CHECK_LIB(swscale,
 			     sws_scale,
 			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
 			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
-			     ]
+			     ],
+			     [],
+			     [-lavutil]
 			     )
 		AC_CHECK_LIB(avutil,
 			     av_malloc,
