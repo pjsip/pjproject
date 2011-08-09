@@ -490,8 +490,9 @@ static pj_status_t ios_factory_create_stream(
 	/* Get the main window */
 	UIWindow *window = [[UIApplication sharedApplication] keyWindow];
 	
-	if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW && param->window)
-	    window = (UIWindow *)param->window;
+	if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW &&
+            param->window.info.ios.window)
+	    window = (UIWindow *)param->window.info.ios.window;
 	
 	pj_assert(window);
 	strm->imgView = [[UIImageView alloc] initWithFrame:[window bounds]];
