@@ -785,7 +785,7 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     PJ_SOCKADDR_RESET_LEN(addr);
 
 #if defined(PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION) && \
-    PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION == 1
+    PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION != 0
     /* Get hostname's IP address */
     count = 1;
     status = pj_getaddrinfo(af, pj_gethostname(), &count, &ai);
