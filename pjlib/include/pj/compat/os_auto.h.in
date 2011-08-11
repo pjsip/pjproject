@@ -177,6 +177,8 @@
 #	include "Availability.h"
 	/* Use CFHost API for pj_getaddrinfo() (see ticket #1246) */
 #	define PJ_GETADDRINFO_USE_CFHOST 1
+	/* Disable local host resolution in pj_gethostip() (see ticket #1342) */
+#	define PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION 1
 #    	ifdef __IPHONE_4_0
  	    /* Is multitasking support available?  (see ticket #1107) */
 #	    define PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT 	1
