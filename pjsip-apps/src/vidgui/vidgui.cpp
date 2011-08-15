@@ -21,17 +21,19 @@
 
 #include <SDL.h>
 #include <assert.h>
+#include <QMessageBox>
 
 #define LOG_FILE		"vidgui.log"
 
+// These configure SIP registration
 #define SIP_DOMAIN		NULL
 //#define SIP_DOMAIN		"pjsip.org"
 #define SIP_USERNAME		"vidgui"
 #define SIP_PASSWORD		"secret"
 #define SIP_PORT		5060
 
-//#define DEFAULT_CAP_DEV		PJMEDIA_VID_DEFAULT_CAPTURE_DEV
-#define DEFAULT_CAP_DEV		1
+#define DEFAULT_CAP_DEV		PJMEDIA_VID_DEFAULT_CAPTURE_DEV
+//#define DEFAULT_CAP_DEV		1
 #define DEFAULT_REND_DEV	PJMEDIA_VID_DEFAULT_RENDER_DEV
 
 MainWin *MainWin::theInstance_;
@@ -165,8 +167,15 @@ void MainWin::preview()
     } else {
 	pjsua_vid_win_id wid;
 	pjsua_vid_win_info wi;
+	pj_status_t status;
 
-	pjsua_vid_preview_start(DEFAULT_CAP_DEV, NULL);
+	status = pjsua_vid_preview_start(DEFAULT_CAP_DEV, NULL);
+	if (status != PJ_SUCCESS) {
+	    char errmsg[PJ_ERR_MSG_SIZE];
+	    pj_strerror(status, errmsg, sizeof(errmsg));
+	    QMessageBox::critical(0, "Error creating preview", errmsg);
+	    return;
+	}
 	wid = pjsua_vid_preview_get_win(DEFAULT_CAP_DEV);
 	pjsua_vid_win_get_info(wid, &wi);
 

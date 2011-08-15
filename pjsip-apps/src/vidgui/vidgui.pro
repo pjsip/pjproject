@@ -1,6 +1,19 @@
 win32 {
   DEFINES += PJ_WIN32=1
-  LIBS += ../../../lib/pjproject.lib Iphlpapi.lib  dsound.lib \
+  INCLUDEPATH += ../../../pjlib/include ../../../pjlib-util/include \
+		 ../../../pjnath/include ../../../pjmedia/include \
+		 ../../../pjsip/include
+
+  # These to enable static linking
+  #CONFIG += static
+  #DEFINES += STATIC
+
+  CONFIG(debug) {
+    LIBS += ../../../lib/libpjproject-i386-Win32-vc8-Debug.lib
+  } else {
+    LIBS += ../../../lib/libpjproject-i386-Win32-vc8-Release.lib
+  }
+  LIBS += Iphlpapi.lib  dsound.lib \
   	  dxguid.lib netapi32.lib mswsock.lib ws2_32.lib odbc32.lib \
   	  odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib 
 } else {
