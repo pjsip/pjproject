@@ -53,7 +53,7 @@ CFLAGS 	= /DPJ_WIN32=1 /DPJ_M_I386=1 \
 	  -I..\..\pjnath/include
 LDFLAGS = $(BUILD_FLAGS) $(LIBS) \
 	  Iphlpapi.lib ole32.lib user32.lib dsound.lib dxguid.lib netapi32.lib \
-	  mswsock.lib ws2_32.lib gdi32.lib advapi32.lib
+	  mswsock.lib ws2_32.lib gdi32.lib advapi32.lib oleaut32.lib
 
 SRCDIR = ..\src\samples
 OBJDIR = .\output\samples-$(TARGET)
