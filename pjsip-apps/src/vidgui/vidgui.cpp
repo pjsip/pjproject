@@ -19,6 +19,10 @@
 #include "vidgui.h"
 #include "vidwin.h"
 
+#if defined(PJ_WIN32)
+#   define SDL_MAIN_HANDLED
+#endif
+
 #include <SDL.h>
 #include <assert.h>
 #include <QMessageBox>
@@ -50,6 +54,7 @@ MainWin::MainWin(QWidget *parent)
 
 MainWin::~MainWin()
 {
+    quit();
     theInstance_ = NULL;
 }
 
@@ -94,7 +99,7 @@ void MainWin::initLayout()
     connect(callButton_, SIGNAL(clicked()), this, SLOT(call()));
     connect(hangupButton_, SIGNAL(clicked()), this, SLOT(hangup()));
     connect(quitButton_, SIGNAL(clicked()), this, SLOT(quit()));
-    connect(this, SIGNAL(close()), this, SLOT(quit()));
+    //connect(this, SIGNAL(close()), this, SLOT(quit()));
 }
 
 void MainWin::quit()
@@ -167,9 +172,13 @@ void MainWin::preview()
     } else {
 	pjsua_vid_win_id wid;
 	pjsua_vid_win_info wi;
+	pjsua_vid_preview_param pre_param;
 	pj_status_t status;
 
-	status = pjsua_vid_preview_start(DEFAULT_CAP_DEV, NULL);
+	pj_bzero(&pre_param, sizeof(pre_param));
+	pre_param.rend_id = DEFAULT_REND_DEV;
+
+	status = pjsua_vid_preview_start(DEFAULT_CAP_DEV, &pre_param);
 	if (status != PJ_SUCCESS) {
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(status, errmsg, sizeof(errmsg));
@@ -179,8 +188,7 @@ void MainWin::preview()
 	wid = pjsua_vid_preview_get_win(DEFAULT_CAP_DEV);
 	pjsua_vid_win_get_info(wid, &wi);
 
-	video_prev_= new VidWin(&wi.hwnd);
-	video_prev_->setMinimumSize(320,200);
+	video_prev_ = new VidWin(&wi.hwnd);
 	vbox_left->addWidget(video_prev_, 1);
 
 	previewButton_->setText(tr("Stop Preview"));

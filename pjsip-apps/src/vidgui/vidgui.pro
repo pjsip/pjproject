@@ -19,8 +19,11 @@ win32 {
 } else {
   LIBS += $$system(make -f pj-pkgconfig.mak ldflags)
   QMAKE_CXXFLAGS += $$system(make -f pj-pkgconfig.mak cflags)
-}
 
+  macx {
+    QMAKE_CXXFLAGS += -ObjC++
+  }
+}
 
 TEMPLATE = app
 CONFIG += thread debug

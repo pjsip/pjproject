@@ -9,25 +9,25 @@ class VidWin : public QWidget
     Q_OBJECT
 
 public:
-    // hwnd	    Handle of the video rendering window.
-    VidWin(pjmedia_vid_dev_hwnd *hwnd = NULL, 
+    VidWin(const pjmedia_vid_dev_hwnd *hwnd,
 	   QWidget* parent = 0,
 	   Qt::WindowFlags f = 0);
     virtual ~VidWin();
+    QSize sizeHint() const { return size_hint; }
 
 protected:
-    void resizeEvent(QResizeEvent *e);
+    virtual bool event(QEvent *e);
 
 private:
     pjmedia_vid_dev_hwnd hwnd;
-    //pjmedia_vid_dev_hwnd old_parent_hwnd;
-    pj_timer_entry timer_entry;
+    void *orig_parent;
+    QSize size_hint;
 
-    static void timer_cb(pj_timer_heap_t *timer_heap,
-			 struct pj_timer_entry *entry);
-
-    void embed();
-    void resize();
+    void attach();
+    void detach();
+    void set_size();
+    void get_size();
 };
 
 #endif
+
