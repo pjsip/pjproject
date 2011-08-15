@@ -19,6 +19,7 @@
 #include "vidgui.h"
 #include "vidwin.h"
 
+#include <SDL.h>
 #include <assert.h>
 
 #define LOG_FILE		"vidgui.log"
@@ -574,7 +575,24 @@ static pjsip_module mod_default_handler =
 
 int main(int argc, char *argv[])
 {
+    /* At least on Linux, we have to initialize SDL video subsystem prior to
+     * creating/initializing QApplication, otherwise we'll segfault miserably
+     * in SDL_CreateWindow(). Here's a stack trace if you're interested:
+
+	Thread [7] (Suspended: Signal 'SIGSEGV' received. Description: Segmentation fault.)
+	13 XCreateIC()
+	12 SetupWindowData()
+	11 X11_CreateWindow()
+	10 SDL_CreateWindow()
+	..
+     */
+    if ( SDL_InitSubSystem(SDL_INIT_VIDEO) < 0 ) {
+        printf("Unable to init SDL: %s\n", SDL_GetError());
+        return 1;
+    }
+
     QApplication app(argc, argv);
+
     MainWin win;
     win.show();
 
@@ -583,9 +601,11 @@ int main(int argc, char *argv[])
 	return 1;
     }
 
-    /* Initialize our module to handle otherwise unhandled request */
-    pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
-				&mod_default_handler);
+    /* We want to be registrar too! */
+    if (pjsua_get_pjsip_endpt()) {
+	pjsip_endpt_register_module(pjsua_get_pjsip_endpt(),
+				    &mod_default_handler);
+    }
 
     return app.exec();
 }
