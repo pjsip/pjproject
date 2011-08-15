@@ -1093,7 +1093,7 @@ static pj_status_t sdl_factory_create_stream(
 #if !SDL_VERSION_ATLEAST(1,3,0)
     /* Prior to 1.3, SDL does not support multiple renderers. */
     pj_mutex_lock(sf->mutex);
-    if (!pj_list_empty(&sf->streams) {
+    if (!pj_list_empty(&sf->streams)) {
         pj_mutex_unlock(sf->mutex);
         return PJMEDIA_EVID_NOTREADY;
     }
