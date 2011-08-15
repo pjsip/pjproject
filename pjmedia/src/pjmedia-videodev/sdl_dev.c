@@ -540,7 +540,8 @@ static pj_status_t sdl_create_view(struct sdl_stream *strm,
 
 #if SDL_VERSION_ATLEAST(1,3,0)
     if (!strm->window) {
-        Uint32 flags = SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE;
+        Uint32 flags = SDL_WINDOW_SHOWN | /*SDL_WINDOW_RESIZABLE*/
+		       SDL_WINDOW_BORDERLESS;
 
 #   if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)
@@ -690,9 +691,21 @@ static void detect_fmt_change(struct sdl_stream *strm)
 {
     strm->status = PJ_SUCCESS;
     if (strm->new_fmt || strm->new_disp_size) {
-        if (strm->new_disp_size)
-            pj_memcpy(&strm->param.disp_size, strm->new_disp_size,
+	if (strm->new_disp_size) {
+	    pj_memcpy(&strm->param.disp_size, strm->new_disp_size,
                       sizeof(strm->param.disp_size));
+#if SDL_VERSION_ATLEAST(1,3,0)
+	    if (strm->scr_tex) {
+		strm->dstrect.x = strm->dstrect.y = 0;
+		strm->dstrect.w = (Uint16)strm->param.disp_size.w;
+		strm->dstrect.h = (Uint16)strm->param.disp_size.h;
+		SDL_RenderSetViewport(strm->renderer, &strm->dstrect);
+		strm->new_fmt = NULL;
+		strm->new_disp_size = NULL;
+		return;
+	    }
+#endif
+	}
 
         /* Re-initialize SDL */
         strm->status = sdl_create_view(strm, (strm->new_fmt? strm->new_fmt :
@@ -754,7 +767,8 @@ static pj_status_t put_frame(struct sdl_stream *stream,
     else if (stream->scr_tex) {
         SDL_UpdateTexture(stream->scr_tex, NULL, frame->buf, stream->pitch);
         SDL_RenderClear(stream->renderer);
-        SDL_RenderCopy(stream->renderer, stream->scr_tex, NULL, NULL);
+        SDL_RenderCopy(stream->renderer, stream->scr_tex,
+		       &stream->rect, &stream->dstrect);
         SDL_RenderPresent(stream->renderer);
     }
 #endif /* SDL_VERSION_ATLEAST(1,3,0) */
