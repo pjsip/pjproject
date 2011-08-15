@@ -3303,6 +3303,11 @@ typedef struct pjsua_stream_stat
 typedef enum pjsua_call_vid_strm_op
 {
     /**
+     * No operation
+     */
+    PJSUA_CALL_VID_STRM_NO_OP,
+
+    /**
      * Add a new video stream. This will add a new m=video line to
      * the media, regardless of whether existing video is/are present
      * or not.  This will cause re-INVITE or UPDATE to be sent to remote
@@ -3350,7 +3355,9 @@ typedef enum pjsua_call_vid_strm_op
 
 
 /**
- * Parameters for video stream operation on a call.
+ * Parameters for video stream operation on a call. Application should
+ * use #pjsua_call_vid_strm_op_param_default() to initialize this structure
+ * with its default values.
  */
 typedef struct pjsua_call_vid_strm_op_param
 {
@@ -3385,11 +3392,20 @@ typedef struct pjsua_call_vid_strm_op_param
      * This field is valid for the following video stream operations:
      * PJSUA_CALL_VID_STRM_ADD and PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV.
      *
-     * Default: capture device configured in account.
+     * Default: PJMEDIA_VID_DEFAULT_CAPTURE_DEV.
      */
     pjmedia_vid_dev_index cap_dev;
 
 } pjsua_call_vid_strm_op_param;
+
+
+/**
+ * Initialize video stream operation param with default values.
+ *
+ * @param param		The video stream operation param to be initialized.
+ */
+PJ_DECL(void)
+pjsua_call_vid_strm_op_param_default(pjsua_call_vid_strm_op_param *param);
 
 
 /**
@@ -3888,9 +3904,10 @@ PJ_DECL(pj_status_t) pjsua_call_get_stream_stat(pjsua_call_id call_id,
  *
  * @return		PJ_SUCCESS on success or the appropriate error.
  */
-PJ_DECL(pj_status_t) pjsua_call_get_transport_info(pjsua_call_id call_id,
-                                                   unsigned med_idx,
-                                                   pjmedia_transport_info *t);
+PJ_DECL(pj_status_t) 
+pjsua_call_get_med_transport_info(pjsua_call_id call_id,
+                                  unsigned med_idx,
+                                  pjmedia_transport_info *t);
 
 
 

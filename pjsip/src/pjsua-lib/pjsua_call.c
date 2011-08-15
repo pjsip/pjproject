@@ -1536,9 +1536,10 @@ PJ_DEF(pj_status_t) pjsua_call_get_stream_stat( pjsua_call_id call_id,
 /*
  * Get media transport info for the specified media index.
  */
-PJ_DEF(pj_status_t) pjsua_call_get_transport_info( pjsua_call_id call_id,
-                                                   unsigned med_idx,
-                                                   pjmedia_transport_info *t)
+PJ_DEF(pj_status_t) 
+pjsua_call_get_med_transport_info(pjsua_call_id call_id,
+                                  unsigned med_idx,
+                                  pjmedia_transport_info *t)
 {
     pjsua_call *call;
     pjsua_call_media *call_med;

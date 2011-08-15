@@ -3778,6 +3778,8 @@ static void vid_handle_menu(char *menuin)
     } else if (strcmp(argv[1], "call")==0) {
 	pjsua_call_vid_strm_op_param param;
 
+	pjsua_call_vid_strm_op_param_default(&param);
+
 	if (argc == 5 && strcmp(argv[2], "rx")==0) {
 	    pjsua_stream_info si;
 	    pj_bool_t on = (strcmp(argv[3], "on") == 0);

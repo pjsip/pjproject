@@ -107,6 +107,14 @@ pj_status_t pjsua_vid_subsys_destroy(void)
     return PJ_SUCCESS;
 }
 
+PJ_DEF(void)
+pjsua_call_vid_strm_op_param_default(pjsua_call_vid_strm_op_param *param)
+{
+    pj_bzero(param, sizeof(*param));
+    param->med_idx = -1;
+    param->dir = PJMEDIA_DIR_ENCODING_DECODING;
+    param->cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+}
 
 /*****************************************************************************
  * Devices.
@@ -1560,6 +1568,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
+    PJ_ASSERT_RETURN(op != PJSUA_CALL_VID_STRM_NO_OP, PJ_EINVAL);
 
     PJSUA_LOCK();
 
@@ -1568,9 +1577,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
     if (param) {
 	param_ = *param;
     } else {
-	param_.med_idx = -1;
-	param_.cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
-	param_.dir = PJMEDIA_DIR_ENCODING_DECODING;
+	pjsua_call_vid_strm_op_param_default(&param_);
     }
 
     /* If set to PJMEDIA_VID_DEFAULT_CAPTURE_DEV, replace it with
