@@ -111,29 +111,29 @@ if __name__ == "__main__":
 		utc = time.gmtime(None)
 
 		if utc.tm_mday != day or rc != 0 or FORCE:
-				group = ""
-				if utc.tm_mday != day:
-					day = utc.tm_mday
-					group = "Nightly" + SUFFIX
-				elif rc != 0:
-					group = "Continuous" + SUFFIX
-				else:
-					group = "Experimental" + SUFFIX
+			group = ""
+			if utc.tm_mday != day:
+				day = utc.tm_mday
+				group = "Nightly" + SUFFIX
+			elif rc != 0:
+				group = "Continuous" + SUFFIX
+			else:
+				group = "Experimental" + SUFFIX
+			if DELAY > 0:
 				print "Will run %s after %f s.." % (group, DELAY)
 				time.sleep(DELAY)
-				rc = run_scenarios(scenarios, group)
-				# Sleep even if something does change
-				msg = str(datetime.datetime.now()) + \
-					  ": done running " + group + \
-					  "tests, will check again in " + str(INTERVAL) + "s.."
+			rc = run_scenarios(scenarios, group)
+			msg = str(datetime.datetime.now()) + \
+				  ": done running " + group + \
+				  "tests, will check again in " + str(INTERVAL) + "s.."
+			if ONCE:
+				sys.exit(0)
 		else:
 			# Nothing changed
 			msg = str(datetime.datetime.now()) + \
 				  ": No update, will check again in " + str(INTERVAL) + "s.."
-			
-
-		if ONCE:
-			sys.exit(0)
+			if ONCE:
+				sys.exit(1)
 
 		print msg
 		time.sleep(INTERVAL)
