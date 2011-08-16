@@ -599,10 +599,19 @@ else
  case $target in
   arm-apple-darwin*)
 	ac_pjmedia_video=iphone_os
+	AC_SUBST(ac_pjmedia_video_has_ios)
 	AC_SUBST(ac_ios_cflags)
-	ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1"
-	LIBS="$LIBS -framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
-	AC_MSG_RESULT([Checking video device backend... AVFoundation])
+	SAVED_LIBS="$LIBS"
+	LIBS="-framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	AC_LINK_IFELSE([AC_LANG_PROGRAM([[]], [])],[ac_pjmedia_video_has_ios=yes],[ac_pjmedia_video_has_ios=no])
+	LIBS="$SAVED_LIBS"
+	if test "$ac_pjmedia_video_has_ios" = "yes"; then
+	  ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1"
+	  LIBS="$LIBS -framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	  AC_MSG_RESULT([Checking if AVFoundation framework is available... yes])
+	else
+	  AC_MSG_RESULT([Checking if AVFoundation framework is available... no])
+	fi
 	;;
   *darwin*)
 	ac_pjmedia_video=mac_os
