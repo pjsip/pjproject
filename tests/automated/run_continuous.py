@@ -7,6 +7,9 @@ import ccdash
 
 INTERVAL = 300
 DELAY = 0
+ONCE = False
+SUFFIX = ""
+FORCE = False
 
 def run_scenarios(scenarios, group):
 	# Run each scenario
@@ -39,6 +42,14 @@ options:
 		after changes are detected, and Nightly build will be done
 		at 00:00 GMT. MIN is a float number.
 
+  --once        Just run one loop to see if anything needs to be done and
+                if so just do it once. Quit after that.
+
+  --suffix SFX  Set group suffix to SFX. For example, if SFX is "-2.x", then
+                tests will be submitted to "Nightly-2.x", "Continuous-2.x",
+		and "Experimental-2.x"
+
+  --force	Force running the test even when nothing has changed.
 """
 	sys.exit(1)
 
@@ -57,6 +68,17 @@ if __name__ == "__main__":
 				sys.exit(1)
 			DELAY = float(sys.argv[i]) * 60
 			print "Delay is set to %f minute(s)" % (DELAY / 60)
+		elif sys.argv[i]=="--suffix":
+			i = i + 1
+			if i >= len(sys.argv):
+				print "Error: missing argument"
+				sys.exit(1)
+			SUFFIX = sys.argv[i]
+			print "Suffix is set to %s" % (SUFFIX)
+		elif sys.argv[i]=="--once":
+			ONCE = True
+		elif sys.argv[i]=="--force":
+			FORCE = True
 		else:
 			# Check if scenario exists
 			scenario = sys.argv[i]
@@ -88,27 +110,31 @@ if __name__ == "__main__":
 
 		utc = time.gmtime(None)
 
-		if utc.tm_mday != day or rc != 0:
+		if utc.tm_mday != day or rc != 0 or FORCE:
 				group = ""
 				if utc.tm_mday != day:
 					day = utc.tm_mday
-					group = "Nightly"
+					group = "Nightly" + SUFFIX
 				elif rc != 0:
-					group = "Continuous"
+					group = "Continuous" + SUFFIX
 				else:
-					group = "Experimental"
+					group = "Experimental" + SUFFIX
 				print "Will run %s after %f s.." % (group, DELAY)
 				time.sleep(DELAY)
 				rc = run_scenarios(scenarios, group)
 				# Sleep even if something does change
-				print str(datetime.datetime.now()) + \
+				msg = str(datetime.datetime.now()) + \
 					  ": done running " + group + \
 					  "tests, will check again in " + str(INTERVAL) + "s.."
-				time.sleep(INTERVAL)
 		else:
 			# Nothing changed
-			print str(datetime.datetime.now()) + \
+			msg = str(datetime.datetime.now()) + \
 				  ": No update, will check again in " + str(INTERVAL) + "s.."
-			time.sleep(INTERVAL)
 			
+
+		if ONCE:
+			sys.exit(0)
+
+		print msg
+		time.sleep(INTERVAL)
 
