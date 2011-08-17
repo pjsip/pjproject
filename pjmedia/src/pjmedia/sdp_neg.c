@@ -1125,6 +1125,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			       pj_bool_t prefer_remote_codec_order,
 			       const pjmedia_sdp_media *offer,
 			       const pjmedia_sdp_media *preanswer,
+			       const pjmedia_sdp_session *preanswer_sdp,
 			       pjmedia_sdp_media **p_answer)
 {
     unsigned i;
@@ -1142,7 +1143,8 @@ static pj_status_t match_offer(pj_pool_t *pool,
 
     /* If offer has zero port, just clone the offer */
     if (offer->desc.port == 0) {
-	answer = sdp_media_clone_deactivate(pool, offer, preanswer, NULL);
+	answer = sdp_media_clone_deactivate(pool, offer, preanswer,
+					    preanswer_sdp);
 	*p_answer = answer;
 	return PJ_SUCCESS;
     }
@@ -1437,7 +1439,7 @@ static pj_status_t create_answer( pj_pool_t *pool,
 	    {
 		/* See if it has matching codec. */
 		status = match_offer(pool, prefer_remote_codec_order, 
-				     om, im, &am);
+				     om, im, initial, &am);
 		if (status == PJ_SUCCESS) {
 		    /* Mark media as used. */
 		    media_used[j] = 1;
