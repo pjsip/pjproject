@@ -23,6 +23,6 @@ include = []
 exclude = []
 
 sendto_cfg = sip.SendtoCfg( "Callee has SRTP disabled but receive RTP/SAVP, should reject the call", 
-			    pjsua_args=args, sdp=sdp, resp_code=406, 
+			    pjsua_args=args, sdp=sdp, resp_code=488, 
 			    resp_inc=include, resp_exc=exclude)
 
