@@ -441,11 +441,11 @@ PJ_INLINE(unsigned) PJMEDIA_SPF(unsigned clock_rate, unsigned usec_ptime,
 {
 #if PJ_HAS_INT64
     return ((unsigned)((pj_uint64_t)usec_ptime * \
-		       clock_rate / channel_count / 1000000));
+		       clock_rate * channel_count / 1000000));
 #elif PJ_HAS_FLOATING_POINT
-    return ((unsigned)(1.0*usec_ptime * clock_rate / channel_count / 1000000));
+    return ((unsigned)(1.0*usec_ptime * clock_rate * channel_count / 1000000));
 #else
-    return ((unsigned)(usec_ptime / 1000L * clock_rate / \
+    return ((unsigned)(usec_ptime / 1000L * clock_rate * \
 		       channel_count / 1000));
 #endif
 }
