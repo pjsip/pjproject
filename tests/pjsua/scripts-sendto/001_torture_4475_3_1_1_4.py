@@ -21,5 +21,5 @@ L:0
 
 sendto_cfg = sip.SendtoCfg( "RFC 4475 3.1.1.4", 
 			    "--null-audio --auto-answer 200", 
-			    "", 405, complete_msg=complete_msg)
+			    "", 200, complete_msg=complete_msg)
 
