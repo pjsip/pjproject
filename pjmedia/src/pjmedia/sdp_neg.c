@@ -1149,6 +1149,15 @@ static pj_status_t match_offer(pj_pool_t *pool,
 	return PJ_SUCCESS;
     }
 
+    /* If the preanswer define zero port, this media is being rejected,
+     * just clone the preanswer.
+     */
+    if (preanswer->desc.port == 0) {
+	answer = pjmedia_sdp_media_clone(pool, preanswer);
+	*p_answer = answer;
+	return PJ_SUCCESS;
+    }
+
     /* Set master/slave negotiator based on prefer_remote_codec_order. */
     if (prefer_remote_codec_order) {
 	master = offer;

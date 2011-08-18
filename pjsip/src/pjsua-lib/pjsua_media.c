@@ -1144,13 +1144,15 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 		++score[i];
 		break;
 	    case PJMEDIA_SRTP_DISABLED:
-		--score[i];
+		//--score[i];
+		score[i] -= 5;
 		break;
 	    }
 	} else if (pj_stricmp2(&m->desc.transport, "RTP/AVP")==0) {
 	    switch (use_srtp) {
 	    case PJMEDIA_SRTP_MANDATORY:
-		--score[i];
+		//--score[i];
+		score[i] -= 5;
 		break;
 	    case PJMEDIA_SRTP_OPTIONAL:
 		/* No change in score */
@@ -1375,8 +1377,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     if (rem_sdp) {
 	sort_media(rem_sdp, &STR_AUDIO, acc->cfg.use_srtp,
 		   maudidx, &maudcnt);
-	if (maudcnt > acc->cfg.max_audio_cnt)
-	    maudcnt = acc->cfg.max_audio_cnt;
+	// Don't apply media count limitation until SDP negotiation is done.
+	//if (maudcnt > acc->cfg.max_audio_cnt)
+	//    maudcnt = acc->cfg.max_audio_cnt;
 
 	if (maudcnt==0) {
 	    /* Expecting audio in the offer */
@@ -1385,10 +1388,15 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	    return PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE_HERE);
 	}
 
+#if PJMEDIA_HAS_VIDEO
 	sort_media(rem_sdp, &STR_VIDEO, acc->cfg.use_srtp,
 		   mvididx, &mvidcnt);
-	if (mvidcnt > acc->cfg.max_video_cnt)
-	    mvidcnt = acc->cfg.max_video_cnt;
+	// Don't apply media count limitation until SDP negotiation is done.
+	//if (mvidcnt > acc->cfg.max_video_cnt)
+	    //mvidcnt = acc->cfg.max_video_cnt;
+#else
+	mvidcnt = 0;
+#endif
 
 	/* Update media count only when remote add any media, this media count
 	 * must never decrease.
@@ -1402,11 +1410,14 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	    maudidx[mi] = (pj_uint8_t)mi;
 	    media_types[mi] = PJMEDIA_TYPE_AUDIO;
 	}
+#if PJMEDIA_HAS_VIDEO
 	mvidcnt = acc->cfg.max_video_cnt;
 	for (mi=0; mi<mvidcnt; ++mi) {
 	    media_types[maudcnt + mi] = PJMEDIA_TYPE_VIDEO;
 	}
-	
+#else
+	mvidcnt = 0;
+#endif	
 	call->med_cnt = maudcnt + mvidcnt;
     }
 
@@ -1610,32 +1621,38 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	     * This media is disabled. Just create a valid SDP with zero
 	     * port.
 	     */
-	    m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
-	    m->desc.transport = pj_str("RTP/AVP");
-	    m->desc.fmt_count = 1;
-	    m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
-	    m->conn->net_type = pj_str("IN");
-	    m->conn->addr_type = pj_str("IP4");
-	    m->conn->addr = pj_str("127.0.0.1");
+	    if (rem_sdp) {
+		/* Just clone the remote media and deactivate it */
+		m = pjmedia_sdp_media_clone_deactivate(pool,
+						       rem_sdp->media[mi]);
+	    } else {
+		m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
+		m->desc.transport = pj_str("RTP/AVP");
+		m->desc.fmt_count = 1;
+		m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+		m->conn->net_type = pj_str("IN");
+		m->conn->addr_type = pj_str("IP4");
+		m->conn->addr = pj_str("127.0.0.1");
 
-	    switch (call_med->type) {
-	    case PJMEDIA_TYPE_AUDIO:
-		m->desc.media = pj_str("audio");
-		m->desc.fmt[0] = pj_str("0");
-		break;
-	    case PJMEDIA_TYPE_VIDEO:
-		m->desc.media = pj_str("video");
-		m->desc.fmt[0] = pj_str("31");
-		break;
-	    default:
-		if (rem_sdp && mi < rem_sdp->media_count) {
-		    pj_strdup(pool, &m->desc.media,
-		              &rem_sdp->media[mi]->desc.media);
-		    pj_strdup(pool, &m->desc.fmt[0],
-		              &rem_sdp->media[mi]->desc.fmt[0]);
-		} else {
-		    pj_assert(!"Invalid call_med media type");
-		    return PJ_EBUG;
+		switch (call_med->type) {
+		case PJMEDIA_TYPE_AUDIO:
+		    m->desc.media = pj_str("audio");
+		    m->desc.fmt[0] = pj_str("0");
+		    break;
+		case PJMEDIA_TYPE_VIDEO:
+		    m->desc.media = pj_str("video");
+		    m->desc.fmt[0] = pj_str("31");
+		    break;
+		default:
+		    if (rem_sdp) {
+			pj_strdup(pool, &m->desc.media,
+				  &rem_sdp->media[mi]->desc.media);
+			pj_strdup(pool, &m->desc.fmt[0],
+				  &rem_sdp->media[mi]->desc.fmt[0]);
+		    } else {
+			pj_assert(!"Invalid call_med media type");
+			return PJ_EBUG;
+		    }
 		}
 	    }
 
@@ -2086,10 +2103,19 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *remote_sdp)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pj_pool_t *tmp_pool = call->inv->pool_prov;
     unsigned mi;
     pj_bool_t got_media = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
+
+    const pj_str_t STR_AUDIO = { "audio", 5 };
+    const pj_str_t STR_VIDEO = { "video", 5 };
+    pj_uint8_t maudidx[PJSUA_MAX_CALL_MEDIA];
+    unsigned maudcnt = PJ_ARRAY_SIZE(maudidx);
+    pj_uint8_t mvididx[PJSUA_MAX_CALL_MEDIA];
+    unsigned mvidcnt = PJ_ARRAY_SIZE(mvididx);
+    pj_bool_t need_renego_sdp = PJ_FALSE;
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
 	return PJ_EBUSY;
@@ -2097,8 +2123,49 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Destroy existing media session, if any. */
     stop_media_session(call->index);
 
+    /* Call media count must be at least equal to SDP media. Note that
+     * it may not be equal when remote removed any SDP media line.
+     */
+    pj_assert(call->med_cnt >= local_sdp->media_count);
+
     /* Reset audio_idx first */
     call->audio_idx = -1;
+
+    /* Apply maximum audio/video count of the account */
+    sort_media(local_sdp, &STR_AUDIO, acc->cfg.use_srtp,
+	       maudidx, &maudcnt);
+#if PJMEDIA_HAS_VIDEO
+    sort_media(local_sdp, &STR_VIDEO, acc->cfg.use_srtp,
+	       mvididx, &mvidcnt);
+#else
+    PJ_UNUSED_ARG(STR_VIDEO);
+    mvidcnt = 0;
+#endif
+    if (maudcnt > acc->cfg.max_audio_cnt || mvidcnt > acc->cfg.max_video_cnt)
+    {
+	pjmedia_sdp_session *local_sdp2;
+
+	maudcnt = PJ_MIN(maudcnt, acc->cfg.max_audio_cnt);
+	mvidcnt = PJ_MIN(mvidcnt, acc->cfg.max_video_cnt);
+	local_sdp2 = pjmedia_sdp_session_clone(tmp_pool, local_sdp);
+
+	for (mi=0; mi < local_sdp2->media_count; ++mi) {
+	    pjmedia_sdp_media *m = local_sdp2->media[mi];
+
+	    if (m->desc.port == 0 ||
+		pj_memchr(maudidx, mi, maudcnt*sizeof(maudidx[0])) ||
+		pj_memchr(mvididx, mi, mvidcnt*sizeof(mvididx[0])))
+	    {
+		continue;
+	    }
+	    
+	    /* Deactivate this media */
+	    pjmedia_sdp_media_deactivate(tmp_pool, m);
+	}
+
+	local_sdp = local_sdp2;
+	need_renego_sdp = PJ_TRUE;
+    }
 
     /* Process each media stream */
     for (mi=0; mi < call->med_cnt; ++mi) {
@@ -2140,12 +2207,43 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    break;
 	}
 
+	/* Close the transport of deactivated media, need this here as media
+	 * can be deactivated by the SDP negotiation and the max media count
+	 * (account) setting.
+	 */
+	if (local_sdp->media[mi]->desc.port==0 && call_med->tp) {
+	    pjmedia_transport_close(call_med->tp);
+	    call_med->tp = call_med->tp_orig = NULL;
+	    call_med->tp_st = PJSUA_MED_TP_IDLE;
+	}
+
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(1,(THIS_FILE, status, "Error updating media call%02d:%d",
 		         call_id, mi));
 	} else {
 	    got_media = PJ_TRUE;
 	}
+    }
+
+    /* Perform SDP re-negotiation if needed. */
+    if (got_media && need_renego_sdp) {
+	pjmedia_sdp_neg *neg = call->inv->neg;
+
+	/* This should only happen when we are the answerer. */
+	PJ_ASSERT_RETURN(neg && !pjmedia_sdp_neg_was_answer_remote(neg),
+			 PJMEDIA_SDPNEG_EINSTATE);
+	
+	status = pjmedia_sdp_neg_set_remote_offer(tmp_pool, neg, remote_sdp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	status = pjmedia_sdp_neg_set_local_answer(tmp_pool, neg, local_sdp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	status = pjmedia_sdp_neg_negotiate(tmp_pool, neg, 0);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
 
     return (got_media? PJ_SUCCESS : PJMEDIA_SDPNEG_ENOMEDIA);
