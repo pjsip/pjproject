@@ -27,9 +27,10 @@ STATE_CONFIRMED = "state.*CONFIRMED"
 STATE_DISCONNECTED = "Call .* DISCONNECTED"
 
 # Media call is put on-hold
-MEDIA_HOLD = "Media for call [0-9]+ is suspended.*hold"
+MEDIA_HOLD = "Call [0-9]+ media [0-9]+ .*, status is .* hold"
 # Media call is active
-MEDIA_ACTIVE = "Media for call [0-9]+ is active"
+MEDIA_ACTIVE = "Call [0-9]+ media [0-9]+ .*, status is Active"
+#MEDIA_ACTIVE = "Media for call [0-9]+ is active"
 # RX_DTMF
 RX_DTMF = "Incoming DTMF on call [0-9]+: "
 
