@@ -18,6 +18,7 @@ tests = []
 excluded_tests = [ "svn",
 		   "pyc",
 		   "scripts-call/150_srtp_2_1",				# SRTP optional 'cannot' call SRTP mandatory
+                   "scripts-call/150_srtp_2_3.py",                      # temporarily disabled until #1267 done
 		   "scripts-call/301_ice_public_a.py",			# Unreliable, proxy returns 408 sometimes
 		   "scripts-call/301_ice_public_b.py",			# Doesn't work because OpenSER modifies SDP
 		   "scripts-pres/200_publish.py",			# Ok from cmdline, error from runall.py
