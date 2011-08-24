@@ -12092,13 +12092,16 @@ echo "${ECHO_T}Using SDL prefix... $with_sdl" >&6; }
 
 		  { echo "$as_me:$LINENO: checking SDL availability.." >&5
 echo $ECHO_N "checking SDL availability..... $ECHO_C" >&6; }
-		  if $SDL_CONFIG --version; then
+		  if (sh -c "$SDL_CONFIG --version" | grep 1.3) then
 
 
 			  ac_sdl_cflags=`$SDL_CONFIG --cflags`
 			  ac_sdl_cflags="-DPJMEDIA_VIDEO_DEV_HAS_SDL=1 $ac_sdl_cflags"
 			  ac_sdl_ldflags=`$SDL_CONFIG --libs`
 			  LIBS="$LIBS $ac_sdl_ldflags"
+		   else
+			{ echo "$as_me:$LINENO: result: Unsupported SDL version" >&5
+echo "${ECHO_T}Unsupported SDL version" >&6; }
 		   fi
 
 fi
