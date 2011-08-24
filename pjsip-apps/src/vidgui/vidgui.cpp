@@ -104,8 +104,14 @@ void MainWin::initLayout()
 
 void MainWin::quit()
 {
-    if (preview_on)
-        preview();
+    //if (preview_on)
+        //preview();
+
+    delete video_prev_;
+    video_prev_ = NULL;
+    delete video_;
+    video_ = NULL;
+
     pjsua_destroy();
     qApp->quit();
 }
