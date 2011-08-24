@@ -18,7 +18,7 @@ win32 {
   	  odbccp32.lib ole32.lib user32.lib gdi32.lib advapi32.lib 
 } else {
   LIBS += $$system(make -f pj-pkgconfig.mak ldflags)
-  QMAKE_CXXFLAGS += $$system(make -f pj-pkgconfig.mak cflags)
+  QMAKE_CXXFLAGS += $$system(make --silent -f pj-pkgconfig.mak cflags)
 
   macx {
     QMAKE_CXXFLAGS += -ObjC++
