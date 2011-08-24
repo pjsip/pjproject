@@ -104,6 +104,8 @@ void MainWin::initLayout()
 
 void MainWin::quit()
 {
+    if (preview_on)
+        preview();
     pjsua_destroy();
     qApp->quit();
 }

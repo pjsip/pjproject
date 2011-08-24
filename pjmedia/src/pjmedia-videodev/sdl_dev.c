@@ -521,6 +521,13 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f)
     sf->is_quitting = PJ_TRUE;
     if (sf->sdl_thread) {
         pj_sem_post(sf->sem);
+#if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
+        /* To prevent pj_thread_join() of getting stuck if we are in
+         * the main thread and we haven't finished processing the job
+         * posted by sdl_thread.
+         */
+        CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+#endif
         pj_thread_join(sf->sdl_thread);
     }
 
