@@ -704,7 +704,12 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
 
         if (!((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) &&
             strm->param.window_hide))
+        {
             flags |= SDL_WINDOW_SHOWN;
+        } else {
+            flags &= ~SDL_WINDOW_SHOWN;
+            flags |= SDL_WINDOW_HIDDEN;
+        }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
         if (strm->param.rend_id == OPENGL_DEV_IDX)

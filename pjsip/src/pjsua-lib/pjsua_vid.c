@@ -116,6 +116,13 @@ pjsua_call_vid_strm_op_param_default(pjsua_call_vid_strm_op_param *param)
     param->cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
 }
 
+PJ_DEF(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p)
+{
+    p->rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+    p->show = PJ_TRUE;
+}
+
+
 /*****************************************************************************
  * Devices.
  */
@@ -338,19 +345,15 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	wid = pjsua_vid_preview_get_win(cap_id);
 	if (wid != PJSUA_INVALID_ID) {
 	    /* Yes, it exists */
+	    /* Show/hide window */
+	    pjmedia_vid_dev_stream *rdr;
+	    pj_bool_t hide = !show;
 
-	    /* Show window if requested */
-	    if (show) {
-		pjmedia_vid_dev_stream *rdr;
-		pj_bool_t hide = PJ_FALSE;
-		
-		rdr = pjmedia_vid_port_get_stream(pjsua_var.win[wid].vp_rend);
-		pj_assert(rdr);
-		status = pjmedia_vid_dev_stream_set_cap(
-					rdr,
-					PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
-					&hide);
-	    }
+	    rdr = pjmedia_vid_port_get_stream(pjsua_var.win[wid].vp_rend);
+	    pj_assert(rdr);
+	    status = pjmedia_vid_dev_stream_set_cap(
+				    rdr, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
+				    &hide);
 
 	    /* Done */
 	    *id = wid;
@@ -832,23 +835,25 @@ void stop_video_stream(pjsua_call_media *call_med)
  * Start video preview window for the specified capture device.
  */
 PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
-                                            pjsua_vid_preview_param *prm)
+                                            const pjsua_vid_preview_param *prm)
 {
     pjsua_vid_win_id wid;
     pjsua_vid_win *w;
     pjmedia_vid_dev_index rend_id;
+    pjsua_vid_preview_param default_param;
     pj_status_t status;
 
     PJSUA_LOCK();
 
-    if (prm) {
-	rend_id = prm->rend_id;
-    } else {
-	rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+    if (!prm) {
+	pjsua_vid_preview_param_default(&default_param);
+	prm = &default_param;
     }
 
+    rend_id = prm->rend_id;
+
     status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, NULL, rend_id, id,
-			    PJ_TRUE, &wid);
+			    prm->show, &wid);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	return status;

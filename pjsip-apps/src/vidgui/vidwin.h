@@ -32,6 +32,7 @@ public:
 	   Qt::WindowFlags f = 0);
     virtual ~VidWin();
     QSize sizeHint() const { return size_hint; }
+    void show(bool visible=true);
 
 protected:
     virtual bool event(QEvent *e);

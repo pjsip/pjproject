@@ -140,6 +140,13 @@ void VidWin::get_size()
     TRACE_("%p size = %dx%d", w, size_hint.width(), size_hint.height());
 }
 
+void VidWin::show(bool visible)
+{
+    if (!hwnd.info.win.hwnd) return;
+
+    ShowWindow(hwnd.info.win.hwnd, visible ? SW_SHOW : SW_HIDE);
+}
+
 #elif defined(__APPLE__)
 
 #import<Cocoa/Cocoa.h>
@@ -203,6 +210,20 @@ void VidWin::get_size()
     TRACE_("%p size = %dx%d", 0, size_hint.width(), size_hint.height());
 }
 
+void VidWin::show(bool visible)
+{
+    if (!hwnd.info.cocoa.window) return;
+
+    NSWindow *w = (NSWindow*)hwnd.info.cocoa.window;
+
+    if (visible) {
+	if (![w isMiniaturized]) {
+	    [w makeKeyAndOrderFront:nil];
+	}
+    } else {
+	[w orderOut:nil];
+    }
+}
 
 #elif defined(linux) || defined(__linux)
 
@@ -210,6 +231,9 @@ void VidWin::get_size()
 #include <X11/Xutil.h>
 #include <QX11Info>
 #include <stdio.h>
+
+#define GET_DISPLAY()	QX11Info::display()
+//#define GET_DISPLAY()	(Display*)hwnd.info.x11.display
 
 void VidWin::attach()
 {
@@ -220,7 +244,7 @@ void VidWin::attach()
     // Use Qt X11 display here, using window creator X11 display may cause
     // the window failing to embed to this QWidget.
     //Display *d = (Display*)hwnd.info.x11.display;
-    Display *d = QX11Info::display();
+    Display *d = GET_DISPLAY();
     Window w = (Window)hwnd.info.x11.window;
     Window parent = (Window)this->winId();
     int err = XReparentWindow(d, w, parent, 0, 0);
@@ -239,7 +263,7 @@ void VidWin::set_size()
     if (!hwnd.info.x11.window) return;
 
     /* Update position and size */
-    Display *d = QX11Info::display();
+    Display *d = GET_DISPLAY();
     Window w = (Window)hwnd.info.x11.window;
     QRect qr = rect();
 
@@ -252,13 +276,29 @@ void VidWin::get_size()
 {
     if (!hwnd.info.x11.window) return;
 
-    Display *d = QX11Info::display();
+    Display *d = GET_DISPLAY();
     Window w = (Window)hwnd.info.x11.window;
 
     XWindowAttributes attr;
     XGetWindowAttributes(d, w, &attr);
     size_hint = QSize(attr.width, attr.height);
     TRACE_("%p size = %dx%d", w, size_hint.width(), size_hint.height());
+}
+
+void VidWin::show(bool visible)
+{
+    if (!hwnd.info.x11.window) return;
+
+    Display *d = GET_DISPLAY();
+    Window w = (Window)hwnd.info.x11.window;
+
+    if (visible) {
+	XMapRaised(d, w);
+    } else {
+	XUnmapWindow(d, w);
+    }
+
+    XFlush(d);
 }
 
 #endif

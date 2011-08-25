@@ -5437,23 +5437,40 @@ typedef struct pjsua_vid_preview_param
     /**
      * Device ID for the video renderer to be used for rendering the
      * capture stream for preview.
+     *
+     * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
      */
     pjmedia_vid_dev_index	rend_id;
+
+    /**
+     * Show window initially.
+     *
+     * Default: PJ_TRUE.
+     */
+    pj_bool_t			show;
+
 } pjsua_vid_preview_param;
 
+
+/**
+ * Initialize pjsua_vid_preview_param
+ *
+ * @param p		The parameter to be initialized.
+ */
+PJ_DECL(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p);
 
 /**
  * Start video preview window for the specified capture device.
  *
  * @param id		The capture device ID where its preview will be
  * 			started.
- * @param prm		Optional video preview parameters. Specify NULL
+ * @param p		Optional video preview parameters. Specify NULL
  * 			to use default values.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
-                                             pjsua_vid_preview_param *prm);
+                                             const pjsua_vid_preview_param *p);
 
 /**
  * Get the preview window handle associated with the capture device, if any.

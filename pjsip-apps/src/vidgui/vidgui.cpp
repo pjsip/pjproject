@@ -28,6 +28,7 @@
 #include <QMessageBox>
 
 #define LOG_FILE		"vidgui.log"
+#define THIS_FILE		"vidgui.cpp"
 
 // These configure SIP registration
 #define SIP_DOMAIN		NULL
@@ -83,7 +84,7 @@ void MainWin::initLayout()
 
     /* Right pane */
     vbox_right->addWidget((localUri_ = new QLabel));
-    vbox_right->addWidget((previewButton_=new QPushButton(tr("Start Preview"))));
+    vbox_right->addWidget((previewButton_=new QPushButton(tr("Start &Preview"))));
     vbox_right->addWidget((callButton_=new QPushButton(tr("Call"))));
     vbox_right->addWidget((hangupButton_=new QPushButton(tr("Hangup"))));
     vbox_right->addWidget((quitButton_=new QPushButton(tr("Quit"))));
@@ -120,7 +121,7 @@ void MainWin::showStatus(const char *msg)
 {
     //statusBar_->showMessage(msg);
     statusBar_->setText(msg);
-    PJ_LOG(3,("vidgui.cpp", "%s", msg));
+    PJ_LOG(3,(THIS_FILE, "%s", msg));
 }
 
 void MainWin::showError(const char *title, pj_status_t status)
@@ -176,15 +177,17 @@ void MainWin::preview()
 
 	pjsua_vid_preview_stop(DEFAULT_CAP_DEV);
 
-	previewButton_->setText(tr("Start Preview"));
+	showStatus("Preview stopped");
+	previewButton_->setText(tr("Start &Preview"));
     } else {
 	pjsua_vid_win_id wid;
 	pjsua_vid_win_info wi;
 	pjsua_vid_preview_param pre_param;
 	pj_status_t status;
 
-	pj_bzero(&pre_param, sizeof(pre_param));
+	pjsua_vid_preview_param_default(&pre_param);
 	pre_param.rend_id = DEFAULT_REND_DEV;
+	pre_param.show = PJ_FALSE;
 
 	status = pjsua_vid_preview_start(DEFAULT_CAP_DEV, &pre_param);
 	if (status != PJ_SUCCESS) {
@@ -198,8 +201,14 @@ void MainWin::preview()
 
 	video_prev_ = new VidWin(&wi.hwnd);
 	vbox_left->addWidget(video_prev_, 1);
+	//Using this will cause SDL window to display blank
+	//screen sometimes, probably because it's using different
+	//X11 Display
+	//status = pjsua_vid_win_set_show(wid, PJ_TRUE);
+	video_prev_->show();
+	showStatus("Preview started");
 
-	previewButton_->setText(tr("Stop Preview"));
+	previewButton_->setText(tr("Stop &Preview"));
     }
     preview_on = !preview_on;
 }
