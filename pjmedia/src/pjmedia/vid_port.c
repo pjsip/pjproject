@@ -485,11 +485,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_stop(pjmedia_vid_port *vp)
 
     PJ_ASSERT_RETURN(vp, PJ_EINVAL);
 
-    status = pjmedia_vid_dev_stream_stop(vp->strm);
-
     if (vp->clock) {
 	status = pjmedia_clock_stop(vp->clock);
     }
+
+    status = pjmedia_vid_dev_stream_stop(vp->strm);
 
     return status;
 }
