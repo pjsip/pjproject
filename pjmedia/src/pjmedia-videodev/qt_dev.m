@@ -594,6 +594,8 @@ static pj_status_t qt_stream_stop(pjmedia_vid_dev_stream *strm)
     if (stream->cap_session && [stream->cap_session isRunning])
 	[stream->cap_session stopRunning];
     
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    
     return PJ_SUCCESS;
 }
 
