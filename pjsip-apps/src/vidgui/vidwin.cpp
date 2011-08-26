@@ -102,7 +102,7 @@ void VidWin::attach()
     HWND new_parent = (HWND)winId();
     orig_parent = GetParent(w);
 
-    SetWindowLong(w, GWL_STYLE, WS_CHILD);
+    //SetWindowLong(w, GWL_STYLE, WS_CHILD);
     SetParent(w, new_parent);
     TRACE_("%p new parent handle = %p", w, new_parent);
 }
