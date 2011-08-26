@@ -23,6 +23,8 @@
 
 #if PJSUA_HAS_VIDEO
 
+#define VID_TEE_MAX_PORT    (PJSUA_MAX_CALLS + 1)
+
 static void free_vid_win(pjsua_vid_win_id wid);
 
 /*****************************************************************************
@@ -405,7 +407,8 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	fmt = &fmt_;
 
 	/* Create video tee */
-	status = pjmedia_vid_tee_create(w->pool, fmt, 2, &w->tee);
+	status = pjmedia_vid_tee_create(w->pool, fmt, VID_TEE_MAX_PORT,
+					&w->tee);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }

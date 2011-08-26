@@ -29,7 +29,6 @@
 
 #define TEE_PORT_NAME	"vid_tee"
 #define TEE_PORT_SIGN	PJMEDIA_SIG_PORT_VID_TEE
-#define MAX_DST_PORT_COUNT 20
 
 
 typedef struct vid_tee_dst_port
@@ -51,6 +50,7 @@ typedef struct vid_tee_port
     unsigned		 dst_port_maxcnt;
     unsigned		 dst_port_cnt;
     vid_tee_dst_port	*dst_ports;
+    pj_uint8_t		*put_frm_flag;
     
     struct vid_tee_conv_t {
         pjmedia_converter   *conv;
@@ -79,7 +79,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && fmt && p_vid_tee, PJ_EINVAL);
     PJ_ASSERT_RETURN(fmt->type == PJMEDIA_TYPE_VIDEO, PJ_EINVAL);
-    PJ_ASSERT_RETURN(max_dst_cnt <= MAX_DST_PORT_COUNT, PJ_ETOOMANY);
 
     /* Allocate video tee structure */
     tee = PJ_POOL_ZALLOC_T(pool, vid_tee_port);
@@ -94,6 +93,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_create( pj_pool_t *pool,
     tee->tee_conv = (struct vid_tee_conv_t *)
                     pj_pool_calloc(pool, max_dst_cnt,
                                    sizeof(struct vid_tee_conv_t));
+    tee->put_frm_flag = (pj_uint8_t*)
+			pj_pool_calloc(pool, max_dst_cnt,
+				       sizeof(tee->put_frm_flag[0]));
 
     /* Initialize video tee buffer, its size is one frame */
     vfi = pjmedia_get_video_format_info(NULL, fmt->id);
@@ -295,14 +297,15 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
 {
     vid_tee_port *tee = (vid_tee_port*)port;
     unsigned i, j;
-    pj_bool_t done[MAX_DST_PORT_COUNT];
-    
-    pj_bzero(done, sizeof(done));
+    const pj_uint8_t PUT_FRM_DONE = 1;
+
+    pj_bzero(tee->put_frm_flag, tee->dst_port_cnt *
+				sizeof(tee->put_frm_flag[0]));
 
     for (i = 0; i < tee->dst_port_cnt; ++i) {
 	pjmedia_frame frame_ = *frame;
 
-        if (done[i])
+        if (tee->put_frm_flag[i])
             continue;
         
         if (tee->tee_conv[i].conv) {
@@ -327,7 +330,7 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
         for (j = i; j < tee->dst_port_cnt; ++j) {
             pjmedia_frame framep;
             
-            if (done[j] ||
+            if (tee->put_frm_flag[j] ||
                 (tee->dst_ports[j].dst->info.fmt.id != 
                  tee->dst_ports[i].dst->info.fmt.id) ||
                 (tee->dst_ports[j].dst->info.fmt.det.vid.size.w != 
@@ -352,7 +355,7 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
 
             /* Deliver the data */
             pjmedia_port_put_frame(tee->dst_ports[j].dst, &framep);
-            done[j] = PJ_TRUE;
+            tee->put_frm_flag[j] = PUT_FRM_DONE;
             
             if (!tee->tee_conv[i].conv)
                 break;
