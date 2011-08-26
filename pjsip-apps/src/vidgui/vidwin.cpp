@@ -46,41 +46,41 @@ VidWin::VidWin(const pjmedia_vid_dev_hwnd *hwnd_,
 
 VidWin::~VidWin()
 {
+    show(false);
     detach();
-    pj_bzero(&hwnd, sizeof(hwnd));
-    size_hint = QSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-    destroy(true, false);
 }
 
 bool VidWin::event(QEvent *e)
 {
     switch(e->type()) {
+
     case QEvent::Resize:
-	{
-	    // revert to default size hint, make it resizable
-	    setFixedSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
-	    // resize now
-	    set_size();
-	}
+	set_size();
 	break;
-    case QEvent::ParentAboutToChange:
-	get_size();
-	setFixedSize(size_hint);
-	break;
+
     case QEvent::ParentChange:
-	{
-	    get_size();
-	    /*
+	get_size();
+	if (0) {
 	    QRect qr = rect();
 	    if (qr.width() > size_hint.width())
 		size_hint.setWidth(qr.width());
 	    if (qr.height() > size_hint.height())
 		size_hint.setWidth(qr.height());
-	    */
-	    setFixedSize(size_hint);
-	    attach();
 	}
+	setFixedSize(size_hint);
+	attach();
 	break;
+
+    case QEvent::Show:
+	show(true);
+	// revert to default size hint, make it resizable
+	setFixedSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
+	break;
+
+    case QEvent::Hide:
+	show(false);
+	break;
+
     default:
 	break;
     }
@@ -102,9 +102,8 @@ void VidWin::attach()
     HWND new_parent = (HWND)winId();
     orig_parent = GetParent(w);
 
-    SetParent(w, new_parent);
     SetWindowLong(w, GWL_STYLE, WS_CHILD);
-    ShowWindow(w, SW_SHOWNOACTIVATE);
+    SetParent(w, new_parent);
     TRACE_("%p new parent handle = %p", w, new_parent);
 }
 
@@ -113,7 +112,6 @@ void VidWin::detach()
     if (!hwnd.info.win.hwnd) return;
 
     HWND w = (HWND)hwnd.info.win.hwnd;
-    ShowWindow(w, SW_HIDE);
     SetParent(w, (HWND)orig_parent);
     TRACE_("%p revert parent handle to %p", w, orig_parent);
 }
@@ -144,7 +142,8 @@ void VidWin::show(bool visible)
 {
     if (!hwnd.info.win.hwnd) return;
 
-    ShowWindow(hwnd.info.win.hwnd, visible ? SW_SHOW : SW_HIDE);
+    HWND w = (HWND)hwnd.info.win.hwnd;
+    ShowWindow(w, visible ? SW_SHOW : SW_HIDE);
 }
 
 #elif defined(__APPLE__)

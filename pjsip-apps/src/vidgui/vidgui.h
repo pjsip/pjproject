@@ -47,28 +47,35 @@ public:
 
     bool initStack();
     void showError(const char *title, pj_status_t status);
-    void showStatus(const char *);
+    void showStatus(const char *msg);
 
-public:
     void on_reg_state(pjsua_acc_id acc_id);
     void on_call_state(pjsua_call_id call_id, pjsip_event *e);
     void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id, pjsip_rx_data *rdata);
     void on_call_media_state(pjsua_call_id call_id);
 
+signals:
+    void signalNewCall(int, bool);
+    void signalCallReleased();
+    void signalInitVideoWindow();
+    void signalShowStatus(const QString&);
+    
 public slots:
     void preview();
     void call();
     void hangup();
     void quit();
 
+    void onNewCall(int cid, bool incoming);
+    void onCallReleased();
+    void initVideoWindow();
+    void doShowStatus(const QString& msg);
+
 private:
     static MainWin *theInstance_;
     pjsua_acc_id accountId_;
     pjsua_call_id currentCall_;
     bool preview_on;
-
-    void onNewCall(pjsua_call_id cid, bool incoming);
-    void onCallReleased();
 
 private:
     QPushButton *callButton_,
@@ -85,7 +92,6 @@ private:
     QVBoxLayout *vbox_left;
 
     void initLayout();
-    void init_video_window();
 };
 
 

@@ -50,7 +50,7 @@ MainWin::MainWin(QWidget *parent)
     theInstance_ = this;
 
     initLayout();
-    onCallReleased();
+    emit signalCallReleased();
 }
 
 MainWin::~MainWin()
@@ -101,13 +101,20 @@ void MainWin::initLayout()
     connect(hangupButton_, SIGNAL(clicked()), this, SLOT(hangup()));
     connect(quitButton_, SIGNAL(clicked()), this, SLOT(quit()));
     //connect(this, SIGNAL(close()), this, SLOT(quit()));
+
+    // UI updates must be done in the UI thread!
+    connect(this, SIGNAL(signalNewCall(int, bool)),
+	    this, SLOT(onNewCall(int, bool)));
+    connect(this, SIGNAL(signalCallReleased()),
+	    this, SLOT(onCallReleased()));
+    connect(this, SIGNAL(signalInitVideoWindow()),
+	    this, SLOT(initVideoWindow()));
+    connect(this, SIGNAL(signalShowStatus(const QString&)),
+	    this, SLOT(doShowStatus(const QString&)));
 }
 
 void MainWin::quit()
 {
-    //if (preview_on)
-        //preview();
-
     delete video_prev_;
     video_prev_ = NULL;
     delete video_;
@@ -119,9 +126,16 @@ void MainWin::quit()
 
 void MainWin::showStatus(const char *msg)
 {
+    PJ_LOG(3,(THIS_FILE, "%s", msg));
+
+    QString msg_ = QString::fromUtf8(msg);
+    emit signalShowStatus(msg_);
+}
+
+void MainWin::doShowStatus(const QString& msg)
+{
     //statusBar_->showMessage(msg);
     statusBar_->setText(msg);
-    PJ_LOG(3,(THIS_FILE, "%s", msg));
 }
 
 void MainWin::showError(const char *title, pj_status_t status)
@@ -134,7 +148,7 @@ void MainWin::showError(const char *title, pj_status_t status)
     showStatus(errline);
 }
 
-void MainWin::onNewCall(pjsua_call_id cid, bool incoming)
+void MainWin::onNewCall(int cid, bool incoming)
 {
     pjsua_call_info ci;
 
@@ -205,7 +219,8 @@ void MainWin::preview()
 	//screen sometimes, probably because it's using different
 	//X11 Display
 	//status = pjsua_vid_win_set_show(wid, PJ_TRUE);
-	video_prev_->show();
+	//This is handled by VidWin now
+	//video_prev_->show();
 	showStatus("Preview started");
 
 	previewButton_->setText(tr("Stop &Preview"));
@@ -223,7 +238,9 @@ void MainWin::call()
     } else {
 	pj_status_t status;
 	QString dst = url_->text();
-	const char *uri = dst.toAscii().data();
+	char uri[256];
+
+	pj_ansi_strncpy(uri, dst.toAscii().data(), sizeof(uri));
 	pj_str_t uri2 = pj_str((char*)uri);
 
 	pj_assert(currentCall_ == -1);
@@ -242,11 +259,11 @@ void MainWin::hangup()
     pj_assert(currentCall_ != -1);
     //pjsua_call_hangup(currentCall_, PJSIP_SC_BUSY_HERE, NULL, NULL);
     pjsua_call_hangup_all();
-    onCallReleased();
+    emit signalCallReleased();
 }
 
 
-void MainWin::init_video_window()
+void MainWin::initVideoWindow()
 {
     pjsua_call_info ci;
     unsigned i;
@@ -310,7 +327,7 @@ void MainWin::on_call_state(pjsua_call_id call_id, pjsip_event *e)
     pjsua_call_get_info(call_id, &ci);
 
     if (currentCall_ == -1 && ci.state < PJSIP_INV_STATE_DISCONNECTED) {
-	onNewCall(call_id, false);
+	emit signalNewCall(call_id, false);
     }
 
     char status[80];
@@ -319,7 +336,7 @@ void MainWin::on_call_state(pjsua_call_id call_id, pjsip_event *e)
 	         ci.state_text.ptr,
 	         ci.last_status_text.ptr);
 	showStatus(status);
-	onCallReleased();
+	emit signalCallReleased();
     } else {
 	snprintf(status, sizeof(status), "Call is %s", pjsip_inv_state_name(ci.state));
 	showStatus(status);
@@ -337,7 +354,7 @@ void MainWin::on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	return;
     }
 
-    onNewCall(call_id, true);
+    emit signalNewCall(call_id, true);
 
     pjsua_call_info ci;
     char status[80];
@@ -365,7 +382,7 @@ void MainWin::on_call_media_state(pjsua_call_id call_id)
 		break;
 	    }
 	} else if (ci.media[i].type == PJMEDIA_TYPE_VIDEO) {
-	    init_video_window();
+	    emit signalInitVideoWindow();
 	}
     }
 }
