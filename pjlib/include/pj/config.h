@@ -1137,7 +1137,7 @@ PJ_BEGIN_DECL
  * Extra suffix for the version (e.g. "-trunk"), or empty for
  * web release version.
  */
-#define PJ_VERSION_NUM_EXTRA	"-alpha"
+#define PJ_VERSION_NUM_EXTRA	"-alpha-svn"
 
 /**
  * PJLIB version number consists of three bytes with the following format:
