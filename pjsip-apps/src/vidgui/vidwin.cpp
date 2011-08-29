@@ -46,7 +46,7 @@ VidWin::VidWin(const pjmedia_vid_dev_hwnd *hwnd_,
 
 VidWin::~VidWin()
 {
-    show(false);
+    show_sdl(false);
     detach();
 }
 
@@ -72,13 +72,13 @@ bool VidWin::event(QEvent *e)
 	break;
 
     case QEvent::Show:
-	show(true);
+	show_sdl(true);
 	// revert to default size hint, make it resizable
 	setFixedSize(QWIDGETSIZE_MAX, QWIDGETSIZE_MAX);
 	break;
 
     case QEvent::Hide:
-	show(false);
+	show_sdl(false);
 	break;
 
     default:
@@ -138,7 +138,7 @@ void VidWin::get_size()
     TRACE_("%p size = %dx%d", w, size_hint.width(), size_hint.height());
 }
 
-void VidWin::show(bool visible)
+void VidWin::show_sdl(bool visible)
 {
     if (!hwnd.info.win.hwnd) return;
 
@@ -209,18 +209,16 @@ void VidWin::get_size()
     TRACE_("%p size = %dx%d", 0, size_hint.width(), size_hint.height());
 }
 
-void VidWin::show(bool visible)
+void VidWin::show_sdl(bool visible)
 {
     if (!hwnd.info.cocoa.window) return;
 
     NSWindow *w = (NSWindow*)hwnd.info.cocoa.window;
 
     if (visible) {
-	if (![w isMiniaturized]) {
-	    [w makeKeyAndOrderFront:nil];
-	}
+        [[w contentView]setHidden:NO];
     } else {
-	[w orderOut:nil];
+        [[w contentView]setHidden:YES];
     }
 }
 
@@ -284,7 +282,7 @@ void VidWin::get_size()
     TRACE_("%p size = %dx%d", w, size_hint.width(), size_hint.height());
 }
 
-void VidWin::show(bool visible)
+void VidWin::show_sdl(bool visible)
 {
     if (!hwnd.info.x11.window) return;
 

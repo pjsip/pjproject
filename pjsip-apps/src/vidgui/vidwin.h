@@ -45,7 +45,7 @@ private:
     void detach();
     void set_size();
     void get_size();
-    void show(bool visible=true);
+    void show_sdl(bool visible=true);
 };
 
 #endif
