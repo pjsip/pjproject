@@ -167,7 +167,7 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     /* Save some port's infos, for convenience. */
     conf_port->port = port;
     conf_port->info = &port->info;
-    conf_port->samples_per_frame= PJMEDIA_PINFO_SAMPLES_PER_FRAME(&port->info);
+    conf_port->samples_per_frame = PJMEDIA_PIA_SPF(&port->info);
 
     /* Init pjmedia_frame structure in the TX buffer. */
     f = (pjmedia_frame*)conf_port->tx_buf;
@@ -1227,8 +1227,7 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 	/* Var "ci" is to count how many ports have been visited so far. */
 	++ci;
 
-	master_samples_per_frame = PJMEDIA_PINFO_SAMPLES_PER_FRAME(
-					&conf->master_port->info);
+	master_samples_per_frame = PJMEDIA_PIA_SPF(&conf->master_port->info);
 
 	/* Update clock of the port. */
 	pj_add_timestamp32(&cport->ts_clock, master_samples_per_frame);
