@@ -790,9 +790,7 @@ void stop_video_stream(pjsua_call_media *call_med)
     pjmedia_event_unsubscribe(&call_med->esub_rend);
     pjmedia_event_unsubscribe(&call_med->esub_cap);
 
-    if (call_med->dir & PJMEDIA_DIR_ENCODING &&
-	call_med->strm.v.cap_win_id != PJSUA_INVALID_ID)
-    {
+    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
 	pjmedia_port *media_port;
 	pjsua_vid_win *w =
 		    &pjsua_var.win[call_med->strm.v.cap_win_id];
@@ -809,9 +807,7 @@ void stop_video_stream(pjsua_call_media *call_med)
 	dec_vid_win(call_med->strm.v.cap_win_id);
     }
 
-    if (call_med->dir & PJMEDIA_DIR_DECODING &&
-	call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID)
-    {
+    if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 	dec_vid_win(call_med->strm.v.rdr_win_id);
     }
 
