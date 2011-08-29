@@ -356,6 +356,12 @@ static pj_status_t vid4lin_factory_refresh(pjmedia_vid_dev_factory *f)
     vid4lin_factory *cf = (vid4lin_factory*)f;
     pj_status_t status;
 
+    /* libv4l2 annoyingly writes "libv4l2: error dequeuing buf: Resource
+     * temporarily unavailable" too many times to stderr. Turn it off
+     * for good.
+     */
+    v4l2_log_file = fopen("/dev/null", "w");
+
     status = v4l2_scan_devs(cf);
     if (status != PJ_SUCCESS)
 	return status;
