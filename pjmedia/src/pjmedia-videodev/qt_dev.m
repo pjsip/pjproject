@@ -65,11 +65,17 @@ struct qt_factory
     struct qt_dev_info		*dev_info;
 };
 
-@interface VOutDelegate: NSObject
+struct qt_stream;
+typedef void (*func_ptr)(struct qt_stream *strm);
+
+@interface QTDelegate: NSObject
 {
 @public
-    struct qt_stream *stream;
+    struct qt_stream *strm;
+    func_ptr          func;
 }
+
+- (void)run_func;
 @end
 
 /* Video stream. */
@@ -90,11 +96,15 @@ struct qt_stream
     pj_thread_desc	    cap_thread_desc;
     pj_thread_t		   *cap_thread;
     
-    NSAutoreleasePool			*apool;
+    struct qt_factory      *qf;
+    pj_status_t             status;
+    pj_bool_t               is_running;
+    pj_bool_t               cap_exited;
+    
     QTCaptureSession			*cap_session;
     QTCaptureDeviceInput		*dev_input;
     QTCaptureDecompressedVideoOutput	*video_output;
-    VOutDelegate			*vout_delegate;
+    QTDelegate                          *qt_delegate;
 };
 
 
@@ -324,40 +334,6 @@ static pj_status_t qt_factory_default_param(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-@implementation VOutDelegate
-- (void)captureOutput:(QTCaptureOutput *)captureOutput
-		      didOutputVideoFrame:(CVImageBufferRef)videoFrame
-		      withSampleBuffer:(QTSampleBuffer *)sampleBuffer
-		      fromConnection:(QTCaptureConnection *)connection
-{
-    unsigned size = [sampleBuffer lengthForAllSamples];
-    pjmedia_frame frame;
-
-    if (stream->cap_thread_initialized == 0 || !pj_thread_is_registered())
-    {
-	pj_thread_register("qt_cap", stream->cap_thread_desc,
-			   &stream->cap_thread);
-	stream->cap_thread_initialized = 1;
-	PJ_LOG(5,(THIS_FILE, "Capture thread started"));
-    }
-    
-    if (!videoFrame)
-	return;
-    
-    frame.type = PJMEDIA_TYPE_VIDEO;
-    frame.buf = [sampleBuffer bytesForAllSamples];
-    frame.size = size;
-    frame.bit_info = 0;
-    frame.timestamp.u64 = stream->cap_frame_ts.u64;
-    
-    if (stream->vid_cb.capture_cb)
-        (*stream->vid_cb.capture_cb)(&stream->base, stream->user_data,
-				     &frame);
-    
-    stream->cap_frame_ts.u64 += stream->cap_ts_inc;
-}
-@end
-
 static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
 {
     unsigned i;
@@ -368,6 +344,139 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
     }
     
     return NULL;
+}
+
+@implementation QTDelegate
+- (void)captureOutput:(QTCaptureOutput *)captureOutput
+		      didOutputVideoFrame:(CVImageBufferRef)videoFrame
+		      withSampleBuffer:(QTSampleBuffer *)sampleBuffer
+		      fromConnection:(QTCaptureConnection *)connection
+{
+    unsigned size = [sampleBuffer lengthForAllSamples];
+    pjmedia_frame frame;
+
+    if (!strm->is_running) {
+        strm->cap_exited = PJ_TRUE;
+        return;
+    }
+    
+    if (strm->cap_thread_initialized == 0 || !pj_thread_is_registered())
+    {
+	pj_thread_register("qt_cap", strm->cap_thread_desc,
+			   &strm->cap_thread);
+	strm->cap_thread_initialized = 1;
+	PJ_LOG(5,(THIS_FILE, "Capture thread started"));
+    }
+    
+    if (!videoFrame)
+	return;
+    
+    frame.type = PJMEDIA_TYPE_VIDEO;
+    frame.buf = [sampleBuffer bytesForAllSamples];
+    frame.size = size;
+    frame.bit_info = 0;
+    frame.timestamp.u64 = strm->cap_frame_ts.u64;
+    
+    if (strm->vid_cb.capture_cb)
+        (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
+    
+    strm->cap_frame_ts.u64 += strm->cap_ts_inc;
+}
+
+- (void)run_func
+{
+    (*func)(strm);
+}
+
+@end
+
+static void init_qt(struct qt_stream *strm)
+{
+    const pjmedia_video_format_detail *vfd;
+    qt_fmt_info *qfi = get_qt_format_info(strm->param.fmt.id);
+    BOOL success = NO;
+    NSError *error;
+    
+    if (!qfi) {
+        strm->status = PJMEDIA_EVID_BADFORMAT;
+        return;
+    }
+    
+    strm->cap_session = [[QTCaptureSession alloc] init];
+    if (!strm->cap_session) {
+        strm->status = PJ_ENOMEM;
+        return;
+    }
+    
+    /* Open video device */
+    QTCaptureDevice *videoDevice = 
+        [QTCaptureDevice deviceWithUniqueID:
+                         [NSString stringWithCString:
+                                   strm->qf->dev_info[strm->param.cap_id].dev_id
+                                   encoding:
+                                   [NSString defaultCStringEncoding]]];
+    if (!videoDevice || ![videoDevice open:&error]) {
+        strm->status = PJMEDIA_EVID_SYSERR;
+        return;
+    }
+    
+    /* Add the video device to the session as a device input */	
+    strm->dev_input = [[QTCaptureDeviceInput alloc] 
+                       initWithDevice:videoDevice];
+    success = [strm->cap_session addInput:strm->dev_input error:&error];
+    if (!success) {
+        strm->status = PJMEDIA_EVID_SYSERR;
+        return;
+    }
+    
+    strm->video_output = [[QTCaptureDecompressedVideoOutput alloc] init];
+    success = [strm->cap_session addOutput:strm->video_output
+                                 error:&error];
+    if (!success) {
+        strm->status = PJMEDIA_EVID_SYSERR;
+        return;
+    }
+    
+    vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt,
+                                                 PJ_TRUE);
+    [strm->video_output setPixelBufferAttributes:
+                        [NSDictionary dictionaryWithObjectsAndKeys:
+                                      [NSNumber numberWithInt:qfi->qt_format],
+                                      kCVPixelBufferPixelFormatTypeKey,
+                                      [NSNumber numberWithInt:vfd->size.w],
+                                      kCVPixelBufferWidthKey,
+                                      [NSNumber numberWithInt:vfd->size.h],
+                                      kCVPixelBufferHeightKey, nil]];
+    
+    pj_assert(vfd->fps.num);
+    strm->cap_ts_inc = PJMEDIA_SPF2(strm->param.clock_rate, &vfd->fps, 1);
+    
+    if ([strm->video_output
+         respondsToSelector:@selector(setMinimumVideoFrameInterval)])
+    {
+        [strm->video_output setMinimumVideoFrameInterval:
+                            (1.0f * vfd->fps.denum / (double)vfd->fps.num)];
+    }
+    
+    strm->qt_delegate = [[QTDelegate alloc]init];
+    strm->qt_delegate->strm = strm;
+    [strm->video_output setDelegate:strm->qt_delegate];
+}    
+
+static void run_func_on_main_thread(struct qt_stream *strm, func_ptr func)
+{
+    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    QTDelegate *delg = [[QTDelegate alloc] init];
+    
+    delg->strm = strm;
+    delg->func = func;
+    [delg performSelectorOnMainThread:@selector(run_func)
+                           withObject:nil waitUntilDone:YES];
+    
+    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+
+    [delg release];
+    [pool release];    
 }
 
 /* API: create stream */
@@ -383,8 +492,6 @@ static pj_status_t qt_factory_create_stream(
     struct qt_stream *strm;
     const pjmedia_video_format_info *vfi;
     pj_status_t status = PJ_SUCCESS;
-    BOOL success = NO;
-    NSError *error;    
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -405,82 +512,15 @@ static pj_status_t qt_factory_create_stream(
     strm->pool = pool;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
-    strm->apool = [[NSAutoreleasePool alloc]init];
-    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_COLORBAR);
+    strm->qf = qf;
+    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_QT);
 
     /* Create capture stream here */
-    if (param->dir & PJMEDIA_DIR_CAPTURE) {
-	const pjmedia_video_format_detail *vfd;
-	qt_fmt_info *qfi = get_qt_format_info(param->fmt.id);
-	
-	if (!qfi) {
-	    status = PJMEDIA_EVID_BADFORMAT;
-	    goto on_error;
-	}
-
-	strm->cap_session = [[QTCaptureSession alloc] init];
-	if (!strm->cap_session) {
-	    status = PJ_ENOMEM;
-	    goto on_error;
-	}
-	
-	/* Open video device */
-	QTCaptureDevice *videoDevice = 
-	    [QTCaptureDevice deviceWithUniqueID:
-			     [NSString stringWithCString:
-				       qf->dev_info[param->cap_id].dev_id
-				       encoding:
-				       [NSString defaultCStringEncoding]]];
-	if (!videoDevice || ![videoDevice open:&error]) {
-	    status = PJMEDIA_EVID_SYSERR;
-	    goto on_error;
-	}
-	
-	/* Add the video device to the session as a device input */	
-	strm->dev_input = [[QTCaptureDeviceInput alloc] 
-			   initWithDevice:videoDevice];
-	success = [strm->cap_session addInput:strm->dev_input error:&error];
-	if (!success) {
-	    status = PJMEDIA_EVID_SYSERR;
-	    goto on_error;
-	}
-	
-	strm->video_output = [[QTCaptureDecompressedVideoOutput alloc] init];
-	success = [strm->cap_session addOutput:strm->video_output
-				     error:&error];
-	if (!success) {
-	    status = PJMEDIA_EVID_SYSERR;
-	    goto on_error;
-	}
-	
-	vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt,
-						     PJ_TRUE);
-	[strm->video_output setPixelBufferAttributes:
-			    [NSDictionary dictionaryWithObjectsAndKeys:
-					  [NSNumber numberWithInt:
-						    qfi->qt_format],
-					  kCVPixelBufferPixelFormatTypeKey,
-					  [NSNumber numberWithInt:
-						    vfd->size.w],
-					  kCVPixelBufferWidthKey,
-					  [NSNumber numberWithInt:
-						    vfd->size.h],
-					  kCVPixelBufferHeightKey, nil]];
-
-	pj_assert(vfd->fps.num);
-	strm->cap_ts_inc = PJMEDIA_SPF2(strm->param.clock_rate, &vfd->fps, 1);
-	
-	if ([strm->video_output
-	     respondsToSelector:@selector(setMinimumVideoFrameInterval)])
-	{
-	    [strm->video_output setMinimumVideoFrameInterval:
-				(1.0f * vfd->fps.denum /
-				 (double)vfd->fps.num)];
-	}
-	
-	strm->vout_delegate = [[VOutDelegate alloc]init];
-	strm->vout_delegate->stream = strm;
-	[strm->video_output setDelegate:strm->vout_delegate];
+    if (param->dir & PJMEDIA_DIR_CAPTURE) {        
+        strm->status = PJ_SUCCESS;
+        run_func_on_main_thread(strm, init_qt);
+        if ((status = strm->status) != PJ_SUCCESS)
+            goto on_error;
     }
     
     /* Apply the remaining settings */
@@ -561,6 +601,16 @@ static pj_status_t qt_stream_set_cap(pjmedia_vid_dev_stream *s,
     return PJMEDIA_EVID_INVCAP;
 }
 
+static void start_qt(struct qt_stream *strm)
+{
+    [strm->cap_session startRunning];
+}
+
+static void stop_qt(struct qt_stream *strm)
+{
+    [strm->cap_session stopRunning];
+}
+
 /* API: Start stream. */
 static pj_status_t qt_stream_start(pjmedia_vid_dev_stream *strm)
 {
@@ -571,12 +621,12 @@ static pj_status_t qt_stream_start(pjmedia_vid_dev_stream *strm)
     PJ_LOG(4, (THIS_FILE, "Starting qt video stream"));
 
     if (stream->cap_session) {
-	[stream->cap_session startRunning];
+        run_func_on_main_thread(stream, start_qt);
     
 	if (![stream->cap_session isRunning])
-	    return PJ_EUNKNOWN;
-	
-	CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+	    return PJMEDIA_EVID_NOTREADY;
+        
+        stream->is_running = PJ_TRUE;
     }
 
     return PJ_SUCCESS;
@@ -591,14 +641,43 @@ static pj_status_t qt_stream_stop(pjmedia_vid_dev_stream *strm)
 
     PJ_LOG(4, (THIS_FILE, "Stopping qt video stream"));
 
-    if (stream->cap_session && [stream->cap_session isRunning])
-	[stream->cap_session stopRunning];
-    
-    CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
+    if (stream->cap_session && [stream->cap_session isRunning]) {
+        int i;
+        
+        stream->cap_exited = PJ_FALSE;
+        run_func_on_main_thread(stream, stop_qt);
+        
+        stream->is_running = PJ_FALSE;
+        for (i = 50; i >= 0 && !stream->cap_exited; i--) {
+            pj_thread_sleep(10);
+        }
+    }
     
     return PJ_SUCCESS;
 }
 
+static void destroy_qt(struct qt_stream *strm)
+{
+    if (strm->dev_input && [[strm->dev_input device] isOpen])
+	[[strm->dev_input device] close];
+    
+    if (strm->cap_session) {
+	[strm->cap_session release];
+	strm->cap_session = NULL;
+    }
+    if (strm->dev_input) {
+	[strm->dev_input release];
+	strm->dev_input = NULL;
+    }
+    if (strm->qt_delegate) {
+	[strm->qt_delegate release];
+	strm->qt_delegate = NULL;
+    }
+    if (strm->video_output) {
+	[strm->video_output release];
+	strm->video_output = NULL;
+    }
+}
 
 /* API: Destroy stream. */
 static pj_status_t qt_stream_destroy(pjmedia_vid_dev_stream *strm)
@@ -608,28 +687,9 @@ static pj_status_t qt_stream_destroy(pjmedia_vid_dev_stream *strm)
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     qt_stream_stop(strm);
-    
-    if (stream->dev_input && [[stream->dev_input device] isOpen])
-	[[stream->dev_input device] close];
-    
-    if (stream->cap_session) {
-	[stream->cap_session release];
-	stream->cap_session = NULL;
-    }
-    if (stream->dev_input) {
-	[stream->dev_input release];
-	stream->dev_input = NULL;
-    }
-    if (stream->vout_delegate) {
-	[stream->vout_delegate release];
-	stream->vout_delegate = NULL;
-    }
-    if (stream->video_output) {
-	[stream->video_output release];
-	stream->video_output = NULL;
-    }
 
-//    [stream->apool release];
+    run_func_on_main_thread(stream, destroy_qt);
+    
     pj_pool_release(stream->pool);
 
     return PJ_SUCCESS;
