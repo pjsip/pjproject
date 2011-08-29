@@ -43,6 +43,7 @@
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 
+#define ENABLE_H264	0
 
 /* Prototypes for FFMPEG codecs factory */
 static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory, 
@@ -89,9 +90,6 @@ static pj_status_t  ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 				         const pjmedia_frame *input,
 				         unsigned output_buf_len, 
 				         pjmedia_frame *output);
-static pj_status_t  ffmpeg_codec_recover( pjmedia_vid_codec *codec, 
-				          unsigned output_buf_len, 
-				          pjmedia_frame *output);
 
 /* Definition for FFMPEG codecs operations. */
 static pjmedia_vid_codec_op ffmpeg_op = 
@@ -105,7 +103,7 @@ static pjmedia_vid_codec_op ffmpeg_op =
     &ffmpeg_unpacketize,
     &ffmpeg_codec_encode,
     &ffmpeg_codec_decode,
-    NULL //&ffmpeg_codec_recover
+    NULL
 };
 
 /* Definition for FFMPEG codecs factory operations. */
@@ -219,6 +217,7 @@ struct ffmpeg_codec_desc
 };
 
 
+#if ENABLE_H264
 /* H264 constants */
 #define PROFILE_H264_BASELINE		66
 #define PROFILE_H264_MAIN		77
@@ -226,9 +225,11 @@ struct ffmpeg_codec_desc
 /* Codec specific functions */
 static pj_status_t h264_preopen(ffmpeg_private *ff);
 static pj_status_t h264_postopen(ffmpeg_private *ff);
-static pj_status_t h263_preopen(ffmpeg_private *ff);
 static FUNC_PACKETIZE(h264_packetize);
 static FUNC_UNPACKETIZE(h264_unpacketize);
+#endif	/* ENABLE_H264 */
+
+static pj_status_t h263_preopen(ffmpeg_private *ff);
 static FUNC_PACKETIZE(h263_packetize);
 static FUNC_UNPACKETIZE(h263_unpacketize);
 
@@ -236,6 +237,7 @@ static FUNC_UNPACKETIZE(h263_unpacketize);
 /* Internal codec info */
 ffmpeg_codec_desc codec_desc[] =
 {
+#if ENABLE_H264
     {
 	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
@@ -255,6 +257,7 @@ ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"profile-level-id",16},    {"42001e",6}}, 
 	      {{" packetization-mode",19},  {"1",1}}, } },
     },
+#endif
     {
 	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
 	PJMEDIA_FORMAT_H263,	1000000,    2000000,
@@ -287,7 +290,7 @@ ffmpeg_codec_desc codec_desc[] =
     },
 };
 
-
+#if ENABLE_H264
 typedef struct h264_data
 {
     pjmedia_vid_codec_h264_fmtp	 fmtp;
@@ -418,7 +421,7 @@ static FUNC_UNPACKETIZE(h264_unpacketize)
     return pjmedia_h264_unpacketize(data->pktz, payload, payload_len,
 				    bits, bits_len, bits_pos);
 }
-
+#endif	/* ENABLE_H264 */
 
 typedef struct h263_data
 {
@@ -1472,19 +1475,6 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     return PJ_SUCCESS;
 }
 
-/* 
- * Recover lost frame.
- */
-static pj_status_t  ffmpeg_codec_recover( pjmedia_vid_codec *codec, 
-				          unsigned output_buf_len, 
-				          pjmedia_frame *output)
-{
-    PJ_UNUSED_ARG(codec);
-    PJ_UNUSED_ARG(output_buf_len);
-    PJ_UNUSED_ARG(output);
-
-    return PJ_ENOTSUP;
-}
 
 #ifdef _MSC_VER
 #   pragma comment( lib, "avcodec.lib")
