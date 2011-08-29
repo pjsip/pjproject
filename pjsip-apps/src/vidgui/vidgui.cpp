@@ -623,15 +623,9 @@ static pjsip_module mod_default_handler =
     NULL,				/* on_tsx_state()	*/
 
 };
-static int main_func(int argc, char *argv[])
-{
-    return 0;
-}
 
 int main(int argc, char *argv[])
 {
-    pj_run_app(&main_func, argc, argv, 0);
-    
     /* At least on Linux, we have to initialize SDL video subsystem prior to
      * creating/initializing QApplication, otherwise we'll segfault miserably
      * in SDL_CreateWindow(). Here's a stack trace if you're interested:
