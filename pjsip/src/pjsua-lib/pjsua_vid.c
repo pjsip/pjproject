@@ -23,6 +23,7 @@
 
 #if PJSUA_HAS_VIDEO
 
+#define ENABLE_EVENT	    0
 #define VID_TEE_MAX_PORT    (PJSUA_MAX_CALLS + 1)
 
 static void free_vid_win(pjsua_vid_win_id wid);
@@ -647,10 +648,12 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 
 	    w = &pjsua_var.win[wid];
 
+#if ENABLE_EVENT
 	    /* Register to video events */
 	    pjmedia_event_subscribe(
 		    pjmedia_vid_port_get_event_publisher(w->vp_rend),
 		    &call_med->esub_rend);
+#endif
 	    
 	    /* Connect renderer to stream */
 	    status = pjmedia_vid_port_connect(w->vp_rend, media_port,
@@ -693,10 +696,11 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 		return status;
 
 	    w = &pjsua_var.win[wid];
-
+#if ENABLE_EVENT
 	    pjmedia_event_subscribe(
 		    pjmedia_vid_port_get_event_publisher(w->vp_cap),
 		    &call_med->esub_cap);
+#endif
 	    
 	    /* Connect stream to capturer (via video window tee) */
 	    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, media_port);
@@ -1474,9 +1478,11 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	return status;
 
+#if ENABLE_EVENT
     pjmedia_event_subscribe(
 	    pjmedia_vid_port_get_event_publisher(w->vp_rend),
 	    &call_med->esub_cap);
+#endif
 
     /* Start renderer */
     status = pjmedia_vid_port_start(new_w->vp_rend);
