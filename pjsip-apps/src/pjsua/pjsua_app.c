@@ -3773,7 +3773,7 @@ static void vid_handle_menu(char *menuin)
 	argv[argc] = strtok(NULL, " \t\r\n");
     }
 
-    if (strcmp(argv[1], "help")==0 || argc == 1) {
+    if (argc == 1 || strcmp(argv[1], "help")==0) {
 	vid_show_help();
     } else if (strcmp(argv[1], "call")==0) {
 	pjsua_call_vid_strm_op_param param;
