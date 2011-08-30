@@ -493,6 +493,13 @@ typedef struct pj_in_addr
  */
 #define PJ_INET6_ADDRSTRLEN	46
 
+/**
+ * The size of sin_zero field in pj_sockaddr_in structure. Most OSes
+ * use 8, but others such as the BSD TCP/IP stack in eCos uses 24.
+ */
+#ifndef PJ_SOCKADDR_IN_SIN_ZERO_LEN
+#   define PJ_SOCKADDR_IN_SIN_ZERO_LEN	8
+#endif
 
 /**
  * This structure describes Internet socket address.
@@ -512,7 +519,7 @@ struct pj_sockaddr_in
 #endif
     pj_uint16_t	sin_port;	/**< Transport layer port number.   */
     pj_in_addr	sin_addr;	/**< IP address.		    */
-    char	sin_zero[8];	/**< Padding.			    */
+    char	sin_zero[PJ_SOCKADDR_IN_SIN_ZERO_LEN]; /**< Padding.*/
 };
 
 
