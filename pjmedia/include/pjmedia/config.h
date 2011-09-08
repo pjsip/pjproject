@@ -387,12 +387,22 @@
 
 
 /**
- * Number of packets received from different source IP address from the
+ * Number of RTP packets received from different source IP address from the
  * remote address required to make the stream switch transmission
  * to the source address.
  */
 #ifndef PJMEDIA_RTP_NAT_PROBATION_CNT	
 #  define PJMEDIA_RTP_NAT_PROBATION_CNT		10
+#endif
+
+
+/**
+ * Number of RTCP packets received from different source IP address from the
+ * remote address required to make the stream switch RTCP transmission
+ * to the source address.
+ */
+#ifndef PJMEDIA_RTCP_NAT_PROBATION_CNT
+#  define PJMEDIA_RTCP_NAT_PROBATION_CNT	3
 #endif
 
 
