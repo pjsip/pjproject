@@ -104,8 +104,10 @@ typedef struct uas_state_t
 /* UAC state */
 typedef struct uac_state_t
 {
-	pj_int32_t	cseq;
-	pj_uint32_t	rseq;	/* Initialized to -1 */
+    pj_str_t		tag;	/* To tag	     	*/
+    pj_int32_t		cseq;
+    pj_uint32_t		rseq;	/* Initialized to -1 	*/
+    struct uac_state_t *next;	/* next call leg	*/
 } uac_state_t;
 
 
@@ -114,7 +116,7 @@ struct dlg_data
 {
 	pjsip_inv_session	*inv;
 	uas_state_t		*uas_state;
-	uac_state_t		*uac_state;
+	uac_state_t		*uac_state_list;
 };
 
 
@@ -230,6 +232,8 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
 					       pjsip_tx_data **p_tdata)
 {
     dlg_data *dd;
+    uac_state_t *uac_state = NULL;
+    const pj_str_t *to_tag = &rdata->msg_info.to->tag;
     pjsip_transaction *tsx;
     pjsip_msg *msg;
     pjsip_generic_string_hdr *rseq_hdr;
@@ -260,47 +264,76 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
 	       pjsip_msg_find_hdr_by_name(msg, &RSEQ, NULL);
     if (rseq_hdr == NULL) {
 	PJ_LOG(4,(dd->inv->dlg->obj_name, 
-		 "Ignoring provisional response with no RSeq header"));
+		 "Ignoring 100rel response with no RSeq header"));
 	return PJSIP_EMISSINGHDR;
     }
     rseq = (pj_uint32_t) pj_strtoul(&rseq_hdr->hvalue);
 
-    /* Create new UAC state if we don't have one */
-    if (dd->uac_state == NULL) {
-	dd->uac_state = PJ_POOL_ZALLOC_T(dd->inv->dlg->pool,
-					 uac_state_t);
-	dd->uac_state->cseq = rdata->msg_info.cseq->cseq;
-	dd->uac_state->rseq = rseq - 1;
+    /* Find UAC state for the specified call leg */
+    uac_state = dd->uac_state_list;
+    while (uac_state) {
+	if (pj_strcmp(&uac_state->tag, to_tag)==0)
+	    break;
+	uac_state = uac_state->next;
     }
 
-    /* If this is from new INVITE transaction, reset UAC state */
-    if (rdata->msg_info.cseq->cseq != dd->uac_state->cseq) {
-	dd->uac_state->cseq = rdata->msg_info.cseq->cseq;
-	dd->uac_state->rseq = rseq - 1;
+    /* Create new UAC state if we don't have one */
+    if (uac_state == NULL) {
+	uac_state = PJ_POOL_ZALLOC_T(dd->inv->dlg->pool, uac_state_t);
+	uac_state->cseq = rdata->msg_info.cseq->cseq;
+	uac_state->rseq = rseq - 1;
+	pj_strdup(dd->inv->dlg->pool, &uac_state->tag, to_tag);
+	uac_state->next = dd->uac_state_list;
+	dd->uac_state_list = uac_state;
+    }
+
+    /* If this is from new INVITE transaction, reset UAC state. */
+    if (rdata->msg_info.cseq->cseq != uac_state->cseq) {
+	uac_state->cseq = rdata->msg_info.cseq->cseq;
+	uac_state->rseq = rseq - 1;
     }
 
     /* Ignore provisional response retransmission */
-    if (rseq <= dd->uac_state->rseq) {
+    if (rseq <= uac_state->rseq) {
 	/* This should have been handled before */
 	return PJ_EIGNORED;
 
     /* Ignore provisional response with out-of-order RSeq */
-    } else if (rseq != dd->uac_state->rseq + 1) {
+    } else if (rseq != uac_state->rseq + 1) {
 	PJ_LOG(4,(dd->inv->dlg->obj_name, 
-		 "Ignoring provisional response because RSeq jump "
+		 "Ignoring 100rel response because RSeq jump "
 		 "(expecting %u, got %u)",
-		 dd->uac_state->rseq+1, rseq));
+		 uac_state->rseq+1, rseq));
 	return PJ_EIGNORED;
     }
 
     /* Update our RSeq */
-    dd->uac_state->rseq = rseq;
+    uac_state->rseq = rseq;
 
     /* Create PRACK */
     status = pjsip_dlg_create_request(dd->inv->dlg, &pjsip_prack_method,
 				      -1, &tdata);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* If this response is a forked response from a different call-leg,
+     * update the req URI (https://trac.pjsip.org/repos/ticket/1364)
+     */
+    if (pj_strcmp(&uac_state->tag, &dd->inv->dlg->remote.info->tag)) {
+	const pjsip_contact_hdr *mhdr;
+
+	mhdr = (const pjsip_contact_hdr*)
+	       pjsip_msg_find_hdr(rdata->msg_info.msg,
+	                          PJSIP_H_CONTACT, NULL);
+	if (!mhdr || !mhdr->uri) {
+	    PJ_LOG(4,(dd->inv->dlg->obj_name,
+		     "Ignoring 100rel response with no or "
+		     "invalid Contact header"));
+	    pjsip_tx_data_dec_ref(tdata);
+	    return PJ_EIGNORED;
+	}
+	tdata->msg->line.req.uri = pjsip_uri_clone(tdata->pool, mhdr->uri);
+    }
 
     /* Create RAck header */
     rack.ptr = rack_buf;
