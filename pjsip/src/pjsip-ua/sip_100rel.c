@@ -332,7 +332,8 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
 	    pjsip_tx_data_dec_ref(tdata);
 	    return PJ_EIGNORED;
 	}
-	tdata->msg->line.req.uri = pjsip_uri_clone(tdata->pool, mhdr->uri);
+	tdata->msg->line.req.uri = (pjsip_uri*)
+				   pjsip_uri_clone(tdata->pool, mhdr->uri);
     }
 
     /* Create RAck header */
