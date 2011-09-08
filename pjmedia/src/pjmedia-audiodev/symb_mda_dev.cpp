@@ -405,6 +405,15 @@ void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
     	return;
     }
 
+    /* Apply output volume setting if specified */
+    if (parentStrm_->param.flags & 
+        PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) 
+    {
+        stream_set_cap(&parentStrm_->base,
+                       PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, 
+                       &parentStrm_->param.input_vol);
+    }
+
     // set stream priority to normal and time sensitive
     iInputStream_->SetPriority(EPriorityNormal, 
     			       EMdaPriorityPreferenceTime);				
@@ -683,8 +692,17 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 	iOutputStream_->SetAudioPropertiesL(iSettings.iSampleRate, 
 					    iSettings.iChannels);
 
-	// set volume to 1/2th of stream max volume
-	iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/2);
+        /* Apply output volume setting if specified */
+        if (parentStrm_->param.flags & 
+            PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) 
+        {
+            stream_set_cap(&parentStrm_->base,
+                           PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+                           &parentStrm_->param.output_vol);
+        } else {
+            // set volume to 1/2th of stream max volume
+            iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/2);
+        }
 	
 	// set stream priority to normal and time sensitive
 	iOutputStream_->SetPriority(EPriorityNormal, 
@@ -1034,7 +1052,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
-	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
 	    PJ_ASSERT_RETURN(strm->out_engine, PJ_EINVAL);
 	    
 	    TInt max_vol = strm->out_engine->GetMaxVolume();
