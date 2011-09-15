@@ -63,6 +63,7 @@ typedef struct pjsua_call
     int			 secure_level;/**< Signaling security level.	    */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.	    */
     pj_bool_t		 local_hold;/**< Flag for call-hold by local.	    */
+    void		*hold_msg;  /**< Outgoing hold tx_data.		    */
     pjsua_call_media_status media_st;/**< Media state.			    */
     pjmedia_dir		 media_dir; /**< Media direction.		    */
     pjmedia_session	*session;   /**< The media session.		    */

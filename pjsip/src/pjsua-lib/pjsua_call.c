@@ -1653,10 +1653,14 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     /* Add additional headers etc */
     pjsua_process_msg_data( tdata, msg_data);
 
+    /* Record the tx_data to keep track the operation */
+    call->hold_msg = (void*) tdata;
+
     /* Send the request */
     status = pjsip_inv_send_msg( call->inv, tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to send re-INVITE", status);
+	call->hold_msg = NULL;
 	pjsip_dlg_dec_lock(dlg);
 	return status;
     }
@@ -4389,7 +4393,20 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 						    &tsx->status_text);
 	    }
 	}
+    } else if (tsx->role == PJSIP_ROLE_UAC &&
+	       tsx->last_tx == (pjsip_tx_data*)call->hold_msg &&
+	       tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+    {
+	/* Monitor the status of call hold request */
+	call->hold_msg = NULL;
+	if (tsx->status_code/100 != 2) {
+	    /* Outgoing call hold failed */
+	    call->local_hold = PJ_FALSE;
+	    PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold (reason=%d)",
+		      call->index, tsx->status_code));
+	}
     }
+
 
 
     PJSUA_UNLOCK();
