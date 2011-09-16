@@ -92,6 +92,7 @@ struct ios_stream
     
     UIImageView		*imgView;
     void		*buf;
+    dispatch_queue_t     render_queue;
     
     pj_timestamp	 frame_ts;
     unsigned		 ts_inc;
@@ -333,8 +334,12 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     /* Release the Quartz image */
     CGImageRelease(quartzImage);
     
+    dispatch_async(dispatch_get_main_queue(),
+                   ^{[stream->imgView setImage:image];});
+    /*
     [stream->imgView performSelectorOnMainThread:@selector(setImage:)
 		     withObject:image waitUntilDone:NO];
+     */
     
     [pool release];
 }    
@@ -506,6 +511,11 @@ static pj_status_t ios_factory_create_stream(
 	    strm->vout_delegate = [VOutDelegate alloc];
 	    strm->vout_delegate->stream = strm;
 	}
+        
+        strm->render_queue = dispatch_queue_create("com.pjsip.render_queue",
+                                                   NULL);
+        if (!strm->render_queue)
+            goto on_error;
 	
 	strm->buf = pj_pool_alloc(pool, strm->frame_size);
     }    
@@ -595,7 +605,7 @@ static pj_status_t ios_stream_start(pjmedia_vid_dev_stream *strm)
 
     PJ_UNUSED_ARG(stream);
 
-    PJ_LOG(4, (THIS_FILE, "Starting qt video stream"));
+    PJ_LOG(4, (THIS_FILE, "Starting ios video stream"));
 
     if (stream->cap_session) {
 	[stream->cap_session startRunning];
@@ -618,9 +628,13 @@ static pj_status_t ios_stream_put_frame(pjmedia_vid_dev_stream *strm,
     pj_assert(stream->frame_size >= frame->size);
     pj_memcpy(stream->buf, frame->buf, frame->size);
     /* Perform video display in a background thread */
-//    [stream->vout_delegate update_image];
+/*   
+    [stream->vout_delegate update_image];
     [NSThread detachNewThreadSelector:@selector(update_image)
 	      toTarget:stream->vout_delegate withObject:nil];
+*/
+    dispatch_async(stream->render_queue,
+                   ^{[stream->vout_delegate update_image];});
     
     [pool release];
     
@@ -634,7 +648,7 @@ static pj_status_t ios_stream_stop(pjmedia_vid_dev_stream *strm)
 
     PJ_UNUSED_ARG(stream);
 
-    PJ_LOG(4, (THIS_FILE, "Stopping qt video stream"));
+    PJ_LOG(4, (THIS_FILE, "Stopping ios video stream"));
 
     if (stream->cap_session && [stream->cap_session isRunning])
 	[stream->cap_session stopRunning];
@@ -676,6 +690,10 @@ static pj_status_t ios_stream_destroy(pjmedia_vid_dev_stream *strm)
 	stream->video_output = NULL;
     }
 */
+    if (stream->render_queue) {
+        dispatch_release(stream->render_queue);
+        stream->render_queue = NULL;
+    }
 
     pj_pool_release(stream->pool);
 
