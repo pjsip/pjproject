@@ -1242,19 +1242,19 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 {
     pjsua_call *call;
     pjsua_conf_port_id port_id;
-    pjsip_dialog *dlg;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
 		     PJ_EINVAL);
 
-    status = acquire_call("pjsua_call_get_conf_port()", call_id, &call, &dlg);
-    if (status != PJ_SUCCESS)
-	return PJSUA_INVALID_ID;
+    /* Use PJSUA_LOCK() instead of acquire_call():
+     *  https://trac.pjsip.org/repos/ticket/1371
+     */
+    PJSUA_LOCK();
 
+    call = &pjsua_var.calls[call_id];
     port_id = call->conf_slot;
 
-    pjsip_dlg_dec_lock(dlg);
+    PJSUA_UNLOCK();
 
     return port_id;
 }
@@ -1268,18 +1268,18 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 					 pjsua_call_info *info)
 {
     pjsua_call *call;
-    pjsip_dialog *dlg;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
     pj_bzero(info, sizeof(*info));
 
-    status = acquire_call("pjsua_call_get_info()", call_id, &call, &dlg);
-    if (status != PJ_SUCCESS) {
-	return status;
-    }
+    /* Use PJSUA_LOCK() instead of acquire_call():
+     *  https://trac.pjsip.org/repos/ticket/1371
+     */
+    PJSUA_LOCK();
+
+    call = &pjsua_var.calls[call_id];
 
     /* id and role */
     info->id = call_id;
@@ -1375,7 +1375,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 	PJ_TIME_VAL_SUB(info->total_duration, call->start_time);
     }
 
-    pjsip_dlg_dec_lock(dlg);
+    PJSUA_UNLOCK();
 
     return PJ_SUCCESS;
 }
