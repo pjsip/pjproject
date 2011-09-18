@@ -31,14 +31,24 @@ PJ_DEF_DATA(int) pj_log_max_level = PJ_LOG_MAX_LEVEL;
 static int pj_log_max_level = PJ_LOG_MAX_LEVEL;
 #endif
 
+static void *g_last_thread;
+
 #if PJ_HAS_THREADS
 static long thread_suspended_tls_id = -1;
+#  if PJ_LOG_ENABLE_INDENT
+static long thread_indent_tls_id = -1;
+#  endif
+#endif
+
+#if !PJ_LOG_ENABLE_INDENT || !PJ_HAS_THREADS
+static int log_indent;
 #endif
 
 static pj_log_func *log_writer = &pj_log_write;
 static unsigned log_decor = PJ_LOG_HAS_TIME | PJ_LOG_HAS_MICRO_SEC |
 			    PJ_LOG_HAS_SENDER | PJ_LOG_HAS_NEWLINE |
-			    PJ_LOG_HAS_SPACE
+			    PJ_LOG_HAS_SPACE | PJ_LOG_HAS_THREAD_SWC |
+			    PJ_LOG_HAS_INDENT
 #if defined(PJ_WIN32) && PJ_WIN32!=0
 			    | PJ_LOG_HAS_COLOR
 #endif
@@ -71,6 +81,8 @@ static pj_color_t PJ_LOG_COLOR_77 = PJ_TERM_COLOR_R |
 static char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
 
+#define LOG_MAX_INDENT		80
+
 #if PJ_HAS_THREADS
 static void logging_shutdown(void)
 {
@@ -78,17 +90,82 @@ static void logging_shutdown(void)
 	pj_thread_local_free(thread_suspended_tls_id);
 	thread_suspended_tls_id = -1;
     }
+#  if PJ_LOG_ENABLE_INDENT
+    if (thread_indent_tls_id != -1) {
+	pj_thread_local_free(thread_indent_tls_id);
+	thread_indent_tls_id = -1;
+    }
+#  endif
 }
-#endif
+#endif	/* PJ_HAS_THREADS */
+
+#if PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS
+static void log_set_indent(int indent)
+{
+    if (indent < 0) indent = 0;
+    pj_thread_local_set(thread_indent_tls_id, (void*)(long)indent);
+}
+
+static int log_get_raw_indent()
+{
+    return (long)pj_thread_local_get(thread_indent_tls_id);
+}
+
+#else
+static void log_set_indent(int indent)
+{
+    log_indent = indent;
+    if (log_indent < 0) log_indent = 0;
+}
+
+static int log_get_raw_indent()
+{
+    return log_indent;
+}
+#endif	/* PJ_LOG_ENABLE_INDENT && PJ_HAS_THREADS */
+
+static int log_get_indent()
+{
+    int indent = log_get_raw_indent();
+    return indent > LOG_MAX_INDENT ? LOG_MAX_INDENT : indent;
+}
+
+PJ_DEF(void) pj_log_add_indent(int indent)
+{
+    log_set_indent(log_get_raw_indent() + indent);
+}
+
+PJ_DEF(void) pj_log_push_indent(void)
+{
+    pj_log_add_indent(PJ_LOG_INDENT_SIZE);
+}
+
+PJ_DEF(void) pj_log_pop_indent(void)
+{
+    pj_log_add_indent(-PJ_LOG_INDENT_SIZE);
+}
 
 pj_status_t pj_log_init(void)
 {
 #if PJ_HAS_THREADS
     if (thread_suspended_tls_id == -1) {
-	pj_thread_local_alloc(&thread_suspended_tls_id);
+	pj_status_t status;
+	status = pj_thread_local_alloc(&thread_suspended_tls_id);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+#  if PJ_LOG_ENABLE_INDENT
+	status = pj_thread_local_alloc(&thread_indent_tls_id);
+	if (status != PJ_SUCCESS) {
+	    pj_thread_local_free(thread_suspended_tls_id);
+	    thread_suspended_tls_id = -1;
+	    return status;
+	}
+#  endif
 	pj_atexit(&logging_shutdown);
     }
 #endif
+    g_last_thread = NULL;
     return PJ_SUCCESS;
 }
 
@@ -242,7 +319,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 #if PJ_LOG_USE_STACK_BUFFER
     char log_buffer[PJ_LOG_MAX_SIZE];
 #endif
-    int saved_level, len, print_len;
+    int saved_level, len, print_len, indent;
 
     PJ_CHECK_STACK();
 
@@ -276,7 +353,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	pre += 3;
     }
     if (log_decor & PJ_LOG_HAS_YEAR) {
-	*pre++ = ' ';
+	if (pre!=log_buffer) *pre++ = ' ';
 	pre += pj_utoa(ptime.year, pre);
     }
     if (log_decor & PJ_LOG_HAS_MONTH) {
@@ -288,7 +365,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
 	pre += pj_utoa_pad(ptime.day, pre, 2, '0');
     }
     if (log_decor & PJ_LOG_HAS_TIME) {
-	*pre++ = ' ';
+	if (pre!=log_buffer) *pre++ = ' ';
 	pre += pj_utoa_pad(ptime.hour, pre, 2, '0');
 	*pre++ = ':';
 	pre += pj_utoa_pad(ptime.min, pre, 2, '0');
@@ -302,7 +379,7 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     if (log_decor & PJ_LOG_HAS_SENDER) {
 	enum { SENDER_WIDTH = 14 };
 	int sender_len = strlen(sender);
-	*pre++ = ' ';
+	if (pre!=log_buffer) *pre++ = ' ';
 	if (sender_len <= SENDER_WIDTH) {
 	    while (sender_len < SENDER_WIDTH)
 		*pre++ = ' ', ++sender_len;
@@ -334,9 +411,27 @@ PJ_DEF(void) pj_log( const char *sender, int level,
     if (log_decor != 0 && log_decor != PJ_LOG_HAS_NEWLINE)
 	*pre++ = ' ';
 
-    if (log_decor & PJ_LOG_HAS_SPACE) {
+    if (log_decor & PJ_LOG_HAS_THREAD_SWC) {
+	void *current_thread = (void*)pj_thread_this();
+	if (current_thread != g_last_thread) {
+	    *pre++ = '!';
+	    g_last_thread = current_thread;
+	} else {
+	    *pre++ = ' ';
+	}
+    } else if (log_decor & PJ_LOG_HAS_SPACE) {
 	*pre++ = ' ';
     }
+
+#if PJ_LOG_ENABLE_INDENT
+    if (log_decor & PJ_LOG_HAS_INDENT) {
+	indent = log_get_indent();
+	if (indent > 0) {
+	    pj_memset(pre, PJ_LOG_INDENT_CHAR, indent);
+	    pre += indent;
+	}
+    }
+#endif
 
     len = pre - log_buffer;
 

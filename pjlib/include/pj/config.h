@@ -408,6 +408,33 @@
 #  define PJ_LOG_USE_STACK_BUFFER   1
 #endif
 
+/**
+ * Enable log indentation feature.
+ *
+ * Default: 1
+ */
+#ifndef PJ_LOG_ENABLE_INDENT
+#   define PJ_LOG_ENABLE_INDENT        1
+#endif
+
+/**
+ * Number of PJ_LOG_INDENT_CHAR to put every time pj_log_push_indent()
+ * is called.
+ *
+ * Default: 1
+ */
+#ifndef PJ_LOG_INDENT_SIZE
+#   define PJ_LOG_INDENT_SIZE        1
+#endif
+
+/**
+ * Log indentation character.
+ *
+ * Default: space
+ */
+#ifndef PJ_LOG_INDENT_CHAR
+#   define PJ_LOG_INDENT_CHAR	    '.'
+#endif
 
 /**
  * Colorfull terminal (for logging etc).
