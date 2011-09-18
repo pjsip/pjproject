@@ -225,6 +225,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 
     PJ_LOG(5,(tsx->obj_name, "STUN sending message (transmit count=%d)",
 	      tsx->transmit_count));
+    pj_log_push_indent();
 
     /* Send message */
     status = tsx->cb.on_send_msg(tsx, tsx->last_pkt, tsx->last_pkt_size);
@@ -238,9 +239,9 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
 	    tsx->retransmit_timer.id = 0;
 	}
 	stun_perror(tsx, "STUN error sending message", status);
-	return status;
     }
 
+    pj_log_pop_indent();
     return status;
 }
 
@@ -321,6 +322,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	/* Retransmission count exceeded. Transaction has failed */
 	tsx->retransmit_timer.id = 0;
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
+	pj_log_push_indent();
 	if (!tsx->complete) {
 	    tsx->complete = PJ_TRUE;
 	    if (tsx->cb.on_complete) {
@@ -328,6 +330,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 	    }
 	}
 	/* We might have been destroyed, don't try to access the object */
+	pj_log_pop_indent();
 	return;
     }
 

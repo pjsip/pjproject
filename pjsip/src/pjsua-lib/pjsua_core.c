@@ -83,7 +83,8 @@ PJ_DEF(void) pjsua_logging_config_default(pjsua_logging_config *cfg)
     cfg->console_level = 4;
     cfg->decor = PJ_LOG_HAS_SENDER | PJ_LOG_HAS_TIME | 
 		 PJ_LOG_HAS_MICRO_SEC | PJ_LOG_HAS_NEWLINE |
-		 PJ_LOG_HAS_SPACE;
+		 PJ_LOG_HAS_SPACE | PJ_LOG_HAS_THREAD_SWC |
+		 PJ_LOG_HAS_INDENT;
 #if defined(PJ_WIN32) && PJ_WIN32 != 0
     cfg->decor |= PJ_LOG_HAS_COLOR;
 #endif
@@ -628,6 +629,8 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     status = pj_init();
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    pj_log_push_indent();
+
     /* Init random seed */
     init_random_seed();
 
@@ -659,6 +662,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua", 
 				       &pjsua_var.mutex);
     if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
 	pjsua_perror(THIS_FILE, "Unable to create mutex", status);
 	return status;
     }
@@ -672,7 +676,7 @@ PJ_DEF(pj_status_t) pjsua_create(void)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
     pjsua_set_state(PJSUA_STATE_CREATED);
-
+    pj_log_pop_indent();
     return PJ_SUCCESS;
 }
 
@@ -693,6 +697,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     unsigned i;
     pj_status_t status;
 
+    pj_log_push_indent();
 
     /* Create default configurations when the config is not supplied */
 
@@ -710,7 +715,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     if (log_cfg) {
 	status = pjsua_reconfigure_logging(log_cfg);
 	if (status != PJ_SUCCESS)
-	    return status;
+	    goto on_error;
     }
 
 #if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
@@ -734,7 +739,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 					     &pjsua_var.resolver);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating resolver", status);
-	    return status;
+	    goto on_error;
 	}
 
 	/* Configure nameserver for the DNS resolver */
@@ -743,14 +748,14 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 					ua_cfg->nameserver, NULL);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error setting nameserver", status);
-	    return status;
+	    goto on_error;
 	}
 
 	/* Set this DNS resolver to be used by the SIP resolver */
 	status = pjsip_endpt_set_resolver(pjsua_var.endpt, pjsua_var.resolver);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error setting DNS resolver", status);
-	    return status;
+	    goto on_error;
 	}
 
 	/* Print nameservers */
@@ -832,7 +837,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	if (r == NULL) {
 	    pjsua_perror(THIS_FILE, "Invalid outbound proxy URI",
 			 PJSIP_EINVALIDURI);
-	    return PJSIP_EINVALIDURI;
+	    status = PJSIP_EINVALIDURI;
+	    goto on_error;
 	}
 
 	if (pjsua_var.ua_cfg.force_lr) {
@@ -840,7 +846,8 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	    if (!PJSIP_URI_SCHEME_IS_SIP(r->name_addr.uri) &&
 		!PJSIP_URI_SCHEME_IS_SIP(r->name_addr.uri))
 	    {
-		return PJSIP_EINVALIDSCHEME;
+		status = PJSIP_EINVALIDSCHEME;
+		goto on_error;
 	    }
 	    sip_url = (pjsip_sip_uri*)r->name_addr.uri;
 	    sip_url->lr_param = 1;
@@ -871,7 +878,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
     status = resolve_stun_server(PJ_FALSE);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
-	return status;
+	goto on_error;
     }
 
     /* Initialize PJSUA media subsystem */
@@ -941,11 +948,12 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 			 pj_get_version(), pj_get_sys_info()->info.ptr));
 
     pjsua_set_state(PJSUA_STATE_INIT);
-
+    pj_log_pop_indent();
     return PJ_SUCCESS;
 
 on_error:
     pjsua_destroy();
+    pj_log_pop_indent();
     return status;
 }
 
@@ -1322,6 +1330,8 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
 	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
 
+	pj_log_push_indent();
+
 	/* Terminate all calls. */
 	pjsua_call_hangup_all();
 
@@ -1477,6 +1487,8 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	    pjsua_var.log_file = NULL;
 	}
 
+	pj_log_pop_indent();
+
 	/* Shutdown PJLIB */
 	pj_shutdown();
     }
@@ -1523,22 +1535,25 @@ PJ_DEF(pj_status_t) pjsua_start(void)
     pj_status_t status;
 
     pjsua_set_state(PJSUA_STATE_STARTING);
+    pj_log_push_indent();
 
     status = pjsua_call_subsys_start();
     if (status != PJ_SUCCESS)
-	return status;
+	goto on_return;
 
     status = pjsua_media_subsys_start();
     if (status != PJ_SUCCESS)
-	return status;
+	goto on_return;
 
     status = pjsua_pres_start();
     if (status != PJ_SUCCESS)
-	return status;
+	goto on_return;
 
     pjsua_set_state(PJSUA_STATE_RUNNING);
 
-    return PJ_SUCCESS;
+on_return:
+    pj_log_pop_indent();
+    return status;
 }
 
 

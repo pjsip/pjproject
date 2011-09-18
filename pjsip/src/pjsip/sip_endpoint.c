@@ -825,6 +825,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 
     PJ_LOG(5, (THIS_FILE, "Processing incoming message: %s", 
 	       pjsip_rx_data_get_info(rdata)));
+    pj_log_push_indent();
 
 #if defined(PJSIP_CHECK_VIA_SENT_BY) && PJSIP_CHECK_VIA_SENT_BY != 0
     /* For response, check that the value in Via sent-by match the transport.
@@ -880,6 +881,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 				 pjsip_rx_data_get_info(rdata),
 				 rdata->pkt_info.src_name, 
 				 rdata->pkt_info.src_port));
+	    pj_log_pop_indent();
 	    return;
 	}
     }
@@ -940,6 +942,8 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
      * rdata may be reused.
      */
     pj_bzero(&rdata->endpt_info, sizeof(rdata->endpt_info));
+
+    pj_log_pop_indent();
 }
 
 /*

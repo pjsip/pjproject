@@ -864,6 +864,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
     PJ_ASSERT_RETURN(sess && addr_len && server && tdata, PJ_EINVAL);
 
+    pj_log_push_indent();
+
     /* Allocate packet */
     tdata->max_len = PJ_STUN_MAX_PKT_LEN;
     tdata->pkt = pj_pool_alloc(tdata->pool, tdata->max_len);
@@ -971,6 +973,8 @@ PJ_DEF(pj_status_t) pj_stun_session_send_msg( pj_stun_session *sess,
 
 on_return:
     pj_lock_release(sess->lock);
+
+    pj_log_pop_indent();
 
     /* Check if application has called destroy() in the callback */
     if (pj_atomic_dec_and_get(sess->busy)==0 && sess->destroy_request) {
@@ -1353,6 +1357,8 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
     PJ_ASSERT_RETURN(sess && packet && pkt_size, PJ_EINVAL);
 
+    pj_log_push_indent();
+
     /* Lock the session and prevent user from destroying us in the callback */
     pj_atomic_inc(sess->busy);
     pj_lock_acquire(sess->lock);
@@ -1409,6 +1415,8 @@ PJ_DEF(pj_status_t) pj_stun_session_on_rx_pkt(pj_stun_session *sess,
 
 on_return:
     pj_lock_release(sess->lock);
+
+    pj_log_pop_indent();
 
     /* If we've received destroy request while we're on the callback,
      * destroy the session now.

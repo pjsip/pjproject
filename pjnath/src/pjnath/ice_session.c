@@ -1748,6 +1748,7 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     LOG5((ice->obj_name, 
 	 "Sending connectivity check for check %s", 
 	 dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), clist, check)));
+    pj_log_push_indent();
 
     /* Create request */
     status = pj_stun_session_create_req(comp->stun_sess, 
@@ -1755,6 +1756,7 @@ static pj_status_t perform_check(pj_ice_sess *ice,
 					NULL, &check->tdata);
     if (status != PJ_SUCCESS) {
 	pjnath_perror(ice->obj_name, "Error creating STUN request", status);
+	pj_log_pop_indent();
 	return status;
     }
 
@@ -1811,11 +1813,13 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     if (status != PJ_SUCCESS) {
 	check->tdata = NULL;
 	pjnath_perror(ice->obj_name, "Error sending STUN request", status);
+	pj_log_pop_indent();
 	return status;
     }
 
     check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS, 
 	            PJ_SUCCESS);
+    pj_log_pop_indent();
     return PJ_SUCCESS;
 }
 
@@ -1845,6 +1849,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     clist_set_state(ice, clist, PJ_ICE_SESS_CHECKLIST_ST_RUNNING);
 
     LOG5((ice->obj_name, "Starting checklist periodic check"));
+    pj_log_push_indent();
 
     /* Send STUN Binding request for check with highest priority on
      * Waiting state.
@@ -1856,6 +1861,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 	    status = perform_check(ice, clist, i, ice->is_nominating);
 	    if (status != PJ_SUCCESS) {
 		pj_mutex_unlock(ice->mutex);
+		pj_log_pop_indent();
 		return status;
 	    }
 
@@ -1875,6 +1881,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
 		status = perform_check(ice, clist, i, ice->is_nominating);
 		if (status != PJ_SUCCESS) {
 		    pj_mutex_unlock(ice->mutex);
+		    pj_log_pop_indent();
 		    return status;
 		}
 
@@ -1896,6 +1903,7 @@ static pj_status_t start_periodic_check(pj_timer_heap_t *th,
     }
 
     pj_mutex_unlock(ice->mutex);
+    pj_log_pop_indent();
     return PJ_SUCCESS;
 }
 
@@ -1908,6 +1916,7 @@ static void start_nominated_check(pj_ice_sess *ice)
     pj_status_t status;
 
     LOG4((ice->obj_name, "Starting nominated check.."));
+    pj_log_push_indent();
 
     pj_assert(ice->is_nominating == PJ_FALSE);
 
@@ -1958,6 +1967,7 @@ static void start_nominated_check(pj_ice_sess *ice)
     }
 
     ice->is_nominating = PJ_TRUE;
+    pj_log_pop_indent();
 }
 
 /* Timer callback to perform periodic check */
@@ -2005,6 +2015,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     pj_mutex_lock(ice->mutex);
 
     LOG4((ice->obj_name, "Starting ICE check.."));
+    pj_log_push_indent();
 
     /* If we are using aggressive nomination, set the is_nominating state */
     if (ice->opt.aggressive)
@@ -2032,6 +2043,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     if (i == clist->count) {
 	pj_assert(!"Unable to find checklist for component 1");
 	pj_mutex_unlock(ice->mutex);
+	pj_log_pop_indent();
 	return PJNATH_EICEINCOMPID;
     }
 
@@ -2072,8 +2084,10 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
 	LOG4((ice->obj_name, 
 	      "Performing delayed triggerred check for component %d",
 	      rcheck->comp_id));
+	pj_log_push_indent();
 	handle_incoming_check(ice, rcheck);
 	rcheck = rcheck->next;
+	pj_log_pop_indent();
     }
     pj_list_init(&ice->early_check);
 
@@ -2091,6 +2105,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_start_check(pj_ice_sess *ice)
     }
 
     pj_mutex_unlock(ice->mutex);
+    pj_log_pop_indent();
     return status;
 }
 
@@ -2193,9 +2208,11 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 
 	    /* Resend request */
 	    LOG4((ice->obj_name, "Resending check because of role conflict"));
+	    pj_log_push_indent();
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_WAITING, 0);
 	    perform_check(ice, clist, msg_data->data.req.ckid, 
 			  check->nominated || ice->is_nominating);
+	    pj_log_pop_indent();
 	    pj_mutex_unlock(ice->mutex);
 	    return;
 	}
@@ -2207,9 +2224,10 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 			&ice->clist, check),
 	     (check->nominated ? " (nominated)" : " (not nominated)"),
 	     errmsg));
-
+	pj_log_push_indent();
 	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
 	on_check_complete(ice, check);
+	pj_log_pop_indent();
 	pj_mutex_unlock(ice->mutex);
 	return;
     }
@@ -2230,8 +2248,10 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 	     dump_check(ice->tmp.txt, sizeof(ice->tmp.txt), 
 			&ice->clist, check),
 	     (check->nominated ? " (nominated)" : " (not nominated)")));
+	pj_log_push_indent();
 	check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, status);
 	on_check_complete(ice, check);
+	pj_log_pop_indent();
 	pj_mutex_unlock(ice->mutex);
 	return;
     }
@@ -2702,14 +2722,18 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	    pj_bool_t nominate = (c->nominated || ice->is_nominating);
 
 	    LOG5((ice->obj_name, "Performing triggered check for check %d",i));
+	    pj_log_push_indent();
 	    perform_check(ice, &ice->clist, i, nominate);
+	    pj_log_pop_indent();
 
 	} else if (c->state == PJ_ICE_SESS_CHECK_STATE_IN_PROGRESS) {
 	    /* Should retransmit immediately
 	     */
 	    LOG5((ice->obj_name, "Triggered check for check %d not performed "
 		  "because it's in progress. Retransmitting", i));
+	    pj_log_push_indent();
 	    pj_stun_session_retransmit_req(comp->stun_sess, c->tdata);
+	    pj_log_pop_indent();
 
 	} else if (c->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED) {
 	    /* Check complete for this component.
@@ -2743,8 +2767,9 @@ static void handle_incoming_check(pj_ice_sess *ice,
 
 	    LOG5((ice->obj_name, "Triggered check for check %d not performed "
 				"because it's completed", i));
-
+	    pj_log_push_indent();
 	    complete = on_check_complete(ice, c);
+	    pj_log_pop_indent();
 	    if (complete) {
 		return;
 	    }
@@ -2773,7 +2798,9 @@ static void handle_incoming_check(pj_ice_sess *ice,
 
 	LOG4((ice->obj_name, "New triggered check added: %d", 
 	     ice->clist.count));
+	pj_log_push_indent();
 	perform_check(ice, &ice->clist, ice->clist.count++, nominate);
+	pj_log_pop_indent();
 
     } else {
 	LOG4((ice->obj_name, "Error: unable to perform triggered check: "
@@ -2802,6 +2829,8 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 
     sd = (struct stun_data*) pj_stun_session_get_user_data(sess);
 
+    pj_log_push_indent();
+
     if (msg->hdr.type == PJ_STUN_BINDING_INDICATION) {
 	LOG5((sd->ice->obj_name, "Received Binding Indication keep-alive "
 	      "for component %d", sd->comp_id));
@@ -2810,6 +2839,8 @@ static pj_status_t on_stun_rx_indication(pj_stun_session *sess,
 	      "for component %d", pj_stun_get_method_name(msg->hdr.type), 
 	      sd->comp_id));
     }
+
+    pj_log_pop_indent();
 
     return PJ_SUCCESS;
 }

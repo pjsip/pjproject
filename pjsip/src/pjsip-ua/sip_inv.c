@@ -1916,6 +1916,8 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
     /* Must have INVITE transaction. */
     PJ_ASSERT_RETURN(inv->invite_tsx, PJ_EBUG);
 
+    pj_log_push_indent();
+
     pjsip_dlg_inc_lock(inv->dlg);
 
     /* Create response */
@@ -1963,6 +1965,7 @@ PJ_DEF(pj_status_t) pjsip_inv_initial_answer(	pjsip_inv_session *inv,
 
 on_return:
     pjsip_dlg_dec_lock(inv->dlg);
+    pj_log_pop_indent();
     return status;
 }
 
@@ -1988,6 +1991,8 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 
     /* Must have created an answer before */
     PJ_ASSERT_RETURN(inv->last_answer, PJ_EINVALIDOP);
+
+    pj_log_push_indent();
 
     pjsip_dlg_inc_lock(inv->dlg);
 
@@ -2016,6 +2021,7 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 
 on_return:
     pjsip_dlg_dec_lock(inv->dlg);
+    pj_log_pop_indent();
     return status;
 }
 
@@ -2052,6 +2058,8 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     /* Verify arguments. */
     PJ_ASSERT_RETURN(inv && p_tdata, PJ_EINVAL);
 
+    pj_log_push_indent();
+
     /* Set cause code. */
     inv_set_cause(inv, st_code, st_text);
 
@@ -2081,6 +2089,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 		*p_tdata = NULL;
 		PJ_LOG(4, (inv->obj_name, "Delaying CANCEL since no "
 			   "provisional response is received yet"));
+		pj_log_pop_indent();
 		return PJ_SUCCESS;
 	    }
 
@@ -2092,8 +2101,10 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	    status = pjsip_endpt_create_cancel(inv->dlg->endpt, 
 					       inv->invite_tsx->last_tx,
 					       &tdata);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		pj_log_pop_indent();
 		return status;
+	    }
 
 	    /* Set timeout for the INVITE transaction, in case UAS is not
 	     * able to respond the INVITE with 487 final response. The 
@@ -2125,15 +2136,19 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 
     case PJSIP_INV_STATE_DISCONNECTED:
 	/* No need to do anything. */
+	pj_log_pop_indent();
 	return PJSIP_ESESSIONTERMINATED;
 
     default:
 	pj_assert("!Invalid operation!");
+	pj_log_pop_indent();
 	return PJ_EINVALIDOP;
     }
 
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
 	return status;
+    }
 
 
     /* Done */
@@ -2141,6 +2156,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
     inv->cancelling = PJ_TRUE;
     *p_tdata = tdata;
 
+    pj_log_pop_indent();
     return PJ_SUCCESS;
 }
 
@@ -2363,6 +2379,7 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
     if (inv->invite_tsx!=NULL)
 	return PJ_EINVALIDOP;
 
+    pj_log_push_indent();
 
     pjsip_dlg_inc_lock(inv->dlg);
 
@@ -2433,6 +2450,7 @@ PJ_DEF(pj_status_t) pjsip_inv_reinvite( pjsip_inv_session *inv,
 
 on_return:
     pjsip_dlg_dec_lock(inv->dlg);
+    pj_log_pop_indent();
     return status;
 }
 
@@ -2459,6 +2477,8 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     /* Invite session must not have been disconnected */
     PJ_ASSERT_RETURN(inv->state < PJSIP_INV_STATE_DISCONNECTED,
 		     PJ_EINVALIDOP);
+
+    pj_log_push_indent();
 
     /* Lock dialog. */
     pjsip_dlg_inc_lock(inv->dlg);
@@ -2522,6 +2542,7 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 
     *p_tdata = tdata;
 
+    pj_log_pop_indent();
     return PJ_SUCCESS;
 
 on_error:
@@ -2531,6 +2552,7 @@ on_error:
     /* Unlock dialog. */
     pjsip_dlg_dec_lock(inv->dlg);
 
+    pj_log_pop_indent();
     return status;
 }
 
@@ -2593,6 +2615,8 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
     /* Verify arguments. */
     PJ_ASSERT_RETURN(inv && tdata, PJ_EINVAL);
 
+    pj_log_push_indent();
+
     PJ_LOG(5,(inv->obj_name, "Sending %s", 
 	      pjsip_tx_data_get_info(tdata)));
 
@@ -2607,7 +2631,8 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	{
 	    pjsip_tx_data_dec_ref(tdata);
 	    pjsip_dlg_dec_lock(inv->dlg);
-	    return PJ_EINVALIDOP;
+	    status = PJ_EINVALIDOP;
+	    goto on_error;
 	}
 
 	/* Associate our data in outgoing invite transaction */
@@ -2618,8 +2643,9 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 
 	status = pjsip_dlg_send_request(inv->dlg, tdata, mod_inv.mod.id, 
 					tsx_inv_data);
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    goto on_error;
+	}
 
     } else {
 	pjsip_cseq_hdr *cseq;
@@ -2638,12 +2664,18 @@ PJ_DEF(pj_status_t) pjsip_inv_send_msg( pjsip_inv_session *inv,
 	    status = pjsip_dlg_send_response(inv->dlg, inv->invite_tsx, tdata);
 	}
 
-	if (status != PJ_SUCCESS)
-	    return status;
+	if (status != PJ_SUCCESS) {
+	    goto on_error;
+	}
     }
 
-    /* Done (?) */
+    /* Done */
+    pj_log_pop_indent();
     return PJ_SUCCESS;
+
+on_error:
+    pj_log_pop_indent();
+    return status;
 }
 
 
