@@ -2960,6 +2960,12 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    timeout.sec = timeout.msec = 0;
 	}
 	lock_timer(tsx);
+	/* In the short period above timer may have been inserted
+	 * by set_timeout() (by CANCEL). Cancel it if necessary. See:
+	 *  https://trac.pjsip.org/repos/ticket/1374
+	 */
+	if (tsx->timeout_timer.id)
+	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 	tsx->timeout_timer.id = TIMER_ACTIVE;
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
 	unlock_timer(tsx);
