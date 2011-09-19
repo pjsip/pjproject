@@ -33,6 +33,7 @@ SAMPLES := auddemo \
 	   resampleplay \
 	   simpleua \
 	   simple_pjsua \
+	   sipecho \
 	   siprtp \
 	   sipstateless \
 	   stateful_proxy \

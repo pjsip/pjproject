@@ -80,6 +80,7 @@ SAMPLES = $(BINDIR)\auddemo.exe \
 	  $(BINDIR)\resampleplay.exe \
 	  $(BINDIR)\simpleua.exe \
 	  $(BINDIR)\simple_pjsua.exe \
+	  $(BINDIR)\sipecho.exe \
 	  $(BINDIR)\siprtp.exe \
 	  $(BINDIR)\sipstateless.exe \
 	  $(BINDIR)\stateful_proxy.exe \
