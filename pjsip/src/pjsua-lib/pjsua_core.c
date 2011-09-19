@@ -228,6 +228,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     pj_ice_sess_options_default(&cfg->ice_opt);
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;
+    cfg->vid_preview_enable_native = PJ_TRUE;
 }
 
 /*****************************************************************************

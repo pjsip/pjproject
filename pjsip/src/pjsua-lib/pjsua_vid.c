@@ -23,8 +23,12 @@
 
 #if PJSUA_HAS_VIDEO
 
-#define ENABLE_EVENT	    0
-#define VID_TEE_MAX_PORT    (PJSUA_MAX_CALLS + 1)
+#define ENABLE_EVENT	    	0
+#define VID_TEE_MAX_PORT    	(PJSUA_MAX_CALLS + 1)
+
+#define PJSUA_SHOW_WINDOW	1
+#define PJSUA_HIDE_WINDOW	0
+
 
 static void free_vid_win(pjsua_vid_win_id wid);
 
@@ -122,6 +126,17 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
     pj_log_pop_indent();
     return PJ_SUCCESS;
+}
+
+PJ_DEF(const char*) pjsua_vid_win_type_name(pjsua_vid_win_type wt)
+{
+    const char *win_type_names[] = {
+         "none",
+         "preview",
+         "stream"
+    };
+
+    return (wt < PJ_ARRAY_SIZE(win_type_names)) ? win_type_names[wt] : "??";
 }
 
 PJ_DEF(void)
@@ -337,6 +352,17 @@ PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
     return wid;
 }
 
+PJ_DEF(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
+{
+    pjsua_vid_win *w = &pjsua_var.win[wid];
+    pj_pool_t *pool = w->pool;
+
+    pj_bzero(w, sizeof(*w));
+    if (pool) pj_pool_reset(pool);
+    w->ref_cnt = 0;
+    w->pool = pool;
+    w->preview_cap_id = PJMEDIA_VID_INVALID_DEV;
+}
 
 /* Allocate and initialize pjsua video window:
  * - If the type is preview, video capture, tee, and render
@@ -350,6 +376,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 				  pj_bool_t show,
 				  pjsua_vid_win_id *id)
 {
+    pj_bool_t enable_native_preview;
     pjsua_vid_win_id wid = PJSUA_INVALID_ID;
     pjsua_vid_win *w = NULL;
     pjmedia_vid_port_param vp_param;
@@ -357,8 +384,11 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
     pj_status_t status;
     unsigned i;
 
-    PJ_LOG(4,(THIS_FILE, "Creating window, type=%d, cap_dev=%d, rend_dev=%d",
-	      type, cap_id, rend_id));
+    enable_native_preview = pjsua_var.media_cfg.vid_preview_enable_native;
+
+    PJ_LOG(4,(THIS_FILE,
+	      "Creating video window: type=%s, cap_id=%d, rend_id=%d",
+	      pjsua_vid_win_type_name(type), cap_id, rend_id));
     pj_log_push_indent();
 
     /* If type is preview, check if it exists already */
@@ -367,13 +397,25 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	if (wid != PJSUA_INVALID_ID) {
 	    /* Yes, it exists */
 	    /* Show/hide window */
-	    pjmedia_vid_dev_stream *rdr;
+	    pjmedia_vid_dev_stream *strm;
 	    pj_bool_t hide = !show;
 
-	    rdr = pjmedia_vid_port_get_stream(pjsua_var.win[wid].vp_rend);
-	    pj_assert(rdr);
+	    w = &pjsua_var.win[wid];
+
+	    PJ_LOG(4,(THIS_FILE,
+		      "Window already exists for cap_dev=%d, returning wid=%d",
+		      cap_id, wid));
+
+
+	    if (w->is_native) {
+		strm = pjmedia_vid_port_get_stream(w->vp_cap);
+	    } else {
+		strm = pjmedia_vid_port_get_stream(w->vp_rend);
+	    }
+
+	    pj_assert(strm);
 	    status = pjmedia_vid_dev_stream_set_cap(
-				    rdr, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
+				    strm, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
 				    &hide);
 
 	    /* Done */
@@ -402,10 +444,31 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
     pjmedia_vid_port_param_default(&vp_param);
 
     if (w->type == PJSUA_WND_TYPE_PREVIEW) {
+	pjmedia_vid_dev_info vdi;
+
+	/*
+	 * Determine if the device supports native preview.
+	 */
+	status = pjmedia_vid_dev_get_info(cap_id, &vdi);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	if (enable_native_preview &&
+	     (vdi.caps & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW))
+	{
+	    /* Device supports native preview! */
+	    w->is_native = PJ_TRUE;
+	}
+
 	status = pjmedia_vid_dev_default_param(w->pool, cap_id,
 					       &vp_param.vidparam);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+
+	if (w->is_native) {
+	    vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
+	    vp_param.vidparam.window_hide = !show;
+	}
 
 	/* Normalize capture ID, in case it was set to
 	 * PJMEDIA_VID_DEFAULT_CAPTURE_DEV
@@ -434,38 +497,67 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 					&w->tee);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+
+	/* If device supports native preview, enable it */
+	if (w->is_native) {
+	    pjmedia_vid_dev_stream *cap_dev;
+	    pj_bool_t enabled = PJ_TRUE;
+
+	    cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+	    status = pjmedia_vid_dev_stream_set_cap(
+			    cap_dev, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
+			    &enabled);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(THIS_FILE, status,
+			     "Error activating native preview, falling back "
+			     "to software preview.."));
+		w->is_native = PJ_FALSE;
+	    }
+	}
     }
 
-    /* Create renderer video port */
-    status = pjmedia_vid_dev_default_param(w->pool, rend_id,
-					   &vp_param.vidparam);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    vp_param.active = (w->type == PJSUA_WND_TYPE_STREAM);
-    vp_param.vidparam.dir = PJMEDIA_DIR_RENDER;
-    vp_param.vidparam.fmt = *fmt;
-    vp_param.vidparam.disp_size = fmt->det.vid.size;
-    vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
-    vp_param.vidparam.window_hide = !show;
-
-    status = pjmedia_vid_port_create(w->pool, &vp_param, &w->vp_rend);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
-    /* For preview window, connect capturer & renderer (via tee) */
-    if (w->type == PJSUA_WND_TYPE_PREVIEW) {
-	pjmedia_port *rend_port;
-
-	status = pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
+    /* Create renderer video port, only if it's not a native preview */
+    if (!w->is_native) {
+	status = pjmedia_vid_dev_default_param(w->pool, rend_id,
+					       &vp_param.vidparam);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	rend_port = pjmedia_vid_port_get_passive_port(w->vp_rend);
-	status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, rend_port);
+	vp_param.active = (w->type == PJSUA_WND_TYPE_STREAM);
+	vp_param.vidparam.dir = PJMEDIA_DIR_RENDER;
+	vp_param.vidparam.fmt = *fmt;
+	vp_param.vidparam.disp_size = fmt->det.vid.size;
+	vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
+	vp_param.vidparam.window_hide = !show;
+
+	status = pjmedia_vid_port_create(w->pool, &vp_param, &w->vp_rend);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
+
+	/* For preview window, connect capturer & renderer (via tee) */
+	if (w->type == PJSUA_WND_TYPE_PREVIEW) {
+	    pjmedia_port *rend_port;
+
+	    status = pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+
+	    rend_port = pjmedia_vid_port_get_passive_port(w->vp_rend);
+	    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, rend_port);
+	    if (status != PJ_SUCCESS)
+		goto on_error;
+	}
+
+	PJ_LOG(4,(THIS_FILE,
+		  "%s window id %d created for cap_dev=%d rend_dev=%d",
+		  pjsua_vid_win_type_name(type), wid, cap_id, rend_id));
+    } else {
+	PJ_LOG(4,(THIS_FILE,
+		  "Preview window id %d created for cap_dev %d, "
+		  "using built-in preview!",
+		  wid, cap_id));
     }
+
 
     /* Done */
     *id = wid;
@@ -733,18 +825,21 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 		goto on_error;
 	    }
 
-	    /* Create preview video window */
-	    status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,
-				    &media_port->info.fmt,
-				    call_med->strm.v.rdr_dev,
-				    call_med->strm.v.cap_dev,
-				    //acc->cfg.vid_rend_dev,
-				    //acc->cfg.vid_cap_dev,
-				    PJ_FALSE,
-				    &wid);
-	    if (status != PJ_SUCCESS) {
+	    wid = pjsua_vid_preview_get_win(call_med->strm.v.cap_dev);
+	    if (wid == PJSUA_INVALID_ID) {
+		/* Create preview video window */
+		status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,
+					&media_port->info.fmt,
+					call_med->strm.v.rdr_dev,
+					call_med->strm.v.cap_dev,
+					//acc->cfg.vid_rend_dev,
+					//acc->cfg.vid_cap_dev,
+					PJSUA_HIDE_WINDOW,
+					&wid);
+		if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
-		goto on_error;
+		    return status;
+		}
 	    }
 
 	    w = &pjsua_var.win[wid];
@@ -902,6 +997,16 @@ void stop_video_stream(pjsua_call_media *call_med)
     pj_log_pop_indent();
 }
 
+/*
+ * Does it have built-in preview support.
+ */
+PJ_DEF(pj_bool_t) pjsua_vid_preview_has_native(pjmedia_vid_dev_index id)
+{
+    pjmedia_vid_dev_info vdi;
+
+    return (pjmedia_vid_dev_get_info(id, &vdi)==PJ_SUCCESS) ?
+	    ((vdi.caps & PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW)!=0) : PJ_FALSE;
+}
 
 /*
  * Start video preview window for the specified capture device.
@@ -938,15 +1043,17 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 
     w = &pjsua_var.win[wid];
 
-    /* Start capturer */
-    status = pjmedia_vid_port_start(w->vp_rend);
-    if (status != PJ_SUCCESS) {
-	PJSUA_UNLOCK();
-	pj_log_pop_indent();
-	return status;
+    /* Start renderer, unless it's native preview */
+    if (!w->is_native) {
+	status = pjmedia_vid_port_start(w->vp_rend);
+	if (status != PJ_SUCCESS) {
+	    PJSUA_UNLOCK();
+	    pj_log_pop_indent();
+	    return status;
+	}
     }
 
-    /* Start renderer */
+    /* Start capturer */
     status = pjmedia_vid_port_start(w->vp_cap);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
@@ -1028,8 +1135,28 @@ PJ_DEF(pj_status_t) pjsua_vid_win_get_info( pjsua_vid_win_id wid,
 
     PJ_ASSERT_RETURN(wid >= 0 && wid < PJSUA_MAX_VID_WINS && wi, PJ_EINVAL);
 
+    pj_bzero(wi, sizeof(*wi));
+
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
+
+    wi->is_native = w->is_native;
+
+    if (w->is_native) {
+	pjmedia_vid_dev_stream *cap_strm;
+	pjmedia_vid_dev_cap cap = PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+
+	cap_strm = pjmedia_vid_port_get_stream(w->vp_cap);
+	if (!cap_strm) {
+	    status = PJ_EINVAL;
+	} else {
+	    status = pjmedia_vid_dev_stream_get_cap(cap_strm, cap, &wi->hwnd);
+	}
+
+	PJSUA_UNLOCK();
+	return status;
+    }
+
     if (w->vp_rend == NULL) {
 	PJSUA_UNLOCK();
 	return PJ_EINVAL;
@@ -1074,6 +1201,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
     if (w->vp_rend == NULL) {
+	/* Native window */
 	PJSUA_UNLOCK();
 	return PJ_EINVAL;
     }
@@ -1108,6 +1236,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_pos( pjsua_vid_win_id wid,
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
     if (w->vp_rend == NULL) {
+	/* Native window */
 	PJSUA_UNLOCK();
 	return PJ_EINVAL;
     }
@@ -1141,6 +1270,7 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_size( pjsua_vid_win_id wid,
     PJSUA_LOCK();
     w = &pjsua_var.win[wid];
     if (w->vp_rend == NULL) {
+	/* Native window */
 	PJSUA_UNLOCK();
 	return PJ_EINVAL;
     }
@@ -1246,6 +1376,7 @@ static pj_status_t call_add_video(pjsua_call *call,
     pj_pool_t *pool = call->inv->pool_prov;
     pjsua_acc_config *acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
     pjsua_call_media *call_med;
+    const pjmedia_sdp_session *current_sdp;
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *sdp_m;
     pjmedia_transport_info tpinfo;
@@ -1260,10 +1391,12 @@ static pj_status_t call_add_video(pjsua_call *call,
     if (active_cnt == acc_cfg->max_video_cnt)
 	return PJ_ETOOMANY;
 
-    /* Get active local SDP */
-    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
+    /* Get active local SDP and clone it */
+    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &current_sdp);
     if (status != PJ_SUCCESS)
 	return status;
+
+    sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, current_sdp);
 
     /* Initialize call media */
     call_med = &call->media[call->med_cnt++];
@@ -1345,6 +1478,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 				     pj_bool_t remove)
 {
     pjsua_call_media *call_med;
+    const pjmedia_sdp_session *current_sdp;
     pjmedia_sdp_session *sdp;
     pj_status_t status;
 
@@ -1373,10 +1507,12 @@ static pj_status_t call_modify_video(pjsua_call *call,
 	return PJ_SUCCESS;
     }
 
-    /* Get active local SDP */
-    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
+    /* Get active local SDP and clone it */
+    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &current_sdp);
     if (status != PJ_SUCCESS)
 	return status;
+
+    sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, current_sdp);
 
     pj_assert(med_idx < (int)sdp->media_count);
 
@@ -1537,15 +1673,18 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 
     /* = Attach stream port to the new capture device = */
 
-    /* Create preview video window */
-    status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,
-			    &media_port->info.fmt,
-			    call_med->strm.v.rdr_dev,
-			    cap_dev,
-			    PJ_FALSE,
-			    &new_wid);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    new_wid = pjsua_vid_preview_get_win(cap_dev);
+    if (new_wid == PJSUA_INVALID_ID) {
+	/* Create preview video window */
+	status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,
+				&media_port->info.fmt,
+				call_med->strm.v.rdr_dev,
+				cap_dev,
+				PJSUA_HIDE_WINDOW,
+				&new_wid);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
 
     inc_vid_win(new_wid);
     new_w = &pjsua_var.win[new_wid];
@@ -1560,16 +1699,18 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	return status;
 
+    if (w->vp_rend) {
 #if ENABLE_EVENT
-    pjmedia_event_subscribe(
-	    pjmedia_vid_port_get_event_publisher(w->vp_rend),
-	    &call_med->esub_cap);
+	pjmedia_event_subscribe(
+		pjmedia_vid_port_get_event_publisher(w->vp_rend),
+		&call_med->esub_cap);
 #endif
 
-    /* Start renderer */
-    status = pjmedia_vid_port_start(new_w->vp_rend);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+	/* Start renderer */
+	status = pjmedia_vid_port_start(new_w->vp_rend);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
 
     /* Start capturer */
     status = pjmedia_vid_port_start(new_w->vp_cap);

@@ -307,6 +307,7 @@ typedef struct pjsua_stun_resolve
     pj_stun_sock	*stun_sock; /**< Testing STUN sock  */
 } pjsua_stun_resolve;
 
+/* See also pjsua_vid_win_type_name() */
 typedef enum pjsua_vid_win_type
 {
     PJSUA_WND_TYPE_NONE,
@@ -322,7 +323,8 @@ typedef struct pjsua_vid_win
     pjmedia_vid_port		*vp_cap;	/**< Capture vidport.	*/
     pjmedia_vid_port		*vp_rend;	/**< Renderer vidport	*/
     pjmedia_port		*tee;		/**< Video tee		*/
-    pjmedia_vid_dev_index	 preview_cap_id;/* Capture dev id	*/
+    pjmedia_vid_dev_index	 preview_cap_id;/**< Capture dev id	*/
+    pj_bool_t			 is_native; 	/**< Preview is by dev  */
 } pjsua_vid_win;
 
 /**
@@ -675,21 +677,11 @@ pj_status_t pjsua_vid_subsys_init(void);
 pj_status_t pjsua_vid_subsys_start(void);
 pj_status_t pjsua_vid_subsys_destroy(void);
 
-PJ_INLINE(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
-{
 #if PJSUA_HAS_VIDEO
-    pjsua_vid_win *w = &pjsua_var.win[wid];
-    pj_pool_t *pool = w->pool;
-
-    pj_bzero(w, sizeof(*w));
-    if (pool) pj_pool_reset(pool);
-    w->ref_cnt = 0;
-    w->pool = pool;
-    w->preview_cap_id = PJMEDIA_VID_INVALID_DEV;
+PJ_DECL(void) pjsua_vid_win_reset(pjsua_vid_win_id wid);
 #else
-    PJ_UNUSED_ARG(wid);
+#  define pjsua_vid_win_reset(wid)
 #endif
-}
 
 
 PJ_END_DECL

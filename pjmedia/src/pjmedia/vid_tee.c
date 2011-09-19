@@ -30,6 +30,7 @@
 #define TEE_PORT_NAME	"vid_tee"
 #define TEE_PORT_SIGN	PJMEDIA_SIG_PORT_VID_TEE
 
+#define THIS_FILE	"vid_tee.c"
 
 typedef struct vid_tee_dst_port
 {
@@ -316,8 +317,9 @@ static pj_status_t tee_put_frame(pjmedia_port *port, pjmedia_frame *frame)
             status = pjmedia_converter_convert(tee->tee_conv[i].conv,
                                                frame, &frame_);
             if (status != PJ_SUCCESS) {
-                PJ_LOG(3, ("", "Failed to convert frame for destination"
-                               "port %d (%.*s)", i,
+                PJ_LOG(3, (THIS_FILE,
+			       "Failed to convert frame for destination"
+                               " port %d (%.*s)", i,
                                tee->dst_ports[i].dst->info.name.slen,
                                tee->dst_ports[i].dst->info.name.ptr));
                 continue;

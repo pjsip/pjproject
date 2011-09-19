@@ -149,8 +149,14 @@ typedef enum pjmedia_vid_dev_cap
     PJMEDIA_VID_DEV_CAP_INPUT_SCALE = 2,
 
     /**
-     * The application can provide a window for the renderer to
-     * display the video.
+     * Support for returning the native window handle of the video window.
+     * For renderer, this means the window handle of the renderer window,
+     * while for capture, this means the window handle of the native preview,
+     * only if the device supports  PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW
+     * capability.
+     *
+     * The value of this capability is pointer to pjmedia_vid_dev_hwnd
+     * structure.
      */
     PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW = 4,
 
@@ -175,7 +181,20 @@ typedef enum pjmedia_vid_dev_cap
     PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE = 32,
 
     /**
-     * End of capability
+     * Support for native preview capability in capture devices. Value is
+     * pj_bool_t. With native preview, capture device can be instructed to
+     * show or hide a preview window showing video directly from the camera
+     * by setting this capability to PJ_TRUE or PJ_FALSE. Once the preview
+     * is started, application may use PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW
+     * capability to query the vidow window.
+     *
+     * The value of this capability is a pj_bool_t containing boolean
+     * PJ_TRUE or PJ_FALSE.
+     */
+    PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW = 64,
+
+    /**
+     * End of standard capability
      */
     PJMEDIA_VID_DEV_CAP_MAX = 16384
 
@@ -336,6 +355,13 @@ typedef struct pjmedia_vid_dev_param
      * used if PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE is set in the flags.
      */
     pj_bool_t window_hide;
+
+    /**
+     * Enable built-in preview. This setting is optional and is only used
+     * if PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW capability is supported and
+     * set in the flags.
+     */
+    pj_bool_t native_preview;
 
 } pjmedia_vid_dev_param;
 

@@ -4691,6 +4691,18 @@ struct pjsua_media_config
      * Default : 1
      */
     int			snd_auto_close_time;
+
+    /**
+     * Specify whether built-in/native preview should be used if available.
+     * In some systems, video input devices have built-in capability to show
+     * preview window of the device. Using this built-in preview is preferable
+     * as it consumes less CPU power. If built-in preview is not available,
+     * the library will perform software rendering of the input. If this
+     * field is set to PJ_FALSE, software preview will always be used.
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t vid_preview_enable_native;
 };
 
 
@@ -5436,7 +5448,8 @@ typedef struct pjsua_vid_preview_param
 {
     /**
      * Device ID for the video renderer to be used for rendering the
-     * capture stream for preview.
+     * capture stream for preview. This parameter is ignored if native
+     * preview is being used.
      *
      * Default: PJMEDIA_VID_DEFAULT_RENDER_DEV
      */
@@ -5458,6 +5471,18 @@ typedef struct pjsua_vid_preview_param
  * @param p		The parameter to be initialized.
  */
 PJ_DECL(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p);
+
+/**
+ * Determine if the specified video input device has built-in native
+ * preview capability. This is a convenience function that is equal to
+ * querying device's capability for PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW
+ * capability.
+ *
+ * @param id		The capture device ID.
+ *
+ * @return		PJ_TRUE if it has.
+ */
+PJ_DECL(pj_bool_t) pjsua_vid_preview_has_native(pjmedia_vid_dev_index id);
 
 /**
  * Start video preview window for the specified capture device.
@@ -5503,14 +5528,22 @@ PJ_DECL(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id);
 typedef struct pjsua_vid_win_info
 {
     /**
-     * Renderer device ID.
+     * Flag to indicate whether this window is a native window,
+     * such as created by built-in preview device. If this field is
+     * PJ_TRUE, only the native window handle field of this
+     * structure is valid.
      */
-    pjmedia_vid_dev_index rdr_dev;
+    pj_bool_t is_native;
 
     /**
      * Native window handle.
      */
     pjmedia_vid_dev_hwnd hwnd;
+
+    /**
+     * Renderer device ID.
+     */
+    pjmedia_vid_dev_index rdr_dev;
 
     /**
      * Window show status. The window is hidden if false.
@@ -5556,7 +5589,9 @@ PJ_DECL(pj_status_t) pjsua_vid_win_get_info(pjsua_vid_win_id wid,
                                             pjsua_vid_win_info *wi);
 
 /**
- * Show or hide window.
+ * Show or hide window. This operation is not valid for native windows
+ * (pjsua_vid_win_info.is_native=PJ_TRUE), on which native windowing API
+ * must be used instead.
  *
  * @param wid		The video window ID.
  * @param show		Set to PJ_TRUE to show the window, PJ_FALSE to
@@ -5568,7 +5603,9 @@ PJ_DECL(pj_status_t) pjsua_vid_win_set_show(pjsua_vid_win_id wid,
                                             pj_bool_t show);
 
 /**
- * Set video window position.
+ * Set video window position. This operation is not valid for native windows
+ * (pjsua_vid_win_info.is_native=PJ_TRUE), on which native windowing API
+ * must be used instead.
  *
  * @param wid		The video window ID.
  * @param pos		The window position.
@@ -5579,7 +5616,9 @@ PJ_DECL(pj_status_t) pjsua_vid_win_set_pos(pjsua_vid_win_id wid,
                                            const pjmedia_coord *pos);
 
 /**
- * Resize window.
+ * Resize window. This operation is not valid for native windows
+ * (pjsua_vid_win_info.is_native=PJ_TRUE), on which native windowing API
+ * must be used instead.
  *
  * @param wid		The video window ID.
  * @param size		The new window size.

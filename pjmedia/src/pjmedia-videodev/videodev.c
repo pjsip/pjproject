@@ -40,10 +40,11 @@ static struct cap_info
 {
     DEFINE_CAP("format",        "Video format"),
     DEFINE_CAP("scale",         "Input dimension"),
-    DEFINE_CAP("window",        "Renderer window"),
+    DEFINE_CAP("window",        "Window handle"),
     DEFINE_CAP("resize",        "Renderer resize"),
     DEFINE_CAP("position",      "Renderer position"),
     DEFINE_CAP("hide",          "Renderer hide"),
+    DEFINE_CAP("preview",       "Input preview"),
 };
 
 
@@ -174,6 +175,9 @@ static pj_status_t get_cap_pointer(const pjmedia_vid_dev_param *param,
 	break;
     case PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE:
 	FIELD_INFO(window_hide);
+	break;
+    case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
+	FIELD_INFO(native_preview);
 	break;
     default:
 	return PJMEDIA_EVID_INVCAP;
