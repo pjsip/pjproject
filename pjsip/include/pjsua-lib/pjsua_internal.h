@@ -324,6 +324,7 @@ typedef struct pjsua_vid_win
     pjmedia_vid_port		*vp_rend;	/**< Renderer vidport	*/
     pjmedia_port		*tee;		/**< Video tee		*/
     pjmedia_vid_dev_index	 preview_cap_id;/**< Capture dev id	*/
+    pj_bool_t			 preview_running;/**< Preview is started*/
     pj_bool_t			 is_native; 	/**< Preview is by dev  */
 } pjsua_vid_win;
 

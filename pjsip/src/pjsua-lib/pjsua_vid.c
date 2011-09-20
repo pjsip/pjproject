@@ -323,10 +323,8 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_set_param(
  * Preview
  */
 
-/*
- * Get the preview window handle associated with the capture device, if any.
- */
-PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
+static pjsua_vid_win_id vid_preview_get_win(pjmedia_vid_dev_index id,
+                                            pj_bool_t running_only)
 {
     pjsua_vid_win_id wid = PJSUA_INVALID_ID;
     unsigned i;
@@ -347,9 +345,25 @@ PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
 	    break;
 	}
     }
+
+    if (wid != PJSUA_INVALID_ID && running_only) {
+	pjsua_vid_win *w = &pjsua_var.win[wid];
+	wid = w->preview_running ? wid : PJSUA_INVALID_ID;
+    }
+
     PJSUA_UNLOCK();
 
     return wid;
+}
+
+/*
+ * NOTE: internal function don't use this!!! Use vid_preview_get_win()
+ *       instead. This is because this function will only return window ID
+ *       if preview is currently running.
+ */
+PJ_DEF(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id)
+{
+    return vid_preview_get_win(id, PJ_TRUE);
 }
 
 PJ_DEF(void) pjsua_vid_win_reset(pjsua_vid_win_id wid)
@@ -393,7 +407,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 
     /* If type is preview, check if it exists already */
     if (type == PJSUA_WND_TYPE_PREVIEW) {
-	wid = pjsua_vid_preview_get_win(cap_id);
+	wid = vid_preview_get_win(cap_id, PJ_FALSE);
 	if (wid != PJSUA_INVALID_ID) {
 	    /* Yes, it exists */
 	    /* Show/hide window */
@@ -420,9 +434,9 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 
 	    /* Done */
 	    *id = wid;
-	    PJ_LOG(4,(THIS_FILE, "Window already exist: %d", wid));
 	    pj_log_pop_indent();
-	    return PJ_SUCCESS;
+
+	    return status;
 	}
     }
 
@@ -825,7 +839,12 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 		goto on_error;
 	    }
 
-	    wid = pjsua_vid_preview_get_win(call_med->strm.v.cap_dev);
+	    /* Note: calling pjsua_vid_preview_get_win() even though
+	     * create_vid_win() will automatically create the window
+	     * if it doesn't exist, because create_vid_win() will modify
+	     * existing window SHOW/HIDE value.
+	     */
+	    wid = vid_preview_get_win(call_med->strm.v.cap_dev, PJ_FALSE);
 	    if (wid == PJSUA_INVALID_ID) {
 		/* Create preview video window */
 		status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,
@@ -1042,9 +1061,30 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
     }
 
     w = &pjsua_var.win[wid];
+    if (w->preview_running) {
+	PJSUA_UNLOCK();
+	pj_log_pop_indent();
+	return PJ_SUCCESS;
+    }
 
     /* Start renderer, unless it's native preview */
-    if (!w->is_native) {
+    if (w->is_native && !pjmedia_vid_port_is_running(w->vp_cap)) {
+	pjmedia_vid_dev_stream *cap_dev;
+	pj_bool_t enabled = PJ_TRUE;
+
+	cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+	status = pjmedia_vid_dev_stream_set_cap(
+			cap_dev, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
+			&enabled);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status,
+			 "Error activating native preview, falling back "
+			 "to software preview.."));
+	    w->is_native = PJ_FALSE;
+	}
+    }
+
+    if (!w->is_native && !pjmedia_vid_port_is_running(w->vp_rend)) {
 	status = pjmedia_vid_port_start(w->vp_rend);
 	if (status != PJ_SUCCESS) {
 	    PJSUA_UNLOCK();
@@ -1054,14 +1094,17 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
     }
 
     /* Start capturer */
-    status = pjmedia_vid_port_start(w->vp_cap);
-    if (status != PJ_SUCCESS) {
-	PJSUA_UNLOCK();
-	pj_log_pop_indent();
-	return status;
+    if (!pjmedia_vid_port_is_running(w->vp_cap)) {
+	status = pjmedia_vid_port_start(w->vp_cap);
+	if (status != PJ_SUCCESS) {
+	    PJSUA_UNLOCK();
+	    pj_log_pop_indent();
+	    return status;
+	}
     }
 
     inc_vid_win(wid);
+    w->preview_running = PJ_TRUE;
 
     PJSUA_UNLOCK();
     pj_log_pop_indent();
@@ -1074,9 +1117,8 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
 PJ_DEF(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id)
 {
     pjsua_vid_win_id wid = PJSUA_INVALID_ID;
-
-    PJ_LOG(4,(THIS_FILE, "Stopping preview for cap_dev=%d", id));
-    pj_log_push_indent();
+    pjsua_vid_win *w;
+    pj_status_t status;
 
     PJSUA_LOCK();
     wid = pjsua_vid_preview_get_win(id);
@@ -1086,7 +1128,34 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_stop(pjmedia_vid_dev_index id)
 	return PJ_ENOTFOUND;
     }
 
-    dec_vid_win(wid);
+    PJ_LOG(4,(THIS_FILE, "Stopping preview for cap_dev=%d", id));
+    pj_log_push_indent();
+
+    w = &pjsua_var.win[wid];
+    if (w->preview_running) {
+	if (w->is_native) {
+	    pjmedia_vid_dev_stream *cap_dev;
+	    pj_bool_t enabled = PJ_FALSE;
+
+	    cap_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+	    status = pjmedia_vid_dev_stream_set_cap(
+			    cap_dev, PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW,
+			    &enabled);
+	} else {
+	    status = pjmedia_vid_port_stop(w->vp_rend);
+	}
+
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "Error stopping %spreview",
+		         (w->is_native ? "native " : "")));
+	    PJSUA_UNLOCK();
+	    pj_log_pop_indent();
+	    return status;
+	}
+
+	dec_vid_win(wid);
+	w->preview_running = PJ_FALSE;
+    }
 
     PJSUA_UNLOCK();
     pj_log_pop_indent();
@@ -1673,7 +1742,12 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 
     /* = Attach stream port to the new capture device = */
 
-    new_wid = pjsua_vid_preview_get_win(cap_dev);
+    /* Note: calling pjsua_vid_preview_get_win() even though
+     * create_vid_win() will automatically create the window
+     * if it doesn't exist, because create_vid_win() will modify
+     * existing window SHOW/HIDE value.
+     */
+    new_wid = vid_preview_get_win(cap_dev, PJ_FALSE);
     if (new_wid == PJSUA_INVALID_ID) {
 	/* Create preview video window */
 	status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,

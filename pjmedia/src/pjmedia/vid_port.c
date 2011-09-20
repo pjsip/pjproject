@@ -479,6 +479,11 @@ on_error:
     return status;
 }
 
+PJ_DEF(pj_bool_t) pjmedia_vid_port_is_running(pjmedia_vid_port *vp)
+{
+    return pjmedia_vid_dev_stream_is_running(vp->strm);
+}
+
 PJ_DEF(pj_status_t) pjmedia_vid_port_stop(pjmedia_vid_port *vp)
 {
     pj_status_t status;

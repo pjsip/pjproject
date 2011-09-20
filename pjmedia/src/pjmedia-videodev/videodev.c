@@ -781,7 +781,17 @@ pjmedia_vid_dev_stream_get_event_publisher(pjmedia_vid_dev_stream *strm)
 /* API: Start the stream. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_start(pjmedia_vid_dev_stream *strm)
 {
-    return strm->op->start(strm);
+    pj_status_t status = strm->op->start(strm);
+    if (status == PJ_SUCCESS)
+	strm->sys.is_running = PJ_TRUE;
+    return status;
+}
+
+/* API: has it been started? */
+PJ_DEF(pj_bool_t)
+pjmedia_vid_dev_stream_is_running(pjmedia_vid_dev_stream *strm)
+{
+    return strm->sys.is_running;
 }
 
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_get_frame(
@@ -803,6 +813,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_put_frame(
 /* API: Stop the stream. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_stop(pjmedia_vid_dev_stream *strm)
 {
+    strm->sys.is_running = PJ_FALSE;
     return strm->op->stop(strm);
 }
 
@@ -810,6 +821,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_stop(pjmedia_vid_dev_stream *strm)
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_destroy(
 						pjmedia_vid_dev_stream *strm)
 {
+    strm->sys.is_running = PJ_FALSE;
     return strm->op->destroy(strm);
 }
 

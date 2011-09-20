@@ -213,6 +213,15 @@ pjmedia_vid_port_get_connected_port(pjmedia_vid_port *vid_port);
 PJ_DECL(pj_status_t) pjmedia_vid_port_start(pjmedia_vid_port *vid_port);
 
 /**
+ * Query whether the video port has been started.
+ *
+ * @param vid_port	The video port.
+ *
+ * @return		PJ_TRUE if the video port has been started.
+ */
+PJ_DECL(pj_bool_t) pjmedia_vid_port_is_running(pjmedia_vid_port *vid_port);
+
+/**
  * Stop the video port.
  *
  * @param vid_port	The video port.

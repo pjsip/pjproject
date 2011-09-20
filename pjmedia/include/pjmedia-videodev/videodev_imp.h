@@ -181,6 +181,9 @@ struct pjmedia_vid_dev_stream
     struct {
 	/** Driver index */
 	unsigned drv_idx;
+
+	/** Has it been started? */
+	pj_bool_t is_running;
     } sys;
 
     /** Operations */

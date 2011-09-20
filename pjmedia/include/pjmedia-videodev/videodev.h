@@ -220,7 +220,13 @@ typedef struct pjmedia_vid_dev_info
      */
     pjmedia_dir dir;
 
-    /** Specify whether the device supports callback */
+    /**
+     * Specify whether the device supports callback. Devices that implement
+     * "active interface" will actively call the callbacks to give or ask for
+     * video frames. If the device doesn't support callback, application
+     * must actively request or give video frames from/to the device by using
+     * pjmedia_vid_dev_stream_get_frame()/pjmedia_vid_dev_stream_put_frame().
+     */
     pj_bool_t has_callback;
 
     /** Device capabilities, as bitmask combination of #pjmedia_vid_dev_cap */
@@ -641,6 +647,16 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_start(
 					    pjmedia_vid_dev_stream *strm);
 
 /**
+ * Query whether the stream has been started.
+ *
+ * @param strm	    The video stream
+ *
+ * @return	    PJ_TRUE if the video stream has been started.
+ */
+PJ_DECL(pj_bool_t) pjmedia_vid_dev_stream_is_running(pjmedia_vid_dev_stream *strm);
+
+
+/**
  * Get the event publisher object for the video stream. Caller typically use
  * the returned object to subscribe or unsubscribe events from the video
  * stream.
@@ -652,11 +668,33 @@ PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_start(
 PJ_DECL(pjmedia_event_publisher*)
 pjmedia_vid_dev_stream_get_event_publisher(pjmedia_vid_dev_stream *strm);
 
-/* Get/put frame API for passive stream */
+
+/**
+ * Request one frame from the stream. Application needs to call this function
+ * periodically only if the stream doesn't support "active interface", i.e.
+ * the pjmedia_vid_dev_info.has_callback member is PJ_FALSE.
+ *
+ * @param strm      The video stream.
+ * @param frame	    The video frame to be filled by the device.
+ *
+ * @return          PJ_SUCCESS on successful operation or the appropriate
+ *                  error code.
+ */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_get_frame(
 					    pjmedia_vid_dev_stream *strm,
                                             pjmedia_frame *frame);
 
+/**
+ * Put one frame to the stream. Application needs to call this function
+ * periodically only if the stream doesn't support "active interface", i.e.
+ * the pjmedia_vid_dev_info.has_callback member is PJ_FALSE.
+ *
+ * @param strm      The video stream.
+ * @param frame	    The video frame to put to the device.
+ *
+ * @return          PJ_SUCCESS on successful operation or the appropriate
+ *                  error code.
+ */
 PJ_DECL(pj_status_t) pjmedia_vid_dev_stream_put_frame(
 					    pjmedia_vid_dev_stream *strm,
                                             const pjmedia_frame *frame);
