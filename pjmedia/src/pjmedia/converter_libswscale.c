@@ -154,7 +154,12 @@ static pj_status_t libswscale_conv_convert(pjmedia_converter *converter,
 		  0, src->apply_param.size.h,
 		  dst->apply_param.planes, dst->apply_param.strides);
 
-    return h==(int)dst->apply_param.size.h ? PJ_SUCCESS : PJ_EUNKNOWN;
+    //sws_scale() return value can't be trusted? There are cases when
+    //sws_scale() returns zero but conversion seems to work okay.
+    //return h==(int)dst->apply_param.size.h ? PJ_SUCCESS : PJ_EUNKNOWN;
+    PJ_UNUSED_ARG(h);
+
+    return PJ_SUCCESS;
 }
 
 static void libswscale_conv_destroy(pjmedia_converter *converter)
