@@ -37,7 +37,7 @@ typedef struct pjsua_call_media pjsua_call_media;
 /**
  * Call's media stream.
  */
-typedef struct pjsua_call_media
+struct pjsua_call_media
 {
     pjsua_call		*call;	    /**< Parent call.			    */
     pjmedia_type	 type;	    /**< Media type.			    */
@@ -93,7 +93,7 @@ typedef struct pjsua_call_media
     pj_status_t (*med_create_cb)(pjsua_call_media *call_med,
                                  pj_status_t status, int security_level,
                                  int *sip_err_code);
-} pjsua_call_media;
+};
 
 /**
  * Maximum number of SDP "m=" lines to be supported.
