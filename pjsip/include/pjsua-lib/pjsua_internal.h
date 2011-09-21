@@ -27,27 +27,11 @@
 
 PJ_BEGIN_DECL
 
-/** 
- * Media transport state.
- */
-typedef enum pjsua_med_tp_st
-{
-    /** Not initialized */
-    PJSUA_MED_TP_IDLE,
-
-    /** Initialized (media_create() has been called) */
-    PJSUA_MED_TP_INIT,
-
-    /** Running (media_start() has been called) */
-    PJSUA_MED_TP_RUNNING,
-
-    /** Disabled (transport is initialized, but media is being disabled) */
-    PJSUA_MED_TP_DISABLED
-
-} pjsua_med_tp_st;
-
 /** Forward decl of pjsua call */
 typedef struct pjsua_call pjsua_call;
+
+/** Forward decl of pjsua call media */
+typedef struct pjsua_call_media pjsua_call_media;
 
 
 /**
@@ -92,15 +76,23 @@ typedef struct pjsua_call_media
     pjmedia_transport	*tp;        /**< Current media transport (can be 0) */
     pj_status_t		 tp_ready;  /**< Media transport status.	    */
     pjmedia_transport	*tp_orig;   /**< Original media transport	    */
-    pj_bool_t		 tp_auto_del; /**< May delete media transport   */
+    pj_bool_t		 tp_auto_del; /**< May delete media transport       */
     pjsua_med_tp_st	 tp_st;     /**< Media transport state		    */
     pj_sockaddr		 rtp_addr;  /**< Current RTP source address
 					    (used to update ICE default
 					    address)			    */
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
-    pjmedia_event_subscription esub_rend;/**< Subscribe renderer events.     */
+    pjmedia_event_subscription esub_rend;/**< Subscribe renderer events.    */
     pjmedia_event_subscription esub_cap;/**< Subscribe capture events.      */
+
+    pjsua_med_tp_state_cb      med_init_cb;/**< Media transport
+                                                initialization callback.    */
+
+    /** Media transport creation callback. */
+    pj_status_t (*med_create_cb)(pjsua_call_media *call_med,
+                                 pj_status_t status, int security_level,
+                                 int *sip_err_code);
 } pjsua_call_media;
 
 /**
@@ -132,6 +124,9 @@ struct pjsua_call
     unsigned		 med_cnt;   /**< Number of media in SDP.	    */
     pjsua_call_media     media[PJSUA_MAX_CALL_MEDIA]; /**< Array of media   */
     int			 audio_idx; /**< First active audio media.	    */
+    pj_mutex_t          *med_ch_mutex;/**< Media channel callback's mutex.  */
+    pjsua_med_tp_state_cb   med_ch_cb;/**< Media channel callback.	    */
+    pjsua_med_tp_state_info med_ch_info;/**< Media channel info.            */
 
     pjsip_evsub		*xfer_sub;  /**< Xfer server subscription, if this
 					 call was triggered by xfer.	    */
@@ -147,6 +142,17 @@ struct pjsua_call
     } lock_codec;		     /**< Data for codec locking when answer
 					  contains multiple codecs.	    */
 
+    struct {
+        pjsip_dialog        *dlg;    /**< Call dialog.                      */
+        pjmedia_sdp_session *rem_sdp;/**< Remote SDP.                       */
+        union {
+            struct {
+                unsigned         options; /**< Outgoing call options.       */
+                pjsua_msg_data  *msg_data;/**< Headers for outgoing INVITE. */
+            } out_call;
+        } call_var;
+    } async_call;                      /**< Temporary storage for async
+                                            outgoing/incoming call.         */
 };
 
 
@@ -508,7 +514,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     int security_level,
 				     pj_pool_t *tmp_pool,
 				     const pjmedia_sdp_session *rem_sdp,
-				     int *sip_err_code);
+				     int *sip_err_code,
+                                     pj_bool_t async,
+                                     pjsua_med_tp_state_cb cb);
 pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id, 
 					   pj_pool_t *pool,
 					   const pjmedia_sdp_session *rem_sdp,
@@ -523,12 +531,15 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pjmedia_type type,
 				  const pjsua_transport_config *tcfg,
 				  int security_level,
-				  int *sip_err_code);
+				  int *sip_err_code,
+                                  pj_bool_t async,
+                                  pjsua_med_tp_state_cb cb);
 pj_status_t video_channel_update(pjsua_call_media *call_med,
                                  pj_pool_t *tmp_pool,
 			         const pjmedia_sdp_session *local_sdp,
 			         const pjmedia_sdp_session *remote_sdp);
 void stop_video_stream(pjsua_call_media *call_med);
+void set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
 
 /**

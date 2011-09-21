@@ -331,6 +331,152 @@ static int call_get_secure_level(pjsua_call *call)
 }
 */
 
+static pj_status_t
+on_make_call_med_tp_complete(pjsua_call_id call_id,
+                             const pjsua_med_tp_state_info *info)
+{
+    pjmedia_sdp_session *offer;
+    pjsip_inv_session *inv = NULL;
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
+    pjsip_dialog *dlg = call->async_call.dlg;
+    unsigned options = call->async_call.call_var.out_call.options;
+    pjsip_tx_data *tdata;
+    pj_status_t status = (info? info->status: PJ_SUCCESS);
+
+    PJSUA_LOCK();
+
+    /* Increment the dialog's lock otherwise when invite session creation
+     * fails the dialog will be destroyed prematurely.
+     */
+    pjsip_dlg_inc_lock(dlg);
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	goto on_error;
+    }
+
+    /* Create offer */
+    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
+					    &offer, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	goto on_error;
+    }
+
+    /* Create the INVITE session: */
+    options |= PJSIP_INV_SUPPORT_100REL;
+    if (acc->cfg.require_100rel)
+	options |= PJSIP_INV_REQUIRE_100REL;
+    if (acc->cfg.use_timer != PJSUA_SIP_TIMER_INACTIVE) {
+	options |= PJSIP_INV_SUPPORT_TIMER;
+	if (acc->cfg.use_timer == PJSUA_SIP_TIMER_REQUIRED)
+	    options |= PJSIP_INV_REQUIRE_TIMER;
+	else if (acc->cfg.use_timer == PJSUA_SIP_TIMER_ALWAYS)
+	    options |= PJSIP_INV_ALWAYS_USE_TIMER;
+    }
+
+    status = pjsip_inv_create_uac( dlg, offer, options, &inv);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Invite session creation failed", status);
+	goto on_error;
+    }
+
+    /* Init Session Timers */
+    status = pjsip_timer_init_session(inv, &acc->cfg.timer_setting);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Session Timer init failed", status);
+	goto on_error;
+    }
+
+    /* Create and associate our data in the session. */
+    call->inv = inv;
+
+    dlg->mod_data[pjsua_var.mod.id] = call;
+    inv->mod_data[pjsua_var.mod.id] = call;
+
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(dlg, &tp_sel);
+    }
+
+    /* Set dialog Route-Set: */
+    if (!pj_list_empty(&acc->route_set))
+	pjsip_dlg_set_route_set(dlg, &acc->route_set);
+
+
+    /* Set credentials: */
+    if (acc->cred_cnt) {
+	pjsip_auth_clt_set_credentials( &dlg->auth_sess, 
+					acc->cred_cnt, acc->cred);
+    }
+
+    /* Set authentication preference */
+    pjsip_auth_clt_set_prefs(&dlg->auth_sess, &acc->cfg.auth_pref);
+
+    /* Create initial INVITE: */
+
+    status = pjsip_inv_invite(inv, &tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to create initial INVITE request", 
+		     status);
+	goto on_error;
+    }
+
+
+    /* Add additional headers etc */
+
+    pjsua_process_msg_data( tdata,
+                            call->async_call.call_var.out_call.msg_data);
+
+    /* Must increment call counter now */
+    ++pjsua_var.call_cnt;
+
+    /* Send initial INVITE: */
+
+    status = pjsip_inv_send_msg(inv, tdata);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
+		     status);
+
+	/* Upon failure to send first request, the invite 
+	 * session would have been cleared.
+	 */
+	inv = NULL;
+	goto on_error;
+    }
+
+    /* Done. */
+
+    pjsip_dlg_dec_lock(dlg);
+    PJSUA_UNLOCK();
+
+    return PJ_SUCCESS;
+
+on_error:
+    if (dlg) {
+	/* This may destroy the dialog */
+	pjsip_dlg_dec_lock(dlg);
+    }
+
+    if (inv != NULL) {
+	pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
+    }
+
+    if (call_id != -1) {
+	reset_call(call_id);
+	pjsua_media_channel_deinit(call_id);
+    }
+
+    PJSUA_UNLOCK();
+    return status;
+}
+
 
 /*
  * Make outgoing call to the specified URI using the specified account.
@@ -344,13 +490,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 {
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
-    pjmedia_sdp_session *offer;
-    pjsip_inv_session *inv = NULL;
     pjsua_acc *acc;
     pjsua_call *call;
     int call_id = -1;
     pj_str_t contact;
-    pjsip_tx_data *tdata;
     pj_status_t status;
 
 
@@ -376,8 +519,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     if (!pjsua_var.is_mswitch && pjsua_var.snd_port==NULL && 
 	pjsua_var.null_snd==NULL && !pjsua_var.no_snd) 
     {
-	pj_status_t status;
-
 	status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -462,114 +603,31 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Increment the dialog's lock otherwise when invite session creation
      * fails the dialog will be destroyed prematurely.
      */
-    pjsip_dlg_inc_lock(dlg);
+//    pjsip_dlg_inc_lock(dlg);
 
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
 
+    /* Attach user data */
+    call->user_data = user_data;
+    
+    call->async_call.call_var.out_call.options = options;
+    call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
+                                                      dlg->pool, msg_data);
+    call->async_call.dlg = dlg;
+
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
 				      call->secure_level, dlg->pool,
-				      NULL, NULL);
-    if (status != PJ_SUCCESS) {
+				      NULL, NULL, PJ_TRUE,
+                                      (pjsua_med_tp_state_cb)
+                                      &on_make_call_med_tp_complete);
+    if (status == PJ_SUCCESS) {
+        status = on_make_call_med_tp_complete(call->index, NULL);
+        if (status != PJ_SUCCESS)
+	    goto on_error;
+    } else if (status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	goto on_error;
-    }
-
-    /* Create offer */
-    status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
-					    &offer, NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	goto on_error;
-    }
-
-    /* Create the INVITE session: */
-    options |= PJSIP_INV_SUPPORT_100REL;
-    if (acc->cfg.require_100rel)
-	options |= PJSIP_INV_REQUIRE_100REL;
-    if (acc->cfg.use_timer != PJSUA_SIP_TIMER_INACTIVE) {
-	options |= PJSIP_INV_SUPPORT_TIMER;
-	if (acc->cfg.use_timer == PJSUA_SIP_TIMER_REQUIRED)
-	    options |= PJSIP_INV_REQUIRE_TIMER;
-	else if (acc->cfg.use_timer == PJSUA_SIP_TIMER_ALWAYS)
-	    options |= PJSIP_INV_ALWAYS_USE_TIMER;
-    }
-
-    status = pjsip_inv_create_uac( dlg, offer, options, &inv);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Invite session creation failed", status);
-	goto on_error;
-    }
-
-    /* Init Session Timers */
-    status = pjsip_timer_init_session(inv, &acc->cfg.timer_setting);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Session Timer init failed", status);
-	goto on_error;
-    }
-
-    /* Create and associate our data in the session. */
-    call->inv = inv;
-
-    dlg->mod_data[pjsua_var.mod.id] = call;
-    inv->mod_data[pjsua_var.mod.id] = call;
-
-    /* Attach user data */
-    call->user_data = user_data;
-
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (acc->cfg.transport_id != PJSUA_INVALID_ID) {
-	pjsip_tpselector tp_sel;
-
-	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
-	pjsip_dlg_set_transport(dlg, &tp_sel);
-    }
-
-    /* Set dialog Route-Set: */
-    if (!pj_list_empty(&acc->route_set))
-	pjsip_dlg_set_route_set(dlg, &acc->route_set);
-
-
-    /* Set credentials: */
-    if (acc->cred_cnt) {
-	pjsip_auth_clt_set_credentials( &dlg->auth_sess, 
-					acc->cred_cnt, acc->cred);
-    }
-
-    /* Set authentication preference */
-    pjsip_auth_clt_set_prefs(&dlg->auth_sess, &acc->cfg.auth_pref);
-
-    /* Create initial INVITE: */
-
-    status = pjsip_inv_invite(inv, &tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to create initial INVITE request", 
-		     status);
-	goto on_error;
-    }
-
-
-    /* Add additional headers etc */
-
-    pjsua_process_msg_data( tdata, msg_data);
-
-    /* Must increment call counter now */
-    ++pjsua_var.call_cnt;
-
-    /* Send initial INVITE: */
-
-    status = pjsip_inv_send_msg(inv, tdata);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
-		     status);
-
-	/* Upon failure to send first request, the invite 
-	 * session would have been cleared.
-	 */
-	inv = NULL;
 	goto on_error;
     }
 
@@ -578,7 +636,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     if (p_call_id)
 	*p_call_id = call_id;
 
-    pjsip_dlg_dec_lock(dlg);
     pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
 
@@ -589,12 +646,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
 
 on_error:
     if (dlg) {
+        pjsip_dlg_inc_lock(dlg);
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
-    }
-
-    if (inv != NULL) {
-	pjsip_inv_terminate(inv, PJSIP_SC_OK, PJ_FALSE);
     }
 
     if (call_id != -1) {
@@ -815,7 +869,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				      call->secure_level, 
 				      rdata->tp_info.pool,
 				      offer,
-				      &sip_err_code);
+				      &sip_err_code, PJ_FALSE,
+                                      NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
@@ -832,7 +887,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 			    sip_err_code, NULL, NULL, NULL, NULL);
 	goto on_return;
     }
-
 
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
@@ -1014,7 +1068,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     inv->mod_data[pjsua_var.mod.id] = call;
 
     ++pjsua_var.call_cnt;
-
 
     /* Check if this request should replace existing call */
     if (replaced_dlg) {

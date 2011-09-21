@@ -675,7 +675,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
-	call_med->tp_st = PJSUA_MED_TP_RUNNING;
+	set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
 
 	/* Get remote SRTP usage policy */
 	pjmedia_transport_info_init(&tp_info);
@@ -1472,7 +1472,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
 				   &acc_cfg->rtp_cfg, call->secure_level,
-				   NULL);
+				   NULL, PJ_FALSE, NULL);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -1485,7 +1485,7 @@ static pj_status_t call_add_video(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    call_med->tp_st = PJSUA_MED_TP_INIT;
+    set_media_tp_state(call_med, PJSUA_MED_TP_INIT);
 
     /* Get transport address info */
     pjmedia_transport_info_init(&tpinfo);
@@ -1592,7 +1592,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
 	status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
 				       &acc_cfg->rtp_cfg, call->secure_level,
-				       NULL);
+				       NULL, PJ_FALSE, NULL);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
@@ -1662,7 +1662,7 @@ on_error:
 	/* Mark media transport to disabled */
 	// Don't close this here, as SDP negotiation has not been
 	// done and stream may be still active.
-	call_med->tp_st = PJSUA_MED_TP_DISABLED;
+	set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
 
 	/* Deactivate the stream */
 	pjmedia_sdp_media_deactivate(pool, sdp->media[med_idx]);

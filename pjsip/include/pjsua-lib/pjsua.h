@@ -463,6 +463,78 @@ typedef struct pjsua_reg_info
 } pjsua_reg_info;
 
 
+/** 
+ * Enumeration of media transport state types.
+ */
+typedef enum pjsua_med_tp_st
+{
+    /** Null, this is the state before media transport is created. */
+    PJSUA_MED_TP_NULL,
+
+    /**
+     * Just before media transport is created, which can finish
+     * asynchronously later.
+     */
+    PJSUA_MED_TP_CREATING,
+
+    /** Media transport creation is completed, but not initialized yet. */
+    PJSUA_MED_TP_IDLE,
+
+    /** Initialized (media_create() has been called). */
+    PJSUA_MED_TP_INIT,
+
+    /** Running (media_start() has been called). */
+    PJSUA_MED_TP_RUNNING,
+
+    /** Disabled (transport is initialized, but media is being disabled). */
+    PJSUA_MED_TP_DISABLED
+
+} pjsua_med_tp_st;
+
+
+/**
+ * Structure to be passed on media transport state callback.
+ */
+typedef struct pjsua_med_tp_state_info
+{
+    /**
+     * The media index.
+     */
+    unsigned             med_idx;
+
+    /**
+     * The media transport state
+     */
+    pjsua_med_tp_st      state;
+
+    /**
+     * The last error code related to the media transport state.
+     */
+    pj_status_t		 status;
+
+    /**
+     * Optional SIP error code.
+     */
+    int		         sip_err_code;
+
+    /**
+     * Optional extended info, the content is specific for each transport type.
+     */
+    void		*ext_info;
+
+} pjsua_med_tp_state_info;
+
+
+/**
+  * Type of callback to be called when media transport state is changed.
+  *
+  * @param call_id	The call ID.
+  * @param info         The media transport state info.
+  */
+typedef void (*pjsua_med_tp_state_cb)(pjsua_call_id call_id,
+                                      const pjsua_med_tp_state_info *info);
+
+
 /**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
@@ -949,6 +1021,12 @@ typedef struct pjsua_callback
     pjsip_tp_state_callback on_transport_state;
 
     /**
+     * This callback is called when media transport state is changed. See
+     * also #pjsua_med_tp_state_cb.
+     */
+    pjsua_med_tp_state_cb on_call_media_transport_state;
+
+    /**
      * This callback is called to report error in ICE media transport.
      * Currently it is used to report TURN Refresh error.
      *
@@ -1362,6 +1440,18 @@ struct pjsua_msg_data
  * @param msg_data  Message data to be initialized.
  */
 PJ_DECL(void) pjsua_msg_data_init(pjsua_msg_data *msg_data);
+
+
+/**
+ * Clone message data.
+ *
+ * @param pool	    Pool to allocate memory for the new message data.
+ * @param rhs       Message data to be cloned.
+ *
+ * @return          The new message data.
+ */
+PJ_DECL(pjsua_msg_data*) pjsua_msg_data_clone(pj_pool_t *pool,
+                                              const pjsua_msg_data *rhs);
 
 
 /**

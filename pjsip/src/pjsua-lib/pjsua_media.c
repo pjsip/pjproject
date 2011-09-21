@@ -710,6 +710,8 @@ static pj_status_t create_udp_media_transport(const pjsua_transport_config *cfg,
     pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_DECODING,
 				    pjsua_var.media_cfg.rx_drop_pct);
 
+    call_med->tp_ready = PJ_SUCCESS;
+
     return PJ_SUCCESS;
 
 on_error:
@@ -771,7 +773,10 @@ static void on_ice_complete(pjmedia_transport *tp,
 
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
-	call_med->tp_ready = result;
+        call_med->tp_ready = result;
+        if (call_med->med_create_cb)
+            (*call_med->med_create_cb)(call_med, result,
+                                       call_med->call->secure_level, NULL);
 	break;
     case PJ_ICE_STRANS_OP_NEGOTIATION:
 	if (result != PJ_SUCCESS) {
@@ -831,6 +836,17 @@ static void on_ice_complete(pjmedia_transport *tp,
 		         "ICE keep alive failure for transport %d:%d",
 		         call_med->call->index, call_med->idx));
 	}
+        if (pjsua_var.ua_cfg.cb.on_call_media_transport_state) {
+            pjsua_med_tp_state_info info;
+
+            pj_bzero(&info, sizeof(info));
+            info.med_idx = call_med->idx;
+            info.state = call_med->tp_st;
+            info.status = result;
+            info.ext_info = &op;
+	    (*pjsua_var.ua_cfg.cb.on_call_media_transport_state)(
+                call_med->call->index, &info);
+        }
 	if (pjsua_var.ua_cfg.cb.on_ice_transport_error) {
 	    pjsua_call_id id = call_med->call->index;
 	    (*pjsua_var.ua_cfg.cb.on_ice_transport_error)(id, op, result,
@@ -870,7 +886,8 @@ static pj_status_t parse_host_port(const pj_str_t *host_port,
 /* Create ICE media transports (when ice is enabled) */
 static pj_status_t create_ice_media_transport(
 				const pjsua_transport_config *cfg,
-				pjsua_call_media *call_med)
+				pjsua_call_media *call_med,
+                                pj_bool_t async)
 {
     char stunip[PJ_INET6_ADDRSTRLEN];
     pj_ice_strans_cfg ice_cfg;
@@ -952,12 +969,17 @@ static pj_status_t create_ice_media_transport(
     }
 
     /* Wait until transport is initialized, or time out */
-    PJSUA_UNLOCK();
-    while (call_med->tp_ready == PJ_EPENDING) {
-	pjsua_handle_events(100);
+    if (!async) {
+        PJSUA_UNLOCK();
+        while (call_med->tp_ready == PJ_EPENDING) {
+	    pjsua_handle_events(100);
+        }
+        PJSUA_LOCK();
     }
-    PJSUA_LOCK();
-    if (call_med->tp_ready != PJ_SUCCESS) {
+
+    if (async && call_med->tp_ready == PJ_EPENDING) {
+        return PJ_EPENDING;
+    } else if (call_med->tp_ready != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing ICE media transport",
 		     call_med->tp_ready);
 	status = call_med->tp_ready;
@@ -1235,59 +1257,42 @@ static pj_status_t call_media_on_event(pjmedia_event_subscription *esub,
     return PJ_SUCCESS;
 }
 
-/* Initialize the media line */
-pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
-                                  pjmedia_type type,
-				  const pjsua_transport_config *tcfg,
-				  int security_level,
-				  int *sip_err_code)
+/* Set media transport state and notify the application via the callback. */
+void set_media_tp_state(pjsua_call_media *call_med,
+                        pjsua_med_tp_st tp_st)
+{
+    if (pjsua_var.ua_cfg.cb.on_call_media_transport_state &&
+        call_med->tp_st != tp_st)
+    {
+        pjsua_med_tp_state_info info;
+
+        pj_bzero(&info, sizeof(info));
+        info.med_idx = call_med->idx;
+        info.state = tp_st;
+        info.status = call_med->tp_ready;
+	(*pjsua_var.ua_cfg.cb.on_call_media_transport_state)(
+            call_med->call->index, &info);
+    }
+
+    call_med->tp_st = tp_st;
+}
+
+/* Callback to resume pjsua_call_media_init() after media transport
+ * creation is completed.
+ */
+static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
+                                      pj_status_t status,
+                                      int security_level,
+                                      int *sip_err_code)
 {
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
-    pj_status_t status;
+    int err_code = 0;
 
-    /*
-     * Note: this function may be called when the media already exists
-     * (e.g. in reinvites, updates, etc.)
-     */
-    call_med->type = type;
+    if (status != PJ_SUCCESS)
+        goto on_error;
 
-    /* Create the media transport for initial call. This is blocking for now */
-    if (call_med->tp == NULL) {
-	if (pjsua_var.media_cfg.enable_ice) {
-	    status = create_ice_media_transport(tcfg, call_med);
-	} else {
-	    status = create_udp_media_transport(tcfg, call_med);
-	}
-
-	if (status != PJ_SUCCESS) {
-	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
-	    return status;
-	}
-	
-	call_med->tp_st = PJSUA_MED_TP_IDLE;
-
-#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-	/* While in initial call, set default video devices */
-	if (type == PJMEDIA_TYPE_VIDEO) {
-	    call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
-	    call_med->strm.v.cap_dev = acc->cfg.vid_cap_dev;
-	    if (call_med->strm.v.rdr_dev == PJMEDIA_VID_DEFAULT_RENDER_DEV) {
-		pjmedia_vid_dev_info info;
-		pjmedia_vid_dev_get_info(call_med->strm.v.rdr_dev, &info);
-		call_med->strm.v.rdr_dev = info.id;
-	    }
-	    if (call_med->strm.v.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
-		pjmedia_vid_dev_info info;
-		pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
-		call_med->strm.v.cap_dev = info.id;
-	    }
-	}
-#endif
-
-    } else if (call_med->tp_st == PJSUA_MED_TP_DISABLED) {
-	/* Media is being reenabled. */
-	call_med->tp_st = PJSUA_MED_TP_INIT;
-    }
+    if (call_med->tp_st == PJSUA_MED_TP_CREATING)
+        set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* This function may be called when SRTP transport already exists
@@ -1300,8 +1305,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	/* Check if SRTP requires secure signaling */
 	if (acc->cfg.use_srtp != PJMEDIA_SRTP_DISABLED) {
 	    if (security_level < acc->cfg.srtp_secure_signaling) {
-		if (sip_err_code)
-		    *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+		err_code = PJSIP_SC_NOT_ACCEPTABLE;
 		status = PJSIP_ESESSIONINSECURE;
 		goto on_error;
 	    }
@@ -1322,8 +1326,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 					       call_med->tp,
 					       &srtp_opt, &srtp);
 	if (status != PJ_SUCCESS) {
-	    if (sip_err_code)
-		*sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
+	    err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
 	    goto on_error;
 	}
 
@@ -1339,15 +1342,190 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
     pjmedia_event_subscription_init(&call_med->esub_rend, &call_media_on_event,
                                     call_med);
     pjmedia_event_subscription_init(&call_med->esub_cap, &call_media_on_event,
-                                        call_med);
-
-    return PJ_SUCCESS;
+                                    call_med);
 
 on_error:
-    if (call_med->tp) {
+    if (status != PJ_SUCCESS && call_med->tp) {
 	pjmedia_transport_close(call_med->tp);
 	call_med->tp = NULL;
     }
+
+    if (sip_err_code)
+        *sip_err_code = err_code;
+
+    if (call_med->med_init_cb) {
+        pjsua_med_tp_state_info info;
+
+        pj_bzero(&info, sizeof(info));
+        info.status = status;
+        info.state = call_med->tp_st;
+        info.med_idx = call_med->idx;
+        info.sip_err_code = err_code;
+        (*call_med->med_init_cb)(call_med->call->index, &info);
+    }
+
+    return status;
+}
+
+/* Initialize the media line */
+pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
+                                  pjmedia_type type,
+				  const pjsua_transport_config *tcfg,
+				  int security_level,
+				  int *sip_err_code,
+                                  pj_bool_t async,
+                                  pjsua_med_tp_state_cb cb)
+{
+    pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+    pj_status_t status = PJ_SUCCESS;
+
+    /*
+     * Note: this function may be called when the media already exists
+     * (e.g. in reinvites, updates, etc.)
+     */
+    call_med->type = type;
+
+    /* Create the media transport for initial call. */
+    if (call_med->tp == NULL) {
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+	/* While in initial call, set default video devices */
+	if (type == PJMEDIA_TYPE_VIDEO) {
+	    call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
+	    call_med->strm.v.cap_dev = acc->cfg.vid_cap_dev;
+	    if (call_med->strm.v.rdr_dev == PJMEDIA_VID_DEFAULT_RENDER_DEV) {
+		pjmedia_vid_dev_info info;
+		pjmedia_vid_dev_get_info(call_med->strm.v.rdr_dev, &info);
+		call_med->strm.v.rdr_dev = info.id;
+	    }
+	    if (call_med->strm.v.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
+		pjmedia_vid_dev_info info;
+		pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
+		call_med->strm.v.cap_dev = info.id;
+	    }
+	}
+#endif
+
+        set_media_tp_state(call_med, PJSUA_MED_TP_CREATING);
+
+        if (async) {
+            call_med->med_create_cb = &call_media_init_cb;
+            call_med->med_init_cb = cb;
+        }
+
+	if (pjsua_var.media_cfg.enable_ice) {
+	    status = create_ice_media_transport(tcfg, call_med, async);
+	} else {
+	    status = create_udp_media_transport(tcfg, call_med);
+	}
+
+        if (status == PJ_EPENDING) {
+            /* We will resume call media initialization in the
+             * on_ice_complete() callback.
+             */
+            return PJ_EPENDING;
+        } else if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
+	    return status;
+	}
+
+        /* Media transport creation completed immediately, so 
+         * we don't need to call the callback.
+         */
+        call_med->med_init_cb = NULL;
+
+    } else if (call_med->tp_st == PJSUA_MED_TP_DISABLED) {
+	/* Media is being reenabled. */
+	set_media_tp_state(call_med, PJSUA_MED_TP_INIT);
+    }
+
+    return call_media_init_cb(call_med, status, security_level,
+                              sip_err_code);
+}
+
+/* Callback to resume pjsua_media_channel_init() after media transport
+ * initialization is completed.
+ */
+static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
+                                         const pjsua_med_tp_state_info *info)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    pj_status_t status = (info? info->status : PJ_SUCCESS);
+    unsigned mi;
+
+    if (info) {
+        pj_mutex_lock(call->med_ch_mutex);
+
+        /* Set the callback to NULL to indicate that the async operation
+         * has completed.
+         */
+        call->media[info->med_idx].med_init_cb = NULL;
+
+        /* In case of failure, save the information to be returned
+         * by the last media transport to finish.
+         */
+        if (info->status != PJ_SUCCESS)
+            pj_memcpy(&call->med_ch_info, info, sizeof(info));
+
+        /* Check whether all the call's medias have finished calling their
+         * callbacks.
+         */
+        for (mi=0; mi < call->med_cnt; ++mi) {
+            pjsua_call_media *call_med = &call->media[mi];
+
+            if (call_med->med_init_cb) {
+                pj_mutex_unlock(call->med_ch_mutex);
+                return PJ_SUCCESS;
+            }
+
+            if (call_med->tp_ready != PJ_SUCCESS)
+                status = call_med->tp_ready;
+        }
+
+        /* OK, we are called by the last media transport finished. */
+        pj_mutex_unlock(call->med_ch_mutex);
+    }
+
+    if (call->med_ch_mutex) {
+        pj_mutex_destroy(call->med_ch_mutex);
+        call->med_ch_mutex = NULL;
+    }
+
+    if (status != PJ_SUCCESS) {
+        pjsua_media_channel_deinit(call_id);
+        goto on_error;
+    }
+
+    /* Tell the media transport of a new offer/answer session */
+    for (mi=0; mi < call->med_cnt; ++mi) {
+	pjsua_call_media *call_med = &call->media[mi];
+
+	/* Note: tp may be NULL if this media line is disabled */
+	if (call_med->tp && call_med->tp_st == PJSUA_MED_TP_IDLE) {
+            pj_pool_t *tmp_pool = (call->inv? call->inv->pool_prov:
+                                   call->async_call.dlg->pool);
+
+	    status = pjmedia_transport_media_create(
+                         call_med->tp, tmp_pool,
+                         0, call->async_call.rem_sdp, mi);
+	    if (status != PJ_SUCCESS) {
+                call->med_ch_info.status = status;
+                call->med_ch_info.med_idx = mi;
+                call->med_ch_info.state = call_med->tp_st;
+                call->med_ch_info.sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+		pjsua_media_channel_deinit(call_id);
+		goto on_error;
+	    }
+
+	    set_media_tp_state(call_med, PJSUA_MED_TP_INIT);
+	}
+    }
+
+    call->med_ch_info.status = PJ_SUCCESS;
+
+on_error:
+    if (call->med_ch_cb)
+        (*call->med_ch_cb)(call->index, &call->med_ch_info);
+
     return status;
 }
 
@@ -1356,7 +1534,9 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 				     int security_level,
 				     pj_pool_t *tmp_pool,
 				     const pjmedia_sdp_session *rem_sdp,
-				     int *sip_err_code)
+				     int *sip_err_code,
+                                     pj_bool_t async,
+                                     pjsua_med_tp_state_cb cb)
 {
     const pj_str_t STR_AUDIO = { "audio", 5 };
     const pj_str_t STR_VIDEO = { "video", 5 };
@@ -1368,9 +1548,11 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     unsigned mvidcnt = PJ_ARRAY_SIZE(mvididx);
     pjmedia_type media_types[PJSUA_MAX_CALL_MEDIA];
     unsigned mi;
+    pj_bool_t pending_med_tp = PJ_FALSE;
     pj_status_t status;
 
     PJ_UNUSED_ARG(role);
+    PJ_UNUSED_ARG(tmp_pool);
 
     /*
      * Note: this function may be called when the media already exists
@@ -1379,6 +1561,15 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
 	return PJ_EBUSY;
+
+    if (async) {
+        pj_pool_t *tmppool = (call->inv? call->inv->pool_prov:
+                              call->async_call.dlg->pool);
+
+        status = pj_mutex_create_simple(tmppool, NULL, &call->med_ch_mutex);
+        if (status != PJ_SUCCESS)
+            return status;
+    }
 
     PJ_LOG(4,(THIS_FILE, "Call %d: initializing media..", call_id));
     pj_log_push_indent();
@@ -1451,6 +1642,15 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	goto on_error;
     }
 
+    if (async) {
+        call->med_ch_cb = cb;
+        if (rem_sdp) {
+            /* TODO: change rem_sdp to non-const parameter. */
+            call->async_call.rem_sdp =
+                pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
+        }
+    }
+
     /* Initialize each media line */
     for (mi=0; mi < call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
@@ -1482,9 +1682,28 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	if (enabled) {
 	    status = pjsua_call_media_init(call_med, media_type,
 	                                   &acc->cfg.rtp_cfg,
-					   security_level, sip_err_code);
-	    if (status != PJ_SUCCESS) {
-		pjsua_media_channel_deinit(call_id);
+					   security_level, sip_err_code,
+                                           async,
+                                           (async? (pjsua_med_tp_state_cb)
+                                           &media_channel_init_cb: NULL));
+            if (status == PJ_EPENDING) {
+                pending_med_tp = PJ_TRUE;
+            } else if (status != PJ_SUCCESS) {
+                if (pending_med_tp) {
+                    /* Save failure information. */
+                    call_med->tp_ready = status;
+                    pj_bzero(&call->med_ch_info, sizeof(call->med_ch_info));
+                    call->med_ch_info.status = status;
+                    call->med_ch_info.state = call_med->tp_st;
+                    call->med_ch_info.med_idx = call_med->idx;
+                    if (sip_err_code)
+                        call->med_ch_info.sip_err_code = *sip_err_code;
+
+                    /* We will return failure in the callback later. */
+                    return PJ_EPENDING;
+                }
+
+                pjsua_media_channel_deinit(call_id);
 		goto on_error;
 	    }
 	} else {
@@ -1498,7 +1717,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 		//call_med->tp = NULL;
 		pj_assert(call_med->tp_st == PJSUA_MED_TP_INIT || 
 			  call_med->tp_st == PJSUA_MED_TP_RUNNING);
-		call_med->tp_st = PJSUA_MED_TP_DISABLED;
+		set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
 	    }
 
 	    /* Put media type just for info */
@@ -1511,29 +1730,30 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     PJ_LOG(4,(THIS_FILE, "Media index %d selected for audio call %d",
 	      call->audio_idx, call->index));
 
-    /* Tell the media transport of a new offer/answer session */
-    for (mi=0; mi < call->med_cnt; ++mi) {
-	pjsua_call_media *call_med = &call->media[mi];
-
-	/* Note: tp may be NULL if this media line is disabled */
-	if (call_med->tp && call_med->tp_st == PJSUA_MED_TP_IDLE) {
-	    status = pjmedia_transport_media_create(call_med->tp,
-						    tmp_pool, 0,
-						    rem_sdp, mi);
-	    if (status != PJ_SUCCESS) {
-		if (sip_err_code) *sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
-		pjsua_media_channel_deinit(call_id);
-		goto on_error;
-	    }
-
-	    call_med->tp_st = PJSUA_MED_TP_INIT;
-	}
+    if (pending_med_tp) {
+        /* We have a pending media transport initialization. */
+        pj_log_pop_indent();
+        return PJ_EPENDING;
     }
 
+    /* Media transport initialization completed immediately, so 
+     * we don't need to call the callback.
+     */
+    call->med_ch_cb = NULL;
+
+    status = media_channel_init_cb(call_id, NULL);
+    if (status != PJ_SUCCESS && sip_err_code)
+        *sip_err_code = call->med_ch_info.sip_err_code;
+
     pj_log_pop_indent();
-    return PJ_SUCCESS;
+    return status;
 
 on_error:
+    if (call->med_ch_mutex) {
+        pj_mutex_destroy(call->med_ch_mutex);
+        call->med_ch_mutex = NULL;
+    }
+
     pj_log_pop_indent();
     return status;
 }
@@ -1562,7 +1782,8 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
 	    status = pjsua_media_channel_init(call_id, PJSIP_ROLE_UAS,
 					      call->secure_level, pool,
-					      rem_sdp, sip_err_code);
+					      rem_sdp, sip_err_code,
+                                              PJ_FALSE, NULL);
 	    if (status != PJ_SUCCESS)
 		return status;
 	}
@@ -1885,9 +2106,9 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
 
-	if (call_med->tp_st != PJSUA_MED_TP_IDLE) {
+	if (call_med->tp_st > PJSUA_MED_TP_IDLE) {
 	    pjmedia_transport_media_stop(call_med->tp);
-	    call_med->tp_st = PJSUA_MED_TP_IDLE;
+	    set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
 	}
 
 	//if (call_med->tp_orig && call_med->tp &&
@@ -1971,7 +2192,7 @@ static pj_status_t audio_channel_update(pjsua_call_media *call_med,
 	if (status != PJ_SUCCESS)
 	    goto on_return;
 
-	call_med->tp_st = PJSUA_MED_TP_RUNNING;
+	set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
 
 	/* Get remote SRTP usage policy */
 	pjmedia_transport_info_init(&tp_info);
@@ -2263,7 +2484,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	if (local_sdp->media[mi]->desc.port==0 && call_med->tp) {
 	    pjmedia_transport_close(call_med->tp);
 	    call_med->tp = call_med->tp_orig = NULL;
-	    call_med->tp_st = PJSUA_MED_TP_IDLE;
+	    set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
 	}
 
 	if (status != PJ_SUCCESS) {
