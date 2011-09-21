@@ -2752,8 +2752,19 @@ static void schedule_reregistration(pjsua_acc *acc)
     acc->auto_rereg.timer.user_data = acc;
 
     /* Reregistration attempt. The first attempt will be done immediately. */
-    delay.sec = acc->auto_rereg.attempt_cnt? acc->cfg.reg_retry_interval : 0;
+    delay.sec = acc->auto_rereg.attempt_cnt? acc->cfg.reg_retry_interval :
+					     acc->cfg.reg_first_retry_interval;
     delay.msec = 0;
+
+    /* Randomize interval by +/- 10 secs */
+    if (delay.sec >= 10) {
+	delay.msec = -10000 + (pj_rand() % 20000);
+    } else {
+	delay.sec = 0;
+	delay.msec = (pj_rand() % 10000);
+    }
+    pj_time_val_normalize(&delay);
+
     pjsua_schedule_timer(&acc->auto_rereg.timer, &delay);
 }
 
