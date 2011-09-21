@@ -120,7 +120,8 @@ PJ_DEF(const char*) pj_stun_sock_op_name(pj_stun_sock_op op)
 	"?",
 	"DNS resolution",
 	"STUN Binding request",
-	"Keep-alive"
+	"Keep-alive",
+	"Mapped addr. changed"
     };
 
     return op <= PJ_STUN_SOCK_KEEP_ALIVE_OP ? names[op] : "?";
