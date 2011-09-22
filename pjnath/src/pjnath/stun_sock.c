@@ -124,7 +124,7 @@ PJ_DEF(const char*) pj_stun_sock_op_name(pj_stun_sock_op op)
 	"Mapped addr. changed"
     };
 
-    return op <= PJ_STUN_SOCK_KEEP_ALIVE_OP ? names[op] : "?";
+    return op < PJ_ARRAY_SIZE(names) ? names[op] : "???";
 };
 
 
