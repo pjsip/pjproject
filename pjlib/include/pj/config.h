@@ -165,7 +165,7 @@
 #elif defined(PJ_M_IA64) || defined(__ia64__) || defined(_IA64) || \
 	defined(__IA64__) || defined( 	_M_IA64)
     /*
-     * Intel IA64 processor, little endian
+     * Intel IA64 processor, default to little endian
      */
 #   undef PJ_M_IA64
 #   define PJ_M_IA64		1
@@ -203,15 +203,14 @@
 #elif defined(PJ_M_MIPS) || defined(__mips__) || defined(__mips) || \
 	defined(__MIPS__) || defined(MIPS) || defined(_MIPS_)
     /*
-     * MIPS, default to little endian
+     * MIPS, bi-endian, so raise error if endianness is not configured
      */
 #   undef PJ_M_MIPS
 #   define PJ_M_MIPS		1
 #   define PJ_M_NAME		"mips"
 #   define PJ_HAS_PENTIUM	0
-#   if !defined(PJ_IS_LITTLE_ENDIAN) && !defined(PJ_IS_BIG_ENDIAN)
-#   	define PJ_IS_LITTLE_ENDIAN	1
-#   	define PJ_IS_BIG_ENDIAN		0
+#   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
+#   	error Endianness must be declared for this processor
 #   endif
 
 
@@ -229,29 +228,29 @@
 #elif defined (PJ_M_ARMV4) || defined(ARM) || defined(_ARM_) ||  \
 	defined(ARMV4) || defined(__arm__)
     /*
-     * ARM, default to little endian
+     * ARM, bi-endian, so raise error if endianness is not configured
      */
 #   undef PJ_M_ARMV4
 #   define PJ_M_ARMV4		1
 #   define PJ_M_NAME		"armv4"
 #   define PJ_HAS_PENTIUM	0
-#   if !defined(PJ_IS_LITTLE_ENDIAN) && !defined(PJ_IS_BIG_ENDIAN)
-#	define PJ_IS_LITTLE_ENDIAN	1
-#	define PJ_IS_BIG_ENDIAN		0
+#   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
+#   	error Endianness must be declared for this processor
 #   endif
 
 #elif defined (PJ_M_POWERPC) || defined(__powerpc) || defined(__powerpc__) || \
 	defined(__POWERPC__) || defined(__ppc__) || defined(_M_PPC) || \
 	defined(_ARCH_PPC)
     /*
-     * PowerPC, big endian
+     * PowerPC, bi-endian, so raise error if endianness is not configured
      */
 #   undef PJ_M_POWERPC
 #   define PJ_M_POWERPC		1
 #   define PJ_M_NAME		"powerpc"
 #   define PJ_HAS_PENTIUM	0
-#   define PJ_IS_LITTLE_ENDIAN	0
-#   define PJ_IS_BIG_ENDIAN	1
+#   if !PJ_IS_LITTLE_ENDIAN && !PJ_IS_BIG_ENDIAN
+#   	error Endianness must be declared for this processor
+#   endif
 
 #elif defined (PJ_M_NIOS2) || defined(__nios2) || defined(__nios2__) || \
       defined(__NIOS2__) || defined(__M_NIOS2) || defined(_ARCH_NIOS2)
