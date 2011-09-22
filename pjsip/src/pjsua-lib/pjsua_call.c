@@ -1283,12 +1283,12 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
      */
     PJSUA_LOCK();
 
-    if (!pjsua_call_is_active(call_id)) {
+    call = &pjsua_var.calls[call_id];
+
+    if (!call->inv) {
 	PJSUA_UNLOCK();
 	return PJSIP_ESESSIONTERMINATED;
     }
-
-    call = &pjsua_var.calls[call_id];
 
     /* id and role */
     info->id = call_id;
