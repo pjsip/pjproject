@@ -2765,6 +2765,10 @@ static void schedule_reregistration(pjsua_acc *acc)
     }
     pj_time_val_normalize(&delay);
 
+    PJ_LOG(4,(THIS_FILE,
+	      "Scheduling re-registration retry for acc %d in %u seconds..",
+	      acc->index, delay.sec));
+
     pjsua_schedule_timer(&acc->auto_rereg.timer, &delay);
 }
 
