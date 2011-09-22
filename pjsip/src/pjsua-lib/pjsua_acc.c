@@ -960,6 +960,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.unreg_timeout = cfg->unreg_timeout;
     acc->cfg.allow_contact_rewrite = cfg->allow_contact_rewrite;
     acc->cfg.reg_retry_interval = cfg->reg_retry_interval;
+    acc->cfg.reg_first_retry_interval = cfg->reg_first_retry_interval;
     acc->cfg.drop_calls_on_reg_fail = cfg->drop_calls_on_reg_fail;
     if (acc->cfg.reg_delay_before_refresh != cfg->reg_delay_before_refresh) {
         acc->cfg.reg_delay_before_refresh = cfg->reg_delay_before_refresh;
