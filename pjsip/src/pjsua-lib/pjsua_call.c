@@ -1241,7 +1241,7 @@ pj_status_t acquire_call(const char *title,
 PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
 {
     pjsua_call *call;
-    pjsua_conf_port_id port_id;
+    pjsua_conf_port_id port_id = PJSUA_INVALID_ID;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls, 
 		     PJ_EINVAL);
@@ -1251,9 +1251,13 @@ PJ_DEF(pjsua_conf_port_id) pjsua_call_get_conf_port(pjsua_call_id call_id)
      */
     PJSUA_LOCK();
 
+    if (!pjsua_call_is_active(call_id))
+	goto on_return;
+
     call = &pjsua_var.calls[call_id];
     port_id = call->conf_slot;
 
+on_return:
     PJSUA_UNLOCK();
 
     return port_id;
@@ -1278,6 +1282,11 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
      *  https://trac.pjsip.org/repos/ticket/1371
      */
     PJSUA_LOCK();
+
+    if (!pjsua_call_is_active(call_id)) {
+	PJSUA_UNLOCK();
+	return PJSIP_ESESSIONTERMINATED;
+    }
 
     call = &pjsua_var.calls[call_id];
 
