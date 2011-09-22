@@ -145,6 +145,7 @@ struct pjsua_call
     struct {
         pjsip_dialog        *dlg;    /**< Call dialog.                      */
         pjmedia_sdp_session *rem_sdp;/**< Remote SDP.                       */
+        pj_pool_t           *pool_prov;/**< Provisional pool.               */
         union {
             struct {
                 unsigned         options; /**< Outgoing call options.       */

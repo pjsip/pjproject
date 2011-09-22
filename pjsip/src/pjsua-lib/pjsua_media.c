@@ -1501,8 +1501,12 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
 
 	/* Note: tp may be NULL if this media line is disabled */
 	if (call_med->tp && call_med->tp_st == PJSUA_MED_TP_IDLE) {
-            pj_pool_t *tmp_pool = (call->inv? call->inv->pool_prov:
-                                   call->async_call.dlg->pool);
+            pj_pool_t *tmp_pool = call->async_call.pool_prov;
+            
+            if (!tmp_pool) {
+                tmp_pool = (call->inv? call->inv->pool_prov:
+                            call->async_call.dlg->pool);
+            }
 
 	    status = pjmedia_transport_media_create(
                          call_med->tp, tmp_pool,
@@ -1552,7 +1556,6 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     pj_status_t status;
 
     PJ_UNUSED_ARG(role);
-    PJ_UNUSED_ARG(tmp_pool);
 
     /*
      * Note: this function may be called when the media already exists
@@ -1651,6 +1654,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
         }
     }
 
+    call->async_call.pool_prov = tmp_pool;
+
     /* Initialize each media line */
     for (mi=0; mi < call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
@@ -1731,6 +1736,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	      call->audio_idx, call->index));
 
     if (pending_med_tp) {
+        /* We shouldn't use temporary pool anymore. */
+        call->async_call.pool_prov = NULL;
         /* We have a pending media transport initialization. */
         pj_log_pop_indent();
         return PJ_EPENDING;
