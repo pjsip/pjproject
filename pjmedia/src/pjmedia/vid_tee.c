@@ -267,8 +267,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_tee_add_dst_port2(pjmedia_port *vid_tee,
 /*
  * Remove a destination media port from the video tee.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
-						     pjmedia_port *port)
+PJ_DEF(pj_status_t) pjmedia_vid_tee_remove_dst_port(pjmedia_port *vid_tee,
+						    pjmedia_port *port)
 {
     vid_tee_port *tee = (vid_tee_port*)vid_tee;
     unsigned i;
