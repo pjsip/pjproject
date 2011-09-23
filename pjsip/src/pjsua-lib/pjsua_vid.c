@@ -979,21 +979,26 @@ void stop_video_stream(pjsua_call_media *call_med)
 	pjmedia_port *media_port;
 	pjsua_vid_win *w =
 		    &pjsua_var.win[call_med->strm.v.cap_win_id];
+	pj_status_t status;
 
-	pjmedia_vid_stream_get_port(call_med->strm.v.stream,
-				    PJMEDIA_DIR_ENCODING,
-				    &media_port);
-	pj_assert(media_port);
-
-	pjmedia_vid_port_stop(w->vp_cap);
-	pjmedia_vid_tee_remove_dst_port(w->tee, media_port);
-	pjmedia_vid_port_start(w->vp_cap);
+	/* Disconnect video stream from capture device */
+	status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
+					     PJMEDIA_DIR_ENCODING,
+					     &media_port);
+	if (status == PJ_SUCCESS) {
+	    /* Video tee is not threadsafe, so stop the capture first */
+	    pjmedia_vid_port_stop(w->vp_cap);
+	    pjmedia_vid_tee_remove_dst_port(w->tee, media_port);
+	    pjmedia_vid_port_start(w->vp_cap);
+	}
 
 	dec_vid_win(call_med->strm.v.cap_win_id);
+	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
     }
 
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
 	dec_vid_win(call_med->strm.v.rdr_win_id);
+	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
     }
 
     if ((call_med->dir & PJMEDIA_DIR_ENCODING) &&
