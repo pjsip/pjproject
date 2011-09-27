@@ -192,6 +192,43 @@ typedef struct pjmedia_rect
 } pjmedia_rect;
 
 /**
+ * Enumeration for video/picture orientation.
+ */
+typedef enum pjmedia_orient
+{
+    /**
+     * Unknown orientation.
+     */
+    PJMEDIA_ORIENT_UNKNOWN,
+
+    /**
+     * Natural orientation, e.g: sky upside on landscape view, head upside
+     * on human portrait.
+     */
+    PJMEDIA_ORIENT_NATURAL,
+
+    /**
+     * Specifies that the video/picture needs to be rotated 90 degrees
+     * clockwise to be displayed in natural orientation.
+     */
+    PJMEDIA_ORIENT_ROTATE_90DEG,
+
+    /**
+     * Specifies that the video/picture needs to be rotated 180 degrees
+     * clockwise to be displayed in natural orientation.
+     */
+    PJMEDIA_ORIENT_ROTATE_180DEG,
+
+    /**
+     * Specifies that the video/picture needs to be rotated 270 degrees
+     * clockwise to be displayed in natural orientation.
+     */
+    PJMEDIA_ORIENT_ROTATE_270DEG
+
+} pjmedia_orient;
+
+
+/**
  * Macro for packing format from a four character code, similar to FOURCC.
  */
 #define PJMEDIA_FOURCC(C1, C2, C3, C4) ( C4<<24 | C3<<16 | C2<<8 | C1 )

@@ -1363,6 +1363,66 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_size( pjsua_vid_win_id wid,
     return status;
 }
 
+/*
+ * Set video orientation.
+ */
+PJ_DEF(pj_status_t) pjsua_vid_win_rotate( pjsua_vid_win_id wid,
+                                          int angle)
+{
+    pjsua_vid_win *w;
+    pjmedia_vid_dev_stream *s;
+    pjmedia_orient orient;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(wid >= 0 && wid < PJSUA_MAX_VID_WINS, PJ_EINVAL);
+    PJ_ASSERT_RETURN((angle % 90) == 0, PJ_EINVAL);
+
+    /* Normalize angle, so it must be 0, 90, 180, or 270. */
+    angle %= 360;
+    if (angle < 0)
+	angle += 360;
+
+    /* Convert angle to pjmedia_orient */
+    switch(angle) {
+	case 0:
+	    /* No rotation */
+	    return PJ_SUCCESS;
+	case 90:
+	    orient = PJMEDIA_ORIENT_ROTATE_90DEG;
+	    break;
+	case 180:
+	    orient = PJMEDIA_ORIENT_ROTATE_180DEG;
+	    break;
+	case 270:
+	    orient = PJMEDIA_ORIENT_ROTATE_270DEG;
+	    break;
+	default:
+	    pj_assert(!"Angle must have been validated");
+	    return PJ_EBUG;
+    }
+
+    PJSUA_LOCK();
+    w = &pjsua_var.win[wid];
+    if (w->vp_rend == NULL) {
+	/* Native window */
+	PJSUA_UNLOCK();
+	return PJ_EINVAL;
+    }
+
+    s = pjmedia_vid_port_get_stream(w->vp_rend);
+    if (s == NULL) {
+	PJSUA_UNLOCK();
+	return PJ_EINVAL;
+    }
+
+    status = pjmedia_vid_dev_stream_set_cap(s,
+			    PJMEDIA_VID_DEV_CAP_ORIENTATION, &orient);
+
+    PJSUA_UNLOCK();
+
+    return status;
+}
+
 
 static void call_get_vid_strm_info(pjsua_call *call,
 				   int *first_active,

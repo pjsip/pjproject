@@ -5718,6 +5718,21 @@ PJ_DECL(pj_status_t) pjsua_vid_win_set_pos(pjsua_vid_win_id wid,
 PJ_DECL(pj_status_t) pjsua_vid_win_set_size(pjsua_vid_win_id wid,
                                             const pjmedia_rect_size *size);
 
+/**
+ * Rotate the video window. This function will change the video orientation
+ * and also possibly the video window size (width and height get swapped).
+ * This operation is not valid for native windows (pjsua_vid_win_info.is_native
+ * =PJ_TRUE), on which native windowing API must be used instead.
+ *
+ * @param wid		The video window ID.
+ * @param angle		The rotation angle in degrees, must be multiple of 90.
+ *			Specify positive value for clockwise rotation or
+ *			negative value for counter-clockwise rotation.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_vid_win_rotate(pjsua_vid_win_id wid,
+					  int angle);
 
 
 /*

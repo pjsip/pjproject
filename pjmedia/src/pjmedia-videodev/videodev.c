@@ -45,6 +45,7 @@ static struct cap_info
     DEFINE_CAP("position",      "Renderer position"),
     DEFINE_CAP("hide",          "Renderer hide"),
     DEFINE_CAP("preview",       "Input preview"),
+    DEFINE_CAP("orientation",   "Video orientation")
 };
 
 
@@ -178,6 +179,9 @@ static pj_status_t get_cap_pointer(const pjmedia_vid_dev_param *param,
 	break;
     case PJMEDIA_VID_DEV_CAP_INPUT_PREVIEW:
 	FIELD_INFO(native_preview);
+	break;
+    case PJMEDIA_VID_DEV_CAP_ORIENTATION:
+	FIELD_INFO(orient);
 	break;
     default:
 	return PJMEDIA_EVID_INVCAP;

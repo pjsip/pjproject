@@ -78,7 +78,12 @@ typedef enum pjmedia_event_type
     /**
      * Video decoding error due to missing key frame event.
      */
-    PJMEDIA_EVENT_KEY_FRAME_MISSING = PJMEDIA_FOURCC('I', 'F', 'R', 'M')
+    PJMEDIA_EVENT_KEY_FRAME_MISSING = PJMEDIA_FOURCC('I', 'F', 'R', 'M'),
+
+    /**
+     * Video orientation has been changed event.
+     */
+    PJMEDIA_EVENT_ORIENT_CHANGED = PJMEDIA_FOURCC('O', 'R', 'N', 'T')
 
 } pjmedia_event_type;
 
