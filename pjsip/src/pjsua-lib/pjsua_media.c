@@ -1414,16 +1414,24 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 
 	if (pjsua_var.media_cfg.enable_ice) {
 	    status = create_ice_media_transport(tcfg, call_med, async);
+	    if (async && status == PJ_SUCCESS) {
+		/* Callback has been called. */
+		call_med->med_init_cb = NULL;
+		/* We cannot return PJ_SUCCESS here since we already call
+		 * the callback.
+		 */
+		return PJ_EPENDING;
+	    } else if (async && status == PJ_EPENDING) {
+	        /* We will resume call media initialization in the
+	         * on_ice_complete() callback.
+	         */
+	        return PJ_EPENDING;
+	    }
 	} else {
 	    status = create_udp_media_transport(tcfg, call_med);
 	}
 
-        if (status == PJ_EPENDING) {
-            /* We will resume call media initialization in the
-             * on_ice_complete() callback.
-             */
-            return PJ_EPENDING;
-        } else if (status != PJ_SUCCESS) {
+        if (status != PJ_SUCCESS) {
 	    PJ_PERROR(1,(THIS_FILE, status, "Error creating media transport"));
 	    return status;
 	}

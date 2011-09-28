@@ -585,12 +585,13 @@ PJ_DEF(pj_status_t) pj_ice_strans_create( const char *name,
     /* Done with initialization */
     pj_lock_release(ice_st->init_lock);
 
-    /* Check if all candidates are ready (this may call callback) */
-    sess_init_update(ice_st);
-
     PJ_LOG(4,(ice_st->obj_name, "ICE stream transport created"));
 
     *p_ice_st = ice_st;
+
+    /* Check if all candidates are ready (this may call callback) */
+    sess_init_update(ice_st);
+
     pj_log_pop_indent();
 
     return PJ_SUCCESS;

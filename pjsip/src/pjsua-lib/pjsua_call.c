@@ -612,8 +612,10 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     call->user_data = user_data;
     
     call->async_call.call_var.out_call.options = options;
-    call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
-                                                      dlg->pool, msg_data);
+    if (msg_data) {
+	call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
+                                                          dlg->pool, msg_data);
+    }
     call->async_call.dlg = dlg;
 
     /* Init media channel */
