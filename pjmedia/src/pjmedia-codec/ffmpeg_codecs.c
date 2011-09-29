@@ -70,26 +70,20 @@ static pj_status_t  ffmpeg_codec_modify(pjmedia_vid_codec *codec,
 				        const pjmedia_vid_codec_param *attr );
 static pj_status_t  ffmpeg_codec_get_param(pjmedia_vid_codec *codec,
 					   pjmedia_vid_codec_param *param);
-static pj_status_t  ffmpeg_packetize ( pjmedia_vid_codec *codec,
-                                       pj_uint8_t *buf,
-                                       pj_size_t buf_len,
-                                       unsigned *pos,
-                                       const pj_uint8_t **payload,
-                                       pj_size_t *payload_len);
-static pj_status_t  ffmpeg_unpacketize(pjmedia_vid_codec *codec,
-                                       const pj_uint8_t *payload,
-                                       pj_size_t   payload_len,
-                                       pj_uint8_t *buf,
-                                       pj_size_t   buf_len,
-				       unsigned	  *pos);
-static pj_status_t  ffmpeg_codec_encode( pjmedia_vid_codec *codec, 
-				         const pjmedia_frame *input,
-				         unsigned output_buf_len, 
-				         pjmedia_frame *output);
-static pj_status_t  ffmpeg_codec_decode( pjmedia_vid_codec *codec, 
-				         const pjmedia_frame *input,
-				         unsigned output_buf_len, 
-				         pjmedia_frame *output);
+static pj_status_t ffmpeg_codec_encode_begin( pjmedia_vid_codec *codec,
+                                              const pjmedia_frame *input,
+					      unsigned out_size,
+					      pjmedia_frame *output,
+					      pj_bool_t *has_more);
+static pj_status_t ffmpeg_codec_encode_more(pjmedia_vid_codec *codec,
+					    unsigned out_size,
+					    pjmedia_frame *output,
+					    pj_bool_t *has_more);
+static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
+					pj_size_t pkt_count,
+					pjmedia_frame packets[],
+					unsigned out_size,
+					pjmedia_frame *output);
 
 /* Definition for FFMPEG codecs operations. */
 static pjmedia_vid_codec_op ffmpeg_op = 
@@ -99,9 +93,8 @@ static pjmedia_vid_codec_op ffmpeg_op =
     &ffmpeg_codec_close,
     &ffmpeg_codec_modify,
     &ffmpeg_codec_get_param,
-    &ffmpeg_packetize,
-    &ffmpeg_unpacketize,
-    &ffmpeg_codec_encode,
+    &ffmpeg_codec_encode_begin,
+    &ffmpeg_codec_encode_more,
     &ffmpeg_codec_decode,
     NULL
 };
@@ -144,6 +137,15 @@ typedef struct ffmpeg_private
     pjmedia_video_apply_fmt_param    enc_vafp;
     const pjmedia_video_format_info *dec_vfi;
     pjmedia_video_apply_fmt_param    dec_vafp;
+
+    /* Buffers, only needed for multi-packets */
+    pj_bool_t			     whole;
+    void			    *enc_buf;
+    unsigned			     enc_buf_size;
+    unsigned			     enc_frame_len;
+    unsigned     		     enc_processed;
+    void			    *dec_buf;
+    unsigned			     dec_buf_size;
 
     /* The ffmpeg codec states. */
     AVCodec			    *enc;
@@ -235,7 +237,7 @@ static FUNC_UNPACKETIZE(h263_unpacketize);
 
 
 /* Internal codec info */
-ffmpeg_codec_desc codec_desc[] =
+static ffmpeg_codec_desc codec_desc[] =
 {
 #if ENABLE_H264
     {
@@ -477,7 +479,8 @@ static const ffmpeg_codec_desc* find_codec_desc_by_info(
 	if (desc->enabled &&
 	    (desc->info.fmt_id == info->fmt_id) &&
             ((desc->info.dir & info->dir) == info->dir) &&
-	    (desc->info.pt == info->pt))
+	    (desc->info.pt == info->pt) &&
+	    (desc->info.packings & info->packings))
         {
             return desc;
         }
@@ -539,8 +542,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
     av_log_set_level(AV_LOG_ERROR);
 
     /* Enum FFMPEG codecs */
-    for (c=av_codec_next(NULL); c; c=av_codec_next(c)) 
-    {
+    for (c=av_codec_next(NULL); c; c=av_codec_next(c)) {
         ffmpeg_codec_desc *desc;
 	pjmedia_format_id fmt_id;
 	int codec_info_idx;
@@ -658,9 +660,11 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 	if (desc->info.clock_rate == 0)
 	    desc->info.clock_rate = 90000;
 
-	/* Set RTP packetization support flag in the codec info */
-	desc->info.has_rtp_pack = (desc->packetize != NULL) &&
-				  (desc->unpacketize != NULL);
+	/* Set supported packings */
+	desc->info.packings |= PJMEDIA_VID_PACKING_WHOLE;
+	if (desc->packetize && desc->unpacketize)
+	    desc->info.packings |= PJMEDIA_VID_PACKING_PACKETS;
+
     }
 
     /* Review all codecs for applying base format, registering format match for
@@ -706,8 +710,11 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 
 	    desc->info.dir |= copied_dir;
 	    desc->enabled = (desc->info.dir != PJMEDIA_DIR_NONE);
-	    desc->info.has_rtp_pack = (desc->packetize != NULL) &&
-				      (desc->unpacketize != NULL);
+
+	    /* Set supported packings */
+	    desc->info.packings |= PJMEDIA_VID_PACKING_WHOLE;
+	    if (desc->packetize && desc->unpacketize)
+		desc->info.packings |= PJMEDIA_VID_PACKING_PACKETS;
 
 	    if (copied_dir != PJMEDIA_DIR_NONE) {
 		const char *dir_name[] = {NULL, "encoder", "decoder", "codec"};
@@ -801,6 +808,7 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
 				        pjmedia_vid_codec_param *attr )
 {
     const ffmpeg_codec_desc *desc;
+    unsigned i;
 
     PJ_ASSERT_RETURN(factory==&ffmpeg_factory.base, PJ_EINVAL);
     PJ_ASSERT_RETURN(info && attr, PJ_EINVAL);
@@ -811,6 +819,20 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
     }
 
     pj_bzero(attr, sizeof(pjmedia_vid_codec_param));
+
+    /* Scan the requested packings and use the lowest number */
+    attr->packing = 0;
+    for (i=0; i<15; ++i) {
+	unsigned packing = (1 << i);
+	if ((desc->info.packings & info->packings) & packing) {
+	    attr->packing = (pjmedia_vid_packing)packing;
+	    break;
+	}
+    }
+    if (attr->packing == 0) {
+	/* No supported packing in info */
+	return PJMEDIA_CODEC_EUNSUP;
+    }
 
     /* Direction */
     attr->dir = desc->info.dir;
@@ -1152,6 +1174,16 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
         goto on_error;
     }
 
+    /* Alloc buffers if needed */
+    ff->whole = (ff->param.packing == PJMEDIA_VID_PACKING_WHOLE);
+    if (!ff->whole) {
+	ff->enc_buf_size = ff->enc_vafp.framebytes;
+	ff->enc_buf = pj_pool_alloc(ff->pool, ff->enc_buf_size);
+
+	ff->dec_buf_size = ff->dec_vafp.framebytes;
+	ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
+    }
+
     /* Update codec attributes, e.g: encoding format may be changed by
      * SDP fmtp negotiation.
      */
@@ -1259,10 +1291,10 @@ static pj_status_t  ffmpeg_unpacketize(pjmedia_vid_codec *codec,
 /*
  * Encode frames.
  */
-static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec, 
-				        const pjmedia_frame *input,
-				        unsigned output_buf_len, 
-				        pjmedia_frame *output)
+static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
+					     const pjmedia_frame *input,
+					     unsigned output_buf_len,
+					     pjmedia_frame *output)
 {
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
     pj_uint8_t *p = (pj_uint8_t*)input->buf;
@@ -1311,13 +1343,96 @@ static pj_status_t ffmpeg_codec_encode( pjmedia_vid_codec *codec,
     return PJ_SUCCESS;
 }
 
+static pj_status_t ffmpeg_codec_encode_begin( pjmedia_vid_codec *codec,
+                                              const pjmedia_frame *input,
+					      unsigned out_size,
+					      pjmedia_frame *output,
+					      pj_bool_t *has_more)
+{
+    ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
+    pj_status_t status;
+
+    *has_more = PJ_FALSE;
+
+    if (ff->whole) {
+	status = ffmpeg_codec_encode_whole(codec, input, out_size, output);
+    } else {
+	pjmedia_frame whole_frm;
+        const pj_uint8_t *payload;
+        pj_size_t payload_len;
+
+	pj_bzero(&whole_frm, sizeof(whole_frm));
+	whole_frm.buf = ff->enc_buf;
+	whole_frm.size = ff->enc_buf_size;
+	status = ffmpeg_codec_encode_whole(codec, input,
+	                                   whole_frm.size, &whole_frm);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	ff->enc_frame_len = (unsigned)whole_frm.size;
+	ff->enc_processed = 0;
+        status = ffmpeg_packetize(codec, (pj_uint8_t*)whole_frm.buf,
+                                  whole_frm.size, &ff->enc_processed,
+				  &payload, &payload_len);
+        if (status != PJ_SUCCESS)
+            return status;
+
+        if (out_size < payload_len)
+            return PJMEDIA_CODEC_EFRMTOOSHORT;
+
+        output->type = PJMEDIA_FRAME_TYPE_VIDEO;
+        pj_memcpy(output->buf, payload, payload_len);
+        output->size = payload_len;
+
+        *has_more = (ff->enc_processed < ff->enc_frame_len);
+    }
+
+    return status;
+}
+
+static pj_status_t ffmpeg_codec_encode_more(pjmedia_vid_codec *codec,
+					    unsigned out_size,
+					    pjmedia_frame *output,
+					    pj_bool_t *has_more)
+{
+    ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
+    const pj_uint8_t *payload;
+    pj_size_t payload_len;
+    pj_status_t status;
+
+    *has_more = PJ_FALSE;
+
+    if (ff->enc_processed >= ff->enc_frame_len) {
+	/* No more frame */
+	return PJ_EEOF;
+    }
+
+    status = ffmpeg_packetize(codec, (pj_uint8_t*)ff->enc_buf,
+                              ff->enc_frame_len, &ff->enc_processed,
+                              &payload, &payload_len);
+    if (status != PJ_SUCCESS)
+        return status;
+
+    if (out_size < payload_len)
+        return PJMEDIA_CODEC_EFRMTOOSHORT;
+
+    output->type = PJMEDIA_FRAME_TYPE_VIDEO;
+    pj_memcpy(output->buf, payload, payload_len);
+    output->size = payload_len;
+
+    *has_more = (ff->enc_processed < ff->enc_frame_len);
+
+    return PJ_SUCCESS;
+}
+
+
 /*
  * Decode frame.
  */
-static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec, 
-				        const pjmedia_frame *input,
-				        unsigned output_buf_len, 
-				        pjmedia_frame *output)
+static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
+					     const pjmedia_frame *input,
+					     unsigned output_buf_len,
+					     pjmedia_frame *output)
 {
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
     AVFrame avframe;
@@ -1416,6 +1531,15 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 	    if (status != PJ_SUCCESS)
 		return status;
 
+	    /* Realloc buffer if necessary */
+	    if (ff->dec_vafp.framebytes > ff->dec_buf_size) {
+		PJ_LOG(5,(THIS_FILE, "Reallocating decoding buffer %u --> %u",
+			   (unsigned)ff->dec_buf_size,
+			   (unsigned)ff->dec_vafp.framebytes));
+		ff->dec_buf_size = ff->dec_vafp.framebytes;
+		ff->dec_buf = pj_pool_alloc(ff->pool, ff->dec_buf_size);
+	    }
+
 	    /* Broadcast event */
 	    if (pjmedia_event_publisher_has_sub(&codec->epub)) {
 		pjmedia_event event;
@@ -1473,6 +1597,50 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
     }
     
     return PJ_SUCCESS;
+}
+
+static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
+					pj_size_t pkt_count,
+					pjmedia_frame packets[],
+					unsigned out_size,
+					pjmedia_frame *output)
+{
+    ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(codec && pkt_count > 0 && packets && output,
+                     PJ_EINVAL);
+
+    if (ff->whole) {
+	pj_assert(pkt_count==1);
+	return ffmpeg_codec_decode_whole(codec, &packets[0], out_size, output);
+    } else {
+	pjmedia_frame whole_frm;
+	unsigned whole_len = 0;
+	unsigned i;
+
+	for (i=0; i<pkt_count; ++i) {
+	    if (whole_len + packets[i].size > ff->dec_buf_size) {
+		PJ_LOG(5,(THIS_FILE, "Decoding buffer overflow"));
+		break;
+	    }
+
+	    status = ffmpeg_unpacketize(codec, packets[i].buf, packets[i].size,
+	                                ff->dec_buf, ff->dec_buf_size,
+	                                &whole_len);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(5,(THIS_FILE, status, "Unpacketize error"));
+		continue;
+	    }
+	}
+
+	whole_frm.buf = ff->dec_buf;
+	whole_frm.size = whole_len;
+	whole_frm.timestamp = output->timestamp = packets[i].timestamp;
+	whole_frm.bit_info = 0;
+
+	return ffmpeg_codec_decode_whole(codec, &whole_frm, out_size, output);
+    }
 }
 
 

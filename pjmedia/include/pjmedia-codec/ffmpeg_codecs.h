@@ -26,6 +26,11 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * @defgroup PJMEDIA_CODEC_VID_FFMPEG FFmpeg Codecs
+ * @ingroup PJMEDIA_CODEC_VID_CODECS
+ * @{
+ */
 
 /**
  * Initialize and register FFMPEG codecs factory to pjmedia endpoint.

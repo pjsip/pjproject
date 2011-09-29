@@ -35,8 +35,46 @@
 
 PJ_BEGIN_DECL
 
+/**
+ * @defgroup PJMEDIA_VID_CODEC Video Codecs
+ * @ingroup PJMEDIA_CODEC
+ * @{
+ */
+
 #define PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT    8
 #define PJMEDIA_VID_CODEC_MAX_FPS_CNT        16
+
+/**
+ * This enumeration specifies the packetization property of video encoding
+ * process. The value is bitmask, and smaller value will have higher priority
+ * to be used.
+ */
+typedef enum pjmedia_vid_packing
+{
+    /**
+     * This specifies that the packetization is unknown, or if nothing
+     * is supported.
+     */
+    PJMEDIA_VID_PACKING_UNKNOWN,
+
+    /**
+     * This specifies that the result of video encoding process will be
+     * segmented into packets, which is suitable for RTP transmission.
+     * The maximum size of the packets is set in \a enc_mtu field of
+     * pjmedia_vid_codec_param.
+     */
+    PJMEDIA_VID_PACKING_PACKETS = 1,
+
+    /**
+     * This specifies that video encoding function will produce a whole
+     * or full frame from the source frame. This is normally used for
+     * encoding video for offline storage such as to an AVI file. The
+     * maximum size of the packets is set in \a enc_mtu field of
+     * pjmedia_vid_codec_param.
+     */
+    PJMEDIA_VID_PACKING_WHOLE = 2
+
+} pjmedia_vid_packing;
 
 /** 
  * Identification used to search for codec factory that supports specific 
@@ -55,11 +93,14 @@ typedef struct pjmedia_vid_codec_info
     pjmedia_format_id   dec_fmt_id[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
                                         /**< Supported encoding source 
                                              format IDs                     */
+    unsigned		packings;	/**< Supported or requested packings,
+					     strategies, bitmask from
+					     pjmedia_vid_packing	    */
     unsigned            fps_cnt;        /**< # of supported frame-rates, can be
 					     zero (support any frame-rate)  */
     pjmedia_ratio       fps[PJMEDIA_VID_CODEC_MAX_FPS_CNT];
                                         /**< Supported frame-rates	    */
-    pj_bool_t		has_rtp_pack;	/**< Support RTP packetization      */
+
 } pjmedia_vid_codec_info;
 
 
@@ -76,13 +117,15 @@ typedef struct pjmedia_vid_codec_info
 typedef struct pjmedia_vid_codec_param
 {
     pjmedia_dir         dir;            /**< Direction                      */
-    pjmedia_format      enc_fmt;        /**< Encoded format	            */
-    pjmedia_format      dec_fmt;        /**< Decoded format	            */
+    pjmedia_vid_packing packing; 	/**< Packetization strategy.	    */
 
+    pjmedia_format      enc_fmt;        /**< Encoded format	            */
     pjmedia_codec_fmtp  enc_fmtp;       /**< Encoder fmtp params	    */
+    unsigned            enc_mtu;        /**< MTU or max payload size setting*/
+
+    pjmedia_format      dec_fmt;        /**< Decoded format	            */
     pjmedia_codec_fmtp  dec_fmtp;       /**< Decoder fmtp params	    */
 
-    unsigned            enc_mtu;        /**< MTU or max payload size setting*/
 } pjmedia_vid_codec_param;
 
 
@@ -111,202 +154,63 @@ typedef struct pjmedia_vid_codec pjmedia_vid_codec;
 typedef struct pjmedia_vid_codec_op
 {
     /** 
-     * Initialize codec using the specified attribute.
-     *
-     * Application should call #pjmedia_vid_codec_init() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param pool	Pool to use when the codec needs to allocate
-     *			some memory.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_init().
      */
     pj_status_t	(*init)(pjmedia_vid_codec *codec, 
 			pj_pool_t *pool );
 
     /** 
-     * Open the codec and initialize with the specified parameter.
-     * Upon successful initialization, the codec may modify the parameter
-     * and fills in the unspecified values (such as size or frame rate of
-     * the encoder format, as it may need to be negotiated with remote
-     * preferences via SDP fmtp).
-     *
-     * Application should call #pjmedia_vid_codec_open() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param param	Codec initialization parameter.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_open().
      */
     pj_status_t	(*open)(pjmedia_vid_codec *codec, 
 			pjmedia_vid_codec_param *param );
 
     /** 
-     * Close and shutdown codec, releasing all resources allocated by
-     * this codec, if any.
-     *
-     * Application should call #pjmedia_vid_codec_close() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_close().
      */
     pj_status_t (*close)(pjmedia_vid_codec *codec);
 
     /** 
-     * Modify the codec parameter after the codec is open. 
-     * Note that not all codec parameters can be modified during run-time. 
-     * When the parameter cannot be changed, this function will return 
-     * non-PJ_SUCCESS, and the original parameters will not be changed.
-     *
-     * Application should call #pjmedia_vid_codec_modify() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param param	The new codec parameter.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_modify().
      */
     pj_status_t	(*modify)(pjmedia_vid_codec *codec, 
 			  const pjmedia_vid_codec_param *param);
 
     /** 
-     * Get the codec parameter after the codec is opened. 
-     *
-     * Application should call #pjmedia_vid_codec_get_param() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param param	The codec parameter.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_get_param().
      */
     pj_status_t	(*get_param)(pjmedia_vid_codec *codec,
 			     pjmedia_vid_codec_param *param);
 
     /**
-     * Instruct the codec to generate a payload/packet from a picture
-     * bitstream to be sent (via network). The maximum payload size or
-     * MTU is configurable via enc_mtu field of #pjmedia_vid_codec_param.
-     * For a long bitstream, application usually need to call this function
-     * multiple times until the whole bitstream is sent. Note that, for
-     * performance reason, the packetization will be done in-place, so the
-     * original bitstream may be modified by this function.
-     *
-     * Application should call #pjmedia_vid_codec_packetize() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance
-     * @param bits	The picture bitstream.
-     * @param bits_len	The length of the bitstream.
-     * @param bits_pos	On input, the start position of the bitstream
-     *			to be packetized. On output, the next position for
-     *			next packet.
-     * @param pkt	The pointer of the generated payload.
-     * @param pkt_len	The payload length.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_encode_begin().
      */
-    pj_status_t (*packetize) (pjmedia_vid_codec *codec,
-                              pj_uint8_t *bits,
-                              pj_size_t bits_len,
-                              unsigned *bits_pos,
-                              const pj_uint8_t **pkt,
-                              pj_size_t *pkt_len);
+    pj_status_t (*encode_begin)(pjmedia_vid_codec *codec,
+				const pjmedia_frame *input,
+				unsigned out_size,
+				pjmedia_frame *output,
+				pj_bool_t *has_more);
 
     /**
-     * Instruct the codec to parse a payload and append it into a picture
-     * bitstream. A picture bitstreams may need to be reconstructed from
-     * one or more payloads. Note that this function will not provide the
-     * detection of picture boundary, so application should manage the
-     * picture boundary detection by itself, e.g: for RTP delivery, payloads
-     * belong to the same picture will share the same RTP timestamp and also
-     * there is marker bit in the RTP header that is usually reserved for
-     * end-of-picture flag. Also note that in case of noticing packet lost,
-     * application should keep calling this function with payload pointer
-     * set to NULL, as the packetizer need to update its internal state.
-     *
-     * Application should call #pjmedia_vid_codec_unpacketize() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance
-     * @param pkt	The input packet.
-     * @param pkt_size	Size of the packet.
-     * @param timestamp	The timestamp of the first sample in the packet.
-     * @param frame_cnt	On input, specifies the maximum number of frames
-     *			in the array. On output, the codec must fill
-     *			with number of frames detected in the packet.
-     * @param frames	On output, specifies the frames that have been
-     *			detected in the packet.
-     *
-     * @return		PJ_SUCCESS on success.
+     * See #pjmedia_vid_codec_encode_more()
      */
-    pj_status_t (*unpacketize)(pjmedia_vid_codec *codec,
-                               const pj_uint8_t *payload,
-                               pj_size_t   payload_len,
-                               pj_uint8_t *bits,
-                               pj_size_t   bits_len,
-			       unsigned	  *bits_pos);
+    pj_status_t (*encode_more)(pjmedia_vid_codec *codec,
+			       unsigned out_size,
+			       pjmedia_frame *output,
+			       pj_bool_t *has_more);
 
-    /** 
-     * Instruct the codec to encode the specified input frame. The input
-     * MUST contain only one picture with appropriate format as specified
-     * in opening the codec.
-     *
-     * Application should call #pjmedia_vid_codec_encode() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param input	The input frame.
-     * @param out_size	The length of buffer in the output frame.
-     * @param output	The output frame.
-     *
-     * @return		PJ_SUCCESS on success;
-     */
-    pj_status_t (*encode)(pjmedia_vid_codec *codec, 
-			  const pjmedia_frame *input,
-			  unsigned out_size, 
-			  pjmedia_frame *output);
 
-    /** 
-     * Instruct the codec to decode the specified input frame. The input
-     * frame MUST contain exactly one picture. Note that the decoded picture
-     * format may different to the current setting, e.g: the format specified
-     * in the #pjmedia_vid_codec_param when opening the codec, in this case the
-     * PJMEDIA_EVENT_FMT_CHANGED event will be emitted by the codec. The codec
-     * parameter will also be updated, and application can query the format by
-     * using #get_param().
-     *
-     * Application should call #pjmedia_vid_codec_decode() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param input	The input frame.
-     * @param out_size	The length of buffer in the output frame.
-     * @param output	The output frame.
-     *
-     * @return		PJ_SUCCESS on success;
+    /*
+     * See #pjmedia_vid_codec_decode().
      */
-    pj_status_t (*decode)(pjmedia_vid_codec *codec, 
-			  const pjmedia_frame *input,
-			  unsigned out_size, 
+    pj_status_t (*decode)(pjmedia_vid_codec *codec,
+			  pj_size_t count,
+			  pjmedia_frame packets[],
+			  unsigned out_size,
 			  pjmedia_frame *output);
 
     /**
-     * Instruct the codec to recover a missing frame.
-     *
-     * Application should call #pjmedia_vid_codec_recover() instead of 
-     * calling this function directly.
-     *
-     * @param codec	The codec instance.
-     * @param out_size	The length of buffer in the output frame.
-     * @param output	The output frame where generated signal
-     *			will be placed.
-     *
-     * @return		PJ_SUCCESS on success;
+     * See #pjmedia_vid_codec_recover()
      */
     pj_status_t (*recover)(pjmedia_vid_codec *codec,
 			   unsigned out_size,
@@ -553,11 +457,11 @@ pjmedia_vid_codec_mgr_unregister_factory( pjmedia_vid_codec_mgr *mgr,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_vid_codec_mgr_enum_codecs( 
-                                            pjmedia_vid_codec_mgr *mgr, 
-					    unsigned *count, 
-					    pjmedia_vid_codec_info info[],
-					    unsigned *prio);
+PJ_DECL(pj_status_t)
+pjmedia_vid_codec_mgr_enum_codecs(pjmedia_vid_codec_mgr *mgr,
+				  unsigned *count,
+				  pjmedia_vid_codec_info info[],
+				  unsigned *prio);
 
 
 /**
@@ -604,9 +508,8 @@ pjmedia_vid_codec_mgr_get_codec_info2(pjmedia_vid_codec_mgr *mgr,
  * @return	    The null terminated codec info string, or NULL if
  *		    the buffer is not long enough.
  */
-PJ_DECL(char*) pjmedia_vid_codec_info_to_id(
-                                        const pjmedia_vid_codec_info *info,
-				        char *id, unsigned max_len );
+PJ_DECL(char*) pjmedia_vid_codec_info_to_id(const pjmedia_vid_codec_info *info,
+                                            char *id, unsigned max_len );
 
 
 /**
@@ -757,9 +660,8 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_init( pjmedia_vid_codec *codec,
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_open(
-					    pjmedia_vid_codec *codec, 
-					    pjmedia_vid_codec_param *param )
+PJ_INLINE(pj_status_t) pjmedia_vid_codec_open(pjmedia_vid_codec *codec,
+                                              pjmedia_vid_codec_param *param)
 {
     return (*codec->op->open)(codec, param);
 }
@@ -790,9 +692,9 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_close( pjmedia_vid_codec *codec )
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_modify(
-				    pjmedia_vid_codec *codec, 
-				    const pjmedia_vid_codec_param *param)
+PJ_INLINE(pj_status_t)
+pjmedia_vid_codec_modify(pjmedia_vid_codec *codec,
+                         const pjmedia_vid_codec_param *param)
 {
     return (*codec->op->modify)(codec, param);
 }
@@ -806,146 +708,117 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_modify(
  *
  * @return		PJ_SUCCESS on success.
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_get_param(
-				    pjmedia_vid_codec *codec, 
-				    pjmedia_vid_codec_param *param)
+PJ_INLINE(pj_status_t)
+pjmedia_vid_codec_get_param(pjmedia_vid_codec *codec,
+			    pjmedia_vid_codec_param *param)
 {
     return (*codec->op->get_param)(codec, param);
 }
 
-
-/**
- * Instruct the codec to generate a payload/packet from a picture
- * bitstream to be sent (via network). The maximum payload size or
- * MTU is configurable via enc_mtu field of #pjmedia_vid_codec_param.
- * For a long bitstream, application usually need to call this function
- * multiple times until the whole bitstream is sent. Note that, for
- * performance reason, the packetization will be done in-place, so the
- * original bitstream may be modified by this function.
+/** 
+ * Encode the specified input frame. The input MUST contain only one picture
+ * with the appropriate format as specified when opening the codec. Depending
+ * on the packing or packetization set in the \a packing param, the process
+ * may produce multiple encoded packets or payloads to represent the picture.
+ * This is true for example for PJMEDIA_VID_PACKING_PACKETS packing. In this
+ * case, the \a has_more field will be set to PJ_TRUE, and application should
+ * call pjmedia_vid_codec_encode_more() to get the remaining results from the
+ * codec.
  *
- * @param codec	The codec instance
- * @param bits	The picture bitstream.
- * @param bits_len	The length of the bitstream.
- * @param bits_pos	On input, the start position of the bitstream
- *			to be packetized. On output, the next position for
- *			next packet.
- * @param pkt	The pointer of the generated payload.
- * @param pkt_len	The payload length.
+ * @param codec		The codec instance.
+ * @param input		The input frame.
+ * @param out_size	The length of buffer in the output frame. This
+ * 			should be at least the same as the configured
+ * 			encoding MTU of the codec.
+ * @param output	The output frame.
+ * @param has_more	PJ_TRUE if more payloads are available; application
+ * 			should then call pjmedia_vid_codec_encode_more()
+ * 			to retrieve the remaining results.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS on success;
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_packetize(
-					    pjmedia_vid_codec *codec,
-					    pj_uint8_t *bits,
-					    pj_size_t bits_len,
-					    unsigned *bits_pos,
-					    const pj_uint8_t **pkt,
-					    pj_size_t *pkt_len )
+PJ_INLINE(pj_status_t)
+pjmedia_vid_codec_encode_begin( pjmedia_vid_codec *codec,
+				const pjmedia_frame *input,
+				unsigned out_size,
+				pjmedia_frame *output,
+				pj_bool_t *has_more)
 {
-    return (*codec->op->packetize)(codec, bits, bits_len, bits_pos,
-				   pkt, pkt_len);
+    return (*codec->op->encode_begin)(codec, input, out_size, output,
+				      has_more);
 }
 
-
 /**
- * Instruct the codec to parse a payload and append it into a picture
- * bitstream. A picture bitstreams may need to be reconstructed from
- * one or more payloads. Note that this function will not provide the
- * detection of picture boundary, so application should manage the
- * picture boundary detection by itself, e.g: for RTP delivery, payloads
- * belong to the same picture will share the same RTP timestamp and also
- * there is marker bit in the RTP header that is usually reserved for
- * end-of-picture flag. Also note that in case of noticing packet lost,
- * application should keep calling this function with payload pointer
- * set to NULL, as the packetizer need to update its internal state.
+ * Retrieve more encoded packets/payloads from the codec. Application
+ * should call this function repeatedly until \a has_more flag is set
+ * to PJ_FALSE.
  *
- * @param codec	The codec instance
- * @param pkt	The input packet.
- * @param pkt_size	Size of the packet.
- * @param timestamp	The timestamp of the first sample in the packet.
- * @param frame_cnt	On input, specifies the maximum number of frames
- *			in the array. On output, the codec must fill
- *			with number of frames detected in the packet.
- * @param frames	On output, specifies the frames that have been
- *			detected in the packet.
+ * @param codec		The codec instance.
+ * @param out_size	The length of buffer in the output frame. This
+ * 			should be at least the same as as the configured
+ * 			encoding MTU of the codec.
+ * @param output	The output frame.
+ * @param has_more	PJ_TRUE if more payloads are available, which in
+ * 			this case application should call \a encode_more()
+ * 			to retrieve them.
  *
- * @return		PJ_SUCCESS on success.
+ * @return		PJ_SUCCESS on success;
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_unpacketize(
-						pjmedia_vid_codec *codec,
-						const pj_uint8_t *payload,
-						pj_size_t payload_len,
-						pj_uint8_t *bits,
-						pj_size_t bits_len,
-						unsigned *bits_pos )
+PJ_INLINE(pj_status_t)
+pjmedia_vid_codec_encode_more( pjmedia_vid_codec *codec,
+			       unsigned out_size,
+			       pjmedia_frame *output,
+			       pj_bool_t *has_more)
 {
-    return (*codec->op->unpacketize)(codec, payload, payload_len, bits,
-				     bits_len, bits_pos);
+    return (*codec->op->encode_more)(codec, out_size, output, has_more);
 }
-
 
 /** 
- * Instruct the codec to encode the specified input frame. The input
- * MUST contain only one picture with appropriate format as specified
- * in opening the codec.
+ * Decode the input packets into one picture. If the packing is set to
+ * PJMEDIA_VID_PACKING_PACKETS when opening the codec, the codec is set
+ * to decode multiple encoded packets into one picture. These encoded
+ * packets are typically retrieved from the jitter buffer. If the packing
+ * is set to PJMEDIA_VID_PACKING_WHOLE, then this decode function can only
+ * accept one frame as the input.
  *
- * @param codec	The codec instance.
- * @param input	The input frame.
+ * Note that the decoded picture format may different to the configured
+ * setting (i.e. the format specified in the #pjmedia_vid_codec_param when
+ * opening the codec), in this case the PJMEDIA_EVENT_FMT_CHANGED event will
+ * be emitted by the codec to notify the event. The codec parameter will
+ * also be updated, and application can query the format by using
+ * pjmedia_vid_codec_get_param().
+ *
+ * @param codec		The codec instance.
+ * @param pkt_count	Number of packets in the input.
+ * @param packets	Array of input packets, each containing an encoded
+ * 			frame.
  * @param out_size	The length of buffer in the output frame.
  * @param output	The output frame.
  *
  * @return		PJ_SUCCESS on success;
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_encode(
-					    pjmedia_vid_codec *codec, 
-					    const pjmedia_frame *input,
-					    unsigned out_size, 
-					    pjmedia_frame *output)
+PJ_INLINE(pj_status_t) pjmedia_vid_codec_decode(pjmedia_vid_codec *codec,
+						pj_size_t pkt_count,
+						pjmedia_frame packets[],
+						unsigned out_size,
+						pjmedia_frame *output)
 {
-    return (*codec->op->encode)(codec, input, out_size, output);
+    return (*codec->op->decode)(codec, pkt_count, packets, out_size, output);
 }
-
-
-/** 
- * Instruct the codec to decode the specified input frame. The input
- * frame MUST contain exactly one picture. Note that the decoded picture
- * format may different to the current setting, e.g: the format specified
- * in the #pjmedia_vid_codec_param when opening the codec, in this case the
- * PJMEDIA_EVENT_FMT_CHANGED event will be emitted by the codec. The codec
- * parameter will also be updated, and application can query the format by
- * using #get_param().
- *
- * @param codec	The codec instance.
- * @param input	The input frame.
- * @param out_size	The length of buffer in the output frame.
- * @param output	The output frame.
- *
- * @return		PJ_SUCCESS on success;
- */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_decode(
-					    pjmedia_vid_codec *codec, 
-					    const pjmedia_frame *input,
-					    unsigned out_size, 
-					    pjmedia_frame *output)
-{
-    return (*codec->op->decode)(codec, input, out_size, output);
-}
-
 
 /**
- * Instruct the codec to recover a missing frame.
+ * Recover a missing frame.
  *
- * @param codec	The codec instance.
+ * @param codec		The codec instance.
  * @param out_size	The length of buffer in the output frame.
  * @param output	The output frame where generated signal
  *			will be placed.
  *
  * @return		PJ_SUCCESS on success;
  */
-PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(
-					    pjmedia_vid_codec *codec, 
-					    unsigned out_size, 
-					    pjmedia_frame *output)
+PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(pjmedia_vid_codec *codec,
+                                                 unsigned out_size,
+                                                 pjmedia_frame *output)
 {
     if (codec->op && codec->op->recover)
 	return (*codec->op->recover)(codec, out_size, output);
@@ -960,13 +833,7 @@ PJ_INLINE(pj_status_t) pjmedia_vid_codec_recover(
 
 /**
  * @defgroup PJMEDIA_CODEC_VID_CODECS Supported video codecs
- * @ingroup PJMEDIA_CODEC
- * @brief Documentation about individual video codec supported by PJMEDIA
- * @{
- * Please see the APIs provided by the individual codecs below.
- */
-/**
- * @}
+ * @ingroup PJMEDIA_VID_CODEC
  */
 
 

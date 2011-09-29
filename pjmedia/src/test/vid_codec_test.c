@@ -28,9 +28,6 @@
 
 #define THIS_FILE "vid_codec.c"
 
-#define BYPASS_CODEC	    0
-#define BYPASS_PACKETIZER   0
-
 /* 
  * Capture device setting: 
  *   -1 = colorbar, 
@@ -80,69 +77,62 @@ static pj_status_t codec_on_event(pjmedia_event_subscription *esub,
 static pj_status_t codec_put_frame(pjmedia_port *port,
 			           pjmedia_frame *frame)
 {
+    enum { MAX_PACKETS = 50 };
     codec_port_data_t *port_data = (codec_port_data_t*)port->port_data.pdata;
     pj_status_t status;
+    pjmedia_vid_codec *codec = port_data->codec;
+    unsigned enc_cnt = 0;
+    pj_uint8_t *enc_buf;
+    unsigned enc_size_left;
+    pjmedia_frame enc_frames[MAX_PACKETS];
+    pj_bool_t has_more = PJ_FALSE;
 
-#if !BYPASS_CODEC
-    {
-	pjmedia_vid_codec *codec = port_data->codec;
-	pjmedia_frame enc_frame;
+    enc_buf = port_data->enc_buf;
+    enc_size_left = port_data->enc_buf_size;
 
-	enc_frame.buf = port_data->enc_buf;
-	enc_frame.size = port_data->enc_buf_size;
+    /*
+     * Encode
+     */
+    enc_frames[enc_cnt].buf = enc_buf;
+    enc_frames[enc_cnt].size = enc_size_left;
 
-	status = pjmedia_vid_codec_encode(codec, frame, enc_frame.size,
-					  &enc_frame);
-	if (status != PJ_SUCCESS) goto on_error;
+    status = pjmedia_vid_codec_encode_begin(codec, frame, enc_size_left,
+                                            &enc_frames[enc_cnt], &has_more);
+    if (status != PJ_SUCCESS) goto on_error;
 
-#if !BYPASS_PACKETIZER
-	if (enc_frame.size) {
-	    unsigned pos = 0;
-	    pj_bool_t packetized = PJ_FALSE;
-	    unsigned unpack_pos = 0;
-	    
-	    while (pos < enc_frame.size) {
-		pj_uint8_t *payload;
-		pj_size_t payload_len;
+    enc_buf += enc_frames[enc_cnt].size;
+    enc_size_left -= enc_frames[enc_cnt].size;
 
-		status = pjmedia_vid_codec_packetize(
-						codec, 
-						(pj_uint8_t*)enc_frame.buf,
-						enc_frame.size, &pos,
-						(const pj_uint8_t**)&payload,
-						&payload_len);
-		if (status == PJ_ENOTSUP)
-		    break;
-		if (status != PJ_SUCCESS)
-		    goto on_error;
+    ++enc_cnt;
+    while (has_more) {
+	enc_frames[enc_cnt].buf = enc_buf;
+	enc_frames[enc_cnt].size = enc_size_left;
 
-		status = pjmedia_vid_codec_unpacketize(
-						codec, payload, payload_len,
-						port_data->pack_buf,
-						port_data->pack_buf_size,
-						&unpack_pos);
-		if (status != PJ_SUCCESS)
-		    goto on_error;
+	status = pjmedia_vid_codec_encode_more(codec, enc_size_left,
+						&enc_frames[enc_cnt],
+						&has_more);
+	if (status != PJ_SUCCESS)
+	    break;
 
-		// what happen if the bitstream is broken?
-		//if (i++ != 1) unpack_pos -= 10;
+	enc_buf += enc_frames[enc_cnt].size;
+	enc_size_left -= enc_frames[enc_cnt].size;
 
-		packetized = PJ_TRUE;
-	    }
+	++enc_cnt;
 
-	    if (packetized) {
-		enc_frame.buf  = port_data->pack_buf;
-		enc_frame.size = unpack_pos;
-	    }
+	if (enc_cnt >= MAX_PACKETS) {
+	    assert(!"Too many packets!");
+	    break;
 	}
-#endif
-
-	status = pjmedia_vid_codec_decode(codec, &enc_frame,
-					  frame->size, frame);
-	if (status != PJ_SUCCESS) goto on_error;
     }
-#endif
 
+    /*
+     * Decode
+     */
+    status = pjmedia_vid_codec_decode(codec, enc_cnt, enc_frames,
+				      frame->size, frame);
+    if (status != PJ_SUCCESS) goto on_error;
+
+    /* Display */
     status = pjmedia_port_put_frame(
 			pjmedia_vid_port_get_passive_port(port_data->rdr_port),
 			frame);
@@ -195,7 +185,8 @@ static int enum_codecs()
     return PJ_SUCCESS;
 }
 
-static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
+static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
+                              pjmedia_vid_packing packing)
 {
     const pj_str_t port_name = {"codec", 5};
 
@@ -204,16 +195,30 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
     codec_port_data_t codec_port_data;
     pjmedia_vid_codec_param codec_param;
     const pjmedia_vid_codec_info *codec_info;
-
+    const char *packing_name;
     pjmedia_vid_dev_index cap_idx, rdr_idx;
     pjmedia_vid_port *capture=NULL, *renderer=NULL;
     pjmedia_vid_port_param vport_param;
     pjmedia_video_format_detail *vfd;
     pjmedia_event_subscription esub;
+    char codec_name[5];
     pj_status_t status;
     int rc = 0;
 
-    PJ_LOG(3, (THIS_FILE, "  encode decode test"));
+    switch (packing) {
+    case PJMEDIA_VID_PACKING_PACKETS:
+	packing_name = "framed";
+	break;
+    case PJMEDIA_VID_PACKING_WHOLE:
+	packing_name = "whole";
+	break;
+    default:
+	packing_name = "unknown";
+	break;
+    }
+
+    PJ_LOG(3, (THIS_FILE, "  encode decode test: codec=%s, packing=%s",
+	       codec_id, packing_name));
 
     /* Lookup codec */
     {
@@ -293,7 +298,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
             rc = 246; goto on_return;
         }
 
-#if !BYPASS_CODEC
+        codec_param.packing = packing;
 
         /* Open codec */
         status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
@@ -321,7 +326,6 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
 	pjmedia_event_subscription_init(&esub, &codec_on_event,
 	                                &codec_port_data);
 	pjmedia_event_subscribe(&codec->epub, &esub);
-#endif /* !BYPASS_CODEC */
     }
 
     pjmedia_vid_port_param_default(&vport_param);
@@ -392,27 +396,13 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id)
 	rc = 270; goto on_return;
     }
 
-#if BYPASS_CODEC
-    PJ_LOG(3, (THIS_FILE, "  starting loopback test: %c%c%c%c %dx%d",
-        ((codec_param.dec_fmt.id & 0x000000FF) >> 0),
-        ((codec_param.dec_fmt.id & 0x0000FF00) >> 8),
-        ((codec_param.dec_fmt.id & 0x00FF0000) >> 16),
-        ((codec_param.dec_fmt.id & 0xFF000000) >> 24),
-        codec_param.dec_fmt.det.vid.size.w,
-        codec_param.dec_fmt.det.vid.size.h
-        ));
-#else
-    PJ_LOG(3, (THIS_FILE, "  starting codec test: %c%c%c%c<->%.*s %dx%d",
-        ((codec_param.dec_fmt.id & 0x000000FF) >> 0),
-        ((codec_param.dec_fmt.id & 0x0000FF00) >> 8),
-        ((codec_param.dec_fmt.id & 0x00FF0000) >> 16),
-        ((codec_param.dec_fmt.id & 0xFF000000) >> 24),
+    PJ_LOG(3, (THIS_FILE, "    starting codec test: %s<->%.*s %dx%d",
+	pjmedia_fourcc_name(codec_param.dec_fmt.id, codec_name),
 	codec_info->encoding_name.slen,
 	codec_info->encoding_name.ptr,
         codec_param.dec_fmt.det.vid.size.w,
         codec_param.dec_fmt.det.vid.size.h
         ));
-#endif
 
     /* Start streaming.. */
     status = pjmedia_vid_port_start(renderer);
@@ -455,7 +445,7 @@ int vid_codec_test(void)
     int orig_log_level;
     
     orig_log_level = pj_log_get_level();
-    pj_log_set_level(6);
+    pj_log_set_level(3);
 
     PJ_LOG(3, (THIS_FILE, "Performing video codec tests.."));
 
@@ -475,7 +465,11 @@ int vid_codec_test(void)
     if (rc != 0)
 	goto on_return;
 
-    rc = encode_decode_test(pool, "h263-1998");
+    rc = encode_decode_test(pool, "h263-1998", PJMEDIA_VID_PACKING_WHOLE);
+    if (rc != 0)
+	goto on_return;
+
+    rc = encode_decode_test(pool, "h263-1998", PJMEDIA_VID_PACKING_PACKETS);
     if (rc != 0)
 	goto on_return;
 

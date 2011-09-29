@@ -224,7 +224,7 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_codecs( pjsua_codec_info id[],
     }
 
     for (i=0, j=0; i<count && j<*p_count; ++i) {
-	if (info[i].has_rtp_pack) {
+	if (info[i].packings & PJMEDIA_VID_PACKING_PACKETS) {
 	    pj_bzero(&id[j], sizeof(pjsua_codec_info));
 
 	    pjmedia_vid_codec_info_to_id(&info[i], id[j].buf_, sizeof(id[j].buf_));

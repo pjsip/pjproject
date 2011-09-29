@@ -301,8 +301,8 @@ static void clock_cb(const pj_timestamp *ts, void *user_data)
 
 	write_frame.buf = play_file->dec_buf;
 	write_frame.size = play_file->dec_buf_size;
-	status = decoder->op->decode(decoder, &read_frame, write_frame.size,
-				     &write_frame);
+	status = pjmedia_vid_codec_decode(decoder, 1, &read_frame,
+	                                  write_frame.size, &write_frame);
 	if (status != PJ_SUCCESS)
 	    return;
     } else {
@@ -615,6 +615,7 @@ int main(int argc, char *argv[])
     if (play_file.file_name) {
 	pjmedia_video_format_detail *file_vfd;
         pjmedia_clock_param clock_param;
+        char fmt_name[5];
 
 	/* Create file player */
 	status = create_file_player(pool, play_file.file_name, &play_port);
@@ -624,12 +625,9 @@ int main(int argc, char *argv[])
 	/* Collect format info */
 	file_vfd = pjmedia_format_get_video_format_detail(&play_port->info.fmt,
 							  PJ_TRUE);
-	PJ_LOG(2, (THIS_FILE, "Reading video stream %dx%d %c%c%c%c @%.2ffps",
+	PJ_LOG(2, (THIS_FILE, "Reading video stream %dx%d %s @%.2ffps",
 		   file_vfd->size.w, file_vfd->size.h,
-		   ((play_port->info.fmt.id & 0x000000FF) >> 0),
-		   ((play_port->info.fmt.id & 0x0000FF00) >> 8),
-		   ((play_port->info.fmt.id & 0x00FF0000) >> 16),
-		   ((play_port->info.fmt.id & 0xFF000000) >> 24),
+		   pjmedia_fourcc_name(play_port->info.fmt.id, fmt_name),
 		   (1.0*file_vfd->fps.num/file_vfd->fps.denum)));
 
 	/* Allocate file read buffer */
