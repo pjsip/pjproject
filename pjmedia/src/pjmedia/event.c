@@ -78,8 +78,11 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_publisher *epub,
     /* Must not currently subscribe to anything */
     PJ_ASSERT_RETURN(esub->subscribe_to == NULL, PJ_EINVALIDOP);
 
-    TRACE_((THIS_FILE, "Subscription to publisher %s",
+    TRACE_((THIS_FILE, "Subscription [0x%p] to publisher %s",
+		       esub,
 		       pjmedia_fourcc_name(epub->sig, epub_name)));
+    /* Suppress compiler warning if trace is disabled */
+    PJ_UNUSED_ARG(epub_name);
 
     pj_list_push_back(&epub->subscription_list, esub);
     esub->subscribe_to = epub;
@@ -92,9 +95,12 @@ PJ_DEF(pj_status_t) pjmedia_event_unsubscribe(pjmedia_event_subscription *esub)
 
     if (esub->subscribe_to) {
 	char epub_name[5];
-	TRACE_((THIS_FILE, "Unsubscription to publisher %s",
+	TRACE_((THIS_FILE, "Unsubscription [0x%p] to publisher %s",
+			   esub,
 			   pjmedia_fourcc_name(esub->subscribe_to->sig,
 					       epub_name)));
+	/* Suppress compiler warning if trace is disabled */
+	PJ_UNUSED_ARG(epub_name);
 
 	PJ_ASSERT_RETURN(
 	    pj_list_find_node(&esub->subscribe_to->subscription_list,
