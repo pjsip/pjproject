@@ -1339,11 +1339,6 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     PJ_UNUSED_ARG(security_level);
 #endif
 
-    pjmedia_event_subscription_init(&call_med->esub_rend, &call_media_on_event,
-                                    call_med);
-    pjmedia_event_subscription_init(&call_med->esub_cap, &call_media_on_event,
-                                    call_med);
-
 on_error:
     if (status != PJ_SUCCESS && call_med->tp) {
 	pjmedia_transport_close(call_med->tp);
@@ -1402,6 +1397,12 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 		pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
 		call_med->strm.v.cap_dev = info.id;
 	    }
+
+	    /* Init event subscribtion */
+	    pjmedia_event_subscription_init(&call_med->esub_rend, &call_media_on_event,
+					    call_med);
+	    pjmedia_event_subscription_init(&call_med->esub_cap, &call_media_on_event,
+					    call_med);
 	}
 #endif
 

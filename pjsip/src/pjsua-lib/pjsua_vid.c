@@ -23,7 +23,7 @@
 
 #if PJSUA_HAS_VIDEO
 
-#define ENABLE_EVENT	    	0
+#define ENABLE_EVENT	    	1
 #define VID_TEE_MAX_PORT    	(PJSUA_MAX_CALLS + 1)
 
 #define PJSUA_SHOW_WINDOW	1
@@ -971,32 +971,40 @@ void stop_video_stream(pjsua_call_media *call_med)
     PJ_LOG(4,(THIS_FILE, "Stopping video stream.."));
     pj_log_push_indent();
 
-    /* Unsubscribe events */
-    pjmedia_event_unsubscribe(&call_med->esub_rend);
-    pjmedia_event_unsubscribe(&call_med->esub_cap);
-
     if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
 	pjmedia_port *media_port;
-	pjsua_vid_win *w =
-		    &pjsua_var.win[call_med->strm.v.cap_win_id];
+	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.cap_win_id];
 	pj_status_t status;
+
+	/* Stop the capture before detaching stream and unsubscribing event */
+	pjmedia_vid_port_stop(w->vp_cap);
 
 	/* Disconnect video stream from capture device */
 	status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 					     PJMEDIA_DIR_ENCODING,
 					     &media_port);
 	if (status == PJ_SUCCESS) {
-	    /* Video tee is not threadsafe, so stop the capture first */
-	    pjmedia_vid_port_stop(w->vp_cap);
 	    pjmedia_vid_tee_remove_dst_port(w->tee, media_port);
-	    pjmedia_vid_port_start(w->vp_cap);
 	}
+
+        /* Unsubscribe event */
+	pjmedia_event_unsubscribe(&call_med->esub_cap);
+
+	/* Re-start capture again, if it is used by other stream */
+	if (w->ref_cnt > 1)
+	    pjmedia_vid_port_start(w->vp_cap);
 
 	dec_vid_win(call_med->strm.v.cap_win_id);
 	call_med->strm.v.cap_win_id = PJSUA_INVALID_ID;
     }
 
     if (call_med->strm.v.rdr_win_id != PJSUA_INVALID_ID) {
+	pjsua_vid_win *w = &pjsua_var.win[call_med->strm.v.rdr_win_id];
+
+	/* Stop the render before unsubscribing event */
+	pjmedia_vid_port_stop(w->vp_rend);
+	pjmedia_event_unsubscribe(&call_med->esub_rend);
+
 	dec_vid_win(call_med->strm.v.rdr_win_id);
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
     }
@@ -1839,17 +1847,17 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 	return status;
 
     if (w->vp_rend) {
-#if ENABLE_EVENT
-	pjmedia_event_subscribe(
-		pjmedia_vid_port_get_event_publisher(w->vp_rend),
-		&call_med->esub_cap);
-#endif
-
 	/* Start renderer */
 	status = pjmedia_vid_port_start(new_w->vp_rend);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
+
+#if ENABLE_EVENT
+    pjmedia_event_subscribe(
+	    pjmedia_vid_port_get_event_publisher(new_w->vp_cap),
+	    &call_med->esub_cap);
+#endif
 
     /* Start capturer */
     status = pjmedia_vid_port_start(new_w->vp_cap);

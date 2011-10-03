@@ -2038,7 +2038,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     }
 
 on_return:
-    pjsip_dlg_dec_lock(dlg);
+    if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
     return status;
 }

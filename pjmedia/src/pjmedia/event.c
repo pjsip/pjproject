@@ -72,9 +72,14 @@ pjmedia_event_publisher_has_sub(pjmedia_event_publisher *epub)
 PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_publisher *epub,
                                              pjmedia_event_subscription *esub)
 {
+    char epub_name[5];
+
     PJ_ASSERT_RETURN(epub && esub && esub->cb, PJ_EINVAL);
     /* Must not currently subscribe to anything */
     PJ_ASSERT_RETURN(esub->subscribe_to == NULL, PJ_EINVALIDOP);
+
+    TRACE_((THIS_FILE, "Subscription to publisher %s",
+		       pjmedia_fourcc_name(epub->sig, epub_name)));
 
     pj_list_push_back(&epub->subscription_list, esub);
     esub->subscribe_to = epub;
@@ -84,7 +89,13 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_publisher *epub,
 PJ_DEF(pj_status_t) pjmedia_event_unsubscribe(pjmedia_event_subscription *esub)
 {
     PJ_ASSERT_RETURN(esub, PJ_EINVAL);
+
     if (esub->subscribe_to) {
+	char epub_name[5];
+	TRACE_((THIS_FILE, "Unsubscription to publisher %s",
+			   pjmedia_fourcc_name(esub->subscribe_to->sig,
+					       epub_name)));
+
 	PJ_ASSERT_RETURN(
 	    pj_list_find_node(&esub->subscribe_to->subscription_list,
 	                      esub)==esub, PJ_ENOTFOUND);
