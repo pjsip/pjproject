@@ -767,34 +767,33 @@ PJ_DEF(void) pjmedia_jbuf_put_frame2(pjmedia_jbuf *jb,
 #if PROGRESSIVE_DISCARD
     {
 	unsigned interval, seq_delta;
-	unsigned burst_level, burst_factor;
+	unsigned burst_level = 0, overflow_pct = 0;
 
-	/* Calculating discard interval (aggressiveness) based on
-	 * (current size / burst level).
-	 */
+	/* Calculating percentage of burst overflow */
 	if (jb->jb_status == JB_STATUS_PROCESSING) {
 	    burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-	    burst_factor = cur_size / burst_level;
-	    /* Tolerate small spikes */
-	    if ((burst_level <= 5) && (burst_factor < 3))
-		burst_factor = 0;
-	} else {
-	    burst_factor = 0;
+	    if (cur_size > (int)burst_level)
+		overflow_pct = (cur_size - burst_level) * 100 / burst_level;
 	}
 
-	switch (burst_factor) {
-	case 0:
+	/* Deciding discard interval (aggressiveness) based on
+	 * burst overflow percentage.
+	 */
+	if (burst_level <= 5 && overflow_pct < 200) {
+	    /* Tolerate spikes on relatively small burst level */
 	    interval = 0;
-	    break;
-	case 1:
-	    interval = 7;
-	    break;
-	case 2:
-	    interval = 5;
-	    break;
-	default:
+	} else if (overflow_pct >= 200) {
+	    /* Overflow >= 200% */
 	    interval = 4;
-	    break;
+	} else if (overflow_pct >= 100) {
+	    /* Overflow >= 100% */
+	    interval = 5;
+	} else if (overflow_pct >= 10) {
+	    /* Overflow >= 10% */
+	    interval = 7;
+	} else {
+	    /* Overflow < 10%, tolerable */
+	    interval = 0;
 	}
 
 	/* Do the math now to see if we should discard this packet.
