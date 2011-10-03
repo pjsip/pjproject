@@ -96,6 +96,20 @@ typedef struct pjmedia_vid_dev_hwnd
 } pjmedia_vid_dev_hwnd;
 
 /**
+ * Parameter for switching device with PJMEDIA_VID_DEV_CAP_SWITCH capability.
+ */
+typedef struct pjmedia_vid_dev_switch_param
+{
+    /**
+     * Target device ID to switch to. Once the switching is successful, the
+     * video stream will use this device and the old device will be closed.
+     */
+    pjmedia_vid_dev_index target_id;
+
+} pjmedia_vid_dev_switch_param;
+
+
+/**
  * Device index constants.
  */
 enum
@@ -204,6 +218,24 @@ typedef enum pjmedia_vid_dev_cap
      * The value of this capability is pjmedia_orient.
      */
     PJMEDIA_VID_DEV_CAP_ORIENTATION = 128,
+
+    /**
+     * Support for fast switching to another device. A video stream with this
+     * capability allows replacing of its underlying device with another
+     * device, saving the user from opening a new video stream and gets a much
+     * faster and smoother switching action.
+     *
+     * Note that even when this capability is supported by a device, it may
+     * not be able to switch to arbitrary device. Application must always
+     * check the return value of the operation to verify that switching has
+     * occurred.
+     *
+     * This capability is currently write-only (i.e. set-only).
+     *
+     * The value of this capability is pointer to pjmedia_vid_dev_switch_param
+     * structure.
+     */
+    PJMEDIA_VID_DEV_CAP_SWITCH = 256,
 
     /**
      * End of standard capability
