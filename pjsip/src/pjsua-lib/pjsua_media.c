@@ -2113,12 +2113,20 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned mi;
 
+    PJSUA_LOCK();
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
 
-        if (call_med->tp_st == PJSUA_MED_TP_CREATING)
-            return PJ_EBUSY;
+        if (call_med->tp_st == PJSUA_MED_TP_CREATING) {
+            /* We will do the deinitialization after media transport
+             * creation is completed.
+             */
+            call->async_call.med_ch_deinit = PJ_TRUE;
+            PJSUA_UNLOCK();
+            return PJ_SUCCESS;
+        }
     }
+    PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call_id));
     pj_log_push_indent();

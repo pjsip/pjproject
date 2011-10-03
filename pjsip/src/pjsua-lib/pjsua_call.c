@@ -357,6 +357,10 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 	goto on_error;
     }
 
+    /* pjsua_media_channel_deinit() has been called. */
+    if (call->async_call.med_ch_deinit)
+        goto on_error;
+
     /* Create offer */
     status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
 					    &offer, NULL);
@@ -708,7 +712,15 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
         goto on_return;
     }
-    
+
+    /* pjsua_media_channel_deinit() has been called. */
+    if (call->async_call.med_ch_deinit) {
+        pjsua_media_channel_deinit(call->index);
+        call->med_ch_cb = NULL;
+        PJSUA_UNLOCK();
+        return PJ_SUCCESS;
+    }
+
     /* Get remote SDP offer (if any). */
     if (call->inv->neg)
         pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer);
@@ -1057,6 +1069,16 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	goto on_return;
     }
 
+    /* If account is locked to specific transport, then lock dialog
+     * to this transport too.
+     */
+    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
+	pjsip_tpselector tp_sel;
+
+	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
+	pjsip_dlg_set_transport(dlg, &tp_sel);
+    }
+
     /* Create and attach pjsua_var data to the dialog: */
     call->inv = inv;
     dlg->mod_data[pjsua_var.mod.id] = call;
@@ -1126,16 +1148,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	if (pjmedia_sdp_neg_get_neg_remote(inv->neg, &remote_sdp)==PJ_SUCCESS)
 	    update_remote_nat_type(call, remote_sdp);
-    }
-
-    /* If account is locked to specific transport, then lock dialog
-     * to this transport too.
-     */
-    if (pjsua_var.acc[acc_id].cfg.transport_id != PJSUA_INVALID_ID) {
-	pjsip_tpselector tp_sel;
-
-	pjsua_init_tpselector(pjsua_var.acc[acc_id].cfg.transport_id, &tp_sel);
-	pjsip_dlg_set_transport(dlg, &tp_sel);
     }
 
     /* Must answer with some response to initial INVITE. We'll do this before

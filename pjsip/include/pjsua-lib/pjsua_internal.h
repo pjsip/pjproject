@@ -156,6 +156,7 @@ struct pjsua_call
         pjsip_dialog        *dlg;    /**< Call dialog.                      */
         pjmedia_sdp_session *rem_sdp;/**< Remote SDP.                       */
         pj_pool_t           *pool_prov;/**< Provisional pool.               */
+        pj_bool_t            med_ch_deinit;/**< Media channel de-init-ed?   */
         union {
             struct {
                 unsigned         options; /**< Outgoing call options.       */
