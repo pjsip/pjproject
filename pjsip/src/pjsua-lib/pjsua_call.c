@@ -331,6 +331,7 @@ static int call_get_secure_level(pjsua_call *call)
 }
 */
 
+/* Outgoing call callback when media transport creation is completed. */
 static pj_status_t
 on_make_call_med_tp_complete(pjsua_call_id call_id,
                              const pjsua_med_tp_state_info *info)
@@ -611,6 +612,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Attach user data */
     call->user_data = user_data;
     
+    /* Store variables required for the callback after the async
+     * media transport creation is completed.
+     */
     call->async_call.call_var.out_call.options = options;
     if (msg_data) {
 	call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
@@ -685,6 +689,93 @@ static void update_remote_nat_type(pjsua_call *call,
 }
 
 
+/* Incoming call callback when media transport creation is completed. */
+static pj_status_t
+on_incoming_call_med_tp_complete(pjsua_call_id call_id,
+                                 const pjsua_med_tp_state_info *info)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    const pjmedia_sdp_session *offer=NULL;
+    pjmedia_sdp_session *answer;
+    pjsip_tx_data *response = NULL;
+    unsigned options = 0;
+    int sip_err_code = (info? info->sip_err_code: 0);
+    pj_status_t status = (info? info->status: PJ_SUCCESS);
+
+    PJSUA_LOCK();
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+        goto on_return;
+    }
+    
+    /* Get remote SDP offer (if any). */
+    if (call->inv->neg)
+        pjmedia_sdp_neg_get_neg_remote(call->inv->neg, &offer);
+
+    status = pjsua_media_channel_create_sdp(call_id,
+                                            call->async_call.dlg->pool, 
+					    offer, &answer, &sip_err_code);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+        goto on_return;
+    }
+
+    status = pjsip_inv_set_local_sdp(call->inv, answer);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error setting local SDP", status);
+        sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+        goto on_return;
+    }
+
+    /* Verify that we can handle the request. */
+    status = pjsip_inv_verify_request3(NULL,
+                                       call->inv->pool_prov, &options, offer,
+                                       answer, NULL, pjsua_var.endpt, &response);
+    if (status != PJ_SUCCESS) {
+	/*
+	 * No we can't handle the incoming INVITE request.
+	 */
+	goto on_return;
+    } 
+
+on_return:
+    if (status != PJ_SUCCESS) {
+        pjsip_tx_data *tdata;
+        pj_status_t status_;
+
+	status_ = pjsip_inv_end_session(call->inv, sip_err_code, NULL, &tdata);
+	if (status_ == PJ_SUCCESS && tdata)
+	    status_ = pjsip_inv_send_msg(call->inv, tdata);
+
+        pjsua_media_channel_deinit(call->index);
+    }
+
+    /* Set the callback to NULL to indicate that the async operation
+     * has completed.
+     */
+    call->med_ch_cb = NULL;
+
+    if (status == PJ_SUCCESS &&
+        !pj_list_empty(&call->async_call.call_var.inc_call.answers))
+    {
+        struct call_answer *answer, *next;
+        
+        answer = call->async_call.call_var.inc_call.answers.next;
+        while (answer != &call->async_call.call_var.inc_call.answers) {
+            next = answer->next;
+            pjsua_call_answer(call_id, answer->code, answer->reason,
+                              answer->msg_data);
+            pj_list_erase(answer);
+            answer = next;
+        }
+    }
+
+    PJSUA_UNLOCK();
+    return status;
+}
+
+
 /**
  * Handle incoming INVITE request.
  * Called by pjsua_core.c
@@ -703,7 +794,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     pjsua_call *call;
     int call_id = -1;
     int sip_err_code;
-    pjmedia_sdp_session *offer=NULL, *answer;
+    pjmedia_sdp_session *offer=NULL;
     pj_status_t status;
 
     /* Don't want to handle anything but INVITE */
@@ -866,30 +957,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	offer = NULL;
     }
 
-    /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
-				      call->secure_level, 
-				      rdata->tp_info.pool,
-				      offer,
-				      &sip_err_code, PJ_FALSE,
-                                      NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
-			    sip_err_code, NULL, NULL, NULL, NULL);
-	goto on_return;
-    }
-
-    /* Create answer */
-    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, 
-					    offer, &answer, &sip_err_code);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
-	pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
-			    sip_err_code, NULL, NULL, NULL, NULL);
-	goto on_return;
-    }
-
     /* Verify that we can handle the request. */
     options |= PJSIP_INV_SUPPORT_100REL;
     options |= PJSIP_INV_SUPPORT_TIMER;
@@ -902,7 +969,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     else if (pjsua_var.acc[acc_id].cfg.use_timer == PJSUA_SIP_TIMER_ALWAYS)
 	options |= PJSIP_INV_ALWAYS_USE_TIMER;
 
-    status = pjsip_inv_verify_request2(rdata, &options, offer, answer, NULL,
+    status = pjsip_inv_verify_request2(rdata, &options, offer, NULL, NULL,
 				       pjsua_var.endpt, &response);
     if (status != PJ_SUCCESS) {
 
@@ -922,10 +989,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				NULL, NULL, NULL);
 	}
 
-	pjsua_media_channel_deinit(call->index);
 	goto on_return;
     } 
-
 
     /* Get suitable Contact header */
     if (pjsua_var.acc[acc_id].contact.slen) {
@@ -938,7 +1003,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 			 status);
 	    pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 					  NULL, NULL);
-	    pjsua_media_channel_deinit(call->index);
 	    goto on_return;
 	}
     }
@@ -949,7 +1013,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     if (status != PJ_SUCCESS) {
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
-	pjsua_media_channel_deinit(call->index);
 	goto on_return;
     }
 
@@ -974,7 +1037,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     }
 
     /* Create invite session: */
-    status = pjsip_inv_create_uas( dlg, rdata, answer, options, &inv);
+    status = pjsip_inv_create_uas( dlg, rdata, NULL, options, &inv);
     if (status != PJ_SUCCESS) {
 	pjsip_hdr hdr_list;
 	pjsip_warning_hdr *w;
@@ -994,6 +1057,50 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	goto on_return;
     }
 
+    /* Create and attach pjsua_var data to the dialog: */
+    call->inv = inv;
+    dlg->mod_data[pjsua_var.mod.id] = call;
+    inv->mod_data[pjsua_var.mod.id] = call;
+
+    /* Store variables required for the callback after the async
+     * media transport creation is completed.
+     */
+    call->async_call.dlg = dlg;
+    pj_list_init(&call->async_call.call_var.inc_call.answers);
+
+    /* Init media channel */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
+				      call->secure_level, 
+				      rdata->tp_info.pool,
+				      offer,
+				      &sip_err_code, PJ_TRUE,
+                                      (pjsua_med_tp_state_cb)
+                                      &on_incoming_call_med_tp_complete);
+    if (status == PJ_SUCCESS) {
+        status = on_incoming_call_med_tp_complete(call_id, NULL);
+        if (status != PJ_SUCCESS) {
+            sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+            pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+	    goto on_return;
+        }
+    } else if (status != PJ_EPENDING) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+	goto on_return;
+    }
+
+    /* Create answer */
+/*  
+    status = pjsua_media_channel_create_sdp(call->index, rdata->tp_info.pool, 
+					    offer, &answer, &sip_err_code);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+	pjsip_endpt_respond(pjsua_var.endpt, NULL, rdata,
+			    sip_err_code, NULL, NULL, NULL, NULL);
+	goto on_return;
+    }
+*/
+
     /* Init Session Timers */
     status = pjsip_timer_init_session(inv, 
 				    &pjsua_var.acc[acc_id].cfg.timer_setting);
@@ -1012,7 +1119,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     /* Update NAT type of remote endpoint, only when there is SDP in
      * incoming INVITE! 
      */
-    if (pjsua_var.ua_cfg.nat_type_in_sdp &&
+    if (pjsua_var.ua_cfg.nat_type_in_sdp && inv->neg &&
 	pjmedia_sdp_neg_get_state(inv->neg) > PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) 
     {
 	const pjmedia_sdp_session *remote_sdp;
@@ -1062,12 +1169,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    goto on_return;
 	}
     }
-
-    /* Create and attach pjsua_var data to the dialog: */
-    call->inv = inv;
-
-    dlg->mod_data[pjsua_var.mod.id] = call;
-    inv->mod_data[pjsua_var.mod.id] = call;
 
     ++pjsua_var.call_cnt;
 
@@ -1636,6 +1737,35 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
     status = acquire_call("pjsua_call_answer()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    PJSUA_LOCK();
+    /* If media transport creation is not yet completed, we will answer
+     * the call in the media transport creation callback instead.
+     */
+    if (call->med_ch_cb) {
+        struct call_answer *answer;
+        
+        PJ_LOG(4,(THIS_FILE, "Pending answering call %d upon completion "
+                             "of media transport", call_id));
+
+        answer = PJ_POOL_ZALLOC_T(call->inv->pool_prov, struct call_answer);
+        answer->code = code;
+        if (reason) {
+            pj_strdup(call->inv->pool_prov, answer->reason, reason);
+        }
+        if (msg_data) {
+            answer->msg_data = pjsua_msg_data_clone(call->inv->pool_prov,
+                                                    msg_data);
+        }
+        pj_list_push_back(&call->async_call.call_var.inc_call.answers,
+                          answer);
+
+        PJSUA_UNLOCK();
+        if (dlg) pjsip_dlg_dec_lock(dlg);
+        pj_log_pop_indent();
+        return status;
+    }
+    PJSUA_UNLOCK();
 
     if (call->res_time.sec == 0)
 	pj_gettimeofday(&call->res_time);

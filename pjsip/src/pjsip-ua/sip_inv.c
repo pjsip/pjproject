@@ -811,7 +811,8 @@ PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
 /*
  * Verify incoming INVITE request.
  */
-PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
+PJ_DEF(pj_status_t) pjsip_inv_verify_request3(pjsip_rx_data *rdata,
+                                              pj_pool_t *tmp_pool,
 					      unsigned *options,
 					      const pjmedia_sdp_session *r_sdp,
 					      const pjmedia_sdp_session *l_sdp,
@@ -819,11 +820,11 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 					      pjsip_endpoint *endpt,
 					      pjsip_tx_data **p_tdata)
 {
-    pjsip_msg *msg;
-    pjsip_allow_hdr *allow;
-    pjsip_supported_hdr *sup_hdr;
-    pjsip_require_hdr *req_hdr;
-    pjsip_contact_hdr *c_hdr;
+    pjsip_msg *msg = NULL;
+    pjsip_allow_hdr *allow = NULL;
+    pjsip_supported_hdr *sup_hdr = NULL;
+    pjsip_require_hdr *req_hdr = NULL;
+    pjsip_contact_hdr *c_hdr = NULL;
     int code = 200;
     unsigned rem_option = 0;
     pj_status_t status = PJ_SUCCESS;
@@ -834,7 +835,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     if (p_tdata) *p_tdata = NULL;
 
     /* Verify arguments. */
-    PJ_ASSERT_RETURN(rdata != NULL && options != NULL, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tmp_pool != NULL && options != NULL, PJ_EINVAL);
 
     /* Normalize options */
     if (*options & PJSIP_INV_REQUIRE_100REL)
@@ -844,13 +845,15 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     if (*options & PJSIP_INV_REQUIRE_ICE)
 	*options |= PJSIP_INV_SUPPORT_ICE;
 
-    /* Get the message in rdata */
-    msg = rdata->msg_info.msg;
-
-    /* Must be INVITE request. */
-    PJ_ASSERT_RETURN(msg->type == PJSIP_REQUEST_MSG &&
-		     msg->line.req.method.id == PJSIP_INVITE_METHOD,
-		     PJ_EINVAL);
+    if (rdata) {
+        /* Get the message in rdata */
+        msg = rdata->msg_info.msg;
+    
+        /* Must be INVITE request. */
+        PJ_ASSERT_RETURN(msg && msg->type == PJSIP_REQUEST_MSG &&
+		         msg->line.req.method.id == PJSIP_INVITE_METHOD,
+		         PJ_EINVAL);
+    }
 
     /* If tdata is specified, then either dlg or endpt must be specified */
     PJ_ASSERT_RETURN((!p_tdata) || (endpt || dlg), PJ_EINVAL);
@@ -862,15 +865,17 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     pj_list_init(&res_hdr_list);
 
     /* Check the Contact header */
-    c_hdr = (pjsip_contact_hdr*)
-	    pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
-    if (!c_hdr || !c_hdr->uri) {
-	/* Missing Contact header or Contact contains "*" */
+    if (msg) {
+        c_hdr = (pjsip_contact_hdr*)
+	        pjsip_msg_find_hdr(msg, PJSIP_H_CONTACT, NULL);
+    }
+    if (msg && (!c_hdr || !c_hdr->uri)) {
+        /* Missing Contact header or Contact contains "*" */
 	pjsip_warning_hdr *w;
 	pj_str_t warn_text;
 
 	warn_text = pj_str("Bad/missing Contact header");
-	w = pjsip_warning_hdr_create(rdata->tp_info.pool, 399,
+	w = pjsip_warning_hdr_create(tmp_pool, 399,
 				     pjsip_endpt_name(endpt),
 				     &warn_text);
 	if (w) {
@@ -885,13 +890,13 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     /* Check the request body, see if it's something that we support,
      * only when the body hasn't been parsed before.
      */
-    if (r_sdp == NULL) {
+    if (r_sdp == NULL && rdata) {
 	sdp_info = pjsip_rdata_get_sdp_info(rdata);
     } else {
 	sdp_info = NULL;
     }
 
-    if (r_sdp==NULL && msg->body) {
+    if (r_sdp==NULL && msg && msg->body) {
 
 	/* Check if body really contains SDP. */
 	if (sdp_info->body.ptr == NULL) {
@@ -903,7 +908,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 		/* Add Accept header to response */
 		pjsip_accept_hdr *acc;
 
-		acc = pjsip_accept_hdr_create(rdata->tp_info.pool);
+		acc = pjsip_accept_hdr_create(tmp_pool);
 		PJ_ASSERT_RETURN(acc, PJ_ENOMEM);
 		acc->values[acc->count++] = pj_str("application/sdp");
 		pj_list_push_back(&res_hdr_list, acc);
@@ -920,7 +925,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 		/* Add Warning header. */
 		pjsip_warning_hdr *w;
 
-		w = pjsip_warning_hdr_create_from_status(rdata->tp_info.pool,
+		w = pjsip_warning_hdr_create_from_status(tmp_pool,
 							 pjsip_endpt_name(endpt),
 							 sdp_info->sdp_err);
 		PJ_ASSERT_RETURN(w, PJ_ENOMEM);
@@ -945,11 +950,11 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 
 	    /* Create SDP negotiator */
 	    status = pjmedia_sdp_neg_create_w_remote_offer(
-			    rdata->tp_info.pool, l_sdp, r_sdp, &neg);
+			    tmp_pool, l_sdp, r_sdp, &neg);
 	    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
 	    /* Negotiate SDP */
-	    status = pjmedia_sdp_neg_negotiate(rdata->tp_info.pool, neg, 0);
+	    status = pjmedia_sdp_neg_negotiate(tmp_pool, neg, 0);
 	    if (status != PJ_SUCCESS) {
 
 		/* Incompatible media */
@@ -961,14 +966,14 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 
 		    /* Add Warning header. */
 		    w = pjsip_warning_hdr_create_from_status(
-					    rdata->tp_info.pool, 
+					    tmp_pool, 
 					    pjsip_endpt_name(endpt), status);
 		    PJ_ASSERT_RETURN(w, PJ_ENOMEM);
 
 		    pj_list_push_back(&res_hdr_list, w);
 
 		    /* Add Accept header to response */
-		    acc = pjsip_accept_hdr_create(rdata->tp_info.pool);
+		    acc = pjsip_accept_hdr_create(tmp_pool);
 		    PJ_ASSERT_RETURN(acc, PJ_ENOMEM);
 		    acc->values[acc->count++] = pj_str("application/sdp");
 		    pj_list_push_back(&res_hdr_list, acc);
@@ -984,7 +989,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
      * We just assume that peer supports standard INVITE, ACK, CANCEL, and BYE
      * implicitly by sending this INVITE.
      */
-    allow = (pjsip_allow_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_ALLOW, NULL);
+    if (msg) {
+        allow = (pjsip_allow_hdr*) pjsip_msg_find_hdr(msg, PJSIP_H_ALLOW,
+                                                      NULL);
+    }
     if (allow) {
 	unsigned i;
 	const pj_str_t STR_UPDATE = { "UPDATE", 6 };
@@ -1002,8 +1010,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     }
 
     /* Check Supported header */
-    sup_hdr = (pjsip_supported_hdr*)
-	      pjsip_msg_find_hdr(msg, PJSIP_H_SUPPORTED, NULL);
+    if (msg) {
+        sup_hdr = (pjsip_supported_hdr*)
+	          pjsip_msg_find_hdr(msg, PJSIP_H_SUPPORTED, NULL);
+    }
     if (sup_hdr) {
 	unsigned i;
 	const pj_str_t STR_100REL = { "100rel", 6};
@@ -1021,8 +1031,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     }
 
     /* Check Require header */
-    req_hdr = (pjsip_require_hdr*)
-	      pjsip_msg_find_hdr(msg, PJSIP_H_REQUIRE, NULL);
+    if (msg) {
+        req_hdr = (pjsip_require_hdr*)
+	          pjsip_msg_find_hdr(msg, PJSIP_H_REQUIRE, NULL);
+    }
     if (req_hdr) {
 	unsigned i;
 	const pj_str_t STR_100REL = { "100rel", 6};
@@ -1074,7 +1086,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 		const pjsip_hdr *h;
 
 		/* Add Unsupported header. */
-		unsupp_hdr = pjsip_unsupported_hdr_create(rdata->tp_info.pool);
+		unsupp_hdr = pjsip_unsupported_hdr_create(tmp_pool);
 		PJ_ASSERT_RETURN(unsupp_hdr != NULL, PJ_ENOMEM);
 
 		unsupp_hdr->count = unsupp_cnt;
@@ -1089,7 +1101,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 		pj_assert(h);
 		if (h) {
 		    sup_hdr = (pjsip_supported_hdr*)
-			      pjsip_hdr_clone(rdata->tp_info.pool, h);
+			      pjsip_hdr_clone(tmp_pool, h);
 		    pj_list_push_back(&res_hdr_list, sup_hdr);
 		}
 	    }
@@ -1101,10 +1113,10 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
     /* Check if there are local requirements that are not supported
      * by peer.
      */
-    if ( ((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
+    if ( msg && (((*options & PJSIP_INV_REQUIRE_100REL)!=0 && 
 	  (rem_option & PJSIP_INV_SUPPORT_100REL)==0) ||
 	 ((*options & PJSIP_INV_REQUIRE_TIMER)!=0 && 
-	  (rem_option & PJSIP_INV_SUPPORT_TIMER)==0))
+	  (rem_option & PJSIP_INV_SUPPORT_TIMER)==0)))
     {
 	code = PJSIP_SC_EXTENSION_REQUIRED;
 	status = PJSIP_ERRNO_FROM_SIP_STATUS(code);
@@ -1113,7 +1125,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 	    const pjsip_hdr *h;
 
 	    /* Add Require header. */
-	    req_hdr = pjsip_require_hdr_create(rdata->tp_info.pool);
+	    req_hdr = pjsip_require_hdr_create(tmp_pool);
 	    PJ_ASSERT_RETURN(req_hdr != NULL, PJ_ENOMEM);
 
 	    if (*options & PJSIP_INV_REQUIRE_100REL)
@@ -1129,7 +1141,7 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
 	    pj_assert(h);
 	    if (h) {
 		sup_hdr = (pjsip_supported_hdr*)
-			  pjsip_hdr_clone(rdata->tp_info.pool, h);
+			  pjsip_hdr_clone(tmp_pool, h);
 		pj_list_push_back(&res_hdr_list, sup_hdr);
 	    }
 
@@ -1156,6 +1168,10 @@ on_return:
     if (code != 200 && p_tdata) {
 	pjsip_tx_data *tdata;
 	const pjsip_hdr *h;
+
+        if (!rdata) {
+            return PJSIP_ERRNO_FROM_SIP_STATUS(code);
+        }
 
 	if (dlg) {
 	    status = pjsip_dlg_create_response(dlg, rdata, code, NULL, 
@@ -1198,6 +1214,23 @@ on_return:
 /*
  * Verify incoming INVITE request.
  */
+PJ_DEF(pj_status_t) pjsip_inv_verify_request2(pjsip_rx_data *rdata,
+					      unsigned *options,
+					      const pjmedia_sdp_session *r_sdp,
+					      const pjmedia_sdp_session *l_sdp,
+					      pjsip_dialog *dlg,
+					      pjsip_endpoint *endpt,
+					      pjsip_tx_data **p_tdata)
+{
+    return pjsip_inv_verify_request3(rdata, rdata->tp_info.pool,
+                                     options, r_sdp, l_sdp, dlg, 
+				     endpt, p_tdata);
+}
+
+
+/*
+ * Verify incoming INVITE request.
+ */
 PJ_DEF(pj_status_t) pjsip_inv_verify_request( pjsip_rx_data *rdata,
 					      unsigned *options,
 					      const pjmedia_sdp_session *l_sdp,
@@ -1205,7 +1238,8 @@ PJ_DEF(pj_status_t) pjsip_inv_verify_request( pjsip_rx_data *rdata,
 					      pjsip_endpoint *endpt,
 					      pjsip_tx_data **p_tdata)
 {
-    return pjsip_inv_verify_request2(rdata, options, NULL, l_sdp, dlg, 
+    return pjsip_inv_verify_request3(rdata, rdata->tp_info.pool,
+                                     options, NULL, l_sdp, dlg, 
 				     endpt, p_tdata);
 }
 
@@ -2022,6 +2056,43 @@ PJ_DEF(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 on_return:
     pjsip_dlg_dec_lock(inv->dlg);
     pj_log_pop_indent();
+    return status;
+}
+
+
+/*
+ * Set local SDP offer/answer.
+ */
+PJ_DEF(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
+					    const pjmedia_sdp_session *sdp )
+{
+    const pjmedia_sdp_session *offer;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(inv && sdp, PJ_EINVAL);
+
+    /* If we have remote SDP offer, set local answer to respond to the offer,
+     * otherwise we set/modify our local offer (and create an SDP negotiator
+     * if we don't have one yet).
+     */
+    if (inv->neg) {
+        pjmedia_sdp_neg_state neg_state = pjmedia_sdp_neg_get_state(inv->neg);
+
+        if ((neg_state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
+	     neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO) &&
+            pjmedia_sdp_neg_get_neg_remote(inv->neg, &offer) == PJ_SUCCESS)
+        {
+            status = pjsip_inv_set_sdp_answer(inv, sdp);
+        }  else if (neg_state == PJMEDIA_SDP_NEG_STATE_DONE) {
+            status = pjmedia_sdp_neg_modify_local_offer(inv->pool,
+                                                        inv->neg, sdp);
+        } else
+            return PJMEDIA_SDPNEG_EINSTATE;
+    } else {
+	status = pjmedia_sdp_neg_create_w_local_offer(inv->pool, 
+						      sdp, &inv->neg);
+    }
+
     return status;
 }
 

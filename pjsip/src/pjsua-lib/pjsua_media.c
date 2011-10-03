@@ -1656,7 +1656,6 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
     if (async) {
         call->med_ch_cb = cb;
         if (rem_sdp) {
-            /* TODO: change rem_sdp to non-const parameter. */
             call->async_call.rem_sdp =
                 pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
         }
@@ -2112,6 +2111,13 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned mi;
+
+    for (mi=0; mi<call->med_cnt; ++mi) {
+	pjsua_call_media *call_med = &call->media[mi];
+
+        if (call_med->tp_st == PJSUA_MED_TP_CREATING)
+            return PJ_EBUSY;
+    }
 
     PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call_id));
     pj_log_push_indent();

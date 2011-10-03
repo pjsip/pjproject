@@ -100,6 +100,16 @@ struct pjsua_call_media
  */
 #define PJSUA_MAX_CALL_MEDIA		PJMEDIA_MAX_SDP_MEDIA
 
+/* Call answer's list. */
+typedef struct call_answer
+{
+    PJ_DECL_LIST_MEMBER(struct call_answer);
+    pjsua_msg_data  *msg_data;      /**< Answer's headers list.       */
+    pj_str_t        *reason;        /**< Answer's reason phrase.      */
+    unsigned         code;          /**< Answer's status code.        */
+} call_answer;
+
+
 /** 
  * Structure to be attached to invite dialog. 
  * Given a dialog "dlg", application can retrieve this structure
@@ -151,6 +161,9 @@ struct pjsua_call
                 unsigned         options; /**< Outgoing call options.       */
                 pjsua_msg_data  *msg_data;/**< Headers for outgoing INVITE. */
             } out_call;
+            struct {
+                call_answer      answers;/**< A list of call answers.       */
+            } inc_call;
         } call_var;
     } async_call;                      /**< Temporary storage for async
                                             outgoing/incoming call.         */

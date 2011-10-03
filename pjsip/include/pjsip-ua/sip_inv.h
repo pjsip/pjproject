@@ -545,6 +545,25 @@ PJ_DECL(pj_status_t) pjsip_inv_verify_request2( pjsip_rx_data *rdata,
 						pjsip_tx_data **tdata);
 
 /**
+ * Variant of #pjsip_inv_verify_request() which allows application not to
+ * specify the rdata (i.e. pass NULL as the rdata parameter) and specify
+ * the parsed SDP in the \a offer argument and a temporary pool in the
+ * \a tmp_pool argument.
+ * This is useful if application no longer has access to the rdata.
+ *
+ * @see pjsip_inv_verify_request()
+ */
+PJ_DECL(pj_status_t) pjsip_inv_verify_request3( pjsip_rx_data *rdata,
+                                                pj_pool_t *tmp_pool,
+						unsigned *options,
+						const pjmedia_sdp_session *offer,
+						const pjmedia_sdp_session *answer,
+						pjsip_dialog *dlg,
+						pjsip_endpoint *endpt,
+						pjsip_tx_data **tdata);
+
+
+/**
  * Create UAS invite session for the specified dialog in dlg. Application 
  * SHOULD call the verification function before calling this function, 
  * to ensure that it can create the session successfully.
@@ -708,6 +727,21 @@ PJ_DECL(pj_status_t) pjsip_inv_answer(	pjsip_inv_session *inv,
 					const pj_str_t *st_text,
 					const pjmedia_sdp_session *local_sdp,
 					pjsip_tx_data **p_tdata );
+
+
+/**
+ * Set local offer or answer depending on negotiator state (it may also
+ * create a negotiator if it doesn't exist yet).
+ *
+ * @param inv		The invite session.
+ * @param sdp		The SDP description which will be set as
+ *			an offer/answer to remote.
+ *
+ * @return		PJ_SUCCESS if local offer/answer can be accepted by
+ *			SDP negotiator.
+ */
+PJ_DECL(pj_status_t) pjsip_inv_set_local_sdp(pjsip_inv_session *inv,
+					     const pjmedia_sdp_session *sdp );
 
 
 /**
