@@ -2767,6 +2767,7 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
  */
 static void arrange_window(pjsua_vid_win_id wid)
 {
+#if PJSUA_HAS_VIDEO
     pjmedia_coord pos;
     int i, last;
 
@@ -2790,6 +2791,9 @@ static void arrange_window(pjsua_vid_win_id wid)
 
     if (wid != PJSUA_INVALID_ID)
 	pjsua_vid_win_set_pos(wid, &pos);
+#else
+    PJ_UNUSED_ARG(wid);
+#endif
 }
 
 /* Process video media state. "mi" is the media index. */
