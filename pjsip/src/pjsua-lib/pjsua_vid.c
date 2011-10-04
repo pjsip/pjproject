@@ -1756,6 +1756,8 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 				       pjmedia_vid_dev_index cap_dev)
 {
     pjsua_call_media *call_med;
+    pjmedia_vid_dev_stream *old_dev;
+    pjmedia_vid_dev_switch_param switch_prm;
     pjmedia_vid_dev_info info;
     pjsua_vid_win *w, *new_w = NULL;
     pjsua_vid_win_id wid, new_wid;
@@ -1794,6 +1796,19 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     w = &pjsua_var.win[wid];
     pj_assert(w->type == PJSUA_WND_TYPE_PREVIEW && w->vp_cap);
 
+    /* If the old device supports fast switching, then that's excellent! */
+    old_dev = pjmedia_vid_port_get_stream(w->vp_cap);
+    pjmedia_vid_dev_switch_param_default(&switch_prm);
+    switch_prm.target_id = cap_dev;
+    status = pjmedia_vid_dev_stream_set_cap(old_dev,
+                                            PJMEDIA_VID_DEV_CAP_SWITCH,
+                                            &switch_prm);
+    if (status == PJ_SUCCESS) {
+	w->preview_cap_id = cap_dev;
+	return PJ_SUCCESS;
+    }
+
+    /* No it doesn't support fast switching. Do slow switching then.. */
     status = pjmedia_vid_stream_get_port(call_med->strm.v.stream,
 					 PJMEDIA_DIR_ENCODING, &media_port);
     if (status != PJ_SUCCESS)

@@ -97,6 +97,7 @@ typedef struct pjmedia_vid_dev_hwnd
 
 /**
  * Parameter for switching device with PJMEDIA_VID_DEV_CAP_SWITCH capability.
+ * Initialize this with pjmedia_vid_dev_switch_param_default()
  */
 typedef struct pjmedia_vid_dev_switch_param
 {
@@ -430,6 +431,17 @@ typedef struct pjmedia_vid_dev_factory pjmedia_vid_dev_factory;
 typedef pjmedia_vid_dev_factory*
 (*pjmedia_vid_dev_factory_create_func_ptr)(pj_pool_factory*);
 
+/**
+ * Initialize pjmedia_vid_dev_switch_param.
+ *
+ * @param p	    Parameter to be initialized.
+ */
+PJ_INLINE(void)
+pjmedia_vid_dev_switch_param_default(pjmedia_vid_dev_switch_param *p)
+{
+    pj_bzero(p, sizeof(*p));
+    p->target_id = PJMEDIA_VID_INVALID_DEV;
+}
 
 /**
  * Get string info for the specified capability.
