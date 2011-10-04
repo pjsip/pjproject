@@ -2038,5 +2038,39 @@ PJ_DEF(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id)
 }
 
 
+/*
+ * Determine if video stream for the specified call is currently running
+ * for the specified direction.
+ */
+PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
+                                                    int med_idx,
+                                                    pjmedia_dir dir)
+{
+    pjsua_call *call;
+    pjsua_call_media *call_med;
+
+    PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
+		     PJ_EINVAL);
+
+    /* Verify and normalize media index */
+    if (med_idx == -1) {
+	med_idx = pjsua_call_get_vid_stream_idx(call_id);
+    }
+
+    call = &pjsua_var.calls[call_id];
+    PJ_ASSERT_RETURN(med_idx >= 0 && med_idx < call->med_cnt, PJ_EINVAL);
+
+    call_med = &call->media[med_idx];
+
+    /* Verify if the stream is transmitting video */
+    if (call_med->type != PJMEDIA_TYPE_VIDEO || (call_med->dir & dir) == 0 ||
+	!call_med->strm.v.stream)
+    {
+	return PJ_FALSE;
+    }
+
+    return pjmedia_vid_stream_is_running(call_med->strm.v.stream, dir);
+}
+
 #endif /* PJSUA_HAS_VIDEO */
 

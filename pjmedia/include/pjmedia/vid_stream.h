@@ -287,6 +287,17 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream);
 
 
 /**
+ * Query if the stream is started on the specified direction.
+ *
+ * @param stream	The video stream.
+ * @param dir 		The direction to be checked.
+ *
+ * @return		PJ_TRUE if stream is started.
+ */
+PJ_DECL(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
+                                                 pjmedia_dir dir);
+
+/**
  * Pause the individual channel in the stream.
  *
  * @param stream	The video channel.

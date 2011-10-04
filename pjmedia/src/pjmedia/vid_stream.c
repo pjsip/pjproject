@@ -1598,6 +1598,27 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_start(pjmedia_vid_stream *stream)
 
 
 /*
+ * Check status.
+ */
+PJ_DEF(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
+                                                pjmedia_dir dir)
+{
+    pj_bool_t is_running = PJ_TRUE;
+
+    PJ_ASSERT_RETURN(stream, PJ_FALSE);
+
+    if (dir & PJMEDIA_DIR_ENCODING) {
+	is_running &= (stream->enc && !stream->enc->paused);
+    }
+
+    if (dir & PJMEDIA_DIR_DECODING) {
+	is_running &= (stream->dec && !stream->dec->paused);
+    }
+
+    return is_running;
+}
+
+/*
  * Pause stream.
  */
 PJ_DEF(pj_status_t) pjmedia_vid_stream_pause(pjmedia_vid_stream *stream,

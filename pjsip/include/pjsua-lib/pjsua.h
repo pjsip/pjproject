@@ -3940,6 +3940,23 @@ PJ_DECL(int) pjsua_call_get_vid_stream_idx(pjsua_call_id call_id);
 
 
 /**
+ * Determine if video stream for the specified call is currently running
+ * (i.e. has been created, started, and not being paused) for the specified
+ *  direction.
+ *
+ * @param call_id	Call identification.
+ * @param med_idx	Media stream index, or -1 to specify default video
+ * 			media.
+ * @param dir		The direction to be checked.
+ *
+ * @return		PJ_TRUE if stream is currently running for the
+ * 			specified direction.
+ */
+PJ_DECL(pj_bool_t) pjsua_call_vid_stream_is_running(pjsua_call_id call_id,
+                                                    int med_idx,
+                                                    pjmedia_dir dir);
+
+/**
  * Add, remove, modify, and/or manipulate video media stream for the
  * specified call. This may trigger a re-INVITE or UPDATE to be sent
  * for the call.
