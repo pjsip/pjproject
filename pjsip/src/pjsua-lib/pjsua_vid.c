@@ -1805,6 +1805,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
                                             &switch_prm);
     if (status == PJ_SUCCESS) {
 	w->preview_cap_id = cap_dev;
+	call_med->strm.v.cap_dev = cap_dev;
 	return PJ_SUCCESS;
     }
 
