@@ -228,7 +228,6 @@ static pj_status_t v4l2_scan_devs(vid4lin_factory *f)
     for (i=0; i<V4L2_MAX_DEVS && f->dev_count < V4L2_MAX_DEVS; ++i) {
 	int fd;
 	vid4lin_dev_info *pdi;
-	pj_pool_t *pool = f->dev_pool;
 	pj_uint32_t fmt_cap[8];
 	int j, fmt_cnt=0;
 
@@ -355,12 +354,6 @@ static pj_status_t vid4lin_factory_refresh(pjmedia_vid_dev_factory *f)
 {
     vid4lin_factory *cf = (vid4lin_factory*)f;
     pj_status_t status;
-
-    /* libv4l2 annoyingly writes "libv4l2: error dequeuing buf: Resource
-     * temporarily unavailable" too many times to stderr. Turn it off
-     * for good.
-     */
-    v4l2_log_file = fopen("/dev/null", "w");
 
     status = v4l2_scan_devs(cf);
     if (status != PJ_SUCCESS)
@@ -578,7 +571,7 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
     stream->fd = INVALID_FD;
     pjmedia_event_publisher_init(&stream->base.epub, PJMEDIA_SIG_VID_DEV_V4L2);
 
-    stream->fd = v4l2_open(vdi->dev_name, O_RDWR | O_NONBLOCK, 0);
+    stream->fd = v4l2_open(vdi->dev_name, O_RDWR, 0);
     if (stream->fd < 0)
 	goto on_error;
 
