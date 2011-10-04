@@ -5593,8 +5593,8 @@ PJ_DECL(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
  * @param id		The capture device ID.
  *
  * @return		The window ID of the preview window for the
- * 			specified capture device ID, or NULL if preview
- * 			does not exist.
+ * 			specified capture device ID, or PJSUA_INVALID_ID if
+ * 			preview has not been started for the device.
  */
 PJ_DECL(pjsua_vid_win_id) pjsua_vid_preview_get_win(pjmedia_vid_dev_index id);
 
