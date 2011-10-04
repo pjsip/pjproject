@@ -2761,12 +2761,46 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
     }
 }
 
+/* arrange windows. arg:
+ *   -1:    arrange all windows
+ *   != -1: arrange only this window id
+ */
+static void arrange_window(pjsua_vid_win_id wid)
+{
+    pjmedia_coord pos;
+    int i, last;
+
+    pos.x = 0;
+    pos.y = 0;
+    last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid;
+
+    for (i=0; i<last; ++i) {
+	pjsua_vid_win_info wi;
+	pj_status_t status;
+
+	status = pjsua_vid_win_get_info(i, &wi);
+	if (status != PJ_SUCCESS)
+	    continue;
+
+	if (wid == PJSUA_INVALID_ID)
+	    pjsua_vid_win_set_pos(i, &pos);
+
+	pos.y += wi.size.h;
+    }
+
+    if (wid != PJSUA_INVALID_ID)
+	pjsua_vid_win_set_pos(wid, &pos);
+}
+
 /* Process video media state. "mi" is the media index. */
 static void on_call_video_state(pjsua_call_info *ci, unsigned mi,
                                 pj_bool_t *has_error)
 {
-    PJ_UNUSED_ARG(ci);
-    PJ_UNUSED_ARG(mi);
+    if (ci->media_status != PJSUA_CALL_MEDIA_ACTIVE)
+	return;
+
+    arrange_window(ci->media[mi].stream.vid.win_in);
+
     PJ_UNUSED_ARG(has_error);
 }
 
@@ -3839,6 +3873,7 @@ static void vid_handle_menu(char *menuin)
 		int dev_id = atoi(argv[4]);
 		if (on) {
 		    pjsua_vid_preview_start(dev_id, NULL);
+		    arrange_window(pjsua_vid_preview_get_win(dev_id));
 		} else {
 		    pjsua_vid_preview_stop(dev_id);
 		}
