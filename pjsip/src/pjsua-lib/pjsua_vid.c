@@ -2074,7 +2074,7 @@ PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
     }
 
     call = &pjsua_var.calls[call_id];
-    PJ_ASSERT_RETURN(med_idx >= 0 && med_idx < call->med_cnt, PJ_EINVAL);
+    PJ_ASSERT_RETURN(med_idx >= 0 && med_idx < (int)call->med_cnt, PJ_EINVAL);
 
     call_med = &call->media[med_idx];
 
