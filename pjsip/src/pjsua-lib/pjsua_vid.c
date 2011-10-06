@@ -1821,17 +1821,22 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 
     pjmedia_event_unsubscribe(&call_med->esub_cap);
     
-    /* = Detach stream port from the old capture device = */
-    status = pjmedia_vid_port_disconnect(w->vp_cap);
-    if (status != PJ_SUCCESS)
-	return status;
+    /* temporarily disconnect while we operate on the tee. */
+    pjmedia_vid_port_disconnect(w->vp_cap);
 
+    /* = Detach stream port from the old capture device's tee = */
     status = pjmedia_vid_tee_remove_dst_port(w->tee, media_port);
     if (status != PJ_SUCCESS) {
-	/* Connect back the old capturer */
-	pjmedia_vid_port_connect(w->vp_cap, media_port, PJ_FALSE);
-	return status;
+	/* Something wrong, assume that media_port has been removed
+	 * and continue.
+	 */
+	PJ_PERROR(4,(THIS_FILE, status,
+		     "Warning: call %d: unable to remove video from tee",
+		     call->index));
     }
+
+    /* Reconnect again immediately. We're done with w->tee */
+    pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
 
     /* = Attach stream port to the new capture device = */
 
@@ -1861,11 +1866,6 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    /* Connect capturer to tee */
-    status = pjmedia_vid_port_connect(new_w->vp_cap, new_w->tee, PJ_FALSE);
-    if (status != PJ_SUCCESS)
-	return status;
-
     if (w->vp_rend) {
 	/* Start renderer */
 	status = pjmedia_vid_port_start(new_w->vp_rend);
@@ -1880,9 +1880,11 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
 #endif
 
     /* Start capturer */
-    status = pjmedia_vid_port_start(new_w->vp_cap);
-    if (status != PJ_SUCCESS)
-	goto on_error;
+    if (!pjmedia_vid_port_is_running(new_w->vp_cap)) {
+	status = pjmedia_vid_port_start(new_w->vp_cap);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
 
     /* Finally */
     call_med->strm.v.cap_dev = cap_dev;
@@ -1892,7 +1894,13 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     return PJ_SUCCESS;
 
 on_error:
+    PJ_PERROR(4,(THIS_FILE, status,
+	         "Call %d: error changing capture device to %d",
+	         call->index, cap_dev));
+
     if (new_w) {
+	/* Unsubscribe, just in case */
+	pjmedia_event_unsubscribe(&call_med->esub_cap);
 	/* Disconnect media port from the new capturer */
 	pjmedia_vid_tee_remove_dst_port(new_w->tee, media_port);
 	/* Release the new capturer */
@@ -1900,13 +1908,18 @@ on_error:
     }
 
     /* Revert back to the old capturer */
+    pjmedia_vid_port_disconnect(w->vp_cap);
     status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, media_port);
+    pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
     if (status != PJ_SUCCESS)
 	return status;
 
-    status = pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
-    if (status != PJ_SUCCESS)
-	return status;
+#if ENABLE_EVENT
+    /* Resubscribe */
+    pjmedia_event_subscribe(
+	    pjmedia_vid_port_get_event_publisher(w->vp_cap),
+	    &call_med->esub_cap);
+#endif
 
     return status;
 }
