@@ -257,7 +257,7 @@ static HRESULT get_cap_device(struct dshow_factory *df,
 
 static void enum_dev_cap(IBaseFilter *filter,
 			 pjmedia_dir dir,
-			 const GUID *dshow_format,
+			 const GUID *dshow_fmt,
 			 AM_MEDIA_TYPE **pMediatype,
 			 IPin **pSrcpin,
 			 pj_bool_t *sup_fmt)
@@ -305,10 +305,12 @@ static void enum_dev_cap(IBaseFilter *filter,
                         if (FAILED (hr))
                             continue;
 
-			nformat = (dshow_format? 1:
+			nformat = (dshow_fmt? 1:
 				   sizeof(dshow_fmts)/sizeof(dshow_fmts[0]));
 			for (j = 0; j < nformat; j++) {
-			    if (!dshow_format || j > 0)
+			    const GUID *dshow_format = dshow_fmt;
+                            
+			    if (!dshow_format)
 				dshow_format = dshow_fmts[j].dshow_format;
 			    if (UuidCompare(&mediatype->subtype, 
 					    (UUID*)dshow_format,
