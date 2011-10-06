@@ -530,9 +530,12 @@ typedef struct pjsua_med_tp_state_info
   *
   * @param call_id	The call ID.
   * @param info         The media transport state info.
+  *
+  * @return		The callback must return PJ_SUCCESS at the moment.
   */
-typedef void (*pjsua_med_tp_state_cb)(pjsua_call_id call_id,
-                                      const pjsua_med_tp_state_info *info);
+typedef pj_status_t
+(*pjsua_med_tp_state_cb)(pjsua_call_id call_id,
+                         const pjsua_med_tp_state_info *info);
 
 
 /**

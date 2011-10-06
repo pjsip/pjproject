@@ -1481,7 +1481,9 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
         for (mi=0; mi < call->med_cnt; ++mi) {
             pjsua_call_media *call_med = &call->media[mi];
 
-            if (call_med->med_init_cb) {
+            if (call_med->med_init_cb ||
+                call_med->tp_st == PJSUA_MED_TP_NULL)
+            {
                 pj_mutex_unlock(call->med_ch_mutex);
                 return PJ_SUCCESS;
             }
@@ -1697,8 +1699,8 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	                                   &acc->cfg.rtp_cfg,
 					   security_level, sip_err_code,
                                            async,
-                                           (async? (pjsua_med_tp_state_cb)
-                                           &media_channel_init_cb: NULL));
+                                           (async? &media_channel_init_cb:
+                                            NULL));
             if (status == PJ_EPENDING) {
                 pending_med_tp = PJ_TRUE;
             } else if (status != PJ_SUCCESS) {

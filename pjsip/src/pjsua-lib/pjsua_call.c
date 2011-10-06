@@ -630,7 +630,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
 				      call->secure_level, dlg->pool,
 				      NULL, NULL, PJ_TRUE,
-                                      (pjsua_med_tp_state_cb)
                                       &on_make_call_med_tp_complete);
     if (status == PJ_SUCCESS) {
         status = on_make_call_med_tp_complete(call->index, NULL);
@@ -1096,7 +1095,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				      rdata->tp_info.pool,
 				      offer,
 				      &sip_err_code, PJ_TRUE,
-                                      (pjsua_med_tp_state_cb)
                                       &on_incoming_call_med_tp_complete);
     if (status == PJ_SUCCESS) {
         status = on_incoming_call_med_tp_complete(call_id, NULL);
