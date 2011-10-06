@@ -267,6 +267,8 @@ static ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
+#if 0
+    /* Force plain H263 to use H263-1998 RTP packetization */
     {
 	{PJMEDIA_FORMAT_H263, PJMEDIA_RTP_PT_H263, {"H263",4}},
 	PJMEDIA_FORMAT_H263,	1000000,    2000000,
@@ -274,9 +276,11 @@ static ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
+#else
     {
 	{PJMEDIA_FORMAT_H263,	PJMEDIA_RTP_PT_H263,	{"H263",4}},
     },
+#endif
     {
 	{PJMEDIA_FORMAT_H261,	PJMEDIA_RTP_PT_H261,	{"H261",4}},
     },
