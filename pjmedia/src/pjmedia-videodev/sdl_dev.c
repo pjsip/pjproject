@@ -667,7 +667,6 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
     const pjmedia_video_format_info *vfi;
     pjmedia_video_format_detail *vfd;
 
-    fmt = &strm->param.fmt;
     sdl_info = get_sdl_format_info(fmt->id);
     vfi = pjmedia_get_video_format_info(pjmedia_video_format_mgr_instance(),
                                         fmt->id);
