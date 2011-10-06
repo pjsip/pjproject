@@ -3375,13 +3375,14 @@ static void vid_show_help(void)
     puts("| vid call tx on|off N      Enable/disable video tx for stream N in curr call |");
     puts("| vid call add              Add video stream for current call                 |");
     puts("| vid call enable/disable N Enable/disable stream #N in current call          |");
-    puts("| vid call set-cap N ID     Set capture dev ID for stream #N in current call  |");
+    puts("| vid call cap N ID         Set capture dev ID for stream #N in current call  |");
     puts("| vid dev list              List all video devices                            |");
     puts("| vid dev refresh           Refresh video device list                         |");
     puts("| vid dev prev on|off ID    Enable/disable preview for specified device ID    |");
     puts("| vid codec list            List video codecs                                 |");
     puts("| vid codec prio PT PRIO    Set codec with pt PT priority to PRIO             |");
     puts("| vid win list              List all active video windows                     |");
+    puts("| vid win arrange           Auto arrange windows                              |");
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
     puts("| vid win move ID X Y       Move window ID to position X,Y                    |");
     puts("| vid win resize ID w h     Resize window ID to the specified width, height   |");
@@ -3858,7 +3859,7 @@ static void vid_handle_menu(char *menuin)
 	    param.dir = PJMEDIA_DIR_ENCODING_DECODING;
 	    pjsua_call_set_vid_strm(current_call, op, &param);
 	}
-	else if (argc >= 3 && strcmp(argv[2], "set-cap")==0) {
+	else if (argc >= 3 && strcmp(argv[2], "cap")==0) {
 	    param.med_idx = argc >= 4? atoi(argv[3]) : -1;
 	    param.cap_dev = argc >= 5? atoi(argv[4]) : PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
 	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV, &param);
@@ -3921,6 +3922,8 @@ static void vid_handle_menu(char *menuin)
 	    size.w = atoi(argv[4]);
 	    size.h = atoi(argv[5]);
 	    pjsua_vid_win_set_size(wid, &size);
+	} else if (strcmp(argv[2], "arrange")==0) {
+	    arrange_window(PJSUA_INVALID_ID);
 	} else
 	    goto on_error;
     } else if (strcmp(argv[1], "codec")==0) {
