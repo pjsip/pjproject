@@ -3880,7 +3880,14 @@ static void vid_handle_menu(char *menuin)
 		    pjsua_vid_preview_start(dev_id, NULL);
 		    arrange_window(pjsua_vid_preview_get_win(dev_id));
 		} else {
-		    pjsua_vid_preview_stop(dev_id);
+		    pjsua_vid_win_id wid;
+		    wid = pjsua_vid_preview_get_win(dev_id);
+		    if (wid != PJSUA_INVALID_ID) {
+			/* Preview window hiding once it is stopped is
+			 * responsibility of app */
+			pjsua_vid_win_set_show(wid, PJ_FALSE);
+			pjsua_vid_preview_stop(dev_id);
+		    }
 		}
 	    }
 	} else
