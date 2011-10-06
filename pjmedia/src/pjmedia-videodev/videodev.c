@@ -790,7 +790,12 @@ pjmedia_vid_dev_stream_get_event_publisher(pjmedia_vid_dev_stream *strm)
 /* API: Start the stream. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_start(pjmedia_vid_dev_stream *strm)
 {
-    pj_status_t status = strm->op->start(strm);
+    pj_status_t status;
+
+    if (pjmedia_vid_dev_stream_is_running(strm))
+	return PJ_SUCCESS;
+
+    status = strm->op->start(strm);
     if (status == PJ_SUCCESS)
 	strm->sys.is_running = PJ_TRUE;
     return status;
