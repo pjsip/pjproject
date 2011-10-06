@@ -827,6 +827,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	{
 	    pjsua_vid_win *w;
 	    pjsua_vid_win_id wid;
+	    pj_bool_t just_created = PJ_FALSE;
 
 	    PJ_LOG(4,(THIS_FILE, "Setting up TX.."));
 	    pj_log_push_indent();
@@ -859,6 +860,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 		pj_log_pop_indent();
 		    return status;
 		}
+		just_created = PJ_TRUE;
 	    }
 
 	    w = &pjsua_var.win[wid];
@@ -883,10 +885,12 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	    }
 
 	    /* Start capturer */
-	    status = pjmedia_vid_port_start(w->vp_cap);
-	    if (status != PJ_SUCCESS) {
-		pj_log_pop_indent();
-		goto on_error;
+	    if (just_created) {
+		status = pjmedia_vid_port_start(w->vp_cap);
+		if (status != PJ_SUCCESS) {
+		    pj_log_pop_indent();
+		    goto on_error;
+		}
 	    }
 
 	    /* Done */
