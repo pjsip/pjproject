@@ -126,6 +126,11 @@ typedef struct pjmedia_vid_codec_param
     pjmedia_format      dec_fmt;        /**< Decoded format	            */
     pjmedia_codec_fmtp  dec_fmtp;       /**< Decoder fmtp params	    */
 
+    pj_bool_t		ignore_fmtp;	/**< Ignore fmtp params. If set to
+					     PJ_TRUE, the codec will apply
+					     format settings specified in
+					     enc_fmt and dec_fmt only.	    */
+
 } pjmedia_vid_codec_param;
 
 

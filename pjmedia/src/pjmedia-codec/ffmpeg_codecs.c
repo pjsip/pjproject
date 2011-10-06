@@ -341,9 +341,11 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	return status;
 
     /* Apply SDP fmtp to format in codec param */
-    status = pjmedia_vid_codec_h264_apply_fmtp(&ff->param);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (!ff->param.ignore_fmtp) {
+	status = pjmedia_vid_codec_h264_apply_fmtp(&ff->param);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
 	AVCodecContext *ctx = ff->enc_ctx;
@@ -448,7 +450,9 @@ static pj_status_t h263_preopen(ffmpeg_private *ff)
 	return status;
 
     /* Apply fmtp settings to codec param */
-    status = pjmedia_vid_codec_h263_apply_fmtp(&ff->param);
+    if (!ff->param.ignore_fmtp) {
+	status = pjmedia_vid_codec_h263_apply_fmtp(&ff->param);
+    }
 
     return status;
 }

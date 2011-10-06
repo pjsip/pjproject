@@ -708,7 +708,7 @@ int main(int argc, char *argv[])
             /* Create capture */
             status = pjmedia_vid_dev_default_param(
 					pool,
-					0,//PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
+					PJMEDIA_VID_DEFAULT_CAPTURE_DEV,
 					&vpp.vidparam);
             if (status != PJ_SUCCESS)
 	        goto on_exit;
@@ -726,7 +726,7 @@ int main(int argc, char *argv[])
             /* Create renderer */
             status = pjmedia_vid_dev_default_param(
 					pool,
-					1,//PJMEDIA_VID_DEFAULT_RENDER_DEV,
+					PJMEDIA_VID_DEFAULT_RENDER_DEV,
 					&vpp.vidparam);
             if (status != PJ_SUCCESS)
 	        goto on_exit;
@@ -740,6 +740,9 @@ int main(int argc, char *argv[])
 	        goto on_exit;
         }
     }
+
+    /* Set to ignore fmtp */
+    codec_param.ignore_fmtp = PJ_TRUE;
 
     /* Create stream based on program arguments */
     status = create_stream(pool, med_endpt, codec_info, &codec_param,
@@ -795,7 +798,7 @@ int main(int argc, char *argv[])
         vpp.active = PJ_FALSE;
         status = pjmedia_vid_dev_default_param(
 				pool,
-				1,//PJMEDIA_VID_DEFAULT_RENDER_DEV,
+				PJMEDIA_VID_DEFAULT_RENDER_DEV,
 				&vpp.vidparam);
         if (status != PJ_SUCCESS)
 	    goto on_exit;
