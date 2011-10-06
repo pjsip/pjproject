@@ -109,6 +109,7 @@ struct pjmedia_vid_stream
     pj_str_t		     cname;	    /**< SDES CNAME		    */
 
     pjmedia_transport	    *transport;	    /**< Stream transport.	    */
+    unsigned		     send_err_cnt;  /**< Send error count.          */
 
     pj_mutex_t		    *jb_mutex;
     pjmedia_jbuf	    *jb;	    /**< Jitter buffer.		    */
@@ -811,8 +812,14 @@ static pj_status_t put_frame(pjmedia_port *port,
 	                                    frame_out.size +
 						sizeof(pjmedia_rtp_hdr));
 	if (status != PJ_SUCCESS) {
-	    LOGERR_((channel->port.info.name.ptr,
-		     "Transport send_rtp() error", status));
+	    enum { COUNT_TO_REPORT = 20 };
+	    if (stream->send_err_cnt++ == 0) {
+		LOGERR_((channel->port.info.name.ptr,
+			 "Transport send_rtp() error (repeated %d times)",
+			 status));
+		if (stream->send_err_cnt > COUNT_TO_REPORT)
+		    stream->send_err_cnt = 0;
+	    }
 	    /* Ignore this error */
 	}
 
