@@ -110,6 +110,8 @@ struct dshow_stream
     pj_bool_t		     cap_thread_initialized;
     pj_thread_desc	     cap_thread_desc;
     pj_thread_t		    *cap_thread;
+    void                    *frm_buf;
+    unsigned                 frm_buf_size;
 
     struct dshow_graph
     {
@@ -556,7 +558,6 @@ static pj_status_t dshow_factory_default_param(pj_pool_t *pool,
 static void input_cb(void *user_data, IMediaSample *pMediaSample)
 {
     struct dshow_stream *strm = (struct dshow_stream*)user_data;
-    unsigned char *buffer;
     pjmedia_frame frame = {0};
 
     if (strm->quit_flag) {
@@ -576,14 +577,34 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 	PJ_LOG(5,(THIS_FILE, "Capture thread started"));
     }
 
-    IMediaSample_GetPointer(pMediaSample, &buffer);
-
     frame.type = PJMEDIA_TYPE_VIDEO;
     IMediaSample_GetPointer(pMediaSample, (BYTE **)&frame.buf);
     frame.size = IMediaSample_GetActualDataLength(pMediaSample);
     frame.bit_info = 0;
     frame.timestamp = strm->cap_ts;
     strm->cap_ts.u64 += strm->cap_ts_inc;
+
+    if (strm->frm_buf_size) {
+        unsigned i, stride;
+        BYTE *src_buf, *dst_buf;
+        pjmedia_video_format_detail *vfd;
+        
+        /* Image is bottom-up, convert it to top-down. */
+        src_buf = dst_buf = (BYTE *)frame.buf;
+        stride = strm->frm_buf_size;
+        vfd = pjmedia_format_get_video_format_detail(&strm->param.fmt,
+                                                     PJ_TRUE);
+        src_buf += (vfd->size.h - 1) * stride;
+
+        for (i = vfd->size.h / 2; i > 0; i--) {
+            memcpy(strm->frm_buf, dst_buf, stride);
+            memcpy(dst_buf, src_buf, stride);
+            memcpy(src_buf, strm->frm_buf, stride);
+            dst_buf += stride;
+            src_buf -= stride;
+        }
+    }
+
     if (strm->vid_cb.capture_cb)
         (*strm->vid_cb.capture_cb)(&strm->base, strm->user_data, &frame);
 }
@@ -760,12 +781,25 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
 
     hr = IFilterGraph_ConnectDirect(graph->filter_graph, srcpin, sinkpin,
                                     mediatype);
-    if (SUCCEEDED(hr) && (use_def_size || use_def_fps)) {
-        pjmedia_format_init_video(&strm->param.fmt, strm->param.fmt.id,
-                                  video_info->bmiHeader.biWidth,
-                                  video_info->bmiHeader.biHeight,
-                                  10000000,
-                                  (unsigned)video_info->AvgTimePerFrame);
+    if (SUCCEEDED(hr)) {
+        if (use_def_size || use_def_fps) {
+            pjmedia_format_init_video(&strm->param.fmt, strm->param.fmt.id,
+                                      video_info->bmiHeader.biWidth,
+                                      video_info->bmiHeader.biHeight,
+                                      10000000,
+                                      (unsigned)video_info->AvgTimePerFrame);
+        }
+
+        strm->frm_buf_size = 0;
+        if (dir == PJMEDIA_DIR_CAPTURE &&
+            video_info->bmiHeader.biCompression == BI_RGB &&
+            video_info->bmiHeader.biHeight > 0)
+        {
+            /* Allocate buffer to flip the captured image. */
+            strm->frm_buf_size = (video_info->bmiHeader.biBitCount >> 3) *
+                                 video_info->bmiHeader.biWidth;
+            strm->frm_buf = pj_pool_alloc(strm->pool, strm->frm_buf_size);
+        }
     }
 
 on_error:
