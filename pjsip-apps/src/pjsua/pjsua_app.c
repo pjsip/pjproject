@@ -141,9 +141,6 @@ static char some_buf[1024 * 3];
 #ifdef STEREO_DEMO
 static void stereo_demo();
 #endif
-#ifdef TRANSPORT_ADAPTER_SAMPLE
-static pj_status_t transport_adapter_sample(void);
-#endif
 static pj_status_t create_ipv6_media_transports(void);
 pj_status_t app_destroy(void);
 
@@ -3051,6 +3048,35 @@ static void on_ice_transport_error(int index, pj_ice_strans_op op,
 	         "ICE keep alive failure for transport %d", index));
 }
 
+#ifdef TRANSPORT_ADAPTER_SAMPLE
+/*
+ * This callback is called when media transport needs to be created.
+ */
+static pjmedia_transport* on_create_media_transport(pjsua_call_id call_id,
+						    unsigned media_idx,
+						    pjmedia_transport *base_tp,
+						    unsigned flags)
+{
+    pjmedia_transport *adapter;
+    pj_status_t status;
+
+    /* Create the adapter */
+    status = pjmedia_tp_adapter_create(pjsua_get_pjmedia_endpt(),
+                                       NULL, base_tp,
+                                       (flags & PJSUA_MED_TP_CLOSE_MEMBER),
+                                       &adapter);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status, "Error creating adapter"));
+	return NULL;
+    }
+
+    PJ_LOG(3,(THIS_FILE, "Media transport is created for call %d media %d",
+	      call_id, media_idx));
+
+    return adapter;
+}
+#endif
+
 /*
  * Print buddy list.
  */
@@ -4651,6 +4677,9 @@ pj_status_t app_init(int argc, char *argv[])
     app_config.cfg.cb.on_mwi_info = &on_mwi_info;
     app_config.cfg.cb.on_transport_state = &on_transport_state;
     app_config.cfg.cb.on_ice_transport_error = &on_ice_transport_error;
+#ifdef TRANSPORT_ADAPTER_SAMPLE
+    app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
+#endif
     app_config.log_cfg.cb = log_cb;
 
     /* Set sound device latency */
@@ -4929,6 +4958,9 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Add accounts */
     for (i=0; i<app_config.acc_cnt; ++i) {
+	app_config.acc_cfg[i].reg_retry_interval = 300;
+	app_config.acc_cfg[i].reg_first_retry_interval = 60;
+
 	status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
@@ -4954,15 +4986,11 @@ pj_status_t app_init(int argc, char *argv[])
     }
 
     /* Add RTP transports */
-#ifdef TRANSPORT_ADAPTER_SAMPLE
-    status = transport_adapter_sample();
-
-#else
     if (app_config.ipv6)
 	status = create_ipv6_media_transports();
     else
 	status = pjsua_media_transports_create(&app_config.rtp_cfg);
-#endif
+
     if (status != PJ_SUCCESS)
 	goto on_error;
 
@@ -5168,47 +5196,6 @@ static void stereo_demo()
     status = pjmedia_snd_port_connect(app_config.snd, app_config.sc);
     pj_assert(status == PJ_SUCCESS);
 
-}
-#endif
-
-#ifdef TRANSPORT_ADAPTER_SAMPLE
-static pj_status_t create_transport_adapter(pjmedia_endpt *med_endpt, int port,
-					    pjmedia_transport **p_tp)
-{
-    pjmedia_transport *udp;
-    pj_status_t status;
-
-    /* Create the UDP media transport */
-    status = pjmedia_transport_udp_create(med_endpt, NULL, port, 0, &udp);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Create the adapter */
-    status = pjmedia_tp_adapter_create(med_endpt, NULL, udp, p_tp);
-    if (status != PJ_SUCCESS) {
-	pjmedia_transport_close(udp);
-	return status;
-    }
-
-    return PJ_SUCCESS;
-}
-
-static pj_status_t transport_adapter_sample(void)
-{
-    pjsua_media_transport tp[PJSUA_MAX_CALLS];
-    pj_status_t status;
-    int port = 7000;
-    unsigned i;
-
-    for (i=0; i<app_config.cfg.max_calls; ++i) {
-	status = create_transport_adapter(pjsua_get_pjmedia_endpt(), 
-					  port + i*10,
-					  &tp[i].transport);
-	if (status != PJ_SUCCESS)
-	    return status;
-    }
-
-    return pjsua_media_transports_attach(tp, i, PJ_TRUE);
 }
 #endif
 

@@ -49,15 +49,18 @@ PJ_BEGIN_DECL
  * @param endpt		The media endpoint.
  * @param name		Optional name to identify this media transport
  *			for logging purposes.
- * @param transport	The underlying media transport to send and receive
- *			RTP/RTCP packets.
+ * @param base_tp	The base/underlying media transport to send and
+ * 			receive RTP/RTCP packets.
+ * @param del_base	Specify whether the base transport should also be
+ * 			destroyed when destroy() is called upon us.
  * @param p_tp		Pointer to receive the media transport instance.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
 					        const char *name,
-					        pjmedia_transport *transport,
+					        pjmedia_transport *base_tp,
+					        pj_bool_t del_base,
 						pjmedia_transport **p_tp);
 
 PJ_END_DECL
