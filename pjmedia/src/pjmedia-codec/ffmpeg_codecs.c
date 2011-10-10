@@ -262,7 +262,7 @@ static ffmpeg_codec_desc codec_desc[] =
 #endif
     {
 	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
-	PJMEDIA_FORMAT_H263,	1000000,    2000000,
+	PJMEDIA_FORMAT_H263,	128000,    256000,
 	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
