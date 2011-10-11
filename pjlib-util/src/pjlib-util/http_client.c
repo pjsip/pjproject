@@ -1073,6 +1073,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status,
 		     "Unable to bind to the requested port"));
+	pj_sock_close(sock);
 	goto on_return;
     }
 
@@ -1082,8 +1083,7 @@ static pj_status_t start_http_req(pj_http_req *http_req,
                                   NULL, http_req->ioqueue,
 				  &asock_cb, http_req, &http_req->asock);
     if (status != PJ_SUCCESS) {
-        if (sock != PJ_INVALID_SOCKET)
-            pj_sock_close(sock);
+        pj_sock_close(sock);
 	goto on_return; // error creating activesock
     }
 
