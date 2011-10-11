@@ -1086,7 +1086,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		    buf.iBuffer.Append((TUint8*)sf->data, len);
 		} else {
 		    enum {NO_DATA_FT = 15 };
-		    pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+		    pj_uint8_t amr_header = 4 | (NO_DATA_FT << 3);
 
 		    buf.iBuffer.Append(amr_header);
 		}
@@ -1095,7 +1095,7 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
 		enum {NO_DATA_FT = 15 };
-		pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+		pj_uint8_t amr_header = 4 | (NO_DATA_FT << 3);
 
 		buf.iBuffer.Append(amr_header);
 
