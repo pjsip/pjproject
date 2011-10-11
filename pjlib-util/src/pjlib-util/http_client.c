@@ -26,15 +26,17 @@
 #include <pj/pool.h>
 #include <pj/string.h>
 #include <pj/timer.h>
+#include <pj/rand.h>
 #include <pjlib-util/base64.h>
 #include <pjlib-util/errno.h>
 #include <pjlib-util/md5.h>
 #include <pjlib-util/scanner.h>
 #include <pjlib-util/string.h>
 
+#define THIS_FILE   "http_client.c"
+
 #if 0
     /* Enable some tracing */
-    #define THIS_FILE   "http_client.c"
     #define TRACE_(arg)	PJ_LOG(3,arg)
 #else
     #define TRACE_(arg)
@@ -764,6 +766,7 @@ PJ_DEF(void) pj_http_req_param_default(pj_http_req_param *param)
     pj_strset2(&param->version, (char*)HTTP_1_0);
     param->timeout.msec = PJ_HTTP_DEFAULT_TIMEOUT;
     pj_time_val_normalize(&param->timeout);
+    param->max_retries = 3;
 }
 
 /* Get the location of '@' character to indicate the end of
@@ -1004,11 +1007,13 @@ PJ_DEF(void*) pj_http_req_get_user_data(pj_http_req *http_req)
     return http_req->param.user_data;
 }
 
-PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
+static pj_status_t start_http_req(pj_http_req *http_req,
+                                  pj_bool_t notify_on_fail)
 {
     pj_sock_t sock = PJ_INVALID_SOCKET;
     pj_status_t status;
     pj_activesock_cb asock_cb;
+    int retry = 0;
 
     PJ_ASSERT_RETURN(http_req, PJ_EINVAL);
     /* Http request is not idle, a request was initiated before and 
@@ -1031,7 +1036,7 @@ PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
 	    (http_req->param.addr_family==pj_AF_INET() &&
 	     http_req->addr.ipv4.sin_addr.s_addr==PJ_INADDR_NONE))
 	{
-	    return status; // cannot resolve host name
+	    goto on_return;
         }
         http_req->resolved = PJ_TRUE;
     }
@@ -1045,6 +1050,31 @@ PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
     asock_cb.on_data_read = &http_on_data_read;
     asock_cb.on_data_sent = &http_on_data_sent;
     asock_cb.on_connect_complete = &http_on_connect;
+	
+    do
+    {
+	pj_sockaddr_in bound_addr;
+	pj_uint16_t port = 0;
+
+	/* If we are using port restriction.
+	 * Get a random port within the range
+	 */
+	if (http_req->param.source_port_range_start != 0) {
+	    port = (pj_uint16_t)
+		   (http_req->param.source_port_range_start +
+		    (pj_rand() % http_req->param.source_port_range_size));
+	}
+
+	pj_sockaddr_in_init(&bound_addr, NULL, port);
+	status = pj_sock_bind(sock, &bound_addr, sizeof(bound_addr));
+
+    } while (status != PJ_SUCCESS && (retry++ < http_req->param.max_retries));
+
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status,
+		     "Unable to bind to the requested port"));
+	goto on_return;
+    }
 
     // TODO: should we set whole data to 0 by default?
     // or add it in the param?
@@ -1074,7 +1104,9 @@ PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
                                          pj_sockaddr_get_len(&http_req->addr));
     if (status == PJ_SUCCESS) {
         http_req->state = SENDING_REQUEST;
-        return http_req_start_sending(http_req);
+        status =  http_req_start_sending(http_req);
+        if (status != PJ_SUCCESS)
+            goto on_return;
     } else if (status != PJ_EPENDING) {
         goto on_return; // error connecting
     }
@@ -1082,8 +1114,19 @@ PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
     return PJ_SUCCESS;
 
 on_return:
-    http_req_end_request(http_req);
+    http_req->error = status;
+    if (notify_on_fail)
+	pj_http_req_cancel(http_req, PJ_TRUE);
+    else
+	http_req_end_request(http_req);
+
     return status;
+}
+
+/* Starts an asynchronous HTTP request to the URL specified. */
+PJ_DEF(pj_status_t) pj_http_req_start(pj_http_req *http_req)
+{
+    return start_http_req(http_req, PJ_FALSE);
 }
 
 /* Respond to basic authentication challenge */
@@ -1433,7 +1476,7 @@ static void restart_req_with_auth(pj_http_req *hreq)
 
     http_req_end_request(hreq);
 
-    status = pj_http_req_start(hreq);
+    status = start_http_req(hreq, PJ_TRUE);
     if (status != PJ_SUCCESS)
 	goto on_error;
 
