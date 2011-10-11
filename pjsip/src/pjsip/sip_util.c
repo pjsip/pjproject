@@ -1390,6 +1390,9 @@ static void send_raw_resolver_callback( pj_status_t status,
 
 	pj_assert(addr->count != 0);
 
+	/* Avoid tdata destroyed by pjsip_tpmgr_send_raw(). */
+	pjsip_tx_data_add_ref(sraw_data->tdata);
+
 	data_len = sraw_data->tdata->buf.cur - sraw_data->tdata->buf.start;
 	status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(sraw_data->endpt),
 				      addr->entry[0].type,
