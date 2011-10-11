@@ -1177,7 +1177,10 @@ static pj_status_t match_offer(pj_pool_t *pool,
 			if (!pj_stricmp(&or_.enc_name, &lr.enc_name) &&
 			    or_.clock_rate == lr.clock_rate &&
 			    (pj_stricmp(&or_.param, &lr.param)==0 ||
-			     (or_.param.slen==1 && *or_.param.ptr=='1'))) 
+			     (lr.param.slen==0 && or_.param.slen==1 && 
+						 *or_.param.ptr=='1') || 
+			     (or_.param.slen==0 && lr.param.slen==1 && 
+						  *lr.param.ptr=='1'))) 
 			{
 			    /* Match! */
 			    if (is_codec) {
