@@ -48,7 +48,7 @@ PJ_BEGIN_DECL
 /**
  * Types of frame returned by the jitter buffer.
  */
-enum pjmedia_jb_frame_type 
+typedef enum pjmedia_jb_frame_type 
 {
     PJMEDIA_JB_MISSING_FRAME	   = 0, /**< No frame because it's missing  */
     PJMEDIA_JB_NORMAL_FRAME	   = 1, /**< Normal frame is being returned */
@@ -56,19 +56,47 @@ enum pjmedia_jb_frame_type
 					     because JB is bufferring.	    */
     PJMEDIA_JB_ZERO_EMPTY_FRAME	   = 3	/**< Zero frame is being returned
 					     because JB is empty.	    */
-};
+} pjmedia_jb_frame_type;
 
 
 /**
- * @see pjmedia_jb_frame_type.
+ * Enumeration of jitter buffer discard algorithm. The jitter buffer
+ * continuously calculates the jitter level to get the optimum latency at
+ * any time and in order to adjust the latency, the jitter buffer may need
+ * to discard some frames.
  */
-typedef enum pjmedia_jb_frame_type pjmedia_jb_frame_type;
+typedef enum pjmedia_jb_discard_algo
+{
+    /**
+     * Jitter buffer should not discard any frame, except when the jitter
+     * buffer is full and a new frame arrives, one frame will be discarded
+     * to make space for the new frame.
+     */
+    PJMEDIA_JB_DISCARD_NONE	   = 0,
+
+    /**
+     * Only discard one frame in at least 200ms when the latency is considered
+     * much higher than it should be. When the jitter buffer is full and a new
+     * frame arrives, one frame will be discarded to make space for the new
+     * frame.
+     */
+    PJMEDIA_JB_DISCARD_STATIC,
+
+    /**
+     * The discard rate is dynamically calculated based on actual parameters
+     * such as jitter level and latency. When the jitter buffer is full and
+     * a new frame arrives, one frame will be discarded to make space for the
+     * new frame.
+     */
+    PJMEDIA_JB_DISCARD_PROGRESSIVE
+
+} pjmedia_jb_discard_algo;
 
 
 /**
  * This structure describes jitter buffer state.
  */
-struct pjmedia_jb_state
+typedef struct pjmedia_jb_state
 {
     /* Setting */
     unsigned	frame_size;	    /**< Individual frame size, in bytes.   */
@@ -89,13 +117,7 @@ struct pjmedia_jb_state
     unsigned	lost;		    /**< Number of lost frames.		    */
     unsigned	discard;	    /**< Number of discarded frames.	    */
     unsigned	empty;		    /**< Number of empty on GET events.	    */
-};
-
-
-/**
- * @see pjmedia_jb_state
- */
-typedef struct pjmedia_jb_state pjmedia_jb_state;
+} pjmedia_jb_state;
 
 
 /**
@@ -113,7 +135,9 @@ typedef struct pjmedia_jbuf pjmedia_jbuf;
 /**
  * Create an adaptive jitter buffer according to the specification. If
  * application wants to have a fixed jitter buffer, it may call
- * #pjmedia_jbuf_set_fixed() after the jitter buffer is created.
+ * #pjmedia_jbuf_set_fixed() after the jitter buffer is created. Also
+ * if application wants to alter the discard algorithm, which the default
+ * PJMEDIA_JB_DISCARD_PROGRESSIVE, it may call #pjmedia_jbuf_set_discard().
  *
  * This function may allocate large chunk of memory to keep the frames in 
  * the buffer.
@@ -177,6 +201,19 @@ PJ_DECL(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
 					        unsigned prefetch,
 					        unsigned min_prefetch,
 						unsigned max_prefetch);
+
+
+/**
+ * Set the jitter buffer discard algorithm. The default discard algorithm,
+ * set in jitter buffer creation, is PJMEDIA_JB_DISCARD_PROGRESSIVE.
+ *
+ * @param jb		The jitter buffer.
+ * @param algo		The discard algorithm to be used.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_jbuf_set_discard(pjmedia_jbuf *jb,
+					      pjmedia_jb_discard_algo algo);
 
 
 /**
