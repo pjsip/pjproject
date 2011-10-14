@@ -81,10 +81,13 @@ static int multipart_print_body(struct pjsip_msg_body *msg_body,
 	/* Print optional headers */
 	hdr = part->hdr.next;
 	while (hdr != &part->hdr) {
-	    int printed = pjsip_hdr_print_on((pjsip_hdr*)hdr, p, SIZE_LEFT());
+	    int printed = pjsip_hdr_print_on((pjsip_hdr*)hdr, p,
+	                                     SIZE_LEFT()-2);
 	    if (printed < 0)
 		return -1;
 	    p += printed;
+	    *p++ = '\r';
+	    *p++ = '\n';
 	    hdr = hdr->next;
 	}
 
