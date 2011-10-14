@@ -305,6 +305,10 @@ static void pcap2wav(const pj_str_t *codec,
     T( pjmedia_codec_l16_init(app.mept, 0) );
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+    T( pjmedia_codec_opencore_amrnb_init(app.mept) );
+#endif	/* PJMEDIA_HAS_L16_CODEC */
+
 #if PJMEDIA_HAS_INTEL_IPP
     T( pjmedia_codec_ipp_init(app.mept) );
 #endif

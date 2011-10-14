@@ -274,6 +274,16 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+    /* Register OpenCORE AMR-NB codec */
+    status = pjmedia_codec_opencore_amrnb_init(pjsua_var.med_endpt);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing OpenCORE AMR-NB codec",
+		     status);
+	return status;
+    }
+#endif /* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
+
 
     /* Save additional conference bridge parameters for future
      * reference.
@@ -728,6 +738,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 #	if PJMEDIA_HAS_L16_CODEC
 	    pjmedia_codec_l16_deinit();
 #	endif	/* PJMEDIA_HAS_L16_CODEC */
+
+#	if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+	    pjmedia_codec_opencore_amrnb_deinit();
+#	endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
 
 	pjmedia_endpt_destroy(pjsua_var.med_endpt);
 	pjsua_var.med_endpt = NULL;

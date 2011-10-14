@@ -313,6 +313,13 @@
 #endif
 
 /**
+ * OpenCORE AMR-NB codec is enabled by default.
+ */
+#ifndef PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+#   define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC	0
+#endif
+
+/**
  * Default G.722.1 codec encoder and decoder level adjustment. 
  * If the value is non-zero, then PCM input samples to the encoder will 
  * be shifted right by this value, and similarly PCM output samples from

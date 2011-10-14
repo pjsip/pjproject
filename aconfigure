@@ -596,6 +596,9 @@ ac_main_obj
 ac_host
 ac_linux_poll
 ac_cross_compile
+opencore_amrnb_present
+opencore_amrnb_h_present
+ac_no_opencore_amrnb
 libcrypto_present
 libssl_present
 openssl_h_present
@@ -721,6 +724,7 @@ with_ipp
 with_ipp_samples
 with_ipp_arch
 enable_ssl
+enable_opencore_amrnb
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1373,6 +1377,10 @@ Optional Features:
                           IPPSAMPLES env var or with --with-ipp and
                           --with-ipp-samples options
   --disable-ssl           Exclude SSL support the build (default: autodetect)
+
+  --disable-opencore-amrnb
+                          Exclude OpenCORE AMR-NB support from the build
+                          (default: autodetect)
 
 
 Optional Packages:
@@ -6253,6 +6261,84 @@ $as_echo "OpenSSL library found, SSL support enabled" >&6; }
 		else
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: ** OpenSSL libraries not found, disabling SSL support **" >&5
 $as_echo "** OpenSSL libraries not found, disabling SSL support **" >&6; }
+		fi
+
+fi
+
+
+
+# Check whether --enable-opencore_amrnb was given.
+if test "${enable_opencore_amrnb+set}" = set; then :
+  enableval=$enable_opencore_amrnb;
+		if test "$enable_opencore_amrnb" = "no"; then
+		 ac_no_opencore_amrnb=1
+		 $as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0" >>confdefs.h
+
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenCORE AMR-NB support is disabled... yes" >&5
+$as_echo "Checking if OpenCORE AMR-NB support is disabled... yes" >&6; }
+	        fi
+
+else
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for OpenCORE AMR-NB installations.." >&5
+$as_echo "checking for OpenCORE AMR-NB installations.." >&6; }
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "opencore-amrnb/interf_enc.h" "ac_cv_header_opencore_amrnb_interf_enc_h" "$ac_includes_default"
+if test "x$ac_cv_header_opencore_amrnb_interf_enc_h" = x""yes; then :
+  opencore_amrnb_h_present=1
+fi
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for Encoder_Interface_init in -lopencore-amrnb" >&5
+$as_echo_n "checking for Encoder_Interface_init in -lopencore-amrnb... " >&6; }
+if test "${ac_cv_lib_opencore_amrnb_Encoder_Interface_init+set}" = set; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lopencore-amrnb  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char Encoder_Interface_init ();
+int
+main ()
+{
+return Encoder_Interface_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_opencore_amrnb_Encoder_Interface_init=yes
+else
+  ac_cv_lib_opencore_amrnb_Encoder_Interface_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opencore_amrnb_Encoder_Interface_init" >&5
+$as_echo "$ac_cv_lib_opencore_amrnb_Encoder_Interface_init" >&6; }
+if test "x$ac_cv_lib_opencore_amrnb_Encoder_Interface_init" = x""yes; then :
+  opencore_amrnb_present=1 && LIBS="$LIBS -lopencore-amrnb"
+fi
+
+		if test "x$opencore_amrnb_h_present" = "x1" -a "x$opencore_amrnb_present" = "x1"; then
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenCORE AMR-NB library found, AMR-NB support enabled" >&5
+$as_echo "OpenCORE AMR-NB library found, AMR-NB support enabled" >&6; }
+	        	$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 1" >>confdefs.h
+
+		else
+			ac_no_opencore_amrnb=1
+			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0" >>confdefs.h
+
 		fi
 
 fi

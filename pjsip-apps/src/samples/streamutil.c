@@ -125,6 +125,11 @@ static pj_status_t init_codecs(pjmedia_endpt *med_endpt)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 #endif
 
+#if defined(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC) && PJMEDIA_HAS_OPENCORE_AMRNB_CODEC!=0
+    status = pjmedia_codec_opencore_amrnb_init(med_endpt);
+    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+#endif
+
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
     status = pjmedia_codec_l16_init(med_endpt, 0);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);

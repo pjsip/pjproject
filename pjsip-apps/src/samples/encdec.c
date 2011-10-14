@@ -253,6 +253,9 @@ int main(int argc, char *argv[])
 #if PJMEDIA_HAS_G722_CODEC
     CHECK( pjmedia_codec_g722_init(mept) );
 #endif
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+    CHECK( pjmedia_codec_opencore_amrnb_init(mept) );
+#endif
 
     pj_gettimeofday(&t0);
     status = enc_dec_test(argv[1], argv[2], argv[3]);

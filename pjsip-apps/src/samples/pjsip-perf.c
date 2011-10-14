@@ -940,6 +940,9 @@ static pj_status_t init_media()
 #if defined(PJMEDIA_HAS_G722_CODEC) && PJMEDIA_HAS_G722_CODEC!=0
     pjmedia_codec_g722_init(app.med_endpt);
 #endif
+#if defined(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC) && PJMEDIA_HAS_OPENCORE_AMRNB_CODEC!=0
+    pjmedia_codec_opencore_amrnb_init(app.med_endpt);
+#endif
 
     /* Init dummy socket addresses */
     app.skinfo_cnt = 0;

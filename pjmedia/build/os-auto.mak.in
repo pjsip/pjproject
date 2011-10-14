@@ -29,6 +29,7 @@ AC_NO_SPEEX_CODEC=@ac_no_speex_codec@
 AC_NO_ILBC_CODEC=@ac_no_ilbc_codec@
 AC_NO_G722_CODEC=@ac_no_g722_codec@
 AC_NO_G7221_CODEC=@ac_no_g7221_codec@
+AC_NO_OPENCORE_AMRNB=@ac_no_opencore_amrnb@
 
 export CODEC_OBJS=
 
@@ -79,6 +80,12 @@ export CFLAGS += -DPJMEDIA_HAS_G7221_CODEC=0
 else
 export CODEC_OBJS += g7221.o
 export G7221_CFLAGS += -I$(THIRD_PARTY)
+endif
+
+ifeq ($(AC_NO_OPENCORE_AMRNB),1)
+export CFLAGS += -DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=0
+else
+export CODEC_OBJS += opencore_amrnb.o
 endif
 
 

@@ -494,6 +494,9 @@ static pj_status_t test_init(void)
 #if defined(PJMEDIA_HAS_INTEL_IPP) && PJMEDIA_HAS_INTEL_IPP != 0
     pjmedia_codec_ipp_init(g_app.endpt);
 #endif
+#if defined(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC) && (PJMEDIA_HAS_OPENCORE_AMRNB_CODEC != 0)
+    pjmedia_codec_opencore_amrnb_init(g_app.endpt);
+#endif
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC != 0
     pjmedia_codec_l16_init(g_app.endpt, 0);
 #endif
