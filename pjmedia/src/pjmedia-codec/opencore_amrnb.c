@@ -300,7 +300,7 @@ static pj_status_t amr_default_attr( pjmedia_codec_factory *factory,
     attr->info.frm_ptime = 20;
     attr->info.pt = PJMEDIA_RTP_PT_AMR;
 
-    attr->setting.frm_per_pkt = 4;
+    attr->setting.frm_per_pkt = 2;
     attr->setting.vad = 1;
     attr->setting.plc = 1;
 
@@ -809,6 +809,12 @@ static pj_status_t  amr_codec_recover( pjmedia_codec *codec,
 }
 #endif
 
-
+#if defined(_MSC_VER) && PJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS
+#  if PJMEDIA_OPENCORE_AMR_BUILT_WITH_GCC
+#   pragma comment( lib, "libopencore-amrnb.a")
+#  else
+#   error Unsupported OpenCORE AMR library, fix here
+#  endif
+#endif
 
 #endif
