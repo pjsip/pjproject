@@ -71,20 +71,29 @@ fi
 # full path as it's not normally in user's PATH
 
 if test "${CC}" = ""; then
-  for archpath in `ls -d ${SDKPATH}/usr/lib/gcc/arm-apple-darwin*`; do
-    archname=`basename ${archpath}`
-    for gccver in `ls ${archpath}`; do
-       gccpath="${DEVPATH}/usr/bin/${archname}-gcc-${gccver}"
-       if test -e ${gccpath}; then
-          export CC="${gccpath}"
-#          break
-       fi
-    done
-    if test ! "${CC}" = ""; then
-       echo "$F: CC is not specified, choosing ${CC}"
-       break
+  # Try to use llvm-gcc if available
+  gccpath="${DEVPATH}/usr/bin/llvm-gcc"
+  if test -e ${gccpath}; then
+    export CC="${gccpath}"
+
+    if test "${ARCH}" = ""; then
+       export ARCH="-arch armv7"
+       echo "$F: ARCH is not specified, choosing ${ARCH}"
     fi
-  done
+  else
+    for archpath in `ls -d ${SDKPATH}/usr/lib/gcc/arm-apple-darwin*`; do
+       archname=`basename ${archpath}`
+       for gccver in `ls ${archpath}`; do
+          gccpath="${DEVPATH}/usr/bin/${archname}-gcc-${gccver}"
+          if test -e ${gccpath}; then
+            export CC="${gccpath}"
+          fi
+       done
+    done
+  fi
+  if test ! "${CC}" = ""; then
+    echo "$F: CC is not specified, choosing ${CC}"
+  fi
 fi
 
 if test "${CC}" = ""; then
