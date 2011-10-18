@@ -108,6 +108,11 @@
 #   define NULL 0
 #endif
 
+/* Endianness */
+#ifndef PJ_IS_LITTLE_ENDIAN
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+#endif
 
 /* Doesn't seem to allow more than this */
 #define PJ_IOQUEUE_MAX_HANDLES	    8

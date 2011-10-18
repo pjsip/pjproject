@@ -98,6 +98,12 @@
  */
 #define PJ_SELECT_NEEDS_NFDS	    0
 
+/* Endianness */
+#ifndef PJ_IS_LITTLE_ENDIAN
+#   define PJ_IS_LITTLE_ENDIAN	1
+#   define PJ_IS_BIG_ENDIAN	0
+#endif
+
 /* Default threading is enabled, unless it's overridden. */
 #ifndef PJ_HAS_THREADS
 #  define PJ_HAS_THREADS	    (1)
