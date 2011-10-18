@@ -127,6 +127,12 @@ dnl Endianness detection
 dnl
 AC_C_BIGENDIAN
 
+if test "x$ac_cv_c_bigendian" = "xyes"; then
+  CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=1 -DPJ_IS_LITTLE_ENDIAN=0"
+else
+  CFLAGS="$CFLAGS -DPJ_IS_BIG_ENDIAN=0 -DPJ_IS_LITTLE_ENDIAN=1"
+fi
+
 dnl
 dnl Legacy macros
 dnl
