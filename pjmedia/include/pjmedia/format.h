@@ -111,6 +111,14 @@ typedef enum pjmedia_format_id
     PJMEDIA_FORMAT_DIB      = PJMEDIA_FORMAT_PACK('D', 'I', 'B', ' '),
 
     /**
+     * This is planar 4:4:4/24bpp RGB format, the data can be treated as
+     * three planes of color components, where the first plane contains
+     * only the G samples, the second plane contains only the B samples,
+     * and the third plane contains only the R samples.
+     */
+    PJMEDIA_FORMAT_GBRP    = PJMEDIA_FORMAT_PACK('G', 'B', 'R', 'P'),
+
+    /**
      * This is a packed 4:4:4/32bpp format, where each pixel is encoded as
      * four consecutive bytes, arranged in the following sequence: V0, U0,
      * Y0, A0. Source:

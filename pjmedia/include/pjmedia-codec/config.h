@@ -354,6 +354,24 @@
 #endif
 
 /**
+ * Enable FFMPEG H263+/H263-1998 codec.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_HAS_FFMPEG_CODEC_H263P
+#   define PJMEDIA_HAS_FFMPEG_CODEC_H263P	1
+#endif
+
+/**
+ * Enable FFMPEG H264 codec (requires libx264).
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_FFMPEG_CODEC_H264
+#   define PJMEDIA_HAS_FFMPEG_CODEC_H264	0
+#endif
+
+/**
  * @}
  */
 

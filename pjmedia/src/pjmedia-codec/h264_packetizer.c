@@ -319,8 +319,6 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetize(pjmedia_h264_packetizer *pktz,
     }
 
     /* Single NAL unit packet */
-    pj_assert(nal_octet);
-
     *payload = nal_start;
     *payload_len = nal_end - nal_start;
     *pos = nal_end - buf;

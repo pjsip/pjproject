@@ -42,8 +42,8 @@
 #include "../pjmedia/ffmpeg_util.h"
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/opt.h>
 
-#define ENABLE_H264	0
 
 /* Prototypes for FFMPEG codecs factory */
 static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory, 
@@ -219,7 +219,11 @@ struct ffmpeg_codec_desc
 };
 
 
-#if ENABLE_H264
+#if PJMEDIA_HAS_FFMPEG_CODEC_H264 && \
+    (LIBAVCODEC_VERSION_MAJOR < 53 || LIBAVCODEC_VERSION_MINOR < 20)
+#   error "Must use libavcodec version 53.20 or later to enable FFMPEG H264"
+#endif
+
 /* H264 constants */
 #define PROFILE_H264_BASELINE		66
 #define PROFILE_H264_MAIN		77
@@ -229,7 +233,6 @@ static pj_status_t h264_preopen(ffmpeg_private *ff);
 static pj_status_t h264_postopen(ffmpeg_private *ff);
 static FUNC_PACKETIZE(h264_packetize);
 static FUNC_UNPACKETIZE(h264_unpacketize);
-#endif	/* ENABLE_H264 */
 
 static pj_status_t h263_preopen(ffmpeg_private *ff);
 static FUNC_PACKETIZE(h263_packetize);
@@ -239,7 +242,7 @@ static FUNC_UNPACKETIZE(h263_unpacketize);
 /* Internal codec info */
 static ffmpeg_codec_desc codec_desc[] =
 {
-#if ENABLE_H264
+#if PJMEDIA_HAS_FFMPEG_CODEC_H264
     {
 	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
@@ -250,16 +253,9 @@ static ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"profile-level-id",16},    {"42e01e",6}}, 
 	      {{" packetization-mode",19},  {"1",1}}, } },
     },
-    {
-	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264_RSV1, {"H264",4},
-	 {"Baseline (level=30, pack=1)", 27}},
-	PJMEDIA_FORMAT_H264,	128000,    1000000,
-	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
-	&pjmedia_vid_codec_h264_match_sdp,
-	{2, { {{"profile-level-id",16},    {"42001e",6}}, 
-	      {{" packetization-mode",19},  {"1",1}}, } },
-    },
 #endif
+
+#if PJMEDIA_HAS_FFMPEG_CODEC_H263P
     {
 	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
 	PJMEDIA_FORMAT_H263,	128000,    256000,
@@ -267,20 +263,11 @@ static ffmpeg_codec_desc codec_desc[] =
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
     },
-#if 0
-    /* Force plain H263 to use H263-1998 RTP packetization */
-    {
-	{PJMEDIA_FORMAT_H263, PJMEDIA_RTP_PT_H263, {"H263",4}},
-	PJMEDIA_FORMAT_H263,	1000000,    2000000,
-	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
-	{2, { {{"CIF",3},   {"1",1}}, 
-	      {{"QCIF",4},  {"1",1}}, } },
-    },
-#else
+#endif
+
     {
 	{PJMEDIA_FORMAT_H263,	PJMEDIA_RTP_PT_H263,	{"H263",4}},
     },
-#endif
     {
 	{PJMEDIA_FORMAT_H261,	PJMEDIA_RTP_PT_H261,	{"H261",4}},
     },
@@ -296,7 +283,8 @@ static ffmpeg_codec_desc codec_desc[] =
     },
 };
 
-#if ENABLE_H264
+#if PJMEDIA_HAS_FFMPEG_CODEC_H264
+
 typedef struct h264_data
 {
     pjmedia_vid_codec_h264_fmtp	 fmtp;
@@ -353,26 +341,27 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 
     if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
 	AVCodecContext *ctx = ff->enc_ctx;
+	const char *profile = NULL;
 
-	/* Apply profile. Note that, for x264 backend, ffmpeg doesn't seem to
-	 * use this profile param field, so let's try to apply it "manually".
-	 */
+	/* Apply profile. */
 	ctx->profile  = data->fmtp.profile_idc;
-	if (ctx->profile == PROFILE_H264_BASELINE) {
-	    /* Baseline profile settings (the most used profile in
-	     * conversational/real-time communications).
-	     */
-	    ctx->coder_type = FF_CODER_TYPE_VLC;
-	    ctx->max_b_frames = 0;
-	    ctx->flags2 &= ~(CODEC_FLAG2_WPRED | CODEC_FLAG2_8X8DCT);
-	    ctx->weighted_p_pred = 0;
-	} else if (ctx->profile == PROFILE_H264_MAIN) {
-	    ctx->flags2 &= ~CODEC_FLAG2_8X8DCT;
+	switch (ctx->profile) {
+	case PROFILE_H264_BASELINE:
+	    profile = "baseline";
+	    break;
+	case PROFILE_H264_MAIN:
+	    profile = "main";
+	    break;
+	default:
+	    break;
+	}
+	if (profile &&
+	    av_set_string3(ctx->priv_data, "profile", profile, 0, NULL))
+	{
+	    PJ_LOG(3, (THIS_FILE, "Failed to set H264 profile"));
 	}
 
 	/* Apply profile constraint bits. */
-	// The x264 doesn't seem to support non-constrained (baseline) profile
-	// so this shouldn't be a problem (for now).
 	//PJ_TODO(set_h264_constraint_bits_properly_in_ffmpeg);
 	if (data->fmtp.profile_iop) {
 #if defined(FF_PROFILE_H264_CONSTRAINED)
@@ -383,14 +372,31 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	/* Apply profile level. */
 	ctx->level    = data->fmtp.level;
 
-	/* Libx264 rejects the "broken" ffmpeg defaults, so just change some */
-	ctx->me_range = 16;
-	ctx->max_qdiff = 4;
-	ctx->qmin = 20;
-	ctx->qmax = 32;
-	ctx->qcompress = 0.6f;
+	/* Limit NAL unit size as we prefer single NAL unit packetization */
+	if (!av_set_int(ctx->priv_data, "slice-max-size", ff->param.enc_mtu))
+	{
+	    PJ_LOG(3, (THIS_FILE, "Failed to set H264 max NAL size to %d",
+		       ff->param.enc_mtu));
+	}
 
-	ctx->rtp_payload_size = ff->param.enc_mtu;
+	/* Apply intra-refresh */
+	if (!av_set_int(ctx->priv_data, "intra-refresh", 1))
+	{
+	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 intra-refresh"));
+	}
+
+	/* Misc x264 settings (performance, quality, latency, etc).
+	 * Let's just use the x264 predefined preset & tune.
+	 */
+	if (av_set_string3(ctx->priv_data, "preset", "veryslow", 0, NULL))
+	{
+	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 preset 'veryfast'"));
+	}
+	if (av_set_string3(ctx->priv_data, "tune", "animation+zerolatency",
+			   0, NULL))
+	{
+	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 tune 'zerolatency'"));
+	}
     }
 
     if (ff->param.dir & PJMEDIA_DIR_DECODING) {
@@ -415,7 +421,6 @@ static pj_status_t h264_postopen(ffmpeg_private *ff)
     return PJ_SUCCESS;
 }
 
-
 static FUNC_PACKETIZE(h264_packetize)
 {
     h264_data *data = (h264_data*)ff->data;
@@ -429,7 +434,11 @@ static FUNC_UNPACKETIZE(h264_unpacketize)
     return pjmedia_h264_unpacketize(data->pktz, payload, payload_len,
 				    bits, bits_len, bits_pos);
 }
-#endif	/* ENABLE_H264 */
+
+#endif /* PJMEDIA_HAS_FFMPEG_CODEC_H264 */
+
+
+#if PJMEDIA_HAS_FFMPEG_CODEC_H263P
 
 typedef struct h263_data
 {
@@ -474,6 +483,8 @@ static FUNC_UNPACKETIZE(h263_unpacketize)
     return pjmedia_h263_unpacketize(data->pktz, payload, payload_len,
 				    bits, bits_len, bits_pos);
 }
+
+#endif /* PJMEDIA_HAS_FFMPEG_CODEC_H263P */
 
 
 static const ffmpeg_codec_desc* find_codec_desc_by_info(
@@ -989,23 +1000,6 @@ static void print_ffmpeg_err(int err)
 
 }
 
-static enum PixelFormat dec_get_format(struct AVCodecContext *s, 
-                                       const enum PixelFormat * fmt)
-{
-    ffmpeg_private *ff = (ffmpeg_private*)s->opaque;
-    enum PixelFormat def_fmt = *fmt;
-
-    while (*fmt != -1) {
-	if (*fmt == ff->expected_dec_fmt)
-	    return *fmt;
-	++fmt;
-    }
-
-    pj_assert(!"Inconsistency in supported formats");
-    return def_fmt;
-}
-
-
 static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
                                      pj_mutex_t *ff_mutex)
 {
@@ -1027,28 +1021,20 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 
     /* Allocate ffmpeg codec context */
     if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
-	ff->enc_ctx = avcodec_alloc_context();
+	ff->enc_ctx = avcodec_alloc_context3(ff->enc);
 	if (ff->enc_ctx == NULL)
 	    goto on_error;
     }
     if (ff->param.dir & PJMEDIA_DIR_DECODING) {
-	ff->dec_ctx = avcodec_alloc_context();
+	ff->dec_ctx = avcodec_alloc_context3(ff->dec);
 	if (ff->dec_ctx == NULL)
 	    goto on_error;
     }
 
-    /* Let the codec apply specific settings before the codec opened */
-    if (ff->desc->preopen) {
-	status = (*ff->desc->preopen)(ff);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
-
+    /* Init generic encoder params */
     if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
         AVCodecContext *ctx = ff->enc_ctx;
-        int err;
 
-	/* Init common settings */
         ctx->pix_fmt = pix_fmt;
 	ctx->width = vfd->size.w;
 	ctx->height = vfd->size.h;
@@ -1070,10 +1056,35 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
     (LIBAVCODEC_VERSION_MAJOR >= 52 && LIBAVCODEC_VERSION_MINOR >= 113)
 	ctx->rc_lookahead = 0;
 #endif
+    }
 
-	/* Open ffmpeg codec */
-        pj_mutex_lock(ff_mutex);
-        err = avcodec_open(ctx, ff->enc);
+    /* Init generic decoder params */
+    if (ff->param.dir & PJMEDIA_DIR_DECODING) {
+	AVCodecContext *ctx = ff->dec_ctx;
+
+	/* Width/height may be overriden by ffmpeg after first decoding. */
+	ctx->width  = ctx->coded_width  = ff->param.dec_fmt.det.vid.size.w;
+	ctx->height = ctx->coded_height = ff->param.dec_fmt.det.vid.size.h;
+	ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
+        ctx->workaround_bugs = FF_BUG_AUTODETECT;
+        ctx->opaque = ff;
+    }
+
+    /* Init codec override generic params or apply specific params before
+     * the codec opened.
+     */
+    if (ff->desc->preopen) {
+	status = (*ff->desc->preopen)(ff);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+    }
+
+    /* Open encoder */
+    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+	int err;
+
+	pj_mutex_lock(ff_mutex);
+	err = avcodec_open(ff->enc_ctx, ff->enc);
         pj_mutex_unlock(ff_mutex);
         if (err < 0) {
             print_ffmpeg_err(err);
@@ -1083,22 +1094,12 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	enc_opened = PJ_TRUE;
     }
 
+    /* Open decoder */
     if (ff->param.dir & PJMEDIA_DIR_DECODING) {
-	AVCodecContext *ctx = ff->dec_ctx;
 	int err;
 
-	/* Init common settings */
-	/* Width/height may be overriden by ffmpeg after first decoding. */
-	ctx->width  = ctx->coded_width  = ff->param.dec_fmt.det.vid.size.w;
-	ctx->height = ctx->coded_height = ff->param.dec_fmt.det.vid.size.h;
-	ctx->strict_std_compliance = FF_COMPLIANCE_EXPERIMENTAL;
-        ctx->workaround_bugs = FF_BUG_AUTODETECT;
-        ctx->opaque = ff;
-	ctx->get_format = &dec_get_format;
-
-	/* Open ffmpeg codec */
-        pj_mutex_lock(ff_mutex);
-        err = avcodec_open(ctx, ff->dec);
+	pj_mutex_lock(ff_mutex);
+	err = avcodec_open(ff->dec_ctx, ff->dec);
         pj_mutex_unlock(ff_mutex);
         if (err < 0) {
             print_ffmpeg_err(err);
@@ -1108,7 +1109,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	dec_opened = PJ_TRUE;
     }
 
-    /* Let the codec apply specific settings after the codec opened */
+    /* Let the codec apply specific params after the codec opened */
     if (ff->desc->postopen) {
 	status = (*ff->desc->postopen)(ff);
 	if (status != PJ_SUCCESS)
@@ -1527,6 +1528,7 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
     	    ff->param.dec_fmt.id = new_fmt_id;
 	    ff->param.dec_fmt.det.vid.size.w = ff->dec_ctx->width;
 	    ff->param.dec_fmt.det.vid.size.h = ff->dec_ctx->height;
+	    ff->expected_dec_fmt = ff->dec_ctx->pix_fmt;
 
 	    /* Re-init format info and apply-param of decoder */
 	    ff->dec_vfi = pjmedia_get_video_format_info(NULL, ff->param.dec_fmt.id);
