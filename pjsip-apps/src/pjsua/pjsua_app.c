@@ -2831,6 +2831,9 @@ static void on_call_media_state(pjsua_call_id call_id)
 	case PJMEDIA_TYPE_VIDEO:
 	    on_call_video_state(&call_info, mi, &has_error);
 	    break;
+	default:
+	    /* Make gcc happy about enum not handled by switch/case */
+	    break;
 	}
     }
 
@@ -3198,6 +3201,7 @@ static void on_call_media_event(pjsua_call_id call_id,
     PJ_LOG(5,(THIS_FILE, "Event %s",
 	      pjmedia_fourcc_name(event->type, event_name)));
 
+#if PJSUA_HAS_VIDEO
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
 	/* Adjust renderer window size to original video size */
 	pjsua_call_info ci;
@@ -3214,6 +3218,7 @@ static void on_call_media_event(pjsua_call_id call_id,
 	    pjsua_vid_win_set_size(wid, &size);
 	}
     }
+#endif
 }
 
 /*
