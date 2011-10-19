@@ -1294,6 +1294,18 @@ typedef struct pjsua_config
 
 
 /**
+ * Flags to be given to pjsua_destroy2()
+ */
+typedef enum pjsua_destroy_flag
+{
+    /**
+     * Do not invoke any networking functions.
+     */
+    PJSUA_DESTROY_NO_NETWORK = 1
+
+} pjsua_destroy_flag;
+
+/**
  * Use this function to initialize pjsua config.
  *
  * @param cfg	pjsua config to be initialized.
@@ -1429,9 +1441,21 @@ PJ_DECL(pj_status_t) pjsua_start(void);
  * Application.may safely call this function more than once if it doesn't
  * keep track of it's state.
  *
+ * @see pjsua_destroy2()
+ *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_destroy(void);
+
+
+/**
+ * Variant of destroy with additional flags.
+ *
+ * @param flags		Combination of pjsua_destroy_flag enumeration.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_destroy2(unsigned flags);
 
 
 /**

@@ -658,7 +658,7 @@ pj_status_t pjsua_media_subsys_start(void)
 /*
  * Destroy pjsua media subsystem.
  */
-pj_status_t pjsua_media_subsys_destroy(void)
+pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 {
     unsigned i;
 
@@ -698,6 +698,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 	    pjsua_media_channel_deinit(i);
 	}
 	if (pjsua_var.calls[i].med_tp && pjsua_var.calls[i].med_tp_auto_del) {
+	    /* TODO: check if we're not allowed to send to network in the
+	     *       "flags", and if so do not do TURN allocation...
+	     */
+	    PJ_UNUSED_ARG(flags);
 	    pjmedia_transport_close(pjsua_var.calls[i].med_tp);
 	}
 	pjsua_var.calls[i].med_tp = NULL;

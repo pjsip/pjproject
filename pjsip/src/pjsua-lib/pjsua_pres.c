@@ -1277,13 +1277,17 @@ pj_status_t pjsua_pres_init_acc(int acc_id)
 
 
 /* Unpublish presence publication */
-void pjsua_pres_unpublish(pjsua_acc *acc)
+void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags)
 {
     if (acc->publish_sess) {
 	pjsua_acc_config *acc_cfg = &acc->cfg;
 
 	acc->online_status = PJ_FALSE;
-	send_publish(acc->index, PJ_FALSE);
+
+	if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	    send_publish(acc->index, PJ_FALSE);
+	}
+
 	/* By ticket #364, don't destroy the session yet (let the callback
 	   destroy it)
 	if (acc->publish_sess) {
@@ -1296,7 +1300,7 @@ void pjsua_pres_unpublish(pjsua_acc *acc)
 }
 
 /* Terminate server subscription for the account */
-void pjsua_pres_delete_acc(int acc_id)
+void pjsua_pres_delete_acc(int acc_id, unsigned flags)
 {
     pjsua_acc *acc = &pjsua_var.acc[acc_id];
     pjsua_srv_pres *uapres;
@@ -1318,11 +1322,15 @@ void pjsua_pres_delete_acc(int acc_id)
 	pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
 	pjsip_pres_set_status(uapres->sub, &pres_status);
 
-	if (pjsip_pres_notify(uapres->sub, 
-			      PJSIP_EVSUB_STATE_TERMINATED, NULL,
-			      &reason, &tdata)==PJ_SUCCESS)
-	{
-	    pjsip_pres_send_request(uapres->sub, tdata);
+	if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	    if (pjsip_pres_notify(uapres->sub,
+				  PJSIP_EVSUB_STATE_TERMINATED, NULL,
+				  &reason, &tdata)==PJ_SUCCESS)
+	    {
+		pjsip_pres_send_request(uapres->sub, tdata);
+	    }
+	} else {
+	    pjsip_pres_terminate(uapres->sub, PJ_FALSE);
 	}
 
 	uapres = next;
@@ -1333,7 +1341,7 @@ void pjsua_pres_delete_acc(int acc_id)
     pj_list_init(&acc->pres_srv_list);
 
     /* Terminate presence publication, if any */
-    pjsua_pres_unpublish(acc);
+    pjsua_pres_unpublish(acc, flags);
 }
 
 
@@ -2252,7 +2260,7 @@ pj_status_t pjsua_pres_start(void)
 /*
  * Shutdown presence.
  */
-void pjsua_pres_shutdown(void)
+void pjsua_pres_shutdown(unsigned flags)
 {
     unsigned i;
 
@@ -2266,17 +2274,19 @@ void pjsua_pres_shutdown(void)
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
 	if (!pjsua_var.acc[i].valid)
 	    continue;
-	pjsua_pres_delete_acc(i);
+	pjsua_pres_delete_acc(i, flags);
     }
 
     for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.buddy); ++i) {
 	pjsua_var.buddy[i].monitor = 0;
     }
 
-    refresh_client_subscriptions();
+    if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	refresh_client_subscriptions();
 
-    for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
-	if (pjsua_var.acc[i].valid)
-	    pjsua_pres_update_acc(i, PJ_FALSE);
+	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
+	    if (pjsua_var.acc[i].valid)
+		pjsua_pres_update_acc(i, PJ_FALSE);
+	}
     }
 }

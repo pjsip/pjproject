@@ -463,7 +463,7 @@ void pjsua_pres_update_acc(int acc_id, pj_bool_t force);
 /*
  * Shutdown presence.
  */
-void pjsua_pres_shutdown(void);
+void pjsua_pres_shutdown(unsigned flags);
 
 /**
  * Init presence for aoocunt.
@@ -478,12 +478,12 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id);
 /**
  *  Send un-PUBLISH
  */
-void pjsua_pres_unpublish(pjsua_acc *acc);
+void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags);
 
 /**
  * Terminate server subscription for the account 
  */
-void pjsua_pres_delete_acc(int acc_id);
+void pjsua_pres_delete_acc(int acc_id, unsigned flags);
 
 /**
  * Init IM module handler to handle incoming MESSAGE outside dialog.
@@ -518,7 +518,7 @@ pj_status_t pjsua_media_subsys_start(void);
 /**
  * Destroy pjsua media subsystem.
  */
-pj_status_t pjsua_media_subsys_destroy(void);
+pj_status_t pjsua_media_subsys_destroy(unsigned flags);
 
 /**
  * Private: check if we can accept the message.

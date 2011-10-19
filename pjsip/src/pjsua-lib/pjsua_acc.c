@@ -582,7 +582,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     }
 
     /* Delete server presence subscription */
-    pjsua_pres_delete_acc(acc_id);
+    pjsua_pres_delete_acc(acc_id, 0);
 
     /* Release account pool */
     if (pjsua_var.acc[acc_id].pool) {
@@ -801,7 +801,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (acc->cfg.publish_enabled != cfg->publish_enabled) {
 	acc->cfg.publish_enabled = cfg->publish_enabled;
 	if (!acc->cfg.publish_enabled)
-	    pjsua_pres_unpublish(acc);
+	    pjsua_pres_unpublish(acc, 0);
 	else
 	    update_reg = PJ_TRUE;
     }
@@ -1995,7 +1995,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    goto on_return;
 	}
 
-	pjsua_pres_unpublish(&pjsua_var.acc[acc_id]);
+	pjsua_pres_unpublish(&pjsua_var.acc[acc_id], 0);
 
 	status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }

@@ -5118,7 +5118,7 @@ pj_status_t app_destroy(void)
 	app_config.pool = NULL;
     }
 
-    status = pjsua_destroy();
+    status = pjsua_destroy2(1);
 
     pj_bzero(&app_config, sizeof(app_config));
 

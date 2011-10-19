@@ -1283,7 +1283,7 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 /*
  * Destroy pjsua.
  */
-PJ_DEF(pj_status_t) pjsua_destroy(void)
+PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 {
     int i;  /* Must be signed */
 
@@ -1302,10 +1302,12 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     if (pjsua_var.endpt) {
 	unsigned max_wait;
 
-	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
+	PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
 
 	/* Terminate all calls. */
-	pjsua_call_hangup_all();
+	if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	    pjsua_call_hangup_all();
+	}
 
 	/* Set all accounts to offline */
 	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
@@ -1316,10 +1318,10 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	}
 
 	/* Terminate all presence subscriptions. */
-	pjsua_pres_shutdown();
+	pjsua_pres_shutdown(flags);
 
 	/* Destroy media (to shutdown media transports etc) */
-	pjsua_media_subsys_destroy();
+	pjsua_media_subsys_destroy(flags);
 
 	/* Wait for sometime until all publish client sessions are done
 	 * (ticket #364)
@@ -1333,6 +1335,11 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		max_wait = pjsua_var.acc[i].cfg.unpublish_max_wait_time_msec;
 	}
 	
+	/* No need to wait if we didn't send anything */
+	if (flags & PJSUA_DESTROY_NO_NETWORK) {
+	    max_wait = 0;
+	}
+
 	/* Second stage, wait for unpublications to complete */
 	for (i=0; i<(int)(max_wait/50); ++i) {
 	    unsigned j;
@@ -1362,7 +1369,8 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 
-	    if (pjsua_var.acc[i].regc) {
+	    if (pjsua_var.acc[i].regc && (flags & PJSUA_DESTROY_NO_NETWORK)==0)
+	    {
 		pjsua_acc_set_registration(i, PJ_FALSE);
 	    }
 	}
@@ -1387,6 +1395,11 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		max_wait = pjsua_var.acc[i].cfg.unreg_timeout;
 	}
 	
+	/* No need to wait if we didn't send anything */
+	if (flags & PJSUA_DESTROY_NO_NETWORK) {
+	    max_wait = 0;
+	}
+
 	/* Second stage, wait for unregistrations to complete */
 	for (i=0; i<(int)(max_wait/50); ++i) {
 	    unsigned j;
@@ -1407,8 +1420,9 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	/* Wait for some time to allow unregistration and ICE/TURN
 	 * transports shutdown to complete: 
 	 */
-	if (i < 20)
+	if (i < 20 && (flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
 	    busy_sleep(1000 - i*50);
+	}
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
 
@@ -1466,6 +1480,12 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 
     /* Done. */
     return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjsua_destroy(void)
+{
+    return pjsua_destroy2(0);
 }
 
 
