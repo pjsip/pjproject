@@ -2330,7 +2330,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	pj_ansi_snprintf(trace_name, sizeof(trace_name), 
 			 TRACE_JB_PATH_PREFIX "%s.csv",
 			 stream->port.info.name.ptr);
-	status = pj_file_open(pool, trace_name, PJ_O_RDWR, &stream->trace_jb_fd);
+	status = pj_file_open(pool, trace_name, PJ_O_WRONLY, &stream->trace_jb_fd);
 	if (status != PJ_SUCCESS) {
 	    stream->trace_jb_fd = TRACE_JB_INVALID_FD;
 	    PJ_LOG(3,(THIS_FILE, "Failed creating RTP trace file '%s'", 
