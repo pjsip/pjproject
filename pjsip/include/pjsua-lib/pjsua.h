@@ -1299,9 +1299,26 @@ typedef struct pjsua_config
 typedef enum pjsua_destroy_flag
 {
     /**
-     * Do not invoke any networking functions.
+     * Allow sending outgoing messages (such as unregistration, event
+     * unpublication, BYEs, unsubscription, etc.), but do not wait for
+     * responses. This is useful to perform "best effort" clean up
+     * without delaying the shutdown process waiting for responses.
      */
-    PJSUA_DESTROY_NO_NETWORK = 1
+    PJSUA_DESTROY_NO_RX_MSG = 1,
+
+    /**
+     * If this flag is set, do not send any outgoing messages at all.
+     * This flag is useful if application knows that the network which
+     * the messages are to be sent on is currently down.
+     */
+    PJSUA_DESTROY_NO_TX_MSG = 2,
+
+    /**
+     * Do not send or receive messages during destroy. This flag is
+     * shorthand for  PJSUA_DESTROY_NO_RX_MSG + PJSUA_DESTROY_NO_TX_MSG.
+     */
+    PJSUA_DESTROY_NO_NETWORK = PJSUA_DESTROY_NO_RX_MSG |
+			       PJSUA_DESTROY_NO_TX_MSG
 
 } pjsua_destroy_flag;
 

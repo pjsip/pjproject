@@ -1284,7 +1284,7 @@ void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags)
 
 	acc->online_status = PJ_FALSE;
 
-	if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
 	    send_publish(acc->index, PJ_FALSE);
 	}
 
@@ -1322,7 +1322,7 @@ void pjsua_pres_delete_acc(int acc_id, unsigned flags)
 	pres_status.info[0].basic_open = pjsua_var.acc[acc_id].online_status;
 	pjsip_pres_set_status(uapres->sub, &pres_status);
 
-	if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
 	    if (pjsip_pres_notify(uapres->sub,
 				  PJSIP_EVSUB_STATE_TERMINATED, NULL,
 				  &reason, &tdata)==PJ_SUCCESS)
@@ -2281,7 +2281,7 @@ void pjsua_pres_shutdown(unsigned flags)
 	pjsua_var.buddy[i].monitor = 0;
     }
 
-    if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+    if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
 	refresh_client_subscriptions();
 
 	for (i=0; i<PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {

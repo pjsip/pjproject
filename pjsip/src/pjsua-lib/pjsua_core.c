@@ -1305,7 +1305,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
 
 	/* Terminate all calls. */
-	if ((flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
 	    pjsua_call_hangup_all();
 	}
 
@@ -1335,8 +1335,8 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 		max_wait = pjsua_var.acc[i].cfg.unpublish_max_wait_time_msec;
 	}
 	
-	/* No need to wait if we didn't send anything */
-	if (flags & PJSUA_DESTROY_NO_NETWORK) {
+	/* No waiting if RX is disabled */
+	if (flags & PJSUA_DESTROY_NO_RX_MSG) {
 	    max_wait = 0;
 	}
 
@@ -1369,7 +1369,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 
-	    if (pjsua_var.acc[i].regc && (flags & PJSUA_DESTROY_NO_NETWORK)==0)
+	    if (pjsua_var.acc[i].regc && (flags & PJSUA_DESTROY_NO_TX_MSG)==0)
 	    {
 		pjsua_acc_set_registration(i, PJ_FALSE);
 	    }
@@ -1395,8 +1395,8 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 		max_wait = pjsua_var.acc[i].cfg.unreg_timeout;
 	}
 	
-	/* No need to wait if we didn't send anything */
-	if (flags & PJSUA_DESTROY_NO_NETWORK) {
+	/* No waiting if RX is disabled */
+	if (flags & PJSUA_DESTROY_NO_RX_MSG) {
 	    max_wait = 0;
 	}
 
@@ -1420,7 +1420,7 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	/* Wait for some time to allow unregistration and ICE/TURN
 	 * transports shutdown to complete: 
 	 */
-	if (i < 20 && (flags & PJSUA_DESTROY_NO_NETWORK) == 0) {
+	if (i < 20 && (flags & PJSUA_DESTROY_NO_RX_MSG) == 0) {
 	    busy_sleep(1000 - i*50);
 	}
 
