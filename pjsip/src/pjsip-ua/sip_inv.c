@@ -455,17 +455,25 @@ static pj_bool_t mod_inv_on_rx_request(pjsip_rx_data *rdata)
      */
     if (method->id == PJSIP_ACK_METHOD && inv) {
 
+	/* Ignore if we don't have INVITE in progress */
+	if (!inv->invite_tsx) {
+	    return PJ_TRUE;
+	}
+
 	/* Ignore ACK if pending INVITE transaction has not finished. */
-	if (inv->invite_tsx && 
-	    inv->invite_tsx->state < PJSIP_TSX_STATE_COMPLETED)
-	{
+	if (inv->invite_tsx->state < PJSIP_TSX_STATE_COMPLETED) {
+	    return PJ_TRUE;
+	}
+
+	/* Ignore ACK with different CSeq
+	 * https://trac.pjsip.org/repos/ticket/1391
+	 */
+	if (rdata->msg_info.cseq->cseq != inv->invite_tsx->cseq) {
 	    return PJ_TRUE;
 	}
 
 	/* Terminate INVITE transaction, if it's still present. */
-	if (inv->invite_tsx && 
-	    inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED)
-	{
+	if (inv->invite_tsx->state <= PJSIP_TSX_STATE_COMPLETED) {
 	    /* Before we terminate INVITE transaction, process the SDP
 	     * in the ACK request, if any. 
 	     * Only do this when invite state is not already disconnected
