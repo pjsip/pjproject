@@ -348,8 +348,18 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
     }
 
     if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+	pjmedia_video_format_detail *vfd;
 	AVCodecContext *ctx = ff->enc_ctx;
 	const char *profile = NULL;
+
+	vfd = pjmedia_format_get_video_format_detail(&ff->param.enc_fmt, 
+						     PJ_TRUE);
+
+	/* Override generic params after applying SDP fmtp */
+	ctx->width = vfd->size.w;
+	ctx->height = vfd->size.h;
+	ctx->time_base.num = vfd->fps.denum;
+	ctx->time_base.den = vfd->fps.num;
 
 	/* Apply profile. */
 	ctx->profile  = data->fmtp.profile_idc;
@@ -473,6 +483,21 @@ static pj_status_t h263_preopen(ffmpeg_private *ff)
     /* Apply fmtp settings to codec param */
     if (!ff->param.ignore_fmtp) {
 	status = pjmedia_vid_codec_h263_apply_fmtp(&ff->param);
+    }
+
+    /* Override generic params after applying SDP fmtp */
+    if (ff->param.dir & PJMEDIA_DIR_ENCODING) {
+	pjmedia_video_format_detail *vfd;
+	AVCodecContext *ctx = ff->enc_ctx;
+
+	vfd = pjmedia_format_get_video_format_detail(&ff->param.enc_fmt, 
+						     PJ_TRUE);
+
+	/* Override generic params after applying SDP fmtp */
+	ctx->width = vfd->size.w;
+	ctx->height = vfd->size.h;
+	ctx->time_base.num = vfd->fps.denum;
+	ctx->time_base.den = vfd->fps.num;
     }
 
     return status;
@@ -1084,8 +1109,8 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
         ctx->opaque = ff;
     }
 
-    /* Init codec override generic params or apply specific params before
-     * the codec opened.
+    /* Override generic params or apply specific params before opening
+     * the codec.
      */
     if (ff->desc->preopen) {
 	status = (*ff->desc->preopen)(ff);
