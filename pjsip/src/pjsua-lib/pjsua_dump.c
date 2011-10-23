@@ -307,7 +307,7 @@ static void dump_media_session(const char *indent,
 			     info.fmt.encoding_name.ptr,
 			     info.fmt.clock_rate / 1000);
 	    pj_ansi_snprintf(rx_info, sizeof(rx_info), "pt=%d,",
-			     info.fmt.pt);
+			     info.rx_pt);
 	    pj_ansi_snprintf(tx_info, sizeof(tx_info), "pt=%d, ptime=%d,",
 			     info.tx_pt,
 			     info.param->setting.frm_per_pkt*

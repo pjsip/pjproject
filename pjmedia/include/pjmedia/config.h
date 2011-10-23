@@ -620,6 +620,18 @@
 
 
 /**
+ * This specifies if the SDP negotiator should rewrite answer payload
+ * type numbers to use the same payload type numbers as the remote offer
+ * for all matched codecs.
+ *
+ * Default is 1 (yes)
+ */
+#ifndef PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT
+#   define PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT		1
+#endif
+
+
+/**
  * Support for sending and decoding RTCP port in SDP (RFC 3605).
  * Default is equal to PJMEDIA_ADVERTISE_RTCP setting.
  */

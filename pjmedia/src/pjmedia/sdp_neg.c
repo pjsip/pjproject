@@ -1120,6 +1120,82 @@ static pj_status_t process_answer(pj_pool_t *pool,
     return has_active ? PJ_SUCCESS : PJMEDIA_SDPNEG_ENOMEDIA;
 }
 
+
+/* Internal function to rewrite the format string in SDP attribute rtpmap
+ * and fmtp.
+ */
+PJ_INLINE(void) rewrite_pt(pj_pool_t *pool, pj_str_t *attr_val,
+			   const pj_str_t *old_pt, const pj_str_t *new_pt)
+{
+    int len_diff = new_pt->slen - old_pt->slen;
+
+    /* Note that attribute value should be null-terminated. */
+    if (len_diff > 0) {
+	pj_str_t new_val;
+	new_val.ptr = (char*)pj_pool_alloc(pool, attr_val->slen+len_diff+1);
+	new_val.slen = attr_val->slen + len_diff;
+	pj_memcpy(new_val.ptr + len_diff, attr_val->ptr, attr_val->slen + 1);
+	*attr_val = new_val;
+    } else if (len_diff < 0) {
+	pj_memmove(attr_val->ptr, attr_val->ptr - len_diff,
+		   attr_val->slen + len_diff + 1);
+    }
+    pj_memcpy(attr_val->ptr, new_pt->ptr, new_pt->slen);
+}
+
+
+/* Internal function to apply symmetric PT for the local answer. */
+static void apply_answer_symmetric_pt(pj_pool_t *pool,
+				      pjmedia_sdp_media *answer,
+				      unsigned pt_cnt,
+				      const pj_str_t pt_offer[],
+				      const pj_str_t pt_answer[])
+{
+    pjmedia_sdp_attr *a_tmp[PJMEDIA_MAX_SDP_ATTR];
+    unsigned i, a_tmp_cnt = 0;
+
+    /* Rewrite the payload types in the answer if different to
+     * the ones in the offer.
+     */
+    for (i = 0; i < pt_cnt; ++i) {
+	pjmedia_sdp_attr *a;
+
+	/* Skip if the PTs are the same already, e.g: static PT. */
+	if (pj_strcmp(&pt_answer[i], &pt_offer[i]) == 0)
+	    continue;
+
+	/* Rewrite payload type in the answer to match to the offer */
+	pj_strdup(pool, &answer->desc.fmt[i], &pt_offer[i]);
+
+	/* Also update payload type in rtpmap */
+	a = pjmedia_sdp_media_find_attr2(answer, "rtpmap", &pt_answer[i]);
+	if (a) {
+	    rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
+	    /* Temporarily remove the attribute in case the new payload
+	     * type is being used by another format in the media.
+	     */
+	    pjmedia_sdp_media_remove_attr(answer, a);
+	    a_tmp[a_tmp_cnt++] = a;
+	}
+
+	/* Also update payload type in fmtp */
+	a = pjmedia_sdp_media_find_attr2(answer, "fmtp", &pt_answer[i]);
+	if (a) {
+	    rewrite_pt(pool, &a->value, &pt_answer[i], &pt_offer[i]);
+	    /* Temporarily remove the attribute in case the new payload
+	     * type is being used by another format in the media.
+	     */
+	    pjmedia_sdp_media_remove_attr(answer, a);
+	    a_tmp[a_tmp_cnt++] = a;
+	}
+    }
+
+    /* Return back 'rtpmap' and 'fmtp' attributes */
+    for (i = 0; i < a_tmp_cnt; ++i)
+	pjmedia_sdp_media_add_attr(answer, a_tmp[i]);
+}
+
+
 /* Try to match offer with answer. */
 static pj_status_t match_offer(pj_pool_t *pool,
 			       pj_bool_t prefer_remote_codec_order,
@@ -1137,6 +1213,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 	      found_matching_other = 0;
     unsigned pt_answer_count = 0;
     pj_str_t pt_answer[PJMEDIA_MAX_SDP_FMT];
+    pj_str_t pt_offer[PJMEDIA_MAX_SDP_FMT];
     pjmedia_sdp_media *answer;
     const pjmedia_sdp_media *master, *slave;
     pj_str_t pt_amr_need_adapt = {NULL, 0};
@@ -1201,6 +1278,7 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		    p = pj_strtoul(&slave->desc.fmt[j]);
 		    if (p == pt && pj_isdigit(*slave->desc.fmt[j].ptr)) {
 			found_matching_codec = 1;
+			pt_offer[pt_answer_count] = slave->desc.fmt[j];
 			pt_answer[pt_answer_count++] = slave->desc.fmt[j];
 			break;
 		    }
@@ -1300,6 +1378,10 @@ static pj_status_t match_offer(pj_pool_t *pool,
 				found_matching_telephone_event = 1;
 			    }
 
+			    pt_offer[pt_answer_count] = 
+						prefer_remote_codec_order?
+						offer->desc.fmt[i]:
+						offer->desc.fmt[j];
 			    pt_answer[pt_answer_count++] = 
 						prefer_remote_codec_order? 
 						preanswer->desc.fmt[j]:
@@ -1325,6 +1407,9 @@ static pj_status_t match_offer(pj_pool_t *pool,
 		if (!pj_strcmp(&master->desc.fmt[i], &slave->desc.fmt[j])) {
 		    /* Match */
 		    found_matching_other = 1;
+		    pt_offer[pt_answer_count] = prefer_remote_codec_order?
+						offer->desc.fmt[i]:
+						offer->desc.fmt[j];
 		    pt_answer[pt_answer_count++] = prefer_remote_codec_order? 
 						   preanswer->desc.fmt[j]:
 						   preanswer->desc.fmt[i];
@@ -1389,6 +1474,11 @@ static pj_status_t match_offer(pj_pool_t *pool,
 	}
     }
     answer->desc.fmt_count = pt_answer_count;
+
+#if PJMEDIA_SDP_NEG_ANSWER_SYMMETRIC_PT
+    apply_answer_symmetric_pt(pool, answer, pt_answer_count,
+			      pt_offer, pt_answer);
+#endif
 
     /* Update media direction. */
     update_media_direction(pool, offer, answer);

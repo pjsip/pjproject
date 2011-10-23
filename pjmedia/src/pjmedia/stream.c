@@ -2220,7 +2220,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     /* Create decoder channel: */
 
     status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, 
-			     info->fmt.pt, info, &stream->dec);
+			     info->rx_pt, info, &stream->dec);
     if (status != PJ_SUCCESS)
 	goto err_cleanup;
 
@@ -2834,6 +2834,9 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
     if ( fmti >= local_m->desc.fmt_count )
 	return PJMEDIA_EINVALIDPT;
 
+    /* Get payload type for receiving direction */
+    si->rx_pt = pt;
+
     /* Get codec info.
      * For static payload types, get the info from codec manager.
      * For dynamic payload types, MUST get the rtpmap.
@@ -2893,6 +2896,9 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	si->tx_pt = pt;
 
     } else {
+	pjmedia_codec_id codec_id;
+	pj_str_t codec_id_st;
+	const pjmedia_codec_info *p_info;
 
 	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
 					   &local_m->desc.fmt[fmti]);
@@ -2907,7 +2913,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 
 	si->fmt.type = si->type;
 	si->fmt.pt = pj_strtoul(&local_m->desc.fmt[fmti]);
-	pj_strdup(pool, &si->fmt.encoding_name, &rtpmap->enc_name);
+	si->fmt.encoding_name = rtpmap->enc_name;
 	si->fmt.clock_rate = rtpmap->clock_rate;
 
 	/* For audio codecs, rtpmap parameters denotes the number of
@@ -2918,6 +2924,23 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	} else {
 	    si->fmt.channel_cnt = 1;
 	}
+
+	/* Normalize the codec info from codec manager. Note that the
+	 * payload type will be resetted to its default (it might have
+	 * been rewritten by the SDP negotiator to match to the remote
+	 * offer), this is intentional as currently some components may
+	 * prefer (or even require) the default PT in codec info.
+	 */
+	pjmedia_codec_info_to_id(&si->fmt, codec_id, sizeof(codec_id));
+
+	i = 1;
+	codec_id_st = pj_str(codec_id);
+	status = pjmedia_codec_mgr_find_codecs_by_id(mgr, &codec_id_st,
+						     &i, &p_info, NULL);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	pj_memcpy(&si->fmt, p_info, sizeof(pjmedia_codec_info));
 
 	/* Determine payload type for outgoing channel, by finding
 	 * dynamic payload type in remote SDP that matches the answer.
@@ -2965,7 +2988,7 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 				   &si->param->setting.enc_fmtp);
 
     /* Get local fmtp for our decoder. */
-    pjmedia_stream_info_parse_fmtp(pool, local_m, si->fmt.pt,
+    pjmedia_stream_info_parse_fmtp(pool, local_m, si->rx_pt,
 				   &si->param->setting.dec_fmtp);
 
     /* Get the remote ptime for our encoder. */

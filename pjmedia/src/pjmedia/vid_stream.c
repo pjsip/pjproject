@@ -1782,22 +1782,27 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
 
     pt = pj_strtoul(&local_m->desc.fmt[0]);
 
-    /* Get codec info. */
-    status = pjmedia_vid_codec_mgr_get_codec_info(mgr, pt, &p_info);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    si->codec_info = *p_info;
-
     /* Get payload type for receiving direction */
     si->rx_pt = pt;
 
-    /* Get payload type for transmitting direction */
+    /* Get codec info and payload type for transmitting direction. */
     if (pt < 96) {
-	/* For static payload type, pt's are symetric */
-	si->tx_pt = pt;
+	/* For static payload types, get the codec info from codec manager. */
+	status = pjmedia_vid_codec_mgr_get_codec_info(mgr, pt, &p_info);
+	if (status != PJ_SUCCESS)
+	    return status;
 
+	si->codec_info = *p_info;
+
+	/* Get payload type for transmitting direction.
+	 * For static payload type, pt's are symetric.
+	 */
+	si->tx_pt = pt;
     } else {
+	const pjmedia_sdp_attr *attr;
+	pjmedia_sdp_rtpmap *rtpmap;
+	pjmedia_codec_id codec_id;
+	pj_str_t codec_id_st;
 	unsigned i;
 
 	/* Determine payload type for outgoing channel, by finding
@@ -1818,6 +1823,28 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
 
 	if (si->tx_pt == 0xFFFF)
 	    return PJMEDIA_EMISSINGRTPMAP;
+
+	/* For dynamic payload types, get codec name from the rtpmap */
+	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP, 
+					   &local_m->desc.fmt[0]);
+	if (attr == NULL)
+	    return PJMEDIA_EMISSINGRTPMAP;
+
+	status = pjmedia_sdp_attr_to_rtpmap(pool, attr, &rtpmap);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Then get the codec info from the codec manager */
+	pj_ansi_snprintf(codec_id, sizeof(codec_id), "%.*s/", 
+			 rtpmap->enc_name.slen, rtpmap->enc_name.ptr);
+	codec_id_st = pj_str(codec_id);
+	i = 1;
+	status = pjmedia_vid_codec_mgr_find_codecs_by_id(mgr, &codec_id_st,
+							 &i, &p_info, NULL);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	si->codec_info = *p_info;
     }
 
 
