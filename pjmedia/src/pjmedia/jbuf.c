@@ -635,6 +635,10 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
     return jb_framelist_destroy(&jb->jb_framelist);
 }
 
+PJ_DEF(pj_bool_t) pjmedia_jbuf_is_full(const pjmedia_jbuf *jb)
+{
+    return jb->jb_framelist.size == jb->jb_framelist.max_count;
+}
 
 static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 {

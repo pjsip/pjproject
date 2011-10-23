@@ -389,6 +389,15 @@ PJ_DECL(void) pjmedia_jbuf_peek_frame(pjmedia_jbuf *jb,
 PJ_DECL(unsigned) pjmedia_jbuf_remove_frame(pjmedia_jbuf *jb, 
 					    unsigned frame_cnt);
 
+/**
+ * Check if the jitter buffer is full.
+ *
+ * @param jb		The jitter buffer.
+ *
+ * @return		PJ_TRUE if it is full.
+ */
+PJ_DECL(pj_bool_t) pjmedia_jbuf_is_full(const pjmedia_jbuf *jb);
+
 
 /**
  * Get jitter buffer current state/settings.

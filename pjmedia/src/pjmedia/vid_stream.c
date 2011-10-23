@@ -68,7 +68,6 @@
 #   define PJMEDIA_VSTREAM_INC	1000
 #endif
 
-
 /**
  * Media channel.
  */
@@ -81,7 +80,6 @@ typedef struct pjmedia_vid_channel
     pj_bool_t		    paused;	    /**< Paused?.		    */
     void		   *buf;	    /**< Output buffer.		    */
     unsigned		    buf_size;	    /**< Size of output buffer.	    */
-    unsigned                buf_len;	    /**< Length of data in buffer.  */
     pjmedia_rtp_session	    rtp;	    /**< RTP session.		    */
 } pjmedia_vid_channel;
 
@@ -121,6 +119,9 @@ struct pjmedia_vid_stream
     pj_uint32_t		     rtcp_interval; /**< Interval, in timestamp.    */
     pj_bool_t		     initial_rr;    /**< Initial RTCP RR sent	    */
 
+    unsigned		     dec_max_size;  /**< Size of decoded/raw picture*/
+    pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
+
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
     unsigned		     frame_ts_len;  /**< Frame length in timestamp. */
 
@@ -149,6 +150,9 @@ struct pjmedia_vid_stream
     pjmedia_event_publisher    epub;	     /**< To publish events	    */
 };
 
+/* Prototypes */
+static pj_status_t decode_frame(pjmedia_vid_stream *stream,
+                                pjmedia_frame *frame);
 
 /*
  * Print error.
@@ -635,11 +639,47 @@ static void on_rx_rtp( void *data,
 	goto on_return;
     }
 
+    pj_mutex_lock( stream->jb_mutex );
+
+    /* Quickly see if there may be a full picture in the jitter buffer, and
+     * decode them if so. More thorough check will be done in decode_frame().
+     */
+    if ((pj_ntohl(hdr->ts) != stream->dec_frame.timestamp.u32.lo) || hdr->m) {
+	if (PJMEDIA_VID_STREAM_SKIP_PACKETS_TO_REDUCE_LATENCY) {
+	    /* Always decode whenever we have picture in jb and
+	     * overwrite already decoded picture if necessary
+	     */
+	    pj_size_t old_size = stream->dec_frame.size;
+
+	    stream->dec_frame.size = stream->dec_max_size;
+	    if (decode_frame(stream, &stream->dec_frame) != PJ_SUCCESS) {
+		stream->dec_frame.size = old_size;
+	    }
+	} else {
+	    /* Only decode if we don't already have decoded one,
+	     * unless the jb is full.
+	     */
+	    pj_bool_t can_decode = PJ_FALSE;
+
+	    if (pjmedia_jbuf_is_full(stream->jb)) {
+		can_decode = PJ_TRUE;
+	    }
+	    else if (stream->dec_frame.size == 0) {
+		can_decode = PJ_TRUE;
+	    }
+
+	    if (can_decode) {
+		stream->dec_frame.size = stream->dec_max_size;
+		if (decode_frame(stream, &stream->dec_frame) != PJ_SUCCESS) {
+		    stream->dec_frame.size = 0;
+		}
+	    }
+	}
+    }
 
     /* Put "good" packet to jitter buffer, or reset the jitter buffer
      * when RTP session is restarted.
      */
-    pj_mutex_lock( stream->jb_mutex );
     if (seq_st.status.flag.restart) {
 	status = pjmedia_jbuf_reset(stream->jb);
 	PJ_LOG(4,(channel->port.info.name.ptr, "Jitter buffer reset"));
@@ -815,11 +855,11 @@ static pj_status_t put_frame(pjmedia_port *port,
 	    enum { COUNT_TO_REPORT = 20 };
 	    if (stream->send_err_cnt++ == 0) {
 		LOGERR_((channel->port.info.name.ptr,
-			 "Transport send_rtp() error (repeated %d times)",
+			 "Transport send_rtp() error",
 			 status));
-		if (stream->send_err_cnt > COUNT_TO_REPORT)
-		    stream->send_err_cnt = 0;
 	    }
+	    if (stream->send_err_cnt > COUNT_TO_REPORT)
+		stream->send_err_cnt = 0;
 	    /* Ignore this error */
 	}
 
@@ -873,10 +913,10 @@ static pj_status_t put_frame(pjmedia_port *port,
     return PJ_SUCCESS;
 }
 
-static pj_status_t get_frame(pjmedia_port *port,
-                             pjmedia_frame *frame)
+/* Decode one image from jitter buffer */
+static pj_status_t decode_frame(pjmedia_vid_stream *stream,
+                                pjmedia_frame *frame)
 {
-    pjmedia_vid_stream *stream = (pjmedia_vid_stream*) port->port_data.pdata;
     pjmedia_vid_channel *channel = stream->dec;
     pj_uint32_t last_ts = 0;
     int frm_first_seq = 0, frm_last_seq = 0;
@@ -884,19 +924,9 @@ static pj_status_t get_frame(pjmedia_port *port,
     unsigned cnt;
     pj_status_t status;
 
-    /* Return no frame is channel is paused */
-    if (channel->paused) {
-	frame->type = PJMEDIA_FRAME_TYPE_NONE;
-	return PJ_SUCCESS;
-    }
-
     /* Repeat get payload from the jitter buffer until all payloads with same
      * timestamp are collected.
      */
-    channel->buf_len = 0;
-
-    /* Lock jitter buffer mutex first */
-    pj_mutex_lock( stream->jb_mutex );
 
     /* Check if we got a decodable frame */
     for (cnt=0; ; ++cnt) {
@@ -927,10 +957,8 @@ static pj_status_t get_frame(pjmedia_port *port,
 	unsigned i;
 
 	/* Generate frame bitstream from the payload */
-	channel->buf_len = 0;
-
 	if (cnt > stream->rx_frame_cnt) {
-	    PJ_LOG(1,(port->info.name.ptr,
+	    PJ_LOG(1,(channel->port.info.name.ptr,
 		      "Discarding %u frames because array is full!",
 		      cnt - stream->rx_frame_cnt));
 	    pjmedia_jbuf_remove_frame(stream->jb, cnt - stream->rx_frame_cnt);
@@ -966,7 +994,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 	                                  stream->rx_frames,
 	                                  frame->size, frame);
 	if (status != PJ_SUCCESS) {
-	    LOGERR_((port->info.name.ptr, "codec decode() error",
+	    LOGERR_((channel->port.info.name.ptr, "codec decode() error",
 		     status));
 	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	    frame->size = 0;
@@ -974,9 +1002,6 @@ static pj_status_t get_frame(pjmedia_port *port,
 
 	pjmedia_jbuf_remove_frame(stream->jb, cnt);
     }
-
-    /* Unlock jitter buffer mutex. */
-    pj_mutex_unlock( stream->jb_mutex );
 
     /* Learn remote frame rate after successful decoding */
     if (0 && frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
@@ -1030,9 +1055,53 @@ static pj_status_t get_frame(pjmedia_port *port,
 	stream->last_dec_ts = last_ts;
     }
 
-    return PJ_SUCCESS;
+    return got_frame ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
 
+
+static pj_status_t get_frame(pjmedia_port *port,
+                             pjmedia_frame *frame)
+{
+    pjmedia_vid_stream *stream = (pjmedia_vid_stream*) port->port_data.pdata;
+    pjmedia_vid_channel *channel = stream->dec;
+
+    /* Return no frame is channel is paused */
+    if (channel->paused) {
+	frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	frame->size = 0;
+	return PJ_SUCCESS;
+    }
+
+    pj_mutex_lock( stream->jb_mutex );
+
+    if (stream->dec_frame.size == 0) {
+	/* Don't have frame in buffer, try to decode one */
+	if (decode_frame(stream, frame) != PJ_SUCCESS) {
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
+	}
+    } else {
+	if (frame->size < stream->dec_frame.size) {
+	    PJ_LOG(4,(stream->dec->port.info.name.ptr,
+		      "Error: not enough buffer for decoded frame "
+		      "(supplied=%d, required=%d)",
+		      (int)frame->size, (int)stream->dec_frame.size));
+	    frame->type = PJMEDIA_FRAME_TYPE_NONE;
+	    frame->size = 0;
+	} else {
+	    frame->type = stream->dec_frame.type;
+	    frame->timestamp = stream->dec_frame.timestamp;
+	    frame->size = stream->dec_frame.size;
+	    pj_memcpy(frame->buf, stream->dec_frame.buf, frame->size);
+	}
+
+	stream->dec_frame.size = 0;
+    }
+
+    pj_mutex_unlock( stream->jb_mutex );
+
+    return PJ_SUCCESS;
+}
 
 /*
  * Create media channel.
@@ -1080,19 +1149,21 @@ static pj_status_t create_channel( pj_pool_t *pool,
     channel->pt = pt;
     
     /* Allocate buffer for outgoing packet. */
-    channel->buf_size = sizeof(pjmedia_rtp_hdr) + stream->frame_size;
+    if (dir == PJMEDIA_DIR_ENCODING) {
+	channel->buf_size = sizeof(pjmedia_rtp_hdr) + stream->frame_size;
 
-    /* It should big enough to hold (minimally) RTCP SR with an SDES. */
-    min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
-			sizeof(pjmedia_rtcp_common) +
-			(4 + stream->cname.slen) +
-			32;
+	/* It should big enough to hold (minimally) RTCP SR with an SDES. */
+	min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
+			    sizeof(pjmedia_rtcp_common) +
+			    (4 + stream->cname.slen) +
+			    32;
 
-    if (channel->buf_size < min_out_pkt_size)
-	channel->buf_size = min_out_pkt_size;
+	if (channel->buf_size < min_out_pkt_size)
+	    channel->buf_size = min_out_pkt_size;
 
-    channel->buf = pj_pool_alloc(pool, channel->buf_size);
-    PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
+	channel->buf = pj_pool_alloc(pool, channel->buf_size);
+	PJ_ASSERT_RETURN(channel->buf != NULL, PJ_ENOMEM);
+    }
 
     /* Create RTP and RTCP sessions: */
     if (info->rtp_seq_ts_set == 0) {
@@ -1156,7 +1227,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     pjmedia_vid_stream *stream;
     unsigned jb_init, jb_max, jb_min_pre, jb_max_pre, len;
     int frm_ptime, chunks_per_frm;
-    pjmedia_video_format_detail *vfd_enc;
+    pjmedia_video_format_detail *vfd_enc, *vfd_dec;
     char *p;
     unsigned mtu;
     pj_status_t status;
@@ -1214,6 +1285,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     vfd_enc = pjmedia_format_get_video_format_detail(
 					&info->codec_param->enc_fmt, PJ_TRUE);
+    vfd_dec = pjmedia_format_get_video_format_detail(
+					&info->codec_param->dec_fmt, PJ_TRUE);
 
     /* Init stream: */
     stream->endpt = endpt;
@@ -1296,6 +1369,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 			     info->tx_pt, info, &stream->enc);
     if (status != PJ_SUCCESS)
 	return status;
+
+    /* Create temporary buffer for immediate decoding */
+    stream->dec_max_size = vfd_dec->size.w * vfd_dec->size.h * 4;
+    stream->dec_frame.buf = pj_pool_alloc(pool, stream->dec_max_size);
 
     /* Init jitter buffer parameters: */
     frm_ptime	    = 1000 * vfd_enc->fps.denum / vfd_enc->fps.num;

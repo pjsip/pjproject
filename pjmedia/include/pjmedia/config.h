@@ -1045,6 +1045,16 @@
 
 
 /**
+ * Video stream will discard old picture from the jitter buffer as soon as
+ * new picture is received, to reduce latency.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_VID_STREAM_SKIP_PACKETS_TO_REDUCE_LATENCY
+#   define PJMEDIA_VID_STREAM_SKIP_PACKETS_TO_REDUCE_LATENCY	0
+#endif
+
+/**
  * @}
  */
 
