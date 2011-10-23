@@ -266,7 +266,7 @@ static ffmpeg_codec_desc codec_desc[] =
 #if PJMEDIA_HAS_FFMPEG_CODEC_H263P
     {
 	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
-	PJMEDIA_FORMAT_H263,	128000,    256000,
+	PJMEDIA_FORMAT_H263,	256000,    512000,
 	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
