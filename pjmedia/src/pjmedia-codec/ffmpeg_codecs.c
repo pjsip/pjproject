@@ -786,6 +786,18 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 						desc->sdp_fmt_match);
 	    pj_assert(status == PJ_SUCCESS);
 	}
+
+	/* Print warning about missing encoder/decoder */
+	if (!desc->enc) {
+	    PJ_LOG(4, (THIS_FILE, "Cannot find %.*s encoder in ffmpeg library",
+		       desc->info.encoding_name.slen,
+		       desc->info.encoding_name.ptr));
+	}
+	if (!desc->dec) {
+	    PJ_LOG(4, (THIS_FILE, "Cannot find %.*s decoder in ffmpeg library",
+		       desc->info.encoding_name.slen,
+		       desc->info.encoding_name.ptr));
+	}
     }
 
     /* Register codec factory to codec manager. */
