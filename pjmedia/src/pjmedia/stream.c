@@ -2822,12 +2822,23 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 
     /* Find the first codec which is not telephone-event */
     for ( fmti = 0; fmti < local_m->desc.fmt_count; ++fmti ) {
+	pjmedia_sdp_rtpmap r;
+
 	if ( !pj_isdigit(*local_m->desc.fmt[fmti].ptr) )
 	    return PJMEDIA_EINVALIDPT;
 	pt = pj_strtoul(&local_m->desc.fmt[fmti]);
-	if ( PJMEDIA_RTP_PT_TELEPHONE_EVENTS == 0 ||
-		pt != PJMEDIA_RTP_PT_TELEPHONE_EVENTS )
-		break;
+
+	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
+					   &local_m->desc.fmt[fmti]);
+	if (attr == NULL)
+	    continue;
+
+	status = pjmedia_sdp_attr_get_rtpmap(attr, &r);
+	if (status != PJ_SUCCESS)
+	    continue;
+
+	if (pj_strcmp(&r.enc_name, &ID_TELEPHONE_EVENT) != 0)
+	    break;
     }
     if ( fmti >= local_m->desc.fmt_count )
 	return PJMEDIA_EINVALIDPT;
