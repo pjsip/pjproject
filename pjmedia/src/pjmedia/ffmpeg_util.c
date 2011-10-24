@@ -24,6 +24,14 @@
 #include "ffmpeg_util.h"
 #include <libavformat/avformat.h>
 
+#define MAKE_VER(mj,mn,mi)	((mj << 16) | (mn << 8) | (mi << 0))
+#define VER_AT_LEAST(mj,mn,mi)	(MAKE_VER(LIBAVUTIL_VERSION_MAJOR, \
+                              	          LIBAVUTIL_VERSION_MINOR, \
+                              	          LIBAVUTIL_VERSION_MICRO) >= \
+                              	 MAKE_VER(mj,mn,mi))
+
+
+
 /* Conversion table between pjmedia_format_id and PixelFormat */
 static const struct ffmpeg_fmt_table_t
 {
@@ -34,8 +42,7 @@ static const struct ffmpeg_fmt_table_t
     { PJMEDIA_FORMAT_RGBA, PIX_FMT_RGBA},
     { PJMEDIA_FORMAT_RGB24,PIX_FMT_BGR24},
     { PJMEDIA_FORMAT_BGRA, PIX_FMT_BGRA},
-#if (LIBAVUTIL_VERSION_MAJOR >= 51) && (LIBAVUTIL_VERSION_MINOR >= 20) && \
-    (LIBAVUTIL_VERSION_MICRO >= 1)
+#if VER_AT_LEAST(51,20,1)
     { PJMEDIA_FORMAT_GBRP, PIX_FMT_GBR24P},
 #endif
 
