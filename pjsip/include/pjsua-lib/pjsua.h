@@ -539,6 +539,22 @@ typedef pj_status_t
 
 
 /**
+ * This enumeration specifies the options for custom media transport creation.
+ */
+typedef enum pjsua_create_media_transport_flag
+{
+   /**
+    * This flag indicates that the media transport must also close its
+    * "member" or "child" transport when pjmedia_transport_close() is
+    * called. If this flag is not specified, then the media transport
+    * must not call pjmedia_transport_close() of its member transport.
+    */
+   PJSUA_MED_TP_CLOSE_MEMBER = 1
+
+} pjsua_create_media_transport_flag;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
@@ -705,6 +721,18 @@ typedef struct pjsua_callback
 			     pjsua_call_id new_call_id);
 
 
+    /**
+     * Notify application when registration or unregistration has been
+     * initiated. Note that this only notifies the initial registration
+     * and unregistration. Once registration session is active, subsequent
+     * refresh will not cause this callback to be called.
+     *
+     * @param acc_id	    The account ID.
+     * @param renew	    Non-zero for registration and zero for
+     * 			    unregistration.
+     */
+    void (*on_reg_started)(pjsua_acc_id acc_id, pj_bool_t renew);
+    
     /**
      * Notify application when registration status has changed.
      * Application may then query the account info to get the
@@ -1074,6 +1102,32 @@ typedef struct pjsua_callback
 				unsigned med_idx,
 				pjmedia_event *event);
 
+    /**
+     * This callback can be used by application to implement custom media
+     * transport adapter for the call, or to replace the media transport
+     * with something completely new altogether.
+     *
+     * This callback is called when a new call is created. The library has
+     * created a media transport for the call, and it is provided as the
+     * \a base_tp argument of this callback. Upon returning, the callback
+     * must return an instance of media transport to be used by the call.
+     *
+     * @param call_id       Call ID
+     * @param media_idx     The media index in the SDP for which this media
+     *                      transport will be used.
+     * @param base_tp       The media transport which otherwise will be
+     *                      used by the call has this callback not been
+     *                      implemented.
+     * @param flags         Bitmask from pjsua_create_media_transport_flag.
+     *
+     * @return              The callback must return an instance of media
+     *                      transport to be used by the call.
+     */
+    pjmedia_transport* (*on_create_media_transport)(pjsua_call_id call_id,
+                                                    unsigned media_idx,
+                                                    pjmedia_transport *base_tp,
+                                                    unsigned flags);
+
 } pjsua_callback;
 
 
@@ -1107,6 +1161,34 @@ typedef enum pjsua_sip_timer_use
     PJSUA_SIP_TIMER_ALWAYS
 
 } pjsua_sip_timer_use;
+
+
+/**
+ * This constants controls the use of 100rel extension.
+ */
+typedef enum pjsua_100rel_use
+{
+    /**
+     * Not used. For UAC, support for 100rel will be indicated in Supported
+     * header so that peer can opt to use it if it wants to. As UAS, this
+     * option will NOT cause 100rel to be used even if UAC indicates that
+     * it supports this feature.
+     */
+    PJSUA_100REL_NOT_USED,
+
+    /**
+     * Mandatory. UAC will place 100rel in Require header, and UAS will
+     * reject incoming calls unless it has 100rel in Supported header.
+     */
+    PJSUA_100REL_MANDATORY,
+
+    /**
+     * Optional. Similar to PJSUA_100REL_NOT_USED, except that as UAS, this
+     * option will cause 100rel to be used if UAC indicates that it supports it.
+     */
+    PJSUA_100REL_OPTIONAL
+
+} pjsua_100rel_use;
 
 
 /**
@@ -1245,13 +1327,13 @@ typedef struct pjsua_config
     int		    nat_type_in_sdp;
 
     /**
-     * Specify whether support for reliable provisional response (100rel and
-     * PRACK) should be required by default. Note that this setting can be
+     * Specify how the support for reliable provisional response (100rel/
+     * PRACK) should be used by default. Note that this setting can be
      * further customized in account configuration (#pjsua_acc_config).
      *
-     * Default: PJ_FALSE
+     * Default: PJSUA_100REL_NOT_USED
      */
-    pj_bool_t	    require_100rel;
+    pjsua_100rel_use require_100rel;
 
     /**
      * Specify the usage of Session Timers for all sessions. See the
@@ -1364,6 +1446,35 @@ typedef struct pjsua_config
 
 } pjsua_config;
 
+
+/**
+ * Flags to be given to pjsua_destroy2()
+ */
+typedef enum pjsua_destroy_flag
+{
+    /**
+     * Allow sending outgoing messages (such as unregistration, event
+     * unpublication, BYEs, unsubscription, etc.), but do not wait for
+     * responses. This is useful to perform "best effort" clean up
+     * without delaying the shutdown process waiting for responses.
+     */
+    PJSUA_DESTROY_NO_RX_MSG = 1,
+
+    /**
+     * If this flag is set, do not send any outgoing messages at all.
+     * This flag is useful if application knows that the network which
+     * the messages are to be sent on is currently down.
+     */
+    PJSUA_DESTROY_NO_TX_MSG = 2,
+
+    /**
+     * Do not send or receive messages during destroy. This flag is
+     * shorthand for  PJSUA_DESTROY_NO_RX_MSG + PJSUA_DESTROY_NO_TX_MSG.
+     */
+    PJSUA_DESTROY_NO_NETWORK = PJSUA_DESTROY_NO_RX_MSG |
+			       PJSUA_DESTROY_NO_TX_MSG
+
+} pjsua_destroy_flag;
 
 /**
  * Use this function to initialize pjsua config.
@@ -1513,6 +1624,8 @@ PJ_DECL(pj_status_t) pjsua_start(void);
  * Application.may safely call this function more than once if it doesn't
  * keep track of it's state.
  *
+ * @see pjsua_destroy2()
+ *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjsua_destroy(void);
@@ -1524,6 +1637,16 @@ PJ_DECL(pj_status_t) pjsua_destroy(void);
  * @return 	pjsua state.
  */
 PJ_DECL(pjsua_state) pjsua_get_state(void);
+
+
+/**
+ * Variant of destroy with additional flags.
+ *
+ * @param flags		Combination of pjsua_destroy_flag enumeration.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_destroy2(unsigned flags);
 
 
 /**
@@ -2395,12 +2518,14 @@ typedef struct pjsua_acc_config
     pj_str_t	    contact_uri_params;
 
     /**
-     * Specify whether support for reliable provisional response (100rel and
-     * PRACK) should be required for all sessions of this account.
+     * Specify how support for reliable provisional response (100rel/
+     * PRACK) should be used for all sessions in this account. See the
+     * documentation of pjsua_100rel_use enumeration for more info.
      *
-     * Default: PJ_FALSE
+     * Default: The default value is taken from the value of
+     *          require_100rel in pjsua_config.
      */
-    pj_bool_t	    require_100rel;
+    pjsua_100rel_use require_100rel;
 
     /**
      * Specify the usage of Session Timers for all sessions. See the
@@ -2676,11 +2801,26 @@ typedef struct pjsua_acc_config
     /**
      * Specify interval of auto registration retry upon registration failure
      * (including caused by transport problem), in second. Set to 0 to
-     * disable auto re-registration.
+     * disable auto re-registration. Note that if the registration retry
+     * occurs because of transport failure, the first retry will be done
+     * after \a reg_first_retry_interval seconds instead. Also note that
+     * the interval will be randomized slightly by approximately +/- ten
+     * seconds to avoid all clients re-registering at the same time.
+     *
+     * See also \a reg_first_retry_interval setting.
      *
      * Default: #PJSUA_REG_RETRY_INTERVAL
      */
     unsigned	     reg_retry_interval;
+
+    /**
+     * This specifies the interval for the first registration retry. The
+     * registration retry is explained in \a reg_retry_interval. Note that
+     * the value here will also be randomized by +/- ten seconds.
+     *
+     * Default: 0
+     */
+    unsigned	     reg_first_retry_interval;
 
     /**
      * Specify whether calls of the configured account should be dropped
@@ -2721,6 +2861,16 @@ typedef struct pjsua_acc_config
      * Default: PJSUA_CALL_HOLD_TYPE_DEFAULT
      */
     pjsua_call_hold_type call_hold_type;
+    
+    
+    /**
+     * Specify whether the account should register as soon as it is
+     * added to the UA. Application can set this to PJ_FALSE and control
+     * the registration manually with pjsua_acc_set_registration().
+     *
+     * Default: PJ_TRUE
+     */
+    pj_bool_t         register_on_acc_add;
 
 } pjsua_acc_config;
 

@@ -916,6 +916,23 @@ static pjmedia_port* g7221c_encode_decode(pj_pool_t *pool,
 }
 #endif	/* PJMEDIA_HAS_G7221_CODEC */
 
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+/* AMR-NB benchmark benchmark */
+static pjmedia_port* amr_encode_decode(pj_pool_t *pool,
+                                       unsigned clock_rate,
+                                       unsigned channel_count,
+                                       unsigned samples_per_frame,
+                                       unsigned flags,
+                                       struct test_entry *te)
+{
+    return codec_encode_decode(pool, "AMR/8000", 
+			       &pjmedia_codec_opencore_amrnb_init,
+			       &pjmedia_codec_opencore_amrnb_deinit,
+			       clock_rate, channel_count,
+			       samples_per_frame, flags, te);
+}
+#endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
+
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
 static pj_status_t init_l16_default(pjmedia_endpt *endpt)
 {
@@ -1976,6 +1993,23 @@ static pjmedia_port* create_stream_g7221c( pj_pool_t *pool,
 }
 #endif	/* PJMEDIA_HAS_G7221_CODEC */ 
 
+/* AMR-NB stream */
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+static pjmedia_port* create_stream_amr( pj_pool_t *pool,
+                                        unsigned clock_rate,
+                                        unsigned channel_count,
+                                        unsigned samples_per_frame,
+                                        unsigned flags,
+                                        struct test_entry *te)
+{
+    return create_stream(pool, "AMR/8000", &pjmedia_codec_opencore_amrnb_init, 
+			 &pjmedia_codec_opencore_amrnb_deinit, 
+			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
+			 clock_rate, channel_count,
+			 samples_per_frame, flags, te);
+}
+#endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */ 
+
 /***************************************************************************/
 /* Delay buffer */
 enum {DELAY_BUF_MAX_DELAY = 80};
@@ -2366,6 +2400,9 @@ int mips_test(void)
 	{ "codec encode/decode - G.722.1", OP_PUT, K16, &g7221_encode_decode},
 	{ "codec encode/decode - G.722.1c", OP_PUT, K32, &g7221c_encode_decode},
 #endif
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+	{ "codec encode/decode - AMR-NB", OP_PUT, K8, &amr_encode_decode},
+#endif
 #if PJMEDIA_HAS_L16_CODEC
 	{ "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
 	{ "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
@@ -2390,6 +2427,9 @@ int mips_test(void)
 #if PJMEDIA_HAS_G7221_CODEC
 	{ "stream TX/RX - G.722.1", OP_PUT_GET, K16, &create_stream_g7221},
 	{ "stream TX/RX - G.722.1c", OP_PUT_GET, K32, &create_stream_g7221c},
+#endif
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+	{ "stream TX/RX - AMR-NB", OP_PUT_GET, K8, &create_stream_amr},
 #endif
     };
 

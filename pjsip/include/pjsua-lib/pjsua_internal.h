@@ -43,6 +43,7 @@ struct pjsua_call_media
     pjmedia_type	 type;	    /**< Media type.			    */
     unsigned		 idx;       /**< This media index in parent call.   */
     pjsua_call_media_status state;  /**< Media state.			    */
+    pjsua_call_media_status prev_state;/**< Previous media state.           */
     pjmedia_dir		 dir;       /**< Media direction.		    */
 
     /** The stream */
@@ -78,6 +79,7 @@ struct pjsua_call_media
     pjmedia_transport	*tp_orig;   /**< Original media transport	    */
     pj_bool_t		 tp_auto_del; /**< May delete media transport       */
     pjsua_med_tp_st	 tp_st;     /**< Media transport state		    */
+    pj_bool_t            use_custom_med_tp;/**< Use custom media transport? */
     pj_sockaddr		 rtp_addr;  /**< Current RTP source address
 					    (used to update ICE default
 					    address)			    */
@@ -130,6 +132,7 @@ struct pjsua_call
     int			 secure_level;/**< Signaling security level.	    */
     pjsua_call_hold_type call_hold_type; /**< How to do call hold.	    */
     pj_bool_t		 local_hold;/**< Flag for call-hold by local.	    */
+    void		*hold_msg;  /**< Outgoing hold tx_data.		    */
 
     unsigned		 med_cnt;   /**< Number of media in SDP.	    */
     pjsua_call_media     media[PJSUA_MAX_CALL_MEDIA]; /**< Array of media   */
@@ -580,7 +583,7 @@ void pjsua_pres_update_acc(int acc_id, pj_bool_t force);
 /*
  * Shutdown presence.
  */
-void pjsua_pres_shutdown(void);
+void pjsua_pres_shutdown(unsigned flags);
 
 /**
  * Init presence for aoocunt.
@@ -595,12 +598,12 @@ pj_status_t pjsua_pres_init_publish_acc(int acc_id);
 /**
  *  Send un-PUBLISH
  */
-void pjsua_pres_unpublish(pjsua_acc *acc);
+void pjsua_pres_unpublish(pjsua_acc *acc, unsigned flags);
 
 /**
  * Terminate server subscription for the account 
  */
-void pjsua_pres_delete_acc(int acc_id);
+void pjsua_pres_delete_acc(int acc_id, unsigned flags);
 
 /**
  * Init IM module handler to handle incoming MESSAGE outside dialog.
@@ -635,7 +638,7 @@ pj_status_t pjsua_media_subsys_start(void);
 /**
  * Destroy pjsua media subsystem.
  */
-pj_status_t pjsua_media_subsys_destroy(void);
+pj_status_t pjsua_media_subsys_destroy(unsigned flags);
 
 /**
  * Private: check if we can accept the message.

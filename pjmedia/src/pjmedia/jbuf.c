@@ -32,14 +32,6 @@
 #define THIS_FILE   "jbuf.c"
 
 
-/* Minimal difference between JB size and 2*burst-level to perform 
- * JB shrinking. 
- */
-#define SAFE_SHRINKING_DIFF	1
-
-/* Minimal gap (in ms) between JB shrinking */
-#define MIN_SHRINK_GAP_MSEC	200
-
 /* Invalid sequence number, used as the initial value. */
 #define INVALID_OFFSET		-9999
 
@@ -52,6 +44,12 @@
  * JB can switch its states to JB_STATUS_PROCESSING.
  */
 #define INIT_CYCLE		10
+
+
+/* Minimal difference between JB size and 2*burst-level to perform 
+ * JB shrinking in static discard algorithm. 
+ */
+#define STA_DISC_SAFE_SHRINKING_DIFF	1
 
 
 /* Struct of JB internal buffer, represented in a circular buffer containing
@@ -82,6 +80,11 @@ typedef struct jb_framelist_t
 } jb_framelist_t;
 
 
+typedef void (*discard_algo)(pjmedia_jbuf *jb);
+static void jbuf_discard_static(pjmedia_jbuf *jb);
+static void jbuf_discard_progressive(pjmedia_jbuf *jb);
+
+
 struct pjmedia_jbuf
 {
     /* Settings (consts) */
@@ -98,6 +101,7 @@ struct pjmedia_jbuf
 					     won't be included in level 
 					     calculation		    */
     int		    jb_min_shrink_gap;	/**< How often can we shrink	    */
+    discard_algo    jb_discard_algo;	/**< Discard algorithm		    */
 
     /* Buffer */
     jb_framelist_t  jb_framelist;	/**< the buffer			    */
@@ -120,13 +124,16 @@ struct pjmedia_jbuf
 					     operation), the value may be
 					     continuously updated based on
 					     current frame burst level.	    */
+    pj_bool_t	    jb_prefetching;	/**< flag if jbuf is prefetching.   */
     int		    jb_status;		/**< status is 'init' until the	first 
 					     'put' operation		    */
     int		    jb_init_cycle_cnt;	/**< status is 'init' until the	first 
 					     'put' operation		    */
-    int		    jb_last_del_seq;	/**< Seq # of last frame deleted    */
 
-    int		    jb_last_discard_seq;/**< Seq # of last frame discarded  */
+    int		    jb_discard_ref;	/**< Seq # of last frame deleted or
+					     discarded			    */
+    unsigned	    jb_discard_dist;	/**< Distance from jb_discard_ref
+					     to perform discard (in frm)    */
 
     /* Statistics */
     pj_math_stat    jb_delay;		/**< Delay statistics of jitter buffer 
@@ -141,7 +148,6 @@ struct pjmedia_jbuf
 
 #define JB_STATUS_INITIALIZING	0
 #define JB_STATUS_PROCESSING	1
-#define JB_STATUS_PREFETCHING	2
 
 
 
@@ -451,7 +457,7 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
     enum { MAX_MISORDER = 100 };
     enum { MAX_DROPOUT = 3000 };
 
-    assert(frame_size <= framelist->frame_size);
+    PJ_ASSERT_RETURN(frame_size <= framelist->frame_size, PJ_EINVAL);
 
     /* too late or sequence restart */
     if (index < framelist->origin) {
@@ -507,14 +513,31 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
 	/* copy frame content */
 	pj_memcpy(framelist->content + pos * framelist->frame_size,
 		  frame, frame_size);
-	return PJ_SUCCESS;
-    } else {
-	/* frame is being discarded */
-	framelist->discarded_num++;
-	return PJ_EIGNORED;
     }
+
+    return PJ_SUCCESS;
 }
 
+
+static pj_status_t jb_framelist_discard(jb_framelist_t *framelist,
+				        int index)
+{
+    unsigned pos;
+
+    PJ_ASSERT_RETURN(index >= framelist->origin &&
+		     index <  framelist->origin + (int)framelist->size,
+		     PJ_EINVAL);
+
+    /* Get the slot position */
+    pos = (framelist->head + (index - framelist->origin)) %
+	  framelist->max_count;
+
+    /* Discard the frame */
+    framelist->frame_type[pos] = PJMEDIA_JB_DISCARDED_FRAME;
+    framelist->discarded_num++;
+
+    return PJ_SUCCESS;
+}
 
 
 enum pjmedia_jb_op
@@ -548,13 +571,13 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     jb->jb_min_prefetch  = 0;
     jb->jb_max_prefetch  = max_count*4/5;
     jb->jb_max_count	 = max_count;
-    jb->jb_min_shrink_gap= MIN_SHRINK_GAP_MSEC / ptime;
+    jb->jb_min_shrink_gap= PJMEDIA_JBUF_DISC_MIN_GAP / ptime;
     jb->jb_max_burst	 = PJ_MAX(MAX_BURST_MSEC / ptime, max_count*3/4);
-    jb->jb_last_discard_seq = 0;
 
     pj_math_stat_init(&jb->jb_delay);
     pj_math_stat_init(&jb->jb_burst);
 
+    pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_PROGRESSIVE);
     pjmedia_jbuf_reset(jb);
 
     *p_jb = jb;
@@ -589,7 +612,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
 					       unsigned max_prefetch)
 {
     PJ_ASSERT_RETURN(jb, PJ_EINVAL);
-    PJ_ASSERT_RETURN(min_prefetch < max_prefetch &&
+    PJ_ASSERT_RETURN(min_prefetch <= max_prefetch &&
 		     prefetch <= max_prefetch &&
 		     max_prefetch <= jb->jb_max_count,
 		     PJ_EINVAL);
@@ -597,6 +620,30 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_adaptive( pjmedia_jbuf *jb,
     jb->jb_prefetch = jb->jb_init_prefetch = prefetch;
     jb->jb_min_prefetch = min_prefetch;
     jb->jb_max_prefetch = max_prefetch;
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_jbuf_set_discard( pjmedia_jbuf *jb,
+					      pjmedia_jb_discard_algo algo)
+{
+    PJ_ASSERT_RETURN(jb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(algo >= PJMEDIA_JB_DISCARD_NONE &&
+		     algo <= PJMEDIA_JB_DISCARD_PROGRESSIVE,
+		     PJ_EINVAL);
+
+    switch(algo) {
+    case PJMEDIA_JB_DISCARD_PROGRESSIVE:
+	jb->jb_discard_algo = &jbuf_discard_progressive;
+	break;
+    case PJMEDIA_JB_DISCARD_STATIC:
+	jb->jb_discard_algo = &jbuf_discard_static;
+	break;
+    default:
+	jb->jb_discard_algo = NULL;
+	break;
+    }
 
     return PJ_SUCCESS;
 }
@@ -610,6 +657,8 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_reset(pjmedia_jbuf *jb)
     jb->jb_status	 = JB_STATUS_INITIALIZING;
     jb->jb_init_cycle_cnt= 0;
     jb->jb_max_hist_level= 0;
+    jb->jb_prefetching   = (jb->jb_prefetch != 0);
+    jb->jb_discard_dist  = 0;
 
     jb_framelist_reset(&jb->jb_framelist);
 
@@ -621,11 +670,13 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_destroy(pjmedia_jbuf *jb)
 {
     PJ_LOG(5, (jb->jb_name.ptr, ""
 	       "JB summary:\n"
-	       "  size=%d prefetch=%d level=%d\n"
+	       "  size=%d/eff=%d prefetch=%d level=%d\n"
 	       "  delay (min/max/avg/dev)=%d/%d/%d/%d ms\n"
 	       "  burst (min/max/avg/dev)=%d/%d/%d/%d frames\n"
 	       "  lost=%d discard=%d empty=%d",
-	       jb->jb_framelist.size, jb->jb_prefetch, jb->jb_eff_level,
+	       jb_framelist_size(&jb->jb_framelist), 
+	       jb_framelist_eff_size(&jb->jb_framelist), 
+	       jb->jb_prefetch, jb->jb_eff_level,
 	       jb->jb_delay.min, jb->jb_delay.max, jb->jb_delay.mean, 
 	       pj_math_stat_get_stddev(&jb->jb_delay),
 	       jb->jb_burst.min, jb->jb_burst.max, jb->jb_burst.mean, 
@@ -712,6 +763,136 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
     }
 }
 
+
+static void jbuf_discard_static(pjmedia_jbuf *jb)
+{
+    /* These code is used for shortening the delay in the jitter buffer.
+     * It needs shrink only when there is possibility of drift. Drift
+     * detection is performed by inspecting the jitter buffer size, if
+     * its size is twice of current burst level, there can be drift.
+     *
+     * Moreover, normally drift level is quite low, so JB shouldn't need
+     * to shrink aggresively, it will shrink maximum one frame per 
+     * PJMEDIA_JBUF_DISC_MIN_GAP ms. Theoritically, JB may handle drift level 
+     * as much as = FRAME_PTIME/PJMEDIA_JBUF_DISC_MIN_GAP * 100%
+     *
+     * Whenever there is drift, where PUT > GET, this method will keep 
+     * the latency (JB size) as much as twice of burst level.
+     */
+
+    /* Shrinking due of drift will be implicitly done by progressive discard,
+     * so just disable it when progressive discard is active.
+     */
+    int diff, burst_level;
+
+    burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
+    diff = jb_framelist_eff_size(&jb->jb_framelist) - burst_level*2;
+
+    if (diff >= STA_DISC_SAFE_SHRINKING_DIFF) {
+	int seq_origin;
+
+	/* Check and adjust jb_discard_ref, in case there was 
+	 * seq restart 
+	 */
+	seq_origin = jb_framelist_origin(&jb->jb_framelist);
+	if (seq_origin < jb->jb_discard_ref)
+	    jb->jb_discard_ref = seq_origin;
+
+	if (seq_origin - jb->jb_discard_ref >= jb->jb_min_shrink_gap)
+	{
+	    /* Shrink slowly, one frame per cycle */
+	    diff = 1;
+
+	    /* Drop frame(s)! */
+	    diff = jb_framelist_remove_head(&jb->jb_framelist, diff);
+	    jb->jb_discard_ref = jb_framelist_origin(&jb->jb_framelist);
+	    jb->jb_discard += diff;
+
+	    TRACE__((jb->jb_name.ptr, 
+		     "JB shrinking %d frame(s), cur size=%d", diff,
+		     jb_framelist_eff_size(&jb->jb_framelist)));
+	}
+    }
+}
+
+
+static void jbuf_discard_progressive(pjmedia_jbuf *jb)
+{
+    unsigned cur_size, burst_level, overflow, T, discard_dist;
+    int last_seq;
+
+    /* Should be done in PUT operation */
+    if (jb->jb_last_op != JB_OP_PUT)
+	return;
+
+    /* Check if latency is longer than burst */
+    cur_size = jb_framelist_eff_size(&jb->jb_framelist);
+    burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
+    if (cur_size <= burst_level) {
+	/* Reset any scheduled discard */
+	jb->jb_discard_dist = 0;
+	return;
+    }
+
+    /* Estimate discard duration needed for adjusting latency */
+    if (burst_level <= PJMEDIA_JBUF_PRO_DISC_MIN_BURST)
+	T = PJMEDIA_JBUF_PRO_DISC_T1;
+    else if (burst_level >= PJMEDIA_JBUF_PRO_DISC_MAX_BURST)
+	T = PJMEDIA_JBUF_PRO_DISC_T2;
+    else
+	T = PJMEDIA_JBUF_PRO_DISC_T1 + 
+	    (PJMEDIA_JBUF_PRO_DISC_T2 - PJMEDIA_JBUF_PRO_DISC_T1) *
+	    (burst_level - PJMEDIA_JBUF_PRO_DISC_MIN_BURST) /
+	    (PJMEDIA_JBUF_PRO_DISC_MAX_BURST-PJMEDIA_JBUF_PRO_DISC_MIN_BURST);
+
+    /* Calculate current discard distance */
+    overflow = cur_size - burst_level;
+    discard_dist = T / overflow / jb->jb_frame_ptime;
+
+    /* Get last seq number in the JB */
+    last_seq = jb_framelist_origin(&jb->jb_framelist) +
+	       jb_framelist_size(&jb->jb_framelist) - 1;
+
+    /* Setup new discard schedule if none, otherwise, update the existing
+     * discard schedule (can be delayed or accelerated).
+     */
+    if (jb->jb_discard_dist == 0) {
+	/* Setup new discard schedule */
+	jb->jb_discard_ref = last_seq;
+    } else if (last_seq < jb->jb_discard_ref) {
+	/* Seq restarted, update discard reference */
+    	jb->jb_discard_ref = last_seq;
+    }
+    jb->jb_discard_dist = PJ_MAX(jb->jb_min_shrink_gap, (int)discard_dist);
+
+    /* Check if we need to discard now */
+    if (last_seq >= (jb->jb_discard_ref + (int)jb->jb_discard_dist)) {
+	int discard_seq;
+	
+	discard_seq = jb->jb_discard_ref + jb->jb_discard_dist;
+	if (discard_seq < jb_framelist_origin(&jb->jb_framelist))
+	    discard_seq = jb_framelist_origin(&jb->jb_framelist);
+
+	jb_framelist_discard(&jb->jb_framelist, discard_seq);
+
+	TRACE__((jb->jb_name.ptr, 
+		"Discard #%d: ref=#%d dist=%d orig=%d size=%d/%d "
+		"burst=%d/%d",
+		discard_seq,
+		jb->jb_discard_ref,
+		jb->jb_discard_dist,
+		jb_framelist_origin(&jb->jb_framelist),
+		cur_size,
+		jb_framelist_size(&jb->jb_framelist),
+		jb->jb_eff_level,
+		burst_level));
+
+	/* Update discard reference */
+	jb->jb_discard_ref = discard_seq;
+    }
+}
+    
+
 PJ_INLINE(void) jbuf_update(pjmedia_jbuf *jb, int oper)
 {
     if(jb->jb_last_op != oper) {
@@ -747,63 +928,10 @@ PJ_INLINE(void) jbuf_update(pjmedia_jbuf *jb, int oper)
 	jb->jb_level = 0;
     }
 
-    /* These code is used for shortening the delay in the jitter buffer.
-     * It needs shrink only when there is possibility of drift. Drift
-     * detection is performed by inspecting the jitter buffer size, if
-     * its size is twice of current burst level, there can be drift.
-     *
-     * Moreover, normally drift level is quite low, so JB shouldn't need
-     * to shrink aggresively, it will shrink maximum one frame per 
-     * MIN_SHRINK_GAP_MSEC ms. Theoritically, JB may handle drift level 
-     * as much as = FRAME_PTIME/MIN_SHRINK_GAP_MSEC * 100%
-     *
-     * Whenever there is drift, where PUT > GET, this method will keep 
-     * the latency (JB size) as much as twice of burst level.
-     */
-
-    /* Shrinking due of drift will be implicitly done by progressive discard,
-     * so just disable it when progressive discard is active.
-     */
-#if !PROGRESSIVE_DISCARD
-
-    if (jb->jb_status != JB_STATUS_PROCESSING)
-	return;
-
-    {
-	int diff, burst_level;
-
-	burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-	diff = jb_framelist_eff_size(&jb->jb_framelist) - burst_level*2;
-
-	if (diff >= SAFE_SHRINKING_DIFF) {
-	    int seq_origin;
-
-	    /* Check and adjust jb_last_del_seq, in case there was 
-	     * seq restart 
-	     */
-	    seq_origin = jb_framelist_origin(&jb->jb_framelist);
-	    if (seq_origin < jb->jb_last_del_seq)
-		jb->jb_last_del_seq = seq_origin;
-
-	    if (seq_origin - jb->jb_last_del_seq >= jb->jb_min_shrink_gap)
-	    {
-		/* Shrink slowly, one frame per cycle */
-		diff = 1;
-
-		/* Drop frame(s)! */
-		diff = jb_framelist_remove_head(&jb->jb_framelist, diff);
-		jb->jb_last_del_seq = jb_framelist_origin(&jb->jb_framelist);
-		jb->jb_discard += diff;
-
-		TRACE__((jb->jb_name.ptr, 
-			 "JB shrinking %d frame(s), cur size=%d", diff,
-			 jb_framelist_eff_size(&jb->jb_framelist)));
-	    }
-	}
+    /* Call discard algorithm */
+    if (jb->jb_status == JB_STATUS_PROCESSING && jb->jb_discard_algo) {
+	(*jb->jb_discard_algo)(jb);
     }
-
-#endif /* !PROGRESSIVE_DISCARD */
-
 }
 
 PJ_DEF(void) pjmedia_jbuf_put_frame( pjmedia_jbuf *jb, 
@@ -834,96 +962,35 @@ PJ_DEF(void) pjmedia_jbuf_put_frame3(pjmedia_jbuf *jb,
 				     pj_bool_t *discarded)
 {
     pj_size_t min_frame_size;
-    int new_size, cur_size, frame_type = PJMEDIA_JB_NORMAL_FRAME;
+    int new_size, cur_size;
     pj_status_t status;
 
     cur_size = jb_framelist_eff_size(&jb->jb_framelist);
 
-#if PROGRESSIVE_DISCARD
-    {
-	unsigned interval, seq_delta;
-	unsigned burst_level, burst_factor;
-
-	/* Calculating discard interval (aggressiveness) based on
-	 * (current size / burst level).
-	 */
-	if (jb->jb_status == JB_STATUS_PROCESSING) {
-	    burst_level = PJ_MAX(jb->jb_eff_level, jb->jb_level);
-	    burst_factor = cur_size / burst_level;
-	    /* Tolerate small spikes */
-	    if ((burst_level <= 5) && (burst_factor < 3))
-		burst_factor = 0;
-	} else {
-	    burst_factor = 0;
-	}
-
-	switch (burst_factor) {
-	case 0:
-	    interval = 0;
-	    break;
-	case 1:
-	    interval = 7;
-	    break;
-	case 2:
-	    interval = 5;
-	    break;
-	default:
-	    interval = 4;
-	    break;
-	}
-
-	/* Do the math now to see if we should discard this packet.
-	 * Calculate the distance from the last sequence
-	 * discarded. If negative, then this is an out of
-	 * order frame so just proceed with discard. Else
-	 * see if the delta is at least the intervals worth away
-	 * from the last frame discarded.
-	 */
-	seq_delta = (pj_uint16_t)(frame_seq - jb->jb_last_discard_seq);
-	if ((0 != interval) && (seq_delta >= interval)) {
-	    frame_type = PJMEDIA_JB_DISCARDED_FRAME;
-	    jb->jb_last_discard_seq = frame_seq;
-
-	    TRACE__((jb->jb_name.ptr, 
-		    "Discarding frame #%d: eff=%d disc=%d orig:%d"
-		    " seq_delta:%d",
-		    frame_seq,
-		    cur_size,
-		    jb_framelist_size(&jb->jb_framelist) - cur_size,
-		    jb_framelist_origin(&jb->jb_framelist),
-		    (int)seq_delta));
-	}
-    }
-#endif /* PROGRESSIVE_DISCARD */
-    
-
     /* Attempt to store the frame */
     min_frame_size = PJ_MIN(frame_size, jb->jb_frame_size);
     status = jb_framelist_put_at(&jb->jb_framelist, frame_seq, frame,
-				 min_frame_size, bit_info, ts, frame_type);
+				 min_frame_size, bit_info, ts,
+				 PJMEDIA_JB_NORMAL_FRAME);
     
     /* Jitter buffer is full, remove some older frames */
     while (status == PJ_ETOOMANY) {
 	int distance;
 	unsigned removed;
 
-	/* When progressive discard activated, just remove as few as possible
-	 * just to make this frame in.
-	 */
-#if PROGRESSIVE_DISCARD
-	/* The cases of seq-jump, out-of-order, and seq restart should have
+	/* Remove as few as possible just to make this frame in. Note that
+	 * the cases of seq-jump, out-of-order, and seq restart should have
 	 * been handled/normalized by previous call of jb_framelist_put_at().
 	 * So we're confident about 'distance' value here.
 	 */
 	distance = (frame_seq - jb_framelist_origin(&jb->jb_framelist)) -
 		   jb->jb_max_count + 1;
 	pj_assert(distance > 0);
-#else
-	distance = PJ_MAX(jb->jb_max_count/4, 1);
-#endif
+
 	removed = jb_framelist_remove_head(&jb->jb_framelist, distance);
 	status = jb_framelist_put_at(&jb->jb_framelist, frame_seq, frame,
-				     min_frame_size, bit_info, ts, frame_type);
+				     min_frame_size, bit_info, ts,
+				     PJMEDIA_JB_NORMAL_FRAME);
 
 	jb->jb_discard += removed;
     }
@@ -936,11 +1003,11 @@ PJ_DEF(void) pjmedia_jbuf_put_frame3(pjmedia_jbuf *jb,
 	*discarded = (status != PJ_SUCCESS);
 
     if (status == PJ_SUCCESS) {
-	if (jb->jb_status == JB_STATUS_PREFETCHING) {
+	if (jb->jb_prefetching) {
 	    TRACE__((jb->jb_name.ptr, "PUT prefetch_cnt=%d/%d", 
 		     new_size, jb->jb_prefetch));
 	    if (new_size >= jb->jb_prefetch)
-		jb->jb_status = JB_STATUS_PROCESSING;
+		jb->jb_prefetching = PJ_FALSE;
 	}
 	jb->jb_level += (new_size > cur_size ? new_size-cur_size : 1);
 	jbuf_update(jb, JB_OP_PUT);
@@ -983,7 +1050,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb,
 				     pj_uint32_t *ts,
 				     int *seq)
 {
-    if (jb->jb_status == JB_STATUS_PREFETCHING) {
+    if (jb->jb_prefetching) {
 
 	/* Can't return frame because jitter buffer is filling up
 	 * minimum prefetch.
@@ -1030,7 +1097,7 @@ PJ_DEF(void) pjmedia_jbuf_get_frame3(pjmedia_jbuf *jb,
 	} else {
 	    /* Jitter buffer is empty */
 	    if (jb->jb_prefetch)
-		jb->jb_status = JB_STATUS_PREFETCHING;
+		jb->jb_prefetching = PJ_TRUE;
 
 	    //pj_bzero(frame, jb->jb_frame_size);
 	    *p_frame_type = PJMEDIA_JB_ZERO_EMPTY_FRAME;

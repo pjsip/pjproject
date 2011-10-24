@@ -94,6 +94,7 @@ static struct pjmedia_transport_op tp_adapter_op =
 struct tp_adapter
 {
     pjmedia_transport	 base;
+    pj_bool_t		 del_base;
 
     pj_pool_t		*pool;
 
@@ -118,6 +119,7 @@ struct tp_adapter
 PJ_DEF(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
 					       const char *name,
 					       pjmedia_transport *transport,
+					       pj_bool_t del_base,
 					       pjmedia_transport **p_tp)
 {
     pj_pool_t *pool;
@@ -138,6 +140,7 @@ PJ_DEF(pj_status_t) pjmedia_tp_adapter_create( pjmedia_endpt *endpt,
 
     /* Save the transport as the slave transport */
     adapter->slave_tp = transport;
+    adapter->del_base = del_base;
 
     /* Done */
     *p_tp = &adapter->base;
@@ -421,7 +424,9 @@ static pj_status_t transport_destroy  (pjmedia_transport *tp)
     struct tp_adapter *adapter = (struct tp_adapter*)tp;
 
     /* Close the slave transport */
-    pjmedia_transport_close(adapter->slave_tp);
+    if (adapter->del_base) {
+	pjmedia_transport_close(adapter->slave_tp);
+    }
 
     /* Self destruct.. */
     pj_pool_release(adapter->pool);

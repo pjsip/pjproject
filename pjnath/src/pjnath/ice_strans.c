@@ -1201,6 +1201,12 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 				    PJ_STUN_SESS_LOG_RX_IND)
 	    };
 
+	    /* https://trac.pjsip.org/repos/ticket/1316 */
+	    if (comp->turn_sock == NULL) {
+		/* TURN socket error */
+		return PJ_EINVALIDOP;
+	    }
+
 	    if (!comp->turn_log_off) {
 		/* Disable logging for Send/Data indications */
 		PJ_LOG(5,(ice_st->obj_name, 

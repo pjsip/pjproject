@@ -107,6 +107,13 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
 	return status;
 #endif	/* PJMEDIA_HAS_L16_CODEC */
 
+#if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+    /* Register OpenCORE AMR-NB */
+    status = pjmedia_codec_opencore_amrnb_init(endpt);
+    if (status != PJ_SUCCESS)
+	return status;
+#endif
+
     return PJ_SUCCESS;
 }
 

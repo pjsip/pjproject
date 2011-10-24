@@ -387,12 +387,22 @@
 
 
 /**
- * Number of packets received from different source IP address from the
+ * Number of RTP packets received from different source IP address from the
  * remote address required to make the stream switch transmission
  * to the source address.
  */
 #ifndef PJMEDIA_RTP_NAT_PROBATION_CNT	
 #  define PJMEDIA_RTP_NAT_PROBATION_CNT		10
+#endif
+
+
+/**
+ * Number of RTCP packets received from different source IP address from the
+ * remote address required to make the stream switch RTCP transmission
+ * to the source address.
+ */
+#ifndef PJMEDIA_RTCP_NAT_PROBATION_CNT
+#  define PJMEDIA_RTCP_NAT_PROBATION_CNT	3
 #endif
 
 
@@ -916,7 +926,7 @@
  * Default: 5 seconds
  */
 #ifndef PJMEDIA_STREAM_KA_INTERVAL
-#	define PJMEDIA_STREAM_KA_INTERVAL	    5
+#   define PJMEDIA_STREAM_KA_INTERVAL		    5
 #endif
 
 
@@ -1053,6 +1063,63 @@
  */
 #ifndef PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION
 #   define PJMEDIA_CLOCK_SYNC_MAX_RESYNC_DURATION 2000
+#endif
+
+
+/**
+ * Minimum gap between two consecutive discards in jitter buffer,
+ * in milliseconds.
+ *
+ * Default: 200 ms
+ */
+#ifndef PJMEDIA_JBUF_DISC_MIN_GAP
+#   define PJMEDIA_JBUF_DISC_MIN_GAP		    200
+#endif
+
+
+/**
+ * Minimum burst level reference used for calculating discard duration
+ * in jitter buffer progressive discard algorithm, in frames.
+ * 
+ * Default: 1 frame
+ */
+#ifndef PJMEDIA_JBUF_PRO_DISC_MIN_BURST
+#   define PJMEDIA_JBUF_PRO_DISC_MIN_BURST	    1
+#endif
+
+
+/**
+ * Maximum burst level reference used for calculating discard duration
+ * in jitter buffer progressive discard algorithm, in frames.
+ * 
+ * Default: 200 frames
+ */
+#ifndef PJMEDIA_JBUF_PRO_DISC_MAX_BURST
+#   define PJMEDIA_JBUF_PRO_DISC_MAX_BURST	    100
+#endif
+
+
+/**
+ * Duration for progressive discard algotithm in jitter buffer to discard
+ * an excessive frame when burst is equal to or lower than
+ * PJMEDIA_JBUF_PRO_DISC_MIN_BURST, in milliseconds.
+ *
+ * Default: 2000 ms
+ */
+#ifndef PJMEDIA_JBUF_PRO_DISC_T1
+#   define PJMEDIA_JBUF_PRO_DISC_T1		    2000
+#endif
+
+
+/**
+ * Duration for progressive discard algotithm in jitter buffer to discard
+ * an excessive frame when burst is equal to or lower than
+ * PJMEDIA_JBUF_PRO_DISC_MAX_BURST, in milliseconds.
+ *
+ * Default: 10000 ms
+ */
+#ifndef PJMEDIA_JBUF_PRO_DISC_T2
+#   define PJMEDIA_JBUF_PRO_DISC_T2		    10000
 #endif
 
 

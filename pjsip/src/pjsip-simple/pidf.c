@@ -324,15 +324,16 @@ PJ_DEF(void) pjpidf_status_construct(pj_pool_t *pool, pjpidf_status *st)
 PJ_DEF(pj_bool_t) pjpidf_status_is_basic_open(const pjpidf_status *st)
 {
     pj_xml_node *node = pj_xml_find_node((pj_xml_node*)st, &BASIC);
-    pj_assert(node != NULL);
+    if (!node)
+	return PJ_FALSE;
     return pj_stricmp(&node->content, &OPEN)==0;
 }
 
 PJ_DEF(void) pjpidf_status_set_basic_open(pjpidf_status *st, pj_bool_t open)
 {
     pj_xml_node *node = pj_xml_find_node(st, &BASIC);
-    pj_assert(node != NULL);
-    node->content = open ? OPEN : CLOSED;
+    if (node)
+	node->content = open ? OPEN : CLOSED;
 }
 
 PJ_DEF(pjpidf_pres*) pjpidf_create(pj_pool_t *pool, const pj_str_t *entity)

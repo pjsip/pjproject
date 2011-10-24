@@ -813,6 +813,8 @@ static pj_status_t get_dest_info(const pjsip_uri *target_uri,
     if (PJSIP_URI_SCHEME_IS_SIPS(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
 	const pjsip_sip_uri *url=(const pjsip_sip_uri*)pjsip_uri_get_uri(uri);
+	unsigned flag;
+
 	dest_info->flag |= (PJSIP_TRANSPORT_SECURE | PJSIP_TRANSPORT_RELIABLE);
 	if (url->maddr_param.slen)
 	    pj_strdup(pool, &dest_info->addr.host, &url->maddr_param);
@@ -821,6 +823,18 @@ static pj_status_t get_dest_info(const pjsip_uri *target_uri,
         dest_info->addr.port = url->port;
 	dest_info->type = 
             pjsip_transport_get_type_from_name(&url->transport_param);
+	/* Double-check that the transport parameter match.
+	 * Sample case:     sips:host;transport=tcp
+	 * See https://trac.pjsip.org/repos/ticket/1319
+	 */
+	flag = pjsip_transport_get_flag_from_type(dest_info->type);
+	if ((flag & dest_info->flag) != dest_info->flag) {
+	    pjsip_transport_type_e t;
+
+	    t = pjsip_transport_get_type_from_flag(dest_info->flag);
+	    if (t != PJSIP_TRANSPORT_UNSPECIFIED)
+		dest_info->type = t;
+	}
 
     } else if (PJSIP_URI_SCHEME_IS_SIP(target_uri)) {
 	pjsip_uri *uri = (pjsip_uri*) target_uri;
@@ -1389,6 +1403,9 @@ static void send_raw_resolver_callback( pj_status_t status,
 	pj_size_t data_len;
 
 	pj_assert(addr->count != 0);
+
+	/* Avoid tdata destroyed by pjsip_tpmgr_send_raw(). */
+	pjsip_tx_data_add_ref(sraw_data->tdata);
 
 	data_len = sraw_data->tdata->buf.cur - sraw_data->tdata->buf.start;
 	status = pjsip_tpmgr_send_raw(pjsip_endpt_get_tpmgr(sraw_data->endpt),

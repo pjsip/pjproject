@@ -239,6 +239,7 @@ private:
     TPtr8		     iFramePtr_;
     TInt		     lastError_;
     pj_uint32_t		     timeStamp_;
+    CActiveSchedulerWait     startAsw_;
 
     // cache variable
     // to avoid calculating frame length repeatedly
@@ -363,6 +364,13 @@ pj_status_t CPjAudioInputEngine::StartRecord()
     lastError_ = KRequestPending;
     iInputStream_->Open(&iStreamSettings);
     
+#if defined(PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START) && \
+    PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START != 0
+    
+    startAsw_.Start();
+    
+#endif
+    
     // Success
     PJ_LOG(4,(THIS_FILE, "Sound capture started."));
     return PJ_SUCCESS;
@@ -386,6 +394,10 @@ void CPjAudioInputEngine::Stop()
 	iInputStream_ = NULL;
     }
     
+    if (startAsw_.IsStarted()) {
+	startAsw_.AsyncStop();
+    }
+    
     state_ = STATE_INACTIVE;
 }
 
@@ -399,10 +411,23 @@ TPtr8 & CPjAudioInputEngine::GetFrame()
 
 void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
 {
+    if (startAsw_.IsStarted()) {
+	startAsw_.AsyncStop();
+    }
+    
     lastError_ = aError;
     if (aError != KErrNone) {
         snd_perror("Error in MaiscOpenComplete()", aError);
     	return;
+    }
+
+    /* Apply input volume setting if specified */
+    if (parentStrm_->param.flags & 
+        PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING) 
+    {
+        stream_set_cap(&parentStrm_->base,
+                       PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING, 
+                       &parentStrm_->param.input_vol);
     }
 
     // set stream priority to normal and time sensitive
@@ -414,7 +439,12 @@ void CPjAudioInputEngine::MaiscOpenComplete(TInt aError)
     TRAPD(err2, iInputStream_->ReadL(frm));
     if (err2) {
     	PJ_LOG(4,(THIS_FILE, "Exception in iInputStream_->ReadL()"));
+	lastError_ = err2;
+	return;
     }
+
+    // input stream opened succesfully, set status to Active
+    state_ = STATE_ACTIVE;
 }
 
 void CPjAudioInputEngine::MaiscBufferCopied(TInt aError, 
@@ -547,6 +577,7 @@ private:
     TPtrC8		     frame_;
     TInt		     lastError_;
     unsigned		     timestamp_;
+    CActiveSchedulerWait     startAsw_;
 
     CPjAudioOutputEngine(struct mda_stream *parent_strm,
 			 pjmedia_aud_play_cb play_cb,
@@ -638,6 +669,13 @@ pj_status_t CPjAudioOutputEngine::StartPlay()
     // Open stream.
     lastError_ = KRequestPending;
     iOutputStream_->Open(&iStreamSettings);
+    
+#if defined(PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START) && \
+    PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START != 0
+    
+    startAsw_.Start();
+    
+#endif
 
     // Success
     PJ_LOG(4,(THIS_FILE, "Sound playback started"));
@@ -662,17 +700,22 @@ void CPjAudioOutputEngine::Stop()
 	iOutputStream_ = NULL;
     }
     
+    if (startAsw_.IsStarted()) {
+	startAsw_.AsyncStop();
+    }
+    
     state_ = STATE_INACTIVE;
 }
 
 void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 {
+    if (startAsw_.IsStarted()) {
+	startAsw_.AsyncStop();
+    }
+
     lastError_ = aError;
     
     if (aError==KErrNone) {
-	// output stream opened succesfully, set status to Active
-	state_ = STATE_ACTIVE;
-
 	// set stream properties, 16bit 8KHz mono
 	TMdaAudioDataSettings iSettings;
 	iSettings.iChannels = 
@@ -683,8 +726,17 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 	iOutputStream_->SetAudioPropertiesL(iSettings.iSampleRate, 
 					    iSettings.iChannels);
 
-	// set volume to 1/2th of stream max volume
-	iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/2);
+        /* Apply output volume setting if specified */
+        if (parentStrm_->param.flags & 
+            PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) 
+        {
+            stream_set_cap(&parentStrm_->base,
+                           PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+                           &parentStrm_->param.output_vol);
+        } else {
+            // set volume to 1/2th of stream max volume
+            iOutputStream_->SetVolume(iOutputStream_->MaxVolume()/2);
+        }
 	
 	// set stream priority to normal and time sensitive
 	iOutputStream_->SetPriority(EPriorityNormal, 
@@ -718,6 +770,9 @@ void CPjAudioOutputEngine::MaoscOpenComplete(TInt aError)
 	// until whole data buffer is written.
 	frame_.Set(frameBuf_, frameBufSize_);
 	iOutputStream_->WriteL(frame_);
+
+	// output stream opened succesfully, set status to Active
+	state_ = STATE_ACTIVE;
     } else {
     	snd_perror("Error in MaoscOpenComplete()", aError);
     }
@@ -881,7 +936,8 @@ static pj_status_t factory_default_param(pjmedia_aud_dev_factory *f,
     param->channel_count = 1;
     param->samples_per_frame = af->dev_info.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = BITS_PER_SAMPLE;
-    param->flags = af->dev_info.caps;
+    // Don't set the flags without specifying the flags value.
+    //param->flags = af->dev_info.caps;
 
     return PJ_SUCCESS;
 }
@@ -955,6 +1011,20 @@ static pj_status_t stream_get_param(pjmedia_aud_stream *s,
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
 
     pj_memcpy(pi, &strm->param, sizeof(*pi));
+    
+    /* Update the output volume setting */
+    if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+		       &pi->output_vol) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    }
+    
+    /* Update the input volume setting */
+    if (stream_get_cap(s, PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING,
+		       &pi->input_vol) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING;
+    }
     
     return PJ_SUCCESS;
 }
@@ -1034,7 +1104,7 @@ static pj_status_t stream_set_cap(pjmedia_aud_stream *s,
 	}
 	break;
     case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
-	if (strm->param.dir & PJMEDIA_DIR_CAPTURE) {
+	if (strm->param.dir & PJMEDIA_DIR_PLAYBACK) {
 	    PJ_ASSERT_RETURN(strm->out_engine, PJ_EINVAL);
 	    
 	    TInt max_vol = strm->out_engine->GetMaxVolume();

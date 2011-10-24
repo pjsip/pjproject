@@ -619,7 +619,8 @@ static pj_status_t turn_on_send_pkt(pj_turn_session *sess,
 
     if (turn_sock == NULL) {
 	/* We've been destroyed */
-	pj_assert(!"We should shutdown gracefully");
+	// https://trac.pjsip.org/repos/ticket/1316
+	//pj_assert(!"We should shutdown gracefully");
 	return PJ_EINVALIDOP;
     }
 

@@ -145,6 +145,21 @@ PJ_BEGIN_DECL
 
 
 /**
+ * This setting controls whether the Symbian audio with built-in multimedia
+ * framework backend should be started synchronously. Note that synchronous
+ * start will block the application/UI, e.g: about 40ms for each direction
+ * on N95. While asynchronous start may cause invalid value (always zero)
+ * returned in input/output volume query, if the query is performed when
+ * the internal start procedure is not completely finished.
+ * 
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START
+#   define PJMEDIA_AUDIO_DEV_MDA_USE_SYNC_START	1
+#endif
+
+
+/**
  * This setting controls whether the Audio Device API should support
  * device implementation that is based on the old sound device API
  * (sound.h). 

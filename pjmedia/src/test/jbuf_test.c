@@ -43,7 +43,8 @@ typedef struct test_cond_t {
     int discard;
     int lost;
     int empty;
-    int delay;	    /**< Maximum delay, in frames.	    */
+    int delay;	    /**< Average delay, in frames.	    */
+    int delay_min;  /**< Minimum delay, in frames.	    */
 } test_cond_t;
 
 static pj_bool_t parse_test_headers(char *line, test_param_t *param, 
@@ -69,6 +70,8 @@ static pj_bool_t parse_test_headers(char *line, test_param_t *param,
 	    cond->burst = cond_val;
 	else if (pj_ansi_stricmp(cond_st, "delay") == 0)
 	    cond->delay = cond_val;
+	else if (pj_ansi_stricmp(cond_st, "delay_min") == 0)
+	    cond->delay_min = cond_val;
 	else if (pj_ansi_stricmp(cond_st, "discard") == 0)
 	    cond->discard = cond_val;
 	else if (pj_ansi_stricmp(cond_st, "empty") == 0)
@@ -217,6 +220,7 @@ int jbuf_main(void)
 
 	cond.burst = -1;
 	cond.delay = -1;
+	cond.delay_min = -1;
 	cond.discard = -1;
 	cond.empty = -1;
 	cond.lost = -1;
@@ -312,6 +316,11 @@ int jbuf_main(void)
 	    printf("! 'Delay' should be %d, it is %d\n", 
 		   cond.delay, state.avg_delay/JB_PTIME);
 	    rc |= 2;
+	}
+	if (cond.delay_min >= 0 && (int)state.min_delay/JB_PTIME > cond.delay_min) {
+	    printf("! 'Minimum delay' should be %d, it is %d\n", 
+		   cond.delay_min, state.min_delay/JB_PTIME);
+	    rc |= 32;
 	}
 	if (cond.discard >= 0 && (int)state.discard > cond.discard) {
 	    printf("! 'Discard' should be %d, it is %d\n",

@@ -470,9 +470,10 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 	      (int)cfg->id.slen, cfg->id.ptr, id));
 
     /* If accounts has registration enabled, start registration */
-    if (pjsua_var.acc[id].cfg.reg_uri.slen)
-	pjsua_acc_set_registration(id, PJ_TRUE);
-    else {
+    if (pjsua_var.acc[id].cfg.reg_uri.slen) {
+	if (pjsua_var.acc[id].cfg.register_on_acc_add)
+            pjsua_acc_set_registration(id, PJ_TRUE);
+    } else {
 	/* Otherwise subscribe to MWI, if it's enabled */
 	if (pjsua_var.acc[id].cfg.mwi_enabled)
 	    pjsua_start_mwi(&pjsua_var.acc[id]);
@@ -603,7 +604,7 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     }
 
     /* Delete server presence subscription */
-    pjsua_pres_delete_acc(acc_id);
+    pjsua_pres_delete_acc(acc_id, 0);
 
     /* Release account pool */
     if (pjsua_var.acc[acc_id].pool) {
@@ -833,7 +834,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (acc->cfg.publish_enabled != cfg->publish_enabled) {
 	acc->cfg.publish_enabled = cfg->publish_enabled;
 	if (!acc->cfg.publish_enabled)
-	    pjsua_pres_unpublish(acc);
+	    pjsua_pres_unpublish(acc, 0);
 	else
 	    update_reg = PJ_TRUE;
     }
@@ -992,6 +993,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.unreg_timeout = cfg->unreg_timeout;
     acc->cfg.allow_contact_rewrite = cfg->allow_contact_rewrite;
     acc->cfg.reg_retry_interval = cfg->reg_retry_interval;
+    acc->cfg.reg_first_retry_interval = cfg->reg_first_retry_interval;
     acc->cfg.drop_calls_on_reg_fail = cfg->drop_calls_on_reg_fail;
     if (acc->cfg.reg_delay_before_refresh != cfg->reg_delay_before_refresh) {
         acc->cfg.reg_delay_before_refresh = cfg->reg_delay_before_refresh;
@@ -1393,7 +1395,7 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 			       tp->type_name,
 			       (int)acc->cfg.contact_uri_params.slen,
 			       acc->cfg.contact_uri_params.ptr,
-			       ob,
+			       (acc->cfg.use_rfc5626? ob: ""),
 			       (int)acc->cfg.contact_params.slen,
 			       acc->cfg.contact_params.ptr);
 	if (len < 1) {
@@ -1691,11 +1693,14 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
     pjsua_acc *acc = (pjsua_acc*) param->token;
 
-    if (param->regc != acc->regc)
+    PJSUA_LOCK();
+
+    if (param->regc != acc->regc) {
+        PJSUA_UNLOCK();
 	return;
+    }
 
     pj_log_push_indent();
-    PJSUA_LOCK();
 
     /*
      * Print registration status.
@@ -2054,7 +2059,7 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 	    goto on_return;
 	}
 
-	pjsua_pres_unpublish(&pjsua_var.acc[acc_id]);
+	pjsua_pres_unpublish(&pjsua_var.acc[acc_id], 0);
 
 	status = pjsip_regc_unregister(pjsua_var.acc[acc_id].regc, &tdata);
     }
@@ -2070,6 +2075,10 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
 
 	pjsip_regc_get_info(pjsua_var.acc[acc_id].regc, &reg_info);
 	pjsua_var.acc[acc_id].auto_rereg.reg_tp = reg_info.transport;
+        
+        if (pjsua_var.ua_cfg.cb.on_reg_started) {
+            (*pjsua_var.ua_cfg.cb.on_reg_started)(acc_id, renew);
+        }
     }
 
     if (status != PJ_SUCCESS) {
@@ -2529,10 +2538,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
     /* Create the contact header */
     contact->ptr = (char*)pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s%s>%.*s",
+				     "%s%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s%s>%.*s",
+				     (acc->display.slen?"\"" : ""),
 				     (int)acc->display.slen,
 				     acc->display.ptr,
-				     (acc->display.slen?" " : ""),
+				     (acc->display.slen?"\" " : ""),
 				     (secure ? PJSUA_SECURE_SCHEME : "sip"),
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
@@ -2545,7 +2555,7 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uac_contact( pj_pool_t *pool,
 				     transport_param,
 				     (int)acc->cfg.contact_uri_params.slen,
 				     acc->cfg.contact_uri_params.ptr,
-				     ob,
+				     (acc->cfg.use_rfc5626? ob: ""),
 				     (int)acc->cfg.contact_params.slen,
 				     acc->cfg.contact_params.ptr);
 
@@ -2687,10 +2697,11 @@ PJ_DEF(pj_status_t) pjsua_acc_create_uas_contact( pj_pool_t *pool,
     /* Create the contact header */
     contact->ptr = (char*) pj_pool_alloc(pool, PJSIP_MAX_URL_SIZE);
     contact->slen = pj_ansi_snprintf(contact->ptr, PJSIP_MAX_URL_SIZE,
-				     "%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>%.*s",
+				     "%s%.*s%s<%s:%.*s%s%s%.*s%s:%d%s%.*s>%.*s",
+				     (acc->display.slen?"\"" : ""),
 				     (int)acc->display.slen,
 				     acc->display.ptr,
-				     (acc->display.slen?" " : ""),
+				     (acc->display.slen?"\" " : ""),
 				     (secure ? PJSUA_SECURE_SCHEME : "sip"),
 				     (int)acc->user_part.slen,
 				     acc->user_part.ptr,
@@ -2807,8 +2818,23 @@ static void schedule_reregistration(pjsua_acc *acc)
     acc->auto_rereg.timer.user_data = acc;
 
     /* Reregistration attempt. The first attempt will be done immediately. */
-    delay.sec = acc->auto_rereg.attempt_cnt? acc->cfg.reg_retry_interval : 0;
+    delay.sec = acc->auto_rereg.attempt_cnt? acc->cfg.reg_retry_interval :
+					     acc->cfg.reg_first_retry_interval;
     delay.msec = 0;
+
+    /* Randomize interval by +/- 10 secs */
+    if (delay.sec >= 10) {
+	delay.msec = -10000 + (pj_rand() % 20000);
+    } else {
+	delay.sec = 0;
+	delay.msec = (pj_rand() % 10000);
+    }
+    pj_time_val_normalize(&delay);
+
+    PJ_LOG(4,(THIS_FILE,
+	      "Scheduling re-registration retry for acc %d in %u seconds..",
+	      acc->index, delay.sec));
+
     pjsua_schedule_timer(&acc->auto_rereg.timer, &delay);
 }
 

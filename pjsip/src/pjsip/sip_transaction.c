@@ -146,13 +146,6 @@ static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
 #define TIMER_INACTIVE	0
 #define TIMER_ACTIVE	1
 
-/* Delay for 1xx retransmission (should be 60 seconds).
- * Specify 0 to disable this feature
- */
-#ifndef PJSIP_TSX_1XX_RETRANS_DELAY
-#   define PJSIP_TSX_1XX_RETRANS_DELAY    60
-#endif
-
 
 /* Prototypes. */
 static void	   lock_tsx(pjsip_transaction *tsx, struct tsx_lock_data *lck);
@@ -2118,7 +2111,6 @@ PJ_DEF(pj_status_t) pjsip_tsx_retransmit_no_state(pjsip_transaction *tsx,
  */
 static void tsx_resched_retransmission( pjsip_transaction *tsx )
 {
-    pj_time_val timeout;
     pj_uint32_t msec_time;
 
     pj_assert((tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) == 0);
@@ -2151,11 +2143,15 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
 	}
     }
 
-    timeout.sec = msec_time / 1000;
-    timeout.msec = msec_time % 1000;
-    tsx->retransmit_timer.id = TIMER_ACTIVE;
-    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->retransmit_timer, 
-				&timeout);
+    if (msec_time != 0) {
+	pj_time_val timeout;
+
+	timeout.sec = msec_time / 1000;
+	timeout.msec = msec_time % 1000;
+	tsx->retransmit_timer.id = TIMER_ACTIVE;
+	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->retransmit_timer, 
+				    &timeout);
+    }
 }
 
 /*
@@ -2987,6 +2983,12 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	    timeout.sec = timeout.msec = 0;
 	}
 	lock_timer(tsx);
+	/* In the short period above timer may have been inserted
+	 * by set_timeout() (by CANCEL). Cancel it if necessary. See:
+	 *  https://trac.pjsip.org/repos/ticket/1374
+	 */
+	if (tsx->timeout_timer.id)
+	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
 	tsx->timeout_timer.id = TIMER_ACTIVE;
 	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
 	unlock_timer(tsx);

@@ -267,6 +267,8 @@ static pj_status_t pack_amr ( codec_private_t *codec_data,
 	}
 	info->good_quality = 1;
 	info->mode = setting->enc_mode;
+	if (info->frame_type == SID_FT)
+	    info->STI = (sf->data[4] >> 4) & 1;
 
 	frames[i].buf = sf->data;
 	frames[i].size = len;

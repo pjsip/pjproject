@@ -396,7 +396,7 @@ pj_status_t pjsua_media_subsys_start(void)
 /*
  * Destroy pjsua media subsystem.
  */
-pj_status_t pjsua_media_subsys_destroy(void)
+pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 {
     unsigned i;
 
@@ -441,6 +441,10 @@ pj_status_t pjsua_media_subsys_destroy(void)
 		pjsua_media_channel_deinit(i);
 	    }
 	    if (call_med->tp && call_med->tp_auto_del) {
+	        /* TODO: check if we're not allowed to send to network in the
+	         *       "flags", and if so do not do TURN allocation...
+	         */
+	        PJ_UNUSED_ARG(flags);
 		pjmedia_transport_close(call_med->tp);
 	    }
 	    call_med->tp = NULL;
@@ -1294,11 +1298,18 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     if (call_med->tp_st == PJSUA_MED_TP_CREATING)
         set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
 
+    if (!call_med->tp_orig &&
+        pjsua_var.ua_cfg.cb.on_create_media_transport)
+    {
+        call_med->use_custom_med_tp = PJ_TRUE;
+    } else
+        call_med->use_custom_med_tp = PJ_FALSE;
+
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
     /* This function may be called when SRTP transport already exists
      * (e.g: in re-invite, update), don't need to destroy/re-create.
      */
-    if (!call_med->tp_orig || call_med->tp == call_med->tp_orig) {
+    if (!call_med->tp_orig) {
 	pjmedia_srtp_setting srtp_opt;
 	pjmedia_transport *srtp = NULL;
 
@@ -1314,7 +1325,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	/* Always create SRTP adapter */
 	pjmedia_srtp_setting_default(&srtp_opt);
 	srtp_opt.close_member_tp = PJ_TRUE;
-	/* If media session has been ever established, let's use remote's
+	/* If media session has been ever established, let's use remote's 
 	 * preference in SRTP usage policy, especially when it is stricter.
 	 */
 	if (call_med->rem_srtp_use > acc->cfg.use_srtp)
@@ -1519,9 +1530,25 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                             call->async_call.dlg->pool);
             }
 
-	    status = pjmedia_transport_media_create(
-                         call_med->tp, tmp_pool,
-                         0, call->async_call.rem_sdp, mi);
+            if (call_med->use_custom_med_tp) {
+                unsigned custom_med_tp_flags = 0;
+
+                /* Use custom media transport returned by the application */
+                call_med->tp =
+                    (*pjsua_var.ua_cfg.cb.on_create_media_transport)
+                        (call_id, mi, call_med->tp,
+                         custom_med_tp_flags);
+                if (!call_med->tp) {
+                    status =
+                        PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+                }
+            }
+
+            if (call_med->tp) {
+                status = pjmedia_transport_media_create(
+                             call_med->tp, tmp_pool,
+                             0, call->async_call.rem_sdp, mi);
+            }
 	    if (status != PJ_SUCCESS) {
                 call->med_ch_info.status = status;
                 call->med_ch_info.med_idx = mi;
@@ -2104,6 +2131,7 @@ static void stop_media_session(pjsua_call_id call_id)
 
 	PJ_LOG(4,(THIS_FILE, "Media session call%02d:%d is destroyed",
 			     call_id, mi));
+        call_med->prev_state = call_med->state;
 	call_med->state = PJSUA_CALL_MEDIA_NONE;
     }
 
@@ -2133,12 +2161,19 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call_id));
     pj_log_push_indent();
 
+    for (mi=0; mi<call->med_cnt; ++mi) {
+	pjsua_call_media *call_med = &call->media[mi];
+
+        if (call_med->type == PJMEDIA_TYPE_AUDIO && call_med->strm.a.stream)
+            pjmedia_stream_send_rtcp_bye(call_med->strm.a.stream);
+    }
+
     stop_media_session(call_id);
 
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
 
-	if (call_med->tp_st > PJSUA_MED_TP_IDLE) {
+        if (call_med->tp_st > PJSUA_MED_TP_IDLE) {
 	    pjmedia_transport_media_stop(call_med->tp);
 	    set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
 	}
@@ -2153,6 +2188,7 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 	    pjmedia_transport_close(call_med->tp);
 	    call_med->tp = call_med->tp_orig = NULL;
 	}
+        call_med->tp_orig = NULL;
     }
 
     check_snd_dev_idle();
@@ -2205,6 +2241,8 @@ static pj_status_t audio_channel_update(pjsua_call_media *call_med,
                                           local_sdp, remote_sdp, strm_idx);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    si->rtcp_sdes_bye_disabled = PJ_TRUE;
 
     /* Check if no media is active */
     if (si->dir == PJMEDIA_DIR_NONE) {
@@ -2295,6 +2333,9 @@ static pj_status_t audio_channel_update(pjsua_call_media *call_med,
 	if (status != PJ_SUCCESS) {
 	    goto on_return;
 	}
+
+        if (call_med->prev_state == PJSUA_CALL_MEDIA_NONE)
+            pjmedia_stream_send_rtcp_sdes(call_med->strm.a.stream);
 
 	/* If DTMF callback is installed by application, install our
 	 * callback to the session.

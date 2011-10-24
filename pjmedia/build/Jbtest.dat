@@ -19,11 +19,11 @@
 #
 # 3. Success conditions, started with '!', followed by condition name 
 #    and its maximum tolerable value, in frames unit. Recognized condition 
-#    names are: burst, discard, lost, empty, delay. These conditions will
-#    be verified with jitter buffer statistics after all session test data
-#    are executed.
+#    names are: burst, discard, lost, empty, delay, delay_min. These
+#    conditions will be verified with jitter buffer statistics after all
+#    session test data are executed.
 #    Example:
-#    !delay 10  <- maximum average delay of jbuf is 10 frames
+#    !delay 10  <- average delay of jbuf is 10 frames
 #
 # 4. Session test data, containing sequence of jitter buffer events,
 #    an event is represented by a character as follow:
@@ -295,8 +295,25 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG
 !discard    50 <- frames discarded for delay adaptation
 !lost	    50 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    0
-!delay	    25 <- average delay, JB is able to adapt the delay
+!delay_min  2  <- minimum delay, JB is able to adapt the delay
 PPPPPPPPPPPPPPPPPPPP PPPPPPPPPPPPPPPPPPPP PPPPPPPPPP
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
+PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
@@ -316,8 +333,8 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 = Fixed mode prefetch 5, with two empty events
 %fixed 5
 !burst	    1
-!discard    0
-!lost	    0
+!discard    4  <- the burst level is about 1, but prefetching will cause delay by 5 frames prefetching, delay adjustment may take place later on
+!lost	    4  <- progressive discard drops frames as if they were lost
 !empty	    10
 !delay	    5
 G
@@ -329,8 +346,8 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 = Fixed mode prefetch 5, with random burst
 %fixed 5
 !burst	    3
-!discard    0
-!lost	    0
+!discard    4 <- (see above test scenario)
+!lost	    4 <- (see above test scenario)
 !empty	    5
 !delay	    5
 PGPGPPGGPPPPGGPGGGPG PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPPPGGPGGGPG 
@@ -349,7 +366,7 @@ PGGGGPPPGPPGPPPGGPGG PGPGPPGGPPGGPPPGGGPG PGGGGPPPGPPGPPPGGPGG
 !discard    50 <- frames discarded for delay adaptation
 !lost	    50 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    0
-!delay	    20 <- average delay, twice of minimal prefetch
+!delay_min  20 <- minimum delay, twice of minimal prefetch
 PPPPPPPPPPPPPPPPPPPP PPPPPPPPPPPPPPPPPPPP PPPPPPPPPP
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
@@ -369,7 +386,7 @@ PGPGPGPGPGPGPGPGPGPG PGPGPGPGPGPGPGPGPGPG PGPGPGPGPG
 
 = Large PUT burst at beginning, then normal with burst level 10 and periodic burst spikes
 %adaptive 0 0 40
-!burst	    10
+!burst	    12
 !discard    300 <- not so relevant for long period session with many delay adjustments needed (i.e: for first burst and periodic spikes)
 !lost	    300 <- ticket #1188, normal frame after discarded frame is flagged 'lost' to align signal
 !empty	    60 <- delay adjustment effect, as there is actually no drift

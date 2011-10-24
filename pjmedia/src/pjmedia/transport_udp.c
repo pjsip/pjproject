@@ -83,6 +83,7 @@ struct transport_udp
     pj_sock_t		rtcp_sock;	/**< RTCP socket		    */
     pj_sockaddr		rtcp_addr_name;	/**< Published RTCP address.	    */
     pj_sockaddr		rtcp_src_addr;	/**< Actual source RTCP address.    */
+    unsigned		rtcp_src_cnt;	/**< How many pkt from this addr.   */
     int			rtcp_addr_len;	/**< Length of RTCP src address.    */
     pj_ioqueue_key_t   *rtcp_key;	/**< RTCP socket key in ioqueue	    */
     pj_ioqueue_op_key_t rtcp_read_op;	/**< Pending read operation	    */
@@ -452,6 +453,7 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
     do {
 	void (*cb)(void*,void*,pj_ssize_t);
 	void *user_data;
+	pj_bool_t discard = PJ_FALSE;
 
 	cb = udp->rtp_cb;
 	user_data = udp->user_data;
@@ -462,13 +464,9 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 		PJ_LOG(5,(udp->base.name, 
 			  "RX RTP packet dropped because of pkt lost "
 			  "simulation"));
-		goto read_next_packet;
+		discard = PJ_TRUE;
 	    }
 	}
-
-
-	if (udp->attached && cb)
-	    (*cb)(user_data, udp->rtp_pkt, bytes_read);
 
 	/* See if source address of RTP packet is different than the 
 	 * configured address, and switch RTP remote address to 
@@ -478,11 +476,15 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	if (bytes_read>0 && 
 	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0) 
 	{
-	    if (pj_sockaddr_cmp(&udp->rem_rtp_addr, &udp->rtp_src_addr) != 0) {
-
+	    if (pj_sockaddr_cmp(&udp->rem_rtp_addr, &udp->rtp_src_addr) == 0) {
+		/* We're still receiving from rem_rtp_addr. Don't switch. */
+		udp->rtp_src_cnt = 0;
+	    } else {
 		udp->rtp_src_cnt++;
 
-		if (udp->rtp_src_cnt >= PJMEDIA_RTP_NAT_PROBATION_CNT) {
+		if (udp->rtp_src_cnt < PJMEDIA_RTP_NAT_PROBATION_CNT) {
+		    discard = PJ_TRUE;
+		} else {
 		
 		    char addr_text[80];
 
@@ -516,7 +518,8 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 				  sizeof(pj_sockaddr));
 
 			PJ_LOG(4,(udp->base.name,
-				  "Remote RTCP address switched to %s",
+				  "Remote RTCP address switched to predicted"
+				  " address %s",
 				  pj_sockaddr_print(&udp->rtcp_src_addr, 
 						    addr_text,
 						    sizeof(addr_text), 3)));
@@ -526,7 +529,9 @@ static void on_rx_rtp( pj_ioqueue_key_t *key,
 	    }
 	}
 
-read_next_packet:
+	if (!discard && udp->attached && cb)
+	    (*cb)(user_data, udp->rtp_pkt, bytes_read);
+
 	bytes_read = sizeof(udp->rtp_pkt);
 	udp->rtp_addrlen = sizeof(udp->rtp_src_addr);
 	status = pj_ioqueue_recvfrom(udp->rtp_key, &udp->rtp_read_op,
@@ -568,18 +573,27 @@ static void on_rx_rtcp(pj_ioqueue_key_t *key,
 	 * different.
 	 */
 	if (bytes_read>0 &&
-	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0 &&
-	    pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) != 0)
+	    (udp->options & PJMEDIA_UDP_NO_SRC_ADDR_CHECKING)==0)
 	{
-	    char addr_text[80];
+	    if (pj_sockaddr_cmp(&udp->rem_rtcp_addr, &udp->rtcp_src_addr) == 0) {
+		/* Still receiving from rem_rtcp_addr, don't switch */
+		udp->rtcp_src_cnt = 0;
+	    } else {
+		++udp->rtcp_src_cnt;
 
-	    pj_memcpy(&udp->rem_rtcp_addr, &udp->rtcp_src_addr,
-		      sizeof(pj_sockaddr));
+		if (udp->rtcp_src_cnt >= PJMEDIA_RTCP_NAT_PROBATION_CNT	) {
+		    char addr_text[80];
 
-	    PJ_LOG(4,(udp->base.name,
-		      "Remote RTCP address switched to %s",
-		      pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
-					sizeof(addr_text), 3)));
+		    udp->rtcp_src_cnt = 0;
+		    pj_memcpy(&udp->rem_rtcp_addr, &udp->rtcp_src_addr,
+			      sizeof(pj_sockaddr));
+
+		    PJ_LOG(4,(udp->base.name,
+			      "Remote RTCP address switched to %s",
+			      pj_sockaddr_print(&udp->rtcp_src_addr, addr_text,
+						sizeof(addr_text), 3)));
+		}
+	    }
 	}
 
 	bytes_read = sizeof(udp->rtcp_pkt);
@@ -677,6 +691,7 @@ static pj_status_t transport_attach(   pjmedia_transport *tp,
     pj_bzero(&udp->rtp_src_addr, sizeof(udp->rtp_src_addr));
     pj_bzero(&udp->rtcp_src_addr, sizeof(udp->rtcp_src_addr));
     udp->rtp_src_cnt = 0;
+    udp->rtcp_src_cnt = 0;
 
     /* Unlock keys */
     pj_ioqueue_unlock_key(udp->rtcp_key);

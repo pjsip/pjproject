@@ -100,9 +100,6 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 
     PJ_ASSERT_RETURN(pool && samples_per_frame && clock_rate && channel_count &&
 		     p_b, PJ_EINVAL);
-    PJ_ASSERT_RETURN(options==0, PJ_EINVAL);
-
-    PJ_UNUSED_ARG(options);
 
     if (!name) {
 	name = "delaybuf";
@@ -127,11 +124,16 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Create WSOLA */
-    status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
-				  PJMEDIA_WSOLA_NO_FADING, &b->wsola);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (!(options & PJMEDIA_DELAY_BUF_SIMPLE_FIFO)) {
+        /* Create WSOLA */
+        status = pjmedia_wsola_create(pool, clock_rate, samples_per_frame, 1,
+				      PJMEDIA_WSOLA_NO_FADING, &b->wsola);
+        if (status != PJ_SUCCESS)
+	    return status;
+        PJ_LOG(5, (b->obj_name, "Using delay buffer with WSOLA."));
+    } else {
+        PJ_LOG(5, (b->obj_name, "Using simple FIFO delay buffer."));
+    }
 
     /* Finally, create mutex */
     status = pj_lock_create_recursive_mutex(pool, b->obj_name, 
@@ -148,15 +150,17 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_create( pj_pool_t *pool,
 
 PJ_DEF(pj_status_t) pjmedia_delay_buf_destroy(pjmedia_delay_buf *b)
 {
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(b, PJ_EINVAL);
 
     pj_lock_acquire(b->lock);
 
-    status = pjmedia_wsola_destroy(b->wsola);
-    if (status == PJ_SUCCESS)
-	b->wsola = NULL;
+    if (b->wsola) {
+        status = pjmedia_wsola_destroy(b->wsola);
+        if (status == PJ_SUCCESS)
+	    b->wsola = NULL;
+    }
 
     pj_lock_release(b->lock);
 
@@ -265,12 +269,14 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
 
     pj_lock_acquire(b->lock);
 
-    update(b, OP_PUT);
+    if (b->wsola) {
+        update(b, OP_PUT);
     
-    status = pjmedia_wsola_save(b->wsola, frame, PJ_FALSE);
-    if (status != PJ_SUCCESS) {
-	pj_lock_release(b->lock);
-	return status;
+        status = pjmedia_wsola_save(b->wsola, frame, PJ_FALSE);
+        if (status != PJ_SUCCESS) {
+	    pj_lock_release(b->lock);
+	    return status;
+        }
     }
 
     /* Overflow checking */
@@ -278,13 +284,15 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
 	b->max_cnt)
     {
 	unsigned erase_cnt;
-	
-	/* shrink one frame or just the diff? */
-	//erase_cnt = b->samples_per_frame;
-	erase_cnt = pjmedia_circ_buf_get_len(b->circ_buf) + 
-		    b->samples_per_frame - b->max_cnt;
 
-	shrink_buffer(b, erase_cnt);
+        if (b->wsola) {
+	    /* shrink one frame or just the diff? */
+	    //erase_cnt = b->samples_per_frame;
+	    erase_cnt = pjmedia_circ_buf_get_len(b->circ_buf) + 
+		        b->samples_per_frame - b->max_cnt;
+
+	    shrink_buffer(b, erase_cnt);
+        }
 
 	/* Check if shrinking failed or erased count is less than requested,
 	 * delaybuf needs to drop eldest samples, this is bad since the voice
@@ -298,9 +306,9 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
 
 	    pjmedia_circ_buf_adv_read_ptr(b->circ_buf, erase_cnt);
 
-	    PJ_LOG(4,(b->obj_name,"Shrinking failed or insufficient, dropping"
-		      " %d eldest samples, buf_cnt=%d", erase_cnt, 
-		      pjmedia_circ_buf_get_len(b->circ_buf)));
+	    PJ_LOG(4,(b->obj_name,"%sDropping %d eldest samples, buf_cnt=%d",
+                      (b->wsola? "Shrinking failed or insufficient. ": ""),
+                      erase_cnt, pjmedia_circ_buf_get_len(b->circ_buf)));
 	}
     }
 
@@ -313,13 +321,14 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_put(pjmedia_delay_buf *b,
 PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
 					   pj_int16_t frame[])
 {
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(b && frame, PJ_EINVAL);
 
     pj_lock_acquire(b->lock);
 
-    update(b, OP_GET);
+    if (b->wsola)
+        update(b, OP_GET);
 
     /* Starvation checking */
     if (pjmedia_circ_buf_get_len(b->circ_buf) < b->samples_per_frame) {
@@ -327,24 +336,29 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_get( pjmedia_delay_buf *b,
 	PJ_LOG(4,(b->obj_name,"Underflow, buf_cnt=%d, will generate 1 frame",
 		  pjmedia_circ_buf_get_len(b->circ_buf)));
 
-	status = pjmedia_wsola_generate(b->wsola, frame);
+        if (b->wsola) {
+            status = pjmedia_wsola_generate(b->wsola, frame);
 
-	if (status == PJ_SUCCESS) {
-	    TRACE__((b->obj_name,"Successfully generate 1 frame"));
-	    if (pjmedia_circ_buf_get_len(b->circ_buf) == 0) {
-		pj_lock_release(b->lock);
-		return PJ_SUCCESS;
-	    }
+	    if (status == PJ_SUCCESS) {
+	        TRACE__((b->obj_name,"Successfully generate 1 frame"));
+	        if (pjmedia_circ_buf_get_len(b->circ_buf) == 0) {
+		    pj_lock_release(b->lock);
+		    return PJ_SUCCESS;
+	        }
 
-	    /* Put generated frame into buffer */
-	    pjmedia_circ_buf_write(b->circ_buf, frame, b->samples_per_frame);
+	        /* Put generated frame into buffer */
+	        pjmedia_circ_buf_write(b->circ_buf, frame,
+                                       b->samples_per_frame);
+            }
+        }
 
-	} else {
+	if (!b->wsola || status != PJ_SUCCESS) {
 	    unsigned buf_len = pjmedia_circ_buf_get_len(b->circ_buf);
 	    
 	    /* Give all what delay buffer has, then pad with zeroes */
-	    PJ_LOG(4,(b->obj_name,"Error generating frame, status=%d", 
-		      status));
+            if (b->wsola)
+	        PJ_LOG(4,(b->obj_name,"Error generating frame, status=%d", 
+		          status));
 
 	    pjmedia_circ_buf_read(b->circ_buf, frame, buf_len);
 	    pjmedia_zero_samples(&frame[buf_len], 
@@ -379,7 +393,8 @@ PJ_DEF(pj_status_t) pjmedia_delay_buf_reset(pjmedia_delay_buf *b)
     pjmedia_circ_buf_reset(b->circ_buf);
 
     /* Reset WSOLA */
-    pjmedia_wsola_reset(b->wsola, 0);
+    if (b->wsola)
+        pjmedia_wsola_reset(b->wsola, 0);
 
     pj_lock_release(b->lock);
 

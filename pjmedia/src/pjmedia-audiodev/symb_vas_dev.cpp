@@ -1130,7 +1130,7 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		    buffer.Append((TUint8*)sf->data, len);
 		} else {
 		    enum {NO_DATA_FT = 15 };
-		    pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+		    pj_uint8_t amr_header = 4 | (NO_DATA_FT << 3);
 
 		    buffer.Append(amr_header);
 		}
@@ -1139,7 +1139,7 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 	    
 	    } else { /* PJMEDIA_FRAME_TYPE_NONE */
 		enum {NO_DATA_FT = 15 };
-		pj_uint8_t amr_header = 4 || (NO_DATA_FT << 3);
+		pj_uint8_t amr_header = 4 | (NO_DATA_FT << 3);
 
 		buffer.Append(amr_header);
 		
@@ -1746,12 +1746,6 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
 	return PJ_RETURN_OS_ERROR(err);
     }
 
-    /* Apply output volume setting if specified */
-    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
-	stream_set_cap(&strm->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
-		       &param->output_vol);
-    }
-
     /* Done */
     strm->base.op = &stream_op;
     *p_aud_strm = &strm->base;
@@ -1945,10 +1939,21 @@ static pj_status_t stream_start(pjmedia_aud_stream *strm)
     	} while (!stream->engine->IsStarted() &&
 		 (now.MicroSecondsFrom(start) < VAS_WAIT_START * 1000));
 	
-	if (stream->engine->IsStarted())
+	if (stream->engine->IsStarted()) {
+	    
+	    /* Apply output volume setting if specified */
+	    if (stream->param.flags & 
+		PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) 
+	    {
+		stream_set_cap(strm,
+			       PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING, 
+			       &stream->param.output_vol);
+	    }
+
 	    return PJ_SUCCESS;
-	else
+	} else {
 	    return PJ_ETIMEDOUT;
+	}
     }    
 
     return PJ_EINVALIDOP;

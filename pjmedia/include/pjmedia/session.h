@@ -232,6 +232,26 @@ PJ_DECL(pj_status_t) pjmedia_session_resume_stream(pjmedia_session *session,
 						   pjmedia_dir dir);
 
 /**
+ * Send RTCP SDES for the session.
+ *
+ * @param session	The media session.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_session_send_rtcp_sdes( const pjmedia_session *session );
+
+/**
+ * Send RTCP BYE for the session.
+ *
+ * @param session	The media session.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) 
+pjmedia_session_send_rtcp_bye( const pjmedia_session *session );
+
+/**
  * Enumerate media streams in the session.
  *
  * @param session	The media session.

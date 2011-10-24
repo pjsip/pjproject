@@ -56,8 +56,8 @@ PJ_BEGIN_DECL
  *    existing modules (such as when incoming request has unsupported method).
  *  - and so on..
  *
- * Theoritically application can have multiple instances of SIP endpoint, 
- * although it's not clear why application may want to do it.
+ * Application should only instantiate one SIP endpoint instance for every
+ * process.
  *
  * @{
  */

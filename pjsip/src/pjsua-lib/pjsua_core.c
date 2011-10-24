@@ -234,6 +234,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pj_list_init(&cfg->reg_hdr_list);
     pj_list_init(&cfg->sub_hdr_list);
     cfg->call_hold_type = PJSUA_CALL_HOLD_TYPE_DEFAULT;
+    cfg->register_on_acc_add = PJ_TRUE;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)
@@ -1340,7 +1341,7 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 /*
  * Destroy pjsua.
  */
-PJ_DEF(pj_status_t) pjsua_destroy(void)
+PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 {
     int i;  /* Must be signed */
 
@@ -1365,12 +1366,14 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
     if (pjsua_var.endpt) {
 	unsigned max_wait;
 
-	PJ_LOG(4,(THIS_FILE, "Shutting down..."));
+	PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
 
 	pj_log_push_indent();
 
 	/* Terminate all calls. */
-	pjsua_call_hangup_all();
+	if ((flags & PJSUA_DESTROY_NO_TX_MSG) == 0) {
+	    pjsua_call_hangup_all();
+	}
 
 	/* Set all accounts to offline */
 	for (i=0; i<(int)PJ_ARRAY_SIZE(pjsua_var.acc); ++i) {
@@ -1381,10 +1384,10 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	}
 
 	/* Terminate all presence subscriptions. */
-	pjsua_pres_shutdown();
+	pjsua_pres_shutdown(flags);
 
 	/* Destroy media (to shutdown media transports etc) */
-	pjsua_media_subsys_destroy();
+	pjsua_media_subsys_destroy(flags);
 
 	/* Wait for sometime until all publish client sessions are done
 	 * (ticket #364)
@@ -1398,6 +1401,11 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		max_wait = pjsua_var.acc[i].cfg.unpublish_max_wait_time_msec;
 	}
 	
+	/* No waiting if RX is disabled */
+	if (flags & PJSUA_DESTROY_NO_RX_MSG) {
+	    max_wait = 0;
+	}
+
 	/* Second stage, wait for unpublications to complete */
 	for (i=0; i<(int)(max_wait/50); ++i) {
 	    unsigned j;
@@ -1427,7 +1435,8 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	    if (!pjsua_var.acc[i].valid)
 		continue;
 
-	    if (pjsua_var.acc[i].regc) {
+	    if (pjsua_var.acc[i].regc && (flags & PJSUA_DESTROY_NO_TX_MSG)==0)
+	    {
 		pjsua_acc_set_registration(i, PJ_FALSE);
 	    }
 	}
@@ -1452,6 +1461,11 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 		max_wait = pjsua_var.acc[i].cfg.unreg_timeout;
 	}
 	
+	/* No waiting if RX is disabled */
+	if (flags & PJSUA_DESTROY_NO_RX_MSG) {
+	    max_wait = 0;
+	}
+
 	/* Second stage, wait for unregistrations to complete */
 	for (i=0; i<(int)(max_wait/50); ++i) {
 	    unsigned j;
@@ -1472,8 +1486,9 @@ PJ_DEF(pj_status_t) pjsua_destroy(void)
 	/* Wait for some time to allow unregistration and ICE/TURN
 	 * transports shutdown to complete: 
 	 */
-	if (i < 20)
+	if (i < 20 && (flags & PJSUA_DESTROY_NO_RX_MSG) == 0) {
 	    busy_sleep(1000 - i*50);
+	}
 
 	PJ_LOG(4,(THIS_FILE, "Destroying..."));
 
@@ -1559,6 +1574,12 @@ PJ_DEF(pjsua_state) pjsua_get_state(void)
 {
     return pjsua_var.state;
 }
+
+PJ_DEF(pj_status_t) pjsua_destroy(void)
+{
+    return pjsua_destroy2(0);
+}
+
 
 /**
  * Application is recommended to call this function after all initialization

@@ -43,6 +43,17 @@ void app_perror(pj_status_t status, const char *msg)
     PJ_LOG(3,(THIS_FILE, "%s: %s", msg, errbuf));
 }
 
+/* Force linking PLC stuff if G.711 is disabled. See:
+ *  https://trac.pjsip.org/repos/ticket/1337 
+ */
+#if PJMEDIA_HAS_G711_CODEC==0
+int dummy()
+{
+    // Dummy
+    return (int) &pjmedia_plc_save;
+}
+#endif
+
 int test_main(void)
 {
     int rc = 0;

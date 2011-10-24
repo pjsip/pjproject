@@ -188,6 +188,36 @@ typedef struct pj_http_req_param
      */
     pj_http_auth_cred	auth_cred;
 
+    /**
+     * Optional source port range to use when binding the socket.
+     * This can be used if the source port needs to be within a certain range
+     * for instance due to strict firewall settings. The port used will be
+     * randomized within the range.
+     *
+     * Note that if authentication is configured, the authentication response
+     * will be a new transaction
+     *
+     * Default is 0 (The OS will select the source port automatically)
+     */
+    pj_uint16_t		source_port_range_start;
+
+    /**
+     * Optional source port range to use when binding.
+     * The size of the port restriction range
+     *
+     * Default is 0 (The OS will select the source port automatically))
+     */
+    pj_uint16_t		source_port_range_size;
+
+    /**
+     * Max number of retries if binding to a port fails.
+     * Note that this does not adress the scenario where a request times out
+     * or errors. This needs to be taken care of by the on_complete callback.
+     *
+     * Default is 3
+     */
+    pj_uint16_t		max_retries;
+
 } pj_http_req_param;
 
 /**

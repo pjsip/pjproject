@@ -195,8 +195,18 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
 		   pjsip_event *e)
 {
     pjsip_inv_state prev_state = inv->state;
+    pj_bool_t dont_notify = PJ_FALSE;
     pj_status_t status;
 
+    /* Prevent STATE_CALLING from being reported more than once because
+     * of authentication
+     * https://trac.pjsip.org/repos/ticket/1318
+     */
+    if (state==PJSIP_INV_STATE_CALLING && 
+	(inv->cb_called & (1 << PJSIP_INV_STATE_CALLING)) != 0)
+    {
+	dont_notify = PJ_TRUE;
+    }
 
     /* If state is confirmed, check that SDP negotiation is done,
      * otherwise disconnect the session.
@@ -224,8 +234,11 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
     pj_assert(inv->state != PJSIP_INV_STATE_DISCONNECTED ||
 	      inv->cause != 0);
 
+    /* Mark the callback as called for this state */
+    inv->cb_called |= (1 << state);
+
     /* Call on_state_changed() callback. */
-    if (mod_inv.cb.on_state_changed && inv->notify)
+    if (mod_inv.cb.on_state_changed && inv->notify && !dont_notify)
 	(*mod_inv.cb.on_state_changed)(inv, e);
 
     /* Only decrement when previous state is not already DISCONNECTED */
@@ -4115,6 +4128,16 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 
 		/* Not Acceptable */
 		const pjsip_hdr *accept;
+
+		/* The incoming SDP is unacceptable. If the SDP negotiator
+		 * state has just been changed, i.e: DONE -> REMOTE_OFFER,
+		 * revert it back.
+		 */
+		if (pjmedia_sdp_neg_get_state(inv->neg) ==
+		    PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER)
+		{
+		    pjmedia_sdp_neg_cancel_offer(inv->neg);
+		}
 
 		status = pjsip_dlg_create_response(inv->dlg, rdata, 
 						   488, NULL, &tdata);

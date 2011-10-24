@@ -2967,6 +2967,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-codec\opencore_amrnb.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-codec\passthrough.c"
 				>
 			</File>
@@ -3099,6 +3103,10 @@
 			</File>
 			<File
 				RelativePath="..\include\pjmedia-codec\l16.h"
+				>
+			</File>
+			<File
+				RelativePath="..\include\pjmedia-codec\opencore_amrnb.h"
 				>
 			</File>
 			<File

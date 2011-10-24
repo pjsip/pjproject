@@ -668,6 +668,16 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_POOL_TSX_INC		256
 #endif
 
+/**
+ * Delay for non-100 1xx retransmission, in seconds.
+ * Set to 0 to disable this feature.
+ *
+ * Default: 60 seconds
+ */
+#ifndef PJSIP_TSX_1XX_RETRANS_DELAY
+#   define PJSIP_TSX_1XX_RETRANS_DELAY	60
+#endif
+
 #define PJSIP_MAX_TSX_KEY_LEN		(PJSIP_MAX_URL_SIZE*2)
 
 /* User agent. */

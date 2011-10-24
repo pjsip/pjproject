@@ -510,7 +510,7 @@ static int send_recv_test(int sock_type,
 	}
 	if (srclen != addrlen)
 	    return -151;
-	if (pj_memcmp(&addr, srcaddr, srclen) != 0) {
+	if (pj_sockaddr_cmp(&addr, srcaddr) != 0) {
 	    char srcaddr_str[32], addr_str[32];
 	    strcpy(srcaddr_str, pj_inet_ntoa(srcaddr->sin_addr));
 	    strcpy(addr_str, pj_inet_ntoa(addr.sin_addr));

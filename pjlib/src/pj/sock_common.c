@@ -784,6 +784,8 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     addr->addr.sa_family = (pj_uint16_t)af;
     PJ_SOCKADDR_RESET_LEN(addr);
 
+#if !defined(PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION) || \
+    PJ_GETHOSTIP_DISABLE_LOCAL_RESOLUTION == 0
     /* Get hostname's IP address */
     count = 1;
     status = pj_getaddrinfo(af, pj_gethostname(), &count, &ai);
@@ -797,7 +799,10 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
 	TRACE_((THIS_FILE, "hostname IP is %s",
 		pj_sockaddr_print(&ai.ai_addr, strip, sizeof(strip), 0)));
     }
-
+#else
+    PJ_UNUSED_ARG(ai);
+    PJ_UNUSED_ARG(count);
+#endif
 
     /* Get default interface (interface for default route) */
     if (cand_cnt < PJ_ARRAY_SIZE(cand_addr)) {
