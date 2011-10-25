@@ -4511,6 +4511,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 		acc_cfg.cred_info[0].data = pj_str(passwd);
 
 		acc_cfg.rtp_cfg = app_config.rtp_cfg;
+		app_config_init_video(&acc_cfg);
 
 		status = pjsua_acc_add(&acc_cfg, PJ_TRUE, NULL);
 		if (status != PJ_SUCCESS) {
@@ -5636,6 +5637,8 @@ pj_status_t app_init(int argc, char *argv[])
 	app_config.acc_cfg[i].rtp_cfg = app_config.rtp_cfg;
 	app_config.acc_cfg[i].reg_retry_interval = 300;
 	app_config.acc_cfg[i].reg_first_retry_interval = 60;
+
+	app_config_init_video(&app_config.acc_cfg[i]);
 
 	status = pjsua_acc_add(&app_config.acc_cfg[i], PJ_TRUE, NULL);
 	if (status != PJ_SUCCESS)
