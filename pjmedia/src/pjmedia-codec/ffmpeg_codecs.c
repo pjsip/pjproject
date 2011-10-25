@@ -652,7 +652,16 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
 			       "format %d", *p));
 		    continue;
 		}
-		raw_fmt[raw_fmt_cnt++] = fmt_id;
+		
+		//raw_fmt[raw_fmt_cnt++] = fmt_id;
+		/* Disable some formats due to H.264 error:
+		 * x264 [error]: baseline profile doesn't support 4:4:4
+		 */
+		if (desc->info.pt != PJMEDIA_RTP_PT_H264 ||
+		    fmt_id != PJMEDIA_FORMAT_RGB24)
+		{
+		    raw_fmt[raw_fmt_cnt++] = fmt_id;
+		}
 	    }
 
 	    if (raw_fmt_cnt == 0) {
