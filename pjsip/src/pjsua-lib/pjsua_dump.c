@@ -148,7 +148,7 @@ static unsigned dump_media_stat(const char *indent,
 
     len = pj_ansi_snprintf(p, end-p,
 	   "%s     TX %s last update:%s\n"
-	   "%s        total %spkt %sB (%sB +IP hdr) @avg %sbps/%sbps\n"
+	   "%s        total %spkt %sB (%sB +IP hdr) @avg=%sbps/%sbps\n"
 	   "%s        pkt loss=%d (%3.1f%%), dup=%d (%3.1f%%), reorder=%d (%3.1f%%)\n"
 	   "%s              (msec)    min     avg     max     last    dev \n"
 	   "%s        loss period: %7.3f %7.3f %7.3f %7.3f %7.3f\n"
