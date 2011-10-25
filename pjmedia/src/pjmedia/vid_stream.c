@@ -121,6 +121,8 @@ struct pjmedia_vid_stream
 
     unsigned		     dec_max_size;  /**< Size of decoded/raw picture*/
     pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
+    pjmedia_event            fmt_event;	    /**< Buffered fmt_changed event
+                                                 to avoid deadlock	    */
 
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
     unsigned		     frame_ts_len;  /**< Frame length in timestamp. */
@@ -346,20 +348,15 @@ static pj_status_t stream_event_cb(pjmedia_event_subscription *esub,
 	/* This is codec event */
 	switch (event->type) {
 	case PJMEDIA_EVENT_FMT_CHANGED:
-	    /* Update param from codec */
-	    pjmedia_vid_codec_get_param(stream->codec, stream->info.codec_param);
-
-	    /* Update decoding channel port info */
-	    pjmedia_format_copy(&stream->dec->port.info.fmt,
-				&stream->info.codec_param->dec_fmt);
-
 	    /* we process the event */
 	    ++event->proc_cnt;
 
-	    dump_port_info(event->data.fmt_changed.dir==PJMEDIA_DIR_DECODING ?
-			    stream->dec : stream->enc,
-			  "changed");
-	    break;
+	    /* Copy the event to avoid deadlock if we publish the event
+	     * now. This happens because fmt_event may trigger restart
+	     * while we're still holding the jb_mutex.
+	     */
+	    pj_memcpy(&stream->fmt_event, event, sizeof(*event));
+	    return PJ_SUCCESS;
 	default:
 	    break;
 	}
@@ -1070,6 +1067,28 @@ static pj_status_t get_frame(pjmedia_port *port,
 	frame->type = PJMEDIA_FRAME_TYPE_NONE;
 	frame->size = 0;
 	return PJ_SUCCESS;
+    }
+
+    /* Report pending events. Do not publish the event while holding the
+     * jb_mutex as that would lead to deadlock. It should be safe to
+     * operate on fmt_event without the mutex because format change normally
+     * would only occur once during the start of the media.
+     */
+    if (stream->fmt_event.type != PJMEDIA_EVENT_NONE) {
+	/* Update param from codec */
+	pjmedia_vid_codec_get_param(stream->codec, stream->info.codec_param);
+
+	/* Update decoding channel port info */
+	pjmedia_format_copy(&stream->dec->port.info.fmt,
+			    &stream->info.codec_param->dec_fmt);
+
+	dump_port_info(stream->fmt_event.data.fmt_changed.dir==PJMEDIA_DIR_DECODING ?
+			stream->dec : stream->enc,
+		      "changed");
+
+	pjmedia_event_publish(&stream->epub, &stream->fmt_event);
+
+	stream->fmt_event.type = PJMEDIA_EVENT_NONE;
     }
 
     pj_mutex_lock( stream->jb_mutex );
