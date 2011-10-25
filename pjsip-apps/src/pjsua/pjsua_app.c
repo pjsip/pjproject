@@ -4075,7 +4075,7 @@ static void vid_handle_menu(char *menuin)
 	    size.w = atoi(argv[4]);
 	    size.h = atoi(argv[5]);
 	    status = pjsua_vid_win_set_size(wid, &size);
-	} else if (strcmp(argv[2], "arrange")==0) {
+	} else if (argc==3 && strcmp(argv[2], "arrange")==0) {
 	    arrange_window(PJSUA_INVALID_ID);
 	} else
 	    goto on_error;
