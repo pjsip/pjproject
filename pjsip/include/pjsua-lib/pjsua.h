@@ -563,7 +563,7 @@ typedef enum pjsua_create_media_transport_flag
 typedef struct pjsua_callback
 {
     /**
-     * Notify application when invite state has changed.
+     * Notify application when call state has changed.
      * Application may then query the call info to get the
      * detail call states by calling  pjsua_call_get_info() function.
      *

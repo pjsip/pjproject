@@ -777,10 +777,12 @@ static void on_ice_complete(pjmedia_transport *tp,
 
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
+        PJSUA_LOCK();
         call_med->tp_ready = result;
         if (call_med->med_create_cb)
             (*call_med->med_create_cb)(call_med, result,
                                        call_med->call->secure_level, NULL);
+        PJSUA_UNLOCK();
 	break;
     case PJ_ICE_STRANS_OP_NEGOTIATION:
 	if (result != PJ_SUCCESS) {
@@ -1419,24 +1421,15 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 
         set_media_tp_state(call_med, PJSUA_MED_TP_CREATING);
 
-        if (async) {
-            call_med->med_create_cb = &call_media_init_cb;
-            call_med->med_init_cb = cb;
-        }
-
 	if (pjsua_var.media_cfg.enable_ice) {
 	    status = create_ice_media_transport(tcfg, call_med, async);
-	    if (async && status == PJ_SUCCESS) {
-		/* Callback has been called. */
-		call_med->med_init_cb = NULL;
-		/* We cannot return PJ_SUCCESS here since we already call
-		 * the callback.
-		 */
-		return PJ_EPENDING;
-	    } else if (async && status == PJ_EPENDING) {
+            if (async && status == PJ_EPENDING) {
 	        /* We will resume call media initialization in the
 	         * on_ice_complete() callback.
 	         */
+                call_med->med_create_cb = &call_media_init_cb;
+                call_med->med_init_cb = cb;
+
 	        return PJ_EPENDING;
 	    }
 	} else {

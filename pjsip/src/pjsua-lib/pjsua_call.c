@@ -464,6 +464,9 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     return PJ_SUCCESS;
 
 on_error:
+    if (inv == NULL && call_id != -1 && pjsua_var.ua_cfg.cb.on_call_state)
+        (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, NULL);
+
     if (dlg) {
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
@@ -1401,6 +1404,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 					 pjsua_call_info *info)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     unsigned mi;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -1414,40 +1418,40 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     PJSUA_LOCK();
 
     call = &pjsua_var.calls[call_id];
-
-    if (!call->inv) {
+    dlg = (call->inv ? call->inv->dlg : call->async_call.dlg);
+    if (!dlg) {
 	PJSUA_UNLOCK();
 	return PJSIP_ESESSIONTERMINATED;
     }
 
     /* id and role */
     info->id = call_id;
-    info->role = call->inv->role;
+    info->role = dlg->role;
     info->acc_id = call->acc_id;
 
     /* local info */
     info->local_info.ptr = info->buf_.local_info;
-    pj_strncpy(&info->local_info, &call->inv->dlg->local.info_str,
+    pj_strncpy(&info->local_info, &dlg->local.info_str,
 	       sizeof(info->buf_.local_info));
 
     /* local contact */
     info->local_contact.ptr = info->buf_.local_contact;
     info->local_contact.slen = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
-					       call->inv->dlg->local.contact->uri,
+					       dlg->local.contact->uri,
 					       info->local_contact.ptr,
 					       sizeof(info->buf_.local_contact));
 
     /* remote info */
     info->remote_info.ptr = info->buf_.remote_info;
-    pj_strncpy(&info->remote_info, &call->inv->dlg->remote.info_str,
+    pj_strncpy(&info->remote_info, &dlg->remote.info_str,
 	       sizeof(info->buf_.remote_info));
 
     /* remote contact */
-    if (call->inv->dlg->remote.contact) {
+    if (dlg->remote.contact) {
 	int len;
 	info->remote_contact.ptr = info->buf_.remote_contact;
 	len = pjsip_uri_print(PJSIP_URI_IN_CONTACT_HDR,
-			      call->inv->dlg->remote.contact->uri,
+			      dlg->remote.contact->uri,
 			      info->remote_contact.ptr,
 			      sizeof(info->buf_.remote_contact));
 	if (len < 0) len = 0;
@@ -1458,15 +1462,15 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 
     /* call id */
     info->call_id.ptr = info->buf_.call_id;
-    pj_strncpy(&info->call_id, &call->inv->dlg->call_id->id,
+    pj_strncpy(&info->call_id, &dlg->call_id->id,
 	       sizeof(info->buf_.call_id));
 
     /* state, state_text */
-    info->state = call->inv->state;
+    info->state = (call->inv? call->inv->state: PJSIP_INV_STATE_DISCONNECTED);
     info->state_text = pj_str((char*)pjsip_inv_state_name(info->state));
 
     /* If call is disconnected, set the last_status from the cause code */
-    if (call->inv->state >= PJSIP_INV_STATE_DISCONNECTED) {
+    if (call->inv && call->inv->state >= PJSIP_INV_STATE_DISCONNECTED) {
 	/* last_status, last_status_text */
 	info->last_status = call->inv->cause;
 
