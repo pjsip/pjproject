@@ -826,7 +826,8 @@ static void on_ice_complete(pjmedia_transport *tp,
 
 		PJ_LOG(4,(THIS_FILE, 
 		          "ICE default transport address has changed for "
-			  "call %d, sending %s", call_med->call->index,
+			  "call %d, sending %s",
+			  call_med->call->index,
 			  (use_update ? "UPDATE" : "re-INVITE")));
 
 		if (use_update)
@@ -1292,6 +1293,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
                                       int *sip_err_code)
 {
     pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+    pjmedia_transport_info tpinfo;
     int err_code = 0;
 
     if (status != PJ_SUCCESS)
@@ -1351,6 +1353,13 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     call_med->tp_orig = call_med->tp;
     PJ_UNUSED_ARG(security_level);
 #endif
+
+
+    pjmedia_transport_info_init(&tpinfo);
+    pjmedia_transport_get_info(call_med->tp, &tpinfo);
+
+    pj_sockaddr_cp(&call_med->rtp_addr, &tpinfo.sock_info.rtp_addr_name);
+
 
 on_error:
     if (status != PJ_SUCCESS && call_med->tp) {
