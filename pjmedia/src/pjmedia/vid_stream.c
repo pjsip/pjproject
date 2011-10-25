@@ -1855,7 +1855,7 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
 
 	/* Then get the codec info from the codec manager */
 	pj_ansi_snprintf(codec_id, sizeof(codec_id), "%.*s/", 
-			 rtpmap->enc_name.slen, rtpmap->enc_name.ptr);
+			 (int)rtpmap->enc_name.slen, rtpmap->enc_name.ptr);
 	codec_id_st = pj_str(codec_id);
 	i = 1;
 	status = pjmedia_vid_codec_mgr_find_codecs_by_id(mgr, &codec_id_st,
