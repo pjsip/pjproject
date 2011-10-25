@@ -644,6 +644,16 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 }
 
 
+/* Get config */
+PJ_DEF(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
+                                         pjsua_acc_config *acc_cfg)
+{
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc)
+                     && pjsua_var.acc[acc_id].valid, PJ_EINVAL);
+    pj_memcpy(acc_cfg, &pjsua_var.acc[acc_id].cfg, sizeof(*acc_cfg));
+    return PJ_SUCCESS;
+}
+
 /*
  * Modify account information.
  */

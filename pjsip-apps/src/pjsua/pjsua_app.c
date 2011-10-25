@@ -52,6 +52,15 @@ struct call_data
     pj_bool_t		    ring_on;
 };
 
+/* Video settings */
+struct app_vid
+{
+    unsigned		    vid_cnt;
+    int			    vcapture_dev;
+    int			    vrender_dev;
+    pj_bool_t		    in_auto_show;
+    pj_bool_t		    out_auto_transmit;
+};
 
 /* Pjsua application data */
 static struct app_config
@@ -124,7 +133,7 @@ static struct app_config
     int			    ring_cnt;
     pjmedia_port	   *ring_port;
 
-    int			    vcapture_dev, vrender_dev;
+    struct app_vid	    vid;
 } app_config;
 
 
@@ -391,8 +400,8 @@ static void default_config(struct app_config *cfg)
     for (i=0; i<PJ_ARRAY_SIZE(cfg->buddy_cfg); ++i)
 	pjsua_buddy_config_default(&cfg->buddy_cfg[i]);
 
-    cfg->vcapture_dev = PJSUA_INVALID_ID;
-    cfg->vrender_dev = PJSUA_INVALID_ID;
+    cfg->vid.vcapture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    cfg->vid.vrender_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
 }
 
 
@@ -1388,11 +1397,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_CAPTURE_DEV:
-	    cfg->capture_dev = atoi(pj_optarg);
+	    cfg->vid.vcapture_dev = atoi(pj_optarg);
 	    break;
 
 	case OPT_PLAYBACK_DEV:
-	    cfg->playback_dev = atoi(pj_optarg);
+	    cfg->vid.vrender_dev = atoi(pj_optarg);
 	    break;
 
 	case OPT_STDOUT_REFRESH:
@@ -1446,23 +1455,22 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.qos_params.dscp_val = 0x18;
 	    break;
 	case OPT_VIDEO:
-	    ++cur_acc->max_video_cnt;
-	    cur_acc->vid_in_auto_show = PJ_TRUE;
-	    cur_acc->vid_out_auto_transmit = PJ_TRUE;
-	    PJ_TODO(implement_pjsua_option_for_vid_auto_show_and_transmit);
+	    app_config.vid.vid_cnt = 1;
+	    app_config.vid.in_auto_show = PJ_TRUE;
+	    app_config.vid.out_auto_transmit = PJ_TRUE;
 	    break;
 	case OPT_EXTRA_AUDIO:
 	    ++cur_acc->max_audio_cnt;
 	    break;
 
 	case OPT_VCAPTURE_DEV:
-	    cfg->vcapture_dev = atoi(pj_optarg);
-	    cur_acc->vid_cap_dev = cfg->vcapture_dev;
+	    cfg->vid.vcapture_dev = atoi(pj_optarg);
+	    cur_acc->vid_cap_dev = cfg->vid.vcapture_dev;
 	    break;
 
 	case OPT_VRENDER_DEV:
-	    cfg->vrender_dev = atoi(pj_optarg);
-	    cur_acc->vid_rend_dev = cfg->vrender_dev;
+	    cfg->vid.vrender_dev = atoi(pj_optarg);
+	    cur_acc->vid_rend_dev = cfg->vid.vrender_dev;
 	    break;
 
 	default:
@@ -2041,12 +2049,12 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
-    if (config->vcapture_dev != PJSUA_INVALID_ID) {
-	pj_ansi_sprintf(line, "--vcapture-dev %d\n", config->vcapture_dev);
+    if (config->vid.vcapture_dev != PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
+	pj_ansi_sprintf(line, "--vcapture-dev %d\n", config->vid.vcapture_dev);
 	pj_strcat2(&cfg, line);
     }
-    if (config->vrender_dev != PJSUA_INVALID_ID) {
-	pj_ansi_sprintf(line, "--vrender-dev %d\n", config->vrender_dev);
+    if (config->vid.vrender_dev != PJMEDIA_VID_DEFAULT_RENDER_DEV) {
+	pj_ansi_sprintf(line, "--vrender-dev %d\n", config->vid.vrender_dev);
 	pj_strcat2(&cfg, line);
     }
 
@@ -3418,6 +3426,12 @@ static void vid_show_help(void)
     puts("|                            Video commands:                                  |");
     puts("|                                                                             |");
     puts("| vid help                  Show this help screen                             |");
+    puts("| vid acc show              Show current account video settings               |");
+    puts("| vid acc enable|disable    Enable or disable video on current account        |");
+    puts("| vid acc autorx on|off     Automatically show incoming video on/off          |");
+    puts("| vid acc autotx on|off     Automatically offer video on/off                  |");
+    puts("| vid acc cap ID            Set default capture device for current acc        |");
+    puts("| vid acc rend ID           Set default renderer device for current acc       |");
     puts("| vid call rx on|off N      Enable/disable video rx for stream N in curr call |");
     puts("| vid call tx on|off N      Enable/disable video tx for stream N in curr call |");
     puts("| vid call add              Add video stream for current call                 |");
@@ -3847,6 +3861,32 @@ static void vid_list_devs(void)
     }
 }
 
+static void app_config_init_video(pjsua_acc_config *acc_cfg)
+{
+    acc_cfg->max_video_cnt = app_config.vid.vid_cnt;
+    acc_cfg->vid_in_auto_show = app_config.vid.in_auto_show;
+    acc_cfg->vid_out_auto_transmit = app_config.vid.out_auto_transmit;
+    acc_cfg->vid_cap_dev = app_config.vid.vcapture_dev;
+    acc_cfg->vid_rend_dev = app_config.vid.vrender_dev;
+}
+
+static void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
+{
+    PJ_LOG(3,(THIS_FILE,
+	      "Account %d:\n"
+	      "  Video count:      %d\n"
+	      "  RX auto show:     %d\n"
+	      "  TX auto transmit: %d\n"
+	      "  Capture dev:      %d\n"
+	      "  Render dev:       %d",
+	      acc_id,
+	      acc_cfg->max_video_cnt,
+	      acc_cfg->vid_in_auto_show,
+	      acc_cfg->vid_out_auto_transmit,
+	      acc_cfg->vid_cap_dev,
+	      acc_cfg->vid_rend_dev));
+}
+
 static void vid_handle_menu(char *menuin)
 {
     char *argv[8];
@@ -3861,8 +3901,55 @@ static void vid_handle_menu(char *menuin)
 
     if (argc == 1 || strcmp(argv[1], "help")==0) {
 	vid_show_help();
+    } else if (strcmp(argv[1], "acc")==0) {
+	pjsua_acc_config acc_cfg;
+	pj_bool_t changed = PJ_FALSE;
+
+	pjsua_acc_get_config(current_acc, &acc_cfg);
+
+	if (argc == 3 && strcmp(argv[2], "show")==0) {
+	    app_config_show_video(current_acc, &acc_cfg);
+
+	} else if (argc == 3 && (strcmp(argv[2], "enable")==0 ||
+			         strcmp(argv[2], "disable")==0))
+        {
+	    int enabled = (strcmp(argv[2], "enable")==0);
+	    acc_cfg.max_video_cnt = (enabled ? 1 : 0);
+	    if (enabled) {
+		app_config_init_video(&acc_cfg);
+		acc_cfg.max_video_cnt = (enabled ? 1 : 0);
+	    }
+	    changed = PJ_TRUE;
+	} else if (argc == 4 && strcmp(argv[2], "autorx")==0) {
+	    int on = (strcmp(argv[3], "on")==0);
+	    acc_cfg.vid_in_auto_show = on;
+	    changed = PJ_TRUE;
+	} else if (argc == 4 && strcmp(argv[2], "autotx")==0) {
+	    int on = (strcmp(argv[3], "on")==0);
+	    acc_cfg.vid_out_auto_transmit = on;
+	    changed = PJ_TRUE;
+	} else if (argc == 4 && strcmp(argv[2], "cap")==0) {
+	    int dev = atoi(argv[3]);
+	    acc_cfg.vid_cap_dev = dev;
+	    changed = PJ_TRUE;
+	} else if (argc == 4 && strcmp(argv[2], "rend")==0) {
+	    int dev = atoi(argv[3]);
+	    acc_cfg.vid_rend_dev = dev;
+	    changed = PJ_TRUE;
+	} else {
+	    goto on_error;
+	}
+
+	if (changed) {
+	    pj_status_t status = pjsua_acc_modify(current_acc, &acc_cfg);
+	    if (status != PJ_SUCCESS)
+		PJ_PERROR(1,(THIS_FILE, status, "Error modifying account %d",
+			     current_acc));
+	}
+
     } else if (strcmp(argv[1], "call")==0) {
 	pjsua_call_vid_strm_op_param param;
+	pj_status_t status = PJ_SUCCESS;
 
 	pjsua_call_vid_strm_op_param_default(&param);
 
@@ -3881,7 +3968,9 @@ static void vid_handle_menu(char *menuin)
 	    if (on) param.dir = (si.info.vid.dir | PJMEDIA_DIR_DECODING);
 	    else param.dir = (si.info.vid.dir & PJMEDIA_DIR_ENCODING);
 
-	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_CHANGE_DIR, &param);
+	    status = pjsua_call_set_vid_strm(current_call,
+	                                     PJSUA_CALL_VID_STRM_CHANGE_DIR,
+	                                     &param);
 	}
 	else if (argc == 5 && strcmp(argv[2], "tx")==0) {
 	    pj_bool_t on = (strcmp(argv[3], "on") == 0);
@@ -3890,10 +3979,11 @@ static void vid_handle_menu(char *menuin)
 
 	    param.med_idx = atoi(argv[4]);
 
-	    pjsua_call_set_vid_strm(current_call, op, &param);
+	    status = pjsua_call_set_vid_strm(current_call, op, &param);
 	}
 	else if (argc == 3 && strcmp(argv[2], "add")==0) {
-	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_ADD, NULL);
+	    status = pjsua_call_set_vid_strm(current_call,
+	                                     PJSUA_CALL_VID_STRM_ADD, NULL);
 	}
 	else if (argc >= 3 && 
 		 (strcmp(argv[2], "disable")==0 || strcmp(argv[2], "enable")==0))
@@ -3904,14 +3994,21 @@ static void vid_handle_menu(char *menuin)
 
 	    param.med_idx = argc >= 4? atoi(argv[3]) : -1;
 	    param.dir = PJMEDIA_DIR_ENCODING_DECODING;
-	    pjsua_call_set_vid_strm(current_call, op, &param);
+	    status = pjsua_call_set_vid_strm(current_call, op, &param);
 	}
 	else if (argc >= 3 && strcmp(argv[2], "cap")==0) {
 	    param.med_idx = argc >= 4? atoi(argv[3]) : -1;
 	    param.cap_dev = argc >= 5? atoi(argv[4]) : PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
-	    pjsua_call_set_vid_strm(current_call, PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV, &param);
+	    status = pjsua_call_set_vid_strm(current_call,
+	                                     PJSUA_CALL_VID_STRM_CHANGE_CAP_DEV,
+	                                     &param);
 	} else
 	    goto on_error;
+
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "Error modifying video stream"));
+	}
+
     } else if (argc >= 3 && strcmp(argv[1], "dev")==0) {
 	if (strcmp(argv[2], "list")==0) {
 	    vid_list_devs();
@@ -3940,6 +4037,8 @@ static void vid_handle_menu(char *menuin)
 	} else
 	    goto on_error;
     } else if (strcmp(argv[1], "win")==0) {
+	pj_status_t status = PJ_SUCCESS;
+
 	if (argc==3 && strcmp(argv[2], "list")==0) {
 	    pjsua_vid_win_id wids[PJSUA_MAX_VID_WINS];
 	    unsigned i, cnt = PJ_ARRAY_SIZE(wids);
@@ -3961,25 +4060,30 @@ static void vid_handle_menu(char *menuin)
 	{
 	    pj_bool_t show = (strcmp(argv[2], "show")==0);
 	    pjsua_vid_win_id wid = atoi(argv[3]);
-	    pjsua_vid_win_set_show(wid, show);
+	    status = pjsua_vid_win_set_show(wid, show);
 	} else if (argc==6 && strcmp(argv[2], "move")==0) {
 	    pjsua_vid_win_id wid = atoi(argv[3]);
 	    pjmedia_coord pos;
 
 	    pos.x = atoi(argv[4]);
 	    pos.y = atoi(argv[5]);
-	    pjsua_vid_win_set_pos(wid, &pos);
+	    status = pjsua_vid_win_set_pos(wid, &pos);
 	} else if (argc==6 && strcmp(argv[2], "resize")==0) {
 	    pjsua_vid_win_id wid = atoi(argv[3]);
 	    pjmedia_rect_size size;
 
 	    size.w = atoi(argv[4]);
 	    size.h = atoi(argv[5]);
-	    pjsua_vid_win_set_size(wid, &size);
+	    status = pjsua_vid_win_set_size(wid, &size);
 	} else if (strcmp(argv[2], "arrange")==0) {
 	    arrange_window(PJSUA_INVALID_ID);
 	} else
 	    goto on_error;
+
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "Window operation error"));
+	}
+
     } else if (strcmp(argv[1], "codec")==0) {
 	pjmedia_vid_codec_info ci[PJMEDIA_CODEC_MGR_MAX_CODECS];
 	unsigned prio[PJMEDIA_CODEC_MGR_MAX_CODECS];
@@ -5420,6 +5524,12 @@ pj_status_t app_init(int argc, char *argv[])
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	if (PJMEDIA_HAS_VIDEO) {
+	    pjsua_acc_config acc_cfg;
+	    pjsua_acc_get_config(aid, &acc_cfg);
+	    app_config_init_video(&acc_cfg);
+	    pjsua_acc_modify(aid, &acc_cfg);
+	}
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
@@ -5453,6 +5563,12 @@ pj_status_t app_init(int argc, char *argv[])
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	if (PJMEDIA_HAS_VIDEO) {
+	    pjsua_acc_config acc_cfg;
+	    pjsua_acc_get_config(aid, &acc_cfg);
+	    app_config_init_video(&acc_cfg);
+	    pjsua_acc_modify(aid, &acc_cfg);
+	}
 	//pjsua_acc_set_transport(aid, transport_id);
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
@@ -5579,18 +5695,6 @@ pj_status_t app_init(int argc, char *argv[])
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }
-
-#if PJSUA_HAS_VIDEO
-    if (app_config.vcapture_dev != PJSUA_INVALID_ID ||
-        app_config.vrender_dev  != PJSUA_INVALID_ID) 
-    {
-	//status = pjsua_vid_set_dev(app_config.vcapture_dev,
-	//			   app_config.vrender_dev);
-	PJ_TODO(vid_implement_pjsua_vid_set_dev);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-    }
-#endif
 
     return PJ_SUCCESS;
 

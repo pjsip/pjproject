@@ -3092,6 +3092,22 @@ PJ_DECL(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id);
 
 
 /**
+ * Get current config for the account. This will copy current account setting
+ * to the specified parameter. Note that all pointers in the settings will
+ * point to the original settings in the account and application must not
+ * modify the values in any way. Application must also take care that these
+ * data is only valid until the account is destroyed.
+ *
+ * @param acc_id	The account ID.
+ * @param acc_cfg	Structure to receive the settings.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_acc_get_config(pjsua_acc_id acc_id,
+                                          pjsua_acc_config *acc_cfg);
+
+
+/**
  * Modify account information.
  *
  * @param acc_id	Id of the account to be modified.
