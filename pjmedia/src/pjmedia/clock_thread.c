@@ -221,7 +221,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
     clock->running = PJ_TRUE;
     clock->quitting = PJ_FALSE;
 
-    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0) {
+    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0 && !clock->thread) {
 	status = pj_thread_create(clock->pool, "clock", &clock_thread, clock,
 				  0, 0, &clock->thread);
 	if (status != PJ_SUCCESS) {
@@ -245,8 +245,11 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
     clock->quitting = PJ_TRUE;
 
     if (clock->thread) {
-	pj_thread_join(clock->thread);
-	clock->thread = NULL;
+	if (pj_thread_join(clock->thread) == PJ_SUCCESS) {
+	    clock->thread = NULL;
+	} else {
+	    clock->quitting = PJ_FALSE;
+	}
     }
 
     return PJ_SUCCESS;
@@ -373,6 +376,10 @@ static int clock_thread(void *arg)
 	/* Call callback, if any */
 	if (clock->cb)
 	    (*clock->cb)(&clock->timestamp, clock->user_data);
+
+	/* Best effort way to detect if we've been destroyed in the callback */
+	if (clock->quitting)
+	    break;
 
 	/* Increment timestamp */
 	clock->timestamp.u64 += clock->timestamp_inc;
