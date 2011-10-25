@@ -462,9 +462,13 @@ PJ_DEF(pj_status_t) pjmedia_wav_player_port_set_pos(pjmedia_port *port,
 
     fport = (struct file_reader_port*) port;
 
-    PJ_ASSERT_RETURN(bytes < fport->fsize - fport->start_data, PJ_EINVAL);
+    /* Check that this offset does not pass the audio-data (in case of
+     * extra chunk after audio data chunk
+     */
+    PJ_ASSERT_RETURN(bytes < fport->data_len, PJ_EINVAL);
 
     fport->fpos = fport->start_data + bytes;
+    fport->data_left = fport->data_len - bytes;
     pj_file_setpos( fport->fd, fport->fpos, PJ_SEEK_SET);
 
     fport->eof = PJ_FALSE;
