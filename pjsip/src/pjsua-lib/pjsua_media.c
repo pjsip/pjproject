@@ -1687,10 +1687,13 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
     if (async) {
         call->med_ch_cb = cb;
-        if (rem_sdp) {
-            call->async_call.rem_sdp =
-                pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
-        }
+    }
+
+    if (rem_sdp) {
+        call->async_call.rem_sdp =
+            pjmedia_sdp_session_clone(call->inv->pool_prov, rem_sdp);
+    } else {
+	call->async_call.rem_sdp = NULL;
     }
 
     call->async_call.pool_prov = tmp_pool;
