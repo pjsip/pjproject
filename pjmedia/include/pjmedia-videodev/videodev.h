@@ -111,6 +111,24 @@ typedef struct pjmedia_vid_dev_switch_param
 
 
 /**
+ * Enumeration of window flags.
+ */
+typedef enum pjmedia_vid_dev_wnd_flag
+{
+    /**
+     * Window with border.
+     */
+    PJMEDIA_VID_DEV_WND_BORDER = 1,
+
+    /**
+     * Window can be resized.
+     */
+    PJMEDIA_VID_DEV_WND_RESIZABLE = 2
+
+} pjmedia_vid_dev_wnd_flag;
+
+
+/**
  * Device index constants.
  */
 enum
@@ -237,6 +255,13 @@ typedef enum pjmedia_vid_dev_cap
      * structure.
      */
     PJMEDIA_VID_DEV_CAP_SWITCH = 256,
+
+    /**
+     * Support for setting the output video window's flags.
+     * The value of this capability is a bitmask combination of
+     * #pjmedia_vid_dev_wnd_flag.
+     */
+    PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS = 512,
 
     /**
      * End of standard capability
@@ -420,6 +445,12 @@ typedef struct pjmedia_vid_dev_param
      * set in the flags.
      */
     pjmedia_orient orient;
+
+    /**
+     * Video window flags. This setting is optional, and will only be used
+     * if PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS is set in the flags.
+     */
+    unsigned window_flags;
 
 } pjmedia_vid_dev_param;
 

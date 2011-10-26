@@ -2746,6 +2746,14 @@ typedef struct pjsua_acc_config
     pj_bool_t        vid_out_auto_transmit;
 
     /**
+     * Specify video window's flags. The value is a bitmask combination of
+     * #pjmedia_vid_dev_wnd_flag.
+     *
+     * Default: 0
+     */
+    unsigned         vid_wnd_flags;
+
+    /**
      * Specify the default capture device to be used by this account. If
      * \a vid_out_auto_transmit is enabled, this device will be used for
      * capturing video.
@@ -5737,6 +5745,14 @@ typedef struct pjsua_vid_preview_param
      * Default: PJ_TRUE.
      */
     pj_bool_t			show;
+
+    /**
+     * Window flags.  The value is a bitmask combination of
+     * #pjmedia_vid_dev_wnd_flag.
+     *
+     * Default: 0.
+     */
+    unsigned			wnd_flags;
 
 } pjsua_vid_preview_param;
 

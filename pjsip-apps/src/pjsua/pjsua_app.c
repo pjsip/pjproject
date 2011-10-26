@@ -3866,6 +3866,11 @@ static void app_config_init_video(pjsua_acc_config *acc_cfg)
     acc_cfg->max_video_cnt = app_config.vid.vid_cnt;
     acc_cfg->vid_in_auto_show = app_config.vid.in_auto_show;
     acc_cfg->vid_out_auto_transmit = app_config.vid.out_auto_transmit;
+    /* Note that normally GUI application will prefer a borderless
+     * window.
+     */
+    acc_cfg->vid_wnd_flags = PJMEDIA_VID_DEV_WND_BORDER |
+                             PJMEDIA_VID_DEV_WND_RESIZABLE;
     acc_cfg->vid_cap_dev = app_config.vid.vcapture_dev;
     acc_cfg->vid_rend_dev = app_config.vid.vrender_dev;
 }
@@ -4021,7 +4026,12 @@ static void vid_handle_menu(char *menuin)
 		pj_bool_t on = (strcmp(argv[3], "on") == 0);
 		int dev_id = atoi(argv[4]);
 		if (on) {
-		    pjsua_vid_preview_start(dev_id, NULL);
+                    pjsua_vid_preview_param param;
+
+                    pjsua_vid_preview_param_default(&param);
+                    param.wnd_flags = PJMEDIA_VID_DEV_WND_BORDER |
+                                      PJMEDIA_VID_DEV_WND_RESIZABLE;
+		    pjsua_vid_preview_start(dev_id, &param);
 		    arrange_window(pjsua_vid_preview_get_win(dev_id));
 		} else {
 		    pjsua_vid_win_id wid;

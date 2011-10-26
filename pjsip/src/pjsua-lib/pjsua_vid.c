@@ -388,6 +388,7 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 				  pjmedia_vid_dev_index rend_id,
 				  pjmedia_vid_dev_index cap_id,
 				  pj_bool_t show,
+                                  unsigned wnd_flags,
 				  pjsua_vid_win_id *id)
 {
     pj_bool_t enable_native_preview;
@@ -431,6 +432,10 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	    status = pjmedia_vid_dev_stream_set_cap(
 				    strm, PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE,
 				    &hide);
+
+	    pjmedia_vid_dev_stream_set_cap(
+                                strm, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS,
+				&wnd_flags);
 
 	    /* Done */
 	    *id = wid;
@@ -482,6 +487,8 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	if (w->is_native) {
 	    vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
 	    vp_param.vidparam.window_hide = !show;
+	    vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+	    vp_param.vidparam.window_flags = wnd_flags;
 	}
 
 	/* Normalize capture ID, in case it was set to
@@ -543,6 +550,8 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	vp_param.vidparam.disp_size = fmt->det.vid.size;
 	vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
 	vp_param.vidparam.window_hide = !show;
+        vp_param.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+        vp_param.vidparam.window_flags = wnd_flags;
 
 	status = pjmedia_vid_port_create(w->pool, &vp_param, &w->vp_rend);
 	if (status != PJ_SUCCESS)
@@ -786,6 +795,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 				    //acc->cfg.vid_rend_dev,
 				    PJSUA_INVALID_ID,
 				    acc->cfg.vid_in_auto_show,
+                                    acc->cfg.vid_wnd_flags,
 				    &wid);
 	    if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
@@ -825,6 +835,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	/* Setup encoding direction */
 	if (si->dir & PJMEDIA_DIR_ENCODING && !call->local_hold)
 	{
+            pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
 	    pjsua_vid_win *w;
 	    pjsua_vid_win_id wid;
 	    pj_bool_t just_created = PJ_FALSE;
@@ -855,6 +866,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 					//acc->cfg.vid_rend_dev,
 					//acc->cfg.vid_cap_dev,
 					PJSUA_HIDE_WINDOW,
+                                        acc->cfg.vid_wnd_flags,
 					&wid);
 		if (status != PJ_SUCCESS) {
 		pj_log_pop_indent();
@@ -1070,7 +1082,7 @@ PJ_DEF(pj_status_t) pjsua_vid_preview_start(pjmedia_vid_dev_index id,
     rend_id = prm->rend_id;
 
     status = create_vid_win(PJSUA_WND_TYPE_PREVIEW, NULL, rend_id, id,
-			    prm->show, &wid);
+			    prm->show, prm->wnd_flags, &wid);
     if (status != PJ_SUCCESS) {
 	PJSUA_UNLOCK();
 	pj_log_pop_indent();
@@ -1847,13 +1859,16 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
      */
     new_wid = vid_preview_get_win(cap_dev, PJ_FALSE);
     if (new_wid == PJSUA_INVALID_ID) {
+        pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+
 	/* Create preview video window */
 	status = create_vid_win(PJSUA_WND_TYPE_PREVIEW,
 				&media_port->info.fmt,
 				call_med->strm.v.rdr_dev,
 				cap_dev,
 				PJSUA_HIDE_WINDOW,
-				&new_wid);
+				acc->cfg.vid_wnd_flags,
+                                &new_wid);
 	if (status != PJ_SUCCESS)
 	    goto on_error;
     }

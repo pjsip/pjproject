@@ -493,6 +493,7 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
         ddi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT |
                          PJMEDIA_VID_DEV_CAP_OUTPUT_RESIZE;
         ddi->info.caps |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW;
+        ddi->info.caps |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
 
         for (j = 0; j < ddi->info.fmt_cnt; j++) {
             pjmedia_format *fmt = &ddi->info.fmt[j];
@@ -699,7 +700,16 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
 #endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
 
     if (!strm->window) {
-        Uint32 flags = /*SDL_WINDOW_RESIZABLE; */ SDL_WINDOW_BORDERLESS;
+        Uint32 flags = 0;
+        
+        if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS) {
+            if (!(strm->param.window_flags & PJMEDIA_VID_DEV_WND_BORDER))
+                flags |= SDL_WINDOW_BORDERLESS;
+            if (strm->param.window_flags & PJMEDIA_VID_DEV_WND_RESIZABLE)
+                flags |= SDL_WINDOW_RESIZABLE;
+        } else {
+            flags |= SDL_WINDOW_BORDERLESS;
+        }
 
         if (!((strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) &&
             strm->param.window_hide))
@@ -971,6 +981,11 @@ static pj_status_t sdl_stream_get_param(pjmedia_vid_dev_stream *s,
     {
 	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE;
     }
+    if (sdl_stream_get_cap(s, PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS,
+			   &pi->window_flags) == PJ_SUCCESS)
+    {
+	pi->flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+    }
 
     return PJ_SUCCESS;
 }
@@ -1037,7 +1052,15 @@ static pj_status_t get_cap(void *data)
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
 	Uint32 flag = SDL_GetWindowFlags(strm->window);
-	*((pj_bool_t *)pval) = (flag | SDL_WINDOW_HIDDEN)? PJ_TRUE: PJ_FALSE;
+	*((pj_bool_t *)pval) = (flag & SDL_WINDOW_HIDDEN)? PJ_TRUE: PJ_FALSE;
+	return PJ_SUCCESS;
+    } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS) {
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+        unsigned *wnd_flags = (unsigned *)pval;
+        if (!(flag & SDL_WINDOW_BORDERLESS))
+            *wnd_flags |= PJMEDIA_VID_DEV_WND_BORDER;
+        if (flag & SDL_WINDOW_RESIZABLE)
+            *wnd_flags |= PJMEDIA_VID_DEV_WND_RESIZABLE;
 	return PJ_SUCCESS;
     }
 

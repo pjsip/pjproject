@@ -46,7 +46,8 @@ static struct cap_info
     DEFINE_CAP("hide",          "Renderer hide"),
     DEFINE_CAP("preview",       "Input preview"),
     DEFINE_CAP("orientation",   "Video orientation"),
-    DEFINE_CAP("switch",        "Switch device")
+    DEFINE_CAP("switch",        "Switch device"),
+    DEFINE_CAP("wndflags",      "Window flags")
 };
 
 
@@ -188,6 +189,9 @@ static pj_status_t get_cap_pointer(const pjmedia_vid_dev_param *param,
      * param (it doesn't make sense to open a stream and tell it
      * to switch immediately).
      */
+    case PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS:
+	FIELD_INFO(window_flags);
+	break;
     default:
 	return PJMEDIA_EVID_INVCAP;
     }
