@@ -5586,6 +5586,8 @@ pj_status_t app_init(int argc, char *argv[])
 
     /* Add TCP transport unless it's disabled */
     if (!app_config.no_tcp) {
+	pjsua_acc_id aid;
+
 	status = pjsua_transport_create(PJSIP_TRANSPORT_TCP,
 					&tcp_cfg, 
 					&transport_id);
@@ -5594,6 +5596,12 @@ pj_status_t app_init(int argc, char *argv[])
 
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_TRUE, NULL);
+	if (PJMEDIA_HAS_VIDEO) {
+	    pjsua_acc_config acc_cfg;
+	    pjsua_acc_get_config(aid, &acc_cfg);
+	    app_config_init_video(&acc_cfg);
+	    pjsua_acc_modify(aid, &acc_cfg);
+	}
 	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
 
     }
@@ -5621,6 +5629,12 @@ pj_status_t app_init(int argc, char *argv[])
 	
 	/* Add local account */
 	pjsua_acc_add_local(transport_id, PJ_FALSE, &acc_id);
+	if (PJMEDIA_HAS_VIDEO) {
+	    pjsua_acc_config acc_cfg;
+	    pjsua_acc_get_config(acc_id, &acc_cfg);
+	    app_config_init_video(&acc_cfg);
+	    pjsua_acc_modify(acc_id, &acc_cfg);
+	}
 	pjsua_acc_set_online_status(acc_id, PJ_TRUE);
     }
 #endif
