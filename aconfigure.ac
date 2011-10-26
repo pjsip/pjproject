@@ -828,6 +828,7 @@ AC_ARG_ENABLE(ffmpeg,
 
 		dnl # libz, needed by newer ffmpeg
 		AC_CHECK_LIB(z, deflate)
+		AC_CHECK_LIB(x264, x264_free)
 
 		FFMPEG_PREFIX=""
     		if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
