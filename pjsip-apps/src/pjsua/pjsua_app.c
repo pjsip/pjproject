@@ -5595,7 +5595,7 @@ pj_status_t app_init(int argc, char *argv[])
 	    goto on_error;
 
 	/* Add local account */
-	pjsua_acc_add_local(transport_id, PJ_TRUE, NULL);
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
 	if (PJMEDIA_HAS_VIDEO) {
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, &acc_cfg);
