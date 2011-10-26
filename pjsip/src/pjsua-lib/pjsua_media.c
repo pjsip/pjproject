@@ -1942,15 +1942,21 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 		    m->desc.fmt[0] = pj_str("31");
 		    break;
 		default:
-		    if (rem_sdp) {
-			pj_strdup(pool, &m->desc.media,
-				  &rem_sdp->media[mi]->desc.media);
-			pj_strdup(pool, &m->desc.fmt[0],
-				  &rem_sdp->media[mi]->desc.fmt[0]);
-		    } else {
-			pj_assert(!"Invalid call_med media type");
-			return PJ_EBUG;
+		    /* This must be us generating re-offer, and some unknown
+		     * media may exist, so just clone from active local SDP
+		     * (and it should have been deactivated already).
+		     */
+		    pj_assert(call->inv && call->inv->neg &&
+			      sdp_neg_state == PJMEDIA_SDP_NEG_STATE_DONE);
+		    {
+			const pjmedia_sdp_session *s_;
+			pjmedia_sdp_neg_get_active_local(call->inv->neg, &s_);
+
+			pj_assert(mi < s_->media_count);
+			m = pjmedia_sdp_media_clone(pool, s_->media[mi]);
+			m->desc.port = 0;
 		    }
+		    break;
 		}
 	    }
 
