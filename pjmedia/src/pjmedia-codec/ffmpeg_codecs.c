@@ -254,7 +254,7 @@ static ffmpeg_codec_desc codec_desc[] =
     {
 	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
-	0,	128000,    1000000,
+	0,	512000,    1000000,
 	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
 	&pjmedia_vid_codec_h264_match_sdp,
 	/* Leading space for better compatibility (strange indeed!) */
@@ -406,7 +406,7 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	/* Misc x264 settings (performance, quality, latency, etc).
 	 * Let's just use the x264 predefined preset & tune.
 	 */
-	if (av_set_string3(ctx->priv_data, "preset", "veryslow", 0, NULL))
+	if (av_set_string3(ctx->priv_data, "preset", "veryfast", 0, NULL))
 	{
 	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 preset 'veryfast'"));
 	}
@@ -912,7 +912,7 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
 
     /* Encoded format */
     pjmedia_format_init_video(&attr->enc_fmt, desc->info.fmt_id,
-                              352, 288, 30000, 1001);
+                              720, 480, 30000, 1001);
 
     /* Decoded format */
     pjmedia_format_init_video(&attr->dec_fmt, desc->info.dec_fmt_id[0],
