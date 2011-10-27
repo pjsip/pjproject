@@ -852,6 +852,12 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.use_stream_ka = cfg->use_stream_ka;
 #endif
 
+    /* Use of proxy */
+    if (acc->cfg.reg_use_proxy != cfg->reg_use_proxy) {
+        acc->cfg.reg_use_proxy = cfg->reg_use_proxy;
+        update_reg = PJ_TRUE;
+    }
+
     /* Global outbound proxy */
     if (global_route_crc != acc->global_route_crc) {
 	unsigned i, rcnt;
@@ -962,6 +968,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.reg_retry_interval = cfg->reg_retry_interval;
     acc->cfg.reg_first_retry_interval = cfg->reg_first_retry_interval;
     acc->cfg.drop_calls_on_reg_fail = cfg->drop_calls_on_reg_fail;
+    acc->cfg.register_on_acc_add = cfg->register_on_acc_add;
     if (acc->cfg.reg_delay_before_refresh != cfg->reg_delay_before_refresh) {
         acc->cfg.reg_delay_before_refresh = cfg->reg_delay_before_refresh;
         pjsip_regc_set_delay_before_refresh(acc->regc,
@@ -1013,6 +1020,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 		pjsua_start_mwi(acc);
 	}
     }
+
+    /* Call hold type */
+    acc->cfg.call_hold_type = cfg->call_hold_type;
 
 on_return:
     PJSUA_UNLOCK();
