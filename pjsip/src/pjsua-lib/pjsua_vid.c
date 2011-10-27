@@ -889,13 +889,6 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 		goto on_error;
 	    }
 
-	    /* Start renderer */
-	    status = pjmedia_vid_port_start(w->vp_rend);
-	    if (status != PJ_SUCCESS) {
-		pj_log_pop_indent();
-		goto on_error;
-	    }
-
 	    /* Start capturer */
 	    if (just_created) {
 		status = pjmedia_vid_port_start(w->vp_cap);
