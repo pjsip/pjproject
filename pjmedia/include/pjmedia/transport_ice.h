@@ -99,9 +99,19 @@ typedef struct pjmedia_ice_transport_info
 	pj_ice_cand_type    lcand_type;
 
 	/**
+	 * The local address.
+	 */
+	pj_sockaddr	    lcand_addr;
+
+	/**
 	 * Remote candidate type.
 	 */
 	pj_ice_cand_type    rcand_type;
+
+	/**
+	 * Remote address.
+	 */
+	pj_sockaddr	    rcand_addr;
 
     } comp[2];
 

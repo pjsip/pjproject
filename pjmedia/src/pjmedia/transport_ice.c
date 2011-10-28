@@ -1549,7 +1549,11 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 	    chk = pj_ice_strans_get_valid_pair(tp_ice->ice_st, i);
 	    if (chk) {
 		ii->comp[i-1].lcand_type = chk->lcand->type;
+		pj_sockaddr_cp(&ii->comp[i-1].lcand_addr,
+		               &chk->lcand->addr);
 		ii->comp[i-1].rcand_type = chk->rcand->type;
+		pj_sockaddr_cp(&ii->comp[i-1].rcand_addr,
+		               &chk->rcand->addr);
 	    }
 	}
     }
