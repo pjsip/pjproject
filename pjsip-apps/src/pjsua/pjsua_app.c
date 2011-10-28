@@ -5673,8 +5673,10 @@ pj_status_t app_init(int argc, char *argv[])
     /* Add buddies */
     for (i=0; i<app_config.buddy_cnt; ++i) {
 	status = pjsua_buddy_add(&app_config.buddy_cfg[i], NULL);
-	if (status != PJ_SUCCESS)
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "Error adding buddy"));
 	    goto on_error;
+	}
     }
 
     /* Optionally disable some codec */
