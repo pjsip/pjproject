@@ -391,6 +391,7 @@ static void dump_media_session(const char *indent,
 			}
 		    } else if (tp_info.spc_info[j].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
 			const pjmedia_ice_transport_info *ii;
+			unsigned jj;
 
 			ii = (const pjmedia_ice_transport_info*)
 			     tp_info.spc_info[j].buffer;
@@ -405,6 +406,32 @@ static void dump_media_session(const char *indent,
 			    p += len;
 			    *p++ = '\n';
 			    *p = '\0';
+			}
+
+			for (jj=0; ii->sess_state==PJ_ICE_STRANS_STATE_RUNNING && jj<2; ++jj) {
+			    const char *type1 = pj_ice_get_cand_type_name(ii->comp[jj].lcand_type);
+			    const char *type2 = pj_ice_get_cand_type_name(ii->comp[jj].rcand_type);
+			    char addr1[PJ_INET6_ADDRSTRLEN+10];
+			    char addr2[PJ_INET6_ADDRSTRLEN+10];
+			    const char *comp_name[2] = {"rtp ", "rtcp"};
+
+			    if (pj_sockaddr_has_addr(&ii->comp[jj].lcand_addr))
+				pj_sockaddr_print(&ii->comp[jj].lcand_addr, addr1, sizeof(addr1), 3);
+			    else
+				strcpy(addr1, "0.0.0.0:0");
+			    if (pj_sockaddr_has_addr(&ii->comp[jj].rcand_addr))
+				pj_sockaddr_print(&ii->comp[jj].rcand_addr, addr2, sizeof(addr2), 3);
+			    else
+				strcpy(addr2, "0.0.0.0:0");
+			    len = pj_ansi_snprintf(p, end-p,
+			                           "   %s     [%d]: L:%s (%c) --> R:%s (%c)\n",
+			                           indent, jj,
+			                           addr1, type1[0],
+			                           addr2, type2[0]);
+			    if (len > 0 && len < end-p) {
+				p += len;
+				*p = '\0';
+			    }
 			}
 		    }
 		}

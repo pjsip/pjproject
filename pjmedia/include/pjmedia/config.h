@@ -863,7 +863,7 @@
  * Maximum size in bytes of storage buffer of a transport specific info.
  */
 #ifndef PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE
-#   define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE  (16*sizeof(long))
+#   define PJMEDIA_TRANSPORT_SPECIFIC_INFO_MAXSIZE  (36*sizeof(long))
 #endif
 
 
