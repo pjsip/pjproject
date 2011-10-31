@@ -353,6 +353,11 @@ static pj_status_t handle_auth_challenge(pj_stun_session *sess,
 		 pj_stun_msg_find_attr(response, PJ_STUN_ATTR_REALM, 0);
 	if (arealm) {
 	    pj_strdup(sess->pool, &sess->server_realm, &arealm->value);
+	    while (sess->server_realm.slen &&
+		    !sess->server_realm.ptr[sess->server_realm.slen-1])
+	    {
+		--sess->server_realm.slen;
+	    }
 	}
 
 	/* Create new request */
