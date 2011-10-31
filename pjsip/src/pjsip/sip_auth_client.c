@@ -278,8 +278,8 @@ static pj_status_t respond_digest( pj_pool_t *pool,
 
     /* Check algorithm is supported. We support MD5 and AKAv1-MD5. */
     if (chal->algorithm.slen==0 ||
-	(pj_stricmp(&chal->algorithm, &pjsip_MD5_STR) ||
-	 pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5_STR)))
+	(pj_stricmp(&chal->algorithm, &pjsip_MD5_STR)==0 ||
+	 pj_stricmp(&chal->algorithm, &pjsip_AKAv1_MD5_STR)==0))
     {
 	;
     }

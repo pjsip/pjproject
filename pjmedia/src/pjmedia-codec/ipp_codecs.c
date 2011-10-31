@@ -438,7 +438,7 @@ static pj_status_t parse_g723(ipp_private_t *codec_data, void *pkt,
 #endif /* PJMEDIA_HAS_INTEL_IPP_CODEC_G723_1 */
 
 
-#if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR
+#if PJMEDIA_HAS_INTEL_IPP_CODEC_AMR || PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
 
 #include <pjmedia-codec/amr_helper.h>
 

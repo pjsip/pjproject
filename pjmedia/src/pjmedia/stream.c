@@ -2072,6 +2072,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     if (stream->codec_param.setting.frm_per_pkt < 1)
 	stream->codec_param.setting.frm_per_pkt = 1;
 
+    /* Init the codec. */
+    status = pjmedia_codec_init(stream->codec, pool);
+    if (status != PJ_SUCCESS)
+	goto err_cleanup;
+
     /* Open the codec. */
     status = pjmedia_codec_open(stream->codec, &stream->codec_param);
     if (status != PJ_SUCCESS)

@@ -1321,8 +1321,12 @@ pj_status_t resolve_stun_server(pj_bool_t wait)
 	 * result.
 	 */
 	if (wait) {
-	    while (pjsua_var.stun_status == PJ_EPENDING)
-		pjsua_handle_events(10);
+	    while (pjsua_var.stun_status == PJ_EPENDING) {
+		if (pjsua_var.thread[0] == NULL)
+		    pjsua_handle_events(10);
+		else
+		    pj_thread_sleep(10);
+	    }
 	}
     }
 
