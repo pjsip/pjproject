@@ -392,6 +392,9 @@ static void sess_shutdown(pj_turn_session *sess,
     PJ_LOG(4,(sess->obj_name, "Request to shutdown in state %s, cause:%d",
 	      state_names[sess->state], status));
 
+    if (sess->last_status == PJ_SUCCESS && status != PJ_SUCCESS)
+	sess->last_status = status;
+
     switch (sess->state) {
     case PJ_TURN_STATE_NULL:
 	break;
