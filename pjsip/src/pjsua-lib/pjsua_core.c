@@ -1291,7 +1291,9 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 {
     int i;  /* Must be signed */
 
-    PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
+    if (pjsua_var.endpt) {
+	PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
+    }
 
     /* Signal threads to quit: */
     pjsua_var.thread_quit_flag = 1;
