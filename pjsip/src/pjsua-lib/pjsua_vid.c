@@ -64,13 +64,6 @@ pj_status_t pjsua_vid_subsys_init(void)
 	goto on_error;
     }
 
-    status = pjmedia_vid_dev_subsys_init(&pjsua_var.cp.factory);
-    if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status,
-		     "Error creating PJMEDIA video subsystem"));
-	goto on_error;
-    }
-
 #if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_FFMPEG_CODEC
     status = pjmedia_codec_ffmpeg_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
@@ -79,6 +72,13 @@ pj_status_t pjsua_vid_subsys_init(void)
 	goto on_error;
     }
 #endif
+
+    status = pjmedia_vid_dev_subsys_init(&pjsua_var.cp.factory);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status,
+		     "Error creating PJMEDIA video subsystem"));
+	goto on_error;
+    }
 
     for (i=0; i<PJSUA_MAX_VID_WINS; ++i) {
 	if (pjsua_var.win[i].pool == NULL) {
@@ -121,8 +121,17 @@ pj_status_t pjsua_vid_subsys_destroy(void)
     pjmedia_vid_dev_subsys_shutdown();
 
 #if PJMEDIA_HAS_FFMPEG_CODEC
-	    pjmedia_codec_ffmpeg_deinit();
+    pjmedia_codec_ffmpeg_deinit();
 #endif
+
+    if (pjmedia_vid_codec_mgr_instance())
+	pjmedia_vid_codec_mgr_destroy(NULL);
+
+    if (pjmedia_converter_mgr_instance())
+	pjmedia_converter_mgr_destroy(NULL);
+
+    if (pjmedia_video_format_mgr_instance())
+	pjmedia_video_format_mgr_destroy(NULL);
 
     pj_log_pop_indent();
     return PJ_SUCCESS;
