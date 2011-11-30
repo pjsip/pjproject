@@ -2833,6 +2833,12 @@ static pj_status_t get_audio_codec_info_param(pjmedia_stream_info *si,
 	    return PJMEDIA_EINVALIDPT;
 	pt = pj_strtoul(&local_m->desc.fmt[fmti]);
 
+	if (pt < 96) {
+	    /* This is known static PT. Skip rtpmap checking because it is
+	     * optional. */
+	    break;
+	}
+
 	attr = pjmedia_sdp_media_find_attr(local_m, &ID_RTPMAP,
 					   &local_m->desc.fmt[fmti]);
 	if (attr == NULL)
