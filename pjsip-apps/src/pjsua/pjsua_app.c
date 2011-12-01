@@ -134,6 +134,7 @@ static struct app_config
     pjmedia_port	   *ring_port;
 
     struct app_vid	    vid;
+    unsigned		    aud_cnt;
 } app_config;
 
 
@@ -402,6 +403,7 @@ static void default_config(struct app_config *cfg)
 
     cfg->vid.vcapture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid.vrender_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+    cfg->aud_cnt = 1;
 }
 
 
@@ -1455,12 +1457,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.qos_params.dscp_val = 0x18;
 	    break;
 	case OPT_VIDEO:
-	    app_config.vid.vid_cnt = 1;
-	    app_config.vid.in_auto_show = PJ_TRUE;
-	    app_config.vid.out_auto_transmit = PJ_TRUE;
+	    cfg->vid.vid_cnt = 1;
+	    cfg->vid.in_auto_show = PJ_TRUE;
+	    cfg->vid.out_auto_transmit = PJ_TRUE;
 	    break;
 	case OPT_EXTRA_AUDIO:
-	    ++cur_acc->max_audio_cnt;
+	    cfg->aud_cnt++;
 	    break;
 
 	case OPT_VCAPTURE_DEV:
@@ -1717,14 +1719,6 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     /* MWI */
     if (acc_cfg->mwi_enabled)
 	pj_strcat2(result, "--mwi\n");
-
-    /* Video & extra audio */
-    for (i=0; i<acc_cfg->max_video_cnt; ++i) {
-	pj_strcat2(result, "--video\n");
-    }
-    for (i=1; i<acc_cfg->max_audio_cnt; ++i) {
-	pj_strcat2(result, "--extra-audio\n");
-    }
 }
 
 
@@ -1889,6 +1883,14 @@ static int write_settings(const struct app_config *config,
     }
 
     pj_strcat2(&cfg, "\n#\n# Media settings:\n#\n");
+
+    /* Video & extra audio */
+    for (i=0; i<config->vid.vid_cnt; ++i) {
+	pj_strcat2(&cfg, "--video\n");
+    }
+    for (i=1; i<config->aud_cnt; ++i) {
+	pj_strcat2(&cfg, "--extra-audio\n");
+    }
 
     /* SRTP */
 #if PJMEDIA_HAS_SRTP
@@ -2575,16 +2577,39 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
     ring_start(call_id);
     
     if (app_config.auto_answer > 0) {
-	pjsua_call_answer(call_id, app_config.auto_answer, NULL, NULL);
-    }
+	pjsua_call_setting call_opt;
 
+	pjsua_call_setting_default(&call_opt);
+	call_opt.audio_cnt = app_config.aud_cnt;
+	call_opt.video_cnt = app_config.vid.vid_cnt;
+
+	pjsua_call_answer2(call_id, &call_opt, app_config.auto_answer, NULL, NULL);
+    }
+    
     if (app_config.auto_answer < 200) {
+	char notif_st[80] = {0};
+
+#if PJSUA_HAS_VIDEO
+	if (call_info.rem_offerer && call_info.rem_video_cnt) {
+	    snprintf(notif_st, sizeof(notif_st), 
+		     "To %s the video, type \"vid %s\" first, "
+		     "before answering the call!\n",
+		     (app_config.vid.vid_cnt? "reject":"accept"),
+		     (app_config.vid.vid_cnt? "disable":"enable"));
+	}
+#endif
+
 	PJ_LOG(3,(THIS_FILE,
 		  "Incoming call for account %d!\n"
+		  "Media count: %d audio & %d video\n"
+		  "%s"
 		  "From: %s\n"
 		  "To: %s\n"
 		  "Press a to answer or h to reject call",
 		  acc_id,
+		  call_info.rem_audio_cnt,
+		  call_info.rem_video_cnt,
+		  notif_st,
 		  call_info.remote_info.ptr,
 		  call_info.local_info.ptr));
     }
@@ -2846,6 +2871,23 @@ static void on_call_media_state(pjsua_call_id call_id)
 	pj_str_t reason = pj_str("Media failed");
 	pjsua_call_hangup(call_id, 500, &reason, NULL);
     }
+
+#if PJSUA_HAS_VIDEO
+    /* Check if remote has just tried to enable video */
+    if (call_info.rem_offerer && call_info.rem_video_cnt)
+    {
+	int vid_idx;
+
+	/* Check if there is active video */
+	vid_idx = pjsua_call_get_vid_stream_idx(call_id);
+	if (vid_idx == -1 || call_info.media[vid_idx].dir == PJMEDIA_DIR_NONE) {
+	    PJ_LOG(3,(THIS_FILE,
+		      "Just rejected incoming video offer on call %d"
+		      "use \"vid call add\" to enable video!",
+		      call_id));
+	}
+    }
+#endif
 }
 
 /*
@@ -3422,12 +3464,14 @@ static void keystroke_help(void)
 static void vid_show_help(void)
 {
 #if PJSUA_HAS_VIDEO
+    pj_bool_t vid_enabled = (app_config.vid.vid_cnt > 0);
+
     puts("+=============================================================================+");
     puts("|                            Video commands:                                  |");
     puts("|                                                                             |");
     puts("| vid help                  Show this help screen                             |");
+    puts("| vid enable|disable        Enable or disable video in next offer/answer      |");
     puts("| vid acc show              Show current account video settings               |");
-    puts("| vid acc enable|disable    Enable or disable video on current account        |");
     puts("| vid acc autorx on|off     Automatically show incoming video on/off          |");
     puts("| vid acc autotx on|off     Automatically offer video on/off                  |");
     puts("| vid acc cap ID            Set default capture device for current acc        |");
@@ -3435,7 +3479,7 @@ static void vid_show_help(void)
     puts("| vid call rx on|off N      Enable/disable video rx for stream N in curr call |");
     puts("| vid call tx on|off N      Enable/disable video tx for stream N in curr call |");
     puts("| vid call add              Add video stream for current call                 |");
-    puts("| vid call enable/disable N Enable/disable stream #N in current call          |");
+    puts("| vid call enable|disable N Enable/disable stream #N in current call          |");
     puts("| vid call cap N ID         Set capture dev ID for stream #N in current call  |");
     puts("| vid dev list              List all video devices                            |");
     puts("| vid dev refresh           Refresh video device list                         |");
@@ -3447,6 +3491,9 @@ static void vid_show_help(void)
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
     puts("| vid win move ID X Y       Move window ID to position X,Y                    |");
     puts("| vid win resize ID w h     Resize window ID to the specified width, height   |");
+    puts("+=============================================================================+");
+    printf("| Video will be %s in the next offer/answer %s                            |\n",
+	   (vid_enabled? "enabled" : "disabled"), (vid_enabled? " " : ""));
     puts("+=============================================================================+");
 #endif
 }
@@ -3863,7 +3910,6 @@ static void vid_list_devs(void)
 
 static void app_config_init_video(pjsua_acc_config *acc_cfg)
 {
-    acc_cfg->max_video_cnt = app_config.vid.vid_cnt;
     acc_cfg->vid_in_auto_show = app_config.vid.in_auto_show;
     acc_cfg->vid_out_auto_transmit = app_config.vid.out_auto_transmit;
     /* Note that normally GUI application will prefer a borderless
@@ -3879,13 +3925,11 @@ static void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
 {
     PJ_LOG(3,(THIS_FILE,
 	      "Account %d:\n"
-	      "  Video count:      %d\n"
 	      "  RX auto show:     %d\n"
 	      "  TX auto transmit: %d\n"
 	      "  Capture dev:      %d\n"
 	      "  Render dev:       %d",
 	      acc_id,
-	      acc_cfg->max_video_cnt,
 	      acc_cfg->vid_in_auto_show,
 	      acc_cfg->vid_out_auto_transmit,
 	      acc_cfg->vid_cap_dev,
@@ -3906,6 +3950,13 @@ static void vid_handle_menu(char *menuin)
 
     if (argc == 1 || strcmp(argv[1], "help")==0) {
 	vid_show_help();
+    } else if (argc == 2 && (strcmp(argv[1], "enable")==0 ||
+			     strcmp(argv[1], "disable")==0))
+    {
+	pj_bool_t enabled = (strcmp(argv[1], "enable")==0);
+	app_config.vid.vid_cnt = (enabled ? 1 : 0);
+	PJ_LOG(3,(THIS_FILE, "Video will be %s in next offer/answer",
+		  (enabled?"enabled":"disabled")));
     } else if (strcmp(argv[1], "acc")==0) {
 	pjsua_acc_config acc_cfg;
 	pj_bool_t changed = PJ_FALSE;
@@ -3914,17 +3965,6 @@ static void vid_handle_menu(char *menuin)
 
 	if (argc == 3 && strcmp(argv[2], "show")==0) {
 	    app_config_show_video(current_acc, &acc_cfg);
-
-	} else if (argc == 3 && (strcmp(argv[2], "enable")==0 ||
-			         strcmp(argv[2], "disable")==0))
-        {
-	    int enabled = (strcmp(argv[2], "enable")==0);
-	    acc_cfg.max_video_cnt = (enabled ? 1 : 0);
-	    if (enabled) {
-		app_config_init_video(&acc_cfg);
-		acc_cfg.max_video_cnt = (enabled ? 1 : 0);
-	    }
-	    changed = PJ_TRUE;
 	} else if (argc == 4 && strcmp(argv[2], "autorx")==0) {
 	    int on = (strcmp(argv[3], "on")==0);
 	    acc_cfg.vid_in_auto_show = on;
@@ -4165,11 +4205,15 @@ void console_app_main(const pj_str_t *uri_to_call)
     pjsua_msg_data msg_data;
     pjsua_call_info call_info;
     pjsua_acc_info acc_info;
+    pjsua_call_setting call_opt;
 
+    pjsua_call_setting_default(&call_opt);
+    call_opt.audio_cnt = app_config.aud_cnt;
+    call_opt.video_cnt = app_config.vid.vid_cnt;
 
     /* If user specifies URI to call, then call the URI */
     if (uri_to_call->slen) {
-	pjsua_call_make_call( current_acc, uri_to_call, 0, NULL, NULL, NULL);
+	pjsua_call_make_call( current_acc, uri_to_call, &call_opt, NULL, NULL, NULL);
     }
 
     keystroke_help();
@@ -4204,6 +4248,11 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    printf("%s", menuin);
 	}
 
+	/* Update call setting */
+	pjsua_call_setting_default(&call_opt);
+	call_opt.audio_cnt = app_config.aud_cnt;
+	call_opt.video_cnt = app_config.vid.vid_cnt;
+
 	switch (menuin[0]) {
 
 	case 'm':
@@ -4233,7 +4282,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    
 	    pjsua_msg_data_init(&msg_data);
 	    TEST_MULTIPART(&msg_data);
-	    pjsua_call_make_call( current_acc, &tmp, 0, NULL, &msg_data, NULL);
+	    pjsua_call_make_call( current_acc, &tmp, &call_opt, NULL, &msg_data, NULL);
 	    break;
 
 	case 'M':
@@ -4265,7 +4314,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    for (i=0; i<my_atoi(menuin); ++i) {
 		pj_status_t status;
 	    
-		status = pjsua_call_make_call(current_acc, &tmp, 0, NULL,
+		status = pjsua_call_make_call(current_acc, &tmp, &call_opt, NULL,
 					      NULL, NULL);
 		if (status != PJ_SUCCESS)
 		    break;
@@ -4402,7 +4451,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 		    continue;
 		}
 
-		pjsua_call_answer(current_call, st_code, NULL, &msg_data);
+		pjsua_call_answer2(current_call, &call_opt, st_code, NULL, &msg_data);
 	    }
 
 	    break;
@@ -4591,7 +4640,8 @@ void console_app_main(const pj_str_t *uri_to_call)
 		/*
 		 * re-INVITE
 		 */
-		pjsua_call_reinvite(current_call, PJ_TRUE, NULL);
+		call_opt.flag |= PJSUA_CALL_UNHOLD;
+		pjsua_call_reinvite2(current_call, &call_opt, NULL);
 
 	    } else {
 		PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -4604,7 +4654,7 @@ void console_app_main(const pj_str_t *uri_to_call)
 	     */
 	    if (current_call != -1) {
 		
-		pjsua_call_update(current_call, 0, NULL);
+		pjsua_call_update2(current_call, &call_opt, NULL);
 
 	    } else {
 		PJ_LOG(3,(THIS_FILE, "No current call"));

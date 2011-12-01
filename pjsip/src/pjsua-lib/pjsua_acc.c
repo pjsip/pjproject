@@ -383,14 +383,6 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     /* Must have a transport */
     PJ_ASSERT_RETURN(pjsua_var.tpdata[0].data.ptr != NULL, PJ_EINVALIDOP);
 
-    /* Verify media count */
-#if !defined(PJMEDIA_HAS_VIDEO) || (PJMEDIA_HAS_VIDEO == 0)
-    /* Enable PJMEDIA_HAS_VIDEO in your config_site.h! */
-    PJ_ASSERT_RETURN(cfg->max_video_cnt == 0, PJ_EINVAL);
-#endif
-    PJ_ASSERT_RETURN(cfg->max_audio_cnt + cfg->max_video_cnt <= 
-		     PJSUA_MAX_CALL_MEDIA, PJ_ETOOMANY);
-
     PJ_LOG(4,(THIS_FILE, "Adding account: id=%.*s",
 	      (int)cfg->id.slen, cfg->id.ptr));
     pj_log_push_indent();
@@ -673,13 +665,6 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
 		     PJ_EINVAL);
-
-    /* Verify media count */
-#if !defined(PJMEDIA_HAS_VIDEO) || (PJMEDIA_HAS_VIDEO == 0)
-    PJ_ASSERT_RETURN(cfg->max_video_cnt == 0, PJ_EINVAL);
-#endif
-    PJ_ASSERT_RETURN(cfg->max_audio_cnt + cfg->max_video_cnt <= 
-		     PJSUA_MAX_CALL_MEDIA, PJ_ETOOMANY);
 
     PJ_LOG(4,(THIS_FILE, "Modifying accunt %d", acc_id));
     pj_log_push_indent();
@@ -1063,10 +1048,6 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 		pjsua_start_mwi(acc);
 	}
     }
-
-    /* Max number of audio and video stream in a call */
-    acc->cfg.max_audio_cnt = cfg->max_audio_cnt;
-    acc->cfg.max_video_cnt = cfg->max_video_cnt;
 
     /* Video settings */
     acc->cfg.vid_in_auto_show = cfg->vid_in_auto_show;

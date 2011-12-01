@@ -120,6 +120,7 @@ typedef struct call_answer
 struct pjsua_call
 {
     unsigned		 index;	    /**< Index in pjsua array.		    */
+    pjsua_call_setting	 opt;	    /**< Call setting.			    */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
     void		*user_data; /**< User/application data.		    */
     pjsip_status_code	 last_code; /**< Last status code seen.		    */
@@ -162,7 +163,6 @@ struct pjsua_call
         pj_bool_t            med_ch_deinit;/**< Media channel de-init-ed?   */
         union {
             struct {
-                unsigned         options; /**< Outgoing call options.       */
                 pjsua_msg_data  *msg_data;/**< Headers for outgoing INVITE. */
             } out_call;
             struct {
@@ -171,6 +171,12 @@ struct pjsua_call
         } call_var;
     } async_call;                      /**< Temporary storage for async
                                             outgoing/incoming call.         */
+
+    pj_bool_t		 rem_offerer;  /**< Was remote SDP offerer?	    */
+    unsigned		 rem_aud_cnt;  /**< No of active audio in last remote
+					    offer.			    */
+    unsigned		 rem_vid_cnt;  /**< No of active video in last remote
+					    offer.			    */
 };
 
 

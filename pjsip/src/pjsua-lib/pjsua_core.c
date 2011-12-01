@@ -216,7 +216,6 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;
     cfg->ka_interval = 15;
     cfg->ka_data = pj_str("\r\n");
-    cfg->max_audio_cnt = 1;
     cfg->vid_cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     pjsua_transport_config_default(&cfg->rtp_cfg);

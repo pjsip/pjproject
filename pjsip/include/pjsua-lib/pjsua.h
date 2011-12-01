@@ -2697,24 +2697,6 @@ typedef struct pjsua_acc_config
     pj_str_t	     ka_data;
 
     /**
-     * Maximum number of simultaneous active audio streams to be allowed
-     * for calls on this account. Setting this to zero will disable audio
-     * in calls on this account.
-     *
-     * Default: 1
-     */
-    unsigned         max_audio_cnt;
-
-    /**
-     * Maximum number of simultaneous active video streams to be allowed
-     * for calls on this account. Setting this to zero will disable video
-     * in calls on this account, regardless of other video settings.
-     *
-     * Default: 1
-     */
-    unsigned         max_video_cnt;
-
-    /**
      * Specify whether incoming video should be shown to screen by default.
      * This applies to incoming call (INVITE), incoming re-INVITE, and
      * incoming UPDATE requests.
@@ -3389,6 +3371,37 @@ typedef enum pjsua_call_media_status
 
 
 /**
+ * Call settings.
+ */
+typedef struct pjsua_call_setting
+{
+    /**
+     * Bitmask of pjsua_call_flag constants.
+     *
+     * Default: 0
+     */
+    unsigned	     flag;
+
+    /**
+     * Number of simultaneous active audio streams for this call. Setting
+     * this to zero will disable audio in this call.
+     *
+     * Default: 1
+     */
+    unsigned         audio_cnt;
+
+    /**
+     * Number of simultaneous active video streams for this call. Setting
+     * this to zero will disable video in this call.
+     *
+     * Default: 1 (if video feature is enabled, otherwise it is zero)
+     */
+    unsigned         video_cnt;
+
+} pjsua_call_setting;
+
+
+/**
  * This structure describes the information and current status of a call.
  */
 typedef struct pjsua_call_info
@@ -3416,6 +3429,9 @@ typedef struct pjsua_call_info
 
     /** Dialog Call-ID string. */
     pj_str_t		call_id;
+
+    /** Call setting */
+    pjsua_call_setting	setting;
 
     /** Call state */
     pjsip_inv_state	state;
@@ -3490,6 +3506,15 @@ typedef struct pjsua_call_info
     /** Total call duration, including set-up time */
     pj_time_val		total_duration;
 
+    /** Flag if remote was SDP offerer */
+    pj_bool_t		rem_offerer;
+
+    /** Number of audio streams offered by remote */
+    unsigned		rem_audio_cnt;
+
+    /** Number of video streams offered by remote */
+    unsigned		rem_video_cnt;
+
     /** Internal */
     struct {
 	char	local_info[128];
@@ -3525,7 +3550,14 @@ typedef enum pjsua_call_flag
      * session with the new Contact and to inform this new Contact to the
      * remote peer with the outgoing re-INVITE or UPDATE
      */
-    PJSUA_CALL_UPDATE_CONTACT = 2
+    PJSUA_CALL_UPDATE_CONTACT = 2,
+
+    /**
+     * Include SDP "m=" line with port set to zero for each disabled media
+     * (i.e when aud_cnt or vid_cnt is set to zero). This flag is only valid
+     * for #pjsua_call_make_call().
+     */
+    PJSUA_CALL_INCLUDE_DISABLED_MEDIA = 4
 
 } pjsua_call_flag;
 
@@ -3578,8 +3610,7 @@ typedef enum pjsua_call_vid_strm_op
      * Add a new video stream. This will add a new m=video line to
      * the media, regardless of whether existing video is/are present
      * or not.  This will cause re-INVITE or UPDATE to be sent to remote
-     * party. The number of maximum active video streams in a call is
-     * still limited by \a max_video_cnt setting in pjsua_acc_config.
+     * party.
      */
     PJSUA_CALL_VID_STRM_ADD,
 
@@ -3667,6 +3698,14 @@ typedef struct pjsua_call_vid_strm_op_param
 
 
 /**
+ * Initialize call settings.
+ *
+ * @param opt		The call setting to be initialized.
+ */
+PJ_DECL(void) pjsua_call_setting_default(pjsua_call_setting *opt);
+
+
+/**
  * Initialize video stream operation param with default values.
  *
  * @param param		The video stream operation param to be initialized.
@@ -3709,7 +3748,8 @@ PJ_DECL(pj_status_t) pjsua_enum_calls(pjsua_call_id ids[],
  * @param acc_id	The account to be used.
  * @param dst_uri	URI to be put in the To header (normally is the same
  *			as the target URI).
- * @param options	Options (must be zero at the moment).
+ * @param opt		Optional call setting. This should be initialized
+ *			using #pjsua_call_setting_default().
  * @param user_data	Arbitrary user data to be attached to the call, and
  *			can be retrieved later.
  * @param msg_data	Optional headers etc to be added to outgoing INVITE
@@ -3720,7 +3760,7 @@ PJ_DECL(pj_status_t) pjsua_enum_calls(pjsua_call_id ids[],
  */
 PJ_DECL(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 					  const pj_str_t *dst_uri,
-					  unsigned options,
+					  const pjsua_call_setting *opt,
 					  void *user_data,
 					  const pjsua_msg_data *msg_data,
 					  pjsua_call_id *p_call_id);
@@ -3862,6 +3902,29 @@ PJ_DECL(pj_status_t) pjsua_call_answer(pjsua_call_id call_id,
 				       const pj_str_t *reason,
 				       const pjsua_msg_data *msg_data);
 
+
+/**
+ * Send response to incoming INVITE request. Depending on the status
+ * code specified as parameter, this function may send provisional
+ * response, establish the call, or terminate the call.
+ *
+ * @param call_id	Incoming call identification.
+ * @param opt		Optional call setting.
+ * @param code		Status code, (100-699).
+ * @param reason	Optional reason phrase. If NULL, default text
+ *			will be used.
+ * @param msg_data	Optional list of headers etc to be added to outgoing
+ *			response message.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id, 
+					const pjsua_call_setting *opt,
+				        unsigned code,
+				        const pj_str_t *reason,
+				        const pjsua_msg_data *msg_data);
+
+
 /**
  * Hangup call by using method that is appropriate according to the
  * call state. This function is different than answering the call with
@@ -3949,6 +4012,25 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
 					 unsigned options,
 					 const pjsua_msg_data *msg_data);
 
+
+/**
+ * Send re-INVITE to release hold.
+ * The final status of the request itself will be reported on the
+ * \a on_call_media_state() callback, which inform the application that
+ * the media state of the call has changed.
+ *
+ * @param call_id	Call identification.
+ * @param opt		Optional call setting.
+ * @param msg_data	Optional message components to be sent with
+ *			the request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
+					  const pjsua_call_setting *opt,
+					  const pjsua_msg_data *msg_data);
+
+
 /**
  * Send UPDATE request.
  *
@@ -3962,6 +4044,22 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
 PJ_DECL(pj_status_t) pjsua_call_update(pjsua_call_id call_id,
 				       unsigned options,
 				       const pjsua_msg_data *msg_data);
+
+
+/**
+ * Send UPDATE request.
+ *
+ * @param call_id	Call identification.
+ * @param opt		Optional call setting.
+ * @param msg_data	Optional message components to be sent with
+ *			the request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
+				        const pjsua_call_setting *opt,
+				        const pjsua_msg_data *msg_data);
+
 
 /**
  * Initiate call transfer to the specified address. This function will send
@@ -4106,7 +4204,8 @@ PJ_DECL(pj_status_t) pjsua_call_dump(pjsua_call_id call_id,
 /**
  * Get the media stream index of the default video stream in the call.
  * Typically this will just retrieve the stream index of the first
- * activated video stream in the call.
+ * activated video stream in the call. If none is active, it will return
+ * the first inactive video stream.
  *
  * @param call_id	Call identification.
  *

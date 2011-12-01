@@ -116,6 +116,7 @@ static void reset_call(pjsua_call_id id)
 	call_med->idx = i;
 	call_med->tp_auto_del = PJ_TRUE;
     }
+    pjsua_call_setting_default(&call->opt);
 }
 
 
@@ -341,7 +342,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjsua_acc *acc = &pjsua_var.acc[call->acc_id];
     pjsip_dialog *dlg = call->async_call.dlg;
-    unsigned options = call->async_call.call_var.out_call.options;
+    unsigned options = 0;
     pjsip_tx_data *tdata;
     pj_status_t status = (info? info->status: PJ_SUCCESS);
 
@@ -487,14 +488,79 @@ on_error:
 
 
 /*
+ * Initialize call settings based on account ID.
+ */
+PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
+{
+    pj_assert(opt);
+
+    pj_bzero(opt, sizeof(*opt));
+    opt->flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
+    opt->audio_cnt = 1;
+
+#if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+    opt->video_cnt = 1;
+    //{
+    //	unsigned i;
+    //	for (i = 0; i < PJ_ARRAY_SIZE(opt->vid_cap_dev); ++i)
+    //	    opt->vid_cap_dev[i] = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
+    //}
+#endif
+}
+
+static pj_status_t apply_call_setting(pjsua_call *call,
+				      const pjsua_call_setting *opt,
+				      const pjmedia_sdp_session *rem_sdp)
+{
+    pj_assert(call);
+
+    if (!opt)
+	return PJ_SUCCESS;
+
+#if !PJMEDIA_HAS_VIDEO
+    pj_assert(opt->video_cnt == 0);
+#endif
+
+    /* If call is established, reinit media channel */
+    if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
+	pjsua_call_setting old_opt;
+	pj_status_t status;
+
+	old_opt = call->opt;
+	call->opt = *opt;
+
+	/* Reinit media channel when media count is changed */
+	if (opt->audio_cnt != old_opt.audio_cnt ||
+	    opt->video_cnt != old_opt.video_cnt)
+	{
+	    pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
+	    status = pjsua_media_channel_init(call->index, role,
+					      call->secure_level,
+					      call->inv->pool_prov,
+					      rem_sdp, NULL,
+					      PJ_FALSE, NULL);
+	    if (status != PJ_SUCCESS) {
+		pjsua_perror(THIS_FILE, "Error re-initializing media channel",
+			     status);
+		return status;
+	    }
+	}
+    } else {
+	call->opt = *opt;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/*
  * Make outgoing call to the specified URI using the specified account.
  */
-PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
-					  const pj_str_t *dest_uri,
-					  unsigned options,
-					  void *user_data,
-					  const pjsua_msg_data *msg_data,
-					  pjsua_call_id *p_call_id)
+PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
+					 const pj_str_t *dest_uri,
+					 const pjsua_call_setting *opt,
+					 void *user_data,
+					 const pjsua_msg_data *msg_data,
+					 pjsua_call_id *p_call_id)
 {
     pj_pool_t *tmp_pool = NULL;
     pjsip_dialog *dlg = NULL;
@@ -554,6 +620,13 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Associate session with account */
     call->acc_id = acc_id;
     call->call_hold_type = acc->cfg.call_hold_type;
+
+    /* Apply call setting */
+    status = apply_call_setting(call, opt, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+	goto on_error;
+    }
 
     /* Create temporary pool */
     tmp_pool = pjsua_pool_create("tmpcall10", 512, 256);
@@ -622,7 +695,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call( pjsua_acc_id acc_id,
     /* Store variables required for the callback after the async
      * media transport creation is completed.
      */
-    call->async_call.call_var.out_call.options = options;
     if (msg_data) {
 	call->async_call.call_var.out_call.msg_data = pjsua_msg_data_clone(
                                                           dlg->pool, msg_data);
@@ -1465,6 +1537,9 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pj_strncpy(&info->call_id, &dlg->call_id->id,
 	       sizeof(info->buf_.call_id));
 
+    /* call setting */
+    pj_memcpy(&info->setting, &call->opt, sizeof(call->opt));
+
     /* state, state_text */
     info->state = (call->inv? call->inv->state: PJSIP_INV_STATE_DISCONNECTED);
     info->state_text = pj_str((char*)pjsip_inv_state_name(info->state));
@@ -1486,6 +1561,13 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 		   sizeof(info->buf_.last_status_text));
     }
     
+    /* Audio & video count offered by remote */
+    info->rem_offerer   = call->rem_offerer;
+    if (call->rem_offerer) {
+	info->rem_audio_cnt = call->rem_aud_cnt;
+	info->rem_video_cnt = call->rem_vid_cnt;
+    }
+
     /* Build array of media status and dir */
     info->media_cnt = 0;
     for (mi=0; mi < call->med_cnt &&
@@ -1760,6 +1842,19 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
 				       const pj_str_t *reason,
 				       const pjsua_msg_data *msg_data)
 {
+    return pjsua_call_answer2(call_id, NULL, code, reason, msg_data);
+}
+
+
+/*
+ * Send response to incoming INVITE request.
+ */
+PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
+				       const pjsua_call_setting *opt,
+				       unsigned code,
+				       const pj_str_t *reason,
+				       const pjsua_msg_data *msg_data)
+{
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pjsip_tx_data *tdata;
@@ -1774,6 +1869,13 @@ PJ_DEF(pj_status_t) pjsua_call_answer( pjsua_call_id call_id,
     status = acquire_call("pjsua_call_answer()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    /* Apply call setting */
+    status = apply_call_setting(call, opt, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+	goto on_return;
+    }
 
     PJSUA_LOCK();
     /* If media transport creation is not yet completed, we will answer
@@ -2016,6 +2118,32 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
                                          unsigned options,
 					 const pjsua_msg_data *msg_data)
 {
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pj_status_t status;
+
+    status = acquire_call("pjsua_call_reinvite()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    if (options != call->opt.flag)
+	call->opt.flag = options;
+
+    status = pjsua_call_reinvite2(call_id, NULL, msg_data);
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    return status;
+}
+
+
+/*
+ * Send re-INVITE (to release hold).
+ */
+PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
+                                         const pjsua_call_setting *opt,
+					 const pjsua_msg_data *msg_data)
+{
     pjmedia_sdp_session *sdp;
     pj_str_t *new_contact = NULL;
     pjsip_tx_data *tdata;
@@ -2030,7 +2158,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
     PJ_LOG(4,(THIS_FILE, "Sending re-INVITE on call %d", call_id));
     pj_log_push_indent();
 
-    status = acquire_call("pjsua_call_reinvite()", call_id, &call, &dlg);
+    status = acquire_call("pjsua_call_reinvite2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -2040,8 +2168,14 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 	goto on_return;
     }
 
+    status = apply_call_setting(call, opt, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+	goto on_return;
+    }
+
     /* Create SDP */
-    if (call->local_hold && (options & PJSUA_CALL_UNHOLD)==0) {
+    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
 	status = create_sdp_of_call_hold(call, &sdp);
     } else {
 	status = pjsua_media_channel_create_sdp(call->index, 
@@ -2055,7 +2189,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite( pjsua_call_id call_id,
 	goto on_return;
     }
 
-    if ((options & PJSUA_CALL_UPDATE_CONTACT) &
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &
 	    pjsua_acc_is_valid(call->acc_id))
     {
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
@@ -2092,6 +2226,32 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 				       unsigned options,
 				       const pjsua_msg_data *msg_data)
 {
+    pjsua_call *call;
+    pjsip_dialog *dlg = NULL;
+    pj_status_t status;
+
+    status = acquire_call("pjsua_call_update()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	goto on_return;
+
+    if (options != call->opt.flag)
+	call->opt.flag = options;
+
+    status = pjsua_call_update2(call_id, NULL, msg_data);
+
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
+    return status;
+}
+
+
+/*
+ * Send UPDATE request.
+ */
+PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
+				       const pjsua_call_setting *opt,
+				       const pjsua_msg_data *msg_data)
+{
     pjmedia_sdp_session *sdp;
     pj_str_t *new_contact = NULL;
     pjsip_tx_data *tdata;
@@ -2099,17 +2259,21 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
     pjsip_dialog *dlg = NULL;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(options);
-
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
 		     PJ_EINVAL);
 
     PJ_LOG(4,(THIS_FILE, "Sending UPDATE on call %d", call_id));
     pj_log_push_indent();
 
-    status = acquire_call("pjsua_call_update()", call_id, &call, &dlg);
+    status = acquire_call("pjsua_call_update2()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    status = apply_call_setting(call, opt, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
+	goto on_return;
+    }
 
     /* Create SDP */
     status = pjsua_media_channel_create_sdp(call->index, 
@@ -2121,7 +2285,7 @@ PJ_DEF(pj_status_t) pjsua_call_update( pjsua_call_id call_id,
 	goto on_return;
     }
 
-    if ((options & PJSUA_CALL_UPDATE_CONTACT) &
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &
 	    pjsua_acc_is_valid(call->acc_id))
     {
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
@@ -3356,6 +3520,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     pjsua_call *call;
     pjmedia_sdp_session *answer;
     unsigned i;
+    int vid_idx;
     pj_status_t status;
 
     PJSUA_LOCK();
@@ -3366,6 +3531,27 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 	      call->index));
     pj_log_push_indent();
+
+#if 0 && PJMEDIA_HAS_VIDEO
+    /* If current session has no video, let's just stay with no video.
+     * If application want to enable video, it must send re-INVITE
+     * with video.
+     */
+    vid_idx = pjsua_call_get_vid_stream_idx(call->index);
+    if (vid_idx == -1 || call->media[vid_idx].dir == PJMEDIA_DIR_NONE)
+	call->opt.video_cnt = 0;
+#endif
+
+    /* Re-init media for the new remote offer before creating SDP */
+    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
+				      call->secure_level,
+				      call->inv->pool_prov,
+				      offer, NULL,
+                                      PJ_FALSE, NULL);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error re-initializing media channel", status);
+	goto on_return;
+    }
 
     status = pjsua_media_channel_create_sdp(call->index, 
 					    call->inv->pool_prov, 

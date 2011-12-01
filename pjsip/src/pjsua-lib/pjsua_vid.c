@@ -1312,6 +1312,10 @@ PJ_DEF(pj_status_t) pjsua_vid_win_set_show( pjsua_vid_win_id wid,
 	return PJ_EINVAL;
     }
 
+    /* Make sure that renderer gets started before shown up */
+    if (show && !pjmedia_vid_port_is_running(w->vp_rend))
+	status = pjmedia_vid_port_start(w->vp_rend);
+
     hide = !show;
     status = pjmedia_vid_dev_stream_set_cap(s,
 			    PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE, &hide);
@@ -1540,15 +1544,10 @@ static pj_status_t call_add_video(pjsua_call *call,
     pjmedia_sdp_session *sdp;
     pjmedia_sdp_media *sdp_m;
     pjmedia_transport_info tpinfo;
-    unsigned active_cnt;
     pj_status_t status;
 
     /* Verify media slot availability */
     if (call->med_cnt == PJSUA_MAX_CALL_MEDIA)
-	return PJ_ETOOMANY;
-
-    call_get_vid_strm_info(call, NULL, NULL, &active_cnt, NULL);
-    if (active_cnt == acc_cfg->max_video_cnt)
 	return PJ_ETOOMANY;
 
     /* Get active local SDP and clone it */
@@ -1616,6 +1615,8 @@ static pj_status_t call_add_video(pjsua_call *call,
     status = call_reoffer_sdp(call->index, sdp);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    call->opt.video_cnt++;
 
     return PJ_SUCCESS;
 
@@ -1758,6 +1759,7 @@ on_error:
 	/* Deactivate the stream */
 	pjmedia_sdp_media_deactivate(pool, sdp->media[med_idx]);
 
+	call->opt.video_cnt--;
     }
 
     status = call_reoffer_sdp(call->index, sdp);
