@@ -105,10 +105,10 @@ typedef struct codec_port_data_t
     pjmedia_converter   *conv;
 } codec_port_data_t;
 
-static pj_status_t avi_event_cb(pjmedia_event_subscription *esub,
-				pjmedia_event *event)
+static pj_status_t avi_event_cb(pjmedia_event *event,
+                                void *user_data)
 {
-    avi_port_t *ap = (avi_port_t *)esub->user_data;
+    avi_port_t *ap = (avi_port_t *)user_data;
     
     switch (event->type) {
     case PJMEDIA_EVENT_WND_CLOSED:
@@ -191,7 +191,6 @@ static int aviplay(pj_pool_t *pool, const char *fname)
     pjmedia_avi_stream *vid_stream, *aud_stream;
     pjmedia_port *vid_port = NULL, *aud_port = NULL;
     pjmedia_vid_codec *codec=NULL;
-    pjmedia_event_subscription esub;
     avi_port_t avi_port;
     
     pj_bzero(&avi_port, sizeof(avi_port));
@@ -402,10 +401,8 @@ static int aviplay(pj_pool_t *pool, const char *fname)
         pjmedia_vid_port_set_cb(renderer, &cb, &avi_port);
 
         /* subscribe events */
-        pjmedia_event_subscription_init(&esub, &avi_event_cb, &avi_port);
-        pjmedia_event_subscribe(
-        	pjmedia_vid_port_get_event_publisher(renderer),
-        	&esub);
+        pjmedia_event_subscribe(NULL, pool, &avi_event_cb, &avi_port,
+                                renderer);
 
         if (snd_port) {
             /* Synchronize video rendering and audio playback */
@@ -436,8 +433,11 @@ on_return:
         pj_thread_sleep(100);
         pjmedia_snd_port_destroy(snd_port);
     }
-    if (renderer)
+    if (renderer) {
+        pjmedia_event_unsubscribe(NULL, &avi_event_cb, &avi_port,
+                                  renderer);
         pjmedia_vid_port_destroy(renderer);
+    }
     if (aud_port)
         pjmedia_port_destroy(aud_port);
     if (vid_port)
@@ -482,6 +482,7 @@ static int main_func(int argc, char *argv[])
 
     pjmedia_video_format_mgr_create(pool, 64, 0, NULL);
     pjmedia_converter_mgr_create(pool, NULL);
+    pjmedia_event_mgr_create(pool, 0, NULL);
     pjmedia_vid_codec_mgr_create(pool, NULL);
     
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
@@ -519,6 +520,7 @@ on_return:
     
     pjmedia_video_format_mgr_destroy(pjmedia_video_format_mgr_instance());
     pjmedia_converter_mgr_destroy(pjmedia_converter_mgr_instance());
+    pjmedia_event_mgr_destroy(pjmedia_event_mgr_instance());
     pjmedia_vid_codec_mgr_destroy(pjmedia_vid_codec_mgr_instance());    
     
     /* Release application pool */

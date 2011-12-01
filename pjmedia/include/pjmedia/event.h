@@ -25,7 +25,6 @@
  */
 #include <pjmedia/format.h>
 #include <pjmedia/signatures.h>
-#include <pj/list.h>
 
 PJ_BEGIN_DECL
 
@@ -86,16 +85,6 @@ typedef enum pjmedia_event_type
     PJMEDIA_EVENT_ORIENT_CHANGED = PJMEDIA_FOURCC('O', 'R', 'N', 'T')
 
 } pjmedia_event_type;
-
-/**
- * Forward declaration for event subscription.
- */
-typedef struct pjmedia_event_subscription pjmedia_event_subscription;
-
-/**
- * Forward declaration for event publisher.
- */
-typedef struct pjmedia_event_publisher pjmedia_event_publisher;
 
 /**
  * Additional data/parameters for media format changed event
@@ -162,8 +151,8 @@ typedef char pjmedia_event_user_data[PJMEDIA_EVENT_DATA_MAX_SIZE];
 
 /**
  * This structure describes a media event. It consists mainly of the event
- * type and additional data/parameters for the event. Event publishers need
- * to use #pjmedia_event_init() to initialize this event structure with
+ * type and additional data/parameters for the event. Applications can
+ * use #pjmedia_event_init() to initialize this event structure with
  * basic information about the event.
  */
 typedef struct pjmedia_event
@@ -179,27 +168,22 @@ typedef struct pjmedia_event
     pj_timestamp		 	 timestamp;
 
     /**
-     * This keeps count on the number of subscribers that have
-     * processed this event.
-     */
-    unsigned				 proc_cnt;
-
-    /**
-     * The object signature of the event publisher. Application may use
-     * this to check which publisher published the event.
-     */
-    pjmedia_obj_sig			 epub_sig;
-
-    /**
      * Pointer information about the source of this event. This field
-     * is provided mainly so that the event subscribers can compare it
-     * against the publisher that it subscribed the events from initially,
-     * a publisher can republish events from other publisher. Event
-     * subscription must be careful when using this pointer other than for
-     * comparison purpose, since access to the publisher may require special
-     * care (e.g. mutex locking).
+     * is provided mainly for comparison purpose so that event subscribers
+     * can check which source the event originated from. Usage of this
+     * pointer for other purpose may require special care such as mutex
+     * locking or checking whether the object is already destroyed.
      */
-    const pjmedia_event_publisher	*epub;
+    const void	                        *src;
+
+    /**
+     * Pointer information about the publisher of this event. This field
+     * is provided mainly for comparison purpose so that event subscribers
+     * can check which object published the event. Usage of this
+     * pointer for other purpose may require special care such as mutex
+     * locking or checking whether the object is already destroyed.
+     */
+    const void	                        *epub;
 
     /**
      * Additional data/parameters about the event. The type of data
@@ -238,52 +222,92 @@ typedef struct pjmedia_event
 } pjmedia_event;
 
 /**
- * The callback to receive media events. The callback should increase
- * \a proc_cnt field of the event if it processes the event.
+ * The callback to receive media events.
  *
- * @param esub		The subscription that was made initially to receive
- * 			this event.
- * @param event		The media event itself.
+ * @param event		The media event.
+ * @param user_data	The user data associated with the callback.
  *
  * @return		If the callback returns non-PJ_SUCCESS, this return
- * 			code may be propagated back to the producer.
+ * 			code may be propagated back to the caller.
  */
-typedef pj_status_t pjmedia_event_cb(pjmedia_event_subscription *esub,
-				     pjmedia_event *event);
+typedef pj_status_t pjmedia_event_cb(pjmedia_event *event,
+                                     void *user_data);
 
 /**
- * This structure keeps the data needed to maintain an event subscription.
- * This data is normally kept by event publishers.
+ * This enumeration describes flags for event publication via
+ * #pjmedia_event_publish().
  */
-struct pjmedia_event_subscription
+typedef enum pjmedia_event_publish_flag
 {
-    /** Standard list members */
-    PJ_DECL_LIST_MEMBER(pjmedia_event_subscription);
+    /**
+     * Publisher will only post the event to the event manager. It is the
+     * event manager that will later notify all the publisher's subscribers.
+     */
+    PJMEDIA_EVENT_PUBLISH_POST_EVENT = 1
 
-    /** Callback that will be called by publisher to report events. */
-    pjmedia_event_cb	*cb;
-
-    /** User data for this subscription */
-    void		*user_data;
-
-    /** Current publisher it is subscribed to */
-    pjmedia_event_publisher *subscribe_to;
-};
+} pjmedia_event_publish_flag;
 
 /**
- * This describes an event publisher. An event publisher is an object that
- * maintains event subscriptions. When an event is published on behalf of
- * a publisher with #pjmedia_event_publish(), that event will be propagated
- * to all of the subscribers registered to the publisher.
+ * Event manager flag.
  */
-struct pjmedia_event_publisher
+typedef enum pjmedia_event_mgr_flag
 {
-    /** The object signature of the publisher */
-    pjmedia_obj_sig		sig;
+    /**
+     * Tell the event manager not to create any event worker thread.
+     */
+    PJMEDIA_EVENT_MGR_NO_THREAD = 1
 
-    /** List of subscriptions for this event publisher */
-    pjmedia_event_subscription	subscription_list;
-};
+} pjmedia_event_mgr_flag;
+
+/**
+ * Opaque data type for event manager. Typically, the event manager
+ * is a singleton instance, although application may instantiate more than one
+ * instances of this if required.
+ */
+typedef struct pjmedia_event_mgr pjmedia_event_mgr;
+
+/**
+ * Create a new event manager instance. This will also set the pointer
+ * to the singleton instance if the value is still NULL.
+ *
+ * @param pool		Pool to allocate memory from.
+ * @param options       Options. Bitmask flags from #pjmedia_event_mgr_flag
+ * @param mgr		Pointer to hold the created instance of the
+ * 			event manager.
+ *
+ * @return		PJ_SUCCESS on success or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
+                                              unsigned options,
+				              pjmedia_event_mgr **mgr);
+
+/**
+ * Get the singleton instance of the event manager.
+ *
+ * @return		The instance.
+ */
+PJ_DECL(pjmedia_event_mgr*) pjmedia_event_mgr_instance(void);
+
+/**
+ * Manually assign a specific event manager instance as the singleton
+ * instance. Normally this is not needed if only one instance is ever
+ * going to be created, as the library automatically assign the singleton
+ * instance.
+ *
+ * @param mgr		The instance to be used as the singleton instance.
+ * 			Application may specify NULL to clear the singleton
+ * 			singleton instance.
+ */
+PJ_DECL(void) pjmedia_event_mgr_set_instance(pjmedia_event_mgr *mgr);
+
+/**
+ * Destroy an event manager. If the manager happens to be the singleton
+ * instance, the singleton instance will be set to NULL.
+ *
+ * @param mgr		The eventmanager. Specify NULL to use
+ * 			the singleton instance.
+ */
+PJ_DECL(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr);
 
 /**
  * Initialize event structure with basic data about the event.
@@ -292,110 +316,76 @@ struct pjmedia_event_publisher
  * @param type		The event type to be set for this event.
  * @param ts		Event timestamp. May be set to NULL to set the event
  * 			timestamp to zero.
- * @param epub		Event publisher.
+ * @param src		Event source.
  */
 PJ_DECL(void) pjmedia_event_init(pjmedia_event *event,
                                  pjmedia_event_type type,
                                  const pj_timestamp *ts,
-                                 const pjmedia_event_publisher *epub);
+                                 const void *src);
 
 /**
- * Initialize an event publisher structure.
- *
- * @param epub		The event publisher.
- * @param sig		The object signature of the publisher.
- */
-PJ_DECL(void) pjmedia_event_publisher_init(pjmedia_event_publisher *epub,
-                                           pjmedia_obj_sig sig);
-
-/**
- * Initialize subscription data.
- *
- * @param esub		The event subscription.
- * @param cb		The callback to receive events.
- * @param user_data	Arbitrary user data to be associated with the
- * 			subscription.
- */
-PJ_DECL(void) pjmedia_event_subscription_init(pjmedia_event_subscription *esub,
-                                              pjmedia_event_cb *cb,
-                                              void *user_data);
-
-/**
- * Subscribe to events published by the specified publisher using the
- * specified subscription object. The callback and user data fields of
- * the subscription object must have been initialized prior to calling
- * this function, and the subscription object must be kept alive throughout
- * the duration of the subscription (e.g. it must not be allocated from
- * the stack).
- *
- * Note that the subscriber may receive not only events emitted by
+ * Subscribe a callback function to events published by the specified
+ * publisher. Note that the subscriber may receive not only events emitted by
  * the specific publisher specified in the argument, but also from other
  * publishers contained by the publisher, if the publisher is republishing
  * events from other publishers.
  *
+ * @param mgr		The event manager.
+ * @param pool          Pool to allocate memory from.
+ * @param cb            The callback function to receive the event.
+ * @param user_data     The user data to be associated with the callback
+ *                      function.
  * @param epub		The event publisher.
- * @param esub 		The event subscription object.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
-PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_publisher *epub,
-                                             pjmedia_event_subscription *esub);
+PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_mgr *mgr,
+                                             pj_pool_t *pool,
+                                             pjmedia_event_cb *cb,
+                                             void *user_data,
+                                             void *epub);
 
 /**
- * Unsubscribe the specified subscription object from publisher it is
- * currently subscribed to. If the subscription object is not currently
- * subscribed to anything, the function will do nothing.
+ * Unsubscribe the callback associated with the user data from a publisher.
+ * If the user data is not specified, this function will do the
+ * unsubscription for all user data. If the publisher, epub, is not
+ * specified, this function will do the unsubscription from all publishers.
  *
- * @param esub		The event subscription object, which must be the same
- * 			object that was given to #pjmedia_event_subscribe().
+ * @param mgr		The event manager.
+ * @param cb            The callback function.
+ * @param user_data     The user data associated with the callback
+ *                      function, can be NULL.
+ * @param epub		The event publisher, can be NULL.
  *
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t)
-pjmedia_event_unsubscribe(pjmedia_event_subscription *esub);
-
-/**
- * Check if the specified publisher has subscribers.
- *
- * @param epub		The event publisher.
- *
- * @return		PJ_TRUE if the publisher has at least one subscriber.
- */
-PJ_DECL(pj_bool_t)
-pjmedia_event_publisher_has_sub(pjmedia_event_publisher *epub);
+pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
+                          pjmedia_event_cb *cb,
+                          void *user_data,
+                          void *epub);
 
 /**
  * Publish the specified event to all subscribers of the specified event
- * publisher.
+ * publisher. By default, the function will call all the subcribers'
+ * callbacks immediately. If the publisher uses the flag
+ * PJMEDIA_EVENT_PUBLISH_POST_EVENT, publisher will only post the event
+ * to the event manager and return immediately. It is the event manager
+ * that will later notify all the publisher's subscribers.
  *
+ * @param mgr		The event manager.
  * @param epub		The event publisher.
  * @param event		The event to be published.
+ * @param flag          Publication flag.
  *
  * @return		PJ_SUCCESS only if all subscription callbacks returned
  * 			PJ_SUCCESS.
  */
-PJ_DECL(pj_status_t) pjmedia_event_publish(pjmedia_event_publisher *epub,
-                                           pjmedia_event *event);
+PJ_DECL(pj_status_t) pjmedia_event_publish(pjmedia_event_mgr *mgr,
+                                           void *epub,
+                                           pjmedia_event *event,
+                                           pjmedia_event_publish_flag flag);
 
-/**
- * Subscribe to events produced by the source publisher in \a esrc and
- * republish the events to all subscribers in \a epub publisher.
- *
- * @param esrc		The event source from which events will be
- * 			republished.
- * @param epub		Events from the event source above will be
- * 			republished to subscribers of this publisher.
- * @param esub		The subscription object to be used to subscribe
- * 			to \a esrc. This doesn't need to be initialized,
- * 			but it must be kept alive throughout the lifetime
- * 			of the subsciption.
- *
- * @return		PJ_SUCCESS only if all subscription callbacks returned
- * 			PJ_SUCCESS.
- */
-PJ_DECL(pj_status_t) pjmedia_event_republish(pjmedia_event_publisher *esrc,
-                                             pjmedia_event_publisher *epub,
-                                             pjmedia_event_subscription *esub);
 
 /**
  * @}  PJMEDIA_EVENT

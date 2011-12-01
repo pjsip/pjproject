@@ -1609,15 +1609,15 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
 	    }
 
 	    /* Broadcast event */
-	    if (pjmedia_event_publisher_has_sub(&codec->epub)) {
+	    {
 		pjmedia_event event;
 
 		pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
-				   &input->timestamp, &codec->epub);
+				   &input->timestamp, codec);
 		event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
 		pj_memcpy(&event.data.fmt_changed.new_fmt, &ff->param.dec_fmt,
 			  sizeof(ff->param.dec_fmt));
-		pjmedia_event_publish(&codec->epub, &event);
+		pjmedia_event_publish(NULL, codec, &event, 0);
 	    }
 	}
 
@@ -1651,13 +1651,13 @@ static pj_status_t ffmpeg_codec_decode_whole(pjmedia_vid_codec *codec,
         output->size = vafp->framebytes;
 
         /* Check if we got key frame */
-        if (avframe.key_frame && pjmedia_event_publisher_has_sub(&codec->epub))
+        if (avframe.key_frame)
         {
             pjmedia_event event;
 
             pjmedia_event_init(&event, PJMEDIA_EVENT_KEY_FRAME_FOUND,
-                               &output->timestamp, &codec->epub);
-            pjmedia_event_publish(&codec->epub, &event);
+                               &output->timestamp, codec);
+            pjmedia_event_publish(NULL, codec, &event, 0);
         }
     } else {
 	output->type = PJMEDIA_FRAME_TYPE_NONE;

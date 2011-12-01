@@ -308,7 +308,7 @@ static struct sdl_stream* find_stream(struct sdl_factory *sf,
  
     if (strm)
         pjmedia_event_init(pevent, PJMEDIA_EVENT_NONE, &strm->last_ts,
-		           &strm->base.epub);
+		           strm);
 
     return strm;
 }
@@ -354,7 +354,7 @@ static pj_status_t handle_event(void *data)
         if (strm && pevent.type != PJMEDIA_EVENT_NONE) {
             pj_status_t status;
 
-	    pjmedia_event_publish(&strm->base.epub, &pevent);
+	    pjmedia_event_publish(NULL, strm, &pevent, 0);
 
 	    switch (pevent.type) {
 	    case PJMEDIA_EVENT_WND_RESIZED:
@@ -375,9 +375,8 @@ static pj_status_t handle_event(void *data)
 		sdl_stream_stop(&strm->base);
                 sdl_destroy_all(strm);
                 pjmedia_event_init(&pevent, PJMEDIA_EVENT_WND_CLOSED,
-                                   &strm->last_ts,
-                                   &strm->base.epub);
-                pjmedia_event_publish(&strm->base.epub, &pevent);
+                                   &strm->last_ts, strm);
+                pjmedia_event_publish(NULL, strm, &pevent, 0);
 
                 /*
                  * Note: don't access the stream after this point, it
@@ -916,7 +915,6 @@ static pj_status_t sdl_factory_create_stream(
     strm->sf = sf;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
-    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_SDL);
 
     /* Create render stream here */
     if (param->dir & PJMEDIA_DIR_RENDER) {

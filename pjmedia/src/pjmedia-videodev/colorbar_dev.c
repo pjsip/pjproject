@@ -416,7 +416,6 @@ static pj_status_t cbar_factory_create_stream(
     strm->cbfi = cbfi;
     pj_memcpy(&strm->vafp, &vafp, sizeof(vafp));
     strm->ts_inc = PJMEDIA_SPF2(param->clock_rate, &vfd->fps, 1);
-    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_COLORBAR);
 
     for (i = 0; i < vfi->plane_cnt; ++i) {
         strm->first_line[i] = pj_pool_alloc(pool, vafp.strides[i]);

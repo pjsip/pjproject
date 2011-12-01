@@ -249,9 +249,6 @@ struct pjmedia_vid_codec
 
     /** Operations to codec. */
     pjmedia_vid_codec_op	*op;
-
-    /** Event publisher object */
-    pjmedia_event_publisher	 epub;
 };
 
 

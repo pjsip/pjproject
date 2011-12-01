@@ -383,7 +383,6 @@ static pj_status_t ffmpeg_factory_create_stream(
     strm->factory = (ffmpeg_factory*)f;
     strm->pool = pool;
     pj_memcpy(&strm->param, param, sizeof(*param));
-    pjmedia_event_publisher_init(&strm->base.epub);
 
     /* Done */
     strm->base.op = &stream_op;

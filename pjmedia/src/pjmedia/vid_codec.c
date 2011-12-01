@@ -77,7 +77,6 @@ PJ_DEF(void) pjmedia_vid_codec_reset(pjmedia_vid_codec *codec,
                                     pjmedia_obj_sig sig)
 {
     pj_bzero(codec, sizeof(*codec));
-    pjmedia_event_publisher_init(&codec->epub, sig);
 }
 
 /*

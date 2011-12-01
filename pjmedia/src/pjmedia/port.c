@@ -117,20 +117,6 @@ PJ_DEF(pj_status_t) pjmedia_port_put_frame( pjmedia_port *port,
 	return PJ_EINVALIDOP;
 }
 
-/*
- * Get event publisher
- */
-PJ_DEF(pjmedia_event_publisher*)
-pjmedia_port_get_event_publisher(pjmedia_port *port)
-{
-    PJ_ASSERT_RETURN(port, NULL);
-
-    if (port->get_event_pub)
-	return (*port->get_event_pub)(port);
-
-    return NULL;
-}
-
 /**
  * Destroy port (and subsequent downstream ports)
  */

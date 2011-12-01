@@ -76,10 +76,10 @@ static int enum_devs(void)
     return PJ_SUCCESS;
 }
 
-static pj_status_t vid_event_cb(pjmedia_event_subscription *esub,
-				pjmedia_event *event)
+static pj_status_t vid_event_cb(pjmedia_event *event,
+                                void *user_data)
 {
-    PJ_UNUSED_ARG(esub);
+    PJ_UNUSED_ARG(user_data);
 
     if (event->type == PJMEDIA_EVENT_WND_CLOSED)
         is_quitting = PJ_TRUE;
@@ -95,7 +95,6 @@ static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
     pjmedia_vid_dev_info cdi, rdi;
     pjmedia_vid_port_param param;
     pjmedia_video_format_detail *vfd;
-    pjmedia_event_subscription esub;
     pj_status_t status;
     int rc = 0, i;
 
@@ -161,10 +160,7 @@ static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
     }
 
     /* Set event handler */
-    pjmedia_event_subscription_init(&esub, &vid_event_cb, NULL);
-    pjmedia_event_subscribe(
-	    pjmedia_vid_port_get_event_publisher(renderer),
-	    &esub);
+    pjmedia_event_subscribe(NULL, pool, &vid_event_cb, NULL, renderer);
 
     /* Connect capture to renderer */
     status = pjmedia_vid_port_connect(
@@ -196,8 +192,10 @@ on_return:
 
     if (capture)
 	pjmedia_vid_port_destroy(capture);
-    if (renderer)
+    if (renderer) {
+        pjmedia_event_unsubscribe(NULL, &vid_event_cb, NULL, renderer);
 	pjmedia_vid_port_destroy(renderer);
+    }
 
     pj_pool_release(pool);
     return rc;

@@ -85,9 +85,6 @@ struct pjsua_call_media
 					    address)			    */
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
 
-    pjmedia_event_subscription esub_rend;/**< Subscribe renderer events.    */
-    pjmedia_event_subscription esub_cap;/**< Subscribe capture events.      */
-
     pjsua_med_tp_state_cb      med_init_cb;/**< Media transport
                                                 initialization callback.    */
 
@@ -565,6 +562,9 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 void stop_video_stream(pjsua_call_media *call_med);
 void set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
+/* Callback to receive media events */
+pj_status_t call_media_on_event(pjmedia_event *event,
+                                void *user_data);
 
 /**
  * Init presence.

@@ -751,19 +751,6 @@ PJ_DECL(pj_bool_t) pjmedia_vid_dev_stream_is_running(pjmedia_vid_dev_stream *str
 
 
 /**
- * Get the event publisher object for the video stream. Caller typically use
- * the returned object to subscribe or unsubscribe events from the video
- * stream.
- *
- * @param strm      The video stream.
- *
- * @return          The event publisher object.
- */
-PJ_DECL(pjmedia_event_publisher*)
-pjmedia_vid_dev_stream_get_event_publisher(pjmedia_vid_dev_stream *strm);
-
-
-/**
  * Request one frame from the stream. Application needs to call this function
  * periodically only if the stream doesn't support "active interface", i.e.
  * the pjmedia_vid_dev_info.has_callback member is PJ_FALSE.

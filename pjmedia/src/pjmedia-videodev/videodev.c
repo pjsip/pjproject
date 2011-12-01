@@ -785,12 +785,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_set_cap(
     return strm->op->set_cap(strm, cap, value);
 }
 
-PJ_DEF(pjmedia_event_publisher*)
-pjmedia_vid_dev_stream_get_event_publisher(pjmedia_vid_dev_stream *strm)
-{
-    return &strm->epub;
-}
-
 /* API: Start the stream. */
 PJ_DEF(pj_status_t) pjmedia_vid_dev_stream_start(pjmedia_vid_dev_stream *strm)
 {

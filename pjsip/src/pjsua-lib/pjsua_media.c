@@ -1253,14 +1253,13 @@ static void sort_media(const pjmedia_sdp_session *sdp,
 }
 
 /* Callback to receive media events */
-static pj_status_t call_media_on_event(pjmedia_event_subscription *esub,
-                                       pjmedia_event *event)
+pj_status_t call_media_on_event(pjmedia_event *event,
+                                void *user_data)
 {
-    pjsua_call_media *call_med = (pjsua_call_media*)esub->user_data;
+    pjsua_call_media *call_med = (pjsua_call_media*)user_data;
     pjsua_call *call = call_med->call;
 
     if (pjsua_var.ua_cfg.cb.on_call_media_event && call) {
-	++event->proc_cnt;
 	(*pjsua_var.ua_cfg.cb.on_call_media_event)(call->index,
 						   call_med->idx, event);
     }
@@ -1424,12 +1423,6 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 		pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
 		call_med->strm.v.cap_dev = info.id;
 	    }
-
-	    /* Init event subscribtion */
-	    pjmedia_event_subscription_init(&call_med->esub_rend, &call_media_on_event,
-					    call_med);
-	    pjmedia_event_subscription_init(&call_med->esub_cap, &call_media_on_event,
-					    call_med);
 	}
 #endif
 

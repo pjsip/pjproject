@@ -147,9 +147,6 @@ struct pjmedia_vid_stream
     pjmedia_vid_codec	    *codec;	    /**< Codec instance being used. */
     pj_uint32_t		     last_dec_ts;    /**< Last decoded timestamp.   */
     int			     last_dec_seq;   /**< Last decoded sequence.    */
-
-    pjmedia_event_subscription esub_codec;   /**< To subscribe codec events */
-    pjmedia_event_publisher    epub;	     /**< To publish events	    */
 };
 
 /* Prototypes */
@@ -339,18 +336,15 @@ static void dump_port_info(const pjmedia_vid_channel *chan,
 /*
  * Handle events from stream components.
  */
-static pj_status_t stream_event_cb(pjmedia_event_subscription *esub,
-                                   pjmedia_event *event)
+static pj_status_t stream_event_cb(pjmedia_event *event,
+                                   void *user_data)
 {
-    pjmedia_vid_stream *stream = (pjmedia_vid_stream*)esub->user_data;
+    pjmedia_vid_stream *stream = (pjmedia_vid_stream*)user_data;
 
-    if (esub == &stream->esub_codec) {
+    if (event->epub == stream->codec) {
 	/* This is codec event */
 	switch (event->type) {
 	case PJMEDIA_EVENT_FMT_CHANGED:
-	    /* we process the event */
-	    ++event->proc_cnt;
-
 	    /* Copy the event to avoid deadlock if we publish the event
 	     * now. This happens because fmt_event may trigger restart
 	     * while we're still holding the jb_mutex.
@@ -362,13 +356,7 @@ static pj_status_t stream_event_cb(pjmedia_event_subscription *esub,
 	}
     }
 
-    return pjmedia_event_publish(&stream->epub, event);
-}
-
-static pjmedia_event_publisher *port_get_epub(pjmedia_port *port)
-{
-    pjmedia_vid_stream *stream = (pjmedia_vid_stream*) port->port_data.pdata;
-    return &stream->epub;
+    return pjmedia_event_publish(NULL, stream, event, 0);
 }
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
@@ -1031,18 +1019,18 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 			   vfd->fps.num / vfd->fps.denum));
 
 		/* Publish PJMEDIA_EVENT_FMT_CHANGED event */
-		if (pjmedia_event_publisher_has_sub(&stream->epub)) {
+		{
 		    pjmedia_event event;
 
 		    dump_port_info(stream->dec, "changed");
 
 		    pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
-		                       &frame->timestamp, &stream->epub);
+		                       &frame->timestamp, &stream);
 		    event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
 		    pj_memcpy(&event.data.fmt_changed.new_fmt,
 		              &stream->info.codec_param->dec_fmt,
 		              sizeof(pjmedia_format));
-		    pjmedia_event_publish(&stream->epub, &event);
+		    pjmedia_event_publish(NULL, stream, &event, 0);
 		}
 	    }
 	}
@@ -1086,7 +1074,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 			stream->dec : stream->enc,
 		      "changed");
 
-	pjmedia_event_publish(&stream->epub, &stream->fmt_event);
+	pjmedia_event_publish(NULL, stream, &stream->fmt_event, 0);
 
 	stream->fmt_event.type = PJMEDIA_EVENT_NONE;
     }
@@ -1211,7 +1199,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     /* Init port. */
     channel->port.port_data.pdata = stream;
-    channel->port.get_event_pub = &port_get_epub;
 
     PJ_LOG(5, (name.ptr,
 	       "%s channel created %dx%d %s%s%.*s %d/%d(~%d)fps",
@@ -1345,11 +1332,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Init event publisher and subscribe to codec events */
-    pjmedia_event_publisher_init(&stream->epub, SIGNATURE);
-    pjmedia_event_subscription_init(&stream->esub_codec, &stream_event_cb,
-                                    stream);
-    pjmedia_event_subscribe(&stream->codec->epub, &stream->esub_codec);
+    /* Subscribe to codec events */
+    pjmedia_event_subscribe(NULL, pool, &stream_event_cb, stream,
+                            stream->codec);
 
     /* Estimate the maximum frame size */
     stream->frame_size = vfd_enc->size.w * vfd_enc->size.h * 4;
@@ -1556,6 +1541,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 
     /* Free codec. */
     if (stream->codec) {
+        pjmedia_event_unsubscribe(NULL, &stream_event_cb, stream,
+                                  stream->codec);
 	pjmedia_vid_codec_close(stream->codec);
 	pjmedia_vid_codec_mgr_dealloc_codec(stream->codec_mgr, stream->codec);
 	stream->codec = NULL;

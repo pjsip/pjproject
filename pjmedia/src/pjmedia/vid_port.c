@@ -61,10 +61,6 @@ struct pjmedia_vid_port
     pj_size_t		     conv_buf_size;
     pjmedia_conversion_param conv_param;
 
-    pjmedia_event_publisher    epub;
-    pjmedia_event_subscription esub_dev;
-    pjmedia_event_subscription esub_client_port;
-
     pjmedia_clock           *clock;
     pjmedia_clock_src        clocksrc;
 
@@ -94,10 +90,10 @@ static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
 static pj_status_t vidstream_render_cb(pjmedia_vid_dev_stream *stream,
 				       void *user_data,
 				       pjmedia_frame *frame);
-static pj_status_t vidstream_event_cb(pjmedia_event_subscription *esub,
-			              pjmedia_event *event);
-static pj_status_t client_port_event_cb(pjmedia_event_subscription *esub,
-                                        pjmedia_event *event);
+static pj_status_t vidstream_event_cb(pjmedia_event *event,
+                                      void *user_data);
+static pj_status_t client_port_event_cb(pjmedia_event *event,
+                                        void *user_data);
 
 static void enc_clock_cb(const pj_timestamp *ts, void *user_data);
 static void dec_clock_cb(const pj_timestamp *ts, void *user_data);
@@ -206,7 +202,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     vp->role = prm->active ? ROLE_ACTIVE : ROLE_PASSIVE;
     vp->dir = prm->vidparam.dir;
 //    vp->cap_size = vfd->size;
-    pjmedia_event_publisher_init(&vp->epub, SIGNATURE);
 
     vparam = prm->vidparam;
     dev_name[0] = '\0';
@@ -272,10 +267,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	      vparam.fmt.det.vid.fps.num, vparam.fmt.det.vid.fps.denum));
 
     /* Subscribe to device's events */
-    pjmedia_event_subscription_init(&vp->esub_dev, vidstream_event_cb, vp);
-    pjmedia_event_subscribe(
-	    pjmedia_vid_dev_stream_get_event_publisher(vp->strm),
-	    &vp->esub_dev);
+    pjmedia_event_subscribe(NULL, vp->pool, &vidstream_event_cb,
+                            vp, vp->strm);
 
     if (vp->dir & PJMEDIA_DIR_CAPTURE) {
 	pjmedia_format_copy(&vp->conv_param.src, &vparam.fmt);
@@ -370,13 +363,6 @@ PJ_DEF(void) pjmedia_vid_port_set_cb(pjmedia_vid_port *vid_port,
     vid_port->strm_cb_data = user_data;
 }
 
-PJ_DEF(pjmedia_event_publisher*)
-pjmedia_vid_port_get_event_publisher(pjmedia_vid_port *vid_port)
-{
-    PJ_ASSERT_RETURN(vid_port, NULL);
-    return &vid_port->epub;
-}
-
 PJ_DEF(pjmedia_vid_dev_stream*)
 pjmedia_vid_port_get_stream(pjmedia_vid_port *vp)
 {
@@ -419,20 +405,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vp,
 					      pjmedia_port *port,
 					      pj_bool_t destroy)
 {
-    pjmedia_event_publisher *epub;
-
     PJ_ASSERT_RETURN(vp && vp->role==ROLE_ACTIVE, PJ_EINVAL);
     vp->destroy_client_port = destroy;
     vp->client_port = port;
 
     /* Subscribe to client port's events */
-    epub = pjmedia_port_get_event_publisher(port);
-    if (epub) {
-	pjmedia_event_subscription_init(&vp->esub_client_port,
-	                                &client_port_event_cb,
-	                                vp);
-	pjmedia_event_subscribe(epub, &vp->esub_client_port);
-    }
+    pjmedia_event_subscribe(NULL, vp->pool, &client_port_event_cb, vp,
+                            vp->client_port);
+
     return PJ_SUCCESS;
 }
 
@@ -441,10 +421,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_disconnect(pjmedia_vid_port *vp)
 {
     PJ_ASSERT_RETURN(vp && vp->role==ROLE_ACTIVE, PJ_EINVAL);
 
-    if (vp->client_port) {
-	pjmedia_event_unsubscribe(&vp->esub_client_port);
-	vp->client_port = NULL;
-    }
+    pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp,
+                              vp->client_port);
+    vp->client_port = NULL;
+
     return PJ_SUCCESS;
 }
 
@@ -510,10 +490,13 @@ PJ_DEF(void) pjmedia_vid_port_destroy(pjmedia_vid_port *vp)
 	vp->clock = NULL;
     }
     if (vp->strm) {
+        pjmedia_event_unsubscribe(NULL, &vidstream_event_cb, vp, vp->strm);
 	pjmedia_vid_dev_stream_destroy(vp->strm);
 	vp->strm = NULL;
     }
     if (vp->client_port) {
+        pjmedia_event_unsubscribe(NULL, &client_port_event_cb, vp,
+                                  vp->client_port);
 	if (vp->destroy_client_port)
 	    pjmedia_port_destroy(vp->client_port);
 	vp->client_port = NULL;
@@ -560,26 +543,24 @@ static void save_rgb_frame(int width, int height, const pjmedia_frame *frm)
 */
 
 /* Handle event from vidstream */
-static pj_status_t vidstream_event_cb(pjmedia_event_subscription *esub,
-				      pjmedia_event *event)
+static pj_status_t vidstream_event_cb(pjmedia_event *event,
+                                      void *user_data)
 {
-    pjmedia_vid_port *vp = (pjmedia_vid_port*)esub->user_data;
+    pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     
     /* Just republish the event to our client */
-    return pjmedia_event_publish(&vp->epub, event);
+    return pjmedia_event_publish(NULL, vp, event, 0);
 }
 
-static pj_status_t client_port_event_cb(pjmedia_event_subscription *esub,
-                                        pjmedia_event *event)
+static pj_status_t client_port_event_cb(pjmedia_event *event,
+                                        void *user_data)
 {
-    pjmedia_vid_port *vp = (pjmedia_vid_port*)esub->user_data;
+    pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
 
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
         const pjmedia_video_format_detail *vfd;
         pj_status_t status;
         
-        ++event->proc_cnt;
-
 	pjmedia_vid_port_stop(vp);
         
         /* Retrieve the video format detail */
@@ -633,8 +614,11 @@ static pj_status_t client_port_event_cb(pjmedia_event_subscription *esub,
 	pjmedia_vid_port_start(vp);
     }
     
-    /* Republish the event */
-    return pjmedia_event_publish(&vp->epub, event);
+    /* Republish the event, post the event to the event manager
+     * to avoid deadlock if vidport is trying to stop the clock.
+     */
+    return pjmedia_event_publish(NULL, vp, event,
+                                 PJMEDIA_EVENT_PUBLISH_POST_EVENT);
 }
 
 static pj_status_t convert_frame(pjmedia_vid_port *vp,

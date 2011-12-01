@@ -57,6 +57,13 @@ pj_status_t pjsua_vid_subsys_init(void)
 	goto on_error;
     }
 
+    status = pjmedia_event_mgr_create(pjsua_var.pool, 0, NULL);
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(1,(THIS_FILE, status,
+		     "Error creating PJMEDIA event manager"));
+	goto on_error;
+    }
+
     status = pjmedia_vid_codec_mgr_create(pjsua_var.pool, NULL);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status,
@@ -129,6 +136,9 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
     if (pjmedia_converter_mgr_instance())
 	pjmedia_converter_mgr_destroy(NULL);
+
+    if (pjmedia_event_mgr_instance())
+	pjmedia_event_mgr_destroy(NULL);
 
     if (pjmedia_video_format_mgr_instance())
 	pjmedia_video_format_mgr_destroy(NULL);
@@ -613,11 +623,15 @@ static void free_vid_win(pjsua_vid_win_id wid)
     pj_log_push_indent();
 
     if (w->vp_cap) {
+        pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
+                                  w->vp_cap);
 	pjmedia_vid_port_stop(w->vp_cap);
 	pjmedia_vid_port_disconnect(w->vp_cap);
 	pjmedia_vid_port_destroy(w->vp_cap);
     }
     if (w->vp_rend) {
+        pjmedia_event_unsubscribe(NULL, &call_media_on_event, NULL,
+                                  w->vp_rend);
 	pjmedia_vid_port_stop(w->vp_rend);
 	pjmedia_vid_port_destroy(w->vp_rend);
     }
@@ -815,9 +829,8 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 
 #if ENABLE_EVENT
 	    /* Register to video events */
-	    pjmedia_event_subscribe(
-		    pjmedia_vid_port_get_event_publisher(w->vp_rend),
-		    &call_med->esub_rend);
+	    pjmedia_event_subscribe(NULL, w->pool, &call_media_on_event,
+                                    call_med, w->vp_rend);
 #endif
 	    
 	    /* Connect renderer to stream */
@@ -886,9 +899,8 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 
 	    w = &pjsua_var.win[wid];
 #if ENABLE_EVENT
-	    pjmedia_event_subscribe(
-		    pjmedia_vid_port_get_event_publisher(w->vp_cap),
-		    &call_med->esub_cap);
+            pjmedia_event_subscribe(NULL, w->pool, &call_media_on_event,
+                                    call_med, w->vp_cap);
 #endif
 	    
 	    /* Connect stream to capturer (via video window tee) */
@@ -1006,7 +1018,8 @@ void stop_video_stream(pjsua_call_media *call_med)
 	}
 
         /* Unsubscribe event */
-	pjmedia_event_unsubscribe(&call_med->esub_cap);
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                  w->vp_cap);
 
 	/* Re-start capture again, if it is used by other stream */
 	if (w->ref_cnt > 1)
@@ -1021,7 +1034,8 @@ void stop_video_stream(pjsua_call_media *call_med)
 
 	/* Stop the render before unsubscribing event */
 	pjmedia_vid_port_stop(w->vp_rend);
-	pjmedia_event_unsubscribe(&call_med->esub_rend);
+	pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                  w->vp_rend);
 
 	dec_vid_win(call_med->strm.v.rdr_win_id);
 	call_med->strm.v.rdr_win_id = PJSUA_INVALID_ID;
@@ -1835,7 +1849,8 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	return status;
 
-    pjmedia_event_unsubscribe(&call_med->esub_cap);
+    pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                              w->vp_cap);
     
     /* temporarily disconnect while we operate on the tee. */
     pjmedia_vid_port_disconnect(w->vp_cap);
@@ -1893,9 +1908,8 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     }
 
 #if ENABLE_EVENT
-    pjmedia_event_subscribe(
-	    pjmedia_vid_port_get_event_publisher(new_w->vp_cap),
-	    &call_med->esub_cap);
+    pjmedia_event_subscribe(NULL, new_w->pool, &call_media_on_event,
+                            call_med, new_w->vp_cap);
 #endif
 
     /* Start capturer */
@@ -1919,7 +1933,8 @@ on_error:
 
     if (new_w) {
 	/* Unsubscribe, just in case */
-	pjmedia_event_unsubscribe(&call_med->esub_cap);
+        pjmedia_event_unsubscribe(NULL, &call_media_on_event, call_med,
+                                  new_w->vp_cap);
 	/* Disconnect media port from the new capturer */
 	pjmedia_vid_tee_remove_dst_port(new_w->tee, media_port);
 	/* Release the new capturer */
@@ -1935,9 +1950,8 @@ on_error:
 
 #if ENABLE_EVENT
     /* Resubscribe */
-    pjmedia_event_subscribe(
-	    pjmedia_vid_port_get_event_publisher(w->vp_cap),
-	    &call_med->esub_cap);
+    pjmedia_event_subscribe(NULL, w->pool, &call_media_on_event,
+                            call_med, w->vp_cap);
 #endif
 
     return status;
