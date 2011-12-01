@@ -4187,6 +4187,13 @@ on_error:
     PJ_LOG(1,(THIS_FILE, "Invalid command, use 'vid help'"));
 }
 
+#else
+
+static void app_config_init_video(pjsua_acc_config *acc_cfg)
+{
+    PJ_UNUSED_ARG(acc_cfg);
+}
+
 #endif /* PJSUA_HAS_VIDEO */
 
 

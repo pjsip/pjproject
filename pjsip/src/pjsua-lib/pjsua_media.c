@@ -1397,7 +1397,6 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pj_bool_t async,
                                   pjsua_med_tp_state_cb cb)
 {
-    pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
     pj_status_t status = PJ_SUCCESS;
 
     /*
@@ -1409,6 +1408,8 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
     /* Create the media transport for initial call. */
     if (call_med->tp == NULL) {
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
+	pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+
 	/* While in initial call, set default video devices */
 	if (type == PJMEDIA_TYPE_VIDEO) {
 	    call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
@@ -2552,7 +2553,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	       mvididx, &mvidcnt, &mtotvidcnt);
 #else
     PJ_UNUSED_ARG(STR_VIDEO);
-    mvidcnt = 0;
+    mvidcnt = mtotvidcnt = 0;
 #endif
 
     /* Applying media count limitation. Note that in generating SDP answer,

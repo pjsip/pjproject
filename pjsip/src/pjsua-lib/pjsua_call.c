@@ -3520,7 +3520,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     pjsua_call *call;
     pjmedia_sdp_session *answer;
     unsigned i;
-    int vid_idx;
     pj_status_t status;
 
     PJSUA_LOCK();
@@ -3531,16 +3530,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     PJ_LOG(4,(THIS_FILE, "Call %d: received updated media offer",
 	      call->index));
     pj_log_push_indent();
-
-#if 0 && PJMEDIA_HAS_VIDEO
-    /* If current session has no video, let's just stay with no video.
-     * If application want to enable video, it must send re-INVITE
-     * with video.
-     */
-    vid_idx = pjsua_call_get_vid_stream_idx(call->index);
-    if (vid_idx == -1 || call->media[vid_idx].dir == PJMEDIA_DIR_NONE)
-	call->opt.video_cnt = 0;
-#endif
 
     /* Re-init media for the new remote offer before creating SDP */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
