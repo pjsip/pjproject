@@ -3461,9 +3461,9 @@ static void keystroke_help(void)
 }
 
 /* Help screen for video */
+#if PJSUA_HAS_VIDEO
 static void vid_show_help(void)
 {
-#if PJSUA_HAS_VIDEO
     pj_bool_t vid_enabled = (app_config.vid.vid_cnt > 0);
 
     puts("+=============================================================================+");
@@ -3495,8 +3495,8 @@ static void vid_show_help(void)
     printf("| Video will be %s in the next offer/answer %s                            |\n",
 	   (vid_enabled? "enabled" : "disabled"), (vid_enabled? " " : ""));
     puts("+=============================================================================+");
-#endif
 }
+#endif
 
 /*
  * Input simple string
