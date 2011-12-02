@@ -569,7 +569,6 @@ static pj_status_t vid4lin_factory_create_stream(pjmedia_vid_dev_factory *f,
     stream->name[sizeof(stream->name)-1] = '\0';
     stream->user_data = user_data;
     stream->fd = INVALID_FD;
-    pjmedia_event_publisher_init(&stream->base.epub, PJMEDIA_SIG_VID_DEV_V4L2);
 
     stream->fd = v4l2_open(vdi->dev_name, O_RDWR, 0);
     if (stream->fd < 0)
