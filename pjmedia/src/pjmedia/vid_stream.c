@@ -1074,7 +1074,7 @@ static pj_status_t get_frame(pjmedia_port *port,
 			stream->dec : stream->enc,
 		      "changed");
 
-	pjmedia_event_publish(NULL, stream, &stream->fmt_event, 0);
+	pjmedia_event_publish(NULL, port, &stream->fmt_event, 0);
 
 	stream->fmt_event.type = PJMEDIA_EVENT_NONE;
     }
