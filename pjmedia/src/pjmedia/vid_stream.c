@@ -1025,7 +1025,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 		    dump_port_info(stream->dec, "changed");
 
 		    pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
-		                       &frame->timestamp, &stream);
+		                       &frame->timestamp, stream);
 		    event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
 		    pj_memcpy(&event.data.fmt_changed.new_fmt,
 		              &stream->info.codec_param->dec_fmt,
