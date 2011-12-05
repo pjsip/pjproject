@@ -19,6 +19,7 @@
  */
 #include <pjlib-util/stun_simple.h>
 #include <pjlib-util/errno.h>
+#include <pj/compat/socket.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -44,7 +45,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 {
     unsigned srv_cnt;
     pj_sockaddr_in srv_addr[2];
-    int i, j, send_cnt = 0;
+    int i, j, send_cnt = 0, nfds;
     pj_pool_t *pool;
     struct query_rec {
 	struct {
@@ -113,6 +114,17 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 
     TRACE_((THIS_FILE, "  Done initialization."));
 
+#if defined(PJ_SELECT_NEEDS_NFDS) && PJ_SELECT_NEEDS_NFDS!=0
+    nfds = -1;
+    for (i=0; i<sock_cnt; ++i) {
+	if (sock[i] > nfds) {
+	    nfds = sock[i];
+	}
+    }
+#else
+    nfds = FD_SETSIZE-1;
+#endif
+
     /* Main retransmission loop. */
     for (send_cnt=0; send_cnt<MAX_REQUEST; ++send_cnt) {
 	pj_time_val next_tx, now;
@@ -169,7 +181,7 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 		PJ_FD_SET(sock[i], &r);
 	    }
 
-	    select_rc = pj_sock_select(PJ_IOQUEUE_MAX_HANDLES, &r, NULL, NULL, &timeout);
+	    select_rc = pj_sock_select(nfds+1, &r, NULL, NULL, &timeout);
 	    TRACE_((THIS_FILE, "  select() rc=%d", select_rc));
 	    if (select_rc < 1)
 		continue;
