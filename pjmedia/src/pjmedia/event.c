@@ -87,7 +87,8 @@ static pj_status_t event_queue_add_event(event_queue* ev_queue,
 
 static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
                                                event_queue *ev_queue,
-                                               esub **next_sub)
+                                               esub **next_sub,
+                                               pj_bool_t rls_lock)
 {
     pj_status_t err = PJ_SUCCESS;
     esub * sub = mgr->esub_list.next;
@@ -100,9 +101,19 @@ static pj_status_t event_mgr_distribute_events(pjmedia_event_mgr *mgr,
          * receiving the event from the publisher.
          */
         if (sub->epub == ev->epub || !sub->epub) {
-            pj_status_t status = (*sub->cb)(ev, sub->user_data);
+            pjmedia_event_cb *cb = sub->cb;
+            void *user_data = sub->user_data;
+            pj_status_t status;
+            
+            if (rls_lock)
+                pj_mutex_unlock(mgr->mutex);
+
+            status = (*cb)(ev, user_data);
             if (status != PJ_SUCCESS && err == PJ_SUCCESS)
 	        err = status;
+
+            if (rls_lock)
+                pj_mutex_lock(mgr->mutex);
         }
 	sub = *next_sub;
     }
@@ -127,7 +138,8 @@ static int event_worker_thread(void *arg)
             break;
 
         pj_mutex_lock(mgr->mutex);
-        event_mgr_distribute_events(mgr, &mgr->ev_queue, &mgr->th_next_sub);
+        event_mgr_distribute_events(mgr, &mgr->ev_queue,
+                                    &mgr->th_next_sub, PJ_TRUE);
         pj_mutex_unlock(mgr->mutex);
     }
 
@@ -346,7 +358,8 @@ PJ_DEF(pj_status_t) pjmedia_event_publish( pjmedia_event_mgr *mgr,
 
             do {
                 status = event_mgr_distribute_events(mgr, mgr->pub_ev_queue,
-                                                     &mgr->pub_next_sub);
+                                                     &mgr->pub_next_sub,
+                                                     PJ_FALSE);
                 if (status != PJ_SUCCESS && err == PJ_SUCCESS)
 	            err = status;
             } while(ev_queue.head != ev_queue.tail || ev_queue.is_full);
