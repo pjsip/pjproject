@@ -360,7 +360,7 @@ static pj_status_t ios_factory_default_param(pj_pool_t *pool,
     /* Lock the base address of the pixel buffer */
     CVPixelBufferLockBaseAddress(imageBuffer, 0); 
     
-    frame.type = PJMEDIA_TYPE_VIDEO;
+    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame.buf = CVPixelBufferGetBaseAddress(imageBuffer);
     frame.size = stream->frame_size;
     frame.bit_info = 0;

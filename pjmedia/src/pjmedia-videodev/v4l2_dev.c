@@ -690,6 +690,7 @@ static pj_status_t vid4lin_stream_get_frame_mmap(vid4lin_stream *stream,
     PJ_TIME_VAL_SUB(time, stream->start_time);
 
     frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
+    frame->bit_info = 0;
     frame->size = buf.bytesused;
     frame->timestamp.u64 = PJ_UINT64(1) * PJ_TIME_VAL_MSEC(time) *
 			   stream->param.clock_rate / PJ_UINT64(1000);

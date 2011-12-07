@@ -2633,7 +2633,30 @@ static void on_call_tsx_state(pjsua_call_id call_id,
 	/*
 	 * Handle INFO method.
 	 */
-	if (tsx->role == PJSIP_ROLE_UAC && 
+	const pj_str_t STR_APPLICATION = { "application", 11};
+	const pj_str_t STR_DTMF_RELAY  = { "dtmf-relay", 10 };
+	pjsip_msg_body *body = NULL;
+	pj_bool_t dtmf_info = PJ_FALSE;
+	
+	if (tsx->role == PJSIP_ROLE_UAC) {
+	    if (e->body.tsx_state.type == PJSIP_EVENT_TX_MSG)
+		body = e->body.tsx_state.src.tdata->msg->body;
+	    else
+		body = e->body.tsx_state.tsx->last_tx->msg->body;
+	} else {
+	    if (e->body.tsx_state.type == PJSIP_EVENT_RX_MSG)
+		body = e->body.tsx_state.src.rdata->msg_info.msg->body;
+	}
+	
+	/* Check DTMF content in the INFO message */
+	if (body && body->len &&
+	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+	    pj_stricmp(&body->content_type.subtype, &STR_DTMF_RELAY)==0)
+	{
+	    dtmf_info = PJ_TRUE;
+	}
+
+	if (dtmf_info && tsx->role == PJSIP_ROLE_UAC && 
 	    (tsx->state == PJSIP_TSX_STATE_COMPLETED ||
 	       (tsx->state == PJSIP_TSX_STATE_TERMINATED &&
 	        e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED))) 
@@ -2651,7 +2674,7 @@ static void on_call_tsx_state(pjsua_call_id call_id,
 			  (int)tsx->status_text.slen,
 			  tsx->status_text.ptr));
 	    }
-	} else if (tsx->role == PJSIP_ROLE_UAS &&
+	} else if (dtmf_info && tsx->role == PJSIP_ROLE_UAS &&
 		   tsx->state == PJSIP_TSX_STATE_TRYING)
 	{
 	    /* Answer incoming INFO with 200/OK */
@@ -2882,9 +2905,9 @@ static void on_call_media_state(pjsua_call_id call_id)
 	vid_idx = pjsua_call_get_vid_stream_idx(call_id);
 	if (vid_idx == -1 || call_info.media[vid_idx].dir == PJMEDIA_DIR_NONE) {
 	    PJ_LOG(3,(THIS_FILE,
-		      "Just rejected incoming video offer on call %d"
-		      "use \"vid call add\" to enable video!",
-		      call_id));
+		      "Just rejected incoming video offer on call %d, "
+		      "use \"vid call enable %d\" or \"vid call add\" to enable video!",
+		      call_id, vid_idx));
 	}
     }
 #endif

@@ -298,10 +298,10 @@ PJ_DECL(pj_bool_t) pjmedia_vid_stream_is_running(pjmedia_vid_stream *stream,
                                                  pjmedia_dir dir);
 
 /**
- * Pause the individual channel in the stream.
+ * Pause stream channels.
  *
- * @param stream	The video channel.
- * @param dir		Which direction to pause.
+ * @param stream	The video stream.
+ * @param dir		Which channel direction to pause.
  *
  * @return		PJ_SUCCESS on success.
  */
@@ -309,15 +309,26 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_pause(pjmedia_vid_stream *stream,
 					      pjmedia_dir dir);
 
 /**
- * Resume the individual channel in the stream.
+ * Resume stream channels.
  *
- * @param stream	The video channel.
- * @param dir		Which direction to resume.
+ * @param stream	The video stream.
+ * @param dir		Which channel direction to resume.
  *
  * @return		PJ_SUCCESS on success;
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
 					       pjmedia_dir dir);
+
+
+/**
+ * Force stream to send video keyframe on the next transmission.
+ *
+ * @param stream	The video stream.
+ *
+ * @return		PJ_SUCCESS on success;
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_stream_send_keyframe(
+						pjmedia_vid_stream *stream);
 
 
 /**

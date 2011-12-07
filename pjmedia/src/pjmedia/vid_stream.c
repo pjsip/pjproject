@@ -68,6 +68,7 @@
 #   define PJMEDIA_VSTREAM_INC	1000
 #endif
 
+
 /**
  * Media channel.
  */
@@ -123,6 +124,9 @@ struct pjmedia_vid_stream
     pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
     pjmedia_event            fmt_event;	    /**< Buffered fmt_changed event
                                                  to avoid deadlock	    */
+    pjmedia_event            miss_keyframe_event; 
+					    /**< Buffered missing keyframe
+                                                 event for delayed republish*/
 
     unsigned		     frame_size;    /**< Size of encoded base frame.*/
     unsigned		     frame_ts_len;  /**< Frame length in timestamp. */
@@ -130,6 +134,8 @@ struct pjmedia_vid_stream
     unsigned		     rx_frame_cnt;  /**< # of array in rx_frames    */
     pjmedia_frame	    *rx_frames;	    /**< Temp. buffer for incoming
 					         frame assembly.	    */
+
+    pj_bool_t		     force_keyframe;/**< Forced to encode keyframe? */
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
     pj_bool_t		     use_ka;	       /**< Stream keep-alive with non-
@@ -351,6 +357,12 @@ static pj_status_t stream_event_cb(pjmedia_event *event,
 	     */
 	    pj_memcpy(&stream->fmt_event, event, sizeof(*event));
 	    return PJ_SUCCESS;
+
+	case PJMEDIA_EVENT_KEYFRAME_MISSING:
+	    /* Republish this event later from get_frame(). */
+	    pj_memcpy(&stream->miss_keyframe_event, event, sizeof(*event));
+	    return PJ_SUCCESS;
+
 	default:
 	    break;
 	}
@@ -763,7 +775,7 @@ static pj_status_t put_frame(pjmedia_port *port,
     int rtphdrlen;
     pj_bool_t has_more_data = PJ_FALSE;
     pj_size_t total_sent = 0;
-
+    pjmedia_vid_encode_opt enc_opt;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* If the interval since last sending packet is greater than
@@ -796,8 +808,18 @@ static pj_status_t put_frame(pjmedia_port *port,
     frame_out.buf = ((char*)channel->buf) + sizeof(pjmedia_rtp_hdr);
     frame_out.size = 0;
 
+    /* Init encoding option */
+    pj_bzero(&enc_opt, sizeof(enc_opt));
+    if (stream->force_keyframe) {
+	/* Force encoder to generate keyframe */
+	enc_opt.force_keyframe = PJ_TRUE;
+	stream->force_keyframe = PJ_FALSE;
+	TRC_((channel->port.info.name.ptr,
+	      "Forcing encoder to generate keyframe"));
+    }
+
     /* Encode! */
-    status = pjmedia_vid_codec_encode_begin(stream->codec, frame,
+    status = pjmedia_vid_codec_encode_begin(stream->codec, &enc_opt, frame,
                                             channel->buf_size -
                                                sizeof(pjmedia_rtp_hdr),
                                             &frame_out,
@@ -1077,6 +1099,12 @@ static pj_status_t get_frame(pjmedia_port *port,
 	pjmedia_event_publish(NULL, port, &stream->fmt_event, 0);
 
 	stream->fmt_event.type = PJMEDIA_EVENT_NONE;
+    }
+
+    if (stream->miss_keyframe_event.type != PJMEDIA_EVENT_NONE) {
+	pjmedia_event_publish(NULL, port, &stream->miss_keyframe_event,
+			      PJMEDIA_EVENT_PUBLISH_POST_EVENT);
+	stream->miss_keyframe_event.type = PJMEDIA_EVENT_NONE;
     }
 
     pj_mutex_lock( stream->jb_mutex );
@@ -1424,8 +1452,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
 
     /* Set up jitter buffer */
-    pjmedia_jbuf_set_adaptive( stream->jb, jb_init, jb_min_pre, jb_max_pre);
-    //pjmedia_jbuf_enable_discard(stream->jb, PJ_FALSE);
+    pjmedia_jbuf_set_adaptive(stream->jb, jb_init, jb_min_pre, jb_max_pre);
+    pjmedia_jbuf_set_discard(stream->jb, PJMEDIA_JB_DISCARD_NONE);
 
     /* Init RTCP session: */
     {
@@ -2089,5 +2117,23 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_info_from_sdp(
 
     return status;
 }
+
+
+/*
+ * Force stream to send video keyframe.
+ */
+PJ_DEF(pj_status_t) pjmedia_vid_stream_send_keyframe(
+						pjmedia_vid_stream *stream)
+{
+    PJ_ASSERT_RETURN(stream, PJ_EINVAL);
+
+    if (!pjmedia_vid_stream_is_running(stream, PJMEDIA_DIR_ENCODING))
+	return PJ_EINVALIDOP;
+
+    stream->force_keyframe = PJ_TRUE;
+
+    return PJ_SUCCESS;
+}
+
 
 #endif /* PJMEDIA_HAS_VIDEO */

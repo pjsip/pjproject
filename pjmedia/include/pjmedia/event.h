@@ -70,14 +70,14 @@ typedef enum pjmedia_event_type
     PJMEDIA_EVENT_MOUSE_BTN_DOWN = PJMEDIA_FOURCC('M', 'S', 'D', 'N'),
 
     /**
-     * Video key frame has just been decoded event.
+     * Video keyframe has just been decoded event.
      */
-    PJMEDIA_EVENT_KEY_FRAME_FOUND = PJMEDIA_FOURCC('I', 'F', 'R', 'F'),
+    PJMEDIA_EVENT_KEYFRAME_FOUND = PJMEDIA_FOURCC('I', 'F', 'R', 'F'),
 
     /**
-     * Video decoding error due to missing key frame event.
+     * Video decoding error due to missing keyframe event.
      */
-    PJMEDIA_EVENT_KEY_FRAME_MISSING = PJMEDIA_FOURCC('I', 'F', 'R', 'M'),
+    PJMEDIA_EVENT_KEYFRAME_MISSING = PJMEDIA_FOURCC('I', 'F', 'R', 'M'),
 
     /**
      * Video orientation has been changed event.
@@ -135,11 +135,11 @@ typedef pjmedia_event_dummy_data pjmedia_event_wnd_closed_data;
 /** Additional parameters for mouse button down event */
 typedef pjmedia_event_dummy_data pjmedia_event_mouse_btn_down_data;
 
-/** Additional parameters for key frame found event */
-typedef pjmedia_event_dummy_data pjmedia_event_key_frame_found_data;
+/** Additional parameters for keyframe found event */
+typedef pjmedia_event_dummy_data pjmedia_event_keyframe_found_data;
 
-/** Additional parameters for key frame missing event */
-typedef pjmedia_event_dummy_data pjmedia_event_key_frame_missing_data;
+/** Additional parameters for keyframe missing event */
+typedef pjmedia_event_dummy_data pjmedia_event_keyframe_missing_data;
 
 /**
  * Maximum size of additional parameters section in pjmedia_event structure
@@ -205,11 +205,11 @@ typedef struct pjmedia_event
 	/** Mouse button down event data */
 	pjmedia_event_mouse_btn_down_data	mouse_btn_down;
 
-	/** Key frame found event data */
-	pjmedia_event_key_frame_found_data	key_frm_found;
+	/** Keyframe found event data */
+	pjmedia_event_keyframe_found_data	keyframe_found;
 
-	/** Key frame missing event data */
-	pjmedia_event_key_frame_missing_data	key_frm_missing;
+	/** Keyframe missing event data */
+	pjmedia_event_keyframe_missing_data	keyframe_missing;
 
 	/** Storage for user event data */
 	pjmedia_event_user_data			user;

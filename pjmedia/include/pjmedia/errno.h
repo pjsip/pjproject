@@ -346,6 +346,11 @@ PJ_BEGIN_DECL
  * Invalid mode.
  */
 #define PJMEDIA_CODEC_EINMODE	    (PJMEDIA_ERRNO_START+86)    /* 220086 */
+/**
+ * @hideinitializer
+ * Bad or corrupted bitstream.
+ */
+#define PJMEDIA_CODEC_EBADBITSTREAM (PJMEDIA_ERRNO_START+87)    /* 220087 */
 
 
 /************************************************************

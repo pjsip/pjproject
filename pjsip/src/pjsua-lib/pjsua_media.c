@@ -1258,13 +1258,55 @@ pj_status_t call_media_on_event(pjmedia_event *event,
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
     pjsua_call *call = call_med->call;
+    pj_status_t status = PJ_SUCCESS;
+  
+    switch(event->type) {
+	case PJMEDIA_EVENT_KEYFRAME_MISSING:
+	    if (call->opt.req_keyframe_method & PJSUA_VID_REQ_KEYFRAME_SIP_INFO)
+	    {
+		pj_timestamp now;
+
+		pj_get_timestamp(&now);
+		if (pj_elapsed_msec(&call_med->last_req_keyframe, &now) >=
+		    PJSUA_VID_REQ_KEYFRAME_INTERVAL)
+		{
+		    pjsua_msg_data msg_data;
+		    const pj_str_t SIP_INFO = {"INFO", 4};
+		    const char *BODY_TYPE = "application/media_control+xml";
+		    const char *BODY =
+			"<?xml version=\"1.0\" encoding=\"utf-8\" ?>"
+			"<media_control><vc_primitive><to_encoder>"
+			"<picture_fast_update/>"
+			"</to_encoder></vc_primitive></media_control>";
+
+		    PJ_LOG(4,(THIS_FILE, 
+			      "Sending video keyframe request via SIP INFO"));
+
+		    pjsua_msg_data_init(&msg_data);
+		    pj_cstr(&msg_data.content_type, BODY_TYPE);
+		    pj_cstr(&msg_data.msg_body, BODY);
+		    status = pjsua_call_send_request(call->index, &SIP_INFO, 
+						     &msg_data);
+		    if (status != PJ_SUCCESS) {
+			pj_perror(3, THIS_FILE, status,
+				  "Failed requesting keyframe via SIP INFO");
+		    } else {
+			call_med->last_req_keyframe = now;
+		    }
+		}
+	    }
+	    break;
+
+	default:
+	    break;
+    }
 
     if (pjsua_var.ua_cfg.cb.on_call_media_event && call) {
 	(*pjsua_var.ua_cfg.cb.on_call_media_event)(call->index,
 						   call_med->idx, event);
     }
 
-    return PJ_SUCCESS;
+    return status;
 }
 
 /* Set media transport state and notify the application via the callback. */
@@ -4186,4 +4228,34 @@ PJ_DEF(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
     return status;
 }
 
+
+pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
+					  const pj_str_t *xml_st)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    const pj_str_t PICT_FAST_UPDATE = {"picture_fast_update", 19};
+
+#if PJMEDIA_HAS_VIDEO
+    if (pj_strstr(xml_st, &PICT_FAST_UPDATE)) {
+	unsigned i;
+
+	PJ_LOG(4,(THIS_FILE, "Received keyframe request via SIP INFO"));
+
+	for (i = 0; i < call->med_cnt; ++i) {
+	    pjsua_call_media *cm = &call->media[i];
+	    if (cm->type != PJMEDIA_TYPE_VIDEO || !cm->strm.v.stream)
+		continue;
+
+	    pjmedia_vid_stream_send_keyframe(cm->strm.v.stream);
+	}
+
+	return PJ_SUCCESS;
+    }
+#endif
+
+    /* Just to avoid compiler warning of unused var */
+    PJ_UNUSED_ARG(xml_st);
+
+    return PJ_ENOTSUP;
+}
 

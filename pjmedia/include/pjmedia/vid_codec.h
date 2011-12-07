@@ -76,6 +76,37 @@ typedef enum pjmedia_vid_packing
 
 } pjmedia_vid_packing;
 
+
+/**
+ * Enumeration of video frame info flag for the bit_info field in the
+ * pjmedia_frame.
+ */
+typedef enum pjmedia_vid_frm_bit_info
+{
+    /**
+     * The video frame is keyframe.
+     */
+    PJMEDIA_VID_FRM_KEYFRAME	= 1
+
+} pjmedia_vid_frm_bit_info;
+
+
+/**
+ * Encoding option.
+ */
+typedef struct pjmedia_vid_encode_opt
+{
+    /**
+     * Flag to force the encoder to generate keyframe for the specified input
+     * frame. When this flag is set, application can verify the result by
+     * examining PJMEDIA_VID_FRM_KEYFRAME flag in the bit_info field of the
+     * output frame.
+     */
+    pj_bool_t force_keyframe;
+
+} pjmedia_vid_encode_opt;
+
+
 /** 
  * Identification used to search for codec factory that supports specific 
  * codec specification. 
@@ -178,7 +209,7 @@ typedef struct pjmedia_vid_codec_op
     /** 
      * See #pjmedia_vid_codec_modify().
      */
-    pj_status_t	(*modify)(pjmedia_vid_codec *codec, 
+    pj_status_t	(*modify)(pjmedia_vid_codec *codec,
 			  const pjmedia_vid_codec_param *param);
 
     /** 
@@ -191,6 +222,7 @@ typedef struct pjmedia_vid_codec_op
      * See #pjmedia_vid_codec_encode_begin().
      */
     pj_status_t (*encode_begin)(pjmedia_vid_codec *codec,
+				const pjmedia_vid_encode_opt *opt,
 				const pjmedia_frame *input,
 				unsigned out_size,
 				pjmedia_frame *output,
@@ -361,15 +393,6 @@ typedef struct pjmedia_vid_codec_mgr pjmedia_vid_codec_mgr;
  */
 #define PJMEDIA_VID_CODEC_MGR_MAX_CODECS	    32
 
-
-/**
- * Initialize pjmedia_vid_codec structure with default values.
- *
- * @param codec	    The codec to be initialized.
- * @param sig	    Codec's object signature (see signatures.h)
- */
-PJ_DECL(void) pjmedia_vid_codec_reset(pjmedia_vid_codec *codec,
-                                      pjmedia_obj_sig sig);
 
 /**
  * Initialize codec manager. If there is no the default video codec manager,
@@ -728,6 +751,7 @@ pjmedia_vid_codec_get_param(pjmedia_vid_codec *codec,
  * codec.
  *
  * @param codec		The codec instance.
+ * @param opt		Optional encoding options.
  * @param input		The input frame.
  * @param out_size	The length of buffer in the output frame. This
  * 			should be at least the same as the configured
@@ -741,12 +765,13 @@ pjmedia_vid_codec_get_param(pjmedia_vid_codec *codec,
  */
 PJ_INLINE(pj_status_t)
 pjmedia_vid_codec_encode_begin( pjmedia_vid_codec *codec,
+				const pjmedia_vid_encode_opt *opt,
 				const pjmedia_frame *input,
 				unsigned out_size,
 				pjmedia_frame *output,
 				pj_bool_t *has_more)
 {
-    return (*codec->op->encode_begin)(codec, input, out_size, output,
+    return (*codec->op->encode_begin)(codec, opt, input, out_size, output,
 				      has_more);
 }
 

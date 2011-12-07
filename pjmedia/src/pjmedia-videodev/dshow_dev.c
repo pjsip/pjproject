@@ -577,7 +577,7 @@ static void input_cb(void *user_data, IMediaSample *pMediaSample)
 	PJ_LOG(5,(THIS_FILE, "Capture thread started"));
     }
 
-    frame.type = PJMEDIA_TYPE_VIDEO;
+    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     IMediaSample_GetPointer(pMediaSample, (BYTE **)&frame.buf);
     frame.size = IMediaSample_GetActualDataLength(pMediaSample);
     frame.bit_info = 0;

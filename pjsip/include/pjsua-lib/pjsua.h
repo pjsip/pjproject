@@ -331,6 +331,17 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 #   define PJSUA_HAS_VIDEO		PJMEDIA_HAS_VIDEO
 #endif
 
+
+/**
+ * Interval between two keyframe requests, in milliseconds.
+ *
+ * Default: 500 ms
+ */
+#ifndef PJSUA_VID_REQ_KEYFRAME_INTERVAL
+#   define PJSUA_VID_REQ_KEYFRAME_INTERVAL	500
+#endif
+
+
 /**
  * This enumeration represents pjsua state.
  */
@@ -3371,16 +3382,44 @@ typedef enum pjsua_call_media_status
 
 
 /**
+ * Enumeration of video keyframe request methods. Keyframe request is
+ * triggered by decoder, usually when the incoming video stream cannot
+ * be decoded properly due to missing video keyframe.
+ */
+typedef enum pjsua_vid_req_keyframe_method
+{
+    /**
+     * Requesting keyframe via SIP INFO message. Note that incoming keyframe
+     * request via SIP INFO will always be handled even if this flag is unset.
+     */
+    PJSUA_VID_REQ_KEYFRAME_SIP_INFO	= 1,
+
+    /**
+     * Requesting keyframe via Picture Loss Indication of RTCP feedback.
+     * This is currently not supported.
+     */
+    PJSUA_VID_REQ_KEYFRAME_RTCP_PLI	= 2
+
+} pjsua_vid_req_keyframe_method;
+
+
+/**
  * Call settings.
  */
 typedef struct pjsua_call_setting
 {
     /**
-     * Bitmask of pjsua_call_flag constants.
+     * Bitmask of #pjsua_call_flag constants.
      *
      * Default: 0
      */
     unsigned	     flag;
+
+    /**
+     * This flag controls what methods to request keyframe are allowed on
+     * the call. Value is bitmask of #pjsua_vid_req_keyframe_method.
+     */
+    unsigned	     req_keyframe_method;
 
     /**
      * Number of simultaneous active audio streams for this call. Setting
@@ -3648,6 +3687,13 @@ typedef enum pjsua_call_vid_strm_op
      * with this operation.
      */
     PJSUA_CALL_VID_STRM_STOP_TRANSMIT,
+
+    /**
+     * Send keyframe in the video stream. This will force the stream to
+     * generate and send video keyframe as soon as possible. No
+     * re-INVITE/UPDATE is to be transmitted to remote with this operation.
+     */
+    PJSUA_CALL_VID_STRM_SEND_KEYFRAME
 
 } pjsua_call_vid_strm_op;
 
@@ -4663,6 +4709,11 @@ PJ_DECL(void) pjsua_pres_dump(pj_bool_t verbose);
  */
 extern const pjsip_method pjsip_message_method;
 
+
+/**
+ * The INFO method (defined in pjsua_call.c)
+ */
+extern const pjsip_method pjsip_info_method;
 
 
 /**

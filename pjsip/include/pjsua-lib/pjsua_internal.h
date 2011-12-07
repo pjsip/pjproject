@@ -84,6 +84,7 @@ struct pjsua_call_media
 					    (used to update ICE default
 					    address)			    */
     pjmedia_srtp_use	 rem_srtp_use; /**< Remote's SRTP usage policy.	    */
+    pj_timestamp	 last_req_keyframe;/**< Last TX keyframe request.   */
 
     pjsua_med_tp_state_cb      med_init_cb;/**< Media transport
                                                 initialization callback.    */
@@ -476,6 +477,9 @@ typedef struct pjsua_im_data
     pj_str_t	     body;
     void	    *user_data;
 } pjsua_im_data;
+
+pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
+					  const pj_str_t *xml_st);
 
 
 /**

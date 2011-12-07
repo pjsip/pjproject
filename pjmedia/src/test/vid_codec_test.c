@@ -94,7 +94,7 @@ static pj_status_t codec_put_frame(pjmedia_port *port,
     enc_frames[enc_cnt].buf = enc_buf;
     enc_frames[enc_cnt].size = enc_size_left;
 
-    status = pjmedia_vid_codec_encode_begin(codec, frame, enc_size_left,
+    status = pjmedia_vid_codec_encode_begin(codec, NULL, frame, enc_size_left,
                                             &enc_frames[enc_cnt], &has_more);
     if (status != PJ_SUCCESS) goto on_error;
 

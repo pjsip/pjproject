@@ -34,6 +34,17 @@
  */
 #define LOCK_CODEC_MAX_RETRY	     5
 
+
+/*
+ * The INFO method.
+ */
+const pjsip_method pjsip_info_method = 
+{
+    PJSIP_OTHER_METHOD,
+    { "INFO", 4 }
+};
+
+
 /* This callback receives notification from invite session when the
  * session state has changed.
  */
@@ -500,11 +511,8 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
     opt->video_cnt = 1;
-    //{
-    //	unsigned i;
-    //	for (i = 0; i < PJ_ARRAY_SIZE(opt->vid_cap_dev); ++i)
-    //	    opt->vid_cap_dev[i] = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
-    //}
+    opt->req_keyframe_method = PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
+			     PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
 }
 
@@ -4189,6 +4197,41 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    call->local_hold = PJ_FALSE;
 	    PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold (reason=%d)",
 		      call->index, tsx->status_code));
+	}
+    } else if (tsx->role==PJSIP_ROLE_UAS &&
+	tsx->state==PJSIP_TSX_STATE_TRYING &&
+	pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0)
+    {
+	/*
+	 * Incoming INFO request for media control.
+	 */
+	const pj_str_t STR_APPLICATION	     = { "application", 11};
+	const pj_str_t STR_MEDIA_CONTROL_XML = { "media_control+xml", 17 };
+	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	pjsip_msg_body *body = rdata->msg_info.msg->body;
+
+	if (body && body->len &&
+	    pj_stricmp(&body->content_type.type, &STR_APPLICATION)==0 &&
+	    pj_stricmp(&body->content_type.subtype, &STR_MEDIA_CONTROL_XML)==0)
+	{
+	    pjsip_tx_data *tdata;
+	    pj_str_t control_st;
+	    pj_status_t status;
+
+	    /* Apply and answer the INFO request */
+	    pj_strset(&control_st, (char*)body->data, body->len);
+	    status = pjsua_media_apply_xml_control(call->index, &control_st);
+	    if (status == PJ_SUCCESS) {
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     200, NULL, &tdata);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_tsx_send_msg(tsx, tdata);
+	    } else {
+		status = pjsip_endpt_create_response(tsx->endpt, rdata,
+						     400, NULL, &tdata);
+		if (status == PJ_SUCCESS)
+		    status = pjsip_tsx_send_msg(tsx, tdata);
+	    }
 	}
     }
 

@@ -577,6 +577,8 @@ static pj_status_t cbar_stream_get_frame(pjmedia_vid_dev_stream *strm,
 {
     struct cbar_stream *stream = (struct cbar_stream*)strm;
 
+    frame->type = PJMEDIA_FRAME_TYPE_VIDEO;
+    frame->bit_info = 0;
     frame->timestamp = stream->ts;
     stream->ts.u64 += stream->ts_inc;
     return spectrum_run(stream, frame->buf, frame->size);

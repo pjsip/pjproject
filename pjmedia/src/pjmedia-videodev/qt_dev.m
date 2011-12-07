@@ -371,7 +371,7 @@ static qt_fmt_info* get_qt_format_info(pjmedia_format_id id)
     if (!videoFrame)
 	return;
     
-    frame.type = PJMEDIA_TYPE_VIDEO;
+    frame.type = PJMEDIA_FRAME_TYPE_VIDEO;
     frame.buf = [sampleBuffer bytesForAllSamples];
     frame.size = size;
     frame.bit_info = 0;

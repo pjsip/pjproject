@@ -2000,6 +2000,32 @@ static pj_status_t call_set_tx_video(pjsua_call *call,
 }
 
 
+static pj_status_t call_send_vid_keyframe(pjsua_call *call,
+					  int med_idx)
+{
+    pjsua_call_media *call_med;
+
+    /* Verify and normalize media index */
+    if (med_idx == -1) {
+	int first_active;
+	
+	call_get_vid_strm_info(call, &first_active, NULL, NULL, NULL);
+	if (first_active == -1)
+	    return PJ_ENOTFOUND;
+
+	med_idx = first_active;
+    }
+
+    call_med = &call->media[med_idx];
+
+    /* Verify media type and stream instance. */
+    if (call_med->type != PJMEDIA_TYPE_VIDEO || !call_med->strm.v.stream)
+	return PJ_EINVAL;
+
+    return pjmedia_vid_stream_send_keyframe(call_med->strm.v.stream);
+}
+
+
 /*
  * Start, stop, and/or manipulate video transmission for the specified call.
  */
@@ -2068,6 +2094,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 	break;
     case PJSUA_CALL_VID_STRM_STOP_TRANSMIT:
 	status = call_set_tx_video(call, param_.med_idx, PJ_FALSE);
+	break;
+    case PJSUA_CALL_VID_STRM_SEND_KEYFRAME:
+	status = call_send_vid_keyframe(call, param_.med_idx);
 	break;
     default:
 	status = PJ_EINVALIDOP;

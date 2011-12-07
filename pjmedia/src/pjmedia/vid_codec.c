@@ -70,14 +70,6 @@ struct pjmedia_vid_codec_mgr
 /* Sort codecs in codec manager based on priorities */
 static void sort_codecs(pjmedia_vid_codec_mgr *mgr);
 
-/*
- * Initialize pjmedia_vid_codec structure with default values.
- */
-PJ_DEF(void) pjmedia_vid_codec_reset(pjmedia_vid_codec *codec,
-                                    pjmedia_obj_sig sig)
-{
-    pj_bzero(codec, sizeof(*codec));
-}
 
 /*
  * Duplicate video codec parameter.
