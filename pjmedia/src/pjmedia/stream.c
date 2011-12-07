@@ -925,10 +925,15 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
 	
 	void *rtcp_pkt;
 	int len;
+	pj_status_t status;
 
 	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);
 
-	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+	status=pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+		         "Error sending RTCP"));
+	}
 
 	stream->rtcp_last_tx = timestamp;
     }
@@ -1338,8 +1343,13 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     stream->is_streaming = PJ_TRUE;
 
     /* Send the RTP packet to the transport. */
-    pjmedia_transport_send_rtp(stream->transport, channel->out_pkt, 
-			       frame_out.size + sizeof(pjmedia_rtp_hdr));
+    status = pjmedia_transport_send_rtp(stream->transport, channel->out_pkt,
+                                        frame_out.size +
+					    sizeof(pjmedia_rtp_hdr));
+    if (status != PJ_SUCCESS) {
+	PJ_PERROR(4,(stream->port.info.name.ptr, status,
+		     "Error sending RTP"));
+    }
 
     /* Update stat */
     pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
@@ -1839,11 +1849,21 @@ on_return:
             if (len > 0) {
                 pkt += len;
                 len = ((pj_uint8_t*)pkt) - ((pj_uint8_t*)stream->enc->out_pkt);
-                pjmedia_transport_send_rtcp(stream->transport, 
-                                            stream->enc->out_pkt, len);
+                status = pjmedia_transport_send_rtcp(stream->transport,
+                                                     stream->enc->out_pkt,
+                                                     len);
+                if (status != PJ_SUCCESS) {
+                    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+                    		 "Error sending RTCP SDES"));
+                }
             }
         } else {
-            pjmedia_transport_send_rtcp(stream->transport, sr_rr_pkt, len);
+            status = pjmedia_transport_send_rtcp(stream->transport,
+                                                 sr_rr_pkt, len);
+            if (status != PJ_SUCCESS) {
+                PJ_PERROR(4,(stream->port.info.name.ptr, status,
+                	     "Error sending initial RTCP RR"));
+            }
         }
 
 	stream->initial_rr = PJ_TRUE;
@@ -2249,6 +2269,11 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 #endif
 
 	pjmedia_rtcp_init2(&stream->rtcp, &rtcp_setting);
+
+	if (info->rtp_seq_ts_set) {
+	    stream->rtcp.stat.rtp_tx_last_seq = info->rtp_seq;
+	    stream->rtcp.stat.rtp_tx_last_ts = info->rtp_ts;
+	}
     }
 
     /* Only attach transport when stream is ready. */
