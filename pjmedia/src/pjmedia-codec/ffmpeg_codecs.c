@@ -1403,8 +1403,13 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     }
 
     /* Force keyframe */
-    if (opt && opt->force_keyframe)
+    if (opt && opt->force_keyframe) {
+#if LIBAVCODEC_VER_AT_LEAST(53,20)
 	avframe.pict_type = AV_PICTURE_TYPE_I;
+#else
+	avframe.pict_type = FF_I_TYPE;
+#endif
+    }
 
     err = avcodec_encode_video(ff->enc_ctx, out_buf, out_buf_len, &avframe);
     if (err < 0) {
