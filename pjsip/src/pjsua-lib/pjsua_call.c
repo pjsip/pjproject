@@ -964,7 +964,10 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * about the request so that application can do subsequent checking
      * if it wants to.
      */
-    if (replaced_dlg != NULL && pjsua_var.ua_cfg.cb.on_call_replace_request) {
+    if (replaced_dlg != NULL &&
+	(pjsua_var.ua_cfg.cb.on_call_replace_request ||
+	 pjsua_var.ua_cfg.cb.on_call_replace_request2))
+    {
 	pjsua_call *replaced_call;
 	int st_code = 200;
 	pj_str_t st_text = { "OK", 2 };
@@ -972,9 +975,22 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	/* Get the replaced call instance */
 	replaced_call = (pjsua_call*) replaced_dlg->mod_data[pjsua_var.mod.id];
 
+	/* Copy call setting from the replaced call */
+	call->opt = replaced_call->opt;
+
 	/* Notify application */
-	pjsua_var.ua_cfg.cb.on_call_replace_request(replaced_call->index,
-						    rdata, &st_code, &st_text);
+	if (pjsua_var.ua_cfg.cb.on_call_replace_request) {
+	    pjsua_var.ua_cfg.cb.on_call_replace_request(replaced_call->index,
+							rdata,
+							&st_code, &st_text);
+	}
+
+	if (pjsua_var.ua_cfg.cb.on_call_replace_request2) {
+	    pjsua_var.ua_cfg.cb.on_call_replace_request2(replaced_call->index,
+							 rdata,
+							 &st_code, &st_text,
+							 &call->opt);
+	}
 
 	/* Must specify final response */
 	PJ_ASSERT_ON_FAIL(st_code >= 200, st_code = 200);
@@ -3874,6 +3890,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
     pj_str_t tmp;
     pjsip_status_code code;
     pjsip_evsub *sub;
+    pjsua_call_setting call_opt;
 
     pj_log_push_indent();
 
@@ -3910,10 +3927,19 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
     /* Notify callback */
     code = PJSIP_SC_ACCEPTED;
-    if (pjsua_var.ua_cfg.cb.on_call_transfer_request)
+    if (pjsua_var.ua_cfg.cb.on_call_transfer_request) {
 	(*pjsua_var.ua_cfg.cb.on_call_transfer_request)(existing_call->index,
 							&refer_to->hvalue, 
 							&code);
+    }
+
+    call_opt = existing_call->opt;
+    if (pjsua_var.ua_cfg.cb.on_call_transfer_request2) {
+	(*pjsua_var.ua_cfg.cb.on_call_transfer_request2)(existing_call->index,
+							 &refer_to->hvalue, 
+							 &code,
+							 &call_opt);
+    }
 
     if (code < 200)
 	code = PJSIP_SC_ACCEPTED;
@@ -4040,7 +4066,7 @@ static void on_call_transfered( pjsip_inv_session *inv,
 
     /* Now make the outgoing call. */
     tmp = pj_str(uri);
-    status = pjsua_call_make_call(existing_call->acc_id, &tmp, 0,
+    status = pjsua_call_make_call(existing_call->acc_id, &tmp, &call_opt,
 				  existing_call->user_data, &msg_data, 
 				  &new_call);
     if (status != PJ_SUCCESS) {

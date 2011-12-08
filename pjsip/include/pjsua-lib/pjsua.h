@@ -566,6 +566,43 @@ typedef enum pjsua_create_media_transport_flag
 
 
 /**
+ * Call settings.
+ */
+typedef struct pjsua_call_setting
+{
+    /**
+     * Bitmask of #pjsua_call_flag constants.
+     *
+     * Default: 0
+     */
+    unsigned	     flag;
+
+    /**
+     * This flag controls what methods to request keyframe are allowed on
+     * the call. Value is bitmask of #pjsua_vid_req_keyframe_method.
+     */
+    unsigned	     req_keyframe_method;
+
+    /**
+     * Number of simultaneous active audio streams for this call. Setting
+     * this to zero will disable audio in this call.
+     *
+     * Default: 1
+     */
+    unsigned         audio_cnt;
+
+    /**
+     * Number of simultaneous active video streams for this call. Setting
+     * this to zero will disable video in this call.
+     *
+     * Default: 1 (if video feature is enabled, otherwise it is zero)
+     */
+    unsigned         video_cnt;
+
+} pjsua_call_setting;
+
+
+/**
  * This structure describes application callback to receive various event
  * notification from PJSUA-API. All of these callbacks are OPTIONAL,
  * although definitely application would want to implement some of
@@ -665,7 +702,8 @@ typedef struct pjsua_callback
      * Application can decide to accept/reject transfer request
      * by setting the code (default is 202). When this callback
      * is not defined, the default behavior is to accept the
-     * transfer.
+     * transfer. See also on_call_transfer_request2() callback for
+     * the version with \a pjsua_call_setting in the argument list.
      *
      * @param call_id	The call index.
      * @param dst	The destination where the call will be 
@@ -676,6 +714,26 @@ typedef struct pjsua_callback
     void (*on_call_transfer_request)(pjsua_call_id call_id,
 				     const pj_str_t *dst,
 				     pjsip_status_code *code);
+
+    /**
+     * Notify application on call being transfered (i.e. REFER is received).
+     * Application can decide to accept/reject transfer request
+     * by setting the code (default is 202). When this callback
+     * is not defined, the default behavior is to accept the
+     * transfer.
+     *
+     * @param call_id	The call index.
+     * @param dst	The destination where the call will be 
+     *			transfered to.
+     * @param code	Status code to be returned for the call transfer
+     *			request. On input, it contains status code 200.
+     * @param opt	The current call setting, application can update
+     *			this setting for the call being transfered.
+     */
+    void (*on_call_transfer_request2)(pjsua_call_id call_id,
+				      const pj_str_t *dst,
+				      pjsip_status_code *code,
+				      pjsua_call_setting *opt);
 
     /**
      * Notify application of the status of previously sent call
@@ -703,6 +761,8 @@ typedef struct pjsua_callback
     /**
      * Notify application about incoming INVITE with Replaces header.
      * Application may reject the request by setting non-2xx code.
+     * See also on_call_replace_request2() callback for the version
+     * with \a pjsua_call_setting in the argument list.
      *
      * @param call_id	    The call ID to be replaced.
      * @param rdata	    The incoming INVITE request to replace the call.
@@ -714,6 +774,24 @@ typedef struct pjsua_callback
 				    pjsip_rx_data *rdata,
 				    int *st_code,
 				    pj_str_t *st_text);
+
+    /**
+     * Notify application about incoming INVITE with Replaces header.
+     * Application may reject the request by setting non-2xx code.
+     *
+     * @param call_id	    The call ID to be replaced.
+     * @param rdata	    The incoming INVITE request to replace the call.
+     * @param st_code	    Status code to be set by application. Application
+     *			    should only return a final status (200-699).
+     * @param st_text	    Optional status text to be set by application.
+     * @param opt	    The current call setting, application can update
+     *			    this setting for the call being replaced.
+     */
+    void (*on_call_replace_request2)(pjsua_call_id call_id,
+				     pjsip_rx_data *rdata,
+				     int *st_code,
+				     pj_str_t *st_text,
+				     pjsua_call_setting *opt);
 
     /**
      * Notify application that an existing call has been replaced with
@@ -3404,43 +3482,6 @@ typedef enum pjsua_vid_req_keyframe_method
 
 
 /**
- * Call settings.
- */
-typedef struct pjsua_call_setting
-{
-    /**
-     * Bitmask of #pjsua_call_flag constants.
-     *
-     * Default: 0
-     */
-    unsigned	     flag;
-
-    /**
-     * This flag controls what methods to request keyframe are allowed on
-     * the call. Value is bitmask of #pjsua_vid_req_keyframe_method.
-     */
-    unsigned	     req_keyframe_method;
-
-    /**
-     * Number of simultaneous active audio streams for this call. Setting
-     * this to zero will disable audio in this call.
-     *
-     * Default: 1
-     */
-    unsigned         audio_cnt;
-
-    /**
-     * Number of simultaneous active video streams for this call. Setting
-     * this to zero will disable video in this call.
-     *
-     * Default: 1 (if video feature is enabled, otherwise it is zero)
-     */
-    unsigned         video_cnt;
-
-} pjsua_call_setting;
-
-
-/**
  * This structure describes the information and current status of a call.
  */
 typedef struct pjsua_call_info
@@ -4066,7 +4107,8 @@ PJ_DECL(pj_status_t) pjsua_call_reinvite(pjsua_call_id call_id,
  * the media state of the call has changed.
  *
  * @param call_id	Call identification.
- * @param opt		Optional call setting.
+ * @param opt		Optional call setting, if NULL, the current call
+ *			setting will remain unchanged.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *
@@ -4096,7 +4138,8 @@ PJ_DECL(pj_status_t) pjsua_call_update(pjsua_call_id call_id,
  * Send UPDATE request.
  *
  * @param call_id	Call identification.
- * @param opt		Optional call setting.
+ * @param opt		Optional call setting, if NULL, the current call
+ *			setting will remain unchanged.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *
