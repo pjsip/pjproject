@@ -513,7 +513,6 @@ static pj_status_t qt_factory_create_stream(
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
     strm->user_data = user_data;
     strm->qf = qf;
-    pjmedia_event_publisher_init(&strm->base.epub, PJMEDIA_SIG_VID_DEV_QT);
 
     /* Create capture stream here */
     if (param->dir & PJMEDIA_DIR_CAPTURE) {        
