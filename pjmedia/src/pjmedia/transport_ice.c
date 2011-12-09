@@ -402,7 +402,9 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
      * the session, in this case we will answer with full ICE SDP and
      * new ufrag/pwd pair.
      */
-    if (!restart_session && pj_ice_strans_sess_is_complete(tp_ice->ice_st)) {
+    if (!restart_session && pj_ice_strans_sess_is_complete(tp_ice->ice_st) &&
+	pj_ice_strans_get_state(tp_ice->ice_st) != PJ_ICE_STRANS_STATE_FAILED)
+    {
 	const pj_ice_sess_check *check;
 	char *attr_buf;
 	pjmedia_sdp_conn *conn;
@@ -532,7 +534,10 @@ static pj_status_t encode_session_in_sdp(struct transport_ice *tp_ice,
 	    pjmedia_sdp_attr_add(&m->attr_count, m->attr, attr);
 	}
 
-    } else if (pj_ice_strans_has_sess(tp_ice->ice_st)) {
+    } else if (pj_ice_strans_has_sess(tp_ice->ice_st) &&
+	       pj_ice_strans_get_state(tp_ice->ice_st) !=
+		        PJ_ICE_STRANS_STATE_FAILED)
+    {
 	/* Encode all candidates to SDP media */
 	char *attr_buf;
 	unsigned comp;
