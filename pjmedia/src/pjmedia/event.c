@@ -49,6 +49,7 @@ typedef struct event_queue
 
 struct pjmedia_event_mgr
 {
+    pj_pool_t      *pool;
     pj_thread_t    *thread;             /**< worker thread.             */
     pj_bool_t       is_quitting;
     pj_sem_t       *sem;
@@ -56,6 +57,7 @@ struct pjmedia_event_mgr
     event_queue     ev_queue;
     event_queue    *pub_ev_queue;       /**< publish() event queue.     */
     esub            esub_list;          /**< list of subscribers.       */
+    esub            free_esub_list;     /**< list of subscribers.       */
     esub           *th_next_sub,        /**< worker thread's next sub.  */
                    *pub_next_sub;       /**< publish() next sub.        */
 };
@@ -154,14 +156,18 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
     pj_status_t status;
 
     mgr = PJ_POOL_ZALLOC_T(pool, pjmedia_event_mgr);
+    mgr->pool = pj_pool_create(pool->factory, "evt mgr", 500, 500, NULL);
     pj_list_init(&mgr->esub_list);
+    pj_list_init(&mgr->free_esub_list);
 
     if (!(options & PJMEDIA_EVENT_MGR_NO_THREAD)) {
-        status = pj_sem_create(pool, "ev_sem", 0, MAX_EVENTS + 1, &mgr->sem);
+        status = pj_sem_create(mgr->pool, "ev_sem", 0, MAX_EVENTS + 1,
+                               &mgr->sem);
         if (status != PJ_SUCCESS)
             return status;
 
-        status = pj_thread_create(pool, "ev_thread", &event_worker_thread,
+        status = pj_thread_create(mgr->pool, "ev_thread",
+                                  &event_worker_thread,
                                   mgr, 0, 0, &mgr->thread);
         if (status != PJ_SUCCESS) {
             pjmedia_event_mgr_destroy(mgr);
@@ -169,7 +175,7 @@ PJ_DEF(pj_status_t) pjmedia_event_mgr_create(pj_pool_t *pool,
         }
     }
 
-    status = pj_mutex_create_recursive(pool, "ev_mutex", &mgr->mutex);
+    status = pj_mutex_create_recursive(mgr->pool, "ev_mutex", &mgr->mutex);
     if (status != PJ_SUCCESS) {
         pjmedia_event_mgr_destroy(mgr);
         return status;
@@ -196,8 +202,6 @@ PJ_DEF(void) pjmedia_event_mgr_set_instance(pjmedia_event_mgr *mgr)
 
 PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
 {
-    esub *sub;
-
     if (!mgr) mgr = pjmedia_event_mgr_instance();
     PJ_ASSERT_ON_FAIL(mgr != NULL, return);
 
@@ -217,12 +221,8 @@ PJ_DEF(void) pjmedia_event_mgr_destroy(pjmedia_event_mgr *mgr)
         mgr->mutex = NULL;
     }
 
-    sub = mgr->esub_list.next;
-    while (sub != &mgr->esub_list) {
-	esub *next = sub->next;
-	pj_list_erase(sub);
-	sub = next;
-    }
+    if (mgr->pool)
+        pj_pool_release(mgr->pool);
 
     if (event_manager_instance == mgr)
 	event_manager_instance = NULL;
@@ -241,14 +241,13 @@ PJ_DEF(void) pjmedia_event_init( pjmedia_event *event,
 }
 
 PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
-                                             pj_pool_t *pool,
                                              pjmedia_event_cb *cb,
                                              void *user_data,
                                              void *epub)
 {
     esub *sub;
 
-    PJ_ASSERT_RETURN(pool && cb, PJ_EINVAL);
+    PJ_ASSERT_RETURN(cb, PJ_EINVAL);
 
     if (!mgr) mgr = pjmedia_event_mgr_instance();
     PJ_ASSERT_RETURN(mgr, PJ_EINVAL);
@@ -270,7 +269,11 @@ PJ_DEF(pj_status_t) pjmedia_event_subscribe( pjmedia_event_mgr *mgr,
 	sub = next;
     }
 
-    sub = PJ_POOL_ZALLOC_T(pool, esub);
+    if (mgr->free_esub_list.next != &mgr->free_esub_list) {
+        sub = mgr->free_esub_list.next;
+        pj_list_erase(sub);
+    } else
+        sub = PJ_POOL_ZALLOC_T(mgr->pool, esub);
     sub->cb = cb;
     sub->user_data = user_data;
     sub->epub = epub;
@@ -309,6 +312,7 @@ pjmedia_event_unsubscribe(pjmedia_event_mgr *mgr,
             if (mgr->pub_next_sub == sub)
                 mgr->pub_next_sub = sub->next;
             pj_list_erase(sub);
+            pj_list_push_back(&mgr->free_esub_list, sub);
             if (user_data && epub)
                 break;
         }

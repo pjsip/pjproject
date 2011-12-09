@@ -320,7 +320,7 @@ static int encode_decode_test(pj_pool_t *pool, const char *codec_id,
 	codec_param.dec_fmt.det = codec_param.enc_fmt.det;
 
 	/* Subscribe to codec events */
-	pjmedia_event_subscribe(NULL, pool, &codec_on_event, &codec_port_data,
+	pjmedia_event_subscribe(NULL, &codec_on_event, &codec_port_data,
                                 codec);
     }
 

@@ -1361,7 +1361,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 	return status;
 
     /* Subscribe to codec events */
-    pjmedia_event_subscribe(NULL, pool, &stream_event_cb, stream,
+    pjmedia_event_subscribe(NULL, &stream_event_cb, stream,
                             stream->codec);
 
     /* Estimate the maximum frame size */

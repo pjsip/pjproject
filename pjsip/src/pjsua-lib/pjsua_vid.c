@@ -829,7 +829,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 
 #if ENABLE_EVENT
 	    /* Register to video events */
-	    pjmedia_event_subscribe(NULL, w->pool, &call_media_on_event,
+	    pjmedia_event_subscribe(NULL, &call_media_on_event,
                                     call_med, w->vp_rend);
 #endif
 	    
@@ -899,7 +899,7 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 
 	    w = &pjsua_var.win[wid];
 #if ENABLE_EVENT
-            pjmedia_event_subscribe(NULL, w->pool, &call_media_on_event,
+            pjmedia_event_subscribe(NULL, &call_media_on_event,
                                     call_med, w->vp_cap);
 #endif
 	    
@@ -1908,7 +1908,7 @@ static pj_status_t call_change_cap_dev(pjsua_call *call,
     }
 
 #if ENABLE_EVENT
-    pjmedia_event_subscribe(NULL, new_w->pool, &call_media_on_event,
+    pjmedia_event_subscribe(NULL, &call_media_on_event,
                             call_med, new_w->vp_cap);
 #endif
 
@@ -1950,7 +1950,7 @@ on_error:
 
 #if ENABLE_EVENT
     /* Resubscribe */
-    pjmedia_event_subscribe(NULL, w->pool, &call_media_on_event,
+    pjmedia_event_subscribe(NULL, &call_media_on_event,
                             call_med, w->vp_cap);
 #endif
 

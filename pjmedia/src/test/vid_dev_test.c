@@ -160,7 +160,7 @@ static int capture_render_loopback(int cap_dev_id, int rend_dev_id,
     }
 
     /* Set event handler */
-    pjmedia_event_subscribe(NULL, pool, &vid_event_cb, NULL, renderer);
+    pjmedia_event_subscribe(NULL, &vid_event_cb, NULL, renderer);
 
     /* Connect capture to renderer */
     status = pjmedia_vid_port_connect(

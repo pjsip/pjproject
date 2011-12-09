@@ -267,7 +267,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	      vparam.fmt.det.vid.fps.num, vparam.fmt.det.vid.fps.denum));
 
     /* Subscribe to device's events */
-    pjmedia_event_subscribe(NULL, vp->pool, &vidstream_event_cb,
+    pjmedia_event_subscribe(NULL, &vidstream_event_cb,
                             vp, vp->strm);
 
     if (vp->dir & PJMEDIA_DIR_CAPTURE) {
@@ -410,7 +410,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_connect(pjmedia_vid_port *vp,
     vp->client_port = port;
 
     /* Subscribe to client port's events */
-    pjmedia_event_subscribe(NULL, vp->pool, &client_port_event_cb, vp,
+    pjmedia_event_subscribe(NULL, &client_port_event_cb, vp,
                             vp->client_port);
 
     return PJ_SUCCESS;

@@ -401,7 +401,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
         pjmedia_vid_port_set_cb(renderer, &cb, &avi_port);
 
         /* subscribe events */
-        pjmedia_event_subscribe(NULL, pool, &avi_event_cb, &avi_port,
+        pjmedia_event_subscribe(NULL, &avi_event_cb, &avi_port,
                                 renderer);
 
         if (snd_port) {

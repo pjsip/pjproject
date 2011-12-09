@@ -331,7 +331,6 @@ PJ_DECL(void) pjmedia_event_init(pjmedia_event *event,
  * events from other publishers.
  *
  * @param mgr		The event manager.
- * @param pool          Pool to allocate memory from.
  * @param cb            The callback function to receive the event.
  * @param user_data     The user data to be associated with the callback
  *                      function.
@@ -340,7 +339,6 @@ PJ_DECL(void) pjmedia_event_init(pjmedia_event *event,
  * @return		PJ_SUCCESS on success or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_event_subscribe(pjmedia_event_mgr *mgr,
-                                             pj_pool_t *pool,
                                              pjmedia_event_cb *cb,
                                              void *user_data,
                                              void *epub);
