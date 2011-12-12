@@ -615,19 +615,21 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 		goto end_rtt_calc;
 	    }
 
-	    /* "Normalize" rtt value that is exceptionally high.
-	     * For such values, "normalize" the rtt to be three times
-	     * the average value.
+#if defined(PJMEDIA_RTCP_NORMALIZE_FACTOR) && PJMEDIA_RTCP_NORMALIZE_FACTOR!=0
+	    /* "Normalize" rtt value that is exceptionally high. For such
+	     * values, "normalize" the rtt to be PJMEDIA_RTCP_NORMALIZE_FACTOR
+	     * times the average value.
 	     */
-	    if (rtt > ((unsigned)sess->stat.rtt.mean*3) && sess->stat.rtt.n!=0)
+	    if (rtt > ((unsigned)sess->stat.rtt.mean *
+		       PJMEDIA_RTCP_NORMALIZE_FACTOR) && sess->stat.rtt.n!=0)
 	    {
 		unsigned orig_rtt = rtt;
-		rtt = sess->stat.rtt.mean*3;
-		PJ_LOG(5,(sess->name, 
+		rtt = sess->stat.rtt.mean * PJMEDIA_RTCP_NORMALIZE_FACTOR;
+		PJ_LOG(5,(sess->name,
 			  "RTT value %d usec is normalized to %d usec",
 			  orig_rtt, rtt));
 	    }
-	
+#endif
 	    TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
 
 	    /* Update RTT stat */

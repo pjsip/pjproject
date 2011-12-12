@@ -453,6 +453,19 @@
 #   define PJMEDIA_RTCP_STAT_HAS_RAW_JITTER	0
 #endif
 
+/**
+ * Specify the factor with wich RTCP RTT statistics should be normalized 
+ * if exceptionally high. For e.g. mobile networks with potentially large
+ * fluctuations, this might be unwanted.
+ *
+ * Use (0) to disable this feature.
+ *
+ * Default: 3.
+ */
+#ifndef PJMEDIA_RTCP_NORMALIZE_FACTOR
+#   define PJMEDIA_RTCP_NORMALIZE_FACTOR	3
+#endif
+
 
 /**
  * Specify whether RTCP statistics includes IP Delay Variation statistics.
