@@ -3555,6 +3555,22 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 	      call->index));
     pj_log_push_indent();
 
+    if (pjsua_var.ua_cfg.cb.on_call_rx_offer) {
+	pjsip_status_code code = PJSIP_SC_OK;
+	pjsua_call_setting opt = call->opt;
+	
+	(*pjsua_var.ua_cfg.cb.on_call_rx_offer)(call->index, offer, NULL,
+						&code, &opt);
+
+	if (code != PJSIP_SC_OK) {
+	    PJ_LOG(4,(THIS_FILE, "Rejecting updated media offer on call %d",
+		      call->index));
+	    goto on_return;
+	}
+
+	call->opt = opt;
+    }
+
     /* Re-init media for the new remote offer before creating SDP */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
 				      call->secure_level,

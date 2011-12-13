@@ -811,6 +811,30 @@ typedef struct pjsua_callback
 
 
     /**
+     * Notify application when call has received new offer from remote
+     * (i.e. re-INVITE/UPDATE with SDP is received). Application can
+     * decide to accept/reject the offer by setting the code (default
+     * is 200). If the offer is accepted, application can update the 
+     * call setting to be applied in the answer. When this callback is
+     * not defined, the default behavior is to accept the offer using
+     * current call setting.
+     *
+     * @param call_id	The call index.
+     * @param offer	The new offer received.
+     * @param reserved	Reserved param, currently not used.
+     * @param code	Status code to be returned for answering the
+     *			offer. On input, it contains status code 200.
+     *			Currently, valid values are only 200 and 488.
+     * @param opt	The current call setting, application can update
+     *			this setting for answering the offer.
+     */
+    void (*on_call_rx_offer)(pjsua_call_id call_id,
+			     const pjmedia_sdp_session *offer,
+			     void *reserved,
+			     pjsip_status_code *code,
+			     pjsua_call_setting *opt);
+
+    /**
      * Notify application when registration or unregistration has been
      * initiated. Note that this only notifies the initial registration
      * and unregistration. Once registration session is active, subsequent
