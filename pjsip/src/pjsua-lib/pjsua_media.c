@@ -150,7 +150,8 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
 		/* See if this extended format is already in the list */
 		for (j = 0; j < ext_fmt_cnt && !is_listed; ++j) {
 		    if (ext_fmts[j].id == aud_info.ext_fmt[i].id &&
-			ext_fmts[j].bitrate == aud_info.ext_fmt[i].bitrate)
+			ext_fmts[j].det.aud.avg_bps ==
+			aud_info.ext_fmt[i].det.aud.avg_bps)
 		    {
 			is_listed = PJ_TRUE;
 		    }
