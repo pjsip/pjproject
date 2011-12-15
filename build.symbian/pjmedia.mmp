@@ -91,6 +91,8 @@ SOURCE		wsola.c
 //
 SOURCEPATH	..\pjmedia\src\pjmedia-codec
 SOURCE		audio_codecs.c
+SOURCE		amr_sdp_match.c
+SOURCE		g7221_sdp_match.c
 
 
 //

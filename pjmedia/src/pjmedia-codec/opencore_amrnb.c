@@ -1,4 +1,4 @@
-/* $Id */
+/* $Id$ */
 /* 
  * Copyright (C) 2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2011 Dan Arrhenius <dan@keystream.se>
@@ -22,6 +22,7 @@
  * AMR-NB codec implementation with OpenCORE AMRNB library
  */
 #include <pjmedia-codec/g722.h>
+#include <pjmedia-codec/amr_sdp_match.h>
 #include <pjmedia/codec.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/endpoint.h>
@@ -166,6 +167,7 @@ static pjmedia_codec_amrnb_config def_config =
 PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrnb_init( pjmedia_endpt *endpt )
 {
     pjmedia_codec_mgr *codec_mgr;
+    pj_str_t codec_name;
     pj_status_t status;
 
     if (amr_codec_factory.pool != NULL)
@@ -187,6 +189,14 @@ PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrnb_init( pjmedia_endpt *endpt )
 	status = PJ_EINVALIDOP;
 	goto on_error;
     }
+
+    /* Register format match callback. */
+    pj_cstr(&codec_name, "AMR");
+    status = pjmedia_sdp_neg_register_fmt_match_cb(
+					&codec_name,
+					&pjmedia_codec_amr_match_sdp);
+    if (status != PJ_SUCCESS)
+	goto on_error;
 
     /* Register codec factory to endpoint. */
     status = pjmedia_codec_mgr_register_factory(codec_mgr, 
