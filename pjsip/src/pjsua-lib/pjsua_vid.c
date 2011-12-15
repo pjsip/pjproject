@@ -1696,6 +1696,22 @@ static pj_status_t call_modify_video(pjsua_call *call,
 	pj_pool_t *pool = call->inv->pool_prov;
 	pjmedia_sdp_media *sdp_m;
 
+	/* Enabling video */
+	if (call_med->dir == PJMEDIA_DIR_NONE) {
+	    unsigned i, vid_cnt = 0;
+
+	    /* Check if video_cnt in call option needs to be increased */
+	    for (i = 0; i < call->med_cnt; ++i) {
+		if (call->media[i].type == PJMEDIA_TYPE_VIDEO &&
+		    call->media[i].dir != PJMEDIA_DIR_NONE)
+		{
+		    ++vid_cnt;
+		}
+	    }
+	    if (call->opt.video_cnt <= vid_cnt)
+		call->opt.video_cnt++;
+	}
+
 	status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
 				       &acc_cfg->rtp_cfg, call->secure_level,
 				       NULL, PJ_FALSE, NULL);
