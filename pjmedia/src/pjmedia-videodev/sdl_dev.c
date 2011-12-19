@@ -1093,8 +1093,20 @@ static pj_status_t set_cap(void *data)
     const void *pval = scap->pval.cpval;
 
     if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
+        /**
+         * Setting window's position when the window is hidden also sets
+         * the window's flag to shown (while the window is, actually,
+         * still hidden). This causes problems later when setting/querying
+         * the window's visibility.
+         * See ticket #1429 (http://trac.pjsip.org/repos/ticket/1429)
+         */
+	Uint32 flag = SDL_GetWindowFlags(strm->window);
+	if (flag & SDL_WINDOW_HIDDEN)
+            SDL_ShowWindow(strm->window);
         SDL_SetWindowPosition(strm->window, ((pjmedia_coord *)pval)->x,
                               ((pjmedia_coord *)pval)->y);
+	if (flag & SDL_WINDOW_HIDDEN)
+            SDL_HideWindow(strm->window);
 	return PJ_SUCCESS;
     } else if (cap == PJMEDIA_VID_DEV_CAP_OUTPUT_HIDE) {
         if (*(pj_bool_t *)pval)
