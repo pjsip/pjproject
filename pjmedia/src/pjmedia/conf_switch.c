@@ -590,6 +590,12 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
 	    break;
     }
 
+    /* Update master port info shortcut, note that application may update
+     * the master port info when the audio device needs to be reopened with
+     * a new format to match to ports connection format.
+     */
+    conf->ports[0]->samples_per_frame = PJMEDIA_PIA_SPF(conf->ports[0]->info);
+
     if (i == src_port->listener_cnt) {
 	src_port->listener_slots[src_port->listener_cnt] = sink_slot;
 	++conf->connect_cnt;

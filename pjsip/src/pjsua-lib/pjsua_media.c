@@ -3717,14 +3717,22 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
      * derived from the sound device setting, so update the setting.
      */
     if (pjsua_var.is_mswitch) {
-	pj_memcpy(&conf_port->info.fmt, &param->base.ext_fmt,
-		  sizeof(conf_port->info.fmt));
-	conf_port->info.fmt.det.aud.clock_rate = param->base.clock_rate;
-	conf_port->info.fmt.det.aud.frame_time_usec = param->base.samples_per_frame*
-						      1000000 /
-						      param->base.clock_rate;
-	conf_port->info.fmt.det.aud.channel_count = param->base.channel_count;
-	conf_port->info.fmt.det.aud.bits_per_sample = 16;
+	if (param->base.flags & PJMEDIA_AUD_DEV_CAP_EXT_FORMAT) {
+	    conf_port->info.fmt = param->base.ext_fmt;
+	} else {
+	    unsigned bps, ptime_usec;
+	    bps = param->base.clock_rate * param->base.bits_per_sample;
+	    ptime_usec = param->base.samples_per_frame /
+			 param->base.channel_count * 1000000 /
+			 param->base.clock_rate;
+	    pjmedia_format_init_audio(&conf_port->info.fmt,
+				      PJMEDIA_FORMAT_PCM,
+				      param->base.clock_rate,
+				      param->base.channel_count,
+				      param->base.bits_per_sample,
+				      ptime_usec,
+				      bps, bps);
+	}
     }
 
 
