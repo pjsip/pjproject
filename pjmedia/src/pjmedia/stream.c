@@ -2089,9 +2089,8 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     stream->port.info.fmt.id = stream->codec_param.info.fmt_id;
     if (stream->codec_param.info.fmt_id == PJMEDIA_FORMAT_L16) {
 	/* Raw format */
-	afd->avg_bps = afd->max_bps = afd->clock_rate *
-				      afd->bits_per_sample / 8;
-
+	afd->avg_bps = afd->max_bps = afd->clock_rate * afd->channel_count *
+				      afd->bits_per_sample;
 
 	stream->port.put_frame = &put_frame;
 	stream->port.get_frame = &get_frame;

@@ -475,7 +475,7 @@ PJ_DEF(pj_status_t) pjmedia_wav_playlist_create(pj_pool_t *pool,
 	    afd->frame_time_usec = ptime * 1000;
 	    afd->avg_bps = afd->max_bps = afd->clock_rate *
 					  afd->channel_count *
-					  afd->bits_per_sample / 8;
+					  afd->bits_per_sample;
 
 	    has_wave_info = PJ_TRUE;
 
