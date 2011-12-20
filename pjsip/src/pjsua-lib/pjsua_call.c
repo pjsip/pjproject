@@ -364,6 +364,9 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
      */
     pjsip_dlg_inc_lock(dlg);
 
+    /* Decrement dialog session. */
+    pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
+
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
@@ -722,6 +725,12 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
     }
+
+    /* Temporarily increment dialog session. Without this, dialog will be
+     * prematurely destroyed if dec_lock() is called on the dialog before
+     * the invite session is created.
+     */
+    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
 
     /* Done. */
 
