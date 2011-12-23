@@ -712,6 +712,12 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     }
     call->async_call.dlg = dlg;
 
+    /* Temporarily increment dialog session. Without this, dialog will be
+     * prematurely destroyed if dec_lock() is called on the dialog before
+     * the invite session is created.
+     */
+    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
+
     /* Init media channel */
     status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC, 
 				      call->secure_level, dlg->pool,
@@ -723,14 +729,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 	    goto on_error;
     } else if (status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+        pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 	goto on_error;
     }
-
-    /* Temporarily increment dialog session. Without this, dialog will be
-     * prematurely destroyed if dec_lock() is called on the dialog before
-     * the invite session is created.
-     */
-    pjsip_dlg_inc_session(dlg, &pjsua_var.mod);
 
     /* Done. */
 
