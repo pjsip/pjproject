@@ -1343,7 +1343,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     int err_code = 0;
 
     if (status != PJ_SUCCESS)
-        goto on_error;
+        goto on_return;
 
     if (call_med->tp_st == PJSUA_MED_TP_CREATING)
         set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
@@ -1368,7 +1368,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 	    if (security_level < acc->cfg.srtp_secure_signaling) {
 		err_code = PJSIP_SC_NOT_ACCEPTABLE;
 		status = PJSIP_ESESSIONINSECURE;
-		goto on_error;
+		goto on_return;
 	    }
 	}
 
@@ -1388,7 +1388,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
 					       &srtp_opt, &srtp);
 	if (status != PJ_SUCCESS) {
 	    err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
-	    goto on_error;
+	    goto on_return;
 	}
 
 	/* Set SRTP as current media transport */
@@ -1407,7 +1407,7 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     pj_sockaddr_cp(&call_med->rtp_addr, &tpinfo.sock_info.rtp_addr_name);
 
 
-on_error:
+on_return:
     if (status != PJ_SUCCESS && call_med->tp) {
 	pjmedia_transport_close(call_med->tp);
 	call_med->tp = NULL;
@@ -1557,7 +1557,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
 
     if (status != PJ_SUCCESS) {
         pjsua_media_channel_deinit(call_id);
-        goto on_error;
+        goto on_return;
     }
 
     /* Tell the media transport of a new offer/answer session */
@@ -1598,7 +1598,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                 call->med_ch_info.state = call_med->tp_st;
                 call->med_ch_info.sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
 		pjsua_media_channel_deinit(call_id);
-		goto on_error;
+		goto on_return;
 	    }
 
 	    set_media_tp_state(call_med, PJSUA_MED_TP_INIT);
@@ -1607,7 +1607,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
 
     call->med_ch_info.status = PJ_SUCCESS;
 
-on_error:
+on_return:
     if (call->med_ch_cb)
         (*call->med_ch_cb)(call->index, &call->med_ch_info);
 
@@ -1715,7 +1715,7 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	 * count from the call setting only.
 	 */
 	if (reinit) {
-	    pjmedia_sdp_session *sdp;
+	    const pjmedia_sdp_session *sdp;
 
 	    status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &sdp);
 	    pj_assert(status == PJ_SUCCESS);
