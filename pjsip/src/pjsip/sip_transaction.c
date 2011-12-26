@@ -3222,7 +3222,10 @@ static pj_status_t tsx_on_state_destroyed(pjsip_transaction *tsx,
 {
     PJ_UNUSED_ARG(tsx);
     PJ_UNUSED_ARG(event);
-    pj_assert(!"Not expecting any events!!");
-    return PJ_EBUG;
+
+    // See https://trac.pjsip.org/repos/ticket/1432
+    //pj_assert(!"Not expecting any events!!");
+
+    return PJ_EIGNORED;
 }
 
