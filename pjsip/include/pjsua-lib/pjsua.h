@@ -335,10 +335,10 @@ typedef struct pjsua_msg_data pjsua_msg_data;
 /**
  * Interval between two keyframe requests, in milliseconds.
  *
- * Default: 500 ms
+ * Default: 3000 ms
  */
 #ifndef PJSUA_VID_REQ_KEYFRAME_INTERVAL
-#   define PJSUA_VID_REQ_KEYFRAME_INTERVAL	500
+#   define PJSUA_VID_REQ_KEYFRAME_INTERVAL	3000
 #endif
 
 
