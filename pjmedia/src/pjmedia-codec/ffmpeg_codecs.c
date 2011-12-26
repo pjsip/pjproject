@@ -255,7 +255,7 @@ static ffmpeg_codec_desc codec_desc[] =
     {
 	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
-	0,	512000,    1000000,
+	0,	256000,    512000,
 	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
 	&pjmedia_vid_codec_h264_match_sdp,
 	/* Leading space for better compatibility (strange indeed!) */
