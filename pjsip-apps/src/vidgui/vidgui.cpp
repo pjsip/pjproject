@@ -30,16 +30,40 @@
 #define LOG_FILE		"vidgui.log"
 #define THIS_FILE		"vidgui.cpp"
 
+///////////////////////////////////////////////////////////////////////////
+//
+// SETTINGS
+//
+
+//
 // These configure SIP registration
-#define SIP_DOMAIN		NULL
-//#define SIP_DOMAIN		"pjsip.org"
+//
+#define USE_REGISTRATION	0
+#define SIP_DOMAIN		"pjsip.org"
 #define SIP_USERNAME		"vidgui"
 #define SIP_PASSWORD		"secret"
-#define SIP_PORT		5060
+#define SIP_PORT		5084
+#define SIP_TCP			1
 
+//
+// NAT helper settings
+//
+#define USE_ICE			1
+#define USE_STUN		0
+#define STUN_SRV		"stun.pjsip.org"
+
+//
+// Devices settings
+//
 #define DEFAULT_CAP_DEV		PJMEDIA_VID_DEFAULT_CAPTURE_DEV
 //#define DEFAULT_CAP_DEV		1
 #define DEFAULT_REND_DEV	PJMEDIA_VID_DEFAULT_RENDER_DEV
+
+
+//
+// End of Settings
+///////////////////////////////////////////////////////////////////////////
+
 
 MainWin *MainWin::theInstance_;
 
@@ -326,7 +350,9 @@ void MainWin::on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
     pjsua_call_get_info(call_id, &ci);
 
-    if (currentCall_ == -1 && ci.state < PJSIP_INV_STATE_DISCONNECTED) {
+    if (currentCall_ == -1 && ci.state < PJSIP_INV_STATE_DISCONNECTED &&
+	ci.role == PJSIP_ROLE_UAC)
+    {
 	emit signalNewCall(call_id, false);
     }
 
@@ -435,6 +461,10 @@ bool MainWin::initStack()
     ua_cfg.cb.on_call_state = &::on_call_state;
     ua_cfg.cb.on_incoming_call = &::on_incoming_call;
     ua_cfg.cb.on_call_media_state = &::on_call_media_state;
+#if USE_STUN
+    ua_cfg.stun_srv_cnt = 1;
+    ua_cfg.stun_srv[0] = pj_str((char*)STUN_SRV);
+#endif
 
     pjsua_logging_config log_cfg;
     pjsua_logging_config_default(&log_cfg);
@@ -442,6 +472,7 @@ bool MainWin::initStack()
 
     pjsua_media_config med_cfg;
     pjsua_media_config_default(&med_cfg);
+    med_cfg.enable_ice = USE_ICE;
 
     status = pjsua_init(&ua_cfg, &log_cfg, &med_cfg);
     if (status != PJ_SUCCESS) {
@@ -471,6 +502,7 @@ bool MainWin::initStack()
 	goto on_error;
     }
 
+#if SIP_TCP
     pjsua_transport_config tcp_cfg;
     pjsua_transport_config_default(&tcp_cfg);
     tcp_cfg.port = 0;
@@ -481,20 +513,26 @@ bool MainWin::initStack()
 	showError("TCP transport creation", status);
 	goto on_error;
     }
+#endif
 
     //
     // Create account
     //
     pjsua_acc_config acc_cfg;
     pjsua_acc_config_default(&acc_cfg);
-#if SIP_DOMAIN
-    acc_cfg.id = pj_str( "sip:" SIP_USERNAME "@" SIP_DOMAIN);
+#if USE_REGISTRATION
+    acc_cfg.id = pj_str( (char*)"<sip:" SIP_USERNAME "@" SIP_DOMAIN ">");
     acc_cfg.reg_uri = pj_str((char*) ("sip:" SIP_DOMAIN));
     acc_cfg.cred_count = 1;
     acc_cfg.cred_info[0].realm = pj_str((char*)"*");
     acc_cfg.cred_info[0].scheme = pj_str((char*)"digest");
     acc_cfg.cred_info[0].username = pj_str((char*)SIP_USERNAME);
     acc_cfg.cred_info[0].data = pj_str((char*)SIP_PASSWORD);
+
+# if SIP_TCP
+    acc_cfg.proxy[acc_cfg.proxy_cnt++] = pj_str((char*) "<sip:" SIP_DOMAIN ";transport=tcp>");
+# endif
+
 #else
     char sip_id[80];
     snprintf(sip_id, sizeof(sip_id),
@@ -505,7 +543,6 @@ bool MainWin::initStack()
     acc_cfg.id = pj_str(sip_id);
 #endif
 
-    acc_cfg.max_video_cnt = 1;
     acc_cfg.vid_cap_dev = DEFAULT_CAP_DEV;
     acc_cfg.vid_rend_dev = DEFAULT_REND_DEV;
     acc_cfg.vid_in_auto_show = PJ_TRUE;
