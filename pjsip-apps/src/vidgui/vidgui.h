@@ -20,6 +20,7 @@
 #define VIDGUI_H_
 
 #include <QApplication>
+#include <QCheckBox>
 #include <QFont>
 #include <QLabel>
 #include <QLineEdit>
@@ -65,6 +66,7 @@ public slots:
     void call();
     void hangup();
     void quit();
+    void onVidEnabledChanged(int state);
 
     void onNewCall(int cid, bool incoming);
     void onCallReleased();
@@ -82,6 +84,7 @@ private:
 		*hangupButton_,
 		*quitButton_,
 		*previewButton_;
+    QCheckBox   *vidEnabled_;
     QLineEdit *url_;
     VidWin *video_;
     VidWin *video_prev_;

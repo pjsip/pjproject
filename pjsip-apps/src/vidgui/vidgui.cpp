@@ -42,7 +42,7 @@
 #define SIP_DOMAIN		"pjsip.org"
 #define SIP_USERNAME		"vidgui"
 #define SIP_PASSWORD		"secret"
-#define SIP_PORT		5084
+#define SIP_PORT		5080
 #define SIP_TCP			1
 
 //
@@ -108,10 +108,18 @@ void MainWin::initLayout()
 
     /* Right pane */
     vbox_right->addWidget((localUri_ = new QLabel));
+    vbox_right->addWidget((vidEnabled_ = new QCheckBox(tr("Enable &video"))));
     vbox_right->addWidget((previewButton_=new QPushButton(tr("Start &Preview"))));
     vbox_right->addWidget((callButton_=new QPushButton(tr("Call"))));
     vbox_right->addWidget((hangupButton_=new QPushButton(tr("Hangup"))));
     vbox_right->addWidget((quitButton_=new QPushButton(tr("Quit"))));
+
+#if PJMEDIA_HAS_VIDEO
+    vidEnabled_->setCheckState(Qt::Checked);
+#else
+    vidEnabled_->setCheckState(Qt::Unchecked);
+    vidEnabled_->setEnabled(false);
+#endif
 
     /* Outest layout */
     QVBoxLayout *vbox_outest = new QVBoxLayout;
@@ -125,6 +133,7 @@ void MainWin::initLayout()
     connect(hangupButton_, SIGNAL(clicked()), this, SLOT(hangup()));
     connect(quitButton_, SIGNAL(clicked()), this, SLOT(quit()));
     //connect(this, SIGNAL(close()), this, SLOT(quit()));
+    connect(vidEnabled_, SIGNAL(stateChanged(int)), this, SLOT(onVidEnabledChanged(int)));
 
     // UI updates must be done in the UI thread!
     connect(this, SIGNAL(signalNewCall(int, bool)),
@@ -170,6 +179,19 @@ void MainWin::showError(const char *title, pj_status_t status)
     pj_strerror(status, errmsg, sizeof(errmsg));
     snprintf(errline, sizeof(errline), "%s error: %s", title, errmsg);
     showStatus(errline);
+}
+
+void MainWin::onVidEnabledChanged(int state)
+{
+    pjsua_call_setting call_setting;
+
+    if (currentCall_ == -1)
+	return;
+
+    pjsua_call_setting_default(&call_setting);
+    call_setting.vid_cnt = (state == Qt::Checked);
+
+    pjsua_call_reinvite2(currentCall_, &call_setting, NULL);
 }
 
 void MainWin::onNewCall(int cid, bool incoming)
@@ -256,20 +278,30 @@ void MainWin::preview()
 void MainWin::call()
 {
     if (callButton_->text() == "Answer") {
+	pjsua_call_setting call_setting;
+
 	pj_assert(currentCall_ != -1);
-	pjsua_call_answer(currentCall_, 200, NULL, NULL);
+
+	pjsua_call_setting_default(&call_setting);
+	call_setting.vid_cnt = (vidEnabled_->checkState()==Qt::Checked);
+
+	pjsua_call_answer2(currentCall_, &call_setting, 200, NULL, NULL);
 	callButton_->setEnabled(false);
     } else {
 	pj_status_t status;
 	QString dst = url_->text();
 	char uri[256];
+	pjsua_call_setting call_setting;
 
 	pj_ansi_strncpy(uri, dst.toAscii().data(), sizeof(uri));
 	pj_str_t uri2 = pj_str((char*)uri);
 
 	pj_assert(currentCall_ == -1);
 
-	status = pjsua_call_make_call(accountId_, &uri2, 0,
+	pjsua_call_setting_default(&call_setting);
+	call_setting.vid_cnt = (vidEnabled_->checkState()==Qt::Checked);
+
+	status = pjsua_call_make_call(accountId_, &uri2, &call_setting,
 				      NULL, NULL, &currentCall_);
 	if (status != PJ_SUCCESS) {
 	    showError("make call", status);
