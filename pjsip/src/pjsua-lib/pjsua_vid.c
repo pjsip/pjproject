@@ -1630,7 +1630,7 @@ static pj_status_t call_add_video(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    call->opt.video_cnt++;
+    call->opt.vid_cnt++;
 
     return PJ_SUCCESS;
 
@@ -1700,7 +1700,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 	if (call_med->dir == PJMEDIA_DIR_NONE) {
 	    unsigned i, vid_cnt = 0;
 
-	    /* Check if video_cnt in call option needs to be increased */
+	    /* Check if vid_cnt in call option needs to be increased */
 	    for (i = 0; i < call->med_cnt; ++i) {
 		if (call->media[i].type == PJMEDIA_TYPE_VIDEO &&
 		    call->media[i].dir != PJMEDIA_DIR_NONE)
@@ -1708,8 +1708,8 @@ static pj_status_t call_modify_video(pjsua_call *call,
 		    ++vid_cnt;
 		}
 	    }
-	    if (call->opt.video_cnt <= vid_cnt)
-		call->opt.video_cnt++;
+	    if (call->opt.vid_cnt <= vid_cnt)
+		call->opt.vid_cnt++;
 	}
 
 	status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
@@ -1789,7 +1789,7 @@ on_error:
 	/* Deactivate the stream */
 	pjmedia_sdp_media_deactivate(pool, sdp->media[med_idx]);
 
-	call->opt.video_cnt--;
+	call->opt.vid_cnt--;
     }
 
     status = call_reoffer_sdp(call->index, sdp);

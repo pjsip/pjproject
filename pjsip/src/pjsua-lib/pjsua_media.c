@@ -1734,34 +1734,34 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 	     */
 
 	    /* Check if we need to add new audio */
-	    if (maudcnt < call->opt.audio_cnt && 
-		mtotaudcnt < call->opt.audio_cnt)
+	    if (maudcnt < call->opt.aud_cnt &&
+		mtotaudcnt < call->opt.aud_cnt)
 	    {
-		for (mi = 0; mi < call->opt.audio_cnt - mtotaudcnt; ++mi)
+		for (mi = 0; mi < call->opt.aud_cnt - mtotaudcnt; ++mi)
 		    maudidx[maudcnt++] = (pj_uint8_t)call->med_cnt++;
 		
-		mtotaudcnt = call->opt.audio_cnt;
+		mtotaudcnt = call->opt.aud_cnt;
 	    }
-	    maudcnt = call->opt.audio_cnt;
+	    maudcnt = call->opt.aud_cnt;
 
 	    /* Check if we need to add new video */
-	    if (mvidcnt < call->opt.video_cnt && 
-		mtotvidcnt < call->opt.video_cnt)
+	    if (mvidcnt < call->opt.vid_cnt &&
+		mtotvidcnt < call->opt.vid_cnt)
 	    {
-		for (mi = 0; mi < call->opt.video_cnt - mtotvidcnt; ++mi)
+		for (mi = 0; mi < call->opt.vid_cnt - mtotvidcnt; ++mi)
 		    mvididx[mvidcnt++] = (pj_uint8_t)call->med_cnt++;
 
-		mtotvidcnt = call->opt.video_cnt;
+		mtotvidcnt = call->opt.vid_cnt;
 	    }
-	    mvidcnt = call->opt.video_cnt;
+	    mvidcnt = call->opt.vid_cnt;
 
 	} else {
 
-	    maudcnt = mtotaudcnt = call->opt.audio_cnt;
+	    maudcnt = mtotaudcnt = call->opt.aud_cnt;
 	    for (mi=0; mi<maudcnt; ++mi) {
 		maudidx[mi] = (pj_uint8_t)mi;
 	    }
-	    mvidcnt = mtotvidcnt = call->opt.video_cnt;
+	    mvidcnt = mtotvidcnt = call->opt.vid_cnt;
 	    for (mi=0; mi<mvidcnt; ++mi) {
 		mvididx[mi] = (pj_uint8_t)(maudcnt + mi);
 	    }
@@ -1814,14 +1814,14 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
 
 	if (pj_memchr(maudidx, mi, mtotaudcnt * sizeof(maudidx[0]))) {
 	    media_type = PJMEDIA_TYPE_AUDIO;
-	    if (call->opt.audio_cnt &&
+	    if (call->opt.aud_cnt &&
 		pj_memchr(maudidx, mi, maudcnt * sizeof(maudidx[0])))
 	    {
 		enabled = PJ_TRUE;
 	    }
 	} else if (pj_memchr(mvididx, mi, mtotvidcnt * sizeof(mvididx[0]))) {
 	    media_type = PJMEDIA_TYPE_VIDEO;
-	    if (call->opt.video_cnt &&
+	    if (call->opt.vid_cnt &&
 		pj_memchr(mvididx, mi, mvidcnt * sizeof(mvididx[0])))
 	    {
 		enabled = PJ_TRUE;
@@ -2596,12 +2596,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
      * no media count limitation applied, as we didn't know yet which media
      * would pass the SDP negotiation.
      */
-    if (maudcnt > call->opt.audio_cnt || mvidcnt > call->opt.video_cnt)
+    if (maudcnt > call->opt.aud_cnt || mvidcnt > call->opt.vid_cnt)
     {
 	pjmedia_sdp_session *local_sdp2;
 
-	maudcnt = PJ_MIN(maudcnt, call->opt.audio_cnt);
-	mvidcnt = PJ_MIN(mvidcnt, call->opt.video_cnt);
+	maudcnt = PJ_MIN(maudcnt, call->opt.aud_cnt);
+	mvidcnt = PJ_MIN(mvidcnt, call->opt.vid_cnt);
 	local_sdp2 = pjmedia_sdp_session_clone(tmp_pool, local_sdp);
 
 	for (mi=0; mi < local_sdp2->media_count; ++mi) {

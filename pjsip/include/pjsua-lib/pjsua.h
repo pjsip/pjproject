@@ -589,7 +589,7 @@ typedef struct pjsua_call_setting
      *
      * Default: 1
      */
-    unsigned         audio_cnt;
+    unsigned         aud_cnt;
 
     /**
      * Number of simultaneous active video streams for this call. Setting
@@ -597,7 +597,7 @@ typedef struct pjsua_call_setting
      *
      * Default: 1 (if video feature is enabled, otherwise it is zero)
      */
-    unsigned         video_cnt;
+    unsigned         vid_cnt;
 
 } pjsua_call_setting;
 
@@ -3614,10 +3614,10 @@ typedef struct pjsua_call_info
     pj_bool_t		rem_offerer;
 
     /** Number of audio streams offered by remote */
-    unsigned		rem_audio_cnt;
+    unsigned		rem_aud_cnt;
 
     /** Number of video streams offered by remote */
-    unsigned		rem_video_cnt;
+    unsigned		rem_vid_cnt;
 
     /** Internal */
     struct {

@@ -2580,8 +2580,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	pjsua_call_setting call_opt;
 
 	pjsua_call_setting_default(&call_opt);
-	call_opt.audio_cnt = app_config.aud_cnt;
-	call_opt.video_cnt = app_config.vid.vid_cnt;
+	call_opt.aud_cnt = app_config.aud_cnt;
+	call_opt.vid_cnt = app_config.vid.vid_cnt;
 
 	pjsua_call_answer2(call_id, &call_opt, app_config.auto_answer, NULL, NULL);
     }
@@ -2590,7 +2590,7 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	char notif_st[80] = {0};
 
 #if PJSUA_HAS_VIDEO
-	if (call_info.rem_offerer && call_info.rem_video_cnt) {
+	if (call_info.rem_offerer && call_info.rem_vid_cnt) {
 	    snprintf(notif_st, sizeof(notif_st), 
 		     "To %s the video, type \"vid %s\" first, "
 		     "before answering the call!\n",
@@ -2607,8 +2607,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 		  "To: %s\n"
 		  "Press a to answer or h to reject call",
 		  acc_id,
-		  call_info.rem_audio_cnt,
-		  call_info.rem_video_cnt,
+		  call_info.rem_aud_cnt,
+		  call_info.rem_vid_cnt,
 		  notif_st,
 		  call_info.remote_info.ptr,
 		  call_info.local_info.ptr));
@@ -2897,7 +2897,7 @@ static void on_call_media_state(pjsua_call_id call_id)
 
 #if PJSUA_HAS_VIDEO
     /* Check if remote has just tried to enable video */
-    if (call_info.rem_offerer && call_info.rem_video_cnt)
+    if (call_info.rem_offerer && call_info.rem_vid_cnt)
     {
 	int vid_idx;
 
@@ -4238,8 +4238,8 @@ void console_app_main(const pj_str_t *uri_to_call)
     pjsua_call_setting call_opt;
 
     pjsua_call_setting_default(&call_opt);
-    call_opt.audio_cnt = app_config.aud_cnt;
-    call_opt.video_cnt = app_config.vid.vid_cnt;
+    call_opt.aud_cnt = app_config.aud_cnt;
+    call_opt.vid_cnt = app_config.vid.vid_cnt;
 
     /* If user specifies URI to call, then call the URI */
     if (uri_to_call->slen) {
@@ -4280,8 +4280,8 @@ void console_app_main(const pj_str_t *uri_to_call)
 
 	/* Update call setting */
 	pjsua_call_setting_default(&call_opt);
-	call_opt.audio_cnt = app_config.aud_cnt;
-	call_opt.video_cnt = app_config.vid.vid_cnt;
+	call_opt.aud_cnt = app_config.aud_cnt;
+	call_opt.vid_cnt = app_config.vid.vid_cnt;
 
 	switch (menuin[0]) {
 

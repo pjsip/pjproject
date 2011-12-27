@@ -510,10 +510,10 @@ PJ_DEF(void) pjsua_call_setting_default(pjsua_call_setting *opt)
 
     pj_bzero(opt, sizeof(*opt));
     opt->flag = PJSUA_CALL_INCLUDE_DISABLED_MEDIA;
-    opt->audio_cnt = 1;
+    opt->aud_cnt = 1;
 
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
-    opt->video_cnt = 1;
+    opt->vid_cnt = 1;
     opt->req_keyframe_method = PJSUA_VID_REQ_KEYFRAME_SIP_INFO |
 			     PJSUA_VID_REQ_KEYFRAME_RTCP_PLI;
 #endif
@@ -529,7 +529,7 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 	return PJ_SUCCESS;
 
 #if !PJMEDIA_HAS_VIDEO
-    pj_assert(opt->video_cnt == 0);
+    pj_assert(opt->vid_cnt == 0);
 #endif
 
     /* If call is established, reinit media channel */
@@ -541,8 +541,8 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 	call->opt = *opt;
 
 	/* Reinit media channel when media count is changed */
-	if (opt->audio_cnt != old_opt.audio_cnt ||
-	    opt->video_cnt != old_opt.video_cnt)
+	if (opt->aud_cnt != old_opt.aud_cnt ||
+	    opt->vid_cnt != old_opt.vid_cnt)
 	{
 	    pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
 	    status = pjsua_media_channel_init(call->index, role,
@@ -1598,8 +1598,8 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     /* Audio & video count offered by remote */
     info->rem_offerer   = call->rem_offerer;
     if (call->rem_offerer) {
-	info->rem_audio_cnt = call->rem_aud_cnt;
-	info->rem_video_cnt = call->rem_vid_cnt;
+	info->rem_aud_cnt = call->rem_aud_cnt;
+	info->rem_vid_cnt = call->rem_vid_cnt;
     }
 
     /* Build array of media status and dir */
