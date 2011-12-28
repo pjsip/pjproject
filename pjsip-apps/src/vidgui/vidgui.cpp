@@ -327,6 +327,9 @@ void MainWin::initVideoWindow()
     if (currentCall_ == -1)
 	return;
 
+    delete video_;
+    video_ = NULL;
+
     pjsua_call_get_info(currentCall_, &ci);
     for (i = 0; i < ci.media_cnt; ++i) {
 	if ((ci.media[i].type == PJMEDIA_TYPE_VIDEO) &&
