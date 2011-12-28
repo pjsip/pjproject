@@ -366,6 +366,8 @@ struct pjsua_data
     pj_caching_pool	 cp;	    /**< Global pool factory.		*/
     pj_pool_t		*pool;	    /**< pjsua's private pool.		*/
     pj_mutex_t		*mutex;	    /**< Mutex protection for this data	*/
+    unsigned		 mutex_nesting_level; /**< Mutex nesting level.	*/
+    pj_thread_t		*mutex_owner; /**< Mutex owner.			*/
     pjsua_state		 state;	    /**< Library state.			*/
 
     /* Logging: */
@@ -502,13 +504,42 @@ PJ_INLINE(pjsua_im_data*) pjsua_im_data_dup(pj_pool_t *pool,
 
 
 #if 1
-#define PJSUA_LOCK()	    pj_mutex_lock(pjsua_var.mutex)
-#define PJSUA_TRY_LOCK()    pj_mutex_trylock(pjsua_var.mutex)
-#define PJSUA_UNLOCK()	    pj_mutex_unlock(pjsua_var.mutex)
+
+PJ_INLINE(void) PJSUA_LOCK()
+{
+    pj_mutex_lock(pjsua_var.mutex);
+    pjsua_var.mutex_owner = pj_thread_this();
+    ++pjsua_var.mutex_nesting_level;
+}
+
+PJ_INLINE(void) PJSUA_UNLOCK()
+{
+    if (--pjsua_var.mutex_nesting_level == 0)
+	pjsua_var.mutex_owner = NULL;
+    pj_mutex_unlock(pjsua_var.mutex);
+}
+
+PJ_INLINE(pj_status_t) PJSUA_TRY_LOCK()
+{
+    pj_status_t status;
+    status = pj_mutex_trylock(pjsua_var.mutex);
+    if (status == PJ_SUCCESS) {
+	pjsua_var.mutex_owner = pj_thread_this();
+	++pjsua_var.mutex_nesting_level;
+    }
+    return status;
+}
+
+PJ_INLINE(pj_bool_t) PJSUA_LOCK_IS_LOCKED()
+{
+    return pjsua_var.mutex_owner == pj_thread_this();
+}
+
 #else
 #define PJSUA_LOCK()
-#define PJSUA_TRY_LOCK()    PJ_SUCCESS
+#define PJSUA_TRY_LOCK()	PJ_SUCCESS
 #define PJSUA_UNLOCK()
+#define PJSUA_LOCK_IS_LOCKED()	PJ_TRUE
 #endif
 
 /* Core */
