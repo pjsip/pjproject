@@ -830,6 +830,9 @@ AC_ARG_ENABLE(ffmpeg,
 		AC_CHECK_LIB(z, deflate)
 		AC_CHECK_LIB(x264, x264_free)
 
+		dnl # libbz2, needed by matroskadec.o in ffmpeg 0.9 in mac os
+		AC_CHECK_LIB(bz2, BZ2_bzDecompressInit)
+
 		FFMPEG_PREFIX=""
     		if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
 			FFMPEG_PREFIX=$with_ffmpeg
