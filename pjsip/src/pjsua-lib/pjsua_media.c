@@ -978,11 +978,14 @@ static pj_status_t create_ice_media_transport(
 
     /* Wait until transport is initialized, or time out */
     if (!async) {
-        PJSUA_UNLOCK();
+	pj_bool_t has_pjsua_lock = PJSUA_LOCK_IS_LOCKED();
+        if (has_pjsua_lock)
+	    PJSUA_UNLOCK();
         while (call_med->tp_ready == PJ_EPENDING) {
 	    pjsua_handle_events(100);
         }
-        PJSUA_LOCK();
+	if (has_pjsua_lock)
+	    PJSUA_LOCK();
     }
 
     if (async && call_med->tp_ready == PJ_EPENDING) {
