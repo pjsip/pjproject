@@ -209,7 +209,13 @@ pjmedia_vid_dev_factory* pjmedia_dshow_factory(pj_pool_factory *pf)
 /* API: init factory */
 static pj_status_t dshow_factory_init(pjmedia_vid_dev_factory *f)
 {
-    CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    HRESULT hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
+    if (hr == RPC_E_CHANGED_MODE) {
+        PJ_LOG(4,(THIS_FILE, "Failed initializing DShow: "
+                             "COM library already initialized with "
+                             "incompatible concurrency model"));
+        return PJMEDIA_EVID_INIT;
+    }
 
     return dshow_factory_refresh(f);
 }
