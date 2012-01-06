@@ -739,6 +739,9 @@ int main(int argc, char *argv[])
             pjmedia_format_copy(&vpp.vidparam.fmt, &codec_param.dec_fmt);
             vpp.vidparam.dir = PJMEDIA_DIR_RENDER;
             vpp.vidparam.disp_size = vpp.vidparam.fmt.det.vid.size;
+	    vpp.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+	    vpp.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER |
+					PJMEDIA_VID_DEV_WND_RESIZABLE;
 
             status = pjmedia_vid_port_create(pool, &vpp, &renderer);
             if (status != PJ_SUCCESS)
