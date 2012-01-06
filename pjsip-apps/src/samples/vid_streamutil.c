@@ -565,6 +565,9 @@ int main(int argc, char *argv[])
     /* Init video converter manager */
     pjmedia_converter_mgr_create(pool, NULL);
 
+    /* Init event manager */
+    pjmedia_event_mgr_create(pool, 0, NULL);
+
     /* Init video codec manager */
     pjmedia_vid_codec_mgr_create(pool, NULL);
 
@@ -917,6 +920,9 @@ on_exit:
 
     /* Shutdown video subsystem */
     pjmedia_vid_dev_subsys_shutdown();
+
+    /* Destroy event manager */
+    pjmedia_event_mgr_destroy(NULL);
 
     /* Release application pool */
     pj_pool_release( pool );
