@@ -611,8 +611,10 @@ int main(int argc, char *argv[])
 
 #if DEF_RENDERER_WIDTH && DEF_RENDERER_HEIGHT
     /* Set incoming video size */
-    codec_param.dec_fmt.det.vid.size.w = DEF_RENDERER_WIDTH;
-    codec_param.dec_fmt.det.vid.size.h = DEF_RENDERER_HEIGHT;
+    if (DEF_RENDERER_WIDTH > codec_param.dec_fmt.det.vid.size.w)
+	codec_param.dec_fmt.det.vid.size.w = DEF_RENDERER_WIDTH;
+    if (DEF_RENDERER_HEIGHT > codec_param.dec_fmt.det.vid.size.h)
+	codec_param.dec_fmt.det.vid.size.h = DEF_RENDERER_HEIGHT;
 #endif
 
     if (play_file.file_name) {
