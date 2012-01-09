@@ -1996,7 +1996,7 @@ PJ_DECL(pj_status_t) pjsua_verify_url(const char *url);
  * not.
  *
  * @param entry		Timer heap entry.
- * @param delay     The interval to expire.
+ * @param delay         The interval to expire.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  *
@@ -2005,6 +2005,20 @@ PJ_DECL(pj_status_t) pjsua_verify_url(const char *url);
 PJ_DECL(pj_status_t) pjsua_schedule_timer(pj_timer_entry *entry,
 					  const pj_time_val *delay);
 
+/**
+ * Schedule a callback function to be called after a specified time interval.
+ * Note that the callback may be executed by different thread, depending on
+ * whether worker thread is enabled or not.
+ *
+ * @param cb		The callback function.
+ * @param user_data     The user data.
+ * @param msec_delay    The time interval in msec.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_schedule_timer2(void (*cb)(void *user_data),
+                                           void *user_data,
+                                           unsigned msec_delay);
 
 /**
  * Cancel the previously scheduled timer.

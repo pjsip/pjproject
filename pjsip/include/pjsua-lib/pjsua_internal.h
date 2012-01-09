@@ -76,6 +76,7 @@ struct pjsua_call_media
 
     pjmedia_transport	*tp;        /**< Current media transport (can be 0) */
     pj_status_t		 tp_ready;  /**< Media transport status.	    */
+    pj_status_t		 tp_result; /**< Media transport creation result.   */
     pjmedia_transport	*tp_orig;   /**< Original media transport	    */
     pj_bool_t		 tp_auto_del; /**< May delete media transport       */
     pjsua_med_tp_st	 tp_st;     /**< Media transport state		    */
@@ -456,6 +457,16 @@ struct pjsua_data
 #if PJSUA_HAS_VIDEO
     pjsua_vid_win	 win[PJSUA_MAX_VID_WINS]; /**< Array of windows	*/
 #endif
+
+    /* Timer entry list */
+    struct timer_list
+    {
+        PJ_DECL_LIST_MEMBER(struct timer_list);
+        pj_timer_entry          entry;
+        void                  (*cb)(void *user_data);
+        void                   *user_data;
+    } timer_list;
+    pj_mutex_t          *timer_mutex;
 };
 
 

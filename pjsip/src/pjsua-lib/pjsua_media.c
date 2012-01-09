@@ -766,6 +766,20 @@ on_error:
 }
 #endif
 
+static void med_tp_timer_cb(void *user_data)
+{
+    pjsua_call_media *call_med = (pjsua_call_media*)user_data;
+
+    PJSUA_LOCK();
+
+    call_med->tp_ready = call_med->tp_result;
+    if (call_med->med_create_cb)
+        (*call_med->med_create_cb)(call_med, call_med->tp_ready,
+                                   call_med->call->secure_level, NULL);
+
+    PJSUA_UNLOCK();
+}
+
 /* This callback is called when ICE negotiation completes */
 static void on_ice_complete(pjmedia_transport *tp, 
 			    pj_ice_strans_op op,
@@ -778,12 +792,8 @@ static void on_ice_complete(pjmedia_transport *tp,
 
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
-        PJSUA_LOCK();
-        call_med->tp_ready = result;
-        if (call_med->med_create_cb)
-            (*call_med->med_create_cb)(call_med, result,
-                                       call_med->call->secure_level, NULL);
-        PJSUA_UNLOCK();
+        call_med->tp_result = result;
+        pjsua_schedule_timer2(&med_tp_timer_cb, call_med, 1);
 	break;
     case PJ_ICE_STRANS_OP_NEGOTIATION:
 	if (result != PJ_SUCCESS) {
@@ -1538,9 +1548,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
         for (mi=0; mi < call->med_cnt; ++mi) {
             pjsua_call_media *call_med = &call->media[mi];
 
-            if (call_med->med_init_cb ||
-                call_med->tp_st == PJSUA_MED_TP_NULL)
-            {
+            if (call_med->med_init_cb) {
                 pj_mutex_unlock(call->med_ch_mutex);
                 return PJ_SUCCESS;
             }

@@ -712,6 +712,18 @@ PJ_DEF(pj_status_t) pjsua_create(void)
 				&pjsua_var.endpt);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
+    /* Init timer entry list */
+    pj_list_init(&pjsua_var.timer_list);
+
+    /* Create timer mutex */
+    status = pj_mutex_create_recursive(pjsua_var.pool, "pjsua_timer", 
+				       &pjsua_var.timer_mutex);
+    if (status != PJ_SUCCESS) {
+	pj_log_pop_indent();
+	pjsua_perror(THIS_FILE, "Unable to create mutex", status);
+	return status;
+    }
+
     pjsua_set_state(PJSUA_STATE_CREATED);
     pj_log_pop_indent();
     return PJ_SUCCESS;
@@ -2601,6 +2613,59 @@ PJ_DEF(pj_status_t) pjsua_schedule_timer( pj_timer_entry *entry,
 					  const pj_time_val *delay)
 {
     return pjsip_endpt_schedule_timer(pjsua_var.endpt, entry, delay);
+}
+
+/* Timer callback */
+static void timer_cb( pj_timer_heap_t *th,
+		      pj_timer_entry *entry)
+{
+    struct timer_list *tmr = (struct timer_list *)entry->user_data;
+    void (*cb)(void *user_data) = tmr->cb;
+    void *user_data = tmr->user_data;
+
+    PJ_UNUSED_ARG(th);
+
+    pj_mutex_lock(pjsua_var.timer_mutex);
+    pj_list_push_back(&pjsua_var.timer_list, tmr);
+    pj_mutex_unlock(pjsua_var.timer_mutex);
+
+    if (cb)
+        (*cb)(user_data);
+}
+
+/*
+ * Schedule a timer callback. 
+ */
+PJ_DEF(pj_status_t) pjsua_schedule_timer2( void (*cb)(void *user_data),
+                                           void *user_data,
+                                           unsigned msec_delay)
+{
+    struct timer_list *tmr = NULL;
+    pj_status_t status;
+    pj_time_val delay;
+
+    pj_mutex_lock(pjsua_var.timer_mutex);
+
+    if (pj_list_empty(&pjsua_var.timer_list)) {
+        tmr = PJ_POOL_ALLOC_T(pjsua_var.pool, struct timer_list);
+    } else {
+        tmr = pjsua_var.timer_list.next;
+        pj_list_erase(tmr);
+    }
+    pj_timer_entry_init(&tmr->entry, 0, tmr, timer_cb);
+    tmr->cb = cb;
+    tmr->user_data = user_data;
+    delay.sec = 0;
+    delay.msec = msec_delay;
+
+    status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &tmr->entry, &delay);
+    if (status != PJ_SUCCESS) {
+        pj_list_push_back(&pjsua_var.timer_list, tmr);
+    }
+
+    pj_mutex_unlock(pjsua_var.timer_mutex);
+
+    return status;
 }
 
 /*
