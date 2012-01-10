@@ -123,7 +123,8 @@ static pjmedia_codec_factory_op amr_factory_op =
     &amr_default_attr,
     &amr_enum_codecs,
     &amr_alloc_codec,
-    &amr_dealloc_codec
+    &amr_dealloc_codec,
+    &pjmedia_codec_opencore_amrnb_deinit
 };
 
 
