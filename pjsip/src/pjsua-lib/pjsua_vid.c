@@ -538,6 +538,11 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
+	/* Connect capturer to the video tee */
+	status = pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
 	/* If device supports native preview, enable it */
 	if (w->is_native) {
 	    pjmedia_vid_dev_stream *cap_dev;
@@ -579,10 +584,6 @@ static pj_status_t create_vid_win(pjsua_vid_win_type type,
 	/* For preview window, connect capturer & renderer (via tee) */
 	if (w->type == PJSUA_WND_TYPE_PREVIEW) {
 	    pjmedia_port *rend_port;
-
-	    status = pjmedia_vid_port_connect(w->vp_cap, w->tee, PJ_FALSE);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
 
 	    rend_port = pjmedia_vid_port_get_passive_port(w->vp_rend);
 	    status = pjmedia_vid_tee_add_dst_port2(w->tee, 0, rend_port);
