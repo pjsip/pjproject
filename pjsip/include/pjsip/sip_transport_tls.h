@@ -26,6 +26,7 @@
  */
 
 #include <pjsip/sip_transport.h>
+#include <pj/pool.h>
 #include <pj/ssl_sock.h>
 #include <pj/string.h>
 #include <pj/sock_qos.h>
@@ -106,10 +107,19 @@ typedef struct pjsip_tls_setting
     int		method;
 
     /**
-     * TLS cipher list string in OpenSSL format. If empty, then default
-     * cipher list of the backend will be used.
+     * Number of ciphers contained in the specified cipher preference. 
+     * If this is set to zero, then default cipher list of the backend 
+     * will be used.
+     *
+     * Default: 0 (zero).
      */
-    pj_str_t	ciphers;
+    unsigned ciphers_num;
+
+    /**
+     * Ciphers and order preference. The #pj_ssl_cipher_get_availables()
+     * can be used to check the available ciphers supported by backend.
+     */
+    pj_ssl_cipher *ciphers;
 
     /**
      * Optionally specify the server name instance to be contacted when
@@ -246,7 +256,13 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
     pj_strdup_with_null(pool, &dst->cert_file, &src->cert_file);
     pj_strdup_with_null(pool, &dst->privkey_file, &src->privkey_file);
     pj_strdup_with_null(pool, &dst->password, &src->password);
-    pj_strdup_with_null(pool, &dst->ciphers, &src->ciphers);
+    if (src->ciphers_num) {
+	unsigned i;
+	dst->ciphers = (pj_ssl_cipher*) pj_pool_calloc(pool, src->ciphers_num,
+						       sizeof(pj_ssl_cipher));
+	for (i=0; i<src->ciphers_num; ++i)
+	    dst->ciphers[i] = src->ciphers[i];
+    }
 }
 
 

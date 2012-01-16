@@ -293,6 +293,8 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
     if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
+    ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
+    ssock_param.ciphers = listener->tls_setting.ciphers;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
@@ -862,7 +864,6 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     ssock_param.cb.on_data_sent = &on_data_sent;
     ssock_param.async_cnt = 1;
     ssock_param.ioqueue = pjsip_endpt_get_ioqueue(listener->endpt);
-    PJ_TODO(synchronize_tls_cipher_type_with_ssl_sock_cipher_type);
     ssock_param.server_name = remote_name;
     ssock_param.timeout = listener->tls_setting.timeout;
     ssock_param.user_data = NULL; /* pending, must be set later */
@@ -872,6 +873,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	ssock_param.send_buffer_size = PJSIP_MAX_PKT_LEN;
     if (ssock_param.read_buffer_size < PJSIP_MAX_PKT_LEN)
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
+    ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
+    ssock_param.ciphers = listener->tls_setting.ciphers;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,

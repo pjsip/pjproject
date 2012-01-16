@@ -39,6 +39,9 @@
 /* Workaround for ticket #985 */
 #define DELAYED_CLOSE_TIMEOUT	200
 
+/* Maximum ciphers */
+#define MAX_CIPHERS		100
+
 /* 
  * Include OpenSSL headers 
  */
@@ -269,8 +272,11 @@ static pj_str_t ssl_strerror(pj_status_t status,
 static int openssl_init_count;
 
 /* OpenSSL available ciphers */
-static pj_ssl_cipher openssl_ciphers[100];
 static unsigned openssl_cipher_num;
+static struct openssl_ciphers_t {
+    pj_ssl_cipher    id;
+    const char	    *name;
+} openssl_ciphers[MAX_CIPHERS];
 
 /* OpenSSL application data index */
 static int sslsock_idx;
@@ -329,9 +335,9 @@ static pj_status_t init_openssl(void)
 	for (i = 0; i < n; ++i) {
 	    SSL_CIPHER *c;
 	    c = sk_SSL_CIPHER_value(sk_cipher,i);
-	    openssl_ciphers[i] = (pj_ssl_cipher)
-				 (pj_uint32_t)c->id & 0x00FFFFFF;
-	    //printf("%3u: %08x=%s\n", i+1, c->id, SSL_CIPHER_get_name(c));
+	    openssl_ciphers[i].id = (pj_ssl_cipher)
+				    (pj_uint32_t)c->id & 0x00FFFFFF;
+	    openssl_ciphers[i].name = SSL_CIPHER_get_name(c);
 	}
 
 	SSL_free(ssl);
@@ -1705,15 +1711,54 @@ PJ_DEF(pj_status_t) pj_ssl_cipher_get_availables(pj_ssl_cipher ciphers[],
 	shutdown_openssl();
     }
 
-    if (openssl_cipher_num == 0)
+    if (openssl_cipher_num == 0) {
+	*cipher_num = 0;
 	return PJ_ENOTFOUND;
+    }
 
     *cipher_num = PJ_MIN(*cipher_num, openssl_cipher_num);
 
     for (i = 0; i < *cipher_num; ++i)
-	ciphers[i] = openssl_ciphers[i];
+	ciphers[i] = openssl_ciphers[i].id;
 
     return PJ_SUCCESS;
+}
+
+
+/* Get cipher name string */
+PJ_DEF(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher)
+{
+    unsigned i;
+
+    if (openssl_cipher_num == 0) {
+	init_openssl();
+	shutdown_openssl();
+    }
+
+    for (i = 0; i < openssl_cipher_num; ++i) {
+	if (cipher == openssl_ciphers[i].id)
+	    return openssl_ciphers[i].name;
+    }
+
+    return NULL;
+}
+
+/* Check if the specified cipher is supported by SSL/TLS backend. */
+PJ_DEF(pj_bool_t) pj_ssl_cipher_is_supported(pj_ssl_cipher cipher)
+{
+    unsigned i;
+
+    if (openssl_cipher_num == 0) {
+	init_openssl();
+	shutdown_openssl();
+    }
+
+    for (i = 0; i < openssl_cipher_num; ++i) {
+	if (cipher == openssl_ciphers[i].id)
+	    return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
 }
 
 

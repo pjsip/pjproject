@@ -332,13 +332,35 @@ PJ_DECL(pj_status_t) pj_ssl_cipher_get_availables(pj_ssl_cipher ciphers[],
 
 
 /**
+ * Check if the specified cipher is supported by SSL/TLS backend.
+ *
+ * @param cipher	The cipher.
+ *
+ * @return		PJ_TRUE when supported.
+ */
+PJ_DECL(pj_bool_t) pj_ssl_cipher_is_supported(pj_ssl_cipher cipher);
+
+
+/**
  * Get cipher name string.
  *
  * @param cipher	The cipher.
  *
- * @return		The cipher name or NULL if cipher is not recognized.
+ * @return		The cipher name or NULL if cipher is not recognized/
+ *			supported.
  */
 PJ_DECL(const char*) pj_ssl_cipher_name(pj_ssl_cipher cipher);
+
+
+/**
+ * Get cipher ID from cipher name string.
+ *
+ * @param cipher_name	The cipher name string.
+ *
+ * @return		The cipher ID or PJ_TLS_UNKNOWN_CIPHER if the cipher
+ *			name string is not recognized/supported.
+ */
+PJ_DECL(pj_ssl_cipher) pj_ssl_cipher_id(const char *cipher_name);
 
 
 /**
