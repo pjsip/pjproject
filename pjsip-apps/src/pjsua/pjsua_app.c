@@ -534,7 +534,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NOREFERSUB, OPT_ACCEPT_REDIRECT,
 	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
-	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME, OPT_TLS_CIPHER,
+	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
 	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS,
@@ -642,7 +642,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "tls-verify-server", 0, 0, OPT_TLS_VERIFY_SERVER},
 	{ "tls-verify-client", 0, 0, OPT_TLS_VERIFY_CLIENT},
 	{ "tls-neg-timeout", 1, 0, OPT_TLS_NEG_TIMEOUT},
-	{ "tls-srv-name", 1, 0, OPT_TLS_SRV_NAME},
 	{ "tls-cipher", 1, 0, OPT_TLS_CIPHER},
 #endif
 	{ "capture-dev",    1, 0, OPT_CAPTURE_DEV},
@@ -1345,9 +1344,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.tls_setting.timeout.sec = atoi(pj_optarg);
 	    break;
 
-	case OPT_TLS_SRV_NAME:
-	    cfg->udp_cfg.tls_setting.server_name = pj_str(pj_optarg);
-	    break;
 	case OPT_TLS_CIPHER:
 	    {
 		pj_ssl_cipher cipher;
@@ -1826,13 +1822,6 @@ static int write_settings(const struct app_config *config,
 	pj_ansi_sprintf(line, "--tls-password %.*s\n",
 			(int)config->udp_cfg.tls_setting.password.slen, 
 			config->udp_cfg.tls_setting.password.ptr);
-	pj_strcat2(&cfg, line);
-    }
-
-    if (config->udp_cfg.tls_setting.server_name.slen) {
-	pj_ansi_sprintf(line, "--tls-srv-name %.*s\n",
-			(int)config->udp_cfg.tls_setting.server_name.slen, 
-			config->udp_cfg.tls_setting.server_name.ptr);
 	pj_strcat2(&cfg, line);
     }
 
