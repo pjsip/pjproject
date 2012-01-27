@@ -59,6 +59,8 @@ static void parse_generic_line(pj_scanner *scanner, pj_str_t *str,
 			       parse_context *ctx);
 static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
 				  parse_context *ctx);
+static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
+				  parse_context *ctx);
 static pjmedia_sdp_attr *parse_attr(pj_pool_t *pool, pj_scanner *scanner,
 				    parse_context *ctx);
 static void parse_media(pj_scanner *scanner, pjmedia_sdp_media *med,
@@ -810,6 +812,14 @@ static int print_session(const pjmedia_sdp_session *ses,
 	p += printed;
     }
 
+    /* print optional bandwidth info. */
+    for (i=0; i<ses->bandw_count; ++i) {
+	printed = print_bandw(ses->bandw[i], p, end-p);
+	if (printed < 1) {
+	    return -1;
+	}
+	p += printed;
+    }
 
     /* Time */
     if ((end-p) < 24) {
@@ -986,6 +996,28 @@ static void parse_connection_info(pj_scanner *scanner, pjmedia_sdp_conn *conn,
     /* address. */
     pj_scan_get_until_chr(scanner, "/ \t\r\n", &conn->addr);
     PJ_TODO(PARSE_SDP_CONN_ADDRESS_SUBFIELDS);
+
+    /* We've got what we're looking for, skip anything until newline */
+    pj_scan_skip_line(scanner);
+}
+
+static void parse_bandwidth_info(pj_scanner *scanner, pjmedia_sdp_bandw *bandw,
+				  parse_context *ctx)
+{
+    pj_str_t str;
+
+    ctx->last_error = PJMEDIA_SDP_EINBANDW;
+
+    /* b= */
+    pj_scan_advance_n(scanner, 2, SKIP_WS);
+
+    /* modifier */
+    pj_scan_get_until_ch(scanner, ':', &bandw->modifier);
+    pj_scan_get_char(scanner);
+
+    /* value */
+    pj_scan_get_until_chr(scanner, " \t\r\n", &str);
+    bandw->value = pj_strtoul(&str);
 
     /* We've got what we're looking for, skip anything until newline */
     pj_scan_skip_line(scanner);
@@ -1180,6 +1212,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
     pjmedia_sdp_media *media = NULL;
     pjmedia_sdp_attr *attr;
     pjmedia_sdp_conn *conn;
+    pjmedia_sdp_bandw *bandw;
     pj_str_t dummy;
     int cur_name = 254;
     parse_context ctx;
@@ -1251,6 +1284,15 @@ PJ_DEF(pj_status_t) pjmedia_sdp_parse( pj_pool_t *pool,
 			    on_scanner_error(&scanner);
 			}
 			pj_scan_get_char(&scanner);
+		    }
+		    break;
+		case 'b':
+		    bandw = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_bandw);
+		    parse_bandwidth_info(&scanner, bandw, &ctx);
+		    if (media) {
+			media->bandw[media->bandw_count++] = bandw;
+		    } else {
+			session->bandw[session->bandw_count++] = bandw;
 		    }
 		    break;
 		default:
@@ -1330,6 +1372,12 @@ PJ_DEF(pjmedia_sdp_session*) pjmedia_sdp_session_clone( pj_pool_t *pool,
     if (rhs->conn) {
 	sess->conn = pjmedia_sdp_conn_clone(pool, rhs->conn);
 	PJ_ASSERT_RETURN(sess->conn != NULL, NULL);
+    }
+
+    /* Duplicate bandwidth info */
+    sess->bandw_count = rhs->bandw_count;
+    for (i=0; i<rhs->bandw_count; ++i) {
+	sess->bandw[i] = pjmedia_sdp_bandw_clone(pool, rhs->bandw[i]);
     }
 
     /* Clone time line. */

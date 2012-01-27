@@ -1938,6 +1938,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjmedia_sdp_neg_state sdp_neg_state = PJMEDIA_SDP_NEG_STATE_NULL;
     unsigned mi;
+    unsigned tot_bandw_tias = 0;
     pj_status_t status;
 
     if (pjsua_get_state() != PJSUA_STATE_RUNNING)
@@ -2011,6 +2012,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	pjsua_call_media *call_med = &call->media[mi];
 	pjmedia_sdp_media *m = NULL;
 	pjmedia_transport_info tpinfo;
+	unsigned i;
 
 	if (rem_sdp && mi >= rem_sdp->media_count) {
 	    /* Remote might have removed some media lines. */
@@ -2108,6 +2110,17 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	if (sdp->conn == NULL) {
 	    sdp->conn = pjmedia_sdp_conn_clone(pool, m->conn);
 	}
+
+	
+	/* Find media bandwidth info */
+	for (i = 0; i < m->bandw_count; ++i) {
+	    const pj_str_t STR_BANDW_MODIFIER_TIAS = { "TIAS", 4 };
+	    if (!pj_stricmp(&m->bandw[i]->modifier, &STR_BANDW_MODIFIER_TIAS))
+	    {
+		tot_bandw_tias += m->bandw[i]->value;
+		break;
+	    }
+	}
     }
 
     /* Add NAT info in the SDP */
@@ -2132,6 +2145,26 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
 	pjmedia_sdp_attr_add(&sdp->attr_count, sdp->attr, a);
 
+    }
+
+
+    /* Add bandwidth info in session level using bandwidth modifier "AS". */
+    if (tot_bandw_tias) {
+	unsigned bandw;
+	const pj_str_t STR_BANDW_MODIFIER_AS = { "AS", 2 };
+	pjmedia_sdp_bandw *b;
+
+	/* AS bandwidth = RTP bitrate + RTCP bitrate.
+	 * RTP bitrate  = payload bitrate (total TIAS) + overheads (~16kbps).
+	 * RTCP bitrate = est. 5% of RTP bitrate.
+	 * Note that AS bandwidth is in kbps.
+	 */
+	bandw = tot_bandw_tias + 16000;
+	bandw += bandw * 5 / 100;
+	b = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_bandw);
+	b->modifier = STR_BANDW_MODIFIER_AS;
+	b->value = bandw / 1000;
+	sdp->bandw[sdp->bandw_count++] = b;
     }
 
 

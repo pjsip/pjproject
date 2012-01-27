@@ -171,6 +171,11 @@ PJ_BEGIN_DECL
  * Invalid SDP media transport protocol.
  */
 #define PJMEDIA_SDP_EINPROTO	    (PJMEDIA_ERRNO_START+36)    /* 220036 */
+/**
+ * @hideinitializer
+ * Invalid SDP bandwidth info (b=) line.
+ */
+#define PJMEDIA_SDP_EINBANDW	    (PJMEDIA_ERRNO_START+37)    /* 220037 */
 
 
 /************************************************************

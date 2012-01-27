@@ -614,8 +614,11 @@ struct pjmedia_sdp_session
 	pj_str_t    addr;	    /**< The address.			*/
     } origin;
 
-    pj_str_t	     name;	    /**< Subject line (s=)		*/
-    pjmedia_sdp_conn *conn;	    /**< Connection line (c=)		*/
+    pj_str_t	       name;	    /**< Subject line (s=)		*/
+    pjmedia_sdp_conn  *conn;	    /**< Connection line (c=)		*/
+    unsigned	       bandw_count; /**< Number of bandwidth info (b=)	*/
+    pjmedia_sdp_bandw *bandw[PJMEDIA_MAX_SDP_BANDW];
+				    /**< Bandwidth info array (b=)	*/
     
     /** Session time (t= line)	*/
     struct

@@ -372,6 +372,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
     pjmedia_sdp_media *m;
     pjmedia_sdp_attr *attr;
     unsigned i;
+    unsigned max_bitrate = 0;
     pj_status_t status;
 
     PJ_UNUSED_ARG(options);
@@ -493,6 +494,10 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    attr->value = pj_strdup3(pool, buf);
 	    m->attr[m->attr_count++] = attr;
 	}
+
+	/* Find maximum bitrate in this media */
+	if (max_bitrate < codec_param.info.max_bps)
+	    max_bitrate = codec_param.info.max_bps;
     }
 
 #if defined(PJMEDIA_RTP_PT_TELEPHONE_EVENTS) && \
@@ -519,6 +524,19 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
     }
 #endif
 
+    /* Put bandwidth info in media level using bandwidth modifier "TIAS"
+     * (RFC3890).
+     */
+    if (max_bitrate) {
+	const pj_str_t STR_BANDW_MODIFIER = { "TIAS", 4 };
+	pjmedia_sdp_bandw *b;
+	    
+	b = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_bandw);
+	b->modifier = STR_BANDW_MODIFIER;
+	b->value = max_bitrate;
+	m->bandw[m->bandw_count++] = b;
+    }
+
     *p_m = m;
     return PJ_SUCCESS;
 }
@@ -541,6 +559,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
     unsigned codec_prio[PJMEDIA_VID_CODEC_MGR_MAX_CODECS];
     pjmedia_sdp_attr *attr;
     unsigned cnt, i;
+    unsigned max_bitrate = 0;
     pj_status_t status;
 
     PJ_UNUSED_ARG(options);
@@ -568,6 +587,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	pjmedia_sdp_rtpmap rtpmap;
 	pjmedia_vid_codec_param codec_param;
 	pj_str_t *fmt;
+	pjmedia_video_format_detail *vfd;
 
 	pj_bzero(&rtpmap, sizeof(rtpmap));
 
@@ -660,6 +680,25 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
 	    attr->value = pj_strdup3(pool, buf);
 	    m->attr[m->attr_count++] = attr;
 	}
+    
+	/* Find maximum bitrate in this media */
+	vfd = pjmedia_format_get_video_format_detail(&codec_param.enc_fmt,
+						     PJ_TRUE);
+	if (vfd && max_bitrate < vfd->max_bps)
+	    max_bitrate = vfd->max_bps;
+    }
+
+    /* Put bandwidth info in media level using bandwidth modifier "TIAS"
+     * (RFC3890).
+     */
+    if (max_bitrate) {
+	const pj_str_t STR_BANDW_MODIFIER = { "TIAS", 4 };
+	pjmedia_sdp_bandw *b;
+	    
+	b = PJ_POOL_ALLOC_T(pool, pjmedia_sdp_bandw);
+	b->modifier = STR_BANDW_MODIFIER;
+	b->value = max_bitrate;
+	m->bandw[m->bandw_count++] = b;
     }
 
     *p_m = m;

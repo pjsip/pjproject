@@ -66,6 +66,7 @@ static const struct
     PJ_BUILD_ERR( PJMEDIA_SDP_EINFMTP,	    "Invalid SDP fmtp attribute" ),
     PJ_BUILD_ERR( PJMEDIA_SDP_EINRTCP,	    "Invalid SDP rtcp attribyte" ),
     PJ_BUILD_ERR( PJMEDIA_SDP_EINPROTO,	    "Invalid SDP media transport protocol" ),
+    PJ_BUILD_ERR( PJMEDIA_SDP_EINBANDW,	    "Invalid SDP bandwidth info line" ),
 
     /* SDP negotiator errors. */
     PJ_BUILD_ERR( PJMEDIA_SDPNEG_EINSTATE,	"Invalid SDP negotiator state for operation" ),
