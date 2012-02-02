@@ -4113,7 +4113,7 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
   {
      pjsua_player_id player_id;
      
-     status = pjsua_player_create("mysong.wav", 0, NULL, &player_id);
+     status = pjsua_player_create("mysong.wav", 0, &player_id);
      if (status != PJ_SUCCESS)
         return status;
 
