@@ -914,22 +914,20 @@ static pj_status_t sdl_factory_create_stream(
     strm->pool = pool;
     strm->sf = sf;
     pj_memcpy(&strm->vid_cb, cb, sizeof(*cb));
+    pj_list_init(&strm->list_entry);
+    strm->list_entry.stream = strm;
     strm->user_data = user_data;
 
     /* Create render stream here */
-    if (param->dir & PJMEDIA_DIR_RENDER) {
-        job_queue_post_job(sf->jq, sdl_create, strm, 0, &status);
-	if (status != PJ_SUCCESS) {
-	    goto on_error;
-	}
-        pj_list_init(&strm->list_entry);
-        strm->list_entry.stream = strm;
-        pj_mutex_lock(strm->sf->mutex);
-        if (pj_list_empty(&strm->sf->streams))
-            pj_sem_post(strm->sf->sem);
-        pj_list_insert_after(&strm->sf->streams, &strm->list_entry);
-        pj_mutex_unlock(strm->sf->mutex);
+    job_queue_post_job(sf->jq, sdl_create, strm, 0, &status);
+    if (status != PJ_SUCCESS) {
+        goto on_error;
     }
+    pj_mutex_lock(strm->sf->mutex);
+    if (pj_list_empty(&strm->sf->streams))
+        pj_sem_post(strm->sf->sem);
+    pj_list_insert_after(&strm->sf->streams, &strm->list_entry);
+    pj_mutex_unlock(strm->sf->mutex);
 
     /* Apply the remaining settings */
     if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
