@@ -2823,6 +2823,8 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
     pj_status_t status = PJ_SUCCESS;
     pj_ice_sess_comp *comp;
     pj_ice_sess_cand *cand;
+    pj_uint8_t transport_id;
+    pj_sockaddr addr;
 
     PJ_ASSERT_RETURN(ice && comp_id, PJ_EINVAL);
     
@@ -2838,22 +2840,29 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
     comp = find_comp(ice, comp_id);
     if (comp == NULL) {
 	status = PJNATH_EICEINCOMPID;
+	pj_mutex_unlock(ice->mutex);
 	goto on_return;
     }
 
     if (comp->valid_check == NULL) {
 	status = PJNATH_EICEINPROGRESS;
+	pj_mutex_unlock(ice->mutex);
 	goto on_return;
     }
 
     cand = comp->valid_check->lcand;
-    status = (*ice->cb.on_tx_pkt)(ice, comp_id, cand->transport_id, 
+    transport_id = cand->transport_id;
+    pj_sockaddr_cp(&addr, &comp->valid_check->rcand->addr);
+
+    /* Release the mutex now to avoid deadlock (see ticket #1451). */
+    pj_mutex_unlock(ice->mutex);
+
+    status = (*ice->cb.on_tx_pkt)(ice, comp_id, transport_id, 
 				  data, data_len, 
-				  &comp->valid_check->rcand->addr, 
+				  &addr, 
 				  sizeof(pj_sockaddr_in));
 
 on_return:
-    pj_mutex_unlock(ice->mutex);
     return status;
 }
 
