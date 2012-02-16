@@ -769,10 +769,13 @@ static pj_status_t create_filter_graph(pjmedia_dir dir,
         video_info->bmiHeader.biWidth = vfd->size.w;
         video_info->bmiHeader.biHeight = vfd->size.h;
     }
-    if (!use_def_fps && vfd->fps.num != 0)
+    if (video_info->AvgTimePerFrame == 0 ||
+        (!use_def_fps && vfd->fps.num != 0))
+    {
         video_info->AvgTimePerFrame = (LONGLONG) (10000000 * 
 						  (double)vfd->fps.denum /
 						  vfd->fps.num);
+    }
     video_info->bmiHeader.biSizeImage = DIBSIZE(video_info->bmiHeader);
     mediatype->lSampleSize = DIBSIZE(video_info->bmiHeader);
     if (graph->csource_filter)

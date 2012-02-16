@@ -113,6 +113,7 @@ PJ_DEF(void) pjmedia_format_init_video( pjmedia_format *fmt,
 					unsigned fps_num,
 					unsigned fps_denum)
 {
+    pj_assert(fps_denum);
     fmt->id = fmt_id;
     fmt->type = PJMEDIA_TYPE_VIDEO;
     fmt->detail_type = PJMEDIA_FORMAT_DETAIL_VIDEO;
