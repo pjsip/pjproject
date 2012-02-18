@@ -4326,6 +4326,18 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	return;
     }
 
+    /* https://trac.pjsip.org/repos/ticket/1452:
+     *    If a request is retried due to 401/407 challenge, don't process the
+     *    transaction first but wait until we've retried it.
+     */
+    if (tsx->role == PJSIP_ROLE_UAC &&
+	(tsx->status_code==401 || tsx->status_code==407) &&
+	tsx->last_tx && tsx->last_tx->auth_retry)
+    {
+	PJSUA_UNLOCK();
+	return;
+    }
+
     /* Notify application callback first */
     if (pjsua_var.ua_cfg.cb.on_call_tsx_state) {
 	(*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index, tsx, e);

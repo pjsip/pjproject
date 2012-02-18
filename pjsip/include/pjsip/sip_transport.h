@@ -574,6 +574,13 @@ struct pjsip_tx_data
     pjsip_tpselector	    tp_sel;
 
     /**
+     * Special flag to indicate that this transmit data is a request that has
+     * been updated with proper authentication response and is ready to be
+     * sent for retry.
+     */
+    pj_bool_t		    auth_retry;
+
+    /**
      * Arbitrary data attached by PJSIP modules.
      */
     void		    *mod_data[PJSIP_MAX_MODULE];

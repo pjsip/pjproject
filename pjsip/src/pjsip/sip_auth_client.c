@@ -1103,7 +1103,8 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 		     PJSIP_EINVALIDSTATUS);
 
     tdata = old_request;
-    
+    tdata->auth_retry = PJ_FALSE;
+
     /*
      * Respond to each authentication challenge.
      */
@@ -1173,6 +1174,9 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_reinit_req(	pjsip_auth_clt_sess *sess,
 
     /* Must invalidate the message! */
     pjsip_tx_data_invalidate_msg(tdata);
+
+    /* Retrying.. */
+    tdata->auth_retry = PJ_TRUE;
 
     /* Increment reference counter. */
     pjsip_tx_data_add_ref(tdata);
