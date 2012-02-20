@@ -1891,6 +1891,33 @@ static pj_status_t get_video_codec_info_param(pjmedia_vid_stream_info *si,
 						     &si->codec_info,
 						     si->codec_param);
 
+    /* Adjust encoding bitrate, if higher than remote preference. The remote
+     * bitrate preference is read from SDP "b=TIAS" line in media level.
+     */
+    if ((si->dir & PJMEDIA_DIR_ENCODING) && rem_m->bandw_count) {
+	unsigned i, bandw = 0;
+
+	for (i = 0; i < rem_m->bandw_count; ++i) {
+	    const pj_str_t STR_BANDW_MODIFIER_TIAS = { "TIAS", 4 };
+	    if (!pj_stricmp(&rem_m->bandw[i]->modifier, 
+		&STR_BANDW_MODIFIER_TIAS))
+	    {
+		bandw = rem_m->bandw[i]->value;
+		break;
+	    }
+	}
+
+	if (bandw) {
+	    pjmedia_video_format_detail *enc_vfd;
+	    enc_vfd = pjmedia_format_get_video_format_detail(
+					&si->codec_param->enc_fmt, PJ_TRUE);
+	    if (!enc_vfd->avg_bps || enc_vfd->avg_bps > bandw)
+		enc_vfd->avg_bps = bandw * 3 / 4;
+	    if (!enc_vfd->max_bps || enc_vfd->max_bps > bandw)
+		enc_vfd->max_bps = bandw;
+	}
+    }
+
     /* Get remote fmtp for our encoder. */
     pjmedia_stream_info_parse_fmtp(pool, rem_m, si->tx_pt,
 				   &si->codec_param->enc_fmtp);
