@@ -619,7 +619,6 @@ pjmedia_vid_codec_mgr_get_default_param(pjmedia_vid_codec_mgr *mgr,
  */
 PJ_DECL(pj_status_t) 
 pjmedia_vid_codec_mgr_set_default_param(pjmedia_vid_codec_mgr *mgr,
-                                        pj_pool_t *pool,
 				        const pjmedia_vid_codec_info *info,
 				        const pjmedia_vid_codec_param *param);
 

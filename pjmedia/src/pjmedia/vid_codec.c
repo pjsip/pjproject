@@ -33,6 +33,14 @@
 static pjmedia_vid_codec_mgr *def_vid_codec_mgr;
 
 
+/* Definition of default codecs parameters */
+typedef struct pjmedia_vid_codec_default_param
+{
+    pj_pool_t			*pool;
+    pjmedia_vid_codec_param	*param;
+} pjmedia_vid_codec_default_param;
+
+
 /*
  * Codec manager maintains array of these structs for each supported
  * codec.
@@ -43,7 +51,7 @@ typedef struct pjmedia_vid_codec_desc
     pjmedia_codec_id	             id;        /**< Fully qualified name   */
     pjmedia_codec_priority           prio;      /**< Priority.		    */
     pjmedia_vid_codec_factory       *factory;	/**< The factory.	    */
-    pjmedia_vid_codec_param         *def_param; /**< Default codecs 
+    pjmedia_vid_codec_default_param *def_param; /**< Default codecs 
 					             parameters.	    */
 } pjmedia_vid_codec_desc;
 
@@ -51,6 +59,9 @@ typedef struct pjmedia_vid_codec_desc
 /* The declaration of video codec manager */
 struct pjmedia_vid_codec_mgr
 {
+    /** Pool factory instance. */
+    pj_pool_factory		*pf;
+
     /** Codec manager mutex. */
     pj_mutex_t			*mutex;
 
@@ -116,6 +127,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_create(
     PJ_ASSERT_RETURN(pool, PJ_EINVAL);
 
     mgr = PJ_POOL_ZALLOC_T(pool, pjmedia_vid_codec_mgr);
+    mgr->pf = pool->factory;
     pj_list_init (&mgr->factory_list);
     mgr->codec_cnt = 0;
 
@@ -611,7 +623,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
 
     /* If we found the codec and its default param is set, return it */
     if (codec_desc && codec_desc->def_param) {
-	pj_memcpy(param, codec_desc->def_param, 
+	pj_memcpy(param, codec_desc->def_param->param, 
 		  sizeof(pjmedia_vid_codec_param));
 
 	pj_mutex_unlock(mgr->mutex);
@@ -651,14 +663,14 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_get_default_param(
  */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param( 
 					    pjmedia_vid_codec_mgr *mgr,
-                                            pj_pool_t *pool,
 					    const pjmedia_vid_codec_info *info,
 					    const pjmedia_vid_codec_param *param )
 {
     unsigned i;
     pjmedia_codec_id codec_id;
     pjmedia_vid_codec_desc *codec_desc = NULL;
-    pjmedia_vid_codec_param *p;
+    pj_pool_t *pool, *old_pool = NULL;
+    pjmedia_vid_codec_default_param *p;
 
     PJ_ASSERT_RETURN(info, PJ_EINVAL);
 
@@ -686,6 +698,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
 
     /* If codec param is previously set */
     if (codec_desc->def_param) {
+	pj_assert(codec_desc->def_param->pool);
+        old_pool = codec_desc->def_param->pool;
 	codec_desc->def_param = NULL;
     }
 
@@ -694,11 +708,20 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
      */
     if (NULL == param) {
 	pj_mutex_unlock(mgr->mutex);
+        if (old_pool)
+	    pj_pool_release(old_pool);
 	return PJ_SUCCESS;
     }
 
+    /* Create new default codec param instance */
+    pool = pj_pool_create(mgr->pf, (char*)codec_id, 256, 256, NULL);
+    codec_desc->def_param = PJ_POOL_ZALLOC_T(pool,
+					     pjmedia_vid_codec_default_param);
+    p = codec_desc->def_param;
+    p->pool = pool;
+
     /* Update codec default param */
-    p = pjmedia_vid_codec_param_clone(pool, param);
+    p->param = pjmedia_vid_codec_param_clone(pool, param);
     if (!p)
 	return PJ_EINVAL;
     codec_desc->def_param = p;

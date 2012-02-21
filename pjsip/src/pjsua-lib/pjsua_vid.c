@@ -332,8 +332,7 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_set_param(
 	return PJ_ETOOMANY;
     }
 
-    status = pjmedia_vid_codec_mgr_set_default_param(NULL, pjsua_var.pool,
-						     info[0], param);
+    status = pjmedia_vid_codec_mgr_set_default_param(NULL, info[0], param);
     return status;
 }
 
