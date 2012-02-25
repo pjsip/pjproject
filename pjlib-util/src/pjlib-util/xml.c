@@ -100,13 +100,13 @@ static pj_xml_node *xml_parse_node( pj_pool_t *pool, pj_scanner *scanner)
     pj_scan_get_char(scanner);
 
     /* Get node name. */
-    pj_scan_get_until_chr( scanner, " />\t", &node->name);
+    pj_scan_get_until_chr( scanner, " />\t\r\n", &node->name);
 
     /* Get attributes. */
     while (*scanner->curptr != '>' && *scanner->curptr != '/') {
 	pj_xml_attr *attr = alloc_attr(pool);
 	
-	pj_scan_get_until_chr( scanner, "=> \t", &attr->name);
+	pj_scan_get_until_chr( scanner, "=> \t\r\n", &attr->name);
 	if (*scanner->curptr == '=') {
 	    pj_scan_get_char( scanner );
             pj_scan_get_quotes(scanner, "\"'", "\"'", 2, &attr->value);
