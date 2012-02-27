@@ -234,6 +234,12 @@ static void stream_perror(const char *sender, const char *title,
 }
 
 
+static pj_status_t send_rtcp(pjmedia_stream *stream,
+			     pj_bool_t with_sdes,
+			     pj_bool_t with_bye,
+			     pj_bool_t with_xr);
+
+
 #if TRACE_JB
 
 PJ_INLINE(int) trace_jb_print_timestamp(char **buf, pj_ssize_t len)
@@ -414,8 +420,7 @@ static void send_keep_alive_packet(pjmedia_stream *stream)
 			       pkt_len);
 
     /* Send RTCP */
-    pjmedia_rtcp_build_rtcp(&stream->rtcp, &pkt, &pkt_len);
-    pjmedia_transport_send_rtcp(stream->transport, pkt, pkt_len);
+    send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE);
 
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
@@ -903,6 +908,114 @@ static void create_dtmf_payload(pjmedia_stream *stream,
 }
 
 
+static pj_status_t send_rtcp(pjmedia_stream *stream,
+			     pj_bool_t with_sdes,
+			     pj_bool_t with_bye,
+			     pj_bool_t with_xr)
+{
+    void *sr_rr_pkt;
+    pj_uint8_t *pkt;
+    int len, max_len;
+    pj_status_t status;
+
+    /* Build RTCP RR/SR packet */
+    pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
+
+#if !defined(PJMEDIA_HAS_RTCP_XR) || (PJMEDIA_HAS_RTCP_XR == 0)
+    with_xr = PJ_FALSE;
+#endif
+
+    if (with_sdes || with_bye || with_xr) {
+	pkt = (pj_uint8_t*) stream->enc->out_pkt;
+	pj_memcpy(pkt, sr_rr_pkt, len);
+	max_len = stream->enc->out_pkt_size;
+    } else {
+	pkt = sr_rr_pkt;
+	max_len = len;
+    }
+
+    /* Build RTCP SDES packet */
+    if (with_sdes) {
+	pjmedia_rtcp_sdes sdes;
+	unsigned sdes_len;
+
+	pj_bzero(&sdes, sizeof(sdes));
+	sdes.cname = stream->cname;
+	sdes_len = max_len - len;
+	status = pjmedia_rtcp_build_rtcp_sdes(&stream->rtcp, pkt+len,
+					      &sdes_len, &sdes);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+        			     "Error generating RTCP SDES"));
+	} else {
+	    len += sdes_len;
+	}
+    }
+
+    /* Build RTCP XR packet */
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    if (with_xr) {
+	int i;
+	pjmedia_jb_state jb_state;
+	void *xr_pkt;
+	int xr_len;
+
+	/* Update RTCP XR with current JB states */
+	pjmedia_jbuf_get_state(stream->jb, &jb_state);
+    	    
+	i = jb_state.avg_delay;
+	status = pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+					     PJMEDIA_RTCP_XR_INFO_JB_NOM, i);
+	pj_assert(status == PJ_SUCCESS);
+
+	i = jb_state.max_delay;
+	status = pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
+					     PJMEDIA_RTCP_XR_INFO_JB_MAX, i);
+	pj_assert(status == PJ_SUCCESS);
+
+	pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0,
+				   &xr_pkt, &xr_len);
+
+	if (xr_len + len <= max_len) {
+	    pj_memcpy(pkt+len, xr_pkt, xr_len);
+	    len += xr_len;
+
+	    /* Send the RTCP XR to third-party destination if specified */
+	    if (stream->rtcp_xr_dest_len) {
+		pjmedia_transport_send_rtcp2(stream->transport, 
+					     &stream->rtcp_xr_dest,
+					     stream->rtcp_xr_dest_len, 
+					     xr_pkt, xr_len);
+	    }
+
+	} else {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, PJ_ETOOBIG,
+        		 "Error generating RTCP-XR"));
+	}
+    }
+#endif
+
+    /* Build RTCP BYE packet */
+    if (with_bye) {
+	unsigned bye_len;
+
+	bye_len = max_len - len;
+	status = pjmedia_rtcp_build_rtcp_bye(&stream->rtcp, pkt+len,
+					     &bye_len, NULL);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+        			     "Error generating RTCP BYE"));
+	} else {
+	    len += bye_len;
+	}
+    }
+
+    /* Send! */
+    status = pjmedia_transport_send_rtcp(stream->transport, pkt, len);
+
+    return status;
+}
+
 /**
  * check_tx_rtcp()
  *
@@ -916,138 +1029,38 @@ static void check_tx_rtcp(pjmedia_stream *stream, pj_uint32_t timestamp)
      * or get_frame().
      */
 
-
     if (stream->rtcp_last_tx == 0) {
 	
 	stream->rtcp_last_tx = timestamp;
 
     } else if (timestamp - stream->rtcp_last_tx >= stream->rtcp_interval) {
-	
-	void *rtcp_pkt;
-	int len;
+	pj_bool_t with_xr = PJ_FALSE;
 	pj_status_t status;
 
-	pjmedia_rtcp_build_rtcp(&stream->rtcp, &rtcp_pkt, &len);
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+	if (stream->rtcp.xr_enabled) {
+	    if (stream->rtcp_xr_last_tx == 0) {
+		stream->rtcp_xr_last_tx = timestamp;
+	    } else if (timestamp - stream->rtcp_xr_last_tx >= 
+		       stream->rtcp_xr_interval)
+	    {
+		with_xr = PJ_TRUE;
 
-	status=pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
+		/* Update last tx RTCP XR */
+		stream->rtcp_xr_last_tx = timestamp;
+	    }
+	}
+#endif
+
+	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled, PJ_FALSE,
+			   with_xr);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
-		         "Error sending RTCP"));
+        		 "Error sending RTCP"));
 	}
 
 	stream->rtcp_last_tx = timestamp;
     }
-
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-    if (stream->rtcp.xr_enabled) {
-
-	if (stream->rtcp_xr_last_tx == 0) {
-    	
-	    stream->rtcp_xr_last_tx = timestamp;
-
-	} else if (timestamp - stream->rtcp_xr_last_tx >= 
-		   stream->rtcp_xr_interval)
-	{
-	    int i;
-	    pjmedia_jb_state jb_state;
-	    void *rtcp_pkt;
-	    int len;
-
-	    /* Update RTCP XR with current JB states */
-	    pjmedia_jbuf_get_state(stream->jb, &jb_state);
-    	    
-	    i = jb_state.avg_delay;
-	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-					PJMEDIA_RTCP_XR_INFO_JB_NOM,
-					i);
-
-	    i = jb_state.max_delay;
-	    pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-					PJMEDIA_RTCP_XR_INFO_JB_MAX,
-					i);
-
-	    /* Build RTCP XR packet */
-	    pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
-				       &rtcp_pkt, &len);
-
-	    /* Send the RTCP XR to remote address */
-	    pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
-
-	    /* Send the RTCP XR to third-party destination if specified */
-	    if (stream->rtcp_xr_dest_len) {
-		pjmedia_transport_send_rtcp2(stream->transport, 
-					     &stream->rtcp_xr_dest,
-					     stream->rtcp_xr_dest_len, 
-					     rtcp_pkt, len);
-	    }
-
-	    /* Update last tx RTCP XR */
-	    stream->rtcp_xr_last_tx = timestamp;
-	}
-    }
-#endif
-}
-
-/* Build RTCP SDES packet */
-static unsigned create_rtcp_sdes(pjmedia_stream *stream, pj_uint8_t *pkt,
-				 unsigned max_len)
-{
-    pjmedia_rtcp_common hdr;
-    pj_uint8_t *p = pkt;
-
-    /* SDES header */
-    hdr.version = 2;
-    hdr.p = 0;
-    hdr.count = 1;
-    hdr.pt = 202;
-    hdr.length = 2 + (4+stream->cname.slen+3)/4 - 1;
-    if (max_len < (hdr.length << 2)) {
-	pj_assert(!"Not enough buffer for SDES packet");
-	return 0;
-    }
-    hdr.length = pj_htons((pj_uint16_t)hdr.length);
-    hdr.ssrc = stream->enc->rtp.out_hdr.ssrc;
-    pj_memcpy(p, &hdr, sizeof(hdr));
-    p += sizeof(hdr);
-
-    /* CNAME item */
-    *p++ = 1;
-    *p++ = (pj_uint8_t)stream->cname.slen;
-    pj_memcpy(p, stream->cname.ptr, stream->cname.slen);
-    p += stream->cname.slen;
-
-    /* END */
-    *p++ = '\0';
-    *p++ = '\0';
-
-    /* Pad to 32bit */
-    while ((p-pkt) % 4)
-	*p++ = '\0';
-
-    return (p - pkt);
-}
-
-/* Build RTCP BYE packet */
-static unsigned create_rtcp_bye(pjmedia_stream *stream, pj_uint8_t *pkt,
-				unsigned max_len)
-{
-    pjmedia_rtcp_common hdr;
-
-    /* BYE header */
-    hdr.version = 2;
-    hdr.p = 0;
-    hdr.count = 1;
-    hdr.pt = 203;
-    hdr.length = 1;
-    if (max_len < (hdr.length << 2)) {
-	pj_assert(!"Not enough buffer for SDES packet");
-	return 0;
-    }
-    hdr.length = pj_htons((pj_uint16_t)hdr.length);
-    hdr.ssrc = stream->enc->rtp.out_hdr.ssrc;
-    pj_memcpy(pkt, &hdr, sizeof(hdr));
-
-    return sizeof(hdr);
 }
 
 
@@ -1831,42 +1844,14 @@ on_return:
 
     /* Send RTCP RR and SDES after we receive some RTP packets */
     if (stream->rtcp.received >= 10 && !stream->initial_rr) {
-	void *sr_rr_pkt;
-	pj_uint8_t *pkt;
-	int len;
-
-	/* Build RR or SR */
-	pjmedia_rtcp_build_rtcp(&stream->rtcp, &sr_rr_pkt, &len);
-
-        if (!stream->rtcp_sdes_bye_disabled) {
-            pkt = (pj_uint8_t*) stream->enc->out_pkt;
-            pj_memcpy(pkt, sr_rr_pkt, len);
-            pkt += len;
-
-            /* Append SDES */
-            len = create_rtcp_sdes(stream, (pj_uint8_t*)pkt, 
-                                   stream->enc->out_pkt_size - len);
-            if (len > 0) {
-                pkt += len;
-                len = ((pj_uint8_t*)pkt) - ((pj_uint8_t*)stream->enc->out_pkt);
-                status = pjmedia_transport_send_rtcp(stream->transport,
-                                                     stream->enc->out_pkt,
-                                                     len);
-                if (status != PJ_SUCCESS) {
-                    PJ_PERROR(4,(stream->port.info.name.ptr, status,
-                    		 "Error sending RTCP SDES"));
-                }
-            }
-        } else {
-            status = pjmedia_transport_send_rtcp(stream->transport,
-                                                 sr_rr_pkt, len);
-            if (status != PJ_SUCCESS) {
-                PJ_PERROR(4,(stream->port.info.name.ptr, status,
-                	     "Error sending initial RTCP RR"));
-            }
-        }
-
-	stream->initial_rr = PJ_TRUE;
+	status = send_rtcp(stream, !stream->rtcp_sdes_bye_disabled,
+			   PJ_FALSE, PJ_FALSE);
+        if (status != PJ_SUCCESS) {
+            PJ_PERROR(4,(stream->port.info.name.ptr, status,
+            	     "Error sending initial RTCP RR"));
+	} else {
+	    stream->initial_rr = PJ_TRUE;
+	}
     }
 }
 
@@ -2400,47 +2385,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 {
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
-#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
-    /* Send RTCP XR on stream destroy */
-    if (stream->rtcp.xr_enabled) {
-	int i;
-	pjmedia_jb_state jb_state;
-	void *rtcp_pkt;
-	int len;
-
-	/* Update RTCP XR with current JB states */
-	pjmedia_jbuf_get_state(stream->jb, &jb_state);
-    	    
-	i = jb_state.avg_delay;
-	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-				    PJMEDIA_RTCP_XR_INFO_JB_NOM,
-				    i);
-
-	i = jb_state.max_delay;
-	pjmedia_rtcp_xr_update_info(&stream->rtcp.xr_session, 
-				    PJMEDIA_RTCP_XR_INFO_JB_MAX,
-				    i);
-
-	/* Build RTCP XR packet */
-	pjmedia_rtcp_build_rtcp_xr(&stream->rtcp.xr_session, 0, 
-				   &rtcp_pkt, &len);
-
-	/* Send the RTCP XR to remote address */
-	pjmedia_transport_send_rtcp(stream->transport, rtcp_pkt, len);
-	
-	/* Send the RTCP XR to third-party destination if specified */
-	if (stream->rtcp_xr_dest_len) {
-	    pjmedia_transport_send_rtcp2(stream->transport, 
-					 &stream->rtcp_xr_dest,
-					 stream->rtcp_xr_dest_len, 
-					 rtcp_pkt, len);
-	}
-    }
-#endif
-
-    /* Send RTCP BYE */
+    /* Send RTCP BYE (also SDES & XR) */
     if (!stream->rtcp_sdes_bye_disabled) {
-        pjmedia_stream_send_rtcp_bye(stream);
+	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_TRUE);
     }
 
     /* Detach from transport 
@@ -2794,18 +2741,9 @@ PJ_DEF(pj_status_t) pjmedia_stream_set_dtmf_callback(pjmedia_stream *stream,
 PJ_DEF(pj_status_t)
 pjmedia_stream_send_rtcp_sdes( pjmedia_stream *stream )
 {
-    unsigned len;
-
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
-    len = create_rtcp_sdes(stream, (pj_uint8_t*)stream->enc->out_pkt,
-                           stream->enc->out_pkt_size);
-    if (len != 0) {
-        return pjmedia_transport_send_rtcp(stream->transport, 
-                                           stream->enc->out_pkt, len);
-    }
-
-    return PJ_SUCCESS;
+    return send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE);
 }
 
 /*
@@ -2817,14 +2755,7 @@ pjmedia_stream_send_rtcp_bye( pjmedia_stream *stream )
     PJ_ASSERT_RETURN(stream, PJ_EINVAL);
 
     if (stream->enc && stream->transport) {
-        unsigned len;
-
-        len = create_rtcp_bye(stream, (pj_uint8_t*)stream->enc->out_pkt,
-                              stream->enc->out_pkt_size);
-        if (len != 0) {
-            return pjmedia_transport_send_rtcp(stream->transport, 
-                                               stream->enc->out_pkt, len);
-        }
+	return send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_FALSE);
     }
 
     return PJ_SUCCESS;

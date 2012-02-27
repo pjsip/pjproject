@@ -54,29 +54,26 @@ PJ_BEGIN_DECL
  * #pjmedia_stream_get_stat() function.
  */
 
+ 
 #pragma pack(1)
 
 /**
  * RTCP sender report.
  */
-struct pjmedia_rtcp_sr
+typedef struct pjmedia_rtcp_sr
 {
     pj_uint32_t	    ntp_sec;	    /**< NTP time, seconds part.	*/
     pj_uint32_t	    ntp_frac;	    /**< NTP time, fractions part.	*/
     pj_uint32_t	    rtp_ts;	    /**< RTP timestamp.			*/
     pj_uint32_t	    sender_pcount;  /**< Sender packet cound.		*/
     pj_uint32_t	    sender_bcount;  /**< Sender octet/bytes count.	*/
-};
+} pjmedia_rtcp_sr;
 
-/**
- * @see pjmedia_rtcp_sr
- */
-typedef struct pjmedia_rtcp_sr pjmedia_rtcp_sr;
 
 /**
  * RTCP receiver report.
  */
-struct pjmedia_rtcp_rr
+typedef struct pjmedia_rtcp_rr
 {
     pj_uint32_t	    ssrc;	    /**< SSRC identification.		*/
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
@@ -94,18 +91,13 @@ struct pjmedia_rtcp_rr
     pj_uint32_t	    jitter;	    /**< Jitter.			*/
     pj_uint32_t	    lsr;	    /**< Last SR.			*/
     pj_uint32_t	    dlsr;	    /**< Delay since last SR.		*/
-};
-
-/**
- * @see pjmedia_rtcp_rr
- */
-typedef struct pjmedia_rtcp_rr pjmedia_rtcp_rr;
+} pjmedia_rtcp_rr;
 
 
 /**
  * RTCP common header.
  */
-struct pjmedia_rtcp_common
+typedef struct pjmedia_rtcp_common
 {
 #if defined(PJ_IS_BIG_ENDIAN) && PJ_IS_BIG_ENDIAN!=0
     unsigned	    version:2;	/**< packet type            */
@@ -120,12 +112,8 @@ struct pjmedia_rtcp_common
 #endif
     unsigned	    length:16;	/**< packet length          */
     pj_uint32_t	    ssrc;	/**< SSRC identification    */
-};
+} pjmedia_rtcp_common;
 
-/**
- * @see pjmedia_rtcp_common
- */
-typedef struct pjmedia_rtcp_common pjmedia_rtcp_common;
 
 /**
  * This structure declares default RTCP packet (SR) that is sent by pjmedia.
@@ -153,25 +141,34 @@ typedef struct pjmedia_rtcp_rr_pkt
 
 
 /**
+ * RTCP SDES structure.
+ */
+typedef struct pjmedia_rtcp_sdes
+{
+    pj_str_t	cname;		/**< RTCP SDES type CNAME.	*/
+    pj_str_t	name;		/**< RTCP SDES type NAME.	*/
+    pj_str_t	email;		/**< RTCP SDES type EMAIL.	*/
+    pj_str_t	phone;		/**< RTCP SDES type PHONE.	*/
+    pj_str_t	loc;		/**< RTCP SDES type LOC.	*/
+    pj_str_t	tool;		/**< RTCP SDES type TOOL.	*/
+    pj_str_t	note;		/**< RTCP SDES type NOTE.	*/
+} pjmedia_rtcp_sdes;
+
+
+/**
  * NTP time representation.
  */
-struct pjmedia_rtcp_ntp_rec
+typedef struct pjmedia_rtcp_ntp_rec
 {
     pj_uint32_t	    hi;		/**< High order 32-bit part.	*/
     pj_uint32_t	    lo;		/**< Lo order 32-bit part.	*/
-};
-
-/**
- * @see pjmedia_rtcp_ntp_rec
- */
-typedef struct pjmedia_rtcp_ntp_rec pjmedia_rtcp_ntp_rec;
-
+} pjmedia_rtcp_ntp_rec;
 
 
 /**
  * Unidirectional RTP stream statistics.
  */
-struct pjmedia_rtcp_stream_stat
+typedef struct pjmedia_rtcp_stream_stat
 {
     pj_time_val	    update;	/**< Time of last update.		    */
     unsigned	    update_cnt;	/**< Number of updates (to calculate avg)   */
@@ -190,20 +187,14 @@ struct pjmedia_rtcp_stream_stat
     } loss_type;		/**< Types of loss detected.		    */
 
     pj_math_stat    jitter;	/**< Jitter statistics (in usec)	    */
-};
 
-
-/**
- * @see pjmedia_rtcp_stream_stat
- */
-typedef struct pjmedia_rtcp_stream_stat pjmedia_rtcp_stream_stat;
-
+} pjmedia_rtcp_stream_stat;
 
 
 /**
  * Bidirectional RTP stream statistics.
  */
-struct pjmedia_rtcp_stat
+typedef struct pjmedia_rtcp_stat
 {
     pj_time_val		     start; /**< Time when session was created	    */
 
@@ -226,20 +217,19 @@ struct pjmedia_rtcp_stat
 						receiving direction 
 						(in usec).		    */
 #endif
-};
 
+    pjmedia_rtcp_sdes	     peer_sdes;	/**< Peer SDES.			    */
+    char		     peer_sdes_buf_[PJMEDIA_RTCP_RX_SDES_BUF_LEN];
+					/**< Peer SDES buffer.		    */
 
-/**
- * @see pjmedia_rtcp_stat
- */
-typedef struct pjmedia_rtcp_stat pjmedia_rtcp_stat;
+} pjmedia_rtcp_stat;
 
 
 /**
  * RTCP session is used to monitor the RTP session of one endpoint. There
  * should only be one RTCP session for a bidirectional RTP streams.
  */
-struct pjmedia_rtcp_session
+typedef struct pjmedia_rtcp_session
 {
     char		   *name;	/**< Name identification.	    */
     pjmedia_rtcp_sr_pkt	    rtcp_sr_pkt;/**< Cached RTCP SR packet.	    */
@@ -278,12 +268,7 @@ struct pjmedia_rtcp_session
      */
     pjmedia_rtcp_xr_session xr_session;
 #endif
-};
-
-/**
- * @see pjmedia_rtcp_session
- */
-typedef struct pjmedia_rtcp_session pjmedia_rtcp_session;
+} pjmedia_rtcp_session;
 
 
 /**
@@ -436,6 +421,46 @@ PJ_DECL(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *session,
  */
 PJ_DECL(void) pjmedia_rtcp_build_rtcp( pjmedia_rtcp_session *session, 
 				       void **rtcp_pkt, int *len);
+
+
+/**
+ * Build an RTCP SDES (source description) packet. This packet can be
+ * appended to other RTCP packets, e.g: RTCP RR/SR, to compose a compound
+ * RTCP packet.
+ *
+ * @param session   The RTCP session.
+ * @param buf	    The buffer to receive RTCP SDES packet.
+ * @param length    On input, it will contain the buffer length.
+ *		    On output, it will contain the generated RTCP SDES
+ *		    packet length.
+ * @param sdes	    The source description, see #pjmedia_rtcp_sdes.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
+					    pjmedia_rtcp_session *session, 
+					    void *buf,
+					    pj_size_t *length,
+					    const pjmedia_rtcp_sdes *sdes);
+
+/**
+ * Build an RTCP BYE packet. This packet can be appended to other RTCP
+ * packets, e.g: RTCP RR/SR, to compose a compound RTCP packet.
+ *
+ * @param session   The RTCP session.
+ * @param buf	    The buffer to receive RTCP BYE packet.
+ * @param length    On input, it will contain the buffer length.
+ *		    On output, it will contain the generated RTCP BYE
+ *		    packet length.
+ * @param reason    Optional, the BYE reason.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_rtcp_build_rtcp_bye(
+					    pjmedia_rtcp_session *session, 
+					    void *buf,
+					    pj_size_t *length,
+					    const pj_str_t *reason);
 
 
 /**
