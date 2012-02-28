@@ -907,19 +907,22 @@ static void srtp_rtp_cb( void *user_data, void *pkt, pj_ssize_t size)
 	(err == err_status_replay_old || err == err_status_replay_fail)) 
     {
 	/* Handle such condition that stream is updated (RTP seq is reinited
-	* & SRTP is restarted), but some old packets are still coming 
-	* so SRTP is learning wrong RTP seq. While the newly inited RTP seq
-	* comes, SRTP thinks the RTP seq is replayed, so srtp_unprotect() 
-	* will returning err_status_replay_*. Restarting SRTP can resolve 
-	* this.
-	*/
-	if (pjmedia_transport_srtp_start((pjmedia_transport*)srtp, 
-					 &srtp->tx_policy, &srtp->rx_policy) 
-					 != PJ_SUCCESS)
-	{
+	 * & SRTP is restarted), but some old packets are still coming 
+	 * so SRTP is learning wrong RTP seq. While the newly inited RTP seq
+	 * comes, SRTP thinks the RTP seq is replayed, so srtp_unprotect() 
+	 * will return err_status_replay_*. Restarting SRTP can resolve this.
+	 */
+	pjmedia_srtp_crypto tx, rx;
+	pj_status_t status;
+
+	tx = srtp->tx_policy;
+	rx = srtp->rx_policy;
+	status = pjmedia_transport_srtp_start((pjmedia_transport*)srtp,
+					      &tx, &rx);
+	if (status != PJ_SUCCESS) {
 	    PJ_LOG(5,(srtp->pool->obj_name, "Failed to restart SRTP, err=%s", 
 		      get_libsrtp_errstr(err)));
-	} else {
+	} else if (!srtp->bypass_srtp) {
 	    err = srtp_unprotect(srtp->srtp_rx_ctx, (pj_uint8_t*)pkt, &len);
 	}
     }
