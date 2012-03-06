@@ -212,7 +212,16 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
      * otherwise disconnect the session.
      */
     if (state == PJSIP_INV_STATE_CONFIRMED) {
-	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
+	struct tsx_inv_data *tsx_inv_data = NULL;
+
+	if (inv->invite_tsx) {
+	    tsx_inv_data = (struct tsx_inv_data*)
+			   inv->invite_tsx->mod_data[mod_inv.mod.id];
+	}
+
+	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE &&
+	    (tsx_inv_data && !tsx_inv_data->sdp_done) )
+	{
 	    pjsip_tx_data *bye;
 
 	    PJ_LOG(4,(inv->obj_name, "SDP offer/answer incomplete, ending the "
