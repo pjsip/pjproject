@@ -1341,7 +1341,7 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	return PJ_EBUSY;
     }
 
-    if (rem_sdp && rem_sdp->media_count != 0) {
+    if (rem_sdp) {
 	pj_bool_t srtp_active;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
