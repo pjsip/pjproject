@@ -432,7 +432,6 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     snd_port->dir = prm->base.dir;
     snd_port->rec_id = prm->base.rec_id;
     snd_port->play_id = prm->base.play_id;
-    snd_port->dir = PJMEDIA_DIR_CAPTURE_PLAYBACK;
     snd_port->clock_rate = prm->base.clock_rate;
     snd_port->channel_count = prm->base.channel_count;
     snd_port->samples_per_frame = prm->base.samples_per_frame;
