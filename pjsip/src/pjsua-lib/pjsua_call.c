@@ -695,7 +695,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     /* Increment the dialog's lock otherwise when invite session creation
      * fails the dialog will be destroyed prematurely.
      */
-//    pjsip_dlg_inc_lock(dlg);
+    pjsip_dlg_inc_lock(dlg);
 
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
@@ -738,6 +738,7 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
     if (p_call_id)
 	*p_call_id = call_id;
 
+    pjsip_dlg_dec_lock(dlg);
     pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
 
@@ -748,7 +749,6 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 
 on_error:
     if (dlg) {
-        pjsip_dlg_inc_lock(dlg);
 	/* This may destroy the dialog */
 	pjsip_dlg_dec_lock(dlg);
     }
