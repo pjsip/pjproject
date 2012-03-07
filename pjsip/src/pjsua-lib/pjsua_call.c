@@ -255,14 +255,18 @@ static pjsua_call_id alloc_call_id(void)
 	 cid<(int)pjsua_var.ua_cfg.max_calls; 
 	 ++cid) 
     {
-	if (pjsua_var.calls[cid].inv == NULL) {
+	if (pjsua_var.calls[cid].inv == NULL &&
+            pjsua_var.calls[cid].async_call.dlg == NULL)
+        {
 	    ++pjsua_var.next_call_id;
 	    return cid;
 	}
     }
 
     for (cid=0; cid < pjsua_var.next_call_id; ++cid) {
-	if (pjsua_var.calls[cid].inv == NULL) {
+	if (pjsua_var.calls[cid].inv == NULL &&
+            pjsua_var.calls[cid].async_call.dlg == NULL)
+        {
 	    ++pjsua_var.next_call_id;
 	    return cid;
 	}
