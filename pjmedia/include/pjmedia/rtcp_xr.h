@@ -200,6 +200,17 @@ typedef struct pjmedia_rtcp_xr_rb_voip_mtc
 					     jitter buffer		*/
 } pjmedia_rtcp_xr_rb_voip_mtc;
 
+
+/**
+ * Constant of RTCP-XR content size.
+ */
+#define PJMEDIA_RTCP_XR_BUF_SIZE \
+    sizeof(pjmedia_rtcp_xr_rb_rr_time) + \
+    sizeof(pjmedia_rtcp_xr_rb_dlrr) + \
+    sizeof(pjmedia_rtcp_xr_rb_stats) + \
+    sizeof(pjmedia_rtcp_xr_rb_voip_mtc)
+
+
 /**
  * This structure declares RTCP XR (Extended Report) packet.
  */
@@ -221,7 +232,8 @@ typedef struct pjmedia_rtcp_xr_pkt
 	pj_uint32_t	 ssrc;		/**< SSRC identification    */
     } common;
 
-    pj_int8_t		 buf[PJMEDIA_MAX_MTU];/**< Content buffer   */
+    pj_int8_t		 buf[PJMEDIA_RTCP_XR_BUF_SIZE];
+					/**< Content buffer   */
 } pjmedia_rtcp_xr_pkt;
 
 #pragma pack()

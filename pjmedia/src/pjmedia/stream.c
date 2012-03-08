@@ -144,6 +144,9 @@ struct pjmedia_stream
     pj_uint32_t		     rtcp_interval; /**< Interval, in timestamp.    */
     pj_bool_t		     initial_rr;    /**< Initial RTCP RR sent	    */
     pj_bool_t                rtcp_sdes_bye_disabled;/**< Send RTCP SDES/BYE?*/
+    void		    *out_rtcp_pkt;  /**< Outgoing RTCP packet.	    */
+    unsigned		     out_rtcp_pkt_size;
+					    /**< Outgoing RTCP packet size. */
 
     /* RFC 2833 DTMF transmission queue: */
     int			     tx_event_pt;   /**< Outgoing pt for dtmf.	    */
@@ -926,9 +929,9 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 #endif
 
     if (with_sdes || with_bye || with_xr) {
-	pkt = (pj_uint8_t*) stream->enc->out_pkt;
+	pkt = (pj_uint8_t*) stream->out_rtcp_pkt;
 	pj_memcpy(pkt, sr_rr_pkt, len);
-	max_len = stream->enc->out_pkt_size;
+	max_len = stream->out_rtcp_pkt_size;
     } else {
 	pkt = sr_rr_pkt;
 	max_len = len;
@@ -1889,7 +1892,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
 {
     pjmedia_channel *channel;
     pj_status_t status;
-    unsigned min_out_pkt_size;
     
     /* Allocate memory for channel descriptor */
 
@@ -1913,15 +1915,6 @@ static pj_status_t create_channel( pj_pool_t *pool,
 
     if (channel->out_pkt_size > PJMEDIA_MAX_MTU)
 	channel->out_pkt_size = PJMEDIA_MAX_MTU;
-
-    /* It should big enough to hold (minimally) RTCP SR with an SDES. */
-    min_out_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
-			sizeof(pjmedia_rtcp_common) +
-			(4 + stream->cname.slen) +
-			32;
-
-    if (channel->out_pkt_size < min_out_pkt_size)
-	channel->out_pkt_size = min_out_pkt_size;
 
     channel->out_pkt = pj_pool_alloc(pool, channel->out_pkt_size);
     PJ_ASSERT_RETURN(channel->out_pkt != NULL, PJ_ENOMEM);
@@ -2260,6 +2253,24 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 	    stream->rtcp.stat.rtp_tx_last_ts = info->rtp_ts;
 	}
     }
+
+    /* Allocate outgoing RTCP buffer, should be enough to hold SR/RR, SDES,
+     * BYE, and XR.
+     */
+    stream->out_rtcp_pkt_size =  sizeof(pjmedia_rtcp_sr_pkt) +
+				 sizeof(pjmedia_rtcp_common) +
+				 (4 + stream->cname.slen) +
+				 32;
+#if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
+    if (info->rtcp_xr_enabled) {
+	stream->out_rtcp_pkt_size += sizeof(pjmedia_rtcp_xr_pkt);
+    }
+#endif
+
+    if (stream->out_rtcp_pkt_size > PJMEDIA_MAX_MTU)
+	stream->out_rtcp_pkt_size = PJMEDIA_MAX_MTU;
+
+    stream->out_rtcp_pkt = pj_pool_alloc(pool, stream->out_rtcp_pkt_size);
 
     /* Only attach transport when stream is ready. */
     status = pjmedia_transport_attach(tp, stream, &info->rem_addr, 
