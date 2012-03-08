@@ -21,7 +21,7 @@ export RESAMPLE_SRCDIR = ../../resample/src
 export RESAMPLE_OBJS = resamplesubs.o
 export RESAMPLE_CFLAGS = $(_CFLAGS)
 
-SHLIB_NAME := libresample.so
+SHLIB_NAME := libresample.$(SHLIB_SUFFIX)
 export RESAMPLE_SHLIB := ../../lib/$(SHLIB_NAME).$(PJ_VERSION_MAJOR)
 export RESAMPLE_LIB := ../../lib/libresample-$(TARGET_NAME)$(LIBEXT)
 
@@ -33,10 +33,13 @@ export CC_OUT CC AR RANLIB HOST_MV HOST_RM HOST_RMDIR HOST_MKDIR OBJEXT LD LDOUT
 #
 ifeq ($(PJ_RESAMPLE_DLL),1)
 TARGETS := ../../lib/$(SHLIB_NAME)
-SONAME_OPT := -Wl,-soname,$(SHLIB_NAME).$(PJ_VERSION_MAJOR)
-#SONAME_OPT := 
+ifeq ($(SHLIB_SUFFIX),so)
+SHLIB_OPT := -Wl,-soname,$(SHLIB_NAME).$(PJ_VERSION_MAJOR)
+else
+SHLIB_OPT := 
+endif
 export RESAMPLE_CFLAGS := -fPIC $(RESAMPLE_CFLAGS)
-export RESAMPLE_LDFLAGS := -shared $(SONAME_OPT) $(RESAMPLE_LDFLAGS)
+export RESAMPLE_LDFLAGS := -shared $(SHLIB_OPT) $(RESAMPLE_LDFLAGS)
 else
 TARGETS := libresample
 endif

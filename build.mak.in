@@ -9,6 +9,7 @@ export CC_NAME := gcc
 export TARGET_NAME := @target@
 export CROSS_COMPILE := @ac_cross_compile@
 export LINUX_POLL := @ac_linux_poll@ 
+export SHLIB_SUFFIX := @ac_shlib_suffix@
 
 export ac_prefix := @prefix@
 
@@ -22,7 +23,7 @@ export APP_THIRD_PARTY_LIB_FILES = $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_S
 ifeq (@ac_resample_dll@,1)
 export PJ_RESAMPLE_DLL := 1
 export APP_THIRD_PARTY_LIBS := -lresample $(APP_THIRD_PARTY_LIBS)
-export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample.so $(APP_THIRD_PARTY_LIB_FILES)
+export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample.$(SHLIB_SUFFIX) $(APP_THIRD_PARTY_LIB_FILES)
 else
 export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME) $(APP_THIRD_PARTY_LIBS)
 export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample-$(LIB_SUFFIX) $(APP_THIRD_PARTY_LIB_FILES)

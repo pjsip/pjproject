@@ -92,6 +92,19 @@ case $host in
 	;;
 esac
 
+AC_SUBST(ac_shlib_suffix)
+case $target in
+    *mingw* | *cygw* | *win32* | *w32* )
+	ac_shlib_suffix=dll
+	;;
+    *darwin*)
+	ac_shlib_suffix=dylib
+	;;
+    *)
+	ac_shlib_suffix=so
+	;;
+esac
+
 AC_CHECK_LIB(pthread,pthread_create)
 AC_CHECK_LIB(wsock32,puts)
 AC_CHECK_LIB(ws2_32,puts)
