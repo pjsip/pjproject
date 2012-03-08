@@ -11,6 +11,11 @@ endif
 LIB = $($(APP)_LIB)
 
 #
+# The full path of output lib file (e.g. ../lib/libapp.a).
+#
+SHLIB = $($(APP)_SHLIB)
+
+#
 # The full path of output executable file (e.g. ../bin/app.exe).
 #
 EXE = $($(APP)_EXE)
@@ -81,6 +86,11 @@ $(LIB): $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
 	if test ! -d $(LIBDIR); then $(subst @@,$(subst /,$(HOST_PSEP),$(LIBDIR)),$(HOST_MKDIR)); fi
 	$(AR) $(LIB) $(OBJS)
 	$(RANLIB) $(LIB)
+
+$(SHLIB): $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
+	if test ! -d $(LIBDIR); then $(subst @@,$(subst /,$(HOST_PSEP),$(LIBDIR)),$(HOST_MKDIR)); fi
+	$(LD) $(LDOUT)$(subst /,$(HOST_PSEP),$(SHLIB)) \
+	    $(subst /,$(HOST_PSEP),$(OBJS)) $($(APP)_LDFLAGS)
 
 $(EXE): $(OBJDIRS) $(OBJS) $($(APP)_EXTRA_DEP)
 	if test ! -d $(BINDIR); then $(subst @@,$(subst /,$(HOST_PSEP),$(BINDIR)),$(HOST_MKDIR)); fi

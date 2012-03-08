@@ -1,3 +1,6 @@
+export PJDIR := @ac_pjdir@
+include $(PJDIR)/version.mak
+
 # @configure_input@
 export MACHINE_NAME := auto
 export OS_NAME := auto
@@ -12,9 +15,18 @@ export ac_prefix := @prefix@
 LIB_SUFFIX = $(TARGET_NAME).a
 
 # Determine which party libraries to use
-export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME) -lmilenage-$(TARGET_NAME) -lsrtp-$(TARGET_NAME)
+export APP_THIRD_PARTY_LIBS := -lmilenage-$(TARGET_NAME) -lsrtp-$(TARGET_NAME)
 export APP_THIRD_PARTY_EXT :=
-export APP_THIRD_PARTY_LIB_FILES = $(PJ_DIR)/third_party/lib/libresample-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libsrtp-$(LIB_SUFFIX)
+export APP_THIRD_PARTY_LIB_FILES = $(PJ_DIR)/third_party/lib/libmilenage-$(LIB_SUFFIX) $(PJ_DIR)/third_party/lib/libsrtp-$(LIB_SUFFIX)
+
+ifeq (@ac_resample_dll@,1)
+export PJ_RESAMPLE_DLL := 1
+export APP_THIRD_PARTY_LIBS := -lresample $(APP_THIRD_PARTY_LIBS)
+export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample.so $(APP_THIRD_PARTY_LIB_FILES)
+else
+export APP_THIRD_PARTY_LIBS := -lresample-$(TARGET_NAME) $(APP_THIRD_PARTY_LIBS)
+export APP_THIRD_PARTY_LIB_FILES := $(PJ_DIR)/third_party/lib/libresample-$(LIB_SUFFIX) $(APP_THIRD_PARTY_LIB_FILES)
+endif
 
 ifneq (@ac_no_gsm_codec@,1)
 ifeq (@ac_external_gsm@,1)
@@ -59,7 +71,6 @@ endif
 @ac_build_mak_vars@
 
 # CFLAGS, LDFLAGS, and LIBS to be used by applications
-export PJDIR := @ac_pjdir@
 export APP_CC := @CC@
 export APP_CXX := @CXX@
 export APP_CFLAGS := -DPJ_AUTOCONF=1\
