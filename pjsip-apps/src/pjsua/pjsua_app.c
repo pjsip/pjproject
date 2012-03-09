@@ -2825,7 +2825,7 @@ static void arrange_window(pjsua_vid_win_id wid)
     int i, last;
 
     pos.x = 0;
-    pos.y = 0;
+    pos.y = 10;
     last = (wid == PJSUA_INVALID_ID) ? PJSUA_MAX_VID_WINS : wid;
 
     for (i=0; i<last; ++i) {
@@ -2839,7 +2839,8 @@ static void arrange_window(pjsua_vid_win_id wid)
 	if (wid == PJSUA_INVALID_ID)
 	    pjsua_vid_win_set_pos(i, &pos);
 
-	pos.y += wi.size.h;
+	if (wi.show)
+	    pos.y += wi.size.h;
     }
 
     if (wid != PJSUA_INVALID_ID)
@@ -3287,6 +3288,9 @@ static void on_call_media_event(pjsua_call_id call_id,
 	    size = event->data.fmt_changed.new_fmt.det.vid.size;
 	    pjsua_vid_win_set_size(wid, &size);
 	}
+
+	/* Re-arrange video windows */
+	arrange_window(PJSUA_INVALID_ID);
     }
 #endif
 }
