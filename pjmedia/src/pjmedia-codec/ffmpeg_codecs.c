@@ -211,6 +211,8 @@ struct ffmpeg_codec_desc
 						     will tell the initializer
 						     to copy this codec desc
 						     from its base format   */
+    pjmedia_rect_size            size;
+    pjmedia_ratio                fps;
     pj_uint32_t			 avg_bps;
     pj_uint32_t			 max_bps;
     func_packetize		 packetize;
@@ -255,7 +257,8 @@ static ffmpeg_codec_desc codec_desc[] =
     {
 	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
-	0,	256000,    512000,
+	0,
+	{720, 480},	{30, 1},	256000, 512000,
 	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
 	&pjmedia_vid_codec_h264_match_sdp,
 	/* Leading space for better compatibility (strange indeed!) */
@@ -267,7 +270,8 @@ static ffmpeg_codec_desc codec_desc[] =
 #if PJMEDIA_HAS_FFMPEG_CODEC_H263P
     {
 	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
-	PJMEDIA_FORMAT_H263,	256000,    512000,
+	PJMEDIA_FORMAT_H263,
+	{352, 288},	{30000, 1001},	256000, 512000,
 	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
@@ -913,12 +917,13 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
 
     /* Encoded format */
     pjmedia_format_init_video(&attr->enc_fmt, desc->info.fmt_id,
-                              720, 480, 30000, 1001);
+                              desc->size.w, desc->size.h,
+			      desc->fps.num, desc->fps.denum);
 
     /* Decoded format */
     pjmedia_format_init_video(&attr->dec_fmt, desc->info.dec_fmt_id[0],
-                              //352, 288, 30000, 1001);
-                              720, 576, 30000, 1001);
+                              desc->size.w, desc->size.h,
+			      desc->fps.num*3/2, desc->fps.denum);
 
     /* Decoding fmtp */
     attr->dec_fmtp = desc->dec_fmtp;
