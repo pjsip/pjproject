@@ -1011,7 +1011,7 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
     }
 
     /* Learn remote frame rate after successful decoding */
-    if (0 && frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
+    if (frame->type == PJMEDIA_FRAME_TYPE_VIDEO && frame->size)
     {
 	/* Only check remote frame rate when timestamp is not wrapping and
 	 * sequence is increased by 1.
@@ -1025,23 +1025,28 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	    ts_diff = last_ts - stream->last_dec_ts;
 	    vfd = pjmedia_format_get_video_format_detail(
 				    &channel->port.info.fmt, PJ_TRUE);
-	    if ((int)(stream->info.codec_info.clock_rate / ts_diff) !=
-		vfd->fps.num / vfd->fps.denum)
+	    if (stream->info.codec_info.clock_rate * vfd->fps.denum !=
+		vfd->fps.num * ts_diff)
 	    {
 		/* Frame rate changed, update decoding port info */
-		vfd->fps.num = stream->info.codec_info.clock_rate;
-		vfd->fps.denum = ts_diff;
+		if (stream->info.codec_info.clock_rate % ts_diff == 0) {
+		    vfd->fps.num = stream->info.codec_info.clock_rate/ts_diff;
+		    vfd->fps.denum = 1;
+		} else {
+		    vfd->fps.num = stream->info.codec_info.clock_rate;
+		    vfd->fps.denum = ts_diff;
+		}
 
 		/* Update stream info */
 		stream->info.codec_param->dec_fmt.det.vid.fps = vfd->fps;
 
-		PJ_LOG(5, (channel->port.info.name.ptr,
-			   "Frame rate changed to %d/%d(~%d)fps",
+		PJ_LOG(6, (channel->port.info.name.ptr,
+			  "Frame rate update: %d/%d(~%.2f)fps",
 			   vfd->fps.num, vfd->fps.denum,
-			   vfd->fps.num / vfd->fps.denum));
+			   vfd->fps.num*1.0 / vfd->fps.denum));
 
 		/* Publish PJMEDIA_EVENT_FMT_CHANGED event */
-		{
+		if (0) {
 		    pjmedia_event event;
 
 		    dump_port_info(stream->dec, "changed");
