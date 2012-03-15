@@ -430,10 +430,10 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Idle timeout interval to be applied to transports with no usage
  * before the transport is destroyed. Value is in seconds.
  *
- * Default: 600
+ * Default: 30
  */
 #ifndef PJSIP_TRANSPORT_IDLE_TIME
-#   define PJSIP_TRANSPORT_IDLE_TIME	600
+#   define PJSIP_TRANSPORT_IDLE_TIME	30
 #endif
 
 
