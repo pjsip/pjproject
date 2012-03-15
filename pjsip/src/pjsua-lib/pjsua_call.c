@@ -3330,12 +3330,9 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 {
     pjsua_call *call;
 
-    PJSUA_LOCK();
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (!call) {
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -3477,21 +3474,21 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     /* Destroy media session when invite session is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 
-	pj_assert(call != NULL);
-
-	if (call)
-	    pjsua_media_channel_deinit(call->index);
+	PJSUA_LOCK();
+	
+	pjsua_media_channel_deinit(call->index);
 
 	/* Free call */
 	call->inv = NULL;
+
+	pj_assert(pjsua_var.call_cnt > 0);
 	--pjsua_var.call_cnt;
 
 	/* Reset call */
 	reset_call(call->index);
 
+	PJSUA_UNLOCK();
     }
-
-    PJSUA_UNLOCK();
 }
 
 /*
@@ -3598,8 +3595,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     const pjmedia_sdp_session *remote_sdp;
     //const pj_str_t st_update = {"UPDATE", 6};
 
-    PJSUA_LOCK();
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (status != PJ_SUCCESS) {
@@ -3623,7 +3618,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	    call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
 	}
 
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -3635,7 +3629,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 		     "Unable to retrieve currently active local SDP", 
 		     status);
 	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -3645,7 +3638,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 		     "Unable to retrieve currently active remote SDP", 
 		     status);
 	//call_disconnect(inv, PJSIP_SC_UNSUPPORTED_MEDIA_TYPE);
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -3664,7 +3656,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	 * state is disconnected anyway.
 	 */
 	/*pjsua_media_channel_deinit(call->index);*/
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -3677,9 +3668,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     /* Call application callback, if any */
     if (pjsua_var.ua_cfg.cb.on_call_media_state)
 	pjsua_var.ua_cfg.cb.on_call_media_state(call->index);
-
-
-    PJSUA_UNLOCK();
 }
 
 
@@ -3789,8 +3777,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     pjmedia_sdp_session *answer;
     pj_status_t status;
 
-    PJSUA_LOCK();
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     /* Supply candidate answer */
@@ -3802,7 +3788,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 					    offer, &answer, NULL);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -3828,11 +3813,8 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     status = pjsip_inv_set_sdp_answer(call->inv, answer);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to set answer", status);
-	PJSUA_UNLOCK();
 	return;
     }
-
-    PJSUA_UNLOCK();
 }
 
 
@@ -3844,8 +3826,6 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 {
     pjsua_call *call;
     pj_status_t status;
-
-    PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
@@ -3866,11 +3846,8 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
 
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create local SDP", status);
-	PJSUA_UNLOCK();
 	return;
     }
-
-    PJSUA_UNLOCK();
 }
 
 
@@ -4307,12 +4284,9 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 {
     pjsua_call *call;
 
-    PJSUA_LOCK();
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (call == NULL) {
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -4322,7 +4296,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	 * transfered (and this call has been disconnected), and we
 	 * receive another REFER for this call.
 	 */
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -4334,7 +4307,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	(tsx->status_code==401 || tsx->status_code==407) &&
 	tsx->last_tx && tsx->last_tx->auth_retry)
     {
-	PJSUA_UNLOCK();
 	return;
     }
 
@@ -4380,7 +4352,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 
 	    pjsip_dlg_respond( inv->dlg, rdata, PJSIP_SC_NOT_ACCEPTABLE_HERE, 
 			       NULL, &hdr_list, NULL );
-	    PJSUA_UNLOCK();
 	    return;
 	}
 
@@ -4427,10 +4398,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 		      call->index, tsx->status_code));
 	}
     }
-
-
-
-    PJSUA_UNLOCK();
 }
 
 
@@ -4442,8 +4409,6 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
     pjsua_call *call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
     pjsip_redirect_op op;
 
-    PJSUA_LOCK();
-
     if (pjsua_var.ua_cfg.cb.on_call_redirected) {
 	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index, 
 							 target, e);
@@ -4454,8 +4419,6 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 		  call->index));
 	op = PJSIP_REDIRECT_STOP;
     }
-
-    PJSUA_UNLOCK();
 
     return op;
 }
