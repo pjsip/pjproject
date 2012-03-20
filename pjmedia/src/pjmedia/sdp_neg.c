@@ -1296,14 +1296,18 @@ static pj_status_t create_answer( pj_pool_t *pool,
 		pj_strcmp(&om->desc.transport, &im->desc.transport)==0 &&
 		media_used[j] == 0)
 	    {
+                pj_status_t status2;
+
 		/* See if it has matching codec. */
-		status = match_offer(pool, prefer_remote_codec_order, 
-				     om, im, initial, &am);
-		if (status == PJ_SUCCESS) {
+		status2 = match_offer(pool, prefer_remote_codec_order, 
+				      om, im, initial, &am);
+		if (status2 == PJ_SUCCESS) {
 		    /* Mark media as used. */
 		    media_used[j] = 1;
 		    break;
-		}
+                } else {
+                    status = status2;
+                }
 	    }
 	}
 
