@@ -29,7 +29,7 @@
 #import <AVFoundation/AVFoundation.h>
 
 #define THIS_FILE		"ios_dev.c"
-#define DEFAULT_CLOCK_RATE	9000
+#define DEFAULT_CLOCK_RATE	90000
 #define DEFAULT_WIDTH		480
 #define DEFAULT_HEIGHT		360
 #define DEFAULT_FPS		15

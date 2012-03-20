@@ -27,7 +27,7 @@
 #include <QTKit/QTKit.h>
 
 #define THIS_FILE		"qt_dev.c"
-#define DEFAULT_CLOCK_RATE	9000
+#define DEFAULT_CLOCK_RATE	90000
 #define DEFAULT_WIDTH		640
 #define DEFAULT_HEIGHT		480
 #define DEFAULT_FPS		15
