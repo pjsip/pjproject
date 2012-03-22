@@ -4914,6 +4914,15 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
  */
 
 /**
+ * Use PJMEDIA for media? Set this to zero when using third party media
+ * stack.
+ */
+#ifndef PJSUA_MEDIA_HAS_PJMEDIA
+#  define PJSUA_MEDIA_HAS_PJMEDIA	1
+#endif	/* PJSUA_MEDIA_HAS_PJMEDIA */
+
+
+/**
  * Max ports in the conference bridge. This setting is the default value
  * for pjsua_media_config.max_media_ports.
  */

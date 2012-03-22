@@ -793,6 +793,7 @@ static pjmedia_port* codec_encode_decode( pj_pool_t *pool,
     return &cp->base;
 }
 
+#if PJMEDIA_HAS_G711_CODEC
 /* G.711 benchmark */
 static pjmedia_port* g711_encode_decode(  pj_pool_t *pool,
 					  unsigned clock_rate,
@@ -806,8 +807,10 @@ static pjmedia_port* g711_encode_decode(  pj_pool_t *pool,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
+#endif
 
 /* GSM benchmark */
+#if PJMEDIA_HAS_GSM_CODEC
 static pjmedia_port* gsm_encode_decode(  pj_pool_t *pool,
 					 unsigned clock_rate,
 					 unsigned channel_count,
@@ -820,7 +823,9 @@ static pjmedia_port* gsm_encode_decode(  pj_pool_t *pool,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_ILBC_CODEC
 static pj_status_t ilbc_init(pjmedia_endpt *endpt)
 {
     return pjmedia_codec_ilbc_init(endpt, 20);
@@ -839,7 +844,9 @@ static pjmedia_port* ilbc_encode_decode( pj_pool_t *pool,
 			       &pjmedia_codec_ilbc_deinit, clock_rate, 
 			       channel_count, samples_per_frame, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_SPEEX_CODEC
 /* Speex narrowband benchmark */
 static pjmedia_port* speex8_encode_decode(pj_pool_t *pool,
 					  unsigned clock_rate,
@@ -869,7 +876,9 @@ static pjmedia_port* speex16_encode_decode(pj_pool_t *pool,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_G722_CODEC
 /* G.722 benchmark benchmark */
 static pjmedia_port* g722_encode_decode(pj_pool_t *pool,
 					unsigned clock_rate,
@@ -883,6 +892,7 @@ static pjmedia_port* g722_encode_decode(pj_pool_t *pool,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
+#endif
 
 #if PJMEDIA_HAS_G7221_CODEC
 /* G.722.1 benchmark benchmark */
@@ -1796,6 +1806,7 @@ static pjmedia_port* create_stream( pj_pool_t *pool,
     return port;
 }
 
+#if PJMEDIA_HAS_G711_CODEC
 /* G.711 stream, no SRTP */
 static pjmedia_port* create_stream_pcmu( pj_pool_t *pool,
 					 unsigned clock_rate,
@@ -1870,7 +1881,9 @@ static pjmedia_port* create_stream_pcmu_srtp80_with_auth(pj_pool_t *pool,
 			 clock_rate, channel_count,
 			 samples_per_frame, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_GSM_CODEC
 /* GSM stream */
 static pjmedia_port* create_stream_gsm(  pj_pool_t *pool,
 					 unsigned clock_rate,
@@ -1945,7 +1958,9 @@ static pjmedia_port* create_stream_gsm_srtp80_with_auth(pj_pool_t *pool,
 			 clock_rate, channel_count,
 			 samples_per_frame, flags, te);
 }
+#endif
 
+#if PJMEDIA_HAS_G722_CODEC
 /* G722 stream */
 static pjmedia_port* create_stream_g722( pj_pool_t *pool,
 					 unsigned clock_rate,
@@ -1960,9 +1975,10 @@ static pjmedia_port* create_stream_g722( pj_pool_t *pool,
 			 clock_rate, channel_count,
 			 samples_per_frame, flags, te);
 }
+#endif
 
-/* G722.1 stream */
 #if PJMEDIA_HAS_G7221_CODEC
+/* G722.1 stream */
 static pjmedia_port* create_stream_g7221( pj_pool_t *pool,
 					  unsigned clock_rate,
 					  unsigned channel_count,

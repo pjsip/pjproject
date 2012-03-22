@@ -19,6 +19,8 @@
 #include <pjsua-lib/pjsua.h>
 #include <pjsua-lib/pjsua_internal.h>
 
+#if defined(PJSUA_MEDIA_HAS_PJMEDIA) && PJSUA_MEDIA_HAS_PJMEDIA != 0
+
 #define THIS_FILE	"pjsua_vid.c"
 
 #if PJSUA_HAS_VIDEO
@@ -667,65 +669,44 @@ static void dec_vid_win(pjsua_vid_win_id wid)
 	free_vid_win(wid);
 }
 
+/* Initialize video call media */
+pj_status_t pjsua_vid_channel_init(pjsua_call_media *call_med)
+{
+    pjsua_acc *acc = &pjsua_var.acc[call_med->call->acc_id];
+
+    call_med->strm.v.rdr_dev = acc->cfg.vid_rend_dev;
+    call_med->strm.v.cap_dev = acc->cfg.vid_cap_dev;
+    if (call_med->strm.v.rdr_dev == PJMEDIA_VID_DEFAULT_RENDER_DEV) {
+	pjmedia_vid_dev_info info;
+	pjmedia_vid_dev_get_info(call_med->strm.v.rdr_dev, &info);
+	call_med->strm.v.rdr_dev = info.id;
+    }
+    if (call_med->strm.v.cap_dev == PJMEDIA_VID_DEFAULT_CAPTURE_DEV) {
+	pjmedia_vid_dev_info info;
+	pjmedia_vid_dev_get_info(call_med->strm.v.cap_dev, &info);
+	call_med->strm.v.cap_dev = info.id;
+    }
+
+    return PJ_SUCCESS;
+}
 
 /* Internal function: update video channel after SDP negotiation */
-pj_status_t video_channel_update(pjsua_call_media *call_med,
-                                 pj_pool_t *tmp_pool,
-			         const pjmedia_sdp_session *local_sdp,
-			         const pjmedia_sdp_session *remote_sdp)
+pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
+				     pj_pool_t *tmp_pool,
+				     pjmedia_vid_stream_info *si,
+				     const pjmedia_sdp_session *local_sdp,
+				     const pjmedia_sdp_session *remote_sdp)
 {
     pjsua_call *call = call_med->call;
     pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];
-    pjmedia_vid_stream_info the_si, *si = &the_si;
     pjmedia_port *media_port;
-    unsigned strm_idx = call_med->idx;
     pj_status_t status;
     
     PJ_LOG(4,(THIS_FILE, "Video channel update.."));
     pj_log_push_indent();
 
-    status = pjmedia_vid_stream_info_from_sdp(si, tmp_pool, pjsua_var.med_endpt,
-					      local_sdp, remote_sdp, strm_idx);
-    if (status != PJ_SUCCESS)
-	goto on_error;
-
     /* Check if no media is active */
-    if (si->dir == PJMEDIA_DIR_NONE) {
-	/* Call media state */
-	call_med->state = PJSUA_CALL_MEDIA_NONE;
-
-	/* Call media direction */
-	call_med->dir = PJMEDIA_DIR_NONE;
-
-    } else {
-	pjmedia_transport_info tp_info;
-
-	/* Start/restart media transport */
-	status = pjmedia_transport_media_start(call_med->tp,
-					       tmp_pool, local_sdp,
-					       remote_sdp, strm_idx);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	set_media_tp_state(call_med, PJSUA_MED_TP_RUNNING);
-
-	/* Get remote SRTP usage policy */
-	pjmedia_transport_info_init(&tp_info);
-	pjmedia_transport_get_info(call_med->tp, &tp_info);
-	if (tp_info.specific_info_cnt > 0) {
-	    unsigned i;
-	    for (i = 0; i < tp_info.specific_info_cnt; ++i) {
-		if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
-		{
-		    pjmedia_srtp_info *srtp_info = 
-				(pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
-
-		    call_med->rem_srtp_use = srtp_info->peer_use;
-		    break;
-		}
-	    }
-	}
-
+    if (si->dir != PJMEDIA_DIR_NONE) {
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
 	 */
@@ -925,50 +906,6 @@ pj_status_t video_channel_update(pjsua_call_media *call_med,
 	    pj_log_pop_indent();
 	}
 
-	/* Call media direction */
-	call_med->dir = si->dir;
-
-	/* Call media state */
-	if (call->local_hold)
-	    call_med->state = PJSUA_CALL_MEDIA_LOCAL_HOLD;
-	else if (call_med->dir == PJMEDIA_DIR_DECODING)
-	    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
-	else
-	    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
-    }
-
-    /* Print info. */
-    {
-	char info[80];
-	int info_len = 0;
-	int len;
-	const char *dir;
-
-	switch (si->dir) {
-	case PJMEDIA_DIR_NONE:
-	    dir = "inactive";
-	    break;
-	case PJMEDIA_DIR_ENCODING:
-	    dir = "sendonly";
-	    break;
-	case PJMEDIA_DIR_DECODING:
-	    dir = "recvonly";
-	    break;
-	case PJMEDIA_DIR_ENCODING_DECODING:
-	    dir = "sendrecv";
-	    break;
-	default:
-	    dir = "unknown";
-	    break;
-	}
-	len = pj_ansi_sprintf( info+info_len,
-			       ", stream #%d: %.*s (%s)", strm_idx,
-			       (int)si->codec_info.encoding_name.slen,
-			       si->codec_info.encoding_name.ptr,
-			       dir);
-	if (len > 0)
-	    info_len += len;
-	PJ_LOG(4,(THIS_FILE,"Video updated%s", info));
     }
 
     if (!acc->cfg.vid_out_auto_transmit && call_med->strm.v.stream) {
@@ -988,7 +925,7 @@ on_error:
 
 
 /* Internal function to stop video stream */
-void stop_video_stream(pjsua_call_media *call_med)
+void pjsua_vid_stop_stream(pjsua_call_media *call_med)
 {
     pjmedia_vid_stream *strm = call_med->strm.v.stream;
     pjmedia_rtcp_stat stat;
@@ -1589,7 +1526,7 @@ static pj_status_t call_add_video(pjsua_call *call,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    set_media_tp_state(call_med, PJSUA_MED_TP_INIT);
+    pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_INIT);
 
     /* Get transport address info */
     pjmedia_transport_info_init(&tpinfo);
@@ -1784,7 +1721,7 @@ on_error:
 	/* Mark media transport to disabled */
 	// Don't close this here, as SDP negotiation has not been
 	// done and stream may be still active.
-	set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
+	pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_DISABLED);
 
 	/* Deactivate the stream */
 	pjmedia_sdp_media_deactivate(pool, sdp->media[med_idx]);
@@ -2185,3 +2122,4 @@ PJ_DEF(pj_bool_t) pjsua_call_vid_stream_is_running( pjsua_call_id call_id,
 
 #endif /* PJSUA_HAS_VIDEO */
 
+#endif /* PJSUA_MEDIA_HAS_PJMEDIA */

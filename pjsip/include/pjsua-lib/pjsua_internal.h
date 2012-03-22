@@ -601,12 +601,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 				  int *sip_err_code,
                                   pj_bool_t async,
                                   pjsua_med_tp_state_cb cb);
-pj_status_t video_channel_update(pjsua_call_media *call_med,
-                                 pj_pool_t *tmp_pool,
-			         const pjmedia_sdp_session *local_sdp,
-			         const pjmedia_sdp_session *remote_sdp);
-void stop_video_stream(pjsua_call_media *call_med);
-void set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
+void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
 
 /* Callback to receive media events */
 pj_status_t call_media_on_event(pjmedia_event *event,
@@ -753,11 +748,31 @@ void print_call(const char *title,
                 char *buf, pj_size_t size);
 
 /*
+ * Audio
+ */
+pj_status_t pjsua_aud_subsys_init(void);
+pj_status_t pjsua_aud_subsys_start(void);
+pj_status_t pjsua_aud_subsys_destroy(void);
+void pjsua_aud_stop_stream(pjsua_call_media *call_med);
+pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
+                                     pj_pool_t *tmp_pool,
+                                     pjmedia_stream_info *si,
+				     const pjmedia_sdp_session *local_sdp,
+				     const pjmedia_sdp_session *remote_sdp);
+
+/*
  * Video
  */
 pj_status_t pjsua_vid_subsys_init(void);
 pj_status_t pjsua_vid_subsys_start(void);
 pj_status_t pjsua_vid_subsys_destroy(void);
+void pjsua_vid_stop_stream(pjsua_call_media *call_med);
+pj_status_t pjsua_vid_channel_init(pjsua_call_media *call_med);
+pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
+				     pj_pool_t *tmp_pool,
+				     pjmedia_vid_stream_info *si,
+				     const pjmedia_sdp_session *local_sdp,
+				     const pjmedia_sdp_session *remote_sdp);
 
 #if PJSUA_HAS_VIDEO
 PJ_DECL(void) pjsua_vid_win_reset(pjsua_vid_win_id wid);

@@ -3,11 +3,23 @@ include build/host-$(HOST_NAME).mak
 -include user.mak
 include version.mak
 
-DIRS = pjlib/build pjlib-util/build pjnath/build third_party/build pjmedia/build pjsip/build pjsip-apps/build $(EXTRA_DIRS)
+LIB_DIRS = pjlib/build pjlib-util/build pjnath/build third_party/build pjmedia/build pjsip/build
+DIRS = $(LIB_DIRS) pjsip-apps/build $(EXTRA_DIRS)
 
 ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
+
+lib:
+	for dir in $(LIB_DIRS); do \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir all; then \
+		    true; \
+		else \
+		    exit 1; \
+		fi; \
+	done; \
+	make -C pjsip-apps/src/third_party_media
+
 
 all clean dep depend distclean print realclean:
 	for dir in $(DIRS); do \
@@ -17,6 +29,8 @@ all clean dep depend distclean print realclean:
 		    exit 1; \
 		fi; \
 	done
+
+.PHONY: lib 
 
 doc:
 	@if test \( ! "$(WWWDIR)" == "" \) -a \( ! -d $(WWWDIR)/pjlib/docs/html \) ; then \
