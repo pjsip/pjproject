@@ -270,9 +270,9 @@ const char* get_libsrtp_errstr(int err)
 }
 
 static pj_bool_t libsrtp_initialized;
-static void pjmedia_srtp_deinit_lib(void);
+static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt);
 
-PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(void)
+PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt)
 {
     if (libsrtp_initialized == PJ_FALSE) {
 	err_status_t err;
@@ -284,7 +284,8 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(void)
 	    return PJMEDIA_ERRNO_FROM_LIBSRTP(err);
 	}
 
-	if (pj_atexit(pjmedia_srtp_deinit_lib) != PJ_SUCCESS) {
+	if (pjmedia_endpt_atexit(endpt, pjmedia_srtp_deinit_lib) != PJ_SUCCESS)
+	{
 	    /* There will be memory leak when it fails to schedule libsrtp 
 	     * deinitialization, however the memory leak could be harmless,
 	     * since in modern OS's memory used by an application is released 
@@ -299,9 +300,18 @@ PJ_DEF(pj_status_t) pjmedia_srtp_init_lib(void)
     return PJ_SUCCESS;
 }
 
-static void pjmedia_srtp_deinit_lib(void)
+static void pjmedia_srtp_deinit_lib(pjmedia_endpt *endpt)
 {
     err_status_t err;
+
+    /* Note that currently this SRTP init/deinit is not equipped with
+     * reference counter, it should be safe as normally there is only
+     * one single instance of media endpoint and even if it isn't, the
+     * pjmedia_transport_srtp_create() will invoke SRTP init (the only
+     * drawback should be the delay described by #788).
+     */
+
+    PJ_UNUSED_ARG(endpt);
 
     err = srtp_deinit();
     if (err != err_status_ok) {
@@ -410,7 +420,7 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_create(
     }
 
     /* Init libsrtp. */
-    status = pjmedia_srtp_init_lib();
+    status = pjmedia_srtp_init_lib(endpt);
     if (status != PJ_SUCCESS)
 	return status;
 

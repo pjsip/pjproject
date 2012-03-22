@@ -200,8 +200,12 @@ typedef struct pjmedia_srtp_info
  * will also invoke this function. This function will also register SRTP
  * library deinitialization to #pj_atexit(), so the deinitialization
  * of SRTP library will be performed automatically by PJLIB destructor.
+ *
+ * @param endpt	    The media endpoint instance.
+ *
+ * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_srtp_init_lib(void);
+PJ_DECL(pj_status_t) pjmedia_srtp_init_lib(pjmedia_endpt *endpt);
 
 
 /**

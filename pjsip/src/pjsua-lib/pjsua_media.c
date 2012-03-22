@@ -335,8 +335,8 @@ pj_status_t pjsua_media_subsys_init(const pjsua_media_config *cfg)
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-    /* Initialize SRTP library. */
-    status = pjmedia_srtp_init_lib();
+    /* Initialize SRTP library (ticket #788). */
+    status = pjmedia_srtp_init_lib(pjsua_var.med_endpt);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error initializing SRTP library", 
 		     status);

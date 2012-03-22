@@ -117,6 +117,11 @@ struct pj_atomic_t
 };
 
 /*
+ * Flag and reference counter for PJLIB instance.
+ */
+static int initialized;
+
+/*
  * Static global variables.
  */
 static pj_thread_desc main_thread;
@@ -141,6 +146,12 @@ PJ_DEF(pj_status_t) pj_init(void)
     char dummy_guid[32]; /* use maximum GUID length */
     pj_str_t guid;
     pj_status_t rc;
+
+    /* Check if PJLIB have been initialized */
+    if (initialized) {
+	++initialized;
+	return PJ_SUCCESS;
+    }
 
     /* Init Winsock.. */
     if (WSAStartup(MAKEWORD(2,0), &wsa) != 0) {
@@ -187,6 +198,10 @@ PJ_DEF(pj_status_t) pj_init(void)
     }
 #endif   
 
+    /* Flag PJLIB as initialized */
+    ++initialized;
+    pj_assert(initialized == 1);
+
     PJ_LOG(4,(THIS_FILE, "pjlib %s for win32 initialized",
 	      PJ_VERSION));
 
@@ -212,6 +227,11 @@ PJ_DEF(pj_status_t) pj_atexit(void (*func)(void))
 PJ_DEF(void) pj_shutdown()
 {
     int i;
+
+    /* Only perform shutdown operation when 'initialized' reaches zero */
+    pj_assert(initialized > 0);
+    if (--initialized != 0)
+	return;
 
     /* Display stack usage */
 #if defined(PJ_OS_HAS_CHECK_STACK) && PJ_OS_HAS_CHECK_STACK!=0
