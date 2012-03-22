@@ -278,6 +278,14 @@ static void check_snd_dev_idle()
 {
     unsigned call_cnt;
 
+    /* Check if the sound device auto-close feature is disabled. */
+    if (pjsua_var.media_cfg.snd_auto_close_time < 0)
+	return;
+
+    /* Check if the sound device is currently closed. */
+    if (!pjsua_var.snd_is_on)
+	return;
+
     /* Get the call count, we shouldn't close the sound device when there is
      * any calls active.
      */
@@ -304,15 +312,10 @@ static void check_snd_dev_idle()
     /* Activate sound device auto-close timer if sound device is idle.
      * It is idle when there is no port connection in the bridge and
      * there is no active call.
-     *
-     * Note: this block is now valid if no snd dev is used because of #1299
      */
-    if ((pjsua_var.snd_port!=NULL || pjsua_var.null_snd!=NULL ||
-	    pjsua_var.no_snd) &&
-	pjsua_var.snd_idle_timer.id == PJ_FALSE &&
-	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0 &&
+    if (pjsua_var.snd_idle_timer.id == PJ_FALSE &&
 	call_cnt == 0 &&
-	pjsua_var.media_cfg.snd_auto_close_time >= 0)
+	pjmedia_conf_get_connect_count(pjsua_var.mconf) == 0)
     {
 	pj_time_val delay;
 
@@ -3836,6 +3839,8 @@ static pj_status_t open_snd_dev(pjmedia_snd_port_param *param)
 	update_initial_aud_param();
 	++pjsua_var.aud_open_cnt;
     }
+
+    pjsua_var.snd_is_on = PJ_TRUE;
 
     pj_log_pop_indent();
     return PJ_SUCCESS;
