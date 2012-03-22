@@ -10,17 +10,6 @@ ifdef MINSIZE
 MAKE_FLAGS := MINSIZE=1
 endif
 
-lib:
-	for dir in $(LIB_DIRS); do \
-		if $(MAKE) $(MAKE_FLAGS) -C $$dir all; then \
-		    true; \
-		else \
-		    exit 1; \
-		fi; \
-	done; \
-	make -C pjsip-apps/src/third_party_media
-
-
 all clean dep depend distclean print realclean:
 	for dir in $(DIRS); do \
 		if $(MAKE) $(MAKE_FLAGS) -C $$dir $@; then \
@@ -29,6 +18,16 @@ all clean dep depend distclean print realclean:
 		    exit 1; \
 		fi; \
 	done
+
+lib:
+	for dir in $(LIB_DIRS); do \
+		if $(MAKE) $(MAKE_FLAGS) -C $$dir all; then \
+		    true; \
+		else \
+		    exit 1; \
+		fi; \
+	done; \
+
 
 .PHONY: lib 
 
