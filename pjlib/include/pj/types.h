@@ -290,6 +290,9 @@ typedef int pj_exception_id_t;
  * in random string generation, and to initialize operating system dependent
  * functionality (such as WSAStartup() in Windows).
  *
+ * Apart from calling pj_init(), application typically should also initialize
+ * the random seed by calling pj_srand().
+ *
  * @return PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pj_init(void);
