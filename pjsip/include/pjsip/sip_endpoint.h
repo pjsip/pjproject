@@ -520,7 +520,10 @@ PJ_DECL(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail );
 
 /**
  * Register cleanup function to be called by SIP endpoint when 
- * #pjsip_endpt_destroy() is called.
+ * #pjsip_endpt_destroy() is called.  Note that application should not
+ * use or access any endpoint resource (such as pool, ioqueue, timer heap)
+ * from within the callback as such resource may have been released when
+ * the callback function is invoked.
  *
  * @param endpt		The SIP endpoint.
  * @param func		The function to be registered.

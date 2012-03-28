@@ -578,13 +578,6 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     PJ_LOG(5, (THIS_FILE, "Destroying endpoing instance.."));
 
-    /* Call all registered exit callbacks */
-    ecb = endpt->exit_cb_list.next;
-    while (ecb != &endpt->exit_cb_list) {
-	(*ecb->func)(endpt);
-	ecb = ecb->next;
-    }
-
     /* Phase 1: stop all modules */
     mod = endpt->module_list.prev;
     while (mod != &endpt->module_list) {
@@ -614,6 +607,13 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Destroy timer heap */
     pj_timer_heap_destroy(endpt->timer_heap);
+
+    /* Call all registered exit callbacks */
+    ecb = endpt->exit_cb_list.next;
+    while (ecb != &endpt->exit_cb_list) {
+	(*ecb->func)(endpt);
+	ecb = ecb->next;
+    }
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);

@@ -219,13 +219,6 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 	}
     }
 
-    /* Call all registered exit callbacks */
-    ecb = endpt->exit_cb_list.next;
-    while (ecb != &endpt->exit_cb_list) {
-	(*ecb->func)(endpt);
-	ecb = ecb->next;
-    }
-
     /* Destroy internal ioqueue */
     if (endpt->ioqueue && endpt->own_ioqueue) {
 	pj_ioqueue_destroy(endpt->ioqueue);
@@ -236,6 +229,14 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 
     pjmedia_codec_mgr_destroy(&endpt->codec_mgr);
     pjmedia_aud_subsys_shutdown();
+
+    /* Call all registered exit callbacks */
+    ecb = endpt->exit_cb_list.next;
+    while (ecb != &endpt->exit_cb_list) {
+	(*ecb->func)(endpt);
+	ecb = ecb->next;
+    }
+
     pj_pool_release (endpt->pool);
 
     return PJ_SUCCESS;

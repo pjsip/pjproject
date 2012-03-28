@@ -212,7 +212,10 @@ PJ_DECL(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt);
 
 /**
  * Register cleanup function to be called by media endpoint when 
- * #pjmedia_endpt_destroy() is called.
+ * #pjmedia_endpt_destroy() is called. Note that application should not
+ * use or access any endpoint resource (such as pool, ioqueue) from within
+ * the callback as such resource may have been released when the callback
+ * function is invoked.
  *
  * @param endpt		The media endpoint.
  * @param func		The function to be registered.
