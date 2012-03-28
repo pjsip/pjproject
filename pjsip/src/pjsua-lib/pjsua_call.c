@@ -1204,10 +1204,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsip_dlg_set_transport(dlg, &tp_sel);
     }
 
-    /* Create and attach pjsua_var data to the dialog: */
+    /* Create and attach pjsua_var data to the dialog */
     call->inv = inv;
-    dlg->mod_data[pjsua_var.mod.id] = call;
-    inv->mod_data[pjsua_var.mod.id] = call;
 
     /* Store variables required for the callback after the async
      * media transport creation is completed.
@@ -1282,7 +1280,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
      * cause the disconnection callback to be called before on_incoming_call()
      * callback is called, which is not right).
      */
-    status = pjsip_inv_initial_answer(inv, rdata, 
+    status = pjsip_inv_initial_answer(inv, rdata,
 				      100, NULL, NULL, &response);
     if (status != PJ_SUCCESS) {
 	if (response == NULL) {
@@ -1292,7 +1290,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_inv_terminate(inv, 500, PJ_FALSE);
 	} else {
 	    pjsip_inv_send_msg(inv, response);
-	    pjsip_inv_terminate(inv, response->msg->line.status.code, 
+	    pjsip_inv_terminate(inv, response->msg->line.status.code,
 				PJ_FALSE);
 	}
 	pjsua_media_channel_deinit(call->index);
@@ -1305,6 +1303,12 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    goto on_return;
 	}
     }
+
+    /* Only do this after sending 100/Trying (really! see the long comment
+     * above)
+     */
+    dlg->mod_data[pjsua_var.mod.id] = call;
+    inv->mod_data[pjsua_var.mod.id] = call;
 
     ++pjsua_var.call_cnt;
 
