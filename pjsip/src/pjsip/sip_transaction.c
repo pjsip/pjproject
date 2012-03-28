@@ -714,23 +714,17 @@ static pj_status_t mod_tsx_layer_stop(void)
     }
 
     pj_mutex_unlock(mod_tsx_layer.mutex);
+
+    PJ_LOG(4,(THIS_FILE, "Stopped transaction layer module"));
+
     return PJ_SUCCESS;
 }
 
 
-/* This module callback is called when module is being unloaded by
- * endpoint.
- */
-static pj_status_t mod_tsx_layer_unload(void)
+/* Destroy this module */
+static void tsx_layer_destroy(pjsip_endpoint *endpt)
 {
-    /* Only self destroy when there's no transaction in the table.
-     * Transaction may refuse to destroy when it has pending
-     * transmission. If we destroy the module now, application will
-     * crash when the pending transaction finally got error response
-     * from transport and when it tries to unregister itself.
-     */
-    if (pj_hash_count(mod_tsx_layer.htable) != 0)
-	return PJ_EBUSY;
+    PJ_UNUSED_ARG(endpt);
 
     /* Destroy mutex. */
     pj_mutex_destroy(mod_tsx_layer.mutex);
@@ -745,6 +739,31 @@ static pj_status_t mod_tsx_layer_unload(void)
     mod_tsx_layer.endpt = NULL;
 
     PJ_LOG(4,(THIS_FILE, "Transaction layer module destroyed"));
+}
+
+
+/* This module callback is called when module is being unloaded by
+ * endpoint.
+ */
+static pj_status_t mod_tsx_layer_unload(void)
+{
+    /* Only self destroy when there's no transaction in the table.
+     * Transaction may refuse to destroy when it has pending
+     * transmission. If we destroy the module now, application will
+     * crash when the pending transaction finally got error response
+     * from transport and when it tries to unregister itself.
+     */
+    if (pj_hash_count(mod_tsx_layer.htable) != 0) {
+	if (pjsip_endpt_atexit(mod_tsx_layer.endpt, &tsx_layer_destroy) !=
+	    PJ_SUCCESS)
+	{
+	    PJ_LOG(3,(THIS_FILE, "Failed to register transaction layer "
+				 "module destroy."));
+	}
+	return PJ_EBUSY;
+    }
+
+    tsx_layer_destroy(mod_tsx_layer.endpt);
 
     return PJ_SUCCESS;
 }
