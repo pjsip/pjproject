@@ -149,6 +149,20 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_parse_h263_fmtp(
 }
 
 
+static unsigned fps_to_mpi(const pjmedia_ratio *fps) 
+{
+    unsigned mpi;
+
+    /* Original formula = (fps->denum * 30000) / (fps->num * 1001) */
+    mpi = (fps->denum*30000 + fps->num*1001/2) / (fps->num*1001);
+    
+    /* Normalize, should be in the range of 1-32 */
+    if (mpi > 32) mpi = 32;
+    if (mpi < 1) mpi = 1;
+
+    return mpi;
+};
+
 PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 				pjmedia_vid_codec_param *param)
 {
@@ -159,11 +173,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 	pjmedia_video_format_detail *vfd;
 	pj_status_t status;
 
+	vfd = pjmedia_format_get_video_format_detail(&param->enc_fmt,
+						     PJ_TRUE);
+
 	/* Get local param */
-	status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
-						   &fmtp_loc);
-	if (status != PJ_SUCCESS)
-	    return status;
+	// Local param should be fetched from "param->enc_fmt" instead of
+	// "param->dec_fmtp".
+	//status = pjmedia_vid_codec_parse_h263_fmtp(&param->dec_fmtp,
+	//					   &fmtp_loc);
+	//if (status != PJ_SUCCESS)
+	//    return status;
+	fmtp_loc.mpi_cnt = 1;
+	fmtp_loc.mpi[0].size = vfd->size;
+	fmtp_loc.mpi[0].val  = fps_to_mpi(&vfd->fps);
 
 	/* Get remote param */
 	status = pjmedia_vid_codec_parse_h263_fmtp(&param->enc_fmtp,
@@ -177,10 +199,10 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 	    size.w = 176;
 	    size.h = 144;
 	    mpi	   = 1;
-	} else if (fmtp_loc.mpi_cnt == 0) {
-	    /* Local MPI setting not set, just use remote preference. */
-	    size = fmtp_rem.mpi[0].size;
-	    mpi  = fmtp_rem.mpi[0].val;
+	//} else if (fmtp_loc.mpi_cnt == 0) {
+	//    /* Local MPI setting not set, just use remote preference. */
+	//    size = fmtp_rem.mpi[0].size;
+	//    mpi  = fmtp_rem.mpi[0].val;
 	} else {
 	    /* Both have preferences, let's try to match them */
 	    unsigned i, j;
@@ -219,8 +241,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 	}
 
 	/* Apply the negotiation result */
-	vfd = pjmedia_format_get_video_format_detail(&param->enc_fmt,
-						     PJ_TRUE);
 	vfd->size = size;
 	vfd->fps.num = 30000;
 	vfd->fps.denum = 1001 * mpi;
