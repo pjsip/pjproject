@@ -1391,6 +1391,11 @@ static pj_bool_t stun_on_rx_data(pj_stun_sock *stun_sock,
     pj_status_t status;
 
     comp = (pj_ice_strans_comp*) pj_stun_sock_get_user_data(stun_sock);
+    if (comp == NULL) {
+	/* We have disassociated ourselves from the STUN socket */
+	return PJ_FALSE;
+    }
+
     ice_st = comp->ice_st;
 
     sess_add_ref(ice_st);
