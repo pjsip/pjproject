@@ -675,17 +675,19 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
     pjmedia_frame frame_;
     pj_status_t status;
 
-    pj_assert(vp->role==ROLE_ACTIVE && vp->stream_role==ROLE_PASSIVE);
+    pj_assert(vp->role==ROLE_ACTIVE);
 
     PJ_UNUSED_ARG(ts);
 
     if (!vp->client_port)
 	return;
 
-    vp->frm_buf->size = vp->frm_buf_size;
-    status = pjmedia_vid_dev_stream_get_frame(vp->strm, vp->frm_buf);
-    if (status != PJ_SUCCESS)
-	return;
+    if (vp->stream_role == ROLE_PASSIVE) {
+        vp->frm_buf->size = vp->frm_buf_size;
+        status = pjmedia_vid_dev_stream_get_frame(vp->strm, vp->frm_buf);
+        if (status != PJ_SUCCESS)
+	    return;
+    }
 
     //save_rgb_frame(vp->cap_size.w, vp->cap_size.h, vp->frm_buf);
 
