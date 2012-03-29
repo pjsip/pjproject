@@ -282,11 +282,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    if (vp->role==ROLE_ACTIVE && vp->stream_role==ROLE_PASSIVE) {
+    if (vp->role==ROLE_ACTIVE &&
+        ((vp->dir & PJMEDIA_DIR_ENCODING) || vp->stream_role==ROLE_PASSIVE))
+    {
         pjmedia_clock_param param;
 
 	/* Active role is wanted, but our device is passive, so create
-	 * master clocks to run the media flow.
+	 * master clocks to run the media flow. For encoding direction,
+         * we also want to create our own clock since the device's clock
+         * may run at a different rate.
 	 */
 	need_frame_buf = PJ_TRUE;
             
@@ -668,6 +672,7 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
      * passive. So get a frame from the stream and push it to user.
      */
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
+    pjmedia_frame frame_;
     pj_status_t status;
 
     pj_assert(vp->role==ROLE_ACTIVE && vp->stream_role==ROLE_PASSIVE);
@@ -684,7 +689,14 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
 
     //save_rgb_frame(vp->cap_size.w, vp->cap_size.h, vp->frm_buf);
 
-    vidstream_cap_cb(vp->strm, vp, vp->frm_buf);
+    status = convert_frame(vp, vp->frm_buf, &frame_);
+    if (status != PJ_SUCCESS)
+        return;
+
+    status = pjmedia_port_put_frame(vp->client_port, 
+                                    (vp->conv? &frame_: vp->frm_buf));
+    if (status != PJ_SUCCESS)
+        return;
 }
 
 static void dec_clock_cb(const pj_timestamp *ts, void *user_data)
@@ -717,26 +729,13 @@ static pj_status_t vidstream_cap_cb(pjmedia_vid_dev_stream *stream,
 {
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
 
-    if (vp->role==ROLE_ACTIVE) {
-        pj_status_t status;
-        pjmedia_frame frame_;
-        
-        status = convert_frame(vp, frame, &frame_);
-        if (status != PJ_SUCCESS)
-            return status;
+    /* We just store the frame in the buffer. For active role, we let
+     * video port's clock to push the frame buffer to the user.
+     * The decoding counterpart for passive role and active stream is
+     * located in vid_pasv_port_put_frame()
+     */
+    copy_frame_to_buffer(vp, frame);
 
-        if (vp->client_port)
-	    status = pjmedia_port_put_frame(vp->client_port, 
-                                            (vp->conv? &frame_: frame));
-        if (status != PJ_SUCCESS)
-            return status;
-    } else {
-        /* We are passive while the stream is active so we just store the
-         * frame in the buffer.
-         * The decoding counterpart is located in vid_pasv_port_put_frame()
-         */
-        copy_frame_to_buffer(vp, frame);
-    }
     /* This is tricky since the frame is still in its original unconverted
      * format, which may not be what the application expects.
      */
