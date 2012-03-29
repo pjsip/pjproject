@@ -14,16 +14,16 @@ OBJS = alt_pjsua_aud.o alt_pjsua_vid.o pjsua_app.o main.o
 all: alt_pjsua
 
 alt_pjsua: $(OBJS)
-	$(CC) -o $@ $(OBJS) $(_CFLAGS) $(_LDFLAGS)
+	$(PJ_CC) -o $@ $(OBJS) $(_CFLAGS) $(_LDFLAGS)
 
 pjsua_app.o: ../pjsua/pjsua_app.c
-	$(CC) $(_CFLAGS) -c -o $@ $<
+	$(PJ_CC) $(_CFLAGS) -c -o $@ $<
 
 main.o: ../pjsua/main.c
-	$(CC) $(_CFLAGS) -c -o $@ $<
+	$(PJ_CC) $(_CFLAGS) -c -o $@ $<
 
 %.o: %.c
-	$(CC) $(_CFLAGS) -c -o $@ $<
+	$(PJ_CC) $(_CFLAGS) -c -o $@ $<
 
 depend:
 
