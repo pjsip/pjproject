@@ -3239,7 +3239,13 @@ static pj_status_t tsx_on_state_terminated( pjsip_transaction *tsx,
                                             pjsip_event *event)
 {
     pj_assert(tsx->state == PJSIP_TSX_STATE_TERMINATED);
-    pj_assert(event->type == PJSIP_EVENT_TIMER);
+
+    /* Ignore events other than timer. This used to be an assertion but
+     * events may genuinely arrive at this state.
+     */
+    if (event->type != PJSIP_EVENT_TIMER) {
+	return PJ_EIGNORED;
+    }
 
     /* Destroy this transaction */
     tsx_set_state(tsx, PJSIP_TSX_STATE_DESTROYED, 

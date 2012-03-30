@@ -1360,6 +1360,10 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 {
     int i;  /* Must be signed */
 
+    if (pjsua_var.endpt) {
+	PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
+    }
+
     if (pjsua_var.state > PJSUA_STATE_NULL &&
 	pjsua_var.state < PJSUA_STATE_CLOSING)
     {
@@ -1372,7 +1376,12 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
     /* Wait worker threads to quit: */
     for (i=0; i<(int)pjsua_var.ua_cfg.thread_cnt; ++i) {
 	if (pjsua_var.thread[i]) {
-	    pj_thread_join(pjsua_var.thread[i]);
+	    pj_status_t status;
+	    status = pj_thread_join(pjsua_var.thread[i]);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(4,(THIS_FILE, status, "Error joining worker thread"));
+		pj_thread_sleep(1000);
+	    }
 	    pj_thread_destroy(pjsua_var.thread[i]);
 	    pjsua_var.thread[i] = NULL;
 	}
@@ -1380,8 +1389,6 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
     
     if (pjsua_var.endpt) {
 	unsigned max_wait;
-
-	PJ_LOG(4,(THIS_FILE, "Shutting down, flags=%d...", flags));
 
 	pj_log_push_indent();
 

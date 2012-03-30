@@ -759,15 +759,14 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 				 struct pjmedia_frame *output)
 {
     codec_private_t *codec_data = (codec_private_t*) codec->codec_data;
-    const Word16 *pcm_input;
-    Word16 mlt_coefs[MAX_SAMPLES_PER_FRAME];
-    Word16 mag_shift;
+    unsigned nsamples, processed;
 
     /* Check frame in & out size */
-    PJ_ASSERT_RETURN((pj_uint16_t)input->size == 
-		     (codec_data->samples_per_frame<<1),
-		     PJMEDIA_CODEC_EPCMTOOSHORT);
-    PJ_ASSERT_RETURN(output_buf_len >= codec_data->frame_size,
+    nsamples = input->size >> 1;
+    PJ_ASSERT_RETURN(nsamples % codec_data->samples_per_frame == 0, 
+		     PJMEDIA_CODEC_EPCMFRMINLEN);
+    PJ_ASSERT_RETURN(output_buf_len >= codec_data->frame_size * nsamples /
+		     codec_data->samples_per_frame,
 		     PJMEDIA_CODEC_EFRMTOOSHORT);
 
     /* Apply silence detection if VAD is enabled */
@@ -799,41 +798,52 @@ static pj_status_t codec_encode( pjmedia_codec *codec,
 	}
     }
 
-    /* Encoder adjust the input signal level */
-    if (codec_data->pcm_shift) {
-	unsigned i;
-	pcm_input = (const Word16*)input->buf;
-	for (i=0; i<codec_data->samples_per_frame; ++i) {
-	    codec_data->enc_frame[i] = 
-		(pj_int16_t)(pcm_input[i] >> codec_data->pcm_shift);
+    processed = 0;
+    output->size = 0;
+    while (processed < nsamples) {
+	Word16 mlt_coefs[MAX_SAMPLES_PER_FRAME];
+	Word16 mag_shift;
+	const Word16 *pcm_input;
+	pj_int8_t *out_bits;
+	
+	pcm_input = (const Word16*)input->buf + processed;
+	out_bits = (pj_int8_t*)output->buf + output->size;
+
+	/* Encoder adjust the input signal level */
+	if (codec_data->pcm_shift) {
+	    unsigned i;
+	    for (i=0; i<codec_data->samples_per_frame; ++i) {
+		codec_data->enc_frame[i] = 
+			(Word16)(pcm_input[i] >> codec_data->pcm_shift);
+	    }
+	    pcm_input = codec_data->enc_frame;
 	}
-	pcm_input = codec_data->enc_frame;
-    } else {
-	pcm_input = (const Word16*)input->buf;
+
+	/* Convert input samples to rmlt coefs */
+	mag_shift = samples_to_rmlt_coefs(pcm_input,
+					  codec_data->enc_old_frame, 
+					  mlt_coefs, 
+					  codec_data->samples_per_frame);
+
+	/* Encode the mlt coefs. Note that encoder output stream is
+	 * 16 bit array, so we need to take care about endianness.
+	 */
+	encoder(codec_data->frame_size_bits,
+		codec_data->number_of_regions,
+		mlt_coefs,
+		mag_shift,
+		(Word16*)out_bits);
+
+	/* Encoder output are in native host byte order, while ITU says
+	 * it must be in network byte order (MSB first).
+	 */
+	swap_bytes((pj_uint16_t*)out_bits, codec_data->frame_size/2);
+
+	processed += codec_data->samples_per_frame;
+	output->size += codec_data->frame_size;
     }
 
-    /* Convert input samples to rmlt coefs */
-    mag_shift = samples_to_rmlt_coefs(pcm_input,
-				      codec_data->enc_old_frame, 
-				      mlt_coefs, 
-				      codec_data->samples_per_frame);
-
-    /* Encode the mlt coefs. Note that encoder output stream is 16 bit array,
-     * so we need to take care about endianness.
-     */
-    encoder(codec_data->frame_size_bits,
-	    codec_data->number_of_regions,
-	    mlt_coefs,
-	    mag_shift,
-	    output->buf);
-
-    /* Encoder output are in native host byte order, while ITU says
-     * it must be in network byte order (MSB first).
-     */
-    swap_bytes((pj_uint16_t*)output->buf, codec_data->frame_size/2);
-
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
-    output->size = codec_data->frame_size;
     output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
