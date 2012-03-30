@@ -569,7 +569,11 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
     pjsua_call *call = call_med->call;
     pjmedia_port *media_port;
     unsigned strm_idx = call_med->idx;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_UNUSED_ARG(tmp_pool);
+    PJ_UNUSED_ARG(local_sdp);
+    PJ_UNUSED_ARG(remote_sdp);
 
     PJ_LOG(4,(THIS_FILE,"Audio channel update.."));
     pj_log_push_indent();

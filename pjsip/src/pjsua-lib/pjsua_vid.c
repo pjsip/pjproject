@@ -701,7 +701,11 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
     pjsua_acc  *acc  = &pjsua_var.acc[call->acc_id];
     pjmedia_port *media_port;
     pj_status_t status;
-    
+ 
+    PJ_UNUSED_ARG(tmp_pool);
+    PJ_UNUSED_ARG(local_sdp);
+    PJ_UNUSED_ARG(remote_sdp);
+
     PJ_LOG(4,(THIS_FILE, "Video channel update.."));
     pj_log_push_indent();
 

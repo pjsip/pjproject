@@ -418,11 +418,10 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     pj_str_t local_uri;
     pjsip_dialog *dlg;
     pjsip_rdata_sdp_info *sdp_info;
-    pjmedia_sdp_session *answer;
-    pjsip_tx_data *tdata;
-    call_t *call;
+    pjmedia_sdp_session *answer = NULL;
+    pjsip_tx_data *tdata = NULL;
+    call_t *call = NULL;
     unsigned i;
-    unsigned options = 0;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "RX %.*s from %s",
@@ -489,7 +488,8 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     }
 
     /* Generate Contact URI */
-    if (pj_gethostip(AF, &hostaddr) != PJ_SUCCESS) {
+    status = pj_gethostip(AF, &hostaddr);
+    if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to retrieve local host IP", status);
 	return PJ_TRUE;
     }
@@ -560,7 +560,6 @@ int main(int argc, char *argv[])
 	pj_str_t dst_uri = pj_str(argv[1]);
 	pj_str_t local_uri;
 	pjsip_dialog *dlg;
-	pjmedia_sdp_session *local_sdp;
 	pj_status_t status;
 	pjsip_tx_data *tdata;
 
@@ -612,7 +611,9 @@ int main(int argc, char *argv[])
 	       "  q    Quit\n",
 	       (app.enable_msg_logging? "Disable" : "Enable"));
 
-	fgets(s, sizeof(s), stdin) != NULL;
+	if (fgets(s, sizeof(s), stdin) == NULL)
+	    continue;
+
 	if (s[0]=='q')
 	    break;
 	switch (s[0]) {
