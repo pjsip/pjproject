@@ -2347,7 +2347,7 @@ static PyObject *py_pjsua_conf_get_port_info(PyObject *pSelf, PyObject *pArgs)
     ret = (PyObj_pjsua_conf_port_info *)
 	  conf_port_info_new(&PyTyp_pjsua_conf_port_info, NULL, NULL);
     ret->bits_per_sample = info.bits_per_sample;
-    ret->channel_count = info.bits_per_sample;
+    ret->channel_count = info.channel_count;
     ret->clock_rate = info.clock_rate;
     ret->name = PyString_FromPJ(&info.name);
     ret->samples_per_frame = info.samples_per_frame;

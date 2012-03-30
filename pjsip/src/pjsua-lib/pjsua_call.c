@@ -2929,12 +2929,10 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     pjsua_call *call;
 
     pj_log_push_indent();
-    PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     if (!call) {
-	PJSUA_UNLOCK();
 	pj_log_pop_indent();
 	return;
     }
@@ -3077,21 +3075,21 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
     /* Destroy media session when invite session is disconnected. */
     if (inv->state == PJSIP_INV_STATE_DISCONNECTED) {
 
-	pj_assert(call != NULL);
-
-	if (call)
-	    pjsua_media_channel_deinit(call->index);
+	PJSUA_LOCK();
+	
+	pjsua_media_channel_deinit(call->index);
 
 	/* Free call */
 	call->inv = NULL;
+
+	pj_assert(pjsua_var.call_cnt > 0);
 	--pjsua_var.call_cnt;
 
 	/* Reset call */
 	reset_call(call->index);
 
+	PJSUA_UNLOCK();
     }
-
-    PJSUA_UNLOCK();
     pj_log_pop_indent();
 }
 
@@ -3202,7 +3200,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
     //const pj_str_t st_update = {"UPDATE", 6};
 
     pj_log_push_indent();
-    PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
@@ -3279,7 +3276,6 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 	pjsua_var.ua_cfg.cb.on_call_media_state(call->index);
 
 on_return:
-    PJSUA_UNLOCK();
     pj_log_pop_indent();
 }
 
@@ -3392,8 +3388,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     unsigned i;
     pj_status_t status;
 
-    PJSUA_LOCK();
-
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
     /* Supply candidate answer */
@@ -3480,7 +3474,6 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
     }
 
 on_return:
-    PJSUA_UNLOCK();
     pj_log_pop_indent();
 }
 
@@ -3495,7 +3488,6 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     pj_status_t status;
 
     pj_log_push_indent();
-    PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
@@ -3520,7 +3512,6 @@ static void pjsua_call_on_create_offer(pjsip_inv_session *inv,
     }
 
 on_return:
-    PJSUA_UNLOCK();
     pj_log_pop_indent();
 }
 
@@ -3983,7 +3974,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     pjsua_call *call;
 
     pj_log_push_indent();
-    PJSUA_LOCK();
 
     call = (pjsua_call*) inv->dlg->mod_data[pjsua_var.mod.id];
 
@@ -3996,6 +3986,17 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	 * transfered (and this call has been disconnected), and we
 	 * receive another REFER for this call.
 	 */
+	goto on_return;
+    }
+
+    /* https://trac.pjsip.org/repos/ticket/1452:
+     *    If a request is retried due to 401/407 challenge, don't process the
+     *    transaction first but wait until we've retried it.
+     */
+    if (tsx->role == PJSIP_ROLE_UAC &&
+	(tsx->status_code==401 || tsx->status_code==407) &&
+	tsx->last_tx && tsx->last_tx->auth_retry)
+    {
 	goto on_return;
     }
 
@@ -4124,8 +4125,6 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
     }
 
 on_return:
-
-    PJSUA_UNLOCK();
     pj_log_pop_indent();
 }
 
@@ -4139,7 +4138,6 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
     pjsip_redirect_op op;
 
     pj_log_push_indent();
-    PJSUA_LOCK();
 
     if (pjsua_var.ua_cfg.cb.on_call_redirected) {
 	op = (*pjsua_var.ua_cfg.cb.on_call_redirected)(call->index, 
@@ -4152,7 +4150,6 @@ static pjsip_redirect_op pjsua_call_on_redirected(pjsip_inv_session *inv,
 	op = PJSIP_REDIRECT_STOP;
     }
 
-    PJSUA_UNLOCK();
     pj_log_pop_indent();
 
     return op;

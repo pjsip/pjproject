@@ -29,7 +29,20 @@
 
 #define RTCP_SR   200
 #define RTCP_RR   201
+#define RTCP_SDES 202
+#define RTCP_BYE  203
 #define RTCP_XR   207
+
+enum {
+    RTCP_SDES_NULL  = 0,
+    RTCP_SDES_CNAME = 1,
+    RTCP_SDES_NAME  = 2,
+    RTCP_SDES_EMAIL = 3,
+    RTCP_SDES_PHONE = 4,
+    RTCP_SDES_LOC   = 5,
+    RTCP_SDES_TOOL  = 6,
+    RTCP_SDES_NOTE  = 7
+};
 
 #if PJ_HAS_HIGH_RES_TIMER==0
 #   error "High resolution timer needs to be enabled"
@@ -473,9 +486,9 @@ PJ_DEF(void) pjmedia_rtcp_tx_rtp(pjmedia_rtcp_session *sess,
 }
 
 
-PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
-				   const void *pkt,
-				   pj_size_t size)
+static void parse_rtcp_report( pjmedia_rtcp_session *sess,
+			       const void *pkt,
+			       pj_size_t size)
 {
     pjmedia_rtcp_common *common = (pjmedia_rtcp_common*) pkt;
     const pjmedia_rtcp_rr *rr = NULL;
@@ -615,19 +628,21 @@ PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
 		goto end_rtt_calc;
 	    }
 
-	    /* "Normalize" rtt value that is exceptionally high.
-	     * For such values, "normalize" the rtt to be three times
-	     * the average value.
+#if defined(PJMEDIA_RTCP_NORMALIZE_FACTOR) && PJMEDIA_RTCP_NORMALIZE_FACTOR!=0
+	    /* "Normalize" rtt value that is exceptionally high. For such
+	     * values, "normalize" the rtt to be PJMEDIA_RTCP_NORMALIZE_FACTOR
+	     * times the average value.
 	     */
-	    if (rtt > ((unsigned)sess->stat.rtt.mean*3) && sess->stat.rtt.n!=0)
+	    if (rtt > ((unsigned)sess->stat.rtt.mean *
+		       PJMEDIA_RTCP_NORMALIZE_FACTOR) && sess->stat.rtt.n!=0)
 	    {
 		unsigned orig_rtt = rtt;
-		rtt = sess->stat.rtt.mean*3;
-		PJ_LOG(5,(sess->name, 
+		rtt = sess->stat.rtt.mean * PJMEDIA_RTCP_NORMALIZE_FACTOR;
+		PJ_LOG(5,(sess->name,
 			  "RTT value %d usec is normalized to %d usec",
 			  orig_rtt, rtt));
 	    }
-	
+#endif
 	    TRACE_((sess->name, "RTCP RTT is set to %d usec", rtt));
 
 	    /* Update RTT stat */
@@ -647,6 +662,142 @@ end_rtt_calc:
 
     pj_gettimeofday(&sess->stat.tx.update);
     sess->stat.tx.update_cnt++;
+}
+
+
+static void parse_rtcp_sdes(pjmedia_rtcp_session *sess,
+			    const void *pkt,
+			    pj_size_t size)
+{
+    pjmedia_rtcp_sdes *sdes = &sess->stat.peer_sdes;
+    char *p, *p_end;
+    char *b, *b_end;
+
+    p = (char*)pkt + 8;
+    p_end = (char*)pkt + size;
+
+    pj_bzero(sdes, sizeof(*sdes));
+    b = sess->stat.peer_sdes_buf_;
+    b_end = b + sizeof(sess->stat.peer_sdes_buf_);
+
+    while (p < p_end) {
+	pj_uint8_t sdes_type, sdes_len;
+	pj_str_t sdes_value = {NULL, 0};
+
+	sdes_type = *p++;
+
+	/* Check for end of SDES item list */
+	if (sdes_type == RTCP_SDES_NULL || p == p_end)
+	    break;
+
+	sdes_len = *p++;
+
+	/* Check for corrupted SDES packet */
+	if (p + sdes_len > p_end)
+	    break;
+
+	/* Get SDES item */
+	if (b + sdes_len < b_end) {
+	    pj_memcpy(b, p, sdes_len);
+	    sdes_value.ptr = b;
+	    sdes_value.slen = sdes_len;
+	    b += sdes_len;
+	} else {
+	    /* Insufficient SDES buffer */
+	    PJ_LOG(5, (sess->name,
+		    "Unsufficient buffer to save RTCP SDES type %d:%.*s",
+		    sdes_type, sdes_len, p));
+	    p += sdes_len;
+	    continue;
+	}
+
+	switch (sdes_type) {
+	case RTCP_SDES_CNAME:
+	    sdes->cname = sdes_value;
+	    break;
+	case RTCP_SDES_NAME:
+	    sdes->name = sdes_value;
+	    break;
+	case RTCP_SDES_EMAIL:
+	    sdes->email = sdes_value;
+	    break;
+	case RTCP_SDES_PHONE:
+	    sdes->phone = sdes_value;
+	    break;
+	case RTCP_SDES_LOC:
+	    sdes->loc = sdes_value;
+	    break;
+	case RTCP_SDES_TOOL:
+	    sdes->tool = sdes_value;
+	    break;
+	case RTCP_SDES_NOTE:
+	    sdes->note = sdes_value;
+	    break;
+	default:
+	    TRACE_((sess->name, "Received unknown RTCP SDES type %d:%.*s",
+		    sdes_type, sdes_value.slen, sdes_value.ptr));
+	    break;
+	}
+
+	p += sdes_len;
+    }
+}
+
+
+static void parse_rtcp_bye(pjmedia_rtcp_session *sess,
+			   const void *pkt,
+			   pj_size_t size)
+{
+    pj_str_t reason = {"-", 1};
+
+    /* Check and get BYE reason */
+    if (size > 8) {
+	reason.slen = *((pj_uint8_t*)pkt+8);
+	pj_memcpy(sess->stat.peer_sdes_buf_, ((pj_uint8_t*)pkt+9),
+		  reason.slen);
+	reason.ptr = sess->stat.peer_sdes_buf_;
+    }
+
+    /* Just print RTCP BYE log */
+    PJ_LOG(5, (sess->name, "Received RTCP BYE, reason: %.*s",
+	       reason.slen, reason.ptr));
+}
+
+
+PJ_DEF(void) pjmedia_rtcp_rx_rtcp( pjmedia_rtcp_session *sess,
+				   const void *pkt,
+				   pj_size_t size)
+{
+    pj_uint8_t *p, *p_end;
+
+    p = (pj_uint8_t*)pkt;
+    p_end = p + size;
+    while (p < p_end) {
+	pjmedia_rtcp_common *common = (pjmedia_rtcp_common*)p;
+	unsigned len;
+
+	len = (pj_ntohs((pj_uint16_t)common->length)+1) * 4;
+	switch(common->pt) {
+	case RTCP_SR:
+	case RTCP_RR:
+	case RTCP_XR:
+	    parse_rtcp_report(sess, p, len);
+	    break;
+	case RTCP_SDES:
+	    parse_rtcp_sdes(sess, p, len);
+	    break;
+	case RTCP_BYE:
+	    parse_rtcp_bye(sess, p, len);
+	    break;
+	default:
+	    /* Ignore unknown RTCP */
+	    TRACE_((sess->name, "Received unknown RTCP packet type=%d",
+		    common->pt));
+	    break;
+	}
+
+	p += len;
+    }
 }
 
 
@@ -801,6 +952,128 @@ PJ_DEF(void) pjmedia_rtcp_build_rtcp(pjmedia_rtcp_session *sess,
     pj_gettimeofday(&sess->stat.rx.update);
     sess->stat.rx.update_cnt++;
 }
+
+
+PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_sdes(
+					    pjmedia_rtcp_session *session, 
+					    void *buf,
+					    pj_size_t *length,
+					    const pjmedia_rtcp_sdes *sdes)
+{
+    pjmedia_rtcp_common *hdr;
+    pj_uint8_t *p;
+    unsigned len;
+
+    PJ_ASSERT_RETURN(session && buf && length && sdes, PJ_EINVAL);
+
+    /* Verify SDES item length */
+    if (sdes->cname.slen > 255 || sdes->name.slen  > 255 ||
+	sdes->email.slen > 255 || sdes->phone.slen > 255 ||
+	sdes->loc.slen   > 255 || sdes->tool.slen  > 255 ||
+	sdes->note.slen  > 255)
+    {
+	return PJ_EINVAL;
+    }
+
+    /* Verify buffer length */
+    len = sizeof(*hdr);
+    if (sdes->cname.slen) len += sdes->cname.slen + 2;
+    if (sdes->name.slen)  len += sdes->name.slen  + 2;
+    if (sdes->email.slen) len += sdes->email.slen + 2;
+    if (sdes->phone.slen) len += sdes->phone.slen + 2;
+    if (sdes->loc.slen)   len += sdes->loc.slen   + 2;
+    if (sdes->tool.slen)  len += sdes->tool.slen  + 2;
+    if (sdes->note.slen)  len += sdes->note.slen  + 2;
+    len++; /* null termination */
+    len = ((len+3)/4) * 4;
+    if (len > *length)
+	return PJ_ETOOSMALL;
+
+    /* Build RTCP SDES header */
+    hdr = (pjmedia_rtcp_common*)buf;
+    pj_memcpy(hdr, &session->rtcp_sr_pkt.common,  sizeof(*hdr));
+    hdr->pt = RTCP_SDES;
+    hdr->length = pj_htons((pj_uint16_t)(len/4 - 1));
+
+    /* Build RTCP SDES items */
+    p = (pj_uint8_t*)hdr + sizeof(*hdr);
+#define BUILD_SDES_ITEM(SDES_NAME, SDES_TYPE) \
+    if (sdes->SDES_NAME.slen) { \
+	*p++ = SDES_TYPE; \
+	*p++ = (pj_uint8_t)sdes->SDES_NAME.slen; \
+	pj_memcpy(p, sdes->SDES_NAME.ptr, sdes->SDES_NAME.slen); \
+	p += sdes->SDES_NAME.slen; \
+    }
+    BUILD_SDES_ITEM(cname, RTCP_SDES_CNAME);
+    BUILD_SDES_ITEM(name,  RTCP_SDES_NAME);
+    BUILD_SDES_ITEM(email, RTCP_SDES_EMAIL);
+    BUILD_SDES_ITEM(phone, RTCP_SDES_PHONE);
+    BUILD_SDES_ITEM(loc,   RTCP_SDES_LOC);
+    BUILD_SDES_ITEM(tool,  RTCP_SDES_TOOL);
+    BUILD_SDES_ITEM(note,  RTCP_SDES_NOTE);
+#undef BUILD_SDES_ITEM
+
+    /* Null termination */
+    *p++ = 0;
+
+    /* Pad to 32bit */
+    while ((p-(pj_uint8_t*)buf) % 4)
+	*p++ = 0;
+
+    /* Finally */
+    pj_assert((int)len == p-(pj_uint8_t*)buf);
+    *length = len;
+
+    return PJ_SUCCESS;
+}
+
+
+PJ_DEF(pj_status_t) pjmedia_rtcp_build_rtcp_bye(pjmedia_rtcp_session *session,
+						void *buf,
+						pj_size_t *length,
+						const pj_str_t *reason)
+{
+    pjmedia_rtcp_common *hdr;
+    pj_uint8_t *p;
+    unsigned len;
+
+    PJ_ASSERT_RETURN(session && buf && length, PJ_EINVAL);
+
+    /* Verify BYE reason length */
+    if (reason && reason->slen > 255)
+	return PJ_EINVAL;
+
+    /* Verify buffer length */
+    len = sizeof(*hdr);
+    if (reason && reason->slen) len += reason->slen + 1;
+    len = ((len+3)/4) * 4;
+    if (len > *length)
+	return PJ_ETOOSMALL;
+
+    /* Build RTCP BYE header */
+    hdr = (pjmedia_rtcp_common*)buf;
+    pj_memcpy(hdr, &session->rtcp_sr_pkt.common,  sizeof(*hdr));
+    hdr->pt = RTCP_BYE;
+    hdr->length = pj_htons((pj_uint16_t)(len/4 - 1));
+
+    /* Write RTCP BYE reason */
+    p = (pj_uint8_t*)hdr + sizeof(*hdr);
+    if (reason && reason->slen) {
+	*p++ = (pj_uint8_t)reason->slen;
+	pj_memcpy(p, reason->ptr, reason->slen);
+	p += reason->slen;
+    }
+
+    /* Pad to 32bit */
+    while ((p-(pj_uint8_t*)buf) % 4)
+	*p++ = 0;
+
+    pj_assert((int)len == p-(pj_uint8_t*)buf);
+    *length = len;
+
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjmedia_rtcp_enable_xr( pjmedia_rtcp_session *sess, 
 					    pj_bool_t enable)

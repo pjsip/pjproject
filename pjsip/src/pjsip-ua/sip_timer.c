@@ -495,8 +495,10 @@ static void stop_timer(pjsip_inv_session *inv)
 }
 
 /* Deinitialize Session Timers */
-static void pjsip_timer_deinit_module(void)
+static void pjsip_timer_deinit_module(pjsip_endpoint *endpt)
 {
+    PJ_TODO(provide_initialized_flag_for_each_endpoint);
+    PJ_UNUSED_ARG(endpt);
     is_initialized = PJ_FALSE;
 }
 
@@ -531,7 +533,7 @@ PJ_DEF(pj_status_t) pjsip_timer_init_module(pjsip_endpoint *endpt)
 	return status;
 
     /* Register deinit module to be executed when PJLIB shutdown */
-    if (pj_atexit(&pjsip_timer_deinit_module) != PJ_SUCCESS) {
+    if (pjsip_endpt_atexit(endpt, &pjsip_timer_deinit_module) != PJ_SUCCESS) {
 	/* Failure to register this function may cause this module won't 
 	 * work properly when the stack is restarted (without quitting 
 	 * application).

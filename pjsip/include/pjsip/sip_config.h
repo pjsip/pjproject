@@ -81,6 +81,13 @@ typedef struct pjsip_cfg_t
 	 * Disable rport in request.
 	 */
 	pj_bool_t disable_rport;
+
+	/**
+	 * Disable automatic switching from UDP to TCP if outgoing request
+	 * is greater than 1300 bytes. See PJSIP_DONT_SWITCH_TO_TCP.
+	 */
+	pj_bool_t disable_tcp_switch;
+
     } endpt;
 
     /** Transaction layer settings. */
@@ -251,6 +258,9 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Disable the behavior of automatic switching to TCP whenever UDP packet
  * size exceeds the threshold defined in PJSIP_UDP_SIZE_THRESHOLD.
  *
+ * This option can also be controlled at run-time by the \a disable_tcp_switch
+ * setting in pjsip_cfg_t.
+ *
  * Default is 0 (no).
  */
 #ifndef PJSIP_DONT_SWITCH_TO_TCP
@@ -420,10 +430,10 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * Idle timeout interval to be applied to transports with no usage
  * before the transport is destroyed. Value is in seconds.
  *
- * Default: 600
+ * Default: 30
  */
 #ifndef PJSIP_TRANSPORT_IDLE_TIME
-#   define PJSIP_TRANSPORT_IDLE_TIME	600
+#   define PJSIP_TRANSPORT_IDLE_TIME	30
 #endif
 
 

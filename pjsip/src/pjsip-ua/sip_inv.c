@@ -212,7 +212,16 @@ void inv_set_state(pjsip_inv_session *inv, pjsip_inv_state state,
      * otherwise disconnect the session.
      */
     if (state == PJSIP_INV_STATE_CONFIRMED) {
-	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE) {
+	struct tsx_inv_data *tsx_inv_data = NULL;
+
+	if (inv->invite_tsx) {
+	    tsx_inv_data = (struct tsx_inv_data*)
+			   inv->invite_tsx->mod_data[mod_inv.mod.id];
+	}
+
+	if (pjmedia_sdp_neg_get_state(inv->neg)!=PJMEDIA_SDP_NEG_STATE_DONE &&
+	    (tsx_inv_data && !tsx_inv_data->sdp_done) )
+	{
 	    pjsip_tx_data *bye;
 
 	    PJ_LOG(4,(inv->obj_name, "SDP offer/answer incomplete, ending the "
@@ -3954,6 +3963,32 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
 	       tsx->state == PJSIP_TSX_STATE_TRYING &&
+	       pjsip_method_cmp(&tsx->method, &pjsip_invite_method)==0)
+    {
+	pjsip_rx_data *rdata = e->body.tsx_state.src.rdata;
+	pjsip_tx_data *tdata;
+	pj_status_t status;
+
+	/* See https://trac.pjsip.org/repos/ticket/1455
+	 * Handle incoming re-INVITE before current INVITE is confirmed.
+	 * According to RFC 5407:
+	 *  - answer with 200 if we don't have pending offer-answer
+	 *  - answer with 491 if we *have* pending offer-answer
+	 *
+	 *  But unfortunately accepting the re-INVITE would mean we have
+	 *  two outstanding INVITEs, and we don't support that because
+	 *  we will get confused when we handle the ACK.
+	 */
+	status = pjsip_dlg_create_response(inv->dlg, rdata,
+					   PJSIP_SC_REQUEST_PENDING,
+					   NULL, &tdata);
+	if (status != PJ_SUCCESS)
+	    return;
+	pjsip_timer_update_resp(inv, tdata);
+	status = pjsip_dlg_send_response(dlg, tsx, tdata);
+
+    } else if (tsx->role == PJSIP_ROLE_UAS &&
+	       tsx->state == PJSIP_TSX_STATE_TRYING &&
 	       pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0)
     {
 	/*
@@ -3986,6 +4021,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 	
 	/* Generic handling for UAC tsx completion */
 	handle_uac_tsx_response(inv, e);
+
     }
 
 }

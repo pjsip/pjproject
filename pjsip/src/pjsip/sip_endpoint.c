@@ -40,6 +40,15 @@
 
 #define MAX_METHODS   32
 
+
+/* List of SIP endpoint exit callback. */
+typedef struct exit_cb
+{
+    PJ_DECL_LIST_MEMBER		    (struct exit_cb);
+    pjsip_endpt_exit_callback	    func;
+} exit_cb;
+
+
 /**
  * The SIP endpoint.
  */
@@ -86,6 +95,9 @@ struct pjsip_endpoint
 
     /** Additional request headers. */
     pjsip_hdr		 req_hdr;
+
+    /** List of exit callback. */
+    exit_cb		 exit_cb_list;
 };
 
 
@@ -445,6 +457,9 @@ PJ_DEF(pj_status_t) pjsip_endpt_create(pj_pool_factory *pf,
     /* Init modules list. */
     pj_list_init(&endpt->module_list);
 
+    /* Initialize exit callback list. */
+    pj_list_init(&endpt->exit_cb_list);
+
     /* Create R/W mutex for module manipulation. */
     status = pj_rwmutex_create(endpt->pool, "ept%p", &endpt->mod_mutex);
     if (status != PJ_SUCCESS)
@@ -559,6 +574,7 @@ on_error:
 PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 {
     pjsip_module *mod;
+    exit_cb *ecb;
 
     PJ_LOG(5, (THIS_FILE, "Destroying endpoing instance.."));
 
@@ -591,6 +607,13 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
 
     /* Destroy timer heap */
     pj_timer_heap_destroy(endpt->timer_heap);
+
+    /* Call all registered exit callbacks */
+    ecb = endpt->exit_cb_list.next;
+    while (ecb != &endpt->exit_cb_list) {
+	(*ecb->func)(endpt);
+	ecb = ecb->next;
+    }
 
     /* Delete endpoint mutex. */
     pj_mutex_destroy(endpt->mutex);
@@ -1182,3 +1205,20 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
 #endif
 }
 
+
+PJ_DEF(pj_status_t) pjsip_endpt_atexit( pjsip_endpoint *endpt,
+					pjsip_endpt_exit_callback func)
+{
+    exit_cb *new_cb;
+
+    PJ_ASSERT_RETURN(endpt && func, PJ_EINVAL);
+
+    new_cb = PJ_POOL_ZALLOC_T(endpt->pool, exit_cb);
+    new_cb->func = func;
+
+    pj_mutex_lock(endpt->mutex);
+    pj_list_push_back(&endpt->exit_cb_list, new_cb);
+    pj_mutex_unlock(endpt->mutex);
+
+    return PJ_SUCCESS;
+}

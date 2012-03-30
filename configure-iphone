@@ -25,7 +25,10 @@ fi
 
 # Set the main iPhone developer directory, if not set
 if test "x${DEVPATH}" = "x"; then
-  DEVPATH=/Developer/Platforms/iPhoneOS.platform/Developer
+  DEVPATH=/Applications/XCode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer
+  if test  ! -d $DEVPATH; then
+    DEVPATH=/Developer/Platforms/iPhoneOS.platform/Developer
+  fi
   echo "$F: DEVPATH is not specified, using ${DEVPATH}"
 fi
 

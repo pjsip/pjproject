@@ -1180,8 +1180,11 @@ PJ_DEF(pj_status_t) pj_ice_strans_sendto( pj_ice_strans *ice_st,
 
     /* If ICE is available, send data with ICE, otherwise send with the
      * default candidate selected during initialization.
+     *
+     * https://trac.pjsip.org/repos/ticket/1416:
+     * Once ICE has failed, also send data with the default candidate.
      */
-    if (ice_st->ice) {
+    if (ice_st->ice && ice_st->state < PJ_ICE_STRANS_STATE_FAILED) {
 	if (comp->turn_sock) {
 	    pj_turn_sock_lock(comp->turn_sock);
 	}
@@ -1406,6 +1409,11 @@ static pj_bool_t stun_on_rx_data(pj_stun_sock *stun_sock,
     pj_status_t status;
 
     comp = (pj_ice_strans_comp*) pj_stun_sock_get_user_data(stun_sock);
+    if (comp == NULL) {
+	/* We have disassociated ourselves from the STUN socket */
+	return PJ_FALSE;
+    }
+
     ice_st = comp->ice_st;
 
     sess_add_ref(ice_st);

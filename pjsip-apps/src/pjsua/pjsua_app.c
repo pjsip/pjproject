@@ -269,6 +269,8 @@ static void usage(void)
     puts  ("                      May be specified multiple times");
     puts  ("  --stun-srv=FORMAT   Set STUN server host or domain. This option may be");
     puts  ("                      specified more than once. FORMAT is hostdom[:PORT]");
+
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
     puts  ("");
     puts  ("TLS Options:");
     puts  ("  --use-tls           Enable TLS transport (default=no)");
@@ -280,6 +282,9 @@ static void usage(void)
     puts  ("  --tls-verify-client Verify client's certificate (default=no)");
     puts  ("  --tls-neg-timeout   Specify TLS negotiation timeout (default=no)");
     puts  ("  --tls-srv-name      Specify TLS server name for multihosting server");
+    puts  ("  --tls-cipher        Specify prefered TLS cipher (optional).");
+    puts  ("                      May be specified multiple times");
+#endif
 
     puts  ("");
     puts  ("Audio Options:");
@@ -560,7 +565,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NOREFERSUB, OPT_ACCEPT_REDIRECT,
 	   OPT_USE_TLS, OPT_TLS_CA_FILE, OPT_TLS_CERT_FILE, OPT_TLS_PRIV_FILE,
 	   OPT_TLS_PASSWORD, OPT_TLS_VERIFY_SERVER, OPT_TLS_VERIFY_CLIENT,
-	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_SRV_NAME,
+	   OPT_TLS_NEG_TIMEOUT, OPT_TLS_CIPHER,
 	   OPT_CAPTURE_DEV, OPT_PLAYBACK_DEV,
 	   OPT_CAPTURE_LAT, OPT_PLAYBACK_LAT, OPT_NO_TONES, OPT_JB_MAX_SIZE,
 	   OPT_STDOUT_REFRESH, OPT_STDOUT_REFRESH_TEXT, OPT_IPV6, OPT_QOS,
@@ -662,6 +667,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "max-calls",	1, 0, OPT_MAX_CALLS},
 	{ "duration",	1, 0, OPT_DURATION},
 	{ "thread-cnt",	1, 0, OPT_THREAD_CNT},
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
 	{ "use-tls",	0, 0, OPT_USE_TLS}, 
 	{ "tls-ca-file",1, 0, OPT_TLS_CA_FILE},
 	{ "tls-cert-file",1,0, OPT_TLS_CERT_FILE}, 
@@ -670,7 +676,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "tls-verify-server", 0, 0, OPT_TLS_VERIFY_SERVER},
 	{ "tls-verify-client", 0, 0, OPT_TLS_VERIFY_CLIENT},
 	{ "tls-neg-timeout", 1, 0, OPT_TLS_NEG_TIMEOUT},
-	{ "tls-srv-name", 1, 0, OPT_TLS_SRV_NAME},
+	{ "tls-cipher", 1, 0, OPT_TLS_CIPHER},
+#endif
 	{ "capture-dev",    1, 0, OPT_CAPTURE_DEV},
 	{ "playback-dev",   1, 0, OPT_PLAYBACK_DEV},
 	{ "capture-lat",    1, 0, OPT_CAPTURE_LAT},
@@ -1345,28 +1352,17 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    }
 	    break;
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
 	case OPT_USE_TLS:
 	    cfg->use_tls = PJ_TRUE;
-#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
-	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
-	    return -1;
-#endif
 	    break;
 	    
 	case OPT_TLS_CA_FILE:
 	    cfg->udp_cfg.tls_setting.ca_list_file = pj_str(pj_optarg);
-#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
-	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
-	    return -1;
-#endif
 	    break;
 	    
 	case OPT_TLS_CERT_FILE:
 	    cfg->udp_cfg.tls_setting.cert_file = pj_str(pj_optarg);
-#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
-	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
-	    return -1;
-#endif
 	    break;
 	    
 	case OPT_TLS_PRIV_FILE:
@@ -1375,10 +1371,6 @@ static pj_status_t parse_args(int argc, char *argv[],
 
 	case OPT_TLS_PASSWORD:
 	    cfg->udp_cfg.tls_setting.password = pj_str(pj_optarg);
-#if !defined(PJSIP_HAS_TLS_TRANSPORT) || PJSIP_HAS_TLS_TRANSPORT==0
-	    PJ_LOG(1,(THIS_FILE, "Error: TLS support is not configured"));
-	    return -1;
-#endif
 	    break;
 
 	case OPT_TLS_VERIFY_SERVER:
@@ -1394,9 +1386,39 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cfg->udp_cfg.tls_setting.timeout.sec = atoi(pj_optarg);
 	    break;
 
-	case OPT_TLS_SRV_NAME:
-	    cfg->udp_cfg.tls_setting.server_name = pj_str(pj_optarg);
-	    break;
+	case OPT_TLS_CIPHER:
+	    {
+		pj_ssl_cipher cipher;
+
+		if (pj_ansi_strnicmp(pj_optarg, "0x", 2) == 0) {
+		    pj_str_t cipher_st = pj_str(pj_optarg + 2);
+		    cipher = pj_strtoul2(&cipher_st, NULL, 16);
+		} else {
+		    cipher = atoi(pj_optarg);
+		}
+
+		if (pj_ssl_cipher_is_supported(cipher)) {
+		    static pj_ssl_cipher tls_ciphers[128];
+
+		    tls_ciphers[cfg->udp_cfg.tls_setting.ciphers_num++] = cipher;
+		    cfg->udp_cfg.tls_setting.ciphers = tls_ciphers;
+		} else {
+		    pj_ssl_cipher ciphers[128];
+		    unsigned j, ciphers_cnt;
+
+		    ciphers_cnt = PJ_ARRAY_SIZE(ciphers);
+		    pj_ssl_cipher_get_availables(ciphers, &ciphers_cnt);
+		    
+		    PJ_LOG(1,(THIS_FILE, "Cipher \"%s\" is not supported by "
+					 "TLS/SSL backend.", pj_optarg));
+		    printf("Available TLS/SSL ciphers (%d):\n", ciphers_cnt);
+		    for (j=0; j<ciphers_cnt; ++j)
+			printf("- 0x%06X: %s\n", ciphers[j], pj_ssl_cipher_name(ciphers[j]));
+		    return -1;
+		}
+	    }
+ 	    break;
+#endif /* PJSIP_HAS_TLS_TRANSPORT */
 
 	case OPT_CAPTURE_DEV:
 	    cfg->vid.vcapture_dev = atoi(pj_optarg);
@@ -1834,6 +1856,7 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
+#if defined(PJSIP_HAS_TLS_TRANSPORT) && (PJSIP_HAS_TLS_TRANSPORT != 0)
     /* TLS */
     if (config->use_tls)
 	pj_strcat2(&cfg, "--use-tls\n");
@@ -1863,13 +1886,6 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 
-    if (config->udp_cfg.tls_setting.server_name.slen) {
-	pj_ansi_sprintf(line, "--tls-srv-name %.*s\n",
-			(int)config->udp_cfg.tls_setting.server_name.slen, 
-			config->udp_cfg.tls_setting.server_name.ptr);
-	pj_strcat2(&cfg, line);
-    }
-
     if (config->udp_cfg.tls_setting.verify_server)
 	pj_strcat2(&cfg, "--tls-verify-server\n");
 
@@ -1881,6 +1897,14 @@ static int write_settings(const struct app_config *config,
 			(int)config->udp_cfg.tls_setting.timeout.sec);
 	pj_strcat2(&cfg, line);
     }
+
+    for (i=0; i<config->udp_cfg.tls_setting.ciphers_num; ++i) {
+	pj_ansi_sprintf(line, "--tls-cipher 0x%06X # %s\n",
+			config->udp_cfg.tls_setting.ciphers[i],
+			pj_ssl_cipher_name(config->udp_cfg.tls_setting.ciphers[i]));
+	pj_strcat2(&cfg, line);
+    }
+#endif
 
     pj_strcat2(&cfg, "\n#\n# Media settings:\n#\n");
 
@@ -3210,6 +3234,11 @@ static void on_transport_state(pjsip_transport *tp,
 	char buf[2048];
 	const char *verif_msgs[32];
 	unsigned verif_msg_cnt;
+
+	/* Dump server TLS cipher */
+	PJ_LOG(4,(THIS_FILE, "TLS cipher used: 0x%06X/%s",
+		  ssl_sock_info->cipher,
+		  pj_ssl_cipher_name(ssl_sock_info->cipher) ));
 
 	/* Dump server TLS certificate */
 	pj_ssl_cert_info_dump(ssl_sock_info->remote_cert_info, "  ",

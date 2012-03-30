@@ -413,7 +413,6 @@ static void dump_media_session(const char *indent,
 			    const char *type2 = pj_ice_get_cand_type_name(ii->comp[jj].rcand_type);
 			    char addr1[PJ_INET6_ADDRSTRLEN+10];
 			    char addr2[PJ_INET6_ADDRSTRLEN+10];
-			    const char *comp_name[2] = {"rtp ", "rtcp"};
 
 			    if (pj_sockaddr_has_addr(&ii->comp[jj].lcand_addr))
 				pj_sockaddr_print(&ii->comp[jj].lcand_addr, addr1, sizeof(addr1), 3);

@@ -61,6 +61,12 @@ typedef enum pjmedia_endpt_flag
 
 
 /**
+ * Type of callback to register to pjmedia_endpt_atexit().
+ */
+typedef void (*pjmedia_endpt_exit_callback)(pjmedia_endpt *endpt);
+
+
+/**
  * Create an instance of media endpoint.
  *
  * @param pf		Pool factory, which will be used by the media endpoint
@@ -258,6 +264,23 @@ PJ_DECL(pj_status_t) pjmedia_endpt_create_video_sdp(pjmedia_endpt *endpt,
  * @return		PJ_SUCCESS on success.
  */
 PJ_DECL(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt);
+
+
+/**
+ * Register cleanup function to be called by media endpoint when 
+ * #pjmedia_endpt_destroy() is called. Note that application should not
+ * use or access any endpoint resource (such as pool, ioqueue) from within
+ * the callback as such resource may have been released when the callback
+ * function is invoked.
+ *
+ * @param endpt		The media endpoint.
+ * @param func		The function to be registered.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_endpt_atexit(pjmedia_endpt *endpt,
+					  pjmedia_endpt_exit_callback func);
+
 
 
 PJ_END_DECL

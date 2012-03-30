@@ -152,22 +152,39 @@ PJ_DEF(pj_status_t) pjsip_auth_create_aka_response(
 				 &auth->uri, &chal->realm, &aka_cred, method);
 
     } else if (aka_version == 2) {
+
 	/*
 	 * For AKAv2, password is base64 encoded [1] parameters:
 	 *    PRF(RES||IK||CK,"http-digest-akav2-password")
 	 *
 	 * The pseudo-random function (PRF) is HMAC-MD5 in this case.
-	 *
-	 * Hmmm.. but those above doesn't seem to work, and this below does!
 	 */
-	aka_cred.data.slen = PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN + 
-			     PJSIP_AKA_CKLEN;
-	aka_cred.data.ptr = pj_pool_alloc(pool, aka_cred.data.slen);
-	
-	pj_memcpy(aka_cred.data.ptr + 0, res, PJSIP_AKA_RESLEN);
-	pj_memcpy(aka_cred.data.ptr + PJSIP_AKA_RESLEN, ik, PJSIP_AKA_IKLEN);
-	pj_memcpy(aka_cred.data.ptr + PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN, 
-		  ck, PJSIP_AKA_CKLEN);
+
+	pj_str_t resikck;
+	const pj_str_t AKAv2_Passwd = { "http-digest-akav2-password", 26 };
+	pj_uint8_t hmac_digest[16];
+	char tmp_buf[48];
+	int hmac64_len;
+
+	resikck.slen = PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN + PJSIP_AKA_CKLEN;
+	pj_assert(resikck.slen <= PJ_ARRAY_SIZE(tmp_buf));
+	resikck.ptr = tmp_buf;
+	pj_memcpy(resikck.ptr + 0, res, PJSIP_AKA_RESLEN);
+	pj_memcpy(resikck.ptr + PJSIP_AKA_RESLEN, ik, PJSIP_AKA_IKLEN);
+	pj_memcpy(resikck.ptr + PJSIP_AKA_RESLEN + PJSIP_AKA_IKLEN,
+	          ck, PJSIP_AKA_CKLEN);
+
+	pj_hmac_md5((const pj_uint8_t*)AKAv2_Passwd.ptr, AKAv2_Passwd.slen,
+	            (const pj_uint8_t*)resikck.ptr, resikck.slen,
+	            hmac_digest);
+
+	aka_cred.data.slen = hmac64_len =
+		PJ_BASE256_TO_BASE64_LEN(PJ_ARRAY_SIZE(hmac_digest));
+	pj_assert(aka_cred.data.slen+1 <= PJ_ARRAY_SIZE(tmp_buf));
+	aka_cred.data.ptr = tmp_buf;
+	pj_base64_encode(hmac_digest, PJ_ARRAY_SIZE(hmac_digest),
+	                 aka_cred.data.ptr, &len);
+	aka_cred.data.slen = hmac64_len;
 
 	pjsip_auth_create_digest(&auth->response, &chal->nonce, 
 				 &auth->nc, &auth->cnonce, &auth->qop, 

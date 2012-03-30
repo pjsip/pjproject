@@ -26,7 +26,7 @@
 #define NULL_SND_DEV_ID		-99
 
 /*****************************************************************************
-/*
+ *
  * Prototypes
  */
 /* Open sound dev */
@@ -43,7 +43,7 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
 				    unsigned bits_per_sample);
 
 /*****************************************************************************
-/*
+ *
  * Call API that are closely tied to PJMEDIA
  */
 /*
@@ -223,7 +223,7 @@ on_return:
 
 
 /*****************************************************************************
-/*
+ *
  * Audio media with PJMEDIA backend
  */
 
@@ -806,13 +806,13 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	      source, sink));
     pj_log_push_indent();
 
-    /* If sound device idle timer is active, cancel it first. */
     PJSUA_LOCK();
+
+    /* If sound device idle timer is active, cancel it first. */
     if (pjsua_var.snd_idle_timer.id) {
 	pjsip_endpt_cancel_timer(pjsua_var.endpt, &pjsua_var.snd_idle_timer);
 	pjsua_var.snd_idle_timer.id = PJ_FALSE;
     }
-    PJSUA_UNLOCK();
 
 
     /* For audio switchboard (i.e. APS-Direct):
@@ -910,8 +910,6 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	if (pjsua_var.snd_port==NULL && pjsua_var.null_snd==NULL &&
 	    !pjsua_var.no_snd)
 	{
-	    pj_status_t status;
-
 	    status = pjsua_set_snd_dev(pjsua_var.cap_dev, pjsua_var.play_dev);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "Error opening sound device", status);
@@ -926,9 +924,13 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	}
     }
 
-    status = pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 0);
-
 on_return:
+    PJSUA_UNLOCK();
+
+    if (status == PJ_SUCCESS) {
+	status = pjmedia_conf_connect_port(pjsua_var.mconf, source, sink, 0);
+    }
+
     pj_log_pop_indent();
     return status;
 }
@@ -1851,8 +1853,11 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	      capture_dev, playback_dev));
     pj_log_push_indent();
 
+    PJSUA_LOCK();
+
     /* Null-sound */
     if (capture_dev==NULL_SND_DEV_ID && playback_dev==NULL_SND_DEV_ID) {
+	PJSUA_UNLOCK();
 	status = pjsua_set_null_snd_dev();
 	pj_log_pop_indent();
 	return status;
@@ -1903,10 +1908,12 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
     pjsua_var.no_snd = PJ_FALSE;
     pjsua_var.snd_is_on = PJ_TRUE;
 
+    PJSUA_UNLOCK();
     pj_log_pop_indent();
     return PJ_SUCCESS;
 
 on_error:
+    PJSUA_UNLOCK();
     pj_log_pop_indent();
     return status;
 }
@@ -1920,6 +1927,8 @@ on_error:
 PJ_DEF(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
 				      int *playback_dev)
 {
+    PJSUA_LOCK();
+
     if (capture_dev) {
 	*capture_dev = pjsua_var.cap_dev;
     }
@@ -1927,6 +1936,7 @@ PJ_DEF(pj_status_t) pjsua_get_snd_dev(int *capture_dev,
 	*playback_dev = pjsua_var.play_dev;
     }
 
+    PJSUA_UNLOCK();
     return PJ_SUCCESS;
 }
 
@@ -1942,6 +1952,7 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     PJ_LOG(4,(THIS_FILE, "Setting null sound device.."));
     pj_log_push_indent();
 
+    PJSUA_LOCK();
 
     /* Close existing sound device */
     close_snd_dev();
@@ -1969,6 +1980,7 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create null sound device",
 		     status);
+	PJSUA_UNLOCK();
 	pj_log_pop_indent();
 	return status;
     }
@@ -1983,6 +1995,7 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
     pjsua_var.no_snd = PJ_FALSE;
     pjsua_var.snd_is_on = PJ_TRUE;
 
+    PJSUA_UNLOCK();
     pj_log_pop_indent();
     return PJ_SUCCESS;
 }
@@ -1994,10 +2007,14 @@ PJ_DEF(pj_status_t) pjsua_set_null_snd_dev(void)
  */
 PJ_DEF(pjmedia_port*) pjsua_set_no_snd_dev(void)
 {
+    PJSUA_LOCK();
+
     /* Close existing sound device */
     close_snd_dev();
-
     pjsua_var.no_snd = PJ_TRUE;
+
+    PJSUA_UNLOCK();
+
     return pjmedia_conf_get_master_port(pjsua_var.mconf);
 }
 
@@ -2007,13 +2024,18 @@ PJ_DEF(pjmedia_port*) pjsua_set_no_snd_dev(void)
  */
 PJ_DEF(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options)
 {
+    pj_status_t status = PJ_SUCCESS;
+
+    PJSUA_LOCK();
+
     pjsua_var.media_cfg.ec_tail_len = tail_ms;
 
     if (pjsua_var.snd_port)
-	return pjmedia_snd_port_set_ec( pjsua_var.snd_port, pjsua_var.pool,
-					tail_ms, options);
+	status = pjmedia_snd_port_set_ec(pjsua_var.snd_port, pjsua_var.pool,
+					 tail_ms, options);
 
-    return PJ_SUCCESS;
+    PJSUA_UNLOCK();
+    return status;
 }
 
 
@@ -2050,6 +2072,8 @@ PJ_DEF(pj_status_t) pjsua_snd_set_setting( pjmedia_aud_dev_cap cap,
 	return PJMEDIA_EAUD_INVCAP;
     }
 
+    PJSUA_LOCK();
+
     /* If sound is active, set it immediately */
     if (pjsua_snd_is_active()) {
 	pjmedia_aud_stream *strm;
@@ -2060,8 +2084,10 @@ PJ_DEF(pj_status_t) pjsua_snd_set_setting( pjmedia_aud_dev_cap cap,
 	status = PJ_SUCCESS;
     }
 
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS) {
+	PJSUA_UNLOCK();
 	return status;
+    }
 
     /* Save in internal param for later device open */
     if (keep) {
@@ -2069,6 +2095,7 @@ PJ_DEF(pj_status_t) pjsua_snd_set_setting( pjmedia_aud_dev_cap cap,
 					   cap, pval);
     }
 
+    PJSUA_UNLOCK();
     return status;
 }
 
@@ -2078,6 +2105,10 @@ PJ_DEF(pj_status_t) pjsua_snd_set_setting( pjmedia_aud_dev_cap cap,
 PJ_DEF(pj_status_t) pjsua_snd_get_setting( pjmedia_aud_dev_cap cap,
 					   void *pval)
 {
+    pj_status_t status;
+
+    PJSUA_LOCK();
+
     /* If sound device has never been opened before, open it to
      * retrieve the initial setting from the device (e.g. audio
      * volume)
@@ -2093,12 +2124,15 @@ PJ_DEF(pj_status_t) pjsua_snd_get_setting( pjmedia_aud_dev_cap cap,
 	pjmedia_aud_stream *strm;
 
 	strm = pjmedia_snd_port_get_snd_stream(pjsua_var.snd_port);
-	return pjmedia_aud_stream_get_cap(strm, cap, pval);
+	status = pjmedia_aud_stream_get_cap(strm, cap, pval);
     } else {
 	/* Otherwise retrieve from internal param */
-	return pjmedia_aud_param_get_cap(&pjsua_var.aud_param,
-					 cap, pval);
+	status = pjmedia_aud_param_get_cap(&pjsua_var.aud_param,
+					   cap, pval);
     }
+
+    PJSUA_UNLOCK();
+    return status;
 }
 
 #endif /* PJSUA_MEDIA_HAS_PJMEDIA */

@@ -453,6 +453,19 @@
 #   define PJMEDIA_RTCP_STAT_HAS_RAW_JITTER	0
 #endif
 
+/**
+ * Specify the factor with wich RTCP RTT statistics should be normalized 
+ * if exceptionally high. For e.g. mobile networks with potentially large
+ * fluctuations, this might be unwanted.
+ *
+ * Use (0) to disable this feature.
+ *
+ * Default: 3.
+ */
+#ifndef PJMEDIA_RTCP_NORMALIZE_FACTOR
+#   define PJMEDIA_RTCP_NORMALIZE_FACTOR	3
+#endif
+
 
 /**
  * Specify whether RTCP statistics includes IP Delay Variation statistics.
@@ -476,7 +489,7 @@
  * if it is enabled on run-time on per stream basis. See  
  * PJMEDIA_STREAM_ENABLE_XR setting for more info.
  *
- * Default: 1 (yes).
+ * Default: 0 (no).
  */
 #ifndef PJMEDIA_HAS_RTCP_XR
 #   define PJMEDIA_HAS_RTCP_XR			0
@@ -493,6 +506,19 @@
 #ifndef PJMEDIA_STREAM_ENABLE_XR
 #   define PJMEDIA_STREAM_ENABLE_XR		0
 #endif
+
+
+/**
+ * Specify the buffer length for storing any received RTCP SDES text
+ * in a stream session. Usually RTCP contains only the mandatory SDES
+ * field, i.e: CNAME.
+ * 
+ * Default: 64 bytes.
+ */
+#ifndef PJMEDIA_RTCP_RX_SDES_BUF_LEN
+#   define PJMEDIA_RTCP_RX_SDES_BUF_LEN		64
+#endif
+
 
 /**
  * Specify how long (in miliseconds) the stream should suspend the

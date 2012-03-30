@@ -21,6 +21,7 @@
 from distutils.core import setup, Extension
 import os
 import sys
+import platform
 
 # find pjsip version
 pj_version=""
@@ -58,9 +59,12 @@ for line in f:
 f.close()
 
 # Mac OS X depedencies
-if sys.platform == 'darwin':
+if platform.system() == 'Darwin':
     extra_link_args = ["-framework", "CoreFoundation", 
                        "-framework", "AudioToolbox"]
+    # OS X Lion support
+    if platform.mac_ver()[0].startswith("10.7"):
+        extra_link_args += ["-framework", "AudioUnit"]
 else:
     extra_link_args = []
 

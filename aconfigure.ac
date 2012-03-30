@@ -1,4 +1,4 @@
-AC_INIT(pjproject,1.x)
+AC_INIT(pjproject,2.x)
 
 host_orig="$host"
 
@@ -89,6 +89,19 @@ case $host in
 	;;
     *)
 	ac_pjdir=`pwd`
+	;;
+esac
+
+AC_SUBST(ac_shlib_suffix)
+case $target in
+    *mingw* | *cygw* | *win32* | *w32* )
+	ac_shlib_suffix=dll
+	;;
+    *darwin*)
+	ac_shlib_suffix=dylib
+	;;
+    *)
+	ac_shlib_suffix=so
 	;;
 esac
 
@@ -774,6 +787,18 @@ AC_ARG_ENABLE(libsamplerate,
 	      AC_MSG_RESULT([Skipping libsamplerate detection])
 	     )
 
+dnl # Include libsamplerate
+AC_SUBST(ac_resample_dll)
+AC_ARG_ENABLE(resample_dll,
+	      AC_HELP_STRING([--enable-resample-dll],
+			     [Build libresample as shared library]),
+	      [if test "$enable_resample_dll" = "yes"; then
+		[ac_resample_dll=1]
+		AC_MSG_RESULT([Building libresample as shared library... yes])
+	       fi],
+	      AC_MSG_RESULT([Building libresample as shared library... no])
+	      )
+
 dnl # SDL alt prefix
 AC_ARG_WITH(sdl,
     AC_HELP_STRING([--with-sdl=DIR],
@@ -1215,7 +1240,6 @@ AC_ARG_ENABLE(opencore_amrnb,
 			AC_DEFINE(PJMEDIA_HAS_OPENCORE_AMRNB_CODEC,0)
 		fi
 	      ])
-
 
 dnl ##########################################
 dnl #

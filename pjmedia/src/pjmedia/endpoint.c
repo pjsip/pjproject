@@ -24,6 +24,7 @@
 #include <pjmedia-audiodev/audiodev.h>
 #include <pj/assert.h>
 #include <pj/ioqueue.h>
+#include <pj/lock.h>
 #include <pj/log.h>
 #include <pj/os.h>
 #include <pj/pool.h>
@@ -57,6 +58,14 @@ static int PJ_THREAD_FUNC worker_proc(void*);
 #define MAX_THREADS	16
 
 
+/* List of media endpoint exit callback. */
+typedef struct exit_cb
+{
+    PJ_DECL_LIST_MEMBER		    (struct exit_cb);
+    pjmedia_endpt_exit_callback	    func;
+} exit_cb;
+
+
 /** Concrete declaration of media endpoint. */
 struct pjmedia_endpt
 {
@@ -86,6 +95,9 @@ struct pjmedia_endpt
 
     /** Is telephone-event enable */
     pj_bool_t		  has_telephone_event;
+
+    /** List of exit callback. */
+    exit_cb		  exit_cb_list;
 };
 
 /**
@@ -128,6 +140,9 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create(pj_pool_factory *pf,
     status = pjmedia_codec_mgr_init(&endpt->codec_mgr, endpt->pf);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Initialize exit callback list. */
+    pj_list_init(&endpt->exit_cb_list);
 
     /* Create ioqueue if none is specified. */
     if (endpt->ioqueue == NULL) {
@@ -189,6 +204,7 @@ PJ_DEF(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *endpt)
  */
 PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 {
+    exit_cb *ecb;
     unsigned i;
 
     PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
@@ -214,6 +230,14 @@ PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 
     pjmedia_codec_mgr_destroy(&endpt->codec_mgr);
     pjmedia_aud_subsys_shutdown();
+
+    /* Call all registered exit callbacks */
+    ecb = endpt->exit_cb_list.next;
+    while (ecb != &endpt->exit_cb_list) {
+	(*ecb->func)(endpt);
+	ecb = ecb->next;
+    }
+
     pj_pool_release (endpt->pool);
 
     return PJ_SUCCESS;
@@ -434,7 +458,7 @@ PJ_DEF(pj_status_t) pjmedia_endpt_create_audio_sdp(pjmedia_endpt *endpt,
 	    rtpmap.param.slen = 1;
 
 	} else {
-	    rtpmap.param.ptr = NULL;
+	    rtpmap.param.ptr = "";
 	    rtpmap.param.slen = 0;
 	}
 
@@ -893,6 +917,26 @@ PJ_DEF(pj_status_t) pjmedia_endpt_dump(pjmedia_endpt *endpt)
 		  (prio[i]==PJMEDIA_CODEC_PRIO_DISABLED?" disabled":"")));
     }
 #endif
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjmedia_endpt_atexit( pjmedia_endpt *endpt,
+					  pjmedia_endpt_exit_callback func)
+{
+    exit_cb *new_cb;
+
+    PJ_ASSERT_RETURN(endpt && func, PJ_EINVAL);
+
+    if (endpt->quit_flag)
+	return PJ_EINVALIDOP;
+
+    new_cb = PJ_POOL_ZALLOC_T(endpt->pool, exit_cb);
+    new_cb->func = func;
+
+    pj_enter_critical_section();
+    pj_list_push_back(&endpt->exit_cb_list, new_cb);
+    pj_leave_critical_section();
 
     return PJ_SUCCESS;
 }

@@ -504,7 +504,7 @@ static pj_status_t get_mapped_addr(pj_stun_sock *stun_sock)
 				    PJ_FALSE, PJ_TRUE, &stun_sock->srv_addr,
 				    pj_sockaddr_get_len(&stun_sock->srv_addr),
 				    tdata);
-    if (status != PJ_SUCCESS)
+    if (status != PJ_SUCCESS && status != PJ_EPENDING)
 	goto on_error;
 
     return PJ_SUCCESS;
