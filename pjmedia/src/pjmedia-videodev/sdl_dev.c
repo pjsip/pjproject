@@ -533,6 +533,7 @@ static pj_status_t sdl_factory_destroy(pjmedia_vid_dev_factory *f)
         CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, false);
 #endif
         pj_thread_join(sf->sdl_thread);
+        pj_thread_destroy(sf->sdl_thread);
     }
 
     if (sf->mutex) {
@@ -1242,6 +1243,7 @@ static int job_thread(void * data)
          */
         if (jq->is_full && ((jq->head + 1) % jq->size == jq->tail)) {
             unsigned i, head;
+            pj_status_t status;
 
             if (jq->old_sem) {
                 for (i = 0; i < jq->size / JOB_QUEUE_INC_FACTOR; i++) {
@@ -1253,14 +1255,24 @@ static int job_thread(void * data)
             /* Double the job queue size. */
             jq->size *= JOB_QUEUE_INC_FACTOR;
             pj_sem_destroy(jq->sem);
-            pj_sem_create(jq->pool, "thread_sem", 0, jq->size + 1,
-                          &jq->sem);
+            status = pj_sem_create(jq->pool, "thread_sem", 0, jq->size + 1,
+                                   &jq->sem);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(3, (THIS_FILE, "Failed growing SDL job queue size."));
+                return 0;
+            }
             jq->jobs = (job **)pj_pool_calloc(jq->pool, jq->size,
                                               sizeof(job *));
             jq->job_sem = (pj_sem_t **) pj_pool_calloc(jq->pool, jq->size,
                                                        sizeof(pj_sem_t *));
             for (i = 0; i < jq->size; i++) {
-                pj_sem_create(jq->pool, "job_sem", 0, 1, &jq->job_sem[i]);
+                status = pj_sem_create(jq->pool, "job_sem", 0, 1,
+                                       &jq->job_sem[i]);
+                if (status != PJ_SUCCESS) {
+                    PJ_LOG(3, (THIS_FILE, "Failed growing SDL job "
+                                          "queue size."));
+                    return 0;
+                }
             }
             jq->is_full = PJ_FALSE;
             head = jq->head;
@@ -1281,31 +1293,39 @@ static pj_status_t job_queue_create(pj_pool_t *pool, job_queue **pjq)
     pj_status_t status;
 
     job_queue *jq = PJ_POOL_ZALLOC_T(pool, job_queue);
+    jq->pool = pool;
+    jq->size = INITIAL_MAX_JOBS;
+    status = pj_sem_create(pool, "thread_sem", 0, jq->size + 1, &jq->sem);
+    if (status != PJ_SUCCESS)
+        goto on_error;
+    jq->jobs = (job **)pj_pool_calloc(pool, jq->size, sizeof(job *));
+    jq->job_sem = (pj_sem_t **) pj_pool_calloc(pool, jq->size,
+                                               sizeof(pj_sem_t *));
+    for (i = 0; i < jq->size; i++) {
+        status = pj_sem_create(pool, "job_sem", 0, 1, &jq->job_sem[i]);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+    }
+
+    status = pj_mutex_create_recursive(pool, "job_mutex", &jq->mutex);
+    if (status != PJ_SUCCESS)
+        goto on_error;
 
 #if defined(PJ_DARWINOS) && PJ_DARWINOS!=0
     PJ_UNUSED_ARG(status);
 #else
     status = pj_thread_create(pool, "job_th", job_thread, jq, 0, 0,
                               &jq->thread);
-    if (status != PJ_SUCCESS) {
-        job_queue_destroy(jq);
-        return status;
-    }
+    if (status != PJ_SUCCESS)
+        goto on_error;
 #endif /* PJ_DARWINOS */
-
-    jq->pool = pool;
-    jq->size = INITIAL_MAX_JOBS;
-    pj_sem_create(pool, "thread_sem", 0, jq->size + 1, &jq->sem);
-    jq->jobs = (job **)pj_pool_calloc(pool, jq->size, sizeof(job *));
-    jq->job_sem = (pj_sem_t **) pj_pool_calloc(pool, jq->size,
-                                               sizeof(pj_sem_t *));
-    for (i = 0; i < jq->size; i++) {
-        pj_sem_create(pool, "job_sem", 0, 1, &jq->job_sem[i]);
-    }
-    pj_mutex_create_recursive(pool, "job_mutex", &jq->mutex);
 
     *pjq = jq;
     return PJ_SUCCESS;
+
+on_error:
+    job_queue_destroy(jq);
+    return status;
 }
 
 static pj_status_t job_queue_post_job(job_queue *jq, job_func_ptr func,
@@ -1366,6 +1386,7 @@ static pj_status_t job_queue_destroy(job_queue *jq)
     if (jq->thread) {
         pj_sem_post(jq->sem);
         pj_thread_join(jq->thread);
+        pj_thread_destroy(jq->thread);
     }
 
     if (jq->sem) {
@@ -1373,14 +1394,23 @@ static pj_status_t job_queue_destroy(job_queue *jq)
         jq->sem = NULL;
     }
     for (i = 0; i < jq->size; i++) {
-        pj_sem_destroy(jq->job_sem[i]);
+        if (jq->job_sem[i]) {
+            pj_sem_destroy(jq->job_sem[i]);
+            jq->job_sem[i] = NULL;
+        }
     }
     if (jq->old_sem) {
         for (i = 0; i < jq->size / JOB_QUEUE_INC_FACTOR; i++) {
-            pj_sem_destroy(jq->old_sem[i]);
+            if (jq->old_sem[i]) {
+                pj_sem_destroy(jq->old_sem[i]);
+                jq->old_sem[i] = NULL;
+            }
         }
     }
-    pj_mutex_destroy(jq->mutex);
+    if (jq->mutex) {
+        pj_mutex_destroy(jq->mutex);
+        jq->mutex = NULL;
+    }
 
     return PJ_SUCCESS;
 }
