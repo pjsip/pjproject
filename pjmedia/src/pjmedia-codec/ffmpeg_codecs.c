@@ -923,7 +923,7 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
     /* Decoded format */
     pjmedia_format_init_video(&attr->dec_fmt, desc->info.dec_fmt_id[0],
                               desc->size.w, desc->size.h,
-			      desc->fps.num*3/2, desc->fps.denum);
+			      desc->fps.num, desc->fps.denum);
 
     /* Decoding fmtp */
     attr->dec_fmtp = desc->dec_fmtp;

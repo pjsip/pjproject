@@ -1392,6 +1392,15 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->frame_ts_len = info->codec_info.clock_rate *
                            vfd_enc->fps.denum / vfd_enc->fps.num;
 
+    /* Override the initial framerate in the decoding direction. This initial
+     * value will be used by the renderer to configure its clock, and setting
+     * it to a bit higher value can avoid the possibility of high latency
+     * caused by clock drift (remote encoder clock runs slightly faster than
+     * local renderer clock) or video setup lag. Note that the actual framerate
+     * will be continuously calculated based on the incoming RTP timestamps.
+     */
+    vfd_dec->fps.num = vfd_dec->fps.num * 3 / 2;
+
     /* Create decoder channel */
     status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, 
 			     info->rx_pt, info, &stream->dec);
