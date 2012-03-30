@@ -1266,7 +1266,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     int frm_ptime, chunks_per_frm;
     pjmedia_video_format_detail *vfd_enc, *vfd_dec;
     char *p;
-    unsigned mtu;
+    unsigned dec_mtu;
     pj_status_t status;
 
     if (!pool) {
@@ -1318,7 +1318,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 				   PJMEDIA_STREAM_RESV_PAYLOAD_LEN);
     if (info->codec_param->enc_mtu > PJMEDIA_MAX_MTU)
 	info->codec_param->enc_mtu = PJMEDIA_MAX_MTU;
-    mtu = info->codec_param->enc_mtu;
+
+    /* MTU estimation for decoding direction */
+    dec_mtu = PJMEDIA_MAX_MTU;
 
     vfd_enc = pjmedia_format_get_video_format_detail(
 					&info->codec_param->enc_fmt, PJ_TRUE);
@@ -1420,7 +1422,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     /* Init jitter buffer parameters: */
     frm_ptime	    = 1000 * vfd_enc->fps.denum / vfd_enc->fps.num;
-    chunks_per_frm  = stream->frame_size / mtu;
+    chunks_per_frm  = stream->frame_size / dec_mtu;
     if (chunks_per_frm == 0) chunks_per_frm = 1;
 
     /* JB max count, default 500ms */
@@ -1456,7 +1458,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     /* Create jitter buffer */
     status = pjmedia_jbuf_create(pool, &stream->dec->port.info.name,
-                                 mtu + PJMEDIA_STREAM_RESV_PAYLOAD_LEN,
+                                 dec_mtu + PJMEDIA_STREAM_RESV_PAYLOAD_LEN,
 				 1000 * vfd_enc->fps.denum / vfd_enc->fps.num,
 				 jb_max, &stream->jb);
     if (status != PJ_SUCCESS)
