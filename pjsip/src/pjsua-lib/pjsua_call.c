@@ -1541,7 +1541,13 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     pj_memcpy(&info->setting, &call->opt, sizeof(call->opt));
 
     /* state, state_text */
-    info->state = (call->inv? call->inv->state: PJSIP_INV_STATE_DISCONNECTED);
+    if (call->inv) {
+        info->state = call->inv->state;
+    } else if (call->async_call.dlg) {
+        info->state = PJSIP_INV_STATE_NULL;
+    } else {
+        info->state = PJSIP_INV_STATE_DISCONNECTED;
+    }
     info->state_text = pj_str((char*)pjsip_inv_state_name(info->state));
 
     /* If call is disconnected, set the last_status from the cause code */
