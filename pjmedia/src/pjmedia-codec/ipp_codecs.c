@@ -250,7 +250,7 @@ ipp_codec[] =
 
 #   if PJMEDIA_HAS_INTEL_IPP_CODEC_AMRWB
     {1, "AMR-WB",   PJMEDIA_RTP_PT_AMRWB,     &USC_AMRWB_Fxns,  16000, 1, 320,
-		    15850, 23850, 1, 1, 1, 
+		    15850, 23850, 2, 1, 1, 
 		    &predecode_amr, &parse_amr, &pack_amr,
 		    {1, {{{"octet-align", 11}, {"1", 1}}} }
     },
@@ -512,8 +512,11 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
     pj_uint8_t *r; /* Read cursor */
     pj_uint8_t SID_FT;
     pjmedia_codec_amr_pack_setting *setting;
+    const pj_uint8_t *framelen_tbl;
 
     setting = &((amr_settings_t*)codec_data->codec_setting)->enc_setting;
+    framelen_tbl = setting->amr_nb? pjmedia_codec_amrnb_framelen:
+				    pjmedia_codec_amrwb_framelen;
 
     SID_FT = (pj_uint8_t)(setting->amr_nb? 8 : 9);
 
@@ -538,8 +541,7 @@ static pj_status_t pack_amr(ipp_private_t *codec_data, void *pkt,
 
 	frames[nframes].buf = r + 2;
 	frames[nframes].size = info->frame_type <= SID_FT ?
-			       pjmedia_codec_amrnb_framelen[info->frame_type] :
-			       0;
+			       framelen_tbl[info->frame_type] : 0;
 
 	r += frames[nframes].size + 2;
 
