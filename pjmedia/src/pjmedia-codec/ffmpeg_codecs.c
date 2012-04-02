@@ -258,7 +258,7 @@ static ffmpeg_codec_desc codec_desc[] =
 	{PJMEDIA_FORMAT_H264, PJMEDIA_RTP_PT_H264, {"H264",4},
 	 {"Constrained Baseline (level=30, pack=1)", 39}},
 	0,
-	{720, 480},	{30, 1},	256000, 512000,
+	{720, 480},	{15, 1},	256000, 512000,
 	&h264_packetize, &h264_unpacketize, &h264_preopen, &h264_postopen,
 	&pjmedia_vid_codec_h264_match_sdp,
 	/* Leading space for better compatibility (strange indeed!) */
@@ -271,7 +271,7 @@ static ffmpeg_codec_desc codec_desc[] =
     {
 	{PJMEDIA_FORMAT_H263P, PJMEDIA_RTP_PT_H263P, {"H263-1998",9}},
 	PJMEDIA_FORMAT_H263,
-	{352, 288},	{30000, 1001},	256000, 512000,
+	{352, 288},	{15, 1},	256000, 512000,
 	&h263_packetize, &h263_unpacketize, &h263_preopen, NULL, NULL,
 	{2, { {{"CIF",3},   {"1",1}}, 
 	      {{"QCIF",4},  {"1",1}}, } },
