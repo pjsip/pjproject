@@ -104,7 +104,7 @@ PJ_DEF(pj_status_t) pjmedia_h264_packetizer_create(
 	pj_memcpy(&p_->cfg, cfg, sizeof(*cfg));
     } else {
 	p_->cfg.mode = PJMEDIA_H264_PACKETIZER_MODE_NON_INTERLEAVED;
-	p_->cfg.mtu = PJMEDIA_MAX_MTU;
+	p_->cfg.mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
     }
 
     *p = p_;

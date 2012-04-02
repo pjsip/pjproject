@@ -932,8 +932,8 @@ static pj_status_t ffmpeg_default_attr( pjmedia_vid_codec_factory *factory,
     attr->enc_fmt.det.vid.avg_bps = desc->avg_bps;
     attr->enc_fmt.det.vid.max_bps = desc->max_bps;
 
-    /* MTU */
-    attr->enc_mtu = PJMEDIA_MAX_MTU;
+    /* Encoding MTU */
+    attr->enc_mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
 
     return PJ_SUCCESS;
 }
@@ -1213,6 +1213,10 @@ static pj_status_t ffmpeg_codec_open( pjmedia_vid_codec *codec,
     ff = (ffmpeg_private*)codec->codec_data;
 
     pj_memcpy(&ff->param, attr, sizeof(*attr));
+
+    /* Normalize encoding MTU in codec param */
+    if (attr->enc_mtu > PJMEDIA_MAX_VID_PAYLOAD_SIZE)
+	attr->enc_mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
 
     /* Open the codec */
     ff_mutex = ((struct ffmpeg_factory*)codec->factory)->mutex;

@@ -1159,6 +1159,18 @@
 #   define PJMEDIA_VID_STREAM_SKIP_PACKETS_TO_REDUCE_LATENCY	0
 #endif
 
+
+/**
+ * Maximum video payload size. Note that this must not be greater than
+ * PJMEDIA_MAX_MTU.
+ *
+ * Default: (PJMEDIA_MAX_MTU - 100)
+ */
+#ifndef PJMEDIA_MAX_VID_PAYLOAD_SIZE			
+#  define PJMEDIA_MAX_VID_PAYLOAD_SIZE		(PJMEDIA_MAX_MTU - 100)
+#endif
+
+
 /**
  * @}
  */

@@ -98,7 +98,7 @@ PJ_DEF(pj_status_t) pjmedia_h263_packetizer_create(
 	pj_memcpy(&p_->cfg, cfg, sizeof(*cfg));
     } else {
 	p_->cfg.mode = PJMEDIA_H263_PACKETIZER_MODE_RFC4629;
-	p_->cfg.mtu = PJMEDIA_MAX_MTU;
+	p_->cfg.mtu = PJMEDIA_MAX_VID_PAYLOAD_SIZE;
     }
 
     *p = p_;
