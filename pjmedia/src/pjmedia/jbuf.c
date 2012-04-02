@@ -166,7 +166,7 @@ struct pjmedia_jbuf
 /* Enabling this would log the jitter buffer state about once per 
  * second.
  */
-#if 1
+#if 0
 #  define TRACE__(args)	    PJ_LOG(5,args)
 #else
 #  define TRACE__(args)
@@ -404,9 +404,13 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
     if (index < framelist->origin) {
 	if (framelist->origin - index < MAX_MISORDER) {
 	    /* too late */
+	    PJ_LOG(5,(THIS_FILE, "frame too late (origin: %d, index: %d, size: %d, max: %d)",
+				 framelist->origin, index, framelist->size, framelist->max_count));
 	    return PJ_ETOOSMALL;
 	} else {
 	    /* sequence restart */
+	    PJ_LOG(5,(THIS_FILE, "sequence restart (origin: %d, index: %d, size: %d, max: %d)",
+				 framelist->origin, index, framelist->size, framelist->max_count));
 	    framelist->origin = index - framelist->size;
 	}
     }
@@ -424,11 +428,15 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
     if (distance >= (int)framelist->max_count) {
 	if (distance > MAX_DROPOUT) {
 	    /* jump too far, reset the buffer */
+	    PJ_LOG(5,(THIS_FILE, "jump too far, resetting (origin: %d, index: %d, size: %d, max: %d)",
+				 framelist->origin, index, framelist->size, framelist->max_count));
 	    jb_framelist_reset(framelist);
 	    framelist->origin = index;
 	    distance = 0;
 	} else {
 	    /* otherwise, reject the frame */
+	    PJ_LOG(5,(THIS_FILE, "frame too far (origin: %d, index: %d, size: %d, max: %d)",
+				 framelist->origin, index, framelist->size, framelist->max_count));
 	    return PJ_ETOOMANY;
 	}
     }
@@ -437,8 +445,11 @@ static pj_status_t jb_framelist_put_at(jb_framelist_t *framelist,
     pos = (framelist->head + distance) % framelist->max_count;
 
     /* if the slot is occupied, it must be duplicated frame, ignore it. */
-    if (framelist->frame_type[pos] != PJMEDIA_JB_MISSING_FRAME)
+    if (framelist->frame_type[pos] != PJMEDIA_JB_MISSING_FRAME) {
+	PJ_LOG(5,(THIS_FILE, "exists (origin: %d, index: %d, size: %d, max: %d)",
+			      framelist->origin, index, framelist->size, framelist->max_count));
 	return PJ_EEXISTS;
+    }
 
     /* put the frame into the slot */
     framelist->frame_type[pos] = frame_type;
@@ -517,7 +528,9 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_create(pj_pool_t *pool,
     pj_math_stat_init(&jb->jb_delay);
     pj_math_stat_init(&jb->jb_burst);
 
-    pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_PROGRESSIVE);
+    //pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_PROGRESSIVE);
+    pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_STATIC);
+    //pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_NONE);
     pjmedia_jbuf_reset(jb);
 
     *p_jb = jb;
