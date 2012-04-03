@@ -722,11 +722,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_mgr_set_default_param(
 
     /* Update codec default param */
     p->param = pjmedia_vid_codec_param_clone(pool, param);
-    if (!p)
+    if (!p->param)
 	return PJ_EINVAL;
+
     codec_desc->def_param = p;
 
     pj_mutex_unlock(mgr->mutex);
+
+    /* Release old pool at the very end, as application tends to apply changes
+     * to the existing/old codec param fetched using
+     * pjmedia_vid_codec_mgr_get_default_param() which doesn't do deep clone.
+     */
+    if (old_pool)
+	pj_pool_release(old_pool);
 
     return PJ_SUCCESS;
 }
