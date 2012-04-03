@@ -2343,7 +2343,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	                                      local_sdp, remote_sdp);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(1,(THIS_FILE, status,
-			     "pjmedia_transport_media_start() failed "
+			     "pjsua_vid_channel_update() failed "
 				 "for call_id %d media %d",
 			     call_id, mi));
 		continue;
