@@ -114,6 +114,9 @@ typedef struct pjmedia_vid_stream_info
     pjmedia_vid_codec_info   codec_info;  /**< Incoming codec format info.  */
     pjmedia_vid_codec_param *codec_param; /**< Optional codec param.	    */
 
+    pj_bool_t           rtcp_sdes_bye_disabled; 
+                                    /**< Disable automatic sending of RTCP
+                                         SDES and BYE.                      */
 } pjmedia_vid_stream_info;
 
 
@@ -328,6 +331,28 @@ PJ_DECL(pj_status_t) pjmedia_vid_stream_resume(pjmedia_vid_stream *stream,
  * @return		PJ_SUCCESS on success;
  */
 PJ_DECL(pj_status_t) pjmedia_vid_stream_send_keyframe(
+						pjmedia_vid_stream *stream);
+
+
+/**
+ * Send RTCP SDES for the media stream.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_sdes(
+						pjmedia_vid_stream *stream);
+
+
+/**
+ * Send RTCP BYE for the media stream.
+ *
+ * @param stream	The media stream.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_vid_stream_send_rtcp_bye(
 						pjmedia_vid_stream *stream);
 
 

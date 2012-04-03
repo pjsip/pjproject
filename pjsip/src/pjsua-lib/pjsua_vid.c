@@ -709,6 +709,8 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
     PJ_LOG(4,(THIS_FILE, "Video channel update.."));
     pj_log_push_indent();
 
+    si->rtcp_sdes_bye_disabled = PJ_TRUE;
+
     /* Check if no media is active */
     if (si->dir != PJMEDIA_DIR_NONE) {
 	/* Optionally, application may modify other stream settings here
