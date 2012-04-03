@@ -125,6 +125,11 @@ static const char *vid_dir_name(pjmedia_dir dir)
 
 static pj_status_t create_converter(pjmedia_vid_port *vp)
 {
+    if (vp->conv) {
+        pjmedia_converter_destroy(vp->conv);
+	vp->conv = NULL;
+    }
+
     /* Instantiate converter if necessary */
     if (vp->conv_param.src.id != vp->conv_param.dst.id ||
 	vp->conv_param.src.det.vid.size.w != vp->conv_param.dst.det.vid.size.w ||
@@ -135,11 +140,6 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
 	/* Yes, we need converter */
 	const pjmedia_video_format_info *vfi;
 	pjmedia_video_apply_fmt_param vafp;
-
-	if (vp->conv) {
-	    pjmedia_converter_destroy(vp->conv);
-	    vp->conv = NULL;
-	}
 
 	status = pjmedia_converter_create(NULL, vp->pool, &vp->conv_param,
 					  &vp->conv);
@@ -563,44 +563,51 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
 
     if (event->type == PJMEDIA_EVENT_FMT_CHANGED) {
         const pjmedia_video_format_detail *vfd;
+        pjmedia_vid_dev_param vid_param;
         pj_status_t status;
         
 	pjmedia_vid_port_stop(vp);
         
         /* Retrieve the video format detail */
-        vfd = pjmedia_format_get_video_format_detail(&vp->client_port->info.fmt,
-                                                     PJ_TRUE);
-        if (!vfd)
+        vfd = pjmedia_format_get_video_format_detail(
+                  &event->data.fmt_changed.new_fmt, PJ_TRUE);
+        if (!vfd || !vfd->fps.num || !vfd->fps.denum)
             return PJMEDIA_EVID_BADFORMAT;
-        pj_assert(vfd->fps.num);
         
 	/* Change the destination format to the new format */
 	pjmedia_format_copy(&vp->conv_param.src,
-			    &vp->client_port->info.fmt);
+			    &event->data.fmt_changed.new_fmt);
 	/* Only copy the size here */
 	vp->conv_param.dst.det.vid.size =
-	vp->client_port->info.fmt.det.vid.size,
+	    event->data.fmt_changed.new_fmt.det.vid.size;
 
 	status = create_converter(vp);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, status, "Error recreating converter"));
 	    return status;
 	}
-        
-        status = pjmedia_vid_dev_stream_set_cap(vp->strm,
-                                                PJMEDIA_VID_DEV_CAP_FORMAT,
-                                                &vp->conv_param.dst);
-        if (status != PJ_SUCCESS) {
-            PJ_LOG(3, (THIS_FILE, "failure in changing the format of the "
-                       "video device"));
-            PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
-                       status != PJMEDIA_EVID_ERR ? "success" :
-                       "failure"));
-            return status;
+
+        pjmedia_vid_dev_stream_get_param(vp->strm, &vid_param);
+        if (vid_param.fmt.id != vp->conv_param.dst.id ||
+            (vid_param.fmt.det.vid.size.h !=
+             vp->conv_param.dst.det.vid.size.h) ||
+            (vid_param.fmt.det.vid.size.w !=
+             vp->conv_param.dst.det.vid.size.w))
+        {
+            status = pjmedia_vid_dev_stream_set_cap(vp->strm,
+                                                    PJMEDIA_VID_DEV_CAP_FORMAT,
+                                                    &vp->conv_param.dst);
+            if (status != PJ_SUCCESS) {
+                PJ_LOG(3, (THIS_FILE, "failure in changing the format of the "
+                                      "video device"));
+                PJ_LOG(3, (THIS_FILE, "reverting to its original format: %s",
+                                      status != PJMEDIA_EVID_ERR ? "success" :
+                                      "failure"));
+                return status;
+            }
         }
         
         if (vp->stream_role == ROLE_PASSIVE) {
-            pjmedia_vid_dev_param vid_param;
             pjmedia_clock_param clock_param;
             
             /**
@@ -609,7 +616,6 @@ static pj_status_t client_port_event_cb(pjmedia_event *event,
              * the buffer here.
              */
             /* Adjust the clock */
-            pjmedia_vid_dev_stream_get_param(vp->strm, &vid_param);
             clock_param.usec_interval = PJMEDIA_PTIME(&vfd->fps);
             clock_param.clock_rate = vid_param.clock_rate;
             pjmedia_clock_modify(vp->clock, &clock_param);
