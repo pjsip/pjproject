@@ -1026,6 +1026,10 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	    if (stream->info.codec_info.clock_rate * vfd->fps.denum !=
 		vfd->fps.num * ts_diff)
 	    {
+		pjmedia_ratio old_fps;
+
+		old_fps = vfd->fps;
+
 		/* Frame rate changed, update decoding port info */
 		if (stream->info.codec_info.clock_rate % ts_diff == 0) {
 		    vfd->fps.num = stream->info.codec_info.clock_rate/ts_diff;
@@ -1038,24 +1042,28 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 		/* Update stream info */
 		stream->info.codec_param->dec_fmt.det.vid.fps = vfd->fps;
 
-		PJ_LOG(6, (channel->port.info.name.ptr,
-			  "Frame rate update: %d/%d(~%.2f)fps",
-			   vfd->fps.num, vfd->fps.denum,
-			   vfd->fps.num*1.0 / vfd->fps.denum));
+		/* Publish PJMEDIA_EVENT_FMT_CHANGED event if frame rate
+		 * increased and not exceeding 100fps.
+		 */
+		if (vfd->fps.num/vfd->fps.denum < 100 &&
+		    vfd->fps.num*old_fps.denum > old_fps.num*vfd->fps.denum)
+		{
+		    pjmedia_event *event = &stream->fmt_event;
 
-		/* Publish PJMEDIA_EVENT_FMT_CHANGED event */
-		if (0) {
-		    pjmedia_event event;
-
-		    dump_port_info(stream->dec, "changed");
-
-		    pjmedia_event_init(&event, PJMEDIA_EVENT_FMT_CHANGED,
-		                       &frame->timestamp, stream);
-		    event.data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
-		    pj_memcpy(&event.data.fmt_changed.new_fmt,
-		              &stream->info.codec_param->dec_fmt,
-		              sizeof(pjmedia_format));
-		    pjmedia_event_publish(NULL, stream, &event, 0);
+		    /* Use the buffered format changed event:
+		     * - just update the framerate if there is pending event,
+		     * - otherwise, init the whole event.
+		     */
+		    if (stream->fmt_event.type != PJMEDIA_EVENT_NONE) {
+			event->data.fmt_changed.new_fmt.det.vid.fps = vfd->fps;
+		    } else {
+			pjmedia_event_init(event, PJMEDIA_EVENT_FMT_CHANGED,
+					   &frame->timestamp, stream);
+			event->data.fmt_changed.dir = PJMEDIA_DIR_DECODING;
+			pj_memcpy(&event->data.fmt_changed.new_fmt,
+				  &stream->info.codec_param->dec_fmt,
+				  sizeof(pjmedia_format));
+		    }
 		}
 	    }
 	}
@@ -1088,16 +1096,32 @@ static pj_status_t get_frame(pjmedia_port *port,
      * would only occur once during the start of the media.
      */
     if (stream->fmt_event.type != PJMEDIA_EVENT_NONE) {
-	/* Update param from codec */
-	pjmedia_vid_codec_get_param(stream->codec, stream->info.codec_param);
+	pjmedia_event_fmt_changed_data *fmt_chg_data;
 
-	/* Update decoding channel port info */
-	pjmedia_format_copy(&stream->dec->port.info.fmt,
-			    &stream->info.codec_param->dec_fmt);
+	fmt_chg_data = &stream->fmt_event.data.fmt_changed;
 
-	dump_port_info(stream->fmt_event.data.fmt_changed.dir==PJMEDIA_DIR_DECODING ?
+	/* Update stream info and decoding channel port info */
+	if (fmt_chg_data->dir == PJMEDIA_DIR_DECODING) {
+	    pjmedia_format_copy(&stream->info.codec_param->dec_fmt,
+				&fmt_chg_data->new_fmt);
+	    pjmedia_format_copy(&stream->dec->port.info.fmt,
+				&fmt_chg_data->new_fmt);
+
+	    /* Override the framerate to be 1.5x higher in the event
+	     * for the renderer.
+	     */
+	    fmt_chg_data->new_fmt.det.vid.fps.num *= 3;
+	    fmt_chg_data->new_fmt.det.vid.fps.num /= 2;
+	} else {
+	    pjmedia_format_copy(&stream->info.codec_param->enc_fmt,
+				&fmt_chg_data->new_fmt);
+	    pjmedia_format_copy(&stream->enc->port.info.fmt,
+				&fmt_chg_data->new_fmt);
+	}
+
+	dump_port_info(fmt_chg_data->dir==PJMEDIA_DIR_DECODING ?
 			stream->dec : stream->enc,
-		      "changed");
+		       "changed");
 
 	pjmedia_event_publish(NULL, port, &stream->fmt_event, 0);
 
