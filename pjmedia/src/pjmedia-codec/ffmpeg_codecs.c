@@ -286,13 +286,11 @@ static ffmpeg_codec_desc codec_desc[] =
     },
     {
 	{PJMEDIA_FORMAT_MJPEG,	PJMEDIA_RTP_PT_JPEG,	{"JPEG",4}},
+	PJMEDIA_FORMAT_MJPEG, {640, 480}, {25, 1},
     },
     {
 	{PJMEDIA_FORMAT_MPEG4,	0,			{"MP4V",4}},
-    },
-    {
-	{PJMEDIA_FORMAT_XVID,	0,			{"XVID",4}},
-	PJMEDIA_FORMAT_MPEG4,
+	PJMEDIA_FORMAT_MPEG4, {640, 480}, {25, 1},
     },
 };
 

@@ -196,7 +196,6 @@ typedef enum pjmedia_format_id
     PJMEDIA_FORMAT_MPEG1VIDEO = PJMEDIA_FORMAT_PACK('M', 'P', '1', 'V'),
     PJMEDIA_FORMAT_MPEG2VIDEO = PJMEDIA_FORMAT_PACK('M', 'P', '2', 'V'),
     PJMEDIA_FORMAT_MPEG4    = PJMEDIA_FORMAT_PACK('M', 'P', 'G', '4'),
-    PJMEDIA_FORMAT_XVID     = PJMEDIA_FORMAT_PACK('x', 'v', 'i', 'd'),
 
 } pjmedia_format_id;
 
