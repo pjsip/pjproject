@@ -284,7 +284,7 @@ static void reset_dev_info(struct avi_dev_info *adi)
 PJ_DEF(pj_status_t) pjmedia_avi_dev_free(pjmedia_vid_dev_index id)
 {
     pjmedia_vid_dev_factory *f;
-    struct avi_factory *cf = (struct avi_factory*)f;
+    struct avi_factory *cf;
     unsigned local_idx;
     struct avi_dev_info *adi;
     pj_status_t status;
@@ -465,7 +465,6 @@ static pj_status_t avi_factory_create_stream(
     pj_pool_t *pool = NULL;
     struct avi_dev_info *adi;
     struct avi_dev_strm *strm;
-    pj_status_t status;
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -500,11 +499,6 @@ static pj_status_t avi_factory_create_stream(
     *p_vid_strm = &strm->base;
 
     return PJ_SUCCESS;
-
-on_error:
-    if (pool)
-	pj_pool_release(pool);
-    return status;
 }
 
 /* API: Get stream info. */
@@ -528,6 +522,8 @@ static pj_status_t avi_dev_strm_get_cap(pjmedia_vid_dev_stream *s,
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
     PJ_UNUSED_ARG(strm);
+    PJ_UNUSED_ARG(cap);
+    PJ_UNUSED_ARG(pval);
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
@@ -542,6 +538,8 @@ static pj_status_t avi_dev_strm_set_cap(pjmedia_vid_dev_stream *s,
     struct avi_dev_strm *strm = (struct avi_dev_strm*)s;
 
     PJ_UNUSED_ARG(strm);
+    PJ_UNUSED_ARG(cap);
+    PJ_UNUSED_ARG(pval);
 
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
 
