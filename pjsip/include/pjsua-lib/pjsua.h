@@ -35,6 +35,9 @@
 /* Include all PJMEDIA-CODEC headers. */
 #include <pjmedia-codec.h>
 
+/* Videodev too */
+#include <pjmedia_videodev.h>
+
 /* Include all PJSIP-UA headers */
 #include <pjsip_ua.h>
 

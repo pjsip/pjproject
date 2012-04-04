@@ -407,15 +407,29 @@ PJ_DEF(pj_status_t) pjmedia_vid_dev_subsys_init(pj_pool_factory *pf)
 
 /* API: register a video device factory to the video device subsystem. */
 PJ_DEF(pj_status_t)
-pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
+pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf,
+                             pjmedia_vid_dev_factory *factory)
 {
+    pj_bool_t refresh = PJ_FALSE;
     pj_status_t status;
 
     if (vid_subsys.init_count == 0)
 	return PJMEDIA_EVID_INIT;
 
     vid_subsys.drv[vid_subsys.drv_cnt].create = adf;
-    status = init_driver(vid_subsys.drv_cnt, PJ_FALSE);
+    vid_subsys.drv[vid_subsys.drv_cnt].f = factory;
+
+    if (factory) {
+        /* Call factory->init() */
+        status = factory->op->init(factory);
+        if (status != PJ_SUCCESS) {
+            factory->op->destroy(factory);
+            return status;
+        }
+        refresh = PJ_TRUE;
+    }
+
+    status = init_driver(vid_subsys.drv_cnt, refresh);
     if (status == PJ_SUCCESS) {
 	vid_subsys.drv_cnt++;
     } else {
@@ -427,7 +441,8 @@ pjmedia_vid_register_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
 
 /* API: unregister a video device factory from the video device subsystem. */
 PJ_DEF(pj_status_t)
-pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
+pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr adf,
+                               pjmedia_vid_dev_factory *factory)
 {
     unsigned i, j;
 
@@ -437,7 +452,7 @@ pjmedia_vid_unregister_factory(pjmedia_vid_dev_factory_create_func_ptr adf)
     for (i=0; i<vid_subsys.drv_cnt; ++i) {
 	struct driver *drv = &vid_subsys.drv[i];
 
-	if (drv->create == adf) {
+	if ((factory && drv->f==factory) || (adf && drv->create == adf)) {
 	    for (j = drv->start_idx; j < drv->start_idx + drv->dev_cnt; j++)
 	    {
 		vid_subsys.dev_list[j] = (pj_uint32_t)PJMEDIA_VID_INVALID_DEV;
@@ -576,6 +591,27 @@ static pj_status_t lookup_dev(pjmedia_vid_dev_index id,
 
     return PJ_SUCCESS;
 
+}
+
+/* API: lookup device id */
+PJ_DEF(pj_status_t)
+pjmedia_vid_dev_get_local_index(pjmedia_vid_dev_index id,
+                                pjmedia_vid_dev_factory **p_f,
+                                unsigned *p_local_index)
+{
+    return lookup_dev(id, p_f, p_local_index);
+}
+
+/* API: from factory and local index, get global index */
+PJ_DEF(pj_status_t)
+pjmedia_vid_dev_get_global_index(const pjmedia_vid_dev_factory *f,
+                                 unsigned local_idx,
+                                 pjmedia_vid_dev_index *pid)
+{
+    PJ_ASSERT_RETURN(f->sys.drv_idx >= 0 && f->sys.drv_idx < MAX_DRIVERS,
+                     PJ_EINVALIDOP);
+    *pid = local_idx;
+    return make_global_index(f->sys.drv_idx, pid);
 }
 
 /* API: Get device information. */

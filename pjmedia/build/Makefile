@@ -89,7 +89,7 @@ export PJMEDIA_AUDIODEV_CFLAGS += $(_CFLAGS)
 # Defines for building PJMEDIA-VIDEODEV library
 #
 export PJMEDIA_VIDEODEV_SRCDIR = ../src/pjmedia-videodev
-export PJMEDIA_VIDEODEV_OBJS +=  errno.o videodev.o ffmpeg_dev.o \
+export PJMEDIA_VIDEODEV_OBJS +=  errno.o videodev.o avi_dev.o ffmpeg_dev.o \
 				colorbar_dev.o v4l2_dev.o
 export PJMEDIA_VIDEODEV_CFLAGS += $(_CFLAGS)
 

@@ -191,7 +191,35 @@ struct pjmedia_vid_dev_stream
 };
 
 
+/**
+ * Internal API: return the factory instance and device index that's local
+ * to the factory for a given device ID.
+ *
+ * @param id		Device id.
+ * @param p_f		Out: factory instance
+ * @param p_local_index Out: device index within the factory
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_vid_dev_get_local_index(pjmedia_vid_dev_index id,
+                                pjmedia_vid_dev_factory **p_f,
+                                unsigned *p_local_index);
 
+/**
+ * Internal API: return the global device index given a factory instance and
+ * a local device index.
+ *
+ * @param f		Factory.
+ * @param local_idx	Local index.
+ * @param pid		Returned global index.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DEF(pj_status_t)
+pjmedia_vid_dev_get_global_index(const pjmedia_vid_dev_factory *f,
+                                 unsigned local_idx,
+                                 pjmedia_vid_dev_index *pid);
 
 /**
  * @}

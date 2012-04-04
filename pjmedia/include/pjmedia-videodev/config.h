@@ -122,6 +122,17 @@ PJ_BEGIN_DECL
 #   define PJMEDIA_VIDEO_DEV_HAS_V4L2		0
 #endif
 
+
+/**
+ * Enable support for AVI player virtual capture device.
+ *
+ * Default: 1
+ */
+#ifndef PJMEDIA_VIDEO_DEV_HAS_AVI
+#   define PJMEDIA_VIDEO_DEV_HAS_AVI		1
+#endif
+
+
 /**
  * @}
  */

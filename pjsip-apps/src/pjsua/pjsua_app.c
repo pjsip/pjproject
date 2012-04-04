@@ -43,6 +43,7 @@
 #define RING_CNT	    3
 #define RING_INTERVAL	    3000
 
+#define MAX_AVI             4
 
 /* Call specific data */
 struct call_data
@@ -135,6 +136,13 @@ static struct app_config
 
     struct app_vid	    vid;
     unsigned		    aud_cnt;
+
+    /* AVI to play */
+    unsigned                avi_cnt;
+    pj_str_t	            avi[MAX_AVI];
+    pj_bool_t               avi_auto_play;
+    pjmedia_vid_dev_index   avi_dev_id;
+    pjsua_conf_port_id      avi_slot;
 } app_config;
 
 
@@ -329,6 +337,8 @@ static void usage(void)
     puts  ("  --video             Enable video");
     puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
     puts  ("  --vrender-dev=id    Video render device ID (default=-1)");
+    puts  ("  --play-avi=FILE     Load this AVI as virtual capture device");
+    puts  ("  --auto-play-avi     Automatically play the AVI media to call");
 #endif
 
     puts  ("");
@@ -399,6 +409,9 @@ static void default_config(struct app_config *cfg)
     cfg->playback_lat = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
+
+    cfg->avi_dev_id = PJMEDIA_VID_INVALID_DEV;
+    cfg->avi_slot = PJSUA_INVALID_ID;
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
 	pjsua_acc_config_default(&cfg->acc_cfg[i]);
@@ -576,7 +589,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_NO_FORCE_LR,
 	   OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
 	   OPT_VIDEO, OPT_EXTRA_AUDIO,
-	   OPT_VCAPTURE_DEV, OPT_VRENDER_DEV,
+	   OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI
     };
     struct pj_getopt_option long_options[] = {
 	{ "config-file",1, 0, OPT_CONFIG_FILE},
@@ -702,6 +715,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "extra-audio",0, 0, OPT_EXTRA_AUDIO},
 	{ "vcapture-dev", 1, 0, OPT_VCAPTURE_DEV},
 	{ "vrender-dev",  1, 0, OPT_VRENDER_DEV},
+	{ "play-avi",	1, 0, OPT_PLAY_AVI},
+	{ "auto-play-avi", 0, 0, OPT_AUTO_PLAY_AVI},
 	{ NULL, 0, 0, 0}
     };
     pj_status_t status;
@@ -1497,6 +1512,18 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    cur_acc->vid_rend_dev = cfg->vid.vrender_dev;
 	    break;
 
+	case OPT_PLAY_AVI:
+	    if (app_config.avi_cnt >= MAX_AVI) {
+		PJ_LOG(1,(THIS_FILE, "Too many AVIs"));
+		return -1;
+	    }
+	    app_config.avi[app_config.avi_cnt++] = pj_str(pj_optarg);
+	    break;
+
+	case OPT_AUTO_PLAY_AVI:
+	    app_config.avi_auto_play = PJ_TRUE;
+	    break;
+
 	default:
 	    PJ_LOG(1,(THIS_FILE, 
 		      "Argument \"%s\" is not valid. Use --help to see help",
@@ -2081,6 +2108,14 @@ static int write_settings(const struct app_config *config,
     }
     if (config->vid.vrender_dev != PJMEDIA_VID_DEFAULT_RENDER_DEV) {
 	pj_ansi_sprintf(line, "--vrender-dev %d\n", config->vid.vrender_dev);
+	pj_strcat2(&cfg, line);
+    }
+    for (i=0; i<config->avi_cnt; ++i) {
+	pj_ansi_sprintf(line, "--play-avi %s\n", config->avi[i].ptr);
+	pj_strcat2(&cfg, line);
+    }
+    if (config->avi_auto_play) {
+	pj_ansi_sprintf(line, "--auto-play-avi\n");
 	pj_strcat2(&cfg, line);
     }
 
@@ -2787,6 +2822,13 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 	{
 	    pjsua_conf_connect(app_config.wav_port, call_conf_slot);
 	    connect_sound = PJ_FALSE;
+	}
+
+	/* Stream AVI, if desired */
+	if (app_config.avi_auto_play &&
+	    app_config.avi_slot != PJSUA_INVALID_ID)
+	{
+	    pjsua_conf_connect(app_config.avi_slot, call_conf_slot);
 	}
 
 	/* Put call in conference with other calls, if desired */
@@ -3975,6 +4017,12 @@ static void app_config_init_video(pjsua_acc_config *acc_cfg)
                              PJMEDIA_VID_DEV_WND_RESIZABLE;
     acc_cfg->vid_cap_dev = app_config.vid.vcapture_dev;
     acc_cfg->vid_rend_dev = app_config.vid.vrender_dev;
+
+    if (app_config.avi_auto_play &&
+	app_config.avi_dev_id != PJMEDIA_VID_INVALID_DEV)
+    {
+	acc_cfg->vid_cap_dev = app_config.avi_dev_id;
+    }
 }
 
 static void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
@@ -5633,6 +5681,76 @@ pj_status_t app_init(int argc, char *argv[])
 	if (status != PJ_SUCCESS)
 	    goto on_error;
 
+    }
+
+    /* Create AVI player virtual devices */
+    if (app_config.avi_cnt) {
+#if PJMEDIA_VIDEO_DEV_HAS_AVI
+	pjmedia_vid_dev_factory *avi_factory;
+
+	status = pjmedia_avi_dev_create_factory(pjsua_get_pool_factory(),
+	                                        app_config.avi_cnt,
+	                                        &avi_factory);
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "Error creating AVI factory"));
+	    goto on_error;
+	}
+
+	for (i=0; i<app_config.avi_cnt; ++i) {
+	    pjmedia_avi_dev_param avdp;
+	    pjmedia_vid_dev_index avid;
+	    unsigned strm_idx, strm_cnt;
+
+	    pjmedia_avi_dev_param_default(&avdp);
+	    avdp.path = app_config.avi[i];
+
+	    status =  pjmedia_avi_dev_alloc(avi_factory, &avdp, &avid);
+	    if (status != PJ_SUCCESS) {
+		PJ_PERROR(1,(THIS_FILE, status,
+			     "Error creating AVI player for %.*s",
+			     (int)avdp.path.slen, avdp.path.ptr));
+		goto on_error;
+	    }
+
+	    PJ_LOG(4,(THIS_FILE, "AVI player %.*s created, dev_id=%d",
+		      (int)avdp.title.slen, avdp.title.ptr, avid));
+	    app_config.avi_dev_id = avid;
+
+	    strm_cnt = pjmedia_avi_streams_get_num_streams(avdp.avi_streams);
+	    for (strm_idx=0; strm_idx<strm_cnt; ++strm_idx) {
+		pjmedia_port *aud;
+		pjmedia_format *fmt;
+		pjsua_conf_port_id slot;
+		char fmt_name[5];
+
+		aud = pjmedia_avi_streams_get_stream(avdp.avi_streams,
+		                                     strm_idx);
+		fmt = &aud->info.fmt;
+
+		pjmedia_fourcc_name(fmt->id, fmt_name);
+
+		if (fmt->id == PJMEDIA_FORMAT_PCM) {
+		    status = pjsua_conf_add_port(app_config.pool, aud,
+		                                 &slot);
+		    if (status == PJ_SUCCESS) {
+			PJ_LOG(4,(THIS_FILE,
+				  "AVI %.*s: audio added to slot %d",
+				  (int)avdp.title.slen, avdp.title.ptr,
+				  slot));
+			app_config.avi_slot = slot;
+		    }
+		} else {
+		    PJ_LOG(4,(THIS_FILE,
+			      "AVI %.*s: audio ignored, format=%s",
+			      (int)avdp.title.slen, avdp.title.ptr,
+			      fmt_name));
+		}
+	    }
+	}
+#else
+	PJ_LOG(2,(THIS_FILE,
+		  "Warning: --play-avi is ignored because AVI is disabled"));
+#endif	/* PJMEDIA_VIDEO_DEV_HAS_AVI */
     }
 
     /* Add UDP transport unless it's disabled. */
