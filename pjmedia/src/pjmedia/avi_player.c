@@ -58,15 +58,19 @@
     static void data_to_host(void *data, pj_uint8_t bits, unsigned count)
     {
 	unsigned i;
-        pj_int32_t *data32 = (pj_int32_t *)data;
-        pj_int16_t *data16 = (pj_int16_t *)data;
+
         count /= (bits == 32? 4 : 2);
-	for (i=0; i<count; ++i) {
-	    if (bits == 32)
-                data32[i] = pj_swap32(data32[i]);
-            else
-                data16[i] = pj_swap16(data16[i]);
+
+	if (bits == 32) {
+	    pj_int32_t *data32 = (pj_int32_t *)data;
+	    for (i=0; i<count; ++i)
+		data32[i] = pj_swap32(data32[i]);
+	} else {
+	    pj_int16_t *data16 = (pj_int16_t *)data;
+	    for (i=0; i<count; ++i)
+		data16[i] = pj_swap16(data16[i]);
 	}
+
     }
     static void data_to_host2(void *data, pj_uint8_t nsizes,
                               pj_uint8_t *sizes)
@@ -98,6 +102,7 @@ struct avi_reader_port
     pjmedia_port     base;
     unsigned         stream_id;
     unsigned	     options;
+    pjmedia_format_id fmt_id;
     pj_uint16_t	     bits_per_sample;
     pj_bool_t	     eof;
     pj_off_t	     fsize;
@@ -326,6 +331,8 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         goto on_error;
 
     for (i = 0, nstr = 0; i < avi_hdr.avih_hdr.num_streams; i++) {
+	pjmedia_format_id fmt_id;
+
         /* Skip non-audio, non-video, or disabled streams) */
         if ((!COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
                           PJMEDIA_AVI_VIDS_TAG) &&
@@ -354,6 +361,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 PJ_LOG(4, (THIS_FILE, "Unsupported video stream"));
                 continue;
             }
+            fmt_id = avi_hdr.strl_hdr[i].codec;
         } else {
             /* Check supported audio formats here */
             if ((avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_PCM &&
@@ -365,6 +373,10 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 PJ_LOG(4, (THIS_FILE, "Unsupported audio stream"));
                 continue;
             }
+            /* Normalize format ID */
+            fmt_id = avi_hdr.strl_hdr[i].codec;
+            if (avi_hdr.strl_hdr[i].codec == PJMEDIA_WAVE_FMT_TAG_PCM)
+        	fmt_id = PJMEDIA_FORMAT_PCM;
         }
 
         if (nstr == 0) {
@@ -381,6 +393,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         }
 
         fport[nstr]->stream_id = i;
+        fport[nstr]->fmt_id = fmt_id;
 
         /* Open file. */
         status = pj_file_open(pool, filename, PJ_O_RDONLY, &fport[nstr]->fd);
@@ -433,7 +446,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
 
             fport[i]->bits_per_sample = strf_hdr->bits_per_sample;
             pjmedia_format_init_audio(&fport[i]->base.info.fmt,
-                                      strl_hdr->codec,
+                                      fport[i]->fmt_id,
                                       strf_hdr->sample_rate,
                                       strf_hdr->nchannels,
                                       strf_hdr->bits_per_sample,
