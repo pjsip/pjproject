@@ -2829,6 +2829,7 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 	    app_config.avi_slot != PJSUA_INVALID_ID)
 	{
 	    pjsua_conf_connect(app_config.avi_slot, call_conf_slot);
+	    connect_sound = PJ_FALSE;
 	}
 
 	/* Put call in conference with other calls, if desired */
