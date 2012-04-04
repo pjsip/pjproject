@@ -175,6 +175,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pjmedia_vid_port *vp;
     const pjmedia_video_format_detail *vfd;
     char dev_name[64];
+    char fmt_name[5];
     pjmedia_vid_dev_cb vid_cb;
     pj_bool_t need_frame_buf = PJ_FALSE;
     pj_status_t status;
@@ -234,11 +235,12 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
     pj_strdup2_with_null(pool, &vp->dev_name, di.name);
     vp->stream_role = di.has_callback ? ROLE_ACTIVE : ROLE_PASSIVE;
 
+    pjmedia_fourcc_name(vparam.fmt.id, fmt_name);
+
     PJ_LOG(4,(THIS_FILE,
 	      "Opening device %s for %s: format=%s, size=%dx%d @%d:%d fps",
 	      dev_name,
-	      vid_dir_name(prm->vidparam.dir),
-	      pjmedia_get_video_format_info(NULL, vparam.fmt.id)->name,
+	      vid_dir_name(prm->vidparam.dir), fmt_name,
 	      vfd->size.w, vfd->size.h,
 	      vfd->fps.num, vfd->fps.denum));
 
@@ -261,8 +263,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 
     PJ_LOG(4,(THIS_FILE,
 	      "Device %s opened: format=%s, size=%dx%d @%d:%d fps",
-	      dev_name,
-	      pjmedia_get_video_format_info(NULL, vparam.fmt.id)->name,
+	      dev_name, fmt_name,
 	      vparam.fmt.det.vid.size.w, vparam.fmt.det.vid.size.h,
 	      vparam.fmt.det.vid.fps.num, vparam.fmt.det.vid.fps.denum));
 
