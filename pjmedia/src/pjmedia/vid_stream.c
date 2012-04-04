@@ -862,6 +862,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 	    /* Ignore this error */
 	}
 
+	pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
 	total_sent += frame_out.size;
 
 	if (!has_more_data)
@@ -900,7 +901,6 @@ static pj_status_t put_frame(pjmedia_port *port,
     }
 
     /* Update stat */
-    pjmedia_rtcp_tx_rtp(&stream->rtcp, total_sent);
     stream->rtcp.stat.rtp_tx_last_ts = pj_ntohl(stream->enc->rtp.out_hdr.ts);
     stream->rtcp.stat.rtp_tx_last_seq = pj_ntohs(stream->enc->rtp.out_hdr.seq);
 
