@@ -84,7 +84,8 @@ struct codec_fmt {
                    PJ_TRUE , PJMEDIA_FORMAT_I420},
                   {PJMEDIA_FORMAT_H263 , "h263" ,
                    PJ_FALSE, 0},
-		  {PJMEDIA_FORMAT_XVID , "xvid"},
+                  {PJMEDIA_FORMAT_MPEG4, "mp4v"}, 
+                  {PJMEDIA_FORMAT_H264 , "h264"}
                  };
 
 typedef struct avi_port_t
@@ -269,12 +270,16 @@ static int aviplay(pj_pool_t *pool, const char *fname)
                 rc = 246; goto on_return;
             }
 	    
+            pjmedia_format_copy(&codec_param.enc_fmt, &param.vidparam.fmt);
+
             pjmedia_vid_dev_get_info(param.vidparam.rend_id, &rdr_info);
             for (i=0; i<codec_info->dec_fmt_id_cnt; ++i) {
                 for (k=0; k<rdr_info.fmt_cnt; ++k) {
                     if (codec_info->dec_fmt_id[i]==(int)rdr_info.fmt[k].id)
                     {
                         param.vidparam.fmt.id = codec_info->dec_fmt_id[i];
+                        i = codec_info->dec_fmt_id_cnt;
+                        break;
                     }
                 }
             }
@@ -292,6 +297,7 @@ static int aviplay(pj_pool_t *pool, const char *fname)
             }
 	    
             pjmedia_format_copy(&codec_param.dec_fmt, &param.vidparam.fmt);
+            codec_param.dir = PJMEDIA_DIR_DECODING;
             codec_param.packing = PJMEDIA_VID_PACKING_WHOLE;
             status = pjmedia_vid_codec_open(codec, &codec_param);
             if (status != PJ_SUCCESS) {

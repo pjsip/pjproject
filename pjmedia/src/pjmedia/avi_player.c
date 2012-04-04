@@ -91,6 +91,24 @@
 #   define data_to_host2(data, nsizes, sizes)
 #endif
 
+typedef struct avi_fmt_info
+{
+    pjmedia_format_id   fmt_id;
+    pjmedia_format_id   eff_fmt_id;
+} avi_fmt_info;
+
+static avi_fmt_info avi_fmts[] =
+{
+    {PJMEDIA_FORMAT_MJPEG}, {PJMEDIA_FORMAT_H264},
+    {PJMEDIA_FORMAT_UYVY}, {PJMEDIA_FORMAT_YUY2},
+    {PJMEDIA_FORMAT_IYUV}, {PJMEDIA_FORMAT_I420},
+    {PJMEDIA_FORMAT_DIB}, {PJMEDIA_FORMAT_RGB24},
+    {PJMEDIA_FORMAT_RGB32},
+    {PJMEDIA_FORMAT_PACK('X','V','I','D'), PJMEDIA_FORMAT_MPEG4},
+    {PJMEDIA_FORMAT_PACK('x','v','i','d'), PJMEDIA_FORMAT_MPEG4},
+    {PJMEDIA_FORMAT_PACK('D','I','V','X'), PJMEDIA_FORMAT_MPEG4},
+};
+
 struct pjmedia_avi_streams
 {
     unsigned        num_streams;
@@ -346,22 +364,27 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         if (COMPARE_TAG(avi_hdr.strl_hdr[i].data_type, 
                         PJMEDIA_AVI_VIDS_TAG))
         {
-            /* Check supported video formats here */
-            if (avi_hdr.strl_hdr[i].flags & AVISF_VIDEO_PALCHANGES ||
-                (avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_MJPEG &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_XVID &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_UYVY &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_YUY2 &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_IYUV &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_I420 &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_DIB &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_RGB24 &&
-                 avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_RGB32))
-            {
+            int j;
+
+            if (avi_hdr.strl_hdr[i].flags & AVISF_VIDEO_PALCHANGES) {
                 PJ_LOG(4, (THIS_FILE, "Unsupported video stream"));
                 continue;
             }
+
             fmt_id = avi_hdr.strl_hdr[i].codec;
+            for (j = sizeof(avi_fmts)/sizeof(avi_fmts[0])-1; j >= 0; j--) {
+                /* Check supported video formats here */
+                if (fmt_id == avi_fmts[j].fmt_id) {
+                    if (avi_fmts[j].eff_fmt_id)
+                        fmt_id = avi_fmts[j].eff_fmt_id;
+                    break;
+                }
+            }
+            
+            if (j < 0) {
+                PJ_LOG(4, (THIS_FILE, "Unsupported video stream"));
+                continue;
+            }
         } else {
             /* Check supported audio formats here */
             if ((avi_hdr.strl_hdr[i].codec != PJMEDIA_FORMAT_PCM &&
@@ -379,32 +402,29 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
         	fmt_id = PJMEDIA_FORMAT_PCM;
         }
 
-        if (nstr == 0) {
-            fport[0]->stream_id = i;
-            nstr++;
-            continue;
-        }
+        if (nstr > 0) {
+            /* Create fport instance. */
+            fport[nstr] = create_avi_port(pool);
+            if (!fport[nstr]) {
+	        status = PJ_ENOMEM;
+                goto on_error;
+            }
 
-        /* Create fport instance. */
-        fport[nstr] = create_avi_port(pool);
-        if (!fport[nstr]) {
-	    status = PJ_ENOMEM;
-            goto on_error;
+            /* Open file. */
+            status = pj_file_open(pool, filename, PJ_O_RDONLY,
+                                  &fport[nstr]->fd);
+            if (status != PJ_SUCCESS)
+                goto on_error;
+
+            /* Set the file position */
+            status = pj_file_setpos(fport[nstr]->fd, pos, PJ_SEEK_SET);
+            if (status != PJ_SUCCESS) {
+                goto on_error;
+            }
         }
 
         fport[nstr]->stream_id = i;
         fport[nstr]->fmt_id = fmt_id;
-
-        /* Open file. */
-        status = pj_file_open(pool, filename, PJ_O_RDONLY, &fport[nstr]->fd);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-        /* Set the file position */
-        status = pj_file_setpos(fport[nstr]->fd, pos, PJ_SEEK_SET);
-        if (status != PJ_SUCCESS) {
-            goto on_error;
-        }
 
         nstr++;
     }
@@ -434,7 +454,7 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
 
             fport[i]->bits_per_sample = (vfi ? vfi->bpp : 0);
             pjmedia_format_init_video(&fport[i]->base.info.fmt,
-                                      strl_hdr->codec,
+                                      fport[i]->fmt_id,
                                       strf_hdr->biWidth,
                                       strf_hdr->biHeight,
                                       strl_hdr->rate,
