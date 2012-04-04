@@ -2801,6 +2801,7 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 	ci->media[mi].status == PJSUA_CALL_MEDIA_REMOTE_HOLD)
     {
 	pj_bool_t connect_sound = PJ_TRUE;
+	pj_bool_t disconnect_mic = PJ_FALSE;
 	pjsua_conf_port_id call_conf_slot;
 
 	call_conf_slot = ci->media[mi].stream.aud.conf_slot;
@@ -2829,7 +2830,7 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 	    app_config.avi_slot != PJSUA_INVALID_ID)
 	{
 	    pjsua_conf_connect(app_config.avi_slot, call_conf_slot);
-	    connect_sound = PJ_FALSE;
+	    disconnect_mic = PJ_TRUE;
 	}
 
 	/* Put call in conference with other calls, if desired */
@@ -2870,7 +2871,8 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 	/* Otherwise connect to sound device */
 	if (connect_sound) {
 	    pjsua_conf_connect(call_conf_slot, 0);
-	    pjsua_conf_connect(0, call_conf_slot);
+	    if (!disconnect_mic)
+		pjsua_conf_connect(0, call_conf_slot);
 
 	    /* Automatically record conversation, if desired */
 	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
