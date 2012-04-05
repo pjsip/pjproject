@@ -1436,11 +1436,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 #endif /* PJSIP_HAS_TLS_TRANSPORT */
 
 	case OPT_CAPTURE_DEV:
-	    cfg->vid.vcapture_dev = atoi(pj_optarg);
+	    cfg->capture_dev = atoi(pj_optarg);
 	    break;
 
 	case OPT_PLAYBACK_DEV:
-	    cfg->vid.vrender_dev = atoi(pj_optarg);
+	    cfg->playback_dev = atoi(pj_optarg);
 	    break;
 
 	case OPT_STDOUT_REFRESH:
