@@ -3594,6 +3594,7 @@ static void vid_show_help(void)
     puts("| vid codec prio ID PRIO    Set codec ID priority to PRIO                     |");
     puts("| vid codec fps ID NUM DEN  Set codec ID framerate to (NUM/DEN) fps           |");
     puts("| vid codec bw ID AVG MAX   Set codec ID bitrate to AVG & MAX kbps            |");
+    puts("| vid codec size ID W H     Set codec ID size/resolution to W x H             |");
     puts("| vid win list              List all active video windows                     |");
     puts("| vid win arrange           Auto arrange windows                              |");
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
@@ -4261,8 +4262,8 @@ static void vid_handle_menu(char *menuin)
 	    } else {
 		unsigned i;
 		PJ_LOG(3,(THIS_FILE, "Found %d video codecs:", count));
-		PJ_LOG(3,(THIS_FILE, "codec id      prio  fps   br(kbps)"));
-		PJ_LOG(3,(THIS_FILE, "----------------------------------"));
+		PJ_LOG(3,(THIS_FILE, "codec id      prio  fps    bw(kbps)   size"));
+		PJ_LOG(3,(THIS_FILE, "------------------------------------------"));
 		for (i=0; i<count; ++i) {
 		    pjmedia_vid_codec_param cp;
 		    pjmedia_video_format_detail *vfd;
@@ -4273,12 +4274,13 @@ static void vid_handle_menu(char *menuin)
 
 		    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
 								 PJ_TRUE);
-		    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f %d/%d", 
+		    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f  %4d/%4d  %dx%d", 
 			      (int)ci[i].codec_id.slen, ci[i].codec_id.ptr,
 			      13-(int)ci[i].codec_id.slen, "                ",
 			      ci[i].priority,
 			      (vfd->fps.num*1.0/vfd->fps.denum),
-			      vfd->avg_bps/1000, vfd->max_bps/1000));
+			      vfd->avg_bps/1000, vfd->max_bps/1000,
+			      vfd->size.w, vfd->size.h));
 		}
 	    }
 	} else if (argc==5 && strcmp(argv[2], "prio")==0) {
@@ -4315,6 +4317,21 @@ static void vid_handle_menu(char *menuin)
 	    if (status == PJ_SUCCESS) {
 		cp.enc_fmt.det.vid.avg_bps = M * 1000;
 		cp.enc_fmt.det.vid.max_bps = N * 1000;
+		status = pjsua_vid_codec_set_param(&cid, &cp);
+	    }
+	    if (status != PJ_SUCCESS)
+		PJ_PERROR(1,(THIS_FILE, status, "Set codec bitrate error"));
+	} else if (argc==6 && strcmp(argv[2], "size")==0) {
+	    pjmedia_vid_codec_param cp;
+	    pj_str_t cid;
+	    int M, N;
+	    cid = pj_str(argv[3]);
+	    M = atoi(argv[4]);
+	    N = atoi(argv[5]);
+	    status = pjsua_vid_codec_get_param(&cid, &cp);
+	    if (status == PJ_SUCCESS) {
+		cp.enc_fmt.det.vid.size.w = M;
+		cp.enc_fmt.det.vid.size.h = N;
 		status = pjsua_vid_codec_set_param(&cid, &cp);
 	    }
 	    if (status != PJ_SUCCESS)
