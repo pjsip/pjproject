@@ -227,6 +227,29 @@ PJ_DEF(pj_status_t) pjsua_vid_enum_devs(pjmedia_vid_dev_info info[],
  * Codecs.
  */
 
+static pj_status_t find_codecs_with_rtp_packing(
+				    const pj_str_t *codec_id,
+				    unsigned *count,
+				    const pjmedia_vid_codec_info *p_info[])
+{
+    const pjmedia_vid_codec_info *info[32];
+    unsigned i, j, count_ = PJ_ARRAY_SIZE(info);
+    pj_status_t status;
+    
+    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, codec_id,
+						     &count_, info, NULL);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    for (i = 0, j = 0; i < count_ && j<*count; ++i) {
+	if ((info[i]->packings & PJMEDIA_VID_PACKING_PACKETS) == 0)
+	    continue;
+	p_info[j++] = info[i];
+    }
+    *count = j;
+    return PJ_SUCCESS;
+}
+
 /*
  * Enum all supported video codecs in the system.
  */
@@ -291,23 +314,18 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_get_param(
 					const pj_str_t *codec_id,
 					pjmedia_vid_codec_param *param)
 {
-    const pj_str_t all = { NULL, 0 };
-    const pjmedia_vid_codec_info *info;
-    unsigned count = 1;
+    const pjmedia_vid_codec_info *info[2];
+    unsigned count = 2;
     pj_status_t status;
 
-    if (codec_id->slen==1 && *codec_id->ptr=='*')
-	codec_id = &all;
-
-    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, codec_id,
-						     &count, &info, NULL);
+    status = find_codecs_with_rtp_packing(codec_id, &count, info);
     if (status != PJ_SUCCESS)
 	return status;
 
     if (count != 1)
 	return (count > 1? PJ_ETOOMANY : PJ_ENOTFOUND);
 
-    status = pjmedia_vid_codec_mgr_get_default_param(NULL, info, param);
+    status = pjmedia_vid_codec_mgr_get_default_param(NULL, info[0], param);
     return status;
 }
 
@@ -323,16 +341,12 @@ PJ_DEF(pj_status_t) pjsua_vid_codec_set_param(
     unsigned count = 2;
     pj_status_t status;
 
-    status = pjmedia_vid_codec_mgr_find_codecs_by_id(NULL, codec_id,
-						     &count, info, NULL);
+    status = find_codecs_with_rtp_packing(codec_id, &count, info);
     if (status != PJ_SUCCESS)
 	return status;
 
-    /* Codec ID should be specific */
-    if (count > 1) {
-	pj_assert(!"Codec ID is not specific");
-	return PJ_ETOOMANY;
-    }
+    if (count != 1)
+	return (count > 1? PJ_ETOOMANY : PJ_ENOTFOUND);
 
     status = pjmedia_vid_codec_mgr_set_default_param(NULL, info[0], param);
     return status;
