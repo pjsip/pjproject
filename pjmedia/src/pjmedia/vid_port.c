@@ -705,12 +705,12 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
 	return;
 
     if (vp->stream_role == ROLE_PASSIVE) {
-        while (vp->conv.usec_ctr < vp->conv.usec_src) {
+        while (vp->conv.usec_ctr < vp->conv.usec_dst) {
             vp->frm_buf->size = vp->frm_buf_size;
             status = pjmedia_vid_dev_stream_get_frame(vp->strm, vp->frm_buf);
-            vp->conv.usec_ctr += vp->conv.usec_dst;
+            vp->conv.usec_ctr += vp->conv.usec_src;
         }
-        vp->conv.usec_ctr -= vp->conv.usec_src;
+        vp->conv.usec_ctr -= vp->conv.usec_dst;
         if (status != PJ_SUCCESS)
 	    return;
     }
