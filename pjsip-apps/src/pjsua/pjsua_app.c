@@ -3582,8 +3582,8 @@ static void vid_show_help(void)
     puts("| vid acc autotx on|off     Automatically offer video on/off                  |");
     puts("| vid acc cap ID            Set default capture device for current acc        |");
     puts("| vid acc rend ID           Set default renderer device for current acc       |");
-    puts("| vid call rx on|off N      Enable/disable video rx for stream N in curr call |");
-    puts("| vid call tx on|off N      Enable/disable video tx for stream N in curr call |");
+    puts("| vid call rx on|off N      Enable/disable video RX for stream N in curr call |");
+    puts("| vid call tx on|off N      Enable/disable video TX for stream N in curr call |");
     puts("| vid call add              Add video stream for current call                 |");
     puts("| vid call enable|disable N Enable/disable stream #N in current call          |");
     puts("| vid call cap N ID         Set capture dev ID for stream #N in current call  |");
@@ -3591,7 +3591,9 @@ static void vid_show_help(void)
     puts("| vid dev refresh           Refresh video device list                         |");
     puts("| vid dev prev on|off ID    Enable/disable preview for specified device ID    |");
     puts("| vid codec list            List video codecs                                 |");
-    puts("| vid codec prio PT PRIO    Set codec with pt PT priority to PRIO             |");
+    puts("| vid codec prio ID PRIO    Set codec ID priority to PRIO                     |");
+    puts("| vid codec fps ID NUM DEN  Set codec ID framerate to (NUM/DEN) fps           |");
+    puts("| vid codec bw ID AVG MAX   Set codec ID bitrate to AVG & MAX kbps            |");
     puts("| vid win list              List all active video windows                     |");
     puts("| vid win arrange           Auto arrange windows                              |");
     puts("| vid win show|hide ID      Show/hide the specified video window ID           |");
@@ -4248,47 +4250,75 @@ static void vid_handle_menu(char *menuin)
 	}
 
     } else if (strcmp(argv[1], "codec")==0) {
-	pjmedia_vid_codec_info ci[PJMEDIA_CODEC_MGR_MAX_CODECS];
-	unsigned prio[PJMEDIA_CODEC_MGR_MAX_CODECS];
-	unsigned count = PJMEDIA_CODEC_MGR_MAX_CODECS;
+	pjsua_codec_info ci[PJMEDIA_CODEC_MGR_MAX_CODECS];
+	unsigned count = PJ_ARRAY_SIZE(ci);
 	pj_status_t status;
 
 	if (argc==3 && strcmp(argv[2], "list")==0) {
-	    status = pjmedia_vid_codec_mgr_enum_codecs(NULL, &count, ci, prio);
+	    status = pjsua_vid_enum_codecs(ci, &count);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(1,(THIS_FILE, status, "Error enumerating codecs"));
 	    } else {
 		unsigned i;
 		PJ_LOG(3,(THIS_FILE, "Found %d video codecs:", count));
-		PJ_LOG(3,(THIS_FILE, " PT  Prio  Name"));
-		PJ_LOG(3,(THIS_FILE, "-------------------------"));
+		PJ_LOG(3,(THIS_FILE, "codec id      prio  fps   br(kbps)"));
+		PJ_LOG(3,(THIS_FILE, "----------------------------------"));
 		for (i=0; i<count; ++i) {
-		    PJ_LOG(3,(THIS_FILE, "% 3d % 3d  %.*s", ci[i].pt, prio[i],
-			      (int)ci[i].encoding_name.slen,
-			      ci[i].encoding_name.ptr));
+		    pjmedia_vid_codec_param cp;
+		    pjmedia_video_format_detail *vfd;
+
+		    status = pjsua_vid_codec_get_param(&ci[i].codec_id, &cp);
+		    if (status != PJ_SUCCESS)
+			continue;
+
+		    vfd = pjmedia_format_get_video_format_detail(&cp.enc_fmt,
+								 PJ_TRUE);
+		    PJ_LOG(3,(THIS_FILE, "%.*s%.*s %3d %7.2f %d/%d", 
+			      (int)ci[i].codec_id.slen, ci[i].codec_id.ptr,
+			      13-(int)ci[i].codec_id.slen, "                ",
+			      ci[i].priority,
+			      (vfd->fps.num*1.0/vfd->fps.denum),
+			      vfd->avg_bps/1000, vfd->max_bps/1000));
 		}
 	    }
 	} else if (argc==5 && strcmp(argv[2], "prio")==0) {
-	    int pt = atoi(argv[3]);
-	    int prio = atoi(argv[4]);
-	    const pjmedia_vid_codec_info *pci;
-
-	    status = pjmedia_vid_codec_mgr_get_codec_info(NULL, pt, &pci);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(1,(THIS_FILE, status, "Unable to find codec"));
-	    } else {
-		char codec_id[40];
-		if (pjmedia_vid_codec_info_to_id(pci, codec_id,
-		                                 sizeof(codec_id)) == NULL)
-		{
-		    PJ_PERROR(1,(THIS_FILE, status, "Unable to get codec id"));
-		} else {
-		    pj_str_t cid = pj_str(codec_id);
-		    status = pjsua_vid_codec_set_priority(&cid,
-		                                          (pj_uint8_t)prio);
-		}
+	    pj_str_t cid;
+	    int prio;
+	    cid = pj_str(argv[3]);
+	    prio = atoi(argv[4]);
+	    status = pjsua_vid_codec_set_priority(&cid, (pj_uint8_t)prio);
+	    if (status != PJ_SUCCESS)
+		PJ_PERROR(1,(THIS_FILE, status, "Set codec priority error"));
+	} else if (argc==6 && strcmp(argv[2], "fps")==0) {
+	    pjmedia_vid_codec_param cp;
+	    pj_str_t cid;
+	    int M, N;
+	    cid = pj_str(argv[3]);
+	    M = atoi(argv[4]);
+	    N = atoi(argv[5]);
+	    status = pjsua_vid_codec_get_param(&cid, &cp);
+	    if (status == PJ_SUCCESS) {
+		cp.enc_fmt.det.vid.fps.num = M;
+		cp.enc_fmt.det.vid.fps.denum = N;
+		status = pjsua_vid_codec_set_param(&cid, &cp);
 	    }
-
+	    if (status != PJ_SUCCESS)
+		PJ_PERROR(1,(THIS_FILE, status, "Set codec framerate error"));
+	} else if (argc==6 && strcmp(argv[2], "bw")==0) {
+	    pjmedia_vid_codec_param cp;
+	    pj_str_t cid;
+	    int M, N;
+	    cid = pj_str(argv[3]);
+	    M = atoi(argv[4]);
+	    N = atoi(argv[5]);
+	    status = pjsua_vid_codec_get_param(&cid, &cp);
+	    if (status == PJ_SUCCESS) {
+		cp.enc_fmt.det.vid.avg_bps = M * 1000;
+		cp.enc_fmt.det.vid.max_bps = N * 1000;
+		status = pjsua_vid_codec_set_param(&cid, &cp);
+	    }
+	    if (status != PJ_SUCCESS)
+		PJ_PERROR(1,(THIS_FILE, status, "Set codec bitrate error"));
 	} else
 	    goto on_error;
     } else
