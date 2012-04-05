@@ -139,10 +139,14 @@ static struct app_config
 
     /* AVI to play */
     unsigned                avi_cnt;
-    pj_str_t	            avi[MAX_AVI];
+    struct {
+	pj_str_t		path;
+	pjmedia_vid_dev_index	dev_id;
+	pjsua_conf_port_id	slot;
+    } avi[MAX_AVI];
     pj_bool_t               avi_auto_play;
-    pjmedia_vid_dev_index   avi_dev_id;
-    pjsua_conf_port_id      avi_slot;
+    int			    avi_def_idx;
+
 } app_config;
 
 
@@ -410,9 +414,6 @@ static void default_config(struct app_config *cfg)
     cfg->ringback_slot = PJSUA_INVALID_ID;
     cfg->ring_slot = PJSUA_INVALID_ID;
 
-    cfg->avi_dev_id = PJMEDIA_VID_INVALID_DEV;
-    cfg->avi_slot = PJSUA_INVALID_ID;
-
     for (i=0; i<PJ_ARRAY_SIZE(cfg->acc_cfg); ++i)
 	pjsua_acc_config_default(&cfg->acc_cfg[i]);
 
@@ -422,6 +423,8 @@ static void default_config(struct app_config *cfg)
     cfg->vid.vcapture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid.vrender_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     cfg->aud_cnt = 1;
+
+    cfg->avi_def_idx = PJSUA_INVALID_ID;
 }
 
 
@@ -1517,7 +1520,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 		PJ_LOG(1,(THIS_FILE, "Too many AVIs"));
 		return -1;
 	    }
-	    app_config.avi[app_config.avi_cnt++] = pj_str(pj_optarg);
+	    app_config.avi[app_config.avi_cnt++].path = pj_str(pj_optarg);
 	    break;
 
 	case OPT_AUTO_PLAY_AVI:
@@ -2111,7 +2114,7 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
     for (i=0; i<config->avi_cnt; ++i) {
-	pj_ansi_sprintf(line, "--play-avi %s\n", config->avi[i].ptr);
+	pj_ansi_sprintf(line, "--play-avi %s\n", config->avi[i].path.ptr);
 	pj_strcat2(&cfg, line);
     }
     if (config->avi_auto_play) {
@@ -2827,9 +2830,11 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 
 	/* Stream AVI, if desired */
 	if (app_config.avi_auto_play &&
-	    app_config.avi_slot != PJSUA_INVALID_ID)
+	    app_config.avi_def_idx != PJSUA_INVALID_ID &&
+	    app_config.avi[app_config.avi_def_idx].slot != PJSUA_INVALID_ID)
 	{
-	    pjsua_conf_connect(app_config.avi_slot, call_conf_slot);
+	    pjsua_conf_connect(app_config.avi[app_config.avi_def_idx].slot,
+			       call_conf_slot);
 	    disconnect_mic = PJ_TRUE;
 	}
 
@@ -4022,9 +4027,10 @@ static void app_config_init_video(pjsua_acc_config *acc_cfg)
     acc_cfg->vid_rend_dev = app_config.vid.vrender_dev;
 
     if (app_config.avi_auto_play &&
-	app_config.avi_dev_id != PJMEDIA_VID_INVALID_DEV)
+	app_config.avi_def_idx != PJSUA_INVALID_ID &&
+	app_config.avi[app_config.avi_def_idx].dev_id != PJMEDIA_VID_INVALID_DEV)
     {
-	acc_cfg->vid_cap_dev = app_config.avi_dev_id;
+	acc_cfg->vid_cap_dev = app_config.avi[app_config.avi_def_idx].dev_id;
     }
 }
 
@@ -5704,8 +5710,11 @@ pj_status_t app_init(int argc, char *argv[])
 	    pjmedia_vid_dev_index avid;
 	    unsigned strm_idx, strm_cnt;
 
+	    app_config.avi[i].dev_id = PJMEDIA_VID_INVALID_DEV;
+	    app_config.avi[i].slot = PJSUA_INVALID_ID;
+
 	    pjmedia_avi_dev_param_default(&avdp);
-	    avdp.path = app_config.avi[i];
+	    avdp.path = app_config.avi[i].path;
 
 	    status =  pjmedia_avi_dev_alloc(avi_factory, &avdp, &avid);
 	    if (status != PJ_SUCCESS) {
@@ -5717,7 +5726,10 @@ pj_status_t app_init(int argc, char *argv[])
 
 	    PJ_LOG(4,(THIS_FILE, "AVI player %.*s created, dev_id=%d",
 		      (int)avdp.title.slen, avdp.title.ptr, avid));
-	    app_config.avi_dev_id = avid;
+
+	    app_config.avi[i].dev_id = avid;
+	    if (app_config.avi_def_idx == PJSUA_INVALID_ID)
+		app_config.avi_def_idx = i;
 
 	    strm_cnt = pjmedia_avi_streams_get_num_streams(avdp.avi_streams);
 	    for (strm_idx=0; strm_idx<strm_cnt; ++strm_idx) {
@@ -5740,7 +5752,7 @@ pj_status_t app_init(int argc, char *argv[])
 				  "AVI %.*s: audio added to slot %d",
 				  (int)avdp.title.slen, avdp.title.ptr,
 				  slot));
-			app_config.avi_slot = slot;
+			app_config.avi[i].slot = slot;
 		    }
 		} else {
 		    PJ_LOG(4,(THIS_FILE,
@@ -6036,6 +6048,14 @@ pj_status_t app_destroy(void)
 	app_config.sc = NULL;
     }
 #endif
+
+    /* Close avi devs and ports */
+    for (i=0; i<app_config.avi_cnt; ++i) {
+	if (app_config.avi[i].slot != PJSUA_INVALID_ID)
+	    pjsua_conf_remove_port(app_config.avi[i].slot);
+	if (app_config.avi[i].dev_id != PJMEDIA_VID_INVALID_DEV)
+	    pjmedia_avi_dev_free(app_config.avi[i].dev_id);
+    }
 
     /* Close ringback port */
     if (app_config.ringback_port && 
