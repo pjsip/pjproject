@@ -744,8 +744,7 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
 
             /* Create the window where we will draw. */
             strm->window = SDL_CreateWindow("pjmedia-SDL video",
-                                            SDL_WINDOWPOS_CENTERED,
-                                            SDL_WINDOWPOS_CENTERED,
+                                            x, y,
                                             strm->param.disp_size.w,
                                             strm->param.disp_size.h,
                                             flags);
