@@ -734,6 +734,14 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
 	    strm->window = SDL_CreateWindowFrom(
                                strm->param.window.info.window);
         } else {
+            int x, y;
+
+            x = y = SDL_WINDOWPOS_CENTERED;
+            if (strm->param.flags & PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
+                x = strm->param.window_pos.x;
+                y = strm->param.window_pos.y;
+            }
+
             /* Create the window where we will draw. */
             strm->window = SDL_CreateWindow("pjmedia-SDL video",
                                             SDL_WINDOWPOS_CENTERED,
@@ -829,6 +837,12 @@ static pj_status_t change_format(struct sdl_stream *strm,
                                  pjmedia_format *new_fmt)
 {
     pj_status_t status;
+
+    if (new_fmt->id == strm->param.fmt.id) {
+        SDL_SetWindowSize(strm->window, new_fmt->det.vid.size.w,
+                          new_fmt->det.vid.size.h);
+        return resize_disp(strm, &new_fmt->det.vid.size);
+    }
 
     /* Recreate SDL renderer */
     status = sdl_create_rend(strm, (new_fmt? new_fmt :
@@ -933,13 +947,6 @@ static pj_status_t sdl_factory_create_stream(
         pj_sem_post(strm->sf->sem);
     pj_list_insert_after(&strm->sf->streams, &strm->list_entry);
     pj_mutex_unlock(strm->sf->mutex);
-
-    /* Apply the remaining settings */
-    if (param->flags & PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION) {
-	sdl_stream_set_cap(&strm->base,
-			   PJMEDIA_VID_DEV_CAP_OUTPUT_POSITION,
-			   &param->window_pos);
-    }
 
     /* Done */
     strm->base.op = &stream_op;
