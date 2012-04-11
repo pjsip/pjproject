@@ -857,7 +857,9 @@ PJ_DEF(pj_status_t) pjsip_transport_dec_ref( pjsip_transport *tp )
 	    if (tp->is_shutdown) {
 		delay.sec = delay.msec = 0;
 	    } else {
-		delay.sec = PJSIP_TRANSPORT_IDLE_TIME;
+		delay.sec = (tp->dir==PJSIP_TP_DIR_OUTGOING) ?
+				PJSIP_TRANSPORT_IDLE_TIME :
+				PJSIP_TRANSPORT_SERVER_IDLE_TIME;
 		delay.msec = 0;
 	    }
 
