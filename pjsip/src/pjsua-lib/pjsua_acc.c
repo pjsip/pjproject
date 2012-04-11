@@ -2821,11 +2821,12 @@ void pjsua_acc_on_tp_state_changed(pjsip_transport *tp,
 	    continue;
 	}
 
-	/* Destroy regc to release transport immediately */
+	/* Release regc transport immediately
+	 * See https://trac.pjsip.org/repos/ticket/1481
+	 */
 	if (pjsua_var.acc[i].regc) {
-	    pjsip_regc_destroy(pjsua_var.acc[i].regc);
+	    pjsip_regc_release_transport(pjsua_var.acc[i].regc);
 	}
-	pjsua_var.acc[i].regc = NULL;
 
 	/* Schedule reregistration for this account */
 	schedule_reregistration(acc);

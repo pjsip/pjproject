@@ -440,6 +440,17 @@ PJ_DEF(pj_status_t) pjsip_regc_set_transport( pjsip_regc *regc,
     return PJ_SUCCESS;
 }
 
+/* Release transport */
+PJ_DEF(pj_status_t) pjsip_regc_release_transport(pjsip_regc *regc)
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+    if (regc->last_transport) {
+	pjsip_transport_dec_ref(regc->last_transport);
+	regc->last_transport = NULL;
+    }
+    return PJ_SUCCESS;
+}
+
 
 PJ_DEF(pj_status_t) pjsip_regc_add_headers( pjsip_regc *regc,
 					    const pjsip_hdr *hdr_list)
@@ -1269,7 +1280,9 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
     pj_lock_acquire(regc->lock);
 
     /* Get last transport used and add reference to it */
-    if (tdata->tp_info.transport != regc->last_transport) {
+    if (tdata->tp_info.transport != regc->last_transport &&
+	status==PJ_SUCCESS)
+    {
 	if (regc->last_transport) {
 	    pjsip_transport_dec_ref(regc->last_transport);
 	    regc->last_transport = NULL;
