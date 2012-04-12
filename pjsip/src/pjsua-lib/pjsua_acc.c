@@ -421,13 +421,6 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
         }
     }
 
-    /* Get CRC of account proxy setting */
-    acc->local_route_crc = calc_proxy_crc(acc->cfg.proxy, acc->cfg.proxy_cnt);
-
-    /* Get CRC of global outbound proxy setting */
-    acc->global_route_crc=calc_proxy_crc(pjsua_var.ua_cfg.outbound_proxy,
-					 pjsua_var.ua_cfg.outbound_proxy_cnt);
-    
     /* Check the route URI's and force loose route if required */
     for (i=0; i<acc->cfg.proxy_cnt; ++i) {
 	status = normalize_route_uri(acc->pool, &acc->cfg.proxy[i]);
@@ -437,6 +430,13 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 	    return status;
 	}
     }
+
+    /* Get CRC of account proxy setting */
+    acc->local_route_crc = calc_proxy_crc(acc->cfg.proxy, acc->cfg.proxy_cnt);
+
+    /* Get CRC of global outbound proxy setting */
+    acc->global_route_crc=calc_proxy_crc(pjsua_var.ua_cfg.outbound_proxy,
+					 pjsua_var.ua_cfg.outbound_proxy_cnt);
 
     status = initialize_acc(id);
     if (status != PJ_SUCCESS) {
@@ -772,6 +772,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 
 	    pj_list_push_back(&local_route, r);
 	}
+
+	/* Recalculate the CRC again after route URI normalization */
+	local_route_crc = calc_proxy_crc(acc_proxy, cfg->proxy_cnt);
     }
 
 
