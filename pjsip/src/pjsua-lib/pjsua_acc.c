@@ -993,7 +993,13 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 			    &cfg->auth_pref.algorithm);
 
     /* Registration */
-    acc->cfg.reg_timeout = cfg->reg_timeout;
+    if (acc->cfg.reg_timeout != cfg->reg_timeout) {
+	acc->cfg.reg_timeout = cfg->reg_timeout;
+	if (acc->regc != NULL)
+	    pjsip_regc_update_expires(acc->regc, acc->cfg.reg_timeout);
+
+	update_reg = PJ_TRUE;
+    }
     acc->cfg.unreg_timeout = cfg->unreg_timeout;
     acc->cfg.allow_contact_rewrite = cfg->allow_contact_rewrite;
     acc->cfg.reg_retry_interval = cfg->reg_retry_interval;
@@ -1002,8 +1008,9 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.register_on_acc_add = cfg->register_on_acc_add;
     if (acc->cfg.reg_delay_before_refresh != cfg->reg_delay_before_refresh) {
         acc->cfg.reg_delay_before_refresh = cfg->reg_delay_before_refresh;
-        pjsip_regc_set_delay_before_refresh(acc->regc,
-                                            cfg->reg_delay_before_refresh);
+	if (acc->regc != NULL)
+	    pjsip_regc_set_delay_before_refresh(acc->regc,
+						cfg->reg_delay_before_refresh);
     }
 
     /* Normalize registration timeout and refresh delay */
