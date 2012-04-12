@@ -73,6 +73,51 @@ PJ_BEGIN_DECL
  */
 
 
+/**
+ * Enumeration of video stream sending rate control.
+ */
+typedef enum pjmedia_vid_stream_rc_method
+{
+    /**
+     * No sending rate control. All outgoing RTP packets will be transmitted
+     * immediately right after encoding process is done.
+     */
+    PJMEDIA_VID_STREAM_RC_NONE		    = 0,
+
+    /**
+     * Simple blocking. Each outgoing RTP packet transmission may be delayed
+     * to avoid peak bandwidth that is much higher than specified. The thread
+     * invoking the video stream put_frame(), e.g: video capture device thread,
+     * will be blocked whenever transmission delay takes place.
+     */
+    PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING   = 1
+
+} pjmedia_vid_stream_rc_method;
+
+
+/**
+ * Structure of configuration settings for video stream sending rate control.
+ */
+typedef struct pjmedia_vid_stream_rc_config
+{
+    /**
+     * Rate control method.
+     *
+     * Default: PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING.
+     */
+    pjmedia_vid_stream_rc_method    method;
+
+    /**
+     * Upstream/outgoing bandwidth. If this is set to zero, the video stream
+     * will use codec maximum bitrate setting.
+     *
+     * Default: 0 (follow codec maximum bitrate).
+     */
+    unsigned			    bandwidth;
+
+} pjmedia_vid_stream_rc_config;
+
+
 /** 
  * This structure describes video stream information. Each video stream
  * corresponds to one "m=" line in SDP session descriptor, and it has
@@ -117,6 +162,9 @@ typedef struct pjmedia_vid_stream_info
     pj_bool_t           rtcp_sdes_bye_disabled; 
                                     /**< Disable automatic sending of RTCP
                                          SDES and BYE.                      */
+
+    pjmedia_vid_stream_rc_config rc_cfg;
+                                    /**< Stream send rate control settings. */
 } pjmedia_vid_stream_info;
 
 
@@ -143,6 +191,15 @@ pjmedia_vid_stream_info_from_sdp(pjmedia_vid_stream_info *si,
 				 const pjmedia_sdp_session *local,
 				 const pjmedia_sdp_session *remote,
 				 unsigned stream_idx);
+
+
+/**
+ * Initialize the video stream rate control with default settings.
+ *
+ * @param cfg		Video stream rate control structure to be initialized.
+ */
+PJ_DECL(void)
+pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg);
 
 
 /*

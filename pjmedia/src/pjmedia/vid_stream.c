@@ -153,8 +153,11 @@ struct pjmedia_vid_stream
 #endif
 
     pjmedia_vid_codec	    *codec;	    /**< Codec instance being used. */
-    pj_uint32_t		     last_dec_ts;    /**< Last decoded timestamp.   */
-    int			     last_dec_seq;   /**< Last decoded sequence.    */
+    pj_uint32_t		     last_dec_ts;   /**< Last decoded timestamp.    */
+    int			     last_dec_seq;  /**< Last decoded sequence.     */
+
+
+    pj_timestamp	     ts_freq;	    /**< Timestamp frequency.	    */
 };
 
 /* Prototypes */
@@ -768,6 +771,8 @@ static pj_status_t put_frame(pjmedia_port *port,
     pj_bool_t has_more_data = PJ_FALSE;
     pj_size_t total_sent = 0;
     pjmedia_vid_encode_opt enc_opt;
+    unsigned pkt_cnt = 0;
+    pj_timestamp initial_time;
 
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
     /* If the interval since last sending packet is greater than
@@ -826,6 +831,8 @@ static pj_status_t put_frame(pjmedia_port *port,
 			       &rtphdrlen);
 	return status;
     }
+    
+    pj_get_timestamp(&initial_time);
 
     /* Loop while we have frame to send */
     for (;;) {
@@ -864,6 +871,7 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 	pjmedia_rtcp_tx_rtp(&stream->rtcp, frame_out.size);
 	total_sent += frame_out.size;
+	pkt_cnt++;
 
 	if (!has_more_data)
 	    break;
@@ -885,7 +893,40 @@ static pj_status_t put_frame(pjmedia_port *port,
 	    /* Ignore this error (?) */
 	    break;
 	}
+
+	/* Send rate control */
+	if (stream->info.rc_cfg.method==PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING)
+	{
+	    pj_timestamp now, next_send_ts, total_send_ts;
+
+	    total_send_ts.u64 = total_sent * stream->ts_freq.u64 * 8 /
+				stream->info.rc_cfg.bandwidth;
+	    next_send_ts = initial_time;
+	    pj_add_timestamp(&next_send_ts, &total_send_ts);
+
+	    pj_get_timestamp(&now);
+	    if (pj_cmp_timestamp(&now, &next_send_ts) < 0) {
+		unsigned ms_sleep;
+		ms_sleep = pj_elapsed_msec(&now, &next_send_ts);
+
+		if (ms_sleep > 10)
+		    ms_sleep = 10;
+
+		pj_thread_sleep(ms_sleep);
+	    }
+	}
     }
+
+#if 0
+    /* Trace log for rate control */
+    {
+	pj_timestamp end_time;
+	pj_get_timestamp(&end_time);
+	PJ_LOG(5, (stream->name.ptr, "total pkt=%d size=%d sleep=%d",
+		   pkt_cnt, total_sent,
+		   pj_elapsed_msec(&initial_time, &end_time)));
+    }
+#endif
 
     /* Check if now is the time to transmit RTCP SR/RR report. 
      * We only do this when stream direction is not "decoding only", because
@@ -1413,6 +1454,11 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     stream->frame_ts_len = info->codec_info.clock_rate *
                            vfd_enc->fps.denum / vfd_enc->fps.num;
 
+    /* Initialize send rate states */
+    pj_get_timestamp_freq(&stream->ts_freq);
+    if (info->rc_cfg.bandwidth == 0)
+	info->rc_cfg.bandwidth = vfd_enc->max_bps * 150 / 100;
+
     /* Override the initial framerate in the decoding direction. This initial
      * value will be used by the renderer to configure its clock, and setting
      * it to a bit higher value can avoid the possibility of high latency
@@ -1864,6 +1910,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_send_rtcp_bye(
     }
 
     return PJ_SUCCESS;
+}
+
+
+/*
+ * Initialize the video stream rate control with default settings.
+ */
+PJ_DEF(void)
+pjmedia_vid_stream_rc_config_default(pjmedia_vid_stream_rc_config *cfg)
+{
+    pj_bzero(cfg, sizeof(*cfg));
+    cfg->method = PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING;
 }
 
 

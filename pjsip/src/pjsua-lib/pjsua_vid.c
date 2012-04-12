@@ -747,6 +747,9 @@ pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 	si->rtp_seq = call_med->rtp_tx_seq;
 	si->rtp_seq_ts_set = call_med->rtp_tx_seq_ts_set;
 
+	/* Set rate control config from account setting */
+	si->rc_cfg = acc->cfg.vid_stream_rc_cfg;
+
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
 	/* Enable/disable stream keep-alive and NAT hole punch. */
 	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;

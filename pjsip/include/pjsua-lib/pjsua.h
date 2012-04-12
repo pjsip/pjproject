@@ -2882,6 +2882,13 @@ typedef struct pjsua_acc_config
     pjmedia_vid_dev_index vid_rend_dev;
 
     /**
+     * Specify the send rate control for video stream.
+     *
+     * Default: see #pjmedia_vid_stream_rc_config
+     */
+    pjmedia_vid_stream_rc_config vid_stream_rc_cfg;
+
+    /**
      * Media transport config.
      */
     pjsua_transport_config rtp_cfg;
