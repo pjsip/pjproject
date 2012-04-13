@@ -1361,7 +1361,7 @@ struct pjsua_msg_data
      * Additional message headers as linked list. Application can add
      * headers to the list by creating the header, either from the heap/pool
      * or from temporary local variable, and add the header using
-     * linked list operation. See pjsip_apps.c for some sample codes.
+     * linked list operation. See pjsua_app.c for some sample codes.
      */
     pjsip_hdr	hdr_list;
 
