@@ -110,7 +110,7 @@ export PJSDP_CFLAGS += $(_CFLAGS)
 # Defines for building PJMEDIA-Codec library
 #
 export PJMEDIA_CODEC_SRCDIR = ../src/pjmedia-codec
-export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_codecs.o \
+export PJMEDIA_CODEC_OBJS += audio_codecs.o ffmpeg_vid_codecs.o \
 			h263_packetizer.o h264_packetizer.o \
 			$(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
 			ipp_codecs.o $(CODEC_OBJS) \
