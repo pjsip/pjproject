@@ -19,7 +19,7 @@
  */
 #include "test.h"
 #include <pjmedia-audiodev/audiodev.h>
-#include <pjmedia-codec/ffmpeg_codecs.h>
+#include <pjmedia-codec/ffmpeg_vid_codecs.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia_videodev.h>
 

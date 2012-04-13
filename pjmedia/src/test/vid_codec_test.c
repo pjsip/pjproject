@@ -17,7 +17,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "test.h"
-#include <pjmedia-codec/ffmpeg_codecs.h>
+#include <pjmedia-codec/ffmpeg_vid_codecs.h>
 #include <pjmedia-videodev/videodev.h>
 #include <pjmedia/vid_codec.h>
 #include <pjmedia/port.h>
@@ -453,8 +453,8 @@ int vid_codec_test(void)
     if (status != PJ_SUCCESS)
         return -10;
 
-#if PJMEDIA_HAS_FFMPEG_CODEC
-    status = pjmedia_codec_ffmpeg_init(NULL, mem);
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC
+    status = pjmedia_codec_ffmpeg_vid_init(NULL, mem);
     if (status != PJ_SUCCESS)
         return -20;
 #endif
@@ -472,8 +472,8 @@ int vid_codec_test(void)
 	goto on_return;
 
 on_return:
-#if PJMEDIA_HAS_FFMPEG_CODEC
-    pjmedia_codec_ffmpeg_deinit();
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC
+    pjmedia_codec_ffmpeg_vid_deinit();
 #endif
     pjmedia_vid_dev_subsys_shutdown();
     pj_pool_release(pool);

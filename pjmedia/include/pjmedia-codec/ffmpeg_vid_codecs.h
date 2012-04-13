@@ -17,8 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJMEDIA_CODECS_FFMPEG_H__
-#define __PJMEDIA_CODECS_FFMPEG_H__
+#ifndef __PJMEDIA_CODECS_FFMPEG_VID_H__
+#define __PJMEDIA_CODECS_FFMPEG_VID_H__
 
 
 #include <pjmedia-codec/types.h>
@@ -33,7 +33,7 @@ PJ_BEGIN_DECL
  */
 
 /**
- * Initialize and register FFMPEG codecs factory to pjmedia endpoint.
+ * Initialize and register FFMPEG video codecs factory to pjmedia endpoint.
  *
  * @param mgr	    The video codec manager instance where this codec will
  * 		    be registered to. Specify NULL to use default instance
@@ -43,17 +43,17 @@ PJ_BEGIN_DECL
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
-                                               pj_pool_factory *pf);
+PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
+                                                   pj_pool_factory *pf);
 
 
 /**
- * Unregister FFMPEG codecs factory from the video codec manager and
+ * Unregister FFMPEG video codecs factory from the video codec manager and
  * deinitialize the codecs library.
  *
  * @return	    PJ_SUCCESS on success.
  */
-PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_deinit(void);
+PJ_DECL(pj_status_t) pjmedia_codec_ffmpeg_vid_deinit(void);
 
 
 PJ_END_DECL
@@ -63,5 +63,5 @@ PJ_END_DECL
  * @}
  */
 
-#endif	/* __PJMEDIA_CODECS_FFMPEG_H__ */
+#endif	/* __PJMEDIA_CODECS_FFMPEG_VID_H__ */
 

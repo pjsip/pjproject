@@ -16,7 +16,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjmedia-codec/ffmpeg_codecs.h>
+#include <pjmedia-codec/ffmpeg_vid_codecs.h>
 #include <pjmedia-codec/h263_packetizer.h>
 #include <pjmedia-codec/h264_packetizer.h>
 #include <pjmedia/errno.h>
@@ -31,13 +31,14 @@
 
 
 /*
- * Only build this file if PJMEDIA_HAS_FFMPEG_CODEC != 0 and 
+ * Only build this file if PJMEDIA_HAS_FFMPEG_VID_CODEC != 0 and 
  * PJMEDIA_HAS_VIDEO != 0
  */
-#if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC != 0 && \
+#if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && \
+            PJMEDIA_HAS_FFMPEG_VID_CODEC != 0 && \
     defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
-#define THIS_FILE   "ffmpeg_codecs.c"
+#define THIS_FILE   "ffmpeg_vid_codecs.c"
 
 #define LIBAVCODEC_VER_AT_LEAST(major,minor)  (LIBAVCODEC_VERSION_MAJOR > major || \
      					       (LIBAVCODEC_VERSION_MAJOR == major && \
@@ -560,8 +561,8 @@ static int find_codec_idx_by_fmt_id(pjmedia_format_id fmt_id)
 /*
  * Initialize and register FFMPEG codec factory to pjmedia endpoint.
  */
-PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_init(pjmedia_vid_codec_mgr *mgr,
-                                              pj_pool_factory *pf)
+PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
+                                                  pj_pool_factory *pf)
 {
     pj_pool_t *pool;
     AVCodec *c;
@@ -831,7 +832,7 @@ on_error:
 /*
  * Unregister FFMPEG codecs factory from pjmedia endpoint.
  */
-PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_deinit(void)
+PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_deinit(void)
 {
     pj_status_t status = PJ_SUCCESS;
 
@@ -1773,5 +1774,5 @@ static pj_status_t ffmpeg_codec_decode( pjmedia_vid_codec *codec,
 #   pragma comment( lib, "avcodec.lib")
 #endif
 
-#endif	/* PJMEDIA_HAS_FFMPEG_CODEC */
+#endif	/* PJMEDIA_HAS_FFMPEG_VID_CODEC */
 
