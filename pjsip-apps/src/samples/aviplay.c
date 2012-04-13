@@ -500,8 +500,8 @@ static int main_func(int argc, char *argv[])
         goto on_return;
     }
     
-#if PJMEDIA_HAS_FFMPEG_CODEC
-    status = pjmedia_codec_ffmpeg_init(NULL, &cp.factory);
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC
+    status = pjmedia_codec_ffmpeg_vid_init(NULL, &cp.factory);
     if (status != PJ_SUCCESS)
 	goto on_return;    
 #endif
@@ -518,8 +518,8 @@ static int main_func(int argc, char *argv[])
     pj_thread_sleep(100);
 
 on_return:    
-#if PJMEDIA_HAS_FFMPEG_CODEC
-    pjmedia_codec_ffmpeg_deinit();
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC
+    pjmedia_codec_ffmpeg_vid_deinit();
 #endif
     pjmedia_aud_subsys_shutdown();
     pjmedia_vid_dev_subsys_shutdown();

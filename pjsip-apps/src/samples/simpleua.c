@@ -385,11 +385,11 @@ int main(int argc, char *argv[])
     status = pjmedia_vid_dev_subsys_init(&cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
 
-#  if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC!=0
+#  if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC!=0
     /* Init ffmpeg video codecs */
-    status = pjmedia_codec_ffmpeg_init(NULL, &cp.factory);
+    status = pjmedia_codec_ffmpeg_vid_init(NULL, &cp.factory);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, 1);
-#  endif  /* PJMEDIA_HAS_FFMPEG_CODEC */
+#  endif  /* PJMEDIA_HAS_FFMPEG_VID_CODEC */
 
 #endif	/* PJMEDIA_HAS_VIDEO */
     
@@ -573,8 +573,8 @@ int main(int argc, char *argv[])
 	pjmedia_vid_stream_destroy(g_med_vstream);
 
     /* Deinit ffmpeg codec */
-#   if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC!=0
-    pjmedia_codec_ffmpeg_deinit();
+#   if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC!=0
+    pjmedia_codec_ffmpeg_vid_deinit();
 #   endif
 
 #endif

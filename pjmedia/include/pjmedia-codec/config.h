@@ -378,12 +378,22 @@
 
 
 /**
- * Specify if FFMPEG video codecs are available.
+ * Specify if FFMPEG codecs are available.
  *
  * Default: PJMEDIA_HAS_LIBAVCODEC
  */
+#ifndef PJMEDIA_HAS_FFMPEG_CODEC
+#   define PJMEDIA_HAS_FFMPEG_CODEC		PJMEDIA_HAS_LIBAVCODEC
+#endif
+
+
+/**
+ * Specify if FFMPEG video codecs are available.
+ *
+ * Default: PJMEDIA_HAS_FFMPEG_CODEC
+ */
 #ifndef PJMEDIA_HAS_FFMPEG_VID_CODEC
-#   define PJMEDIA_HAS_FFMPEG_VID_CODEC		PJMEDIA_HAS_LIBAVCODEC
+#   define PJMEDIA_HAS_FFMPEG_VID_CODEC		PJMEDIA_HAS_FFMPEG_CODEC
 #endif
 
 /**

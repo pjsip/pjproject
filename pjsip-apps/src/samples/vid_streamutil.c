@@ -121,8 +121,8 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
     /* To suppress warning about unused var when all codecs are disabled */
     PJ_UNUSED_ARG(status);
 
-#if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC != 0
-    status = pjmedia_codec_ffmpeg_init(NULL, pf);
+#if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
+    status = pjmedia_codec_ffmpeg_vid_init(NULL, pf);
     PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
 #endif
 
@@ -134,8 +134,8 @@ static pj_status_t init_codecs(pj_pool_factory *pf)
  */
 static void deinit_codecs()
 {
-#if defined(PJMEDIA_HAS_FFMPEG_CODEC) && PJMEDIA_HAS_FFMPEG_CODEC != 0
-    pjmedia_codec_ffmpeg_deinit();
+#if defined(PJMEDIA_HAS_FFMPEG_VID_CODEC) && PJMEDIA_HAS_FFMPEG_VID_CODEC != 0
+    pjmedia_codec_ffmpeg_vid_deinit();
 #endif
 }
 

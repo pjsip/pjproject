@@ -73,8 +73,8 @@ pj_status_t pjsua_vid_subsys_init(void)
 	goto on_error;
     }
 
-#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_FFMPEG_CODEC
-    status = pjmedia_codec_ffmpeg_init(NULL, &pjsua_var.cp.factory);
+#if PJMEDIA_HAS_VIDEO && PJMEDIA_HAS_FFMPEG_VID_CODEC
+    status = pjmedia_codec_ffmpeg_vid_init(NULL, &pjsua_var.cp.factory);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status,
 		     "Error initializing ffmpeg library"));
@@ -129,8 +129,8 @@ pj_status_t pjsua_vid_subsys_destroy(void)
 
     pjmedia_vid_dev_subsys_shutdown();
 
-#if PJMEDIA_HAS_FFMPEG_CODEC
-    pjmedia_codec_ffmpeg_deinit();
+#if PJMEDIA_HAS_FFMPEG_VID_CODEC
+    pjmedia_codec_ffmpeg_vid_deinit();
 #endif
 
     if (pjmedia_vid_codec_mgr_instance())
