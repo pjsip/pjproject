@@ -107,6 +107,8 @@ static avi_fmt_info avi_fmts[] =
     {PJMEDIA_FORMAT_PACK('X','V','I','D'), PJMEDIA_FORMAT_MPEG4},
     {PJMEDIA_FORMAT_PACK('x','v','i','d'), PJMEDIA_FORMAT_MPEG4},
     {PJMEDIA_FORMAT_PACK('D','I','V','X'), PJMEDIA_FORMAT_MPEG4},
+    {PJMEDIA_FORMAT_PACK('F','M','P','4'), PJMEDIA_FORMAT_MPEG4},
+    {PJMEDIA_FORMAT_PACK('D','X','5','0'), PJMEDIA_FORMAT_MPEG4}
 };
 
 struct pjmedia_avi_streams
