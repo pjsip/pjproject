@@ -46,6 +46,9 @@ struct avi_dev_info
     pjmedia_avi_streams		*avi;
     pjmedia_port                *vid;
     avi_dev_strm		*strm;
+    pjmedia_vid_codec           *codec;
+    pj_uint8_t                  *enc_buf;
+    pj_size_t                    enc_buf_size;
 };
 
 /* avi_ factory */
@@ -69,9 +72,6 @@ struct avi_dev_strm
 
     pjmedia_vid_dev_cb		     vid_cb;	    /**< Stream callback.   */
     void			    *user_data;	    /**< Application data.  */
-    pjmedia_vid_codec               *codec;
-    pj_uint8_t                      *enc_buf;
-    pj_size_t                        enc_buf_size;
 };
 
 
@@ -272,6 +272,11 @@ static void reset_dev_info(struct avi_dev_info *adi)
 	adi->avi = NULL;
     }
 
+    if (adi->codec) {
+        pjmedia_vid_codec_close(adi->codec);
+        adi->codec = NULL;
+    }
+
     if (adi->pool)
 	pj_pool_release(adi->pool);
 
@@ -360,6 +365,8 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
     struct avi_factory *cf = (struct avi_factory*)f;
     unsigned local_idx;
     struct avi_dev_info *adi = NULL;
+    pjmedia_format avi_fmt;
+    const pjmedia_video_format_info *vfi;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(f && p && p_id, PJ_EINVAL);
@@ -411,6 +418,56 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
 	goto on_error;
     }
 
+    pjmedia_format_copy(&avi_fmt, &adi->vid->info.fmt);
+    vfi = pjmedia_get_video_format_info(NULL, avi_fmt.id);
+    /* Check whether the frame is encoded. */
+    if (!vfi || vfi->bpp == 0) {
+        /* Yes, prepare codec */
+        const pjmedia_vid_codec_info *codec_info;
+        pjmedia_vid_codec_param codec_param;
+	pjmedia_video_apply_fmt_param vafp;
+
+        /* Lookup codec */
+        status = pjmedia_vid_codec_mgr_get_codec_info2(NULL,
+                                                       avi_fmt.id,
+                                                       &codec_info);
+        if (status != PJ_SUCCESS || !codec_info)
+            goto on_error;
+
+        status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
+                                                         &codec_param);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        /* Open codec */
+        status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
+                                                   &adi->codec);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        status = pjmedia_vid_codec_init(adi->codec, adi->pool);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+        codec_param.dir = PJMEDIA_DIR_DECODING;
+        codec_param.packing = PJMEDIA_VID_PACKING_WHOLE;
+        status = pjmedia_vid_codec_open(adi->codec, &codec_param);
+        if (status != PJ_SUCCESS)
+            goto on_error;
+
+	/* Allocate buffer */
+        avi_fmt.id = codec_info->dec_fmt_id[0];
+        vfi = pjmedia_get_video_format_info(NULL, avi_fmt.id);
+	pj_bzero(&vafp, sizeof(vafp));
+	vafp.size = avi_fmt.det.vid.size;
+	status = vfi->apply_fmt(vfi, &vafp);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	adi->enc_buf = pj_pool_alloc(adi->pool, vafp.framebytes);
+	adi->enc_buf_size = vafp.framebytes;
+    }
+
     /* Calculate title */
     if (p->title.slen) {
 	pj_strdup_with_null(adi->pool, &adi->title, &p->title);
@@ -436,7 +493,7 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
 
     adi->info.caps = PJMEDIA_VID_DEV_CAP_FORMAT;
     adi->info.fmt_cnt = 1;
-    pjmedia_format_copy(&adi->info.fmt[0], &adi->vid->info.fmt);
+    pjmedia_format_copy(&adi->info.fmt[0], &avi_fmt);
 
     /* Set out vars */
     if (p_id)
@@ -448,6 +505,10 @@ PJ_DEF(pj_status_t) pjmedia_avi_dev_alloc( pjmedia_vid_dev_factory *f,
     return PJ_SUCCESS;
 
 on_error:
+    if (adi->codec) {
+        pjmedia_vid_codec_close(adi->codec);
+        adi->codec = NULL;
+    }
     if (adi->pool) {
 	pj_pool_release(adi->pool);
 	adi->pool = NULL;
@@ -469,9 +530,6 @@ static pj_status_t avi_factory_create_stream(
     pj_pool_t *pool = NULL;
     struct avi_dev_info *adi;
     struct avi_dev_strm *strm;
-    pjmedia_format avi_fmt;
-    const pjmedia_video_format_info *vfi;
-    pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(f && param && p_vid_strm, PJ_EINVAL);
     PJ_ASSERT_RETURN(param->fmt.type == PJMEDIA_TYPE_VIDEO &&
@@ -497,56 +555,7 @@ static pj_status_t avi_factory_create_stream(
     strm->user_data = user_data;
     strm->adi = adi;
 
-    pjmedia_format_copy(&avi_fmt, &adi->vid->info.fmt);
-    vfi = pjmedia_get_video_format_info(NULL, avi_fmt.id);
-    /* Check whether the frame is encoded. */
-    if (!vfi || vfi->bpp == 0) {
-        /* Yes, prepare codec */
-        const pjmedia_vid_codec_info *codec_info;
-        pjmedia_vid_codec_param codec_param;
-	pjmedia_video_apply_fmt_param vafp;
-
-        /* Lookup codec */
-        status = pjmedia_vid_codec_mgr_get_codec_info2(NULL,
-                                                       avi_fmt.id,
-                                                       &codec_info);
-        if (status != PJ_SUCCESS || !codec_info)
-            goto on_error;
-
-        status = pjmedia_vid_codec_mgr_get_default_param(NULL, codec_info,
-                                                         &codec_param);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-        /* Open codec */
-        status = pjmedia_vid_codec_mgr_alloc_codec(NULL, codec_info,
-                                                   &strm->codec);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-        status = pjmedia_vid_codec_init(strm->codec, strm->pool);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-        codec_param.dir = PJMEDIA_DIR_DECODING;
-        codec_param.packing = PJMEDIA_VID_PACKING_WHOLE;
-        status = pjmedia_vid_codec_open(strm->codec, &codec_param);
-        if (status != PJ_SUCCESS)
-            goto on_error;
-
-	/* Allocate buffer */
-        avi_fmt.id = codec_info->dec_fmt_id[0];
-        vfi = pjmedia_get_video_format_info(NULL, avi_fmt.id);
-	pj_bzero(&vafp, sizeof(vafp));
-	vafp.size = avi_fmt.det.vid.size;
-	status = vfi->apply_fmt(vfi, &vafp);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
-
-	strm->enc_buf = pj_pool_alloc(strm->pool, vafp.framebytes);
-	strm->enc_buf_size = vafp.framebytes;
-    }
-    pjmedia_format_copy(&param->fmt, &avi_fmt);
+    pjmedia_format_copy(&param->fmt, &adi->info.fmt[0]);
 
     /* Done */
     strm->base.op = &stream_op;
@@ -554,10 +563,6 @@ static pj_status_t avi_factory_create_stream(
     *p_vid_strm = &strm->base;
 
     return PJ_SUCCESS;
-
-on_error:
-    avi_dev_strm_destroy(&strm->base);
-    return status;
 }
 
 /* API: Get stream info. */
@@ -611,17 +616,17 @@ static pj_status_t avi_dev_strm_get_frame(pjmedia_vid_dev_stream *strm,
 {
     struct avi_dev_strm *stream = (struct avi_dev_strm*)strm;
     
-    if (stream->codec) {
+    if (stream->adi->codec) {
         pjmedia_frame enc_frame;
         pj_status_t status;
 
-        enc_frame.buf = stream->enc_buf;
-        enc_frame.size = stream->enc_buf_size;
+        enc_frame.buf = stream->adi->enc_buf;
+        enc_frame.size = stream->adi->enc_buf_size;
         status = pjmedia_port_get_frame(stream->adi->vid, &enc_frame);
         if (status != PJ_SUCCESS)
             return status;
 
-        return pjmedia_vid_codec_decode(stream->codec, 1, &enc_frame,
+        return pjmedia_vid_codec_decode(stream->adi->codec, 1, &enc_frame,
                                         frame->size, frame);
     } else {
         return pjmedia_port_get_frame(stream->adi->vid, frame);
@@ -661,11 +666,6 @@ static pj_status_t avi_dev_strm_destroy(pjmedia_vid_dev_stream *strm)
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     avi_dev_strm_stop(strm);
-
-    if (stream->codec) {
-        pjmedia_vid_codec_close(stream->codec);
-        stream->codec = NULL;
-    }
 
     stream->adi->strm = NULL;
     stream->adi = NULL;
