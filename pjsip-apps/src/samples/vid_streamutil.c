@@ -816,6 +816,9 @@ int main(int argc, char *argv[])
 	vpp.vidparam.fmt.det.vid.size = play_port->info.fmt.det.vid.size;
 	vpp.vidparam.fmt.det.vid.fps = play_port->info.fmt.det.vid.fps;
         vpp.vidparam.disp_size = vpp.vidparam.fmt.det.vid.size;
+	vpp.vidparam.flags |= PJMEDIA_VID_DEV_CAP_OUTPUT_WINDOW_FLAGS;
+	vpp.vidparam.window_flags = PJMEDIA_VID_DEV_WND_BORDER |
+				    PJMEDIA_VID_DEV_WND_RESIZABLE;
 
 	status = pjmedia_vid_port_create(pool, &vpp, &renderer);
         if (status != PJ_SUCCESS)
