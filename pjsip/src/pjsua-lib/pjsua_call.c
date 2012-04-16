@@ -844,6 +844,7 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
 	/*
 	 * No we can't handle the incoming INVITE request.
 	 */
+        sip_err_code = PJSIP_ERRNO_TO_SIP_STATUS(status);
 	goto on_return;
     } 
 
