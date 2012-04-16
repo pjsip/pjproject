@@ -837,12 +837,6 @@ static pj_status_t change_format(struct sdl_stream *strm,
 {
     pj_status_t status;
 
-    if (new_fmt->id == strm->param.fmt.id) {
-        SDL_SetWindowSize(strm->window, new_fmt->det.vid.size.w,
-                          new_fmt->det.vid.size.h);
-        return resize_disp(strm, &new_fmt->det.vid.size);
-    }
-
     /* Recreate SDL renderer */
     status = sdl_create_rend(strm, (new_fmt? new_fmt :
 				   &strm->param.fmt));
