@@ -45,6 +45,8 @@
 #define TRC_(expr)			PJ_LOG(5,expr)
 #define SIGNATURE			PJMEDIA_SIG_PORT_VID_STREAM
 
+#define TRACE_RC			0
+
 /* Tracing jitter buffer operations in a stream session to a CSV file.
  * The trace will contain JB operation timestamp, frame info, RTP info, and
  * the JB state right after the operation.
@@ -158,6 +160,14 @@ struct pjmedia_vid_stream
 
 
     pj_timestamp	     ts_freq;	    /**< Timestamp frequency.	    */
+
+#if TRACE_RC
+    unsigned		     rc_total_sleep;
+    unsigned		     rc_total_pkt;
+    unsigned		     rc_total_img;
+    pj_timestamp	     tx_start;
+    pj_timestamp	     tx_end;
+#endif
 };
 
 /* Prototypes */
@@ -917,14 +927,23 @@ static pj_status_t put_frame(pjmedia_port *port,
 	}
     }
 
-#if 0
+#if TRACE_RC
     /* Trace log for rate control */
     {
 	pj_timestamp end_time;
+	unsigned total_sleep;
+
 	pj_get_timestamp(&end_time);
+	total_sleep = pj_elapsed_msec(&initial_time, &end_time);
 	PJ_LOG(5, (stream->name.ptr, "total pkt=%d size=%d sleep=%d",
-		   pkt_cnt, total_sent,
-		   pj_elapsed_msec(&initial_time, &end_time)));
+		   pkt_cnt, total_sent, total_sleep));
+
+	if (stream->tx_start.u64 == 0)
+	    stream->tx_start = initial_time;
+	stream->tx_end = end_time;
+	stream->rc_total_pkt += pkt_cnt;
+	stream->rc_total_sleep += total_sleep;
+	stream->rc_total_img++;
     }
 #endif
 
@@ -1457,7 +1476,16 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     /* Initialize send rate states */
     pj_get_timestamp_freq(&stream->ts_freq);
     if (info->rc_cfg.bandwidth == 0)
-	info->rc_cfg.bandwidth = vfd_enc->max_bps * 150 / 100;
+	info->rc_cfg.bandwidth = vfd_enc->max_bps;
+
+    /* For simple blocking, need to have bandwidth large enough, otherwise
+     * we can slow down the transmission too much
+     */
+    if (info->rc_cfg.method==PJMEDIA_VID_STREAM_RC_SIMPLE_BLOCKING &&
+	info->rc_cfg.bandwidth < vfd_enc->avg_bps * 3)
+    {
+	info->rc_cfg.bandwidth = vfd_enc->avg_bps * 3;
+    }
 
     /* Override the initial framerate in the decoding direction. This initial
      * value will be used by the renderer to configure its clock, and setting
@@ -1473,7 +1501,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 			     info->rx_pt, info, &stream->dec);
     if (status != PJ_SUCCESS)
 	return status;
-
 
     /* Create encoder channel */
     status = create_channel( pool, stream, PJMEDIA_DIR_ENCODING, 
@@ -1629,6 +1656,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 PJ_DEF(pj_status_t) pjmedia_vid_stream_destroy( pjmedia_vid_stream *stream )
 {
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
+
+#if TRACE_RC
+    {
+	unsigned total_time;
+
+	total_time = pj_elapsed_msec(&stream->tx_start, &stream->tx_end);
+	PJ_LOG(5, (stream->name.ptr, 
+		   "RC stat: pkt_cnt=%.2f/image, sleep=%.2fms/s, fps=%.2f",
+		   stream->rc_total_pkt*1.0/stream->rc_total_img,
+		   stream->rc_total_sleep*1000.0/total_time,
+		   stream->rc_total_img*1000.0/total_time));
+    }
+#endif
 
     /* Send RTCP BYE (also SDES) */
     if (!stream->rtcp_sdes_bye_disabled) {
