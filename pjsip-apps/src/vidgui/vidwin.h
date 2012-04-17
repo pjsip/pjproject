@@ -21,6 +21,7 @@
 
 #include <pjsua.h>
 #include <QWidget>
+#include <QBoxLayout>
 
 class VidWin : public QWidget
 {
@@ -32,6 +33,8 @@ public:
 	   Qt::WindowFlags f = 0);
     virtual ~VidWin();
     QSize sizeHint() const { return size_hint; }
+
+    void putIntoLayout(QBoxLayout *layout);
 
 protected:
     virtual bool event(QEvent *e);

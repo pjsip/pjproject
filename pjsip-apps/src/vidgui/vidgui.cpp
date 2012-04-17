@@ -260,7 +260,7 @@ void MainWin::preview()
 	pjsua_vid_win_get_info(wid, &wi);
 
 	video_prev_ = new VidWin(&wi.hwnd);
-	vbox_left->addWidget(video_prev_, 1);
+        video_prev_->putIntoLayout(vbox_left);
 	//Using this will cause SDL window to display blank
 	//screen sometimes, probably because it's using different
 	//X11 Display
@@ -339,7 +339,7 @@ void MainWin::initVideoWindow()
 	    pjsua_vid_win_get_info(ci.media[i].stream.vid.win_in, &wi);
 
 	    video_= new VidWin(&wi.hwnd);
-	    vbox_left->addWidget(video_, 1);
+            video_->putIntoLayout(vbox_left);
 
 	    break;
 	}

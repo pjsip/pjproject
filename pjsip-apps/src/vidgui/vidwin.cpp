@@ -50,6 +50,13 @@ VidWin::~VidWin()
     detach();
 }
 
+void VidWin::putIntoLayout(QBoxLayout *box)
+{
+    box->addWidget(this, 1);
+    show();
+    activateWindow();
+}
+
 bool VidWin::event(QEvent *e)
 {
     switch(e->type()) {

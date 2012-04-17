@@ -173,6 +173,7 @@ PJ_DEF(void) pjsua_vid_preview_param_default(pjsua_vid_preview_param *p)
 {
     p->rend_id = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     p->show = PJ_TRUE;
+    p->wnd_flags = 0;
 }
 
 
