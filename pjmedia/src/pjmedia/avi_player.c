@@ -48,6 +48,8 @@
 
 #define SIGNATURE	    PJMEDIA_SIG_PORT_VID_AVI_PLAYER
 
+#define VIDEO_CLOCK_RATE	90000
+
 #if 0
 #   define TRACE_(x)	PJ_LOG(4,x)
 #else
@@ -123,6 +125,7 @@ struct avi_reader_port
     unsigned         stream_id;
     unsigned	     options;
     pjmedia_format_id fmt_id;
+    unsigned         usec_per_frame;
     pj_uint16_t	     bits_per_sample;
     pj_bool_t	     eof;
     pj_off_t	     fsize;
@@ -130,6 +133,7 @@ struct avi_reader_port
     pj_uint8_t       pad;
     pj_oshandle_t    fd;
     pj_ssize_t       size_left;
+    pj_timestamp     next_ts;
 
     pj_status_t	   (*cb)(pjmedia_port*, void*);
 };
@@ -455,26 +459,43 @@ pjmedia_avi_player_create_streams(pj_pool_t *pool,
                 strl_hdr->codec);
 
             fport[i]->bits_per_sample = (vfi ? vfi->bpp : 0);
+            fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
             pjmedia_format_init_video(&fport[i]->base.info.fmt,
                                       fport[i]->fmt_id,
                                       strf_hdr->biWidth,
                                       strf_hdr->biHeight,
                                       strl_hdr->rate,
                                       strl_hdr->scale);
-            
+#if 0
+            /* The calculation below is wrong. strf_hdr->biSizeImage shows
+             * uncompressed size. Looks like we need to go the ugly way to
+             * get the bitrage:
+             *    http://www.virtualdub.org/blog/pivot/entry.php?id=159
+             */
+            bps = strf_hdr->biSizeImage * 8 * strl_hdr->rate / strl_hdr->scale;
+            if (bps==0) {
+        	/* strf_hdr->biSizeImage may be zero for uncompressed RGB */
+        	bps = strf_hdr->biWidth * strf_hdr->biHeight *
+        		strf_hdr->biBitCount *
+        		strl_hdr->rate / strl_hdr->scale;
+            }
+            fport[i]->base.info.fmt.det.vid.avg_bps = bps;
+            fport[i]->base.info.fmt.det.vid.max_bps = bps;
+#endif
         } else {
             strf_audio_hdr_t *strf_hdr =
                 &avi_hdr.strf_hdr[fport[i]->stream_id].strf_audio_hdr;
 
             fport[i]->bits_per_sample = strf_hdr->bits_per_sample;
+            fport[i]->usec_per_frame = avi_hdr.avih_hdr.usec_per_frame;
             pjmedia_format_init_audio(&fport[i]->base.info.fmt,
                                       fport[i]->fmt_id,
                                       strf_hdr->sample_rate,
                                       strf_hdr->nchannels,
                                       strf_hdr->bits_per_sample,
-                                      20000,
-                                      strf_hdr->bytes_per_sec,
-                                      strf_hdr->bytes_per_sec);
+                                      20000 /* fport[i]->usec_per_frame */,
+                                      strf_hdr->bytes_per_sec * 8,
+                                      strf_hdr->bytes_per_sec * 8);
         }
 
         pj_strdup2(pool, &fport[i]->base.info.name, filename);
@@ -695,7 +716,7 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
 
         frame->type = (fport->base.info.fmt.type == PJMEDIA_TYPE_VIDEO ?
                        PJMEDIA_FRAME_TYPE_VIDEO : PJMEDIA_FRAME_TYPE_AUDIO);
-        frame->timestamp.u64 = 0;
+
         if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
             if (size_to_read > fport->size_left)
                 size_to_read = fport->size_left;
@@ -718,6 +739,27 @@ static pj_status_t avi_get_frame(pjmedia_port *this_port,
         break;
 
     } while(1);
+
+    frame->timestamp.u64 = fport->next_ts.u64;
+    if (frame->type == PJMEDIA_FRAME_TYPE_AUDIO) {
+	if (fport->usec_per_frame) {
+	    fport->next_ts.u64 += (fport->usec_per_frame *
+				   fport->base.info.fmt.det.aud.clock_rate /
+				   1000000);
+	} else {
+	    fport->next_ts.u64 += (frame->size *
+				   fport->base.info.fmt.det.aud.clock_rate /
+				   (fport->base.info.fmt.det.aud.avg_bps / 8));
+	}
+    } else {
+	if (fport->usec_per_frame) {
+	    fport->next_ts.u64 += (fport->usec_per_frame * VIDEO_CLOCK_RATE /
+				   1000000);
+	} else {
+	    fport->next_ts.u64 += (frame->size * VIDEO_CLOCK_RATE /
+				   (fport->base.info.fmt.det.vid.avg_bps / 8));
+	}
+    }
 
     return PJ_SUCCESS;
 
