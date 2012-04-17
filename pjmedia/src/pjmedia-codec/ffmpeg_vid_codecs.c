@@ -593,9 +593,9 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    pjmedia_ffmpeg_add_ref();
     avcodec_init();
     avcodec_register_all();
-    av_log_set_level(AV_LOG_ERROR);
 
     /* Enum FFMPEG codecs */
     for (c=av_codec_next(NULL); c; c=av_codec_next(c)) {
@@ -853,6 +853,8 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_deinit(void)
     /* Destroy pool. */
     pj_pool_release(ffmpeg_factory.pool);
     ffmpeg_factory.pool = NULL;
+
+    pjmedia_ffmpeg_dec_ref();
 
     return status;
 }

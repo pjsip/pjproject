@@ -184,6 +184,7 @@ PJ_DEF(pj_status_t)
 pjmedia_libswscale_converter_init(pjmedia_converter_mgr *mgr)
 {
     libswscale_factory.op = &libswscale_factory_op;
+    pjmedia_ffmpeg_add_ref();
     return pjmedia_converter_mgr_register_factory(mgr, &libswscale_factory);
 }
 
@@ -193,6 +194,7 @@ pjmedia_libswscale_converter_shutdown(pjmedia_converter_mgr *mgr,
 				      pj_pool_t *pool)
 {
     PJ_UNUSED_ARG(pool);
+    pjmedia_ffmpeg_dec_ref();
     return pjmedia_converter_mgr_unregister_factory(mgr, &libswscale_factory,
 						    PJ_TRUE);
 }

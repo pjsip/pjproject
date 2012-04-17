@@ -18,6 +18,8 @@
  */
 #include <pjmedia/types.h>
 #include <pj/errno.h>
+#include <pj/log.h>
+#include <pj/string.h>
 
 #if PJMEDIA_HAS_LIBAVFORMAT && PJMEDIA_HAS_LIBAVUTIL
 
@@ -74,9 +76,13 @@ static const struct ffmpeg_codec_table_t
 
 static int pjmedia_ffmpeg_ref_cnt;
 
+static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl);
+
 void pjmedia_ffmpeg_add_ref()
 {
     if (pjmedia_ffmpeg_ref_cnt++ == 0) {
+	av_log_set_level(AV_LOG_ERROR);
+	av_log_set_callback(&ffmpeg_log_cb);
 	av_register_all();
     }
 }
@@ -89,6 +95,42 @@ void pjmedia_ffmpeg_dec_ref()
 
     if (pjmedia_ffmpeg_ref_cnt < 0) pjmedia_ffmpeg_ref_cnt = 0;
 }
+
+
+static void ffmpeg_log_cb(void* ptr, int level, const char* fmt, va_list vl)
+{
+    const char *LOG_SENDER = "ffmpeg";
+    enum { LOG_LEVEL = 5 };
+    char buf[100];
+    int bufsize = sizeof(buf), len;
+    pj_str_t fmt_st;
+
+    /* Custom callback needs to filter log level by itself */
+    if (level > av_log_get_level())
+	return;
+    
+    /* Add original ffmpeg sender to log format */
+    if (ptr) {
+	AVClass* avc = *(AVClass**)ptr;
+	len = pj_ansi_snprintf(buf, bufsize, "%s: ", avc->item_name(ptr));
+	bufsize -= len;
+    }
+
+    /* Copy original log format */
+    len = pj_ansi_strlen(fmt);
+    if (len > bufsize-1)
+	len = bufsize-1;
+    pj_memcpy(buf+sizeof(buf)-bufsize, fmt, len);
+    bufsize -= len;
+
+    /* Trim log format */
+    pj_strset(&fmt_st, buf, sizeof(buf)-bufsize);
+    pj_strrtrim(&fmt_st);
+    buf[fmt_st.slen] = '\0';
+
+    pj_log(LOG_SENDER, LOG_LEVEL, buf, vl);
+}
+
 
 pj_status_t pjmedia_format_id_to_PixelFormat(pjmedia_format_id fmt_id,
 					     enum PixelFormat *pixel_format)
