@@ -92,7 +92,7 @@ typedef struct avih_hdr_t {
     pj_uint32_t hdrl_tag;
     pj_uint32_t avih;
     pj_uint32_t size;
-    pj_uint32_t msec_per_frame;     /**< microsecs between frames   */
+    pj_uint32_t usec_per_frame;     /**< microsecs between frames   */
     pj_uint32_t max_Bps;
     pj_uint32_t pad;
     pj_uint32_t flags;
