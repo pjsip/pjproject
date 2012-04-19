@@ -26,12 +26,6 @@
 #include <assert.h>
 #include <streams.h>
 
-#if PJ_DEBUG
-#   pragma comment(lib, "Strmbasd.lib")
-#else
-#   pragma comment(lib, "Strmbase.lib")
-#endif
-
 typedef void (*input_callback)(void *user_data, IMediaSample *pMediaSample);
 
 const GUID CLSID_NullRenderer = {0xF9168C5E, 0xCEB2, 0x4FAA, {0xB6, 0xBF,

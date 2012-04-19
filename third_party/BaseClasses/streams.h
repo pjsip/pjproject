@@ -159,11 +159,11 @@ LONG_PTR _SetWindowLongPtr(HWND hwnd, int nIndex, T p)
 //#include <amaudio.h>    // ActiveMovie audio interfaces and definitions
 #include <wxutil.h>     // General helper classes for threads etc
 #include <combase.h>    // Base COM classes to support IUnknown
-#include <dllsetup.h>   // Filter registration support functions
+//#include <dllsetup.h>   // Filter registration support functions
 #include <measure.h>    // Performance measurement
-#include <comlite.h>    // Light weight com function prototypes
+//#include <comlite.h>    // Light weight com function prototypes
 
-#include <cache.h>      // Simple cache container class
+//#include <cache.h>      // Simple cache container class
 #include <wxlist.h>     // Non MFC generic list class
 #include <msgthrd.h>	// CMsgThread
 #include <mtype.h>      // Helper class for managing media types
@@ -172,26 +172,26 @@ LONG_PTR _SetWindowLongPtr(HWND hwnd, int nIndex, T p)
 #include <ctlutil.h>    // control interface utility classes
 #include <evcode.h>     // event code definitions
 #include <amfilter.h>   // Main streams architecture class hierachy
-#include <transfrm.h>   // Generic transform filter
-#include <transip.h>    // Generic transform-in-place filter
+//#include <transfrm.h>   // Generic transform filter
+//#include <transip.h>    // Generic transform-in-place filter
 #include <uuids.h>      // declaration of type GUIDs and well-known clsids
-#include <source.h>	// Generic source filter
-#include <outputq.h>    // Output pin queueing
+//#include <source.h>	// Generic source filter
+//#include <outputq.h>    // Output pin queueing
 #include <errors.h>     // HRESULT status and error definitions
 #include <renbase.h>    // Base class for writing ActiveX renderers
-#include <winutil.h>    // Helps with filters that manage windows
-#include <winctrl.h>    // Implements the IVideoWindow interface
-#include <videoctl.h>   // Specifically video related classes
-#include <refclock.h>	// Base clock class
-#include <sysclock.h>	// System clock
-#include <pstream.h>    // IPersistStream helper class
-#include <vtrans.h>     // Video Transform Filter base class
-#include <amextra.h>
-#include <cprop.h>      // Base property page class
-#include <strmctl.h>    // IAMStreamControl support
-#include <edevdefs.h>   // External device control interface defines
-#include <audevcod.h>   // audio filter device error event codes
-
+//#include <winutil.h>    // Helps with filters that manage windows
+//#include <winctrl.h>    // Implements the IVideoWindow interface
+//#include <videoctl.h>   // Specifically video related classes
+const LONGLONG MAX_TIME = 0x7FFFFFFFFFFFFFFF;   /* Maximum LONGLONG value */
+//#include <refclock.h>	// Base clock class
+//#include <sysclock.h>	// System clock
+//#include <pstream.h>    // IPersistStream helper class
+//#include <vtrans.h>     // Video Transform Filter base class
+//#include <amextra.h>
+//#include <cprop.h>      // Base property page class
+//#include <strmctl.h>    // IAMStreamControl support
+//#include <edevdefs.h>   // External device control interface defines
+//#include <audevcod.h>   // audio filter device error event codes
 
 
 #else
