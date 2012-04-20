@@ -259,7 +259,8 @@ static pj_status_t pack_amr ( codec_private_t *codec_data,
 	pj_bzero(info, sizeof(*info));
 	
 	if (len == 0) {
-	    info->frame_type = (pj_uint8_t)(enc_setting->amr_nb? 14 : 15);
+	    /* DTX */
+	    info->frame_type = 15;
 	} else {
 	    info->frame_type = pjmedia_codec_amr_get_mode2(enc_setting->amr_nb, 
 							   len);
