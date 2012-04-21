@@ -75,6 +75,8 @@ enum pjmedia_snd_port_option
 
 /**
  * This structure specifies the parameters to create the sound port.
+ * Use pjmedia_snd_port_param_default() to initialize this structure with
+ * default values (mostly zeroes)
  */
 typedef struct pjmedia_snd_port_param
 {
@@ -87,7 +89,20 @@ typedef struct pjmedia_snd_port_param
      * Sound port creation options.
      */
     unsigned options;
+
+    /**
+     * Echo cancellation options/flags.
+     */
+    unsigned ec_options;
+
 } pjmedia_snd_port_param;
+
+/**
+ * Initialize pjmedia_snd_port_param with default values.
+ *
+ * @param prm		    The parameter.
+ */
+PJ_DECL(void) pjmedia_snd_port_param_default(pjmedia_snd_port_param *prm);
 
 /**
  * This opaque type describes sound device port connection.

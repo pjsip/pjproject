@@ -2028,6 +2028,9 @@ PJ_DEF(pj_status_t) pjsua_conf_connect( pjsua_conf_port_id source,
 	    if (pjsua_var.cap_dev != NULL_SND_DEV_ID) {
 		pjmedia_snd_port_param param;
 
+		pjmedia_snd_port_param_default(&param);
+		param.ec_options = pjsua_var.media_cfg.ec_options;
+
 		/* Create parameter based on peer info */
 		status = create_aud_param(&param.base, pjsua_var.cap_dev, 
 					  pjsua_var.play_dev,
@@ -2952,6 +2955,8 @@ PJ_DEF(pj_status_t) pjsua_set_snd_dev( int capture_dev,
 	samples_per_frame = alt_cr[i] *
 			    pjsua_var.media_cfg.audio_frame_ptime *
 			    pjsua_var.media_cfg.channel_count / 1000;
+	pjmedia_snd_port_param_default(&param);
+	param.ec_options = pjsua_var.media_cfg.ec_options;
 	status = create_aud_param(&param.base, capture_dev, playback_dev, 
 				  alt_cr[i], pjsua_var.media_cfg.channel_count,
 				  samples_per_frame, 16);
@@ -3080,6 +3085,7 @@ PJ_DEF(pj_status_t) pjsua_set_ec(unsigned tail_ms, unsigned options)
     PJSUA_LOCK();
 
     pjsua_var.media_cfg.ec_tail_len = tail_ms;
+    pjsua_var.media_cfg.ec_options = options;
 
     if (pjsua_var.snd_port)
 	status = pjmedia_snd_port_set_ec(pjsua_var.snd_port, pjsua_var.pool,
