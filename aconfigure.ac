@@ -851,65 +851,112 @@ AC_ARG_ENABLE(ffmpeg,
 		AC_SUBST(ac_ffmpeg_cflags)
 		AC_SUBST(ac_ffmpeg_ldflags)
 
-		dnl # libz, needed by newer ffmpeg
-		AC_CHECK_LIB(z, deflate)
-		AC_CHECK_LIB(x264, x264_free)
-
-		dnl # libbz2, needed by matroskadec.o in ffmpeg 0.9 in mac os
-		AC_CHECK_LIB(bz2, BZ2_bzDecompressInit)
-
 		FFMPEG_PREFIX=""
+		AC_SUBST(SAVED_PKG_CONFIG_PATH)
+		SAVED_PKG_CONFIG_PATH=$PKG_CONFIG_PATH
     		if test "x$with_ffmpeg" != "xno" -a "x$with_ffmpeg" != "x"; then
 			FFMPEG_PREFIX=$with_ffmpeg
 			AC_MSG_RESULT([Using ffmpeg prefix... $FFMPEG_PREFIX])
+			PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
+		fi
+
+		AC_CHECK_PROGS(PKG_CONFIG,pkg-config "python pkgconfig.py",none)
+
+		if test "$PKG_CONFIG" != "none"; then
+			AC_MSG_CHECKING([ffmpeg packages])
+			av_pkg=""
+			if $PKG_CONFIG --exists libdevice; then
+				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
+				av_pkg="$av_pkg libdevice"
+			fi
+			if $PKG_CONFIG --exists libavformat; then
+				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
+				av_pkg="$av_pkg libavformat"
+			fi
+			if $PKG_CONFIG --exists libavcodec; then
+				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
+				av_pkg="$av_pkg libavcodec"
+			fi
+			if $PKG_CONFIG --exists libswscale; then
+				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
+				av_pkg="$av_pkg libswscale"
+			fi
+			if $PKG_CONFIG --exists libavutil; then
+				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
+				av_pkg="$av_pkg libavutil"
+			fi
+			if $PKG_CONFIG --exists libavcore; then
+				ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
+				av_pkg="$av_pkg libavcore"
+			fi
+			
+			if test "x$av_pkg" == "x"; then
+			   AC_MSG_RESULT([none detected (check the prefix)! **])
+			else
+			   AC_MSG_RESULT([$av_pkg])
+			fi
+			
+			ac_ffmpeg_cflags="$ac_ffmpeg_cflags `$PKG_CONFIG --cflags $av_pkg`"
+			ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags `$PKG_CONFIG --libs $av_pkg`"
+
+		else
+			dnl #
+			dnl # Use hardcoded values to configure ffmpeg
+			dnl #
+			
+			AC_MSG_RESULT([*** Warning: neither pkg-config nor python is available, ffmpeg dependency cannot be calculated. If ffmpeg libraries are not detected, you need to specify the correct CFLAGS and LDFLAGS settings for ffmpeg prior to invoking configure ***])
+			
 			LIBS="-L$FFMPEG_PREFIX/lib $LIBS"
 			LDFLAGS="-L$FFMPEG_PREFIX/lib $LDFLAGS"
 			CFLAGS="-I$FFMPEG_PREFIX/include $CFLAGS"
+			
+			AC_CHECK_LIB(avdevice,
+				     avdevice_version,
+				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
+				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavdevice"
+				     ]
+				     )
+			AC_CHECK_LIB(avutil,
+				     av_malloc,
+				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
+				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavutil"
+				     ]
+				     )
+			AC_CHECK_LIB(avcodec,
+				     avcodec_init,
+				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
+				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcodec"
+				     ],
+				     [],
+				     [-lavutil]
+				     )
+			AC_CHECK_LIB(avformat,
+				     av_register_all,
+				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
+				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavformat"
+				     ],
+				     [],
+				     [-lavcodec -lavutil]
+				     )
+			AC_CHECK_LIB(swscale,
+				     sws_scale,
+				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
+				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
+				     ],
+				     [],
+				     [-lavutil]
+				     )
+			AC_CHECK_LIB(avcore,
+				     avcore_version,
+				     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
+				      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcore"
+				     ]
+				     )
+			
 		fi
-
-		AC_CHECK_LIB(avdevice,
-			     avdevice_version,
-			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVDEVICE=1"
-			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavdevice"
-			     ]
-			     )
-		AC_CHECK_LIB(avformat,
-			     av_register_all,
-			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVFORMAT=1"
-			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavformat"
-			     ],
-			     [],
-			     [-lavcodec -lavutil]
-			     )
-		AC_CHECK_LIB(avcodec,
-			     avcodec_init,
-			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCODEC=1"
-			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcodec"
-			     ],
-			     [],
-			     [-lavutil]
-			     )
-		AC_CHECK_LIB(swscale,
-			     sws_scale,
-			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBSWSCALE=1"
-			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lswscale"
-			     ],
-			     [],
-			     [-lavutil]
-			     )
-		AC_CHECK_LIB(avutil,
-			     av_malloc,
-			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVUTIL=1"
-			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavutil"
-			     ]
-			     )
-		AC_CHECK_LIB(avcore,
-			     avcore_version,
-			     [ac_ffmpeg_cflags="$ac_ffmpeg_cflags -DPJMEDIA_HAS_LIBAVCORE=1"
-			      ac_ffmpeg_ldflags="$ac_ffmpeg_ldflags -lavcore"
-			     ]
-			     )
+		
 		LIBS="$LIBS $ac_ffmpeg_ldflags"
+		PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
 	      ]
 	      )
 
