@@ -2159,7 +2159,7 @@ PJ_DEF(pj_status_t) pjsip_inv_end_session(  pjsip_inv_session *inv,
 	return PJSIP_ESESSIONTERMINATED;
 
     default:
-	pj_assert("!Invalid operation!");
+	pj_assert(!"Invalid operation!");
 	return PJ_EINVALIDOP;
     }
 
