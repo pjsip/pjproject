@@ -850,12 +850,19 @@ on_incoming_call_med_tp_complete(pjsua_call_id call_id,
 
 on_return:
     if (status != PJ_SUCCESS) {
-        pjsip_tx_data *tdata;
-        pj_status_t status_;
+        /* If the callback is called from pjsua_call_on_incoming(), the
+         * invite's state is PJSIP_INV_STATE_NULL, so the invite session
+         * will be terminated later, otherwise we end the session here.
+         */
+        if (call->inv->state > PJSIP_INV_STATE_NULL) {
+            pjsip_tx_data *tdata;
+            pj_status_t status_;
 
-	status_ = pjsip_inv_end_session(call->inv, sip_err_code, NULL, &tdata);
-	if (status_ == PJ_SUCCESS && tdata)
-	    status_ = pjsip_inv_send_msg(call->inv, tdata);
+	    status_ = pjsip_inv_end_session(call->inv, sip_err_code, NULL,
+                                            &tdata);
+	    if (status_ == PJ_SUCCESS && tdata)
+	        status_ = pjsip_inv_send_msg(call->inv, tdata);
+        }
 
         pjsua_media_channel_deinit(call->index);
     }
@@ -1225,12 +1232,21 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
         status = on_incoming_call_med_tp_complete(call_id, NULL);
         if (status != PJ_SUCCESS) {
             sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+            /* Since the call invite's state is still PJSIP_INV_STATE_NULL,
+             * the invite session was not ended in
+             * on_incoming_call_med_tp_complete(), so we need to send
+             * a response message and terminate the invite here.
+             */
             pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+            pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
+            call->inv = NULL; 
 	    goto on_return;
         }
     } else if (status != PJ_EPENDING) {
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+        pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
+        call->inv = NULL; 
 	goto on_return;
     }
 
