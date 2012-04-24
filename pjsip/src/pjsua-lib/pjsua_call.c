@@ -544,9 +544,12 @@ static pj_status_t apply_call_setting(pjsua_call *call,
 	old_opt = call->opt;
 	call->opt = *opt;
 
-	/* Reinit media channel when media count is changed */
-	if (opt->aud_cnt != old_opt.aud_cnt ||
-	    opt->vid_cnt != old_opt.vid_cnt)
+	/* Reinit media channel when media count is changed or we are the
+	 * answerer (as remote offer may 'extremely' modify the existing
+	 * media session, e.g: media type order).
+	 */
+	if (rem_sdp ||
+	    opt->aud_cnt!=old_opt.aud_cnt || opt->vid_cnt!=old_opt.vid_cnt)
 	{
 	    pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
 	    status = pjsua_media_channel_init(call->index, role,
@@ -1198,7 +1201,6 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	/* Can't terminate dialog because transaction is in progress.
 	pjsip_dlg_terminate(dlg);
 	 */
-	pjsua_media_channel_deinit(call->index);
 	goto on_return;
     }
 
@@ -1317,6 +1319,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	status = pjsip_inv_send_msg(inv, response);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
+	    pjsua_media_channel_deinit(call->index);
 	    goto on_return;
 	}
     }
@@ -3224,6 +3227,9 @@ static void pjsua_call_on_media_update(pjsip_inv_session *inv,
 
 	pjsua_perror(THIS_FILE, "SDP negotiation has failed", status);
 
+	/* Clean up provisional media */
+	pjsua_media_prov_clean_up(call->index);
+
 	/* Do not deinitialize media since this may be a re-INVITE or
 	 * UPDATE (which in this case the media should not get affected
 	 * by the failed re-INVITE/UPDATE). The media will be shutdown
@@ -3427,17 +3433,11 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
 	call->opt = opt;
     }
-
+    
     /* Re-init media for the new remote offer before creating SDP */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS,
-				      call->secure_level,
-				      call->inv->pool_prov,
-				      offer, NULL,
-                                      PJ_FALSE, NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error re-initializing media channel", status);
+    status = apply_call_setting(call, &call->opt, offer);
+    if (status != PJ_SUCCESS)
 	goto on_return;
-    }
 
     status = pjsua_media_channel_create_sdp(call->index, 
 					    call->inv->pool_prov, 

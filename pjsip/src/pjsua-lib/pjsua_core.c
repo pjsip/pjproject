@@ -2770,26 +2770,47 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     pjmedia_endpt_dump(pjsua_get_pjmedia_endpt());
 
     PJ_LOG(3,(THIS_FILE, "Dumping media transports:"));
-    // Suppress compile warning caused by unreferenced var.
-    PJ_UNUSED_ARG(i);
-#if DISABLED_FOR_TICKET_1185
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];
-	pjmedia_transport_info tpinfo;
-	char addr_buf[80];
+	pjmedia_transport *tp[PJSUA_MAX_CALL_MEDIA*2];
+	unsigned tp_cnt = 0;
+	unsigned j;
 
-	/* MSVC complains about tpinfo not being initialized */
-	//pj_bzero(&tpinfo, sizeof(tpinfo));
+	/* Collect media transports in this call */
+	for (j = 0; j < call->med_cnt; ++j) {
+	    if (call->media[j].tp != NULL)
+		tp[tp_cnt++] = call->media[j].tp;
+	}
+	for (j = 0; j < call->med_prov_cnt; ++j) {
+	    pjmedia_transport *med_tp = call->media_prov[j].tp;
+	    if (med_tp) {
+		unsigned k;
+		pj_bool_t used = PJ_FALSE;
+		for (k = 0; k < tp_cnt; ++k) {
+		    if (med_tp == tp[k]) {
+			used = PJ_TRUE;
+			break;
+		    }
+		}
+		if (!used)
+		    tp[tp_cnt++] = med_tp;
+	    }
+	}
 
-	pjmedia_transport_info_init(&tpinfo);
-	pjmedia_transport_get_info(call->med_tp, &tpinfo);
+	/* Dump the media transports in this call */
+	for (j = 0; j < tp_cnt; ++j) {
+	    pjmedia_transport_info tpinfo;
+	    char addr_buf[80];
 
-	PJ_LOG(3,(THIS_FILE, " %s: %s",
-		  (pjsua_var.media_cfg.enable_ice ? "ICE" : "UDP"),
-		  pj_sockaddr_print(&tpinfo.sock_info.rtp_addr_name, addr_buf,
-				    sizeof(addr_buf), 3)));
+	    pjmedia_transport_info_init(&tpinfo);
+	    pjmedia_transport_get_info(tp[j], &tpinfo);
+	    PJ_LOG(3,(THIS_FILE, " %s: %s",
+		      (pjsua_var.media_cfg.enable_ice ? "ICE" : "UDP"),
+		      pj_sockaddr_print(&tpinfo.sock_info.rtp_addr_name,
+					addr_buf,
+					sizeof(addr_buf), 3)));
+	}
     }
-#endif
 
     pjsip_tsx_layer_dump(detail);
     pjsip_ua_dump(detail);

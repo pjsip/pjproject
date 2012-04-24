@@ -136,6 +136,10 @@ struct pjsua_call
 
     unsigned		 med_cnt;   /**< Number of media in SDP.	    */
     pjsua_call_media     media[PJSUA_MAX_CALL_MEDIA]; /**< Array of media   */
+    unsigned		 med_prov_cnt;/**< Number of provisional media.	    */
+    pjsua_call_media	 media_prov[PJSUA_MAX_CALL_MEDIA];
+				    /**< Array of provisional media.	    */
+
     int			 audio_idx; /**< First active audio media.	    */
     pj_mutex_t          *med_ch_mutex;/**< Media channel callback's mutex.  */
     pjsua_med_tp_state_cb   med_ch_cb;/**< Media channel callback.	    */
@@ -602,6 +606,8 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
                                   pj_bool_t async,
                                   pjsua_med_tp_state_cb cb);
 void pjsua_set_media_tp_state(pjsua_call_media *call_med, pjsua_med_tp_st tp_st);
+
+void pjsua_media_prov_clean_up(pjsua_call_id call_id);
 
 /* Callback to receive media events */
 pj_status_t call_media_on_event(pjmedia_event *event,

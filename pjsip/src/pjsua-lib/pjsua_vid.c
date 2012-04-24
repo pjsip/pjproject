@@ -1532,9 +1532,16 @@ static pj_status_t call_add_video(pjsua_call *call,
 
     sdp = pjmedia_sdp_session_clone(call->inv->pool_prov, current_sdp);
 
-    /* Initialize call media */
-    call_med = &call->media[call->med_cnt++];
+    /* Clean up provisional media before using it */
+    pjsua_media_prov_clean_up(call->index);
 
+    /* Update provisional media from call media */
+    call->med_prov_cnt = call->med_cnt;
+    pj_memcpy(call->media_prov, call->media,
+	      sizeof(call->media[0]) * call->med_cnt);
+
+    /* Initialize call media */
+    call_med = &call->media_prov[call->med_prov_cnt++];
     status = pjsua_call_media_init(call_med, PJMEDIA_TYPE_VIDEO,
 				   &acc_cfg->rtp_cfg, call->secure_level,
 				   NULL, PJ_FALSE, NULL);
@@ -1597,6 +1604,7 @@ static pj_status_t call_add_video(pjsua_call *call,
 
 on_error:
     if (call_med->tp) {
+	pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
 	pjmedia_transport_close(call_med->tp);
 	call_med->tp = call_med->tp_orig = NULL;
     }
@@ -1629,7 +1637,15 @@ static pj_status_t call_modify_video(pjsua_call *call,
 	med_idx = first_active;
     }
 
-    call_med = &call->media[med_idx];
+    /* Clean up provisional media before using it */
+    pjsua_media_prov_clean_up(call->index);
+
+    /* Update provisional media from call media */
+    call->med_prov_cnt = call->med_cnt;
+    pj_memcpy(call->media_prov, call->media,
+	      sizeof(call->media[0]) * call->med_cnt);
+
+    call_med = &call->media_prov[med_idx];
 
     /* Verify if the stream media type is video */
     if (call_med->type != PJMEDIA_TYPE_VIDEO)
@@ -1735,6 +1751,7 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
 on_error:
 	if (status != PJ_SUCCESS) {
+	    pjsua_media_prov_clean_up(call->index);
 	    return status;
 	}
     
