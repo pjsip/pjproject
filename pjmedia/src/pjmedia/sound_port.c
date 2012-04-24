@@ -225,11 +225,14 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     pj_memcpy(&param_copy, &snd_port->aud_param, sizeof(param_copy));
     if (param_copy.flags & PJMEDIA_AUD_DEV_CAP_EC) {
 	/* EC is wanted */
-	if (snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC) {
+	if ((snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) == 0 &&
+            snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)
+        {
 	    /* Device supports EC */
 	    /* Nothing to do */
 	} else {
-	    /* Device doesn't support EC, remove EC settings from
+	    /* Application wants to use software EC or device
+             * doesn't support EC, remove EC settings from
 	     * device parameters
 	     */
 	    param_copy.flags &= ~(PJMEDIA_AUD_DEV_CAP_EC |
@@ -261,11 +264,13 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 				 (snd_port->clock_rate / 
 				  snd_port->samples_per_frame);
 
-    /* Create software EC if parameter specifies EC but device 
-     * doesn't support EC. Only do this if the format is PCM!
+    /* Create software EC if parameter specifies EC and
+     * (app specifically requests software EC or device
+     * doesn't support EC). Only do this if the format is PCM!
      */
     if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC) &&
-	(snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 &&
+	((snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 ||
+         (snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) != 0) &&
 	param_copy.ext_fmt.id == PJMEDIA_FORMAT_PCM)
     {
 	if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC_TAIL)==0) {
@@ -505,7 +510,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 		     PJ_EINVALIDOP);
 
     /* Determine whether we use device or software EC */
-    if (snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC) {
+    if ((snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) == 0 &&
+        snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)
+    {
 	/* We use device EC */
 	pj_bool_t ec_enabled;
 
