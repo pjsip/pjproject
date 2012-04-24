@@ -34,7 +34,7 @@ RESAMPLE_LIB = ..\..\third_party\lib\libresample-$(TARGET)$(LIBEXT)
 SPEEX_LIB = ..\..\third_party\lib\libspeex-$(TARGET)$(LIBEXT)
 SRTP_LIB = ..\..\third_party\lib\libsrtp-$(TARGET)$(LIBEXT)
 G7221_LIB = ..\..\third_party\lib\libg7221codec-$(TARGET)$(LIBEXT)
-BASECLASSES_LIB = ..\..\third_party\lib\strmbas-$(BUILD_MODE)$(LIBEXT)
+BASECLASSES_LIB = ..\..\third_party\lib\libbaseclasses-$(TARGET)$(LIBEXT)
 
 THIRD_PARTY_LIBS = $(GSM_LIB) $(ILBC_LIB) $(PORTAUDIO_LIB) $(RESAMPLE_LIB) \
 				   $(SPEEX_LIB) $(SRTP_LIB) $(G7221_LIB) $(BASECLASSES_LIB)
