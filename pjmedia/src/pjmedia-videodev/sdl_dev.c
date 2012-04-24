@@ -1222,6 +1222,7 @@ static pj_status_t sdl_stream_destroy(pjmedia_vid_dev_stream *strm)
 /****************************************************************************
  * Job queue implementation
  */
+#if PJ_DARWINOS==0
 static int job_thread(void * data)
 {
     job_queue *jq = (job_queue *)data;
@@ -1286,6 +1287,7 @@ static int job_thread(void * data)
 
     return 0;
 }
+#endif
 
 static pj_status_t job_queue_create(pj_pool_t *pool, job_queue **pjq)
 {
