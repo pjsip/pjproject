@@ -52,6 +52,17 @@
 # include <libavutil/opt.h>
 #endif
 
+/* Various compatibility */
+#if LIBAVCODEC_VER_AT_LEAST(53,20)
+#  define AV_OPT_SET(obj,name,val,opt)	av_opt_set(obj,name,val,opt)
+#  define AV_OPT_SET_INT(obj,name,val)	av_opt_set_int(obj,name,val,0)
+#  define AVCODEC_OPEN(ctx,c)		avcodec_open2(ctx,c,NULL)
+#else
+#  define AV_OPT_SET(obj,name,val,opt)	av_set_string3(obj,name,val,opt,NULL)
+#  define AV_OPT_SET_INT(obj,name,val)	av_set_int(obj,name,val)
+#  define AVCODEC_OPEN(ctx,c)		avcodec_open(ctx,c)
+#endif
+
 
 /* Prototypes for FFMPEG codecs factory */
 static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory, 
@@ -378,7 +389,7 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	    break;
 	}
 	if (profile &&
-	    av_set_string3(ctx->priv_data, "profile", profile, 0, NULL))
+	    AV_OPT_SET(ctx->priv_data, "profile", profile, 0))
 	{
 	    PJ_LOG(3, (THIS_FILE, "Failed to set H264 profile"));
 	}
@@ -395,14 +406,14 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	ctx->level    = data->fmtp.level;
 
 	/* Limit NAL unit size as we prefer single NAL unit packetization */
-	if (!av_set_int(ctx->priv_data, "slice-max-size", ff->param.enc_mtu))
+	if (!AV_OPT_SET_INT(ctx->priv_data, "slice-max-size", ff->param.enc_mtu))
 	{
 	    PJ_LOG(3, (THIS_FILE, "Failed to set H264 max NAL size to %d",
 		       ff->param.enc_mtu));
 	}
 
 	/* Apply intra-refresh */
-	if (!av_set_int(ctx->priv_data, "intra-refresh", 1))
+	if (!AV_OPT_SET_INT(ctx->priv_data, "intra-refresh", 1))
 	{
 	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 intra-refresh"));
 	}
@@ -410,13 +421,10 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	/* Misc x264 settings (performance, quality, latency, etc).
 	 * Let's just use the x264 predefined preset & tune.
 	 */
-	if (av_set_string3(ctx->priv_data, "preset", "veryfast", 0, NULL))
-	{
+	if (AV_OPT_SET(ctx->priv_data, "preset", "veryfast", 0)) {
 	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 preset 'veryfast'"));
 	}
-	if (av_set_string3(ctx->priv_data, "tune", "animation+zerolatency",
-			   0, NULL))
-	{
+	if (AV_OPT_SET(ctx->priv_data, "tune", "animation+zerolatency", 0)) {
 	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 tune 'zerolatency'"));
 	}
     }
@@ -594,7 +602,12 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 	goto on_error;
 
     pjmedia_ffmpeg_add_ref();
+#if !LIBAVCODEC_VER_AT_LEAST(53,20)
+    /* avcodec_init() dissappeared between version 53.20 and 54.15, not sure
+     * exactly when 
+     */
     avcodec_init();
+#endif
     avcodec_register_all();
 
     /* Enum FFMPEG codecs */
@@ -1119,7 +1132,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	/* Set no delay, note that this may cause some codec functionals
 	 * not working (e.g: rate control).
 	 */
-#if LIBAVCODEC_VER_AT_LEAST(52,113)
+#if LIBAVCODEC_VER_AT_LEAST(52,113) && !LIBAVCODEC_VER_AT_LEAST(53,20)
 	ctx->rc_lookahead = 0;
 #endif
     }
@@ -1150,7 +1163,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	int err;
 
 	pj_mutex_lock(ff_mutex);
-	err = avcodec_open(ff->enc_ctx, ff->enc);
+	err = AVCODEC_OPEN(ff->enc_ctx, ff->enc);
         pj_mutex_unlock(ff_mutex);
         if (err < 0) {
             print_ffmpeg_err(err);
@@ -1165,7 +1178,7 @@ static pj_status_t open_ffmpeg_codec(ffmpeg_private *ff,
 	int err;
 
 	pj_mutex_lock(ff_mutex);
-	err = avcodec_open(ff->dec_ctx, ff->dec);
+	err = AVCODEC_OPEN(ff->dec_ctx, ff->dec);
         pj_mutex_unlock(ff_mutex);
         if (err < 0) {
             print_ffmpeg_err(err);
