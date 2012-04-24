@@ -1269,10 +1269,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				    &pjsua_var.acc[acc_id].cfg.timer_setting);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Session Timer init failed", status);
-	status = pjsip_inv_end_session(inv, PJSIP_SC_INTERNAL_SERVER_ERROR,
-				       NULL, &response);
-	if (status == PJ_SUCCESS && response)
-	    status = pjsip_inv_send_msg(inv, response);
+        pjsip_dlg_respond(dlg, rdata, PJSIP_SC_INTERNAL_SERVER_ERROR, NULL, NULL, NULL);
+	pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
 
 	pjsua_media_channel_deinit(call->index);
 

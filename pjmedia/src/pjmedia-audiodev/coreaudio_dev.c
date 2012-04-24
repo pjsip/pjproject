@@ -1964,6 +1964,11 @@ static pj_status_t ca_stream_set_cap(pjmedia_aud_stream *s,
 	strm->cf->io_comp = io_comp;
 	strm->param.ec_enabled = *(pj_bool_t*)pval;
 
+        PJ_LOG(4, (THIS_FILE, "Using %s audio unit", 
+                              (desc.componentSubType ==
+                               kAudioUnitSubType_RemoteIO? "RemoteIO":
+                               "VoiceProcessingIO")));
+        
 	return PJ_SUCCESS;
     }
 #endif

@@ -967,8 +967,9 @@ static void systest_aec_test(void)
 	goto on_return;
     }
 
-    status = pjsua_recorder_create(pj_cstr(&tmp, AEC_REC_PATH), 0, 0, -1,
-			           0, &writer_id);
+    status = pjsua_recorder_create(
+                 pj_cstr(&tmp, add_path(doc_path, AEC_REC_PATH)), 0, 0, -1,
+                 0, &writer_id);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status, "Error writing WAV file %s",
 		     AEC_REC_PATH));
@@ -999,7 +1000,9 @@ static void systest_aec_test(void)
     /*
      * Play the result.
      */
-    status = pjsua_player_create(pj_cstr(&tmp, AEC_REC_PATH), 0, &player_id);
+    status = pjsua_player_create(
+                 pj_cstr(&tmp, add_path(doc_path, AEC_REC_PATH)),
+                 0, &player_id);
     if (status != PJ_SUCCESS) {
 	PJ_PERROR(1,(THIS_FILE, status, "Error opening WAV file %s", AEC_REC_PATH));
 	goto on_return;

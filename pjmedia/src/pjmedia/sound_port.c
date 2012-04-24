@@ -52,6 +52,7 @@ struct pjmedia_snd_port
     unsigned		 samples_per_frame;
     unsigned		 bits_per_sample;
     unsigned		 options;
+    unsigned		 prm_ec_options;
 
     /* software ec */
     pjmedia_echo_state	*ec_state;
@@ -187,6 +188,12 @@ static pj_status_t rec_cb_ext(void *user_data, pjmedia_frame *frame)
     return PJ_SUCCESS;
 }
 
+/* Initialize with default values (zero) */
+PJ_DEF(void) pjmedia_snd_port_param_default(pjmedia_snd_port_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+}
+
 /*
  * Start the sound stream.
  * This may be called even when the sound stream has already been started.
@@ -226,11 +233,14 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
     pj_memcpy(&param_copy, &snd_port->aud_param, sizeof(param_copy));
     if (param_copy.flags & PJMEDIA_AUD_DEV_CAP_EC) {
 	/* EC is wanted */
-	if (snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC) {
+	if ((snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) == 0 &&
+            snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)
+        {
 	    /* Device supports EC */
 	    /* Nothing to do */
 	} else {
-	    /* Device doesn't support EC, remove EC settings from
+	    /* Application wants to use software EC or device
+             * doesn't support EC, remove EC settings from
 	     * device parameters
 	     */
 	    param_copy.flags &= ~(PJMEDIA_AUD_DEV_CAP_EC |
@@ -262,11 +272,13 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 				 (snd_port->clock_rate / 
 				  snd_port->samples_per_frame);
 
-    /* Create software EC if parameter specifies EC but device 
-     * doesn't support EC. Only do this if the format is PCM!
+    /* Create software EC if parameter specifies EC and
+     * (app specifically requests software EC or device
+     * doesn't support EC). Only do this if the format is PCM!
      */
     if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC) &&
-	(snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 &&
+	((snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)==0 ||
+         (snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) != 0) &&
 	param_copy.ext_fmt.id == PJMEDIA_FORMAT_PCM)
     {
 	if ((snd_port->aud_param.flags & PJMEDIA_AUD_DEV_CAP_EC_TAIL)==0) {
@@ -277,7 +289,8 @@ static pj_status_t start_sound_device( pj_pool_t *pool,
 	}
 	    
 	status = pjmedia_snd_port_set_ec(snd_port, pool, 
-					 snd_port->aud_param.ec_tail_ms, 0);
+					 snd_port->aud_param.ec_tail_ms,
+					 snd_port->prm_ec_options);
 	if (status != PJ_SUCCESS) {
 	    pjmedia_aud_stream_destroy(snd_port->aud_stream);
 	    snd_port->aud_stream = NULL;
@@ -338,7 +351,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     pjmedia_snd_port_param param;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(options);
+    pjmedia_snd_port_param_default(&param);
 
     status = pjmedia_aud_dev_default_param(rec_id, &param.base);
     if (status != PJ_SUCCESS)
@@ -352,6 +365,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create( pj_pool_t *pool,
     param.base.samples_per_frame = samples_per_frame;
     param.base.bits_per_sample = bits_per_sample;
     param.options = options;
+    param.ec_options = 0;
 
     return pjmedia_snd_port_create2(pool, &param, p_port);
 }
@@ -371,7 +385,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
     pjmedia_snd_port_param param;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(options);
+    pjmedia_snd_port_param_default(&param);
 
     status = pjmedia_aud_dev_default_param(dev_id, &param.base);
     if (status != PJ_SUCCESS)
@@ -384,6 +398,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_rec( pj_pool_t *pool,
     param.base.samples_per_frame = samples_per_frame;
     param.base.bits_per_sample = bits_per_sample;
     param.options = options;
+    param.ec_options = 0;
 
     return pjmedia_snd_port_create2(pool, &param, p_port);
 }
@@ -404,7 +419,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
     pjmedia_snd_port_param param;
     pj_status_t status;
 
-    PJ_UNUSED_ARG(options);
+    pjmedia_snd_port_param_default(&param);
 
     status = pjmedia_aud_dev_default_param(dev_id, &param.base);
     if (status != PJ_SUCCESS)
@@ -417,6 +432,7 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create_player( pj_pool_t *pool,
     param.base.samples_per_frame = samples_per_frame;
     param.base.bits_per_sample = bits_per_sample;
     param.options = options;
+    param.ec_options = 0;
 
     return pjmedia_snd_port_create2(pool, &param, p_port);
 }
@@ -445,8 +461,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_create2(pj_pool_t *pool,
     snd_port->channel_count = prm->base.channel_count;
     snd_port->samples_per_frame = prm->base.samples_per_frame;
     snd_port->bits_per_sample = prm->base.bits_per_sample;
-    pj_memcpy(&snd_port->aud_param, prm, sizeof(snd_port->aud_param));
+    pj_memcpy(&snd_port->aud_param, &prm->base, sizeof(snd_port->aud_param));
     snd_port->options = prm->options;
+    snd_port->prm_ec_options = prm->ec_options;
 
     ptime_usec = prm->base.samples_per_frame * 1000 / prm->base.channel_count /
                  prm->base.clock_rate * 1000;
@@ -509,7 +526,9 @@ PJ_DEF(pj_status_t) pjmedia_snd_port_set_ec( pjmedia_snd_port *snd_port,
 		     PJ_EINVALIDOP);
 
     /* Determine whether we use device or software EC */
-    if (snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC) {
+    if ((snd_port->prm_ec_options & PJMEDIA_ECHO_USE_SW_ECHO) == 0 &&
+        snd_port->aud_caps & PJMEDIA_AUD_DEV_CAP_EC)
+    {
 	/* We use device EC */
 	pj_bool_t ec_enabled;
 

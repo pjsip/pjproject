@@ -1818,7 +1818,6 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 
 	pjsip_tx_data *tdata;
 	pj_status_t status;
-	int next_refresh;
 
 	/* Only want to handle initial NOTIFY receive event. */
 	if (tsx->state != PJSIP_TSX_STATE_TRYING)
@@ -1898,19 +1897,14 @@ static void on_tsx_state_uac( pjsip_evsub *sub, pjsip_transaction *tsx,
 	    (pj_stricmp(&sub_state->sub_state, &STR_ACTIVE)==0 ||
 	     pj_stricmp(&sub_state->sub_state, &STR_PENDING)==0))
 	{
-	    next_refresh = sub_state->expires_param;
+	    int next_refresh = sub_state->expires_param;
+	    unsigned timeout;
 
-	} else {
-	    next_refresh = sub->expires->ivalue;
-	}
+	    update_expires(sub, next_refresh);
 
-	/* Update time */
-	update_expires(sub, next_refresh);
-
-	/* Start UAC refresh timer, only when we're not unsubscribing */
-	if (sub->expires->ivalue != 0) {
-	    unsigned timeout = (next_refresh > TIME_UAC_REFRESH) ?
-		next_refresh - TIME_UAC_REFRESH : next_refresh;
+	    /* Start UAC refresh timer, only when we're not unsubscribing */
+	    timeout = (next_refresh > TIME_UAC_REFRESH) ?
+			next_refresh - TIME_UAC_REFRESH : next_refresh;
 
 	    PJ_LOG(5,(sub->obj_name, "Will refresh in %d seconds", timeout));
 	    set_timer(sub, TIMER_TYPE_UAC_REFRESH, timeout);
