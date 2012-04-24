@@ -7,6 +7,9 @@
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 #include <streams.h>
 #define STRSAFE_NO_DEPRECATE
@@ -767,3 +770,4 @@ bool TimeKillSynchronousFlagAvailable( void )
 }
 
 
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

@@ -27,6 +27,10 @@
 //=====================================================================
 //=====================================================================
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
+
 #include <streams.h>
 #include <strsafe.h>
 
@@ -5356,3 +5360,4 @@ AMovieSetupRegisterFilter( const AMOVIESETUP_FILTER * const psetupdata
 //  Remove warnings about unreferenced inline functions
 #pragma warning(disable:4514)
 
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

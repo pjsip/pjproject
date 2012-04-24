@@ -12,6 +12,9 @@
 // property methods. We also implement CPosPassThru that can be used by
 // renderers and transforms to pass by IMediaPosition and IMediaSeeking
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 #include <streams.h>
 #include <limits.h>
@@ -2539,3 +2542,4 @@ CCmdQueue::GetCommandDueFor(REFERENCE_TIME rtStream, __out CDeferredCommand**ppC
     return VFW_E_NOT_FOUND;
 }
 
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

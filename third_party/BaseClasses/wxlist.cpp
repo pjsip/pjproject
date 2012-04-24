@@ -6,6 +6,9 @@
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 /* A generic list of pointers to objects.
    Objectives: avoid using MFC libraries in ndm kernel mode and
@@ -889,3 +892,5 @@ void CBaseList::Reverse()
 #endif
 
 } // Reverse
+
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

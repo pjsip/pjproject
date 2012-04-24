@@ -6,6 +6,9 @@
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 #include <streams.h>        // DirectShow base class definitions
 #include <mmsystem.h>       // Needed for definition of timeGetTime
@@ -2856,3 +2859,4 @@ CBaseVideoRenderer::JoinFilterGraph(__inout_opt IFilterGraph *pGraph, __in_opt L
 // Microsoft compiler which in this case are not very useful
 #pragma warning(disable: 4514)
 
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

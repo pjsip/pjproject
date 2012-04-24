@@ -7,6 +7,9 @@
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 // helper class that derived pin objects can use to compare media
 // types etc. Has same data members as the struct AM_MEDIA_TYPE defined
@@ -476,3 +479,5 @@ STDAPI CreateAudioMediaType(
 
 // eliminate very many spurious warnings from MS compiler
 #pragma warning(disable:4514)
+
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

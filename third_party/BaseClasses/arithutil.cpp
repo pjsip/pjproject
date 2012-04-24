@@ -7,6 +7,10 @@
 // Copyright (c) 1992-2004 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
+
 #include <streams.h>
 
 //
@@ -358,3 +362,5 @@ LONGLONG WINAPI Int64x32Div32(LONGLONG a, LONG b, LONG c, LONG d)
     return bSign ? -(LONGLONG)uliResult.QuadPart :
                     (LONGLONG)uliResult.QuadPart;
 }
+
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

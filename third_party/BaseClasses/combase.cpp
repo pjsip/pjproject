@@ -7,6 +7,9 @@
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 #include <streams.h>
 #pragma warning( disable : 4514 )   // Disable warnings re unused inline functions
@@ -263,3 +266,4 @@ BOOL WINAPI IsEqualObject(IUnknown *pFirst, IUnknown *pSecond)
     return (pUnknown1 == pUnknown2);
 }
 
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */

@@ -7,6 +7,9 @@
 // Copyright (c) 1992-2001 Microsoft Corporation.  All rights reserved.
 //------------------------------------------------------------------------------
 
+#include <pjmedia-videodev/config.h>
+
+#if defined(PJMEDIA_VIDEO_DEV_HAS_DSHOW) && PJMEDIA_VIDEO_DEV_HAS_DSHOW != 0
 
 #define _WINDLL
 
@@ -1472,3 +1475,4 @@ void WINAPI DumpGraph(IFilterGraph *pGraph, DWORD dwLevel)
 
 #endif
 
+#endif /* PJMEDIA_VIDEO_DEV_HAS_DSHOW */
