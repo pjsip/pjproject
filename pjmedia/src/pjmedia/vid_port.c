@@ -695,7 +695,7 @@ static void enc_clock_cb(const pj_timestamp *ts, void *user_data)
      */
     pjmedia_vid_port *vp = (pjmedia_vid_port*)user_data;
     pjmedia_frame frame_;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     pj_assert(vp->role==ROLE_ACTIVE);
 
