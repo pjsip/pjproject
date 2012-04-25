@@ -891,6 +891,12 @@ int main(int argc, char *argv[])
     /* Start deinitialization: */
 on_exit:
 
+    /* Stop video devices */
+    if (capture)
+        pjmedia_vid_port_stop(capture);
+    if (renderer)
+        pjmedia_vid_port_stop(renderer);
+
     /* Stop and destroy file clock */
     if (play_clock) {
 	pjmedia_clock_stop(play_clock);

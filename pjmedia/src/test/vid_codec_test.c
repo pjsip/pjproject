@@ -417,14 +417,14 @@ on_return:
     if (status != PJ_SUCCESS) {
         PJ_PERROR(3, (THIS_FILE, status, "  error"));
     }
-    if (capture) {
+    if (capture)
         pjmedia_vid_port_stop(capture);
-	pjmedia_vid_port_destroy(capture);
-    }
-    if (renderer) {
+    if (renderer)
         pjmedia_vid_port_stop(renderer);
+    if (capture)
+	pjmedia_vid_port_destroy(capture);
+    if (renderer)
 	pjmedia_vid_port_destroy(renderer);
-    }
     if (codec) {
 	pjmedia_event_unsubscribe(NULL, &codec_on_event, &codec_port_data,
                                   codec);

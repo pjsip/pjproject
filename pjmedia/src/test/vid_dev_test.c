@@ -191,6 +191,10 @@ on_return:
 	PJ_PERROR(3, (THIS_FILE, status, "   error"));
 
     if (capture)
+        pjmedia_vid_port_stop(capture);
+    if (renderer)
+        pjmedia_vid_port_stop(renderer);
+    if (capture)
 	pjmedia_vid_port_destroy(capture);
     if (renderer) {
         pjmedia_event_unsubscribe(NULL, &vid_event_cb, NULL, renderer);
