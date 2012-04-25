@@ -63,6 +63,17 @@
 #  define AVCODEC_OPEN(ctx,c)		avcodec_open(ctx,c)
 #endif
 
+#if LIBAVCODEC_VER_AT_LEAST(53,61)
+/* Not sure when AVCodec::encode2 is introduced. It appears in 
+ * libavcodec 53.61 where some codecs actually still use AVCodec::encode
+ * (e.g: H263, H264).
+ */
+#  define AVCODEC_HAS_ENCODE(c)		(c->encode || c->encode2)
+#else
+#  define AVCODEC_HAS_ENCODE(c)		(c->encode)
+#endif
+#define AVCODEC_HAS_DECODE(c)		(c->decode)
+
 
 /* Prototypes for FFMPEG codecs factory */
 static pj_status_t ffmpeg_test_alloc( pjmedia_vid_codec_factory *factory, 
@@ -643,14 +654,15 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 	desc = &codec_desc[codec_info_idx];
 
 	/* Skip duplicated codec implementation */
-	if ((c->encode && (desc->info.dir & PJMEDIA_DIR_ENCODING)) ||
-	    (c->decode && (desc->info.dir & PJMEDIA_DIR_DECODING)))
+	if ((AVCODEC_HAS_ENCODE(c) && (desc->info.dir & PJMEDIA_DIR_ENCODING))
+	    ||
+	    (AVCODEC_HAS_DECODE(c) && (desc->info.dir & PJMEDIA_DIR_DECODING)))
 	{
 	    continue;
 	}
 
 	/* Get raw/decoded format ids in the encoder */
-	if (c->pix_fmts && c->encode) {
+	if (c->pix_fmts && AVCODEC_HAS_ENCODE(c)) {
 	    pjmedia_format_id raw_fmt[PJMEDIA_VID_CODEC_MAX_DEC_FMT_CNT];
 	    unsigned raw_fmt_cnt = 0;
 	    unsigned raw_fmt_cnt_should_be = 0;
@@ -715,13 +727,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_ffmpeg_vid_init(pjmedia_vid_codec_mgr *mgr,
 	}
 
 	/* Get ffmpeg encoder instance */
-        if (c->encode && !desc->enc) {
+	if (AVCODEC_HAS_ENCODE(c) && !desc->enc) {
             desc->info.dir |= PJMEDIA_DIR_ENCODING;
             desc->enc = c;
         }
 	
 	/* Get ffmpeg decoder instance */
-        if (c->decode && !desc->dec) {
+        if (AVCODEC_HAS_DECODE(c) && !desc->dec) {
             desc->info.dir |= PJMEDIA_DIR_DECODING;
             desc->dec = c;
         }
@@ -1392,9 +1404,8 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
     ffmpeg_private *ff = (ffmpeg_private*)codec->codec_data;
     pj_uint8_t *p = (pj_uint8_t*)input->buf;
     AVFrame avframe;
-    pj_uint8_t *out_buf = (pj_uint8_t*)output->buf;
-    int out_buf_len = output_buf_len;
-    int err;
+    AVPacket avpacket;
+    int err, got_packet;
     //AVRational src_timebase;
     /* For some reasons (e.g: SSE/MMX usage), the avcodec_encode_video() must
      * have stack aligned to 16 bytes. Let's try to be safe by preparing the
@@ -1434,7 +1445,19 @@ static pj_status_t ffmpeg_codec_encode_whole(pjmedia_vid_codec *codec,
 #endif
     }
 
-    err = avcodec_encode_video(ff->enc_ctx, out_buf, out_buf_len, &avframe);
+    av_init_packet(&avpacket);
+    avpacket.data = (pj_uint8_t*)output->buf;
+    avpacket.size = output_buf_len;
+
+#if LIBAVCODEC_VER_AT_LEAST(54,15)
+    err = avcodec_encode_video2(ff->enc_ctx, &avpacket, &avframe, &got_packet);
+    if (!err && got_packet)
+	err = avpacket.size;
+#else
+    PJ_UNUSED_ARG(got_packet);
+    err = avcodec_encode_video(ff->enc_ctx, avpacket.data, avpacket.size, &avframe);
+#endif
+
     if (err < 0) {
         print_ffmpeg_err(err);
         return PJMEDIA_CODEC_EFAILED;
