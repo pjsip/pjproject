@@ -253,7 +253,7 @@ static void dump_media_session(const char *indent,
 	    (!call_med->strm.a.stream && !call_med->strm.v.stream))
 	{
 	    len = pj_ansi_snprintf(p, end-p,
-		      "%s #%d %s deactivated\n",
+		      "%s  #%d %s deactivated\n",
 		      indent, i, media_type_str);
 	    if (len < 1 || len > end-p) {
 		*p = '\0';
@@ -964,7 +964,7 @@ PJ_DEF(pj_status_t) pjsua_call_dump( pjsua_call_id call_id,
     }
 
     /* Dump session statistics */
-    if (with_media && pjsua_call_has_media(call_id))
+    if (with_media)
 	dump_media_session(indent, p, end-p, call);
 
     pjsip_dlg_dec_lock(dlg);
