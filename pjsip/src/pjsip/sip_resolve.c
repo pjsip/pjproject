@@ -263,8 +263,14 @@ PJ_DEF(void) pjsip_resolve( pjsip_resolver_t *resolver,
 	    /* Resolve */
 	    count = 1;
 	    status = pj_getaddrinfo(af, &target->addr.host, &count, &ai);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		/* "Normalize" error to PJ_ERESOLVE. This is a special error
+		 * because it will be translated to SIP status 502 by
+		 * sip_transaction.c
+		 */
+		status = PJ_ERESOLVE;
 		goto on_error;
+	    }
 
 	    svr_addr.entry[0].addr.addr.sa_family = (pj_uint16_t)af;
 	    pj_memcpy(&svr_addr.entry[0].addr, &ai.ai_addr,
