@@ -167,7 +167,7 @@ struct pjmedia_jbuf
 /* Enabling this would log the jitter buffer state about once per 
  * second.
  */
-#if 0
+#if 1
 #  define TRACE__(args)	    PJ_LOG(5,args)
 #else
 #  define TRACE__(args)
