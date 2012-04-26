@@ -2629,7 +2629,7 @@ PJ_DEF(pj_status_t) pjsua_schedule_timer( pj_timer_entry *entry,
 static void timer_cb( pj_timer_heap_t *th,
 		      pj_timer_entry *entry)
 {
-    struct timer_list *tmr = (struct timer_list *)entry->user_data;
+    pjsua_timer_list *tmr = (pjsua_timer_list *)entry->user_data;
     void (*cb)(void *user_data) = tmr->cb;
     void *user_data = tmr->user_data;
 
@@ -2650,14 +2650,14 @@ PJ_DEF(pj_status_t) pjsua_schedule_timer2( void (*cb)(void *user_data),
                                            void *user_data,
                                            unsigned msec_delay)
 {
-    struct timer_list *tmr = NULL;
+    pjsua_timer_list *tmr = NULL;
     pj_status_t status;
     pj_time_val delay;
 
     pj_mutex_lock(pjsua_var.timer_mutex);
 
     if (pj_list_empty(&pjsua_var.timer_list)) {
-        tmr = PJ_POOL_ALLOC_T(pjsua_var.pool, struct timer_list);
+        tmr = PJ_POOL_ALLOC_T(pjsua_var.pool, pjsua_timer_list);
     } else {
         tmr = pjsua_var.timer_list.next;
         pj_list_erase(tmr);

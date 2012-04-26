@@ -361,6 +361,16 @@ typedef struct pjsua_vid_win
     pj_bool_t			 is_native; 	/**< Preview is by dev  */
 } pjsua_vid_win;
 
+
+typedef struct pjsua_timer_list
+{
+    PJ_DECL_LIST_MEMBER(struct pjsua_timer_list);
+    pj_timer_entry         entry;
+    void                  (*cb)(void *user_data);
+    void                   *user_data;
+} pjsua_timer_list;
+
+
 /**
  * Global pjsua application data.
  */
@@ -463,13 +473,7 @@ struct pjsua_data
 #endif
 
     /* Timer entry list */
-    struct timer_list
-    {
-        PJ_DECL_LIST_MEMBER(struct timer_list);
-        pj_timer_entry          entry;
-        void                  (*cb)(void *user_data);
-        void                   *user_data;
-    } timer_list;
+    pjsua_timer_list	 timer_list;
     pj_mutex_t          *timer_mutex;
 };
 
