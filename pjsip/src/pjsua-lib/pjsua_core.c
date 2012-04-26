@@ -218,7 +218,9 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->ka_data = pj_str("\r\n");
     cfg->vid_cap_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid_rend_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
+#if PJMEDIA_HAS_VIDEO
     pjmedia_vid_stream_rc_config_default(&cfg->vid_stream_rc_cfg);
+#endif
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;

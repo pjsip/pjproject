@@ -24,7 +24,8 @@
 #include <pj/rand.h>
 #include <pjmedia/vid_codec.h>
 
-#if defined(PJMEDIA_VIDEO_DEV_HAS_AVI) && PJMEDIA_VIDEO_DEV_HAS_AVI != 0
+#if defined(PJMEDIA_VIDEO_DEV_HAS_AVI) && PJMEDIA_VIDEO_DEV_HAS_AVI != 0 && \
+    defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 
 #define THIS_FILE		"avi_dev.c"
 #define DRIVER_NAME		"AVIDev"
