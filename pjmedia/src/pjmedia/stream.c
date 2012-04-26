@@ -940,7 +940,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
     /* Build RTCP SDES packet */
     if (with_sdes) {
 	pjmedia_rtcp_sdes sdes;
-	unsigned sdes_len;
+	pj_size_t sdes_len;
 
 	pj_bzero(&sdes, sizeof(sdes));
 	sdes.cname = stream->cname;
@@ -951,7 +951,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
         			     "Error generating RTCP SDES"));
 	} else {
-	    len += sdes_len;
+	    len += (int)sdes_len;
 	}
     }
 
@@ -1000,7 +1000,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 
     /* Build RTCP BYE packet */
     if (with_bye) {
-	unsigned bye_len;
+	pj_size_t bye_len;
 
 	bye_len = max_len - len;
 	status = pjmedia_rtcp_build_rtcp_bye(&stream->rtcp, pkt+len,
@@ -1009,7 +1009,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
         			     "Error generating RTCP BYE"));
 	} else {
-	    len += bye_len;
+	    len += (int)bye_len;
 	}
     }
 
