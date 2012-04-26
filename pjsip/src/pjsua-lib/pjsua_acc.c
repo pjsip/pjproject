@@ -33,6 +33,7 @@ enum
 
 
 static void schedule_reregistration(pjsua_acc *acc);
+static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te);
 
 /*
  * Get number of current accounts.
@@ -561,6 +562,7 @@ PJ_DEF(void*) pjsua_acc_get_user_data(pjsua_acc_id acc_id)
  */
 PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 {
+    pjsua_acc *acc;
     unsigned i;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -569,30 +571,42 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 
     PJSUA_LOCK();
 
+    acc = &pjsua_var.acc[acc_id];
+
+    /* Cancel keep-alive timer, if any */
+    if (acc->ka_timer.id) {
+	pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
+	acc->ka_timer.id = PJ_FALSE;
+    }
+    if (acc->ka_transport) {
+	pjsip_transport_dec_ref(acc->ka_transport);
+	acc->ka_transport = NULL;
+    }
+
     /* Cancel any re-registration timer */
-    pjsua_cancel_timer(&pjsua_var.acc[acc_id].auto_rereg.timer);
+    pjsua_cancel_timer(&acc->auto_rereg.timer);
 
     /* Delete registration */
-    if (pjsua_var.acc[acc_id].regc != NULL) {
+    if (acc->regc != NULL) {
 	pjsua_acc_set_registration(acc_id, PJ_FALSE);
-	if (pjsua_var.acc[acc_id].regc) {
-	    pjsip_regc_destroy(pjsua_var.acc[acc_id].regc);
+	if (acc->regc) {
+	    pjsip_regc_destroy(acc->regc);
 	}
-	pjsua_var.acc[acc_id].regc = NULL;
+	acc->regc = NULL;
     }
 
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id, 0);
 
     /* Release account pool */
-    if (pjsua_var.acc[acc_id].pool) {
-	pj_pool_release(pjsua_var.acc[acc_id].pool);
-	pjsua_var.acc[acc_id].pool = NULL;
+    if (acc->pool) {
+	pj_pool_release(acc->pool);
+	acc->pool = NULL;
     }
 
     /* Invalidate */
-    pjsua_var.acc[acc_id].valid = PJ_FALSE;
-    pjsua_var.acc[acc_id].contact.slen = 0;
+    acc->valid = PJ_FALSE;
+    acc->contact.slen = 0;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -837,12 +851,61 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     acc->cfg.use_timer = cfg->use_timer;
     acc->cfg.timer_setting = cfg->timer_setting;
 
-    /* Transport and keep-alive */
+    /* Transport */
     if (acc->cfg.transport_id != cfg->transport_id) {
 	acc->cfg.transport_id = cfg->transport_id;
 	update_reg = PJ_TRUE;
     }
-    acc->cfg.ka_interval = cfg->ka_interval;
+
+    /* Update keep-alive */
+    if (acc->cfg.ka_interval != cfg->ka_interval ||
+	pj_strcmp(&acc->cfg.ka_data, &cfg->ka_data))
+    {
+	pjsip_transport *ka_transport = acc->ka_transport;
+
+	if (acc->ka_timer.id) {
+	    pjsip_endpt_cancel_timer(pjsua_var.endpt, &acc->ka_timer);
+	    acc->ka_timer.id = PJ_FALSE;
+	}
+	if (acc->ka_transport) {
+	    pjsip_transport_dec_ref(acc->ka_transport);
+	    acc->ka_transport = NULL;
+	}
+
+	acc->cfg.ka_interval = cfg->ka_interval;
+
+	if (cfg->ka_interval) {
+	    if (ka_transport) {
+		/* Keep-alive has been running so we can just restart it */
+		pj_time_val delay;
+
+		pjsip_transport_add_ref(ka_transport);
+		acc->ka_transport = ka_transport;
+
+		acc->ka_timer.cb = &keep_alive_timer_cb;
+		acc->ka_timer.user_data = (void*)acc;
+
+		delay.sec = acc->cfg.ka_interval;
+		delay.msec = 0;
+		status = pjsua_schedule_timer(&acc->ka_timer, &delay);
+		if (status == PJ_SUCCESS) {
+		    acc->ka_timer.id = PJ_TRUE;
+		} else {
+		    pjsip_transport_dec_ref(ka_transport);
+		    acc->ka_transport = NULL;
+		    pjsua_perror(THIS_FILE, "Error starting keep-alive timer",
+		                 status);
+		}
+
+	    } else {
+		/* Keep-alive has not been running, we need to (re)register
+		 * first.
+		 */
+		update_reg = PJ_TRUE;
+	    }
+	}
+    }
+
     if (pj_strcmp(&acc->cfg.ka_data, &cfg->ka_data))
 	pj_strdup(acc->pool, &acc->cfg.ka_data, &cfg->ka_data);
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1526,6 +1589,13 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	pjsua_perror(THIS_FILE, "Error sending keep-alive packet", status);
     }
 
+    /* Check just in case keep-alive has been disabled. This shouldn't happen
+     * though as when ka_interval is changed this timer should have been
+     * cancelled.
+     */
+    if (acc->cfg.ka_interval == 0)
+	goto on_return;
+
     /* Reschedule next timer */
     delay.sec = acc->cfg.ka_interval;
     delay.msec = 0;
@@ -1536,6 +1606,7 @@ static void keep_alive_timer_cb(pj_timer_heap_t *th, pj_timer_entry *te)
 	pjsua_perror(THIS_FILE, "Error starting keep-alive timer", status);
     }
 
+on_return:
     PJSUA_UNLOCK();
 }
 
