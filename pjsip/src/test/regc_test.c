@@ -772,7 +772,7 @@ int regc_test(void)
 
 	    /* client expected results: */
 	    /* error	code	have_reg    expiration	contact_cnt auth?*/
-	    { PJ_FALSE,	503,	PJ_FALSE,   -1,		0,	    PJ_FALSE}
+	    { PJ_FALSE,	502,	PJ_FALSE,   -1,		0,	    PJ_FALSE}
 	},
 
 	/* timeout test */
