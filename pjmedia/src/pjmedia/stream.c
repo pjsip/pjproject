@@ -933,7 +933,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 	pj_memcpy(pkt, sr_rr_pkt, len);
 	max_len = stream->out_rtcp_pkt_size;
     } else {
-	pkt = sr_rr_pkt;
+	pkt = (pj_uint8_t*)sr_rr_pkt;
 	max_len = len;
     }
 
