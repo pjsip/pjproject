@@ -1273,6 +1273,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsip_inv_terminate(inv, PJSIP_SC_INTERNAL_SERVER_ERROR, PJ_FALSE);
 
 	pjsua_media_channel_deinit(call->index);
+	call->inv = NULL;
 
 	goto on_return;
     }
@@ -1311,6 +1312,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 				PJ_FALSE);
 	}
 	pjsua_media_channel_deinit(call->index);
+	call->inv = NULL;
 	goto on_return;
 
     } else {
@@ -1318,6 +1320,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
 	    pjsua_media_channel_deinit(call->index);
+	    call->inv = NULL;
 	    goto on_return;
 	}
     }
