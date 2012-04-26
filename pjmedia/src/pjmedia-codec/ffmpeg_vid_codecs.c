@@ -52,14 +52,12 @@
 # include <libavutil/opt.h>
 #endif
 
+
 /* Various compatibility */
+
 #if LIBAVCODEC_VER_AT_LEAST(53,20)
-#  define AV_OPT_SET(obj,name,val,opt)	av_opt_set(obj,name,val,opt)
-#  define AV_OPT_SET_INT(obj,name,val)	av_opt_set_int(obj,name,val,0)
 #  define AVCODEC_OPEN(ctx,c)		avcodec_open2(ctx,c,NULL)
 #else
-#  define AV_OPT_SET(obj,name,val,opt)	av_set_string3(obj,name,val,opt,NULL)
-#  define AV_OPT_SET_INT(obj,name,val)	av_set_int(obj,name,val)
 #  define AVCODEC_OPEN(ctx,c)		avcodec_open(ctx,c)
 #endif
 
@@ -69,8 +67,12 @@
  * (e.g: H263, H264).
  */
 #  define AVCODEC_HAS_ENCODE(c)		(c->encode || c->encode2)
+#  define AV_OPT_SET(obj,name,val,opt)	(av_opt_set(obj,name,val,opt)==0)
+#  define AV_OPT_SET_INT(obj,name,val)	(av_opt_set_int(obj,name,val,0)==0)
 #else
 #  define AVCODEC_HAS_ENCODE(c)		(c->encode)
+#  define AV_OPT_SET(obj,name,val,opt)	(av_set_string3(obj,name,val,opt,NULL)==0)
+#  define AV_OPT_SET_INT(obj,name,val)	(av_set_int(obj,name,val)!=NULL)
 #endif
 #define AVCODEC_HAS_DECODE(c)		(c->decode)
 
@@ -399,10 +401,10 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	default:
 	    break;
 	}
-	if (profile &&
-	    AV_OPT_SET(ctx->priv_data, "profile", profile, 0))
+	if (profile && !AV_OPT_SET(ctx->priv_data, "profile", profile, 0))
 	{
-	    PJ_LOG(3, (THIS_FILE, "Failed to set H264 profile"));
+	    PJ_LOG(3, (THIS_FILE, "Failed to set H264 profile to '%s'",
+		       profile));
 	}
 
 	/* Apply profile constraint bits. */
@@ -432,10 +434,10 @@ static pj_status_t h264_preopen(ffmpeg_private *ff)
 	/* Misc x264 settings (performance, quality, latency, etc).
 	 * Let's just use the x264 predefined preset & tune.
 	 */
-	if (AV_OPT_SET(ctx->priv_data, "preset", "veryfast", 0)) {
+	if (!AV_OPT_SET(ctx->priv_data, "preset", "veryfast", 0)) {
 	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 preset 'veryfast'"));
 	}
-	if (AV_OPT_SET(ctx->priv_data, "tune", "animation+zerolatency", 0)) {
+	if (!AV_OPT_SET(ctx->priv_data, "tune", "animation+zerolatency", 0)) {
 	    PJ_LOG(3, (THIS_FILE, "Failed to set x264 tune 'zerolatency'"));
 	}
     }
