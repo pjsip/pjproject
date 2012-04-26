@@ -2654,10 +2654,10 @@ PJ_DEF(pj_status_t) pjsua_codec_set_param( const pj_str_t *codec_id,
 pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
 					  const pj_str_t *xml_st)
 {
+#if PJMEDIA_HAS_VIDEO
     pjsua_call *call = &pjsua_var.calls[call_id];
     const pj_str_t PICT_FAST_UPDATE = {"picture_fast_update", 19};
 
-#if PJMEDIA_HAS_VIDEO
     if (pj_strstr(xml_st, &PICT_FAST_UPDATE)) {
 	unsigned i;
 
@@ -2676,6 +2676,7 @@ pj_status_t pjsua_media_apply_xml_control(pjsua_call_id call_id,
 #endif
 
     /* Just to avoid compiler warning of unused var */
+    PJ_UNUSED_ARG(call_id);
     PJ_UNUSED_ARG(xml_st);
 
     return PJ_ENOTSUP;

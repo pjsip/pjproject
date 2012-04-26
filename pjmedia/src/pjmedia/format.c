@@ -53,6 +53,10 @@ pjmedia_format_get_audio_format_detail(const pjmedia_format *fmt,
     if (fmt->detail_type==PJMEDIA_FORMAT_DETAIL_AUDIO) {
 	return (pjmedia_audio_format_detail*) &fmt->det.aud;
     } else {
+        /* Get rid of unused var compiler warning if pj_assert()
+         * macro does not do anything
+         */
+        PJ_UNUSED_ARG(assert_valid);
 	pj_assert(!assert_valid || !"Invalid audio format detail");
 	return NULL;
     }

@@ -133,7 +133,7 @@ if test "1" = "1"; then
 fi
 
 # And finally invoke the configure script itself
-./aconfigure --host=arm-apple-darwin9 --disable-floating-point $*
+./aconfigure --host=arm-apple-darwin9 --disable-floating-point --disable-sdl $*
 
 if test "$?" = "0"; then
   echo "Done configuring for `basename $SDKPATH`"

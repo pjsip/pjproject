@@ -39,7 +39,7 @@ PJ_DEF(pj_status_t) pjmedia_converter_mgr_create(pj_pool_t *pool,
 					         pjmedia_converter_mgr **p_mgr)
 {
     pjmedia_converter_mgr *mgr;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
 
     mgr = PJ_POOL_ALLOC_T(pool, pjmedia_converter_mgr);
     pj_list_init(&mgr->factory_list);

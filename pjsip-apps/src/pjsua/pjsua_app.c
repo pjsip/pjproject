@@ -3371,6 +3371,9 @@ static void on_call_media_event(pjsua_call_id call_id,
 	/* Re-arrange video windows */
 	arrange_window(PJSUA_INVALID_ID);
     }
+#else
+    PJ_UNUSED_ARG(med_idx);
+    PJ_UNUSED_ARG(event);
 #endif
 }
 
