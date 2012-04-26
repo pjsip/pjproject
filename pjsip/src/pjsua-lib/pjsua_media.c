@@ -191,22 +191,11 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
 
     /* Close media transports */
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
-	unsigned strm_idx;
-	pjsua_call *call = &pjsua_var.calls[i];
-	for (strm_idx=0; strm_idx<call->med_cnt; ++strm_idx) {
-	    pjsua_call_media *call_med = &call->media[strm_idx];
-	    if (call_med->tp_st != PJSUA_MED_TP_IDLE) {
-		pjsua_media_channel_deinit(i);
-	    }
-	    if (call_med->tp && call_med->tp_auto_del) {
-	        /* TODO: check if we're not allowed to send to network in the
-	         *       "flags", and if so do not do TURN allocation...
-	         */
-	        PJ_UNUSED_ARG(flags);
-		pjmedia_transport_close(call_med->tp);
-	    }
-	    call_med->tp = NULL;
-	}
+        /* TODO: check if we're not allowed to send to network in the
+         *       "flags", and if so do not do TURN allocation...
+         */
+	PJ_UNUSED_ARG(flags);
+	pjsua_media_channel_deinit(i);
     }
 
     /* Destroy media endpoint. */
