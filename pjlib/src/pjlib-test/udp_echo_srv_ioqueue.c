@@ -22,6 +22,7 @@
 
 static pj_ioqueue_key_t *key;
 static pj_atomic_t *total_bytes;
+static pj_bool_t thread_quit_flag;
 
 struct op_key
 {
@@ -145,12 +146,12 @@ static int worker_thread(void *arg)
         on_read_complete(key, &read_op.op_key_, length);
     }
     
-    for (;;) {
+    while (!thread_quit_flag) {
         pj_time_val timeout;
         timeout.sec = 0; timeout.msec = 10;
         rc = pj_ioqueue_poll(ioqueue, &timeout);
     }
-    PJ_UNREACHED(return 0;)
+    return 0;
 }
 
 int udp_echo_srv_ioqueue(void)
