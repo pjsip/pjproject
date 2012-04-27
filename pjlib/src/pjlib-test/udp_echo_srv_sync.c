@@ -21,6 +21,7 @@
 #include <pjlib.h>
 
 static pj_atomic_t *total_bytes;
+static pj_bool_t thread_quit_flag = 0;
 
 static int worker_thread(void *arg)
 {
@@ -28,7 +29,7 @@ static int worker_thread(void *arg)
     char         buf[512];
     pj_status_t  last_recv_err = PJ_SUCCESS, last_write_err = PJ_SUCCESS;
 
-    for (;;) {
+    while (!thread_quit_flag) {
         pj_ssize_t len;
         pj_status_t rc;
         pj_sockaddr_in addr;
@@ -56,7 +57,7 @@ static int worker_thread(void *arg)
             continue;
         }
     }
-    PJ_UNREACHED(return 0;)
+    return 0;
 }
 
 

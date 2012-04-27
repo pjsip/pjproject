@@ -6634,9 +6634,8 @@ $as_echo "ok" >&6; }
 else
   { { $as_echo "$as_me:${as_lineno-$LINENO}: error: in \`$ac_pwd':" >&5
 $as_echo "$as_me: error: in \`$ac_pwd':" >&2;}
-{ as_fn_set_status run with --help for more info
-as_fn_error "Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly
-See \`config.log' for more details." "$LINENO" 5; }; }
+as_fn_error "Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info
+See \`config.log' for more details." "$LINENO" 5; }
 fi
 rm -f core conftest.err conftest.$ac_objext \
     conftest$ac_exeext conftest.$ac_ext

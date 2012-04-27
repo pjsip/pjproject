@@ -961,7 +961,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
         			     "Error generating RTCP SDES"));
 	} else {
-	    len += sdes_len;
+	    len += (int)sdes_len;
 	}
     }
 
@@ -1019,7 +1019,7 @@ static pj_status_t send_rtcp(pjmedia_stream *stream,
 	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
         			     "Error generating RTCP BYE"));
 	} else {
-	    len += bye_len;
+	    len += (int)bye_len;
 	}
     }
 

@@ -1111,7 +1111,7 @@ if test "x$enable_ipp" != "xno"; then
 					   ]],
 					   [ippStaticInit();])],
 		  [AC_MSG_RESULT(ok)],
-		  [AC_MSG_FAILURE(Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info)])
+		  [AC_MSG_FAILURE([Error: unable to recognize your IPP installation. Make sure the paths and ARCH suffix are set correctly, run with --help for more info])])
 
 	CFLAGS="$SAVED_CFLAGS"
 	LDFLAGS="$SAVED_LDFLAGS"
