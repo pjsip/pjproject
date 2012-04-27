@@ -23,13 +23,22 @@
 
 static const char *id = "config.c";
 
-#define PJ_MAKE_VERSION1(a,b,c,d) 	#a "." #b "." #c d
-#define PJ_MAKE_VERSION2(a,b,c,d)	PJ_MAKE_VERSION1(a,b,c,d)
+#define PJ_MAKE_VERSION3_1(a,b,d) 	#a "." #b d
+#define PJ_MAKE_VERSION3_2(a,b,d)	PJ_MAKE_VERSION3_1(a,b,d)
 
-PJ_DEF_DATA(const char*) PJ_VERSION = PJ_MAKE_VERSION2(PJ_VERSION_NUM_MAJOR,
-						       PJ_VERSION_NUM_MINOR,
-						       PJ_VERSION_NUM_REV,
-						       PJ_VERSION_NUM_EXTRA);
+#define PJ_MAKE_VERSION4_1(a,b,c,d) 	#a "." #b "." #c d
+#define PJ_MAKE_VERSION4_2(a,b,c,d)	PJ_MAKE_VERSION4_1(a,b,c,d)
+
+#if PJ_VERSION_NUM_REV
+PJ_DEF_DATA(const char*) PJ_VERSION = PJ_MAKE_VERSION4_2(PJ_VERSION_NUM_MAJOR,
+						         PJ_VERSION_NUM_MINOR,
+						         PJ_VERSION_NUM_REV,
+						         PJ_VERSION_NUM_EXTRA);
+#else
+PJ_DEF_DATA(const char*) PJ_VERSION = PJ_MAKE_VERSION3_2(PJ_VERSION_NUM_MAJOR,
+						         PJ_VERSION_NUM_MINOR,
+						         PJ_VERSION_NUM_EXTRA);
+#endif
 
 /*
  * Get PJLIB version string.
