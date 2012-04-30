@@ -125,6 +125,7 @@ struct pjmedia_vid_stream
 					    /**< Outgoing RTCP packet size. */
 
     unsigned		     dec_max_size;  /**< Size of decoded/raw picture*/
+    pjmedia_ratio	     dec_max_fps;   /**< Max fps of decoding dir.   */
     pjmedia_frame            dec_frame;	    /**< Current decoded frame.     */
     pjmedia_event            fmt_event;	    /**< Buffered fmt_changed event
                                                  to avoid deadlock	    */
@@ -1080,10 +1081,6 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 	    if (stream->info.codec_info.clock_rate * vfd->fps.denum !=
 		vfd->fps.num * ts_diff)
 	    {
-		pjmedia_ratio old_fps;
-
-		old_fps = vfd->fps;
-
 		/* Frame rate changed, update decoding port info */
 		if (stream->info.codec_info.clock_rate % ts_diff == 0) {
 		    vfd->fps.num = stream->info.codec_info.clock_rate/ts_diff;
@@ -1099,10 +1096,14 @@ static pj_status_t decode_frame(pjmedia_vid_stream *stream,
 		/* Publish PJMEDIA_EVENT_FMT_CHANGED event if frame rate
 		 * increased and not exceeding 100fps.
 		 */
-		if (vfd->fps.num/vfd->fps.denum < 100 &&
-		    vfd->fps.num*old_fps.denum > old_fps.num*vfd->fps.denum)
+		if (vfd->fps.num/vfd->fps.denum <= 100 &&
+		    vfd->fps.num * stream->dec_max_fps.denum >
+		    stream->dec_max_fps.num * vfd->fps.denum)
 		{
 		    pjmedia_event *event = &stream->fmt_event;
+
+		    /* Update max fps of decoding dir */
+		    stream->dec_max_fps = vfd->fps;
 
 		    /* Use the buffered format changed event:
 		     * - just update the framerate if there is pending event,
@@ -1495,6 +1496,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
      * will be continuously calculated based on the incoming RTP timestamps.
      */
     vfd_dec->fps.num = vfd_dec->fps.num * 3 / 2;
+    stream->dec_max_fps = vfd_dec->fps;
 
     /* Create decoder channel */
     status = create_channel( pool, stream, PJMEDIA_DIR_DECODING, 
