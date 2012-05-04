@@ -885,6 +885,14 @@ on_return:
             next = answer->next;
             pjsua_call_answer(call_id, answer->code, answer->reason,
                               answer->msg_data);
+            
+            /* Call might have been disconnected if application is answering
+             * with 200/OK and the media failed to start.
+             * See pjsua_call_answer() below.
+             */
+            if (!call->inv || !call->inv->pool_prov)
+                break;
+
             pj_list_erase(answer);
             answer = next;
         }
