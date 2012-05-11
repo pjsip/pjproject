@@ -2081,7 +2081,7 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 
     PJSUA_LOCK();
 
-    if (pjsua_var.tpdata[id].type == PJSIP_TRANSPORT_UDP) {
+    if (t->type == PJSIP_TRANSPORT_UDP) {
 
 	pjsip_transport *tp = t->data.tp;
 
@@ -2102,7 +2102,9 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
 
 	status = PJ_SUCCESS;
 
-    } else if (pjsua_var.tpdata[id].type == PJSIP_TRANSPORT_TCP) {
+    } else if (t->type == PJSIP_TRANSPORT_TCP ||
+	       t->type == PJSIP_TRANSPORT_TLS)
+    {
 
 	pjsip_tpfactory *factory = t->data.factory;
 
@@ -2113,8 +2115,10 @@ PJ_DEF(pj_status_t) pjsua_transport_get_info( pjsua_transport_id id,
     
 	info->id = id;
 	info->type = t->type;
-	info->type_name = pj_str("TCP");
-	info->info = pj_str("TCP transport");
+	info->type_name = (t->type==PJSIP_TRANSPORT_TCP)? pj_str("TCP"):
+							  pj_str("TLS");
+	info->info = (t->type==PJSIP_TRANSPORT_TCP)? pj_str("TCP transport"):
+						     pj_str("TLS transport");
 	info->flag = factory->flag;
 	info->addr_len = sizeof(factory->local_addr);
 	info->local_addr = factory->local_addr;
