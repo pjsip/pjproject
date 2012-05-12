@@ -68,6 +68,12 @@
 #   define PJMEDIA_VSTREAM_INC	1000
 #endif
 
+/* Video stream keep-alive feature is currently disabled. */
+#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
+#   undef PJMEDIA_STREAM_ENABLE_KA
+#   define PJMEDIA_STREAM_ENABLE_KA 0
+#endif
+
 
 /**
  * Media channel.
@@ -401,6 +407,7 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
 #if PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_EMPTY_RTP
 
     /* Keep-alive packet is empty RTP */
+    pjmedia_vid_channel *channel = (pjmedia_vid_channel *)stream;
     pj_status_t status;
     void *pkt;
     int pkt_len;
@@ -422,11 +429,12 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
 			       pkt_len);
 
     /* Send RTCP */
-    send_rtcp(stream, PJ_TRUE, PJ_FALSE, PJ_FALSE);
+    send_rtcp(stream, PJ_TRUE, PJ_FALSE);
 
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
     /* Keep-alive packet is defined in PJMEDIA_STREAM_KA_USER_PKT */
+    pjmedia_vid_channel *channel = (pjmedia_vid_channel *)stream;
     int pkt_len;
     const pj_str_t str_ka = PJMEDIA_STREAM_KA_USER_PKT;
 
@@ -795,12 +803,16 @@ static pj_status_t put_frame(pjmedia_port *port,
 
 	dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent, 
 					   &frame->timestamp);
-	if (dtx_duration >
-	    PJMEDIA_STREAM_KA_INTERVAL * channel->port.info.clock_rate)
+        /* Video stream keep-alive feature is currently disabled. */
+        /*
+        if (dtx_duration >
+	    PJMEDIA_STREAM_KA_INTERVAL *
+            PJMEDIA_PIA_SRATE(&channel->port.info))
 	{
 	    send_keep_alive_packet(stream);
 	    stream->last_frm_ts_sent = frame->timestamp;
 	}
+        */
     }
 #endif
 

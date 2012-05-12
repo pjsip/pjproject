@@ -1165,7 +1165,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	dtx_duration = pj_timestamp_diff32(&stream->last_frm_ts_sent, 
 					   &frame->timestamp);
 	if (dtx_duration >
-	    PJMEDIA_STREAM_KA_INTERVAL * stream->port.info.clock_rate)
+	    PJMEDIA_STREAM_KA_INTERVAL * PJMEDIA_PIA_SRATE(&stream->port.info))
 	{
 	    send_keep_alive_packet(stream);
 	    stream->last_frm_ts_sent = frame->timestamp;
