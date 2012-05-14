@@ -546,7 +546,7 @@ PJ_DEF(pj_status_t) pjmedia_conf_connect_port( pjmedia_conf *conf,
     /* Channel count must match. */
     if (src_afd->channel_count != dst_afd->channel_count) {
 	pj_mutex_unlock(conf->mutex);
-	return PJMEDIA_ENCCLOCKRATE;
+	return PJMEDIA_ENCCHANNEL;
     }
 
     /* Source and sink ptime must be equal or a multiplication factor. */

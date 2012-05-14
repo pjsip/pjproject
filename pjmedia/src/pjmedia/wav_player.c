@@ -157,6 +157,7 @@ static pj_status_t fill_buffer(struct file_reader_port *fport)
                     int val = pjmedia_linear2alaw(0);
                     pj_memset(fport->eofpos, val, size_left);
                 }
+		size_left = 0;
             }
 
 	    /* Rewind file */
