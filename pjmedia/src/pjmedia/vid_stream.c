@@ -407,7 +407,7 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
 #if PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_EMPTY_RTP
 
     /* Keep-alive packet is empty RTP */
-    pjmedia_vid_channel *channel = (pjmedia_vid_channel *)stream;
+    pjmedia_vid_channel *channel = stream->enc;
     pj_status_t status;
     void *pkt;
     int pkt_len;
@@ -434,7 +434,7 @@ static void send_keep_alive_packet(pjmedia_vid_stream *stream)
 #elif PJMEDIA_STREAM_ENABLE_KA == PJMEDIA_STREAM_KA_USER
 
     /* Keep-alive packet is defined in PJMEDIA_STREAM_KA_USER_PKT */
-    pjmedia_vid_channel *channel = (pjmedia_vid_channel *)stream;
+    pjmedia_vid_channel *channel = stream->enc;
     int pkt_len;
     const pj_str_t str_ka = PJMEDIA_STREAM_KA_USER_PKT;
 
