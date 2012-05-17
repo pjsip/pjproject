@@ -1139,7 +1139,7 @@
 
 /**
  * Duration for progressive discard algotithm in jitter buffer to discard
- * an excessive frame when burst is equal to or lower than
+ * an excessive frame when burst is equal to or greater than
  * PJMEDIA_JBUF_PRO_DISC_MAX_BURST, in milliseconds.
  *
  * Default: 10000 ms

@@ -115,7 +115,7 @@ rdb_add_index(rdb_t *rdb, uint32_t index) {
 
     /* shift the window forward by delta bits*/
     v128_left_shift(&rdb->bitmask, delta);
-    v128_set_bit(&rdb->bitmask, rdb_bits_in_bitmask-delta);
+    v128_set_bit(&rdb->bitmask, rdb_bits_in_bitmask-1);
     rdb->window_start += delta;
 
   }    

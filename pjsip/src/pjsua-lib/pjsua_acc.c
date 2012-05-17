@@ -675,6 +675,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pjsip_route_hdr local_route;
     pj_str_t acc_proxy[PJSUA_ACC_MAX_PROXIES];
     pj_bool_t update_reg = PJ_FALSE;
+    pj_bool_t unreg_first = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -802,6 +803,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strdup_with_null(acc->pool, &acc->srv_domain, &id_sip_uri->host);
 	acc->srv_port = 0;
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* User data */
@@ -856,6 +858,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strdup_with_null(acc->pool, &acc->cfg.force_contact,
 			    &cfg->force_contact);
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Contact param */
@@ -1100,6 +1103,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	    pj_bzero(&acc->cfg.reg_uri, sizeof(acc->cfg.reg_uri));
 	}
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* SIP outbound setting */
@@ -1108,6 +1112,16 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	pj_strcmp(&acc->cfg.rfc5626_reg_id, &cfg->rfc5626_reg_id))
     {
 	update_reg = PJ_TRUE;
+    }
+
+    /* Unregister first */
+    if (unreg_first) {
+	pjsua_acc_set_registration(acc->index, PJ_FALSE);
+	if (acc->regc != NULL) {
+	    pjsip_regc_destroy(acc->regc);
+	    acc->regc = NULL;
+	    acc->contact.slen = 0;
+	}
     }
 
     /* Update registration */
