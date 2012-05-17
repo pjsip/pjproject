@@ -2025,6 +2025,12 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
     call->rem_offerer = (rem_sdp != NULL);
 
+    /* Notify application */
+    if (pjsua_var.ua_cfg.cb.on_call_sdp_created) {
+	(*pjsua_var.ua_cfg.cb.on_call_sdp_created)(call_id, sdp,
+						   pool, rem_sdp);
+    }
+
     *p_sdp = sdp;
     return PJ_SUCCESS;
 }

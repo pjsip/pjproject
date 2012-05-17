@@ -662,6 +662,25 @@ typedef struct pjsua_callback
 
 
     /**
+     * Notify application when a call has just created a local SDP (for 
+     * initial or subsequent SDP offer/answer). Application can implement
+     * this callback to modify the SDP, before it is being sent and/or
+     * negotiated with remote SDP, for example to apply per account/call
+     * basis codecs priority or to add custom/proprietary SDP attributes.
+     *
+     * @param call_id	The call index.
+     * @param sdp	The SDP has just been created.
+     * @param pool	The pool instance, application should use this pool
+     *			to modify the SDP.
+     * @param rem_sdp	The remote SDP, will be NULL if local is SDP offerer.
+     */
+    void (*on_call_sdp_created)(pjsua_call_id call_id,
+			        pjmedia_sdp_session *sdp,
+			        pj_pool_t *pool,
+			        const pjmedia_sdp_session *rem_sdp);
+
+
+    /**
      * Notify application when media session is created and before it is
      * registered to the conference bridge. Application may return different
      * media port if it has added media processing port to the stream. This
