@@ -723,6 +723,7 @@ with_external_gsm
 enable_sound
 with_external_pa
 enable_oss
+enable_video
 enable_ext_sound
 enable_small_filter
 enable_large_filter
@@ -1380,6 +1381,7 @@ Optional Features:
   --enable-epoll          Use /dev/epoll ioqueue on Linux (experimental)
   --disable-sound         Exclude sound (i.e. use null sound)
   --disable-oss           Disable OSS audio (default: not disabled)
+  --disable-video         Disable video feature
   --enable-ext-sound      PJMEDIA will not provide any sound device backend
   --disable-small-filter  Exclude small filter in resampling
   --disable-large-filter  Exclude large filter in resampling
@@ -5671,6 +5673,29 @@ fi
 fi
 
 
+
+# Check whether --enable-video was given.
+if test "${enable_video+set}" = set; then :
+  enableval=$enable_video; if test "$enable_video" = "no"; then
+	        #AC_DEFINE(PJMEDIA_HAS_VIDEO,0)
+                { $as_echo "$as_me:${as_lineno-$LINENO}: result: Video is disabled" >&5
+$as_echo "Video is disabled" >&6; }
+                enable_sdl="no"
+                enable_ffmpeg="no"
+		enable_v4l2="no"
+               fi
+fi
+
+
+case $target in
+ arm-apple-darwin*)
+ 	LIBS="$LIBS -framework UIKit"
+	;;
+ *darwin*)
+ 	LIBS="$LIBS -framework Foundation -framework AppKit"
+	;;
+esac
+
 if test "$enable_video" = "no"; then
   true;
 else
@@ -5680,7 +5705,7 @@ else
 
 
 	SAVED_LIBS="$LIBS"
-	LIBS="-framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	LIBS="-framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
 	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
 /* end confdefs.h.  */
 
@@ -5702,7 +5727,7 @@ rm -f core conftest.err conftest.$ac_objext \
 	LIBS="$SAVED_LIBS"
 	if test "$ac_pjmedia_video_has_ios" = "yes"; then
 	  ac_ios_cflags="-DPJMEDIA_VIDEO_DEV_HAS_IOS=1"
-	  LIBS="$LIBS -framework AVFoundation -framework UIKit -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
+	  LIBS="$LIBS -framework AVFoundation -framework CoreGraphics -framework QuartzCore -framework CoreVideo -framework CoreMedia"
 	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if AVFoundation framework is available... yes" >&5
 $as_echo "Checking if AVFoundation framework is available... yes" >&6; }
 	else
@@ -5737,7 +5762,7 @@ rm -f core conftest.err conftest.$ac_objext \
 	LIBS="$SAVED_LIBS"
 	if test "$ac_pjmedia_video_has_qt" = "yes"; then
 	  ac_qt_cflags="-DPJMEDIA_VIDEO_DEV_HAS_QT=1"
-	  LIBS="$LIBS -framework QTKit -framework Foundation -framework AppKit -framework QuartzCore -framework OpenGL"
+	  LIBS="$LIBS -framework QTKit -framework QuartzCore -framework OpenGL"
 	  { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if QTKit framework is available... yes" >&5
 $as_echo "Checking if QTKit framework is available... yes" >&6; }
 	else
@@ -6051,7 +6076,7 @@ else
 			FFMPEG_PREFIX=$with_ffmpeg
 			{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Using ffmpeg prefix... $FFMPEG_PREFIX" >&5
 $as_echo "Using ffmpeg prefix... $FFMPEG_PREFIX" >&6; }
-			PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
+			export PKG_CONFIG_PATH=$FFMPEG_PREFIX/lib/pkgconfig
 		fi
 
 		for ac_prog in pkg-config "python pkgconfig.py"
@@ -6409,7 +6434,7 @@ fi
 		fi
 
 		LIBS="$LIBS $ac_ffmpeg_ldflags"
-		PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
+		export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
 
 
 fi
