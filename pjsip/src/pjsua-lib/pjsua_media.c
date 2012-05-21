@@ -2232,6 +2232,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    /* This may happen when remote removed any SDP media lines in
 	     * its re-offer.
 	     */
+	    if (call_med->tp) {
+		/* Close the media transport */
+		pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
+		pjmedia_transport_close(call_med->tp);
+		call_med->tp = call_med->tp_orig = NULL;
+	    }
 	    continue;
 #if 0
 	    /* Something is wrong */
