@@ -221,6 +221,7 @@ PJ_DEF(void) pj_ice_strans_cfg_default(pj_ice_strans_cfg *cfg)
     cfg->turn.conn_type = PJ_TURN_TP_UDP;
 
     cfg->stun.max_host_cands = 64;
+    cfg->stun.ignore_stun_error = PJ_FALSE;
 }
 
 
@@ -1501,8 +1502,14 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 	    /* May not have cand, e.g. when error during init */
 	    if (cand)
 		cand->status = status;
-	    sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT, "DNS resolution failed", 
-		      status);
+	    if (!ice_st->cfg.stun.ignore_stun_error) {
+		sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT,
+		          "DNS resolution failed", status);
+	    } else {
+		PJ_LOG(4,(ice_st->obj_name,
+			  "STUN error is ignored for comp %d",
+			  comp->comp_id));
+	    }
 	}
 	break;
     case PJ_STUN_SOCK_BINDING_OP:
@@ -1539,7 +1546,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    if (comp->default_cand > idx) {
 			--comp->default_cand;
 		    } else if (comp->default_cand == idx) {
-			comp->default_cand = 0;
+			comp->default_cand = !idx;
 		    }
 
 		    /* Remove srflx candidate */
@@ -1567,16 +1574,37 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 	    /* May not have cand, e.g. when error during init */
 	    if (cand)
 		cand->status = status;
-	    sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT, 
-		      "STUN binding request failed", status);
+	    if (!ice_st->cfg.stun.ignore_stun_error) {
+		sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT,
+			  "STUN binding request failed", status);
+	    } else {
+		PJ_LOG(4,(ice_st->obj_name,
+			  "STUN error is ignored for comp %d",
+			  comp->comp_id));
+
+		if (cand) {
+		    unsigned idx = cand - comp->cand_list;
+
+		    /* Update default candidate index */
+		    if (comp->default_cand == idx) {
+			comp->default_cand = !idx;
+		    }
+		}
+
+		sess_init_update(ice_st);
+	    }
 	}
 	break;
     case PJ_STUN_SOCK_KEEP_ALIVE_OP:
 	if (status != PJ_SUCCESS) {
 	    pj_assert(cand != NULL);
 	    cand->status = status;
-	    sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT, 
-		      "STUN keep-alive failed", status);
+	    if (!ice_st->cfg.stun.ignore_stun_error) {
+		sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT,
+			  "STUN keep-alive failed", status);
+	    } else {
+		PJ_LOG(4,(ice_st->obj_name, "STUN error is ignored"));
+	    }
 	}
 	break;
     }

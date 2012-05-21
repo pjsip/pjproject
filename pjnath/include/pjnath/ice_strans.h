@@ -269,6 +269,14 @@ typedef struct pj_ice_strans_cfg
 	 */
 	pj_uint16_t	     port;
 
+	/**
+	 * Ignore STUN resolution error and proceed with just local
+	 * addresses.
+	 *
+	 * The default is PJ_FALSE
+	 */
+	pj_bool_t	     ignore_stun_error;
+
     } stun;
 
     /**
