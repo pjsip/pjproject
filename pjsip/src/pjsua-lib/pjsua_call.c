@@ -372,6 +372,17 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     pjsip_dlg_dec_session(dlg, &pjsua_var.mod);
 
     if (status != PJ_SUCCESS) {
+	pj_str_t err_str;
+	int title_len;
+
+	call->last_code = PJSIP_SC_PRECONDITION_FAILURE;
+	pj_strcpy2(&call->last_text, "Media init error: ");
+
+	title_len = call->last_text.slen;
+	err_str = pj_strerror(status, call->last_text_buf_ + title_len,
+	                      sizeof(call->last_text_buf_) - title_len);
+	call->last_text.slen += err_str.slen;
+
 	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	goto on_error;
     }
@@ -1572,7 +1583,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
     /* state, state_text */
     if (call->inv) {
         info->state = call->inv->state;
-    } else if (call->async_call.dlg) {
+    } else if (call->async_call.dlg && call->last_code==0) {
         info->state = PJSIP_INV_STATE_NULL;
     } else {
         info->state = PJSIP_INV_STATE_DISCONNECTED;
