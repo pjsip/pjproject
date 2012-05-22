@@ -1313,6 +1313,8 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
     }
 
     if (status != PJ_SUCCESS) {
+	if (call->med_ch_info.status == PJ_SUCCESS)
+	    call->med_ch_info.status = status;
 	pjsua_media_prov_clean_up(call_id);
         goto on_return;
     }
