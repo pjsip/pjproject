@@ -1313,8 +1313,10 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
     }
 
     if (status != PJ_SUCCESS) {
-	if (call->med_ch_info.status == PJ_SUCCESS)
+	if (call->med_ch_info.status == PJ_SUCCESS) {
 	    call->med_ch_info.status = status;
+	    call->med_ch_info.sip_err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
+	}
 	pjsua_media_prov_clean_up(call_id);
         goto on_return;
     }
@@ -1342,7 +1344,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                          custom_med_tp_flags);
                 if (!call_med->tp) {
                     status =
-                        PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_NOT_ACCEPTABLE);
+                        PJSIP_ERRNO_FROM_SIP_STATUS(PJSIP_SC_TEMPORARILY_UNAVAILABLE);
                 }
             }
 
@@ -1355,7 +1357,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
                 call->med_ch_info.status = status;
                 call->med_ch_info.med_idx = mi;
                 call->med_ch_info.state = call_med->tp_st;
-                call->med_ch_info.sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+                call->med_ch_info.sip_err_code = PJSIP_SC_TEMPORARILY_UNAVAILABLE;
 		pjsua_media_prov_clean_up(call_id);
 		goto on_return;
 	    }
