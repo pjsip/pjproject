@@ -1556,12 +1556,7 @@ typedef struct pjsua_config
     int		     srtp_secure_signaling;
 
     /**
-     * Specify whether SRTP in PJMEDIA_SRTP_OPTIONAL mode should compose
-     * duplicated media in SDP offer, i.e: unsecured and secured version.
-     * Otherwise, the SDP media will be composed as unsecured media but
-     * with SDP "crypto" attribute.
-     *
-     * Default: PJ_FALSE
+     * This setting has been deprecated and will be ignored.
      */
     pj_bool_t	     srtp_optional_dup_offer;
 
@@ -2935,12 +2930,7 @@ typedef struct pjsua_acc_config
     int		     srtp_secure_signaling;
 
     /**
-     * Specify whether SRTP in PJMEDIA_SRTP_OPTIONAL mode should compose
-     * duplicated media in SDP offer, i.e: unsecured and secured version.
-     * Otherwise, the SDP media will be composed as unsecured media but
-     * with SDP "crypto" attribute.
-     *
-     * Default: PJ_FALSE
+     * This setting has been deprecated and will be ignored.
      */
     pj_bool_t	     srtp_optional_dup_offer;
 
