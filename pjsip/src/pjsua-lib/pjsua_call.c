@@ -3128,6 +3128,8 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	/* Reset call */
 	reset_call(call->index);
 
+	pjsua_check_snd_dev_idle();
+
 	PJSUA_UNLOCK();
     }
     pj_log_pop_indent();

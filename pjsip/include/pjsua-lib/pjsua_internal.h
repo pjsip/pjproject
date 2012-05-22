@@ -769,6 +769,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                      pjmedia_stream_info *si,
 				     const pjmedia_sdp_session *local_sdp,
 				     const pjmedia_sdp_session *remote_sdp);
+void pjsua_check_snd_dev_idle();
 
 /*
  * Video

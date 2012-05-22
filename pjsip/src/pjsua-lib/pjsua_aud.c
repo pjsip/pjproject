@@ -377,7 +377,7 @@ on_error:
 }
 
 /* Check if sound device is idle. */
-static void check_snd_dev_idle()
+void pjsua_check_snd_dev_idle()
 {
     unsigned call_cnt;
 
@@ -439,7 +439,7 @@ static void close_snd_timer_cb( pj_timer_heap_t *th,
 
     PJSUA_LOCK();
     if (entry->id) {
-	PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d seconds",
+	PJ_LOG(4,(THIS_FILE,"Closing sound device after idle for %d second(s)",
 		  pjsua_var.media_cfg.snd_auto_close_time));
 
 	entry->id = PJ_FALSE;
@@ -532,7 +532,7 @@ void pjsua_aud_stop_stream(pjsua_call_media *call_med)
 	call_med->strm.a.stream = NULL;
     }
 
-    check_snd_dev_idle();
+    pjsua_check_snd_dev_idle();
 }
 
 /*
@@ -791,7 +791,7 @@ PJ_DEF(pj_status_t) pjsua_conf_remove_port(pjsua_conf_port_id id)
     pj_status_t status;
 
     status = pjmedia_conf_remove_port(pjsua_var.mconf, (unsigned)id);
-    check_snd_dev_idle();
+    pjsua_check_snd_dev_idle();
 
     return status;
 }
@@ -957,7 +957,7 @@ PJ_DEF(pj_status_t) pjsua_conf_disconnect( pjsua_conf_port_id source,
     pj_log_push_indent();
 
     status = pjmedia_conf_disconnect_port(pjsua_var.mconf, source, sink);
-    check_snd_dev_idle();
+    pjsua_check_snd_dev_idle();
 
     pj_log_pop_indent();
     return status;
