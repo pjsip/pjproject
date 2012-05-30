@@ -542,6 +542,11 @@ typedef struct pj_ssl_sock_info
      */
     pj_uint32_t		verify_status;
 
+    /**
+     * Last native error returned by the backend.
+     */
+    unsigned long	last_native_err;
+
 } pj_ssl_sock_info;
 
 
