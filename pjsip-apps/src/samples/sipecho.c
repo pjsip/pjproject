@@ -41,10 +41,6 @@
 
 
 /* Settings */
-#define AF		pj_AF_INET() /* Change to pj_AF_INET6() for IPv6.
-				      * PJ_HAS_IPV6 must be enabled and
-				      * your system must support IPv6.  */
-#define SIP_PORT	5060	     /* Listening SIP port		*/
 #define MAX_CALLS	8
 
 typedef struct call_t
@@ -78,6 +74,10 @@ static void call_on_rx_offer(pjsip_inv_session *inv, const pjmedia_sdp_session *
 static void call_on_forked(pjsip_inv_session *inv, pjsip_event *e);
 static pj_bool_t on_rx_request( pjsip_rx_data *rdata );
 
+/* Globals */
+static int sip_af;
+static int sip_port = 5060;
+static pj_bool_t sip_tcp;
 
 /* This is a PJSIP module to be registered by application to handle
  * incoming requests outside any dialogs/transactions. The main purpose
@@ -238,11 +238,6 @@ static pj_status_t init_stack()
     pjsip_inv_callback inv_cb;
     pj_status_t status;
 
-    pj_log_set_level(5);
-
-    status = pj_init();
-    CHECK_STATUS();
-
     pj_log_set_level(3);
 
     status = pjlib_util_init();
@@ -255,13 +250,18 @@ static pj_status_t init_stack()
     CHECK_STATUS();
 
     pj_log_set_level(4);
-    pj_sockaddr_init(AF, &addr, NULL, (pj_uint16_t)SIP_PORT);
-    if (AF == pj_AF_INET()) {
-	status = pjsip_udp_transport_start( app.sip_endpt, &addr.ipv4, NULL,
-					    1, NULL);
-    } else if (AF == pj_AF_INET6()) {
-	status = pjsip_udp_transport_start6(app.sip_endpt, &addr.ipv6, NULL,
-					    1, NULL);
+    pj_sockaddr_init((pj_uint16_t)sip_af, &addr, NULL, (pj_uint16_t)sip_port);
+    if (sip_af == pj_AF_INET()) {
+	if (sip_tcp) {
+	    status = pjsip_tcp_transport_start( app.sip_endpt, &addr.ipv4, 1,
+						NULL);
+	} else {
+	    status = pjsip_udp_transport_start( app.sip_endpt, &addr.ipv4,
+	                                        NULL, 1, NULL);
+	}
+    } else if (sip_af == pj_AF_INET6()) {
+	    status = pjsip_udp_transport_start6(app.sip_endpt, &addr.ipv6,
+	                                        NULL, 1, NULL);
     } else {
 	status = PJ_EAFNOTSUP;
     }
@@ -488,13 +488,13 @@ static pj_bool_t on_rx_request( pjsip_rx_data *rdata )
     }
 
     /* Generate Contact URI */
-    status = pj_gethostip(AF, &hostaddr);
+    status = pj_gethostip(sip_af, &hostaddr);
     if (status != PJ_SUCCESS) {
 	app_perror(THIS_FILE, "Unable to retrieve local host IP", status);
 	return PJ_TRUE;
     }
     pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
-    pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>", hostip, SIP_PORT);
+    pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>", hostip, sip_port);
     local_uri = pj_str(temp);
 
     status = pjsip_dlg_create_uas( pjsip_ua_instance(), rdata,
@@ -541,6 +541,17 @@ static void call_on_media_update( pjsip_inv_session *inv,
 }
 
 
+static void usage()
+{
+    printf("\nUsage: sipecho OPTIONS\n");
+    printf("\n");
+    printf("where OPTIONS:\n");
+    printf("  --local-port, -p PORT        Bind to port PORT.\n");
+    printf("  --tcp, -t                    Listen to TCP instead.\n");
+    printf("  --ipv6, -6                   Use IPv6 instead.\n");
+    printf("  --help, -h                   Show this help page.\n");
+}
+
 /* main()
  *
  * If called with argument, treat argument as SIP URL to be called.
@@ -548,29 +559,68 @@ static void call_on_media_update( pjsip_inv_session *inv,
  */
 int main(int argc, char *argv[])
 {
+    struct pj_getopt_option long_options[] = {
+        { "local-port",	1, 0, 'p' },
+        { "tcp",	0, 0, 't' },
+        { "ipv6",	0, 0, '6' },
+        { "help", 	0, 0, 'h' }
+    };
+    int c, option_index;
+
+    pj_log_set_level(5);
+
+    pj_init();
+
+    sip_af = pj_AF_INET();
+
+    pj_optind = 0;
+    while ((c = pj_getopt_long(argc, argv, "p:t6h", long_options,
+                               &option_index)) != -1)
+    {
+	switch (c) {
+	case 'p':
+	    sip_port = atoi(pj_optarg);
+	    break;
+	case 't':
+	    sip_tcp = PJ_TRUE;
+	    break;
+	case 'h':
+	    usage();
+	    return 0;
+	case '6':
+	    sip_af = pj_AF_INET6();
+	    break;
+	default:
+	    PJ_LOG(1,(THIS_FILE,
+		      "Argument \"%s\" is not valid. Use --help to see help",
+		      argv[pj_optind-1]));
+	    return -1;
+	}
+    }
+
     if (init_stack())
 	goto on_error;
 
     /* If URL is specified, then make call immediately. */
-    if (argc > 1) {
+    if (pj_optind != argc) {
 	pj_sockaddr hostaddr;
 	char hostip[PJ_INET6_ADDRSTRLEN+2];
 	char temp[80];
 	call_t *call;
-	pj_str_t dst_uri = pj_str(argv[1]);
+	pj_str_t dst_uri = pj_str(argv[pj_optind]);
 	pj_str_t local_uri;
 	pjsip_dialog *dlg;
 	pj_status_t status;
 	pjsip_tx_data *tdata;
 
-	if (pj_gethostip(AF, &hostaddr) != PJ_SUCCESS) {
+	if (pj_gethostip(sip_af, &hostaddr) != PJ_SUCCESS) {
 	    PJ_LOG(1,(THIS_FILE, "Unable to retrieve local host IP"));
 	    goto on_error;
 	}
 	pj_sockaddr_print(&hostaddr, hostip, sizeof(hostip), 2);
 
 	pj_ansi_sprintf(temp, "<sip:sipecho@%s:%d>",
-			hostip, SIP_PORT);
+			hostip, sip_port);
 	local_uri = pj_str(temp);
 
 	call = &app.call[0];
