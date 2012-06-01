@@ -105,6 +105,13 @@ case $target in
 	;;
 esac
 
+AC_SUBST(ac_cross_compile)
+if test "$build" = "$host"; then
+    ac_cross_compile=
+else
+    ac_cross_compile=${host_orig}-
+fi
+
 AC_CHECK_LIB(pthread,pthread_create)
 AC_CHECK_LIB(wsock32,puts)
 AC_CHECK_LIB(ws2_32,puts)
@@ -830,6 +837,11 @@ AC_ARG_WITH(sdl,
     [with_sdl=no]
     )
 
+dnl # Do not use default SDL installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_sdl" = "xno"; then
+    enable_sdl=no
+fi
+
 dnl # SDL
 AC_ARG_ENABLE(sdl,
 	      AC_HELP_STRING([--disable-sdl],
@@ -859,6 +871,18 @@ AC_ARG_ENABLE(sdl,
 		   fi
 	      ])
 
+
+AC_ARG_WITH(ffmpeg,
+    AC_HELP_STRING([--with-ffmpeg=DIR],
+		   [Specify alternate FFMPEG prefix]),
+    [],
+    [with_ffmpeg=no]
+    )
+
+dnl # Do not use default ffmpeg installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_ffmpeg" = "xno"; then
+    enable_ffmpeg=no
+fi
 
 dnl # FFMPEG stuffs
 AC_ARG_ENABLE(ffmpeg,
@@ -982,14 +1006,6 @@ AC_ARG_ENABLE(ffmpeg,
 		export PKG_CONFIG_PATH=$SAVED_PKG_CONFIG_PATH
 	      ]
 	      )
-
-AC_ARG_WITH(ffmpeg,
-    AC_HELP_STRING([--with-ffmpeg=DIR],
-		   [Specify alternate FFMPEG prefix]),
-    [],
-    [with_ffmpeg=no]
-    )
-
 
 dnl # Video for Linux 2
 AC_ARG_ENABLE(v4l2,
@@ -1253,6 +1269,19 @@ dnl #
 dnl # PJSIP CONFIG
 dnl #
 
+dnl # SSL alt prefix
+AC_ARG_WITH(ssl,
+    AC_HELP_STRING([--with-ssl=DIR],
+		   [Specify alternate libssl prefix]),
+    [],
+    [with_ssl=no]
+    )
+
+dnl # Do not use default SSL installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_ssl" = "xno"; then
+    enable_ssl=no
+fi
+
 dnl # Include SSL support
 AC_SUBST(ac_no_ssl)
 AC_ARG_ENABLE(ssl,
@@ -1267,6 +1296,11 @@ AC_ARG_ENABLE(ssl,
 	      ],
 	      [
 		AC_MSG_RESULT([checking for OpenSSL installations..])
+                if test "x$with_ssl" != "xno" -a "x$with_ssl" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_ssl/include"
+                    LDFLAGS="$LDFLAGS -L$with_ssl/lib"
+                    AC_MSG_RESULT([Using SSL prefix... $with_ssl])
+                fi
 		AC_SUBST(openssl_h_present)
 		AC_SUBST(libssl_present)
 		AC_SUBST(libcrypto_present)
@@ -1283,6 +1317,19 @@ AC_ARG_ENABLE(ssl,
 		fi
 	      ])
 
+dnl # opencore-amrnb alt prefix
+AC_ARG_WITH(opencore-amrnb,
+    AC_HELP_STRING([--with-opencore-amrnb=DIR],
+		   [Specify alternate libopencore-amrnb prefix]),
+    [],
+    [with_opencore_amrnb=no]
+    )
+
+dnl # Do not use default opencore-amrnb installation if we are cross-compiling
+if test "x$ac_cross_compile" != "x" -a "x$with_opencore_amrnb" = "xno"; then
+    enable_opencore_amrnb=no
+fi
+
 dnl # Include opencore-amrnb support
 AC_SUBST(ac_no_opencore_amrnb)
 AC_ARG_ENABLE(opencore_amrnb,
@@ -1298,6 +1345,11 @@ AC_ARG_ENABLE(opencore_amrnb,
 	      ],
 	      [
 		AC_MSG_RESULT([checking for OpenCORE AMR-NB installations..])
+                if test "x$with_opencore_amrnb" != "xno" -a "x$with_opencore_amrnb" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_opencore_amrnb/include"
+                    LDFLAGS="$LDFLAGS -L$with_opencore_amrnb/lib"
+                    AC_MSG_RESULT([Using OpenCORE AMR-NB prefix... $with_opencore_amrnb])
+                fi                
 		AC_SUBST(opencore_amrnb_h_present)
 		AC_SUBST(opencore_amrnb_present)
 		AC_CHECK_HEADER(opencore-amrnb/interf_enc.h,[opencore_amrnb_h_present=1])
@@ -1380,12 +1432,6 @@ esac
 
 
 AC_SUBST(target)
-AC_SUBST(ac_cross_compile)
-if test "$build" = "$host"; then
-    ac_cross_compile=
-else
-    ac_cross_compile=${host_orig}-
-fi
 AC_SUBST(ac_linux_poll,select)
 AC_SUBST(ac_host,unix)
 AC_SUBST(ac_main_obj)
