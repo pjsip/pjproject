@@ -1674,6 +1674,10 @@
 				>
 			</File>
 			<File
+				RelativePath="..\src\samples\sipecho.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\samples\siprtp.c"
 				>
 			</File>
