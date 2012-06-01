@@ -19,7 +19,7 @@
 
 /*
  * This is the implementation of BlackBerry 10 (BB10) audio device.
- * Original code was kindly donated by Truphone Ltd.
+ * Original code was kindly donated by Truphone Ltd. (http://www.truphone.com)
  * The key methods here are bb10_capture_open, bb10_play_open together
  * with the capture and play threads ca_thread_func and pb_thread_func
  */
@@ -567,6 +567,7 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     snd_pcm_channel_info_t pi;
     snd_pcm_channel_setup_t setup;
     snd_mixer_group_t group;
+    snd_pcm_channel_params_t pp;
     unsigned int rate;
     unsigned long tmp_buf_size;
 
@@ -589,7 +590,6 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
         return PJMEDIA_EAUD_SYSERR;
     }
 
-    snd_pcm_channel_params_t pp;
     memset (&pp, 0, sizeof (pp));
 
     /* Request VoIP compatible capabilities
@@ -606,7 +606,8 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
     /* HARD CODE for the time being PJMEDIA expects 16khz */
-    PJ_TODO(REMOVE_SAMPLE_RATE_HARD_CODE);    
+    PJ_TODO(REMOVE_SAMPLE_RATE_HARD_CODE);
+    pj_assert(param->clock_rate == VOIP_SAMPLE_RATE * 2);
     pp.format.rate = VOIP_SAMPLE_RATE*2;
     pp.format.voices = 1;
     pp.format.format = SND_PCM_SFMT_S16_LE;
@@ -712,6 +713,7 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     pp.format.interleave = 1;
     /* HARD CODE for the time being PJMEDIA expects 16khz */
     PJ_TODO(REMOVE_SAMPLE_RATE_HARD_CODE);
+    pj_assert(param->clock_rate == VOIP_SAMPLE_RATE * 2);
     pp.format.rate = VOIP_SAMPLE_RATE*2;
     pp.format.voices = 1;
     pp.format.format = SND_PCM_SFMT_S16_LE;
@@ -954,23 +956,6 @@ static pj_status_t bb10_stream_destroy (pjmedia_aud_stream *s)
     TRACE_((THIS_FILE,"bb10_stream_destroy()"));
 
     bb10_stream_stop (s);
-
-    if (stream->param.dir & PJMEDIA_DIR_PLAYBACK) {
-        /*
-        snd_mixer_close (stream->pb_mixer);
-	snd_pcm_close (stream->pb_pcm);
-        stream->pb_mixer = NULL;
-        stream->pb_pcm = NULL;
-        */
-    }
-    if (stream->param.dir & PJMEDIA_DIR_CAPTURE) {
-        /*
-        snd_mixer_close (stream->ca_mixer);
-        snd_pcm_close (stream->ca_pcm);
-        stream->ca_mixer = NULL;
-        stream->ca_pcm = NULL;
-        */
-    }
 
     pj_pool_release (stream->pool);
 
