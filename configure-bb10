@@ -1,0 +1,38 @@
+#!/bin/sh
+#
+
+F="configure-bb10"
+
+if test "$*" = "--help" -o "$*" = "-h"; then
+  echo "$F [--simulator] [OPTIONS]"
+  echo ""
+  echo "where:"
+  echo "  --simulator Optional parameter to specify that the compilation"
+  echo "              target is a simulator."
+  echo "  OPTIONS     Other options that will be passed directly to"
+  echo "              ./aconfigure script. Run ./aconfigure --help"
+  echo "              for more info."
+  exit 0
+fi
+
+if test "$1" = "--simulator"; then
+  shift
+  TARGET_ARCH="x86"
+  TARGET_ARCHEND=${TARGET_ARCH}
+  LIBDIR=${TARGET_ARCH}
+  TARGET_HOST="i486-pc-nto-qnx8.0.0"
+else
+  TARGET_ARCH="armv7"
+  TARGET_ARCHEND="${TARGET_ARCH}le"
+  LIBDIR="armle-v7"
+  TARGET_HOST="arm-unknown-nto-qnx8.0.0eabi"
+fi
+
+RANLIB="${QNX_HOST}/usr/bin/nto${TARGET_ARCH}-ranlib "
+CPP="${QNX_HOST}/usr/bin/qcc -V4.6.3,gcc_nto${TARGET_ARCHEND}_cpp -E "
+CC="${QNX_HOST}/usr/bin/qcc -V4.6.3,gcc_nto${TARGET_ARCHEND}_cpp "
+LD="${QNX_HOST}/usr/bin/nto${TARGET_ARCH}-ld " 
+export LDFLAGS=" -L${QNX_TARGET}/${LIBDIR}/usr/lib -L${QNX_TARGET}/${LIBDIR}/lib -L${QNX_HOST}/usr/lib/gcc/${TARGET_HOST}/4.6.3 -lgcc -lasound "
+export CFLAGS=" -g -fPIC -DPJMEDIA_AUDIO_DEV_HAS_BB10=1 " 
+
+./configure --host=${TARGET_HOST} --disable-oss $*
