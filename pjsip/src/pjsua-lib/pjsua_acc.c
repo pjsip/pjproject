@@ -598,7 +598,10 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     }
 
     /* Cancel any re-registration timer */
-    pjsua_cancel_timer(&acc->auto_rereg.timer);
+    if (acc->auto_rereg.timer.id) {
+	acc->auto_rereg.timer.id = PJ_FALSE;
+	pjsua_cancel_timer(&acc->auto_rereg.timer);
+    }
 
     /* Delete registration */
     if (acc->regc != NULL) {
@@ -2106,7 +2109,10 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     PJSUA_LOCK();
 
     /* Cancel any re-registration timer */
-    pjsua_cancel_timer(&pjsua_var.acc[acc_id].auto_rereg.timer);
+    if (pjsua_var.acc[acc_id].auto_rereg.timer.id) {
+	pjsua_var.acc[acc_id].auto_rereg.timer.id = PJ_FALSE;
+	pjsua_cancel_timer(&pjsua_var.acc[acc_id].auto_rereg.timer);
+    }
 
     /* Reset pointer to registration transport */
     pjsua_var.acc[acc_id].auto_rereg.reg_tp = NULL;
@@ -2905,7 +2911,10 @@ static void schedule_reregistration(pjsua_acc *acc)
     }
 
     /* Cancel any re-registration timer */
-    pjsua_cancel_timer(&acc->auto_rereg.timer);
+    if (acc->auto_rereg.timer.id) {
+	acc->auto_rereg.timer.id = PJ_FALSE;
+	pjsua_cancel_timer(&acc->auto_rereg.timer);
+    }
 
     /* Update re-registration flag */
     acc->auto_rereg.active = PJ_TRUE;
@@ -2932,7 +2941,9 @@ static void schedule_reregistration(pjsua_acc *acc)
 	      "Scheduling re-registration retry for acc %d in %u seconds..",
 	      acc->index, delay.sec));
 
-    pjsua_schedule_timer(&acc->auto_rereg.timer, &delay);
+    acc->auto_rereg.timer.id = PJ_TRUE;
+    if (pjsua_schedule_timer(&acc->auto_rereg.timer, &delay) != PJ_SUCCESS)
+	acc->auto_rereg.timer.id = PJ_FALSE;
 }
 
 
