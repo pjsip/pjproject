@@ -606,6 +606,9 @@ PJ_DEF(void) pjsip_endpt_destroy(pjsip_endpoint *endpt)
     pj_ioqueue_destroy(endpt->ioqueue);
 
     /* Destroy timer heap */
+#if PJ_TIMER_DEBUG
+    pj_timer_heap_dump(endpt->timer_heap);
+#endif
     pj_timer_heap_destroy(endpt->timer_heap);
 
     /* Call all registered exit callbacks */
@@ -768,6 +771,19 @@ PJ_DEF(pj_status_t) pjsip_endpt_handle_events(pjsip_endpoint *endpt,
 /*
  * Schedule timer.
  */
+#if PJ_TIMER_DEBUG
+PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer_dbg(pjsip_endpoint *endpt,
+						    pj_timer_entry *entry,
+						    const pj_time_val *delay,
+						    const char *src_file,
+						    int src_line)
+{
+    PJ_LOG(6, (THIS_FILE, "pjsip_endpt_schedule_timer(entry=%p, delay=%u.%u)",
+			 entry, delay->sec, delay->msec));
+    return pj_timer_heap_schedule_dbg(endpt->timer_heap, entry, delay,
+                                      src_file, src_line);
+}
+#else
 PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 						pj_timer_entry *entry,
 						const pj_time_val *delay )
@@ -776,6 +792,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 			 entry, delay->sec, delay->msec));
     return pj_timer_heap_schedule( endpt->timer_heap, entry, delay );
 }
+#endif
 
 /*
  * Cancel the previously registered timer.
@@ -1193,8 +1210,12 @@ PJ_DEF(void) pjsip_endpt_dump( pjsip_endpoint *endpt, pj_bool_t detail )
     pjsip_tpmgr_dump_transports( endpt->transport_mgr );
 
     /* Timer. */
+#if PJ_TIMER_DEBUG
+    pj_timer_heap_dump(endpt->timer_heap);
+#else
     PJ_LOG(3,(THIS_FILE, " Timer heap has %u entries", 
 			pj_timer_heap_count(endpt->timer_heap)));
+#endif
 
     /* Unlock mutex. */
     pj_mutex_unlock(endpt->mutex);

@@ -2019,8 +2019,18 @@ PJ_DECL(pj_status_t) pjsua_verify_url(const char *url);
  *
  * @see pjsip_endpt_schedule_timer()
  */
+#if PJ_TIMER_DEBUG
+#define pjsua_schedule_timer(e,d) pjsua_schedule_timer_dbg(e,d,\
+                                                           __FILE__,__LINE__)
+
+PJ_DECL(pj_status_t) pjsua_schedule_timer_dbg(pj_timer_entry *entry,
+                                              const pj_time_val *delay,
+                                              const char *src_file,
+                                              int src_line);
+#else
 PJ_DECL(pj_status_t) pjsua_schedule_timer(pj_timer_entry *entry,
 					  const pj_time_val *delay);
+#endif
 
 /**
  * Schedule a callback function to be called after a specified time interval.
@@ -2033,9 +2043,20 @@ PJ_DECL(pj_status_t) pjsua_schedule_timer(pj_timer_entry *entry,
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
+#if PJ_TIMER_DEBUG
+#define pjsua_schedule_timer2(cb,u,d) \
+			pjsua_schedule_timer2_dbg(cb,u,d,__FILE__,__LINE__)
+
+PJ_DECL(pj_status_t) pjsua_schedule_timer2_dbg(void (*cb)(void *user_data),
+                                               void *user_data,
+                                               unsigned msec_delay,
+                                               const char *src_file,
+                                               int src_line);
+#else
 PJ_DECL(pj_status_t) pjsua_schedule_timer2(void (*cb)(void *user_data),
                                            void *user_data,
                                            unsigned msec_delay);
+#endif
 
 /**
  * Cancel the previously scheduled timer.

@@ -2623,11 +2623,22 @@ PJ_DEF(pj_status_t) pjsua_verify_sip_url(const char *c_url)
 /*
  * Schedule a timer entry. 
  */
+#if PJ_TIMER_DEBUG
+PJ_DEF(pj_status_t) pjsua_schedule_timer_dbg( pj_timer_entry *entry,
+                                              const pj_time_val *delay,
+                                              const char *src_file,
+                                              int src_line)
+{
+    return pjsip_endpt_schedule_timer_dbg(pjsua_var.endpt, entry, delay,
+                                          src_file, src_line);
+}
+#else
 PJ_DEF(pj_status_t) pjsua_schedule_timer( pj_timer_entry *entry,
 					  const pj_time_val *delay)
 {
     return pjsip_endpt_schedule_timer(pjsua_var.endpt, entry, delay);
 }
+#endif
 
 /* Timer callback */
 static void timer_cb( pj_timer_heap_t *th,
@@ -2650,9 +2661,17 @@ static void timer_cb( pj_timer_heap_t *th,
 /*
  * Schedule a timer callback. 
  */
+#if PJ_TIMER_DEBUG
+PJ_DEF(pj_status_t) pjsua_schedule_timer2_dbg( void (*cb)(void *user_data),
+                                               void *user_data,
+                                               unsigned msec_delay,
+                                               const char *src_file,
+                                               int src_line)
+#else
 PJ_DEF(pj_status_t) pjsua_schedule_timer2( void (*cb)(void *user_data),
                                            void *user_data,
                                            unsigned msec_delay)
+#endif
 {
     pjsua_timer_list *tmr = NULL;
     pj_status_t status;
@@ -2672,7 +2691,12 @@ PJ_DEF(pj_status_t) pjsua_schedule_timer2( void (*cb)(void *user_data),
     delay.sec = 0;
     delay.msec = msec_delay;
 
+#if PJ_TIMER_DEBUG
+    status = pjsip_endpt_schedule_timer_dbg(pjsua_var.endpt, &tmr->entry,
+                                            &delay, src_file, src_line);
+#else
     status = pjsip_endpt_schedule_timer(pjsua_var.endpt, &tmr->entry, &delay);
+#endif
     if (status != PJ_SUCCESS) {
         pj_list_push_back(&pjsua_var.timer_list, tmr);
     }

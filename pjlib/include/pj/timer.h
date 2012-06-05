@@ -85,7 +85,7 @@ typedef void pj_timer_heap_callback(pj_timer_heap_t *timer_heap,
 /**
  * This structure represents an entry to the timer.
  */
-struct pj_timer_entry
+typedef struct pj_timer_entry
 {
     /** 
      * User data to be associated with this entry. 
@@ -117,7 +117,12 @@ struct pj_timer_entry
      * by timer heap when the timer is scheduled.
      */
     pj_time_val _timer_value;
-};
+
+#if PJ_TIMER_DEBUG
+    const char	*src_file;
+    int		 src_line;
+#endif
+} pj_timer_entry;
 
 
 /**
@@ -208,9 +213,20 @@ PJ_DECL(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
  * @param delay     The interval to expire.
  * @return          PJ_SUCCESS, or the appropriate error code.
  */
+#if PJ_TIMER_DEBUG
+#  define pj_timer_heap_schedule(ht,e,d) \
+			pj_timer_heap_schedule_dbg(ht,e,d,__FILE__,__LINE__)
+
+  PJ_DECL(pj_status_t) pj_timer_heap_schedule_dbg( pj_timer_heap_t *ht,
+        					   pj_timer_entry *entry,
+        					   const pj_time_val *delay,
+        					   const char *src_file,
+        					   int src_line);
+#else
 PJ_DECL(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
 					     pj_timer_entry *entry, 
 					     const pj_time_val *delay);
+#endif	/* PJ_TIMER_DEBUG */
 
 /**
  * Cancel a previously registered timer.
@@ -261,6 +277,15 @@ PJ_DECL(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t *ht,
  */
 PJ_DECL(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht, 
                                       pj_time_val *next_delay);
+
+#if PJ_TIMER_DEBUG
+/**
+ * Dump timer heap entries.
+ *
+ * @param ht	    The timer heap.
+ */
+PJ_DECL(void) pj_timer_heap_dump(pj_timer_heap_t *ht);
+#endif
 
 /**
  * @}

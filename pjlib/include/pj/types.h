@@ -213,11 +213,6 @@ typedef struct pj_ioqueue_key_t pj_ioqueue_key_t;
  */
 typedef struct pj_timer_heap_t pj_timer_heap_t;
 
-/**
- * Forward declaration for timer entry.
- */
-typedef struct pj_timer_entry pj_timer_entry;
-
 /** 
  * Opaque data type for atomic operations.
  */

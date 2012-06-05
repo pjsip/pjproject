@@ -475,6 +475,19 @@
 
 
 /**
+ * Enable timer heap debugging facility. When this is enabled, application
+ * can call pj_timer_heap_dump() to show the contents of the timer heap
+ * along with the source location where the timer entries were scheduled.
+ * See https://trac.pjsip.org/repos/ticket/1527 for more info.
+ *
+ * Default: 0
+ */
+#ifndef PJ_TIMER_DEBUG
+#  define PJ_TIMER_DEBUG	    0
+#endif
+
+
+/**
  * Specify this as \a stack_size argument in #pj_thread_create() to specify
  * that thread should use default stack size for the current platform.
  *

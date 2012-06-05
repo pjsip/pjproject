@@ -34,6 +34,9 @@
 #include <pj/assert.h>
 #include <pj/errno.h>
 #include <pj/lock.h>
+#include <pj/log.h>
+
+#define THIS_FILE	"timer.c"
 
 #define HEAP_PARENT(X)	(X == 0 ? 0 : (((X) - 1) / 2))
 #define HEAP_LEFT(X)	(((X)+(X))+1)
@@ -452,9 +455,17 @@ PJ_DEF(pj_timer_entry*) pj_timer_entry_init( pj_timer_entry *entry,
     return entry;
 }
 
+#if PJ_TIMER_DEBUG
+PJ_DEF(pj_status_t) pj_timer_heap_schedule_dbg( pj_timer_heap_t *ht,
+						pj_timer_entry *entry,
+						const pj_time_val *delay,
+						const char *src_file,
+						int src_line)
+#else
 PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
 					    pj_timer_entry *entry, 
 					    const pj_time_val *delay)
+#endif
 {
     pj_status_t status;
     pj_time_val expires;
@@ -465,6 +476,10 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
     /* Prevent same entry from being scheduled more than once */
     PJ_ASSERT_RETURN(entry->_timer_id < 1, PJ_EINVALIDOP);
 
+#if PJ_TIMER_DEBUG
+    entry->src_file = src_file;
+    entry->src_line = src_line;
+#endif
     pj_gettickcount(&expires);
     PJ_TIME_VAL_ADD(expires, *delay);
     
@@ -551,4 +566,45 @@ PJ_DEF(pj_status_t) pj_timer_heap_earliest_time( pj_timer_heap_t * ht,
 
     return PJ_SUCCESS;
 }
+
+#if PJ_TIMER_DEBUG
+PJ_DEF(void) pj_timer_heap_dump(pj_timer_heap_t *ht)
+{
+    lock_timer_heap(ht);
+
+    PJ_LOG(3,(THIS_FILE, "Dumping timer heap:"));
+    PJ_LOG(3,(THIS_FILE, "  Cur size: %d entries, max: %d",
+			 (int)ht->cur_size, (int)ht->max_size));
+
+    if (ht->cur_size) {
+	unsigned i;
+	pj_time_val now;
+
+	PJ_LOG(3,(THIS_FILE, "  Entries: "));
+	PJ_LOG(3,(THIS_FILE, "    _id\tId\tElapsed\tSource"));
+	PJ_LOG(3,(THIS_FILE, "    ----------------------------------"));
+
+	pj_gettickcount(&now);
+
+	for (i=0; i<(unsigned)ht->cur_size; ++i) {
+	    pj_timer_entry *e = ht->heap[i];
+	    pj_time_val delta;
+
+	    if (PJ_TIME_VAL_LTE(e->_timer_value, now))
+		delta.sec = delta.msec = 0;
+	    else {
+		delta = e->_timer_value;
+		PJ_TIME_VAL_SUB(delta, now);
+	    }
+
+	    PJ_LOG(3,(THIS_FILE, "    %d\t%d\t%d.%03d\t%s:%d",
+		      e->_timer_id, e->id,
+		      (int)delta.sec, (int)delta.msec,
+		      e->src_file, e->src_line));
+	}
+    }
+
+    unlock_timer_heap(ht);
+}
+#endif
 

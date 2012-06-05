@@ -150,9 +150,21 @@ PJ_DECL(pj_status_t) pjsip_endpt_handle_events2(pjsip_endpoint *endpt,
  * @param delay	    The relative delay of the timer.
  * @return	    PJ_OK (zero) if successfull.
  */
+#if PJ_TIMER_DEBUG
+#define pjsip_endpt_schedule_timer(ept,ent,d) \
+			pjsip_endpt_schedule_timer_dbg(ept, ent, d, \
+			                               __FILE__, __LINE__)
+
+PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer_dbg(pjsip_endpoint *endpt,
+						    pj_timer_entry *entry,
+						    const pj_time_val *delay,
+						    const char *src_file,
+						    int src_line);
+#else
 PJ_DECL(pj_status_t) pjsip_endpt_schedule_timer( pjsip_endpoint *endpt,
 						 pj_timer_entry *entry,
 						 const pj_time_val *delay );
+#endif
 
 /**
  * Cancel the previously registered timer.
