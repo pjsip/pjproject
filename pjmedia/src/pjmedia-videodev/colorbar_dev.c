@@ -76,6 +76,7 @@ static struct cbar_fmt_info cbar_fmts[] =
     /* Planar formats */
     { PJMEDIA_FORMAT_YV12 },
     { PJMEDIA_FORMAT_I420 },
+    { PJMEDIA_FORMAT_I422 },
     { PJMEDIA_FORMAT_I420JPEG },
     { PJMEDIA_FORMAT_I422JPEG },
 };
@@ -354,8 +355,12 @@ static void fill_first_line(pj_uint8_t *first_lines[],
 
                 if (vfi->color_model == PJMEDIA_COLOR_MODEL_RGB)
                     c = rgb_colors[i][j];
-                else
-                    c = yuv_colors[i][j];
+		else {
+		    if (vfi->id == PJMEDIA_FORMAT_YV12 && j > 0)
+			c = yuv_colors[i][3-j];
+		    else
+			c = yuv_colors[i][j];
+		}
 
                 bar_width = vafp->strides[j]/8;
                 p = first_lines[j] + bar_width*i;

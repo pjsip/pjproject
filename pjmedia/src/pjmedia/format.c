@@ -105,7 +105,8 @@ static pjmedia_video_format_info built_in_vid_fmt_info[] =
     {PJMEDIA_FORMAT_UYVY,  "UYVY", PJMEDIA_COLOR_MODEL_YUV, 16, 1, &apply_packed_fmt},
     {PJMEDIA_FORMAT_YVYU,  "YVYU", PJMEDIA_COLOR_MODEL_YUV, 16, 1, &apply_packed_fmt},
     {PJMEDIA_FORMAT_I420,  "I420", PJMEDIA_COLOR_MODEL_YUV, 12, 3, &apply_planar_420},
-    {PJMEDIA_FORMAT_YV12,  "YV12", PJMEDIA_COLOR_MODEL_YUV, 16, 3, &apply_planar_422},
+    {PJMEDIA_FORMAT_YV12,  "YV12", PJMEDIA_COLOR_MODEL_YUV, 12, 3, &apply_planar_420},
+    {PJMEDIA_FORMAT_I422,  "I422", PJMEDIA_COLOR_MODEL_YUV, 16, 3, &apply_planar_422},
     {PJMEDIA_FORMAT_I420JPEG, "I420JPG", PJMEDIA_COLOR_MODEL_YUV, 12, 3, &apply_planar_420},
     {PJMEDIA_FORMAT_I422JPEG, "I422JPG", PJMEDIA_COLOR_MODEL_YUV, 16, 3, &apply_planar_422},
 };

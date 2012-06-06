@@ -169,9 +169,20 @@ typedef enum pjmedia_format_id
     PJMEDIA_FORMAT_IYUV	    = PJMEDIA_FORMAT_I420,
 
     /**
-     * This is planar 4:2:2/16bpp YUV format.
+     * This is planar 4:2:0/12bpp YUV format, similar to I420 or IYUV but
+     * the U (Cb) and V (Cr) planes order is switched, i.e: the second plane
+     * contains the V (Cb) samples and the third plane contains the V (Cr)
+     * samples.
      */
     PJMEDIA_FORMAT_YV12	    = PJMEDIA_FORMAT_PACK('Y', 'V', '1', '2'),
+
+    /**
+     * This is planar 4:2:2/16bpp YUV format, the data can be treated as
+     * three planes of color components, where the first plane contains
+     * only the Y samples, the second plane contains only the U (Cb) samples,
+     * and the third plane contains only the V (Cr) sample.
+     */
+    PJMEDIA_FORMAT_I422	    = PJMEDIA_FORMAT_PACK('I', '4', '2', '2'),
 
     /**
      * The JPEG version of planar 4:2:0/12bpp YUV format.
