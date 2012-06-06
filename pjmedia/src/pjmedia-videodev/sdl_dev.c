@@ -76,13 +76,13 @@ static sdl_fmt_info sdl_fmts[] =
     {PJMEDIA_FORMAT_DIB , (Uint32)SDL_PIXELFORMAT_RGB24,
      0xFF0000, 0xFF00, 0xFF, 0} ,
 
-    {PJMEDIA_FORMAT_YUY2, SDL_YUY2_OVERLAY, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_UYVY, SDL_UYVY_OVERLAY, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_YVYU, SDL_YVYU_OVERLAY, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_I420, SDL_IYUV_OVERLAY, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_YV12, SDL_YV12_OVERLAY, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_I420JPEG, SDL_IYUV_OVERLAY, 0, 0, 0, 0} ,
-    {PJMEDIA_FORMAT_I422JPEG, SDL_YV12_OVERLAY, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_YUY2, SDL_PIXELFORMAT_YUY2, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_UYVY, SDL_PIXELFORMAT_UYVY, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_YVYU, SDL_PIXELFORMAT_YVYU, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_I420, SDL_PIXELFORMAT_IYUV, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_YV12, SDL_PIXELFORMAT_YV12, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_I420JPEG, SDL_PIXELFORMAT_IYUV, 0, 0, 0, 0} ,
+    {PJMEDIA_FORMAT_I422JPEG, SDL_PIXELFORMAT_YV12, 0, 0, 0, 0}
 };
 
 /* sdl_ device info */
@@ -1418,7 +1418,11 @@ static pj_status_t job_queue_destroy(job_queue *jq)
 }
 
 #ifdef _MSC_VER
-#   pragma comment( lib, "sdl.lib")
+#   if SDL_VERSION_ATLEAST(2,0,0)
+#	pragma comment( lib, "sdl2.lib")
+#   elif SDL_VERSION_ATLEAST(1,3,0)
+#	pragma comment( lib, "sdl.lib")
+#   endif
 #   if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
 #	pragma comment(lib, "OpenGL32.lib")
 #   endif /* PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL */
