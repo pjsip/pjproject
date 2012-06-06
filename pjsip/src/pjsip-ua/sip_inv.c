@@ -362,6 +362,7 @@ static const pjmedia_sdp_session *inv_has_pending_answer(pjsip_inv_session *inv,
 static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
 {
     pjsip_rx_data *rdata;
+    pjsip_event ack_e;
     pj_status_t status;
 
     if (e->type == PJSIP_EVENT_TSX_STATE)
@@ -397,7 +398,11 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
     } else {
 	status = pjsip_inv_create_ack(inv, rdata->msg_info.cseq->cseq,
 				      &inv->last_ack);
+	if (status != PJ_SUCCESS)
+	    return status;
     }
+
+    PJSIP_EVENT_INIT_TX_MSG(ack_e, inv->last_ack);
 
     /* Send ACK */
     status = pjsip_dlg_send_request(inv->dlg, inv->last_ack, -1, NULL);
@@ -413,7 +418,7 @@ static pj_status_t inv_send_ack(pjsip_inv_session *inv, pjsip_event *e)
      * (this may have been a late 200/OK response.
      */
     if (inv->state < PJSIP_INV_STATE_CONFIRMED) {
-	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, e);
+	inv_set_state(inv, PJSIP_INV_STATE_CONFIRMED, &ack_e);
     }
 
     return PJ_SUCCESS;
