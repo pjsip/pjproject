@@ -165,11 +165,9 @@ PJ_DEF(pj_status_t) pjmedia_clock_create2(pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && param->usec_interval && param->clock_rate &&
                      p_clock, PJ_EINVAL);
 
-    pool = pj_pool_create(pool->factory, "clock%p", 512, 512, NULL);
-
     clock = PJ_POOL_ALLOC_T(pool, pjmedia_clock);
-    clock->pool = pool;
-    
+    clock->pool = pj_pool_create(pool->factory, "clock%p", 512, 512, NULL);
+
     status = pj_get_timestamp_freq(&clock->freq);
     if (status != PJ_SUCCESS)
 	return status;
@@ -225,7 +223,7 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
 	status = pj_thread_create(clock->pool, "clock", &clock_thread, clock,
 				  0, 0, &clock->thread);
 	if (status != PJ_SUCCESS) {
-	    pj_lock_destroy(clock->lock);
+	    clock->running = PJ_FALSE;
 	    return status;
 	}
     }
@@ -246,7 +244,9 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
 
     if (clock->thread) {
 	if (pj_thread_join(clock->thread) == PJ_SUCCESS) {
+	    pj_thread_destroy(clock->thread);
 	    clock->thread = NULL;
+	    pj_pool_reset(clock->pool);
 	} else {
 	    clock->quitting = PJ_FALSE;
 	}
