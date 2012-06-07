@@ -854,9 +854,9 @@ AC_ARG_ENABLE(sdl,
 	      [
 		  if test "x$with_sdl" != "xno" -a "x$with_sdl" != "x"; then
 			AC_MSG_RESULT([Using SDL prefix... $with_sdl])
-			AC_PATH_PROGS(SDL_CONFIG,sdl-config sdl2-config,,$with_sdl/bin)
+			AC_PATH_PROGS(SDL_CONFIG,sdl2-config sdl-config,,$with_sdl/bin)
                   else
-			AC_PATH_PROGS(SDL_CONFIG, sdl-config sdl2-config)
+			AC_PATH_PROGS(SDL_CONFIG, sdl2-config sdl-config)
 		  fi
 		  
 		  AC_MSG_CHECKING([SDL availability])
