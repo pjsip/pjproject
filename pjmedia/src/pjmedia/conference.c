@@ -1797,30 +1797,10 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     /* Must lock mutex */
     pj_mutex_lock(conf->mutex);
 
-    /* Reset port source count. We will only reset port's mix
-     * buffer when we have someone transmitting to it.
-     */
-    for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
-	struct conf_port *conf_port = conf->ports[i];
-
-	/* Skip empty slot. */
-	if (!conf_port)
-	    continue;
-
-	++ci;
-
-	/* Reset buffer & auto adjustment level for mixed signal */
-	conf_port->mix_adj = NORMAL_LEVEL;
-	if (conf_port->transmitter_cnt) {
-	    pj_bzero(conf_port->mix_buf,
-		     conf->samples_per_frame*sizeof(conf_port->mix_buf[0]));
-	}
-    }
-
     /* Get frames from all ports, and "mix" the signal 
      * to mix_buf of all listeners of the port.
      */
-    for (i=0, ci=0; i<conf->max_ports && ci<conf->port_cnt; ++i) {
+    for (i=0, ci=0; i < conf->max_ports && ci < conf->port_cnt; ++i) {
 	struct conf_port *conf_port = conf->ports[i];
 	pj_int32_t level = 0;
 
@@ -1830,6 +1810,14 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	/* Var "ci" is to count how many ports have been visited so far. */
 	++ci;
+
+	/* Reset buffer (only necessary if more than one transmitter) &
+	 * reset auto adjustment level for mixed signal */
+	conf_port->mix_adj = NORMAL_LEVEL;
+	if (conf_port->transmitter_cnt > 1) {
+	    pj_bzero(conf_port->mix_buf,
+		     conf->samples_per_frame*sizeof(conf_port->mix_buf[0]));
+	}
 
 	/* Skip if we're not allowed to receive from this port. */
 	if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
@@ -1948,23 +1936,33 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	    mix_buf = listener->mix_buf;
 
-	    /* Mixing signals,
-	     * and calculate appropriate level adjustment if there is
-	     * any overflowed level in the mixed signal.
-	     */
-	    for (k=0; k<conf->samples_per_frame; ++k) {
-		mix_buf[k] += p_in[k];
-		/* Check if normalization adjustment needed. */
-		if (IS_OVERFLOW(mix_buf[k])) {
-		    /* NORMAL_LEVEL * MAX_LEVEL / mix_buf[k]; */
-		    int tmp_adj = (MAX_LEVEL<<7) / mix_buf[k];
-		    if (tmp_adj<0) tmp_adj = -tmp_adj;
+	    if (listener->transmitter_cnt > 1) {
+		/* Mixing signals,
+		 * and calculate appropriate level adjustment if there is
+		 * any overflowed level in the mixed signal.
+		 */
+		for (k=0; k < conf->samples_per_frame; ++k) {
+		    mix_buf[k] += p_in[k];
+		    /* Check if normalization adjustment needed. */
+		    if (IS_OVERFLOW(mix_buf[k])) {
+			/* NORMAL_LEVEL * MAX_LEVEL / mix_buf[k]; */
+			int tmp_adj = (MAX_LEVEL<<7) / mix_buf[k];
+			if (tmp_adj<0) tmp_adj = -tmp_adj;
 
-		    if (tmp_adj<listener->mix_adj)
-			listener->mix_adj = tmp_adj;
+			if (tmp_adj<listener->mix_adj)
+			    listener->mix_adj = tmp_adj;
 
-		} /* if any overflow in the mixed signals */
-	    } /* loop mixing signals */
+		    } /* if any overflow in the mixed signals */
+		} /* loop mixing signals */
+	    } else {
+		/* Only 1 transmitter:
+		 * just copy the samples to the mix buffer
+		 * no mixing and level adjustment needed
+		 */
+		for (k=0; k<conf->samples_per_frame; ++k) {
+		    mix_buf[k] = p_in[k];
+		}
+	    }
 	} /* loop the listeners of conf port */
     } /* loop of all conf ports */
 
