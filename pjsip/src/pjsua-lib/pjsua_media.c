@@ -515,15 +515,18 @@ on_error:
 static void med_tp_timer_cb(void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
+    pjsua_call *call = NULL;
+    pjsip_dialog *dlg = NULL;
 
-    PJSUA_LOCK();
+    acquire_call("med_tp_timer_cb", call_med->call->index, &call, &dlg);
 
     call_med->tp_ready = call_med->tp_result;
     if (call_med->med_create_cb)
         (*call_med->med_create_cb)(call_med, call_med->tp_ready,
                                    call_med->call->secure_level, NULL);
 
-    PJSUA_UNLOCK();
+    if (dlg)
+	pjsip_dlg_dec_lock(dlg);
 }
 
 /* This callback is called when ICE negotiation completes */
@@ -2102,7 +2105,6 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned mi;
 
-    PJSUA_LOCK();
     for (mi=0; mi<call->med_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media[mi];
 
@@ -2111,11 +2113,9 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
              * creation is completed.
              */
             call->async_call.med_ch_deinit = PJ_TRUE;
-            PJSUA_UNLOCK();
             return PJ_SUCCESS;
         }
     }
-    PJSUA_UNLOCK();
 
     PJ_LOG(4,(THIS_FILE, "Call %d: deinitializing media..", call_id));
     pj_log_push_indent();
