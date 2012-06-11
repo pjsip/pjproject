@@ -1797,6 +1797,29 @@ static pj_status_t get_frame(pjmedia_port *this_port,
     /* Must lock mutex */
     pj_mutex_lock(conf->mutex);
 
+    /* Reset port source count. We will only reset port's mix
+     * buffer when we have someone transmitting to it.
+     */
+    for (i=0, ci=0; i<conf->max_ports && ci < conf->port_cnt; ++i) {
+	struct conf_port *conf_port = conf->ports[i];
+
+	/* Skip empty port. */
+	if (!conf_port)
+	    continue;
+
+	/* Var "ci" is to count how many ports have been visited so far. */
+	++ci;
+
+	/* Reset buffer (only necessary if more than one transmitter) and
+	 * reset auto adjustment level for mixed signal.
+	 */
+	conf_port->mix_adj = NORMAL_LEVEL;
+	if (conf_port->transmitter_cnt > 1) {
+	    pj_bzero(conf_port->mix_buf,
+		     conf->samples_per_frame*sizeof(conf_port->mix_buf[0]));
+	}
+    }
+
     /* Get frames from all ports, and "mix" the signal 
      * to mix_buf of all listeners of the port.
      */
@@ -1810,14 +1833,6 @@ static pj_status_t get_frame(pjmedia_port *this_port,
 
 	/* Var "ci" is to count how many ports have been visited so far. */
 	++ci;
-
-	/* Reset buffer (only necessary if more than one transmitter) &
-	 * reset auto adjustment level for mixed signal */
-	conf_port->mix_adj = NORMAL_LEVEL;
-	if (conf_port->transmitter_cnt > 1) {
-	    pj_bzero(conf_port->mix_buf,
-		     conf->samples_per_frame*sizeof(conf_port->mix_buf[0]));
-	}
 
 	/* Skip if we're not allowed to receive from this port. */
 	if (conf_port->rx_setting == PJMEDIA_PORT_DISABLE) {
