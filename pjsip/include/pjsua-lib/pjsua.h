@@ -3560,6 +3560,50 @@ typedef enum pjsua_vid_req_keyframe_method
 
 
 /**
+ * Call media information.
+ */
+typedef struct pjsua_call_media_info
+{
+    /** Media index in SDP. */
+    unsigned		index;
+
+    /** Media type. */
+    pjmedia_type	type;
+
+    /** Media direction. */
+    pjmedia_dir		dir;
+
+    /** Call media status. */
+    pjsua_call_media_status status;
+
+    /** The specific media stream info. */
+    union {
+	/** Audio stream */
+	struct {
+	    /** The conference port number for the call.  */
+	    pjsua_conf_port_id	    conf_slot;
+	} aud;
+
+	/** Video stream */
+	struct {
+	    /**
+	     * The window id for incoming video, if any, or
+	     * PJSUA_INVALID_ID.
+	     */
+	    pjsua_vid_win_id	    win_in;
+
+	    /** The video capture device for outgoing transmission,
+	     *  if any, or PJMEDIA_VID_INVALID_DEV
+	     */
+	    pjmedia_vid_dev_index   cap_dev;
+
+	} vid;
+    } stream;
+
+} pjsua_call_media_info;
+
+
+/**
  * This structure describes the information and current status of a call.
  */
 typedef struct pjsua_call_info
@@ -3612,49 +3656,20 @@ typedef struct pjsua_call_info
     /** The conference port number for the first audio stream. */
     pjsua_conf_port_id	conf_slot;
 
-    /** Number of media streams in this call */
+    /** Number of active media info in this call. */
     unsigned		media_cnt;
 
-    /** Array of media stream information */
-    struct
-    {
-	/** Media index in SDP. */
-	unsigned		index;
+    /** Array of active media information. */
+    pjsua_call_media_info media[PJMEDIA_MAX_SDP_MEDIA];
 
-	/** Media type. */
-	pjmedia_type		type;
+    /** Number of provisional media info in this call. */
+    unsigned		prov_media_cnt;
 
-	/** Media direction. */
-	pjmedia_dir		dir;
-
-	/** Call media status. */
-	pjsua_call_media_status status;
-
-	/** The specific media stream info. */
-	union {
-	    /** Audio stream */
-	    struct {
-		/** The conference port number for the call.  */
-		pjsua_conf_port_id   conf_slot;
-	    } aud;
-
-	    /** Video stream */
-	    struct {
-		/**
-		 * The window id for incoming video, if any, or
-		 * PJSUA_INVALID_ID.
-		 */
-		pjsua_vid_win_id     win_in;
-
-		/** The video capture device for outgoing transmission,
-		 *  if any, or PJMEDIA_VID_INVALID_DEV
-		 */
-		pjmedia_vid_dev_index	cap_dev;
-
-	    } vid;
-	} stream;
-
-    } media[PJMEDIA_MAX_SDP_MEDIA];
+    /** Array of provisional media information. This contains the media info
+     *  in the provisioning state, that is when the media session is being
+     *  created/updated (SDP offer/answer is on progress).
+     */
+    pjsua_call_media_info prov_media[PJMEDIA_MAX_SDP_MEDIA];
 
     /** Up-to-date call connected duration (zero when call is not 
      *  established)

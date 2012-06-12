@@ -1614,7 +1614,7 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 	info->rem_vid_cnt = call->rem_vid_cnt;
     }
 
-    /* Build array of media status and dir */
+    /* Build array of active media info */
     info->media_cnt = 0;
     for (mi=0; mi < call->med_cnt &&
 	       info->media_cnt < PJ_ARRAY_SIZE(info->media); ++mi)
@@ -1649,6 +1649,36 @@ PJ_DEF(pj_status_t) pjsua_call_get_info( pjsua_call_id call_id,
 	info->media_status = call->media[call->audio_idx].state;
 	info->media_dir = call->media[call->audio_idx].dir;
 	info->conf_slot = call->media[call->audio_idx].strm.a.conf_slot;
+    }
+
+    /* Build array of provisional media info */
+    info->prov_media_cnt = 0;
+    for (mi=0; mi < call->med_prov_cnt &&
+	       info->prov_media_cnt < PJ_ARRAY_SIZE(info->prov_media); ++mi)
+    {
+	pjsua_call_media *call_med = &call->media_prov[mi];
+
+	info->prov_media[info->prov_media_cnt].index = mi;
+	info->prov_media[info->prov_media_cnt].status = call_med->state;
+	info->prov_media[info->prov_media_cnt].dir = call_med->dir;
+	info->prov_media[info->prov_media_cnt].type = call_med->type;
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    info->prov_media[info->prov_media_cnt].stream.aud.conf_slot =
+						call_med->strm.a.conf_slot;
+	} else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	    pjmedia_vid_dev_index cap_dev = PJMEDIA_VID_INVALID_DEV;
+
+	    info->prov_media[info->prov_media_cnt].stream.vid.win_in = 
+						call_med->strm.v.rdr_win_id;
+
+	    if (call_med->strm.v.cap_win_id != PJSUA_INVALID_ID) {
+		cap_dev = call_med->strm.v.cap_dev;
+	    }
+	    info->prov_media[info->prov_media_cnt].stream.vid.cap_dev=cap_dev;
+	} else {
+	    continue;
+	}
+	++info->prov_media_cnt;
     }
 
     /* calculate duration */
