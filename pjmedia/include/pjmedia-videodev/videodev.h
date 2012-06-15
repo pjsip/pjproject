@@ -676,7 +676,10 @@ pjmedia_vid_dev_default_param(pj_pool_t *pool,
  * if the device ID in the \a param specifies default device, it may be
  * replaced with the actual device ID upon return.
  *
- * @param param         Sound device parameters to be used for the stream.
+ * @param param         On input, it specifies the video device parameters
+ *                      to be used for the stream. On output, this will be
+ *                      set to the actual video device parameters used to
+ *                      open the stream.
  * @param cb            Pointer to structure containing video stream
  *                      callbacks.
  * @param user_data     Arbitrary user data, which will be given back in the
