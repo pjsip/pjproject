@@ -184,7 +184,7 @@ static pj_status_t create_converter(pjmedia_vid_port *vp)
 }
 
 PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
-					     pjmedia_vid_port_param *prm,
+					     const pjmedia_vid_port_param *prm,
 					     pjmedia_vid_port **p_vid_port)
 {
     pjmedia_vid_port *vp;
@@ -365,7 +365,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
             goto on_error;
     }
 
-    prm->vidparam = vparam;
     *p_vid_port = vp;
 
     return PJ_SUCCESS;

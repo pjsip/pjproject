@@ -78,23 +78,20 @@ typedef struct pjmedia_vid_port pjmedia_vid_port;
 PJ_DECL(void) pjmedia_vid_port_param_default(pjmedia_vid_port_param *prm);
 
 /**
- * Create a video port with the specified parameter. Video port may open
+ * Create a video port with the specified parameter. When video port opens
  * the video stream with different parameter than the requested values in
- * the \a prm.vidparam argument. Application can check the the values in
- * the \a prm.vidparam argument to see if they have changed.
+ * the \a prm.vidparam argument, it will automatically do the necessary
+ * conversion.
  *
  * @param pool		Pool to allocate memory from.
- * @param prm		On input, it specifies the video port parameters
- *                      to be used. On output, prm.vidparam will be set to
- *                      the actual video device parameters used to open the
- *                      stream.
+ * @param prm		The video port parameter.
  * @param p_vp		Pointer to receive the result.
  *
  * @return		PJ_SUCCESS if video port has been created
  * 			successfully, or the appropriate error code.
  */
 PJ_DECL(pj_status_t) pjmedia_vid_port_create(pj_pool_t *pool,
-					     pjmedia_vid_port_param *prm,
+					     const pjmedia_vid_port_param *prm,
 					     pjmedia_vid_port **p_vp);
 
 /**
