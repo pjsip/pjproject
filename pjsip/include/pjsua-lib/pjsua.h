@@ -2615,6 +2615,14 @@ typedef struct pjsua_acc_config
     pj_bool_t	    mwi_enabled;
 
     /**
+     * Specify the default expiration time for Message Waiting Indication
+     * (RFC 3842) event subscription. This must not be zero.
+     *
+     * Default: PJSIP_MWI_DEFAULT_EXPIRES
+     */
+    unsigned	    mwi_expires;
+
+    /**
      * If this flag is set, the presence information of this account will
      * be PUBLISH-ed to the server where the account belongs.
      *

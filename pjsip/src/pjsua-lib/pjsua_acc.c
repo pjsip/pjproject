@@ -469,7 +469,7 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
     } else {
 	/* Otherwise subscribe to MWI, if it's enabled */
 	if (pjsua_var.acc[id].cfg.mwi_enabled)
-	    pjsua_start_mwi(&pjsua_var.acc[id]);
+	    pjsua_start_mwi(id, PJ_TRUE);
     }
 
     pj_log_pop_indent();
@@ -679,6 +679,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     pj_str_t acc_proxy[PJSUA_ACC_MAX_PROXIES];
     pj_bool_t update_reg = PJ_FALSE;
     pj_bool_t unreg_first = PJ_FALSE;
+    pj_bool_t update_mwi = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
 
     PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc),
@@ -838,7 +839,14 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     }
 
     /* MWI */
-    acc->cfg.mwi_enabled = cfg->mwi_enabled;
+    if (acc->cfg.mwi_enabled != cfg->mwi_enabled) {
+	acc->cfg.mwi_enabled = cfg->mwi_enabled;
+	update_mwi = PJ_TRUE;
+    }
+    if (acc->cfg.mwi_expires != cfg->mwi_expires && cfg->mwi_expires > 0) {
+	acc->cfg.mwi_expires = cfg->mwi_expires;
+	update_mwi = PJ_TRUE;
+    }
 
     /* PIDF tuple ID */
     if (pj_strcmp(&acc->cfg.pidf_tuple_id, &cfg->pidf_tuple_id))
@@ -1132,11 +1140,11 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	/* If accounts has registration enabled, start registration */
 	if (acc->cfg.reg_uri.slen)
 	    pjsua_acc_set_registration(acc->index, PJ_TRUE);
-	else {
-	    /* Otherwise subscribe to MWI, if it's enabled */
-	    if (acc->cfg.mwi_enabled)
-		pjsua_start_mwi(acc);
-	}
+    }
+
+    /* Update MWI subscription */
+    if (update_mwi) {
+	pjsua_start_mwi(acc_id, PJ_TRUE);
     }
 
     /* Video settings */
@@ -1875,7 +1883,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 
 	    /* Subscribe to MWI, if it's enabled */
 	    if (acc->cfg.mwi_enabled)
-		pjsua_start_mwi(acc);
+		pjsua_start_mwi(acc->index, PJ_FALSE);
 	}
 
     } else {

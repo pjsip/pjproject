@@ -237,6 +237,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pj_list_init(&cfg->sub_hdr_list);
     cfg->call_hold_type = PJSUA_CALL_HOLD_TYPE_DEFAULT;
     cfg->register_on_acc_add = PJ_TRUE;
+    cfg->mwi_expires = PJSIP_MWI_DEFAULT_EXPIRES;
 }
 
 PJ_DEF(void) pjsua_buddy_config_default(pjsua_buddy_config *cfg)

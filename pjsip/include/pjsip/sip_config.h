@@ -994,6 +994,23 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/**
+ * Specify the default expiration time for Message Waiting Indication
+ * (RFC 3842) event subscription, for both client and server subscription.
+ * For client subscription, application can override this by specifying
+ * positive non-zero value in "expires" parameter when calling
+ * #pjsip_mwi_initiate(). For server subscription, we would take the
+ * expiration value from the Expires header sent by client in the SUBSCRIBE
+ * request if the header exists and its value is less than  this setting,
+ * otherwise this setting will be used.
+ *
+ * Default: 3600 seconds
+ */
+#ifndef PJSIP_MWI_DEFAULT_EXPIRES
+#   define PJSIP_MWI_DEFAULT_EXPIRES		3600
+#endif
+
+
 PJ_END_DECL
 
 /**

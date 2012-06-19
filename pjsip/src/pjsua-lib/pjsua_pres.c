@@ -2011,17 +2011,22 @@ static pjsip_evsub_user mwi_cb =
 	     */
 };
 
-void pjsua_start_mwi(pjsua_acc *acc)
+pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 {
+    pjsua_acc *acc;
     pj_pool_t *tmp_pool = NULL;
     pj_str_t contact;
     pjsip_tx_data *tdata;
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_ASSERT_RETURN(acc_id>=0 && acc_id<(int)PJ_ARRAY_SIZE(pjsua_var.acc)
+                     && pjsua_var.acc[acc_id].valid, PJ_EINVAL);
+
+    acc = &pjsua_var.acc[acc_id];
 
     if (!acc->cfg.mwi_enabled) {
 	if (acc->mwi_sub) {
 	    /* Terminate MWI subscription */
-	    pjsip_tx_data *tdata;
 	    pjsip_evsub *sub = acc->mwi_sub;
 
 	    /* Detach sub from this account */
@@ -2035,13 +2040,26 @@ void pjsua_start_mwi(pjsua_acc *acc)
 		status = pjsip_mwi_send_request(acc->mwi_sub, tdata);
 	    }
 	}
-	return;
+	return status;
     }
 
+    /* Subscription is already active */
     if (acc->mwi_sub) {
-	/* Subscription is already active */
-	return;
+	if (!force_renew)
+	    return PJ_SUCCESS;
+	
+	/* Update MWI subscription */
+	pj_assert(acc->mwi_dlg);
+	pjsip_dlg_inc_lock(acc->mwi_dlg);
+	
+	status = pjsip_mwi_initiate(acc->mwi_sub, acc->cfg.mwi_expires, &tdata);
+	if (status == PJ_SUCCESS) {
+	    pjsua_process_msg_data(tdata, NULL);
+	    status = pjsip_pres_send_request(acc->mwi_sub, tdata);
+	}
 
+	pjsip_dlg_dec_lock(acc->mwi_dlg);
+	return status;
     }
 
     PJ_LOG(4,(THIS_FILE, "Starting MWI subscription.."));
@@ -2059,9 +2077,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to generate Contact header", 
 		         status);
-	    pj_pool_release(tmp_pool);
-	    pj_log_pop_indent();
-	    return;
+	    goto on_return;
 	}
     }
 
@@ -2073,9 +2089,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
 				   NULL, &acc->mwi_dlg);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create dialog", status);
-	if (tmp_pool) pj_pool_release(tmp_pool);
-	pj_log_pop_indent();
-	return;
+	goto on_return;
     }
 
     /* Increment the dialog's lock otherwise when presence session creation
@@ -2088,10 +2102,8 @@ void pjsua_start_mwi(pjsua_acc *acc)
 				  PJSIP_EVSUB_NO_EVENT_ID, &acc->mwi_sub);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Error creating MWI subscription", status);
-	if (tmp_pool) pj_pool_release(tmp_pool);
 	if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
-	pj_log_pop_indent();
-	return;
+	goto on_return;
     }
 
     /* If account is locked to specific transport, then lock dialog
@@ -2120,7 +2132,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
 
     pjsip_evsub_set_mod_data(acc->mwi_sub, pjsua_var.mod.id, acc);
 
-    status = pjsip_mwi_initiate(acc->mwi_sub, -1, &tdata);
+    status = pjsip_mwi_initiate(acc->mwi_sub, acc->cfg.mwi_expires, &tdata);
     if (status != PJ_SUCCESS) {
 	if (acc->mwi_dlg) pjsip_dlg_dec_lock(acc->mwi_dlg);
 	if (acc->mwi_sub) {
@@ -2130,9 +2142,7 @@ void pjsua_start_mwi(pjsua_acc *acc)
 	acc->mwi_dlg = NULL;
 	pjsua_perror(THIS_FILE, "Unable to create initial MWI SUBSCRIBE", 
 		     status);
-	if (tmp_pool) pj_pool_release(tmp_pool);
-	pj_log_pop_indent();
-	return;
+	goto on_return;
     }
 
     pjsua_process_msg_data(tdata, NULL);
@@ -2147,15 +2157,16 @@ void pjsua_start_mwi(pjsua_acc *acc)
 	acc->mwi_dlg = NULL;
 	pjsua_perror(THIS_FILE, "Unable to send initial MWI SUBSCRIBE", 
 		     status);
-	if (tmp_pool) pj_pool_release(tmp_pool);
-	pj_log_pop_indent();
-	return;
+	goto on_return;
     }
 
     pjsip_dlg_dec_lock(acc->mwi_dlg);
+
+on_return:
     if (tmp_pool) pj_pool_release(tmp_pool);
 
     pj_log_pop_indent();
+    return status;
 }
 
 
@@ -2269,7 +2280,7 @@ static void pres_timer_cb(pj_timer_heap_t *th,
 
 	/* Re-subscribe MWI subscription if it's terminated prematurely */
 	if (acc->cfg.mwi_enabled && !acc->mwi_sub)
-	    pjsua_start_mwi(acc);
+	    pjsua_start_mwi(acc->index, PJ_FALSE);
     }
 
     /* #937: No need to do bulk client refresh, as buddies have their

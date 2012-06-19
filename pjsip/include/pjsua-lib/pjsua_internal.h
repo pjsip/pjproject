@@ -670,7 +670,7 @@ pj_status_t pjsua_im_init(void);
 /**
  * Start MWI subscription
  */
-void pjsua_start_mwi(pjsua_acc *acc);
+pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew);
 
 /**
  * Init call subsystem.
