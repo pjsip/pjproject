@@ -654,6 +654,11 @@ PJ_DEF(pj_status_t) pj_sock_send(pj_sock_t sock,
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(len, PJ_EINVAL);
 
+#ifdef MSG_NOSIGNAL
+    /* Suppress SIGPIPE. See https://trac.pjsip.org/repos/ticket/1538 */
+    flags |= MSG_NOSIGNAL;
+#endif
+
     *len = send(sock, (const char*)buf, *len, flags);
 
     if (*len < 0)
