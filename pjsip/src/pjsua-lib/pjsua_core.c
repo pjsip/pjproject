@@ -211,6 +211,7 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     cfg->unpublish_max_wait_time_msec = PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC;
     cfg->transport_id = PJSUA_INVALID_ID;
     cfg->allow_contact_rewrite = PJ_TRUE;
+    cfg->allow_via_rewrite = PJ_TRUE;
     cfg->require_100rel = pjsua_var.ua_cfg.require_100rel;
     cfg->use_timer = pjsua_var.ua_cfg.use_timer;
     cfg->timer_setting = pjsua_var.ua_cfg.timer_setting;

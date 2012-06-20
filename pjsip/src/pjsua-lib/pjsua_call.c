@@ -715,6 +715,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
      */
     pjsip_dlg_inc_lock(dlg);
 
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0)
+        pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
+
     /* Calculate call's secure level */
     call->secure_level = get_secure_level(acc_id, dest_uri);
 
@@ -1168,6 +1171,13 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	pjsip_endpt_respond_stateless(pjsua_var.endpt, rdata, 500, NULL,
 				      NULL, NULL);
 	goto on_return;
+    }
+
+    if (pjsua_var.acc[acc_id].cfg.allow_via_rewrite &&
+        pjsua_var.acc[acc_id].via_addr.host.slen > 0)
+    {
+        pjsip_dlg_set_via_sent_by(dlg, &pjsua_var.acc[acc_id].via_addr,
+                                  pjsua_var.acc[acc_id].via_tp);
     }
 
     /* Set credentials */

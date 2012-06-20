@@ -584,6 +584,14 @@ struct pjsip_tx_data
      * Arbitrary data attached by PJSIP modules.
      */
     void		    *mod_data[PJSIP_MAX_MODULE];
+
+    /**
+     * If via_addr is set, it will be used as the "sent-by" field of the
+     * Via header for outgoing requests as long as the request uses via_tp
+     * transport. Normally application should not use or access these fields.
+     */
+    pjsip_host_port          via_addr;      /**< Via address.	        */
+    const void              *via_tp;        /**< Via transport.	        */
 };
 
 

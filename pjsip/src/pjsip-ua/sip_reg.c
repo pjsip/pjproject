@@ -90,6 +90,8 @@ struct pjsip_regc
     pj_uint32_t			 delay_before_refresh;
     pjsip_route_hdr		 route_set;
     pjsip_hdr			 hdr_list;
+    pjsip_host_port              via_addr;
+    const void                  *via_tp;
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess		 auth_sess;
@@ -808,6 +810,21 @@ static void schedule_registration ( pjsip_regc *regc, pj_int32_t expiration )
     }
 }
 
+PJ_DEF(pj_status_t) pjsip_regc_set_via_sent_by( pjsip_regc *regc,
+				                pjsip_host_port *via_addr,
+                                                pjsip_transport *via_tp)
+{
+    PJ_ASSERT_RETURN(regc, PJ_EINVAL);
+
+    if (!via_addr)
+        pj_bzero(&regc->via_addr, sizeof(regc->via_addr));
+    else
+        regc->via_addr = *via_addr;
+    regc->via_tp = via_tp;
+
+    return PJ_SUCCESS;
+}
+
 PJ_DEF(pj_status_t)
 pjsip_regc_set_delay_before_refresh( pjsip_regc *regc,
 				     pj_uint32_t delay )
@@ -1261,6 +1278,12 @@ PJ_DEF(pj_status_t) pjsip_regc_send(pjsip_regc *regc, pjsip_tx_data *tdata)
      * we need tdata to retrieve the transport.
      */
     pjsip_tx_data_add_ref(tdata);
+
+    /* If via_addr is set, use this address for the Via header. */
+    if (regc->via_addr.host.slen > 0) {
+        tdata->via_addr = regc->via_addr;
+        tdata->via_tp = regc->via_tp;
+    }
 
     /* Need to unlock the regc temporarily while sending the message to
      * prevent deadlock (https://trac.pjsip.org/repos/ticket/1247).

@@ -212,6 +212,9 @@ typedef struct pjsua_acc
     pj_str_t         reg_contact;   /**< Contact header for REGISTER.
 				         It may be different than acc
 				         contact if outbound is used    */
+    pjsip_host_port  via_addr;      /**< Address for Via header         */
+    pjsip_transport *via_tp;        /**< Transport associated with
+                                         the Via address                */
 
     pj_str_t	     srv_domain;    /**< Host part of reg server.	*/
     int		     srv_port;	    /**< Port number of reg server.	*/

@@ -237,6 +237,22 @@ PJ_DECL(pj_status_t) pjsip_publishc_set_headers(pjsip_publishc *pubc,
 						const pjsip_hdr *hdr_list);
 
 /**
+ * Set the "sent-by" field of the Via header for outgoing requests.
+ *
+ * @param pubc	    The client publication structure.
+ * @param via_addr  Set via_addr to use for the Via header or NULL to use
+ *                  the transport's published name.
+ * @param via_tp    via_addr will only be used if we are using via_tp
+ *                  transport.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
+				                    pjsip_host_port *via_addr,
+                                                    pjsip_transport *via_tp);
+
+
+/**
  * Create PUBLISH request for the specified client publication structure.
  * Application can use this function to both create initial publication
  * or to modify existing publication. 

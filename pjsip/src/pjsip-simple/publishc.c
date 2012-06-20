@@ -94,6 +94,8 @@ struct pjsip_publishc
     pj_uint32_t			 expires;
     pjsip_route_hdr		 route_set;
     pjsip_hdr			 usr_hdr;
+    pjsip_host_port              via_addr;
+    const void                  *via_tp;
 
     /* Authorization sessions. */
     pjsip_auth_clt_sess		 auth_sess;
@@ -341,6 +343,21 @@ PJ_DEF(pj_status_t) pjsip_publishc_set_headers( pjsip_publishc *pubc,
 	pj_list_push_back(&pubc->usr_hdr, pjsip_hdr_clone(pubc->pool, h));
 	h = h->next;
     }
+
+    return PJ_SUCCESS;
+}
+
+PJ_DEF(pj_status_t) pjsip_publishc_set_via_sent_by(pjsip_publishc *pubc,
+				                   pjsip_host_port *via_addr,
+                                                   pjsip_transport *via_tp)
+{
+    PJ_ASSERT_RETURN(pubc, PJ_EINVAL);
+
+    if (!via_addr)
+        pj_bzero(&pubc->via_addr, sizeof(pubc->via_addr));
+    else
+        pubc->via_addr = *via_addr;
+    pubc->via_tp = via_tp;
 
     return PJ_SUCCESS;
 }
@@ -738,6 +755,12 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
 	}
     }
     pj_mutex_unlock(pubc->mutex);
+
+    /* If via_addr is set, use this address for the Via header. */
+    if (pubc->via_addr.host.slen > 0) {
+        tdata->via_addr = pubc->via_addr;
+        tdata->via_tp = pubc->via_tp;
+    }
 
     /* Invalidate message buffer. */
     pjsip_tx_data_invalidate_msg(tdata);

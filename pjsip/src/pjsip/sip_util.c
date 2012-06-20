@@ -1192,7 +1192,13 @@ static void stateless_send_transport_cb( void *token,
 	}
 
 	via->transport = pj_str(stateless_data->cur_transport->type_name);
-	via->sent_by = stateless_data->cur_transport->local_name;
+        if (tdata->via_addr.host.slen > 0 &&
+            tdata->via_tp == (void *)stateless_data->cur_transport)
+        {
+            via->sent_by = tdata->via_addr;
+        } else {
+	    via->sent_by = stateless_data->cur_transport->local_name;
+        }
 	via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
 
 	pjsip_tx_data_invalidate_msg(tdata);

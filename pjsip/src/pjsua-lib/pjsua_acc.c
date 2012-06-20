@@ -624,6 +624,8 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
     /* Invalidate */
     acc->valid = PJ_FALSE;
     acc->contact.slen = 0;
+    pj_bzero(&acc->via_addr, sizeof(acc->via_addr));
+    acc->via_tp = NULL;
 
     /* Remove from array */
     for (i=0; i<pjsua_var.acc_cnt; ++i) {
@@ -1090,6 +1092,25 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 						cfg->reg_delay_before_refresh);
     }
 
+    /* Allow via rewrite */
+    if (acc->cfg.allow_via_rewrite != cfg->allow_via_rewrite) {
+        if (acc->regc != NULL) {
+            if (cfg->allow_via_rewrite) {
+                pjsip_regc_set_via_sent_by(acc->regc, &acc->via_addr,
+                                           acc->via_tp);
+            } else
+                pjsip_regc_set_via_sent_by(acc->regc, NULL, NULL);
+        }
+        if (acc->publish_sess != NULL) {
+            if (cfg->allow_via_rewrite) {
+                pjsip_publishc_set_via_sent_by(acc->publish_sess,
+                                               &acc->via_addr, acc->via_tp);
+            } else
+                pjsip_publishc_set_via_sent_by(acc->publish_sess, NULL, NULL);
+        }
+        acc->cfg.allow_via_rewrite = cfg->allow_via_rewrite;
+    }
+
     /* Normalize registration timeout and refresh delay */
     if (acc->cfg.reg_uri.slen ) {
         if (acc->cfg.reg_timeout == 0) {
@@ -1313,6 +1334,19 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
     const pj_str_t STR_CONTACT = { "Contact", 7 };
 
     tp = param->rdata->tp_info.transport;
+
+    /* If allow_via_rewrite is enabled, we save the Via "sent-by" address
+     * from the response.
+     */
+    if (acc->cfg.allow_via_rewrite &&
+        (acc->via_addr.host.slen == 0 || acc->via_tp != tp))
+    {
+        via = param->rdata->msg_info.via;
+        if (pj_strcmp(&acc->via_addr.host, &via->sent_by.host))
+            pj_strdup(acc->pool, &acc->via_addr.host, &via->sent_by.host);
+        acc->via_addr.port = via->sent_by.port;
+        acc->via_tp = tp;
+    }
 
     /* Only update if account is configured to auto-update */
     if (acc->cfg.allow_contact_rewrite == PJ_FALSE)
@@ -2176,6 +2210,14 @@ PJ_DEF(pj_status_t) pjsua_acc_set_registration( pjsua_acc_id acc_id,
     }
 
     if (status == PJ_SUCCESS) {
+        if (pjsua_var.acc[acc_id].cfg.allow_via_rewrite &&
+            pjsua_var.acc[acc_id].via_addr.host.slen > 0)
+        {
+            pjsip_regc_set_via_sent_by(pjsua_var.acc[acc_id].regc,
+                                       &pjsua_var.acc[acc_id].via_addr,
+                                       pjsua_var.acc[acc_id].via_tp);
+        }
+
 	//pjsua_process_msg_data(tdata, NULL);
 	status = pjsip_regc_send( pjsua_var.acc[acc_id].regc, tdata );
     }
@@ -2539,6 +2581,14 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
 
 	pjsua_init_tpselector(acc->cfg.transport_id, &tp_sel);
 	pjsip_tx_data_set_transport(tdata, &tp_sel);
+    }
+
+    /* If via_addr is set, use this address for the Via header. */
+    if (pjsua_var.acc[acc_id].cfg.allow_via_rewrite &&
+        pjsua_var.acc[acc_id].via_addr.host.slen > 0)
+    {
+        tdata->via_addr = pjsua_var.acc[acc_id].via_addr;
+        tdata->via_tp = pjsua_var.acc[acc_id].via_tp;
     }
 
     /* Done */

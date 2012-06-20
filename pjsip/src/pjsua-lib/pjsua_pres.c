@@ -864,6 +864,9 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_TRUE;
     }
 
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0)
+        pjsip_dlg_set_via_sent_by(dlg, &acc->via_addr, acc->via_tp);
+
     /* Set credentials and preference. */
     pjsip_auth_clt_set_credentials(&dlg->auth_sess, acc->cred_cnt, acc->cred);
     pjsip_auth_clt_set_prefs(&dlg->auth_sess, &acc->cfg.auth_pref);
@@ -1228,6 +1231,12 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 
     /* Add headers etc */
     pjsua_process_msg_data(tdata, NULL);
+
+    /* Set Via sent-by */
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
+        pjsip_publishc_set_via_sent_by(acc->publish_sess, &acc->via_addr,
+                                       acc->via_tp);
+    }
 
     /* Send the PUBLISH request */
     status = pjsip_publishc_send(acc->publish_sess, tdata);
@@ -1780,6 +1789,9 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
      */
     pjsip_dlg_inc_lock(buddy->dlg);
 
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0)
+        pjsip_dlg_set_via_sent_by(buddy->dlg, &acc->via_addr, acc->via_tp);
+
     status = pjsip_pres_create_uac( buddy->dlg, &pres_callback, 
 				    PJSIP_EVSUB_NO_EVENT_ID, &buddy->sub);
     if (status != PJ_SUCCESS) {
@@ -2096,6 +2108,9 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
      * fails the dialog will be destroyed prematurely.
      */
     pjsip_dlg_inc_lock(acc->mwi_dlg);
+
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0)
+        pjsip_dlg_set_via_sent_by(acc->mwi_dlg, &acc->via_addr, acc->via_tp);
 
     /* Create UAC subscription */
     status = pjsip_mwi_create_uac(acc->mwi_dlg, &mwi_cb, 

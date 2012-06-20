@@ -2818,6 +2818,16 @@ typedef struct pjsua_acc_config
     int		     contact_rewrite_method;
 
     /**
+     * This option is used to overwrite the "sent-by" field of the Via header
+     * for outgoing messages with the same interface address as the one in
+     * the REGISTER request, as long as the request uses the same transport
+     * instance as the previous REGISTER request.
+     *
+     * Default: 1 (yes)
+     */
+    pj_bool_t        allow_via_rewrite;
+
+    /**
      * Control the use of SIP outbound feature. SIP outbound is described in
      * RFC 5626 to enable proxies or registrar to send inbound requests back
      * to UA using the same connection initiated by the UA for its

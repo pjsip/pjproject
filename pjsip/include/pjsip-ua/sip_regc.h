@@ -191,6 +191,21 @@ PJ_DECL(pj_status_t) pjsip_regc_init(pjsip_regc *regc,
 				     pj_uint32_t expires);
 
 /**
+ * Set the "sent-by" field of the Via header for outgoing requests.
+ *
+ * @param regc	    The client registration structure.
+ * @param via_addr  Set via_addr to use for the Via header or NULL to use
+ *                  the transport's published name.
+ * @param via_tp    via_addr will only be used if we are using via_tp
+ *                  transport.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_regc_set_via_sent_by(pjsip_regc *regc,
+				                pjsip_host_port *via_addr,
+                                                pjsip_transport *via_tp);
+
+/**
  * Set the number of seconds to refresh the client registration before
  * the registration expires.
  *

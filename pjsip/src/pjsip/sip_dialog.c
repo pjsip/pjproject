@@ -585,6 +585,24 @@ PJ_DEF(pj_status_t) pjsip_dlg_set_transport( pjsip_dialog *dlg,
     return PJ_SUCCESS;
 }
 
+/*
+ * Set "sent-by" field of Via header.
+ */
+PJ_DEF(pj_status_t) pjsip_dlg_set_via_sent_by( pjsip_dialog *dlg,
+				               pjsip_host_port *via_addr,
+                                               pjsip_transport *via_tp)
+{
+    PJ_ASSERT_RETURN(dlg, PJ_EINVAL);
+
+    if (!via_addr)
+        pj_bzero(&dlg->via_addr, sizeof(dlg->via_addr));
+    else
+        dlg->via_addr = *via_addr;
+    dlg->via_tp = via_tp;
+
+    return PJ_SUCCESS;
+}
+
 
 /*
  * Create forked dialog from a response.
@@ -1162,6 +1180,12 @@ PJ_DEF(pj_status_t) pjsip_dlg_send_request( pjsip_dialog *dlg,
 
     /* Lock and increment session */
     pjsip_dlg_inc_lock(dlg);
+
+    /* If via_addr is set, use this address for the Via header. */
+    if (dlg->via_addr.host.slen > 0) {
+        tdata->via_addr = dlg->via_addr;
+        tdata->via_tp = dlg->via_tp;
+    }
 
     /* Update dialog's CSeq and message's CSeq if request is not
      * ACK nor CANCEL.

@@ -173,6 +173,14 @@ struct pjsip_dialog
 
     /** Module specific data. */
     void	       *mod_data[PJSIP_MAX_MODULE]; /**< Module data.	    */
+
+    /**
+     * If via_addr is set, it will be used as the "sent-by" field of the
+     * Via header for outgoing requests as long as the request uses via_tp
+     * transport. Normally application should not use or access these fields.
+     */
+    pjsip_host_port     via_addr;   /**< Via address.	                    */
+    const void         *via_tp;     /**< Via transport.	                    */
 };
 
 
@@ -298,6 +306,22 @@ PJ_DECL(pj_status_t) pjsip_dlg_set_transport(pjsip_dialog *dlg,
 
 
 /**
+ * Set the "sent-by" field of the Via header for outgoing requests.
+ *
+ * @param dlg	    The dialog instance.
+ * @param via_addr  Set via_addr to use for the Via header or NULL to use
+ *                  the transport's published name.
+ * @param via_tp    via_addr will only be used if we are using via_tp
+ *                  transport.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_dlg_set_via_sent_by(pjsip_dialog *dlg,
+				               pjsip_host_port *via_addr,
+                                               pjsip_transport *via_tp);
+
+
+/**
  * Create a new (forked) dialog on receipt on forked response in rdata. 
  * The new dialog will be created from original_dlg, except that it will have
  * new remote tag as copied from the To header in the response. Upon return, 
@@ -402,7 +426,7 @@ PJ_DECL(pj_status_t) pjsip_dlg_add_usage( pjsip_dialog *dlg,
  * 			    registered as a usage to the dialog.
  */
 PJ_DECL(pj_bool_t) pjsip_dlg_has_usage(pjsip_dialog *dlg,
-					  pjsip_module *module);
+				       pjsip_module *module);
 
 /**
  * Attach module specific data to the dialog. Application can also set 

@@ -601,6 +601,12 @@ PJ_DEF(pj_status_t) pjsua_im_send( pjsua_acc_id acc_id,
     /* Add route set */
     pjsua_set_msg_route_set(tdata, &acc->route_set);
 
+    /* If via_addr is set, use this address for the Via header. */
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
+        tdata->via_addr = acc->via_addr;
+        tdata->via_tp = acc->via_tp;
+    }
+
     /* Send request (statefully) */
     status = pjsip_endpt_send_request( pjsua_var.endpt, tdata, -1, 
 				       im_data, &im_callback);
@@ -683,6 +689,12 @@ PJ_DEF(pj_status_t) pjsua_im_typing( pjsua_acc_id acc_id,
 
     /* Add route set */
     pjsua_set_msg_route_set(tdata, &acc->route_set);
+
+    /* If via_addr is set, use this address for the Via header. */
+    if (acc->cfg.allow_via_rewrite && acc->via_addr.host.slen > 0) {
+        tdata->via_addr = acc->via_addr;
+        tdata->via_tp = acc->via_tp;
+    }
 
     /* Create data to reauthenticate */
     im_data = PJ_POOL_ZALLOC_T(tdata->pool, pjsua_im_data);
