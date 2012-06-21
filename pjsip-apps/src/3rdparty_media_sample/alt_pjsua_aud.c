@@ -224,7 +224,7 @@ static void timer_to_send_aud_rtp(void *user_data)
     pjsua_call_media *call_med = (pjsua_call_media*) user_data;
     const char *pkt = "Not RTP packet";
 
-    if (call_med->call->inv == NULL) {
+    if (!call_med->call || !call_med->call->inv || !call_med->tp) {
 	/* Call has been disconnected. There is race condition here as
 	 * this cb may be called sometime after call has been disconnected */
 	return;
@@ -240,7 +240,7 @@ static void timer_to_send_aud_rtcp(void *user_data)
     pjsua_call_media *call_med = (pjsua_call_media*) user_data;
     const char *pkt = "Not RTCP packet";
 
-    if (call_med->call->inv == NULL) {
+    if (!call_med->call || !call_med->call->inv || !call_med->tp) {
 	/* Call has been disconnected. There is race condition here as
 	 * this cb may be called sometime after call has been disconnected */
 	return;
@@ -301,6 +301,9 @@ on_return:
     return status;
 }
 
+void pjsua_check_snd_dev_idle()
+{
+}
 
 /*****************************************************************************
  *

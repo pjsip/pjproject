@@ -234,6 +234,12 @@ pj_status_t pjsua_vid_subsys_start(void)
 /* Cleanup and deinitialize the video library */
 pj_status_t pjsua_vid_subsys_destroy(void)
 {
+    if (pjmedia_vid_codec_mgr_instance())
+	pjmedia_vid_codec_mgr_destroy(NULL);
+
+    if (pjmedia_video_format_mgr_instance())
+	pjmedia_video_format_mgr_destroy(NULL);
+
     /*
      * TODO: put your 3rd party library cleanup routine here
      */
@@ -291,7 +297,7 @@ static void timer_to_send_vid_rtp(void *user_data)
     pjsua_call_media *call_med = (pjsua_call_media*) user_data;
     const char *pkt = "Not RTP packet";
 
-    if (call_med->call->inv == NULL) {
+    if (!call_med->call || !call_med->call->inv || !call_med->tp) {
 	/* Call has been disconnected. There is race condition here as
 	 * this cb may be called sometime after call has been disconnected */
 	return;
@@ -307,7 +313,7 @@ static void timer_to_send_vid_rtcp(void *user_data)
     pjsua_call_media *call_med = (pjsua_call_media*) user_data;
     const char *pkt = "Not RTCP packet";
 
-    if (call_med->call->inv == NULL) {
+    if (!call_med->call || !call_med->call->inv || !call_med->tp) {
 	/* Call has been disconnected. There is race condition here as
 	 * this cb may be called sometime after call has been disconnected */
 	return;
