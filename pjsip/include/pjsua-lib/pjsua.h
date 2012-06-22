@@ -4084,7 +4084,8 @@ PJ_DECL(pj_status_t) pjsua_call_get_rem_nat_type(pjsua_call_id call_id,
 /**
  * Send response to incoming INVITE request. Depending on the status
  * code specified as parameter, this function may send provisional
- * response, establish the call, or terminate the call.
+ * response, establish the call, or terminate the call. See also
+ * #pjsua_call_answer2().
  *
  * @param call_id	Incoming call identification.
  * @param code		Status code, (100-699).
@@ -4102,9 +4103,17 @@ PJ_DECL(pj_status_t) pjsua_call_answer(pjsua_call_id call_id,
 
 
 /**
- * Send response to incoming INVITE request. Depending on the status
- * code specified as parameter, this function may send provisional
- * response, establish the call, or terminate the call.
+ * Send response to incoming INVITE request with call setting param.
+ * Depending on the status code specified as parameter, this function may
+ * send provisional response, establish the call, or terminate the call.
+ * Notes about call setting:
+ *  - if call setting is changed in the subsequent call to this function,
+ *    only the first call setting supplied will applied. So normally
+ *    application will not supply call setting before getting confirmation
+ *    from the user.
+ *  - if no call setting is supplied when SDP has to be sent, i.e: answer
+ *    with status code 183 or 2xx, the default call setting will be used,
+ *    check #pjsua_call_setting for its default values.
  *
  * @param call_id	Incoming call identification.
  * @param opt		Optional call setting.

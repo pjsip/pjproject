@@ -108,6 +108,7 @@ typedef struct call_answer
     pjsua_msg_data  *msg_data;      /**< Answer's headers list.       */
     pj_str_t        *reason;        /**< Answer's reason phrase.      */
     unsigned         code;          /**< Answer's status code.        */
+    pjsua_call_setting *opt;	    /**< Answer's call setting.	      */
 } call_answer;
 
 
@@ -120,6 +121,8 @@ struct pjsua_call
 {
     unsigned		 index;	    /**< Index in pjsua array.		    */
     pjsua_call_setting	 opt;	    /**< Call setting.			    */
+    pj_bool_t		 opt_inited;/**< Initial call setting has been set,
+					 to avoid different opt in answer.  */
     pjsip_inv_session	*inv;	    /**< The invite session.		    */
     void		*user_data; /**< User/application data.		    */
     pjsip_status_code	 last_code; /**< Last status code seen.		    */
@@ -170,6 +173,7 @@ struct pjsua_call
             } out_call;
             struct {
                 call_answer      answers;/**< A list of call answers.       */
+		pjsip_dialog	*replaced_dlg; /**< Replaced dialog.	    */
             } inc_call;
         } call_var;
     } async_call;                      /**< Temporary storage for async

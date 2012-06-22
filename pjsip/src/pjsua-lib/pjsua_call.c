@@ -806,6 +806,79 @@ static void update_remote_nat_type(pjsua_call *call,
 }
 
 
+static pj_status_t process_incoming_call_replace(pjsua_call *call,
+						 pjsip_dialog *replaced_dlg)
+{
+    pjsip_inv_session *replaced_inv;
+    struct pjsua_call *replaced_call;
+    pjsip_tx_data *tdata;
+    pj_status_t status;
+
+    /* Get the invite session in the dialog */
+    replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
+
+    /* Get the replaced call instance */
+    replaced_call = (pjsua_call*) replaced_dlg->mod_data[pjsua_var.mod.id];
+
+    /* Notify application */
+    if (pjsua_var.ua_cfg.cb.on_call_replaced)
+	pjsua_var.ua_cfg.cb.on_call_replaced(replaced_call->index,
+					     call->index);
+
+    PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with 200/OK",
+			 call->index));
+
+    /* Answer the new call with 200 response */
+    status = pjsip_inv_answer(call->inv, 200, NULL, NULL, &tdata);
+    if (status == PJ_SUCCESS)
+	status = pjsip_inv_send_msg(call->inv, tdata);
+
+    if (status != PJ_SUCCESS)
+	pjsua_perror(THIS_FILE, "Error answering session", status);
+
+    /* Note that inv may be invalid if 200/OK has caused error in
+     * starting the media.
+     */
+
+    PJ_LOG(4,(THIS_FILE, "Disconnecting replaced call %d",
+			 replaced_call->index));
+
+    /* Disconnect replaced invite session */
+    status = pjsip_inv_end_session(replaced_inv, PJSIP_SC_GONE, NULL,
+				   &tdata);
+    if (status == PJ_SUCCESS && tdata)
+	status = pjsip_inv_send_msg(replaced_inv, tdata);
+
+    if (status != PJ_SUCCESS)
+	pjsua_perror(THIS_FILE, "Error terminating session", status);
+
+    return status;
+}
+
+
+static void process_pending_call_answer(pjsua_call *call)
+{
+    struct call_answer *answer, *next;
+    
+    answer = call->async_call.call_var.inc_call.answers.next;
+    while (answer != &call->async_call.call_var.inc_call.answers) {
+        next = answer->next;
+	pjsua_call_answer2(call->index, answer->opt, answer->code,
+			   answer->reason, answer->msg_data);
+        
+        /* Call might have been disconnected if application is answering
+         * with 200/OK and the media failed to start.
+         * See pjsua_call_answer() below.
+         */
+        if (!call->inv || !call->inv->pool_prov)
+            break;
+
+        pj_list_erase(answer);
+        answer = next;
+    }
+}
+
+
 /* Incoming call callback when media transport creation is completed. */
 static pj_status_t
 on_incoming_call_med_tp_complete(pjsua_call_id call_id,
@@ -889,27 +962,17 @@ on_return:
      */
     call->med_ch_cb = NULL;
 
-    if (status == PJ_SUCCESS &&
-        !pj_list_empty(&call->async_call.call_var.inc_call.answers))
-    {
-        struct call_answer *answer, *next;
-        
-        answer = call->async_call.call_var.inc_call.answers.next;
-        while (answer != &call->async_call.call_var.inc_call.answers) {
-            next = answer->next;
-            pjsua_call_answer(call_id, answer->code, answer->reason,
-                              answer->msg_data);
-            
-            /* Call might have been disconnected if application is answering
-             * with 200/OK and the media failed to start.
-             * See pjsua_call_answer() below.
-             */
-            if (!call->inv || !call->inv->pool_prov)
-                break;
-
-            pj_list_erase(answer);
-            answer = next;
-        }
+    /* Finish any pending process */
+    if (status == PJ_SUCCESS) {
+	if (call->async_call.call_var.inc_call.replaced_dlg) {
+	    /* Process pending call replace */
+	    pjsip_dialog *replaced_dlg = 
+			call->async_call.call_var.inc_call.replaced_dlg;
+	    process_incoming_call_replace(call, replaced_dlg);
+	} else {
+	    /* Process pending call answers */
+	    process_pending_call_answer(call);
+	}
     }
 
     PJSUA_UNLOCK();
@@ -1252,33 +1315,38 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     call->async_call.dlg = dlg;
     pj_list_init(&call->async_call.call_var.inc_call.answers);
 
-    /* Init media channel */
-    status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
-				      call->secure_level, 
-				      rdata->tp_info.pool,
-				      offer,
-				      &sip_err_code, PJ_TRUE,
-                                      &on_incoming_call_med_tp_complete);
-    if (status == PJ_SUCCESS) {
-        status = on_incoming_call_med_tp_complete(call_id, NULL);
-        if (status != PJ_SUCCESS) {
-            sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
-            /* Since the call invite's state is still PJSIP_INV_STATE_NULL,
-             * the invite session was not ended in
-             * on_incoming_call_med_tp_complete(), so we need to send
-             * a response message and terminate the invite here.
-             */
-            pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
-            pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
-            call->inv = NULL; 
+    /* Init media channel, only when there is offer or call replace request.
+     * For incoming call without SDP offer, media channel init will be done
+     * in pjsua_call_answer(), see ticket #1526.
+     */
+    if (offer || replaced_dlg) {
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAS, 
+					  call->secure_level, 
+					  rdata->tp_info.pool,
+					  offer,
+					  &sip_err_code, PJ_TRUE,
+					  &on_incoming_call_med_tp_complete);
+	if (status == PJ_SUCCESS) {
+	    status = on_incoming_call_med_tp_complete(call_id, NULL);
+	    if (status != PJ_SUCCESS) {
+		sip_err_code = PJSIP_SC_NOT_ACCEPTABLE;
+		/* Since the call invite's state is still PJSIP_INV_STATE_NULL,
+		 * the invite session was not ended in
+		 * on_incoming_call_med_tp_complete(), so we need to send
+		 * a response message and terminate the invite here.
+		 */
+		pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+		pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
+		call->inv = NULL; 
+		goto on_return;
+	    }
+	} else if (status != PJ_EPENDING) {
+	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	    pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
+	    pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
+	    call->inv = NULL; 
 	    goto on_return;
-        }
-    } else if (status != PJ_EPENDING) {
-	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
-	pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
-        pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
-        call->inv = NULL; 
-	goto on_return;
+	}
     }
 
     /* Create answer */
@@ -1364,51 +1432,17 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
     /* Check if this request should replace existing call */
     if (replaced_dlg) {
-	pjsip_inv_session *replaced_inv;
-	struct pjsua_call *replaced_call;
-	pjsip_tx_data *tdata;
-
-	/* Get the invite session in the dialog */
-	replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
-
-	/* Get the replaced call instance */
-	replaced_call = (pjsua_call*) replaced_dlg->mod_data[pjsua_var.mod.id];
-
-	/* Notify application */
-	if (pjsua_var.ua_cfg.cb.on_call_replaced)
-	    pjsua_var.ua_cfg.cb.on_call_replaced(replaced_call->index,
-					         call_id);
-
-	PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with 200/OK",
-			     call_id));
-
-	/* Answer the new call with 200 response */
-	status = pjsip_inv_answer(inv, 200, NULL, NULL, &tdata);
-	if (status == PJ_SUCCESS)
-	    status = pjsip_inv_send_msg(inv, tdata);
-
-	if (status != PJ_SUCCESS)
-	    pjsua_perror(THIS_FILE, "Error answering session", status);
-
-	/* Note that inv may be invalid if 200/OK has caused error in
-	 * starting the media.
+	/* Process call replace. If the media channel init has been completed,
+	 * just process now, otherwise, just queue the replaced dialog so
+	 * it will be processed once the media channel async init is finished
+	 * successfully.
 	 */
-
-	PJ_LOG(4,(THIS_FILE, "Disconnecting replaced call %d",
-			     replaced_call->index));
-
-	/* Disconnect replaced invite session */
-	status = pjsip_inv_end_session(replaced_inv, PJSIP_SC_GONE, NULL,
-				       &tdata);
-	if (status == PJ_SUCCESS && tdata)
-	    status = pjsip_inv_send_msg(replaced_inv, tdata);
-
-	if (status != PJ_SUCCESS)
-	    pjsua_perror(THIS_FILE, "Error terminating session", status);
-
-
+	if (call->med_ch_cb == NULL) {
+	    process_incoming_call_replace(call, replaced_dlg);
+	} else {
+	    call->async_call.call_var.inc_call.replaced_dlg = replaced_dlg;
+	}
     } else {
-
 	/* Notify application if on_incoming_call() is overriden, 
 	 * otherwise hangup the call with 480
 	 */
@@ -1821,6 +1855,81 @@ pjsua_call_get_med_transport_info(pjsua_call_id call_id,
 }
 
 
+/* Media channel init callback for pjsua_call_answer(). */
+static pj_status_t
+on_answer_call_med_tp_complete(pjsua_call_id call_id,
+                               const pjsua_med_tp_state_info *info)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    pjmedia_sdp_session *sdp;
+    int sip_err_code = (info? info->sip_err_code: 0);
+    pj_status_t status = (info? info->status: PJ_SUCCESS);
+
+    PJSUA_LOCK();
+
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+        goto on_return;
+    }
+
+    /* pjsua_media_channel_deinit() has been called. */
+    if (call->async_call.med_ch_deinit) {
+        pjsua_media_channel_deinit(call->index);
+        call->med_ch_cb = NULL;
+        PJSUA_UNLOCK();
+        return PJ_SUCCESS;
+    }
+
+    status = pjsua_media_channel_create_sdp(call_id,
+                                            call->async_call.dlg->pool, 
+					    NULL, &sdp, &sip_err_code);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error creating SDP answer", status);
+        goto on_return;
+    }
+
+    status = pjsip_inv_set_local_sdp(call->inv, sdp);
+    if (status != PJ_SUCCESS) {
+	pjsua_perror(THIS_FILE, "Error setting local SDP", status);
+        sip_err_code = PJSIP_SC_NOT_ACCEPTABLE_HERE;
+        goto on_return;
+    }
+
+on_return:
+    if (status != PJ_SUCCESS) {
+        /* If the callback is called from pjsua_call_on_incoming(), the
+         * invite's state is PJSIP_INV_STATE_NULL, so the invite session
+         * will be terminated later, otherwise we end the session here.
+         */
+        if (call->inv->state > PJSIP_INV_STATE_NULL) {
+            pjsip_tx_data *tdata;
+            pj_status_t status_;
+
+	    status_ = pjsip_inv_end_session(call->inv, sip_err_code, NULL,
+                                            &tdata);
+	    if (status_ == PJ_SUCCESS && tdata)
+	        status_ = pjsip_inv_send_msg(call->inv, tdata);
+        }
+
+        pjsua_media_channel_deinit(call->index);
+    }
+
+    /* Set the callback to NULL to indicate that the async operation
+     * has completed.
+     */
+    call->med_ch_cb = NULL;
+
+    /* Finish any pending process */
+    if (status == PJ_SUCCESS) {
+	/* Process pending call answers */
+	process_pending_call_answer(call);
+    }
+
+    PJSUA_UNLOCK();
+    return status;
+}
+
+
 /*
  * Send response to incoming INVITE request.
  */
@@ -1857,14 +1966,57 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
-    /* Apply call setting */
-    status = apply_call_setting(call, opt, NULL);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Failed to apply call setting", status);
-	goto on_return;
+    /* Apply call setting, only if status code is 1xx or 2xx. */
+    if (opt && code < 300) {
+	/* Check if it has not been set previously or it is different to
+	 * the previous one.
+	 */
+	if (!call->opt_inited) {
+	    call->opt_inited = PJ_TRUE;
+	    apply_call_setting(call, opt, NULL);
+	} else if (pj_memcmp(opt, &call->opt, sizeof(*opt)) != 0) {
+	    /* Warn application about call setting inconsistency */
+	    PJ_LOG(2,(THIS_FILE, "The call setting changes is ignored."));
+	}
     }
 
     PJSUA_LOCK();
+
+    /* Ticket #1526: When the incoming call contains no SDP offer, the media
+     * channel may have not been initialized at this stage. The media channel
+     * will be initialized here (along with SDP local offer generation) when
+     * the following conditions are met:
+     * - no pending media channel init
+     * - local SDP has not been generated
+     * - call setting has just been set, or SDP offer needs to be sent, i.e:
+     *   answer code 183 or 2xx is issued
+     */
+    if (!call->med_ch_cb && 
+	(call->opt_inited || (code==183 && code/100==2)) &&
+	(!call->inv->neg ||
+	 pjmedia_sdp_neg_get_state(call->inv->neg) == 
+		PJMEDIA_SDP_NEG_STATE_NULL))
+    {
+	/* Mark call setting as initialized as it is just about to be used
+	 * for initializing the media channel.
+	 */
+	call->opt_inited = PJ_TRUE;
+
+	status = pjsua_media_channel_init(call->index, PJSIP_ROLE_UAC,
+					  call->secure_level,
+					  dlg->pool,
+					  NULL, NULL, PJ_TRUE,
+					  &on_answer_call_med_tp_complete);
+	if (status == PJ_SUCCESS) {
+	    status = on_answer_call_med_tp_complete(call->index, NULL);
+	    if (status != PJ_SUCCESS)
+		goto on_return;
+	} else if (status != PJ_EPENDING) {
+	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
+	    goto on_return;
+	}
+    }
+
     /* If media transport creation is not yet completed, we will answer
      * the call in the media transport creation callback instead.
      */
@@ -1876,6 +2028,11 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 
         answer = PJ_POOL_ZALLOC_T(call->inv->pool_prov, struct call_answer);
         answer->code = code;
+	if (opt) {
+	    answer->opt = PJ_POOL_ZALLOC_T(call->inv->pool_prov,
+					   pjsua_call_setting);
+	    *answer->opt = *opt;
+	}
         if (reason) {
             pj_strdup(call->inv->pool_prov, answer->reason, reason);
         }
@@ -1891,6 +2048,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
         pj_log_pop_indent();
         return status;
     }
+
     PJSUA_UNLOCK();
 
     if (call->res_time.sec == 0)
