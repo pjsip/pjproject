@@ -2009,9 +2009,12 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
 					  &on_answer_call_med_tp_complete);
 	if (status == PJ_SUCCESS) {
 	    status = on_answer_call_med_tp_complete(call->index, NULL);
-	    if (status != PJ_SUCCESS)
+	    if (status != PJ_SUCCESS) {
+		PJSUA_UNLOCK();
 		goto on_return;
+	    }
 	} else if (status != PJ_EPENDING) {
+	    PJSUA_UNLOCK();
 	    pjsua_perror(THIS_FILE, "Error initializing media channel", status);
 	    goto on_return;
 	}
