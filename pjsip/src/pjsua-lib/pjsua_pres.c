@@ -1958,6 +1958,11 @@ static void mwi_evsub_on_state( pjsip_evsub *sub, pjsip_event *event)
 	      (int)acc->cfg.id.slen, acc->cfg.id.ptr, 
 	      pjsip_evsub_get_state_name(sub)));
 
+    /* Call callback */
+    if (pjsua_var.ua_cfg.cb.on_mwi_state) {
+	(*pjsua_var.ua_cfg.cb.on_mwi_state)(acc->index, sub);
+    }
+
     if (pjsip_evsub_get_state(sub) == PJSIP_EVSUB_STATE_TERMINATED) {
 	/* Clear subscription */
 	acc->mwi_dlg = NULL;

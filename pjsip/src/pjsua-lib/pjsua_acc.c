@@ -612,6 +612,12 @@ PJ_DEF(pj_status_t) pjsua_acc_del(pjsua_acc_id acc_id)
 	acc->regc = NULL;
     }
 
+    /* Terminate mwi subscription */
+    if (acc->cfg.mwi_enabled) {
+        acc->cfg.mwi_enabled = PJ_FALSE;
+        pjsua_start_mwi(acc_id, PJ_FALSE);
+    }
+
     /* Delete server presence subscription */
     pjsua_pres_delete_acc(acc_id, 0);
 

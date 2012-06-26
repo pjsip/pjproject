@@ -1170,6 +1170,16 @@ typedef struct pjsua_callback
 					    const pjsip_event *e);
 
     /**
+     * This callback is called when message waiting indication subscription
+     * state has changed. Application can then query the subscription state
+     * by calling #pjsip_evsub_get_state().
+     *
+     * @param acc_id	The account ID.
+     * @param evsub	The subscription instance.
+     */
+    void (*on_mwi_state)(pjsua_acc_id acc_id, pjsip_evsub *evsub);
+
+    /**
      * This callback is called when a NOTIFY request for message summary / 
      * message waiting indication is received.
      *
