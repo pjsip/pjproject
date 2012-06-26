@@ -9,6 +9,13 @@ import subprocess
 from inc_cfg import *
 import inc_const
 
+# flags that test is running in Unix
+G_INUNIX = False
+if sys.platform.lower().find("win32")!=-1 or sys.platform.lower().find("microsoft")!=-1:
+    G_INUNIX = False
+else:
+    G_INUNIX = True
+
 # SIPp executable path and param
 #SIPP_PATH = '"C:\\Program Files (x86)\\Sipp_3.2\\sipp.exe"'
 SIPP_PATH = 'sipp'
@@ -16,7 +23,9 @@ SIPP_PARAM = "-i 127.0.0.1 -p 6000 -m 1 127.0.0.1"
 SIPP_TIMEOUT = 60
 # On BG mode, SIPp doesn't require special terminal
 # On non-BG mode, on win, it needs env var: "TERMINFO=c:\cygwin\usr\share\terminfo"
-SIPP_BG_MODE = True
+# TODO: on unix with BG mode, waitpid() always fails, need to be fixed
+#SIPP_BG_MODE = True
+SIPP_BG_MODE = not G_INUNIX
 
 # Will be updated based on configuration file (a .py file whose the same name as SIPp XML file)
 PJSUA_INST_PARAM = []
@@ -33,6 +42,7 @@ if ARGS[1].endswith('.xml'):
     SIPP_SCEN_XML  = ARGS[1]
 else:
     exit(-99)
+
 
 # Init PJSUA test instance
 if os.access(SIPP_SCEN_XML[:-4]+".py", os.R_OK):
@@ -67,9 +77,9 @@ def start_sipp():
     fullcmd = os.path.normpath(SIPP_PATH) + " " + sipp_param
     print "Running SIPP: " + fullcmd
     if SIPP_BG_MODE:
-	sipp_proc = subprocess.Popen(fullcmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, universal_newlines=False)
+	sipp_proc = subprocess.Popen(fullcmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=G_INUNIX, universal_newlines=False)
     else:
-	sipp_proc = subprocess.Popen(fullcmd)
+	sipp_proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
 
     if not SIPP_BG_MODE:
 	if sipp_proc == None or sipp_proc.poll():
