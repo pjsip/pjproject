@@ -46,7 +46,7 @@
       [last_To:];tag=[call_number]
       [last_Call-ID:]
       [last_CSeq:]
-      Contact: <sip:192.168.0.15>
+      Contact: <sip:sipp@[local_ip]:[local_port]>
       Content-Type: application/sdp
 
       v=0
@@ -65,10 +65,6 @@
 
   <recv request="ACK" crlf="true">
   </recv>
-
-  <!-- Keep the call open for a while in case the 200 is lost to be     -->
-  <!-- able to retransmit it if we receive the BYE again.               -->
-  <pause milliseconds="4000"/>
 
 
   <!-- definition of the response time repartition table (unit is ms)   -->

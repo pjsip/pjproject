@@ -21,6 +21,8 @@ EVENT_INCOMING_CALL = "Press .* answer"
 
 # Call state is CALLING
 STATE_CALLING = "state.*CALLING"
+# Call state is EARLY
+STATE_EARLY = "state.*EARLY"
 # Call state is CONFIRMED
 STATE_CONFIRMED = "state.*CONFIRMED"
 # Call state is DISCONNECTED

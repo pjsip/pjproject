@@ -87,8 +87,6 @@
   <recv request="ACK" crlf="true">
   </recv>
 
-  <pause milliseconds="4000"/>
-
   <!-- definition of the response time repartition table (unit is ms)   -->
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>
 

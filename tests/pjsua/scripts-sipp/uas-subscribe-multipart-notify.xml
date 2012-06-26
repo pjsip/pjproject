@@ -55,7 +55,7 @@
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Event: presence
-      Subscription-State: active;expires=50
+      Subscription-State: active;expires=10
       Content-Type: multipart/mixed;boundary=abcd
 
       --abcd

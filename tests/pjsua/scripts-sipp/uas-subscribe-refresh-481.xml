@@ -16,13 +16,6 @@
 <!-- Free Software Foundation, Inc.,                                    -->
 <!-- 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA             -->
 <!--                                                                    -->
-<!-- Late NOTIFY scenario:                       			-->
-<!--  - UAC sends SUBSCRIBE, we reply with 200				-->
-<!--  - we send NOTIFY, expect 200					-->
-<!--  - UAC sends SUBSCRIBE, we ignore					-->
-<!--  - we send NOTIFY							-->
-<!-- See http://trac.pjsip.org/repos/ticket/911                         -->
-<!--                                                                    -->
 
 <scenario name="SUBSCRIBE tests">
   <!-- Establish subscription -->
@@ -60,7 +53,7 @@
       Contact: sip:sipp@[local_ip]:[local_port]
       Max-Forwards: 70
       Event: presence
-      Subscription-State: active;expires=50
+      Subscription-State: active;expires=10
       Content-Type: application/pidf+xml
 
       <?xml version="1.0" encoding="UTF-8"?>

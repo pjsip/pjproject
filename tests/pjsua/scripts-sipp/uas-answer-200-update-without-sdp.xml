@@ -72,10 +72,6 @@
 	]]>
   </send>
 
-  <!-- Keep the call open for a while in case the 200 is lost to be     -->
-  <!-- able to retransmit it if we receive the BYE again.               -->
-  <pause milliseconds="4000"/>
-
 
   <!-- definition of the response time repartition table (unit is ms)   -->
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>

@@ -36,10 +36,7 @@
         optional="true">
   </recv>
 
-  <recv response="180" optional="true">
-  </recv>
-
-  <recv response="200" rtd="true">
+  <recv response="420" rtd="true">
   </recv>
 
   <send>
@@ -59,27 +56,6 @@
     ]]>
   </send>
 
-  <pause/>
-
-  <send retrans="500">
-    <![CDATA[
-
-      BYE sip:[service]@[remote_ip]:[remote_port] SIP/2.0
-      Via: SIP/2.0/[transport] [local_ip]:[local_port];branch=z9hG4bK-1
-      From: sipp <sip:sipp@[local_ip]:[local_port]>;tag=[call_number]
-      To: sut <sip:[service]@[remote_ip]:[remote_port]>[peer_tag_param]
-      Call-ID: [call_id]
-      CSeq: 2 BYE
-      Contact: sip:sipp@[local_ip]:[local_port]
-      Max-Forwards: 70
-      Subject: Performance Test
-      Content-Length: 0
-
-    ]]>
-  </send>
-
-  <recv response="200" crlf="true">
-  </recv>
 
   <!-- definition of the response time repartition table (unit is ms)   -->
   <ResponseTimeRepartition value="10, 20, 30, 40, 50, 100, 150, 200"/>

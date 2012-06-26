@@ -124,9 +124,8 @@
     ]]>
   </send>
 
-  <!-- Keep the call open for a while in case the 200 is lost to be     -->
-  <!-- able to retransmit it if we receive the BYE again.               -->
-  <pause milliseconds="4000"/>
+  <recv response="200">
+  </recv>
 
 
   <!-- definition of the response time repartition table (unit is ms)   -->

@@ -7,19 +7,25 @@ import os
 import re
 import subprocess
 from inc_cfg import *
+import inc_const
 
 # SIPp executable path and param
 #SIPP_PATH = '"C:\\Program Files (x86)\\Sipp_3.2\\sipp.exe"'
 SIPP_PATH = 'sipp'
 SIPP_PARAM = "-i 127.0.0.1 -p 6000 -m 1 127.0.0.1"
-SIPP_TIMEOUT = 10
+SIPP_TIMEOUT = 60
 # On BG mode, SIPp doesn't require special terminal
 # On non-BG mode, on win, it needs env var: "TERMINFO=c:\cygwin\usr\share\terminfo"
 SIPP_BG_MODE = True
 
-PJSUA_DEF_PARAM = "--null-audio --max-calls=1 --no-tcp"
+# Will be updated based on configuration file (a .py file whose the same name as SIPp XML file)
 PJSUA_INST_PARAM = []
 PJSUA_EXPECTS = []
+
+# Default PJSUA param if configuration file (the corresponding .py file) is not available:
+# - no-tcp as SIPp is on UDP only
+# - id, username, and realm: to allow PJSUA sending re-INVITE with auth after receiving 401/407 response
+PJSUA_DEF_PARAM = "--null-audio --max-calls=1 --no-tcp --id=sip:a@localhost --username=a --realm=*"
 
 # Get SIPp scenario (XML file)
 SIPP_SCEN_XML  = ""
@@ -57,7 +63,7 @@ def start_sipp():
     if SIPP_BG_MODE:
 	sipp_param = sipp_param + " -bg"
     if SIPP_TIMEOUT:
-	sipp_param = sipp_param + " -timeout "+str(SIPP_TIMEOUT)+"s -timeout_error"
+	sipp_param = sipp_param + " -timeout "+str(SIPP_TIMEOUT)+"s -timeout_error" + " -deadcall_wait "+str(SIPP_TIMEOUT)+"s"
     fullcmd = os.path.normpath(SIPP_PATH) + " " + sipp_param
     print "Running SIPP: " + fullcmd
     if SIPP_BG_MODE:
@@ -131,15 +137,6 @@ def exec_pjsua_expects(t, sipp):
     for ua_idx in range(len(PJSUA_INST_PARAM)):
 	ua.append(t.process[ua_idx])
 
-    # If there is no PJSUA EXPECT scenario, must keep polling PJSUA stdout
-    # otherwise PJSUA process may stuck (due to stdout pipe buffer full?)
-    # Ideally the poll should be done contiunously until SIPp process is
-    # terminated.
-    if len(PJSUA_EXPECTS)==0:
-	import inc_const
-	ua[0].expect(inc_const.STDOUT_REFRESH, raise_on_error = False)
-	return ""
-
     ua_err_st = ""
     while len(PJSUA_EXPECTS):
 	expect = PJSUA_EXPECTS.pop(0)
@@ -158,6 +155,17 @@ def exec_pjsua_expects(t, sipp):
 	except:
 	    ua_err_st = "Unknown error"
 	    break;
+
+    # Need to poll here for handling these cases:
+    # - If there is no PJSUA EXPECT scenario, we must keep polling the stdout,
+    #   otherwise PJSUA process may stuck (due to stdout pipe buffer full?).
+    # - last PJSUA_EXPECT contains a pjsua command that needs time to
+    #   finish, for example "v" (re-INVITE), the SIPp XML scenario may expect
+    #   that re-INVITE transaction to be completed and without stdout poll
+    #   PJSUA process may stuck.
+    # Ideally the poll should be done contiunously until SIPp process is
+    # terminated.
+    ua[0].expect(inc_const.STDOUT_REFRESH, raise_on_error = False)
 
     return ua_err_st
 
