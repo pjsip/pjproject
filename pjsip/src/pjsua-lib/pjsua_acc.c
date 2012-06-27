@@ -1352,6 +1352,11 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
             pj_strdup(acc->pool, &acc->via_addr.host, &via->sent_by.host);
         acc->via_addr.port = via->sent_by.port;
         acc->via_tp = tp;
+        pjsip_regc_set_via_sent_by(acc->regc, &acc->via_addr, acc->via_tp);
+        if (acc->publish_sess != NULL) {
+                pjsip_publishc_set_via_sent_by(acc->publish_sess,
+                                               &acc->via_addr, acc->via_tp);
+        }
     }
 
     /* Only update if account is configured to auto-update */
