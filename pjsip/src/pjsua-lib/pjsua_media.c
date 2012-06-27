@@ -1107,6 +1107,12 @@ static pj_status_t call_media_init_cb(pjsua_call_media *call_med,
     if (status != PJ_SUCCESS)
         goto on_return;
 
+    pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_ENCODING,
+				    pjsua_var.media_cfg.tx_drop_pct);
+
+    pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_DECODING,
+				    pjsua_var.media_cfg.rx_drop_pct);
+
     if (call_med->tp_st == PJSUA_MED_TP_CREATING)
         pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_IDLE);
 
