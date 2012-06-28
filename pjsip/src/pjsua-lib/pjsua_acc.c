@@ -1341,16 +1341,33 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 
     tp = param->rdata->tp_info.transport;
 
-    /* If allow_via_rewrite is enabled, we save the Via "sent-by" address
+    /* Get the received and rport info */
+    via = param->rdata->msg_info.via;
+    if (via->rport_param < 1) {
+	/* Remote doesn't support rport */
+	rport = via->sent_by.port;
+	if (rport==0) {
+	    pjsip_transport_type_e tp_type;
+	    tp_type = (pjsip_transport_type_e) tp->key.type;
+	    rport = pjsip_transport_get_default_port_for_type(tp_type);
+	}
+    } else
+	rport = via->rport_param;
+
+    if (via->recvd_param.slen != 0)
+        via_addr = &via->recvd_param;
+    else
+        via_addr = &via->sent_by.host;
+
+    /* If allow_via_rewrite is enabled, we save the Via "received" address
      * from the response.
      */
     if (acc->cfg.allow_via_rewrite &&
         (acc->via_addr.host.slen == 0 || acc->via_tp != tp))
     {
-        via = param->rdata->msg_info.via;
-        if (pj_strcmp(&acc->via_addr.host, &via->sent_by.host))
-            pj_strdup(acc->pool, &acc->via_addr.host, &via->sent_by.host);
-        acc->via_addr.port = via->sent_by.port;
+        if (pj_strcmp(&acc->via_addr.host, via_addr))
+            pj_strdup(acc->pool, &acc->via_addr.host, via_addr);
+        acc->via_addr.port = rport;
         acc->via_tp = tp;
         pjsip_regc_set_via_sent_by(acc->regc, &acc->via_addr, acc->via_tp);
         if (acc->publish_sess != NULL) {
@@ -1388,24 +1405,6 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	return PJ_FALSE;
     }
 #endif
-
-    /* Get the received and rport info */
-    via = param->rdata->msg_info.via;
-    if (via->rport_param < 1) {
-	/* Remote doesn't support rport */
-	rport = via->sent_by.port;
-	if (rport==0) {
-	    pjsip_transport_type_e tp_type;
-	    tp_type = (pjsip_transport_type_e) tp->key.type;
-	    rport = pjsip_transport_get_default_port_for_type(tp_type);
-	}
-    } else
-	rport = via->rport_param;
-
-    if (via->recvd_param.slen != 0)
-	via_addr = &via->recvd_param;
-    else
-	via_addr = &via->sent_by.host;
 
     /* Compare received and rport with the URI in our registration */
     pool = pjsua_pool_create("tmp", 512, 512);
@@ -1553,8 +1552,14 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	update_regc_contact(acc);
 
 	/* Always update, by http://trac.pjsip.org/repos/ticket/864. */
+        /* Since the Via address will now be overwritten to the correct
+         * address by https://trac.pjsip.org/repos/ticket/1537, we do
+         * not need to update the transport address.
+         */
+        /*
 	pj_strdup_with_null(tp->pool, &tp->local_name.host, via_addr);
 	tp->local_name.port = rport;
+         */
 
     }
 
