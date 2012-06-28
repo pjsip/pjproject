@@ -87,10 +87,9 @@
       s=SIP Call
       c=IN IP4 [local_ip]
       t=0 0
-      m=audio 17294 RTP/AVP 18 101
+      m=audio 17294 RTP/AVP 0 101
       c=IN IP4 [local_ip]
-      a=rtpmap:18 G729/8000
-      a=fmtp:18 annexb=no
+      a=rtpmap:0 PCMU/8000
       a=rtpmap:101 telephone-event/8000
       a=fmtp:101 0-16
       a=ptime:20 
