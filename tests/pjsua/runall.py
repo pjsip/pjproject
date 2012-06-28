@@ -93,7 +93,7 @@ while len(sys.argv):
 	        if len(sys.argv) > 1:
 			resume_script=sys.argv[1]
 			sys.argv.pop(0)
-			sys.argv.pop(1)
+			sys.argv.pop(0)
 	        else:
 	                sys.argv.pop(0)
                         sys.stderr.write("Error: argument value required")
@@ -119,15 +119,18 @@ while len(sys.argv):
                 if len(sys.argv) > 1:
 			shell_cmd = sys.argv[1]
 			sys.argv.pop(0)
-			sys.argv.pop(1)
+			sys.argv.pop(0)
                 else:
                         sys.argv.pop(0)
                         sys.stderr.write("Error: argument value required")
                         sys.exit(1)
+	else:
+		# should be run.py options
+		break
 
 
 # Generate arguments for run.py
-argv_st = " ".join(sys.argv)
+argv_st = " ".join(sys.argv) + " "
 
 # Init vars
 fails_cnt = 0

@@ -11,6 +11,7 @@ PJSUA_EXPECTS = [
 		 # A calls B
 		 [0, "", "m"],
 		 [0, "", "sip:localhost:5062"],
+		 [0, const.STATE_CALLING, ""],
 		 [1, const.EVENT_INCOMING_CALL, "a"],
 		 [1, "", "200"],
 		 [0, const.STATE_CONFIRMED, ""],
@@ -24,6 +25,7 @@ PJSUA_EXPECTS = [
 		 # B calls C
 		 [1, "", "m"],
 		 [1, "", "sip:localhost:5064"],
+		 [1, const.STATE_CALLING, ""],
 		 [2, const.EVENT_INCOMING_CALL, "a"],
 		 [2, "", "200"],
 		 [1, const.STATE_CONFIRMED, ""],
@@ -46,6 +48,5 @@ PJSUA_EXPECTS = [
 		 [1, "call transfered successfully", ""],
 		 [0, const.MEDIA_ACTIVE, ""],
 		 [2, const.MEDIA_ACTIVE, ""],
-		 [1, "", " "],
-		 [1, "have 0 active call", ""],
+		 [1, const.STATE_DISCONNECTED, ""]
 		]

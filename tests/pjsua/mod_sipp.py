@@ -16,6 +16,9 @@ if sys.platform.lower().find("win32")!=-1 or sys.platform.lower().find("microsof
 else:
     G_INUNIX = True
 
+# /dev/null handle, for redirecting output when SIPP is not in background mode
+FDEVNULL = None
+
 # SIPp executable path and param
 #SIPP_PATH = '"C:\\Program Files (x86)\\Sipp_3.2\\sipp.exe"'
 SIPP_PATH = 'sipp'
@@ -24,8 +27,8 @@ SIPP_TIMEOUT = 60
 # On BG mode, SIPp doesn't require special terminal
 # On non-BG mode, on win, it needs env var: "TERMINFO=c:\cygwin\usr\share\terminfo"
 # TODO: on unix with BG mode, waitpid() always fails, need to be fixed
-#SIPP_BG_MODE = True
-SIPP_BG_MODE = not G_INUNIX
+SIPP_BG_MODE = False
+#SIPP_BG_MODE = not G_INUNIX
 
 # Will be updated based on configuration file (a .py file whose the same name as SIPp XML file)
 PJSUA_INST_PARAM = []
@@ -79,7 +82,10 @@ def start_sipp():
     if SIPP_BG_MODE:
 	sipp_proc = subprocess.Popen(fullcmd, bufsize=0, stdin=subprocess.PIPE, stdout=subprocess.PIPE, shell=G_INUNIX, universal_newlines=False)
     else:
-	sipp_proc = subprocess.Popen(fullcmd, shell=G_INUNIX)
+	# redirect output to NULL
+	global FDEVNULL
+	FDEVNULL  = open(os.devnull, 'w')
+	sipp_proc = subprocess.Popen(fullcmd, shell=G_INUNIX, stdout=FDEVNULL, stderr=FDEVNULL)
 
     if not SIPP_BG_MODE:
 	if sipp_proc == None or sipp_proc.poll():
@@ -114,7 +120,9 @@ def start_sipp():
 # Wait SIPp process to exit, returning SIPp exit code
 def wait_sipp(sipp):
     if not SIPP_BG_MODE:
+	global FDEVNULL
 	sipp.wait()
+	FDEVNULL.close()
 	return sipp.returncode
 
     else:
@@ -175,9 +183,27 @@ def exec_pjsua_expects(t, sipp):
     #   PJSUA process may stuck.
     # Ideally the poll should be done contiunously until SIPp process is
     # terminated.
-    ua[0].expect(inc_const.STDOUT_REFRESH, raise_on_error = False)
+    for ua_idx in range(len(ua)):
+	ua[ua_idx].expect(inc_const.STDOUT_REFRESH, raise_on_error = False)
 
     return ua_err_st
+
+
+def sipp_err_to_str(err_code):
+    if err_code == 0:
+	return "All calls were successful"
+    elif err_code == 1:
+	return "At least one call failed"
+    elif err_code == 97:
+	return "exit on internal command. Calls may have been processed"
+    elif err_code == 99:
+	return "Normal exit without calls processed"
+    elif err_code == -1:
+	return "Fatal error (timeout)"
+    elif err_code == -2:
+	return "Fatal error binding a socket"
+    else:
+	return "Unknown error"
 
 
 # Test body function
@@ -198,7 +224,8 @@ def TEST_FUNC(t):
 	raise TestError(ua_err_st)
 
     if sipp_ret_code:
-        raise TestError("SIPp returned error " + str(sipp_ret_code))
+	rc = ctypes.c_byte(sipp_ret_code).value
+        raise TestError("SIPp returned error " + str(rc) + ": " + sipp_err_to_str(rc))
 
 
 # Here where it all comes together

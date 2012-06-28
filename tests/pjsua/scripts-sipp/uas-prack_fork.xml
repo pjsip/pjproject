@@ -22,8 +22,9 @@
 <scenario name="Forked INVITE, one of them require PRACK">
   <recv request="INVITE" crlf="true">
    <action>
-    <ereg regexp="branch=([0-9a-zA-Z]*)"
-          search_in="msg"
+    <ereg regexp="branch=([^;]*)"
+          search_in="hdr"
+          header="Via"
           assign_to="3"/>
     <ereg regexp="CSeq: ([0-9a-zA-Z ]*)"
           search_in="msg"

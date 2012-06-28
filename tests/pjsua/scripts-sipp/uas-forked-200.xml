@@ -22,9 +22,9 @@
 <scenario name="Forked INVITE, one of them require PRACK">
   <recv request="INVITE" crlf="true">
    <action>
-    <ereg regexp="branch=([0-9a-zA-Z]*)"
+    <ereg regexp="branch=([^;]*)"
           search_in="hdr"
-	  header="Via"
+          header="Via"
           assign_to="1,2"/>
     <assign assign_to="1" variable="2"/>
     </action>

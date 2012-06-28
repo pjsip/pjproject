@@ -143,7 +143,7 @@ class Expect:
 				raise inc.TestError(self.name + ": Premature EOF")
 			# Print the line if echo is ON
 			if self.echo:
-				print self.name + ": " + line,
+				print self.name + ": " + line.rstrip()
 			# Trap assertion error
 			if self.ra.search(line) != None:
 				if raise_on_error:
