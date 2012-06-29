@@ -2052,9 +2052,9 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
 	    pjsip_evsub_set_mod_data(sub, pjsua_var.mod.id, NULL);
 
 	    /* Unsubscribe */
-	    status = pjsip_mwi_initiate(acc->mwi_sub, 0, &tdata);
+	    status = pjsip_mwi_initiate(sub, 0, &tdata);
 	    if (status == PJ_SUCCESS) {
-		status = pjsip_mwi_send_request(acc->mwi_sub, tdata);
+		status = pjsip_mwi_send_request(sub, tdata);
 	    }
 	}
 	return status;
