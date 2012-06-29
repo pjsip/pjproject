@@ -1,4 +1,24 @@
 # $Id$
+
+## Automatic test module for SIPp.
+##
+## This module will need a test driver for each SIPp scenario:
+## - For simple scenario, i.e: make/receive call (including auth), this
+##   test module can auto-generate a default test driver, i.e: make call
+##   or apply auto answer. Just name the SIPp scenario using "uas" or
+##   "uac" prefix accordingly.
+## - Custom test driver can be defined in a python script file containing
+##   a list of the PJSUA instances and another list for PJSUA expects/
+##   commands. The custom test driver file must use the same filename as
+##   the SIPp XML scenario. See samples of SIPp scenario + its driver
+##   in tests/pjsua/scripts-sipp/ folder for detail.
+##
+##   Here are defined macros that can be used in the custom driver:
+##   - $SIPP_PORT	    : SIPp binding port
+##   - $SIPP_URI	    : SIPp SIP URI
+##   - $PJSUA_PORT[N]	    : binding port of PJSUA instance #N
+##   - $PJSUA_URI[N]	    : SIP URI of PJSUA instance #N
+
 import ctypes
 import time
 import imp
@@ -22,7 +42,8 @@ FDEVNULL = None
 # SIPp executable path and param
 #SIPP_PATH = '"C:\\Program Files (x86)\\Sipp_3.2\\sipp.exe"'
 SIPP_PATH = 'sipp'
-SIPP_PARAM = "-i 127.0.0.1 -p 6000 -m 1 127.0.0.1"
+SIPP_PORT    = 6000
+SIPP_PARAM = "-m 1 -i 127.0.0.1 -p " + str(SIPP_PORT)
 SIPP_TIMEOUT = 60
 # On BG mode, SIPp doesn't require special terminal
 # On non-BG mode, on win, it needs env var: "TERMINFO=c:\cygwin\usr\share\terminfo"
@@ -30,11 +51,11 @@ SIPP_TIMEOUT = 60
 SIPP_BG_MODE = False
 #SIPP_BG_MODE = not G_INUNIX
 
-# Will be updated based on configuration file (a .py file whose the same name as SIPp XML file)
+# Will be updated based on the test driver file (a .py file whose the same name as SIPp XML file)
 PJSUA_INST_PARAM = []
 PJSUA_EXPECTS = []
 
-# Default PJSUA param if configuration file (the corresponding .py file) is not available:
+# Default PJSUA param if test driver is not available:
 # - no-tcp as SIPp is on UDP only
 # - id, username, and realm: to allow PJSUA sending re-INVITE with auth after receiving 401/407 response
 PJSUA_DEF_PARAM = "--null-audio --max-calls=1 --no-tcp --id=sip:a@localhost --username=a --realm=*"
@@ -47,23 +68,38 @@ else:
     exit(-99)
 
 
-# Init PJSUA test instance
+# Functions for resolving macros in the test driver
+def resolve_pjsua_port(mo):
+    return str(PJSUA_INST_PARAM[int(mo.group(1))].sip_port)
+
+def resolve_pjsua_uri(mo):
+    return PJSUA_INST_PARAM[int(mo.group(1))].uri[1:-1]
+
+def resolve_driver_macros(st):
+    st = re.sub("\$SIPP_PORT", str(SIPP_PORT), st)
+    st = re.sub("\$SIPP_URI", "sip:sipp@127.0.0.1:"+str(SIPP_PORT), st)
+    st = re.sub("\$PJSUA_PORT\[(\d+)\]", resolve_pjsua_port, st)
+    st = re.sub("\$PJSUA_URI\[(\d+)\]", resolve_pjsua_uri, st)
+    return st
+
+
+# Init test driver
 if os.access(SIPP_SCEN_XML[:-4]+".py", os.R_OK):
-    # Load from configuration file (the corresponding .py file), if any
+    # Load test driver file (the corresponding .py file), if any
     cfg_file = imp.load_source("cfg_file", SIPP_SCEN_XML[:-4]+".py")
     for ua_idx, ua_param in enumerate(cfg_file.PJSUA):
-	PJSUA_INST_PARAM.append(InstanceParam("pjsua"+str(ua_idx+1), ua_param, sip_port=5060+ua_idx*2))
+	ua_param = resolve_driver_macros(ua_param)
+	PJSUA_INST_PARAM.append(InstanceParam("pjsua"+str(ua_idx), ua_param))
     PJSUA_EXPECTS = cfg_file.PJSUA_EXPECTS
 else:
-    # Just use the SIPp XML scenario
+    # Generate default test driver
     if os.path.basename(SIPP_SCEN_XML)[0:3] == "uas":
 	# auto make call when SIPp is as UAS
-	ua_param = PJSUA_DEF_PARAM + " sip:127.0.0.1:6000"
+	ua_param = PJSUA_DEF_PARAM + " sip:127.0.0.1:" + str(SIPP_PORT)
     else:
 	# auto answer when SIPp is as UAC
 	ua_param = PJSUA_DEF_PARAM + " --auto-answer=200" 
-    PJSUA_INST_PARAM.append(InstanceParam("pjsua", ua_param, sip_port=5060))
-    
+    PJSUA_INST_PARAM.append(InstanceParam("pjsua", ua_param))
 
 
 # Start SIPp process, returning PID
@@ -71,12 +107,16 @@ def start_sipp():
     global SIPP_BG_MODE
     sipp_proc = None
 
-    # run SIPp
     sipp_param = SIPP_PARAM + " -sf " + SIPP_SCEN_XML
     if SIPP_BG_MODE:
 	sipp_param = sipp_param + " -bg"
     if SIPP_TIMEOUT:
 	sipp_param = sipp_param + " -timeout "+str(SIPP_TIMEOUT)+"s -timeout_error" + " -deadcall_wait "+str(SIPP_TIMEOUT)+"s"
+
+    # add target param
+    sipp_param = sipp_param + " 127.0.0.1:" + str(PJSUA_INST_PARAM[0].sip_port)
+
+    # run SIPp
     fullcmd = os.path.normpath(SIPP_PATH) + " " + sipp_param
     print "Running SIPP: " + fullcmd
     if SIPP_BG_MODE:
@@ -161,7 +201,7 @@ def exec_pjsua_expects(t, sipp):
 	expect = PJSUA_EXPECTS.pop(0)
 	ua_idx = expect[0]
 	expect_st = expect[1]
-	send_cmd = expect[2]
+	send_cmd = resolve_driver_macros(expect[2])
 	# Handle exception in pjsua flow, to avoid zombie SIPp process
 	try:
 	    if expect_st != "":
