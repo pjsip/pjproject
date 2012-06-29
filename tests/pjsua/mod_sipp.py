@@ -84,7 +84,8 @@ def start_sipp():
     else:
 	# redirect output to NULL
 	global FDEVNULL
-	FDEVNULL  = open(os.devnull, 'w')
+	#FDEVNULL  = open(os.devnull, 'w')
+	FDEVNULL  = open("logs/sipp_output.tmp", 'w')
 	sipp_proc = subprocess.Popen(fullcmd, shell=G_INUNIX, stdout=FDEVNULL, stderr=FDEVNULL)
 
     if not SIPP_BG_MODE:
