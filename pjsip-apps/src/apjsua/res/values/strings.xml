@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="command">Insert command here</string>
+    <string name="app_name">apjsua</string>
+
+</resources>
