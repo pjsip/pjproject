@@ -58,6 +58,14 @@ PJ_BEGIN_DECL
 #endif
 
 /**
+ * This setting controls whether Android OpenSL audio support should be
+ * included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_OPENSL
+#   define PJMEDIA_AUDIO_DEV_HAS_OPENSL		0
+#endif
+
+/**
  * This setting controls whether BlackBerry 10 (BB10) audio support
  * should be included.
  */
