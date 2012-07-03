@@ -1,0 +1,47 @@
+#!/bin/sh
+#
+
+F="configure-android"
+
+if test "$*" = "--help" -o "$*" = "-h"; then
+  echo "$F [OPTIONS]"
+  echo ""
+  echo "where:"
+  echo "  --simulator Optional parameter to specify that the compilation"
+  echo "              target is a simulator."
+  echo "  OPTIONS     Other options that will be passed directly to"
+  echo "              ./aconfigure script. Run ./aconfigure --help"
+  echo "              for more info."
+  exit 0
+fi
+
+if test "$1" = "--simulator"; then
+  shift
+  TARGET_HOST="i686-android-linux"
+  TC_DIR="x86"
+else
+  TARGET_HOST="arm-linux-androideabi"
+  TC_DIR=${TARGET_HOST}
+fi
+
+HOST_OS=$(uname -s)
+case $HOST_OS in
+  Darwin) BUILD_MACHINE="darwin-x86";;
+  Linux) BUILD_MACHINE="linux-x86";;
+  CYGWIN*|*_NT-*) BUILD_MACHINE="windows";;
+esac
+
+API_VERSION="14"
+
+ANDROID_TC="${ANDROID_NDK}/toolchains/${TC_DIR}-4.4.3/prebuilt/${BUILD_MACHINE}"
+
+export ANDROID_SYSROOT="${ANDROID_NDK}/platforms/android-${API_VERSION}/arch-arm"
+export CC="${ANDROID_TC}/bin/${TARGET_HOST}-gcc"
+export CXX="${ANDROID_TC}/bin/${TARGET_HOST}-g++"
+export LDFLAGS+=" -nostdlib -L${ANDROID_SYSROOT}/usr/lib/"
+export LIBS+=" -lc -lgcc"
+export CFLAGS+=" -I${ANDROID_SYSROOT}/usr/include"
+export CPPFLAGS="${CFLAGS}"
+export CXXFLAGS+=" -shared --sysroot=${ANDROID_SYSROOT}"
+
+./configure --host=${TARGET_HOST} --disable-video $*
