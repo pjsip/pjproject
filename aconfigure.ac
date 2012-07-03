@@ -157,6 +157,9 @@ dnl
 dnl Legacy macros
 dnl
 case $target in
+    *android*)
+	AC_DEFINE(PJ_ANDROID,1)
+	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	AC_DEFINE(PJ_WIN32,1)
 	AC_DEFINE(PJ_WIN32_WINNT,0x0400)
@@ -569,6 +572,10 @@ if test "$enable_sound" = "no"; then
   true;
 else
  case $target in
+  *android*)
+	LIBS="$LIBS -lOpenSLES"
+	AC_MSG_RESULT([Checking sound device backend... OpenSL ES])
+	;;
   arm-apple-darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit"
 	AC_MSG_RESULT([Checking sound device backend... AudioUnit])
@@ -634,6 +641,9 @@ AC_ARG_ENABLE(video,
 	      [])
 
 case $target in
+ *android*)
+	LIBS="$LIBS -llog -lgcc"
+	;;
  arm-apple-darwin*)
  	LIBS="$LIBS -framework UIKit"
 	;;

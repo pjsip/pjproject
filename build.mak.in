@@ -113,7 +113,7 @@ export APP_CFLAGS := -DPJ_AUTOCONF=1\
 	-I$(PJDIR)/pjnath/include\
 	-I$(PJDIR)/pjmedia/include\
 	-I$(PJDIR)/pjsip/include
-export APP_CXXFLAGS := $(APP_CFLAGS)
+export APP_CXXFLAGS := @CXXFLAGS@
 export APP_LDFLAGS := -L$(PJDIR)/pjlib/lib\
 	-L$(PJDIR)/pjlib-util/lib\
 	-L$(PJDIR)/pjnath/lib\

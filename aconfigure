@@ -4674,6 +4674,10 @@ else
 fi
 
 case $target in
+    *android*)
+	$as_echo "#define PJ_ANDROID 1" >>confdefs.h
+
+	;;
     *mingw* | *cygw* | *win32* | *w32* )
 	$as_echo "#define PJ_WIN32 1" >>confdefs.h
 
@@ -5652,6 +5656,11 @@ if test "$enable_sound" = "no"; then
   true;
 else
  case $target in
+  *android*)
+	LIBS="$LIBS -lOpenSLES"
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking sound device backend... OpenSL ES" >&5
+$as_echo "Checking sound device backend... OpenSL ES" >&6; }
+	;;
   arm-apple-darwin*)
 	LIBS="$LIBS -framework CoreAudio -framework CoreFoundation -framework AudioToolbox -framework CFNetwork -framework UIKit"
 	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking sound device backend... AudioUnit" >&5
@@ -5731,6 +5740,9 @@ fi
 
 
 case $target in
+ *android*)
+	LIBS="$LIBS -llog -lgcc"
+	;;
  arm-apple-darwin*)
  	LIBS="$LIBS -framework UIKit"
 	;;
