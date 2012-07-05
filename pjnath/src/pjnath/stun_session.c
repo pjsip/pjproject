@@ -500,10 +500,8 @@ PJ_DEF(pj_status_t) pj_stun_session_create( pj_stun_config *cfg,
     pj_memcpy(&sess->cb, cb, sizeof(*cb));
     sess->use_fingerprint = fingerprint;
     sess->log_flag = 0xFFFF;
-    
-    sess->srv_name.ptr = (char*) pj_pool_alloc(pool, 32);
-    sess->srv_name.slen = pj_ansi_snprintf(sess->srv_name.ptr, 32,
-					   "pjnath-%s", pj_get_version());
+
+    pj_stun_session_set_software_name(sess, &cfg->software_name);
 
     sess->rx_pool = pj_pool_create(sess->cfg->pf, name, 
 				   PJNATH_POOL_LEN_STUN_TDATA, 

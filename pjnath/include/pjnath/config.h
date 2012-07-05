@@ -487,6 +487,17 @@
 #   define PJNATH_POOL_INC_TURN_SOCK		    1000
 #endif
 
+/** Default STUN software name */
+#ifndef PJNATH_STUN_SOFTWARE_NAME
+#   define PJNATH_MAKE_SW_NAME(a,b,c,d)     "pjnath-" #a "." #b "." #c d
+#   define PJNATH_MAKE_SW_NAME2(a,b,c,d)    PJNATH_MAKE_SW_NAME(a,b,c,d)
+#   define PJNATH_STUN_SOFTWARE_NAME        PJNATH_MAKE_SW_NAME2( \
+						    PJ_VERSION_NUM_MAJOR, \
+						    PJ_VERSION_NUM_MINOR, \
+						    PJ_VERSION_NUM_REV, \
+						    PJ_VERSION_NUM_EXTRA)
+#endif
+
 /**
  * @}
  */
