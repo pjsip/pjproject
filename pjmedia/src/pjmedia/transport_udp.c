@@ -29,7 +29,7 @@
 
 
 /* Maximum size of incoming RTP packet */
-#define RTP_LEN	    PJMEDIA_MAX_MTU
+#define RTP_LEN	    PJMEDIA_MAX_MRU
 
 /* Maximum size of incoming RTCP packet */
 #define RTCP_LEN    600
@@ -42,7 +42,7 @@ static const pj_str_t ID_RTP_AVP  = { "RTP/AVP", 7 };
 /* Pending write buffer */
 typedef struct pending_write
 {
-    char		buffer[RTP_LEN];
+    char		buffer[PJMEDIA_MAX_MTU];
     pj_ioqueue_op_key_t	op_key;
 } pending_write;
 
@@ -752,7 +752,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     PJ_ASSERT_RETURN(udp->attached, PJ_EINVALIDOP);
 
     /* Check that the size is supported */
-    PJ_ASSERT_RETURN(size <= RTP_LEN, PJ_ETOOBIG);
+    PJ_ASSERT_RETURN(size <= PJMEDIA_MAX_MTU, PJ_ETOOBIG);
 
     /* Simulate packet lost on TX direction */
     if (udp->tx_drop_pct) {

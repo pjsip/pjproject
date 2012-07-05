@@ -68,6 +68,13 @@
 #   define PJMEDIA_VSTREAM_INC	1000
 #endif
 
+/* Due to network MTU limitation, a picture bitstream may be splitted into
+ * several chunks for RTP delivery. The chunk number may vary depend on the
+ * picture resolution and MTU. This constant specifies the minimum chunk
+ * number to be allocated to store a picture bitstream in decoding direction.
+ */
+#define MIN_CHUNKS_PER_FRM	30
+
 /* Video stream keep-alive feature is currently disabled. */
 #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA != 0
 #   undef PJMEDIA_STREAM_ENABLE_KA
@@ -1357,7 +1364,6 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     int frm_ptime, chunks_per_frm;
     pjmedia_video_format_detail *vfd_enc, *vfd_dec;
     char *p;
-    unsigned dec_mtu;
     pj_status_t status;
 
     if (!pool) {
@@ -1410,9 +1416,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
     if (info->codec_param->enc_mtu > PJMEDIA_MAX_MTU)
 	info->codec_param->enc_mtu = PJMEDIA_MAX_MTU;
 
-    /* MTU estimation for decoding direction */
-    dec_mtu = PJMEDIA_MAX_MTU;
-
+    /* Packet size estimation for decoding direction */
     vfd_enc = pjmedia_format_get_video_format_detail(
 					&info->codec_param->enc_fmt, PJ_TRUE);
     vfd_dec = pjmedia_format_get_video_format_detail(
@@ -1528,8 +1532,9 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     /* Init jitter buffer parameters: */
     frm_ptime	    = 1000 * vfd_enc->fps.denum / vfd_enc->fps.num;
-    chunks_per_frm  = stream->frame_size / dec_mtu;
-    if (chunks_per_frm == 0) chunks_per_frm = 1;
+    chunks_per_frm  = stream->frame_size / PJMEDIA_MAX_MRU;
+    if (chunks_per_frm < MIN_CHUNKS_PER_FRM)
+	chunks_per_frm = MIN_CHUNKS_PER_FRM;
 
     /* JB max count, default 500ms */
     if (info->jb_max >= frm_ptime)
@@ -1564,7 +1569,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_stream_create(
 
     /* Create jitter buffer */
     status = pjmedia_jbuf_create(pool, &stream->dec->port.info.name,
-                                 dec_mtu + PJMEDIA_STREAM_RESV_PAYLOAD_LEN,
+                                 PJMEDIA_MAX_MRU,
 				 1000 * vfd_enc->fps.denum / vfd_enc->fps.num,
 				 jb_max, &stream->jb);
     if (status != PJ_SUCCESS)

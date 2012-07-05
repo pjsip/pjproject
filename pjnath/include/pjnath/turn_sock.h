@@ -109,6 +109,13 @@ typedef struct pj_turn_sock_cb
 typedef struct pj_turn_sock_cfg
 {
     /**
+     * Packet buffer size.
+     *
+     * Default value is PJ_TURN_MAX_PKT_LEN.
+     */
+    unsigned max_pkt_size;
+
+    /**
      * QoS traffic type to be set on this transport. When application wants
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qos_param fields since this is more portable.

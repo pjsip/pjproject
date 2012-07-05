@@ -371,10 +371,18 @@
 
 
 /**
- * Max packet size to support.
+ * Max packet size for transmitting direction.
  */
 #ifndef PJMEDIA_MAX_MTU			
 #  define PJMEDIA_MAX_MTU			1500
+#endif
+
+
+/**
+ * Max packet size for receiving direction.
+ */
+#ifndef PJMEDIA_MAX_MRU			
+#  define PJMEDIA_MAX_MRU			2000
 #endif
 
 

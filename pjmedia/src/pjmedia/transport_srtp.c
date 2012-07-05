@@ -34,9 +34,11 @@
 
 #define THIS_FILE   "transport_srtp.c"
 
-/* Maximum size of packet */
-#define MAX_RTP_BUFFER_LEN	    1500
-#define MAX_RTCP_BUFFER_LEN	    1500
+/* Maximum size of outgoing packet */
+#define MAX_RTP_BUFFER_LEN	    PJMEDIA_MAX_MTU
+#define MAX_RTCP_BUFFER_LEN	    PJMEDIA_MAX_MTU
+
+/* Maximum SRTP crypto key length */
 #define MAX_KEY_LEN		    32
 
 /* Initial value of probation counter. When probation counter > 0, 
@@ -777,7 +779,7 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     if (srtp->bypass_srtp)
 	return pjmedia_transport_send_rtp(srtp->member_tp, pkt, size);
 
-    if (size > sizeof(srtp->rtp_tx_buffer))
+    if (size > sizeof(srtp->rtp_tx_buffer) - 10)
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtp_tx_buffer, pkt, size);
@@ -791,7 +793,8 @@ static pj_status_t transport_send_rtp( pjmedia_transport *tp,
     pj_lock_release(srtp->mutex);
 
     if (err == err_status_ok) {
-	status = pjmedia_transport_send_rtp(srtp->member_tp, srtp->rtp_tx_buffer, len);
+	status = pjmedia_transport_send_rtp(srtp->member_tp, 
+					    srtp->rtp_tx_buffer, len);
     } else {
 	status = PJMEDIA_ERRNO_FROM_LIBSRTP(err);
     }
@@ -822,7 +825,7 @@ static pj_status_t transport_send_rtcp2(pjmedia_transport *tp,
 	                                    pkt, size);
     }
 
-    if (size > sizeof(srtp->rtcp_tx_buffer))
+    if (size > sizeof(srtp->rtcp_tx_buffer) - 10)
 	return PJ_ETOOBIG;
 
     pj_memcpy(srtp->rtcp_tx_buffer, pkt, size);

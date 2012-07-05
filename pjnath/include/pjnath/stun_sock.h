@@ -218,7 +218,9 @@ typedef struct pj_stun_sock_info
 typedef struct pj_stun_sock_cfg
 {
     /**
-     * Packet buffer size. Default value is PJ_STUN_SOCK_PKT_LEN.
+     * Packet buffer size.
+     *
+     * Default value is PJ_STUN_SOCK_PKT_LEN.
      */
     unsigned max_pkt_size;
 

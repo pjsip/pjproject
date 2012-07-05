@@ -720,6 +720,10 @@ static pj_status_t create_ice_media_transport(
 		  sizeof(cfg->qos_params));
     }
 
+    /* Configure packet size for STUN and TURN sockets */
+    ice_cfg.stun.cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+    ice_cfg.turn.cfg.max_pkt_size = PJMEDIA_MAX_MRU;
+
     pj_bzero(&ice_cb, sizeof(pjmedia_ice_cb));
     ice_cb.on_ice_complete = &on_ice_complete;
     pj_ansi_snprintf(name, sizeof(name), "icetp%02d", call_med->idx);

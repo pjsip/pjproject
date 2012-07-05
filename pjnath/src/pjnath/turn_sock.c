@@ -97,6 +97,7 @@ static void timer_cb(pj_timer_heap_t *th, pj_timer_entry *e);
 PJ_DEF(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg)
 {
     pj_bzero(cfg, sizeof(*cfg));
+    cfg->max_pkt_size = PJ_TURN_MAX_PKT_LEN;
     cfg->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     cfg->qos_ignore_error = PJ_TRUE;
 }
@@ -474,7 +475,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 
     /* Kick start pending read operation */
     status = pj_activesock_start_read(asock, turn_sock->pool, 
-				      PJ_TURN_MAX_PKT_LEN, 0);
+				      turn_sock->setting.max_pkt_size, 0);
 
     /* Init send_key */
     pj_ioqueue_op_key_init(&turn_sock->send_key, sizeof(turn_sock->send_key));
