@@ -518,6 +518,9 @@ static void med_tp_timer_cb(void *user_data)
     pjsua_call *call = NULL;
     pjsip_dialog *dlg = NULL;
 
+    if (call_med->call == NULL)
+	return;
+
     acquire_call("med_tp_timer_cb", call_med->call->index, &call, &dlg);
 
     call_med->tp_ready = call_med->tp_result;
