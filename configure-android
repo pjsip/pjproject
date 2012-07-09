@@ -4,24 +4,45 @@
 F="configure-android"
 
 if test "$*" = "--help" -o "$*" = "-h"; then
-  echo "$F [OPTIONS]"
+  echo "$F [--use-ndk-cflags] [OPTIONS]"
   echo ""
   echo "where:"
-  echo "  --simulator Optional parameter to specify that the compilation"
-  echo "              target is a simulator."
+  echo "  --use-ndk-cflags"
+  echo "              Optional parameter to use the same compilation flags"
+  echo "              as the one used by ndk-build"
   echo "  OPTIONS     Other options that will be passed directly to"
   echo "              ./aconfigure script. Run ./aconfigure --help"
   echo "              for more info."
   exit 0
 fi
 
-if test "$1" = "--simulator"; then
+if test "x${ANDROID_NDK}" = "x"; then
+  echo "$F error: ANDROID_NDK must be specified"
+  exit 0
+fi
+
+#if test "$1" = "--simulator"; then
+if test "1" = "0"; then
   shift
   TARGET_HOST="i686-android-linux"
   TC_DIR="x86"
 else
   TARGET_HOST="arm-linux-androideabi"
   TC_DIR=${TARGET_HOST}
+fi
+
+if test "$1" = "--use-ndk-cflags"; then
+  shift
+  for i in `${ANDROID_NDK}/ndk-build --dry-run --directory=${ANDROID_NDK}/samples/hello-jni`; do
+    if test "$i" = "-c"; then break; fi
+    if test "x${NDK_CC}" != "x" -a "$i" != "-MF" -a "x`echo $i|grep '\.o\.d'`" = "x" -a "x`echo $i|grep 'include'`" = "x"; then
+      NDK_CFLAGS="${NDK_CFLAGS} $i"
+    fi
+    if test "x`echo $i | grep 'gcc'`" != "x"; then
+      NDK_CC=$i
+    fi
+  done
+  export CFLAGS+="${NDK_CFLAGS}"
 fi
 
 HOST_OS=$(uname -s)
@@ -31,17 +52,41 @@ case $HOST_OS in
   CYGWIN*|*_NT-*) BUILD_MACHINE="windows";;
 esac
 
-API_VERSION="14"
+if test "x$API_LEVEL" = "x"; then
+  API_LEVEL=`ls ${ANDROID_NDK}/platforms/ | sed 's/android-//' | sort -gr | head -1`
+  echo "$F: API_LEVEL not specified, using android-${API_LEVEL}"
+fi
 
 ANDROID_TC="${ANDROID_NDK}/toolchains/${TC_DIR}-4.4.3/prebuilt/${BUILD_MACHINE}"
+if test ! -d ${ANDROID_TC}; then
+  echo "$F error: unable to find directory ${ANDROID_TC} in Android NDK"
+  exit 1
+fi
 
-export ANDROID_SYSROOT="${ANDROID_NDK}/platforms/android-${API_VERSION}/arch-arm"
+export ANDROID_SYSROOT="${ANDROID_NDK}/platforms/android-${API_LEVEL}/arch-arm"
+if test ! -d ${ANDROID_SYSROOT}; then
+  echo "$F error: unable to find sysroot dir ${ANDROID_SYSROOT} in Android NDK"
+  exit 1
+fi
+
 export CC="${ANDROID_TC}/bin/${TARGET_HOST}-gcc"
 export CXX="${ANDROID_TC}/bin/${TARGET_HOST}-g++"
+
 export LDFLAGS+=" -nostdlib -L${ANDROID_SYSROOT}/usr/lib/"
 export LIBS+=" -lc -lgcc"
 export CFLAGS+=" -I${ANDROID_SYSROOT}/usr/include"
 export CPPFLAGS="${CFLAGS}"
 export CXXFLAGS+=" -shared --sysroot=${ANDROID_SYSROOT}"
+
+# Print settings
+if test "1" = "1"; then
+  echo "$F: calling ./configure with env vars:"
+  echo " CC = ${CC}"
+  echo " CXX = ${CXX}"
+  echo " CFLAGS = ${CFLAGS}"
+  echo " CXXFLAGS = ${CXXFLAGS}"
+  echo " LDFLAGS = ${LDFLAGS}"
+  echo " LIBS = ${LIBS}"
+fi
 
 ./configure --host=${TARGET_HOST} --disable-video $*
