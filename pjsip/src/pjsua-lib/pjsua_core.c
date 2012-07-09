@@ -2087,7 +2087,7 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
     }
 
     /* Set transport state callback */
-    if (pjsua_var.ua_cfg.cb.on_transport_state) {
+    {
 	pjsip_tp_state_callback tpcb;
 	pjsip_tpmgr *tpmgr;
 
