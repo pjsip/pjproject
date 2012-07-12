@@ -1145,6 +1145,8 @@ pj_ice_strans_get_valid_pair(const pj_ice_strans *ice_st,
  */
 PJ_DEF(pj_status_t) pj_ice_strans_stop_ice(pj_ice_strans *ice_st)
 {
+    PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
+
     if (ice_st->ice) {
 	pj_ice_sess_destroy(ice_st->ice);
 	ice_st->ice = NULL;
