@@ -2743,6 +2743,15 @@ typedef struct pjsua_acc_config
      */
     pj_str_t	    proxy[PJSUA_ACC_MAX_PROXIES];
 
+    /**
+     * If remote sends SDP answer containing more than one format or codec in
+     * the media line, send re-INVITE or UPDATE with just one codec to lock
+     * which codec to use.
+     *
+     * Default: 1 (Yes). Set to zero to disable.
+     */
+    unsigned	    lock_codec;
+
     /** 
      * Optional interval for registration, in seconds. If the value is zero, 
      * default interval will be used (PJSUA_REG_INTERVAL, 300 seconds).

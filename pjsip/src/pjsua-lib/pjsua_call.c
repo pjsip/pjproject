@@ -3060,6 +3060,10 @@ static pj_status_t lock_codec(pjsua_call *call)
     pj_bool_t has_mult_fmt = PJ_FALSE;
     pj_status_t status;
 
+    if (!pjsua_var.acc[call->acc_id].cfg.lock_codec) {
+	return PJ_SUCCESS;
+    }
+
     /* Stop lock codec timer, if it is active */
     if (call->lock_codec.reinv_timer.id) {
 	pjsip_endpt_cancel_timer(pjsua_var.endpt,
