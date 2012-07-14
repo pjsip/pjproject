@@ -503,6 +503,13 @@ static pj_status_t create_comp(pj_ice_strans *ice_st, unsigned comp_id)
 	add_update_turn(ice_st, comp);
     }
 
+    /* It's possible that we end up without any candidates */
+    if (comp->cand_cnt == 0) {
+	PJ_LOG(4,(ice_st->obj_name,
+		  "Error: no candidate is created due to settings"));
+	return PJ_EINVAL;
+    }
+
     return PJ_SUCCESS;
 }
 
@@ -1548,7 +1555,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 		    if (comp->default_cand > idx) {
 			--comp->default_cand;
 		    } else if (comp->default_cand == idx) {
-			comp->default_cand = !idx;
+			comp->default_cand = 0;
 		    }
 
 		    /* Remove srflx candidate */
@@ -1576,7 +1583,7 @@ static pj_bool_t stun_on_status(pj_stun_sock *stun_sock,
 	    /* May not have cand, e.g. when error during init */
 	    if (cand)
 		cand->status = status;
-	    if (!ice_st->cfg.stun.ignore_stun_error) {
+	    if (!ice_st->cfg.stun.ignore_stun_error || comp->cand_cnt==1) {
 		sess_fail(ice_st, PJ_ICE_STRANS_OP_INIT,
 			  "STUN binding request failed", status);
 	    } else {
