@@ -596,8 +596,11 @@ PJ_DEF(pj_status_t) pjsip_dlg_set_via_sent_by( pjsip_dialog *dlg,
 
     if (!via_addr)
         pj_bzero(&dlg->via_addr, sizeof(dlg->via_addr));
-    else
-        dlg->via_addr = *via_addr;
+    else {
+        if (pj_strcmp(&dlg->via_addr.host, &via_addr->host))
+            pj_strdup(dlg->pool, &dlg->via_addr.host, &via_addr->host);
+        dlg->via_addr.port = via_addr->port;
+    }
     dlg->via_tp = via_tp;
 
     return PJ_SUCCESS;

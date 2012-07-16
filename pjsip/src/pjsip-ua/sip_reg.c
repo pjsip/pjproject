@@ -818,8 +818,11 @@ PJ_DEF(pj_status_t) pjsip_regc_set_via_sent_by( pjsip_regc *regc,
 
     if (!via_addr)
         pj_bzero(&regc->via_addr, sizeof(regc->via_addr));
-    else
-        regc->via_addr = *via_addr;
+    else {
+        if (pj_strcmp(&regc->via_addr.host, &via_addr->host))
+            pj_strdup(regc->pool, &regc->via_addr.host, &via_addr->host);
+        regc->via_addr.port = via_addr->port;
+    }
     regc->via_tp = via_tp;
 
     return PJ_SUCCESS;
