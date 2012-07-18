@@ -159,7 +159,7 @@ static struct my_timer
  */
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
-    if (pj_strcmp2(&tsx->branch, TEST1_BRANCH_ID)==0) {
+    if (pj_stricmp2(&tsx->branch, TEST1_BRANCH_ID)==0) {
 	/*
 	 * Transaction with TEST1_BRANCH_ID should terminate with transaction
 	 * timeout status.
@@ -213,7 +213,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	    }
 	}
 
-    } else if (pj_strcmp2(&tsx->branch, TEST2_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST2_BRANCH_ID)==0) {
 	/*
 	 * Transaction with TEST2_BRANCH_ID should terminate with transport error.
 	 */
@@ -231,7 +231,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 		test_complete = 1;
 	}
 
-    } else if (pj_strcmp2(&tsx->branch, TEST3_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST3_BRANCH_ID)==0) {
 	/*
 	 * This test terminates the transaction while resolver is still
 	 * running. 
@@ -256,7 +256,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 	}
 
-    } else if (pj_strcmp2(&tsx->branch, TEST4_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST4_BRANCH_ID)==0) {
 	/* 
 	 * This test simulates transport failure after several 
 	 * retransmissions.
@@ -284,7 +284,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	}
 
 
-    } else if (pj_strcmp2(&tsx->branch, TEST5_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST5_BRANCH_ID)==0) {
 	/* 
 	 * This test simulates transport failure after several 
 	 * retransmissions.
@@ -312,7 +312,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	}
 
 
-    } else if (pj_strcmp2(&tsx->branch, TEST6_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST6_BRANCH_ID)==0) {
 	/* 
 	 * Successfull non-INVITE transaction.
 	 */
@@ -355,7 +355,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 	}
 
-    } else if (pj_strcmp2(&tsx->branch, TEST7_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST7_BRANCH_ID)==0) {
 	/* 
 	 * Successfull non-INVITE transaction.
 	 */
@@ -408,7 +408,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	}
 
 
-    } else if (pj_strcmp2(&tsx->branch, TEST8_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST8_BRANCH_ID)==0) {
 	/* 
 	 * Failed INVITE transaction.
 	 */
@@ -468,7 +468,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	}
 
 
-    } else if (pj_strcmp2(&tsx->branch, TEST9_BRANCH_ID)==0) {
+    } else if (pj_stricmp2(&tsx->branch, TEST9_BRANCH_ID)==0) {
 	/* 
 	 * Failed INVITE transaction with provisional response.
 	 */
@@ -583,7 +583,7 @@ static void terminate_tsx_callback( pj_timer_heap_t *timer_heap,
  */
 static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 {
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST1_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST1_BRANCH_ID) == 0) {
 	/*
 	 * The TEST1_BRANCH_ID test performs the verifications for transaction
 	 * retransmission mechanism. It will not answer the incoming request
@@ -651,7 +651,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_TRUE;
 
     } else
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST4_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST4_BRANCH_ID) == 0) {
 	/*
 	 * The TEST4_BRANCH_ID test simulates transport failure after several
 	 * retransmissions.
@@ -672,7 +672,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 
 
     } else
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST5_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST5_BRANCH_ID) == 0) {
 	/*
 	 * The TEST5_BRANCH_ID test simulates user terminating the transaction
 	 * after several retransmissions.
@@ -703,7 +703,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 	return PJ_TRUE;
 
     } else
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST6_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST6_BRANCH_ID) == 0) {
 	/*
 	 * The TEST6_BRANCH_ID test successfull non-INVITE transaction.
 	 */
@@ -728,7 +728,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 
 
     } else
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST7_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST7_BRANCH_ID) == 0) {
 	/*
 	 * The TEST7_BRANCH_ID test successfull non-INVITE transaction
 	 * with provisional response.
@@ -778,7 +778,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 
 
     } else
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST8_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST8_BRANCH_ID) == 0) {
 	/*
 	 * The TEST8_BRANCH_ID test failed INVITE transaction.
 	 */
@@ -841,7 +841,7 @@ static pj_bool_t msg_receiver_on_rx_request(pjsip_rx_data *rdata)
 
 
     } else
-    if (pj_strcmp2(&rdata->msg_info.via->branch_param, TEST9_BRANCH_ID) == 0) {
+    if (pj_stricmp2(&rdata->msg_info.via->branch_param, TEST9_BRANCH_ID) == 0) {
 	/*
 	 * The TEST9_BRANCH_ID test failed INVITE transaction with
 	 * provisional response.

@@ -302,9 +302,10 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 	struct dlg_set *dlg_set;
 
 	dlg_set = (struct dlg_set*)
-		  pj_hash_get( mod_ua.dlg_table, dlg->local.info->tag.ptr, 
-			       dlg->local.info->tag.slen,
-			       &dlg->local.tag_hval);
+		  pj_hash_get_lower( mod_ua.dlg_table,
+                                     dlg->local.info->tag.ptr, 
+			             dlg->local.info->tag.slen,
+			             &dlg->local.tag_hval);
 
 	if (dlg_set) {
 	    /* This is NOT the first dialog in the dialog set. 
@@ -326,9 +327,11 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 	    dlg->dlg_set = dlg_set;
 
 	    /* Register the dialog set in the hash table. */
-	    pj_hash_set_np(mod_ua.dlg_table, 
-			   dlg->local.info->tag.ptr, dlg->local.info->tag.slen,
-			   dlg->local.tag_hval, dlg_set->ht_entry, dlg_set);
+	    pj_hash_set_np_lower(mod_ua.dlg_table, 
+			         dlg->local.info->tag.ptr,
+                                 dlg->local.info->tag.slen,
+			         dlg->local.tag_hval, dlg_set->ht_entry,
+                                 dlg_set);
 	}
 
     } else {
@@ -341,9 +344,10 @@ PJ_DEF(pj_status_t) pjsip_ua_register_dlg( pjsip_user_agent *ua,
 
 	dlg->dlg_set = dlg_set;
 
-	pj_hash_set_np(mod_ua.dlg_table, 
-		       dlg->local.info->tag.ptr, dlg->local.info->tag.slen,
-		       dlg->local.tag_hval, dlg_set->ht_entry, dlg_set);
+	pj_hash_set_np_lower(mod_ua.dlg_table, 
+		             dlg->local.info->tag.ptr,
+                             dlg->local.info->tag.slen,
+		             dlg->local.tag_hval, dlg_set->ht_entry, dlg_set);
     }
 
     /* Unlock user agent. */
@@ -387,8 +391,9 @@ PJ_DEF(pj_status_t) pjsip_ua_unregister_dlg( pjsip_user_agent *ua,
 
     /* If dialog list is empty, remove the dialog set from the hash table. */
     if (pj_list_empty(&dlg_set->dlg_list)) {
-	pj_hash_set(NULL, mod_ua.dlg_table, dlg->local.info->tag.ptr,
-		    dlg->local.info->tag.slen, dlg->local.tag_hval, NULL);
+	pj_hash_set_lower(NULL, mod_ua.dlg_table, dlg->local.info->tag.ptr,
+		          dlg->local.info->tag.slen, dlg->local.tag_hval,
+                          NULL);
 
 	/* Return dlg_set to free nodes. */
 	pj_list_push_back(&mod_ua.free_dlgset_nodes, dlg_set);
@@ -449,8 +454,8 @@ PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
 
     /* Lookup the dialog set. */
     dlg_set = (struct dlg_set*)
-    	      pj_hash_get(mod_ua.dlg_table, local_tag->ptr, local_tag->slen,
-			  NULL);
+    	      pj_hash_get_lower(mod_ua.dlg_table, local_tag->ptr,
+                                local_tag->slen, NULL);
     if (dlg_set == NULL) {
 	/* Not found */
 	pj_mutex_unlock(mod_ua.mutex);
@@ -462,7 +467,7 @@ PJ_DEF(pjsip_dialog*) pjsip_ua_find_dialog(const pj_str_t *call_id,
      */
     dlg = dlg_set->dlg_list.next;
     while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {	
-	if (pj_strcmp(&dlg->remote.info->tag, remote_tag) == 0)
+	if (pj_stricmp(&dlg->remote.info->tag, remote_tag) == 0)
 	    break;
 	dlg = dlg->next;
     }
@@ -563,7 +568,8 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 
 	/* Lookup the dialog set. */
 	dlg_set = (struct dlg_set*)
-		  pj_hash_get(mod_ua.dlg_table, tag->ptr, tag->slen, NULL);
+		  pj_hash_get_lower(mod_ua.dlg_table, tag->ptr, tag->slen,
+                                    NULL);
 	return dlg_set;
     }
 }
@@ -624,7 +630,7 @@ retry_on_deadlock:
     dlg = dlg_set->dlg_list.next;
     while (dlg != (pjsip_dialog*)&dlg_set->dlg_list) {
 	
-	if (pj_strcmp(&dlg->remote.info->tag, from_tag) == 0)
+	if (pj_stricmp(&dlg->remote.info->tag, from_tag) == 0)
 	    break;
 
 	dlg = dlg->next;
@@ -761,10 +767,10 @@ retry_on_deadlock:
 
 	/* Get the dialog set. */
 	dlg_set = (struct dlg_set*)
-		  pj_hash_get(mod_ua.dlg_table, 
-			      rdata->msg_info.from->tag.ptr,
-			      rdata->msg_info.from->tag.slen,
-			      NULL);
+		  pj_hash_get_lower(mod_ua.dlg_table, 
+			            rdata->msg_info.from->tag.ptr,
+			            rdata->msg_info.from->tag.slen,
+			            NULL);
 
 	if (!dlg_set) {
 	    /* Unlock dialog hash table. */
@@ -812,7 +818,7 @@ retry_on_deadlock:
 		break;
 
 	    /* Otherwise find the one with matching To tag. */
-	    if (pj_strcmp(to_tag, &dlg->remote.info->tag) == 0)
+	    if (pj_stricmp(to_tag, &dlg->remote.info->tag) == 0)
 		break;
 
 	    dlg = dlg->next;

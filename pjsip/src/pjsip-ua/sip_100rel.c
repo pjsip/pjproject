@@ -273,7 +273,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
     /* Find UAC state for the specified call leg */
     uac_state = dd->uac_state_list;
     while (uac_state) {
-	if (pj_strcmp(&uac_state->tag, to_tag)==0)
+	if (pj_stricmp(&uac_state->tag, to_tag)==0)
 	    break;
 	uac_state = uac_state->next;
     }
@@ -320,7 +320,7 @@ PJ_DEF(pj_status_t) pjsip_100rel_create_prack( pjsip_inv_session *inv,
     /* If this response is a forked response from a different call-leg,
      * update the req URI (https://trac.pjsip.org/repos/ticket/1364)
      */
-    if (pj_strcmp(&uac_state->tag, &dd->inv->dlg->remote.info->tag)) {
+    if (pj_stricmp(&uac_state->tag, &dd->inv->dlg->remote.info->tag)) {
 	const pjsip_contact_hdr *mhdr;
 
 	mhdr = (const pjsip_contact_hdr*)

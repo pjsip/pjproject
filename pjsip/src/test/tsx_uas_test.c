@@ -352,8 +352,8 @@ static void schedule_terminate_tsx( pjsip_transaction *tsx,
  */
 static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 {
-    if (pj_strcmp2(&tsx->branch, TEST1_BRANCH_ID)==0 ||
-	pj_strcmp2(&tsx->branch, TEST2_BRANCH_ID)==0) 
+    if (pj_stricmp2(&tsx->branch, TEST1_BRANCH_ID)==0 ||
+	pj_stricmp2(&tsx->branch, TEST2_BRANCH_ID)==0) 
     {
 	/*
 	 * TEST1_BRANCH_ID tests that non-INVITE transaction transmits final
@@ -362,7 +362,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	 *
 	 * TEST2_BRANCH_ID does similar test for non-2xx final response.
 	 */
-	int status_code = (pj_strcmp2(&tsx->branch, TEST1_BRANCH_ID)==0) ?
+	int status_code = (pj_stricmp2(&tsx->branch, TEST1_BRANCH_ID)==0) ?
 			  TEST1_STATUS_CODE : TEST2_STATUS_CODE;
 
 	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
@@ -392,7 +392,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
     }
     else
-    if (pj_strcmp2(&tsx->branch, TEST3_BRANCH_ID)==0) {
+    if (pj_stricmp2(&tsx->branch, TEST3_BRANCH_ID)==0) {
 	/*
 	 * TEST3_BRANCH_ID tests sending provisional response.
 	 */
@@ -455,7 +455,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	}
 
     } else
-    if (pj_strcmp2(&tsx->branch, TEST4_BRANCH_ID)==0) {
+    if (pj_stricmp2(&tsx->branch, TEST4_BRANCH_ID)==0) {
 	/*
 	 * TEST4_BRANCH_ID tests receiving retransmissions in TRYING state.
 	 */
@@ -488,7 +488,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 
     } else
-    if (pj_strcmp2(&tsx->branch, TEST5_BRANCH_ID)==0) {
+    if (pj_stricmp2(&tsx->branch, TEST5_BRANCH_ID)==0) {
 	/*
 	 * TEST5_BRANCH_ID tests receiving retransmissions in PROCEEDING state
 	 */
@@ -525,7 +525,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	}
 
     } else
-    if (pj_strcmp2(&tsx->branch, TEST6_BRANCH_ID)==0) {
+    if (pj_stricmp2(&tsx->branch, TEST6_BRANCH_ID)==0) {
 	/*
 	 * TEST6_BRANCH_ID tests receiving retransmissions in COMPLETED state
 	 */
@@ -560,8 +560,8 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 
     } else
-    if (pj_strcmp2(&tsx->branch, TEST7_BRANCH_ID)==0 ||
-	pj_strcmp2(&tsx->branch, TEST8_BRANCH_ID)==0) 
+    if (pj_stricmp2(&tsx->branch, TEST7_BRANCH_ID)==0 ||
+	pj_stricmp2(&tsx->branch, TEST8_BRANCH_ID)==0) 
     {
 	/*
 	 * TEST7_BRANCH_ID and TEST8_BRANCH_ID test retransmission of
@@ -569,7 +569,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 	 */
 	int code;
 
-	if (pj_strcmp2(&tsx->branch, TEST7_BRANCH_ID) == 0)
+	if (pj_stricmp2(&tsx->branch, TEST7_BRANCH_ID) == 0)
 	    code = TEST7_STATUS_CODE;
 	else
 	    code = TEST8_STATUS_CODE;
@@ -637,7 +637,7 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 
     } else
-    if (pj_strcmp2(&tsx->branch, TEST9_BRANCH_ID)==0)  {
+    if (pj_stricmp2(&tsx->branch, TEST9_BRANCH_ID)==0)  {
 	/*
 	 * TEST9_BRANCH_ID tests that retransmission of INVITE final response
 	 * must cease when ACK is received.
@@ -701,9 +701,9 @@ static void tsx_user_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
 
 
     } else
-    if (pj_strcmp2(&tsx->branch, TEST10_BRANCH_ID)==0 ||
-	pj_strcmp2(&tsx->branch, TEST11_BRANCH_ID)==0 ||
-	pj_strcmp2(&tsx->branch, TEST12_BRANCH_ID)==0)  
+    if (pj_stricmp2(&tsx->branch, TEST10_BRANCH_ID)==0 ||
+	pj_stricmp2(&tsx->branch, TEST11_BRANCH_ID)==0 ||
+	pj_stricmp2(&tsx->branch, TEST12_BRANCH_ID)==0)  
     {
 	if (tsx->state == PJSIP_TSX_STATE_TERMINATED) {
 	    
@@ -739,8 +739,8 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
     pj_str_t branch_param = rdata->msg_info.via->branch_param;
     pj_status_t status;
 
-    if (pj_strcmp2(&branch_param, TEST1_BRANCH_ID) == 0 ||
-	pj_strcmp2(&branch_param, TEST2_BRANCH_ID) == 0) 
+    if (pj_stricmp2(&branch_param, TEST1_BRANCH_ID) == 0 ||
+	pj_stricmp2(&branch_param, TEST2_BRANCH_ID) == 0) 
     {
 	/*
 	 * TEST1_BRANCH_ID tests that non-INVITE transaction transmits 2xx 
@@ -749,7 +749,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	 *
 	 * TEST2_BRANCH_ID performs similar test for non-2xx final response.
 	 */
-	int status_code = (pj_strcmp2(&branch_param, TEST1_BRANCH_ID) == 0) ?
+	int status_code = (pj_stricmp2(&branch_param, TEST1_BRANCH_ID) == 0) ?
 			  TEST1_STATUS_CODE : TEST2_STATUS_CODE;
 
 	if (msg->type == PJSIP_REQUEST_MSG) {
@@ -789,7 +789,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	}
 	return PJ_TRUE;
 
-    } else if (pj_strcmp2(&branch_param, TEST3_BRANCH_ID) == 0) {
+    } else if (pj_stricmp2(&branch_param, TEST3_BRANCH_ID) == 0) {
 
 	/* TEST3_BRANCH_ID tests provisional response. */
 
@@ -838,9 +838,9 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	}
 	return PJ_TRUE;
 
-    } else if (pj_strcmp2(&branch_param, TEST4_BRANCH_ID) == 0 ||
-	       pj_strcmp2(&branch_param, TEST5_BRANCH_ID) == 0 ||
-	       pj_strcmp2(&branch_param, TEST6_BRANCH_ID) == 0) 
+    } else if (pj_stricmp2(&branch_param, TEST4_BRANCH_ID) == 0 ||
+	       pj_stricmp2(&branch_param, TEST5_BRANCH_ID) == 0 ||
+	       pj_stricmp2(&branch_param, TEST6_BRANCH_ID) == 0) 
     {
 
 	/* TEST4_BRANCH_ID: absorbs retransmissions in TRYING state. */
@@ -863,12 +863,12 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	    pjsip_tsx_recv_msg(tsx, rdata);
 	    save_key(tsx);
 
-	    if (pj_strcmp2(&branch_param, TEST4_BRANCH_ID) == 0) {
+	    if (pj_stricmp2(&branch_param, TEST4_BRANCH_ID) == 0) {
 
-	    } else if (pj_strcmp2(&branch_param, TEST5_BRANCH_ID) == 0) {
+	    } else if (pj_stricmp2(&branch_param, TEST5_BRANCH_ID) == 0) {
 		send_response(rdata, tsx, TEST5_PROVISIONAL_CODE);
 
-	    } else if (pj_strcmp2(&branch_param, TEST6_BRANCH_ID) == 0) {
+	    } else if (pj_stricmp2(&branch_param, TEST6_BRANCH_ID) == 0) {
 		PJ_LOG(4,(THIS_FILE, "    sending provisional response"));
 		send_response(rdata, tsx, TEST6_PROVISIONAL_CODE);
 		PJ_LOG(4,(THIS_FILE, "    sending final response"));
@@ -882,11 +882,11 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
 	    ++recv_count;
 
-	    if (pj_strcmp2(&branch_param, TEST4_BRANCH_ID) == 0) {
+	    if (pj_stricmp2(&branch_param, TEST4_BRANCH_ID) == 0) {
 		PJ_LOG(3,(THIS_FILE, "    error: not expecting response!"));
 		test_complete = -132;
 
-	    } else if (pj_strcmp2(&branch_param, TEST5_BRANCH_ID) == 0) {
+	    } else if (pj_stricmp2(&branch_param, TEST5_BRANCH_ID) == 0) {
 
 		if (rdata->msg_info.msg->line.status.code!=TEST5_PROVISIONAL_CODE) {
 		    PJ_LOG(3,(THIS_FILE, "    error: incorrect status code!"));
@@ -898,7 +898,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 		    test_complete = -134;
 		}
 
-	    } else if (pj_strcmp2(&branch_param, TEST6_BRANCH_ID) == 0) {
+	    } else if (pj_stricmp2(&branch_param, TEST6_BRANCH_ID) == 0) {
 
 		int code = rdata->msg_info.msg->line.status.code;
 
@@ -927,8 +927,8 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	return PJ_TRUE;
 
 
-    } else if (pj_strcmp2(&branch_param, TEST7_BRANCH_ID) == 0 ||
-	       pj_strcmp2(&branch_param, TEST8_BRANCH_ID) == 0) 
+    } else if (pj_stricmp2(&branch_param, TEST7_BRANCH_ID) == 0 ||
+	       pj_stricmp2(&branch_param, TEST8_BRANCH_ID) == 0) 
     {
 
 	/*
@@ -950,7 +950,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	    pjsip_tsx_recv_msg(tsx, rdata);
 	    save_key(tsx);
 
-	    if (pj_strcmp2(&branch_param, TEST7_BRANCH_ID) == 0) {
+	    if (pj_stricmp2(&branch_param, TEST7_BRANCH_ID) == 0) {
 
 		send_response(rdata, tsx, TEST7_STATUS_CODE);
 
@@ -965,7 +965,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 
 	    ++recv_count;
 
-	    if (pj_strcmp2(&branch_param, TEST7_BRANCH_ID) == 0)
+	    if (pj_stricmp2(&branch_param, TEST7_BRANCH_ID) == 0)
 		code = TEST7_STATUS_CODE;
 	    else
 		code = TEST8_STATUS_CODE;
@@ -1013,7 +1013,7 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	}
 	return PJ_TRUE;
 
-    } else if (pj_strcmp2(&branch_param, TEST9_BRANCH_ID) == 0) {
+    } else if (pj_stricmp2(&branch_param, TEST9_BRANCH_ID) == 0) {
 
 	/*
 	 * TEST9_BRANCH_ID tests that the retransmission of INVITE final 
@@ -1118,15 +1118,15 @@ static pj_bool_t on_rx_message(pjsip_rx_data *rdata)
 	}
 	return PJ_TRUE;
 
-    } else if (pj_strcmp2(&branch_param, TEST10_BRANCH_ID) == 0 ||
-	       pj_strcmp2(&branch_param, TEST11_BRANCH_ID) == 0 ||
-	       pj_strcmp2(&branch_param, TEST12_BRANCH_ID) == 0) 
+    } else if (pj_stricmp2(&branch_param, TEST10_BRANCH_ID) == 0 ||
+	       pj_stricmp2(&branch_param, TEST11_BRANCH_ID) == 0 ||
+	       pj_stricmp2(&branch_param, TEST12_BRANCH_ID) == 0) 
     {
 	int test_num, code1, code2;
 
-	if (pj_strcmp2(&branch_param, TEST10_BRANCH_ID) == 0)
+	if (pj_stricmp2(&branch_param, TEST10_BRANCH_ID) == 0)
 	    test_num=10, code1 = 100, code2 = 0;
-	else if (pj_strcmp2(&branch_param, TEST11_BRANCH_ID) == 0)
+	else if (pj_stricmp2(&branch_param, TEST11_BRANCH_ID) == 0)
 	    test_num=11, code1 = 100, code2 = 200;
 	else
 	    test_num=12, code1 = 200, code2 = 0;

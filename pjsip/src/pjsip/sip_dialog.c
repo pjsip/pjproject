@@ -206,8 +206,8 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uac( pjsip_user_agent *ua,
     pj_create_unique_string(dlg->pool, &dlg->local.info->tag);
 
     /* Calculate hash value of local tag. */
-    dlg->local.tag_hval = pj_hash_calc(0, dlg->local.info->tag.ptr,
-				       dlg->local.info->tag.slen);
+    dlg->local.tag_hval = pj_hash_calc_tolower(0, NULL,
+                                               &dlg->local.info->tag);
 
     /* Randomize local CSeq. */
     dlg->local.first_cseq = pj_rand() & 0x7FFF;
@@ -374,8 +374,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     pj_strdup(dlg->pool, &dlg->local.info_str, &tmp);
 
     /* Calculate hash value of local tag. */
-    dlg->local.tag_hval = pj_hash_calc(0, dlg->local.info->tag.ptr,
-				       dlg->local.info->tag.slen);
+    dlg->local.tag_hval = pj_hash_calc_tolower(0, NULL, &dlg->local.info->tag);
 
 
     /* Randomize local cseq */
@@ -522,8 +521,7 @@ PJ_DEF(pj_status_t) pjsip_dlg_create_uas(   pjsip_user_agent *ua,
     ++dlg->tsx_count;
 
     /* Calculate hash value of remote tag. */
-    dlg->remote.tag_hval = pj_hash_calc(0, dlg->remote.info->tag.ptr, 
-					dlg->remote.info->tag.slen);
+    dlg->remote.tag_hval = pj_hash_calc_tolower(0, NULL, &dlg->remote.info->tag);
 
     /* Update remote capabilities info */
     pjsip_dlg_update_remote_cap(dlg, rdata->msg_info.msg, PJ_TRUE);
@@ -1817,7 +1815,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 res_code > 100 &&
 	 res_code/100 <= 2 &&
 	 pjsip_method_creates_dialog(&rdata->msg_info.cseq->method) &&
-	 pj_strcmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag)))
+	 pj_stricmp(&dlg->remote.info->tag, &rdata->msg_info.to->tag)))
     {
 	pjsip_contact_hdr *contact;
 
@@ -1826,7 +1824,7 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	 * with To-tag or forking, apply strict update.
 	 */
 	pjsip_dlg_update_remote_cap(dlg, rdata->msg_info.msg,
-				    pj_strcmp(&dlg->remote.info->tag,
+				    pj_stricmp(&dlg->remote.info->tag,
 					      &rdata->msg_info.to->tag));
 
 	/* Update To tag. */

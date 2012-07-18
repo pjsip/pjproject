@@ -1745,7 +1745,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 	if (tsx->role == PJSIP_ROLE_UAC &&
 	    rdata->msg_info.msg->line.status.code/100 == 2 &&
 	    tsx_inv_data->done_early &&
-	    pj_strcmp(&tsx_inv_data->done_tag, &res_tag))
+	    pj_stricmp(&tsx_inv_data->done_tag, &res_tag))
 	{
 	    const pjmedia_sdp_session *reoffer_sdp = NULL;
 
