@@ -906,9 +906,10 @@ typedef struct pjsua_callback
      *	  callback.
      *  - it may delay the processing of the request, for example to request
      *    user permission whether to accept or reject the request. In this 
-     *	  case, the application MUST set the \a code argument to 202, and 
-     *	  later calls #pjsua_pres_notify() to accept or reject the 
-     *	  subscription request.
+     *	  case, the application MUST set the \a code argument to 202, then
+     *    IMMEDIATELY calls #pjsua_pres_notify() with state
+     *    PJSIP_EVSUB_STATE_PENDING and later calls #pjsua_pres_notify()
+     *    again to accept or reject the subscription request.
      *
      * Any \a code other than 200 and 202 will be treated as 200.
      *
