@@ -275,6 +275,37 @@ typedef pj_status_t pjsip_auth_lookup_cred( pj_pool_t *pool,
 					    const pj_str_t *acc_name,
 					    pjsip_cred_info *cred_info );
 
+
+/**
+ * This structure describes input param for credential lookup.
+ */
+typedef struct pjsip_auth_lookup_cred_param
+{
+    pj_str_t realm;	    /**< Realm to find the account.		*/
+    pj_str_t acc_name;	    /**< Account name to look for.		*/
+    pjsip_rx_data *rdata;   /**< Incoming request to be authenticated.	*/
+
+} pjsip_auth_lookup_cred_param;
+
+
+/**
+ * Type of function to lookup credential for the specified name.
+ *
+ * @param pool		Pool to initialize the credential info.
+ * @param param		The input param for credential lookup.
+ * @param cred_info	The structure to put the credential when it's found.
+ *
+ * @return		The function MUST return PJ_SUCCESS when it found
+ *			a correct credential for the specified account and
+ *			realm. Otherwise it may return PJSIP_EAUTHACCNOTFOUND
+ *			or PJSIP_EAUTHACCDISABLED.
+ */
+typedef pj_status_t pjsip_auth_lookup_cred2(
+				pj_pool_t *pool,
+				const pjsip_auth_lookup_cred_param *param,
+				pjsip_cred_info *cred_info );
+
+
 /** Flag to specify that server is a proxy. */
 #define PJSIP_AUTH_SRV_IS_PROXY	    1
 
@@ -286,7 +317,8 @@ typedef struct pjsip_auth_srv
     pj_str_t		     realm;	/**< Realm to serve.		    */
     pj_bool_t		     is_proxy;	/**< Will issue 407 instead of 401  */
     pjsip_auth_lookup_cred  *lookup;	/**< Lookup function.		    */
-
+    pjsip_auth_lookup_cred2 *lookup2;	/**< Lookup function with additional
+					     info in its input param.	    */
 } pjsip_auth_srv;
 
 
@@ -432,6 +464,49 @@ PJ_DECL(pj_status_t) pjsip_auth_srv_init( pj_pool_t *pool,
 					  pjsip_auth_lookup_cred *lookup,
 					  unsigned options );
 
+
+/**
+ * This structure describes initialization settings of server authorization
+ * session.
+ */
+typedef struct pjsip_auth_srv_init_param
+{
+    /**
+     * Realm to be served by the server.
+     */
+    const pj_str_t		*realm;
+
+    /**
+     * Account lookup function.
+     */
+    pjsip_auth_lookup_cred2	*lookup2;
+
+    /**
+     * Options, bitmask of:
+     * - PJSIP_AUTH_SRV_IS_PROXY: to specify that the server will authorize
+     *   clients as a proxy server (instead of as UAS), which means that
+     *   Proxy-Authenticate will be used instead of WWW-Authenticate.
+     */
+    unsigned			 options;
+
+} pjsip_auth_srv_init_param;
+
+
+/**
+ * Initialize server authorization session data structure to serve the 
+ * specified realm and to use lookup_func function to look for the credential
+ * info. 
+ *
+ * @param pool		Pool used to initialize the authentication server.
+ * @param auth_srv	The authentication server structure.
+ * @param param		The initialization param.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_auth_srv_init2(
+				    pj_pool_t *pool,
+				    pjsip_auth_srv *auth_srv,
+				    const pjsip_auth_srv_init_param *param);
 
 /**
  * Request the authorization server framework to verify the authorization 

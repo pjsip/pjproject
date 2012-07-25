@@ -40,9 +40,30 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_init(  pj_pool_t *pool,
 {
     PJ_ASSERT_RETURN(pool && auth_srv && realm && lookup, PJ_EINVAL);
 
+    pj_bzero(auth_srv, sizeof(*auth_srv));
     pj_strdup( pool, &auth_srv->realm, realm);
     auth_srv->lookup = lookup;
     auth_srv->is_proxy = (options & PJSIP_AUTH_SRV_IS_PROXY);
+
+    return PJ_SUCCESS;
+}
+
+/*
+ * Initialize server authorization session data structure to serve the 
+ * specified realm and to use lookup_func function to look for the credential 
+ * info. 
+ */
+PJ_DEF(pj_status_t) pjsip_auth_srv_init2(
+				    pj_pool_t *pool,
+				    pjsip_auth_srv *auth_srv,
+				    const pjsip_auth_srv_init_param *param)
+{
+    PJ_ASSERT_RETURN(pool && auth_srv && param, PJ_EINVAL);
+
+    pj_bzero(auth_srv, sizeof(*auth_srv));
+    pj_strdup( pool, &auth_srv->realm, param->realm);
+    auth_srv->lookup2 = param->lookup2;
+    auth_srv->is_proxy = (param->options & PJSIP_AUTH_SRV_IS_PROXY);
 
     return PJ_SUCCESS;
 }
@@ -148,11 +169,25 @@ PJ_DEF(pj_status_t) pjsip_auth_srv_verify( pjsip_auth_srv *auth_srv,
     }
 
     /* Find the credential information for the account. */
-    status = (*auth_srv->lookup)(rdata->tp_info.pool, &auth_srv->realm,
-				 &acc_name, &cred_info);
-    if (status != PJ_SUCCESS) {
-	*status_code = PJSIP_SC_FORBIDDEN;
-	return status;
+    if (auth_srv->lookup2) {
+	pjsip_auth_lookup_cred_param param;
+
+	pj_bzero(&param, sizeof(param));
+	param.realm = auth_srv->realm;
+	param.acc_name = acc_name;
+	param.rdata = rdata;
+	status = (*auth_srv->lookup2)(rdata->tp_info.pool, &param, &cred_info);
+	if (status != PJ_SUCCESS) {
+	    *status_code = PJSIP_SC_FORBIDDEN;
+	    return status;
+	}
+    } else {
+	status = (*auth_srv->lookup)(rdata->tp_info.pool, &auth_srv->realm,
+				     &acc_name, &cred_info);
+	if (status != PJ_SUCCESS) {
+	    *status_code = PJSIP_SC_FORBIDDEN;
+	    return status;
+	}
     }
 
     /* Authenticate with the specified credential. */
