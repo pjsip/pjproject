@@ -34,6 +34,8 @@
 
 #include <SLES/OpenSLES.h>
 #include <SLES/OpenSLES_Android.h>
+#include <sys/system_properties.h>
+#include <android/api-level.h>
 
 #define THIS_FILE	"opensl_dev.c"
 #define DRIVER_NAME	"OpenSL"
@@ -69,6 +71,9 @@ struct opensl_aud_stream
     pjmedia_aud_rec_cb  rec_cb;
     pjmedia_aud_play_cb play_cb;
 
+    pj_timestamp	play_timestamp;
+    pj_timestamp	rec_timestamp;
+    
     pj_bool_t		rec_thread_initialized;
     pj_thread_desc	rec_thread_desc;
     pj_thread_t        *rec_thread;
@@ -80,6 +85,7 @@ struct opensl_aud_stream
     /* Player */
     SLObjectItf         playerObj;
     SLPlayItf           playerPlay;
+    SLVolumeItf         playerVol;
     unsigned            playerBufferSize;
     char               *playerBuffer[NUM_BUFFERS];
     int                 playerBufIdx;
@@ -173,11 +179,15 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         frame.buf = buf = stream->playerBuffer[stream->playerBufIdx++];
         frame.size = stream->playerBufferSize;
+        frame.timestamp.u64 = stream->play_timestamp.u64;
         frame.bit_info = 0;
         
         status = (*stream->play_cb)(stream->user_data, &frame);
         if (status != PJ_SUCCESS || frame.type != PJMEDIA_FRAME_TYPE_AUDIO)
             pj_bzero(buf, stream->playerBufferSize);
+        
+        stream->play_timestamp.u64 += stream->param.samples_per_frame /
+                                      stream->param.channel_count;
         
         result = (*bq)->Enqueue(bq, buf, stream->playerBufferSize);
         if (result != SL_RESULT_SUCCESS) {
@@ -215,10 +225,13 @@ void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         frame.buf = buf = stream->recordBuffer[stream->recordBufIdx++];
         frame.size = stream->recordBufferSize;
-        frame.timestamp.u64 = 0;
+        frame.timestamp.u64 = stream->rec_timestamp.u64;
         frame.bit_info = 0;
         
         status = (*stream->rec_cb)(stream->user_data, &frame);
+        
+        stream->rec_timestamp.u64 += stream->param.samples_per_frame /
+                                     stream->param.channel_count;
         
         /* And now enqueue next buffer */
         result = (*bq)->Enqueue(bq, buf, stream->recordBufferSize);
@@ -378,9 +391,8 @@ static pj_status_t opensl_get_dev_info(pjmedia_aud_dev_factory *f,
     pj_bzero(info, sizeof(*info));
     
     pj_ansi_strcpy(info->name, "OpenSL ES Audio");
-    info->default_samples_per_sec = 16000;
-    info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING |
-                 PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    info->default_samples_per_sec = 8000;
+    info->caps = PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
     info->input_count = 1;
     info->output_count = 1;
     
@@ -421,7 +433,6 @@ static pj_status_t opensl_default_param(pjmedia_aud_dev_factory *f,
     param->channel_count = 1;
     param->samples_per_frame = adi.default_samples_per_sec * 20 / 1000;
     param->bits_per_sample = 16;
-    param->flags = adi.caps;
     param->input_latency_ms = PJMEDIA_SND_DEFAULT_REC_LATENCY;
     param->output_latency_ms = PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
     
@@ -485,35 +496,37 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                               pa->outputMixObject};
         SLDataSink audioSnk = {&loc_outmix, NULL};
         /* Audio interface */
-        const SLInterfaceID ids[2] = {SL_IID_BUFFERQUEUE,
-                                      SL_IID_VOLUME/*,
-                                      SL_IID_ANDROIDCONFIGURATION*/};
-        const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+        const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE,
+                                      SL_IID_VOLUME,
+                                      SL_IID_ANDROIDCONFIGURATION};
+        const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE,
+                                  SL_BOOLEAN_FALSE};
+        SLAndroidConfigurationItf playerConfig;
+        SLint32 streamType = SL_ANDROID_STREAM_VOICE;
         
         /* Create audio player */
         result = (*pa->engineEngine)->CreateAudioPlayer(pa->engineEngine,
                                                         &stream->playerObj,
                                                         &audioSrc, &audioSnk,
-                                                        2, ids, req);
+                                                        3, ids, req);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Cannot create audio player: %d", result));
             goto on_error;
         }
 
-        /*
-        SLAndroidConfigurationItf playerConfig;
-        SLint32 streamType = SL_ANDROID_STREAM_VOICE;
+        /* Set Android configuration */
         result = (*stream->playerObj)->GetInterface(stream->playerObj,
                                                     SL_IID_ANDROIDCONFIGURATION,
                                                     &playerConfig);
-        if (result != SL_RESULT_SUCCESS) {
-            PJ_LOG(4, (THIS_FILE, "Cannot get android configuration iface"));
+        if (result == SL_RESULT_SUCCESS && playerConfig) {
+            result = (*playerConfig)->SetConfiguration(
+                         playerConfig, SL_ANDROID_KEY_STREAM_TYPE,
+                         &streamType, sizeof(SLint32));
         }
-        result = (*playerConfig)->SetConfiguration(playerConfig,
-                                                   SL_ANDROID_KEY_STREAM_TYPE,
-                                                   &streamType,
-                                                   sizeof(SLint32));
-        */
+        if (result != SL_RESULT_SUCCESS) {
+            PJ_LOG(4, (THIS_FILE, "Warning: Unable to set android "
+                                  "player configuration"));
+        }
         
         /* Realize the player */
         result = (*stream->playerObj)->Realize(stream->playerObj,
@@ -540,6 +553,11 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(3, (THIS_FILE, "Cannot get buffer queue interface"));
             goto on_error;
         }
+        
+        /* Get the volume interface */
+        result = (*stream->playerObj)->GetInterface(stream->playerObj,
+                                                    SL_IID_VOLUME,
+                                                    &stream->playerVol);
         
         /* Register callback on the buffer queue */
         result = (*stream->playerBufQ)->RegisterCallback(stream->playerBufQ,
@@ -568,8 +586,10 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         /* Audio sink */
         SLDataSink audioSnk = {&loc_bq, &format_pcm};
         /* Audio interface */
-        const SLInterfaceID ids[1] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE};
-        const SLboolean req[1] = {SL_BOOLEAN_TRUE};
+        const SLInterfaceID ids[2] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                                      SL_IID_ANDROIDCONFIGURATION};
+        const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE};
+        SLAndroidConfigurationItf recorderConfig;
         
         /* Create audio recorder
          * (requires the RECORD_AUDIO permission)
@@ -577,19 +597,19 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         result = (*pa->engineEngine)->CreateAudioRecorder(pa->engineEngine,
                                                           &stream->recordObj,
                                                           &audioSrc, &audioSnk,
-                                                          1, ids, req);
+                                                          2, ids, req);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Cannot create recorder: %d", result));
             goto on_error;
         }
 
-        /*
-        SLAndroidConfigurationItf recorderConfig;
+        /* Set Android configuration */
         result = (*stream->recordObj)->GetInterface(stream->recordObj,
                                                     SL_IID_ANDROIDCONFIGURATION,
                                                     &recorderConfig);
         if (result == SL_RESULT_SUCCESS) {
             SLint32 streamType = SL_ANDROID_RECORDING_PRESET_GENERIC;
+#if __ANDROID_API__ >= 14
             char sdk_version[PROP_VALUE_MAX];
             pj_str_t pj_sdk_version;
             int sdk_v;
@@ -597,18 +617,19 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             __system_property_get("ro.build.version.sdk", sdk_version);
             pj_sdk_version = pj_str(sdk_version);
             sdk_v = pj_strtoul(&pj_sdk_version);
-            if (sdk_v >= 10)
-                streamType = 0x7;
-        
-            PJ_LOG(4, (THIS_FILE, "We have a stream type %d SDK : %d",
+            if (sdk_v >= 14)
+                streamType = SL_ANDROID_RECORDING_PRESET_VOICE_COMMUNICATION;
+            PJ_LOG(4, (THIS_FILE, "Recording stream type %d, SDK : %d",
                                   streamType, sdk_v));
+#endif
             result = (*recorderConfig)->SetConfiguration(
                          recorderConfig, SL_ANDROID_KEY_RECORDING_PRESET,
                          &streamType, sizeof(SLint32));
-        } else {
-            PJ_LOG(4, (THIS_FILE, "Cannot get recorder config interface"));
         }
-         */
+        if (result != SL_RESULT_SUCCESS) {
+            PJ_LOG(4, (THIS_FILE, "Warning: Unable to set android "
+                                  "recorder configuration"));
+        }
         
         /* Realize the recorder */
         result = (*stream->recordObj)->Realize(stream->recordObj,
@@ -654,6 +675,11 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
 
     }
     
+    if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING) {
+	strm_set_cap(&stream->base, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                     &param->output_vol);
+    }
+    
     /* Done */
     stream->base.op = &opensl_strm_op;
     *p_aud_strm = &stream->base;
@@ -671,6 +697,12 @@ static pj_status_t strm_get_param(pjmedia_aud_stream *s,
     struct opensl_aud_stream *strm = (struct opensl_aud_stream*)s;
     PJ_ASSERT_RETURN(strm && pi, PJ_EINVAL);
     pj_memcpy(pi, &strm->param, sizeof(*pi));
+
+    if (strm_get_cap(s, PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING,
+                     &pi->output_vol) == PJ_SUCCESS)
+    {
+        pi->flags |= PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING;
+    }    
     
     return PJ_SUCCESS;
 }
@@ -685,30 +717,58 @@ static pj_status_t strm_get_cap(pjmedia_aud_stream *s,
     
     PJ_ASSERT_RETURN(s && pval, PJ_EINVAL);
     
-    PJ_UNUSED_ARG(strm);
-    
-    switch (cap) {
-        case PJMEDIA_AUD_DEV_CAP_INPUT_VOLUME_SETTING:
-            status = PJ_SUCCESS;
-            break;
-        case PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING:
-            status = PJ_SUCCESS;
-            break;
-        default:
-            break;
+    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
+	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+    {
+        if (strm->playerVol) {
+            SLresult res;
+            SLmillibel vol, mvol;
+            
+            res = (*strm->playerVol)->GetMaxVolumeLevel(strm->playerVol,
+                                                        &mvol);
+            if (res == SL_RESULT_SUCCESS) {
+                res = (*strm->playerVol)->GetVolumeLevel(strm->playerVol,
+                                                         &vol);
+                if (res == SL_RESULT_SUCCESS) {
+                    *(int *)pval = ((int)vol - SL_MILLIBEL_MIN) * 100 /
+                                   ((int)mvol - SL_MILLIBEL_MIN);
+                    return PJ_SUCCESS;
+                }
+            }
+        }
     }
     
     return status;
 }
 
 /* API: set capability */
-static pj_status_t strm_set_cap(pjmedia_aud_stream *strm,
+static pj_status_t strm_set_cap(pjmedia_aud_stream *s,
                                 pjmedia_aud_dev_cap cap,
                                 const void *value)
 {
-    PJ_UNUSED_ARG(strm);
-    PJ_UNUSED_ARG(cap);
-    PJ_UNUSED_ARG(value);
+    struct opensl_aud_stream *strm = (struct opensl_aud_stream*)s;
+    
+    PJ_ASSERT_RETURN(s && value, PJ_EINVAL);
+
+    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_VOLUME_SETTING &&
+	(strm->param.dir & PJMEDIA_DIR_PLAYBACK))
+    {
+        if (strm->playerVol) {
+            SLresult res;
+            SLmillibel vol, mvol;
+            
+            res = (*strm->playerVol)->GetMaxVolumeLevel(strm->playerVol,
+                                                        &mvol);
+            if (res == SL_RESULT_SUCCESS) {
+                vol = (SLmillibel)(*(int *)value *
+                      ((int)mvol - SL_MILLIBEL_MIN) / 100 + SL_MILLIBEL_MIN);
+                res = (*strm->playerVol)->SetVolumeLevel(strm->playerVol,
+                                                         vol);
+                if (res == SL_RESULT_SUCCESS)
+                    return PJ_SUCCESS;
+            }
+        }
+    }
 
     return PJMEDIA_EAUD_INVCAP;
 }
@@ -794,9 +854,9 @@ static pj_status_t strm_stop(pjmedia_aud_stream *s)
 
     if (stream->playerBufQ && stream->playerPlay) {
         /* Wait until the PCM data is done playing, the buffer queue callback
-         will continue to queue buffers until the entire PCM data has been
-         played. This is indicated by waiting for the count member of the
-         SLBufferQueueState to go to zero.
+         * will continue to queue buffers until the entire PCM data has been
+         * played. This is indicated by waiting for the count member of the
+         * SLBufferQueueState to go to zero.
          */
 /*      
         SLresult result;
@@ -828,14 +888,17 @@ static pj_status_t strm_destroy(pjmedia_aud_stream *s)
     if (stream->playerObj) {
         /* Destroy the player */
         (*stream->playerObj)->Destroy(stream->playerObj);
+        /* Invalidate all associated interfaces */
         stream->playerObj = NULL;
         stream->playerPlay = NULL;
         stream->playerBufQ = NULL;
+        stream->playerVol = NULL;
     }
     
     if (stream->recordObj) {
         /* Destroy the recorder */
         (*stream->recordObj)->Destroy(stream->recordObj);
+        /* Invalidate all associated interfaces */
         stream->recordObj = NULL;
         stream->recordRecord = NULL;
         stream->recordBufQ = NULL;
