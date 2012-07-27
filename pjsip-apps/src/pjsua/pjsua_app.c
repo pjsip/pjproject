@@ -340,7 +340,7 @@ static void usage(void)
     puts  ("Video Options:");
     puts  ("  --video             Enable video");
     puts  ("  --vcapture-dev=id   Video capture device ID (default=-1)");
-    puts  ("  --vrender-dev=id    Video render device ID (default=-1)");
+    puts  ("  --vrender-dev=id    Video render device ID (default=-2)");
     puts  ("  --play-avi=FILE     Load this AVI as virtual capture device");
     puts  ("  --auto-play-avi     Automatically play the AVI media to call");
 #endif
