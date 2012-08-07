@@ -416,9 +416,6 @@
     #define PJSUA_MAX_RECORDERS			4
     #define PJSUA_MAX_CONF_PORTS		(PJSUA_MAX_CALLS+2*PJSUA_MAX_PLAYERS)
     #define PJSUA_MAX_BUDDIES			32
-
-    /* pjsua_app settings */
-    #define USE_GUI                             1
 #endif
 
 

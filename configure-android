@@ -7,17 +7,26 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   echo "$F [--use-ndk-cflags] [OPTIONS]"
   echo ""
   echo "where:"
-  echo "  --use-ndk-cflags"
-  echo "              Optional parameter to use the same compilation flags"
-  echo "              as the one used by ndk-build"
-  echo "  OPTIONS     Other options that will be passed directly to"
-  echo "              ./aconfigure script. Run ./aconfigure --help"
-  echo "              for more info."
+  echo "  --use-ndk-cflags Optional parameter to use the same compilation flags"
+  echo "              	   as the one used by ndk-build"
+  echo "  OPTIONS     	   Other options that will be passed directly to"
+  echo "                   ./aconfigure script. Run ./aconfigure --help"
+  echo "                   for more info."
+  echo ""
+  echo "Environment variables:"
+  echo "  ANDROID_NDK_ROOT Specify the directory of Android NDK to use."
+  echo "  APP_PLATFORM     Optionally specify the platform level used, e.g."
+  echo "                   android-8. By default, configure will use the maximum"
+  echo "                   platform level detected."
+  echo "  TARGET_ABI       Optionally specify a single target architecture, e.g."
+  echo "                   armeabi-v7a. By default, the target architecture is"
+  echo "                   armeabi."
+  echo ""
   exit 0
 fi
 
-if test "x${ANDROID_NDK}" = "x"; then
-  echo "$F error: ANDROID_NDK must be specified"
+if test "x${ANDROID_NDK_ROOT}" = "x"; then
+  echo "$F error: ANDROID_NDK_ROOT must be specified"
   exit 0
 fi
 
@@ -31,9 +40,20 @@ else
   TC_DIR=${TARGET_HOST}
 fi
 
+if test "x$APP_PLATFORM" = "x"; then
+  APP_PLATFORM=`ls ${ANDROID_NDK_ROOT}/platforms/ | sed 's/android-//' | sort -gr | head -1`
+  APP_PLATFORM="android-${APP_PLATFORM}"
+  echo "$F: APP_PLATFORM not specified, using ${APP_PLATFORM}"
+fi
+
+if test "x$TARGET_ABI" = "x"; then
+  TARGET_ABI="armeabi"
+  echo "$F: TARGET_ABI not specified, using ${TARGET_ABI}"
+fi
+
 if test "$1" = "--use-ndk-cflags"; then
   shift
-  for i in `${ANDROID_NDK}/ndk-build --dry-run --directory=${ANDROID_NDK}/samples/hello-jni`; do
+  for i in `${ANDROID_NDK_ROOT}/ndk-build -n -C ${ANDROID_NDK_ROOT}/samples/hello-jni NDK_LOG=1 APP_PLATFORM=${APP_PLATFORM} APP_ABI=${TARGET_ABI}`; do
     if test "$i" = "-c"; then break; fi
     if test "x${NDK_CC}" != "x" -a "$i" != "-MF" -a "x`echo $i|grep '\.o\.d'`" = "x" -a "x`echo $i|grep 'include'`" = "x"; then
       NDK_CFLAGS="${NDK_CFLAGS} $i"
@@ -52,18 +72,13 @@ case $HOST_OS in
   CYGWIN*|*_NT-*) BUILD_MACHINE="windows";;
 esac
 
-if test "x$API_LEVEL" = "x"; then
-  API_LEVEL=`ls ${ANDROID_NDK}/platforms/ | sed 's/android-//' | sort -gr | head -1`
-  echo "$F: API_LEVEL not specified, using android-${API_LEVEL}"
-fi
-
-ANDROID_TC="${ANDROID_NDK}/toolchains/${TC_DIR}-4.4.3/prebuilt/${BUILD_MACHINE}"
+ANDROID_TC="${ANDROID_NDK_ROOT}/toolchains/${TC_DIR}-4.4.3/prebuilt/${BUILD_MACHINE}"
 if test ! -d ${ANDROID_TC}; then
   echo "$F error: unable to find directory ${ANDROID_TC} in Android NDK"
   exit 1
 fi
 
-export ANDROID_SYSROOT="${ANDROID_NDK}/platforms/android-${API_LEVEL}/arch-arm"
+export ANDROID_SYSROOT="${ANDROID_NDK_ROOT}/platforms/${APP_PLATFORM}/arch-arm"
 if test ! -d ${ANDROID_SYSROOT}; then
   echo "$F error: unable to find sysroot dir ${ANDROID_SYSROOT} in Android NDK"
   exit 1
