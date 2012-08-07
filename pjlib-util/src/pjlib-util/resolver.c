@@ -1248,6 +1248,9 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
     pj_hash_set(NULL, resolver->hquerybyid, &q->id, sizeof(q->id), 0, NULL);
     pj_hash_set(NULL, resolver->hquerybyres, &q->key, sizeof(q->key), 0, NULL);
 
+    /* Workaround for deadlock problem in #1565 (similar to #1108) */
+    pj_mutex_unlock(resolver->mutex);
+
     /* Call application callback, if any. */
     if (q->cb)
 	(*q->cb)(q->user_data, PJ_ETIMEDOUT, NULL);
@@ -1259,6 +1262,9 @@ static void on_timeout( pj_timer_heap_t *timer_heap,
 	    (*cq->cb)(cq->user_data, PJ_ETIMEDOUT, NULL);
 	cq = cq->next;
     }
+
+    /* Workaround for deadlock problem in #1565 (similar to #1108) */
+    pj_mutex_lock(resolver->mutex);
 
     /* Clear data */
     q->timer_entry.id = 0;
