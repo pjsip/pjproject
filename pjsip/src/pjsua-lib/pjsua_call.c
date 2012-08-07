@@ -1182,7 +1182,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     options |= PJSIP_INV_SUPPORT_TIMER;
     if (pjsua_var.acc[acc_id].cfg.require_100rel == PJSUA_100REL_MANDATORY)
 	options |= PJSIP_INV_REQUIRE_100REL;
-    if (pjsua_var.media_cfg.enable_ice)
+    if (pjsua_var.acc[acc_id].cfg.ice_cfg.enable_ice)
 	options |= PJSIP_INV_SUPPORT_ICE;
     if (pjsua_var.acc[acc_id].cfg.use_timer == PJSUA_SIP_TIMER_REQUIRED)
 	options |= PJSIP_INV_REQUIRE_TIMER;

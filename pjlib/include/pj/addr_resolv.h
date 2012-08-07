@@ -117,6 +117,31 @@ PJ_DECL(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr);
 
 
 /**
+ * Get the interface IP address to send data to the specified destination.
+ *
+ * @param af	    The desired address family to query. Valid values
+ *		    are pj_AF_INET() or pj_AF_INET6().
+ * @param dst	    The destination host.
+ * @param itf_addr  On successful resolution, the address family and address
+ *		    part of this socket address will be filled up with the host
+ *		    IP address, in network byte order. Other parts of the socket
+ *		    address should be ignored.
+ * @param allow_resolve   If \a dst may contain hostname (instead of IP
+ * 		    address), specify whether hostname resolution should
+ * 	            be performed. If not, default interface address will
+ *  		    be returned.
+ * @param p_dst_addr If not NULL, it will be filled with the IP address of
+ * 		    the destination host.
+ *
+ * @return	    PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pj_getipinterface(int af,
+                                       const pj_str_t *dst,
+                                       pj_sockaddr *itf_addr,
+                                       pj_bool_t allow_resolve,
+                                       pj_sockaddr *p_dst_addr);
+
+/**
  * Get the IP address of the default interface. Default interface is the
  * interface of the default route.
  *

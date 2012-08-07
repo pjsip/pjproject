@@ -583,6 +583,20 @@ pj_status_t resolve_stun_server(pj_bool_t wait);
  */
 pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri);
 
+/* acc use stun? */
+pj_bool_t pjsua_sip_acc_is_using_stun(pjsua_acc_id acc_id);
+
+/* Get local transport address suitable to be used for Via or Contact address
+ * to send request to the specified destination URI.
+ */
+pj_status_t pjsua_acc_get_uac_addr(pjsua_acc_id acc_id,
+				   pj_pool_t *pool,
+				   const pj_str_t *dst_uri,
+				   pjsip_host_port *addr,
+				   pjsip_transport_type_e *p_tp_type,
+				   int *p_secure,
+				   const void **p_tp);
+
 /**
  * Handle incoming invite request.
  */

@@ -2567,6 +2567,120 @@ typedef enum pjsua_call_hold_type
 #endif
 
 /**
+ * This enumeration controls the use of STUN in the account.
+ */
+typedef enum pjsua_stun_use
+{
+    /**
+     * Follow the default setting in the global \a pjsua_config.
+     */
+    PJSUA_STUN_USE_DEFAULT,
+
+    /**
+     * Disable STUN. If STUN is not enabled in the global \a pjsua_config,
+     * this setting has no effect.
+     */
+    PJSUA_STUN_USE_DISABLED
+
+} pjsua_stun_use;
+
+/**
+ * This enumeration controls the use of ICE settings in the account.
+ */
+typedef enum pjsua_ice_config_use
+{
+    /**
+     * Use the default settings in the global \a pjsua_media_config.
+     */
+    PJSUA_ICE_CONFIG_USE_DEFAULT,
+
+    /**
+     * Use the custom \a pjsua_ice_config setting in the account.
+     */
+    PJSUA_ICE_CONFIG_USE_CUSTOM
+
+} pjsua_ice_config_use;
+
+/**
+ * This enumeration controls the use of TURN settings in the account.
+ */
+typedef enum pjsua_turn_config_use
+{
+    /**
+     * Use the default setting in the global \a pjsua_media_config.
+     */
+    PJSUA_TURN_CONFIG_USE_DEFAULT,
+
+    /**
+     * Use the custom \a pjsua_turn_config setting in the account.
+     */
+    PJSUA_TURN_CONFIG_USE_CUSTOM
+
+} pjsua_turn_config_use;
+
+/**
+ * ICE setting. This setting is used in the pjsua_acc_config.
+ */
+typedef struct pjsua_ice_config
+{
+    /**
+     * Enable ICE.
+     */
+    pj_bool_t		enable_ice;
+
+    /**
+     * Set the maximum number of host candidates.
+     *
+     * Default: -1 (maximum not set)
+     */
+    int			ice_max_host_cands;
+
+    /**
+     * ICE session options.
+     */
+    pj_ice_sess_options	ice_opt;
+
+    /**
+     * Disable RTCP component.
+     *
+     * Default: no
+     */
+    pj_bool_t		ice_no_rtcp;
+
+} pjsua_ice_config;
+
+/**
+ * TURN setting. This setting is used in the pjsua_acc_config.
+ */
+typedef struct pjsua_turn_config
+{
+    /**
+     * Enable TURN candidate in ICE.
+     */
+    pj_bool_t		enable_turn;
+
+    /**
+     * Specify TURN domain name or host name, in in "DOMAIN:PORT" or
+     * "HOST:PORT" format.
+     */
+    pj_str_t		turn_server;
+
+    /**
+     * Specify the connection type to be used to the TURN server. Valid
+     * values are PJ_TURN_TP_UDP or PJ_TURN_TP_TCP.
+     *
+     * Default: PJ_TURN_TP_UDP
+     */
+    pj_turn_tp_type	turn_conn_type;
+
+    /**
+     * Specify the credential to authenticate with the TURN server.
+     */
+    pj_stun_auth_cred	turn_auth_cred;
+
+} pjsua_turn_config;
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -2967,13 +3081,55 @@ typedef struct pjsua_acc_config
     pjsua_transport_config rtp_cfg;
 
     /**
+     * Control the use of STUN for the SIP signaling.
+     *
+     * Default: PJSUA_STUN_USE_DEFAULT
+     */
+    pjsua_stun_use 		sip_stun_use;
+
+    /**
+     * Control the use of STUN for the media transports.
+     *
+     * Default: PJSUA_STUN_USE_DEFAULT
+     */
+    pjsua_stun_use 		media_stun_use;
+
+    /**
+     * Control the use of ICE in the account. By default, the settings in the
+     * \a pjsua_media_config will be used.
+     *
+     * Default: PJSUA_ICE_CONFIG_USE_DEFAULT
+     */
+    pjsua_ice_config_use	ice_cfg_use;
+
+    /**
+     * The custom ICE setting for this account. This setting will only be
+     * used if \a ice_cfg_use is set to PJSUA_ICE_CONFIG_USE_CUSTOM
+     */
+    pjsua_ice_config		ice_cfg;
+
+    /**
+     * Control the use of TURN in the account. By default, the settings in the
+     * \a pjsua_media_config will be used
+     *
+     * Default: PJSUA_TURN_CONFIG_USE_DEFAULT
+     */
+    pjsua_turn_config_use	turn_cfg_use;
+
+    /**
+     * The custom TURN setting for this account. This setting will only be
+     * used if \a turn_cfg_use is set to PJSUA_TURN_CONFIG_USE_CUSTOM
+     */
+    pjsua_turn_config		turn_cfg;
+
+    /**
      * Specify whether secure media transport should be used for this account.
      * Valid values are PJMEDIA_SRTP_DISABLED, PJMEDIA_SRTP_OPTIONAL, and
      * PJMEDIA_SRTP_MANDATORY.
      *
      * Default: #PJSUA_DEFAULT_USE_SRTP
      */
-    pjmedia_srtp_use	use_srtp;
+    pjmedia_srtp_use		use_srtp;
 
     /**
      * Specify whether SRTP requires secure signaling to be used. This option
@@ -3069,6 +3225,52 @@ typedef struct pjsua_acc_config
 
 } pjsua_acc_config;
 
+
+/**
+ * Initialize ICE config from a media config. If the \a pool argument
+ * is NULL, a simple memcpy() will be used.
+ *
+ * @param pool	    Memory to duplicate strings.
+ * @param dst	    Destination config.
+ * @param src	    Source config.
+ */
+PJ_DECL(void) pjsua_ice_config_from_media_config(pj_pool_t *pool,
+                                              pjsua_ice_config *dst,
+                                              const pjsua_media_config *src);
+
+/**
+ * Clone. If the \a pool argument is NULL, a simple memcpy() will be used.
+ *
+ * @param pool	    Memory to duplicate strings.
+ * @param dst	    Destination config.
+ * @param src	    Source config.
+ */
+PJ_DECL(void) pjsua_ice_config_dup( pj_pool_t *pool,
+                                    pjsua_ice_config *dst,
+                                    const pjsua_ice_config *src);
+
+/**
+ * Initialize TURN config from a media config. If the \a pool argument
+ * is NULL, a simple memcpy() will be used.
+ *
+ * @param pool	    Memory to duplicate strings.
+ * @param dst	    Destination config.
+ * @param src	    Source config.
+ */
+PJ_DECL(void) pjsua_turn_config_from_media_config(pj_pool_t *pool,
+                                               pjsua_turn_config *dst,
+                                               const pjsua_media_config *src);
+
+/**
+ * Clone. If the \a pool argument is NULL, a simple memcpy() will be used.
+ *
+ * @param pool	    Memory to duplicate strings.
+ * @param dst	    Destination config.
+ * @param src	    Source config.
+ */
+PJ_DECL(void) pjsua_turn_config_dup(pj_pool_t *pool,
+                                    pjsua_turn_config *dst,
+                                    const pjsua_turn_config *src);
 
 /**
  * Call this function to initialize account config with default values.

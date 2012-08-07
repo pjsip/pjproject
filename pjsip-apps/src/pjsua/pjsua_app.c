@@ -224,14 +224,11 @@ static void usage(void)
 
     puts  ("");
     puts  ("SIP Account options:");
-    puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
-#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
-    puts  ("  --use-srtp=N        Use SRTP?  0:disabled, 1:optional, 2:mandatory,");
-    puts  ("                      3:optional by duplicating media offer (def:0)");
-    puts  ("  --srtp-secure=N     SRTP require secure SIP? 0:no, 1:tls, 2:sips (def:1)");
-#endif
     puts  ("  --registrar=url     Set the URL of registrar server");
     puts  ("  --id=url            Set the URL of local ID (used in From header)");
+    puts  ("  --realm=string      Set realm");
+    puts  ("  --username=string   Set authentication username");
+    puts  ("  --password=string   Set authentication password");
     puts  ("  --contact=url       Optionally override the Contact information");
     puts  ("  --contact-params=S  Append the specified parameters S in Contact header");
     puts  ("  --contact-uri-params=S  Append the specified parameters S in Contact URI");
@@ -243,11 +240,14 @@ static void usage(void)
 	    PJSUA_REG_RETRY_INTERVAL);
     puts  ("  --reg-use-proxy=N   Control the use of proxy settings in REGISTER.");
     puts  ("                      0=no proxy, 1=outbound only, 2=acc only, 3=all (default)");
-    puts  ("  --realm=string      Set realm");
-    puts  ("  --username=string   Set authentication username");
-    puts  ("  --password=string   Set authentication password");
     puts  ("  --publish           Send presence PUBLISH for this account");
     puts  ("  --mwi               Subscribe to message summary/waiting indication");
+    puts  ("  --use-ims           Enable 3GPP/IMS related settings on this account");
+#if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
+    puts  ("  --use-srtp=N        Use SRTP?  0:disabled, 1:optional, 2:mandatory,");
+    puts  ("                      3:optional by duplicating media offer (def:0)");
+    puts  ("  --srtp-secure=N     SRTP require secure SIP? 0:no, 1:tls, 2:sips (def:1)");
+#endif
     puts  ("  --use-100rel        Require reliable provisional response (100rel)");
     puts  ("  --use-timer=N       Use SIP session timers? (default=1)");
     puts  ("                      0:inactive, 1:optional, 2:mandatory, 3:always");
@@ -257,6 +257,7 @@ static void usage(void)
     puts  ("  --outb-rid=string   Set SIP outbound reg-id (default:1)");
     puts  ("  --auto-update-nat=N Where N is 0 or 1 to enable/disable SIP traversal behind");
     puts  ("                      symmetric NAT (default 1)");
+    puts  ("  --disable-stun      Disable STUN for this account");
     puts  ("  --next-cred         Add another credentials");
     puts  ("");
     puts  ("SIP Account Control:");
@@ -589,7 +590,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	   OPT_STDOUT_NO_BUF,
 #endif
 	   OPT_AUTO_UPDATE_NAT,OPT_USE_COMPACT_FORM,OPT_DIS_CODEC,
-	   OPT_NO_FORCE_LR,
+	   OPT_DISABLE_STUN, OPT_NO_FORCE_LR,
 	   OPT_TIMER, OPT_TIMER_SE, OPT_TIMER_MIN_SE,
 	   OPT_VIDEO, OPT_EXTRA_AUDIO,
 	   OPT_VCAPTURE_DEV, OPT_VRENDER_DEV, OPT_PLAY_AVI, OPT_AUTO_PLAY_AVI
@@ -629,6 +630,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	{ "contact-params",1,0, OPT_CONTACT_PARAMS},
 	{ "contact-uri-params",1,0, OPT_CONTACT_URI_PARAMS},
 	{ "auto-update-nat",	1, 0, OPT_AUTO_UPDATE_NAT},
+	{ "disable-stun",0,0, OPT_DISABLE_STUN},
         { "use-compact-form",	0, 0, OPT_USE_COMPACT_FORM},
 	{ "accept-redirect", 1, 0, OPT_ACCEPT_REDIRECT},
 	{ "no-force-lr",0, 0, OPT_NO_FORCE_LR},
@@ -1021,6 +1023,11 @@ static pj_status_t parse_args(int argc, char *argv[],
             cur_acc->allow_contact_rewrite  = pj_strtoul(pj_cstr(&tmp, pj_optarg));
 	    break;
 
+	case OPT_DISABLE_STUN:
+	    cur_acc->sip_stun_use = PJSUA_STUN_USE_DISABLED;
+	    cur_acc->media_stun_use = PJSUA_STUN_USE_DISABLED;
+	    break;
+
 	case OPT_USE_COMPACT_FORM:
 	    /* enable compact form - from Ticket #342 */
             {
@@ -1171,42 +1178,54 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_USE_ICE:
-	    cfg->media_cfg.enable_ice = PJ_TRUE;
+	    cfg->media_cfg.enable_ice =
+		    cur_acc->ice_cfg.enable_ice = PJ_TRUE;
 	    break;
 
 	case OPT_ICE_REGULAR:
-	    cfg->media_cfg.ice_opt.aggressive = PJ_FALSE;
+	    cfg->media_cfg.ice_opt.aggressive =
+		    cur_acc->ice_cfg.ice_opt.aggressive = PJ_FALSE;
 	    break;
 
 	case OPT_USE_TURN:
-	    cfg->media_cfg.enable_turn = PJ_TRUE;
+	    cfg->media_cfg.enable_turn =
+		    cur_acc->turn_cfg.enable_turn = PJ_TRUE;
 	    break;
 
 	case OPT_ICE_MAX_HOSTS:
-	    cfg->media_cfg.ice_max_host_cands = my_atoi(pj_optarg);
+	    cfg->media_cfg.ice_max_host_cands =
+		    cur_acc->ice_cfg.ice_max_host_cands = my_atoi(pj_optarg);
 	    break;
 
 	case OPT_ICE_NO_RTCP:
-	    cfg->media_cfg.ice_no_rtcp = PJ_TRUE;
+	    cfg->media_cfg.ice_no_rtcp =
+		    cur_acc->ice_cfg.ice_no_rtcp = PJ_TRUE;
 	    break;
 
 	case OPT_TURN_SRV:
-	    cfg->media_cfg.turn_server = pj_str(pj_optarg);
+	    cfg->media_cfg.turn_server =
+		    cur_acc->turn_cfg.turn_server = pj_str(pj_optarg);
 	    break;
 
 	case OPT_TURN_TCP:
-	    cfg->media_cfg.turn_conn_type = PJ_TURN_TP_TCP;
+	    cfg->media_cfg.turn_conn_type =
+		    cur_acc->turn_cfg.turn_conn_type = PJ_TURN_TP_TCP;
 	    break;
 
 	case OPT_TURN_USER:
-	    cfg->media_cfg.turn_auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
-	    cfg->media_cfg.turn_auth_cred.data.static_cred.realm = pj_str("*");
-	    cfg->media_cfg.turn_auth_cred.data.static_cred.username = pj_str(pj_optarg);
+	    cfg->media_cfg.turn_auth_cred.type =
+		    cur_acc->turn_cfg.turn_auth_cred.type = PJ_STUN_AUTH_CRED_STATIC;
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.realm =
+		    cur_acc->turn_cfg.turn_auth_cred.data.static_cred.realm = pj_str("*");
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.username =
+		    cur_acc->turn_cfg.turn_auth_cred.data.static_cred.username = pj_str(pj_optarg);
 	    break;
 
 	case OPT_TURN_PASSWD:
-	    cfg->media_cfg.turn_auth_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
-	    cfg->media_cfg.turn_auth_cred.data.static_cred.data = pj_str(pj_optarg);
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.data_type =
+		    cur_acc->turn_cfg.turn_auth_cred.data.static_cred.data_type = PJ_STUN_PASSWD_PLAIN;
+	    cfg->media_cfg.turn_auth_cred.data.static_cred.data =
+		    cur_acc->turn_cfg.turn_auth_cred.data.static_cred.data = pj_str(pj_optarg);
 	    break;
 
 #if defined(PJMEDIA_HAS_SRTP) && (PJMEDIA_HAS_SRTP != 0)
@@ -1577,6 +1596,13 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    acfg->cred_count++;
 	}
 
+	if (acfg->ice_cfg.enable_ice) {
+	    acfg->ice_cfg_use = PJSUA_ICE_CONFIG_USE_CUSTOM;
+	}
+	if (acfg->turn_cfg.enable_turn) {
+	    acfg->turn_cfg_use = PJSUA_TURN_CONFIG_USE_CUSTOM;
+	}
+
 	/* When IMS mode is enabled for the account, verify that settings
 	 * are okay.
 	 */
@@ -1771,6 +1797,55 @@ static void write_account_settings(int acc_index, pj_str_t *result)
     /* MWI */
     if (acc_cfg->mwi_enabled)
 	pj_strcat2(result, "--mwi\n");
+
+    if (acc_cfg->sip_stun_use != PJSUA_STUN_USE_DEFAULT ||
+	acc_cfg->media_stun_use != PJSUA_STUN_USE_DEFAULT)
+    {
+	pj_strcat2(result, "--disable-stun\n");
+    }
+
+    /* Media Transport*/
+    if (acc_cfg->ice_cfg.enable_ice)
+	pj_strcat2(result, "--use-ice\n");
+
+    if (acc_cfg->ice_cfg.ice_opt.aggressive == PJ_FALSE)
+	pj_strcat2(result, "--ice-regular\n");
+
+    if (acc_cfg->turn_cfg.enable_turn)
+	pj_strcat2(result, "--use-turn\n");
+
+    if (acc_cfg->ice_cfg.ice_max_host_cands >= 0) {
+	pj_ansi_sprintf(line, "--ice_max_host_cands %d\n",
+	                acc_cfg->ice_cfg.ice_max_host_cands);
+	pj_strcat2(result, line);
+    }
+
+    if (acc_cfg->ice_cfg.ice_no_rtcp)
+	pj_strcat2(result, "--ice-no-rtcp\n");
+
+    if (acc_cfg->turn_cfg.turn_server.slen) {
+	pj_ansi_sprintf(line, "--turn-srv %.*s\n",
+			(int)acc_cfg->turn_cfg.turn_server.slen,
+			acc_cfg->turn_cfg.turn_server.ptr);
+	pj_strcat2(result, line);
+    }
+
+    if (acc_cfg->turn_cfg.turn_conn_type == PJ_TURN_TP_TCP)
+	pj_strcat2(result, "--turn-tcp\n");
+
+    if (acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.slen) {
+	pj_ansi_sprintf(line, "--turn-user %.*s\n",
+			(int)acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.slen,
+			acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.username.ptr);
+	pj_strcat2(result, line);
+    }
+
+    if (acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.slen) {
+	pj_ansi_sprintf(line, "--turn-passwd %.*s\n",
+			(int)acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.slen,
+			acc_cfg->turn_cfg.turn_auth_cred.data.static_cred.data.ptr);
+	pj_strcat2(result, line);
+    }
 }
 
 
@@ -1966,49 +2041,6 @@ static int write_settings(const struct app_config *config,
 	pj_strcat2(&cfg, line);
     }
 #endif
-
-    /* Media Transport*/
-    if (config->media_cfg.enable_ice)
-	pj_strcat2(&cfg, "--use-ice\n");
-
-    if (config->media_cfg.ice_opt.aggressive == PJ_FALSE)
-	pj_strcat2(&cfg, "--ice-regular\n");
-
-    if (config->media_cfg.enable_turn)
-	pj_strcat2(&cfg, "--use-turn\n");
-
-    if (config->media_cfg.ice_max_host_cands >= 0) {
-	pj_ansi_sprintf(line, "--ice_max_host_cands %d\n",
-			config->media_cfg.ice_max_host_cands);
-	pj_strcat2(&cfg, line);
-    }
-
-    if (config->media_cfg.ice_no_rtcp)
-	pj_strcat2(&cfg, "--ice-no-rtcp\n");
-
-    if (config->media_cfg.turn_server.slen) {
-	pj_ansi_sprintf(line, "--turn-srv %.*s\n",
-			(int)config->media_cfg.turn_server.slen,
-			config->media_cfg.turn_server.ptr);
-	pj_strcat2(&cfg, line);
-    }
-
-    if (config->media_cfg.turn_conn_type == PJ_TURN_TP_TCP)
-	pj_strcat2(&cfg, "--turn-tcp\n");
-
-    if (config->media_cfg.turn_auth_cred.data.static_cred.username.slen) {
-	pj_ansi_sprintf(line, "--turn-user %.*s\n",
-			(int)config->media_cfg.turn_auth_cred.data.static_cred.username.slen,
-			config->media_cfg.turn_auth_cred.data.static_cred.username.ptr);
-	pj_strcat2(&cfg, line);
-    }
-
-    if (config->media_cfg.turn_auth_cred.data.static_cred.data.slen) {
-	pj_ansi_sprintf(line, "--turn-passwd %.*s\n",
-			(int)config->media_cfg.turn_auth_cred.data.static_cred.data.slen,
-			config->media_cfg.turn_auth_cred.data.static_cred.data.ptr);
-	pj_strcat2(&cfg, line);
-    }
 
     /* Media */
     if (config->null_audio)

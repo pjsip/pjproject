@@ -24,6 +24,7 @@
 #include <pjsip/sip_private.h>
 #include <pjsip/sip_errno.h>
 #include <pjsip/sip_module.h>
+#include <pj/addr_resolv.h>
 #include <pj/except.h>
 #include <pj/os.h>
 #include <pj/log.h>
@@ -1080,6 +1081,10 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_unregister_tpfactory( pjsip_tpmgr *mgr,
     return PJ_SUCCESS;
 }
 
+PJ_DECL(void) pjsip_tpmgr_fla2_param_default(pjsip_tpmgr_fla2_param *prm)
+{
+    pj_bzero(prm, sizeof(*prm));
+}
 
 /*****************************************************************************
  *
@@ -1138,7 +1143,27 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+/* Get the interface to send packet to the specified address */
+static pj_status_t get_net_interface(pjsip_transport_type_e tp_type,
+				     const pj_str_t *dst,
+                                     pj_str_t *itf_str_addr)
+{
+    int af;
+    pj_sockaddr itf_addr;
+    pj_status_t status;
 
+    af = (tp_type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
+    status = pj_getipinterface(af, dst, &itf_addr, PJ_FALSE, NULL);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Print address */
+    pj_sockaddr_print(&itf_addr, itf_str_addr->ptr,
+		      PJ_INET6_ADDRSTRLEN, 0);
+    itf_str_addr->slen = pj_ansi_strlen(itf_str_addr->ptr);
+
+    return PJ_SUCCESS;
+}
 
 /*
  * Find out the appropriate local address info (IP address and port) to
@@ -1149,46 +1174,65 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
  * In this implementation, it will only select the transport based on
  * the transport type in the request.
  */
-PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
+PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 						 pj_pool_t *pool,
-						 pjsip_transport_type_e type,
-						 const pjsip_tpselector *sel,
-						 pj_str_t *ip_addr,
-						 int *port)
+						 pjsip_tpmgr_fla2_param *prm)
 {
+    char tmp_buf[PJ_INET6_ADDRSTRLEN+10];
+    pj_str_t tmp_str = { tmp_buf, 0 };
     pj_status_t status = PJSIP_EUNSUPTRANSPORT;
     unsigned flag;
 
     /* Sanity checks */
-    PJ_ASSERT_RETURN(tpmgr && pool && ip_addr && port, PJ_EINVAL);
+    PJ_ASSERT_RETURN(tpmgr && pool && prm, PJ_EINVAL);
 
-    ip_addr->slen = 0;
-    *port = 0;
+    prm->ret_addr.slen = 0;
+    prm->ret_port = 0;
+    prm->ret_tp = NULL;
 
-    flag = pjsip_transport_get_flag_from_type(type);
+    flag = pjsip_transport_get_flag_from_type(prm->tp_type);
 
-    if (sel && sel->type == PJSIP_TPSELECTOR_TRANSPORT &&
-	sel->u.transport)
+    if (prm->tp_sel && prm->tp_sel->type == PJSIP_TPSELECTOR_TRANSPORT &&
+	prm->tp_sel->u.transport)
     {
-	pj_strdup(pool, ip_addr, &sel->u.transport->local_name.host);
-	*port = sel->u.transport->local_name.port;
+	const pjsip_transport *tp = prm->tp_sel->u.transport;
+	if (prm->local_if) {
+	    status = get_net_interface(tp->key.type, &prm->dst_host,
+	                               &tmp_str);
+	    if (status != PJ_SUCCESS)
+		goto on_return;
+	    pj_strdup(pool, &prm->ret_addr, &tmp_str);
+	    prm->ret_port = pj_sockaddr_get_port(&tp->local_addr);
+	    prm->ret_tp = tp;
+	} else {
+	    pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
+	    prm->ret_port = tp->local_name.port;
+	}
 	status = PJ_SUCCESS;
 
-    } else if (sel && sel->type == PJSIP_TPSELECTOR_LISTENER &&
-	       sel->u.listener)
+    } else if (prm->tp_sel && prm->tp_sel->type == PJSIP_TPSELECTOR_LISTENER &&
+	       prm->tp_sel->u.listener)
     {
-	pj_strdup(pool, ip_addr, &sel->u.listener->addr_name.host);
-	*port = sel->u.listener->addr_name.port;
+	if (prm->local_if) {
+	    status = get_net_interface(prm->tp_sel->u.listener->type,
+	                               &prm->dst_host, &tmp_str);
+	    if (status != PJ_SUCCESS)
+		goto on_return;
+	    pj_strdup(pool, &prm->ret_addr, &tmp_str);
+	} else {
+	    pj_strdup(pool, &prm->ret_addr,
+		      &prm->tp_sel->u.listener->addr_name.host);
+	}
+	prm->ret_port = prm->tp_sel->u.listener->addr_name.port;
 	status = PJ_SUCCESS;
 
     } else if ((flag & PJSIP_TRANSPORT_DATAGRAM) != 0) {
-	
 	pj_sockaddr remote;
 	int addr_len;
 	pjsip_transport *tp;
 
 	pj_bzero(&remote, sizeof(remote));
-	if (type & PJSIP_TRANSPORT_IPV6) {
+	if (prm->tp_type & PJSIP_TRANSPORT_IPV6) {
 	    addr_len = sizeof(pj_sockaddr_in6);
 	    remote.addr.sa_family = pj_AF_INET6();
 	} else {
@@ -1196,13 +1240,22 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 	    remote.addr.sa_family = pj_AF_INET();
 	}
 
-	status = pjsip_tpmgr_acquire_transport(tpmgr, type, &remote,
+	status = pjsip_tpmgr_acquire_transport(tpmgr, prm->tp_type, &remote,
 					       addr_len, NULL, &tp);
 
 	if (status == PJ_SUCCESS) {
-	    pj_strdup(pool, ip_addr, &tp->local_name.host);
-	    *port = tp->local_name.port;
-	    status = PJ_SUCCESS;
+	    if (prm->local_if) {
+		status = get_net_interface(tp->key.type, &prm->dst_host,
+					   &tmp_str);
+		if (status != PJ_SUCCESS)
+		    goto on_return;
+		pj_strdup(pool, &prm->ret_addr, &tmp_str);
+		prm->ret_port = pj_sockaddr_get_port(&tp->local_addr);
+		prm->ret_tp = tp;
+	    } else {
+		pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
+		prm->ret_port = tp->local_name.port;
+	    }
 
 	    pjsip_transport_dec_ref(tp);
 	}
@@ -1215,20 +1268,53 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
 
 	f = tpmgr->factory_list.next;
 	while (f != &tpmgr->factory_list) {
-	    if (f->type == type)
+	    if (f->type == prm->tp_type)
 		break;
 	    f = f->next;
 	}
 
 	if (f != &tpmgr->factory_list) {
-	    pj_strdup(pool, ip_addr, &f->addr_name.host);
-	    *port = f->addr_name.port;
+	    if (prm->local_if) {
+		status = get_net_interface(f->type, &prm->dst_host,
+					   &tmp_str);
+		if (status != PJ_SUCCESS)
+		    goto on_return;
+		pj_strdup(pool, &prm->ret_addr, &tmp_str);
+	    } else {
+		pj_strdup(pool, &prm->ret_addr, &f->addr_name.host);
+	    }
+	    prm->ret_port = f->addr_name.port;
 	    status = PJ_SUCCESS;
 	}
 	pj_lock_release(tpmgr->lock);
     }
 
+on_return:
     return status;
+}
+
+PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr( pjsip_tpmgr *tpmgr,
+						 pj_pool_t *pool,
+						 pjsip_transport_type_e type,
+						 const pjsip_tpselector *sel,
+						 pj_str_t *ip_addr,
+						 int *port)
+{
+    pjsip_tpmgr_fla2_param prm;
+    pj_status_t status;
+
+    pjsip_tpmgr_fla2_param_default(&prm);
+    prm.tp_type = type;
+    prm.tp_sel = sel;
+
+    status = pjsip_tpmgr_find_local_addr2(tpmgr, pool, &prm);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    *ip_addr = prm.ret_addr;
+    *port = prm.ret_port;
+
+    return PJ_SUCCESS;
 }
 
 /*

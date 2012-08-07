@@ -165,9 +165,11 @@ pj_status_t pjsua_media_subsys_start(void)
 #endif
 
     /* Perform NAT detection */
-    status = pjsua_detect_nat_type();
-    if (status != PJ_SUCCESS) {
-	PJ_PERROR(1,(THIS_FILE, status, "NAT type detection failed"));
+    if (pjsua_var.ua_cfg.stun_srv_cnt) {
+	status = pjsua_detect_nat_type();
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(1,(THIS_FILE, status, "NAT type detection failed"));
+	}
     }
 
     pj_log_pop_indent();
@@ -226,7 +228,8 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
  * Create RTP and RTCP socket pair, and possibly resolve their public
  * address via STUN.
  */
-static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
+static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
+					const pjsua_transport_config *cfg,
 					pjmedia_sock_info *skinfo)
 {
     enum {
@@ -240,10 +243,12 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
     pj_sock_t sock[2];
 
     /* Make sure STUN server resolution has completed */
-    status = resolve_stun_server(PJ_TRUE);
-    if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
-	return status;
+    if (pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
+	status = resolve_stun_server(PJ_TRUE);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
+	    return status;
+	}
     }
 
     if (next_rtp_port == 0)
@@ -318,7 +323,9 @@ static pj_status_t create_rtp_rtcp_sock(const pjsua_transport_config *cfg,
 	 * If we're configured to use STUN, then find out the mapped address,
 	 * and make sure that the mapped RTCP port is adjacent with the RTP.
 	 */
-	if (pjsua_var.stun_srv.addr.sa_family != 0) {
+	if (pjsua_sip_acc_is_using_stun(call_med->call->acc_id) &&
+	    pjsua_var.stun_srv.addr.sa_family != 0)
+	{
 	    char ip_addr[32];
 	    pj_str_t stun_srv;
 
@@ -440,7 +447,7 @@ static pj_status_t create_udp_media_transport(const pjsua_transport_config *cfg,
     pjmedia_sock_info skinfo;
     pj_status_t status;
 
-    status = create_rtp_rtcp_sock(cfg, &skinfo);
+    status = create_rtp_rtcp_sock(call_med, cfg, &skinfo);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create RTP/RTCP socket",
 		     status);
@@ -660,11 +667,14 @@ static pj_status_t create_ice_media_transport(
                                 pj_bool_t async)
 {
     char stunip[PJ_INET6_ADDRSTRLEN];
+    pjsua_acc_config *acc_cfg;
     pj_ice_strans_cfg ice_cfg;
     pjmedia_ice_cb ice_cb;
     char name[32];
     unsigned comp_cnt;
     pj_status_t status;
+
+    acc_cfg = &pjsua_var.acc[call_med->call->acc_id].cfg;
 
     /* Make sure STUN server resolution has completed */
     status = resolve_stun_server(PJ_TRUE);
@@ -682,7 +692,7 @@ static pj_status_t create_ice_media_transport(
     ice_cfg.af = pj_AF_INET();
     ice_cfg.resolver = pjsua_var.resolver;
     
-    ice_cfg.opt = pjsua_var.media_cfg.ice_opt;
+    ice_cfg.opt = acc_cfg->ice_cfg.ice_opt;
 
     /* Configure STUN settings */
     if (pj_sockaddr_has_addr(&pjsua_var.stun_srv)) {
@@ -690,8 +700,8 @@ static pj_status_t create_ice_media_transport(
 	ice_cfg.stun.server = pj_str(stunip);
 	ice_cfg.stun.port = pj_sockaddr_get_port(&pjsua_var.stun_srv);
     }
-    if (pjsua_var.media_cfg.ice_max_host_cands >= 0)
-	ice_cfg.stun.max_host_cands = pjsua_var.media_cfg.ice_max_host_cands;
+    if (acc_cfg->ice_cfg.ice_max_host_cands >= 0)
+	ice_cfg.stun.max_host_cands = acc_cfg->ice_cfg.ice_max_host_cands;
 
     /* Copy QoS setting to STUN setting */
     ice_cfg.stun.cfg.qos_type = cfg->qos_type;
@@ -699,8 +709,8 @@ static pj_status_t create_ice_media_transport(
 	      sizeof(cfg->qos_params));
 
     /* Configure TURN settings */
-    if (pjsua_var.media_cfg.enable_turn) {
-	status = parse_host_port(&pjsua_var.media_cfg.turn_server,
+    if (acc_cfg->turn_cfg.enable_turn) {
+	status = parse_host_port(&acc_cfg->turn_cfg.turn_server,
 				 &ice_cfg.turn.server,
 				 &ice_cfg.turn.port);
 	if (status != PJ_SUCCESS || ice_cfg.turn.server.slen == 0) {
@@ -709,9 +719,9 @@ static pj_status_t create_ice_media_transport(
 	}
 	if (ice_cfg.turn.port == 0)
 	    ice_cfg.turn.port = 3479;
-	ice_cfg.turn.conn_type = pjsua_var.media_cfg.turn_conn_type;
+	ice_cfg.turn.conn_type = acc_cfg->turn_cfg.turn_conn_type;
 	pj_memcpy(&ice_cfg.turn.auth_cred, 
-		  &pjsua_var.media_cfg.turn_auth_cred,
+		  &acc_cfg->turn_cfg.turn_auth_cred,
 		  sizeof(ice_cfg.turn.auth_cred));
 
 	/* Copy QoS setting to TURN setting */
@@ -730,7 +740,7 @@ static pj_status_t create_ice_media_transport(
     call_med->tp_ready = PJ_EPENDING;
 
     comp_cnt = 1;
-    if (PJMEDIA_ADVERTISE_RTCP && !pjsua_var.media_cfg.ice_no_rtcp)
+    if (PJMEDIA_ADVERTISE_RTCP && !acc_cfg->ice_cfg.ice_no_rtcp)
 	++comp_cnt;
 
     status = pjmedia_ice_create3(pjsua_var.med_endpt, name, comp_cnt,
@@ -858,7 +868,7 @@ PJ_DEF(pj_status_t) pjsua_media_transports_create(
     pjsua_transport_config_dup(pjsua_var.pool, &cfg, app_cfg);
 
     /* Create the transports */
-    if (pjsua_var.media_cfg.enable_ice) {
+    if (pjsua_var.ice_cfg.enable_ice) {
 	status = create_ice_media_transports(&cfg);
     } else {
 	status = create_udp_media_transports(&cfg);
@@ -1244,7 +1254,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 
         pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_CREATING);
 
-	if (pjsua_var.media_cfg.enable_ice) {
+	if (pjsua_var.acc[call_med->call->acc_id].cfg.ice_cfg.enable_ice) {
 	    status = create_ice_media_transport(tcfg, call_med, async);
             if (async && status == PJ_EPENDING) {
 	        /* We will resume call media initialization in the

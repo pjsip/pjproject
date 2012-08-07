@@ -196,12 +196,64 @@ PJ_DEF(void) pjsua_transport_config_dup(pj_pool_t *pool,
 					pjsua_transport_config *dst,
 					const pjsua_transport_config *src)
 {
+    pj_memcpy(dst, src, sizeof(*src));
+    pj_strdup(pool, &dst->public_addr, &src->public_addr);
+    pj_strdup(pool, &dst->bound_addr, &src->bound_addr);
+}
+
+PJ_DEF(void) pjsua_ice_config_from_media_config( pj_pool_t *pool,
+                                           pjsua_ice_config *dst,
+                                           const pjsua_media_config *src)
+{
+    PJ_UNUSED_ARG(pool);
+
+    dst->enable_ice = src->enable_ice;
+    dst->ice_max_host_cands = src->ice_max_host_cands;
+    dst->ice_opt = src->ice_opt;
+    dst->ice_no_rtcp = src->ice_no_rtcp;
+}
+
+PJ_DEF(void) pjsua_ice_config_dup( pj_pool_t *pool,
+                                pjsua_ice_config *dst,
+                                const pjsua_ice_config *src)
+{
     PJ_UNUSED_ARG(pool);
     pj_memcpy(dst, src, sizeof(*src));
 }
 
+PJ_DEF(void) pjsua_turn_config_from_media_config(pj_pool_t *pool,
+                                                 pjsua_turn_config *dst,
+                                                 const pjsua_media_config *src)
+{
+    dst->enable_turn = src->enable_turn;
+    dst->turn_conn_type = src->turn_conn_type;
+    if (pool == NULL) {
+	dst->turn_server = src->turn_server;
+	dst->turn_auth_cred = src->turn_auth_cred;
+    } else {
+	if (pj_stricmp(&dst->turn_server, &src->turn_server))
+	    pj_strdup(pool, &dst->turn_server, &src->turn_server);
+	pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred,
+	                      &src->turn_auth_cred);
+    }
+}
+
+PJ_DEF(void) pjsua_turn_config_dup(pj_pool_t *pool,
+                                   pjsua_turn_config *dst,
+                                   const pjsua_turn_config *src)
+{
+    pj_memcpy(dst, src, sizeof(*src));
+    if (pool) {
+	pj_strdup(pool, &dst->turn_server, &src->turn_server);
+	pj_stun_auth_cred_dup(pool, &dst->turn_auth_cred,
+	                      &src->turn_auth_cred);
+    }
+}
+
 PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
 {
+    pjsua_media_config med_cfg;
+
     pj_bzero(cfg, sizeof(*cfg));
 
     cfg->reg_timeout = PJSUA_REG_INTERVAL;
@@ -224,6 +276,11 @@ PJ_DEF(void) pjsua_acc_config_default(pjsua_acc_config *cfg)
     pjmedia_vid_stream_rc_config_default(&cfg->vid_stream_rc_cfg);
 #endif
     pjsua_transport_config_default(&cfg->rtp_cfg);
+
+    pjsua_media_config_default(&med_cfg);
+    pjsua_ice_config_from_media_config(NULL, &cfg->ice_cfg, &med_cfg);
+    pjsua_turn_config_from_media_config(NULL, &cfg->turn_cfg, &med_cfg);
+
     cfg->use_srtp = pjsua_var.ua_cfg.use_srtp;
     cfg->srtp_secure_signaling = pjsua_var.ua_cfg.srtp_secure_signaling;
     cfg->srtp_optional_dup_offer = pjsua_var.ua_cfg.srtp_optional_dup_offer;
@@ -2805,6 +2862,7 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
     PJ_LOG(3,(THIS_FILE, "Dumping media transports:"));
     for (i=0; i<pjsua_var.ua_cfg.max_calls; ++i) {
 	pjsua_call *call = &pjsua_var.calls[i];
+	pjsua_acc_config *acc_cfg;
 	pjmedia_transport *tp[PJSUA_MAX_CALL_MEDIA*2];
 	unsigned tp_cnt = 0;
 	unsigned j;
@@ -2830,6 +2888,8 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 	    }
 	}
 
+	acc_cfg = &pjsua_var.acc[call->acc_id].cfg;
+
 	/* Dump the media transports in this call */
 	for (j = 0; j < tp_cnt; ++j) {
 	    pjmedia_transport_info tpinfo;
@@ -2838,7 +2898,7 @@ PJ_DEF(void) pjsua_dump(pj_bool_t detail)
 	    pjmedia_transport_info_init(&tpinfo);
 	    pjmedia_transport_get_info(tp[j], &tpinfo);
 	    PJ_LOG(3,(THIS_FILE, " %s: %s",
-		      (pjsua_var.media_cfg.enable_ice ? "ICE" : "UDP"),
+		      (acc_cfg->ice_cfg.enable_ice ? "ICE" : "UDP"),
 		      pj_sockaddr_print(&tpinfo.sock_info.rtp_addr_name,
 					addr_buf,
 					sizeof(addr_buf), 3)));

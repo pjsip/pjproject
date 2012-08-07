@@ -956,42 +956,54 @@ PJ_DEF(pj_status_t) pj_gethostip(int af, pj_sockaddr *addr)
     return PJ_SUCCESS;
 }
 
-/* Get the default IP interface */
-PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
+/* Get IP interface for sending to the specified destination */
+PJ_DEF(pj_status_t) pj_getipinterface(int af,
+                                      const pj_str_t *dst,
+                                      pj_sockaddr *itf_addr,
+                                      pj_bool_t allow_resolve,
+                                      pj_sockaddr *p_dst_addr)
 {
+    pj_sockaddr dst_addr;
     pj_sock_t fd;
-    pj_str_t cp;
-    pj_sockaddr a;
     int len;
     pj_uint8_t zero[64];
     pj_status_t status;
 
-    addr->addr.sa_family = (pj_uint16_t)af;
+    pj_sockaddr_init(af, &dst_addr, NULL, 53);
+    status = pj_inet_pton(af, dst, pj_sockaddr_get_addr(&dst_addr));
+    if (status != PJ_SUCCESS) {
+	/* "dst" is not an IP address. */
+	if (allow_resolve) {
+	    status = pj_sockaddr_init(af, &dst_addr, dst, 53);
+	} else {
+	    pj_str_t cp;
 
+	    if (af == PJ_AF_INET) {
+		cp = pj_str("1.1.1.1");
+	    } else {
+		cp = pj_str("1::1");
+	    }
+	    status = pj_sockaddr_init(af, &dst_addr, &cp, 53);
+	}
+
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
+    /* Create UDP socket and connect() to the destination IP */
     status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &fd);
     if (status != PJ_SUCCESS) {
 	return status;
     }
 
-    if (af == PJ_AF_INET) {
-	cp = pj_str("1.1.1.1");
-    } else {
-	cp = pj_str("1::1");
-    }
-    status = pj_sockaddr_init(af, &a, &cp, 53);
+    status = pj_sock_connect(fd, &dst_addr, pj_sockaddr_get_len(&dst_addr));
     if (status != PJ_SUCCESS) {
 	pj_sock_close(fd);
 	return status;
     }
 
-    status = pj_sock_connect(fd, &a, pj_sockaddr_get_len(&a));
-    if (status != PJ_SUCCESS) {
-	pj_sock_close(fd);
-	return status;
-    }
-
-    len = sizeof(a);
-    status = pj_sock_getsockname(fd, &a, &len);
+    len = sizeof(*itf_addr);
+    status = pj_sock_getsockname(fd, itf_addr, &len);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(fd);
 	return status;
@@ -1001,16 +1013,30 @@ PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
 
     /* Check that the address returned is not zero */
     pj_bzero(zero, sizeof(zero));
-    if (pj_memcmp(pj_sockaddr_get_addr(&a), zero,
-		  pj_sockaddr_get_addr_len(&a))==0)
+    if (pj_memcmp(pj_sockaddr_get_addr(itf_addr), zero,
+		  pj_sockaddr_get_addr_len(itf_addr))==0)
     {
 	return PJ_ENOTFOUND;
     }
 
-    pj_sockaddr_copy_addr(addr, &a);
+    if (p_dst_addr)
+	*p_dst_addr = dst_addr;
 
-    /* Success */
     return PJ_SUCCESS;
+}
+
+/* Get the default IP interface */
+PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
+{
+    pj_str_t cp;
+
+    if (af == PJ_AF_INET) {
+	cp = pj_str("1.1.1.1");
+    } else {
+	cp = pj_str("1::1");
+    }
+
+    return pj_getipinterface(af, &cp, addr, PJ_FALSE, NULL);
 }
 
 
