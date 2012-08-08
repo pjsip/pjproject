@@ -1765,7 +1765,11 @@ static void on_rx_rtp( void *data,
 			 peer_frm_ts_diff == (frm_ts_span>>1)))
 		    {
 			if (peer_frm_ts_diff < stream->rtp_rx_ts_len_per_frame)
+			{
 			    stream->rtp_rx_ts_len_per_frame = peer_frm_ts_diff;
+			    /* Done, stop the check immediately */
+			    stream->rtp_rx_check_cnt = 1;
+			}
 
 			if (--stream->rtp_rx_check_cnt == 0) {
     			    PJ_LOG(4, (THIS_FILE, "G722 codec used, remote"
@@ -2172,7 +2176,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
 			    stream->codec_param.info.frm_ptime;
 
 #if defined(PJMEDIA_HANDLE_G722_MPEG_BUG) && (PJMEDIA_HANDLE_G722_MPEG_BUG!=0)
-    stream->rtp_rx_check_cnt = 5;
+    stream->rtp_rx_check_cnt = 50;
     stream->has_g722_mpeg_bug = PJ_FALSE;
     stream->rtp_rx_last_ts = 0;
     stream->rtp_rx_last_cnt = 0;
