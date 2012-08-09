@@ -1940,12 +1940,14 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 	    return status;
 	}
 
+#if PJSUA_SDP_SESS_HAS_CONN
 	/* Copy c= line of the first media to session level,
 	 * if there's none.
 	 */
 	if (sdp->conn == NULL) {
 	    sdp->conn = pjmedia_sdp_conn_clone(pool, m->conn);
 	}
+#endif
 
 	
 	/* Find media bandwidth info */

@@ -5302,6 +5302,14 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 /**
+ * Enable/disable "c=" line in SDP session level. Set to zero to disable it.
+ */
+#ifndef PJSUA_SDP_SESS_HAS_CONN
+#   define PJSUA_SDP_SESS_HAS_CONN	0
+#endif
+
+
+/**
  * This structure describes media configuration, which will be specified
  * when calling #pjsua_init(). Application MUST initialize this structure
  * by calling #pjsua_media_config_default().
