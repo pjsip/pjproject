@@ -1922,6 +1922,8 @@ static pj_status_t create_sip_udp_sock(int af,
 	    pj_sockaddr_set_port(p_pub_addr, (pj_uint16_t)port);
 
     } else if (stun_srv.slen) {
+	pjstun_setting stun_opt;
+
 	/*
 	 * STUN is specified, resolve the address with STUN.
 	 */
@@ -1931,10 +1933,13 @@ static pj_status_t create_sip_udp_sock(int af,
 	    return PJ_EAFNOTSUP;
 	}
 
-	status = pjstun_get_mapped_addr(&pjsua_var.cp.factory, 1, &sock,
-				         &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
-					 &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
-				         &p_pub_addr->ipv4);
+	pj_bzero(&stun_opt, sizeof(stun_opt));
+	stun_opt.use_stun2 = pjsua_var.ua_cfg.stun_map_use_stun2;
+	stun_opt.srv1  = stun_opt.srv2  = stun_srv;
+	stun_opt.port1 = stun_opt.port2 = 
+			 pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
+	status = pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
+					 1, &sock, &p_pub_addr->ipv4);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error contacting STUN server", status);
 	    pj_sock_close(sock);

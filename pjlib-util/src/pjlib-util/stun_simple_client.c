@@ -42,7 +42,27 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 					    const pj_str_t *srv2, int port2,
 					    pj_sockaddr_in mapped_addr[])
 {
+    pjstun_setting opt;
+
+    pj_bzero(&opt, sizeof(opt));
+    opt.use_stun2 = PJ_FALSE;
+    opt.srv1 = *srv1;
+    opt.port1 = port1;
+    opt.srv2 = *srv2;
+    opt.port2 = port2;
+
+    return pjstun_get_mapped_addr2(pf, &opt, sock_cnt, sock, mapped_addr);
+}
+
+PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
+					    const pjstun_setting *opt,
+					    int sock_cnt,
+					    pj_sock_t sock[],
+					    pj_sockaddr_in mapped_addr[])
+{
     unsigned srv_cnt;
+    const pj_str_t *srv1, *srv2;
+    int port1, port2;
     pj_sockaddr_in srv_addr[2];
     int i, send_cnt = 0, nfds;
     pj_pool_t *pool;
@@ -58,6 +78,11 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
     pj_status_t status;
 
     PJ_CHECK_STACK();
+
+    srv1 = &opt->srv1;
+    port1 = opt->port1;
+    srv2 = &opt->srv1;
+    port2 = opt->port2;
 
     TRACE_((THIS_FILE, "Entering pjstun_get_mapped_addr()"));
 
@@ -81,6 +106,12 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr( pj_pool_factory *pf,
 				      pj_rand(), pj_rand());
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Insert magic cookie (specified in RFC 5389) when requested to. */
+    if (opt->use_stun2) {
+	pjstun_msg_hdr *hdr = (pjstun_msg_hdr*)out_msg;
+	hdr->tsx[0] = pj_htonl(STUN_MAGIC);
+    }
 
     TRACE_((THIS_FILE, "  Binding request created."));
 

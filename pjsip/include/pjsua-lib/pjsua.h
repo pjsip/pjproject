@@ -1462,6 +1462,15 @@ typedef struct pjsua_config
     pj_bool_t	    stun_ignore_failure;
 
     /**
+     * This specifies whether STUN requests for resolving socket mapped
+     * address should use the new format, i.e: having STUN magic cookie
+     * in its transaction ID.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t	    stun_map_use_stun2;
+
+    /**
      * Support for adding and parsing NAT type in the SDP to assist 
      * troubleshooting. The valid values are:
      *	- 0: no information will be added in SDP, and parsing is disabled.

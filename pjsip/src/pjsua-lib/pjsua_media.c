@@ -328,15 +328,19 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	{
 	    char ip_addr[32];
 	    pj_str_t stun_srv;
+	    pjstun_setting stun_opt;
 
 	    pj_ansi_strcpy(ip_addr,
 			   pj_inet_ntoa(pjsua_var.stun_srv.ipv4.sin_addr));
 	    stun_srv = pj_str(ip_addr);
 
-	    status=pjstun_get_mapped_addr(&pjsua_var.cp.factory, 2, sock,
-					   &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
-					   &stun_srv, pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port),
-					   mapped_addr);
+	    pj_bzero(&stun_opt, sizeof(stun_opt));
+	    stun_opt.use_stun2 = pjsua_var.ua_cfg.stun_map_use_stun2;
+	    stun_opt.srv1  = stun_opt.srv2  = stun_srv;
+	    stun_opt.port1 = stun_opt.port2 = 
+			     pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
+	    status=pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
+					   2, sock, mapped_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "STUN resolve error", status);
 		goto on_error;
