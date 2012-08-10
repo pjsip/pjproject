@@ -33,9 +33,21 @@
 #if defined(PJMEDIA_AUDIO_DEV_HAS_OPENSL) && PJMEDIA_AUDIO_DEV_HAS_OPENSL != 0
 
 #include <SLES/OpenSLES.h>
-#include <SLES/OpenSLES_Android.h>
-#include <sys/system_properties.h>
-#include <android/api-level.h>
+
+#ifdef __ANDROID__
+    #include <SLES/OpenSLES_Android.h>
+    #include <SLES/OpenSLES_AndroidConfiguration.h>
+    #include <sys/system_properties.h>
+    #include <android/api-level.h>
+
+    #define W_SLBufferQueueItf SLAndroidSimpleBufferQueueItf
+    #define W_SLBufferQueueState SLAndroidSimpleBufferQueueState
+    #define W_SL_IID_BUFFERQUEUE SL_IID_ANDROIDSIMPLEBUFFERQUEUE
+#else
+    #define W_SLBufferQueueItf SLBufferQueueItf
+    #define W_SLBufferQueueState SLBufferQueueState
+    #define W_SL_IID_BUFFERQUEUE SL_IID_BUFFERQUEUE
+#endif
 
 #define THIS_FILE	"opensl_dev.c"
 #define DRIVER_NAME	"OpenSL"
@@ -97,8 +109,8 @@ struct opensl_aud_stream
     char               *recordBuffer[NUM_BUFFERS];
     int                 recordBufIdx;
 
-    SLAndroidSimpleBufferQueueItf playerBufQ;
-    SLAndroidSimpleBufferQueueItf recordBufQ;
+    W_SLBufferQueueItf  playerBufQ;
+    W_SLBufferQueueItf  recordBufQ;
 };
 
 /* Factory prototypes */
@@ -154,7 +166,7 @@ static pjmedia_aud_stream_op opensl_strm_op =
 };
 
 /* This callback is called every time a buffer finishes playing. */
-void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
+void bqPlayerCallback(W_SLBufferQueueItf bq, void *context)
 {
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*) context;
     SLresult result;
@@ -200,7 +212,7 @@ void bqPlayerCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
 }
 
 /* This callback handler is called every time a buffer finishes recording */
-void bqRecorderCallback(SLAndroidSimpleBufferQueueItf bq, void *context)
+void bqRecorderCallback(W_SLBufferQueueItf bq, void *context)
 {
     struct opensl_aud_stream *stream = (struct opensl_aud_stream*) context;
     SLresult result;
@@ -448,8 +460,13 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                         pjmedia_aud_stream **p_aud_strm)
 {
     /* Audio sink for recorder and audio source for player */
+#ifdef __ANDROID__
     SLDataLocator_AndroidSimpleBufferQueue loc_bq =
         { SL_DATALOCATOR_ANDROIDSIMPLEBUFFERQUEUE, NUM_BUFFERS };
+#else
+    SLDataLocator_BufferQueue loc_bq =
+        { SL_DATALOCATOR_BUFFERQUEUE, NUM_BUFFERS };
+#endif
     struct opensl_aud_factory *pa = (struct opensl_aud_factory*)f;
     pj_pool_t *pool;
     struct opensl_aud_stream *stream;
@@ -496,6 +513,8 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                               pa->outputMixObject};
         SLDataSink audioSnk = {&loc_outmix, NULL};
         /* Audio interface */
+#ifdef __ANDROID__
+        int numIface = 3;
         const SLInterfaceID ids[3] = {SL_IID_BUFFERQUEUE,
                                       SL_IID_VOLUME,
                                       SL_IID_ANDROIDCONFIGURATION};
@@ -503,17 +522,24 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                   SL_BOOLEAN_FALSE};
         SLAndroidConfigurationItf playerConfig;
         SLint32 streamType = SL_ANDROID_STREAM_VOICE;
+#else
+        int numIface = 2;
+        const SLInterfaceID ids[2] = {SL_IID_BUFFERQUEUE,
+                                      SL_IID_VOLUME};
+        const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
+#endif
         
         /* Create audio player */
         result = (*pa->engineEngine)->CreateAudioPlayer(pa->engineEngine,
                                                         &stream->playerObj,
                                                         &audioSrc, &audioSnk,
-                                                        3, ids, req);
+                                                        numIface, ids, req);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Cannot create audio player: %d", result));
             goto on_error;
         }
 
+#ifdef __ANDROID__
         /* Set Android configuration */
         result = (*stream->playerObj)->GetInterface(stream->playerObj,
                                                     SL_IID_ANDROIDCONFIGURATION,
@@ -527,7 +553,8 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(4, (THIS_FILE, "Warning: Unable to set android "
                                   "player configuration"));
         }
-        
+#endif
+
         /* Realize the player */
         result = (*stream->playerObj)->Realize(stream->playerObj,
                                                SL_BOOLEAN_FALSE);
@@ -586,10 +613,17 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         /* Audio sink */
         SLDataSink audioSnk = {&loc_bq, &format_pcm};
         /* Audio interface */
-        const SLInterfaceID ids[2] = {SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+#ifdef __ANDROID__
+        int numIface = 2;
+        const SLInterfaceID ids[2] = {W_SL_IID_BUFFERQUEUE,
                                       SL_IID_ANDROIDCONFIGURATION};
         const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE};
         SLAndroidConfigurationItf recorderConfig;
+#else
+        int numIface = 1;
+        const SLInterfaceID ids[1] = {W_SL_IID_BUFFERQUEUE};
+        const SLboolean req[1] = {SL_BOOLEAN_TRUE};
+#endif
         
         /* Create audio recorder
          * (requires the RECORD_AUDIO permission)
@@ -597,12 +631,13 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         result = (*pa->engineEngine)->CreateAudioRecorder(pa->engineEngine,
                                                           &stream->recordObj,
                                                           &audioSrc, &audioSnk,
-                                                          2, ids, req);
+                                                          numIface, ids, req);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Cannot create recorder: %d", result));
             goto on_error;
         }
 
+#ifdef __ANDROID__
         /* Set Android configuration */
         result = (*stream->recordObj)->GetInterface(stream->recordObj,
                                                     SL_IID_ANDROIDCONFIGURATION,
@@ -630,6 +665,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
             PJ_LOG(4, (THIS_FILE, "Warning: Unable to set android "
                                   "recorder configuration"));
         }
+#endif
         
         /* Realize the recorder */
         result = (*stream->recordObj)->Realize(stream->recordObj,
@@ -650,7 +686,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         
         /* Get the buffer queue interface */
         result = (*stream->recordObj)->GetInterface(
-                     stream->recordObj, SL_IID_ANDROIDSIMPLEBUFFERQUEUE,
+                     stream->recordObj, W_SL_IID_BUFFERQUEUE,
                      &stream->recordBufQ);
         if (result != SL_RESULT_SUCCESS) {
             PJ_LOG(3, (THIS_FILE, "Cannot get recorder buffer queue iface"));
@@ -860,7 +896,7 @@ static pj_status_t strm_stop(pjmedia_aud_stream *s)
          */
 /*      
         SLresult result;
-        SLAndroidSimpleBufferQueueState state;
+        W_SLBufferQueueState state;
 
         result = (*stream->playerBufQ)->GetState(stream->playerBufQ, &state);
         while (state.count) {
