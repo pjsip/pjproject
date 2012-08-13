@@ -362,9 +362,13 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  * response is received, the response will be discarded since its Via
  * sent-by now contains address that is different than the transport
  * address.
+ *
+ * Update:
+ * As of version 2.1, the default value is 0. This change was part of
+ * https://trac.pjsip.org/repos/ticket/1412
  */
 #ifndef PJSIP_CHECK_VIA_SENT_BY
-#   define PJSIP_CHECK_VIA_SENT_BY	1
+#   define PJSIP_CHECK_VIA_SENT_BY	0
 #endif
 
 
