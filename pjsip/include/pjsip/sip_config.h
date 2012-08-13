@@ -78,6 +78,12 @@ typedef struct pjsip_cfg_t
 	pj_bool_t allow_port_in_fromto_hdr;
 
 	/**
+	 * Allow hash character ('#') to appear in outgoing URIs. See
+	 * https://trac.pjsip.org/repos/ticket/1569
+	 */
+	pj_bool_t allow_tx_hash_in_uri;
+
+	/**
 	 * Disable rport in request.
 	 */
 	pj_bool_t disable_rport;

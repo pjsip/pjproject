@@ -269,7 +269,10 @@ static pj_ssize_t pjsip_url_print(  pjsip_uri_context_e context,
 
     /* Print "user:password@", if any. */
     if (url->user.slen) {
-	copy_advance_escape(buf, url->user, pc->pjsip_USER_SPEC);
+	const pj_cis_t *spec = pjsip_cfg()->endpt.allow_tx_hash_in_uri ?
+				&pc->pjsip_USER_SPEC_LENIENT :
+				&pc->pjsip_USER_SPEC;
+	copy_advance_escape(buf, url->user, *spec);
 	if (url->passwd.slen) {
 	    *buf++ = ':';
 	    copy_advance_escape(buf, url->passwd, pc->pjsip_PASSWD_SPEC);
