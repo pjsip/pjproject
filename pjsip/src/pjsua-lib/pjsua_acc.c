@@ -485,6 +485,10 @@ PJ_DEF(pj_status_t) pjsua_acc_add( const pjsua_acc_config *cfg,
 	/* Otherwise subscribe to MWI, if it's enabled */
 	if (pjsua_var.acc[id].cfg.mwi_enabled)
 	    pjsua_start_mwi(id, PJ_TRUE);
+
+	/* Start publish too */
+	if (acc->cfg.publish_enabled)
+	    pjsua_pres_init_publish_acc(id);
     }
 
     pj_log_pop_indent();
@@ -2703,6 +2707,15 @@ PJ_DEF(pj_status_t) pjsua_acc_create_request(pjsua_acc_id acc_id,
     {
         tdata->via_addr = pjsua_var.acc[acc_id].via_addr;
         tdata->via_tp = pjsua_var.acc[acc_id].via_tp;
+    } else if (!pjsua_sip_acc_is_using_stun(acc_id)) {
+        /* Choose local interface to use in Via if acc is not using
+         * STUN
+         */
+        pjsua_acc_get_uac_addr(acc_id, tdata->pool,
+	                       target,
+	                       &tdata->via_addr,
+	                       NULL, NULL,
+	                       &tdata->via_tp);
     }
 
     /* Done */
