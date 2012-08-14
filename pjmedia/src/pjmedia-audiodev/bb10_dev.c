@@ -33,6 +33,11 @@
 
 #if defined(PJMEDIA_AUDIO_DEV_HAS_BB10) && PJMEDIA_AUDIO_DEV_HAS_BB10 != 0
 
+#ifndef PJ_BBSDK_VER
+    /* Format: 0xMMNNRR:  MM: major, NN: minor, RR: revision */
+#   define PJ_BBSDK_VER	0x100006
+#endif
+
 #include <sys/time.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -40,6 +45,9 @@
 #include <pthread.h>
 #include <errno.h>
 #include <sys/asoundlib.h>
+#if PJ_BBSDK_VER >= 0x100006
+#include <audio/audio_manager_routing.h>
+#endif
 
 
 #define THIS_FILE 			"bb10_dev.c"
@@ -115,7 +123,6 @@ struct bb10_stream
 
     /* Playback */
     snd_pcm_t		*pb_pcm;
-    snd_mixer_t         *pb_mixer;
     unsigned long        pb_frames; 	/* samples_per_frame		*/
     pjmedia_aud_play_cb  pb_cb;
     unsigned             pb_buf_size;
@@ -124,7 +131,6 @@ struct bb10_stream
 
     /* Capture */
     snd_pcm_t		*ca_pcm;
-    snd_mixer_t         *ca_mixer;
     unsigned long        ca_frames; 	/* samples_per_frame		*/
     pjmedia_aud_rec_cb   ca_cb;
     unsigned             ca_buf_size;
@@ -162,6 +168,7 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
     int pb_result, ca_result;
     int card = -1;
     int dev = 0;
+    unsigned int handle;
     snd_pcm_t *pcm_handle;
 
     if (af->dev_cnt >= PJ_ARRAY_SIZE(af->devs))
@@ -171,8 +178,18 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
 
     TRACE_((THIS_FILE, "bb10_add_dev Enter"));
 
+#if PJ_BBSDK_VER >= 0x100006
+    if ((pb_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+                                                     &pcm_handle,
+                                                     &handle,
+                                                     "/dev/snd/voicep",
+                                                     SND_PCM_OPEN_PLAYBACK))
+                                                     >= 0)
+#else
+    PJ_UNUSED_ARG(handle);
     if ((pb_result = snd_pcm_open_preferred (&pcm_handle, &card, &dev,
                                              SND_PCM_OPEN_PLAYBACK)) >= 0)
+#endif
     {
         TRACE_((THIS_FILE, "Try to open the device for playback - success"));
 	snd_pcm_close (pcm_handle);
@@ -180,8 +197,17 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
         TRACE_((THIS_FILE, "Try to open the device for playback - failure"));
     }
 
+#if PJ_BBSDK_VER >= 0x100006
+    if ((ca_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+                                                     &pcm_handle,
+                                                     &handle,
+                                                     "/dev/snd/voicec",
+                                                     SND_PCM_OPEN_CAPTURE))
+                                                     >= 0)
+#else
     if ((ca_result = snd_pcm_open_preferred (&pcm_handle, &card, &dev,
                                              SND_PCM_OPEN_CAPTURE)) >=0)
+#endif
     {
         TRACE_((THIS_FILE, "Try to open the device for capture - success"));
         snd_pcm_close (pcm_handle);
@@ -239,7 +265,7 @@ pjmedia_aud_dev_factory* pjmedia_bb10_factory(pj_pool_factory *pf)
 static pj_status_t bb10_factory_init(pjmedia_aud_dev_factory *f)
 {
     pj_status_t status;
-    
+
     status = bb10_factory_refresh(f);
     if (status != PJ_SUCCESS)
         return status;
@@ -314,7 +340,7 @@ static pj_status_t bb10_factory_get_dev_info(pjmedia_aud_dev_factory *f,
     pj_memcpy(info, &af->devs[index], sizeof(*info));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
                  PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
-    
+
     return PJ_SUCCESS;
 }
 
@@ -358,7 +384,7 @@ static pj_status_t bb10_factory_default_param(pjmedia_aud_dev_factory *f,
     TRACE_((THIS_FILE, "bb10_factory_default_param clock = %d flags = %d"
                        " spf = %d", param->clock_rate, param->flags,
                        param->samples_per_frame));
-    
+
     return PJ_SUCCESS;
 }
 
@@ -368,14 +394,6 @@ static void close_play_pcm(struct bb10_stream *stream)
     if (stream != NULL && stream->pb_pcm != NULL) {
         snd_pcm_close(stream->pb_pcm);
         stream->pb_pcm = NULL;
-    }
-}
-
-static void close_play_mixer(struct bb10_stream *stream)
-{
-    if (stream != NULL && stream->pb_mixer != NULL) {
-        snd_mixer_close(stream->pb_mixer);
-        stream->pb_mixer = NULL;
     }
 }
 
@@ -391,14 +409,6 @@ static void close_capture_pcm(struct bb10_stream *stream)
     if (stream != NULL && stream->ca_pcm != NULL) {
         snd_pcm_close(stream->ca_pcm);
         stream->ca_pcm = NULL;
-    }
-}
-
-static void close_capture_mixer(struct bb10_stream *stream)
-{
-    if (stream != NULL && stream->ca_mixer != NULL) {
-        snd_mixer_close(stream->ca_mixer);
-        stream->ca_mixer = NULL;
     }
 }
 
@@ -435,7 +445,6 @@ static int pb_thread_func (void *arg)
     if ((result = snd_pcm_plugin_prepare(stream->pb_pcm,
                                          SND_PCM_CHANNEL_PLAYBACK)) < 0)
     {
-        close_play_mixer(stream);
         close_play_pcm(stream);
         TRACE_((THIS_FILE, "pb_thread_func failed prepare = %d", result));
 	return PJ_SUCCESS;
@@ -460,7 +469,26 @@ static int pb_thread_func (void *arg)
 
         /* Write 640 to play unit */
         result = snd_pcm_plugin_write(stream->pb_pcm,buf,size);
-        if (result != size) {
+        if (result != size || result < 0) {
+            snd_pcm_channel_status_t status;
+            if (snd_pcm_plugin_status (stream->pb_pcm, &status) < 0) {
+                PJ_LOG(4,(THIS_FILE,
+                	  "underrun: playback channel status error"));
+                continue;
+            }
+
+            if (status.status == SND_PCM_STATUS_READY ||
+        	status.status == SND_PCM_STATUS_UNDERRUN)
+            {
+                if (snd_pcm_plugin_prepare (stream->pb_pcm,
+                                            SND_PCM_CHANNEL_PLAYBACK) < 0)
+                {
+                    PJ_LOG(4,(THIS_FILE,
+                    	      "underrun: playback channel prepare error"));
+                    continue;
+                }
+            }
+
             TRACE_((THIS_FILE, "pb_thread_func failed write = %d", result));
         }
 
@@ -468,10 +496,9 @@ static int pb_thread_func (void *arg)
     }
 
     flush_play(stream);
-    close_play_mixer(stream);
     close_play_pcm(stream);
     TRACE_((THIS_FILE, "pb_thread_func: Stopped"));
-    
+
     return PJ_SUCCESS;
 }
 
@@ -513,7 +540,6 @@ static int ca_thread_func (void *arg)
     if ((result = snd_pcm_plugin_prepare (stream->ca_pcm,
                                           SND_PCM_CHANNEL_CAPTURE)) < 0)
     {
-        close_capture_mixer(stream);
         close_capture_pcm(stream);
         TRACE_((THIS_FILE, "ca_thread_func failed prepare = %d", result));
 	return PJ_SUCCESS;
@@ -523,14 +549,26 @@ static int ca_thread_func (void *arg)
         pjmedia_frame frame;
 
         pj_bzero (buf, size);
-        
+
         result = snd_pcm_plugin_read(stream->ca_pcm, buf,size);
-        if (result == -EPIPE) {
-            PJ_LOG (4,(THIS_FILE, "ca_thread_func: overrun!"));
-            snd_pcm_plugin_prepare (stream->ca_pcm, SND_PCM_CHANNEL_CAPTURE);
-            continue;
-        } else if (result < 0) {
-            PJ_LOG (4,(THIS_FILE, "ca_thread_func: error reading data!"));
+        if(result <0 || result != size) {
+            snd_pcm_channel_status_t status;
+            if (snd_pcm_plugin_status (stream->ca_pcm, &status) < 0) {
+                PJ_LOG (4,(THIS_FILE, "overrun: capture channel status "
+                                      "error"));
+                continue;
+            }
+
+            if (status.status == SND_PCM_STATUS_READY ||
+        	status.status == SND_PCM_STATUS_OVERRUN) {
+                if (snd_pcm_plugin_prepare (stream->ca_pcm,
+                                            SND_PCM_CHANNEL_CAPTURE) < 0)
+                {
+                    PJ_LOG (4,(THIS_FILE, "overrun: capture channel prepare  "
+                                          "error"));
+                    continue;
+                }
+            }
         }
 
         if (stream->quit)
@@ -550,7 +588,6 @@ static int ca_thread_func (void *arg)
     }
 
     flush_capture(stream);
-    close_capture_mixer(stream);
     close_capture_pcm(stream);
     TRACE_((THIS_FILE, "ca_thread_func: Stopped"));
 
@@ -570,17 +607,30 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     snd_pcm_channel_params_t pp;
     unsigned int rate;
     unsigned long tmp_buf_size;
+    unsigned int handle;
 
     if (param->play_id < 0 || param->play_id >= stream->af->dev_cnt) {
         return PJMEDIA_EAUD_INVDEV;
     }
 
+#if PJ_BBSDK_VER >= 0x100006
+    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+                                               &stream->pb_pcm, &handle,
+                                               "/dev/snd/voicep",
+                                               SND_PCM_OPEN_PLAYBACK)) < 0)
+    {
+        TRACE_((THIS_FILE, "audio_manager_snd_pcm_open_name ret = %d", ret));
+        return PJMEDIA_EAUD_SYSERR;
+    }
+
+#else
     if ((ret = snd_pcm_open_preferred (&stream->pb_pcm, &card, &dev,
                                        SND_PCM_OPEN_PLAYBACK)) < 0)
     {
         TRACE_((THIS_FILE, "snd_pcm_open_preferred ret = %d", ret));
         return PJMEDIA_EAUD_SYSERR;
     }
+#endif
 
     /* TODO PJ_ZERO */
     memset (&pi, 0, sizeof (pi));
@@ -622,7 +672,7 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     memset (&group, 0, sizeof (group));
     setup.channel = SND_PCM_CHANNEL_PLAYBACK;
     setup.mixer_gid = &group.gid;
-    
+
     if ((ret = snd_pcm_plugin_setup (stream->pb_pcm, &setup)) < 0) {
         TRACE_((THIS_FILE, "snd_pcm_plugin_setup ret = %d", ret));
         return PJMEDIA_EAUD_SYSERR;
@@ -631,14 +681,6 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     if (group.gid.name[0] == 0) {
         return PJMEDIA_EAUD_SYSERR;
     }
-    
-    if ((ret = snd_mixer_open (&stream->pb_mixer, card,
-                               setup.mixer_device)) < 0)
-    {
-        TRACE_((THIS_FILE, "snd_mixer_open ret = %d", ret));
-        return PJMEDIA_EAUD_SYSERR;
-    }
-
 
     rate = param->clock_rate;
     /* Set the sound device buffer size and latency */
@@ -675,17 +717,31 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     snd_mixer_group_t group;
     snd_pcm_channel_params_t pp;
     snd_pcm_channel_setup_t setup;
+    unsigned int handle;
 
     if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
+#if PJ_BBSDK_VER >= 0x100006
+    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+                                               &stream->ca_pcm,
+                                               &handle,
+                                               "/dev/snd/voicec",
+                                               SND_PCM_OPEN_CAPTURE)) < 0)
+    {
+	TRACE_((THIS_FILE, "audio_manager_snd_pcm_open_name ret = %d", ret));
+	return PJMEDIA_EAUD_SYSERR;
+    }
+#else
     /* BB10 Audio init here (not prepare) */
+    PJ_UNUSED_ARG(handle);
     if ((ret = snd_pcm_open_preferred (&stream->ca_pcm, &card, &dev,
                                        SND_PCM_OPEN_CAPTURE)) < 0)
     {
         TRACE_((THIS_FILE, "snd_pcm_open_preferred ret = %d", ret));
         return PJMEDIA_EAUD_SYSERR;
     }
+#endif
 
     /* sample reads the capabilities of the capture */
     memset (&pi, 0, sizeof (pi));
@@ -738,13 +794,6 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
 
     if (group.gid.name[0] == 0) {
     } else {
-    }
-
-    if ((ret = snd_mixer_open (&stream->ca_mixer, card,
-                               setup.mixer_device)) < 0)
-    {
-        TRACE_((THIS_FILE,"snd_mixer_open ret = %d",ret));
-        return PJMEDIA_EAUD_SYSERR;
     }
 
     /* frag_size should be 160 */
@@ -820,7 +869,6 @@ static pj_status_t bb10_factory_create_stream(pjmedia_aud_dev_factory *f,
         status = bb10_open_capture (stream, param);
         if (status != PJ_SUCCESS) {
             if (param->dir & PJMEDIA_DIR_PLAYBACK) {
-                close_play_mixer(stream);
                 close_play_pcm(stream);
             }
             pj_pool_release (pool);
@@ -952,7 +1000,7 @@ static pj_status_t bb10_stream_stop (pjmedia_aud_stream *s)
 static pj_status_t bb10_stream_destroy (pjmedia_aud_stream *s)
 {
     struct bb10_stream *stream = (struct bb10_stream*)s;
-    
+
     TRACE_((THIS_FILE,"bb10_stream_destroy()"));
 
     bb10_stream_stop (s);
