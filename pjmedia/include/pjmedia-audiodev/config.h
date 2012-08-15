@@ -66,6 +66,14 @@ PJ_BEGIN_DECL
 #endif
 
 /**
+ * This setting controls whether Android JNI audio support should be
+ * included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI
+#   define PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI    0
+#endif
+
+/**
  * This setting controls whether BlackBerry 10 (BB10) audio support
  * should be included.
  */

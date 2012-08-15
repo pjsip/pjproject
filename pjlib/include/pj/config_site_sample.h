@@ -381,6 +381,7 @@
     #define PJMEDIA_AUDIO_DEV_HAS_PORTAUDIO	0
     #define PJMEDIA_AUDIO_DEV_HAS_WMME		0
     #define PJMEDIA_AUDIO_DEV_HAS_OPENSL        1
+    #define PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI	0
 
     /* Disable some codecs */
     #define PJMEDIA_HAS_L16_CODEC		0
