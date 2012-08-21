@@ -723,7 +723,6 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
 {
     PJ_CHECK_STACK();
     PJ_ASSERT_RETURN(buf && len, PJ_EINVAL);
-    PJ_ASSERT_RETURN(from && fromlen, (*len=-1, PJ_EINVAL));
 
     *len = recvfrom(sock, (char*)buf, *len, flags, 
 		    (struct sockaddr*)from, (socklen_t*)fromlen);
@@ -731,7 +730,9 @@ PJ_DEF(pj_status_t) pj_sock_recvfrom(pj_sock_t sock,
     if (*len < 0) 
 	return PJ_RETURN_OS_ERROR(pj_get_native_netos_error());
     else {
-	PJ_SOCKADDR_RESET_LEN(from);
+        if (from) {
+            PJ_SOCKADDR_RESET_LEN(from);
+        }
 	return PJ_SUCCESS;
     }
 }
