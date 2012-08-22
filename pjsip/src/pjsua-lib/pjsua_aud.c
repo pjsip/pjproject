@@ -291,7 +291,8 @@ pj_status_t pjsua_aud_subsys_init()
 	/* Init the passthrough codec with supported formats only */
 	codec_cfg.passthrough.setting.fmt_cnt = ext_fmt_cnt;
 	codec_cfg.passthrough.setting.fmts = ext_fmts;
-	codec_cfg.passthrough.setting.ilbc_mode = cfg->ilbc_mode;
+	codec_cfg.passthrough.setting.ilbc_mode =
+            pjsua_var.media_cfg.ilbc_mode;
     }
 #endif /* PJMEDIA_HAS_PASSTHROUGH_CODECS */
 
