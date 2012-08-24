@@ -1743,11 +1743,13 @@ static pj_status_t call_modify_video(pjsua_call *call,
 
 	sdp->media[med_idx] = sdp_m;
 
-	/* Update SDP media line by media transport */
-	status = pjmedia_transport_encode_sdp(call_med->tp, pool,
-					      sdp, NULL, call_med->idx);
-	if (status != PJ_SUCCESS)
-	    goto on_error;
+        if (call_med->dir == PJMEDIA_DIR_NONE) {
+	    /* Update SDP media line by media transport */
+	    status = pjmedia_transport_encode_sdp(call_med->tp, pool,
+					          sdp, NULL, call_med->idx);
+	    if (status != PJ_SUCCESS)
+	        goto on_error;
+        }
 
 on_error:
 	if (status != PJ_SUCCESS) {
