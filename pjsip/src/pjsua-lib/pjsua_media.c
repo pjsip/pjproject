@@ -526,21 +526,29 @@ on_error:
 static void med_tp_timer_cb(void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
-    pjsua_call *call = NULL;
-    pjsip_dialog *dlg = NULL;
 
     if (call_med->call == NULL)
 	return;
 
-    acquire_call("med_tp_timer_cb", call_med->call->index, &call, &dlg);
-
+    /* No need to acquire_call() if we only change the tp_ready flag
+     * (i.e. transport is being created synchronously). Otherwise
+     * calling acquire_call() here may cause deadlock. See
+     * https://trac.pjsip.org/repos/ticket/1578
+     */
     call_med->tp_ready = call_med->tp_result;
-    if (call_med->med_create_cb)
+
+    if (call_med->med_create_cb) {
+	pjsua_call *call = NULL;
+	pjsip_dialog *dlg = NULL;
+
+	acquire_call("med_tp_timer_cb", call_med->call->index, &call, &dlg);
+
         (*call_med->med_create_cb)(call_med, call_med->tp_ready,
                                    call_med->call->secure_level, NULL);
 
-    if (dlg)
-	pjsip_dlg_dec_lock(dlg);
+        if (dlg)
+            pjsip_dlg_dec_lock(dlg);
+    }
 }
 
 /* This callback is called when ICE negotiation completes */
