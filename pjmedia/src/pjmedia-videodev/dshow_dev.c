@@ -33,6 +33,7 @@
 #include <windows.h>
 #define COBJMACROS
 #include <DShow.h>
+#include <wmsdkidl.h>
 
 #ifdef _MSC_VER
 #   pragma warning(pop)
@@ -72,6 +73,7 @@ static dshow_fmt_info dshow_fmts[] =
     {PJMEDIA_FORMAT_RGB24, &MEDIASUBTYPE_RGB24} ,
     {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32} ,
     {PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV} ,
+    {PJMEDIA_FORMAT_I420, &WMMEDIASUBTYPE_I420}
 };
 
 /* dshow_ device info */
