@@ -685,6 +685,28 @@
 
 
 /**
+ * This macro controls whether pjmedia should include SDP
+ * bandwidth modifier "TIAS" (RFC3890).
+ *
+ * Note that there is also a run-time variable to turn this setting
+ * on or off, defined in endpoint.c. To access this variable, use
+ * the following construct
+ *
+ \verbatim
+    extern pj_bool_t pjmedia_add_bandwidth_tias_in_sdp;
+
+    // Do not enable bandwidth information inclusion in sdp
+    pjmedia_add_bandwidth_tias_in_sdp = PJ_FALSE;
+ \endverbatim
+ *
+ * Default: 1 (yes)
+ */
+#ifndef PJMEDIA_ADD_BANDWIDTH_TIAS_IN_SDP
+#   define PJMEDIA_ADD_BANDWIDTH_TIAS_IN_SDP	1
+#endif
+
+
+/**
  * This macro controls whether pjmedia should include SDP rtpmap 
  * attribute for static payload types. SDP rtpmap for static
  * payload types are optional, although they are normally included
