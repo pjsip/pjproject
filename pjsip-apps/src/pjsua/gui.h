@@ -21,6 +21,10 @@
 
 PJ_BEGIN_DECL
 
+#if defined(PJ_ANDROID) && !defined(USE_GUI)
+    #define USE_GUI 1
+#endif
+
 #ifdef USE_GUI
 
 #define printf showMsg
