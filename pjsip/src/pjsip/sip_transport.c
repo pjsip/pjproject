@@ -1179,13 +1179,14 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 						 pjsip_tpmgr_fla2_param *prm)
 {
     char tmp_buf[PJ_INET6_ADDRSTRLEN+10];
-    pj_str_t tmp_str = { tmp_buf, 0 };
+    pj_str_t tmp_str;
     pj_status_t status = PJSIP_EUNSUPTRANSPORT;
     unsigned flag;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(tpmgr && pool && prm, PJ_EINVAL);
 
+    pj_strset(&tmp_str, tmp_buf, 0);
     prm->ret_addr.slen = 0;
     prm->ret_port = 0;
     prm->ret_tp = NULL;
@@ -1197,8 +1198,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
     {
 	const pjsip_transport *tp = prm->tp_sel->u.transport;
 	if (prm->local_if) {
-	    status = get_net_interface(tp->key.type, &prm->dst_host,
-	                               &tmp_str);
+	    status = get_net_interface((pjsip_transport_type_e)tp->key.type,
+				       &prm->dst_host, &tmp_str);
 	    if (status != PJ_SUCCESS)
 		goto on_return;
 	    pj_strdup(pool, &prm->ret_addr, &tmp_str);
@@ -1206,7 +1207,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 	    prm->ret_tp = tp;
 	} else {
 	    pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
-	    prm->ret_port = tp->local_name.port;
+	    prm->ret_port = (pj_uint16_t)tp->local_name.port;
 	}
 	status = PJ_SUCCESS;
 
@@ -1223,7 +1224,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 	    pj_strdup(pool, &prm->ret_addr,
 		      &prm->tp_sel->u.listener->addr_name.host);
 	}
-	prm->ret_port = prm->tp_sel->u.listener->addr_name.port;
+	prm->ret_port = (pj_uint16_t)prm->tp_sel->u.listener->addr_name.port;
 	status = PJ_SUCCESS;
 
     } else if ((flag & PJSIP_TRANSPORT_DATAGRAM) != 0) {
@@ -1245,8 +1246,9 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 
 	if (status == PJ_SUCCESS) {
 	    if (prm->local_if) {
-		status = get_net_interface(tp->key.type, &prm->dst_host,
-					   &tmp_str);
+		status = get_net_interface((pjsip_transport_type_e)
+					   tp->key.type,
+					   &prm->dst_host, &tmp_str);
 		if (status != PJ_SUCCESS)
 		    goto on_return;
 		pj_strdup(pool, &prm->ret_addr, &tmp_str);
@@ -1254,7 +1256,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 		prm->ret_tp = tp;
 	    } else {
 		pj_strdup(pool, &prm->ret_addr, &tp->local_name.host);
-		prm->ret_port = tp->local_name.port;
+		prm->ret_port = (pj_uint16_t)tp->local_name.port;
 	    }
 
 	    pjsip_transport_dec_ref(tp);
@@ -1283,7 +1285,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 	    } else {
 		pj_strdup(pool, &prm->ret_addr, &f->addr_name.host);
 	    }
-	    prm->ret_port = f->addr_name.port;
+	    prm->ret_port = (pj_uint16_t)f->addr_name.port;
 	    status = PJ_SUCCESS;
 	}
 	pj_lock_release(tpmgr->lock);
