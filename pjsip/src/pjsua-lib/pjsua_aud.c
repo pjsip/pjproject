@@ -1572,6 +1572,14 @@ static pj_status_t create_aud_param(pjmedia_aud_param *param,
 	param->flags &= ~(PJMEDIA_AUD_DEV_CAP_EC|PJMEDIA_AUD_DEV_CAP_EC_TAIL);
     }
 
+    /* VAD settings */
+    if (pjsua_var.media_cfg.no_vad) {
+	param->flags &= ~PJMEDIA_AUD_DEV_CAP_VAD;
+    } else {
+	param->flags |= PJMEDIA_AUD_DEV_CAP_VAD;
+	param->vad_enabled = PJ_TRUE;
+    }
+
     return PJ_SUCCESS;
 }
 

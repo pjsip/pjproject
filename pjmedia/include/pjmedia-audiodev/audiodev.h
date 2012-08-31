@@ -424,6 +424,12 @@ typedef struct pjmedia_aud_param
      */
     pj_bool_t cng_enabled;
 
+    /** 
+     * Enable/disable VAD. This setting is optional, and will only be used
+     * if PJMEDIA_AUD_DEV_CAP_VAD is set in the flags.
+     */
+    pj_bool_t vad_enabled;
+
 } pjmedia_aud_param;
 
 

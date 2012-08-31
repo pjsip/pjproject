@@ -973,7 +973,8 @@ static void RecCb(TAPSCommBuffer &buf, void *user_data)
 	{
 	    unsigned samples_got;
 	    
-	    samples_got = strm->param.ext_fmt.bitrate == 15200? 160 : 240;
+	    samples_got =
+	        strm->param.ext_fmt.det.aud.avg_bps == 15200? 160 : 240;
 	    
 	    /* Check if we got a normal frame. */
 	    if (buf.iBuffer[0] == 1 && buf.iBuffer[1] == 0) {
@@ -1171,9 +1172,9 @@ static void PlayCb(TAPSCommBuffer &buf, void *user_data)
 		sf = pjmedia_frame_ext_get_subframe(frame, 0);
 		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
 		
-		pj_assert((strm->param.ext_fmt.bitrate == 15200 && 
+		pj_assert((strm->param.ext_fmt.det.aud.avg_bps == 15200 && 
 			   samples_cnt == 160) ||
-			  (strm->param.ext_fmt.bitrate != 15200 &&
+			  (strm->param.ext_fmt.det.aud.avg_bps != 15200 &&
 			   samples_cnt == 240));
 		
 		if (sf->data && sf->bitlen) {
@@ -1391,34 +1392,41 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
 	}
 
 	if (supported) {
+	    pjmedia_format ext_fmt;
+	    
 	    switch(i) {
 	    case 0: /* AMRNB */
-		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_AMR;
-		af->dev_info.ext_fmt[fmt_cnt].bitrate = 7400;
-		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_TRUE;
+		pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_AMR,
+					  8000, 1, 16, 20, 7400, 12200);
+		af->dev_info.ext_fmt[fmt_cnt] = ext_fmt;
+		//af->dev_info.ext_fmt[fmt_cnt].vad = PJ_TRUE;
 		++fmt_cnt;
 		break;
 	    case 1: /* G.711 */
-		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_PCMU;
-		af->dev_info.ext_fmt[fmt_cnt].bitrate = 64000;
-		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
+		pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_PCMU,
+					  8000, 1, 16, 20, 64000, 64000);
+		af->dev_info.ext_fmt[fmt_cnt] = ext_fmt;
+		//af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
 		++fmt_cnt;
-		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_PCMA;
-		af->dev_info.ext_fmt[fmt_cnt].bitrate = 64000;
-		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
+		pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_PCMA,
+					  8000, 1, 16, 20, 64000, 64000);
+		af->dev_info.ext_fmt[fmt_cnt] = ext_fmt;
+		//af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
 		++fmt_cnt;
 		g711_supported = PJ_TRUE;
 		break;
 	    case 2: /* G.729 */
-		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_G729;
-		af->dev_info.ext_fmt[fmt_cnt].bitrate = 8000;
-		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
+		pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_G729,
+					  8000, 1, 16, 20, 8000, 8000);
+		af->dev_info.ext_fmt[fmt_cnt] = ext_fmt;
+		//af->dev_info.ext_fmt[fmt_cnt].vad = PJ_FALSE;
 		++fmt_cnt;
 		break;
 	    case 3: /* iLBC */
-		af->dev_info.ext_fmt[fmt_cnt].id = PJMEDIA_FORMAT_ILBC;
-		af->dev_info.ext_fmt[fmt_cnt].bitrate = 13333;
-		af->dev_info.ext_fmt[fmt_cnt].vad = PJ_TRUE;
+		pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_ILBC,
+					  8000, 1, 16, 30, 13333, 15200);
+		af->dev_info.ext_fmt[fmt_cnt] = ext_fmt;
+		//af->dev_info.ext_fmt[fmt_cnt].vad = PJ_TRUE;
 		++fmt_cnt;
 		break;
 	    }
@@ -1570,18 +1578,18 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     /* Set audio engine mode. */
     if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_AMR)
     {
-	aps_setting.mode = (TAPSCodecMode)strm->param.ext_fmt.bitrate;
+	aps_setting.mode = (TAPSCodecMode)strm->param.ext_fmt.det.aud.avg_bps;
     } 
     else if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMU ||
 	     strm->param.ext_fmt.id == PJMEDIA_FORMAT_L16 ||
 	    (strm->param.ext_fmt.id == PJMEDIA_FORMAT_ILBC  &&
-	     strm->param.ext_fmt.bitrate != 15200))
+	     strm->param.ext_fmt.det.aud.avg_bps != 15200))
     {
 	aps_setting.mode = EULawOr30ms;
     } 
     else if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMA ||
 	    (strm->param.ext_fmt.id == PJMEDIA_FORMAT_ILBC &&
-	     strm->param.ext_fmt.bitrate == 15200))
+	     strm->param.ext_fmt.det.aud.avg_bps == 15200))
     {
 	aps_setting.mode = EALawOr20ms;
     }
@@ -1596,11 +1604,13 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     {
 	aps_setting.vad = EFalse;
     } else {
-	aps_setting.vad = strm->param.ext_fmt.vad;
+	aps_setting.vad = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_VAD) &&
+			  strm->param.vad_enabled;
     }
     
     /* Set other audio engine attributes. */
-    aps_setting.plc = strm->param.plc_enabled;
+    aps_setting.plc = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_PLC) &&
+		      strm->param.plc_enabled;
     aps_setting.cng = aps_setting.vad;
     aps_setting.loudspk = 
 		strm->param.output_route==PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;

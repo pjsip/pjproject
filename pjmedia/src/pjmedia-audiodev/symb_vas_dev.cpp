@@ -1015,7 +1015,8 @@ static void RecCb(CVoIPDataBuffer *buf, void *user_data)
 	{
 	    unsigned samples_got;
 	    
-	    samples_got = strm->param.ext_fmt.bitrate == 15200? 160 : 240;
+	    samples_got =
+	        strm->param.ext_fmt.det.aud.avg_bps == 15200? 160 : 240;
 	    
 	    /* Check if we got a normal or SID frame. */
 	    if (buffer[0] != 0) {
@@ -1214,9 +1215,9 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		sf = pjmedia_frame_ext_get_subframe(frame, 0);
 		samples_cnt = frame->samples_cnt / frame->subframe_cnt;
 		
-		pj_assert((strm->param.ext_fmt.bitrate == 15200 && 
+		pj_assert((strm->param.ext_fmt.det.aud.avg_bps == 15200 && 
 			   samples_cnt == 160) ||
-			  (strm->param.ext_fmt.bitrate != 15200 &&
+			  (strm->param.ext_fmt.det.aud.avg_bps != 15200 &&
 			   samples_cnt == 240));
 		
 		if (sf->data && sf->bitlen) {
@@ -1230,7 +1231,8 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		    buffer.Append(0);
 		    
 		    /* VAS iLBC frame is 20ms or 30ms */
-		    frame_len = strm->param.ext_fmt.bitrate == 15200? 38 : 50;
+		    frame_len =
+		        strm->param.ext_fmt.det.aud.avg_bps == 15200? 38 : 50;
 		    buffer.AppendFill(0, frame_len);
 		}
 
@@ -1244,7 +1246,8 @@ static void PlayCb(CVoIPDataBuffer *buf, void *user_data)
 		buffer.Append(0);
 		
 		/* VAS iLBC frame is 20ms or 30ms */
-		frame_len = strm->param.ext_fmt.bitrate == 15200? 38 : 50;
+		frame_len =
+		    strm->param.ext_fmt.det.aud.avg_bps == 15200? 38 : 50;
 		buffer.AppendFill(0, frame_len);
 
 	    }
@@ -1408,40 +1411,47 @@ static pj_status_t factory_init(pjmedia_aud_dev_factory *f)
     vas_factory_ = NULL;
     
     for (TInt i = 0; i < dnlink_formats.Count(); i++) {
+	pjmedia_format ext_fmt;
+	
 	/* Format must be supported by both downlink & uplink. */
 	if (uplink_formats.Find(dnlink_formats[i]) == KErrNotFound)
 	    continue;
 	
 	switch (dnlink_formats[i]) {
 	case EAMR_NB:
-	    af->dev_info.ext_fmt[ext_fmt_cnt].id = PJMEDIA_FORMAT_AMR;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].bitrate = 7400;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_TRUE;
+	    pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_AMR,
+				      8000, 1, 16, 20, 7400, 12200);
+	    af->dev_info.ext_fmt[ext_fmt_cnt] = ext_fmt;
+	    //af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_TRUE;
 	    break;
 
 	case EG729:
-	    af->dev_info.ext_fmt[ext_fmt_cnt].id = PJMEDIA_FORMAT_G729;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].bitrate = 8000;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
+	    pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_G729,
+				      8000, 1, 16, 20, 8000, 8000);
+	    af->dev_info.ext_fmt[ext_fmt_cnt] = ext_fmt;
+	    //af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
 	    break;
 
 	case EILBC:
-	    af->dev_info.ext_fmt[ext_fmt_cnt].id = PJMEDIA_FORMAT_ILBC;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].bitrate = 13333;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_TRUE;
+	    pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_ILBC,
+				      8000, 1, 16, 30, 13333, 15200);
+	    af->dev_info.ext_fmt[ext_fmt_cnt] = ext_fmt;
+	    //af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_TRUE;
 	    break;
 
 	case EG711:
 #if PJMEDIA_AUDIO_DEV_SYMB_VAS_VERSION==2
 	case EG711_10MS:
 #endif
-	    af->dev_info.ext_fmt[ext_fmt_cnt].id = PJMEDIA_FORMAT_PCMU;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].bitrate = 64000;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
+	    pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_PCMU,
+				      8000, 1, 16, 20, 64000, 64000);
+	    af->dev_info.ext_fmt[ext_fmt_cnt] = ext_fmt;
+	    //af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
 	    ++ext_fmt_cnt;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].id = PJMEDIA_FORMAT_PCMA;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].bitrate = 64000;
-	    af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
+	    pjmedia_format_init_audio(&ext_fmt, PJMEDIA_FORMAT_PCMA,
+				      8000, 1, 16, 20, 64000, 64000);
+	    af->dev_info.ext_fmt[ext_fmt_cnt] = ext_fmt;
+	    //af->dev_info.ext_fmt[ext_fmt_cnt].vad = PJ_FALSE;
 	    break;
 	
 	default:
@@ -1616,7 +1626,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     } 
     else if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_AMR)
     {
-	vas_setting.mode = strm->param.ext_fmt.bitrate;
+	vas_setting.mode = strm->param.ext_fmt.det.aud.avg_bps;
     } 
     else if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_PCMU)
     {
@@ -1628,7 +1638,7 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     }
     else if (strm->param.ext_fmt.id == PJMEDIA_FORMAT_ILBC)
     {
-	if (strm->param.ext_fmt.bitrate == 15200)
+	if (strm->param.ext_fmt.det.aud.avg_bps == 15200)
 	    vas_setting.mode = CVoIPFormatIntfc::EiLBC20mSecFrame;
 	else
 	    vas_setting.mode = CVoIPFormatIntfc::EiLBC30mSecFrame;
@@ -1647,11 +1657,13 @@ static pj_status_t factory_create_stream(pjmedia_aud_dev_factory *f,
     {
 	vas_setting.vad = EFalse;
     } else {
-	vas_setting.vad = strm->param.ext_fmt.vad;
+	vas_setting.vad = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_VAD) &&
+			  strm->param.vad_enabled;
     }
     
     /* Set other audio engine attributes. */
-    vas_setting.plc = strm->param.plc_enabled;
+    vas_setting.plc = (strm->param.flags & PJMEDIA_AUD_DEV_CAP_PLC) &&
+		      strm->param.plc_enabled;
     vas_setting.cng = vas_setting.vad;
     vas_setting.loudspk = 
 		strm->param.output_route==PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER;
