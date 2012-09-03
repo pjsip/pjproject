@@ -1992,7 +1992,7 @@ PJ_DEF(pj_status_t) pjsua_call_answer2(pjsua_call_id call_id,
      *   answer code 183 or 2xx is issued
      */
     if (!call->med_ch_cb && 
-	(call->opt_inited || (code==183 && code/100==2)) &&
+	(call->opt_inited || (code==183 || code/100==2)) &&
 	(!call->inv->neg ||
 	 pjmedia_sdp_neg_get_state(call->inv->neg) == 
 		PJMEDIA_SDP_NEG_STATE_NULL))
