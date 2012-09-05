@@ -1877,10 +1877,6 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 		m = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_media);
 		m->desc.transport = pj_str("RTP/AVP");
 		m->desc.fmt_count = 1;
-		m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
-		m->conn->net_type = pj_str("IN");
-		m->conn->addr_type = pj_str("IP4");
-		m->conn->addr = pj_str("127.0.0.1");
 
 		switch (call_med->type) {
 		case PJMEDIA_TYPE_AUDIO:
@@ -1908,6 +1904,14 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 		    }
 		    break;
 		}
+	    }
+
+	    /* Add connection line, if none */
+	    if (m->conn == NULL && sdp->conn == NULL) {
+		m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+		m->conn->net_type = pj_str("IN");
+		m->conn->addr_type = pj_str("IP4");
+		m->conn->addr = pj_str("127.0.0.1");
 	    }
 
 	    sdp->media[sdp->media_count++] = m;
