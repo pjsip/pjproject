@@ -1157,7 +1157,7 @@ static void free_send_data(pj_ssl_sock_t *ssock, write_data_t *wdata)
 	}
     }
     /* For data in the middle buffer, just do nothing on the buffer. The slot
-     * will be freed when freeing other data that is in the first/last.
+     * will be freed later when freeing the first/last data.
      */
     
     /* Remove the data from send pending list */
@@ -1267,6 +1267,8 @@ static pj_status_t flush_write_bio(pj_ssl_sock_t *ssock,
     }
 
     /* Copy the data and set its properties into the send data */
+    pj_ioqueue_op_key_init(&wdata->key, sizeof(pj_ioqueue_op_key_t));
+    wdata->key.user_data = wdata;
     wdata->app_key = send_key;
     wdata->record_len = needed_len;
     wdata->data_len = len;
@@ -1547,7 +1549,7 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
 
     } else if (send_key != &ssock->handshake_op_key) {
 	/* Some data has been sent, notify application */
-	write_data_t *wdata = (write_data_t*)send_key;
+	write_data_t *wdata = (write_data_t*)send_key->user_data;
 	if (ssock->param.cb.on_data_sent) {
 	    pj_bool_t ret;
 	    ret = (*ssock->param.cb.on_data_sent)(ssock, wdata->app_key, 
@@ -1931,6 +1933,8 @@ PJ_DEF(pj_status_t) pj_ssl_sock_create (pj_pool_t *pool,
     pj_list_init(&ssock->write_pending_empty);
     pj_list_init(&ssock->send_pending);
     pj_timer_entry_init(&ssock->timer, 0, ssock, &on_timer);
+    pj_ioqueue_op_key_init(&ssock->handshake_op_key,
+			   sizeof(pj_ioqueue_op_key_t));
 
     /* Create secure socket mutex */
     status = pj_lock_create_recursive_mutex(pool, pool->obj_name,
