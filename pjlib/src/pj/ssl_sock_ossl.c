@@ -1350,7 +1350,6 @@ static pj_status_t do_handshake(pj_ssl_sock_t *ssock)
      */
     status = flush_write_bio(ssock, &ssock->handshake_op_key, 0, 0);
     if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-	pj_lock_release(ssock->write_mutex);
 	return status;
     }
 
