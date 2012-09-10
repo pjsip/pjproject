@@ -519,7 +519,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
                                       SL_IID_VOLUME,
                                       SL_IID_ANDROIDCONFIGURATION};
         const SLboolean req[3] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE,
-                                  SL_BOOLEAN_FALSE};
+                                  SL_BOOLEAN_TRUE};
         SLAndroidConfigurationItf playerConfig;
         SLint32 streamType = SL_ANDROID_STREAM_VOICE;
 #else
@@ -617,7 +617,7 @@ static pj_status_t opensl_create_stream(pjmedia_aud_dev_factory *f,
         int numIface = 2;
         const SLInterfaceID ids[2] = {W_SL_IID_BUFFERQUEUE,
                                       SL_IID_ANDROIDCONFIGURATION};
-        const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_FALSE};
+        const SLboolean req[2] = {SL_BOOLEAN_TRUE, SL_BOOLEAN_TRUE};
         SLAndroidConfigurationItf recorderConfig;
 #else
         int numIface = 1;
