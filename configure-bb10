@@ -32,7 +32,7 @@ RANLIB="${QNX_HOST}/usr/bin/nto${TARGET_ARCH}-ranlib "
 CPP="${QNX_HOST}/usr/bin/qcc -V4.6.3,gcc_nto${TARGET_ARCHEND}_cpp -E "
 CC="${QNX_HOST}/usr/bin/qcc -V4.6.3,gcc_nto${TARGET_ARCHEND}_cpp "
 LD="${QNX_HOST}/usr/bin/nto${TARGET_ARCH}-ld " 
-export LDFLAGS=" -L${QNX_TARGET}/${LIBDIR}/usr/lib -L${QNX_TARGET}/${LIBDIR}/lib -L${QNX_HOST}/usr/lib/gcc/${TARGET_HOST}/4.6.3 -lgcc -lasound "
+export LDFLAGS=" -L${QNX_TARGET}/${LIBDIR}/usr/lib -L${QNX_TARGET}/${LIBDIR}/lib -L${QNX_HOST}/usr/lib/gcc/${TARGET_HOST}/4.6.3 -lgcc -lasound-lasound -laudio_manager"
 export CFLAGS=" -g -fPIC -DPJMEDIA_AUDIO_DEV_HAS_BB10=1 " 
 
 ./configure --host=${TARGET_HOST} --disable-oss $*
