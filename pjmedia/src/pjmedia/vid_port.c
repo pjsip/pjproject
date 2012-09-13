@@ -332,9 +332,7 @@ PJ_DEF(pj_status_t) pjmedia_vid_port_create( pj_pool_t *pool,
 	                        PJMEDIA_SIG_VID_PORT,
 			        prm->vidparam.dir, &prm->vidparam.fmt);
 
-	if (vp->stream_role == ROLE_ACTIVE) {
-	    need_frame_buf = PJ_TRUE;
-	}
+        need_frame_buf = PJ_TRUE;
     }
 
     if (need_frame_buf) {
@@ -654,8 +652,10 @@ static pj_status_t convert_frame(pjmedia_vid_port *vp,
     pj_status_t status = PJ_SUCCESS;
 
     if (vp->conv.conv) {
-	dst_frame->buf  = vp->conv.conv_buf;
-	dst_frame->size = vp->conv.conv_buf_size;
+        if (!dst_frame->buf || dst_frame->size < vp->conv.conv_buf_size) {
+            dst_frame->buf  = vp->conv.conv_buf;
+	    dst_frame->size = vp->conv.conv_buf_size;
+        }
 	status = pjmedia_converter_convert(vp->conv.conv,
 					   src_frame, dst_frame);
     }
