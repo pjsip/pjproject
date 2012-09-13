@@ -65,15 +65,16 @@ typedef struct dshow_fmt_info
 {
     pjmedia_format_id    pjmedia_format;
     const GUID          *dshow_format;
+    pj_bool_t            enabled;
 } dshow_fmt_info;
 
 static dshow_fmt_info dshow_fmts[] =
 {
-    {PJMEDIA_FORMAT_YUY2, &MEDIASUBTYPE_YUY2} ,
-    {PJMEDIA_FORMAT_RGB24, &MEDIASUBTYPE_RGB24} ,
-    {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32} ,
-    {PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV} ,
-    {PJMEDIA_FORMAT_I420, &WMMEDIASUBTYPE_I420}
+    {PJMEDIA_FORMAT_YUY2, &MEDIASUBTYPE_YUY2, PJ_FALSE} ,
+    {PJMEDIA_FORMAT_RGB24, &MEDIASUBTYPE_RGB24, PJ_FALSE} ,
+    {PJMEDIA_FORMAT_RGB32, &MEDIASUBTYPE_RGB32, PJ_FALSE} ,
+    {PJMEDIA_FORMAT_IYUV, &MEDIASUBTYPE_IYUV, PJ_FALSE} ,
+    {PJMEDIA_FORMAT_I420, &WMMEDIASUBTYPE_I420, PJ_FALSE}
 };
 
 /* dshow_ device info */
@@ -331,6 +332,8 @@ static void enum_dev_cap(IBaseFilter *filter,
 					    &rpcstatus2) == 0 &&
 				rpcstatus2 == RPC_S_OK)
 			    {
+                                if (!dshow_fmt)
+                                    dshow_fmts[j].enabled = PJ_TRUE;
 				if (sup_fmt)
 				    sup_fmt[j] = PJ_TRUE;
 				if (pSrcpin) {
@@ -642,7 +645,7 @@ static dshow_fmt_info* get_dshow_format_info(pjmedia_format_id id)
     unsigned i;
 
     for (i = 0; i < sizeof(dshow_fmts)/sizeof(dshow_fmts[0]); i++) {
-        if (dshow_fmts[i].pjmedia_format == id)
+        if (dshow_fmts[i].pjmedia_format == id && dshow_fmts[i].enabled)
             return &dshow_fmts[i];
     }
 
