@@ -705,7 +705,12 @@ pj_status_t pjsua_vid_channel_init(pjsua_call_media *call_med)
     return PJ_SUCCESS;
 }
 
-/* Internal function: update video channel after SDP negotiation */
+/* Internal function: update video channel after SDP negotiation.
+ * Warning: do not use temporary/flip-flop pool, e.g: inv->pool_prov,
+ *          for creating stream, etc, as after SDP negotiation and when
+ *	    the SDP media is not changed, the stream should remain running
+ *          while the temporary/flip-flop pool may be released.
+ */
 pj_status_t pjsua_vid_channel_update(pjsua_call_media *call_med,
 				     pj_pool_t *tmp_pool,
 				     pjmedia_vid_stream_info *si,

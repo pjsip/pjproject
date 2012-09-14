@@ -212,6 +212,10 @@ static unsigned dump_media_stat(const char *indent,
 
 
 /* Dump media session */
+#if PJSUA_MEDIA_HAS_PJMEDIA || \
+    (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO && \
+     PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT)
+
 static void dump_media_session(const char *indent,
 			       char *buf, unsigned maxlen,
 			       pjsua_call *call)
@@ -857,6 +861,24 @@ static void dump_media_session(const char *indent,
 
     }
 }
+
+#else	/* PJSUA_MEDIA_HAS_PJMEDIA ||
+	   (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO &&
+	    PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT) */
+
+static void dump_media_session(const char *indent,
+			       char *buf, unsigned maxlen,
+			       pjsua_call *call)
+{
+    PJ_UNUSED_ARG(indent);
+    PJ_UNUSED_ARG(buf);
+    PJ_UNUSED_ARG(maxlen);
+    PJ_UNUSED_ARG(call);
+}
+
+#endif	/* PJSUA_MEDIA_HAS_PJMEDIA ||
+	   (PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO &&
+	    PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT) */
 
 
 /* Print call info */

@@ -5236,6 +5236,28 @@ PJ_DECL(pj_status_t) pjsua_im_typing(pjsua_acc_id acc_id,
 
 
 /**
+ * Specify whether the third party stream has the capability of retrieving
+ * the stream info, i.e: pjmedia_stream_get_info() and
+ * pjmedia_vid_stream_get_info(). Currently this capability is required
+ * by smart media update and call dump.
+ */
+#ifndef PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
+#   define PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO    0
+#endif
+
+
+/**
+ * Specify whether the third party stream has the capability of retrieving
+ * the stream statistics, i.e: pjmedia_stream_get_stat() and
+ * pjmedia_vid_stream_get_stat(). Currently this capability is required
+ * by call dump.
+ */
+#ifndef PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT
+#   define PJSUA_THIRD_PARTY_STREAM_HAS_GET_STAT    0
+#endif
+
+
+/**
  * Max ports in the conference bridge. This setting is the default value
  * for pjsua_media_config.max_media_ports.
  */
@@ -5548,6 +5570,20 @@ struct pjsua_media_config
      * Default: PJ_TRUE
      */
     pj_bool_t vid_preview_enable_native;
+
+    /**
+     * Disable smart media update (ticket #1568). The smart media update
+     * will check for any changes in the media properties after a successful
+     * SDP negotiation and the media will only be reinitialized when any
+     * change is found. When it is disabled, media streams will always be
+     * reinitialized after a successful SDP negotiation.
+     *
+     * Note for third party media, the smart media update requires stream info
+     * retrieval capability, see #PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t no_smart_media_update;
 };
 
 

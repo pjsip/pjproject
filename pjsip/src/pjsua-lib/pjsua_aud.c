@@ -560,7 +560,12 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
     pj_log_pop_indent();
 }
 
-
+/* Internal function: update audio channel after SDP negotiation.
+ * Warning: do not use temporary/flip-flop pool, e.g: inv->pool_prov,
+ *          for creating stream, etc, as after SDP negotiation and when
+ *	    the SDP media is not changed, the stream should remain running
+ *          while the temporary/flip-flop pool may be released.
+ */
 pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
                                      pj_pool_t *tmp_pool,
                                      pjmedia_stream_info *si,
@@ -679,7 +684,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
 		port_name = pj_str("call");
 	    }
 	    status = pjmedia_conf_add_port( pjsua_var.mconf,
-					    call->inv->pool_prov,
+					    call->inv->pool,
 					    media_port,
 					    &port_name,
 					    (unsigned*)

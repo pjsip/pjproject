@@ -2084,61 +2084,71 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 }
 
 
+static void stop_media_stream(pjsua_call *call, unsigned med_idx)
+{
+    pjsua_call_media *call_med = &call->media[med_idx];
+
+    /* Check if stream does not exist */
+    if (med_idx >= call->med_cnt)
+	return;
+
+    pj_log_push_indent();
+
+    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	pjsua_aud_stop_stream(call_med);
+    }
+
+#if PJMEDIA_HAS_VIDEO
+    else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	pjsua_vid_stop_stream(call_med);
+    }
+#endif
+
+    PJ_LOG(4,(THIS_FILE, "Media stream call%02d:%d is destroyed",
+			 call->index, med_idx));
+    call_med->prev_state = call_med->state;
+    call_med->state = PJSUA_CALL_MEDIA_NONE;
+
+    /* Try to sync recent changes to provisional media */
+    if (med_idx < call->med_prov_cnt && 
+	call->media_prov[med_idx].tp == call_med->tp)
+    {
+	pjsua_call_media *prov_med = &call->media_prov[med_idx];
+
+	/* Media state */
+	prov_med->prev_state = call_med->prev_state;
+	prov_med->state	     = call_med->state;
+
+	/* RTP seq/ts */
+	prov_med->rtp_tx_seq_ts_set = call_med->rtp_tx_seq_ts_set;
+	prov_med->rtp_tx_seq	    = call_med->rtp_tx_seq;
+	prov_med->rtp_tx_ts	    = call_med->rtp_tx_ts;
+
+	/* Stream */
+	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	    prov_med->strm.a.conf_slot = call_med->strm.a.conf_slot;
+	    prov_med->strm.a.stream    = call_med->strm.a.stream;
+	}
+#if PJMEDIA_HAS_VIDEO
+	else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	    prov_med->strm.v.cap_win_id = call_med->strm.v.cap_win_id;
+	    prov_med->strm.v.rdr_win_id = call_med->strm.v.rdr_win_id;
+	    prov_med->strm.v.stream	= call_med->strm.v.stream;
+	}
+#endif
+    }
+
+    pj_log_pop_indent();
+}
+
 static void stop_media_session(pjsua_call_id call_id)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned mi;
 
-    pj_log_push_indent();
-
     for (mi=0; mi<call->med_cnt; ++mi) {
-	pjsua_call_media *call_med = &call->media[mi];
-
-	if (call_med->type == PJMEDIA_TYPE_AUDIO) {
-	    pjsua_aud_stop_stream(call_med);
-	}
-
-#if PJMEDIA_HAS_VIDEO
-	else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
-	    pjsua_vid_stop_stream(call_med);
-	}
-#endif
-
-	PJ_LOG(4,(THIS_FILE, "Media session call%02d:%d is destroyed",
-			     call_id, mi));
-        call_med->prev_state = call_med->state;
-	call_med->state = PJSUA_CALL_MEDIA_NONE;
-
-	/* Try to sync recent changes to provisional media */
-	if (mi<call->med_prov_cnt && call->media_prov[mi].tp==call_med->tp)
-	{
-	    pjsua_call_media *prov_med = &call->media_prov[mi];
-
-	    /* Media state */
-	    prov_med->prev_state = call_med->prev_state;
-	    prov_med->state	 = call_med->state;
-
-	    /* RTP seq/ts */
-	    prov_med->rtp_tx_seq_ts_set = call_med->rtp_tx_seq_ts_set;
-	    prov_med->rtp_tx_seq	= call_med->rtp_tx_seq;
-	    prov_med->rtp_tx_ts		= call_med->rtp_tx_ts;
-
-	    /* Stream */
-	    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
-		prov_med->strm.a.conf_slot = call_med->strm.a.conf_slot;
-		prov_med->strm.a.stream	   = call_med->strm.a.stream;
-	    }
-#if PJMEDIA_HAS_VIDEO
-	    else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
-		prov_med->strm.v.cap_win_id = call_med->strm.v.cap_win_id;
-		prov_med->strm.v.rdr_win_id = call_med->strm.v.rdr_win_id;
-		prov_med->strm.v.stream	    = call_med->strm.v.stream;
-	    }
-#endif
-	}
+	stop_media_stream(call, mi);
     }
-
-    pj_log_pop_indent();
 }
 
 pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
@@ -2188,6 +2198,171 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
 }
 
 
+/* Match codec fmtp. This will compare the values and the order. */
+static pj_bool_t match_codec_fmtp(const pjmedia_codec_fmtp *fmtp1,
+				  const pjmedia_codec_fmtp *fmtp2)
+{
+    unsigned i;
+
+    if (fmtp1->cnt != fmtp2->cnt)
+	return PJ_FALSE;
+
+    for (i = 0; i < fmtp1->cnt; ++i) {
+	if (pj_stricmp(&fmtp1->param[i].name, &fmtp2->param[i].name))
+	    return PJ_FALSE;
+	if (pj_stricmp(&fmtp1->param[i].val, &fmtp2->param[i].val))
+	    return PJ_FALSE;
+    }
+
+    return PJ_TRUE;
+}
+
+#if PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO
+
+static pj_bool_t is_media_changed(const pjsua_call *call,
+				  unsigned med_idx,
+				  const pjsua_stream_info *new_si_)
+{
+    const pjsua_call_media *call_med = &call->media[med_idx];
+
+    /* Check for newly added media */
+    if (med_idx >= call->med_cnt)
+	return PJ_TRUE;
+
+    /* Compare media type */
+    if (call_med->type != new_si_->type)
+	return PJ_TRUE;
+
+    /* Audio update checks */
+    if (call_med->type == PJMEDIA_TYPE_AUDIO) {
+	pjmedia_stream_info the_old_si;
+	const pjmedia_stream_info *old_si = NULL;
+	const pjmedia_stream_info *new_si = &new_si_->info.aud;
+	const pjmedia_codec_info *old_ci = NULL;
+	const pjmedia_codec_info *new_ci = &new_si->fmt;
+	const pjmedia_codec_param *old_cp = NULL;
+	const pjmedia_codec_param *new_cp = new_si->param;
+
+	/* Compare media direction */
+	if (call_med->dir != new_si->dir)
+	    return PJ_TRUE;
+
+	/* Get current active stream info */
+	if (call_med->strm.a.stream) {
+	    pjmedia_stream_get_info(call_med->strm.a.stream, &the_old_si);
+	    old_si = &the_old_si;
+	    old_ci = &old_si->fmt;
+	    old_cp = old_si->param;
+	} else {
+	    /* The stream is inactive. */
+	    return (new_si->dir != PJMEDIA_DIR_NONE);
+	}
+
+	/* Compare remote RTP address */
+	if (pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
+	    return PJ_TRUE;
+
+	/* Compare codec info */
+	if (pj_stricmp(&old_ci->encoding_name, &new_ci->encoding_name) ||
+	    old_ci->clock_rate != new_ci->clock_rate ||
+	    old_ci->channel_cnt != new_ci->channel_cnt ||
+	    old_si->rx_pt != new_si->rx_pt ||
+	    old_si->tx_pt != new_si->tx_pt ||
+	    old_si->rx_event_pt != new_si->tx_event_pt ||
+	    old_si->tx_event_pt != new_si->tx_event_pt)
+	{
+	    return PJ_TRUE;
+	}
+
+	/* Compare codec param */
+	if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
+	    old_cp->setting.vad != new_cp->setting.vad ||
+	    old_cp->setting.cng != new_cp->setting.cng ||
+	    old_cp->setting.plc != new_cp->setting.plc ||
+	    old_cp->setting.penh != new_cp->setting.penh ||
+	    !match_codec_fmtp(&old_cp->setting.dec_fmtp,
+			      &new_cp->setting.dec_fmtp) ||
+	    !match_codec_fmtp(&old_cp->setting.enc_fmtp,
+			      &new_cp->setting.enc_fmtp))
+	{
+	    return PJ_TRUE;
+	}
+    }
+
+#if PJMEDIA_HAS_VIDEO
+    else if (call_med->type == PJMEDIA_TYPE_VIDEO) {
+	pjmedia_vid_stream_info the_old_si;
+	const pjmedia_vid_stream_info *old_si = NULL;
+	const pjmedia_vid_stream_info *new_si = &new_si_->info.vid;
+	const pjmedia_vid_codec_info *old_ci = NULL;
+	const pjmedia_vid_codec_info *new_ci = &new_si->codec_info;
+	const pjmedia_vid_codec_param *old_cp = NULL;
+	const pjmedia_vid_codec_param *new_cp = new_si->codec_param;
+
+	/* Compare media direction */
+	if (call_med->dir != new_si->dir)
+	    return PJ_TRUE;
+
+	/* Get current active stream info */
+	if (call_med->strm.v.stream) {
+	    pjmedia_vid_stream_get_info(call_med->strm.v.stream, &the_old_si);
+	    old_si = &the_old_si;
+	    old_ci = &old_si->codec_info;
+	    old_cp = old_si->codec_param;
+	} else {
+	    /* The stream is inactive. */
+	    return (new_si->dir != PJMEDIA_DIR_NONE);
+	}
+
+	/* Compare remote RTP address */
+	if (pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
+	    return PJ_TRUE;
+
+	/* Compare codec info */
+	if (pj_stricmp(&old_ci->encoding_name, &new_ci->encoding_name) ||
+	    old_si->rx_pt != new_si->rx_pt ||
+	    old_si->tx_pt != new_si->tx_pt)
+	{
+	    return PJ_TRUE;
+	}
+
+	/* Compare codec param */
+	if (/* old_cp->enc_mtu != new_cp->enc_mtu || */
+	    pj_memcmp(&old_cp->enc_fmt.det, &new_cp->enc_fmt.det,
+		      sizeof(pjmedia_video_format_detail)) ||
+	    !match_codec_fmtp(&old_cp->dec_fmtp, &new_cp->dec_fmtp) ||
+	    !match_codec_fmtp(&old_cp->enc_fmtp, &new_cp->enc_fmtp))
+	{
+	    return PJ_TRUE;
+	}
+    }
+
+#endif
+
+    else {
+	/* Just return PJ_TRUE for other media type */
+	return PJ_TRUE;
+    }
+
+    return PJ_FALSE;
+}
+
+#else /* PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO */
+
+static pj_bool_t is_media_changed(const pjsua_call *call,
+				  unsigned med_idx,
+				  const pjsua_stream_info *new_si_)
+{
+    PJ_UNUSED_ARG(call);
+    PJ_UNUSED_ARG(med_idx);
+    PJ_UNUSED_ARG(new_si_);
+    /* Always assume that media has been changed */
+    return PJ_TRUE;
+}
+
+#endif /* PJSUA_MEDIA_HAS_PJMEDIA || PJSUA_THIRD_PARTY_STREAM_HAS_GET_INFO */
+
+
 pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *local_sdp,
 				       const pjmedia_sdp_session *remote_sdp)
@@ -2216,7 +2391,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     pj_log_push_indent();
 
     /* Destroy existing media session, if any. */
-    stop_media_session(call->index);
+    //stop_media_session(call->index);
 
     /* Call media count must be at least equal to SDP media. Note that
      * it may not be equal when remote removed any SDP media line.
@@ -2270,6 +2445,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Process each media stream */
     for (mi=0; mi < call->med_prov_cnt; ++mi) {
 	pjsua_call_media *call_med = &call->media_prov[mi];
+	pj_bool_t media_changed = PJ_FALSE;
 
 	if (mi >= local_sdp->media_count ||
 	    mi >= remote_sdp->media_count)
@@ -2277,8 +2453,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    /* This may happen when remote removed any SDP media lines in
 	     * its re-offer.
 	     */
+
+	    /* Stop stream */
+	    stop_media_stream(call, mi);
+
+	    /* Close the media transport */
 	    if (call_med->tp) {
-		/* Close the media transport */
 		pjsua_set_media_tp_state(call_med, PJSUA_MED_TP_NULL);
 		pjmedia_transport_close(call_med->tp);
 		call_med->tp = call_med->tp_orig = NULL;
@@ -2293,11 +2473,14 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 #endif
 	}
 
+	/* Apply media update action */
 	if (call_med->type==PJMEDIA_TYPE_AUDIO) {
 	    pjmedia_stream_info the_si, *si = &the_si;
+	    pjsua_stream_info stream_info;
 
-	    status = pjmedia_stream_info_from_sdp(si, tmp_pool, pjsua_var.med_endpt,
-	                                          local_sdp, remote_sdp, mi);
+	    status = pjmedia_stream_info_from_sdp(
+					si, tmp_pool, pjsua_var.med_endpt,
+	                                local_sdp, remote_sdp, mi);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(1,(THIS_FILE, status,
 			     "pjmedia_stream_info_from_sdp() failed "
@@ -2306,8 +2489,23 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		continue;
 	    }
 
+	    /* Check if this media is changed */
+	    stream_info.type = PJMEDIA_TYPE_AUDIO;
+	    stream_info.info.aud = the_si;
+	    if (pjsua_var.media_cfg.no_smart_media_update ||
+		is_media_changed(call, mi, &stream_info))
+	    {
+		media_changed = PJ_TRUE;
+		/* Stop the media */
+		stop_media_stream(call, mi);
+	    } else {
+		PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (audio) unchanged.",
+			  call_id, mi));
+	    }
+
 	    /* Check if no media is active */
 	    if (si->dir == PJMEDIA_DIR_NONE) {
+
 		/* Update call media state and direction */
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
 		call_med->dir = PJMEDIA_DIR_NONE;
@@ -2335,14 +2533,29 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		if (tp_info.specific_info_cnt > 0) {
 		    unsigned i;
 		    for (i = 0; i < tp_info.specific_info_cnt; ++i) {
-			if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP)
+			if (tp_info.spc_info[i].type == 
+			    PJMEDIA_TRANSPORT_TYPE_SRTP)
 			{
 			    pjmedia_srtp_info *srtp_info =
-					(pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
+				(pjmedia_srtp_info*)tp_info.spc_info[i].buffer;
 
 			    call_med->rem_srtp_use = srtp_info->peer_use;
 			    break;
 			}
+		    }
+		}
+
+		/* Update audio channel */
+		if (media_changed) {
+		    status = pjsua_aud_channel_update(call_med,
+						      call->inv->pool, si,
+						      local_sdp, remote_sdp);
+		    if (status != PJ_SUCCESS) {
+			PJ_PERROR(1,(THIS_FILE, status,
+				     "pjsua_aud_channel_update() failed "
+					 "for call_id %d media %d",
+				     call_id, mi));
+			continue;
 		    }
 		}
 
@@ -2356,17 +2569,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
 		else
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
-	    }
-
-	    /* Call implementation */
-	    status = pjsua_aud_channel_update(call_med, tmp_pool, si,
-	                                      local_sdp, remote_sdp);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(1,(THIS_FILE, status,
-			     "pjsua_aud_channel_update() failed "
-				 "for call_id %d media %d",
-			     call_id, mi));
-		continue;
 	    }
 
 	    /* Print info. */
@@ -2413,9 +2615,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 #if defined(PJMEDIA_HAS_VIDEO) && (PJMEDIA_HAS_VIDEO != 0)
 	} else if (call_med->type==PJMEDIA_TYPE_VIDEO) {
 	    pjmedia_vid_stream_info the_si, *si = &the_si;
+	    pjsua_stream_info stream_info;
 
-	    status = pjmedia_vid_stream_info_from_sdp(si, tmp_pool, pjsua_var.med_endpt,
-						      local_sdp, remote_sdp, mi);
+	    status = pjmedia_vid_stream_info_from_sdp(
+					si, tmp_pool, pjsua_var.med_endpt,
+					local_sdp, remote_sdp, mi);
 	    if (status != PJ_SUCCESS) {
 		PJ_PERROR(1,(THIS_FILE, status,
 			     "pjmedia_vid_stream_info_from_sdp() failed "
@@ -2424,8 +2628,21 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		continue;
 	    }
 
+	    /* Check if this media is changed */
+	    stream_info.type = PJMEDIA_TYPE_VIDEO;
+	    stream_info.info.vid = the_si;
+	    if (is_media_changed(call, mi, &stream_info)) {
+		media_changed = PJ_TRUE;
+		/* Stop the media */
+		stop_media_stream(call, mi);
+	    } else {
+		PJ_LOG(4,(THIS_FILE, "Call %d: stream #%d (video) unchanged.",
+			  call_id, mi));
+	    }
+
 	    /* Check if no media is active */
 	    if (si->dir == PJMEDIA_DIR_NONE) {
+
 		/* Update call media state and direction */
 		call_med->state = PJSUA_CALL_MEDIA_NONE;
 		call_med->dir = PJMEDIA_DIR_NONE;
@@ -2464,6 +2681,20 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    }
 		}
 
+		/* Update audio channel */
+		if (media_changed) {
+		    status = pjsua_vid_channel_update(call_med,
+						      call->inv->pool, si,
+						      local_sdp, remote_sdp);
+		    if (status != PJ_SUCCESS) {
+			PJ_PERROR(1,(THIS_FILE, status,
+				     "pjsua_vid_channel_update() failed "
+					 "for call_id %d media %d",
+				     call_id, mi));
+			continue;
+		    }
+		}
+
 		/* Call media direction */
 		call_med->dir = si->dir;
 
@@ -2474,16 +2705,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    call_med->state = PJSUA_CALL_MEDIA_REMOTE_HOLD;
 		else
 		    call_med->state = PJSUA_CALL_MEDIA_ACTIVE;
-	    }
-
-	    status = pjsua_vid_channel_update(call_med, tmp_pool, si,
-	                                      local_sdp, remote_sdp);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(1,(THIS_FILE, status,
-			     "pjsua_vid_channel_update() failed "
-				 "for call_id %d media %d",
-			     call_id, mi));
-		continue;
 	    }
 
 	    /* Print info. */
