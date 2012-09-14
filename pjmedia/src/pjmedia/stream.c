@@ -876,7 +876,7 @@ static pj_status_t get_frame_ext( pjmedia_port *port, pjmedia_frame *frame)
  */
 static void create_dtmf_payload(pjmedia_stream *stream, 
 			        struct pjmedia_frame *frame_out,
-				int *first, int *last)
+			        int forced_last, int *first, int *last)
 {
     pjmedia_rtp_dtmf_event *event;
     struct dtmf *digit = &stream->tx_dtmf_buf[0];
@@ -902,7 +902,7 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     event->duration = pj_htons((pj_uint16_t)digit->duration);
 
 
-    if (digit->duration >= PJMEDIA_DTMF_DURATION) {
+    if (forced_last || digit->duration >= PJMEDIA_DTMF_DURATION) {
 
 	event->e_vol |= 0x80;
 	*last = 1;
@@ -1217,7 +1217,7 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
     if (stream->tx_dtmf_count) {
 	int first=0, last=0;
 
-	create_dtmf_payload(stream, &frame_out, &first, &last);
+	create_dtmf_payload(stream, &frame_out, 0, &first, &last);
 
 	/* Encapsulate into RTP packet. Note that:
          *  - RTP marker should be set on the beginning of a new event
@@ -2415,11 +2415,55 @@ err_cleanup:
  */
 PJ_DEF(pj_status_t) pjmedia_stream_destroy( pjmedia_stream *stream )
 {
+    pj_status_t status;
+
     PJ_ASSERT_RETURN(stream != NULL, PJ_EINVAL);
 
     /* Send RTCP BYE (also SDES & XR) */
     if (!stream->rtcp_sdes_bye_disabled) {
 	send_rtcp(stream, PJ_TRUE, PJ_TRUE, PJ_TRUE);
+    }
+
+    /* If we're in the middle of transmitting DTMF digit, send one last
+     * RFC 2833 RTP packet with 'End' flag set.
+     */
+    if (stream->tx_dtmf_count && stream->tx_dtmf_buf[0].duration != 0) {
+	pjmedia_frame frame_out;
+	pjmedia_channel *channel = stream->enc;
+	int first=0, last=0;
+	void *rtphdr;
+	int rtphdrlen;
+
+	pj_bzero(&frame_out, sizeof(frame_out));
+	frame_out.buf = ((char*)channel->out_pkt) + sizeof(pjmedia_rtp_hdr);
+	frame_out.size = 0;
+
+	create_dtmf_payload(stream, &frame_out, 1, &first, &last);
+
+	/* Encapsulate into RTP packet. Note that:
+         *  - RTP marker should be set on the beginning of a new event
+	 *  - RTP timestamp is constant for the same packet.
+         */
+	status = pjmedia_rtp_encode_rtp( &channel->rtp,
+					 stream->tx_event_pt, first,
+					 frame_out.size, 0,
+					 (const void**)&rtphdr,
+					 &rtphdrlen);
+	if (status == PJ_SUCCESS) {
+	    /* Copy RTP header to the beginning of packet */
+	    pj_memcpy(channel->out_pkt, rtphdr, sizeof(pjmedia_rtp_hdr));
+
+	    /* Send the RTP packet to the transport. */
+	    status = pjmedia_transport_send_rtp(stream->transport,
+						channel->out_pkt,
+						frame_out.size +
+						    sizeof(pjmedia_rtp_hdr));
+	}
+
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(stream->port.info.name.ptr, status,
+			 "Error sending RTP/DTMF end packet"));
+	}
     }
 
     /* Detach from transport 
