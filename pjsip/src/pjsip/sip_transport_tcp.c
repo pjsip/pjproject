@@ -73,6 +73,7 @@ struct delayed_tdata
 {
     PJ_DECL_LIST_MEMBER(struct delayed_tdata);
     pjsip_tx_data_op_key    *tdata_op_key;
+    pj_time_val              timeout;
 };
 
 
@@ -649,6 +650,9 @@ on_error:
 /* Flush all delayed transmision once the socket is connected. */
 static void tcp_flush_pending_tx(struct tcp_transport *tcp)
 {
+    pj_time_val now;
+
+    pj_gettickcount(&now);
     pj_lock_acquire(tcp->base.lock);
     while (!pj_list_empty(&tcp->delayed_list)) {
 	struct delayed_tdata *pending_tx;
@@ -662,6 +666,13 @@ static void tcp_flush_pending_tx(struct tcp_transport *tcp)
 
 	tdata = pending_tx->tdata_op_key->tdata;
 	op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+        if (pending_tx->timeout.sec > 0 &&
+            PJ_TIME_VAL_GT(now, pending_tx->timeout))
+        {
+            on_data_sent(tcp->asock, op_key, -PJ_ETIMEDOUT);
+            continue;
+        }
 
 	/* send! */
 	size = tdata->buf.cur - tdata->buf.start;
@@ -1122,10 +1133,19 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
 	    /*
 	     * connect() is still in progress. Put the transmit data to
 	     * the delayed list.
+             * Starting from #1583 (https://trac.pjsip.org/repos/ticket/1583),
+             * we also add timeout value for the transmit data. When the
+             * connect() is completed, the timeout value will be checked to
+             * determine whether the transmit data needs to be sent.
 	     */
-	    delayed_tdata = PJ_POOL_ALLOC_T(tdata->pool, 
-					    struct delayed_tdata);
+	    delayed_tdata = PJ_POOL_ZALLOC_T(tdata->pool, 
+					     struct delayed_tdata);
 	    delayed_tdata->tdata_op_key = &tdata->op_key;
+            if (tdata->msg && tdata->msg->type == PJSIP_REQUEST_MSG) {
+                pj_gettickcount(&delayed_tdata->timeout);
+                delayed_tdata->timeout.msec += pjsip_cfg()->tsx.td;
+                pj_time_val_normalize(&delayed_tdata->timeout);
+            }
 
 	    pj_list_push_back(&tcp->delayed_list, delayed_tdata);
 	    status = PJ_EPENDING;
