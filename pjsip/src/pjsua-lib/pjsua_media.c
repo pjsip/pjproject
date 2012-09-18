@@ -1583,8 +1583,8 @@ pj_status_t pjsua_media_channel_deinit(pjsua_call_id call_id)
     if (call->med_orig && call->med_tp && call->med_tp != call->med_orig) {
 	pjmedia_transport_close(call->med_tp);
 	call->med_tp = call->med_orig;
-        call->med_orig = NULL;
     }
+    call->med_orig = NULL;
 
     check_snd_dev_idle();
 
