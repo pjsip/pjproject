@@ -101,6 +101,7 @@ struct tcp_transport
 
     /* Keep-alive timer. */
     pj_timer_entry	     ka_timer;
+    pj_timer_entry	     connect_timer;
     pj_time_val		     last_activity;
     pjsip_tx_data_op_key     ka_op_key;
     pj_str_t		     ka_pkt;
@@ -523,8 +524,36 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
 			      pj_ssize_t sent);
 
 /* Callback when connect completes */
-static pj_bool_t on_connect_complete(pj_activesock_t *asock,
+static pj_bool_t on_connect_complete_real(pj_activesock_t *asock,
 				     pj_status_t status);
+
+static void tcp_connect_timer(pj_timer_heap_t *th, pj_timer_entry *e)
+{
+    struct tcp_transport *tcp = (struct tcp_transport*) e->user_data;
+
+    e->id = 0;
+    on_connect_complete_real(tcp->asock, PJ_SUCCESS);
+}
+
+static pj_bool_t on_connect_complete(pj_activesock_t *asock,
+                                     pj_status_t status)
+{
+    struct tcp_transport *tcp;
+    pj_time_val delay = {35, 0};
+
+    tcp = (struct tcp_transport*) pj_activesock_get_user_data(asock);
+
+    if (status != PJ_SUCCESS) {
+	return on_connect_complete_real(asock, status);
+    }
+
+    PJ_LOG(3,(tcp->base.obj_name, "Delaying CONNECT notification"));
+    pj_timer_entry_init(&tcp->connect_timer, 1, (void*)tcp, &tcp_connect_timer);
+    pjsip_endpt_schedule_timer(tcp->base.endpt, &tcp->connect_timer,
+			       &delay);
+
+    return PJ_TRUE;
+}
 
 /* TCP keep-alive timer callback */
 static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
@@ -670,7 +699,6 @@ static void tcp_flush_pending_tx(struct tcp_transport *tcp)
         if (pending_tx->timeout.sec > 0 &&
             PJ_TIME_VAL_GT(now, pending_tx->timeout))
         {
-            on_data_sent(tcp->asock, op_key, -PJ_ETIMEDOUT);
             continue;
         }
 
@@ -1285,7 +1313,7 @@ static pj_bool_t on_data_read(pj_activesock_t *asock,
 /* 
  * Callback from ioqueue when asynchronous connect() operation completes.
  */
-static pj_bool_t on_connect_complete(pj_activesock_t *asock,
+static pj_bool_t on_connect_complete_real(pj_activesock_t *asock,
 				     pj_status_t status)
 {
     struct tcp_transport *tcp;
