@@ -73,6 +73,8 @@
 #   define PJMEDIA_STREAM_INC	1000
 #endif
 
+/* Number of DTMF E bit transmissions */
+#define DTMF_EBIT_RETRANSMIT_CNT	3
 
 /**
  * Media channel.
@@ -94,6 +96,7 @@ struct dtmf
 {
     int		    event;
     pj_uint32_t	    duration;
+    int		    ebit_cnt;		    /**< # of E bit transmissions   */
 };
 
 /**
@@ -896,25 +899,33 @@ static void create_dtmf_payload(pjmedia_stream *stream,
     }
 
     digit->duration += PJMEDIA_PIA_SPF(&stream->port.info);
+    if (digit->duration >= PJMEDIA_DTMF_DURATION)
+	digit->duration = PJMEDIA_DTMF_DURATION;
 
     event->event = (pj_uint8_t)digit->event;
     event->e_vol = 10;
     event->duration = pj_htons((pj_uint16_t)digit->duration);
 
+    if (forced_last) {
+	digit->duration = PJMEDIA_DTMF_DURATION;
+    }
 
-    if (forced_last || digit->duration >= PJMEDIA_DTMF_DURATION) {
+    if (digit->duration >= PJMEDIA_DTMF_DURATION) {
 
 	event->e_vol |= 0x80;
-	*last = 1;
 
-	/* Prepare next digit. */
-	pj_mutex_lock(stream->jb_mutex);
+	if (++digit->ebit_cnt >= DTMF_EBIT_RETRANSMIT_CNT) {
+	    *last = 1;
 
-	pj_array_erase(stream->tx_dtmf_buf, sizeof(stream->tx_dtmf_buf[0]),
-		       stream->tx_dtmf_count, 0);
-	--stream->tx_dtmf_count;
+	    /* Prepare next digit. */
+	    pj_mutex_lock(stream->jb_mutex);
 
-	pj_mutex_unlock(stream->jb_mutex);
+	    pj_array_erase(stream->tx_dtmf_buf, sizeof(stream->tx_dtmf_buf[0]),
+			   stream->tx_dtmf_count, 0);
+	    --stream->tx_dtmf_count;
+
+	    pj_mutex_unlock(stream->jb_mutex);
+	}
     }
 
     frame_out->size = 4;
@@ -1235,7 +1246,9 @@ static pj_status_t put_frame_imp( pjmedia_port *port,
 	     * Increment the RTP timestamp of the RTP session, for next
 	     * RTP packets.
 	     */
-	    inc_timestamp = PJMEDIA_DTMF_DURATION - rtp_ts_len;
+	    inc_timestamp = PJMEDIA_DTMF_DURATION +
+		            ((DTMF_EBIT_RETRANSMIT_CNT-1) * samples_per_frame)
+		            - rtp_ts_len;
 	}
 
 
@@ -2741,6 +2754,7 @@ PJ_DEF(pj_status_t) pjmedia_stream_dial_dtmf( pjmedia_stream *stream,
 
 	    stream->tx_dtmf_buf[stream->tx_dtmf_count+i].event = pt;
 	    stream->tx_dtmf_buf[stream->tx_dtmf_count+i].duration = 0;
+	    stream->tx_dtmf_buf[stream->tx_dtmf_count+i].ebit_cnt = 0;
 	}
 
 	if (status != PJ_SUCCESS)
