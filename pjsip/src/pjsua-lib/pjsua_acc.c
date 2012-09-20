@@ -1190,6 +1190,8 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	acc->cfg.rtp_cfg =  cfg->rtp_cfg;
     }
 
+    acc->cfg.ipv6_media_use = cfg->ipv6_media_use;
+
     /* STUN and Media customization */
     if (acc->cfg.sip_stun_use != cfg->sip_stun_use) {
 	acc->cfg.sip_stun_use = cfg->sip_stun_use;

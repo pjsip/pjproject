@@ -2067,8 +2067,10 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	pjsua_transport_config config;
 	pjsip_tpfactory *tcp;
 	pjsip_tcp_transport_cfg tcp_cfg;
+	int af;
 
-	pjsip_tcp_transport_cfg_default(&tcp_cfg, pj_AF_INET());
+	af = (type==PJSIP_TRANSPORT_TCP6) ? pj_AF_INET6() : pj_AF_INET();
+	pjsip_tcp_transport_cfg_default(&tcp_cfg, af);
 
 	/* Supply default config if it's not specified */
 	if (cfg == NULL) {
@@ -2118,14 +2120,15 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 #endif	/* PJ_HAS_TCP */
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
-    } else if (type == PJSIP_TRANSPORT_TLS) {
+    } else if (type == PJSIP_TRANSPORT_TLS || type == PJSIP_TRANSPORT_TLS6) {
 	/*
 	 * Create TLS transport.
 	 */
 	pjsua_transport_config config;
 	pjsip_host_port a_name;
 	pjsip_tpfactory *tls;
-	pj_sockaddr_in local_addr;
+	pj_sockaddr local_addr;
+	int af;
 
 	/* Supply default config if it's not specified */
 	if (cfg == NULL) {
@@ -2135,13 +2138,15 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	}
 
 	/* Init local address */
-	pj_sockaddr_in_init(&local_addr, 0, 0);
+	af = (type==PJSIP_TRANSPORT_TLS) ? pj_AF_INET() : pj_AF_INET6();
+	pj_sockaddr_init(af, &local_addr, NULL, 0);
 
 	if (cfg->port)
-	    local_addr.sin_port = pj_htons((pj_uint16_t)cfg->port);
+	    pj_sockaddr_set_port(&local_addr, (pj_uint16_t)cfg->port);
 
 	if (cfg->bound_addr.slen) {
-	    status = pj_sockaddr_in_set_str_addr(&local_addr,&cfg->bound_addr);
+	    status = pj_sockaddr_set_str_addr(af, &local_addr,
+	                                      &cfg->bound_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, 
 			     "Unable to resolve transport bound address", 
@@ -2155,9 +2160,9 @@ PJ_DEF(pj_status_t) pjsua_transport_create( pjsip_transport_type_e type,
 	if (cfg->public_addr.slen)
 	    a_name.host = cfg->public_addr;
 
-	status = pjsip_tls_transport_start(pjsua_var.endpt, 
-					   &cfg->tls_setting, 
-					   &local_addr, &a_name, 1, &tls);
+	status = pjsip_tls_transport_start2(pjsua_var.endpt,
+					    &cfg->tls_setting,
+					    &local_addr, &a_name, 1, &tls);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error creating SIP TLS listener", 
 			 status);

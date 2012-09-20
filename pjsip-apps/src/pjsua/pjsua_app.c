@@ -170,7 +170,6 @@ static char some_buf[SOME_BUF_SIZE];
 #ifdef STEREO_DEMO
 static void stereo_demo();
 #endif
-static pj_status_t create_ipv6_media_transports(void);
 pj_status_t app_destroy(void);
 
 static void ringback_start(pjsua_call_id call_id);
@@ -876,8 +875,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_NO_UDP: /* no-udp */
-	    if (cfg->no_tcp) {
-	      PJ_LOG(1,(THIS_FILE,"Error: can not disable both TCP and UDP"));
+	    if (cfg->no_tcp && !cfg->use_tls) {
+	      PJ_LOG(1,(THIS_FILE,"Error: cannot disable both TCP and UDP"));
 	      return PJ_EINVAL;
 	    }
 
@@ -889,8 +888,8 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_NO_TCP: /* no-tcp */
-	    if (cfg->no_udp) {
-	      PJ_LOG(1,(THIS_FILE,"Error: can not disable both TCP and UDP"));
+	    if (cfg->no_udp && !cfg->use_tls) {
+	      PJ_LOG(1,(THIS_FILE,"Error: cannot disable both TCP and UDP"));
 	      return PJ_EINVAL;
 	    }
 
@@ -5907,6 +5906,8 @@ pj_status_t app_init(int argc, char *argv[])
 	    pjsua_acc_config acc_cfg;
 	    pjsua_acc_get_config(aid, &acc_cfg);
 	    app_config_init_video(&acc_cfg);
+	    if (app_config.ipv6)
+		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
 	    pjsua_acc_modify(aid, &acc_cfg);
 	}
 	//pjsua_acc_set_transport(aid, transport_id);
@@ -5945,6 +5946,33 @@ pj_status_t app_init(int argc, char *argv[])
 
     }
 
+    /* Add TCP IPv6 transport unless it's disabled. */
+    if (!app_config.no_tcp && app_config.ipv6) {
+	pjsua_acc_id aid;
+	pjsip_transport_type_e type = PJSIP_TRANSPORT_TCP6;
+
+	tcp_cfg.port += 10;
+
+	status = pjsua_transport_create(type,
+					&tcp_cfg,
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	if (PJMEDIA_HAS_VIDEO) {
+	    pjsua_acc_config acc_cfg;
+	    pjsua_acc_get_config(aid, &acc_cfg);
+	    app_config_init_video(&acc_cfg);
+	    if (app_config.ipv6)
+		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+	    pjsua_acc_modify(aid, &acc_cfg);
+	}
+	//pjsua_acc_set_transport(aid, transport_id);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+    }
+
 
 #if defined(PJSIP_HAS_TLS_TRANSPORT) && PJSIP_HAS_TLS_TRANSPORT!=0
     /* Add TLS transport when application wants one */
@@ -5976,6 +6004,34 @@ pj_status_t app_init(int argc, char *argv[])
 	}
 	pjsua_acc_set_online_status(acc_id, PJ_TRUE);
     }
+
+    /* Add TLS IPv6 transport unless it's disabled. */
+    if (app_config.use_tls && app_config.ipv6) {
+	pjsua_acc_id aid;
+	pjsip_transport_type_e type = PJSIP_TRANSPORT_TLS6;
+
+	tcp_cfg.port += 10;
+
+	status = pjsua_transport_create(type,
+					&tcp_cfg,
+					&transport_id);
+	if (status != PJ_SUCCESS)
+	    goto on_error;
+
+	/* Add local account */
+	pjsua_acc_add_local(transport_id, PJ_TRUE, &aid);
+	if (PJMEDIA_HAS_VIDEO) {
+	    pjsua_acc_config acc_cfg;
+	    pjsua_acc_get_config(aid, &acc_cfg);
+	    app_config_init_video(&acc_cfg);
+	    if (app_config.ipv6)
+		acc_cfg.ipv6_media_use = PJSUA_IPV6_ENABLED;
+	    pjsua_acc_modify(aid, &acc_cfg);
+	}
+	//pjsua_acc_set_transport(aid, transport_id);
+	pjsua_acc_set_online_status(current_acc, PJ_TRUE);
+    }
+
 #endif
 
     if (transport_id == -1) {
@@ -6025,16 +6081,6 @@ pj_status_t app_init(int argc, char *argv[])
 				     (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
 #endif
     }
-
-    /* Add RTP transports */
-    if (app_config.ipv6)
-	status = create_ipv6_media_transports();
-  #if DISABLED_FOR_TICKET_1185
-    else
-	status = pjsua_media_transports_create(&app_config.rtp_cfg);
-  #endif
-    if (status != PJ_SUCCESS)
-	goto on_error;
 
     /* Use null sound device? */
 #ifndef STEREO_DEMO
@@ -6250,95 +6296,4 @@ static void stereo_demo()
 
 }
 #endif
-
-static pj_status_t create_ipv6_media_transports(void)
-{
-    pjsua_media_transport tp[PJSUA_MAX_CALLS];
-    pj_status_t status;
-    int port = app_config.rtp_cfg.port;
-    unsigned i;
-
-    for (i=0; i<app_config.cfg.max_calls; ++i) {
-	enum { MAX_RETRY = 10 };
-	pj_sock_t sock[2];
-	pjmedia_sock_info si;
-	unsigned j;
-
-	/* Get rid of uninitialized var compiler warning with MSVC */
-	status = PJ_SUCCESS;
-
-	for (j=0; j<MAX_RETRY; ++j) {
-	    unsigned k;
-
-	    for (k=0; k<2; ++k) {
-		pj_sockaddr bound_addr;
-
-		status = pj_sock_socket(pj_AF_INET6(), pj_SOCK_DGRAM(), 0, &sock[k]);
-		if (status != PJ_SUCCESS)
-		    break;
-
-		status = pj_sockaddr_init(pj_AF_INET6(), &bound_addr,
-					  &app_config.rtp_cfg.bound_addr, 
-					  (unsigned short)(port+k));
-		if (status != PJ_SUCCESS)
-		    break;
-
-		status = pj_sock_bind(sock[k], &bound_addr, 
-				      pj_sockaddr_get_len(&bound_addr));
-		if (status != PJ_SUCCESS)
-		    break;
-	    }
-	    if (status != PJ_SUCCESS) {
-		if (k==1)
-		    pj_sock_close(sock[0]);
-
-		if (port != 0)
-		    port += 10;
-		else
-		    break;
-
-		continue;
-	    }
-
-	    pj_bzero(&si, sizeof(si));
-	    si.rtp_sock = sock[0];
-	    si.rtcp_sock = sock[1];
-	
-	    pj_sockaddr_init(pj_AF_INET6(), &si.rtp_addr_name, 
-			     &app_config.rtp_cfg.public_addr, 
-			     (unsigned short)(port));
-	    pj_sockaddr_init(pj_AF_INET6(), &si.rtcp_addr_name, 
-			     &app_config.rtp_cfg.public_addr, 
-			     (unsigned short)(port+1));
-
-	    status = pjmedia_transport_udp_attach(pjsua_get_pjmedia_endpt(),
-						  NULL,
-						  &si,
-						  0,
-						  &tp[i].transport);
-	    if (port != 0)
-		port += 10;
-	    else
-		break;
-
-	    if (status == PJ_SUCCESS)
-		break;
-	}
-
-	if (status != PJ_SUCCESS) {
-	    pjsua_perror(THIS_FILE, "Error creating IPv6 UDP media transport", 
-			 status);
-	    for (j=0; j<i; ++j) {
-		pjmedia_transport_close(tp[j].transport);
-	    }
-	    return status;
-	}
-    }
-
-#if DISABLED_FOR_TICKET_1185
-    return pjsua_media_transports_attach(tp, i, PJ_TRUE);
-#else
-    return PJ_ENOTSUP;
-#endif
-}
 

@@ -2690,6 +2690,23 @@ typedef struct pjsua_turn_config
 } pjsua_turn_config;
 
 /**
+ * Specify how IPv6 transport should be used in account config.
+ */
+typedef enum pjsua_ipv6_use
+{
+    /**
+     * IPv6 is not used.
+     */
+    PJSUA_IPV6_DISABLED,
+
+    /**
+     * IPv6 is enabled.
+     */
+    PJSUA_IPV6_ENABLED
+
+} pjsua_ipv6_use;
+
+/**
  * This structure describes account configuration to be specified when
  * adding a new account with #pjsua_acc_add(). Application MUST initialize
  * this structure first by calling #pjsua_acc_config_default().
@@ -3088,6 +3105,11 @@ typedef struct pjsua_acc_config
      * Media transport config.
      */
     pjsua_transport_config rtp_cfg;
+
+    /**
+     * Specify whether IPv6 should be used on media.
+     */
+    pjsua_ipv6_use     		ipv6_media_use;
 
     /**
      * Control the use of STUN for the SIP signaling.

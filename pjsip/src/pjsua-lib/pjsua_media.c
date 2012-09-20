@@ -236,14 +236,20 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	RTP_RETRY = 100
     };
     int i;
-    pj_sockaddr_in bound_addr;
-    pj_sockaddr_in mapped_addr[2];
+    pj_bool_t use_ipv6;
+    int af;
+    pj_sockaddr bound_addr;
+    pj_sockaddr mapped_addr[2];
     pj_status_t status = PJ_SUCCESS;
-    char addr_buf[PJ_INET6_ADDRSTRLEN+2];
+    char addr_buf[PJ_INET6_ADDRSTRLEN+10];
     pj_sock_t sock[2];
 
+    use_ipv6 = (pjsua_var.acc[call_med->call->acc_id].cfg.ipv6_media_use !=
+		PJSUA_IPV6_DISABLED);
+    af = use_ipv6 ? pj_AF_INET6() : pj_AF_INET();
+
     /* Make sure STUN server resolution has completed */
-    if (pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
+    if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id)) {
 	status = resolve_stun_server(PJ_TRUE);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Error resolving STUN server", status);
@@ -260,9 +266,9 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     for (i=0; i<2; ++i)
 	sock[i] = PJ_INVALID_SOCKET;
 
-    bound_addr.sin_addr.s_addr = PJ_INADDR_ANY;
+    pj_sockaddr_init(af, &bound_addr, NULL, 0);
     if (cfg->bound_addr.slen) {
-	status = pj_sockaddr_in_set_str_addr(&bound_addr, &cfg->bound_addr);
+	status = pj_sockaddr_set_str_addr(af, &bound_addr, &cfg->bound_addr);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "Unable to resolve transport bind address",
 			 status);
@@ -274,7 +280,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
     for (i=0; i<RTP_RETRY; ++i, next_rtp_port += 2) {
 
 	/* Create RTP socket. */
-	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[0]);
+	status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[0]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    return status;
@@ -286,8 +292,9 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 				    2, THIS_FILE, "RTP socket");
 
 	/* Bind RTP socket */
-	status=pj_sock_bind_in(sock[0], pj_ntohl(bound_addr.sin_addr.s_addr),
-			       next_rtp_port);
+	pj_sockaddr_set_port(&bound_addr, next_rtp_port);
+	status=pj_sock_bind(sock[0], &bound_addr,
+	                    pj_sockaddr_get_len(&bound_addr));
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]);
 	    sock[0] = PJ_INVALID_SOCKET;
@@ -295,7 +302,7 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	}
 
 	/* Create RTCP socket. */
-	status = pj_sock_socket(pj_AF_INET(), pj_SOCK_DGRAM(), 0, &sock[1]);
+	status = pj_sock_socket(af, pj_SOCK_DGRAM(), 0, &sock[1]);
 	if (status != PJ_SUCCESS) {
 	    pjsua_perror(THIS_FILE, "socket() error", status);
 	    pj_sock_close(sock[0]);
@@ -308,8 +315,9 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 				    2, THIS_FILE, "RTCP socket");
 
 	/* Bind RTCP socket */
-	status=pj_sock_bind_in(sock[1], pj_ntohl(bound_addr.sin_addr.s_addr),
-			       (pj_uint16_t)(next_rtp_port+1));
+	pj_sockaddr_set_port(&bound_addr, (pj_uint16_t)(next_rtp_port+1));
+	status=pj_sock_bind(sock[1], &bound_addr,
+	                    pj_sockaddr_get_len(&bound_addr));
 	if (status != PJ_SUCCESS) {
 	    pj_sock_close(sock[0]);
 	    sock[0] = PJ_INVALID_SOCKET;
@@ -323,11 +331,12 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	 * If we're configured to use STUN, then find out the mapped address,
 	 * and make sure that the mapped RTCP port is adjacent with the RTP.
 	 */
-	if (pjsua_sip_acc_is_using_stun(call_med->call->acc_id) &&
+	if (!use_ipv6 && pjsua_sip_acc_is_using_stun(call_med->call->acc_id) &&
 	    pjsua_var.stun_srv.addr.sa_family != 0)
 	{
 	    char ip_addr[32];
 	    pj_str_t stun_srv;
+	    pj_sockaddr_in resolved_addr[2];
 	    pjstun_setting stun_opt;
 
 	    pj_ansi_strcpy(ip_addr,
@@ -340,15 +349,18 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    stun_opt.port1 = stun_opt.port2 = 
 			     pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
 	    status=pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
-					   2, sock, mapped_addr);
+					   2, sock, resolved_addr);
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "STUN resolve error", status);
 		goto on_error;
 	    }
 
+	    pj_sockaddr_cp(&mapped_addr[0], &resolved_addr[0]);
+	    pj_sockaddr_cp(&mapped_addr[1], &resolved_addr[1]);
+
 #if PJSUA_REQUIRE_CONSECUTIVE_RTCP_PORT
-	    if (pj_ntohs(mapped_addr[1].sin_port) ==
-		pj_ntohs(mapped_addr[0].sin_port)+1)
+	    if (pj_sockaddr_get_port(&mapped_addr[1]) ==
+		pj_sockaddr_get_port(&mapped_addr[0])+1)
 	    {
 		/* Success! */
 		break;
@@ -360,14 +372,14 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 	    pj_sock_close(sock[1]);
 	    sock[1] = PJ_INVALID_SOCKET;
 #else
-	    if (pj_ntohs(mapped_addr[1].sin_port) !=
-		pj_ntohs(mapped_addr[0].sin_port)+1)
+	    if (pj_sockaddr_get_port(&mapped_addr[1]) !=
+		pj_sockaddr_get_port(&mapped_addr[0])+1)
 	    {
 		PJ_LOG(4,(THIS_FILE,
 			  "Note: STUN mapped RTCP port %d is not adjacent"
 			  " to RTP port %d",
-			  pj_ntohs(mapped_addr[1].sin_port),
-			  pj_ntohs(mapped_addr[0].sin_port)));
+			  pj_sockaddr_get_port(&mapped_addr[1]),
+			  pj_sockaddr_get_port(&mapped_addr[0])));
 	    }
 	    /* Success! */
 	    break;
@@ -375,13 +387,13 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
 	} else if (cfg->public_addr.slen) {
 
-	    status = pj_sockaddr_in_init(&mapped_addr[0], &cfg->public_addr,
-					 (pj_uint16_t)next_rtp_port);
+	    status = pj_sockaddr_init(af, &mapped_addr[0], &cfg->public_addr,
+				      (pj_uint16_t)next_rtp_port);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    status = pj_sockaddr_in_init(&mapped_addr[1], &cfg->public_addr,
-					 (pj_uint16_t)(next_rtp_port+1));
+	    status = pj_sockaddr_init(af, &mapped_addr[1], &cfg->public_addr,
+				      (pj_uint16_t)(next_rtp_port+1));
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
@@ -389,24 +401,24 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
 	} else {
 
-	    if (bound_addr.sin_addr.s_addr == 0) {
+	    if (!pj_sockaddr_has_addr(&bound_addr)) {
 		pj_sockaddr addr;
 
 		/* Get local IP address. */
-		status = pj_gethostip(pj_AF_INET(), &addr);
+		status = pj_gethostip(af, &addr);
 		if (status != PJ_SUCCESS)
 		    goto on_error;
 
-		bound_addr.sin_addr.s_addr = addr.ipv4.sin_addr.s_addr;
+		pj_sockaddr_copy_addr(&bound_addr, &addr);
 	    }
 
 	    for (i=0; i<2; ++i) {
-		pj_sockaddr_in_init(&mapped_addr[i], NULL, 0);
-		mapped_addr[i].sin_addr.s_addr = bound_addr.sin_addr.s_addr;
+		pj_sockaddr_init(af, &mapped_addr[i], NULL, 0);
+		pj_sockaddr_copy_addr(&mapped_addr[i], &bound_addr);
+		pj_sockaddr_set_port(&mapped_addr[i],
+		                     (pj_uint16_t)(next_rtp_port+i));
 	    }
 
-	    mapped_addr[0].sin_port=pj_htons((pj_uint16_t)next_rtp_port);
-	    mapped_addr[1].sin_port=pj_htons((pj_uint16_t)(next_rtp_port+1));
 	    break;
 	}
     }
@@ -419,12 +431,10 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 
 
     skinfo->rtp_sock = sock[0];
-    pj_memcpy(&skinfo->rtp_addr_name,
-	      &mapped_addr[0], sizeof(pj_sockaddr_in));
+    pj_sockaddr_cp(&skinfo->rtp_addr_name, &mapped_addr[0]);
 
     skinfo->rtcp_sock = sock[1];
-    pj_memcpy(&skinfo->rtcp_addr_name,
-	      &mapped_addr[1], sizeof(pj_sockaddr_in));
+    pj_sockaddr_cp(&skinfo->rtcp_addr_name, &mapped_addr[1]);
 
     PJ_LOG(4,(THIS_FILE, "RTP socket reachable at %s",
 	      pj_sockaddr_print(&skinfo->rtp_addr_name, addr_buf,
@@ -1908,10 +1918,20 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
 	    /* Add connection line, if none */
 	    if (m->conn == NULL && sdp->conn == NULL) {
+		pj_bool_t use_ipv6;
+
+		use_ipv6 = (pjsua_var.acc[call->acc_id].cfg.ipv6_media_use !=
+			    PJSUA_IPV6_DISABLED);
+
 		m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
 		m->conn->net_type = pj_str("IN");
-		m->conn->addr_type = pj_str("IP4");
-		m->conn->addr = pj_str("127.0.0.1");
+		if (use_ipv6) {
+		    m->conn->addr_type = pj_str("IP6");
+		    m->conn->addr = pj_str("::1");
+		} else {
+		    m->conn->addr_type = pj_str("IP4");
+		    m->conn->addr = pj_str("127.0.0.1");
+		}
 	    }
 
 	    sdp->media[sdp->media_count++] = m;

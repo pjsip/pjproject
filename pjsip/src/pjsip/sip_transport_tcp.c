@@ -57,6 +57,7 @@ struct tcp_listener
     pjsip_endpoint	    *endpt;
     pjsip_tpmgr		    *tpmgr;
     pj_activesock_t	    *asock;
+    pj_sockaddr		     bound_addr;
     pj_qos_type		     qos_type;
     pj_qos_params	     qos_params;
 };
@@ -141,8 +142,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 static pj_status_t tcp_create(struct tcp_listener *listener,
 			      pj_pool_t *pool,
 			      pj_sock_t sock, pj_bool_t is_server,
-			      const pj_sockaddr_in *local,
-			      const pj_sockaddr_in *remote,
+			      const pj_sockaddr *local,
+			      const pj_sockaddr *remote,
 			      struct tcp_transport **p_tcp);
 
 
@@ -159,10 +160,10 @@ static void tcp_perror(const char *sender, const char *title,
 
 static void sockaddr_to_host_port( pj_pool_t *pool,
 				   pjsip_host_port *host_port,
-				   const pj_sockaddr_in *addr )
+				   const pj_sockaddr *addr )
 {
     host_port->host.ptr = (char*) pj_pool_alloc(pool, PJ_INET6_ADDRSTRLEN+4);
-    pj_sockaddr_print(addr, host_port->host.ptr, PJ_INET6_ADDRSTRLEN+4, 2);
+    pj_sockaddr_print(addr, host_port->host.ptr, PJ_INET6_ADDRSTRLEN+4, 0);
     host_port->host.slen = pj_ansi_strlen(host_port->host.ptr);
     host_port->port = pj_sockaddr_get_port(addr);
 }
@@ -267,17 +268,21 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
 
     listener = PJ_POOL_ZALLOC_T(pool, struct tcp_listener);
     listener->factory.pool = pool;
-    listener->factory.type = PJSIP_TRANSPORT_TCP;
-    listener->factory.type_name = "tcp";
+    listener->factory.type = cfg->af==pj_AF_INET() ? PJSIP_TRANSPORT_TCP :
+						     PJSIP_TRANSPORT_TCP6;
+    listener->factory.type_name = (char*)
+		pjsip_transport_get_type_name(listener->factory.type);
     listener->factory.flag = 
-	pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TCP);
+	pjsip_transport_get_flag_from_type(listener->factory.type);
     listener->qos_type = cfg->qos_type;
     pj_memcpy(&listener->qos_params, &cfg->qos_params,
 	      sizeof(cfg->qos_params));
 
     pj_ansi_strcpy(listener->factory.obj_name, "tcplis");
+    if (listener->factory.type==PJSIP_TRANSPORT_TCP6)
+	pj_ansi_strcat(listener->factory.obj_name, "6");
 
-    status = pj_lock_create_recursive_mutex(pool, "tcplis", 
+    status = pj_lock_create_recursive_mutex(pool, listener->factory.obj_name,
 					    &listener->factory.lock);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -292,6 +297,11 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     status = pj_sock_apply_qos2(sock, cfg->qos_type, &cfg->qos_params, 
 				2, listener->factory.obj_name, 
 				"SIP TCP listener socket");
+
+    /* Bind address may be different than factory.local_addr because
+     * factory.local_addr will be resolved below.
+     */
+    pj_sockaddr_cp(&listener->bound_addr, &cfg->bind_addr);
 
     /* Bind socket */
     listener_addr = &listener->factory.local_addr;
@@ -327,19 +337,18 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
 	if (!pj_sockaddr_has_addr(listener_addr)) {
 	    pj_sockaddr hostip;
 
-	    status = pj_gethostip(pj_AF_INET(), &hostip);
+	    status = pj_gethostip(listener->bound_addr.addr.sa_family,
+	                          &hostip);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    pj_memcpy(pj_sockaddr_get_addr(listener_addr),
-		      pj_sockaddr_get_addr(&hostip),
-		      pj_sockaddr_get_addr_len(&hostip));
+	    pj_sockaddr_copy_addr(listener_addr, &hostip);
 	}
 
 	/* Save the address name */
 	sockaddr_to_host_port(listener->factory.pool, 
 			      &listener->factory.addr_name, 
-			      (pj_sockaddr_in*)listener_addr);
+			      listener_addr);
     }
 
     /* If port is zero, get the bound port */
@@ -536,8 +545,8 @@ static void tcp_keep_alive_timer(pj_timer_heap_t *th, pj_timer_entry *e);
 static pj_status_t tcp_create( struct tcp_listener *listener,
 			       pj_pool_t *pool,
 			       pj_sock_t sock, pj_bool_t is_server,
-			       const pj_sockaddr_in *local,
-			       const pj_sockaddr_in *remote,
+			       const pj_sockaddr *local,
+			       const pj_sockaddr *remote,
 			       struct tcp_transport **p_tcp)
 {
     struct tcp_transport *tcp;
@@ -545,6 +554,7 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     pj_activesock_cfg asock_cfg;
     pj_activesock_cb tcp_callback;
     const pj_str_t ka_pkt = PJSIP_TCP_KEEP_ALIVE_DATA;
+    char print_addr[PJ_INET6_ADDRSTRLEN+10];
     pj_status_t status;
     
 
@@ -580,18 +590,20 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 	goto on_error;
     }
 
-    tcp->base.key.type = PJSIP_TRANSPORT_TCP;
-    pj_memcpy(&tcp->base.key.rem_addr, remote, sizeof(pj_sockaddr_in));
-    tcp->base.type_name = "tcp";
-    tcp->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TCP);
+    tcp->base.key.type = listener->factory.type;
+    pj_sockaddr_cp(&tcp->base.key.rem_addr, remote);
+    tcp->base.type_name = (char*)
+			  pjsip_transport_get_type_name(tcp->base.key.type);
+    tcp->base.flag = pjsip_transport_get_flag_from_type(tcp->base.key.type);
 
     tcp->base.info = (char*) pj_pool_alloc(pool, 64);
-    pj_ansi_snprintf(tcp->base.info, 64, "TCP to %s:%d",
-		     pj_inet_ntoa(remote->sin_addr), 
-		     (int)pj_ntohs(remote->sin_port));
+    pj_ansi_snprintf(tcp->base.info, 64, "%s to %s",
+                     tcp->base.type_name,
+                     pj_sockaddr_print(remote, print_addr,
+                                       sizeof(print_addr), 3));
 
-    tcp->base.addr_len = sizeof(pj_sockaddr_in);
-    pj_memcpy(&tcp->base.local_addr, local, sizeof(pj_sockaddr_in));
+    tcp->base.addr_len = pj_sockaddr_get_len(remote);
+    pj_sockaddr_cp(&tcp->base.local_addr, local);
     sockaddr_to_host_port(pool, &tcp->base.local_name, local);
     sockaddr_to_host_port(pool, &tcp->base.remote_name, remote);
     tcp->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
@@ -601,7 +613,6 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
     tcp->base.send_msg = &tcp_send_msg;
     tcp->base.do_shutdown = &tcp_shutdown;
     tcp->base.destroy = &tcp_destroy_transport;
-
 
     /* Create active socket */
     pj_activesock_cfg_default(&asock_cfg);
@@ -801,7 +812,7 @@ static pj_status_t tcp_start_read(struct tcp_transport *tcp)
 {
     pj_pool_t *pool;
     pj_ssize_t size;
-    pj_sockaddr_in *rem_addr;
+    pj_sockaddr *rem_addr;
     void *readbuf[1];
     pj_status_t status;
 
@@ -824,11 +835,11 @@ static pj_status_t tcp_start_read(struct tcp_transport *tcp)
 			   sizeof(pj_ioqueue_op_key_t));
 
     tcp->rdata.pkt_info.src_addr = tcp->base.key.rem_addr;
-    tcp->rdata.pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
-    rem_addr = (pj_sockaddr_in*) &tcp->base.key.rem_addr;
-    pj_ansi_strcpy(tcp->rdata.pkt_info.src_name,
-		   pj_inet_ntoa(rem_addr->sin_addr));
-    tcp->rdata.pkt_info.src_port = pj_ntohs(rem_addr->sin_port);
+    tcp->rdata.pkt_info.src_addr_len = sizeof(tcp->rdata.pkt_info.src_addr);
+    rem_addr = &tcp->base.key.rem_addr;
+    pj_sockaddr_print(rem_addr, tcp->rdata.pkt_info.src_name,
+                      sizeof(tcp->rdata.pkt_info.src_name), 0);
+    tcp->rdata.pkt_info.src_port = pj_sockaddr_get_port(rem_addr);
 
     size = sizeof(tcp->rdata.pkt_info.packet);
     readbuf[0] = tcp->rdata.pkt_info.packet;
@@ -858,23 +869,25 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     struct tcp_listener *listener;
     struct tcp_transport *tcp;
     pj_sock_t sock;
-    pj_sockaddr_in local_addr;
+    pj_sockaddr local_addr;
     pj_status_t status;
 
     /* Sanity checks */
     PJ_ASSERT_RETURN(factory && mgr && endpt && rem_addr &&
 		     addr_len && p_transport, PJ_EINVAL);
 
-    /* Check that address is a sockaddr_in */
-    PJ_ASSERT_RETURN(rem_addr->addr.sa_family == pj_AF_INET() &&
-		     addr_len == sizeof(pj_sockaddr_in), PJ_EINVAL);
+    /* Check that address is a sockaddr_in or sockaddr_in6*/
+    PJ_ASSERT_RETURN((rem_addr->addr.sa_family == pj_AF_INET() &&
+		      addr_len == sizeof(pj_sockaddr_in)) ||
+		     (rem_addr->addr.sa_family == pj_AF_INET6() &&
+		      addr_len == sizeof(pj_sockaddr_in6)), PJ_EINVAL);
 
 
     listener = (struct tcp_listener*)factory;
 
-    
     /* Create socket */
-    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
+    status = pj_sock_socket(rem_addr->addr.sa_family, pj_SOCK_STREAM(),
+                            0, &sock);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -884,15 +897,20 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 				2, listener->factory.obj_name, 
 				"outgoing SIP TCP socket");
 
-    /* Bind to any port */
-    status = pj_sock_bind_in(sock, 0, 0);
+    /* Bind to listener's address and any port */
+    pj_bzero(&local_addr, sizeof(local_addr));
+    pj_sockaddr_cp(&local_addr, &listener->bound_addr);
+    pj_sockaddr_set_port(&local_addr, 0);
+
+    status = pj_sock_bind(sock, &local_addr,
+                          pj_sockaddr_get_len(&local_addr));
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
 	return status;
     }
 
     /* Get the local port */
-    addr_len = sizeof(pj_sockaddr_in);
+    addr_len = sizeof(local_addr);
     status = pj_sock_getsockname(sock, &local_addr, &addr_len);
     if (status != PJ_SUCCESS) {
 	pj_sock_close(sock);
@@ -900,12 +918,13 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     }
 
     /* Initially set the address from the listener's address */
-    local_addr.sin_addr.s_addr = 
-	((pj_sockaddr_in*)&listener->factory.local_addr)->sin_addr.s_addr;
+    if (!pj_sockaddr_has_addr(&local_addr)) {
+	pj_sockaddr_copy_addr(&local_addr, &listener->factory.local_addr);
+    }
 
     /* Create the transport descriptor */
     status = tcp_create(listener, NULL, sock, PJ_FALSE, &local_addr, 
-			(pj_sockaddr_in*)rem_addr, &tcp);
+			rem_addr, &tcp);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -913,7 +932,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     /* Start asynchronous connect() operation */
     tcp->has_pending_connect = PJ_TRUE;
     status = pj_activesock_start_connect(tcp->asock, tcp->base.pool, rem_addr,
-					 sizeof(pj_sockaddr_in));
+					 addr_len);
     if (status == PJ_SUCCESS) {
 	on_connect_complete(tcp->asock, PJ_SUCCESS);
     } else if (status != PJ_EPENDING) {
@@ -925,18 +944,17 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	/* Update (again) local address, just in case local address currently
 	 * set is different now that asynchronous connect() is started.
 	 */
-	addr_len = sizeof(pj_sockaddr_in);
+	addr_len = sizeof(local_addr);
 	if (pj_sock_getsockname(sock, &local_addr, &addr_len)==PJ_SUCCESS) {
-	    pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tcp->base.local_addr;
+	    pj_sockaddr *tp_addr = &tcp->base.local_addr;
 
 	    /* Some systems (like old Win32 perhaps) may not set local address
 	     * properly before socket is fully connected.
 	     */
-	    if (tp_addr->sin_addr.s_addr != local_addr.sin_addr.s_addr &&
-		local_addr.sin_addr.s_addr != 0) 
+	    if (pj_sockaddr_cmp(tp_addr, &local_addr) &&
+		pj_sockaddr_get_port(&local_addr) != 0)
 	    {
-		tp_addr->sin_addr.s_addr = local_addr.sin_addr.s_addr;
-		tp_addr->sin_port = local_addr.sin_port;
+		pj_sockaddr_cp(tp_addr, &local_addr);
 		sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
 				      &local_addr);
 	    }
@@ -972,6 +990,7 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
     struct tcp_transport *tcp;
     char addr[PJ_INET6_ADDRSTRLEN+10];
     pjsip_tp_state_callback state_cb;
+    pj_sockaddr tmp_src_addr;
     pj_status_t status;
 
     PJ_UNUSED_ARG(src_addr_len);
@@ -995,13 +1014,19 @@ static pj_bool_t on_accept_complete(pj_activesock_t *asock,
 				2, listener->factory.obj_name, 
 				"incoming SIP TCP socket");
 
+    /* tcp_create() expect pj_sockaddr, so copy src_addr to temporary var,
+     * just in case.
+     */
+    pj_bzero(&tmp_src_addr, sizeof(tmp_src_addr));
+    pj_sockaddr_cp(&tmp_src_addr, src_addr);
+
     /* 
      * Incoming connection!
      * Create TCP transport for the new socket.
      */
     status = tcp_create( listener, NULL, sock, PJ_TRUE,
-			 (const pj_sockaddr_in*)&listener->factory.local_addr,
-			 (const pj_sockaddr_in*)src_addr, &tcp);
+			 &listener->factory.local_addr,
+			 &tmp_src_addr, &tcp);
     if (status == PJ_SUCCESS) {
 	status = tcp_start_read(tcp);
 	if (status != PJ_SUCCESS) {
@@ -1105,9 +1130,9 @@ static pj_status_t tcp_send_msg(pjsip_transport *transport,
     PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
     
     /* Check the address is supported */
-    PJ_ASSERT_RETURN(rem_addr && addr_len==sizeof(pj_sockaddr_in), PJ_EINVAL);
-
-
+    PJ_ASSERT_RETURN(rem_addr && (addr_len==sizeof(pj_sockaddr_in) ||
+	                          addr_len==sizeof(pj_sockaddr_in6)),
+	             PJ_EINVAL);
 
     /* Init op key. */
     tdata->op_key.tdata = tdata;
@@ -1288,7 +1313,7 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
 				     pj_status_t status)
 {
     struct tcp_transport *tcp;
-    pj_sockaddr_in addr;
+    pj_sockaddr addr;
     int addrlen;
     pjsip_tp_state_callback state_cb;
 
@@ -1333,15 +1358,14 @@ static pj_bool_t on_connect_complete(pj_activesock_t *asock,
      * set is different now that the socket is connected (could happen
      * on some systems, like old Win32 probably?).
      */
-    addrlen = sizeof(pj_sockaddr_in);
+    addrlen = sizeof(addr);
     if (pj_sock_getsockname(tcp->sock, &addr, &addrlen)==PJ_SUCCESS) {
-	pj_sockaddr_in *tp_addr = (pj_sockaddr_in*)&tcp->base.local_addr;
+	pj_sockaddr *tp_addr = &tcp->base.local_addr;
 
 	if (pj_sockaddr_has_addr(&addr) &&
-	    tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) 
+	    pj_sockaddr_cmp(&addr, tp_addr) != 0)
 	{
-	    tp_addr->sin_addr.s_addr = addr.sin_addr.s_addr;
-	    tp_addr->sin_port = addr.sin_port;
+	    pj_sockaddr_cp(tp_addr, &addr);
 	    sockaddr_to_host_port(tcp->base.pool, &tcp->base.local_name,
 				  tp_addr);
 	}

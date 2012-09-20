@@ -55,6 +55,7 @@ struct tls_listener
     pjsip_endpoint	    *endpt;
     pjsip_tpmgr		    *tpmgr;
     pj_ssl_sock_t	    *ssock;
+    pj_sockaddr		     bound_addr;
     pj_ssl_cert_t	    *cert;
     pjsip_tls_setting	     tls_setting;
 };
@@ -147,8 +148,8 @@ static pj_status_t tls_create(struct tls_listener *listener,
 			      pj_pool_t *pool,
 			      pj_ssl_sock_t *ssock, 
 			      pj_bool_t is_server,
-			      const pj_sockaddr_in *local,
-			      const pj_sockaddr_in *remote,
+			      const pj_sockaddr *local,
+			      const pj_sockaddr *remote,
 			      const pj_str_t *remote_name,
 			      struct tls_transport **p_tls);
 
@@ -166,10 +167,10 @@ static void tls_perror(const char *sender, const char *title,
 
 static void sockaddr_to_host_port( pj_pool_t *pool,
 				   pjsip_host_port *host_port,
-				   const pj_sockaddr_in *addr )
+				   const pj_sockaddr *addr )
 {
     host_port->host.ptr = (char*) pj_pool_alloc(pool, PJ_INET6_ADDRSTRLEN+4);
-    pj_sockaddr_print(addr, host_port->host.ptr, PJ_INET6_ADDRSTRLEN+4, 2);
+    pj_sockaddr_print(addr, host_port->host.ptr, PJ_INET6_ADDRSTRLEN+4, 0);
     host_port->host.slen = pj_ansi_strlen(host_port->host.ptr);
     host_port->port = pj_sockaddr_get_port(addr);
 }
@@ -235,29 +236,50 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
  */
 PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 					       const pjsip_tls_setting *opt,
-					       const pj_sockaddr_in *local,
+					       const pj_sockaddr_in *local_in,
 					       const pjsip_host_port *a_name,
 					       unsigned async_cnt,
 					       pjsip_tpfactory **p_factory)
 {
+    pj_sockaddr local;
+
+    if (local_in)
+	pj_sockaddr_cp(&local, local_in);
+
+    return pjsip_tls_transport_start2(endpt, opt, (local_in? &local : NULL),
+                                      a_name, async_cnt, p_factory);
+}
+
+PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
+ 					        const pjsip_tls_setting *opt,
+					        const pj_sockaddr *local,
+					        const pjsip_host_port *a_name,
+					        unsigned async_cnt,
+					        pjsip_tpfactory **p_factory)
+{
     pj_pool_t *pool;
+    pj_bool_t is_ipv6;
+    int af;
     struct tls_listener *listener;
     pj_ssl_sock_param ssock_param;
-    pj_sockaddr_in *listener_addr;
+    pj_sockaddr *listener_addr;
     pj_bool_t has_listener;
     pj_status_t status;
 
     /* Sanity check */
     PJ_ASSERT_RETURN(endpt && async_cnt, PJ_EINVAL);
 
+    is_ipv6 = (local && local->addr.sa_family == pj_AF_INET6());
+    af = is_ipv6 ? pj_AF_INET6() : pj_AF_INET();
+
     /* Verify that address given in a_name (if any) is valid */
     if (a_name && a_name->host.slen) {
-	pj_sockaddr_in tmp;
+	pj_sockaddr tmp;
 
-	status = pj_sockaddr_in_init(&tmp, &a_name->host, 
-				     (pj_uint16_t)a_name->port);
-	if (status != PJ_SUCCESS || tmp.sin_addr.s_addr == PJ_INADDR_ANY ||
-	    tmp.sin_addr.s_addr == PJ_INADDR_NONE)
+	status = pj_sockaddr_init(af, &tmp, &a_name->host,
+				  (pj_uint16_t)a_name->port);
+	if (status != PJ_SUCCESS || !pj_sockaddr_has_addr(&tmp) ||
+	    (!is_ipv6 && tmp.ipv4.sin_addr.s_addr == PJ_INADDR_NONE))
 	{
 	    /* Invalid address */
 	    return PJ_EINVAL;
@@ -270,19 +292,25 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 
     listener = PJ_POOL_ZALLOC_T(pool, struct tls_listener);
     listener->factory.pool = pool;
-    listener->factory.type = PJSIP_TRANSPORT_TLS;
-    listener->factory.type_name = "tls";
+    if (is_ipv6)
+	listener->factory.type = PJSIP_TRANSPORT_TLS6;
+    else
+	listener->factory.type = PJSIP_TRANSPORT_TLS;
+    listener->factory.type_name = (char*)
+		pjsip_transport_get_type_name(listener->factory.type);
     listener->factory.flag = 
-	pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
+	pjsip_transport_get_flag_from_type(listener->factory.type);
 
     pj_ansi_strcpy(listener->factory.obj_name, "tlslis");
+    if (is_ipv6)
+	pj_ansi_strcat(listener->factory.obj_name, "6");
 
     if (opt)
 	pjsip_tls_setting_copy(pool, &listener->tls_setting, opt);
     else
 	pjsip_tls_setting_default(&listener->tls_setting);
 
-    status = pj_lock_create_recursive_mutex(pool, "tlslis", 
+    status = pj_lock_create_recursive_mutex(pool, listener->factory.obj_name,
 					    &listener->factory.lock);
     if (status != PJ_SUCCESS)
 	goto on_error;
@@ -292,6 +320,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 
     /* Build SSL socket param */
     pj_ssl_sock_param_default(&ssock_param);
+    ssock_param.sock_af = af;
     ssock_param.cb.on_accept_complete = &on_accept_complete;
     ssock_param.cb.on_data_read = &on_data_read;
     ssock_param.cb.on_data_sent = &on_data_sent;
@@ -338,12 +367,17 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
-    listener_addr = (pj_sockaddr_in*)&listener->factory.local_addr;
+    /* Bind address may be different than factory.local_addr because
+     * factory.local_addr will be resolved below.
+     */
+    listener_addr = &listener->factory.local_addr;
     if (local) {
 	pj_sockaddr_cp((pj_sockaddr_t*)listener_addr, 
 		       (const pj_sockaddr_t*)local);
+	pj_sockaddr_cp(&listener->bound_addr, local);
     } else {
-	pj_sockaddr_in_init(listener_addr, NULL, 0);
+	pj_sockaddr_init(af, listener_addr, NULL, 0);
+	pj_sockaddr_init(af, &listener->bound_addr, NULL, 0);
     }
 
     /* Check if certificate/CA list for SSL socket is set */
@@ -401,14 +435,14 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 	/* If the address returns 0.0.0.0, use the default
 	 * interface address as the transport's address.
 	 */
-	if (listener_addr->sin_addr.s_addr == 0) {
+	if (!pj_sockaddr_has_addr(listener_addr)) {
 	    pj_sockaddr hostip;
 
-	    status = pj_gethostip(pj_AF_INET(), &hostip);
+	    status = pj_gethostip(af, &hostip);
 	    if (status != PJ_SUCCESS)
 		goto on_error;
 
-	    listener_addr->sin_addr.s_addr = hostip.ipv4.sin_addr.s_addr;
+	    pj_sockaddr_copy_addr(listener_addr, &hostip);
 	}
 
 	/* Save the address name */
@@ -418,7 +452,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start (pjsip_endpoint *endpt,
 
     /* If port is zero, get the bound port */
     if (listener->factory.addr_name.port == 0) {
-	listener->factory.addr_name.port = pj_ntohs(listener_addr->sin_port);
+	listener->factory.addr_name.port = pj_sockaddr_get_port(listener_addr);
     }
 
     pj_ansi_snprintf(listener->factory.obj_name, 
@@ -535,13 +569,14 @@ static pj_status_t tls_create( struct tls_listener *listener,
 			       pj_pool_t *pool,
 			       pj_ssl_sock_t *ssock,
 			       pj_bool_t is_server,
-			       const pj_sockaddr_in *local,
-			       const pj_sockaddr_in *remote,
+			       const pj_sockaddr *local,
+			       const pj_sockaddr *remote,
 			       const pj_str_t *remote_name,
 			       struct tls_transport **p_tls)
 {
     struct tls_transport *tls;
     const pj_str_t ka_pkt = PJSIP_TLS_KEEP_ALIVE_DATA;
+    char print_addr[PJ_INET6_ADDRSTRLEN+10];
     pj_status_t status;
     
 
@@ -579,17 +614,20 @@ static pj_status_t tls_create( struct tls_listener *listener,
     if (remote_name)
 	pj_strdup(pool, &tls->remote_name, remote_name);
 
-    tls->base.key.type = PJSIP_TRANSPORT_TLS;
-    pj_memcpy(&tls->base.key.rem_addr, remote, sizeof(pj_sockaddr_in));
-    tls->base.type_name = "tls";
-    tls->base.flag = pjsip_transport_get_flag_from_type(PJSIP_TRANSPORT_TLS);
+    tls->base.key.type = listener->factory.type;
+    pj_sockaddr_cp(&tls->base.key.rem_addr, remote);
+    tls->base.type_name = (char*)
+			  pjsip_transport_get_type_name(tls->base.key.type);
+    tls->base.flag = pjsip_transport_get_flag_from_type(tls->base.key.type);
 
     tls->base.info = (char*) pj_pool_alloc(pool, 64);
-    pj_ansi_snprintf(tls->base.info, 64, "TLS to %s:%d",
-		     pj_inet_ntoa(remote->sin_addr), 
-		     (int)pj_ntohs(remote->sin_port));
+    pj_ansi_snprintf(tls->base.info, 64, "%s to %s",
+                     tls->base.type_name,
+                     pj_sockaddr_print(remote, print_addr,
+                                       sizeof(print_addr), 3));
 
-    tls->base.addr_len = sizeof(pj_sockaddr_in);
+
+    tls->base.addr_len = pj_sockaddr_get_len(remote);
     tls->base.dir = is_server? PJSIP_TP_DIR_INCOMING : PJSIP_TP_DIR_OUTGOING;
     
     /* Set initial local address */
@@ -600,11 +638,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
 	pj_sockaddr_cp(&tls->base.local_addr, local);
     }
     
-    sockaddr_to_host_port(pool, &tls->base.local_name, 
-			  (pj_sockaddr_in*)&tls->base.local_addr);
+    sockaddr_to_host_port(pool, &tls->base.local_name, &tls->base.local_addr);
     if (tls->remote_name.slen) {
 	tls->base.remote_name.host = tls->remote_name;
-	tls->base.remote_name.port = pj_sockaddr_in_get_port(remote);
+	tls->base.remote_name.port = pj_sockaddr_get_port(remote);
     } else {
 	sockaddr_to_host_port(pool, &tls->base.remote_name, remote);
     }
@@ -794,7 +831,7 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
 {
     pj_pool_t *pool;
     pj_ssize_t size;
-    pj_sockaddr_in *rem_addr;
+    pj_sockaddr *rem_addr;
     void *readbuf[1];
     pj_status_t status;
 
@@ -817,11 +854,11 @@ static pj_status_t tls_start_read(struct tls_transport *tls)
 			   sizeof(pj_ioqueue_op_key_t));
 
     tls->rdata.pkt_info.src_addr = tls->base.key.rem_addr;
-    tls->rdata.pkt_info.src_addr_len = sizeof(pj_sockaddr_in);
-    rem_addr = (pj_sockaddr_in*) &tls->base.key.rem_addr;
-    pj_ansi_strcpy(tls->rdata.pkt_info.src_name,
-		   pj_inet_ntoa(rem_addr->sin_addr));
-    tls->rdata.pkt_info.src_port = pj_ntohs(rem_addr->sin_port);
+    tls->rdata.pkt_info.src_addr_len = sizeof(tls->rdata.pkt_info.src_addr);
+    rem_addr = &tls->base.key.rem_addr;
+    pj_sockaddr_print(rem_addr, tls->rdata.pkt_info.src_name,
+                          sizeof(tls->rdata.pkt_info.src_name), 0);
+    tls->rdata.pkt_info.src_port = pj_sockaddr_get_port(rem_addr);
 
     size = sizeof(tls->rdata.pkt_info.packet);
     readbuf[0] = tls->rdata.pkt_info.packet;
@@ -854,7 +891,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     pj_pool_t *pool;
     pj_ssl_sock_t *ssock;
     pj_ssl_sock_param ssock_param;
-    pj_sockaddr_in local_addr;
+    pj_sockaddr local_addr;
     pj_str_t remote_name;
     pj_status_t status;
 
@@ -862,9 +899,11 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
     PJ_ASSERT_RETURN(factory && mgr && endpt && rem_addr &&
 		     addr_len && p_transport, PJ_EINVAL);
 
-    /* Check that address is a sockaddr_in */
-    PJ_ASSERT_RETURN(rem_addr->addr.sa_family == pj_AF_INET() &&
-		     addr_len == sizeof(pj_sockaddr_in), PJ_EINVAL);
+    /* Check that address is a sockaddr_in or sockaddr_in6*/
+    PJ_ASSERT_RETURN((rem_addr->addr.sa_family == pj_AF_INET() &&
+		      addr_len == sizeof(pj_sockaddr_in)) ||
+		     (rem_addr->addr.sa_family == pj_AF_INET6() &&
+		      addr_len == sizeof(pj_sockaddr_in6)), PJ_EINVAL);
 
 
     listener = (struct tls_listener*)factory;
@@ -881,6 +920,8 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 
     /* Build SSL socket param */
     pj_ssl_sock_param_default(&ssock_param);
+    ssock_param.sock_af = (factory->type & PJSIP_TRANSPORT_IPV6) ?
+			    pj_AF_INET6() : pj_AF_INET();
     ssock_param.cb.on_connect_complete = &on_connect_complete;
     ssock_param.cb.on_data_read = &on_data_read;
     ssock_param.cb.on_data_sent = &on_data_sent;
@@ -931,12 +972,14 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	    return status;
     }
 
-    /* Initially set bind address to PJ_INADDR_ANY port 0 */
-    pj_sockaddr_in_init(&local_addr, NULL, 0);
+    /* Initially set bind address to listener's bind address */
+    pj_sockaddr_init(listener->bound_addr.addr.sa_family,
+		     &local_addr, NULL, 0);
+    pj_sockaddr_copy_addr(&local_addr, &listener->bound_addr);
 
     /* Create the transport descriptor */
     status = tls_create(listener, pool, ssock, PJ_FALSE, &local_addr, 
-			(pj_sockaddr_in*)rem_addr, &remote_name, &tls);
+			rem_addr, &remote_name, &tls);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -983,7 +1026,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	    }
 
 	    sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
-				  (pj_sockaddr_in*)&tls->base.local_addr);
+				  &tls->base.local_addr);
 	}
 
 	PJ_LOG(4,(tls->base.obj_name, 
@@ -1017,6 +1060,7 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
     pj_ssl_sock_info ssl_info;
     char addr[PJ_INET6_ADDRSTRLEN+10];
     pjsip_tp_state_callback state_cb;
+    pj_sockaddr tmp_src_addr;
     pj_bool_t is_shutdown;
     pj_status_t status;
 
@@ -1044,13 +1088,17 @@ static pj_bool_t on_accept_complete(pj_ssl_sock_t *ssock,
 	return PJ_TRUE;
     }
 
+    /* Copy to larger buffer, just in case */
+    pj_bzero(&tmp_src_addr, sizeof(tmp_src_addr));
+    pj_sockaddr_cp(&tmp_src_addr, src_addr);
+
     /* 
      * Incoming connection!
      * Create TLS transport for the new socket.
      */
     status = tls_create( listener, NULL, new_ssock, PJ_TRUE,
-			 (const pj_sockaddr_in*)&listener->factory.local_addr,
-			 (const pj_sockaddr_in*)src_addr, NULL, &tls);
+			 &listener->factory.local_addr,
+			 &tmp_src_addr, NULL, &tls);
     
     if (status != PJ_SUCCESS)
 	return PJ_TRUE;
@@ -1200,9 +1248,9 @@ static pj_status_t tls_send_msg(pjsip_transport *transport,
     PJ_ASSERT_RETURN(tdata->op_key.tdata == NULL, PJSIP_EPENDINGTX);
     
     /* Check the address is supported */
-    PJ_ASSERT_RETURN(rem_addr && addr_len==sizeof(pj_sockaddr_in), PJ_EINVAL);
-
-
+    PJ_ASSERT_RETURN(rem_addr && (addr_len==sizeof(pj_sockaddr_in) ||
+	                          addr_len==sizeof(pj_sockaddr_in6)),
+	             PJ_EINVAL);
 
     /* Init op key. */
     tdata->op_key.tdata = tdata;
@@ -1384,7 +1432,7 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
 {
     struct tls_transport *tls;
     pj_ssl_sock_info ssl_info;
-    pj_sockaddr_in addr, *tp_addr;
+    pj_sockaddr addr, *tp_addr;
     pjsip_tp_state_callback state_cb;
     pj_bool_t is_shutdown;
 
@@ -1422,12 +1470,11 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
      * set is different now that the socket is connected (could happen
      * on some systems, like old Win32 probably?).
      */
-    tp_addr = (pj_sockaddr_in*)&tls->base.local_addr;
+    tp_addr = &tls->base.local_addr;
     pj_sockaddr_cp((pj_sockaddr_t*)&addr, 
 		   (pj_sockaddr_t*)&ssl_info.local_addr);
-    if (tp_addr->sin_addr.s_addr != addr.sin_addr.s_addr) {
-	tp_addr->sin_addr.s_addr = addr.sin_addr.s_addr;
-	tp_addr->sin_port = addr.sin_port;
+    if (pj_sockaddr_cmp(tp_addr, &addr) != 0) {
+	pj_sockaddr_cp(tp_addr, &addr);
 	sockaddr_to_host_port(tls->base.pool, &tls->base.local_name,
 			      tp_addr);
     }

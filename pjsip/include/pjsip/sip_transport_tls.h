@@ -262,6 +262,8 @@ PJ_INLINE(void) pjsip_tls_setting_copy(pj_pool_t *pool,
  * instance of SIP TLS transport factory and register it to the
  * transport manager.
  *
+ * See also #pjsip_tls_transport_start2() which supports IPv6.
+ *
  * @param endpt		The SIP endpoint.
  * @param opt		Optional TLS settings.
  * @param local		Optional local address to bind, or specify the
@@ -294,7 +296,43 @@ PJ_DECL(pj_status_t) pjsip_tls_transport_start(pjsip_endpoint *endpt,
 					       unsigned async_cnt,
 					       pjsip_tpfactory **p_factory);
 
-
+/**
+ * Variant of #pjsip_tls_transport_start() that supports IPv6. To instantiate
+ * IPv6 listener, set the address family of the "local" argument to IPv6
+ * (the host and port part may be left unspecified if not desired, i.e. by
+ * filling them with zeroes).
+ *
+ * @param endpt		The SIP endpoint.
+ * @param opt		Optional TLS settings.
+ * @param local		Optional local address to bind, or specify the
+ *			address to bind the server socket to. Both IP
+ *			interface address and port fields are optional.
+ *			If IP interface address is not specified, socket
+ *			will be bound to any address. If port is not
+ *			specified, socket will be bound to any port
+ *			selected by the operating system.
+ * @param a_name	Optional published address, which is the address to be
+ *			advertised as the address of this SIP transport.
+ *			If this argument is NULL, then the bound address
+ *			will be used as the published address.
+ * @param async_cnt	Number of simultaneous asynchronous accept()
+ *			operations to be supported. It is recommended that
+ *			the number here corresponds to the number of
+ *			processors in the system (or the number of SIP
+ *			worker threads).
+ * @param p_factory	Optional pointer to receive the instance of the
+ *			SIP TLS transport factory just created.
+ *
+ * @return		PJ_SUCCESS when the transport has been successfully
+ *			started and registered to transport manager, or
+ *			the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsip_tls_transport_start2(pjsip_endpoint *endpt,
+ 					        const pjsip_tls_setting *opt,
+					        const pj_sockaddr *local,
+					        const pjsip_host_port *a_name,
+					        unsigned async_cnt,
+					        pjsip_tpfactory **p_factory);
 
 PJ_END_DECL
 

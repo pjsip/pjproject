@@ -198,6 +198,13 @@ struct transport_names_t
 	"TCP IPv6 transport", 
 	PJSIP_TRANSPORT_RELIABLE
     },
+    {
+	PJSIP_TRANSPORT_TLS6,
+	5061,
+	{"TLS", 3},
+	"TLS IPv6 transport",
+	PJSIP_TRANSPORT_RELIABLE | PJSIP_TRANSPORT_SECURE
+    },
 };
 
 static void tp_state_callback(pjsip_transport *tp,
@@ -1279,9 +1286,20 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_find_local_addr2(pjsip_tpmgr *tpmgr,
 	    if (prm->local_if) {
 		status = get_net_interface(f->type, &prm->dst_host,
 					   &tmp_str);
-		if (status != PJ_SUCCESS)
-		    goto on_return;
-		pj_strdup(pool, &prm->ret_addr, &tmp_str);
+		if (status == PJ_SUCCESS) {
+		    pj_strdup(pool, &prm->ret_addr, &tmp_str);
+		} else {
+		    /* It could fail "normally" on certain cases, e.g.
+		     * when connecting to IPv6 link local address, it
+		     * will wail with EINVAL.
+		     * In this case, fallback to use the default interface
+		     * rather than failing the call.
+		     */
+		    PJ_PERROR(5,(THIS_FILE, status, "Warning: unable to "
+			         "determine local interface"));
+		    pj_strdup(pool, &prm->ret_addr, &f->addr_name.host);
+		    status = PJ_SUCCESS;
+		}
 	    } else {
 		pj_strdup(pool, &prm->ret_addr, &f->addr_name.host);
 	    }
