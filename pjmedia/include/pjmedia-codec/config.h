@@ -378,6 +378,38 @@
 
 
 /**
+ * Enable SILK codec.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_SILK_CODEC
+#   define PJMEDIA_HAS_SILK_CODEC		0
+#endif
+
+
+/**
+ * SILK codec default complexity setting, valid values are 0 (lowest), 1,
+ * and 2.
+ *
+ * Default: 2
+ */
+#ifndef PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY
+#   define PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY   2
+#endif
+
+/**
+ * SILK codec default quality setting, valid values are ranging from
+ * 0 (lowest) to 10. Please note that pjsua-lib may override this setting
+ * via its codec quality setting (i.e PJSUA_DEFAULT_CODEC_QUALITY).
+ *
+ * Default: 10
+ */
+#ifndef PJMEDIA_CODEC_SILK_DEFAULT_QUALITY
+#   define PJMEDIA_CODEC_SILK_DEFAULT_QUALITY	    10
+#endif
+
+
+/**
  * Specify if FFMPEG codecs are available.
  *
  * Default: PJMEDIA_HAS_LIBAVCODEC
