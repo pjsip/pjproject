@@ -623,6 +623,9 @@ LIBOBJS
 ac_main_obj
 ac_host
 ac_linux_poll
+silk_present
+silk_h_present
+ac_no_silk
 opencore_amrnb_present
 opencore_amrnb_h_present
 ac_no_opencore_amrnb
@@ -779,6 +782,8 @@ with_ssl
 enable_ssl
 with_opencore_amrnb
 enable_opencore_amrnb
+with_silk
+enable_silk
 '
       ac_precious_vars='build_alias
 host_alias
@@ -1439,6 +1444,9 @@ Optional Features:
                           Exclude OpenCORE AMR-NB support from the build
                           (default: autodetect)
 
+  --disable-silk          Exclude SILK support from the build (default:
+                          autodetect)
+
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1467,6 +1475,7 @@ Optional Packages:
   --with-ssl=DIR          Specify alternate libssl prefix
   --with-opencore-amrnb=DIR
                           Specify alternate libopencore-amrnb prefix
+  --with-silk=DIR         Specify alternate SILK prefix
 
 Some influential environment variables:
   CC          C compiler command
@@ -7188,11 +7197,110 @@ $as_echo "OpenCORE AMR-NB library found, AMR-NB support enabled" >&6; }
 
 		else
 			ac_no_opencore_amrnb=1
-			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0" >>confdefs.h
+			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB444_CODEC 0" >>confdefs.h
 
 		fi
 
 fi
+
+
+
+# Check whether --with-silk was given.
+if test "${with_silk+set}" = set; then :
+  withval=$with_silk;
+else
+  with_silk=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_silk" = "xno"; then
+    enable_silk=no
+fi
+
+
+# Check whether --enable-silk was given.
+if test "${enable_silk+set}" = set; then :
+  enableval=$enable_silk;
+		if test "$enable_silk" = "no"; then
+		 ac_no_silk=1
+		 $as_echo "#define PJMEDIA_HAS_SILK_CODEC 0" >>confdefs.h
+
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if SILK support is disabled... yes" >&5
+$as_echo "Checking if SILK support is disabled... yes" >&6; }
+	        fi
+
+else
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for SILK installations.." >&5
+$as_echo "checking for SILK installations.." >&6; }
+                if test "x$with_silk" != "xno" -a "x$with_silk" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_silk/interface"
+                    LDFLAGS="$LDFLAGS -L$with_silk"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using SILK prefix... $with_silk" >&5
+$as_echo "Using SILK prefix... $with_silk" >&6; }
+                fi
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "SKP_Silk_SDK_API.h" "ac_cv_header_SKP_Silk_SDK_API_h" "$ac_includes_default"
+if test "x$ac_cv_header_SKP_Silk_SDK_API_h" = xyes; then :
+  silk_h_present=1
+fi
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for SKP_Silk_SDK_get_version in -lSKP_SILK_SDK" >&5
+$as_echo_n "checking for SKP_Silk_SDK_get_version in -lSKP_SILK_SDK... " >&6; }
+if ${ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lSKP_SILK_SDK  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char SKP_Silk_SDK_get_version ();
+int
+main ()
+{
+return SKP_Silk_SDK_get_version ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version=yes
+else
+  ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" >&5
+$as_echo "$ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" >&6; }
+if test "x$ac_cv_lib_SKP_SILK_SDK_SKP_Silk_SDK_get_version" = xyes; then :
+  silk_present=1 && LIBS="$LIBS -lSKP_SILK_SDK"
+fi
+
+		if test "x$silk_h_present" = "x1" -a "x$silk_present" = "x1"; then
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: SILK library found, SILK support enabled" >&5
+$as_echo "SILK library found, SILK support enabled" >&6; }
+	        	$as_echo "#define PJMEDIA_HAS_SILK_CODEC 1" >>confdefs.h
+
+		else
+			ac_no_silk=1
+			$as_echo "#define PJMEDIA_HAS_SILK_CODEC 0" >>confdefs.h
+
+		fi
+
+fi
+
 
 
 
