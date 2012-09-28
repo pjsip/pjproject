@@ -825,11 +825,20 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
 	pjsua_var.ua_cfg.cb.on_call_replaced(replaced_call->index,
 					     call->index);
 
-    PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with 200/OK",
-			 call->index));
+    if (replaced_call->inv->state <= PJSIP_INV_STATE_EARLY &&
+	replaced_call->inv->role != PJSIP_ROLE_UAC)
+    {
+	/* Replaced call is not in confirmed state yet and we are not
+	 * the call initiator, should not answer with 200 response here.
+	 */
+    } else {
+    	PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with 200/OK",
+			     call->index));
 
-    /* Answer the new call with 200 response */
-    status = pjsip_inv_answer(call->inv, 200, NULL, NULL, &tdata);
+	/* Answer the new call with 200 response */
+	status = pjsip_inv_answer(call->inv, 200, NULL, NULL, &tdata);
+    }
+
     if (status == PJ_SUCCESS)
 	status = pjsip_inv_send_msg(call->inv, tdata);
 
