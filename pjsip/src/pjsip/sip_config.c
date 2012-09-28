@@ -26,6 +26,7 @@ pjsip_cfg_t pjsip_sip_cfg_var =
     /* Global settings */
     {
        PJSIP_ALLOW_PORT_IN_FROMTO_HDR,
+       PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE,
        0,
        PJSIP_DONT_SWITCH_TO_TCP
     },

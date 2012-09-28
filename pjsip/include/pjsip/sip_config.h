@@ -78,6 +78,15 @@ typedef struct pjsip_cfg_t
 	pj_bool_t allow_port_in_fromto_hdr;
 
 	/**
+	 * Accept call replace in early state when invite is not initiated
+	 * by the user agent. RFC 3891 Section 3 disallows this, however,
+	 * for better interoperability reason, this might be ignored.
+	 *
+	 * Default is PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE.
+	 */
+	pj_bool_t accept_replace_in_early_state;
+
+	/**
 	 * Allow hash character ('#') to appear in outgoing URIs. See
 	 * https://trac.pjsip.org/repos/ticket/1569
 	 */
@@ -271,6 +280,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
  */
 #ifndef PJSIP_DONT_SWITCH_TO_TCP
 #   define PJSIP_DONT_SWITCH_TO_TCP	0
+#endif
+
+
+/**
+ * Accept call replace in early state when invite is not initiated
+ * by the user agent. RFC 3891 Section 3 disallows this, however,
+ * for better interoperability reason, this might be ignored.
+ *
+ * This option can also be controlled at run-time by the
+ * \a accept_replace_in_early_state setting in pjsip_cfg_t.
+ *
+ * Default is 0 (no).
+ */
+#ifndef PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE
+#   define PJSIP_ACCEPT_REPLACE_IN_EARLY_STATE	    0
 #endif
 
 

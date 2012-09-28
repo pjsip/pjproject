@@ -305,7 +305,9 @@ PJ_DEF(pj_status_t) pjsip_replaces_verify_request( pjsip_rx_data *rdata,
      * initiated by this UA, it returns a 481 (Call/Transaction Does Not
      * Exist) response to the new INVITE.
      */
-    if (inv->state <= PJSIP_INV_STATE_EARLY && inv->role != PJSIP_ROLE_UAC) {
+    if (inv->state <= PJSIP_INV_STATE_EARLY && inv->role != PJSIP_ROLE_UAC &&
+	pjsip_cfg()->endpt.accept_replace_in_early_state == PJ_FALSE)
+    {
 	code = PJSIP_SC_CALL_TSX_DOES_NOT_EXIST;
 	warn_text = "Found early INVITE session but not initiated by this UA";
 	goto on_return;
