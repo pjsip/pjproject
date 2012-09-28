@@ -811,8 +811,8 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
 {
     pjsip_inv_session *replaced_inv;
     struct pjsua_call *replaced_call;
-    pjsip_tx_data *tdata;
-    pj_status_t status;
+    pjsip_tx_data *tdata = NULL;
+    pj_status_t status = PJ_SUCCESS;
 
     /* Get the invite session in the dialog */
     replaced_inv = pjsip_dlg_get_inv_session(replaced_dlg);
@@ -828,9 +828,17 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
     if (replaced_call->inv->state <= PJSIP_INV_STATE_EARLY &&
 	replaced_call->inv->role != PJSIP_ROLE_UAC)
     {
-	/* Replaced call is not in confirmed state yet and we are not
-	 * the call initiator, should not answer with 200 response here.
-	 */
+	if (replaced_call->last_code > 100 && replaced_call->last_code < 200)
+	{
+	    pjsip_status_code code = replaced_call->last_code;
+	    pj_str_t *text = &replaced_call->last_text;
+
+    	    PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with %d/%.*s",
+				 call->index, code, text->slen, text->ptr));
+
+	    /* Answer the new call with last response in the replaced call */
+	    status = pjsip_inv_answer(call->inv, code, text, NULL, &tdata);
+	}
     } else {
     	PJ_LOG(4,(THIS_FILE, "Answering replacement call %d with 200/OK",
 			     call->index));
@@ -839,7 +847,7 @@ static pj_status_t process_incoming_call_replace(pjsua_call *call,
 	status = pjsip_inv_answer(call->inv, 200, NULL, NULL, &tdata);
     }
 
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS && tdata)
 	status = pjsip_inv_send_msg(call->inv, tdata);
 
     if (status != PJ_SUCCESS)
