@@ -7197,7 +7197,7 @@ $as_echo "OpenCORE AMR-NB library found, AMR-NB support enabled" >&6; }
 
 		else
 			ac_no_opencore_amrnb=1
-			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB444_CODEC 0" >>confdefs.h
+			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0" >>confdefs.h
 
 		fi
 
@@ -7236,6 +7236,7 @@ else
 $as_echo "checking for SILK installations.." >&6; }
                 if test "x$with_silk" != "xno" -a "x$with_silk" != "x"; then
                     CFLAGS="$CFLAGS -I$with_silk/interface"
+		    CPPFLAGS="$CPPFLAGS -I$with_silk/interface"
                     LDFLAGS="$LDFLAGS -L$with_silk"
                     { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using SILK prefix... $with_silk" >&5
 $as_echo "Using SILK prefix... $with_silk" >&6; }
