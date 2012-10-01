@@ -35,8 +35,11 @@
 #define THIS_FILE		"silk.c"
 
 #define FRAME_LENGTH_MS         20
+#define CALC_BITRATE_QUALITY(quality, max_br) \
+                (quality * max_br / 10)
 #define CALC_BITRATE(max_br) \
-		(PJMEDIA_CODEC_SILK_DEFAULT_QUALITY * max_br / 10)
+                CALC_BITRATE_QUALITY(PJMEDIA_CODEC_SILK_DEFAULT_QUALITY, \
+                                     max_br);
 
 
 /* Prototypes for SILK factory */
@@ -287,9 +290,23 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_set_config(
 				    unsigned clock_rate, 
 				    const pjmedia_codec_silk_setting *opt)
 {
-    PJ_UNUSED_ARG(clock_rate);
-    PJ_UNUSED_ARG(opt);
-    return PJ_ENOTSUP;
+    unsigned i;
+
+    /* Look up in factory modes table */
+    for (i = 0; i < sizeof(silk_factory.silk_param)/
+                    sizeof(silk_factory.silk_param[0]); ++i)
+    {
+        if (silk_factory.silk_param[i].clock_rate == clock_rate) {
+	    silk_factory.silk_param[i].enabled = opt->enabled;
+            silk_factory.silk_param[i].complexity = opt->complexity;
+            silk_factory.silk_param[i].bitrate =
+                CALC_BITRATE_QUALITY(opt->quality,
+                                     silk_factory.silk_param[i].max_bitrate);
+	    return PJ_SUCCESS;
+	}
+    }
+
+    return PJ_ENOTFOUND;
 }
 
 
@@ -403,10 +420,10 @@ static pj_status_t silk_default_attr( pjmedia_codec_factory *factory,
     attr->setting.plc = 1;
 
     i = 0;
-    attr->setting.dec_fmtp.param[i++].name = pj_str("useinbandfec");
+    attr->setting.dec_fmtp.param[i].name = pj_str("useinbandfec");
     attr->setting.dec_fmtp.param[i++].val = pj_str("0");
     /*
-    attr->setting.dec_fmtp.param[i++].name = pj_str("maxaveragebitrate");
+    attr->setting.dec_fmtp.param[i].name = pj_str("maxaveragebitrate");
     attr->setting.dec_fmtp.param[i++].val = pj_str(mode->bitrate_str);
     */
     attr->setting.dec_fmtp.cnt = (pj_uint8_t)i;
