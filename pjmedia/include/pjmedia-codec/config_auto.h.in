@@ -74,6 +74,10 @@
 #undef PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
 #endif
 
+/* SILK codec */
+#ifndef PJMEDIA_HAS_SILK_CODEC
+#undef PJMEDIA_HAS_SILK_CODEC
+#endif
 
 #endif	/* __PJMEDIA_CODEC_CONFIG_AUTO_H_ */
 
