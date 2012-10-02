@@ -359,6 +359,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     pjsip_dialog *dlg = call->async_call.dlg;
     unsigned options = 0;
     pjsip_tx_data *tdata;
+    pj_bool_t cb_called = PJ_FALSE;
     pj_status_t status = (info? info->status: PJ_SUCCESS);
 
     PJSUA_LOCK();
@@ -476,8 +477,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 
     status = pjsip_inv_send_msg(inv, tdata);
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to send initial INVITE request", 
-		     status);
+	cb_called = PJ_TRUE;
 
 	/* Upon failure to send first request, the invite 
 	 * session would have been cleared.
@@ -494,8 +494,11 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     return PJ_SUCCESS;
 
 on_error:
-    if (inv == NULL && call_id != -1 && pjsua_var.ua_cfg.cb.on_call_state)
+    if (inv == NULL && call_id != -1 && !cb_called &&
+	pjsua_var.ua_cfg.cb.on_call_state)
+    {
         (*pjsua_var.ua_cfg.cb.on_call_state)(call_id, NULL);
+    }
 
     if (dlg) {
 	/* This may destroy the dialog */
