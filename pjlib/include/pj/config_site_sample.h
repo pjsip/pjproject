@@ -302,8 +302,10 @@
      * PJLIB settings.
      */
 
-    /* Disable floating point support */
-    #define PJ_HAS_FLOATING_POINT		0
+    /* Both armv6 and armv7 has FP hardware support.
+     * See https://trac.pjsip.org/repos/ticket/1589 for more info
+     */
+    #define PJ_HAS_FLOATING_POINT		1
 
     /*
      * PJMEDIA settings
