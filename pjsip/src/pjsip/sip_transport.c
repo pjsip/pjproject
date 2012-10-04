@@ -602,6 +602,87 @@ PJ_DEF(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata)
     return rdata->msg_info.info;
 }
 
+/* Clone pjsip_rx_data. */
+PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
+                                         unsigned flags,
+                                         pjsip_rx_data **p_rdata)
+{
+    pj_pool_t *pool;
+    pjsip_rx_data *dst;
+    pjsip_hdr *hdr;
+
+    PJ_ASSERT_RETURN(src && flags==0 && p_rdata, PJ_EINVAL);
+
+    pool = pj_pool_create(src->tp_info.pool->factory,
+                          "rtd%p",
+                          PJSIP_POOL_RDATA_LEN,
+                          PJSIP_POOL_RDATA_INC,
+                          NULL);
+    if (!pool)
+	return PJ_ENOMEM;
+
+    dst = PJ_POOL_ZALLOC_T(pool, pjsip_rx_data);
+
+    /* Parts of tp_info */
+    dst->tp_info.pool = pool;
+    dst->tp_info.transport = (pjsip_transport*)src->tp_info.transport;
+
+    /* pkt_info can be memcopied */
+    pj_memcpy(&dst->pkt_info, &src->pkt_info, sizeof(src->pkt_info));
+
+    /* msg_info needs deep clone */
+    dst->msg_info.msg_buf = dst->pkt_info.packet;
+    dst->msg_info.len = src->msg_info.len;
+    dst->msg_info.msg = pjsip_msg_clone(pool, src->msg_info.msg);
+    pj_list_init(&dst->msg_info.parse_err);
+
+#define GET_MSG_HDR2(TYPE, type, var)	\
+			case PJSIP_H_##TYPE: \
+			    dst->msg_info.var = (pjsip_##type##_hdr*)hdr; \
+			    break
+#define GET_MSG_HDR(TYPE, var_type)	GET_MSG_HDR2(TYPE, var_type, var_type)
+
+    hdr = dst->msg_info.msg->hdr.next;
+    while (hdr != &dst->msg_info.msg->hdr) {
+	switch (hdr->type) {
+	GET_MSG_HDR(CALL_ID, cid);
+	GET_MSG_HDR(FROM, from);
+	GET_MSG_HDR(TO, to);
+	GET_MSG_HDR(VIA, via);
+	GET_MSG_HDR(CSEQ, cseq);
+	GET_MSG_HDR(MAX_FORWARDS, max_fwd);
+	GET_MSG_HDR(ROUTE, route);
+	GET_MSG_HDR2(RECORD_ROUTE, rr, record_route);
+	GET_MSG_HDR(CONTENT_TYPE, ctype);
+	GET_MSG_HDR(CONTENT_LENGTH, clen);
+	GET_MSG_HDR(REQUIRE, require);
+	GET_MSG_HDR(SUPPORTED, supported);
+	default:
+	    break;
+	}
+	hdr = hdr->next;
+    }
+
+#undef GET_MSG_HDR
+#undef GET_MSG_HDR2
+
+    *p_rdata = dst;
+
+    /* Finally add transport ref */
+    return pjsip_transport_add_ref(dst->tp_info.transport);
+}
+
+/* Free previously cloned pjsip_rx_data. */
+PJ_DEF(pj_status_t) pjsip_rx_data_free_cloned(pjsip_rx_data *rdata)
+{
+    PJ_ASSERT_RETURN(rdata, PJ_EINVAL);
+
+    pjsip_transport_dec_ref(rdata->tp_info.transport);
+    pj_pool_release(rdata->tp_info.pool);
+
+    return PJ_SUCCESS;
+}
+
 /*****************************************************************************
  *
  * TRANSPORT KEY

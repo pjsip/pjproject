@@ -213,6 +213,77 @@ PJ_DECL(pj_status_t) pjsip_endpt_register_module( pjsip_endpoint *endpt,
 PJ_DECL(pj_status_t) pjsip_endpt_unregister_module( pjsip_endpoint *endpt,
 						    pjsip_module *module );
 
+/**
+ * This describes additional parameters to pjsip_endpt_process_rx_data()
+ * function. Application MUST call pjsip_process_rdata_param_default() to
+ * initialize this structure.
+ */
+typedef struct pjsip_process_rdata_param
+{
+    /**
+     * Specify the minimum priority number of the modules that are allowed
+     * to process the message. Default is zero to allow all modules to
+     * process the message.
+     */
+    unsigned start_prio;
+
+    /**
+     * Specify the pointer of the module where processing will start.
+     * The default is NULL, meaning processing will start from the start
+     * of the module list.
+     */
+    void *start_mod;
+
+    /**
+     * Set to N, then processing will start at Nth module after start
+     * module (where start module can be an explicit module as specified
+     * by \a start_mod or the start of module list when \a start_mod is
+     * NULL). For example, if set to 1, then processing will start from
+     * the next module after start module. Default is zero.
+     */
+    unsigned idx_after_start;
+
+    /**
+     * Print nothing to log. Default is PJ_FALSE.
+     */
+    pj_bool_t silent;
+
+} pjsip_process_rdata_param;
+
+/**
+ * Initialize with default.
+ *
+ * @param p	The param.
+ */
+PJ_DECL(void) pjsip_process_rdata_param_default(pjsip_process_rdata_param *p);
+
+/**
+ * Manually distribute the specified pjsip_rx_data to registered modules.
+ * Normally application does not need to call this function because received
+ * messages will be given to endpoint automatically by transports.
+ *
+ * Application can use this function when it has postponed the processing of
+ * an incoming message, for example to perform long operations such as
+ * database operation or to consult other servers to decide what to do with
+ * the message. In this case, application clones the original rdata, return
+ * from the callback, and perform the long operation. Upon completing the
+ * long operation, it resumes pjsip's module processing by calling this
+ * function, and then free the cloned rdata.
+ *
+ * @param endpt		The endpoint instance.
+ * @param rdata		The rdata to be distributed.
+ * @param p		Optional pointer to param to specify from which module
+ * 			the processing should start.
+ * @param p_handled	Optional pointer to receive last return value of
+ * 			module's \a on_rx_request() or \a on_rx_response()
+ * 			callback.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjsip_endpt_process_rx_data(pjsip_endpoint *endpt,
+                                                 pjsip_rx_data *rdata,
+                                                 pjsip_process_rdata_param *p,
+                                                 pj_bool_t *p_handled);
 
 /**
  * Create pool from the endpoint. All SIP components should allocate their

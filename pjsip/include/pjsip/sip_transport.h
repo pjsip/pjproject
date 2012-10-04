@@ -427,6 +427,42 @@ struct pjsip_rx_data
  */
 PJ_DECL(char*) pjsip_rx_data_get_info(pjsip_rx_data *rdata);
 
+/**
+ * Clone pjsip_rx_data. This will duplicate the contents of
+ * pjsip_rx_data and add reference count to the transport.
+ * Once application has finished using the cloned pjsip_rx_data,
+ * it must release it by calling  #pjsip_rx_data_free_cloned().
+ *
+ * By default (if flags is set to zero), this function copies the
+ * transport pointer in \a tp_info, duplicates the \a pkt_info,
+ * perform deep clone of the \a msg_info parts of the rdata, and
+ * fills the \a endpt_info (i.e. the \a mod_data) with zeros.
+ *
+ * @param src	    The source to be cloned.
+ * @param flags	    Optional flags. Must be zero for now.
+ * @param p_rdata   Pointer to receive the cloned rdata.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pjsip_rx_data_clone(const pjsip_rx_data *src,
+                                         unsigned flags,
+                                         pjsip_rx_data **p_rdata);
+
+/**
+ * Free cloned pjsip_rx_data. This function must be and must only
+ * be called for a cloned pjsip_rx_data. Specifically, it must NOT
+ * be called for the original pjsip_rx_data that is returned by
+ * transports.
+ *
+ * This function will free the memory used by the pjsip_rx_data and
+ * decrement the transport reference counter.
+ *
+ * @param rdata	    The receive data buffer.
+ *
+ * @return	    PJ_SUCCESS on success or the appropriate error.
+ */
+PJ_DECL(pj_status_t) pjsip_rx_data_free_cloned(pjsip_rx_data *rdata);
+
 
 /*****************************************************************************
  *

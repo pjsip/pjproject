@@ -812,6 +812,103 @@ PJ_DEF(pj_timer_heap_t*) pjsip_endpt_get_timer_heap(pjsip_endpoint *endpt)
     return endpt->timer_heap;
 }
 
+/* Init with default */
+PJ_DEF(void) pjsip_process_rdata_param_default(pjsip_process_rdata_param *p)
+{
+    pj_bzero(p, sizeof(*p));
+}
+
+/* Distribute rdata */
+PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
+                                                 pjsip_rx_data *rdata,
+                                                 pjsip_process_rdata_param *p,
+                                                 pj_bool_t *p_handled)
+{
+    pjsip_msg *msg;
+    pjsip_process_rdata_param def_prm;
+    pjsip_module *mod;
+    pj_bool_t handled = PJ_FALSE;
+    unsigned i;
+    pj_status_t status;
+
+    PJ_ASSERT_RETURN(endpt && rdata, PJ_EINVAL);
+
+    if (p==NULL) {
+	p = &def_prm;
+	pjsip_process_rdata_param_default(p);
+    }
+
+    msg = rdata->msg_info.msg;
+
+    if (p_handled)
+	*p_handled = PJ_FALSE;
+
+    if (!p->silent) {
+	PJ_LOG(5, (THIS_FILE, "Distributing rdata to modules: %s",
+		   pjsip_rx_data_get_info(rdata)));
+	pj_log_push_indent();
+    }
+
+    LOCK_MODULE_ACCESS(endpt);
+
+    /* Find start module */
+    if (p->start_mod) {
+	mod = pj_list_find_node(&endpt->module_list, p->start_mod);
+	if (!mod) {
+	    status = PJ_ENOTFOUND;
+	    goto on_return;
+	}
+    } else {
+	mod = endpt->module_list.next;
+    }
+
+    /* Start after the specified index */
+    for (i=0; i < p->idx_after_start && mod != &endpt->module_list; ++i) {
+	mod = mod->next;
+    }
+
+    /* Start with the specified priority */
+    while (mod != &endpt->module_list && mod->priority < p->start_prio) {
+	mod = mod->next;
+    }
+
+    if (mod == &endpt->module_list) {
+	status = PJ_ENOTFOUND;
+	goto on_return;
+    }
+
+    /* Distribute */
+    if (msg->type == PJSIP_REQUEST_MSG) {
+	do {
+	    if (mod->on_rx_request)
+		handled = (*mod->on_rx_request)(rdata);
+	    if (handled)
+		break;
+	    mod = mod->next;
+	} while (mod != &endpt->module_list);
+    } else {
+	do {
+	    if (mod->on_rx_response)
+		handled = (*mod->on_rx_response)(rdata);
+	    if (handled)
+		break;
+	    mod = mod->next;
+	} while (mod != &endpt->module_list);
+    }
+
+    status = PJ_SUCCESS;
+
+on_return:
+    if (p_handled)
+	*p_handled = handled;
+
+    UNLOCK_MODULE_ACCESS(endpt);
+    if (!p->silent) {
+	pj_log_pop_indent();
+    }
+    return status;
+}
+
 /*
  * This is the callback that is called by the transport manager when it 
  * receives a message from the network.
@@ -820,7 +917,8 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 				      pj_status_t status,
 				      pjsip_rx_data *rdata )
 {
-    pjsip_msg *msg = rdata->msg_info.msg;
+    pjsip_process_rdata_param proc_prm;
+    pj_bool_t handled = PJ_FALSE;
 
     if (status != PJ_SUCCESS) {
 	char info[30];
@@ -927,56 +1025,19 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
     }
 #endif
 
+    pjsip_process_rdata_param_default(&proc_prm);
+    proc_prm.silent = PJ_TRUE;
 
-    /* Distribute to modules, starting from modules with highest priority */
-    LOCK_MODULE_ACCESS(endpt);
+    pjsip_endpt_process_rx_data(endpt, rdata, &proc_prm, &handled);
 
-    if (msg->type == PJSIP_REQUEST_MSG) {
-	pjsip_module *mod;
-	pj_bool_t handled = PJ_FALSE;
-
-	mod = endpt->module_list.next;
-	while (mod != &endpt->module_list) {
-	    if (mod->on_rx_request)
-		handled = (*mod->on_rx_request)(rdata);
-	    if (handled)
-		break;
-	    mod = mod->next;
-	}
-
-	/* No module is able to handle the request. */
-	if (!handled) {
-	    PJ_TODO(ENDPT_RESPOND_UNHANDLED_REQUEST);
-	    PJ_LOG(4,(THIS_FILE, "Message %s from %s:%d was dropped/unhandled by"
-				 " any modules",
-				 pjsip_rx_data_get_info(rdata),
-				 rdata->pkt_info.src_name,
-				 rdata->pkt_info.src_port));
-	}
-
-    } else {
-	pjsip_module *mod;
-	pj_bool_t handled = PJ_FALSE;
-
-	mod = endpt->module_list.next;
-	while (mod != &endpt->module_list) {
-	    if (mod->on_rx_response)
-		handled = (*mod->on_rx_response)(rdata);
-	    if (handled)
-		break;
-	    mod = mod->next;
-	}
-
-	if (!handled) {
-	    PJ_LOG(4,(THIS_FILE, "Message %s from %s:%d was dropped/unhandled"
-				 " by any modules",
-				 pjsip_rx_data_get_info(rdata),
-				 rdata->pkt_info.src_name,
-				 rdata->pkt_info.src_port));
-	}
+    /* No module is able to handle the message */
+    if (!handled) {
+	PJ_LOG(4,(THIS_FILE, "%s from %s:%d was dropped/unhandled by"
+			     " any modules",
+			     pjsip_rx_data_get_info(rdata),
+			     rdata->pkt_info.src_name,
+			     rdata->pkt_info.src_port));
     }
-
-    UNLOCK_MODULE_ACCESS(endpt);
 
     /* Must clear mod_data before returning rdata to transport, since
      * rdata may be reused.
