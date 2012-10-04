@@ -62,11 +62,16 @@
 #endif
 
 #if LIBAVCODEC_VER_AT_LEAST(53,61)
-/* Not sure when AVCodec::encode2 is introduced. It appears in 
- * libavcodec 53.61 where some codecs actually still use AVCodec::encode
- * (e.g: H263, H264).
- */
-#  define AVCODEC_HAS_ENCODE(c)		(c->encode || c->encode2)
+#  if LIBAVCODEC_VER_AT_LEAST(54,63)
+   /* Not sure when AVCodec::encode is obsoleted/removed. */
+#      define AVCODEC_HAS_ENCODE(c)	(c->encode2)
+#  else
+   /* Not sure when AVCodec::encode2 is introduced. It appears in 
+    * libavcodec 53.61 where some codecs actually still use AVCodec::encode
+    * (e.g: H263, H264).
+    */
+#      define AVCODEC_HAS_ENCODE(c)	(c->encode || c->encode2)
+#  endif
 #  define AV_OPT_SET(obj,name,val,opt)	(av_opt_set(obj,name,val,opt)==0)
 #  define AV_OPT_SET_INT(obj,name,val)	(av_opt_set_int(obj,name,val,0)==0)
 #else
