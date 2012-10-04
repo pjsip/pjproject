@@ -164,6 +164,8 @@ if __name__ == "__main__":
 		if REMOVE_THESE.count(opt) != 0:
 			continue
 		if opt != '-framework' and opt != '--framework' and filtered_opts.count(opt) != 0:
+			if len(filtered_opts) and (filtered_opts[-1] == '-framework' or filtered_opts[-1] == '--framework'):
+				filtered_opts.pop()
 			continue
 		filtered_opts.append(opt)
 
