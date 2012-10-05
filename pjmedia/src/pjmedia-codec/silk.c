@@ -20,6 +20,7 @@
 
 #include <pjmedia-codec/silk.h>
 #include <pjmedia/codec.h>
+#include <pjmedia/delaybuf.h>
 #include <pjmedia/endpoint.h>
 #include <pjmedia/errno.h>
 #include <pjmedia/port.h>
@@ -33,6 +34,10 @@
 #include "SKP_Silk_SDK_API.h"
 
 #define THIS_FILE		"silk.c"
+
+#ifndef PJMEDIA_SILK_DELAY_BUF_OPTIONS
+    #define PJMEDIA_SILK_DELAY_BUF_OPTIONS PJMEDIA_DELAY_BUF_SIMPLE_FIFO
+#endif
 
 #define FRAME_LENGTH_MS         20
 #define CALC_BITRATE_QUALITY(quality, max_br) \
@@ -148,6 +153,7 @@ typedef struct silk_private
     silk_mode	 mode;		/**< Silk mode.	*/
     pj_pool_t	*pool;		/**< Pool for each instance.    */
     unsigned	 samples_per_frame;
+    pj_uint8_t   pcm_bytes_per_sample;
 
     pj_bool_t	 enc_ready;
     SKP_SILK_SDK_EncControlStruct enc_ctl;
@@ -156,6 +162,13 @@ typedef struct silk_private
     pj_bool_t	 dec_ready;
     SKP_SILK_SDK_DecControlStruct dec_ctl;
     void	*dec_st;
+
+    /* Buffer to hold decoded frames. */
+    void        *dec_buf[SILK_MAX_FRAMES_PER_PACKET-1];
+    SKP_int16    dec_buf_size[SILK_MAX_FRAMES_PER_PACKET-1];
+    pj_size_t    dec_buf_sz;
+    unsigned     dec_buf_cnt;
+    pj_uint32_t  pkt_info;    /**< Packet info for buffered frames.  */
 } silk_private;
 
 
@@ -218,7 +231,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt)
     sp = &silk_factory.silk_param[PARAM_NB];
     sp->pt = PJMEDIA_RTP_PT_SILK_NB;
     sp->clock_rate = 8000;
-    sp->max_bitrate = 20000;
+    sp->max_bitrate = 22000;
     sp->bitrate = CALC_BITRATE(sp->max_bitrate);
     sp->ptime = FRAME_LENGTH_MS;
     sp->complexity = PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY;
@@ -227,7 +240,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt)
     sp = &silk_factory.silk_param[PARAM_MB];
     sp->pt = PJMEDIA_RTP_PT_SILK_MB;
     sp->clock_rate = 12000;
-    sp->max_bitrate = 25000;
+    sp->max_bitrate = 28000;
     sp->bitrate = CALC_BITRATE(sp->max_bitrate);
     sp->ptime = FRAME_LENGTH_MS;
     sp->complexity = PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY;
@@ -236,7 +249,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt)
     sp = &silk_factory.silk_param[PARAM_WB];
     sp->pt = PJMEDIA_RTP_PT_SILK_WB;
     sp->clock_rate = 16000;
-    sp->max_bitrate = 30000;
+    sp->max_bitrate = 36000;
     sp->bitrate = CALC_BITRATE(sp->max_bitrate);
     sp->ptime = FRAME_LENGTH_MS;
     sp->complexity = PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY;
@@ -245,7 +258,7 @@ PJ_DEF(pj_status_t) pjmedia_codec_silk_init(pjmedia_endpt *endpt)
     sp = &silk_factory.silk_param[PARAM_SWB];
     sp->pt = PJMEDIA_RTP_PT_SILK_SWB;
     sp->clock_rate = 24000;
-    sp->max_bitrate = 40000;
+    sp->max_bitrate = 46000;
     sp->bitrate = CALC_BITRATE(sp->max_bitrate);
     sp->ptime = FRAME_LENGTH_MS;
     sp->complexity = PJMEDIA_CODEC_SILK_DEFAULT_COMPLEXITY;
@@ -596,6 +609,7 @@ static pj_status_t silk_codec_open(pjmedia_codec *codec,
     silk->enc_ready = PJ_TRUE;
     silk->samples_per_frame = attr->setting.frm_per_pkt * FRAME_LENGTH_MS *
 			      attr->info.clock_rate / 1000;
+    silk->pcm_bytes_per_sample = attr->info.pcm_bits_per_sample / 8;
 
     silk->enc_ctl.API_sampleRate        = attr->info.clock_rate;
     silk->enc_ctl.maxInternalSampleRate = attr->info.clock_rate;
@@ -625,13 +639,20 @@ static pj_status_t silk_codec_open(pjmedia_codec *codec,
     silk->dec_ctl.API_sampleRate        = attr->info.clock_rate;
     silk->dec_ctl.framesPerPacket	= 1; /* for proper PLC at start */
     silk->dec_ready = PJ_TRUE;
+    silk->dec_buf_sz = attr->info.clock_rate * attr->info.channel_cnt *
+                       attr->info.frm_ptime / 1000 *
+                       silk->pcm_bytes_per_sample;
 
-    /* Increase max_bps (as the bitrate values in the table seems to be
-     * rounded down, and without increasing this, frame size of the jitter
-     * buffer has been found lower than the actual frame size, which in turn
-     * it causes noise as the payloads get trimmed).
+    /* Inform the stream to prepare a larger buffer since we cannot parse
+     * SILK packets and split it into individual frames.
      */
-    attr->info.max_bps *= 2;
+    attr->info.max_rx_frame_size = attr->info.max_bps * 
+			           attr->info.frm_ptime / 8 / 1000;
+    if ((attr->info.max_bps * attr->info.frm_ptime) % 8000 != 0)
+    {
+	++attr->info.max_rx_frame_size;
+    }
+    attr->info.max_rx_frame_size *= SILK_MAX_FRAMES_PER_PACKET;
 
     return PJ_SUCCESS;
 }
@@ -721,24 +742,28 @@ static pj_status_t  silk_codec_parse( pjmedia_codec *codec,
 				     pjmedia_frame frames[])
 {
     silk_private *silk;
-    unsigned count;
+    SKP_Silk_TOC_struct toc;
+    unsigned i, count;
 
     PJ_ASSERT_RETURN(codec && ts && frames && frame_cnt, PJ_EINVAL);
     silk = (silk_private*)codec->codec_data;
 
-    PJ_TODO(support_parsing_multiple_frames_per_packet);
+    SKP_Silk_SDK_get_TOC(pkt, pkt_size, &toc);
+    count = toc.framesInPacket;
+    pj_assert(count <= SILK_MAX_FRAMES_PER_PACKET);
 
-    count = 0;
-    frames[count].type = PJMEDIA_FRAME_TYPE_AUDIO;
-    frames[count].buf = pkt;
-    frames[count].size = pkt_size;
-    frames[count].timestamp.u64 = ts->u64;
-    ++count;
+    for (i = 0; i < count; i++) {
+        frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;
+        frames[i].bit_info = (((unsigned)ts->u64 & 0xFFFF) << 16) |
+                              (((unsigned)pkt & 0xFF) << 8) | i;
+        frames[i].buf = pkt;
+        frames[i].size = pkt_size;
+        frames[i].timestamp.u64 = ts->u64 + i * silk->samples_per_frame;
+    }
 
     *frame_cnt = count;
     return PJ_SUCCESS;
 }
-
 
 static pj_status_t silk_codec_decode(pjmedia_codec *codec,
 				     const struct pjmedia_frame *input,
@@ -747,28 +772,108 @@ static pj_status_t silk_codec_decode(pjmedia_codec *codec,
 {
     silk_private *silk;
     SKP_int16 out_size;
-    SKP_int err;
+    SKP_Silk_TOC_struct toc;
+    SKP_int err = 0;
+    unsigned pkt_info, frm_info;
 
     PJ_ASSERT_RETURN(codec && input && output_buf_len && output, PJ_EINVAL);
     silk = (silk_private*)codec->codec_data;
+    PJ_ASSERT_RETURN(output_buf_len >= silk->dec_buf_sz, PJ_ETOOSMALL);
 
-    out_size = (SKP_int16)output_buf_len;
-    err = SKP_Silk_SDK_Decode(silk->dec_st, &silk->dec_ctl,
-			      0, /* Normal frame flag */
-			      input->buf,
-			      input->size,
-			      output->buf,
-			      &out_size);
-    if (err) {
-	PJ_LOG(3, (THIS_FILE, "Failed to decode frame (err=%d)", err));
-	output->type = PJMEDIA_FRAME_TYPE_NONE;
-	output->buf = NULL;
-	output->size = 0;
-	return PJMEDIA_CODEC_EFAILED;
+    SKP_Silk_SDK_get_TOC(input->buf, input->size, &toc);
+    pkt_info = input->bit_info & 0xFFFFFF00;
+    frm_info = input->bit_info & 0xF;
+
+    if (toc.framesInPacket == 0) {
+        output->size = 0;
+    } else if (silk->pkt_info != pkt_info || input->bit_info == 0) {
+        unsigned i;
+        SKP_int16 nsamples;
+
+        silk->pkt_info = pkt_info;
+        nsamples = (SKP_int16)silk->dec_buf_sz / silk->pcm_bytes_per_sample;
+
+        if (toc.framesInPacket-1 > (SKP_int)silk->dec_buf_cnt) {
+            /* Grow the buffer */
+            for (i = silk->dec_buf_cnt+1; i < (unsigned)toc.framesInPacket;
+                i++)
+            {
+                silk->dec_buf[i-1] = pj_pool_alloc(silk->pool,
+                                                   silk->dec_buf_sz);
+            }
+            silk->dec_buf_cnt = toc.framesInPacket-1;
+        }
+
+        /* We need to decode all the frames in the packet. */
+        for (i = 0; i < (unsigned)toc.framesInPacket;) {
+            void *buf;
+            SKP_int16 *size;
+
+            if (i == 0 || i == frm_info) {
+                buf = output->buf;
+                size = &out_size;
+            } else {
+                buf = silk->dec_buf[i-1];
+                size = &silk->dec_buf_size[i-1];
+            }
+
+            *size = nsamples;
+            err = SKP_Silk_SDK_Decode(silk->dec_st, &silk->dec_ctl,
+			              0, /* Normal frame flag */
+			              input->buf, input->size,
+			              buf, size);
+            if (err) {
+	        PJ_LOG(3, (THIS_FILE, "Failed to decode frame (err=%d)",
+                                      err));
+                *size = 0;
+            } else {
+                *size = *size * silk->pcm_bytes_per_sample;
+            }
+
+            if (i == frm_info) {
+                output->size = *size;
+            }
+
+            i++;
+            if (!silk->dec_ctl.moreInternalDecoderFrames &&
+                i < (unsigned)toc.framesInPacket)
+            {
+                /* It turns out that the packet does not have
+                 * the number of frames as mentioned in the TOC.
+                 */
+                for (; i < (unsigned)toc.framesInPacket; i++) {
+                    silk->dec_buf_size[i-1] = 0;
+                    if (i == frm_info) {
+                        output->size = 0;
+                    }
+                }
+            }
+        }
+    } else {
+        /* We have already decoded this packet. */
+        if (frm_info == 0 || silk->dec_buf_size[frm_info-1] == 0) {
+            /* The decoding was a failure. */
+            output->size = 0;
+        } else {
+            /* Copy the decoded frame from the buffer. */
+            pj_assert(frm_info-1 < silk->dec_buf_cnt);
+            if (frm_info-1 >= silk->dec_buf_cnt) {
+                output->size = 0;
+            } else {
+                pj_memcpy(output->buf, silk->dec_buf[frm_info-1],
+                          silk->dec_buf_size[frm_info-1]);
+                output->size = silk->dec_buf_size[frm_info-1];
+            }
+        }
     }
 
-    output->size = out_size;
-    output->type = PJMEDIA_FRAME_TYPE_AUDIO;
+    if (output->size == 0) {
+        output->type = PJMEDIA_TYPE_NONE;
+        output->buf = NULL;
+        return PJMEDIA_CODEC_EFAILED;
+    }
+
+    output->type = PJMEDIA_TYPE_AUDIO;
     output->timestamp = input->timestamp;
 
     return PJ_SUCCESS;
@@ -779,8 +884,8 @@ static pj_status_t silk_codec_decode(pjmedia_codec *codec,
  * Recover lost frame.
  */
 static pj_status_t  silk_codec_recover(pjmedia_codec *codec,
-				      unsigned output_buf_len,
-				      struct pjmedia_frame *output)
+				       unsigned output_buf_len,
+				       struct pjmedia_frame *output)
 {
     silk_private *silk;
     SKP_int16 out_size;
@@ -789,7 +894,7 @@ static pj_status_t  silk_codec_recover(pjmedia_codec *codec,
     PJ_ASSERT_RETURN(codec && output_buf_len && output, PJ_EINVAL);
     silk = (silk_private*)codec->codec_data;
 
-    out_size = (SKP_int16)output_buf_len;
+    out_size = (SKP_int16)output_buf_len / silk->pcm_bytes_per_sample;
     err = SKP_Silk_SDK_Decode(silk->dec_st, &silk->dec_ctl,
 			      1, /* Lost frame flag */
 			      NULL,
@@ -804,7 +909,7 @@ static pj_status_t  silk_codec_recover(pjmedia_codec *codec,
 	return PJMEDIA_CODEC_EFAILED;
     }
 
-    output->size = out_size;
+    output->size = out_size * silk->pcm_bytes_per_sample;
     output->type = PJMEDIA_FRAME_TYPE_AUDIO;
 
     return PJ_SUCCESS;

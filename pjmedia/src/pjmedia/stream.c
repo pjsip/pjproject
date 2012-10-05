@@ -2177,12 +2177,16 @@ PJ_DEF(pj_status_t) pjmedia_stream_create( pjmedia_endpt *endpt,
     }
 
     /* Get the frame size */
-    stream->frame_size = stream->codec_param.info.max_bps * 
-			 stream->codec_param.info.frm_ptime / 8 / 1000;
-    if ((stream->codec_param.info.max_bps * stream->codec_param.info.frm_ptime) 
-	% 8000 != 0)
-    {
-	++stream->frame_size;
+    if (stream->codec_param.info.max_rx_frame_size > 0) {
+        stream->frame_size = stream->codec_param.info.max_rx_frame_size;
+    } else {
+        stream->frame_size = stream->codec_param.info.max_bps * 
+			     stream->codec_param.info.frm_ptime / 8 / 1000;
+        if ((stream->codec_param.info.max_bps *
+             stream->codec_param.info.frm_ptime) % 8000 != 0)
+        {
+	    ++stream->frame_size;
+        }
     }
 
     /* How many consecutive PLC frames can be generated */
