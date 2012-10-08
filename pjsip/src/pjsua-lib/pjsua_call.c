@@ -1508,6 +1508,7 @@ pj_status_t acquire_call(const char *title,
     pj_bool_t has_pjsua_lock = PJ_FALSE;
     pj_status_t status = PJ_SUCCESS;
     pj_time_val time_start, timeout;
+    pjsip_dialog *dlg = NULL;
 
     pj_gettimeofday(&time_start);
     timeout.sec = 0;
@@ -1535,14 +1536,18 @@ pj_status_t acquire_call(const char *title,
 
 	has_pjsua_lock = PJ_TRUE;
 	call = &pjsua_var.calls[call_id];
+        if (call->inv)
+            dlg = call->inv->dlg;
+        else
+            dlg = call->async_call.dlg;
 
-	if (call->inv == NULL) {
+	if (dlg == NULL) {
 	    PJSUA_UNLOCK();
 	    PJ_LOG(3,(THIS_FILE, "Invalid call_id %d in %s", call_id, title));
 	    return PJSIP_ESESSIONTERMINATED;
 	}
 
-	status = pjsip_dlg_try_inc_lock(call->inv->dlg);
+	status = pjsip_dlg_try_inc_lock(dlg);
 	if (status != PJ_SUCCESS) {
 	    PJSUA_UNLOCK();
 	    pj_thread_sleep(retry/10);
@@ -1567,7 +1572,7 @@ pj_status_t acquire_call(const char *title,
     }
     
     *p_call = call;
-    *p_dlg = call->inv->dlg;
+    *p_dlg = dlg;
 
     return PJ_SUCCESS;
 }
