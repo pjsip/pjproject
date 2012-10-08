@@ -512,15 +512,16 @@ PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht,
 
     PJ_ASSERT_RETURN(ht, 0);
 
+    lock_timer_heap(ht);
     if (!ht->cur_size && next_delay) {
 	next_delay->sec = next_delay->msec = PJ_MAXINT32;
+        unlock_timer_heap(ht);
 	return 0;
     }
 
     count = 0;
     pj_gettickcount(&now);
 
-    lock_timer_heap(ht);
     while ( ht->cur_size && 
 	    PJ_TIME_VAL_LTE(ht->heap[0]->_timer_value, now) &&
             count < ht->max_entries_per_poll ) 

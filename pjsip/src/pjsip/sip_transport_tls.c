@@ -714,7 +714,9 @@ static void tls_flush_pending_tx(struct tls_transport *tls)
 				  &size, 0);
 
 	if (status != PJ_EPENDING) {
+            pj_lock_release(tls->base.lock);
 	    on_data_sent(tls->ssock, op_key, size);
+            pj_lock_acquire(tls->base.lock);
 	}
     }
     pj_lock_release(tls->base.lock);

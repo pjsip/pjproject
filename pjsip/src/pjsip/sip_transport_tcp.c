@@ -689,7 +689,9 @@ static void tcp_flush_pending_tx(struct tcp_transport *tcp)
 	status = pj_activesock_send(tcp->asock, op_key, tdata->buf.start, 
 				    &size, 0);
 	if (status != PJ_EPENDING) {
+            pj_lock_release(tcp->base.lock);
 	    on_data_sent(tcp->asock, op_key, size);
+            pj_lock_acquire(tcp->base.lock);
 	}
 
     }
