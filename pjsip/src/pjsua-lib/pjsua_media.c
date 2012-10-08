@@ -1383,7 +1383,7 @@ static pj_status_t media_channel_init_cb(pjsua_call_id call_id,
             }
 
             if (call_med->use_custom_med_tp) {
-                unsigned custom_med_tp_flags = 0;
+                unsigned custom_med_tp_flags = PJSUA_MED_TP_CLOSE_MEMBER;
 
                 /* Use custom media transport returned by the application */
                 call_med->tp =
