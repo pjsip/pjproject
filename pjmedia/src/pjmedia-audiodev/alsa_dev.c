@@ -232,7 +232,7 @@ static pj_status_t add_dev (struct alsa_factory *af, const char *dev_name)
     pj_bzero(adi, sizeof(*adi));
 
     /* Set device name */
-    strcpy(adi->name, dev_name);
+    strncpy(adi->name, dev_name, sizeof(adi->name));
 
     /* Check the number of playback channels */
     adi->output_count = (pb_result>=0) ? 1 : 0;
