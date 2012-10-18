@@ -21,14 +21,25 @@ import android.widget.TextView;
 
 /* This class is for running pjsua in a secondary thread. */
 class PjsuaThread extends Thread {
-	public static Boolean finished;
+	public enum PjsuaState {
+		NULL, INITED, TERMINATED
+	};
+	public static PjsuaState state;
 	
 	public void run() {
-		if (pjsua_app.initApp() != 0)
-        	return;
+		if (pjsua_app.initApp() != 0) {
+			state = PjsuaState.TERMINATED;
+			return;
+		}
+		state = PjsuaState.INITED;
 		
         pjsua_app.startPjsua(ApjsuaActivity.CFG_FNAME);
-        finished = true;
+        state = PjsuaState.TERMINATED;
+        
+        try {
+        	Thread.sleep(200);
+        } catch(Exception e) {
+        }
         pjsua_app.deinitApp();
 	}
 }
@@ -41,8 +52,9 @@ class TextOutTask extends AsyncTask<Void, String ,Void> {
 	public TextView tv;
 	
 	protected Void doInBackground(Void... args) {
-		while (!PjsuaThread.finished) {
-			publishProgress(pjsua_app.getMessage());
+		while (PjsuaThread.state != PjsuaThread.PjsuaState.TERMINATED) {
+			if (PjsuaThread.state == PjsuaThread.PjsuaState.INITED)
+				publishProgress(pjsua_app.getMessage());
 		}
 		return null;
 	}
@@ -115,7 +127,8 @@ public class ApjsuaActivity extends Activity {
         		if ((event.getAction() == KeyEvent.ACTION_DOWN) &&
         			(keyCode == KeyEvent.KEYCODE_ENTER))
         		{
-        			pjsua_app.setInput(cmd.getText().toString());
+        			if (PjsuaThread.state == PjsuaThread.PjsuaState.INITED)
+        				pjsua_app.setInput(cmd.getText().toString());
         			cmd.setText("");
         			return true;
         		}
@@ -135,7 +148,7 @@ public class ApjsuaActivity extends Activity {
         setupConfig();
         
         /* Create pjsua and output thread */
-        PjsuaThread.finished = false;
+        PjsuaThread.state = PjsuaThread.PjsuaState.NULL;
         TextOutTask outTask = new TextOutTask();
         outTask.tv = tv;
         outTask.execute();
