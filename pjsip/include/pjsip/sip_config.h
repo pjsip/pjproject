@@ -73,7 +73,9 @@ typedef struct pjsip_cfg_t
 	/**
 	 * Specify port number should be allowed to appear in To and From
 	 * header. Note that RFC 3261 disallow this, see Table 1 in section
-	 * 19.1.1 of the RFC. Default is PJSIP_ALLOW_PORT_IN_FROMTO_HDR.
+	 * 19.1.1 of the RFC.
+	 *
+	 * Default is PJSIP_ALLOW_PORT_IN_FROMTO_HDR.
 	 */
 	pj_bool_t allow_port_in_fromto_hdr;
 
@@ -88,18 +90,24 @@ typedef struct pjsip_cfg_t
 
 	/**
 	 * Allow hash character ('#') to appear in outgoing URIs. See
-	 * https://trac.pjsip.org/repos/ticket/1569
+	 * https://trac.pjsip.org/repos/ticket/1569.
+	 *
+	 * Default is PJ_FALSE.
 	 */
 	pj_bool_t allow_tx_hash_in_uri;
 
 	/**
 	 * Disable rport in request.
+	 *
+	 * Default is PJ_FALSE.
 	 */
 	pj_bool_t disable_rport;
 
 	/**
 	 * Disable automatic switching from UDP to TCP if outgoing request
-	 * is greater than 1300 bytes. See PJSIP_DONT_SWITCH_TO_TCP.
+	 * is greater than 1300 bytes.
+	 *
+	 * Default is PJSIP_DONT_SWITCH_TO_TCP.
 	 */
 	pj_bool_t disable_tcp_switch;
 
