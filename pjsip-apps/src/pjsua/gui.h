@@ -25,7 +25,7 @@ PJ_BEGIN_DECL
     #define USE_GUI 1
 #endif
 
-#ifdef USE_GUI
+#if USE_GUI
 
 #define printf showMsg
 #define puts(str) showMsg("%s\n", str)
