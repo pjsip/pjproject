@@ -2729,7 +2729,8 @@ typedef struct pjsua_acc_config
 
     /** 
      * The full SIP URL for the account. The value can take name address or 
-     * URL format, and will look something like "sip:account@serviceprovider".
+     * URL format, and will look something like "sip:account@serviceprovider"
+     * or "\"Display Name\" <sip:account@provider>".
      *
      * This field is mandatory.
      */
@@ -4534,7 +4535,8 @@ PJ_DECL(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
  * of the call transfer request.
  *
  * @param call_id	The call id to be transfered.
- * @param dest		Address of new target to be contacted.
+ * @param dest		URI of new target to be contacted. The URI may be
+ * 			in name address or addr-spec format.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *
