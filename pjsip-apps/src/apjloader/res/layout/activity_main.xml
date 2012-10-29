@@ -1,0 +1,50 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical" >
+    
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+        	
+        <Button
+            android:id="@+id/send_cmd_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Send:" />
+        
+        <EditText
+            android:id="@+id/input_cmd"
+            android:layout_width="0dip"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:maxLines="1"
+            android:text="" 
+            android:hint="Type string to send">
+        </EditText>
+
+        <Button
+            android:id="@+id/quit_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Quit" />
+        
+    </LinearLayout>
+	
+	    <ScrollView
+		    android:id="@+id/output_scroller"
+		    android:layout_width="match_parent"
+		    android:layout_height="wrap_content"
+		    android:scrollbars="vertical"
+		    android:fillViewport="true" >
+	    
+		    <TextView
+		        android:id="@+id/output"
+		        android:layout_width="match_parent"
+		        android:layout_height="wrap_content"
+		        android:textSize="7dip"
+		        android:typeface="monospace" />
+	
+	    </ScrollView>
+
+</LinearLayout>
