@@ -922,6 +922,7 @@ static pj_status_t vid_pasv_port_put_frame(struct pjmedia_port *this_port,
         pj_status_t status;
         pjmedia_frame frame_;
         
+        pj_bzero(&frame_, sizeof(frame_));
         status = convert_frame(vp, frame, &frame_);
         if (status != PJ_SUCCESS)
             return status;
