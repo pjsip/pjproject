@@ -853,7 +853,8 @@ PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
 
     /* Find start module */
     if (p->start_mod) {
-	mod = pj_list_find_node(&endpt->module_list, p->start_mod);
+	mod = (pjsip_module*)
+	      pj_list_find_node(&endpt->module_list, p->start_mod);
 	if (!mod) {
 	    status = PJ_ENOTFOUND;
 	    goto on_return;
