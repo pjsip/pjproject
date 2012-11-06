@@ -592,9 +592,10 @@ static pj_status_t tcp_create( struct tcp_listener *listener,
 
     tcp->base.key.type = listener->factory.type;
     pj_sockaddr_cp(&tcp->base.key.rem_addr, remote);
-    tcp->base.type_name = (char*)
-			  pjsip_transport_get_type_name(tcp->base.key.type);
-    tcp->base.flag = pjsip_transport_get_flag_from_type(tcp->base.key.type);
+    tcp->base.type_name = (char*)pjsip_transport_get_type_name(
+				(pjsip_transport_type_e)tcp->base.key.type);
+    tcp->base.flag = pjsip_transport_get_flag_from_type(
+				(pjsip_transport_type_e)tcp->base.key.type);
 
     tcp->base.info = (char*) pj_pool_alloc(pool, 64);
     pj_ansi_snprintf(tcp->base.info, 64, "%s to %s",

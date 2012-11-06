@@ -885,7 +885,8 @@ static pj_bool_t pres_on_rx_request(pjsip_rx_data *rdata)
 				   &via_addr, NULL, NULL,
 				   &via_tp) == PJ_SUCCESS)
 	{
-	    pjsip_dlg_set_via_sent_by(dlg, &via_addr, (void*)via_tp);
+	    pjsip_dlg_set_via_sent_by(dlg, &via_addr,
+				      (pjsip_transport*)via_tp);
 	}
     }
 
@@ -1270,7 +1271,7 @@ static pj_status_t send_publish(int acc_id, pj_bool_t active)
 				   &via_tp) == PJ_SUCCESS)
         {
 	    pjsip_publishc_set_via_sent_by(acc->publish_sess, &via_addr,
-	                                   (void*)via_tp);
+	                                   (pjsip_transport*)via_tp);
         }
     }
 
@@ -1838,7 +1839,8 @@ static void subscribe_buddy_presence(pjsua_buddy_id buddy_id)
 				   &via_addr, NULL, NULL,
 				   &via_tp) == PJ_SUCCESS)
         {
-	    pjsip_dlg_set_via_sent_by(buddy->dlg, &via_addr, (void*)via_tp);
+	    pjsip_dlg_set_via_sent_by(buddy->dlg, &via_addr,
+				      (pjsip_transport*)via_tp);
         }
     }
 
@@ -2179,7 +2181,7 @@ pj_status_t pjsua_start_mwi(pjsua_acc_id acc_id, pj_bool_t force_renew)
    				   &via_tp) == PJ_SUCCESS)
    	{
    	    pjsip_dlg_set_via_sent_by(acc->mwi_dlg, &via_addr,
-   	                              (void*)via_tp);
+   	                              (pjsip_transport*)via_tp);
    	}
     }
 

@@ -1605,7 +1605,8 @@ static pj_bool_t acc_check_nat_addr(pjsua_acc *acc,
 	{
 	    pj_ansi_snprintf(transport_param, sizeof(transport_param),
 			     ";transport=%s",
-			     pjsip_transport_get_type_name(tp->key.type));
+			     pjsip_transport_get_type_name(
+				     (pjsip_transport_type_e)tp->key.type));
 	} else {
 	    transport_param[0] = '\0';
 	}
