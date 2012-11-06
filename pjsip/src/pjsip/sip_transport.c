@@ -638,7 +638,9 @@ PJ_DEF(pj_status_t) pjsip_rx_data_clone( const pjsip_rx_data *src,
 
 #define GET_MSG_HDR2(TYPE, type, var)	\
 			case PJSIP_H_##TYPE: \
-			    dst->msg_info.var = (pjsip_##type##_hdr*)hdr; \
+			    if (!dst->msg_info.var) { \
+				dst->msg_info.var = (pjsip_##type##_hdr*)hdr; \
+			    } \
 			    break
 #define GET_MSG_HDR(TYPE, var_type)	GET_MSG_HDR2(TYPE, var_type, var_type)
 
