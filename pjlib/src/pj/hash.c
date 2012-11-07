@@ -178,17 +178,12 @@ static pj_hash_entry **find_entry( pj_pool_t *pool, pj_hash_table_t *ht,
 	 entry; 
 	 p_entry = &entry->next, entry = *p_entry)
     {
-        pj_str_t str;
-        
-        if (lower) {
-            str.ptr = (char *)entry->key;
-            str.slen = keylen;
-        }
 	if (entry->hash==hash && entry->keylen==keylen &&
-            ((lower && pj_strnicmp2(&str, (const char *)key, keylen)==0) ||
+            ((lower && pj_ansi_strnicmp((const char*)entry->key,
+        			        (const char*)key, keylen)==0) ||
 	     (!lower && pj_memcmp(entry->key, key, keylen)==0)))
 	{
-	    break;	
+	    break;
 	}
     }
 
