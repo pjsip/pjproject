@@ -193,15 +193,15 @@ PJ_DEF(pj_status_t) pjstun_get_mapped_addr2(pj_pool_factory *pf,
 	TRACE_((THIS_FILE, "  Request(s) sent, counter=%d", send_cnt));
 
 	/* Calculate time of next retransmission. */
-	pj_gettimeofday(&next_tx);
+	pj_gettickcount(&next_tx);
 	next_tx.sec += (stun_timer[send_cnt]/1000);
 	next_tx.msec += (stun_timer[send_cnt]%1000);
 	pj_time_val_normalize(&next_tx);
 
-	for (pj_gettimeofday(&now), select_rc=1; 
+	for (pj_gettickcount(&now), select_rc=1;
 	     status==PJ_SUCCESS && select_rc>=1 && wait_resp>0 
 	       && PJ_TIME_VAL_LT(now, next_tx); 
-	     pj_gettimeofday(&now)) 
+	     pj_gettickcount(&now))
 	{
 	    pj_time_val timeout;
 

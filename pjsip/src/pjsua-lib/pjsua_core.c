@@ -1075,7 +1075,7 @@ static void busy_sleep(unsigned msec)
 {
     pj_time_val timeout, now;
 
-    pj_gettimeofday(&timeout);
+    pj_gettickcount(&timeout);
     timeout.msec += msec;
     pj_time_val_normalize(&timeout);
 
@@ -1084,7 +1084,7 @@ static void busy_sleep(unsigned msec)
 	i = msec / 10;
 	while (pjsua_handle_events(10) > 0 && i > 0)
 	    --i;
-	pj_gettimeofday(&now);
+	pj_gettickcount(&now);
     } while (PJ_TIME_VAL_LT(now, timeout));
 }
 
