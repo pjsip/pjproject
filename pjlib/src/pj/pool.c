@@ -88,7 +88,7 @@ static pj_pool_block *pj_pool_create_block( pj_pool_t *pool, pj_size_t size)
  * If no space is available in all the blocks, a new block might be created
  * (depending on whether the pool is allowed to resize).
  */
-PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, unsigned size)
+PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size)
 {
     pj_pool_block *block = pool->block_list.next;
     void *p;
@@ -121,7 +121,7 @@ PJ_DEF(void*) pj_pool_allocate_find(pj_pool_t *pool, unsigned size)
     if (pool->increment_size < 
 	    size + sizeof(pj_pool_block) + PJ_POOL_ALIGNMENT) 
     {
-        unsigned count;
+        pj_size_t count;
         count = (size + pool->increment_size + sizeof(pj_pool_block) +
                  PJ_POOL_ALIGNMENT) / 
                 pool->increment_size;

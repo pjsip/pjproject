@@ -509,7 +509,7 @@ PJ_INLINE(void*) pj_pool_zalloc(pj_pool_t *pool, pj_size_t size)
  * Internal functions
  */
 PJ_IDECL(void*) pj_pool_alloc_from_block(pj_pool_block *block, pj_size_t size);
-PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, unsigned size);
+PJ_DECL(void*) pj_pool_allocate_find(pj_pool_t *pool, pj_size_t size);
 
 
 	
