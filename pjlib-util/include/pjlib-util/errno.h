@@ -393,7 +393,7 @@
 /**
  * @hideinitializer
  * End the current session. This is a special error code returned by
- * pj_cli_exec() to indicate that "exit" or equivalent command has been
+ * pj_cli_sess_exec() to indicate that "exit" or equivalent command has been
  * called to end the current session.
  */
 #define PJ_CLI_EEXIT        	    (PJLIB_UTIL_ERRNO_START+201)/* 320201 */
@@ -423,6 +423,12 @@
  * Invalid XML format for CLI command specification.
  */
 #define PJ_CLI_EBADXML        	    (PJLIB_UTIL_ERRNO_START+206)/* 320206 */
+/**
+ * @hideinitializer
+ * CLI command entered by user match with more than one command/argument 
+ * specification.
+ */
+#define PJ_CLI_EAMBIGUOUS	    (PJLIB_UTIL_ERRNO_START+207)/* 320207 */
 /**
  * @hideinitializer
  * Telnet connection lost.

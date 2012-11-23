@@ -50,6 +50,13 @@ typedef struct pj_cli_console_cfg
      */
     int log_level;
 
+    /**
+     * Specify text message as a prompt string to user.
+     *
+     * Default: empty
+     */
+    pj_str_t prompt_str;
+
 } pj_cli_console_cfg;
 
 
@@ -82,13 +89,7 @@ PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
 					   pj_cli_front_end **p_fe);
 
 /**
- * Retrieve a cmdline from console stdin. Application should use this
- * instead of the standard gets() or fgets(), since unlike these functions,
- * this is able to end the blocking when pj_cli_quit() is called by other
- * session. This function requires a thread support.
- *
- * Note that this function would also remove the trailing newlines from the
- * input, if any.
+ * Retrieve a cmdline from console stdin and process the input accordingly.
  *
  * @param sess		The CLI session.
  * @param buf		Pointer to receive the buffer.
@@ -96,9 +97,7 @@ PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
  *
  * @return		PJ_SUCCESS if an input was read
  */
-PJ_DECL(pj_status_t) pj_cli_console_readline(pj_cli_sess *sess,
-					     char *buf,
-					     unsigned maxlen);
+PJ_DECL(pj_status_t) pj_cli_console_process(pj_cli_sess *sess);
 
 /**
  * @}

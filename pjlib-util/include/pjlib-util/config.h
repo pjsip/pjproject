@@ -303,6 +303,14 @@
 #endif
 
 /**
+ * Maximum number of hints.
+ * Default: 32
+ */
+#ifndef PJ_CLI_MAX_HINTS
+#   define PJ_CLI_MAX_HINTS		32
+#endif
+
+/**
  * Maximum short name version (shortcuts) for a command.
  * Default: 4
  */
@@ -342,6 +350,21 @@
 #   define PJ_CLI_TELNET_POOL_INC  512
 #endif
 
+/**
+ * Maximum number of argument values of choice type.
+ * Default: 16
+ */
+#ifndef PJ_CLI_MAX_CHOICE_VAL
+#   define PJ_CLI_MAX_CHOICE_VAL  16
+#endif
+
+/**
+ * Maximum number of command history.
+ * Default: 16
+ */
+#ifndef PJ_CLI_MAX_CMD_HISTORY
+#   define PJ_CLI_MAX_CMD_HISTORY  16
+#endif
 
 /**
  * @}

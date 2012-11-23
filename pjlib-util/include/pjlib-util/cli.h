@@ -33,7 +33,36 @@ PJ_BEGIN_DECL
 /**
  * @defgroup PJLIB_UTIL_CLI Command Line Interface Framework
  * @{
+ * A CLI framework features an interface for defining command specification, 
+ * parsing, and executing a command. 
+ * It also features an interface to communicate with various front-ends, 
+ * such as console, telnet.
  *
+\verbatim
+| vid help                  Show this help screen                             |
+| vid enable|disable        Enable or disable video in next offer/answer      |
+| vid call add              Add video stream for current call                 |
+| vid call cap N ID         Set capture dev ID for stream #N in current call  |
+| disable_codec g711|g722   Show this help screen                             |
+<CMD name='vid' id='0' desc="">
+       <CMD name='help' id='0' desc='' />
+       <CMD name='enable' id='0' desc='' />
+       <CMD name='disable' id='0' desc='' />
+       <CMD name='call' id='0' desc='' >
+                <CMD name='add' id='101' desc='...' />
+                <CMD name='cap' id='102' desc='...' >
+                   <ARG name='streamno' type='int' desc='...' id='1'/>
+                   <ARG name='devid' type='int' optional='1' id='2'/>
+                </CMD>
+       </CMD>
+</CMD>
+<CMD name='disable_codec' id=0 desc="">
+	<ARG name='codec_list' type='choice' id='3'>
+	    <CHOICE value='g711'/>
+	    <CHOICE value='g722'/>
+	</ARG>
+</CMD>
+\endverbatim 
  */
 
 /**
@@ -47,25 +76,6 @@ typedef struct pj_cli_t pj_cli_t;
  * Type of command id.
  */
 typedef int pj_cli_cmd_id;
-
-/**
- * Reserved command id constants.
- */
-typedef enum pj_cli_std_cmd_id
-{
-    /**
-     * Constant to indicate an invalid command id.
-     */
-    PJ_CLI_INVALID_CMD_ID = -1,
-
-    /**
-     * A special command id to indicate that a command id denotes
-     * a command group.
-     */
-    PJ_CLI_CMD_ID_GROUP = -2
-
-} pj_cli_std_cmd_id;
-
 
 /**
  * This describes the parameters to be specified when creating a CLI
@@ -95,48 +105,10 @@ typedef struct pj_cli_cfg
 
 } pj_cli_cfg;
 
-
 /**
- * This describes the type of an argument (pj_cli_arg_spec).
+ * Type of argument id.
  */
-typedef enum pj_cli_arg_type
-{
-    /**
-     * Unformatted string.
-     */
-    PJ_CLI_ARG_TEXT,
-
-    /**
-     * An integral number.
-     */
-    PJ_CLI_ARG_INT
-
-} pj_cli_arg_type;
-
-/**
- * This structure describe the specification of a command argument.
- */
-typedef struct pj_cli_arg_spec
-{
-    /**
-     * Argument name.
-     */
-    pj_str_t name;
-
-    /**
-     * Helpful description of the argument. This text will be used when
-     * displaying help texts for the command/argument.
-     */
-    pj_str_t desc;
-
-    /**
-     * Argument type, which will be used for rendering the argument and
-     * to perform basic validation against an input value.
-     */
-    pj_cli_arg_type type;
-
-} pj_cli_arg_spec;
-
+typedef int pj_cli_arg_id;
 
 /**
  * Forward declaration of pj_cli_cmd_spec structure.
@@ -152,6 +124,11 @@ typedef struct pj_cli_sess pj_cli_sess;
  * Forward declaration for CLI front-end.
  */
 typedef struct pj_cli_front_end pj_cli_front_end;
+
+/**
+ * Forward declaration for CLI argument spec structure.
+ */
+typedef struct pj_cli_arg_spec pj_cli_arg_spec;
 
 /**
  * This structure contains the command to be executed by command handler.
@@ -172,106 +149,35 @@ typedef struct pj_cli_cmd_val
 
 } pj_cli_cmd_val;
 
-
-
 /**
- * This specifies the callback type for command handlers, which will be
- * executed when the specified command is invoked.
- *
- * @param sess      The CLI session where the command is invoked.
- * @param cmd_val   The command that is specified by the user.
- *
- * @return          Return the status of the command execution.
+ * This structure contains the hints information for the end user. 
+ * This structure could contain either command or argument information.
+ * The front-end will format the information and present it to the user.
  */
-typedef pj_status_t (*pj_cli_cmd_handler)(pj_cli_cmd_val *cval);
-
-/**
- * This structure describes the full specification of a CLI command. A CLI
- * command mainly consists of the name of the command, zero or more arguments,
- * and a callback function to be called to execute the command.
- *
- * Application can create this specification by forming an XML document and
- * calling pj_cli_create_cmd_from_xml() to instantiate the spec. A sample XML
- * document containing a command spec is as follows:
- *
- \verbatim
-  <CMD name='makecall' id='101' sc='m,mc' desc='Make outgoing call'>
-      <ARGS>
-	  <ARG name='target' type='text' desc='The destination'/>
-      </ARGS>
-  </CMD>
- \endverbatim
-
- */
-struct pj_cli_cmd_spec
+typedef struct pj_cli_hint_info
 {
     /**
-     * To make list of child cmds.
-     */
-    PJ_DECL_LIST_MEMBER(struct pj_cli_cmd_spec);
-
-    /**
-     * Command ID assigned to this command by the application during command
-     * creation. If this value is PJ_CLI_CMD_ID_GROUP (-2), then this is
-     * a command group and it can't be executed.
-     */
-    pj_cli_cmd_id id;
-
-    /**
-     * The command name.
+     * The hint value.
      */
     pj_str_t name;
 
     /**
-     * The full description of the command.
+     * The hint type.
+     */
+    pj_str_t type;
+
+    /**
+     * Helpful description of the hint value. 
      */
     pj_str_t desc;
 
-    /**
-     * Number of optional shortcuts
-     */
-    unsigned sc_cnt;
-
-    /**
-     * Optional array of shortcuts, if any. Shortcut is a short name version
-     * of the command. If the command doesn't have any shortcuts, this
-     * will be initialized to NULL.
-     */
-    pj_str_t *sc;
-
-    /**
-     * The command handler, to be executed when a command matching this command
-     * specification is invoked by the end user. The value may be NULL if this
-     * is a command group.
-     */
-    pj_cli_cmd_handler handler;
-
-    /**
-     * Number of arguments.
-     */
-    unsigned arg_cnt;
-
-    /**
-     * Array of arguments.
-     */
-    pj_cli_arg_spec *arg;
-
-    /**
-     * Child commands, if any. A command will only have subcommands if it is
-     * a group. If the command doesn't have subcommands, this field will be
-     * initialized with NULL.
-     */
-    pj_cli_cmd_spec *sub_cmd;
-};
-
+} pj_cli_hint_info;
 
 /**
- * This contains extra parameters to be specified when calling pj_cli_exec().
+ * This structure contains extra information returned by pj_cli_sess_exec()/
+ * pj_cli_sess_parse().
  * Upon return from the function, various other fields in this structure will
  * be set by the function.
- *
- * Application must call pj_cli_exec_info_default() to initialize this
- * structure with its default values.
  */
 typedef struct pj_cli_exec_info
 {
@@ -295,16 +201,105 @@ typedef struct pj_cli_exec_info
     pj_status_t cmd_ret;
 
     /**
-     * If pj_cli_exec() fails because an argument is missing (the function
-     * returned PJ_CLI_EMISSINGARG error), this field will be set to the
-     * index of the missing argument. This is useful to give more helpful
-     * error info to the end user, or to facilitate a more interactive
-     * input display.
+     * The number of hint elements
+     **/
+    unsigned hint_cnt;
+
+    /**
+     * If pj_cli_sess_parse() fails because of a missing argument or ambigous 
+     * command/argument, the function returned PJ_CLI_EMISSINGARG or 
+     * PJ_CLI_EAMBIGUOUS error. 
+     * This field will contain the hint information. This is useful to give 
+     * helpful information to the end_user.
      */
-    int arg_idx;
+    pj_cli_hint_info hint[PJ_CLI_MAX_HINTS];
 
 } pj_cli_exec_info;
 
+/**
+ * This structure contains the information returned from the dynamic 
+ * argument callback.
+ */
+typedef struct pj_cli_arg_choice_val
+{
+    /**
+     * The argument choice value
+     */
+    pj_str_t value;
+
+    /**
+     * Helpful description of the choice value. This text will be used when
+     * displaying the help texts for the choice value
+     */
+    pj_str_t desc;
+
+} pj_cli_arg_choice_val;
+
+/**
+ * This structure contains the parameters for pj_cli_arg_get_dyn_choice_val
+ */
+typedef struct pj_cli_dyn_choice_param
+{
+    /**
+     * The session on which the command was executed on.
+     */
+    pj_cli_sess *sess;
+
+    /**
+     * The command being processed.
+     */
+    pj_cli_cmd_spec *cmd;
+
+    /**
+     * The argument id.
+     */
+    pj_cli_arg_id arg_id;
+
+    /**
+     * The maximum number of values that the choice can hold.
+     */
+    unsigned max_cnt;
+
+    /**
+     * The pool to allocate memory from.
+     */
+    pj_pool_t *pool;
+
+    /**
+     * The choice values count.
+     */
+    unsigned cnt;
+
+    /**
+     * Array containing the valid choice values.
+     */
+    pj_cli_arg_choice_val choice[PJ_CLI_MAX_CHOICE_VAL];
+} pj_cli_dyn_choice_param;
+
+/**
+ * This specifies the callback type for argument handlers, which will be
+ * called to get the valid values of the choice type arguments.
+ */
+typedef void (*pj_cli_arg_get_dyn_choice_val) (pj_cli_dyn_choice_param *param);
+
+/**
+ * This specifies the function to get the id of the specified command
+ * 
+ * @param cmd		The specified command.
+ *
+ * @return		The command id
+ */
+PJ_DECL(pj_cli_cmd_id) pj_cli_get_cmd_id(const pj_cli_cmd_spec *cmd);
+
+/**
+ * This specifies the callback type for command handlers, which will be
+ * executed when the specified command is invoked.
+ *
+ * @param cmd_val   The command that is specified by the user.
+ *
+ * @return          Return the status of the command execution.
+ */
+typedef pj_status_t (*pj_cli_cmd_handler)(pj_cli_cmd_val *cval);
 
 /**
  * Initialize a pj_cli_cfg with its default values.
@@ -312,13 +307,6 @@ typedef struct pj_cli_exec_info
  * @param param  The instance to be initialized.
  */
 PJ_DECL(void) pj_cli_cfg_default(pj_cli_cfg *param);
-
-/**
- * Initialize pj_cli_exec_info with its default values.
- *
- * @param param		The param to be initialized.
- */
-PJ_DECL(void) pj_cli_exec_info_default(pj_cli_exec_info *param);
 
 /**
  * Write a log message to the CLI application. The CLI application
@@ -335,6 +323,17 @@ PJ_DECL(void) pj_cli_write_log(pj_cli_t *cli,
                                int len);
 
 /**
+ * Write a log message to the specific CLI session. 
+ *
+ * @param sess		The CLI active session.
+ * @param buffer        The message itself.
+ * @param len 	        Length of this message.
+ */
+PJ_DECL(void) pj_cli_sess_write_msg(pj_cli_sess *sess,                               
+				    const char *buffer,
+				    int len);
+
+/**
  * Create a new CLI application instance.
  *
  * @param cfg		CLI application creation parameters.
@@ -344,7 +343,6 @@ PJ_DECL(void) pj_cli_write_log(pj_cli_t *cli,
  */
 PJ_DECL(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
                                    pj_cli_t **p_cli);
-
 /**
  * Get the internal parameter of the CLI instance.
  *
@@ -354,13 +352,12 @@ PJ_DECL(pj_status_t) pj_cli_create(pj_cli_cfg *cfg,
  */
 PJ_DECL(pj_cli_cfg*) pj_cli_get_param(pj_cli_t *cli);
 
-
 /**
  * Call this to signal application shutdown. Typically application would
  * call this from it's "Quit" menu or similar command to quit the
  * application.
  *
- * See also pj_cli_end_session() to end a session instead of quitting the
+ * See also pj_cli_sess_end_session() to end a session instead of quitting the
  * whole application.
  *
  * @param cli		The CLI application instance.
@@ -370,7 +367,6 @@ PJ_DECL(pj_cli_cfg*) pj_cli_get_param(pj_cli_t *cli);
  */
 PJ_DECL(void) pj_cli_quit(pj_cli_t *cli, pj_cli_sess *req,
 			  pj_bool_t restart);
-
 /**
  * Check if application shutdown or restart has been requested.
  *
@@ -379,7 +375,6 @@ PJ_DECL(void) pj_cli_quit(pj_cli_t *cli, pj_cli_sess *req,
  * @return		PJ_TRUE if pj_cli_quit() has been called.
  */
 PJ_DECL(pj_bool_t) pj_cli_is_quitting(pj_cli_t *cli);
-
 
 /**
  * Check if application restart has been requested.
@@ -391,7 +386,6 @@ PJ_DECL(pj_bool_t) pj_cli_is_quitting(pj_cli_t *cli);
  */
 PJ_DECL(pj_bool_t) pj_cli_is_restarting(pj_cli_t *cli);
 
-
 /**
  * Destroy a CLI application instance. This would also close all sessions
  * currently running for this CLI application.
@@ -399,7 +393,6 @@ PJ_DECL(pj_bool_t) pj_cli_is_restarting(pj_cli_t *cli);
  * @param cli		The CLI application.
  */
 PJ_DECL(void) pj_cli_destroy(pj_cli_t *cli);
-
 
 /**
  * End the specified session, and destroy it to release all resources used
@@ -409,7 +402,7 @@ PJ_DECL(void) pj_cli_destroy(pj_cli_t *cli);
  *
  * @param sess		The CLI session to be destroyed.
  */
-PJ_DECL(void) pj_cli_end_session(pj_cli_sess *sess);
+PJ_DECL(void) pj_cli_sess_end_session(pj_cli_sess *sess);
 
 /**
  * Register a front end to the CLI application.
@@ -434,6 +427,8 @@ PJ_DECL(void) pj_cli_register_front_end(pj_cli_t *cli,
  * 			if the command specifies a command group.
  * @param p_cmd		Optional pointer to store the newly created
  * 			specification.
+ * @param get_choice	Function handler for the argument. Specify this for 
+ *			dynamic choice type arguments.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -441,7 +436,14 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
 					     pj_cli_cmd_spec *group,
                                              const pj_str_t *xml,
                                              pj_cli_cmd_handler handler,
-                                             pj_cli_cmd_spec *p_cmd);
+                                             pj_cli_cmd_spec **p_cmd, 
+					     pj_cli_arg_get_dyn_choice_val get_choice);
+/**
+ * Initialize pj_cli_exec_info with its default values.
+ *
+ * @param param		The param to be initialized.
+ */
+PJ_DECL(void) pj_cli_exec_info_default(pj_cli_exec_info *param);
 
 /**
  * Parse an input cmdline string. The first word of the command line is the
@@ -464,6 +466,7 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
  * @param sess		The CLI session.
  * @param cmdline	The command line string to be parsed.
  * @param val		Structure to store the parsing result.
+ * @param pool		The pool to allocate memory from.
  * @param info		Additional info to be returned regarding the parsing.
  *
  * @return		This function returns the status of the parsing,
@@ -471,30 +474,32 @@ PJ_DECL(pj_status_t) pj_cli_add_cmd_from_xml(pj_cli_t *cli,
  *			  - PJ_SUCCESS: a command was executed successfully.
  *			  - PJ_EINVAL: invalid parameter to this function.
  *			  - PJ_ENOTFOUND: command is not found.
+ *			  - PJ_CLI_EAMBIGUOUS: command/argument is ambiguous.
  *			  - PJ_CLI_EMISSINGARG: missing argument.
  *			  - PJ_CLI_EINVARG: invalid command argument.
  *			  - PJ_CLI_EEXIT: "exit" has been called to end
  *			      the current session. This is a signal for the
  *			      application to end it's main loop.
  */
-PJ_DECL(pj_status_t) pj_cli_parse(pj_cli_sess *sess,
-				  char *cmdline,
-				  pj_cli_cmd_val *val,
-				  pj_cli_exec_info *info);
+PJ_DECL(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
+				       char *cmdline,
+				       pj_cli_cmd_val *val,
+				       pj_pool_t *pool,
+				       pj_cli_exec_info *info);
 
 /**
  * Execute a command line. This function will parse the input string to find
  * the appropriate command and verify whether the string matches the command
  * specifications. If matches, the command will be executed, and the return
- * value of the command will be set in the \a cmd_ret field of the \a eparam
+ * value of the command will be set in the \a cmd_ret field of the \a info
  * argument, if specified.
  *
- * Please also see pj_cli_parse() for more info regarding the cmdline format.
+ * Please also see pj_cli_sess_parse() for more info regarding the cmdline 
+ * format.
  *
  * @param sess		The CLI session.
- * @param cmdline	The command line string to be executed. See the
- * 			description of pj_cli_parse() API for more info
- * 			regarding the cmdline format.
+ * @param cmdline	The command line string to be executed. 
+ * @param pool		The pool to allocate memory from.
  * @param info		Optional pointer to receive additional information
  * 			related to the execution of the command (such as
  * 			the command return value).
@@ -503,12 +508,12 @@ PJ_DECL(pj_status_t) pj_cli_parse(pj_cli_sess *sess,
  * 			parsing and execution (note that the return value
  * 			of the handler itself will be returned in \a info
  * 			argument, if specified). Please see the return value
- * 			of pj_cli_parse() for possible return values.
+ * 			of pj_cli_sess_parse() for possible return values.
  */
-pj_status_t pj_cli_exec(pj_cli_sess *sess,
-                        char *cmdline,
-                        pj_cli_exec_info *info);
-
+PJ_DECL(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
+				      char *cmdline,
+				      pj_pool_t *pool,
+				      pj_cli_exec_info *info);
 
 /**
  * @}

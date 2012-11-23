@@ -78,6 +78,13 @@ typedef struct pj_cli_telnet_cfg
      */
     pj_str_t welcome_msg;
 
+    /**
+     * Specify text message as a prompt string to user.
+     *
+     * Default: empty
+     */
+    pj_str_t prompt_str;
+
 } pj_cli_telnet_cfg;
 
 

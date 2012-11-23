@@ -33,7 +33,7 @@
  * for the CLI telnet daemon.
  * Default: 1
  */
-#define USE_RANDOM_PORT 1
+#define USE_RANDOM_PORT 0
 
 struct cmd_xml_t {
     char * xml;
@@ -81,37 +81,44 @@ static pj_status_t say(pj_cli_cmd_val *cval)
     return PJ_SUCCESS;
 }
 
-static pj_status_t quit(pj_cli_cmd_val *cval)
+static pj_status_t quit_app(pj_cli_cmd_val *cval)
 {
     PJ_UNUSED_ARG(cval);
-    pj_cli_end_session(cval->sess);
+    pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_FALSE);
 
     return PJ_CLI_EEXIT;
 }
 
 static struct cmd_xml_t cmd_xmls[] = {
     {"<CMD name='sayhello' id='1' sc='  ,h , ,, sh  ,' desc='Will say hello'>"
-     "  <ARGS>"
      "    <ARG name='whom' type='text' desc='Whom to say hello to'/>"
-     "  </ARGS>"
      "</CMD>",
      &sayhello},
     {"<CMD name='saybye' id='2' sc='b,sb' desc='Will say bye'>"
-     "  <ARGS>"
      "    <ARG name='whom' type='text' desc='Whom to say bye to'/>"
-     "  </ARGS>"
      "</CMD>",
      &saybye},
-    {"<CMD name=' say ' id='3' sc='s' desc='Will say something'>"
-     "  <ARGS>"
+    {"<CMD name='saymsg' id='3' sc='s' desc='Will say something'>"
      "    <ARG name='msg' type='text' desc='Message to say'/>"
      "    <ARG name='whom' type='text' desc='Whom to say to'/>"
-     "  </ARGS>"
      "</CMD>",
      &say},
-    {"<CMD name='quit' id='999' sc='q' desc='Quit the application'>"
+    {"<CMD name='vid' id='1' desc='Video Command'>"
+     "   <CMD name='help' id='2' desc='Show Help' />"
+     "   <CMD name='enable' id='3' desc='Enable Video' />"
+     "   <CMD name='disable' id='4' desc='Disable Video' />"
+     "   <CMD name='call' id='5' desc='Video call' >"
+     "            <CMD name='add' id='6' desc='Add Call' />"
+     "            <CMD name='cap' id='7' desc='Capture Call' >"
+     "               <ARG name='streamno' type='int' desc='Stream Number' id='1'/>"
+     "               <ARG name='devid' type='int' desc='Device Id' optional='1' id='2'/>"
+     "            </CMD>"
+     "   </CMD>"     
      "</CMD>",
-     &quit},
+     NULL},
+    {"<CMD name='quit_app' id='999' sc='qa' desc='Quit the application'>"
+     "</CMD>",
+     &quit_app},
 };
 
 static void log_writer(int level, const char *buffer, int len)
@@ -127,7 +134,7 @@ int main()
     pj_cli_telnet_cfg tcfg;
     pj_str_t xml;
     pj_status_t status;
-    int i;
+    int i;        
 
     pj_init();
     pj_caching_pool_init(&cp, NULL, 0);
@@ -149,9 +156,9 @@ int main()
      * Register some commands.
      */
     for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
-        xml = pj_str(cmd_xmls[i].xml);
+        xml = pj_str(cmd_xmls[i].xml);	
         status = pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
-                                         cmd_xmls[i].handler, NULL);
+                                         cmd_xmls[i].handler, NULL, NULL);
         if (status != PJ_SUCCESS)
 	    goto on_return;
     }
@@ -209,15 +216,13 @@ pj_status_t app_main(pj_cli_t *cli)
      * Main loop.
      */
     for (;;) {
-	char cmdline[PJ_CLI_MAX_CMDBUF];
         pj_status_t status;
 
-        status = pj_cli_console_readline(sess, cmdline, sizeof(cmdline));
+        status = pj_cli_console_process(sess);
 	if (status != PJ_SUCCESS)
 	    break;
 
-//        pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");
-	status = pj_cli_exec(sess, cmdline, NULL);
+	//pj_ansi_strcpy(cmdline, "sayhello {Teluu Inc.}");	
 	if (status == PJ_CLI_EEXIT) {
 	    /* exit is called */
 	    break;
