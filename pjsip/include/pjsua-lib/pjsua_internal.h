@@ -170,6 +170,7 @@ struct pjsua_call
         union {
             struct {
                 pjsua_msg_data  *msg_data;/**< Headers for outgoing INVITE. */
+                pj_bool_t        hangup;  /**< Call is hangup?              */
             } out_call;
             struct {
                 call_answer      answers;/**< A list of call answers.       */

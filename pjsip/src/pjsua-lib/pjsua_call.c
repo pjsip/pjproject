@@ -388,9 +388,16 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
 	goto on_error;
     }
 
-    /* pjsua_media_channel_deinit() has been called. */
-    if (call->async_call.med_ch_deinit)
+    /* pjsua_media_channel_deinit() has been called or
+     * call has been hung up.
+     */
+    if (call->async_call.med_ch_deinit ||
+        call->async_call.call_var.out_call.hangup)
+    {
+        PJ_LOG(4,(THIS_FILE, "Call has been hung up or media channel has "
+                             "been deinitialized"));
         goto on_error;
+    }
 
     /* Create offer */
     status = pjsua_media_channel_create_sdp(call->index, dlg->pool, NULL,
@@ -487,6 +494,7 @@ on_make_call_med_tp_complete(pjsua_call_id call_id,
     }
 
     /* Done. */
+    call->med_ch_cb = NULL;
 
     pjsip_dlg_dec_lock(dlg);
     PJSUA_UNLOCK();
@@ -513,6 +521,10 @@ on_error:
 	reset_call(call_id);
 	pjsua_media_channel_deinit(call_id);
     }
+
+    call->med_ch_cb = NULL;
+
+    pjsua_check_snd_dev_idle();
 
     PJSUA_UNLOCK();
     return status;
@@ -2144,6 +2156,25 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     status = acquire_call("pjsua_call_hangup()", call_id, &call, &dlg);
     if (status != PJ_SUCCESS)
 	goto on_return;
+
+    /* If media transport creation is not yet completed, we will hangup
+     * the call in the media transport creation callback instead.
+     */
+    if (call->med_ch_cb) {
+        PJ_LOG(4,(THIS_FILE, "Pending call %d hangup upon completion "
+                             "of media transport", call_id));
+        call->async_call.call_var.out_call.hangup = PJ_TRUE;
+        if (code == 0)
+            call->last_code = PJSIP_SC_REQUEST_TERMINATED;
+        else
+            call->last_code = code;
+        if (reason) {
+            pj_strncpy(&call->last_text, reason,
+		       sizeof(call->last_text_buf_));
+        }
+        
+        goto on_return;
+    }
 
     if (code==0) {
 	if (call->inv->state == PJSIP_INV_STATE_CONFIRMED)

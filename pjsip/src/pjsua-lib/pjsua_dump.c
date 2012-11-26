@@ -888,11 +888,12 @@ void print_call(const char *title,
 {
     int len;
     pjsip_inv_session *inv = pjsua_var.calls[call_id].inv;
-    pjsip_dialog *dlg = inv->dlg;
+    pjsip_dialog *dlg;
     char userinfo[128];
 
     /* Dump invite sesion info. */
 
+    dlg = (inv? inv->dlg: pjsua_var.calls[call_id].async_call.dlg);
     len = pjsip_hdr_print_on(dlg->remote.info, userinfo, sizeof(userinfo));
     if (len < 0)
 	pj_ansi_strcpy(userinfo, "<--uri too long-->");
@@ -901,7 +902,8 @@ void print_call(const char *title,
 
     len = pj_ansi_snprintf(buf, size, "%s[%s] %s",
 			   title,
-			   pjsip_inv_state_name(inv->state),
+                           pjsip_inv_state_name(inv? inv->state:
+                                                PJSIP_INV_STATE_DISCONNECTED),
 			   userinfo);
     if (len < 1 || len >= (int)size) {
 	pj_ansi_strcpy(buf, "<--uri too long-->");
