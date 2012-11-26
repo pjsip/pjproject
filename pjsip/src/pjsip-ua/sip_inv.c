@@ -2957,8 +2957,16 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
 
     neg_state = pjmedia_sdp_neg_get_state(inv->neg);
 
+    /* If UPDATE doesn't contain SDP, just respond with 200/OK.
+     * This is a valid scenario according to session-timer draft.
+     */
+    if (rdata->msg_info.msg->body == NULL) {
+
+	status = pjsip_dlg_create_response(inv->dlg, rdata, 
+					   200, NULL, &tdata);
+    }
     /* Send 491 if we receive UPDATE while we're waiting for an answer */
-    if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
+    else if (neg_state == PJMEDIA_SDP_NEG_STATE_LOCAL_OFFER) {
 	status = pjsip_dlg_create_response(inv->dlg, rdata, 
 					   PJSIP_SC_REQUEST_PENDING, NULL,
 					   &tdata);
@@ -2967,18 +2975,18 @@ static void inv_respond_incoming_update(pjsip_inv_session *inv,
      * receive UPDATE while we haven't sent answer.
      */
     else if (neg_state == PJMEDIA_SDP_NEG_STATE_REMOTE_OFFER ||
-	     neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO) {
-	status = pjsip_dlg_create_response(inv->dlg, rdata, 
+	     neg_state == PJMEDIA_SDP_NEG_STATE_WAIT_NEGO)
+    {
+        pjsip_retry_after_hdr *ra_hdr;
+	int val;
+
+        status = pjsip_dlg_create_response(inv->dlg, rdata, 
 					   PJSIP_SC_INTERNAL_SERVER_ERROR,
 					   NULL, &tdata);
 
-    /* If UPDATE doesn't contain SDP, just respond with 200/OK.
-     * This is a valid scenario according to session-timer draft.
-     */
-    } else if (rdata->msg_info.msg->body == NULL) {
-
-	status = pjsip_dlg_create_response(inv->dlg, rdata, 
-					   200, NULL, &tdata);
+        val = (pj_rand() % 10);
+        ra_hdr = pjsip_retry_after_hdr_create(tdata->pool, val);
+        pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)ra_hdr);
 
     } else {
 	/* We receive new offer from remote */
