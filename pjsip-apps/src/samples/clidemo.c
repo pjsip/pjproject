@@ -89,6 +89,17 @@ static pj_status_t quit_app(pj_cli_cmd_val *cval)
     return PJ_CLI_EEXIT;
 }
 
+static void get_codec_list(pj_cli_dyn_choice_param *param)
+{
+    if (param->arg_id == 3) {
+	param->cnt = 2;
+	pj_strdup2(param->pool, &param->choice[0].value, "iLbc");
+	pj_strdup2(param->pool, &param->choice[0].desc, "iLbc Codec");
+	pj_strdup2(param->pool, &param->choice[1].value, "g729");
+	pj_strdup2(param->pool, &param->choice[1].desc, "g729 Codec");
+    }
+}
+
 static struct cmd_xml_t cmd_xmls[] = {
     {"<CMD name='sayhello' id='1' sc='  ,h , ,, sh  ,' desc='Will say hello'>"
      "    <ARG name='whom' type='text' desc='Whom to say hello to'/>"
@@ -114,6 +125,13 @@ static struct cmd_xml_t cmd_xmls[] = {
      "               <ARG name='devid' type='int' desc='Device Id' optional='1' id='2'/>"
      "            </CMD>"
      "   </CMD>"     
+     "</CMD>",
+     NULL},
+    {"<CMD name='disable_codec' id='8' desc='Disable codec'>"
+     "	<ARG name='codec_list' type='choice' id='3' desc='Codec list'>"
+     "	    <CHOICE value='g711' desc='G711 Codec'/>"
+     "	    <CHOICE value='g722' desc='G722 Codec'/>"
+     "	</ARG>"
      "</CMD>",
      NULL},
     {"<CMD name='quit_app' id='999' sc='qa' desc='Quit the application'>"
@@ -158,7 +176,7 @@ int main()
     for (i = 0; i < sizeof(cmd_xmls)/sizeof(cmd_xmls[0]); i++) {
         xml = pj_str(cmd_xmls[i].xml);	
         status = pj_cli_add_cmd_from_xml(cli, NULL, &xml, 
-                                         cmd_xmls[i].handler, NULL, NULL);
+	    cmd_xmls[i].handler, NULL, get_codec_list);
         if (status != PJ_SUCCESS)
 	    goto on_return;
     }

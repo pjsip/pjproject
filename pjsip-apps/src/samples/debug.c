@@ -28,5 +28,5 @@
  * E.g.:
  *  #include "playfile.c"
  */
-#include "clidemo.c"
+#include "icedemo.c"
 

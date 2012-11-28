@@ -197,6 +197,17 @@ enum terminal_cmd
 };
 
 /**
+ * This specify the state of output character parsing.
+ */
+typedef enum out_parse_state
+{
+    OP_NORMAL,
+    OP_TYPE,
+    OP_SHORTCUT,
+    OP_CHOICE
+} out_parse_state;
+
+/**
  * This structure contains the command line shown to the user.  
  */
 typedef struct telnet_recv_buf {
@@ -754,10 +765,10 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     char data[1028];
     struct cli_telnet_fe *fe = (struct cli_telnet_fe *)sess->base.fe;
     const pj_cli_hint_info *hint = info->hint;
-    pj_bool_t is_process_sc = PJ_FALSE;
-    pj_bool_t valid_type = PJ_FALSE;
+    out_parse_state parse_state = OP_NORMAL;
     pj_ssize_t max_length = 0;
-    const pj_str_t sc_type = pj_str("SC");    
+    static const pj_str_t sc_type = {"sc", 2};
+    static const pj_str_t choice_type = {"choice", 6};
     send_data.ptr = &data[0];
     send_data.slen = 0;
     
@@ -778,46 +789,46 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     }
 
     for (i=0;i<info->hint_cnt;++i) {	
-	if ((&hint[i].type) && (hint[i].type.slen > 0)) {
-	    valid_type = PJ_TRUE;
+	pj_strcat2(&send_data, "\r\n  ");
+	
+	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
 	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
-		if (is_process_sc) {
-		    pj_strcat2(&send_data, ", ");
-		} else {
-		    pj_strcat2(&send_data, "\r\n\t Shorcut: ");
-		    is_process_sc = PJ_TRUE;
-		}
-		pj_strcat(&send_data, &hint[i].name);
+		parse_state = OP_SHORTCUT;
+	    } else if (pj_stricmp(&hint[i].type, &choice_type) == 0) {
+		parse_state = OP_CHOICE;
 	    } else {
-		is_process_sc = PJ_FALSE;
+		parse_state = OP_TYPE;
 	    }
-	} else {	    
-	    valid_type = PJ_FALSE;
-	    is_process_sc = PJ_FALSE;
+	} else {	    	    
+	    parse_state = OP_NORMAL;
 	}
-
-	if (!is_process_sc) {
-	    pj_strcat2(&send_data, "\r\n\t");
-
-	    if (valid_type) {
-		pj_strcat2(&send_data, "<");
-		pj_strcat(&send_data, &hint[i].type);
-		pj_strcat2(&send_data, ">");	
-	    } else {
-		pj_strcat(&send_data, &hint[i].name);	    
-	    }
+    
+	switch (parse_state) {
+	case OP_CHOICE:
+	    pj_strcat2(&send_data, "[");
+	    pj_strcat(&send_data, &hint[i].name);
+	    pj_strcat2(&send_data, "]");	
+	    break;
+	case OP_TYPE:
+	    pj_strcat2(&send_data, "<");
+	    pj_strcat(&send_data, &hint[i].name);
+	    pj_strcat2(&send_data, ">");	
+	    break;
+	default:
+	    pj_strcat(&send_data, &hint[i].name);	    
+	    break;
+	}
     	
-	    if ((&hint[i].desc) && (hint[i].desc.slen > 0)) {
-		if (!valid_type) {
-		    for (j=0;j<(max_length-hint[i].name.slen);++j) {
-			pj_strcat2(&send_data, " ");
-		    }
+	if ((&hint[i].desc) && (hint[i].desc.slen > 0)) {
+	    if (parse_state != OP_TYPE) {
+		for (j=0;j<(max_length-hint[i].name.slen);++j) {
+		    pj_strcat2(&send_data, " ");
 		}
-		pj_strcat2(&send_data, "\t");
-		pj_strcat(&send_data, &hint[i].desc);	    
 	    }
+	    pj_strcat2(&send_data, "  ");
+	    pj_strcat(&send_data, &hint[i].desc);	    
 	}
-    }   
+    }  
     pj_strcat2(&send_data, "\r\n");       
     pj_strcat(&send_data, &fe->cfg.prompt_str);
     if (with_last_cmd)
@@ -1290,7 +1301,7 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
 	case ST_NORMAL:
 	    if (*cdata == IAC) {
 		sess->parse_state = ST_IAC;
-	    } else if (*cdata == '\b') {
+	    } else if (*cdata == 127) {
 		is_valid = handle_backspace(sess, cdata);
 	    } else if (*cdata == 27) {		    
 		sess->parse_state = ST_ESC;

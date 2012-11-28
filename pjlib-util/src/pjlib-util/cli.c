@@ -560,7 +560,8 @@ static pj_status_t pj_cli_add_choice_node(pj_cli_t *cli,
 		pj_strassign(&choice_val->value, &choice_attr->value);
 	    } else if (!pj_stricmp2(&choice_attr->name, "desc")) {
 		pj_strassign(&choice_val->desc, &choice_attr->value);
-	    }				
+	    }
+	    choice_attr = choice_attr->next;
 	}			    
 	++(arg->stat_choice_cnt);
 	choice_node = choice_node->next;
@@ -608,7 +609,7 @@ static pj_status_t pj_cli_add_arg_node(pj_cli_t *cli,
 		arg->type = PJ_CLI_ARG_TEXT;
 	    } else if (!pj_stricmp2(&attr->value, "int")) {
 		arg->type = PJ_CLI_ARG_INT;
-	    } else if (!pj_stricmp2(&attr->value, "CHOICE")) {
+	    } else if (!pj_stricmp2(&attr->value, "choice")) {
 		/* Get choice value */
 		pj_cli_add_choice_node(cli, xml_node, arg, get_choice);
 	    } 
@@ -732,11 +733,18 @@ static pj_status_t pj_cli_add_cmd_node(pj_cli_t *cli,
 
         cmd->arg = (pj_cli_arg_spec *)pj_pool_zalloc(cli->pool, cmd->arg_cnt *
                                                      sizeof(pj_cli_arg_spec));
+	
         for (i = 0; i < cmd->arg_cnt; i++) {
+	    unsigned j;
+
             pj_strdup(cli->pool, &cmd->arg[i].name, &args[i].name);
             pj_strdup(cli->pool, &cmd->arg[i].desc, &args[i].desc);
+	    cmd->arg[i].id = args[i].id;
             cmd->arg[i].type = args[i].type;
 	    cmd->arg[i].optional = args[i].optional;
+	    cmd->arg[i].get_dyn_choice = args[i].get_dyn_choice;
+	    cmd->arg[i].stat_choice_cnt = args[i].stat_choice_cnt;
+	    cmd->arg[i].stat_choice_val = args[i].stat_choice_val;
         }
     }
 
@@ -1063,8 +1071,7 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
 	arg = &cmd->arg[argc-1];
 	PJ_ASSERT_RETURN(arg, PJ_EINVAL);
 	if (arg->type == PJ_CLI_ARG_CHOICE) {	    
-	    unsigned j;	    
-	    pj_cli_dyn_choice_param dyn_choice_param;	    
+	    unsigned j;	    	    
 
 	    for (j=0; j < arg->stat_choice_cnt; ++j) {
 		pj_cli_arg_choice_val *choice_val = &arg->stat_choice_val[j];
@@ -1080,20 +1087,28 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
 			return status;		    
 		}
 	    }
-	    /* Get the dynamic choice values */	    
-	    dyn_choice_param.sess = sess;
-	    dyn_choice_param.cmd = cmd;
-	    dyn_choice_param.arg_id = arg->id;
-	    dyn_choice_param.max_cnt = PJ_CLI_MAX_CHOICE_VAL;
-	    dyn_choice_param.pool = pool;
-	    dyn_choice_param.cnt = 0;	    
+	    if (arg->get_dyn_choice) {
+		pj_cli_dyn_choice_param dyn_choice_param;
+		static const pj_str_t choice_str = {"choice", 6};
 
-	    (*arg->get_dyn_choice)(&dyn_choice_param);
-	    for (j=0; j < dyn_choice_param.cnt; ++j) {
-		pj_cli_arg_choice_val *choice = &dyn_choice_param.choice[j];
-		pj_strassign(&info->hint[info->hint_cnt].name, &choice->value);
-		pj_strassign(&info->hint[info->hint_cnt].desc, &choice->desc);
-		++info->hint_cnt;
+		/* Get the dynamic choice values */	    
+		dyn_choice_param.sess = sess;
+		dyn_choice_param.cmd = cmd;
+		dyn_choice_param.arg_id = arg->id;
+		dyn_choice_param.max_cnt = PJ_CLI_MAX_CHOICE_VAL;
+		dyn_choice_param.pool = pool;
+		dyn_choice_param.cnt = 0;	    
+
+		(*arg->get_dyn_choice)(&dyn_choice_param);
+		for (j=0; j < dyn_choice_param.cnt; ++j) {
+		    pj_cli_arg_choice_val *choice = &dyn_choice_param.choice[j];
+		    if (!pj_strnicmp(&choice->value, cmd_val, cmd_val->slen)) {
+			pj_strassign(&info->hint[info->hint_cnt].name, &choice->value);
+			pj_strassign(&info->hint[info->hint_cnt].type, &choice_str);
+			pj_strassign(&info->hint[info->hint_cnt].desc, &choice->desc);
+			++info->hint_cnt;
+		    }
+		}
 	    }
 	} else {
 	    if (cmd_val->slen == 0) {
