@@ -26,7 +26,9 @@
 #include <pj/os.h>
 #include <pj/pool.h>
 #include <pj/string.h>
+#include <pj/except.h>
 #include <pjlib-util/errno.h>
+#include <pjlib-util/scanner.h>
 
 #define CLI_TELNET_BUF_SIZE 256
 
@@ -888,6 +890,32 @@ static pj_bool_t handle_backspace(cli_telnet_sess *sess, unsigned char *data)
     return PJ_FALSE;
 }
 
+/* Syntax error handler for parser. */
+static void on_syntax_error(pj_scanner *scanner)
+{
+    PJ_UNUSED_ARG(scanner);
+    PJ_THROW(PJ_EINVAL);
+}
+
+static pj_status_t get_last_token(pj_str_t *cmd, pj_str_t *str)
+{
+    pj_scanner scanner;
+    PJ_USE_EXCEPTION;
+    pj_scan_init(&scanner, cmd->ptr, cmd->slen, PJ_SCAN_AUTOSKIP_WS, 
+		 &on_syntax_error);
+    PJ_TRY {
+	while (!pj_scan_is_eof(&scanner)) {
+	    pj_scan_get_until_chr(&scanner, " \t\r\n", str);
+	}
+    }
+    PJ_CATCH_ANY {
+	pj_scan_fini(&scanner);	
+	return PJ_GET_EXCEPTION();
+    }
+    PJ_END;
+    return PJ_SUCCESS;
+}
+
 static pj_bool_t handle_tab(cli_telnet_sess *sess)
 {
     pj_status_t status;
@@ -929,13 +957,25 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 	}
 	if (info.hint_cnt > 0) {	
 	    /* Complete command */
-	    send_comp_arg(sess, &info);
+	    pj_str_t cmd = pj_str((char *)&sess->rcmd->rbuf[0]);
+	    pj_str_t last_token;
 
-	    pj_memcpy(&sess->rcmd->rbuf[len], 
-		      &info.hint[0].name.ptr[0], info.hint[0].name.slen);
+	    if (get_last_token(&cmd, &last_token) == PJ_SUCCESS) {
+		pj_str_t *hint_info = &info.hint[0].name;
+		pj_strtrim(&last_token);
+		if (hint_info->slen > last_token.slen) {
+		    hint_info->slen -= last_token.slen;
+		    pj_memmove(&hint_info->ptr[0], &hint_info->ptr[last_token.slen], 
+			       hint_info->slen);		    
+		} 
+		send_comp_arg(sess, &info);
 
-	    len += info.hint[0].name.slen;
-	    sess->rcmd->rbuf[len] = 0;		    
+		pj_memcpy(&sess->rcmd->rbuf[len], &info.hint[0].name.ptr[0], 
+			  info.hint[0].name.slen);
+
+		len += info.hint[0].name.slen;
+		sess->rcmd->rbuf[len] = 0;		    
+	    }
 	} else {
 	    retval = PJ_FALSE;
 	}

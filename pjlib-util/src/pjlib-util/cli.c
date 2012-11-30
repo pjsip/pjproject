@@ -164,14 +164,14 @@ typedef enum pj_cli_arg_type
 
 } pj_cli_arg_type;
 
-static const struct
+struct arg_type
 {
     const pj_str_t msg;
-} arg_type[] = 
+} arg_type[3] = 
 {
-    {"Text", 4},
-    {"Int", 3},
-    {"Choice", 6}
+    {{"Text", 4}},
+    {{"Int", 3}},
+    {{"Choice", 6}}
 };
 
 /**
@@ -735,8 +735,6 @@ static pj_status_t pj_cli_add_cmd_node(pj_cli_t *cli,
                                                      sizeof(pj_cli_arg_spec));
 	
         for (i = 0; i < cmd->arg_cnt; i++) {
-	    unsigned j;
-
             pj_strdup(cli->pool, &cmd->arg[i].name, &args[i].name);
             pj_strdup(cli->pool, &cmd->arg[i].desc, &args[i].desc);
 	    cmd->arg[i].id = args[i].id;
@@ -834,7 +832,7 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 
     /* Set the parse mode based on the latest char. */
     len = pj_ansi_strlen(cmdline);
-    if (len > 0 && cmdline[len - 1] == '\r') {
+    if (len > 0 && ((cmdline[len - 1] == '\r')||(cmdline[len - 1] == '\n'))) {
         cmdline[--len] = 0;
 	parse_mode = PARSE_EXEC;
     } else if (len > 0 && 
@@ -920,16 +918,8 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 	    info->err_pos = pj_ansi_strlen(cmdline);
 	}
 
-    } else if (parse_mode == PARSE_COMPLETION) {
-	if (info->hint[0].name.slen > str.slen) {
-	    pj_str_t *hint_info = &info->hint[0].name;
-	    pj_memmove(&hint_info->ptr[0], &hint_info->ptr[str.slen], 
-		       info->hint[0].name.slen-str.slen);
-	    hint_info->slen = info->hint[0].name.slen-str.slen;		
-	} else {
-	    info->hint[0].name.slen = 0;
-	}
-    }    
+    } 
+   
     val->sess = sess;
     return status;
 }
@@ -1089,7 +1079,7 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
 	    }
 	    if (arg->get_dyn_choice) {
 		pj_cli_dyn_choice_param dyn_choice_param;
-		static const pj_str_t choice_str = {"choice", 6};
+		static pj_str_t choice_str = {"choice", 6};
 
 		/* Get the dynamic choice values */	    
 		dyn_choice_param.sess = sess;

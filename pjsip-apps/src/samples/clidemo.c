@@ -189,6 +189,8 @@ int main()
 #if USE_RANDOM_PORT
     tcfg.port = 0;
 #endif
+    tcfg.port = 2233;
+    tcfg.prompt_str = pj_str("CoolWater% ");
     status = pj_cli_telnet_create(cli, &tcfg, NULL);
     if (status != PJ_SUCCESS)
 	goto on_return;
@@ -220,11 +222,15 @@ pj_status_t app_main(pj_cli_t *cli)
 {
     pj_status_t status;
     pj_cli_sess *sess;
+    pj_cli_console_cfg console_cfg;
 
+    pj_cli_console_cfg_default(&console_cfg);
+    console_cfg.prompt_str = pj_str("HotWater> ");
+    
     /*
      * Create the console front end
      */
-    status = pj_cli_console_create(cli, NULL, &sess, NULL);
+    status = pj_cli_console_create(cli, &console_cfg, &sess, NULL);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -234,9 +240,10 @@ pj_status_t app_main(pj_cli_t *cli)
      * Main loop.
      */
     for (;;) {
+	char cmdline[PJ_CLI_MAX_CMDBUF];
         pj_status_t status;
 
-        status = pj_cli_console_process(sess);
+        status = pj_cli_console_process(sess, &cmdline[0], sizeof(cmdline));
 	if (status != PJ_SUCCESS)
 	    break;
 

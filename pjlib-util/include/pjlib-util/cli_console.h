@@ -97,7 +97,9 @@ PJ_DECL(pj_status_t) pj_cli_console_create(pj_cli_t *cli,
  *
  * @return		PJ_SUCCESS if an input was read
  */
-PJ_DECL(pj_status_t) pj_cli_console_process(pj_cli_sess *sess);
+PJ_DECL(pj_status_t) pj_cli_console_process(pj_cli_sess *sess, 
+					    char *buf,
+					    unsigned maxlen);
 
 /**
  * @}
