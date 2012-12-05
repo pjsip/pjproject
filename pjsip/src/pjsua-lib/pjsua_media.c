@@ -570,7 +570,12 @@ static void med_tp_timer_cb(void *user_data)
 	pjsua_call *call = NULL;
 	pjsip_dialog *dlg = NULL;
 
-	acquire_call("med_tp_timer_cb", call_med->call->index, &call, &dlg);
+	if (acquire_call("med_tp_timer_cb", call_med->call->index,
+	                 &call, &dlg) != PJ_SUCCESS)
+	{
+	    /* Call have been terminated */
+	    return;
+	}
 
         (*call_med->med_create_cb)(call_med, call_med->tp_ready,
                                    call_med->call->secure_level, NULL);
