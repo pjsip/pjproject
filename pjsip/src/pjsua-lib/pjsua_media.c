@@ -350,6 +350,25 @@ static pj_status_t create_rtp_rtcp_sock(pjsua_call_media *call_med,
 			     pj_ntohs(pjsua_var.stun_srv.ipv4.sin_port);
 	    status=pjstun_get_mapped_addr2(&pjsua_var.cp.factory, &stun_opt,
 					   2, sock, resolved_addr);
+#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
+	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
+	    /* Handle EPIPE (Broken Pipe) error, which happens on UDP socket
+	     * after app wakes up from suspended state. In this case, simply
+	     * just retry.
+	     * P.S.: The magic status is PJ_STATUS_FROM_OS(EPIPE)
+	     */
+	    if (status == 120032) {
+		PJ_LOG(4,(THIS_FILE, "Got EPIPE error, retrying.."));
+		pj_sock_close(sock[0]);
+		sock[0] = PJ_INVALID_SOCKET;
+
+		pj_sock_close(sock[1]);
+		sock[1] = PJ_INVALID_SOCKET;
+
+		continue;
+	    }
+	    else
+#endif
 	    if (status != PJ_SUCCESS) {
 		pjsua_perror(THIS_FILE, "STUN resolve error", status);
 		goto on_error;
