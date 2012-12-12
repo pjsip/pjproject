@@ -1029,7 +1029,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
     int acc_id;
     pjsua_call *call;
     int call_id = -1;
-    int sip_err_code;
+    int sip_err_code = PJSIP_SC_INTERNAL_SERVER_ERROR;
     pjmedia_sdp_session *offer=NULL;
     pj_status_t status;
 

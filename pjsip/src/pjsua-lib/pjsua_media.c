@@ -1515,8 +1515,10 @@ pj_status_t pjsua_media_channel_init(pjsua_call_id call_id,
      * (e.g. in reinvites, updates, etc).
      */
 
-    if (pjsua_get_state() != PJSUA_STATE_RUNNING)
+    if (pjsua_get_state() != PJSUA_STATE_RUNNING) {
+        if (sip_err_code) *sip_err_code = PJSIP_SC_SERVICE_UNAVAILABLE;
 	return PJ_EBUSY;
+    }
 
     if (async) {
         pj_pool_t *tmppool = (call->inv? call->inv->pool_prov:
