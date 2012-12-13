@@ -138,7 +138,7 @@ pjsip-simple:
 pjsua-lib: 
 	$(MAKE) -f $(RULES_MAK) APP=PJSUA_LIB app=pjsua-lib $(PJSUA_LIB_LIB)
 
-pjsip-test:
+pjsip-test: pjsip
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjsip-test $(TEST_EXE)
 
 .PHONY: ../lib/pjsip.ko

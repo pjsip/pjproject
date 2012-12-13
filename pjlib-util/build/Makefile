@@ -74,7 +74,7 @@ distclean: realclean
 pjlib-util:
 	$(MAKE) -f $(RULES_MAK) APP=PJLIB_UTIL app=pjlib-util $(PJLIB_UTIL_LIB)
 
-pjlib-util-test:
+pjlib-util-test: pjlib-util
 	$(MAKE) -f $(RULES_MAK) APP=UTIL_TEST app=pjlib-util-test $(UTIL_TEST_EXE)
 
 .PHONY: ../lib/pjlib-util.ko
