@@ -2160,7 +2160,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
     /* If media transport creation is not yet completed, we will hangup
      * the call in the media transport creation callback instead.
      */
-    if (call->med_ch_cb) {
+    if (call->med_ch_cb && !call->inv) {
         PJ_LOG(4,(THIS_FILE, "Pending call %d hangup upon completion "
                              "of media transport", call_id));
         call->async_call.call_var.out_call.hangup = PJ_TRUE;
