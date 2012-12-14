@@ -2393,7 +2393,7 @@ PJ_DEF(pj_status_t) pjsua_call_reinvite2(pjsua_call_id call_id,
 	goto on_return;
     }
 
-    if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &&
 	    pjsua_acc_is_valid(call->acc_id))
     {
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
@@ -2489,7 +2489,7 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
 	goto on_return;
     }
 
-    if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &
+    if ((call->opt.flag & PJSUA_CALL_UPDATE_CONTACT) &&
 	    pjsua_acc_is_valid(call->acc_id))
     {
 	new_contact = &pjsua_var.acc[call->acc_id].contact;
