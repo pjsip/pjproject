@@ -62,7 +62,7 @@
 #endif
 
 #if LIBAVCODEC_VER_AT_LEAST(53,61)
-#  if LIBAVCODEC_VER_AT_LEAST(54,63)
+#  if LIBAVCODEC_VER_AT_LEAST(54,59)
    /* Not sure when AVCodec::encode is obsoleted/removed. */
 #      define AVCODEC_HAS_ENCODE(c)	(c->encode2)
 #  else
