@@ -193,9 +193,12 @@ void keepAliveFunction(int timeout)
 	if (!pjsua_acc_is_valid(i))
 	    continue;
 
-	if (app_config.acc_cfg[i].reg_timeout < timeout)
+        if (app_config.acc_cfg[i].reg_timeout < timeout) {
 	    app_config.acc_cfg[i].reg_timeout = timeout;
-	pjsua_acc_set_registration(i, PJ_TRUE);
+            pjsua_acc_modify(i, &app_config.acc_cfg[i]);
+        } else {
+	    pjsua_acc_set_registration(i, PJ_TRUE);
+        }
     }
 }
 #endif
