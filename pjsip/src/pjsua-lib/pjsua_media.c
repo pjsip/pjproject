@@ -585,6 +585,76 @@ static void med_tp_timer_cb(void *user_data)
     }
 }
 
+static void med_tp_nego_timer_cb(void *user_data)
+{
+    pjsua_call *call;
+    unsigned med_idx = (unsigned)(((long)user_data) & 0xFFFF);
+    pjsua_call_media *call_med;
+    pjmedia_transport *tp;
+    pjmedia_transport_info tpinfo;
+    pjmedia_ice_transport_info *ii = NULL;
+    unsigned i;
+    pjsip_dialog *dlg = NULL;
+
+    if ((acquire_call("med_tp_nego_timer_cb", ((long)user_data) >> 16,
+	             &call, &dlg) != PJ_SUCCESS) ||
+        (med_idx >= call->med_cnt))
+    {
+        /* Call have been terminated or media has been removed */
+	return;
+    }
+
+    call_med = &call->media[med_idx];
+    tp = call_med->tp;
+
+    if (!tp)
+        return;
+
+    /* Send UPDATE if default transport address is different than
+     * what was advertised (ticket #881)
+     */
+
+    pjmedia_transport_info_init(&tpinfo);
+    pjmedia_transport_get_info(tp, &tpinfo);
+    for (i=0; i<tpinfo.specific_info_cnt; ++i) {
+        if (tpinfo.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
+	    ii = (pjmedia_ice_transport_info*)
+	    tpinfo.spc_info[i].buffer;
+	    break;
+	}
+    }
+
+    if (ii && ii->role==PJ_ICE_SESS_ROLE_CONTROLLING &&
+	pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
+		        &call_med->rtp_addr))
+    {
+        pj_bool_t use_update;
+	const pj_str_t STR_UPDATE = { "UPDATE", 6 };
+	pjsip_dialog_cap_status support_update;
+	pjsip_dialog *dlg;
+
+	dlg = call_med->call->inv->dlg;
+	support_update = pjsip_dlg_remote_has_cap(dlg, PJSIP_H_ALLOW,
+					          NULL, &STR_UPDATE);
+        use_update = (support_update == PJSIP_DIALOG_CAP_SUPPORTED);
+
+	PJ_LOG(4,(THIS_FILE, 
+                  "ICE default transport address has changed for "
+		  "call %d, sending %s",
+		  call_med->call->index,
+		  (use_update ? "UPDATE" : "re-INVITE")));
+
+        if (use_update)
+	    pjsua_call_update(call_med->call->index, 0, NULL);
+	else
+	    pjsua_call_reinvite(call_med->call->index, 0, NULL);
+    }
+
+    if (dlg)
+        pjsip_dlg_dec_lock(dlg);
+}
+
+
 /* This callback is called when ICE negotiation completes */
 static void on_ice_complete(pjmedia_transport *tp, 
 			    pj_ice_strans_op op,
@@ -609,49 +679,10 @@ static void on_ice_complete(pjmedia_transport *tp,
 		pjsua_var.ua_cfg.cb.on_call_media_state(call_med->call->index);
 	    }
 	} else if (call_med->call) {
-	    /* Send UPDATE if default transport address is different than
-	     * what was advertised (ticket #881)
-	     */
-	    pjmedia_transport_info tpinfo;
-	    pjmedia_ice_transport_info *ii = NULL;
-	    unsigned i;
-
-	    pjmedia_transport_info_init(&tpinfo);
-	    pjmedia_transport_get_info(tp, &tpinfo);
-	    for (i=0; i<tpinfo.specific_info_cnt; ++i) {
-		if (tpinfo.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
-		    ii = (pjmedia_ice_transport_info*)
-			 tpinfo.spc_info[i].buffer;
-		    break;
-		}
-	    }
-
-	    if (ii && ii->role==PJ_ICE_SESS_ROLE_CONTROLLING &&
-		pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
-				&call_med->rtp_addr))
-	    {
-		pj_bool_t use_update;
-		const pj_str_t STR_UPDATE = { "UPDATE", 6 };
-		pjsip_dialog_cap_status support_update;
-		pjsip_dialog *dlg;
-
-		dlg = call_med->call->inv->dlg;
-		support_update = pjsip_dlg_remote_has_cap(dlg, PJSIP_H_ALLOW,
-							  NULL, &STR_UPDATE);
-		use_update = (support_update == PJSIP_DIALOG_CAP_SUPPORTED);
-
-		PJ_LOG(4,(THIS_FILE, 
-		          "ICE default transport address has changed for "
-			  "call %d, sending %s",
-			  call_med->call->index,
-			  (use_update ? "UPDATE" : "re-INVITE")));
-
-		if (use_update)
-		    pjsua_call_update(call_med->call->index, 0, NULL);
-		else
-		    pjsua_call_reinvite(call_med->call->index, 0, NULL);
-	    }
-	}
+            void *data = (void*)(long)( (call_med->call->index<<16) |
+                                        (call_med->idx & 0xFFFF) );
+            pjsua_schedule_timer2(&med_tp_nego_timer_cb, data, 1);
+        }
 	break;
     case PJ_ICE_STRANS_OP_KEEP_ALIVE:
 	if (result != PJ_SUCCESS) {
