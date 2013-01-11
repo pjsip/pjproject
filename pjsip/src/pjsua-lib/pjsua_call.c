@@ -562,35 +562,23 @@ static pj_status_t apply_call_setting(pjsua_call *call,
     pj_assert(opt->vid_cnt == 0);
 #endif
 
+    call->opt = *opt;
+
     /* If call is established, reinit media channel */
     if (call->inv && call->inv->state == PJSIP_INV_STATE_CONFIRMED) {
-	pjsua_call_setting old_opt;
+	pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
 	pj_status_t status;
 
-	old_opt = call->opt;
-	call->opt = *opt;
-
-	/* Reinit media channel when media count is changed or we are the
-	 * answerer (as remote offer may 'extremely' modify the existing
-	 * media session, e.g: media type order).
-	 */
-	if (rem_sdp ||
-	    opt->aud_cnt!=old_opt.aud_cnt || opt->vid_cnt!=old_opt.vid_cnt)
-	{
-	    pjsip_role_e role = rem_sdp? PJSIP_ROLE_UAS : PJSIP_ROLE_UAC;
-	    status = pjsua_media_channel_init(call->index, role,
-					      call->secure_level,
-					      call->inv->pool_prov,
-					      rem_sdp, NULL,
-					      PJ_FALSE, NULL);
-	    if (status != PJ_SUCCESS) {
-		pjsua_perror(THIS_FILE, "Error re-initializing media channel",
-			     status);
-		return status;
-	    }
+	status = pjsua_media_channel_init(call->index, role,
+					  call->secure_level,
+					  call->inv->pool_prov,
+					  rem_sdp, NULL,
+					  PJ_FALSE, NULL);
+	if (status != PJ_SUCCESS) {
+	    pjsua_perror(THIS_FILE, "Error re-initializing media channel",
+			 status);
+	    return status;
 	}
-    } else {
-	call->opt = *opt;
     }
 
     return PJ_SUCCESS;
