@@ -741,14 +741,14 @@ PJ_DEF(pj_status_t) pj_ice_strans_destroy(pj_ice_strans *ice_st)
 {
     PJ_ASSERT_RETURN(ice_st, PJ_EINVAL);
 
+    sess_add_ref(ice_st);
     ice_st->destroy_req = PJ_TRUE;
-    if (pj_atomic_get(ice_st->busy_cnt) > 0) {
+    if (sess_dec_ref(ice_st)) {
 	PJ_LOG(5,(ice_st->obj_name, 
 		  "ICE strans object is busy, will destroy later"));
 	return PJ_EPENDING;
     }
-    
-    destroy_ice_st(ice_st);
+
     return PJ_SUCCESS;
 }
 
@@ -770,7 +770,7 @@ static pj_bool_t sess_dec_ref(pj_ice_strans *ice_st)
     int count = pj_atomic_dec_and_get(ice_st->busy_cnt);
     pj_assert(count >= 0);
     if (count==0 && ice_st->destroy_req) {
-	pj_ice_strans_destroy(ice_st);
+	destroy_ice_st(ice_st);
 	return PJ_FALSE;
     } else {
 	return PJ_TRUE;
