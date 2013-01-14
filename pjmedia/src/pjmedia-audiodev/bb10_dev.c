@@ -123,6 +123,7 @@ struct bb10_stream
 
     /* Playback */
     snd_pcm_t		*pb_pcm;
+    unsigned int pb_audio_manager_handle;
     unsigned long        pb_frames; 	/* samples_per_frame		*/
     pjmedia_aud_play_cb  pb_cb;
     unsigned             pb_buf_size;
@@ -131,6 +132,7 @@ struct bb10_stream
 
     /* Capture */
     snd_pcm_t		*ca_pcm;
+    unsigned int ca_audio_manager_handle;
     unsigned long        ca_frames; 	/* samples_per_frame		*/
     pjmedia_aud_rec_cb   ca_cb;
     unsigned             ca_buf_size;
@@ -178,39 +180,39 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
 
     TRACE_((THIS_FILE, "bb10_add_dev Enter"));
 
-#if PJ_BBSDK_VER >= 0x100006
-    if ((pb_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+    if ((pb_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
                                                      &pcm_handle,
                                                      &handle,
                                                      "/dev/snd/voicep",
                                                      SND_PCM_OPEN_PLAYBACK))
                                                      >= 0)
-#else
-    PJ_UNUSED_ARG(handle);
-    if ((pb_result = snd_pcm_open_preferred (&pcm_handle, &card, &dev,
-                                             SND_PCM_OPEN_PLAYBACK)) >= 0)
-#endif
     {
-        TRACE_((THIS_FILE, "Try to open the device for playback - success"));
-	snd_pcm_close (pcm_handle);
+    	if ((pb_result = snd_pcm_plugin_set_disable (pcm_handle, PLUGIN_DISABLE_MMAP)) < 0) {
+            TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", pb_result));
+    	}else{
+            TRACE_((THIS_FILE, "Try to open the device for playback - success"));
+    	}
+	    snd_pcm_close (pcm_handle);
+	    audio_manager_free_handle(handle);
     } else {
         TRACE_((THIS_FILE, "Try to open the device for playback - failure"));
     }
 
-#if PJ_BBSDK_VER >= 0x100006
-    if ((ca_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+    if ((ca_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
                                                      &pcm_handle,
                                                      &handle,
                                                      "/dev/snd/voicec",
                                                      SND_PCM_OPEN_CAPTURE))
                                                      >= 0)
-#else
-    if ((ca_result = snd_pcm_open_preferred (&pcm_handle, &card, &dev,
-                                             SND_PCM_OPEN_CAPTURE)) >=0)
-#endif
     {
-        TRACE_((THIS_FILE, "Try to open the device for capture - success"));
+        if ((ca_result = snd_pcm_plugin_set_disable (pcm_handle, PLUGIN_DISABLE_MMAP)) < 0) {
+            TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", ca_result));
+        }else{
+            TRACE_((THIS_FILE, "Try to open the device for capture - success"));        
+        }
         snd_pcm_close (pcm_handle);
+	    audio_manager_free_handle(handle);
+
     } else {
         TRACE_((THIS_FILE, "Try to open the device for capture - failure"));
     }
@@ -394,6 +396,10 @@ static void close_play_pcm(struct bb10_stream *stream)
     if (stream != NULL && stream->pb_pcm != NULL) {
         snd_pcm_close(stream->pb_pcm);
         stream->pb_pcm = NULL;
+        if(stream->pb_audio_manager_handle != 0){
+    	    audio_manager_free_handle(stream->pb_audio_manager_handle);
+    	    stream->pb_audio_manager_handle = 0;
+        }
     }
 }
 
@@ -409,6 +415,10 @@ static void close_capture_pcm(struct bb10_stream *stream)
     if (stream != NULL && stream->ca_pcm != NULL) {
         snd_pcm_close(stream->ca_pcm);
         stream->ca_pcm = NULL;
+        if(stream->ca_audio_manager_handle != 0){
+    	    audio_manager_free_handle(stream->ca_audio_manager_handle);
+    	    stream->ca_audio_manager_handle = 0;
+        }
     }
 }
 
@@ -607,31 +617,35 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     snd_pcm_channel_params_t pp;
     unsigned int rate;
     unsigned long tmp_buf_size;
-    unsigned int handle;
 
     if (param->play_id < 0 || param->play_id >= stream->af->dev_cnt) {
         return PJMEDIA_EAUD_INVDEV;
     }
 
-#if PJ_BBSDK_VER >= 0x100006
-    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
-                                               &stream->pb_pcm, &handle,
+    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
+                                               &stream->pb_pcm, &stream->pb_audio_manager_handle,
                                                "/dev/snd/voicep",
                                                SND_PCM_OPEN_PLAYBACK)) < 0)
     {
         TRACE_((THIS_FILE, "audio_manager_snd_pcm_open_name ret = %d", ret));
         return PJMEDIA_EAUD_SYSERR;
     }
-
-#else
-    if ((ret = snd_pcm_open_preferred (&stream->pb_pcm, &card, &dev,
-                                       SND_PCM_OPEN_PLAYBACK)) < 0)
-    {
-        TRACE_((THIS_FILE, "snd_pcm_open_preferred ret = %d", ret));
+    ret = audio_manager_set_handle_type(stream->pb_audio_manager_handle, AUDIO_TYPE_VIDEO_CHAT, AUDIO_DEVICE_HANDSET , AUDIO_DEVICE_HANDSET);
+    if (ret==0) {
+          ret = audio_manager_set_handle_routing_conditions(stream->pb_audio_manager_handle, SETTINGS_RESET_ON_DEVICE_CONNECTION);
+          if(ret != 0){
+              TRACE_((THIS_FILE, "audio_manager_set_handle_routing_conditions ret = %d", ret));
+              return PJMEDIA_EAUD_SYSERR;
+          }
+    }else{
+    	TRACE_((THIS_FILE, "audio_manager_set_handle_type ret = %d", ret));
         return PJMEDIA_EAUD_SYSERR;
     }
-#endif
 
+    if ((ret = snd_pcm_plugin_set_disable (stream->pb_pcm, PLUGIN_DISABLE_MMAP)) < 0) {
+    	TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", ret));
+        return PJMEDIA_EAUD_SYSERR;
+    }
     /* TODO PJ_ZERO */
     memset (&pi, 0, sizeof (pi));
     pi.channel = SND_PCM_CHANNEL_PLAYBACK;
@@ -717,31 +731,23 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     snd_mixer_group_t group;
     snd_pcm_channel_params_t pp;
     snd_pcm_channel_setup_t setup;
-    unsigned int handle;
 
     if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
-#if PJ_BBSDK_VER >= 0x100006
-    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VOICE,
+    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
                                                &stream->ca_pcm,
-                                               &handle,
+                                               &stream->ca_audio_manager_handle,
                                                "/dev/snd/voicec",
                                                SND_PCM_OPEN_CAPTURE)) < 0)
     {
 	TRACE_((THIS_FILE, "audio_manager_snd_pcm_open_name ret = %d", ret));
 	return PJMEDIA_EAUD_SYSERR;
     }
-#else
-    /* BB10 Audio init here (not prepare) */
-    PJ_UNUSED_ARG(handle);
-    if ((ret = snd_pcm_open_preferred (&stream->ca_pcm, &card, &dev,
-                                       SND_PCM_OPEN_CAPTURE)) < 0)
-    {
-        TRACE_((THIS_FILE, "snd_pcm_open_preferred ret = %d", ret));
+    if ((ret = snd_pcm_plugin_set_disable (stream->ca_pcm, PLUGIN_DISABLE_MMAP)) < 0) {
+        TRACE_(("snd_pcm_plugin_set_disable failed: %d",ret));
         return PJMEDIA_EAUD_SYSERR;
     }
-#endif
 
     /* sample reads the capabilities of the capture */
     memset (&pi, 0, sizeof (pi));
