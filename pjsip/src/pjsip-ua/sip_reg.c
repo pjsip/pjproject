@@ -336,7 +336,7 @@ PJ_DEF(pj_status_t) pjsip_regc_init( pjsip_regc *regc,
     pj_status_t status;
 
     PJ_ASSERT_RETURN(regc && srv_url && from_url && to_url && 
-		     contact_cnt && contact && expires, PJ_EINVAL);
+		     expires, PJ_EINVAL);
 
     /* Copy server URL. */
     pj_strdup_with_null(regc->pool, &regc->str_srv_url, srv_url);
