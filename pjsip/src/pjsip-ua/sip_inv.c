@@ -2572,6 +2572,7 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
     pjsip_contact_hdr *contact_hdr = NULL;
     pjsip_tx_data *tdata = NULL;
     pjmedia_sdp_session *sdp_copy;
+    const pjsip_hdr *hdr;
     pj_status_t status = PJ_SUCCESS;
 
     /* Verify arguments. */
@@ -2640,12 +2641,23 @@ PJ_DEF(pj_status_t) pjsip_inv_update (	pjsip_inv_session *inv,
 	pjsip_create_sdp_body(tdata->pool, sdp_copy, &tdata->msg->body);
     }
 
-    /* Unlock dialog. */
-    pjsip_dlg_dec_lock(inv->dlg);
+    /* Session Timers spec (RFC 4028) says that Supported header MUST be put
+     * in refresh requests. So here we'll just put the Supported header in
+     * all cases regardless of whether session timers is used or not, just
+     * in case this is a common behavior.
+     */
+    hdr = pjsip_endpt_get_capability(inv->dlg->endpt, PJSIP_H_SUPPORTED, NULL);
+    if (hdr) {
+	pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)
+			  pjsip_hdr_shallow_clone(tdata->pool, hdr));
+    }
 
     status = pjsip_timer_update_req(inv, tdata);
     if (status != PJ_SUCCESS)
 	goto on_error;
+
+    /* Unlock dialog. */
+    pjsip_dlg_dec_lock(inv->dlg);
 
     *p_tdata = tdata;
 
