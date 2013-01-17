@@ -390,6 +390,7 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
      * stray callback.
      */
     if (stun_sock->active_sock != NULL) {
+	pj_activesock_set_user_data(stun_sock->active_sock, NULL);
 	pj_activesock_close(stun_sock->active_sock);
 	stun_sock->active_sock = NULL;
 	stun_sock->sock_fd = PJ_INVALID_SOCKET;
@@ -765,6 +766,8 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     pj_uint16_t type;
 
     stun_sock = (pj_stun_sock*) pj_activesock_get_user_data(asock);
+    if (!stun_sock)
+	return PJ_FALSE;
 
     /* Log socket error */
     if (status != PJ_SUCCESS) {
