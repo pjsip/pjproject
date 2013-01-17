@@ -182,7 +182,7 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
 {
     int printed;
     char *startbuf = buf;
-    char *endbuf = buf+size;
+    char *endbuf = buf+size-1;
     const pjsip_parser_const_t *pc = pjsip_parser_const();
 
     PJ_UNUSED_ARG(context);
@@ -216,6 +216,8 @@ static pj_ssize_t tel_uri_print( pjsip_uri_context_e context,
     if (printed < 0)
 	return -1;
     buf += printed;
+
+    *buf = '\0';
 
     return (buf-startbuf);
 }

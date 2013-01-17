@@ -920,17 +920,14 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 	 * or add an empty authorization header.
 	 */
 	unsigned i;
-	char *uri_str;
-	int len;
+	pj_str_t uri;
 
-	uri_str = (char*)pj_pool_alloc(tdata->pool, PJSIP_MAX_URL_SIZE+1);
-	len = pjsip_uri_print(PJSIP_URI_IN_REQ_URI, tdata->msg->line.req.uri,
-			      uri_str, PJSIP_MAX_URL_SIZE);
-	if (len < 1 || len >= PJSIP_MAX_URL_SIZE)
+	uri.ptr = (char*)pj_pool_alloc(tdata->pool, PJSIP_MAX_URL_SIZE);
+	uri.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+	                           tdata->msg->line.req.uri,
+	                           uri.ptr, PJSIP_MAX_URL_SIZE);
+	if (uri.slen < 1 || uri.slen >= PJSIP_MAX_URL_SIZE)
 	    return PJSIP_EURITOOLONG;
-
-	/* https://trac.pjsip.org/repos/ticket/1609 */
-	uri_str[len] = '\0';
 
 	for (i=0; i<sess->cred_cnt; ++i) {
 	    pjsip_cred_info *c = &sess->cred_info[i];
@@ -949,8 +946,7 @@ PJ_DEF(pj_status_t) pjsip_auth_clt_init_req( pjsip_auth_clt_sess *sess,
 			  &c->username);
 		pj_strdup(tdata->pool, &hs->credential.digest.realm,
 			  &c->realm);
-		pj_strdup2(tdata->pool, &hs->credential.digest.uri,
-			   uri_str);
+		pj_strdup(tdata->pool, &hs->credential.digest.uri, &uri);
 		pj_strdup(tdata->pool, &hs->credential.digest.algorithm,
 			  &sess->pref.algorithm);
 
