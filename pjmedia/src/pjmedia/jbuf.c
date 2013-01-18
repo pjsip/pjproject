@@ -599,6 +599,7 @@ PJ_DEF(pj_status_t) pjmedia_jbuf_set_fixed( pjmedia_jbuf *jb,
     jb->jb_min_prefetch = jb->jb_max_prefetch = 
 	jb->jb_prefetch = jb->jb_init_prefetch = prefetch;
 
+    pjmedia_jbuf_set_discard(jb, PJMEDIA_JB_DISCARD_NONE);
     return PJ_SUCCESS;
 }
 
@@ -724,6 +725,8 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 		jb->jb_prefetch = jb->jb_eff_level;
 		if (jb->jb_prefetch < jb->jb_min_prefetch) 
 		    jb->jb_prefetch = jb->jb_min_prefetch;
+		if (jb->jb_prefetch > jb->jb_max_prefetch)
+		    jb->jb_prefetch = jb->jb_max_prefetch;
 	    }
 
 	    /* Reset history */
@@ -747,6 +750,8 @@ static void jbuf_calculate_jitter(pjmedia_jbuf *jb)
 	    jb->jb_prefetch = jb->jb_eff_level;
 	    if (jb->jb_prefetch > jb->jb_max_prefetch)
 		jb->jb_prefetch = jb->jb_max_prefetch;
+	    if (jb->jb_prefetch < jb->jb_min_prefetch)
+		jb->jb_prefetch = jb->jb_min_prefetch;
 	}
 
 	jb->jb_stable_hist = 0;
