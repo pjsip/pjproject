@@ -832,6 +832,8 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
     pj_stun_sock *stun_sock;
 
     stun_sock = (pj_stun_sock*) pj_activesock_get_user_data(asock);
+    if (!stun_sock)
+	return PJ_FALSE;
 
     /* Don't report to callback if this is internal message */
     if (send_key == &stun_sock->int_send_key) {
