@@ -177,6 +177,7 @@ static pj_status_t if_enum_by_af(int af,
     *p_cnt = 0;
     for (i=0; i<count; ++i) {
 	struct ifreq *itf = &ifr[i];
+        struct ifreq iff;
 	struct sockaddr *ad = &itf->ifr_addr;
 	
 	TRACE_((THIS_FILE, " checking interface %s", itf->ifr_name));
@@ -188,13 +189,19 @@ static pj_status_t if_enum_by_af(int af,
 	    continue;
 	}
 
-	if ((itf->ifr_flags & IFF_UP)==0) {
+        if ((rc=ioctl(sock, SIOCGIFFLAGS, &iff)) != 0) {
+	    TRACE_((THIS_FILE, "  ioctl(SIOCGIFFLAGS) failed: %s",
+		    get_os_errmsg()));
+	    continue;	/* Failed to get flags, continue */
+	}
+
+	if ((iff.ifr_flags & IFF_UP)==0) {
 	    TRACE_((THIS_FILE, "  interface is down"));
 	    continue; /* Skip when interface is down */
 	}
 
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
-	if (itf->ifr_flags & IFF_LOOPBACK) {
+	if (iff.ifr_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
 	    continue; /* Skip loopback interface */
 	}
