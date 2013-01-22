@@ -189,7 +189,7 @@ static pj_status_t if_enum_by_af(int af,
 	    continue;
 	}
 
-        if ((rc=ioctl(sock, SIOCGIFFLAGS, &iff)) != 0) {
+        if (ioctl(sock, SIOCGIFFLAGS, &iff) != 0) {
 	    TRACE_((THIS_FILE, "  ioctl(SIOCGIFFLAGS) failed: %s",
 		    get_os_errmsg()));
 	    continue;	/* Failed to get flags, continue */
