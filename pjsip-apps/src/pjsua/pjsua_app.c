@@ -194,6 +194,7 @@ void keepAliveFunction(int timeout)
 	    continue;
 
         if (app_config.acc_cfg[i].reg_timeout < timeout) {
+            pjsua_acc_get_config(i, &app_config.acc_cfg[i]);
 	    app_config.acc_cfg[i].reg_timeout = timeout;
             pjsua_acc_modify(i, &app_config.acc_cfg[i]);
         } else {
