@@ -619,13 +619,14 @@ static pj_status_t silk_codec_open(pjmedia_codec *codec,
 
     /* Setup encoder control for encoding process */
     silk->enc_ready = PJ_TRUE;
-    silk->samples_per_frame = attr->setting.frm_per_pkt * FRAME_LENGTH_MS *
+    silk->samples_per_frame = FRAME_LENGTH_MS *
 			      attr->info.clock_rate / 1000;
     silk->pcm_bytes_per_sample = attr->info.pcm_bits_per_sample / 8;
 
     silk->enc_ctl.API_sampleRate        = attr->info.clock_rate;
     silk->enc_ctl.maxInternalSampleRate = attr->info.clock_rate;
-    silk->enc_ctl.packetSize            = silk->samples_per_frame;
+    silk->enc_ctl.packetSize            = attr->setting.frm_per_pkt *
+                                          silk->samples_per_frame;
     /* For useInBandFEC setting to be useful, we need to set
      * packetLossPercentage greater than LBRR_LOSS_THRES (1)
      */
@@ -721,7 +722,7 @@ static pj_status_t silk_codec_encode(pjmedia_codec *codec,
 
     /* Check frame in size */
     nsamples = input->size >> 1;
-    PJ_ASSERT_RETURN(nsamples == silk->samples_per_frame, 
+    PJ_ASSERT_RETURN(nsamples % silk->samples_per_frame == 0,
 		     PJMEDIA_CODEC_EPCMFRMINLEN);
 
     /* Encode */
