@@ -309,6 +309,18 @@ typedef struct pjmedia_codec_param
 } pjmedia_codec_param;
 
 
+/**
+ * Duplicate codec parameter.
+ *
+ * @param pool	    The pool.
+ * @param src	    The codec parameter to be duplicated.
+ *
+ * @return	    Duplicated codec parameter.
+ */
+PJ_DECL(pjmedia_codec_param*) pjmedia_codec_param_clone(
+					pj_pool_t *pool,
+					const pjmedia_codec_param *src);
+
 
 /*
  * Forward declaration for pjmedia_codec.

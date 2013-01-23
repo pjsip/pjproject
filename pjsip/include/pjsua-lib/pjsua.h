@@ -4433,6 +4433,17 @@ struct pjsua_media_config
      * Default : 1
      */
     int			snd_auto_close_time;
+
+    /**
+     * Disable smart media update (ticket #1568). The smart media update
+     * will check for any changes in the media properties after a successful
+     * SDP negotiation and the media will only be reinitialized when any
+     * change is found. When it is disabled, media streams will always be
+     * reinitialized after a successful SDP negotiation.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t no_smart_media_update;
 };
 
 

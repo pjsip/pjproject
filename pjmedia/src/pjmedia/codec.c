@@ -41,6 +41,39 @@ static void sort_codecs(pjmedia_codec_mgr *mgr);
 
 
 /*
+ * Duplicate codec parameter.
+ */
+PJ_DEF(pjmedia_codec_param*) pjmedia_codec_param_clone(
+					pj_pool_t *pool,
+					const pjmedia_codec_param *src)
+{
+    pjmedia_codec_param *p;
+    unsigned i;
+
+    PJ_ASSERT_RETURN(pool && src, NULL);
+
+    p = PJ_POOL_ZALLOC_T(pool, pjmedia_codec_param);
+
+    /* Update codec param */
+    pj_memcpy(p, src, sizeof(pjmedia_codec_param));
+    for (i = 0; i < src->setting.dec_fmtp.cnt; ++i) {
+	pj_strdup(pool, &p->setting.dec_fmtp.param[i].name,
+		  &src->setting.dec_fmtp.param[i].name);
+	pj_strdup(pool, &p->setting.dec_fmtp.param[i].val,
+		  &src->setting.dec_fmtp.param[i].val);
+    }
+    for (i = 0; i < src->setting.enc_fmtp.cnt; ++i) {
+	pj_strdup(pool, &p->setting.enc_fmtp.param[i].name,
+		  &src->setting.enc_fmtp.param[i].name);
+	pj_strdup(pool, &p->setting.enc_fmtp.param[i].val,
+		  &src->setting.enc_fmtp.param[i].val);
+    }
+
+    return p;
+}
+
+
+/*
  * Initialize codec manager.
  */
 PJ_DEF(pj_status_t) pjmedia_codec_mgr_init (pjmedia_codec_mgr *mgr,
