@@ -323,8 +323,18 @@
 #endif
 
 /**
+ * Enable OpenCORE AMR-WB codec.
+ * See https://trac.pjsip.org/repos/ticket/1608 for some info.
+ *
+ * Default: 0
+ */
+#ifndef PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
+#   define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC	0
+#endif
+
+/**
  * Link with libopencore-amrXX via pragma comment on Visual Studio.
- * This option only makes sense if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+ * This option only makes sense if PJMEDIA_HAS_OPENCORE_AMRNB/WB_CODEC
  * is enabled.
  *
  * Default: 1
@@ -335,7 +345,7 @@
 
 /**
  * Link with libopencore-amrXX.a that has been produced with gcc.
- * This option only makes sense if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
+ * This option only makes sense if PJMEDIA_HAS_OPENCORE_AMRNB/WB_CODEC
  * and PJMEDIA_AUTO_LINK_OPENCORE_AMR_LIBS are enabled.
  *
  * Default: 1

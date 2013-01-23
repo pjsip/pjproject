@@ -58,6 +58,7 @@ AC_NO_ILBC_CODEC=@ac_no_ilbc_codec@
 AC_NO_G722_CODEC=@ac_no_g722_codec@
 AC_NO_G7221_CODEC=@ac_no_g7221_codec@
 AC_NO_OPENCORE_AMRNB=@ac_no_opencore_amrnb@
+AC_NO_OPENCORE_AMRWB=@ac_no_opencore_amrwb@
 
 export CODEC_OBJS=
 
@@ -113,7 +114,15 @@ endif
 ifeq ($(AC_NO_OPENCORE_AMRNB),1)
 export CFLAGS += -DPJMEDIA_HAS_OPENCORE_AMRNB_CODEC=0
 else
-export CODEC_OBJS += opencore_amrnb.o
+export CODEC_OBJS += opencore_amr.o
+endif
+
+ifeq ($(AC_NO_OPENCORE_AMRWB),1)
+export CFLAGS += -DPJMEDIA_HAS_OPENCORE_AMRWB_CODEC=0
+else
+ifeq ($(AC_NO_OPENCORE_AMRNB),1)
+export CODEC_OBJS += opencore_amr.o
+endif
 endif
 
 

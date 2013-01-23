@@ -113,6 +113,13 @@ pjmedia_codec_register_audio_codecs(pjmedia_endpt *endpt,
     if (status != PJ_SUCCESS)
 	return status;
 #endif
+    
+#if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
+    /* Register OpenCORE AMR-WB */
+    status = pjmedia_codec_opencore_amrwb_init(endpt);
+    if (status != PJ_SUCCESS)
+	return status;
+#endif
 
 #if PJMEDIA_HAS_SILK_CODEC
     /* Register SILK */

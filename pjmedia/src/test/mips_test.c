@@ -943,6 +943,23 @@ static pjmedia_port* amr_encode_decode(pj_pool_t *pool,
 }
 #endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
 
+#if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
+/* AMR-WB benchmark benchmark */
+static pjmedia_port* amrwb_encode_decode(pj_pool_t *pool,
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
+{
+    return codec_encode_decode(pool, "AMR/16000",
+			       &pjmedia_codec_opencore_amrwb_init,
+			       &pjmedia_codec_opencore_amrwb_deinit,
+			       clock_rate, channel_count,
+			       samples_per_frame, flags, te);
+}
+#endif	/* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
+
 #if defined(PJMEDIA_HAS_L16_CODEC) && PJMEDIA_HAS_L16_CODEC!=0
 static pj_status_t init_l16_default(pjmedia_endpt *endpt)
 {
@@ -2024,7 +2041,24 @@ static pjmedia_port* create_stream_amr( pj_pool_t *pool,
 			 clock_rate, channel_count,
 			 samples_per_frame, flags, te);
 }
-#endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */ 
+#endif	/* PJMEDIA_HAS_OPENCORE_AMRNB_CODEC */
+
+/* AMR-WB stream */
+#if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
+static pjmedia_port* create_stream_amrwb( pj_pool_t *pool,
+                                         unsigned clock_rate,
+                                         unsigned channel_count,
+                                         unsigned samples_per_frame,
+                                         unsigned flags,
+                                         struct test_entry *te)
+{
+    return create_stream(pool, "AMR/16000", &pjmedia_codec_opencore_amrwb_init,
+			 &pjmedia_codec_opencore_amrwb_deinit,
+			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
+			 clock_rate, channel_count,
+			 samples_per_frame, flags, te);
+}
+#endif	/* PJMEDIA_HAS_OPENCORE_AMRWB_CODEC */
 
 /***************************************************************************/
 /* Delay buffer */
@@ -2419,6 +2453,9 @@ int mips_test(void)
 #if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
 	{ "codec encode/decode - AMR-NB", OP_PUT, K8, &amr_encode_decode},
 #endif
+#if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
+	{ "codec encode/decode - AMR-WB", OP_PUT, K16, &amrwb_encode_decode},
+#endif
 #if PJMEDIA_HAS_L16_CODEC
 	{ "codec encode/decode - L16/8000/1", OP_PUT, K8, &l16_8_encode_decode},
 	{ "codec encode/decode - L16/16000/1", OP_PUT, K16, &l16_16_encode_decode},
@@ -2446,6 +2483,9 @@ int mips_test(void)
 #endif
 #if PJMEDIA_HAS_OPENCORE_AMRNB_CODEC
 	{ "stream TX/RX - AMR-NB", OP_PUT_GET, K8, &create_stream_amr},
+#endif
+#if PJMEDIA_HAS_OPENCORE_AMRWB_CODEC
+	{ "stream TX/RX - AMR-WB", OP_PUT_GET, K16, &create_stream_amrwb},
 #endif
     };
 

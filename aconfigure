@@ -626,8 +626,13 @@ ac_linux_poll
 silk_present
 silk_h_present
 ac_no_silk
+opencore_amrwb_dec_present
+opencore_amrwb_dec_h_present
+opencore_amrwb_enc_present
+opencore_amrwb_enc_h_present
 opencore_amrnb_present
 opencore_amrnb_h_present
+ac_no_opencore_amrwb
 ac_no_opencore_amrnb
 libcrypto_present
 libssl_present
@@ -781,7 +786,9 @@ with_ipp_arch
 with_ssl
 enable_ssl
 with_opencore_amrnb
-enable_opencore_amrnb
+with_opencore_amr
+with_opencore_amrwbenc
+enable_opencore_amr
 with_silk
 enable_silk
 '
@@ -1440,8 +1447,7 @@ Optional Features:
                           --with-ipp-samples options
   --disable-ssl           Exclude SSL support the build (default: autodetect)
 
-  --disable-opencore-amrnb
-                          Exclude OpenCORE AMR-NB support from the build
+  --disable-opencore-amr  Exclude OpenCORE AMR support from the build
                           (default: autodetect)
 
   --disable-silk          Exclude SILK support from the build (default:
@@ -1474,7 +1480,11 @@ Optional Packages:
                           "em64t. Default is blank for IA32"
   --with-ssl=DIR          Specify alternate libssl prefix
   --with-opencore-amrnb=DIR
-                          Specify alternate libopencore-amrnb prefix
+                          This option is obsolete and replaced by
+                          --with-opencore-amr=DIR
+  --with-opencore-amr=DIR Specify alternate libopencore-amr prefix
+  --with-opencore-amrwbenc=DIR
+                          Specify alternate libvo-amrwbenc prefix
   --with-silk=DIR         Specify alternate SILK prefix
 
 Some influential environment variables:
@@ -7109,38 +7119,70 @@ fi
 
 # Check whether --with-opencore-amrnb was given.
 if test "${with_opencore_amrnb+set}" = set; then :
-  withval=$with_opencore_amrnb;
+  withval=$with_opencore_amrnb; as_fn_error $? "This option is obsolete and replaced by --with-opencore-amr=DIR" "$LINENO" 5
+fi
+
+
+
+# Check whether --with-opencore-amr was given.
+if test "${with_opencore_amr+set}" = set; then :
+  withval=$with_opencore_amr;
 else
-  with_opencore_amrnb=no
+  with_opencore_amr=no
 
 fi
 
 
-if test "x$ac_cross_compile" != "x" -a "x$with_opencore_amrnb" = "xno"; then
-    enable_opencore_amrnb=no
+if test "x$ac_cross_compile" != "x" -a "x$with_opencore_amr" = "xno"; then
+    enable_opencore_amr=no
 fi
 
 
-# Check whether --enable-opencore_amrnb was given.
-if test "${enable_opencore_amrnb+set}" = set; then :
-  enableval=$enable_opencore_amrnb;
-		if test "$enable_opencore_amrnb" = "no"; then
+# Check whether --with-opencore-amrwbenc was given.
+if test "${with_opencore_amrwbenc+set}" = set; then :
+  withval=$with_opencore_amrwbenc;
+else
+  with_opencore_amrwbenc=no
+
+fi
+
+
+if test "x$ac_cross_compile" != "x" -a "x$with_opencore_amrwbenc" = "xno"; then
+    enable_opencore_amrwbenc=no
+fi
+
+
+
+
+# Check whether --enable-opencore_amr was given.
+if test "${enable_opencore_amr+set}" = set; then :
+  enableval=$enable_opencore_amr;
+		if test "$enable_opencore_amr" = "no"; then
 		 ac_no_opencore_amrnb=1
+		 ac_no_opencore_amrwb=1
 		 $as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0" >>confdefs.h
 
-		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenCORE AMR-NB support is disabled... yes" >&5
-$as_echo "Checking if OpenCORE AMR-NB support is disabled... yes" >&6; }
+		 $as_echo "#define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC 0" >>confdefs.h
+
+		 { $as_echo "$as_me:${as_lineno-$LINENO}: result: Checking if OpenCORE AMR support is disabled... yes" >&5
+$as_echo "Checking if OpenCORE AMR support is disabled... yes" >&6; }
 	        fi
 
 else
 
-		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for OpenCORE AMR-NB installations.." >&5
-$as_echo "checking for OpenCORE AMR-NB installations.." >&6; }
-                if test "x$with_opencore_amrnb" != "xno" -a "x$with_opencore_amrnb" != "x"; then
-                    CFLAGS="$CFLAGS -I$with_opencore_amrnb/include"
-                    LDFLAGS="$LDFLAGS -L$with_opencore_amrnb/lib"
-                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using OpenCORE AMR-NB prefix... $with_opencore_amrnb" >&5
-$as_echo "Using OpenCORE AMR-NB prefix... $with_opencore_amrnb" >&6; }
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: result: checking for OpenCORE AMR installations.." >&5
+$as_echo "checking for OpenCORE AMR installations.." >&6; }
+                if test "x$with_opencore_amr" != "xno" -a "x$with_opencore_amr" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_opencore_amr/include"
+                    LDFLAGS="$LDFLAGS -L$with_opencore_amr/lib"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using OpenCORE AMR prefix... $with_opencore_amr" >&5
+$as_echo "Using OpenCORE AMR prefix... $with_opencore_amr" >&6; }
+                fi
+                if test "x$with_opencore_amrwbenc" != "xno" -a "x$with_opencore_amrwbenc" != "x"; then
+                    CFLAGS="$CFLAGS -I$with_opencore_amrwbenc/include"
+                    LDFLAGS="$LDFLAGS -L$with_opencore_amrwbenc/lib"
+                    { $as_echo "$as_me:${as_lineno-$LINENO}: result: Using OpenCORE AMRWB-enc prefix... $with_opencore_amrwbenc" >&5
+$as_echo "Using OpenCORE AMRWB-enc prefix... $with_opencore_amrwbenc" >&6; }
                 fi
 
 
@@ -7200,6 +7242,113 @@ $as_echo "OpenCORE AMR-NB library found, AMR-NB support enabled" >&6; }
 			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRNB_CODEC 0" >>confdefs.h
 
 		fi
+
+
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "vo-amrwbenc/enc_if.h" "ac_cv_header_vo_amrwbenc_enc_if_h" "$ac_includes_default"
+if test "x$ac_cv_header_vo_amrwbenc_enc_if_h" = xyes; then :
+  opencore_amrwb_enc_h_present=1
+fi
+
+
+		ac_fn_c_check_header_mongrel "$LINENO" "opencore-amrwb/dec_if.h" "ac_cv_header_opencore_amrwb_dec_if_h" "$ac_includes_default"
+if test "x$ac_cv_header_opencore_amrwb_dec_if_h" = xyes; then :
+  opencore_amrwb_dec_h_present=1
+fi
+
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for D_IF_init in -lopencore-amrwb" >&5
+$as_echo_n "checking for D_IF_init in -lopencore-amrwb... " >&6; }
+if ${ac_cv_lib_opencore_amrwb_D_IF_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lopencore-amrwb  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char D_IF_init ();
+int
+main ()
+{
+return D_IF_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_opencore_amrwb_D_IF_init=yes
+else
+  ac_cv_lib_opencore_amrwb_D_IF_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_opencore_amrwb_D_IF_init" >&5
+$as_echo "$ac_cv_lib_opencore_amrwb_D_IF_init" >&6; }
+if test "x$ac_cv_lib_opencore_amrwb_D_IF_init" = xyes; then :
+  opencore_amrwb_dec_present=1 && LIBS="$LIBS -lopencore-amrwb"
+fi
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for E_IF_init in -lvo-amrwbenc" >&5
+$as_echo_n "checking for E_IF_init in -lvo-amrwbenc... " >&6; }
+if ${ac_cv_lib_vo_amrwbenc_E_IF_init+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lvo-amrwbenc  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+/* Override any GCC internal prototype to avoid an error.
+   Use char because int might match the return type of a GCC
+   builtin and then its argument prototype would still apply.  */
+#ifdef __cplusplus
+extern "C"
+#endif
+char E_IF_init ();
+int
+main ()
+{
+return E_IF_init ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_c_try_link "$LINENO"; then :
+  ac_cv_lib_vo_amrwbenc_E_IF_init=yes
+else
+  ac_cv_lib_vo_amrwbenc_E_IF_init=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_vo_amrwbenc_E_IF_init" >&5
+$as_echo "$ac_cv_lib_vo_amrwbenc_E_IF_init" >&6; }
+if test "x$ac_cv_lib_vo_amrwbenc_E_IF_init" = xyes; then :
+  opencore_amrwb_enc_present=1 && LIBS="$LIBS -lvo-amrwbenc"
+fi
+
+		if test "x$opencore_amrwb_enc_h_present" = "x1" -a "x$opencore_amrwb_dec_h_present" = "x1" -a "x$opencore_amrwb_enc_present" = "x1" -a "x$opencore_amrwb_dec_present" = "x1"; then
+	        	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: OpenCORE AMR-WB library found, AMR-WB support enabled" >&5
+$as_echo "OpenCORE AMR-WB library found, AMR-WB support enabled" >&6; }
+	        	$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC 1" >>confdefs.h
+
+		else
+			ac_no_opencore_amrwb=1
+			$as_echo "#define PJMEDIA_HAS_OPENCORE_AMRWB_CODEC 0" >>confdefs.h
+
+		fi
+
 
 fi
 
