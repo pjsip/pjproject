@@ -180,7 +180,8 @@ struct pj_dns_resolver
     unsigned char	 udp_rx_pkt[UDPSZ];/**< UDP receive buffer.	    */
     unsigned char	 udp_tx_pkt[UDPSZ];/**< UDP receive buffer.	    */
     pj_ssize_t		 udp_len;	/**< Length of received packet.	    */
-    pj_ioqueue_op_key_t	 udp_op_key;	/**< UDP read operation key.	    */
+    pj_ioqueue_op_key_t	 udp_op_rx_key;	/**< UDP read operation key.	    */
+    pj_ioqueue_op_key_t	 udp_op_tx_key;	/**< UDP write operation key.	    */
     pj_sockaddr_in	 udp_src_addr;	/**< Source address of packet	    */
     int			 udp_addr_len;	/**< Source address length.	    */
 
@@ -263,12 +264,13 @@ static pj_status_t init_sock(pj_dns_resolver *resv)
     if (status != PJ_SUCCESS)
 	return status;
 
-    pj_ioqueue_op_key_init(&resv->udp_op_key, sizeof(resv->udp_op_key));
+    pj_ioqueue_op_key_init(&resv->udp_op_rx_key, sizeof(resv->udp_op_rx_key));
+    pj_ioqueue_op_key_init(&resv->udp_op_tx_key, sizeof(resv->udp_op_tx_key));
 
     /* Start asynchronous read to the UDP socket */
     resv->udp_len = sizeof(resv->udp_rx_pkt);
     resv->udp_addr_len = sizeof(resv->udp_src_addr);
-    status = pj_ioqueue_recvfrom(resv->udp_key, &resv->udp_op_key,
+    status = pj_ioqueue_recvfrom(resv->udp_key, &resv->udp_op_rx_key,
 				 resv->udp_rx_pkt, &resv->udp_len,
 				 PJ_IOQUEUE_ALWAYS_ASYNC,
 				 &resv->udp_src_addr, &resv->udp_addr_len);
@@ -583,15 +585,6 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
     pj_time_val delay;
     pj_status_t status;
 
-    /* Create DNS query packet */
-    pkt_size = sizeof(resolver->udp_tx_pkt);
-    name = pj_str(q->key.name);
-    status = pj_dns_make_query(resolver->udp_tx_pkt, &pkt_size, 
-			       q->id, q->key.qtype, &name);
-    if (status != PJ_SUCCESS) {
-	return status;
-    }
-
     /* Select which nameserver(s) to send requests to. */
     server_cnt = PJ_ARRAY_SIZE(servers);
     status = select_nameservers(resolver, &server_cnt, servers);
@@ -617,6 +610,28 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 	return status;
     }
 
+    /* Check if the socket is available for sending */
+    if (pj_ioqueue_is_pending(resolver->udp_key, &resolver->udp_op_tx_key)) {
+	++q->transmit_cnt;
+	PJ_LOG(4,(resolver->name.ptr,
+		  "Socket busy in transmitting DNS %s query for %s%s",
+		  pj_dns_get_type_name(q->key.qtype),
+		  q->key.name,
+		  (q->transmit_cnt < resolver->settings.qretr_count?
+		   ", will try again later":"")));
+	return PJ_SUCCESS;
+    }
+
+    /* Create DNS query packet */
+    pkt_size = sizeof(resolver->udp_tx_pkt);
+    name = pj_str(q->key.name);
+    status = pj_dns_make_query(resolver->udp_tx_pkt, &pkt_size,
+			       q->id, q->key.qtype, &name);
+    if (status != PJ_SUCCESS) {
+	pj_timer_heap_cancel(resolver->timer, &q->timer_entry);
+	return status;
+    }
+
     /* Get current time. */
     pj_gettimeofday(&now);
 
@@ -625,31 +640,11 @@ static pj_status_t transmit_query(pj_dns_resolver *resolver,
 	pj_ssize_t sent  = (pj_ssize_t) pkt_size;
 	struct nameserver *ns = &resolver->ns[servers[i]];
 
-	status = pj_sock_sendto(resolver->udp_sock, resolver->udp_tx_pkt,
-				&sent, 0, &resolver->ns[servers[i]].addr,
-				sizeof(pj_sockaddr_in));
-
-#if defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-	    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0
-	/* Re-init dead UDP sockets, see ticket #1107 & #1603.
-	 * Note: PJ_STATUS_FROM_OS(EPIPE) == PJ_ERRNO_START_SYS + 32.
-	 */
-	if (status == PJ_ERRNO_START_SYS + 32) {
-	    close_sock(resolver);
-	    status = init_sock(resolver);
-	    if (status != PJ_SUCCESS) {
-		PJ_PERROR(1,(THIS_FILE, status, "Error reinit UDP socket"));
-		return status;
-	    }
-
-	    PJ_LOG(3,(THIS_FILE, "UDP socket reinitialized."));
-
-	    /* Try to send again */
-	    status = pj_sock_sendto(resolver->udp_sock, resolver->udp_tx_pkt,
-				    &sent, 0, &resolver->ns[servers[i]].addr,
-				    sizeof(pj_sockaddr_in));
-	}
-#endif
+	status = pj_ioqueue_sendto(resolver->udp_key,
+				   &resolver->udp_op_tx_key,
+				   resolver->udp_tx_pkt, &sent, 0,
+				   &resolver->ns[servers[i]].addr,
+				   sizeof(pj_sockaddr_in));
 
 	PJ_PERROR(4,(resolver->name.ptr, status,
 		  "%s %d bytes to NS %d (%s:%d): DNS %s query for %s",
