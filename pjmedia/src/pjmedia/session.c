@@ -671,8 +671,10 @@ PJ_DEF(pj_status_t) pjmedia_session_create( pjmedia_endpt *endpt,
     pj_memcpy(session->stream_info, si->stream_info,
 	      si->stream_cnt * sizeof(pjmedia_stream_info));
 
-    /* Clone codec param */
+    /* Clone codec param and format info */
     for (i=0; i<(int)si->stream_cnt; ++i) {
+        pj_strdup(pool, &session->stream_info[i].fmt.encoding_name,
+                  &si->stream_info[i].fmt.encoding_name);
 	if (session->stream_info[i].param) {
 	    session->stream_info[i].param =
 		    pjmedia_codec_param_clone(pool, si->stream_info[i].param);

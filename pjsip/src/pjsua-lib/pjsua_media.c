@@ -1641,9 +1641,12 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
 	return PJ_TRUE;
     }
 
-    /* Compare codec param */
+    /* Compare codec param
+     * Disable checking of VAD setting since VAD setting can be overwritten
+     * by application setting in pjsua_media_cfg.
+     */
     if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
-	old_cp->setting.vad != new_cp->setting.vad ||
+	/* old_cp->setting.vad != new_cp->setting.vad || */
 	old_cp->setting.cng != new_cp->setting.cng ||
 	old_cp->setting.plc != new_cp->setting.plc ||
 	old_cp->setting.penh != new_cp->setting.penh ||
