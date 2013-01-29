@@ -589,20 +589,6 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
     /* Check if no media is active */
     if (si->dir != PJMEDIA_DIR_NONE) {
 
-	/* Override ptime, if this option is specified. */
-	if (pjsua_var.media_cfg.ptime != 0) {
-	    si->param->setting.frm_per_pkt = (pj_uint8_t)
-		(pjsua_var.media_cfg.ptime / si->param->info.frm_ptime);
-	    if (si->param->setting.frm_per_pkt == 0)
-		si->param->setting.frm_per_pkt = 1;
-	}
-
-	/* Disable VAD, if this option is specified. */
-	if (pjsua_var.media_cfg.no_vad) {
-	    si->param->setting.vad = 0;
-	}
-
-
 	/* Optionally, application may modify other stream settings here
 	 * (such as jitter buffer parameters, codec ptime, etc.)
 	 */
