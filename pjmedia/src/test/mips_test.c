@@ -953,8 +953,8 @@ static pjmedia_port* amrwb_encode_decode(pj_pool_t *pool,
                                          struct test_entry *te)
 {
     return codec_encode_decode(pool, "AMR/16000",
-			       &pjmedia_codec_opencore_amrwb_init,
-			       &pjmedia_codec_opencore_amrwb_deinit,
+			       &pjmedia_codec_opencore_amr_init_default,
+			       &pjmedia_codec_opencore_amr_deinit,
 			       clock_rate, channel_count,
 			       samples_per_frame, flags, te);
 }
@@ -2052,8 +2052,9 @@ static pjmedia_port* create_stream_amrwb( pj_pool_t *pool,
                                          unsigned flags,
                                          struct test_entry *te)
 {
-    return create_stream(pool, "AMR/16000", &pjmedia_codec_opencore_amrwb_init,
-			 &pjmedia_codec_opencore_amrwb_deinit,
+    return create_stream(pool, "AMR/16000",
+                         &pjmedia_codec_opencore_amr_init_default,
+			 &pjmedia_codec_opencore_amr_deinit,
 			 PJ_FALSE, PJ_FALSE, PJ_FALSE,
 			 clock_rate, channel_count,
 			 samples_per_frame, flags, te);

@@ -198,7 +198,8 @@ static const pj_uint16_t* amr_bitrates[2] =
 /*
  * Initialize and register AMR codec factory to pjmedia endpoint.
  */
-static pj_status_t amr_init( pjmedia_endpt *endpt )
+PJ_DEF(pj_status_t) pjmedia_codec_opencore_amr_init( pjmedia_endpt *endpt,
+                                                     unsigned options)
 {
     pjmedia_codec_mgr *codec_mgr;
     pj_str_t codec_name;
@@ -211,8 +212,18 @@ static pj_status_t amr_init( pjmedia_endpt *endpt )
     amr_codec_factory.base.op = &amr_factory_op;
     amr_codec_factory.base.factory_data = NULL;
     amr_codec_factory.endpt = endpt;
+#ifdef USE_AMRNB
+    amr_codec_factory.init[IDX_AMR_NB] = ((options & PJMEDIA_AMR_NO_NB) == 0);
+#else
+    amr_codec_factory.init[IDX_AMR_NB] = PJ_FALSE;
+#endif
+#ifdef USE_AMRWB
+    amr_codec_factory.init[IDX_AMR_WB] = ((options & PJMEDIA_AMR_NO_WB) == 0);
+#else
+    amr_codec_factory.init[IDX_AMR_WB] = PJ_FALSE;
+#endif
 
-    amr_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "amr", 1000, 
+    amr_codec_factory.pool = pjmedia_endpt_create_pool(endpt, "amr", 1000,
 						       1000);
     if (!amr_codec_factory.pool)
 	return PJ_ENOMEM;
@@ -247,18 +258,15 @@ on_error:
     return status;
 }
 
-PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrnb_init( pjmedia_endpt *endpt )
+PJ_DEF(pj_status_t)
+pjmedia_codec_opencore_amr_init_default( pjmedia_endpt *endpt )
 {
-    amr_codec_factory.init[IDX_AMR_NB] = PJ_TRUE;
-    
-    return amr_init(endpt);
+    return pjmedia_codec_opencore_amr_init(endpt, 0);
 }
 
-PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrwb_init( pjmedia_endpt *endpt )
+PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrnb_init( pjmedia_endpt *endpt )
 {
-    amr_codec_factory.init[IDX_AMR_WB] = PJ_TRUE;
-    
-    return amr_init(endpt);    
+    return pjmedia_codec_opencore_amr_init(endpt, PJMEDIA_AMR_NO_WB);
 }
 
 
@@ -266,16 +274,13 @@ PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrwb_init( pjmedia_endpt *endpt )
  * Unregister AMR codec factory from pjmedia endpoint and deinitialize
  * the AMR codec library.
  */
-static pj_status_t amr_deinit(void)
+PJ_DEF(pj_status_t) pjmedia_codec_opencore_amr_deinit(void)
 {
     pjmedia_codec_mgr *codec_mgr;
     pj_status_t status;
 
-    if (amr_codec_factory.init[IDX_AMR_NB] ||
-        amr_codec_factory.init[IDX_AMR_WB])
-    {
-        return PJ_SUCCESS;
-    }
+    amr_codec_factory.init[IDX_AMR_NB] = PJ_FALSE;
+    amr_codec_factory.init[IDX_AMR_WB] = PJ_FALSE;
     
     if (amr_codec_factory.pool == NULL)
 	return PJ_SUCCESS;
@@ -301,16 +306,16 @@ static pj_status_t amr_deinit(void)
 
 PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrnb_deinit(void)
 {
-    amr_codec_factory.init[IDX_AMR_NB] = PJ_FALSE;
+    if (amr_codec_factory.init[IDX_AMR_NB] &&
+        amr_codec_factory.init[IDX_AMR_WB])
+    {
+        PJ_LOG(4, (THIS_FILE, "Should call "
+                              "pjmedia_codec_opencore_amr_deinit() instead"));
+        
+        return PJ_EINVALIDOP;
+    }
     
-    return amr_deinit();
-}
-
-PJ_DEF(pj_status_t) pjmedia_codec_opencore_amrwb_deinit(void)
-{
-    amr_codec_factory.init[IDX_AMR_WB] = PJ_FALSE;
-    
-    return amr_deinit();
+    return pjmedia_codec_opencore_amr_deinit();
 }
 
 static pj_status_t
@@ -447,7 +452,7 @@ static pj_status_t amr_enum_codecs( pjmedia_codec_factory *factory,
         (*count)++;
     }
     
-    if (amr_codec_factory.init[IDX_AMR_NB]) {
+    if (amr_codec_factory.init[IDX_AMR_WB]) {
         pj_bzero(&codecs[*count], sizeof(pjmedia_codec_info));
         codecs[*count].encoding_name = pj_str("AMR-WB");
         codecs[*count].pt = PJMEDIA_RTP_PT_AMRWB;

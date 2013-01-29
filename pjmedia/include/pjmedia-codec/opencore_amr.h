@@ -32,6 +32,15 @@
 PJ_BEGIN_DECL
 
 /**
+ * Bitmask options to be passed during AMR codec factory initialization.
+ */
+enum pjmedia_amr_options
+{
+    PJMEDIA_AMR_NO_NB	    = 1,    /**< Disable narrowband mode.	*/
+    PJMEDIA_AMR_NO_WB	    = 2,    /**< Disable wideband mode.		*/
+};
+
+/**
  * Settings. Use #pjmedia_codec_opencore_amrnb/wb_set_config() to
  * activate.
  */
@@ -53,7 +62,42 @@ typedef pjmedia_codec_amr_config pjmedia_codec_amrnb_config;
 typedef pjmedia_codec_amr_config pjmedia_codec_amrwb_config;
 
 /**
- * Initialize and register AMR-NB codec factory to pjmedia endpoint.
+ * Initialize and register AMR codec factory to pjmedia endpoint.
+ *
+ * @param endpt     The pjmedia endpoint.
+ * @param options   Bitmask of pjmedia_amr_options (default=0).
+ *
+ * @return          PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_opencore_amr_init(pjmedia_endpt* endpt,
+                                                     unsigned options);
+
+/**
+ * Initialize and register AMR codec factory using default settings to
+ * pjmedia endpoint.
+ *
+ * @param endpt The pjmedia endpoint.
+ *
+ * @return	PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t)
+pjmedia_codec_opencore_amr_init_default(pjmedia_endpt* endpt);
+
+/**
+ * Unregister AMR codec factory from pjmedia endpoint and deinitialize
+ * the OpenCORE codec library.
+ *
+ * @return	PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_codec_opencore_amr_deinit(void);
+
+/**
+ * Initialize and register AMR-NB codec factory to pjmedia endpoint. Calling
+ * this function will automatically initialize AMR codec factory without
+ * the wideband mode (i.e. it is equivalent to calling
+ * #pjmedia_codec_opencore_amr_init() with PJMEDIA_AMR_NO_WB). Application
+ * should call #pjmedia_codec_opencore_amr_init() instead if wishing to use
+ * both modes.
  *
  * @param endpt	The pjmedia endpoint.
  *
@@ -79,23 +123,6 @@ PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_deinit(void);
  */
 PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrnb_set_config(
 				const pjmedia_codec_amrnb_config* cfg);
-
-/**
- * Initialize and register AMR-WB codec factory to pjmedia endpoint.
- *
- * @param endpt	The pjmedia endpoint.
- *
- * @return	PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrwb_init(pjmedia_endpt* endpt);
-
-/**
- * Unregister AMR-WB codec factory from pjmedia endpoint and deinitialize
- * the OpenCORE codec library.
- *
- * @return	PJ_SUCCESS on success.
- */
-PJ_DECL(pj_status_t) pjmedia_codec_opencore_amrwb_deinit(void);
 
 
 /**
