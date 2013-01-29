@@ -1646,7 +1646,7 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
      * by application setting in pjsua_media_cfg.
      */
     if (old_cp->setting.frm_per_pkt != new_cp->setting.frm_per_pkt ||
-	/* old_cp->setting.vad != new_cp->setting.vad || */
+	old_cp->setting.vad != new_cp->setting.vad ||
 	old_cp->setting.cng != new_cp->setting.cng ||
 	old_cp->setting.plc != new_cp->setting.plc ||
 	old_cp->setting.penh != new_cp->setting.penh ||
@@ -1741,6 +1741,19 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Override ptime, if this option is specified. */
+    if (pjsua_var.media_cfg.ptime != 0) {
+	si->param->setting.frm_per_pkt = (pj_uint8_t)
+	    (pjsua_var.media_cfg.ptime / si->param->info.frm_ptime);
+	if (si->param->setting.frm_per_pkt == 0)
+            si->param->setting.frm_per_pkt = 1;
+    }
+
+    /* Disable VAD, if this option is specified. */
+    if (pjsua_var.media_cfg.no_vad) {
+        si->param->setting.vad = 0;
+    }
+
     /* Get audio index from the negotiated SDP */
     audio_idx = find_audio_index(local_sdp, PJ_TRUE);
 
@@ -1831,19 +1844,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		    break;
 		}
 	    }
-	}
-
-	/* Override ptime, if this option is specified. */
-	if (pjsua_var.media_cfg.ptime != 0) {
-	    si->param->setting.frm_per_pkt = (pj_uint8_t)
-		(pjsua_var.media_cfg.ptime / si->param->info.frm_ptime);
-	    if (si->param->setting.frm_per_pkt == 0)
-		si->param->setting.frm_per_pkt = 1;
-	}
-
-	/* Disable VAD, if this option is specified. */
-	if (pjsua_var.media_cfg.no_vad) {
-	    si->param->setting.vad = 0;
 	}
 
 
