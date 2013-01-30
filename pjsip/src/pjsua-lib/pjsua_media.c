@@ -1709,6 +1709,104 @@ static void dtmf_callback(pjmedia_stream *strm, void *user_data,
 }
 
 
+static pj_status_t audio_channel_update(pjsua_call_id call_id,
+					int prev_media_st,
+					pjmedia_session_info *sess_info,
+					const pjmedia_sdp_session *local_sdp,
+					const pjmedia_sdp_session *remote_sdp)
+{
+    pjsua_call *call = &pjsua_var.calls[call_id];
+    pjmedia_stream_info *si = &sess_info->stream_info[0];
+    pjmedia_port *media_port;
+    pj_status_t status;
+    
+    /* Optionally, application may modify other stream settings here
+     * (such as jitter buffer parameters, codec ptime, etc.)
+     */
+    si->jb_init = pjsua_var.media_cfg.jb_init;
+    si->jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
+    si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
+    si->jb_max = pjsua_var.media_cfg.jb_max;
+    
+    /* Set SSRC */
+    si->ssrc = call->ssrc;
+    
+    /* Set RTP timestamp & sequence, normally these value are intialized
+     * automatically when stream session created, but for some cases (e.g:
+     * call reinvite, call update) timestamp and sequence need to be kept
+     * contigue.
+     */
+    si->rtp_ts = call->rtp_tx_ts;
+    si->rtp_seq = call->rtp_tx_seq;
+    si->rtp_seq_ts_set = call->rtp_tx_seq_ts_set;
+    
+    #if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
+    /* Enable/disable stream keep-alive and NAT hole punch. */
+    si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;
+    #endif
+    
+    /* Create session based on session info. */
+    status = pjmedia_session_create( pjsua_var.med_endpt, sess_info,
+				     &call->med_tp,
+				     call, &call->session );
+    if (status != PJ_SUCCESS) {
+	return status;
+    }
+    
+    if (prev_media_st == PJSUA_CALL_MEDIA_NONE)
+	pjmedia_session_send_rtcp_sdes(call->session);
+    
+    /* If DTMF callback is installed by application, install our
+     * callback to the session.
+     */
+    if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
+	pjmedia_session_set_dtmf_callback(call->session, 0, 
+					  &dtmf_callback, 
+					  (void*)(long)(call->index));
+    }
+    
+    /* Get the port interface of the first stream in the session.
+     * We need the port interface to add to the conference bridge.
+     */
+    pjmedia_session_get_port(call->session, 0, &media_port);
+    
+    /* Notify application about stream creation.
+     * Note: application may modify media_port to point to different
+     * media port
+     */
+    if (pjsua_var.ua_cfg.cb.on_stream_created) {
+	pjsua_var.ua_cfg.cb.on_stream_created(call_id, call->session,
+					      0, &media_port);
+    }
+    
+    /*
+     * Add the call to conference bridge.
+     */
+    {
+	char tmp[PJSIP_MAX_URL_SIZE];
+	pj_str_t port_name;
+    
+	port_name.ptr = tmp;
+	port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
+					 call->inv->dlg->remote.info->uri,
+					 tmp, sizeof(tmp));
+	if (port_name.slen < 1) {
+	    port_name = pj_str("call");
+	}
+	status = pjmedia_conf_add_port( pjsua_var.mconf, 
+					call->inv->pool,
+					media_port, 
+					&port_name,
+					(unsigned*)&call->conf_slot);
+	if (status != PJ_SUCCESS) {
+	    return status;
+	}
+    }
+    
+    return PJ_SUCCESS;
+}
+
+
 /* Internal function: update media channel after SDP negotiation.
  * Warning: do not use temporary/flip-flop pool, e.g: inv->pool_prov,
  *          for creating stream, etc, as after SDP negotiation and when
@@ -1720,12 +1818,12 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 				       const pjmedia_sdp_session *remote_sdp)
 {
     unsigned i;
-    int prev_media_st = 0;
+    int prev_media_st;
     pjsua_call *call = &pjsua_var.calls[call_id];
     pjmedia_session_info sess_info;
     pjmedia_stream_info *si = NULL;
-    pjmedia_port *media_port;
     pj_status_t status;
+    pj_bool_t media_changed = PJ_FALSE;
     int audio_idx;
 
     if (!pjsua_var.med_endpt) {
@@ -1757,18 +1855,22 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     /* Get audio index from the negotiated SDP */
     audio_idx = find_audio_index(local_sdp, PJ_TRUE);
 
+    /* Get previous media status */
+    prev_media_st = call->media_st;
+    
     /* Check if media has just been changed. */
-    if (!pjsua_var.media_cfg.no_smart_media_update &&
-	!is_media_changed(call, audio_idx, &sess_info))
+    if (pjsua_var.media_cfg.no_smart_media_update ||
+	is_media_changed(call, audio_idx, &sess_info))
     {
+	media_changed = PJ_TRUE;
+
+	/* Destroy existing media session, if any. */
+	stop_media_session(call->index);
+    } else {
 	PJ_LOG(4,(THIS_FILE, "Media session for call %d is unchanged",
 			     call_id));
-	return PJ_SUCCESS;
     }
 
-    /* Destroy existing media session, if any. */
-    prev_media_st = call->media_st;
-    stop_media_session(call->index);
 
     for (i = 0; i < sess_info.stream_cnt; ++i) {
         sess_info.stream_info[i].rtcp_sdes_bye_disabled = PJ_TRUE;
@@ -1846,88 +1948,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 	}
 
-
-	/* Optionally, application may modify other stream settings here
-	 * (such as jitter buffer parameters, codec ptime, etc.)
-	 */
-	si->jb_init = pjsua_var.media_cfg.jb_init;
-	si->jb_min_pre = pjsua_var.media_cfg.jb_min_pre;
-	si->jb_max_pre = pjsua_var.media_cfg.jb_max_pre;
-	si->jb_max = pjsua_var.media_cfg.jb_max;
-
-	/* Set SSRC */
-	si->ssrc = call->ssrc;
-
-	/* Set RTP timestamp & sequence, normally these value are intialized
-	 * automatically when stream session created, but for some cases (e.g:
-	 * call reinvite, call update) timestamp and sequence need to be kept
-	 * contigue.
-	 */
-	si->rtp_ts = call->rtp_tx_ts;
-	si->rtp_seq = call->rtp_tx_seq;
-	si->rtp_seq_ts_set = call->rtp_tx_seq_ts_set;
-
-#if defined(PJMEDIA_STREAM_ENABLE_KA) && PJMEDIA_STREAM_ENABLE_KA!=0
-	/* Enable/disable stream keep-alive and NAT hole punch. */
-	si->use_ka = pjsua_var.acc[call->acc_id].cfg.use_stream_ka;
-#endif
-
-	/* Create session based on session info. */
-	status = pjmedia_session_create( pjsua_var.med_endpt, &sess_info,
-					 &call->med_tp,
-					 call, &call->session );
-	if (status != PJ_SUCCESS) {
-	    return status;
-	}
-
-        if (prev_media_st == PJSUA_CALL_MEDIA_NONE)
-            pjmedia_session_send_rtcp_sdes(call->session);
-
-	/* If DTMF callback is installed by application, install our
-	 * callback to the session.
-	 */
-	if (pjsua_var.ua_cfg.cb.on_dtmf_digit) {
-	    pjmedia_session_set_dtmf_callback(call->session, 0, 
-					      &dtmf_callback, 
-					      (void*)(long)(call->index));
-	}
-
-	/* Get the port interface of the first stream in the session.
-	 * We need the port interface to add to the conference bridge.
-	 */
-	pjmedia_session_get_port(call->session, 0, &media_port);
-
-	/* Notify application about stream creation.
-	 * Note: application may modify media_port to point to different
-	 * media port
-	 */
-	if (pjsua_var.ua_cfg.cb.on_stream_created) {
-	    pjsua_var.ua_cfg.cb.on_stream_created(call_id, call->session,
-						  0, &media_port);
-	}
-
-	/*
-	 * Add the call to conference bridge.
-	 */
-	{
-	    char tmp[PJSIP_MAX_URL_SIZE];
-	    pj_str_t port_name;
-
-	    port_name.ptr = tmp;
-	    port_name.slen = pjsip_uri_print(PJSIP_URI_IN_REQ_URI,
-					     call->inv->dlg->remote.info->uri,
-					     tmp, sizeof(tmp));
-	    if (port_name.slen < 1) {
-		port_name = pj_str("call");
-	    }
-	    status = pjmedia_conf_add_port( pjsua_var.mconf, 
-					    call->inv->pool,
-					    media_port, 
-					    &port_name,
-					    (unsigned*)&call->conf_slot);
-	    if (status != PJ_SUCCESS) {
+	if (media_changed) {
+	    status = audio_channel_update(call_id, prev_media_st, &sess_info,
+					  local_sdp, remote_sdp);
+	    if (status != PJ_SUCCESS)
 		return status;
-	    }
 	}
 
 	/* Call media direction */
