@@ -771,7 +771,8 @@ static pj_status_t  silk_codec_parse( pjmedia_codec *codec,
     for (i = 0; i < count; i++) {
         frames[i].type = PJMEDIA_FRAME_TYPE_AUDIO;
         frames[i].bit_info = (((unsigned)ts->u64 & 0xFFFF) << 16) |
-                              (((unsigned)pkt & 0xFF) << 8) | i;
+                              (((unsigned)pkt & 0xFF) << 8) |
+                              (toc.framesInPacket << 4) | i;
         frames[i].buf = pkt;
         frames[i].size = pkt_size;
         frames[i].timestamp.u64 = ts->u64 + i * silk->samples_per_frame;
@@ -800,6 +801,15 @@ static pj_status_t silk_codec_decode(pjmedia_codec *codec,
     pkt_info = input->bit_info & 0xFFFFFF00;
     frm_info = input->bit_info & 0xF;
 
+    if (toc.framesInPacket == 0) {
+        /* In SILK ARM version, the table of content can indicate
+         * that the number of frames in the packet is 0.
+         * Try to get the number of frames in packet that we save
+         * in the frame instead.
+         */
+        toc.framesInPacket = (input->bit_info & 0xF0) >> 4;
+    }
+    
     if (toc.framesInPacket == 0) {
         output->size = 0;
     } else if (silk->pkt_info != pkt_info || input->bit_info == 0) {
