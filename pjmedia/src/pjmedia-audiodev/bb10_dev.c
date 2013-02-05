@@ -122,6 +122,7 @@ struct bb10_stream
     int                  quit;
 
     /* Playback */
+    unsigned int pb_ctrl_audio_manager_handle;
     snd_pcm_t		*pb_pcm;
     unsigned int pb_audio_manager_handle;
     unsigned long        pb_frames; 	/* samples_per_frame		*/
@@ -168,8 +169,6 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
 {
     pjmedia_aud_dev_info *adi;
     int pb_result, ca_result;
-    int card = -1;
-    int dev = 0;
     unsigned int handle;
     snd_pcm_t *pcm_handle;
 
@@ -183,17 +182,12 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
     if ((pb_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
                                                      &pcm_handle,
                                                      &handle,
-                                                     "/dev/snd/voicep",
+                                                     (char*)"voice",
                                                      SND_PCM_OPEN_PLAYBACK))
                                                      >= 0)
     {
-    	if ((pb_result = snd_pcm_plugin_set_disable (pcm_handle, PLUGIN_DISABLE_MMAP)) < 0) {
-            TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", pb_result));
-    	}else{
-            TRACE_((THIS_FILE, "Try to open the device for playback - success"));
-    	}
-	    snd_pcm_close (pcm_handle);
-	    audio_manager_free_handle(handle);
+	snd_pcm_close (pcm_handle);
+	audio_manager_free_handle(handle);
     } else {
         TRACE_((THIS_FILE, "Try to open the device for playback - failure"));
     }
@@ -201,17 +195,12 @@ static pj_status_t bb10_add_dev (struct bb10_factory *af)
     if ((ca_result = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
                                                      &pcm_handle,
                                                      &handle,
-                                                     "/dev/snd/voicec",
+                                                     (char*)"voice",
                                                      SND_PCM_OPEN_CAPTURE))
                                                      >= 0)
     {
-        if ((ca_result = snd_pcm_plugin_set_disable (pcm_handle, PLUGIN_DISABLE_MMAP)) < 0) {
-            TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", ca_result));
-        }else{
-            TRACE_((THIS_FILE, "Try to open the device for capture - success"));        
-        }
-        snd_pcm_close (pcm_handle);
-	    audio_manager_free_handle(handle);
+	snd_pcm_close (pcm_handle);
+	audio_manager_free_handle(handle);
 
     } else {
         TRACE_((THIS_FILE, "Try to open the device for capture - failure"));
@@ -396,9 +385,15 @@ static void close_play_pcm(struct bb10_stream *stream)
     if (stream != NULL && stream->pb_pcm != NULL) {
         snd_pcm_close(stream->pb_pcm);
         stream->pb_pcm = NULL;
-        if(stream->pb_audio_manager_handle != 0){
+
+        if (stream->pb_audio_manager_handle != 0) {
     	    audio_manager_free_handle(stream->pb_audio_manager_handle);
     	    stream->pb_audio_manager_handle = 0;
+        }
+
+        if (stream->pb_ctrl_audio_manager_handle != 0) {
+    	    audio_manager_free_handle(stream->pb_ctrl_audio_manager_handle);
+    	    stream->pb_ctrl_audio_manager_handle = 0;
         }
     }
 }
@@ -415,7 +410,8 @@ static void close_capture_pcm(struct bb10_stream *stream)
     if (stream != NULL && stream->ca_pcm != NULL) {
         snd_pcm_close(stream->ca_pcm);
         stream->ca_pcm = NULL;
-        if(stream->ca_audio_manager_handle != 0){
+
+        if (stream->ca_audio_manager_handle != 0) {
     	    audio_manager_free_handle(stream->ca_audio_manager_handle);
     	    stream->ca_audio_manager_handle = 0;
         }
@@ -457,7 +453,7 @@ static int pb_thread_func (void *arg)
     {
         close_play_pcm(stream);
         TRACE_((THIS_FILE, "pb_thread_func failed prepare = %d", result));
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     while (!stream->quit) {
@@ -470,6 +466,7 @@ static int pb_thread_func (void *arg)
         frame.timestamp.u64 = tstamp.u64;
         frame.bit_info = 0;
 
+        /* Read the audio from pjmedia */
         result = stream->pb_cb (user_data, &frame);
         if (result != PJ_SUCCESS || stream->quit)
             break;
@@ -480,28 +477,37 @@ static int pb_thread_func (void *arg)
         /* Write 640 to play unit */
         result = snd_pcm_plugin_write(stream->pb_pcm,buf,size);
         if (result != size || result < 0) {
-            snd_pcm_channel_status_t status;
+	    /* either the write to output device has failed or not the
+	     * full amount of bytes have been written. This usually happens
+	     * when audio routing is being changed by another thread
+	     * Use a status variable for reading the error
+	     */
+	    snd_pcm_channel_status_t status;
+            status.channel = SND_PCM_CHANNEL_PLAYBACK;
             if (snd_pcm_plugin_status (stream->pb_pcm, &status) < 0) {
-                PJ_LOG(4,(THIS_FILE,
+                /* Call has failed nothing we can do except log and
+                 * continue */
+            	PJ_LOG(4,(THIS_FILE,
                 	  "underrun: playback channel status error"));
-                continue;
-            }
-
-            if (status.status == SND_PCM_STATUS_READY ||
-        	status.status == SND_PCM_STATUS_UNDERRUN)
-            {
-                if (snd_pcm_plugin_prepare (stream->pb_pcm,
-                                            SND_PCM_CHANNEL_PLAYBACK) < 0)
-                {
-                    PJ_LOG(4,(THIS_FILE,
-                    	      "underrun: playback channel prepare error"));
-                    continue;
-                }
-            }
-
-            TRACE_((THIS_FILE, "pb_thread_func failed write = %d", result));
+            } else {
+            	/* The status of the error has been read
+            	 * RIM say these are expected so we can "re-prepare" the stream
+            	 */
+            	PJ_LOG(4,(THIS_FILE,"PLAY thread ERROR status = %d",
+            		  status.status));
+		if (status.status == SND_PCM_STATUS_READY ||
+		    status.status == SND_PCM_STATUS_UNDERRUN ||
+		    status.status == SND_PCM_STATUS_ERROR ) 
+		{
+		    if (snd_pcm_plugin_prepare (stream->pb_pcm,
+						SND_PCM_CHANNEL_PLAYBACK) < 0)
+		    {
+			PJ_LOG(4,(THIS_FILE,
+				  "underrun: playback channel prepare error"));
+		    }
+		}
+	    }
         }
-
 	tstamp.u64 += nframes;
     }
 
@@ -552,7 +558,7 @@ static int ca_thread_func (void *arg)
     {
         close_capture_pcm(stream);
         TRACE_((THIS_FILE, "ca_thread_func failed prepare = %d", result));
-	return PJ_SUCCESS;
+        return PJ_SUCCESS;
     }
 
     while (!stream->quit) {
@@ -560,30 +566,48 @@ static int ca_thread_func (void *arg)
 
         pj_bzero (buf, size);
 
+        /* read the input device */
         result = snd_pcm_plugin_read(stream->ca_pcm, buf,size);
         if(result <0 || result != size) {
+            /* We expect result to be size (640)
+             * It's not so we have to read the status error and "prepare"
+             * the channel. This usually happens when output audio routing
+             * has been changed by another thread.
+             * We won't "continue", instead just do what we can and leave
+             * the end of the loop to write what's in the buffer. Not entirely
+             * correct but saves a potential underrun in PJMEDIA
+             */
+            PJ_LOG (4,(THIS_FILE,
+        	       "snd_pcm_plugin_read ERROR read = %d required = %d",
+        	       result,size));
             snd_pcm_channel_status_t status;
-            if (snd_pcm_plugin_status (stream->ca_pcm, &status) < 0) {
-                PJ_LOG (4,(THIS_FILE, "overrun: capture channel status "
-                                      "error"));
-                continue;
-            }
-
-            if (status.status == SND_PCM_STATUS_READY ||
-        	status.status == SND_PCM_STATUS_OVERRUN) {
-                if (snd_pcm_plugin_prepare (stream->ca_pcm,
-                                            SND_PCM_CHANNEL_CAPTURE) < 0)
-                {
-                    PJ_LOG (4,(THIS_FILE, "overrun: capture channel prepare  "
-                                          "error"));
-                    continue;
-                }
+            status.channel = SND_PCM_CHANNEL_CAPTURE;
+            if ((result = snd_pcm_plugin_status (stream->ca_pcm, &status)) < 0)
+            {
+        	/* Should not fail but all we can do is continue */
+        	PJ_LOG(4,(THIS_FILE, "capture: snd_pcm_plugin_status ret = %d",
+        		  result));
+            } else {
+        	/* RIM say these are the errors that we should "prepare"
+        	 * after */
+        	if (status.status == SND_PCM_STATUS_READY ||
+        		status.status == SND_PCM_STATUS_OVERRUN ||
+        		status.status == SND_PCM_STATUS_ERROR)
+        	{
+        	    if (snd_pcm_plugin_prepare (stream->ca_pcm,
+        	                                SND_PCM_CHANNEL_CAPTURE) < 0)
+        	    {
+        		PJ_LOG (4,(THIS_FILE,
+        			   "overrun: capture channel prepare  error"));
+        	    }
+        	}
             }
         }
 
         if (stream->quit)
             break;
 
+        /* Write the capture audio data to PJMEDIA */
         frame.type = PJMEDIA_FRAME_TYPE_AUDIO;
         frame.buf = (void *) buf;
         frame.size = size;
@@ -604,12 +628,62 @@ static int ca_thread_func (void *arg)
     return PJ_SUCCESS;
 }
 
+/* Audio routing, speaker/headset */
+static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
+                                                 bool speaker)
+{
+    /* Although the play and capture have audio manager handles, audio routing
+     * requires a separate handle
+     */
+    int ret = PJ_SUCCESS;
+
+    if (stream->pb_ctrl_audio_manager_handle == 0) {
+	/* lazy init an audio manager handle */
+	ret = audio_manager_get_handle(AUDIO_TYPE_VIDEO_CHAT, 0, false,
+	                               &stream->pb_ctrl_audio_manager_handle);
+	if (ret != 0) {
+	    TRACE_((THIS_FILE, "audio_manager_get_handle ret = %d",ret));
+	    return PJMEDIA_EAUD_SYSERR;
+	}
+    }
+
+    /* Set for either speaker or earpiece */
+    if (speaker) {
+	ret = audio_manager_set_handle_type(
+		stream->pb_ctrl_audio_manager_handle,
+		AUDIO_TYPE_VIDEO_CHAT,
+		AUDIO_DEVICE_SPEAKER,
+		AUDIO_DEVICE_DEFAULT);
+    } else {
+	ret = audio_manager_set_handle_type(
+		stream->pb_ctrl_audio_manager_handle,
+		AUDIO_TYPE_VIDEO_CHAT,
+		AUDIO_DEVICE_HANDSET,
+		AUDIO_DEVICE_DEFAULT);
+    }
+
+    if (ret == 0) {
+	/* RIM recommend this call */
+	ret = audio_manager_set_handle_routing_conditions(
+		stream->pb_ctrl_audio_manager_handle,
+		SETTINGS_RESET_ON_DEVICE_CONNECTION);
+	if (ret != 0) {
+	    TRACE_((THIS_FILE,
+		    "audio_manager_set_handle_routing_conditions ret = %d",
+		    ret));
+	    return PJMEDIA_EAUD_SYSERR;
+	}
+    } else {
+	TRACE_((THIS_FILE, "audio_manager_set_handle_type ret = %d", ret));
+	return PJMEDIA_EAUD_SYSERR;
+    }
+
+    return PJ_SUCCESS;
+}
 
 static pj_status_t bb10_open_playback (struct bb10_stream *stream,
                                        const pjmedia_aud_param *param)
 {
-    int card = -1;
-    int dev = 0;
     int ret = 0;
     snd_pcm_channel_info_t pi;
     snd_pcm_channel_setup_t setup;
@@ -622,51 +696,54 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
         return PJMEDIA_EAUD_INVDEV;
     }
 
-    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
-                                               &stream->pb_pcm, &stream->pb_audio_manager_handle,
-                                               "/dev/snd/voicep",
-                                               SND_PCM_OPEN_PLAYBACK)) < 0)
+    /* Use the bb10 audio manager API to open as opposed to QNX core audio
+     * Echo cancellation built in
+     */
+    if ((ret = audio_manager_snd_pcm_open_name(
+	    AUDIO_TYPE_VIDEO_CHAT,
+            &stream->pb_pcm, &stream->pb_audio_manager_handle,
+            (char*)"voice",
+            SND_PCM_OPEN_PLAYBACK)) < 0)
     {
         TRACE_((THIS_FILE, "audio_manager_snd_pcm_open_name ret = %d", ret));
         return PJMEDIA_EAUD_SYSERR;
     }
-    ret = audio_manager_set_handle_type(stream->pb_audio_manager_handle, AUDIO_TYPE_VIDEO_CHAT, AUDIO_DEVICE_HANDSET , AUDIO_DEVICE_HANDSET);
-    if (ret==0) {
-          ret = audio_manager_set_handle_routing_conditions(stream->pb_audio_manager_handle, SETTINGS_RESET_ON_DEVICE_CONNECTION);
-          if(ret != 0){
-              TRACE_((THIS_FILE, "audio_manager_set_handle_routing_conditions ret = %d", ret));
-              return PJMEDIA_EAUD_SYSERR;
-          }
-    }else{
-    	TRACE_((THIS_FILE, "audio_manager_set_handle_type ret = %d", ret));
-        return PJMEDIA_EAUD_SYSERR;
+
+    /* Required call from January 2013 gold OS release */
+    if ((ret = snd_pcm_plugin_set_disable(stream->pb_pcm,
+                                          PLUGIN_DISABLE_MMAP)) < 0)
+    {
+	TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", ret));
+	return PJMEDIA_EAUD_SYSERR;
     }
 
-    if ((ret = snd_pcm_plugin_set_disable (stream->pb_pcm, PLUGIN_DISABLE_MMAP)) < 0) {
-    	TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", ret));
-        return PJMEDIA_EAUD_SYSERR;
+    /* Required call from January 2013 gold OS release */
+    if ((ret = snd_pcm_plugin_set_enable(stream->pb_pcm,
+                                         PLUGIN_ROUTING)) < 0)
+    {
+	TRACE_((THIS_FILE, "snd_pcm_plugin_set_enable ret = %d", ret));
+	return PJMEDIA_EAUD_SYSERR;
     }
+
     /* TODO PJ_ZERO */
     memset (&pi, 0, sizeof (pi));
     pi.channel = SND_PCM_CHANNEL_PLAYBACK;
     if ((ret = snd_pcm_plugin_info (stream->pb_pcm, &pi)) < 0) {
-        TRACE_((THIS_FILE, "snd_pcm_plugin_info ret = %d", ret));
-        return PJMEDIA_EAUD_SYSERR;
+	TRACE_((THIS_FILE, "snd_pcm_plugin_info ret = %d", ret));
+	return PJMEDIA_EAUD_SYSERR;
     }
 
     memset (&pp, 0, sizeof (pp));
 
-    /* Request VoIP compatible capabilities
-     * On simulator frag_size is always negotiated to 170
-     */
+    /* Request VoIP compatible capabilities */
     pp.mode = SND_PCM_MODE_BLOCK;
     pp.channel = SND_PCM_CHANNEL_PLAYBACK;
     pp.start_mode = SND_PCM_START_DATA;
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
     /* HARD CODE for the time being PJMEDIA expects 640 for 16khz */
     pp.buf.block.frag_size = PREFERRED_FRAME_SIZE*2;
-    /* Increasing this internal buffer count delays write failure in the loop */
-    pp.buf.block.frags_max = 4;
+    /* RIM recommends maximum of 3 */
+    pp.buf.block.frags_max = 3;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
     /* HARD CODE for the time being PJMEDIA expects 16khz */
@@ -714,7 +791,7 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
 
     TRACE_((THIS_FILE, "bb10_open_playback: pb_frames = %d clock = %d",
                        stream->pb_frames, param->clock_rate));
-
+    
     return PJ_SUCCESS;
 }
 
@@ -724,8 +801,6 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     int ret = 0;
     unsigned int rate;
     unsigned long tmp_buf_size;
-    int card = -1;
-    int dev = 0;
     int frame_size;
     snd_pcm_channel_info_t pi;
     snd_mixer_group_t group;
@@ -735,17 +810,27 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
 
-    if ((ret = audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
-                                               &stream->ca_pcm,
-                                               &stream->ca_audio_manager_handle,
-                                               "/dev/snd/voicec",
-                                               SND_PCM_OPEN_CAPTURE)) < 0)
+    if ((ret=audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
+                                             &stream->ca_pcm,
+                                             &stream->ca_audio_manager_handle,
+                                             (char*)"voice",
+                                             SND_PCM_OPEN_CAPTURE)) < 0)
     {
 	TRACE_((THIS_FILE, "audio_manager_snd_pcm_open_name ret = %d", ret));
 	return PJMEDIA_EAUD_SYSERR;
     }
-    if ((ret = snd_pcm_plugin_set_disable (stream->ca_pcm, PLUGIN_DISABLE_MMAP)) < 0) {
+    /* Required call from January 2013 gold OS release */
+    if ((ret = snd_pcm_plugin_set_disable (stream->ca_pcm,
+                                           PLUGIN_DISABLE_MMAP)) < 0)
+    {
         TRACE_(("snd_pcm_plugin_set_disable failed: %d",ret));
+        return PJMEDIA_EAUD_SYSERR;
+    }
+    /* Required call from January 2013 gold OS release */
+    if ((ret = snd_pcm_plugin_set_enable(stream->ca_pcm,
+                                         PLUGIN_ROUTING)) < 0)
+    {
+        TRACE_(("snd_pcm_plugin_set_enable failed: %d",ret));
         return PJMEDIA_EAUD_SYSERR;
     }
 
@@ -769,8 +854,8 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
     /* HARD CODE for the time being PJMEDIA expects 640 for 16khz */
     pp.buf.block.frag_size = PREFERRED_FRAME_SIZE*2;
-    /* Not applicable for capture hence -1 */
-    pp.buf.block.frags_max = -1;
+    /* From January 2013 gold OS release. RIM recommend these for capture */
+    pp.buf.block.frags_max = 1;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
     /* HARD CODE for the time being PJMEDIA expects 16khz */
@@ -802,10 +887,7 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     } else {
     }
 
-    /* frag_size should be 160 */
     frame_size = setup.buf.block.frag_size;
-
-    /* END BB10 init */
 
     /* Set clock rate */
     rate = param->clock_rate;
@@ -882,12 +964,24 @@ static pj_status_t bb10_factory_create_stream(pjmedia_aud_dev_factory *f,
         }
     }
 
+    /* Part of the play functionality but the RIM/Truphone loopback sample
+     * initialializes after the play and capture
+     * "false" is default/earpiece for output
+     */
+    status = bb10_initialize_playback_ctrl(stream,false);
+    if (status != PJ_SUCCESS) {
+    	return PJMEDIA_EAUD_SYSERR;
+    }
+
     *p_strm = &stream->base;
     return PJ_SUCCESS;
 }
 
 
-/* API: get running parameter */
+/* 
+ * API: get running parameter
+ * based on ALSA template
+ */
 static pj_status_t bb10_stream_get_param(pjmedia_aud_stream *s,
                                          pjmedia_aud_param *pi)
 {
@@ -901,7 +995,10 @@ static pj_status_t bb10_stream_get_param(pjmedia_aud_stream *s,
 }
 
 
-/* API: get capability */
+/*
+ * API: get capability
+ * based on ALSA template 
+*/
 static pj_status_t bb10_stream_get_cap(pjmedia_aud_stream *s,
                                        pjmedia_aud_dev_cap cap,
                                        void *pval)
@@ -916,28 +1013,51 @@ static pj_status_t bb10_stream_get_cap(pjmedia_aud_stream *s,
         /* Recording latency */
         *(unsigned*)pval = stream->param.input_latency_ms;
         return PJ_SUCCESS;
+
     } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY &&
                (stream->param.dir & PJMEDIA_DIR_PLAYBACK))
     {
         /* Playback latency */
         *(unsigned*)pval = stream->param.output_latency_ms;
         return PJ_SUCCESS;
+
     } else {
         return PJMEDIA_EAUD_INVCAP;
     }
 }
 
 
-/* API: set capability */
+/*
+ * API: set capability
+ * Currently just supporting toggle between speaker and earpiece
+ */
 static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
                                        pjmedia_aud_dev_cap cap,
                                        const void *value)
 {
-    PJ_UNUSED_ARG(strm);
-    PJ_UNUSED_ARG(cap);
-    PJ_UNUSED_ARG(value);
+    pj_status_t ret = PJ_SUCCESS;
+    struct bb10_stream *stream = (struct bb10_stream*)strm;
 
-    return PJMEDIA_EAUD_INVCAP;
+    if (cap != PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE || value == NULL) {
+        TRACE_((THIS_FILE,"bb10_stream_set_cap() = PJMEDIA_EAUD_INVCAP"));
+        return PJMEDIA_EAUD_INVCAP; 
+
+    } else {
+    	pjmedia_aud_dev_route route = *((pjmedia_aud_dev_route*)value);
+        /* Use the initialization function which lazy-inits the
+         * handle for routing
+         */
+    	if (route == PJMEDIA_AUD_DEV_ROUTE_LOUDSPEAKER) {
+            ret = bb10_initialize_playback_ctrl(stream,true);
+        } else {
+            ret = bb10_initialize_playback_ctrl(stream,false);        	
+        }
+    }
+
+    if (ret != PJ_SUCCESS) {
+        TRACE_((THIS_FILE,"bb10_stream_set_cap() = %d",ret));
+    }
+    return ret;
 }
 
 
