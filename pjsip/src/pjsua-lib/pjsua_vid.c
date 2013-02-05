@@ -2036,6 +2036,7 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 				const pjsua_call_vid_strm_op_param *param)
 {
     pjsua_call *call;
+    pjsip_dialog *dlg;
     pjsua_call_vid_strm_op_param param_;
     pj_status_t status;
 
@@ -2047,9 +2048,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 	      call_id, op));
     pj_log_push_indent();
 
-    PJSUA_LOCK();
-
-    call = &pjsua_var.calls[call_id];
+    status = acquire_call("pjsua_call_set_vid_strm()", call_id, &call, &dlg);
+    if (status != PJ_SUCCESS)
+	goto on_return;
 
     if (param) {
 	param_ = *param;
@@ -2104,9 +2105,9 @@ PJ_DEF(pj_status_t) pjsua_call_set_vid_strm (
 	break;
     }
 
-    PJSUA_UNLOCK();
+on_return:
+    if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
-
     return status;
 }
 
