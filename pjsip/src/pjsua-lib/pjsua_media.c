@@ -585,75 +585,6 @@ static void med_tp_timer_cb(void *user_data)
     }
 }
 
-static void med_tp_nego_timer_cb(void *user_data)
-{
-    pjsua_call *call;
-    unsigned med_idx = (unsigned)(((long)user_data) & 0xFFFF);
-    pjsua_call_media *call_med;
-    pjmedia_transport *tp;
-    pjmedia_transport_info tpinfo;
-    pjmedia_ice_transport_info *ii = NULL;
-    unsigned i;
-    pjsip_dialog *dlg = NULL;
-
-    if ((acquire_call("med_tp_nego_timer_cb", ((long)user_data) >> 16,
-	             &call, &dlg) != PJ_SUCCESS) ||
-        (med_idx >= call->med_cnt))
-    {
-        /* Call have been terminated or media has been removed */
-	return;
-    }
-
-    call_med = &call->media[med_idx];
-    tp = call_med->tp;
-
-    if (!tp)
-        return;
-
-    /* Send UPDATE if default transport address is different than
-     * what was advertised (ticket #881)
-     */
-
-    pjmedia_transport_info_init(&tpinfo);
-    pjmedia_transport_get_info(tp, &tpinfo);
-    for (i=0; i<tpinfo.specific_info_cnt; ++i) {
-        if (tpinfo.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
-	    ii = (pjmedia_ice_transport_info*)
-	    tpinfo.spc_info[i].buffer;
-	    break;
-	}
-    }
-
-    if (ii && ii->role==PJ_ICE_SESS_ROLE_CONTROLLING &&
-	pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
-		        &call_med->rtp_addr))
-    {
-        pj_bool_t use_update;
-	const pj_str_t STR_UPDATE = { "UPDATE", 6 };
-	pjsip_dialog_cap_status support_update;
-	pjsip_dialog *dlg;
-
-	dlg = call_med->call->inv->dlg;
-	support_update = pjsip_dlg_remote_has_cap(dlg, PJSIP_H_ALLOW,
-					          NULL, &STR_UPDATE);
-        use_update = (support_update == PJSIP_DIALOG_CAP_SUPPORTED);
-
-	PJ_LOG(4,(THIS_FILE, 
-                  "ICE default transport address has changed for "
-		  "call %d, sending %s",
-		  call_med->call->index,
-		  (use_update ? "UPDATE" : "re-INVITE")));
-
-        if (use_update)
-	    pjsua_call_update(call_med->call->index, 0, NULL);
-	else
-	    pjsua_call_reinvite(call_med->call->index, 0, NULL);
-    }
-
-    if (dlg)
-        pjsip_dlg_dec_lock(dlg);
-}
-
 
 /* This callback is called when ICE negotiation completes */
 static void on_ice_complete(pjmedia_transport *tp, 
@@ -661,34 +592,41 @@ static void on_ice_complete(pjmedia_transport *tp,
 			    pj_status_t result)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)tp->user_data;
+    pjsua_call *call;
 
     if (!call_med)
 	return;
 
+    call = call_med->call;
+    
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
         call_med->tp_result = result;
         pjsua_schedule_timer2(&med_tp_timer_cb, call_med, 1);
 	break;
     case PJ_ICE_STRANS_OP_NEGOTIATION:
-	if (result != PJ_SUCCESS) {
+	if (result == PJ_SUCCESS) {
+            /* Update RTP address */
+            pjmedia_transport_info tpinfo;
+            pjmedia_transport_info_init(&tpinfo);
+            pjmedia_transport_get_info(call_med->tp, &tpinfo);
+            pj_sockaddr_cp(&call_med->rtp_addr, &tpinfo.sock_info.rtp_addr_name);
+        } else {
 	    call_med->state = PJSUA_CALL_MEDIA_ERROR;
 	    call_med->dir = PJMEDIA_DIR_NONE;
-
-	    if (call_med->call && pjsua_var.ua_cfg.cb.on_call_media_state) {
-		pjsua_var.ua_cfg.cb.on_call_media_state(call_med->call->index);
+	    if (call && pjsua_var.ua_cfg.cb.on_call_media_state) {
+		pjsua_var.ua_cfg.cb.on_call_media_state(call->index);
 	    }
-	} else if (call_med->call) {
-            void *data = (void*)(long)( (call_med->call->index<<16) |
-                                        (call_med->idx & 0xFFFF) );
-            pjsua_schedule_timer2(&med_tp_nego_timer_cb, data, 1);
         }
+	/* Check if default ICE transport address is changed */
+        call->reinv_ice_sent = PJ_FALSE;
+	pjsua_call_schedule_reinvite_check(call, 0);
 	break;
     case PJ_ICE_STRANS_OP_KEEP_ALIVE:
 	if (result != PJ_SUCCESS) {
 	    PJ_PERROR(4,(THIS_FILE, result,
 		         "ICE keep alive failure for transport %d:%d",
-		         call_med->call->index, call_med->idx));
+		         call->index, call_med->idx));
 	}
         if (pjsua_var.ua_cfg.cb.on_call_media_transport_state) {
             pjsua_med_tp_state_info info;
@@ -699,10 +637,10 @@ static void on_ice_complete(pjmedia_transport *tp,
             info.status = result;
             info.ext_info = &op;
 	    (*pjsua_var.ua_cfg.cb.on_call_media_transport_state)(
-                call_med->call->index, &info);
+                call->index, &info);
         }
 	if (pjsua_var.ua_cfg.cb.on_ice_transport_error) {
-	    pjsua_call_id id = call_med->call->index;
+	    pjsua_call_id id = call->index;
 	    (*pjsua_var.ua_cfg.cb.on_ice_transport_error)(id, op, result,
 							  NULL);
 	}
@@ -855,7 +793,7 @@ static pj_status_t create_ice_media_transport(
 
     pjmedia_transport_simulate_lost(call_med->tp, PJMEDIA_DIR_DECODING,
 				    pjsua_var.media_cfg.rx_drop_pct);
-
+    
     return PJ_SUCCESS;
 
 on_error:
@@ -1339,7 +1277,7 @@ pj_status_t pjsua_call_media_init(pjsua_call_media *call_med,
 	         */
                 call_med->med_create_cb = &call_media_init_cb;
                 call_med->med_init_cb = cb;
-
+                
 	        return PJ_EPENDING;
 	    }
 	} else {

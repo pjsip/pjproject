@@ -211,6 +211,7 @@ PJ_DEF(void) pjsua_ice_config_from_media_config( pj_pool_t *pool,
     dst->ice_max_host_cands = src->ice_max_host_cands;
     dst->ice_opt = src->ice_opt;
     dst->ice_no_rtcp = src->ice_no_rtcp;
+    dst->ice_always_update = src->ice_always_update;
 }
 
 PJ_DEF(void) pjsua_ice_config_dup( pj_pool_t *pool,
@@ -324,6 +325,7 @@ PJ_DEF(void) pjsua_media_config_default(pjsua_media_config *cfg)
     cfg->snd_auto_close_time = 1;
 
     cfg->ice_max_host_cands = -1;
+    cfg->ice_always_update = PJ_TRUE;
     pj_ice_sess_options_default(&cfg->ice_opt);
 
     cfg->turn_conn_type = PJ_TURN_TP_UDP;

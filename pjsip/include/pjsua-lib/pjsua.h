@@ -2656,6 +2656,16 @@ typedef struct pjsua_ice_config
      */
     pj_bool_t		ice_no_rtcp;
 
+    /**
+     * Send re-INVITE/UPDATE every after ICE connectivity check regardless
+     * the default ICE transport address is changed or not. When this is set
+     * to PJ_FALSE, re-INVITE/UPDATE will be sent only when the default ICE
+     * transport address is changed.
+     *
+     * Default: yes
+     */
+    pj_bool_t		ice_always_update;
+
 } pjsua_ice_config;
 
 /**
@@ -5549,6 +5559,16 @@ struct pjsua_media_config
      * Default: no
      */
     pj_bool_t		ice_no_rtcp;
+
+    /**
+     * Send re-INVITE/UPDATE every after ICE connectivity check regardless
+     * the default ICE transport address is changed or not. When this is set
+     * to PJ_FALSE, re-INVITE/UPDATE will be sent only when the default ICE
+     * transport address is changed.
+     *
+     * Default: yes
+     */
+    pj_bool_t		ice_always_update;
 
     /**
      * Enable TURN relay candidate in ICE.
