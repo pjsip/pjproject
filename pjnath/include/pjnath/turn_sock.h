@@ -141,6 +141,23 @@ typedef struct pj_turn_sock_cfg
      */
     pj_bool_t qos_ignore_error;
 
+    /**
+     * Specify the interface where the socket should be bound to. If the
+     * address is zero, socket will be bound to INADDR_ANY. If the address
+     * is non-zero, socket will be bound to this address only. If the port is
+     * set to zero, the socket will bind at any port (chosen by the OS).
+     */
+    pj_sockaddr bound_addr;
+
+    /**
+     * Specify the port range for TURN socket binding, relative to the start
+     * port number specified in \a bound_addr. Note that this setting is only
+     * applicable when the start port number is non zero.
+     *
+     * Default value is zero.
+     */
+    pj_uint16_t	port_range;
+
 } pj_turn_sock_cfg;
 
 

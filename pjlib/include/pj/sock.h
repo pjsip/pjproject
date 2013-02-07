@@ -1166,6 +1166,24 @@ PJ_DECL(pj_status_t) pj_sock_bind_in( pj_sock_t sockfd,
 				      pj_uint32_t addr,
 				      pj_uint16_t port);
 
+/**
+ * Bind the IP socket sockfd to the given address and a random port in the
+ * specified range.
+ *
+ * @param sockfd    	The socket desriptor.
+ * @param addr      	The local address and port to bind the socket to.
+ * @param port_range	The port range, relative the to start port number
+ * 			specified in port field in #addr. Note that if the
+ * 			port is zero, this param will be ignored.
+ * @param max_try   	Maximum retries.
+ *
+ * @return	    	Zero on success.
+ */
+PJ_DECL(pj_status_t) pj_sock_bind_random( pj_sock_t sockfd,
+				          const pj_sockaddr_t *addr,
+				          pj_uint16_t port_range,
+				          pj_uint16_t max_try);
+
 #if PJ_HAS_TCP
 /**
  * Listen for incoming connection. This function only applies to connection

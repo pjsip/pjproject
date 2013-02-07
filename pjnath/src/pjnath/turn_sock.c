@@ -32,6 +32,10 @@ enum
     TIMER_DESTROY
 };
 
+
+enum { MAX_BIND_RETRY = 100 };
+
+
 #define INIT	0x1FFFFFFF
 
 struct pj_turn_sock
@@ -101,6 +105,7 @@ PJ_DEF(void) pj_turn_sock_cfg_default(pj_turn_sock_cfg *cfg)
     cfg->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     cfg->qos_ignore_error = PJ_TRUE;
 }
+
 
 /*
  * Create.
@@ -725,6 +730,8 @@ static void turn_on_state(pj_turn_session *sess,
 	int sock_type;
 	pj_sock_t sock;
 	pj_activesock_cb asock_cb;
+	pj_sockaddr bound_addr, *cfg_bind_addr;
+	pj_uint16_t max_bind_retry;
 
 	/* Close existing connection, if any. This happens when
 	 * we're switching to alternate TURN server when either TCP
@@ -750,7 +757,29 @@ static void turn_on_state(pj_turn_session *sess,
 	    return;
 	}
 
-        /* Apply QoS, if specified */
+	/* Bind socket */
+	cfg_bind_addr = &turn_sock->setting.bound_addr;
+	max_bind_retry = MAX_BIND_RETRY;
+	if (turn_sock->setting.port_range &&
+	    turn_sock->setting.port_range < max_bind_retry)
+	{
+	    max_bind_retry = turn_sock->setting.port_range;
+	}
+	pj_sockaddr_init(turn_sock->af, &bound_addr, NULL, 0);
+	if (cfg_bind_addr->addr.sa_family == pj_AF_INET() || 
+	    cfg_bind_addr->addr.sa_family == pj_AF_INET6())
+	{
+	    pj_sockaddr_cp(&bound_addr, cfg_bind_addr);
+	}
+	status = pj_sock_bind_random(sock, &bound_addr,
+				     turn_sock->setting.port_range,
+				     max_bind_retry);
+	if (status != PJ_SUCCESS) {
+	    pj_turn_sock_destroy(turn_sock);
+	    return;
+	}
+
+	/* Apply QoS, if specified */
 	status = pj_sock_apply_qos2(sock, turn_sock->setting.qos_type,
 				    &turn_sock->setting.qos_params, 
 				    (turn_sock->setting.qos_ignore_error?2:1),

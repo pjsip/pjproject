@@ -238,9 +238,19 @@ typedef struct pj_stun_sock_cfg
      * address is zero, socket will be bound to INADDR_ANY. If the address
      * is non-zero, socket will be bound to this address only, and the
      * transport will have only one address alias (the \a alias_cnt field
-     * in #pj_stun_sock_info structure.
+     * in #pj_stun_sock_info structure. If the port is set to zero, the
+     * socket will bind at any port (chosen by the OS).
      */
     pj_sockaddr bound_addr;
+
+    /**
+     * Specify the port range for STUN socket binding, relative to the start
+     * port number specified in \a bound_addr. Note that this setting is only
+     * applicable when the start port number is non zero.
+     *
+     * Default value is zero.
+     */
+    pj_uint16_t	port_range;
 
     /**
      * Specify the STUN keep-alive duration, in seconds. The STUN transport

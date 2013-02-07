@@ -32,6 +32,8 @@
 #include <pj/rand.h>
 
 
+enum { MAX_BIND_RETRY = 100 };
+
 struct pj_stun_sock
 {
     char		*obj_name;	/* Log identification	    */
@@ -162,7 +164,9 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
     pj_pool_t *pool;
     pj_stun_sock *stun_sock;
     pj_stun_sock_cfg default_cfg;
+    pj_sockaddr bound_addr;
     unsigned i;
+    pj_uint16_t max_bind_retry;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(stun_cfg && cb && p_stun_sock, PJ_EINVAL);
@@ -211,17 +215,17 @@ PJ_DEF(pj_status_t) pj_stun_sock_create( pj_stun_config *stun_cfg,
 	goto on_error;
 
     /* Bind socket */
-    if (pj_sockaddr_has_addr(&cfg->bound_addr)) {
-	status = pj_sock_bind(stun_sock->sock_fd, &cfg->bound_addr,
-			      pj_sockaddr_get_len(&cfg->bound_addr));
-    } else {
-	pj_sockaddr bound_addr;
-
-	pj_sockaddr_init(af, &bound_addr, NULL, 0);
-	status = pj_sock_bind(stun_sock->sock_fd, &bound_addr,
-			      pj_sockaddr_get_len(&bound_addr));
+    max_bind_retry = MAX_BIND_RETRY;
+    if (cfg->port_range && cfg->port_range < max_bind_retry)
+	max_bind_retry = cfg->port_range;
+    pj_sockaddr_init(af, &bound_addr, NULL, 0);
+    if (cfg->bound_addr.addr.sa_family == pj_AF_INET() || 
+	cfg->bound_addr.addr.sa_family == pj_AF_INET6())
+    {
+	pj_sockaddr_cp(&bound_addr, &cfg->bound_addr);
     }
-
+    status = pj_sock_bind_random(stun_sock->sock_fd, &bound_addr,
+				 cfg->port_range, max_bind_retry);
     if (status != PJ_SUCCESS)
 	goto on_error;
 

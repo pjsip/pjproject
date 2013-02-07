@@ -2153,6 +2153,15 @@ typedef struct pjsua_transport_config
     unsigned		port;
 
     /**
+     * Specify the port range for socket binding, relative to the start
+     * port number specified in \a port. Note that this setting is only
+     * applicable when the start port number is non zero.
+     *
+     * Default value is zero.
+     */
+    unsigned		port_range;
+
+    /**
      * Optional address to advertise as the address of this transport.
      * Application can specify any address or hostname for this field,
      * for example it can point to one of the interface address in the

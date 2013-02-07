@@ -718,6 +718,13 @@ static pj_status_t create_ice_media_transport(
     if (acc_cfg->ice_cfg.ice_max_host_cands >= 0)
 	ice_cfg.stun.max_host_cands = acc_cfg->ice_cfg.ice_max_host_cands;
 
+    /* Copy binding port setting to STUN setting */
+    pj_sockaddr_init(ice_cfg.af, &ice_cfg.stun.cfg.bound_addr,
+		     &cfg->bound_addr, cfg->port);
+    ice_cfg.stun.cfg.port_range = cfg->port_range;
+    if (cfg->port != 0 && ice_cfg.stun.cfg.port_range == 0)
+	ice_cfg.stun.cfg.port_range = pjsua_var.ua_cfg.max_calls * 10;
+
     /* Copy QoS setting to STUN setting */
     ice_cfg.stun.cfg.qos_type = cfg->qos_type;
     pj_memcpy(&ice_cfg.stun.cfg.qos_params, &cfg->qos_params,
@@ -743,6 +750,13 @@ static pj_status_t create_ice_media_transport(
 	ice_cfg.turn.cfg.qos_type = cfg->qos_type;
 	pj_memcpy(&ice_cfg.turn.cfg.qos_params, &cfg->qos_params,
 		  sizeof(cfg->qos_params));
+
+	/* Copy binding port setting to TURN setting */
+	pj_sockaddr_init(ice_cfg.af, &ice_cfg.turn.cfg.bound_addr,
+			 &cfg->bound_addr, cfg->port);
+	ice_cfg.turn.cfg.port_range = cfg->port_range;
+	if (cfg->port != 0 && ice_cfg.turn.cfg.port_range == 0)
+	    ice_cfg.turn.cfg.port_range = pjsua_var.ua_cfg.max_calls * 10;
     }
 
     /* Configure packet size for STUN and TURN sockets */

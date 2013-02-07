@@ -24,6 +24,7 @@
 #include <pj/ip_helper.h>
 #include <pj/os.h>
 #include <pj/addr_resolv.h>
+#include <pj/rand.h>
 #include <pj/string.h>
 #include <pj/compat/socket.h>
 
@@ -1037,6 +1038,44 @@ PJ_DEF(pj_status_t) pj_getdefaultipinterface(int af, pj_sockaddr *addr)
     }
 
     return pj_getipinterface(af, &cp, addr, PJ_FALSE, NULL);
+}
+
+
+/*
+ * Bind socket at random port.
+ */
+PJ_DEF(pj_status_t) pj_sock_bind_random(  pj_sock_t sockfd,
+				          const pj_sockaddr_t *addr,
+				          pj_uint16_t port_range,
+				          pj_uint16_t max_try)
+{
+    pj_sockaddr bind_addr;
+    int addr_len;
+    pj_uint16_t base_port;
+    pj_status_t status = PJ_SUCCESS;
+
+    PJ_CHECK_STACK();
+
+    PJ_ASSERT_RETURN(addr, PJ_EINVAL);
+
+    pj_sockaddr_cp(&bind_addr, addr);
+    addr_len = pj_sockaddr_get_len(addr);
+    base_port = pj_sockaddr_get_port(addr);
+
+    if (base_port == 0 || port_range == 0) {
+	return pj_sock_bind(sockfd, &bind_addr, addr_len);
+    }
+
+    for (; max_try; --max_try) {
+	pj_uint16_t port;
+	port = (pj_uint16_t)(base_port + pj_rand() % (port_range + 1));
+	pj_sockaddr_set_port(&bind_addr, port);
+	status = pj_sock_bind(sockfd, &bind_addr, addr_len);
+	if (status == PJ_SUCCESS)
+	    break;
+    }
+
+    return status;
 }
 
 
