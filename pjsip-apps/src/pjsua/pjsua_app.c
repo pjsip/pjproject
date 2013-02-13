@@ -377,7 +377,8 @@ static void usage(void)
     puts  ("  --use-compact-form  Minimize SIP message size");
     puts  ("  --no-force-lr       Allow strict-route to be used (i.e. do not force lr)");
     puts  ("  --accept-redirect=N Specify how to handle call redirect (3xx) response.");
-    puts  ("                      0: reject, 1: follow automatically (default), 2: ask");
+    puts  ("                      0: reject, 1: follow automatically,");
+    puts  ("                      2: follow + replace To header (default), 3: ask");
 
     puts  ("");
     puts  ("When URL is specified, pjsua will immediately initiate call to that URL");
@@ -404,7 +405,7 @@ static void default_config(struct app_config *cfg)
     cfg->udp_cfg.port = 5060;
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
-    cfg->redir_op = PJSIP_REDIRECT_ACCEPT;
+    cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
     cfg->duration = NO_LIMIT;
     cfg->wav_id = PJSUA_INVALID_ID;
     cfg->rec_id = PJSUA_INVALID_ID;
@@ -2241,7 +2242,7 @@ static int write_settings(const struct app_config *config,
     }
 
     /* accept-redirect */
-    if (config->redir_op != PJSIP_REDIRECT_ACCEPT) {
+    if (config->redir_op != PJSIP_REDIRECT_ACCEPT_REPLACE) {
 	pj_ansi_sprintf(line, "--accept-redirect %d\n",
 			config->redir_op);
 	pj_strcat2(&cfg, line);
@@ -3051,8 +3052,8 @@ static pjsip_redirect_op call_on_redirected(pjsua_call_id call_id,
 	}
 
 	PJ_LOG(3,(THIS_FILE, "Call %d is being redirected to %.*s. "
-		  "Press 'Ra' to accept, 'Rr' to reject, or 'Rd' to "
-		  "disconnect.",
+		  "Press 'Ra' to accept+replace To header, 'RA' to accept, "
+		  "'Rr' to reject, or 'Rd' to disconnect.",
 		  call_id, len, uristr));
     }
 
@@ -5380,6 +5381,9 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    if (!pjsua_call_is_active(current_call)) {
 		PJ_LOG(1,(THIS_FILE, "Call %d has gone", current_call));
 	    } else if (menuin[1] == 'a') {
+		pjsua_call_process_redirect(current_call, 
+					    PJSIP_REDIRECT_ACCEPT_REPLACE);
+	    } else if (menuin[1] == 'A') {
 		pjsua_call_process_redirect(current_call, 
 					    PJSIP_REDIRECT_ACCEPT);
 	    } else if (menuin[1] == 'r') {

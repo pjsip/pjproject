@@ -92,6 +92,13 @@ typedef enum pjsip_redirect_op
     PJSIP_REDIRECT_ACCEPT,
 
     /**
+     * Accept the redirection to the current target and replace the To
+     * header in the INVITE request with the current target. The INVITE
+     * request will be resent to the current target.
+     */
+    PJSIP_REDIRECT_ACCEPT_REPLACE,
+
+    /**
      * Defer the redirection decision, for example to request permission
      * from the end user.
      */

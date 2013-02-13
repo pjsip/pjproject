@@ -1125,9 +1125,8 @@ typedef struct pjsua_callback
      * INVITE request to the specified target, following the previously
      * received redirection response.
      *
-     * Application may accept the redirection to the specified target 
-     * (the default behavior if this callback is implemented), reject 
-     * this target only and make the session continue to try the next 
+     * Application may accept the redirection to the specified target,
+     * reject this target only and make the session continue to try the next 
      * target in the list if such target exists, stop the whole
      * redirection process altogether and cause the session to be
      * disconnected, or defer the decision to ask for user confirmation.
@@ -1147,9 +1146,12 @@ typedef struct pjsua_callback
      * @return		Action to be performed for the target. Set this
      *			parameter to one of the value below:
      *			- PJSIP_REDIRECT_ACCEPT: immediately accept the
-     *			  redirection (default value). When set, the
-     *			  call will immediately resend INVITE request
-     *			  to the target.
+     *			  redirection. When set, the call will immediately
+     *			  resend INVITE request to the target.
+     *			- PJSIP_REDIRECT_ACCEPT_REPLACE: immediately accept
+     *			  the redirection and replace the To header with the
+     *			  current target. When set, the call will immediately
+     *			  resend INVITE request to the target.
      *			- PJSIP_REDIRECT_REJECT: immediately reject this
      *			  target. The call will continue retrying with
      *			  next target if present, or disconnect the call

@@ -2329,6 +2329,7 @@ static pj_bool_t inv_uac_recurse(pjsip_inv_session *inv, int code,
     /* Check what the application wants to do now */
     switch (op) {
     case PJSIP_REDIRECT_ACCEPT:
+    case PJSIP_REDIRECT_ACCEPT_REPLACE:
     case PJSIP_REDIRECT_STOP:
 	/* Must increment session counter, that's the convention of the 
 	 * pjsip_inv_process_redirect().
@@ -2394,6 +2395,7 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
     /* See what the application wants to do now */
     switch (op) {
     case PJSIP_REDIRECT_ACCEPT:
+    case PJSIP_REDIRECT_ACCEPT_REPLACE:
 	/* User accept the redirection. Reset the session and resend the 
 	 * INVITE request.
 	 */
@@ -2418,6 +2420,51 @@ PJ_DEF(pj_status_t) pjsip_inv_process_redirect( pjsip_inv_session *inv,
 	    via = (pjsip_via_hdr*) 
 		  pjsip_msg_find_hdr(tdata->msg, PJSIP_H_VIA, NULL);
 	    via->branch_param.slen = 0;
+
+	    /* Process PJSIP_REDIRECT_ACCEPT_REPLACE */
+	    if (op == PJSIP_REDIRECT_ACCEPT_REPLACE) {
+		pjsip_to_hdr *to;
+		pjsip_dialog *dlg = inv->dlg;
+		enum { TMP_LEN = 128 };
+		char tmp[TMP_LEN];
+		int len;
+
+		/* Replace To header */
+		to = PJSIP_MSG_TO_HDR(tdata->msg);
+		to->uri = (pjsip_uri*)
+			  pjsip_uri_clone(tdata->pool,
+				          dlg->target_set.current->uri);
+		to->tag.slen = 0;
+		pj_list_init(&to->other_param);
+		
+		/* Re-init dialog remote info */
+		dlg->remote.info = (pjsip_to_hdr*)
+				   pjsip_hdr_clone(dlg->pool, to);
+
+		/* Remove header param from remote info */
+		if (PJSIP_URI_SCHEME_IS_SIP(dlg->remote.info->uri) ||
+		    PJSIP_URI_SCHEME_IS_SIPS(dlg->remote.info->uri))
+		{
+		    pjsip_sip_uri *sip_uri = (pjsip_sip_uri *) 
+				   pjsip_uri_get_uri(dlg->remote.info->uri);
+		    if (!pj_list_empty(&sip_uri->header_param)) {
+			/* Remove all header param */
+			pj_list_init(&sip_uri->header_param);
+		    }
+		}
+
+		/* Print the remote info. */
+		len = pjsip_uri_print(PJSIP_URI_IN_FROMTO_HDR,
+				      dlg->remote.info->uri, tmp, TMP_LEN);
+		if (len < 1) {
+		    pj_ansi_strcpy(tmp, "<-error: uri too long->");
+		    len = pj_ansi_strlen(tmp);
+		}
+		pj_strdup2_with_null(dlg->pool, &dlg->remote.info_str, tmp);
+
+		/* Secure? */
+		dlg->secure = PJSIP_URI_SCHEME_IS_SIPS(to->uri);
+	    }
 
 	    /* Reset message destination info (see #1248). */
 	    pj_bzero(&tdata->dest_info, sizeof(tdata->dest_info));
