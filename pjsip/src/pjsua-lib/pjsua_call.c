@@ -3059,10 +3059,10 @@ static pj_bool_t check_ice_complete(pjsua_call *call, pj_bool_t *need_reinv)
     unsigned i;
 
     /* Check if ICE setup is complete and if it needs reinvite */
-    for (i = 0; i < call->med_cnt && ice_complete; ++i) {
+    for (i = 0; i < call->med_cnt; ++i) {
 	pjsua_call_media *call_med = &call->media[i];
 	pjmedia_transport_info tpinfo;
-	unsigned j;
+	pjmedia_ice_transport_info *ice_info;
 	
 	if (call_med->tp_st == PJSUA_MED_TP_NULL ||
 	    call_med->tp_st == PJSUA_MED_TP_DISABLED ||
@@ -3073,34 +3073,30 @@ static pj_bool_t check_ice_complete(pjsua_call *call, pj_bool_t *need_reinv)
 	
 	pjmedia_transport_info_init(&tpinfo);
 	pjmedia_transport_get_info(call_med->tp, &tpinfo);
-	for (j = 0; j < tpinfo.specific_info_cnt; ++j) {
-	    pjmedia_ice_transport_info *ice_info;
-	    
-	    if (tpinfo.spc_info[j].type != PJMEDIA_TRANSPORT_TYPE_ICE)
-		continue;
-	    
-	    ice_info = (pjmedia_ice_transport_info*)tpinfo.spc_info[j].buffer;
-	    
-	    /* Check if ICE setup not completed yet */
-	    if (ice_info->sess_state < PJ_ICE_STRANS_STATE_RUNNING) {
-		ice_complete = PJ_FALSE;
-		break;
-	    }
-	    
-	    /* Check if ICE needs to send reinvite */
-	    if (!ice_need_reinv &&
-		ice_info->sess_state == PJ_ICE_STRANS_STATE_RUNNING &&
-		ice_info->role == PJ_ICE_SESS_ROLE_CONTROLLING)
-	    {
-		pjsua_ice_config *cfg=&pjsua_var.acc[call->acc_id].cfg.ice_cfg;
-		if ((cfg->ice_always_update && !call->reinv_ice_sent) ||
-		    pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
-				    &call_med->rtp_addr))
-		{
-		    ice_need_reinv = PJ_TRUE;
-		}
-	    }
+	ice_info = (pjmedia_ice_transport_info*)
+		   pjmedia_transport_info_get_spc_info(
+					&tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
+	if (!ice_info)
+	    continue;
+
+	/* Check if ICE setup not completed yet */
+	if (ice_info->sess_state < PJ_ICE_STRANS_STATE_RUNNING) {
+	    ice_complete = PJ_FALSE;
 	    break;
+	}
+	
+	/* Check if ICE needs to send reinvite */
+	if (!ice_need_reinv &&
+	    ice_info->sess_state == PJ_ICE_STRANS_STATE_RUNNING &&
+	    ice_info->role == PJ_ICE_SESS_ROLE_CONTROLLING)
+	{
+	    pjsua_ice_config *cfg=&pjsua_var.acc[call->acc_id].cfg.ice_cfg;
+	    if ((cfg->ice_always_update && !call->reinv_ice_sent) ||
+		pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
+				&call_med->rtp_addr))
+	    {
+		ice_need_reinv = PJ_TRUE;
+	    }
 	}
     }
     

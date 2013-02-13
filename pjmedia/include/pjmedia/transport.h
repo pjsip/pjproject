@@ -566,7 +566,7 @@ PJ_INLINE(void) pjmedia_transport_info_init(pjmedia_transport_info *info)
  * for example to fill in the "c=" and "m=" line of local SDP.
  *
  * @param tp	    The transport.
- * @param info	    Media socket info to be initialized.
+ * @param info	    Media transport info to be initialized.
  *
  * @return	    PJ_SUCCESS on success.
  */
@@ -577,6 +577,29 @@ PJ_INLINE(pj_status_t) pjmedia_transport_get_info(pjmedia_transport *tp,
 	return (*tp->op->get_info)(tp, info);
     
     return PJ_ENOTSUP;
+}
+
+
+/**
+ * Utility API to get transport type specific info from the specified media
+ * transport info.
+ * 
+ * @param info	    Media transport info.
+ * @param type	    Media transport type.
+ *
+ * @return	    Pointer to media transport specific info, or NULL if
+ * 		    specific info for the transport type is not found.
+ */
+PJ_INLINE(void*) pjmedia_transport_info_get_spc_info(
+						pjmedia_transport_info *info,
+						pjmedia_transport_type type)
+{
+    unsigned i;
+    for (i = 0; i < info->specific_info_cnt; ++i) {
+	if (info->spc_info[i].type == type)
+	    return (void*)info->spc_info[i].buffer;
+    }
+    return NULL;
 }
 
 
