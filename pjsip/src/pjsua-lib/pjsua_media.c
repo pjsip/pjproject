@@ -857,18 +857,12 @@ static void on_ice_complete(pjmedia_transport *tp,
 	     */
 	    pjmedia_transport_info tpinfo;
 	    pjmedia_ice_transport_info *ii = NULL;
-	    unsigned i;
 
 	    pjmedia_transport_info_init(&tpinfo);
 	    pjmedia_transport_get_info(tp, &tpinfo);
-	    for (i=0; i<tpinfo.specific_info_cnt; ++i) {
-		if (tpinfo.spc_info[i].type==PJMEDIA_TRANSPORT_TYPE_ICE) {
-		    ii = (pjmedia_ice_transport_info*)
-			 tpinfo.spc_info[i].buffer;
-		    break;
-		}
-	    }
-
+	    ii = (pjmedia_ice_transport_info*)
+		 pjmedia_transport_info_get_spc_info(
+					 &tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
 	    if (ii && ii->role==PJ_ICE_SESS_ROLE_CONTROLLING &&
 		pj_sockaddr_cmp(&tpinfo.sock_info.rtp_addr_name,
 				&pjsua_var.calls[id].med_rtp_addr))
@@ -1586,6 +1580,20 @@ static pj_bool_t match_codec_fmtp(const pjmedia_codec_fmtp *fmtp1,
 }
 
 
+static pj_bool_t is_ice_running(pjmedia_transport *tp)
+{
+    pjmedia_transport_info tpinfo;
+    pjmedia_ice_transport_info *ice_info;
+
+    pjmedia_transport_info_init(&tpinfo);
+    pjmedia_transport_get_info(tp, &tpinfo);
+    ice_info = (pjmedia_ice_transport_info*)
+	       pjmedia_transport_info_get_spc_info(&tpinfo,
+						   PJMEDIA_TRANSPORT_TYPE_ICE);
+    return (ice_info && ice_info->sess_state == PJ_ICE_STRANS_STATE_RUNNING);
+}
+
+
 static pj_bool_t is_media_changed(const pjsua_call *call,
 				  int new_audio_idx,
 				  const pjmedia_session_info *new_sess)
@@ -1625,9 +1633,15 @@ static pj_bool_t is_media_changed(const pjsua_call *call,
     if (!old_si || (old_si && old_si->dir != new_si->dir))
 	return PJ_TRUE;
 
-    /* Compare remote RTP address */
-    if (pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
+    /* Compare remote RTP address. If ICE is running, change in default
+     * address can happen after negotiation, this can be handled
+     * internally by ICE and does not need to cause media restart.
+     */
+    if (!is_ice_running(call->med_tp) &&
+	pj_sockaddr_cmp(&old_si->rem_addr, &new_si->rem_addr))
+    {
 	return PJ_TRUE;
+    }
 
     /* Compare codec info */
     if (pj_stricmp(&old_ci->encoding_name, &new_ci->encoding_name) ||
@@ -1920,6 +1934,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 
     } else {
 	pjmedia_transport_info tp_info;
+	pjmedia_srtp_info *srtp_info;
 
 	/* Start/restart media transport */
 	status = pjmedia_transport_media_start(call->med_tp, 
@@ -1934,18 +1949,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	/* Get remote SRTP usage policy */
 	pjmedia_transport_info_init(&tp_info);
 	pjmedia_transport_get_info(call->med_tp, &tp_info);
-	if (tp_info.specific_info_cnt > 0) {
-	    unsigned i;
-	    for (i = 0; i < tp_info.specific_info_cnt; ++i) {
-		if (tp_info.spc_info[i].type == PJMEDIA_TRANSPORT_TYPE_SRTP) 
-		{
-		    pjmedia_srtp_info *srtp_info = 
-				(pjmedia_srtp_info*) tp_info.spc_info[i].buffer;
-
-		    call->rem_srtp_use = srtp_info->peer_use;
-		    break;
-		}
-	    }
+	srtp_info = (pjmedia_srtp_info*)
+		    pjmedia_transport_info_get_spc_info(
+			    &tp_info, PJMEDIA_TRANSPORT_TYPE_SRTP);
+	if (srtp_info) {
+	    call->rem_srtp_use = srtp_info->peer_use;
 	}
 
 	if (media_changed) {
