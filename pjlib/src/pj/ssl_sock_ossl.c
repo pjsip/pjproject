@@ -1551,8 +1551,11 @@ static pj_bool_t asock_on_data_sent (pj_activesock_t *asock,
 	write_data_t *wdata = (write_data_t*)send_key->user_data;
 	if (ssock->param.cb.on_data_sent) {
 	    pj_bool_t ret;
+	    pj_ssize_t sent_len;
+
+	    sent_len = (sent > 0)? wdata->plain_data_len : sent;
 	    ret = (*ssock->param.cb.on_data_sent)(ssock, wdata->app_key, 
-						  wdata->plain_data_len);
+						  sent_len);
 	    if (!ret) {
 		/* We've been destroyed */
 		return PJ_FALSE;
