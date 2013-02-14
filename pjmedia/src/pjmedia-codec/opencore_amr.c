@@ -142,7 +142,7 @@ static pjmedia_codec_factory_op amr_factory_op =
     &amr_enum_codecs,
     &amr_alloc_codec,
     &amr_dealloc_codec,
-    &pjmedia_codec_opencore_amrnb_deinit
+    &pjmedia_codec_opencore_amr_deinit
 };
 
 
@@ -193,6 +193,12 @@ static pjmedia_codec_amr_config def_config[2] =
 
 static const pj_uint16_t* amr_bitrates[2] =
     {pjmedia_codec_amrnb_bitrates, pjmedia_codec_amrwb_bitrates};
+
+static const unsigned amr_bitrates_size[2] =
+{
+    PJ_ARRAY_SIZE(pjmedia_codec_amrnb_bitrates),
+    PJ_ARRAY_SIZE(pjmedia_codec_amrwb_bitrates)
+};
 
 
 /*
@@ -326,7 +332,7 @@ amr_set_config(unsigned idx, const pjmedia_codec_amr_config *config)
     def_config[idx] = *config;
 
     /* Normalize bitrate. */
-    nbitrates = PJ_ARRAY_SIZE(amr_bitrates[idx]);
+    nbitrates = amr_bitrates_size[idx];
     if (def_config[idx].bitrate < amr_bitrates[idx][0]) {
 	def_config[idx].bitrate = amr_bitrates[idx][0];
     } else if (def_config[idx].bitrate > amr_bitrates[idx][nbitrates-1]) {
@@ -409,7 +415,7 @@ static pj_status_t amr_default_attr( pjmedia_codec_factory *factory,
     attr->info.clock_rate = (id->clock_rate <= 8000? 8000: 16000);
     attr->info.channel_cnt = 1;
     attr->info.avg_bps = def_config[idx].bitrate;
-    attr->info.max_bps = amr_bitrates[idx][PJ_ARRAY_SIZE(amr_bitrates[idx])-1];
+    attr->info.max_bps = amr_bitrates[idx][amr_bitrates_size[idx]-1];
     attr->info.pcm_bits_per_sample = 16;
     attr->info.frm_ptime = 20;
     attr->info.pt = (pj_uint8_t)id->pt;
@@ -562,8 +568,7 @@ static pj_status_t amr_codec_open( pjmedia_codec *codec,
 
     idx = (attr->info.clock_rate <= 8000? IDX_AMR_NB: IDX_AMR_WB);
     enc_mode = pjmedia_codec_amr_get_mode(attr->info.avg_bps);
-    pj_assert(enc_mode >= 0 &&
-              enc_mode < PJ_ARRAY_SIZE(amr_bitrates[idx]));
+    pj_assert(enc_mode >= 0 && enc_mode < amr_bitrates_size[idx]);
 
     /* Check octet-align */
     for (i = 0; i < attr->setting.dec_fmtp.cnt; ++i) {
@@ -597,9 +602,7 @@ static pj_status_t amr_codec_open( pjmedia_codec *codec,
 	    p = pj_strbuf(&attr->setting.enc_fmtp.param[i].val);
 	    l = pj_strlen(&attr->setting.enc_fmtp.param[i].val);
 	    while (l--) {
-		if (*p>='0' &&
-                    *p<=('0'+PJ_ARRAY_SIZE(amr_bitrates[idx])-1))
-                {
+		if (*p>='0' && *p<=('0'+amr_bitrates_size[idx]-1)) {
 		    pj_int8_t tmp = *p - '0' - enc_mode;
 
 		    if (PJ_ABS(diff) > PJ_ABS(tmp) || 
@@ -775,7 +778,7 @@ static pj_status_t amr_codec_parse( pjmedia_codec *codec,
 	return status;
 
     /* Check for Change Mode Request. */
-    if (cmr < PJ_ARRAY_SIZE(amr_bitrates[idx]) && amr_data->enc_mode != cmr) {
+    if (cmr < amr_bitrates_size[idx] && amr_data->enc_mode != cmr) {
 	amr_data->enc_mode = cmr;
 	TRACE_((THIS_FILE, "AMR encoder switched mode to %d (%dbps)",
                 amr_data->enc_mode, 
