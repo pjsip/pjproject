@@ -69,6 +69,12 @@ typedef struct pjmedia_ice_cb
 typedef struct pjmedia_ice_transport_info
 {
     /**
+     * Specifies whether ICE is used, i.e. SDP offer and answer indicates
+     * that both parties support ICE and ICE should be used for the session.
+     */
+    pj_bool_t active;
+
+    /**
      * ICE sesion state.
      */
     pj_ice_strans_state sess_state;

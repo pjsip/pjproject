@@ -1543,6 +1543,8 @@ static pj_status_t transport_get_info(pjmedia_transport *tp,
 	ii = (pjmedia_ice_transport_info*) tsi->buffer;
 	pj_bzero(ii, sizeof(*ii));
 
+	ii->active = tp_ice->use_ice;
+
 	if (pj_ice_strans_has_sess(tp_ice->ice_st))
 	    ii->role = pj_ice_strans_get_role(tp_ice->ice_st);
 	else

@@ -3076,11 +3076,13 @@ static pj_bool_t check_ice_complete(pjsua_call *call, pj_bool_t *need_reinv)
 	ice_info = (pjmedia_ice_transport_info*)
 		   pjmedia_transport_info_get_spc_info(
 					&tpinfo, PJMEDIA_TRANSPORT_TYPE_ICE);
-	if (!ice_info)
+
+	/* Check if ICE is active */
+	if (!ice_info || !ice_info->active)
 	    continue;
 
 	/* Check if ICE setup not completed yet */
-	if (ice_info->sess_state < PJ_ICE_STRANS_STATE_RUNNING) {
+	if (ice_info->sess_state < PJ_ICE_STRANS_STATE_RUNNING)	{
 	    ice_complete = PJ_FALSE;
 	    break;
 	}
