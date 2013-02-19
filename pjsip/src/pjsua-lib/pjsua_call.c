@@ -3156,6 +3156,7 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 
     /* Check if we need to lock codec */
     need_lock_codec = check_lock_codec(call);
+    need_lock_codec = PJ_TRUE;
 
     /* Check if reinvite is really needed */
     if (!need_lock_codec && !ice_need_reinv)
@@ -3257,10 +3258,69 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 					       "fmtp", fmt);
 		    if (a) pjmedia_sdp_attr_add(&m->attr_count, m->attr, a);
 		}
-    
 	    }
 	}
     }
+
+    /* Put back original direction and "c=0.0.0.0" line */
+    {
+	const pjmedia_sdp_session *cur_sdp;
+	
+	/* Get local active SDP */
+	status = pjmedia_sdp_neg_get_active_local(call->inv->neg, &cur_sdp);
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	/* Make sure media count has not been changed */
+	if (call->med_cnt != cur_sdp->media_count)
+	    return PJMEDIA_SDPNEG_EINSTATE;
+
+	for (i = 0; i < call->med_cnt; ++i) {
+	    const pjmedia_sdp_media *m = cur_sdp->media[i];
+	    pjmedia_sdp_media *new_m = new_offer->media[i];
+	    pjsua_call_media *call_med = &call->media[i];
+	    pjmedia_sdp_attr *a = NULL;
+
+	    /* Update direction to the current dir */
+	    pjmedia_sdp_media_remove_all_attr(new_m, "sendrecv");
+	    pjmedia_sdp_media_remove_all_attr(new_m, "sendonly");
+	    pjmedia_sdp_media_remove_all_attr(new_m, "recvonly");
+	    pjmedia_sdp_media_remove_all_attr(new_m, "inactive");
+
+	    if (call_med->dir == PJMEDIA_DIR_ENCODING_DECODING) {
+		a = pjmedia_sdp_attr_create(pool, "sendrecv", NULL);
+	    } else if (call_med->dir == PJMEDIA_DIR_ENCODING) {
+		a = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
+	    } else if (call_med->dir == PJMEDIA_DIR_DECODING) {
+		a = pjmedia_sdp_attr_create(pool, "recvonly", NULL);
+	    } else {
+		const pjmedia_sdp_conn *conn;
+		a = pjmedia_sdp_attr_create(pool, "inactive", NULL);
+
+		/* Also check if the original c= line address is zero */
+		conn = m->conn;
+		if (!conn)
+		    conn = cur_sdp->conn;
+		if (pj_strcmp2(&conn->addr, "0.0.0.0")==0 ||
+		    pj_strcmp2(&conn->addr, "0")==0)
+		{
+		    if (!new_m->conn) {
+			new_m->conn = PJ_POOL_ZALLOC_T(pool, pjmedia_sdp_conn);
+		    }
+
+		    if (pj_strcmp2(&new_m->conn->addr, "0.0.0.0")) {
+			new_m->conn->net_type = pj_str("IN");
+			new_m->conn->addr_type = pj_str("IP4");
+			new_m->conn->addr = pj_str("0.0.0.0");
+		    }
+		}
+	    }
+
+	    pj_assert(a);
+	    pjmedia_sdp_media_add_attr(new_m, a);
+	}
+    }
+
     
     if (rem_can_update) {
 	status = pjsip_inv_update(inv, NULL, new_offer, &tdata);
