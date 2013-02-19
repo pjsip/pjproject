@@ -3160,7 +3160,6 @@ static pj_status_t process_pending_reinvite(pjsua_call *call)
 
     /* Check if we need to lock codec */
     need_lock_codec = check_lock_codec(call);
-    need_lock_codec = PJ_TRUE;
 
     /* Check if reinvite is really needed */
     if (!need_lock_codec && !ice_need_reinv)
