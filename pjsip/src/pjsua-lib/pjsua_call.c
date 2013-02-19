@@ -187,6 +187,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_SUPPORTED,
 			       NULL, 1, &str_norefersub);
 
+    /* Add "INFO" in Allow header, for DTMF and video key frame request. */
+    pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,
+			       NULL, 1, &pjsip_info_method.name);
+
     return status;
 }
 
