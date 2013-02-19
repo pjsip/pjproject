@@ -966,6 +966,7 @@ static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
 	}
     }
 
+    pj_assert(clist->count > 0);
     for (i=0; i<clist->count-1; ++i) {
 	unsigned j, highest = i;
 
@@ -1688,6 +1689,13 @@ PJ_DEF(pj_status_t) pj_ice_sess_create_check_list(
 
 	    clist->count++;
 	}
+    }
+
+    /* This could happen if candidates have no matching address families */
+    if (clist->count == 0) {
+	LOG4((ice->obj_name,  "Error: no checklist can be created"));
+	pj_mutex_unlock(ice->mutex);
+	return PJ_ENOTFOUND;
     }
 
     /* Sort checklist based on priority */
