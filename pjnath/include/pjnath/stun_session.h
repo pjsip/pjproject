@@ -682,6 +682,8 @@ PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
  *
  * @param sess	    The STUN session instance.
  * @param tdata	    The request message previously sent.
+ * @param mod_count Boolean flag to indicate whether transmission count
+ *                  needs to be incremented.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error.
  *		    This function will return PJNATH_ESTUNDESTROYED if 
@@ -689,7 +691,8 @@ PJ_DECL(pj_status_t) pj_stun_session_cancel_req(pj_stun_session *sess,
  *		    callback.
  */
 PJ_DECL(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
-						    pj_stun_tx_data *tdata);
+						    pj_stun_tx_data *tdata,
+                                                    pj_bool_t mod_count);
 
 
 /**

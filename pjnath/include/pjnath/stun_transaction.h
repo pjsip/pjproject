@@ -234,13 +234,16 @@ PJ_DECL(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
  * but this functionality is needed by ICE.
  *
  * @param tsx		The STUN client transaction instance.
+ * @param mod_count     Boolean flag to indicate whether transmission count
+ *                      needs to be incremented.
  *
  * @return		PJ_SUCCESS on success, or PJNATH_ESTUNDESTROYED 
  *			when the user has destroyed the transaction in 
  *			\a on_send_msg() callback, or any other error code
  *			as returned by \a on_send_msg() callback.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx);
+PJ_DECL(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
+                                                   pj_bool_t mod_count);
 
 
 /**

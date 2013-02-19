@@ -180,14 +180,15 @@ PJ_DEF(void*) pj_stun_client_tsx_get_data(pj_stun_client_tsx *tsx)
 /*
  * Transmit message.
  */
-static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
+static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx,
+                                    pj_bool_t mod_count)
 {
     pj_status_t status;
 
     PJ_ASSERT_RETURN(tsx->retransmit_timer.id == 0 ||
 		     !tsx->require_retransmit, PJ_EBUSY);
 
-    if (tsx->require_retransmit) {
+    if (tsx->require_retransmit && mod_count) {
 	/* Calculate retransmit/timeout delay */
 	if (tsx->transmit_count == 0) {
 	    tsx->retransmit_time.sec = 0;
@@ -221,7 +222,8 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
     }
 
 
-    tsx->transmit_count++;
+    if (mod_count)
+        tsx->transmit_count++;
 
     PJ_LOG(5,(tsx->obj_name, "STUN sending message (transmit count=%d)",
 	      tsx->transmit_count));
@@ -233,7 +235,7 @@ static pj_status_t tsx_transmit_msg(pj_stun_client_tsx *tsx)
     if (status == PJNATH_ESTUNDESTROYED) {
 	/* We've been destroyed, don't access the object. */
     } else if (status != PJ_SUCCESS) {
-	if (tsx->retransmit_timer.id != 0) {
+	if (tsx->retransmit_timer.id != 0 && mod_count) {
 	    pj_timer_heap_cancel(tsx->timer_heap, 
 				 &tsx->retransmit_timer);
 	    tsx->retransmit_timer.id = 0;
@@ -295,7 +297,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_send_msg(pj_stun_client_tsx *tsx,
     }
 
     /* Send the message */
-    status = tsx_transmit_msg(tsx);
+    status = tsx_transmit_msg(tsx, PJ_TRUE);
     if (status != PJ_SUCCESS) {
 	if (tsx->retransmit_timer.id != 0) {
 	    pj_timer_heap_cancel(tsx->timer_heap, 
@@ -335,7 +337,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
     }
 
     tsx->retransmit_timer.id = 0;
-    status = tsx_transmit_msg(tsx);
+    status = tsx_transmit_msg(tsx, PJ_TRUE);
     if (status == PJNATH_ESTUNDESTROYED) {
 	/* We've been destroyed, don't try to access the object */
     } else if (status != PJ_SUCCESS) {
@@ -353,7 +355,8 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 /*
  * Request to retransmit the request.
  */
-PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx)
+PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx,
+                                                  pj_bool_t mod_count)
 {
     if (tsx->destroy_timer.id != 0) {
 	return PJ_SUCCESS;
@@ -364,7 +367,7 @@ PJ_DEF(pj_status_t) pj_stun_client_tsx_retransmit(pj_stun_client_tsx *tsx)
 	tsx->retransmit_timer.id = 0;
     }
 
-    return tsx_transmit_msg(tsx);
+    return tsx_transmit_msg(tsx, mod_count);
 }
 
 /* Timer callback to destroy transaction */
