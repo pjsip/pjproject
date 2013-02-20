@@ -4375,7 +4375,7 @@ static void vid_handle_menu(char *menuin)
 		status = pjsua_vid_codec_set_param(&cid, &cp);
 	    }
 	    if (status != PJ_SUCCESS)
-		PJ_PERROR(1,(THIS_FILE, status, "Set codec bitrate error"));
+		PJ_PERROR(1,(THIS_FILE, status, "Set codec size error"));
 	} else
 	    goto on_error;
     } else
@@ -4402,7 +4402,7 @@ static void app_config_init_video(pjsua_acc_config *acc_cfg)
  */
 void console_app_main(const pj_str_t *uri_to_call)
 {
-    char menuin[32];
+    char menuin[80];
     char buf[128];
     char text[128];
     int i, count;
