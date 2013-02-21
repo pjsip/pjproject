@@ -1955,6 +1955,11 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 	pj_bool_t resched = PJ_TRUE;
 	pj_bool_t pkt_sent = PJ_FALSE;
 
+	if (sess->state >= PJ_TURN_STATE_DEALLOCATING) {
+	    /* Ignore if we're deallocating */
+	    goto on_return;
+	}
+
 	pj_gettimeofday(&now);
 
 	/* Refresh allocation if it's time to do so */
@@ -2033,6 +2038,7 @@ static void on_timer_event(pj_timer_heap_t *th, pj_timer_entry *e)
 	pj_assert(!"Unknown timer event");
     }
 
+on_return:
     pj_grp_lock_release(sess->grp_lock);
 }
 
