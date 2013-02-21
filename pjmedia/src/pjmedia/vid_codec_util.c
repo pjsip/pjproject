@@ -38,6 +38,14 @@
  */
 #define H264_STRICT_SDP_NEGO	    0
 
+/* Default frame rate, if not specified */
+#define DEFAULT_H264_FPS_NUM	    15
+#define DEFAULT_H264_FPS_DENUM	    1
+
+/* Default aspect ratio, if not specified */
+#define DEFAULT_H264_RATIO_NUM	    15
+#define DEFAULT_H264_RATIO_DENUM    1
+
 
 /* ITU resolution definition */
 struct mpi_resolution_t
@@ -53,6 +61,10 @@ mpi_resolutions [] =
     {{"CIF4",4},    {704,576}},
     {{"CIF16",5},   {1408,1142}},
 };
+
+
+#define CALC_H264_MB_NUM(size) (((size.w+15)/16)*((size.h+15)/16))
+#define CALC_H264_MBPS(size,fps) CALC_H264_MB_NUM(size)*fps.num/fps.denum
 
 
 /* Parse fmtp value for custom resolution, e.g: "CUSTOM=800,600,2" */
@@ -291,6 +303,75 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h263_apply_fmtp(
 }
 
 
+/* Declaration of H.264 level info */
+typedef struct h264_level_info_t
+{
+    unsigned id;	    /* Level id.			*/
+    unsigned max_mbps;	    /* Max macroblocks per second.	*/
+    unsigned max_mb;	    /* Max macroblocks.			*/
+    unsigned max_br;	    /* Max bitrate (kbps).		*/
+} h264_level_info_t;
+
+
+/* Init H264 parameters based on profile-level-id */
+static pj_status_t init_h264_profile(const pj_str_t *profile,
+				     pjmedia_vid_codec_h264_fmtp *fmtp)
+{
+    const h264_level_info_t level_info[] =
+    {
+	{ 10,   1485,    99,     64 },
+	{ 9,    1485,    99,    128 }, /*< level 1b */
+	{ 11,   3000,   396,    192 },
+	{ 12,   6000,   396,    384 },
+	{ 13,  11880,   396,    768 },
+	{ 20,  11880,   396,   2000 },
+	{ 21,  19800,   792,   4000 },
+	{ 22,  20250,  1620,   4000 },
+	{ 30,  40500,  1620,  10000 },
+	{ 31, 108000,  3600,  14000 },
+	{ 32, 216000,  5120,  20000 },
+	{ 40, 245760,  8192,  20000 },
+	{ 41, 245760,  8192,  50000 },
+	{ 42, 522240,  8704,  50000 },
+	{ 50, 589824, 22080, 135000 },
+	{ 51, 983040, 36864, 240000 },
+    };
+    unsigned i, tmp;
+    pj_str_t endst;
+    const h264_level_info_t *li = NULL;
+
+    if (profile->slen != 6)
+	return PJMEDIA_SDP_EINFMTP;
+
+    tmp = pj_strtoul2(profile, &endst, 16);
+    if (endst.slen)
+	return PJMEDIA_SDP_EINFMTP;
+
+    fmtp->profile_idc = (pj_uint8_t)((tmp >> 16) & 0xFF);
+    fmtp->profile_iop = (pj_uint8_t)((tmp >> 8) & 0xFF);
+    fmtp->level = (pj_uint8_t)(tmp & 0xFF);
+
+    for (i = 0; i < PJ_ARRAY_SIZE(level_info); ++i) {
+	if (level_info[i].id == fmtp->level) {
+	    li = &level_info[i];
+	    break;
+	}
+    }
+    if (li == NULL)
+	return PJMEDIA_SDP_EINFMTP;
+
+    /* Init profile level spec */
+    if (fmtp->max_br == 0)
+	fmtp->max_br = li->max_br;
+    if (fmtp->max_mbps == 0)
+	fmtp->max_mbps = li->max_mbps;
+    if (fmtp->max_fs == 0)
+	fmtp->max_fs = li->max_mb;
+
+    return PJ_SUCCESS;
+}
+
+
 /* H264 fmtp parser */
 PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 				    const pjmedia_codec_fmtp *fmtp,
@@ -305,24 +386,17 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
     const pj_str_t PACKETIZATION_MODE	= {"packetization-mode", 18};
     const pj_str_t SPROP_PARAMETER_SETS = {"sprop-parameter-sets", 20};
     unsigned i;
+    pj_status_t status;
 
     pj_bzero(h264_fmtp, sizeof(*h264_fmtp));
 
     for (i=0; i<fmtp->cnt; ++i) {
 	unsigned tmp;
 	if (pj_stricmp(&fmtp->param[i].name, &PROFILE_LEVEL_ID)==0) {
-	    pj_str_t endst;
-
-	    if (fmtp->param[i].val.slen != 6)
-		return PJMEDIA_SDP_EINFMTP;
-
-	    tmp = pj_strtoul2(&fmtp->param[i].val, &endst, 16);
-	    if (endst.slen)
-		return PJMEDIA_SDP_EINFMTP;
-
-	    h264_fmtp->profile_idc = (pj_uint8_t)((tmp >> 16) & 0xFF);
-	    h264_fmtp->profile_iop = (pj_uint8_t)((tmp >> 8) & 0xFF);
-	    h264_fmtp->level = (pj_uint8_t)(tmp & 0xFF);
+	    /* Init H264 parameters based on level, if not set yet */
+	    status = init_h264_profile(&fmtp->param[i].val, h264_fmtp);
+	    if (status != PJ_SUCCESS)
+		return status;
 	} else if (pj_stricmp(&fmtp->param[i].name, &PACKETIZATION_MODE)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
 	    if (tmp >= 0 && tmp <= 2) 
@@ -331,19 +405,19 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_parse_fmtp(
 		return PJMEDIA_SDP_EINFMTP;
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_MBPS)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    h264_fmtp->max_mbps = tmp;
+	    h264_fmtp->max_mbps = PJ_MAX(tmp, h264_fmtp->max_mbps);
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_FS)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    h264_fmtp->max_fs = tmp;
+	    h264_fmtp->max_fs = PJ_MAX(tmp, h264_fmtp->max_fs);
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_CPB)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    h264_fmtp->max_cpb = tmp;
+	    h264_fmtp->max_cpb = PJ_MAX(tmp, h264_fmtp->max_cpb);
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_DPB)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    h264_fmtp->max_dpb = tmp;
+	    h264_fmtp->max_dpb = PJ_MAX(tmp, h264_fmtp->max_dpb);
 	} else if (pj_stricmp(&fmtp->param[i].name, &MAX_BR)==0) {
 	    tmp = pj_strtoul(&fmtp->param[i].val);
-	    h264_fmtp->max_br = tmp;
+	    h264_fmtp->max_br = PJ_MAX(tmp, h264_fmtp->max_br);
 	} else if (pj_stricmp(&fmtp->param[i].name, &SPROP_PARAMETER_SETS)==0)
 	{
 	    pj_str_t sps_st;
@@ -507,66 +581,80 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_match_sdp(pj_pool_t *pool,
 }
 
 
-/* Declaration of H.264 level info */
-typedef struct h264_level_info_t
-{
-    unsigned id;	    /* Level id.			*/
-    unsigned max_mbps;	    /* Max macroblocks per second.	*/
-    unsigned max_mb;	    /* Max macroblocks.			*/
-    unsigned bitrate;	    /* Max bitrate (kbps).		*/
-    unsigned def_w;	    /* Default width.			*/
-    unsigned def_h;	    /* Default height.			*/
-    unsigned def_fps;	    /* Default fps.			*/
-} h264_level_info_t;
-
-
-/* Get H.264 level info from specified level ID */
-static pj_status_t get_h264_level_info(unsigned id, h264_level_info_t *level)
-{
-    unsigned i;
-    const h264_level_info_t level_info[] =
-    {
-	{ 10,   1485,    99,     64,  176,  144, 15 },
-	{ 9,    1485,    99,    128,  176,  144, 15 }, /*< level 1b */
-	{ 11,   3000,   396,    192,  320,  240, 10 },
-	{ 12,   6000,   396,    384,  352,  288, 15 },
-	{ 13,  11880,   396,    768,  352,  288, 15 },
-	{ 20,  11880,   396,   2000,  352,  288, 30 },
-	{ 21,  19800,   792,   4000,  352,  288, 30 },
-	{ 22,  20250,  1620,   4000,  352,  288, 30 },
-	{ 30,  40500,  1620,  10000,  720,  480, 30 },
-	{ 31, 108000,  3600,  14000, 1280,  720, 30 },
-	{ 32, 216000,  5120,  20000, 1280,  720, 30 },
-	{ 40, 245760,  8192,  20000, 1920, 1080, 30 },
-	{ 41, 245760,  8192,  50000, 1920, 1080, 30 },
-	{ 42, 522240,  8704,  50000, 1920, 1080, 30 },
-	{ 50, 589824, 22080, 135000, 1920, 1080, 30 },
-	{ 51, 983040, 36864, 240000, 1920, 1080, 30 },
-    };
-
-    for (i = 0; i < PJ_ARRAY_SIZE(level_info); ++i) {
-	if (level_info[i].id == id) {
-	    *level = level_info[i];
-	    return PJ_SUCCESS;
-	}
+/* Find greatest common divisor (GCD) */
+static unsigned gcd (unsigned a, unsigned b) {
+    unsigned c;
+    while (b) {
+	c = a % b;
+	a = b;
+	b = c;
     }
-    return PJ_ENOTFOUND;
+    return a;
 }
 
+/* Find highest resolution possible for the specified H264 fmtp and
+ * aspect ratio.
+ */
+static pj_status_t find_highest_res(pjmedia_vid_codec_h264_fmtp *fmtp,
+				    const pjmedia_ratio *fps,
+				    const pjmedia_ratio *ratio,
+				    pjmedia_rect_size *size)
+{
+    pjmedia_ratio def_ratio = { DEFAULT_H264_RATIO_NUM,
+			        DEFAULT_H264_RATIO_DENUM };
+    pjmedia_ratio def_fps   = { DEFAULT_H264_FPS_NUM,
+			        DEFAULT_H264_FPS_DENUM };
+    pjmedia_ratio asp_ratio, the_fps;
+    unsigned max_fs, g, scale;
 
-#define CALC_H264_MB_NUM(size) (((size.w+15)/16)*((size.h+15)/16))
-#define CALC_H264_MBPS(size,fps) CALC_H264_MB_NUM(size)*fps.num/fps.denum
+    pj_assert(size);
+
+    /* Get the ratio, or just use default if not provided. */
+    if (ratio && ratio->num && ratio->denum) {
+	asp_ratio = *ratio;
+    } else {
+	asp_ratio = def_ratio;
+    }
+
+    /* Normalize the aspect ratio */
+    g = gcd(asp_ratio.num, asp_ratio.denum);
+    asp_ratio.num /= g;
+    asp_ratio.denum /= g;
+
+    /* Get the frame rate, or just use default if not provided. */
+    if (fps && fps->num && fps->denum) {
+	the_fps = *fps;
+    } else {
+	the_fps = def_fps;
+    }
+
+    /* Calculate maximum size (in macroblocks) */
+    max_fs = fmtp->max_mbps * fps->denum / fps->num;
+    max_fs = PJ_MIN(max_fs, fmtp->max_fs);
+
+    /* Check if the specified ratio is using big numbers
+     * (not normalizable), override it with default ratio!
+     */
+    if ((int)max_fs < asp_ratio.num * asp_ratio.denum)
+	asp_ratio = def_ratio;
+
+    /* Calculate the scale factor for size */
+    scale = pj_isqrt(max_fs / asp_ratio.denum / asp_ratio.num);
+
+    /* Calculate the size, note that the frame size is in macroblock units */
+    size->w = asp_ratio.num   * scale * 16;
+    size->h = asp_ratio.denum * scale * 16;
+
+    return PJ_SUCCESS;
+}
 
 
 PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 				pjmedia_vid_codec_param *param)
 {
-    const unsigned default_fps = 30;
-
     if (param->dir & PJMEDIA_DIR_ENCODING) {
 	pjmedia_vid_codec_h264_fmtp fmtp;
 	pjmedia_video_format_detail *vfd;
-	h264_level_info_t level_info;
 	pj_status_t status;
 
 	/* Get remote param */
@@ -575,36 +663,42 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	status = get_h264_level_info(fmtp.level, &level_info);
-	if (status != PJ_SUCCESS)
-	    return status;
-
-	/* Size and fps for encoding direction must conform to H.264 level
+	/* Adjust fps, size, and bitrate to conform to H.264 level
 	 * specified by remote SDP fmtp.
 	 */
 	vfd = pjmedia_format_get_video_format_detail(&param->enc_fmt,
 						     PJ_TRUE);
+
+	if (vfd->fps.num == 0 || vfd->fps.denum == 0) {
+	    vfd->fps.num   = DEFAULT_H264_FPS_NUM;
+	    vfd->fps.denum = DEFAULT_H264_FPS_DENUM;
+	}
+
 	if (vfd->size.w && vfd->size.h) {
 	    unsigned mb, mbps;
 	    
-	    if (vfd->fps.num == 0 || vfd->fps.denum == 0) {
-		vfd->fps.num = default_fps;
-		vfd->fps.denum = 1;
-	    }
+	    /* Scale down the resolution if it exceeds profile spec */
 	    mb = CALC_H264_MB_NUM(vfd->size);
 	    mbps = CALC_H264_MBPS(vfd->size, vfd->fps);
-	    if (mb > level_info.max_mb || mbps > level_info.max_mbps) {
-		vfd->size.w = level_info.def_w;
-		vfd->size.h = level_info.def_h;
-		vfd->fps.num = level_info.def_fps;
-		vfd->fps.denum = 1;
+	    if (mb > fmtp.max_fs || mbps > fmtp.max_mbps) {
+		pjmedia_ratio r;
+		r.num = vfd->size.w;
+		r.denum = vfd->size.h;
+		find_highest_res(&fmtp, &vfd->fps, &r, &vfd->size);
 	    }
 	} else {
-	    vfd->size.w = level_info.def_w;
-	    vfd->size.h = level_info.def_h;
-	    vfd->fps.num = level_info.def_fps;
-	    vfd->fps.denum = 1;
+	    /* When not specified, just use the highest res possible*/
+	    pjmedia_ratio r;
+	    r.num = vfd->size.w;
+	    r.denum = vfd->size.h;
+	    find_highest_res(&fmtp, &vfd->fps, &r, &vfd->size);
 	}
+
+	/* Encoding bitrate must not be higher than H264 level spec */
+	if (vfd->avg_bps > fmtp.max_br * 1000)
+	    vfd->avg_bps = fmtp.max_br * 1000;
+	if (vfd->max_bps > fmtp.max_br * 1000)
+	    vfd->max_bps = fmtp.max_br * 1000;
     }
 
     if (param->dir & PJMEDIA_DIR_DECODING) {
@@ -613,7 +707,8 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 	 */
 	pjmedia_vid_codec_h264_fmtp fmtp;
 	pjmedia_video_format_detail *vfd;
-	h264_level_info_t level_info;
+	pjmedia_ratio r;
+	pjmedia_rect_size highest_size;
 	pj_status_t status;
 	
 	status = pjmedia_vid_codec_h264_parse_fmtp(&param->dec_fmtp,
@@ -621,22 +716,29 @@ PJ_DEF(pj_status_t) pjmedia_vid_codec_h264_apply_fmtp(
 	if (status != PJ_SUCCESS)
 	    return status;
 
-	status = get_h264_level_info(fmtp.level, &level_info);
-	if (status != PJ_SUCCESS)
-	    return status;
-
 	vfd = pjmedia_format_get_video_format_detail(&param->dec_fmt,
 						     PJ_TRUE);
 
-	if (vfd->size.w * vfd->size.h < level_info.def_w * level_info.def_h) {
-	    vfd->size.w = level_info.def_w;
-	    vfd->size.h = level_info.def_h;
+	if (vfd->fps.num == 0 || vfd->fps.denum == 0) {
+	    vfd->fps.num   = DEFAULT_H264_FPS_NUM;
+	    vfd->fps.denum = DEFAULT_H264_FPS_DENUM;
 	}
 
-	if (vfd->fps.num == 0 || vfd->fps.denum == 0) {
-	    vfd->fps.num = default_fps;
-	    vfd->fps.denum = 1;
-	}
+	/* Normalize decoding resolution, i.e: it must not be lower than
+	 * the H264 profile level setting used, as this may be used by
+	 * app to allocate buffer.
+	 */
+	r.num = vfd->size.w;
+	r.denum = vfd->size.h;
+	find_highest_res(&fmtp, &vfd->fps, &r, &highest_size);
+	if (vfd->size.w * vfd->size.h < highest_size.w * highest_size.h)
+	    vfd->size = highest_size;
+
+	/* Normalize decoding bitrate based on H264 level spec */
+	if (vfd->avg_bps < fmtp.max_br * 1000)
+	    vfd->avg_bps = fmtp.max_br * 1000;
+	if (vfd->max_bps < fmtp.max_br * 1000)
+	    vfd->max_bps = fmtp.max_br * 1000;
     }
 
     return PJ_SUCCESS;
