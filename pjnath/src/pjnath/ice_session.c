@@ -718,6 +718,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 {
     pj_ice_sess_cand *lcand;
     pj_status_t status = PJ_SUCCESS;
+    char address[PJ_INET6_ADDRSTRLEN];
 
     PJ_ASSERT_RETURN(ice && comp_id && 
 		     foundation && addr && base_addr && addr_len,
@@ -737,13 +738,14 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
     lcand->type = type;
     pj_strdup(ice->pool, &lcand->foundation, foundation);
     lcand->prio = CALC_CAND_PRIO(ice, type, local_pref, lcand->comp_id);
-    pj_memcpy(&lcand->addr, addr, addr_len);
-    pj_memcpy(&lcand->base_addr, base_addr, addr_len);
+    pj_sockaddr_cp(&lcand->addr, addr);
+    pj_sockaddr_cp(&lcand->base_addr, base_addr);
     if (rel_addr == NULL)
 	rel_addr = base_addr;
     pj_memcpy(&lcand->rel_addr, rel_addr, addr_len);
 
-    pj_ansi_strcpy(ice->tmp.txt, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
+    pj_ansi_strcpy(ice->tmp.txt, pj_sockaddr_print(&lcand->addr, address,
+                                                   sizeof(address), 0));
     LOG4((ice->obj_name, 
 	 "Candidate %d added: comp_id=%d, type=%s, foundation=%.*s, "
 	 "addr=%s:%d, base=%s:%d, prio=0x%x (%u)",
@@ -753,9 +755,9 @@ PJ_DEF(pj_status_t) pj_ice_sess_add_cand(pj_ice_sess *ice,
 	 (int)lcand->foundation.slen,
 	 lcand->foundation.ptr,
 	 ice->tmp.txt, 
-	 (int)pj_ntohs(lcand->addr.ipv4.sin_port),
-	 pj_inet_ntoa(lcand->base_addr.ipv4.sin_addr),
-	 (int)pj_htons(lcand->base_addr.ipv4.sin_port),
+	  pj_sockaddr_get_port(&lcand->addr),
+	  pj_sockaddr_print(&lcand->base_addr, address, sizeof(address), 0),
+	  pj_sockaddr_get_port(&lcand->base_addr),
 	 lcand->prio, lcand->prio));
 
     if (p_cand_id)
@@ -892,25 +894,24 @@ static const char *dump_check(char *buffer, unsigned bufsize,
 {
     const pj_ice_sess_cand *lcand = check->lcand;
     const pj_ice_sess_cand *rcand = check->rcand;
-    char laddr[PJ_INET6_ADDRSTRLEN];
+    char laddr[PJ_INET6_ADDRSTRLEN], raddr[PJ_INET6_ADDRSTRLEN];
     int len;
 
     PJ_CHECK_STACK();
 
-    pj_ansi_strcpy(laddr, pj_inet_ntoa(lcand->addr.ipv4.sin_addr));
+    pj_ansi_strcpy(laddr, pj_sockaddr_print(&lcand->addr, laddr,
+                                            sizeof(laddr), 0));
 
-    if (lcand->addr.addr.sa_family == pj_AF_INET()) {
-	len = pj_ansi_snprintf(buffer, bufsize,
-			       "%d: [%d] %s:%d-->%s:%d",
-			       (int)GET_CHECK_ID(clist, check),
-			       check->lcand->comp_id,
-			       laddr, (int)pj_ntohs(lcand->addr.ipv4.sin_port),
-			       pj_inet_ntoa(rcand->addr.ipv4.sin_addr),
-			       (int)pj_ntohs(rcand->addr.ipv4.sin_port));
-    } else {
-	len = pj_ansi_snprintf(buffer, bufsize, "IPv6->IPv6");
-    }
-
+    len = pj_ansi_snprintf(buffer, bufsize,
+			   "%d: [%d] %s:%d-->%s:%d",
+			   (int)GET_CHECK_ID(clist, check),
+			   check->lcand->comp_id,
+			   pj_sockaddr_print(&lcand->addr, laddr,
+			                     sizeof(laddr), 0),
+			   pj_sockaddr_get_port(&lcand->addr),
+			   pj_sockaddr_print(&rcand->addr, raddr,
+			                     sizeof(raddr), 0),
+			   pj_sockaddr_get_port(&rcand->addr));
 
     if (len < 0)
 	len = 0;
@@ -1014,32 +1015,6 @@ static void sort_checklist(pj_ice_sess *ice, pj_ice_sess_checklist *clist)
     }
 }
 
-enum 
-{ 
-    SOCKADDR_EQUAL = 0, 
-    SOCKADDR_NOT_EQUAL = 1 
-};
-
-/* Utility: compare sockaddr.
- * Returns 0 if equal.
- */
-static int sockaddr_cmp(const pj_sockaddr *a1, const pj_sockaddr *a2)
-{
-    if (a1->addr.sa_family != a2->addr.sa_family)
-	return SOCKADDR_NOT_EQUAL;
-
-    if (a1->addr.sa_family == pj_AF_INET()) {
-	return !(a1->ipv4.sin_addr.s_addr == a2->ipv4.sin_addr.s_addr &&
-		 a1->ipv4.sin_port == a2->ipv4.sin_port);
-    } else if (a1->addr.sa_family == pj_AF_INET6()) {
-	return pj_memcmp(&a1->ipv6, &a2->ipv6, sizeof(a1->ipv6));
-    } else {
-	pj_assert(!"Invalid address family!");
-	return SOCKADDR_NOT_EQUAL;
-    }
-}
-
-
 /* Prune checklist, this must have been done after the checklist
  * is sorted.
  */
@@ -1071,7 +1046,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 		if (host->type != PJ_ICE_CAND_TYPE_HOST)
 		    continue;
 
-		if (sockaddr_cmp(&srflx->base_addr, &host->addr) == 0) {
+		if (pj_sockaddr_cmp(&srflx->base_addr, &host->addr) == 0) {
 		    /* Replace this SRFLX with its BASE */
 		    clist->checks[i].lcand = host;
 		    break;
@@ -1079,11 +1054,13 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 	    }
 
 	    if (j==ice->lcand_cnt) {
+		char baddr[PJ_INET6_ADDRSTRLEN];
 		/* Host candidate not found this this srflx! */
 		LOG4((ice->obj_name, 
 		      "Base candidate %s:%d not found for srflx candidate %d",
-		      pj_inet_ntoa(srflx->base_addr.ipv4.sin_addr),
-		      pj_ntohs(srflx->base_addr.ipv4.sin_port),
+		      pj_sockaddr_print(&srflx->base_addr, baddr,
+		                        sizeof(baddr), 0),
+		      pj_sockaddr_get_port(&srflx->base_addr),
 		      GET_LCAND_ID(clist->checks[i].lcand)));
 		return PJNATH_EICENOHOSTCAND;
 	    }
@@ -1111,7 +1088,7 @@ static pj_status_t prune_checklist(pj_ice_sess *ice,
 	    if ((licand == ljcand) && (ricand == rjcand)) {
 		reason = "duplicate found";
 	    } else if ((rjcand == ricand) &&
-		       (sockaddr_cmp(&ljcand->base_addr, 
+		       (pj_sockaddr_cmp(&ljcand->base_addr, 
 				     &licand->base_addr)==0)) 
 	    {
 		reason = "equal base";
@@ -1839,7 +1816,8 @@ static pj_status_t perform_check(pj_ice_sess *ice,
     /* Initiate STUN transaction to send the request */
     status = pj_stun_session_send_msg(comp->stun_sess, msg_data, PJ_FALSE, 
 				      PJ_TRUE, &rcand->addr, 
-				      sizeof(pj_sockaddr_in), check->tdata);
+				      pj_sockaddr_get_len(&rcand->addr),
+				      check->tdata);
     if (status != PJ_SUCCESS) {
 	check->tdata = NULL;
 	pjnath_perror(ice->obj_name, "Error sending STUN request", status);
@@ -2292,7 +2270,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
      * the response match the source IP address and port that the Binding
      * Request was sent from.
      */
-    if (sockaddr_cmp(&check->rcand->addr, (const pj_sockaddr*)src_addr) != 0) {
+    if (pj_sockaddr_cmp(&check->rcand->addr, (const pj_sockaddr*)src_addr)!=0)
+    {
 	status = PJNATH_EICEINSRCADDR;
 	LOG4((ice->obj_name, 
 	     "Check %s%s: connectivity check FAILED: source address mismatch",
@@ -2343,7 +2322,7 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
     /* Find local candidate that matches the XOR-MAPPED-ADDRESS */
     pj_assert(lcand == NULL);
     for (i=0; i<ice->lcand_cnt; ++i) {
-	if (sockaddr_cmp(&xaddr->sockaddr, &ice->lcand[i].addr) == 0) {
+	if (pj_sockaddr_cmp(&xaddr->sockaddr, &ice->lcand[i].addr) == 0) {
 	    /* Match */
 	    lcand = &ice->lcand[i];
 	    break;
@@ -2379,7 +2358,8 @@ static void on_stun_request_complete(pj_stun_session *stun_sess,
 				      &xaddr->sockaddr, 
 				      &check->lcand->base_addr, 
 				      &check->lcand->base_addr,
-				      sizeof(pj_sockaddr_in), &cand_id);
+				      pj_sockaddr_get_len(&xaddr->sockaddr),
+				      &cand_id);
 	if (status != PJ_SUCCESS) {
 	    check_set_state(ice, check, PJ_ICE_SESS_CHECK_STATE_FAILED, 
 			    status);
@@ -2618,7 +2598,7 @@ static pj_status_t on_stun_rx_request(pj_stun_session *sess,
     rcheck->comp_id = sd->comp_id;
     rcheck->transport_id = ((pj_ice_msg_data*)token)->transport_id;
     rcheck->src_addr_len = src_addr_len;
-    pj_memcpy(&rcheck->src_addr, src_addr, src_addr_len);
+    pj_sockaddr_cp(&rcheck->src_addr, src_addr);
     rcheck->use_candidate = (uc_attr != NULL);
     rcheck->priority = prio_attr->value;
     rcheck->role_attr = role_attr;
@@ -2656,7 +2636,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
      * the request.
      */
     for (i=0; i<ice->rcand_cnt; ++i) {
-	if (sockaddr_cmp(&rcheck->src_addr, &ice->rcand[i].addr)==0)
+	if (pj_sockaddr_cmp(&rcheck->src_addr, &ice->rcand[i].addr)==0)
 	    break;
     }
 
@@ -2666,6 +2646,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
      * candidate.
      */
     if (i == ice->rcand_cnt) {
+	char raddr[PJ_INET6_ADDRSTRLEN];
 	if (ice->rcand_cnt >= PJ_ICE_MAX_CAND) {
 	    LOG4((ice->obj_name, 
 	          "Unable to add new peer reflexive candidate: too many "
@@ -2677,7 +2658,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	rcand->comp_id = (pj_uint8_t)rcheck->comp_id;
 	rcand->type = PJ_ICE_CAND_TYPE_PRFLX;
 	rcand->prio = rcheck->priority;
-	pj_memcpy(&rcand->addr, &rcheck->src_addr, rcheck->src_addr_len);
+	pj_sockaddr_cp(&rcand->addr, &rcheck->src_addr);
 
 	/* Foundation is random, unique from other foundation */
 	rcand->foundation.ptr = (char*) pj_pool_alloc(ice->pool, 36);
@@ -2686,9 +2667,9 @@ static void handle_incoming_check(pj_ice_sess *ice,
 						  rcand->foundation.ptr);
 
 	LOG4((ice->obj_name, 
-	     "Added new remote candidate from the request: %s:%d",
-	     pj_inet_ntoa(rcand->addr.ipv4.sin_addr),
-	     (int)pj_ntohs(rcand->addr.ipv4.sin_port)));
+	      "Added new remote candidate from the request: %s:%d",
+	      pj_sockaddr_print(&rcand->addr, raddr, sizeof(raddr), 0),
+	      pj_sockaddr_get_port(&rcand->addr)));
 
     } else {
 	/* Remote candidate found */
@@ -2705,7 +2686,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
     for (i=0; i<ice->clist.count; ++i) {
 	pj_ice_sess_check *c = &ice->clist.checks[i];
 	if (/*c->lcand == lcand ||*/
-	    sockaddr_cmp(&c->lcand->base_addr, &lcand->base_addr)==0)
+	    pj_sockaddr_cmp(&c->lcand->base_addr, &lcand->base_addr)==0)
 	{
 	    lcand = c->lcand;
 	    break;
@@ -2954,7 +2935,7 @@ PJ_DEF(pj_status_t) pj_ice_sess_send_data(pj_ice_sess *ice,
     status = (*ice->cb.on_tx_pkt)(ice, comp_id, transport_id, 
 				  data, data_len, 
 				  &addr, 
-				  sizeof(pj_sockaddr_in));
+				  pj_sockaddr_get_len(&addr));
 
 on_return:
     return status;

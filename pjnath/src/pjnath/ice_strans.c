@@ -1320,17 +1320,18 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     pj_ice_strans *ice_st = (pj_ice_strans*)ice->user_data;
     pj_ice_strans_comp *comp;
     pj_status_t status;
+    char daddr[PJ_INET6_ADDRSTRLEN];
 
     PJ_ASSERT_RETURN(comp_id && comp_id <= ice_st->comp_cnt, PJ_EINVAL);
 
     comp = ice_st->comp[comp_id-1];
 
     TRACE_PKT((comp->ice_st->obj_name, 
-	      "Component %d TX packet to %s:%d with transport %d",
-	      comp_id, 
-	      pj_inet_ntoa(((pj_sockaddr_in*)dst_addr)->sin_addr),
-	      (int)pj_ntohs(((pj_sockaddr_in*)dst_addr)->sin_port),
-	      transport_id));
+	       "Component %d TX packet to %s:%d with transport %d",
+	       comp_id, 
+	       pj_sockaddr_print(dst_addr, daddr, sizeof(addr), 0),
+	       pj_sockaddr_get_port(dst_addr),
+	       transport_id));
 
     if (transport_id == TP_TURN) {
 	if (comp->turn_sock) {
