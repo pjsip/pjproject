@@ -1423,6 +1423,14 @@ static pj_status_t validate_sdp_conn(const pjmedia_sdp_conn *c)
 /* Validate SDP session descriptor. */
 PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 {
+    return pjmedia_sdp_validate2(sdp, PJ_TRUE);
+}
+
+
+/* Validate SDP session descriptor. */
+PJ_DEF(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
+					  pj_bool_t strict)
+{
     unsigned i;
     const pj_str_t STR_RTPMAP = { "rtpmap", 6 };
 
@@ -1471,7 +1479,8 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
 	 */
 	if (m->conn == NULL) {
 	    if (sdp->conn == NULL)
-		return PJMEDIA_SDP_EMISSINGCONN;
+		if (strict || m->desc.port != 0)
+		    return PJMEDIA_SDP_EMISSINGCONN;
 	}
 
 	/* Verify payload type. */
@@ -1504,6 +1513,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp)
     /* Looks good. */
     return PJ_SUCCESS;
 }
+
 
 PJ_DEF(pj_status_t) pjmedia_sdp_transport_cmp( const pj_str_t *t1,
 					       const pj_str_t *t2)

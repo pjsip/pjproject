@@ -829,7 +829,7 @@ PJ_DEF(pjsip_rdata_sdp_info*) pjsip_rdata_get_sdp_info(pjsip_rx_data *rdata)
 				   sdp_info->body.slen,
 				   &sdp_info->sdp);
 	if (status == PJ_SUCCESS)
-	    status = pjmedia_sdp_validate(sdp_info->sdp);
+	    status = pjmedia_sdp_validate2(sdp_info->sdp, PJ_FALSE);
 
 	if (status != PJ_SUCCESS) {
 	    sdp_info->sdp = NULL;

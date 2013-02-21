@@ -686,6 +686,23 @@ PJ_DECL(pj_status_t) pjmedia_sdp_validate(const pjmedia_sdp_session *sdp);
 
 
 /**
+ * Perform semantic validation for the specified SDP session descriptor.
+ * This function perform validation beyond just syntactic verification,
+ * such as to verify the value of network type and address type, check
+ * the connection line, and verify that \a rtpmap attribute is present
+ * when dynamic payload type is used.
+ *
+ * @param sdp	    The SDP session descriptor to validate.
+ * @param strict    Flag whether the check should be strict, i.e: allow
+ *		    media without connection line when port is zero.
+ *
+ * @return	    PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_sdp_validate2(const pjmedia_sdp_session *sdp,
+					   pj_bool_t strict);
+
+
+/**
  * Clone SDP session descriptor.
  *
  * @param pool	    The pool used to clone the session.

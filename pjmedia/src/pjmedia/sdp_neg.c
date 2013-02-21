@@ -138,7 +138,7 @@ PJ_DEF(pj_status_t) pjmedia_sdp_neg_create_w_remote_offer(pj_pool_t *pool,
     *p_neg = NULL;
 
     /* Validate remote offer and initial answer */
-    status = pjmedia_sdp_validate(remote);
+    status = pjmedia_sdp_validate2(remote, PJ_FALSE);
     if (status != PJ_SUCCESS)
 	return status;
 
