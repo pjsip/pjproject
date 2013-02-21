@@ -109,6 +109,14 @@ typedef struct pj_turn_sock_cb
 typedef struct pj_turn_sock_cfg
 {
     /**
+     * The group lock to be used by the STUN socket. If NULL, the STUN socket
+     * will create one internally.
+     *
+     * Default: NULL
+     */
+    pj_grp_lock_t *grp_lock;
+
+    /**
      * Packet buffer size.
      *
      * Default value is PJ_TURN_MAX_PKT_LEN.

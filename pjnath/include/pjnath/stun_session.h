@@ -30,6 +30,7 @@
 #include <pjnath/stun_config.h>
 #include <pjnath/stun_transaction.h>
 #include <pj/list.h>
+#include <pj/lock.h>
 #include <pj/timer.h>
 
 PJ_BEGIN_DECL
@@ -384,6 +385,8 @@ typedef enum pj_stun_sess_msg_log_flag
  *			name will be used for example for logging purpose.
  * @param cb		Session callback.
  * @param fingerprint	Enable message fingerprint for outgoing messages.
+ * @param grp_lock	Optional group lock to be used by this session.
+ * 			If NULL, the session will create one itself.
  * @param p_sess	Pointer to receive STUN session instance.
  *
  * @return	    PJ_SUCCESS on success, or the appropriate error code.
@@ -392,6 +395,7 @@ PJ_DECL(pj_status_t) pj_stun_session_create(pj_stun_config *cfg,
 					    const char *name,
 					    const pj_stun_session_cb *cb,
 					    pj_bool_t fingerprint,
+					    pj_grp_lock_t *grp_lock,
 					    pj_stun_session **p_sess);
 
 /**
@@ -429,22 +433,6 @@ PJ_DECL(pj_status_t) pj_stun_session_set_user_data(pj_stun_session *sess,
  * @return	    The user data associated with this STUN session.
  */
 PJ_DECL(void*) pj_stun_session_get_user_data(pj_stun_session *sess);
-
-/**
- * Change the lock object used by the STUN session. By default, the STUN
- * session uses a mutex to protect its internal data. If application already
- * protects access to STUN session with higher layer lock, it may disable
- * the mutex protection in the STUN session by changing the STUN session
- * lock to a NULL mutex.
- *
- * @param sess	    The STUN session instance.
- * @param lock	    New lock instance to be used by the STUN session.
- * @param auto_del  Specify whether STUN session should destroy this
- *		    lock instance when it's destroyed.
- */
-PJ_DECL(pj_status_t) pj_stun_session_set_lock(pj_stun_session *sess,
-					      pj_lock_t *lock,
-					      pj_bool_t auto_del);
 
 /**
  * Set SOFTWARE name to be included in all requests and responses.

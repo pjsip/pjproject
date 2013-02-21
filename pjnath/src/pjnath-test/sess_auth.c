@@ -247,7 +247,7 @@ static int create_std_server(pj_stun_auth_type auth_type,
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_rx_request = &server_on_rx_request;
     sess_cb.on_send_msg = &server_send_msg;
-    status = pj_stun_session_create(&stun_cfg, "server", &sess_cb, PJ_FALSE, &server->sess);
+    status = pj_stun_session_create(&stun_cfg, "server", &sess_cb, PJ_FALSE, NULL, &server->sess);
     if (status != PJ_SUCCESS) {
 	destroy_server();
 	return -10;
@@ -479,7 +479,7 @@ static int run_client_test(const char *title,
     pj_bzero(&sess_cb, sizeof(sess_cb));
     sess_cb.on_request_complete = &client_on_request_complete;
     sess_cb.on_send_msg = &client_send_msg;
-    status = pj_stun_session_create(&stun_cfg, "client", &sess_cb, PJ_FALSE, &client->sess);
+    status = pj_stun_session_create(&stun_cfg, "client", &sess_cb, PJ_FALSE, NULL, &client->sess);
     if (status != PJ_SUCCESS) {
 	destroy_client_server();
 	return -200;

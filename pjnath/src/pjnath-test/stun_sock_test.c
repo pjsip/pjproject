@@ -298,7 +298,7 @@ static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err)
     struct stun_client *client;
     pj_str_t srv_addr;
     pj_time_val timeout, t;
-    int ret = 0;
+    int i, ret = 0;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  timeout test [%d]", destroy_on_err));
@@ -359,6 +359,8 @@ static int timeout_test(pj_stun_config *cfg, pj_bool_t destroy_on_err)
 on_return:
     destroy_server(srv);
     destroy_client(client);
+    for (i=0; i<7; ++i)
+	handle_events(cfg, 50);
     return ret;
 }
 
@@ -373,7 +375,7 @@ static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err)
     struct stun_client *client;
     pj_str_t srv_addr;
     pj_time_val timeout, t;
-    int ret = 0;
+    int i, ret = 0;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  missing attribute test [%d]", destroy_on_err));
@@ -426,6 +428,8 @@ static int missing_attr_test(pj_stun_config *cfg, pj_bool_t destroy_on_err)
 on_return:
     destroy_server(srv);
     destroy_client(client);
+    for (i=0; i<7; ++i)
+	handle_events(cfg, 50);
     return ret;
 }
 
@@ -440,7 +444,7 @@ static int keep_alive_test(pj_stun_config *cfg)
     pj_stun_sock_info info;
     pj_str_t srv_addr;
     pj_time_val timeout, t;
-    int ret = 0;
+    int i, ret = 0;
     pj_status_t status;
 
     PJ_LOG(3,(THIS_FILE, "  normal operation"));
@@ -791,6 +795,8 @@ static int keep_alive_test(pj_stun_config *cfg)
 on_return:
     destroy_server(srv);
     destroy_client(client);
+    for (i=0; i<7; ++i)
+	handle_events(cfg, 50);
     return ret;
 }
 

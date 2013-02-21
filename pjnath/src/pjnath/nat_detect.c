@@ -307,7 +307,7 @@ PJ_DEF(pj_status_t) pj_stun_detect_nat_type(const pj_sockaddr_in *server,
     sess_cb.on_request_complete = &on_request_complete;
     sess_cb.on_send_msg = &on_send_msg;
     status = pj_stun_session_create(stun_cfg, pool->obj_name, &sess_cb,
-				    PJ_FALSE, &sess->stun_sess);
+				    PJ_FALSE, NULL, &sess->stun_sess);
     if (status != PJ_SUCCESS)
 	goto on_error;
 

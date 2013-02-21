@@ -27,6 +27,7 @@
 #include <pjnath/stun_config.h>
 #include <pjlib-util/resolver.h>
 #include <pj/ioqueue.h>
+#include <pj/lock.h>
 #include <pj/sock.h>
 #include <pj/sock_qos.h>
 
@@ -217,6 +218,14 @@ typedef struct pj_stun_sock_info
  */
 typedef struct pj_stun_sock_cfg
 {
+    /**
+     * The group lock to be used by the STUN socket. If NULL, the STUN socket
+     * will create one internally.
+     *
+     * Default: NULL
+     */
+    pj_grp_lock_t *grp_lock;
+
     /**
      * Packet buffer size.
      *

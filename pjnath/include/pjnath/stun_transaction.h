@@ -27,6 +27,7 @@
 
 #include <pjnath/stun_msg.h>
 #include <pjnath/stun_config.h>
+#include <pj/lock.h>
 
 
 PJ_BEGIN_DECL
@@ -124,6 +125,7 @@ typedef struct pj_stun_tsx_cb
  * @param cfg		The STUN endpoint, which will be used to retrieve
  *			various settings for the transaction.
  * @param pool		Pool to be used to allocate memory from.
+ * @param grp_lock	Group lock to synchronize.
  * @param cb		Callback structure, to be used by the transaction
  *			to send message and to notify the application about
  *			the completion of the transaction.
@@ -133,6 +135,7 @@ typedef struct pj_stun_tsx_cb
  */
 PJ_DECL(pj_status_t) pj_stun_client_tsx_create(	pj_stun_config *cfg,
 					        pj_pool_t *pool,
+					        pj_grp_lock_t *grp_lock,
 						const pj_stun_tsx_cb *cb,
 						pj_stun_client_tsx **p_tsx);
 
@@ -159,15 +162,14 @@ pj_stun_client_tsx_schedule_destroy(pj_stun_client_tsx *tsx,
 
 
 /**
- * Destroy a STUN client transaction immediately. This function can be 
- * called at any time to stop the transaction and destroy it.
+ * Stop the client transaction.
  *
  * @param tsx		The STUN transaction.
  *
  * @return		PJ_SUCCESS on success or PJ_EINVAL if the parameter
  *			is NULL.
  */
-PJ_DECL(pj_status_t) pj_stun_client_tsx_destroy(pj_stun_client_tsx *tsx);
+PJ_DECL(pj_status_t) pj_stun_client_tsx_stop(pj_stun_client_tsx *tsx);
 
 
 /**

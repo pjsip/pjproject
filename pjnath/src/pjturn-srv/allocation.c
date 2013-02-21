@@ -338,7 +338,7 @@ PJ_DEF(pj_status_t) pj_turn_allocation_create(pj_turn_transport *transport,
     sess_cb.on_rx_request = &stun_on_rx_request;
     sess_cb.on_rx_indication = &stun_on_rx_indication;
     status = pj_stun_session_create(&srv->core.stun_cfg, alloc->obj_name,
-				    &sess_cb, PJ_FALSE, &alloc->sess);
+				    &sess_cb, PJ_FALSE, NULL, &alloc->sess);
     if (status != PJ_SUCCESS) {
 	goto on_error;
     }

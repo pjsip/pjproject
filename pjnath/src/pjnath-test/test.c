@@ -34,6 +34,7 @@ pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg)
 {
     pj_ioqueue_t *ioqueue;
     pj_timer_heap_t *timer_heap;
+    pj_lock_t *lock;
     pj_status_t status;
 
     status = pj_ioqueue_create(pool, 64, &ioqueue);
@@ -48,6 +49,9 @@ pj_status_t create_stun_config(pj_pool_t *pool, pj_stun_config *stun_cfg)
 	pj_ioqueue_destroy(ioqueue);
 	return status;
     }
+
+    pj_lock_create_recursive_mutex(pool, NULL, &lock);
+    pj_timer_heap_set_lock(timer_heap, lock, PJ_TRUE);
 
     pj_stun_config_init(stun_cfg, mem, 0, ioqueue, timer_heap);
 
@@ -105,7 +109,7 @@ void capture_pjlib_state(pj_stun_config *cfg, struct pjlib_state *st)
 
     st->timer_cnt = pj_timer_heap_count(cfg->timer_heap);
     
-    cp = (pj_caching_pool*)mem;
+    cp = (pj_caching_pool*)cfg->pf;
     st->pool_used_cnt = cp->used_count;
 }
 
@@ -120,6 +124,10 @@ int check_pjlib_state(pj_stun_config *cfg,
     if (current_state.timer_cnt > initial_st->timer_cnt) {
 	PJ_LOG(3,("", "    error: possibly leaking timer"));
 	rc |= ERR_TIMER_LEAK;
+
+#if PJ_TIMER_DEBUG
+	pj_timer_heap_dump(cfg->timer_heap);
+#endif
     }
 
     if (current_state.pool_used_cnt > initial_st->pool_used_cnt) {
@@ -148,6 +156,18 @@ pj_pool_factory *mem;
 int param_log_decor = PJ_LOG_HAS_NEWLINE | PJ_LOG_HAS_TIME | 
 		      PJ_LOG_HAS_MICRO_SEC;
 
+pj_log_func *orig_log_func;
+FILE *log_file;
+
+static void test_log_func(int level, const char *data, int len)
+{
+    if (log_file) {
+	fwrite(data, len, 1, log_file);
+    }
+    if (level <= 3)
+	orig_log_func(level, data, len);
+}
+
 static int test_inner(void)
 {
     pj_caching_pool caching_pool;
@@ -158,6 +178,11 @@ static int test_inner(void)
 #if 1
     pj_log_set_level(3);
     pj_log_set_decor(param_log_decor);
+#elif 1
+    log_file = fopen("pjnath-test.log", "wt");
+    pj_log_set_level(5);
+    orig_log_func = pj_log_get_log_func();
+    pj_log_set_log_func(&test_log_func);
 #endif
 
     rc = pj_init();
@@ -189,7 +214,13 @@ static int test_inner(void)
     DO_TEST(turn_sock_test());
 #endif
 
+#if INCLUDE_CONCUR_TEST
+    DO_TEST(concur_test());
+#endif
+
 on_return:
+    if (log_file)
+	fclose(log_file);
     return rc;
 }
 
