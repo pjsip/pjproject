@@ -77,7 +77,8 @@ static const struct
     PJ_BUILD_ERR(PJ_ETOOSMALL,	   "Size is too short"),
     PJ_BUILD_ERR(PJ_EIGNORED,	   "Ignored"),
     PJ_BUILD_ERR(PJ_EIPV6NOTSUP,   "IPv6 is not supported"),
-    PJ_BUILD_ERR(PJ_EAFNOTSUP,	   "Unsupported address family")
+    PJ_BUILD_ERR(PJ_EAFNOTSUP,	   "Unsupported address family"),
+    PJ_BUILD_ERR(PJ_EGONE,	   "Object no longer exists")
 };
 #endif	/* PJ_HAS_ERROR_STRING */
 

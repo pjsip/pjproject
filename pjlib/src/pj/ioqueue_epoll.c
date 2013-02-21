@@ -262,11 +262,11 @@ PJ_DEF(pj_status_t) pj_ioqueue_create( pj_pool_t *pool,
 
 	key = PJ_POOL_ALLOC_T(pool, pj_ioqueue_key_t);
 	key->ref_count = 0;
-	rc = pj_mutex_create_recursive(pool, NULL, &key->mutex);
+	rc = pj_lock_create_recursive_mutex(pool, NULL, &key->lock);
 	if (rc != PJ_SUCCESS) {
 	    key = ioqueue->free_list.next;
 	    while (key != &ioqueue->free_list) {
-		pj_mutex_destroy(key->mutex);
+		pj_lock_destroy(key->lock);
 		key = key->next;
 	    }
 	    pj_mutex_destroy(ioqueue->ref_cnt_mutex);
@@ -323,19 +323,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
     /* Destroy reference counters */
     key = ioqueue->active_list.next;
     while (key != &ioqueue->active_list) {
-	pj_mutex_destroy(key->mutex);
+	pj_lock_destroy(key->lock);
 	key = key->next;
     }
 
     key = ioqueue->closing_list.next;
     while (key != &ioqueue->closing_list) {
-	pj_mutex_destroy(key->mutex);
+	pj_lock_destroy(key->lock);
 	key = key->next;
     }
 
     key = ioqueue->free_list.next;
     while (key != &ioqueue->free_list) {
-	pj_mutex_destroy(key->mutex);
+	pj_lock_destroy(key->lock);
 	key = key->next;
     }
 
@@ -422,7 +422,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     status = os_epoll_ctl(ioqueue->epfd, EPOLL_CTL_ADD, sock, &ev);
     if (status < 0) {
 	rc = pj_get_os_error();
-	pj_mutex_destroy(key->mutex);
+	pj_lock_destroy(key->lock);
 	key = NULL;
 	TRACE_((THIS_FILE, 
                 "pj_ioqueue_register_sock error: os_epoll_ctl rc=%d", 
@@ -497,7 +497,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
      * the key. We need to lock the key before ioqueue here to prevent
      * deadlock.
      */
-    pj_mutex_lock(key->mutex);
+    pj_lock_acquire(key->lock);
 
     /* Also lock ioqueue */
     pj_lock_acquire(ioqueue->lock);
@@ -531,9 +531,9 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     decrement_counter(key);
 
     /* Done. */
-    pj_mutex_unlock(key->mutex);
+    pj_lock_release(key->lock);
 #else
-    pj_mutex_destroy(key->mutex);
+    pj_lock_destroy(key->lock);
 #endif
 
     return PJ_SUCCESS;

@@ -405,6 +405,19 @@ PJ_DECL(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
                                                pj_ioqueue_key_t **key );
 
 /**
+ * Variant of pj_ioqueue_register_sock() with additional group lock parameter.
+ * If group lock is set for the key, the key will add the reference counter
+ * when the socket is registered and decrease it when it is destroyed.
+ */
+PJ_DECL(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
+					       pj_ioqueue_t *ioque,
+					       pj_sock_t sock,
+					       pj_grp_lock_t *grp_lock,
+					       void *user_data,
+					       const pj_ioqueue_callback *cb,
+                                               pj_ioqueue_key_t **key );
+
+/**
  * Unregister from the I/O Queue framework. Caller must make sure that
  * the key doesn't have any pending operations before calling this function,
  * by calling #pj_ioqueue_is_pending() for all previously submitted

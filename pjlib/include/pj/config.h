@@ -488,6 +488,14 @@
 
 
 /**
+ * Set this to 1 to enable debugging on the group lock. Default: 0
+ */
+#ifndef PJ_GRP_LOCK_DEBUG
+#  define PJ_GRP_LOCK_DEBUG	0
+#endif
+
+
+/**
  * Specify this as \a stack_size argument in #pj_thread_create() to specify
  * that thread should use default stack size for the current platform.
  *
@@ -1119,6 +1127,14 @@
  */
 #ifndef PJ_TODO
 #  define PJ_TODO(id)	    TODO___##id:
+#endif
+
+/**
+ * Simulate race condition by sleeping the thread in strategic locations.
+ * Default: no!
+ */
+#ifndef PJ_RACE_ME
+#  define PJ_RACE_ME(x)
 #endif
 
 /**

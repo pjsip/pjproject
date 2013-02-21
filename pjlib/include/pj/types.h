@@ -231,6 +231,9 @@ typedef struct pj_thread_t pj_thread_t;
 /** Lock object. */
 typedef struct pj_lock_t pj_lock_t;
 
+/** Group lock */
+typedef struct pj_grp_lock_t pj_grp_lock_t;
+
 /** Mutex handle. */
 typedef struct pj_mutex_t pj_mutex_t;
 
