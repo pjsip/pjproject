@@ -552,7 +552,8 @@ on_error:
 }
 #endif
 
-static void med_tp_timer_cb(void *user_data)
+/* Deferred callback to notify ICE init complete */
+static void ice_init_complete_cb(void *user_data)
 {
     pjsua_call_media *call_med = (pjsua_call_media*)user_data;
 
@@ -570,7 +571,7 @@ static void med_tp_timer_cb(void *user_data)
 	pjsua_call *call = NULL;
 	pjsip_dialog *dlg = NULL;
 
-	if (acquire_call("med_tp_timer_cb", call_med->call->index,
+	if (acquire_call("ice_init_complete_cb", call_med->call->index,
 	                 &call, &dlg) != PJ_SUCCESS)
 	{
 	    /* Call have been terminated */
@@ -585,6 +586,26 @@ static void med_tp_timer_cb(void *user_data)
     }
 }
 
+/* Deferred callback to notify ICE negotiation failure */
+static void ice_failed_nego_cb(void *user_data)
+{
+    int call_id = (int)(long)user_data;
+    pjsua_call *call = NULL;
+    pjsip_dialog *dlg = NULL;
+
+    if (acquire_call("ice_failed_nego_cb", call_id,
+                     &call, &dlg) != PJ_SUCCESS)
+    {
+	/* Call have been terminated */
+	return;
+    }
+
+    pjsua_var.ua_cfg.cb.on_call_media_state(call_id);
+
+    if (dlg)
+        pjsip_dlg_dec_lock(dlg);
+
+}
 
 /* This callback is called when ICE negotiation completes */
 static void on_ice_complete(pjmedia_transport *tp, 
@@ -602,7 +623,7 @@ static void on_ice_complete(pjmedia_transport *tp,
     switch (op) {
     case PJ_ICE_STRANS_OP_INIT:
         call_med->tp_result = result;
-        pjsua_schedule_timer2(&med_tp_timer_cb, call_med, 1);
+        pjsua_schedule_timer2(&ice_init_complete_cb, call_med, 1);
 	break;
     case PJ_ICE_STRANS_OP_NEGOTIATION:
 	if (result == PJ_SUCCESS) {
@@ -615,7 +636,9 @@ static void on_ice_complete(pjmedia_transport *tp,
 	    call_med->state = PJSUA_CALL_MEDIA_ERROR;
 	    call_med->dir = PJMEDIA_DIR_NONE;
 	    if (call && pjsua_var.ua_cfg.cb.on_call_media_state) {
-		pjsua_var.ua_cfg.cb.on_call_media_state(call->index);
+		/* Defer the callback to a timer */
+		pjsua_schedule_timer2(&ice_failed_nego_cb,
+				      (void*)(long)call->index, 1);
 	    }
         }
 	/* Check if default ICE transport address is changed */
