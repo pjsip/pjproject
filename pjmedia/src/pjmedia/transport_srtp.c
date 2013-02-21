@@ -39,7 +39,7 @@
 #define MAX_RTCP_BUFFER_LEN	    PJMEDIA_MAX_MTU
 
 /* Maximum SRTP crypto key length */
-#define MAX_KEY_LEN		    32
+#define MAX_KEY_LEN		    128
 
 /* Initial value of probation counter. When probation counter > 0, 
  * it means SRTP is in probation state, and it may restart when
