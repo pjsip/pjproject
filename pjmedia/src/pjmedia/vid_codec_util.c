@@ -43,8 +43,8 @@
 #define DEFAULT_H264_FPS_DENUM	    1
 
 /* Default aspect ratio, if not specified */
-#define DEFAULT_H264_RATIO_NUM	    15
-#define DEFAULT_H264_RATIO_DENUM    1
+#define DEFAULT_H264_RATIO_NUM	    16
+#define DEFAULT_H264_RATIO_DENUM    9
 
 
 /* ITU resolution definition */
