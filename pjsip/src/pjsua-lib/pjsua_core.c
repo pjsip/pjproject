@@ -958,7 +958,7 @@ PJ_DEF(pj_status_t) pjsua_init( const pjsua_config *ua_cfg,
 	if (pjsua_var.ua_cfg.force_lr) {
 	    pjsip_sip_uri *sip_url;
 	    if (!PJSIP_URI_SCHEME_IS_SIP(r->name_addr.uri) &&
-		!PJSIP_URI_SCHEME_IS_SIP(r->name_addr.uri))
+		!PJSIP_URI_SCHEME_IS_SIPS(r->name_addr.uri))
 	    {
 		status = PJSIP_EINVALIDSCHEME;
 		goto on_error;
@@ -2840,7 +2840,7 @@ pj_status_t normalize_route_uri(pj_pool_t *pool, pj_str_t *uri)
     }
 
     if (!PJSIP_URI_SCHEME_IS_SIP(uri_obj) && 
-	!PJSIP_URI_SCHEME_IS_SIP(uri_obj))
+	!PJSIP_URI_SCHEME_IS_SIPS(uri_obj))
     {
 	PJ_LOG(1,(THIS_FILE, "Route URI must be SIP URI: %.*s", 
 		  (int)uri->slen, uri->ptr));
