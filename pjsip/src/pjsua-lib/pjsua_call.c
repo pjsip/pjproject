@@ -3503,6 +3503,15 @@ static void pjsua_call_on_state_changed(pjsip_inv_session *inv,
 	}
     }
 
+    /* Ticket #1627: Invoke on_call_tsx_state() when call is disconnected. */
+    if (inv->state == PJSIP_INV_STATE_DISCONNECTED &&
+	e->type == PJSIP_EVENT_TSX_STATE &&
+	call->inv &&
+	pjsua_var.ua_cfg.cb.on_call_tsx_state)
+    {
+	(*pjsua_var.ua_cfg.cb.on_call_tsx_state)(call->index,
+						 e->body.tsx_state.tsx, e);
+    }
 
     if (pjsua_var.ua_cfg.cb.on_call_state)
 	(*pjsua_var.ua_cfg.cb.on_call_state)(call->index, e);
@@ -4414,11 +4423,7 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	goto on_return;
 
     if (call->inv == NULL) {
-	/* Shouldn't happen. It happens only when we don't terminate the
-	 * server subscription caused by REFER after the call has been
-	 * transfered (and this call has been disconnected), and we
-	 * receive another REFER for this call.
-	 */
+	/* Call has been disconnected. */
 	goto on_return;
     }
 
