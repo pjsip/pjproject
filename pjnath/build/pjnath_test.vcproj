@@ -2999,6 +2999,64 @@
 			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
 			>
 			<File
+				RelativePath="..\src\pjnath-test\concur_test.c"
+				>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Static|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Dynamic|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug-Dynamic|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Release-Static|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>			
+			<File
 				RelativePath="..\src\pjnath-test\ice_test.c"
 				>
 				<FileConfiguration
