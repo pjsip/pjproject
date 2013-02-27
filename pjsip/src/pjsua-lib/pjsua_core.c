@@ -956,11 +956,17 @@ static void busy_sleep(unsigned msec)
     } while (PJ_TIME_VAL_LT(now, timeout));
 }
 
-/* Internal function to destroy STUN resolution session
- * (pj_stun_resolve).
- */
+static void stun_resolve_add_ref(pjsua_stun_resolve *sess)
+{
+    ++sess->ref_cnt;
+}
+
 static void destroy_stun_resolve(pjsua_stun_resolve *sess)
 {
+    sess->destroy_flag = PJ_TRUE;
+    if (sess->ref_cnt > 0)
+	return;
+
     PJSUA_LOCK();
     pj_list_erase(sess);
     PJSUA_UNLOCK();
@@ -969,6 +975,14 @@ static void destroy_stun_resolve(pjsua_stun_resolve *sess)
     pj_pool_release(sess->pool);
 }
 
+static void stun_resolve_dec_ref(pjsua_stun_resolve *sess)
+{
+    --sess->ref_cnt;
+    if (sess->ref_cnt <= 0 && sess->destroy_flag)
+	destroy_stun_resolve(sess);
+}
+
+
 /* This is the internal function to be called when STUN resolution
  * session (pj_stun_resolve) has completed.
  */
@@ -976,11 +990,15 @@ static void stun_resolve_complete(pjsua_stun_resolve *sess)
 {
     pj_stun_resolve_result result;
 
+    if (sess->has_result)
+	goto on_return;
+
     pj_bzero(&result, sizeof(result));
     result.token = sess->token;
     result.status = sess->status;
     result.name = sess->srv[sess->idx];
     pj_memcpy(&result.addr, &sess->addr, sizeof(result.addr));
+    sess->has_result = PJ_TRUE;
 
     if (result.status == PJ_SUCCESS) {
 	char addr[PJ_INET6_ADDRSTRLEN+10];
@@ -996,8 +1014,11 @@ static void stun_resolve_complete(pjsua_stun_resolve *sess)
 	PJ_LOG(1,(THIS_FILE, "STUN resolution failed: %s", errmsg));
     }
 
+    stun_resolve_add_ref(sess);
     sess->cb(&result);
+    stun_resolve_dec_ref(sess);
 
+on_return:
     if (!sess->blocking) {
 	destroy_stun_resolve(sess);
     }
@@ -1059,22 +1080,27 @@ static pj_bool_t test_stun_on_status(pj_stun_sock *stun_sock,
  */
 static void resolve_stun_entry(pjsua_stun_resolve *sess)
 {
+    stun_resolve_add_ref(sess);
+
     /* Loop while we have entry to try */
     for (; sess->idx < sess->count; ++sess->idx) {
 	const int af = pj_AF_INET();
+	char target[64];
 	pj_str_t hostpart;
 	pj_uint16_t port;
 	pj_stun_sock_cb stun_sock_cb;
 	
 	pj_assert(sess->idx < sess->count);
 
+	pj_ansi_snprintf(target, sizeof(target), "%.*s",
+			 (int)sess->srv[sess->idx].slen,
+			 sess->srv[sess->idx].ptr);
+
 	/* Parse the server entry into host:port */
 	sess->status = pj_sockaddr_parse2(af, 0, &sess->srv[sess->idx],
 					  &hostpart, &port, NULL);
 	if (sess->status != PJ_SUCCESS) {
-	    PJ_LOG(2,(THIS_FILE, "Invalid STUN server entry %.*s", 
-		      (int)sess->srv[sess->idx].slen, 
-		      sess->srv[sess->idx].ptr));
+	    PJ_LOG(2,(THIS_FILE, "Invalid STUN server entry %s", target));
 	    continue;
 	}
 	
@@ -1084,10 +1110,8 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 
 	pj_assert(sess->stun_sock == NULL);
 
-	PJ_LOG(4,(THIS_FILE, "Trying STUN server %.*s (%d of %d)..",
-		  (int)sess->srv[sess->idx].slen,
-		  sess->srv[sess->idx].ptr,
-		  sess->idx+1, sess->count));
+	PJ_LOG(4,(THIS_FILE, "Trying STUN server %s (%d of %d)..",
+		  target, sess->idx+1, sess->count));
 
 	/* Use STUN_sock to test this entry */
 	pj_bzero(&stun_sock_cb, sizeof(stun_sock_cb));
@@ -1099,9 +1123,8 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(sess->status, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, 
-		     "Error creating STUN socket for %.*s: %s",
-		      (int)sess->srv[sess->idx].slen,
-		      sess->srv[sess->idx].ptr, errmsg));
+		     "Error creating STUN socket for %s: %s",
+		     target, errmsg));
 
 	    continue;
 	}
@@ -1112,19 +1135,20 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 	    char errmsg[PJ_ERR_MSG_SIZE];
 	    pj_strerror(sess->status, errmsg, sizeof(errmsg));
 	    PJ_LOG(4,(THIS_FILE, 
-		     "Error starting STUN socket for %.*s: %s",
-		      (int)sess->srv[sess->idx].slen,
-		      sess->srv[sess->idx].ptr, errmsg));
+		     "Error starting STUN socket for %s: %s",
+		     target, errmsg));
 
-	    pj_stun_sock_destroy(sess->stun_sock);
-	    sess->stun_sock = NULL;
+	    if (sess->stun_sock) {
+		pj_stun_sock_destroy(sess->stun_sock);
+		sess->stun_sock = NULL;
+	    }
 	    continue;
 	}
 
 	/* Done for now, testing will resume/complete asynchronously in
 	 * stun_sock_cb()
 	 */
-	return;
+	goto on_return;
     }
 
     if (sess->idx >= sess->count) {
@@ -1133,6 +1157,9 @@ static void resolve_stun_entry(pjsua_stun_resolve *sess)
 			  sess->status = PJ_EUNKNOWN);
 	stun_resolve_complete(sess);
     }
+
+on_return:
+    stun_resolve_dec_ref(sess);
 }
 
 

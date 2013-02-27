@@ -249,6 +249,9 @@ typedef struct pjsua_stun_resolve
     PJ_DECL_LIST_MEMBER(struct pjsua_stun_resolve);
 
     pj_pool_t		*pool;	    /**< Pool		    */
+    int			 ref_cnt;   /**< Reference count    */
+    pj_bool_t		 destroy_flag; /**< To be destroyed */
+    pj_bool_t		 has_result;
     unsigned		 count;	    /**< # of entries	    */
     pj_str_t		*srv;	    /**< Array of entries   */
     unsigned		 idx;	    /**< Current index	    */
