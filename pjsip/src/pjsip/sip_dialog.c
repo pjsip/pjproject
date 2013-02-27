@@ -1871,6 +1871,15 @@ void pjsip_dlg_on_rx_response( pjsip_dialog *dlg, pjsip_rx_data *rdata )
 	}
 
 	dlg_update_routeset(dlg, rdata);
+
+	/* Update remote capability info after the first 2xx response
+	 * (ticket #1539). Note that the remote capability retrieved here
+	 * will be assumed to remain unchanged for the duration of the dialog.
+	 */
+	if (dlg->role==PJSIP_ROLE_UAC && !dlg->uac_has_2xx) {
+	    pjsip_dlg_update_remote_cap(dlg, rdata->msg_info.msg, PJ_FALSE);
+	    dlg->uac_has_2xx = PJ_TRUE;
+	}
     }
 
     /* Pass to dialog usages. */
