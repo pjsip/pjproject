@@ -3222,8 +3222,7 @@ static pj_bool_t handle_uac_tsx_response(pjsip_inv_session *inv,
 	((tsx->status_code == PJSIP_SC_CALL_TSX_DOES_NOT_EXIST &&
 	    tsx->method.id != PJSIP_CANCEL_METHOD) ||
 	 tsx->status_code == PJSIP_SC_REQUEST_TIMEOUT ||
-	 tsx->status_code == PJSIP_SC_TSX_TIMEOUT ||
-	 tsx->status_code == PJSIP_SC_TSX_TRANSPORT_ERROR))
+	 tsx->status_code == PJSIP_SC_TSX_TIMEOUT))
     {
 	pjsip_tx_data *bye;
 	pj_status_t status;
