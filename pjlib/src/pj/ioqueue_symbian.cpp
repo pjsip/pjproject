@@ -528,6 +528,19 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
+					      pj_ioqueue_t *ioqueue,
+					      pj_sock_t sock,
+					      pj_grp_lock_t *grp_lock,
+					      void *user_data,
+					      const pj_ioqueue_callback *cb,
+                                              pj_ioqueue_key_t **p_key)
+{
+    PJ_UNUSED_ARG(grp_lock);
+
+    return pj_ioqueue_register_sock(pool, ioqueue, sock, user_data, cb, p_key);
+}
+
 /*
  * Unregister from the I/O Queue framework. 
  */

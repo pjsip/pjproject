@@ -392,6 +392,24 @@ PJ_DEF(pj_status_t) pj_timer_heap_schedule( pj_timer_heap_t *ht,
     return PJ_SUCCESS;
 }
 
+PJ_DEF(pj_status_t) pj_timer_heap_schedule_w_grp_lock(pj_timer_heap_t *ht,
+                                                      pj_timer_entry *entry,
+                                                      const pj_time_val *delay,
+                                                      int id_val,
+                                                      pj_grp_lock_t *grp_lock)
+{
+    pj_status_t status;
+	    
+    PJ_UNUSED_ARG(grp_lock);
+
+    status = pj_timer_heap_schedule(ht, entry, delay);
+    
+    if (status == PJ_SUCCESS)
+    	entry->id = id_val;
+    
+    return status;
+}
+
 PJ_DEF(int) pj_timer_heap_cancel( pj_timer_heap_t *ht,
 				  pj_timer_entry *entry)
 {
@@ -409,6 +427,17 @@ PJ_DEF(int) pj_timer_heap_cancel( pj_timer_heap_t *ht,
     } else {
     	return 0;
     }
+}
+
+PJ_DEF(int) pj_timer_heap_cancel_if_active(pj_timer_heap_t *ht,
+                                           pj_timer_entry *entry,
+                                           int id_val)
+{
+    int count = pj_timer_heap_cancel(ht, entry);
+    if (count == 1)
+    	entry->id = id_val;
+    
+    return count;
 }
 
 PJ_DEF(unsigned) pj_timer_heap_poll( pj_timer_heap_t *ht, 
