@@ -1667,9 +1667,26 @@ static void update_keep_alive(pjsua_acc *acc, pj_bool_t start,
 	/* Save transport and destination address. */
 	acc->ka_transport = param->rdata->tp_info.transport;
 	pjsip_transport_add_ref(acc->ka_transport);
-	pj_memcpy(&acc->ka_target, &param->rdata->pkt_info.src_addr,
-		  param->rdata->pkt_info.src_addr_len);
-	acc->ka_target_len = param->rdata->pkt_info.src_addr_len;
+
+	/* https://trac.pjsip.org/repos/ticket/1607:
+	 * Calculate the destination address from the original request. Some
+	 * (broken) servers send the response using different source address
+	 * than the one that receives the request, which is forbidden by RFC
+	 * 3581.
+	 */
+	{
+	    pjsip_transaction *tsx;
+	    pjsip_tx_data *req;
+
+	    tsx = pjsip_rdata_get_tsx(param->rdata);
+	    PJ_ASSERT_ON_FAIL(tsx, return);
+
+	    req = tsx->last_tx;
+
+	    pj_memcpy(&acc->ka_target, &req->tp_info.dst_addr,
+	              req->tp_info.dst_addr_len);
+	    acc->ka_target_len = req->tp_info.dst_addr_len;
+	}
 
 	/* Setup and start the timer */
 	acc->ka_timer.cb = &keep_alive_timer_cb;
