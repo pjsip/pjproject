@@ -165,9 +165,6 @@ static pj_status_t if_enum_by_af(int af,
 	return PJ_RETURN_OS_ERROR(oserr);
     }
 
-    /* Done with socket */
-    pj_sock_close(sock);
-
     /* Interface interfaces */
     ifr = (struct ifreq*) ifc.ifc_req;
     count = ifc.ifc_len / sizeof(struct ifreq);
@@ -177,6 +174,7 @@ static pj_status_t if_enum_by_af(int af,
     *p_cnt = 0;
     for (i=0; i<count; ++i) {
 	struct ifreq *itf = &ifr[i];
+        struct ifreq iff = *itf;
 	struct sockaddr *ad = &itf->ifr_addr;
 	
 	TRACE_((THIS_FILE, " checking interface %s", itf->ifr_name));
@@ -188,13 +186,19 @@ static pj_status_t if_enum_by_af(int af,
 	    continue;
 	}
 
-	if ((itf->ifr_flags & IFF_UP)==0) {
+        if (ioctl(sock, SIOCGIFFLAGS, &iff) != 0) {
+	    TRACE_((THIS_FILE, "  ioctl(SIOCGIFFLAGS) failed: %s",
+		    get_os_errmsg()));
+	    continue;	/* Failed to get flags, continue */
+	}
+
+	if ((iff.ifr_flags & IFF_UP)==0) {
 	    TRACE_((THIS_FILE, "  interface is down"));
 	    continue; /* Skip when interface is down */
 	}
 
 #if PJ_IP_HELPER_IGNORE_LOOPBACK_IF
-	if (itf->ifr_flags & IFF_LOOPBACK) {
+	if (iff.ifr_flags & IFF_LOOPBACK) {
 	    TRACE_((THIS_FILE, "  loopback interface"));
 	    continue; /* Skip loopback interface */
 	}
@@ -220,9 +224,13 @@ static pj_status_t if_enum_by_af(int af,
 	(*p_cnt)++;
     }
 
+    /* Done with socket */
+    pj_sock_close(sock);
+
     TRACE_((THIS_FILE, "done, found %d address(es)", *p_cnt));
     return (*p_cnt != 0) ? PJ_SUCCESS : PJ_ENOTFOUND;
 }
+
 
 #elif defined(PJ_HAS_NET_IF_H) && PJ_HAS_NET_IF_H != 0
 /* Note: this does not work with IPv6 */
