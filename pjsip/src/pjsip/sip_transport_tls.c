@@ -194,9 +194,21 @@ static void tls_init_shutdown(struct tls_transport *tls, pj_status_t status)
     state_cb = pjsip_tpmgr_get_state_cb(tls->base.tpmgr);
     if (state_cb) {
 	pjsip_transport_state_info state_info;
-
+	pjsip_tls_state_info tls_info;
+	pj_ssl_sock_info ssl_info;
+	
+	/* Init transport state info */
 	pj_bzero(&state_info, sizeof(state_info));
 	state_info.status = tls->close_reason;
+
+	if (tls->ssock && 
+	    pj_ssl_sock_get_info(tls->ssock, &ssl_info) == PJ_SUCCESS)
+	{
+	    pj_bzero(&tls_info, sizeof(tls_info));
+	    tls_info.ssl_sock_info = &ssl_info;
+	    state_info.ext_info = &tls_info;
+	}
+
 	(*state_cb)(&tls->base, PJSIP_TP_STATE_DISCONNECTED, &state_info);
     }
 
