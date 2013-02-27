@@ -330,7 +330,8 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 
 #if !PLC_DISABLED
 	/* Create PLC, always with 10ms ptime */
-	status = pjmedia_plc_create(g711_factory.pool, 8000, 80,
+	status = pjmedia_plc_create(g711_factory.pool, 8000,
+				    SAMPLES_PER_FRAME,
 				    0, &codec_priv->plc);
 	if (status != PJ_SUCCESS) {
 	    pj_mutex_unlock(g711_factory.mutex);
@@ -340,7 +341,7 @@ static pj_status_t g711_alloc_codec( pjmedia_codec_factory *factory,
 
 	/* Create VAD */
 	status = pjmedia_silence_det_create(g711_factory.pool,
-					    8000, 80,
+					    8000, SAMPLES_PER_FRAME,
 					    &codec_priv->vad);
 	if (status != PJ_SUCCESS) {
 	    pj_mutex_unlock(g711_factory.mutex);

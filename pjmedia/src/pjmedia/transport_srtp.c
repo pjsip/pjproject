@@ -37,7 +37,7 @@
 /* Maximum size of packet */
 #define MAX_RTP_BUFFER_LEN	    1500
 #define MAX_RTCP_BUFFER_LEN	    1500
-#define MAX_KEY_LEN		    32
+#define MAX_KEY_LEN		    128
 
 /* Initial value of probation counter. When probation counter > 0, 
  * it means SRTP is in probation state, and it may restart when
@@ -611,19 +611,47 @@ PJ_DEF(pj_status_t) pjmedia_transport_srtp_start(
     /* Declare SRTP session initialized */
     srtp->session_inited = PJ_TRUE;
 
-    PJ_LOG(5, (srtp->pool->obj_name, "TX: %s key=%s", srtp->tx_policy.name.ptr,
-	       octet_string_hex_string(tx->key.ptr, tx->key.slen)));
-    if (srtp->tx_policy.flags) {
-	PJ_LOG(5,(srtp->pool->obj_name,"TX: disable%s%s", (cr_tx_idx?"":" enc"),
-		  (au_tx_idx?"":" auth")));
-    }
+    /* Logging stuffs */
+#if PJ_LOG_MAX_LEVEL >= 5
+    {
+	char b64[PJ_BASE256_TO_BASE64_LEN(MAX_KEY_LEN)];
+	int b64_len;
 
-    PJ_LOG(5, (srtp->pool->obj_name, "RX: %s key=%s", srtp->rx_policy.name.ptr,
-	       octet_string_hex_string(rx->key.ptr, rx->key.slen)));
-    if (srtp->rx_policy.flags) {
-	PJ_LOG(5,(srtp->pool->obj_name,"RX: disable%s%s", (cr_rx_idx?"":" enc"),
-		  (au_rx_idx?"":" auth")));
+	/* TX crypto and key */
+	b64_len = sizeof(b64);
+	status = pj_base64_encode((pj_uint8_t*)tx->key.ptr, tx->key.slen,
+				  b64, &b64_len);
+	if (status != PJ_SUCCESS)
+	    b64_len = pj_ansi_sprintf(b64, "--key too long--");
+	else
+	    b64[b64_len] = '\0';
+        
+	PJ_LOG(5, (srtp->pool->obj_name, "TX: %s key=%s",
+		   srtp->tx_policy.name.ptr, b64));
+	if (srtp->tx_policy.flags) {
+	    PJ_LOG(5,(srtp->pool->obj_name, "TX: disable%s%s",
+		      (cr_tx_idx?"":" enc"),
+		      (au_tx_idx?"":" auth")));
+	}
+
+	/* RX crypto and key */
+	b64_len = sizeof(b64);
+	status = pj_base64_encode((pj_uint8_t*)rx->key.ptr, rx->key.slen,
+				  b64, &b64_len);
+	if (status != PJ_SUCCESS)
+	    b64_len = pj_ansi_sprintf(b64, "--key too long--");
+	else
+	    b64[b64_len] = '\0';
+
+	PJ_LOG(5, (srtp->pool->obj_name, "RX: %s key=%s",
+		   srtp->rx_policy.name.ptr, b64));
+	if (srtp->rx_policy.flags) {
+	    PJ_LOG(5,(srtp->pool->obj_name,"RX: disable%s%s",
+		      (cr_rx_idx?"":" enc"),
+		      (au_rx_idx?"":" auth")));
+	}
     }
+#endif
 
 on_return:
     pj_lock_release(srtp->mutex);

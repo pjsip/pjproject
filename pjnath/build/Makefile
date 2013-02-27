@@ -97,6 +97,8 @@ distclean: realclean
 pjnath:
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH app=pjnath $(PJNATH_LIB)
 
+$$(PJNATH_LIB): pjnath
+
 pjnath-test: $(PJLIB_LIB) $(PJLIB_UTIL_LIB) $(PJNATH_LIB)
 	$(MAKE) -f $(RULES_MAK) APP=PJNATH_TEST app=pjnath-test $(PJNATH_TEST_EXE)
 

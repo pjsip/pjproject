@@ -213,6 +213,7 @@ static int udp_ping_pong_test(void)
 	for (i=0; i<10 && last_rx1 == srv1->rx_cnt && last_rx2 == srv2->rx_cnt; ++i) {
 	    pj_time_val delay = {0, 10};
 #ifdef PJ_SYMBIAN
+	    PJ_UNUSED_ARG(delay);
 	    pj_symbianos_poll(-1, 100);
 #else
 	    pj_ioqueue_poll(ioqueue, &delay);

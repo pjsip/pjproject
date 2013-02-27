@@ -363,7 +363,7 @@ static int compliance_test_0(pj_bool_t allow_concur)
 
 #ifdef PJ_SYMBIAN
 	callback_call_count = 0;
-	pj_symbianos_poll(-1, 1000);
+	pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 	status = callback_call_count;
 #else
 	status = pj_ioqueue_poll(ioque, &timeout);
@@ -412,7 +412,7 @@ static int compliance_test_0(pj_bool_t allow_concur)
     if (pending_op == 0) {
         pj_time_val timeout = {1, 0};
 #ifdef PJ_SYMBIAN
-	status = pj_symbianos_poll(-1, 1000);
+	status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
         status = pj_ioqueue_poll(ioque, &timeout);
 #endif
@@ -542,7 +542,7 @@ static int compliance_test_1(pj_bool_t allow_concur)
 
 #ifdef PJ_SYMBIAN
 	callback_call_count = 0;
-	pj_symbianos_poll(-1, 1000);
+	pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 	status = callback_call_count;
 #else
 	status = pj_ioqueue_poll(ioque, &timeout);
@@ -576,7 +576,7 @@ static int compliance_test_1(pj_bool_t allow_concur)
     if (pending_op == 0) {
         pj_time_val timeout = {1, 0};
 #ifdef PJ_SYMBIAN
-	status = pj_symbianos_poll(-1, 1000);
+	status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
         status = pj_ioqueue_poll(ioque, &timeout);
 #endif
@@ -771,7 +771,7 @@ static int compliance_test_2(pj_bool_t allow_concur)
 		pj_time_val timeout = {1, 0};
 
 #ifdef PJ_SYMBIAN
-		status = pj_symbianos_poll(-1, 1000);
+		status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
 		status = pj_ioqueue_poll(ioque, &timeout);
 #endif
@@ -797,7 +797,7 @@ static int compliance_test_2(pj_bool_t allow_concur)
 	if (pending_op == 0) {
 	    pj_time_val timeout = {1, 0};
 #ifdef PJ_SYMBIAN
-	    status = pj_symbianos_poll(-1, 1000);
+	    status = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
 	    status = pj_ioqueue_poll(ioque, &timeout);
 #endif

@@ -267,7 +267,7 @@ static int compliance_test(pj_bool_t allow_concur)
 
 	TRACE_("poll...");
 #ifdef PJ_SYMBIAN
-	rc = pj_symbianos_poll(-1, 5000);
+	rc = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
 	rc = pj_ioqueue_poll(ioque, &timeout);
 #endif
@@ -783,7 +783,7 @@ static int bench_test(pj_bool_t allow_concur, int bufsize,
 	do {
 	    pj_time_val timeout = { 1, 0 };
 #ifdef PJ_SYMBIAN
-	    rc = pj_symbianos_poll(-1, 1000);
+	    rc = pj_symbianos_poll(-1, PJ_TIME_VAL_MSEC(timeout));
 #else
 	    rc = pj_ioqueue_poll(ioque, &timeout);
 #endif
@@ -812,6 +812,7 @@ static int bench_test(pj_bool_t allow_concur, int bufsize,
 	do {
 	    pj_time_val timeout = { 0, 10 };
 #ifdef PJ_SYMBIAN
+	    PJ_UNUSED_ARG(timeout);
 	    rc = pj_symbianos_poll(-1, 100);
 #else	    
 	    rc = pj_ioqueue_poll(ioque, &timeout);

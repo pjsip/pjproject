@@ -614,6 +614,7 @@ static int encode_session(char buffer[], unsigned maxlen)
 	}
 
 	/* Enumerate all candidates for this component */
+	cand_cnt = PJ_ARRAY_SIZE(cand);
 	status = pj_ice_strans_enum_cands(icedemo.icest, comp+1,
 					  &cand_cnt, cand);
 	if (status != PJ_SUCCESS)

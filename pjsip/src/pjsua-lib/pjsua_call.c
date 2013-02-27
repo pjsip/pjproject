@@ -34,6 +34,17 @@
  */
 #define LOCK_CODEC_MAX_RETRY	     5
 
+
+/*
+ * The INFO method.
+ */
+const pjsip_method pjsip_info_method =
+{
+    PJSIP_OTHER_METHOD,
+    { "INFO", 4 }
+};
+
+
 /* This callback receives notification from invite session when the
  * session state has changed.
  */
@@ -174,6 +185,10 @@ pj_status_t pjsua_call_subsys_init(const pjsua_config *cfg)
     /* Add "norefersub" in Supported header */
     pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_SUPPORTED,
 			       NULL, 1, &str_norefersub);
+
+    /* Add "INFO" in Allow header, for DTMF and video key frame request. */
+    pjsip_endpt_add_capability(pjsua_var.endpt, NULL, PJSIP_H_ALLOW,
+			       NULL, 1, &pjsip_info_method.name);
 
     return status;
 }

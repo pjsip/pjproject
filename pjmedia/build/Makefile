@@ -150,7 +150,9 @@ pjmedia-audiodev:
 pjsdp:
 	$(MAKE) -f $(RULES_MAK) APP=PJSDP app=pjsdp $(PJSDP_LIB)
 
-pjmedia-test: $(PJMEDIA_LIB)
+$(PJMEDIA_LIB): pjmedia
+
+pjmedia-test: $(PJMEDIA_LIB) pjmedia
 	$(MAKE) -f $(RULES_MAK) APP=PJMEDIA_TEST app=pjmedia-test $(PJMEDIA_TEST_EXE)
 
 .PHONY: ../lib/pjmedia.ko

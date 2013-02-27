@@ -1522,8 +1522,15 @@ static pjsip_name_addr *int_parse_name_addr( pj_scanner *scanner,
 
     /* Get the SIP-URL */
     has_bracket = (*scanner->curptr == '<');
-    if (has_bracket)
+    if (has_bracket) {
 	pj_scan_get_char(scanner);
+    } else if (name_addr->display.slen) {
+	/* Must have bracket now (2012-10-26).
+	 * Allowing (invalid) name-addr to pass URI verification will
+	 * cause us to send invalid URI to the wire.
+	 */
+	PJ_THROW( PJSIP_SYN_ERR_EXCEPTION);
+    }
     name_addr->uri = int_parse_uri( scanner, pool, PJ_TRUE );
     if (has_bracket) {
 	if (pj_scan_get_char(scanner) != '>')

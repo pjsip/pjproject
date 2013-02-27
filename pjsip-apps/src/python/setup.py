@@ -87,8 +87,9 @@ f.close()
 if platform.system() == 'Darwin':
     extra_link_args = ["-framework", "CoreFoundation", 
                        "-framework", "AudioToolbox"]
-    # OS X Lion support
-    if platform.mac_ver()[0].startswith("10.7"):
+    version = platform.mac_ver()[0].split(".")    
+    # OS X Lion (10.7.x) or above support
+    if version[0] == '10' and int(version[1]) >= 7:
         extra_link_args += ["-framework", "AudioUnit"]
 else:
     extra_link_args = []

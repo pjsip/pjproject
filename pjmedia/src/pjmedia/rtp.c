@@ -118,8 +118,6 @@ PJ_DEF(pj_status_t) pjmedia_rtp_encode_rtp( pjmedia_rtp_session *ses,
 					    int payload_len, int ts_len,
 					    const void **rtphdr, int *hdrlen )
 {
-    PJ_UNUSED_ARG(payload_len);
-
     /* Update timestamp */
     ses->out_hdr.ts = pj_htonl(pj_ntohl(ses->out_hdr.ts)+ts_len);
 

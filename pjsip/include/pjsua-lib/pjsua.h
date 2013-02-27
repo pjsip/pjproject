@@ -653,9 +653,10 @@ typedef struct pjsua_callback
      *	  callback.
      *  - it may delay the processing of the request, for example to request
      *    user permission whether to accept or reject the request. In this 
-     *	  case, the application MUST set the \a code argument to 202, and 
-     *	  later calls #pjsua_pres_notify() to accept or reject the 
-     *	  subscription request.
+     *	  case, the application MUST set the \a code argument to 202, then
+     *    IMMEDIATELY calls #pjsua_pres_notify() with state
+     *    PJSIP_EVSUB_STATE_PENDING and later calls #pjsua_pres_notify()
+     *    again to accept or reject the subscription request.
      *
      * Any \a code other than 200 and 202 will be treated as 200.
      *
@@ -2240,7 +2241,8 @@ typedef struct pjsua_acc_config
 
     /** 
      * The full SIP URL for the account. The value can take name address or 
-     * URL format, and will look something like "sip:account@serviceprovider".
+     * URL format, and will look something like "sip:account@serviceprovider"
+     * or "\"Display Name\" <sip:account@provider>".
      *
      * This field is mandatory.
      */
@@ -3524,7 +3526,8 @@ PJ_DECL(pj_status_t) pjsua_call_update(pjsua_call_id call_id,
  * of the call transfer request.
  *
  * @param call_id	The call id to be transfered.
- * @param dest		Address of new target to be contacted.
+ * @param dest		URI of new target to be contacted. The URI may be
+ * 			in name address or addr-spec format.
  * @param msg_data	Optional message components to be sent with
  *			the request.
  *

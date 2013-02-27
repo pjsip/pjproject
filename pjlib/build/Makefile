@@ -87,7 +87,7 @@ pjlib: ../include/pj/config_site.h
 ../include/pj/config_site.h:
 	touch ../include/pj/config_site.h
 	
-pjlib-test: 
+pjlib-test: pjlib
 	$(MAKE) -f $(RULES_MAK) APP=TEST app=pjlib-test $(TEST_EXE)
 
 .PHONY: ../lib/pjlib.ko
