@@ -2709,7 +2709,7 @@ static void handle_incoming_check(pj_ice_sess *ice,
 	     */
 	    LOG5((ice->obj_name, "Triggered check for check %d not performed "
 		  "because it's in progress. Retransmitting", i));
-	    pj_stun_session_retransmit_req(comp->stun_sess, c->tdata);
+	    pj_stun_session_retransmit_req(comp->stun_sess, c->tdata, PJ_FALSE);
 
 	} else if (c->state == PJ_ICE_SESS_CHECK_STATE_SUCCEEDED) {
 	    /* Check complete for this component.

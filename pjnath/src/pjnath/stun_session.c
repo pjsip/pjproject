@@ -1052,7 +1052,8 @@ PJ_DEF(pj_status_t) pj_stun_session_cancel_req( pj_stun_session *sess,
  * Explicitly request retransmission of the request.
  */
 PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
-						   pj_stun_tx_data *tdata)
+						   pj_stun_tx_data *tdata,
+                                                   pj_bool_t mod_count)
 {
     pj_status_t status;
 
@@ -1063,7 +1064,7 @@ PJ_DEF(pj_status_t) pj_stun_session_retransmit_req(pj_stun_session *sess,
     pj_atomic_inc(sess->busy);
     pj_lock_acquire(sess->lock);
 
-    status = pj_stun_client_tsx_retransmit(tdata->client_tsx);
+    status = pj_stun_client_tsx_retransmit(tdata->client_tsx, mod_count);
 
     pj_lock_release(sess->lock);
 
