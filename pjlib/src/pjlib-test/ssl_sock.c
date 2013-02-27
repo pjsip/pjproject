@@ -1329,10 +1329,33 @@ on_return:
     return status;
 }
 
+#if 0 && (!defined(PJ_SYMBIAN) || PJ_SYMBIAN==0)
+pj_status_t pj_ssl_sock_ossl_test_send_buf(pj_pool_t *pool);
+static int ossl_test_send_buf()
+{
+    pj_pool_t *pool;
+    pj_status_t status;
+
+    pool = pj_pool_create(mem, "send_buf", 256, 256, NULL);
+    status = pj_ssl_sock_ossl_test_send_buf(pool);
+    pj_pool_release(pool);
+    return status;
+}
+#else
+static int ossl_test_send_buf()
+{
+    return 0;
+}
+#endif
 
 int ssl_sock_test(void)
 {
     int ret;
+
+    PJ_LOG(3,("", "..test ossl send buf"));
+    ret = ossl_test_send_buf();
+    if (ret != 0)
+	return ret;
 
     PJ_LOG(3,("", "..get cipher list test"));
     ret = get_cipher_list();
