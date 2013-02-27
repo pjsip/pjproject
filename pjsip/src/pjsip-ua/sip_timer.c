@@ -1030,6 +1030,33 @@ PJ_DEF(pj_status_t) pjsip_timer_update_resp(pjsip_inv_session *inv,
 	if (inv->timer && inv->timer->active) {
 	    /* Add Session-Expires header and start the timer */
 	    add_timer_headers(inv, tdata, PJ_TRUE, PJ_FALSE);
+
+	    /* Add 'timer' to Require header (see ticket #1560). */
+	    if (inv->timer->refresher == TR_UAC) {
+		pjsip_require_hdr *req_hdr;
+		pj_bool_t req_hdr_has_timer = PJ_FALSE;
+
+		req_hdr = (pjsip_require_hdr*)
+			   pjsip_msg_find_hdr(tdata->msg, PJSIP_H_REQUIRE,
+					      NULL);
+		if (req_hdr == NULL) {
+		    req_hdr = pjsip_require_hdr_create(tdata->pool);
+		    PJ_ASSERT_RETURN(req_hdr, PJ_ENOMEM);
+		    pjsip_msg_add_hdr(tdata->msg, (pjsip_hdr*)req_hdr);
+		} else {
+		    unsigned i;
+		    for (i = 0; i < req_hdr->count; ++i) {
+			if (pj_stricmp(&req_hdr->values[i], &STR_TIMER)) {
+			    req_hdr_has_timer = PJ_TRUE;
+			    break;
+			}
+		    }
+		}
+		if (!req_hdr_has_timer)
+		    req_hdr->values[req_hdr->count++] = STR_TIMER;
+	    }
+	    
+	    /* Finally, start timer. */
 	    start_timer(inv);
 	}
     } 
