@@ -47,7 +47,7 @@ PJ_IDEF(void*) pj_pool_alloc_from_block( pj_pool_block *block, pj_size_t size )
     if (size & (PJ_POOL_ALIGNMENT-1)) {
 	size = (size + PJ_POOL_ALIGNMENT) & ~(PJ_POOL_ALIGNMENT-1);
     }
-    if ((unsigned)(block->end - block->cur) >= size) {
+    if ((pj_size_t)(block->end - block->cur) >= size) {
 	void *ptr = block->cur;
 	block->cur += size;
 	return ptr;
