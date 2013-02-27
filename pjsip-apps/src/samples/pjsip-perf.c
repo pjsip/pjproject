@@ -219,8 +219,8 @@ static pj_bool_t mod_stateless_on_rx_request(pjsip_rx_data *rdata)
 
     uri = pjsip_uri_get_uri(rdata->msg_info.msg->line.req.uri);
 
-    /* Only want to receive SIP scheme */
-    if (!PJSIP_URI_SCHEME_IS_SIP(uri))
+    /* Only want to receive SIP/SIPS scheme */
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
 	return PJ_FALSE;
 
     sip_uri = (pjsip_sip_uri*) uri;
@@ -280,8 +280,8 @@ static pj_bool_t mod_stateful_on_rx_request(pjsip_rx_data *rdata)
 
     uri = pjsip_uri_get_uri(rdata->msg_info.msg->line.req.uri);
 
-    /* Only want to receive SIP scheme */
-    if (!PJSIP_URI_SCHEME_IS_SIP(uri))
+    /* Only want to receive SIP/SIPS scheme */
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
 	return PJ_FALSE;
 
     sip_uri = (pjsip_sip_uri*) uri;
@@ -417,8 +417,8 @@ static pj_bool_t mod_call_on_rx_request(pjsip_rx_data *rdata)
 
     uri = pjsip_uri_get_uri(rdata->msg_info.msg->line.req.uri);
 
-    /* Only want to receive SIP scheme */
-    if (!PJSIP_URI_SCHEME_IS_SIP(uri))
+    /* Only want to receive SIP/SIPS scheme */
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) && !PJSIP_URI_SCHEME_IS_SIPS(uri))
 	return PJ_FALSE;
 
     sip_uri = (pjsip_sip_uri*) uri;

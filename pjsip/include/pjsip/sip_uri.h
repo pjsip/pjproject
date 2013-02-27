@@ -226,12 +226,12 @@ struct pjsip_uri
 };
 
 /**
- * This macro checks that the URL is a "sip:" or "sips:" URL.
+ * This macro checks that the URL is a "sip:" URL.
  * @param url The URL (pointer to)
  * @return non-zero if TRUE.
  */
 #define PJSIP_URI_SCHEME_IS_SIP(url)	\
-    (pj_strnicmp2(pjsip_uri_get_scheme(url), "sip", 3)==0)
+    (pj_stricmp2(pjsip_uri_get_scheme(url), "sip")==0)
 
 /**
  * This macro checks that the URL is a "sips:" URL (not SIP).
@@ -239,7 +239,7 @@ struct pjsip_uri
  * @return non-zero if TRUE.
  */
 #define PJSIP_URI_SCHEME_IS_SIPS(url)	\
-    (pj_strnicmp2(pjsip_uri_get_scheme(url), "sips", 4)==0)
+    (pj_stricmp2(pjsip_uri_get_scheme(url), "sips")==0)
 
 /**
  * This macro checks that the URL is a "tel:" URL.
@@ -247,7 +247,7 @@ struct pjsip_uri
  * @return non-zero if TRUE.
  */
 #define PJSIP_URI_SCHEME_IS_TEL(url)	\
-    (pj_strnicmp2(pjsip_uri_get_scheme(url), "tel", 3)==0)
+    (pj_stricmp2(pjsip_uri_get_scheme(url), "tel")==0)
 
 
 /**
