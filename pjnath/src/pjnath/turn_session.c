@@ -421,7 +421,10 @@ static void sess_shutdown(pj_turn_session *sess,
 	/* This may recursively call this function again with
 	 * state==PJ_TURN_STATE_DEALLOCATED.
 	 */
+	/* No need to deallocate as we're already deallocating!
+	 * See https://trac.pjsip.org/repos/ticket/1551
 	send_refresh(sess, 0);
+	*/
 	break;
     case PJ_TURN_STATE_DEALLOCATED:
     case PJ_TURN_STATE_DESTROYING:
