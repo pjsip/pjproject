@@ -393,7 +393,6 @@ PJ_DEF(void) pj_scan_get_quotes(pj_scanner *scanner,
 		    }
 		    /* break from main loop if we have odd number of backslashes */
 		    if (((unsigned)(q-r) & 0x01) == 1) {
-			++s;
 			break;
 		    }
 		    ++s;
