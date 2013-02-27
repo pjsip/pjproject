@@ -268,7 +268,9 @@ static void set_no_ice(struct transport_ice *tp_ice, const char *reason,
 		  "Stopping ICE, reason=%s", reason));
     }
 
-    pj_ice_strans_stop_ice(tp_ice->ice_st);
+    if (tp_ice->ice_st) {
+	pj_ice_strans_stop_ice(tp_ice->ice_st);
+    }
 
     tp_ice->use_ice = PJ_FALSE;
 }
