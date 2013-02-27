@@ -1457,12 +1457,12 @@ on_return:
 /* Clean up media transports in provisional media that is not used
  * by call media.
  */
-void pjsua_media_prov_clean_up(pjsua_call_id call_id)
+static void media_prov_clean_up(pjsua_call_id call_id, int idx)
 {
     pjsua_call *call = &pjsua_var.calls[call_id];
     unsigned i;
 
-    for (i = 0; i < call->med_prov_cnt; ++i) {
+    for (i = idx; i < call->med_prov_cnt; ++i) {
 	pjsua_call_media *call_med = &call->media_prov[i];
 	unsigned j;
 	pj_bool_t used = PJ_FALSE;
@@ -1487,6 +1487,11 @@ void pjsua_media_prov_clean_up(pjsua_call_id call_id)
 	    call_med->tp = call_med->tp_orig = NULL;
 	}
     }
+}
+
+void pjsua_media_prov_clean_up(pjsua_call_id call_id)
+{
+    media_prov_clean_up(call_id, 0);
 }
 
 
@@ -1902,6 +1907,8 @@ pj_status_t pjsua_media_channel_create_sdp(pjsua_call_id call_id,
 
 	if (rem_sdp && mi >= rem_sdp->media_count) {
 	    /* Remote might have removed some media lines. */
+            media_prov_clean_up(call->index, rem_sdp->media_count);
+            call->med_prov_cnt = rem_sdp->media_count;
 	    break;
 	}
 
