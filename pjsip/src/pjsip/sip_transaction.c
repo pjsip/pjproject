@@ -403,7 +403,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_key( pj_pool_t *pool, pj_str_t *key,
      */
     const pj_str_t *branch = &rdata->msg_info.via->branch_param;
 
-    if (pj_strncmp(branch,&rfc3261_branch,PJSIP_RFC3261_BRANCH_LEN)==0) {
+    if (pj_strnicmp(branch,&rfc3261_branch,PJSIP_RFC3261_BRANCH_LEN)==0) {
 
 	/* Create transaction key. */
 	return create_tsx_key_3261(pool, key, role, method, branch);
@@ -548,10 +548,10 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
      * Do not use PJ_ASSERT_RETURN since it evaluates the expression
      * twice!
      */
-    if(pj_hash_get(mod_tsx_layer.htable, 
-		   tsx->transaction_key.ptr,
-		   tsx->transaction_key.slen, 
-		   NULL))
+    if(pj_hash_get_lower(mod_tsx_layer.htable, 
+		         tsx->transaction_key.ptr,
+		         tsx->transaction_key.slen, 
+		         NULL))
     {
 	pj_mutex_unlock(mod_tsx_layer.mutex);
 	PJ_LOG(2,(THIS_FILE, 
@@ -568,11 +568,13 @@ static pj_status_t mod_tsx_layer_register_tsx( pjsip_transaction *tsx)
 
     /* Register the transaction to the hash table. */
 #ifdef PRECALC_HASH
-    pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    		 tsx->transaction_key.slen, tsx->hashed_key, tsx);
+    pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable,
+                       tsx->transaction_key.ptr,
+    		       tsx->transaction_key.slen, tsx->hashed_key, tsx);
 #else
-    pj_hash_set( tsx->pool, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    		 tsx->transaction_key.slen, 0, tsx);
+    pj_hash_set_lower( tsx->pool, mod_tsx_layer.htable,
+                       tsx->transaction_key.ptr,
+    		       tsx->transaction_key.slen, 0, tsx);
 #endif
 
     /* Unlock mutex. */
@@ -604,11 +606,11 @@ static void mod_tsx_layer_unregister_tsx( pjsip_transaction *tsx)
 
     /* Register the transaction to the hash table. */
 #ifdef PRECALC_HASH
-    pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    		 tsx->transaction_key.slen, tsx->hashed_key, NULL);
+    pj_hash_set_lower( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
+    		       tsx->transaction_key.slen, tsx->hashed_key, NULL);
 #else
-    pj_hash_set( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
-    		 tsx->transaction_key.slen, 0, NULL);
+    pj_hash_set_lower( NULL, mod_tsx_layer.htable, tsx->transaction_key.ptr,
+    		       tsx->transaction_key.slen, 0, NULL);
 #endif
 
     TSX_TRACE_((THIS_FILE, 
@@ -651,7 +653,8 @@ PJ_DEF(pjsip_transaction*) pjsip_tsx_layer_find_tsx( const pj_str_t *key,
 
     pj_mutex_lock(mod_tsx_layer.mutex);
     tsx = (pjsip_transaction*)
-    	  pj_hash_get( mod_tsx_layer.htable, key->ptr, key->slen, &hval );
+    	  pj_hash_get_lower( mod_tsx_layer.htable, key->ptr, key->slen,
+                             &hval );
     pj_mutex_unlock(mod_tsx_layer.mutex);
 
     TSX_TRACE_((THIS_FILE, 
@@ -785,7 +788,7 @@ static pj_bool_t mod_tsx_layer_on_rx_request(pjsip_rx_data *rdata)
     pj_mutex_lock( mod_tsx_layer.mutex );
 
     tsx = (pjsip_transaction*) 
-    	  pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
+    	  pj_hash_get_lower( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
 
 
     TSX_TRACE_((THIS_FILE, 
@@ -834,7 +837,7 @@ static pj_bool_t mod_tsx_layer_on_rx_response(pjsip_rx_data *rdata)
     pj_mutex_lock( mod_tsx_layer.mutex );
 
     tsx = (pjsip_transaction*) 
-    	  pj_hash_get( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
+    	  pj_hash_get_lower( mod_tsx_layer.htable, key.ptr, key.slen, &hval );
 
 
     TSX_TRACE_((THIS_FILE, 
@@ -1293,8 +1296,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uac( pjsip_module *tsx_user,
 
     /* Calculate hashed key value. */
 #ifdef PRECALC_HASH
-    tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
-				   tsx->transaction_key.slen);
+    tsx->hashed_key = pj_hash_calc_tolower(0, NULL, &tsx->transaction_key);
 #endif
 
     PJ_LOG(6, (tsx->obj_name, "tsx_key=%.*s", tsx->transaction_key.slen,
@@ -1424,8 +1426,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_create_uas( pjsip_module *tsx_user,
 
     /* Calculate hashed key value. */
 #ifdef PRECALC_HASH
-    tsx->hashed_key = pj_hash_calc(0, tsx->transaction_key.ptr,
-				   tsx->transaction_key.slen);
+    tsx->hashed_key = pj_hash_calc_tolower(0, NULL, &tsx->transaction_key);
 #endif
 
     /* Duplicate branch parameter for transaction. */

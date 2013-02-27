@@ -345,7 +345,7 @@ PJ_DEF(pj_str_t) pjsip_calculate_branch_id( pjsip_rx_data *rdata )
     /* If incoming request does not have RFC 3261 branch value, create
      * a branch value from GUID .
      */
-    if (pj_strncmp(&rdata->msg_info.via->branch_param, 
+    if (pj_strnicmp(&rdata->msg_info.via->branch_param, 
 		   &rfc3261_branch, PJSIP_RFC3261_BRANCH_LEN) != 0 ) 
     {
 	pj_str_t tmp;

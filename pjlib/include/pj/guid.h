@@ -83,12 +83,31 @@ PJ_DECL(unsigned) pj_GUID_STRING_LENGTH(void);
 PJ_DECL(pj_str_t*) pj_generate_unique_string(pj_str_t *str);
 
 /**
+ * Create a globally unique string in lowercase, which length is
+ * PJ_GUID_STRING_LENGTH characters. Caller is responsible for preallocating
+ * the storage used in the string.
+ *
+ * @param str       The string to store the result.
+ *
+ * @return          The string.
+ */
+PJ_DECL(pj_str_t*) pj_generate_unique_string_lower(pj_str_t *str);
+
+/**
  * Generate a unique string.
  *
  * @param pool	    Pool to allocate memory from.
  * @param str	    The string.
  */
 PJ_DECL(void) pj_create_unique_string(pj_pool_t *pool, pj_str_t *str);
+
+/**
+ * Generate a unique string in lowercase.
+ *
+ * @param pool	    Pool to allocate memory from.
+ * @param str	    The string.
+ */
+PJ_DECL(void) pj_create_unique_string_lower(pj_pool_t *pool, pj_str_t *str);
 
 
 /**
