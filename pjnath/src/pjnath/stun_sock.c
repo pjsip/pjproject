@@ -386,13 +386,19 @@ PJ_DEF(pj_status_t) pj_stun_sock_destroy(pj_stun_sock *stun_sock)
 	stun_sock->q = NULL;
     }
 
+    if (stun_sock->stun_sess) {
+	pj_stun_session_set_user_data(stun_sock->stun_sess, NULL);
+    }
+    
     /* Destroy the active socket first just in case we'll get
      * stray callback.
      */
     if (stun_sock->active_sock != NULL) {
-	pj_activesock_close(stun_sock->active_sock);
+	pj_activesock_t	*asock = stun_sock->active_sock;
 	stun_sock->active_sock = NULL;
 	stun_sock->sock_fd = PJ_INVALID_SOCKET;
+	pj_activesock_set_user_data(asock, NULL);
+	pj_activesock_close(asock);
     } else if (stun_sock->sock_fd != PJ_INVALID_SOCKET) {
 	pj_sock_close(stun_sock->sock_fd);
 	stun_sock->sock_fd = PJ_INVALID_SOCKET;
@@ -615,6 +621,8 @@ static pj_status_t sess_on_send_msg(pj_stun_session *sess,
     pj_ssize_t size;
 
     stun_sock = (pj_stun_sock *) pj_stun_session_get_user_data(sess);
+    if (!stun_sock || !stun_sock->active_sock)
+	return PJ_EINVALIDOP;
 
     pj_assert(token==INTERNAL_MSG_TOKEN);
     PJ_UNUSED_ARG(token);
@@ -643,6 +651,8 @@ static void sess_on_request_complete(pj_stun_session *sess,
     pj_bool_t resched = PJ_TRUE;
 
     stun_sock = (pj_stun_sock *) pj_stun_session_get_user_data(sess);
+    if (!stun_sock)
+	return;
 
     PJ_UNUSED_ARG(tdata);
     PJ_UNUSED_ARG(token);
@@ -765,6 +775,8 @@ static pj_bool_t on_data_recvfrom(pj_activesock_t *asock,
     pj_uint16_t type;
 
     stun_sock = (pj_stun_sock*) pj_activesock_get_user_data(asock);
+    if (!stun_sock)
+	return PJ_FALSE;
 
     /* Log socket error */
     if (status != PJ_SUCCESS) {
@@ -829,6 +841,8 @@ static pj_bool_t on_data_sent(pj_activesock_t *asock,
     pj_stun_sock *stun_sock;
 
     stun_sock = (pj_stun_sock*) pj_activesock_get_user_data(asock);
+    if (!stun_sock)
+	return PJ_FALSE;
 
     /* Don't report to callback if this is internal message */
     if (send_key == &stun_sock->int_send_key) {
