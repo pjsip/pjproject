@@ -59,7 +59,10 @@ static void mod_util_on_tsx_state(pjsip_transaction *tsx, pjsip_event *event)
 {
     struct tsx_data *tsx_data;
 
-    if (event->type != PJSIP_EVENT_TSX_STATE)
+    /* Check if the module has been unregistered (see ticket #1535) and also
+     * verify the event type.
+     */
+    if (mod_stateful_util.id < 0 || event->type != PJSIP_EVENT_TSX_STATE)
 	return;
 
     tsx_data = (struct tsx_data*) tsx->mod_data[mod_stateful_util.id];
