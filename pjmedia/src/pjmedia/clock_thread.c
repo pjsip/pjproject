@@ -31,6 +31,7 @@
 
 struct pjmedia_clock
 {
+    pj_pool_t		    *pool;
     pj_timestamp	     freq;
     pj_timestamp	     interval;
     pj_timestamp	     next_tick;
@@ -70,8 +71,8 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
 		     PJ_EINVAL);
 
     clock = PJ_POOL_ALLOC_T(pool, pjmedia_clock);
+    clock->pool = pj_pool_create(pool->factory, "clock%p", 512, 512, NULL);
 
-    
     status = pj_get_timestamp_freq(&clock->freq);
     if (status != PJ_SUCCESS)
 	return status;
@@ -93,16 +94,6 @@ PJ_DEF(pj_status_t) pjmedia_clock_create( pj_pool_t *pool,
     status = pj_lock_create_null_mutex(pool, "clock", &clock->lock);
     if (status != PJ_SUCCESS)
 	return status;
-
-    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0) {
-	status = pj_thread_create(pool, "clock", &clock_thread, clock,
-				  0, 0, &clock->thread);
-	if (status != PJ_SUCCESS) {
-	    pj_lock_destroy(clock->lock);
-	    return status;
-	}
-    }
-
 
     *p_clock = clock;
 
@@ -127,12 +118,20 @@ PJ_DEF(pj_status_t) pjmedia_clock_start(pjmedia_clock *clock)
     if (status != PJ_SUCCESS)
 	return status;
 
-    pj_lock_acquire(clock->lock);
     clock->next_tick.u64 = now.u64 + clock->interval.u64;
     clock->running = PJ_TRUE;
-    pj_lock_release(clock->lock);
+    clock->quitting = PJ_FALSE;
 
-    return status;
+    if ((clock->options & PJMEDIA_CLOCK_NO_ASYNC) == 0 && !clock->thread) {
+	status = pj_thread_create(clock->pool, "clock", &clock_thread, clock,
+				  0, 0, &clock->thread);
+	if (status != PJ_SUCCESS) {
+	    clock->running = PJ_FALSE;
+	    return status;
+	}
+    }
+
+    return PJ_SUCCESS;
 }
 
 
@@ -144,6 +143,17 @@ PJ_DEF(pj_status_t) pjmedia_clock_stop(pjmedia_clock *clock)
     PJ_ASSERT_RETURN(clock != NULL, PJ_EINVAL);
 
     clock->running = PJ_FALSE;
+    clock->quitting = PJ_TRUE;
+
+    if (clock->thread) {
+	if (pj_thread_join(clock->thread) == PJ_SUCCESS) {
+	    pj_thread_destroy(clock->thread);
+	    clock->thread = NULL;
+	    pj_pool_reset(clock->pool);
+	} else {
+	    clock->quitting = PJ_FALSE;
+	}
+    }
 
     return PJ_SUCCESS;
 }
@@ -254,6 +264,10 @@ static int clock_thread(void *arg)
 	if (clock->cb)
 	    (*clock->cb)(&clock->timestamp, clock->user_data);
 
+	/* Best effort way to detect if we've been destroyed in the callback */
+	if (clock->quitting)
+	    break;
+
 	/* Increment timestamp */
 	clock->timestamp.u64 += clock->timestamp_inc;
 
@@ -288,6 +302,11 @@ PJ_DEF(pj_status_t) pjmedia_clock_destroy(pjmedia_clock *clock)
 	clock->lock = NULL;
     }
 
+    if (clock->pool) {
+	pj_pool_t *pool = clock->pool;
+	clock->pool = NULL;
+	pj_pool_release(pool);
+    }
     return PJ_SUCCESS;
 }
 
