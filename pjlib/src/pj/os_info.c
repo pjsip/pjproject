@@ -242,6 +242,9 @@ PJ_DEF(const pj_sys_info*) pj_get_sys_info(void)
 	} else {
 	    si.os_name = pj_str("Unknown");
 	}
+	
+	/* Avoid compile warning on Symbian. */
+	goto get_sdk_info;
     }
 #endif
 

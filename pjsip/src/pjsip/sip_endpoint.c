@@ -869,7 +869,7 @@ PJ_DEF(pj_status_t) pjsip_endpt_process_rx_data( pjsip_endpoint *endpt,
     }
 
     /* Start with the specified priority */
-    while (mod != &endpt->module_list && mod->priority < p->start_prio) {
+    while (mod != &endpt->module_list && mod->priority < (int)p->start_prio) {
 	mod = mod->next;
     }
 

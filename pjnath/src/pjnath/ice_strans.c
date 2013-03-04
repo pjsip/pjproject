@@ -1320,7 +1320,6 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     pj_ice_strans *ice_st = (pj_ice_strans*)ice->user_data;
     pj_ice_strans_comp *comp;
     pj_status_t status;
-    char daddr[PJ_INET6_ADDRSTRLEN];
 
     PJ_ASSERT_RETURN(comp_id && comp_id <= ice_st->comp_cnt, PJ_EINVAL);
 

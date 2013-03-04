@@ -351,7 +351,7 @@ static pj_status_t grp_lock_destroy(LOCK_OBJ *p)
     lck = glock->lock_list.next;
     while (lck != &glock->lock_list) {
 	if (lck->lock != glock->own_lock) {
-	    unsigned i;
+	    int i;
 	    for (i=0; i<glock->owner_cnt; ++i)
 		pj_lock_release(lck->lock);
 	}
@@ -447,27 +447,27 @@ PJ_DEF(pj_status_t) pj_grp_lock_release( pj_grp_lock_t *grp_lock)
     return grp_lock_release(grp_lock);
 }
 
-PJ_DEF(pj_status_t) pj_grp_lock_replace( pj_grp_lock_t *old,
-                                         pj_grp_lock_t *new)
+PJ_DEF(pj_status_t) pj_grp_lock_replace( pj_grp_lock_t *old_lock,
+                                         pj_grp_lock_t *new_lock)
 {
     grp_destroy_callback *ocb;
 
     /* Move handlers from old to new */
-    ocb = old->destroy_list.next;
-    while (ocb != &old->destroy_list) {
+    ocb = old_lock->destroy_list.next;
+    while (ocb != &old_lock->destroy_list) {
 	grp_destroy_callback *ncb;
 
-	ncb = PJ_POOL_ALLOC_T(new->pool, grp_destroy_callback);
+	ncb = PJ_POOL_ALLOC_T(new_lock->pool, grp_destroy_callback);
 	ncb->comp = ocb->comp;
 	ncb->handler = ocb->handler;
-	pj_list_push_back(&new->destroy_list, ncb);
+	pj_list_push_back(&new_lock->destroy_list, ncb);
 
 	ocb = ocb->next;
     }
 
-    pj_list_init(&old->destroy_list);
+    pj_list_init(&old_lock->destroy_list);
 
-    grp_lock_destroy(old);
+    grp_lock_destroy(old_lock);
     return PJ_SUCCESS;
 }
 
@@ -614,7 +614,7 @@ PJ_DEF(pj_status_t) pj_grp_lock_chain_lock( pj_grp_lock_t *glock,
                                             int pos)
 {
     grp_lock_item *lck, *new_lck;
-    unsigned i;
+    int i;
 
     grp_lock_acquire(glock);
 
@@ -653,7 +653,7 @@ PJ_DEF(pj_status_t) pj_grp_lock_unchain_lock( pj_grp_lock_t *glock,
     }
 
     if (lck != &glock->lock_list) {
-	unsigned i;
+	int i;
 
 	pj_list_erase(lck);
 	for (i=0; i<glock->owner_cnt; ++i)

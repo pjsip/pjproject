@@ -616,9 +616,10 @@ static pj_status_t tls_create( struct tls_listener *listener,
 
     tls->base.key.type = listener->factory.type;
     pj_sockaddr_cp(&tls->base.key.rem_addr, remote);
-    tls->base.type_name = (char*)
-			  pjsip_transport_get_type_name(tls->base.key.type);
-    tls->base.flag = pjsip_transport_get_flag_from_type(tls->base.key.type);
+    tls->base.type_name = (char*)pjsip_transport_get_type_name(
+				   (pjsip_transport_type_e)tls->base.key.type);
+    tls->base.flag = pjsip_transport_get_flag_from_type(
+				   (pjsip_transport_type_e)tls->base.key.type);
 
     tls->base.info = (char*) pj_pool_alloc(pool, 64);
     pj_ansi_snprintf(tls->base.info, 64, "%s to %s",

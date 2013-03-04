@@ -37,10 +37,10 @@ PJ_DEF(const char*) pjmedia_type_name(pjmedia_type t)
 	"unknown"
     };
 
-    pj_assert(t < PJ_ARRAY_SIZE(type_names));
+    pj_assert(t < (int)PJ_ARRAY_SIZE(type_names));
     pj_assert(PJMEDIA_TYPE_UNKNOWN == 4);
 
-    if (t < PJ_ARRAY_SIZE(type_names))
+    if (t < (int)PJ_ARRAY_SIZE(type_names))
 	return type_names[t];
     else
 	return "??";

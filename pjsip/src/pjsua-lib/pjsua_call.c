@@ -2167,7 +2167,7 @@ PJ_DEF(pj_status_t) pjsua_call_hangup(pjsua_call_id call_id,
         if (code == 0)
             call->last_code = PJSIP_SC_REQUEST_TERMINATED;
         else
-            call->last_code = code;
+            call->last_code = (pjsip_status_code)code;
         if (reason) {
             pj_strncpy(&call->last_text, reason,
 		       sizeof(call->last_text_buf_));
