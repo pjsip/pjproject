@@ -342,6 +342,9 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
     pj_grp_lock_acquire(tsx->grp_lock);
 
     if (tsx->transmit_count >= PJ_STUN_MAX_TRANSMIT_COUNT) {
+        /* tsx may be destroyed when calling the callback below */
+        pj_grp_lock_t *grp_lock = tsx->grp_lock;
+
 	/* Retransmission count exceeded. Transaction has failed */
 	tsx->retransmit_timer.id = 0;
 	PJ_LOG(4,(tsx->obj_name, "STUN timeout waiting for response"));
@@ -352,7 +355,7 @@ static void retransmit_timer_callback(pj_timer_heap_t *timer_heap,
 		tsx->cb.on_complete(tsx, PJNATH_ESTUNTIMEDOUT, NULL, NULL, 0);
 	    }
 	}
-	pj_grp_lock_release(tsx->grp_lock);
+	pj_grp_lock_release(grp_lock);
 	/* We might have been destroyed, don't try to access the object */
 	pj_log_pop_indent();
 	return;
