@@ -132,6 +132,17 @@ PJ_BEGIN_DECL
 #   define PJMEDIA_VIDEO_DEV_HAS_AVI		1
 #endif
 
+/**
+ * Specify the SDL library name to be linked with Visual Studio project. 
+ * By default, the name is autodetected based on SDL version ("sdl.lib" or 
+ * "sdl2.lib"), but application may explicitly specify the library name if this 
+ * autodetection fails. Common names are: "sdl2.lib" or "sdl.lib".
+ *
+ * Default: undeclared.
+ */
+#ifndef PJMEDIA_SDL_LIB
+#   undef PJMEDIA_SDL_LIB
+#endif
 
 /**
  * @}
