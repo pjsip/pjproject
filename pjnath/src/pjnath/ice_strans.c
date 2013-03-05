@@ -31,8 +31,9 @@
 #include <pj/string.h>
 #include <pj/compat/socket.h>
 
+#define ENABLE_TRACE 0
 
-#if 0
+#if defined(ENABLE_TRACE) && (ENABLE_TRACE != 0)
 #  define TRACE_PKT(expr)	    PJ_LOG(5,expr)
 #else
 #  define TRACE_PKT(expr)
@@ -1320,6 +1321,9 @@ static pj_status_t ice_tx_pkt(pj_ice_sess *ice,
     pj_ice_strans *ice_st = (pj_ice_strans*)ice->user_data;
     pj_ice_strans_comp *comp;
     pj_status_t status;
+#if defined(ENABLE_TRACE) && (ENABLE_TRACE != 0)
+    char daddr[PJ_INET6_ADDRSTRLEN];
+#endif
 
     PJ_ASSERT_RETURN(comp_id && comp_id <= ice_st->comp_cnt, PJ_EINVAL);
 

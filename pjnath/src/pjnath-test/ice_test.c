@@ -467,7 +467,8 @@ static int check_pair(const struct ice_ept *ept1, const struct ice_ept *ept2,
 					break; \
 				    } \
 				    PJ_TIME_VAL_SUB(t, t0); \
-				    if (PJ_TIME_VAL_MSEC(t) >= (timeout)) break; \
+				    if ((unsigned)PJ_TIME_VAL_MSEC(t) >= (timeout)) \
+					break; \
 				} \
 			    }
 
@@ -1015,7 +1016,7 @@ int ice_one_conc_test(pj_stun_config *stun_cfg, int err_quit)
 
 int ice_conc_test(void)
 {
-    const int LOOP = 100;
+    const unsigned LOOP = 100;
     pj_pool_t *pool;
     pj_stun_config stun_cfg;
     unsigned i;
@@ -1034,6 +1035,9 @@ int ice_conc_test(void)
 	if (rc)
 	    break;
     }
+
+    /* Avoid compiler warning */
+    goto on_return;
     
 on_return:
     destroy_stun_config(&stun_cfg);

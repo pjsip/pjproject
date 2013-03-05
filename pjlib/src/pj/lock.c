@@ -709,5 +709,7 @@ PJ_DEF(void) pj_grp_lock_dump(pj_grp_lock_t *grp_lock)
 
     PJ_LOG(4,(THIS_FILE, "Group lock %p, ref_cnt=%d. Reference holders: %s",
 	       grp_lock, pj_grp_lock_get_ref(grp_lock), info.ptr));
+#else
+    PJ_UNUSED_ARG(grp_lock);
 #endif
 }

@@ -158,6 +158,10 @@ static pj_bool_t stun_sock_on_status(pj_stun_sock *stun_sock,
                                      pj_status_t status)
 {
     struct stun_test_session *test_sess = (struct stun_test_session*)pj_stun_sock_get_user_data(stun_sock);
+
+    PJ_UNUSED_ARG(op);
+    PJ_UNUSED_ARG(status);
+
     test_sess->param.client_got_response++;
     return PJ_TRUE;
 }
@@ -192,7 +196,7 @@ static int stun_destroy_test_session(struct stun_test_session *test_sess)
     for (i=0; i<MAX_SOCK_CLIENTS; ++i) {
 	pj_str_t server_ip = pj_str("127.0.0.1");
 	status = pj_stun_sock_start(stun_sock[i], &server_ip,
-	                            test_sess->server_port, NULL);
+	                            (pj_uint16_t)test_sess->server_port, NULL);
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(1,(THIS_FILE, status, "Error starting stun socket"));
 	    return -20;
@@ -322,6 +326,9 @@ static int stun_destroy_test(void)
 
 	pj_thread_sleep(10);
     }
+
+    /* Avoid compiler warning */
+    goto on_return;
 
 
 on_return:
