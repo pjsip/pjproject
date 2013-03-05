@@ -2910,7 +2910,7 @@ static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
     }
 
     if (invite_tsx)
-	pj_mutex_unlock(invite_tsx->mutex);
+	pj_grp_lock_release(invite_tsx->grp_lock);
 }
 
 

@@ -545,7 +545,7 @@ static struct dlg_set *find_dlg_set_for_msg( pjsip_rx_data *rdata )
 	/* We should find the dialog attached to the INVITE transaction */
 	if (tsx) {
 	    dlg = (pjsip_dialog*) tsx->mod_data[mod_ua.mod.id];
-	    pj_mutex_unlock(tsx->mutex);
+	    pj_grp_lock_release(tsx->grp_lock);
 
 	    /* Dlg may be NULL on some extreme condition
 	     * (e.g. during debugging where initially there is a dialog)
