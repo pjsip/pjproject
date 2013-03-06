@@ -2257,10 +2257,18 @@ PJ_DEF(pj_status_t) pjsua_call_process_redirect( pjsua_call_id call_id,
 PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 					const pjsua_msg_data *msg_data)
 {
+    return pjsua_call_set_hold2(call_id, 0, msg_data);
+}
+
+PJ_DEF(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
+                                         unsigned options,
+					 const pjsua_msg_data *msg_data)
+{
     pjmedia_sdp_session *sdp;
     pjsua_call *call;
     pjsip_dialog *dlg = NULL;
     pjsip_tx_data *tdata;
+    pj_str_t *new_contact = NULL;
     pj_status_t status;
 
     PJ_ASSERT_RETURN(call_id>=0 && call_id<(int)pjsua_var.ua_cfg.max_calls,
@@ -2283,8 +2291,14 @@ PJ_DEF(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	goto on_return;
 
+    if ((options & PJSUA_CALL_UPDATE_CONTACT) &&
+	pjsua_acc_is_valid(call->acc_id))
+    {
+	new_contact = &pjsua_var.acc[call->acc_id].contact;
+    }
+
     /* Create re-INVITE with new offer */
-    status = pjsip_inv_reinvite( call->inv, NULL, sdp, &tdata);
+    status = pjsip_inv_reinvite( call->inv, new_contact, sdp, &tdata);
     if (status != PJ_SUCCESS) {
 	pjsua_perror(THIS_FILE, "Unable to create re-INVITE", status);
 	goto on_return;

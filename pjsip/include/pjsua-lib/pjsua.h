@@ -4009,12 +4009,12 @@ typedef enum pjsua_call_flag
 
     /**
      * Update the local invite session's contact with the contact URI from
-     * the account. This flag is only valid for #pjsua_call_reinvite() and
-     * #pjsua_call_update(). This flag is useful in IP address change
-     * situation, after the local account's Contact has been updated
-     * (typically with re-registration) use this flag to update the invite
-     * session with the new Contact and to inform this new Contact to the
-     * remote peer with the outgoing re-INVITE or UPDATE
+     * the account. This flag is only valid for #pjsua_call_set_hold2(),
+     * #pjsua_call_reinvite() and #pjsua_call_update(). This flag is useful
+     * in IP address change situation, after the local account's Contact has
+     * been updated (typically with re-registration) use this flag to update
+     * the invite session with the new Contact and to inform this new Contact
+     * to the remote peer with the outgoing re-INVITE or UPDATE.
      */
     PJSUA_CALL_UPDATE_CONTACT = 2,
 
@@ -4474,6 +4474,24 @@ PJ_DECL(pj_status_t) pjsua_call_process_redirect(pjsua_call_id call_id,
 PJ_DECL(pj_status_t) pjsua_call_set_hold(pjsua_call_id call_id,
 					 const pjsua_msg_data *msg_data);
 
+/**
+ * Put the specified call on hold. This will send re-INVITE with the
+ * appropriate SDP to inform remote that the call is being put on hold.
+ * The final status of the request itself will be reported on the
+ * \a on_call_media_state() callback, which inform the application that
+ * the media state of the call has changed.
+ *
+ * @param call_id	Call identification.
+ * @param options	Bitmask of pjsua_call_flag constants. Currently, only
+ *                      the flag PJSUA_CALL_UPDATE_CONTACT can be used.
+ * @param msg_data	Optional message components to be sent with
+ *			the request.
+ *
+ * @return		PJ_SUCCESS on success, or the appropriate error code.
+ */
+PJ_DECL(pj_status_t) pjsua_call_set_hold2(pjsua_call_id call_id,
+                                          unsigned options,
+					  const pjsua_msg_data *msg_data);
 
 /**
  * Send re-INVITE to release hold.
