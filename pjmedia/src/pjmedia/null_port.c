@@ -46,7 +46,7 @@ PJ_DEF(pj_status_t) pjmedia_null_port_create( pj_pool_t *pool,
     PJ_ASSERT_RETURN(pool && p_port, PJ_EINVAL);
 
     port = PJ_POOL_ZALLOC_T(pool, pjmedia_port);
-    PJ_ASSERT_RETURN(pool != NULL, PJ_ENOMEM);
+    PJ_ASSERT_RETURN(port != NULL, PJ_ENOMEM);
 
     pjmedia_port_info_init(&port->info, &name, SIGNATURE, sampling_rate,
 			   channel_count, bits_per_sample, samples_per_frame);
