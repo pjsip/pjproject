@@ -3290,11 +3290,11 @@ static void inv_on_state_null( pjsip_inv_session *inv, pjsip_event *e)
 
 	if (dlg->role == PJSIP_ROLE_UAC) {
 
-	    /* Save the original INVITE request, if on_redirected() callback
-	     * is implemented. We may need to resend the INVITE if we receive
-	     * redirection response.
+	    /* Save the original INVITE request.
+             * We may need to resend the INVITE if we receive redirection
+             * or session timer too small response.
 	     */
-	    if (mod_inv.cb.on_redirected) {
+	    if (1) {
 		if (inv->invite_req) {
 		    pjsip_tx_data_dec_ref(inv->invite_req);
 		    inv->invite_req = NULL;
