@@ -3105,14 +3105,15 @@ static PyObject *py_pjsua_call_make_call(PyObject *pSelf, PyObject *pArgs)
     int acc_id;
     pj_str_t dst_uri;
     PyObject *pDstUri, *pMsgData, *pUserData;
-    unsigned options;
+	pjsua_call_setting option;
     pjsua_msg_data msg_data;
     int call_id;
     pj_pool_t *pool = NULL;
 
     PJ_UNUSED_ARG(pSelf);
 
-    if (!PyArg_ParseTuple(pArgs, "iOIOO", &acc_id, &pDstUri, &options, 
+	pjsua_call_setting_default(&option);
+	if (!PyArg_ParseTuple(pArgs, "iOIOO", &acc_id, &pDstUri, &option.flag, 
 			  &pUserData, &pMsgData))
     {
         return NULL;
@@ -3135,7 +3136,7 @@ static PyObject *py_pjsua_call_make_call(PyObject *pSelf, PyObject *pArgs)
     Py_XINCREF(pUserData);
 
     status = pjsua_call_make_call(acc_id, &dst_uri, 
-				  options, (void*)pUserData, 
+				  &option, (void*)pUserData, 
 				  &msg_data, &call_id);	
     if (pool != NULL)
 	pj_pool_release(pool);
