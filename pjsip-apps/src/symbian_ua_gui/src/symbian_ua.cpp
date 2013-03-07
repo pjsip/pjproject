@@ -34,7 +34,6 @@ static RConnection aConn;
 
 static pjsua_acc_id g_acc_id = PJSUA_INVALID_ID;
 static pjsua_call_id g_call_id = PJSUA_INVALID_ID;
-static pjsua_buddy_id g_buddy_id = PJSUA_INVALID_ID;
 
 static symbian_ua_info_cb_t g_cb =  {NULL, NULL, NULL, NULL, NULL};
 
