@@ -1856,6 +1856,17 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     if (status != PJ_SUCCESS)
 	return status;
 
+    /* Get audio index from the negotiated SDP */
+    audio_idx = find_audio_index(local_sdp, PJ_TRUE);
+
+    /* Update audio index from the negotiated SDP */
+    call->audio_idx = audio_idx;
+
+    /* Find which session is audio */
+    PJ_ASSERT_RETURN(call->audio_idx != -1, PJ_EBUG);
+    PJ_ASSERT_RETURN(call->audio_idx < (int)sess_info.stream_cnt, PJ_EBUG);
+    si = &sess_info.stream_info[call->audio_idx];
+
     /* Override ptime, if this option is specified. */
     if (pjsua_var.media_cfg.ptime != 0) {
 	si->param->setting.frm_per_pkt = (pj_uint8_t)
@@ -1868,9 +1879,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
     if (pjsua_var.media_cfg.no_vad) {
         si->param->setting.vad = 0;
     }
-
-    /* Get audio index from the negotiated SDP */
-    audio_idx = find_audio_index(local_sdp, PJ_TRUE);
 
     /* Get previous media status */
     prev_media_st = call->media_st;
@@ -1893,14 +1901,6 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
         sess_info.stream_info[i].rtcp_sdes_bye_disabled = PJ_TRUE;
     }
 
-    /* Update audio index from the negotiated SDP */
-    call->audio_idx = audio_idx;
-
-    /* Find which session is audio */
-    PJ_ASSERT_RETURN(call->audio_idx != -1, PJ_EBUG);
-    PJ_ASSERT_RETURN(call->audio_idx < (int)sess_info.stream_cnt, PJ_EBUG);
-    si = &sess_info.stream_info[call->audio_idx];
-    
     /* Reset session info with only one media stream */
     sess_info.stream_cnt = 1;
     if (si != &sess_info.stream_info[0]) {
