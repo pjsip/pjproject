@@ -1733,6 +1733,9 @@ static pj_status_t audio_channel_update(pjsua_call_id call_id,
     pjmedia_stream_info *si = &sess_info->stream_info[0];
     pjmedia_port *media_port;
     pj_status_t status;
+
+    PJ_UNUSED_ARG(local_sdp);
+    PJ_UNUSED_ARG(remote_sdp);
     
     /* Optionally, application may modify other stream settings here
      * (such as jitter buffer parameters, codec ptime, etc.)
