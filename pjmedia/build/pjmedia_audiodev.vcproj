@@ -3565,6 +3565,10 @@
 				</FileConfiguration>
 			</File>
 			<File
+				RelativePath="..\src\pjmedia-audiodev\bdimad_dev.c"
+				>
+			</File>
+			<File
 				RelativePath="..\src\pjmedia-audiodev\errno.c"
 				>
 				<FileConfiguration

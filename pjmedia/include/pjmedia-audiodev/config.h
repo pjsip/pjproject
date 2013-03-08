@@ -96,6 +96,14 @@ PJ_BEGIN_DECL
 #   define PJMEDIA_AUDIO_DEV_HAS_WMME		1
 #endif
 
+ 
+/**
+ * This setting controls whether BDIMAD support should be included.
+ */
+#ifndef PJMEDIA_AUDIO_DEV_HAS_BDIMAD
+#	define PJMEDIA_AUDIO_DEV_HAS_BDIMAD	0
+#endif
+
 
 /**
  * This setting controls whether Symbian APS support should be included.

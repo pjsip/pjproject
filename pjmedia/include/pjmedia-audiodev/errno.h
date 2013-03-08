@@ -104,6 +104,19 @@ PJ_BEGIN_DECL
 #define PJMEDIA_AUDIODEV_ERRNO_FROM_COREAUDIO(err) \
 	    ((int)PJMEDIA_AUDIODEV_COREAUDIO_ERRNO_START-err)
 
+/**
+ * Mapping from BDIMAD error codes to pjmedia error space.
+ */
+#define PJMEDIA_AUDIODEV_BDIMAD_ERROR_START	\
+	    (PJMEDIA_AUDIODEV_ERRNO_START + 40000)
+#define PJMEDIA_AUDIODEV_BDIMAD_ERROR_END	\
+	    (PJMEDIA_AUDIODEV_BDIMAD_ERROR_START + 2000 - 1)
+/**
+ * Convert BDIMAD error codes to PJLIB error space.
+ */
+#define PJMEDIA_AUDIODEV_ERRNO_FROM_BDIMAD(err) \
+	    ((int)PJMEDIA_AUDIODEV_BDIMAD_ERROR_START+err)
+
 /************************************************************
  * Audio Device API error codes
  ***********************************************************/

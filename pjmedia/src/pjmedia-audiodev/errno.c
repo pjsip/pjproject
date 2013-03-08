@@ -155,6 +155,20 @@ PJ_DEF(pj_str_t) pjmedia_audiodev_strerror(pj_status_t statcode,
     } else
 #endif
 
+/* See if the error comes from BDIMAD */
+#if PJMEDIA_AUDIO_DEV_HAS_BDIMAD
+	
+	if (statcode >= PJMEDIA_AUDIODEV_BDIMAD_ERROR_START &&
+	    statcode <  PJMEDIA_AUDIODEV_BDIMAD_ERROR_END)
+	{
+	    pj_status_t native_err;
+	    native_err = statcode - PJMEDIA_AUDIODEV_BDIMAD_ERROR_START;
+
+	    pj_ansi_snprintf(buf, bufsize, "BDIMAD native error %d", native_err);
+	    return pj_str(buf);
+	} else
+#endif
+
     /* Audiodev error */
     if (statcode >= PJMEDIA_AUDIODEV_ERRNO_START && 
 	statcode < PJMEDIA_AUDIODEV_ERRNO_END)
