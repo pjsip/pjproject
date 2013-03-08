@@ -2576,8 +2576,11 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 		continue;
 	    }
 
+            /* Codec parameter of stream info (si->param) can be NULL if
+             * the stream is rejected or disabled.
+             */
 	    /* Override ptime, if this option is specified. */
-	    if (pjsua_var.media_cfg.ptime != 0) {
+	    if (pjsua_var.media_cfg.ptime != 0 && si->param) {
 	        si->param->setting.frm_per_pkt = (pj_uint8_t)
 		    (pjsua_var.media_cfg.ptime / si->param->info.frm_ptime);
 	        if (si->param->setting.frm_per_pkt == 0)
@@ -2585,7 +2588,7 @@ pj_status_t pjsua_media_channel_update(pjsua_call_id call_id,
 	    }
 
 	    /* Disable VAD, if this option is specified. */
-	    if (pjsua_var.media_cfg.no_vad) {
+	    if (pjsua_var.media_cfg.no_vad && si->param) {
 	        si->param->setting.vad = 0;
 	    }
 
