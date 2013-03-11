@@ -2056,6 +2056,7 @@ static void regc_cb(struct pjsip_regc_cbparam *param)
 	 param->code == PJSIP_SC_BAD_GATEWAY ||
 	 param->code == PJSIP_SC_SERVICE_UNAVAILABLE ||
 	 param->code == PJSIP_SC_SERVER_TIMEOUT ||
+	 param->code == PJSIP_SC_TEMPORARILY_UNAVAILABLE ||
 	 PJSIP_IS_STATUS_IN_CLASS(param->code, 600))) /* Global failure */
     {
 	schedule_reregistration(acc);
