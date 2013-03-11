@@ -35,6 +35,7 @@
 #include <pj/errno.h>
 #include <pj/sock.h>
 #include <pj/compat/socket.h>
+#include <pj/rand.h>
 
 #if !defined(PJ_LINUX_KERNEL) || PJ_LINUX_KERNEL==0
     /*
@@ -349,9 +350,10 @@ PJ_DEF(pj_status_t) pj_ioqueue_destroy(pj_ioqueue_t *ioqueue)
  *
  * Register a socket to ioqueue.
  */
-PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
+PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 					      pj_ioqueue_t *ioqueue,
 					      pj_sock_t sock,
+					      pj_grp_lock_t *grp_lock,
 					      void *user_data,
 					      const pj_ioqueue_callback *cb,
                                               pj_ioqueue_key_t **p_key)
@@ -403,7 +405,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     key = (pj_ioqueue_key_t*)pj_pool_zalloc(pool, sizeof(pj_ioqueue_key_t));
 #endif
 
-    rc = ioqueue_init_key(pool, ioqueue, key, sock, user_data, cb);
+    rc = ioqueue_init_key(pool, ioqueue, key, sock, grp_lock, user_data, cb);
     if (rc != PJ_SUCCESS) {
 	key = NULL;
 	goto on_return;
@@ -437,10 +439,25 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
     //TRACE_((THIS_FILE, "socket registered, count=%d", ioqueue->count));
 
 on_return:
+    if (rc != PJ_SUCCESS) {
+	if (key->grp_lock)
+	    pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
+    }
     *p_key = key;
     pj_lock_release(ioqueue->lock);
     
     return rc;
+}
+
+PJ_DEF(pj_status_t) pj_ioqueue_register_sock( pj_pool_t *pool,
+					      pj_ioqueue_t *ioqueue,
+					      pj_sock_t sock,
+					      void *user_data,
+					      const pj_ioqueue_callback *cb,
+					      pj_ioqueue_key_t **p_key)
+{
+    return pj_ioqueue_register_sock2(pool, ioqueue, sock, NULL, user_data,
+                                     cb, p_key);
 }
 
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
@@ -497,7 +514,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
      * the key. We need to lock the key before ioqueue here to prevent
      * deadlock.
      */
-    pj_lock_acquire(key->lock);
+    pj_ioqueue_lock_key(key);
 
     /* Also lock ioqueue */
     pj_lock_acquire(ioqueue->lock);
@@ -531,8 +548,33 @@ PJ_DEF(pj_status_t) pj_ioqueue_unregister( pj_ioqueue_key_t *key)
     decrement_counter(key);
 
     /* Done. */
-    pj_lock_release(key->lock);
+    if (key->grp_lock) {
+	/* just dec_ref and unlock. we will set grp_lock to NULL
+	 * elsewhere */
+	pj_grp_lock_t *grp_lock = key->grp_lock;
+	// Don't set grp_lock to NULL otherwise the other thread
+	// will crash. Just leave it as dangling pointer, but this
+	// should be safe
+	//key->grp_lock = NULL;
+	pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
+	pj_grp_lock_release(grp_lock);
+    } else {
+	pj_ioqueue_unlock_key(key);
+    }
 #else
+    if (key->grp_lock) {
+	/* set grp_lock to NULL and unlock */
+	pj_grp_lock_t *grp_lock = key->grp_lock;
+	// Don't set grp_lock to NULL otherwise the other thread
+	// will crash. Just leave it as dangling pointer, but this
+	// should be safe
+	//key->grp_lock = NULL;
+	pj_grp_lock_dec_ref_dbg(grp_lock, "ioqueue", 0);
+	pj_grp_lock_release(grp_lock);
+    } else {
+	pj_ioqueue_unlock_key(key);
+    }
+
     pj_lock_destroy(key->lock);
 #endif
 
@@ -592,6 +634,10 @@ static void scan_closing_keys(pj_ioqueue_t *ioqueue)
 
 	if (PJ_TIME_VAL_GTE(now, h->free_time)) {
 	    pj_list_erase(h);
+	    // Don't set grp_lock to NULL otherwise the other thread
+	    // will crash. Just leave it as dangling pointer, but this
+	    // should be safe
+	    //h->grp_lock = NULL;
 	    pj_list_push_back(&ioqueue->free_list, h);
 	}
 	h = next;
@@ -709,7 +755,16 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    ++processed;
 	}
     }
+    for (i=0; i<processed; ++i) {
+	if (queue[i].key->grp_lock)
+	    pj_grp_lock_add_ref_dbg(queue[i].key->grp_lock, "ioqueue", 0);
+    }
+
+    PJ_RACE_ME(5);
+
     pj_lock_release(ioqueue->lock);
+
+    PJ_RACE_ME(5);
 
     /* Now process the events. */
     for (i=0; i<processed; ++i) {
@@ -731,6 +786,10 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 	decrement_counter(queue[i].key);
 #endif
+
+	if (queue[i].key->grp_lock)
+	    pj_grp_lock_dec_ref_dbg(queue[i].key->grp_lock,
+	                            "ioqueue", 0);
     }
 
     /* Special case:
