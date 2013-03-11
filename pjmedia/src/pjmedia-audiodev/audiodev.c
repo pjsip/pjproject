@@ -78,6 +78,14 @@ pjmedia_aud_dev_factory* pjmedia_coreaudio_factory(pj_pool_factory *pf);
 pjmedia_aud_dev_factory* pjmedia_alsa_factory(pj_pool_factory *pf);
 #endif
 
+#if PJMEDIA_AUDIO_DEV_HAS_OPENSL
+pjmedia_aud_dev_factory* pjmedia_opensl_factory(pj_pool_factory *pf);
+#endif
+
+#if PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI
+pjmedia_aud_dev_factory* pjmedia_android_factory(pj_pool_factory *pf);
+#endif
+
 #if PJMEDIA_AUDIO_DEV_HAS_BB10
 pjmedia_aud_dev_factory* pjmedia_bb10_factory(pj_pool_factory *pf);
 #endif
@@ -395,6 +403,12 @@ PJ_DEF(pj_status_t) pjmedia_aud_subsys_init(pj_pool_factory *pf)
     aud_subsys.dev_cnt = 0;
 
     /* Register creation functions */
+#if PJMEDIA_AUDIO_DEV_HAS_OPENSL
+    aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_opensl_factory;
+#endif
+#if PJMEDIA_AUDIO_DEV_HAS_ANDROID_JNI
+    aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_android_factory;
+#endif
 #if PJMEDIA_AUDIO_DEV_HAS_BB10
     aud_subsys.drv[aud_subsys.drv_cnt++].create = &pjmedia_bb10_factory;
 #endif

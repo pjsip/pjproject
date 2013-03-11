@@ -175,6 +175,7 @@
  */
 #undef s_addr
 #undef s6_addr
+#undef sin_zero
 
 /*
  * Linux kernel specifics
