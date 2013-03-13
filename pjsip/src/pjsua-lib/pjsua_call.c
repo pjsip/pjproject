@@ -530,8 +530,8 @@ on_error:
     }
 
     if (call_id != -1) {
-	reset_call(call_id);
 	pjsua_media_channel_deinit(call_id);
+	reset_call(call_id);
     }
 
     call->med_ch_cb = NULL;
@@ -790,8 +790,8 @@ on_error:
     }
 
     if (call_id != -1) {
-	reset_call(call_id);
 	pjsua_media_channel_deinit(call_id);
+	reset_call(call_id);
     }
 
     if (tmp_pool)

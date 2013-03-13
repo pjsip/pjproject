@@ -4489,7 +4489,8 @@ void console_app_main(const pj_str_t *uri_to_call)
 	    
 	    pjsua_msg_data_init(&msg_data);
 	    TEST_MULTIPART(&msg_data);
-	    pjsua_call_make_call( current_acc, &tmp, &call_opt, NULL, &msg_data, NULL);
+	    pjsua_call_make_call( current_acc, &tmp, &call_opt, NULL,
+	                          &msg_data, &current_call);
 	    break;
 
 	case 'M':
