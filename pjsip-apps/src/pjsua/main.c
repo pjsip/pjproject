@@ -29,8 +29,9 @@
 extern pj_bool_t app_restart;
 pj_status_t app_init(int argc, char *argv[]);
 pj_status_t app_main(void);
-pj_status_t app_destroy(void);
-
+pj_status_t app_destroy();
+pj_status_t receive_end_sig;
+pj_thread_t *sig_thread;
 
 #if defined(PJ_WIN32) && PJ_WIN32!=0
 #include <windows.h>
@@ -38,9 +39,7 @@ pj_status_t app_destroy(void);
 static pj_thread_desc handler_desc;
 
 static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
-{
-    pj_thread_t *thread;
-
+{   
     switch (fdwCtrlType) 
     { 
         // Handle the CTRL+C signal. 
@@ -50,9 +49,10 @@ static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
         case CTRL_BREAK_EVENT: 
         case CTRL_LOGOFF_EVENT: 
         case CTRL_SHUTDOWN_EVENT: 
-	    pj_thread_register("ctrlhandler", handler_desc, &thread);
+	    pj_thread_register("ctrlhandler", handler_desc, &sig_thread);
 	    PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
-            app_destroy();
+	    receive_end_sig = PJ_TRUE;
+            app_destroy();	    
 	    ExitProcess(1);
             PJ_UNREACHED(return TRUE;)
  
@@ -87,6 +87,7 @@ static void setup_socket_signal()
 
 static int main_func(int argc, char *argv[])
 {
+    receive_end_sig = PJ_FALSE;
     setup_socket_signal();
 
     do {
@@ -98,10 +99,14 @@ static int main_func(int argc, char *argv[])
 	setup_signal_handler();
 
 	app_main();
-	app_destroy();
+	if (!receive_end_sig) {
+	    app_destroy();
 
-	/* This is on purpose */
-	app_destroy();
+	    /* This is on purpose */
+	    app_destroy();
+	} else {
+	    pj_thread_join(sig_thread);
+	}
     } while (app_restart);
 
     return 0;

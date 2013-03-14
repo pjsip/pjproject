@@ -17,6 +17,7 @@ SAMPLES := auddemo \
 	   aviplay \
 	   aectest \
 	   aviplay \
+	   clidemo \
 	   confsample \
 	   encdec \
 	   httpdemo \

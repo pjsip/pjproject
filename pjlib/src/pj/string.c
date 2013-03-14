@@ -109,6 +109,19 @@ PJ_DEF(char*) pj_create_random_string(char *str, pj_size_t len)
     return str;
 }
 
+PJ_DEF(long) pj_strtol(const pj_str_t *str)
+{
+    PJ_CHECK_STACK();
+
+    if (str->slen > 0 && (str->ptr[0] == '+' || str->ptr[0] == '-')) {
+        pj_str_t s;
+        
+        s.ptr = str->ptr + 1;
+        s.slen = str->slen - 1;
+        return (str->ptr[0] == '-'? -(long)pj_strtoul(&s) : pj_strtoul(&s));
+    } else
+        return pj_strtoul(str);
+}
 
 PJ_DEF(unsigned long) pj_strtoul(const pj_str_t *str)
 {

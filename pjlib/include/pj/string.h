@@ -536,6 +536,17 @@ PJ_IDECL(pj_str_t*) pj_strtrim( pj_str_t *str );
 PJ_DECL(char*) pj_create_random_string(char *str, pj_size_t length);
 
 /**
+ * Convert string to signed integer. The conversion will stop as
+ * soon as non-digit character is found or all the characters have
+ * been processed.
+ *
+ * @param str	the string.
+ *
+ * @return the integer.
+ */
+PJ_DECL(long) pj_strtol(const pj_str_t *str);
+
+/**
  * Convert string to unsigned integer. The conversion will stop as
  * soon as non-digit character is found or all the characters have
  * been processed.
