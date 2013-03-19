@@ -1735,23 +1735,27 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
      */
     if (tsx_inv_data->sdp_done) {
 	pj_str_t res_tag;
+	int st_code;
 
 	res_tag = rdata->msg_info.to->tag;
+	st_code = rdata->msg_info.msg->line.status.code;
 
-	/* Allow final response after SDP has been negotiated in early
-	 * media, IF this response is a final response with different
+	/* Allow final/early response after SDP has been negotiated in early
+	 * media, IF this response is a final/early response with different
 	 * tag.
 	 */
 	if (tsx->role == PJSIP_ROLE_UAC &&
-	    rdata->msg_info.msg->line.status.code/100 == 2 &&
+	    (st_code/100 == 2 ||
+	     (st_code==183 && pjsip_cfg()->endpt.follow_early_media_fork)) &&
 	    tsx_inv_data->done_early &&
 	    pj_stricmp(&tsx_inv_data->done_tag, &res_tag))
 	{
 	    const pjmedia_sdp_session *reoffer_sdp = NULL;
 
-	    PJ_LOG(4,(inv->obj_name, "Received forked final response "
+	    PJ_LOG(4,(inv->obj_name, "Received forked %s response "
 		      "after SDP negotiation has been done in early "
-		      "media. Renegotiating SDP.."));
+		      "media. Renegotiating SDP..",
+		      (st_code==183? "early" : "final" )));
 
 	    /* Retrieve original SDP offer from INVITE request */
 	    reoffer_sdp = (const pjmedia_sdp_session*) 
@@ -1763,7 +1767,7 @@ static pj_status_t inv_check_sdp_in_incoming_msg( pjsip_inv_session *inv,
 						        reoffer_sdp);
 	    if (status != PJ_SUCCESS) {
 		PJ_LOG(1,(inv->obj_name, "Error updating local offer for "
-			  "forked 2xx response (err=%d)", status));
+			  "forked 2xx/183 response (err=%d)", status));
 		return status;
 	    }
 
