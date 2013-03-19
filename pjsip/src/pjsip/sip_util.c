@@ -1201,6 +1201,28 @@ static void stateless_send_transport_cb( void *token,
         }
 	via->rport_param = pjsip_cfg()->endpt.disable_rport ? -1 : 0;
 
+	/* Add/remove "alias" param to/from Via header on connection 
+	 * oriented/less transport, if configured.
+	 */
+	if (pjsip_cfg()->endpt.req_has_via_alias &&
+	    tdata->msg->type == PJSIP_REQUEST_MSG)
+	{
+	    const pj_str_t ALIAS_STR = {"alias", 5};
+	    pjsip_param *alias_param;
+	    pj_bool_t is_datagram;
+
+	    alias_param = pjsip_param_find(&via->other_param, &ALIAS_STR);
+	    is_datagram = (stateless_data->cur_transport->flag & 
+			   PJSIP_TRANSPORT_DATAGRAM);
+	    if (!is_datagram && !alias_param) {
+		alias_param = PJ_POOL_ZALLOC_T(tdata->pool, pjsip_param);
+		alias_param->name = ALIAS_STR;
+		pj_list_push_back(&via->other_param, alias_param);
+	    } else if (is_datagram && alias_param) {
+		pj_list_erase(alias_param);
+	    }
+	}
+
 	pjsip_tx_data_invalidate_msg(tdata);
 
 	/* Send message using this transport. */
