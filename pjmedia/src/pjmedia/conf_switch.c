@@ -50,7 +50,7 @@
 #define NORMAL_LEVEL	    128
 #define SLOT_TYPE	    unsigned
 #define INVALID_SLOT	    ((SLOT_TYPE)-1)
-#define BUFFER_SIZE	    PJMEDIA_MAX_MTU
+#define BUFFER_SIZE	    PJMEDIA_CONF_SWITCH_BOARD_BUF_SIZE
 #define MAX_LEVEL	    (32767)
 #define MIN_LEVEL	    (-32768)
 
@@ -143,6 +143,15 @@ static pj_status_t create_conf_port( pj_pool_t *pool,
     pjmedia_frame *f;
 
     PJ_ASSERT_RETURN(pool && conf && port && name && p_conf_port, PJ_EINVAL);
+
+    /* Check port's buffer size */
+    if (port->info.fmt.id == PJMEDIA_FORMAT_PCM &&
+	PJMEDIA_PIA_SPF(&port->info)*2 > BUFFER_SIZE - sizeof(pjmedia_frame))
+    {
+	pj_assert(!"Too small buffer size for audio switchboard. "
+		   "Try increase PJMEDIA_CONF_SWITCH_BOARD_BUF_SIZE");
+	return PJ_ETOOSMALL;
+    }
 
     /* Create port. */
     conf_port = PJ_POOL_ZALLOC_T(pool, struct conf_port);

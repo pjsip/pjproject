@@ -60,6 +60,21 @@
 #   define PJMEDIA_CONF_USE_SWITCH_BOARD    0
 #endif
 
+/**
+ * Specify buffer size for audio switch board, in bytes. This buffer will
+ * be used for transmitting/receiving audio frame data (and some overheads,
+ * i.e: pjmedia_frame structure) among conference ports in the audio
+ * switch board. For example, if a port uses PCM format @44100Hz mono
+ * and frame time 20ms, the PCM audio data will require 1764 bytes,
+ * so with overhead, a safe buffer size will be ~1900 bytes.
+ *
+ * Default: PJMEDIA_MAX_MTU
+ */
+#ifndef PJMEDIA_CONF_SWITCH_BOARD_BUF_SIZE
+#   define PJMEDIA_CONF_SWITCH_BOARD_BUF_SIZE    PJMEDIA_MAX_MTU
+#endif
+
+
 /*
  * Types of sound stream backends.
  */
