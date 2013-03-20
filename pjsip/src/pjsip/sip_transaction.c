@@ -133,8 +133,10 @@ static pj_time_val td_timer_val = { PJSIP_TD_TIMEOUT/1000,
 static pj_time_val timeout_timer_val = { (64*PJSIP_T1_TIMEOUT)/1000,
 					 (64*PJSIP_T1_TIMEOUT)%1000 };
 
-#define TIMER_INACTIVE	0
-#define TIMER_ACTIVE	1
+#define TIMER_INACTIVE		0
+#define RETRANSMIT_TIMER	1
+#define TIMEOUT_TIMER		2
+#define TRANSPORT_ERR_TIMER	3
 
 
 /* Prototypes. */
@@ -164,6 +166,16 @@ static void	   tsx_tp_state_callback(
 				       pjsip_transport *tp,
 				       pjsip_transport_state state,
 				       const pjsip_transport_state_info *info);
+static void 	   tsx_set_state( pjsip_transaction *tsx,
+            	                  pjsip_tsx_state_e state,
+            	                  pjsip_event_id_e event_src_type,
+            	                  void *event_src );
+static void 	   tsx_set_state_no_notify( pjsip_transaction *tsx,
+            	                            pjsip_tsx_state_e state,
+            	                            pjsip_event_id_e event_src_type,
+            	                            void *event_src );
+static void 	   tsx_set_status_code(pjsip_transaction *tsx,
+            	                       int code, const pj_str_t *reason);
 static pj_status_t tsx_create( pjsip_module *tsx_user,
                                pj_grp_lock_t *grp_lock,
 			       pjsip_transaction **p_tsx);
@@ -920,6 +932,31 @@ static void unlock_timer(pjsip_transaction *tsx)
     pj_mutex_unlock(tsx->mutex_b);
 }
 
+/* Utility: schedule a timer */
+static pj_status_t tsx_schedule_timer(pjsip_transaction *tsx,
+                                      pj_timer_entry *entry,
+                                      const pj_time_val *delay,
+                                      int active_id)
+{
+    pj_timer_heap_t *timer_heap = pjsip_endpt_get_timer_heap(tsx->endpt);
+    pj_status_t status;
+
+    pj_assert(active_id != 0);
+    status = pj_timer_heap_schedule_w_grp_lock(timer_heap, entry,
+                                               delay, active_id,
+                                               tsx->grp_lock);
+
+    return status;
+}
+
+/* Utility: cancel a timer */
+static int tsx_cancel_timer(pjsip_transaction *tsx,
+                            pj_timer_entry *entry)
+{
+    pj_timer_heap_t *timer_heap = pjsip_endpt_get_timer_heap(tsx->endpt);
+    return pj_timer_heap_cancel_if_active(timer_heap, entry, TIMER_INACTIVE);
+}
+
 /* Create and initialize basic transaction structure.
  * This function is called by both UAC and UAS creation.
  */
@@ -946,10 +983,10 @@ static pj_status_t tsx_create( pjsip_module *tsx_user,
     pj_memcpy(pool->obj_name, tsx->obj_name, sizeof(pool->obj_name));
 
     tsx->handle_200resp = 1;
-    tsx->retransmit_timer.id = 0;
+    tsx->retransmit_timer.id = TIMER_INACTIVE;
     tsx->retransmit_timer.user_data = tsx;
     tsx->retransmit_timer.cb = &tsx_timer_callback;
-    tsx->timeout_timer.id = 0;
+    tsx->timeout_timer.id = TIMER_INACTIVE;
     tsx->timeout_timer.user_data = tsx;
     tsx->timeout_timer.cb = &tsx_timer_callback;
     
@@ -1005,15 +1042,10 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
 	tsx->last_tx = NULL;
     }
     /* Cancel timeout timer. */
-    if (tsx->timeout_timer.id != 0) {
-	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-	tsx->timeout_timer.id = 0;
-    }
+    tsx_cancel_timer(tsx, &tsx->timeout_timer);
+
     /* Cancel retransmission timer. */
-    if (tsx->retransmit_timer.id != 0) {
-	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-	tsx->retransmit_timer.id = 0;
-    }
+    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
     /* Clear some pending flags. */
     tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED | TSX_HAS_PENDING_SEND);
@@ -1039,30 +1071,72 @@ static pj_status_t tsx_shutdown( pjsip_transaction *tsx )
 
 
 /*
- * Callback when timer expires.
+ * Callback when timer expires. Transport error also piggybacks this event
+ * to avoid deadlock (https://trac.pjsip.org/repos/ticket/1646).
  */
 static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 {
-    pjsip_event event;
     pjsip_transaction *tsx = (pjsip_transaction*) entry->user_data;
 
     PJ_UNUSED_ARG(theap);
 
-    entry->id = 0;
-    
-    PJ_LOG(5,(tsx->obj_name, "%s timer event", 
-	     (entry==&tsx->retransmit_timer ? "Retransmit":"Timeout")));
-    pj_log_push_indent();
+    if (entry->id == TRANSPORT_ERR_TIMER) {
+	/* Posted transport error event */
+	entry->id = 0;
+	if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
+	    pjsip_tsx_state_e prev_state;
+
+	    pj_grp_lock_acquire(tsx->grp_lock);
+	    prev_state = tsx->state;
+
+	    if (tsx->status_code < 200) {
+		pj_str_t err;
+		char errmsg[PJ_ERR_MSG_SIZE];
+
+		err = pj_strerror(tsx->transport_err, errmsg, sizeof(errmsg));
+		tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
+	    }
+
+	    /* Set transaction state etc, but don't notify TU now,
+	     * otherwise we'll get a deadlock. See:
+	     * https://trac.pjsip.org/repos/ticket/1646
+	     */
+	    tsx_set_state_no_notify( tsx, PJSIP_TSX_STATE_TERMINATED,
+	                             PJSIP_EVENT_TRANSPORT_ERROR, NULL);
+	    pj_grp_lock_release(tsx->grp_lock);
+
+	    /* Now notify TU about state change, WITHOUT holding the
+	     * group lock. It should be safe to do so; transaction will
+	     * not get destroyed because group lock reference counter
+	     * has been incremented by the timer heap.
+	     */
+	    if (tsx->tsx_user && tsx->tsx_user->on_tsx_state) {
+		pjsip_event e;
+		PJSIP_EVENT_INIT_TSX_STATE(e, tsx,
+		                           PJSIP_EVENT_TRANSPORT_ERROR, NULL,
+					   prev_state);
+		(*tsx->tsx_user->on_tsx_state)(tsx, &e);
+	    }
+	}
+    } else {
+	pjsip_event event;
+
+	entry->id = 0;
+
+	PJ_LOG(5,(tsx->obj_name, "%s timer event",
+		 (entry==&tsx->retransmit_timer ? "Retransmit":"Timeout")));
+	pj_log_push_indent();
 
 
-    PJSIP_EVENT_INIT_TIMER(event, entry);
+	PJSIP_EVENT_INIT_TIMER(event, entry);
 
-    /* Dispatch event to transaction. */
-    pj_grp_lock_acquire(tsx->grp_lock);
-    (*tsx->state_handler)(tsx, &event);
-    pj_grp_lock_release(tsx->grp_lock);
+	/* Dispatch event to transaction. */
+	pj_grp_lock_acquire(tsx->grp_lock);
+	(*tsx->state_handler)(tsx, &event);
+	pj_grp_lock_release(tsx->grp_lock);
 
-    pj_log_pop_indent();
+	pj_log_pop_indent();
+    }
 }
 
 
@@ -1140,17 +1214,8 @@ static void tsx_set_state( pjsip_transaction *tsx,
 	}
 
 	lock_timer(tsx);
-
-	/* Cancel timeout timer. */
-	if (tsx->timeout_timer.id != 0) {
-	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-	    tsx->timeout_timer.id = 0;
-	}
-
-	tsx->timeout_timer.id = TIMER_ACTIVE;
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer,
-				    &timeout);
-
+	tsx_cancel_timer(tsx, &tsx->timeout_timer);
+	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout, TIMEOUT_TIMER);
 	unlock_timer(tsx);
 
     } else if (state == PJSIP_TSX_STATE_DESTROYED) {
@@ -1165,6 +1230,17 @@ static void tsx_set_state( pjsip_transaction *tsx,
     pj_log_pop_indent();
 }
 
+/* Set transaction state without notifying tsx_user */
+static void tsx_set_state_no_notify( pjsip_transaction *tsx,
+                                     pjsip_tsx_state_e state,
+                                     pjsip_event_id_e event_src_type,
+                                     void *event_src )
+{
+    pjsip_module *tsx_user = tsx->tsx_user;
+    tsx->tsx_user = NULL;
+    tsx_set_state(tsx, state, event_src_type, event_src);
+    tsx->tsx_user = tsx_user;
+}
 
 /*
  * Create, initialize, and register UAC transaction.
@@ -1550,10 +1626,7 @@ PJ_DEF(pj_status_t) pjsip_tsx_stop_retransmit(pjsip_transaction *tsx)
 
     pj_grp_lock_acquire(tsx->grp_lock);
     /* Cancel retransmission timer. */
-    if (tsx->retransmit_timer.id != 0) {
-	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-	tsx->retransmit_timer.id = 0;
-    }
+    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
     pj_grp_lock_release(tsx->grp_lock);
 
     pj_log_pop_indent();
@@ -1591,19 +1664,13 @@ PJ_DEF(pj_status_t) pjsip_tsx_set_timeout( pjsip_transaction *tsx,
 	return PJ_EEXISTS;
     }
 
-    if (tsx->timeout_timer.id != 0) {
-	pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-	tsx->timeout_timer.id = 0;
-    }
+    tsx_cancel_timer(tsx, &tsx->timeout_timer);
 
     timeout.sec = 0;
     timeout.msec = millisec;
     pj_time_val_normalize(&timeout);
 
-    tsx->timeout_timer.id = TIMER_ACTIVE;
-    pjsip_endpt_schedule_timer(tsx->endpt, &tsx->timeout_timer,
-			       &timeout);
-
+    tsx_schedule_timer(tsx, &tsx->timeout_timer, &timeout, TIMEOUT_TIMER);
 
     unlock_timer(tsx);
 
@@ -1828,14 +1895,9 @@ static void send_msg_callback( pjsip_send_state *send_state,
 	    /* And reset timeout timer */
 	    if (tsx->timeout_timer.id) {
 		lock_timer(tsx);
-
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-		tsx->timeout_timer.id = TIMER_INACTIVE;
-
-		tsx->timeout_timer.id = TIMER_ACTIVE;
-		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-					    &timeout_timer_val);
-
+		tsx_cancel_timer(tsx, &tsx->timeout_timer);
+		tsx_schedule_timer( tsx, &tsx->timeout_timer,
+				    &timeout_timer_val, TIMEOUT_TIMER);
 		unlock_timer(tsx);
 	    }
 
@@ -1891,25 +1953,21 @@ static void tsx_tp_state_callback( pjsip_transport *tp,
 
     if (state == PJSIP_TP_STATE_DISCONNECTED) {
 	pjsip_transaction *tsx;
+	pj_time_val delay = {0, 0};
 
 	pj_assert(tp && info && info->user_data);
 
 	tsx = (pjsip_transaction*)info->user_data;
 
-	pj_grp_lock_acquire(tsx->grp_lock);
-
-	/* Terminate transaction when transport disconnected */
-	if (tsx->state < PJSIP_TSX_STATE_TERMINATED) {
-	    pj_str_t err;
-	    char errmsg[PJ_ERR_MSG_SIZE];
-
-	    err = pj_strerror(info->status, errmsg, sizeof(errmsg));
-	    tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
-	    tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-			   PJSIP_EVENT_TRANSPORT_ERROR, NULL);
-	}
-
-	pj_grp_lock_release(tsx->grp_lock);
+	/* Post the event for later processing, to avoid deadlock.
+	 * See https://trac.pjsip.org/repos/ticket/1646
+	 */
+	lock_timer(tsx);
+	tsx->transport_err = info->status;
+	tsx_cancel_timer(tsx, &tsx->timeout_timer);
+	tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+	                   TRANSPORT_ERR_TIMER);
+	unlock_timer(tsx);
     }
 }
 
@@ -2118,9 +2176,8 @@ static void tsx_resched_retransmission( pjsip_transaction *tsx )
 
 	timeout.sec = msec_time / 1000;
 	timeout.msec = msec_time % 1000;
-	tsx->retransmit_timer.id = TIMER_ACTIVE;
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->retransmit_timer, 
-				    &timeout);
+	tsx_schedule_timer( tsx, &tsx->retransmit_timer, &timeout,
+	                    RETRANSMIT_TIMER);
     }
 }
 
@@ -2187,7 +2244,6 @@ static void tsx_update_transport( pjsip_transaction *tsx,
     }
 }
 
-
 /*
  * Handler for events in state Null.
  */
@@ -2240,9 +2296,8 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 	 * timeout.
 	 */
 	lock_timer(tsx);
-	tsx->timeout_timer.id = TIMER_ACTIVE;
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-				    &timeout_timer_val);
+	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout_timer_val,
+	                    TIMEOUT_TIMER);
 	unlock_timer(tsx);
 
 	/* Start Timer A (or timer E) for retransmission only if unreliable 
@@ -2253,9 +2308,8 @@ static pj_status_t tsx_on_state_null( pjsip_transaction *tsx,
 	    if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 		tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
 	    } else {
-	    	tsx->retransmit_timer.id = TIMER_ACTIVE;
-		pjsip_endpt_schedule_timer(tsx->endpt, &tsx->retransmit_timer,
-					   &t1_timer_val);
+		tsx_schedule_timer(tsx, &tsx->retransmit_timer,
+		                   &t1_timer_val, RETRANSMIT_TIMER);
 	    }
 	}
 
@@ -2292,19 +2346,16 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
     } else if (event->type == PJSIP_EVENT_TIMER && 
 	       event->body.timer.entry == &tsx->timeout_timer) 
     {
-
 	/* Cancel retransmission timer. */
-	if (tsx->retransmit_timer.id != 0) {
-	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-	    tsx->retransmit_timer.id = 0;
-	}
+	tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+
 	tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	/* Set status code */
 	tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
 	/* Inform TU. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
                        PJSIP_EVENT_TIMER, &tsx->timeout_timer);
 
 	/* Transaction is destroyed */
@@ -2327,15 +2378,11 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	 * timer.
 	 */
 	if (code >= 200) {
-	    if (tsx->retransmit_timer.id != 0) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-		tsx->retransmit_timer.id = 0;
-	    }
+	    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 	    if (tsx->timeout_timer.id != 0) {
 		lock_timer(tsx);
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
-		tsx->timeout_timer.id = 0;
+		tsx_cancel_timer(tsx, &tsx->timeout_timer);
 		unlock_timer(tsx);
 	    }
 
@@ -2343,10 +2390,7 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 	    /* Cancel retransmit timer (for non-INVITE transaction, the
 	     * retransmit timer will be rescheduled at T2.
 	     */
-	    if (tsx->retransmit_timer.id != 0) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-		tsx->retransmit_timer.id = 0;
-	    }
+	    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 	    /* For provisional response, only cancel retransmit when this
 	     * is an INVITE transaction. For non-INVITE, section 17.1.2.1
@@ -2358,15 +2402,13 @@ static pj_status_t tsx_on_state_calling( pjsip_transaction *tsx,
 
 		/* Cancel timeout timer */
 		lock_timer(tsx);
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->timeout_timer);
+		tsx_cancel_timer(tsx, &tsx->timeout_timer);
 		unlock_timer(tsx);
 
 	    } else {
 		if (!tsx->is_reliable) {
-		    tsx->retransmit_timer.id = TIMER_ACTIVE;
-		    pjsip_endpt_schedule_timer(tsx->endpt, 
-					       &tsx->retransmit_timer,
-					       &t2_timer_val);
+		    tsx_schedule_timer(tsx, &tsx->retransmit_timer,
+		                       &t2_timer_val, RETRANSMIT_TIMER);
 		}
 	    }
 	}
@@ -2524,11 +2566,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	    {
 
 		/* Stop 1xx retransmission timer, if any */
-		if (tsx->retransmit_timer.id) {
-		    pjsip_endpt_cancel_timer(tsx->endpt, 
-					     &tsx->retransmit_timer);
-		    tsx->retransmit_timer.id = 0;
-		}
+		tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 		/* Schedule retransmission */
 		tsx->retransmit_count = 0;
@@ -2536,21 +2574,15 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		    tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
 		} else {
 		    pj_time_val delay = {PJSIP_TSX_1XX_RETRANS_DELAY, 0};
-
-		    tsx->retransmit_timer.id = TIMER_ACTIVE;
-		    pjsip_endpt_schedule_timer( tsx->endpt, 
-						&tsx->retransmit_timer,
-						&delay);
+		    tsx_schedule_timer( tsx, &tsx->retransmit_timer, &delay,
+		                        RETRANSMIT_TIMER);
 		}
 	    }
 
 	} else if (PJSIP_IS_STATUS_IN_CLASS(tsx->status_code, 200)) {
 
 	    /* Stop 1xx retransmission timer, if any */
-	    if (tsx->retransmit_timer.id) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-		tsx->retransmit_timer.id = 0;
-	    }
+	    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 	    if (tsx->method.id == PJSIP_INVITE_METHOD && tsx->handle_200resp==0) {
 
@@ -2571,10 +2603,8 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		    if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 			tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
 		    } else {
-		    	tsx->retransmit_timer.id = TIMER_ACTIVE;
-			pjsip_endpt_schedule_timer( tsx->endpt, 
-						    &tsx->retransmit_timer,
-						    &t1_timer_val);
+			tsx_schedule_timer( tsx, &tsx->retransmit_timer,
+					    &t1_timer_val, RETRANSMIT_TIMER);
 		    }
 		}
 
@@ -2611,9 +2641,8 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		}
 
 		lock_timer(tsx);
-		tsx->timeout_timer.id = TIMER_ACTIVE;
-		pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-                                            &timeout);
+		tsx_schedule_timer( tsx, &tsx->timeout_timer,
+                                    &timeout, TIMEOUT_TIMER);
 		unlock_timer(tsx);
 
 		/* Set state to "Completed" */
@@ -2624,10 +2653,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	} else if (tsx->status_code >= 300) {
 
 	    /* Stop 1xx retransmission timer, if any */
-	    if (tsx->retransmit_timer.id) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-		tsx->retransmit_timer.id = 0;
-	    }
+	    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 	    /* 3xx-6xx class message causes transaction to move to 
              * "Completed" state. 
@@ -2645,20 +2671,17 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 	    lock_timer(tsx);
 	    if (tsx->method.id == PJSIP_INVITE_METHOD) {
 		/* Start timer H for INVITE */
-		tsx->timeout_timer.id = TIMER_ACTIVE;
-		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
-					   &timeout_timer_val);
+		tsx_schedule_timer(tsx, &tsx->timeout_timer,
+				   &timeout_timer_val, TIMEOUT_TIMER);
 	    } else if (!tsx->is_reliable) {
 		/* Start timer J on 64*T1 seconds for non-INVITE */
-		tsx->timeout_timer.id = TIMER_ACTIVE;
-		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
-					   &timeout_timer_val);
+		tsx_schedule_timer(tsx, &tsx->timeout_timer,
+				   &timeout_timer_val, TIMEOUT_TIMER);
 	    } else {
 		/* Start timer J on zero seconds for non-INVITE */
 		pj_time_val zero_time = { 0, 0 };
-		tsx->timeout_timer.id = TIMER_ACTIVE;
-		pjsip_endpt_schedule_timer(tsx->endpt,&tsx->timeout_timer,
-					   &zero_time);
+		tsx_schedule_timer(tsx, &tsx->timeout_timer,
+				   &zero_time, TIMEOUT_TIMER);
 	    }
 	    unlock_timer(tsx);
 
@@ -2674,10 +2697,8 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 		    if (tsx->transport_flag & TSX_HAS_PENDING_TRANSPORT) {
 			tsx->transport_flag |= TSX_HAS_PENDING_RESCHED;
 		    } else {
-		    	tsx->retransmit_timer.id = TIMER_ACTIVE;
-			pjsip_endpt_schedule_timer(tsx->endpt, 
-						   &tsx->retransmit_timer, 
-						   &t1_timer_val);
+			tsx_schedule_timer(tsx, &tsx->retransmit_timer,
+					   &t1_timer_val, RETRANSMIT_TIMER);
 		    }
 		}
 	    }
@@ -2717,7 +2738,7 @@ static pj_status_t tsx_on_state_proceeding_uas( pjsip_transaction *tsx,
 
 	tsx_set_status_code(tsx, PJSIP_SC_TSX_TIMEOUT, NULL);
 
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
                        PJSIP_EVENT_TIMER, &tsx->timeout_timer);
 
 	return PJ_EBUG;
@@ -2789,7 +2810,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 
 	/* Stop timeout timer B/F. */
 	lock_timer(tsx);
-	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
+	tsx_cancel_timer( tsx, &tsx->timeout_timer );
 	unlock_timer(tsx);
 
 	/* For INVITE, the state moves to Terminated state (because ACK is
@@ -2815,16 +2836,12 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 		timeout.sec = timeout.msec = 0;
 	    }
 	    lock_timer(tsx);
-	    tsx->timeout_timer.id = TIMER_ACTIVE;
-	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-					&timeout);
+	    tsx_schedule_timer( tsx, &tsx->timeout_timer,
+				&timeout, TIMEOUT_TIMER);
 	    unlock_timer(tsx);
 
 	    /* Cancel retransmission timer */
-	    if (tsx->retransmit_timer.id != 0) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-		tsx->retransmit_timer.id = 0;
-	    }
+	    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 	    /* Move state to Completed, inform TU. */
 	    tsx_set_state( tsx, PJSIP_TSX_STATE_COMPLETED, 
@@ -2835,7 +2852,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	       event->body.timer.entry == &tsx->timeout_timer) {
 
 	/* Inform TU. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
 		       PJSIP_EVENT_TIMER, &tsx->timeout_timer);
 
 
@@ -2851,7 +2868,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
         pj_status_t status;
 
 	/* Stop timer B. */
-	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
+	tsx_cancel_timer( tsx, &tsx->timeout_timer );
 
 	/* Generate and send ACK for INVITE. */
 	if (tsx->method.id == PJSIP_INVITE_METHOD) {
@@ -2884,8 +2901,7 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	} else {
 	    timeout.sec = timeout.msec = 0;
 	}
-	tsx->timeout->timer.id = TSX_TIMER_TIMEOUT;
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
+	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout, TIMEOUT_TIMER);
 
 	/* Inform TU. 
 	 * blp: You might be tempted to move this notification before
@@ -2904,15 +2920,11 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	pjsip_tx_data *ack_tdata = NULL;
 
 	/* Cancel retransmission timer */
-	if (tsx->retransmit_timer.id != 0) {
-	    pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-	    tsx->retransmit_timer.id = 0;
-	}
+	tsx_cancel_timer(tsx, &tsx->retransmit_timer);
 
 	/* Stop timer B. */
 	lock_timer(tsx);
-	tsx->timeout_timer.id = 0;
-	pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
+	tsx_cancel_timer( tsx, &tsx->timeout_timer );
 	unlock_timer(tsx);
 
 	/* Generate and send ACK (for INVITE) */
@@ -2965,10 +2977,9 @@ static pj_status_t tsx_on_state_proceeding_uac(pjsip_transaction *tsx,
 	 * by set_timeout() (by CANCEL). Cancel it if necessary. See:
 	 *  https://trac.pjsip.org/repos/ticket/1374
 	 */
-	if (tsx->timeout_timer.id)
-	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
-	tsx->timeout_timer.id = TIMER_ACTIVE;
-	pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, &timeout);
+	tsx_cancel_timer( tsx, &tsx->timeout_timer );
+	tsx_schedule_timer( tsx, &tsx->timeout_timer, &timeout,
+	                    TIMEOUT_TIMER);
 	unlock_timer(tsx);
 
     } else {
@@ -3020,16 +3031,13 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 	    }
 
 	    /* Cease retransmission. */
-	    if (tsx->retransmit_timer.id != 0) {
-		pjsip_endpt_cancel_timer(tsx->endpt, &tsx->retransmit_timer);
-		tsx->retransmit_timer.id = 0;
-	    }
+	    tsx_cancel_timer(tsx, &tsx->retransmit_timer);
+
 	    tsx->transport_flag &= ~(TSX_HAS_PENDING_RESCHED);
 
 	    /* Reschedule timeout timer. */
 	    lock_timer(tsx);
-	    pjsip_endpt_cancel_timer( tsx->endpt, &tsx->timeout_timer );
-	    tsx->timeout_timer.id = TIMER_ACTIVE;
+	    tsx_cancel_timer( tsx, &tsx->timeout_timer );
 
 	    /* Timer I is T4 timer for unreliable transports, and
 	     * zero seconds for reliable transports.
@@ -3041,8 +3049,8 @@ static pj_status_t tsx_on_state_completed_uas( pjsip_transaction *tsx,
 		timeout.sec = t4_timer_val.sec;
 		timeout.msec = t4_timer_val.msec;
 	    }
-	    pjsip_endpt_schedule_timer( tsx->endpt, &tsx->timeout_timer, 
-					&timeout);
+	    tsx_schedule_timer( tsx, &tsx->timeout_timer,
+				&timeout, TIMEOUT_TIMER);
 	    unlock_timer(tsx);
 
 	    /* Move state to "Confirmed" */
@@ -3107,7 +3115,7 @@ static pj_status_t tsx_on_state_completed_uac( pjsip_transaction *tsx,
 	pj_assert(event->body.timer.entry == &tsx->timeout_timer);
 
 	/* Move to Terminated state. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
                        PJSIP_EVENT_TIMER, event->body.timer.entry );
 
 	/* Transaction has been destroyed. */
@@ -3176,7 +3184,7 @@ static pj_status_t tsx_on_state_confirmed( pjsip_transaction *tsx,
 	pj_assert(event->body.timer.entry == &tsx->timeout_timer);
 
 	/* Move to Terminated state. */
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
+	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED,
                        PJSIP_EVENT_TIMER, &tsx->timeout_timer );
 
 	/* Transaction has been destroyed. */
