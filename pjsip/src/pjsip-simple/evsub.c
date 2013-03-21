@@ -1425,8 +1425,18 @@ static pjsip_evsub *on_new_transaction( pjsip_transaction *tsx,
 	    if (pj_strcmp(&dlgsub->sub->event->id_param, 
 			  &event_hdr->id_param)==0)
 	    {
-		
-		break;
+		/* Skip this subscription if it has no event ID and has been
+		 * terminated (see ticket #1647).
+		 */
+		if ((dlgsub->sub->option & PJSIP_EVSUB_NO_EVENT_ID) &&
+		    (pjsip_evsub_get_state(dlgsub->sub)==
+					PJSIP_EVSUB_STATE_TERMINATED))
+		{
+		    dlgsub = dlgsub->next;
+    		    continue;
+		} else {
+		    break;
+		}
 
 	    }
 	    /*
