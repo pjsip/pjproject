@@ -1920,12 +1920,21 @@ static void transport_callback(void *token, pjsip_tx_data *tdata,
 {
     pjsip_transaction *tsx = (pjsip_transaction*) token;
 
+    /* In other circumstances, locking tsx->grp_lock AFTER transport mutex
+     * will introduce deadlock if another thread is currently sending a
+     * SIP message to the transport. But this should be safe as there should
+     * be no way this callback could be called while another thread is
+     * sending a message.
+     */
+    pj_grp_lock_acquire(tsx->grp_lock);
+    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
+    pj_grp_lock_release(tsx->grp_lock);
+
     if (sent < 0) {
 	pj_time_val delay = {0, 0};
 	char errmsg[PJ_ERR_MSG_SIZE];
-	pj_str_t err;
 
-	err = pj_strerror(-sent, errmsg, sizeof(errmsg));
+	pj_strerror(-sent, errmsg, sizeof(errmsg));
 
 	PJ_LOG(2,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
 		pjsip_tx_data_get_info(tdata), -sent, errmsg));
@@ -2001,6 +2010,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	 * https://trac.pjsip.org/repos/ticket/1646
 	 */
 	pj_grp_lock_add_ref(tsx->grp_lock);
+	tsx->transport_flag |= TSX_HAS_PENDING_TRANSPORT;
 
 	status = pjsip_transport_send( tsx->transport, tdata, &tsx->addr,
 				       tsx->addr_len, tsx, 
@@ -2009,6 +2019,7 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	    status = PJ_SUCCESS;
 	else {
 	    /* Operation completes immediately */
+	    tsx->transport_flag &= ~(TSX_HAS_PENDING_TRANSPORT);
 	    pj_grp_lock_dec_ref(tsx->grp_lock);
 	}
 
