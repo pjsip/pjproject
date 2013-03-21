@@ -1089,6 +1089,9 @@ static void tsx_timer_callback( pj_timer_heap_t *theap, pj_timer_entry *entry)
 	    pj_grp_lock_acquire(tsx->grp_lock);
 	    prev_state = tsx->state;
 
+	    /* Release transport as it's no longer working. */
+	    tsx_update_transport(tsx, NULL);
+
 	    if (tsx->status_code < 200) {
 		pj_str_t err;
 		char errmsg[PJ_ERR_MSG_SIZE];
@@ -1915,30 +1918,31 @@ static void send_msg_callback( pjsip_send_state *send_state,
 static void transport_callback(void *token, pjsip_tx_data *tdata,
 			       pj_ssize_t sent)
 {
+    pjsip_transaction *tsx = (pjsip_transaction*) token;
+
     if (sent < 0) {
-	pjsip_transaction *tsx = (pjsip_transaction*) token;
+	pj_time_val delay = {0, 0};
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_str_t err;
-
-	tsx->transport_err = -sent;
 
 	err = pj_strerror(-sent, errmsg, sizeof(errmsg));
 
 	PJ_LOG(2,(tsx->obj_name, "Transport failed to send %s! Err=%d (%s)",
 		pjsip_tx_data_get_info(tdata), -sent, errmsg));
 
-	pj_grp_lock_acquire(tsx->grp_lock);
-
-	/* Release transport. */
-	tsx_update_transport(tsx, NULL);
-
-	/* Terminate transaction. */
-	tsx_set_status_code(tsx, PJSIP_SC_TSX_TRANSPORT_ERROR, &err);
-	tsx_set_state( tsx, PJSIP_TSX_STATE_TERMINATED, 
-		       PJSIP_EVENT_TRANSPORT_ERROR, tdata );
-
-	pj_grp_lock_release(tsx->grp_lock);
+	/* Post the event for later processing, to avoid deadlock.
+	 * See https://trac.pjsip.org/repos/ticket/1646
+	 */
+	lock_timer(tsx);
+	tsx->transport_err = -sent;
+	tsx_cancel_timer(tsx, &tsx->timeout_timer);
+	tsx_schedule_timer(tsx, &tsx->timeout_timer, &delay,
+	                   TRANSPORT_ERR_TIMER);
+	unlock_timer(tsx);
    }
+
+    /* Decrease pending send counter */
+    pj_grp_lock_dec_ref(tsx->grp_lock);
 }
 
 
@@ -1992,11 +1996,21 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
      * Otherwise perform full transport resolution.
      */
     if (tsx->transport) {
+	/* Increment group lock while waiting for send operation to complete,
+	 * to prevent us from being destroyed prematurely. See
+	 * https://trac.pjsip.org/repos/ticket/1646
+	 */
+	pj_grp_lock_add_ref(tsx->grp_lock);
+
 	status = pjsip_transport_send( tsx->transport, tdata, &tsx->addr,
 				       tsx->addr_len, tsx, 
 				       &transport_callback);
 	if (status == PJ_EPENDING)
 	    status = PJ_SUCCESS;
+	else {
+	    /* Operation completes immediately */
+	    pj_grp_lock_dec_ref(tsx->grp_lock);
+	}
 
 	if (status != PJ_SUCCESS) {
 	    PJ_PERROR(2,(tsx->obj_name, status,
