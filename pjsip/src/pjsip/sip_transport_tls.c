@@ -1580,8 +1580,25 @@ static pj_bool_t on_connect_complete(pj_ssl_sock_t *ssock,
      */
     is_shutdown = tls->base.is_shutdown;
     pjsip_transport_dec_ref(&tls->base);
-    if (is_shutdown)
+    if (is_shutdown) {
+	status = tls->close_reason;
+	tls_perror(tls->base.obj_name, "TLS connect() error", status);
+
+	/* Cancel all delayed transmits */
+	while (!pj_list_empty(&tls->delayed_list)) {
+	    struct delayed_tdata *pending_tx;
+	    pj_ioqueue_op_key_t *op_key;
+
+	    pending_tx = tls->delayed_list.next;
+	    pj_list_erase(pending_tx);
+
+	    op_key = (pj_ioqueue_op_key_t*)pending_tx->tdata_op_key;
+
+	    on_data_sent(tls->ssock, op_key, -status);
+	}
+
 	return PJ_FALSE;
+    }
 
 
     /* Mark that pending connect() operation has completed. */
