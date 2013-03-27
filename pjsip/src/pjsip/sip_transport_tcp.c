@@ -955,6 +955,7 @@ static pj_status_t lis_create_transport(pjsip_tpfactory *factory,
 	     * properly before socket is fully connected.
 	     */
 	    if (pj_sockaddr_cmp(tp_addr, &local_addr) &&
+                pj_sockaddr_has_addr(&local_addr) &&
 		pj_sockaddr_get_port(&local_addr) != 0)
 	    {
 		pj_sockaddr_cp(tp_addr, &local_addr);
