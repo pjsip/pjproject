@@ -794,6 +794,8 @@ on_error:
 	reset_call(call_id);
     }
 
+    pjsua_check_snd_dev_idle();
+
     if (tmp_pool)
 	pj_pool_release(tmp_pool);
     PJSUA_UNLOCK();
