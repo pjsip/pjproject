@@ -918,6 +918,7 @@ static void endpt_on_rx_msg( pjsip_endpoint *endpt,
 				      pj_status_t status,
 				      pjsip_rx_data *rdata )
 {
+    pjsip_msg *msg = rdata->msg_info.msg;
     pjsip_process_rdata_param proc_prm;
     pj_bool_t handled = PJ_FALSE;
 
