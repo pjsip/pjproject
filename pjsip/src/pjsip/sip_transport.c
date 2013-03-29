@@ -1506,6 +1506,8 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
 	PJ_LOG(3,(THIS_FILE, "Warning: %d transmit buffer(s) not freed!",
 		  pj_atomic_get(mgr->tdata_counter)));
     }
+    
+    pj_atomic_destroy(mgr->tdata_counter);
 #endif
 
     return PJ_SUCCESS;

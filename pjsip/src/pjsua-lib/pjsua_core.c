@@ -1636,6 +1636,11 @@ PJ_DEF(pj_status_t) pjsua_destroy2(unsigned flags)
 	pj_mutex_destroy(pjsua_var.mutex);
 	pjsua_var.mutex = NULL;
     }
+    
+    if (pjsua_var.timer_mutex) {
+        pj_mutex_destroy(pjsua_var.timer_mutex);
+        pjsua_var.timer_mutex = NULL;
+    }
 
     /* Destroy pool and pool factory. */
     if (pjsua_var.pool) {
