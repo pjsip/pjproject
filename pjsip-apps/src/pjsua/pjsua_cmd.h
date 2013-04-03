@@ -1,4 +1,4 @@
-/* $Id: pjsua_cmd.h 3553 2011-05-05 06:14:19Z nanang $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  *
@@ -177,3 +177,4 @@ PJ_DECL(void) app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
 #endif
 
 #endif	/* __PJSUA_CMD_H__ */
+

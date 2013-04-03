@@ -1,4 +1,4 @@
-/* $Id: pjsua_cli_cmd.c 3664 2011-07-19 03:42:28Z nanang $ */
+/* $Id$ */
 /* 
  * Copyright (C) 2008-2011 Teluu Inc. (http://www.teluu.com)
  * Copyright (C) 2003-2008 Benny Prijono <benny@prijono.org>
@@ -2951,3 +2951,4 @@ void destroy_cli()
     pj_cli_destroy(cli);
     cli = NULL;  
 }
+
