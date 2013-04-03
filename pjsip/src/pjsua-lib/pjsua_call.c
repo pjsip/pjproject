@@ -3753,7 +3753,8 @@ on_return:
 /* Modify SDP for call hold. */
 static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
 					   pj_pool_t *pool,
-					   pjmedia_sdp_session *sdp)
+					   pjmedia_sdp_session *sdp,
+					   pj_bool_t as_answerer)
 {
     unsigned mi;
 
@@ -3804,7 +3805,11 @@ static pj_status_t modify_sdp_of_call_hold(pjsua_call *call,
 	    pjmedia_sdp_media_remove_all_attr(m, "recvonly");
 	    pjmedia_sdp_media_remove_all_attr(m, "inactive");
 
-	    if (call->media[mi].dir & PJMEDIA_DIR_ENCODING) {
+	    /* When as answerer, just simply set dir to "sendonly", note that
+	     * if the offer uses "sendonly" or "inactive", the SDP negotiator
+	     * will change our answer dir to "inactive".
+	     */
+	    if (as_answerer || (call->media[mi].dir & PJMEDIA_DIR_ENCODING)) {
 		/* Add sendonly attribute */
 		attr = pjmedia_sdp_attr_create(pool, "sendonly", NULL);
 		pjmedia_sdp_media_add_attr(m, attr);
@@ -3838,7 +3843,7 @@ static pj_status_t create_sdp_of_call_hold(pjsua_call *call,
 	return status;
     }
 
-    status = modify_sdp_of_call_hold(call, pool, sdp);
+    status = modify_sdp_of_call_hold(call, pool, sdp, PJ_FALSE);
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -3928,7 +3933,7 @@ static void pjsua_call_on_rx_offer(pjsip_inv_session *inv,
 
     /* Check if call is on-hold */
     if (call->local_hold) {
-	modify_sdp_of_call_hold(call, call->inv->pool_prov, answer);
+	modify_sdp_of_call_hold(call, call->inv->pool_prov, answer, PJ_TRUE);
     }
 
     status = pjsip_inv_set_sdp_answer(call->inv, answer);
