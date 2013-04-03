@@ -2533,8 +2533,6 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
 	goto on_return;
     }
 
-    call->local_hold = PJ_FALSE;
-
 on_return:
     if (dlg) pjsip_dlg_dec_lock(dlg);
     pj_log_pop_indent();
