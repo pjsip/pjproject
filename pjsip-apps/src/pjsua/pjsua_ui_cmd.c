@@ -970,7 +970,8 @@ static void ui_call_reinvite()
 
 static void ui_send_update()
 {
-    if (current_call != -1) {		
+    if (current_call != -1) {
+	call_opt.flag |= PJSUA_CALL_UNHOLD;
 	pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -1935,4 +1936,5 @@ void console_app_main(const pj_str_t *uri_to_call, pj_bool_t *app_restart)
 
 on_exit:
     ;
-}
+} 
+

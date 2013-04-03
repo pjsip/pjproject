@@ -2495,11 +2495,17 @@ PJ_DEF(pj_status_t) pjsua_call_update2(pjsua_call_id call_id,
     }
 
     /* Create SDP */
-    status = pjsua_media_channel_create_sdp(call->index, 
-					    call->inv->pool_prov, 
-					    NULL, &sdp, NULL);
+    if (call->local_hold && (call->opt.flag & PJSUA_CALL_UNHOLD)==0) {
+	status = create_sdp_of_call_hold(call, &sdp);
+    } else {
+	status = pjsua_media_channel_create_sdp(call->index,
+						call->inv->pool_prov,
+						NULL, &sdp, NULL);
+	call->local_hold = PJ_FALSE;
+    }
+
     if (status != PJ_SUCCESS) {
-	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint", 
+	pjsua_perror(THIS_FILE, "Unable to get SDP from media endpoint",
 		     status);
 	goto on_return;
     }
