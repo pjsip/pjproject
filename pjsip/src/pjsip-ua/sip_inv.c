@@ -623,9 +623,15 @@ static void mod_inv_on_tsx_state(pjsip_transaction *tsx, pjsip_event *e)
     /* Call state handler for the invite session. */
     (*inv_state_handler[inv->state])(inv, e);
 
-    /* Call on_tsx_state */
-    if (mod_inv.cb.on_tsx_state_changed && inv->notify)
+    /* Call on_tsx_state. CANCEL request is a special case and has been
+     * reported earlier in inv_respond_incoming_cancel()
+     */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify &&
+        !(tsx->method.id==PJSIP_CANCEL_METHOD &&
+          e->body.tsx_state.type==PJSIP_EVENT_RX_MSG))
+    {
 	(*mod_inv.cb.on_tsx_state_changed)(inv, tsx, e);
+    }
 
     /* Clear invite transaction when tsx is confirmed.
      * Previously we set invite_tsx to NULL only when transaction has
@@ -2854,12 +2860,28 @@ on_error:
  */
 static void inv_respond_incoming_cancel(pjsip_inv_session *inv,
 					pjsip_transaction *cancel_tsx,
-					pjsip_rx_data *rdata)
+					pjsip_event *e)
 {
     pjsip_tx_data *tdata;
     pjsip_transaction *invite_tsx;
+    pjsip_rx_data *rdata;
     pj_str_t key;
     pj_status_t status;
+
+    pj_assert(e->body.tsx_state.type == PJSIP_EVENT_RX_MSG);
+    rdata = e->body.tsx_state.src.rdata;
+
+    /* https://trac.pjsip.org/repos/ticket/1651
+     * Special treatment for CANCEL. Since here we're responding to CANCEL
+     * automatically (including 487 to INVITE), application will see the
+     * 200/OK response to CANCEL first in the callback, and then 487 to
+     * INVITE, before the CANCEL request itself. And worse, pjsua application
+     * may not see the CANCEL request at all because by the time the CANCEL
+     * request is reported, call has been disconnected and further events
+     * from the INVITE session has been suppressed.
+     */
+    if (mod_inv.cb.on_tsx_state_changed && inv->notify)
+	(*mod_inv.cb.on_tsx_state_changed)(inv, cancel_tsx, e);
 
     /* See if we have matching INVITE server transaction: */
 
@@ -3754,7 +3776,7 @@ static void inv_on_state_incoming( pjsip_inv_session *inv, pjsip_event *e)
 	 * Handle incoming CANCEL request.
 	 */
 
-	inv_respond_incoming_cancel(inv, tsx, e->body.tsx_state.src.rdata);
+	inv_respond_incoming_cancel(inv, tsx, e);
 
     }
 }
@@ -3878,7 +3900,7 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 	 * Handle incoming CANCEL request.
 	 */
 
-	inv_respond_incoming_cancel(inv, tsx, e->body.tsx_state.src.rdata);
+	inv_respond_incoming_cancel(inv, tsx, e);
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&
 	       tsx->state == PJSIP_TSX_STATE_TRYING &&
