@@ -282,6 +282,18 @@ static pj_status_t initialize_acc(unsigned acc_id)
 	acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
     }
 
+    /* If account's ICE and TURN customization is not set, then
+     * initialize it with the settings from the global media config.
+     */
+    if (acc->cfg.ice_cfg_use == PJSUA_ICE_CONFIG_USE_DEFAULT) {
+	pjsua_ice_config_from_media_config(NULL, &acc->cfg.ice_cfg,
+	                                &pjsua_var.media_cfg);
+    }
+    if (acc->cfg.turn_cfg_use == PJSUA_TURN_CONFIG_USE_DEFAULT) {
+	pjsua_turn_config_from_media_config(NULL, &acc->cfg.turn_cfg,
+	                                    &pjsua_var.media_cfg);
+    }
+
     /* If ICE is enabled, add "+sip.ice" media feature tag in account's
      * contact params.
      */
@@ -349,18 +361,6 @@ static pj_status_t initialize_acc(unsigned acc_id)
 		             acc_cfg->rfc5626_reg_id.ptr);
 	    acc->rfc5626_regprm.slen = len;
 	}
-    }
-
-    /* If account's ICE and TURN customization is not set, then
-     * initialize it with the settings from the global media config.
-     */
-    if (acc->cfg.ice_cfg_use == PJSUA_ICE_CONFIG_USE_DEFAULT) {
-	pjsua_ice_config_from_media_config(NULL, &acc->cfg.ice_cfg,
-	                                &pjsua_var.media_cfg);
-    }
-    if (acc->cfg.turn_cfg_use == PJSUA_TURN_CONFIG_USE_DEFAULT) {
-	pjsua_turn_config_from_media_config(NULL, &acc->cfg.turn_cfg,
-	                                    &pjsua_var.media_cfg);
     }
 
     /* Mark account as valid */
