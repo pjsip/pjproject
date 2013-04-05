@@ -63,4 +63,7 @@
 /* HTTP */
 #include <pjlib-util/http_client.h>
 
+/** CLI Telnet **/
+#include <pjlib-util/cli_telnet.h>
+
 #endif	/* __PJLIB_UTIL_H__ */

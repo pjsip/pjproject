@@ -18,13 +18,17 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-#include "pjsua_cmd.h"
+#include "pjsua_common.h"
 #include <pjlib-util/cli.h>
 #include <pjlib-util/cli_imp.h>
 #include <pjlib-util/cli_console.h>
 #include <pjlib-util/cli_telnet.h>
+#include <pjlib-util/scanner.h>
 
 #define THIS_FILE	"pjsua_cli_cmd.c"
+
+#define CHECK_PJSUA_RUNNING() if (pjsua_get_state()!=PJSUA_STATE_RUNNING) \
+				  return PJ_EINVALIDOP
 
 /* CLI command id */
 /* level 1 command */
@@ -38,6 +42,8 @@
 #define CMD_ECHO		    800
 #define CMD_NETWORK		    900
 #define CMD_QUIT		    110
+#define CMD_RESTART		    120
+#define CMD_RELOAD		    130
 
 /* call level 2 command */
 #define CMD_CALL_NEW		    ((CMD_CALL*10)+1)
@@ -143,17 +149,11 @@
 #define DYN_CHOICE_CALL_ID	    (DYN_CHOICE_START)+11
 #define DYN_CHOICE_ADDED_BUDDY_ID   (DYN_CHOICE_START)+12
 
-static pj_cli_cfg cli_cfg;
-static pj_cli_telnet_cfg telnet_cfg;
-static pj_cli_t *cli = NULL;
-static pj_cli_sess *sess = NULL;
-static pj_cli_console_cfg console_cfg;
-
 /* Get input URL */
 static void get_input_url(char *buf, 
 			  int len,
 			  pj_cli_cmd_val *cval,
-struct input_result *result)
+			  struct input_result *result)
 {
     static const pj_str_t err_invalid_input = {"Invalid input\n", 15};
     result->nb_result = NO_NB;
@@ -202,7 +202,7 @@ struct input_result *result)
 	    return;
 
 	pj_cli_sess_write_msg(cval->sess, err_invalid_input.ptr, 
-	    err_invalid_input.slen);
+			      err_invalid_input.slen);
 	result->nb_result = NO_NB;
 	return;
 
@@ -615,39 +615,8 @@ static void get_choice_value(pj_cli_dyn_choice_param *param)
 #endif
     default:
 	param->cnt = 0;
+	break;
     }
-}
-
-void cli_console_app_main(const pj_str_t *uri_to_call, pj_bool_t *app_restart)
-{        
-    pjsua_call_setting_default(&call_opt);
-    call_opt.aud_cnt = app_config.aud_cnt;
-    call_opt.vid_cnt = app_config.vid.vid_cnt;    
-
-    /* If user specifies URI to call, then call the URI */
-    if (uri_to_call->slen) {
-	pjsua_call_make_call(current_acc, uri_to_call, &call_opt, NULL, 
-			     NULL, NULL);
-    }
-
-    /*
-     * Main loop.
-     */
-    for (;;) {
-	char cmdline[PJ_CLI_MAX_CMDBUF];	
-        pj_status_t status;
-
-        status = pj_cli_console_process(sess, &cmdline[0], sizeof(cmdline));
-
-	if (status == PJ_CLI_EEXIT) {
-	    /* exit is called */
-	    break;
-	} else if (status != PJ_SUCCESS) {
-	    /* Something wrong with the cmdline */
-	    PJ_PERROR(1,(THIS_FILE, status, "Exec error"));
-	}
-    }    
-    *app_restart = pj_cli_is_restarting(cli);  
 }
 
 /* 
@@ -794,6 +763,8 @@ static pj_status_t cmd_show_account(pj_cli_cmd_val *cval)
 pj_status_t cmd_account_handler(pj_cli_cmd_val *cval)
 {    
     pj_status_t status = PJ_SUCCESS;
+
+    CHECK_PJSUA_RUNNING();
 
     switch(pj_cli_get_cmd_id(cval->cmd)) {
     case CMD_ACCOUNT_ADD:
@@ -1064,6 +1035,8 @@ pj_status_t cmd_presence_handler(pj_cli_cmd_val *cval)
 {    
     pj_status_t status = PJ_SUCCESS;
 
+    CHECK_PJSUA_RUNNING();
+
     switch(pj_cli_get_cmd_id(cval->cmd)) {
     case CMD_PRESENCE_ADD_BUDDY:
 	status = cmd_add_buddy(cval);
@@ -1106,8 +1079,8 @@ static pj_status_t cmd_media_list(pj_cli_cmd_val *cval)
     pjsua_enum_conf_ports(id, &count);
 
     for (i=0; i<count; ++i) {
-	char out_str[PJSUA_MAX_CALLS*6];
-	char txlist[PJSUA_MAX_CALLS*4+10];
+	char out_str[128];
+	char txlist[16];
 	unsigned j;
 	pjsua_conf_port_info info;
 
@@ -1223,6 +1196,8 @@ pj_status_t cmd_media_handler(pj_cli_cmd_val *cval)
 {
     pj_status_t status = PJ_SUCCESS;
 
+    CHECK_PJSUA_RUNNING();
+
     switch(pj_cli_get_cmd_id(cval->cmd)) {
     case CMD_MEDIA_LIST:
 	status = cmd_media_list(cval);
@@ -1305,6 +1280,8 @@ static pj_status_t cmd_write_config(pj_cli_cmd_val *cval)
 pj_status_t cmd_config_handler(pj_cli_cmd_val *cval)
 {
     pj_status_t status = PJ_SUCCESS;
+
+    CHECK_PJSUA_RUNNING();
 
     switch(pj_cli_get_cmd_id(cval->cmd)) {
     case CMD_CONFIG_DUMP_STAT:
@@ -1523,7 +1500,6 @@ static pj_status_t cmd_call_reinvite()
 static pj_status_t cmd_call_update()
 {
     if (current_call != PJSUA_INVALID_ID) {
-	call_opt.flag |= PJSUA_CALL_UNHOLD;
 	pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -1922,6 +1898,8 @@ pj_status_t cmd_call_handler(pj_cli_cmd_val *cval)
     pj_status_t status = PJ_SUCCESS;
     pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);
 
+    CHECK_PJSUA_RUNNING();
+
     switch(cmd_id) {
     case CMD_CALL_NEW:
 	status = cmd_make_single_call(cval);
@@ -2011,6 +1989,8 @@ static pj_status_t cmd_video_acc_handler(pj_cli_cmd_val *cval)
 {
     pjsua_acc_config acc_cfg;
     pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);
+
+    CHECK_PJSUA_RUNNING();
 
     pjsua_acc_get_config(current_acc, &acc_cfg);
 
@@ -2321,6 +2301,8 @@ static pj_status_t cmd_video_handler(pj_cli_cmd_val *cval)
     pj_status_t status = PJ_SUCCESS;
     pj_cli_cmd_id cmd_id = pj_cli_get_cmd_id(cval->cmd);    
 
+    CHECK_PJSUA_RUNNING();
+
     switch(cmd_id) {
     case CMD_VIDEO_ENABLE:
 	status = cmd_set_video_enable(PJ_TRUE);
@@ -2414,7 +2396,10 @@ static pj_status_t cmd_sleep_handler(pj_cli_cmd_val *cval)
 static pj_status_t cmd_network_handler(pj_cli_cmd_val *cval)
 {
     pj_status_t status = PJ_SUCCESS;
-    PJ_UNUSED_ARG(cval);    
+    PJ_UNUSED_ARG(cval);
+
+    CHECK_PJSUA_RUNNING();
+    
     status = pjsua_detect_nat_type();
     if (status != PJ_SUCCESS)
 	pjsua_perror(THIS_FILE, "Error", status);
@@ -2424,15 +2409,83 @@ static pj_status_t cmd_network_handler(pj_cli_cmd_val *cval)
 
 static pj_status_t cmd_quit_handler(pj_cli_cmd_val *cval)
 {
+    extern pj_cli_on_quit cli_on_quit_cb;
     PJ_LOG(3,(THIS_FILE, "Quitting app.."));
-    pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_FALSE);    
+    pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_FALSE);
+    /** Call pj_cli_on_quit callback **/
+    if (cli_on_quit_cb)
+	(*cli_on_quit_cb)(PJ_FALSE);
+
     return PJ_SUCCESS;
 }
 
 static pj_status_t cmd_restart_handler(pj_cli_cmd_val *cval)
 {
+    extern pj_cli_on_quit cli_on_quit_cb;
     PJ_LOG(3,(THIS_FILE, "Restarting app.."));
-    pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_TRUE);    
+    pj_cli_quit(cval->sess->fe->cli, cval->sess, PJ_TRUE);
+    /** Call pj_cli_on_quit callback **/
+    if (cli_on_quit_cb)
+	(*cli_on_quit_cb)(PJ_TRUE);
+
+    return PJ_SUCCESS;
+}
+
+/* 
+ * Syntax error handler for parser. 
+ */
+static void on_syntax_error(pj_scanner *scanner)
+{
+    PJ_UNUSED_ARG(scanner);
+    PJ_THROW(PJ_EINVAL);
+}
+
+static pj_status_t get_options(pj_str_t *options, unsigned *cmd_count)
+{
+    pj_scanner scanner;
+    pj_str_t str;
+    
+    PJ_USE_EXCEPTION;
+
+    if (!options)
+	return PJ_SUCCESS;
+
+    pj_scan_init(&scanner, options->ptr, options->slen, PJ_SCAN_AUTOSKIP_WS, 
+		 &on_syntax_error);
+    PJ_TRY {
+	while (!pj_scan_is_eof(&scanner)) {	    
+	    ++(*cmd_count);
+	    pj_scan_get_until_chr(&scanner, " \t\r\n", &str);
+	    /** Store to command arguments **/	    
+	    add_reload_config(*cmd_count, &str);	    
+	}
+    }
+    PJ_CATCH_ANY {
+	pj_scan_fini(&scanner);	
+	return PJ_GET_EXCEPTION();
+    }
+    PJ_END;
+    return PJ_SUCCESS;
+}
+
+static pj_status_t cmd_reload_handler(pj_cli_cmd_val *cval)
+{
+    int i;
+    unsigned cmd_count = 0;
+    extern pj_bool_t pjsua_restarted;
+    extern pj_cli_on_restart_pjsua cli_on_restart_pjsua_cb;
+
+    PJ_LOG(3,(THIS_FILE, "Reloading Pjsua.."));
+    /** Get the pjsua option **/       
+    
+    for (i=1;i<cval->argc;i++) {
+	get_options(&cval->argv[i], &cmd_count);
+    }
+    pjsua_restarted = PJ_TRUE;
+
+    if (cli_on_restart_pjsua_cb)
+	(*cli_on_restart_pjsua_cb)();
+
     return PJ_SUCCESS;
 }
 
@@ -2831,11 +2884,20 @@ static pj_status_t add_other_command(pj_cli_t *cli)
     char* restart_command =
 	"<CMD name='restart' id='120' desc='Restart application'/>";
 
+    char* reload_command =
+	"<CMD name='reload' id='130' desc='Reload pjsua'>"
+	"  <ARG name='options1' type='string' desc='Options' optional='1'/>"
+	"  <ARG name='options2' type='string' desc='Options' optional='1'/>"
+	"  <ARG name='options3' type='string' desc='Options' optional='1'/>"
+	"  <ARG name='options4' type='string' desc='Options' optional='1'/>"
+	"</CMD>";
+
     pj_status_t status;
     pj_str_t sleep_xml = pj_str(sleep_command);    
     pj_str_t network_xml = pj_str(network_command);
     pj_str_t shutdown_xml = pj_str(shutdown_command);
     pj_str_t restart_xml = pj_str(restart_command);
+    pj_str_t reload_xml = pj_str(reload_command);
 
     status = pj_cli_add_cmd_from_xml(cli, NULL, 
 				     &sleep_xml, cmd_sleep_handler, 
@@ -2859,11 +2921,17 @@ static pj_status_t add_other_command(pj_cli_t *cli)
     status = pj_cli_add_cmd_from_xml(cli, NULL, 
 				     &restart_xml, cmd_restart_handler, 
 				     NULL, NULL);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    status = pj_cli_add_cmd_from_xml(cli, NULL, 
+				     &reload_xml, cmd_reload_handler, 
+				     NULL, NULL);
 
     return status;
 }
 
-static pj_status_t setup_command()
+pj_status_t setup_command(pj_cli_t *cli)
 {
     pj_status_t status;
 
@@ -2897,58 +2965,3 @@ static pj_status_t setup_command()
 
     return status;
 }
-
-static void log_writer(int level, const char *buffer, int len)
-{
-    if (cli)
-	pj_cli_write_log(cli, level, buffer, len);
-}
-
-pj_status_t setup_cli()
-{
-    pj_status_t status;    
-    pj_cli_cfg_default(&cli_cfg);
-    cli_cfg.pf = app_config.pool->factory;    
-    cli_cfg.name = pj_str("pjsua_cli");
-    cli_cfg.title = pj_str("Pjsua CLI Application");
-
-    status = pj_cli_create(&cli_cfg, &cli);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    status = setup_command();
-    if (status != PJ_SUCCESS)
-	return status;
-
-    pj_log_set_log_func(&log_writer);
-
-    /* 
-    * Init telnet
-    */ 
-    pj_cli_telnet_cfg_default(&telnet_cfg);
-    telnet_cfg.log_level = 5;
-    if (app_config.cli_telnet_port)
-	telnet_cfg.port = (pj_uint16_t)app_config.cli_telnet_port;
-
-    status = pj_cli_telnet_create(cli, &telnet_cfg, NULL);
-    if (status != PJ_SUCCESS)
-	return status;
-
-    app_config.cli_telnet_port = telnet_cfg.port;;
-
-    /*
-    * Init console
-    */ 
-    pj_cli_console_cfg_default(&console_cfg);
-    console_cfg.quit_command = pj_str("shutdown");
-    status = pj_cli_console_create(cli, &console_cfg, &sess, NULL);
-    return status;
-}
-
-void destroy_cli()
-{
-    pj_log_set_log_func(&pj_log_write);    
-    pj_cli_destroy(cli);
-    cli = NULL;  
-}
-

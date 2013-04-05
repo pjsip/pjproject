@@ -19,9 +19,10 @@
  */
 
 #include <pjsua-lib/pjsua.h>
-#include "pjsua_cmd.h"
+#include "pjsua_common.h"
+#include "gui.h"
 
-#define THIS_FILE	"pjsua_ui_cmd.c"
+#define THIS_FILE	"pjsua_legacy.c"
 
 static pj_bool_t	cmd_echo;
 
@@ -970,8 +971,7 @@ static void ui_call_reinvite()
 
 static void ui_send_update()
 {
-    if (current_call != -1) {
-	call_opt.flag |= PJSUA_CALL_UNHOLD;
+    if (current_call != -1) {		
 	pjsua_call_update2(current_call, &call_opt, NULL);
     } else {
 	PJ_LOG(3,(THIS_FILE, "No current call"));
@@ -1936,5 +1936,24 @@ void console_app_main(const pj_str_t *uri_to_call, pj_bool_t *app_restart)
 
 on_exit:
     ;
-} 
+}
 
+void start_ui_main(pj_str_t *uri_to_call, pj_bool_t *app_restart)
+{
+    pj_status_t status;    
+    *app_restart = PJ_FALSE;
+
+    status = pjsua_start();
+    if (status != PJ_SUCCESS)
+	return;	    
+
+    setup_signal_handler();
+
+    /* If user specifies URI to call, then call the URI */
+    if (uri_to_call->slen) {
+	pjsua_call_make_call(current_acc, uri_to_call, &call_opt, NULL, 
+			     NULL, NULL);
+    }    
+
+    console_app_main(uri_to_call, app_restart);
+}

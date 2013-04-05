@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJSUA_CMD_H__
-#define __PJSUA_CMD_H__
+#ifndef __PJSUA_COMMON_H__
+#define __PJSUA_COMMON_H__
 
 #include <pjsua-lib/pjsua.h>
 
@@ -36,12 +36,12 @@ typedef struct input_result
 } input_result;
 
 /* Call specific data */
-typedef struct call_data
+typedef struct app_call_data
 {
     pj_timer_entry	    timer;
     pj_bool_t		    ringback_on;
     pj_bool_t		    ring_on;
-} call_data;
+} app_call_data;
 
 /* Video settings */
 typedef struct app_vid
@@ -75,7 +75,7 @@ typedef struct pjsua_app_config
     unsigned		    buddy_cnt;
     pjsua_buddy_config	    buddy_cfg[PJSUA_MAX_BUDDIES];
 
-    call_data		    call_data[PJSUA_MAX_CALLS];
+    app_call_data	    call_data[PJSUA_MAX_CALLS];
 
     pj_pool_t		   *pool;
     /* Compatibility with older pjsua */
@@ -139,16 +139,25 @@ typedef struct pjsua_app_config
 
     /* CLI setting */
     pj_bool_t		    use_cli;
-    unsigned		    cli_telnet_port;    
+    int			    cli_telnet_port;
+    pj_bool_t		    disable_cli_console;
 } pjsua_app_config;
+
+/** CLI callback **/
+/** This specifies the callback called when cli quit is called. **/
+typedef void (*pj_cli_on_quit)(pj_bool_t is_restarting);
+/** This callback is called when the cli is completely destroyed **/
+typedef void (*pj_cli_on_destroy)(void);
+/** This callback is called when pjsua restart command is invode by cli **/
+typedef void (*pj_cli_on_restart_pjsua)(void);
 
 /** Extern variable declaration **/
 extern pjsua_call_id	    current_call;
 extern pjsua_app_config	    app_config;
 extern int		    stdout_refresh;
 extern pj_bool_t	    stdout_refresh_quit;
-extern pjsua_call_setting call_opt;
-extern pjsua_msg_data msg_data;
+extern pjsua_call_setting   call_opt;
+extern pjsua_msg_data	    msg_data;
 
 PJ_DECL(int) my_atoi(const char *cs);
 PJ_DECL(pj_bool_t) find_next_call();
@@ -159,10 +168,32 @@ PJ_DECL(int) write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
 PJ_DECL(void) app_config_init_video(pjsua_acc_config *acc_cfg);
 PJ_DECL(void) arrange_window(pjsua_vid_win_id wid);
 
+/** Defined in pjsua_cli_cmd.c **/
+PJ_DECL(pj_bool_t) is_cli_inited();
+
+/** Defined in pjsua_app.c **/
+PJ_DECL(pj_status_t) app_init(pj_cli_telnet_on_started on_started_cb,
+			      pj_cli_on_quit on_quit_cb,
+			      pj_cli_on_destroy on_destroy_cb,
+			      pj_cli_on_restart_pjsua on_restart_pjsua_cb);
+PJ_DECL(void) setup_signal_handler(void);
+
+/** Defined in pjsua_config.c **/
+/** This is to store the app runtime/startup options **/
+PJ_DECL(void) add_startup_config(int argc, char *argv[]);
+/** This is to store the app reload options **/
+PJ_DECL(void) add_reload_config(unsigned idx, pj_str_t *option);
+/** This is to load the configuration **/
+PJ_DECL(pj_status_t) load_config(pjsua_app_config *app_config, 
+				 pj_str_t *uri_arg,
+				 pj_bool_t app_running);
+
 #if PJSUA_HAS_VIDEO
-PJ_DECL(void) vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title);
+PJ_DECL(void) vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, 
+			    const char *title);
 PJ_DECL(void) vid_list_devs();
-PJ_DECL(void) app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg);
+PJ_DECL(void) app_config_show_video(int acc_id, 
+				    const pjsua_acc_config *acc_cfg);
 #endif
 
 #ifdef HAVE_MULTIPART_TEST
@@ -176,5 +207,8 @@ PJ_DECL(void) app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
 #  define TEST_MULTIPART(msg_data)
 #endif
 
+
+PJ_END_DECL
+    
 #endif	/* __PJSUA_CMD_H__ */
 

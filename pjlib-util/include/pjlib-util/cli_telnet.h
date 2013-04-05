@@ -34,6 +34,31 @@ PJ_BEGIN_DECL
  *
  */
 
+ /**
+ * This structure contains the information about the telnet.
+ * Application will get updated information each time the telnet is started/
+ * restarted.
+ */
+typedef struct pj_cli_telnet_info
+{
+    /**
+     * The telnet's ip address.
+     */
+    pj_str_t	ip_address;
+
+    /**
+     * The telnet's port number.
+     */
+    pj_uint16_t port;
+} pj_cli_telnet_info;
+
+/**
+ * This specifies the callback called when telnet is started
+ *
+ * @param telnet_info   The telnet runtime information.
+ *
+ */
+typedef void (*pj_cli_telnet_on_started)(pj_cli_telnet_info *telnet_info);
 
 /**
  * This structure contains various options to instantiate the telnet daemon.
@@ -85,8 +110,14 @@ typedef struct pj_cli_telnet_cfg
      */
     pj_str_t prompt_str;
 
-} pj_cli_telnet_cfg;
+    /**
+     * Specify the pj_cli_telnet_on_started callback.
+     *
+     * Default: empty
+     */
+    pj_cli_telnet_on_started on_started;
 
+} pj_cli_telnet_cfg;
 
 /**
  * Initialize pj_cli_telnet_cfg with its default values.

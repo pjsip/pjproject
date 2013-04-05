@@ -29,6 +29,15 @@
 #include <pj/except.h>
 #include <pjlib-util/errno.h>
 #include <pjlib-util/scanner.h>
+#include <pj/addr_resolv.h>
+#include <pj/compat/socket.h>
+
+#if (defined(PJ_WIN32) && PJ_WIN32!=0) || \
+    (defined(PJ_WIN32_WINCE) && PJ_WIN32_WINCE!=0)
+
+#define EADDRINUSE WSAEADDRINUSE 
+
+#endif
 
 #define CLI_TELNET_BUF_SIZE 256
 
@@ -44,6 +53,14 @@
 #endif
 
 #define MAX_CLI_TELNET_OPTIONS 256
+/** Maximum retry on Telnet Restart **/
+#define MAX_RETRY_ON_TELNET_RESTART 100
+/** Minimum number of millisecond to wait before retrying to re-bind on
+ * telnet restart **/
+#define MIN_WAIT_ON_TELNET_RESTART 20
+/** Maximum number of millisecod to wait before retrying to re-bind on
+ *  telnet restart **/
+#define MAX_WAIT_ON_TELNET_RESTART 1000
 
 /**
  * This specify the state for the telnet option negotiation.
@@ -261,7 +278,7 @@ typedef struct cli_telnet_sess
     unsigned		    buf_len;
 } cli_telnet_sess;
 
-struct cli_telnet_fe
+typedef struct cli_telnet_fe
 {
     pj_cli_front_end        base;
     pj_pool_t              *pool;
@@ -272,8 +289,8 @@ struct cli_telnet_fe
     pj_activesock_t	   *asock;
     pj_thread_t            *worker_thread;
     pj_bool_t               is_quitting;
-    pj_mutex_t             *mutex;
-};
+    pj_mutex_t             *mutex;    
+} cli_telnet_fe;
 
 /* Forward Declaration */
 static pj_status_t telnet_sess_send2(cli_telnet_sess *sess,
@@ -281,6 +298,9 @@ static pj_status_t telnet_sess_send2(cli_telnet_sess *sess,
 
 static pj_status_t telnet_sess_send(cli_telnet_sess *sess,
                                     const pj_str_t *str);
+
+static pj_status_t telnet_start(cli_telnet_fe *fe);
+static pj_status_t telnet_restart(cli_telnet_fe *tfe);
 
 /**
  * Return the number of characters between the current cursor position 
@@ -645,7 +665,7 @@ static void send_prompt_str(cli_telnet_sess *sess)
 {
     pj_str_t send_data;
     char data_str[128];
-    struct cli_telnet_fe *fe = (struct cli_telnet_fe *)sess->base.fe;
+    cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
 
     send_data.ptr = &data_str[0];
     send_data.slen = 0;
@@ -669,7 +689,7 @@ static void send_err_arg(cli_telnet_sess *sess,
     char data_str[256];
     unsigned len;
     unsigned i;
-    struct cli_telnet_fe *fe = (struct cli_telnet_fe *)sess->base.fe;
+    cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
 
     send_data.ptr = &data_str[0];
     send_data.slen = 0;
@@ -743,7 +763,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     unsigned len;
     pj_str_t send_data;
     char data[1028];
-    struct cli_telnet_fe *fe = (struct cli_telnet_fe *)sess->base.fe;
+    cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
     const pj_cli_hint_info *hint = info->hint;
     out_parse_state parse_state = OP_NORMAL;
     pj_ssize_t max_length = 0;
@@ -1318,7 +1338,7 @@ static pj_status_t telnet_sess_send2(cli_telnet_sess *sess,
 static void telnet_sess_destroy(pj_cli_sess *sess)
 {
     cli_telnet_sess *tsess = (cli_telnet_sess *)sess;
-    pj_mutex_t *mutex = ((struct cli_telnet_fe *)sess->fe)->mutex;
+    pj_mutex_t *mutex = ((cli_telnet_fe *)sess->fe)->mutex;
 
     pj_mutex_lock(mutex);
     pj_list_erase(sess);
@@ -1334,7 +1354,7 @@ static void telnet_sess_destroy(pj_cli_sess *sess)
 static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
 		                const char *data, int len)
 {
-    struct cli_telnet_fe * tfe = (struct cli_telnet_fe *)fe;
+    cli_telnet_fe *tfe = (cli_telnet_fe *)fe;
     pj_cli_sess *sess;    
 
     pj_mutex_lock(tfe->mutex);
@@ -1357,7 +1377,7 @@ static void telnet_fe_write_log(pj_cli_front_end *fe, int level,
 
 static void telnet_fe_destroy(pj_cli_front_end *fe)
 {
-    struct cli_telnet_fe *tfe = (struct cli_telnet_fe *)fe;
+    cli_telnet_fe *tfe = (cli_telnet_fe *)fe;
     pj_cli_sess *sess;
 
     tfe->is_quitting = PJ_TRUE;
@@ -1391,7 +1411,7 @@ static void telnet_fe_destroy(pj_cli_front_end *fe)
 
 static int poll_worker_thread(void *p)
 {
-    struct cli_telnet_fe *fe = (struct cli_telnet_fe *)p;
+    cli_telnet_fe *fe = (cli_telnet_fe *)p;
 
     while (!fe->is_quitting) {
 	pj_time_val delay = {0, 50};
@@ -1408,9 +1428,10 @@ static pj_bool_t telnet_sess_on_data_sent(pj_activesock_t *asock,
     cli_telnet_sess *sess = (cli_telnet_sess *)
 			    pj_activesock_get_user_data(asock);
 
-    PJ_UNUSED_ARG(op_key);
+    PJ_UNUSED_ARG(op_key);    
 
     if (sent <= 0) {
+	TRACE_((THIS_FILE, "Error On data send"));
         pj_cli_sess_end_session(&sess->base);
         return PJ_FALSE;
     }
@@ -1441,20 +1462,20 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
 {
     cli_telnet_sess *sess = (cli_telnet_sess *)
                             pj_activesock_get_user_data(asock);
-    struct cli_telnet_fe *tfe = (struct cli_telnet_fe *)sess->base.fe;
+    cli_telnet_fe *tfe = (cli_telnet_fe *)sess->base.fe;
     unsigned char *cdata = (unsigned char*)data;    
     pj_status_t is_valid = PJ_TRUE;
 
     PJ_UNUSED_ARG(size);
     PJ_UNUSED_ARG(remainder);
 
-    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
-        pj_cli_sess_end_session(&sess->base);
-        return PJ_FALSE;
-    }
-
     if (tfe->is_quitting)
         return PJ_FALSE;
+
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	TRACE_((THIS_FILE, "Error on data read %d", status));
+        return PJ_FALSE;
+    }    
 
     pj_mutex_lock(sess->smutex);
 
@@ -1551,13 +1572,14 @@ static pj_bool_t telnet_sess_on_data_read(pj_activesock_t *asock,
 static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
 				     pj_sock_t newsock,
 				     const pj_sockaddr_t *src_addr,
-				     int src_addr_len)
+				     int src_addr_len,
+				     pj_status_t status)
 {
-    struct cli_telnet_fe *fe = (struct cli_telnet_fe *)
-                                pj_activesock_get_user_data(asock);
+    cli_telnet_fe *fe = (cli_telnet_fe *) pj_activesock_get_user_data(asock);
+
     pj_status_t sstatus;
     pj_pool_t *pool;
-    cli_telnet_sess *sess;
+    cli_telnet_sess *sess = NULL;
     pj_activesock_cb asock_cb;
 
     PJ_UNUSED_ARG(src_addr);
@@ -1565,6 +1587,14 @@ static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
 
     if (fe->is_quitting)
         return PJ_FALSE;
+
+    if (status != PJ_SUCCESS && status != PJ_EPENDING) {
+	TRACE_((THIS_FILE, "Error on data accept %d", status));
+	if (status == PJ_ESOCKETSTOP) 
+	    telnet_restart(fe);	    
+	
+        return PJ_FALSE;
+    }    
 
     /* An incoming connection is accepted, create a new session */
     pool = pj_pool_create(fe->pool->factory, "telnet_sess",
@@ -1657,19 +1687,16 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
 					 pj_cli_telnet_cfg *param,
 					 pj_cli_front_end **p_fe)
 {
-    struct cli_telnet_fe *fe;
+    cli_telnet_fe *fe;
     pj_pool_t *pool;
-    pj_sock_t sock = PJ_INVALID_SOCKET;
-    pj_activesock_cb asock_cb;
-    pj_sockaddr_in addr;
-    pj_status_t sstatus;
+    pj_status_t status;   
 
     PJ_ASSERT_RETURN(cli, PJ_EINVAL);
 
     pool = pj_pool_create(pj_cli_get_param(cli)->pf, "telnet_fe",
                           PJ_CLI_TELNET_POOL_SIZE, PJ_CLI_TELNET_POOL_INC,
                           NULL);
-    fe = PJ_POOL_ZALLOC_T(pool, struct cli_telnet_fe);
+    fe = PJ_POOL_ZALLOC_T(pool, cli_telnet_fe);
     if (!fe)
         return PJ_ENOMEM;
 	
@@ -1687,42 +1714,86 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
     fe->base.op->on_destroy = &telnet_fe_destroy;
     fe->pool = pool;
 
-    if (!fe->cfg.ioqueue) {
+    if (!fe->cfg.ioqueue) {	
         /* Create own ioqueue if application doesn't supply one */
-        sstatus = pj_ioqueue_create(pool, 8, &fe->cfg.ioqueue);
-        if (sstatus != PJ_SUCCESS)
+        status = pj_ioqueue_create(pool, 8, &fe->cfg.ioqueue);
+        if (status != PJ_SUCCESS)
             goto on_exit;
         fe->own_ioqueue = PJ_TRUE;
     }
 
-    sstatus = pj_mutex_create_recursive(pool, "mutex_telnet_fe", &fe->mutex);
-    if (sstatus != PJ_SUCCESS)
+    status = pj_mutex_create_recursive(pool, "mutex_telnet_fe", &fe->mutex);
+    if (status != PJ_SUCCESS)
         goto on_exit;
 
     /* Start telnet daemon */
-    sstatus = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, 
-                             &sock);
-    if (sstatus != PJ_SUCCESS)
+    telnet_start(fe);
+
+    pj_cli_register_front_end(cli, &fe->base);
+
+    if (p_fe)
+        *p_fe = &fe->base;
+
+    return PJ_SUCCESS;
+
+on_exit:
+    if (fe->own_ioqueue)
+        pj_ioqueue_destroy(fe->cfg.ioqueue);
+
+    if (fe->mutex)
+        pj_mutex_destroy(fe->mutex);
+
+    pj_pool_release(pool);
+    return status;
+}
+
+static pj_status_t telnet_start(cli_telnet_fe *fe)
+{
+    pj_sock_t sock = PJ_INVALID_SOCKET;
+    pj_activesock_cb asock_cb;
+    pj_sockaddr_in addr;
+    pj_status_t status;   
+    int val;
+    int restart_retry;
+    unsigned msec;
+
+    /* Start telnet daemon */
+    status = pj_sock_socket(pj_AF_INET(), pj_SOCK_STREAM(), 0, &sock);
+
+    if (status != PJ_SUCCESS)
         goto on_exit;
 
     pj_sockaddr_in_init(&addr, NULL, fe->cfg.port);
 
-    sstatus = pj_sock_bind(sock, &addr, sizeof(addr));
-    if (sstatus == PJ_SUCCESS) {
-	pj_sockaddr_in addr;
-	int addr_len = sizeof(addr);
+    val = 1;
+    status = pj_sock_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
+				&val, sizeof(val));
 
-	sstatus = pj_sock_getsockname(sock, &addr, &addr_len);
-	if (sstatus != PJ_SUCCESS)
+    if (status != PJ_SUCCESS)
+	goto on_exit;
+
+    /* The loop is silly, but what else can we do? */
+    for (msec=MIN_WAIT_ON_TELNET_RESTART, restart_retry=0;
+	 restart_retry < MAX_RETRY_ON_TELNET_RESTART;
+	 ++restart_retry, msec=(msec<MAX_WAIT_ON_TELNET_RESTART?
+		          msec*2 : MAX_WAIT_ON_TELNET_RESTART))
+    {
+	status = pj_sock_bind(sock, &addr, sizeof(addr));
+	if (status != PJ_STATUS_FROM_OS(EADDRINUSE))
+	    break;
+	PJ_LOG(4,(THIS_FILE, "Address is still in use, retrying.."));
+	pj_thread_sleep(msec);
+    }    
+    
+    if (status == PJ_SUCCESS) {	
+	int addr_len = sizeof(addr);	
+
+	status = pj_sock_getsockname(sock, &addr, &addr_len);
+	if (status != PJ_SUCCESS)
 	    goto on_exit;
 	    
-        fe->cfg.port = pj_sockaddr_in_get_port(&addr);
-	if (param) 
-	    param->port = fe->cfg.port;
-	
-        PJ_LOG(3, (THIS_FILE, "CLI telnet daemon listening at port %d",
-		   fe->cfg.port));
-	
+        fe->cfg.port = pj_sockaddr_in_get_port(&addr);	
+
 	if (fe->cfg.prompt_str.slen == 0) {
 	    pj_str_t prompt_sign = {"> ", 2};
 	    char *prompt_data = pj_pool_alloc(fe->pool, 
@@ -1737,35 +1808,51 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
         goto on_exit;
     }
 
-    sstatus = pj_sock_listen(sock, 4);
-    if (sstatus != PJ_SUCCESS)
+    status = pj_sock_listen(sock, 4);
+    if (status != PJ_SUCCESS)
         goto on_exit;
 
     pj_bzero(&asock_cb, sizeof(asock_cb));
-    asock_cb.on_accept_complete = &telnet_fe_on_accept;
-    sstatus = pj_activesock_create(pool, sock, pj_SOCK_STREAM(),
-                                   NULL, fe->cfg.ioqueue,
-		                   &asock_cb, fe, &fe->asock);
-    if (sstatus != PJ_SUCCESS)
+    asock_cb.on_accept_complete2 = &telnet_fe_on_accept;
+    status = pj_activesock_create(fe->pool, sock, pj_SOCK_STREAM(),
+                                  NULL, fe->cfg.ioqueue,
+		                  &asock_cb, fe, &fe->asock);
+    if (status != PJ_SUCCESS)
         goto on_exit;
 
-    sstatus = pj_activesock_start_accept(fe->asock, pool);
-    if (sstatus != PJ_SUCCESS)
+    status = pj_activesock_start_accept(fe->asock, fe->pool);
+    if (status != PJ_SUCCESS)
         goto on_exit;
 
     if (fe->own_ioqueue) {
         /* Create our own worker thread */
-        sstatus = pj_thread_create(pool, "worker_telnet_fe",
-                                   &poll_worker_thread, fe, 0, 0,
-                                   &fe->worker_thread);
-        if (sstatus != PJ_SUCCESS)
+        status = pj_thread_create(fe->pool, "worker_telnet_fe",
+                                  &poll_worker_thread, fe, 0, 0,
+                                  &fe->worker_thread);
+        if (status != PJ_SUCCESS)
             goto on_exit;
     }
 
-    pj_cli_register_front_end(cli, &fe->base);
+    /** Fill telnet information and call pj_cli_telnet_on_started callback */
+    if (fe->cfg.on_started) {
+	char ip_addr[32];
+	pj_cli_telnet_info telnet_info;
+	pj_sockaddr hostip;
 
-    if (p_fe)
-        *p_fe = &fe->base;
+	telnet_info.ip_address.ptr = ip_addr;
+	telnet_info.ip_address.slen = 0;
+	
+	status = pj_gethostip(pj_AF_INET(), &hostip);
+	if (status != PJ_SUCCESS)
+	    goto on_exit;
+
+	pj_strcpy2(&telnet_info.ip_address, 
+		   pj_inet_ntoa(hostip.ipv4.sin_addr));
+
+	telnet_info.port = fe->cfg.port;
+
+	(*fe->cfg.on_started)(&telnet_info);
+    }
 
     return PJ_SUCCESS;
 
@@ -1781,6 +1868,48 @@ on_exit:
     if (fe->mutex)
         pj_mutex_destroy(fe->mutex);
 
-    pj_pool_release(pool);
-    return sstatus;
+    pj_pool_release(fe->pool);
+    return status;
+}
+
+static pj_status_t telnet_restart(cli_telnet_fe *fe)
+{
+    pj_status_t status;
+    pj_cli_sess *sess;      
+
+    fe->is_quitting = PJ_TRUE;
+    if (fe->worker_thread) {	
+	pj_thread_join(fe->worker_thread);
+    }
+
+    pj_mutex_lock(fe->mutex);
+
+    /* Destroy all the sessions */
+    sess = fe->sess_head.next;
+    while (sess != &fe->sess_head) {
+	(*sess->op->destroy)(sess);
+	sess = fe->sess_head.next;
+    }
+
+    pj_mutex_unlock(fe->mutex);
+
+    /** Close existing activesock **/
+    status = pj_activesock_close(fe->asock);
+    if (status != PJ_SUCCESS)
+	goto on_exit;
+
+    if (fe->worker_thread) {
+	pj_thread_destroy(fe->worker_thread);
+	fe->worker_thread = NULL;
+    }
+
+    fe->is_quitting = PJ_FALSE;
+
+    /** Start Telnet **/
+    status = telnet_start(fe);
+    if (status == PJ_SUCCESS)
+	TRACE_((THIS_FILE, "Telnet Restarted"));
+    
+on_exit:
+    return status;
 }

@@ -33,7 +33,8 @@ export _CXXFLAGS:= $(_CFLAGS) $(CC_CXXFLAGS) $(OS_CXXFLAGS) $(M_CXXFLAGS) \
 #
 export PJSUA_SRCDIR = ../src/pjsua
 export PJSUA_OBJS += $(OS_OBJS) $(M_OBJS) $(CC_OBJS) $(HOST_OBJS) \
-			main.o pjsua_app.o pjsua_cmd.o pjsua_cli_cmd.o pjsua_ui_cmd.o
+            main.o pjsua_app.o pjsua_cli.o pjsua_cli_cmd.o pjsua_common.o \
+            pjsua_config.o pjsua_legacy.o
 export PJSUA_CFLAGS += $(_CFLAGS)
 export PJSUA_LDFLAGS += $(APP_LDFLAGS) $(APP_LDLIBS) $(LDFLAGS)
 export PJSUA_EXE:=../bin/pjsua-$(TARGET_NAME)$(HOST_EXE)

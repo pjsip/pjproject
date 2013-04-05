@@ -291,7 +291,7 @@
  * Default: 120
  */
 #ifndef PJ_CLI_MAX_CMDBUF
-#   define PJ_CLI_MAX_CMDBUF		120
+#   define PJ_CLI_MAX_CMDBUF		512
 #endif
 
 /**

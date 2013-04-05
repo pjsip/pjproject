@@ -32,6 +32,9 @@ OPTION          GCCE -x c++
 // PJLIB-UTIL files
 //
 SOURCE	base64.c
+SOURCE	cli.c
+SOURCE	cli_console.c
+SOURCE	cli_telnet.c
 SOURCE	crc32.c
 SOURCE	dns.c
 SOURCE	dns_dump.c

@@ -843,6 +843,16 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
 		PJ_LOG(3, ("", "Received %d consecutive errors: %d for the accept()"
 			       " operation, stopping further ioqueue accepts.",
 			       asock->err_counter, asock->last_err));
+		
+		if ((status == PJ_STATUS_FROM_OS(OSERR_EWOULDBLOCK)) && 
+		    (asock->cb.on_accept_complete2)) 
+		{
+		    (*asock->cb.on_accept_complete2)(asock, 
+						     accept_op->new_sock,
+						     &accept_op->rem_addr,
+						     accept_op->rem_addr_len,
+						     PJ_ESOCKETSTOP);
+		}
 		return;
 	    }
 	} else {
@@ -850,13 +860,23 @@ static void ioqueue_on_accept_complete(pj_ioqueue_key_t *key,
 	    asock->last_err = status;
 	}
 
-	if (status==PJ_SUCCESS && asock->cb.on_accept_complete) {
+	if (status==PJ_SUCCESS && (asock->cb.on_accept_complete2 || 
+				   asock->cb.on_accept_complete)) {
 	    pj_bool_t ret;
 
 	    /* Notify callback */
-	    ret = (*asock->cb.on_accept_complete)(asock, accept_op->new_sock,
-						  &accept_op->rem_addr,
-						  accept_op->rem_addr_len);
+	    if (asock->cb.on_accept_complete2) {
+		ret = (*asock->cb.on_accept_complete2)(asock, 
+						       accept_op->new_sock,
+						       &accept_op->rem_addr,
+						       accept_op->rem_addr_len,
+						       status);
+	    } else {
+		ret = (*asock->cb.on_accept_complete)(asock, 
+						      accept_op->new_sock,
+						      &accept_op->rem_addr,
+						      accept_op->rem_addr_len);	    
+	    }
 
 	    /* If callback returns false, we have been destroyed! */
 	    if (!ret)
