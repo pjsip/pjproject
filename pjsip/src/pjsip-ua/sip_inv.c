@@ -4478,7 +4478,13 @@ static void inv_on_state_confirmed( pjsip_inv_session *inv, pjsip_event *e)
 	    /* Handle response that terminates dialog */
 	    /* Nothing to do (already handled) */
 
-	} else if (tsx->status_code >= 300 && tsx->status_code < 700) {
+	} else if (tsx->status_code >= 300 && tsx->status_code < 700 &&
+		   e->body.tsx_state.prev_state != PJSIP_TSX_STATE_COMPLETED)
+	{
+	    /* Ticket #1654: do not cancel SDP offer when tsx state changing
+	     * from 'completed' to 'terminated', as it should have already
+	     * been cancelled when tsx state is 'completed'.
+	     */
 
 	    pjmedia_sdp_neg_state neg_state;
 	    struct tsx_inv_data *tsx_inv_data;
