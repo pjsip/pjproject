@@ -4367,7 +4367,9 @@ PJ_DECL(pj_status_t) pjsua_call_get_rem_nat_type(pjsua_call_id call_id,
  * @param reason	Optional reason phrase. If NULL, default text
  *			will be used.
  * @param msg_data	Optional list of headers etc to be added to outgoing
- *			response message.
+ *			response message. Note that this message data will
+ *			be persistent in all next answers/responses for this
+ *			INVITE request.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
@@ -4396,7 +4398,9 @@ PJ_DECL(pj_status_t) pjsua_call_answer(pjsua_call_id call_id,
  * @param reason	Optional reason phrase. If NULL, default text
  *			will be used.
  * @param msg_data	Optional list of headers etc to be added to outgoing
- *			response message.
+ *			response message. Note that this message data will
+ *			be persistent in all next answers/responses for this
+ *			INVITE request.
  *
  * @return		PJ_SUCCESS on success, or the appropriate error code.
  */
