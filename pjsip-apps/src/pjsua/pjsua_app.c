@@ -19,8 +19,6 @@
  */
 #include "pjsua_common.h"
 
-#define USE_GUI
-
 #define THIS_FILE	"pjsua_app.c"
 
 //#define STEREO_DEMO

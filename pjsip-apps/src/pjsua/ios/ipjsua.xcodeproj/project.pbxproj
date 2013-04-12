@@ -401,6 +401,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
 					"PJ_AUTOCONF=1",
+					USE_GUI,
 				);
 				HEADER_SEARCH_PATHS = (
 					../../../../pjsip/include,
@@ -431,7 +432,10 @@
 			buildSettings = {
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "ipjsua/ipjsua-Prefix.pch";
-				GCC_PREPROCESSOR_DEFINITIONS = "PJ_AUTOCONF=1";
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"PJ_AUTOCONF=1",
+					USE_GUI,
+				);
 				HEADER_SEARCH_PATHS = (
 					../../../../pjsip/include,
 					../../../../pjlib/include,

@@ -20,7 +20,6 @@
 
 #include <pjsua-lib/pjsua.h>
 #include "pjsua_common.h"
-#include "gui.h"
 
 #define THIS_FILE	"pjsua_legacy.c"
 
