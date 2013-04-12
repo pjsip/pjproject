@@ -18,7 +18,8 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 #include "pjsua_common.h"
-#include "gui.h"
+
+#define USE_GUI
 
 #define THIS_FILE	"pjsua_app.c"
 
@@ -78,27 +79,6 @@ void destroy_cli(pj_bool_t app_restart);
 /*****************************************************************************
  * Configuration manipulation
  */
-
-#if (defined(PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT) && \
-    PJ_IPHONE_OS_HAS_MULTITASKING_SUPPORT!=0) || \
-    defined(__IPHONE_4_0)
-void keepAliveFunction(int timeout)
-{
-    int i;
-    for (i=0; i<(int)pjsua_acc_get_count(); ++i) {
-	if (!pjsua_acc_is_valid(i))
-	    continue;
-
-        if (app_config.acc_cfg[i].reg_timeout < timeout) {
-            pjsua_acc_get_config(i, &app_config.acc_cfg[i]);
-	    app_config.acc_cfg[i].reg_timeout = timeout;
-            pjsua_acc_modify(i, &app_config.acc_cfg[i]);
-        } else {
-	    pjsua_acc_set_registration(i, PJ_TRUE);
-        }
-    }
-}
-#endif
 
 /*****************************************************************************
  * Callback 
@@ -2035,6 +2015,11 @@ static void cli_on_restart_pjsua(void)
     PJ_LOG(3,(THIS_FILE, "Restart pjsua"));
 }
 
+pj_cli_telnet_on_started on_started_cb = &cli_telnet_started;
+pj_cli_on_quit on_quit_cb = &cli_on_quit;
+pj_cli_on_destroy on_destroy_cb = &cli_on_destroy;
+pj_cli_on_restart_pjsua on_restart_pjsua_cb = &cli_on_restart_pjsua;
+
 /** ======================= **/
 
 int main_func(int argc, char *argv[])
@@ -2050,8 +2035,8 @@ int main_func(int argc, char *argv[])
 
     do {
 	if (app_restart) {	    
-	    status = app_init(cli_telnet_started, cli_on_quit,
-			      cli_on_destroy, cli_on_restart_pjsua);
+	    status = app_init(on_started_cb, on_quit_cb,
+                              on_destroy_cb, on_restart_pjsua_cb);
 	    if (status != PJ_SUCCESS)
 		return 1;	    
 	}	
