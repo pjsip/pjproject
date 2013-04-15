@@ -521,11 +521,11 @@ PJ_INLINE(unsigned) PJMEDIA_PTIME(const pjmedia_ratio *frame_rate)
     return ((unsigned)((pj_uint64_t)1000000 * \
 		       frame_rate->denum / frame_rate->num));
 #elif PJ_HAS_FLOATING_POINT
-    return ((unsigned)(1000000.0 * frame_rate->denum / \
+    return ((unsigned)(1000000.0 * frame_rate->denum /
                        frame_rate->num));
 #else
-    return ((unsigned)((1000L * frame_rate->denum / \
-                       frame_rate->num) * 1000);
+    return ((unsigned)((1000L * frame_rate->denum /
+                       frame_rate->num) * 1000));
 #endif
 }
 
