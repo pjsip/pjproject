@@ -330,7 +330,8 @@ static pj_status_t bb10_factory_get_dev_info(pjmedia_aud_dev_factory *f,
 
     pj_memcpy(info, &af->devs[index], sizeof(*info));
     info->caps = PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY |
-                 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY;
+                 PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY |
+                 PJMEDIA_AUD_DEV_CAP_EC;
 
     return PJ_SUCCESS;
 }
@@ -823,14 +824,14 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     if ((ret = snd_pcm_plugin_set_disable (stream->ca_pcm,
                                            PLUGIN_DISABLE_MMAP)) < 0)
     {
-        TRACE_(("snd_pcm_plugin_set_disable failed: %d",ret));
+        TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable failed: %d",ret));
         return PJMEDIA_EAUD_SYSERR;
     }
     /* Required call from January 2013 gold OS release */
     if ((ret = snd_pcm_plugin_set_enable(stream->ca_pcm,
                                          PLUGIN_ROUTING)) < 0)
     {
-        TRACE_(("snd_pcm_plugin_set_enable failed: %d",ret));
+        TRACE_((THIS_FILE, "snd_pcm_plugin_set_enable failed: %d",ret));
         return PJMEDIA_EAUD_SYSERR;
     }
 
@@ -1021,6 +1022,12 @@ static pj_status_t bb10_stream_get_cap(pjmedia_aud_stream *s,
         *(unsigned*)pval = stream->param.output_latency_ms;
         return PJ_SUCCESS;
 
+    } else if (cap==PJMEDIA_AUD_DEV_CAP_EC &&
+	       (stream->param.dir & PJMEDIA_DIR_CAPTURE))
+    {
+	/* EC is enablied implicitly by opening "voice" device */
+	*(pj_bool_t*)pval = PJ_TRUE;
+	return PJ_SUCCESS;
     } else {
         return PJMEDIA_EAUD_INVCAP;
     }
@@ -1035,15 +1042,18 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
                                        pjmedia_aud_dev_cap cap,
                                        const void *value)
 {
-    pj_status_t ret = PJ_SUCCESS;
+
     struct bb10_stream *stream = (struct bb10_stream*)strm;
 
-    if (cap != PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE || value == NULL) {
-        TRACE_((THIS_FILE,"bb10_stream_set_cap() = PJMEDIA_EAUD_INVCAP"));
-        return PJMEDIA_EAUD_INVCAP; 
+    if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
+        (stream->param.dir & PJMEDIA_DIR_PLAYBACK))
+    {
+	pjmedia_aud_dev_route route;
+	pj_status_t ret;
 
-    } else {
-    	pjmedia_aud_dev_route route = *((pjmedia_aud_dev_route*)value);
+	PJ_ASSERT_RETURN(value, PJ_EINVAL);
+
+    	route = *((pjmedia_aud_dev_route*)value);
         /* Use the initialization function which lazy-inits the
          * handle for routing
          */
@@ -1052,12 +1062,17 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
         } else {
             ret = bb10_initialize_playback_ctrl(stream,false);        	
         }
+    	return ret;
+
+    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
+	       (stream->param.dir & PJMEDIA_DIR_PLAYBACK))
+    {
+	/* EC is always enabled. Silently ignore the request */
+	return PJ_SUCCESS;
     }
 
-    if (ret != PJ_SUCCESS) {
-        TRACE_((THIS_FILE,"bb10_stream_set_cap() = %d",ret));
-    }
-    return ret;
+    TRACE_((THIS_FILE,"bb10_stream_set_cap() = PJMEDIA_EAUD_INVCAP"));
+    return PJMEDIA_EAUD_INVCAP;
 }
 
 
