@@ -1064,8 +1064,8 @@ static pj_status_t bb10_stream_set_cap(pjmedia_aud_stream *strm,
         }
     	return ret;
 
-    } else if (cap==PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE &&
-	       (stream->param.dir & PJMEDIA_DIR_PLAYBACK))
+    } else if (cap==PJMEDIA_AUD_DEV_CAP_EC &&
+	       (stream->param.dir & PJMEDIA_DIR_CAPTURE))
     {
 	/* EC is always enabled. Silently ignore the request */
 	return PJ_SUCCESS;
