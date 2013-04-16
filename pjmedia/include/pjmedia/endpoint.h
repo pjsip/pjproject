@@ -150,6 +150,15 @@ PJ_DECL(unsigned) pjmedia_endpt_get_thread_count(pjmedia_endpt *endpt);
 PJ_DECL(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt, 
 					       unsigned index);
 
+/**
+ * Stop and destroy the worker threads of the media endpoint
+ *
+ * @param endpt		The media endpoint instance.
+ *
+ * @return		PJ_SUCCESS on success.
+ */
+PJ_DECL(pj_status_t) pjmedia_endpt_stop_threads(pjmedia_endpt *endpt);
+
 
 /**
  * Request the media endpoint to create pool.

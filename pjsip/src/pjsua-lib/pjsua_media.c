@@ -188,6 +188,9 @@ pj_status_t pjsua_media_subsys_destroy(unsigned flags)
     pj_log_push_indent();
 
     if (pjsua_var.med_endpt) {
+        /* Wait for media endpoint's worker threads to quit. */
+        pjmedia_endpt_stop_threads(pjsua_var.med_endpt);
+
 	pjsua_aud_subsys_destroy();
     }
 

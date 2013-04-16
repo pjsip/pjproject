@@ -209,20 +209,8 @@ PJ_DEF(pjmedia_codec_mgr*) pjmedia_endpt_get_codec_mgr(pjmedia_endpt *endpt)
 PJ_DEF(pj_status_t) pjmedia_endpt_destroy (pjmedia_endpt *endpt)
 {
     exit_cb *ecb;
-    unsigned i;
 
-    PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
-
-    endpt->quit_flag = 1;
-
-    /* Destroy threads */
-    for (i=0; i<endpt->thread_cnt; ++i) {
-	if (endpt->thread[i]) {
-	    pj_thread_join(endpt->thread[i]);
-	    pj_thread_destroy(endpt->thread[i]);
-	    endpt->thread[i] = NULL;
-	}
-    }
+    pjmedia_endpt_stop_threads(endpt);
 
     /* Destroy internal ioqueue */
     if (endpt->ioqueue && endpt->own_ioqueue) {
@@ -311,6 +299,29 @@ PJ_DEF(pj_thread_t*) pjmedia_endpt_get_thread(pjmedia_endpt *endpt,
     /* here should be an assert on index >= 0 < endpt->thread_cnt */
 
     return endpt->thread[index];
+}
+
+/**
+ * Stop and destroy the worker threads of the media endpoint
+ */
+PJ_DEF(pj_status_t) pjmedia_endpt_stop_threads(pjmedia_endpt *endpt)
+{
+    unsigned i;
+
+    PJ_ASSERT_RETURN(endpt, PJ_EINVAL);
+
+    endpt->quit_flag = 1;
+
+    /* Destroy threads */
+    for (i=0; i<endpt->thread_cnt; ++i) {
+	if (endpt->thread[i]) {
+	    pj_thread_join(endpt->thread[i]);
+	    pj_thread_destroy(endpt->thread[i]);
+	    endpt->thread[i] = NULL;
+	}
+    }
+
+    return PJ_SUCCESS;
 }
 
 /**
