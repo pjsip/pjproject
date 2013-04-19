@@ -420,7 +420,7 @@ static pj_status_t amr_default_attr( pjmedia_codec_factory *factory,
     attr->info.frm_ptime = 20;
     attr->info.pt = (pj_uint8_t)id->pt;
 
-    attr->setting.frm_per_pkt = 2;
+    attr->setting.frm_per_pkt = 1;
     attr->setting.vad = 1;
     attr->setting.plc = 1;
 
