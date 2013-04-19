@@ -37,7 +37,7 @@
 
 
 #define THIS_FILE	    "mp3_writer.c"
-#define SIGNATURE	    PJMEDIA_PORT_SIGNATURE('F', 'W', 'M', '3')
+#define SIGNATURE	    PJMEDIA_SIG_CLASS_PORT_AUD('M','W')
 #define BYTES_PER_SAMPLE    2
 
 static struct BladeDLL
@@ -175,12 +175,12 @@ static pj_status_t init_mp3_encoder(struct mp3_file_port *fport,
     LConfig.dwConfig = BE_CONFIG_LAME;
     LConfig.format.LHV1.dwStructVersion = 1;
     LConfig.format.LHV1.dwStructSize = sizeof(BE_CONFIG);
-    LConfig.format.LHV1.dwSampleRate = fport->base.info.clock_rate;
+    LConfig.format.LHV1.dwSampleRate = PJMEDIA_PIA_SRATE(&fport->base.info);
     LConfig.format.LHV1.dwReSampleRate = 0;
 
-    if (fport->base.info.channel_count==1)
+    if (PJMEDIA_PIA_CCNT(&fport->base.info)==1)
 	LConfig.format.LHV1.nMode = BE_MP3_MODE_MONO;
-    else if (fport->base.info.channel_count==2)
+    else if (PJMEDIA_PIA_CCNT(&fport->base.info)==2)
 	LConfig.format.LHV1.nMode = BE_MP3_MODE_STEREO;
     else
 	return PJMEDIA_ENCCHANNEL;
@@ -322,7 +322,7 @@ pjmedia_mp3_writer_port_create( pj_pool_t *pool,
 	      "bitrate=%dkbps%s, quality=%d",
 	      (int)fport->base.info.name.slen,
 	      fport->base.info.name.ptr,
-	      fport->base.info.clock_rate/1000,
+		  PJMEDIA_PIA_SRATE(&fport->base.info),
 	      fport->mp3_option.bit_rate/1000,
 	      (fport->mp3_option.vbr ? " (VBR)" : ""),
 	      fport->mp3_option.quality));
@@ -376,11 +376,11 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 
     /* Record silence if input is no-frame */
     if (frame->type == PJMEDIA_FRAME_TYPE_NONE || frame->size == 0) {
-	unsigned samples_left = fport->base.info.samples_per_frame;
+	unsigned samples_left = PJMEDIA_PIA_SPF(&fport->base.info);
 	unsigned samples_copied = 0;
 
 	/* Only want to record at most 1 second of silence */
-	if (fport->silence_duration >= fport->base.info.clock_rate)
+	if (fport->silence_duration >= PJMEDIA_PIA_SRATE(&fport->base.info))
 	    return PJ_SUCCESS;
 
 	while (samples_left) {
@@ -421,14 +421,14 @@ static pj_status_t file_put_frame(pjmedia_port *this_port,
 	    }
 	}
 
-	fport->silence_duration += fport->base.info.samples_per_frame;
+	fport->silence_duration += PJMEDIA_PIA_SPF(&fport->base.info);
 
     }
     /* If encoder is expecting different sample size, then we need to
      * buffer the samples.
      */
     else if (fport->mp3_samples_per_frame != 
-	     fport->base.info.samples_per_frame) 
+	     PJMEDIA_PIA_SPF(&fport->base.info)) 
     {
 	unsigned samples_left = frame->size / 2;
 	unsigned samples_copied = 0;
