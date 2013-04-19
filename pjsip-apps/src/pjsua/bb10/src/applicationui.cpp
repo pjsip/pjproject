@@ -65,13 +65,16 @@ static void bb10_on_quit (pj_bool_t is_restarted)
 void CliThread::run()
 {
     // TODO: read from config?
-    char *argv[] = { (char*)"pjsuabb",
-		     (char*)"--use-cli",
-		     (char*)"--no-cli-console",
-		     (char*)"--cli-telnet-port=2323",
-		     (char*)"--dis-codec=*",
-		     (char*)"--add-codec=g722",
-		      NULL };
+    const char *argv[] = { "pjsuabb",
+			   "--use-cli",
+			   "--no-cli-console",
+			   "--cli-telnet-port=2323",
+			   "--no-vad",
+			   "--add-buddy=sip:169.254.0.2",
+			   "--quality=4",
+			   //(char*)"--dis-codec=*",
+			   //(char*)"--add-codec=g722",
+			    NULL };
     int argc = PJ_ARRAY_SIZE(argv) -1;
     pj_thread_desc thread_desc;
     pj_thread_t *thread;
@@ -82,7 +85,7 @@ void CliThread::run()
 
     on_started_cb = &bb10_telnet_started;
     on_quit_cb = &bb10_on_quit;
-    main_func(argc, argv);
+    main_func(argc, (char**)argv);
 }
 
 ApplicationUI::ApplicationUI(bb::cascades::Application *app)

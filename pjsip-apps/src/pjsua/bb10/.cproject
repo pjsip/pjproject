@@ -52,7 +52,7 @@
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
-				<configuration artifactName="${ProjName}" buildProperties="" id="com.qnx.qcc.toolChain.2079401108" name="Device-Release" parent="org.eclipse.cdt.build.core.emptycfg">
+				<configuration artifactName="${ProjName}" buildProperties="" description="" id="com.qnx.qcc.toolChain.2079401108" name="Device-Release" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="com.qnx.qcc.toolChain.2079401108.1026133684" name="/" resourcePath="">
 						<toolChain id="com.qnx.qcc.toolChain.1240537150" name="com.qnx.qcc.toolChain" superClass="com.qnx.qcc.toolChain">
 							<option id="com.qnx.qcc.option.os.1756939211" name="Target OS:" superClass="com.qnx.qcc.option.os"/>
@@ -60,9 +60,9 @@
 							<option id="com.qnx.qcc.option.compiler.1111407921" name="Compiler:" superClass="com.qnx.qcc.option.compiler"/>
 							<option id="com.qnx.qcc.option.runtime.1247073904" name="Runtime:" superClass="com.qnx.qcc.option.runtime"/>
 							<targetPlatform archList="all" binaryParser="com.qnx.tools.ide.qde.core.QDEBynaryParser" id="com.qnx.qcc.targetPlatform.1300126991" osList="all" superClass="com.qnx.qcc.targetPlatform"/>
-							<builder autoBuildTarget="Device-Release" enableAutoBuild="true" id="com.qnx.qcc.toolChain.2079401108.467426564" incrementalBuildTarget="Device-Release" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
+							<builder autoBuildTarget="Device-Release" enableAutoBuild="true" id="com.qnx.qcc.toolChain.2079401108.467426564" incrementalBuildTarget="Device-Release" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" parallelBuildOn="true" parallelizationNumber="optimal" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
 							<tool id="com.qnx.qcc.tool.compiler.115320452" name="QCC Compiler" superClass="com.qnx.qcc.tool.compiler">
-								<option id="com.qnx.qcc.option.compiler.optlevel.77840692" superClass="com.qnx.qcc.option.compiler.optlevel" value="com.qnx.qcc.option.compiler.optlevel.0" valueType="enumerated"/>
+								<option id="com.qnx.qcc.option.compiler.optlevel.77840692" name="Optimization Level" superClass="com.qnx.qcc.option.compiler.optlevel" value="com.qnx.qcc.option.compiler.optlevel.0" valueType="enumerated"/>
 								<inputType id="com.qnx.qcc.inputType.compiler.153511514" superClass="com.qnx.qcc.inputType.compiler"/>
 							</tool>
 							<tool id="com.qnx.qcc.tool.assembler.256115398" name="QCC Assembler" superClass="com.qnx.qcc.tool.assembler">
@@ -177,4 +177,5 @@
 	<storageModule moduleId="refreshScope" versionNumber="1">
 		<resource resourceType="PROJECT" workspacePath="/PjsuaBB"/>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
