@@ -426,6 +426,8 @@
  * BB10
  */
 #if defined(PJ_CONFIG_BB10) && PJ_CONFIG_BB10
+    /* Quality 3 - 4 to use resampling small filter */
+    #define PJSUA_DEFAULT_CODEC_QUALITY			4
     #define PJMEDIA_HAS_LEGACY_SOUND_API		0
     #undef PJMEDIA_HAS_SPEEX_AEC
     #define PJMEDIA_HAS_SPEEX_AEC			0
