@@ -52,9 +52,7 @@
 
 #define THIS_FILE 			"bb10_dev.c"
 #define BB10_DEVICE_NAME 		"plughw:%d,%d"
-/* Double these for 16khz sampling */
-#define PREFERRED_FRAME_SIZE 320
-#define VOIP_SAMPLE_RATE 8000
+
 
 /* Set to 1 to enable tracing */
 #if 1
@@ -433,10 +431,7 @@ static void flush_capture(struct bb10_stream *stream)
 static int pb_thread_func (void *arg)
 {
     struct bb10_stream* stream = (struct bb10_stream *) arg;
-    /* Handle from bb10_open_playback */
-    /* Will be 640 */
     int size                   	= stream->pb_buf_size;
-    /* 160 frames for 20ms */
     unsigned long nframes	= stream->pb_frames;
     void *user_data            	= stream->user_data;
     char *buf 		       	= stream->pb_buf;
@@ -682,6 +677,22 @@ static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
     return PJ_SUCCESS;
 }
 
+static int32_t get_alsa_pcm_fmt(const pjmedia_aud_param *param)
+{
+    switch (param->bits_per_sample) {
+    case 8:
+	return SND_PCM_SFMT_S8;
+    case 16:
+	return SND_PCM_SFMT_S16_LE;
+    case 24:
+	return SND_PCM_SFMT_S24_LE;
+    case 32:
+	return SND_PCM_SFMT_S32_LE;
+    default:
+	PJ_ASSERT_RETURN(!"Unsupported bits_per_frame", SND_PCM_SFMT_S16_LE);
+    }
+}
+
 static pj_status_t bb10_open_playback (struct bb10_stream *stream,
                                        const pjmedia_aud_param *param)
 {
@@ -696,6 +707,8 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     if (param->play_id < 0 || param->play_id >= stream->af->dev_cnt) {
         return PJMEDIA_EAUD_INVDEV;
     }
+
+    PJ_ASSERT_RETURN(param->bits_per_sample == 16, PJMEDIA_EAUD_SAMPFORMAT);
 
     /* Use the bb10 audio manager API to open as opposed to QNX core audio
      * Echo cancellation built in
@@ -726,7 +739,6 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
 	return PJMEDIA_EAUD_SYSERR;
     }
 
-    /* TODO PJ_ZERO */
     memset (&pi, 0, sizeof (pi));
     pi.channel = SND_PCM_CHANNEL_PLAYBACK;
     if ((ret = snd_pcm_plugin_info (stream->pb_pcm, &pi)) < 0) {
@@ -741,18 +753,14 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     pp.channel = SND_PCM_CHANNEL_PLAYBACK;
     pp.start_mode = SND_PCM_START_DATA;
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
-    /* HARD CODE for the time being PJMEDIA expects 640 for 16khz */
-    pp.buf.block.frag_size = PREFERRED_FRAME_SIZE*2;
+    pp.buf.block.frag_size = param->samples_per_frame * param->bits_per_sample / 8;
     /* RIM recommends maximum of 3 */
     pp.buf.block.frags_max = 3;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
-    /* HARD CODE for the time being PJMEDIA expects 16khz */
-    PJ_TODO(REMOVE_SAMPLE_RATE_HARD_CODE);
-    pj_assert(param->clock_rate == VOIP_SAMPLE_RATE * 2);
-    pp.format.rate = VOIP_SAMPLE_RATE*2;
-    pp.format.voices = 1;
-    pp.format.format = SND_PCM_SFMT_S16_LE;
+    pp.format.rate = param->clock_rate;
+    pp.format.voices = param->channel_count;
+    pp.format.format = get_alsa_pcm_fmt(param);
 
     /* Make the calls as per the wave sample */
     if ((ret = snd_pcm_plugin_params (stream->pb_pcm, &pp)) < 0) {
@@ -777,17 +785,17 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     rate = param->clock_rate;
     /* Set the sound device buffer size and latency */
     if (param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_LATENCY) {
-        tmp_buf_size = (rate / 1000) * param->output_latency_ms;
+        tmp_buf_size = rate * param->output_latency_ms / 1000;
     } else {
-	tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_PLAY_LATENCY;
+	tmp_buf_size = rate * PJMEDIA_SND_DEFAULT_PLAY_LATENCY / 1000;
     }
     /* Set period size to samples_per_frame frames. */
-    stream->pb_frames = param->samples_per_frame;
-    stream->param.output_latency_ms = tmp_buf_size / (rate / 1000);
+    stream->pb_frames = param->samples_per_frame / param->channel_count;
+    stream->param.output_latency_ms = tmp_buf_size * 1000 / rate;
 
     /* Set our buffer */
     stream->pb_buf_size = stream->pb_frames * param->channel_count *
-                          (param->bits_per_sample/8);
+                          param->bits_per_sample / 8;
     stream->pb_buf = (char *) pj_pool_alloc(stream->pool, stream->pb_buf_size);
 
     TRACE_((THIS_FILE, "bb10_open_playback: pb_frames = %d clock = %d",
@@ -810,6 +818,8 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
 
     if (param->rec_id < 0 || param->rec_id >= stream->af->dev_cnt)
         return PJMEDIA_EAUD_INVDEV;
+
+    PJ_ASSERT_RETURN(param->bits_per_sample == 16, PJMEDIA_EAUD_SAMPFORMAT);
 
     if ((ret=audio_manager_snd_pcm_open_name(AUDIO_TYPE_VIDEO_CHAT,
                                              &stream->ca_pcm,
@@ -853,18 +863,14 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     pp.start_mode = SND_PCM_START_DATA;
     /* Auto-recover from errors */
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
-    /* HARD CODE for the time being PJMEDIA expects 640 for 16khz */
-    pp.buf.block.frag_size = PREFERRED_FRAME_SIZE*2;
+    pp.buf.block.frag_size = param->samples_per_frame * param->bits_per_sample / 8;
     /* From January 2013 gold OS release. RIM recommend these for capture */
     pp.buf.block.frags_max = 1;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
-    /* HARD CODE for the time being PJMEDIA expects 16khz */
-    PJ_TODO(REMOVE_SAMPLE_RATE_HARD_CODE);
-    pj_assert(param->clock_rate == VOIP_SAMPLE_RATE * 2);
-    pp.format.rate = VOIP_SAMPLE_RATE*2;
-    pp.format.voices = 1;
-    pp.format.format = SND_PCM_SFMT_S16_LE;
+    pp.format.rate = param->clock_rate;
+    pp.format.voices = param->channel_count;
+    pp.format.format = get_alsa_pcm_fmt(param);
 
     /* make the request */
     if ((ret = snd_pcm_plugin_params (stream->ca_pcm, &pp)) < 0) {
@@ -897,16 +903,16 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
 
     /* Set the sound device buffer size and latency */
     if (param->flags & PJMEDIA_AUD_DEV_CAP_INPUT_LATENCY) {
-        tmp_buf_size = (rate / 1000) * param->input_latency_ms;
+        tmp_buf_size = rate * param->input_latency_ms / 1000;
     } else {
-        tmp_buf_size = (rate / 1000) * PJMEDIA_SND_DEFAULT_REC_LATENCY;
+        tmp_buf_size = rate * PJMEDIA_SND_DEFAULT_REC_LATENCY / 1000;
     }
 
-    stream->param.input_latency_ms = tmp_buf_size / (rate / 1000);
+    stream->param.input_latency_ms = tmp_buf_size * 1000 / rate;
 
     /* Set our buffer */
     stream->ca_buf_size = stream->ca_frames * param->channel_count *
-			  (param->bits_per_sample/8);
+			  param->bits_per_sample / 8;
     stream->ca_buf = (char *)pj_pool_alloc (stream->pool, stream->ca_buf_size);
 
     TRACE_((THIS_FILE, "bb10_open_capture: ca_frames = %d clock = %d",
@@ -965,13 +971,21 @@ static pj_status_t bb10_factory_create_stream(pjmedia_aud_dev_factory *f,
         }
     }
 
-    /* Part of the play functionality but the RIM/Truphone loopback sample
-     * initialializes after the play and capture
-     * "false" is default/earpiece for output
-     */
-    status = bb10_initialize_playback_ctrl(stream,false);
-    if (status != PJ_SUCCESS) {
-    	return PJMEDIA_EAUD_SYSERR;
+    /* Set the audio routing ONLY if app explicitly asks one */
+    if ((param->dir & PJMEDIA_DIR_PLAYBACK) &&
+	(param->flags & PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE))
+    {
+	status = bb10_stream_set_cap(&stream->base,
+				     PJMEDIA_AUD_DEV_CAP_OUTPUT_ROUTE,
+                                     &param->output_route);
+	if (status != PJ_SUCCESS) {
+	    TRACE_((THIS_FILE, "Error setting output route"));
+	    bb10_stream_destroy(&stream->base);
+	    return status;
+	}
+    } else {
+	/* Legacy behavior: if none specified, set to speaker */
+	status = bb10_initialize_playback_ctrl(stream, false);
     }
 
     *p_strm = &stream->base;
