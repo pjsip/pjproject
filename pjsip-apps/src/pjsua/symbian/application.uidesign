@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<designerData version="1.1.0">
+  <componentManifest>
+    <manifestEntry id="com.nokia.sdt.series60.CAknApplication" version="1.1.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.NonLayoutBase" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CommonBase" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CAknDocument" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CAknViewAppUi" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CAknAppUi" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CAknAppUiBase" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.DesignTimeContainer" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.StatusPane" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.ControlBase" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.StatusPaneCaption" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.StatusPaneTitleBase" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CBA" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.CBABase" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.AvkonViewReference" version="1.0.0"/>
+    <manifestEntry id="com.nokia.sdt.series60.DesignReference" version="1.0.0"/>
+  </componentManifest>
+  <property id="com.nokia.sdt.symbian.dm.RESOURCE_DIRECTORY_ID">data</property>
+  <property id="com.nokia.sdt.component.symbian.version">3.2.0</property>
+  <property id="com.nokia.sdt.component.symbian.vendor">com.nokia.series60</property>
+  <property id="com.nokia.sdt.symbian.dm.COMPONENT_PROVIDER">com.nokia.sdt.component.symbian.Symbian-Provider</property>
+  <property id="com.nokia.sdt.symbian.dm.INCLUDE_DIRECTORY_ID">inc</property>
+  <property id="com.nokia.sdt.symbian.dm.ROOT_CONTAINER">pjsuaAppUi</property>
+  <property id="com.nokia.sdt.symbian.dm.SOURCE_DIRECTORY_ID">src</property>
+  <property id="com.nokia.sdt.symbian.dm.ROOT_APPLICATION_NAME">pjsua</property>
+  <property id="com.nokia.sdt.symbian.dm.SOURCEGEN_PROVIDER">com.nokia.sdt.sourcegen.Symbian-Provider</property>
+  <property id="com.nokia.sdt.symbian.dm.BUILD_DIRECTORY_ID">group</property>
+  <component id="com.nokia.sdt.series60.CAknApplication">
+    <property id="className">CpjsuaApplication</property>
+    <property id="documentBase">pjsua</property>
+    <property id="name">pjsuaApplication</property>
+    <property id="uid">0xE44C2D02</property>
+    <component id="com.nokia.sdt.series60.CAknDocument">
+      <property id="className">CpjsuaDocument</property>
+      <property id="name">pjsuaDocument</property>
+      <component id="com.nokia.sdt.series60.CAknViewAppUi">
+        <property id="initialDesign" type="componentRef">aknViewReference1</property>
+        <property id="className">CpjsuaAppUi</property>
+        <compoundProperty id="location">
+          <property id="x">51</property>
+          <property id="y">44</property>
+        </compoundProperty>
+        <property id="name">pjsuaAppUi</property>
+        <compoundProperty id="size">
+          <property id="width">240</property>
+          <property id="height">320</property>
+        </compoundProperty>
+        <component id="com.nokia.sdt.series60.StatusPane">
+          <compoundProperty id="location">
+            <property id="x">20</property>
+          </compoundProperty>
+          <property id="name">statusPane</property>
+          <compoundProperty id="size">
+            <property id="width">204</property>
+            <property id="height">63</property>
+          </compoundProperty>
+          <component id="com.nokia.sdt.series60.StatusPaneCaption">
+            <property id="shortCaption" type="i18n">STR_pjsuaApplication_5</property>
+            <compoundProperty id="location">
+              <property id="x">56</property>
+            </compoundProperty>
+            <property id="longCaption" type="i18n">STR_pjsuaApplication_4</property>
+            <property id="name">caption</property>
+            <compoundProperty id="size">
+              <property id="width">148</property>
+              <property id="height">43</property>
+            </compoundProperty>
+          </component>
+        </component>
+        <component id="com.nokia.sdt.series60.CBA">
+          <compoundProperty id="location">
+            <property id="y">288</property>
+          </compoundProperty>
+          <compoundProperty id="info">
+            <property id="leftText" type="i18n">STR_pjsuaApplication_1</property>
+            <property id="rightText" type="i18n">STR_pjsuaApplication_2</property>
+            <property id="middleText" type="i18n">STR_pjsuaApplication_3</property>
+            <property id="leftId"></property>
+            <property id="rightId">EAknSoftkeyBack</property>
+            <property id="type">R_AVKON_SOFTKEYS_EXIT</property>
+          </compoundProperty>
+          <property id="name">controlPane</property>
+          <compoundProperty id="size">
+            <property id="width">240</property>
+            <property id="height">32</property>
+          </compoundProperty>
+        </component>
+        <component id="com.nokia.sdt.series60.AvkonViewReference">
+          <property id="filePath">pjsuaContainer.uidesign</property>
+          <compoundProperty id="tabImage"/>
+          <property id="baseName">pjsuaContainer</property>
+          <property id="name">aknViewReference1</property>
+        </component>
+      </component>
+    </component>
+  </component>
+  <stringBundle>
+    <stringTable language="LANG_English">
+      <string id="STR_pjsuaApplication_1"/>
+      <string id="STR_pjsuaApplication_2"/>
+      <string id="STR_pjsuaApplication_3"/>
+      <string id="STR_pjsuaApplication_4">pjsua</string>
+      <string id="STR_pjsuaApplication_5">pjsua</string>
+    </stringTable>
+  </stringBundle>
+  <macroTable/>
+  <sourceMappingState>
+    <resourceMappings>
+      <resourceMapping instanceName="pjsuaAppUi">r_application_pjsua_app_ui</resourceMapping>
+      <resourceMapping instanceName="statusPane">r_application_status_pane</resourceMapping>
+      <resourceMapping instanceName="pjsuaAppUi" rsrcId="localisable_app_info">r_localisable_app_info</resourceMapping>
+      <resourceMapping instanceName="aknViewReference1" rsrcId="tabText">r_application_akn_view_reference1</resourceMapping>
+    </resourceMappings>
+    <enumMappings>
+      <enumMapping instanceName="aknViewReference1" propertyId="" nameAlgorithm="com.nokia.sdt.component.symbian.NAME_ALG_VIEW_UID">EPjsuaContainerViewId</enumMapping>
+    </enumMappings>
+    <arrayMappings/>
+  </sourceMappingState>
+  <generatedFiles>
+    <file>src/pjsuaapplication.cpp</file>
+    <file>src/pjsuacontainerview.cpp</file>
+    <file>src/pjsuadocument.cpp</file>
+    <file>inc/pjsuadocument.h</file>
+    <file>inc/pjsuacontainerview.h</file>
+    <file>inc/pjsuaappui.h</file>
+    <file>inc/pjsuaapplication.h</file>
+    <file>src/pjsuaappui.cpp</file>
+    <file>data/pjsua.rss</file>
+    <file>data/pjsuacontainer.rssi</file>
+    <file>inc/pjsua.hrh</file>
+    <file>data/pjsua.loc</file>
+    <file>data/pjsua.l01</file>
+    <file>data/pjsuacontainer.loc</file>
+    <file>data/pjsuacontainer.l01</file>
+  </generatedFiles>
+</designerData>

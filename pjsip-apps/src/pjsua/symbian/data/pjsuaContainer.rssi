@@ -1,0 +1,28 @@
+#include "pjsuaContainer.loc"
+
+RESOURCE AVKON_VIEW r_pjsua_container_pjsua_container_view
+	{
+	cba = R_AVKON_SOFTKEYS_EXIT;
+	toolbar = 0;
+	}
+RESOURCE STATUS_PANE_APP_MODEL r_pjsua_container_status_pane
+	{
+	panes =
+		{
+		SPANE_PANE
+			{
+			id = EEikStatusPaneUidTitle;
+			type = EAknCtTitlePane;
+			resource = r_pjsua_container_title_resource;
+			}
+		};
+	}
+RESOURCE TITLE_PANE r_pjsua_container_title_resource
+	{
+	txt = STR_pjsuaContainerView_4;
+	}
+RESOURCE LABEL r_pjsua_container_label1
+	{
+	txt = STR_pjsuaContainerView_5;
+	horiz_align = EEikLabelAlignHCenter;
+	}

@@ -1,0 +1,14 @@
+/*
+========================================================================
+ Name        : pjsua.l01
+ Author      : nanang
+ Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ Description : 
+========================================================================
+*/
+// localized strings for language: UK English (01)
+#define STR_pjsuaApplication_4 "pjsua"
+#define STR_pjsuaApplication_5 "pjsua"
+#define STR_pjsuaApplication_1 ""
+#define STR_pjsuaApplication_2 ""
+#define STR_pjsuaApplication_3 ""

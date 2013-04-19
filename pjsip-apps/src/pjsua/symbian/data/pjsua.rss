@@ -1,0 +1,46 @@
+/*
+========================================================================
+ Name        : pjsua.rss
+ Author      : nanang
+ Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ Description : 
+========================================================================
+*/
+NAME PJSU
+
+#include <avkon.rsg>
+#include <avkon.rh>
+#include <eikon.rh>
+#include <appinfo.rh>
+#include "pjsua.hrh"
+#include "pjsua.loc"
+
+RESOURCE RSS_SIGNATURE
+	{
+	}
+RESOURCE TBUF
+	{
+	buf = "pjsua";
+	}
+RESOURCE EIK_APP_INFO r_application_pjsua_app_ui
+	{
+	cba = R_AVKON_SOFTKEYS_EXIT;
+	status_pane = r_application_status_pane;
+	}
+RESOURCE STATUS_PANE_APP_MODEL r_application_status_pane
+	{
+	}
+RESOURCE LOCALISABLE_APP_INFO r_localisable_app_info
+	{
+	short_caption = STR_pjsuaApplication_5;
+	caption_and_icon = CAPTION_AND_ICON_INFO
+		{
+		caption = STR_pjsuaApplication_4;
+		number_of_icons = 0;
+		};
+	}
+RESOURCE TBUF r_application_akn_view_reference1
+	{
+	}
+
+#include "pjsuaContainer.rssi"

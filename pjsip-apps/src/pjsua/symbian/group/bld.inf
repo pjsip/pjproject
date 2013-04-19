@@ -1,0 +1,26 @@
+
+PRJ_PLATFORMS
+WINSCW ARMV5 GCCE
+
+
+#ifdef SBSV2
+
+PRJ_EXTENSIONS
+	
+	START EXTENSION s60/mifconv
+	OPTION TARGETFILE pjsua_0xE44C2D02.mif
+	OPTION HEADERFILE pjsua_0xE44C2D02.mbg
+	OPTION SOURCEDIR ../gfx
+	OPTION SOURCES -c32 qgn_menu_pjsua
+	END
+
+#else
+
+PRJ_MMPFILES
+
+	gnumakefile pjsua_icons.mk
+
+#endif
+
+PRJ_MMPFILES
+pjsua.mmp

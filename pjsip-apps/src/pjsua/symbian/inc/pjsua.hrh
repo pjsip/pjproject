@@ -1,0 +1,12 @@
+/*
+========================================================================
+ Name        : pjsua.hrh
+ Author      : nanang
+ Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ Description : 
+========================================================================
+*/
+enum TpjsuaViewUids
+	{
+	EPjsuaContainerViewId = 1
+	};

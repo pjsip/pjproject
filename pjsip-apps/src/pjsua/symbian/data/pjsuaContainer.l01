@@ -1,0 +1,14 @@
+/*
+========================================================================
+ Name        : pjsuaContainer.l01
+ Author      : nanang
+ Copyright   : Copyright (C) 2013 Teluu Inc. (http://www.teluu.com)
+ Description : 
+========================================================================
+*/
+// localized strings for language: UK English (01)
+#define STR_pjsuaContainerView_2 ""
+#define STR_pjsuaContainerView_3 ""
+#define STR_pjsuaContainerView_4 "pjsuaContainer"
+#define STR_pjsuaContainerView_1 ""
+#define STR_pjsuaContainerView_5 "Please wait.."
