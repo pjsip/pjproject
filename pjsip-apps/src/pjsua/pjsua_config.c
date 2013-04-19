@@ -17,7 +17,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <pjsua-lib/pjsua.h>
 #include "pjsua_common.h"
 
 #define THIS_FILE	"pjsua_config.c"
@@ -25,10 +24,6 @@
 #define MAX_APP_OPTIONS 128
 
 char   *stdout_refresh_text = "STDOUT_REFRESH";
-
-/** This is for storing console runtime options **/
-static int	    cmd_argc;
-static char	    cmd_argv[MAX_APP_OPTIONS][MAX_APP_OPTIONS];
 
 /* Show usage */
 static void usage(void)
@@ -326,12 +321,12 @@ static int read_config_file(pj_pool_t *pool, const char *filename,
 }
 
 /* Parse arguments. */
-static pj_status_t parse_args(int argc, char *argv[], 
-			      pjsua_app_config *cfg,
+static pj_status_t parse_args(int argc, char *argv[], 			      
 			      pj_str_t *uri_to_call)
 {
     int c;
     int option_index;
+    pjsua_app_config *cfg = &app_config;
     enum { OPT_CONFIG_FILE=127, OPT_LOG_FILE, OPT_LOG_LEVEL, OPT_APP_LOG_LEVEL, 
 	   OPT_LOG_APPEND, OPT_COLOR, OPT_NO_COLOR, OPT_LIGHT_BG, OPT_NO_STDERR,
 	   OPT_HELP, OPT_VERSION, OPT_NULL_AUDIO, OPT_SND_AUTO_CLOSE,
@@ -1313,7 +1308,7 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_PLAY_AVI:
-	    if (app_config.avi_cnt >= MAX_AVI) {
+	    if (app_config.avi_cnt >= PJSUA_APP_MAX_AVI) {
 		PJ_LOG(1,(THIS_FILE, "Too many AVIs"));
 		return -1;
 	    }
@@ -1329,11 +1324,12 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_CLI_TELNET_PORT:
-	    cfg->cli_telnet_port = atoi(pj_optarg);
+	    cfg->cli_cfg.telnet_cfg.port = (pj_uint16_t)atoi(pj_optarg);
+	    cfg->cli_cfg.cli_fe |= CLI_FE_TELNET;
 	    break;
 
 	case OPT_DISABLE_CLI_CONSOLE:
-	    cfg->disable_cli_console = PJ_TRUE;
+	    cfg->cli_cfg.cli_fe &= (~CLI_FE_CONSOLE);
 	    break;
 
 	default:
@@ -1420,10 +1416,11 @@ static pj_status_t parse_args(int argc, char *argv[],
 }
 
 /* Set default config. */
-static void default_config(pjsua_app_config *cfg)
+static void default_config()
 {
     char tmp[80];
     unsigned i;
+    pjsua_app_config *cfg = &app_config;
 
     pjsua_config_default(&cfg->cfg);
     pj_ansi_sprintf(tmp, "PJSUA v%s %s", pj_get_version(),
@@ -1437,7 +1434,7 @@ static void default_config(pjsua_app_config *cfg)
     pjsua_transport_config_default(&cfg->rtp_cfg);
     cfg->rtp_cfg.port = 4000;
     cfg->redir_op = PJSIP_REDIRECT_ACCEPT_REPLACE;
-    cfg->duration = NO_LIMIT_DURATION;
+    cfg->duration = PJSUA_APP_NO_LIMIT_DURATION;
     cfg->wav_id = PJSUA_INVALID_ID;
     cfg->rec_id = PJSUA_INVALID_ID;
     cfg->wav_port = PJSUA_INVALID_ID;
@@ -1463,12 +1460,11 @@ static void default_config(pjsua_app_config *cfg)
     cfg->avi_def_idx = PJSUA_INVALID_ID;
 
     cfg->use_cli = PJ_FALSE;
-    cfg->disable_cli_console = PJ_FALSE;
-    cfg->cli_telnet_port = -1;
+    cfg->cli_cfg.cli_fe = CLI_FE_CONSOLE;
+    cfg->cli_cfg.telnet_cfg.port = 0;
 }
 
-static pj_status_t parse_config(int argc, char *argv[], 
-				pjsua_app_config *app_config, pj_str_t *uri_arg)
+static pj_status_t parse_config(int argc, char *argv[], pj_str_t *uri_arg)
 {
     pj_status_t status;
 
@@ -1476,66 +1472,34 @@ static pj_status_t parse_config(int argc, char *argv[],
     default_config(app_config);
 
     /* Parse the arguments */
-    status = parse_args(argc, argv, app_config, uri_arg);
+    status = parse_args(argc, argv, uri_arg);
     return status;
 }
 
-PJ_DEF(void) add_startup_config(int argc, char *argv[])
+PJ_DEF(pj_status_t) load_config(int argc,
+				char **argv,
+				pj_str_t *uri_arg)
 {
-    int i;
-    cmd_argc = argc;
-
-    for (i=0;i<argc;++i)
-    {
-	pj_memcpy(&cmd_argv[i], argv[i], strlen(argv[i]));
-	cmd_argv[i][strlen(argv[i])] = 0;
-    }    
-}
-
-PJ_DEF(void) add_reload_config(unsigned idx, pj_str_t *option)
-{        
-    /** First command always contain the app path**/
-    pj_str_t cmd;
-    
-    pj_assert(idx < MAX_APP_OPTIONS);
-
-    cmd = pj_str(&cmd_argv[idx][0]);
-    pj_strncpy_with_null(&cmd, option, 128);    
-    cmd_argc = idx+1;
-}
-
-PJ_DEF(pj_status_t) load_config(pjsua_app_config *app_config, 
-				pj_str_t *uri_arg,
-				pj_bool_t app_running)
-{
-    int i;
-    int argc = cmd_argc;
-    char *argv[128];
     pj_status_t status;
     pj_bool_t use_cli = PJ_FALSE;
-    pj_bool_t disable_cli_console = PJ_TRUE;
-    int cli_telnet_port = 0;
+    int cli_fe = 0;
+    pj_uint16_t cli_telnet_port = 0;
 
     /** CLI options are not changable **/
     if (app_running) {
-	use_cli = app_config->use_cli;
-	disable_cli_console = app_config->disable_cli_console;
-	cli_telnet_port = app_config->cli_telnet_port;
+	use_cli = app_config.use_cli;
+	cli_fe = app_config.cli_cfg.cli_fe;
+	cli_telnet_port = app_config.cli_cfg.telnet_cfg.port;
     }
 
-    for (i=0;i<cmd_argc;++i)
-    {
-	argv[i] = &cmd_argv[i][0];
-    }
-
-    status = parse_config(argc, argv, app_config, uri_arg);
+    status = parse_config(argc, argv, uri_arg);
     if (status != PJ_SUCCESS)
 	return status;
 
     if (app_running) {    
-	app_config->use_cli = use_cli;
-	app_config->disable_cli_console = disable_cli_console;
-	app_config->cli_telnet_port = cli_telnet_port;
+	app_config.use_cli = use_cli;
+	app_config.cli_cfg.cli_fe = cli_fe;
+	app_config.cli_cfg.telnet_cfg.port = cli_telnet_port;
     }
 
     return status;
@@ -2155,7 +2119,7 @@ PJ_DEF(int) write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
     pj_strcat2(&cfg, line);
 
     /* Uas-duration. */
-    if (config->duration != NO_LIMIT_DURATION) {
+    if (config->duration != PJSUA_APP_NO_LIMIT_DURATION) {
 	pj_ansi_sprintf(line, "--duration %d\n",
 			config->duration);
 	pj_strcat2(&cfg, line);

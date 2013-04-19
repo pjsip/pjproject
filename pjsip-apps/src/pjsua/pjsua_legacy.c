@@ -64,7 +64,7 @@ static void print_buddy_list()
 static void ui_input_url(const char *title, char *buf, int len, 
 			 input_result *result)
 {
-    result->nb_result = NO_NB;
+    result->nb_result = PJSUA_APP_NO_NB;
     result->uri_result = NULL;
 
     print_buddy_list();
@@ -123,7 +123,7 @@ static void ui_input_url(const char *title, char *buf, int len,
 	    return;
 
 	puts("Invalid input");
-	result->nb_result = NO_NB;
+	result->nb_result = PJSUA_APP_NO_NB;
 	return;
 
     } else {
@@ -596,7 +596,7 @@ static void ui_make_new_call()
     printf("(You currently have %d calls)\n", pjsua_call_get_count());
     
     ui_input_url("Make call", buf, sizeof(buf), &result);
-    if (result.nb_result != NO_NB) {
+    if (result.nb_result != PJSUA_APP_NO_NB) {
 
 	if (result.nb_result == -1 || result.nb_result == 0) {
 	    puts("You can't do that with make call!");
@@ -639,7 +639,7 @@ static void ui_make_multi_call()
 	return;
 
     ui_input_url("Make call", buf, sizeof(buf), &result);
-    if (result.nb_result != NO_NB) {
+    if (result.nb_result != PJSUA_APP_NO_NB) {
 	pjsua_buddy_info binfo;
 	if (result.nb_result == -1 || result.nb_result == 0) {
 	    puts("You can't do that with make call!");
@@ -681,7 +681,7 @@ static void ui_send_instant_message()
 
     /* Input destination. */
     ui_input_url("Send IM to", buf, sizeof(buf), &result);
-    if (result.nb_result != NO_NB) {
+    if (result.nb_result != PJSUA_APP_NO_NB) {
 
 	if (result.nb_result == -1) {
 	    puts("You can't send broadcast IM like that!");
@@ -1084,7 +1084,7 @@ static void ui_call_transfer(pj_bool_t no_refersub)
 		&STR_FALSE);
 	    pj_list_push_back(&msg_data.hdr_list, &refer_sub);
 	}
-	if (result.nb_result != NO_NB) {
+	if (result.nb_result != PJSUA_APP_NO_NB) {
 	    if (result.nb_result == -1 || result.nb_result == 0)
 		puts("You can't do that with transfer call!");
 	    else {
@@ -1287,7 +1287,7 @@ static void ui_send_arbitrary_request()
     /* Input destination URI */
     uri = NULL;
     ui_input_url("Destination URI", buf, sizeof(buf), &result);
-    if (result.nb_result != NO_NB) {
+    if (result.nb_result != PJSUA_APP_NO_NB) {
 
 	if (result.nb_result == -1) {
 	    puts("Sorry you can't do that!");
@@ -1368,7 +1368,7 @@ static void ui_subscribe(char menuin[])
     input_result result;
 
     ui_input_url("(un)Subscribe presence of", buf, sizeof(buf), &result);
-    if (result.nb_result != NO_NB) {
+    if (result.nb_result != PJSUA_APP_NO_NB) {
 	if (result.nb_result == -1) {
 	    int i, count;
 	    count = pjsua_get_buddy_count();
@@ -1669,20 +1669,10 @@ static void ui_call_redirect(char menuin[])
 /*
  * Main "user interface" loop.
  */
-void console_app_main(const pj_str_t *uri_to_call, pj_bool_t *app_restart)
+PJ_DEF(void) legacy_main()
 {    
     char menuin[80];    
     char buf[128];    
-
-    pjsua_call_setting_default(&call_opt);
-    call_opt.aud_cnt = app_config.aud_cnt;
-    call_opt.vid_cnt = app_config.vid.vid_cnt;
-
-    /* If user specifies URI to call, then call the URI */
-    if (uri_to_call->slen) {
-	pjsua_call_make_call( current_acc, uri_to_call, &call_opt, 
-			      NULL, NULL, NULL);
-    }
 
     keystroke_help(current_call);
 
@@ -1914,10 +1904,8 @@ void console_app_main(const pj_str_t *uri_to_call, pj_bool_t *app_restart)
 	    break;
 
 	case 'L':   /* Restart */
-	    *app_restart = PJ_TRUE;
-	    /* Continues below */
-
 	case 'q':
+	    legacy_on_stopped(menuin[0]=='L');
 	    goto on_exit;
 
 	case 'R':	    
@@ -1935,24 +1923,4 @@ void console_app_main(const pj_str_t *uri_to_call, pj_bool_t *app_restart)
 
 on_exit:
     ;
-}
-
-void start_ui_main(pj_str_t *uri_to_call, pj_bool_t *app_restart)
-{
-    pj_status_t status;    
-    *app_restart = PJ_FALSE;
-
-    status = pjsua_start();
-    if (status != PJ_SUCCESS)
-	return;	    
-
-    setup_signal_handler();
-
-    /* If user specifies URI to call, then call the URI */
-    if (uri_to_call->slen) {
-	pjsua_call_make_call(current_acc, uri_to_call, &call_opt, NULL, 
-			     NULL, NULL);
-    }    
-
-    console_app_main(uri_to_call, app_restart);
 }

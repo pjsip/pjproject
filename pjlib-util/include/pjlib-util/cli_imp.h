@@ -47,7 +47,7 @@ PJ_BEGIN_DECL
  * Default log level for telnet sessions.
  */
 #ifndef PJ_CLI_TELNET_LOG_LEVEL
-#   define PJ_CLI_TELNET_LOG_LEVEL	3
+#   define PJ_CLI_TELNET_LOG_LEVEL	4
 #endif
 
 /**

@@ -17,7 +17,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "pjsua_common.h"
+#include "pjsua_app.h"
 
 #define THIS_FILE	"pjsua_app.c"
 
@@ -51,28 +51,12 @@ pj_status_t app_destroy(void);
 static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
+static pj_status_t pjsua_app_init();
+static pj_status_t pjsua_app_destroy();
 
-static pj_status_t	    receive_end_sig;
-static pj_thread_t	    *sig_thread;
+static app_cfg_t app_cfg;
 pj_str_t		    uri_arg;
-pj_bool_t 		    app_restart;
 pj_bool_t		    app_running	= PJ_FALSE;
-pj_log_func		    *log_cb = NULL;
-
-/** Forward declaration **/
-/** Defined in pjsua_common.c **/
-void app_config_init_video(pjsua_acc_config *acc_cfg);
-/** Defined in pjsua_legacy.c **/
-void start_ui_main(pj_str_t *uri_to_call, pj_bool_t *app_restart);
-/** Defined in pjsua_cli.c **/
-void start_cli_main(pj_str_t *uri_to_call, pj_bool_t *app_restart);
-pj_status_t setup_cli(pj_bool_t with_console, pj_bool_t with_telnet,
-		      pj_uint16_t telnet_port, 
-		      pj_cli_telnet_on_started on_started_cb,
-		      pj_cli_on_quit on_quit_cb,
-		      pj_cli_on_destroy on_destroy_cb,
-		      pj_cli_on_restart_pjsua on_restart_pjsua_cb);
-void destroy_cli(pj_bool_t app_restart);
 
 /*****************************************************************************
  * Configuration manipulation
@@ -177,7 +161,6 @@ static void call_timeout_callback(pj_timer_heap_t *timer_heap,
     pjsua_call_hangup(call_id, 200, NULL, &msg_data);
 }
 
-
 /*
  * Handler when invite state has changed.
  */
@@ -229,7 +212,7 @@ static void on_call_state(pjsua_call_id call_id, pjsip_event *e)
 
     } else {
 
-	if (app_config.duration != NO_LIMIT_DURATION && 
+	if (app_config.duration != PJSUA_APP_NO_LIMIT_DURATION && 
 	    call_info.state == PJSIP_INV_STATE_CONFIRMED) 
 	{
 	    /* Schedule timer to hangup call after the specified duration */
@@ -314,7 +297,8 @@ static void on_incoming_call(pjsua_acc_id acc_id, pjsua_call_id call_id,
 	call_opt.aud_cnt = app_config.aud_cnt;
 	call_opt.vid_cnt = app_config.vid.vid_cnt;
 
-	pjsua_call_answer2(call_id, &call_opt, app_config.auto_answer, NULL, NULL);
+	pjsua_call_answer2(call_id, &call_opt, app_config.auto_answer, NULL,
+			   NULL);
     }
     
     if (app_config.auto_answer < 200) {
@@ -532,7 +516,9 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 		                   call_conf_slot);
 
 		/* Automatically record conversation, if desired */
-		if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
+		if (app_config.auto_rec && app_config.rec_port !=
+					   PJSUA_INVALID_ID)
+		{
 		    pjsua_conf_connect(pjsua_call_get_conf_port(call_ids[i]), 
 				       app_config.rec_port);
 		}
@@ -550,7 +536,8 @@ static void on_call_audio_state(pjsua_call_info *ci, unsigned mi,
 		pjsua_conf_connect(0, call_conf_slot);
 
 	    /* Automatically record conversation, if desired */
-	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID) {
+	    if (app_config.auto_rec && app_config.rec_port != PJSUA_INVALID_ID)
+	    {
 		pjsua_conf_connect(call_conf_slot, app_config.rec_port);
 		pjsua_conf_connect(0, app_config.rec_port);
 	    }
@@ -615,8 +602,8 @@ static void on_call_media_state(pjsua_call_id call_id)
 	if (vid_idx == -1 || call_info.media[vid_idx].dir == PJMEDIA_DIR_NONE) {
 	    PJ_LOG(3,(THIS_FILE,
 		      "Just rejected incoming video offer on call %d, "
-		      "use \"vid call enable %d\" or \"vid call add\" to enable video!",
-		      call_id, vid_idx));
+		      "use \"vid call enable %d\" or \"vid call add\" to "
+		      "enable video!", call_id, vid_idx));
 	}
     }
 #endif
@@ -895,8 +882,8 @@ static void on_transport_state(pjsip_transport *tp,
 	{
 	    char buf[100];
 
-	    snprintf(buf, sizeof(buf), "SIP %s transport is disconnected from %s",
-		     tp->type_name, host_port);
+	    snprintf(buf, sizeof(buf), "SIP %s transport is disconnected "
+		    "from %s", tp->type_name, host_port);
 	    pjsua_perror(THIS_FILE, buf, info->status);
 	}
 	break;
@@ -1226,80 +1213,53 @@ static pjsip_module mod_default_handler =
 
 };
 
-#if defined(PJ_WIN32) && PJ_WIN32!=0
-#include <windows.h>
+/** CLI callback **/
 
-static pj_thread_desc handler_desc;
-
-static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
-{   
-    switch (fdwCtrlType) 
-    { 
-        // Handle the CTRL+C signal. 
- 
-        case CTRL_C_EVENT: 
-        case CTRL_CLOSE_EVENT: 
-        case CTRL_BREAK_EVENT: 
-        case CTRL_LOGOFF_EVENT: 
-        case CTRL_SHUTDOWN_EVENT: 
-	    pj_thread_register("ctrlhandler", handler_desc, &sig_thread);
-	    PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
-	    receive_end_sig = PJ_TRUE;
-            app_destroy();	    
-	    ExitProcess(1);
-            PJ_UNREACHED(return TRUE;)
- 
-        default: 
- 
-            return FALSE; 
-    } 
-}
-
-static void setup_socket_signal()
+/* Called on CLI (re)started, e.g: initial start, after iOS bg */
+PJ_DEF(void) cli_on_started(pj_status_t status)
 {
+    /* Notify app */
+    if (app_cfg.on_started) {
+	if (status == PJ_SUCCESS) {
+	    char info[128];
+	    cli_get_info(info, sizeof(info));
+	    if (app_cfg.on_started) {
+		(*app_cfg.on_started)(status, info);		
+	    } 
+	} else {
+	    if (app_cfg.on_started) {
+		(*app_cfg.on_started)(status, NULL);
+	    } 		
+	}
+    }
 }
 
-#else
-#include <signal.h>
-
-static void setup_socket_signal()
+/* Called on CLI quit */
+PJ_DEF(pj_bool_t) cli_on_stopped(pj_bool_t restart, int argc, char* argv[])
 {
-    signal(SIGPIPE, SIG_IGN);
+    /* Notify app */
+    if (app_cfg.on_stopped)
+	return (*app_cfg.on_stopped)(restart, argc, argv);
+
+    return PJ_SUCCESS;
 }
 
-#endif
 
-static pj_status_t setup_pjsua()
+/* Called on pjsua legacy quit */
+PJ_DEF(pj_bool_t) legacy_on_stopped(pj_bool_t restart)
 {
-    pj_status_t status = pjsua_destroy();
-    if (status != PJ_SUCCESS)
-	return status;
+    /* Notify app */
+    if (app_cfg.on_stopped)
+	return (*app_cfg.on_stopped)(restart, 0, NULL);
 
-    /* Create pjsua */
-    status = pjsua_create();
-    if (status != PJ_SUCCESS)
-	return status;
-
-    /* Create pool for application */
-    app_config.pool = pjsua_pool_create("pjsua-app", 1000, 1000);
-
-    return status;
+    return PJ_SUCCESS;
 }
+
+
 
 /*****************************************************************************
  * Public API
  */
-
-#if defined(PJ_WIN32) && PJ_WIN32!=0
-PJ_DEF(void) setup_signal_handler(void)
-{
-    SetConsoleCtrlHandler(&CtrlHandler, TRUE);
-}
-#else
-PJ_DEF(void) setup_signal_handler(void)
-{
-}
-#endif
 
 int stdout_refresh_proc(void *arg)
 {
@@ -1322,32 +1282,33 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
-PJ_DEF(pj_status_t) app_init(pj_cli_telnet_on_started on_started_cb,
-			     pj_cli_on_quit on_quit_cb,
-			     pj_cli_on_destroy on_destroy_cb,
-			     pj_cli_on_restart_pjsua on_restart_pjsua_cb)
+static pj_status_t pjsua_app_init()
 {
     pjsua_transport_id transport_id = -1;
     pjsua_transport_config tcp_cfg;
     unsigned i;
     pj_status_t status;
 
-    /** Setup pjsua **/
-    status = setup_pjsua();
+    /** Create pjsua **/
+    status = pjsua_create();
     if (status != PJ_SUCCESS)
 	return status;
 
-    /** Load config **/
-    status = load_config(&app_config, &uri_arg, app_running);
-    if (status != PJ_SUCCESS)
-	return status;	    
+    /* Create pool for application */
+    app_config.pool = pjsua_pool_create("pjsua-app", 1000, 1000);
 
-#if defined(PJ_SYMBIAN) && PJ_SYMBIAN!=0
-    /* Disable threading on Symbian */
-    app_config.cfg.thread_cnt = 0;
-    app_config.media_cfg.thread_cnt = 0;
-    app_config.media_cfg.has_ioqueue = PJ_FALSE;
-#endif
+    /* Init CLI & its FE settings */
+    if (!app_running) {
+	pj_cli_cfg_default(&app_config.cli_cfg.cfg);
+	pj_cli_telnet_cfg_default(&app_config.cli_cfg.telnet_cfg);
+	pj_cli_console_cfg_default(&app_config.cli_cfg.console_cfg);
+	app_config.cli_cfg.telnet_cfg.on_started = cli_on_started;
+    }
+
+    /** Parse args **/
+    status = load_config(app_cfg.argc, app_cfg.argv, &uri_arg);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Initialize application callbacks */
     app_config.cfg.cb.on_call_state = &on_call_state;
@@ -1373,13 +1334,15 @@ PJ_DEF(pj_status_t) app_init(pj_cli_telnet_on_started on_started_cb,
 #ifdef TRANSPORT_ADAPTER_SAMPLE
     app_config.cfg.cb.on_create_media_transport = &on_create_media_transport;
 #endif
-    app_config.log_cfg.cb = log_cb;
 
     /* Set sound device latency */
     if (app_config.capture_lat > 0)
 	app_config.media_cfg.snd_rec_latency = app_config.capture_lat;
     if (app_config.playback_lat)
 	app_config.media_cfg.snd_play_latency = app_config.playback_lat;
+
+    if (app_cfg.on_config_init)
+	(*app_cfg.on_config_init)(&app_config);
 
     /* Initialize pjsua */
     status = pjsua_init(&app_config.cfg, &app_config.log_cfg,
@@ -1833,9 +1796,11 @@ PJ_DEF(pj_status_t) app_init(pj_cli_telnet_on_started on_started_cb,
 
     /* Optionally disable some codec */
     for (i=0; i<app_config.codec_dis_cnt; ++i) {
-	pjsua_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
+	pjsua_codec_set_priority(&app_config.codec_dis[i],
+				 PJMEDIA_CODEC_PRIO_DISABLED);
 #if PJSUA_HAS_VIDEO
-	pjsua_vid_codec_set_priority(&app_config.codec_dis[i],PJMEDIA_CODEC_PRIO_DISABLED);
+	pjsua_vid_codec_set_priority(&app_config.codec_dis[i],
+				     PJMEDIA_CODEC_PRIO_DISABLED);
 #endif
     }
 
@@ -1845,7 +1810,7 @@ PJ_DEF(pj_status_t) app_init(pj_cli_telnet_on_started on_started_cb,
 				 (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
 #if PJSUA_HAS_VIDEO
 	pjsua_vid_codec_set_priority(&app_config.codec_arg[i],
-				     (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
+				   (pj_uint8_t)(PJMEDIA_CODEC_PRIO_NORMAL+i+9));
 #endif
     }
 
@@ -1870,32 +1835,35 @@ PJ_DEF(pj_status_t) app_init(pj_cli_telnet_on_started on_started_cb,
     /* Init call setting */
     pjsua_call_setting_default(&call_opt);
     call_opt.aud_cnt = app_config.aud_cnt;
-    call_opt.vid_cnt = app_config.vid.vid_cnt;    
-
-    /* Init CLI if configured */    
-    if (app_config.use_cli) {
-	if (app_restart) {
-	    pj_uint16_t port = (pj_uint16_t)app_config.cli_telnet_port;
-	    status = setup_cli(!app_config.disable_cli_console, 
-			       app_config.cli_telnet_port >= 0, port,
-			       on_started_cb, on_quit_cb, on_destroy_cb,
-			       on_restart_pjsua_cb);
-	    if (status != PJ_SUCCESS)
-		goto on_error;
-	}
-    }
+    call_opt.vid_cnt = app_config.vid.vid_cnt;
 
     return PJ_SUCCESS;
 
 on_error:
-    app_restart = PJ_FALSE;
     app_destroy();
     return status;
 }
 
-pj_status_t app_main(void)
+PJ_DEF(pj_status_t) app_init(const app_cfg_t *cfg)
+{
+    pj_status_t status;
+    pj_memcpy(&app_cfg, cfg, sizeof(app_cfg));
+
+    status = pjsua_app_init();
+    if (status != PJ_SUCCESS)
+	return status;
+
+    /* Init CLI if configured */    
+    if (app_config.use_cli) {
+	status = cli_init();
+    } 
+    return status;
+}
+
+pj_status_t app_run(pj_bool_t wait_telnet_cli)
 {
     pj_thread_t *stdout_refresh_thread = NULL;
+    pj_status_t status;
 
     /* Start console refresh thread */
     if (stdout_refresh > 0) {
@@ -1903,23 +1871,53 @@ pj_status_t app_main(void)
 			 NULL, 0, 0, &stdout_refresh_thread);
     }
 
-    if (app_config.use_cli)
-	start_cli_main(&uri_arg, &app_restart);	
-    else
-	start_ui_main(&uri_arg, &app_restart);
+    status = pjsua_start();
+    if (status != PJ_SUCCESS)
+	goto on_return;
 
+    if (app_config.use_cli && (app_config.cli_cfg.cli_fe & CLI_FE_TELNET)) {
+	char info[128];
+	cli_get_info(info, sizeof(info));
+	if (app_cfg.on_started) {
+	    (*app_cfg.on_started)(status, info);
+	}
+    } else {
+	if (app_cfg.on_started) {
+	    (*app_cfg.on_started)(status, "Ready");
+	}    
+    }
+
+    /* If user specifies URI to call, then call the URI */
+    if (uri_arg.slen) {
+	pjsua_call_setting_default(&call_opt);
+	call_opt.aud_cnt = app_config.aud_cnt;
+	call_opt.vid_cnt = app_config.vid.vid_cnt;
+
+	pjsua_call_make_call(current_acc, &uri_arg, &call_opt, NULL, 
+			     NULL, NULL);
+    }   
+
+    app_running = PJ_TRUE;
+
+    if (app_config.use_cli)
+	cli_main(wait_telnet_cli);	
+    else
+	legacy_main();
+
+    status = PJ_SUCCESS;
+
+on_return:
     if (stdout_refresh_thread) {
 	stdout_refresh_quit = PJ_TRUE;
 	pj_thread_join(stdout_refresh_thread);
 	pj_thread_destroy(stdout_refresh_thread);
     }
-
-    return PJ_SUCCESS;
+    return status;
 }
 
-pj_status_t app_destroy()
+static pj_status_t pjsua_app_destroy()
 {
-    pj_status_t status;
+    pj_status_t status = PJ_SUCCESS;
     unsigned i;
 
 #ifdef STEREO_DEMO
@@ -1972,87 +1970,30 @@ pj_status_t app_destroy()
 	pjsua_conf_remove_port(app_config.tone_slots[i]);
     }
 
-    if (app_config.use_cli) {	
-	destroy_cli(app_restart);
-    }
-
     if (app_config.pool) {
 	pj_pool_release(app_config.pool);
 	app_config.pool = NULL;
     }
-    
+
     status = pjsua_destroy();
-    
-    if (!app_restart)
-	pj_bzero(&app_config, sizeof(app_config));
+
+    return status;
+}
+
+pj_status_t app_destroy()
+{
+    pj_status_t status;
+
+    status = pjsua_app_destroy();
+
+    if (app_config.use_cli) {	
+	cli_destroy();
+    }
     
     return status;
 }
 
-/** === CLI Callback == **/
-
-static void cli_telnet_started(pj_cli_telnet_info *telnet_info)
-{    
-    PJ_LOG(3,(THIS_FILE, "Telnet daemon listening at %.*s:%d", 
-	      telnet_info->ip_address.slen, telnet_info->ip_address.ptr,
-	      telnet_info->port));
-}
-
-static void cli_on_quit (pj_bool_t is_restarted)
-{
-    PJ_LOG(3,(THIS_FILE, "CLI quit, restart(%d)", is_restarted));
-}
-
-static void cli_on_destroy(void)
-{
-    PJ_LOG(3,(THIS_FILE, "CLI destroyed"));
-}
-
-static void cli_on_restart_pjsua(void)
-{
-    PJ_LOG(3,(THIS_FILE, "Restart pjsua"));
-}
-
-pj_cli_telnet_on_started on_started_cb = &cli_telnet_started;
-pj_cli_on_quit on_quit_cb = &cli_on_quit;
-pj_cli_on_destroy on_destroy_cb = &cli_on_destroy;
-pj_cli_on_restart_pjsua on_restart_pjsua_cb = &cli_on_restart_pjsua;
-
 /** ======================= **/
-
-int main_func(int argc, char *argv[])
-{
-    pj_status_t status;
-
-    setup_socket_signal();
-
-    receive_end_sig = PJ_FALSE;
-    app_restart = PJ_TRUE;
-
-    add_startup_config(argc, argv);    
-
-    do {
-	if (app_restart) {	    
-	    status = app_init(on_started_cb, on_quit_cb,
-                              on_destroy_cb, on_restart_pjsua_cb);
-	    if (status != PJ_SUCCESS)
-		return 1;	    
-	}	
-
-	app_running = PJ_TRUE;
-
-	app_main();
-	if (!receive_end_sig) {
-	    app_destroy();
-
-	    /* This is on purpose */
-	    app_destroy();
-	} else {
-	    pj_thread_join(sig_thread);
-	}
-    } while (app_restart);
-    return 0;
-}
 
 #ifdef STEREO_DEMO
 /*

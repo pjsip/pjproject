@@ -145,7 +145,7 @@ typedef enum cli_telnet_command
 enum cli_telnet_options
 {
     TRANSMIT_BINARY	= 0,	/* Transmit Binary. */
-    ECHO		= 1,	/* Echo. */
+    TERM_ECHO		= 1,	/* Echo. */
     RECONNECT		= 2,	/* Reconnection. */
     SUPPRESS_GA		= 3,	/* Suppress Go Aheah. */
     MESSAGE_SIZE_NEGO	= 4,	/* Approx Message Size Negotiation. */
@@ -895,7 +895,7 @@ static void send_comp_arg(cli_telnet_sess *sess,
  */
 static pj_bool_t handle_alfa_num(cli_telnet_sess *sess, unsigned char *data)
 {        
-    if (is_local_option_state_ena(sess, ECHO)) {
+    if (is_local_option_state_ena(sess, TERM_ECHO)) {
 	if (recv_buf_right_len(sess->rcmd) > 0) {
 	    /* Cursor is not at EOL, insert character */	    
 	    unsigned char echo[5] = {0x1b, 0x5b, 0x31, 0x40, 0x00};
@@ -1061,7 +1061,7 @@ static pj_bool_t handle_return(cli_telnet_sess *sess)
 			  NULL);    
     
     status = pj_cli_sess_exec(&sess->base, (char *)&sess->rcmd->rbuf, 
-			      pool, &info);    
+			      pool, &info);
 
     switch (status) {
     case PJ_CLI_EINVARG:
@@ -1645,10 +1645,10 @@ static pj_bool_t telnet_fe_on_accept(pj_activesock_t *asock,
     set_peer_option(sess, SUPPRESS_GA, PJ_TRUE);
     set_peer_option(sess, STATUS, PJ_TRUE);
     set_peer_option(sess, TIMING_MARK, PJ_TRUE);
-    set_peer_option(sess, ECHO, PJ_TRUE);    
+    set_peer_option(sess, TERM_ECHO, PJ_TRUE);
 
     send_cmd_do(sess, SUPPRESS_GA);
-    send_cmd_will(sess, ECHO);
+    send_cmd_will(sess, TERM_ECHO);
     send_cmd_will(sess, STATUS);   
     send_cmd_will(sess, SUPPRESS_GA);
 
@@ -1727,7 +1727,9 @@ PJ_DEF(pj_status_t) pj_cli_telnet_create(pj_cli_t *cli,
         goto on_exit;
 
     /* Start telnet daemon */
-    telnet_start(fe);
+    status = telnet_start(fe);
+    if (status != PJ_SUCCESS)
+	goto on_exit;
 
     pj_cli_register_front_end(cli, &fe->base);
 
@@ -1769,8 +1771,9 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
     status = pj_sock_setsockopt(sock, SOL_SOCKET, SO_REUSEADDR,
 				&val, sizeof(val));
 
-    if (status != PJ_SUCCESS)
-	goto on_exit;
+    if (status != PJ_SUCCESS) {
+	PJ_LOG(3, (THIS_FILE, "Failed setting socket options"));
+    }
 
     /* The loop is silly, but what else can we do? */
     for (msec=MIN_WAIT_ON_TELNET_RESTART, restart_retry=0;
@@ -1833,30 +1836,13 @@ static pj_status_t telnet_start(cli_telnet_fe *fe)
             goto on_exit;
     }
 
-    /** Fill telnet information and call pj_cli_telnet_on_started callback */
-    if (fe->cfg.on_started) {
-	char ip_addr[32];
-	pj_cli_telnet_info telnet_info;
-	pj_sockaddr hostip;
-
-	telnet_info.ip_address.ptr = ip_addr;
-	telnet_info.ip_address.slen = 0;
-	
-	status = pj_gethostip(pj_AF_INET(), &hostip);
-	if (status != PJ_SUCCESS)
-	    goto on_exit;
-
-	pj_strcpy2(&telnet_info.ip_address, 
-		   pj_inet_ntoa(hostip.ipv4.sin_addr));
-
-	telnet_info.port = fe->cfg.port;
-
-	(*fe->cfg.on_started)(&telnet_info);
-    }
-
     return PJ_SUCCESS;
 
 on_exit:
+    if (fe->cfg.on_started) {
+	(*fe->cfg.on_started)(status);
+    }
+
     if (fe->asock)
         pj_activesock_close(fe->asock);
     else if (sock != PJ_INVALID_SOCKET)
@@ -1907,9 +1893,35 @@ static pj_status_t telnet_restart(cli_telnet_fe *fe)
 
     /** Start Telnet **/
     status = telnet_start(fe);
-    if (status == PJ_SUCCESS)
+    if (status == PJ_SUCCESS) {
+	if (fe->cfg.on_started) {
+	    (*fe->cfg.on_started)(status);
+	}
 	TRACE_((THIS_FILE, "Telnet Restarted"));
-    
+    }
 on_exit:
     return status;
+}
+
+PJ_DEF(pj_status_t) pj_cli_telnet_get_info(pj_cli_front_end *fe, 
+					   pj_cli_telnet_info *info)
+{
+    pj_sockaddr hostip;
+    pj_status_t status;
+    cli_telnet_fe *tfe = (cli_telnet_fe*) fe; 
+
+    PJ_ASSERT_RETURN(fe && (fe->type == PJ_CLI_TELNET_FRONT_END) && info, 
+		     PJ_EINVAL);
+
+    pj_strset(&info->ip_address, info->buf_, 0);
+
+    status = pj_gethostip(pj_AF_INET(), &hostip);
+    if (status != PJ_SUCCESS)
+	return status;
+
+    pj_strcpy2(&info->ip_address, pj_inet_ntoa(hostip.ipv4.sin_addr));
+
+    info->port = tfe->cfg.port;
+
+    return PJ_SUCCESS;
 }
