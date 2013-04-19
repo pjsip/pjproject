@@ -588,7 +588,9 @@ static pj_status_t parse_args(int argc, char *argv[],
 	    break;
 
 	case OPT_NO_STDERR:
+#if !defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0
 	    freopen("/dev/null", "w", stderr);
+#endif
 	    break;
 
 	case OPT_HELP:

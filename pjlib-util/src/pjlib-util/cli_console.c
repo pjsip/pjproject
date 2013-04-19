@@ -469,7 +469,8 @@ static int readline_thread(void * p)
 	     * If exit is desired end script with q for quit
 	     */
  	    /* Reopen stdin/stdout/stderr to /dev/console */
-#if defined(PJ_WIN32) && PJ_WIN32!=0
+#if defined(PJ_WIN32) && PJ_WIN32!=0 && \
+  (!defined(PJ_WIN32_WINCE) || PJ_WIN32_WINCE==0)
 	    if (freopen ("CONIN$", "r", stdin) == NULL) {
 #else
 	    if (1) {
