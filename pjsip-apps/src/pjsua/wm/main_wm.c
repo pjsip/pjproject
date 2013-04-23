@@ -16,13 +16,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include <windows.h>
-
-#include <pjlib.h>
-#include <windows.h>
 #include <winuserm.h>
 #include <aygshell.h>
 #include "..\pjsua_app.h"
+#include "..\pjsua_app_config.h"
 
 #define MAINWINDOWCLASS TEXT("PjsuaDlg")
 #define MAINWINDOWTITLE TEXT("PJSUA")
@@ -39,18 +36,17 @@ static HWND		 g_hWndLbl;
 static HWND		 g_hWndImg;
 static HBITMAP		 g_hBmp;
 
-static int restart_argc = 0;
-static char **restart_argv = NULL;
+static int		 start_argc;
+static char	       **start_argv;
 
-/* Helper funtions to init/restart/destroy the pjsua */
-static void LibInit();
-static void LibDestroy();
-static void LibRestart();
+/* Helper funtions to init/destroy the pjsua */
+static void PjsuaInit();
+static void PjsuaDestroy();
 
 /* pjsua app callbacks */
-static void lib_on_started(pj_status_t status, const char* title);
-static pj_bool_t lib_on_stopped(pj_bool_t restart, int argc, char** argv);
-static void lib_on_config_init(pjsua_app_config *cfg);
+static void PjsuaOnStarted(pj_status_t status, const char* title);
+static void PjsuaOnStopped(pj_bool_t restart, int argc, char** argv);
+static void PjsuaOnConfig(pjsua_app_config *cfg);
 
 LRESULT CALLBACK DialogProc(const HWND hWnd,
 			    const UINT Msg, 
@@ -85,16 +81,12 @@ LRESULT CALLBACK DialogProc(const HWND hWnd,
 	return (LRESULT)GetStockObject(BLACK_BRUSH);
 
     case WM_APP_INIT:
-	LibInit();
+    case WM_APP_RESTART:
+	PjsuaInit();
 	break;
 
     case WM_APP_DESTROY:
-	LibDestroy();
 	PostQuitMessage(0);
-	break;
-
-    case WM_APP_RESTART:
-	LibRestart();
 	break;
 
     default:
@@ -107,7 +99,7 @@ LRESULT CALLBACK DialogProc(const HWND hWnd,
 
 /* === GUI === */
 
-pj_status_t gui_init()
+pj_status_t GuiInit()
 {
     WNDCLASS wc;
     HWND hWnd = NULL;	
@@ -192,7 +184,7 @@ pj_status_t gui_init()
 #endif
 
     /* Create logo */
-    g_hBmp = SHLoadDIBitmap(LOGO_PATH); // for jpeg, uses SHLoadImageFile()
+    g_hBmp = SHLoadDIBitmap(LOGO_PATH); /* for jpeg, uses SHLoadImageFile() */
     if (g_hBmp == NULL) {
 	DWORD err = GetLastError();
 	return PJ_RETURN_OS_ERROR(err);
@@ -227,7 +219,7 @@ pj_status_t gui_init()
 }
 
 
-pj_status_t gui_start()
+pj_status_t GuiStart()
 {
     MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
@@ -238,7 +230,7 @@ pj_status_t gui_start()
     return (msg.wParam);
 }
 
-void gui_destroy(void)
+void GuiDestroy(void)
 {
     if (g_hWndMain) {
 	DestroyWindow(g_hWndMain);
@@ -266,22 +258,29 @@ void gui_destroy(void)
 /* === ENGINE === */
 
 /* Called when pjsua is started */
-void lib_on_started(pj_status_t status, const char* title)
+void PjsuaOnStarted(pj_status_t status, const char* title)
 {
     wchar_t wtitle[128];
+    char err_msg[128];
 
-    PJ_UNUSED_ARG(status);
+    if (status != PJ_SUCCESS || title == NULL) {
+	char err_str[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, err_str, sizeof(err_str));
+	pj_ansi_snprintf(err_msg, sizeof(err_msg), "%s: %s",
+			 (title?title:"App start error"), err_str);
+	title = err_msg;
+    }
 
     pj_ansi_to_unicode(title, strlen(title), wtitle, PJ_ARRAY_SIZE(wtitle));
     SetWindowText(g_hWndLbl, wtitle);
 }
 
 /* Called when pjsua is stopped */
-pj_bool_t lib_on_stopped(pj_bool_t restart, int argc, char** argv)
+void PjsuaOnStopped(pj_bool_t restart, int argc, char** argv)
 {
     if (restart) {
-	restart_argc = argc;
-	restart_argv = argv;
+	start_argc = argc;
+	start_argv = argv;
 
 	// Schedule Lib Restart
 	PostMessage(g_hWndMain, WM_APP_RESTART, 0, 0);
@@ -289,41 +288,37 @@ pj_bool_t lib_on_stopped(pj_bool_t restart, int argc, char** argv)
 	/* Destroy & quit GUI, e.g: clean up window, resources  */
 	PostMessage(g_hWndMain, WM_APP_DESTROY, 0, 0);
     }
-
-    return PJ_FALSE;
 }
 
 /* Called before pjsua initializing config. */
-void lib_on_config_init(pjsua_app_config *cfg)
+void PjsuaOnConfig(pjsua_app_config *cfg)
 {
     PJ_UNUSED_ARG(cfg);
 }
 
-void LibInit()
+void PjsuaInit()
 {
-    char* argv[] = {
-	"",
-	"--use-cli",
-	"--cli-telnet-port=0",
-	"--no-cli-console"
-    };
-    app_cfg_t app_cfg;
+    pjsua_app_cfg_t app_cfg;
     pj_status_t status;
 
+    /* Destroy pjsua app first */
+    pjsua_app_destroy();
+
+    /* Init pjsua app */
     pj_bzero(&app_cfg, sizeof(app_cfg));
-    app_cfg.argc = PJ_ARRAY_SIZE(argv);
-    app_cfg.argv = argv;
-    app_cfg.on_started = &lib_on_started;
-    app_cfg.on_stopped = &lib_on_stopped;
-    app_cfg.on_config_init = &lib_on_config_init;
+    app_cfg.argc = start_argc;
+    app_cfg.argv = start_argv;
+    app_cfg.on_started = &PjsuaOnStarted;
+    app_cfg.on_stopped = &PjsuaOnStopped;
+    app_cfg.on_config_init = &PjsuaOnConfig;
 
     SetWindowText(g_hWndLbl, _T("Initializing.."));
-    status = app_init(&app_cfg);
+    status = pjsua_app_init(&app_cfg);
     if (status != PJ_SUCCESS)
 	goto on_return;
     
     SetWindowText(g_hWndLbl, _T("Starting.."));
-    status = app_run(PJ_FALSE);
+    status = pjsua_app_run(PJ_FALSE);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -332,44 +327,10 @@ on_return:
 	SetWindowText(g_hWndLbl, _T("Initialization failed"));
 }
 
-void LibDestroy()
+void PjsuaDestroy()
 {
-    app_destroy();
+    pjsua_app_destroy();
 }
-
-void LibRestart()
-{
-    app_cfg_t app_cfg;
-    pj_status_t status;
-    
-    /* Destroy pjsua app first */
-
-    app_destroy();
-
-    /* Reinit pjsua app */
-    
-    pj_bzero(&app_cfg, sizeof(app_cfg));
-    app_cfg.argc = restart_argc;
-    app_cfg.argv = restart_argv;
-    app_cfg.on_started = &lib_on_started;
-    app_cfg.on_stopped = &lib_on_stopped;
-    app_cfg.on_config_init = &lib_on_config_init;
-
-    status = app_init(&app_cfg);
-    if (status != PJ_SUCCESS) {
-	SetWindowText(g_hWndLbl, _T("app_init() failed"));
-	return;
-    }
-	
-    /* Run pjsua app */
-
-    status = app_run(PJ_FALSE);
-    if (status != PJ_SUCCESS) {
-	SetWindowText(g_hWndLbl, _T("app_run() failed"));
-	return;
-    }
-}
-
 
 /* === MAIN === */
 
@@ -389,18 +350,21 @@ int WINAPI WinMain(
     // store the hInstance in global
     g_hInst = hInstance;
 
-    status = gui_init();
+    // Start GUI
+    status = GuiInit();
     if (status != 0)
 	goto on_return;
 
-    // Start the engine
+    // Setup args and start pjsua
+    start_argc = pjsua_app_def_argc;
+    start_argv = (char**)pjsua_app_def_argv;
     PostMessage(g_hWndMain, WM_APP_INIT, 0, 0);
 
-    status = gui_start();
+    status = GuiStart();
 	
 on_return:
-    LibDestroy();
-    gui_destroy();
+    PjsuaDestroy();
+    GuiDestroy();
 
     return status;
 }

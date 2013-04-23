@@ -32,3 +32,4 @@ pjmedia_audiodev.mmp
 /* Applications */
 //symsndtest.mmp
 pjlib_test.mmp
+../pjsip-apps/src/pjsua/symbian/group/pjsua.mmp

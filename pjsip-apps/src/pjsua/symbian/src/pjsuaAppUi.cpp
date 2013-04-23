@@ -23,22 +23,25 @@
 // ]]] end generated region [Generated Constants]
 
 #include "../../pjsua_app.h"
+#include "../../pjsua_app_config.h"
 
 /* Global vars */
 static CpjsuaAppUi *appui = NULL;
 static pj_ioqueue_t *app_ioqueue = NULL;
-static int restart_argc = 0;
-static char **restart_argv = NULL;
+static int start_argc = 0;
+static char **start_argv = NULL;
+
+static pj_status_t InitSymbSocket();
+static void DestroySymbSocket();
 
 /* Helper funtions to init/restart/destroy the pjsua */
-static void LibInitL();
-static void LibDestroyL();
-static void LibRestartL();
+static void PjsuaInitL();
+static void PjsuaDestroyL();
 
 /* pjsua app callbacks */
-static void lib_on_started(pj_status_t status, const char* title);
-static pj_bool_t lib_on_stopped(pj_bool_t restart, int argc, char** argv);
-static void lib_on_config_init(pjsua_app_config *cfg);
+static void PjsuaOnStarted(pj_status_t status, const char* title);
+static void PjsuaOnStopped(pj_bool_t restart, int argc, char** argv);
+static void PjsuaOnConfig(pjsua_app_config *cfg);
 
 /* Helper class to schedule function execution */
 class MyTimer : public CActive 
@@ -208,14 +211,24 @@ void CpjsuaAppUi::ConstructL()
 	StatusPane()->MakeVisible(EFalse);
 	Cba()->MakeVisible(EFalse);
 
-	// Schedule Lib Init
-	MyTimer::NewL(100, &LibInitL);
+	if (InitSymbSocket() != PJ_SUCCESS) {
+	    PutMsg("Failed to initialize Symbian network param.");
+	} else {	
+	    start_argc = pjsua_app_def_argc;
+	    start_argv = (char**)pjsua_app_def_argv;
+
+	    // Schedule Lib Init
+	    MyTimer::NewL(100, &PjsuaInitL);
+	}
+	
 	}
 
 /* Called by Symbian GUI framework when app is about to exit */
 void CpjsuaAppUi::PrepareToExit()
 {
-    TRAPD(result, LibDestroyL());
+    TRAPD(result, PjsuaDestroyL());
+    DestroySymbSocket();
+    CloseSTDLIB();
     CAknViewAppUi::PrepareToExit();
 }
 
@@ -231,32 +244,40 @@ static RSocketServ aSocketServer;
 static RConnection aConn;
 
 /* Called when pjsua is started */
-void lib_on_started(pj_status_t status, const char* title)
+void PjsuaOnStarted(pj_status_t status, const char* title)
 {
+    char err_msg[128];
+
+    if (status != PJ_SUCCESS || title == NULL) {
+	char err_str[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, err_str, sizeof(err_str));
+	pj_ansi_snprintf(err_msg, sizeof(err_msg), "%s: %s",
+			 (title?title:"App start error"), err_str);
+	title = err_msg;
+    }
+
     appui->PutMsg(title);
 }
 
 /* Called when pjsua is stopped */
-pj_bool_t lib_on_stopped(pj_bool_t restart, int argc, char** argv)
+void PjsuaOnStopped(pj_bool_t restart, int argc, char** argv)
 {
     if (restart) {
-	restart_argc = argc;
-	restart_argv = argv;
+	start_argc = argc;
+	start_argv = argv;
 
 	// Schedule Lib Init
-	MyTimer::NewL(100, &LibRestartL);
+	MyTimer::NewL(100, &PjsuaInitL);
     } else {
 	/* Destroy & quit GUI, e.g: clean up window, resources  */
 	appui->Exit();
     }
-
-    return PJ_FALSE;
 }
 
 /* Called before pjsua initializing config.
  * We need to override some settings here.
  */
-void lib_on_config_init(pjsua_app_config *cfg)
+void PjsuaOnConfig(pjsua_app_config *cfg)
 {
     /* Disable threading */
     cfg->cfg.thread_cnt = 0;
@@ -271,59 +292,66 @@ void lib_on_config_init(pjsua_app_config *cfg)
     cfg->cli_cfg.telnet_cfg.ioqueue = app_ioqueue; 
 }
 
-void LibInitL()
+// Set Symbian OS parameters in pjlib.
+// This must be done before pj_init() is called.
+pj_status_t InitSymbSocket()
 {
     pj_symbianos_params sym_params;
-    char* argv[] = {
-	"",
-	"--use-cli",
-	"--cli-telnet-port=0",
-	"--no-cli-console"
-    };
-    app_cfg_t app_cfg;
-    pj_status_t status;
     TInt err;
-
+    
     // Initialize RSocketServ
     if ((err=aSocketServer.Connect(32)) != KErrNone) {
-    	status = PJ_STATUS_FROM_OS(err);
-    	goto on_return;
+	return PJ_STATUS_FROM_OS(err);
     }
     
     // Open up a connection
     if ((err=aConn.Open(aSocketServer)) != KErrNone) {
 	aSocketServer.Close();
-	status = PJ_STATUS_FROM_OS(err);
-    	goto on_return;
+	return PJ_STATUS_FROM_OS(err);
     }
     if ((err=aConn.Start()) != KErrNone) {
 	aConn.Close();
-    	aSocketServer.Close();
-    	status = PJ_STATUS_FROM_OS(err);
-    	goto on_return;
+	aSocketServer.Close();
+	return PJ_STATUS_FROM_OS(err);
     }
     
-    // Set Symbian OS parameters in pjlib.
-    // This must be done before pj_init() is called.
     pj_bzero(&sym_params, sizeof(sym_params));
     sym_params.rsocketserv = &aSocketServer;
     sym_params.rconnection = &aConn;
     pj_symbianos_set_params(&sym_params);
+    
+    return PJ_SUCCESS;
+}
 
+
+void DestroySymbSocket()
+{
+    aConn.Close();
+    aSocketServer.Close();
+}
+
+
+void PjsuaInitL()
+{
+    pjsua_app_cfg_t app_cfg;
+    pj_status_t status;
+    
+    PjsuaDestroyL();
+    
     pj_bzero(&app_cfg, sizeof(app_cfg));
-    app_cfg.argc = PJ_ARRAY_SIZE(argv);
-    app_cfg.argv = argv;
-    app_cfg.on_started = &lib_on_started;
-    app_cfg.on_stopped = &lib_on_stopped;
-    app_cfg.on_config_init = &lib_on_config_init;
+    app_cfg.argc = start_argc;
+    app_cfg.argv = start_argv;
+    app_cfg.on_started = &PjsuaOnStarted;
+    app_cfg.on_stopped = &PjsuaOnStopped;
+    app_cfg.on_config_init = &PjsuaOnConfig;
 
     appui->PutMsg("Initializing..");
-    status = app_init(&app_cfg);
+    status = pjsua_app_init(&app_cfg);
     if (status != PJ_SUCCESS)
 	goto on_return;
     
     appui->PutMsg("Starting..");
-    status = app_run(PJ_FALSE);
+    status = pjsua_app_run(PJ_FALSE);
     if (status != PJ_SUCCESS)
 	goto on_return;
 
@@ -332,49 +360,11 @@ on_return:
 	appui->PutMsg("Initialization failed");
 }
 
-void LibDestroyL()
+void PjsuaDestroyL()
 {
     if (app_ioqueue) {
 	pj_ioqueue_destroy(app_ioqueue);
 	app_ioqueue = NULL;
     }
-    app_destroy();
-    CloseSTDLIB();
-}
-
-void LibRestartL()
-{
-    app_cfg_t app_cfg;
-    pj_status_t status;
-    
-    /* Destroy pjsua app first */
-
-    if (app_ioqueue) {
-	pj_ioqueue_destroy(app_ioqueue);
-	app_ioqueue = NULL;
-    }
-    app_destroy();
-
-    /* Reinit pjsua app */
-    
-    pj_bzero(&app_cfg, sizeof(app_cfg));
-    app_cfg.argc = restart_argc;
-    app_cfg.argv = restart_argv;
-    app_cfg.on_started = &lib_on_started;
-    app_cfg.on_stopped = &lib_on_stopped;
-    app_cfg.on_config_init = &lib_on_config_init;
-
-    status = app_init(&app_cfg);
-    if (status != PJ_SUCCESS) {
-	appui->PutMsg("app_init() failed");
-	return;
-    }
-	
-    /* Run pjsua app */
-
-    status = app_run(PJ_FALSE);
-    if (status != PJ_SUCCESS) {
-	appui->PutMsg("app_run() failed");
-	return;
-    }
+    pjsua_app_destroy();
 }

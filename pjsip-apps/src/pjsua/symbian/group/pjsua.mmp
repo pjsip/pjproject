@@ -101,5 +101,5 @@ STATICLIBRARY		libresample.lib
 
 SOURCEPATH		..\..
 
-SOURCE 			pjsua_cli.c pjsua_legacy.c
-SOURCE 			pjsua_app.c pjsua_common.c pjsua_config.c
+SOURCE 			pjsua_app_cli.c pjsua_app_legacy.c
+SOURCE 			pjsua_app.c pjsua_app_common.c pjsua_app_config.c
