@@ -437,11 +437,17 @@ static int pb_thread_func (void *arg)
     char *buf 		       	= stream->pb_buf;
     pj_timestamp tstamp;
     int result = 0;
+    int policy;
+    struct sched_param param;
+
+    TRACE_((THIS_FILE, "pb_thread_func: size = %d ", size));
+
+    pthread_getschedparam(pthread_self(), &policy, &param);
+    param.sched_priority = 18;
+    pthread_setschedparam (pthread_self(), policy, &param);
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;
-
-    TRACE_((THIS_FILE, "pb_thread_func: size = %d ", size));
 
     /* Do the final initialization now the thread has started. */
     if ((result = snd_pcm_plugin_prepare(stream->pb_pcm,
@@ -526,24 +532,14 @@ static int ca_thread_func (void *arg)
     char *buf 		       = stream->ca_buf;
     pj_timestamp tstamp;
     int result;
+    int policy;
     struct sched_param param;
-    pthread_t *thid;
 
     TRACE_((THIS_FILE, "ca_thread_func: size = %d ", size));
 
-    thid = (pthread_t*) pj_thread_get_os_handle (pj_thread_this());
-    param.sched_priority = sched_get_priority_max (SCHED_RR);
-
-    result = pthread_setschedparam (*thid, SCHED_RR, &param);
-    if (result) {
-        if (result == EPERM) {
-            PJ_LOG (4,(THIS_FILE, "Unable to increase thread priority, "
-                                  "root access needed."));
-        } else {
-            PJ_LOG (4,(THIS_FILE, "Unable to increase thread priority, "
-                                  "error: %d", result));
-        }
-    }
+    pthread_getschedparam(pthread_self(), &policy, &param);
+    param.sched_priority = 18;
+    pthread_setschedparam (pthread_self(), policy, &param);
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;
@@ -560,7 +556,7 @@ static int ca_thread_func (void *arg)
     while (!stream->quit) {
         pjmedia_frame frame;
 
-        pj_bzero (buf, size);
+        //pj_bzero (buf, size);
 
         /* read the input device */
         result = snd_pcm_plugin_read(stream->ca_pcm, buf,size);
@@ -751,11 +747,11 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     /* Request VoIP compatible capabilities */
     pp.mode = SND_PCM_MODE_BLOCK;
     pp.channel = SND_PCM_CHANNEL_PLAYBACK;
-    pp.start_mode = SND_PCM_START_DATA;
+    pp.start_mode = SND_PCM_START_FULL;
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
     pp.buf.block.frag_size = param->samples_per_frame * param->bits_per_sample / 8;
-    /* RIM recommends maximum of 3 */
-    pp.buf.block.frags_max = 3;
+    /* RIM recommends maximum of 5 */
+    pp.buf.block.frags_max = 5;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
     pp.format.rate = param->clock_rate;
@@ -860,12 +856,12 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     /* Blocking read */
     pp.mode = SND_PCM_MODE_BLOCK;
     pp.channel = SND_PCM_CHANNEL_CAPTURE;
-    pp.start_mode = SND_PCM_START_DATA;
+    pp.start_mode = SND_PCM_START_FULL;
     /* Auto-recover from errors */
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
     pp.buf.block.frag_size = param->samples_per_frame * param->bits_per_sample / 8;
     /* From January 2013 gold OS release. RIM recommend these for capture */
-    pp.buf.block.frags_max = 1;
+    pp.buf.block.frags_max = -1;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
     pp.format.rate = param->clock_rate;
