@@ -3708,19 +3708,19 @@
 				</FileConfiguration>
 			</File>
 			<File
-				RelativePath="..\src\pjsua\pjsua_cli.c"
+				RelativePath="..\src\pjsua\pjsua_app_cli.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\pjsua\pjsua_common.c"
+				RelativePath="..\src\pjsua\pjsua_app_common.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\pjsua\pjsua_config.c"
+				RelativePath="..\src\pjsua\pjsua_app_config.c"
 				>
 			</File>
 			<File
-				RelativePath="..\src\pjsua\pjsua_legacy.c"
+				RelativePath="..\src\pjsua\pjsua_app_legacy.c"
 				>
 			</File>
 		</Filter>
@@ -3733,7 +3733,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\src\pjsua\pjsua_common.h"
+				RelativePath="..\src\pjsua\pjsua_app_common.h"
 				>
 			</File>
 		</Filter>

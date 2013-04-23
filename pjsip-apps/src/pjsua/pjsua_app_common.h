@@ -16,8 +16,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#ifndef __PJSUA_COMMON_H__
-#define __PJSUA_COMMON_H__
+#ifndef __PJSUA_APP_COMMON_H__
+#define __PJSUA_APP_COMMON_H__
 
 #include <pjsua-lib/pjsua.h>
 
@@ -167,49 +167,45 @@ extern pjsua_call_setting   call_opt;
 extern pjsua_msg_data	    msg_data;
 extern pj_bool_t	    app_running;
 
-PJ_DECL(int) my_atoi(const char *cs);
-PJ_DECL(pj_bool_t) find_next_call();
-PJ_DECL(pj_bool_t) find_prev_call();
-PJ_DECL(void) send_request(char *cstr_method, const pj_str_t *dst_uri);
-PJ_DECL(void) log_call_dump(int call_id);
-PJ_DECL(int) write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
-PJ_DECL(void) app_config_init_video(pjsua_acc_config *acc_cfg);
-PJ_DECL(void) arrange_window(pjsua_vid_win_id wid);
+int my_atoi(const char *cs);
+pj_bool_t find_next_call();
+pj_bool_t find_prev_call();
+void send_request(char *cstr_method, const pj_str_t *dst_uri);
+void log_call_dump(int call_id);
+int write_settings(pjsua_app_config *cfg, char *buf, pj_size_t max);
+void app_config_init_video(pjsua_acc_config *acc_cfg);
+void arrange_window(pjsua_vid_win_id wid);
 
 /** Defined in pjsua_cli_cmd.c **/
-PJ_DECL(pj_bool_t) is_cli_inited();
+pj_bool_t is_cli_inited();
 
 /** Defined in pjsua_config.c **/
 /** This is to load the configuration **/
-PJ_DECL(pj_status_t) load_config(int argc,
-				 char **argv,
-				 pj_str_t *uri_arg);
+pj_status_t load_config(int argc, char **argv, pj_str_t *uri_arg);
 
 /** Pjsua app callback **/
 /** This callback is called when CLI is started. **/
-PJ_DECL(void) cli_on_started(pj_status_t status);
+void cli_on_started(pj_status_t status);
 
 /** This callback is called when "shutdown"/"restart" command is invoked **/
-PJ_DECL(pj_bool_t) cli_on_stopped(pj_bool_t restart, int argc, char **argv);
+void cli_on_stopped(pj_bool_t restart, int argc, char **argv);
 
 /** This callback is called when "quit"/"restart" command is invoked **/
-PJ_DECL(pj_bool_t) legacy_on_stopped(pj_bool_t restart);
+void legacy_on_stopped(pj_bool_t restart);
 
 /** Pjsua cli method **/
-PJ_DECL(pj_status_t) cli_init();
-PJ_DECL(pj_status_t) cli_main(pj_bool_t wait_telnet_cli);
-PJ_DECL(void) cli_destroy();
-PJ_DECL(void) cli_get_info(char *info, pj_size_t size); 
+pj_status_t cli_init();
+pj_status_t cli_main(pj_bool_t wait_telnet_cli);
+void cli_destroy();
+void cli_get_info(char *info, pj_size_t size); 
 
 /** Legacy method **/
-PJ_DECL(void) legacy_main();
+void legacy_main();
 
 #if PJSUA_HAS_VIDEO
-PJ_DECL(void) vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, 
-			    const char *title);
-PJ_DECL(void) vid_list_devs();
-PJ_DECL(void) app_config_show_video(int acc_id, 
-				    const pjsua_acc_config *acc_cfg);
+void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title);
+void vid_list_devs();
+void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg);
 #endif
 
 #ifdef HAVE_MULTIPART_TEST
@@ -217,7 +213,7 @@ PJ_DECL(void) app_config_show_video(int acc_id,
     * Enable multipart in msg_data and add a dummy body into the
     * multipart bodies.
     */
-    PJ_DECL(void) add_multipart(pjsua_msg_data *msg_data);
+    void add_multipart(pjsua_msg_data *msg_data);
 #  define TEST_MULTIPART(msg_data)	add_multipart(msg_data)
 #else
 #  define TEST_MULTIPART(msg_data)
@@ -226,5 +222,5 @@ PJ_DECL(void) app_config_show_video(int acc_id,
 
 PJ_END_DECL
     
-#endif	/* __PJSUA_COMMON_H__ */
+#endif	/* __PJSUA_APP_COMMON_H__ */
 

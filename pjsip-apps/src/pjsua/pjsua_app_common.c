@@ -18,9 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-#include "pjsua_common.h"
+#include "pjsua_app_common.h"
 
-#define THIS_FILE	"pjsua_common.c"
+#define THIS_FILE	"pjsua_app_common.c"
 
 #if defined(PJMEDIA_HAS_RTCP_XR) && (PJMEDIA_HAS_RTCP_XR != 0)
 #   define SOME_BUF_SIZE	(1024 * 10)
@@ -38,7 +38,7 @@ pjsua_app_config    app_config;
 pjsua_call_setting  call_opt;
 pjsua_msg_data	    msg_data;
 
-PJ_DEF(int) my_atoi(const char *cs)
+int my_atoi(const char *cs)
 {
     pj_str_t s;
 
@@ -58,7 +58,7 @@ PJ_DEF(int) my_atoi(const char *cs)
  * Find next call when current call is disconnected or when user
  * press ']'
  */
-PJ_DEF(pj_bool_t) find_next_call()
+pj_bool_t find_next_call()
 {
     int i, max;
 
@@ -81,7 +81,7 @@ PJ_DEF(pj_bool_t) find_next_call()
     return PJ_FALSE;
 }
 
-PJ_DEF(pj_bool_t) find_prev_call()
+pj_bool_t find_prev_call()
 {
     int i, max;
 
@@ -107,7 +107,7 @@ PJ_DEF(pj_bool_t) find_prev_call()
 /*
  * Send arbitrary request to remote host
  */
-PJ_DEF(void) send_request(char *cstr_method, const pj_str_t *dst_uri)
+void send_request(char *cstr_method, const pj_str_t *dst_uri)
 {
     pj_str_t str_method;
     pjsip_method method;
@@ -134,7 +134,7 @@ PJ_DEF(void) send_request(char *cstr_method, const pj_str_t *dst_uri)
  * printing it is a bit tricky, it should be printed part by part as long 
  * as the logger can accept.
  */
-PJ_DEF(void) log_call_dump(int call_id) 
+void log_call_dump(int call_id) 
 {
     unsigned call_dump_len;
     unsigned part_len;
@@ -167,7 +167,7 @@ PJ_DEF(void) log_call_dump(int call_id)
 }
 
 #ifdef PJSUA_HAS_VIDEO
-PJ_DEF(void) app_config_init_video(pjsua_acc_config *acc_cfg)
+void app_config_init_video(pjsua_acc_config *acc_cfg)
 {
     acc_cfg->vid_in_auto_show = app_config.vid.in_auto_show;
     acc_cfg->vid_out_auto_transmit = app_config.vid.out_auto_transmit;
@@ -187,7 +187,7 @@ PJ_DEF(void) app_config_init_video(pjsua_acc_config *acc_cfg)
     }
 }
 #else
-PJ_DEF(void) app_config_init_video(pjsua_acc_config *acc_cfg)
+void app_config_init_video(pjsua_acc_config *acc_cfg)
 {
     PJ_UNUSED_ARG(acc_cfg);
 }
@@ -198,7 +198,7 @@ PJ_DEF(void) app_config_init_video(pjsua_acc_config *acc_cfg)
    * Enable multipart in msg_data and add a dummy body into the
    * multipart bodies.
    */
-  PJ_DEF(void) add_multipart(pjsua_msg_data *msg_data)
+  void add_multipart(pjsua_msg_data *msg_data)
   {
       static pjsip_multipart_part *alt_part;
 
@@ -224,7 +224,7 @@ PJ_DEF(void) app_config_init_video(pjsua_acc_config *acc_cfg)
  *   -1:    arrange all windows
  *   != -1: arrange only this window id
  */
-PJ_DEF(void) arrange_window(pjsua_vid_win_id wid)
+void arrange_window(pjsua_vid_win_id wid)
 {
 #if PJSUA_HAS_VIDEO
     pjmedia_coord pos;
@@ -258,8 +258,7 @@ PJ_DEF(void) arrange_window(pjsua_vid_win_id wid)
 
 
 #if PJSUA_HAS_VIDEO
-PJ_DEF(void) vid_print_dev(int id, const pjmedia_vid_dev_info *vdi,
-                          const char *title)
+void vid_print_dev(int id, const pjmedia_vid_dev_info *vdi, const char *title)
 {
     char capnames[120];
     char formats[120];
@@ -305,7 +304,7 @@ PJ_DEF(void) vid_print_dev(int id, const pjmedia_vid_dev_info *vdi,
     PJ_LOG(3,(THIS_FILE, "    Supported formats: %s", formats));
 }
 
-PJ_DEF(void) vid_list_devs()
+void vid_list_devs()
 {
     unsigned i, count;
     pjmedia_vid_dev_info vdi;
@@ -337,7 +336,7 @@ PJ_DEF(void) vid_list_devs()
     }
 }
 
-PJ_DEF(void) app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
+void app_config_show_video(int acc_id, const pjsua_acc_config *acc_cfg)
 {
     PJ_LOG(3,(THIS_FILE,
 	      "Account %d:\n"

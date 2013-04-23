@@ -46,15 +46,13 @@
 static void stereo_demo();
 #endif
 
-pj_status_t app_destroy(void);
-
 static void ringback_start(pjsua_call_id call_id);
 static void ring_start(pjsua_call_id call_id);
 static void ring_stop(pjsua_call_id call_id);
-static pj_status_t pjsua_app_init();
-static pj_status_t pjsua_app_destroy();
+static pj_status_t app_init();
+static pj_status_t app_destroy();
 
-static app_cfg_t app_cfg;
+static pjsua_app_cfg_t app_cfg;
 pj_str_t		    uri_arg;
 pj_bool_t		    app_running	= PJ_FALSE;
 
@@ -1216,7 +1214,7 @@ static pjsip_module mod_default_handler =
 /** CLI callback **/
 
 /* Called on CLI (re)started, e.g: initial start, after iOS bg */
-PJ_DEF(void) cli_on_started(pj_status_t status)
+void cli_on_started(pj_status_t status)
 {
     /* Notify app */
     if (app_cfg.on_started) {
@@ -1235,27 +1233,21 @@ PJ_DEF(void) cli_on_started(pj_status_t status)
 }
 
 /* Called on CLI quit */
-PJ_DEF(pj_bool_t) cli_on_stopped(pj_bool_t restart, int argc, char* argv[])
+void cli_on_stopped(pj_bool_t restart, int argc, char* argv[])
 {
     /* Notify app */
     if (app_cfg.on_stopped)
-	return (*app_cfg.on_stopped)(restart, argc, argv);
-
-    return PJ_SUCCESS;
+	(*app_cfg.on_stopped)(restart, argc, argv);
 }
 
 
 /* Called on pjsua legacy quit */
-PJ_DEF(pj_bool_t) legacy_on_stopped(pj_bool_t restart)
+void legacy_on_stopped(pj_bool_t restart)
 {
     /* Notify app */
     if (app_cfg.on_stopped)
-	return (*app_cfg.on_stopped)(restart, 0, NULL);
-
-    return PJ_SUCCESS;
+	(*app_cfg.on_stopped)(restart, 1, NULL);
 }
-
-
 
 /*****************************************************************************
  * Public API
@@ -1282,7 +1274,7 @@ int stdout_refresh_proc(void *arg)
     return 0;
 }
 
-static pj_status_t pjsua_app_init()
+static pj_status_t app_init()
 {
     pjsua_transport_id transport_id = -1;
     pjsua_transport_config tcp_cfg;
@@ -1844,12 +1836,12 @@ on_error:
     return status;
 }
 
-PJ_DEF(pj_status_t) app_init(const app_cfg_t *cfg)
+pj_status_t pjsua_app_init(const pjsua_app_cfg_t *cfg)
 {
     pj_status_t status;
     pj_memcpy(&app_cfg, cfg, sizeof(app_cfg));
 
-    status = pjsua_app_init();
+    status = app_init();
     if (status != PJ_SUCCESS)
 	return status;
 
@@ -1860,7 +1852,7 @@ PJ_DEF(pj_status_t) app_init(const app_cfg_t *cfg)
     return status;
 }
 
-pj_status_t app_run(pj_bool_t wait_telnet_cli)
+pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli)
 {
     pj_thread_t *stdout_refresh_thread = NULL;
     pj_status_t status;
@@ -1916,7 +1908,7 @@ on_return:
     return status;
 }
 
-static pj_status_t pjsua_app_destroy()
+static pj_status_t app_destroy()
 {
     pj_status_t status = PJ_SUCCESS;
     unsigned i;
@@ -1981,11 +1973,11 @@ static pj_status_t pjsua_app_destroy()
     return status;
 }
 
-pj_status_t app_destroy()
+pj_status_t pjsua_app_destroy()
 {
     pj_status_t status;
 
-    status = pjsua_app_destroy();
+    status = app_destroy();
 
     if (app_config.use_cli) {	
 	cli_destroy();

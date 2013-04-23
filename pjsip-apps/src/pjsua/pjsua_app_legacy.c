@@ -19,9 +19,9 @@
  */
 
 #include <pjsua-lib/pjsua.h>
-#include "pjsua_common.h"
+#include "pjsua_app_common.h"
 
-#define THIS_FILE	"pjsua_legacy.c"
+#define THIS_FILE	"pjsua_app_legacy.c"
 
 static pj_bool_t	cmd_echo;
 
@@ -1669,7 +1669,7 @@ static void ui_call_redirect(char menuin[])
 /*
  * Main "user interface" loop.
  */
-PJ_DEF(void) legacy_main()
+void legacy_main()
 {    
     char menuin[80];    
     char buf[128];    

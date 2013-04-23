@@ -17,9 +17,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
-#include "pjsua_common.h"
+#include "pjsua_app_common.h"
 
-#define THIS_FILE	"pjsua_config.c"
+#define THIS_FILE	"pjsua_app_config.c"
 
 #define MAX_APP_OPTIONS 128
 
@@ -1478,7 +1478,7 @@ static pj_status_t parse_config(int argc, char *argv[], pj_str_t *uri_arg)
     return status;
 }
 
-PJ_DEF(pj_status_t) load_config(int argc,
+pj_status_t load_config(int argc,
 				char **argv,
 				pj_str_t *uri_arg)
 {
@@ -1726,7 +1726,7 @@ static void write_account_settings(int acc_index, pj_str_t *result)
 /*
  * Write settings.
  */
-PJ_DEF(int) write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
+int write_settings(pjsua_app_config *config, char *buf, pj_size_t max)
 {
     unsigned acc_index;
     unsigned i;

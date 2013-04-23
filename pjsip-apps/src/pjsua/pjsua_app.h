@@ -24,14 +24,14 @@
  * Interface for user application to use pjsua with CLI/menu based UI. 
  */
 
-#include "pjsua_common.h"
+#include "pjsua_app_common.h"
 
 PJ_BEGIN_DECL
 
 /**
  * This structure contains the configuration of application.
  */
-typedef struct app_cfg_t
+typedef struct pjsua_app_cfg_t
 {
     /**
      * The number of runtime arguments passed to the application.
@@ -55,20 +55,20 @@ typedef struct app_cfg_t
      * GUI app needs to use a timer mechanism to wait before invoking the 
      * cleanup procedure.
      */
-    pj_bool_t (*on_stopped)(pj_bool_t restart, int argc, char** argv);
+    void (*on_stopped)(pj_bool_t restart, int argc, char** argv);
 
     /**
      * This will enable application to supply customize configuration other than
      * the basic configuration provided by pjsua. 
      */
     void (*on_config_init)(pjsua_app_config *cfg);
-} app_cfg_t;
+} pjsua_app_cfg_t;
 
 /**
  * This will initiate the pjsua and the user interface (CLI/menu UI) based on 
  * the provided configuration.
  */
-PJ_DECL(pj_status_t) app_init(const app_cfg_t *app_cfg);
+pj_status_t pjsua_app_init(const pjsua_app_cfg_t *app_cfg);
 
 /**
  * This will run the CLI/menu based UI.
@@ -76,12 +76,12 @@ PJ_DECL(pj_status_t) app_init(const app_cfg_t *app_cfg);
  * or wait until user invoke the "shutdown"/"restart" command. GUI based app
  * should define this param as PJ_FALSE.
  */
-PJ_DECL(pj_status_t) app_run(pj_bool_t wait_telnet_cli);
+pj_status_t pjsua_app_run(pj_bool_t wait_telnet_cli);
 
 /**
  * This will destroy/cleanup the application library.
  */
-PJ_DECL(pj_status_t) app_destroy();
+pj_status_t pjsua_app_destroy();
 
 PJ_END_DECL
     

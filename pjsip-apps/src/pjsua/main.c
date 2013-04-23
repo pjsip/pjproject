@@ -24,7 +24,7 @@
 static pj_bool_t	    running = PJ_TRUE;
 static pj_status_t	    receive_end_sig;
 static pj_thread_t	    *sig_thread;
-static app_cfg_t	    cfg;
+static pjsua_app_cfg_t	    cfg;
 
 /* Called when CLI (re)started */
 void on_app_started(pj_status_t status, const char *msg)
@@ -32,13 +32,12 @@ void on_app_started(pj_status_t status, const char *msg)
     pj_perror(3, THIS_FILE, status, (msg)?msg:"");
 }
 
-pj_bool_t on_app_stopped(pj_bool_t restart, int argc, char** argv)
+void on_app_stopped(pj_bool_t restart, int argc, char** argv)
 {
     cfg.argc = argc;
     cfg.argv = argv;
 
     running = restart;
-    return PJ_TRUE;
 }
 
 #if defined(PJ_WIN32) && PJ_WIN32!=0
@@ -60,7 +59,7 @@ static BOOL WINAPI CtrlHandler(DWORD fdwCtrlType)
 	    pj_thread_register("ctrlhandler", handler_desc, &sig_thread);
 	    PJ_LOG(3,(THIS_FILE, "Ctrl-C detected, quitting.."));
 	    receive_end_sig = PJ_TRUE;
-            app_destroy();	    
+            pjsua_app_destroy();	    
 	    ExitProcess(1);
             PJ_UNREACHED(return TRUE;)
  
@@ -104,19 +103,19 @@ int main(int argc, char *argv[])
     setup_socket_signal();
 
     while (running) {        
-	status = app_init(&cfg);
+	status = pjsua_app_init(&cfg);
 	if (status == PJ_SUCCESS) {
-	    status = app_run(PJ_TRUE);
+	    status = pjsua_app_run(PJ_TRUE);
 	} else {
 	    pj_perror(3, THIS_FILE, status, "Failed init");
 	    running = PJ_FALSE;
 	}
 
 	if (!receive_end_sig) {
-	    app_destroy();
+	    pjsua_app_destroy();
 
 	    /* This is on purpose */
-	    app_destroy();
+	    pjsua_app_destroy();
 	} else {
 	    pj_thread_join(sig_thread);
 	}

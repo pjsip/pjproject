@@ -18,9 +18,9 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA 
  */
 
-#include "pjsua_common.h"
+#include "pjsua_app_common.h"
 
-#define THIS_FILE	"pjsua_cli.c"
+#define THIS_FILE	"pjsua_app_cli.c"
 
 #define CHECK_PJSUA_RUNNING() if (pjsua_get_state()!=PJSUA_STATE_RUNNING) \
 				  return PJ_EINVALIDOP
@@ -160,7 +160,8 @@ PJ_DEF(void) cli_get_info(char *info, pj_size_t size)
     pj_cli_telnet_get_info(telnet_front_end, &telnet_info);
 
     pj_ansi_snprintf(info, size, "Telnet to %.*s:%d",
-		     telnet_info.ip_address.slen, telnet_info.ip_address.ptr, 
+		     (int)telnet_info.ip_address.slen, 
+		     telnet_info.ip_address.ptr, 
 		     telnet_info.port);
 }
 
