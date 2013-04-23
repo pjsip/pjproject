@@ -382,12 +382,16 @@ static void dump_media_session(const char *indent,
 		    {
 			pjmedia_srtp_info *srtp_info =
 				    (pjmedia_srtp_info*) tp_info.spc_info[j].buffer;
+			const char *policy_name = srtp_info->tx_policy.name.ptr;
+
+			if (!policy_name)
+			    policy_name = "";
 
 			len = pj_ansi_snprintf(p, end-p,
 					       "   %s  SRTP status: %s Crypto-suite: %s",
 					       indent,
 					       (srtp_info->active?"Active":"Not active"),
-					       srtp_info->tx_policy.name.ptr);
+					       policy_name);
 			if (len > 0 && len < end-p) {
 			    p += len;
 			    *p++ = '\n';
