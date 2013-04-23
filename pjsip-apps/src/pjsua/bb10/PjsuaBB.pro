@@ -5,10 +5,10 @@ CONFIG += qt warn_on cascades10
 include(config.pri)
 
 SOURCES +=  ../../pjsua_app.c \
-            ../../pjsua_cli.c \
-            ../../pjsua_common.c \
-            ../../pjsua_config.c \
-            ../../pjsua_legacy.c
+            ../../pjsua_app_cli.c \
+            ../../pjsua_app_common.c \
+            ../../pjsua_app_config.c \
+            ../../pjsua_app_legacy.c
 
 device {
     CONFIG(debug, debug|release) {

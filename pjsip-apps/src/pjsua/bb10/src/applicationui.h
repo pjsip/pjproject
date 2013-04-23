@@ -45,9 +45,9 @@ private:
     void pjsuaDestroy();
 
     /* pjsua app callbacks */
-    static void 	pjsuaOnStartedCb(pj_status_t status, const char* msg);
-    static pj_bool_t 	pjsuaOnStoppedCb(pj_bool_t restart, int argc, char** argv);
-    static void 	pjsuaOnAppConfigCb(pjsua_app_config *cfg);
+    static void pjsuaOnStartedCb(pj_status_t status, const char* msg);
+    static void pjsuaOnStoppedCb(pj_bool_t restart, int argc, char** argv);
+    static void pjsuaOnAppConfigCb(pjsua_app_config *cfg);
 };
 
 

@@ -40,8 +40,8 @@ void ApplicationUI::pjsuaOnStartedCb(pj_status_t status, const char* msg)
 }
 
 
-pj_bool_t ApplicationUI::pjsuaOnStoppedCb(pj_bool_t restart,
-					  int argc, char** argv)
+void ApplicationUI::pjsuaOnStoppedCb(pj_bool_t restart,
+				     int argc, char** argv)
 {
     PJ_LOG(3,("ipjsua", "CLI %s request", (restart? "restart" : "shutdown")));
     if (restart) {
@@ -56,8 +56,6 @@ pj_bool_t ApplicationUI::pjsuaOnStoppedCb(pj_bool_t restart,
 	bb::cascades::Application *app = bb::cascades::Application::instance();
 	app->quit();
     }
-
-    return PJ_TRUE;
 }
 
 
@@ -65,6 +63,7 @@ void ApplicationUI::pjsuaOnAppConfigCb(pjsua_app_config *cfg)
 {
     PJ_UNUSED_ARG(cfg);
 }
+
 
 void ApplicationUI::extRestartRequest(int argc, char **argv)
 {
@@ -74,12 +73,13 @@ void ApplicationUI::extRestartRequest(int argc, char **argv)
 			      Qt::QueuedConnection);
 }
 
+
 void ApplicationUI::pjsuaStart()
 {
     // TODO: read from config?
     const char **argv = pjsua_app_def_argv;
     int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
-    app_cfg_t app_cfg;
+    pjsua_app_cfg_t app_cfg;
     pj_status_t status;
 
     isShuttingDown = false;
@@ -97,21 +97,21 @@ void ApplicationUI::pjsuaStart()
     app_cfg.on_stopped = &pjsuaOnStoppedCb;
     app_cfg.on_config_init = &pjsuaOnAppConfigCb;
 
-    status = app_init(&app_cfg);
+    status = pjsua_app_init(&app_cfg);
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	displayMsg(QString("Init error:") + errmsg);
-	app_destroy();
+	pjsua_app_destroy();
 	return;
     }
 
-    status = app_run(PJ_FALSE);
+    status = pjsua_app_run(PJ_FALSE);
     if (status != PJ_SUCCESS) {
 	char errmsg[PJ_ERR_MSG_SIZE];
 	pj_strerror(status, errmsg, sizeof(errmsg));
 	displayMsg(QString("Error:") + errmsg);
-	app_destroy();
+	pjsua_app_destroy();
     }
 
     restartArgv = NULL;
@@ -120,8 +120,9 @@ void ApplicationUI::pjsuaStart()
 
 void ApplicationUI::pjsuaDestroy()
 {
-    app_destroy();
+    pjsua_app_destroy();
 }
+
 
 ApplicationUI::ApplicationUI(bb::cascades::Application *app)
 : QObject(app), isShuttingDown(false), restartArgv(NULL), restartArgc(0)
@@ -138,15 +139,18 @@ ApplicationUI::ApplicationUI(bb::cascades::Application *app)
     pjsuaStart();
 }
 
+
 ApplicationUI::~ApplicationUI()
 {
     instance_ = NULL;
 }
 
+
 ApplicationUI* ApplicationUI::instance()
 {
     return instance_;
 }
+
 
 void ApplicationUI::aboutToQuit()
 {
@@ -157,6 +161,7 @@ void ApplicationUI::aboutToQuit()
     }
 }
 
+
 void ApplicationUI::displayMsg(const QString &msg)
 {
     bb::cascades::Application *app = bb::cascades::Application::instance();
@@ -165,6 +170,7 @@ void ApplicationUI::displayMsg(const QString &msg)
 	telnetMsg->setText(msg);
     }
 }
+
 
 void ApplicationUI::restartPjsua()
 {
