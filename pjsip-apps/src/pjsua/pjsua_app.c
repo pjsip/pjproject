@@ -1911,6 +1911,7 @@ on_return:
 	stdout_refresh_quit = PJ_TRUE;
 	pj_thread_join(stdout_refresh_thread);
 	pj_thread_destroy(stdout_refresh_thread);
+	stdout_refresh_quit = PJ_FALSE;
     }
     return status;
 }

@@ -10,111 +10,136 @@
 
 using namespace bb::cascades;
 
-#include "../../pjsua_common.h"
-
-extern pj_cli_telnet_on_started on_started_cb;
-extern pj_cli_on_quit           on_quit_cb;
-
-extern "C" int main_func(int argc, char *argv[]);
-
+/* appUI singleton */
 ApplicationUI *ApplicationUI::instance_;
 
-class CliThread : public QThread
-{
-    Q_OBJECT
-public:
-    virtual ~CliThread() {}
-protected:
-     void run();
-};
+#include "../../pjsua_app_config.h"
 
-static void bb10_show_msg(const char *msg)
+void ApplicationUI::extDisplayMsg(const char *msg)
 {
     /* Qt's way to invoke method from "foreign" thread */
-    QMetaObject::invokeMethod((QObject*)ApplicationUI::instance(), "displayMsg",
-			      Qt::QueuedConnection,
+    QMetaObject::invokeMethod((QObject*)ApplicationUI::instance(),
+			      "displayMsg", Qt::AutoConnection,
 			      Q_ARG(QString,msg));
 }
 
-static void bb10_telnet_started(pj_cli_telnet_info *telnet_info)
+
+void ApplicationUI::pjsuaOnStartedCb(pj_status_t status, const char* msg)
 {
-    char msg[64];
+    char errmsg[PJ_ERR_MSG_SIZE];
 
-    pj_ansi_snprintf(msg, sizeof(msg),
-		     "Telnet to %.*s:%d",
-	    	     (int)telnet_info->ip_address.slen,
-	    	     telnet_info->ip_address.ptr,
-	    	     telnet_info->port);
+    if (status != PJ_SUCCESS && (!msg || !*msg)) {
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(3,(THIS_FILE, "Error: %s", errmsg));
+	msg = errmsg;
+    } else {
+	PJ_LOG(3,(THIS_FILE, "Started: %s", msg));
+    }
 
-    PJ_LOG(3,(THIS_FILE, "Started: %s", msg));
-
-    bb10_show_msg(msg);
+    ApplicationUI::extDisplayMsg(msg);
 }
 
-static void bb10_on_quit (pj_bool_t is_restarted)
+
+pj_bool_t ApplicationUI::pjsuaOnStoppedCb(pj_bool_t restart,
+					  int argc, char** argv)
 {
-    PJ_LOG(3,("ipjsua", "CLI quit, restart(%d)", is_restarted));
-    if (!is_restarted) {
-	bb10_show_msg("Shutting down..");
+    PJ_LOG(3,("ipjsua", "CLI %s request", (restart? "restart" : "shutdown")));
+    if (restart) {
+	ApplicationUI::extDisplayMsg("Restarting..");
+	pj_thread_sleep(100);
+	ApplicationUI::instance()->extRestartRequest(argc, argv);
+    } else {
+	ApplicationUI::extDisplayMsg("Shutting down..");
+	pj_thread_sleep(100);
 	ApplicationUI::instance()->isShuttingDown = true;
+
 	bb::cascades::Application *app = bb::cascades::Application::instance();
 	app->quit();
     }
+
+    return PJ_TRUE;
 }
 
-void CliThread::run()
+
+void ApplicationUI::pjsuaOnAppConfigCb(pjsua_app_config *cfg)
+{
+    PJ_UNUSED_ARG(cfg);
+}
+
+void ApplicationUI::extRestartRequest(int argc, char **argv)
+{
+    restartArgc = argc;
+    restartArgv = argv;
+    QMetaObject::invokeMethod((QObject*)this, "restartPjsua",
+			      Qt::QueuedConnection);
+}
+
+void ApplicationUI::pjsuaStart()
 {
     // TODO: read from config?
-    const char *argv[] = { "pjsuabb",
-			   "--use-cli",
-			   "--no-cli-console",
-			   "--cli-telnet-port=2323",
-			   "--no-vad",
-			   "--add-buddy=sip:169.254.0.2",
-			   "--quality=4",
-			   //(char*)"--dis-codec=*",
-			   //(char*)"--add-codec=g722",
-			    NULL };
-    int argc = PJ_ARRAY_SIZE(argv) -1;
-    pj_thread_desc thread_desc;
-    pj_thread_t *thread;
+    const char **argv = pjsua_app_def_argv;
+    int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
+    app_cfg_t app_cfg;
+    pj_status_t status;
 
-    pj_thread_register("CliThread", thread_desc, &thread);
-    // Wait UI to be created
-    pj_thread_sleep(100);
+    isShuttingDown = false;
+    displayMsg("Starting..");
 
-    on_started_cb = &bb10_telnet_started;
-    on_quit_cb = &bb10_on_quit;
-    main_func(argc, (char**)argv);
+    pj_bzero(&app_cfg, sizeof(app_cfg));
+    if (restartArgc) {
+	app_cfg.argc = restartArgc;
+	app_cfg.argv = restartArgv;
+    } else {
+	app_cfg.argc = argc;
+	app_cfg.argv = (char**)argv;
+    }
+    app_cfg.on_started = &pjsuaOnStartedCb;
+    app_cfg.on_stopped = &pjsuaOnStoppedCb;
+    app_cfg.on_config_init = &pjsuaOnAppConfigCb;
+
+    status = app_init(&app_cfg);
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	displayMsg(QString("Init error:") + errmsg);
+	app_destroy();
+	return;
+    }
+
+    status = app_run(PJ_FALSE);
+    if (status != PJ_SUCCESS) {
+	char errmsg[PJ_ERR_MSG_SIZE];
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	displayMsg(QString("Error:") + errmsg);
+	app_destroy();
+    }
+
+    restartArgv = NULL;
+    restartArgc = 0;
+}
+
+void ApplicationUI::pjsuaDestroy()
+{
+    app_destroy();
 }
 
 ApplicationUI::ApplicationUI(bb::cascades::Application *app)
-: QObject(app), isShuttingDown(false)
+: QObject(app), isShuttingDown(false), restartArgv(NULL), restartArgc(0)
 {
     instance_ = this;
 
-    // create scene document from main.qml asset
-    // set parent to created document to ensure it exists for the whole application lifetime
     QmlDocument *qml = QmlDocument::create("asset:///main.qml").parent(this);
-
-    // create root object for the UI
     AbstractPane *root = qml->createRootObject<AbstractPane>();
-    // set created root object as a scene
     app->setScene(root);
 
     app->setAutoExit(true);
     connect(app, SIGNAL(aboutToQuit()), this, SLOT(aboutToQuit()));
 
-    pj_init();
-
-    // Run CLI
-    cliThread = new CliThread;
-    cliThread->start();
+    pjsuaStart();
 }
 
 ApplicationUI::~ApplicationUI()
 {
-    pj_shutdown();
     instance_ = NULL;
 }
 
@@ -125,16 +150,10 @@ ApplicationUI* ApplicationUI::instance()
 
 void ApplicationUI::aboutToQuit()
 {
-    static pj_thread_desc thread_desc;
-    pj_thread_t *thread;
-
-    if (!pj_thread_is_registered())
-	pj_thread_register("UIThread", thread_desc, &thread);
-
     if (!isShuttingDown) {
 	isShuttingDown = true;
 	PJ_LOG(3,(THIS_FILE, "Quit signal from GUI, shutting down pjsua.."));
-	pjsua_destroy();
+	pjsuaDestroy();
     }
 }
 
@@ -147,4 +166,8 @@ void ApplicationUI::displayMsg(const QString &msg)
     }
 }
 
-#include "applicationui.moc"
+void ApplicationUI::restartPjsua()
+{
+    pjsuaDestroy();
+    pjsuaStart();
+}

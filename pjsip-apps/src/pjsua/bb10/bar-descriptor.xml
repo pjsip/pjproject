@@ -68,6 +68,8 @@
     <configuration name="Device-Debug">
        <platformArchitecture>armle-v7</platformArchitecture>
        <asset path="arm/o.le-v7-g/PjsuaBB" entry="true" type="Qnx/Elf">PjsuaBB</asset>
+       <asset path="/home/bennylp/Desktop/opt/bb10/lib/libopencore-amrnb.so.0" type="Qnx/Elf">lib/libopencore-amrnb.so.0</asset>
+       <asset path="/home/bennylp/Desktop/opt/bb10/lib/libopencore-amrwb.so.0" type="Qnx/Elf">lib/libopencore-amrwb.so.0</asset>
     </configuration>
     <configuration name="Device-Release">
        <entryPointType>Qnx/Cascades</entryPointType>

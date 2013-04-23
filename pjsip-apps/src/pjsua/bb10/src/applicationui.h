@@ -4,9 +4,9 @@
 
 #include <QObject>
 
-namespace bb { namespace cascades { class Application; }}
+#include "../../pjsua_app.h"
 
-class CliThread;
+namespace bb { namespace cascades { class Application; }}
 
 /*!
  * @brief Application pane object
@@ -23,14 +23,31 @@ public:
     bool isShuttingDown;
     static ApplicationUI *instance();
 
+    /* Write msg to label (from different thread) */
+    static void extDisplayMsg(const char *msg);
+
+    /* Restart request (from different thread) */
+    void extRestartRequest(int argc, char **argv);
+
 public slots:
     void aboutToQuit();
 
+    Q_INVOKABLE void restartPjsua();
     Q_INVOKABLE void displayMsg(const QString &msg);
 
 private:
-    CliThread *cliThread;
     static ApplicationUI *instance_;
+    char **restartArgv;
+    int restartArgc;
+
+    /* pjsua main operations */
+    void pjsuaStart();
+    void pjsuaDestroy();
+
+    /* pjsua app callbacks */
+    static void 	pjsuaOnStartedCb(pj_status_t status, const char* msg);
+    static pj_bool_t 	pjsuaOnStoppedCb(pj_bool_t restart, int argc, char** argv);
+    static void 	pjsuaOnAppConfigCb(pjsua_app_config *cfg);
 };
 
 
