@@ -808,7 +808,6 @@ static pj_status_t amr_codec_encode( pjmedia_codec *codec,
     pj_size_t payload_len;
     unsigned dtx_cnt, sid_cnt;
     pj_status_t status;
-    int size;
 
     pj_assert(amr_data != NULL);
     PJ_ASSERT_RETURN(input && output, PJ_EINVAL);
@@ -826,16 +825,21 @@ static pj_status_t amr_codec_encode( pjmedia_codec *codec,
     speech = (pj_int16_t*)input->buf;
     bitstream = (unsigned char*)output->buf;
     while (nsamples >= samples_per_frame) {
+	int size;
         if (amr_data->enc_setting.amr_nb) {
 #ifdef USE_AMRNB
             size = Encoder_Interface_Encode (amr_data->encoder,
                                              amr_data->enc_mode,
                                              speech, bitstream, 0);
+#else
+            size = 0;
 #endif
         } else {
 #ifdef USE_AMRWB
             size = E_IF_encode (amr_data->encoder, amr_data->enc_mode,
                                 speech, bitstream, 0);
+#else
+            size = 0;
 #endif
         }
 	if (size == 0) {

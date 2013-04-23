@@ -3887,6 +3887,7 @@ static void inv_on_state_early( pjsip_inv_session *inv, pjsip_event *e)
 
 	default:
 	    pj_assert(!"Unexpected INVITE tsx state");
+	    break;
 	}
 
     } else if (inv->role == PJSIP_ROLE_UAS &&
@@ -4035,6 +4036,7 @@ static void inv_on_state_connecting( pjsip_inv_session *inv, pjsip_event *e)
 
 	default:
 	    pj_assert(!"Unexpected state");
+	    break;
 	}
 
     } else if (tsx->role == PJSIP_ROLE_UAS &&

@@ -101,7 +101,6 @@ static pj_status_t udp_echo_srv_create(pj_pool_t *pool,
     struct udp_echo_srv *srv;
     pj_sock_t sock_fd = PJ_INVALID_SOCKET;
     pj_sockaddr addr;
-    int addr_len;
     pj_activesock_cb activesock_cb;
     pj_status_t status;
 
@@ -109,7 +108,6 @@ static pj_status_t udp_echo_srv_create(pj_pool_t *pool,
     srv->echo_enabled = enable_echo;
 
     pj_sockaddr_in_init(&addr.ipv4, NULL, 0);
-    addr_len = sizeof(addr);
 
     pj_bzero(&activesock_cb, sizeof(activesock_cb));
     activesock_cb.on_data_recvfrom = &udp_echo_srv_on_data_recvfrom;
