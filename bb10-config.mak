@@ -9,9 +9,10 @@
 include build.mak
 
 # Generate library list (the "-lxxx" options) from list of linked libraries.
-PJ_BB_LIBS = $(subst PJLIB,pjlib,$(subst .a,,$(subst lib,-l,$(subst pjlib,PJLIB,$(notdir $(APP_LIB_FILES))))))
+PJ_BB_LIBS = $(filter-out -lm -lsocket, $(APP_LDLIBS))
 
 # This used to generate the library path list (the "-Lxxx" options)
+# We replace the path with "$$PJ_DIR"
 PJ_BB_LDFLAGS = $(subst $(PJDIR),\$$\$$PJ_DIR,$(APP_LDFLAGS))
 
 all: 
@@ -26,7 +27,7 @@ all:
 	@echo 'PJ_INCLUDEPATH += $$$$quote($$$$PJ_DIR/pjsip/include)'
 	@echo
 	@for token in $(PJ_BB_LDFLAGS); do \
-		if echo $$token | grep -- '-L\$$' >> /dev/null; then \
+		if echo $$token | grep -- '-L' >> /dev/null; then \
 			echo "PJ_LIBPATH += \$$\$$quote($$token)"; \
 		fi; \
 	done
@@ -38,6 +39,6 @@ all:
 	@echo 'INCLUDEPATH += $$$$PJ_INCLUDEPATH'
 	@echo 'LIBS += $$$$PJ_LIBPATH'
 	@echo 'LIBS += $$$$PJ_LIBS'
-	@echo 'LIBS += -lOpenAL -lalut -laudio_manager -lsocket -lasound -lbbsystem'
+	@echo 'LIBS += -lOpenAL -lalut -laudio_manager -lsocket -lasound -lbbsystem -lm'
 
 
