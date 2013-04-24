@@ -442,9 +442,10 @@ static int pb_thread_func (void *arg)
 
     TRACE_((THIS_FILE, "pb_thread_func: size = %d ", size));
 
-    pthread_getschedparam(pthread_self(), &policy, &param);
-    param.sched_priority = 18;
-    pthread_setschedparam (pthread_self(), policy, &param);
+    if (pthread_getschedparam(pthread_self(), &policy, &param) == 0) {
+	param.sched_priority = 18;
+	pthread_setschedparam (pthread_self(), policy, &param);
+    }
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;
@@ -537,9 +538,10 @@ static int ca_thread_func (void *arg)
 
     TRACE_((THIS_FILE, "ca_thread_func: size = %d ", size));
 
-    pthread_getschedparam(pthread_self(), &policy, &param);
-    param.sched_priority = 18;
-    pthread_setschedparam (pthread_self(), policy, &param);
+    if (pthread_getschedparam(pthread_self(), &policy, &param) == 0) {
+	param.sched_priority = 18;
+	pthread_setschedparam (pthread_self(), policy, &param);
+    }
 
     pj_bzero (buf, size);
     tstamp.u64 = 0;
@@ -720,20 +722,12 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     }
 
     /* Required call from January 2013 gold OS release */
-    if ((ret = snd_pcm_plugin_set_disable(stream->pb_pcm,
-                                          PLUGIN_DISABLE_MMAP)) < 0)
-    {
-	TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable ret = %d", ret));
-	return PJMEDIA_EAUD_SYSERR;
-    }
+    snd_pcm_plugin_set_disable(stream->pb_pcm, PLUGIN_DISABLE_MMAP);
 
     /* Required call from January 2013 gold OS release */
-    if ((ret = snd_pcm_plugin_set_enable(stream->pb_pcm,
-                                         PLUGIN_ROUTING)) < 0)
-    {
-	TRACE_((THIS_FILE, "snd_pcm_plugin_set_enable ret = %d", ret));
-	return PJMEDIA_EAUD_SYSERR;
-    }
+    /* Feedback on 24/04/2013: should not be used for "voice" port
+    snd_pcm_plugin_set_enable(stream->pb_pcm, PLUGIN_ROUTING);
+    */
 
     memset (&pi, 0, sizeof (pi));
     pi.channel = SND_PCM_CHANNEL_PLAYBACK;
@@ -827,19 +821,12 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
 	return PJMEDIA_EAUD_SYSERR;
     }
     /* Required call from January 2013 gold OS release */
-    if ((ret = snd_pcm_plugin_set_disable (stream->ca_pcm,
-                                           PLUGIN_DISABLE_MMAP)) < 0)
-    {
-        TRACE_((THIS_FILE, "snd_pcm_plugin_set_disable failed: %d",ret));
-        return PJMEDIA_EAUD_SYSERR;
-    }
+    snd_pcm_plugin_set_disable (stream->ca_pcm, PLUGIN_DISABLE_MMAP);
+
     /* Required call from January 2013 gold OS release */
-    if ((ret = snd_pcm_plugin_set_enable(stream->ca_pcm,
-                                         PLUGIN_ROUTING)) < 0)
-    {
-        TRACE_((THIS_FILE, "snd_pcm_plugin_set_enable failed: %d",ret));
-        return PJMEDIA_EAUD_SYSERR;
-    }
+    /* Feedback on 24/04/2013: should not be used for "voice" port
+    snd_pcm_plugin_set_enable(stream->ca_pcm, PLUGIN_ROUTING);
+    */
 
     /* sample reads the capabilities of the capture */
     memset (&pi, 0, sizeof (pi));
