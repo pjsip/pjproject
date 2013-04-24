@@ -10,63 +10,118 @@
 #import <pjlib.h>
 #import <pjsua.h>
 #import <pj/log.h>
-#include "../../pjsua_common.h"
+
+#include "../../pjsua_app.h"
+#include "../../pjsua_app_config.h"
 
 #import "ipjsuaViewController.h"
 
 @implementation ipjsuaAppDelegate
 
+#define THIS_FILE	"ipjsuaAppDelegate.m"
+
 #define KEEP_ALIVE_INTERVAL 600
 
-static int _argc = 4;
-static char *_argv[] = {"",
-    "--use-cli",
-    "--no-cli-console",
-    "--cli-telnet-port=6378"
-};
+ipjsuaAppDelegate      *app;
+static pjsua_app_cfg_t  app_cfg;
+static bool             isShuttingDown;
+static char           **restartArgv;
+static int              restartArgc;
+static pj_thread_desc   a_thread_desc;
+static pj_thread_t     *a_thread;
 
-ipjsuaAppDelegate              *app;
-extern pj_cli_telnet_on_started on_started_cb;
-extern pj_cli_on_quit           on_quit_cb;
-extern pj_cli_on_destroy        on_destroy_cb;
-extern pj_cli_on_restart_pjsua  on_restart_pjsua_cb;
-static pj_thread_desc           a_thread_desc;
-static pj_thread_t             *a_thread;
-
-int main_func(int argc, char *argv[]);
-
-static void cli_telnet_started(pj_cli_telnet_info *telnet_info)
+static void displayMsg(const char *msg)
 {
-    PJ_LOG(3,("ipjsua", "Telnet to %.*s:%d",
-	      telnet_info->ip_address.slen, telnet_info->ip_address.ptr,
-	      telnet_info->port));
-    NSString *str = [NSString stringWithFormat:@"Telnet to %.*s:%d",
-                     (int)telnet_info->ip_address.slen,
-                     telnet_info->ip_address.ptr,
-                     telnet_info->port];
+    NSString *str = [NSString stringWithFormat:@"%s", msg];
     [app performSelectorOnMainThread:@selector(displayMsg:) withObject:str
-         waitUntilDone:NO];
+                       waitUntilDone:NO];
 }
 
-static void cli_on_quit (pj_bool_t is_restarted)
+static void pjsuaOnStartedCb(pj_status_t status, const char* msg)
 {
-    PJ_LOG(3,("ipjsua", "CLI quit, restart(%d)", is_restarted));
-    if (!is_restarted) {
-        NSString *str = [NSString stringWithFormat:@"CLI quit, "
-                         "telnet unavailable"];
-        [app performSelectorOnMainThread:@selector(displayMsg:) withObject:str
-             waitUntilDone:NO];
+    char errmsg[PJ_ERR_MSG_SIZE];
+    
+    if (status != PJ_SUCCESS && (!msg || !*msg)) {
+	pj_strerror(status, errmsg, sizeof(errmsg));
+	PJ_LOG(3,(THIS_FILE, "Error: %s", errmsg));
+	msg = errmsg;
+    } else {
+	PJ_LOG(3,(THIS_FILE, "Started: %s", msg));
+    }
+
+    displayMsg(msg);
+}
+
+static void pjsuaOnStoppedCb(pj_bool_t restart,
+                             int argc, char** argv)
+{
+    PJ_LOG(3,("ipjsua", "CLI %s request", (restart? "restart" : "shutdown")));
+    if (restart) {
+        displayMsg("Restarting..");
+	pj_thread_sleep(100);
+        app_cfg.argc = argc;
+        app_cfg.argv = argv;
+    } else {
+        displayMsg("Shutting down..");
+	pj_thread_sleep(100);
+        isShuttingDown = true;
     }
 }
 
-- (void)displayMsg:(NSString *)str {
+static void pjsuaOnAppConfigCb(pjsua_app_config *cfg)
+{
+    PJ_UNUSED_ARG(cfg);
+}
+
+- (void)displayMsg:(NSString *)str
+{
     app.viewController.textLabel.text = str;
 }
 
-- (void)start_app {
-    on_started_cb = &cli_telnet_started;
-    on_quit_cb = &cli_on_quit;
-    main_func(_argc, _argv);
+- (void)pjsuaStart
+{
+    // TODO: read from config?
+    const char **argv = pjsua_app_def_argv;
+    int argc = PJ_ARRAY_SIZE(pjsua_app_def_argv) -1;
+    pj_status_t status;
+    
+    isShuttingDown = false;
+    displayMsg("Starting..");
+    
+    pj_bzero(&app_cfg, sizeof(app_cfg));
+    if (restartArgc) {
+	app_cfg.argc = restartArgc;
+	app_cfg.argv = restartArgv;
+    } else {
+	app_cfg.argc = argc;
+	app_cfg.argv = (char**)argv;
+    }
+    app_cfg.on_started = &pjsuaOnStartedCb;
+    app_cfg.on_stopped = &pjsuaOnStoppedCb;
+    app_cfg.on_config_init = &pjsuaOnAppConfigCb;
+    
+    while (!isShuttingDown) {
+        status = pjsua_app_init(&app_cfg);
+        if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            displayMsg(errmsg);
+            pjsua_app_destroy();
+            return;
+        }
+    
+        status = pjsua_app_run(PJ_TRUE);
+        if (status != PJ_SUCCESS) {
+            char errmsg[PJ_ERR_MSG_SIZE];
+            pj_strerror(status, errmsg, sizeof(errmsg));
+            displayMsg(errmsg);
+        }
+    
+        pjsua_app_destroy();
+    }
+    
+    restartArgv = NULL;
+    restartArgc = 0;
 }
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
@@ -84,7 +139,7 @@ static void cli_on_quit (pj_bool_t is_restarted)
     app = self;
     
     /* Start pjsua app thread */
-    [NSThread detachNewThreadSelector:@selector(start_app) toTarget:self withObject:nil];
+    [NSThread detachNewThreadSelector:@selector(pjsuaStart) toTarget:self withObject:nil];
 
     return YES;
 }
