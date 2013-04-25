@@ -713,9 +713,7 @@ static pj_status_t bb10_open_playback (struct bb10_stream *stream,
     snd_pcm_plugin_set_disable(stream->pb_pcm, PLUGIN_DISABLE_MMAP);
 
     /* Required call from January 2013 gold OS release */
-    /* Feedback on 24/04/2013: should not be used for "voice" port
     snd_pcm_plugin_set_enable(stream->pb_pcm, PLUGIN_ROUTING);
-    */
 
     memset (&pi, 0, sizeof (pi));
     pi.channel = SND_PCM_CHANNEL_PLAYBACK;
@@ -812,9 +810,7 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     snd_pcm_plugin_set_disable (stream->ca_pcm, PLUGIN_DISABLE_MMAP);
 
     /* Required call from January 2013 gold OS release */
-    /* Feedback on 24/04/2013: should not be used for "voice" port
     snd_pcm_plugin_set_enable(stream->ca_pcm, PLUGIN_ROUTING);
-    */
 
     /* sample reads the capabilities of the capture */
     memset (&pi, 0, sizeof (pi));
