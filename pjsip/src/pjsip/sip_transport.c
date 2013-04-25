@@ -1244,8 +1244,16 @@ static pj_status_t get_net_interface(pjsip_transport_type_e tp_type,
 
     af = (tp_type & PJSIP_TRANSPORT_IPV6)? PJ_AF_INET6 : PJ_AF_INET;
     status = pj_getipinterface(af, dst, &itf_addr, PJ_FALSE, NULL);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (status != PJ_SUCCESS) {
+	/* If it fails, e.g: on WM6 (http://support.microsoft.com/kb/129065),
+	 * just fallback using pj_gethostip(), see ticket #1660.
+	 */
+	PJ_LOG(5,(THIS_FILE,"Warning: unable to determine local "
+			    "interface, fallback to default interface!"));
+	status = pj_gethostip(af, &itf_addr);
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
 
     /* Print address */
     pj_sockaddr_print(&itf_addr, itf_str_addr->ptr,
