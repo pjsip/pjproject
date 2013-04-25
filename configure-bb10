@@ -33,7 +33,12 @@ CPP="${QNX_HOST}/usr/bin/qcc -V4.6.3,gcc_nto${TARGET_ARCHEND}_cpp -E "
 CC="${QNX_HOST}/usr/bin/qcc -V4.6.3,gcc_nto${TARGET_ARCHEND}_cpp "
 LD="${QNX_HOST}/usr/bin/nto${TARGET_ARCH}-ld " 
 export LDFLAGS=" -L${QNX_TARGET}/${LIBDIR}/usr/lib -L${QNX_TARGET}/${LIBDIR}/lib -L${QNX_HOST}/usr/lib/gcc/${TARGET_HOST}/4.6.3 -lgcc -lasound -laudio_manager"
-export CFLAGS=" -g -O2 -fPIC -DPJ_CONFIG_BB10=1 -DPJMEDIA_AUDIO_DEV_HAS_BB10=1" 
+
+if test "$CFLAGS" = ""; then
+  # Default if no CFLAGS is set in env
+  export CFLAGS=" -g -O2"
+fi
+export CFLAGS="$CFLAGS -fPIC -DPJ_CONFIG_BB10=1 -DPJMEDIA_AUDIO_DEV_HAS_BB10=1" 
 
 # Invoke configure
 ./configure --host=${TARGET_HOST} --disable-oss $*
