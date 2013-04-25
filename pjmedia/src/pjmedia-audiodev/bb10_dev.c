@@ -633,7 +633,7 @@ static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
 
     if (stream->pb_ctrl_audio_manager_handle == 0) {
 	/* lazy init an audio manager handle */
-	ret = audio_manager_get_handle(AUDIO_TYPE_VIDEO_CHAT, 0, false,
+	ret = audio_manager_get_handle(AUDIO_TYPE_VOICE, 0, false,
 	                               &stream->pb_ctrl_audio_manager_handle);
 	if (ret != 0) {
 	    TRACE_((THIS_FILE, "audio_manager_get_handle ret = %d",ret));
@@ -646,33 +646,21 @@ static pj_status_t bb10_initialize_playback_ctrl(struct bb10_stream *stream,
 	ret = audio_manager_set_handle_type(
 		stream->pb_ctrl_audio_manager_handle,
 		AUDIO_TYPE_VIDEO_CHAT,
-		AUDIO_DEVICE_SPEAKER,
+		AUDIO_DEVICE_DEFAULT,
 		AUDIO_DEVICE_DEFAULT);
     } else {
 	ret = audio_manager_set_handle_type(
 		stream->pb_ctrl_audio_manager_handle,
-		AUDIO_TYPE_VIDEO_CHAT,
-		AUDIO_DEVICE_HANDSET,
+		AUDIO_TYPE_VOICE,
+		AUDIO_DEVICE_DEFAULT,
 		AUDIO_DEVICE_DEFAULT);
     }
 
-    if (ret == 0) {
-	/* RIM recommend this call */
-	ret = audio_manager_set_handle_routing_conditions(
-		stream->pb_ctrl_audio_manager_handle,
-		SETTINGS_RESET_ON_DEVICE_CONNECTION);
-	if (ret != 0) {
-	    TRACE_((THIS_FILE,
-		    "audio_manager_set_handle_routing_conditions ret = %d",
-		    ret));
-	    return PJMEDIA_EAUD_SYSERR;
-	}
-    } else {
-	TRACE_((THIS_FILE, "audio_manager_set_handle_type ret = %d", ret));
-	return PJMEDIA_EAUD_SYSERR;
+    if (ret != 0) {
+        return PJMEDIA_EAUD_SYSERR;
+    }else{
+        return PJ_SUCCESS;
     }
-
-    return PJ_SUCCESS;
 }
 
 static int32_t get_alsa_pcm_fmt(const pjmedia_aud_param *param)
