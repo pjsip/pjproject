@@ -28,7 +28,7 @@
 /**************************
 *           bdIMAD
 ***************************/
-#include <bdimad.h>
+#include  "../../third_party/bdsound/include/bdimad.h"
 
 /* Maximum supported audio devices */
 #define BD_IMAD_MAX_DEV_COUNT               100                                
