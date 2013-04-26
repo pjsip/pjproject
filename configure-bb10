@@ -15,8 +15,18 @@ if test "$*" = "--help" -o "$*" = "-h"; then
   exit 0
 fi
 
-if test "$1" = "--simulator"; then
-  shift
+# Find simulator argument
+args=""
+simulator="no"
+for arg in "$@"; do
+    if test "$arg" = "--simulator"; then
+	simulator="yes"
+    else
+	args="$args $arg"
+    fi
+done
+
+if test "$simulator" = "yes"; then
   TARGET_ARCH="x86"
   TARGET_ARCHEND=${TARGET_ARCH}
   LIBDIR=${TARGET_ARCH}
@@ -41,7 +51,7 @@ fi
 export CFLAGS="$CFLAGS -fPIC -DPJ_CONFIG_BB10=1 -DPJMEDIA_AUDIO_DEV_HAS_BB10=1" 
 
 # Invoke configure
-./configure --host=${TARGET_HOST} --disable-oss $*
+./configure --host=${TARGET_HOST} --disable-oss $args
 RETVAL=$?
 
 # Write to pjsip.pri only if configure was successful
