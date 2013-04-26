@@ -457,6 +457,7 @@ pj_status_t pjsua_aud_subsys_start(void)
     pj_timer_entry_init(&pjsua_var.snd_idle_timer, PJ_FALSE, NULL,
 			&close_snd_timer_cb);
 
+    pjsua_check_snd_dev_idle();
     return status;
 }
 
