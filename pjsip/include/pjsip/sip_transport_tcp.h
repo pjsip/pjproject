@@ -64,6 +64,12 @@ typedef struct pjsip_tcp_transport_cfg
     pj_sockaddr		bind_addr;
 
     /**
+     * Should SO_REUSEADDR be used for the listener socket.
+     * Default value is PJSIP_TCP_TRANSPORT_REUSEADDR.
+     */
+    pj_bool_t		reuse_addr;
+
+    /**
      * Optional published address, which is the address to be
      * advertised as the address of this SIP transport. 
      * By default the bound address will be used as the published address.

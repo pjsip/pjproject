@@ -569,6 +569,24 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 
 
 /**
+ * Specify whether TCP listener should use SO_REUSEADDR option. This constant
+ * will be used as the default value for the "reuse_addr" field in the
+ * pjsip_tcp_transport_cfg structure.
+ *
+ * Default is FALSE on Windows and TRUE on non-Windows.
+ *
+ * @see PJSIP_TLS_TRANSPORT_REUSEADDR
+ */
+#ifndef PJSIP_TCP_TRANSPORT_REUSEADDR
+# if defined(PJ_WIN32) && PJ_WIN32
+#   define PJSIP_TCP_TRANSPORT_REUSEADDR	0
+# else
+#   define PJSIP_TCP_TRANSPORT_REUSEADDR	1
+# endif
+#endif
+
+
+/**
  * Set the interval to send keep-alive packet for TCP transports.
  * If the value is zero, keep-alive will be disabled for TCP.
  *
@@ -675,6 +693,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #   define PJSIP_TLS_TRANSPORT_BACKLOG	    5
 #endif
 
+
+/**
+ * Specify whether TLS listener should use SO_REUSEADDR option.
+ *
+ * Default is FALSE on Windows and TRUE on non-Windows.
+ *
+ * @see PJSIP_TCP_TRANSPORT_REUSEADDR
+ */
+#ifndef PJSIP_TLS_TRANSPORT_REUSEADDR
+# if defined(PJ_WIN32) && PJ_WIN32
+#   define PJSIP_TLS_TRANSPORT_REUSEADDR	0
+# else
+#   define PJSIP_TLS_TRANSPORT_REUSEADDR	1
+# endif
+#endif
 
 
 /* Endpoint. */

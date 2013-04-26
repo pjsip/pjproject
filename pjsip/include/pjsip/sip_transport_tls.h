@@ -174,6 +174,12 @@ typedef struct pjsip_tls_setting
     pj_time_val	timeout;
 
     /**
+     * Should SO_REUSEADDR be used for the listener socket.
+     * Default value is PJSIP_TLS_TRANSPORT_REUSEADDR.
+     */
+    pj_bool_t reuse_addr;
+
+    /**
      * QoS traffic type to be set on this transport. When application wants
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qos_param fields since this is more portable.
@@ -225,6 +231,7 @@ typedef struct pjsip_tls_state_info
 PJ_INLINE(void) pjsip_tls_setting_default(pjsip_tls_setting *tls_opt)
 {
     pj_memset(tls_opt, 0, sizeof(*tls_opt));
+    tls_opt->reuse_addr = PJSIP_TLS_TRANSPORT_REUSEADDR;
     tls_opt->qos_type = PJ_QOS_TYPE_BEST_EFFORT;
     tls_opt->qos_ignore_error = PJ_TRUE;
 }

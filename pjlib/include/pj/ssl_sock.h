@@ -711,6 +711,14 @@ typedef struct pj_ssl_sock_param
     pj_str_t server_name;
 
     /**
+     * Specify if SO_REUSEADDR should be used for listening socket. This
+     * option will only be used with accept() operation.
+     *
+     * Default is PJ_FALSE.
+     */
+    pj_bool_t reuse_addr;
+
+    /**
      * QoS traffic type to be set on this transport. When application wants
      * to apply QoS tagging to the transport, it's preferable to set this
      * field rather than \a qos_param fields since this is more portable.

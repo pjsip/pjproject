@@ -2377,6 +2377,18 @@ PJ_DEF(pj_status_t) pj_ssl_sock_start_accept (pj_ssl_sock_t *ssock,
     if (status != PJ_SUCCESS)
 	goto on_error;
 
+    /* Apply SO_REUSEADDR */
+    if (ssock->param.reuse_addr) {
+	int enabled = 1;
+	status = pj_sock_setsockopt(ssock->sock, pj_SOL_SOCKET(),
+				    pj_SO_REUSEADDR(),
+				    &enabled, sizeof(enabled));
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(ssock->pool->obj_name, status,
+		         "Warning: error applying SO_REUSEADDR"));
+	}
+    }
+
     /* Apply QoS, if specified */
     status = pj_sock_apply_qos2(ssock->sock, ssock->param.qos_type,
 				&ssock->param.qos_params, 2, 

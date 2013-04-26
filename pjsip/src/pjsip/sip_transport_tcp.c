@@ -217,6 +217,7 @@ PJ_DEF(void) pjsip_tcp_transport_cfg_default(pjsip_tcp_transport_cfg *cfg,
     cfg->af = af;
     pj_sockaddr_init(cfg->af, &cfg->bind_addr, NULL, 0);
     cfg->async_cnt = 1;
+    cfg->reuse_addr = PJSIP_TCP_TRANSPORT_REUSEADDR;
 }
 
 
@@ -297,6 +298,17 @@ PJ_DEF(pj_status_t) pjsip_tcp_transport_start3(
     status = pj_sock_apply_qos2(sock, cfg->qos_type, &cfg->qos_params, 
 				2, listener->factory.obj_name, 
 				"SIP TCP listener socket");
+
+    /* Apply SO_REUSEADDR */
+    if (cfg->reuse_addr) {
+	int enabled = 1;
+	status = pj_sock_setsockopt(sock, pj_SOL_SOCKET(), pj_SO_REUSEADDR(),
+				    &enabled, sizeof(enabled));
+	if (status != PJ_SUCCESS) {
+	    PJ_PERROR(4,(listener->factory.obj_name, status,
+		         "Warning: error applying SO_REUSEADDR"));
+	}
+    }
 
     /* Bind address may be different than factory.local_addr because
      * factory.local_addr will be resolved below.

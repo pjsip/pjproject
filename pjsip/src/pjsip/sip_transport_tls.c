@@ -337,6 +337,7 @@ PJ_DEF(pj_status_t) pjsip_tls_transport_start2( pjsip_endpoint *endpt,
 	ssock_param.read_buffer_size = PJSIP_MAX_PKT_LEN;
     ssock_param.ciphers_num = listener->tls_setting.ciphers_num;
     ssock_param.ciphers = listener->tls_setting.ciphers;
+    ssock_param.reuse_addr = listener->tls_setting.reuse_addr;
     ssock_param.qos_type = listener->tls_setting.qos_type;
     ssock_param.qos_ignore_error = listener->tls_setting.qos_ignore_error;
     pj_memcpy(&ssock_param.qos_params, &listener->tls_setting.qos_params,
