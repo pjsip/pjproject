@@ -1371,7 +1371,8 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 		 */
 		pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
 		pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
-		call->inv = NULL; 
+		call->inv = NULL;
+		call->async_call.dlg = NULL;
 		goto on_return;
 	    }
 	} else if (status != PJ_EPENDING) {
@@ -1379,6 +1380,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsip_dlg_respond(dlg, rdata, sip_err_code, NULL, NULL, NULL);
 	    pjsip_inv_terminate(call->inv, sip_err_code, PJ_FALSE); 
 	    call->inv = NULL; 
+	    call->async_call.dlg = NULL;
 	    goto on_return;
 	}
     }
@@ -1405,6 +1407,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 
 	pjsua_media_channel_deinit(call->index);
 	call->inv = NULL;
+	call->async_call.dlg = NULL;
 
 	goto on_return;
     }
@@ -1444,6 +1447,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	}
 	pjsua_media_channel_deinit(call->index);
 	call->inv = NULL;
+	call->async_call.dlg = NULL;
 	goto on_return;
 
     } else {
@@ -1452,6 +1456,7 @@ pj_bool_t pjsua_call_on_incoming(pjsip_rx_data *rdata)
 	    pjsua_perror(THIS_FILE, "Unable to send 100 response", status);
 	    pjsua_media_channel_deinit(call->index);
 	    call->inv = NULL;
+	    call->async_call.dlg = NULL;
 	    goto on_return;
 	}
     }
