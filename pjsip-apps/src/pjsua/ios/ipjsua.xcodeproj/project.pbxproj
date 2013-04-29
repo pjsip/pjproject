@@ -10,11 +10,11 @@
 		3A92068F16F1DE7100D49F96 /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A92068E16F1DE7100D49F96 /* AudioToolbox.framework */; };
 		3A92069316F1DEA500D49F96 /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3A92069216F1DEA500D49F96 /* CFNetwork.framework */; };
 		3ADCCD171715338D0007BE8E /* pjsua.png in Resources */ = {isa = PBXBuildFile; fileRef = 3ADCCD161715338D0007BE8E /* pjsua.png */; };
-		3ADCCD231726D1920007BE8E /* pjsua_app_cli.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD1E1726D1920007BE8E /* pjsua_app_cli.c */; };
-		3ADCCD241726D1920007BE8E /* pjsua_app_common.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD1F1726D1920007BE8E /* pjsua_app_common.c */; };
-		3ADCCD251726D1920007BE8E /* pjsua_app_config.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD201726D1920007BE8E /* pjsua_app_config.c */; };
-		3ADCCD261726D1920007BE8E /* pjsua_app_legacy.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD211726D1920007BE8E /* pjsua_app_legacy.c */; };
-		3ADCCD271726D1920007BE8E /* pjsua_app.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD221726D1920007BE8E /* pjsua_app.c */; };
+		3ADCCD2D172E40120007BE8E /* pjsua_app_cli.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */; };
+		3ADCCD2E172E40120007BE8E /* pjsua_app_common.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD29172E40120007BE8E /* pjsua_app_common.c */; };
+		3ADCCD2F172E40120007BE8E /* pjsua_app_config.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD2A172E40120007BE8E /* pjsua_app_config.c */; };
+		3ADCCD30172E40120007BE8E /* pjsua_app_legacy.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD2B172E40120007BE8E /* pjsua_app_legacy.c */; };
+		3ADCCD31172E40120007BE8E /* pjsua_app.c in Sources */ = {isa = PBXBuildFile; fileRef = 3ADCCD2C172E40120007BE8E /* pjsua_app.c */; };
 		3AF0580916F050770046B835 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0580816F050770046B835 /* UIKit.framework */; };
 		3AF0580B16F050770046B835 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0580A16F050770046B835 /* Foundation.framework */; };
 		3AF0580D16F050770046B835 /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 3AF0580C16F050770046B835 /* CoreGraphics.framework */; };
@@ -52,11 +52,11 @@
 		3A92068E16F1DE7100D49F96 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		3A92069216F1DEA500D49F96 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
 		3ADCCD161715338D0007BE8E /* pjsua.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = pjsua.png; sourceTree = "<group>"; };
-		3ADCCD1E1726D1920007BE8E /* pjsua_app_cli.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pjsua_app_cli.c; sourceTree = "<group>"; };
-		3ADCCD1F1726D1920007BE8E /* pjsua_app_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pjsua_app_common.c; sourceTree = "<group>"; };
-		3ADCCD201726D1920007BE8E /* pjsua_app_config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pjsua_app_config.c; sourceTree = "<group>"; };
-		3ADCCD211726D1920007BE8E /* pjsua_app_legacy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pjsua_app_legacy.c; sourceTree = "<group>"; };
-		3ADCCD221726D1920007BE8E /* pjsua_app.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = pjsua_app.c; sourceTree = "<group>"; };
+		3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_cli.c; path = ../../pjsua_app_cli.c; sourceTree = "<group>"; };
+		3ADCCD29172E40120007BE8E /* pjsua_app_common.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_common.c; path = ../../pjsua_app_common.c; sourceTree = "<group>"; };
+		3ADCCD2A172E40120007BE8E /* pjsua_app_config.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_config.c; path = ../../pjsua_app_config.c; sourceTree = "<group>"; };
+		3ADCCD2B172E40120007BE8E /* pjsua_app_legacy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app_legacy.c; path = ../../pjsua_app_legacy.c; sourceTree = "<group>"; };
+		3ADCCD2C172E40120007BE8E /* pjsua_app.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = pjsua_app.c; path = ../../pjsua_app.c; sourceTree = "<group>"; };
 		3AF0580416F050770046B835 /* ipjsua.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ipjsua.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		3AF0580816F050770046B835 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		3AF0580A16F050770046B835 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -133,11 +133,11 @@
 		3A92068D16F1D1A100D49F96 /* pjsua */ = {
 			isa = PBXGroup;
 			children = (
-				3ADCCD1E1726D1920007BE8E /* pjsua_app_cli.c */,
-				3ADCCD1F1726D1920007BE8E /* pjsua_app_common.c */,
-				3ADCCD201726D1920007BE8E /* pjsua_app_config.c */,
-				3ADCCD211726D1920007BE8E /* pjsua_app_legacy.c */,
-				3ADCCD221726D1920007BE8E /* pjsua_app.c */,
+				3ADCCD28172E40120007BE8E /* pjsua_app_cli.c */,
+				3ADCCD29172E40120007BE8E /* pjsua_app_common.c */,
+				3ADCCD2A172E40120007BE8E /* pjsua_app_config.c */,
+				3ADCCD2B172E40120007BE8E /* pjsua_app_legacy.c */,
+				3ADCCD2C172E40120007BE8E /* pjsua_app.c */,
 			);
 			name = pjsua;
 			sourceTree = "<group>";
@@ -300,11 +300,11 @@
 				3AF0581516F050780046B835 /* main.m in Sources */,
 				3AF0581916F050780046B835 /* ipjsuaAppDelegate.m in Sources */,
 				3AF0582216F050780046B835 /* ipjsuaViewController.m in Sources */,
-				3ADCCD231726D1920007BE8E /* pjsua_app_cli.c in Sources */,
-				3ADCCD241726D1920007BE8E /* pjsua_app_common.c in Sources */,
-				3ADCCD251726D1920007BE8E /* pjsua_app_config.c in Sources */,
-				3ADCCD261726D1920007BE8E /* pjsua_app_legacy.c in Sources */,
-				3ADCCD271726D1920007BE8E /* pjsua_app.c in Sources */,
+				3ADCCD2D172E40120007BE8E /* pjsua_app_cli.c in Sources */,
+				3ADCCD2E172E40120007BE8E /* pjsua_app_common.c in Sources */,
+				3ADCCD2F172E40120007BE8E /* pjsua_app_config.c in Sources */,
+				3ADCCD30172E40120007BE8E /* pjsua_app_legacy.c in Sources */,
+				3ADCCD31172E40120007BE8E /* pjsua_app.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
