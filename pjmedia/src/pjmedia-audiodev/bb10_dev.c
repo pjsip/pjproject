@@ -832,7 +832,7 @@ static pj_status_t bb10_open_capture (struct bb10_stream *stream,
     pp.stop_mode = SND_PCM_STOP_ROLLOVER;
     pp.buf.block.frag_size = param->samples_per_frame * param->bits_per_sample / 8;
     /* From January 2013 gold OS release. RIM recommend these for capture */
-    pp.buf.block.frags_max = -1;
+    pp.buf.block.frags_max = 3;
     pp.buf.block.frags_min = 1;
     pp.format.interleave = 1;
     pp.format.rate = param->clock_rate;
