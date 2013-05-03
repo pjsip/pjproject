@@ -440,7 +440,7 @@ PJ_DEF(pj_status_t) pj_ioqueue_register_sock2(pj_pool_t *pool,
 
 on_return:
     if (rc != PJ_SUCCESS) {
-	if (key->grp_lock)
+	if (key && key->grp_lock)
 	    pj_grp_lock_dec_ref_dbg(key->grp_lock, "ioqueue", 0);
     }
     *p_key = key;
