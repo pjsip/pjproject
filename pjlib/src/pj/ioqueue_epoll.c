@@ -712,6 +712,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    queue[processed].key = h;
 	    queue[processed].event_type = READABLE_EVENT;
 	    ++processed;
+	    continue;
 	}
 
 	/*
@@ -725,6 +726,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    queue[processed].key = h;
 	    queue[processed].event_type = WRITEABLE_EVENT;
 	    ++processed;
+	    continue;
 	}
 
 #if PJ_HAS_TCP
@@ -739,20 +741,36 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 	    queue[processed].key = h;
 	    queue[processed].event_type = WRITEABLE_EVENT;
 	    ++processed;
+	    continue;
 	}
 #endif /* PJ_HAS_TCP */
-	
+
 	/*
 	 * Check for error condition.
 	 */
-	if (events[i].events & EPOLLERR && (h->connecting) && !IS_CLOSING(h)) {
-		
+	if ((events[i].events & EPOLLERR) && !IS_CLOSING(h)) {
+	    /*
+	     * We need to handle this exception event.  If it's related to us
+	     * connecting, report it as such.  If not, just report it as a
+	     * read event and the higher layers will handle it.
+	     */
+	    if (h->connecting) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
-	    increment_counter(h);
-#endif		
-	    queue[processed].key = h;
-	    queue[processed].event_type = EXCEPTION_EVENT;
-	    ++processed;
+		increment_counter(h);
+#endif
+		queue[processed].key = h;
+		queue[processed].event_type = EXCEPTION_EVENT;
+		++processed;
+	    } else if (!(events[i].events & EPOLLERR) &&
+	               (key_has_pending_read(h) || key_has_pending_accept(h))) {
+#if PJ_IOQUEUE_HAS_SAFE_UNREG
+		increment_counter(h);
+#endif
+		queue[processed].key = h;
+		queue[processed].event_type = READABLE_EVENT;
+		++processed;
+	    }
+	    continue;
 	}
     }
     for (i=0; i<processed; ++i) {
