@@ -667,7 +667,7 @@ static void send_prompt_str(cli_telnet_sess *sess)
     char data_str[128];
     cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
 
-    send_data.ptr = &data_str[0];
+    send_data.ptr = data_str;
     send_data.slen = 0;
     
     pj_strcat(&send_data, &fe->cfg.prompt_str);
@@ -691,7 +691,7 @@ static void send_err_arg(cli_telnet_sess *sess,
     unsigned i;
     cli_telnet_fe *fe = (cli_telnet_fe *)sess->base.fe;
 
-    send_data.ptr = &data_str[0];
+    send_data.ptr = data_str;
     send_data.slen = 0;
 
     if (with_return)
@@ -708,7 +708,7 @@ static void send_err_arg(cli_telnet_sess *sess,
     pj_strcat(&send_data, msg);
     pj_strcat(&send_data, &fe->cfg.prompt_str);
     if (with_last_cmd)
-	pj_strcat2(&send_data, (char *)&sess->rcmd->rbuf[0]);
+	pj_strcat2(&send_data, (char *)sess->rcmd->rbuf);
 
     telnet_sess_send(sess, &send_data);
 }
@@ -771,7 +771,7 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     const pj_str_t *cmd_desc = 0;
     static const pj_str_t sc_type = {"sc", 2};
     static const pj_str_t choice_type = {"choice", 6};
-    send_data.ptr = &data[0];
+    send_data.ptr = data;
     send_data.slen = 0;
     
     if (with_return)
@@ -786,9 +786,12 @@ static void send_ambi_arg(cli_telnet_sess *sess,
     /* Get the max length of the command name */
     for (i=0;i<info->hint_cnt;++i) {
 	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
-	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
-		//Additional delimiter " | "
-		cmd_length += (hint[i].name.slen + 3);
+	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {		
+		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
+		    cmd_length += (hint[i].name.slen + 3);
+		} else {
+		    cmd_length = hint[i].name.slen;
+		}		
 	    } else {
 		cmd_length = hint[i].name.slen;
 	    }
@@ -816,18 +819,11 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 	    parse_state = OP_NORMAL;
 	}
 	
-	if ((parse_state != OP_SHORTCUT)) {
-	    if (cmd_desc) {
-		/* Print data if previous hint is shortcut */
-		send_hint_arg(sess, &send_data, 
-			      cmd_desc, cmd_length, 
-			      max_length);
-		cmd_desc = 0;
-	    }
+	if (parse_state != OP_SHORTCUT) {
 	    pj_strcat2(&send_data, "\r\n  ");
 	    cmd_length = hint[i].name.slen;
-	}
-
+	}	    
+	
 	switch (parse_state) {
 	case OP_CHOICE:
 	    /* Format : "[Choice Value]  description" */	    
@@ -843,9 +839,16 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 	    break;
 	case OP_SHORTCUT:
 	    /* Format : "Command | sc |  description" */
-	    pj_strcat2(&send_data, " | ");
-	    pj_strcat(&send_data, &hint[i].name);
-	    cmd_length += (hint[i].name.slen + 3);
+	    {		
+		cmd_length += hint[i].name.slen;
+		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
+		    pj_strcat2(&send_data, " | ");
+		    cmd_length += 3;		    
+		} else {
+		    pj_strcat2(&send_data, "\r\n  ");
+		}
+		pj_strcat(&send_data, &hint[i].name);	
+	    }
 	    break;
 	default:
 	    /* Command */
@@ -855,18 +858,21 @@ static void send_ambi_arg(cli_telnet_sess *sess,
 	}
     	
 	if ((parse_state == OP_TYPE) || (parse_state == OP_CHOICE) || 
-	    ((i+1) >= info->hint_cnt)) 
+	    ((i+1) >= info->hint_cnt) ||
+	    (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen))) 
 	{
 	    /* Add description info */
 	    send_hint_arg(sess, &send_data, 
 			  &hint[i].desc, cmd_length, 
 			  max_length);
+
+	    cmd_length = 0;
 	}	
     }  
     pj_strcat2(&send_data, "\r\n");       
     pj_strcat(&send_data, &fe->cfg.prompt_str);
     if (with_last_cmd)
-	pj_strcat2(&send_data, (char *)&sess->rcmd->rbuf[0]);
+	pj_strcat2(&send_data, (char *)sess->rcmd->rbuf);
 
     telnet_sess_send(sess, &send_data);    
 }
@@ -882,7 +888,7 @@ static void send_comp_arg(cli_telnet_sess *sess,
 
     pj_strcat2(&info->hint[0].name, " ");
 
-    send_data.ptr = &data[0];
+    send_data.ptr = data;
     send_data.slen = 0;
 
     pj_strcat(&send_data, &info->hint[0].name);        
@@ -900,7 +906,7 @@ static pj_bool_t handle_alfa_num(cli_telnet_sess *sess, unsigned char *data)
 	    /* Cursor is not at EOL, insert character */	    
 	    unsigned char echo[5] = {0x1b, 0x5b, 0x31, 0x40, 0x00};
 	    echo[4] = *data;
-	    telnet_sess_send2(sess, &echo[0], 5);
+	    telnet_sess_send2(sess, echo, 5);
 	} else {
 	    /* Append character */
 	    telnet_sess_send2(sess, data, 1);
@@ -924,10 +930,10 @@ static pj_bool_t handle_backspace(cli_telnet_sess *sess, unsigned char *data)
 	     */
 	    unsigned char echo[5] = {0x00, 0x1b, 0x5b, 0x31, 0x50};
 	    echo[0] = *data;
-	    telnet_sess_send2(sess, &echo[0], 5);
+	    telnet_sess_send2(sess, echo, 5);
 	} else {
 	    const static unsigned char echo[3] = {0x08, 0x20, 0x08};	    
-	    telnet_sess_send2(sess, &echo[0], 3);
+	    telnet_sess_send2(sess, echo, 3);
 	}
 	return PJ_TRUE;
     }
@@ -986,7 +992,7 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
     status = pj_cli_sess_parse(&sess->base, (char *)&sess->rcmd->rbuf, cmd_val, 
 			       pool, &info);    
 
-    len = pj_ansi_strlen((char *)&sess->rcmd->rbuf[0]);
+    len = pj_ansi_strlen((char *)sess->rcmd->rbuf);
 
     switch (status) {
     case PJ_CLI_EINVARG:
@@ -1009,7 +1015,7 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 	}
 	if (info.hint_cnt > 0) {	
 	    /* Complete command */
-	    pj_str_t cmd = pj_str((char *)&sess->rcmd->rbuf[0]);
+	    pj_str_t cmd = pj_str((char *)sess->rcmd->rbuf);
 	    pj_str_t last_token;
 
 	    if (get_last_token(&cmd, &last_token) == PJ_SUCCESS) {
@@ -1018,13 +1024,13 @@ static pj_bool_t handle_tab(cli_telnet_sess *sess)
 		pj_strtrim(&last_token);
 		if (hint_info->slen >= last_token.slen) {
 		    hint_info->slen -= last_token.slen;
-		    pj_memmove(&hint_info->ptr[0], 
+		    pj_memmove(hint_info->ptr, 
 			       &hint_info->ptr[last_token.slen], 
 			       hint_info->slen);		    
 		} 
 		send_comp_arg(sess, &info);
 
-		pj_memcpy(&sess->rcmd->rbuf[len], &info.hint[0].name.ptr[0], 
+		pj_memcpy(&sess->rcmd->rbuf[len], info.hint[0].name.ptr, 
 			  info.hint[0].name.slen);
 
 		len += info.hint[0].name.slen;
@@ -1135,7 +1141,7 @@ static pj_bool_t handle_up_down(cli_telnet_sess *sess, pj_bool_t is_up)
 	    MOVE_CURSOR_LEFT = 0x08,
 	    CLEAR_CHAR = 0x20
 	};
-	send_data.ptr = &str[0];
+	send_data.ptr = str;
 	send_data.slen = 0;
 
 	/* Move cursor position to the beginning of line */

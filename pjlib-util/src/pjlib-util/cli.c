@@ -34,6 +34,9 @@
 #define CLI_CMD_CHANGE_LOG  30000
 #define CLI_CMD_EXIT        30001
 
+#define MAX_CMD_HASH_NAME_LENGTH 64
+#define MAX_CMD_ID_LENGTH 16
+
 #if 1
     /* Enable some tracing */
     #define THIS_FILE   "cli.c"
@@ -126,7 +129,9 @@ struct pj_cli_t
     pj_cli_cfg          cfg;            /* CLI configuration */
     pj_cli_cmd_spec     root;           /* Root of command tree structure */
     pj_cli_front_end    fe_head;        /* List of front-ends */
-    pj_hash_table_t    *cmd_name_hash;  /* Command name hash table */
+    pj_hash_table_t    *cmd_name_hash;  /* Command name hash table, this will 
+					   include the command name and shortcut 
+					   as hash key */
     pj_hash_table_t    *cmd_id_hash;    /* Command id hash table */
 
     pj_bool_t           is_quitting;
@@ -484,24 +489,25 @@ static void on_syntax_error(pj_scanner *scanner)
     PJ_THROW(PJ_EINVAL);
 }
 
-/* Check if command already added to command hash */
-static pj_bool_t cmd_name_exists(pj_cli_t *cli, pj_cli_cmd_spec *group, 
-				 pj_str_t *cmd)
+/* Get the command from the command hash */
+static pj_cli_cmd_spec *get_cmd_name(const pj_cli_t *cli, 
+				     const pj_cli_cmd_spec *group, 
+				     const pj_str_t *cmd)
 {
     pj_str_t cmd_val;
-    char cmd_ptr[64];
+    char cmd_ptr[MAX_CMD_HASH_NAME_LENGTH];
 
-    cmd_val.ptr = &cmd_ptr[0];
+    cmd_val.ptr = cmd_ptr;
     cmd_val.slen = 0;
 
     if (group) {
-	char cmd_str[16];
-	pj_ansi_sprintf(&cmd_str[0], "%d", group->id);
-	pj_strcat2(&cmd_val, &cmd_str[0]);	
+	char cmd_str[MAX_CMD_ID_LENGTH];
+	pj_ansi_sprintf(cmd_str, "%d", group->id);
+	pj_strcat2(&cmd_val, cmd_str);	
     }
     pj_strcat(&cmd_val, cmd);
-    return (pj_hash_get(cli->cmd_name_hash, 
-	                cmd_val.ptr, cmd_val.slen, NULL) != 0);
+    return (pj_cli_cmd_spec *)pj_hash_get(cli->cmd_name_hash, cmd_val.ptr, 
+					  cmd_val.slen, NULL);
 }
 
 /* Add command to the command hash */
@@ -510,19 +516,21 @@ static void add_cmd_name(pj_cli_t *cli, pj_cli_cmd_spec *group,
 {
     pj_str_t cmd_val;
     pj_str_t add_cmd;
-    char cmd_ptr[64];
+    char cmd_ptr[MAX_CMD_HASH_NAME_LENGTH];
 
-    cmd_val.ptr = &cmd_ptr[0];
+    cmd_val.ptr = cmd_ptr;
     cmd_val.slen = 0;
 
     if (group) {
-	pj_strcat(&cmd_val, &group->name);
+	char cmd_str[MAX_CMD_ID_LENGTH];
+	pj_ansi_sprintf(cmd_str, "%d", group->id);
+	pj_strcat2(&cmd_val, cmd_str);	
     }
     pj_strcat(&cmd_val, cmd_name);
     pj_strdup(cli->pool, &add_cmd, &cmd_val);
     
-    pj_hash_set(cli->pool, cli->cmd_name_hash, 
-		cmd_val.ptr, cmd_val.slen, 0, cmd);
+    pj_hash_set(cli->pool, cli->cmd_name_hash, cmd_val.ptr, 
+		cmd_val.slen, 0, cmd);
 }
 
 /**
@@ -664,7 +672,7 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
         if (!pj_stricmp2(&attr->name, "name")) {
             pj_strltrim(&attr->value);
             if (!attr->value.slen || 
-		cmd_name_exists(cli, group, &attr->value))                
+		(get_cmd_name(cli, group, &attr->value)))                
             {
                 return PJ_CLI_EBADNAME;
             }
@@ -702,7 +710,7 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
                         PJ_THROW(PJ_CLI_ETOOMANYARGS);
                     }
                     /* Check whether the shortcuts are already used */
-                    if (cmd_name_exists(cli, group, &str)) {
+                    if (get_cmd_name(cli, &cli->root, &str)) {
                         PJ_THROW(PJ_CLI_EBADNAME);
                     }
 
@@ -772,8 +780,9 @@ static pj_status_t add_cmd_node(pj_cli_t *cli,
         cmd->sc = (pj_str_t *)pj_pool_zalloc(cli->pool, cmd->sc_cnt *
                                              sizeof(pj_str_t));
         for (i = 0; i < cmd->sc_cnt; i++) {
-            pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);
-	    add_cmd_name(cli, group, cmd, &sc[i]);
+            pj_strdup(cli->pool, &cmd->sc[i], &sc[i]);	
+	    /** Add shortcut to root command **/
+	    add_cmd_name(cli, &cli->root, cmd, &sc[i]);
         }
     }
     
@@ -880,9 +889,9 @@ PJ_DEF(pj_status_t) pj_cli_sess_parse(pj_cli_sess *sess,
 	    while (!pj_scan_is_eof(&scanner)) {
 		info->err_pos = scanner.curptr - scanner.begin;
 		if (*scanner.curptr == '\'' || *scanner.curptr == '"' ||
-		    *scanner.curptr == '[' || *scanner.curptr == '{')
+		    *scanner.curptr == '{')
 		{
-		    pj_scan_get_quotes(&scanner, "'\"[{", "'\"]}", 4, &str);
+		    pj_scan_get_quotes(&scanner, "'\"{", "'\"}", 3, &str);
 		    /* Remove the quotes */
 		    str.ptr++;
 		    str.slen -= 2;
@@ -982,15 +991,40 @@ PJ_DECL(pj_status_t) pj_cli_sess_exec(pj_cli_sess *sess,
     return PJ_SUCCESS;
 }
 
-static pj_status_t insert_new_hint(pj_pool_t *pool, 
-				   const pj_str_t *name, 
-				   const pj_str_t *desc, 
-				   const pj_str_t *type, 
-				   pj_cli_exec_info *info)
-{        
+static pj_bool_t hint_inserted(const pj_str_t *name, 
+			       const pj_str_t *desc, 
+			       const pj_str_t *type, 
+			       pj_cli_exec_info *info)
+{
+    unsigned i;
+    for(i=0; i<info->hint_cnt; ++i) {
+	pj_cli_hint_info *hint = &info->hint[i];
+	if ((!pj_strncmp(&hint->name, name, hint->name.slen)) &&
+	    (!pj_strncmp(&hint->desc, desc, hint->desc.slen)) &&
+	    (!pj_strncmp(&hint->type, type, hint->type.slen)))
+	{
+	    return PJ_TRUE;
+	}
+    }
+    return PJ_FALSE;
+}
+
+/** This will insert new hint with the option to check for the same 
+    previous entry **/
+static pj_status_t insert_new_hint2(pj_pool_t *pool, 
+				    pj_bool_t unique_insert,
+				    const pj_str_t *name, 
+				    const pj_str_t *desc, 
+				    const pj_str_t *type, 
+				    pj_cli_exec_info *info)
+{
     pj_cli_hint_info *hint;
     PJ_ASSERT_RETURN(pool && info, PJ_EINVAL);
     PJ_ASSERT_RETURN((info->hint_cnt < PJ_CLI_MAX_HINTS), PJ_EINVAL);
+
+    if ((unique_insert) && (hint_inserted(name, desc, type, info)))
+	return PJ_SUCCESS;
+
     hint = &info->hint[info->hint_cnt];
 
     pj_strdup(pool, &hint->name, name);
@@ -1011,14 +1045,98 @@ static pj_status_t insert_new_hint(pj_pool_t *pool,
     return PJ_SUCCESS;
 }
 
-static pj_status_t get_match_cmds(pj_cli_cmd_spec *cmd, 
-				  const pj_str_t *cmd_val,				      
-				  pj_pool_t *pool, 
-				  pj_cli_cmd_spec **p_cmd, 			       
-				  pj_cli_exec_info *info)
+/** This will insert new hint without checking for the same previous entry **/
+static pj_status_t insert_new_hint(pj_pool_t *pool, 
+				   const pj_str_t *name, 
+				   const pj_str_t *desc, 
+				   const pj_str_t *type, 
+				   pj_cli_exec_info *info)
+{        
+    return insert_new_hint2(pool, PJ_FALSE, name, desc, type, info);
+}
+
+/** This will get a complete/exact match of a command from the cmd hash **/
+static pj_status_t get_comp_match_cmds(const pj_cli_t *cli, 
+				       const pj_cli_cmd_spec *group,
+				       const pj_str_t *cmd_val,	
+				       pj_pool_t *pool, 
+				       pj_cli_cmd_spec **p_cmd,
+				       pj_cli_exec_info *info)
 {
-    pj_status_t status = PJ_SUCCESS;
-    PJ_ASSERT_RETURN(cmd && pool && info && cmd_val, PJ_EINVAL);    
+    pj_cli_cmd_spec *cmd;    
+    PJ_ASSERT_RETURN(cli && group && cmd_val && pool && info, PJ_EINVAL);   
+
+    cmd = get_cmd_name(cli, group, cmd_val);
+
+    if (cmd) {
+	pj_status_t status;    
+	status = insert_new_hint(pool, cmd_val, &cmd->desc, NULL, info);
+
+	if (status != PJ_SUCCESS)
+	    return status;
+
+	*p_cmd = cmd;
+    }
+
+    return PJ_SUCCESS;
+}
+
+/** This method will search for any shortcut with pattern match to the input
+    command. This method should be called from root command, as shortcut could
+    only be executed from root **/
+static pj_status_t get_pattern_match_shortcut(const pj_cli_t *cli,
+					      const pj_str_t *cmd_val,
+					      pj_pool_t *pool, 
+					      pj_cli_cmd_spec **p_cmd,
+					      pj_cli_exec_info *info)
+{
+    pj_hash_iterator_t it_buf, *it;
+    pj_status_t status;
+    PJ_ASSERT_RETURN(cli && pool && cmd_val && info, PJ_EINVAL);
+  
+    it = pj_hash_first(cli->cmd_name_hash, &it_buf);
+    while (it) {
+	unsigned i;
+	pj_cli_cmd_spec *cmd = (pj_cli_cmd_spec *)
+			       pj_hash_this(cli->cmd_name_hash, it);
+
+	PJ_ASSERT_RETURN(cmd, PJ_EINVAL);	    
+	
+	for (i=0; i < cmd->sc_cnt; ++i) {
+	    static const pj_str_t SHORTCUT = {"SC", 2};
+	    pj_str_t *sc = &cmd->sc[i];
+	    PJ_ASSERT_RETURN(sc, PJ_EINVAL);
+
+	    if (!pj_strncmp(sc, cmd_val, cmd_val->slen)) {
+		/** Unique hints needed because cmd hash contain command name
+		    and shortcut referencing to the same command **/
+		status = insert_new_hint2(pool, PJ_TRUE, sc, &cmd->desc, 
+					  &SHORTCUT, info);
+		if (status != PJ_SUCCESS)
+		    return status;
+
+		if (p_cmd)
+		    *p_cmd = cmd;
+	    }
+	}
+	
+	it = pj_hash_next(cli->cmd_name_hash, it);
+    }
+
+    return PJ_SUCCESS;
+}
+
+/** This method will search a pattern match to the input command from the child
+    command list of the current/active command. **/
+static pj_status_t get_pattern_match_cmds(pj_cli_cmd_spec *cmd, 
+					  const pj_str_t *cmd_val,				      
+					  pj_pool_t *pool, 
+					  pj_cli_cmd_spec **p_cmd, 
+					  pj_cli_parse_mode parse_mode,
+					  pj_cli_exec_info *info)
+{
+    pj_status_t status;
+    PJ_ASSERT_RETURN(cmd && pool && info && cmd_val, PJ_EINVAL);   
 
     if (p_cmd)
 	*p_cmd = cmd;
@@ -1027,7 +1145,6 @@ static pj_status_t get_match_cmds(pj_cli_cmd_spec *cmd,
     if (cmd->sub_cmd) {
 	pj_cli_cmd_spec *child_cmd = cmd->sub_cmd->next;
 	while (child_cmd != cmd->sub_cmd) {
-	    unsigned i;	   
 	    pj_bool_t found = PJ_FALSE;
 	    if (!pj_strncmp(&child_cmd->name, cmd_val, cmd_val->slen)) {		
 		status = insert_new_hint(pool, &child_cmd->name, 
@@ -1037,29 +1154,34 @@ static pj_status_t get_match_cmds(pj_cli_cmd_spec *cmd,
 
 		found = PJ_TRUE;
 	    }
-	    for (i=0; i < child_cmd->sc_cnt; ++i) {
-		static const pj_str_t SHORTCUT = {"SC", 2};
-		pj_str_t *sc = &child_cmd->sc[i];
-		PJ_ASSERT_RETURN(sc, PJ_EINVAL);
+	    if (found) {
+		if (parse_mode == PARSE_NEXT_AVAIL) {
+		    /** Only insert shortcut on next available commands mode **/
+		    unsigned i;
+		    for (i=0; i < child_cmd->sc_cnt; ++i) {
+			static const pj_str_t SHORTCUT = {"SC", 2};
+			pj_str_t *sc = &child_cmd->sc[i];
+			PJ_ASSERT_RETURN(sc, PJ_EINVAL);
 
-		if (!pj_strncmp(sc, cmd_val, cmd_val->slen)) {		
-		    status = insert_new_hint(pool, sc, &child_cmd->desc, 
-					     &SHORTCUT, info);
-		    if (status != PJ_SUCCESS)
-			return status;
+			status = insert_new_hint(pool, sc, 
+						 &child_cmd->desc, &SHORTCUT, 
+						 info);
+			if (status != PJ_SUCCESS)
+			    return status;
+		    }
+		}
 
-		    found = PJ_TRUE;
-		}		
-	    }
-	    if (found && p_cmd) 
-		*p_cmd = child_cmd;			    
-
+		if (p_cmd)
+		    *p_cmd = child_cmd;			    
+	    }	
 	    child_cmd = child_cmd->next;
 	}
     }
-    return status;
+    return PJ_SUCCESS;
 }
 
+/** This will match the arguments passed to the command with the argument list
+    of the specified command list. **/
 static pj_status_t get_match_args(pj_cli_sess *sess,
 				  pj_cli_cmd_spec *cmd, 
 				  const pj_str_t *cmd_val,
@@ -1088,11 +1210,7 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
 
 	    if ((parse_mode == PARSE_EXEC) && (!arg->validate)) {
 		/* If no validation needed, then insert the values */
-		status = insert_new_hint(pool, 
-					 cmd_val, 
-			  	         NULL, 
-					 NULL,
-					 info);		
+		status = insert_new_hint(pool, cmd_val, NULL, NULL, info);		
 		return status;
 	    }
 
@@ -1164,6 +1282,8 @@ static pj_status_t get_match_args(pj_cli_sess *sess,
     return status;
 }
 
+/** This will check for a match of the commands/arguments input. Any match 
+    will be inserted to the hint data. **/
 static pj_status_t get_available_cmds(pj_cli_sess *sess,
 				      pj_cli_cmd_spec *cmd, 
 				      pj_str_t *cmd_val,
@@ -1182,14 +1302,41 @@ static pj_status_t get_available_cmds(pj_cli_sess *sess,
 
     info->hint_cnt = 0;    
 
-    if (get_cmd)
-	status = get_match_cmds(cmd, prefix, pool, p_cmd, info);
+    if (get_cmd) {
+	status = get_comp_match_cmds(sess->fe->cli, cmd, prefix, pool, p_cmd, 
+				     info);
+	if (status != PJ_SUCCESS)
+	    return status;
+	
+	/** If exact match found, then no need to search for pattern match **/
+	if (info->hint_cnt == 0) {
+	    if ((parse_mode != PARSE_NEXT_AVAIL) && 
+		(cmd == &sess->fe->cli->root)) 
+	    {
+		/** Pattern match for shortcut needed on root command only **/
+		status = get_pattern_match_shortcut(sess->fe->cli, prefix, pool,
+						    p_cmd, info);
+
+		if (status != PJ_SUCCESS)
+		    return status;
+	    }
+
+	    status = get_pattern_match_cmds(cmd, prefix, pool, p_cmd, 
+					    parse_mode, info);
+	}
+
+	if (status != PJ_SUCCESS)
+	    return status;
+    }
+
     if (argc > 0)
 	status = get_match_args(sess, cmd, prefix, argc, 
 			        pool, parse_mode, info);
 
     if (status == PJ_SUCCESS) {	
 	if (prefix->slen > 0) {
+	    /** If a command entered is not a an empty command, and have a 
+		single match in the command list then it is a valid command **/
 	    if (info->hint_cnt == 0) {
 		status = PJ_CLI_EINVARG;
 	    } else if (info->hint_cnt > 1) {

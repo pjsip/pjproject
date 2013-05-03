@@ -181,7 +181,7 @@ static void send_prompt_str(pj_cli_sess *sess)
     char data_str[128];
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
 
-    send_data.ptr = &data_str[0];
+    send_data.ptr = data_str;
     send_data.slen = 0;
     
     pj_strcat(&send_data, &fe->cfg.prompt_str);
@@ -201,7 +201,7 @@ static void send_err_arg(pj_cli_sess *sess,
     unsigned i;
     struct cli_console_fe *fe = (struct cli_console_fe *)sess->fe;
 
-    send_data.ptr = &data_str[0];
+    send_data.ptr = data_str;
     send_data.slen = 0;
 
     if (with_return)
@@ -272,7 +272,7 @@ static void send_ambi_arg(pj_cli_sess *sess,
     const pj_str_t *cmd_desc = 0;
     static const pj_str_t sc_type = {"sc", 2};
     static const pj_str_t choice_type = {"choice", 6};
-    send_data.ptr = &data[0];
+    send_data.ptr = data;
     send_data.slen = 0;
     
     if (with_return)
@@ -287,9 +287,12 @@ static void send_ambi_arg(pj_cli_sess *sess,
     /* Get the max length of the command name */
     for (i=0;i<info->hint_cnt;++i) {
 	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
-	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
-		//Additional delimiter " | "
-		cmd_length += (hint[i].name.slen + 3);
+	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {		
+		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
+		    cmd_length += (hint[i].name.slen + 3);
+		} else {
+		    cmd_length = hint[i].name.slen;
+		}		
 	    } else {
 		cmd_length = hint[i].name.slen;
 	    }
@@ -303,7 +306,7 @@ static void send_ambi_arg(pj_cli_sess *sess,
     }
 
     cmd_length = 0;
-    for (i=0;i<info->hint_cnt;++i) {	
+    for (i=0;i<info->hint_cnt;++i) {
 	if ((&hint[i].type) && (hint[i].type.slen > 0)) {	    
 	    if (pj_stricmp(&hint[i].type, &sc_type) == 0) {
 		parse_state = OP_SHORTCUT;
@@ -316,12 +319,7 @@ static void send_ambi_arg(pj_cli_sess *sess,
 	    parse_state = OP_NORMAL;
 	}
 
-	if ((parse_state != OP_SHORTCUT)) {
-	    if (cmd_desc) {
-		/* Print data if previous hint is shortcut */
-		send_hint_arg(&send_data, cmd_desc, cmd_length, max_length);
-		cmd_desc = 0;
-	    }
+	if (parse_state != OP_SHORTCUT) {
 	    pj_strcat2(&send_data, "\r\n  ");
 	    cmd_length = hint[i].name.slen;
 	}
@@ -337,10 +335,18 @@ static void send_ambi_arg(pj_cli_sess *sess,
 	    pj_strcat(&send_data, &hint[i].type);
 	    pj_strcat2(&send_data, ">");	
 	    break;
-	case OP_SHORTCUT:	    
-	    pj_strcat2(&send_data, " | ");
-	    pj_strcat(&send_data, &hint[i].name);
-	    cmd_length += (hint[i].name.slen + 3);
+	case OP_SHORTCUT:
+	    /* Format : "Command | sc |  description" */
+	    {		
+		cmd_length += hint[i].name.slen;
+		if ((i > 0) && (!pj_stricmp(&hint[i-1].desc, &hint[i].desc))) {
+		    pj_strcat2(&send_data, " | ");
+		    cmd_length += 3;		    
+		} else {
+		    pj_strcat2(&send_data, "\r\n  ");
+		}
+		pj_strcat(&send_data, &hint[i].name);	
+	    }
 	    break;
 	default:
 	    pj_strcat(&send_data, &hint[i].name);
@@ -349,10 +355,13 @@ static void send_ambi_arg(pj_cli_sess *sess,
 	}
     	
 	if ((parse_state == OP_TYPE) || (parse_state == OP_CHOICE) || 
-	    ((i+1) >= info->hint_cnt)) 
+	    ((i+1) >= info->hint_cnt) ||
+	    (pj_strncmp(&hint[i].desc, &hint[i+1].desc, hint[i].desc.slen))) 
 	{
 	    /* Add description info */
 	    send_hint_arg(&send_data, &hint[i].desc, cmd_length, max_length);
+
+	    cmd_length = 0;
 	}
     }  
     pj_strcat2(&send_data, "\r\n");

@@ -245,7 +245,7 @@ pj_status_t cli_main(pj_bool_t wait_telnet_cli)
     if (app_config.cli_cfg.cli_fe & CLI_FE_CONSOLE) {
 	/* Main loop for CLI FE console */
 	while (!pj_cli_is_quitting(cli)) {
-	    pj_cli_console_process(cli_cons_sess, &cmdline[0], sizeof(cmdline));
+	    pj_cli_console_process(cli_cons_sess, cmdline, sizeof(cmdline));
 	}
     } else if (wait_telnet_cli) {
 	/* Just wait for CLI quit */
@@ -2631,7 +2631,7 @@ static pj_status_t add_call_command(pj_cli_t *cli)
 {  
     char* call_command = 
 	"<CMD name='call' id='100' desc='Call related commands'>"
-	"  <CMD name='new' id='1001' desc='Show Help'>"
+	"  <CMD name='new' id='1001' desc='Make a new call/INVITE'>"
 	"    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
 	"     desc='Buddy Id'>"
 	"      <CHOICE value='-1' desc='All buddies'/>"
@@ -2657,8 +2657,8 @@ static pj_status_t add_call_command(pj_cli_t *cli)
 	"  <CMD name='reinvite' id='1007' sc='v' "
 	"   desc='Re-invite (release hold)'/>"
 	"  <CMD name='update' id='1008' sc='U' desc='Send Update request'/>"
-	"  <CMD name='next' id='1009' sc='>' desc='Select next call'/>"
-	"  <CMD name='previous' id='1010' sc='<' desc='Select previous call'/>"
+	"  <CMD name='next' id='1009' sc=']' desc='Select next call'/>"
+	"  <CMD name='previous' id='1010' sc='[' desc='Select previous call'/>"
 	"  <CMD name='transfer' id='1011' sc='x' desc='Transfer call'>"
 	"    <ARG name='buddy_id' type='choice' id='9901' validate='0' "
 	"     desc='Buddy Id'>"
@@ -2750,7 +2750,7 @@ static pj_status_t add_presence_command(pj_cli_t *cli)
 	"      <CHOICE value='7' desc='Offline'/>"
 	"    </ARG>"
 	"  </CMD>"
-	"  <CMD name='bud_list' id='2008' sc='l' desc='Show buddy list'/>"
+	"  <CMD name='bud_list' id='2008' sc='bl' desc='Show buddy list'/>"
 	"</CMD>";
 
     pj_str_t xml = pj_str(presence_command);

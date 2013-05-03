@@ -523,7 +523,7 @@ static pj_status_t parse_args(int argc, char *argv[],
     }
 
     cfg->acc_cnt = 0;
-    cur_acc = &cfg->acc_cfg[0];
+    cur_acc = cfg->acc_cfg;
 
 
     /* Reinitialize and re-run pj_getopt again, possibly with new arguments
