@@ -2001,6 +2001,13 @@ static pj_status_t tsx_send_msg( pjsip_transaction *tsx,
 	return PJ_SUCCESS;
     }
 
+    /* Skip send if previous tdata transmission is pending (see #1665). */
+    if (tdata->is_pending) {
+	PJ_LOG(2,(THIS_FILE, "Unable to send %s: message is pending", 
+			     pjsip_tx_data_get_info(tdata)));
+	return PJ_SUCCESS;
+    }
+
     /* If we have the transport, send the message using that transport.
      * Otherwise perform full transport resolution.
      */
