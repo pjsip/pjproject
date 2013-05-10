@@ -4555,6 +4555,20 @@ static void pjsua_call_on_tsx_state_changed(pjsip_inv_session *inv,
 	    PJ_LOG(3,(THIS_FILE, "Error putting call %d on hold (reason=%d)",
 		      call->index, tsx->status_code));
 	}
+    } else if (tsx->role == PJSIP_ROLE_UAC &&
+               (call->opt.flag & PJSUA_CALL_UNHOLD) &&
+               tsx->state >= PJSIP_TSX_STATE_COMPLETED)
+    {
+        /* Monitor the status of call unhold request */
+        if (tsx->status_code/100 != 2 &&
+            (tsx->status_code!=401 && tsx->status_code!=407))
+        {
+            /* Call unhold failed */
+            call->opt.flag &= ~PJSUA_CALL_UNHOLD;
+            call->local_hold = PJ_TRUE;
+	    PJ_LOG(3,(THIS_FILE, "Error releasing hold on call %d (reason=%d)",
+		      call->index, tsx->status_code));
+        }
     } else if (tsx->role==PJSIP_ROLE_UAS &&
 	tsx->state==PJSIP_TSX_STATE_TRYING &&
 	pjsip_method_cmp(&tsx->method, &pjsip_info_method)==0)
