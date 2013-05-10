@@ -659,6 +659,9 @@ PJ_DEF(pj_status_t) pjsua_call_make_call(pjsua_acc_id acc_id,
 	goto on_error;
     }
 
+    /* Clear call descriptor */
+    reset_call(call_id);
+
     call = &pjsua_var.calls[call_id];
 
     /* Associate session with account */
