@@ -22,7 +22,6 @@
 #include <pj/os.h>
 
 #if defined(PJMEDIA_VIDEO_DEV_HAS_SDL) && PJMEDIA_VIDEO_DEV_HAS_SDL != 0
-
 #include <SDL.h>
 #include <SDL_syswm.h>
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
@@ -261,6 +260,13 @@ static pjmedia_vid_dev_stream_op stream_op =
     &sdl_stream_destroy
 };
 
+/*
+ * Util
+ */
+static void sdl_log_err(const char *op)
+{
+    PJ_LOG(1,(THIS_FILE, "%s error: %s", op, SDL_GetError()));
+}
 
 /****************************************************************************
  * Factory operations
@@ -287,7 +293,7 @@ static pj_status_t sdl_init(void * data)
     PJ_UNUSED_ARG(data);
 
     if (SDL_Init(SDL_INIT_VIDEO)) {
-        PJ_LOG(3, (THIS_FILE, "Failed initializing SDL"));
+        sdl_log_err("SDL_Init()");
         return PJMEDIA_EVID_INIT;
     }
 
@@ -733,6 +739,10 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
             /* Use the window supplied by the application. */
 	    strm->window = SDL_CreateWindowFrom(
                                strm->param.window.info.window);
+	    if (!strm->window) {
+		sdl_log_err("SDL_CreateWindowFrom()");
+		return PJMEDIA_EVID_SYSERR;
+	    }
         } else {
             int x, y;
 
@@ -748,9 +758,11 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
                                             strm->param.disp_size.w,
                                             strm->param.disp_size.h,
                                             flags);
+	    if (!strm->window) {
+		sdl_log_err("SDL_CreateWindow()");
+		return PJMEDIA_EVID_SYSERR;
+	    }
         }
-        if (!strm->window)
-            return PJMEDIA_EVID_SYSERR;
     }
 
     /**
@@ -758,14 +770,18 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
       * affect this window.
       */
     strm->renderer = SDL_CreateRenderer(strm->window, -1, 0);
-    if (!strm->renderer)
+    if (!strm->renderer) {
+	sdl_log_err("SDL_CreateRenderer()");
         return PJMEDIA_EVID_SYSERR;
+    }
 
 #if PJMEDIA_VIDEO_DEV_SDL_HAS_OPENGL
     if (strm->param.rend_id == OPENGL_DEV_IDX) {
         strm->gl_context = SDL_GL_CreateContext(strm->window);
-        if (!strm->gl_context)
+        if (!strm->gl_context) {
+            sdl_log_err("SDL_GL_CreateContext()");
             return PJMEDIA_EVID_SYSERR;
+        }
         SDL_GL_MakeCurrent(strm->window, strm->gl_context);
 
         /* Init some OpenGL settings */
@@ -796,8 +812,10 @@ static pj_status_t sdl_create_rend(struct sdl_stream * strm,
         strm->scr_tex = SDL_CreateTexture(strm->renderer, sdl_info->sdl_format,
                                           SDL_TEXTUREACCESS_STREAMING,
                                           strm->rect.w, strm->rect.h);
-        if (strm->scr_tex == NULL)
+        if (strm->scr_tex == NULL) {
+            sdl_log_err("SDL_CreateTexture()");
             return PJMEDIA_EVID_SYSERR;
+        }
     
         strm->pitch = strm->rect.w * SDL_BYTESPERPIXEL(sdl_info->sdl_format);
     }
