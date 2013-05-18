@@ -3706,6 +3706,16 @@ static void inv_on_state_calling( pjsip_inv_session *inv, pjsip_event *e)
 	    inv_set_cause(inv, tsx->status_code, &tsx->status_text);
 	    inv_set_state(inv, PJSIP_INV_STATE_DISCONNECTED, e);
 	}
+    } else if (tsx->role == PJSIP_ROLE_UAS &&
+	       tsx->state == PJSIP_TSX_STATE_TRYING &&
+	       pjsip_method_cmp(&tsx->method, &pjsip_update_method)==0)
+    {
+	/*
+	 * Handle a very early UPDATE
+	 */
+	inv_respond_incoming_update(inv, e->body.tsx_state.src.rdata);
+
+
     }
 }
 
