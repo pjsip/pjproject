@@ -924,6 +924,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (acc->cfg.transport_id != cfg->transport_id) {
 	acc->cfg.transport_id = cfg->transport_id;
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Update keep-alive */
@@ -991,6 +992,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
     if (acc->cfg.reg_use_proxy != cfg->reg_use_proxy) {
         acc->cfg.reg_use_proxy = cfg->reg_use_proxy;
         update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Global outbound proxy */
@@ -1011,6 +1013,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	acc->global_route_crc = global_route_crc;
 
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Account proxy */
@@ -1035,6 +1038,7 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	acc->local_route_crc = local_route_crc;
 
 	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Credential info */
@@ -1088,13 +1092,19 @@ PJ_DEF(pj_status_t) pjsua_acc_modify( pjsua_acc_id acc_id,
 	{
 	    acc->cred[acc->cred_cnt++] = pjsua_var.ua_cfg.cred_info[i];
 	}
+
+	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
     }
 
     /* Authentication preference */
     acc->cfg.auth_pref.initial_auth = cfg->auth_pref.initial_auth;
-    if (pj_strcmp(&acc->cfg.auth_pref.algorithm, &cfg->auth_pref.algorithm))
+    if (pj_strcmp(&acc->cfg.auth_pref.algorithm, &cfg->auth_pref.algorithm)) {
 	pj_strdup_with_null(acc->pool, &acc->cfg.auth_pref.algorithm, 
 			    &cfg->auth_pref.algorithm);
+	update_reg = PJ_TRUE;
+	unreg_first = PJ_TRUE;
+    }
 
     /* Registration */
     if (acc->cfg.reg_timeout != cfg->reg_timeout) {
