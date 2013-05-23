@@ -34,8 +34,10 @@ void on_app_started(pj_status_t status, const char *msg)
 
 void on_app_stopped(pj_bool_t restart, int argc, char** argv)
 {
-    cfg.argc = argc;
-    cfg.argv = argv;
+    if (argv) {
+	cfg.argc = argc;
+	cfg.argv = argv;
+    }
 
     running = restart;
 }
@@ -107,7 +109,6 @@ int main(int argc, char *argv[])
 	if (status == PJ_SUCCESS) {
 	    status = pjsua_app_run(PJ_TRUE);
 	} else {
-	    pj_perror(3, THIS_FILE, status, "Failed init");
 	    running = PJ_FALSE;
 	}
 

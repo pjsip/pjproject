@@ -1455,6 +1455,7 @@ static void default_config()
     for (i=0; i<PJ_ARRAY_SIZE(cfg->buddy_cfg); ++i)
 	pjsua_buddy_config_default(&cfg->buddy_cfg[i]);
 
+    cfg->buddy_cnt = 0;
     cfg->vid.vcapture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid.vrender_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     cfg->aud_cnt = 1;
