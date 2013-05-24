@@ -585,7 +585,7 @@ pj_status_t pjsua_aud_channel_update(pjsua_call_media *call_med,
     PJ_LOG(4,(THIS_FILE,"Audio channel update.."));
     pj_log_push_indent();
 
-    si->rtcp_sdes_bye_disabled = PJ_TRUE;
+    si->rtcp_sdes_bye_disabled = pjsua_var.media_cfg.no_rtcp_sdes_bye;
 
     /* Check if no media is active */
     if (si->dir != PJMEDIA_DIR_NONE) {

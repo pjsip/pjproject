@@ -5661,6 +5661,17 @@ struct pjsua_media_config
      * Default: PJ_FALSE
      */
     pj_bool_t no_smart_media_update;
+
+    /**
+     * Omit RTCP SDES and BYE in outgoing RTCP packet, this setting will be
+     * applied for both audio and video streams. Note that, when RTCP SDES
+     * and BYE are set to be omitted, RTCP SDES will still be sent once when
+     * the stream starts/stops and RTCP BYE will be sent once when the stream
+     * stops.
+     *
+     * Default: PJ_FALSE
+     */
+    pj_bool_t no_rtcp_sdes_bye;
 };
 
 
