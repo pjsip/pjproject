@@ -1454,8 +1454,7 @@ static void default_config()
 
     for (i=0; i<PJ_ARRAY_SIZE(cfg->buddy_cfg); ++i)
 	pjsua_buddy_config_default(&cfg->buddy_cfg[i]);
-
-    cfg->buddy_cnt = 0;
+    
     cfg->vid.vcapture_dev = PJMEDIA_VID_DEFAULT_CAPTURE_DEV;
     cfg->vid.vrender_dev = PJMEDIA_VID_DEFAULT_RENDER_DEV;
     cfg->aud_cnt = 1;
@@ -1472,7 +1471,7 @@ static pj_status_t parse_config(int argc, char *argv[], pj_str_t *uri_arg)
     pj_status_t status;
 
     /* Initialize default config */
-    default_config(app_config);
+    default_config();
 
     /* Parse the arguments */
     status = parse_args(argc, argv, uri_arg);
@@ -1480,8 +1479,8 @@ static pj_status_t parse_config(int argc, char *argv[], pj_str_t *uri_arg)
 }
 
 pj_status_t load_config(int argc,
-				char **argv,
-				pj_str_t *uri_arg)
+			char **argv,
+			pj_str_t *uri_arg)
 {
     pj_status_t status;
     pj_bool_t use_cli = PJ_FALSE;

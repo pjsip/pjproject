@@ -1912,6 +1912,9 @@ static pj_status_t app_destroy()
 {
     pj_status_t status = PJ_SUCCESS;
     unsigned i;
+    pj_bool_t use_cli = PJ_FALSE;
+    int cli_fe = 0;
+    pj_uint16_t cli_telnet_port = 0;
 
 #ifdef STEREO_DEMO
     if (app_config.snd) {
@@ -1969,6 +1972,21 @@ static pj_status_t app_destroy()
     }
 
     status = pjsua_destroy();
+
+    if (app_config.use_cli) {
+	use_cli = app_config.use_cli;
+	cli_fe = app_config.cli_cfg.cli_fe;
+	cli_telnet_port = app_config.cli_cfg.telnet_cfg.port;	
+    }
+
+    /* Reset config */
+    pj_bzero(&app_config, sizeof(app_config));
+
+    if (use_cli) {    
+	app_config.use_cli = use_cli;
+	app_config.cli_cfg.cli_fe = cli_fe;
+	app_config.cli_cfg.telnet_cfg.port = cli_telnet_port;
+    }
 
     return status;
 }
