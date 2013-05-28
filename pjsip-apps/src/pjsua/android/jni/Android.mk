@@ -1,4 +1,4 @@
-# $id$
+# $Id$
 
 LOCAL_PATH	:= $(call my-dir)
 include $(CLEAR_VARS)
@@ -10,35 +10,12 @@ include $(PJDIR)/build/common.mak
 # Path to SWIG
 MY_SWIG		:= swig
 
-#========================================================================
-# Choose console application to load
-#========================================================================
-
-# pjlib test
-#MY_MODULE :=  $(PJDIR)/pjlib/build/output/pjlib-test-$(TARGET_NAME)/*.o
-
-# pjlib-util test
-#MY_MODULE :=  $(PJDIR)/pjlib-util/build/output/pjlib-util-test-$(TARGET_NAME)/*.o
-
-# pjsip test
-#MY_MODULE :=  $(PJDIR)/pjsip/build/output/pjsip-test-$(TARGET_NAME)/*.o
-
-# pjnath test
-#MY_MODULE :=  $(PJDIR)/pjnath/build/output/pjnath-test-$(TARGET_NAME)/*.o
-
-# pjmedia test
-# Note: jbuf test requires Jbtest.dat, this jbuf test must be disabled (for now).
-#MY_MODULE :=  $(PJDIR)/pjmedia/build/output/pjmedia-test-$(TARGET_NAME)/*.o
-
-# pjsystest app (not supported yet)
-# Todo: this test requires some input and output files (log & WAV).
-#MY_MODULE := $(PJDIR)/pjsip-apps/build/output/pjsystest-$(TARGET_NAME)/*.o
-
-# pjsua app
-# Note: must set USE_GUI to zero in config_site.h
-MY_MODULE := $(PJDIR)/pjsip-apps/build/output/pjsua-$(TARGET_NAME)/*.o
-
-#========================================================================
+MY_MODULE_PATH  := $(PJDIR)/pjsip-apps/build/output/pjsua-$(TARGET_NAME)
+MY_MODULES      := $(MY_MODULE_PATH)/pjsua_app.o \
+		   $(MY_MODULE_PATH)/pjsua_app_cli.o \
+		   $(MY_MODULE_PATH)/pjsua_app_common.o \
+		   $(MY_MODULE_PATH)/pjsua_app_config.o \
+		   $(MY_MODULE_PATH)/pjsua_app_legacy.o
 
 # Constants
 MY_JNI_WRAP	:= pjsua_wrap.cpp
@@ -48,7 +25,7 @@ MY_JNI_DIR	:= jni
 LOCAL_MODULE    := libpjsua
 LOCAL_CFLAGS    := -Werror $(APP_CFLAGS) -frtti
 LOCAL_LDFLAGS   := $(APP_LDFLAGS)
-LOCAL_LDLIBS    := $(MY_MODULE) $(APP_LDLIBS)
+LOCAL_LDLIBS    := $(MY_MODULES) $(APP_LDLIBS)
 LOCAL_SRC_FILES := $(MY_JNI_WRAP) pjsua_app_callback.cpp
 
 # Invoke SWIG
