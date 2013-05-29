@@ -32,7 +32,9 @@
 
 #include <AudioUnit/AudioUnit.h>
 #include <AudioToolbox/AudioConverter.h>
-#if !COREAUDIO_MAC
+#if COREAUDIO_MAC
+    #include <CoreAudio/CoreAudio.h>
+#else
     #include <AudioToolbox/AudioServices.h>
 
     #define AudioDeviceID unsigned
@@ -444,7 +446,7 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 	ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
 					     &addr, 0, NULL,
 					     &size, (void *)&dev_id);
-	if (ostatus != noErr && dev_id != dev_ids[idx]) {
+	if (ostatus == noErr && dev_id != dev_ids[idx]) {
 	    AudioDeviceID temp_id = dev_ids[idx];
 	    
 	    for (i = idx + 1; i < dev_size; i++) {
@@ -461,7 +463,7 @@ static pj_status_t ca_factory_refresh(pjmedia_aud_dev_factory *f)
 	ostatus = AudioObjectGetPropertyData(kAudioObjectSystemObject,
 					     &addr, 0, NULL,
 					     &size, (void *)&dev_id);
-	if (ostatus != noErr && dev_id != dev_ids[idx]) {
+	if (ostatus == noErr && dev_id != dev_ids[idx]) {
 	    AudioDeviceID temp_id = dev_ids[idx];
 	    
 	    for (i = idx + 1; i < dev_size; i++) {
