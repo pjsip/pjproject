@@ -761,8 +761,7 @@ PJ_DEF(int) pj_ioqueue_poll( pj_ioqueue_t *ioqueue, const pj_time_val *timeout)
 		queue[processed].key = h;
 		queue[processed].event_type = EXCEPTION_EVENT;
 		++processed;
-	    } else if (!(events[i].events & EPOLLERR) &&
-	               (key_has_pending_read(h) || key_has_pending_accept(h))) {
+	    } else if (key_has_pending_read(h) || key_has_pending_accept(h)) {
 #if PJ_IOQUEUE_HAS_SAFE_UNREG
 		increment_counter(h);
 #endif
