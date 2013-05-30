@@ -558,6 +558,7 @@ on_error:
 	pj_mutex_destroy(endpt->mutex);
 	endpt->mutex = NULL;
     }
+    deinit_sip_parser();
     if (endpt->mod_mutex) {
 	pj_rwmutex_destroy(endpt->mod_mutex);
 	endpt->mod_mutex = NULL;

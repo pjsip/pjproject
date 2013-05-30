@@ -1218,14 +1218,14 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     status = pj_atomic_create(pool, 0, &mgr->tdata_counter);
-    if (status != PJ_SUCCESS)
-	return status;
+    if (status != PJ_SUCCESS) {
+    	pj_lock_destroy(mgr->lock);
+    	return status;
+    }
 #endif
 
     /* Set transport state callback */
-    status = pjsip_tpmgr_set_state_cb(mgr, &tp_state_callback);
-    if (status != PJ_SUCCESS)
-	return status;
+    pjsip_tpmgr_set_state_cb(mgr, &tp_state_callback);
 
     PJ_LOG(5, (THIS_FILE, "Transport manager created."));
 
