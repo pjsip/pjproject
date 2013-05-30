@@ -92,6 +92,11 @@ struct pjsip_tpmgr
     void           (*on_rx_msg)(pjsip_endpoint*, pj_status_t, pjsip_rx_data*);
     pj_status_t	   (*on_tx_msg)(pjsip_endpoint*, pjsip_tx_data*);
     pjsip_tp_state_callback tp_state_cb;
+
+    /* Transmit data list, for transmit data cleanup when transport manager
+     * is destroyed.
+     */
+    pjsip_tx_data    tdata_list;
 };
 
 
@@ -419,6 +424,14 @@ PJ_DEF(pj_status_t) pjsip_tx_data_create( pjsip_tpmgr *mgr,
     }
 
     pj_ioqueue_op_key_init(&tdata->op_key.key, sizeof(tdata->op_key.key));
+    pj_list_init(tdata);
+
+#if defined(PJSIP_HAS_TX_DATA_LIST) && PJSIP_HAS_TX_DATA_LIST!=0
+    /* Append this just created tdata to transmit buffer list */
+    pj_lock_acquire(mgr->lock);
+    pj_list_push_back(&mgr->tdata_list, tdata);
+    pj_lock_release(mgr->lock);
+#endif
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     pj_atomic_inc( tdata->mgr->tdata_counter );
@@ -437,6 +450,27 @@ PJ_DEF(void) pjsip_tx_data_add_ref( pjsip_tx_data *tdata )
     pj_atomic_inc(tdata->ref_cnt);
 }
 
+static void tx_data_destroy(pjsip_tx_data *tdata)
+{
+    PJ_LOG(5,(tdata->obj_name, "Destroying txdata %s",
+	      pjsip_tx_data_get_info(tdata)));
+    pjsip_tpselector_dec_ref(&tdata->tp_sel);
+#if defined(PJ_DEBUG) && PJ_DEBUG!=0
+    pj_atomic_dec( tdata->mgr->tdata_counter );
+#endif
+
+#if defined(PJSIP_HAS_TX_DATA_LIST) && PJSIP_HAS_TX_DATA_LIST!=0
+    /* Remove this tdata from transmit buffer list */
+    pj_lock_acquire(tdata->mgr->lock);
+    pj_list_erase(tdata);
+    pj_lock_release(tdata->mgr->lock);
+#endif
+
+    pj_atomic_destroy( tdata->ref_cnt );
+    pj_lock_destroy( tdata->lock );
+    pjsip_endpt_release_pool( tdata->mgr->endpt, tdata->pool );
+}
+
 /*
  * Decrease transport data reference, destroy it when the reference count
  * reaches zero.
@@ -445,15 +479,7 @@ PJ_DEF(pj_status_t) pjsip_tx_data_dec_ref( pjsip_tx_data *tdata )
 {
     pj_assert( pj_atomic_get(tdata->ref_cnt) > 0);
     if (pj_atomic_dec_and_get(tdata->ref_cnt) <= 0) {
-	PJ_LOG(5,(tdata->obj_name, "Destroying txdata %s",
-		  pjsip_tx_data_get_info(tdata)));
-	pjsip_tpselector_dec_ref(&tdata->tp_sel);
-#if defined(PJ_DEBUG) && PJ_DEBUG!=0
-	pj_atomic_dec( tdata->mgr->tdata_counter );
-#endif
-	pj_atomic_destroy( tdata->ref_cnt );
-	pj_lock_destroy( tdata->lock );
-	pjsip_endpt_release_pool( tdata->mgr->endpt, tdata->pool );
+	tx_data_destroy(tdata);
 	return PJSIP_EBUFDESTROYED;
     } else {
 	return PJ_SUCCESS;
@@ -1207,6 +1233,7 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_create( pj_pool_t *pool,
     mgr->on_rx_msg = rx_cb;
     mgr->on_tx_msg = tx_cb;
     pj_list_init(&mgr->factory_list);
+    pj_list_init(&mgr->tdata_list);
 
     mgr->table = pj_hash_create(pool, PJSIP_TPMGR_HTABLE_SIZE);
     if (!mgr->table)
@@ -1497,12 +1524,6 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     }
 
     pj_lock_release(mgr->lock);
-    pj_lock_destroy(mgr->lock);
-
-    /* Unregister mod_msg_print. */
-    if (mod_msg_print.id != -1) {
-	pjsip_endpt_unregister_module(endpt, &mod_msg_print);
-    }
 
 #if defined(PJ_DEBUG) && PJ_DEBUG!=0
     /* If you encounter assert error on this line, it means there are
@@ -1517,6 +1538,26 @@ PJ_DEF(pj_status_t) pjsip_tpmgr_destroy( pjsip_tpmgr *mgr )
     
     pj_atomic_destroy(mgr->tdata_counter);
 #endif
+
+    /*
+     * Destroy any dangling transmit buffer.
+     */
+    if (!pj_list_empty(&mgr->tdata_list)) {
+	pjsip_tx_data *tdata = mgr->tdata_list.next;
+	while (tdata != &mgr->tdata_list) {
+	    pjsip_tx_data *next = tdata->next;
+	    tx_data_destroy(tdata);
+	    tdata = next;
+	}
+	PJ_LOG(3,(THIS_FILE, "Cleaned up dangling transmit buffer(s)."));
+    }
+
+    pj_lock_destroy(mgr->lock);
+
+    /* Unregister mod_msg_print. */
+    if (mod_msg_print.id != -1) {
+	pjsip_endpt_unregister_module(endpt, &mod_msg_print);
+    }
 
     return PJ_SUCCESS;
 }

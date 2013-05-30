@@ -61,7 +61,8 @@ const pjsip_method pjsip_publish_method =
  */
 typedef struct pending_publish
 {
-    PJ_DECL_LIST_MEMBER(pjsip_tx_data);
+    PJ_DECL_LIST_MEMBER(struct pending_publish);
+    pjsip_tx_data		*tdata;
 } pending_publish;
 
 
@@ -108,6 +109,7 @@ struct pjsip_publishc
 
     /* Pending PUBLISH request */
     pending_publish		 pending_reqs;
+    pending_publish		 pending_reqs_empty;
 };
 
 
@@ -180,6 +182,7 @@ PJ_DEF(pj_status_t) pjsip_publishc_create( pjsip_endpoint *endpt,
     }
     pj_memcpy(&pubc->opt, opt, sizeof(*opt));
     pj_list_init(&pubc->pending_reqs);
+    pj_list_init(&pubc->pending_reqs_empty);
 
     status = pj_mutex_create_recursive(pubc->pool, "pubc%p", &pubc->mutex);
     if (status != PJ_SUCCESS) {
@@ -683,8 +686,14 @@ static void tsx_callback(void *token, pjsip_event *event)
 	/* If we have pending request(s), send them now */
 	pj_mutex_lock(pubc->mutex);
 	while (!pj_list_empty(&pubc->pending_reqs)) {
-	    pjsip_tx_data *tdata = pubc->pending_reqs.next;
-	    pj_list_erase(tdata);
+	    pending_publish *pp = pubc->pending_reqs.next;
+	    pjsip_tx_data *tdata = pp->tdata;
+
+	    /* Remove the request from pending request list,
+	     * and keep the unused entry into pending_reqs_empty pool.
+	     */
+	    pj_list_erase(pp);
+	    pj_list_push_back(&pubc->pending_reqs_empty, pp);
 
 	    /* Add SIP-If-Match if we have etag and the request doesn't have
 	     * one (http://trac.pjsip.org/repos/ticket/996)
@@ -712,7 +721,6 @@ static void tsx_callback(void *token, pjsip_event *event)
 	    status = pjsip_publishc_send(pubc, tdata);
 	    if (status == PJ_EPENDING) {
 		pj_assert(!"Not expected");
-		pj_list_erase(tdata);
 		pjsip_tx_data_dec_ref(tdata);
 	    } else if (status == PJ_SUCCESS) {
 		break;
@@ -744,7 +752,15 @@ PJ_DEF(pj_status_t) pjsip_publishc_send(pjsip_publishc *pubc,
     pj_mutex_lock(pubc->mutex);
     if (pubc->pending_tsx) {
 	if (pubc->opt.queue_request) {
-	    pj_list_push_back(&pubc->pending_reqs, tdata);
+	    pending_publish *pp = NULL;
+	    if (pj_list_empty(&pubc->pending_reqs_empty)) {
+		pp = PJ_POOL_ZALLOC_T(pubc->pool, pending_publish);
+	    } else {
+		pp = pubc->pending_reqs_empty.next;
+		pj_list_erase(pp);
+	    }
+	    pp->tdata = tdata;
+	    pj_list_push_back(&pubc->pending_reqs, pp);
 	    pj_mutex_unlock(pubc->mutex);
 	    PJ_LOG(4,(THIS_FILE, "Request is queued, pubc has another "
 				 "transaction pending"));

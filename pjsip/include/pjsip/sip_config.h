@@ -1132,6 +1132,21 @@ PJ_INLINE(pjsip_cfg_t*) pjsip_cfg(void)
 #endif
 
 
+/**
+ * Specify whether transport manager should maintain a list of transmit
+ * buffer instances, so any possible dangling instance can be cleaned up
+ * when the transport manager is shutdown (see also ticket #1671).
+ * Note that this feature will have slight impact on the performance as
+ * mutex is employed in updating the list, i.e: on creation and destruction
+ * of transmit data.
+ *
+ * Default: 0 (no)
+ */
+#ifndef PJSIP_HAS_TX_DATA_LIST
+#   define PJSIP_HAS_TX_DATA_LIST		0
+#endif
+
+
 PJ_END_DECL
 
 /**
