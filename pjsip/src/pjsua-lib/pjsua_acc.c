@@ -2624,7 +2624,17 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 
     uri = rdata->msg_info.to->uri;
 
-    /* Just return default account if To URI is not SIP: */
+    /* Use Req URI if To URI is not SIP */
+    if (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
+	!PJSIP_URI_SCHEME_IS_SIPS(uri))
+    {
+	if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG)
+	    uri = rdata->msg_info.msg->line.req.uri;
+	else
+	    return pjsua_var.default_acc;
+    }
+
+    /* Just return default account if both To and Req URI are not SIP: */
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
 	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
     {
