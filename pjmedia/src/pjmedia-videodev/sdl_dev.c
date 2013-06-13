@@ -447,6 +447,8 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     pj_status_t status;
     SDL_version version;
 
+    pj_list_init(&sf->streams);
+
     status = job_queue_create(sf->pool, &sf->jq);
     if (status != PJ_SUCCESS)
         return PJMEDIA_EVID_INIT;
@@ -455,7 +457,6 @@ static pj_status_t sdl_factory_init(pjmedia_vid_dev_factory *f)
     if (status != PJ_SUCCESS)
         return status;
 
-    pj_list_init(&sf->streams);
     status = pj_mutex_create_recursive(sf->pool, "sdl_factory",
 				       &sf->mutex);
     if (status != PJ_SUCCESS)
