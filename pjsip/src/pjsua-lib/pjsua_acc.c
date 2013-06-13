@@ -2617,12 +2617,15 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 {
     pjsip_uri *uri;
     pjsip_sip_uri *sip_uri;
+    pjsua_acc_id id = PJSUA_INVALID_ID;
     unsigned i;
 
     /* Check that there's at least one account configured */
     PJ_ASSERT_RETURN(pjsua_var.acc_cnt!=0, pjsua_var.default_acc);
 
     uri = rdata->msg_info.to->uri;
+
+    PJSUA_LOCK();
 
     /* Use Req URI if To URI is not SIP */
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) &&
@@ -2631,18 +2634,15 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	if (rdata->msg_info.msg->type == PJSIP_REQUEST_MSG)
 	    uri = rdata->msg_info.msg->line.req.uri;
 	else
-	    return pjsua_var.default_acc;
+	    goto on_return;
     }
 
     /* Just return default account if both To and Req URI are not SIP: */
     if (!PJSIP_URI_SCHEME_IS_SIP(uri) && 
 	!PJSIP_URI_SCHEME_IS_SIPS(uri)) 
     {
-	return pjsua_var.default_acc;
+	goto on_return;
     }
-
-
-    PJSUA_LOCK();
 
     sip_uri = (pjsip_sip_uri*)pjsip_uri_get_uri(uri);
 
@@ -2655,8 +2655,8 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	    pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) 
 	{
 	    /* Match ! */
-	    PJSUA_UNLOCK();
-	    return acc_id;
+	    id = acc_id;
+	    goto on_return;
 	}
     }
 
@@ -2667,8 +2667,8 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 
 	if (acc->valid && pj_stricmp(&acc->srv_domain, &sip_uri->host)==0) {
 	    /* Match ! */
-	    PJSUA_UNLOCK();
-	    return acc_id;
+	    id = acc_id;
+	    goto on_return;
 	}
     }
 
@@ -2690,14 +2690,27 @@ PJ_DEF(pjsua_acc_id) pjsua_acc_find_for_incoming(pjsip_rx_data *rdata)
 	    }
 
 	    /* Match ! */
-	    PJSUA_UNLOCK();
-	    return acc_id;
+	    id = acc_id;
+	    goto on_return;
 	}
     }
 
-    /* Still no match, use default account */
+on_return:
     PJSUA_UNLOCK();
-    return pjsua_var.default_acc;
+
+    /* Still no match, use default account */
+    if (id == PJSUA_INVALID_ID)
+	id = pjsua_var.default_acc;
+
+    /* Invoke account find callback */
+    if (pjsua_var.ua_cfg.cb.on_acc_find_for_incoming)
+	(*pjsua_var.ua_cfg.cb.on_acc_find_for_incoming)(rdata, &id);
+
+    /* Verify if the specified account id is valid */
+    if (!pjsua_acc_is_valid(id))
+	id = pjsua_var.default_acc;
+
+    return id;
 }
 
 

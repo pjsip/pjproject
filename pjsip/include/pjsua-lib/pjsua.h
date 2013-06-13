@@ -1276,6 +1276,27 @@ typedef struct pjsua_callback
                                                     pjmedia_transport *base_tp,
                                                     unsigned flags);
 
+    /**
+     * This callback can be used by application to override the account
+     * to be used to handle an incoming message. Initially, the account to
+     * be used will be calculated automatically by the library. This initial
+     * account will be used if application does not implement this callback,
+     * or application sets an invalid account upon returning from this
+     * callback.
+     *
+     * Note that currently the incoming messages requiring account assignment
+     * are INVITE, MESSAGE, SUBSCRIBE, and unsolicited NOTIFY. This callback
+     * may be called before the callback of the SIP event itself, i.e:
+     * incoming call, pager, subscription, or unsolicited-event.
+     *
+     * @param rdata	The incoming message.
+     * @param acc_id 	On input, initial account ID calculated automatically
+     *			by the library. On output, the account ID prefered
+     *			by application to handle the incoming message.
+     */
+    void (*on_acc_find_for_incoming)(const pjsip_rx_data *rdata,
+				     pjsua_acc_id* acc_id);
+
 } pjsua_callback;
 
 
