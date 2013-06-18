@@ -398,7 +398,10 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
 
     /* Get file size. */
     status = pj_file_getpos(fport->fd, &file_size);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+	return status;
+    }
 
     /* Calculate wave fields */
     wave_file_len = (pj_uint32_t)(file_size - 8);
@@ -411,12 +414,18 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
 
     /* Seek to the file_len field. */
     status = pj_file_setpos(fport->fd, FILE_LEN_POS, PJ_SEEK_SET);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+	return status;
+    }
 
     /* Write file_len */
     bytes = sizeof(wave_file_len);
     status = pj_file_write(fport->fd, &wave_file_len, &bytes);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+	return status;
+    }
 
     /* Write samples_len in FACT chunk */
     if (fport->fmt_tag != PJMEDIA_WAVE_FMT_TAG_PCM) {
@@ -430,26 +439,39 @@ static pj_status_t file_on_destroy(pjmedia_port *this_port)
 
 	/* Seek to samples_len field. */
 	status = pj_file_setpos(fport->fd, SAMPLES_LEN_POS, PJ_SEEK_SET);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+        if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+	    return status;
+        }
 
 	/* Write samples_len */
 	bytes = sizeof(wav_samples_len);
 	status = pj_file_write(fport->fd, &wav_samples_len, &bytes);
-	PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+	if (status != PJ_SUCCESS) {
+            pj_file_close(fport->fd);
+	    return status;
+        }
     }
 
     /* Seek to data_len field. */
     status = pj_file_setpos(fport->fd, data_len_pos, PJ_SEEK_SET);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+	return status;
+    }
 
     /* Write file_len */
     bytes = sizeof(wave_data_len);
     status = pj_file_write(fport->fd, &wave_data_len, &bytes);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS) {
+        pj_file_close(fport->fd);
+	return status;
+    }
 
     /* Close file */
     status = pj_file_close(fport->fd);
-    PJ_ASSERT_RETURN(status == PJ_SUCCESS, status);
+    if (status != PJ_SUCCESS)
+	return status;
 
     /* Done. */
     return PJ_SUCCESS;
